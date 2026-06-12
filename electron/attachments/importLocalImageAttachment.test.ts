@@ -71,6 +71,14 @@ function hashBytes(bytes: Uint8Array) {
   return createHash('sha256').update(bytes).digest('hex');
 }
 
+function createPngBytes() {
+  return Buffer.from([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+    0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01
+  ]);
+}
+
 function expectAttachmentSyncState(attachmentId: string, sizeBytes: number) {
   expect(openDatabaseConnection().driver.queryOne<{ content_hash: string; object_type: string; sync_dirty: number }>(
     `SELECT content_hash, object_type, sync_dirty FROM sync_object_state WHERE object_type = 'attachment' AND object_id = ?`,
@@ -88,7 +96,7 @@ function expectAttachmentSyncState(attachmentId: string, sizeBytes: number) {
 it('imports a local png into the app attachment directory and links it to the node', async () => {
   seedNode('node-1');
   const sourcePath = path.join(tempRoot, 'cover.png');
-  const imageBytes = Buffer.from('png-image-bytes');
+  const imageBytes = createPngBytes();
 
   await fs.writeFile(sourcePath, imageBytes);
 
@@ -98,7 +106,7 @@ it('imports a local png into the app attachment directory and links it to the no
     attachment_record: 'created',
     created_at: expect.any(String),
     hash: hashBytes(imageBytes),
-    intrinsic_size: null,
+    intrinsic_size: { height: 1, width: 1 },
     mime_type: 'image/png',
     original_name: 'cover.png',
     size_bytes: imageBytes.byteLength,
@@ -145,7 +153,7 @@ it('imports a local png into the app attachment directory and links it to the no
 it('reuses the same stored file and attachment record for repeated imports of identical content', async () => {
   seedNode('node-1');
   seedNode('node-2');
-  const sharedBytes = Buffer.from('shared-image-bytes');
+  const sharedBytes = createPngBytes();
   const firstSourcePath = path.join(tempRoot, 'first.png');
   const secondSourcePath = path.join(tempRoot, 'second.png');
 
@@ -180,6 +188,21 @@ it('reuses the same stored file and attachment record for repeated imports of id
   ]);
 });
 
+it('rejects files whose bytes do not match the declared image type', async () => {
+  seedNode('node-1');
+  const sourcePath = path.join(tempRoot, 'cover.png');
+
+  await fs.writeFile(sourcePath, Buffer.from('<html>not an image</html>'));
+
+  await expect(importLocalImageAttachment('node-1', sourcePath)).resolves.toEqual({
+    status: 'error',
+    error_code: 'unsupported_format',
+    message: 'The image bytes do not match the declared image format.',
+    source_path: sourcePath
+  });
+  expect(countAttachments()).toBe(0);
+});
+
 it('returns explicit errors for unsupported formats and missing source files', async () => {
   seedNode('node-1');
 
@@ -201,7 +224,7 @@ it('returns explicit errors for unsupported formats and missing source files', a
 it('returns an explicit error when the app cannot persist the image file', async () => {
   seedNode('node-1');
   const sourcePath = path.join(tempRoot, 'cover.png');
-  const imageBytes = Buffer.from('png-image-bytes');
+  const imageBytes = createPngBytes();
 
   await fs.writeFile(sourcePath, imageBytes);
   const assetsDir = path.join(mockedDocumentsDir, 'Foliole', 'Assets');

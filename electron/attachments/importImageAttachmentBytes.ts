@@ -12,6 +12,7 @@ import {
 import { openDatabaseConnection } from '../database/connection.js';
 import { readImageIntrinsicSize } from '../import/imageIntrinsicSize.js';
 
+import { hasSupportedImageSignature } from './imageByteSignature.js';
 import { resolveAttachmentStoragePath } from './resourceResolver.js';
 import { buildAttachmentStorageFileName } from './storagePath.js';
 
@@ -41,6 +42,26 @@ interface ImportImageAttachmentBytesInput {
 
 function createContentHash(bytes: Uint8Array) {
   return createHash('sha256').update(bytes).digest('hex');
+}
+
+function validateSupportedImageBytes(input: ImportImageAttachmentBytesInput, normalizedMimeType: string) {
+  if (!SUPPORTED_IMAGE_MIME_TYPES.has(normalizedMimeType)) {
+    return createErrorResult(
+      'unsupported_format',
+      'Only png, jpg, jpeg, webp, and gif images are supported.',
+      input.errorSource
+    );
+  }
+
+  if (!hasSupportedImageSignature(input.bytes, normalizedMimeType)) {
+    return createErrorResult(
+      'unsupported_format',
+      'The image bytes do not match the declared image format.',
+      input.errorSource
+    );
+  }
+
+  return null;
 }
 
 function createErrorResult(
@@ -153,13 +174,8 @@ export async function importImageAttachmentBytes(
   const normalizedMimeType = input.mimeType.trim().toLowerCase();
   const normalizedOriginalName = normalizeImageFileName(input.originalName, normalizedMimeType);
 
-  if (!SUPPORTED_IMAGE_MIME_TYPES.has(normalizedMimeType)) {
-    return createErrorResult(
-      'unsupported_format',
-      'Only png, jpg, jpeg, webp, and gif images are supported.',
-      input.errorSource
-    );
-  }
+  const validationError = validateSupportedImageBytes(input, normalizedMimeType);
+  if (validationError) return validationError;
 
   if (!ensureNodeExists(normalizedNodeId)) {
     return createErrorResult('node_not_found', 'The target node does not exist.', input.errorSource);
