@@ -99,15 +99,17 @@ it('keeps breadcrumb and priority controls on the document content rail', () => 
   );
 
   const rail = screen.getByTestId('document-header-content-rail');
+  const breadcrumbAligner = screen.getByTestId('document-header-breadcrumb-aligner');
   expect(rail.closest('header')).toHaveClass('min-h-8');
-  expect(rail.closest('header')).toHaveClass('pr-4');
-  expect(rail.closest('header')).toHaveClass('max-[1080px]:px-2');
+  expect(rail.closest('header')?.className).not.toMatch(/(?:^|\s)(?:px-|pl-|pr-)/);
   expect(rail).toHaveClass('max-w-[var(--document-max-width)]');
   expect(rail).toHaveClass('px-[var(--document-content-inline-padding)]');
-  expect(rail).toHaveClass('[@container(max-width:1040px)]:grid-cols-[auto_minmax(0,1fr)_auto]');
+  expect(rail).toHaveClass('grid-cols-[minmax(0,1fr)_auto]');
   expect(rail.parentElement).toHaveClass('[container-type:inline-size]');
-  expect(screen.getAllByLabelText('Document navigation actions')).toHaveLength(2);
+  expect(screen.getAllByLabelText('Document navigation actions')).toHaveLength(1);
   expect(rail).toContainElement(screen.getByRole('button', { name: 'Inbox' }));
+  expect(rail).not.toContainElement(screen.getByLabelText('Document navigation actions'));
+  expect(breadcrumbAligner.className).not.toMatch(/(?:^|\s)(?:pl-|ml-|translate-)/);
   expect(rail).toContainElement(screen.getByRole('button', { name: /Priority P5 from the default fallback/i }));
 });
 

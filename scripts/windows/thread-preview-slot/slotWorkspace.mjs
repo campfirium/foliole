@@ -1,3 +1,5 @@
+/* global console */
+
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -52,6 +54,13 @@ function isShellConfigFile(file) {
   return /^(tailwind\.config\.(js|cjs|mjs|ts)|postcss\.config\.(js|cjs|mjs|ts)|vite\.config\.(js|cjs|mjs|ts)|vite\.shared\.ts|package\.json|package-lock\.json|scripts\/electron-dev\.mjs|scripts\/electron-dev-server\.mjs|scripts\/windows\/electron-dev-native\.mjs)$/u.test(file);
 }
 
+export function resolvePreviewClientAction({ labelChanged, requiresRuntimeRestart, requiresShellRestart, running }) {
+  if (!running) return 'start';
+  if (requiresShellRestart || labelChanged) return 'full-restart';
+  if (requiresRuntimeRestart) return 'restart';
+  return 'status';
+}
+
 export function record(slot, files) {
   if (files.length === 0) {
     throw new Error('record requires at least one --file');
@@ -79,29 +88,33 @@ export function prepare(slot, reset) {
   }
   const files = overlayFiles(slot, state.touchedFiles);
   const dependencyFiles = syncMissingLocalDependencies(slot, files);
-  const preparedFiles = uniqueSorted([...files, ...dependencyFiles]);
   ensureDir(path.dirname(path.join(p.repo, p.windowsSyncStamp)));
   fs.closeSync(fs.openSync(path.join(p.repo, p.windowsSyncStamp), 'a'));
   writeState(slot, {
     baselineHead: state.baselineHead || gitHead(p.repo),
     lastPreparedAt: new Date().toISOString(),
-    touchedFiles: preparedFiles
+    previewDependencies: dependencyFiles,
+    touchedFiles: files
   });
-  console.log(`[preview-slot] prepared slot=${slot} files=${preparedFiles.length}`);
+  console.log(`[preview-slot] prepared slot=${slot} files=${files.length} previewDependencies=${dependencyFiles.length}`);
 }
 
 export async function preview(slot, { label = '', reset = false, thread = '' } = {}) {
   ensureSlotLibraryExists(slot);
+  const previousState = readState(slot);
   const binding = bindSlot(slot, { label, thread });
   const port = await acquireSlotPort(slot, binding);
   prepare(slot, reset);
   const state = readState(slot);
   const touchedFiles = state.touchedFiles.map(normalizeRelPath);
+  const previewDependencies = (state.previewDependencies ?? []).map(normalizeRelPath);
+  const runtimeFiles = uniqueSorted([...touchedFiles, ...previewDependencies]);
+  const labelChanged = (previousState.label || '') !== (binding.label || '');
   const requiresShellRestart = hasMatchingFile(touchedFiles, isShellConfigFile);
-  const requiresRuntimeRestart = requiresShellRestart || hasMatchingFile(touchedFiles, isRuntimeFile);
+  const requiresRuntimeRestart = requiresShellRestart || hasMatchingFile(runtimeFiles, isRuntimeFile);
   ensureElectronDistInSlot(slot, { requiresRuntimeRestart });
   const running = slotStatus(slot).running;
-  const action = running ? (requiresShellRestart ? 'full-restart' : (requiresRuntimeRestart ? 'restart' : 'status')) : 'start';
+  const action = resolvePreviewClientAction({ labelChanged, requiresRuntimeRestart, requiresShellRestart, running });
   if (running && action === 'status') {
     console.log(`[preview-slot] status: RUNNING slot=${slot} update=hmr-or-existing-vite-watch`);
   } else {
@@ -113,5 +126,5 @@ export async function preview(slot, { label = '', reset = false, thread = '' } =
     });
   }
   writeState(slot, { lastPreviewAt: new Date().toISOString(), port });
-  console.log(`[preview-slot] preview finished slot=${slot} action=${action} files=${touchedFiles.length}`);
+  console.log(`[preview-slot] preview finished slot=${slot} action=${action} files=${touchedFiles.length} previewDependencies=${previewDependencies.length}`);
 }

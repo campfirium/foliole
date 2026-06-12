@@ -1,3 +1,5 @@
+/* global console, process */
+
 import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -10,6 +12,7 @@ import {
   toWindowsPath,
   wait
 } from './slotCommon.mjs';
+import { inspectElectronDistFreshness } from '../check-electron-dist-fresh.mjs';
 
 function appendWslenv(env, key, suffix = '') {
   const entry = `${key}${suffix}`;
@@ -36,7 +39,7 @@ export function createSlotClientEnv(slot, action, extraEnv = {}) {
   appendWslenv(env, 'FOLIOLE_NATIVE_PREVIEW_SLOT_ROOT', '/w');
   appendWslenv(env, 'FOLIOLE_NATIVE_PREVIEW_TEMP_LIBRARY');
   appendWslenv(env, 'FOLIOLE_NATIVE_USER_DATA_PATH', '/w');
-  appendWslenv(env, 'FOLIOLE_PREVIEW_LABEL');
+  appendWslenv(env, 'FOLIOLE_PREVIEW_LABEL', '/w');
   appendWslenv(env, 'FOLIOLE_VITE_PORT');
   appendWslenv(env, 'FOLIOLE_VITE_PORT_STRICT');
   if (env.FOLIOLE_VITE_PORT && !env.FOLIOLE_DEV_SCREENSHOT_PORT) {
@@ -186,7 +189,16 @@ function copyDirectory(source, target) {
 export function ensureElectronDistInSlot(slot, { requiresRuntimeRestart = false } = {}) {
   const p = paths(slot);
   const slotMain = path.join(p.slotDir, 'electron-dist', 'electron', 'main.js');
-  if (fs.existsSync(slotMain) && !requiresRuntimeRestart) return 'present';
+  if (fs.existsSync(slotMain) && !requiresRuntimeRestart) {
+    const freshness = inspectElectronDistFreshness({
+      distRoot: path.join(p.slotDir, 'electron-dist'),
+      repoRoot: p.slotDir
+    });
+    if (freshness.ok) return 'present';
+    console.log(`[preview-slot] electron-dist stale in slot=${slot}; compiling inside slot`);
+    compileElectronInSlot(slot);
+    return 'compiled';
+  }
   if (requiresRuntimeRestart) {
     compileElectronInSlot(slot);
     return 'compiled';

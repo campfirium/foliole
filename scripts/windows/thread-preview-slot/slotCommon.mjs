@@ -1,3 +1,5 @@
+/* global process, setTimeout */
+
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -133,6 +135,7 @@ export function readState(slot) {
     createdAt: '',
     lastPreparedAt: '',
     lastPreviewAt: '',
+    previewDependencies: [],
     slot,
     touchedFiles: [],
     version: STATE_VERSION
@@ -144,6 +147,7 @@ export function writeState(slot, patch) {
   const next = {
     ...current,
     ...patch,
+    previewDependencies: uniqueSorted(patch.previewDependencies ?? current.previewDependencies ?? []),
     slot,
     touchedFiles: uniqueSorted(patch.touchedFiles ?? current.touchedFiles ?? []),
     version: STATE_VERSION

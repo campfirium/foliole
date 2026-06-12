@@ -1,4 +1,5 @@
 // @vitest-environment node
+/* global process */
 
 import fs from 'node:fs';
 import os from 'node:os';
@@ -13,6 +14,7 @@ import { syncMissingLocalDependencies } from './thread-preview-slot/slotDependen
 import { refreshLibrary } from './thread-preview-slot/slotLibrary.mjs';
 import { acquireSlotPort, readSlotPort, releaseSlotPort } from './thread-preview-slot/slotPorts.mjs';
 import { releaseSlot } from './thread-preview-slot/slotRelease.mjs';
+import { resolvePreviewClientAction } from './thread-preview-slot/slotWorkspace.mjs';
 
 let tempRoot = '';
 let tempRepo = '';
@@ -75,9 +77,24 @@ it('injects slot library, user data, label and strict Vite port env', () => {
   expect(env.FOLIOLE_PREVIEW_LABEL).toBe('外链预览');
   expect(env.FOLIOLE_VITE_PORT).toBe('24609');
   expect(env.FOLIOLE_DEV_SCREENSHOT_PORT).toBe('38651');
-  expect(env.WSLENV).toContain('FOLIOLE_PREVIEW_LABEL');
+  expect(env.WSLENV).toContain('FOLIOLE_PREVIEW_LABEL/w');
   expect(env.WSLENV).toContain('FOLIOLE_DEV_SCREENSHOT_PORT');
   expect(env.WSLENV).toContain('FOLIOLE_VITE_PORT_STRICT');
+});
+
+it('uses a full shell restart when the preview label changes', () => {
+  expect(resolvePreviewClientAction({
+    labelChanged: true,
+    requiresRuntimeRestart: false,
+    requiresShellRestart: false,
+    running: true
+  })).toBe('full-restart');
+  expect(resolvePreviewClientAction({
+    labelChanged: false,
+    requiresRuntimeRestart: false,
+    requiresShellRestart: false,
+    running: true
+  })).toBe('status');
 });
 
 it('copies electron-dist from the main mirror when a renderer-only slot lacks a runtime bundle', () => {
@@ -111,6 +128,46 @@ it('copies missing relative source dependencies from the shared worktree into th
   ]);
   expect(fs.existsSync(path.join(p.slotDir, 'src', 'shared', 'ui', 'ShelllessSurface.ts'))).toBe(true);
   expect(fs.existsSync(path.join(p.slotDir, 'src', 'shared', 'ui', 'SurfaceControl.ts'))).toBe(true);
+});
+
+it('syncs alias, stale barrel and css import preview dependencies from the shared worktree', () => {
+  const p = paths('slot-a');
+  const repoHeader = path.join(tempRepo, 'src', 'app', 'components', 'Header.tsx');
+  const repoIndex = path.join(tempRepo, 'src', 'shared', 'ui', 'index.ts');
+  const repoShellless = path.join(tempRepo, 'src', 'shared', 'ui', 'ShelllessSurface.ts');
+  const repoStyles = path.join(tempRepo, 'src', 'app', 'styles.css');
+  const repoShelllessCss = path.join(tempRepo, 'src', 'app', 'tokens', 'shellless-surfaces.css');
+  fs.mkdirSync(path.dirname(repoHeader), { recursive: true });
+  fs.mkdirSync(path.dirname(repoIndex), { recursive: true });
+  fs.mkdirSync(path.dirname(repoShelllessCss), { recursive: true });
+  fs.writeFileSync(repoHeader, "import { appShelllessSurfaceClassName } from '@/shared/ui';\n");
+  fs.writeFileSync(repoIndex, "export { appShelllessSurfaceClassName } from './ShelllessSurface';\n");
+  fs.writeFileSync(repoShellless, 'export const appShelllessSurfaceClassName = () => "shellless";\n');
+  fs.writeFileSync(repoStyles, '@import "./tokens/shellless-surfaces.css";\n');
+  fs.writeFileSync(repoShelllessCss, ':root { --app-shellless-surface-bg: white; }\n');
+
+  const slotHeader = path.join(p.slotDir, 'src', 'app', 'components', 'Header.tsx');
+  const slotIndex = path.join(p.slotDir, 'src', 'shared', 'ui', 'index.ts');
+  const slotStyles = path.join(p.slotDir, 'src', 'app', 'styles.css');
+  fs.mkdirSync(path.dirname(slotHeader), { recursive: true });
+  fs.mkdirSync(path.dirname(slotIndex), { recursive: true });
+  fs.copyFileSync(repoHeader, slotHeader);
+  fs.writeFileSync(slotIndex, 'export const stale = true;\n');
+  fs.copyFileSync(repoStyles, slotStyles);
+
+  expect(syncMissingLocalDependencies('slot-a', ['src/app/components/Header.tsx'])).toEqual([
+    'src/app/tokens/shellless-surfaces.css',
+    'src/shared/ui/ShelllessSurface.ts',
+    'src/shared/ui/index.ts'
+  ]);
+  expect(syncMissingLocalDependencies('slot-a', ['src/app/components/Header.tsx'])).toEqual([
+    'src/app/tokens/shellless-surfaces.css',
+    'src/shared/ui/ShelllessSurface.ts',
+    'src/shared/ui/index.ts'
+  ]);
+  expect(fs.readFileSync(slotIndex, 'utf8')).toContain('ShelllessSurface');
+  expect(fs.existsSync(path.join(p.slotDir, 'src', 'shared', 'ui', 'ShelllessSurface.ts'))).toBe(true);
+  expect(fs.existsSync(path.join(p.slotDir, 'src', 'app', 'tokens', 'shellless-surfaces.css'))).toBe(true);
 });
 
 it('allocates, reuses and releases a registry port per slot', async () => {
