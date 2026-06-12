@@ -7,16 +7,17 @@ import {
 import {
   markWorkspaceSearchSidecarRebuilding,
   readWorkspaceSearchSidecarRebuildStatus,
-  rebuildWorkspaceSearchSidecar,
   type WorkspaceSearchSidecarRebuildStatus
 } from '../../lib/core/database/workspaceSearchSidecar.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { rebuildExternalSearchCacheStrategy } from '../database/externalSearchCacheDatabase.js';
+import { desktopTaskScheduler } from '../desktopTaskScheduler.js';
 
 import {
   IPC_SEARCH_INDEX_REBUILD_STATUS_EVENT_CHANNEL,
   type SearchIndexRebuildStatusEvent
 } from './contracts.js';
+import { runWorkspaceSearchRebuildInWorker } from './searchIndexRebuildWorkerClient.js';
 
 let activeStrategy: FullTextSearchIndexStrategy | null = null;
 let pendingStrategy: FullTextSearchIndexStrategy | null = null;
@@ -80,13 +81,30 @@ function drainRebuildQueue() {
   const strategy = pendingStrategy;
   pendingStrategy = null;
   activeStrategy = strategy;
-  const status = combineRebuildStatus(
-    rebuildWorkspaceSearchSidecar(openDatabaseConnection(), { strategy }),
-    rebuildExternalSearchCacheStrategy(strategy)
-  );
-  notifySearchIndexRebuildStatus(status);
-  activeStrategy = null;
-  if (pendingStrategy) scheduleRebuildDrain();
+  const handle = desktopTaskScheduler.submit({
+    concurrencyKey: 'search-index-rebuild',
+    duplicatePolicy: 'enqueue',
+    failureLabel: '[search] index rebuild failed',
+    id: `search-index-rebuild:${strategy}`,
+    label: 'Search index rebuild',
+    priority: 'background',
+    run: async (context) => {
+      context.progress({ message: 'rebuilding search index', unit: 'index' });
+      const workspaceStatus = await runWorkspaceSearchRebuildInWorker(strategy);
+      await context.yieldIfNeeded();
+      return combineRebuildStatus(workspaceStatus, rebuildExternalSearchCacheStrategy(strategy));
+    },
+    runOn: 'utility',
+    source: 'search-index-rebuild'
+  });
+  void handle.promise
+    .then((status) => {
+      notifySearchIndexRebuildStatus(status as WorkspaceSearchSidecarRebuildStatus);
+    })
+    .finally(() => {
+      activeStrategy = null;
+      if (pendingStrategy) scheduleRebuildDrain();
+    });
 }
 
 export function loadSearchIndexRebuildStatus(): SearchIndexRebuildStatusEvent | null {
