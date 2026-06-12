@@ -36,5 +36,6 @@ describe('reading typography guards', () => {
     expect(theme).toContain("lineHeight: 'var(--content-panel-line-height, 1.75)'");
     expect(theme).toContain("'.cm-line.cm-line-paragraph': { paddingBottom: 'var(--content-panel-paragraph-spacing, 0.75em)' }");
     expect(styles).toContain('line-height: var(--content-panel-line-height, 1.75);');
+    expect(styles).toContain('overflow-y: scroll;');
   });
 });
