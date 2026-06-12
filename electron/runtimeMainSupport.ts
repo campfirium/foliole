@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 import path from 'node:path';
 
 import { app, type BrowserWindowConstructorOptions, type Session, type WebContents, type WebPreferences } from 'electron';
@@ -44,6 +45,14 @@ export function createMainWindowOptions(preloadPath: string): BrowserWindowConst
 }
 
 export function resolvePreviewWindowTitle(env: NodeJS.ProcessEnv = process.env) {
+  const encodedLabel = env.FOLIOLE_PREVIEW_LABEL_B64?.trim();
+  if (encodedLabel) {
+    try {
+      return Buffer.from(encodedLabel, 'base64').toString('utf8').trim();
+    } catch {
+      return '';
+    }
+  }
   return env.FOLIOLE_PREVIEW_LABEL?.trim() ?? '';
 }
 

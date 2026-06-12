@@ -74,6 +74,7 @@ if (process.env.FOLIOLE_NATIVE_GUIDED_SAMPLE_LOCALE?.trim()) {
 }
 process.env.FOLIOLE_WORKDIR ??= repoRoot;
 process.env.FOLIOLE_BOOT_SESSION ??= `windows-native-${randomUUID()}`;
+process.env.FOLIOLE_ALLOW_PARALLEL_INSTANCE ??= '1';
 process.env.FOLIOLE_DISABLE_IN_APP_RELAUNCH ??= '1';
 process.env.FOLIOLE_DEV_SHELL_RESTART_REQUEST_FILE ??= path.join(repoRoot, '.windows-dev-shell-restart-request.json');
 process.env.FOLIOLE_DISABLE_HARDWARE_ACCELERATION ??= '1';

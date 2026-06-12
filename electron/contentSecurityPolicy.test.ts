@@ -46,6 +46,20 @@ it('keeps vite dev server and websocket access only for localhost renderer URLs'
   expect(policy).toContain('foliole-remote-image:');
 });
 
+it('allows dev runtime renderer html to load localhost Vite modules', () => {
+  const headers = withMainWindowContentSecurityPolicy(
+    'file:///C:/Users/zephu/AppData/Roaming/foliole/runtime-renderer-index.html',
+    {},
+    { isPackaged: false }
+  );
+  const policy = headers['Content-Security-Policy']?.[0] ?? '';
+
+  expect(policy).toContain("'unsafe-eval'");
+  expect(policy).toContain("'unsafe-inline'");
+  expect(policy).toContain('http://127.0.0.1:*');
+  expect(policy).toContain('ws://127.0.0.1:*');
+});
+
 it('keeps packaged localhost renderer URLs on the production policy', () => {
   const headers = withMainWindowContentSecurityPolicy('http://127.0.0.1:24600', {}, { isPackaged: true });
   const policy = headers['Content-Security-Policy']?.[0] ?? '';

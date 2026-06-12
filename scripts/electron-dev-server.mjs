@@ -6,7 +6,11 @@ import { URL } from 'node:url';
 export async function isViteServerReady(viteUrl, fetchImpl = globalThis.fetch) {
   try {
     const response = await fetchImpl(viteUrl, { method: 'GET' });
-    return response.ok;
+    if (response.ok) {
+      return true;
+    }
+    const clientResponse = await fetchImpl(resolveViteResourceUrl(viteUrl, '/@vite/client'), { method: 'GET' });
+    return clientResponse.ok;
   } catch {
     return false;
   }

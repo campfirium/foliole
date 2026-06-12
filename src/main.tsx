@@ -58,6 +58,10 @@ function renderStartupError(message: string) {
   renderStartupErrorView(rootElement, message);
 }
 
+function hideBootSkeleton() {
+  document.body.dataset.bootSkeleton = 'hidden';
+}
+
 function renderStartupViewIfRequested() {
   const startupView = resolveStartupView(window.location.search);
   if (!startupView) {
@@ -70,6 +74,7 @@ function renderStartupViewIfRequested() {
   }
   registerBootDiagnostics();
   reportRuntimeBootStage('startup_surface_render', { kind: startupView.kind });
+  hideBootSkeleton();
   renderStartupErrorView(
     rootElement,
     {

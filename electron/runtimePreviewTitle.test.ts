@@ -1,3 +1,5 @@
+import { Buffer } from 'node:buffer';
+
 import { expect, it, vi } from 'vitest';
 
 const { appMock } = vi.hoisted(() => ({
@@ -16,14 +18,19 @@ import {
 
 it('uses the preview label as the native window title', () => {
   expect(resolvePreviewWindowTitle({ FOLIOLE_PREVIEW_LABEL: ' 外链预览 ' })).toBe('外链预览');
+  expect(resolvePreviewWindowTitle({ FOLIOLE_PREVIEW_LABEL_B64: Buffer.from('编辑器性能预览', 'utf8').toString('base64') })).toBe('编辑器性能预览');
 
   const oldLabel = process.env.FOLIOLE_PREVIEW_LABEL;
+  const oldEncodedLabel = process.env.FOLIOLE_PREVIEW_LABEL_B64;
   process.env.FOLIOLE_PREVIEW_LABEL = '外链预览';
+  delete process.env.FOLIOLE_PREVIEW_LABEL_B64;
   try {
     expect(createMainWindowOptions('/tmp/preload.cjs').title).toBe('外链预览');
   } finally {
     if (oldLabel === undefined) delete process.env.FOLIOLE_PREVIEW_LABEL;
     else process.env.FOLIOLE_PREVIEW_LABEL = oldLabel;
+    if (oldEncodedLabel === undefined) delete process.env.FOLIOLE_PREVIEW_LABEL_B64;
+    else process.env.FOLIOLE_PREVIEW_LABEL_B64 = oldEncodedLabel;
   }
 });
 

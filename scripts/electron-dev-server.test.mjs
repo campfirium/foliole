@@ -15,6 +15,19 @@ describe('isViteServerReady', () => {
     await expect(isViteServerReady('http://127.0.0.1:4600', fetchMock)).resolves.toBe(true);
   });
 
+  it('falls back to the Vite client module when the root path is not ok', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 404 })
+      .mockResolvedValueOnce({ ok: true, status: 200 });
+
+    await expect(isViteServerReady('http://127.0.0.1:4600', fetchMock)).resolves.toBe(true);
+
+    expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
+      'http://127.0.0.1:4600',
+      'http://127.0.0.1:4600/@vite/client'
+    ]);
+  });
+
   it('returns false when request fails', async () => {
     const fetchMock = vi.fn().mockRejectedValue(new Error('connect failed'));
     await expect(isViteServerReady('http://127.0.0.1:4600', fetchMock)).resolves.toBe(false);
