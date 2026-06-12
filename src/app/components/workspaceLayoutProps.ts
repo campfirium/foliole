@@ -128,7 +128,7 @@ export interface WorkspaceLayoutFieldTypes {
   onEditorRedo: () => boolean;
   onFinalizeNodeTitle: (nodeId: string, content: string) => void;
   onRegisterEditorDraftFlush: (flush: (() => boolean) | null, closeFlush: (() => Promise<boolean>) | null) => void;
-  onNodeContentChange: (nodeId: string, content: string) => void;
+  onNodeContentChange: (nodeId: string, content: string, options?: { publishLocal?: boolean }) => void;
   setNodeViewState: (nodeId: string, viewState: NodeViewState) => void;
   onEditorReady: (adapter: EditorAdapter | null) => void;
   onEditorContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;

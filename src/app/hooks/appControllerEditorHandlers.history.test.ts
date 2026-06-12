@@ -101,7 +101,7 @@ describe('app controller editor history handlers', () => {
         type: 'text.edit'
       })
     );
-    expect(updateNodeContent).toHaveBeenCalledWith('node-1', 'Alpha Beta Gamma Delta');
+    expect(updateNodeContent).toHaveBeenCalledWith('node-1', 'Alpha Beta Gamma Delta', undefined);
   });
 
 });

@@ -74,7 +74,7 @@ export function createEditorReadyHandler(args: BuildControllerLayoutPropsArgs) {
 }
 
 export function createNodeContentChangeHandler(args: BuildControllerLayoutPropsArgs) {
-  return (nodeId: string, content: string) => {
+  return (nodeId: string, content: string, options?: { publishLocal?: boolean }) => {
     if (args.runtime.isViewingTrashNode) {
       return;
     }
@@ -86,6 +86,6 @@ export function createNodeContentChangeHandler(args: BuildControllerLayoutPropsA
       return;
     }
     pushTextEditOperation(args, nodeId, content);
-    args.ws.updateNodeContent(nodeId, content);
+    args.ws.updateNodeContent(nodeId, content, options);
   };
 }

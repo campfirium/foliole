@@ -132,9 +132,9 @@ function useDocumentPanelSectionModel(props: DocumentPanelSectionProps) {
 }
 
 function useDocumentPanelDraftProps(props: DocumentPanelSectionProps) {
-  const commitEditorContent = useCallback((nodeId: string | null, content: string) => {
+  const commitEditorContent = useCallback((nodeId: string | null, content: string, options?: { publishLocal?: boolean }) => {
     if (nodeId) {
-      props.onNodeContentChange(nodeId, content);
+      props.onNodeContentChange(nodeId, content, options);
       return;
     }
     props.onEditorChange(content);
