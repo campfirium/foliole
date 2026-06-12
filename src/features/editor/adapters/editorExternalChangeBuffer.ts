@@ -140,7 +140,7 @@ export class EditorExternalChangeBuffer {
 
   private scheduleInputFrameDiagnostic(args: {
     changedAtMs: number;
-    contentLength: number;
+    contentLength: number | null;
     nodeId: string | null;
     sampleId: number;
   }) {

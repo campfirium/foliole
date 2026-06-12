@@ -187,6 +187,7 @@ export async function saveLocalFile(args: {
   expectedModifiedAt?: string | null;
   force?: boolean;
   path: string;
+  updateSearchIndex?: boolean;
 }): Promise<NativeLocalFileSaveResult> {
   const absolutePath = path.resolve(args.path);
   if (!isSupportedLocalFilePath(absolutePath)) {
@@ -215,7 +216,9 @@ export async function saveLocalFile(args: {
       missingAt: null,
       modifiedAt: next.modifiedAt
     });
-    indexReadyLocalDocument(row!, args.content, next);
+    if (args.updateSearchIndex !== false) {
+      indexReadyLocalDocument(row!, args.content, next);
+    }
     return { ...next, status: 'saved' };
   } catch {
     return { errorCode: 'write_failed', message: 'Failed to save local file.', status: 'error' };

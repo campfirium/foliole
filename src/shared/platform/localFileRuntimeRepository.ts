@@ -34,6 +34,7 @@ export async function saveLocalFile(args: {
   expectedModifiedAt?: string | null;
   force?: boolean;
   path: string;
+  updateSearchIndex?: boolean;
 }): Promise<NativeLocalFileSaveResult> {
   return requireRuntimeInvoke()(NATIVE_COMMANDS.saveLocalFile, args);
 }

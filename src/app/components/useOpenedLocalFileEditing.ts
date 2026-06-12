@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
 
 import type { ExternalDocumentPreview } from '../../shared/platform/externalDocumentPreviewRepository';
 import { runRuntimeTextFileImport } from '../../shared/platform/importExecutionRuntimeRepository';
@@ -15,6 +15,8 @@ declare global {
   }
 }
 
+type LocalFileFlushOptions = boolean | { force?: boolean; reportStatus?: boolean; updateSearchIndex?: boolean };
+
 function resolveEditablePreview(preview: ExternalDocumentPreview | null): EditablePreview | null {
   return preview?.sourceKind === 'local_file' && preview.editable ? preview as EditablePreview : null;
 }
@@ -22,68 +24,81 @@ function resolveEditablePreview(preview: ExternalDocumentPreview | null): Editab
 function useResetLocalFileEditingState(args: {
   contentRef: MutableRefObject<string>;
   dirtyRef: MutableRefObject<boolean>;
+  indexDirtyRef: MutableRefObject<boolean>;
   editablePreview: EditablePreview | null;
   preview: ExternalDocumentPreview | null;
   previewRef: MutableRefObject<EditablePreview | null>;
   setContentSnapshot: (content: string) => void;
   setStatus: (status: OpenedLocalFileSaveStatus) => void;
 }) {
-  const { contentRef, dirtyRef, editablePreview, preview, previewRef, setContentSnapshot, setStatus } = args;
+  const { contentRef, dirtyRef, editablePreview, indexDirtyRef, preview, previewRef, setContentSnapshot, setStatus } = args;
   useEffect(() => {
     previewRef.current = editablePreview;
     contentRef.current = preview?.content ?? '';
     dirtyRef.current = false;
+    indexDirtyRef.current = false;
     setContentSnapshot(preview?.content ?? '');
     setStatus('saved');
-  }, [contentRef, dirtyRef, editablePreview, preview, previewRef, setContentSnapshot, setStatus]);
+  }, [contentRef, dirtyRef, editablePreview, indexDirtyRef, preview, previewRef, setContentSnapshot, setStatus]);
 }
 
 function useFlushLocalFileSave(args: {
   contentRef: MutableRefObject<string>;
   dirtyRef: MutableRefObject<boolean>;
+  indexDirtyRef: MutableRefObject<boolean>;
   previewRef: MutableRefObject<EditablePreview | null>;
   saveTimerRef: MutableRefObject<number | null>;
   setStatus: (status: OpenedLocalFileSaveStatus) => void;
 }) {
-  const { contentRef, dirtyRef, previewRef, saveTimerRef, setStatus } = args;
-  return useCallback(async (force = false) => {
+  const { contentRef, dirtyRef, indexDirtyRef, previewRef, saveTimerRef, setStatus } = args;
+  return useCallback(async (options: LocalFileFlushOptions = {}) => {
+    const force = typeof options === 'boolean' ? options : options.force === true;
+    const reportStatus = typeof options === 'boolean' ? true : options.reportStatus !== false;
+    const updateSearchIndex = typeof options === 'boolean' ? true : options.updateSearchIndex !== false;
     const current = previewRef.current;
-    if (!current || (!dirtyRef.current && !force)) return true;
+    if (!current || (!dirtyRef.current && !force && !(updateSearchIndex && indexDirtyRef.current))) return true;
     if (saveTimerRef.current !== null) {
       window.clearTimeout(saveTimerRef.current);
       saveTimerRef.current = null;
     }
-    setStatus('saving');
+    if (reportStatus) {
+      startTransition(() => setStatus('saving'));
+    }
     const result = await saveLocalFile({
       content: contentRef.current,
       expectedFileSize: current.fileSize ?? null,
       expectedModifiedAt: current.modifiedAt ?? null,
       force,
-      path: current.absolutePath
+      path: current.absolutePath,
+      updateSearchIndex
     });
     if (result.status === 'conflict') {
-      setStatus('conflict');
+      startTransition(() => setStatus('conflict'));
       return false;
     }
     if (result.status === 'error') {
-      setStatus(result.errorCode === 'missing' ? 'missing' : 'error');
+      startTransition(() => setStatus(result.errorCode === 'missing' ? 'missing' : 'error'));
       return false;
     }
     previewRef.current = { ...current, content: contentRef.current, fileSize: result.fileSize, modifiedAt: result.modifiedAt };
     dirtyRef.current = false;
-    setStatus('saved');
+    indexDirtyRef.current = !updateSearchIndex;
+    if (reportStatus) {
+      startTransition(() => setStatus('saved'));
+    }
     return true;
-  }, [contentRef, dirtyRef, previewRef, saveTimerRef, setStatus]);
+  }, [contentRef, dirtyRef, indexDirtyRef, previewRef, saveTimerRef, setStatus]);
 }
 
 function useReloadLocalFileFromDisk(args: {
   contentRef: MutableRefObject<string>;
   dirtyRef: MutableRefObject<boolean>;
+  indexDirtyRef: MutableRefObject<boolean>;
   previewRef: MutableRefObject<EditablePreview | null>;
   setContentSnapshot: (content: string) => void;
   setStatus: (status: OpenedLocalFileSaveStatus) => void;
 }) {
-  const { contentRef, dirtyRef, previewRef, setContentSnapshot, setStatus } = args;
+  const { contentRef, dirtyRef, indexDirtyRef, previewRef, setContentSnapshot, setStatus } = args;
   return useCallback(async () => {
     const current = previewRef.current;
     if (!current) return;
@@ -95,15 +110,16 @@ function useReloadLocalFileFromDisk(args: {
     previewRef.current = { ...current, content: result.content, fileSize: result.fileSize, modifiedAt: result.modifiedAt };
     contentRef.current = result.content;
     dirtyRef.current = false;
+    indexDirtyRef.current = false;
     setContentSnapshot(result.content);
     setStatus('saved');
-  }, [contentRef, dirtyRef, previewRef, setContentSnapshot, setStatus]);
+  }, [contentRef, dirtyRef, indexDirtyRef, previewRef, setContentSnapshot, setStatus]);
 }
 
 function useOpenedLocalFileWindowBindings(args: {
   dirtyRef: MutableRefObject<boolean>;
   editablePreview: EditablePreview | null;
-  flushSave: (force?: boolean) => Promise<boolean>;
+  flushSave: (options?: LocalFileFlushOptions) => Promise<boolean>;
   reloadFromDisk: () => Promise<void>;
 }) {
   const { dirtyRef, editablePreview, flushSave, reloadFromDisk } = args;
@@ -116,10 +132,10 @@ function useOpenedLocalFileWindowBindings(args: {
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
         event.preventDefault();
-        void flushSave();
+        void flushSave({ updateSearchIndex: true });
       }
     };
-    const onPageHide = () => void flushSave();
+    const onPageHide = () => void flushSave({ updateSearchIndex: true });
     window.addEventListener('focus', onFocus);
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('pagehide', onPageHide);
@@ -137,7 +153,7 @@ function useOpenedLocalFileWindowBindings(args: {
 function useOpenedLocalFileChangeHandler(args: {
   contentRef: MutableRefObject<string>;
   dirtyRef: MutableRefObject<boolean>;
-  flushSave: (force?: boolean) => Promise<boolean>;
+  flushSave: (options?: LocalFileFlushOptions) => Promise<boolean>;
   previewRef: MutableRefObject<EditablePreview | null>;
   saveTimerRef: MutableRefObject<number | null>;
   setStatus: (status: OpenedLocalFileSaveStatus) => void;
@@ -147,9 +163,11 @@ function useOpenedLocalFileChangeHandler(args: {
     if (!previewRef.current) return;
     contentRef.current = nextContent;
     dirtyRef.current = true;
-    setStatus('unsaved');
+    startTransition(() => {
+      setStatus('unsaved');
+    });
     if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = window.setTimeout(() => void flushSave(), 1000);
+    saveTimerRef.current = window.setTimeout(() => void flushSave({ reportStatus: false, updateSearchIndex: false }), 1000);
   }, [contentRef, dirtyRef, flushSave, previewRef, saveTimerRef, setStatus]);
 }
 
@@ -163,12 +181,14 @@ export function useOpenedLocalFileEditing(args: {
   const [status, setStatus] = useState<OpenedLocalFileSaveStatus>('saved');
   const contentRef = useRef(contentSnapshot);
   const dirtyRef = useRef(false);
+  const indexDirtyRef = useRef(false);
   const previewRef = useRef(editablePreview);
   const saveTimerRef = useRef<number | null>(null);
 
   const stateHandles = useMemo(() => ({
     contentRef,
     dirtyRef,
+    indexDirtyRef,
     previewRef,
     saveTimerRef,
     setContentSnapshot,
@@ -197,7 +217,7 @@ export function useOpenedLocalFileEditing(args: {
   useOpenedLocalFileWindowBindings({ dirtyRef, editablePreview, flushSave, reloadFromDisk });
 
   return useMemo(() => ({
-    content: contentRef.current,
+    content: contentSnapshot,
     flushSave,
     handleChange,
     importAsTopic,

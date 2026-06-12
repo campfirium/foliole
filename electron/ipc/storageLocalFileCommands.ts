@@ -17,7 +17,8 @@ export async function handleLocalFileStorageCommand(command: string, args: Recor
       expectedFileSize: asNullableFiniteNumber(args.expectedFileSize, 'expectedFileSize'),
       expectedModifiedAt: asNullableString(args.expectedModifiedAt, 'expectedModifiedAt'),
       force: asBoolean(args.force ?? false, 'force'),
-      path: asString(args.path, 'path')
+      path: asString(args.path, 'path'),
+      updateSearchIndex: asBoolean(args.updateSearchIndex ?? true, 'updateSearchIndex')
     });
   }
   return undefined;

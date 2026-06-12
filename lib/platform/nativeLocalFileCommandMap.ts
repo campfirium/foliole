@@ -65,6 +65,7 @@ export type NativeLocalFileCommandMap = {
       expectedModifiedAt?: string | null;
       force?: boolean;
       path: string;
+      updateSearchIndex?: boolean;
     };
     result: NativeLocalFileSaveResult;
   };

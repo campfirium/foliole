@@ -114,6 +114,27 @@ it('updates the local document search index after save', async () => {
   expect(searchExternalDocuments('old searchable')).toEqual([]);
 });
 
+it('can save local file edits without refreshing the search index on the autosave path', async () => {
+  const filePath = path.join(tempRoot, 'autosave-index.md');
+  await fs.writeFile(filePath, '# Local\nOld autosave marker', 'utf8');
+  const opened = await readLocalFile(filePath);
+  expect(opened.status).toBe('ready');
+
+  await saveLocalFile({
+    content: '# Local\nNew autosave marker',
+    expectedFileSize: opened.status === 'ready' ? opened.fileSize : null,
+    expectedModifiedAt: opened.status === 'ready' ? opened.modifiedAt : null,
+    path: filePath,
+    updateSearchIndex: false
+  });
+
+  expect(await fs.readFile(filePath, 'utf8')).toBe('# Local\nNew autosave marker');
+  expect(searchExternalDocuments('new autosave')).toEqual([]);
+  expect(searchExternalDocuments('old autosave')).toEqual([
+    expect.objectContaining({ externalMatch: expect.objectContaining({ absolutePath: filePath }) })
+  ]);
+});
+
 it('finds local documents by combining split Chinese search terms', async () => {
   const filePath = path.join(tempRoot, 'combined-cjk.md');
   const partialPath = path.join(tempRoot, 'partial-cjk.md');
