@@ -40,6 +40,9 @@ const pdfNode = {
   kind: 'topic' as const,
   title: 'PDF Node',
   parentNodeId: null,
+  bodyStatus: 'ready' as const,
+  hasContent: true,
+  hasReveal: false,
   content: '',
   anchorLink: null,
   reveal: '',
@@ -51,7 +54,8 @@ const pdfNode = {
 const textNode = {
   ...pdfNode,
   id: 'node-2',
-  title: 'Text Node'
+  title: 'Text Node',
+  content: '# Text node'
 };
 
 const defaultProps: ComponentProps<typeof DocumentPanelSection> = {
@@ -118,7 +122,7 @@ function createSourceDetails(sourceKind: 'pdf' | 'markdown', sourceLocator: stri
   };
 }
 
-it('keeps a cached pdf view visible when revisiting the same node during source refresh', () => {
+it('keeps a cached pdf view visible when revisiting the same node during source refresh', async () => {
   const sourceDetailsByNodeId: Record<string, { isLoading: boolean; value: unknown | null }> = {
     'node-1': createSourceDetails('pdf', '/tmp/sample.pdf'),
     'node-2': createSourceDetails('markdown', '/tmp/sample.md')
@@ -132,7 +136,7 @@ it('keeps a cached pdf view visible when revisiting the same node during source 
   });
 
   const rendered = render(<DocumentPanelSection {...defaultProps} />);
-  expect(screen.getByTestId('pdf-document-surface')).toBeInTheDocument();
+  expect(await screen.findByTestId('pdf-document-surface')).toBeInTheDocument();
 
   rendered.rerender(<DocumentPanelSection {...defaultProps} activeNodeId="node-2" editorNodeId="node-2" />);
   expect(screen.getByTestId('document-panel-content-body')).toBeInTheDocument();

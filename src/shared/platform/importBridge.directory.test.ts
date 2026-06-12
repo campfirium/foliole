@@ -63,6 +63,7 @@ it('normalizes the directory import payload', async () => {
         importId: 'import-dir-1',
         importedAt: '2026-03-22T10:00:00.000Z',
         nodeId: 'node-1',
+        nodeMutationPatch: null,
         provider: 'desktop_text_file',
         resultStatus: 'imported',
         sourceFingerprint: 'source-fingerprint',
@@ -73,6 +74,7 @@ it('normalizes the directory import payload', async () => {
     ],
     failedCount: 0,
     importedCount: 1,
+    nodeMutationPatch: null,
     rootPath: '/tmp/library',
     sourceAdapter: 'external_directory'
   });

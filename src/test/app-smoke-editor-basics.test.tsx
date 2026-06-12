@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { expect, it } from 'vitest';
 
 import './app-smoke.shared';
@@ -126,6 +126,9 @@ it('keeps first note content unchanged when editing a newly created note', async
 
   fireEvent.change(screen.getByTestId('editor-value'), {
     target: { value: 'My second note content' }
+  });
+  await act(async () => {
+    await window.__folioleFlushPendingEditorDraftBeforeClose?.();
   });
 
   await waitFor(() => {

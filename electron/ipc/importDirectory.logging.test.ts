@@ -41,12 +41,14 @@ import { initializeDatabase } from '../database/migrate.js';
 
 import { runDirectoryImport } from './importDirectory.js';
 import { createTempRoot } from './importDirectory.test-support.js';
+import { authorizeSelectedImportDirectoryPath, resetImportPathAuthorizationForTests } from './importPathAuthorization.js';
 
 const tempRoots: string[] = [];
 
 beforeEach(async () => {
   const appDataDir = await createTempRoot('import-directory-logging-app-data', tempRoots);
   vi.clearAllMocks();
+  resetImportPathAuthorizationForTests();
   logDirectoryImportCompleted.mockResolvedValue(undefined);
   logDirectoryImportFailed.mockResolvedValue(undefined);
   resolveAppPaths.mockReturnValue({
@@ -60,6 +62,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  resetImportPathAuthorizationForTests();
   closeDatabaseConnection();
   await Promise.all(tempRoots.splice(0).map((root) => fs.rm(root, { force: true, recursive: true })));
 });
@@ -68,6 +71,7 @@ it('records a failed directory import attempt before rethrowing the error', asyn
   const root = await createTempRoot('import-directory-failure', tempRoots);
   const failure = new Error('discover failed');
   await fs.writeFile(path.join(root, 'a-note.md'), 'Use ==important== text', 'utf8');
+  await authorizeSelectedImportDirectoryPath(root);
   runPreparedImport.mockImplementation(() => {
     throw failure;
   });

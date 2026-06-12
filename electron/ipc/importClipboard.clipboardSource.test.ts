@@ -62,7 +62,12 @@ beforeEach(() => {
   clipboard.readHTML.mockReturnValue('');
   clipboard.readText.mockReturnValue('');
   clipboardImage.isEmpty.mockReturnValue(true);
-  runPreparedImport.mockReturnValue(createImportRecord());
+  runPreparedImport.mockImplementation((prepared) =>
+    createImportRecord({
+      sourceKind: prepared.sourceKind,
+      sourceName: prepared.sourceName
+    })
+  );
 });
 
 it('imports VS Code copied markdown tables from plain text instead of syntax-highlight HTML', async () => {
@@ -80,14 +85,14 @@ it('imports VS Code copied markdown tables from plain text instead of syntax-hig
 
   await expect(runClipboardImport()).resolves.toMatchObject({
     source_kind: 'text',
-    source_name: 'Clipboard Text.txt'
+    source_name: 'A B --- --- 1 2'
   });
 
   expect(runPreparedImport).toHaveBeenCalledWith(
     expect.objectContaining({
       content: table,
       sourceKind: 'text',
-      sourceName: 'Clipboard Text.txt'
+      sourceName: 'A B --- --- 1 2'
     })
   );
 });
@@ -95,11 +100,16 @@ it('imports VS Code copied markdown tables from plain text instead of syntax-hig
 it('keeps rich clipboard HTML import when plain text is only a fallback', async () => {
   clipboard.readHTML.mockReturnValue('<h1>Rich topic</h1><p><strong>Body</strong></p>');
   clipboard.readText.mockReturnValue('Rich topic\nBody');
-  runPreparedImport.mockReturnValue(createImportRecord({ sourceKind: 'html', sourceName: 'Clipboard HTML.html' }));
+  runPreparedImport.mockImplementation((prepared) =>
+    createImportRecord({
+      sourceKind: prepared.sourceKind,
+      sourceName: prepared.sourceName
+    })
+  );
 
   await expect(runClipboardImport()).resolves.toMatchObject({
     source_kind: 'html',
-    source_name: 'Clipboard HTML.html'
+    source_name: 'Rich topic Body'
   });
 
   expect(runPreparedImport).toHaveBeenCalledWith(
@@ -107,7 +117,7 @@ it('keeps rich clipboard HTML import when plain text is only a fallback', async 
       content: '# Rich topic\n\n**Body**',
       nodeTitle: 'Rich topic',
       sourceKind: 'html',
-      sourceName: 'Clipboard HTML.html'
+      sourceName: 'Rich topic Body'
     })
   );
 });

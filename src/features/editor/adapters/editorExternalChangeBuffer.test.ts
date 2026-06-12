@@ -28,7 +28,9 @@ describe('EditorExternalChangeBuffer coalescing', () => {
     expect(onFlush).toHaveBeenCalledTimes(1);
     expect(onFlush).toHaveBeenCalledWith('abcde', 'node-1');
   });
+});
 
+describe('EditorExternalChangeBuffer lazy change resolution', () => {
   it('reads current editor content only when a same-node lazy change flushes', () => {
     vi.useFakeTimers();
     const onFlush = vi.fn();
@@ -87,6 +89,9 @@ describe('EditorExternalChangeBuffer coalescing', () => {
     expect(onFlush).toHaveBeenCalledWith('ab中文', 'node-1');
   });
 
+});
+
+describe('EditorExternalChangeBuffer composition boundaries', () => {
   it('keeps a composed change bound to its source content when the editor switches nodes before composition ends', () => {
     vi.useFakeTimers();
     const onFlush = vi.fn();
@@ -108,9 +113,6 @@ describe('EditorExternalChangeBuffer coalescing', () => {
     expect(onFlush).toHaveBeenCalledWith('Alpha draft', 'node-1');
     expect(onFlush).not.toHaveBeenCalledWith('Beta body', 'node-1');
   });
-});
-
-describe('EditorExternalChangeBuffer flush boundaries', () => {
   it('flushes pending content when destroyed', () => {
     vi.useFakeTimers();
     const onFlush = vi.fn();
@@ -148,6 +150,9 @@ describe('EditorExternalChangeBuffer flush boundaries', () => {
 
     expect(onFlush).not.toHaveBeenCalled();
   });
+});
+
+describe('EditorExternalChangeBuffer flush boundaries', () => {
 
   it('captures lazy pending content before an applying-external flush is deferred across node switch', () => {
     vi.useFakeTimers();

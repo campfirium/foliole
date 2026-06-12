@@ -84,6 +84,8 @@ describe('electron-builder release packaging config', () => {
     const config = await readBuilderConfig();
 
     expect(config.files).toContain('electron/preload.cjs');
+    expect(config.files).toContain('electron/globalCapturePanelPreload.cjs');
+    expect(config.files).toContain('electron/globalCaptureToastPreload.cjs');
     expect(config.files).toEqual(expect.arrayContaining([
       '!electron-dist/**/*.test.js',
       '!electron-dist/**/*.test.helpers.js',

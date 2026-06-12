@@ -54,7 +54,7 @@ export const InspectorListRow = forwardRef<HTMLButtonElement, InspectorListRowPr
       className={cn(
         'flex min-w-0 w-full text-left transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
         'hover:bg-[color-mix(in_srgb,var(--app-surface)_96%,rgb(var(--color-foreground))_4%)] focus-visible:bg-[color-mix(in_srgb,var(--app-surface)_96%,rgb(var(--color-foreground))_4%)]',
-        active && 'bg-[color-mix(in_srgb,var(--app-surface)_82%,rgb(var(--app-accent-color-rgb))_18%)] shadow-[inset_0_0_0_1px_rgb(var(--app-accent-color-rgb)/0.1)]',
+        active && 'bg-[color-mix(in_srgb,var(--app-surface)_82%,rgb(var(--app-accent-color-rgb))_18%)] ring-1 ring-inset ring-[rgb(var(--app-accent-color-rgb)/0.1)]',
         className
       )}
       ref={ref}

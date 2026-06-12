@@ -60,7 +60,7 @@ it('keeps Opened above manually ordered external folders without a special trail
     expect.stringContaining('1act')
   ]);
   const openedRow = screen.getByRole('treeitem', { name: /^Opened$/i });
-  expect(openedRow.querySelector('.lucide-square-pen')).toBeInTheDocument();
+  expect(openedRow.querySelector('.lucide-file-clock')).toBeInTheDocument();
   expect(openedRow.querySelector('[aria-label="External folder"]')).toBeNull();
 });
 

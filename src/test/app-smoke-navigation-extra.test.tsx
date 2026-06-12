@@ -21,12 +21,12 @@ function createTextAnchorLink(id: string, originalText: string, from: number) {
   };
 }
 
-function openRightPanelFromMenu(label: string) {
-  fireEvent.keyDown(screen.getByRole('button', { name: 'More right sidebar panels' }), { key: 'ArrowDown' });
-  fireEvent.click(screen.getByRole('menuitem', { name: new RegExp(label, 'i') }));
+async function openRightPanelFromMenu(label: string) {
+  fireEvent.keyDown(await screen.findByRole('button', { name: 'More right sidebar panels' }), { key: 'ArrowDown' });
+  fireEvent.click(await screen.findByRole('menuitem', { name: new RegExp(label, 'i') }));
 }
 
-it('reveals document highlights from the right sidebar list', () => {
+it('reveals document highlights from the right sidebar list', async () => {
   const parentContent = '# Parent Needle\n\nSecond mark';
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'node-2',
@@ -52,11 +52,11 @@ it('reveals document highlights from the right sidebar list', () => {
   }));
 
   render(<App />);
-  openRightPanelFromMenu('Highlights');
-  fireEvent.click(screen.getByRole('button', { name: /Second mark/i }));
+  await openRightPanelFromMenu('Highlights');
+  fireEvent.click(await screen.findByRole('button', { name: /Second mark/i }));
 
   const expectedFrom = parentContent.indexOf('Second mark');
-  return waitFor(() => {
+  await waitFor(() => {
     expect(mockEditorState.selectionFrom).toBe(expectedFrom);
     expect(mockEditorState.selectionTo).toBe(expectedFrom);
   });

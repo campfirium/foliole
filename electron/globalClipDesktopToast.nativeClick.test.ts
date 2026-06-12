@@ -6,6 +6,7 @@ const { electronMocks } = vi.hoisted(() => {
   const getAllWindows = vi.fn<() => unknown[]>(() => []);
   return {
     electronMocks: {
+      app: { getAppPath: vi.fn(() => '/app') },
       BrowserWindow: Object.assign(vi.fn(function BrowserWindow() {
         return {};
       }), { getAllWindows }),

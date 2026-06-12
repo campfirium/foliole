@@ -17,6 +17,8 @@
     "build/icon.png",
     "dist/**/*",
     "electron/preload.cjs",
+    "electron/globalCapturePanelPreload.cjs",
+    "electron/globalCaptureToastPreload.cjs",
     "electron-dist/**/*",
     "package.json",
     "!electron-dist/**/*.test.js",

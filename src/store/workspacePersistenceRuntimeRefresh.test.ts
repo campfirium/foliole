@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HOME_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../features/nodes/model/specialNodes';
 import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 
+import { refreshWorkspaceState } from './workspaceRefreshScheduler';
 import { createInitialWorkspaceState, useWorkspaceStore } from './workspaceStore';
 
 vi.mock('../shared/platform/runtimeInvoke', () => ({
@@ -176,7 +177,7 @@ describe('workspace persistence runtime refresh', () => {
 describe('workspace persistence overlapping runtime refresh', () => {
   beforeEach(resetRuntimeRefreshTest);
 
-  it('applies a second runtime rehydrate that starts while the first hydrate is still in flight', async () => {
+  it('applies a queued workspace refresh after an in-flight refresh completes', async () => {
     const firstSnapshot = createDeferred<ReturnType<typeof createWorkspaceSnapshot>>();
     const invoke = vi.fn().mockImplementation((command: string, payload?: { nodeId?: string }) => {
       if (command === 'load_workspace_list_snapshot') {
@@ -188,11 +189,11 @@ describe('workspace persistence overlapping runtime refresh', () => {
       if (command === 'load_reading_progress') {
         return Promise.resolve({ activeNodeId: 'node-1', nodeViewStateById: {} });
       }
-      if (command === 'load_node_document' && payload?.nodeId === 'node-1') {
+      if (command === 'load_node_document' && payload?.nodeId) {
         return Promise.resolve({
-          nodeId: 'node-1',
+          nodeId: payload.nodeId,
           kind: 'topic',
-          content: 'Node 1 body',
+          content: `${payload.nodeId} body`,
           hideTitleHeading: false,
           reveal: null
         });
@@ -201,8 +202,8 @@ describe('workspace persistence overlapping runtime refresh', () => {
     });
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
-    const firstRehydrate = useWorkspaceStore.persist.rehydrate();
-    const secondRehydrate = useWorkspaceStore.persist.rehydrate();
+    const firstRehydrate = refreshWorkspaceState('content-changed');
+    const secondRehydrate = refreshWorkspaceState('managed-inbox');
     firstSnapshot.resolve(createWorkspaceSnapshot(['special-inbox', 'node-1']));
 
     await firstRehydrate;

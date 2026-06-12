@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 
-import { BrowserWindow, screen } from 'electron';
+import { app, BrowserWindow, screen } from 'electron';
 
 import { GLOBAL_CAPTURE_TOAST_TARGET_CHANNEL } from './globalCaptureChannels.js';
 import {
@@ -125,7 +125,7 @@ function createToastWindow() {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
-      preload: join(process.cwd(), 'electron', 'globalCaptureToastPreload.cjs'),
+      preload: join(app.getAppPath(), 'electron', 'globalCaptureToastPreload.cjs'),
       sandbox: true
     },
     width: TOAST_WINDOW_WIDTH,

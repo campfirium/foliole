@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 
-import { BrowserWindow, ipcMain, screen, type IpcMainEvent } from 'electron';
+import { app, BrowserWindow, ipcMain, screen, type IpcMainEvent } from 'electron';
 
 import {
   GLOBAL_CAPTURE_PANEL_CANCEL_CHANNEL,
@@ -94,7 +94,7 @@ function createPanelWindow() {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
-      preload: join(process.cwd(), 'electron', 'globalCapturePanelPreload.cjs'),
+      preload: join(app.getAppPath(), 'electron', 'globalCapturePanelPreload.cjs'),
       sandbox: true
     },
     width: bounds.width,

@@ -17,6 +17,7 @@ const {
 } = vi.hoisted(() => {
   const driver = {
     execute: vi.fn(),
+    queryAll: vi.fn(() => []),
     query: vi.fn(),
     queryOne: vi.fn(),
     transaction: vi.fn((execute: () => unknown) => execute())
@@ -117,6 +118,7 @@ beforeEach(() => {
   clipboardImage.isEmpty.mockReturnValue(true);
   clipboardImage.toPNG.mockReturnValue(Buffer.from('png-bytes'));
   runPreparedImport.mockReturnValue(createImportRecord());
+  databaseDriver.queryAll.mockReturnValue([]);
   runImportForFilePath.mockResolvedValue(createNativeImportResult({ source_kind: 'pdf', source_name: 'document.pdf' }));
   importImageAttachmentBytes.mockResolvedValue({
     attachment_id: 'attachment-1',

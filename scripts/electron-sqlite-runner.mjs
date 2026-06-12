@@ -10,10 +10,32 @@ export function resolveElectronBinary(repoRoot = process.cwd()) {
   return path.join(repoRoot, 'node_modules', 'electron', 'dist', executable);
 }
 
-export function buildElectronNodeEnv(env = process.env) {
+export function resolveElectronSqliteTempRoot(repoRoot = process.cwd()) {
+  return path.join(repoRoot, '.tmp', 'electron-sqlite-tmp');
+}
+
+function shouldUseRepoLocalTemp(args = []) {
+  const scriptPath = args[0] ?? '';
+  if (scriptPath === 'scripts/test-files.mjs') {
+    return true;
+  }
+  return scriptPath === 'scripts/run-vitest-with-summary.mjs' && args.includes('electron');
+}
+
+export function buildElectronNodeEnv(env = process.env, repoRoot = process.cwd(), options = {}) {
+  if (!options.useRepoLocalTemp) {
+    return {
+      ...env,
+      ELECTRON_RUN_AS_NODE: '1'
+    };
+  }
+  const tempRoot = resolveElectronSqliteTempRoot(repoRoot);
   return {
     ...env,
-    ELECTRON_RUN_AS_NODE: '1'
+    ELECTRON_RUN_AS_NODE: '1',
+    TEMP: tempRoot,
+    TMP: tempRoot,
+    TMPDIR: tempRoot
   };
 }
 
@@ -24,18 +46,23 @@ export function buildElectronNodeArgs(scriptPath, scriptArgs = []) {
 }
 
 export function buildRunnerInvocation(scriptPath, scriptArgs = [], repoRoot = process.cwd()) {
+  const args = buildElectronNodeArgs(scriptPath, scriptArgs);
   return {
-    args: buildElectronNodeArgs(scriptPath, scriptArgs),
+    args,
     cwd: repoRoot,
     electronPath: resolveElectronBinary(repoRoot),
-    env: { ELECTRON_RUN_AS_NODE: '1' }
+    env: buildElectronNodeEnv({}, repoRoot, { useRepoLocalTemp: shouldUseRepoLocalTemp(args) })
   };
 }
 
-export function buildElectronNodeSpawnOptions(repoRoot = process.cwd(), stdio = 'inherit') {
+export function buildElectronNodeSpawnOptions(repoRoot = process.cwd(), stdio = 'inherit', args = []) {
+  const useRepoLocalTemp = shouldUseRepoLocalTemp(args);
+  if (useRepoLocalTemp) {
+    mkdirSync(resolveElectronSqliteTempRoot(repoRoot), { recursive: true });
+  }
   return {
     cwd: repoRoot,
-    env: buildElectronNodeEnv(),
+    env: buildElectronNodeEnv(process.env, repoRoot, { useRepoLocalTemp }),
     stdio,
     ...(stdio === 'inherit' ? {} : { encoding: 'utf8' })
   };
@@ -63,7 +90,7 @@ function writePreflightScript(tempDir, repoRoot) {
 }
 
 function runElectronNode(electronPath, args, repoRoot, stdio = 'inherit') {
-  return spawnSync(electronPath, args, buildElectronNodeSpawnOptions(repoRoot, stdio));
+  return spawnSync(electronPath, args, buildElectronNodeSpawnOptions(repoRoot, stdio, args));
 }
 
 function assertElectronAbi(electronPath, repoRoot) {

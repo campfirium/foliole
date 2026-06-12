@@ -32,11 +32,13 @@ vi.mock('electron', () => ({
 
 import { runDirectoryImport } from './importDirectory.js';
 import { createPersistedRecord, createTempRoot } from './importDirectory.test-support.js';
+import { authorizeSelectedImportDirectoryPath, resetImportPathAuthorizationForTests } from './importPathAuthorization.js';
 
 const tempRoots: string[] = [];
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resetImportPathAuthorizationForTests();
   logDirectoryImportCompleted.mockResolvedValue(undefined);
   logDirectoryImportFailed.mockResolvedValue(undefined);
   resolveAppPaths.mockReturnValue({
@@ -62,6 +64,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
+  resetImportPathAuthorizationForTests();
   await Promise.all(tempRoots.splice(0).map((root) => fs.rm(root, { force: true, recursive: true })));
 });
 
@@ -71,6 +74,7 @@ it('rejects importing an external parent directory that contains mirror output',
   await fs.writeFile(path.join(root, 'source.md'), '# Source', 'utf8');
   await fs.mkdir(mirrorPath, { recursive: true });
   await fs.writeFile(path.join(mirrorPath, 'exported.md'), '# Exported mirror', 'utf8');
+  await authorizeSelectedImportDirectoryPath(root);
   loadLibraryPathSettings.mockResolvedValue({ inbox: '/tmp/app-data/Inbox', mirror: mirrorPath });
   loadLibraryPathSettingsSync.mockReturnValue({
     assets_dir: '/tmp/app-data/Assets',

@@ -7,6 +7,12 @@ export function tableExists(sqlite: DatabaseMigrationTarget, tableName: string) 
   return row?.name === tableName;
 }
 
+export function columnExists(sqlite: DatabaseMigrationTarget, tableName: string, columnName: string) {
+  if (!tableExists(sqlite, tableName)) return false;
+  const columns = sqlite.prepare(`PRAGMA table_info(${tableName})`).all() as Array<{ name: string }>;
+  return columns.some((column) => column.name === columnName);
+}
+
 export function addColumnIfMissing(
   sqlite: DatabaseMigrationTarget,
   tableName: string,
@@ -14,8 +20,7 @@ export function addColumnIfMissing(
   columnSql: string
 ) {
   if (!tableExists(sqlite, tableName)) return;
-  const columns = sqlite.prepare(`PRAGMA table_info(${tableName})`).all() as Array<{ name: string }>;
-  if (columns.some((column) => column.name === columnName)) return;
+  if (columnExists(sqlite, tableName, columnName)) return;
   sqlite.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnSql}`);
 }
 

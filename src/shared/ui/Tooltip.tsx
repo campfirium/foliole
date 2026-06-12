@@ -5,7 +5,6 @@ import { cn } from '@/shared/lib/utils';
 
 const AppTooltipProvider = TooltipPrimitive.Provider;
 const AppTooltipTrigger = TooltipPrimitive.Trigger;
-const AppTooltipPortal = TooltipPrimitive.Portal;
 
 function AppTooltip(props: React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Root>) {
   return (

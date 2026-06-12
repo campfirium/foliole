@@ -11,7 +11,8 @@ import {
   buildElectronNodeEnv,
   buildElectronNodeSpawnOptions,
   buildRunnerInvocation,
-  resolveElectronBinary
+  resolveElectronBinary,
+  resolveElectronSqliteTempRoot
 } from './electron-sqlite-runner.mjs';
 
 describe('electron sqlite runner', () => {
@@ -31,10 +32,14 @@ describe('electron sqlite runner', () => {
   });
 
   it('forces ELECTRON_RUN_AS_NODE without dropping the caller environment', () => {
-    expect(buildElectronNodeEnv({ FOO: 'bar' })).toEqual({
+    expect(buildElectronNodeEnv({ FOO: 'bar' }, 'D:/C/foliole')).toEqual({
       ELECTRON_RUN_AS_NODE: '1',
       FOO: 'bar'
     });
+  });
+
+  it('pins sqlite test temp files under the repo-local temp root', () => {
+    expect(resolveElectronSqliteTempRoot('D:/C/foliole')).toBe(path.join('D:/C/foliole', '.tmp', 'electron-sqlite-tmp'));
   });
 
   it('can describe a dry-run invocation without touching sqlite', () => {
@@ -43,6 +48,15 @@ describe('electron sqlite runner', () => {
       cwd: 'D:/C/foliole',
       electronPath: path.join('D:/C/foliole', 'node_modules', 'electron', 'dist', process.platform === 'win32' ? 'electron.exe' : 'electron'),
       env: { ELECTRON_RUN_AS_NODE: '1' }
+    });
+  });
+
+  it('uses repo-local temp files for sqlite vitest runs only', () => {
+    expect(buildRunnerInvocation('scripts/test-files.mjs', ['electron/mirror/example.test.ts'], 'D:/C/foliole').env).toEqual({
+      ELECTRON_RUN_AS_NODE: '1',
+      TEMP: path.join('D:/C/foliole', '.tmp', 'electron-sqlite-tmp'),
+      TMP: path.join('D:/C/foliole', '.tmp', 'electron-sqlite-tmp'),
+      TMPDIR: path.join('D:/C/foliole', '.tmp', 'electron-sqlite-tmp')
     });
   });
 

@@ -46,7 +46,19 @@ export async function acquireStableDesktopWindow(electronApp, timeoutMs) {
 }
 
 async function acquireDesktopWindowWithConsole(electronApp, timeoutMs) {
-  const windowPage = await waitForDesktopRootWindow(electronApp, timeoutMs);
+  let windowPage;
+  try {
+    windowPage = await waitForDesktopRootWindow(electronApp, timeoutMs);
+  } catch (error) {
+    if (error?.windowPage) {
+      error.rendererCollectors = {
+        rendererConsoleCollector: createRendererConsoleCollector(error.windowPage),
+        rendererPageEventCollector: createRendererPageEventCollector(error.windowPage),
+        windowPage: error.windowPage
+      };
+    }
+    throw error;
+  }
   const rendererConsoleCollector = createRendererConsoleCollector(windowPage);
   const rendererPageEventCollector = createRendererPageEventCollector(windowPage);
 

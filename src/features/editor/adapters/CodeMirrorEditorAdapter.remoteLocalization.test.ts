@@ -19,7 +19,7 @@ function getEditorView(adapter: CodeMirrorEditorAdapter) {
 }
 
 async function waitForLocalization() {
-  await vi.advanceTimersByTimeAsync(540);
+  await vi.advanceTimersByTimeAsync(1_600);
   await Promise.resolve();
   await Promise.resolve();
 }

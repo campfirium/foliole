@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import { loadExternalSearchFolders } from '../database/externalSearchFolders.js';
+import { getLocalFileMetadata } from '../database/localFiles.js';
 import { isSameOrNestedPath } from '../libraryPathSafety.js';
 
 const authorizedImportFileRealPaths = new Set<string>();
@@ -60,6 +61,10 @@ export async function assertAuthorizedImportDirectoryPath(directoryPath: string)
 
 export async function assertExternalSearchImportPath(filePath: string) {
   const realPath = await resolveRealImportPath(filePath);
+  const localFile = getLocalFileMetadata(realPath);
+  if (localFile && localFile.missingAt === null) {
+    return realPath;
+  }
   const folders = await Promise.all(loadExternalSearchFolders().map(async (folder) => resolveRealImportPath(folder.folder_path).catch(() => null)));
   if (!folders.some((folderPath) => folderPath && isSameOrNestedPath(realPath, folderPath))) {
     throw new Error('External search import path is not authorized.');

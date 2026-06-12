@@ -14,7 +14,7 @@ import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 import { SearchPalette } from './SearchPalette';
 import type { WorkspaceSearchResult } from './workspaceSearch';
 
-const SEARCH_DEBOUNCE_MS = 160;
+const SEARCH_DEBOUNCE_MS = 400;
 
 function createDeferred<T>() {
   let resolve!: (value: T) => void;

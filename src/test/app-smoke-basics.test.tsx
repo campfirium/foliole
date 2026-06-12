@@ -34,6 +34,10 @@ function expectReviewToolbarSummary(label: string) {
   expect(screen.getAllByLabelText(label).length).toBeGreaterThan(0);
 }
 
+async function enterFlow() {
+  fireEvent.click(await screen.findByRole('button', { name: 'Enter Flow' }));
+}
+
 beforeEach(() => {
   vi.mocked(getBridgeRuntimeInvoke).mockReset();
   vi.mocked(getRuntimeInvoke).mockReset();
@@ -101,8 +105,7 @@ it('runs study flow with FSRS cards consumed before queued reading cards', async
 
   render(<App />);
 
-  expect(screen.getByRole('button', { name: 'Enter Flow' })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Enter Flow' }));
+  await enterFlow();
   await waitFor(() => expect(useWorkspaceStore.getState().reviewSession.queueNodeIds).toEqual(['node-2']));
   expectReviewToolbarSummary('i 0/1');
   expect(screen.getByRole('button', { name: 'Show Answer' })).toBeInTheDocument();
@@ -133,7 +136,7 @@ it('enters review mode with the reading queue when no FSRS cards are due', async
 
   render(<App />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Enter Flow' }));
+  await enterFlow();
 
   await waitFor(() => expect(useWorkspaceStore.getState().reviewSession.queueNodeIds).toEqual(['node-1']));
   expect(screen.getByRole('button', { name: 'Later' })).toBeInTheDocument();
@@ -178,7 +181,7 @@ it('syncs node list selection when review grading advances active node', async (
 
   render(<App />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Enter Flow' }));
+  await enterFlow();
   expectReviewToolbarSummary('i 0/2');
   fireEvent.click(await screen.findByRole('button', { name: 'Show Answer' }));
   fireEvent.click(screen.getByRole('button', { name: 'Good' }));
@@ -210,7 +213,7 @@ it('keeps review toolbar visible in completed state until user exits', async () 
 
   render(<App />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Enter Flow' }));
+  await enterFlow();
   fireEvent.click(await screen.findByRole('button', { name: 'Show Answer' }));
   fireEvent.click(screen.getByRole('button', { name: 'Good' }));
 

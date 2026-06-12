@@ -1,3 +1,5 @@
+/* global console */
+
 import { formatWindowHealthFailure, readNativeWindowHealth } from './windows-client-native-window-health.mjs';
 
 export function createStatusPrinter({

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,

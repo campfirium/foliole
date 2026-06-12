@@ -17,6 +17,10 @@ describe('playwright desktop window readiness', () => {
       },
       async waitForLoadState(state, options) {
         calls.push(['waitForLoadState', state, options]);
+      },
+      async evaluate(pageFunction) {
+        calls.push(['evaluate', pageFunction]);
+        return true;
       }
     };
 
@@ -25,6 +29,10 @@ describe('playwright desktop window readiness', () => {
         async firstWindow({ timeout }) {
           calls.push(['firstWindow', timeout]);
           return windowPage;
+        },
+        windows() {
+          calls.push(['windows']);
+          return [windowPage];
         }
       },
       4_321
@@ -33,8 +41,9 @@ describe('playwright desktop window readiness', () => {
     expect(stableWindow).toBe(windowPage);
     expect(calls).toEqual([
       ['firstWindow', 4_321],
-      ['waitForLoadState', 'domcontentloaded', { timeout: 4_321 }],
-      ['waitForFunction', expect.any(Function), undefined, { timeout: 4_321 }]
+      ['windows'],
+      ['waitForLoadState', 'domcontentloaded', { timeout: 500 }],
+      ['evaluate', expect.any(Function)]
     ]);
   });
 

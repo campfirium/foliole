@@ -6,6 +6,7 @@ const { electronMocks } = vi.hoisted(() => {
   const getAllWindows = vi.fn<() => unknown[]>(() => []);
   return {
     electronMocks: {
+      app: { getAppPath: vi.fn(() => '/app') },
       BrowserWindow: Object.assign(vi.fn(function BrowserWindow() {
         return {};
       }), { getAllWindows }),
@@ -110,6 +111,11 @@ it('shows an app-owned desktop toast and closes it automatically', async () => {
     width: 384,
     x: 1020,
     y: 788
+  }));
+  expect(electronMocks.BrowserWindow).toHaveBeenCalledWith(expect.objectContaining({
+    webPreferences: expect.objectContaining({
+      preload: '/app/electron/globalCaptureToastPreload.cjs'
+    })
   }));
   expect(toastWindow.setAlwaysOnTop).toHaveBeenCalledWith(true, 'screen-saver');
   expect(toastWindow.setIgnoreMouseEvents).toHaveBeenCalledWith(false);

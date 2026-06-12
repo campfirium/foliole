@@ -1,6 +1,7 @@
 import { useEffect, type MutableRefObject } from 'react';
 
 import { onWindowEscape } from '../../shared/platform/keyboard';
+import { onReviewEditorEscapeBlur } from '../../shared/platform/reviewEditorEscape';
 
 import { onEditingEscapeNativeFallback } from './editingEscapeNativeFallback';
 import { blurActiveKeyboardTarget, isEditableKeyboardTarget } from './workspaceKeyboardTarget';
@@ -46,9 +47,11 @@ export function useReviewEditingEscapeHandler(
       isDialogOpen: () => Boolean(document.querySelector('[role="dialog"]')),
       isEditing: () => reviewEditingContextRef.current || isEditableKeyboardTarget(document.activeElement)
     });
+    const unlistenEditorEscapeBlur = onReviewEditorEscapeBlur(exitEditing);
     return () => {
       unlistenEscape();
       unlistenNativeFallback();
+      unlistenEditorEscapeBlur();
     };
   }, [args.isCommandPaletteOpen, args.isSearchPaletteOpen, args.isSettingsOpen, args.isStudyMode, reviewEditingContextRef, setIsReviewEditing]);
 }

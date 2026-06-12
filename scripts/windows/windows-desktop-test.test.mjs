@@ -71,7 +71,7 @@ describe('windows desktop test script', () => {
         .filter((entry) => entry.length > 0);
       expect(args).toContain('-File');
       expect(args).toContain('-WindowsWorkDir');
-      expect(args).toContain('C:\\dev\\foliole');
+      expect(args).toContain('D:\\C\\foliole');
       expect(args).toContain('-Config');
       expect(args).toContain('playwright.desktop.config.ts');
       expect(args).toContain('tests/desktop/smoke.spec.ts');

@@ -85,16 +85,16 @@ it('keeps document body for derived highlight nodes that inherit pdf source from
   expect(screen.queryByTestId('pdf-document-surface')).not.toBeInTheDocument();
 });
 
-it('renders the pdf reading container for linked pdf nodes', () => {
+it('renders the pdf reading container for linked pdf nodes', async () => {
   useNodeSourceDetails.mockReturnValue(createPdfSourceDetails() as never);
 
   renderSection();
 
-  expect(screen.getByTestId('pdf-document-surface')).toBeInTheDocument();
-  expect(screen.getByTestId('pdf-document-view')).toHaveAttribute('data-file', 'file:///tmp/sample.pdf');
+  expect(await screen.findByTestId('pdf-document-surface')).toBeInTheDocument();
+  expect(await screen.findByTestId('pdf-document-view')).toHaveAttribute('data-file', 'file:///tmp/sample.pdf');
 });
 
-it('passes app protocol pdf attachments through to the document loader', () => {
+it('passes app protocol pdf attachments through to the document loader', async () => {
   useNodeSourceDetails.mockReturnValue(
     createPdfSourceDetails({
       importSource: {
@@ -106,7 +106,7 @@ it('passes app protocol pdf attachments through to the document loader', () => {
 
   renderSection();
 
-  expect(screen.getByTestId('pdf-document-view')).toHaveAttribute('data-file', 'foliole-asset://attachment/hash-1');
+  expect(await screen.findByTestId('pdf-document-view')).toHaveAttribute('data-file', 'foliole-asset://attachment/hash-1');
 });
 
 it('renders the pdf toolbar and nearby pages after the document connects', async () => {

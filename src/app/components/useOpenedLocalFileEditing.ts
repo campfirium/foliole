@@ -1,7 +1,7 @@
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
 
+import { importExternalDocument } from '../../shared/platform/externalDocumentImportRepository';
 import type { ExternalDocumentPreview } from '../../shared/platform/externalDocumentPreviewRepository';
-import { runRuntimeTextFileImport } from '../../shared/platform/importExecutionRuntimeRepository';
 import { readLocalFile, saveLocalFile } from '../../shared/platform/localFileRuntimeRepository';
 import { refreshWorkspaceState } from '../../store/workspaceRefreshScheduler';
 
@@ -204,10 +204,10 @@ export function useOpenedLocalFileEditing(args: {
     if (!current || !(await flushSave())) return;
     setIsImporting(true);
     try {
-      const result = await runRuntimeTextFileImport('adopt', 'file_name', { filePath: current.absolutePath });
-      if (result?.nodeId) {
-        await refreshWorkspaceState('formal-import');
-        args.onImportedNodeId(result.nodeId);
+      const result = await importExternalDocument(current.absolutePath);
+      if (result?.node_id) {
+        await refreshWorkspaceState('external-document-import');
+        args.onImportedNodeId(result.node_id);
       }
     } finally {
       setIsImporting(false);

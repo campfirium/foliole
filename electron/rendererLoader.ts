@@ -3,8 +3,8 @@ import fs from 'node:fs';
 import { app, type BrowserWindow } from 'electron';
 
 import { formatRuntimeDiagnosticsSnapshot, resolveRendererTargetUrl, type RuntimeDiagnosticsSnapshot } from './runtimeIdentity.js';
-import { resolveUsableRuntimeRendererIndex } from './runtimeRendererIndexCache.js';
 import { resolveRendererFilePath, resolveSourceRendererIndexPath } from './runtimeRendererHtml.js';
+import { resolveUsableRuntimeRendererIndex } from './runtimeRendererIndexCache.js';
 
 export {
   injectDevRendererIntoHtml,

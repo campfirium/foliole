@@ -130,6 +130,38 @@ it('moves data and default library folders when library home changes', async () 
   await expect(fs.readFile(path.join(nextLibraryHome, 'Mirror', 'entry.md'), 'utf8')).resolves.toBe('# entry');
 });
 
+it('falls back to copying data when Windows denies directory rename', async () => {
+  const initialPaths = await loadLibraryPathSettings();
+  initializeDatabase();
+  resetSeededWorkspace();
+  await fs.writeFile(path.join(initialPaths.data_dir, 'fallback-marker.txt'), 'copied');
+  const originalRename = fs.rename.bind(fs);
+  const renameSpy = vi.spyOn(fs, 'rename').mockImplementation(async (sourcePath, targetPath) => {
+    if (sourcePath === initialPaths.data_dir) {
+      const error = new Error('access denied') as NodeJS.ErrnoException;
+      error.code = 'EACCES';
+      throw error;
+    }
+    await originalRename(sourcePath, targetPath);
+  });
+
+  try {
+    const nextLibraryHome = path.join(tempRoot, 'LibraryDeniedRename');
+    await expect(updateLibraryPathSetting({ location: 'library_home', path: nextLibraryHome })).resolves.toMatchObject({
+      data_dir: path.join(nextLibraryHome, 'Data'),
+      library_home: nextLibraryHome
+    });
+
+    expect(renameSpy).toHaveBeenCalled();
+    expect(resolveDatabasePath()).toBe(path.join(nextLibraryHome, 'Data', 'foliole.db'));
+    expect(openDatabaseConnection().sqlite.prepare('SELECT COUNT(*) FROM nodes').pluck().get()).toBe(0);
+    await expect(fs.readFile(path.join(nextLibraryHome, 'Data', 'fallback-marker.txt'), 'utf8')).resolves.toBe('copied');
+    await expect(fs.access(initialPaths.data_dir)).rejects.toThrow();
+  } finally {
+    renameSpy.mockRestore();
+  }
+});
+
 it('requires confirmation before adopting an existing library home', async () => {
   const initialPaths = await loadLibraryPathSettings();
   initializeDatabase();

@@ -1,4 +1,4 @@
-import { HardDrive, SquarePen } from 'lucide-react';
+import { FileClock, HardDrive } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { getNodeListRowSpacing } from '../../features/nodes/components/nodeListRowSpacingSettings';
@@ -117,7 +117,7 @@ function renderExternalTrailingLabelContent(row: ExternalTreeRowRecord, label: s
   if (row.secondaryIconKind === 'recent') {
     return (
       <span className="inline-flex size-3.5 items-center justify-center align-middle text-foreground/45" data-external-library-marker="opened">
-        <SquarePen aria-hidden="true" className="-translate-y-[1px]" size={14} strokeWidth={1.7} />
+        <FileClock aria-hidden="true" className="-translate-y-[1px]" size={14} strokeWidth={1.7} />
       </span>
     );
   }

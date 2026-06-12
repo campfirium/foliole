@@ -15,6 +15,7 @@ describe('liveMarkdownViewportPlans', () => {
         { from: 13, lineNumber: 3, text: '```' }
       ],
       markdownSyntaxVisible: true,
+      source: '```ts\n# Title\n```',
       startInCodeBlock: false
     });
 
@@ -32,6 +33,7 @@ describe('liveMarkdownViewportPlans', () => {
         { from: 7, lineNumber: 2, text: '---' }
       ],
       markdownSyntaxVisible: false,
+      source: 'Before\n---',
       startInCodeBlock: false,
       thematicBreakLineFroms: new Set([7])
     });

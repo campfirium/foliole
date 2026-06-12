@@ -26,6 +26,7 @@ const { electronMocks, panelWindow } = vi.hoisted(() => {
   };
   return {
     electronMocks: {
+      app: { getAppPath: vi.fn(() => '/app') },
       BrowserWindow: Object.assign(vi.fn(function BrowserWindow() {
         return window;
       }), { getAllWindows: appWindows }),
@@ -86,7 +87,7 @@ it('shows a compact shell-less capture panel with an isolated preload', async ()
     webPreferences: expect.objectContaining({
       contextIsolation: true,
       nodeIntegration: false,
-      preload: expect.stringContaining('globalCapturePanelPreload.cjs'),
+      preload: '/app/electron/globalCapturePanelPreload.cjs',
       sandbox: true
     })
   }));

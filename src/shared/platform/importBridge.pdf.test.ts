@@ -43,6 +43,7 @@ it('accepts pdf import payloads from the runtime bridge', async () => {
     importId: 'import-pdf-1',
     importedAt: '2026-03-22T10:40:00.000Z',
     nodeId: 'node-pdf-1',
+    nodeMutationPatch: null,
     provider: 'desktop_text_file',
     resultStatus: 'imported',
     sourceFingerprint: 'source-fingerprint-pdf',

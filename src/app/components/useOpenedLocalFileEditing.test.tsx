@@ -3,9 +3,17 @@ import { afterEach, expect, it, vi } from 'vitest';
 
 import { useOpenedLocalFileEditing } from './useOpenedLocalFileEditing';
 
+const importMocks = vi.hoisted(() => ({
+  importExternalDocument: vi.fn()
+}));
 const localFileMocks = vi.hoisted(() => ({
   readLocalFile: vi.fn(),
   saveLocalFile: vi.fn()
+}));
+const refreshWorkspaceState = vi.hoisted(() => vi.fn());
+
+vi.mock('../../shared/platform/externalDocumentImportRepository', () => ({
+  importExternalDocument: importMocks.importExternalDocument
 }));
 
 vi.mock('../../shared/platform/localFileRuntimeRepository', () => ({
@@ -13,18 +21,16 @@ vi.mock('../../shared/platform/localFileRuntimeRepository', () => ({
   saveLocalFile: localFileMocks.saveLocalFile
 }));
 
-vi.mock('../../shared/platform/importExecutionRuntimeRepository', () => ({
-  runRuntimeTextFileImport: vi.fn()
-}));
-
 vi.mock('../../store/workspaceRefreshScheduler', () => ({
-  refreshWorkspaceState: vi.fn()
+  refreshWorkspaceState
 }));
 
 afterEach(() => {
   vi.useRealTimers();
+  importMocks.importExternalDocument.mockReset();
   localFileMocks.readLocalFile.mockReset();
   localFileMocks.saveLocalFile.mockReset();
+  refreshWorkspaceState.mockReset();
 });
 
 it('keeps local file keystrokes out of React content state while autosaving the latest text', async () => {
@@ -119,4 +125,46 @@ it('refreshes the search index on the next boundary flush after an autosave', as
     content: 'Draft 1',
     updateSearchIndex: true
   }));
+});
+
+it('imports opened local files through the external document import command', async () => {
+  localFileMocks.saveLocalFile.mockResolvedValue({
+    fileSize: 7,
+    modifiedAt: '2026-06-11T12:00:00.000Z',
+    status: 'saved'
+  });
+  importMocks.importExternalDocument.mockResolvedValue({
+    imported_at: '2026-06-12T08:10:00.000Z',
+    node_id: 'node-imported',
+    source_name: 'topic.md'
+  });
+  const onImportedNodeId = vi.fn();
+  const preview = {
+    absolutePath: '/library/topic.md',
+    content: 'Initial',
+    editable: true,
+    extension: 'md',
+    fileName: 'topic.md',
+    fileSize: 7,
+    folderId: 'opened-external-documents',
+    folderPath: '/library',
+    modifiedAt: '2026-06-11T11:59:00.000Z',
+    relativePath: 'topic.md',
+    sourceKind: 'local_file'
+  } as const;
+
+  const { result } = renderHook(() =>
+    useOpenedLocalFileEditing({
+      onImportedNodeId,
+      preview
+    })
+  );
+
+  await act(async () => {
+    await result.current.importAsTopic();
+  });
+
+  expect(importMocks.importExternalDocument).toHaveBeenCalledWith('/library/topic.md');
+  expect(refreshWorkspaceState).toHaveBeenCalledWith('external-document-import');
+  expect(onImportedNodeId).toHaveBeenCalledWith('node-imported');
 });

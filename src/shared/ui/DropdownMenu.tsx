@@ -14,7 +14,6 @@ function AppDropdownMenu(props: React.ComponentPropsWithoutRef<typeof DropdownMe
   return <DropdownMenuPrimitive.Root modal={false} {...props} />;
 }
 const AppDropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
-const AppDropdownMenuPortal = DropdownMenuPrimitive.Portal;
 
 interface AppSelectionDropdownMenuProps {
   children: ReactNode;

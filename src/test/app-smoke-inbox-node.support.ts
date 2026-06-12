@@ -10,8 +10,8 @@ export function createImportedWorkspaceSnapshot(title = 'Imported note') {
       'special-inbox': {
         id: 'special-inbox',
         parentNodeId: null,
-        kind: 'folder',
-        specialKind: 'inbox',
+        kind: 'folder' as const,
+        specialKind: 'inbox' as const,
         title: 'Inbox',
         isTitleManual: true,
         hideTitleHeading: false,
@@ -28,7 +28,7 @@ export function createImportedWorkspaceSnapshot(title = 'Imported note') {
       'node-imported': {
         id: 'node-imported',
         parentNodeId: 'special-inbox',
-        kind: 'topic',
+        kind: 'topic' as const,
         title,
         isTitleManual: true,
         hideTitleHeading: false,

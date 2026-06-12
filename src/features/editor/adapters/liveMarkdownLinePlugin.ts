@@ -18,6 +18,8 @@ import {
 } from './liveMarkdownState';
 import { shouldRefreshLineDecorations } from './liveMarkdownViewport';
 
+const MARKDOWN_DECORATION_CONTEXT_PATTERN = /[\\`*_{}\[\]()#+\-.!|<>]/;
+
 function getCursorLineNumber(view: EditorView) {
   if (!view.hasFocus) return null;
   const cursor = view.state.selection.main.head;
@@ -70,6 +72,9 @@ export function shouldReparsePreviewMarkdown(update: Pick<ViewUpdate, 'docChange
 }
 
 function isPlainTextInputChange(update: ViewUpdate) {
+  if (MARKDOWN_DECORATION_CONTEXT_PATTERN.test(update.startState.doc.toString())) {
+    return false;
+  }
   let plainTextInput = false;
   let changeCount = 0;
   update.changes.iterChanges((fromA, toA, _fromB, _toB, inserted) => {
@@ -79,7 +84,7 @@ function isPlainTextInputChange(update: ViewUpdate) {
       return;
     }
     const text = inserted.toString();
-    plainTextInput = text.length > 0 && !/[\\`*_{}\[\]()#+\-.!|<>\n\r]/.test(text);
+    plainTextInput = text.length > 0 && !/[\n\r]/.test(text);
   });
   return plainTextInput;
 }

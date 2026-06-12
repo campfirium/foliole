@@ -150,6 +150,7 @@ function collectPreviewDecorationData(view: EditorView, parsed: PreviewMarkdownP
       localDocumentPath: context.localDocumentPath,
       markdownSyntaxVisible: context.markdownSyntaxVisible,
       documentImageMatches,
+      source,
       startInCodeBlock: false,
       thematicBreakLineFroms: collectThematicBreakLineFroms(markdownTree, source)
     }),

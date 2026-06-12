@@ -3,11 +3,11 @@ import { fileURLToPath } from 'node:url';
 
 import { app } from 'electron';
 
+import { APP_SETTINGS_STORAGE_KEYS } from '../../src/shared/config/appSettings.js';
 import {
   getLocalStorageAppSettingsKeys,
   getRuntimeAppSettingsKeys
 } from '../../src/shared/config/appSettingsClassification.js';
-import { APP_SETTINGS_STORAGE_KEYS } from '../../src/shared/config/appSettings.js';
 import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
 import { appendMainProcessDiagnosticLog } from '../diagnostics/mainProcessDiagnostics.js';
 import { writeStartupRendererHtml } from '../startupRendererPreparation.js';

@@ -87,6 +87,7 @@ it('normalizes node source details from the runtime bridge', async () => {
         importId: 'import-1',
         importedAt: '2026-03-22T10:00:00.000Z',
         nodeId: 'node-1',
+        nodeMutationPatch: null,
         provider: 'desktop_text_file',
         resultStatus: 'imported',
         sourceFingerprint: 'source-fingerprint-1',

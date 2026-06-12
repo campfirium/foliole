@@ -22,7 +22,7 @@ export function resetBackgroundPresenceForTests() {
 }
 
 function resolveTrayIconPath() {
-  return path.join(process.cwd(), 'build', 'icon.png');
+  return path.join(app.getAppPath(), 'build', 'icon.png');
 }
 
 function showMainWindow(window: BrowserWindow | null) {

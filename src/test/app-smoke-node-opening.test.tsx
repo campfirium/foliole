@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import './reactPdfMock';
@@ -60,6 +60,9 @@ it('updates active node content from editor changes', async () => {
   render(<App />);
   fireEvent.change(screen.getByTestId('editor-value'), {
     target: { value: 'Alpha Beta Gamma' }
+  });
+  await act(async () => {
+    await window.__folioleFlushPendingEditorDraftBeforeClose?.();
   });
   await waitFor(() => {
     expect(useWorkspaceStore.getState().nodesById['node-1']?.content).toBe('Alpha Beta Gamma');

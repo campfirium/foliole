@@ -25,7 +25,7 @@ it('uses the unified settings shell surfaces for sidebar and content area', () =
   expect(dialog.className).toContain('shadow-settings');
   expect(dialog.className).toContain('rounded-lg');
   expect(within(sidebar).getByText('Foliole')).toBeVisible();
-  expect(within(sidebar).getByText('v0.6.2')).toBeVisible();
+  expect(within(sidebar).getByText('v0.6.3')).toBeVisible();
   expect(sidebar.querySelector('img[src*="foliole-app-icon"]')).not.toBeNull();
   expect(within(sidebar).queryByRole('textbox', { name: 'Search settings' })).not.toBeInTheDocument();
   expect(screen.getByRole('textbox', { name: 'Search settings' })).toBeVisible();

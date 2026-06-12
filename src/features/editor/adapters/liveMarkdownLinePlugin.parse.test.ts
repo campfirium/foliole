@@ -65,7 +65,9 @@ describe('live Markdown parse reuse', () => {
       textAnchorDecorationsChanged: false
     })).toBe(false);
   });
+});
 
+describe('live Markdown decoration reuse', () => {
   it('builds preview decorations from pre-parsed markdown without internal reparses', () => {
     const view = createView(COMPLEX_MARKDOWN);
     const parseSpy = vi.spyOn(folioleMarkdownParser, 'parse');

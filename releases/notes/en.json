@@ -15,5 +15,25 @@
       "Import, organize, read, and review topics in one workspace.",
       "Check for updates from the About settings section."
     ]
+  },
+  "0.6.3": {
+    "notes": [
+      "New",
+      "Quick Entry and Quick Clipping: use a global shortcut in any window to open the Quick Entry panel and add typed content to Inbox; if text is already selected before the shortcut is pressed, that selection is added directly; confirming the panel without typing adds the current clipboard content, including images.",
+      "Local Markdown file editing: preview and edit Markdown documents on your computer directly.",
+      "Quick feedback: send suggestions and feedback directly in the app.",
+      "Improved",
+      "Tray presence: keeps Quick Entry, Quick Clipping, and LAN sync available in the background, lets you restore or quit from the system tray after closing the main window, and can be set to start with the system.",
+      "External folder display: hide external folder entries from settings when you are not using them.",
+      "Editing experience: long documents feel smoother while typing.",
+      "Window and panel details: startup, window restore, resizing, and sidebar content display have been adjusted.",
+      "Safety handling: local paths, remote content, update links, and LAN sync requests now go through clearer scope checks.",
+      "Fixed",
+      "Deleted content in Trash now opens correctly.",
+      "Restoring content from Trash now returns to a more appropriate navigation position.",
+      "Bulk restore from Trash no longer repeatedly jumps to a single topic.",
+      "Delete actions during review now apply to the content currently being viewed.",
+      "Escape now exits editing correctly while editing during review."
+    ]
   }
 }

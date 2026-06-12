@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, type ChangeEvent } from 'react';
 
 import type { EditorAdapter } from '../features/editor/adapters/EditorAdapter';
 
@@ -64,25 +64,44 @@ export const mockEditorAdapter: EditorAdapter = {
   onScroll: () => () => undefined
 };
 
-export function MarkdownEditor({
-  ariaLabel,
-  readingSelection,
-  nodeViewState,
-  value,
-  onChange,
-  onImageLoadStateChange,
-  onReady,
-  reviewEscapeBlurEnabled
-}: {
+interface MockMarkdownEditorProps {
   ariaLabel?: string;
   readingSelection?: { from: number; to: number } | null;
+  nodeId?: string | null;
   nodeViewState?: { selection: { from: number; to: number } };
   value: string;
   onChange: (value: string) => void;
+  onDocumentInput?: (meta: { nodeId: string | null }) => void;
   onImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
   onReady?: (adapter: EditorAdapter | null) => void;
   reviewEscapeBlurEnabled?: boolean;
-}) {
+}
+
+interface MockEditorChangeProps {
+  nodeId: string | null;
+  onChange: (value: string) => void;
+  onDocumentInput: ((meta: { nodeId: string | null }) => void) | undefined;
+}
+
+function handleMockEditorChange(event: ChangeEvent<HTMLTextAreaElement>, props: MockEditorChangeProps) {
+  const nextValue = event.currentTarget.value;
+  mockEditorState.content = nextValue;
+  props.onDocumentInput?.({ nodeId: props.nodeId ?? null });
+  props.onChange(nextValue);
+}
+
+export function MarkdownEditor({
+  ariaLabel,
+  readingSelection,
+  nodeId,
+  nodeViewState,
+  value,
+  onChange,
+  onDocumentInput,
+  onImageLoadStateChange,
+  onReady,
+  reviewEscapeBlurEnabled
+}: MockMarkdownEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   mockEditorState.content = value;
   useLayoutEffect(() => {
@@ -112,11 +131,7 @@ export function MarkdownEditor({
       aria-label={ariaLabel ?? 'Mock editor'}
       data-review-escape-blur={reviewEscapeBlurEnabled ? 'true' : 'false'}
       data-testid={ariaLabel === 'Answer editor' ? 'answer-editor-value' : 'editor-value'}
-      onChange={(event) => {
-        const nextValue = event.currentTarget.value;
-        mockEditorState.content = nextValue;
-        onChange(nextValue);
-      }}
+      onChange={(event) => handleMockEditorChange(event, { nodeId: nodeId ?? null, onChange, onDocumentInput })}
       ref={textareaRef}
       value={value}
     />

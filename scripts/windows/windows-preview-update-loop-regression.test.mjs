@@ -116,7 +116,7 @@ describe('windows-preview update loop regressions', { timeout: 15000 }, () => {
         WINDOWS_CLIENT_SCRIPT: clientScript,
         WINDOWS_RESTART_INTENT_ROOT: tempRoot,
         WINDOWS_PREVIEW_CURRENT_HEAD: 'current-head',
-        WINDOWS_PREVIEW_CHANGED_FILES: 'src/app/App.tsx'
+        WINDOWS_PREVIEW_CHANGED_FILES: 'src/features/editor/model/liveMarkdownViewportPlans.ts'
       });
       const rendererReloadDelivery = await readRendererReloadDelivery(tempRoot);
 
@@ -160,13 +160,13 @@ describe('windows-preview update loop regressions', { timeout: 15000 }, () => {
         WINDOWS_CLIENT_SCRIPT: clientScript,
         WINDOWS_RESTART_INTENT_ROOT: tempRoot,
         WINDOWS_PREVIEW_CURRENT_HEAD: 'current-head',
-        WINDOWS_PREVIEW_CHANGED_FILES: ['src/app/App.tsx', 'electron/preload.ts'].join('\n'),
+        WINDOWS_PREVIEW_CHANGED_FILES: ['src/features/editor/model/liveMarkdownViewportPlans.ts', 'electron/main.ts'].join('\n'),
         WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS: '4'
       });
 
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('reason: Class B: working tree runtime and renderer changes detected');
-      expect(result.stdout).toContain('[windows-sync] include electron-dist');
+      expect(result.stdout).toContain('[electron-dist-sync] status: SYNCED files=1');
       expect(result.stdout).toContain('selected action: restart-intent');
       expect(result.stdout).toContain('status: STARTED');
       expect(await readActions(actionLog)).toEqual(['status', 'status']);

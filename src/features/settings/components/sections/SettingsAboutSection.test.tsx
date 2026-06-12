@@ -47,7 +47,7 @@ it('shows application info and copies the diagnostic report in the about section
   });
   renderWithLocalization(<SettingsAboutSection />);
 
-  expect(await screen.findByText('Version 0.6.2')).toBeInTheDocument();
+  expect(await screen.findByText('Version 0.6.3')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Check for Updates' })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Copy diagnostic report' }));
   await waitFor(() => {

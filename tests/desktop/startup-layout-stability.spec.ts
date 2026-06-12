@@ -3,13 +3,13 @@ import path from 'node:path';
 
 import { _electron as electron, expect, test } from '@playwright/test';
 
+import { writePrebuiltRendererHtmlForSettings } from '../../electron-dist/electron/runtimeRendererHtml.js';
 import {
   createDesktopLaunchOptions,
   resolveDesktopAppRoot,
   resolveDesktopLaunchTarget
 } from '../../scripts/windows/playwright-desktop-harness.mjs';
 import { createDesktopIsolationContext } from '../../scripts/windows/playwright-desktop-isolation.mjs';
-import { writePrebuiltRendererHtmlForSettings } from '../../electron-dist/electron/runtimeRendererHtml.js';
 
 const FRAME_COUNT = 40;
 const FRAME_INTERVAL_MS = 80;
@@ -65,7 +65,7 @@ async function sampleStartupLayout(page: Awaited<ReturnType<typeof electron.laun
   }, index);
 }
 
-test('startup layout variables stay stable from static shell through React takeover', async ({}, testInfo) => {
+test('startup layout variables stay stable from static shell through React takeover', async (_, testInfo) => {
   const appRoot = resolveDesktopAppRoot();
   const target = resolveDesktopLaunchTarget(appRoot);
   const isolation = createDesktopIsolationContext();

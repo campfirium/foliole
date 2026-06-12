@@ -30,6 +30,9 @@ const EXPLICIT_FILE_SUBDOMAINS = new Map([
   ['src/shared/platform/companionUuid.ts', 'companion-runtime-plugin'],
   ['src/shared/platform/companionWorkspaceSync.testSupport.ts', 'companion-runtime-plugin'],
   ['src/shared/platform/databaseMaintenanceStatusRuntimeRepository.ts', 'desktop-runtime-repository'],
+  ['src/shared/platform/libraryPathSettingsCache.ts', 'desktop-runtime-repository'],
+  ['src/shared/platform/localFileRuntimeRepository.ts', 'desktop-runtime-repository'],
+  ['src/shared/platform/loginItemSettings.ts', 'desktop-runtime-repository'],
   ['src/shared/platform/readwiseOriginalFileWidgetEvents.ts', 'import-runtime'],
   ['src/shared/platform/releaseLinks.ts', 'runtime-core'],
   ['src/shared/platform/remoteImageSourceRecovery.ts', 'external-runtime'],
@@ -41,7 +44,9 @@ const EXPLICIT_FILE_SUBDOMAINS = new Map([
   ['src/shared/platform/webLookupActionResolution.ts', 'external-runtime'],
   ['src/shared/platform/webLookupEntries.ts', 'external-runtime'],
   ['src/shared/platform/webLookupEntryDefaults.ts', 'external-runtime'],
-  ['src/shared/platform/webLookupTemplateResolution.ts', 'external-runtime']
+  ['src/shared/platform/webLookupTemplateResolution.ts', 'external-runtime'],
+  ['src/shared/platform/workspaceRuntimeMutationResults.ts', 'runtime-core'],
+  ['src/shared/platform/workspaceRuntimeTypes.ts', 'runtime-core']
 ]);
 
 const FILE_SUBDOMAIN_RULES = [

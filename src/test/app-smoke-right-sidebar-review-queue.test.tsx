@@ -8,7 +8,7 @@ import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode } from './app-smoke.shared';
 
-it('renders the review queue panel with the active session queue', () => {
+it('renders the review queue panel with the active session queue', async () => {
   useWorkspaceStore.setState((state) => ({
     ...state,
     activeNodeId: 'fsrs-1',
@@ -59,15 +59,15 @@ it('renders the review queue panel with the active session queue', () => {
   }));
 
   render(<App />);
-  fireEvent.click(screen.getByRole('button', { name: 'Flow panel' }));
-  const queueList = screen.getByRole('list', { name: 'Flow items' });
+  fireEvent.click(await screen.findByRole('button', { name: 'Flow panel' }));
+  const queueList = await screen.findByRole('list', { name: 'Flow items' });
 
   expect(screen.getByRole('button', { name: 'Flow panel' })).toHaveAttribute('aria-pressed', 'true');
   expect(within(queueList).getByText(/Review prompt$/)).toBeInTheDocument();
   expect(within(queueList).getByText(/Reading passage$/)).toBeInTheDocument();
 });
 
-it('labels cloze review nodes as FSRS in the review queue panel', () => {
+it('labels cloze review nodes as FSRS in the review queue panel', async () => {
   useWorkspaceStore.setState((state) => ({
     ...state,
     activeNodeId: 'cloze-1',
@@ -112,13 +112,13 @@ it('labels cloze review nodes as FSRS in the review queue panel', () => {
   }));
 
   render(<App />);
-  fireEvent.click(screen.getByRole('button', { name: 'Flow panel' }));
-  const queueList = screen.getByRole('list', { name: 'Flow items' });
+  fireEvent.click(await screen.findByRole('button', { name: 'Flow panel' }));
+  const queueList = await screen.findByRole('list', { name: 'Flow items' });
 
   expect(within(queueList).getByText(/Cloze prompt$/)).toBeInTheDocument();
 });
 
-it('shows due extension entries beside the live task queue', () => {
+it('shows due extension entries beside the live task queue', async () => {
   useWorkspaceStore.setState((state) => ({
     ...state,
     activeNodeId: 'reading-1',
@@ -173,8 +173,8 @@ it('shows due extension entries beside the live task queue', () => {
   }));
 
   render(<App />);
-  fireEvent.click(screen.getByRole('button', { name: 'Flow panel' }));
-  const queueList = screen.getByRole('list', { name: 'Flow items' });
+  fireEvent.click(await screen.findByRole('button', { name: 'Flow panel' }));
+  const queueList = await screen.findByRole('list', { name: 'Flow items' });
 
   expect(within(queueList).getByText(/Scheduled review card$/)).toBeInTheDocument();
   expect(within(queueList).getByText(/Reading passage$/)).toBeInTheDocument();

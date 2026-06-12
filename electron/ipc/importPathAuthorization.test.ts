@@ -9,9 +9,16 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 const { loadExternalSearchFolders } = vi.hoisted(() => ({
   loadExternalSearchFolders: vi.fn()
 }));
+const { getLocalFileMetadata } = vi.hoisted(() => ({
+  getLocalFileMetadata: vi.fn()
+}));
 
 vi.mock('../database/externalSearchFolders.js', () => ({
   loadExternalSearchFolders
+}));
+
+vi.mock('../database/localFiles.js', () => ({
+  getLocalFileMetadata
 }));
 
 import {
@@ -26,6 +33,7 @@ let tempRoot = '';
 beforeEach(async () => {
   resetImportPathAuthorizationForTests();
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-import-path-auth-'));
+  getLocalFileMetadata.mockReturnValue(null);
   loadExternalSearchFolders.mockReturnValue([]);
 });
 
@@ -60,4 +68,20 @@ it('allows external search imports only when the file resolves inside a configur
 
   await expect(assertExternalSearchImportPath(filePath)).resolves.toBe(filePath);
   await expect(assertExternalSearchImportPath(outsidePath)).rejects.toThrow('External search import path is not authorized.');
+});
+
+it('allows opened local file imports when the main process already tracks the file', async () => {
+  const filePath = path.join(tempRoot, 'opened.md');
+  await fs.writeFile(filePath, '# Opened', 'utf8');
+  getLocalFileMetadata.mockReturnValue({
+    absolutePath: filePath,
+    id: 'local-1',
+    lastOpenedAt: '2026-06-12T08:32:00.000Z',
+    missingAt: null,
+    title: 'opened.md'
+  });
+  loadExternalSearchFolders.mockClear();
+
+  await expect(assertExternalSearchImportPath(filePath)).resolves.toBe(filePath);
+  expect(loadExternalSearchFolders).not.toHaveBeenCalled();
 });

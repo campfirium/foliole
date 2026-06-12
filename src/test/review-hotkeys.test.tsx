@@ -40,6 +40,10 @@ function seedActiveNode(node: ReturnType<typeof createNode>) {
   }));
 }
 
+async function enterFlow() {
+  fireEvent.click(await screen.findByRole('button', { name: 'Enter Flow' }));
+}
+
 it('supports review keyboard flow with edit mode guard (native Esc -> F)', async () => {
   seedActiveNode(
     createNode({
@@ -65,7 +69,7 @@ it('supports review keyboard flow with edit mode guard (native Esc -> F)', async
   const dispatchNativeKeyboard = installNativeKeyboardBridge();
   render(<App />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Enter Flow' }));
+  await enterFlow();
 
   const editor = screen.getByTestId('editor-value');
   expect(editor).toHaveAttribute('data-review-escape-blur', 'true');
@@ -103,7 +107,7 @@ it('uses reading hotkeys with F/R action keys and Space as Read', async () => {
 
   render(<App />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Enter Flow' }));
+  await enterFlow();
 
   expect(screen.getByRole('button', { name: 'Later' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Read' })).toBeInTheDocument();
@@ -128,7 +132,7 @@ it('dismisses reading review items with R', async () => {
 
   render(<App />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Enter Flow' }));
+  await enterFlow();
   fireEvent.keyDown(window, { key: 'r', code: 'KeyR' });
 
   await waitFor(() => {
@@ -148,7 +152,7 @@ it('uses numeric reading fallback keys', async () => {
 
   render(<App />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Enter Flow' }));
+  await enterFlow();
   fireEvent.keyDown(window, { key: '3', code: 'Digit3' });
 
   await waitFor(() => {
@@ -168,7 +172,7 @@ it('deletes the current review item with T and Delete', async () => {
 
   render(<App />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Enter Flow' }));
+  await enterFlow();
   fireEvent.keyDown(window, { key: 't', code: 'KeyT' });
 
   await waitFor(() => {

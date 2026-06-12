@@ -5,16 +5,14 @@ import path from 'node:path';
 
 import { afterEach, expect, it, vi } from 'vitest';
 
-const runtimeMocks = vi.hoisted(() => ({
-  userDataPath: '/tmp'
-}));
+const runtimeMocks = vi.hoisted(() => ({ appPath: process.cwd(), userDataPath: '/tmp' }));
 
 vi.mock('electron', () => ({
   app: {
+    getAppPath: () => runtimeMocks.appPath,
     getPath: () => runtimeMocks.userDataPath
   }
 }));
-
 import {
   injectDevRendererIntoHtml,
   injectStartupTokensIntoRendererHtml,
@@ -25,6 +23,7 @@ import {
 const tempRoots: string[] = [];
 
 afterEach(async () => {
+  runtimeMocks.appPath = process.cwd();
   runtimeMocks.userDataPath = '/tmp';
   for (const tempRoot of tempRoots.splice(0)) {
     await fs.rm(tempRoot, { recursive: true, force: true });
@@ -116,6 +115,7 @@ it('loads the prebuilt dev renderer html without waiting for Vite to render the 
   const indexPath = path.join(tempRoot, 'index.html');
   const runtimeHtmlDir = path.join(tempRoot, 'userData');
   const runtimeIndexPath = path.join(runtimeHtmlDir, 'runtime-renderer-index.html');
+  runtimeMocks.appPath = runtimeDir;
   runtimeMocks.userDataPath = runtimeHtmlDir;
   await fs.mkdir(runtimeDir, { recursive: true });
   await fs.writeFile(
@@ -155,6 +155,7 @@ it('falls back to the Vite dev renderer when no prebuilt startup html exists', a
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-renderer-loader-'));
   tempRoots.push(tempRoot);
   const runtimeHtmlDir = path.join(tempRoot, 'userData');
+  runtimeMocks.appPath = tempRoot;
   runtimeMocks.userDataPath = runtimeHtmlDir;
   process.env.ELECTRON_RENDERER_URL = 'http://127.0.0.1:24600/';
   const window = {

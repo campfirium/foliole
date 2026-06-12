@@ -5,8 +5,13 @@ import './app-smoke.shared';
 
 import { App } from '../app/App';
 import type { ElectronAPI } from '../shared/platform/electronApi';
+import { useWorkspaceStore } from '../store/workspaceStore';
 
-import { createImportedNodeRuntimeInvoke, createSuccessfulImportResult } from './app-smoke-inbox-node.support';
+import {
+  createImportedNodeRuntimeInvoke,
+  createImportedWorkspaceSnapshot,
+  createSuccessfulImportResult
+} from './app-smoke-inbox-node.support';
 
 async function getNodeListPanel() {
   return (await screen.findAllByRole('complementary', { name: 'Topic list panel' }))[0]!;
@@ -19,6 +24,10 @@ it('shows Inbox in the node tree and opens the folder list surface', async () =>
     onNativeMenuCommand: () => () => undefined,
     onWindowResized: () => () => undefined
   };
+  useWorkspaceStore.setState({
+    ...createImportedWorkspaceSnapshot(),
+    isHydrated: true
+  });
 
   render(<App />);
 
@@ -29,7 +38,7 @@ it('shows Inbox in the node tree and opens the folder list surface', async () =>
 
   expect(screen.getByRole('heading', { level: 2, name: 'Inbox' })).toBeInTheDocument();
   expect(screen.getByRole('list', { name: 'Folder contents' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Open Imported note' })).toBeInTheDocument();
+  expect(await screen.findByTestId('folder-list-title-node-imported')).toHaveTextContent('Imported note');
   expect(screen.queryByLabelText('Prompt editor')).not.toBeInTheDocument();
 });
 

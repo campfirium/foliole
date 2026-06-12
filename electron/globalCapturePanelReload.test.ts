@@ -45,7 +45,7 @@ const { electronMocks, panelWindow } = vi.hoisted(() => {
   };
   return {
     electronMocks: {
-      BrowserWindow: Object.assign(vi.fn(function BrowserWindow() {
+      app: { getAppPath: vi.fn(() => '/app') }, BrowserWindow: Object.assign(vi.fn(function BrowserWindow() {
         return window;
       }), { getAllWindows: vi.fn(() => [{ isDestroyed: vi.fn(() => false), webContents }]) }),
       ipcMain: {

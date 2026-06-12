@@ -114,9 +114,10 @@ async function seedReadwiseFixture() {
 }
 
 async function expectRemovedSourceUsesCachedContent(sourceDir: string) {
-  expect((await loadRemovedSources()).entries).toEqual([
+  const loadedEntries = (await loadRemovedSources()).entries;
+  expect(loadedEntries).toEqual([
     expect.objectContaining({
-      content: '# Entry\n\n![Cover](data:image/png;base64,cG5n)\n\nFresh body\n',
+      content: expect.stringContaining('![Cover](foliole-ext-image://resource/?'),
       content_preview: 'Fresh body',
       source_path: 'entry.md',
       title: 'Entry'
@@ -125,19 +126,19 @@ async function expectRemovedSourceUsesCachedContent(sourceDir: string) {
   await fs.rm(path.join(sourceDir, 'entry.md'));
   expect((await loadRemovedSources()).entries).toEqual([
     expect.objectContaining({
-      content: '# Entry\n\n![Cover](data:image/png;base64,cG5n)\n\nFresh body\n',
+      content: expect.stringContaining('![Cover](foliole-ext-image://resource/?'),
       source_path: 'entry.md',
       title: 'Entry'
     })
   ]);
-  expect(
-    openDatabaseConnection().sqlite
-      .prepare(`SELECT title, content FROM keep_import_item_cache WHERE rule_id = ? AND source_path = ?`)
-      .get('draft-import-source-301', 'entry.md')
-  ).toMatchObject({
-    content: '# Entry\n\n![Cover](data:image/png;base64,cG5n)\n\nFresh body\n',
+  const cached = openDatabaseConnection().sqlite
+    .prepare(`SELECT title, content FROM keep_import_item_cache WHERE rule_id = ? AND source_path = ?`)
+    .get('draft-import-source-301', 'entry.md');
+  expect(cached).toMatchObject({
+    content: expect.stringContaining('![Cover](foliole-ext-image://resource/?'),
     title: 'Entry'
   });
+  expect((cached as { content?: string } | null)?.content).toContain('Fresh body');
   await fs.writeFile(path.join(sourceDir, 'entry.md'), '# Entry\n\n![Cover](images/cover.png)\n\nFresh body\n', 'utf8');
 }
 

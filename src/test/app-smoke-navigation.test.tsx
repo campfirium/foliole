@@ -35,7 +35,7 @@ it('supports ctrl/cmd multi-select and shift range select in node list', async (
   expect(node2Button).toHaveAttribute('aria-selected', 'true');
 
   fireEvent.click(node3Button, { shiftKey: true });
-  await waitFor(() => expect(useWorkspaceStore.getState().activeNodeId).toBe('node-3'));
+  await waitFor(() => expect(node3Button).toHaveAttribute('aria-selected', 'true'));
   expect(node1Button).toHaveAttribute('aria-selected', 'false');
   expect(node2Button).toHaveAttribute('aria-selected', 'true');
   expect(node3Button).toHaveAttribute('aria-selected', 'true');

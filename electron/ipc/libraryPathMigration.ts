@@ -49,7 +49,7 @@ function isRecoverableMoveError(error: unknown) {
   }
 
   const code = 'code' in error ? error.code : null;
-  return code === 'EXDEV' || code === 'EEXIST' || code === 'ENOTEMPTY';
+  return code === 'EXDEV' || code === 'EEXIST' || code === 'ENOTEMPTY' || code === 'EACCES' || code === 'EPERM';
 }
 
 async function moveDirectoryContents(sourcePath: string, targetPath: string) {

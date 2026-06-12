@@ -16,7 +16,7 @@ it('renders title, description, and actions in the header', () => {
     </SettingsSection>
   );
 
-  expect(container.querySelector('section')?.className).toContain('before:right-5');
+  expect(container.querySelector('section')?.className).toContain('before:right-settings-panel-x');
   expect(container.querySelector('section')?.className).toContain('first:before:hidden');
   expect(screen.getByRole('heading', { level: 3, name: 'Hotkeys' })).toBeInTheDocument();
   expect(screen.getByText('Section copy.')).toBeInTheDocument();

@@ -101,7 +101,7 @@ it('keeps embedded images attached to their own fragment section only', async ()
       '<h1 id="chapter-2">Chapter 2</h1><p>Second body.</p><img src="../images/two.jpeg" alt="Two"/>',
     extraEntries: [
       { content: new Uint8Array([0xff, 0xd8, 0xff, 0xd9]), name: 'OPS/images/one.jpeg' },
-      { content: new Uint8Array([0xff, 0xd8, 0x00, 0xff, 0xd9]), name: 'OPS/images/two.jpeg' }
+      { content: new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0xff, 0xd9]), name: 'OPS/images/two.jpeg' }
     ],
     manifestExtra:
       '<item id="one" href="images/one.jpeg" media-type="image/jpeg"/><item id="two" href="images/two.jpeg" media-type="image/jpeg"/>',

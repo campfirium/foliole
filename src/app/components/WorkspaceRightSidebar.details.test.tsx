@@ -28,7 +28,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-it('renders backlinks in the dedicated inspector panel and opens the linked note', () => {
+it('renders backlinks in the dedicated inspector panel and opens the linked note', async () => {
   const onSelectNode = vi.fn();
 
   render(
@@ -58,7 +58,7 @@ it('renders backlinks in the dedicated inspector panel and opens the linked note
     />
   );
 
-  expect(screen.getByRole('heading', { level: 3, name: 'Backlinks' })).toBeInTheDocument();
+  expect(await screen.findByRole('heading', { level: 3, name: 'Backlinks' })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: /source note/i }));
 
   expect(onSelectNode).toHaveBeenCalledWith('source');

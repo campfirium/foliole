@@ -1,5 +1,7 @@
 import { type KeyboardEvent as ReactKeyboardEvent, useEffect, type MutableRefObject } from 'react';
 
+import { dispatchReviewEditorEscapeBlur } from '../../../shared/platform/reviewEditorEscape';
+
 import type { MarkdownEditorProps } from './markdownEditorTypes';
 import { handleEditorUndoRedoKeyDown } from './markdownEditorUndoRedoShortcut';
 
@@ -16,6 +18,7 @@ function blurReviewEditorIfEscape(event: KeyboardEvent | ReactKeyboardEvent<HTML
     return false;
   }
   activeElement.blur();
+  dispatchReviewEditorEscapeBlur();
   return true;
 }
 

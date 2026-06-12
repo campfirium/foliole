@@ -3,6 +3,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
+  appPath: '/app',
   appQuit: vi.fn(),
   createFromPath: vi.fn((path: string) => ({ path })),
   focusWindow: vi.fn(),
@@ -16,7 +17,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('electron', () => ({
-  app: { quit: mocks.appQuit },
+  app: { getAppPath: () => mocks.appPath, quit: mocks.appQuit },
   Menu: {
     buildFromTemplate: vi.fn((template) => template)
   },
@@ -46,6 +47,7 @@ vi.mock('./runtimeMainSupport.js', () => ({
 
 beforeEach(async () => {
   vi.clearAllMocks();
+  mocks.appPath = '/app';
   const { resetBackgroundPresenceForTests } = await import('./backgroundPresence.js');
   resetBackgroundPresenceForTests();
   mocks.trayInstances.length = 0;
@@ -62,6 +64,7 @@ it('installs a minimal Windows tray with open and quit actions', async () => {
   });
 
   const tray = mocks.trayInstances[0]!;
+  expect(mocks.createFromPath).toHaveBeenCalledWith('/app/build/icon.png');
   expect(tray.setToolTip).toHaveBeenCalledWith('Foliole');
   const menu = tray.menu as Array<{ click?: () => void; label?: string }>;
   expect(menu.map((item) => item.label).filter(Boolean)).toEqual(['Open Foliole', 'Quit Foliole']);

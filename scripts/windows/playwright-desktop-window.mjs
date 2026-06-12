@@ -19,12 +19,16 @@ async function isDesktopRootPage(page) {
 
 export async function waitForDesktopRootWindow(electronApp, timeoutMs) {
   const deadline = Date.now() + timeoutMs;
-  await electronApp.firstWindow({ timeout: timeoutMs });
+  const firstWindow = await electronApp.firstWindow({ timeout: timeoutMs });
+  let lastWindow = firstWindow;
   while (Date.now() < deadline) {
     for (const page of electronApp.windows()) {
+      lastWindow = page;
       if (await isDesktopRootPage(page)) return page;
     }
     await delay(100);
   }
-  throw new Error('desktop root window was not found');
+  const error = new Error('desktop root window was not found');
+  error.windowPage = lastWindow;
+  throw error;
 }

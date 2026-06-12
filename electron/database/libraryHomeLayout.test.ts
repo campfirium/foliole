@@ -77,7 +77,7 @@ it('initializes and keeps using the library home directory layout across restart
 
   seedNode('node-1');
   const sourcePath = path.join(tempRoot, 'cover.png');
-  const imageBytes = Buffer.from('png-image-bytes');
+  const imageBytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
   const hash = createHash('sha256').update(imageBytes).digest('hex');
   await fs.writeFile(sourcePath, imageBytes);
 

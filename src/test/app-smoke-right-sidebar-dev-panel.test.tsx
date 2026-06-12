@@ -9,7 +9,7 @@ import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode, FIXED_TIMESTAMP } from './app-smoke.shared';
 
-it('renders topic scheduling from reading cadence instead of FSRS fields', () => {
+it('renders topic scheduling from reading cadence instead of FSRS fields', async () => {
   useWorkspaceStore.setState((state) => ({
     ...state,
     activeNodeId: 'topic-dev',
@@ -38,8 +38,8 @@ it('renders topic scheduling from reading cadence instead of FSRS fields', () =>
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.rightSidebarActivePanel, 'dev');
   render(<App />);
 
-  expect(screen.getByRole('button', { name: 'More right sidebar panels' })).toHaveAttribute('aria-pressed', 'true');
-  expect(screen.getByText('Scheduling')).toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: 'More right sidebar panels' })).toHaveAttribute('aria-pressed', 'true');
+  expect(await screen.findByText('Scheduling')).toBeInTheDocument();
   expect(screen.getByText('Topic')).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Schedule' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Decision parameters' })).toBeInTheDocument();
@@ -55,7 +55,7 @@ it('renders topic scheduling from reading cadence instead of FSRS fields', () =>
   expect(screen.queryByText('Flow')).not.toBeInTheDocument();
 });
 
-it('renders item scheduling from FSRS review data', () => {
+it('renders item scheduling from FSRS review data', async () => {
   useWorkspaceStore.setState((state) => ({
     ...state,
     activeNodeId: 'item-dev',
@@ -87,8 +87,8 @@ it('renders item scheduling from FSRS review data', () => {
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.rightSidebarActivePanel, 'dev');
   render(<App />);
 
-  expect(screen.getByRole('button', { name: 'More right sidebar panels' })).toHaveAttribute('aria-pressed', 'true');
-  expect(screen.getByText('Scheduling')).toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: 'More right sidebar panels' })).toHaveAttribute('aria-pressed', 'true');
+  expect(await screen.findByText('Scheduling')).toBeInTheDocument();
   expect(screen.getByText('Item')).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Schedule' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Decision parameters' })).toBeInTheDocument();

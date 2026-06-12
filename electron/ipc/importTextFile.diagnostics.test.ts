@@ -2,7 +2,7 @@
 
 import path from 'node:path';
 
-import { beforeEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 const { readFile, recordPreparedImportFailure, runPreparedImport } = vi.hoisted(() => ({
   readFile: vi.fn(),
@@ -36,10 +36,12 @@ vi.mock('../import/managedInboxEvents.js', () => ({
   notifyManagedInboxUpdated: vi.fn()
 }));
 
+import { authorizeSelectedImportFilePath, resetImportPathAuthorizationForTests } from './importPathAuthorization.js';
 import { runTextFileImport } from './importTextFile.js';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resetImportPathAuthorizationForTests();
   readFile.mockResolvedValue('# Secret body');
   runPreparedImport.mockImplementation(() => {
     throw new Error('Import failed');
@@ -61,7 +63,13 @@ beforeEach(() => {
   });
 });
 
+afterEach(() => {
+  resetImportPathAuthorizationForTests();
+});
+
 it('records a safe operation failure diagnostic when file import is caught as a failed result', async () => {
+  await authorizeSelectedImportFilePath('/tmp/private/book.md');
+
   await expect(runTextFileImport(undefined, { file_path: '/tmp/private/book.md' })).resolves.toMatchObject({
     failure_reason: 'Import failed',
     import_id: 'import-failed',

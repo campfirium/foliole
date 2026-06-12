@@ -36,6 +36,9 @@ describe('playwright electron spike', () => {
     let closed = false;
     const windowPage = {
       async evaluate(pageFunction, appReadyFlag) {
+        if (appReadyFlag === undefined) {
+          return true;
+        }
         expect(appReadyFlag).toBe(APP_READY_FLAG);
         return {
           href: 'file:///workspace/foliole/dist/index.html',
@@ -86,6 +89,9 @@ describe('playwright electron spike', () => {
             expect(timeout).toBeLessThanOrEqual(12_345);
             return windowPage;
           },
+          windows() {
+            return [windowPage];
+          },
           process() {
             return { pid: 4242 };
           }
@@ -97,6 +103,7 @@ describe('playwright electron spike', () => {
       appRoot: '/workspace/foliole',
       electronLauncher,
       env: {
+        FOLIOLE_ELECTRON_PLAYWRIGHT_ALLOW_STALE_RENDERER: '1',
         FOLIOLE_ELECTRON_SPIKE_TIMEOUT_MS: '12345',
         FOLIOLE_ELECTRON_TEST_STATE_ROOT: '/tmp/foliole-playwright-state'
       },
@@ -109,6 +116,7 @@ describe('playwright electron spike', () => {
         cwd: '/workspace/foliole',
         env: {
           FOLIOLE_ALLOW_PARALLEL_INSTANCE: '1',
+          FOLIOLE_ELECTRON_PLAYWRIGHT_ALLOW_STALE_RENDERER: '1',
           FOLIOLE_ELECTRON_SPIKE_TIMEOUT_MS: '12345',
           FOLIOLE_ELECTRON_TEST_STATE_ROOT: '/tmp/foliole-playwright-state',
           FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE: '1',

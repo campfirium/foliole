@@ -43,6 +43,9 @@ describe('playwright desktop launch diagnostics', () => {
               url: () => 'http://127.0.0.1:24600/'
             });
             return windowPage;
+          },
+          windows() {
+            return [windowPage];
           }
         };
       }
@@ -54,7 +57,7 @@ describe('playwright desktop launch diagnostics', () => {
         electronLauncher,
         env: {
           FOLIOLE_ELECTRON_PLAYWRIGHT_ALLOW_STALE_RENDERER: '1',
-          FOLIOLE_ELECTRON_PLAYWRIGHT_TIMEOUT_MS: '30000',
+          FOLIOLE_ELECTRON_PLAYWRIGHT_TIMEOUT_MS: '500',
           FOLIOLE_ELECTRON_TEST_STATE_ROOT: '/tmp/foliole-playwright-state'
         },
         existsSync: () => true

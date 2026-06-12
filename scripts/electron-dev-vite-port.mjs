@@ -1,3 +1,5 @@
+/* global process */
+
 const VITE_HOST = '127.0.0.1';
 const VITE_PORT_DEFAULT = 24600;
 const VITE_PORT_MAX_ATTEMPTS = 8;
