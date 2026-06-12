@@ -50,6 +50,19 @@ it('reads recent local file metadata without storing a content mirror', async ()
     .not.toEqual(expect.arrayContaining([expect.objectContaining({ name: 'content' })]));
 });
 
+it('removes opened local file records once the source file disappears', async () => {
+  const filePath = path.join(tempRoot, 'temporary.md');
+  await fs.writeFile(filePath, '# Temporary', 'utf8');
+  await readLocalFile(filePath);
+
+  await fs.rm(filePath);
+
+  expect(listLocalFiles()).toEqual([]);
+  expect(openDatabaseConnection().sqlite.prepare('SELECT COUNT(*) AS count FROM local_files').get())
+    .toMatchObject({ count: 0 });
+  expect(searchExternalDocuments('Temporary')).toEqual([]);
+});
+
 it('saves through mtime and size guards so external edits become conflicts', async () => {
   const filePath = path.join(tempRoot, 'guarded.md');
   await fs.writeFile(filePath, 'original', 'utf8');

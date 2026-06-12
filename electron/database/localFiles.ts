@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
@@ -80,6 +81,21 @@ function readLocalFileRow(absolutePath: string) {
   );
 }
 
+function deleteMissingLocalFileRows(rows: LocalFileRow[]) {
+  const missingRows = rows.filter((row) => !existsSync(row.absolute_path));
+  if (missingRows.length === 0) {
+    return rows;
+  }
+  const connection = openDatabaseConnection();
+  const missingAt = new Date().toISOString();
+  for (const row of missingRows) {
+    connection.driver.execute('DELETE FROM local_files WHERE absolute_path = ?', [row.absolute_path]);
+    markLocalDocumentSearchIndexMissing(row.absolute_path, missingAt);
+  }
+  const missingPaths = new Set(missingRows.map((row) => row.absolute_path));
+  return rows.filter((row) => !missingPaths.has(row.absolute_path));
+}
+
 function upsertLocalFileMetadata(args: {
   absolutePath: string;
   fileSize: number | null;
@@ -130,7 +146,7 @@ export function listLocalFiles() {
      FROM local_files
      ORDER BY last_opened_at DESC, title COLLATE NOCASE ASC`
   );
-  return rows.map(toEntry);
+  return deleteMissingLocalFileRows(rows).map(toEntry);
 }
 
 export function getLocalFileMetadata(filePath: string) {
