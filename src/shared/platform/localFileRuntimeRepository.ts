@@ -1,11 +1,9 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type {
-  NativeLocalFileEntry,
   NativeLocalFileReadResult,
   NativeLocalFileSaveResult
 } from '../../../lib/platform/nativeLocalFileCommandMap';
 
-import { getElectronAPI, type LocalFileOpenedPayload } from './electronApi';
 import { getRuntimeInvoke } from './runtimeInvoke';
 
 function requireRuntimeInvoke() {
@@ -14,14 +12,6 @@ function requireRuntimeInvoke() {
     throw new Error('Local files require the desktop runtime.');
   }
   return runtimeInvoke;
-}
-
-export function subscribeLocalFileOpened(handler: (payload: LocalFileOpenedPayload) => void) {
-  return getElectronAPI()?.onLocalFileOpened?.(handler) ?? (() => undefined);
-}
-
-export async function listLocalFiles(): Promise<NativeLocalFileEntry[]> {
-  return requireRuntimeInvoke()(NATIVE_COMMANDS.listLocalFiles);
 }
 
 export async function readLocalFile(path: string): Promise<NativeLocalFileReadResult> {

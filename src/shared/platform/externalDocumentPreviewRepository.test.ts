@@ -34,13 +34,33 @@ it('loads external document previews through the native external search command'
   expect(result).toEqual({
     absolutePath: '/library/topic.md',
     content: '# Topic',
+    editable: undefined,
     extension: 'md',
     fileName: 'topic.md',
+    fileSize: null,
     folderId: 'folder-1',
     folderPath: '/library',
     importedNodeId: null,
     isPresent: undefined,
     lastOpenedAt: null,
+    modifiedAt: null,
+    sourceKind: undefined,
     relativePath: 'topic.md'
+  });
+});
+
+it('passes local file source context to external preview loading', async () => {
+  const invoke = vi.fn(async (command: string) => (command === NATIVE_COMMANDS.loadExternalSearchPreview ? createNativePreview() : null));
+  window.electronAPI = { invoke } as unknown as ElectronAPI;
+
+  await loadExternalDocumentPreview('/library/topic.md', {
+    folderId: 'opened-external-documents',
+    sourceKind: 'local_file'
+  });
+
+  expect(invoke).toHaveBeenCalledWith(NATIVE_COMMANDS.loadExternalSearchPreview, {
+    absolute_path: '/library/topic.md',
+    folder_id: 'opened-external-documents',
+    source_kind: 'local_file'
   });
 });

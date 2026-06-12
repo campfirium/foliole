@@ -5,6 +5,12 @@ import {
 
 export type ExternalDocumentPreview = RuntimeExternalSearchPreview;
 
-export function loadExternalDocumentPreview(absolutePath: string) {
-  return loadRuntimeExternalSearchPreview(absolutePath);
+export function loadExternalDocumentPreview(
+  absolutePath: string,
+  options: {
+    folderId?: string | undefined;
+    sourceKind?: 'external_document' | 'local_file' | undefined;
+  } = {}
+) {
+  return loadRuntimeExternalSearchPreview(absolutePath, options);
 }

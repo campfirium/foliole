@@ -1,7 +1,6 @@
 import { expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  loadExternalSearchFolders: vi.fn((): Array<{ folder_path: string }> => []),
   readLocalFile: vi.fn(async (filePath: string) => ({ absolutePath: filePath, status: 'ready' })),
   recordOpenedExternalDocument: vi.fn()
 }));
@@ -14,10 +13,6 @@ vi.mock('electron', () => ({
 
 vi.mock('./database/externalOpenedDocuments.js', () => ({
   recordOpenedExternalDocument: mocks.recordOpenedExternalDocument
-}));
-
-vi.mock('./database/externalSearchFolders.js', () => ({
-  loadExternalSearchFolders: mocks.loadExternalSearchFolders
 }));
 
 vi.mock('./database/localFiles.js', () => ({
@@ -43,7 +38,7 @@ it('extracts supported Markdown file paths from launch arguments', () => {
   ]);
 });
 
-it('sends OS-opened files outside external search folders as local file events', async () => {
+it('sends OS-opened files outside external search folders through the opened files event', async () => {
   const lifecycle = installExternalDocumentFileOpenLifecycle();
   const window = {
     isDestroyed: () => false,
@@ -53,13 +48,16 @@ it('sends OS-opened files outside external search folders as local file events',
   lifecycle.setReadyWindow(window as never);
   lifecycle.enqueueFromArgv(['/app/foliole', '/outside/read.md']);
   await vi.waitFor(() => {
-    expect(window.webContents.send).toHaveBeenCalledWith('foliole:local-file-opened', { absolutePath: '/outside/read.md' });
+    expect(window.webContents.send).toHaveBeenCalledWith('foliole:external-document-file-opened', {
+      absolutePath: '/outside/read.md',
+      folderId: 'opened-external-documents',
+      sourceKind: 'local_file'
+    });
   });
   expect(mocks.recordOpenedExternalDocument).not.toHaveBeenCalled();
 });
 
-it('keeps OS-opened files inside external search folders on the read-only external document path', async () => {
-  mocks.loadExternalSearchFolders.mockReturnValue([{ folder_path: '/library' }]);
+it('sends OS-opened files inside external search folders through the editable local file path', async () => {
   mocks.recordOpenedExternalDocument.mockResolvedValue({ absolute_path: '/library/read.md', folder_id: 'folder-1' });
   const lifecycle = installExternalDocumentFileOpenLifecycle();
   const window = {
@@ -72,8 +70,10 @@ it('keeps OS-opened files inside external search folders on the read-only extern
   await vi.waitFor(() => {
     expect(window.webContents.send).toHaveBeenCalledWith('foliole:external-document-file-opened', {
       absolutePath: '/library/read.md',
-      folderId: 'folder-1'
+      folderId: 'opened-external-documents',
+      sourceKind: 'local_file'
     });
   });
-  expect(mocks.readLocalFile).not.toHaveBeenCalledWith('/library/read.md');
+  expect(mocks.readLocalFile).toHaveBeenCalledWith('/library/read.md');
+  expect(mocks.recordOpenedExternalDocument).not.toHaveBeenCalled();
 });

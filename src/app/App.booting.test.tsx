@@ -83,10 +83,6 @@ vi.mock('./components/WorkspaceLayout', () => ({
   WorkspaceLayout: () => <div>workspace-layout</div>
 }));
 
-vi.mock('./components/LocalFileEditorSurface', () => ({
-  LocalFileEditorSurface: () => null
-}));
-
 vi.mock('./components/CommandPalette', () => ({
   CommandPalette: overlayMocks.CommandPalette
 }));

@@ -28,7 +28,7 @@ export function rebuildExternalLibraryIndex(folderId?: string) {
 }
 
 export function subscribeExternalLibraryDocumentFileOpened(
-  handler: (payload: { absolutePath: string; folderId: string }) => void
+  handler: (payload: { absolutePath: string; folderId: string; sourceKind?: 'external_document' | 'local_file' }) => void
 ) {
   return subscribeRuntimeExternalDocumentFileOpened(handler);
 }

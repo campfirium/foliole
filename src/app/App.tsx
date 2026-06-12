@@ -10,7 +10,6 @@ import { ensureWorkspaceHydrated } from '../store/workspaceStoreHydration';
 import { AppProviders } from './AppProviders';
 import { AppOverlayStack, prewarmAppOverlayStack } from './components/AppOverlayStack';
 import { prewarmImportSourceWorkspace } from './components/ImportSourceWorkspace';
-import { LocalFileEditorSurface } from './components/LocalFileEditorSurface';
 import { useGlobalCaptureNavigation } from './components/useGlobalCaptureNavigation';
 import { WorkspaceLayout } from './components/WorkspaceLayout';
 import { prewarmWorkspaceRightSidebarPanels } from './components/workspaceRightSidebarPanelLoaders';
@@ -64,7 +63,6 @@ function AppContent() {
     <HotkeySettingsProvider {...controller.hotkeySettings}>
       <>
         <WorkspaceLayout {...workspaceLayoutProps} />
-        <LocalFileEditorSurface />
         <AppOverlayStack
           controller={controller}
           isFeedbackOpen={isFeedbackOpen}

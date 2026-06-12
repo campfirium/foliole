@@ -46,7 +46,7 @@ it('keeps Opened above manually ordered external folders without a special trail
       folders={[
         externalFolder('folder-1', '/library/1act'),
         externalFolder('folder-2', '/library/2think'),
-        externalFolder('opened-external-documents', 'Recent')
+        externalFolder('opened-external-documents', 'Local')
       ]}
       isExternalViewOpen={false}
       onOpenExternalSelection={vi.fn()}
@@ -68,7 +68,7 @@ it('explains Opened as files opened from disk', async () => {
   renderWithLocalization(
     <ExternalLibrarySection
       entriesByFolderId={{ 'opened-external-documents': [] }}
-      folders={[externalFolder('opened-external-documents', 'Recent')]}
+      folders={[externalFolder('opened-external-documents', 'Local')]}
       isExternalViewOpen={false}
       onOpenExternalSelection={vi.fn()}
       selection={{ kind: 'root' }}
@@ -92,14 +92,14 @@ it('shows opened files as one folder and only keeps the last compact path segmen
           extension: 'md',
           fileName: 'a.md',
           folderId: 'opened-external-documents',
-          folderPath: 'Recent',
+          folderPath: 'Local',
           modifiedAt: '2026-04-21T00:00:00.000Z',
           openingText: 'Alpha opening',
           relativePath: 'D:/T/test/a.md',
           title: 'Alpha'
         }]
       }}
-      folders={[externalFolder('opened-external-documents', 'Recent')]}
+      folders={[externalFolder('opened-external-documents', 'Local')]}
       isExternalViewOpen={false}
       onOpenExternalSelection={vi.fn()}
       selection={{ kind: 'root' }}
@@ -132,14 +132,14 @@ it('shows the full compact path in the tooltip text for opened file path rows', 
             extension: 'md',
             fileName: 'a.md',
             folderId: 'opened-external-documents',
-            folderPath: 'Recent',
+            folderPath: 'Local',
             modifiedAt: '2026-04-21T00:00:00.000Z',
             openingText: 'Alpha opening',
             relativePath: `${longPath}/a.md`,
             title: 'Alpha'
           }]
         }}
-        folders={[externalFolder('opened-external-documents', 'Recent')]}
+        folders={[externalFolder('opened-external-documents', 'Local')]}
         isExternalViewOpen={false}
         onOpenExternalSelection={vi.fn()}
         selection={{ kind: 'root' }}

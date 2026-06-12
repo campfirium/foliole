@@ -31,20 +31,26 @@ export interface RuntimeExternalSearchFolder {
 export interface RuntimeExternalSearchPreview {
   absolutePath: string;
   content: string;
+  editable?: boolean | undefined;
   extension: 'md' | 'txt';
   fileName: string;
+  fileSize?: number | null;
   folderId: string;
   folderPath: string;
   importedNodeId?: string | null;
   isPresent?: boolean | undefined;
   lastOpenedAt?: string | null;
+  modifiedAt?: string | null;
   relativePath: string;
+  sourceKind?: 'external_document' | 'local_file' | undefined;
 }
 
 export interface RuntimeExternalSearchBrowseEntry {
   absolutePath: string;
+  editable?: boolean | undefined;
   extension: 'md' | 'txt';
   fileName: string;
+  fileSize?: number | null;
   folderId: string;
   folderPath: string;
   importedNodeId?: string | null;
@@ -53,6 +59,7 @@ export interface RuntimeExternalSearchBrowseEntry {
   modifiedAt: string;
   openingText: string | null;
   relativePath: string;
+  sourceKind?: 'external_document' | 'local_file' | undefined;
   title: string;
 }
 
@@ -87,22 +94,28 @@ function toPreview(value: NativeExternalSearchPreview): RuntimeExternalSearchPre
   return {
     absolutePath: value.absolute_path,
     content: value.content,
+    editable: value.editable,
     extension: value.extension,
     fileName: value.file_name,
+    fileSize: value.file_size ?? null,
     folderId: value.folder_id,
     folderPath: value.folder_path,
     importedNodeId: value.imported_node_id ?? null,
     isPresent: value.is_present,
     lastOpenedAt: value.last_opened_at ?? null,
-    relativePath: value.relative_path
+    modifiedAt: value.modified_at ?? null,
+    relativePath: value.relative_path,
+    sourceKind: value.source_kind
   };
 }
 
 function toBrowseEntry(value: NativeExternalSearchBrowseEntry): RuntimeExternalSearchBrowseEntry {
   return {
     absolutePath: value.absolute_path,
+    editable: value.editable,
     extension: value.extension,
     fileName: value.file_name,
+    fileSize: value.file_size ?? null,
     folderId: value.folder_id,
     folderPath: value.folder_path,
     importedNodeId: value.imported_node_id ?? null,
@@ -111,6 +124,7 @@ function toBrowseEntry(value: NativeExternalSearchBrowseEntry): RuntimeExternalS
     modifiedAt: value.modified_at,
     openingText: value.opening_text,
     relativePath: value.relative_path,
+    sourceKind: value.source_kind,
     title: value.title
   };
 }
@@ -174,12 +188,22 @@ export async function loadRuntimeExternalSearchBrowseEntries(folderId: string) {
   return Array.isArray(result) ? (result as NativeExternalSearchBrowseEntry[]).map((item) => toBrowseEntry(item)) : [];
 }
 
-export async function loadRuntimeExternalSearchPreview(absolutePath: string) {
+export async function loadRuntimeExternalSearchPreview(
+  absolutePath: string,
+  options: {
+    folderId?: string | undefined;
+    sourceKind?: 'external_document' | 'local_file' | undefined;
+  } = {}
+) {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
     return null;
   }
-  const result = await runtimeInvoke(NATIVE_COMMANDS.loadExternalSearchPreview, { absolute_path: absolutePath });
+  const result = await runtimeInvoke(NATIVE_COMMANDS.loadExternalSearchPreview, {
+    absolute_path: absolutePath,
+    ...(options.folderId ? { folder_id: options.folderId } : {}),
+    ...(options.sourceKind ? { source_kind: options.sourceKind } : {})
+  });
   return result ? toPreview(result as NativeExternalSearchPreview) : null;
 }
 
@@ -201,7 +225,7 @@ export async function openRuntimeExternalDocumentFile(path: string) {
 }
 
 export function subscribeRuntimeExternalDocumentFileOpened(
-  handler: (payload: { absolutePath: string; folderId: string }) => void
+  handler: (payload: { absolutePath: string; folderId: string; sourceKind?: 'external_document' | 'local_file' }) => void
 ) {
   return getElectronAPI()?.onExternalDocumentFileOpened?.(handler) ?? (() => undefined);
 }

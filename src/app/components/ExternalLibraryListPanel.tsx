@@ -176,7 +176,8 @@ function openExternalDocumentSelection(
   onOpenExternalSelection({
     absolutePath: document.absolutePath,
     folderId: document.folderId,
-    kind: 'document'
+    kind: 'document',
+    ...(document.sourceKind ? { sourceKind: document.sourceKind } : {})
   });
 }
 

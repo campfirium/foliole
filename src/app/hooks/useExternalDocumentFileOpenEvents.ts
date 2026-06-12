@@ -42,7 +42,8 @@ export function useExternalDocumentFileOpenEvents(args: {
         args.history.openExternalTarget({
           absolutePath: payload.absolutePath,
           folderId: payload.folderId,
-          kind: 'document'
+          kind: 'document',
+          ...(payload.sourceKind ? { sourceKind: payload.sourceKind } : {})
         } satisfies ExternalLibrarySelection);
       }),
     [args]

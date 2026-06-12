@@ -1,4 +1,5 @@
 import { fireEvent, screen } from '@testing-library/react';
+import type React from 'react';
 import { expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
@@ -10,7 +11,9 @@ vi.mock('../../features/editor/components/MarkdownEditor', () => ({
 }));
 
 vi.mock('./DocumentPanelHeader', () => ({
-  DocumentPanelHeader: () => <div data-testid="document-panel-header" />
+  DocumentPanelHeader: (props: { rightSlot?: React.ReactNode }) => (
+    <div data-testid="document-panel-header">{props.rightSlot}</div>
+  )
 }));
 
 it('opens imported external folder documents in the external preview first', () => {

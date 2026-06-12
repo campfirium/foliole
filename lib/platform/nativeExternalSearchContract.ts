@@ -20,20 +20,26 @@ export interface NativeExternalSearchFolder {
 export interface NativeExternalSearchPreview {
   absolute_path: string;
   content: string;
+  editable?: boolean;
   extension: 'md' | 'txt';
   file_name: string;
+  file_size?: number | null;
   folder_id: string;
   folder_path: string;
   imported_node_id?: string | null;
   is_present?: boolean;
   last_opened_at?: string | null;
+  modified_at?: string | null;
   relative_path: string;
+  source_kind?: 'external_document' | 'local_file';
 }
 
 export interface NativeExternalSearchBrowseEntry {
   absolute_path: string;
+  editable?: boolean;
   extension: 'md' | 'txt';
   file_name: string;
+  file_size?: number | null;
   folder_id: string;
   folder_path: string;
   imported_node_id?: string | null;
@@ -42,5 +48,6 @@ export interface NativeExternalSearchBrowseEntry {
   modified_at: string;
   opening_text: string | null;
   relative_path: string;
+  source_kind?: 'external_document' | 'local_file';
   title: string;
 }

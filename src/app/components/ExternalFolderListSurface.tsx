@@ -47,6 +47,7 @@ export function buildExternalFolderBrowseProjection(args: {
     activeFolderId,
     documentNodes,
     documentNodesById: Object.fromEntries(documentNodes.map((node) => [node.id, node])),
+    documentSourceKindByPath: Object.fromEntries((browseState?.documentItems ?? []).map((item) => [item.absolutePath, item.sourceKind])),
     selectedFolder
   };
 }
@@ -57,6 +58,7 @@ export function ExternalFolderListSurface(args: {
   canGoForward: boolean;
   documentNodes: Node[];
   documentNodesById: Record<string, Node>;
+  documentSourceKindByPath: Record<string, 'external_document' | 'local_file' | undefined>;
   onGoBack: () => void;
   onGoForward: () => void;
   onOpenSelection: (selection: ExternalLibrarySelection) => void;
@@ -65,10 +67,12 @@ export function ExternalFolderListSurface(args: {
 }) {
   const t = useTranslation();
   function handleSelectDocument(absolutePath: string) {
+    const sourceKind = args.documentSourceKindByPath[absolutePath];
     args.onOpenSelection({
       absolutePath,
       folderId: args.activeFolderId,
-      kind: 'document'
+      kind: 'document',
+      ...(sourceKind ? { sourceKind } : {})
     });
   }
 

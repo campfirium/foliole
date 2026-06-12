@@ -134,7 +134,18 @@ function useExternalPreviewController(props: WorkspaceGridContentSource) {
     props.externalLibrary.isExternalViewOpen && props.externalLibrary.externalSelection.kind === 'document'
       ? props.externalLibrary.externalSelection.absolutePath
       : null;
-  const previewState = useExternalSearchPreviewDocument(previewPath);
+  const previewSourceKind =
+    props.externalLibrary.isExternalViewOpen && props.externalLibrary.externalSelection.kind === 'document'
+      ? props.externalLibrary.externalSelection.sourceKind
+      : undefined;
+  const previewFolderId =
+    props.externalLibrary.isExternalViewOpen && props.externalLibrary.externalSelection.kind === 'document'
+      ? props.externalLibrary.externalSelection.folderId
+      : undefined;
+  const previewState = useExternalSearchPreviewDocument(previewPath, {
+    folderId: previewFolderId,
+    sourceKind: previewSourceKind
+  });
   const onEditorReady = useCallback((adapter: EditorAdapter | null) => {
     editorRef.current = adapter;
   }, []);

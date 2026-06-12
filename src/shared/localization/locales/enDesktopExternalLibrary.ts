@@ -38,5 +38,13 @@ export const EN_DESKTOP_EXTERNAL_LIBRARY_TRANSLATIONS = {
   'desktop.externalLibrary.preview.openInLibrary': 'Open in External library',
   'desktop.externalLibrary.preview.restore': 'Restore preview window',
   'desktop.externalLibrary.preview.fullscreen': 'Full screen preview',
-  'desktop.externalLibrary.preview.close': 'Close preview'
+  'desktop.externalLibrary.preview.close': 'Close preview',
+  'desktop.externalLibrary.localFile.status.conflict': 'External change',
+  'desktop.externalLibrary.localFile.status.error': 'Save failed',
+  'desktop.externalLibrary.localFile.status.missing': 'Missing file',
+  'desktop.externalLibrary.localFile.status.saved': 'Saved',
+  'desktop.externalLibrary.localFile.status.saving': 'Saving',
+  'desktop.externalLibrary.localFile.status.unsaved': 'Unsaved',
+  'desktop.externalLibrary.localFile.saveMine': 'Save mine',
+  'desktop.externalLibrary.localFile.reload': 'Reload'
 } as const;

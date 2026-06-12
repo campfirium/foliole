@@ -5,7 +5,13 @@ import {
   type ExternalDocumentPreview
 } from '../../shared/platform/externalDocumentPreviewRepository';
 
-export function useExternalSearchPreviewDocument(absolutePath: string | null) {
+export function useExternalSearchPreviewDocument(
+  absolutePath: string | null,
+  options: {
+    folderId?: string | undefined;
+    sourceKind?: 'external_document' | 'local_file' | undefined;
+  } = {}
+) {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [preview, setPreview] = useState<ExternalDocumentPreview | null>(null);
@@ -23,7 +29,7 @@ export function useExternalSearchPreviewDocument(absolutePath: string | null) {
     setError(null);
     setIsLoading(true);
     setPreview(null);
-    void loadExternalDocumentPreview(absolutePath)
+    void loadExternalDocumentPreview(absolutePath, options)
       .then((result) => {
         if (!alive) {
           return;
@@ -47,7 +53,7 @@ export function useExternalSearchPreviewDocument(absolutePath: string | null) {
     return () => {
       alive = false;
     };
-  }, [absolutePath, reloadKey]);
+  }, [absolutePath, options.folderId, options.sourceKind, reloadKey]);
 
   const retry = useCallback(() => {
     if (absolutePath) {

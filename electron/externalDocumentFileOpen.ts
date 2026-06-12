@@ -2,14 +2,10 @@ import path from 'node:path';
 
 import { app, type BrowserWindow } from 'electron';
 
-import { recordOpenedExternalDocument } from './database/externalOpenedDocuments.js';
-import { loadExternalSearchFolders } from './database/externalSearchFolders.js';
+import { OPENED_EXTERNAL_DOCUMENTS_FOLDER_ID } from './database/externalOpenedDocumentConstants.js';
 import { readLocalFile } from './database/localFiles.js';
 import { appendMainProcessDiagnosticLog } from './diagnostics/mainProcessDiagnostics.js';
-import {
-  IPC_EXTERNAL_DOCUMENT_FILE_OPENED_CHANNEL,
-  IPC_LOCAL_FILE_OPENED_CHANNEL
-} from './ipc/contracts.js';
+import { IPC_EXTERNAL_DOCUMENT_FILE_OPENED_CHANNEL } from './ipc/contracts.js';
 
 function isSupportedExternalDocumentPath(value: string) {
   const extension = path.extname(value).toLowerCase();
@@ -27,15 +23,6 @@ function createUniqueQueue(paths: string[]) {
   return [...new Set(paths)];
 }
 
-function isWithinFolder(filePath: string, folderPath: string) {
-  const relative = path.relative(folderPath, filePath);
-  return relative === '' || (!!relative && !relative.startsWith('..') && !path.isAbsolute(relative));
-}
-
-function isWithinExternalSearchFolder(filePath: string) {
-  return loadExternalSearchFolders().some((folder) => isWithinFolder(filePath, folder.folder_path));
-}
-
 export function installExternalDocumentFileOpenLifecycle() {
   let readyWindow: BrowserWindow | null = null;
   let pendingPaths = createUniqueQueue(resolveExternalDocumentFileArgs(process.argv));
@@ -50,20 +37,12 @@ export function installExternalDocumentFileOpenLifecycle() {
     pendingPaths = [];
     for (const filePath of nextPaths) {
       try {
-        if (!isWithinExternalSearchFolder(filePath)) {
-          const result = await readLocalFile(filePath);
-          if (result.status === 'ready' && readyWindow && !readyWindow.isDestroyed()) {
-            readyWindow.webContents.send(IPC_LOCAL_FILE_OPENED_CHANNEL, {
-              absolutePath: result.absolutePath
-            });
-          }
-          continue;
-        }
-        const entry = await recordOpenedExternalDocument(filePath);
-        if (entry && readyWindow && !readyWindow.isDestroyed()) {
+        const result = await readLocalFile(filePath);
+        if (result.status === 'ready' && readyWindow && !readyWindow.isDestroyed()) {
           readyWindow.webContents.send(IPC_EXTERNAL_DOCUMENT_FILE_OPENED_CHANNEL, {
-            absolutePath: entry.absolute_path,
-            folderId: entry.folder_id
+            absolutePath: result.absolutePath,
+            folderId: OPENED_EXTERNAL_DOCUMENTS_FOLDER_ID,
+            sourceKind: 'local_file'
           });
         }
       } catch (error) {

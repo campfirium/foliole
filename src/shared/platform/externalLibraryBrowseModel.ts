@@ -2,8 +2,10 @@ import { buildExternalLibraryDirectoryNodes } from './externalLibraryDirectoryNo
 
 export interface ExternalLibraryBrowseEntry {
   absolutePath: string;
+  editable?: boolean | undefined;
   extension: 'md' | 'txt';
   fileName: string;
+  fileSize?: number | null;
   folderId: string;
   importedNodeId?: string | null;
   isPresent?: boolean | undefined;
@@ -11,6 +13,7 @@ export interface ExternalLibraryBrowseEntry {
   modifiedAt: string;
   openingText: string | null;
   relativePath: string;
+  sourceKind?: 'external_document' | 'local_file' | undefined;
   title: string;
 }
 
@@ -35,7 +38,12 @@ export type ExternalLibrarySelection =
   | { kind: 'root' }
   | { folderId: string; kind: 'folder' }
   | { directoryPath: string; folderId: string; kind: 'directory' }
-  | { absolutePath: string; folderId: string; kind: 'document' };
+  | {
+    absolutePath: string;
+    folderId: string;
+    kind: 'document';
+    sourceKind?: 'external_document' | 'local_file' | undefined;
+  };
 
 export interface ExternalLibraryFolderBrowseState {
   directoryNodes: ExternalLibraryDirectoryNode[];

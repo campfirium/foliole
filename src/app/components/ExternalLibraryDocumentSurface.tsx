@@ -20,6 +20,7 @@ import {
 } from './externalLibraryDocumentSurfaceSupport';
 import { ExternalLibraryPreviewSurface } from './ExternalLibraryPreviewSurface';
 import type { ExternalDocumentPreviewLoadState } from './externalSearchPreviewState';
+import { useOpenedLocalFileEditing, type OpenedLocalFileSaveStatus } from './useOpenedLocalFileEditing';
 
 interface ExternalLibraryDocumentSurfaceProps {
   canGoBack: boolean;
@@ -92,6 +93,14 @@ function renderExternalPreviewSurface(args: {
   onHandleImport: () => void;
   onOpenImportedNodeId: (nodeId: string) => void;
   onPreviewEditorReady: (adapter: EditorAdapter | null) => void;
+  localFileEditing: {
+    content: string;
+    flushSave: (force?: boolean) => Promise<boolean>;
+    handleChange: (content: string) => void;
+    isEditable: boolean;
+    reloadFromDisk: () => Promise<void>;
+    status: OpenedLocalFileSaveStatus;
+  };
   preview: ExternalDocumentPreview;
   props: ExternalLibraryDocumentSurfaceProps;
 }) {
@@ -108,6 +117,7 @@ function renderExternalPreviewSurface(args: {
       onOpenImportedNodeId={args.onOpenImportedNodeId}
       onOpenSelection={args.props.onOpenSelection}
       onPreviewEditorReady={args.onPreviewEditorReady}
+      localFileEditing={args.localFileEditing}
       preview={args.preview}
     />
   );
@@ -116,7 +126,17 @@ function renderExternalPreviewSurface(args: {
 export function ExternalLibraryDocumentSurface(props: ExternalLibraryDocumentSurfaceProps) {
   const { error, isLoading, preview, retry } = props.previewState;
   const { handleImport, isImporting } = useOpenImportedExternalDocument(preview, props.onOpenImportedNode);
-  const { activeFolderId, documentNodes, documentNodesById, selectedFolder } = useExternalFolderBrowseState(props);
+  const localFileEditing = useOpenedLocalFileEditing({
+    onImportedNodeId: props.onOpenImportedNodeId ?? (() => undefined),
+    preview
+  });
+  const {
+    activeFolderId,
+    documentNodes,
+    documentNodesById,
+    documentSourceKindByPath,
+    selectedFolder
+  } = useExternalFolderBrowseState(props);
 
   useEffect(() => {
     if (props.selection.kind === 'document') {
@@ -132,6 +152,7 @@ export function ExternalLibraryDocumentSurface(props: ExternalLibraryDocumentSur
         canGoForward={props.canGoForward}
         documentNodes={documentNodes}
         documentNodesById={documentNodesById}
+        documentSourceKindByPath={documentSourceKindByPath}
         onGoBack={props.onGoBack}
         onGoForward={props.onGoForward}
         onOpenSelection={props.onOpenSelection}
@@ -158,11 +179,12 @@ export function ExternalLibraryDocumentSurface(props: ExternalLibraryDocumentSur
   }
 
   return renderExternalPreviewSurface({
-    isImporting,
-    onHandleImport: () => void handleImport(),
+    isImporting: localFileEditing.isEditable ? localFileEditing.isImporting : isImporting,
+    onHandleImport: () => void (localFileEditing.isEditable ? localFileEditing.importAsTopic() : handleImport()),
     onOpenImportedNodeId: props.onOpenImportedNodeId ?? (() => undefined),
     onPreviewEditorReady: props.onPreviewEditorReady,
     preview,
-    props
+    props,
+    localFileEditing
   });
 }

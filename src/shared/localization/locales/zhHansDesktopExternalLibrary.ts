@@ -40,5 +40,13 @@ export const ZH_HANS_DESKTOP_EXTERNAL_LIBRARY_TRANSLATIONS: Partial<Record<Trans
   'desktop.externalLibrary.preview.openInLibrary': '在外部文档库中打开',
   'desktop.externalLibrary.preview.restore': '还原预览窗口',
   'desktop.externalLibrary.preview.fullscreen': '全屏预览',
-  'desktop.externalLibrary.preview.close': '关闭预览'
+  'desktop.externalLibrary.preview.close': '关闭预览',
+  'desktop.externalLibrary.localFile.status.conflict': '外部有改动',
+  'desktop.externalLibrary.localFile.status.error': '保存失败',
+  'desktop.externalLibrary.localFile.status.missing': '文件已缺失',
+  'desktop.externalLibrary.localFile.status.saved': '已保存',
+  'desktop.externalLibrary.localFile.status.saving': '正在保存',
+  'desktop.externalLibrary.localFile.status.unsaved': '未保存',
+  'desktop.externalLibrary.localFile.saveMine': '保存当前内容',
+  'desktop.externalLibrary.localFile.reload': '重新载入'
 };

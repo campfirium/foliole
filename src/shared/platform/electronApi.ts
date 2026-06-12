@@ -61,10 +61,7 @@ interface SearchIndexRebuildStatusPayload {
 interface ExternalDocumentFileOpenedPayload {
   absolutePath: string;
   folderId: string;
-}
-
-export interface LocalFileOpenedPayload {
-  absolutePath: string;
+  sourceKind?: 'external_document' | 'local_file';
 }
 
 export interface GlobalCaptureNavigatePayload {
@@ -95,7 +92,6 @@ export interface ElectronAPI {
   onWorkspaceSyncApplied?: (handler: (payload: WorkspaceSyncAppliedPayload) => void) => () => void;
   onCompanionPairingRequestsChanged?: (handler: () => void) => () => void;
   onExternalDocumentFileOpened?: (handler: (payload: ExternalDocumentFileOpenedPayload) => void) => () => void;
-  onLocalFileOpened?: (handler: (payload: LocalFileOpenedPayload) => void) => () => void;
   onWindowResized: (handler: () => void) => () => void;
   runtimeConfig?: ElectronRuntimeConfig;
   setNativeHotkeyRecordingActive?: (active: boolean) => void;

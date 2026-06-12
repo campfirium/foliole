@@ -10,12 +10,10 @@ import {
   resolveImportedNodeIdForExternalDocument
 } from './externalDocumentImportVisibility.js';
 import { OPENED_EXTERNAL_DOCUMENTS_FOLDER_ID } from './externalOpenedDocumentConstants.js';
-import {
-  loadOpenedExternalSearchBrowseEntries
-} from './externalOpenedDocuments.js';
 import { openExternalSearchCacheDatabase } from './externalSearchCacheDatabase.js';
 import { loadExternalSearchFolders } from './externalSearchFolders.js';
 import { resolveExternalPreviewSourceContent, rewriteExternalPreviewContent } from './externalSearchPreviewContent.js';
+import { loadOpenedFilesBrowseEntries } from './openedFiles.js';
 import {
   isReadwiseExternalFolderId,
   loadReadwiseExternalSearchBrowseEntries,
@@ -27,7 +25,7 @@ export function loadExternalSearchBrowseEntries(folderId: string): NativeExterna
     return loadReadwiseExternalSearchBrowseEntries(folderId);
   }
   if (folderId === OPENED_EXTERNAL_DOCUMENTS_FOLDER_ID) {
-    return loadOpenedExternalSearchBrowseEntries();
+    return loadOpenedFilesBrowseEntries();
   }
   const importedNodeIdsByLocator = loadActiveImportedSourceLocatorNodeIds();
   return (
@@ -78,7 +76,7 @@ export function loadExternalSearchPreview(absolutePath: string): NativeExternalS
   const row = openExternalSearchCacheDatabase()
     .prepare(
       `SELECT absolute_path, folder_id, folder_path, relative_path, file_name, extension, content,
-        is_present, last_opened_at
+        is_present, last_opened_at, modified_at
        FROM external_search_documents
        WHERE absolute_path = ? AND (is_present = 1 OR folder_id = ?)`
     )
@@ -91,22 +89,23 @@ export function loadExternalSearchPreview(absolutePath: string): NativeExternalS
     folder_path: string;
     is_present: number;
     last_opened_at: string | null;
+    modified_at: string | null;
     relative_path: string;
   } | undefined;
-  if (!row) {
-    return loadReadwiseExternalSearchPreview(absolutePath);
-  }
+  if (!row) return loadReadwiseExternalSearchPreview(absolutePath);
   const importedNodeId = resolveImportedNodeIdForExternalDocument(absolutePath);
   const folder = loadExternalSearchFolders().find((item) => item.id === row.folder_id) ?? null;
   const previewContent = resolveExternalPreviewSourceContent(row.content, row.absolute_path);
   return {
     ...row,
+    editable: false,
     content:
       row.extension === 'md'
         ? rewriteExternalPreviewContent(previewContent, row.absolute_path, folder)
         : previewContent,
     imported_node_id: importedNodeId,
     is_present: row.is_present === 1,
-    last_opened_at: row.last_opened_at
+    last_opened_at: row.last_opened_at,
+    source_kind: 'external_document'
   };
 }
