@@ -1,39 +1,37 @@
 import { render, screen } from '@testing-library/react';
+import type { ComponentProps } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { CompanionShellOverlays } from './CompanionShellOverlays';
 import { DEFAULT_COMPANION_TAB_CONFIG } from './CompanionTabsConfig';
-import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 
-function createSurface() {
+function createOverlayProps() {
   return {
     activeAction: 'review',
-    handleReadReviewTopic: vi.fn(),
-    handlePostponeReviewTopic: vi.fn(),
-    handleDismissReviewTopic: vi.fn(),
-    handleGradeReview: vi.fn(),
-    handleRevealAnswer: vi.fn(),
-    handleTabAction: vi.fn(),
-    isAnswerRevealed: false,
-    reviewSession: {
-      currentCard: null
-    }
-  } as unknown as ReturnType<typeof useCompanionArticleSurface>;
+    activeSecondaryDestinationId: null,
+    companionTabConfig: DEFAULT_COMPANION_TAB_CONFIG,
+    currentReviewCard: null,
+    isBottomBarDisabled: false,
+    isCaptureSheetOpen: false,
+    isNavigationVisible: false,
+    isReadableArticleImmersive: false,
+    isReviewAnswerRevealed: false,
+    onCaptureSheetOpenChange: vi.fn(),
+    onDismissReviewTopic: vi.fn(),
+    onGradeReview: vi.fn(),
+    onNavigationAction: vi.fn(),
+    onPostponeReviewTopic: vi.fn(),
+    onReadReviewTopic: vi.fn(),
+    onRevealAnswer: vi.fn(),
+    onSecondaryDestination: vi.fn()
+  } satisfies ComponentProps<typeof CompanionShellOverlays>;
 }
 
 describe('CompanionShellOverlays', () => {
   it('does not block the shell with sync onboarding', () => {
     render(
       <CompanionShellOverlays
-        activeSecondaryDestinationId={null}
-        companionTabConfig={DEFAULT_COMPANION_TAB_CONFIG}
-        isBottomBarDisabled={false}
-        isCaptureSheetOpen={false}
-        isNavigationVisible={false}
-        onCaptureSheetOpenChange={vi.fn()}
-        onNavigationAction={vi.fn()}
-        onSecondaryDestination={vi.fn()}
-        surface={createSurface()}
+        {...createOverlayProps()}
       />
     );
 
@@ -43,15 +41,8 @@ describe('CompanionShellOverlays', () => {
   it('keeps navigation available when visible', () => {
     render(
       <CompanionShellOverlays
-        activeSecondaryDestinationId={null}
-        companionTabConfig={DEFAULT_COMPANION_TAB_CONFIG}
-        isBottomBarDisabled={false}
-        isCaptureSheetOpen={false}
+        {...createOverlayProps()}
         isNavigationVisible
-        onCaptureSheetOpenChange={vi.fn()}
-        onNavigationAction={vi.fn()}
-        onSecondaryDestination={vi.fn()}
-        surface={createSurface()}
       />
     );
 

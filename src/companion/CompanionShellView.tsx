@@ -68,6 +68,13 @@ function renderCompanionMainContent(model: CompanionShellModel) {
   );
 }
 
+function isReadableArticleImmersive(model: CompanionShellModel) {
+  return model.surface.activeAction === 'recent'
+    && Boolean(model.surface.readableArticle)
+    && Boolean(model.surface.selectedBrowseNodeId)
+    && !model.surface.browsedFolder;
+}
+
 export function CompanionShellView(props: { model: CompanionShellModel }) {
   const { model } = props;
   return (
@@ -87,14 +94,22 @@ export function CompanionShellView(props: { model: CompanionShellModel }) {
       </main>
       <CompanionShellOverlays
         activeSecondaryDestinationId={model.activeSecondaryDestinationId}
+        activeAction={model.surface.activeAction}
         companionTabConfig={model.companionTabs.config}
+        currentReviewCard={model.surface.reviewSession.currentCard}
         isBottomBarDisabled={model.isBottomBarDisabled}
         isCaptureSheetOpen={model.isCaptureSheetOpen}
         isNavigationVisible={model.isNavigationVisible}
+        isReadableArticleImmersive={isReadableArticleImmersive(model)}
+        isReviewAnswerRevealed={model.surface.isAnswerRevealed}
         onCaptureSheetOpenChange={model.setIsCaptureSheetOpen}
+        onDismissReviewTopic={model.surface.handleDismissReviewTopic}
+        onGradeReview={model.surface.handleGradeReview}
         onNavigationAction={model.handleNavigationAction}
+        onPostponeReviewTopic={model.surface.handlePostponeReviewTopic}
+        onReadReviewTopic={model.surface.handleReadReviewTopic}
+        onRevealAnswer={model.surface.handleRevealAnswer}
         onSecondaryDestination={model.handleSecondaryDestination}
-        surface={model.surface}
       />
     </>
   );
