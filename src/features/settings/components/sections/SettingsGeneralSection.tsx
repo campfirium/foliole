@@ -142,7 +142,7 @@ function LanguageSection() {
 }
 
 function getOpenAtLoginDescription(state: RuntimeLoginItemSettingsState | null, t: Translate) {
-  if (state.enabled && !state.effective) {
+  if (state?.enabled && !state.effective) {
     return t('settings.general.openAtLogin.ineffective');
   }
   return t('settings.general.openAtLogin.description');

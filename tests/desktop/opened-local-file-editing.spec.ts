@@ -17,7 +17,7 @@ test('opens a Markdown file from launch args as an editable local file and saves
   try {
     const page = session.firstWindow;
     await page.setViewportSize({ width: 1600, height: 1000 });
-    await expect(page.getByRole('treeitem', { name: /^Local$/i })).toBeVisible();
+    await expect(page.getByRole('treeitem', { name: /^Opened$/i })).toBeVisible();
     await expect(page.getByRole('treeitem', { name: /editable\.md/i })).toBeVisible();
     await expect(page.getByText(/^(Saved|已保存)$/)).not.toBeVisible();
 

@@ -15,6 +15,14 @@ function Write-Info {
   Write-Host "[windows-desktop-test] $Message"
 }
 
+function Convert-CmdArgument {
+  param([string]$Value)
+  if ($Value -notmatch '[\s"]') {
+    return $Value
+  }
+  return '"' + ($Value -replace '"', '\"') + '"'
+}
+
 if (!(Test-Path -Path $WindowsWorkDir)) {
   throw "windows workdir not found: $WindowsWorkDir"
 }
@@ -46,7 +54,11 @@ try {
   $commandArgs = @("test", "--config", $Config) + $PlaywrightArgs
   Write-Info "workdir=$WindowsWorkDir"
   Write-Info "playwright=$($commandArgs -join ' ')"
-  & $playwrightBin @commandArgs
+  $playwrightCommand = (@($playwrightBin) + $commandArgs | ForEach-Object { Convert-CmdArgument $_ }) -join " "
+  cmd.exe /d /c $playwrightCommand
+  if ($LASTEXITCODE -ne 0) {
+    exit $LASTEXITCODE
+  }
   exit $LASTEXITCODE
 } finally {
   if ($null -eq $previousAppRoot) {

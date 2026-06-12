@@ -95,7 +95,9 @@ it('hides launch at startup when the runtime cannot manage it', async () => {
   loginItemSettingsState = { enabled: false, effective: false, supported: false };
   renderWithMouseGestureProvider(<SearchSettingsHarness />);
 
-  await waitFor(() => expect(window.electronAPI.invoke).toHaveBeenCalledWith('load_login_item_settings'));
+  const electronAPI = window.electronAPI;
+  expect(electronAPI).toBeDefined();
+  await waitFor(() => expect(electronAPI!.invoke).toHaveBeenCalledWith('load_login_item_settings'));
 
   expect(screen.queryByRole('switch', { name: 'Start Foliole automatically' })).not.toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: 'System' })).not.toBeInTheDocument();
