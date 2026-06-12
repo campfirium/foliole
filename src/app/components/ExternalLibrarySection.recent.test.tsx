@@ -59,8 +59,9 @@ it('keeps Opened above manually ordered external folders without a special trail
     expect.stringContaining('2think'),
     expect.stringContaining('1act')
   ]);
-  expect(screen.getByRole('treeitem', { name: /^Opened$/i }).querySelector('.lucide-history')).toBeNull();
-  expect(screen.getByRole('treeitem', { name: /^Opened$/i }).querySelector('[aria-label="External folder"]')).toBeNull();
+  const openedRow = screen.getByRole('treeitem', { name: /^Opened$/i });
+  expect(openedRow.querySelector('.lucide-square-pen')).toBeInTheDocument();
+  expect(openedRow.querySelector('[aria-label="External folder"]')).toBeNull();
 });
 
 it('explains Opened as files opened from disk', async () => {

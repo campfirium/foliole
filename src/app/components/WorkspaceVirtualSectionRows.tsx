@@ -1,3 +1,4 @@
+import { Layers2 } from 'lucide-react';
 import type { Dispatch, MouseEvent as ReactMouseEvent, SetStateAction } from 'react';
 
 import { createNodeListRowKeydownHandler } from '../../features/nodes/components/NodeListTreeKeyboard';
@@ -106,6 +107,7 @@ function renderMainVirtualRow(args: Parameters<typeof renderVirtualRow>[0] & {
       rowSpacing={args.rowSpacing}
       showIcon={false}
       showLeafChevronPlaceholder={false}
+      {...(args.isVirtualRoot ? { trailingLabelContent: <VirtualRootMarker /> } : {})}
       {...(args.isSavedSearch ? { onRename: args.props.onRenameVirtualNode } : {})}
       {...(args.isSavedSearch ? { onContextMenu: args.props.onContextMenuSavedSearch } : {})}
       onKeyDown={args.onRowKeyDown}
@@ -115,6 +117,14 @@ function renderMainVirtualRow(args: Parameters<typeof renderVirtualRow>[0] & {
       }}
       onToggleCollapse={(nodeId) => toggleCollapsed(nodeId, args.setCollapsedIds)}
     />
+  );
+}
+
+function VirtualRootMarker() {
+  return (
+    <span className="inline-flex size-3.5 items-center justify-center align-middle text-foreground/45" data-virtual-root-marker="true">
+      <Layers2 aria-hidden="true" className="-translate-y-[1px]" size={14} strokeWidth={1.7} />
+    </span>
   );
 }
 

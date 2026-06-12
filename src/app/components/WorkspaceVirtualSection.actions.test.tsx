@@ -65,6 +65,12 @@ beforeEach(() => {
   });
 });
 
+it('marks the virtual root with the layers icon', () => {
+  renderSavedSearchTree();
+
+  expect(screen.getByRole('treeitem', { name: 'Virtual' }).querySelector('.lucide-layers-2')).toBeInTheDocument();
+});
+
 it('renames a saved search from the virtual directory row', async () => {
   renderSavedSearchTree();
 
