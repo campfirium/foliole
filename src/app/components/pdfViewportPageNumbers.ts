@@ -6,6 +6,7 @@ const PDF_INITIAL_RENDER_RADIUS = 2;
 interface ResolvePageNumberArgs {
   highlightLocators: Array<{ id: string; page: number; x: number | null; y: number | null }>;
   page: number;
+  pendingPage?: number | undefined;
   pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
   searchHighlights: PdfSearchVisualHighlight[];
   searchQuery: string;
@@ -33,6 +34,7 @@ export function resolveRenderablePageNumbers(args: ResolvePageNumberArgs) {
   const lastPage = Math.min(args.totalPages, args.page + PDF_INITIAL_RENDER_RADIUS);
   const pageNumbers = new Set<number>();
   for (let pageNumber = firstPage; pageNumber <= lastPage; pageNumber += 1) pageNumbers.add(pageNumber);
+  addRenderablePage(pageNumbers, args.pendingPage, args.totalPages);
   addRenderablePage(pageNumbers, args.pdfSelectionLocator?.page, args.totalPages);
   args.highlightLocators.forEach((locator) => addRenderablePage(pageNumbers, locator.page, args.totalPages));
   args.searchHighlights.forEach((highlight) => {

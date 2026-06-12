@@ -6,6 +6,8 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 cd "${REPO_ROOT}"
 
+NPM_HARDENING_NETWORK_TIMEOUT_SECONDS="${NPM_HARDENING_NETWORK_TIMEOUT_SECONDS:-45}"
+
 echo "[npm-hardening] checking repository dependency guardrails"
 
 save_exact="$(npm config get save-exact)"
@@ -25,10 +27,14 @@ audit_cache_dir=".tmp/npm-audit-cache"
 audit_json_file=".tmp/npm-audit-report.json"
 mkdir -p "${audit_cache_dir}"
 set +e
-npm audit --omit=dev --json --cache "${audit_cache_dir}" > "${audit_json_file}"
+timeout "${NPM_HARDENING_NETWORK_TIMEOUT_SECONDS}s" npm audit --omit=dev --json --cache "${audit_cache_dir}" > "${audit_json_file}"
 audit_exit=$?
 set -e
 if [[ "${audit_exit}" -gt 1 ]]; then
+  if [[ "${audit_exit}" -eq 124 ]]; then
+    echo "[npm-hardening] npm audit timed out after ${NPM_HARDENING_NETWORK_TIMEOUT_SECONDS}s"
+    exit "${audit_exit}"
+  fi
   echo "[npm-hardening] npm audit failed unexpectedly"
   cat "${audit_json_file}"
   exit "${audit_exit}"
@@ -36,6 +42,10 @@ fi
 node -e "
   const fs = require('node:fs');
   const report = JSON.parse(fs.readFileSync(process.argv[1], 'utf8'));
+  if (report.error) {
+    console.error('[npm-hardening] runtime audit unavailable: ' + (report.message || report.error.summary || 'unknown audit error'));
+    process.exit(1);
+  }
   const stats = report.metadata?.vulnerabilities ?? {};
   const total = stats.total ?? 0;
   const high = stats.high ?? 0;
@@ -59,7 +69,7 @@ fi
 echo "[npm-hardening] ok: .npmrc pins min-release-age=7"
 
 versions_json_file=".tmp/npm-time.json"
-npm view npm time --json > "${versions_json_file}"
+timeout "${NPM_HARDENING_NETWORK_TIMEOUT_SECONDS}s" npm view npm time --json > "${versions_json_file}"
 
 mapfile -t selected_versions < <(
   node -e "
@@ -102,7 +112,7 @@ printf 'min-release-age=7\n' > "${probe_dir}/.npmrc"
 
 if [[ -n "${recent_version}" ]]; then
   set +e
-  (cd "${probe_dir}" && npm install "npm@${recent_version}" --package-lock-only > recent.log 2>&1)
+  (cd "${probe_dir}" && timeout "${NPM_HARDENING_NETWORK_TIMEOUT_SECONDS}s" npm install "npm@${recent_version}" --package-lock-only > recent.log 2>&1)
   recent_exit=$?
   set -e
   if [[ "${recent_exit}" -eq 0 ]]; then
@@ -120,6 +130,6 @@ if [[ -z "${mature_version}" ]]; then
   exit 1
 fi
 
-(cd "${probe_dir}" && npm install "npm@${mature_version}" --package-lock-only > mature.log 2>&1)
+(cd "${probe_dir}" && timeout "${NPM_HARDENING_NETWORK_TIMEOUT_SECONDS}s" npm install "npm@${mature_version}" --package-lock-only > mature.log 2>&1)
 echo "[npm-hardening] ok: min-release-age allowed mature npm@${mature_version}"
 echo "[npm-hardening] all dependency guardrails passed"

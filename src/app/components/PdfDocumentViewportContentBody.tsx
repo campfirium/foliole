@@ -202,6 +202,7 @@ function renderViewportDocument(
       onTextContentLoad={props.onTextContentLoad}
       onTextLayerRender={props.onTextLayerRender}
       page={props.page}
+      pageJumpRequest={props.pageJumpRequest}
       pageElementsRef={props.pageElementsRef}
       persistedPageCount={props.persistedPageCount}
       persistedPageDimensions={props.persistedPageDimensions}

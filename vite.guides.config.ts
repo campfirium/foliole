@@ -1,8 +1,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import type { OutputAsset, OutputChunk } from 'rollup';
-import type { Plugin } from 'vite';
+import type { Plugin, Rollup } from 'vite';
 import { defineConfig, mergeConfig } from 'vite';
 
 import { createWebGuidesManifest, WEB_GUIDES_MANIFEST_FILE, type WebGuidesRuntimeAsset } from './src/web-guides/webGuidesManifest';
@@ -10,7 +9,7 @@ import { createSharedViteConfig } from './vite.shared';
 
 const PROJECT_ROOT = path.dirname(fileURLToPath(import.meta.url));
 
-function toRuntimeAsset(output: OutputAsset | OutputChunk): WebGuidesRuntimeAsset | null {
+function toRuntimeAsset(output: Rollup.OutputAsset | Rollup.OutputChunk): WebGuidesRuntimeAsset | null {
   if (output.type === 'chunk') return { path: output.fileName, type: 'script' };
   if (output.fileName.endsWith('.css')) return { path: output.fileName, type: 'style' };
   return null;

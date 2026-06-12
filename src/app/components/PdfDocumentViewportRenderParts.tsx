@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { Document } from 'react-pdf';
 
+import type { PdfJumpRequest } from '../../features/pdf/model/pdfSystemApi';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 
 import type { PdfSearchVisualHighlight } from './PdfDocumentSearch';
@@ -30,6 +31,7 @@ interface PdfViewportDocumentProps {
   onTextContentLoad: (pageNumber: number, text: PdfPageTextEntry) => void;
   onTextLayerRender: (pageNumber: number) => void;
   page: number;
+  pageJumpRequest: PdfJumpRequest | null;
   pageElementsRef: PdfPageElementsRef;
   persistedPageCount: number | null;
   persistedPageDimensions: Record<number, PdfPageDimensions>;
@@ -132,6 +134,7 @@ function renderPdfDocument(
           onTextContentLoad={props.onTextContentLoad}
           onTextLayerRender={props.onTextLayerRender}
           onPageLoadSuccess={handlePageLoadSuccess}
+          pageJumpRequest={props.pageJumpRequest}
           pageDimensionsByNumber={pageDimensionsByNumber}
           pageElementsRef={props.pageElementsRef}
           pdfSelectionLocator={props.pdfSelectionLocator}
@@ -185,6 +188,7 @@ function PdfDocumentPages({
   onTextContentLoad,
   onTextLayerRender,
   onPageLoadSuccess,
+  pageJumpRequest,
   pageDimensionsByNumber,
   pageElementsRef,
   pdfSelectionLocator,
@@ -202,6 +206,7 @@ function PdfDocumentPages({
   const pageNumbers = resolveRenderablePageNumbers({
     highlightLocators,
     page: visiblePage,
+    pendingPage: pageJumpRequest?.page,
     pdfSelectionLocator,
     searchHighlights,
     searchQuery,
@@ -236,6 +241,7 @@ interface PdfDocumentPagesProps {
   onTextContentLoad: (pageNumber: number, text: PdfPageTextEntry) => void;
   onTextLayerRender: (pageNumber: number) => void;
   onPageLoadSuccess: (pageNumber: number, dimensions: PdfPageDimensions) => void;
+  pageJumpRequest: PdfJumpRequest | null;
   pageDimensionsByNumber: Record<number, PdfPageDimensions>;
   pageElementsRef: PdfPageElementsRef;
   pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
