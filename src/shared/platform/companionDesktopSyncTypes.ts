@@ -2,6 +2,7 @@ export interface CompanionDesktopSyncOptions {
   includeResources?: boolean;
   onProgress?: (progress: CompanionDesktopSyncProgress) => void;
   onStructureSynced?: () => Promise<void> | void;
+  resourcesOnly?: boolean;
 }
 
 export interface CompanionDesktopSyncProgress {

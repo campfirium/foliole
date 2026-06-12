@@ -5,9 +5,9 @@ import { loadPairedCompanionDevice } from './companionPairingStore.js';
 
 const AUTH_WINDOW_MS = 60 * 1000;
 const NONCE_TTL_MS = 2 * 60 * 1000;
-const NONCE_CACHE_LIMIT = 2_048;
+const NONCE_CACHE_LIMIT_PER_DEVICE = 2_048;
 
-const usedNonceExpiryByKey = new Map<string, number>();
+const usedNonceExpiryByDeviceId = new Map<string, Map<string, number>>();
 
 interface CompanionRequestAuthSuccess {
   device_id: string;
@@ -41,28 +41,34 @@ function parsePathWithQuery(request: http.IncomingMessage) {
   return `${parsed.pathname}${parsed.search}`;
 }
 
-function pruneUsedNonces(nowMs: number) {
-  for (const [key, expiresAtMs] of usedNonceExpiryByKey.entries()) {
+function pruneDeviceUsedNonces(deviceCache: Map<string, number>, nowMs: number) {
+  for (const [key, expiresAtMs] of deviceCache.entries()) {
     if (expiresAtMs <= nowMs) {
-      usedNonceExpiryByKey.delete(key);
+      deviceCache.delete(key);
     }
   }
-  while (usedNonceExpiryByKey.size > NONCE_CACHE_LIMIT) {
-    const oldest = usedNonceExpiryByKey.keys().next();
+  while (deviceCache.size > NONCE_CACHE_LIMIT_PER_DEVICE) {
+    const oldest = deviceCache.keys().next();
     if (oldest.done) {
       return;
     }
-    usedNonceExpiryByKey.delete(oldest.value);
+    deviceCache.delete(oldest.value);
   }
 }
 
 function consumeNonce(deviceId: string, nonce: string, nowMs: number) {
-  pruneUsedNonces(nowMs);
-  const nonceKey = `${deviceId}:${nonce}`;
-  if (usedNonceExpiryByKey.has(nonceKey)) {
+  const deviceCache = usedNonceExpiryByDeviceId.get(deviceId) ?? new Map<string, number>();
+  pruneDeviceUsedNonces(deviceCache, nowMs);
+  if (deviceCache.has(nonce)) {
     return false;
   }
-  usedNonceExpiryByKey.set(nonceKey, nowMs + NONCE_TTL_MS);
+  deviceCache.set(nonce, nowMs + NONCE_TTL_MS);
+  pruneDeviceUsedNonces(deviceCache, nowMs);
+  if (deviceCache.size === 0) {
+    usedNonceExpiryByDeviceId.delete(deviceId);
+  } else {
+    usedNonceExpiryByDeviceId.set(deviceId, deviceCache);
+  }
   return true;
 }
 
@@ -81,7 +87,7 @@ function compareSignatures(actual: string, expected: string) {
 }
 
 export function clearCompanionRequestNonceCache() {
-  usedNonceExpiryByKey.clear();
+  usedNonceExpiryByDeviceId.clear();
 }
 
 export function authenticateCompanionRequest(args: {

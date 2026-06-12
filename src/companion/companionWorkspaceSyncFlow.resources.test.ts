@@ -8,7 +8,7 @@ import {
   syncPlatformMock
 } from './companionWorkspaceSyncFlow.testHarness';
 
-async function testRecordsBacklogBytes() {
+async function testRecordsBacklogBytesWithoutFastRetry() {
   syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({
     remainingAttachmentResourceBytes: 3145728,
     remainingAttachmentResourceCount: 2,
@@ -27,7 +27,7 @@ async function testRecordsBacklogBytes() {
     state: createSyncState()
   });
 
-  expect(outcome).toBe('backlog');
+  expect(outcome).toBe('skipped');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     message: 'Resource downloads are still pending.',
     status: 'skipped'
@@ -53,9 +53,11 @@ async function testRecordsDownloadedResourcesForPass() {
   });
   const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
   const setSyncProgress = vi.fn();
+  const onContinuationModeChange = vi.fn();
 
   const outcome = await tryForegroundAutoSync({
     cancelled: () => false,
+    onContinuationModeChange,
     setError: vi.fn(),
     setReadableArticle: vi.fn(),
     setState: vi.fn(),
@@ -65,6 +67,7 @@ async function testRecordsDownloadedResourcesForPass() {
   });
 
   expect(outcome).toBe('backlog');
+  expect(onContinuationModeChange).toHaveBeenCalledWith('resources-only');
   expect(setSyncProgress).toHaveBeenLastCalledWith({
     completed: 1,
     completedBytes: 1048576,
@@ -155,7 +158,7 @@ async function testKeepsProgressVisibleWhenBacklogRemains() {
     state: createSyncState()
   });
 
-  expect(outcome).toBe('backlog');
+  expect(outcome).toBe('skipped');
   expect(setSyncProgress).not.toHaveBeenCalledWith(null);
   expect(setSyncProgress).toHaveBeenCalledWith({
     completed: 0,
@@ -175,6 +178,26 @@ async function testKeepsProgressVisibleWhenBacklogRemains() {
     total: 5,
     totalBytes: null
   });
+}
+
+async function testUsesResourceOnlyContinuationMode() {
+  const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+
+  await tryForegroundAutoSync({
+    cancelled: () => false,
+    continuationMode: 'resources-only',
+    setError: vi.fn(),
+    setReadableArticle: vi.fn(),
+    setState: vi.fn(),
+    setSyncProgress: vi.fn(),
+    setStatus: vi.fn(),
+    state: createSyncState()
+  });
+
+  expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledWith(
+    'http://10.0.2.2:38641',
+    expect.objectContaining({ resourcesOnly: true })
+  );
 }
 
 async function testClearsProgressWhenBacklogIsDone() {
@@ -197,13 +220,15 @@ async function testClearsProgressWhenBacklogIsDone() {
 describe('tryForegroundAutoSync resource progress', () => {
   beforeEach(resetCompanionWorkspaceSyncFlowMocks);
 
-  it('records remaining cache bytes and schedules a fast retry while backlog remains', testRecordsBacklogBytes);
+  it('records remaining cache bytes without fast retry when no resource progress is made', testRecordsBacklogBytesWithoutFastRetry);
 
   it('records downloaded resources when a pass makes progress', testRecordsDownloadedResourcesForPass);
 
   it('keeps resource errors visible without fast retry when the pass makes no progress', testKeepsResourceErrorsVisibleWithoutFastRetry);
 
-  it('keeps sync progress visible and retries when a pass leaves idle resource backlog', testKeepsProgressVisibleWhenBacklogRemains);
+  it('keeps sync progress visible without fast retry when idle resource backlog remains', testKeepsProgressVisibleWhenBacklogRemains);
+
+  it('uses resource-only continuation mode on retry', testUsesResourceOnlyContinuationMode);
 
   it('clears sync progress when the resource backlog is done', testClearsProgressWhenBacklogIsDone);
 

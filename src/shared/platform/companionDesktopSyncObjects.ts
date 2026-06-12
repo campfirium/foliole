@@ -27,16 +27,8 @@ import { createSignedRequestHeaders } from './companionWorkspacePairing';
 const SYNC_PACK_PATH = '/companion/sync-pack';
 export const COMPANION_DESKTOP_SYNC_STRUCTURE_TIMEOUT_MS =
   companionSyncTimeoutOwnership('structure_pack_apply').timeoutMs;
-export {
-  ATTACHMENT_RESOURCE_BATCH_LIMIT,
-  CONTENT_BLOB_BATCH_LIMIT,
-  syncCompanionContentBlobFromDesktop
-} from './companionDesktopSyncResources';
-export type {
-  CompanionDesktopSyncOptions,
-  CompanionDesktopSyncProgress,
-  CompanionDesktopSyncResult
-} from './companionDesktopSyncTypes';
+export { ATTACHMENT_RESOURCE_BATCH_LIMIT, CONTENT_BLOB_BATCH_LIMIT, syncCompanionContentBlobFromDesktop } from './companionDesktopSyncResources';
+export type { CompanionDesktopSyncOptions, CompanionDesktopSyncProgress, CompanionDesktopSyncResult } from './companionDesktopSyncTypes';
 const inFlightSyncByEndpoint = new Map<string, Promise<CompanionDesktopSyncResult>>();
 
 function buildPackPath(cursor: number | null) {
@@ -128,6 +120,25 @@ function pushErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Desktop sync push failed.';
 }
 
+function createSkippedStructurePack() {
+  return {
+    appliedPackBlobCount: 0,
+    appliedPackObjectCount: 0,
+    appliedReviewOpIds: [],
+    syncedStructureElapsedMs: 0
+  };
+}
+
+function createSkippedPushResult() {
+  return {
+    pushConflictCount: 0,
+    pushedObjectIds: [],
+    pushedReviewOpIds: [],
+    pushError: null,
+    pushRejectedCount: 0
+  };
+}
+
 function mergeCompanionObjectsSyncResult(args: {
   finalSummary: Awaited<ReturnType<typeof loadCompanionDesktopSyncSummary>> | ReturnType<typeof createSkippedResourceSummary>;
   pack: Awaited<ReturnType<typeof pullRemoteStructurePack>>;
@@ -163,17 +174,23 @@ async function runCompanionObjectsSync(
   endpointUrl: string,
   options: CompanionDesktopSyncOptions = {}
 ): Promise<CompanionDesktopSyncResult> {
-  const pushed = await withSyncStepTimeout('push_local_changes', pushLocalDirtyObjects(endpointUrl))
-    .catch((error) => ({
-      pushConflictCount: 0,
-      pushedObjectIds: [],
-      pushedReviewOpIds: [],
-      pushError: pushErrorMessage(error),
-      pushRejectedCount: 0
-    }));
-  const pack = await withSyncStepTimeout('structure_pack_apply', pullRemoteStructurePack(endpointUrl));
-  options.onProgress?.({ completed: pack.appliedPackObjectCount, phase: 'structure', total: pack.appliedPackObjectCount });
-  await options.onStructureSynced?.();
+  const pushed = options.resourcesOnly
+    ? createSkippedPushResult()
+    : await withSyncStepTimeout('push_local_changes', pushLocalDirtyObjects(endpointUrl))
+      .catch((error) => ({
+        pushConflictCount: 0,
+        pushedObjectIds: [],
+        pushedReviewOpIds: [],
+        pushError: pushErrorMessage(error),
+        pushRejectedCount: 0
+      }));
+  const pack = options.resourcesOnly
+    ? createSkippedStructurePack()
+    : await withSyncStepTimeout('structure_pack_apply', pullRemoteStructurePack(endpointUrl));
+  if (!options.resourcesOnly) {
+    options.onProgress?.({ completed: pack.appliedPackObjectCount, phase: 'structure', total: pack.appliedPackObjectCount });
+    await options.onStructureSynced?.();
+  }
   const resources = options.includeResources === false
     ? createEmptyResourceStages()
     : await pullResourceStages(endpointUrl, options.onProgress);

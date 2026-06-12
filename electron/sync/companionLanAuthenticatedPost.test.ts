@@ -113,12 +113,12 @@ function createWriteJson() {
   });
 }
 
-function createOversizedRequest(url: string) {
+function createOversizedRequest(url: string): http.IncomingMessage & { url: string } {
   const request = Readable.from([Buffer.alloc((1024 * 1024) + 1)]) as http.IncomingMessage;
   request.headers = {};
   request.method = 'POST';
   request.url = url;
-  return request;
+  return request as http.IncomingMessage & { url: string };
 }
 
 it('returns unknown post paths before reading oversized bodies', async () => {

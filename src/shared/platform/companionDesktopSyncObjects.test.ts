@@ -136,6 +136,25 @@ async function testStoresPrimaryDeviceFromDesktopDiagnostics() {
   expect(primaryDeviceIdentityMock.saveLocalPrimaryDeviceId).toHaveBeenCalledWith('device-desktop');
 }
 
+async function testResourceContinuationSkipsStructurePack() {
+  vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 200 })));
+  syncBridgeMock.loadCompanionMissingContentBlobs
+    .mockResolvedValueOnce([{ hash: 'body-hash', size_bytes: 1024 }])
+    .mockResolvedValue([]);
+
+  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+  const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/', { resourcesOnly: true });
+
+  expect(result).toMatchObject({
+    appliedPackBlobCount: 0,
+    appliedPackObjectCount: 0,
+    pushError: null,
+    syncedContentBlobHashes: ['body-hash']
+  });
+  expect(syncBridgeMock.applyCompanionDesktopSyncPack).not.toHaveBeenCalled();
+  expect(syncBridgeMock.saveCompanionSyncPackCursor).not.toHaveBeenCalled();
+}
+
 describe('companion desktop sync objects', () => {
   beforeEach(resetCompanionDesktopSyncMocks);
 
@@ -150,4 +169,6 @@ describe('companion desktop sync objects', () => {
   it('reports remaining structure lag from final diagnostics', testReportsRemainingStructureLagFromFinalDiagnostics);
 
   it('stores the primary device from desktop diagnostics after sync', testStoresPrimaryDeviceFromDesktopDiagnostics);
+
+  it('skips structure pack work during resource-only continuation', testResourceContinuationSkipsStructurePack);
 });

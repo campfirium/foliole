@@ -12,6 +12,7 @@ import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncE
 type CompanionWorkspaceSyncStatus = 'idle' | 'loading' | 'syncing';
 type ForegroundAutoSyncOutcome = 'backlog' | 'completed' | 'failed' | 'skipped';
 type ForegroundSyncReason = 'endpoint-ready' | 'foreground' | 'retry';
+type CompanionSyncContinuationMode = 'full' | 'resources-only';
 const FOREGROUND_DUPLICATE_EVENT_WINDOW_MS = 1_000;
 const AUTO_SYNC_RETRY_DELAYS_MS = [2_000, 5_000, 15_000, 30_000, 60_000] as const;
 const AUTO_SYNC_BACKLOG_CONTINUE_DELAY_MS = 1_000;
@@ -19,6 +20,8 @@ type RunForegroundSyncCheck = (reason: ForegroundSyncReason) => void;
 
 type TryForegroundAutoSync = (args: {
   cancelled: () => boolean;
+  continuationMode?: CompanionSyncContinuationMode;
+  onContinuationModeChange?(mode: CompanionSyncContinuationMode): void;
   setError(error: string | null): void;
   setReadableArticle(article: CompanionReadableArticle | null): void;
   setState(state: NativeCompanionWorkspaceSyncState): void;
@@ -33,6 +36,7 @@ type ForegroundSyncRunnerArgs = {
   isPairingReadyRef: MutableRefObject<boolean>;
   lastCheckedAtRef: MutableRefObject<number>;
   lastForegroundAtRef: MutableRefObject<number>;
+  resourceContinuationModeRef: MutableRefObject<CompanionSyncContinuationMode>;
   retryAttemptRef: MutableRefObject<number>;
   retryTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>;
   setError: (error: string | null) => void;
@@ -49,6 +53,7 @@ type ForegroundSyncRefs = Pick<
   | 'isPairingReadyRef'
   | 'lastCheckedAtRef'
   | 'lastForegroundAtRef'
+  | 'resourceContinuationModeRef'
   | 'retryAttemptRef'
   | 'retryTimerRef'
   | 'stateRef'
@@ -100,11 +105,16 @@ function shouldStartForegroundSync(args: ForegroundSyncRunnerArgs, reason: Foreg
 function startForegroundSync(
   args: ForegroundSyncRunnerArgs,
   runForegroundSyncCheck: RunForegroundSyncCheck,
+  reason: ForegroundSyncReason,
   state: NativeCompanionWorkspaceSyncState
 ) {
   args.inFlightRef.current = true;
   void args.tryForegroundAutoSync({
     cancelled: args.cancelled,
+    continuationMode: reason === 'retry' ? args.resourceContinuationModeRef.current : 'full',
+    onContinuationModeChange: (mode) => {
+      args.resourceContinuationModeRef.current = mode;
+    },
     setError: args.setError,
     setReadableArticle: args.setReadableArticle,
     setState: args.setState,
@@ -115,11 +125,13 @@ function startForegroundSync(
     .then((outcome) => {
       if (outcome === 'completed') {
         args.retryAttemptRef.current = 0;
+        args.resourceContinuationModeRef.current = 'full';
         clearRetryTimer(args.retryTimerRef);
       } else if (outcome === 'backlog' || outcome === 'failed') {
         scheduleRetry(args, runForegroundSyncCheck, outcome);
       } else {
         args.retryAttemptRef.current = 0;
+        args.resourceContinuationModeRef.current = 'full';
         clearRetryTimer(args.retryTimerRef);
       }
     })
@@ -140,7 +152,7 @@ function createForegroundSyncRunner(args: ForegroundSyncRunnerArgs) {
       clearRetryTimer(args.retryTimerRef);
     }
     args.lastCheckedAtRef.current = now;
-    startForegroundSync(args, runForegroundSyncCheck, args.stateRef.current);
+    startForegroundSync(args, runForegroundSyncCheck, reason, args.stateRef.current);
   };
 
   return runForegroundSyncCheck;
@@ -151,6 +163,7 @@ function useForegroundSyncRefs(isPairingReady: boolean, state: NativeCompanionWo
   const isPairingReadyRef = useRef(isPairingReady);
   const lastCheckedAtRef = useRef(0);
   const lastForegroundAtRef = useRef(0);
+  const resourceContinuationModeRef = useRef<CompanionSyncContinuationMode>('full');
   const retryAttemptRef = useRef(0);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stateRef = useRef(state);
@@ -159,6 +172,7 @@ function useForegroundSyncRefs(isPairingReady: boolean, state: NativeCompanionWo
     isPairingReadyRef,
     lastCheckedAtRef,
     lastForegroundAtRef,
+    resourceContinuationModeRef,
     retryAttemptRef,
     retryTimerRef,
     stateRef
