@@ -77,7 +77,7 @@ export function MarkdownImagePreviewDialog(props: MarkdownImagePreviewDialogProp
           >
             <div className="absolute right-4 top-4 z-local-raised">
               <AppIconButton
-                className="bg-bg-elevated/92 text-foreground hover:bg-bg-elevated"
+                className="bg-[var(--app-floating-surface-bg)] text-foreground hover:bg-[var(--app-floating-item-hover-bg)]"
                 icon={<X aria-hidden="true" size={16} strokeWidth={2} />}
                 label={t('desktop.editorPreview.closeImage')}
                 onClick={handleDismiss}

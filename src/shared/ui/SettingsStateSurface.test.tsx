@@ -48,7 +48,7 @@ it('supports loading copy and settings state actions', () => {
   render(<SettingsStateAction label="Retry" onClick={onClick} />);
 
   expect(screen.getByText('Loading backups').closest('[data-settings-state-surface]')).toHaveAttribute('aria-busy', 'true');
-  expect(screen.getByText('Loading backups').className).toContain('text-foreground');
+  expect(screen.getByText('Loading backups').className).toContain('text-foreground/72');
   fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
   expect(onClick).toHaveBeenCalledTimes(1);
 });

@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from '../localization/LocalizationProvider';
 
 import { localizeActionHelpCopy } from './actionHelpLocalization';
+import { appFloatingSurfaceClassName } from './FloatingSurface';
 
 import { cn } from '@/shared/lib/utils';
 
@@ -74,8 +75,7 @@ function ActionHelpCardContent({ help, position }: ActionHelpCardContentProps) {
     <div
       className={cn(
         'pointer-events-none fixed z-popover-elevated max-w-[min(15.5rem,calc(100vw-2rem))]',
-        'rounded-xl border border-[var(--app-floating-border-color)] px-4 py-3 shadow-popover',
-        'bg-[color-mix(in_oklab,var(--app-floating-surface-bg)_88%,rgb(var(--color-background)))]',
+        appFloatingSurfaceClassName('popover', 'px-4 py-3'),
         'text-left'
       )}
       role="tooltip"

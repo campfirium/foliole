@@ -1,5 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 
+import { appFloatingSurfaceClassName } from './FloatingSurface';
+
 import { cn } from '@/shared/lib/utils';
 
 interface ReviewActionBarProps {
@@ -40,9 +42,9 @@ export function ReviewActionBar({
       aria-label={ariaLabel}
       className={cn(
         'relative flex h-[var(--workspace-bottom-toolbar-height)] flex-none items-center',
-        surface === 'panel' && 'w-full border-t border-border bg-bg-elevated',
+        surface === 'panel' && 'w-full border-t border-border bg-[var(--workspace-region-footer-document-bg)]',
         surface === 'overlay' &&
-          'mx-auto w-fit max-w-[calc(100vw-3rem)] rounded-lg border border-border/45 bg-bg-elevated px-4 shadow-control',
+          appFloatingSurfaceClassName('popover', 'mx-auto w-fit max-w-[calc(100vw-3rem)] px-4'),
         className
       )}
       data-surface={surface}

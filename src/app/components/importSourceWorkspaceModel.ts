@@ -7,12 +7,12 @@ import {
   formatReadwiseSourceLabel,
   type ImportManagerSourceDraft as DraftImportSource
 } from '../../../lib/core/import/importManagerSettings';
+import { appSurfaceControlClassName } from '../../shared/ui';
 
 export type DraftImportSourceField = keyof DraftImportSource;
 export type { DraftImportSource };
 
-export const importSourceSelectClassName =
-  'h-10 w-full rounded-md border border-border bg-bg-elevated px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong';
+export const importSourceSelectClassName = appSurfaceControlClassName('h-10 w-full');
 
 export function cloneDraftImportSource(source: DraftImportSource, index: number): DraftImportSource {
   return {

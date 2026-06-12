@@ -1,7 +1,7 @@
 import { ArrowUpRight, CheckCircle2, XCircle } from 'lucide-react';
 
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { AppSpinner } from '../../shared/ui';
+import { appFloatingSurfaceClassName, AppSpinner } from '../../shared/ui';
 
 export type WorkspaceActivityNoticeTone = 'loading' | 'success' | 'error';
 
@@ -47,7 +47,7 @@ export function WorkspaceActivityNotice({
   return (
     <div
       aria-live="polite"
-      className={`absolute left-[calc(var(--workspace-rail-width)+theme(spacing.2))] top-[calc(var(--workspace-top-toolbar-height)+theme(spacing.2))] z-workspace-overlay max-w-80 rounded-md border border-border/70 bg-bg-panel/95 text-sm text-foreground shadow-panel ${onOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}
+      className={appFloatingSurfaceClassName('popover', `absolute left-[calc(var(--workspace-rail-width)+theme(spacing.2))] top-[calc(var(--workspace-top-toolbar-height)+theme(spacing.2))] z-workspace-overlay max-w-80 text-ui-md text-foreground ${onOpen ? 'pointer-events-auto' : 'pointer-events-none'}`)}
       data-testid="clipboard-import-notice"
       role="status"
     >

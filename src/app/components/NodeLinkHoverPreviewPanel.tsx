@@ -82,7 +82,7 @@ export function NodeLinkHoverPreviewPanel(props: NodeLinkHoverPreviewPanelProps)
         className={appFloatingSurfaceClassName('panel', 'absolute flex flex-col overflow-hidden')}
         style={panelStyle}
       >
-        <header className="border-b border-border bg-bg-panel px-4 py-3">
+        <header className="border-b border-[var(--app-floating-divider-color)] bg-[var(--app-floating-muted-bg)] px-4 py-3">
           <div className="truncate text-sm font-semibold text-foreground">{props.preview.title}</div>
           {props.preview.targetNodeId ? (
             <div className="mt-1 text-xs text-foreground/60">{t('desktop.linkPreview.subtitle')}</div>

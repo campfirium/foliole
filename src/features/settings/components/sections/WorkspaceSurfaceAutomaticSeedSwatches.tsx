@@ -135,7 +135,7 @@ export function AutomaticSeedPopoverSurface(props: {
   return (
     <div
       aria-label={t('settings.appearance.surface.autoSeedPicker')}
-      className={cn(appFloatingSurfaceClassName('popover'), 'absolute left-0 top-11 z-popover-elevated max-h-80 w-72 overflow-y-auto rounded-md p-2.5 shadow-panel')}
+      className={cn(appFloatingSurfaceClassName('popover'), 'absolute left-0 top-11 z-popover-elevated max-h-80 w-72 overflow-y-auto p-2.5')}
       ref={props.panelRef as RefObject<HTMLDivElement>}
       role="dialog"
       tabIndex={-1}

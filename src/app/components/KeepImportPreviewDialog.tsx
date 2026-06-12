@@ -102,7 +102,7 @@ export function KeepImportPreviewDialog(props: {
         <AppDialogOverlay />
         <AppDialogContent
           aria-describedby={undefined}
-          className="left-1/2 top-1/2 w-[min(860px,calc(100vw-64px))] -translate-x-1/2 -translate-y-1/2 rounded-xl border-border/35 bg-bg-elevated p-0"
+          className="w-[min(860px,calc(100vw-64px))] p-0"
         >
           <section aria-label={t('desktop.keepImport.preview.aria')} className="flex flex-col">
             <header className="px-8 pb-2 pt-7">

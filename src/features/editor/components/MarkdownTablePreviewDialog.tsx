@@ -1,5 +1,5 @@
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
-import { AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../../shared/ui';
+import { AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle, appFloatingSurfaceClassName } from '../../../shared/ui';
 import { buildFootnotePresentation } from '../model/footnotePresentation';
 import { tokenizeMarkdownTableInlineText } from '../model/markdownTableInline';
 import { getMarkdownTableCellAnchorClasses } from '../model/markdownTablePlans';
@@ -217,10 +217,10 @@ export function MarkdownTablePreviewDialog(props: MarkdownTablePreviewDialogProp
         >
           <AppDialogTitle className="sr-only">{t('desktop.editorPreview.tableTitle')}</AppDialogTitle>
           <div
-            className="relative max-h-[88vh] overflow-hidden rounded-md border border-border bg-canvas shadow-popover"
+            className={appFloatingSurfaceClassName('panel', 'relative max-h-[88vh] overflow-hidden')}
             style={panelStyle}
           >
-            <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 z-local-overlay h-8 bg-canvas" />
+            <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 z-local-overlay h-8 bg-[var(--app-floating-surface-bg)]" />
             {props.table ? renderPreviewHeaderOverlay(props.table, columnCount) : null}
             <div className="app-scrollbar max-h-[88vh] overflow-y-auto overflow-x-hidden px-10 pb-8 pt-8 [--app-scrollbar-thumb-color:rgb(var(--color-foreground)/0.04)] [--app-scrollbar-thumb-hover-color:rgb(var(--color-foreground)/0.12)]">
               {props.table ? renderPreviewTable(props.table) : null}

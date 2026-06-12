@@ -111,10 +111,10 @@ function TruncatedTooltipContent(props: {
   return (
     <AppTooltipContent
       align="center"
-      className="relative max-w-[min(15rem,calc(100vw-2rem))] overflow-visible border-transparent bg-transparent p-0 text-foreground/86 [--app-tooltip-bg:color-mix(in_srgb,rgb(var(--color-bg-elevated))_88%,rgb(var(--color-bg-panel))_12%)] [--app-tooltip-border-color:rgb(var(--color-foreground)/0.12)] [--app-tooltip-fg:rgb(var(--color-foreground)/0.86)] [--app-tooltip-line-height:1.375rem] [--app-tooltip-padding-x:0.75rem] [--app-tooltip-padding-y:0.5rem] [--app-tooltip-shadow:var(--shadow-panel)]"
       ref={props.setTooltipElement}
       side="right"
       sideOffset={props.sideOffset}
+      surface="truncated"
     >
       <TruncatedTooltipBubbleSurface height={props.size.height} width={props.size.width} />
       <span className="relative block px-[var(--app-tooltip-padding-x)] py-[var(--app-tooltip-padding-y)]">{props.text}</span>

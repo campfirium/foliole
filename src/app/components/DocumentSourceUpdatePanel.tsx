@@ -138,7 +138,7 @@ function SourceUpdatePanelDialog(props: {
         <AppDialogOverlay />
         <AppDialogContent
           aria-describedby={undefined}
-          className="left-1/2 top-1/2 h-[min(820px,calc(100vh-88px))] w-[min(1520px,calc(100vw-72px))] -translate-x-1/2 -translate-y-1/2 rounded-2xl border-border/35 bg-bg-panel p-0"
+          className="h-[min(820px,calc(100vh-88px))] w-[min(1520px,calc(100vw-72px))] p-0"
         >
           <section className="flex h-full min-h-0 flex-col overflow-hidden">
             <AppDialogTitle className="sr-only">{t('desktop.sourceUpdate.dialogTitle')}</AppDialogTitle>

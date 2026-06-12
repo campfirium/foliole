@@ -94,6 +94,8 @@ it('renders review action bar with primary, secondary, and status slots', () => 
 
   expect(container.querySelector('[data-mode="study"]')).toBeInTheDocument();
   expect(screen.getByLabelText('Review mode toolbar').querySelector('.max-w-\\[var\\(--document-max-width\\)\\]')).toBeInTheDocument();
+  expect(screen.getByLabelText('Review mode toolbar').className).toContain('--workspace-region-footer-document-bg');
+  expect(screen.getByLabelText('Review mode toolbar').className).not.toContain('bg-bg-elevated');
   expect(
     screen.getByLabelText('Review mode toolbar').querySelector(
       '.pl-\\[var\\(--document-content-inline-start-padding\\,var\\(--document-content-inline-padding\\)\\)\\]'
@@ -101,6 +103,21 @@ it('renders review action bar with primary, secondary, and status slots', () => 
   ).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Show Answer' })).toBeInTheDocument();
   expect(screen.getByText('Hotkeys enabled')).toBeInTheDocument();
+});
+
+it('renders review action overlay with shared floating surface tokens', () => {
+  render(
+    <ReviewActionBar
+      ariaLabel="Review overlay toolbar"
+      primary={<button type="button">Continue</button>}
+      surface="overlay"
+    />
+  );
+
+  const toolbar = screen.getByLabelText('Review overlay toolbar');
+  expect(toolbar.className).toContain('--app-floating-surface-bg');
+  expect(toolbar.className).toContain('shadow-popover');
+  expect(toolbar.className).not.toContain('bg-bg-elevated');
 });
 
 it('renders toolbar action groups with shared grouping semantics', () => {

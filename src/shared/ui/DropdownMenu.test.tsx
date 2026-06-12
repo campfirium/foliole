@@ -70,7 +70,7 @@ it('lets passthrough selection menus close without stealing the outside pointer 
   expect(onPointerDown).toHaveBeenCalledTimes(1);
 });
 
-it('uses the shared selection surface color token for hover and focus states', () => {
+it('uses the shared floating item token for hover and focus states', () => {
   renderWithLocalization(
     <AppSelectionDropdownMenu left={40} onClose={() => undefined} top={56}>
       <AppSelectionDropdownMenuItem>Highlight</AppSelectionDropdownMenuItem>
@@ -78,8 +78,9 @@ it('uses the shared selection surface color token for hover and focus states', (
   );
 
   const item = screen.getByRole('menuitem', { name: 'Highlight' });
-  expect(item.className).toContain('focus:bg-[var(--app-selection-surface-color)]');
-  expect(item.className).toContain('hover:bg-[var(--app-selection-surface-color)]');
+  expect(item.className).toContain('focus:bg-[var(--app-floating-item-hover-bg)]');
+  expect(item.className).toContain('hover:bg-[var(--app-floating-item-hover-bg)]');
+  expect(item.className).not.toContain('--app-selection-surface-color');
 });
 
 it('renders menus above tooltip-level floating surfaces', () => {
@@ -92,7 +93,8 @@ it('renders menus above tooltip-level floating surfaces', () => {
   const menu = screen.getByRole('menu', { name: 'Selection commands' });
   expect(menu.className).toContain('z-dropdown');
   expect(menu.className).toContain('shadow-popover');
-  expect(menu.className).toContain('bg-[color-mix(in_oklab,var(--app-floating-surface-bg)_82%,rgb(var(--color-background)))]');
+  expect(menu.className).toContain('bg-[var(--app-floating-surface-bg)]');
+  expect(menu.className).not.toContain('color-mix');
 });
 
 it('uses shared dropdown styling for grouped checked menu items', () => {

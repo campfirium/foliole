@@ -1,7 +1,7 @@
 import type { ReactNode, Ref } from 'react';
 
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
-import { AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../../shared/ui';
+import { AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle, settingsDialogSurfaceClassName } from '../../../shared/ui';
 import { useHotkeySettings } from '../context/HotkeySettingsProvider';
 import type { SettingsCategoryId } from '../model/settingsPanelOptions';
 import type { SettingsSearchResult } from '../model/settingsSearch';
@@ -90,7 +90,7 @@ export function SettingsPanelDialog(props: SettingsPanelDialogProps) {
         <AppDialogContent
           aria-label={t('settings.dialog.aria')}
           aria-describedby={undefined}
-          className={`grid h-[min(800px,calc(100dvh-36px))] w-[min(1240px,calc(100vw-36px))] max-w-none grid-cols-[260px_minmax(0,1fr)] overflow-hidden rounded-lg border-settings-outline bg-settings-group shadow-settings ${props.isPreviewActive ? 'pointer-events-none opacity-0' : ''}`}
+          className={settingsDialogSurfaceClassName(`grid h-[min(800px,calc(100dvh-36px))] w-[min(1240px,calc(100vw-36px))] max-w-none grid-cols-[260px_minmax(0,1fr)] overflow-hidden ${props.isPreviewActive ? 'pointer-events-none opacity-0' : ''}`)}
           data-settings-root-dialog="true"
           onEscapeKeyDown={(event) => {
             if (props.searchQuery.trim().length > 0) {

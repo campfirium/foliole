@@ -25,6 +25,12 @@ function expectSharedPreviewOverlay() {
   expect(overlay?.className).not.toContain('bg-foreground/60');
 }
 
+function hasClassToken(token: string) {
+  return [...document.body.querySelectorAll<HTMLElement>('*')].some((element) =>
+    element.className.includes(token)
+  );
+}
+
 describe('Markdown preview dialog surface', () => {
   it('keeps image preview overlay on shared theme-aware floating tokens', () => {
     renderWithLocalization(
@@ -41,5 +47,7 @@ describe('Markdown preview dialog surface', () => {
     renderWithLocalization(<MarkdownTablePreviewDialog onOpenChange={vi.fn()} table={TABLE_PREVIEW} />);
 
     expectSharedPreviewOverlay();
+    expect(document.body.querySelector('[role="dialog"] .shadow-panel')).toBeInTheDocument();
+    expect(hasClassToken('bg-[var(--app-floating-surface-bg)]')).toBe(true);
   });
 });

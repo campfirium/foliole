@@ -56,6 +56,11 @@ const STATE_SURFACE_TONE_CLASS_NAMES: Record<StateSurfaceTone, string> = {
   error: 'text-foreground/65',
   loading: 'text-foreground/60'
 };
+const STATE_SURFACE_TITLE_CLASS_NAMES: Record<StateSurfaceTone, string> = {
+  empty: 'text-foreground/72',
+  error: 'text-error',
+  loading: 'text-foreground/72'
+};
 
 const STATE_SURFACE_SCOPE_CLASS_NAMES: Record<StateSurfaceScope, string> = {
   document: 'min-h-state-surface px-6 py-10',
@@ -95,10 +100,10 @@ function AppStateSurface({ action, ariaBusy, ariaLabel, className, description, 
       data-state-surface-tone={tone}
       role={role}
     >
-      {tone === 'loading' ? <AppSpinner decorative tone="accent" /> : null}
+      {tone === 'loading' ? <AppSpinner decorative tone="neutral" /> : null}
       {title || description ? (
         <div className="flex flex-col items-center gap-2">
-          {title ? <p className={cn('m-0 text-ui-md font-semibold', tone === 'error' ? 'text-error' : 'text-foreground')}>{title}</p> : null}
+          {title ? <p className={cn('m-0 text-ui-md font-semibold', STATE_SURFACE_TITLE_CLASS_NAMES[tone])}>{title}</p> : null}
           {description ? <p className="m-0 text-ui-base">{description}</p> : null}
         </div>
       ) : null}

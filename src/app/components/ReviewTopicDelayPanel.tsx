@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react';
 import { getTopicPostponeDelayOption, TOPIC_POSTPONE_DELAY_OPTIONS } from '../../../lib/core/review/topicPostponeDelay';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { onWindowEscape, onWindowKeydown } from '../../shared/platform/keyboard';
-import { AppButton } from '../../shared/ui';
+import { AppButton, appFloatingSurfaceClassName } from '../../shared/ui';
 import type { useReviewTopicDelayPanel } from '../hooks/useReviewTopicDelayPanel';
 
 type ReviewTopicDelayPanelProps = ReturnType<typeof useReviewTopicDelayPanel>;
@@ -59,7 +59,7 @@ function ReviewTopicDelaySlider(props: Pick<ReviewTopicDelayPanelProps, 'selecte
         <div className="absolute left-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-foreground/32" style={{ width: progress }} />
         <div
           aria-hidden="true"
-          className="absolute top-1/2 size-5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-foreground/28 bg-bg-elevated shadow-control"
+          className="absolute top-1/2 size-5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[var(--app-control-border-color)] bg-[var(--app-surface-control-bg)] shadow-control"
           style={{ left: progress }}
         />
         <input
@@ -87,7 +87,7 @@ export function ReviewTopicDelayPanel(props: ReviewTopicDelayPanelProps) {
     <div className="fixed inset-0 z-command-palette flex items-center justify-center px-4" role="presentation">
       <section
         aria-label={t('desktop.reviewDelay.dialog')}
-        className="grid w-full max-w-md gap-4 rounded-lg border border-[var(--app-floating-border-color)] bg-[color-mix(in_oklab,var(--app-floating-surface-bg)_82%,rgb(var(--color-background)))] px-5 py-4 text-foreground/72 shadow-popover"
+        className={appFloatingSurfaceClassName('popover', 'grid w-full max-w-md gap-4 px-5 py-4 text-foreground/72')}
         role="dialog"
       >
         <div className="flex items-center justify-between gap-4">

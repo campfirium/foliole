@@ -1,9 +1,7 @@
-import { ImagePlus, X } from 'lucide-react';
-import { useMemo } from 'react';
+import { X } from 'lucide-react';
 
 import {
   FEEDBACK_IMAGE_TYPES,
-  FEEDBACK_LIMITS,
   type FeedbackAttachmentPayload
 } from '../../shared/feedback/feedbackContract';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
@@ -14,19 +12,10 @@ export function FeedbackAttachmentPicker(props: {
   onRemoveAttachment: (index: number) => void;
 }) {
   const t = useTranslation();
-  const attachmentLabel = useMemo(() => `${props.attachments.length}/${FEEDBACK_LIMITS.attachmentCount}`, [props.attachments.length]);
   return (
-    <section className="py-3">
-      <div className="flex min-h-8 flex-wrap items-center justify-between gap-3">
-        <div className="flex min-w-0 items-baseline gap-2 text-sm text-foreground/60">
-          <p className="text-sm font-medium text-foreground">{t('feedback.attachments.title')}</p>
-          <span className="rounded-full border border-border bg-background px-2 py-0.5 text-xs tabular-nums text-foreground/60">
-            {t('feedback.attachments.count', { count: attachmentLabel })}
-          </span>
-          <span>{t('feedback.attachments.hint')}</span>
-        </div>
-        <label className="inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-md border border-[var(--app-control-border-color)] bg-transparent px-3.5 text-ui-md text-foreground transition-colors hover:border-[var(--app-control-border-hover-color)] hover:bg-[var(--app-control-bg-hover-color)]">
-          <ImagePlus aria-hidden className="size-4" />
+    <section className="py-3 font-shellless-ui">
+      <div className="flex min-h-8 flex-wrap items-center justify-start gap-3">
+        <label className="cursor-pointer text-shellless-meta text-shellless-control-fg transition-colors hover:text-shellless-fg">
           {t('feedback.attachments.add')}
           <input
             accept={FEEDBACK_IMAGE_TYPES.join(',')}
@@ -60,18 +49,18 @@ function FeedbackAttachmentPreview(props: {
 }) {
   const t = useTranslation();
   return (
-    <div className="group relative w-28 shrink-0 overflow-hidden rounded-md border border-border bg-background">
+    <div className="group relative w-28 shrink-0 overflow-hidden rounded-shellless-control border border-shellless-control-border bg-shellless-surface">
       <img
         alt={props.attachment.name}
         className="h-[4.5rem] w-full object-cover"
         src={`data:${props.attachment.type};base64,${props.attachment.contentBase64}`}
       />
       <div className="px-2 py-1.5">
-        <span className="min-w-0 truncate text-xs text-foreground/70">{props.attachment.name}</span>
+        <span className="min-w-0 truncate text-xs text-shellless-muted">{props.attachment.name}</span>
       </div>
       <button
         aria-label={t('feedback.attachments.remove', { name: props.attachment.name })}
-        className="absolute right-1 top-1 inline-flex size-6 items-center justify-center rounded-md bg-background/90 text-foreground/65 shadow-control hover:bg-background hover:text-foreground"
+        className="absolute right-1 top-1 inline-flex size-6 items-center justify-center rounded-shellless-control border border-shellless-control-border bg-shellless-surface/90 text-shellless-muted shadow-control hover:bg-shellless-surface hover:text-shellless-fg"
         onClick={() => props.onRemoveAttachment(props.index)}
         type="button"
       >

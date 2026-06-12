@@ -98,7 +98,7 @@ export function ExternalSearchPreviewDialog(props: {
         <AppDialogOverlay />
         <AppDialogContent
           aria-describedby={undefined}
-          className="left-1/2 top-1/2 flex h-[min(760px,calc(100dvh-48px))] w-[min(980px,calc(100vw-48px))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border-border/45 bg-bg-panel p-0"
+          className="flex h-[min(760px,calc(100dvh-48px))] w-[min(980px,calc(100vw-48px))] flex-col overflow-hidden p-0"
         >
           <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
             <div className="min-w-0">

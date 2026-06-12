@@ -17,6 +17,17 @@ describe('applyEditorTypographyScale', () => {
     applyEditorTypographyScale(root, 17);
 
     expect(root.style.getPropertyValue('--content-panel-code-font-size')).toBe('15.3px');
+    expect(root.style.getPropertyValue('--app-shellless-input-font-size')).toBe('15.64px');
+  });
+
+  it('keeps shell-less input size tied to reading size without becoming tiny or oversized', () => {
+    const root = document.createElement('div');
+
+    applyEditorTypographyScale(root, 12);
+    expect(root.style.getPropertyValue('--app-shellless-input-font-size')).toBe('15px');
+
+    applyEditorTypographyScale(root, 24);
+    expect(root.style.getPropertyValue('--app-shellless-input-font-size')).toBe('22px');
   });
 });
 

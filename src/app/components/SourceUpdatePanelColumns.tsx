@@ -9,6 +9,14 @@ import type { SourceUpdateOverviewSegment } from './sourceUpdateDiffModel';
 import { SourceUpdateOverviewRuler } from './SourceUpdateOverviewRuler';
 import { SourceUpdateSummaryBar } from './SourceUpdateSummaryBar';
 
+const DOCUMENT_PREVIEW_PANE_CLASS_NAME =
+  'flex min-h-0 min-w-0 flex-col overflow-hidden bg-[var(--workspace-region-main-document-bg)]';
+const REFERENCE_PREVIEW_PANE_CLASS_NAME =
+  'flex min-h-0 min-w-0 flex-col overflow-hidden border-l border-border bg-[var(--app-floating-muted-bg)]';
+const REFERENCE_HEADER_SURFACE_CLASS_NAME = 'border-l border-border bg-[var(--app-floating-muted-bg)]';
+const OVERVIEW_PANE_CLASS_NAME =
+  'flex min-h-0 min-w-0 flex-col overflow-hidden border-l border-border bg-[var(--app-floating-muted-bg)]';
+
 interface DocumentSourceUpdatePanelLayoutProps {
   currentContent: string;
   currentHighlightCount: number;
@@ -147,22 +155,22 @@ export function SourceUpdatePanelColumns(props: SourceUpdatePanelColumnsProps) {
           description={t('desktop.sourceUpdate.current.description')}
           title={t('desktop.sourceUpdate.current.title')}
         />
-        <div className="border-l border-border bg-bg-panel/40">
+        <div className={REFERENCE_HEADER_SURFACE_CLASS_NAME}>
           <PanelColumnLabel
             description={t('desktop.sourceUpdate.updated.description')}
             title={t('desktop.sourceUpdate.updated.title')}
           />
         </div>
-        <div aria-hidden="true" className="border-b border-l border-border bg-bg-panel/40" />
+        <div aria-hidden="true" className={`${REFERENCE_HEADER_SURFACE_CLASS_NAME} border-b`} />
         <SourceUpdatePaneBody
-          className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-bg-elevated"
+          className={DOCUMENT_PREVIEW_PANE_CLASS_NAME}
           paneProps={currentPaneProps}
         />
         <SourceUpdatePaneBody
-          className="flex min-h-0 min-w-0 flex-col overflow-hidden border-l border-border bg-bg-panel/40"
+          className={REFERENCE_PREVIEW_PANE_CLASS_NAME}
           paneProps={updatedPaneProps}
         />
-        <section className="flex min-h-0 min-w-0 flex-col overflow-hidden border-l border-border bg-bg-panel/40">
+        <section className={OVERVIEW_PANE_CLASS_NAME}>
           <SourceUpdateOverviewRuler
             currentContent={props.props.currentContent}
             currentEditor={props.currentEditor}

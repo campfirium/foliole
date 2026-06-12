@@ -144,7 +144,7 @@ function PreviewHeader(args: {
   const t = useTranslation();
   return (
     <header
-      className="flex cursor-move items-start justify-between gap-3 border-b border-border bg-bg-panel px-4 py-3"
+      className="flex cursor-move items-start justify-between gap-3 border-b border-[var(--app-floating-divider-color)] bg-[var(--app-floating-muted-bg)] px-4 py-3"
       onPointerDown={(event) => {
         if ((event.target as HTMLElement | null)?.closest('button')) {
           return;

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { cn } from '../../../shared/lib/utils';
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import {
+  appFloatingItemClassName,
   appFloatingSurfaceClassName,
   settingsHotkeySearchFieldClassName,
   settingsHotkeySearchPanelClassName,
@@ -14,7 +15,7 @@ import { HOTKEY_FILTER_OPTIONS } from './HotkeySettingsFilterOptions';
 import type { HotkeyFilterMode } from './HotkeySettingsSectionModel';
 
 const HOTKEY_ICON_BUTTON_CLASS_NAME = settingsResetButtonClassName('size-8');
-const HOTKEY_FILTER_ITEM_CLASS_NAME = 'flex min-h-9 w-full items-center justify-between gap-4 px-3 text-left text-sm font-semibold hover:bg-settings-control-hover';
+const HOTKEY_FILTER_ITEM_CLASS_NAME = appFloatingItemClassName('flex min-h-9 items-center justify-between gap-4 text-ui-base font-semibold');
 
 function HotkeyFilterMenu(props: {
   filterMode: HotkeyFilterMode;

@@ -8,7 +8,8 @@ import {
   AppDialogContent,
   AppDialogOverlay,
   AppDialogPortal,
-  AppDialogTitle
+  AppDialogTitle,
+  settingsNestedDialogSurfaceClassName
 } from '../../../../shared/ui';
 
 import {
@@ -46,7 +47,7 @@ export function NodeIconSettingsDialog(props: NodeIconSettingsDialogProps) {
         <AppDialogOverlay />
         <AppDialogContent
           aria-describedby={undefined}
-          className="grid max-h-[calc(100dvh-32px)] w-[min(640px,calc(100vw-32px))] gap-4 overflow-auto rounded-lg border-settings-outline bg-settings-shell p-5 shadow-settings"
+          className={settingsNestedDialogSurfaceClassName('shell', 'grid max-h-[calc(100dvh-32px)] w-[min(640px,calc(100vw-32px))] gap-4 overflow-auto p-5')}
           data-settings-nested-dialog="true"
         >
           <AppDialogTitle className="text-[1.05rem]">{target.title}</AppDialogTitle>

@@ -74,6 +74,7 @@ export default {
         'shellless-muted': 'var(--app-shellless-muted-fg)',
         'shellless-faint': 'var(--app-shellless-faint-fg)',
         'shellless-placeholder': 'var(--app-shellless-placeholder-fg)',
+        'shellless-control-fg': 'var(--app-shellless-control-fg)',
         'shellless-control-border': 'var(--app-shellless-control-border-color)',
         'shellless-control-border-hover': 'var(--app-shellless-control-border-hover-color)',
         'shellless-control-hover': 'var(--app-shellless-control-hover-bg)',

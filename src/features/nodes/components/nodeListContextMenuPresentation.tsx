@@ -16,8 +16,7 @@ export const nodeContextMenuSeparatorClassName = 'mx-1 my-1.5 h-px bg-[var(--app
 
 const menuItemClassName = [
   'min-h-7 gap-2 rounded-md px-2 py-1 text-[13px] font-normal leading-5 text-foreground/78',
-  'focus:bg-[var(--node-context-menu-item-hover-bg)] focus:text-foreground',
-  'data-[highlighted]:bg-[var(--node-context-menu-item-hover-bg)] data-[highlighted]:text-foreground'
+  'focus:text-foreground data-[highlighted]:text-foreground'
 ].join(' ');
 const menuIconClassName = 'h-3.5 w-3.5 shrink-0 text-foreground/48';
 

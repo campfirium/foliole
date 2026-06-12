@@ -25,7 +25,7 @@ function createImagePreviewTrigger(args: { alt: string; presentation: ImageCloze
   const label = translate(getStoredAppLocale(), 'desktop.editorPreview.openImage');
   const button = document.createElement('button');
   button.className =
-    'cm-md-image-preview-trigger absolute right-2 top-2 z-surface inline-flex size-8 cursor-pointer items-center justify-center rounded-md border border-border/60 bg-bg-elevated/90 p-0 text-foreground shadow-panel transition-opacity hover:bg-bg-elevated focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring';
+    'cm-md-image-preview-trigger absolute right-2 top-2 z-surface inline-flex size-8 cursor-pointer items-center justify-center rounded-md border border-[var(--app-control-border-color)] bg-[var(--app-surface-control-bg)] p-0 text-foreground shadow-control transition-opacity hover:border-[var(--app-control-border-hover-color)] hover:bg-[var(--app-surface-control-hover-bg)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring';
   button.type = 'button';
   button.setAttribute('aria-label', label);
   button.innerHTML =

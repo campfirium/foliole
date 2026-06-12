@@ -51,4 +51,17 @@ describe('radius token boundary', () => {
 
     expect(offenders).toEqual([]);
   });
+
+  it('keeps editor radius tokens derived from the shared app radius scale', () => {
+    const styles = readWorkspaceFile('src/app/styles.css');
+    const editorRadiusBlock = styles.slice(styles.indexOf('--editor-radius-xs'), styles.indexOf('--editor-space-xxs'));
+
+    expect(editorRadiusBlock).toContain('--editor-radius-xs: calc(var(--radius-sm) * 0.4)');
+    expect(editorRadiusBlock).toContain('--editor-radius-sm: calc(var(--radius-sm) * 0.5)');
+    expect(editorRadiusBlock).toContain('--editor-radius-md: var(--radius-sm)');
+    expect(editorRadiusBlock).toContain('--editor-radius-lg: calc(var(--radius-sm) * 1.5)');
+    expect(editorRadiusBlock).toContain('--editor-radius-xl: var(--radius-md)');
+    expect(editorRadiusBlock).toContain('--editor-radius-popover: var(--radius-lg)');
+    expect(editorRadiusBlock).not.toMatch(/--editor-radius-[^:]+:\s*[0-9.]+rem/);
+  });
 });

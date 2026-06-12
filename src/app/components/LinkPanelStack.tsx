@@ -4,7 +4,7 @@ import type { PointerEvent as ReactPointerEvent, RefObject } from 'react';
 
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { openExternalUrl } from '../../shared/platform/runtimeExternalNavigation';
-import { AppIconButton } from '../../shared/ui';
+import { AppIconButton, appFloatingSurfaceClassName } from '../../shared/ui';
 
 import { useLinkPanelViewportBounds } from './linkPanelBounds';
 import {
@@ -31,7 +31,7 @@ function LinkPanelHeader(props: {
 
   return (
     <header
-      className="flex cursor-move items-center gap-2 border-b border-border bg-bg-panel/85 px-3 py-2"
+      className="flex cursor-move items-center gap-2 border-b border-[var(--app-floating-divider-color)] bg-[var(--app-floating-muted-bg)] px-3 py-2"
       onPointerDown={props.onDragStart}
     >
       <div className="min-w-0 flex-1">
@@ -86,7 +86,7 @@ function LinkPanelCard(props: {
   return (
     <section
       aria-label={props.panel.title || props.panel.currentUrl}
-      className="pointer-events-auto absolute flex flex-col overflow-hidden rounded-lg border border-border bg-bg-elevated shadow-panel"
+      className={appFloatingSurfaceClassName('panel', 'pointer-events-auto absolute flex flex-col overflow-hidden')}
       style={buildLinkPanelStyle(props.position, props.size)}
     >
       <LinkPanelHeader

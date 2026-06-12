@@ -1,0 +1,40 @@
+:root {
+  --app-shellless-surface-bg: var(--app-floating-surface-bg);
+  --app-shellless-input-bg: var(--app-floating-surface-bg);
+  --app-shellless-border-color: var(--app-floating-border-color);
+  --app-shellless-divider-color: var(--app-floating-divider-color);
+  --app-shellless-fg: rgb(var(--color-foreground) / 0.86);
+  --app-shellless-title-fg: rgb(var(--color-foreground) / 0.68);
+  --app-shellless-muted-fg: rgb(var(--color-foreground) / 0.52);
+  --app-shellless-faint-fg: rgb(var(--color-foreground) / 0.38);
+  --app-shellless-placeholder-fg: rgb(var(--color-foreground) / 0.36);
+  --app-shellless-control-fg: rgb(var(--color-foreground) / 0.52);
+  --app-shellless-ui-font-family: var(--app-interface-font-family, var(--font-family-interface));
+  --app-shellless-input-font-family: var(--content-panel-font-family, var(--font-family-text));
+  --app-shellless-input-font-size: 15px;
+  --app-shellless-input-line-height: clamp(1.45, var(--content-panel-line-height, 1.75), 1.75);
+  --app-shellless-content-inline-padding: 26px;
+  --app-shellless-input-padding-block-start: 24px;
+  --app-shellless-input-padding-block-end: 12px;
+  --app-shellless-ui-font-size: 14px;
+  --app-shellless-meta-font-size: 13px;
+  --app-shellless-radius: var(--radius-lg);
+  --app-shellless-control-radius: var(--radius-md);
+  --app-shellless-shadow: 0 8px 22px rgb(15 17 19 / 0.045), 0 1px 2px rgb(15 17 19 / 0.03);
+  --app-shellless-control-border-color: var(--app-control-border-color);
+  --app-shellless-control-border-hover-color: var(--app-control-border-hover-color);
+  --app-shellless-control-hover-bg: var(--app-control-bg-hover-color);
+  --app-shellless-brand-mark-color: rgb(var(--app-accent-color-rgb) / 0.22);
+}
+
+:root[data-resolved-base-color='dark'] {
+  --app-shellless-surface-bg: color-mix(in srgb, var(--app-floating-surface-bg) 88%, rgb(var(--color-foreground)) 12%);
+  --app-shellless-input-bg: var(--app-shellless-surface-bg);
+  --app-shellless-border-color: color-mix(in srgb, var(--app-floating-border-color) 76%, rgb(var(--color-foreground)) 24%);
+  --app-shellless-divider-color: color-mix(in srgb, var(--app-floating-divider-color) 82%, rgb(var(--color-foreground)) 18%);
+  --app-shellless-fg: rgb(var(--color-foreground) / 0.78);
+  --app-shellless-title-fg: rgb(var(--color-foreground) / 0.64);
+  --app-shellless-muted-fg: rgb(var(--color-foreground) / 0.5);
+  --app-shellless-control-fg: rgb(var(--color-foreground) / 0.58);
+  --app-shellless-shadow: 0 10px 26px rgb(0 0 0 / 0.18), 0 1px 3px rgb(0 0 0 / 0.14);
+}

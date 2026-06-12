@@ -3,6 +3,7 @@ import { type ReactNode, useEffect, useMemo, useState } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
+import { appSurfaceControlClassName } from '../../shared/ui';
 
 import type { SourceUpdateOverviewKind, SourceUpdateOverviewSegment } from './sourceUpdateDiffModel';
 
@@ -106,7 +107,7 @@ function OverviewNavButton(props: {
   return (
     <button
       aria-label={props.ariaLabel}
-      className="pointer-events-auto flex h-5 w-5 items-center justify-center border border-border/70 bg-bg-elevated text-foreground/70 transition-colors hover:bg-bg-panel"
+      className={appSurfaceControlClassName('pointer-events-auto flex h-5 w-5 items-center justify-center px-0 text-foreground/70')}
       onClick={props.onClick}
       type="button"
     >

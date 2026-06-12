@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import type { HTMLAttributes, ReactNode } from 'react';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
+import { ZH_HANS_FEEDBACK_TRANSLATIONS } from '../../shared/localization/locales/zhHansFeedback';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { preloadTranslationCatalog } from '../../shared/localization/translations';
 import { onWindowEscape } from '../../shared/platform/keyboard';
@@ -61,13 +62,34 @@ describe('FeedbackDialog text submission', () => {
     const submit = screen.getByRole('button', { name: 'Send' });
     expect(submit).toBeDisabled();
     expect(submit.className).toContain('bg-transparent');
+    expect(submit.className).toContain('border-shellless-control-border');
     expect(submit.className).not.toContain('workspace-region-main-rail-bg');
-    expect(screen.getByRole('button', { name: 'Cancel' }).className).toContain('border-[var(--app-control-border-color)]');
+    expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('Feedback'), { target: { value: 'This path should stay low friction.' } });
     expect(submit).not.toBeDisabled();
   });
+});
 
+describe('FeedbackDialog surface layout', () => {
+  it('keeps the shell-less feedback surface compact', () => {
+    renderWithLocalization(<FeedbackDialog endpoint="https://feedback.example.test" onClose={() => undefined} open />);
+
+    expect(screen.getByLabelText('Feedback').className).toContain('min-h-40');
+    expect(screen.getByLabelText('Feedback').className).toContain('pt-[var(--app-shellless-input-padding-block-start)]');
+    expect(screen.getByRole('button', { name: 'Send' }).closest('div')?.className).toContain('py-2');
+  });
+
+  it('keeps the lower metadata above the single action divider', () => {
+    renderWithLocalization(<FeedbackDialog endpoint="https://feedback.example.test" onClose={() => undefined} open />);
+
+    const metadataGrid = screen.getByLabelText('Name').closest('label')?.parentElement;
+    expect(metadataGrid?.className).not.toContain('border-shellless-divider');
+    expect(screen.getByRole('button', { name: 'Send' }).closest('div')?.className).toContain('border-shellless-divider');
+  });
+});
+
+describe('FeedbackDialog text submission', () => {
   it('preserves text and reports unavailable endpoint', async () => {
     renderWithLocalization(<FeedbackDialog onClose={() => undefined} open />);
 
@@ -120,13 +142,27 @@ describe('FeedbackDialog text submission', () => {
 });
 
 describe('FeedbackDialog action styling', () => {
-  it('keeps the attachment picker on the neutral control style', () => {
+  it('keeps send on the shell-less control style and attachments as metadata', () => {
     renderWithLocalization(<FeedbackDialog endpoint="https://feedback.example.test" onClose={() => undefined} open />);
 
-    const picker = screen.getByText('Add image').closest('label');
-    expect(picker?.className).toContain('border-[var(--app-control-border-color)]');
-    expect(picker?.className).toContain('bg-transparent');
-    expect(picker?.className).toContain('text-ui-md');
+    const submit = screen.getByRole('button', { name: 'Send' });
+    const picker = screen.getByText('Add or paste images').closest('label');
+    expect(submit.className).toContain('rounded-shellless-control');
+    expect(submit.className).toContain('border-shellless-control-border');
+    expect(submit.className).toContain('text-shellless-control-fg');
+    expect(picker?.className).toContain('text-shellless-control-fg');
+    expect(picker?.className).not.toContain('border-shellless-control-border');
+    expect(picker?.className).not.toContain('rounded-shellless-control');
+    expect(screen.queryByText('Images')).not.toBeInTheDocument();
+    expect(screen.queryByText('0/3')).not.toBeInTheDocument();
+    expect(screen.queryByText('Paste screenshots')).not.toBeInTheDocument();
+  });
+
+  it('uses the lighter Chinese feedback field copy', () => {
+    expect(ZH_HANS_FEEDBACK_TRANSLATIONS['feedback.name.label']).toBe('称呼');
+    expect(ZH_HANS_FEEDBACK_TRANSLATIONS['feedback.name.placeholder']).toBe('称呼，可不填');
+    expect(ZH_HANS_FEEDBACK_TRANSLATIONS['feedback.contact.placeholder']).toBe('联系方式，可不填');
+    expect(ZH_HANS_FEEDBACK_TRANSLATIONS['feedback.attachments.add']).toBe('添加或粘贴图片');
   });
 });
 
@@ -145,7 +181,8 @@ describe('FeedbackDialog attachments', () => {
       }
     });
 
-    expect(await screen.findByText('1/3')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('Add or paste images')).toBeInTheDocument());
+    expect(screen.queryByText('1/3')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Send' }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
@@ -167,10 +204,14 @@ describe('FeedbackDialog attachments', () => {
       }
     });
 
-    expect(await screen.findByRole('img', { name: 'preview.png' })).toBeInTheDocument();
+    const image = await screen.findByRole('img', { name: 'preview.png' });
+    expect(image).toBeInTheDocument();
+    expect(image.closest('div')?.className).toContain('border-shellless-control-border');
+    expect(image.closest('div')?.className).toContain('bg-shellless-surface');
     fireEvent.click(screen.getByRole('button', { name: 'Remove preview.png' }));
     expect(screen.queryByRole('img', { name: 'preview.png' })).not.toBeInTheDocument();
-    expect(screen.getByText('0/3')).toBeInTheDocument();
+    expect(screen.getByText('Add or paste images')).toBeInTheDocument();
+    expect(screen.queryByText('0/3')).not.toBeInTheDocument();
   });
 });
 
@@ -186,8 +227,8 @@ describe('FeedbackDialog attachment limits', () => {
       }
     });
 
-    expect(await screen.findByText('3/3')).toBeInTheDocument();
-    expect(screen.getByText('You can add up to 3 images. The first 3 were kept.')).toBeInTheDocument();
+    expect(await screen.findByText('You can add up to 3 images. The first 3 were kept.')).toBeInTheDocument();
+    expect(screen.queryByText('3/3')).not.toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'screen-1.png' })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'screen-3.png' })).toBeInTheDocument();
     expect(screen.queryByRole('img', { name: 'screen-4.png' })).not.toBeInTheDocument();

@@ -7,7 +7,7 @@ import {
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { InspectorSection } from '../../shared/ui';
+import { appSurfaceControlClassName, InspectorSection } from '../../shared/ui';
 
 interface DocumentPanelNodeReviewSettingsProps {
   activeNodeId: string | null;
@@ -89,7 +89,7 @@ function DesiredRetentionField({
   return (
     <label className="flex min-w-0 flex-col gap-1 text-sm text-foreground">
       <span className="font-medium">{t('desktop.nodeReview.desiredRetention')}</span>
-      <select aria-label={t('desktop.nodeReview.desiredRetention.aria')} className="h-9 rounded-md border border-border bg-bg-elevated px-3 text-sm text-foreground" disabled={!isEditable} onChange={(event) => onDesiredRetentionChange(activeNodeId, event.target.value === 'inherit' ? null : Number(event.target.value))} value={node.desiredRetention == null ? 'inherit' : node.desiredRetention.toFixed(2)}>
+      <select aria-label={t('desktop.nodeReview.desiredRetention.aria')} className={appSurfaceControlClassName()} disabled={!isEditable} onChange={(event) => onDesiredRetentionChange(activeNodeId, event.target.value === 'inherit' ? null : Number(event.target.value))} value={node.desiredRetention == null ? 'inherit' : node.desiredRetention.toFixed(2)}>
         <option value="inherit">{t('desktop.nodeReview.inherit')}</option>
         {DESIRED_RETENTION_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
       </select>
@@ -117,7 +117,7 @@ function PriorityField({
   return (
     <label className="flex min-w-0 flex-col gap-1 text-sm text-foreground">
       <span className="font-medium">{t('desktop.nodeReview.priority')}</span>
-      <select aria-label={t('desktop.nodeReview.priority.aria')} className="h-9 rounded-md border border-border bg-bg-elevated px-3 text-sm text-foreground" disabled={!isEditable} onChange={(event) => onPriorityChange(activeNodeId, event.target.value === 'inherit' ? null : Number(event.target.value))} value={node.priority == null ? 'inherit' : String(node.priority)}>
+      <select aria-label={t('desktop.nodeReview.priority.aria')} className={appSurfaceControlClassName()} disabled={!isEditable} onChange={(event) => onPriorityChange(activeNodeId, event.target.value === 'inherit' ? null : Number(event.target.value))} value={node.priority == null ? 'inherit' : String(node.priority)}>
         <option value="inherit">{t('desktop.nodeReview.inherit')}</option>
         {PRIORITY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.value === '0' ? t('desktop.nodeReview.priority.p0') : `P${option.value}`}</option>)}
       </select>
@@ -145,7 +145,7 @@ function ShortTermField({
   return (
     <label className="flex min-w-0 flex-col gap-1 text-sm text-foreground">
       <span className="font-medium">{t('desktop.nodeReview.shortTerm')}</span>
-      <select aria-label={t('desktop.nodeReview.shortTerm')} className="h-9 rounded-md border border-border bg-bg-elevated px-3 text-sm text-foreground" disabled={!isEditable} onChange={(event) => {
+      <select aria-label={t('desktop.nodeReview.shortTerm')} className={appSurfaceControlClassName()} disabled={!isEditable} onChange={(event) => {
         const value = event.target.value;
         onShortTermChange(activeNodeId, value === 'inherit' ? null : value === 'enabled');
       }} value={node.enableShortTerm == null ? 'inherit' : node.enableShortTerm ? 'enabled' : 'disabled'}>

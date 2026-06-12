@@ -8,7 +8,8 @@ import {
   AppDialogContent,
   AppDialogOverlay,
   AppDialogPortal,
-  AppDialogTitle
+  AppDialogTitle,
+  settingsNestedDialogSurfaceClassName
 } from '../../../../shared/ui';
 import type { NodeTreeRowIconKind } from '../../../nodes/components/NodeTreeRowIconModel';
 
@@ -57,7 +58,7 @@ export function NodeIconSettingsEditorDialog(props: {
         <AppDialogOverlay className="bg-transparent" />
         <AppDialogContent
           aria-describedby={undefined}
-          className="grid max-h-[min(760px,calc(100dvh-36px))] w-fit max-w-[calc(100vw-36px)] grid-rows-[auto_minmax(0,auto)_auto] overflow-hidden rounded-lg border-settings-outline bg-settings-group p-0 shadow-settings"
+          className={settingsNestedDialogSurfaceClassName('group', 'grid max-h-[min(760px,calc(100dvh-36px))] w-fit max-w-[calc(100vw-36px)] grid-rows-[auto_minmax(0,auto)_auto] overflow-hidden p-0')}
           data-settings-nested-dialog="true"
         >
           <EditorHeader onReset={props.state.handleReset} />

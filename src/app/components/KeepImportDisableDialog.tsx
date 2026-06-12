@@ -14,7 +14,7 @@ export function KeepImportDisableDialog(props: {
         <AppDialogOverlay />
         <AppDialogContent
           aria-describedby={undefined}
-          className="left-1/2 top-1/2 w-[min(480px,calc(100vw-64px))] -translate-x-1/2 -translate-y-1/2 rounded-2xl border-border/35 bg-bg-panel p-0"
+          className="w-[min(480px,calc(100vw-64px))] p-0"
         >
           <section className="flex flex-col">
             <header className="border-b border-border/60 px-6 pb-4 pt-5">

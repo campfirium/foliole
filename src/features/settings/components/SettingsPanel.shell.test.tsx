@@ -50,6 +50,6 @@ it('keeps settings dividers aligned without title extension lines', () => {
   expect(storageGroup?.className).toContain('before:left-3');
   expect(storageGroup?.className).toContain('before:right-3');
   expect(storageGroup?.className.split(' ')).not.toContain('border-t');
-  expect(desiredRetentionRow?.className).toContain('before:left-5');
-  expect(desiredRetentionRow?.className).toContain('before:right-5');
+  expect(desiredRetentionRow?.className).toContain('before:left-settings-panel-x');
+  expect(desiredRetentionRow?.className).toContain('before:right-settings-panel-x');
 });

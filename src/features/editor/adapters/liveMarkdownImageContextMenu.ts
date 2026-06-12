@@ -1,7 +1,7 @@
 import { getStoredAppLocale } from '../../../shared/localization/appLanguage';
 import { translate } from '../../../shared/localization/translations';
 import { onWindowEscape } from '../../../shared/platform/keyboard';
-import { appFloatingSurfaceClassName } from '../../../shared/ui/FloatingSurface';
+import { appFloatingItemClassName, appFloatingSurfaceClassName } from '../../../shared/ui/FloatingSurface';
 
 interface RemoteImageFailureContextMenuOptions {
   anchor: HTMLElement;
@@ -18,10 +18,9 @@ let closeActiveMenu: (() => void) | null = null;
 
 function createMenuItem(label: string, onSelect: () => void) {
   const item = document.createElement('button');
-  item.className = [
-    'relative flex min-h-9 w-full cursor-default select-none items-center px-3 text-left text-sm font-semibold outline-none transition-colors',
-    'hover:bg-[var(--app-selection-surface-color)] focus:bg-[var(--app-selection-surface-color)]'
-  ].join(' ');
+  item.className = appFloatingItemClassName(
+    'relative flex min-h-9 cursor-default select-none items-center text-ui-base font-semibold'
+  );
   item.role = 'menuitem';
   item.textContent = label;
   item.type = 'button';

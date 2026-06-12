@@ -33,6 +33,9 @@ const MONOSPACE_FONT_PRESET_VALUES: Record<MonospaceFontPreset, string> = {
 };
 
 const EDITOR_CODE_FONT_SCALE = 0.9;
+const SHELLLESS_INPUT_FONT_SCALE = 0.92;
+const SHELLLESS_INPUT_FONT_SIZE_MIN = 15;
+const SHELLLESS_INPUT_FONT_SIZE_MAX = 22;
 
 function quoteFontFamilyName(value: string) {
   return `'${value.replace(/'/g, "\\'")}'`;
@@ -70,6 +73,10 @@ export function applyEditorTypographyScale(root: HTMLElement, baseFontSize: numb
   root.style.setProperty('--content-panel-h2-font-size', toPx(baseFontSize * 1.18));
   root.style.setProperty('--content-panel-h3-font-size', toPx(baseFontSize * 1.04));
   root.style.setProperty('--content-panel-code-font-size', toPx(baseFontSize * EDITOR_CODE_FONT_SCALE));
+  root.style.setProperty(
+    '--app-shellless-input-font-size',
+    toPx(Math.min(SHELLLESS_INPUT_FONT_SIZE_MAX, Math.max(SHELLLESS_INPUT_FONT_SIZE_MIN, baseFontSize * SHELLLESS_INPUT_FONT_SCALE)))
+  );
 }
 
 export function normalizeReadingLineHeight(value: unknown): ReadingLineHeight {

@@ -13,7 +13,7 @@ export function AnnotationNotePanel(props: {
   const t = useTranslation();
   return (
     <div
-      className={cn(appFloatingSurfaceClassName('popover'), 'fixed z-floating w-60 rounded-md p-2')}
+      className={cn(appFloatingSurfaceClassName('popover'), 'fixed z-floating w-60 p-2')}
       data-annotation-toolbar="true"
       style={{ left: props.left, top: props.top }}
     >

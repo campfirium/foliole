@@ -85,12 +85,12 @@
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
-  --editor-radius-xs: 0.16rem;
-  --editor-radius-sm: 0.2rem;
-  --editor-radius-md: 0.25rem;
-  --editor-radius-lg: 0.35rem;
-  --editor-radius-xl: 0.45rem;
-  --editor-radius-popover: 0.75rem;
+  --editor-radius-xs: calc(var(--radius-sm) * 0.4);
+  --editor-radius-sm: calc(var(--radius-sm) * 0.5);
+  --editor-radius-md: var(--radius-sm);
+  --editor-radius-lg: calc(var(--radius-sm) * 1.5);
+  --editor-radius-xl: var(--radius-md);
+  --editor-radius-popover: var(--radius-lg);
   --editor-space-xxs: 0.15rem;
   --editor-space-xs: 0.25rem;
   --editor-space-sm: 0.45rem;

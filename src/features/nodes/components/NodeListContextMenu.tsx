@@ -59,11 +59,7 @@ export function NodeListContextMenu(props: NodeListContextMenuProps) {
       </AppDropdownMenuTrigger>
       <AppDropdownMenuContent
         align="start"
-        className={[
-          'min-w-[224px] rounded-lg border-[var(--app-floating-border-color)] p-2 shadow-popover',
-          'bg-[color-mix(in_oklab,var(--app-floating-surface-bg)_82%,rgb(var(--color-background)))]',
-          '[--node-context-menu-item-hover-bg:color-mix(in_oklab,var(--app-floating-item-hover-bg)_52%,rgb(var(--color-foreground)/0.12))]'
-        ].join(' ')}
+        className="min-w-[224px] p-2"
         onCloseAutoFocus={(event) => event.preventDefault()}
         onContextMenu={(event) => event.preventDefault()}
         sideOffset={0}

@@ -24,7 +24,7 @@ export function ImportManagementSearchBar({
   return (
     <AppToolbar
       ariaLabel={resolvedAriaLabel}
-      className="min-h-10 justify-between gap-3 rounded-lg border border-border bg-bg-panel px-3 py-2"
+      className="min-h-10 justify-between gap-3 rounded-lg border border-[var(--app-control-border-color)] bg-[var(--app-surface-control-bg)] px-3 py-2"
     >
       <ToolbarActionGroup ariaLabel={resolvedFieldLabel} className="min-w-0 flex-1 gap-2 border-0">
         <Search aria-hidden="true" className="shrink-0 text-foreground/45" size={14} strokeWidth={1.8} />

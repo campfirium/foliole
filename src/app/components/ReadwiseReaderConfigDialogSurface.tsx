@@ -107,7 +107,7 @@ export function ReadwiseConfigDialogSurface(props: {
         <AppDialogOverlay />
         <AppDialogContent
           aria-describedby={undefined}
-          className="left-1/2 top-1/2 w-[min(1280px,calc(100vw-96px))] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-2xl border-border/35 bg-bg-panel p-0"
+          className="w-[min(1280px,calc(100vw-96px))] overflow-hidden p-0"
         >
           <section className="flex max-h-[min(760px,calc(100vh-96px))] min-h-0 flex-col">
             <ReadwiseConfigDialogHeader

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
-import { AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../../shared/ui';
+import { AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle, appFloatingSurfaceClassName } from '../../../shared/ui';
 import { renderMermaidSvg } from '../adapters/liveMarkdownMermaidRenderer';
 import type { MarkdownMermaidPreviewRequest } from '../model/markdownMermaidPreview';
 
@@ -68,7 +68,7 @@ export function MarkdownMermaidPreviewDialog(props: MarkdownMermaidPreviewDialog
   const t = useTranslation();
   const diagramKind = props.diagram ? resolveMermaidKind(props.diagram.source) : 'diagram';
   const shellClassName = [
-    'relative max-h-[88vh] w-[min(1500px,calc(100vw-7rem))] overflow-auto rounded-md border border-border bg-canvas p-10 shadow-popover',
+    appFloatingSurfaceClassName('panel', 'relative max-h-[88vh] w-[min(1500px,calc(100vw-7rem))] overflow-auto p-10'),
     diagramKind === 'gantt' ? '' : 'flex items-center justify-center'
   ].filter(Boolean).join(' ');
 

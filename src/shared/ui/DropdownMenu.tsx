@@ -40,7 +40,7 @@ function dropdownMenuContentClassName(className?: string) {
 function dropdownMenuItemClassName(className?: string) {
   return cn(
     'relative flex min-h-8 cursor-default select-none items-center gap-2 rounded-md px-2 py-1 text-ui-base font-normal leading-5 text-foreground/78 outline-none transition-colors',
-    'focus:bg-[var(--app-floating-item-hover-bg)] focus:text-foreground data-[highlighted]:bg-[var(--app-floating-item-hover-bg)] data-[highlighted]:text-foreground',
+    'hover:bg-[var(--app-floating-item-hover-bg)] focus:bg-[var(--app-floating-item-hover-bg)] focus:text-foreground data-[highlighted]:bg-[var(--app-floating-item-hover-bg)] data-[highlighted]:text-foreground',
     'data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
     className
   );
@@ -173,8 +173,7 @@ function AppSelectionDropdownMenu({
         aria-label={t('shared.selection.commands')}
         className={cn(
           dropdownMenuContentClassName(),
-          'fixed p-2 shadow-popover',
-          'bg-[color-mix(in_oklab,var(--app-floating-surface-bg)_82%,rgb(var(--color-background)))]'
+          'fixed p-2'
         )}
         onContextMenu={(event) => event.preventDefault()}
         ref={menuRef}
@@ -199,7 +198,7 @@ function AppSelectionDropdownMenuItem({
     <button
       className={cn(
         dropdownMenuItemClassName(className),
-        'w-full text-left hover:bg-[var(--app-selection-surface-color)] focus:bg-[var(--app-selection-surface-color)] disabled:pointer-events-none disabled:opacity-45'
+        'w-full text-left disabled:pointer-events-none disabled:opacity-45'
       )}
       onMouseDown={(event) => {
         preventFocusSteal(event);

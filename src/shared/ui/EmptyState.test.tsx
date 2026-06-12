@@ -46,7 +46,7 @@ describe('AppLoadingState', () => {
     expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true');
     expect(screen.getByRole('status')).toHaveAttribute('data-state-surface-tone', 'loading');
     expect(container.querySelector('.animate-spin')).toHaveAttribute('aria-hidden', 'true');
-    expect(container.querySelector('.animate-spin')?.className).toContain('border-t-[rgb(var(--app-accent-color-rgb))]');
+    expect(container.querySelector('.animate-spin')?.className).toContain('border-t-foreground/55');
   });
 
   it('can carry loading copy without changing the state surface contract', () => {
@@ -54,6 +54,7 @@ describe('AppLoadingState', () => {
 
     expect(screen.getByRole('status', { name: 'Preparing' })).toHaveAttribute('data-state-surface-tone', 'loading');
     expect(screen.getByText('Loading').className).toContain('text-ui-md');
+    expect(screen.getByText('Loading').className).toContain('text-foreground/72');
     expect(screen.getByText('Preparing preview.').className).toContain('text-ui-base');
   });
 });
@@ -67,6 +68,7 @@ describe('AppEmptyState', () => {
     expect(screen.getByRole('status')).toHaveAttribute('data-state-surface-scope', 'document');
     expect(screen.getByRole('status')).toHaveAttribute('data-state-surface-tone', 'empty');
     expect(screen.getByText('Nothing to review').className).toContain('text-ui-md');
+    expect(screen.getByText('Nothing to review').className).toContain('text-foreground/72');
     expect(screen.getByText('No due cards.').className).toContain('text-ui-base');
   });
 });

@@ -18,7 +18,7 @@ function OriginalFileActionPanel(props: {
   const t = useTranslation();
   return (
     <div className="px-4 pt-4">
-      <div className="mx-auto flex w-full flex-col gap-3 rounded-xl border border-border bg-bg-panel px-4 py-4 [width:min(100%,var(--document-max-width))]">
+      <div className="mx-auto flex w-full flex-col gap-3 rounded-lg border border-[var(--app-control-border-color)] bg-[var(--app-surface-control-bg)] px-4 py-4 [width:min(100%,var(--document-max-width))]">
         <div className="flex flex-col gap-1">
           <h3 className="text-sm font-semibold text-foreground">{t('desktop.readwise.original.title')}</h3>
           <p className="text-[13px] text-foreground/60">{props.helperText}</p>

@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 
+import { appFloatingSurfaceClassName } from '../../shared/ui';
 import { clearAppRuntimeNotice, useAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 
 function useAutoClearAppRuntimeNotice(notice: ReturnType<typeof useAppRuntimeNotice>) {
@@ -23,7 +24,7 @@ export function WorkspaceRuntimeNotice() {
   return (
     <div
       aria-live="polite"
-      className="pointer-events-none absolute left-1/2 top-1/2 z-workspace-overlay flex min-h-32 w-[min(540px,calc(100vw-48px))] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-xl border border-border/70 bg-bg-elevated/98 px-8 py-6 text-center text-[15px] leading-6 text-foreground shadow-panel"
+      className={appFloatingSurfaceClassName('panel', 'pointer-events-none absolute left-1/2 top-1/2 z-workspace-overlay flex min-h-32 w-[min(540px,calc(100vw-48px))] -translate-x-1/2 -translate-y-1/2 items-center justify-center px-8 py-6 text-center text-ui-md leading-6 text-foreground/72')}
       data-testid="app-runtime-notice"
       key={notice.id}
       role="status"

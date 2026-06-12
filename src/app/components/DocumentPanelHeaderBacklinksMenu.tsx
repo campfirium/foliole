@@ -34,7 +34,7 @@ export function DocumentPanelHeaderBacklinksMenu(props: DocumentPanelHeaderBackl
       </AppDropdownMenuTrigger>
       <AppDropdownMenuContent
         align="start"
-        className="w-[min(36rem,calc(100vw-3rem))] border-transparent bg-bg-elevated p-0 shadow-none"
+        className="w-[min(36rem,calc(100vw-3rem))] p-0"
         sideOffset={8}
       >
         <section aria-label={t('desktop.links.references')} className="flex max-h-[min(70vh,42rem)] min-h-0 flex-col">

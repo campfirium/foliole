@@ -39,7 +39,7 @@ const PairingDialogContent = forwardRef<HTMLDivElement, {
   return (
     <AppDialogContent
       aria-describedby={undefined}
-      className="left-1/2 top-1/2 w-[min(460px,calc(100vw-48px))] -translate-x-1/2 -translate-y-1/2 rounded-2xl border-border/35 bg-bg-panel p-0"
+      className="w-[min(460px,calc(100vw-48px))] p-0"
       onEscapeKeyDown={(event) => event.preventDefault()}
       onPointerDownOutside={(event) => event.preventDefault()}
       ref={ref}
@@ -128,7 +128,6 @@ function PairingDialogActions({
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
         <AppButton
-          className="border border-border-strong bg-bg-panel text-foreground hover:bg-bg-subtle"
           disabled={disabled}
           onClick={() => void runPairingAction(state.rejectRequest)}
           variant="danger"

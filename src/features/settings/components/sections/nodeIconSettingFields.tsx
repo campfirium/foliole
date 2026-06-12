@@ -6,6 +6,7 @@ import {
   settingsColorSwatchClassName,
   settingsControlValueClassName,
   settingsFieldClassName,
+  settingsPopoverSurfaceClassName,
   settingsRangeClassName,
   settingsSwitchClassName,
   settingsSwitchKnobClassName
@@ -136,7 +137,7 @@ export function RangeField(props: {
         />
       </div>
       {expanded ? (
-        <div className="absolute right-0 top-9 z-20 w-52 rounded-md border border-settings-outline bg-settings-shell px-3 py-2 shadow-settings">
+        <div className={settingsPopoverSurfaceClassName('shell', 'absolute right-0 top-9 z-20 w-52 px-3 py-2')}>
           <input
             aria-label={`${props.label} slider`}
             className={settingsRangeClassName('w-full')}

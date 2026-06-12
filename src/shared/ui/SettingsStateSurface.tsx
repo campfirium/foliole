@@ -30,9 +30,9 @@ interface SettingsStateActionProps {
 type SettingsStateSurfaceTone = 'empty' | 'error' | 'loading';
 
 const SETTINGS_STATE_TITLE_CLASS_NAMES: Record<SettingsStateSurfaceTone, string> = {
-  empty: 'text-foreground',
+  empty: 'text-foreground/72',
   error: 'text-error',
-  loading: 'text-foreground'
+  loading: 'text-foreground/72'
 };
 
 function SettingsStateSurface({
@@ -82,7 +82,7 @@ export function SettingsLoadingState({ className, description, title }: Settings
       data-state-surface-tone="loading"
       role="status"
     >
-      <AppSpinner decorative tone="accent" />
+      <AppSpinner decorative tone="neutral" />
     </div>
   );
 }

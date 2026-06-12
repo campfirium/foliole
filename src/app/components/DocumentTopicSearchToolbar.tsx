@@ -15,7 +15,7 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { AppIconButton, AppInput } from '../../shared/ui';
+import { AppIconButton, appFloatingToolbarClassName, AppInput } from '../../shared/ui';
 import { useCommandShortcutState } from '../hooks/reviewHotkeysState';
 
 import { useDocumentTopicSearchActivation } from './useDocumentTopicSearchActivation';
@@ -198,7 +198,7 @@ function TopicSearchPanel(state: TopicSearchState) {
   };
   return (
     <div className="sticky top-0 z-surface-overlay h-0 w-full px-4 pt-3 pointer-events-none" data-testid="topic-search-toolbar">
-      <div className="pointer-events-auto absolute left-1/2 top-3 flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-4 rounded-full border border-border bg-bg-elevated px-4 py-2 shadow-control">
+      <div className={appFloatingToolbarClassName()}>
         <div className="flex items-center gap-1">
           <Search aria-hidden="true" className="ml-1 text-foreground/55" size={15} strokeWidth={2.1} />
           <AppInput

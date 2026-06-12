@@ -2,7 +2,7 @@ import { ArrowLeftRight, RotateCwSquare, ZoomIn, ZoomOut } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { AppIconButton } from '../../shared/ui';
+import { AppIconButton, appFloatingItemClassName, appFloatingSurfaceClassName } from '../../shared/ui';
 
 const PDF_ZOOM_OPTIONS = [100, 125, 150, 175, 200];
 
@@ -61,10 +61,10 @@ function PdfZoomMenu(props: {
   }
 
   return (
-    <div className="absolute left-1/2 top-full z-surface-raised mt-2 flex min-w-20 -translate-x-1/2 flex-col rounded-xl border border-border bg-bg-elevated p-1 shadow-popover" role="menu">
+    <div className={appFloatingSurfaceClassName('popover', 'absolute left-1/2 top-full z-surface-raised mt-2 flex min-w-20 -translate-x-1/2 flex-col p-1')} role="menu">
       {PDF_ZOOM_OPTIONS.map((option) => (
         <button
-          className="min-h-8 rounded-lg px-3 text-left text-xs text-foreground/80 transition-colors hover:bg-foreground/[0.04] hover:text-foreground"
+          className={appFloatingItemClassName('min-h-8 text-ui-sm text-foreground/80')}
           key={option}
           onClick={() => {
             props.onToolbarInteraction();

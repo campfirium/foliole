@@ -6,7 +6,13 @@ import {
   type FeedbackSubmissionPayload
 } from '../../shared/feedback/feedbackContract';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { AppButton, AppDialogContent, AppDialogTitle } from '../../shared/ui';
+import {
+  AppDialogContent,
+  appShelllessActionBarClassName,
+  appShelllessControlClassName,
+  appShelllessInputClassName,
+  appShelllessSurfaceClassName
+} from '../../shared/ui';
 
 import { FeedbackAttachmentPicker } from './FeedbackDialogAttachments';
 import { FeedbackContactFields } from './FeedbackDialogContactFields';
@@ -43,7 +49,6 @@ export function FeedbackDialogContent(props: {
   turnstileContainerRef: RefObject<HTMLDivElement>;
   turnstileSiteKey?: string | undefined;
 }) {
-  const t = useTranslation();
   if (props.state === 'sent') {
     return (
       <FeedbackSuccessContent
@@ -54,7 +59,7 @@ export function FeedbackDialogContent(props: {
   }
   return (
     <AppDialogContent
-      className="flex w-[min(92vw,41.25rem)] flex-col overflow-hidden p-0"
+      className={appShelllessSurfaceClassName('flex w-[min(92vw,41.25rem)] flex-col overflow-hidden p-0')}
       onPaste={(event) => {
         const files = getPastedFiles(event.clipboardData);
         if (!files.length) return;
@@ -62,8 +67,7 @@ export function FeedbackDialogContent(props: {
         void props.onPasteFiles(files);
       }}
     >
-      <FeedbackDialogHeader title={t('feedback.title')} />
-      <div className="px-6">
+      <div className="px-[var(--app-shellless-content-inline-padding)]">
         <FeedbackTextField message={props.message} onMessageChange={props.onMessageChange} />
         <FeedbackContactFields contact={props.contact} name={props.name} onContactChange={props.onContactChange} onNameChange={props.onNameChange} />
         <FeedbackAttachmentPicker attachments={props.attachments} onAppendFiles={props.onAppendFiles} onRemoveAttachment={props.onRemoveAttachment} />
@@ -76,18 +80,8 @@ export function FeedbackDialogContent(props: {
           state={props.state}
         />
       </div>
-      <FeedbackActions canSubmit={props.canSubmit} onClose={props.onClose} onSubmit={props.onSubmit} state={props.state} />
+      <FeedbackActions canSubmit={props.canSubmit} onSubmit={props.onSubmit} state={props.state} />
     </AppDialogContent>
-  );
-}
-
-function FeedbackDialogHeader(props: {
-  title: string;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-5 border-b border-foreground/[0.08] bg-background/80 px-6 py-5">
-      <AppDialogTitle>{props.title}</AppDialogTitle>
-    </div>
   );
 }
 
@@ -156,7 +150,7 @@ export function FeedbackTextField(props: {
   return (
     <textarea
       aria-label={t('feedback.message.label')}
-      className="min-h-64 w-full resize-none border-0 border-b border-foreground/[0.13] bg-transparent px-0 py-5 text-[17px] leading-7 text-foreground outline-none placeholder:text-foreground/40 focus-visible:ring-0"
+      className={appShelllessInputClassName('min-h-40 px-0')}
       maxLength={FEEDBACK_LIMITS.messageLength}
       onChange={(event) => props.onMessageChange(event.target.value)}
       placeholder={t('feedback.message.placeholder')}
@@ -192,17 +186,15 @@ export function FeedbackStatus(props: {
 
 export function FeedbackActions(props: {
   canSubmit: boolean;
-  onClose: () => void;
   onSubmit: () => Promise<void>;
   state: SubmitState;
 }) {
   const t = useTranslation();
   return (
-    <div className="flex justify-end gap-2 border-t border-foreground/[0.08] bg-background/80 px-6 py-4">
-      <AppButton onClick={props.onClose} variant="default">{t('feedback.cancel')}</AppButton>
-      <AppButton disabled={!props.canSubmit} onClick={() => void props.onSubmit()} variant="default">
+    <div className={appShelllessActionBarClassName()}>
+      <button className={appShelllessControlClassName()} disabled={!props.canSubmit} onClick={() => void props.onSubmit()} type="button">
         {props.state === 'sending' ? t('feedback.sending') : t('feedback.submit')}
-      </AppButton>
+      </button>
     </div>
   );
 }
