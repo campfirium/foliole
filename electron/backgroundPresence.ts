@@ -2,6 +2,7 @@ import path from 'node:path';
 
 import { Menu, Tray, app, nativeImage, type BrowserWindow } from 'electron';
 
+import { appendMainProcessDiagnosticLog } from './diagnostics/mainProcessDiagnostics.js';
 import { focusWindow } from './runtimeMainSupport.js';
 
 let tray: Tray | null = null;
@@ -21,8 +22,24 @@ export function resetBackgroundPresenceForTests() {
   appIsQuitting = false;
 }
 
-function resolveTrayIconPath() {
-  return path.join(app.getAppPath(), 'build', 'icon.png');
+function resolveTrayIconPath(platform: NodeJS.Platform = process.platform) {
+  const iconName = platform === 'win32' ? 'icon.ico' : 'icon.png';
+  const basePath = app.isPackaged ? process.resourcesPath : app.getAppPath();
+  return path.join(basePath, 'build', iconName);
+}
+
+function createTrayIcon(platform: NodeJS.Platform = process.platform) {
+  const iconPath = resolveTrayIconPath(platform);
+  const icon = nativeImage.createFromPath(iconPath);
+  if (!icon.isEmpty()) {
+    return icon;
+  }
+  appendMainProcessDiagnosticLog('tray_icon_empty', {
+    icon_path: iconPath,
+    is_packaged: app.isPackaged,
+    platform
+  });
+  return null;
 }
 
 function showMainWindow(window: BrowserWindow | null) {
@@ -35,6 +52,18 @@ function showMainWindow(window: BrowserWindow | null) {
   focusWindow(window);
 }
 
+function toggleMainWindow(window: BrowserWindow | null) {
+  if (!window || window.isDestroyed()) {
+    return false;
+  }
+  if (window.isVisible() && !window.isMinimized()) {
+    window.hide();
+    return true;
+  }
+  showMainWindow(window);
+  return true;
+}
+
 export function installBackgroundTray(args: {
   getMainWindow: () => BrowserWindow | null;
   openMainWindow: () => Promise<BrowserWindow | null>;
@@ -44,7 +73,11 @@ export function installBackgroundTray(args: {
     return;
   }
 
-  tray = new Tray(nativeImage.createFromPath(resolveTrayIconPath()));
+  const trayIcon = createTrayIcon(args.platform);
+  if (!trayIcon) {
+    return;
+  }
+  tray = new Tray(trayIcon);
   tray.setToolTip('Foliole');
   tray.setContextMenu(Menu.buildFromTemplate([
     {
@@ -62,10 +95,9 @@ export function installBackgroundTray(args: {
       }
     }
   ]));
-  tray.on('double-click', () => {
+  tray.on('click', () => {
     const window = args.getMainWindow();
-    if (window) {
-      showMainWindow(window);
+    if (toggleMainWindow(window)) {
       return;
     }
     void args.openMainWindow();
