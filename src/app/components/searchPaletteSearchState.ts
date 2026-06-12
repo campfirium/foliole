@@ -20,9 +20,9 @@ interface SearchSourceProps {
   trashedNodeIds: string[];
 }
 
-const SEARCH_QUERY_DEBOUNCE_MS = 160;
+const SEARCH_QUERY_DEBOUNCE_MS = 400;
 
-function useSearchExecutionQuery(isOpen: boolean, query: string) {
+function useSearchExecutionQuery(isOpen: boolean, query: string, isComposing: boolean) {
   const [executionQuery, setExecutionQuery] = useState('');
   const trimmedQuery = query.trim();
   useEffect(() => {
@@ -30,12 +30,13 @@ function useSearchExecutionQuery(isOpen: boolean, query: string) {
       setExecutionQuery('');
       return;
     }
+    if (isComposing) return;
 
     const timer = window.setTimeout(() => {
       setExecutionQuery(query);
     }, SEARCH_QUERY_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
-  }, [isOpen, query, trimmedQuery]);
+  }, [isComposing, isOpen, query, trimmedQuery]);
   return executionQuery;
 }
 
@@ -92,9 +93,9 @@ function useRemovedSearchResults(isOpen: boolean, query: string) {
   return removedResults;
 }
 
-export function useSearchResults(props: SearchSourceProps, query: string) {
+export function useSearchResults(props: SearchSourceProps, query: string, isComposing = false) {
   const hasRuntime = hasWorkspaceSearchRuntimeRepository();
-  const executionQuery = useSearchExecutionQuery(props.isOpen, query);
+  const executionQuery = useSearchExecutionQuery(props.isOpen, query, isComposing);
   const hasPendingQuery = query.trim() !== executionQuery.trim();
   const localResults = useMemo(
     () =>

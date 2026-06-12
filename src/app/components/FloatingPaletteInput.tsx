@@ -8,6 +8,7 @@ import { handleFloatingPaletteInputKeyDown } from './floatingPaletteKeyboard';
 interface FloatingPaletteInputProps {
   inputLabel: string;
   onClose: () => void;
+  onCompositionChange?: (isComposing: boolean) => void;
   onQueryChange: (value: string) => void;
   onRunActive: (event: ReactKeyboardEvent<HTMLInputElement>) => void;
   onSetActiveIndex: (update: (current: number) => number) => void;
@@ -28,6 +29,11 @@ export function FloatingPaletteInput(props: FloatingPaletteInputProps) {
       aria-label={props.inputLabel}
       className={appFloatingInputClassName()}
       onChange={(event) => props.onQueryChange(event.target.value)}
+      onCompositionEnd={(event) => {
+        props.onCompositionChange?.(false);
+        props.onQueryChange(event.currentTarget.value);
+      }}
+      onCompositionStart={() => props.onCompositionChange?.(true)}
       onKeyDown={(event) =>
         handleFloatingPaletteInputKeyDown(
           event,

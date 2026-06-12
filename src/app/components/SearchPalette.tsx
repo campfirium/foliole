@@ -34,22 +34,17 @@ export function SearchPalette(props: SearchPaletteProps) {
   const focusTrap = useFloatingDialogFocusTrap(props.isOpen);
   useFloatingPaletteEscape(props.isOpen, props.onClose);
   const [query, setQuery] = useState('');
+  const [isComposingQuery, setIsComposingQuery] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const shortcuts = useSearchPaletteShortcuts();
-  const searchState = useSearchResults(props, query);
+  const searchState = useSearchResults(props, query, isComposingQuery);
   const results = useOrderedSearchResults(searchState.results, props.nodesById);
   const externalSectionStatus = useExternalSectionStatus(props.isOpen);
   const sourceDetailsByNodeId = useSearchResultSourceDetails(results);
-  useSearchPaletteLifecycle(props.isOpen, activeIndex, results.length, setActiveIndex, setQuery);
+  useSearchPaletteLifecycle(props.isOpen, activeIndex, results.length, setActiveIndex, setIsComposingQuery, setQuery);
+  const openActiveNode = createOpenActiveSearchResultHandler(results, activeIndex, props.onOpenResult);
 
   if (!props.isOpen) return null;
-
-  const openActiveNode = (event: ReactKeyboardEvent<HTMLInputElement>) => {
-    const result = results[activeIndex];
-    if (result) {
-      props.onOpenResult(result, { preview: event.shiftKey });
-    }
-  };
 
   return (
     <div
@@ -68,6 +63,7 @@ export function SearchPalette(props: SearchPaletteProps) {
         <FloatingPaletteInput
           inputLabel={t('desktop.search.input')}
           onClose={props.onClose}
+          onCompositionChange={setIsComposingQuery}
           onQueryChange={setQuery}
           onRunActive={openActiveNode}
           onSetActiveIndex={setActiveIndex}
@@ -91,6 +87,17 @@ export function SearchPalette(props: SearchPaletteProps) {
       </div>
     </div>
   );
+}
+
+function createOpenActiveSearchResultHandler(
+  results: WorkspaceSearchResult[],
+  activeIndex: number,
+  onOpenResult: (result: WorkspaceSearchResult, options?: { preview?: boolean }) => void
+) {
+  return (event: ReactKeyboardEvent<HTMLInputElement>) => {
+    const result = results[activeIndex];
+    if (result) onOpenResult(result, { preview: event.shiftKey });
+  };
 }
 
 function useSearchPaletteShortcuts() {
@@ -142,14 +149,16 @@ function useSearchPaletteLifecycle(
   activeIndex: number,
   resultCount: number,
   setActiveIndex: (value: number) => void,
+  setIsComposingQuery: (value: boolean) => void,
   setQuery: (value: string) => void
 ) {
   useEffect(() => {
     if (!isOpen) {
       setQuery('');
+      setIsComposingQuery(false);
       setActiveIndex(0);
     }
-  }, [isOpen, setActiveIndex, setQuery]);
+  }, [isOpen, setActiveIndex, setIsComposingQuery, setQuery]);
 
   useEffect(() => {
     if (!resultCount) {
