@@ -22,14 +22,13 @@ const folioleDefaultKeymap = defaultKeymap.filter((binding) => binding.run !== t
 
 function createEditorUpdateListener(args: {
   nodeId: string | null;
-  onDocChanged: (content: string, meta: EditorDocumentChangeMeta) => void;
+  onDocChanged: (content: string | null, meta: EditorDocumentChangeMeta) => void;
 }) {
   return EditorView.updateListener.of((update) => {
     if (!update.docChanged) {
       return;
     }
-    const content = update.state.doc.toString();
-    args.onDocChanged(content, { isComposing: update.view.composing, nodeId: args.nodeId });
+    args.onDocChanged(null, { contentLength: update.state.doc.length, isComposing: update.view.composing, nodeId: args.nodeId });
   });
 }
 
@@ -42,7 +41,7 @@ export function createCodeMirrorEditorExtensions(args: {
   liveMarkdownCompartment: import('@codemirror/state').Compartment;
   liveMarkdownStateCompartment: import('@codemirror/state').Compartment;
   nodeId: string | null;
-  onDocChanged: (content: string, meta: EditorDocumentChangeMeta) => void;
+  onDocChanged: (content: string | null, meta: EditorDocumentChangeMeta) => void;
   onCompositionEnd: () => void;
   options: CodeMirrorEditorAdapterOptions;
   paragraphMarkerCompartment: import('@codemirror/state').Compartment;

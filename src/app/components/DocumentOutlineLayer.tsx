@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 
@@ -93,7 +93,8 @@ export function DocumentOutlineLayer({
   onResolveDocumentPositionAtViewportY
 }: DocumentOutlineLayerProps) {
   const t = useTranslation(), [outlineItems, setOutlineItems] = useState<OutlineDisplayItem[] | null>(null);
-  const hasOutlineCandidate = useMemo(() => mayHaveOutline(content), [content]);
+  const deferredContent = useDeferredValue(content);
+  const hasOutlineCandidate = useMemo(() => mayHaveOutline(deferredContent), [deferredContent]);
   const resolveOutlineItems = useCallback(() => {
     if (outlineItems !== null) {
       return outlineItems;

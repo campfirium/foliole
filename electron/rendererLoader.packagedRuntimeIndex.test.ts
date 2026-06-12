@@ -90,3 +90,26 @@ it('loads current prebuilt startup html in packaged mode when referenced assets 
 
   expect(window.loadFile).toHaveBeenCalledWith(runtimeIndexPath);
 });
+
+it('falls back to packaged startup html when prebuilt startup html predates the packaged index', async () => {
+  const { packagedIndexPath, runtimeDir, runtimeIndexPath } = await createPackagedRuntimeHarness();
+  const packagedAssetPath = path.join(path.dirname(packagedIndexPath), 'assets', 'index-current.js');
+  const packagedStylePath = path.join(path.dirname(packagedIndexPath), 'assets', 'index-current.css');
+  await fs.mkdir(path.dirname(packagedAssetPath), { recursive: true });
+  await fs.writeFile(packagedAssetPath, 'console.log("current");', 'utf8');
+  await fs.writeFile(packagedStylePath, 'body{}', 'utf8');
+  await fs.writeFile(
+    runtimeIndexPath,
+    createRuntimeHtml(packagedIndexPath, 'index-current.js', 'index-current.css', RUNTIME_RENDERER_INDEX_CACHE_MARKER),
+    'utf8'
+  );
+  const oldTime = new Date('2026-01-01T00:00:00.000Z');
+  const newTime = new Date('2026-01-02T00:00:00.000Z');
+  await fs.utimes(runtimeIndexPath, oldTime, oldTime);
+  await fs.utimes(packagedIndexPath, newTime, newTime);
+  const window = { loadFile: vi.fn().mockResolvedValue(undefined) };
+
+  await loadRenderer(window as never, runtimeDir);
+
+  expect(window.loadFile).toHaveBeenCalledWith(packagedIndexPath);
+});

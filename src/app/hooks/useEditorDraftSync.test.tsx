@@ -22,7 +22,7 @@ function registerDebouncePersistenceTest() {
     expect(onCommit).not.toHaveBeenCalled();
 
     act(() => {
-      vi.advanceTimersByTime(399);
+      vi.advanceTimersByTime(1199);
     });
 
     expect(onCommit).not.toHaveBeenCalled();
@@ -31,7 +31,7 @@ function registerDebouncePersistenceTest() {
       vi.advanceTimersByTime(1);
     });
 
-    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated');
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated', { publishLocal: false });
   });
 
   it('defers pending draft flush while raw editor input keeps arriving', () => {
@@ -49,7 +49,7 @@ function registerDebouncePersistenceTest() {
     });
 
     act(() => {
-      vi.advanceTimersByTime(399);
+      vi.advanceTimersByTime(1199);
       result.current.handleEditorInput({ nodeId: 'node-1' });
       vi.advanceTimersByTime(1);
     });
@@ -57,10 +57,10 @@ function registerDebouncePersistenceTest() {
     expect(onCommit).not.toHaveBeenCalled();
 
     act(() => {
-      vi.advanceTimersByTime(400);
+      vi.advanceTimersByTime(1200);
     });
 
-    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated');
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated', { publishLocal: false });
   });
 
 }
@@ -89,7 +89,7 @@ function registerCloseFlushTest() {
       await expect(closeFlush?.()).resolves.toBe(true);
     });
 
-    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated');
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated', undefined);
   });
 
   it('flushes the pending draft on unmount', () => {
@@ -108,7 +108,7 @@ function registerCloseFlushTest() {
 
     unmount();
 
-    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha unmount draft');
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha unmount draft', undefined);
   });
 
 }
@@ -184,9 +184,9 @@ function registerNodeSwitchCommitIsolationTest() {
       vi.advanceTimersByTime(1200);
     });
 
-    expect(alphaCommit).toHaveBeenCalledWith('node-1', 'Alpha draft');
+    expect(alphaCommit).toHaveBeenCalledWith('node-1', 'Alpha draft', undefined);
     expect(alphaCommit).not.toHaveBeenCalledWith('node-1', 'Beta draft');
-    expect(betaCommit).toHaveBeenCalledWith('node-2', 'Beta draft');
+    expect(betaCommit).toHaveBeenCalledWith('node-2', 'Beta draft', { publishLocal: false });
   });
 
 }
@@ -211,7 +211,7 @@ function registerStaleNodeChangeTest() {
       vi.advanceTimersByTime(1200);
     });
 
-    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha late draft');
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha late draft', { publishLocal: false });
     expect(onCommit).not.toHaveBeenCalledWith('node-2', 'Alpha late draft');
   });
 
@@ -237,7 +237,7 @@ function registerCommittedContentRefreshTest() {
       vi.advanceTimersByTime(1200);
     });
 
-    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha local draft');
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha local draft', { publishLocal: false });
   });
 }
 

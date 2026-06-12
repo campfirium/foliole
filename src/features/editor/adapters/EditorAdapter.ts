@@ -10,6 +10,7 @@ export interface EditorRevealOptions {
 }
 
 export interface EditorContentChangeMeta {
+  contentLength?: number;
   nodeId: string | null;
 }
 

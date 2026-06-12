@@ -29,6 +29,42 @@ describe('EditorExternalChangeBuffer coalescing', () => {
     expect(onFlush).toHaveBeenCalledWith('abcde', 'node-1');
   });
 
+  it('reads current editor content only when a same-node lazy change flushes', () => {
+    vi.useFakeTimers();
+    const onFlush = vi.fn();
+    const getCurrentContent = vi.fn(() => 'abcde');
+    const buffer = new EditorExternalChangeBuffer({
+      getCurrentContent,
+      getCurrentNodeId: () => 'node-1',
+      isApplyingExternalContent: () => false,
+      onFlush
+    });
+
+    buffer.handleDocumentChange(null, { contentLength: 5, isComposing: false, nodeId: 'node-1' });
+
+    expect(getCurrentContent).not.toHaveBeenCalled();
+    vi.runAllTimers();
+
+    expect(getCurrentContent).toHaveBeenCalledTimes(1);
+    expect(onFlush).toHaveBeenCalledWith('abcde', 'node-1');
+  });
+
+  it('uses supplied content when a lazy pending change no longer belongs to the current node', () => {
+    vi.useFakeTimers();
+    const onFlush = vi.fn();
+    const buffer = new EditorExternalChangeBuffer({
+      getCurrentContent: () => 'Beta body',
+      getCurrentNodeId: () => 'node-2',
+      isApplyingExternalContent: () => false,
+      onFlush
+    });
+
+    buffer.handleDocumentChange('Alpha draft', { isComposing: false, nodeId: 'node-1' });
+    vi.runAllTimers();
+
+    expect(onFlush).toHaveBeenCalledWith('Alpha draft', 'node-1');
+  });
+
   it('waits until composition ends before flushing composed text', () => {
     vi.useFakeTimers();
     const onFlush = vi.fn();

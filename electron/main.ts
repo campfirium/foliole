@@ -58,6 +58,12 @@ import { applyWindowStateToOptions, bindWindowStatePersistence } from './windowS
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const remoteDebuggingPort = process.env.FOLIOLE_REMOTE_DEBUGGING_PORT?.trim();
+if (remoteDebuggingPort && /^\d{2,5}$/.test(remoteDebuggingPort)) {
+  app.commandLine.appendSwitch('remote-debugging-port', remoteDebuggingPort);
+}
+
 if (process.env.FOLIOLE_DISABLE_HARDWARE_ACCELERATION === '1') {
   app.commandLine.appendSwitch('disable-gpu');
   app.commandLine.appendSwitch('disable-gpu-compositing');

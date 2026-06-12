@@ -20,10 +20,20 @@ function resolveRuntimeRendererAssetPath(runtimeIndexPath: string, html: string,
   return url.protocol === 'file:' ? fileURLToPath(url) : null;
 }
 
-function hasCurrentRuntimeRendererAssets(runtimeIndexPath: string) {
+function isRuntimeRendererIndexFresh(runtimeIndexPath: string, sourceIndexPath: string | null) {
+  if (!sourceIndexPath) return true;
+  try {
+    return fs.statSync(runtimeIndexPath).mtimeMs >= fs.statSync(sourceIndexPath).mtimeMs;
+  } catch {
+    return false;
+  }
+}
+
+function hasCurrentRuntimeRendererAssets(runtimeIndexPath: string, sourceIndexPath: string | null = null) {
   const html = readTextFile(runtimeIndexPath);
   if (!html) return false;
   if (!html.includes(RUNTIME_RENDERER_INDEX_CACHE_MARKER)) return false;
+  if (!isRuntimeRendererIndexFresh(runtimeIndexPath, sourceIndexPath)) return false;
   return extractLocalRendererAssetRefs(html).every((ref) => {
     const assetPath = resolveRuntimeRendererAssetPath(runtimeIndexPath, html, ref);
     return assetPath === null || fs.existsSync(assetPath);
@@ -38,9 +48,9 @@ function readTextFile(filePath: string) {
   }
 }
 
-export function resolveUsableRuntimeRendererIndex(runtimeHtmlDir: string) {
+export function resolveUsableRuntimeRendererIndex(runtimeHtmlDir: string, sourceIndexPath: string | null = null) {
   const runtimeIndexPath = resolveRuntimeRendererIndexPath(runtimeHtmlDir);
   if (!fs.existsSync(runtimeIndexPath)) return null;
-  if (hasCurrentRuntimeRendererAssets(runtimeIndexPath)) return runtimeIndexPath;
+  if (hasCurrentRuntimeRendererAssets(runtimeIndexPath, sourceIndexPath)) return runtimeIndexPath;
   return null;
 }

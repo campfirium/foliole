@@ -69,17 +69,32 @@ export function shouldReparsePreviewMarkdown(update: Pick<ViewUpdate, 'docChange
   return update.docChanged;
 }
 
-export function shouldMapLocalDocumentInputDecorations(args: {
+function isPlainTextInputChange(update: ViewUpdate) {
+  let plainTextInput = false;
+  let changeCount = 0;
+  update.changes.iterChanges((fromA, toA, _fromB, _toB, inserted) => {
+    changeCount += 1;
+    if (changeCount > 1 || fromA !== toA) {
+      plainTextInput = false;
+      return;
+    }
+    const text = inserted.toString();
+    plainTextInput = text.length > 0 && !/[\\`*_{}\[\]()#+\-.!|<>\n\r]/.test(text);
+  });
+  return plainTextInput;
+}
+
+export function shouldMapDocumentInputDecorations(args: {
   docChanged: boolean;
   editedMathRangeChanged: boolean;
   imageClozePresentationChanged: boolean;
-  localDocumentPath: string | null;
   localDocumentPathChanged: boolean;
   nodeIdChanged: boolean;
+  plainTextInputChange: boolean;
   textAnchorDecorationsChanged: boolean;
 }) {
-  return Boolean(args.localDocumentPath) &&
-    args.docChanged &&
+  return args.docChanged &&
+    args.plainTextInputChange &&
     !args.nodeIdChanged &&
     !args.localDocumentPathChanged &&
     !args.imageClozePresentationChanged &&
@@ -93,6 +108,7 @@ export const markdownLinePlugin = ViewPlugin.fromClass(
     decorations: DecorationSet;
     cursorLineNumber: number | null;
     parsedPreviewMarkdown: PreviewMarkdownParse;
+    previewParseDirty = false;
 
     constructor(view: EditorView) {
       this.parsedPreviewMarkdown = parsePreviewMarkdown(view);
@@ -116,21 +132,26 @@ export const markdownLinePlugin = ViewPlugin.fromClass(
         getEditedMathRange(update.state)
       );
       const nextCursorLineNumber = getCursorLineNumber(update.view);
+      const plainTextInputChange = isPlainTextInputChange(update);
+      const shouldMapInputDecorations = shouldMapDocumentInputDecorations({
+        docChanged: update.docChanged,
+        editedMathRangeChanged,
+        imageClozePresentationChanged,
+        localDocumentPathChanged,
+        nodeIdChanged,
+        plainTextInputChange,
+        textAnchorDecorationsChanged
+      });
 
-      if (
-        shouldMapLocalDocumentInputDecorations({
-          docChanged: update.docChanged,
-          editedMathRangeChanged,
-          imageClozePresentationChanged,
-          localDocumentPath: update.state.facet(localDocumentPathFacet),
-          localDocumentPathChanged,
-          nodeIdChanged,
-          textAnchorDecorationsChanged
-        })
-      ) {
+      if (shouldMapInputDecorations) {
+        const startedAt = readEditorInputDiagnosticTime();
         this.atomicRanges = this.atomicRanges.map(update.changes);
         this.decorations = this.decorations.map(update.changes);
+        logEditorInputDiagnostic('live-markdown-map-decorations', {
+          totalMs: readEditorInputDiagnosticTime() - startedAt
+        });
         this.cursorLineNumber = nextCursorLineNumber;
+        this.previewParseDirty = true;
         return;
       }
 
@@ -142,8 +163,9 @@ export const markdownLinePlugin = ViewPlugin.fromClass(
         textAnchorDecorationsChanged ||
         editedMathRangeChanged
       ) {
-        if (shouldReparsePreviewMarkdown(update)) {
+        if (this.previewParseDirty || shouldReparsePreviewMarkdown(update)) {
           this.parsedPreviewMarkdown = parsePreviewMarkdown(update.view);
+          this.previewParseDirty = false;
         }
         this.atomicRanges = buildAtomicRanges(update.view, this.parsedPreviewMarkdown);
         this.decorations = buildLineDecorations(update.view, this.parsedPreviewMarkdown);

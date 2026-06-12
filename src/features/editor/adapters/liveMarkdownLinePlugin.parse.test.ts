@@ -6,7 +6,7 @@ import { folioleMarkdownParser } from '../model/folioleMarkdownParser';
 
 import { buildPreviewAtomicRangeSet } from './liveMarkdownAtomicRanges';
 import { buildPreviewDecorationSet, buildSourceDecorationSet } from './liveMarkdownDecorations';
-import { shouldMapLocalDocumentInputDecorations, shouldReparsePreviewMarkdown } from './liveMarkdownLinePlugin';
+import { shouldMapDocumentInputDecorations, shouldReparsePreviewMarkdown } from './liveMarkdownLinePlugin';
 
 describe('live Markdown parse reuse', () => {
   afterEach(() => {
@@ -30,26 +30,38 @@ describe('live Markdown parse reuse', () => {
     expect(shouldReparsePreviewMarkdown({ docChanged: false })).toBe(false);
   });
 
-  it('maps existing decorations while typing in an opened local document', () => {
-    expect(shouldMapLocalDocumentInputDecorations({
+  it('maps existing decorations while typing plain text in the editor', () => {
+    expect(shouldMapDocumentInputDecorations({
       docChanged: true,
       editedMathRangeChanged: false,
       imageClozePresentationChanged: false,
-      localDocumentPath: 'D:/library/topic.md',
       localDocumentPathChanged: false,
       nodeIdChanged: false,
+      plainTextInputChange: true,
       textAnchorDecorationsChanged: false
     })).toBe(true);
   });
 
-  it('rebuilds local document decorations for structural presentation changes', () => {
-    expect(shouldMapLocalDocumentInputDecorations({
+  it('rebuilds editor decorations for structural presentation changes', () => {
+    expect(shouldMapDocumentInputDecorations({
       docChanged: true,
       editedMathRangeChanged: false,
       imageClozePresentationChanged: true,
-      localDocumentPath: 'D:/library/topic.md',
       localDocumentPathChanged: false,
       nodeIdChanged: false,
+      plainTextInputChange: true,
+      textAnchorDecorationsChanged: false
+    })).toBe(false);
+  });
+
+  it('rebuilds editor decorations for markdown structure input', () => {
+    expect(shouldMapDocumentInputDecorations({
+      docChanged: true,
+      editedMathRangeChanged: false,
+      imageClozePresentationChanged: false,
+      localDocumentPathChanged: false,
+      nodeIdChanged: false,
+      plainTextInputChange: false,
       textAnchorDecorationsChanged: false
     })).toBe(false);
   });

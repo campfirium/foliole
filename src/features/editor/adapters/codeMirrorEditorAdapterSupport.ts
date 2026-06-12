@@ -30,6 +30,7 @@ export interface CodeMirrorEditorAdapterOptions {
 }
 
 export interface EditorDocumentChangeMeta {
+  contentLength?: number;
   isComposing: boolean;
   nodeId: string | null;
 }

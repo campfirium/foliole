@@ -18,10 +18,10 @@ function registerDebounceTitleFinalizationTest() {
 
     act(() => {
       result.current.handleEditorChange('Alpha body updated');
-      vi.advanceTimersByTime(400);
+      vi.advanceTimersByTime(1200);
     });
 
-    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated');
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated', { publishLocal: false });
     expect(onFinalizeNode).not.toHaveBeenCalled();
   });
 }
@@ -52,7 +52,7 @@ function registerBoundaryTitleFinalizationTests() {
       await closeFlush?.();
     });
 
-    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated');
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated', undefined);
     expect(onFinalizeNode).toHaveBeenCalledWith('node-1', 'Alpha body updated');
   });
 
@@ -84,7 +84,7 @@ function registerBoundaryTitleFinalizationTests() {
       nodeId: 'node-2'
     });
 
-    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha draft');
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha draft', undefined);
     expect(onFinalizeNode).toHaveBeenCalledWith('node-1', 'Alpha draft');
   });
 }

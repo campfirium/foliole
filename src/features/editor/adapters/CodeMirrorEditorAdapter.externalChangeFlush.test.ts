@@ -47,7 +47,7 @@ describe('CodeMirrorEditorAdapter external change flush boundaries', () => {
 
     view.dispatch({ changes: { from: 11, insert: ' draft' } });
 
-    expect(onDocumentInput).toHaveBeenCalledWith({ isComposing: false, nodeId: 'node-A' });
+    expect(onDocumentInput).toHaveBeenCalledWith({ contentLength: 'old content draft'.length, isComposing: false, nodeId: 'node-A' });
     expect(onChange).not.toHaveBeenCalled();
 
     vi.runAllTimers();

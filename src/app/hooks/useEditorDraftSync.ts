@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
 
 import type { EditorContentChangeMeta } from '../../features/editor/adapters/EditorAdapter';
 import { deferNodeContentRuntimePersist } from '../../store/workspaceStoreContentRuntimePersist';
@@ -13,12 +13,12 @@ import {
   type PendingTitleRefresh
 } from './useEditorDraftPendingCommit';
 
-const EDITOR_DRAFT_FLUSH_DEBOUNCE_MS = 400;
+const EDITOR_DRAFT_FLUSH_DEBOUNCE_MS = 1200;
 
 interface UseEditorDraftSyncArgs {
   committedContent: string;
   nodeId: string | null;
-  onCommit: (nodeId: string | null, content: string) => void;
+  onCommit: (nodeId: string | null, content: string, options?: { publishLocal?: boolean }) => void;
   onFinalizeNode?: (nodeId: string, content: string) => void;
   onRegisterFlush?: (flush: (() => boolean) | null, closeFlush: (() => Promise<boolean>) | null) => void;
 }
@@ -32,7 +32,7 @@ interface DraftChangeHandlerArgs {
   clearPendingDraftCommit: () => void;
   latestCommittedContentRef: MutableRefObject<string>;
   nodeId: string | null;
-  onCommit: (nodeId: string | null, content: string) => void;
+  onCommit: (nodeId: string | null, content: string, options?: { publishLocal?: boolean }) => void;
   scheduleFlush: () => void;
   setDraftState: Dispatch<SetStateAction<EditorDraftState>>;
   setPendingDraftCommit: (pendingCommit: PendingDraftCommit) => void;
@@ -82,7 +82,9 @@ function useDraftChangeHandler(args: DraftChangeHandlerArgs) {
     }
     const committedContent = sourceNodeId === args.nodeId ? args.latestCommittedContentRef.current : null;
     if (sourceNodeId === args.nodeId) {
-      args.setDraftState({ content, nodeId: sourceNodeId });
+      startTransition(() => {
+        args.setDraftState({ content, nodeId: sourceNodeId });
+      });
     }
     deferNodeContentRuntimePersist(sourceNodeId);
     args.setPendingTitleRefresh({ content, nodeId: sourceNodeId });

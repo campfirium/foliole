@@ -16,7 +16,7 @@ export interface EditorExternalChangeBufferArgs {
 
 export class EditorExternalChangeBuffer {
   private inputChangeSequence = 0;
-  private pendingChange: { changedAtMs: number; content: string; nodeId: string | null; sampleId: number } | null = null;
+  private pendingChange: { changedAtMs: number; content: string | null; nodeId: string | null; sampleId: number } | null = null;
   private pendingTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private readonly args: EditorExternalChangeBufferArgs) {}
@@ -26,7 +26,7 @@ export class EditorExternalChangeBuffer {
     this.clearTimer();
   }
 
-  handleDocumentChange(content: string, meta: EditorDocumentChangeMeta) {
+  handleDocumentChange(content: string | null, meta: EditorDocumentChangeMeta) {
     const diagnosticsEnabled = isEditorInputDiagnosticEnabled();
     const changedAtMs = diagnosticsEnabled ? readEditorInputDiagnosticTime() : 0;
     const sampleId = diagnosticsEnabled ? this.inputChangeSequence + 1 : 0;
@@ -35,7 +35,13 @@ export class EditorExternalChangeBuffer {
     }
     this.pendingChange = { changedAtMs, content, nodeId: meta.nodeId, sampleId };
     if (diagnosticsEnabled) {
-      this.logInputChange({ changedAtMs, contentLength: content.length, isComposing: meta.isComposing, nodeId: meta.nodeId, sampleId });
+      this.logInputChange({
+        changedAtMs,
+        contentLength: content?.length ?? meta.contentLength ?? null,
+        isComposing: meta.isComposing,
+        nodeId: meta.nodeId,
+        sampleId
+      });
     }
     if (meta.isComposing) {
       this.clearTimer();
@@ -84,13 +90,24 @@ export class EditorExternalChangeBuffer {
     const nextChange = this.pendingChange;
     this.pendingChange = null;
     const flushStartedAt = readEditorInputDiagnosticTime();
-    this.args.onFlush(nextChange.content, nextChange.nodeId);
-    this.logInputFlush(nextChange, flushStartedAt);
+    const content = this.resolveFlushContent(nextChange);
+    if (content === null) {
+      return;
+    }
+    this.args.onFlush(content, nextChange.nodeId);
+    this.logInputFlush({ ...nextChange, content }, flushStartedAt);
+  }
+
+  private resolveFlushContent(change: { content: string | null; nodeId: string | null }) {
+    if (change.nodeId === this.args.getCurrentNodeId()) {
+      return this.args.getCurrentContent();
+    }
+    return change.content;
   }
 
   private logInputChange(args: {
     changedAtMs: number;
-    contentLength: number;
+    contentLength: number | null;
     isComposing: boolean;
     nodeId: string | null;
     sampleId: number;

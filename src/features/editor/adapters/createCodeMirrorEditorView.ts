@@ -18,7 +18,7 @@ export function createCodeMirrorEditorView(args: {
   liveMarkdownStateCompartment: Compartment;
   nodeId: string | null;
   onCompositionEnd: () => void;
-  onDocChanged: (content: string, meta: EditorDocumentChangeMeta) => void;
+  onDocChanged: (content: string | null, meta: EditorDocumentChangeMeta) => void;
   options: CodeMirrorEditorAdapterOptions;
   paragraphMarkerCompartment: Compartment;
   readOnlyCompartment: Compartment;

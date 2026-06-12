@@ -4,7 +4,7 @@ import { app, type BrowserWindow } from 'electron';
 
 import { formatRuntimeDiagnosticsSnapshot, resolveRendererTargetUrl, type RuntimeDiagnosticsSnapshot } from './runtimeIdentity.js';
 import { resolveUsableRuntimeRendererIndex } from './runtimeRendererIndexCache.js';
-import { resolveRendererFilePath } from './runtimeRendererHtml.js';
+import { resolveRendererFilePath, resolveSourceRendererIndexPath } from './runtimeRendererHtml.js';
 
 export {
   injectDevRendererIntoHtml,
@@ -123,11 +123,11 @@ function appendRendererParamsToUrl(url: string, startupView?: StartupRendererVie
 
 async function loadPackagedRenderer(window: BrowserWindow, runtimeDir: string) {
   const indexPath = resolveRendererFilePath(runtimeDir);
-  await window.loadFile(resolveExistingRuntimeRendererIndex() ?? indexPath);
+  await window.loadFile(resolveExistingRuntimeRendererIndex(indexPath) ?? indexPath);
 }
 
 async function loadDevRenderer(window: BrowserWindow, devUrl: string) {
-  const runtimeIndexPath = resolveExistingRuntimeRendererIndex();
+  const runtimeIndexPath = resolveExistingRuntimeRendererIndex(resolveSourceRendererIndexPath(app.getAppPath()));
   if (runtimeIndexPath) {
     await window.loadFile(runtimeIndexPath);
     return;
@@ -135,8 +135,8 @@ async function loadDevRenderer(window: BrowserWindow, devUrl: string) {
   await window.loadURL(devUrl);
 }
 
-function resolveExistingRuntimeRendererIndex() {
-  return resolveUsableRuntimeRendererIndex(app.getPath('userData'));
+function resolveExistingRuntimeRendererIndex(sourceIndexPath: string | null = null) {
+  return resolveUsableRuntimeRendererIndex(app.getPath('userData'), sourceIndexPath);
 }
 
 export async function loadRenderer(
