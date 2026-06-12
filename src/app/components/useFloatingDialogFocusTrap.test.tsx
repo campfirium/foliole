@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { useState } from 'react';
+import { StrictMode, useEffect, useRef, useState } from 'react';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { useFloatingDialogFocusTrap } from './useFloatingDialogFocusTrap';
@@ -26,6 +26,34 @@ function FloatingDialog({ onClose }: { onClose: () => void }) {
         Close dialog
       </button>
     </div>
+  );
+}
+
+function AutoFocusedFloatingDialog() {
+  const focusTrap = useFloatingDialogFocusTrap();
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  return (
+    <div onKeyDown={focusTrap.handleKeyDown} ref={focusTrap.containerRef} role="dialog">
+      <input aria-label="Dialog search" ref={inputRef} />
+    </div>
+  );
+}
+
+function AutoFocusedFloatingDialogHarness() {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <>
+      <button onClick={() => setIsOpen(true)} type="button">
+        Open search
+      </button>
+      {isOpen ? <AutoFocusedFloatingDialog /> : null}
+    </>
   );
 }
 
@@ -125,6 +153,28 @@ it('restores focus to the trigger when the floating dialog closes', async () => 
   fireEvent.click(closeButton);
 
   await waitFor(() => expect(trigger).toHaveFocus());
+});
+
+it('does not restore previous focus during the StrictMode mount probe', async () => {
+  vi.useFakeTimers();
+  try {
+    render(
+      <StrictMode>
+        <AutoFocusedFloatingDialogHarness />
+      </StrictMode>
+    );
+
+    const trigger = screen.getByRole('button', { name: 'Open search' });
+    trigger.focus();
+    fireEvent.click(trigger);
+    const input = screen.getByRole('textbox', { name: 'Dialog search' });
+    expect(input).toHaveFocus();
+    await vi.runOnlyPendingTimersAsync();
+
+    expect(input).toHaveFocus();
+  } finally {
+    vi.useRealTimers();
+  }
 });
 
 it('cycles tab focus inside the floating dialog', () => {

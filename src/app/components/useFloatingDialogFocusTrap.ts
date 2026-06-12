@@ -21,6 +21,10 @@ function scheduleRestoreFocus(element: HTMLElement | null) {
   window.setTimeout(() => restoreFocus(element), 0);
 }
 
+function shouldRestoreFocus(container: HTMLElement | null) {
+  return !container || !document.contains(container);
+}
+
 export function useFloatingDialogFocusTrap(isActive = true) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
@@ -35,7 +39,7 @@ export function useFloatingDialogFocusTrap(isActive = true) {
 
   useEffect(
     () => () => {
-      if (isActive) {
+      if (isActive && shouldRestoreFocus(containerRef.current)) {
         scheduleRestoreFocus(previousFocusRef.current);
         previousFocusRef.current = null;
       }

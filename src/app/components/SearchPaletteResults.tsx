@@ -122,6 +122,7 @@ function SearchPaletteResultItem(props: {
         data-active={props.active}
         data-search-result-active={props.active}
         onClick={(event) => props.onOpenResult(item, { preview: event.shiftKey })}
+        onMouseDown={(event) => event.preventDefault()}
         onMouseEnter={() => props.onSetActiveIndex(props.index)}
         type="button"
       >

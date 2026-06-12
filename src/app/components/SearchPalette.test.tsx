@@ -150,6 +150,22 @@ it('renders search results as title context and path rows', async () => {
   expect(resultButtons[1]).toHaveTextContent('Atlas highlight');
 });
 
+it('keeps the search input focused when pointer selection reaches a result row', async () => {
+  vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn().mockResolvedValue([createNodeResult()]));
+  vi.mocked(loadRuntimeNodeSourceDetails).mockResolvedValue(null);
+  vi.mocked(loadRuntimeExternalSearchFolders).mockResolvedValue([]);
+  renderSearchPalette();
+
+  const input = screen.getByRole('textbox', { name: 'Search workspace' });
+  fireEvent.change(input, { target: { value: 'launch' } });
+  input.focus();
+
+  const resultButton = await screen.findByRole('button', { name: /Atlas note/ });
+  fireEvent.mouseDown(resultButton);
+
+  expect(input).toHaveFocus();
+});
+
 it('rehydrates the workspace before opening an imported external result', async () => {
   const rehydrate = vi.spyOn(useWorkspaceStore.persist, 'rehydrate').mockResolvedValue(undefined);
   const onOpenResult = vi.fn();
