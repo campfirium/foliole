@@ -140,7 +140,7 @@ export function PdfDocumentViewportContentBody(props: PdfDocumentViewportContent
     <div className="relative flex min-h-0 flex-1 flex-col">
       {!isLayoutReady || !isInitialRenderReady || isViewportPageLoading ? <PdfDocumentLoadingOverlay /> : null}
       <div
-        className={`app-scrollbar flex min-h-0 flex-1 flex-col items-center overflow-y-auto overflow-x-auto px-2 pb-5 ${isLayoutReady ? '' : 'overflow-hidden'}`}
+        className={`pdf-document-scroll-container app-scrollbar flex min-h-0 flex-1 flex-col items-center overflow-y-auto overflow-x-auto px-2 pb-5 ${isLayoutReady ? '' : 'overflow-hidden'}`}
         onContextMenu={props.handleContextMenu}
         onScroll={props.handleScroll}
         data-testid="pdf-scroll-container"

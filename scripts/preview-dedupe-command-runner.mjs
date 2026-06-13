@@ -22,13 +22,13 @@ function killChildProcess(child) {
   child.kill();
 }
 
-export function runPreviewCommand(command, target, cwd = process.cwd()) {
+export function runPreviewCommand(command, target, cwd = process.cwd(), extraEnv = {}) {
   const timeoutMs = readCommandTimeoutMs(target);
   return new Promise((resolve) => {
     let settled = false;
     const child = spawn(command[0], command.slice(1), {
       cwd,
-      env: process.env,
+      env: { ...process.env, ...extraEnv },
       stdio: 'inherit'
     });
     const timeout =

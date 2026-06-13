@@ -154,6 +154,17 @@ function readWaitOnFailureForCommand() {
   return false;
 }
 
+function shouldRequireActualPreview(requireActualPreview) {
+  return requireActualPreview || process.env.PREVIEW_DEDUPE_REQUIRE_ACTUAL === '1';
+}
+
+function buildPreviewCommandEnv(target, forced, requireActualPreview) {
+  if (target !== 'windows' || (!forced && !requireActualPreview)) {
+    return {};
+  }
+  return { WINDOWS_PREVIEW_REQUIRE_REFRESH: '1' };
+}
+
 async function logDiagnostics(target, stage) {
   if (process.env.PREVIEW_DEDUPE_DIAGNOSTICS === '0') {
     return;
@@ -174,8 +185,9 @@ async function runPreviewFlow({ command, requireActualPreview, target }) {
   const currentHash = await workspaceHash(target);
   const storedHash = await readStoredHash(target);
   const forced = shouldForcePreview();
-  await logEvent(target, 'hash-compared', { currentHash, forced, requireActualPreview, storedHash: storedHash || null });
-  if (!forced && !requireActualPreview && storedHash === currentHash) {
+  const effectiveRequireActualPreview = shouldRequireActualPreview(requireActualPreview);
+  await logEvent(target, 'hash-compared', { currentHash, forced, requireActualPreview: effectiveRequireActualPreview, storedHash: storedHash || null });
+  if (!forced && !effectiveRequireActualPreview && storedHash === currentHash) {
     if (canSkipCoveredPreview(target)) {
       await logEvent(target, 'real-preview-skipped', { action: 'skip-real-preview', currentHash, reason: 'covered-running-runtime' });
       console.log(`[${target}-preview] dedupe: covered hash=${currentHash} action=skip-real-preview`);
@@ -186,9 +198,14 @@ async function runPreviewFlow({ command, requireActualPreview, target }) {
     console.log(`[${target}-preview] dedupe: stale-covered hash=${currentHash}`);
   }
 
-  await logEvent(target, 'real-preview-claimed', { currentHash, forced, requireActualPreview, storedHash: storedHash || null });
+  await logEvent(target, 'real-preview-claimed', { currentHash, forced, requireActualPreview: effectiveRequireActualPreview, storedHash: storedHash || null });
   console.log(`[${target}-preview] dedupe: claimed hash=${currentHash}`);
-  const exitCode = await runPreviewCommand(command, target, REPO_ROOT);
+  const exitCode = await runPreviewCommand(
+    command,
+    target,
+    REPO_ROOT,
+    buildPreviewCommandEnv(target, forced, effectiveRequireActualPreview)
+  );
   await logEvent(target, 'real-preview-finished', { currentHash, exitCode });
   if (exitCode === 0) {
     await writeStoredHash(target, currentHash);

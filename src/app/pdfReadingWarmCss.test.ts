@@ -16,6 +16,30 @@ function readFilterNumber(filter: string, name: string) {
   return value === undefined ? Number.NaN : Number(value);
 }
 
+function expectModePageBackground(styles: string, mode: string, color: string) {
+  expect(styles).toContain(
+    `:root[data-pdf-reading-mode='${mode}'] .pdf-document-surface :is(.react-pdf__Page, .pdf-document-page-placeholder) {\n  background: ${color};`
+  );
+}
+
+function expectModeSurfaceBackground(styles: string, mode: string, color: string) {
+  const block = styles.match(
+    new RegExp(
+      `:root\\[data-pdf-reading-mode='${mode}'\\] \\.pdf-document-surface,\\n:root\\[data-pdf-reading-mode='${mode}'\\] \\.pdf-document-surface :is\\(\\.pdf-document-scroll-container, \\.pdf-document-page-stack\\) \\{([^}]+)\\}`
+    )
+  )?.[1];
+  expect(block).toContain(`background: ${color};`);
+}
+
+function expectInvertedPageBackgrounds(styles: string) {
+  expect(styles).toContain(
+    ":root[data-pdf-reading-mode='inverted'] .pdf-document-surface .pdf-document-page-placeholder {\n  background: var(--pdf-reading-inverted-page-color);"
+  );
+  expect(styles).toContain(
+    ":root[data-pdf-reading-mode='inverted'] .pdf-document-surface .react-pdf__Page {\n  background: var(--pdf-reading-inverted-page-filter-source-color);"
+  );
+}
+
 describe('PDF warm reading CSS', () => {
   it('keeps warm mode as a dim warm canvas filter without textLayer background coverage', () => {
     const styles = readStyles();
@@ -31,5 +55,19 @@ describe('PDF warm reading CSS', () => {
     expect(saturation).toBeLessThan(1);
     expect(styles).not.toMatch(/data-pdf-reading-mode='warm'[\s\S]*?\.textLayer\s*\{[\s\S]*?background:/);
     expect(styles).not.toContain('--pdf-reading-warm-text-layer-color');
+  });
+});
+
+describe('PDF reading mode backgrounds', () => {
+  it('keeps rendered pages and placeholders on the same mode-aware background', () => {
+    const styles = readStyles();
+
+    expectModeSurfaceBackground(styles, 'original', 'rgb(var(--color-canvas))');
+    expectModeSurfaceBackground(styles, 'inverted', 'var(--pdf-reading-inverted-surface-color)');
+    expect(styles).toContain('--app-scrollbar-track-bg: var(--pdf-reading-inverted-surface-color);');
+    expectModeSurfaceBackground(styles, 'warm', 'var(--pdf-reading-warm-surface-color)');
+    expectModePageBackground(styles, 'original', 'rgb(var(--color-canvas))');
+    expectInvertedPageBackgrounds(styles);
+    expectModePageBackground(styles, 'warm', 'var(--pdf-reading-warm-surface-color)');
   });
 });

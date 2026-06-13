@@ -20,7 +20,7 @@ export function PdfViewportPlaceholderStack(props: PdfViewportPlaceholderStackPr
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-none flex-col items-center gap-4" data-testid="pdf-document-placeholder-stack">
+    <div className="pdf-document-page-stack mx-auto flex w-full max-w-none flex-col items-center gap-4" data-testid="pdf-document-placeholder-stack">
       {Array.from({ length: totalPages }, (_, index) =>
         renderPdfPagePlaceholder({
           fitWidthTargetWidth: props.fitWidthTargetWidth,

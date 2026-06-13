@@ -133,6 +133,7 @@
   --companion-text-tertiary: rgb(var(--color-muted-foreground) / 0.7);
   --pdf-reading-inverted-surface-color: color-mix(in srgb, rgb(var(--color-background)) 58%, rgb(var(--color-bg-panel)) 42%);
   --pdf-reading-inverted-page-color: color-mix(in srgb, rgb(var(--color-background)) 68%, rgb(var(--color-canvas)) 32%);
+  --pdf-reading-inverted-page-filter-source-color: color-mix(in srgb, white 92%, rgb(var(--color-background)) 8%);
   --pdf-reading-warm-surface-color: var(--workspace-region-main-document-bg);
   --font-family-interface: system-ui, -apple-system, 'Segoe UI Variable', 'Segoe UI', sans-serif;
   --font-family-text: system-ui, -apple-system, 'Segoe UI Variable', 'Segoe UI', sans-serif;
@@ -1231,12 +1232,12 @@ b {
 }
 
 .app-scrollbar {
-  scrollbar-color: var(--app-scrollbar-thumb-color) transparent;
+  scrollbar-color: var(--app-scrollbar-thumb-color) var(--app-scrollbar-track-bg, transparent);
   scrollbar-width: thin;
 }
 
 .app-scrollbar:hover {
-  scrollbar-color: var(--app-scrollbar-thumb-hover-color) transparent;
+  scrollbar-color: var(--app-scrollbar-thumb-hover-color) var(--app-scrollbar-track-bg, transparent);
 }
 
 .app-scrollbar::-webkit-scrollbar {
@@ -1245,7 +1246,7 @@ b {
 }
 
 .app-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--app-scrollbar-track-bg, transparent);
 }
 
 .app-scrollbar::-webkit-scrollbar-button {
@@ -1283,28 +1284,36 @@ b {
   -webkit-text-fill-color: transparent;
 }
 
-:root[data-pdf-reading-mode='original'] .pdf-document-surface {
+:root[data-pdf-reading-mode='original'] .pdf-document-surface,
+:root[data-pdf-reading-mode='original'] .pdf-document-surface :is(.pdf-document-scroll-container, .pdf-document-page-stack) {
   background: rgb(var(--color-canvas));
 }
 
-:root[data-pdf-reading-mode='original'] .pdf-document-surface .react-pdf__Page {
+:root[data-pdf-reading-mode='original'] .pdf-document-surface :is(.react-pdf__Page, .pdf-document-page-placeholder) {
   background: rgb(var(--color-canvas));
 }
 
-:root[data-pdf-reading-mode='inverted'] .pdf-document-surface {
+:root[data-pdf-reading-mode='inverted'] .pdf-document-surface,
+:root[data-pdf-reading-mode='inverted'] .pdf-document-surface :is(.pdf-document-scroll-container, .pdf-document-page-stack) {
+  --app-scrollbar-track-bg: var(--pdf-reading-inverted-surface-color);
   background: var(--pdf-reading-inverted-surface-color);
 }
 
-:root[data-pdf-reading-mode='inverted'] .pdf-document-surface .react-pdf__Page {
+:root[data-pdf-reading-mode='inverted'] .pdf-document-surface .pdf-document-page-placeholder {
   background: var(--pdf-reading-inverted-page-color);
+}
+
+:root[data-pdf-reading-mode='inverted'] .pdf-document-surface .react-pdf__Page {
+  background: var(--pdf-reading-inverted-page-filter-source-color);
   filter: invert(0.94) hue-rotate(180deg) brightness(0.92) contrast(0.92);
 }
 
-:root[data-pdf-reading-mode='warm'] .pdf-document-surface {
+:root[data-pdf-reading-mode='warm'] .pdf-document-surface,
+:root[data-pdf-reading-mode='warm'] .pdf-document-surface :is(.pdf-document-scroll-container, .pdf-document-page-stack) {
   background: var(--pdf-reading-warm-surface-color);
 }
 
-:root[data-pdf-reading-mode='warm'] .pdf-document-surface .react-pdf__Page {
+:root[data-pdf-reading-mode='warm'] .pdf-document-surface :is(.react-pdf__Page, .pdf-document-page-placeholder) {
   background: var(--pdf-reading-warm-surface-color);
 }
 

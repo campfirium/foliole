@@ -195,6 +195,11 @@ select_update_action() {
       SELECTED_REASON="Class A: renderer-only sync path"
       return 0
     fi
+    if [ "${WINDOWS_PREVIEW_REQUIRE_REFRESH:-}" = "1" ]; then
+      SELECTED_ACTION="renderer-reload-intent"
+      SELECTED_REASON="Class A: explicit preview refresh requested"
+      return 0
+    fi
     SELECTED_ACTION="sync-only"
     SELECTED_REASON="Class A: no runtime changes detected"
     return 0

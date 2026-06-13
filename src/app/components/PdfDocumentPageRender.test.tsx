@@ -1,6 +1,14 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
+vi.mock('../../features/pdf/model/pdfAutoCrop', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../features/pdf/model/pdfAutoCrop')>();
+  return {
+    ...actual,
+    measurePdfTextLayerCropBox: vi.fn(() => ({ bottom: 1075, left: 24, right: 776, top: 0 }))
+  };
+});
+
 vi.mock('react-pdf', async () => {
   const React = await import('react');
   return {
@@ -9,14 +17,26 @@ vi.mock('react-pdf', async () => {
       onRenderSuccess,
       onGetTextSuccess,
       onRenderTextLayerSuccess,
+      inputRef,
       pageNumber
     }: {
+      inputRef?: (element: HTMLDivElement | null) => void;
       onLoadSuccess?: (page: { getViewport: (input: { scale: number }) => { height: number; width: number } }) => void;
       onRenderSuccess?: () => void;
       onGetTextSuccess?: (payload: { items: Array<{ str: string }> }) => void;
       onRenderTextLayerSuccess?: () => void;
       pageNumber: number;
     }) => {
+      const pageRef = React.useRef<HTMLDivElement | null>(null);
+
+      React.useEffect(() => {
+        if (!pageRef.current) {
+          return undefined;
+        }
+        inputRef?.(pageRef.current);
+        return () => inputRef?.(null);
+      }, [inputRef]);
+
       React.useEffect(() => {
         onLoadSuccess?.({
           getViewport: ({ scale }: { scale: number }) => ({ height: 1131 * scale, width: 800 * scale })
@@ -27,7 +47,7 @@ vi.mock('react-pdf', async () => {
       }, [onGetTextSuccess, onLoadSuccess, onRenderSuccess, onRenderTextLayerSuccess, pageNumber]);
 
       return (
-        <div data-testid="pdf-document-page">
+        <div data-testid="pdf-document-page" ref={pageRef}>
           <div className="textLayer">
             <span role="presentation" style={{ fontFamily: 'MockPdfFont' }}>
               {`mock text ${pageNumber}`}
@@ -215,4 +235,30 @@ it('renders a placeholder shell for pages outside the active render window', () 
   );
 
   expect(container.querySelector('[data-pdf-page-state="placeholder"]')).not.toBeNull();
+});
+
+it('crops rendered pdf page side gutters after the text layer renders', async () => {
+  const { container } = render(
+    renderPdfPage({
+      highlightLocators: [],
+      onPageLoadSuccess: vi.fn(),
+      onTextContentLoad: vi.fn(),
+      onTextLayerRender: vi.fn(),
+      pageDimensions: { height: 1131, width: 800 },
+      pageElementsRef,
+      pageNumber: 1,
+      pdfSelectionLocator: undefined,
+      fitWidthTargetWidth: null,
+      rotation: 0,
+      searchHighlights: [],
+      zoomMode: 'custom',
+      zoom: 100
+    })
+  );
+
+  await waitFor(() => {
+    expect(container.querySelector('[data-testid="pdf-document-page-crop-frame"]')).toHaveStyle({ width: '752px' });
+  });
+
+  expect(container.querySelector('.pdf-document-page-crop-content')).toHaveStyle({ marginLeft: '-24px' });
 });

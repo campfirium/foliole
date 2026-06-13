@@ -119,7 +119,7 @@ function renderPdfDocument(
         />
       ) : null}
       <Document
-        className={isLayoutReady ? 'mx-auto flex w-full max-w-none flex-col items-center gap-4' : 'hidden'}
+        className={isLayoutReady ? 'pdf-document-page-stack mx-auto flex w-full max-w-none flex-col items-center gap-4' : 'hidden'}
         data-testid="pdf-document-view"
         file={props.pdfSource}
         loading={null}
