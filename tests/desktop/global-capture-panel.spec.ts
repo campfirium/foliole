@@ -50,6 +50,16 @@ async function expectCaptureFocused(panelPage: Page) {
   await expect.poll(async () => panelPage.evaluate(() => document.activeElement?.id ?? null)).toBe('capture');
 }
 
+async function getCapturePanelBounds(electronApp: ElectronApplication) {
+  return electronApp.evaluate(({ BrowserWindow }) => {
+    const panel = BrowserWindow.getAllWindows().find((window) =>
+      !window.isDestroyed() && window.webContents.getURL().startsWith('data:text/html;charset=utf-8,')
+    );
+    if (!panel) throw new Error('capture panel window not found');
+    return panel.getBounds();
+  });
+}
+
 test('focuses the global capture panel and submits from Enter', async ({ browserName }) => {
   void browserName;
   const session = await launchDesktopSession();
@@ -67,6 +77,33 @@ test('focuses the global capture panel and submits from Enter', async ({ browser
       text: 'Playwright capture panel text',
       type: 'text'
     });
+  } finally {
+    await session.close();
+  }
+});
+
+test('drags the global capture panel from its visible surface', async ({ browserName }) => {
+  void browserName;
+  const session = await launchDesktopSession();
+  try {
+    await showCapturePanel(session.electronApp);
+    const panelPage = await getCapturePanelPage(session.electronApp);
+    await expectCaptureFocused(panelPage);
+
+    const before = await getCapturePanelBounds(session.electronApp);
+    await panelPage.mouse.move(286, 36);
+    await panelPage.mouse.down();
+    await panelPage.mouse.move(406, 96, { steps: 8 });
+    await panelPage.mouse.up();
+
+    await expect.poll(async () => {
+      const after = await getCapturePanelBounds(session.electronApp);
+      return after.x - before.x;
+    }).toBeGreaterThan(80);
+    await expect.poll(async () => {
+      const after = await getCapturePanelBounds(session.electronApp);
+      return after.y - before.y;
+    }).toBeGreaterThan(40);
   } finally {
     await session.close();
   }

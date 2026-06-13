@@ -8,6 +8,9 @@ const FOCUS_CHANNEL = 'foliole:global-capture-panel:focus';
 const READY_CHANNEL = 'foliole:global-capture-panel:ready';
 const RESIZE_CHANNEL = 'foliole:global-capture-panel:resize';
 const HINT_VISIBLE_CHANNEL = 'foliole:global-capture-panel:hint-visible';
+const DRAG_START_CHANNEL = 'foliole:global-capture-panel:drag-start';
+const DRAG_MOVE_CHANNEL = 'foliole:global-capture-panel:drag-move';
+const DRAG_END_CHANNEL = 'foliole:global-capture-panel:drag-end';
 
 const FOOTER_HEIGHT = 44;
 const GUTTER = 26;
@@ -27,6 +30,34 @@ function cancelCapture() {
 
 function setHintVisible(visible) {
   ipcRenderer.send(HINT_VISIBLE_CHANNEL, Boolean(visible));
+}
+
+function toScreenPoint(event) {
+  return { x: event.screenX, y: event.screenY };
+}
+
+function bindDragStrip(dragStrip) {
+  let dragging = false;
+  dragStrip?.addEventListener('pointerdown', (event) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    dragging = true;
+    dragStrip.setPointerCapture?.(event.pointerId);
+    ipcRenderer.send(DRAG_START_CHANNEL, toScreenPoint(event));
+  });
+  dragStrip?.addEventListener('pointermove', (event) => {
+    if (!dragging) return;
+    event.preventDefault();
+    ipcRenderer.send(DRAG_MOVE_CHANNEL, toScreenPoint(event));
+  });
+  const stopDrag = (event) => {
+    if (!dragging) return;
+    dragging = false;
+    dragStrip.releasePointerCapture?.(event.pointerId);
+    ipcRenderer.send(DRAG_END_CHANNEL);
+  };
+  dragStrip?.addEventListener('pointerup', stopDrag);
+  dragStrip?.addEventListener('pointercancel', stopDrag);
 }
 
 function clamp(value, min, max) {
@@ -74,7 +105,9 @@ window.addEventListener('DOMContentLoaded', () => {
   const hideHint = document.getElementById('hide-hint');
   const showHint = document.getElementById('show-hint');
   const close = document.getElementById('close');
+  const dragStrip = document.getElementById('drag-strip');
   focusCaptureInput();
+  bindDragStrip(dragStrip);
   runAfterInitialPaint(() => ipcRenderer.send(READY_CHANNEL));
   ipcRenderer.on(FOCUS_CHANNEL, focusCaptureInput);
   input?.addEventListener('input', resizeCaptureSurface);

@@ -11,7 +11,7 @@ const { electronMocks, panelWindow } = vi.hoisted(() => {
   const ipcHandlers = new Map<string, (...args: unknown[]) => void>();
   const webContents = {
     executeJavaScript: vi.fn(async () => undefined),
-    focus: vi.fn(), id: 11, send: vi.fn()
+    focus: vi.fn(), id: 11, on: vi.fn(), send: vi.fn()
   };
   const appWindows = vi.fn<() => Array<{ isDestroyed: () => boolean; webContents: typeof webContents }>>(() => []);
   const window = {
@@ -21,7 +21,7 @@ const { electronMocks, panelWindow } = vi.hoisted(() => {
     loadURL: vi.fn<(url: string) => Promise<void>>(async () => undefined),
     on: vi.fn(),
     setBackgroundColor: vi.fn(), setBounds: vi.fn(),
-    setIgnoreMouseEvents: vi.fn(), setOpacity: vi.fn(), showInactive: vi.fn(),
+    setAlwaysOnTop: vi.fn(), setIgnoreMouseEvents: vi.fn(), setOpacity: vi.fn(), showInactive: vi.fn(),
     webContents
   };
   return {
@@ -91,6 +91,8 @@ it('shows a compact shell-less capture panel with an isolated preload', async ()
       sandbox: true
     })
   }));
+  const panelOptions = (electronMocks.BrowserWindow.mock.calls[0] as unknown[] | undefined)?.[0];
+  expect(panelOptions).not.toHaveProperty('alwaysOnTop');
   expect(panelWindow.showInactive).toHaveBeenCalledTimes(1);
   expect(panelWindow.setOpacity).toHaveBeenCalledWith(0);
   expect(panelWindow.setIgnoreMouseEvents).toHaveBeenCalledWith(true);
@@ -145,6 +147,10 @@ it('waits for panel readiness before reveal and focuses its web contents', async
   expect(panelWindow.webContents.send).toHaveBeenCalledWith('foliole:global-capture-panel:focus');
   expect(panelWindow.setIgnoreMouseEvents).toHaveBeenCalledWith(false);
   expect(panelWindow.setOpacity).toHaveBeenLastCalledWith(1);
+  expect(panelWindow.setAlwaysOnTop).toHaveBeenNthCalledWith(1, true);
+  expect(panelWindow.setAlwaysOnTop).toHaveBeenNthCalledWith(2, false);
+  expect(panelWindow.setAlwaysOnTop.mock.invocationCallOrder[0]!).toBeLessThan(panelWindow.focus.mock.invocationCallOrder[0]!);
+  expect(panelWindow.focus.mock.invocationCallOrder[0]!).toBeLessThan(panelWindow.setAlwaysOnTop.mock.invocationCallOrder[1]!);
 
   panelWindow.emitCancel();
   await expect(promise).resolves.toEqual({ type: 'cancelled' });

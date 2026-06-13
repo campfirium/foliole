@@ -36,11 +36,11 @@ const { electronMocks, panelWindow } = vi.hoisted(() => {
     }
   });
   let theme = englishTheme();
-  const webContents = { executeJavaScript: vi.fn(async () => theme), focus: vi.fn(), id: 11, send: vi.fn() };
+  const webContents = { executeJavaScript: vi.fn(async () => theme), focus: vi.fn(), id: 11, on: vi.fn(), send: vi.fn() };
   const window = {
     close: vi.fn(), focus: vi.fn(), isDestroyed: vi.fn(() => false), isVisible: vi.fn(() => true),
     loadURL: vi.fn<(url: string) => Promise<void>>(async () => undefined),
-    on: vi.fn(), setBounds: vi.fn(), setIgnoreMouseEvents: vi.fn(), setOpacity: vi.fn(), showInactive: vi.fn(),
+    on: vi.fn(), setAlwaysOnTop: vi.fn(), setBounds: vi.fn(), setIgnoreMouseEvents: vi.fn(), setOpacity: vi.fn(), showInactive: vi.fn(),
     webContents
   };
   return {
@@ -121,6 +121,19 @@ it('keeps capture shell-less without old dialog chrome', async () => {
   expect(html).toContain('aria-label="Hide shortcut hint"');
   expect(html).toContain('placeholder="..."');
   expect(html).toContain('>Save<');
+  expect(html).toContain('html,body{height:100%;}');
+  expect(html).toContain('body{box-sizing:border-box;padding:26px;-webkit-app-region:drag;app-region:drag;}');
+  expect(html).toContain('.panel{position:relative;display:grid;grid-template-rows:minmax(0,auto) auto;width:520px;min-height:188px;max-height:420px;overflow:hidden;padding:0;-webkit-app-region:no-drag;app-region:no-drag;}');
+  expect(html).toContain('.drag-strip{position:absolute;left:0;right:0;top:0;z-index:1;height:18px;cursor:grab;-webkit-app-region:no-drag;app-region:no-drag;}');
+  expect(html).toContain('<div aria-hidden="true" class="drag-strip" id="drag-strip"></div>');
+  expect(html).toContain('textarea{box-sizing:border-box;display:block;width:100%;height:144px;min-height:144px;max-height:376px;resize:none;');
+  expect(html).toContain('scrollbar-width:none;-webkit-app-region:no-drag;app-region:no-drag;}');
+  expect(html).toContain('.footer{display:grid;min-height:44px;grid-template-columns:minmax(0,1fr) auto;');
+  expect(html).toContain('background:transparent;-webkit-app-region:no-drag;app-region:no-drag;}');
+  expect(html).toContain('.hint-toggle{display:inline-flex;width:22px;height:22px;');
+  expect(html).toContain('cursor:pointer;-webkit-app-region:no-drag;app-region:no-drag;}');
+  expect(html).toContain('.primary{min-width:58px;min-height:32px;');
+  expect(html).toContain('cursor:pointer;-webkit-app-region:no-drag;app-region:no-drag;}');
   expect(html).toContain('font:400 var(--capture-input-font-size)/var(--capture-input-line-height) var(--capture-input-font-family)');
   expect(html).not.toContain('var(--capture-accent) 8%');
   panelWindow.emitCancel();

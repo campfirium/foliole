@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, screen, type IpcMainEvent } from 'electron';
+import { BrowserWindow, ipcMain, screen, type IpcMainEvent } from 'electron';
 
 import {
   GLOBAL_CAPTURE_PANEL_CANCEL_CHANNEL,
@@ -8,12 +8,9 @@ import {
   GLOBAL_CAPTURE_PANEL_HINT_VISIBLE_CHANNEL,
   GLOBAL_CAPTURE_PANEL_SUBMIT_CHANNEL
 } from './globalCaptureChannels.js';
-import {
-  buildFloatingThemeStyle,
-  escapeHtml,
-  type GlobalCaptureFloatingTheme,
-  resolveFloatingTheme
-} from './globalCaptureFloatingSurface.js';
+import { resolveFloatingTheme } from './globalCaptureFloatingSurface.js';
+import { bindGlobalCapturePanelDrag } from './globalCapturePanelDrag.js';
+import { buildGlobalCapturePanelHtml } from './globalCapturePanelHtml.js';
 import { installGlobalCapturePanelTestHook } from './globalCapturePanelTestHook.js';
 import { resolveGlobalCapturePreloadPath } from './globalCapturePreloadPath.js';
 import { isGlobalClipHintVisible, setGlobalClipHintVisible } from './globalClipSettings.js';
@@ -27,7 +24,6 @@ const SURFACE_WIDTH = 520;
 const PANEL_MAX_HEIGHT = SURFACE_MAX_HEIGHT + PANEL_GUTTER * 2;
 const PANEL_MIN_HEIGHT = SURFACE_MIN_HEIGHT + PANEL_GUTTER * 2;
 const PANEL_WIDTH = SURFACE_WIDTH + PANEL_GUTTER * 2;
-
 let cachedPanelWindow: BrowserWindow | null = null;
 let cachedPanelLoad: Promise<void> | null = null;
 let cachedPanelReady = false;
@@ -48,40 +44,9 @@ function clampPanelHeight(value: number) {
   return Math.min(Math.max(value, PANEL_MIN_HEIGHT), PANEL_MAX_HEIGHT);
 }
 
-function buildPanelHtml(theme: GlobalCaptureFloatingTheme) {
-  const chevronDown = '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="m8 9 4 4 4-4"/></svg>';
-  const chevronRight = '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="m8 7 4 5-4 5"/></svg>';
-  const html = [
-    '<!doctype html>',
-    '<meta charset="utf-8">',
-    '<style>',
-    buildFloatingThemeStyle(theme),
-    'body{padding:26px;}',
-    '.panel{display:grid;grid-template-rows:minmax(0,auto) auto;width:520px;min-height:188px;max-height:420px;overflow:hidden;padding:0;}',
-    'textarea{box-sizing:border-box;display:block;width:100%;height:144px;min-height:144px;max-height:376px;resize:none;border:0;outline:0;overflow:hidden;background:var(--capture-input-bg);color:var(--capture-fg);font:400 var(--capture-input-font-size)/var(--capture-input-line-height) var(--capture-input-font-family);padding:var(--capture-input-padding-block-start) var(--capture-content-inline-padding) var(--capture-input-padding-block-end);scrollbar-width:none;}',
-    'textarea::-webkit-scrollbar{display:none;width:0;height:0;}',
-    'textarea::placeholder{color:var(--capture-placeholder);font-weight:400;}',
-    '.footer{display:grid;min-height:44px;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;border-top:1px solid var(--capture-divider);padding:6px var(--capture-content-inline-padding);background:transparent;}',
-    '.hint{display:flex;min-width:0;align-items:center;gap:4px;overflow:hidden;color:var(--capture-muted);font:400 12px/18px var(--capture-ui-font-family);}',
-    '.hint-text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
-    '.hint-toggle{display:inline-flex;width:22px;height:22px;margin-left:-6px;align-items:center;justify-content:center;border:0;border-radius:6px;background:transparent;color:color-mix(in srgb,var(--capture-muted) 76%,transparent);padding:0;cursor:pointer;}',
-    '.hint-toggle:hover{color:var(--capture-fg);background:var(--capture-control-hover-bg);}',
-    '.hint-toggle svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}',
-    'body[data-hint-visible="false"] .hint-expanded{display:none;}',
-    'body[data-hint-visible="true"] .hint-collapsed{display:none;}',
-    '.actions{display:flex;align-items:center;gap:8px;}',
-    '.primary{min-width:58px;min-height:32px;border:1px solid var(--capture-control-border);border-radius:var(--capture-control-radius);background:transparent;color:var(--capture-control-fg);font:400 13px/18px var(--capture-ui-font-family);padding:5px 14px;cursor:pointer;}',
-    '.primary:hover{border-color:var(--capture-control-border-hover);background:var(--capture-control-hover-bg);color:var(--capture-fg);}',
-    '</style>',
-    `<body data-hint-visible="${theme.hintVisible ? 'true' : 'false'}"><form class="capture-surface panel" id="form"><textarea id="capture" autofocus placeholder="${escapeHtml(theme.strings.placeholder)}"></textarea><div class="footer"><div class="hint"><button aria-expanded="true" aria-label="${escapeHtml(theme.strings.hideHintLabel)}" class="hint-expanded hint-toggle" id="hide-hint" type="button">${chevronDown}</button><span class="hint-expanded hint-text">${escapeHtml(theme.strings.hint)}</span><button aria-expanded="false" aria-label="${escapeHtml(theme.strings.showHintLabel)}" class="hint-collapsed hint-toggle" id="show-hint" type="button">${chevronRight}</button></div><div class="actions"><button class="primary" type="submit">${escapeHtml(theme.strings.save)}</button></div></div></form></body>`
-  ].join('');
-  return `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
-}
-
 function createPanelWindow() {
   const bounds = resolvePanelBounds(PANEL_MIN_HEIGHT);
   const panel = new BrowserWindow({
-    alwaysOnTop: true,
     backgroundColor: '#00000000',
     focusable: true,
     frame: false,
@@ -103,6 +68,7 @@ function createPanelWindow() {
   panel.setOpacity(0);
   panel.setIgnoreMouseEvents(true);
   panel.showInactive();
+  bindGlobalCapturePanelDrag(panel);
   const handlePanelReady = (event: IpcMainEvent) => {
     if (event.sender.id === panel.webContents.id) cachedPanelReady = true;
   };
@@ -125,7 +91,7 @@ function loadPanelWindow(panel: BrowserWindow, forceReload = false) {
     cachedPanelLoad = resolveFloatingTheme(panel)
       .then((theme) => {
         if (loadVersion !== cachedPanelLoadVersion || panel.isDestroyed()) return undefined;
-        return panel.loadURL(buildPanelHtml({ ...theme, hintVisible: isGlobalClipHintVisible() }));
+        return panel.loadURL(buildGlobalCapturePanelHtml({ ...theme, hintVisible: isGlobalClipHintVisible() }));
       })
       .then(() => undefined);
   }
@@ -155,9 +121,11 @@ function revealPanel(panel: BrowserWindow) {
   panel.setOpacity(0);
   if (!panel.isVisible()) panel.showInactive();
   panel.setOpacity(1);
+  panel.setAlwaysOnTop(true);
   panel.focus();
   panel.webContents.focus();
   panel.webContents.send(GLOBAL_CAPTURE_PANEL_FOCUS_CHANNEL);
+  panel.setAlwaysOnTop(false);
 }
 
 function concealPanel(panel: BrowserWindow) {
