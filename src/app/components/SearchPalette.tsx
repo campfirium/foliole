@@ -1,6 +1,6 @@
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from 'react';
 
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
@@ -32,6 +32,7 @@ export function SearchPalette(props: SearchPaletteProps) {
   const t = useTranslation();
   const focusTrap = useFloatingDialogFocusTrap(props.isOpen);
   useFloatingPaletteEscape(props.isOpen, props.onClose);
+  const overlayClose = useOverlayClickClose(props.onClose);
   const [query, setQuery] = useState('');
   const [isComposingQuery, setIsComposingQuery] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -49,7 +50,8 @@ export function SearchPalette(props: SearchPaletteProps) {
       aria-label={t('desktop.search.dialog')}
       aria-modal="true"
       className={appFloatingOverlayClassName()}
-      onClick={props.onClose}
+      onClick={overlayClose.handleClick}
+      onMouseDown={overlayClose.handleMouseDown}
       role="dialog"
     >
       <div
@@ -84,6 +86,22 @@ export function SearchPalette(props: SearchPaletteProps) {
       </div>
     </div>
   );
+}
+
+function useOverlayClickClose(onClose: () => void) {
+  const pointerStartedOnOverlayRef = useRef(false);
+
+  return {
+    handleClick: (event: ReactMouseEvent<HTMLDivElement>) => {
+      if (event.target === event.currentTarget && pointerStartedOnOverlayRef.current) {
+        onClose();
+      }
+      pointerStartedOnOverlayRef.current = false;
+    },
+    handleMouseDown: (event: ReactMouseEvent<HTMLDivElement>) => {
+      pointerStartedOnOverlayRef.current = event.target === event.currentTarget;
+    }
+  };
 }
 
 function createOpenActiveSearchResultHandler(

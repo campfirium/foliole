@@ -39,7 +39,7 @@ function createNodeResult() {
   };
 }
 
-function renderSearchPalette() {
+function renderSearchPalette(overrides: { onClose?: () => void } = {}) {
   return renderWithLocalization(
     <SearchPalette
       isOpen
@@ -80,7 +80,7 @@ function renderSearchPalette() {
           updatedAt: '2026-03-29T00:00:00.000Z'
         }
       }}
-      onClose={() => undefined}
+      onClose={overrides.onClose ?? (() => undefined)}
       onOpenResult={() => undefined}
       trashedNodeIds={[]}
     />
@@ -165,6 +165,24 @@ it('keeps the search input focused when pointer selection reaches a result row',
   fireEvent.mouseDown(resultButton);
 
   expect(input).toHaveFocus();
+});
+
+it('does not close when selecting query text releases on the overlay', () => {
+  vi.mocked(loadRuntimeExternalSearchFolders).mockResolvedValue([]);
+  const onClose = vi.fn();
+  renderSearchPalette({ onClose });
+
+  const dialog = screen.getByRole('dialog', { name: 'Workspace search' });
+  const input = screen.getByRole('textbox', { name: 'Search workspace' });
+  fireEvent.change(input, { target: { value: 'launch' } });
+  input.focus();
+
+  fireEvent.mouseDown(input);
+  fireEvent.mouseUp(dialog);
+  fireEvent.click(dialog);
+
+  expect(onClose).not.toHaveBeenCalled();
+  expect(input).toHaveValue('launch');
 });
 
 it('rehydrates the workspace before opening an imported external result', async () => {
