@@ -1,5 +1,3 @@
-import { join } from 'node:path';
-
 import { app, BrowserWindow, ipcMain, screen, type IpcMainEvent } from 'electron';
 
 import {
@@ -17,6 +15,7 @@ import {
   resolveFloatingTheme
 } from './globalCaptureFloatingSurface.js';
 import { installGlobalCapturePanelTestHook } from './globalCapturePanelTestHook.js';
+import { resolveGlobalCapturePreloadPath } from './globalCapturePreloadPath.js';
 import { isGlobalClipHintVisible, setGlobalClipHintVisible } from './globalClipSettings.js';
 
 export type GlobalCapturePanelResult = { type: 'cancelled' } | { type: 'clipboard' } | { text: string; type: 'text' };
@@ -94,7 +93,7 @@ function createPanelWindow() {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
-      preload: join(app.getAppPath(), 'electron', 'globalCapturePanelPreload.cjs'),
+      preload: resolveGlobalCapturePreloadPath('globalCapturePanelPreload.cjs'),
       sandbox: true
     },
     width: bounds.width,

@@ -1,5 +1,3 @@
-import { join } from 'node:path';
-
 import { app, BrowserWindow, screen } from 'electron';
 
 import { GLOBAL_CAPTURE_TOAST_TARGET_CHANNEL } from './globalCaptureChannels.js';
@@ -10,6 +8,7 @@ import {
   resolveFloatingTheme,
   truncateCapturePreview
 } from './globalCaptureFloatingSurface.js';
+import { resolveGlobalCapturePreloadPath } from './globalCapturePreloadPath.js';
 import { buildBrandMarkHtml } from './globalClipDesktopToastBrand.js';
 import {
   prepareGlobalClipDesktopToastWindow as preparePrewarmedToastWindow,
@@ -125,7 +124,7 @@ function createToastWindow() {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
-      preload: join(app.getAppPath(), 'electron', 'globalCaptureToastPreload.cjs'),
+      preload: resolveGlobalCapturePreloadPath('globalCaptureToastPreload.cjs'),
       sandbox: true
     },
     width: TOAST_WINDOW_WIDTH,
