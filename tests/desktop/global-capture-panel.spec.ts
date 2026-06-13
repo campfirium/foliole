@@ -91,9 +91,9 @@ test('drags the global capture panel from its visible surface', async ({ browser
     await expectCaptureFocused(panelPage);
 
     const before = await getCapturePanelBounds(session.electronApp);
-    await panelPage.mouse.move(286, 36);
+    await panelPage.mouse.move(72, 214);
     await panelPage.mouse.down();
-    await panelPage.mouse.move(406, 96, { steps: 8 });
+    await panelPage.mouse.move(192, 274, { steps: 8 });
     await panelPage.mouse.up();
 
     await expect.poll(async () => {

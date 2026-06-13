@@ -116,22 +116,35 @@ export function resetGlobalCapturePanelWindowForTests() {
   cachedPanelLoadVersion += 1;
 }
 
-function revealPanel(panel: BrowserWindow) {
+function raisePanelWindow(panel: BrowserWindow, sendFocusRequest: boolean) {
   panel.setIgnoreMouseEvents(false);
-  panel.setOpacity(0);
   if (!panel.isVisible()) panel.showInactive();
   panel.setOpacity(1);
   panel.setAlwaysOnTop(true);
+  panel.moveTop();
   panel.focus();
   panel.webContents.focus();
-  panel.webContents.send(GLOBAL_CAPTURE_PANEL_FOCUS_CHANNEL);
+  if (sendFocusRequest) panel.webContents.send(GLOBAL_CAPTURE_PANEL_FOCUS_CHANNEL);
   panel.setAlwaysOnTop(false);
+  panel.moveTop();
+}
+
+function revealPanel(panel: BrowserWindow) {
+  panel.setOpacity(0);
+  raisePanelWindow(panel, true);
+}
+
+export function raiseGlobalCapturePanelWindow() {
+  if (!cachedPanelReady || !cachedPanelWindow || cachedPanelWindow.isDestroyed()) return false;
+  raisePanelWindow(cachedPanelWindow, false);
+  return true;
 }
 
 function concealPanel(panel: BrowserWindow) {
   if (panel.isDestroyed()) return;
   panel.setOpacity(0);
   panel.setIgnoreMouseEvents(true);
+  panel.setAlwaysOnTop(false);
 }
 
 interface PanelIpcHandlers {

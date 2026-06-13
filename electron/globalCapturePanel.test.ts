@@ -13,15 +13,18 @@ const { electronMocks, panelWindow } = vi.hoisted(() => {
     executeJavaScript: vi.fn(async () => undefined),
     focus: vi.fn(), id: 11, on: vi.fn(), send: vi.fn()
   };
-  const appWindows = vi.fn<() => Array<{ isDestroyed: () => boolean; webContents: typeof webContents }>>(() => []);
+  const appWindows = vi.fn(() => []);
   const window = {
     close: vi.fn(), focus: vi.fn(),
+    getParentWindow: vi.fn(() => null),
     isDestroyed: vi.fn(() => false),
+    isMinimized: vi.fn(() => false),
     isVisible: vi.fn(() => true),
     loadURL: vi.fn<(url: string) => Promise<void>>(async () => undefined),
+    moveTop: vi.fn(),
     on: vi.fn(),
     setBackgroundColor: vi.fn(), setBounds: vi.fn(),
-    setAlwaysOnTop: vi.fn(), setIgnoreMouseEvents: vi.fn(), setOpacity: vi.fn(), showInactive: vi.fn(),
+    setAlwaysOnTop: vi.fn(), setIgnoreMouseEvents: vi.fn(), setOpacity: vi.fn(), setParentWindow: vi.fn(), showInactive: vi.fn(),
     webContents
   };
   return {
@@ -52,7 +55,7 @@ const { electronMocks, panelWindow } = vi.hoisted(() => {
 vi.mock('electron', () => electronMocks);
 vi.mock('./globalClipSettings.js', () => clipSettingsMocks);
 
-import { resetGlobalCapturePanelWindowForTests, showGlobalCapturePanel } from './globalCapturePanel.js';
+import { raiseGlobalCapturePanelWindow, resetGlobalCapturePanelWindowForTests, showGlobalCapturePanel } from './globalCapturePanel.js';
 
 async function waitForPanelLoad() {
   for (let index = 0; index < 30 && panelWindow.loadURL.mock.calls.length === 0; index += 1) {
@@ -71,7 +74,9 @@ beforeEach(() => {
   resetGlobalCapturePanelWindowForTests();
   clipSettingsMocks.isGlobalClipHintVisible.mockReturnValue(true);
   electronMocks.BrowserWindow.getAllWindows.mockReturnValue([]);
+  panelWindow.getParentWindow.mockReturnValue(null);
   panelWindow.isDestroyed.mockReturnValue(false);
+  panelWindow.isMinimized.mockReturnValue(false);
   panelWindow.isVisible.mockReturnValue(true);
 });
 
@@ -140,6 +145,9 @@ it('waits for panel readiness before reveal and focuses its web contents', async
   await waitForPanelLoad();
 
   expect(panelWindow.focus).not.toHaveBeenCalled();
+  panelWindow.moveTop.mockClear();
+  panelWindow.setAlwaysOnTop.mockClear();
+  panelWindow.setParentWindow.mockClear();
   panelWindow.emitReady();
   await waitForPanelReveal();
   expect(panelWindow.focus).toHaveBeenCalledTimes(1);
@@ -149,8 +157,37 @@ it('waits for panel readiness before reveal and focuses its web contents', async
   expect(panelWindow.setOpacity).toHaveBeenLastCalledWith(1);
   expect(panelWindow.setAlwaysOnTop).toHaveBeenNthCalledWith(1, true);
   expect(panelWindow.setAlwaysOnTop).toHaveBeenNthCalledWith(2, false);
+  expect(panelWindow.moveTop).toHaveBeenCalledTimes(2);
   expect(panelWindow.setAlwaysOnTop.mock.invocationCallOrder[0]!).toBeLessThan(panelWindow.focus.mock.invocationCallOrder[0]!);
   expect(panelWindow.focus.mock.invocationCallOrder[0]!).toBeLessThan(panelWindow.setAlwaysOnTop.mock.invocationCallOrder[1]!);
+  expect(panelWindow.setAlwaysOnTop.mock.invocationCallOrder[1]!).toBeLessThan(panelWindow.moveTop.mock.invocationCallOrder[1]!);
+  expect(panelWindow.setParentWindow).not.toHaveBeenCalled();
+
+  panelWindow.emitCancel();
+  await expect(promise).resolves.toEqual({ type: 'cancelled' });
+  expect(panelWindow.setAlwaysOnTop).toHaveBeenLastCalledWith(false);
+  expect(panelWindow.setParentWindow).not.toHaveBeenCalled();
+});
+
+it('raises an already open panel without resetting the capture input', async () => {
+  const promise = showGlobalCapturePanel();
+  await waitForPanelLoad();
+  panelWindow.emitReady();
+  await waitForPanelReveal();
+  panelWindow.focus.mockClear();
+  panelWindow.moveTop.mockClear();
+  panelWindow.setAlwaysOnTop.mockClear();
+  panelWindow.webContents.focus.mockClear();
+  panelWindow.webContents.send.mockClear();
+
+  expect(raiseGlobalCapturePanelWindow()).toBe(true);
+
+  expect(panelWindow.focus).toHaveBeenCalledTimes(1);
+  expect(panelWindow.webContents.focus).toHaveBeenCalledTimes(1);
+  expect(panelWindow.webContents.send).not.toHaveBeenCalled();
+  expect(panelWindow.setAlwaysOnTop).toHaveBeenNthCalledWith(1, true);
+  expect(panelWindow.setAlwaysOnTop).toHaveBeenNthCalledWith(2, false);
+  expect(panelWindow.moveTop).toHaveBeenCalledTimes(2);
 
   panelWindow.emitCancel();
   await expect(promise).resolves.toEqual({ type: 'cancelled' });

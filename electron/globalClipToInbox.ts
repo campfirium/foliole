@@ -14,6 +14,7 @@ import { waitForDatabaseReady } from './database/databaseReadiness.js';
 import { appendMainProcessDiagnosticLog } from './diagnostics/mainProcessDiagnostics.js';
 import {
   prepareGlobalCapturePanelWindow,
+  raiseGlobalCapturePanelWindow,
   showGlobalCapturePanel,
   type GlobalCapturePanelResult
 } from './globalCapturePanel.js';
@@ -50,6 +51,7 @@ export interface GlobalClipToInboxDeps {
   runImport?: typeof runClipboardImport;
   sendCopyShortcut?: () => Promise<boolean>;
   prepareCapturePanel?: () => void;
+  raiseCapturePanel?: () => boolean;
   prepareDesktopToast?: () => void;
   showCapturePanel?: () => Promise<GlobalCapturePanelResult>;
   showDesktopToast?: (status: GlobalClipToastStatus) => GlobalClipDesktopToast;
@@ -126,6 +128,7 @@ export async function runGlobalClipToInbox(deps: GlobalClipToInboxDeps = {}) {
   const waitForReady = deps.waitForReady ?? waitForDatabaseReady;
   const showDesktopToast = deps.showDesktopToast ?? showGlobalClipDesktopToast;
   if (globalCaptureInFlight) {
+    (deps.raiseCapturePanel ?? raiseGlobalCapturePanelWindow)();
     log('global_clip_capture_in_flight');
     return null;
   }
