@@ -16,18 +16,8 @@ describe('playwright desktop launch target', () => {
     expect(resolveDesktopAppRoot({ FOLIOLE_ELECTRON_APP_ROOT: '/tmp/custom-root' })).toBe('/tmp/custom-root');
   });
 
-  it('defaults to the fixed windows mirror root instead of current working directory', () => {
-    expect(resolveDesktopAppRoot({})).toBe('/mnt/d/C/foliole');
-  });
-
-  it('derives the mirror root from the configured windows workdir', () => {
-    expect(resolveDesktopAppRoot({ FOLIOLE_WINDOWS_WORKDIR: 'D:\\foliole-dev\\sandbox' })).toBe(
-      '/mnt/d/foliole-dev/sandbox'
-    );
-  });
-
-  it('normalizes drive-relative configured windows workdirs before deriving the mirror root', () => {
-    expect(resolveDesktopAppRoot({ FOLIOLE_WINDOWS_WORKDIR: 'D:C\\foliole' })).toBe('/mnt/d/C/foliole');
+  it('defaults to the current repository root on Linux/WSL', () => {
+    expect(resolveDesktopAppRoot({})).toBe(path.resolve('.'));
   });
 
   it('resolves current build output paths in args launch mode', () => {
@@ -59,10 +49,10 @@ describe('playwright desktop launch target', () => {
     });
   });
 
-  it('keeps Windows executable paths absolute without appending them to the current app root', () => {
+  it('does not infer a Windows executable from a Linux process', () => {
     expect(resolveElectronExecutablePath('D:\\C\\foliole', {}, (filePath) =>
       filePath === 'D:\\C\\foliole\\node_modules\\electron\\dist\\electron.exe'
-    )).toBe('D:\\C\\foliole\\node_modules\\electron\\dist\\electron.exe');
+    )).toBeUndefined();
   });
 
   it('requires the current preload entry instead of historical electron-dist fallback paths', () => {
@@ -130,7 +120,7 @@ describe('playwright desktop launch target', () => {
       resolveElectronExecutablePath('/mnt/d/C/foliole', {}, (filePath) =>
         filePath === '/mnt/d/C/foliole/node_modules/electron/dist/electron.exe'
       )
-    ).toBe('/mnt/d/C/foliole/node_modules/electron/dist/electron.exe');
+    ).toBeUndefined();
 
     expect(
       resolveElectronExecutablePath('/workspace/foliole', {}, (filePath) =>

@@ -88,7 +88,7 @@
 - 新增文件、拆分文件或修复 `max-lines` / `max-lines-per-function` 后，先跑 `node scripts/check-file-budget.mjs <file...>`，再跑对应窄 scope lint。
 - 新增或升级 npm 依赖时，额外执行 `npm run deps:hardening:check`；`build` 只在用户明确要求或触及依赖 / 构建根链路且必须验证时执行。
 - `it.skip` / `test.skip` 必须紧邻 `// SKIP: <reason> | <date YYYY-MM-DD> | revive: <condition>`；看到超过 30 天的 stale `SKIP` 必须复查能否恢复。
-- E2E（Playwright）不进入任何质量闸；只在用户明确要求验证核心用户路径回归时由用户手工运行 `npm run test:e2e`。
+- E2E（Playwright）不进入任何质量闸；只在用户明确要求验证核心用户路径回归时运行。桌面日常 agent 自动化验收优先按 `electron/AGENTS.md` 使用不干扰用户桌面的 Playwright 入口，人工预览仍按下表执行。
 - `copy:guard` 默认只报告 warning；若它报 warning，修复前先读 `.lab/specs/_product/terminology-and-copy.md`，禁止机械替换。
 
 预览 flag 路径：Windows 为 `.lab/internal/runtime/windows-preview.flag`，Android 为 `.lab/internal/runtime/android-preview.flag`；有效值仅 `ON` / `OFF`，缺失按 `OFF`。
@@ -102,7 +102,7 @@
 | 普通模式、对应 flag 为 `OFF`，或仅改 agent 规则 / 文档 / 测试 / 脚本 / 内部 spec | 不执行预览，最终 `R` 写明原因 |
 | 用户说“打开预览” / “关闭预览” | 同时写入两个 flag 为 `ON` / `OFF`；用户可只指定 Windows 或 Android |
 
-预览入口：桌面按 `electron/AGENTS.md` 当前工作区入口执行，桌面预览代表当前真实 WSL 工作区，不再提供线程隔离预览；移动按 `npm run android:preview` 执行；同时影响桌面与移动共享链路时，只执行已命中上表的宿主预览。预览成功时最终末行可写 `pushed`；预览失败或未执行时不能写 `pushed`，必须在 `R` 写失败阶段、失败原因或未执行原因。
+预览入口：桌面人工预览按 `electron/AGENTS.md` 当前工作区入口执行，桌面预览代表当前真实 WSL 工作区，不再提供线程隔离预览；移动按 `npm run android:preview` 执行；同时影响桌面与移动共享链路时，只执行已命中上表的宿主预览。预览成功时最终末行可写 `pushed`；预览失败或未执行时不能写 `pushed`，必须在 `R` 写失败阶段、失败原因或未执行原因。
 
 最终汇报默认使用 `C / V / R / pushed`：`C` 写用户问题恢复与已确认根因，`V` 写用户可见验收现象，`R` 写真实剩余风险或未执行原因；不列命令、内部字段、数据库对象或可选后续，除非用户追问或验证失败。
 

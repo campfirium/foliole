@@ -14,16 +14,6 @@ function resolveConfiguredWindowsWorkdir(env = process.env) {
   return DEFAULT_WINDOWS_WORKDIR;
 }
 
-function resolveWslMirrorRoot(windowsWorkdir) {
-  const normalized = windowsWorkdir.replace(/\\/g, '/');
-  const driveMatch = normalized.match(/^([A-Za-z]):\/(.*)$/);
-  if (!driveMatch) {
-    return path.posix.resolve(normalized);
-  }
-  const [, driveLetter, remainder] = driveMatch;
-  return path.posix.join('/mnt', driveLetter.toLowerCase(), remainder);
-}
-
 function normalizeWindowsDrivePath(value) {
   return value.replace(/^([A-Za-z]):(?![\\/])/, '$1:\\');
 }
@@ -49,8 +39,11 @@ export function resolveDesktopAppRoot(env = process.env) {
   if (configuredRoot) {
     return resolveHostPath(configuredRoot);
   }
+  if (process.platform !== 'win32') {
+    return path.resolve('.');
+  }
   const windowsWorkdir = resolveConfiguredWindowsWorkdir(env);
-  return process.platform === 'win32' ? windowsWorkdir : resolveWslMirrorRoot(windowsWorkdir);
+  return windowsWorkdir;
 }
 
 export function resolveDesktopLaunchTarget(appRoot, existsSync = fs.existsSync) {
@@ -75,10 +68,9 @@ export function resolveElectronExecutablePath(appRoot, env = process.env, exists
     return resolveHostPath(configuredPath);
   }
   const resolvedAppRoot = resolveHostPath(appRoot);
-  const candidatePaths = [
-    joinHostPath(resolvedAppRoot, 'node_modules', 'electron', 'dist', 'electron.exe'),
-    joinHostPath(resolvedAppRoot, 'node_modules', 'electron', 'dist', 'electron')
-  ];
+  const candidatePaths = process.platform === 'win32'
+    ? [joinHostPath(resolvedAppRoot, 'node_modules', 'electron', 'dist', 'electron.exe')]
+    : [joinHostPath(resolvedAppRoot, 'node_modules', 'electron', 'dist', 'electron')];
   return candidatePaths.find((candidatePath) => existsSync(candidatePath));
 }
 

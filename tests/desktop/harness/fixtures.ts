@@ -52,6 +52,12 @@ async function normalizeDesktopWindow(session: DesktopSession) {
   });
   await session.firstWindow.setViewportSize({ width: 1600, height: 1000 });
   await session.firstWindow.waitForTimeout(150);
+  const searchEnhancementPrompt = session.firstWindow.getByRole('dialog', {
+    name: /(Turn on search enhancement for languages without spaces|要为无空格语言开启搜索增强)/
+  });
+  if (await searchEnhancementPrompt.isVisible().catch(() => false)) {
+    await searchEnhancementPrompt.getByRole('button', { name: /(Not now|暂不)/ }).click();
+  }
 }
 
 export const test = base.extend<DesktopFixtures>({
