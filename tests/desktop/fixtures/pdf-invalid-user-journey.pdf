@@ -1,0 +1,2 @@
+This is not a valid PDF file. It intentionally keeps a .pdf extension so the
+desktop import path treats it as a PDF while the reader must show a load error.
