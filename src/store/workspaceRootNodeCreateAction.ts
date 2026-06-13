@@ -20,7 +20,6 @@ type WorkspaceSet = (
 ) => void;
 
 interface RuntimeSyncHandlers {
-  hasMutationRuntime: () => boolean;
   syncNodeContent: (node: WorkspaceNode) => void;
   syncNodeCreation: (node: WorkspaceNode, nodeOrder: string[], activeNodeId?: string | null, position?: number) => Promise<import('../shared/platform/workspaceRuntimeTypes').WorkspaceNodeMutationPatchResult | null>;
   syncNodeOrder: (nodeOrder: string[]) => void;
@@ -85,7 +84,6 @@ export function createRootNodeAction(
     let createdNode: WorkspaceNode | null = null;
     let nextNodeOrder: string[] | null = null;
     let localPatch: Partial<WorkspaceState> | null = null;
-    let shouldUseLocalFallback = false;
     let applied = false;
 
     set((state) => {
@@ -114,23 +112,21 @@ export function createRootNodeAction(
           nodeId
         )
       };
-      return state;
+      applied = true;
+      return localPatch;
     });
-    shouldUseLocalFallback = !handlers.hasMutationRuntime();
     if (createdNode && nextNodeOrder) {
       const acceptedOrder = [...nextNodeOrder] as string[];
       const result = await handlers.syncNodeCreation(createdNode, acceptedOrder, nodeId, acceptedOrder.indexOf(nodeId));
-      set((state) => {
-        const acceptedPatch = result
-          ? createWorkspaceNodeMutationPatchWithLocalSideEffects(state, result, localPatch)
-          : shouldUseLocalFallback ? localPatch : null;
-        if (!acceptedPatch) return state;
-        applied = true;
-        return {
-          ...acceptedPatch,
-          reviewSession: reconcileReviewSession({ ...state, ...acceptedPatch }, nodeId)
-        };
-      });
+      if (result) {
+        set((state) => {
+          const acceptedPatch = createWorkspaceNodeMutationPatchWithLocalSideEffects(state, result, localPatch);
+          return {
+            ...acceptedPatch,
+            reviewSession: reconcileReviewSession({ ...state, ...acceptedPatch }, nodeId)
+          };
+        });
+      }
     }
     return createdNode && applied ? nodeId : null;
   };

@@ -41,6 +41,48 @@ function shouldApplyNodePatch(current: Node | undefined, next: Node) {
   return !current || next.updatedAt >= current.updatedAt;
 }
 
+function mergeNodeWithLocalUserFields(runtimeNode: Node | undefined, localNode: Node): Node {
+  if (!runtimeNode) {
+    return localNode;
+  }
+  const title = localNode.isTitleManual || runtimeNode.title.trim().length === 0
+    ? localNode.title
+    : runtimeNode.title;
+  const merged = {
+    ...runtimeNode,
+    ...(localNode.specialKind ? { specialKind: localNode.specialKind } : {}),
+    title,
+    isTitleManual: localNode.isTitleManual ?? runtimeNode.isTitleManual ?? false,
+    content: localNode.content,
+    reveal: localNode.reveal,
+    anchorLink: localNode.anchorLink ?? null,
+    imageRegions: localNode.imageRegions ?? null
+  };
+  return {
+    ...merged,
+    hasContent: merged.content.trim().length > 0,
+    hasReveal: merged.reveal !== null
+  };
+}
+
+function mergeNodesByIdWithLocalUserFields(
+  runtimeNodesById: WorkspaceState['nodesById'] | undefined,
+  localNodesById: WorkspaceState['nodesById'] | undefined,
+  nodeIds: ReadonlySet<string>
+) {
+  const nextNodesById = { ...runtimeNodesById };
+  if (!localNodesById) {
+    return nextNodesById;
+  }
+  for (const nodeId of nodeIds) {
+    const localNode = localNodesById[nodeId];
+    if (localNode) {
+      nextNodesById[nodeId] = mergeNodeWithLocalUserFields(nextNodesById[nodeId], localNode);
+    }
+  }
+  return nextNodesById;
+}
+
 export function createWorkspaceNodeMutationPatch(
   state: Pick<WorkspaceState, 'nodesById'>,
   result: WorkspaceNodeMutationPatchResult
@@ -71,7 +113,7 @@ export function createWorkspaceNodeMutationPatch(
 }
 
 export function createWorkspaceNodeMutationPatchWithLocalSideEffects(
-  state: WorkspaceState,
+  state: Pick<WorkspaceState, 'nodesById'>,
   result: WorkspaceNodeMutationPatchResult,
   localPatch: Partial<WorkspaceState> | null
 ): WorkspacePatch & Partial<WorkspaceState> {
@@ -89,9 +131,10 @@ export function createWorkspaceNodeMutationPatchWithLocalSideEffects(
   return {
     ...localPatch,
     ...runtimePatch,
-    nodesById: {
-      ...localPatch.nodesById,
-      ...runtimePatch.nodesById
-    }
+    nodesById: mergeNodesByIdWithLocalUserFields(
+      runtimePatch.nodesById,
+      localPatch.nodesById,
+      new Set(result.nodes.map((node) => node.nodeId))
+    )
   };
 }

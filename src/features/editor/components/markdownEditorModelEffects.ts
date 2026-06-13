@@ -12,6 +12,7 @@ export function useMarkdownEditorModelEffects(args: {
   rootRef: MutableRefObject<HTMLDivElement | null>;
 }) {
   const { adapterRef, props, rootRef } = args;
+  useEditorAppearanceEffects(adapterRef, props.hideTitleHeading ?? false, props.nodeId);
   useEditorLayoutEffects(
     adapterRef,
     props.nodeId,
@@ -28,6 +29,5 @@ export function useMarkdownEditorModelEffects(args: {
     props.value,
     props.lineDiffDecorations
   );
-  useEditorAppearanceEffects(adapterRef, props.hideTitleHeading ?? false, props.nodeId);
   useReviewEditorEscapeBlur({ enabled: props.reviewEscapeBlurEnabled === true, rootRef });
 }

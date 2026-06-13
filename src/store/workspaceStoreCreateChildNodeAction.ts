@@ -22,8 +22,7 @@ export function createChildNodeAction(
     activeNodeId?: string | null,
     position?: number
   ) => Promise<WorkspaceNodeMutationPatchResult | null>,
-  onNodeOrderChanged?: (nodeOrder: string[]) => void,
-  hasMutationRuntime: () => boolean = () => false
+  onNodeOrderChanged?: (nodeOrder: string[]) => void
 ): WorkspaceState['createChildNode'] {
   return async (parentNodeId, content = '', kind: NodeKind = 'topic', options) => {
     const nodeId = `node-${crypto.randomUUID()}`;
@@ -31,6 +30,7 @@ export function createChildNodeAction(
     let createdNode: NodeSnapshot | null = null;
     let nextNodeOrder: string[] | null = null;
     let localPatch: Partial<WorkspaceState> | null = null;
+    let applied = false;
 
     set((state) => {
       if (!state.nodesById[parentNodeId] || state.trashedNodeIds.includes(parentNodeId)) return state;
@@ -47,21 +47,15 @@ export function createChildNodeAction(
       createdNode = nextChildState.nextNode;
       nextNodeOrder = nextChildState.nextNodeOrder;
       localPatch = nextChildState.patch;
-      return state;
+      applied = true;
+      return localPatch;
     });
     if (!createdNode) return null;
     const orderForSync = [...(nextNodeOrder ?? [])] as string[];
-    const shouldUseLocalFallback = !hasMutationRuntime();
     const result = await onNodeCreated?.(createdNode, orderForSync, nodeId, orderForSync.indexOf(nodeId));
-    let applied = false;
-    set((state) => {
-      const acceptedPatch = result
-        ? createWorkspaceNodeMutationPatchWithLocalSideEffects(state, result, localPatch)
-        : shouldUseLocalFallback ? localPatch : null;
-      if (!acceptedPatch) return state;
-      applied = true;
-      return acceptedPatch;
-    });
+    if (result) {
+      set((state) => createWorkspaceNodeMutationPatchWithLocalSideEffects(state, result, localPatch));
+    }
     if (applied && !result && kind === 'folder' && nextNodeOrder) {
       onNodeOrderChanged?.(nextNodeOrder);
     }

@@ -7,7 +7,6 @@ import {
   syncMoveNodesToRuntime,
   syncNodeContentToRuntime,
   syncNodeOrderToRuntime,
-  hasWorkspaceNodeMutationRuntime,
   syncRestoreNodesToRuntime,
   syncSoftDeleteNodesToRuntime
 } from './workspaceRuntimeSync';
@@ -84,7 +83,6 @@ type WorkspaceNodeActions = Pick<
 
 function createRuntimeHandlers() {
   return {
-    hasMutationRuntime: hasWorkspaceNodeMutationRuntime,
     syncNodeContent: syncNodeContentToRuntime,
     syncNodeCreation: async (
       node: WorkspaceState['nodesById'][string],
@@ -134,14 +132,12 @@ export function createWorkspaceNodeActions(set: WorkspaceSet): WorkspaceNodeActi
     createChildNode: createChildNodeAction(
       set,
       runtimeHandlers.syncNodeCreation,
-      syncNodeOrderToRuntime,
-      hasWorkspaceNodeMutationRuntime
+      syncNodeOrderToRuntime
     ),
     createVirtualNode: createVirtualNodeAction(
       set,
       runtimeHandlers.syncNodeCreation,
-      syncNodeOrderToRuntime,
-      hasWorkspaceNodeMutationRuntime
+      syncNodeOrderToRuntime
     ),
     createHighlightNodeFromSelection: createHighlightFromSelectionAction(set, runtimeHandlers),
     createFormulaClozeNode: createFormulaClozeNodeAction(set, runtimeHandlers, reconcileReviewSession),

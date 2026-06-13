@@ -75,7 +75,6 @@ function createVirtualNodeLocalPatch(args: {
 
 async function applyCreatedVirtualNode(args: {
   createdNode: NodeSnapshot | null;
-  hasMutationRuntime: () => boolean;
   localPatch: Partial<WorkspaceState> | null;
   nextNodeOrder: string[] | null;
   nodeId: string;
@@ -92,26 +91,19 @@ async function applyCreatedVirtualNode(args: {
     return null;
   }
   const orderForSync = [...(args.nextNodeOrder ?? [])] as string[];
-  const shouldUseLocalFallback = !args.hasMutationRuntime();
   const result = await args.onNodeCreated?.(
     args.createdNode,
     orderForSync,
     args.nodeId,
     orderForSync.indexOf(args.nodeId)
   );
-  let applied = false;
-  args.set((state) => {
-    const acceptedPatch = result
-      ? createWorkspaceNodeMutationPatchWithLocalSideEffects(state, result, args.localPatch)
-      : shouldUseLocalFallback ? args.localPatch : null;
-    if (!acceptedPatch) return state;
-    applied = true;
-    return acceptedPatch;
-  });
-  if (applied && !result && args.nextNodeOrder) {
+  if (result) {
+    args.set((state) => createWorkspaceNodeMutationPatchWithLocalSideEffects(state, result, args.localPatch));
+  }
+  if (!result && args.nextNodeOrder) {
     args.onNodeOrderChanged?.(args.nextNodeOrder);
   }
-  return applied ? args.nodeId : null;
+  return args.nodeId;
 }
 
 export function createVirtualNodeAction(
@@ -122,8 +114,7 @@ export function createVirtualNodeAction(
     activeNodeId?: string | null,
     position?: number
   ) => Promise<WorkspaceNodeMutationPatchResult | null>,
-  onNodeOrderChanged?: (nodeOrder: string[]) => void,
-  hasMutationRuntime: () => boolean = () => false
+  onNodeOrderChanged?: (nodeOrder: string[]) => void
 ): WorkspaceState['createVirtualNode'] {
   return async () => {
     const nodeId = `node-${crypto.randomUUID()}`;
@@ -131,6 +122,7 @@ export function createVirtualNodeAction(
     let createdNode: NodeSnapshot | null = null;
     let nextNodeOrder: string[] | null = null;
     let localPatch: Partial<WorkspaceState> | null = null;
+    let applied = false;
 
     set((state) => {
       const untitledState = resolveCreatedNodeTitleState(deriveNodeTitleFromContent(''), VIRTUAL_ROOT_NODE_ID, state);
@@ -148,11 +140,12 @@ export function createVirtualNodeAction(
         untitledSequenceByParent: untitledState.untitledSequenceByParent,
         updatedNodesById
       });
-      return state;
+      applied = true;
+      return localPatch;
     });
+    if (!applied) return null;
     return await applyCreatedVirtualNode({
       createdNode,
-      hasMutationRuntime,
       localPatch,
       nextNodeOrder,
       nodeId,

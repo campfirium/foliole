@@ -2,6 +2,7 @@ import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
 import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeError } from './runtimeLogging';
+import { resolvePendingNodeSync, stagePendingNodeSync } from './workspacePendingNodeSync';
 import {
   isCreateNodeMutationPatchResult,
   isNodeMutationPatchResult
@@ -49,16 +50,23 @@ export async function saveCreatedWorkspaceNodeMutationSnapshot(args: {
 }): Promise<WorkspaceNodeMutationPatchResult | null> {
   const runtimeInvoke = getRuntimeInvoke();
   const command = resolveCreateWorkspaceNodeCommand(args.node.kind);
+  const payload = createWorkspaceRuntimeNodeSnapshot(args.node, args.position);
   if (!runtimeInvoke || !command) {
+    stagePendingNodeSync(payload);
     return null;
   }
+  stagePendingNodeSync(payload);
   try {
     const result = await runtimeInvoke(command, {
-      ...createWorkspaceRuntimeNodeSnapshot(args.node, args.position),
+      ...payload,
       activeNodeId: args.activeNodeId ?? null,
       nodeOrder: args.nodeOrder
     });
-    return isCreateNodeMutationPatchResult(result) ? result : null;
+    if (!isCreateNodeMutationPatchResult(result)) {
+      return null;
+    }
+    resolvePendingNodeSync(payload.nodeId, payload.updatedAt);
+    return result;
   } catch (error) {
     logRuntimeError('runtime sync failed', {
       area: 'native',

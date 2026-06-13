@@ -5,6 +5,7 @@ import { LocalizationProvider } from '../../../shared/localization/LocalizationP
 import { MouseGestureSettingsProvider } from '../../settings/context/MouseGestureSettingsProvider';
 
 const mockSetContent = vi.fn();
+const mockSetNodeId = vi.fn();
 const mockSetTextAnchorDecorations = vi.fn();
 let currentContent = '';
 
@@ -30,6 +31,7 @@ vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
     setContent(content: string) { currentContent = content; mockSetContent(content); }
     setDiffDecorations() {}
     setHideTitleHeading() {}
+    setNodeId(nodeId: string | null) { mockSetNodeId(nodeId); }
     setParagraphMarker() {}
     setScrollTop() {}
     setSelection() {}
@@ -91,4 +93,31 @@ it('applies node-switch text anchor decorations only after the new content is in
     cancelAnimationFrameSpy.mockRestore();
     vi.useRealTimers();
   }
+});
+
+it('flushes the previous node id before applying switched node content', () => {
+  const onChange = vi.fn();
+  const view = renderWithProvider(
+    <MarkdownEditor nodeId="node-1" onChange={onChange} textAnchorDecorations={[]} value="Alpha draft" />
+  );
+
+  mockSetContent.mockClear();
+  mockSetNodeId.mockClear();
+
+  act(() => {
+    view.rerender(
+      <MarkdownEditor
+        nodeId="node-2"
+        onChange={onChange}
+        textAnchorDecorations={[]}
+        value="Beta body"
+      />
+    );
+  });
+
+  expect(mockSetNodeId).toHaveBeenCalledWith('node-2');
+  expect(mockSetContent).toHaveBeenCalledWith('Beta body');
+  expect(mockSetNodeId.mock.invocationCallOrder[0]).toBeLessThan(
+    mockSetContent.mock.invocationCallOrder[0] ?? Number.POSITIVE_INFINITY
+  );
 });

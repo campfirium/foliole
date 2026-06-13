@@ -90,6 +90,32 @@ describe('workspace node mutation runtime acceptance', () => {
   });
 });
 
+it('keeps root creation content local when native persistence rejects creation mutation', async () => {
+  vi.mocked(hasWorkspaceNodeMutationRuntime).mockReturnValue(true);
+  vi.mocked(syncCreateNodeMutationToRuntime).mockResolvedValueOnce(null);
+  const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
+  const actions = createWorkspaceNodeActions(harness.setState);
+
+  const createdNodeId = (await actions.createRootNode('# Local root'))!;
+
+  expect(createdNodeId).toContain('node-');
+  expect(harness.getState().activeNodeId).toBe(createdNodeId);
+  expect(harness.getState().nodesById[createdNodeId]?.content).toBe('# Local root');
+});
+
+it('keeps child creation content local when native persistence rejects creation mutation', async () => {
+  vi.mocked(hasWorkspaceNodeMutationRuntime).mockReturnValue(true);
+  vi.mocked(syncCreateNodeMutationToRuntime).mockResolvedValueOnce(null);
+  const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
+  const actions = createWorkspaceNodeActions(harness.setState);
+
+  const createdNodeId = (await actions.createChildNode('node-1', 'Local child'))!;
+
+  expect(createdNodeId).toContain('node-');
+  expect(harness.getState().activeNodeId).toBe(createdNodeId);
+  expect(harness.getState().nodesById[createdNodeId]?.content).toBe('Local child');
+});
+
 it('keeps virtual node metadata when runtime accepts a newly created virtual node', async () => {
   vi.mocked(hasWorkspaceNodeMutationRuntime).mockReturnValue(true);
   vi.mocked(syncCreateNodeMutationToRuntime).mockImplementationOnce(async (node, nodeOrder, activeNodeId) => ({

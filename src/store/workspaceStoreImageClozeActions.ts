@@ -17,7 +17,6 @@ import { resolveCreatedNodeTitleState } from './workspaceUntitledNodeTitle';
 type WorkspaceNode = WorkspaceState['nodesById'][string];
 
 interface RuntimeSyncHandlers {
-  hasMutationRuntime: () => boolean;
   syncNodeContent: (node: WorkspaceNode) => void;
   syncNodeCreation: (
     node: WorkspaceNode,
@@ -217,7 +216,7 @@ export function createImageClozeNodesAction(
       updatedParentNode = nextResult.updatedParentNode;
       nextNodeOrder = nextResult.nextNodeOrder;
       localPatch = nextResult.nextState;
-      return state;
+      return localPatch;
     });
 
     return applyCreatedImageClozeNodes({

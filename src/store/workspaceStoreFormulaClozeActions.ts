@@ -16,7 +16,6 @@ import { resolveCreatedNodeTitleState } from './workspaceUntitledNodeTitle';
 type WorkspaceNode = WorkspaceState['nodesById'][string];
 
 interface RuntimeSyncHandlers {
-  hasMutationRuntime: () => boolean;
   syncNodeContent: (node: WorkspaceNode) => void;
   syncNodeCreation: (
     node: WorkspaceNode,
@@ -112,18 +111,11 @@ async function applyCreatedFormulaClozeNode(
   if (!node || !nextNodeOrder) {
     return null;
   }
-  const shouldUseLocalFallback = !handlers.hasMutationRuntime();
   const result = await handlers.syncNodeCreation(node, nextNodeOrder, node.id, nextNodeOrder.indexOf(node.id));
-  let applied = false;
-  set((state) => {
-    const acceptedPatch = result
-      ? createWorkspaceNodeMutationPatchWithLocalSideEffects(state, result, localPatch)
-      : shouldUseLocalFallback ? localPatch : null;
-    if (!acceptedPatch) return state;
-    applied = true;
-    return acceptedPatch;
-  });
-  return applied ? node.id : null;
+  if (result) {
+    set((state) => createWorkspaceNodeMutationPatchWithLocalSideEffects(state, result, localPatch));
+  }
+  return node.id;
 }
 
 export function createFormulaClozeNodeAction(
@@ -172,7 +164,7 @@ export function createFormulaClozeNodeAction(
         ...nextState,
         reviewSession: reconcileReviewSession({ ...state, ...nextState })
       };
-      return state;
+      return localPatch;
     });
 
     return applyCreatedFormulaClozeNode({

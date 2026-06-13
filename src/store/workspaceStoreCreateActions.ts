@@ -20,7 +20,6 @@ type WorkspaceSet = (
 ) => void;
 
 interface RuntimeSyncHandlers {
-  hasMutationRuntime: () => boolean;
   syncNodeContent: (node: WorkspaceState['nodesById'][string]) => void;
   syncNodeCreation: (
     node: WorkspaceState['nodesById'][string],
@@ -46,18 +45,11 @@ async function applyCreatedNode(args: {
   if (!node || !nodeOrder) {
     return null;
   }
-  const shouldUseLocalFallback = !handlers.hasMutationRuntime();
   const result = await handlers.syncNodeCreation(node, nodeOrder, activeNodeId, nodeOrder.indexOf(nodeId));
-  let applied = false;
-  set((state) => {
-    const acceptedPatch = result
-      ? createWorkspaceNodeMutationPatchWithLocalSideEffects(state, result, localPatch)
-      : shouldUseLocalFallback ? localPatch : null;
-    if (!acceptedPatch) return state;
-    applied = true;
-    return acceptedPatch;
-  });
-  return applied ? nodeId : null;
+  if (result) {
+    set((state) => createWorkspaceNodeMutationPatchWithLocalSideEffects(state, result, localPatch));
+  }
+  return nodeId;
 }
 
 export function createHighlightFromSelectionAction(
@@ -115,7 +107,7 @@ export function createHighlightFromSelectionAction(
           untitledSequenceByParent: untitledState.untitledSequenceByParent
           })
       };
-      return state;
+      return localPatch;
     });
     return applyCreatedNode({ activeNodeId: parentNodeId, handlers, localPatch, node: createdNode, nodeId: childNodeId, nodeOrder: nextNodeOrder, set });
   };
@@ -173,7 +165,7 @@ export function createQAFromSelectionAction(
           untitledSequenceByParent: created.untitledSequenceByParent
           })
       };
-      return state;
+      return localPatch;
     });
     return applyCreatedNode({ activeNodeId: parentNodeId, handlers, localPatch, node: createdNode, nodeId: childNodeId, nodeOrder: nextNodeOrder, set });
   };

@@ -40,6 +40,21 @@ describe('CodeMirrorEditorAdapter external change flush boundaries', () => {
     adapter.destroy();
   });
 
+  it('keeps pending old-node content when the caller switches node id before applying next content', () => {
+    vi.useFakeTimers();
+    const { adapter, onChange, view } = createAdapter();
+    adapter.setNodeId('node-A');
+
+    view.dispatch({ changes: { from: 11, insert: ' draft' } });
+    adapter.setNodeId('node-B');
+    adapter.setContent('Beta body');
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith('old content draft', { nodeId: 'node-A' });
+    expect(adapter.getContent()).toBe('Beta body');
+    adapter.destroy();
+  });
+
   it('reports raw document input before the buffered content flush', () => {
     vi.useFakeTimers();
     const { adapter, onChange, onDocumentInput, view } = createAdapter();
