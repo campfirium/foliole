@@ -138,6 +138,8 @@
     "quality:release": "bash scripts/quality-gate-target.sh release",
     "quality:release:base": "bash scripts/quality-gate-target.sh release-base",
     "quality:release:core": "bash scripts/quality-gate-target.sh release-core",
+    "quality:release:repair": "node scripts/quality-gate-repair.mjs",
+    "quality:release:repair:run": "node scripts/quality-gate-repair.mjs --run",
     "quality:release:windows:tail": "bash scripts/quality-gate-target.sh release-windows-tail",
     "quality:release:android:tail": "bash scripts/quality-gate-target.sh release-android-tail",
     "quality:release:ios:tail": "bash scripts/quality-gate-target.sh release-ios-tail",
