@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest';
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const RUNNER = path.join(REPO_ROOT, 'scripts', 'run-vitest-with-summary.mjs');
 
-function runSummary(tempRoot, reportPath, exitCode = 1, envOverrides = null) {
+function runSummary(tempRoot, reportPath, exitCode = 1, envOverrides = null, vitestArgs = ['src/Foo.test.ts']) {
   const vitestEnv =
     envOverrides ??
     {
@@ -20,7 +20,7 @@ function runSummary(tempRoot, reportPath, exitCode = 1, envOverrides = null) {
       VITEST_BIN: process.execPath
     };
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, [RUNNER, reportPath, '--', 'src/Foo.test.ts'], {
+    const child = spawn(process.execPath, [RUNNER, reportPath, '--', ...vitestArgs], {
       cwd: tempRoot,
       env: {
         ...process.env,
@@ -129,6 +129,35 @@ describe('run-vitest-with-summary', () => {
       expect(args[0]).toBe('run');
       expect(args).toContain('src/Foo.test.ts');
       expect(result.stdout).toContain('[vitest-summary] totals: files 1/1 passed, tests 1/1 passed');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('lets release gates tune workers and file parallelism without changing package scripts', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'vitest-summary-tuning-'));
+    const reportPath = path.join(tempRoot, '.tmp', 'vitest', 'summary.json');
+    try {
+      const argsPath = await createFakeVitestPackage(tempRoot);
+      const result = await runSummary(
+        tempRoot,
+        reportPath,
+        0,
+        {
+          VITEST_BIN: '',
+          VITEST_FILE_PARALLELISM: '1',
+          VITEST_MAX_WORKERS: '4',
+          VITEST_SUMMARY_SLOW_LIMIT: '2'
+        },
+        ['--pool=threads', '--maxWorkers=2', '--no-file-parallelism', 'src/Foo.test.ts']
+      );
+
+      expect(result.code).toBe(0);
+      const args = JSON.parse(await readFile(argsPath, 'utf8'));
+      expect(args).toContain('--maxWorkers=4');
+      expect(args).not.toContain('--maxWorkers=2');
+      expect(args).not.toContain('--no-file-parallelism');
+      expect(args).toContain('src/Foo.test.ts');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }

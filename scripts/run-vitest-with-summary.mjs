@@ -51,6 +51,50 @@ function formatMs(value) {
   return `${value.toFixed(0)}ms`;
 }
 
+function normalizeBooleanEnv(value) {
+  if (value === '1' || value === 'true') {
+    return true;
+  }
+  if (value === '0' || value === 'false') {
+    return false;
+  }
+  return null;
+}
+
+function removeMaxWorkersArgs(args) {
+  const nextArgs = [];
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === '--maxWorkers') {
+      index += 1;
+      continue;
+    }
+    if (arg.startsWith('--maxWorkers=')) {
+      continue;
+    }
+    nextArgs.push(arg);
+  }
+  return nextArgs;
+}
+
+function resolveVitestArgs(vitestArgs, env) {
+  let args = [...vitestArgs];
+  const maxWorkers = env.VITEST_MAX_WORKERS || '';
+  if (maxWorkers) {
+    args = removeMaxWorkersArgs(args);
+    args.unshift(`--maxWorkers=${maxWorkers}`);
+  }
+
+  const fileParallelism = normalizeBooleanEnv(env.VITEST_FILE_PARALLELISM || '');
+  if (fileParallelism === true) {
+    args = args.filter((arg) => arg !== '--no-file-parallelism' && arg !== '--fileParallelism=false');
+  } else if (fileParallelism === false && !args.includes('--no-file-parallelism')) {
+    args.unshift('--no-file-parallelism');
+  }
+
+  return args;
+}
+
 function readReport(reportPath) {
   try {
     return JSON.parse(readFileSync(reportPath, 'utf8'));
@@ -141,7 +185,13 @@ function printSummary(reportPath) {
 async function main() {
   const { reportPath, vitestArgs } = parseArgs(process.argv.slice(2));
   mkdirSync(path.dirname(reportPath), { recursive: true });
-  const args = ['run', '--reporter=dot', '--reporter=json', `--outputFile.json=${reportPath}`, ...vitestArgs];
+  const args = [
+    'run',
+    '--reporter=dot',
+    '--reporter=json',
+    `--outputFile.json=${reportPath}`,
+    ...resolveVitestArgs(vitestArgs, process.env)
+  ];
   const vitestCommand = resolveVitestCommand();
   const exitCode = await runVitest(vitestCommand, args, process.env);
   printSummary(reportPath);

@@ -187,6 +187,12 @@ run_gate_steps_parallel() {
   fi
 }
 
+apply_release_gate_acceleration_defaults() {
+  export QUALITY_GATE_PARALLEL_MAX_JOBS="${QUALITY_GATE_PARALLEL_MAX_JOBS:-4}"
+  export VITEST_FILE_PARALLELISM="${VITEST_FILE_PARALLELISM:-1}"
+  export VITEST_MAX_WORKERS="${VITEST_MAX_WORKERS:-4}"
+}
+
 source "${SCRIPT_DIR}/quality-gate-target-steps.sh"
 if quality_gate_should_print_step; then
   echo "[${prefix}] detected package manager: ${pm}"
@@ -227,6 +233,7 @@ case "${target}" in
     run_workspace_boundary_check_if_present
     ;;
   full|release|release-core|release-static|release-tests|release-build|release-script-preview|release-base|release-windows-tail|release-android-tail|release-ios-tail|release-tooling|release-preview-recovery|release-android-host)
+    apply_release_gate_acceleration_defaults
     run_release_target_steps "${target}"
     ;;
   *)

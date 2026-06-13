@@ -15,8 +15,17 @@ describe('quality-gate release split targets', () => {
     expect(packageJson.scripts['quality:release:preview-recovery']).toBe(
       'bash scripts/quality-gate-target.sh release-preview-recovery'
     );
-    expect(packageJson.scripts['quality:release:base']).toBeUndefined();
-    expect(packageJson.scripts['quality:release:windows:tail']).toBeUndefined();
+    expect(packageJson.scripts['quality:release:base']).toBe('bash scripts/quality-gate-target.sh release-base');
+    expect(packageJson.scripts['quality:release:windows:tail']).toBe(
+      'bash scripts/quality-gate-target.sh release-windows-tail'
+    );
+    expect(packageJson.scripts['quality:release:android:tail']).toBe(
+      'bash scripts/quality-gate-target.sh release-android-tail'
+    );
+    expect(packageJson.scripts['quality:release:ios:tail']).toBe(
+      'bash scripts/quality-gate-target.sh release-ios-tail'
+    );
+    expect(packageJson.scripts['quality:release:tooling']).toBe('bash scripts/quality-gate-target.sh release-tooling');
   });
 
   it('keeps release-core isolated from preview recovery and android host checks', async () => {
