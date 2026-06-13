@@ -7,8 +7,7 @@ const clipSettingsMocks = vi.hoisted(() => ({
   setGlobalClipHintVisible: vi.fn()
 }));
 
-const { electronMocks, panelWindow } = vi.hoisted(() => {
-  const ipcHandlers = new Map<string, (...args: unknown[]) => void>();
+const { chineseDarkTheme, englishTheme } = vi.hoisted(() => {
   const englishTheme = () => ({
     accent: 'rgb(52, 119, 91)', actionForeground: 'rgba(28, 31, 30, 0.64)',
     actionHoverBackground: 'rgba(28, 31, 30, 0.06)', actionHoverForeground: 'rgba(28, 31, 30, 0.8)',
@@ -35,19 +34,27 @@ const { electronMocks, panelWindow } = vi.hoisted(() => {
       placeholder: '...', save: '保存', showHint: '?', showHintLabel: '显示提示'
     }
   });
+  return { chineseDarkTheme, englishTheme };
+});
+
+const { electronMocks, panelWindow } = vi.hoisted(() => {
+  const ipcHandlers = new Map<string, (...args: unknown[]) => void>();
   let theme = englishTheme();
   const webContents = { executeJavaScript: vi.fn(async () => theme), focus: vi.fn(), id: 11, on: vi.fn(), send: vi.fn() };
   const window = {
-    close: vi.fn(), focus: vi.fn(), isDestroyed: vi.fn(() => false), isVisible: vi.fn(() => true),
+    close: vi.fn(), focus: vi.fn(), getParentWindow: vi.fn(() => null), isDestroyed: vi.fn(() => false), isMinimized: vi.fn(() => false), isVisible: vi.fn(() => true),
     loadURL: vi.fn<(url: string) => Promise<void>>(async () => undefined),
-    on: vi.fn(), setAlwaysOnTop: vi.fn(), setBounds: vi.fn(), setIgnoreMouseEvents: vi.fn(), setOpacity: vi.fn(), showInactive: vi.fn(),
+    moveTop: vi.fn(), on: vi.fn(), setAlwaysOnTop: vi.fn(), setBounds: vi.fn(), setIgnoreMouseEvents: vi.fn(), setOpacity: vi.fn(), setParentWindow: vi.fn(), showInactive: vi.fn(),
     webContents
   };
   return {
     electronMocks: {
       app: { getAppPath: vi.fn(() => '/app') }, BrowserWindow: Object.assign(vi.fn(function BrowserWindow() {
         return window;
-      }), { getAllWindows: vi.fn(() => [{ isDestroyed: vi.fn(() => false), webContents }]) }),
+      }), {
+        getAllWindows: vi.fn(() => [{ isDestroyed: vi.fn(() => false), isMinimized: vi.fn(() => false), isVisible: vi.fn(() => true), webContents }]),
+        getFocusedWindow: vi.fn(() => null)
+      }),
       ipcMain: {
         on: vi.fn((channel: string, handler: (...args: unknown[]) => void) => ipcHandlers.set(channel, handler)),
         removeListener: vi.fn()
@@ -124,8 +131,9 @@ it('keeps capture shell-less without old dialog chrome', async () => {
   expect(html).toContain('html,body{height:100%;}');
   expect(html).toContain('body{box-sizing:border-box;padding:26px;-webkit-app-region:drag;app-region:drag;}');
   expect(html).toContain('.panel{position:relative;display:grid;grid-template-rows:minmax(0,auto) auto;width:520px;min-height:188px;max-height:420px;overflow:hidden;padding:0;-webkit-app-region:no-drag;app-region:no-drag;}');
-  expect(html).toContain('.drag-strip{position:absolute;left:0;right:0;top:0;z-index:1;height:18px;cursor:grab;-webkit-app-region:no-drag;app-region:no-drag;}');
-  expect(html).toContain('<div aria-hidden="true" class="drag-strip" id="drag-strip"></div>');
+  expect(html).not.toContain('drag-strip');
+  expect(html).not.toContain('cursor:grab');
+  expect(html).not.toContain('cursor:grabbing');
   expect(html).toContain('textarea{box-sizing:border-box;display:block;width:100%;height:144px;min-height:144px;max-height:376px;resize:none;');
   expect(html).toContain('scrollbar-width:none;-webkit-app-region:no-drag;app-region:no-drag;}');
   expect(html).toContain('.footer{display:grid;min-height:44px;grid-template-columns:minmax(0,1fr) auto;');

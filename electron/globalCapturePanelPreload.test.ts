@@ -56,26 +56,42 @@ async function waitForChannel(ipcSend: ReturnType<typeof vi.fn>, channel: string
 beforeEach(() => {
   document.body.innerHTML = [
     '<form id="form">',
-    '<div id="drag-strip"></div>',
     '<textarea id="capture"></textarea>',
+    '<div id="footer">',
+    '<span id="footer-blank">Hint text</span>',
     '<button id="hide-hint" type="button">Hide</button>',
     '<button id="show-hint" type="button">Hint</button>',
+    '</div>',
     '<button id="close" type="button">x</button>',
     '</form>'
   ].join('');
 });
 
-it('sends drag points from the visible drag strip', () => {
+it('sends drag points from non-interactive panel chrome', () => {
   const { ipcSend } = executePanelPreload();
-  const dragStrip = document.getElementById('drag-strip');
+  const footerBlank = document.getElementById('footer-blank');
 
-  dragStrip?.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0, screenX: 120, screenY: 140 }));
-  dragStrip?.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, screenX: 180, screenY: 190 }));
-  dragStrip?.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, screenX: 180, screenY: 190 }));
+  footerBlank?.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0, screenX: 120, screenY: 140 }));
+  footerBlank?.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, screenX: 180, screenY: 190 }));
+  footerBlank?.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, screenX: 180, screenY: 190 }));
 
   expect(ipcSend).toHaveBeenCalledWith('foliole:global-capture-panel:drag-start', { x: 120, y: 140 });
   expect(ipcSend).toHaveBeenCalledWith('foliole:global-capture-panel:drag-move', { x: 180, y: 190 });
   expect(ipcSend).toHaveBeenCalledWith('foliole:global-capture-panel:drag-end');
+});
+
+it('does not drag from input or button controls', () => {
+  const { ipcSend } = executePanelPreload();
+  const input = document.getElementById('capture');
+  const saveButton = document.createElement('button');
+  saveButton.type = 'submit';
+  saveButton.textContent = 'Save';
+  document.getElementById('form')?.append(saveButton);
+
+  input?.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0, screenX: 120, screenY: 140 }));
+  saveButton.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0, screenX: 120, screenY: 140 }));
+
+  expect(ipcSend).not.toHaveBeenCalledWith('foliole:global-capture-panel:drag-start', expect.anything());
 });
 
 it('does not need shell chrome controls to preserve typed text', () => {

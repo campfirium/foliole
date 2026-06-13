@@ -36,16 +36,22 @@ function toScreenPoint(event) {
   return { x: event.screenX, y: event.screenY };
 }
 
-function bindDragStrip(dragStrip) {
+function isInteractiveDragTarget(target) {
+  if (!target || typeof target.closest !== 'function') return false;
+  return Boolean(target.closest('button,input,textarea,select,a,[contenteditable="true"],[data-no-panel-drag="true"]'));
+}
+
+function bindPanelDrag(dragSurface) {
   let dragging = false;
-  dragStrip?.addEventListener('pointerdown', (event) => {
+  dragSurface?.addEventListener('pointerdown', (event) => {
     if (event.button !== 0) return;
+    if (isInteractiveDragTarget(event.target)) return;
     event.preventDefault();
     dragging = true;
-    dragStrip.setPointerCapture?.(event.pointerId);
+    dragSurface.setPointerCapture?.(event.pointerId);
     ipcRenderer.send(DRAG_START_CHANNEL, toScreenPoint(event));
   });
-  dragStrip?.addEventListener('pointermove', (event) => {
+  dragSurface?.addEventListener('pointermove', (event) => {
     if (!dragging) return;
     event.preventDefault();
     ipcRenderer.send(DRAG_MOVE_CHANNEL, toScreenPoint(event));
@@ -53,11 +59,11 @@ function bindDragStrip(dragStrip) {
   const stopDrag = (event) => {
     if (!dragging) return;
     dragging = false;
-    dragStrip.releasePointerCapture?.(event.pointerId);
+    dragSurface.releasePointerCapture?.(event.pointerId);
     ipcRenderer.send(DRAG_END_CHANNEL);
   };
-  dragStrip?.addEventListener('pointerup', stopDrag);
-  dragStrip?.addEventListener('pointercancel', stopDrag);
+  dragSurface?.addEventListener('pointerup', stopDrag);
+  dragSurface?.addEventListener('pointercancel', stopDrag);
 }
 
 function clamp(value, min, max) {
@@ -105,9 +111,8 @@ window.addEventListener('DOMContentLoaded', () => {
   const hideHint = document.getElementById('hide-hint');
   const showHint = document.getElementById('show-hint');
   const close = document.getElementById('close');
-  const dragStrip = document.getElementById('drag-strip');
   focusCaptureInput();
-  bindDragStrip(dragStrip);
+  bindPanelDrag(form);
   runAfterInitialPaint(() => ipcRenderer.send(READY_CHANNEL));
   ipcRenderer.on(FOCUS_CHANNEL, focusCaptureInput);
   input?.addEventListener('input', resizeCaptureSurface);
