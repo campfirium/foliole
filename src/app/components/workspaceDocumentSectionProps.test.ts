@@ -98,6 +98,7 @@ it('does not pass progress-only reading selection as an editor restore target', 
 
   expect(sectionProps.editorReadingRestoreCommandId).toBeNull();
   expect(sectionProps.editorReadingSelection).toBeNull();
+  expect(sectionProps.editorReadingSelectionMode).toBe('caret');
 });
 
 it('passes only explicit restore commands to the editor restore target', () => {
@@ -122,6 +123,7 @@ it('passes only explicit restore commands to the editor restore target', () => {
   expect(sectionProps.editorReadingRestoreCommandId).toBe('restore-1');
   expect(sectionProps.editorReadingRestoreScrollTop).toBe(6400);
   expect(sectionProps.editorReadingSelection).toEqual({ from: 320, to: 320 });
+  expect(sectionProps.editorReadingSelectionMode).toBe('caret');
   expect(sectionProps.editorReadingTargetViewportRatio).toBe(0.24);
 });
 

@@ -2,6 +2,7 @@ import { useRef, type MutableRefObject } from 'react';
 
 import type { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
 import type { EditorViewportMode } from '../adapters/EditorAdapter';
+import type { EditorRestoreSelectionMode } from '../model/editorRestoreCommand';
 
 import { useSelectionRestoreExecution } from './markdownEditorSelectionRestoreExecution';
 import {
@@ -37,6 +38,7 @@ export function useEditorSelectionRestorePreparation(args: {
   readingRestoreCommandId: string | null | undefined;
   readingRestoreScrollTop: number | undefined;
   readingSelection: EditorViewState['selection'] | null | undefined;
+  readingSelectionMode: EditorRestoreSelectionMode | undefined;
   readingTargetViewportMode: EditorViewportMode | null | undefined;
   restoreRefs: SelectionRestoreRefs;
 }) {
@@ -52,6 +54,7 @@ export function useEditorSelectionRestorePreparation(args: {
     readingRestoreCommandId: args.readingRestoreCommandId,
     readingRestoreScrollTop: args.readingRestoreScrollTop,
     readingSelection: args.readingSelection,
+    readingSelectionMode: args.readingSelectionMode,
     readingTargetViewportMode: args.readingTargetViewportMode,
     restoreCompletionFrame2Ref: args.restoreRefs.restoreCompletionFrame2Ref,
     restoreCompletionFrameRef: args.restoreRefs.restoreCompletionFrameRef,
@@ -67,6 +70,7 @@ export function useEditorSelectionRestoreExecution(args: {
   readingRestoreCommandId: string | null | undefined;
   readingRestoreScrollTop: number | undefined;
   readingSelection: EditorViewState['selection'] | null | undefined;
+  readingSelectionMode: EditorRestoreSelectionMode | undefined;
   readingTargetViewportMode: EditorViewportMode | null | undefined;
   readingTargetViewportRatio: number | null | undefined;
   restoreRefs: SelectionRestoreRefs;
@@ -87,6 +91,7 @@ export function useEditorSelectionRestoreExecution(args: {
     readingRestoreCommandId: args.readingRestoreCommandId,
     readingRestoreScrollTop: args.readingRestoreScrollTop,
     readingSelection: args.readingSelection,
+    readingSelectionMode: args.readingSelectionMode,
     readingTargetViewportMode: args.readingTargetViewportMode,
     readingTargetViewportRatio: args.readingTargetViewportRatio,
     restoreCompletionFrame2Ref: args.restoreRefs.restoreCompletionFrame2Ref,
@@ -109,6 +114,7 @@ function useSelectionRestorePreparation(args: {
   readingRestoreCommandId: string | null | undefined;
   readingRestoreScrollTop: number | undefined;
   readingSelection: EditorViewState['selection'] | null | undefined;
+  readingSelectionMode: EditorRestoreSelectionMode | undefined;
   readingTargetViewportMode: EditorViewportMode | null | undefined;
   restoreCompletionFrame2Ref: MutableRefObject<number | null>;
   restoreCompletionFrameRef: MutableRefObject<number | null>;
@@ -130,6 +136,7 @@ function useSelectionRestorePreparation(args: {
     readingRestoreCommandId: args.readingRestoreCommandId,
     readingRestoreScrollTop: args.readingRestoreScrollTop,
     readingSelection: args.readingSelection,
+    readingSelectionMode: args.readingSelectionMode,
     readingTargetViewportMode: args.readingTargetViewportMode
   });
 }

@@ -13,6 +13,7 @@ import { FORMULA_CLOZE_PRESENTATION_CHANGE_EVENT } from '../../formula-cloze/mod
 import { IMAGE_CLOZE_PRESENTATION_CHANGE_EVENT } from '../../image-cloze/model/imageClozePresentation';
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
 import type { EditorDiffDecorations, EditorViewportMode } from '../adapters/EditorAdapter';
+import type { EditorRestoreSelectionMode } from '../model/editorRestoreCommand';
 
 import {
   useEditorSelectionRestoreExecution,
@@ -61,6 +62,7 @@ export function useEditorLayoutEffects(
   readingRestoreCommandId: string | null | undefined,
   readingRestoreScrollTop: number | undefined,
   readingSelection: EditorViewState['selection'] | null | undefined,
+  readingSelectionMode: EditorRestoreSelectionMode | undefined,
   readingTargetViewportMode: EditorViewportMode | null | undefined,
   readingTargetViewportRatio: number | null | undefined,
   beginApplyingReadingPosition: ((selection: NonNullable<EditorViewState['selection']>, reason: string, commandId?: string) => void) | undefined,
@@ -78,6 +80,7 @@ export function useEditorLayoutEffects(
     readingRestoreCommandId,
     readingRestoreScrollTop,
     readingSelection,
+    readingSelectionMode,
     readingTargetViewportMode,
     restoreRefs
   });
@@ -90,6 +93,7 @@ export function useEditorLayoutEffects(
     readingRestoreCommandId,
     readingRestoreScrollTop,
     readingSelection,
+    readingSelectionMode,
     readingTargetViewportMode,
     readingTargetViewportRatio,
     restoreRefs,

@@ -12,6 +12,7 @@ import type {
 } from '../adapters/EditorAdapter';
 import type { EditorSelection } from '../adapters/EditorAdapter';
 import type { ClipboardAnchorRange } from '../model/anchorClipboardPayload';
+import type { EditorRestoreSelectionMode } from '../model/editorRestoreCommand';
 import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
 
 export interface EditorViewState {
@@ -43,6 +44,7 @@ export interface MarkdownEditorProps {
   readingRestoreCommandId?: string | null;
   readingRestoreScrollTop?: number;
   readingSelection?: EditorSelection | null;
+  readingSelectionMode?: EditorRestoreSelectionMode;
   readingTargetViewportMode?: EditorViewportMode | null;
   readingTargetViewportRatio?: number | null;
   nodeViewState?: EditorViewState;

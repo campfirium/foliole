@@ -1,12 +1,9 @@
 import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 
-import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
-import type { EditorDiffDecorations } from '../../features/editor/adapters/EditorAdapter';
-import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
-import type { EditorTextAnchorDecoration } from '../../features/editor/adapters/EditorAdapter';
-import type { EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
+import type { EditorAdapter, EditorDiffDecorations, EditorSelection, EditorTextAnchorDecoration, EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
 import type { ClipboardAnchorRange } from '../../features/editor/model/anchorClipboardPayload';
+import type { EditorRestoreSelectionMode } from '../../features/editor/model/editorRestoreCommand';
 import type { EditorNodeLinkPreviewRequest } from '../../features/editor/model/nodeLinkPreview';
 import { definedProps } from '../../shared/lib/definedProps';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
@@ -41,6 +38,7 @@ export interface DocumentPanelBodyLayoutProps {
   editorReadingRestoreCommandId?: string | null;
   editorReadingRestoreScrollTop?: number;
   editorReadingSelection?: EditorSelection | null;
+  editorReadingSelectionMode?: EditorRestoreSelectionMode;
   editorReadingTargetViewportMode?: EditorViewportMode | null;
   editorReadingTargetViewportRatio?: number | null;
   editorNodeViewState?: NodeViewState | undefined;
@@ -129,6 +127,7 @@ function renderDocumentBodyContent(props: DocumentPanelBodyLayoutProps) {
           readingRestoreCommandId: props.editorReadingRestoreCommandId,
           readingRestoreScrollTop: props.editorReadingRestoreScrollTop,
           readingSelection: props.editorReadingSelection,
+          readingSelectionMode: props.editorReadingSelectionMode,
           readingTargetViewportMode: props.editorReadingTargetViewportMode,
           readingTargetViewportRatio: props.editorReadingTargetViewportRatio,
           reviewCaretLineHighlight: props.reviewCaretLineHighlight,

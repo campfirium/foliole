@@ -7,6 +7,7 @@ import { MouseGestureSettingsProvider } from '../../settings/context/MouseGestur
 const mockRestoreSelection = vi.fn();
 const mockRevealSelectionAtViewportRatio = vi.fn();
 const mockRevealSelectionCentered = vi.fn();
+const mockSetSelection = vi.fn();
 
 vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
   CodeMirrorEditorAdapter: class {
@@ -21,7 +22,7 @@ vi.mock('../adapters/CodeMirrorEditorAdapter', () => ({
     setHideTitleHeading() {}
     getSelection() { return { from: 0, to: 0 }; }
     setParagraphMarker() {}
-    setSelection() {}
+    setSelection(selection: { from: number; to: number }) { mockSetSelection(selection); }
     restoreSelection(selection: { from: number; to: number }) { mockRestoreSelection(selection); }
     revealSelection() {}
     revealSelectionCentered(selection: { from: number; to: number }) { mockRevealSelectionCentered(selection); }
@@ -58,6 +59,7 @@ beforeEach(() => {
   mockRestoreSelection.mockClear();
   mockRevealSelectionAtViewportRatio.mockClear();
   mockRevealSelectionCentered.mockClear();
+  mockSetSelection.mockClear();
 });
 
 it('reveals a centered reading restore without viewport-ratio alignment', async () => {
@@ -76,6 +78,28 @@ it('reveals a centered reading restore without viewport-ratio alignment', async 
   await waitFor(() => {
     expect(mockRevealSelectionCentered).toHaveBeenCalledWith({ from: 48_000, to: 48_000 });
   });
+  expect(mockRestoreSelection).not.toHaveBeenCalled();
+  expect(mockRevealSelectionAtViewportRatio).not.toHaveBeenCalled();
+});
+
+it('keeps an explicit range restore selected when centered', async () => {
+  renderEditor(
+    <MarkdownEditor
+      nodeId="node-1"
+      nodeViewState={{ scrollTop: 5_400, selection: { from: 48_000, to: 48_024 } }}
+      onChange={vi.fn()}
+      readingRestoreCommandId="mode-center-range-1"
+      readingSelection={{ from: 48_000, to: 48_024 }}
+      readingSelectionMode="range"
+      readingTargetViewportMode="center"
+      value={createLongDocument()}
+    />
+  );
+
+  await waitFor(() => {
+    expect(mockRevealSelectionCentered).toHaveBeenCalledWith({ from: 48_000, to: 48_024 });
+  });
+  expect(mockSetSelection).toHaveBeenCalledWith({ from: 48_000, to: 48_024 });
   expect(mockRestoreSelection).not.toHaveBeenCalled();
   expect(mockRevealSelectionAtViewportRatio).not.toHaveBeenCalled();
 });

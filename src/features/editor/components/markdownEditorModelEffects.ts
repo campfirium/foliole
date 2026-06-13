@@ -18,6 +18,7 @@ export function useMarkdownEditorModelEffects(args: {
     props.readingRestoreCommandId,
     props.readingRestoreScrollTop,
     props.readingSelection,
+    props.readingSelectionMode,
     props.readingTargetViewportMode,
     props.readingTargetViewportRatio,
     props.onBeginApplyingReadingPosition,

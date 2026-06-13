@@ -11,6 +11,7 @@ function buildReadingPositionProps(
   return {
     editorReadingRestoreCommandId: restoreCommand?.commandId ?? null,
     editorReadingSelection: restoreCommand?.selection ?? null,
+    editorReadingSelectionMode: restoreCommand?.selectionMode ?? 'caret',
     editorReadingTargetViewportMode: restoreCommand?.targetViewportMode ?? null,
     editorReadingTargetViewportRatio: restoreCommand?.targetViewportRatio ?? null,
     onBeginApplyingReadingPosition: props.beginApplyingReadingPosition,

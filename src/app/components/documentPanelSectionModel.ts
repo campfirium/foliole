@@ -130,6 +130,17 @@ export function shouldReserveTitleSlot(
   return shouldReserveNodeTitleSlot({ content, hideTitleHeading, node, nodesById });
 }
 
+function getEditorReadingProps(props: DocumentPanelSectionProps) {
+  return {
+    editorReadingRestoreCommandId: props.editorReadingRestoreCommandId,
+    editorReadingRestoreScrollTop: props.editorReadingRestoreScrollTop,
+    editorReadingSelection: props.editorReadingSelection,
+    editorReadingSelectionMode: props.editorReadingSelectionMode,
+    editorReadingTargetViewportMode: props.editorReadingTargetViewportMode,
+    editorReadingTargetViewportRatio: props.editorReadingTargetViewportRatio
+  };
+}
+
 function getDocumentPanelBodyProps(
   props: DocumentPanelSectionProps,
   panelState: ReturnType<typeof getDocumentPanelState>,
@@ -152,11 +163,7 @@ function getDocumentPanelBodyProps(
     reviewCaretLineHighlight: props.reviewCaretLineHighlight,
     reviewEscapeBlurEnabled: props.reviewEscapeBlurEnabled,
     editorNodeId: props.editorNodeId,
-    editorReadingRestoreCommandId: props.editorReadingRestoreCommandId,
-    editorReadingRestoreScrollTop: props.editorReadingRestoreScrollTop,
-    editorReadingSelection: props.editorReadingSelection,
-    editorReadingTargetViewportMode: props.editorReadingTargetViewportMode,
-    editorReadingTargetViewportRatio: props.editorReadingTargetViewportRatio,
+    ...getEditorReadingProps(props),
     editorNodeViewState: props.editorNodeViewState,
     onBeginApplyingReadingPosition: props.onBeginApplyingReadingPosition,
     onCompleteApplyingReadingPosition: props.onCompleteApplyingReadingPosition,

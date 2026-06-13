@@ -33,9 +33,34 @@ function createArgs() {
       handleSelectNode: vi.fn()
     },
     runtime: {
+      bumpReadingPositionRequest: vi.fn(),
+      editorRef: {
+        current: null
+      },
       recentNodeIds: ['node-1'],
       isGoToNodePaletteOpen: true,
       isSearchPaletteOpen: true,
+      readingPositionRef: {
+        current: {
+          nodeId: null,
+          selection: null
+        }
+      },
+      readingPositionRestoreCommandRef: {
+        current: {
+          command: null,
+          nodeId: null
+        }
+      },
+      readingPositionRestoreCommandSeqRef: {
+        current: 0
+      },
+      readingPositionSyncRef: {
+        current: {
+          nodeId: null,
+          state: null
+        }
+      },
       recordRecentNode: vi.fn(),
       setIsGoToNodePaletteOpen: vi.fn(),
       setIsSearchPaletteOpen: vi.fn()
@@ -44,6 +69,7 @@ function createArgs() {
       closeTrashView: vi.fn()
     },
     ws: {
+      activeNodeId: 'node-1',
       nodeViewById: {},
       nodeOrder: ['node-1', 'node-2'],
       nodesById: {
@@ -96,6 +122,14 @@ function openPdfResult(args: ReturnType<typeof createArgs>) {
   });
 }
 
+function expectCallBefore(first: number | undefined, second: number | undefined) {
+  expect(first).toBeDefined();
+  expect(second).toBeDefined();
+  if (typeof first === 'number' && typeof second === 'number') {
+    expect(first).toBeLessThan(second);
+  }
+}
+
 describe('node search view-state persistence', () => {
   it('routes search node opening through the shared navigation handler', () => {
     const args = createArgs();
@@ -117,6 +151,56 @@ describe('node search view-state persistence', () => {
       selection: { from: 4, to: 8 }
     });
     expect(args.nav.handleSelectNode).toHaveBeenCalledWith('node-2');
+  });
+});
+
+describe('node search body match jumps', () => {
+  it('requests a centered editor jump for a body match even when the same topic is already selected', () => {
+    const args = createArgs();
+    args.ws.nodeViewById = {
+      'node-2': { scrollTop: 100, selection: { from: 4, to: 8 } }
+    };
+    openBodyMatchResult(args);
+
+    expect(args.runtime.readingPositionRef.current).toEqual({
+      nodeId: 'node-2',
+      selection: { from: 4, to: 8 }
+    });
+    expect(args.runtime.readingPositionRestoreCommandRef.current).toMatchObject({
+      nodeId: 'node-2',
+      command: {
+        commandId: 'reading-position-1',
+        nodeId: 'node-2',
+        reason: 'workspace-search-result',
+        selection: { from: 4, to: 8 },
+        selectionMode: 'range',
+        targetViewportMode: 'center'
+      }
+    });
+    expect(args.runtime.bumpReadingPositionRequest).toHaveBeenCalledTimes(1);
+    expect(args.nav.handleSelectNode).toHaveBeenCalledWith('node-2');
+    expectCallBefore(
+      args.nav.handleSelectNode.mock.invocationCallOrder[0],
+      args.runtime.bumpReadingPositionRequest.mock.invocationCallOrder[0]
+    );
+  });
+
+  it('reveals a body match immediately when the searched topic is already open', () => {
+    const args = createArgs();
+    const setSelection = vi.fn();
+    const revealSelectionCentered = vi.fn();
+    args.ws.activeNodeId = 'node-2';
+    args.runtime.editorRef.current = {
+      setSelection,
+      revealSelectionCentered
+    } as never;
+    openBodyMatchResult(args);
+
+    expect(setSelection).toHaveBeenCalledWith({ from: 4, to: 8 });
+    expect(revealSelectionCentered).toHaveBeenCalledWith({ from: 4, to: 8 });
+    expect(args.runtime.bumpReadingPositionRequest).toHaveBeenCalledTimes(1);
+    expect(args.nav.handleSelectNode).toHaveBeenCalledWith('node-2');
+    expectCallBefore(args.nav.handleSelectNode.mock.invocationCallOrder[0], revealSelectionCentered.mock.invocationCallOrder[0]);
   });
 });
 

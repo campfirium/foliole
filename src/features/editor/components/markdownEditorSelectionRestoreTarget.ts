@@ -1,12 +1,21 @@
 import type { EditorViewportMode } from '../adapters/EditorAdapter';
-import { createEditorRestoreCommandKey } from '../model/editorRestoreCommand';
+import {
+  createEditorRestoreCommandKey,
+  type EditorRestoreSelectionMode
+} from '../model/editorRestoreCommand';
 import { createEditorRestoreTarget } from '../model/editorRestoreStateMachine';
 
 import type { EditorViewState } from './markdownEditorTypes';
 
-export function normalizeRestoreSelection(selection: EditorViewState['selection']) {
+export function normalizeRestoreSelection(
+  selection: EditorViewState['selection'],
+  selectionMode?: EditorRestoreSelectionMode
+) {
   if (!selection) {
     return null;
+  }
+  if (selectionMode === 'range') {
+    return selection;
   }
   return selection.from === selection.to
     ? selection
@@ -26,6 +35,7 @@ export function shouldCollapseSelectionAfterRestore(selection: NonNullable<Edito
 export function createPendingRestoreSelectionKey(
   nodeId: string | null,
   readingSelection: EditorViewState['selection'] | null | undefined,
+  readingSelectionMode: EditorRestoreSelectionMode | undefined,
   readingRestoreScrollTop: number | undefined,
   targetViewportMode?: EditorViewportMode | null,
   restoreCommandId?: string | null
@@ -33,7 +43,7 @@ export function createPendingRestoreSelectionKey(
   if (!restoreCommandId) {
     return null;
   }
-  const selection = readingSelection ? normalizeRestoreSelection(readingSelection) : null;
+  const selection = readingSelection ? normalizeRestoreSelection(readingSelection, readingSelectionMode) : null;
   const target = createEditorRestoreTarget({
     nodeId,
     scrollTop: readingRestoreScrollTop,

@@ -1,6 +1,9 @@
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
-import type { ReadingPositionRestoreCommand } from '../../features/editor/model/editorRestoreCommand';
+import type {
+  EditorRestoreSelectionMode,
+  ReadingPositionRestoreCommand
+} from '../../features/editor/model/editorRestoreCommand';
 import { pushDebugTrace } from '../../shared/diagnostics/debugTrace';
 import { definedProps } from '../../shared/lib/definedProps';
 
@@ -37,6 +40,7 @@ export function requestReadingPositionApply(args: {
   runtime: ReadingPositionRuntimeLike;
   scrollTop?: number;
   selection: EditorSelection | null;
+  selectionMode?: EditorRestoreSelectionMode;
   targetViewportMode?: EditorViewportMode;
   targetViewportRatio?: number;
 }) {
@@ -47,6 +51,7 @@ export function requestReadingPositionApply(args: {
     reason: args.reason,
     scrollTop: args.scrollTop ?? null,
     selection: args.selection,
+    selectionMode: args.selectionMode ?? null,
     targetViewportMode: args.targetViewportMode ?? null,
     targetViewportRatio: args.targetViewportRatio ?? null
   });
@@ -81,6 +86,7 @@ function createReadingPositionRestoreCommand(args: {
   runtime: ReadingPositionRuntimeLike;
   scrollTop?: number;
   selection: EditorSelection | null;
+  selectionMode?: EditorRestoreSelectionMode;
   targetViewportMode?: EditorViewportMode;
   targetViewportRatio?: number;
 }): ReadingPositionRestoreCommand {
@@ -93,6 +99,7 @@ function createReadingPositionRestoreCommand(args: {
     startedAt: Date.now(),
     ...definedProps({
       scrollTop: args.scrollTop,
+      selectionMode: args.selectionMode,
       targetViewportMode: args.targetViewportMode,
       targetViewportRatio: args.targetViewportRatio
     })

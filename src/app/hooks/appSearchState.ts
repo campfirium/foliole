@@ -1,3 +1,5 @@
+import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import type { ReadingPositionRestoreCommand } from '../../features/editor/model/editorRestoreCommand';
 import { VIRTUAL_REMOVED_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { requestPdfSearch } from '../../features/pdf/model/pdfSystemRegistry';
@@ -6,6 +8,33 @@ import type { WorkspaceSearchResult } from '../components/workspaceSearch';
 
 import { buildSearchState, toSearchNodesById } from './appControllerHelpers';
 import type { useWorkspaceSelectors } from './appControllerState';
+import { requestReadingPositionApply } from './readingPositionRequests';
+import type { ReadingPositionSyncState } from './useAppRuntime';
+
+interface SearchReadingPositionRuntime {
+  bumpReadingPositionRequest: () => void;
+  readingPositionRef: {
+    current: {
+      nodeId: string | null;
+      selection: { from: number; to: number } | null;
+    };
+  };
+  readingPositionRestoreCommandRef: {
+    current: {
+      command: ReadingPositionRestoreCommand | null;
+      nodeId: string | null;
+    };
+  };
+  readingPositionRestoreCommandSeqRef: {
+    current: number;
+  };
+  readingPositionSyncRef: {
+    current: {
+      nodeId: string | null;
+      state: ReadingPositionSyncState | null;
+    };
+  };
+}
 
 interface SearchStateArgs {
   externalLibrary?: {
@@ -18,9 +47,12 @@ interface SearchStateArgs {
     handleSelectNode: (nodeId: string) => void;
   };
   runtime: {
+    editorRef?: {
+      current: EditorAdapter | null;
+    };
     isSearchPaletteOpen: boolean;
     setIsSearchPaletteOpen: (open: boolean) => void;
-  };
+  } & Partial<SearchReadingPositionRuntime>;
   trash: {
     closeTrashView: () => void;
   };
@@ -29,12 +61,69 @@ interface SearchStateArgs {
     openVirtualView?: (nodeId?: string) => void;
   };
   ws: {
+    activeNodeId?: string | null;
     nodeViewById: ReturnType<typeof useWorkspaceSelectors>['nodeViewById'];
     nodeOrder: string[];
     nodesById: ReturnType<typeof useWorkspaceSelectors>['nodesById'];
     setNodeViewState: ReturnType<typeof useWorkspaceSelectors>['setNodeViewState'];
     trashedNodeIds: string[];
   };
+}
+
+function hasReadingPositionRuntime(
+  runtime: SearchStateArgs['runtime']
+): runtime is SearchStateArgs['runtime'] & SearchReadingPositionRuntime {
+  return Boolean(
+    runtime.bumpReadingPositionRequest &&
+    runtime.readingPositionRef &&
+    runtime.readingPositionRestoreCommandRef &&
+    runtime.readingPositionRestoreCommandSeqRef &&
+    runtime.readingPositionSyncRef
+  );
+}
+
+function requestNodeMatchJump(args: {
+  result: WorkspaceSearchResult;
+  runtime: SearchStateArgs['runtime'];
+}) {
+  if (args.result.kind !== 'node' || !args.result.nodeMatch || !hasReadingPositionRuntime(args.runtime)) {
+    return;
+  }
+  requestReadingPositionApply({
+    nodeId: args.result.id,
+    reason: 'workspace-search-result',
+    runtime: args.runtime,
+    selection: {
+      from: args.result.nodeMatch.from,
+      to: args.result.nodeMatch.to
+    },
+    selectionMode: 'range',
+    targetViewportMode: 'center'
+  });
+}
+
+function revealActiveNodeMatch(args: {
+  result: WorkspaceSearchResult;
+  runtime: SearchStateArgs['runtime'];
+  ws: SearchStateArgs['ws'];
+}) {
+  if (args.result.kind !== 'node' || !args.result.nodeMatch || args.ws.activeNodeId !== args.result.id) {
+    return;
+  }
+  const editor = args.runtime.editorRef?.current;
+  if (!editor) {
+    return;
+  }
+  const selection = {
+    from: args.result.nodeMatch.from,
+    to: args.result.nodeMatch.to
+  };
+  editor.setSelection(selection);
+  if (editor.revealSelectionCentered) {
+    editor.revealSelectionCentered(selection);
+    return;
+  }
+  editor.revealSelection(selection);
 }
 
 export interface AppSearchState {
@@ -93,6 +182,8 @@ export function buildControllerSearchState(args: SearchStateArgs): AppSearchStat
         });
       }
       args.nav.handleSelectNode(result.id);
+      requestNodeMatchJump({ result, runtime: args.runtime });
+      revealActiveNodeMatch({ result, runtime: args.runtime, ws: args.ws });
       if (result.kind === 'pdf' && result.pdfMatch) {
         requestPdfSearch(result.id, {
           matchStart: result.pdfMatch.matchStart,

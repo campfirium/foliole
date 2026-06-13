@@ -4,6 +4,7 @@ import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
 import type { ClipboardAnchorRange } from '../../features/editor/model/anchorClipboardPayload';
+import type { EditorRestoreSelectionMode } from '../../features/editor/model/editorRestoreCommand';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
@@ -37,6 +38,7 @@ export interface DocumentPanelSectionProps {
   editorReadingRestoreCommandId?: string | null;
   editorReadingRestoreScrollTop?: number;
   editorReadingSelection?: EditorSelection | null;
+  editorReadingSelectionMode?: EditorRestoreSelectionMode;
   editorReadingTargetViewportMode?: EditorViewportMode | null;
   editorReadingTargetViewportRatio?: number | null;
   editorNodeViewState?: NodeViewState | undefined;

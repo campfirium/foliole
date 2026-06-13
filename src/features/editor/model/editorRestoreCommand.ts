@@ -1,10 +1,13 @@
 import type { EditorSelection, EditorViewportMode } from '../adapters/EditorAdapter';
 
+export type EditorRestoreSelectionMode = 'caret' | 'range';
+
 export interface ReadingPositionRestoreCommand {
   commandId: string;
   nodeId: string | null;
   reason: string;
   selection: EditorSelection | null;
+  selectionMode?: EditorRestoreSelectionMode;
   startedAt: number;
   scrollTop?: number;
   targetViewportMode?: EditorViewportMode;

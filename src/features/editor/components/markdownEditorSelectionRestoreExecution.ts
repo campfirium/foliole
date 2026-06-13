@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, type MutableRefObject } from 'react
 
 import type { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
 import type { EditorViewportMode } from '../adapters/EditorAdapter';
+import type { EditorRestoreSelectionMode } from '../model/editorRestoreCommand';
 
 import {
   handleSelectionRestore,
@@ -25,6 +26,7 @@ interface SelectionRestoreExecutionArgs {
   readingRestoreCommandId: string | null | undefined;
   readingRestoreScrollTop: number | undefined;
   readingSelection: EditorViewState['selection'] | null | undefined;
+  readingSelectionMode: EditorRestoreSelectionMode | undefined;
   readingTargetViewportMode: EditorViewportMode | null | undefined;
   readingTargetViewportRatio: number | null | undefined;
   restoreCompletionFrame2Ref: MutableRefObject<number | null>;
@@ -52,6 +54,7 @@ export function useSelectionRestoreExecution(args: SelectionRestoreExecutionArgs
       readingRestoreCommandId: args.readingRestoreCommandId,
       readingRestoreScrollTop: args.readingRestoreScrollTop,
       readingSelection: args.readingSelection,
+      readingSelectionMode: args.readingSelectionMode,
       readingTargetViewportMode: args.readingTargetViewportMode,
       readingTargetViewportRatio: args.readingTargetViewportRatio,
       restoreCompletionFrame2Ref: args.restoreCompletionFrame2Ref,
@@ -145,6 +148,7 @@ function runSelectionRestore(args: Omit<SelectionRestoreExecutionArgs, 'adapterR
     readingRestoreCommandId: args.readingRestoreCommandId,
     readingRestoreScrollTop: args.readingRestoreScrollTop,
     readingSelection: args.readingSelection,
+    readingSelectionMode: args.readingSelectionMode,
     readingTargetViewportMode: args.readingTargetViewportMode,
     readingTargetViewportRatio: args.readingTargetViewportRatio,
     value: args.value
@@ -162,6 +166,7 @@ function runSelectionRestore(args: Omit<SelectionRestoreExecutionArgs, 'adapterR
     readingRestoreCommandId: args.readingRestoreCommandId,
     readingRestoreScrollTop: args.readingRestoreScrollTop,
     readingSelection: args.readingSelection,
+    readingSelectionMode: args.readingSelectionMode,
     readingTargetViewportMode: args.readingTargetViewportMode,
     readingTargetViewportRatio: args.readingTargetViewportRatio,
     restoreCompletionFrame2Ref: args.restoreCompletionFrame2Ref,

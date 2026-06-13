@@ -3,12 +3,8 @@ import type { MutableRefObject } from 'react';
 import { pushDebugTrace } from '../../../shared/diagnostics/debugTrace';
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
 import type { EditorViewportMode } from '../adapters/EditorAdapter';
-import { createEditorRestoreCommandKey } from '../model/editorRestoreCommand';
-import {
-  canEditorRestoreTargetMatchDocument,
-  createEditorRestoreTarget,
-  createEditorRestoreTargetKey
-} from '../model/editorRestoreStateMachine';
+import { createEditorRestoreCommandKey, type EditorRestoreSelectionMode } from '../model/editorRestoreCommand';
+import { canEditorRestoreTargetMatchDocument, createEditorRestoreTarget, createEditorRestoreTargetKey } from '../model/editorRestoreStateMachine';
 
 import { shouldNotifyReadingPositionApply } from './markdownEditorRestoreNotify';
 import { canRetryScrollOnlyRestore } from './markdownEditorRestoreRetry';
@@ -29,6 +25,7 @@ export function handleSelectionRestore(args: {
   readingRestoreCommandId: string | null | undefined;
   readingRestoreScrollTop: number | undefined;
   readingSelection: EditorViewState['selection'] | null | undefined;
+  readingSelectionMode: EditorRestoreSelectionMode | undefined;
   readingTargetViewportMode: EditorViewportMode | null | undefined;
   readingTargetViewportRatio: number | null | undefined;
   restoreCompletionFrame2Ref: MutableRefObject<number | null>;
@@ -97,10 +94,7 @@ function markSuppressedRestore(args: {
   pendingRestoreSelectionKeyRef: MutableRefObject<string | null>;
   restoreTarget: NonNullable<ReturnType<typeof resolveRestoreTarget>>;
 }) {
-  if (
-    args.restoreTarget.targetViewportMode == null &&
-    typeof args.restoreTarget.targetViewportRatio !== 'number'
-  ) {
+  if (args.restoreTarget.targetViewportMode == null && typeof args.restoreTarget.targetViewportRatio !== 'number') {
     args.lastRestoredSelectionKeyRef.current = args.restoreTarget.selectionKey;
     args.pendingRestoreSelectionKeyRef.current = null;
   }
@@ -120,6 +114,7 @@ export function resolveRestoreTarget(args: {
   readingRestoreCommandId: string | null | undefined;
   readingRestoreScrollTop: number | undefined;
   readingSelection: EditorViewState['selection'] | null | undefined;
+  readingSelectionMode: EditorRestoreSelectionMode | undefined;
   readingTargetViewportMode: EditorViewportMode | null | undefined;
   readingTargetViewportRatio: number | null | undefined;
   value: string;
@@ -214,8 +209,9 @@ function createRestoreTargetContext(args: {
   nodeId: string | null;
   readingRestoreScrollTop: number | undefined;
   readingSelection: EditorViewState['selection'] | null | undefined;
+  readingSelectionMode: EditorRestoreSelectionMode | undefined;
 }) {
-  const selection = args.readingSelection ? normalizeRestoreSelection(args.readingSelection) : null;
+  const selection = args.readingSelection ? normalizeRestoreSelection(args.readingSelection, args.readingSelectionMode) : null;
   const stateTarget = createEditorRestoreTarget({
     nodeId: args.nodeId,
     scrollTop: args.readingRestoreScrollTop,
