@@ -22,6 +22,18 @@ function expectModePageBackground(styles: string, mode: string, color: string) {
   );
 }
 
+function expectOriginalModePdfBackground(styles: string) {
+  expect(styles).toContain(":root[data-pdf-reading-mode='original'] .pdf-document-surface,");
+  expect(styles).toContain(":root[data-pdf-reading-mode='original'] .pdf-document-surface :is(.react-pdf__Page, .pdf-document-page-placeholder),");
+}
+
+function expectLightModePdfOriginalOverride(styles: string) {
+  expect(styles).toContain(":root[data-resolved-base-color='light'] .pdf-document-surface,");
+  expect(styles).toContain(
+    ":root[data-resolved-base-color='light'] .pdf-document-surface :is(.react-pdf__Page, .pdf-document-page-placeholder) {\n  background: rgb(var(--color-canvas));\n  filter: none;"
+  );
+}
+
 function expectModeSurfaceBackground(styles: string, mode: string, color: string) {
   const block = styles.match(
     new RegExp(
@@ -31,22 +43,25 @@ function expectModeSurfaceBackground(styles: string, mode: string, color: string
   expect(block).toContain(`background: ${color};`);
 }
 
+function expectDarkInvertedModeSurfaceBackground(styles: string) {
+  expect(styles).toContain(":root[data-resolved-base-color='dark'][data-pdf-reading-mode='inverted'] .pdf-document-surface,");
+  expect(styles).toContain(
+    ":root[data-resolved-base-color='dark'][data-pdf-reading-mode='inverted'] .pdf-document-surface :is(.pdf-document-scroll-container, .pdf-document-page-stack) {\n  --app-scrollbar-track-bg: var(--pdf-reading-inverted-surface-color);\n  background: var(--pdf-reading-inverted-surface-color);"
+  );
+}
+
 function expectInvertedPageBackgrounds(styles: string) {
   expect(styles).toContain(
-    ":root[data-pdf-reading-mode='inverted'] .pdf-document-surface .pdf-document-page-placeholder {\n  background: var(--pdf-reading-inverted-page-color);"
+    ":root[data-resolved-base-color='dark'][data-pdf-reading-mode='inverted'] .pdf-document-surface .pdf-document-page-placeholder {\n  background: var(--pdf-reading-inverted-page-color);"
   );
   expect(styles).toContain(
-    ":root[data-pdf-reading-mode='inverted'] .pdf-document-surface .react-pdf__Page {\n  background: var(--pdf-reading-inverted-page-filter-source-color);"
+    ":root[data-resolved-base-color='dark'][data-pdf-reading-mode='inverted'] .pdf-document-surface .react-pdf__Page {\n  background: var(--pdf-reading-inverted-page-filter-source-color);"
   );
 }
 
 function expectStableInvertedBackgroundTokens(styles: string) {
-  expect(styles).toContain(
-    '--pdf-reading-inverted-surface-color: color-mix(in srgb, rgb(20 21 20) 58%, rgb(37 40 36) 42%);'
-  );
-  expect(styles).toContain(
-    '--pdf-reading-inverted-page-color: color-mix(in srgb, rgb(20 21 20) 68%, rgb(24 25 24) 32%);'
-  );
+  expect(styles).toContain('--pdf-reading-inverted-surface-color: rgb(23 23 23);');
+  expect(styles).toContain('--pdf-reading-inverted-page-color: rgb(23 23 23);');
   expect(styles).not.toContain('--pdf-reading-inverted-surface-color: color-mix(in srgb, rgb(var(--color-background))');
 }
 
@@ -72,11 +87,11 @@ describe('PDF reading mode backgrounds', () => {
   it('keeps rendered pages and placeholders on the same mode-aware background', () => {
     const styles = readStyles();
 
-    expectModeSurfaceBackground(styles, 'original', 'rgb(var(--color-canvas))');
-    expectModeSurfaceBackground(styles, 'inverted', 'var(--pdf-reading-inverted-surface-color)');
+    expectOriginalModePdfBackground(styles);
+    expectDarkInvertedModeSurfaceBackground(styles);
     expect(styles).toContain('--app-scrollbar-track-bg: var(--pdf-reading-inverted-surface-color);');
     expectModeSurfaceBackground(styles, 'warm', 'var(--pdf-reading-warm-surface-color)');
-    expectModePageBackground(styles, 'original', 'rgb(var(--color-canvas))');
+    expectLightModePdfOriginalOverride(styles);
     expectStableInvertedBackgroundTokens(styles);
     expectInvertedPageBackgrounds(styles);
     expectModePageBackground(styles, 'warm', 'var(--pdf-reading-warm-surface-color)');
