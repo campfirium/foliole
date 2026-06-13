@@ -154,7 +154,7 @@ function useResolvedBaseColorEffect(state: ReturnType<typeof useAppearanceStateV
 }
 
 function useModeScopedAppearanceEffect(state: ReturnType<typeof useAppearanceStateValues>) {
-  useEffect(() => {
+  usePrePaintEffect(() => {
     const nextState = readModeScopedAppearanceState(state.resolvedBaseColorModeState);
     applyModeScopedAppearanceState(state, nextState);
   }, [state.resolvedBaseColorModeState]);
@@ -162,8 +162,9 @@ function useModeScopedAppearanceEffect(state: ReturnType<typeof useAppearanceSta
 
 function useApplyAppearanceEffect(state: ReturnType<typeof useAppearanceStateValues>) {
   usePrePaintEffect(() => {
+    const modeScopedState = readModeScopedAppearanceState(state.resolvedBaseColorModeState);
     applyAppearanceSettings({
-      accentColor: state.accentColorPresetState,
+      accentColor: modeScopedState.accentColorPreset,
       baseColor: state.baseColorModeState,
       resolvedBaseColor: state.resolvedBaseColorModeState,
       dimImagesInDarkMode: state.dimImagesInDarkModeState,
@@ -171,20 +172,20 @@ function useApplyAppearanceEffect(state: ReturnType<typeof useAppearanceStateVal
       readingContentWidth: state.readingContentWidthState,
       readingLineHeight: state.readingLineHeightState,
       readingParagraphSpacing: state.readingParagraphSpacingState,
-      clozeColor: state.clozeColorPresetState,
+      clozeColor: modeScopedState.clozeColorPreset,
       customInterfaceFont: state.customInterfaceFontState,
       customMonospaceFont: state.customMonospaceFontState,
       customUiFont: state.customUiFontState,
-      fontColor: state.fontColorPresetState,
-      highlightColor: state.highlightColorPresetState,
-      selectionColor: state.selectionColorPresetState,
+      fontColor: modeScopedState.fontColorPreset,
+      highlightColor: modeScopedState.highlightColorPreset,
+      selectionColor: modeScopedState.selectionColorPreset,
       interfaceFont: state.interfaceFontPresetState,
       interfaceFontSize: state.interfaceFontSizeState,
       monospaceFont: state.monospaceFontPresetState,
       uiFont: state.uiFontPresetState,
       workspaceDividerOpacityPercent: state.workspaceDividerOpacityPercentState,
-      workspaceSurfaceAssignments: state.workspaceSurfaceAssignmentsState,
-      workspaceSurfacePalette: state.workspaceSurfacePaletteState
+      workspaceSurfaceAssignments: modeScopedState.workspaceSurfaceAssignments,
+      workspaceSurfacePalette: modeScopedState.workspaceSurfacePalette
     });
     applySelectionToolbarOpacityPercent(state.selectionToolbarOpacityPercentState);
   }, [

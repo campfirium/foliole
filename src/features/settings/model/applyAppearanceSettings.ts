@@ -56,6 +56,29 @@ interface ApplyAppearanceSettingsInput {
   workspaceSurfacePalette: WorkspaceSurfacePalette;
 }
 
+const BASE_APPEARANCE_TOKENS_BY_MODE = {
+  dark: {
+    '--color-background': '20 21 20',
+    '--color-bg-panel': '37 40 36',
+    '--color-canvas': '24 25 24',
+    '--workspace-divider-mix-target': 'white',
+    '--workspace-divider-subtle-surface-weight': '90%'
+  },
+  light: {
+    '--color-background': '245 245 243',
+    '--color-bg-panel': '246 246 246',
+    '--color-canvas': '255 255 255',
+    '--workspace-divider-mix-target': 'black',
+    '--workspace-divider-subtle-surface-weight': '92%'
+  }
+} as const;
+
+function applyBaseAppearanceTokens(root: HTMLElement, mode: ResolvedBaseColorMode) {
+  Object.entries(BASE_APPEARANCE_TOKENS_BY_MODE[mode]).forEach(([token, value]) => {
+    root.style.setProperty(token, value);
+  });
+}
+
 export function applyAppearanceSettings(settings: ApplyAppearanceSettingsInput) {
   if (typeof document === 'undefined') {
     return;
@@ -66,6 +89,7 @@ export function applyAppearanceSettings(settings: ApplyAppearanceSettingsInput) 
   root.dataset.dimImagesInDarkMode = settings.dimImagesInDarkMode ? 'true' : 'false';
   root.dataset.resolvedBaseColor = settings.resolvedBaseColor;
   root.dataset.pdfReadingMode = resolvePdfReadingModeForColorMode(settings.pdfReadingMode, settings.resolvedBaseColor);
+  applyBaseAppearanceTokens(root, settings.resolvedBaseColor);
   applyAppearanceColorSettings(root, {
     accentColor: settings.accentColor,
     clozeColor: settings.clozeColor,

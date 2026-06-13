@@ -48,6 +48,15 @@ async function openAppearanceSettings(desktopWindow: Page) {
   await expect(desktopWindow.getByRole('radiogroup', { name: COLOR_MODE_NAME })).toBeVisible();
 }
 
+async function reloadWithDarkInvertedPreference(desktopWindow: Page) {
+  await desktopWindow.evaluate(() => {
+    window.localStorage.setItem('foliole-base-color', 'dark');
+    window.localStorage.setItem('foliole-pdf-reading-mode', 'inverted');
+  });
+  await desktopWindow.reload();
+  await expect(desktopWindow.locator('main[aria-label]').first()).toBeVisible();
+}
+
 async function chooseRadio(desktopWindow: Page, groupName: RegExp, optionName: RegExp) {
   await desktopWindow.getByRole('radiogroup', { name: groupName }).getByRole('radio', { name: optionName }).click();
 }
@@ -164,30 +173,17 @@ test('PDF background @pdf follows the rail light and dark toggle immediately', a
   desktopWindow
 }) => {
   await expect(desktopWindow.locator('main[aria-label]').first()).toBeVisible();
+  await reloadWithDarkInvertedPreference(desktopWindow);
 
   const importedNodeId = await importPdfThroughRuntime(desktopApp, desktopWindow);
   await openImportedPdf(desktopWindow, importedNodeId);
   await expect(desktopWindow.getByRole('region', { name: /PDF reader panel|PDF 阅读器面板/ })).toContainText(FIRST_PAGE_TEXT);
 
-  await openAppearanceSettings(desktopWindow);
-  await chooseRadio(desktopWindow, COLOR_MODE_NAME, /Light|浅色/);
-  await chooseRadio(desktopWindow, PDF_DARK_MODE_NAME, /Inverted|反色/);
-  await desktopWindow.keyboard.press('Escape');
-
-  const lightMetrics = await waitForPdfModeMetrics(desktopWindow, {
-    pdfReadingMode: 'original',
-    resolvedBaseColor: 'light'
-  });
-
-  await desktopWindow.getByRole('button', { name: TOGGLE_THEME_NAME }).click();
-  const darkMetrics = await waitForPdfModeMetrics(desktopWindow, {
+  const initialDarkMetrics = await waitForPdfModeMetrics(desktopWindow, {
     pdfReadingMode: 'inverted',
     resolvedBaseColor: 'dark'
   });
-  expect(darkMetrics.surfaceBackground).toBe(darkMetrics.scrollBackground);
-  expect(darkMetrics.surfaceBackground).not.toBe(lightMetrics.surfaceBackground);
-  expect(readColorLuminance(darkMetrics.surfaceBackground)).toBeLessThan(90);
-  expect(darkMetrics.topicBackground).not.toBe(lightMetrics.topicBackground);
+  expect(readColorLuminance(initialDarkMetrics.surfaceBackground)).toBeLessThan(90);
 
   await desktopWindow.getByRole('button', { name: TOGGLE_THEME_NAME }).click();
   const restoredLightMetrics = await waitForPdfModeMetrics(desktopWindow, {
@@ -197,6 +193,15 @@ test('PDF background @pdf follows the rail light and dark toggle immediately', a
   expect(restoredLightMetrics.surfaceBackground).toBe(restoredLightMetrics.scrollBackground);
   expect(restoredLightMetrics.surfaceBackground).toBe(restoredLightMetrics.documentSurfaceToken);
   expect(readColorLuminance(restoredLightMetrics.surfaceBackground)).toBeGreaterThan(230);
-  expect(restoredLightMetrics.surfaceBackground).toBe(lightMetrics.surfaceBackground);
-  expect(restoredLightMetrics.topicBackground).toBe(lightMetrics.topicBackground);
+  expect(restoredLightMetrics.surfaceBackground).not.toBe(initialDarkMetrics.surfaceBackground);
+  expect(restoredLightMetrics.topicBackground).not.toBe(initialDarkMetrics.topicBackground);
+
+  await desktopWindow.getByRole('button', { name: TOGGLE_THEME_NAME }).click();
+  const restoredDarkMetrics = await waitForPdfModeMetrics(desktopWindow, {
+    pdfReadingMode: 'inverted',
+    resolvedBaseColor: 'dark'
+  });
+  expect(restoredDarkMetrics.surfaceBackground).toBe(restoredDarkMetrics.scrollBackground);
+  expect(readColorLuminance(restoredDarkMetrics.surfaceBackground)).toBeLessThan(90);
+  expect(restoredDarkMetrics.surfaceBackground).toBe(initialDarkMetrics.surfaceBackground);
 });
