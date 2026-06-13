@@ -21,7 +21,7 @@ import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 import { SearchPalette } from './SearchPalette';
 import type { WorkspaceSearchResult } from './workspaceSearch';
 
-it('shows the external index status in the external results section header', async () => {
+it('keeps external result labels inline without a section header', async () => {
   window.localStorage.setItem('foliole-search-enhancement-prompt-dismissed', 'true');
   vi.mocked(getRuntimeInvoke).mockReturnValue(
     vi.fn().mockResolvedValue([
@@ -74,8 +74,9 @@ it('shows the external index status in the external results section header', asy
     target: { value: 'spaced' }
   });
 
-  await waitFor(() => {
-    expect(screen.getByText('External folders')).toBeInTheDocument();
-  });
-  expect(screen.getByText('Updating')).toBeInTheDocument();
+  await waitFor(() => expect(screen.getByRole('button', { name: /History of spaced repetition/ })).toBeInTheDocument());
+  expect(screen.getByText('External')).toBeInTheDocument();
+  expect(screen.getByText('library')).toBeInTheDocument();
+  expect(screen.queryByText('External folders')).not.toBeInTheDocument();
+  expect(screen.queryByText('Updating')).not.toBeInTheDocument();
 });

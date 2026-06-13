@@ -8,7 +8,6 @@ import { appFloatingOverlayClassName, appFloatingSurfaceClassName } from '../../
 
 import { FloatingPaletteInput } from './FloatingPaletteInput';
 import { SearchPaletteEnhancementPrompt } from './SearchPaletteEnhancementPrompt';
-import { useExternalSectionStatus } from './searchPaletteExternalStatus';
 import { SearchPaletteEmptyState, SearchPaletteErrorState, SearchPaletteList } from './SearchPaletteResults';
 import { useOrderedSearchResults, useSearchResults } from './searchPaletteSearchState';
 import {
@@ -39,7 +38,6 @@ export function SearchPalette(props: SearchPaletteProps) {
   const shortcuts = useSearchPaletteShortcuts();
   const searchState = useSearchResults(props, query, isComposingQuery);
   const results = useOrderedSearchResults(searchState.results, props.nodesById);
-  const externalSectionStatus = useExternalSectionStatus(props.isOpen);
   const sourceDetailsByNodeId = useSearchResultSourceDetails(results);
   useSearchPaletteLifecycle(props.isOpen, activeIndex, results.length, setActiveIndex, setIsComposingQuery, setQuery);
   const openActiveNode = createOpenActiveSearchResultHandler(results, activeIndex, props.onOpenResult);
@@ -74,7 +72,6 @@ export function SearchPalette(props: SearchPaletteProps) {
         <SearchPaletteEnhancementPrompt />
         <SearchPaletteBody
           activeIndex={activeIndex}
-          externalSectionStatus={externalSectionStatus}
           hasError={searchState.error}
           nodesById={props.nodesById}
           onOpenResult={props.onOpenResult}
@@ -115,7 +112,6 @@ function useSearchPaletteShortcuts() {
 
 function SearchPaletteBody(props: {
   activeIndex: number;
-  externalSectionStatus: string | null;
   hasError: boolean;
   nodesById: WorkspaceListNodesById;
   onOpenResult: (result: WorkspaceSearchResult, options?: { preview?: boolean }) => void;
@@ -133,7 +129,6 @@ function SearchPaletteBody(props: {
   return (
     <SearchPaletteList
       activeIndex={props.activeIndex}
-      externalSectionStatus={props.externalSectionStatus}
       nodesById={props.nodesById}
       onOpenResult={props.onOpenResult}
       onSetActiveIndex={props.onSetActiveIndex}

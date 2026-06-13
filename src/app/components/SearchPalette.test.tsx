@@ -143,6 +143,7 @@ it('renders search results as title context and path rows', async () => {
   expect(launchMatches.every((node) => node.tagName === 'SPAN')).toBe(true);
   expect(launchMatches.every((node) => node.getAttribute('style')?.includes('var(--app-accent-color)'))).toBe(true);
   expect(screen.getByText('Highlight')).toBeInTheDocument();
+  expect(screen.queryByText(/Foliole/i)).not.toBeInTheDocument();
   expect(screen.queryByText('Content')).not.toBeInTheDocument();
   expect(screen.queryByText('Title')).not.toBeInTheDocument();
   const resultButtons = screen.getAllByRole('button').filter((button) => !button.getAttribute('aria-label'));

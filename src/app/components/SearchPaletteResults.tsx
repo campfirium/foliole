@@ -6,9 +6,7 @@ import type { RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceR
 import {
   appFloatingEmptyStateClassName,
   appFloatingItemClassName,
-  appFloatingListClassName,
-  appFloatingMetaBadgeClassName,
-  appFloatingSectionHeaderClassName
+  appFloatingListClassName
 } from '../../shared/ui';
 
 import {
@@ -45,7 +43,6 @@ export function SearchPaletteErrorState() {
 
 export function SearchPaletteList(props: {
   activeIndex: number;
-  externalSectionStatus: string | null;
   nodesById: WorkspaceListNodesById;
   onOpenResult: (result: WorkspaceSearchResult, options?: { preview?: boolean }) => void;
   onSetActiveIndex: (value: number | ((current: number) => number)) => void;
@@ -79,14 +76,12 @@ export function SearchPaletteList(props: {
       {props.results.map((item, index) => (
         <SearchPaletteResultItem
           active={index === props.activeIndex}
-          externalSectionStatus={props.externalSectionStatus}
-          index={index}
           item={item}
           key={`${item.id}-${item.kind}-${index}`}
           nodesById={props.nodesById}
           onOpenResult={props.onOpenResult}
           onSetActiveIndex={props.onSetActiveIndex}
-          previousKind={props.results[index - 1]?.kind}
+          index={index}
           query={props.query}
           sourceDetails={props.sourceDetailsByNodeId[item.id]}
         />
@@ -97,13 +92,11 @@ export function SearchPaletteList(props: {
 
 function SearchPaletteResultItem(props: {
   active: boolean;
-  externalSectionStatus: string | null;
   index: number;
   item: WorkspaceSearchResult;
   nodesById: WorkspaceListNodesById;
   onOpenResult: (result: WorkspaceSearchResult, options?: { preview?: boolean }) => void;
   onSetActiveIndex: (value: number | ((current: number) => number)) => void;
-  previousKind: WorkspaceSearchResult['kind'] | undefined;
   query: string;
   sourceDetails: RuntimeNodeSourceDetails | null | undefined;
 }) {
@@ -111,12 +104,6 @@ function SearchPaletteResultItem(props: {
   const projectResultText = item.kind === 'node';
   return (
     <li className="relative">
-      {props.index === 0 || props.previousKind !== item.kind ? (
-        <SearchPaletteSectionHeader
-          externalSectionStatus={props.externalSectionStatus}
-          kind={item.kind}
-        />
-      ) : null}
       <button
         className={appFloatingItemClassName('grid gap-1.5 data-[active=true]:bg-[var(--app-floating-item-active-bg)]')}
         data-active={props.active}
@@ -139,23 +126,6 @@ function SearchPaletteResultItem(props: {
         />
       </button>
     </li>
-  );
-}
-
-function SearchPaletteSectionHeader(props: {
-  externalSectionStatus: string | null;
-  kind: WorkspaceSearchResult['kind'];
-}) {
-  const t = useTranslation();
-  return (
-    <div className={appFloatingSectionHeaderClassName('flex items-center justify-between gap-3')}>
-      <span>{props.kind === 'external' ? t('desktop.search.section.externalFolders') : props.kind === 'removed' ? t('desktop.search.section.removed') : t('desktop.search.section.folioleContent')}</span>
-      {props.kind === 'external' && props.externalSectionStatus ? (
-        <span className={appFloatingMetaBadgeClassName('normal-case tracking-normal')}>
-          {props.externalSectionStatus}
-        </span>
-      ) : null}
-    </div>
   );
 }
 
