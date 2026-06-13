@@ -46,5 +46,5 @@
 - Android / Capacitor 相关改动默认先执行覆盖本轮能力闭环的最小验证；只有当能力闭环触及移动宿主根链路、Capacitor 宿主 / bridge 主链路、共享层 / 依赖、跨宿主联动、或你无法用相关验证证明影响已被覆盖时，才升级为 `npm run quality:android`、`npm run quality:shared` 或 `npm run quality:release`；`npm run quality:full` 只覆盖仓库级 JS/TS、桌面构建与 companion Web 构建，不跑 Android 原生宿主检查。
 - 若改动触及 Android 权限、生命周期、Capacitor 插件、intent、安装 / 启动链路，或问题只会在模拟器 / 设备上暴露，必须升级执行 `npm run quality:android:device`。
 - Android 设备侧验证默认优先使用已连接的 A5 真机 ADB 链路；除非用户明确要求、真机不可用、需要破坏性 instrumentation 测试、多 Android 版本矩阵或原生工程配置诊断，否则不启动模拟器或 Android Studio。
-- `npm run android:preview` 只在根 `AGENTS.md` 的连续推进 / 阶段验收规则允许，且 `.lab/internal/runtime/android-preview.flag` 为 `ON`、用户当次明确要求 Android 预览、或用户当次要求阶段验收时执行。
+- `npm run android:preview` 只在用户当次明确要求 Android 预览、用户当次要求阶段验收且本轮有 Android 可见面、或 Android 局部规则命中必须设备预览时执行；不再读取持久 preview flag 自动触发。
 - Android 宿主公开入口默认使用 `package.json` 中已有的 `npm run quality:android*` 与 `npm run android:*` 脚本，不直接口头推荐裸 Gradle、adb 或 Capacitor 命令。

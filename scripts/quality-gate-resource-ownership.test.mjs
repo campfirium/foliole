@@ -32,4 +32,10 @@ describe('quality gate resource ownership', () => {
     expect(script).toContain('node node_modules/eslint/bin/eslint.js --cache --cache-location .tmp/eslint-cache/changed/');
     expect(script).not.toContain('with-resource-gate.mjs node-heavy -- node node_modules/eslint/bin/eslint.js');
   });
+
+  it('serializes agent desktop Playwright through the preview resource gate', async () => {
+    const scripts = await readPackageScripts();
+
+    expect(scripts['test:e2e:desktop:agent']).toContain('scripts/with-resource-gate.mjs preview --');
+  });
 });

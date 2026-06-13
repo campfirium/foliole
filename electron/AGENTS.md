@@ -54,9 +54,11 @@
 ## Validation
 
 - 桌面相关改动默认先执行覆盖本轮能力闭环的最小验证；只有当能力闭环触及桌面根链路、桌面多子系统联动、共享层 / 依赖、或你无法用相关验证证明影响已被覆盖时，才升级为 `npm run quality:desktop`、`npm run quality:shared` 或 `npm run quality:full`；需要 Android 原生宿主一起验收时才升级到 `npm run quality:release`。
-- WSL 主开发会话执行 Windows 桌面人工预览时，统一使用 `npm run windows:preview`；Windows 原生 Codex 会话直接诊断 Windows checkout 时才使用 `npm run windows:preview:native`。根 `AGENTS.md` 决定是否需要人工预览：用户明确要求 Windows 预览、阶段验收、发布 / 安装包验收、或本节 Windows 专属风险命中时，相关验证通过后执行对应入口；连续推进期间除非用户当次明确要求，否则不自动执行。
+- WSL 主开发会话执行 Windows 桌面人工预览时，统一使用 `npm run windows:preview`；Windows 原生 Codex 会话直接诊断 Windows checkout 时才使用 `npm run windows:preview:native`。桌面人工预览只在用户明确要求 Windows 预览、阶段验收、发布 / 安装包验收、或本节 Windows 专属风险命中时执行；不再读取持久 preview flag 自动升级日常桌面可见改动。
 - Agent 日常自动化验收先按验收目标选入口：纯 renderer / Web UI 行为可用 WSL headless Playwright；桌面 Electron 行为默认使用 `npm run test:e2e:desktop:agent` 或等价 `xvfb-run --auto-servernum npx playwright test -c playwright.desktop.config.ts ...`，在 WSL/Linux + Xvfb 中启动 Linux Electron，避免可见窗口、闪屏或抢焦点。
+- WSL/Linux 桌面 Electron Playwright 必须使用 `npm run test:e2e:desktop:agent -- <spec>`，或显式 `xvfb-run --auto-servernum npx playwright test -c playwright.desktop.config.ts ...`；若直接运行 `npx playwright test -c playwright.desktop.config.ts ...` 并出现 `Missing X server or $DISPLAY`，这只是入口缺少 Xvfb，不是业务失败。
+- 桌面 Electron Playwright 在共享工作区内默认串行执行；若 `desktopSession` setup 卡住且发现另一条桌面 Playwright / 预览正在持有运行资源，必须等待或清理 stale 进程后重跑，不得把并发抢占汇报为产品失败。`npm run test:e2e:desktop:agent` 已通过 resource gate 排队；临时绕开该入口时必须自行保证同等串行。
 - WSL/Linux desktop Playwright 必须从当前 WSL 仓库启动，不得默认解析到 Windows mirror 或 `electron.exe`；若出现 Electron inspector / localhost 连接到 Windows executable、stale renderer build、ABI mismatch、构建产物缺失或首次提示遮挡，应修复入口或测试前置，不得改走 Windows 侧后报告为本轮自动验收通过。
-- Desktop Playwright 应把用户预期转成具体断言；若验收目标不是“物理键盘快捷键”，测试可以用页面内事件、debug bridge 或命令入口打开前置 UI，避免 Xvfb 焦点差异污染主断言。最终汇报必须说明 Playwright 断言覆盖的用户效果和未覆盖的人工观察点。
+- Desktop Playwright 应把用户预期转成具体断言；测试前置状态优先用页面内事件、debug bridge 或命令入口建立，避免把导航和面板点击噪声混进主断言。只有验收目标本身是鼠标点击、命中区域、菜单/面板可达性、拖拽、物理键盘快捷键或普通用户路径完整性时，才把真实 UI 操作作为主动作。最终汇报必须说明 Playwright 断言覆盖的用户效果和未覆盖的人工观察点。
 - Windows 侧 Electron Playwright、Windows 预览和 Windows 桌面脚本链路只用于 Windows 专属验收：用户明确要求 Windows 预览、阶段 / 最终人工验收、发布 / 安装包、Windows 路径或 `app.getPath` 语义、`better-sqlite3` Windows ABI、Windows 原生 shell / dialog / tray / notification、Windows 主数据库路径、preload sandbox / IPC 在 Windows 上的边界风险、以及其他必须证明 Windows 客户端真实行为的任务。Linux Electron + Xvfb 不得宣称为 Windows 专属行为已验收。
 - `npm run electron:dev` 仅用于直接拉起 Electron dev runtime 的调试场景，不作为默认 Windows 验收命令。

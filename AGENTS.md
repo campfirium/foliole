@@ -35,7 +35,7 @@
 - 新增或修改用户可见 UI 文案时，必须按 `.lab/specs/_product/terminology-and-copy.md` 的文案分层先区分用户效果、轻原理说明与内部语言；最终文案不得直接从变量名、数据库字段、IPC / action 名、队列流程动词或对话里的临时术语生成。
 - 任务涉及具体现有规范时，按需读取对应 `.lab/specs/**` 条目，不全量通读。
 - 任务涉及新增、重写或审计 agent 规则时，按 `$agents-maintainer` 流程只审根与局部 `AGENTS.md`；不默认扫描其他项目文档。
-- 仅在判断验证、预览或停车策略时读取 `.lab/internal/runtime/windows-preview.flag`、`.lab/internal/runtime/android-preview.flag` 与 `.lab/internal/runtime/park.flag`。
+- 仅在判断停车策略时读取 `.lab/internal/runtime/park.flag`；预览不再由持久 flag 自动触发。
 
 ## Agent Rule Maintenance
 
@@ -91,18 +91,18 @@
 - E2E（Playwright）不进入任何质量闸；只在用户明确要求验证核心用户路径回归时运行。桌面日常 agent 自动化验收优先按 `electron/AGENTS.md` 使用不干扰用户桌面的 Playwright 入口，人工预览仍按下表执行。
 - `copy:guard` 默认只报告 warning；若它报 warning，修复前先读 `.lab/specs/_product/terminology-and-copy.md`，禁止机械替换。
 
-预览 flag 路径：Windows 为 `.lab/internal/runtime/windows-preview.flag`，Android 为 `.lab/internal/runtime/android-preview.flag`；有效值仅 `ON` / `OFF`，缺失按 `OFF`。
-
 | 条件 | 预览决策 |
 | --- | --- |
 | 用户当次明确要求某宿主预览 | 相关验证通过后执行该宿主预览 |
 | 用户说“阶段验收”且本轮有对应宿主可见面 | 忽略 flag，执行受影响宿主预览 |
 | 用户说“连续推进”且未明确要求预览 | 不自动预览，最终 `R` 写明连续推进未执行 |
-| 普通模式、对应 flag 为 `ON`、本轮有用户可见预览面 | 执行对应宿主预览 |
-| 普通模式、对应 flag 为 `OFF`，或仅改 agent 规则 / 文档 / 测试 / 脚本 / 内部 spec | 不执行预览，最终 `R` 写明原因 |
-| 用户说“打开预览” / “关闭预览” | 同时写入两个 flag 为 `ON` / `OFF`；用户可只指定 Windows 或 Android |
+| 普通模式、局部宿主规则命中人工预览 | 执行对应宿主预览 |
+| 普通模式、局部宿主规则未命中人工预览，或仅改 agent 规则 / 文档 / 测试 / 脚本 / 内部 spec | 不执行预览，最终 `R` 写明原因 |
+| 用户说“打开预览” / “关闭预览” | 只影响当次明确指定的宿主预览动作，不写入持久 preview flag |
 
 预览入口：桌面人工预览按 `electron/AGENTS.md` 当前工作区入口执行，桌面预览代表当前真实 WSL 工作区，不再提供线程隔离预览；移动按 `npm run android:preview` 执行；同时影响桌面与移动共享链路时，只执行已命中上表的宿主预览。预览成功时最终末行可写 `pushed`；预览失败或未执行时不能写 `pushed`，必须在 `R` 写失败阶段、失败原因或未执行原因。
+
+- 自动化验证通过但仍需要用户最终人工确认的用户可见闭环，最终汇报前必须向 `.lab/atlas/0active/manual-acceptance.md` 追加 1 行待验收记录；仅改 agent 规则 / 文档 / 测试 / 脚本 / 内部 spec 时不追加。同一轮同一验收目标只记 1 行，不按命令、文件、截图拆行；该清单只追加不删除，后续人工结论也用新行追加。
 
 最终汇报默认使用 `C / V / R / pushed`：`C` 写用户问题恢复与已确认根因，`V` 写用户可见验收现象，`R` 写真实剩余风险或未执行原因；不列命令、内部字段、数据库对象或可选后续，除非用户追问或验证失败。
 
