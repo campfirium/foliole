@@ -32,8 +32,21 @@ vi.mock('./externalSearchBackgroundRefreshRuntime.js', () => ({
   notifyExternalSearchUserActivity: vi.fn(),
   stopExternalSearchBackgroundRefresh: vi.fn()
 }));
+vi.mock('./backgroundPresence.js', () => ({
+  installBackgroundTray: vi.fn(),
+  markAppQuittingForBackgroundPresence: vi.fn()
+}));
+vi.mock('./globalClipToastNavigation.js', () => ({ installGlobalCaptureToastOpenHandler: vi.fn() }));
+vi.mock('./globalClipToInbox.js', () => ({ installGlobalClipToInboxShortcut: vi.fn() }));
 vi.mock('./import/keepImportMonitor.js', () => ({ stopKeepImportMonitor: vi.fn() }));
 vi.mock('./import/managedInboxMonitor.js', () => ({ stopManagedInboxMonitor: vi.fn() }));
+vi.mock('./mainStartup.js', () => ({ startInitialMainWindow: vi.fn() }));
+vi.mock('./mainWindowLifecycle.js', () => ({
+  installPairingFocusHandler: vi.fn(),
+  openOrCreateMainWindow: vi.fn(),
+  startCompanionSyncIfEnabled: vi.fn()
+}));
+vi.mock('./mainWindowRegistry.js', () => ({ getMainWindow: vi.fn(), setMainWindow: vi.fn() }));
 vi.mock('./mirror/mirrorSyncScheduler.js', () => ({ flushMirrorSync: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('./devScreenshotServer.js', () => ({ stopDevScreenshotServer: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('./sync/lanWorkspaceSyncServer.js', () => ({
@@ -42,10 +55,20 @@ vi.mock('./sync/lanWorkspaceSyncServer.js', () => ({
 }));
 vi.mock('./runtimeMainSupport.js', () => ({
   bindEmbeddedLinkPanelContents: vi.fn(),
-  bindMainWindowNavigationGuard: vi.fn(),
   focusWindow: vi.fn(),
   installMainRuntimeDiagnostics: vi.fn()
 }));
+vi.mock('./sync/desktopCompanionSyncPreference.js', () => ({ isDesktopCompanionSyncEnabled: vi.fn(() => false) }));
+vi.mock('./database/databaseReadiness.js', () => ({
+  beginDatabaseStartup: vi.fn(),
+  markDatabaseReady: vi.fn(),
+  markDatabaseStartupFailed: vi.fn()
+}));
+vi.mock('./database/deviceIdentity.js', () => ({ loadOrCreateDesktopDeviceId: vi.fn(() => 'desktop-test') }));
+vi.mock('./database/migrate.js', () => ({ initializeDatabase: vi.fn() }));
+vi.mock('./ipc/boot.js', () => ({ appendBootEvent: vi.fn().mockResolvedValue(undefined) }));
+vi.mock('./ipc/menu.js', () => ({ installAppMenu: vi.fn() }));
+vi.mock('./ipc/paths.js', () => ({ resolveAppPaths: vi.fn(() => ({ app_log_dir: '/logs' })) }));
 
 it('flushes coalesced search invalidations before quitting', async () => {
   const { installMainLifecycle } = await import('./mainLifecycle.js');

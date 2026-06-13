@@ -14,6 +14,16 @@ import {
   writePackageJson
 } from './quality-gate-fast.test-support.mjs';
 
+function expectedVitestArgs(prefix, testFile) {
+  const maxWorkers = process.env.VITEST_MAX_WORKERS?.trim() || '2';
+  const fileParallelism = process.env.VITEST_FILE_PARALLELISM?.trim();
+  if (process.env.VITEST_MAX_WORKERS?.trim()) {
+    const fileParallelArg = fileParallelism === '1' || fileParallelism === 'true' ? '' : ' --no-file-parallelism';
+    return `${prefix}run --reporter=dot --reporter=json --outputFile.json=.tmp/vitest/related.json --maxWorkers=${maxWorkers}${fileParallelArg} --silent=passed-only --pool=threads ${testFile}`;
+  }
+  return `${prefix}run --reporter=dot --reporter=json --outputFile.json=.tmp/vitest/related.json --silent=passed-only --pool=threads --maxWorkers=${maxWorkers} --no-file-parallelism ${testFile}`;
+}
+
 describe('quality-gate-fast.sh routing', () => {
   it('uses the light level for local component changes and skips related tests', async () => {
     const tempRoot = await createQualityGateTempRoot();
@@ -120,9 +130,7 @@ describe('quality-gate-fast.sh routing', () => {
       expect(result.stdout).toContain('repository root boundary ok');
       expect(await readFile(lintMarker, 'utf8')).toContain('src/app/components/FancyCard.tsx');
       expect(await readFile(typecheckMarker, 'utf8')).toBe('ok');
-      expect(result.stdout).toContain(
-        'related test:run --reporter=dot --reporter=json --outputFile.json=.tmp/vitest/related.json --silent=passed-only --pool=threads --maxWorkers=2 --no-file-parallelism src/app/components/FancyCard.test.tsx'
-      );
+      expect(result.stdout).toContain(expectedVitestArgs('related test:', 'src/app/components/FancyCard.test.tsx'));
       expect(result.stdout).not.toContain('repo lint should stay unused');
       expect(result.stdout).not.toContain('repo test should stay unused');
       expect(result.stdout).not.toContain('repo build should stay unused');

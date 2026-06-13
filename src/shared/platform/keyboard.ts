@@ -171,3 +171,19 @@ export function onWindowKeydownCapture(handler: (event: KeyboardEvent) => void):
 export function onWindowEscape(handler: (event: KeyboardEvent) => boolean | void): KeydownUnlisten {
   return registerWindowKeydown(escapeEntries, handler);
 }
+
+export function onNativeEditingEscape(args: {
+  exitEditing: () => void;
+  isDialogOpen: () => boolean;
+  isEditing: () => boolean;
+}): KeydownUnlisten {
+  return getElectronAPI()?.onNativeKeyboardInput?.((payload) => {
+    if (payload.type !== 'keyDown' || payload.key !== 'Escape') {
+      return;
+    }
+    if (args.isDialogOpen() || !args.isEditing()) {
+      return;
+    }
+    args.exitEditing();
+  }) ?? (() => undefined);
+}

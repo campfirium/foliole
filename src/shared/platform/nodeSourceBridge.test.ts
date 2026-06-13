@@ -59,6 +59,63 @@ const NODE_SOURCE_DETAILS_PAYLOAD = {
   source_node_id: 'node-parent'
 };
 
+const EXPECTED_NODE_SOURCE_DETAILS = {
+  importRuns: [
+    {
+      contentFingerprint: 'content-success',
+      degradedReason: null,
+      duplicateSemantic: 'new',
+      failureReason: null,
+      importId: 'import-1',
+      importedAt: '2026-03-22T10:00:00.000Z',
+      nodeId: 'node-1',
+      nodeMutationPatch: null,
+      provider: 'desktop_text_file',
+      resultStatus: 'imported',
+      sourceFingerprint: 'source-fingerprint-1',
+      sourceKind: 'markdown',
+      sourceLocator: '/tmp/note.md',
+      sourceName: 'note.md'
+    }
+  ],
+  importSource: {
+    firstImportedAt: '2026-03-20T10:00:00.000Z',
+    lastContentFingerprint: 'content-success',
+    lastImportedAt: '2026-03-22T10:00:00.000Z',
+    latestNodeId: 'node-1',
+    provider: 'desktop_text_file',
+    sourceFingerprint: 'source-fingerprint-1',
+    sourceKind: 'markdown',
+    sourceLocator: '/tmp/note.md',
+    sourceName: 'note.md'
+  },
+  inheritedFromParent: true,
+  keepImportItem: {
+    firstSeenAt: '2026-03-20T10:00:00.000Z',
+    hasSourceUpdate: true,
+    highlightPath: '/tmp/readwise/Articles',
+    keepState: 'enabled',
+    lastImportedAt: '2026-03-22T10:00:00.000Z',
+    lastSeenAt: '2026-03-22T10:01:00.000Z',
+    lastStatus: 'imported',
+    localNodeState: 'active',
+    primaryPath: '/tmp/readwise/Full Document Contents/Articles',
+    ruleId: 'draft-import-source-1',
+    ruleLabel: 'Readwise articles',
+    resolvedSourcePath: '/tmp/readwise/Full Document Contents/Articles/note.md',
+    sourceMtimeMs: 123,
+    sourcePath: '/tmp/readwise/Full Document Contents/Articles/note.md',
+    sourceSizeBytes: 456,
+    sourceState: 'present',
+    sourceType: 'readwise'
+  },
+  pdfPageDimensions: [
+    { page: 1, pageHeight: 1131, pageWidth: 800 },
+    { page: 2, pageHeight: 1200, pageWidth: 820 }
+  ],
+  sourceNodeId: 'node-parent'
+};
+
 function createMockElectronApi(invoke: ElectronAPI['invoke']): ElectronAPI {
   return {
     invoke,
@@ -77,62 +134,7 @@ it('normalizes node source details from the runtime bridge', async () => {
   const invoke = vi.fn().mockResolvedValue(NODE_SOURCE_DETAILS_PAYLOAD);
   window.electronAPI = createMockElectronApi(invoke);
 
-  await expect(loadRuntimeNodeSourceDetails('node-1')).resolves.toEqual({
-    importRuns: [
-      {
-        contentFingerprint: 'content-success',
-        degradedReason: null,
-        duplicateSemantic: 'new',
-        failureReason: null,
-        importId: 'import-1',
-        importedAt: '2026-03-22T10:00:00.000Z',
-        nodeId: 'node-1',
-        nodeMutationPatch: null,
-        provider: 'desktop_text_file',
-        resultStatus: 'imported',
-        sourceFingerprint: 'source-fingerprint-1',
-        sourceKind: 'markdown',
-        sourceLocator: '/tmp/note.md',
-        sourceName: 'note.md'
-      }
-    ],
-    importSource: {
-      firstImportedAt: '2026-03-20T10:00:00.000Z',
-      lastContentFingerprint: 'content-success',
-      lastImportedAt: '2026-03-22T10:00:00.000Z',
-      latestNodeId: 'node-1',
-      provider: 'desktop_text_file',
-      sourceFingerprint: 'source-fingerprint-1',
-      sourceKind: 'markdown',
-      sourceLocator: '/tmp/note.md',
-      sourceName: 'note.md'
-    },
-    inheritedFromParent: true,
-    keepImportItem: {
-      firstSeenAt: '2026-03-20T10:00:00.000Z',
-      hasSourceUpdate: true,
-      highlightPath: '/tmp/readwise/Articles',
-      keepState: 'enabled',
-      lastImportedAt: '2026-03-22T10:00:00.000Z',
-      lastSeenAt: '2026-03-22T10:01:00.000Z',
-      lastStatus: 'imported',
-      localNodeState: 'active',
-      primaryPath: '/tmp/readwise/Full Document Contents/Articles',
-      ruleId: 'draft-import-source-1',
-      ruleLabel: 'Readwise articles',
-      resolvedSourcePath: '/tmp/readwise/Full Document Contents/Articles/note.md',
-      sourceMtimeMs: 123,
-      sourcePath: '/tmp/readwise/Full Document Contents/Articles/note.md',
-      sourceSizeBytes: 456,
-      sourceState: 'present',
-      sourceType: 'readwise'
-    },
-    pdfPageDimensions: [
-      { page: 1, pageHeight: 1131, pageWidth: 800 },
-      { page: 2, pageHeight: 1200, pageWidth: 820 }
-    ],
-    sourceNodeId: 'node-parent'
-  });
+  await expect(loadRuntimeNodeSourceDetails('node-1')).resolves.toEqual(EXPECTED_NODE_SOURCE_DETAILS);
   expect(invoke).toHaveBeenCalledWith('load_node_source_details', { node_id: 'node-1' });
 });
 

@@ -123,6 +123,7 @@ function createWorkspaceSync(overrides: Record<string, unknown> = {}) {
     ...((overrides.state as Record<string, unknown> | undefined) ?? {})
   };
   return {
+    isWorkspaceSyncStateReady: true,
     pullFromDesktop: vi.fn(async () => undefined),
     status: 'idle',
     ...overrides,
@@ -172,6 +173,7 @@ async function testPrimaryPdfReadingSurface() {
 async function testInlineAttachmentSync() {
   const pullFromDesktop = vi.fn(async () => undefined);
   renderSurface(createPdfReadableSurface(), {
+    isWorkspaceSyncStateReady: true,
     pullFromDesktop,
     status: 'idle',
     state: {
@@ -192,6 +194,7 @@ async function testInlineAttachmentSync() {
 
 async function testInlineAttachmentSyncUsesLatestTopic() {
   const workspaceSync = {
+    isWorkspaceSyncStateReady: true,
     pullFromDesktop: vi.fn(async () => undefined),
     status: 'idle',
     state: {

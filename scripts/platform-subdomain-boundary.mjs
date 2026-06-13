@@ -36,6 +36,7 @@ const EXPLICIT_FILE_SUBDOMAINS = new Map([
   ['src/shared/platform/readwiseOriginalFileWidgetEvents.ts', 'import-runtime'],
   ['src/shared/platform/releaseLinks.ts', 'runtime-core'],
   ['src/shared/platform/remoteImageSourceRecovery.ts', 'external-runtime'],
+  ['src/shared/platform/reviewEditorEscape.ts', 'runtime-core'],
   ['src/shared/platform/runtimeConfig.ts', 'runtime-core'],
   ['src/shared/platform/searchEnhancementSettings.ts', 'desktop-runtime-repository'],
   ['src/shared/platform/searchIndexRebuildStatus.ts', 'desktop-runtime-repository'],

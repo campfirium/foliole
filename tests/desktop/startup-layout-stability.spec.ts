@@ -65,7 +65,8 @@ async function sampleStartupLayout(page: Awaited<ReturnType<typeof electron.laun
   }, index);
 }
 
-test('startup layout variables stay stable from static shell through React takeover', async ({}, testInfo) => {
+test('startup layout variables stay stable from static shell through React takeover', async (fixtures, testInfo) => {
+  void fixtures;
   const appRoot = resolveDesktopAppRoot();
   const target = resolveDesktopLaunchTarget(appRoot);
   const isolation = createDesktopIsolationContext();

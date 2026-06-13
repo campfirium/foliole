@@ -18,7 +18,7 @@ import {
 } from './liveMarkdownState';
 import { shouldRefreshLineDecorations } from './liveMarkdownViewport';
 
-const MARKDOWN_DECORATION_CONTEXT_PATTERN = /[\\`*_{}\[\]()#+\-.!|<>]/;
+const MARKDOWN_DECORATION_CONTEXT_PATTERN = /[\\`*_{}[\]()#+\-.!|<>]/;
 
 function getCursorLineNumber(view: EditorView) {
   if (!view.hasFocus) return null;

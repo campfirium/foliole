@@ -12,6 +12,7 @@ vi.mock('./useFloatingBarVisibility', () => ({ useFloatingBarVisibility }));
 function mockWorkspaceSync() {
   useCompanionWorkspaceSync.mockReturnValue({
     error: null,
+    isWorkspaceSyncStateReady: true,
     pairingState: { is_paired: true },
     pullFromDesktop: vi.fn(),
     state: {

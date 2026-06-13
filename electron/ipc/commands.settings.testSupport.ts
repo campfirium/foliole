@@ -2,6 +2,7 @@ import { vi } from 'vitest';
 
 import './commands.settings.companionMocks.testSupport.js';
 import './commands.settings.reviewSchedulerMocks.testSupport.js';
+import { resetDatabaseReadinessForTests } from '../database/databaseReadiness.js';
 
 vi.mock('electron', () => ({
   BrowserWindow: {
@@ -146,6 +147,7 @@ vi.mock('./review.js', () => ({ reviewGrade: vi.fn(), reviewPreview: vi.fn() }))
 
 export function resetCommandsSettingsTestDoubles() {
   vi.clearAllMocks();
+  resetDatabaseReadinessForTests();
 }
 
 const commandsModulePromise = import('./commands.js');

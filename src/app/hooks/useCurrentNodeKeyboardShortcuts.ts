@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState, type MutableRefObject } from 'react';
 
 import { isProtectedRootNode } from '../../features/nodes/model/specialNodes';
-import { onWindowEscape, onWindowKeydown } from '../../shared/platform/keyboard';
+import { onNativeEditingEscape, onWindowEscape, onWindowKeydown } from '../../shared/platform/keyboard';
 
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
-import { onEditingEscapeNativeFallback } from './editingEscapeNativeFallback';
 import { blurActiveKeyboardTarget, isEditableKeyboardTarget } from './workspaceKeyboardTarget';
 
 export function useCurrentNodeKeyboardShortcuts(args: {
@@ -118,7 +117,7 @@ function useCurrentNodeEditingEscape(
       exitEditing();
     };
     const unlistenEscape = onWindowEscape(handleEscape);
-    const unlistenNativeFallback = onEditingEscapeNativeFallback({
+    const unlistenNativeFallback = onNativeEditingEscape({
       exitEditing,
       isDialogOpen: () => transientSurfaceOpen || Boolean(document.querySelector('[role="dialog"]')),
       isEditing: () => editingContextRef.current || isEditableKeyboardTarget(document.activeElement)

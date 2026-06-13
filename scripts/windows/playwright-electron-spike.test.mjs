@@ -1,4 +1,5 @@
 import path from 'node:path';
+import process from 'node:process';
 import { describe, expect, it } from 'vitest';
 
 import { APP_READY_FLAG } from './playwright-desktop-harness.mjs';
@@ -15,10 +16,10 @@ describe('playwright electron spike', () => {
     expect(appRoot).toBe('/tmp/custom-root');
   });
 
-  it('uses the fixed windows mirror root by default', () => {
+  it('uses the current checkout by default outside Windows', () => {
     const appRoot = resolveDefaultAppRoot({});
 
-    expect(appRoot).toBe('/mnt/d/C/foliole');
+    expect(appRoot).toBe(process.platform === 'win32' ? 'D:\\C\\foliole' : path.resolve('.'));
   });
 
   it('resolves current build output paths in args launch mode', () => {
@@ -124,7 +125,9 @@ describe('playwright electron spike', () => {
           FOLIOLE_USER_DATA_PATH: path.join('/tmp/foliole-playwright-state', 'user-data'),
           FOLIOLE_WORKDIR: '/tmp/foliole-playwright-state'
         },
-        executablePath: '/workspace/foliole/node_modules/electron/dist/electron.exe',
+        executablePath: process.platform === 'win32'
+          ? '/workspace/foliole/node_modules/electron/dist/electron.exe'
+          : '/workspace/foliole/node_modules/electron/dist/electron',
         timeout: 12_345
       }
     ]);

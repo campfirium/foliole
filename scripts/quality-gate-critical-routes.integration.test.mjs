@@ -11,6 +11,16 @@ import { describe, expect, it } from 'vitest';
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const QUALITY_GATE_FAST_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality-gate-fast.sh');
 
+function expectedVitestArgs(prefix, testFile) {
+  const maxWorkers = process.env.VITEST_MAX_WORKERS?.trim() || '2';
+  const fileParallelism = process.env.VITEST_FILE_PARALLELISM?.trim();
+  if (process.env.VITEST_MAX_WORKERS?.trim()) {
+    const fileParallelArg = fileParallelism === '1' || fileParallelism === 'true' ? '' : ' --no-file-parallelism';
+    return `${prefix}run --reporter=dot --reporter=json --outputFile.json=.tmp/vitest/related.json --maxWorkers=${maxWorkers}${fileParallelArg} --silent=passed-only --pool=threads ${testFile}`;
+  }
+  return `${prefix}run --reporter=dot --reporter=json --outputFile.json=.tmp/vitest/related.json --silent=passed-only --pool=threads --maxWorkers=${maxWorkers} --no-file-parallelism ${testFile}`;
+}
+
 function runQualityGate(cwd, env = {}, args = []) {
   return new Promise((resolve) => {
     const child = spawn('bash', [QUALITY_GATE_FAST_SCRIPT, ...args], {
@@ -78,7 +88,7 @@ describe('quality gate critical routes integration', () => {
 
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('[quality-gate-fast] selected level: mid');
-      expect(result.stdout).toContain('critical test:run --reporter=dot --reporter=json --outputFile.json=.tmp/vitest/related.json --silent=passed-only --pool=threads --maxWorkers=2 --no-file-parallelism src/app/components/DocumentPanelSection.runtimeBacklinks.test.tsx');
+      expect(result.stdout).toContain(expectedVitestArgs('critical test:', 'src/app/components/DocumentPanelSection.runtimeBacklinks.test.tsx'));
       expect(await readFile(lintMarker, 'utf8')).toContain('src/app/components/useNodeBacklinks.ts');
     } finally {
       await rm(root, { recursive: true, force: true });

@@ -8,6 +8,7 @@ const SPECIALIZED_SURFACE_PATTERN = /\b(?:bg-bg-(?:panel|elevated)(?:\/\d+)?|rou
 const ALLOWED_SPECIALIZED_SURFACE_FILES = [
   'src/app/components/CompanionPairingRequestsDialog.tsx',
   'src/app/components/EditorInputDiagnosticsPanel.tsx',
+  'src/app/components/PdfPageCanvas.tsx',
   'src/app/components/PdfDocumentPageRender.tsx',
   'src/app/components/ReadwiseReaderSetupParts.tsx',
   'src/app/components/documentPanelPdfView.tsx',

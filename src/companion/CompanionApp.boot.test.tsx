@@ -25,6 +25,7 @@ function mockCompanionWorkspaceSync() {
       device_id: 'android-test-device',
       runtime_kind: 'android-capacitor'
     },
+    isWorkspaceSyncStateReady: true,
     checkDesktop: vi.fn(),
     clearError: vi.fn(),
     completePairing: vi.fn(),
@@ -67,7 +68,6 @@ describe('CompanionApp bootstrap states', () => {
   });
 
   beforeEach(() => {
-    vi.resetModules();
     useCompanionBootstrap.mockReset();
     useCompanionWorkspaceSync.mockReset();
     mockCompanionWorkspaceSync();

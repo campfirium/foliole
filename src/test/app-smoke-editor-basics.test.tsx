@@ -7,6 +7,8 @@ import { App } from '../app/App';
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
+import { mockEditorState } from './app-smoke.shared';
+
 function createTopicFromHeaderMenu() {
   fireEvent.click(screen.getByRole('button', { name: 'Create topic' }));
 }
@@ -37,8 +39,12 @@ function keepOnlyInboxWithoutActiveNode() {
   useWorkspaceStore.setState({
     activeNodeId: null,
     nodeOrder: [INBOX_NODE_ID],
-    nodesById: { [INBOX_NODE_ID]: inboxNode }
+    nodesById: { [INBOX_NODE_ID]: inboxNode },
+    rendererBoundaryKeepNodeIds: []
   });
+  mockEditorState.content = '';
+  mockEditorState.selectionFrom = 0;
+  mockEditorState.selectionTo = 0;
 }
 
 function clearActiveNodeSelection() {
@@ -47,14 +53,16 @@ function clearActiveNodeSelection() {
   });
 }
 
-it('shows the empty workspace state when no note exists yet', () => {
+it('opens the guided sample when no note exists yet', async () => {
   keepOnlyInboxWithoutActiveNode();
 
   render(<App />);
-  expect(screen.getByText('Nothing here yet')).toBeInTheDocument();
-  expect(screen.getByText('Create your first document or folder from the list toolbar to start building the workspace.')).toBeInTheDocument();
-  expect(screen.getByText('No document selected')).toBeInTheDocument();
-  expect(screen.queryByTestId('editor-value')).not.toBeInTheDocument();
+
+  await waitFor(() => {
+    const workspace = useWorkspaceStore.getState();
+    expect(workspace.nodeOrder.some((nodeId) => workspace.nodesById[nodeId]?.title === 'Welcome to Foliole')).toBe(true);
+  });
+  expect(screen.queryByText('Nothing here yet')).not.toBeInTheDocument();
 });
 
 it('shows the document empty state when no note is selected', () => {
