@@ -149,6 +149,10 @@ describe('electron-builder release packaging config', () => {
     const config = await readBuilderConfig();
 
     expect(config.files).toContain('build/icon.png');
+    expect(config.extraResources).toContainEqual({
+      from: 'build/icon.ico',
+      to: 'build/icon.ico'
+    });
     expect(config.win.icon).toBe('build/icon.ico');
     expect(config.linux.icon).toBe('build/icon.png');
   });

@@ -10,6 +10,12 @@
   "asarUnpack": [
     "**/node_modules/better-sqlite3/build/Release/*.node"
   ],
+  "extraResources": [
+    {
+      "from": "build/icon.ico",
+      "to": "build/icon.ico"
+    }
+  ],
   "electronLanguages": ["en-US", "zh-CN"],
   "npmRebuild": true,
   "nativeRebuilder": "sequential",
