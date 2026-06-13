@@ -31,6 +31,7 @@ it('passes native GPU disable switches before the Electron app path', async () =
   expect(runner).toContain('const VITE_PREWARM_STARTUP_BUDGET_MS = 8000;');
   expect(runner).toContain('FOLIOLE_VITE_PREWARM_STARTUP_BUDGET_MS');
   expect(runner).toContain('strict Vite port already has a ready server');
+  expect(runner).toContain('FOLIOLE_ELECTRON_DEV_FORCE_OWN_VITE');
   expect(runner).toContain('candidateVitePorts(preferredPort)');
   expect(vitePort).toContain('FOLIOLE_VITE_PORT_STRICT');
   expect(vitePort).toContain('return [preferredPort]');

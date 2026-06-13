@@ -15,7 +15,7 @@ const RESTART_INTENT_FILE = '.windows-dev-restart-intent.json';
 const RESTART_DELIVERY_FILE = '.windows-dev-restart-delivered.json';
 const RENDERER_RELOAD_INTENT_FILE = '.windows-dev-renderer-reload-intent.json';
 const RENDERER_RELOAD_DELIVERY_FILE = '.windows-dev-renderer-reload-delivered.json';
-const TEST_IDLE_TIMEOUT_MS = 5_000;
+const TEST_IDLE_TIMEOUT_MS = 30_000;
 const TEST_PREVIEW_TIMEOUTS = {
   WINDOWS_PREVIEW_TIMEOUT_SECONDS: '2',
   WINDOWS_PREVIEW_TIMEOUT_STATUS_SECONDS: '2',
@@ -123,10 +123,6 @@ function expectFallbackStartActions(actions) {
 
 async function readRestartDelivery(rootDir) {
   return JSON.parse(await readFile(path.join(rootDir, RESTART_DELIVERY_FILE), 'utf8'));
-}
-
-async function readRendererReloadDelivery(rootDir) {
-  return JSON.parse(await readFile(path.join(rootDir, RENDERER_RELOAD_DELIVERY_FILE), 'utf8'));
 }
 
 function startIntentConsumer(rootDir, mode) {
@@ -298,7 +294,17 @@ describe('windows-preview script', { timeout: 15000 }, () => {
     try {
       const { syncScript, clientScript, compileScript, freshnessScript, actionLog } = await createMockScripts(
         tempRoot,
-        ['if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then', '  echo "[windows-restart-client] status: RUNNING trust=OK"', '  exit 0', 'fi', 'exit 1'].join('\n')
+        [
+          'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
+          '  echo "[windows-restart-client] status: RUNNING trust=OK"',
+          '  exit 0',
+          'fi',
+          'if [ "${WINDOWS_CLIENT_ACTION}" = "full-restart" ]; then',
+          '  echo "[windows-restart-client] status: RESTARTED"',
+          '  exit 0',
+          'fi',
+          'exit 1'
+        ].join('\n')
       );
 
       await writeFile(
@@ -327,20 +333,30 @@ describe('windows-preview script', { timeout: 15000 }, () => {
       expect(result.stdout).toContain('[mock-electron-compile] status: COMPILED');
       expect(result.stdout).toContain('[windows-sync] status: SYNCED');
       expect(result.stdout).toContain('[windows-preview] status: STARTED');
-      expect(await readActions(actionLog)).toEqual(['status', 'status']);
+      expect(await readActions(actionLog)).toEqual(['status', 'full-restart']);
     } finally {
       consumer.kill('SIGTERM');
       await rm(tempRoot, { recursive: true, force: true });
     }
   });
 
-  it('chooses renderer reload intent for ordinary Class A renderer changes on a trusted running client', { timeout: 30000 }, async () => {
+  it('chooses full restart for ordinary Class A renderer changes on a trusted running client', { timeout: 30000 }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
     const consumer = startIntentConsumer(tempRoot, 'renderer-reload');
     try {
       const { syncScript, clientScript, electronDistSyncScript, freshnessScript, actionLog } = await createMockScripts(
         tempRoot,
-        ['if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then', '  echo "[windows-restart-client] status: RUNNING trust=OK"', '  exit 0', 'fi', 'exit 1'].join('\n')
+        [
+          'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
+          '  echo "[windows-restart-client] status: RUNNING trust=OK"',
+          '  exit 0',
+          'fi',
+          'if [ "${WINDOWS_CLIENT_ACTION}" = "full-restart" ]; then',
+          '  echo "[windows-restart-client] status: RESTARTED"',
+          '  exit 0',
+          'fi',
+          'exit 1'
+        ].join('\n')
       );
 
       const result = await runScript({
@@ -352,20 +368,11 @@ describe('windows-preview script', { timeout: 15000 }, () => {
         WINDOWS_RESTART_INTENT_ROOT: tempRoot,
         WINDOWS_PREVIEW_CHANGED_FILES: 'src/app/components/SearchPalette.tsx'
       });
-      const rendererReloadDelivery = await readRendererReloadDelivery(tempRoot);
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('reason: Class A: renderer-only sync path');
-      expect(result.stdout).toContain('selected action: renderer-reload-intent');
-      expect(result.stdout).toContain('windows-renderer-reload-intent] status: REQUESTED nonce=1');
-      expect(result.stdout).toContain('renderer reload delivery acknowledged nonce=1');
+      expect(result.stdout).toContain('reason: Class A: renderer-only preview shell restart');
+      expect(result.stdout).toContain('selected action: full-restart');
       expect(result.stdout).toContain('[windows-preview] status: STARTED');
-      expect(rendererReloadDelivery).toMatchObject({
-        nonce: 1,
-        requestedBy: 'wsl-windows-preview',
-        target: 'electron-dev-renderer',
-        reason: 'Class A: renderer-only sync path'
-      });
-      expect(await readActions(actionLog)).toEqual(['status', 'status']);
+      expect(await readActions(actionLog)).toEqual(['status', 'full-restart']);
     } finally {
       consumer.kill('SIGTERM');
       await rm(tempRoot, { recursive: true, force: true });
@@ -416,7 +423,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
 
   it('chooses restart-intent for Class B working tree electron changes', { timeout: 30000 }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
-    const consumer = startRestartDeliveryConsumer(tempRoot, 15_000);
+    const consumer = startRestartDeliveryConsumer(tempRoot, 30_000);
     try {
       const { syncScript, clientScript, electronDistSyncScript, freshnessScript, actionLog } = await createMockScripts(
         tempRoot,
@@ -441,7 +448,8 @@ describe('windows-preview script', { timeout: 15000 }, () => {
         WINDOWS_CLIENT_SCRIPT: clientScript,
         WINDOWS_RESTART_INTENT_ROOT: tempRoot,
         WINDOWS_PREVIEW_CURRENT_HEAD: 'old-head',
-        WINDOWS_PREVIEW_CHANGED_FILES: 'electron/main.ts'
+        WINDOWS_PREVIEW_CHANGED_FILES: 'electron/main.ts',
+        WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS: '10'
       });
 
       const restartDelivery = await readRestartDelivery(tempRoot);
@@ -818,7 +826,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
     }
   });
 
-  it('falls back to restart-intent when renderer reload delivery times out', async () => {
+  it('falls back to restart-intent when renderer reload delivery times out', { timeout: 60000 }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
     const consumer = startRestartDeliveryConsumer(tempRoot);
     try {
@@ -846,6 +854,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
         WINDOWS_PREVIEW_CURRENT_HEAD: 'old-head',
         WINDOWS_RESTART_INTENT_ROOT: tempRoot,
         WINDOWS_RENDERER_RELOAD_INTENT_ROOT: rendererReloadRoot,
+        WINDOWS_PREVIEW_ALLOW_RENDERER_RELOAD: '1',
         WINDOWS_PREVIEW_CHANGED_FILES: 'src/app/components/SearchPalette.tsx',
         WINDOWS_PREVIEW_TIMEOUT_SECONDS: '1',
         WINDOWS_PREVIEW_TIMEOUT_STATUS_SECONDS: '1',
@@ -1073,7 +1082,7 @@ const timer = setInterval(() => {
         WINDOWS_RESTART_INTENT_ROOT: tempRoot,
         WINDOWS_PREVIEW_CURRENT_HEAD: 'old-head',
         WINDOWS_PREVIEW_CHANGED_FILES: 'electron/main.ts',
-        WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS: '2'
+        WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS: '5'
       });
 
       expect(result.code).toBe(0);

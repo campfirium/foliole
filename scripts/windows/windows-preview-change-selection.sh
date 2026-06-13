@@ -120,6 +120,16 @@ has_runtime_code_changes() {
   has_matching_file "$1" is_runtime_file
 }
 
+select_renderer_preview_action() {
+  if [ "${WINDOWS_PREVIEW_ALLOW_RENDERER_RELOAD:-}" = "1" ]; then
+    SELECTED_ACTION="renderer-reload-intent"
+    SELECTED_REASON="$1"
+  else
+    SELECTED_ACTION="full-restart"
+    SELECTED_REASON="$2"
+  fi
+}
+
 is_renderer_source_file() {
   local file="$1"
   if ! echo "${file}" | grep -qE '^(src/app/|src/features/|src/shared/|src/store/)'; then
@@ -191,13 +201,11 @@ select_update_action() {
       return 0
     fi
     if has_matching_file "${changed_files}" is_renderer_source_file; then
-      SELECTED_ACTION="renderer-reload-intent"
-      SELECTED_REASON="Class A: renderer-only sync path"
+      select_renderer_preview_action "Class A: renderer-only sync path" "Class A: renderer-only preview shell restart"
       return 0
     fi
     if [ "${WINDOWS_PREVIEW_REQUIRE_REFRESH:-}" = "1" ]; then
-      SELECTED_ACTION="renderer-reload-intent"
-      SELECTED_REASON="Class A: explicit preview refresh requested"
+      select_renderer_preview_action "Class A: explicit preview refresh requested" "Class A: explicit preview shell restart requested"
       return 0
     fi
     SELECTED_ACTION="sync-only"

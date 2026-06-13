@@ -131,9 +131,9 @@
   --companion-accent-soft: rgb(var(--app-accent-color-rgb) / 0.14);
   --companion-text-secondary: rgb(var(--color-muted-foreground));
   --companion-text-tertiary: rgb(var(--color-muted-foreground) / 0.7);
-  --pdf-reading-inverted-surface-color: color-mix(in srgb, rgb(var(--color-background)) 58%, rgb(var(--color-bg-panel)) 42%);
-  --pdf-reading-inverted-page-color: color-mix(in srgb, rgb(var(--color-background)) 68%, rgb(var(--color-canvas)) 32%);
-  --pdf-reading-inverted-page-filter-source-color: color-mix(in srgb, white 92%, rgb(var(--color-background)) 8%);
+  --pdf-reading-inverted-surface-color: color-mix(in srgb, rgb(20 21 20) 58%, rgb(37 40 36) 42%);
+  --pdf-reading-inverted-page-color: color-mix(in srgb, rgb(20 21 20) 68%, rgb(24 25 24) 32%);
+  --pdf-reading-inverted-page-filter-source-color: color-mix(in srgb, white 92%, rgb(20 21 20) 8%);
   --pdf-reading-warm-surface-color: var(--workspace-region-main-document-bg);
   --font-family-interface: system-ui, -apple-system, 'Segoe UI Variable', 'Segoe UI', sans-serif;
   --font-family-text: system-ui, -apple-system, 'Segoe UI Variable', 'Segoe UI', sans-serif;

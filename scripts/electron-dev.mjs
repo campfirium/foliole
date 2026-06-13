@@ -138,10 +138,9 @@ async function startViteWithPortFallback() {
     if (await isViteServerReady(viteUrl)) {
       if (strictPort) {
         throw new Error(`strict Vite port already has a ready server: ${viteUrl}`);
-      }
+      } else if (isEnabledEnv('FOLIOLE_ELECTRON_DEV_FORCE_OWN_VITE')) continue;
       return { viteUrl, viteProc: null };
     }
-
     if (isEnabledEnv('FOLIOLE_ELECTRON_DEV_SKIP_APPEARANCE_GENERATION')) {
       console.info('[electron-dev] appearance colors generation skipped by FOLIOLE_ELECTRON_DEV_SKIP_APPEARANCE_GENERATION');
     } else {

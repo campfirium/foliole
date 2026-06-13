@@ -40,6 +40,16 @@ function expectInvertedPageBackgrounds(styles: string) {
   );
 }
 
+function expectStableInvertedBackgroundTokens(styles: string) {
+  expect(styles).toContain(
+    '--pdf-reading-inverted-surface-color: color-mix(in srgb, rgb(20 21 20) 58%, rgb(37 40 36) 42%);'
+  );
+  expect(styles).toContain(
+    '--pdf-reading-inverted-page-color: color-mix(in srgb, rgb(20 21 20) 68%, rgb(24 25 24) 32%);'
+  );
+  expect(styles).not.toContain('--pdf-reading-inverted-surface-color: color-mix(in srgb, rgb(var(--color-background))');
+}
+
 describe('PDF warm reading CSS', () => {
   it('keeps warm mode as a dim warm canvas filter without textLayer background coverage', () => {
     const styles = readStyles();
@@ -67,6 +77,7 @@ describe('PDF reading mode backgrounds', () => {
     expect(styles).toContain('--app-scrollbar-track-bg: var(--pdf-reading-inverted-surface-color);');
     expectModeSurfaceBackground(styles, 'warm', 'var(--pdf-reading-warm-surface-color)');
     expectModePageBackground(styles, 'original', 'rgb(var(--color-canvas))');
+    expectStableInvertedBackgroundTokens(styles);
     expectInvertedPageBackgrounds(styles);
     expectModePageBackground(styles, 'warm', 'var(--pdf-reading-warm-surface-color)');
   });

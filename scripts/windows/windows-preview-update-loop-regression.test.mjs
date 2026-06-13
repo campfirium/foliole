@@ -13,7 +13,6 @@ import { startIntentConsumer } from './windows-preview-regression-test-support.m
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const PREVIEW_SCRIPT = path.join(REPO_ROOT, 'scripts', 'windows', 'windows-preview.sh');
 const TEMP_ROOT_BASE = path.join(REPO_ROOT, '.tmp-tests');
-const RENDERER_RELOAD_DELIVERY_FILE = '.windows-dev-renderer-reload-delivered.json';
 const TEST_PREVIEW_TIMEOUTS = {
   WINDOWS_PREVIEW_TIMEOUT_SECONDS: '2',
   WINDOWS_PREVIEW_TIMEOUT_STATUS_SECONDS: '2',
@@ -88,12 +87,8 @@ async function readActions(actionLog) {
     .filter((entry) => entry.length > 0);
 }
 
-async function readRendererReloadDelivery(rootDir) {
-  return JSON.parse(await readFile(path.join(rootDir, RENDERER_RELOAD_DELIVERY_FILE), 'utf8'));
-}
-
 describe('windows-preview update loop regressions', { timeout: 15000 }, () => {
-  it('requests renderer reload intent for Class A after sync', async () => {
+  it('requests full restart for Class A after sync', async () => {
     await mkdir(TEMP_ROOT_BASE, { recursive: true });
     const tempRoot = await mkdtemp(path.join(TEMP_ROOT_BASE, 'windows-preview-regression-'));
     const consumer = startIntentConsumer(tempRoot, 'renderer-reload', REPO_ROOT);
@@ -103,6 +98,10 @@ describe('windows-preview update loop regressions', { timeout: 15000 }, () => {
         [
           'if [ "${WINDOWS_CLIENT_ACTION}" = "status" ]; then',
           '  echo "[windows-restart-client] status: RUNNING trust=OK head=current-head"',
+          '  exit 0',
+          'fi',
+          'if [ "${WINDOWS_CLIENT_ACTION}" = "full-restart" ]; then',
+          '  echo "[windows-restart-client] status: RESTARTED"',
           '  exit 0',
           'fi',
           'exit 1'
@@ -118,19 +117,12 @@ describe('windows-preview update loop regressions', { timeout: 15000 }, () => {
         WINDOWS_PREVIEW_CURRENT_HEAD: 'current-head',
         WINDOWS_PREVIEW_CHANGED_FILES: 'src/features/editor/model/liveMarkdownViewportPlans.ts'
       });
-      const rendererReloadDelivery = await readRendererReloadDelivery(tempRoot);
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('selected action: renderer-reload-intent');
-      expect(result.stdout).toContain('windows-renderer-reload-intent] status: REQUESTED nonce=1');
+      expect(result.stdout).toContain('reason: Class A: renderer-only preview shell restart');
+      expect(result.stdout).toContain('selected action: full-restart');
       expect(result.stdout).toContain('[windows-preview] status: STARTED');
-      expect(rendererReloadDelivery).toMatchObject({
-        nonce: 1,
-        head: 'current-head',
-        reason: 'Class A: renderer-only sync path',
-        target: 'electron-dev-renderer'
-      });
-      expect(await readActions(actionLog)).toEqual(['status', 'status']);
+      expect(await readActions(actionLog)).toEqual(['status', 'full-restart']);
     } finally {
       consumer.kill('SIGTERM');
       await rm(tempRoot, { recursive: true, force: true });

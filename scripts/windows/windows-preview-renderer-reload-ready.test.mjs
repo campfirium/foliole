@@ -116,6 +116,7 @@ it('falls back to full restart when renderer reload never reaches app ready', as
       ACTION_LOG: actionLog,
       WINDOWS_CLIENT_SCRIPT: clientScript,
       WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT: freshnessScript,
+      WINDOWS_PREVIEW_ALLOW_RENDERER_RELOAD: '1',
       WINDOWS_PREVIEW_CHANGED_FILES: 'src/features/editor/model/liveMarkdownViewportPlans.ts',
       WINDOWS_PREVIEW_CURRENT_HEAD: 'current-head',
       WINDOWS_RENDERER_RELOAD_INTENT_ROOT: tempRoot,
