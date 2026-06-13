@@ -179,6 +179,27 @@ it('keeps light mode PDFs original while preserving the dark mode PDF preference
   expect(document.documentElement.dataset.pdfReadingMode).toBe('warm');
 });
 
+it('applies the resolved color mode immediately when returning to light mode', () => {
+  render(
+    <AppearanceSettingsProvider>
+      <AppearanceHarness />
+    </AppearanceSettingsProvider>
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: 'Warm PDF' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Toggle light/dark' }));
+
+  expect(document.documentElement.dataset.baseColor).toBe('dark');
+  expect(document.documentElement.dataset.resolvedBaseColor).toBe('dark');
+  expect(document.documentElement.dataset.pdfReadingMode).toBe('warm');
+
+  fireEvent.click(screen.getByRole('button', { name: 'Toggle light/dark' }));
+
+  expect(document.documentElement.dataset.baseColor).toBe('light');
+  expect(document.documentElement.dataset.resolvedBaseColor).toBe('light');
+  expect(document.documentElement.dataset.pdfReadingMode).toBe('original');
+});
+
 it('keeps the selected reading line height when the color mode changes', () => {
   render(
     <AppearanceSettingsProvider>

@@ -96,6 +96,7 @@ export type AppearanceState = {
   setSelectionColorPresetState: Setter<SelectionColorPreset>;
   setSelectionToolbarEnabledState: Setter<boolean>;
   setSelectionToolbarOpacityPercentState: Setter<number>;
+  setResolvedBaseColorModeState: Setter<ResolvedBaseColorMode>;
   setUiFontPresetState: Setter<InterfaceFontPreset>;
   setWorkspaceDividerOpacityPercentState: Setter<number>;
   setWorkspaceSurfaceAssignmentsState: Setter<AppearanceSettingsContextValue['workspaceSurfaceAssignments']>;

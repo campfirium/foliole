@@ -26,6 +26,7 @@ import {
   setUiFontPreset
 } from '../model/appearanceSettings';
 import type { BaseColorMode } from '../model/baseColorMode';
+import { resolveBaseColorMode } from '../model/baseColorMode';
 
 import type { AppearanceState } from './appearanceSettingsActions';
 import type { AppearanceSettingsContextValue } from './appearanceSettingsContext';
@@ -58,11 +59,17 @@ export type GeneralAppearanceActions = Pick<
 >;
 
 export function createGeneralAppearanceActions(state: AppearanceState): GeneralAppearanceActions {
+  const applyBaseColorMode = (value: BaseColorMode) => {
+    setBaseColorMode(value);
+    state.setBaseColorModeState(value);
+    state.setResolvedBaseColorModeState(resolveBaseColorMode(value));
+  };
+
   return {
     resetInterfaceFontSize: () => (setInterfaceFontSize(INTERFACE_FONT_SIZE_DEFAULT), state.setInterfaceFontSizeState(INTERFACE_FONT_SIZE_DEFAULT)),
     resetFrontmatterMetaFields: () => state.setFrontmatterMetaFieldsState(resetFrontmatterMetaFields()),
     setAutoLocalizeRemoteImages: (value: boolean) => (setAutoLocalizeRemoteImages(value), state.setAutoLocalizeRemoteImagesState(value)),
-    setBaseColorMode: (value: BaseColorMode) => (setBaseColorMode(value), state.setBaseColorModeState(value)),
+    setBaseColorMode: applyBaseColorMode,
     setCustomInterfaceFont: (value: string) => (setCustomInterfaceFont(value), state.setCustomInterfaceFontState(value)),
     setCustomMonospaceFont: (value: string) => (setCustomMonospaceFont(value), state.setCustomMonospaceFontState(value)),
     setCustomUiFont: (value: string) => (setCustomUiFont(value), state.setCustomUiFontState(value)),
@@ -82,8 +89,7 @@ export function createGeneralAppearanceActions(state: AppearanceState): GeneralA
     setUiFontPreset: (value: InterfaceFontPreset) => (setUiFontPreset(value), state.setUiFontPresetState(value)),
     toggleBaseColorMode: () => {
       const next = state.resolvedBaseColorModeState === 'dark' ? 'light' : 'dark';
-      setBaseColorMode(next);
-      state.setBaseColorModeState(next);
+      applyBaseColorMode(next);
     },
     toggleEditorDisplayMode: () => {
       const next = state.editorDisplayModeState === 'preview' ? 'source' : 'preview';
