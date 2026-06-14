@@ -12,6 +12,7 @@ import {
 } from './native-sqlite-test-policy.mjs';
 
 const SQLITE_PATTERN = /\b(?:import\b[\s\S]*?\bfrom\s+|require\s*\()\s*['"]better-sqlite3['"]/u;
+const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
 
 async function testFiles() {
   const { execFile } = await import('node:child_process');
@@ -37,7 +38,7 @@ describe('native sqlite test policy', () => {
 
     const manifest = JSON.parse(await readFile(path.resolve(process.cwd(), 'package.json'), 'utf8'));
     expect(manifest.scripts['test:sqlite:electron']).toBe('node scripts/electron-sqlite-runner.mjs scripts/test-files.mjs');
-  });
+  }, RELEASE_GATE_TEST_TIMEOUT_MS);
 
   it('keeps Readwise sqlite visibility coverage on the Electron ABI test entry', () => {
     expect(controlledElectronSqliteTests).toContain('electron/database/externalDocumentImportVisibility.test.ts');

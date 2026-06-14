@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { usePdfSearchInputState } from './pdfSearchInputState';
 
 describe('usePdfSearchInputState', () => {
-  it('replaces a composing draft when an external search query arrives', () => {
+  it('keeps a composing draft when an external search query arrives', () => {
     const onSearchQueryChange = vi.fn();
     const onToolbarInteraction = vi.fn();
     const { result, rerender } = renderHook(
@@ -33,6 +33,16 @@ describe('usePdfSearchInputState', () => {
 
     rerender({ searchQuery: '测试' });
 
+    expect(result.current.draftQuery).toBe('ceshi');
+    expect(onSearchQueryChange).not.toHaveBeenCalled();
+
+    act(() => {
+      result.current.handleSearchCompositionEnd({
+        currentTarget: { value: '测试' }
+      } as never);
+    });
+
     expect(result.current.draftQuery).toBe('测试');
+    expect(onSearchQueryChange).toHaveBeenCalledWith('测试');
   });
 });

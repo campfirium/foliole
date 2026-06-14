@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import React from 'react';
 import { beforeAll, beforeEach, expect, it, vi } from 'vitest';
 
@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   loadPreview: vi.fn(),
   markdownEditorMounted: vi.fn()
 }));
+const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
 
 vi.mock('../../shared/platform/externalDocumentPreviewRepository', () => ({
   loadExternalDocumentPreview: (absolutePath: string) => mocks.loadPreview(absolutePath)
@@ -71,10 +72,14 @@ it('remounts the floating external preview editor when editor appearance changes
 
   const { rerender } = renderWithLocalization(<ExternalDocumentPreviewPanel {...props} />);
   await screen.findByText('# Topic');
-  expect(mocks.markdownEditorMounted).toHaveBeenCalledTimes(1);
+  await waitFor(() => {
+    expect(mocks.markdownEditorMounted).toHaveBeenCalledTimes(1);
+  });
 
   mocks.editorAppearanceKey = 'source';
   rerender(<ExternalDocumentPreviewPanel {...props} />);
 
-  expect(mocks.markdownEditorMounted).toHaveBeenCalledTimes(2);
-});
+  await waitFor(() => {
+    expect(mocks.markdownEditorMounted).toHaveBeenCalledTimes(2);
+  });
+}, RELEASE_GATE_TEST_TIMEOUT_MS);

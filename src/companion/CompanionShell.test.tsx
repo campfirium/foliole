@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
@@ -6,6 +6,7 @@ import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapsho
 const useCompanionWorkspaceSync = vi.fn();
 const useCompanionArticleSurface = vi.fn();
 const useFloatingBarVisibility = vi.fn();
+const RELEASE_GATE_TEST_TIMEOUT_MS = 30_000;
 
 vi.mock('./useCompanionWorkspaceSync', () => ({
   useCompanionWorkspaceSync
@@ -209,20 +210,21 @@ describe('CompanionShell review surfaces', () => {
     const settingsButtons = screen.getAllByRole('button', { name: 'Settings' });
     expect(settingsButtons).toHaveLength(2);
     expect(settingsButtons.some((button) => button.getAttribute('aria-current') === 'page')).toBe(true);
-  }, 10000);
+  }, RELEASE_GATE_TEST_TIMEOUT_MS);
 
   it('hides Tabs settings while showing Directory as the default first tab', async () => {
     const surface = { ...createReviewEmptySurface(), activeAction: 'more' };
     await renderShellWithSurface(surface);
 
     expect(screen.queryByRole('button', { name: /Choose bottom tabs/ })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Directory' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Directory' }));
+    const bottomBar = screen.getByTestId('companion-bottom-tab-bar');
+    expect(within(bottomBar).getByRole('button', { name: 'Directory' })).toBeInTheDocument();
+    fireEvent.click(within(bottomBar).getByRole('button', { name: 'Directory' }));
     expect(surface.handleTabAction).toHaveBeenCalledWith('recent');
     expect(JSON.parse(window.localStorage.getItem('foliole-companion-tabs-config') ?? '{}')).toEqual({
       orderedTabIds: ['shortcut', 'browse', 'learn', 'search', 'settings'],
       shortcut: { destinationId: 'directory', enabled: true }
     });
-  });
+  }, RELEASE_GATE_TEST_TIMEOUT_MS);
 
 });

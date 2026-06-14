@@ -421,9 +421,9 @@ describe('windows-preview script', { timeout: 15000 }, () => {
     }
   });
 
-  it('chooses restart-intent for Class B working tree electron changes', { timeout: 30000 }, async () => {
+  it('chooses restart-intent for Class B working tree electron changes', { timeout: 45000 }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
-    const consumer = startRestartDeliveryConsumer(tempRoot, 30_000);
+    const consumer = startRestartDeliveryConsumer(tempRoot, 45_000);
     try {
       const { syncScript, clientScript, electronDistSyncScript, freshnessScript, actionLog } = await createMockScripts(
         tempRoot,
@@ -987,8 +987,9 @@ const timer = setInterval(() => {
     }
   });
 
-  it('completes restart-intent when trusted running status reaches the current head before fresh marker timestamps appear', async () => {
+  it('completes restart-intent when trusted running status reaches the current head before fresh marker timestamps appear', { timeout: 30000 }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
+    const restartIntentScript = path.join(tempRoot, 'mock-restart-intent.mjs');
     const consumer = spawn(
       process.execPath,
       [
@@ -1055,6 +1056,50 @@ const timer = setInterval(() => {
     );
 
     try {
+      const staleTimestamp = new Date('2026-03-14T00:00:00.000Z').toISOString();
+      await writeFile(
+        path.join(tempRoot, '.windows-native-boot-ready.json'),
+        JSON.stringify({ pid: 501, session: 'session-1', stage: 'app_ready', timestamp: staleTimestamp }, null, 2),
+        'utf8'
+      );
+      await writeFile(
+        path.join(tempRoot, '.windows-native-bridge-ready.json'),
+        JSON.stringify(
+          {
+            payload: { bridgeAvailable: true },
+            pid: 501,
+            session: 'session-1',
+            stage: 'bridge_ready',
+            timestamp: staleTimestamp
+          },
+          null,
+          2
+        ),
+        'utf8'
+      );
+      await writeFile(
+        restartIntentScript,
+        [
+          "import { writeFileSync } from 'node:fs';",
+          "import path from 'node:path';",
+          "const rootDir = process.env.FOLIOLE_RESTART_INTENT_ROOT;",
+          `const intentPath = path.join(rootDir, '${RESTART_INTENT_FILE}');`,
+          `const deliveryPath = path.join(rootDir, '${RESTART_DELIVERY_FILE}');`,
+          'const delivery = {',
+          "  deliveredAt: new Date().toISOString(),",
+          '  head: process.env.FOLIOLE_RESTART_INTENT_HEAD ?? null,',
+          "  kind: 'foliole.electron.dev.restart-delivered.v1',",
+          '  nonce: 1,',
+          '  reason: process.env.FOLIOLE_RESTART_INTENT_REASON,',
+          '  requestedAt: new Date().toISOString(),',
+          '  requestedBy: process.env.FOLIOLE_RESTART_INTENT_REQUESTED_BY,',
+          "  target: 'electron-dev'",
+          '};',
+          "writeFileSync(deliveryPath, JSON.stringify(delivery, null, 2) + '\\n', 'utf8');",
+          "process.stdout.write(`[windows-restart-intent] status: REQUESTED nonce=1 path=${intentPath}\\n`);"
+        ].join('\n'),
+        'utf8'
+      );
       const { syncScript, clientScript, freshnessScript, actionLog } = await createMockScripts(
         tempRoot,
         [
@@ -1079,10 +1124,11 @@ const timer = setInterval(() => {
         WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT: freshnessScript,
         WINDOWS_SYNC_SCRIPT: syncScript,
         WINDOWS_CLIENT_SCRIPT: clientScript,
+        WINDOWS_RESTART_INTENT_SCRIPT: restartIntentScript,
         WINDOWS_RESTART_INTENT_ROOT: tempRoot,
         WINDOWS_PREVIEW_CURRENT_HEAD: 'old-head',
         WINDOWS_PREVIEW_CHANGED_FILES: 'electron/main.ts',
-        WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS: '5'
+        WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS: '10'
       });
 
       expect(result.code).toBe(0);

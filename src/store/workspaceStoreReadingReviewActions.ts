@@ -115,12 +115,12 @@ export function createRevisitReviewTopicSoonAction(set: WorkspaceSet, get: Works
     const currentNodeId = snapshot.reviewSession.currentNodeId;
     if (!currentNodeId || snapshot.activeNodeId !== currentNodeId) return false;
     const currentNode = snapshot.nodesById[currentNodeId];
-    if (!currentNode || !isReadingReviewItemNode(currentNode) || !currentNode.reading) return false;
+    if (!currentNode || !isReadingReviewItemNode(currentNode)) return false;
     const readingElapsedMsDelta = calculateReviewStepElapsedMs(snapshot.reviewSession, now);
     const progressDelta = isExistingQueueTopic(snapshot.reviewSession, currentNodeId) ? 1 : 0;
     set((state) => {
       const node = state.nodesById[currentNodeId];
-      if (!node?.reading) return state;
+      if (!node) return state;
       const reviewSession = advanceAfterSoonAction({
         currentNodeId,
         now,

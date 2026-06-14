@@ -25,6 +25,14 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+vi.mock('../database/pdfIndexingTaskQueue.js', () => ({
+  submitPdfIndexingTask: (attachmentId: string) => ({
+    cancel: () => undefined,
+    id: `pdf-indexing:${attachmentId}`,
+    promise: Promise.resolve()
+  })
+}));
+
 import { buildAttachmentAssetUrl } from '../attachments/attachmentAssetUrl.js';
 import { resolveAttachmentFile } from '../attachments/resourceResolver.js';
 import { listNodeAttachments } from '../database/attachments.js';

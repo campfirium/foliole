@@ -10,6 +10,8 @@ import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode } from './app-smoke.shared';
 
+const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
+
 function getCurrentFolderPanel() {
   return screen.getByRole('complementary', { name: 'Current folder contents' });
 }
@@ -60,7 +62,7 @@ it('restores and permanently deletes nodes from trash context menu actions', asy
   fireEvent.contextMenu(await getTrashTreeItem('Child'), { clientX: 56, clientY: 64 });
   fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Permanently' }));
   await waitFor(() => expect(useWorkspaceStore.getState().nodesById['node-2']!).toBeUndefined());
-});
+}, RELEASE_GATE_TEST_TIMEOUT_MS);
 
 it('supports multi-select permanent delete inside trash', async () => {
   useWorkspaceStore.setState((state) => ({

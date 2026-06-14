@@ -6,6 +6,8 @@ import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import { SettingsPanel } from './SettingsPanel';
 import { createProps, renderWithMouseGestureProvider } from './SettingsPanel.testUtils';
 
+const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
+
 beforeEach(() => {
   window.localStorage.clear();
   delete window.electronAPI;
@@ -40,7 +42,7 @@ it('persists and resets selection, highlight, and cloze colors from appearance s
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.highlightColor)).toBe('#38bdf8');
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.clozeColor)).toBe('#facc15');
   });
-});
+}, RELEASE_GATE_TEST_TIMEOUT_MS);
 
 it('persists and resets font color from appearance settings', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);

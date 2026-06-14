@@ -36,6 +36,7 @@ function renderReadingToolbar(overrides: Partial<Parameters<typeof ReviewModeToo
 }
 
 it.each([
+  ['Soon', 'onRevisitReviewTopicSoon'],
   ['Later', 'onPostponeReviewTopic'],
   ['Read', 'onReadReviewTopic'],
   ['Dismiss', 'onDismissReviewTopic']
@@ -70,6 +71,7 @@ it('disables reading actions while a save is pending', async () => {
   expect(screen.getByRole('button', { name: 'Later' })).toBeDisabled();
   expect(screen.getByRole('button', { name: 'Read' })).toBeDisabled();
   expect(screen.getByRole('button', { name: 'Dismiss' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Soon' })).toBeDisabled();
 
   await act(async () => {
     completeSave?.(true);

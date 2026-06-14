@@ -120,7 +120,7 @@ export function applyGradedReviewState(args: {
 }
 
 export function createReadingReviewHistoryPatch(args: {
-  afterReading: NonNullable<WorkspaceState['nodesById'][string]['reading']>;
+  afterReading: WorkspaceState['nodesById'][string]['reading'] | null | undefined;
   afterReviewSession: WorkspaceState['reviewSession'];
   beforeReading: WorkspaceState['nodesById'][string]['reading'] | null | undefined;
   beforeReviewSession: WorkspaceState['reviewSession'];

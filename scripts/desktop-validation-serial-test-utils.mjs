@@ -67,7 +67,7 @@ async function withTempFixture(fn) {
     const stub = await createStub(tempDir);
     return await fn({ logFile, runtimeDir, stub, tempDir });
   } finally {
-    await rm(tempDir, { recursive: true, force: true });
+    await rm(tempDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 }
 

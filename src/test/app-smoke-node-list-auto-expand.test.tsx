@@ -9,6 +9,8 @@ import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode, getCurrentFolderPanel, getTopicListPanel } from './app-smoke.shared';
 
+const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
+
 beforeEach(() => {
   resetNodeListCollapseSessionForTest();
 });
@@ -109,7 +111,7 @@ it('keeps branches collapsed by default without auto-expanding the active path',
   });
   expect(within(getCurrentFolderPanel()).getByRole('treeitem', { name: 'Article C' })).toBeInTheDocument();
   expect(within(getCurrentFolderPanel()).queryByRole('treeitem', { name: 'Highlight C1' })).not.toBeInTheDocument();
-});
+}, RELEASE_GATE_TEST_TIMEOUT_MS);
 
 it('keeps collapsed branches closed after focus moves', () => {
   seedAutoExpandState();

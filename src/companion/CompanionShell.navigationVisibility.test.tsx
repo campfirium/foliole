@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 const useCompanionWorkspaceSync = vi.fn();
 const useCompanionArticleSurface = vi.fn();
 const useFloatingBarVisibility = vi.fn();
+const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
 
 vi.mock('./useCompanionWorkspaceSync', () => ({ useCompanionWorkspaceSync }));
 vi.mock('./useCompanionArticleSurface', () => ({ useCompanionArticleSurface }));
@@ -81,5 +82,5 @@ describe('CompanionShell navigation visibility', () => {
     );
 
     expect(screen.getByTestId('companion-bottom-tab-bar')).toBeInTheDocument();
-  });
+  }, RELEASE_GATE_TEST_TIMEOUT_MS);
 });

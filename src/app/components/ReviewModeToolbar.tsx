@@ -128,6 +128,7 @@ export function ReviewModeToolbar(props: ReviewModeToolbarProps) {
     onDismissReviewTopic: toolbarProps.onDismissReviewTopic,
     onPostponeReviewTopic: toolbarProps.onPostponeReviewTopic,
     onReadReviewTopic: toolbarProps.onReadReviewTopic,
+    onRevisitReviewTopicSoon: toolbarProps.onRevisitReviewTopicSoon,
     reviewCurrentNodeId: toolbarProps.reviewCurrentNodeId
   });
 

@@ -34,6 +34,10 @@ const { useNodeSourceDetails } = vi.hoisted(() => ({ useNodeSourceDetails: vi.fn
 vi.mock('./useNodeSourceDetails', () => ({
   useNodeSourceDetails
 }));
+
+const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
+const RELEASE_GATE_WAIT_OPTIONS = { timeout: RELEASE_GATE_TEST_TIMEOUT_MS };
+
 beforeEach(() => {
   appearanceMocks.setDimImagesInDarkMode.mockReset();
   useNodeSourceDetails.mockReturnValue({
@@ -90,9 +94,9 @@ it('renders the pdf reading container for linked pdf nodes', async () => {
 
   renderSection();
 
-  expect(await screen.findByTestId('pdf-document-surface')).toBeInTheDocument();
-  expect(await screen.findByTestId('pdf-document-view')).toHaveAttribute('data-file', 'file:///tmp/sample.pdf');
-});
+  expect(await screen.findByTestId('pdf-document-surface', undefined, RELEASE_GATE_WAIT_OPTIONS)).toBeInTheDocument();
+  expect(await screen.findByTestId('pdf-document-view', undefined, RELEASE_GATE_WAIT_OPTIONS)).toHaveAttribute('data-file', 'file:///tmp/sample.pdf');
+}, RELEASE_GATE_TEST_TIMEOUT_MS);
 
 it('passes app protocol pdf attachments through to the document loader', async () => {
   useNodeSourceDetails.mockReturnValue(

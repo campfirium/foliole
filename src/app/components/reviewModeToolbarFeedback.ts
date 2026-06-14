@@ -79,23 +79,25 @@ export function useGradeFeedback(args: {
   };
 }
 
-export type ReadingReviewFeedbackAction = 'dismiss' | 'later' | 'read';
+export type ReadingReviewFeedbackAction = 'dismiss' | 'later' | 'read' | 'soon';
 
 export function useReadingReviewFeedback(args: {
   isReadingActive: boolean;
   onDismissReviewTopic: () => Promise<boolean>;
   onPostponeReviewTopic: () => Promise<boolean>;
   onReadReviewTopic: () => Promise<boolean>;
+  onRevisitReviewTopicSoon: () => Promise<boolean>;
   reviewCurrentNodeId: string | null;
 }) {
-  const { onDismissReviewTopic, onPostponeReviewTopic, onReadReviewTopic } = args;
+  const { onDismissReviewTopic, onPostponeReviewTopic, onReadReviewTopic, onRevisitReviewTopicSoon } = args;
   const submitReadingAction = useCallback(
     (action: ReadingReviewFeedbackAction) => {
+      if (action === 'soon') return onRevisitReviewTopicSoon();
       if (action === 'later') return onPostponeReviewTopic();
       if (action === 'read') return onReadReviewTopic();
       return onDismissReviewTopic();
     },
-    [onDismissReviewTopic, onPostponeReviewTopic, onReadReviewTopic]
+    [onDismissReviewTopic, onPostponeReviewTopic, onReadReviewTopic, onRevisitReviewTopicSoon]
   );
   const feedback = useReviewActionFeedback({
     failureMessage: 'Failed to save. Please retry.',

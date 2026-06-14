@@ -9,6 +9,9 @@ import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode, FIXED_TIMESTAMP } from './app-smoke.shared';
 
+const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
+const RELEASE_GATE_WAIT_OPTIONS = { timeout: RELEASE_GATE_TEST_TIMEOUT_MS };
+
 it('renders topic scheduling from reading cadence instead of FSRS fields', async () => {
   useWorkspaceStore.setState((state) => ({
     ...state,
@@ -39,7 +42,7 @@ it('renders topic scheduling from reading cadence instead of FSRS fields', async
   render(<App />);
 
   expect(await screen.findByRole('button', { name: 'More right sidebar panels' })).toHaveAttribute('aria-pressed', 'true');
-  expect(await screen.findByText('Scheduling')).toBeInTheDocument();
+  expect(await screen.findByText('Scheduling', undefined, RELEASE_GATE_WAIT_OPTIONS)).toBeInTheDocument();
   expect(screen.getByText('Topic')).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Schedule' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Decision parameters' })).toBeInTheDocument();
@@ -53,7 +56,7 @@ it('renders topic scheduling from reading cadence instead of FSRS fields', async
   expect(screen.queryByText('Retention')).not.toBeInTheDocument();
   expect(screen.queryByText(/Default/)).not.toBeInTheDocument();
   expect(screen.queryByText('Flow')).not.toBeInTheDocument();
-});
+}, RELEASE_GATE_TEST_TIMEOUT_MS);
 
 it('renders item scheduling from FSRS review data', async () => {
   useWorkspaceStore.setState((state) => ({

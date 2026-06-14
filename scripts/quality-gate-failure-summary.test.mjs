@@ -11,6 +11,7 @@ import { describe, expect, it } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const QUALITY_GATE_LIB = path.join(REPO_ROOT, 'scripts', 'quality-gate-lib.sh');
+const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
 
 function runBash(script, cwd, env = {}) {
   return new Promise((resolve) => {
@@ -78,5 +79,5 @@ describe('quality gate failure summary', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  });
+  }, RELEASE_GATE_TEST_TIMEOUT_MS);
 });

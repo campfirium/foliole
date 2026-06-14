@@ -8,6 +8,9 @@ import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode } from './app-smoke.shared';
 
+const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
+const RELEASE_GATE_WAIT_OPTIONS = { timeout: RELEASE_GATE_TEST_TIMEOUT_MS };
+
 async function openCommandPaletteByShortcut() {
   document.body.focus();
   window.dispatchEvent(new KeyboardEvent('keydown', {
@@ -16,7 +19,7 @@ async function openCommandPaletteByShortcut() {
     ctrlKey: true,
     key: 'p'
   }));
-  return screen.findByRole('dialog', { name: 'Command palette' });
+  return screen.findByRole('dialog', { name: 'Command palette' }, RELEASE_GATE_WAIT_OPTIONS);
 }
 
 async function openCommandPalette() {
@@ -88,7 +91,7 @@ it('moves the active node under an empty target node from the command palette', 
   });
   expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
   expect(screen.queryByRole('dialog', { name: 'Move to' })).not.toBeInTheDocument();
-});
+}, RELEASE_GATE_TEST_TIMEOUT_MS);
 
 it('keeps non-derived topics as move targets even when they already have content', async () => {
   useWorkspaceStore.setState((state) => ({

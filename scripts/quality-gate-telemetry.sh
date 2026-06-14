@@ -18,8 +18,9 @@ append_quality_gate_telemetry() {
   local peak_rss_kb="$6"
   local output_file="$7"
 
-  local telemetry_file started_at ended_at line
+  local telemetry_file telemetry_lock_file started_at ended_at line
   telemetry_file="$(create_quality_gate_telemetry_file)"
+  telemetry_lock_file="${telemetry_file}.lock"
   started_at="${QUALITY_GATE_CURRENT_STARTED_AT:-}"
   ended_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
@@ -39,6 +40,13 @@ const entry = {
 process.stdout.write(JSON.stringify(entry));
 NODE
 )"
+
+  if command -v flock >/dev/null 2>&1; then
+    if ! { flock 9; printf '%s\n' "${line}" >>"${telemetry_file}"; } 9>"${telemetry_lock_file}"; then
+      echo "[${prefix}] warning: unable to write quality gate telemetry: ${telemetry_file}" >&2
+    fi
+    return
+  fi
 
   if ! printf '%s\n' "${line}" >>"${telemetry_file}"; then
     echo "[${prefix}] warning: unable to write quality gate telemetry: ${telemetry_file}" >&2

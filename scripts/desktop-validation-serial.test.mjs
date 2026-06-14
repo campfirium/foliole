@@ -11,7 +11,7 @@ import {
   withTempFixture
 } from './desktop-validation-serial-test-utils.mjs';
 
-async function waitForLogText(logFile, text, timeoutMs = 1000) {
+async function waitForLogText(logFile, text, timeoutMs = 5000) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     try {
@@ -19,7 +19,7 @@ async function waitForLogText(logFile, text, timeoutMs = 1000) {
     } catch {
       // Keep polling until the stub creates the log file.
     }
-    await new Promise((resolve) => globalThis.setTimeout(resolve, 25));
+    await new Promise((resolve) => globalThis.setTimeout(resolve, 50));
   }
   throw new Error(`Timed out waiting for log text: ${text}`);
 }

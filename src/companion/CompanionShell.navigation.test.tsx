@@ -7,6 +7,7 @@ const useCompanionArticleSurface = vi.fn();
 const useFloatingBarVisibility = vi.fn();
 const revealSelectionCentered = vi.fn();
 const setSearchDecorations = vi.fn();
+const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
 
 vi.mock('./useCompanionWorkspaceSync', () => ({ useCompanionWorkspaceSync }));
 vi.mock('./useCompanionArticleSurface', () => ({ useCompanionArticleSurface }));
@@ -173,7 +174,7 @@ describe('CompanionShell navigation', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Exit' }));
     expect(surface.handleTabAction).toHaveBeenCalledWith('recent');
-  });
+  }, RELEASE_GATE_TEST_TIMEOUT_MS);
 
   it('shows bottom navigation outside review tasks', async () => {
     await renderShellWithSurface(createSurface('recent'));

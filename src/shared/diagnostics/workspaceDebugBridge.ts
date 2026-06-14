@@ -31,6 +31,7 @@ interface WorkspaceDebugApi {
     content: string;
     id: string;
     parentNodeId: string | null;
+    reading: { nextAt: string; state: string } | null;
     reveal: string | null;
     title: string;
     trashed: boolean;
@@ -42,6 +43,11 @@ interface WorkspaceDebugApi {
     originalName?: string;
   }) => Promise<string | null>;
   getNodeViewState: (nodeId: string) => { scrollTop: number; selection: { from: number; to: number } | null } | null;
+  getReviewSession: () => {
+    currentNodeId: string | null;
+    queueNodeIds: string[];
+    soonNodeIds?: string[];
+  };
   listNodes: () => Array<{ id: string; title: string }>;
   openNode: (nodeId: string) => Promise<boolean>;
   restoreNode: (nodeId: string) => Promise<boolean>;
@@ -76,6 +82,34 @@ function getExistingNodeState(nodeId: string) {
     return null;
   }
   return state;
+}
+
+function getDebugNode(nodeId: string): ReturnType<WorkspaceDebugApi['getNode']> {
+  const state = useWorkspaceStore.getState();
+  const node = state.nodesById[nodeId];
+  if (!node) {
+    return null;
+  }
+  return {
+    anchorKind: node.anchorLink?.kind ?? null,
+    anchorLink: node.anchorLink ?? null,
+    content: node.content,
+    id: node.id,
+    parentNodeId: node.parentNodeId,
+    reading: node.reading ? { nextAt: node.reading.nextAt, state: node.reading.state } : null,
+    reveal: node.reveal,
+    title: node.title,
+    trashed: state.trashedNodeIds.includes(nodeId)
+  };
+}
+
+function getDebugReviewSession(): ReturnType<WorkspaceDebugApi['getReviewSession']> {
+  const reviewSession = useWorkspaceStore.getState().reviewSession;
+  return {
+    currentNodeId: reviewSession.currentNodeId,
+    queueNodeIds: [...reviewSession.queueNodeIds],
+    ...(reviewSession.soonNodeIds ? { soonNodeIds: [...reviewSession.soonNodeIds] } : {})
+  };
 }
 
 function createNodeMutationDebugApi(): Pick<
@@ -118,28 +152,13 @@ function createNodeMutationDebugApi(): Pick<
 
 function createNodeReadDebugApi(): Pick<
   WorkspaceDebugApi,
-  'getActiveNodeId' | 'getNode' | 'getNodeViewState' | 'listNodes' | 'openNode' | 'setNodeViewState'
+  'getActiveNodeId' | 'getNode' | 'getNodeViewState' | 'getReviewSession' | 'listNodes' | 'openNode' | 'setNodeViewState'
 > {
   return {
     getActiveNodeId: () => useWorkspaceStore.getState().activeNodeId,
-    getNode: (nodeId) => {
-      const state = useWorkspaceStore.getState();
-      const node = state.nodesById[nodeId];
-      if (!node) {
-        return null;
-      }
-      return {
-        anchorKind: node.anchorLink?.kind ?? null,
-        anchorLink: node.anchorLink ?? null,
-        content: node.content,
-        id: node.id,
-        parentNodeId: node.parentNodeId,
-        reveal: node.reveal,
-        title: node.title,
-        trashed: state.trashedNodeIds.includes(nodeId)
-      };
-    },
+    getNode: getDebugNode,
     getNodeViewState: (nodeId) => useWorkspaceStore.getState().nodeViewById[nodeId] ?? null,
+    getReviewSession: getDebugReviewSession,
     listNodes: () => {
       const state = useWorkspaceStore.getState();
       return state.nodeOrder.map((nodeId) => ({ id: nodeId, title: state.nodesById[nodeId]?.title ?? nodeId }));

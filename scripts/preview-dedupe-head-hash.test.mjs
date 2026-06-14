@@ -11,6 +11,7 @@ import { describe, expect, it } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DEDUPE_SCRIPT = path.join(REPO_ROOT, 'scripts', 'preview-dedupe.mjs');
+const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
 
 function git(cwd, args) {
   const result = spawnSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
@@ -71,5 +72,5 @@ describe('preview-dedupe committed target hash', () => {
     } finally {
       await rm(repoRoot, { force: true, recursive: true });
     }
-  });
+  }, RELEASE_GATE_TEST_TIMEOUT_MS);
 });

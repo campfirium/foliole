@@ -45,6 +45,7 @@ coproc DEPLOY_PS { powershell.exe "${POWERSHELL_ARGS[@]}" 2>&1; }
 DEPLOY_PS_PROCESS_PID="$!"
 DEPLOY_STATUS_OPENED=0
 
+set +e
 while IFS= read -r line <&"${DEPLOY_PS[0]}"; do
   echo "${line}"
   if [[ "${line}" == *"[android-deploy] status: OPENED"* ]]; then
@@ -52,6 +53,7 @@ while IFS= read -r line <&"${DEPLOY_PS[0]}"; do
     break
   fi
 done
+set -e
 
 if [[ "${DEPLOY_STATUS_OPENED}" == "1" ]]; then
   for _ in {1..50}; do

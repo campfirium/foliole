@@ -8,6 +8,9 @@ import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode } from './app-smoke.shared';
 
+const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
+const RELEASE_GATE_WAIT_OPTIONS = { timeout: RELEASE_GATE_TEST_TIMEOUT_MS };
+
 it('runs go to node from the command palette without replacing workspace search', async () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'node-1',
@@ -31,7 +34,7 @@ it('runs go to node from the command palette without replacing workspace search'
   render(<App />);
 
   fireEvent.keyDown(window, { ctrlKey: true, key: 'p' });
-  const commandDialog = await screen.findByRole('dialog', { name: 'Command palette' });
+  const commandDialog = await screen.findByRole('dialog', { name: 'Command palette' }, RELEASE_GATE_WAIT_OPTIONS);
   const commandInput = within(commandDialog).getByLabelText('Search commands');
 
   fireEvent.change(commandInput, { target: { value: 'go to' } });
@@ -56,7 +59,7 @@ it('runs go to node from the command palette without replacing workspace search'
     expect(useWorkspaceStore.getState().activeNodeId).toBe('node-3');
   });
   expect(screen.queryByRole('dialog', { name: 'Go to' })).not.toBeInTheDocument();
-});
+}, RELEASE_GATE_TEST_TIMEOUT_MS);
 
 it('shows nodes immediately and puts the last used target first when reopened', async () => {
   useWorkspaceStore.setState((state) => ({

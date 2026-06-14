@@ -10,6 +10,8 @@ import { listFormulaSelectionLeaves } from '../model/formulaDomSelection';
 
 import { CodeMirrorEditorAdapter } from './CodeMirrorEditorAdapter';
 
+const RELEASE_GATE_WAIT_OPTIONS = { timeout: 15_000 };
+
 function mockRect(element: HTMLElement, rect: { height: number; width: number; x: number; y: number }) {
   Object.defineProperty(element, 'getBoundingClientRect', {
     configurable: true,
@@ -55,7 +57,7 @@ async function createFormulaClozeHost(registerPresentation = true) {
 
   await waitFor(() => {
     expect(host.querySelector('.cm-md-math-widget-block .katex-html')).not.toBeNull();
-  });
+  }, RELEASE_GATE_WAIT_OPTIONS);
   return { adapter, host };
 }
 

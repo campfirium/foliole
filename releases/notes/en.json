@@ -1,4 +1,19 @@
 {
+  "0.6.4": {
+    "notes": [
+      "Improved",
+      "The Quick Capture panel can now be moved by dragging it, and pressing the shortcut again brings the existing panel back with typed content preserved.",
+      "The tray icon can now show or hide the main window with a single click.",
+      "Fixed",
+      "Imported PDFs can now be previewed and read normally.",
+      "Editor changes are preserved more reliably when switching topics or creating a new topic.",
+      "Full-text search results now open at the matched text instead of only opening the containing topic.",
+      "Jumping to a PDF page now reliably renders the target page instead of leaving a blank placeholder.",
+      "PDF pages and surrounding backgrounds now stay in sync after switching PDF reading modes.",
+      "Selecting text in the search box no longer closes the search panel unexpectedly.",
+      "Clicking Soon in Flow now works normally."
+    ]
+  },
   "0.6.2": {
     "notes": [
       "Initial Simplified Chinese interface support is now available.",

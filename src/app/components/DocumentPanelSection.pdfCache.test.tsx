@@ -5,6 +5,8 @@ import { expect, it, vi } from 'vitest';
 import '../../test/reactPdfMock';
 import { DocumentPanelSection } from './DocumentPanelSection';
 
+const RELEASE_GATE_WAIT_OPTIONS = { timeout: 15_000 };
+
 vi.mock('../../features/settings/context/AppearanceSettingsProvider', () => ({
   useAppearanceSettings: () => ({
     editorDisplayMode: 'preview' as const,
@@ -136,7 +138,7 @@ it('keeps a cached pdf view visible when revisiting the same node during source 
   });
 
   const rendered = render(<DocumentPanelSection {...defaultProps} />);
-  expect(await screen.findByTestId('pdf-document-surface')).toBeInTheDocument();
+  expect(await screen.findByTestId('pdf-document-surface', undefined, RELEASE_GATE_WAIT_OPTIONS)).toBeInTheDocument();
 
   rendered.rerender(<DocumentPanelSection {...defaultProps} activeNodeId="node-2" editorNodeId="node-2" />);
   expect(screen.getByTestId('document-panel-content-body')).toBeInTheDocument();

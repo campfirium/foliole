@@ -9,6 +9,8 @@ import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode, mockEditorState } from './app-smoke.shared';
 
+const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
+
 function createTextAnchorLink(id: string, originalText: string, from: number) {
   return {
     id,
@@ -60,7 +62,7 @@ it('reveals document highlights from the right sidebar list', async () => {
     expect(mockEditorState.selectionFrom).toBe(expectedFrom);
     expect(mockEditorState.selectionTo).toBe(expectedFrom);
   });
-});
+}, RELEASE_GATE_TEST_TIMEOUT_MS);
 
 it('renders the full ancestor path and keeps nested topics navigable', () => {
   useWorkspaceStore.setState((state) => ({

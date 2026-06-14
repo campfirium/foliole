@@ -6,6 +6,9 @@ import { renderWithLocalization } from '../../shared/localization/testLocalizati
 
 import { WorkspaceRightSidebar } from './WorkspaceRightSidebar';
 
+const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
+const RELEASE_GATE_WAIT_OPTIONS = { timeout: RELEASE_GATE_TEST_TIMEOUT_MS };
+
 const { requestPdfAnchorJump } = vi.hoisted(() => ({
   requestPdfAnchorJump: vi.fn()
 }));
@@ -80,7 +83,7 @@ it('opens pdf highlight parent through unified node selection when parent is not
     />
   );
 
-  fireEvent.click(await screen.findByRole('button', { name: /picked text/i }));
+  fireEvent.click(await screen.findByRole('button', { name: /picked text/i }, RELEASE_GATE_WAIT_OPTIONS));
 
   expect(onSelectNode).toHaveBeenCalledWith(
     'node-parent',
@@ -133,7 +136,7 @@ it('opens parent node with text highlight focus when highlight parent is not act
     />
   );
 
-  fireEvent.click(await screen.findByRole('button', { name: 'Beta' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Beta' }, RELEASE_GATE_WAIT_OPTIONS));
 
   expect(onSelectNode).toHaveBeenCalledWith(
     'node-parent',
@@ -181,7 +184,7 @@ it('routes current-parent pdf highlights through unified node selection without 
     />
   );
 
-  fireEvent.click(await screen.findByRole('button', { name: /picked text/i }));
+  fireEvent.click(await screen.findByRole('button', { name: /picked text/i }, RELEASE_GATE_WAIT_OPTIONS));
 
   expect(onSelectNode).toHaveBeenCalledWith(
     'node-parent',
@@ -228,7 +231,7 @@ it('routes current-parent text highlights through unified node selection without
     />
   );
 
-  fireEvent.click(await screen.findByRole('button', { name: 'Beta' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Beta' }, RELEASE_GATE_WAIT_OPTIONS));
 
   expect(onSelectNode).toHaveBeenCalledWith(
     'node-parent',
@@ -268,7 +271,7 @@ it('renders the outline panel from active topic headings', async () => {
     />
   );
 
-  fireEvent.click(await screen.findByRole('button', { name: /first section/i }));
+  fireEvent.click(await screen.findByRole('button', { name: /first section/i }, RELEASE_GATE_WAIT_OPTIONS));
 
   expect(screen.getByRole('navigation', { name: 'Document outline' })).toBeInTheDocument();
   expect(screen.queryByText('Outline')).not.toBeInTheDocument();

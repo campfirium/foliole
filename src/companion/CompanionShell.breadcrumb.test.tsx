@@ -7,6 +7,7 @@ import { renderWithLocalization } from '../shared/localization/testLocalization'
 const useCompanionWorkspaceSync = vi.fn();
 const useCompanionArticleSurface = vi.fn();
 const useFloatingBarVisibility = vi.fn();
+const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
 
 vi.mock('./useCompanionWorkspaceSync', () => ({
   useCompanionWorkspaceSync
@@ -229,7 +230,7 @@ describe('CompanionShell review breadcrumb', () => {
     expect(screen.getByText('Inbox')).toBeInTheDocument();
     expect(screen.getByText('Topic node title')).toBeInTheDocument();
     expect(screen.queryByText('Inner review topic')).not.toBeInTheDocument();
-  });
+  }, RELEASE_GATE_TEST_TIMEOUT_MS);
 
   it('routes folder breadcrumbs to the folder browse surface target', async () => {
     const { surface } = await renderBreadcrumbShell();

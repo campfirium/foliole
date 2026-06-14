@@ -16,6 +16,7 @@ import { useWorkspaceStore } from '../store/workspaceStore';
 import { createNode, createSmokeRuntimeInvoke } from './app-smoke.shared';
 
 const FUTURE_TIMESTAMP = '2099-01-01T00:00:00.000Z';
+const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
 
 beforeEach(() => {
   vi.mocked(getRuntimeInvoke).mockReset();
@@ -132,5 +133,7 @@ it('keeps review paused when navigation history jumps to another queued node dur
   expect(useWorkspaceStore.getState().reviewSession.currentNodeId).toBe('fsrs-1');
   expect(useWorkspaceStore.getState().reviewSession.queueNodeIds).toEqual(['fsrs-1', 'reading-1']);
   expect(screen.queryByRole('button', { name: 'Later' })).not.toBeInTheDocument();
-  expect(screen.getByTestId('editor-value')).toHaveValue('Read this first');
-}, 15000);
+  await waitFor(() => {
+    expect(screen.getByTestId('editor-value')).toHaveValue('Read this first');
+  });
+}, RELEASE_GATE_TEST_TIMEOUT_MS);

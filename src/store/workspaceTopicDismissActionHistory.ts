@@ -25,7 +25,7 @@ type WorkspaceSet = (
 ) => void;
 
 export interface WorkspaceTopicDismissHistoryEntry {
-  afterReading: NodeReadingProfile;
+  afterReading: NodeReadingProfile | null;
   afterReviewSession?: WorkspaceState['reviewSession'] | null;
   beforeReading: NodeReadingProfile | null;
   beforeReviewSession?: WorkspaceState['reviewSession'] | null;
@@ -40,7 +40,7 @@ export interface WorkspaceTopicDismissHistoryEntry {
 }
 
 export function createTopicDismissHistoryEntry(args: {
-  afterReading: NodeReadingProfile;
+  afterReading: NodeReadingProfile | null | undefined;
   afterReviewSession?: WorkspaceState['reviewSession'] | null;
   beforeReading: NodeReadingProfile | null | undefined;
   beforeReviewSession?: WorkspaceState['reviewSession'] | null;
@@ -53,7 +53,7 @@ export function createTopicDismissHistoryEntry(args: {
   title?: WorkspaceTopicReadingActionTitle;
 }): WorkspaceTopicDismissHistoryEntry {
   const entry: WorkspaceTopicDismissHistoryEntry = {
-    afterReading: cloneReadingProfile(args.afterReading)!,
+    afterReading: cloneReadingProfile(args.afterReading),
     afterReviewSession: cloneReviewSession(args.afterReviewSession),
     beforeReading: cloneReadingProfile(args.beforeReading),
     beforeReviewSession: cloneReviewSession(args.beforeReviewSession),

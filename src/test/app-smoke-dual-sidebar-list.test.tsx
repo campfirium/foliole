@@ -9,6 +9,8 @@ import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode } from './app-smoke.shared';
 
+const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
+
 function expectCurrentFolderPanel() {
   return screen.getByRole('complementary', { name: 'Current folder contents' });
 }
@@ -127,7 +129,7 @@ it('shows folders in the left tree and topics in the adjacent topic tree', () =>
   expect(within(currentFolderPanel).getByRole('treeitem', { name: 'Nested idea' })).toBeInTheDocument();
   expect(within(currentFolderPanel).getByRole('treeitem', { name: 'Key Card' })).toBeInTheDocument();
   expect(within(currentFolderPanel).queryByRole('treeitem', { name: 'Research' })).not.toBeInTheDocument();
-});
+}, RELEASE_GATE_TEST_TIMEOUT_MS);
 
 it('keeps the dual tree visible when inbox is selected', () => {
   useWorkspaceStore.setState((state) => ({

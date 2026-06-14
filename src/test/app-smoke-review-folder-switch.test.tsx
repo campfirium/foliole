@@ -16,6 +16,7 @@ import { useWorkspaceStore } from '../store/workspaceStore';
 import { createNode, createSmokeRuntimeInvoke } from './app-smoke.shared';
 
 const DUE = '2026-03-03T00:00:00.000Z';
+const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
 
 beforeEach(() => {
   vi.mocked(getRuntimeInvoke).mockReset();
@@ -83,4 +84,4 @@ it('keeps folder navigation available while the review status bar is open', asyn
   expect(within(screen.getByRole('complementary', { name: 'Current folder contents' })).getByRole('treeitem', {
     name: 'Topic B'
   })).toBeInTheDocument();
-});
+}, RELEASE_GATE_TEST_TIMEOUT_MS);

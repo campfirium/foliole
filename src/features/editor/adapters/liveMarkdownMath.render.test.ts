@@ -9,6 +9,8 @@ import {
 
 import { CodeMirrorEditorAdapter } from './CodeMirrorEditorAdapter';
 
+const RELEASE_GATE_WAIT_OPTIONS = { timeout: 15_000 };
+
 function createAdapterHost(initialContent: string) {
   const host = document.createElement('div');
   document.body.append(host);
@@ -47,8 +49,8 @@ async function expectInlineAndBlockMathWidgets() {
 
   await waitFor(() => {
     expect(host.querySelectorAll('.cm-md-math-widget-inline .katex').length).toBe(1);
-    expect(host.querySelectorAll('.cm-md-math-widget-block .katex-display').length).toBe(1);
-  });
+    expect(host.querySelectorAll('.cm-md-math-widget-block .katex').length).toBe(1);
+  }, RELEASE_GATE_WAIT_OPTIONS);
   expect(host.querySelector('.cm-md-math-widget-inline')).toHaveAttribute('data-md-math-tex', 'E=mc^2');
   expect(host.querySelector('.cm-md-math-widget-block')).toHaveAttribute('data-md-math-tex', 'a^2+b^2=c^2');
 

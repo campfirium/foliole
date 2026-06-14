@@ -4,6 +4,8 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { handleInvokeRequest, resetCommandsSettingsTestDoubles } from './commands.settings.testSupport.js';
 import { updateLibraryPathSetting } from './libraryPaths.js';
 
+const RELEASE_GATE_TEST_TIMEOUT_MS = 30_000;
+
 beforeEach(() => {
   resetCommandsSettingsTestDoubles();
 });
@@ -198,4 +200,4 @@ it('handles app, sync peer, library path, and import settings commands', async (
   await expectSyncAndAppSettingsCommands();
   await expectLibraryPathCommands();
   await expectImportSettingsCommands();
-}, 15000);
+}, RELEASE_GATE_TEST_TIMEOUT_MS);

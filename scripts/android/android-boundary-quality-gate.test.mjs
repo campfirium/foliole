@@ -11,8 +11,7 @@ import { describe, expect, it } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const TARGET_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality-gate-target.sh');
-const QUALITY_GATE_ROUTING_TIMEOUT_MS = 30_000;
-const RELEASE_GATE_ROUTING_TIMEOUT_MS = 60_000;
+const GATE_ROUTING_TIMEOUT_MS = 60_000;
 
 function runTargetGate(cwd, target) {
   return new Promise((resolve) => {
@@ -130,7 +129,7 @@ describe('Android boundary quality gate routing', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, RELEASE_GATE_ROUTING_TIMEOUT_MS);
+  }, GATE_ROUTING_TIMEOUT_MS);
 
   it('runs the Android boundary check in the shared gate', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-boundary-gate-'));
@@ -148,7 +147,7 @@ describe('Android boundary quality gate routing', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, QUALITY_GATE_ROUTING_TIMEOUT_MS);
+  }, GATE_ROUTING_TIMEOUT_MS);
 
   it('runs the Android boundary check in the full gate', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-boundary-gate-'));
@@ -166,7 +165,7 @@ describe('Android boundary quality gate routing', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, QUALITY_GATE_ROUTING_TIMEOUT_MS);
+  }, GATE_ROUTING_TIMEOUT_MS);
 
   it('runs the Android boundary check in the release gate', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-boundary-gate-'));
@@ -184,5 +183,5 @@ describe('Android boundary quality gate routing', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, RELEASE_GATE_ROUTING_TIMEOUT_MS);
+  }, GATE_ROUTING_TIMEOUT_MS);
 });

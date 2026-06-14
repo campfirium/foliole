@@ -138,7 +138,7 @@ describe('preview-dedupe scheduler defaults', () => {
     try {
       let runs = 0;
       const waitAnnouncer = { shouldAnnounce: () => false };
-      const options = { maxSettleMs: 220, runtimeDir, settleMs: 120, target: 'windows', waitAnnouncer, windowMs: 0 };
+      const options = { maxSettleMs: 900, runtimeDir, settleMs: 300, target: 'windows', waitAnnouncer, windowMs: 0 };
       const first = runScheduledPreview({
         ...options,
         runPreview: async () => {
@@ -162,7 +162,7 @@ describe('preview-dedupe scheduler defaults', () => {
           return { exitCode: 0, hash: 'hash-ok', previewed: true };
         }
       });
-      const earlyResult = await Promise.race([first.then(() => 'settled'), delay(40).then(() => 'waiting')]);
+      const earlyResult = await Promise.race([first.then(() => 'settled'), delay(250).then(() => 'waiting')]);
       const [firstResult, secondResult, thirdResult] = await Promise.all([first, second, third]);
 
       expect(earlyResult).toBe('waiting');

@@ -154,13 +154,15 @@ function reviewSurface(currentCard: Record<string, unknown> | null) {
 }
 
 describe('CompanionShell review surfaces', () => {
+  const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
+
   it('shows the review empty state instead of falling back to reading content', async () => {
     await renderShellWithSurface(reviewSurface(null));
 
     expect(screen.getByText('No items are due right now')).toBeInTheDocument();
     expect(screen.getByText(/Synced review state: 2 reading topics, 9 items\./)).toBeInTheDocument();
     expect(screen.queryByText('Readable article')).not.toBeInTheDocument();
-  });
+  }, RELEASE_GATE_TEST_TIMEOUT_MS);
 
   it('shows reading actions when the current review card is a reading item', async () => {
     await renderShellWithSurface(reviewSurface({

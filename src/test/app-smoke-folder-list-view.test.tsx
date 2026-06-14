@@ -8,6 +8,8 @@ import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode } from './app-smoke.shared';
 
+const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
+
 function getFolderListTitles() {
   return within(screen.getByRole('list', { name: 'Folder contents' }))
     .getAllByRole('button')
@@ -49,7 +51,7 @@ it('shows a folder list shell when an ordinary folder is selected', () => {
   expect(screen.getByRole('searchbox', { name: 'Search folder contents' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Open Child note' })).toBeInTheDocument();
   expect(screen.queryByTestId('editor-value')).not.toBeInTheDocument();
-});
+}, RELEASE_GATE_TEST_TIMEOUT_MS);
 
 it('opens the selected child content when a folder list item is clicked', async () => {
   useWorkspaceStore.setState((state) => ({

@@ -69,7 +69,6 @@ function createActiveReviewActions(props: Pick<
   | 'onPostponeReviewTopic'
   | 'onDismissReviewTopic'
   | 'onRevealAnswer'
-  | 'onRevisitReviewTopicSoon'
   | 'readingErrorMessage'
   | 'readingIsSubmitting'
   | 'retryReadingAction'
@@ -87,8 +86,8 @@ function createActiveReviewActions(props: Pick<
         onDismissReviewTopic={() => void props.submitReadingAction('dismiss')}
         onPostponeReviewTopic={() => void props.submitReadingAction('later')}
         onReadReviewTopic={() => void props.submitReadingAction('read')}
+        onRevisitReviewTopicSoon={() => void props.submitReadingAction('soon')}
         {...definedProps({ onRetry: props.retryReadingAction })}
-        onRevisitReviewTopicSoon={props.onRevisitReviewTopicSoon}
         showActionHelp={props.showActionHelp}
         {...definedProps({ surface: props.surface })}
       />
@@ -125,7 +124,6 @@ function createActiveReviewPrimary(props: ActiveReviewActionBarProps, showAction
     onPostponeReviewTopic: props.onPostponeReviewTopic,
     onDismissReviewTopic: props.onDismissReviewTopic,
     onRevealAnswer: props.onRevealAnswer,
-    onRevisitReviewTopicSoon: props.onRevisitReviewTopicSoon,
     readingErrorMessage: props.readingErrorMessage,
     readingIsSubmitting: props.readingIsSubmitting,
     ...definedProps({ retryReadingAction: props.retryReadingAction }),

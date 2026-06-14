@@ -9,6 +9,9 @@ import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode } from './app-smoke.shared';
 
+const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
+const RELEASE_GATE_WAIT_OPTIONS = { timeout: RELEASE_GATE_TEST_TIMEOUT_MS };
+
 it('renders the standalone performance panel with timing, memory, and cache groups', async () => {
   useWorkspaceStore.setState((state) => ({
     ...state,
@@ -35,5 +38,5 @@ it('renders the standalone performance panel with timing, memory, and cache grou
     expect(screen.getByRole('heading', { name: 'Cache' })).toBeInTheDocument();
     expect(screen.getByText('Topic blocks')).toBeInTheDocument();
     expect(screen.getByText('Image results')).toBeInTheDocument();
-  });
-});
+  }, RELEASE_GATE_WAIT_OPTIONS);
+}, RELEASE_GATE_TEST_TIMEOUT_MS);

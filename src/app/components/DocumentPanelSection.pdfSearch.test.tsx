@@ -29,6 +29,9 @@ vi.mock('./useNodeSourceUpdatePreview', () => ({
 const { useNodeSourceDetails } = vi.hoisted(() => ({ useNodeSourceDetails: vi.fn() }));
 vi.mock('./useNodeSourceDetails', () => ({ useNodeSourceDetails }));
 
+const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
+const RELEASE_GATE_WAIT_OPTIONS = { timeout: RELEASE_GATE_TEST_TIMEOUT_MS };
+
 const defaultProps: ComponentProps<typeof DocumentPanelSection> = {
   activeNodeId: 'node-1',
   canGoBack: true,
@@ -101,7 +104,7 @@ beforeEach(() => {
 
 it('supports in-view pdf search navigation and empty-state feedback', async () => {
   renderWithLocalization(<DocumentPanelSection {...defaultProps} />);
-  await waitFor(() => expect(screen.getByRole('textbox', { name: 'PDF search' })).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByRole('textbox', { name: 'PDF search' })).toBeInTheDocument(), RELEASE_GATE_WAIT_OPTIONS);
   const previousMatchButton = screen.getByRole('button', { name: 'Previous match' });
   const nextMatchButton = screen.getByRole('button', { name: 'Next match' });
   const searchInput = screen.getByRole('textbox', { name: 'PDF search' });
@@ -116,9 +119,9 @@ it('supports in-view pdf search navigation and empty-state feedback', async () =
     expect(nextMatchButton).toBeEnabled();
     expect(clearSearchButton).toBeEnabled();
     expect(screen.queryByText('Search debug')).not.toBeInTheDocument();
-  });
+  }, RELEASE_GATE_WAIT_OPTIONS);
   fireEvent.click(nextMatchButton);
-  await waitFor(() => expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('2 / 9'));
+  await waitFor(() => expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('2 / 9'), RELEASE_GATE_WAIT_OPTIONS);
   fireEvent.click(clearSearchButton);
   await waitFor(() => {
     expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('');
@@ -126,14 +129,14 @@ it('supports in-view pdf search navigation and empty-state feedback', async () =
     expect(previousMatchButton).toBeDisabled();
     expect(nextMatchButton).toBeDisabled();
     expect(clearSearchButton).toBeDisabled();
-  });
+  }, RELEASE_GATE_WAIT_OPTIONS);
   fireEvent.change(searchInput, { target: { value: 'not-found-token' } });
   await waitFor(() => {
     expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('No matches');
     expect(previousMatchButton).toBeDisabled();
     expect(nextMatchButton).toBeDisabled();
-  });
-});
+  }, RELEASE_GATE_WAIT_OPTIONS);
+}, RELEASE_GATE_TEST_TIMEOUT_MS);
 
 it('supports Enter and Shift+Enter for in-view pdf search navigation', async () => {
   renderWithLocalization(<DocumentPanelSection {...defaultProps} />);

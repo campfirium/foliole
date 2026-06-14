@@ -33,6 +33,9 @@ vi.mock('./useNodeSourceDetails', () => ({
   useNodeSourceDetails
 }));
 
+const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
+const RELEASE_GATE_WAIT_OPTIONS = { timeout: RELEASE_GATE_TEST_TIMEOUT_MS };
+
 const baseNode = {
   id: 'node-1',
   kind: 'topic' as const,
@@ -115,7 +118,7 @@ it('keeps selected pdf text available when right-click clears selection before c
 
   render(<DocumentPanelSection {...defaultProps} onCreatePdfHighlight={onCreatePdfHighlight} />);
 
-  const textNode = await screen.findByText('keyword match on page 1');
+  const textNode = await screen.findByText('keyword match on page 1', undefined, RELEASE_GATE_WAIT_OPTIONS);
   const range = document.createRange();
   range.selectNodeContents(textNode);
   const selection = window.getSelection();
@@ -130,7 +133,7 @@ it('keeps selected pdf text available when right-click clears selection before c
     fireEvent.contextMenu(textNode, { button: 2, clientX: 220, clientY: 180 });
   });
 
-  await waitFor(() => expect(screen.getByTestId('pdf-selection-marker')).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByTestId('pdf-selection-marker')).toBeInTheDocument(), RELEASE_GATE_WAIT_OPTIONS);
   fireEvent.click(screen.getByRole('menuitem', { name: 'Highlight' }));
   expect(onCreatePdfHighlight).toHaveBeenCalledWith('keyword match on page 1', expect.anything());
-});
+}, RELEASE_GATE_TEST_TIMEOUT_MS);

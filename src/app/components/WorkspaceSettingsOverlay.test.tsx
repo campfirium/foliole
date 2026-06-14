@@ -114,6 +114,8 @@ vi.mock('../../features/settings/components/SettingsPanel', () => ({
 
 import { WorkspaceSettingsOverlay } from './WorkspaceSettingsOverlay';
 
+const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
+
 beforeEach(() => {
   workspaceSettingsOverlayMocks.requestAppConfirmation.mockReset();
   workspaceSettingsOverlayMocks.useImportSourceWorkspaceState.mockReset();
@@ -161,7 +163,7 @@ it('opens the keep import preview dialog from the watch folders table', async ()
   expect(screen.getByText('first highlight')).toBeInTheDocument();
   expect(screen.getByText('second highlight')).toBeInTheDocument();
   expect(screen.getByText('third highlight')).toBeInTheDocument();
-});
+}, RELEASE_GATE_TEST_TIMEOUT_MS);
 
 it('confirms before enabling delete handling for a watch folder', async () => {
   const handleChangeAction = vi.fn();

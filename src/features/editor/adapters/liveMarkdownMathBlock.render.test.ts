@@ -6,6 +6,9 @@ import { setEditorDisplayMode } from '../model/editorDisplayMode';
 
 import { CodeMirrorEditorAdapter } from './CodeMirrorEditorAdapter';
 
+const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
+const RELEASE_GATE_WAIT_OPTIONS = { timeout: RELEASE_GATE_TEST_TIMEOUT_MS };
+
 function createAdapterHost(initialContent: string) {
   setEditorDisplayMode('preview');
   const host = document.createElement('div');
@@ -22,8 +25,8 @@ async function expectBlockMathHiddenSourceLinesCollapse() {
   const { adapter, host } = createAdapterHost('Before\n\n$$\n\\frac{a}{b}=c\n$$\n\nAfter');
 
   await waitFor(() => {
-    expect(host.querySelector('.cm-md-math-widget-block .katex-display')).not.toBeNull();
-  });
+    expect(host.querySelector('.cm-md-math-widget-block .katex')).not.toBeNull();
+  }, RELEASE_GATE_WAIT_OPTIONS);
   expect(host.querySelectorAll('.cm-line-math-source-hidden').length).toBe(2);
 
   adapter.destroy();

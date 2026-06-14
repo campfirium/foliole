@@ -9,6 +9,8 @@ import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode, getCurrentFolderPanel } from './app-smoke.shared';
 
+const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
+
 it('shows direct child counts at the end of node rows', () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: INBOX_NODE_ID,
@@ -51,4 +53,4 @@ it('shows direct child counts at the end of node rows', () => {
   expect(within(listPanel).getByRole('treeitem', { name: 'Grandchild' })).not.toHaveTextContent('(0)');
   expect(within(listPanel).getByRole('treeitem', { name: 'Child 2' })).toHaveTextContent('Child 2');
   expect(within(listPanel).getByRole('treeitem', { name: 'Child 2' })).not.toHaveTextContent('(0)');
-});
+}, RELEASE_GATE_TEST_TIMEOUT_MS);

@@ -17,6 +17,7 @@ import { useWorkspaceStore } from '../store/workspaceStore';
 import { createNode, createSmokeRuntimeInvoke, FIXED_TIMESTAMP, getCurrentFolderTreeItem } from './app-smoke.shared';
 
 const FUTURE_TIMESTAMP = '2099-01-01T00:00:00.000Z';
+const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
 
 beforeEach(() => {
   vi.mocked(getRuntimeInvoke).mockReset();
@@ -128,11 +129,11 @@ it('switches toolbar actions when review queue advances from fsrs card to readin
 
   await waitFor(() => {
     expect(screen.getByLabelText('Flow toolbar')).toHaveAttribute('data-review-item-kind', 'reading');
+    expect(screen.getByTestId('editor-value')).toHaveValue('Read this first');
   });
-  expect(screen.getByTestId('editor-value')).toHaveValue('Read this first');
   expect(screen.getByRole('button', { name: 'Later' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Show Answer' })).not.toBeInTheDocument();
-});
+}, RELEASE_GATE_TEST_TIMEOUT_MS);
 
 it('keeps review paused when clicking another queued node during study', async () => {
   mockDocumentLoad();

@@ -7,6 +7,7 @@ vi.mock('../../../../shared/platform/diagnosticBundle', () => ({
 
 import { NATIVE_COMMANDS } from '../../../../../lib/platform/nativeCommands';
 import type { NativeInvoke } from '../../../../../lib/platform/nativeContract';
+import packageJson from '../../../../../package.json';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../../shared/config/appSettings';
 import { APP_LANGUAGE_STORAGE_KEY } from '../../../../shared/localization/appLanguage';
 import { renderWithLocalization } from '../../../../shared/localization/testLocalization';
@@ -14,6 +15,8 @@ import { copyDiagnosticReport } from '../../../../shared/platform/diagnosticBund
 
 import { SettingsAboutSection } from './SettingsAboutSection';
 import { SettingsGeneralSection } from './SettingsGeneralSection';
+
+const CURRENT_VERSION_TEXT = `Version ${packageJson.version}`;
 
 beforeEach(() => {
   vi.mocked(copyDiagnosticReport).mockReset();
@@ -47,7 +50,7 @@ it('shows application info and copies the diagnostic report in the about section
   });
   renderWithLocalization(<SettingsAboutSection />);
 
-  expect(await screen.findByText('Version 0.6.3')).toBeInTheDocument();
+  expect(await screen.findByText(CURRENT_VERSION_TEXT)).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Check for Updates' })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Copy diagnostic report' }));
   await waitFor(() => {

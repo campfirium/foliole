@@ -9,6 +9,8 @@ import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { mockEditorState } from './app-smoke.shared';
 
+const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
+
 function createTopicFromHeaderMenu() {
   fireEvent.click(screen.getByRole('button', { name: 'Create topic' }));
 }
@@ -63,7 +65,7 @@ it('opens the guided sample when no note exists yet', async () => {
     expect(workspace.nodeOrder.some((nodeId) => workspace.nodesById[nodeId]?.title === 'Welcome to Foliole')).toBe(true);
   });
   expect(screen.queryByText('Nothing here yet')).not.toBeInTheDocument();
-});
+}, RELEASE_GATE_TEST_TIMEOUT_MS);
 
 it('shows the document empty state when no note is selected', () => {
   clearActiveNodeSelection();

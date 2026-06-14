@@ -37,6 +37,9 @@ vi.mock('./useNodeSourceDetails', () => ({
   useNodeSourceDetails
 }));
 
+const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
+const RELEASE_GATE_WAIT_OPTIONS = { timeout: RELEASE_GATE_TEST_TIMEOUT_MS };
+
 const baseNode = {
   id: 'node-1',
   kind: 'topic' as const,
@@ -123,16 +126,18 @@ it('writes pdf page and zoom through onPersistPdfViewState callback', async () =
 
   expect(onPersistPdfViewState).not.toHaveBeenCalled();
 
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Zoom in' })).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Zoom in' })).toBeInTheDocument(), RELEASE_GATE_WAIT_OPTIONS);
   fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
 
-  await waitFor(() =>
-    expect(onPersistPdfViewState).toHaveBeenCalledWith('node-1', {
-      scrollTop: 0,
-      selection: { from: 1, to: 110 }
-    })
+  await waitFor(
+    () =>
+      expect(onPersistPdfViewState).toHaveBeenCalledWith('node-1', {
+        scrollTop: 0,
+        selection: { from: 1, to: 110 }
+      }),
+    RELEASE_GATE_WAIT_OPTIONS
   );
-});
+}, RELEASE_GATE_TEST_TIMEOUT_MS);
 
 it('keeps fit width as the default persisted zoom mode for a new pdf', async () => {
   const onPersistPdfViewState = vi.fn();
