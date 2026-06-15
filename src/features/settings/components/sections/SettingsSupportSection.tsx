@@ -9,6 +9,7 @@ import { APP_COMMAND_IDS } from '../../../../shared/commands/ids';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import { useAppVersion } from '../../../../shared/platform/appVersion';
 import {
+  checkForFolioleUpdates,
   readUpdateCheckState,
   subscribeUpdateCheckState,
   type UpdateCheckState
@@ -89,20 +90,28 @@ function SupportButton(props: {
   ariaLabel?: string | undefined;
   children: ReactNode;
   className?: string;
-  commandId: string;
+  commandId?: string | undefined;
   icon?: LucideIcon | undefined;
   onRunSupportCommand?: ((commandId: string) => void) | undefined;
   onRunStart?: (() => void) | undefined;
+  onRunAction?: (() => void) | undefined;
 }) {
   const Icon = props.icon;
+  const canRun = Boolean(props.onRunAction || (props.commandId && props.onRunSupportCommand));
   return (
     <button
       aria-label={props.ariaLabel}
       className={settingsButtonClassName(`gap-2 ${props.className ?? ''}`)}
-      disabled={!props.onRunSupportCommand}
+      disabled={!canRun}
       onClick={() => {
         props.onRunStart?.();
-        props.onRunSupportCommand?.(props.commandId);
+        if (props.onRunAction) {
+          props.onRunAction();
+          return;
+        }
+        if (props.commandId) {
+          props.onRunSupportCommand?.(props.commandId);
+        }
       }}
       type="button"
     >
@@ -132,9 +141,8 @@ function VersionBlock({ onRunSupportCommand }: SettingsSupportSectionProps) {
             {t('settings.about.openReleases')}
           </SupportButton>
           <SupportButton
-            commandId={APP_COMMAND_IDS.checkForUpdates}
+            onRunAction={() => void checkForFolioleUpdates({ force: true })}
             onRunStart={() => updateCheck.setIsChecking(true)}
-            onRunSupportCommand={onRunSupportCommand}
           >
             {t('settings.about.checkForUpdates')}
           </SupportButton>

@@ -5,10 +5,23 @@ vi.mock('../../../../shared/platform/diagnosticBundle', () => ({
   copyDiagnosticReport: vi.fn()
 }));
 
+vi.mock('../../../../shared/platform/updateCheck', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../../shared/platform/updateCheck')>();
+  return {
+    ...actual,
+    checkForFolioleUpdates: vi.fn(async () => ({
+      latestRelease: null,
+      state: actual.readUpdateCheckState(),
+      status: 'current'
+    }))
+  };
+});
+
 import type { NativeInvoke } from '../../../../../lib/platform/nativeContract';
 import { APP_COMMAND_IDS } from '../../../../shared/commands/ids';
 import { APP_LANGUAGE_STORAGE_KEY } from '../../../../shared/localization/appLanguage';
 import { renderWithLocalization } from '../../../../shared/localization/testLocalization';
+import { checkForFolioleUpdates } from '../../../../shared/platform/updateCheck';
 
 import { SettingsAboutSection } from './SettingsAboutSection';
 
@@ -42,9 +55,9 @@ it('runs support commands from About settings', async () => {
   const emailTooltip = await screen.findByRole('tooltip');
   expect(emailTooltip).toHaveTextContent('hello@foliole.app');
   expect(emailTooltip.parentElement?.className).toContain('[z-index:var(--z-dropdown)]');
-  expect(onRunSupportCommand).toHaveBeenNthCalledWith(1, APP_COMMAND_IDS.checkForUpdates);
-  expect(onRunSupportCommand).toHaveBeenNthCalledWith(2, APP_COMMAND_IDS.openGitHubIssues);
-  expect(onRunSupportCommand).toHaveBeenNthCalledWith(3, APP_COMMAND_IDS.openYouTubePlaylist);
-  expect(onRunSupportCommand).toHaveBeenNthCalledWith(4, APP_COMMAND_IDS.sendFeedback);
-  expect(onRunSupportCommand).toHaveBeenNthCalledWith(5, APP_COMMAND_IDS.openSupportEmail);
+  expect(checkForFolioleUpdates).toHaveBeenCalledWith({ force: true });
+  expect(onRunSupportCommand).toHaveBeenNthCalledWith(1, APP_COMMAND_IDS.openGitHubIssues);
+  expect(onRunSupportCommand).toHaveBeenNthCalledWith(2, APP_COMMAND_IDS.openYouTubePlaylist);
+  expect(onRunSupportCommand).toHaveBeenNthCalledWith(3, APP_COMMAND_IDS.sendFeedback);
+  expect(onRunSupportCommand).toHaveBeenNthCalledWith(4, APP_COMMAND_IDS.openSupportEmail);
 });
