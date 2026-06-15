@@ -53,14 +53,14 @@
 
 ## Validation
 
-- Windows 原生本地快检优先使用 `npm run quality:fast:native`。它是 L0：复用既有路由但封顶在 light / mid，不启动真实 Electron 窗口，不自动运行 `quality:desktop` / `quality:shared` / `quality:android` / `quality:full`；当它提示 L0.5 deferred 时，按风险、交接或 push 需要再显式运行对应综合机械门。
-- 凡本轮改动会进入 Windows 桌面运行时或改变桌面用户可见行为，必须先完成本轮相关前置验证并运行 L0 `npm run quality:fast:native`，再完成一次 L1 验收。首选 L1a Hidden Native：新增或复用本轮任务相关 spec，并运行 `npm run test:e2e:desktop:native:hidden -- <spec>`；若行为不适合 hidden-capable 自动化，再升级到 L1b `npm run test:e2e:desktop:native:visible -- <spec>` 或 L2 人工验收。只改文档、agent 规则、只读诊断、测试代码或脚本内部逻辑，且不改变桌面运行时行为时，可跳过 L0 / L1，但最终汇报必须写明跳过原因。
+- Windows 原生本地快检优先使用 `npm run quality:fast:native`。它是 T0 快速检查：复用既有路由但封顶在 light / mid，不启动真实 Electron 窗口，不自动运行 `quality:desktop` / `quality:shared` / `quality:android` / `quality:full`；当它提示 T0 后置综合门 deferred 时，按风险、交接或 push 需要再显式运行对应综合机械门。
+- 凡本轮改动会进入 Windows 桌面运行时或改变桌面用户可见行为，必须先完成本轮相关前置验证并运行 T0 快速检查 `npm run quality:fast:native`，再完成一次 T1 / T2 / T3 检查。首选 T1 隐藏检查：新增或复用本轮任务相关 spec，并运行 `npm run test:e2e:desktop:native:hidden -- <spec>`；若行为不适合 hidden-capable 自动化，再升级到 T2 可见检查 `npm run test:e2e:desktop:native:visible -- <spec>` 或 T3 人工检查。只改文档、agent 规则、只读诊断、测试代码或脚本内部逻辑，且不改变桌面运行时行为时，可跳过 T0 / T1 / T2 / T3，但最终汇报必须写明跳过原因。
 - 桌面相关改动仍应先执行覆盖本轮能力闭环的最小前置验证；只有当能力闭环触及桌面根链路、桌面多子系统联动、共享层 / 依赖、或你无法用相关验证证明影响已被覆盖时，才升级为 `npm run quality:desktop`、`npm run quality:shared`、`npm run quality:android` 或 `npm run quality:full`；同时进入发布候选、安装包或跨宿主发布验收时才升级到 `npm run quality:release`。
 - WSL 主开发会话执行 Windows 桌面人工预览时，统一使用 `npm run windows:preview`；Windows 原生 Codex 会话直接诊断 Windows checkout 时才使用 `npm run windows:preview:native`。桌面人工预览只在用户明确要求 Windows 预览、阶段验收、发布 / 安装包验收、或本节 Windows 专属风险命中时执行；不再读取持久 preview flag 自动升级日常桌面可见改动。
-- Agent 日常 L1 自动化验收先按验收目标选入口：纯 renderer / Web UI 行为若属于桌面产品表面，仍优先使用 `npm run test:e2e:desktop:native:hidden -- <spec>` 覆盖真实 Electron renderer；只有非桌面表面才使用 headless browser。Windows 原生 Codex 会话必须运行本轮任务相关的 hidden-capable Playwright spec，不得用无参 hidden health 替代功能验收。
+- Agent 日常 T1 / T2 自动化验收先按验收目标选入口：纯 renderer / Web UI 行为若属于桌面产品表面，仍优先使用 `npm run test:e2e:desktop:native:hidden -- <spec>` 覆盖真实 Electron renderer；只有非桌面表面才使用 headless browser。Windows 原生 Codex 会话必须运行本轮任务相关的 hidden-capable Playwright spec，不得用无参 hidden health 替代功能验收。
 - Hidden Native 是不打扰用户的 Windows 原生 Electron 执行模式，不是固定测试内容；无显式 spec 时 `npm run test:e2e:desktop:native:hidden` 只运行 hidden mode health，用来证明 runner / 窗口呈现链路可用，不构成本轮功能验收。
-- L1a Hidden Native 验收只覆盖 renderer / preload bridge / IPC / 临时 sqlite / navigation / layout 等不依赖真实桌面 focus 的当前任务行为；只要本轮桌面产品行为可被 hidden-capable spec 断言，就必须新增或复用 targeted spec 并运行。若本轮没有 hidden-capable 桌面行为，最终汇报说明跳过 L1a 的原因；若行为依赖 focus、窗口拖拽、系统 dialog、tray、notification、installer / updater、真实菜单栏，则必须升级到 L1b 可见窗口自动验收、L2 人工验收或发布专项验收。
-- L1b 可见原生自动验收使用 `npm run test:e2e:desktop:native:visible -- <spec>`，必须显式传入当前任务相关 spec；它会短暂打扰桌面，但仍是自动化断言，不得汇报成人工验收，也不得复用 `windows:preview:native` 人工预览入口。
+- T1 隐藏检查只覆盖 renderer / preload bridge / IPC / 临时 sqlite / navigation / layout 等不依赖真实桌面 focus 的当前任务行为；只要本轮桌面产品行为可被 hidden-capable spec 断言，就必须新增或复用 targeted spec 并运行。若本轮没有 hidden-capable 桌面行为，最终汇报说明跳过 T1 的原因；若行为依赖 focus、窗口拖拽、系统 dialog、tray、notification、installer / updater、真实菜单栏，则必须升级到 T2 可见检查、T3 人工检查或发布专项验收。
+- T2 可见检查使用 `npm run test:e2e:desktop:native:visible -- <spec>`，必须显式传入当前任务相关 spec；它会短暂打扰桌面，但仍是自动化断言，不得汇报成人工验收，也不得复用 `windows:preview:native` 人工预览入口。
 - WSL/Linux 桌面 Electron Playwright 仅作为非 Windows 原生会话的回退入口，必须使用 `npm run test:e2e:desktop:agent -- <spec>`，或显式 `xvfb-run --auto-servernum npx playwright test -c playwright.desktop.config.ts ...`；不得用 Linux Electron + Xvfb 宣称 Windows 专属行为已验收。
 - 桌面 Electron Playwright 在共享工作区内默认串行执行；若 `desktopSession` setup 卡住且发现另一条桌面 Playwright / 预览正在持有运行资源，必须等待或清理 stale 进程后重跑，不得把并发抢占汇报为产品失败。hidden native 与 WSL agent 入口都必须通过 resource gate 或等价串行保护。
 - Desktop Playwright 应把用户预期转成具体断言；测试前置状态优先用页面内事件、debug bridge 或命令入口建立，避免把导航和面板点击噪声混进主断言。只有验收目标本身是鼠标点击、命中区域、菜单/面板可达性、拖拽、物理键盘快捷键或普通用户路径完整性时，才把真实 UI 操作作为主动作。最终汇报必须说明 Playwright 断言覆盖的用户效果和未覆盖的人工观察点。

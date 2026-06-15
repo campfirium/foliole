@@ -100,13 +100,13 @@ describe('desktop regression suite manifest', () => {
     expect(HIDDEN_MODE_HEALTH_SPECS.some((spec) => regressionSpecs.has(spec))).toBe(false);
   });
 
-  it('formats a markdown table for L0.5, L3, and L4 consumers', () => {
+  it('formats a markdown table for T0/T4/T5 consumers', () => {
     const output = formatDesktopRegressionSuite();
 
     expect(output).toContain('startup-settings-backups');
     expect(output).toContain('hidden-capable');
     expect(output).toContain('enabled');
     expect(output).toContain('manifest-only; run explicitly before release use');
-    expect(output).toContain('L0.5, L3, L4');
+    expect(output).toContain('T0, T4, T5');
   });
 });

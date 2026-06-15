@@ -1,5 +1,6 @@
-#!/usr/bin/env node
 /* global console, process */
+
+import { fileURLToPath } from 'node:url';
 
 export const DESKTOP_REGRESSION_CLASSIFICATIONS = new Set([
   'hidden-capable',
@@ -20,7 +21,7 @@ export const DESKTOP_REGRESSION_SUITE = [
     id: 'startup-settings-backups',
     spec: 'tests/desktop/startup-settings-backups.smoke.spec.ts',
     classification: 'hidden-capable',
-    triggers: ['L0.5', 'L3', 'L4'],
+    triggers: ['T0', 'T4', 'T5'],
     command: 'npm run test:e2e:desktop:native:hidden -- tests/desktop/startup-settings-backups.smoke.spec.ts',
     admission: 'enabled',
     hiddenAutomationCleared: true,
@@ -31,7 +32,7 @@ export const DESKTOP_REGRESSION_SUITE = [
     id: 'main-path-smoke',
     spec: 'tests/desktop/main-path-smoke.spec.ts',
     classification: 'hidden-screening-required',
-    triggers: ['L3', 'L4'],
+    triggers: ['T4', 'T5'],
     command: 'npm run test:e2e:desktop:native:hidden -- tests/desktop/main-path-smoke.spec.ts',
     admission: 'candidate',
     hiddenAutomationCleared: false,
@@ -42,7 +43,7 @@ export const DESKTOP_REGRESSION_SUITE = [
     id: 'pdf-user-journey',
     spec: 'tests/desktop/pdf-user-journey.spec.ts',
     classification: 'hidden-screening-required',
-    triggers: ['L3', 'L4'],
+    triggers: ['T4', 'T5'],
     command: 'npm run test:e2e:desktop:native:hidden -- tests/desktop/pdf-user-journey.spec.ts',
     admission: 'candidate',
     hiddenAutomationCleared: false,
@@ -53,7 +54,7 @@ export const DESKTOP_REGRESSION_SUITE = [
     id: 'pdf-appearance-mode-switch',
     spec: 'tests/desktop/pdf-appearance-mode-switch.spec.ts',
     classification: 'hidden-screening-required',
-    triggers: ['L0.5', 'L3', 'L4'],
+    triggers: ['T0', 'T4', 'T5'],
     command: 'npm run test:e2e:desktop:native:hidden -- tests/desktop/pdf-appearance-mode-switch.spec.ts',
     admission: 'candidate',
     hiddenAutomationCleared: false,
@@ -64,7 +65,7 @@ export const DESKTOP_REGRESSION_SUITE = [
     id: 'text-anchor-navigation',
     spec: 'tests/desktop/text-anchor-breadcrumb-context.spec.ts',
     classification: 'hidden-screening-required',
-    triggers: ['L0.5', 'L3'],
+    triggers: ['T0', 'T4'],
     command: 'npm run test:e2e:desktop:native:hidden -- tests/desktop/text-anchor-breadcrumb-context.spec.ts',
     admission: 'candidate',
     hiddenAutomationCleared: false,
@@ -75,7 +76,7 @@ export const DESKTOP_REGRESSION_SUITE = [
     id: 'global-capture-panel',
     spec: 'tests/desktop/global-capture-panel.spec.ts',
     classification: 'visible-required',
-    triggers: ['L1b', 'L4'],
+    triggers: ['T2', 'T5'],
     command: 'npm run test:e2e:desktop:native:visible -- tests/desktop/global-capture-panel.spec.ts',
     admission: 'candidate',
     hiddenAutomationCleared: false,
@@ -86,7 +87,7 @@ export const DESKTOP_REGRESSION_SUITE = [
     id: 'global-capture-toast-navigation',
     spec: 'tests/desktop/global-capture-toast-navigation.spec.ts',
     classification: 'visible-required',
-    triggers: ['L1b', 'L4'],
+    triggers: ['T2', 'T5'],
     command: 'npm run test:e2e:desktop:native:visible -- tests/desktop/global-capture-toast-navigation.spec.ts',
     admission: 'candidate',
     hiddenAutomationCleared: false,
@@ -97,7 +98,7 @@ export const DESKTOP_REGRESSION_SUITE = [
     id: 'installed-app-smoke',
     spec: '(release workflow / package verification)',
     classification: 'release-only',
-    triggers: ['L4'],
+    triggers: ['T5'],
     command: 'npm run quality:release:windows:tail && npm run windows:package:install && node scripts/windows/installed-app-smoke.mjs',
     admission: 'release-only',
     hiddenAutomationCleared: false,
@@ -151,6 +152,6 @@ export function formatDesktopRegressionSuite(entries = DESKTOP_REGRESSION_SUITE)
   ].join('\n');
 }
 
-if (process.argv[1] && import.meta.url.endsWith('/desktop-regression-suite.mjs')) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   console.log(formatDesktopRegressionSuite());
 }
