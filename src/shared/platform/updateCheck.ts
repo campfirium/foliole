@@ -25,7 +25,7 @@ export {
   selectLatestPlatformRelease,
   selectSkippedPlatformReleases
 } from './updateCheckModel';
-export type { UpdateCheckState, UpdateReleaseNotes } from './updateCheckModel';
+export type { UpdateCheckState, UpdateRelease, UpdateReleaseNotes } from './updateCheckModel';
 
 const DEFAULT_MANIFEST_URL = 'https://campfirium.github.io/foliole/releases/update-manifest.json';
 const UPDATE_NOTES_LOCALES = ['en', 'zh-Hans'] as const;

@@ -90,8 +90,8 @@ it('selects skipped Windows releases between the installed and latest versions',
   const manifest = normalizeUpdateManifest(createManifest());
 
   expect(selectSkippedPlatformReleases(manifest, '0.1.1', '0.1.3').map((release) => release.version)).toEqual([
-    '0.1.2',
-    '0.1.3'
+    '0.1.3',
+    '0.1.2'
   ]);
 });
 

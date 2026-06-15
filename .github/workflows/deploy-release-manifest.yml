@@ -28,7 +28,7 @@ jobs:
       - name: Prepare static files
         run: |
           mkdir -p _site/releases
-          cp releases/update-manifest.json _site/releases/update-manifest.json
+          cp -R releases/. _site/releases/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

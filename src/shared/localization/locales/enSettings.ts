@@ -101,6 +101,7 @@ export const EN_SETTINGS_TRANSLATIONS = {
   'settings.about.update.description.failed': 'Could not check for updates.',
   'settings.about.update.description.idle': 'Current Foliole desktop version.',
   'settings.about.openReleases': 'Open releases',
+  'settings.about.viewUpdateDetails': 'View update details',
   'settings.about.checkForUpdates': 'Check for Updates',
   'settings.about.discussions': 'Discussions',
   'settings.about.feedback': 'Send Feedback',

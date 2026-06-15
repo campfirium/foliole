@@ -126,7 +126,15 @@ function VersionBlock({ onRunSupportCommand }: SettingsSupportSectionProps) {
   const appRow = useLocalizedSettingsSearchRow('about-foliole-desktop');
   const appVersion = useAppVersion();
   const updateCheck = useUpdateCheckViewState();
+  const [releaseNotesOpen, setReleaseNotesOpen] = useState(false);
   const status = updateCheck.status;
+  const handleCheckForUpdates = async () => {
+    updateCheck.setIsChecking(true);
+    const result = await checkForFolioleUpdates({ force: true });
+    if (result.status === 'available') {
+      setReleaseNotesOpen(true);
+    }
+  };
 
   return (
     <>
@@ -140,15 +148,24 @@ function VersionBlock({ onRunSupportCommand }: SettingsSupportSectionProps) {
           <SupportButton commandId={APP_COMMAND_IDS.openLatestRelease} onRunSupportCommand={onRunSupportCommand}>
             {t('settings.about.openReleases')}
           </SupportButton>
+          {status === 'available' ? (
+            <SupportButton onRunAction={() => setReleaseNotesOpen(true)}>
+              {t('settings.about.viewUpdateDetails')}
+            </SupportButton>
+          ) : null}
           <SupportButton
-            onRunAction={() => void checkForFolioleUpdates({ force: true })}
-            onRunStart={() => updateCheck.setIsChecking(true)}
+            onRunAction={() => void handleCheckForUpdates()}
           >
             {t('settings.about.checkForUpdates')}
           </SupportButton>
         </SettingsControlSlot>
       </SettingsRow>
-      <SettingsUpdateReleaseNotes currentVersion={appVersion} state={updateCheck.state} />
+      <SettingsUpdateReleaseNotes
+        currentVersion={appVersion}
+        onOpenChange={setReleaseNotesOpen}
+        open={releaseNotesOpen}
+        state={updateCheck.state}
+      />
     </>
   );
 }

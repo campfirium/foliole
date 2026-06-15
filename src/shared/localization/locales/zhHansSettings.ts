@@ -103,6 +103,7 @@ export const ZH_HANS_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, strin
   'settings.about.update.description.failed': '无法检查更新。',
   'settings.about.update.description.idle': '当前 Foliole 桌面端版本。',
   'settings.about.openReleases': '打开发布页',
+  'settings.about.viewUpdateDetails': '查看更新内容',
   'settings.about.checkForUpdates': '检查更新',
   'settings.about.discussions': 'Discussions',
   'settings.about.feedback': '发送反馈',

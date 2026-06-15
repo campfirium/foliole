@@ -205,7 +205,7 @@ export function selectSkippedPlatformReleases(manifest: UpdateManifest | null, c
         && compareVersionStrings(release.version, currentVersion) > 0
         && compareVersionStrings(release.version, latestVersion) <= 0
     )
-    .sort((left, right) => compareVersionStrings(left.version, right.version));
+    .sort((left, right) => compareVersionStrings(right.version, left.version));
 }
 
 function resolvePolicy(manifest: UpdateManifest | null, failed: boolean) {

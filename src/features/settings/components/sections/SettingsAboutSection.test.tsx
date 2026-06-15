@@ -95,8 +95,10 @@ it('shows release notes for the available update in About settings', async () =>
       en: {
         '0.6.2': {
           notes: [
+            'Improved',
             'Initial Simplified Chinese interface support is now available.',
             'Inbox folder import now supports HTML files.',
+            'Fixed',
             'About settings can now show the changes included in available updates.',
             'Reading material due dates now follow the learning day instead of a specific clock time.',
             'The Flow panel no longer shows material that is not due yet.'
@@ -125,8 +127,12 @@ it('shows release notes for the available update in About settings', async () =>
 
   renderWithLocalization(<SettingsAboutSection />);
 
-  await waitFor(() => expect(screen.getByText('Included updates')).toBeInTheDocument());
-  expect(screen.getByText('Version 0.6.2')).toBeInTheDocument();
+  await waitFor(() => expect(screen.getByRole('button', { name: 'View update details' })).toBeInTheDocument());
+  fireEvent.click(screen.getByRole('button', { name: 'View update details' }));
+  expect(screen.getByRole('dialog', { name: 'Update details' })).toBeInTheDocument();
+  expect(screen.getByText('v0.6.2')).toBeInTheDocument();
+  expect(screen.getByText('Improved').tagName).toBe('H4');
+  expect(screen.getByText('Fixed').tagName).toBe('H4');
   expect(screen.getByText('Initial Simplified Chinese interface support is now available.')).toBeInTheDocument();
   expect(screen.getByText('About settings can now show the changes included in available updates.')).toBeInTheDocument();
   expect(screen.getByText('The Flow panel no longer shows material that is not due yet.')).toBeInTheDocument();
@@ -168,8 +174,10 @@ it('shows release notes in Simplified Chinese', async () => {
 
   renderWithLocalization(<SettingsAboutSection />);
 
-  await waitFor(() => expect(screen.getByText('将获得的更新')).toBeInTheDocument());
-  expect(screen.getByText('版本 0.6.2')).toBeInTheDocument();
+  await waitFor(() => expect(screen.getByRole('button', { name: '查看更新内容' })).toBeInTheDocument());
+  fireEvent.click(screen.getByRole('button', { name: '查看更新内容' }));
+  expect(screen.getByRole('dialog', { name: '更新内容' })).toBeInTheDocument();
+  expect(screen.getByText('v0.6.2')).toBeInTheDocument();
   expect(screen.getByText('已加入初步的简体中文界面支持。')).toBeInTheDocument();
   expect(screen.getByText('关于设置现在会显示可用更新包含的变化。')).toBeInTheDocument();
   expect(screen.queryByText('Initial Simplified Chinese interface support is now available.')).not.toBeInTheDocument();
