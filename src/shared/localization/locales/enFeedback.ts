@@ -19,6 +19,7 @@ export const EN_FEEDBACK_TRANSLATIONS = {
   'feedback.done': 'Done',
   'feedback.submit': 'Send',
   'feedback.sending': 'Sending...',
+  'feedback.updateBeforeSubmit': 'This version is not the latest. We recommend updating before sending feedback.',
   'feedback.success': 'Feedback sent.',
   'feedback.success.title': 'Feedback sent',
   'feedback.success.attachmentsSkipped': 'Your message was sent. Images are temporarily unavailable and were not attached.',

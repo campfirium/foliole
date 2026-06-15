@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import type { HTMLAttributes, ReactNode } from 'react';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
+import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
 import { ZH_HANS_FEEDBACK_TRANSLATIONS } from '../../shared/localization/locales/zhHansFeedback';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { preloadTranslationCatalog } from '../../shared/localization/translations';
@@ -25,6 +26,7 @@ vi.mock('../../shared/ui', async (importOriginal) => {
 import { FeedbackDialog } from './FeedbackDialog';
 
 afterEach(() => {
+  window.localStorage.clear();
   vi.unstubAllGlobals();
 });
 
@@ -116,7 +118,7 @@ describe('FeedbackDialog text submission', () => {
     }
     expect(JSON.parse(requestInit.body as string)).toMatchObject({
       message: 'The app needs an easier feedback path.',
-      metadata: { platform: 'desktop' }
+      metadata: { appVersion: expect.any(String), platform: 'desktop' }
     });
     expect(await screen.findByText('Feedback sent')).toBeInTheDocument();
     expect(screen.queryByLabelText('Feedback')).not.toBeInTheDocument();
@@ -156,6 +158,25 @@ describe('FeedbackDialog action styling', () => {
     expect(screen.queryByText('Images')).not.toBeInTheDocument();
     expect(screen.queryByText('0/3')).not.toBeInTheDocument();
     expect(screen.queryByText('Paste screenshots')).not.toBeInTheDocument();
+  });
+
+  it('shows an update hint only when the current version is behind the checked latest version', () => {
+    window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.updateCheckState, JSON.stringify({
+      lastCheckStatus: 'available',
+      latestVersion: '9.0.0'
+    }));
+    const { unmount } = renderWithLocalization(<FeedbackDialog endpoint="https://feedback.example.test" onClose={() => undefined} open />);
+
+    expect(screen.getByText('This version is not the latest. We recommend updating before sending feedback.')).toBeInTheDocument();
+    unmount();
+
+    window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.updateCheckState, JSON.stringify({
+      lastCheckStatus: 'current',
+      latestVersion: null
+    }));
+    renderWithLocalization(<FeedbackDialog endpoint="https://feedback.example.test" onClose={() => undefined} open />);
+
+    expect(screen.queryByText('This version is not the latest. We recommend updating before sending feedback.')).not.toBeInTheDocument();
   });
 
   it('uses the lighter Chinese feedback field copy', () => {

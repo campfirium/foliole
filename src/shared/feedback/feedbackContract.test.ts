@@ -16,6 +16,16 @@ describe('validateFeedbackSubmission', () => {
     });
   });
 
+  it('keeps submitted app version metadata', () => {
+    expect(validateFeedbackSubmission({
+      message: 'Please add a lighter feedback path.',
+      metadata: { appVersion: '0.6.4' }
+    })).toMatchObject({
+      ok: true,
+      value: { metadata: { appVersion: '0.6.4' } }
+    });
+  });
+
   it('rejects an empty message', () => {
     expect(validateFeedbackSubmission({ message: '   ' })).toEqual({
       errors: ['message_required'],

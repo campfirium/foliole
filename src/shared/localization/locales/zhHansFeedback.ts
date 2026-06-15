@@ -21,6 +21,7 @@ export const ZH_HANS_FEEDBACK_TRANSLATIONS: Partial<Record<TranslationKey, strin
   'feedback.done': '完成',
   'feedback.submit': '发送',
   'feedback.sending': '发送中...',
+  'feedback.updateBeforeSubmit': '当前版本不是最新版本，建议更新后再提交反馈。',
   'feedback.success': '反馈已发送。',
   'feedback.success.title': '反馈已发送',
   'feedback.success.attachmentsSkipped': '文字反馈已发送。图片暂时不可用，所以没有附上。',

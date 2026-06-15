@@ -17,10 +17,12 @@ import {
 import { FeedbackAttachmentPicker } from './FeedbackDialogAttachments';
 import { FeedbackContactFields } from './FeedbackDialogContactFields';
 import { FeedbackSuccessContent } from './FeedbackDialogSuccess';
+import { useFeedbackUpdateNotice } from './FeedbackDialogUpdateNotice';
 
 type SubmitState = 'idle' | 'sending' | 'sent' | 'failed';
 
 export interface FeedbackDraft {
+  appVersion: string;
   attachments: FeedbackAttachmentPayload[];
   contact: string;
   message: string;
@@ -30,6 +32,7 @@ export interface FeedbackDraft {
 export function FeedbackDialogContent(props: {
   attachments: FeedbackAttachmentPayload[];
   attachmentWarning: boolean;
+  appVersion: string;
   canSubmit: boolean;
   contact: string;
   endpoint?: string | undefined;
@@ -80,7 +83,7 @@ export function FeedbackDialogContent(props: {
           state={props.state}
         />
       </div>
-      <FeedbackActions canSubmit={props.canSubmit} onSubmit={props.onSubmit} state={props.state} />
+      <FeedbackActions appVersion={props.appVersion} canSubmit={props.canSubmit} onSubmit={props.onSubmit} state={props.state} />
     </AppDialogContent>
   );
 }
@@ -91,6 +94,7 @@ export function createFeedbackPayload(draft: FeedbackDraft, turnstileToken: stri
     contact: draft.contact,
     message: draft.message,
     metadata: {
+      appVersion: draft.appVersion,
       language: navigator.language,
       platform: 'desktop'
     },
@@ -103,6 +107,7 @@ export function buildFeedbackContentProps(args: {
   appendFiles: (files: File[]) => Promise<void>;
   attachments: FeedbackAttachmentPayload[];
   attachmentWarning: boolean;
+  appVersion: string;
   canSubmit: boolean;
   contact: string;
   endpoint: string | undefined;
@@ -122,6 +127,7 @@ export function buildFeedbackContentProps(args: {
   return {
     attachments: args.attachments,
     attachmentWarning: args.attachmentWarning,
+    appVersion: args.appVersion,
     canSubmit: args.canSubmit,
     contact: args.contact,
     endpoint: args.endpoint,
@@ -185,13 +191,20 @@ export function FeedbackStatus(props: {
 }
 
 export function FeedbackActions(props: {
+  appVersion: string;
   canSubmit: boolean;
   onSubmit: () => Promise<void>;
   state: SubmitState;
 }) {
   const t = useTranslation();
+  const showUpdateNotice = useFeedbackUpdateNotice(props.appVersion);
   return (
     <div className={appShelllessActionBarClassName()}>
+      {showUpdateNotice ? (
+        <p className="mr-auto min-w-0 truncate pr-3 text-xs text-shellless-muted">
+          {t('feedback.updateBeforeSubmit')}
+        </p>
+      ) : null}
       <button className={appShelllessControlClassName()} disabled={!props.canSubmit} onClick={() => void props.onSubmit()} type="button">
         {props.state === 'sending' ? t('feedback.sending') : t('feedback.submit')}
       </button>

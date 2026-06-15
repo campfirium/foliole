@@ -6,6 +6,7 @@ import {
   type FeedbackAttachmentPayload
 } from '../../shared/feedback/feedbackContract';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
+import { useAppVersion } from '../../shared/platform/appVersion';
 import { onWindowEscape } from '../../shared/platform/keyboard';
 import {
   AppDialog,
@@ -94,10 +95,11 @@ function useFeedbackDialogController({
   const [message, setMessage] = useState('');
   const [name, setName] = useState('');
   const [state, setState] = useState<SubmitState>('idle');
+  const appVersion = useAppVersion();
   const turnstile = useTurnstileToken(turnstileSiteKey);
   const canSubmit = Boolean(endpoint && message.trim()) && state !== 'sending' && (!turnstileSiteKey || Boolean(turnstile.token));
   const submit = useFeedbackSubmitAction({
-    draft: { attachments: attachmentState.attachments, contact, message, name },
+    draft: { appVersion, attachments: attachmentState.attachments, contact, message, name },
     endpoint,
     setError,
     setAttachmentWarning,
@@ -124,6 +126,7 @@ function useFeedbackDialogController({
       endpoint,
       error,
       attachmentWarning,
+      appVersion,
       message,
       name,
       setContact,
