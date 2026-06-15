@@ -36,7 +36,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   closeDatabaseConnection();
-  await fs.rm(tempRoot, { recursive: true, force: true });
+  await removeTempRootBestEffort(tempRoot);
 });
 
 it('drops legacy main FTS tables and their shadow tables after creating a snapshot', async () => {
@@ -203,4 +203,21 @@ function readSidecarMarker(sqlite: import('better-sqlite3').Database) {
 
 function openDetachedSqlite(databasePath: string) {
   return new BetterSqlite3(databasePath, { fileMustExist: true, readonly: true });
+}
+
+async function removeTempRootBestEffort(directoryPath: string) {
+  try {
+    await fs.rm(directoryPath, { recursive: true, force: true });
+  } catch (error) {
+    if (!isBusyCleanupError(error)) {
+      throw error;
+    }
+  }
+}
+
+function isBusyCleanupError(error: unknown) {
+  const code = typeof error === 'object' && error !== null && 'code' in error
+    ? String((error as { code?: unknown }).code)
+    : '';
+  return code === 'EBUSY' || code === 'EPERM' || code === 'ENOTEMPTY';
 }

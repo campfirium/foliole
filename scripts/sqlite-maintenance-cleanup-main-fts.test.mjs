@@ -23,7 +23,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await fs.rm(tempRoot, { recursive: true, force: true });
+  await removeTempRootBestEffort(tempRoot);
 });
 
 it('dry-runs legacy main FTS cleanup without snapshot or writes', async () => {
@@ -210,4 +210,21 @@ function readLegacyMainFtsObjects(dbPath) {
   } finally {
     sqlite.close();
   }
+}
+
+async function removeTempRootBestEffort(directoryPath) {
+  try {
+    await fs.rm(directoryPath, { recursive: true, force: true });
+  } catch (error) {
+    if (!isBusyCleanupError(error)) {
+      throw error;
+    }
+  }
+}
+
+function isBusyCleanupError(error) {
+  const code = typeof error === 'object' && error !== null && 'code' in error
+    ? String(error.code)
+    : '';
+  return code === 'EBUSY' || code === 'EPERM' || code === 'ENOTEMPTY';
 }
