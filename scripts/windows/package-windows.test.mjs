@@ -112,13 +112,14 @@ describe('windows package runner', () => {
   });
 
   it('cleans only known release artifacts before native packaging', () => {
-    expect(resolveReleaseArtifactPaths('/repo', '9.8.7')).toEqual([
-      '/repo/release-artifacts/win-unpacked',
-      '/repo/release-artifacts/win-unpacked.tmp',
-      '/repo/release-artifacts/Foliole Setup 9.8.7.exe',
-      '/repo/release-artifacts/Foliole Setup 9.8.7.exe.blockmap',
-      '/repo/release-artifacts/latest.yml',
-      '/repo/release-artifacts/builder-debug.yml'
+    const root = 'D:\\repo';
+    expect(resolveReleaseArtifactPaths(root, '9.8.7')).toEqual([
+      join(root, 'release-artifacts/win-unpacked'),
+      join(root, 'release-artifacts/win-unpacked.tmp'),
+      join(root, 'release-artifacts/Foliole Setup 9.8.7.exe'),
+      join(root, 'release-artifacts/Foliole Setup 9.8.7.exe.blockmap'),
+      join(root, 'release-artifacts/latest.yml'),
+      join(root, 'release-artifacts/builder-debug.yml')
     ]);
   });
 

@@ -8,16 +8,6 @@ import { fileURLToPath } from 'node:url';
 
 const DEFAULT_LOG_ROOT = path.join('.tmp', 'logs', 'quality-gate');
 const FINAL_CONFIRMATION = 'npm run quality:release:base';
-const RERUN_PREFIX = [
-  'node',
-  'scripts/run-vitest-with-summary.mjs',
-  '.tmp/vitest/rerun.json',
-  '--',
-  '--silent=passed-only',
-  '--pool=threads',
-  '--maxWorkers=2',
-  '--no-file-parallelism'
-];
 
 function shellQuote(value) {
   if (/^[A-Za-z0-9_./:=@+-]+$/u.test(value)) {
@@ -88,7 +78,20 @@ function parseFailureBlock(block) {
 
 export function buildRepairCommand(entry) {
   if (entry.failedTests.length > 0) {
-    return [...RERUN_PREFIX, ...entry.failedTests].map(shellQuote).join(' ');
+    if (entry.script) {
+      return ['npm', 'run', entry.script, '--', ...entry.failedTests].map(shellQuote).join(' ');
+    }
+    return [
+      'node',
+      'scripts/run-vitest-with-summary.mjs',
+      '.tmp/vitest/rerun.json',
+      '--',
+      '--silent=passed-only',
+      '--pool=threads',
+      '--maxWorkers=2',
+      '--no-file-parallelism',
+      ...entry.failedTests
+    ].map(shellQuote).join(' ');
   }
   return entry.rerun;
 }

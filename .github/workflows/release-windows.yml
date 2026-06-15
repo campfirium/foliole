@@ -2,6 +2,11 @@ name: Release Windows
 
 on:
   workflow_dispatch:
+    inputs:
+      release_ref:
+        description: "Fixed release branch or tag to build, e.g. release/0.6.4 or v0.6.4"
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -21,6 +26,36 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_ref }}
+          fetch-depth: 0
+
+      - name: Verify fixed release ref
+        shell: pwsh
+        run: |
+          $releaseRef = "${{ inputs.release_ref }}".Trim()
+          if ([string]::IsNullOrWhiteSpace($releaseRef)) {
+            throw "release_ref is required."
+          }
+          if (-not ($releaseRef.StartsWith("release/") -or $releaseRef.StartsWith("v"))) {
+            throw "release_ref must be a release branch or version tag."
+          }
+          $head = (git rev-parse HEAD).Trim()
+          $checkedOutRef = (git rev-parse --verify HEAD).Trim()
+          if ($head -ne $checkedOutRef) {
+            throw "Unable to verify checked out release ref."
+          }
+          $package = Get-Content package.json | ConvertFrom-Json
+          $expectedTag = "v$($package.version)"
+          if ($releaseRef.StartsWith("v") -and $releaseRef -ne $expectedTag) {
+            throw "release_ref $releaseRef does not match package version tag $expectedTag."
+          }
+          $expectedBranch = "release/$($package.version)"
+          if ($releaseRef.StartsWith("release/") -and $releaseRef -ne $expectedBranch) {
+            throw "release_ref $releaseRef does not match package version $($package.version)."
+          }
+          Write-Host "release_ref=$releaseRef"
+          Write-Host "release_commit=$head"
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -31,8 +66,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build Windows installer
-        run: npm run release:windows:package
+      - name: Build and install Windows installer
+        run: npm run windows:package:install
+
+      - name: Smoke installed Windows app
+        run: node scripts/windows/installed-app-smoke.mjs
 
       - name: Generate installer checksum
         shell: pwsh
@@ -44,6 +82,13 @@ jobs:
 
           $hash = (Get-FileHash -Algorithm SHA256 $installer.FullName).Hash.ToLowerInvariant()
           "$hash *$($installer.Name)" | Set-Content -Path release-artifacts/SHA256SUMS.txt -Encoding ascii
+
+      - name: Generate release copy surfaces
+        shell: pwsh
+        run: |
+          $package = Get-Content package.json | ConvertFrom-Json
+          $version = $package.version
+          node scripts/release-copy-surfaces.mjs --version $version --out release-artifacts
 
       - name: Generate artifact attestation
         uses: actions/attest@v4
@@ -58,11 +103,15 @@ jobs:
           $releaseTitle = $package.version
           $installer = Get-ChildItem -Path release-artifacts -Filter "*.exe" | Select-Object -First 1
           $checksums = Get-Item -Path release-artifacts/SHA256SUMS.txt
+          $notesFile = Get-Item -Path "release-artifacts/release-v$($package.version)-github-body.md"
           if (-not $installer) {
             throw "Windows installer was not generated."
           }
           if (-not $checksums) {
             throw "Installer checksums were not generated."
+          }
+          if (-not $notesFile) {
+            throw "GitHub release body was not generated."
           }
 
           $existingDraft = gh release view $tagName --json isDraft --jq ".isDraft" 2>$null
@@ -76,11 +125,8 @@ jobs:
             }
           }
 
-          $notes = @"
-          Windows alpha; please use test data and keep your own backup.
-          "@
-
-          gh release create $tagName $installer.FullName $checksums.FullName --draft --title $releaseTitle --notes $notes
+          $targetCommit = (git rev-parse HEAD).Trim()
+          gh release create $tagName $installer.FullName $checksums.FullName --draft --title $releaseTitle --target $targetCommit --notes-file $notesFile.FullName
 
       - name: Upload installer artifacts
         uses: actions/upload-artifact@v4

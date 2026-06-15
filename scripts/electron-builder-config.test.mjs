@@ -130,14 +130,14 @@ describe('electron-builder release packaging config', () => {
     expect(workflow).toContain('attestations: write');
     expect(workflow).toContain('runs-on: windows-latest');
     expect(workflow).toContain('GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}');
-    expect(workflow).toContain('npm run release:windows:package');
+    expect(workflow).toContain('npm run windows:package:install');
     expect(workflow).toContain('Generate installer checksum');
     expect(workflow).toContain('Set-Content -Path release-artifacts/SHA256SUMS.txt -Encoding ascii');
     expect(workflow).toContain('actions/attest@v4');
     expect(workflow).toContain('subject-checksums: release-artifacts/SHA256SUMS.txt');
     expect(workflow).toContain('gh release create $tagName $installer.FullName $checksums.FullName --draft');
-    expect(workflow).toContain('--title $releaseTitle --notes $notes');
-    expect(workflow).toContain('Windows alpha; please use test data and keep your own backup.');
+    expect(workflow).toContain('--title $releaseTitle --target $targetCommit --notes-file $notesFile.FullName');
+    expect(workflow).toContain('node scripts/release-copy-surfaces.mjs --version $version --out release-artifacts');
     expect(workflow).not.toContain('SmartScreen');
     expect(workflow).not.toContain('Advanced provenance check:');
     expect(workflow).toContain('gh release delete $tagName --yes');

@@ -24,7 +24,7 @@ async function writeFailedSummary(logRoot, runId, text) {
 }
 
 describe('quality gate release repair', () => {
-  it('rebuilds file-level rerun commands from failed-test entries', () => {
+  it('preserves the original script runtime for failed-test entries', () => {
     const [entry] = parseFailureSummary(`
 script=test:release:shared
 display=test:release:shared
@@ -35,8 +35,17 @@ failed-test=src/features/File With Space.test.tsx
 `);
 
     expect(buildRepairCommand(entry)).toBe(
-      "node scripts/run-vitest-with-summary.mjs .tmp/vitest/rerun.json -- --silent=passed-only --pool=threads --maxWorkers=2 --no-file-parallelism src/shared/One.test.ts 'src/features/File With Space.test.tsx'"
+      "npm run test:release:shared -- src/shared/One.test.ts 'src/features/File With Space.test.tsx'"
     );
+  });
+
+  it('uses a plain vitest rerun only when no source script is recorded', () => {
+    const [entry] = parseFailureSummary(`
+display=manual vitest
+failed-test=src/shared/One.test.ts
+`);
+
+    expect(buildRepairCommand(entry)).toContain('node scripts/run-vitest-with-summary.mjs');
   });
 
   it('falls back to the recorded rerun command for non-test failures', () => {
@@ -75,7 +84,7 @@ failed-test=electron/main/Bridge.test.ts
       expect(plan.entries).toHaveLength(1);
       expect(output).toContain('run-dir:');
       expect(output).toContain('failed-tests: electron/main/Bridge.test.ts');
-      expect(output).toContain('repair: node scripts/run-vitest-with-summary.mjs');
+      expect(output).toContain('repair: npm run test:desktop:electron -- electron/main/Bridge.test.ts');
       expect(output).toContain('fallback: npm run test:desktop:electron');
       expect(output).toContain('final confirmation after repairs: npm run quality:release:base');
     } finally {
