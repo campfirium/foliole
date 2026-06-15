@@ -44,7 +44,7 @@ export const EN_DESKTOP_SEARCH_TRANSLATIONS = {
   'desktop.reviewComplete.minutes': '{count} min',
   'desktop.reviewComplete.hours': '{count} hr',
   'desktop.reviewComplete.hoursMinutes': '{hours} hr {minutes} min',
-  'desktop.reviewComplete.title.reviewFirst': 'Review queue clear',
+  'desktop.reviewComplete.title.reviewFirst': 'Queue clear',
   'desktop.reviewComplete.title.readingOnly': 'Reading complete',
   'desktop.reviewComplete.title.default': 'Queue clear',
   'desktop.reviewComplete.reviewed': 'Reviewed',

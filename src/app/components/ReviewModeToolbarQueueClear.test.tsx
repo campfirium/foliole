@@ -51,7 +51,7 @@ function renderToolbar(overrides: Partial<Parameters<typeof ReviewModeToolbar>[0
 it('shows review queue clear controls while continuing normal reading after review items are done', () => {
   renderToolbar();
 
-  const queueClearButton = screen.getByRole('button', { name: 'Review queue clear' });
+  const queueClearButton = screen.getByRole('button', { name: 'Queue clear' });
   expect(queueClearButton).toBeInTheDocument();
   expect(queueClearButton).toHaveClass('bg-transparent');
   expect(queueClearButton).not.toHaveClass('bg-foreground/[0.055]');
@@ -61,7 +61,7 @@ it('shows review queue clear controls while continuing normal reading after revi
   expect(screen.getByLabelText('Queue summary')).toBeInTheDocument();
 
   fireEvent.click(queueClearButton);
-  expect(screen.getByText('Review queue clear. Continue Flow.')).toBeInTheDocument();
+  expect(screen.getByText('Queue clear. Continue Flow.')).toBeInTheDocument();
 });
 
 it('keeps queue-clear copy after the current queue is empty', () => {
@@ -81,7 +81,7 @@ it('keeps queue-clear copy after the current queue is empty', () => {
     }
   });
 
-  const queueClearButton = screen.getByRole('button', { name: 'Review queue clear' });
+  const queueClearButton = screen.getByRole('button', { name: 'Queue clear' });
   fireEvent.click(queueClearButton);
-  expect(screen.getByText('Review queue clear. Continue Flow.')).toBeInTheDocument();
+  expect(screen.getByText('Queue clear. Continue Flow.')).toBeInTheDocument();
 });

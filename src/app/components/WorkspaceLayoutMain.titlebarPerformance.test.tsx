@@ -208,7 +208,7 @@ describe('WorkspaceLayoutMain review title bar rendering', () => {
       />
     );
 
-    expect(windowTitleBarRender).toHaveBeenCalledWith(expect.objectContaining({ centerTitle: 'Review queue clear' }));
+    expect(windowTitleBarRender).toHaveBeenCalledWith(expect.objectContaining({ centerTitle: 'Queue clear' }));
   });
 });
 

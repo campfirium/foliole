@@ -185,8 +185,8 @@ it('shows completed without progress and continues reading when the review phase
     reviewStatus: 'completed'
   });
 
-  fireEvent.click(screen.getByRole('button', { name: 'Review queue clear' }));
-  expect(screen.getByText('Review queue clear. Continue Flow.')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Queue clear' }));
+  expect(screen.getByText('Queue clear. Continue Flow.')).toBeInTheDocument();
   expect(screen.queryByLabelText('Queue summary')).not.toBeInTheDocument();
   expect(screen.queryByLabelText('i 3/3')).not.toBeInTheDocument();
 

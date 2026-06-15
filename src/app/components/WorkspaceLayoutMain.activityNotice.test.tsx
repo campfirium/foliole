@@ -228,8 +228,9 @@ it('shows app runtime notices inside the workspace surface', async () => {
   const noticeId = showAppRuntimeNotice('Selected topic is not backed by an active keep import source.');
 
   const notice = await screen.findByTestId('app-runtime-notice');
-  expect(notice).toHaveClass('left-1/2');
-  expect(notice).toHaveClass('top-1/2');
+  expect(notice).toHaveClass('left-[calc(var(--workspace-rail-width)+var(--workspace-list-current-width,300px)+var(--workspace-list-splitter-width,1px))]');
+  expect(notice).toHaveClass('top-[var(--workspace-top-toolbar-height)]');
+  expect(notice).toHaveClass('right-[calc(var(--workspace-right-sidebar-current-width,320px)+var(--workspace-right-sidebar-splitter-width,1px))]');
   expect(notice).toHaveTextContent(
     'Selected topic is not backed by an active keep import source.'
   );

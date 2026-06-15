@@ -53,7 +53,7 @@ it('uses review-first completion copy without claiming every reading topic is do
     />
   );
 
-  expect(screen.getByText('Review queue clear')).toBeInTheDocument();
+  expect(screen.getByText('Queue clear')).toBeInTheDocument();
   expect(screen.queryByText('Reading complete')).not.toBeInTheDocument();
 });
 
@@ -74,6 +74,6 @@ it('uses reading session completion copy without claiming review items are done'
   );
 
   expect(screen.getByText('Reading complete')).toBeInTheDocument();
-  expect(screen.queryByText('Review queue clear')).not.toBeInTheDocument();
+  expect(screen.queryByText('Queue clear')).not.toBeInTheDocument();
   expect(screen.queryByText('Next review')).not.toBeInTheDocument();
 });

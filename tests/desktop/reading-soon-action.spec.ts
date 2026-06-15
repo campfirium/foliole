@@ -80,7 +80,7 @@ async function assertQueueClearStage(page: Page, testInfo: TestInfo) {
   });
   expect(queueClear.reviewSession?.currentNodeId).toBeTruthy();
   expect(queueClear.reviewSession?.queueNodeIds ?? []).toHaveLength(0);
-  await expect(page.getByRole('button', { name: /^(Review queue clear|复习队列已清空)$/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Queue clear' })).toBeVisible();
   await expect(page.getByTestId('app-runtime-notice')).toHaveCount(0);
   await attachScreenshot(page, testInfo, 'reading-soon-queue-clear-screenshot');
 }
@@ -98,7 +98,7 @@ async function readUntilAllClear(page: Page) {
 
 async function assertAllClearNotice(page: Page, testInfo: TestInfo) {
   const allClearNotice = page.getByTestId('app-runtime-notice');
-  await expect(allClearNotice).toHaveText(/^(All clear for now\.|当前已清空。)$/);
+  await expect(allClearNotice).toHaveText('All clear for now.');
   await expect(reviewActionsToolbar(page)).toHaveCount(0);
   await attachScreenshot(page, testInfo, 'reading-soon-all-clear-screenshot');
 }
@@ -118,6 +118,6 @@ test('clicking Soon advances the guided reading review action in the desktop run
   await assertAllClearNotice(desktopWindow, testInfo);
 
   await desktopWindow.getByRole('button', { name: /^(Review queue empty|复习队列为空|Enter Flow|进入 Flow)$/ }).click();
-  await expect(desktopWindow.getByTestId('app-runtime-notice')).toHaveText(/^(All clear for now\.|当前已清空。)$/);
+  await expect(desktopWindow.getByTestId('app-runtime-notice')).toHaveText('All clear for now.');
   await expect(reviewActionsToolbar(desktopWindow)).toHaveCount(0);
 });

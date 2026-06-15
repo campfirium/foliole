@@ -24,12 +24,14 @@ export function WorkspaceRuntimeNotice() {
   return (
     <div
       aria-live="polite"
-      className={appFloatingSurfaceClassName('panel', 'pointer-events-none absolute left-1/2 top-1/2 z-workspace-overlay flex min-h-32 w-[min(540px,calc(100vw-48px))] -translate-x-1/2 -translate-y-1/2 items-center justify-center px-8 py-6 text-center text-ui-md leading-6 text-foreground/72')}
+      className="pointer-events-none absolute bottom-0 left-[calc(var(--workspace-rail-width)+var(--workspace-list-current-width,300px)+var(--workspace-list-splitter-width,1px))] right-[calc(var(--workspace-right-sidebar-current-width,320px)+var(--workspace-right-sidebar-splitter-width,1px))] top-[var(--workspace-top-toolbar-height)] z-workspace-overlay flex items-center justify-center px-6"
       data-testid="app-runtime-notice"
       key={notice.id}
       role="status"
     >
-      {notice.message}
+      <div className={appFloatingSurfaceClassName('panel', 'flex min-h-32 w-[min(540px,100%)] items-center justify-center px-8 py-6 text-center text-ui-md leading-6 text-foreground/72')}>
+        {notice.message}
+      </div>
     </div>
   );
 }

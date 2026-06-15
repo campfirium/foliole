@@ -143,7 +143,7 @@ export const ZH_HANS_DESKTOP_TRANSLATIONS: Partial<Record<TranslationKey, string
   'desktop.reviewActions.retry': '重试',
   'desktop.reviewActions.reveal.group': '检测项显示操作',
   'desktop.reviewActions.showAnswer': '显示答案',
-  'desktop.reviewActions.queueClear': '复习队列已清空',
+  'desktop.reviewActions.queueClear': 'Queue clear',
   'desktop.reviewActions.resumeReview': '继续复习',
   'desktop.reviewActions.resume': '继续',
   'desktop.reviewActions.continueReading': '继续阅读',
