@@ -29,3 +29,16 @@ it('stays hidden outside Flow mode', () => {
 
   expect(screen.queryByText(/Flow ·/)).not.toBeInTheDocument();
 });
+
+it('shows Flow completion instead of queue copy when the session is completed', () => {
+  render(
+    <WorkspaceListStudyStatusBar
+      isStudyMode
+      reviewCompletedCount={3}
+      reviewQueueCount={0}
+      reviewStatus="completed"
+    />
+  );
+
+  expect(screen.getByText('Flow · 0 left · 3 done · Queue clear')).toBeInTheDocument();
+});

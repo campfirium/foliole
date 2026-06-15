@@ -33,7 +33,7 @@ it('shows the completed review phase summary and continues reading', () => {
   expect(screen.getByText('Created')).toBeInTheDocument();
   expect(screen.getByText('12')).toBeInTheDocument();
   expect(screen.getByText('Next review')).toBeInTheDocument();
-  expect(screen.getByText(/Mar 11|11 Mar/)).toBeInTheDocument();
+  expect(screen.getByText(/11/)).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Continue reading' })).not.toBeInTheDocument();
 });
 

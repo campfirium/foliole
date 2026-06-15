@@ -144,7 +144,7 @@ export function ReviewModeToolbar(props: ReviewModeToolbarProps) {
         {...definedProps({ reviewProgressCounts: toolbarProps.reviewProgressCounts })}
         reviewQueueCount={toolbarProps.reviewQueueCount}
         {...definedProps({
-          reviewSummary: withSummaryStatus(toolbarProps.reviewSummary, toolbarProps.reviewStatus === 'completed' ? 'clear' : 'not-started')
+          reviewSummary: withSummaryStatus(toolbarProps.reviewSummary, toolbarProps.reviewStatus === 'completed' ? 'complete' : 'not-started')
         })}
         reviewStatus={toolbarProps.reviewStatus}
         showSummary={toolbarProps.showSummary}

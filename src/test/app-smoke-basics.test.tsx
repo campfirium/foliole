@@ -145,13 +145,10 @@ it('enters review mode with the reading queue when no FSRS cards are due', async
 
   fireEvent.click(screen.getByRole('button', { name: 'Read' }));
   await waitFor(() => {
-    expect(screen.getByRole('button', { name: 'Continue reading' })).toBeInTheDocument();
+    expect(screen.getByTestId('app-runtime-notice')).toHaveTextContent('All clear for now.');
   });
-
-  fireEvent.click(screen.getByRole('button', { name: 'Continue reading' }));
-  await waitFor(() => {
-    expect(screen.getByRole('button', { name: 'Resume review' })).toBeInTheDocument();
-  });
+  expect(screen.queryByRole('button', { name: 'Continue reading' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('toolbar', { name: 'Flow toolbar' })).not.toBeInTheDocument();
 });
 
 it('syncs node list selection when review grading advances active node', async () => {
@@ -194,7 +191,7 @@ it('syncs node list selection when review grading advances active node', async (
   });
 });
 
-it('keeps review toolbar visible in completed state until user exits', async () => {
+it('closes review toolbar and shows all-clear notice when the session completes', async () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'node-1',
     nodeOrder: ['node-1'],
@@ -218,12 +215,8 @@ it('keeps review toolbar visible in completed state until user exits', async () 
   fireEvent.click(screen.getByRole('button', { name: 'Good' }));
 
   await waitFor(() => {
-    expect(screen.getAllByText('Queue clear').length).toBeGreaterThan(0);
+    expect(screen.getByTestId('app-runtime-notice')).toHaveTextContent('All clear for now.');
   });
-  expect(screen.getByRole('button', { name: 'Continue reading' })).toBeInTheDocument();
-
-  fireEvent.click(screen.getByRole('button', { name: 'Continue reading' }));
-  await waitFor(() => {
-    expect(screen.getByRole('button', { name: 'Resume review' })).toBeInTheDocument();
-  });
+  expect(screen.queryByRole('button', { name: 'Continue reading' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('toolbar', { name: 'Flow toolbar' })).not.toBeInTheDocument();
 });

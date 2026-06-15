@@ -185,8 +185,8 @@ it('shows completed without progress and continues reading when the review phase
     reviewStatus: 'completed'
   });
 
-  fireEvent.click(screen.getByRole('button', { name: 'Queue clear' }));
-  expect(screen.getByText('Queue clear. Flow on.')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Review queue clear' }));
+  expect(screen.getByText('Review queue clear. Continue Flow.')).toBeInTheDocument();
   expect(screen.queryByLabelText('Queue summary')).not.toBeInTheDocument();
   expect(screen.queryByLabelText('i 3/3')).not.toBeInTheDocument();
 
@@ -250,5 +250,5 @@ it('keeps an empty dev-restored status bar in idle study mode', () => {
   });
 
   expect(screen.getByText('Flow mode')).toBeInTheDocument();
-  expect(screen.queryByText('Queue clear')).not.toBeInTheDocument();
+  expect(screen.queryByText('All clear for now.')).not.toBeInTheDocument();
 });

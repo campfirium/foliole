@@ -5,8 +5,8 @@ import { renderWithLocalization } from '../../shared/localization/testLocalizati
 
 import { ReviewModeToolbar } from './ReviewModeToolbar';
 
-it('shows queue clear controls while continuing reading after review items are done', () => {
-  renderWithLocalization(
+function renderToolbar(overrides: Partial<Parameters<typeof ReviewModeToolbar>[0]> = {}) {
+  return renderWithLocalization(
     <ReviewModeToolbar
       isAnswerRevealed={false}
       isCurrentItemGradable={false}
@@ -43,10 +43,15 @@ it('shows queue clear controls while continuing reading after review items are d
       }}
       reviewStatus="awaiting-answer"
       showSessionModeControl
+      {...overrides}
     />
   );
+}
 
-  const queueClearButton = screen.getByRole('button', { name: 'Queue clear' });
+it('shows review queue clear controls while continuing normal reading after review items are done', () => {
+  renderToolbar();
+
+  const queueClearButton = screen.getByRole('button', { name: 'Review queue clear' });
   expect(queueClearButton).toBeInTheDocument();
   expect(queueClearButton).toHaveClass('bg-transparent');
   expect(queueClearButton).not.toHaveClass('bg-foreground/[0.055]');
@@ -56,5 +61,27 @@ it('shows queue clear controls while continuing reading after review items are d
   expect(screen.getByLabelText('Queue summary')).toBeInTheDocument();
 
   fireEvent.click(queueClearButton);
-  expect(screen.getByText('Queue clear. Flow on.')).toBeInTheDocument();
+  expect(screen.getByText('Review queue clear. Continue Flow.')).toBeInTheDocument();
+});
+
+it('keeps queue-clear copy after the current queue is empty', () => {
+  renderToolbar({
+    reviewProgressCounts: {
+      completedItemCount: 7,
+      completedTopicCount: 3,
+      queuedItemCount: 0,
+      queuedTopicCount: 0
+    },
+    reviewQueueCount: 0,
+    reviewSummary: {
+      readingElapsedMs: 4 * 60 * 1000,
+      readTopicCount: 3,
+      reviewElapsedMs: 18 * 60 * 1000,
+      reviewedItemCount: 7
+    }
+  });
+
+  const queueClearButton = screen.getByRole('button', { name: 'Review queue clear' });
+  fireEvent.click(queueClearButton);
+  expect(screen.getByText('Review queue clear. Continue Flow.')).toBeInTheDocument();
 });

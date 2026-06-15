@@ -15,7 +15,7 @@ import { ReviewSessionModeControl } from './ReviewSessionModeControl';
 import { fallbackProgressCounts, formatReviewProgressLabel, type ReviewToolbarProgressCounts } from './reviewToolbarProgressLabel';
 import { ReviewToolbarSessionSummaryMenu } from './ReviewToolbarSessionSummaryMenu';
 
-export type ReviewToolbarSessionSummaryStatus = 'clear' | 'in-progress' | 'not-started';
+export type ReviewToolbarSessionSummaryStatus = 'clear' | 'complete' | 'in-progress' | 'not-started';
 
 export interface ReviewToolbarSessionSummaryValues {
   readingElapsedMs: number;

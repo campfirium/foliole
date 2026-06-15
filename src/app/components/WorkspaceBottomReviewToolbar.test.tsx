@@ -181,7 +181,7 @@ it('hides the footer progress line after review completion', () => {
     />
   );
 
-  expect(screen.getByRole('button', { name: 'Queue clear' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Review queue clear' })).toBeInTheDocument();
   expect(screen.queryByLabelText('i 2/2')).not.toBeInTheDocument();
 
   screen.getByRole('button', { name: 'Continue reading' }).click();

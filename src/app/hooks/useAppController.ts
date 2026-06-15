@@ -1,5 +1,10 @@
+import { useEffect } from 'react';
+
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { useReviewSchedulerSettings } from '../../features/settings/context/ReviewSchedulerSettingsProvider';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
+import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
+import { isReviewSessionCompleted } from '../../store/workspaceReviewReading';
 import type { WorkspaceSearchResult } from '../components/workspaceSearch';
 
 import { useControllerCoreState } from './appControllerCoreState';
@@ -106,6 +111,21 @@ function buildControllerLayoutState(args: {
   });
 }
 
+function useReviewFlowAllClearNotice(args: {
+  exitStudyMode: () => void;
+  isReviewSessionCompleted: boolean;
+  isStudyMode: boolean;
+}) {
+  const t = useTranslation();
+  useEffect(() => {
+    if (!args.isStudyMode || !args.isReviewSessionCompleted) {
+      return;
+    }
+    args.exitStudyMode();
+    showAppRuntimeNotice(t('desktop.reviewSession.allClear.notice'), 'success');
+  }, [args.exitStudyMode, args.isReviewSessionCompleted, args.isStudyMode, t]);
+}
+
 function useControllerQuickEntryState(args: {
   controller: ReturnType<typeof useWorkspaceControllerState>;
   hotkeys: ReturnType<typeof useCommandShortcutState>;
@@ -146,6 +166,7 @@ export function useAppController(args: {
   const { priorityQuickSet, reviewTopicDelayPanel } = useControllerQuickEntryState({ controller, hotkeys, isStudyMode, ws });
   const reviewPreview = useReviewSessionRuntime({ isStudyMode, nowIso, reviewSettings, ws });
   useControllerStartupEffects({ controller, isReviewSchedulerSettingsReady: reviewSettings.isReviewSchedulerSettingsReady, isStudyMode, isWorkspaceHydrated, startStudyMode, ws });
+  useReviewFlowAllClearNotice({ exitStudyMode, isReviewSessionCompleted: isReviewSessionCompleted(ws.reviewSession), isStudyMode });
   const reviewEditing = useControllerReviewEditingState({
     controller,
     hotkeys,
@@ -189,10 +210,7 @@ export function useAppController(args: {
   });
 
   return buildAppControllerResult({
-    auxiliaryState,
-    controller,
-    hotkeys,
-    layoutProps,
+    auxiliaryState, controller, hotkeys, layoutProps,
     reviewSourceTopicDeleteDialog: reviewEditing.reviewSourceTopicDeleteDialog,
     reviewTopicDelayPanel
   });

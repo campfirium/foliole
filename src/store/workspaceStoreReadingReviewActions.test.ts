@@ -109,6 +109,11 @@ it('replays soon reading topics after the current queue in click order without r
   await expect(actions.readReviewTopic(now)).resolves.toBe(true);
   expect(harness.getState().reviewSession.currentNodeId).toBe(secondNodeId);
   expect(harness.getState().reviewSession.readTopicCount).toBe(3);
+
+  await expect(actions.readReviewTopic(now)).resolves.toBe(true);
+  expect(harness.getState().reviewSession.currentNodeId).toBeNull();
+  expect(harness.getState().reviewSession.completedAt).toBe(now);
+  expect(harness.getState().reviewSession.soonNodeIds).toEqual([]);
 });
 
 it('reads topics without showing grading and advances the queue', async () => {

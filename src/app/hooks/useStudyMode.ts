@@ -10,9 +10,10 @@ import {
 
 interface UseStudyModeOptions {
   canStartStudyMode: boolean;
+  onBlockedStart?: (() => void) | undefined;
 }
 
-export function useStudyMode({ canStartStudyMode }: UseStudyModeOptions) {
+export function useStudyMode({ canStartStudyMode, onBlockedStart }: UseStudyModeOptions) {
   const [isDevReviewStatusBarPersistenceEnabledState, setIsDevReviewStatusBarPersistenceEnabledState] = useState(
     () => import.meta.env.DEV && isDevReviewStatusBarPersistenceEnabled()
   );
@@ -28,6 +29,7 @@ export function useStudyMode({ canStartStudyMode }: UseStudyModeOptions) {
 
   const startStudyMode = (options?: StartStudyModeOptions) => {
     if (!canStartStudyMode && !options?.force) {
+      onBlockedStart?.();
       return;
     }
     setStudyMode(true);

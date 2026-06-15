@@ -27,14 +27,13 @@ it('opens Flow once when a hydrated session has a current review item', () => {
   expect(props.startStudyMode).toHaveBeenCalledTimes(1);
 });
 
-it('opens Flow once when a hydrated session is completed', () => {
+it('does not auto-open a completed restored Flow session', () => {
   const props = renderAutoOpenHook({
     isReviewSessionCompleted: true,
     reviewCurrentNodeId: null
   });
 
-  expect(props.startStudyMode).toHaveBeenCalledWith({ force: true });
-  expect(props.startStudyMode).toHaveBeenCalledTimes(1);
+  expect(props.startStudyMode).not.toHaveBeenCalled();
 });
 
 it('does not open Flow without a restored session', () => {

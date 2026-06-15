@@ -1,6 +1,6 @@
 import { act, render, screen } from '@testing-library/react';
 import { useState } from 'react';
-import { beforeEach, expect, it } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
 
@@ -10,9 +10,9 @@ beforeEach(() => {
   window.localStorage.clear();
 });
 
-function Probe() {
+function Probe({ onBlockedStart }: { onBlockedStart?: () => void }) {
   const [canStartStudyMode, setCanStartStudyMode] = useState(false);
-  const study = useStudyMode({ canStartStudyMode });
+  const study = useStudyMode({ canStartStudyMode, onBlockedStart });
   return (
     <>
       <div data-testid="mode">{study.isStudyMode ? 'on' : 'off'}</div>
@@ -98,4 +98,14 @@ it('remembers the review status bar state only while dev memory is enabled', () 
 
   expect(screen.getByTestId('mode')).toHaveTextContent('off');
   expect(screen.getByTestId('memory')).toHaveTextContent('memory-off');
+});
+
+it('reports blocked guarded starts without opening review mode', () => {
+  const onBlockedStart = vi.fn();
+  render(<Probe onBlockedStart={onBlockedStart} />);
+
+  act(() => screen.getByRole('button', { name: 'guarded' }).click());
+
+  expect(screen.getByTestId('mode')).toHaveTextContent('off');
+  expect(onBlockedStart).toHaveBeenCalledTimes(1);
 });

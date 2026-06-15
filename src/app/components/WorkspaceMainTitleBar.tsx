@@ -51,8 +51,8 @@ function resolveWindowTitleBarTitle(nodeId: string | null, nodesById: Record<str
   return cursor?.title.trim() || t('desktop.search.context.untitled');
 }
 
-function resolveReviewTitleBarTitle(review: WorkspaceLayoutProps['review']) {
-  return review.isStudyMode && review.reviewStatus === 'completed' ? 'Queue clear' : null;
+function resolveReviewTitleBarTitle(review: WorkspaceLayoutProps['review'], t: Translate) {
+  return review.isStudyMode && review.reviewStatus === 'completed' ? t('desktop.reviewSession.summary.complete') : null;
 }
 
 export function WorkspaceMainTitleBar({
@@ -75,7 +75,7 @@ export function WorkspaceMainTitleBar({
   return (
     <WindowTitleBar
       activeRightPanelId={activeRightPanelId}
-      centerTitle={externalTitle ?? resolveReviewTitleBarTitle(review) ?? resolveWindowTitleBarTitle(
+      centerTitle={externalTitle ?? resolveReviewTitleBarTitle(review, t) ?? resolveWindowTitleBarTitle(
         trash.isViewingTrashNode ? trash.selectedTrashNodeId : navigation.activeNodeId,
         nodeList.nodesById,
         t

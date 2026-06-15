@@ -17,7 +17,7 @@ export function useReviewModeRestoredSessionAutoOpen(args: {
     if (openedRestoredSessionRef.current) {
       return;
     }
-    if (!args.reviewCurrentNodeId && !args.isReviewSessionCompleted) {
+    if (!args.reviewCurrentNodeId) {
       return;
     }
     openedRestoredSessionRef.current = true;

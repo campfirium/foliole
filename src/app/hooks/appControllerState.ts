@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { definedProps } from '../../shared/lib/definedProps';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
+import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 import { buildStartReviewSessionQueue } from '../../store/workspaceReviewLiveQueue';
 
 import {
@@ -33,6 +35,14 @@ export function useNowIso(tickMs = 15_000) {
     return () => window.clearInterval(timer);
   }, [tickMs]);
   return nowIso;
+}
+
+function useReviewStartBlockedNotice(isReviewSchedulerSettingsReady: boolean) {
+  const t = useTranslation();
+  if (!isReviewSchedulerSettingsReady) {
+    return undefined;
+  }
+  return () => showAppRuntimeNotice(t('desktop.reviewSession.allClear.notice'), 'success');
 }
 
 function useWorkspaceReadingProgressPersistence(args: {
@@ -145,8 +155,10 @@ export function useWorkspaceControllerState(
   const selectedTrashNode = trash.selectedTrashNodeId ? ws.nodesById[trash.selectedTrashNodeId] : undefined;
   const runtime = useAppRuntime(ws.listWidth, ws.rightSidebarWidth);
   const canStartStudyMode = isReviewSchedulerSettingsReady && buildStartReviewSessionQueue(ws, nowIso).length > 0;
+  const onBlockedStudyStart = useReviewStartBlockedNotice(isReviewSchedulerSettingsReady);
   const study = useStudyMode({
-    canStartStudyMode
+    canStartStudyMode,
+    onBlockedStart: onBlockedStudyStart
   });
   const listResize = useListResizer(ws.listWidth, ws.setListWidth);
   const rightSidebarResize = useRightSidebarResizer(ws.rightSidebarWidth, ws.setRightSidebarWidth);
