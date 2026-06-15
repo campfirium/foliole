@@ -55,16 +55,18 @@ beforeEach(() => {
   };
 });
 
-it('persists search enhancement from General settings', async () => {
+it('persists full-text search language from General settings', async () => {
   renderWithMouseGestureProvider(<SearchSettingsHarness />);
 
-  const toggle = await screen.findByRole('switch', { name: 'Search enhancement' });
-  expect(toggle).toHaveAttribute('aria-checked', 'false');
+  const select = await screen.findByRole('combobox', { name: 'Full-text search language' });
+  expect(select).toHaveValue('word-based');
   expect(screen.getByText('Adjust general workspace behavior.')).toBeInTheDocument();
-  expect(screen.getByText(/other languages that are not separated by spaces/)).toBeInTheDocument();
+  expect(screen.getByText(/Chinese, Japanese, or Korean uses more search data/)).toBeInTheDocument();
+  expect(screen.getByRole('option', { name: 'Languages with word spacing' })).toBeInTheDocument();
+  expect(screen.getByRole('option', { name: 'Chinese, Japanese, or Korean' })).toBeInTheDocument();
   expect(screen.queryByText('Full-text search index')).not.toBeInTheDocument();
 
-  fireEvent.click(toggle);
+  fireEvent.change(select, { target: { value: 'cjk-trigram' } });
 
   await waitFor(() => {
     expect(window.localStorage.getItem(FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY)).toBe('cjk-trigram');
@@ -73,7 +75,7 @@ it('persists search enhancement from General settings', async () => {
   fireEvent.click(screen.getByLabelText('Settings'));
   fireEvent.click(screen.getByRole('button', { name: 'Reopen settings' }));
 
-  expect(await screen.findByRole('switch', { name: 'Search enhancement' })).toHaveAttribute('aria-checked', 'true');
+  expect(await screen.findByRole('combobox', { name: 'Full-text search language' })).toHaveValue('cjk-trigram');
 });
 
 it('toggles launch at startup from the General System settings', async () => {

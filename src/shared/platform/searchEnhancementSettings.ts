@@ -1,6 +1,7 @@
 import {
   FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY,
-  normalizeFullTextSearchIndexStrategy
+  normalizeFullTextSearchIndexStrategy,
+  type FullTextSearchIndexStrategy
 } from '../../../lib/core/database/fullTextSearchIndexStrategy';
 import { APP_SETTINGS_STORAGE_KEYS } from '../config/appSettings';
 
@@ -13,37 +14,43 @@ import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '
 
 const TRUE_VALUE = 'true';
 
-export function isSearchEnhancementEnabled() {
+export type { FullTextSearchIndexStrategy };
+
+export function getFullTextSearchIndexStrategy() {
   return normalizeFullTextSearchIndexStrategy(
     getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.fullTextSearchIndexStrategy)
-  ) === 'cjk-trigram';
-}
-
-export function setSearchEnhancementEnabled(enabled: boolean) {
-  setSearchEnhancementStrategy(enabled ? 'cjk-trigram' : 'word-based');
-}
-
-function setSearchEnhancementStrategy(strategy: 'cjk-trigram' | 'word-based') {
-  setWhitelistedLocalStorageItem(
-    FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY,
-    strategy
   );
 }
 
-export async function updateSearchEnhancementEnabled(enabled: boolean): Promise<SearchIndexRebuildStatus | null> {
-  const previous = getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.fullTextSearchIndexStrategy);
-  const strategy = enabled ? 'cjk-trigram' : 'word-based';
-  setSearchEnhancementStrategy(strategy);
+export function setFullTextSearchIndexStrategy(strategy: FullTextSearchIndexStrategy) {
+  setWhitelistedLocalStorageItem(FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY, strategy);
+}
+
+export async function updateFullTextSearchIndexStrategy(strategy: FullTextSearchIndexStrategy): Promise<SearchIndexRebuildStatus | null> {
+  const previous = getFullTextSearchIndexStrategy();
+  setFullTextSearchIndexStrategy(strategy);
   const saved = await saveRuntimeAppSettingsState({ [FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY]: strategy });
   if (!saved) {
-    setSearchEnhancementStrategy(previous === 'cjk-trigram' ? 'cjk-trigram' : 'word-based');
-    throw new Error('search enhancement setting could not be saved');
+    setFullTextSearchIndexStrategy(previous);
+    throw new Error('full-text search language setting could not be saved');
   }
   const status = await requestSearchIndexRebuild(strategy);
   if (!status) {
-    throw new Error('search enhancement rebuild could not be started');
+    throw new Error('full-text search index rebuild could not be started');
   }
   return status;
+}
+
+export function isSearchEnhancementEnabled() {
+  return getFullTextSearchIndexStrategy() === 'cjk-trigram';
+}
+
+export function setSearchEnhancementEnabled(enabled: boolean) {
+  setFullTextSearchIndexStrategy(enabled ? 'cjk-trigram' : 'word-based');
+}
+
+export async function updateSearchEnhancementEnabled(enabled: boolean): Promise<SearchIndexRebuildStatus | null> {
+  return updateFullTextSearchIndexStrategy(enabled ? 'cjk-trigram' : 'word-based');
 }
 
 export function isSearchEnhancementPromptDismissed() {

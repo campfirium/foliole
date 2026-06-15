@@ -8,8 +8,9 @@ import {
   type RuntimeLoginItemSettingsState
 } from '../../../../shared/platform/loginItemSettings';
 import {
-  isSearchEnhancementEnabled,
-  updateSearchEnhancementEnabled
+  getFullTextSearchIndexStrategy,
+  updateFullTextSearchIndexStrategy,
+  type FullTextSearchIndexStrategy
 } from '../../../../shared/platform/searchEnhancementSettings';
 import {
   loadSearchIndexRebuildStatus,
@@ -18,9 +19,11 @@ import {
 } from '../../../../shared/platform/searchIndexRebuildStatus';
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
+  SETTINGS_SELECT_WIDTH_CLASS_NAME,
   SettingsControlSlot,
   SettingsRow,
   SettingsSection,
+  settingsFieldClassName,
   settingsSwitchClassName,
   settingsSwitchKnobClassName
 } from '../../../../shared/ui';
@@ -45,6 +48,10 @@ function getSearchEnhancementStatusCopy(status: SearchIndexRebuildStatus | null,
     : t('settings.general.searchEnhancement.ready');
 }
 
+function isFullTextSearchIndexStrategy(value: string): value is FullTextSearchIndexStrategy {
+  return value === 'word-based' || value === 'cjk-trigram';
+}
+
 function SearchEnhancementDescription(props: { statusCopy: string | null }) {
   const t = useTranslation();
   return (
@@ -60,7 +67,7 @@ function SearchEnhancementDescription(props: { statusCopy: string | null }) {
 function SearchEnhancementRow() {
   const t = useTranslation();
   const searchEnhancementRow = useLocalizedSettingsSearchRow('general-search-enhancement');
-  const [enabled, setEnabled] = useState(isSearchEnhancementEnabled);
+  const [strategy, setStrategy] = useState(getFullTextSearchIndexStrategy);
   const [status, setStatus] = useState<SearchIndexRebuildStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -80,16 +87,16 @@ function SearchEnhancementRow() {
     };
   }, []);
 
-  const updateEnabled = async (nextEnabled: boolean) => {
+  const updateStrategy = async (nextStrategy: FullTextSearchIndexStrategy) => {
     setIsUpdating(true);
     setError(null);
     try {
-      const nextStatus = await updateSearchEnhancementEnabled(nextEnabled);
-      setEnabled(nextEnabled);
+      const nextStatus = await updateFullTextSearchIndexStrategy(nextStrategy);
+      setStrategy(nextStrategy);
       setStatus(nextStatus);
     } catch {
-      setEnabled(isSearchEnhancementEnabled());
-      setError(nextEnabled ? t('settings.general.searchEnhancement.enableFailed') : t('settings.general.searchEnhancement.disableFailed'));
+      setStrategy(getFullTextSearchIndexStrategy());
+      setError(t('settings.general.searchEnhancement.enableFailed'));
     } finally {
       setIsUpdating(false);
     }
@@ -102,17 +109,19 @@ function SearchEnhancementRow() {
       title={searchEnhancementRow.title}
     >
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-        <button
-          aria-checked={enabled}
+        <select
           aria-label={t('settings.general.searchEnhancement.aria')}
-          className={settingsSwitchClassName(enabled)}
+          className={settingsFieldClassName(SETTINGS_SELECT_WIDTH_CLASS_NAME)}
           disabled={isUpdating}
-          onClick={() => void updateEnabled(!enabled)}
-          role="switch"
-          type="button"
+          onChange={(event) => {
+            const nextStrategy = event.target.value;
+            if (isFullTextSearchIndexStrategy(nextStrategy)) void updateStrategy(nextStrategy);
+          }}
+          value={strategy}
         >
-          <span aria-hidden="true" className={settingsSwitchKnobClassName(enabled)} />
-        </button>
+          <option value="word-based">{t('settings.general.searchEnhancement.option.wordBased')}</option>
+          <option value="cjk-trigram">{t('settings.general.searchEnhancement.option.cjk')}</option>
+        </select>
       </SettingsControlSlot>
     </SettingsRow>
   );

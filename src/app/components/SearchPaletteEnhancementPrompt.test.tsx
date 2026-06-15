@@ -27,24 +27,24 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-it('offers search enhancement once and turns it on', async () => {
+it('offers the Chinese, Japanese, or Korean search language once and turns it on', async () => {
   const view = renderWithLocalization(<SearchPaletteEnhancementPrompt />);
 
   expect(screen.getByRole('dialog', {
-    name: 'Turn on search enhancement for languages without spaces?'
+    name: 'Use Chinese, Japanese, or Korean search?'
   })).toBeInTheDocument();
-  expect(screen.getByText(/other languages that are not separated by spaces/)).toBeInTheDocument();
+  expect(screen.getByText(/languages that are not separated by spaces/)).toBeInTheDocument();
   expect(screen.getByText(/uses more search data/i)).toBeInTheDocument();
   expect(screen.getByText(/Settings > General/)).toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Turn on' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Use this option' }));
 
   await waitFor(() => {
     expect(window.localStorage.getItem(FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY)).toBe('cjk-trigram');
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.searchEnhancementPromptDismissed)).toBe('true');
-    expect(screen.getByRole('dialog', { name: 'Search enhancement is on' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Search language updated' })).toBeInTheDocument();
   });
-  expect(screen.getByText('Preparing enhanced search...')).toBeInTheDocument();
+  expect(screen.getByText('Preparing search data...')).toBeInTheDocument();
 
   view.unmount();
   renderWithLocalization(<SearchPaletteEnhancementPrompt />);
@@ -52,7 +52,7 @@ it('offers search enhancement once and turns it on', async () => {
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
 
-it('dismisses the search enhancement prompt without turning it on', () => {
+it('dismisses the search language prompt without changing the strategy', () => {
   renderWithLocalization(<SearchPaletteEnhancementPrompt />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Not now' }));
@@ -62,7 +62,7 @@ it('dismisses the search enhancement prompt without turning it on', () => {
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
 
-it('does not prompt when search enhancement is already on and records the prompt as handled', async () => {
+it('does not prompt when the CJK search strategy is already selected and records the prompt as handled', async () => {
   window.localStorage.setItem(FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY, 'cjk-trigram');
 
   renderWithLocalization(<SearchPaletteEnhancementPrompt />);
@@ -73,17 +73,17 @@ it('does not prompt when search enhancement is already on and records the prompt
   });
 });
 
-it('keeps the search enhancement prompt visible when local settings cannot be written', async () => {
+it('keeps the search language prompt visible when local settings cannot be written', async () => {
   const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
     throw new Error('storage unavailable');
   });
   renderWithLocalization(<SearchPaletteEnhancementPrompt />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Turn on' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Use this option' }));
 
-  expect(await screen.findByText('Search enhancement could not be turned on.')).toBeInTheDocument();
+  expect(await screen.findByText('Full-text search language could not be updated.')).toBeInTheDocument();
   expect(screen.getByRole('dialog', {
-    name: 'Turn on search enhancement for languages without spaces?'
+    name: 'Use Chinese, Japanese, or Korean search?'
   })).toBeInTheDocument();
   setItem.mockRestore();
 });

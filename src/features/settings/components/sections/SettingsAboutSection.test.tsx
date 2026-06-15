@@ -191,24 +191,23 @@ it('shows About sections in application, support, and community order', () => {
   const communityTitle = screen.getByText('Community', { selector: 'h3' });
   expect(appTitle.compareDocumentPosition(supportTitle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(supportTitle.compareDocumentPosition(communityTitle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  expect(screen.queryByRole('switch', { name: 'Search enhancement' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('combobox', { name: 'Full-text search language' })).not.toBeInTheDocument();
 });
 
-it('shows the global search enhancement switch in General', async () => {
+it('shows the full-text search language selector in General', async () => {
   renderWithLocalization(<SettingsGeneralSection />);
 
-  const toggle = screen.getByRole('switch', { name: 'Search enhancement' });
-  expect(toggle).toHaveAttribute('aria-checked', 'false');
-  expect(screen.getByText(/other languages that are not separated by spaces/)).toBeInTheDocument();
-  expect(screen.getByText(/Uses more search data/)).toBeInTheDocument();
+  const select = screen.getByRole('combobox', { name: 'Full-text search language' });
+  expect(select).toHaveValue('word-based');
+  expect(screen.getByText(/Chinese, Japanese, or Korean uses more search data/)).toBeInTheDocument();
 
-  fireEvent.click(toggle);
+  fireEvent.change(select, { target: { value: 'cjk-trigram' } });
 
   await waitFor(() => {
-    expect(toggle).toHaveAttribute('aria-checked', 'true');
+    expect(select).toHaveValue('cjk-trigram');
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.fullTextSearchIndexStrategy)).toBe('cjk-trigram');
   });
-  expect(screen.getByText('Preparing search...')).toBeInTheDocument();
+  expect(screen.getByText('Preparing search data...')).toBeInTheDocument();
 });
 
 
@@ -225,9 +224,9 @@ it('localizes About and General settings rows in Simplified Chinese', () => {
   expect(screen.getByText('诊断报告')).toBeInTheDocument();
   expect(screen.getByText('发送私下反馈，可选择留下联系方式和图片；也可以通过邮件继续沟通。')).toBeInTheDocument();
   expect(screen.getByText('打开源代码、社区讨论、问题列表和视频更新入口。')).toBeInTheDocument();
-  expect(screen.getByRole('switch', { name: '搜索增强' })).toBeInTheDocument();
-  expect(screen.getByText('改进中文、日文、韩文以及其他不按空格分词语言的搜索，会使用更多搜索数据。')).toBeInTheDocument();
+  expect(screen.getByRole('combobox', { name: '全文搜索语言' })).toBeInTheDocument();
+  expect(screen.getByText('选择 Foliole 如何准备全文搜索。中文、日文或韩文会使用更多搜索数据。')).toBeInTheDocument();
   expect(screen.queryByText('Diagnostic report')).not.toBeInTheDocument();
   expect(screen.queryByText('Community', { selector: 'h3' })).not.toBeInTheDocument();
-  expect(screen.queryByRole('switch', { name: 'Search enhancement' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('combobox', { name: 'Full-text search language' })).not.toBeInTheDocument();
 });
