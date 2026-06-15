@@ -18,6 +18,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { closeDatabaseConnection } from './connection.js';
+import { recordOpenedExternalDocument } from './externalOpenedDocuments.js';
 import {
   refreshExternalSearchIndexes,
   searchExternalDocuments
@@ -93,4 +94,29 @@ it('finds external documents by combining split Chinese search terms', async () 
   const resultIds = searchExternalDocuments('哈哈哈哈 一二三').map((result) => result.id);
   expect(resultIds).toContain(combinedPath);
   expect(resultIds).not.toContain(partialPath);
+});
+
+it('marks opened-file search results separately from indexed external documents', async () => {
+  const libraryRoot = path.join(tempRoot, 'library');
+  const externalPath = path.join(libraryRoot, 'external.md');
+  const openedPath = path.join(tempRoot, 'opened.md');
+  await writeTextFile(externalPath, 'Shared source marker');
+  await writeTextFile(openedPath, 'Opened source marker');
+  saveExternalSearchFolders([
+    {
+      attachment_mode: 'document_relative_first_then_fixed_root',
+      attachment_root_path: null,
+      excluded_dirs: [],
+      folder_path: libraryRoot,
+      id: 'folder-1'
+    }
+  ]);
+
+  await refreshExternalSearchIndexes();
+  await recordOpenedExternalDocument(externalPath);
+  await recordOpenedExternalDocument(openedPath);
+
+  const results = searchExternalDocuments('source marker');
+  expect(results.find((result) => result.id === externalPath)?.externalMatch?.sourceKind).toBe('external');
+  expect(results.find((result) => result.id === openedPath)?.externalMatch?.sourceKind).toBe('opened');
 });

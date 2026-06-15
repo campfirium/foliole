@@ -1,3 +1,4 @@
+import type { WorkspaceExternalSearchSourceKind } from '../core/database/workspaceSearchResults.js';
 import type { NodeKind } from '../core/nodes/nodeKind.js';
 import type { VirtualNodeFilter } from '../core/nodes/virtualNodeFilter.js';
 import type { UnifiedPushQueueRules } from '../core/review/unifiedPushQueueRules.js';
@@ -81,8 +82,10 @@ export interface NativeWorkspaceSearchResult {
     absolutePath: string;
     folderId: string;
     folderPath: string;
+    importedNodeId?: string | null;
     query: string;
     relativePath: string;
+    sourceKind: WorkspaceExternalSearchSourceKind;
   } | null;
   nodeMatch: {
     from: number;

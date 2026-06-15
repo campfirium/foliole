@@ -188,7 +188,8 @@ export function searchReadwiseExternalDocuments(queryPlan: FtsSearchQueryPlan) {
         folderPath: resolveReadwiseFolderPath(row.folder_id),
         importedNodeId: resolveImportedNodeIdForExternalDocument(resolveDocumentAbsolutePath(row), importedNodeIdsByLocator),
         query: queryPlan.highlightQuery,
-        relativePath: row.relative_path
+        relativePath: row.relative_path,
+        sourceKind: 'external' as const
       },
       id: resolveDocumentAbsolutePath(row),
       kind: 'external',

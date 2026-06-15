@@ -1,8 +1,10 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
+import type { WorkspaceExternalSearchSourceKind } from '../../lib/core/database/workspaceSearchResults.js';
 import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorageContract.js';
 
+import { OPENED_EXTERNAL_DOCUMENTS_FOLDER_ID } from './externalOpenedDocumentConstants.js';
 import {
   createExternalSearchScanRuntime,
   shouldSkipExternalSearchDirectory,
@@ -19,6 +21,10 @@ export interface ExternalSearchRow {
   rank: number;
   relative_path: string;
   text: string;
+}
+
+export function resolveExternalSearchSourceKind(folderId: string): WorkspaceExternalSearchSourceKind {
+  return folderId === OPENED_EXTERNAL_DOCUMENTS_FOLDER_ID ? 'opened' : 'external';
 }
 
 export interface ScannedDocument {
@@ -171,7 +177,8 @@ export function toExternalResult(row: ExternalSearchRow, query: string, imported
       folderPath: row.folder_path,
       importedNodeId,
       query,
-      relativePath: row.relative_path
+      relativePath: row.relative_path,
+      sourceKind: resolveExternalSearchSourceKind(row.folder_id)
     },
     id: row.absolute_path,
     kind: 'external',

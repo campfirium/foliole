@@ -122,15 +122,17 @@ export function useOrderedSearchResults(
 ) {
   return useMemo(() => {
     const externalResults: WorkspaceSearchResult[] = [];
+    const openedResults: WorkspaceSearchResult[] = [];
     const removedResults: WorkspaceSearchResult[] = [];
     const regularResults: WorkspaceSearchResult[] = [];
     const anchoredResults: WorkspaceSearchResult[] = [];
     results.forEach((result) => {
-      if (result.kind === 'external') externalResults.push(result);
+      if (result.kind === 'external' && result.externalMatch?.sourceKind === 'opened') openedResults.push(result);
+      else if (result.kind === 'external') externalResults.push(result);
       else if (result.kind === 'removed') removedResults.push(result);
       else if (nodesById[result.id]?.anchorLink?.kind) anchoredResults.push(result);
       else regularResults.push(result);
     });
-    return [...regularResults, ...anchoredResults, ...removedResults, ...externalResults];
+    return [...regularResults, ...anchoredResults, ...removedResults, ...openedResults, ...externalResults];
   }, [nodesById, results]);
 }

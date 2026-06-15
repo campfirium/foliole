@@ -1,3 +1,4 @@
+import { executeFtsSearchPlan } from '../../lib/core/database/ftsSearchExecution.js';
 import { buildFtsSearchQueryPlan, type FtsSearchQueryPlan } from '../../lib/core/database/ftsSearchQuery.js';
 
 import {
@@ -124,21 +125,20 @@ function readCombinedTermFallbackExternalSearchRows(db: import('better-sqlite3')
 export function searchExternalDocuments(query: string) {
   const db = openExternalSearchCacheDatabase();
   const queryPlan = buildFtsSearchQueryPlan(query);
-  const normalizedQuery = queryPlan.normalizedQuery;
-  if (!normalizedQuery) {
+  const rows = executeFtsSearchPlan(query, {
+    finalizeResults: (results) => results,
+    loadAdvancedMatches: (plan) => readAdvancedExternalSearchRows(db, plan.advancedQuery),
+    loadLiteralMatches: (plan) => readExternalSearchFtsRows(db, plan.literalQuery),
+    loadPairMatches: (plan) => readPairExternalSearchRows(db, plan),
+    loadPostTermFallbackMatches: (plan) => readCombinedTermFallbackExternalSearchRows(db, plan),
+    loadShortQueryMatches: (plan) => readShortExternalSearchRows(db, plan.normalizedQuery),
+    loadShortTermFallbackMatches: (plan) => readShortTermExternalSearchRows(db, plan),
+    loadTermMatches: (plan) => readTermExternalSearchRows(db, plan),
+    mergeResults: mergeExternalSearchRows
+  });
+  if (!queryPlan.normalizedQuery) {
     return [];
   }
-  const rows =
-    normalizedQuery.length <= 2
-      ? readShortExternalSearchRows(db, normalizedQuery)
-      : mergeExternalSearchRows([
-          ...readExternalSearchFtsRows(db, queryPlan.literalQuery),
-          ...readPairExternalSearchRows(db, queryPlan),
-          ...readTermExternalSearchRows(db, queryPlan),
-          ...readCombinedTermFallbackExternalSearchRows(db, queryPlan),
-          ...readShortTermExternalSearchRows(db, queryPlan),
-          ...readAdvancedExternalSearchRows(db, queryPlan.advancedQuery)
-        ]);
   const activeImportedLocators = loadActiveImportedSourceLocators();
   const importedNodeIdsByLocator = loadActiveImportedSourceLocatorNodeIds();
   return [

@@ -20,6 +20,7 @@ import { FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY } from '../../lib/core/data
 import { syncNodeSearchIndexForNodeIds, syncPdfSearchIndexForNodeIds } from '../../lib/core/database/workspaceSearchIndex.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { closeExternalSearchCacheDatabase } from './externalSearchCacheDatabase.js';
 import { initializeDatabase } from './migrate.js';
 import { upsertNodeSnapshot } from './nodeMutations.js';
 import { saveJsonSetting } from './settingsStore.js';
@@ -38,6 +39,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  closeExternalSearchCacheDatabase();
   closeDatabaseConnection();
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
@@ -155,6 +157,26 @@ it('uses substring AND fallback for all-short mixed Chinese queries', () => {
 
   expect(resultIds).toContain('node-ai-china');
   expect(resultIds).not.toContain('node-ai-only');
+});
+
+it('finds adjacent CJK text by combining split search terms', () => {
+  insertNode({
+    id: 'node-combined-cjk',
+    title: 'Combined CJK',
+    content: '哈哈哈哈一二三',
+    updatedAt: '2026-05-06T00:00:00.000Z'
+  });
+  insertNode({
+    id: 'node-partial-cjk',
+    title: 'Partial CJK',
+    content: '哈哈哈哈但是没有后半段',
+    updatedAt: '2026-05-07T00:00:00.000Z'
+  });
+
+  const resultIds = searchWorkspace('哈哈哈哈 一二三').map((result) => result.id);
+
+  expect(resultIds).toContain('node-combined-cjk');
+  expect(resultIds).not.toContain('node-partial-cjk');
 });
 
 it('normalizes CJK punctuation in workspace queries', () => {

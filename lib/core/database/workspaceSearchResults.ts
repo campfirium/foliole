@@ -6,8 +6,10 @@ export interface WorkspaceSearchResult {
     absolutePath: string;
     folderId: string;
     folderPath: string;
+    importedNodeId?: string | null;
     query: string;
     relativePath: string;
+    sourceKind: WorkspaceExternalSearchSourceKind;
   } | null;
   nodeMatch: {
     from: number;
@@ -24,6 +26,8 @@ export interface WorkspaceSearchResult {
   title: string;
   updatedAt: string;
 }
+
+export type WorkspaceExternalSearchSourceKind = 'external' | 'opened';
 
 export type WorkspaceSearchPathQuality = 'fallback' | 'literal' | 'pair' | 'term';
 

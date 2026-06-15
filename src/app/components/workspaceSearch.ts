@@ -15,6 +15,7 @@ export interface WorkspaceSearchResult {
     importedNodeId?: string | null;
     query: string;
     relativePath: string;
+    sourceKind?: 'external' | 'opened';
   } | null;
   nodeMatch: {
     from: number;

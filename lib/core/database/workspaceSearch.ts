@@ -1,5 +1,6 @@
 import type { DatabaseDriver } from './driver.js';
-import { buildFtsSearchQueryPlan, type FtsSearchQueryPlan } from './ftsSearchQuery.js';
+import { executeFtsSearchPlan } from './ftsSearchExecution.js';
+import type { FtsSearchQueryPlan } from './ftsSearchQuery.js';
 import { buildCrossPagePdfResult, buildNodeResult, buildPdfResult } from './workspaceSearchResultBuilders.js';
 import {
   mergeRankedResults,
@@ -161,26 +162,22 @@ function loadLiteralFtsWorkspaceMatches(driver: DatabaseDriver, queryPlan: FtsSe
 }
 
 export function searchWorkspace(driver: DatabaseDriver, query: string) {
-  const queryPlan = buildFtsSearchQueryPlan(query);
-  const normalizedQuery = queryPlan.normalizedQuery;
-  if (!normalizedQuery) {
-    return [];
-  }
-  if (normalizedQuery.length <= 2) {
-    return sortAndLimitResults(
-      [...loadFallbackNodeMatches(driver, normalizedQuery), ...loadFallbackPdfMatches(driver, normalizedQuery)],
-      MAX_RESULTS
-    );
-  }
-  const literalFtsMatches = loadLiteralFtsWorkspaceMatches(driver, queryPlan);
-  const results = mergeRankedResults([
-    ...(literalFtsMatches ?? loadFallbackNodeMatches(driver, normalizedQuery)),
-    ...loadPairFtsWorkspaceMatches(driver, queryPlan),
-    ...loadTermFtsWorkspaceMatches(driver, queryPlan),
-    ...loadFallbackPdfMatches(driver, queryPlan.normalizedQuery),
-    ...loadCrossPagePdfMatches(driver, queryPlan.normalizedQuery, queryPlan.shortTerms),
-    ...loadShortTermFallbackMatches(driver, queryPlan),
-    ...loadAdvancedFtsWorkspaceMatches(driver, queryPlan)
-  ]).slice(0, MERGED_CANDIDATE_LIMIT);
-  return sortAndLimitResults(results, MAX_RESULTS);
+  return executeFtsSearchPlan(query, {
+    finalizeResults: (results) => sortAndLimitResults(results.slice(0, MERGED_CANDIDATE_LIMIT), MAX_RESULTS),
+    loadAdvancedMatches: (queryPlan) => loadAdvancedFtsWorkspaceMatches(driver, queryPlan),
+    loadLiteralFallbackMatches: (queryPlan) => loadFallbackNodeMatches(driver, queryPlan.normalizedQuery),
+    loadLiteralMatches: (queryPlan) => loadLiteralFtsWorkspaceMatches(driver, queryPlan),
+    loadPairMatches: (queryPlan) => loadPairFtsWorkspaceMatches(driver, queryPlan),
+    loadPostTermFallbackMatches: (queryPlan) => [
+      ...loadFallbackPdfMatches(driver, queryPlan.normalizedQuery),
+      ...loadCrossPagePdfMatches(driver, queryPlan.normalizedQuery, queryPlan.shortTerms)
+    ],
+    loadShortQueryMatches: (queryPlan) => [
+      ...loadFallbackNodeMatches(driver, queryPlan.normalizedQuery),
+      ...loadFallbackPdfMatches(driver, queryPlan.normalizedQuery)
+    ],
+    loadShortTermFallbackMatches: (queryPlan) => loadShortTermFallbackMatches(driver, queryPlan),
+    loadTermMatches: (queryPlan) => loadTermFtsWorkspaceMatches(driver, queryPlan),
+    mergeResults: mergeRankedResults
+  });
 }
