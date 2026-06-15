@@ -23,6 +23,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { closeExternalSearchCacheDatabase } from './externalSearchCacheDatabase.js';
 import { initializeDatabase } from './migrate.js';
 
 let tempRoot = '';
@@ -34,6 +35,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  closeExternalSearchCacheDatabase();
   closeDatabaseConnection();
   await fs.rm(tempRoot, { recursive: true, force: true });
 });

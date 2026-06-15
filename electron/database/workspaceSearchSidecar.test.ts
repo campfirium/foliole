@@ -23,6 +23,7 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { createApplicationDatabaseBackup, restoreApplicationDatabaseBackup } from './backupRestore.js';
 import { closeDatabaseConnection, openDatabaseConnection, resolveSearchDatabasePath } from './connection.js';
+import { closeExternalSearchCacheDatabase } from './externalSearchCacheDatabase.js';
 import { initializeDatabase } from './migrate.js';
 import { upsertNodeSnapshot } from './nodeMutations.js';
 import { saveJsonSetting } from './settingsStore.js';
@@ -41,6 +42,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  closeExternalSearchCacheDatabase();
   closeDatabaseConnection();
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
