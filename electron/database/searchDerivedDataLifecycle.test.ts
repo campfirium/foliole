@@ -29,7 +29,11 @@ import {
   upsertNodeSnapshot
 } from './nodeMutations.js';
 import { savePdfPageTextRows } from './pdfPageTextRows.js';
-import { insertPdfAttachment } from './workspaceSearchTestSupport.js';
+import {
+  enqueueSubtreeDeletedInvalidation,
+  insertPdfAttachment,
+  insertStaleSearchRows
+} from './workspaceSearchTestSupport.js';
 
 let tempRoot = '';
 
@@ -183,22 +187,33 @@ it('keeps PDF page text facts and sync state intact while soft delete only hides
   expect(indexedPdfCount(['node-soft-pdf'])).toEqual({ count: 0 });
 });
 
-it('keeps historical subtree delete invalidations harmless when their nodes are already missing', () => {
-  const connection = openDatabaseConnection();
-  connection.sqlite
-    .prepare('INSERT INTO search.node_search (title, path, content, node_id, updated_at) VALUES (?, ?, ?, ?, ?)')
-    .run('Missing', '', 'orphan marker', 'missing-node', '2026-05-26T00:00:00.000Z');
-  connection.sqlite
-    .prepare(
-      `INSERT INTO search_index_invalidations (
-         invalidation_type, target_id, status, attempts, last_error, created_at, updated_at, claimed_at, completed_at
-       ) VALUES (?, ?, 'pending', 0, NULL, ?, ?, NULL, NULL)`
-    )
-    .run('node_subtree_deleted', 'missing-node', '2026-05-26T00:00:00.000Z', '2026-05-26T00:00:00.000Z');
+it('clears historical search rows when subtree delete invalidations target missing nodes', () => {
+  insertStaleSearchRows('missing-node');
+  enqueueSubtreeDeletedInvalidation('missing-node');
 
   expect(processSearchQueue()).toEqual({ failed: 0, processed: 1 });
-  expect(indexedNodeCount(['missing-node'])).toEqual({ count: 1 });
+  expect(indexedNodeCount(['missing-node'])).toEqual({ count: 0 });
   expect(indexedPdfCount(['missing-node'])).toEqual({ count: 0 });
+});
+
+it('clears existing subtrees and exact missing targets in the same delete batch', () => {
+  upsertSearchNode({ content: 'parent marker', id: 'batch-parent', title: 'Batch Parent' });
+  upsertSearchNode({
+    content: 'child marker',
+    id: 'batch-child',
+    parentNodeId: 'batch-parent',
+    title: 'Batch Child'
+  });
+  upsertSearchNode({ content: 'survivor marker', id: 'batch-survivor', title: 'Batch Survivor' });
+  processSearchQueue();
+  insertStaleSearchRows('batch-missing');
+  enqueueSubtreeDeletedInvalidation('batch-parent');
+  enqueueSubtreeDeletedInvalidation('batch-missing');
+
+  expect(processSearchQueue()).toEqual({ failed: 0, processed: 2 });
+  expect(indexedNodeCount(['batch-parent', 'batch-child', 'batch-missing'])).toEqual({ count: 0 });
+  expect(indexedPdfCount(['batch-missing'])).toEqual({ count: 0 });
+  expect(indexedNodeCount(['batch-survivor'])).toEqual({ count: 1 });
 });
 
 it('refreshes node and PDF search paths after moving a subtree to a new parent', () => {
