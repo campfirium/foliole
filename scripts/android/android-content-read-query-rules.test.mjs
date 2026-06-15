@@ -13,6 +13,7 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..
 const QUERY_DEFINITIONS = path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'assets', 'companion-query-definitions.json');
 const EXTERNAL_DOCUMENT_STORE = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionExternalDocumentStore.java');
 const READABLE_ARTICLE_QUERY = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionReadableArticleQuery.java');
+const TOPIC_SEARCH_STORE = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionTopicSearchStore.java');
 const CONTENT_READ_RULES = path.join(REPO_ROOT, 'android/app/src/main/java/com/foliole/android/FolioleCompanionContentReadQueryRules.java');
 const DESKTOP_PHYSICAL_DATABASE_FILE_NAMES = [
   'external-search-cache.db',
@@ -28,7 +29,8 @@ describe('Android content read query rules', () => {
     expect(definitions.contentRead).toEqual(ANDROID_COMPANION_CONTENT_READ_RULES);
     expect(definitions.contentRead.groupKeys).toEqual({
       externalDocuments: 'externalDocuments',
-      readableArticle: 'readableArticle'
+      readableArticle: 'readableArticle',
+      topicSearch: 'topicSearch'
     });
     expect(definitions.contentRead.externalDocuments).toMatchObject({
       byIdQueryName: 'externalDocumentById',
@@ -81,6 +83,11 @@ describe('Android content read query rules', () => {
     expect(definitions.queries.externalDocumentSearch.sql).toContain('LEFT JOIN content_blob_data');
     expect(definitions.queries.externalDocumentSearch.sql).not.toContain('external_search_documents');
     expect(definitions.queries.externalDocumentSearch.sql).not.toContain('external_search_fts');
+    expect(definitions.queries.topicSearch.sql).toContain('FROM nodes');
+    expect(definitions.queries.topicSearch.sql).toContain('LEFT JOIN content_blobs');
+    expect(definitions.queries.topicSearch.sql).toContain('LEFT JOIN content_blob_data');
+    expect(definitions.queries.topicSearch.sql).not.toContain('external_search_fts');
+    expect(definitions.queries.topicSearch.sql).not.toContain('foliole-search.db');
     for (const fileName of DESKTOP_PHYSICAL_DATABASE_FILE_NAMES) {
       expect(JSON.stringify(definitions.contentRead)).not.toContain(fileName);
       expect(JSON.stringify(definitions.queries.externalDocumentSearch)).not.toContain(fileName);
@@ -95,7 +102,11 @@ describe('Android content read query rules', () => {
   });
 
   it('keeps content read Java stores wired to generated query rules', async () => {
-    const combinedStoreSource = `${await readFile(EXTERNAL_DOCUMENT_STORE, 'utf8')}\n${await readFile(READABLE_ARTICLE_QUERY, 'utf8')}`;
+    const combinedStoreSource = [
+      await readFile(EXTERNAL_DOCUMENT_STORE, 'utf8'),
+      await readFile(READABLE_ARTICLE_QUERY, 'utf8'),
+      await readFile(TOPIC_SEARCH_STORE, 'utf8')
+    ].join('\n');
     const rulesSource = await readFile(CONTENT_READ_RULES, 'utf8');
 
     expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.externalDocumentString(context, key)');
@@ -111,6 +122,8 @@ describe('Android content read query rules', () => {
     expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.readableArticleString(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.readableArticleOutputKey(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.readableArticleArray(context, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.topicSearchString(context, key)');
+    expect(combinedStoreSource).toContain('FolioleCompanionContentReadQueryRules.topicSearchArray(context, key)');
     expect(combinedStoreSource).toContain('FolioleCompanionQueryDefinitionShapeKeys.fieldRowString(context, row, field)');
     expect(rulesSource).toContain('FolioleCompanionQueryAssetKeys.ruleGroup(context, "contentRead", groupName)');
     expect(rulesSource).toContain('getJSONArray(key)');
@@ -121,6 +134,7 @@ describe('Android content read query rules', () => {
     expect(combinedStoreSource).not.toContain('row.getInt(rowKey(context, "matchIndex"))');
     expect(combinedStoreSource).not.toContain('"Linked PDF source ready for the reader surface."');
     expect(combinedStoreSource).not.toContain('"readable_article"');
+    expect(combinedStoreSource).not.toContain('"topicSearch"');
     expect(combinedStoreSource).not.toContain('result.put("document"');
     expect(combinedStoreSource).not.toContain('entry.put("document_id"');
     expect(combinedStoreSource).not.toContain('target.put("content_status"');

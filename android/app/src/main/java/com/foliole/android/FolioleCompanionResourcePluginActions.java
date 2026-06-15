@@ -84,6 +84,17 @@ final class FolioleCompanionResourcePluginActions {
         );
     }
 
+    static JSObject searchTopics(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
+        android.content.Context context = databaseHelper.hostContext();
+        return databaseHelper.searchTopics(
+            call.getString(FolioleCompanionBridgeContractDefinitions.resourceQueryRequestKey(context)),
+            call.getInt(
+                FolioleCompanionBridgeContractDefinitions.resourceLimitRequestKey(context),
+                FolioleCompanionBridgeContractDefinitions.resourceTopicSearchLimitDefault(context)
+            )
+        );
+    }
+
     static JSObject loadExternalDocument(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
         return databaseHelper.loadExternalDocument(
             call.getString(FolioleCompanionBridgeContractDefinitions.resourceDocumentIdRequestKey(databaseHelper.hostContext()))

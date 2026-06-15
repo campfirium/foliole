@@ -86,6 +86,11 @@ public class FolioleCompanionSyncPlugin extends FolioleCompanionDatabasePlugin {
     }
 
     @PluginMethod
+    public void searchTopics(PluginCall call) {
+        withCall(call, "Failed to search companion topics.", FolioleCompanionResourcePluginActions::searchTopics);
+    }
+
+    @PluginMethod
     public void loadExternalDocument(PluginCall call) {
         withCall(call, "Failed to load companion external document.", FolioleCompanionResourcePluginActions::loadExternalDocument);
     }

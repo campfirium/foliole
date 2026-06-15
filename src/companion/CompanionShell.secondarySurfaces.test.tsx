@@ -4,10 +4,14 @@ import { describe, expect, it, vi } from 'vitest';
 const useCompanionWorkspaceSync = vi.fn();
 const useCompanionArticleSurface = vi.fn();
 const useFloatingBarVisibility = vi.fn();
+const searchCompanionFullText = vi.fn();
 
 vi.mock('./useCompanionWorkspaceSync', () => ({ useCompanionWorkspaceSync }));
 vi.mock('./useCompanionArticleSurface', () => ({ useCompanionArticleSurface }));
 vi.mock('./useFloatingBarVisibility', () => ({ useFloatingBarVisibility }));
+vi.mock('../shared/platform/companionFullTextSearch', () => ({
+  searchCompanionFullText: (...args: unknown[]) => searchCompanionFullText(...args)
+}));
 
 vi.mock('./CompanionReviewCard', () => ({
   CompanionReviewAnswer: () => <div data-testid="companion-review-answer" />,
@@ -143,13 +147,15 @@ describe('CompanionShell secondary surfaces', () => {
   }, 15000);
 
   it('shows Search as an independent input surface', async () => {
+    searchCompanionFullText.mockResolvedValue({ external: [], pdf: [], strategy: 'word-based', topics: [] });
+
     await renderShellWithSurface(createSurface('search'));
 
     const input = screen.getByRole('searchbox', { name: 'Search topics' });
     fireEvent.change(input, { target: { value: 'queue' } });
 
     expect(input).toHaveValue('queue');
-    expect(input).toBeDisabled();
-    expect(screen.getByText('Search is coming soon')).toBeInTheDocument();
+    expect(input).toBeEnabled();
+    expect(await screen.findByText('No local results found.')).toBeInTheDocument();
   });
 });

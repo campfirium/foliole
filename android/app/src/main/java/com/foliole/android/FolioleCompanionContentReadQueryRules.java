@@ -74,6 +74,22 @@ final class FolioleCompanionContentReadQueryRules {
         return row.isNull(rowKey) ? null : row.optString(rowKey, null);
     }
 
+    static String topicSearchString(Context context, String key) throws Exception {
+        return stringValue("topicSearch", key);
+    }
+
+    static int topicSearchInt(Context context, String key) throws Exception {
+        return group(context, "topicSearch").getInt(key);
+    }
+
+    static String topicSearchOutputKey(Context context, String key) throws Exception {
+        return nestedStringValue("topicSearch", "outputKeys", key);
+    }
+
+    static JSONArray topicSearchArray(Context context, String key) throws Exception {
+        return group(context, "topicSearch").getJSONArray(key);
+    }
+
     private static JSONObject group(Context context, String groupName) throws Exception {
         return FolioleCompanionQueryAssetKeys.ruleGroup(context, "contentRead", groupName);
     }

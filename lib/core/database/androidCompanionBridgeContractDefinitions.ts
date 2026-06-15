@@ -118,7 +118,8 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
     defaults: {
       externalDocumentSearchLimit: 20,
       missingResourceLimit: 50,
-      pdfPageTextSearchLimit: 20
+      pdfPageTextSearchLimit: 20,
+      topicSearchLimit: 20
     },
     requestKeys: {
       attachmentId: 'attachment_id',

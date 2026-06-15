@@ -26,6 +26,10 @@ final class FolioleCompanionBridgeContractDefinitions {
         return resourceDefault(context, "pdfPageTextSearchLimit");
     }
 
+    static int resourceTopicSearchLimitDefault(Context context) throws Exception {
+        return resourceDefault(context, "topicSearchLimit");
+    }
+
     static String pairingCredentialRequestKey(Context context, String key) throws Exception {
         return string(context, "pairingPlugin", "credentialRequestKeys", key);
     }

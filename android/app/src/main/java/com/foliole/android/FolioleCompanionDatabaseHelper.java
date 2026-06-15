@@ -187,6 +187,11 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         return FolioleCompanionPdfPageTextStore.searchPageText(context, database, query, limit);
     }
 
+    JSObject searchTopics(String query, int limit) throws Exception {
+        SQLiteDatabase database = getReadableDatabase();
+        return FolioleCompanionTopicSearchStore.searchTopics(context, database, query, limit);
+    }
+
     JSObject loadExternalDocument(String documentId) throws Exception {
         SQLiteDatabase database = getReadableDatabase();
         return FolioleCompanionExternalDocumentStore.loadDocument(context, database, documentId);

@@ -101,10 +101,12 @@ describe('Android bridge contract metadata', () => {
 
     expect(bridgeSource).toContain('resourceRequestKey(context, "attachmentId")');
     expect(bridgeSource).toContain('resourceDefault(context, "missingResourceLimit")');
+    expect(bridgeSource).toContain('resourceDefault(context, "topicSearchLimit")');
     expect(bridgeSource).toContain('intValue(context, "resourcePlugin", "defaults", key)');
     expect(source).toContain('FolioleCompanionBridgeContractDefinitions.resourceAttachmentIdRequestKey');
     expect(source).toContain('FolioleCompanionBridgeContractDefinitions.resourceUrlRequestKey');
     expect(source).toContain('FolioleCompanionBridgeContractDefinitions.resourceMissingResourceLimitDefault(context)');
+    expect(source).toContain('FolioleCompanionBridgeContractDefinitions.resourceTopicSearchLimitDefault(context)');
     expect(source).not.toContain('getString("attachment_id"');
     expect(source).not.toContain('getString("content_hash"');
     expect(source).not.toContain('getString("document_id"');

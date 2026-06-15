@@ -1,7 +1,8 @@
 export const ANDROID_COMPANION_CONTENT_READ_RULES = {
   groupKeys: {
     externalDocuments: 'externalDocuments',
-    readableArticle: 'readableArticle'
+    readableArticle: 'readableArticle',
+    topicSearch: 'topicSearch'
   },
   externalDocuments: {
     byIdQueryName: 'externalDocumentById',
@@ -104,6 +105,26 @@ export const ANDROID_COMPANION_CONTENT_READ_RULES = {
       { outputKey: 'content', rowKey: 'content', type: 'nullableString' },
       { outputKey: 'content_status', rowKey: 'content_status', type: 'string' },
       { outputKey: 'pdf_attachment_id', rowKey: 'pdf_attachment_id', type: 'nullableString' }
+    ]
+  },
+  topicSearch: {
+    defaultSearchLimit: 20,
+    excerptRadius: 80,
+    maxSearchLimit: 100,
+    resultKey: 'results',
+    searchQueryName: 'topicSearch',
+    outputKeys: {
+      query: 'query',
+      results: 'results'
+    },
+    searchResultFields: [
+      { outputKey: 'node_id', rowKey: 'id', type: 'string' },
+      { outputKey: 'title', rowKey: 'title', type: 'string' },
+      { outputKey: 'opening_text', rowKey: 'opening_text', type: 'nullableString' },
+      { outputKey: 'content_status', rowKey: 'content_status', type: 'string' },
+      { outputKey: 'updated_at', rowKey: 'updated_at', type: 'string' },
+      { outputKey: 'match_start', rowKey: 'match_start', type: 'long' },
+      { outputKey: 'excerpt', rowKey: 'excerpt', type: 'string' }
     ]
   }
 } as const;

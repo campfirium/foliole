@@ -405,6 +405,47 @@
         }
       ]
     },
+    "topicSearch": {
+      "resultKey": "results",
+      "sql": "SELECT n.id, COALESCE(NULLIF(TRIM(n.title), ''), 'Untitled') AS title, n.opening_text, CASE WHEN n.body_blob_hash IS NOT NULL AND TRIM(n.body_blob_hash) <> '' AND CAST(cbd.data AS TEXT) IS NULL THEN CASE WHEN cb.availability IN ('fetching', 'failed') THEN cb.availability ELSE 'missing' END WHEN TRIM(COALESCE(CASE WHEN n.body_blob_hash IS NOT NULL AND TRIM(n.body_blob_hash) <> '' THEN CAST(cbd.data AS TEXT) ELSE n.content END, '')) = '' THEN 'empty' ELSE 'ready' END AS content_status, n.updated_at, max(0, instr(lower(CASE WHEN n.body_blob_hash IS NOT NULL AND TRIM(n.body_blob_hash) <> '' THEN CAST(cbd.data AS TEXT) ELSE n.content END), ?) - 1) AS match_start, trim(substr(CASE WHEN n.body_blob_hash IS NOT NULL AND TRIM(n.body_blob_hash) <> '' THEN CAST(cbd.data AS TEXT) ELSE n.content END, max(1, instr(lower(CASE WHEN n.body_blob_hash IS NOT NULL AND TRIM(n.body_blob_hash) <> '' THEN CAST(cbd.data AS TEXT) ELSE n.content END), ?) - 80), 160)) AS excerpt FROM nodes n LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE n.deleted_at IS NULL AND (instr(lower(COALESCE(n.title, '')), ?) > 0 OR instr(lower(COALESCE(n.opening_text, '')), ?) > 0 OR instr(lower(CASE WHEN n.body_blob_hash IS NOT NULL AND TRIM(n.body_blob_hash) <> '' THEN CAST(cbd.data AS TEXT) ELSE n.content END), ?) > 0) ORDER BY n.updated_at DESC, n.created_at DESC, n.id ASC LIMIT ?",
+      "columns": [
+        {
+          "key": "id",
+          "source": "id",
+          "type": "string"
+        },
+        {
+          "key": "title",
+          "source": "title",
+          "type": "string"
+        },
+        {
+          "key": "opening_text",
+          "source": "opening_text",
+          "type": "nullableString"
+        },
+        {
+          "key": "content_status",
+          "source": "content_status",
+          "type": "string"
+        },
+        {
+          "key": "updated_at",
+          "source": "updated_at",
+          "type": "string"
+        },
+        {
+          "key": "match_start",
+          "source": "match_start",
+          "type": "long"
+        },
+        {
+          "key": "excerpt",
+          "source": "excerpt",
+          "type": "string"
+        }
+      ]
+    },
     "readableArticleActiveNodeId": {
       "resultKey": "rows",
       "sql": "SELECT value FROM workspace_meta WHERE key = 'active_node_id' LIMIT 1",
@@ -1723,7 +1764,8 @@
   "contentRead": {
     "groupKeys": {
       "externalDocuments": "externalDocuments",
-      "readableArticle": "readableArticle"
+      "readableArticle": "readableArticle",
+      "topicSearch": "topicSearch"
     },
     "externalDocuments": {
       "byIdQueryName": "externalDocumentById",
@@ -1969,6 +2011,54 @@
           "outputKey": "pdf_attachment_id",
           "rowKey": "pdf_attachment_id",
           "type": "nullableString"
+        }
+      ]
+    },
+    "topicSearch": {
+      "defaultSearchLimit": 20,
+      "excerptRadius": 80,
+      "maxSearchLimit": 100,
+      "resultKey": "results",
+      "searchQueryName": "topicSearch",
+      "outputKeys": {
+        "query": "query",
+        "results": "results"
+      },
+      "searchResultFields": [
+        {
+          "outputKey": "node_id",
+          "rowKey": "id",
+          "type": "string"
+        },
+        {
+          "outputKey": "title",
+          "rowKey": "title",
+          "type": "string"
+        },
+        {
+          "outputKey": "opening_text",
+          "rowKey": "opening_text",
+          "type": "nullableString"
+        },
+        {
+          "outputKey": "content_status",
+          "rowKey": "content_status",
+          "type": "string"
+        },
+        {
+          "outputKey": "updated_at",
+          "rowKey": "updated_at",
+          "type": "string"
+        },
+        {
+          "outputKey": "match_start",
+          "rowKey": "match_start",
+          "type": "long"
+        },
+        {
+          "outputKey": "excerpt",
+          "rowKey": "excerpt",
+          "type": "string"
         }
       ]
     }

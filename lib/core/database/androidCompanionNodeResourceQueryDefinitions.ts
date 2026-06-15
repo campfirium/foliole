@@ -1,9 +1,22 @@
 import {
+  androidBodyStatusExpression,
   androidReadableArticleColumns,
   androidReadableArticleReferencePdfAttachmentSql,
   androidReadableArticleSql,
   androidSearchExcerptExpression,
 } from './androidCompanionDerivedReadSql.ts';
+
+const TOPIC_INLINE_CONTENT = 'n.content';
+const TOPIC_BODY_BLOB_DATA = 'CAST(cbd.data AS TEXT)';
+const TOPIC_HAS_BODY_BLOB = "n.body_blob_hash IS NOT NULL AND TRIM(n.body_blob_hash) <> ''";
+const TOPIC_CONTENT = `CASE WHEN ${TOPIC_HAS_BODY_BLOB} THEN ${TOPIC_BODY_BLOB_DATA} ELSE ${TOPIC_INLINE_CONTENT} END`;
+const TOPIC_STATUS = androidBodyStatusExpression({
+  availabilityExpression: 'cb.availability',
+  bodyBlobDataExpression: TOPIC_BODY_BLOB_DATA,
+  bodyBlobHashExpression: 'n.body_blob_hash',
+  contentExpression: TOPIC_CONTENT,
+  emptyWhenBlank: true
+});
 
 export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
   nodeAttachments: {
@@ -44,6 +57,28 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
       { key: 'text', source: 'text', type: 'string' },
       { key: 'page_width', source: 'page_width', type: 'double' },
       { key: 'page_height', source: 'page_height', type: 'double' },
+      { key: 'match_start', source: 'match_start', type: 'long' },
+      { key: 'excerpt', source: 'excerpt', type: 'string' }
+    ]
+  },
+  topicSearch: {
+    resultKey: 'results',
+    sql:
+      'SELECT n.id, COALESCE(NULLIF(TRIM(n.title), \'\'), \'Untitled\') AS title, n.opening_text, ' +
+      `${TOPIC_STATUS} AS content_status, n.updated_at, ` +
+      'max(0, instr(lower(' + TOPIC_CONTENT + '), ?) - 1) AS match_start, ' +
+      `${androidSearchExcerptExpression(TOPIC_CONTENT, '?', 80)} AS excerpt ` +
+      'FROM nodes n LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash ' +
+      'LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE n.deleted_at IS NULL ' +
+      'AND (instr(lower(COALESCE(n.title, \'\')), ?) > 0 OR instr(lower(COALESCE(n.opening_text, \'\')), ?) > 0 ' +
+      `OR instr(lower(${TOPIC_CONTENT}), ?) > 0) ` +
+      'ORDER BY n.updated_at DESC, n.created_at DESC, n.id ASC LIMIT ?',
+    columns: [
+      { key: 'id', source: 'id', type: 'string' },
+      { key: 'title', source: 'title', type: 'string' },
+      { key: 'opening_text', source: 'opening_text', type: 'nullableString' },
+      { key: 'content_status', source: 'content_status', type: 'string' },
+      { key: 'updated_at', source: 'updated_at', type: 'string' },
       { key: 'match_start', source: 'match_start', type: 'long' },
       { key: 'excerpt', source: 'excerpt', type: 'string' }
     ]

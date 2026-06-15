@@ -87,6 +87,18 @@ export interface CompanionWorkspaceSyncPlugin
       text: string;
     }>;
   }>;
+  searchTopics(args: { limit?: number; query: string }): Promise<{
+    query: string;
+    results: Array<{
+      content_status?: 'empty' | 'failed' | 'fetching' | 'missing' | 'ready';
+      excerpt: string;
+      match_start: number;
+      node_id: string;
+      opening_text: string | null;
+      title: string;
+      updated_at: string;
+    }>;
+  }>;
   loadExternalDocument(args: { document_id: string }): Promise<{
     document: {
       content: string;

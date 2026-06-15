@@ -7,6 +7,7 @@ final class FolioleCompanionResourceQueryStringKeys {
         switch (section + "." + group + "." + key) {
             case "contentRead.groupKeys.externalDocuments": return "externalDocuments";
             case "contentRead.groupKeys.readableArticle": return "readableArticle";
+            case "contentRead.groupKeys.topicSearch": return "topicSearch";
             case "contentRead.externalDocuments.byIdQueryName": return "externalDocumentById";
             case "contentRead.externalDocuments.directoryEntriesQueryName": return "externalDocumentDirectoryEntries";
             case "contentRead.externalDocuments.directoryEntriesResultKey": return "entries";
@@ -26,6 +27,8 @@ final class FolioleCompanionResourceQueryStringKeys {
             case "contentRead.readableArticle.pdfPlaceholderText": return "Linked PDF source ready for the reader surface.";
             case "contentRead.readableArticle.referencePdfAttachmentQueryName": return "readableArticleReferencePdfAttachment";
             case "contentRead.readableArticle.untitledTitle": return "Untitled";
+            case "contentRead.topicSearch.resultKey": return "results";
+            case "contentRead.topicSearch.searchQueryName": return "topicSearch";
             case "missingResourceRead.groupKeys.attachmentResources": return "attachmentResources";
             case "missingResourceRead.groupKeys.contentBlobs": return "contentBlobs";
             case "missingResourceRead.attachmentResources.byIdQueryName": return "attachmentResourceMissingById";
@@ -131,6 +134,8 @@ final class FolioleCompanionResourceQueryStringKeys {
             case "contentRead.readableArticle.outputKeys.nodeId": return "node_id";
             case "contentRead.readableArticle.outputKeys.pdfAttachmentId": return "pdf_attachment_id";
             case "contentRead.readableArticle.outputKeys.title": return "title";
+            case "contentRead.topicSearch.outputKeys.query": return "query";
+            case "contentRead.topicSearch.outputKeys.results": return "results";
             case "missingResourceRead.attachmentResources.rowKeys.activeTopic": return "active_topic";
             case "missingResourceRead.attachmentResources.rowKeys.attachmentId": return "attachment_id";
             case "missingResourceRead.attachmentResources.rowKeys.availability": return "availability";

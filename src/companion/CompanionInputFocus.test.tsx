@@ -58,11 +58,11 @@ it('keeps the selection note textarea keyboard focus visible', () => {
   expectInputFocusVisible(screen.getByPlaceholderText('Add annotation...'));
 });
 
-it('keeps the disabled companion search input on the shared focus-visible class', () => {
+it('keeps the companion search input on the shared focus-visible class', () => {
   renderWithLocalization(<CompanionSearchContent />);
 
   const search = screen.getByRole('searchbox', { name: 'Search topics' });
-  expect(search).toBeDisabled();
+  expect(search).toBeEnabled();
   expectInputFocusVisible(search);
   expect(search.className).toContain('focus-visible:border-border-strong');
 });

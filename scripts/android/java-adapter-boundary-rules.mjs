@@ -144,6 +144,7 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionSyncReviewLogStore.java',
       'FolioleCompanionSyncStateWriteStore.java',
       'FolioleCompanionTextBodyBlobs.java',
+      'FolioleCompanionTopicSearchStore.java',
       'FolioleCompanionViewStateSyncStore.java',
       'FolioleCompanionWorkspaceNodeSnapshotBuilder.java',
       'FolioleCompanionWorkspaceSnapshotExporter.java',

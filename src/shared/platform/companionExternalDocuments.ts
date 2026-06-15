@@ -26,7 +26,7 @@ export interface CompanionExternalDocument {
   updated_at: string;
 }
 
-interface CompanionExternalDocumentSearchResult extends CompanionExternalDocument {
+export interface CompanionExternalDocumentSearchResult extends CompanionExternalDocument {
   excerpt: string;
   match_start: number;
 }
