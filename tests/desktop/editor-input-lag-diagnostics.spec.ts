@@ -121,4 +121,8 @@ test('collects editor input lag diagnostics while typing plain body text', async
   });
 
   expect(summary.totalRecords).toBeGreaterThan(0);
+  expect(summary.counts['editor-input-change']).toBeGreaterThanOrEqual(80);
+  expect(summary.counts['live-markdown-map-decorations']).toBeGreaterThanOrEqual(70);
+  expect(summary.counts['live-markdown-parse'] ?? 0).toBeLessThanOrEqual(2);
+  expect(summary.counts['document-panel-section-render'] ?? 0).toBeLessThanOrEqual(16);
 });

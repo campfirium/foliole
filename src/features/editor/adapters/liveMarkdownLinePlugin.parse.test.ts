@@ -6,14 +6,19 @@ import { folioleMarkdownParser } from '../model/folioleMarkdownParser';
 
 import { buildPreviewAtomicRangeSet } from './liveMarkdownAtomicRanges';
 import { buildPreviewDecorationSet, buildSourceDecorationSet } from './liveMarkdownDecorations';
-import { shouldMapDocumentInputDecorations, shouldReparsePreviewMarkdown } from './liveMarkdownLinePlugin';
+import {
+  hasMarkdownDecorationContext,
+  isPlainTextInputChange,
+  shouldMapDocumentInputDecorations,
+  shouldReparsePreviewMarkdown
+} from './liveMarkdownLinePlugin';
+
+afterEach(() => {
+  document.body.innerHTML = '';
+  vi.restoreAllMocks();
+});
 
 describe('live Markdown parse reuse', () => {
-  afterEach(() => {
-    document.body.innerHTML = '';
-    vi.restoreAllMocks();
-  });
-
   it('reuses pre-parsed preview markdown for atomic range builds', () => {
     setEditorDisplayMode('preview');
     const parseSpy = vi.spyOn(folioleMarkdownParser, 'parse');
@@ -29,7 +34,9 @@ describe('live Markdown parse reuse', () => {
   it('does not reparse preview markdown for viewport-only updates', () => {
     expect(shouldReparsePreviewMarkdown({ docChanged: false })).toBe(false);
   });
+});
 
+describe('live Markdown plain text input reuse', () => {
   it('maps existing decorations while typing plain text in the editor', () => {
     expect(shouldMapDocumentInputDecorations({
       docChanged: true,
@@ -40,6 +47,28 @@ describe('live Markdown parse reuse', () => {
       plainTextInputChange: true,
       textAnchorDecorationsChanged: false
     })).toBe(true);
+  });
+
+  it('treats plain prose as safe even when another document line has markdown', () => {
+    const update = createTextInsertionUpdate('# Title\n\nThis is plain prose.', 28, '1');
+
+    expect(isPlainTextInputChange(update as never)).toBe(true);
+  });
+
+  it('rebuilds when plain input edits a markdown decoration line', () => {
+    const update = createTextInsertionUpdate('# Title\n\nThis is plain prose.', 3, '1');
+
+    expect(isPlainTextInputChange(update as never)).toBe(false);
+  });
+
+  it('rebuilds when inserted text can introduce markdown structure', () => {
+    const update = createTextInsertionUpdate('This is plain prose.', 18, '*');
+
+    expect(isPlainTextInputChange(update as never)).toBe(false);
+  });
+
+  it('does not treat prose punctuation as markdown decoration context', () => {
+    expect(hasMarkdownDecorationContext('This document intentionally contains ordinary prose.')).toBe(false);
   });
 
   it('rebuilds editor decorations for structural presentation changes', () => {
@@ -130,6 +159,32 @@ function createDecorationContext(): Parameters<typeof buildPreviewDecorationSet>
     markdownSyntaxVisible: false,
     nodeId: null,
     onMissingAttachmentResource: null
+  };
+}
+
+function createTextInsertionUpdate(text: string, position: number, insertedText: string) {
+  const lines = text.split('\n');
+  return {
+    changes: {
+      iterChanges(callback: (fromA: number, toA: number, fromB: number, toB: number, inserted: { toString: () => string }) => void) {
+        callback(position, position, position, position + insertedText.length, { toString: () => insertedText });
+      }
+    },
+    startState: {
+      doc: {
+        lineAt(target: number) {
+          let from = 0;
+          for (const [index, line] of lines.entries()) {
+            const to = from + line.length;
+            if (target <= to || index === lines.length - 1) {
+              return { from, number: index + 1, text: line, to };
+            }
+            from = to + 1;
+          }
+          return { from: 0, number: 1, text: lines[0] ?? '', to: lines[0]?.length ?? 0 };
+        }
+      }
+    }
   };
 }
 
