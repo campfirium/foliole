@@ -62,7 +62,7 @@ it('shows the current primary device role in sync settings', () => {
   expect(screen.getByText('Device role')).toBeInTheDocument();
   expect(screen.getByText('Primary device')).toBeInTheDocument();
   expect(screen.getByText('Current primary')).toBeInTheDocument();
-  expect(screen.getByText('This desktop runs sync and external folders for paired devices.')).toBeInTheDocument();
+  expect(screen.getByText('This desktop runs sync and external document mirrors for paired devices.')).toBeInTheDocument();
 });
 
 it('lets a secondary desktop become the primary device from sync settings', async () => {

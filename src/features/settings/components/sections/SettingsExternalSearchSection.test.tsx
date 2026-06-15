@@ -42,7 +42,7 @@ it('shows a progress row while external sources load', () => {
   expect(status).toHaveTextContent('');
 });
 
-it('describes external folders as mirrored sources', () => {
+it('describes external folders as external document mirrors', () => {
   renderWithLocalization(<SettingsExternalSearchSection {...baseProps} folders={[{
     attachmentMode: 'document_relative_first_then_fixed_root',
     attachmentRootPath: null,
@@ -57,7 +57,7 @@ it('describes external folders as mirrored sources', () => {
     updatedAt: '2026-05-26T00:00:00.000Z'
   }]} />);
 
-  expect(screen.getByText('Choose folders Foliole mirrors for browsing, search, and import. Original files stay outside Foliole.')).toBeInTheDocument();
+  expect(screen.getByText('Choose folders Foliole mirrors as external documents for browsing, search, and import. Original files stay outside Foliole.')).toBeInTheDocument();
   expect(screen.getByTitle('3 files mirrored')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Update folder mirror' })).toBeInTheDocument();
 });
@@ -71,10 +71,10 @@ it('does not show global search enhancement controls in external sources', () =>
 });
 
 it('shows a retryable alert when external sources fail to load', () => {
-  renderWithLocalization(<SettingsExternalSearchSection {...baseProps} error="Could not load external folders." />);
+  renderWithLocalization(<SettingsExternalSearchSection {...baseProps} error="Could not load external document mirror settings." />);
 
-  expect(screen.getByRole('alert')).toHaveTextContent('Could not load external folders.');
-  expect(screen.getByRole('alert')).toHaveTextContent('External folders unavailable');
+  expect(screen.getByRole('alert')).toHaveTextContent('Could not load external document mirror settings.');
+  expect(screen.getByRole('alert')).toHaveTextContent('External document mirrors unavailable');
 
   fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
 

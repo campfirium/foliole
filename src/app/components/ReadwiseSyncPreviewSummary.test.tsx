@@ -33,5 +33,5 @@ it('summarizes external destinations separately from inbox imports', () => {
 
   renderWithLocalization(<ReadwisePreviewSummary preview={preview} />);
 
-  expect(screen.getByText('1 ready for external folders (1 highlight-only), 1 skipped.')).toBeInTheDocument();
+  expect(screen.getByText('1 ready for external document mirrors (1 highlight-only), 1 skipped.')).toBeInTheDocument();
 });
