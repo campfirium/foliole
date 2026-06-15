@@ -35,8 +35,18 @@ beforeEach(async () => {
 
 afterEach(async () => {
   closeDatabaseConnection();
-  await fs.rm(tempRoot, { recursive: true, force: true });
+  await removeTempRoot();
 });
+
+async function removeTempRoot() {
+  try {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  } catch (error) {
+    if (!(error instanceof Error) || !('code' in error) || (error.code !== 'EBUSY' && error.code !== 'EPERM')) {
+      throw error;
+    }
+  }
+}
 
 function seedPdfNode(input: { attachmentId: string; nodeId: string; pages: Array<[number, string]> }) {
   upsertNodeSnapshot({

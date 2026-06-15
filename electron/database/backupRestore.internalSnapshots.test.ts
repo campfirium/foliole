@@ -37,8 +37,18 @@ beforeEach(async () => {
 
 afterEach(async () => {
   closeDatabaseConnection();
-  await fs.rm(tempRoot, { recursive: true, force: true });
+  await removeTempRoot();
 });
+
+async function removeTempRoot() {
+  try {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  } catch (error) {
+    if (!(error instanceof Error) || !('code' in error) || (error.code !== 'EBUSY' && error.code !== 'EPERM')) {
+      throw error;
+    }
+  }
+}
 
 it('creates a pre-restore snapshot in Backups and prunes older snapshot files', async () => {
   seedNode('node-1', '# original');
