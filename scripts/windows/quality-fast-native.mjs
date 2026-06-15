@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /* global console, process */
 
 import { spawn } from 'node:child_process';
@@ -204,7 +203,7 @@ async function runCappedHeavyPlan(plan, env = process.env, runner = runInherited
   }
 }
 
-export async function runQualityL0Native(options = {}) {
+export async function runQualityT0Native(options = {}) {
   const env = options.env ?? process.env;
   const bashExe = options.bashExe ?? resolveGitBash(env);
   const changedFiles = options.changedFiles ?? parseEnvFileList(env.QUALITY_GATE_CHANGED_FILES);
@@ -225,13 +224,13 @@ export async function runQualityL0Native(options = {}) {
 
   await runCappedHeavyPlan(plan, env, runner);
   const deferred = plan.level === 'full' ? 'quality:full' : `quality:${plan.level}`;
-  console.log(`[quality-fast-native] ${plan.level}-class change detected -> L0.5 comprehensive gate deferred: npm run ${deferred}`);
+  console.log(`[quality-fast-native] ${plan.level}-class change detected -> T0 follow-up gate deferred: npm run ${deferred}`);
   return plan;
 }
 
 async function main() {
   try {
-    await runQualityL0Native();
+    await runQualityT0Native();
     console.log('[quality-fast-native] all checks passed.');
   } catch (error) {
     console.error(`[quality-fast-native] ${error instanceof Error ? error.message : String(error)}`);

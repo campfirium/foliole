@@ -7,9 +7,14 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it, vi } from 'vitest';
 
-import { isRejectedBashPath, parseRoutePlan, resolveGitBash, runQualityL0Native } from './quality-fast-native.mjs';
+import { isRejectedBashPath, parseRoutePlan, resolveGitBash, runQualityT0Native } from './quality-fast-native.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const WIN_SEP = String.fromCharCode(92);
+const winPath = (...parts) => parts.join(WIN_SEP);
+const SYSTEM_BASH = winPath('C:', 'Windows', 'System32', 'bash.exe');
+const GIT_BASH = winPath('C:', 'Program Files', 'Git', 'bin', 'bash.exe');
+const SCOOP_BASH = winPath('C:', 'Users', 'zephu', 'scoop', 'apps', 'git', 'current', 'bin', 'bash.exe');
 
 it('exposes a Windows native fast quality npm entry', async () => {
   const packageJson = JSON.parse(await readFile(path.join(REPO_ROOT, 'package.json'), 'utf8'));
@@ -57,23 +62,23 @@ describe('quality-fast-native route parsing', () => {
 
 describe('quality-fast-native Git Bash resolution', () => {
   it('rejects Windows system bash and wsl executables', () => {
-    expect(isRejectedBashPath('C:\\Windows\\System32\\bash.exe')).toBe(true);
+    expect(isRejectedBashPath(SYSTEM_BASH)).toBe(true);
     expect(isRejectedBashPath('C:/Windows/System32/wsl.exe')).toBe(true);
-    expect(isRejectedBashPath('C:\\Users\\zephu\\scoop\\apps\\git\\current\\bin\\bash.exe')).toBe(false);
+    expect(isRejectedBashPath(SCOOP_BASH)).toBe(false);
   });
 
   it('fails fast when an explicit bash points at WSL bash', () => {
-    expect(() => resolveGitBash({ FOLIOLE_GIT_BASH: 'C:\\Windows\\System32\\bash.exe' })).toThrow(
+    expect(() => resolveGitBash({ FOLIOLE_GIT_BASH: SYSTEM_BASH })).toThrow(
       /Git Bash not found/u
     );
   });
 });
 
-describe('quality-fast-native L0 routing', () => {
+describe('quality-fast-native T0 routing', () => {
   it('runs light and mid routes through the native local steps with changed files', async () => {
     const calls = [];
-    await runQualityL0Native({
-      bashExe: 'C:\\Program Files\\Git\\bin\\bash.exe',
+    await runQualityT0Native({
+      bashExe: GIT_BASH,
       changedFiles: ['src/app/App.tsx'],
       env: {},
       plan: { changedFiles: ['src/app/App.tsx'], level: 'light', lintTargets: [], relatedTests: [], target: 'scoped lint + typecheck' },
@@ -83,15 +88,15 @@ describe('quality-fast-native L0 routing', () => {
       }
     });
 
-    expect(calls.some((call) => call.command === 'C:\\Program Files\\Git\\bin\\bash.exe')).toBe(false);
+    expect(calls.some((call) => call.command === GIT_BASH)).toBe(false);
     expect(calls.map((call) => call.label)).toContain('typecheck');
     expect(calls.every((call) => call.env.QUALITY_GATE_CHANGED_FILES === 'src/app/App.tsx')).toBe(true);
   });
 
   it('uses QUALITY_GATE_CHANGED_FILES as the native changed-file override', async () => {
     const calls = [];
-    await runQualityL0Native({
-      bashExe: 'C:\\Program Files\\Git\\bin\\bash.exe',
+    await runQualityT0Native({
+      bashExe: GIT_BASH,
       env: { QUALITY_GATE_CHANGED_FILES: 'src/app/App.tsx' },
       plan: { changedFiles: ['src/app/App.tsx'], level: 'light', lintTargets: [], relatedTests: [], target: 'scoped lint + typecheck' },
       runner: async (command, args, options) => {
@@ -103,12 +108,12 @@ describe('quality-fast-native L0 routing', () => {
     expect(calls.every((call) => call.env.QUALITY_GATE_CHANGED_FILES === 'src/app/App.tsx')).toBe(true);
   });
 
-  it('caps desktop routes to L0 commands and defers the L0.5 comprehensive gate', async () => {
+  it('caps desktop routes to T0 commands and defers the T0 follow-up gate', async () => {
     const calls = [];
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
-      await runQualityL0Native({
-        bashExe: 'C:\\Program Files\\Git\\bin\\bash.exe',
+      await runQualityT0Native({
+        bashExe: GIT_BASH,
         changedFiles: ['electron/main.ts'],
         env: {},
         plan: {
@@ -124,7 +129,7 @@ describe('quality-fast-native L0 routing', () => {
         }
       });
       expect(logSpy).toHaveBeenCalledWith(
-        '[quality-fast-native] desktop-class change detected -> L0.5 comprehensive gate deferred: npm run quality:desktop'
+        '[quality-fast-native] desktop-class change detected -> T0 follow-up gate deferred: npm run quality:desktop'
       );
     } finally {
       logSpy.mockRestore();
@@ -141,8 +146,8 @@ describe('quality-fast-native L0 routing', () => {
 
   it('runs controlled sqlite tests through the Electron ABI runner even outside electron paths', async () => {
     const calls = [];
-    await runQualityL0Native({
-      bashExe: 'C:\\Program Files\\Git\\bin\\bash.exe',
+    await runQualityT0Native({
+      bashExe: GIT_BASH,
       changedFiles: ['src/shared/platform/companionSyncNodeVersions.ts'],
       env: {},
       plan: {
@@ -176,8 +181,8 @@ describe('quality-fast-native L0 routing', () => {
     const calls = [];
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
-      await runQualityL0Native({
-        bashExe: 'C:\\Program Files\\Git\\bin\\bash.exe',
+      await runQualityT0Native({
+        bashExe: GIT_BASH,
         changedFiles: ['src/shared/platform/example.ts'],
         env: {},
         plan: {
@@ -193,7 +198,7 @@ describe('quality-fast-native L0 routing', () => {
         }
       });
       expect(logSpy).toHaveBeenCalledWith(
-        `[quality-fast-native] ${level}-class change detected -> L0.5 comprehensive gate deferred: npm run ${deferredGate}`
+        `[quality-fast-native] ${level}-class change detected -> T0 follow-up gate deferred: npm run ${deferredGate}`
       );
     } finally {
       logSpy.mockRestore();
