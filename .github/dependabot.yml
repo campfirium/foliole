@@ -19,6 +19,9 @@ updates:
       - dependency-name: "*"
         update-types:
           - version-update:semver-major
+      - dependency-name: pdfjs-dist
+        update-types:
+          - version-update:semver-minor
     groups:
       electron-native:
         patterns:
