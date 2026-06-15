@@ -167,7 +167,7 @@
   "dependencies": {
     "@capacitor-community/sqlite": "8.1.0",
     "@capacitor/app": "8.1.0",
-    "@capacitor/core": "8.3.4",
+    "@capacitor/core": "8.4.0",
     "@capacitor/local-notifications": "8.2.0",
     "@codemirror/commands": "^6.10.3",
     "@codemirror/language": "6.12.1",
@@ -196,8 +196,8 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
-    "@capacitor/android": "8.3.4",
-    "@capacitor/cli": "8.3.4",
+    "@capacitor/android": "8.4.0",
+    "@capacitor/cli": "8.4.0",
     "@electron/rebuild": "4.0.4",
     "@eslint/js": "^9.39.4",
     "@playwright/test": "^1.60.0",
