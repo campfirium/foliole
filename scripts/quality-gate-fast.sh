@@ -151,7 +151,7 @@ run_critical_tests_if_needed() {
   printf '%s\n' "${changed}" | node scripts/quality-critical-test-routes.mjs --run
 }
 
-if quality_gate_should_print_step && ! has_quality_gate_arg "--route" "$@"; then
+if quality_gate_should_print_step && ! has_quality_gate_arg "--route" "$@" && ! has_quality_gate_arg "--route-json" "$@"; then
   echo "[quality-gate-fast] detected package manager: ${pm}"
 fi
 
@@ -174,6 +174,11 @@ level="$(resolve_quality_gate_level "${all_changed}")"
 
 if has_quality_gate_arg "--route" "$@"; then
   print_quality_gate_route_plan "${all_changed}" "${level}"
+  exit 0
+fi
+
+if has_quality_gate_arg "--route-json" "$@"; then
+  print_quality_gate_route_plan "${all_changed}" "${level}" | node "${SCRIPT_DIR}/quality-gate-route-json.mjs"
   exit 0
 fi
 

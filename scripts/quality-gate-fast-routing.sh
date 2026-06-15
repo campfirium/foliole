@@ -110,6 +110,35 @@ resolve_quality_gate_level_reason() {
   resolve_quality_gate_route "${changed}" | cut -f2-
 }
 
+resolve_quality_gate_target() {
+  local level="$1"
+  local changed="$2"
+  case "${level}" in
+    full)
+      printf 'quality:full'
+      ;;
+    desktop)
+      printf 'quality:desktop'
+      ;;
+    shared)
+      printf 'quality:shared'
+      ;;
+    android)
+      printf 'quality:android'
+      ;;
+    mid)
+      printf 'scoped lint + typecheck + workspace boundary + related tests'
+      ;;
+    *)
+      if [[ -z "${changed}" ]]; then
+        printf 'typecheck only'
+      else
+        printf 'scoped lint + typecheck'
+      fi
+      ;;
+  esac
+}
+
 collect_lint_targets() {
   local changed="$1"
   printf '%s\n' "${changed}" | grep -E '\.(js|jsx|ts|tsx|cjs|mjs)$' | grep -v '^\s*$' || true
@@ -184,30 +213,7 @@ print_quality_gate_route_plan() {
 
   echo "[quality-gate-route] selected level: ${level}"
   echo "[quality-gate-route] reason: ${reason}"
-  case "${level}" in
-    full)
-      echo "[quality-gate-route] target: quality:full"
-      ;;
-    desktop)
-      echo "[quality-gate-route] target: quality:desktop"
-      ;;
-    shared)
-      echo "[quality-gate-route] target: quality:shared"
-      ;;
-    android)
-      echo "[quality-gate-route] target: quality:android"
-      ;;
-    mid)
-      echo "[quality-gate-route] target: scoped lint + typecheck + workspace boundary + related tests"
-      ;;
-    *)
-      if [[ -z "${changed}" ]]; then
-        echo "[quality-gate-route] target: typecheck only"
-      else
-        echo "[quality-gate-route] target: scoped lint + typecheck"
-      fi
-      ;;
-  esac
+  echo "[quality-gate-route] target: $(resolve_quality_gate_target "${level}" "${changed}")"
 
   if [[ -n "${changed}" ]]; then
     echo "[quality-gate-route] changed files:"

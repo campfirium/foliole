@@ -34,6 +34,15 @@ function joinHostPath(root, ...segments) {
   return isWindowsHostPath(root) ? path.win32.join(normalizeWindowsDrivePath(root), ...segments) : path.join(root, ...segments);
 }
 
+function resolveInstalledExePath(env = process.env) {
+  const configuredPath = env.FOLIOLE_ELECTRON_INSTALLED_EXE_PATH?.trim();
+  if (configuredPath) {
+    return resolveHostPath(configuredPath);
+  }
+  const localAppData = env.LOCALAPPDATA?.trim();
+  return localAppData ? path.win32.join(localAppData, 'Programs', 'Foliole', 'Foliole.exe') : null;
+}
+
 export function resolveDesktopAppRoot(env = process.env) {
   const configuredRoot = env.FOLIOLE_ELECTRON_APP_ROOT?.trim();
   if (configuredRoot) {
@@ -46,7 +55,20 @@ export function resolveDesktopAppRoot(env = process.env) {
   return windowsWorkdir;
 }
 
-export function resolveDesktopLaunchTarget(appRoot, existsSync = fs.existsSync) {
+export function resolveDesktopLaunchTarget(appRoot, existsSync = fs.existsSync, env = process.env) {
+  if (env.FOLIOLE_ELECTRON_LAUNCH_MODE === 'installed' || env.FOLIOLE_ELECTRON_INSTALLED_EXE_PATH) {
+    const executablePath = resolveInstalledExePath(env);
+    const resolvedExecutablePath = executablePath ? resolveHostPath(executablePath) : null;
+    return {
+      appRoot: resolvedExecutablePath ? path.win32.dirname(resolvedExecutablePath) : resolveHostPath(appRoot),
+      executablePath: resolvedExecutablePath,
+      launchMode: 'installed',
+      mainEntry: null,
+      missingPaths: resolvedExecutablePath && existsSync(resolvedExecutablePath) ? [] : [resolvedExecutablePath ?? 'Foliole.exe'],
+      preloadPath: null,
+      rendererIndexPath: null
+    };
+  }
   const resolvedAppRoot = resolveHostPath(appRoot);
   const mainEntry = joinHostPath(resolvedAppRoot, 'electron-dist', 'electron', 'main.js');
   const preloadPath = joinHostPath(resolvedAppRoot, 'electron', 'preload.cjs');
@@ -82,7 +104,9 @@ export function createDesktopLaunchOptions(
   existsSync = fs.existsSync,
   extraArgs = []
 ) {
-  const executablePath = resolveElectronExecutablePath(target.appRoot, env, existsSync);
+  const executablePath = target.launchMode === 'installed'
+    ? target.executablePath
+    : resolveElectronExecutablePath(target.appRoot, env, existsSync);
   const launchEnv = {
     ...env,
     ...isolation.env,
@@ -90,10 +114,25 @@ export function createDesktopLaunchOptions(
   };
   delete launchEnv.ELECTRON_RUN_AS_NODE;
   return {
-    args: [target.mainEntry, ...extraArgs],
+    args: createElectronLaunchArgs(target.mainEntry, env, extraArgs),
     cwd: target.appRoot,
     env: launchEnv,
     executablePath: executablePath ? resolveHostPath(executablePath) : undefined,
     timeout: timeoutMs
   };
+}
+
+function createElectronLaunchArgs(mainEntry, env, extraArgs) {
+  const args = [];
+  if (env.FOLIOLE_DISABLE_HARDWARE_ACCELERATION === '1') {
+    args.push('--disable-gpu', '--disable-gpu-compositing', '--disable-gpu-sandbox');
+  }
+  if (env.FOLIOLE_DISABLE_CHROMIUM_SANDBOX_FOR_DEBUG === '1') {
+    args.push('--no-sandbox');
+  }
+  if (mainEntry) {
+    args.push(mainEntry);
+  }
+  args.push(...extraArgs);
+  return args;
 }

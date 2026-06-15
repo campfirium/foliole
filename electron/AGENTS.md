@@ -53,12 +53,15 @@
 
 ## Validation
 
-- 桌面相关改动默认先执行覆盖本轮能力闭环的最小验证；只有当能力闭环触及桌面根链路、桌面多子系统联动、共享层 / 依赖、或你无法用相关验证证明影响已被覆盖时，才升级为 `npm run quality:desktop`、`npm run quality:shared` 或 `npm run quality:full`；需要 Android 原生宿主一起验收时才升级到 `npm run quality:release`。
+- Windows 原生本地快检优先使用 `npm run quality:fast:native`。它是 L0：复用既有路由但封顶在 light / mid，不启动真实 Electron 窗口，不自动运行 `quality:desktop` / `quality:shared` / `quality:android` / `quality:full`；当它提示 L0.5 deferred 时，按风险、交接或 push 需要再显式运行对应综合机械门。
+- 桌面相关改动默认先执行覆盖本轮能力闭环的最小验证；只有当能力闭环触及桌面根链路、桌面多子系统联动、共享层 / 依赖、或你无法用相关验证证明影响已被覆盖时，才升级为 `npm run quality:desktop`、`npm run quality:shared`、`npm run quality:android` 或 `npm run quality:full`；同时进入发布候选、安装包或跨宿主发布验收时才升级到 `npm run quality:release`。
 - WSL 主开发会话执行 Windows 桌面人工预览时，统一使用 `npm run windows:preview`；Windows 原生 Codex 会话直接诊断 Windows checkout 时才使用 `npm run windows:preview:native`。桌面人工预览只在用户明确要求 Windows 预览、阶段验收、发布 / 安装包验收、或本节 Windows 专属风险命中时执行；不再读取持久 preview flag 自动升级日常桌面可见改动。
-- Agent 日常自动化验收先按验收目标选入口：纯 renderer / Web UI 行为可用 WSL headless Playwright；桌面 Electron 行为默认使用 `npm run test:e2e:desktop:agent` 或等价 `xvfb-run --auto-servernum npx playwright test -c playwright.desktop.config.ts ...`，在 WSL/Linux + Xvfb 中启动 Linux Electron，避免可见窗口、闪屏或抢焦点。
-- WSL/Linux 桌面 Electron Playwright 必须使用 `npm run test:e2e:desktop:agent -- <spec>`，或显式 `xvfb-run --auto-servernum npx playwright test -c playwright.desktop.config.ts ...`；若直接运行 `npx playwright test -c playwright.desktop.config.ts ...` 并出现 `Missing X server or $DISPLAY`，这只是入口缺少 Xvfb，不是业务失败。
-- 桌面 Electron Playwright 在共享工作区内默认串行执行；若 `desktopSession` setup 卡住且发现另一条桌面 Playwright / 预览正在持有运行资源，必须等待或清理 stale 进程后重跑，不得把并发抢占汇报为产品失败。`npm run test:e2e:desktop:agent` 已通过 resource gate 排队；临时绕开该入口时必须自行保证同等串行。
-- WSL/Linux desktop Playwright 必须从当前 WSL 仓库启动，不得默认解析到 Windows mirror 或 `electron.exe`；若出现 Electron inspector / localhost 连接到 Windows executable、stale renderer build、ABI mismatch、构建产物缺失或首次提示遮挡，应修复入口或测试前置，不得改走 Windows 侧后报告为本轮自动验收通过。
+- Agent 日常自动化验收先按验收目标选入口：纯 renderer / Web UI 行为可用 headless browser；桌面 Electron 行为在 Windows 原生 Codex 会话优先使用 `npm run test:e2e:desktop:native:hidden -- <spec>` 运行本轮任务相关的 hidden-capable Playwright spec。
+- Hidden Native 是不打扰用户的 Windows 原生 Electron 执行模式，不是固定测试内容；无显式 spec 时 `npm run test:e2e:desktop:native:hidden` 只运行 hidden mode health，用来证明 runner / 窗口呈现链路可用，不构成本轮功能验收。
+- L1a Hidden Native 验收只覆盖 renderer / preload bridge / IPC / 临时 sqlite / navigation / layout 等不依赖真实桌面 focus 的当前任务行为；若本轮没有 hidden-capable 桌面行为，最终汇报说明跳过 L1a 的原因；若行为依赖 focus、窗口拖拽、系统 dialog、tray、notification、installer / updater、真实菜单栏，则必须升级到 L1b 可见窗口自动验收、L2 人工验收或发布专项验收。
+- L1b 可见原生自动验收使用 `npm run test:e2e:desktop:native:visible -- <spec>`，必须显式传入当前任务相关 spec；它会短暂打扰桌面，但仍是自动化断言，不得汇报成人工验收，也不得复用 `windows:preview:native` 人工预览入口。
+- WSL/Linux 桌面 Electron Playwright 仅作为非 Windows 原生会话的回退入口，必须使用 `npm run test:e2e:desktop:agent -- <spec>`，或显式 `xvfb-run --auto-servernum npx playwright test -c playwright.desktop.config.ts ...`；不得用 Linux Electron + Xvfb 宣称 Windows 专属行为已验收。
+- 桌面 Electron Playwright 在共享工作区内默认串行执行；若 `desktopSession` setup 卡住且发现另一条桌面 Playwright / 预览正在持有运行资源，必须等待或清理 stale 进程后重跑，不得把并发抢占汇报为产品失败。hidden native 与 WSL agent 入口都必须通过 resource gate 或等价串行保护。
 - Desktop Playwright 应把用户预期转成具体断言；测试前置状态优先用页面内事件、debug bridge 或命令入口建立，避免把导航和面板点击噪声混进主断言。只有验收目标本身是鼠标点击、命中区域、菜单/面板可达性、拖拽、物理键盘快捷键或普通用户路径完整性时，才把真实 UI 操作作为主动作。最终汇报必须说明 Playwright 断言覆盖的用户效果和未覆盖的人工观察点。
 - Windows 侧 Electron Playwright、Windows 预览和 Windows 桌面脚本链路只用于 Windows 专属验收：用户明确要求 Windows 预览、阶段 / 最终人工验收、发布 / 安装包、Windows 路径或 `app.getPath` 语义、`better-sqlite3` Windows ABI、Windows 原生 shell / dialog / tray / notification、Windows 主数据库路径、preload sandbox / IPC 在 Windows 上的边界风险、以及其他必须证明 Windows 客户端真实行为的任务。Linux Electron + Xvfb 不得宣称为 Windows 专属行为已验收。
 - `npm run electron:dev` 仅用于直接拉起 Electron dev runtime 的调试场景，不作为默认 Windows 验收命令。

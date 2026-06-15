@@ -13,7 +13,7 @@ describe('playwright electron spike', () => {
   it('prefers configured app root over mirror detection', () => {
     const appRoot = resolveDefaultAppRoot({ FOLIOLE_ELECTRON_APP_ROOT: '/tmp/custom-root' });
 
-    expect(appRoot).toBe('/tmp/custom-root');
+    expect(appRoot).toBe(path.resolve('/tmp/custom-root'));
   });
 
   it('uses the current checkout by default outside Windows', () => {
@@ -23,16 +23,20 @@ describe('playwright electron spike', () => {
   });
 
   it('resolves current build output paths in args launch mode', () => {
+    const appRoot = path.resolve('/workspace/foliole');
     const target = resolveElectronSpikeTarget('/workspace/foliole', () => true);
 
     expect(target.launchMode).toBe('args');
-    expect(target.mainEntry).toBe('/workspace/foliole/electron-dist/electron/main.js');
-    expect(target.preloadPath).toBe('/workspace/foliole/electron/preload.cjs');
-    expect(target.rendererIndexPath).toBe('/workspace/foliole/dist/index.html');
+    expect(target.mainEntry).toBe(path.join(appRoot, 'electron-dist', 'electron', 'main.js'));
+    expect(target.preloadPath).toBe(path.join(appRoot, 'electron', 'preload.cjs'));
+    expect(target.rendererIndexPath).toBe(path.join(appRoot, 'dist', 'index.html'));
     expect(target.missingPaths).toEqual([]);
   });
 
   it('launches electron via args and captures first window metadata', async () => {
+    const appRoot = path.resolve('/workspace/foliole');
+    const stateRoot = path.resolve('/tmp/foliole-playwright-state');
+    const electronName = process.platform === 'win32' ? 'electron.exe' : 'electron';
     const calls = [];
     let closed = false;
     const windowPage = {
@@ -113,21 +117,20 @@ describe('playwright electron spike', () => {
 
     expect(calls).toEqual([
       {
-        args: ['/workspace/foliole/electron-dist/electron/main.js'],
-        cwd: '/workspace/foliole',
+        args: [path.join(appRoot, 'electron-dist', 'electron', 'main.js')],
+        cwd: appRoot,
         env: {
           FOLIOLE_ALLOW_PARALLEL_INSTANCE: '1',
           FOLIOLE_ELECTRON_PLAYWRIGHT_ALLOW_STALE_RENDERER: '1',
           FOLIOLE_ELECTRON_SPIKE_TIMEOUT_MS: '12345',
-          FOLIOLE_ELECTRON_TEST_STATE_ROOT: '/tmp/foliole-playwright-state',
+          FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot,
           FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE: '1',
-          FOLIOLE_SESSION_DATA_PATH: path.join('/tmp/foliole-playwright-state', 'session-data'),
-          FOLIOLE_USER_DATA_PATH: path.join('/tmp/foliole-playwright-state', 'user-data'),
-          FOLIOLE_WORKDIR: '/tmp/foliole-playwright-state'
+          FOLIOLE_LIBRARY_HOME: path.join(stateRoot, 'library'),
+          FOLIOLE_SESSION_DATA_PATH: path.join(stateRoot, 'session-data'),
+          FOLIOLE_USER_DATA_PATH: path.join(stateRoot, 'user-data'),
+          FOLIOLE_WORKDIR: stateRoot
         },
-        executablePath: process.platform === 'win32'
-          ? '/workspace/foliole/node_modules/electron/dist/electron.exe'
-          : '/workspace/foliole/node_modules/electron/dist/electron',
+        executablePath: path.join(appRoot, 'node_modules', 'electron', 'dist', electronName),
         timeout: 12_345
       }
     ]);

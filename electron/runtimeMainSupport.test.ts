@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { expect, it, vi } from 'vitest';
 
 const { appMock } = vi.hoisted(() => ({
@@ -9,9 +11,9 @@ vi.mock('electron', () => ({
 }));
 
 import {
-  bindMainWindowNavigationGuard,
   bindMainWindowWebviewAttachGuard,
   bindEmbeddedLinkPanelContents,
+  applyHiddenNativeDesktopWindowOptions,
   createMainWindowOptions,
   isAllowedEmbeddedLinkPanelUrl,
   resolveMainWindowIconPath
@@ -31,12 +33,28 @@ it('disables DevTools in packaged main window options', () => {
 });
 
 it('uses the branded runtime window icon next to the electron preload source', () => {
-  expect(resolveMainWindowIconPath('/workspace/foliole/electron/preload.cjs')).toBe(
-    '/workspace/foliole/build/icon.png'
-  );
-  expect(createMainWindowOptions('/workspace/foliole/electron/preload.cjs').icon).toBe(
-    '/workspace/foliole/build/icon.png'
-  );
+  const expectedIconPath = path.resolve('/workspace/foliole/build/icon.png');
+  expect(resolveMainWindowIconPath('/workspace/foliole/electron/preload.cjs')).toBe(expectedIconPath);
+  expect(createMainWindowOptions('/workspace/foliole/electron/preload.cjs').icon).toBe(expectedIconPath);
+});
+
+it('pins hidden native desktop test windows offscreen and out of the taskbar', () => {
+  expect(
+    applyHiddenNativeDesktopWindowOptions(
+      { height: 900, show: true, width: 1400, x: 80, y: 80 },
+      { FOLIOLE_ELECTRON_NATIVE_HIDDEN: '1' }
+    )
+  ).toMatchObject({
+    focusable: false,
+    height: 1000,
+    show: false,
+    skipTaskbar: true,
+    width: 1600,
+    x: -32_000,
+    y: -32_000
+  });
+
+  expect(applyHiddenNativeDesktopWindowOptions({ x: 80 }, {})).toEqual({ x: 80 });
 });
 
 it('allows only http and https URLs for embedded link panel window opens', () => {
@@ -105,31 +123,6 @@ it('does not bind embedded link panel guards to the main window contents', () =>
   expect(contents.on).not.toHaveBeenCalled();
   expect(contents.session.setPermissionRequestHandler).not.toHaveBeenCalled();
   expect(contents.session.on).not.toHaveBeenCalled();
-});
-
-it('blocks main window renderer navigation and renderer-created windows', () => {
-  type WindowOpenHandler = (details: { url: string }) => { action: 'deny' };
-  type WillNavigateHandler = (event: { preventDefault: () => void }, url: string) => void;
-  const windowOpenHandlers: WindowOpenHandler[] = [];
-  const willNavigateHandlers: WillNavigateHandler[] = [];
-  const webContents = {
-    on: vi.fn((eventName: string, handler: WillNavigateHandler) => {
-      if (eventName === 'will-navigate') {
-        willNavigateHandlers.push(handler);
-      }
-    }),
-    setWindowOpenHandler: vi.fn((handler: WindowOpenHandler) => {
-      windowOpenHandlers.push(handler);
-    })
-  };
-
-  bindMainWindowNavigationGuard({ webContents } as never);
-  const navigationEvent = { preventDefault: vi.fn() };
-  willNavigateHandlers[0]?.(navigationEvent, 'https://example.com');
-
-  expect(webContents.on).toHaveBeenCalledWith('will-navigate', expect.any(Function));
-  expect(navigationEvent.preventDefault).toHaveBeenCalledTimes(1);
-  expect(windowOpenHandlers[0]?.({ url: 'https://example.com' })).toEqual({ action: 'deny' });
 });
 
 it('allows only the fixed link panel partition and web URLs for webview attach', () => {

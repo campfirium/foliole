@@ -78,6 +78,21 @@ export function isPidAlive(pid) {
   return result.status === 0;
 }
 
+export function normalizeQualityGateLogPath(filePath) {
+  if (process.platform !== 'win32') {
+    return filePath;
+  }
+
+  const result = spawnSync('bash', ['-lc', 'cygpath -w "$QUALITY_GATE_LOG_PATH"'], {
+    encoding: 'utf8',
+    env: { ...process.env, QUALITY_GATE_LOG_PATH: filePath },
+  });
+  if (result.status !== 0) {
+    return filePath;
+  }
+  return result.stdout.trim() || filePath;
+}
+
 export async function writePackageJson(rootDir, scripts) {
   const fixtureScripts = {
     'check:android-boundary': 'node -e "console.log(\'android boundary ok\')"',

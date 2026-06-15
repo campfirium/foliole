@@ -148,11 +148,13 @@ export async function launchDesktopSession({
     env.FOLIOLE_ELECTRON_PLAYWRIGHT_TIMEOUT_MS ?? env.FOLIOLE_ELECTRON_SPIKE_TIMEOUT_MS
   )
 } = {}) {
-  const target = resolveDesktopLaunchTarget(appRoot, existsSync);
+  const target = resolveDesktopLaunchTarget(appRoot, existsSync, env);
   if (target.missingPaths.length > 0) {
     throw new Error(`missing build output: ${target.missingPaths.join(', ')}`);
   }
-  assertRendererDistFresh(target, env);
+  if (target.launchMode !== 'installed') {
+    assertRendererDistFresh(target, env);
+  }
 
   const launcher = electronLauncher ?? (await loadElectronLauncher());
   const isolation = createDesktopIsolationContext(env);

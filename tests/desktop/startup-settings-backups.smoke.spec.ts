@@ -2,6 +2,12 @@ import { expectBridgeBackedControlEnabled } from './harness/bridgeBackedControls
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell, openBackupsSection } from './harness/settings';
 
+const CLOSE_BUTTON_NAME = /^(Close|关闭)$/;
+const CREATE_BACKUP_BUTTON_NAME = /^(Create backup|创建备份)$/;
+const MAXIMIZE_BUTTON_NAME = /^(Maximize|最大化)$/;
+const MINIMIZE_BUTTON_NAME = /^(Minimize|最小化)$/;
+const RESTORE_BUTTON_NAME = /^(Restore|恢复)$/;
+
 test.describe('desktop smoke', () => {
   test('startup renders the desktop workspace shell', async ({ desktopSession, desktopWindow }) => {
     expect(desktopSession.appReady.reported).toBe(true);
@@ -9,25 +15,25 @@ test.describe('desktop smoke', () => {
     await expectWorkspaceShell(desktopWindow);
   });
 
-  test('titlebar window controls are enabled in the visible desktop window', async ({ desktopSession, desktopWindow }) => {
+  test('titlebar window controls are enabled through the desktop bridge', async ({ desktopSession, desktopWindow }) => {
     await expectWorkspaceShell(desktopWindow);
 
     await expectBridgeBackedControlEnabled({
       controlName: 'Minimize',
       desktopSession,
-      locator: desktopWindow.getByRole('button', { name: 'Minimize' }),
+      locator: desktopWindow.getByRole('button', { name: MINIMIZE_BUTTON_NAME }),
       windowPage: desktopWindow
     });
     await expectBridgeBackedControlEnabled({
       controlName: 'Maximize',
       desktopSession,
-      locator: desktopWindow.getByRole('button', { name: 'Maximize' }),
+      locator: desktopWindow.getByRole('button', { name: MAXIMIZE_BUTTON_NAME }),
       windowPage: desktopWindow
     });
     await expectBridgeBackedControlEnabled({
       controlName: 'Close',
       desktopSession,
-      locator: desktopWindow.getByRole('button', { name: 'Close' }),
+      locator: desktopWindow.getByRole('button', { name: CLOSE_BUTTON_NAME }),
       windowPage: desktopWindow
     });
   });
@@ -35,7 +41,7 @@ test.describe('desktop smoke', () => {
   test('settings exposes backup actions and creates a visible backup entry', async ({ desktopSession, desktopWindow }) => {
     await expectWorkspaceShell(desktopWindow);
     await openBackupsSection(desktopWindow);
-    const createBackupButton = desktopWindow.getByRole('button', { name: 'Create backup' });
+    const createBackupButton = desktopWindow.getByRole('button', { name: CREATE_BACKUP_BUTTON_NAME });
 
     await expectBridgeBackedControlEnabled({
       controlName: 'Create backup',
@@ -49,7 +55,7 @@ test.describe('desktop smoke', () => {
     await expectBridgeBackedControlEnabled({
       controlName: 'Restore',
       desktopSession,
-      locator: desktopWindow.getByRole('button', { name: 'Restore' }).first(),
+      locator: desktopWindow.getByRole('button', { name: RESTORE_BUTTON_NAME }).first(),
       windowPage: desktopWindow
     });
   });

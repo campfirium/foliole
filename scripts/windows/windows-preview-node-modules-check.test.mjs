@@ -4,12 +4,23 @@
 import { chmod, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+
+function toGitBashPath(filePath) {
+  if (process.platform !== 'win32') {
+    return filePath;
+  }
+  const result = spawnSync('bash', ['-lc', 'cygpath -u "$TEST_PATH"'], {
+    encoding: 'utf8',
+    env: { ...process.env, TEST_PATH: filePath },
+  });
+  return result.status === 0 ? result.stdout.trim() : filePath;
+}
 
 function runNodeModulesCheck(env) {
   return new Promise((resolve) => {
@@ -163,14 +174,16 @@ describe('windows preview node_modules check', () => {
       const abiCheck = path.join(tempRoot, 'check-abi.sh');
       const nodeModulesCheck = path.join(tempRoot, 'check-node-modules.sh');
       const stampFile = path.join(tempRoot, 'preflight.json');
-      const abiCommand = `bash ${abiCheck}`;
-      const nodeModulesCommand = `bash ${nodeModulesCheck}`;
+      const abiCommand = `bash ${toGitBashPath(abiCheck)}`;
+      const nodeModulesCommand = `bash ${toGitBashPath(nodeModulesCheck)}`;
+      const stampPath = toGitBashPath(stampFile);
       await writeFile(abiCheck, 'exit 0\n', 'utf8');
       await writeFile(nodeModulesCheck, 'exit 0\n', 'utf8');
       const seed = await runNativePreflight({
         WINDOWS_NATIVE_ABI_CHECK_COMMAND: abiCommand,
-        WINDOWS_NATIVE_PREFLIGHT_STAMP_FILE: stampFile,
-        WINDOWS_NODE_MODULES_CHECK_COMMAND: nodeModulesCommand
+        WINDOWS_NATIVE_PREFLIGHT_STAMP_FILE: stampPath,
+        WINDOWS_NODE_MODULES_CHECK_COMMAND: nodeModulesCommand,
+        WINDOWS_WORKDIR: 'C:\\dev\\foliole'
       });
       expect(seed.code).toBe(0);
       expect(seed.stdout).toContain('windows dependency/native preflight required');
@@ -179,8 +192,9 @@ describe('windows preview node_modules check', () => {
       await writeFile(nodeModulesCheck, 'echo should-not-run-node-modules; exit 8\n', 'utf8');
       const skipped = await runNativePreflight({
         WINDOWS_NATIVE_ABI_CHECK_COMMAND: abiCommand,
-        WINDOWS_NATIVE_PREFLIGHT_STAMP_FILE: stampFile,
-        WINDOWS_NODE_MODULES_CHECK_COMMAND: nodeModulesCommand
+        WINDOWS_NATIVE_PREFLIGHT_STAMP_FILE: stampPath,
+        WINDOWS_NODE_MODULES_CHECK_COMMAND: nodeModulesCommand,
+        WINDOWS_WORKDIR: 'C:\\dev\\foliole'
       });
 
       expect(skipped.code).toBe(0);

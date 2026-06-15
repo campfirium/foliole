@@ -43,6 +43,7 @@ import {
 } from './runtimeIdentity.js';
 import {
   activateMainWindowRenderer,
+  applyHiddenNativeDesktopWindowOptions,
   bindMainWindowNavigationGuard,
   bindMainWindowWebviewAttachGuard,
   createMainWindowOptions,
@@ -162,11 +163,12 @@ async function createMainWindow(startupAppearance?: { backgroundColor: string } 
   const restoredWindowState = await loadStartupWindowState({ appendBootEvent, loadWindowState });
   await appendBootEvent('window_state_loaded', restoredWindowState);
   logWindowStateRestoreDecision('window-state-loaded', restoredWindowState);
-  const options = applyWindowStateToOptions(
+  let options = applyWindowStateToOptions(
     createMainWindowOptions(runtimeDiagnostics.preloadPath),
     restoredWindowState,
     screen.getAllDisplays().map((display) => display.workArea)
   );
+  options = applyHiddenNativeDesktopWindowOptions(options);
   if (startupAppearance?.backgroundColor) {
     options.backgroundColor = startupAppearance.backgroundColor;
   }
@@ -174,6 +176,7 @@ async function createMainWindow(startupAppearance?: { backgroundColor: string } 
     options: {
       fullscreen: options.fullscreen ?? false,
       height: options.height,
+      hiddenNativeDesktopTest: process.env.FOLIOLE_ELECTRON_NATIVE_HIDDEN === '1',
       width: options.width,
       x: options.x,
       y: options.y

@@ -21,6 +21,14 @@ vi.mock('./diagnostics/windowsDiagnosticPaths.js', () => ({
 vi.mock('./ipc/boot.js', () => ({
   appendBootEvent: mocks.appendBootEvent
 }));
+vi.mock('electron', () => ({
+  screen: {
+    getDisplayMatching: vi.fn(() => ({
+      workArea: { height: 1080, width: 1920, x: 0, y: 0 }
+    })),
+    screenToDipRect: vi.fn((_window: unknown, rect: unknown) => rect)
+  }
+}));
 
 function createWindowMock() {
   const windowEmitter = new EventEmitter();
@@ -45,7 +53,12 @@ function createWindowMock() {
     setFullScreen: vi.fn((next: boolean) => {
       fullScreen = next;
     }),
+    setFocusable: vi.fn(),
+    setSkipTaskbar: vi.fn(),
     show: vi.fn(() => {
+      visible = true;
+    }),
+    showInactive: vi.fn(() => {
       visible = true;
     }),
     webContents
@@ -112,6 +125,30 @@ describe('window runtime startup visibility', () => {
     );
   });
 
+});
+
+describe('window runtime hidden native desktop presentation', () => {
+  it('presents hidden native desktop test windows without focusing them', async () => {
+    const originalHiddenFlag = process.env.FOLIOLE_ELECTRON_NATIVE_HIDDEN;
+    process.env.FOLIOLE_ELECTRON_NATIVE_HIDDEN = '1';
+    try {
+      const window = createWindowMock();
+      const { presentInitialRendererWindow } = await import('./windowRuntimeDiagnostics.js');
+
+      await presentInitialRendererWindow(window as never);
+
+      expect(window.setSkipTaskbar).toHaveBeenCalledWith(true);
+      expect(window.setFocusable).toHaveBeenCalledWith(false);
+      expect(window.showInactive).toHaveBeenCalledTimes(1);
+      expect(window.show).not.toHaveBeenCalled();
+    } finally {
+      if (originalHiddenFlag === undefined) {
+        delete process.env.FOLIOLE_ELECTRON_NATIVE_HIDDEN;
+      } else {
+        process.env.FOLIOLE_ELECTRON_NATIVE_HIDDEN = originalHiddenFlag;
+      }
+    }
+  });
 });
 
 describe('window runtime diagnostics redaction', () => {

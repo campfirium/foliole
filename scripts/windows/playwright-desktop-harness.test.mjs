@@ -1,7 +1,9 @@
 // @vitest-environment node
+/* global process */
 
 import { Buffer } from 'node:buffer';
 import { EventEmitter } from 'node:events';
+import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
@@ -12,6 +14,15 @@ import {
 
 describe('playwright desktop harness', () => {
   it('launches electron and returns a reusable session envelope', async () => {
+    const appRoot = path.resolve('/workspace/foliole');
+    const stateRoot = path.resolve('/tmp/foliole-playwright-state');
+    const electronExecutable = path.join(
+      appRoot,
+      'node_modules',
+      'electron',
+      'dist',
+      process.platform === 'win32' ? 'electron.exe' : 'electron'
+    );
     const calls = [];
     let closed = false;
     const childProcess = {
@@ -111,24 +122,25 @@ describe('playwright desktop harness', () => {
 
     expect(calls).toEqual([
       {
-        args: ['/workspace/foliole/electron-dist/electron/main.js'],
-        cwd: '/workspace/foliole',
+        args: [path.join(appRoot, 'electron-dist', 'electron', 'main.js')],
+        cwd: appRoot,
         env: {
           FOLIOLE_ALLOW_PARALLEL_INSTANCE: '1',
           FOLIOLE_ELECTRON_PLAYWRIGHT_ALLOW_STALE_RENDERER: '1',
           FOLIOLE_ELECTRON_PLAYWRIGHT_TIMEOUT_MS: '12345',
-          FOLIOLE_ELECTRON_TEST_STATE_ROOT: '/tmp/foliole-playwright-state',
+          FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot,
           FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE: '1',
-          FOLIOLE_SESSION_DATA_PATH: '/tmp/foliole-playwright-state/session-data',
-          FOLIOLE_USER_DATA_PATH: '/tmp/foliole-playwright-state/user-data',
-          FOLIOLE_WORKDIR: '/tmp/foliole-playwright-state'
+          FOLIOLE_LIBRARY_HOME: path.join(stateRoot, 'library'),
+          FOLIOLE_SESSION_DATA_PATH: path.join(stateRoot, 'session-data'),
+          FOLIOLE_USER_DATA_PATH: path.join(stateRoot, 'user-data'),
+          FOLIOLE_WORKDIR: stateRoot
         },
-        executablePath: '/workspace/foliole/node_modules/electron/dist/electron',
+        executablePath: electronExecutable,
         timeout: 12_345
       }
     ]);
     expect(session.target.launchMode).toBe('args');
-    expect(session.target.runtimeStateRoot).toBe('/tmp/foliole-playwright-state');
+    expect(session.target.runtimeStateRoot).toBe(stateRoot);
     expect(session.appReady).toEqual({
       href: 'file:///workspace/foliole/dist/index.html',
       readyState: 'complete',

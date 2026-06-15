@@ -2,6 +2,12 @@
 
 import { formatWindowHealthFailure, readNativeWindowHealth } from './windows-client-native-window-health.mjs';
 
+function formatRunningStatus(ready, state) {
+  const runtimeHead = ready.appReady.head ?? state?.head;
+  const head = runtimeHead ? ` head=${runtimeHead}` : '';
+  return `[windows-restart-client] status: RUNNING trust=OK shell_pid=${state?.shellPid ?? 'unknown'} runtime_pid=${ready.windowVisible.pid}${head}`;
+}
+
 export function createStatusPrinter({
   nativeWindowHealthScript,
   readClientState,
@@ -11,15 +17,14 @@ export function createStatusPrinter({
   return async function printStatus() {
     const state = readClientState();
     const ready = readReadyState();
-    const windowHealth = ready
-      ? await readNativeWindowHealth({ nativeWindowHealthScript, repoRoot, runtimePid: ready.windowVisible.pid })
-      : null;
-    if (ready && windowHealth.ok) {
-      const runtimeHead = ready.appReady.head ?? state?.head;
-      const head = runtimeHead ? ` head=${runtimeHead}` : '';
-      console.log(`[windows-restart-client] status: RUNNING trust=OK shell_pid=${state?.shellPid ?? 'unknown'} runtime_pid=${ready.windowVisible.pid}${head}`);
+    if (ready) {
+      console.log(formatRunningStatus(ready, state));
       return { ok: true, ready, state };
     }
+    const runtimePid = state?.runtimePid;
+    const windowHealth = runtimePid
+      ? await readNativeWindowHealth({ nativeWindowHealthScript, repoRoot, runtimePid })
+      : null;
     if (windowHealth && !windowHealth.ok) {
       console.log(`[windows-restart-client] status: STOPPED trust=FAILED${formatWindowHealthFailure(windowHealth)}`);
       return { ok: false, ready: null, state };

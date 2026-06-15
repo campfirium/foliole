@@ -4,6 +4,7 @@ import path from 'node:path';
 import { app, type BrowserWindowConstructorOptions, type Session, type WebContents, type WebPreferences } from 'electron';
 
 import { logMainProcessException } from './diagnostics/mainProcessDiagnostics.js';
+import { applyHiddenNativeDesktopWindowOptions } from './hiddenNativeDesktopTest.js';
 import { LINK_PANEL_WEBVIEW_PARTITION } from './linkPanelBrowsingData.js';
 import {
   loadRenderer,
@@ -14,7 +15,6 @@ import type { RuntimeDiagnosticsSnapshot } from './runtimeIdentity.js';
 import { logWindowStateLifecycleEvent, logWindowStateRestoreDecision } from './windowStateDiagnostics.js';
 
 const guardedEmbeddedLinkPanelSessions = new WeakSet<Session>();
-
 export function resolveMainWindowIconPath(preloadPath: string) {
   return path.resolve(path.dirname(preloadPath), '..', 'build', 'icon.png');
 }
@@ -93,7 +93,10 @@ export function bindEmbeddedLinkPanelContents(contents: WebContents) {
 }
 
 export function bindMainWindowNavigationGuard(window: import('electron').BrowserWindow) {
-  window.webContents.on('will-navigate', (event) => {
+  window.webContents.on('will-navigate', (event, url) => {
+    if (isInitialMainWindowRendererNavigation(window.webContents.getURL(), url)) {
+      return;
+    }
     event.preventDefault();
   });
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
@@ -115,6 +118,18 @@ export function bindMainWindowNavigationGuard(window: import('electron').Browser
     globalThis.setTimeout(() => {
       if (!window.isDestroyed()) restorePreviewTitle();
     }, 1000);
+  }
+}
+
+function isInitialMainWindowRendererNavigation(currentUrl: string, targetUrl: string) {
+  if (currentUrl) {
+    return false;
+  }
+  try {
+    const parsedUrl = new URL(targetUrl);
+    return parsedUrl.protocol === 'file:' || parsedUrl.protocol === 'data:';
+  } catch {
+    return false;
   }
 }
 
@@ -194,4 +209,4 @@ export async function activateMainWindowRenderer(window: import('electron').Brow
   void window;
 }
 
-export { logWindowStateLifecycleEvent, logWindowStateRestoreDecision };
+export { applyHiddenNativeDesktopWindowOptions, logWindowStateLifecycleEvent, logWindowStateRestoreDecision };

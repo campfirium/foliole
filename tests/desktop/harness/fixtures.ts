@@ -40,7 +40,7 @@ type DesktopFixtures = {
   desktopWindow: Page;
 };
 
-async function normalizeDesktopWindow(session: DesktopSession) {
+async function focusVisibleWindow(session: DesktopSession) {
   await session.electronApp.evaluate(async ({ BrowserWindow }) => {
     const target = BrowserWindow.getAllWindows()[0];
     if (!target) {
@@ -48,10 +48,28 @@ async function normalizeDesktopWindow(session: DesktopSession) {
     }
     target.setBounds({ width: 1600, height: 1000, x: 80, y: 80 });
     target.show();
+    target.setAlwaysOnTop(true);
     target.focus();
+    target.webContents.focus();
+    target.setAlwaysOnTop(false);
   });
-  await session.firstWindow.setViewportSize({ width: 1600, height: 1000 });
-  await session.firstWindow.waitForTimeout(150);
+  await expect.poll(
+    () => session.electronApp.evaluate(({ BrowserWindow }) =>
+      Boolean(BrowserWindow.getAllWindows()[0]?.isFocused())
+    ),
+    { timeout: 3000 }
+  ).toBe(true);
+}
+
+async function normalizeDesktopWindow(session: DesktopSession) {
+  if (process.env.FOLIOLE_ELECTRON_NATIVE_HIDDEN === '1') {
+    // Hidden native mode must stay offscreen and must not call show() or focus().
+    await session.firstWindow.setViewportSize({ width: 1600, height: 1000 });
+  } else {
+    await focusVisibleWindow(session);
+    await session.firstWindow.setViewportSize({ width: 1600, height: 1000 });
+    await session.firstWindow.waitForTimeout(150);
+  }
   const searchEnhancementPrompt = session.firstWindow.getByRole('dialog', {
     name: /(Turn on search enhancement for languages without spaces|要为无空格语言开启搜索增强)/
   });

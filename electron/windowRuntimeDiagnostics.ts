@@ -6,6 +6,7 @@ import type { BrowserWindow } from 'electron';
 import { redactDiagnosticValue } from './diagnostics/diagnosticRedactor.js';
 import { appendMainProcessDiagnosticLog } from './diagnostics/mainProcessDiagnostics.js';
 import { resolveWindowsDiagnosticLogPath } from './diagnostics/windowsDiagnosticPaths.js';
+import { isHiddenNativeDesktopTest } from './hiddenNativeDesktopTest.js';
 import { appendBootEvent } from './ipc/boot.js';
 import { startStartupWindowFrameCapture } from './startupWindowFrameCapture.js';
 import { normalizeWindowBoundsToDip } from './windowBoundsDpi.js';
@@ -121,7 +122,13 @@ export async function presentInitialRendererWindow(window: BrowserWindow) {
     window.maximize();
   }
   if (!window.isVisible()) {
-    window.show();
+    if (isHiddenNativeDesktopTest()) {
+      window.setSkipTaskbar(true);
+      window.setFocusable(false);
+      window.showInactive();
+    } else {
+      window.show();
+    }
   }
   await appendBootEvent('window_visible', {
     bounds: normalizeWindowBoundsToDip(window, window.getBounds()),

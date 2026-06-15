@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   createQualityGateTempRoot,
+  normalizeQualityGateLogPath,
   runQualityGate,
   writePackageJson
 } from './quality-gate-fast.test-support.mjs';
@@ -73,7 +74,7 @@ describe('quality-gate-fast.sh output', () => {
 
       expect(result.code).toBe(1);
       expect(match).not.toBeNull();
-      await access(match[1]);
+      await access(normalizeQualityGateLogPath(match[1]));
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
