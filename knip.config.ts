@@ -23,7 +23,7 @@ const config = {
     '*.config.{js,ts}',
     'vite.shared.ts'
   ],
-  ignoreBinaries: ['python3'],
+  ignoreBinaries: ['codex', 'powershell.exe', 'ps', 'python3', 'rg', 'taskkill.exe', 'where.exe', 'wslpath', 'xcrun'],
   ignoreDependencies: ['@capacitor/android', '@capacitor/core', 'prettier']
 };
 

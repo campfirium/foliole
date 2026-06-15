@@ -7,6 +7,8 @@ import guidesViteConfig, { webGuidesManifestPlugin } from '../vite.guides.config
 import viteConfig from '../vite.config.ts';
 import { injectDefaultStartupSkeletonHtml } from '../vite.shared.ts';
 
+const normalizePath = (value) => String(value).replaceAll('\\', '/');
+
 describe('vite config', () => {
   it('uses relative asset paths for desktop file loading', () => {
     expect(viteConfig.base).toBe('./');
@@ -59,8 +61,8 @@ describe('vite config', () => {
   });
 
   it('builds Web Guides from an isolated root into its static output directory', () => {
-    expect(String(guidesViteConfig.root)).toMatch(/src\/web-guides$/);
-    expect(String(guidesViteConfig.build?.outDir)).toMatch(/dist-guides$/);
+    expect(normalizePath(guidesViteConfig.root)).toMatch(/src\/web-guides$/);
+    expect(normalizePath(guidesViteConfig.build?.outDir)).toMatch(/dist-guides$/);
     expect(guidesViteConfig.build?.emptyOutDir).toBe(true);
   });
 
