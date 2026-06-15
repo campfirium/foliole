@@ -1,4 +1,4 @@
-import type { CommandPaletteItem } from '../../shared/commands/types';
+import type { CommandPaletteItem, CommandShortcutSet } from '../../shared/commands/types';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 
 import type { ReviewSourceTopicDeleteDialogState } from './appControllerReviewSourceDelete';
@@ -22,7 +22,9 @@ export interface AppControllerResult {
   layoutProps: WorkspaceLayoutProps;
   onOpenCompanionSyncSettings: () => void;
   paletteState: AppPaletteState;
-  reviewSourceTopicDeleteDialog: Omit<ReviewSourceTopicDeleteDialogState, 'requestDeleteSourceTopic'>;
+  reviewSourceTopicDeleteDialog: Omit<ReviewSourceTopicDeleteDialogState, 'requestDeleteSourceTopic'> & {
+    deleteSourceTopicShortcuts?: CommandShortcutSet | undefined;
+  };
   reviewTopicDelayPanel: ReturnType<typeof useReviewTopicDelayPanel>;
   searchState: AppSearchState;
 }

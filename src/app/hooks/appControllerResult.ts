@@ -1,8 +1,10 @@
+import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 
 import type { useReviewSourceTopicDeleteDialog } from './appControllerReviewSourceDelete';
 import type { useWorkspaceControllerState } from './appControllerState';
 import type { AppControllerResult } from './appControllerTypes';
+import type { useCommandShortcutState } from './reviewHotkeysState';
 import { openCompanionSyncSettings } from './settingsOverlayRequest';
 import type { useControllerAuxiliaryState } from './useControllerAuxiliaryState';
 import type { useReviewTopicDelayPanel } from './useReviewTopicDelayPanel';
@@ -10,6 +12,7 @@ import type { useReviewTopicDelayPanel } from './useReviewTopicDelayPanel';
 export function buildAppControllerResult(args: {
   auxiliaryState: ReturnType<typeof useControllerAuxiliaryState>;
   controller: ReturnType<typeof useWorkspaceControllerState>;
+  hotkeys: ReturnType<typeof useCommandShortcutState>;
   layoutProps: WorkspaceLayoutProps;
   reviewSourceTopicDeleteDialog: ReturnType<typeof useReviewSourceTopicDeleteDialog>;
   reviewTopicDelayPanel: ReturnType<typeof useReviewTopicDelayPanel>;
@@ -23,6 +26,7 @@ export function buildAppControllerResult(args: {
     paletteState: args.auxiliaryState.paletteState,
     reviewSourceTopicDeleteDialog: {
       isOpen: args.reviewSourceTopicDeleteDialog.isOpen,
+      deleteSourceTopicShortcuts: args.hotkeys.shortcutMap[APP_COMMAND_IDS.deleteReviewSourceTopic],
       nodeTitle: args.reviewSourceTopicDeleteDialog.nodeTitle,
       onCancel: args.reviewSourceTopicDeleteDialog.onCancel,
       onConfirm: args.reviewSourceTopicDeleteDialog.onConfirm

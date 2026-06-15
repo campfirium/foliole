@@ -180,6 +180,57 @@ it('deletes the current review item with T and Delete', async () => {
   });
 });
 
+it('confirms source topic deletion with T after Alt+T opens the dialog', async () => {
+  useWorkspaceStore.setState((state) => ({
+    activeNodeId: 'review-item',
+    nodeOrder: [...state.nodeOrder, 'source-topic', 'review-item'],
+    nodesById: {
+      ...state.nodesById,
+      'source-topic': createNode({
+        id: 'source-topic',
+        title: 'Source Topic',
+        content: 'Source body',
+        kind: 'topic'
+      }),
+      'review-item': createNode({
+        id: 'review-item',
+        parentNodeId: 'source-topic',
+        title: 'Review Item',
+        content: 'Question',
+        kind: 'item',
+        reveal: 'Answer',
+        review: {
+          due: FIXED_TIMESTAMP,
+          lastReviewAt: null,
+          state: 0,
+          stability: 0,
+          difficulty: 0,
+          elapsedDays: 0,
+          scheduledDays: 0,
+          reps: 0,
+          lapses: 0
+        }
+      })
+    }
+  }));
+
+  render(<App />);
+  await enterFlow();
+
+  fireEvent.keyDown(window, { altKey: true, code: 'KeyT', key: 't' });
+  const dialog = await screen.findByRole('dialog', { name: 'Delete source topic?' });
+  fireEvent.keyDown(dialog, { code: 'KeyF', key: 'f' });
+  fireEvent.keyDown(dialog, { code: 'Enter', key: 'Enter' });
+  expect(useWorkspaceStore.getState().trashedNodeIds).not.toContain('source-topic');
+  expect(useWorkspaceStore.getState().trashedNodeIds).not.toContain('review-item');
+
+  fireEvent.keyDown(dialog, { code: 'KeyT', key: 't' });
+
+  await waitFor(() => {
+    expect(useWorkspaceStore.getState().trashedNodeIds).toContain('source-topic');
+  });
+});
+
 it('supports quick priority changes from the two-step shortcut', () => {
   seedActiveNode(
     createNode({

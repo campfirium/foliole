@@ -191,6 +191,7 @@ export function useAppController(args: {
   return buildAppControllerResult({
     auxiliaryState,
     controller,
+    hotkeys,
     layoutProps,
     reviewSourceTopicDeleteDialog: reviewEditing.reviewSourceTopicDeleteDialog,
     reviewTopicDelayPanel
