@@ -27,7 +27,10 @@ export function upsertTextBodyBlob(driver: DatabaseDriver, content: string, now:
 }
 
 export function decodeTextBodyBlobData(data: unknown) {
-  if (data instanceof Uint8Array) {
+  if (ArrayBuffer.isView(data)) {
+    return Buffer.from(data).toString('utf8');
+  }
+  if (data instanceof ArrayBuffer) {
     return Buffer.from(data).toString('utf8');
   }
   if (typeof data === 'string') {

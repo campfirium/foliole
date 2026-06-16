@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { canonicalGuidePath, WEB_GUIDES, type WebGuideSeed } from './webGuidesContent';
 
 export const WEB_GUIDES_MANIFEST_FILE = 'guides-manifest.json';
-export const WEB_GUIDES_CONTRACT_VERSION = 1;
+export const WEB_GUIDES_CONTRACT_VERSION = 2;
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -18,10 +18,15 @@ export interface WebGuidesManifestGuide {
   description: string;
   canonicalPath: string;
   contentHash: string;
+  highlights: WebGuideSeed['highlights'];
+  reviewItems: WebGuideSeed['reviewItems'];
+  runtime: WebGuideSeed['runtime'];
+  sections: WebGuideSeed['sections'];
+  summary: string;
 }
 
 export interface WebGuidesManifest {
-  contractVersion: 1;
+  contractVersion: 2;
   generatedAt: string;
   buildHash: string;
   runtime: {
@@ -52,6 +57,7 @@ function sha256Uri(value: string) {
 function assertValidGuide(guide: WebGuideSeed) {
   if (!SLUG_PATTERN.test(guide.slug)) throw new Error(`Invalid Web Guide slug: ${guide.slug}`);
   if (!guide.sections.length) throw new Error(`Web Guide must include sections: ${guide.slug}`);
+  if (!guide.blocks.length) throw new Error(`Web Guide must include blocks: ${guide.slug}`);
   for (const section of guide.sections) {
     if (!section.heading || !section.body.length) throw new Error(`Web Guide section is incomplete: ${guide.slug}`);
   }
@@ -61,7 +67,10 @@ export function guideManifestProjection(guide: WebGuideSeed) {
   assertValidGuide(guide);
   return {
     canonicalPath: canonicalGuidePath(guide.slug),
+    highlights: guide.highlights,
     description: guide.description,
+    reviewItems: guide.reviewItems,
+    runtime: guide.runtime,
     sections: guide.sections,
     slug: guide.slug,
     summary: guide.summary,
@@ -76,6 +85,11 @@ export function createWebGuideManifestGuide(guide: WebGuideSeed): WebGuidesManif
     title: projection.title,
     description: projection.description,
     canonicalPath: projection.canonicalPath,
+    highlights: projection.highlights,
+    reviewItems: projection.reviewItems,
+    runtime: projection.runtime,
+    sections: projection.sections,
+    summary: projection.summary,
     contentHash: sha256Uri(stableJson(projection))
   };
 }
