@@ -1,8 +1,13 @@
-import { beforeEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { HOME_NODE_ID, INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../features/nodes/model/specialNodes';
 import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 
+import {
+  createBrowserLocalWorkspaceMutationRepository,
+  installWorkspaceMutationRepository,
+  resetWorkspaceMutationRepository
+} from './workspaceMutationRepository';
 import { createInitialWorkspaceState, useWorkspaceStore } from './workspaceStore';
 
 vi.mock('../shared/platform/runtimeInvoke', () => ({
@@ -35,6 +40,7 @@ function resetWorkspaceStore() {
 }
 
 beforeEach(() => {
+  resetWorkspaceMutationRepository();
   localStorage.clear();
   vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn(async (command, args?: unknown) => {
     if (command === 'create_folder' || command === 'create_topic' || command === 'create_item') {
@@ -55,6 +61,10 @@ beforeEach(() => {
     return null;
   }));
   resetWorkspaceStore();
+});
+
+afterEach(() => {
+  resetWorkspaceMutationRepository();
 });
 
 it('creates child node under target parent', async () => {
@@ -81,6 +91,28 @@ it('keeps newest inbox child at the top of inbox children', async () => {
 });
 
 it('moves regular node under new parent and reorders subtree block', async () => {
+  const folderAId = (await useWorkspaceStore.getState().createRootNode('A', 'folder'))!;
+  const folderBId = (await useWorkspaceStore.getState().createRootNode('B', 'folder'))!;
+  const childId = (await useWorkspaceStore.getState().createChildNode(folderAId, 'A child'))!;
+
+  const moved = await useWorkspaceStore.getState().moveNode(folderBId, folderAId);
+
+  expect(moved).toBe(true);
+  expect(useWorkspaceStore.getState().nodesById[folderBId]?.parentNodeId).toBe(folderAId);
+  expect(useWorkspaceStore.getState().nodeOrder).toEqual([
+    HOME_NODE_ID,
+    INBOX_NODE_ID,
+    VIRTUAL_ROOT_NODE_ID,
+    'node-1',
+    folderAId,
+    childId,
+    folderBId
+  ]);
+});
+
+it('commits moved nodes through the browser-local repository without a runtime bridge', async () => {
+  installWorkspaceMutationRepository(createBrowserLocalWorkspaceMutationRepository());
+  vi.mocked(getRuntimeInvoke).mockReturnValue(null);
   const folderAId = (await useWorkspaceStore.getState().createRootNode('A', 'folder'))!;
   const folderBId = (await useWorkspaceStore.getState().createRootNode('B', 'folder'))!;
   const childId = (await useWorkspaceStore.getState().createChildNode(folderAId, 'A child'))!;

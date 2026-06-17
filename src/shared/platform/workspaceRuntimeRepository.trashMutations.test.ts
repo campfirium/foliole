@@ -4,7 +4,7 @@ import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
 const mocks = vi.hoisted(() => ({
   logRuntimeError: vi.fn(),
-  runtimeInvoke: vi.fn()
+  runtimeInvoke: vi.fn() as ReturnType<typeof vi.fn> | null
 }));
 
 vi.mock('./runtimeInvoke', () => ({
@@ -19,10 +19,6 @@ vi.mock('./removedSourcesRuntimeRepository', () => ({
   refreshRuntimeRemovedSources: vi.fn()
 }));
 
-vi.mock('./runtime', () => ({
-  isDesktopRuntime: () => true
-}));
-
 import {
   deleteWorkspaceNodesPermanently,
   softDeleteWorkspaceNodes
@@ -30,11 +26,11 @@ import {
 
 beforeEach(() => {
   mocks.logRuntimeError.mockReset();
-  mocks.runtimeInvoke.mockReset();
+  mocks.runtimeInvoke = vi.fn();
 });
 
 it('returns soft delete runtime success results', async () => {
-  mocks.runtimeInvoke.mockResolvedValue({ deletedNodeIds: ['node-1'] });
+  mocks.runtimeInvoke!.mockResolvedValue({ deletedNodeIds: ['node-1'] });
 
   await expect(softDeleteWorkspaceNodes({
     deletedAt: '2026-05-24T00:00:00.000Z',
@@ -49,7 +45,7 @@ it('returns soft delete runtime success results', async () => {
 
 it('returns undefined when soft delete runtime fails', async () => {
   const error = new Error('sqlite failed');
-  mocks.runtimeInvoke.mockRejectedValue(error);
+  mocks.runtimeInvoke!.mockRejectedValue(error);
 
   await expect(softDeleteWorkspaceNodes({
     deletedAt: '2026-05-24T00:00:00.000Z',
@@ -66,10 +62,28 @@ it('returns undefined when soft delete runtime fails', async () => {
 });
 
 it('returns undefined when permanent delete runtime result is invalid', async () => {
-  mocks.runtimeInvoke.mockResolvedValue(null);
+  mocks.runtimeInvoke?.mockResolvedValue(null);
 
   await expect(deleteWorkspaceNodesPermanently({
     nodeIds: ['node-1'],
     nodeOrder: []
+  })).resolves.toBeUndefined();
+});
+
+it('returns undefined when soft delete has no runtime bridge', async () => {
+  mocks.runtimeInvoke = null;
+
+  await expect(softDeleteWorkspaceNodes({
+    deletedAt: '2026-05-24T00:00:00.000Z',
+    nodeIds: ['node-1']
+  })).resolves.toBeUndefined();
+});
+
+it('returns undefined when permanent delete has no runtime bridge', async () => {
+  mocks.runtimeInvoke = null;
+
+  await expect(deleteWorkspaceNodesPermanently({
+    nodeIds: ['node-1'],
+    nodeOrder: ['node-2']
   })).resolves.toBeUndefined();
 });

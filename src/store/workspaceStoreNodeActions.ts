@@ -1,15 +1,8 @@
+import type { WorkspaceMoveNodesPayload } from '../shared/platform/workspaceRuntimeTypes';
+
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import { createRootNodeAction } from './workspaceRootNodeCreateAction';
-import {
-  syncCreateNodeToRuntime,
-  syncCreateNodeMutationToRuntime,
-  syncDeleteNodesPermanentlyToRuntime,
-  syncMoveNodesToRuntime,
-  syncNodeContentToRuntime,
-  syncNodeOrderToRuntime,
-  syncRestoreNodesToRuntime,
-  syncSoftDeleteNodesToRuntime
-} from './workspaceRuntimeSync';
+import { getWorkspaceMutationRepository } from './workspaceMutationRepository';
 import { type WorkspaceState } from './workspaceStore';
 import { createUpdateNodeContentAction } from './workspaceStoreContentActions';
 import {
@@ -83,33 +76,29 @@ type WorkspaceNodeActions = Pick<
 
 function createRuntimeHandlers() {
   return {
-    syncNodeContent: syncNodeContentToRuntime,
+    syncNodeContent: (node: WorkspaceState['nodesById'][string], position?: number) =>
+      getWorkspaceMutationRepository().syncNodeContent(node, position),
     syncNodeCreation: async (
       node: WorkspaceState['nodesById'][string],
       nodeOrder?: string[],
       activeNodeId?: string | null,
       position?: number
-    ) => {
-      if (!nodeOrder) {
-        syncCreateNodeToRuntime(node);
-        return null;
-      }
-      return syncCreateNodeMutationToRuntime(node, nodeOrder, activeNodeId, position);
-    },
-    syncNodeOrder: syncNodeOrderToRuntime
+    ) => getWorkspaceMutationRepository().syncNodeCreation(node, nodeOrder, activeNodeId, position),
+    syncNodeOrder: (nodeOrder: string[]) => getWorkspaceMutationRepository().syncNodeOrder(nodeOrder)
   };
 }
 
 export function createWorkspaceNodeActions(set: WorkspaceSet): WorkspaceNodeActions {
   const trashActions = createWorkspaceTrashActions(set, {
-    syncNodeContent: syncNodeContentToRuntime,
-    syncSoftDeleteNodes: syncSoftDeleteNodesToRuntime,
-    syncRestoreNodes: syncRestoreNodesToRuntime,
-    syncDeleteNodesPermanently: syncDeleteNodesPermanentlyToRuntime
+    syncNodeContent: (node, position) => getWorkspaceMutationRepository().syncNodeContent(node, position),
+    syncSoftDeleteNodes: (payload) => getWorkspaceMutationRepository().syncSoftDeleteNodes(payload),
+    syncRestoreNodes: (payload) => getWorkspaceMutationRepository().syncRestoreNodes(payload),
+    syncDeleteNodesPermanently: (payload) =>
+      getWorkspaceMutationRepository().syncDeleteNodesPermanently(payload)
   });
   const runtimeHandlers = createRuntimeHandlers();
-  const syncMovedNodes = async (payload: Parameters<typeof syncMoveNodesToRuntime>[0]) =>
-    Boolean(await syncMoveNodesToRuntime(payload));
+  const syncMovedNodes = async (payload: WorkspaceMoveNodesPayload) =>
+    Boolean(await getWorkspaceMutationRepository().syncMoveNodes(payload));
   return {
     ...trashActions,
     setNodeViewState: createSetNodeViewStateAction(set),
@@ -132,12 +121,12 @@ export function createWorkspaceNodeActions(set: WorkspaceSet): WorkspaceNodeActi
     createChildNode: createChildNodeAction(
       set,
       runtimeHandlers.syncNodeCreation,
-      syncNodeOrderToRuntime
+      runtimeHandlers.syncNodeOrder
     ),
     createVirtualNode: createVirtualNodeAction(
       set,
       runtimeHandlers.syncNodeCreation,
-      syncNodeOrderToRuntime
+      runtimeHandlers.syncNodeOrder
     ),
     createHighlightNodeFromSelection: createHighlightFromSelectionAction(set, runtimeHandlers),
     createFormulaClozeNode: createFormulaClozeNodeAction(set, runtimeHandlers, reconcileReviewSession),

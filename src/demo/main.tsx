@@ -4,6 +4,10 @@ import ReactDOM from 'react-dom/client';
 import '../app/styles.css';
 
 import { installDemoRuntimeController } from '../shared/platform/runtime/demoRuntime';
+import {
+  createBrowserLocalWorkspaceMutationRepository,
+  installWorkspaceMutationRepository
+} from '../store/workspaceMutationRepository';
 
 import { createBrowserDemoRuntimeController } from './demoRuntimeController';
 import { installDemoWorkspaceSnapshot } from './demoWorkspaceSnapshot';
@@ -16,6 +20,7 @@ if (!rootElement) {
 
 await installDemoWorkspaceSnapshot();
 installDemoRuntimeController(createBrowserDemoRuntimeController());
+installWorkspaceMutationRepository(createBrowserLocalWorkspaceMutationRepository());
 const { App } = await import('../app/App');
 
 ReactDOM.createRoot(rootElement).render(
