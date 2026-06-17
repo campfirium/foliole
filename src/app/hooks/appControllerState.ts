@@ -4,6 +4,7 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { definedProps } from '../../shared/lib/definedProps';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
+import { getDemoRuntimeNowIso, subscribeDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 import { buildStartReviewSessionQueue } from '../../store/workspaceReviewLiveQueue';
 
@@ -29,10 +30,15 @@ import { useWorkspaceNavigation } from './useWorkspaceNavigation';
 export { useWorkspaceSelectors };
 
 export function useNowIso(tickMs = 15_000) {
-  const [nowIso, setNowIso] = useState(() => new Date().toISOString());
+  const [nowIso, setNowIso] = useState(() => getDemoRuntimeNowIso());
   useEffect(() => {
-    const timer = window.setInterval(() => setNowIso(new Date().toISOString()), tickMs);
-    return () => window.clearInterval(timer);
+    const updateNow = () => setNowIso(getDemoRuntimeNowIso());
+    const timer = window.setInterval(updateNow, tickMs);
+    const unsubscribeDemoRuntime = subscribeDemoRuntimeState(updateNow);
+    return () => {
+      window.clearInterval(timer);
+      unsubscribeDemoRuntime();
+    };
   }, [tickMs]);
   return nowIso;
 }

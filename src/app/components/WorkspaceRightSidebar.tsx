@@ -47,7 +47,8 @@ function areReviewFlowWindowsEqual(
   }
   return (
     areStringArraysEqual(previous.queueNodeIds, next.queueNodeIds) &&
-    areStringArraysEqual(previous.readyNodeIds, next.readyNodeIds)
+    areStringArraysEqual(previous.readyNodeIds, next.readyNodeIds) &&
+    areStringArraysEqual(previous.upcomingNodeIds, next.upcomingNodeIds)
   );
 }
 

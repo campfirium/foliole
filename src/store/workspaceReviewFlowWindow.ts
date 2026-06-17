@@ -39,6 +39,10 @@ function excludeKnownNodeIds(nodeIds: string[], knownNodeIds: Set<string>) {
   return nodeIds.filter((nodeId) => !knownNodeIds.has(nodeId));
 }
 
+function buildKnownFlowNodeIds(queueNodeIds: string[], readyNodeIds: string[]) {
+  return new Set([...queueNodeIds, ...readyNodeIds]);
+}
+
 export function buildReviewFlowWindow(
   state: ReviewFlowWindowState,
   now: string,
@@ -67,5 +71,10 @@ export function buildReviewFlowWindow(
   const readyPlan = buildCachedReviewQueuePlan(baseArgs);
   const queueNodeIdSet = new Set(queueNodeIds);
   const readyNodeIds = excludeKnownNodeIds(collectPlanNodeIds(readyPlan), queueNodeIdSet);
-  return { queueNodeIds, readyNodeIds, upcomingNodeIds: [] };
+  const scheduledPlan = buildCachedReviewQueuePlan({ ...baseArgs, includeScheduled: true });
+  const upcomingNodeIds = excludeKnownNodeIds(
+    collectPlanNodeIds(scheduledPlan),
+    buildKnownFlowNodeIds(queueNodeIds, readyNodeIds)
+  );
+  return { queueNodeIds, readyNodeIds, upcomingNodeIds };
 }

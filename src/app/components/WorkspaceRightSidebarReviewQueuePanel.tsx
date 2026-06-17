@@ -12,6 +12,8 @@ import {
 } from '../../shared/ui';
 import type { ReviewFlowWindow } from '../../store/workspaceReviewFlowWindow';
 
+import { WorkspaceRightSidebarReviewQueueDemoControls } from './WorkspaceRightSidebarReviewQueueDemoControls';
+
 interface WorkspaceRightSidebarReviewQueuePanelProps {
   currentNodeId: string | null;
   flowWindow: ReviewFlowWindow;
@@ -53,6 +55,7 @@ function EmptyQueueState() {
     <section className="min-h-0">
       <QueueHeader />
       <p className={`${inspectorListInsetPaddingClassName} py-3 ${inspectorListMetaClassName}`}>{t('desktop.rightPanel.flow.empty')}</p>
+      <WorkspaceRightSidebarReviewQueueDemoControls hasUpcoming={false} />
     </section>
   );
 }
@@ -96,6 +99,7 @@ function QueueRow(props: {
 }
 
 function FlowSection(props: {
+  heading?: string;
   indexOffset: number;
   nodeIds: string[];
   nodesById: Record<string, Node>;
@@ -108,6 +112,11 @@ function FlowSection(props: {
   return (
     <>
       {props.showDivider ? <li className={`${inspectorListInsetClassName} my-1.5 h-px list-none ${inspectorListDividerLineClassName}`} role="presentation" /> : null}
+      {props.heading ? (
+        <li className={`${inspectorListInsetPaddingClassName} list-none pb-1 pt-2 ${inspectorListMetaClassName}`}>
+          {props.heading}
+        </li>
+      ) : null}
       {props.nodeIds.map((nodeId, index) => (
         <QueueRow
           index={props.indexOffset + index}
@@ -122,7 +131,7 @@ function FlowSection(props: {
 }
 
 function collectFlowNodeIds(flowWindow: ReviewFlowWindow) {
-  return [...flowWindow.queueNodeIds, ...flowWindow.readyNodeIds];
+  return [...flowWindow.queueNodeIds, ...flowWindow.readyNodeIds, ...flowWindow.upcomingNodeIds];
 }
 
 export function WorkspaceRightSidebarReviewQueuePanel(props: WorkspaceRightSidebarReviewQueuePanelProps) {
@@ -144,6 +153,8 @@ export function WorkspaceRightSidebarReviewQueuePanel(props: WorkspaceRightSideb
 
   const displayQueueNodeIds = buildDisplayQueueNodeIds(props.flowWindow.queueNodeIds, props.currentNodeId);
   const readyIndexOffset = displayQueueNodeIds.length;
+  const upcomingIndexOffset = readyIndexOffset + props.flowWindow.readyNodeIds.length;
+  const hasUpcoming = props.flowWindow.upcomingNodeIds.length > 0;
 
   return (
     <section className="flex min-h-0 flex-col">
@@ -163,7 +174,16 @@ export function WorkspaceRightSidebarReviewQueuePanel(props: WorkspaceRightSideb
           onSelectNode={props.onSelectNode}
           showDivider={displayQueueNodeIds.length > 0}
         />
+        <FlowSection
+          heading={t('desktop.rightPanel.flow.scheduledLater')}
+          indexOffset={upcomingIndexOffset}
+          nodeIds={props.flowWindow.upcomingNodeIds}
+          nodesById={props.nodesById}
+          onSelectNode={props.onSelectNode}
+          showDivider={displayQueueNodeIds.length > 0 || props.flowWindow.readyNodeIds.length > 0}
+        />
       </ol>
+      <WorkspaceRightSidebarReviewQueueDemoControls hasUpcoming={hasUpcoming} />
     </section>
   );
 }

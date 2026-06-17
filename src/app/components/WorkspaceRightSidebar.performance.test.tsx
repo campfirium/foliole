@@ -1,5 +1,5 @@
 import { waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
@@ -53,8 +53,7 @@ function createNode(overrides: Partial<Node>): Node {
   };
 }
 
-describe('WorkspaceRightSidebar performance', () => {
-  it('does not render the review queue panel before workspace hydration completes', async () => {
+it('does not render the review queue panel before workspace hydration completes', async () => {
     reviewQueuePanelRender.mockClear();
     renderWithLocalization(
       <WorkspaceRightSidebar
@@ -76,9 +75,9 @@ describe('WorkspaceRightSidebar performance', () => {
     await Promise.resolve();
 
     expect(reviewQueuePanelRender).not.toHaveBeenCalled();
-  });
+});
 
-  it('keeps review queue panel steady when only queued node content changes', async () => {
+it('keeps review queue panel steady when only queued node content changes', async () => {
     reviewQueuePanelRender.mockClear();
     const queuedNode = createNode({
       id: 'node-1',
@@ -113,10 +112,31 @@ describe('WorkspaceRightSidebar performance', () => {
     })));
 
     expect(reviewQueuePanelRender).toHaveBeenCalledTimes(1);
-  });
 });
 
-function createReviewQueueSidebarElement(node: Node) {
+it('rerenders the review queue panel when upcoming flow entries change', async () => {
+    reviewQueuePanelRender.mockClear();
+    const node = createNode({ id: 'node-1', title: 'Queued note' });
+    const { rerender } = renderWithLocalization(
+      createReviewQueueSidebarElement(node, { queueNodeIds: ['node-1'], readyNodeIds: [], upcomingNodeIds: [] })
+    );
+
+    await waitFor(() => expect(reviewQueuePanelRender).toHaveBeenCalledTimes(1));
+
+    rerender(createReviewQueueSidebarElement(node, {
+      queueNodeIds: ['node-1'],
+      readyNodeIds: [],
+      upcomingNodeIds: ['node-2']
+    }));
+
+    await waitFor(() => expect(reviewQueuePanelRender).toHaveBeenCalledTimes(2));
+});
+
+function createReviewQueueSidebarElement(node: Node, reviewFlowWindow?: {
+  queueNodeIds: string[];
+  readyNodeIds: string[];
+  upcomingNodeIds: string[];
+}) {
   return (
     <WorkspaceRightSidebar
       activeNodeId="node-1"
@@ -127,6 +147,7 @@ function createReviewQueueSidebarElement(node: Node) {
       onSelectBreadcrumbNode={STABLE_NOOP}
       onSelectNode={STABLE_NOOP}
       reviewCurrentNodeId="node-1"
+      {...(reviewFlowWindow ? { reviewFlowWindow } : {})}
       reviewQueueNodeIds={['node-1']}
       reviewSchedulerSettings={{} as never}
       trashedNodeIds={[]}

@@ -217,7 +217,7 @@ it('separates queue and ready flow entries with dividers only', () => {
   expect(items[1]!).toHaveTextContent('2Reading 2');
 });
 
-it('treats future-only flow content as empty', () => {
+it('shows future-only flow content as scheduled later', () => {
   renderWithLocalization(
     <WorkspaceRightSidebarReviewQueuePanel
       currentNodeId={null}
@@ -229,7 +229,7 @@ it('treats future-only flow content as empty', () => {
     />
   );
 
-  expect(screen.queryByText('Upcoming')).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Reading Later' })).not.toBeInTheDocument();
-  expect(screen.getByText('No Flow topics are available right now.')).toBeInTheDocument();
+  expect(screen.getByText('Scheduled later')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Reading Later' })).toBeInTheDocument();
+  expect(screen.queryByText('No Flow topics are available right now.')).not.toBeInTheDocument();
 });

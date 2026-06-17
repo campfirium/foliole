@@ -4,7 +4,12 @@ import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { createInitialWorkspaceState, useWorkspaceStore, WORKSPACE_STORAGE_KEY } from '../store/workspaceStore';
 
 import { canonicalDemoPath, DEFAULT_DEMO_TOPIC, DEMO_TOPICS } from './demoContent';
-import { createDemoWorkspaceSnapshot, installDemoWorkspaceSnapshot, resolveDemoTopicFromPath } from './demoWorkspaceSnapshot';
+import { clearDemoLocalStorage, readDemoPreviewDay, writeDemoPreviewDay } from './demoLocalStorage';
+import {
+  createDemoWorkspaceSnapshot,
+  installDemoWorkspaceSnapshot,
+  resolveDemoTopicFromPath
+} from './demoWorkspaceSnapshot';
 
 function requireTopic(index: number) {
   const topic = DEMO_TOPICS[index];
@@ -78,6 +83,10 @@ function stubDemoStorage(storage: Map<string, string>, pathname = canonicalDemoP
   vi.stubGlobal('window', {
     localStorage: {
       getItem: (key: string) => storage.get(key) ?? null,
+      key: (index: number) => Array.from(storage.keys())[index] ?? null,
+      get length() {
+        return storage.size;
+      },
       removeItem: (key: string) => storage.delete(key),
       setItem: (key: string, value: string) => storage.set(key, value)
     },
@@ -162,6 +171,36 @@ it('reinstalls the official Demo snapshot when the stored payload is incompatibl
     const payload = JSON.parse(storage.get(WORKSPACE_STORAGE_KEY) ?? 'null');
     expect(payload.state.activeNodeId).toBe(`demo-${requireTopic(0).slug}`);
     expect(payload.state.nodesById[INBOX_NODE_ID]).toMatchObject({ specialKind: 'inbox' });
+    vi.unstubAllGlobals();
+});
+
+it('persists the Demo preview day as Demo-owned browser-local state', () => {
+    const storage = new Map<string, string>();
+    stubDemoStorage(storage);
+
+    expect(readDemoPreviewDay()).toBe(0);
+    writeDemoPreviewDay(2);
+
+    expect(readDemoPreviewDay()).toBe(2);
+    expect(storage.get('foliole-demo-preview-day-v1')).toBe('2');
+    vi.unstubAllGlobals();
+});
+
+it('clears only Demo-owned local storage keys', async () => {
+    const storage = new Map<string, string>();
+    stubDemoStorage(storage);
+    await installDemoWorkspaceSnapshot();
+    writeDemoPreviewDay(3);
+    storage.set('foliole-demo-try-local-v1', 'draft');
+    storage.set('site-theme', 'light');
+
+    clearDemoLocalStorage();
+
+    expect(storage.has(WORKSPACE_STORAGE_KEY)).toBe(false);
+    expect(storage.has('demo-workspace-v1')).toBe(false);
+    expect(storage.has('foliole-demo-preview-day-v1')).toBe(false);
+    expect(storage.has('foliole-demo-try-local-v1')).toBe(false);
+    expect(storage.get('site-theme')).toBe('light');
     vi.unstubAllGlobals();
 });
 

@@ -12,10 +12,8 @@ import {
 import { createWorkspaceReviewActions } from '../store/workspaceStoreReviewActions';
 
 import { canonicalDemoPath, DEFAULT_DEMO_TOPIC, DEMO_TOPICS, type DemoTopic } from './demoContent';
+import { DEMO_CAPTURED_VERSION, DEMO_SNAPSHOT_VERSION } from './demoLocalStorage';
 import type { DemoPackReadingSeed, DemoPackReviewItem, DemoPackReviewScheduleSeed, DemoPackRelativeTime } from './demoPack';
-
-const DEMO_SNAPSHOT_VERSION = 'demo-workspace-v1';
-const DEMO_CAPTURED_VERSION = 'demo:2026-06-17';
 
 export function resolveDemoTopicFromPath(pathname: string, topics: DemoTopic[] = DEMO_TOPICS) {
   return requireDemoTopic(
