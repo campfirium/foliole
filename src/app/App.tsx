@@ -4,6 +4,7 @@ import { HotkeySettingsProvider } from '../features/settings/context/HotkeySetti
 import { useReviewSchedulerSettings } from '../features/settings/context/ReviewSchedulerSettingsProvider';
 import { installWorkspaceDebugBridge } from '../shared/diagnostics/workspaceDebugBridge';
 import { readPerformanceDiagnosticsProbe } from '../shared/platform/performanceDiagnosticsProbe';
+import { useDemoRuntimeState } from '../shared/platform/runtime/demoRuntime';
 import { reportRuntimeAppReady, reportRuntimeBootStage } from '../shared/platform/runtimeBootTelemetry';
 import { ensureWorkspaceHydrated } from '../store/workspaceStoreHydration';
 
@@ -36,6 +37,7 @@ function AppContent() {
   useWorkspaceContentChangedRefresh();
   useReadwiseAutoSync();
   useReleaseUpdateCheck();
+  const { isDemo } = useDemoRuntimeState();
   const { isReviewSchedulerSettingsReady } = useReviewSchedulerSettings();
   const isAppReady = controller.layoutProps.layoutChrome.isWorkspaceHydrated && isReviewSchedulerSettingsReady;
   const handleGlobalCaptureNavigation = useCallback((nodeId: string) => {
@@ -49,7 +51,7 @@ function AppContent() {
     readPerformanceDiagnosticsProbe();
   }, []);
   useReportAppReadyWhenHydrated(isAppReady);
-  usePrewarmInteractiveSurfacesAfterReady(isAppReady);
+  usePrewarmInteractiveSurfacesAfterReady(isAppReady, isDemo);
 
   const workspaceLayoutProps = {
     ...controller.layoutProps,
@@ -154,18 +156,19 @@ function runStartupPrewarmQueue(tasks: Array<() => Promise<unknown>>) {
   };
 }
 
-function usePrewarmInteractiveSurfacesAfterReady(isWorkspaceHydrated?: boolean) {
+function usePrewarmInteractiveSurfacesAfterReady(isWorkspaceHydrated?: boolean, isDemo = false) {
   useEffect(() => {
     if (!isWorkspaceHydrated) {
       return undefined;
     }
-    return runStartupPrewarmQueue([
+    const prewarmTasks = [
       prewarmAppOverlayStack,
-      prewarmWorkspaceSettingsOverlay,
+      ...(!isDemo ? [prewarmWorkspaceSettingsOverlay] : []),
       prewarmWorkspaceRightSidebarPanels,
       prewarmImportSourceWorkspace
-    ]);
-  }, [isWorkspaceHydrated]);
+    ];
+    return runStartupPrewarmQueue(prewarmTasks);
+  }, [isDemo, isWorkspaceHydrated]);
 }
 
 export function App() {

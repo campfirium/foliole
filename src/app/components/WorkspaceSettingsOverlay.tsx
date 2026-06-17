@@ -1,18 +1,30 @@
 import { Suspense, lazy } from 'react';
 
 import type { SettingsCategoryId } from '../../features/settings/model/settingsPanelOptions';
+import { useDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
 
 function loadWorkspaceSettingsOverlayContent() {
   return import('./WorkspaceSettingsOverlayContent');
+}
+
+function loadDemoSettingsPreviewOverlay() {
+  return import('../../features/settings/components/DemoSettingsPreviewOverlay');
 }
 
 const WorkspaceSettingsOverlayContent = lazy(() =>
   loadWorkspaceSettingsOverlayContent().then((module) => ({ default: module.WorkspaceSettingsOverlayContent }))
 );
 
+const DemoSettingsPreviewOverlay = lazy(() =>
+  loadDemoSettingsPreviewOverlay().then((module) => ({ default: module.DemoSettingsPreviewOverlay }))
+);
+
 let workspaceSettingsOverlayPrewarm: Promise<void> | null = null;
 
-export function prewarmWorkspaceSettingsOverlay() {
+export function prewarmWorkspaceSettingsOverlay(options?: { isDemo?: boolean }) {
+  if (options?.isDemo) {
+    return Promise.resolve();
+  }
   workspaceSettingsOverlayPrewarm ??= loadWorkspaceSettingsOverlayContent()
     .then((module) => module.prewarmWorkspaceSettingsOverlayContent())
     .catch(() => undefined);
@@ -50,8 +62,21 @@ export function WorkspaceSettingsOverlay({
   onRunSupportCommand,
   requestedCategory
 }: WorkspaceSettingsOverlayProps) {
+  const { isDemo } = useDemoRuntimeState();
+
   if (!isSettingsOpen) {
     return null;
+  }
+
+  if (isDemo) {
+    return (
+      <Suspense fallback={null}>
+        <DemoSettingsPreviewOverlay
+          onClose={onClose}
+          requestedCategory={requestedCategory}
+        />
+      </Suspense>
+    );
   }
 
   return (

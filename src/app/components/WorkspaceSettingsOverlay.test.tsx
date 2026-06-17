@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const workspaceSettingsOverlayMocks = vi.hoisted(() => ({
+  isDemo: false,
   requestAppConfirmation: vi.fn(),
   useImportSourceWorkspaceState: vi.fn()
 }));
@@ -98,6 +99,15 @@ vi.mock('./useImportSourceWorkspaceState', () => ({
   useImportSourceWorkspaceState: workspaceSettingsOverlayMocks.useImportSourceWorkspaceState
 }));
 
+vi.mock('../../shared/platform/runtime/demoRuntime', () => ({
+  useDemoRuntimeState: () => ({ isDemo: workspaceSettingsOverlayMocks.isDemo })
+}));
+
+vi.mock('../../shared/localization/LocalizationProvider', () => ({
+  useLocalization: () => ({ t: (key: string) => key }),
+  useTranslation: () => (key: string) => key
+}));
+
 vi.mock('../../shared/ui', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../shared/ui')>();
   return {
@@ -117,6 +127,7 @@ import { WorkspaceSettingsOverlay } from './WorkspaceSettingsOverlay';
 const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
 
 beforeEach(() => {
+  workspaceSettingsOverlayMocks.isDemo = false;
   workspaceSettingsOverlayMocks.requestAppConfirmation.mockReset();
   workspaceSettingsOverlayMocks.useImportSourceWorkspaceState.mockReset();
   workspaceSettingsOverlayMocks.useImportSourceWorkspaceState.mockImplementation(
@@ -133,6 +144,27 @@ it('skips import settings state while the settings overlay is closed', () => {
     />
   );
 
+  expect(workspaceSettingsOverlayMocks.useImportSourceWorkspaceState).not.toHaveBeenCalled();
+  expect(screen.queryByTestId('settings-panel')).not.toBeInTheDocument();
+});
+
+it('opens the demo settings preview without loading live settings state', async () => {
+  workspaceSettingsOverlayMocks.isDemo = true;
+
+  render(
+    <WorkspaceSettingsOverlay
+      isSettingsOpen
+      onClose={() => undefined}
+      requestedCategory="general"
+    />
+  );
+
+  expect(await screen.findByText('settings.demoPreview.banner.title')).toBeInTheDocument();
+  expect(screen.getByText('settings.demoPreview.readOnlyBadge')).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'settings.demoPreview.downloadDesktop' })).toHaveAttribute(
+    'href',
+    'https://github.com/campfirium/foliole/releases'
+  );
   expect(workspaceSettingsOverlayMocks.useImportSourceWorkspaceState).not.toHaveBeenCalled();
   expect(screen.queryByTestId('settings-panel')).not.toBeInTheDocument();
 });

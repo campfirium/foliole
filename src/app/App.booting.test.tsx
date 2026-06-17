@@ -9,6 +9,9 @@ const prewarmWorkspaceRightSidebarPanels = vi.fn(() => Promise.resolve());
 const prewarmWorkspaceSettingsOverlay = vi.fn(() => Promise.resolve());
 const reportRuntimeAppReady = vi.fn();
 const reportRuntimeBootStage = vi.fn();
+const demoRuntimeMock = vi.hoisted(() => ({
+  isDemo: false
+}));
 const overlayMocks = vi.hoisted(() => ({
   CommandPalette: vi.fn(() => <div>command-palette</div>),
   GoToNodePalette: vi.fn(() => <div>go-to-node-palette</div>),
@@ -54,6 +57,10 @@ vi.mock('../shared/platform/runtimeBootTelemetry', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../shared/platform/runtimeBootTelemetry')>()),
   reportRuntimeAppReady,
   reportRuntimeBootStage
+}));
+
+vi.mock('../shared/platform/runtime/demoRuntime', () => ({
+  useDemoRuntimeState: () => ({ isDemo: demoRuntimeMock.isDemo })
 }));
 
 vi.mock('../features/settings/context/AppearanceSettingsProvider', () => ({
@@ -132,6 +139,7 @@ beforeEach(() => {
   overlayMocks.CommandPalette.mockClear();
   overlayMocks.GoToNodePalette.mockClear();
   overlayMocks.SearchPalette.mockClear();
+  demoRuntimeMock.isDemo = false;
   reviewSettingsProviderMock.isReady = true;
   document.body.dataset.bootSkeleton = '';
   Reflect.deleteProperty(window, 'requestIdleCallback');
@@ -193,6 +201,38 @@ it('prewarms interactive surfaces after the hydrated workspace is ready', async 
   expect(prewarmWorkspaceRightSidebarPanels).toHaveBeenCalledTimes(1);
   expect(prewarmImportSourceWorkspace).toHaveBeenCalledTimes(1);
   expect(requestIdleCallback).toHaveBeenCalledWith(expect.any(Function), { timeout: 2500 });
+});
+
+it('skips settings overlay prewarm in the Demo runtime', async () => {
+  demoRuntimeMock.isDemo = true;
+  const requestIdleCallback = vi.fn((callback: IdleRequestCallback) => {
+    callback({ didTimeout: false, timeRemaining: () => 20 });
+    return 1;
+  });
+  Object.defineProperty(window, 'requestIdleCallback', {
+    configurable: true,
+    value: requestIdleCallback
+  });
+  Object.defineProperty(window, 'cancelIdleCallback', {
+    configurable: true,
+    value: vi.fn()
+  });
+  useAppController.mockReturnValue({
+    ...createClosedOverlayState(),
+    hotkeySettings: {},
+    layoutProps: createLayoutProps(true)
+  });
+
+  const { App } = await import('./App');
+
+  render(<App />);
+
+  await waitFor(() => {
+    expect(prewarmImportSourceWorkspace).toHaveBeenCalledTimes(1);
+  });
+  expect(prewarmAppOverlayStack).toHaveBeenCalledTimes(1);
+  expect(prewarmWorkspaceRightSidebarPanels).toHaveBeenCalledTimes(1);
+  expect(prewarmWorkspaceSettingsOverlay).not.toHaveBeenCalled();
 });
 
 it('loads lazy command overlays only after the command entry opens', async () => {
