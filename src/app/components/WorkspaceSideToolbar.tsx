@@ -1,4 +1,4 @@
-import { Route, Settings } from 'lucide-react';
+import { Settings } from 'lucide-react';
 import { useState } from 'react';
 
 import { useWorkspaceRailSettings } from '../../features/settings/context/WorkspaceRailSettingsProvider';
@@ -10,11 +10,12 @@ import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
 import { definedProps } from '../../shared/lib/definedProps';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { setWhitelistedLocalStorageItem } from '../../shared/platform/storage';
-import { AppIconButton, AppToolbar, AppTooltip, AppTooltipContent, AppTooltipTrigger, ToolbarActionGroup } from '../../shared/ui';
+import { AppToolbar, ToolbarActionGroup } from '../../shared/ui';
 
 import { RailActionGroup, WorkspaceRailContextMenu } from './WorkspaceRailActions';
 import { WorkspaceRailTooltipButton } from './WorkspaceRailTooltipButton';
-import { getWorkspaceSurfaceDividerColor } from './WorkspaceSurfaceRowOverlay';
+import { useDemoMarkdownRailImport } from './WorkspaceSideToolbarDemoImport';
+import { renderStudyDock } from './WorkspaceStudyDock';
 import { WorkspaceThemeModeAction } from './WorkspaceThemeModeAction';
 
 interface WorkspaceSideToolbarProps {
@@ -49,45 +50,6 @@ function SettingsAction({ isSettingsOpen, onOpenSettings }: { isSettingsOpen: bo
   );
 }
 
-function FlowAction({
-  canStartStudyMode,
-  isStudyMode,
-  onToggleReviewSession
-}: {
-  canStartStudyMode: boolean;
-  isStudyMode: boolean;
-  onToggleReviewSession: () => void;
-}) {
-  const t = useTranslation();
-  const actionLabel = isStudyMode
-    ? t('desktop.workspace.leaveFlow')
-    : canStartStudyMode
-      ? t('desktop.workspace.enterFlow')
-      : t('desktop.workspace.reviewQueueEmpty');
-  return (
-    <ToolbarActionGroup
-      ariaLabel={t('desktop.workspace.studyActions')}
-      className="h-[var(--workspace-bottom-toolbar-height)] w-full justify-center px-1"
-      fullWidth
-      orientation="vertical"
-    >
-      <AppTooltip>
-        <AppTooltipTrigger asChild>
-          <span className="inline-flex">
-            <AppIconButton
-              className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
-              icon={<Route aria-hidden="true" size={16} strokeWidth={1.75} />}
-              label={actionLabel}
-              onClick={onToggleReviewSession}
-            />
-          </span>
-        </AppTooltipTrigger>
-        <AppTooltipContent>{actionLabel}</AppTooltipContent>
-      </AppTooltip>
-    </ToolbarActionGroup>
-  );
-}
-
 function useWorkspaceRailToolbarState({
   onOpenSettings,
   onRunRailAction,
@@ -97,6 +59,7 @@ function useWorkspaceRailToolbarState({
   WorkspaceSideToolbarProps,
   'onOpenSettings' | 'onRunRailAction' | 'onStartClipboardImport' | 'onStartImport'
 >) {
+  const demoImport = useDemoMarkdownRailImport();
   const rail = useWorkspaceRailSettings();
   const [contextMenuPosition, setContextMenuPosition] = useState<{ left: number; top: number } | null>(null);
   const topItems = getWorkspaceRailSectionItems(rail.items, 'top').filter((item) => item.visible);
@@ -104,9 +67,17 @@ function useWorkspaceRailToolbarState({
 
   function runRailCommand(commandId: string) {
     if (commandId === APP_COMMAND_IDS.importSingleFile) {
-      onStartImport();
+      if (demoImport.isDemo) {
+        demoImport.fileInputRef.current?.click();
+      } else {
+        onStartImport();
+      }
     } else if (commandId === APP_COMMAND_IDS.clipboardImport) {
-      onStartClipboardImport();
+      if (demoImport.isDemo) {
+        void demoImport.importClipboardMarkdown();
+      } else {
+        onStartClipboardImport();
+      }
     } else {
       onRunRailAction?.(commandId);
     }
@@ -118,37 +89,16 @@ function useWorkspaceRailToolbarState({
     onOpenSettings();
   }
 
-  return { bottomItems, contextMenuPosition, openRailManager, rail, runRailCommand, setContextMenuPosition, topItems };
-}
-
-function renderStudyDock(props: {
-  canStartStudyMode: boolean;
-  isStudyMode: boolean;
-  onToggleReviewSession: () => void;
-  showStudyDock: boolean;
-}) {
-  if (!props.showStudyDock) {
-    return null;
-  }
-  return (
-    <>
-      {props.isStudyMode ? (
-        <div
-          aria-hidden="true"
-          className="w-full shrink-0 border-t"
-          data-testid="workspace-study-divider"
-          style={{ borderTopColor: getWorkspaceSurfaceDividerColor('main', 'rail') }}
-        />
-      ) : null}
-      <div className="flex h-[var(--workspace-bottom-toolbar-height)] w-full shrink-0 items-center justify-center">
-        <FlowAction
-          canStartStudyMode={props.canStartStudyMode}
-          isStudyMode={props.isStudyMode}
-          onToggleReviewSession={props.onToggleReviewSession}
-        />
-      </div>
-    </>
-  );
+  return {
+    bottomItems,
+    contextMenuPosition,
+    demoImport,
+    openRailManager,
+    rail,
+    runRailCommand,
+    setContextMenuPosition,
+    topItems
+  };
 }
 
 export function WorkspaceSideToolbar(props: WorkspaceSideToolbarProps) {
@@ -195,25 +145,14 @@ export function WorkspaceSideToolbar(props: WorkspaceSideToolbarProps) {
           top={state.contextMenuPosition.top}
         />
       ) : null}
-    </AppToolbar>
-  );
-}
-
-export function WorkspaceStudyDockTrigger(props: {
-  canStartStudyMode: boolean;
-  isStudyMode: boolean;
-  onToggleReviewSession: () => void;
-}) {
-  return (
-    <div
-      className="flex h-[var(--workspace-bottom-toolbar-height)] w-[var(--workspace-rail-width)] shrink-0 items-center justify-center"
-      style={{ backgroundColor: 'var(--workspace-region-footer-rail-bg)' }}
-    >
-      <FlowAction
-        canStartStudyMode={props.canStartStudyMode}
-        isStudyMode={props.isStudyMode}
-        onToggleReviewSession={props.onToggleReviewSession}
+      <input
+        accept=".md,text/markdown,text/plain"
+        className="hidden"
+        multiple
+        onChange={(event) => void state.demoImport.importMarkdownFiles(event.target.files)}
+        ref={state.demoImport.fileInputRef}
+        type="file"
       />
-    </div>
+    </AppToolbar>
   );
 }

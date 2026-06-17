@@ -2,8 +2,21 @@ import { useSyncExternalStore } from 'react';
 
 export interface DemoRuntimeState {
   clearError: string | null;
+  importError: string | null;
+  importedTopicCount: number;
   isDemo: boolean;
   previewDay: number;
+}
+
+export interface DemoMarkdownRuntimeEntry {
+  markdown: string;
+  relativePath?: string;
+  sourceName?: string;
+}
+
+export interface DemoMarkdownRuntimeImportResult {
+  ignoredCount: number;
+  importedTopicCount: number;
 }
 
 export interface DemoRuntimeController {
@@ -11,11 +24,14 @@ export interface DemoRuntimeController {
   continueToNextPreviewDay: () => void;
   getNowIso: (realNow: Date) => string;
   getState: () => DemoRuntimeState;
+  importMarkdown: (entries: DemoMarkdownRuntimeEntry[]) => Promise<DemoMarkdownRuntimeImportResult>;
   subscribe: (listener: () => void) => () => void;
 }
 
 const defaultState: DemoRuntimeState = {
   clearError: null,
+  importError: null,
+  importedTopicCount: 0,
   isDemo: false,
   previewDay: 0
 };
@@ -25,6 +41,7 @@ const defaultController: DemoRuntimeController = {
   continueToNextPreviewDay: () => undefined,
   getNowIso: (realNow) => realNow.toISOString(),
   getState: () => defaultState,
+  importMarkdown: () => Promise.resolve({ ignoredCount: 0, importedTopicCount: 0 }),
   subscribe: () => () => undefined
 };
 
@@ -52,6 +69,10 @@ export function continueToNextDemoPreviewDay() {
 
 export function getDemoRuntimeNowIso(realNow = new Date()) {
   return activeController.getNowIso(realNow);
+}
+
+export function importDemoMarkdown(entries: DemoMarkdownRuntimeEntry[]) {
+  return activeController.importMarkdown(entries);
 }
 
 export function useDemoRuntimeState() {

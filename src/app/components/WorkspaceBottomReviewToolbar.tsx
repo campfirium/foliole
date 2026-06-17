@@ -7,7 +7,7 @@ import type { ReviewToolbarProgressCounts } from './reviewToolbarProgressLabel';
 import { ReviewToolbarProgressLine } from './ReviewToolbarSessionFrame';
 import { getWorkspaceGridColumns } from './workspaceGridColumns';
 import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
-import { WorkspaceStudyDockTrigger } from './WorkspaceSideToolbar';
+import { WorkspaceStudyDockTrigger } from './WorkspaceStudyDock';
 import { WorkspaceFooterRowDividers, WorkspaceSurfaceRowOverlay } from './WorkspaceSurfaceRowOverlay';
 
 export interface WorkspaceBottomReviewToolbarProps {
