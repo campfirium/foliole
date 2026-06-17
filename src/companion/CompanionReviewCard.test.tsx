@@ -57,7 +57,7 @@ describe('CompanionReviewCard', () => {
 
     expect(screen.getByText('Readable topic body')).toBeInTheDocument();
     expect(screen.getByText('Projects')).toBeInTheDocument();
-    expect(screen.getByText('Article title')).toBeInTheDocument();
+    expect(screen.getAllByText('Article title')).toHaveLength(2);
     expect(screen.queryByText('Prompt')).not.toBeInTheDocument();
     expect(screen.queryByText('Readable article')).not.toBeInTheDocument();
     expect(screen.queryByText('Due now')).not.toBeInTheDocument();

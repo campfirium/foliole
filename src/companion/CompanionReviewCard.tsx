@@ -52,16 +52,35 @@ function ReviewAnswer(props: { nodeId: string; reveal: string }) {
   );
 }
 
+function resolveReviewSourceLabel(items: CompanionReviewBreadcrumbItem[]) {
+  return items.find((item) => item.isCurrent)?.label ?? items.at(-1)?.label ?? null;
+}
+
+function ReviewSourceEyebrow(props: { items: CompanionReviewBreadcrumbItem[] }) {
+  const label = resolveReviewSourceLabel(props.items);
+  if (!label) {
+    return null;
+  }
+  return (
+    <div className="mb-3 flex items-center gap-2 px-6 text-[11.5px] font-bold uppercase tracking-[.06em] text-companion-accent">
+      <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-companion-accent" />
+      <span className="line-clamp-1">{label}</span>
+    </div>
+  );
+}
+
 export function CompanionReviewCard(props: {
   breadcrumbItems?: CompanionReviewBreadcrumbItem[];
   card: CompanionReviewCardModel;
   onSelectBreadcrumbItem?: (id: string) => void;
 }) {
   const t = useTranslation();
+  const breadcrumbItems = props.breadcrumbItems ?? [];
   return (
     <section aria-label={t('companion.review.card')} className="bg-companion-content pb-4">
-      <ReviewBreadcrumb items={props.breadcrumbItems ?? []} {...definedProps({ onSelectItem: props.onSelectBreadcrumbItem })} />
+      <ReviewBreadcrumb items={breadcrumbItems} {...definedProps({ onSelectItem: props.onSelectBreadcrumbItem })} />
       <div className="pt-1">
+        <ReviewSourceEyebrow items={breadcrumbItems} />
         <CompanionArticleDocument
           content={props.card.content}
           hideTitleHeading={props.card.hideTitleHeading}
