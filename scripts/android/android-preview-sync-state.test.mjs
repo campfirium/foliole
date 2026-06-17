@@ -63,7 +63,7 @@ describe('android-preview sync readiness check', () => {
   it('can report sync readiness after deploy without blocking preview', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-preview-sync-state-'));
     try {
-      const windowsSync = await writeExecutable(tempRoot, 'windows-sync.sh', '#!/usr/bin/env bash\necho sync-ok\n');
+      const sourceSync = await writeExecutable(tempRoot, 'source-sync.sh', '#!/usr/bin/env bash\necho source-sync-ok\n');
       const androidSync = await writeExecutable(tempRoot, 'android-sync.sh', '#!/usr/bin/env bash\necho cap-sync-ok\n');
       const emulator = await writeExecutable(tempRoot, 'emulator.sh', '#!/usr/bin/env bash\necho emulator-ok\n');
       const deploy = await writeExecutable(tempRoot, 'deploy.sh', '#!/usr/bin/env bash\necho deploy-ok\n');
@@ -75,7 +75,7 @@ describe('android-preview sync readiness check', () => {
       );
 
       const result = await runAndroidPreview(tempRoot, {
-        WINDOWS_SYNC_SCRIPT: windowsSync,
+        ANDROID_SOURCE_SYNC_SCRIPT: sourceSync,
         ANDROID_SYNC_SCRIPT: androidSync,
         ANDROID_EMULATOR_SCRIPT: emulator,
         ANDROID_DEPLOY_SCRIPT: deploy,

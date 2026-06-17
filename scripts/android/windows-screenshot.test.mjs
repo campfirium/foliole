@@ -55,6 +55,7 @@ describe('windows-screenshot.sh', () => {
 
       const outputDir = path.join(tempRoot, 'shots');
       const result = await runScreenshot(tempRoot, [outputDir], {
+        FOLIOLE_ANDROID_SERIAL: 'phone-serial',
         PATH: `${bashPath(mockBinDir)}:/usr/bin:/bin:${process.env.PATH ?? ''}`,
         WINDOWS_SCRIPT_PATH: path.join(tempRoot, 'windows-screenshot.ps1'),
         POWERSHELL_ARGS_LOG: bashPath(powershellArgsLog)
@@ -68,8 +69,28 @@ describe('windows-screenshot.sh', () => {
       expect(args.some((arg) => arg.endsWith('windows-screenshot.ps1'))).toBe(true);
       expect(args).toContain('-OutputDir');
       expect(args.some((arg) => arg.endsWith('shots'))).toBe(true);
+      expect(args).toContain('-TargetSerial');
+      expect(args).toContain('phone-serial');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
+  });
+
+  it('does not pipe adb executable calls through Out-Null', async () => {
+    const script = await readFile(path.join(REPO_ROOT, 'scripts', 'android', 'windows-screenshot.ps1'), 'utf8');
+
+    expect(script).toContain('function Test-LastCommandFailed');
+    expect(script).toContain('function Invoke-ScreenshotCapture');
+    expect(script).toContain('-ArgumentList @("-s", $Serial, "exec-out", "screencap", "-p")');
+    expect(script).toContain('-RedirectStandardOutput $OutputPath');
+    expect(script).toContain('& $adbPath start-server *> $null');
+    expect(script).toContain('$serial = $TargetSerial');
+    expect(script).not.toContain('get-state');
+    expect(script).toContain('$resolvedOutputDir = (Resolve-Path -LiteralPath $OutputDir).Path');
+    expect(script).toContain('Invoke-ScreenshotCapture -AdbPath $adbPath -Serial $serial -OutputPath $outputPath');
+    expect(script).toContain('$devicesOutput = & $adbPath devices 2>$null');
+    expect(script).not.toContain('& $adbPath start-server |');
+    expect(script).not.toContain(' pull ');
+    expect(script).not.toContain(' shell rm ');
   });
 });

@@ -104,6 +104,7 @@
     "android:web:build": "npm run android:schema:generate && vite build --config vite.companion.config.ts",
     "android:icons:generate": "python3 scripts/android/generate-launcher-icons.py",
     "android:open": "bash scripts/android/windows-open.sh",
+    "android:control": "powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File scripts/android/windows-control-device.ps1",
     "android:sync": "bash scripts/android/windows-cap-sync.sh",
     "android:reset-sync-data": "node scripts/electron-sqlite-runner.mjs scripts/android/android-reset-sync-data.mjs",
     "android:host:lint": "bash scripts/android/windows-gradle-check.sh lint",

@@ -96,7 +96,7 @@ describe('windows-cap-sync.sh', () => {
       const mockBinDir = path.join(tempRoot, 'bin');
       const powershellArgsLog = path.join(tempRoot, 'powershell-args.log');
       await mkdir(mockBinDir, { recursive: true });
-      const windowsSync = await writeExecutable(tempRoot, 'windows-sync.sh', '#!/usr/bin/env bash\necho cap-sync-target:${WINDOWS_MIRROR_DIR}\n');
+      const sourceSync = await writeExecutable(tempRoot, 'source-sync.sh', '#!/usr/bin/env bash\necho cap-source-sync:${ANDROID_WINDOWS_WORKDIR}\n');
       await writeFile(
         path.join(mockBinDir, 'powershell.exe'),
         ['#!/usr/bin/env bash', 'set -euo pipefail', 'printf "%s\\n" "$@" > "${POWERSHELL_ARGS_LOG}"'].join('\n'),
@@ -106,13 +106,13 @@ describe('windows-cap-sync.sh', () => {
 
       const result = await runCapSync(tempRoot, {
         PATH: `${bashPath(mockBinDir)}:/usr/bin:/bin:${process.env.PATH ?? ''}`,
-        WINDOWS_SYNC_SCRIPT: windowsSync,
+        ANDROID_SOURCE_SYNC_SCRIPT: sourceSync,
         WINDOWS_SCRIPT_PATH: path.join(tempRoot, 'windows-cap-sync.ps1'),
         POWERSHELL_ARGS_LOG: bashPath(powershellArgsLog)
       });
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('cap-sync-target:/mnt/c/dev/foliole-android-preview');
+      expect(result.stdout).toContain('cap-source-sync:C:\\dev\\foliole-android-preview');
       const args = (await readFile(powershellArgsLog, 'utf8')).split('\n').filter(Boolean);
       expect(args).toContain('-WindowStyle');
       expect(args).toContain('Hidden');
@@ -130,7 +130,7 @@ describe('windows-cap-sync.sh', () => {
       const mockBinDir = path.join(tempRoot, 'bin');
       const powershellArgsLog = path.join(tempRoot, 'powershell-args.log');
       await mkdir(mockBinDir, { recursive: true });
-      const windowsSync = await writeExecutable(tempRoot, 'windows-sync.sh', '#!/usr/bin/env bash\necho cap-sync-target:${WINDOWS_MIRROR_DIR}\n');
+      const sourceSync = await writeExecutable(tempRoot, 'source-sync.sh', '#!/usr/bin/env bash\necho cap-source-sync:${ANDROID_WINDOWS_WORKDIR}\n');
       await writeFile(
         path.join(mockBinDir, 'powershell.exe'),
         ['#!/usr/bin/env bash', 'set -euo pipefail', 'printf "%s\\n" "$@" > "${POWERSHELL_ARGS_LOG}"'].join('\n'),
@@ -148,7 +148,7 @@ describe('windows-cap-sync.sh', () => {
       const mirrorDirForBash = bashPath(mirrorDir);
       const result = await runCapSync(tempRoot, {
         PATH: `${bashPath(mockBinDir)}:/usr/bin:/bin:${process.env.PATH ?? ''}`,
-        WINDOWS_SYNC_SCRIPT: windowsSync,
+        ANDROID_SOURCE_SYNC_SCRIPT: sourceSync,
         WINDOWS_SCRIPT_PATH: path.join(tempRoot, 'windows-cap-sync.ps1'),
         ANDROID_WINDOWS_MIRROR_DIR: mirrorDirForBash,
         ANDROID_WINDOWS_WORKDIR: 'C:\\dev\\foliole-test',
@@ -157,7 +157,7 @@ describe('windows-cap-sync.sh', () => {
       });
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain(`cap-sync-target:${mirrorDirForBash}`);
+      expect(result.stdout).toContain('cap-source-sync:C:\\dev\\foliole-test');
       const args = (await readFile(powershellArgsLog, 'utf8')).split('\n').filter(Boolean);
       expect(args).toContain('-DependencyRefresh');
       expect(args).toContain('skip');

@@ -11,6 +11,7 @@ import { describe, expect, it } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const DEPLOY_SCRIPT = path.join(REPO_ROOT, 'scripts', 'android', 'windows-deploy-app.sh');
+const ADB_DEVICE_SCRIPT = path.join(REPO_ROOT, 'scripts', 'android', 'windows-adb-device.ps1');
 const DEPLOY_CACHE_SCRIPT = path.join(REPO_ROOT, 'scripts', 'android', 'windows-deploy-install-cache.ps1');
 const DEPLOY_PS_SCRIPT = path.join(REPO_ROOT, 'scripts', 'android', 'windows-deploy-app.ps1');
 
@@ -74,11 +75,16 @@ describe('windows-deploy-app.sh', () => {
 
   it('does not pipe adb executable calls through Out-Null', async () => {
     const script = await readFile(DEPLOY_PS_SCRIPT, 'utf8');
+    const adbDeviceScript = await readFile(ADB_DEVICE_SCRIPT, 'utf8');
 
     expect(script).toContain('function Invoke-AdbCommand');
     expect(script).toContain('Invoke-AdbCommand -AdbPath $adbPath -Arguments @("start-server") *> $null');
     expect(script).toContain('-WindowStyle Hidden');
     expect(script).toContain('function Test-LastCommandFailed');
+    expect(script).toContain('[string]$TargetSerial = ""');
+    expect(script).toContain('. $adbDeviceScript');
+    expect(adbDeviceScript).toContain('Resolve-AndroidDeviceSerialFromAdbDevices');
+    expect(adbDeviceScript).toContain('Unlock the device and allow USB debugging.');
     expect(script).not.toContain('| Out-Null');
   });
 
@@ -113,12 +119,15 @@ describe('windows-deploy-app.sh', () => {
 
       const result = await runDeploy(tempRoot, {
         ANDROID_WINDOWS_WORKDIR: 'C:\\dev\\foliole-test',
+        FOLIOLE_ANDROID_SERIAL: 'phone-serial',
         FOLIOLE_ANDROID_ALLOW_DIRECT_DEPLOY: '1'
       });
 
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('-WindowStyle');
       expect(result.stdout).toContain('Hidden');
+      expect(result.stdout).toContain('-TargetSerial');
+      expect(result.stdout).toContain('phone-serial');
       expect(result.stdout).toContain('[android-deploy] status: OPENED');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });

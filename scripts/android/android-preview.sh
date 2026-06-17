@@ -4,8 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 source "${SCRIPT_DIR}/android-windows-workdir.sh"
-WINDOWS_SYNC_SCRIPT="${WINDOWS_SYNC_SCRIPT:-scripts/windows/windows-sync.sh}"
-WINDOWS_MTIME_CHANGES_SCRIPT="${WINDOWS_MTIME_CHANGES_SCRIPT:-scripts/windows/windows-preview-mtime-changes.sh}"
+ANDROID_SOURCE_SYNC_SCRIPT="${ANDROID_SOURCE_SYNC_SCRIPT:-scripts/android/windows-source-sync.sh}"
 ANDROID_SYNC_SCRIPT="${ANDROID_SYNC_SCRIPT:-scripts/android/windows-cap-sync.sh}"
 ANDROID_OPEN_SCRIPT="${ANDROID_OPEN_SCRIPT:-scripts/android/windows-open.sh}"
 ANDROID_EMULATOR_SCRIPT="${ANDROID_EMULATOR_SCRIPT:-scripts/android/windows-run-emulator.sh}"
@@ -19,6 +18,7 @@ ANDROID_DATA_PROTECTION="${ANDROID_DATA_PROTECTION:-0}"
 ANDROID_PREVIEW_OPEN_STUDIO="${ANDROID_PREVIEW_OPEN_STUDIO:-1}"
 DEFAULT_ANDROID_AVD="${DEFAULT_ANDROID_AVD:-Foliole_API_36}"
 ANDROID_PREVIEW_AVD="${ANDROID_PREVIEW_AVD-${FOLIOLE_ANDROID_AVD-${DEFAULT_ANDROID_AVD}}}"
+ANDROID_PREVIEW_TARGET_SERIAL="${FOLIOLE_ANDROID_SERIAL:-${ANDROID_SERIAL:-}}"
 ANDROID_PREVIEW_SYNC_TIMEOUT_SECONDS="${ANDROID_PREVIEW_SYNC_TIMEOUT_SECONDS:-600}"
 ANDROID_PREVIEW_CAP_SYNC_TIMEOUT_SECONDS="${ANDROID_PREVIEW_CAP_SYNC_TIMEOUT_SECONDS:-600}"
 ANDROID_PREVIEW_EMULATOR_TIMEOUT_SECONDS="${ANDROID_PREVIEW_EMULATOR_TIMEOUT_SECONDS:-240}"
@@ -28,20 +28,24 @@ ANDROID_PREVIEW_OPEN_STUDIO_TIMEOUT_SECONDS="${ANDROID_PREVIEW_OPEN_STUDIO_TIMEO
 ANDROID_PREVIEW_SYNC_STATE_TIMEOUT_SECONDS="${ANDROID_PREVIEW_SYNC_STATE_TIMEOUT_SECONDS:-30}"
 ANDROID_PREVIEW_KILL_AFTER_SECONDS="${ANDROID_PREVIEW_KILL_AFTER_SECONDS:-10}"
 ANDROID_PREVIEW_SYNC_STATE_CHECK="${ANDROID_PREVIEW_SYNC_STATE_CHECK:-1}"
-ANDROID_PREVIEW_SYNC_STAMP_FILE="${ANDROID_PREVIEW_SYNC_STAMP_FILE:-.lab/internal/runtime/android-preview-windows-sync.stamp}"
-ANDROID_PREVIEW_CHANGED_FILES_ENV_MAX_BYTES="${ANDROID_PREVIEW_CHANGED_FILES_ENV_MAX_BYTES:-60000}"
 ANDROID_PREVIEW_TIMINGS=""
 PREVIEW_TOTAL_STEPS=3
 
-if [[ -n "${ANDROID_PREVIEW_AVD}" ]]; then
+if [[ -n "${ANDROID_PREVIEW_TARGET_SERIAL}" ]]; then
+  ANDROID_PREVIEW_AVD=""
+fi
+
+if [[ -n "${ANDROID_PREVIEW_TARGET_SERIAL}" || -n "${ANDROID_PREVIEW_AVD}" ]]; then
   PREVIEW_TOTAL_STEPS=4
   if [[ "${ANDROID_DATA_PROTECTION}" != "0" ]]; then
-    PREVIEW_TOTAL_STEPS=6
+    PREVIEW_TOTAL_STEPS=5
+    if [[ -n "${ANDROID_PREVIEW_AVD}" ]]; then
+      PREVIEW_TOTAL_STEPS=6
+    fi
   fi
 fi
 
 cd "${REPO_ROOT}"
-source "${WINDOWS_MTIME_CHANGES_SCRIPT}"
 
 run_preview_step() {
   local label="$1"
@@ -95,20 +99,9 @@ ensure_host_dir() {
   fi
 }
 
-resolve_android_preview_changed_files() {
-  local changed_files
-  changed_files="$(WINDOWS_PREVIEW_SYNC_STAMP_FILE="${ANDROID_PREVIEW_SYNC_STAMP_FILE}" resolve_changed_files)"
-  if (( ${#changed_files} > ANDROID_PREVIEW_CHANGED_FILES_ENV_MAX_BYTES )); then
-    echo "[android-preview] changed file list too large; falling back to full windows sync (${#changed_files} bytes)" >&2
-    return 0
-  fi
-  printf '%s' "${changed_files}"
-}
-
 echo "[android-preview] step 1/${PREVIEW_TOTAL_STEPS}: sync to android preview workspace"
 ensure_host_dir "${ANDROID_WINDOWS_MIRROR_DIR}"
-android_preview_changed_files="$(resolve_android_preview_changed_files)"
-if ! run_timed_preview_step "windows-sync" "${ANDROID_PREVIEW_SYNC_TIMEOUT_SECONDS}" env WINDOWS_MIRROR_DIR="${ANDROID_WINDOWS_MIRROR_DIR}" WINDOWS_SYNC_CHANGED_FILES="${android_preview_changed_files}" WINDOWS_SYNC_STAMP_FILE="${ANDROID_PREVIEW_SYNC_STAMP_FILE}" bash "${WINDOWS_SYNC_SCRIPT}"; then
+if ! run_timed_preview_step "android-source-sync" "${ANDROID_PREVIEW_SYNC_TIMEOUT_SECONDS}" env ANDROID_WINDOWS_WORKDIR="${ANDROID_WINDOWS_WORKDIR}" bash "${ANDROID_SOURCE_SYNC_SCRIPT}"; then
   echo "[android-preview] failed at: windows sync"
   echo "[android-preview] status: FAILED"
   exit 1
@@ -121,12 +114,16 @@ if ! run_timed_preview_step "android-cap-sync" "${ANDROID_PREVIEW_CAP_SYNC_TIMEO
   exit 1
 fi
 
-if [[ -n "${ANDROID_PREVIEW_AVD}" ]]; then
-  echo "[android-preview] step 3/${PREVIEW_TOTAL_STEPS}: start emulator"
-  if ! run_timed_preview_step "android-emulator" "${ANDROID_PREVIEW_EMULATOR_TIMEOUT_SECONDS}" bash "${ANDROID_EMULATOR_SCRIPT}" "${ANDROID_PREVIEW_AVD}"; then
-    echo "[android-preview] failed at: emulator startup"
-    echo "[android-preview] status: FAILED"
-    exit 1
+if [[ -n "${ANDROID_PREVIEW_TARGET_SERIAL}" || -n "${ANDROID_PREVIEW_AVD}" ]]; then
+  if [[ -n "${ANDROID_PREVIEW_AVD}" ]]; then
+    echo "[android-preview] step 3/${PREVIEW_TOTAL_STEPS}: start emulator"
+    if ! run_timed_preview_step "android-emulator" "${ANDROID_PREVIEW_EMULATOR_TIMEOUT_SECONDS}" bash "${ANDROID_EMULATOR_SCRIPT}" "${ANDROID_PREVIEW_AVD}"; then
+      echo "[android-preview] failed at: emulator startup"
+      echo "[android-preview] status: FAILED"
+      exit 1
+    fi
+  else
+    echo "[android-preview] real device target: ${ANDROID_PREVIEW_TARGET_SERIAL}"
   fi
   DATA_PROTECTION_MANIFEST=""
   if [[ "${ANDROID_DATA_PROTECTION}" != "0" ]]; then
@@ -141,8 +138,14 @@ if [[ -n "${ANDROID_PREVIEW_AVD}" ]]; then
     fi
   fi
   DEPLOY_STEP=4
+  if [[ -n "${ANDROID_PREVIEW_TARGET_SERIAL}" ]]; then
+    DEPLOY_STEP=3
+  fi
   if [[ "${ANDROID_DATA_PROTECTION}" != "0" ]]; then
-    DEPLOY_STEP=5
+    DEPLOY_STEP=4
+    if [[ -n "${ANDROID_PREVIEW_AVD}" ]]; then
+      DEPLOY_STEP=5
+    fi
   fi
   echo "[android-preview] step ${DEPLOY_STEP}/${PREVIEW_TOTAL_STEPS}: deploy app"
   if ! run_timed_preview_step "android-deploy" "${ANDROID_PREVIEW_DEPLOY_TIMEOUT_SECONDS}" env ANDROID_WINDOWS_WORKDIR="${ANDROID_WINDOWS_WORKDIR}" FOLIOLE_ANDROID_PREVIEW_DEPLOY=1 bash "${ANDROID_DEPLOY_SCRIPT}"; then

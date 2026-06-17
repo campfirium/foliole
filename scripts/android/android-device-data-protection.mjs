@@ -57,7 +57,10 @@ function adbCandidates(adbPath) {
   for (const sdkRoot of [process.env.ANDROID_SDK_ROOT, process.env.ANDROID_HOME]) {
     if (sdkRoot) candidates.push(path.join(sdkRoot, 'platform-tools', 'adb'));
   }
-  candidates.push(path.join('/mnt/c/Users', os.userInfo().username, 'AppData/Local/Android/Sdk/platform-tools/adb.exe'));
+  if (process.env.USERPROFILE) {
+    candidates.push(path.join(process.env.USERPROFILE, 'AppData/Local/Android/Sdk/platform-tools/adb.exe'));
+  }
+  candidates.push(path.posix.join('/mnt/c/Users', os.userInfo().username, 'AppData/Local/Android/Sdk/platform-tools/adb.exe'));
   return [...new Set(candidates)];
 }
 

@@ -1,5 +1,6 @@
 param(
-  [string]$OutputDir = ".tmp\android-screenshots"
+  [string]$OutputDir = ".tmp\android-screenshots",
+  [string]$TargetSerial = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -8,6 +9,31 @@ function Write-Info {
   param([string]$Message)
   Write-Host "[android-screenshot] $Message"
 }
+
+function Test-LastCommandFailed {
+  return $null -ne $LASTEXITCODE -and $LASTEXITCODE -ne 0
+}
+
+function Invoke-ScreenshotCapture {
+  param(
+    [string]$AdbPath,
+    [string]$Serial,
+    [string]$OutputPath
+  )
+
+  $process = Start-Process `
+    -FilePath $AdbPath `
+    -ArgumentList @("-s", $Serial, "exec-out", "screencap", "-p") `
+    -RedirectStandardOutput $OutputPath `
+    -WindowStyle Hidden `
+    -Wait `
+    -PassThru
+  if ($process.ExitCode -ne 0 -or !(Test-Path -LiteralPath $OutputPath)) {
+    throw "Android screenshot capture failed."
+  }
+}
+
+. "$PSScriptRoot\windows-adb-device.ps1"
 
 function Resolve-SdkRoot {
   $candidates = @(
@@ -40,29 +66,16 @@ function Resolve-AdbPath {
   throw "adb not found. Install Android platform-tools first."
 }
 
-function Get-RunningDeviceSerial {
-  param([string]$AdbPath)
-
-  $deviceLines = (& $AdbPath devices 2>$null) | Select-Object -Skip 1
-  foreach ($line in $deviceLines) {
-    $trimmed = $line.Trim()
-    if ([string]::IsNullOrWhiteSpace($trimmed)) {
-      continue
-    }
-
-    $parts = $trimmed -split "\s+"
-    if ($parts.Count -ge 2 -and $parts[1] -eq "device") {
-      return $parts[0]
-    }
-  }
-
-  return $null
-}
-
 $adbPath = Resolve-AdbPath
-& $adbPath start-server | Out-Null
+& $adbPath start-server *> $null
 
-$serial = Get-RunningDeviceSerial -AdbPath $adbPath
+if (![string]::IsNullOrWhiteSpace($TargetSerial)) {
+  $serial = $TargetSerial
+} else {
+  $devicesOutput = & $adbPath devices 2>$null
+  $deviceLines = $devicesOutput | Select-Object -Skip 1
+  $serial = Resolve-AndroidDeviceSerialFromAdbDevices -DeviceLines $deviceLines -TargetSerial $TargetSerial
+}
 if ($null -eq $serial) {
   throw "No ready Android emulator/device found."
 }
@@ -70,21 +83,13 @@ if ($null -eq $serial) {
 if (!(Test-Path -Path $OutputDir)) {
   New-Item -ItemType Directory -Path $OutputDir | Out-Null
 }
+$resolvedOutputDir = (Resolve-Path -LiteralPath $OutputDir).Path
 
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
-$outputPath = Join-Path $OutputDir "android-$timestamp.png"
-$devicePath = "/sdcard/Download/foliole-screenshot-$timestamp.png"
+$outputPath = Join-Path $resolvedOutputDir "android-$timestamp.png"
 
 Write-Info "device: $serial"
-& $adbPath -s $serial shell screencap -p $devicePath
-if ($LASTEXITCODE -ne 0) {
-  throw "Android screenshot capture failed."
-}
-& $adbPath -s $serial pull $devicePath $outputPath | Out-Null
-if ($LASTEXITCODE -ne 0) {
-  throw "Android screenshot pull failed."
-}
-& $adbPath -s $serial shell rm $devicePath | Out-Null
+Invoke-ScreenshotCapture -AdbPath $adbPath -Serial $serial -OutputPath $outputPath
 
 Write-Info "file: $outputPath"
 Write-Info "status: CAPTURED"

@@ -57,7 +57,7 @@ describe('android-preview failure and protection paths', () => {
   it('backs up app data before deploy and checks it after deploy', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-preview-data-'));
     try {
-      const windowsSync = await writeExecutable(tempRoot, 'windows-sync.sh', '#!/usr/bin/env bash\necho sync-ok\n');
+      const sourceSync = await writeExecutable(tempRoot, 'source-sync.sh', '#!/usr/bin/env bash\necho source-sync-ok\n');
       const androidSync = await writeExecutable(tempRoot, 'android-sync.sh', '#!/usr/bin/env bash\necho cap-sync-ok\n');
       const emulator = await writeExecutable(tempRoot, 'emulator.sh', '#!/usr/bin/env bash\necho emulator-ok\n');
       const deploy = await writeExecutable(tempRoot, 'deploy.sh', '#!/usr/bin/env bash\necho deploy-ok\n');
@@ -73,7 +73,7 @@ describe('android-preview failure and protection paths', () => {
         ANDROID_DATA_PROTECTION_SCRIPT: dataProtection,
         ELECTRON_SQLITE_RUNNER: sqliteRunner,
         ANDROID_DATA_PROTECTION_BACKUP_DIR: path.join(tempRoot, 'backups'),
-        WINDOWS_SYNC_SCRIPT: windowsSync,
+        ANDROID_SOURCE_SYNC_SCRIPT: sourceSync,
         ANDROID_SYNC_SCRIPT: androidSync,
         ANDROID_EMULATOR_SCRIPT: emulator,
         ANDROID_DEPLOY_SCRIPT: deploy,
@@ -97,7 +97,7 @@ describe('android-preview failure and protection paths', () => {
   it('fails preview as a data protection failure when the post-deploy check fails', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-preview-data-fail-'));
     try {
-      const windowsSync = await writeExecutable(tempRoot, 'windows-sync.sh', '#!/usr/bin/env bash\necho sync-ok\n');
+      const sourceSync = await writeExecutable(tempRoot, 'source-sync.sh', '#!/usr/bin/env bash\necho source-sync-ok\n');
       const androidSync = await writeExecutable(tempRoot, 'android-sync.sh', '#!/usr/bin/env bash\necho cap-sync-ok\n');
       const emulator = await writeExecutable(tempRoot, 'emulator.sh', '#!/usr/bin/env bash\necho emulator-ok\n');
       const deploy = await writeExecutable(tempRoot, 'deploy.sh', '#!/usr/bin/env bash\necho deploy-ok\n');
@@ -117,7 +117,7 @@ describe('android-preview failure and protection paths', () => {
         ANDROID_DATA_PROTECTION_SCRIPT: dataProtection,
         ELECTRON_SQLITE_RUNNER: sqliteRunner,
         ANDROID_DATA_PROTECTION_BACKUP_DIR: path.join(tempRoot, 'backups'),
-        WINDOWS_SYNC_SCRIPT: windowsSync,
+        ANDROID_SOURCE_SYNC_SCRIPT: sourceSync,
         ANDROID_SYNC_SCRIPT: androidSync,
         ANDROID_EMULATOR_SCRIPT: emulator,
         ANDROID_DEPLOY_SCRIPT: deploy,
@@ -137,13 +137,13 @@ describe('android-preview failure and protection paths', () => {
   it('fails with a clear emulator stage when startup hangs past the timeout', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-preview-timeout-'));
     try {
-      const windowsSync = await writeExecutable(tempRoot, 'windows-sync.sh', '#!/usr/bin/env bash\necho sync-before-timeout\n');
+      const sourceSync = await writeExecutable(tempRoot, 'source-sync.sh', '#!/usr/bin/env bash\necho source-sync-before-timeout\n');
       const androidSync = await writeExecutable(tempRoot, 'android-sync.sh', '#!/usr/bin/env bash\necho cap-sync-before-timeout\n');
       const emulator = await writeExecutable(tempRoot, 'emulator.sh', '#!/usr/bin/env bash\nsleep 2\n');
       const failIfCalled = await writeExecutable(tempRoot, 'fail-if-called.sh', '#!/usr/bin/env bash\necho should-not-run\nexit 64\n');
 
       const result = await runAndroidPreview(tempRoot, {
-        WINDOWS_SYNC_SCRIPT: windowsSync,
+        ANDROID_SOURCE_SYNC_SCRIPT: sourceSync,
         ANDROID_SYNC_SCRIPT: androidSync,
         ANDROID_EMULATOR_SCRIPT: emulator,
         ANDROID_DEPLOY_SCRIPT: failIfCalled,
@@ -153,7 +153,7 @@ describe('android-preview failure and protection paths', () => {
       });
 
       expect(result.code).toBe(1);
-      expect(result.stdout).toContain('sync-before-timeout');
+      expect(result.stdout).toContain('source-sync-before-timeout');
       expect(result.stdout).toContain('cap-sync-before-timeout');
       expect(result.stdout).toContain('[android-preview] android-emulator timeout: 1s');
       expect(result.stdout).toContain('[android-preview] failed at: emulator startup');
@@ -181,7 +181,7 @@ describe('android-preview failure and protection paths', () => {
       const result = await runAndroidPreview(tempRoot, {
         PATH: `${mockBinRelative}:${process.env.PATH}`,
         ANDROID_PREVIEW_TIMEOUT_COMMAND: `${mockBinRelative}/timeout`,
-        WINDOWS_SYNC_SCRIPT: failIfCalled,
+        ANDROID_SOURCE_SYNC_SCRIPT: failIfCalled,
         ANDROID_SYNC_SCRIPT: failIfCalled,
         ANDROID_EMULATOR_SCRIPT: failIfCalled,
         ANDROID_DEPLOY_SCRIPT: failIfCalled,

@@ -1,7 +1,7 @@
 // @vitest-environment node
 /* global process */
 
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
@@ -43,43 +43,31 @@ async function writeExecutable(rootDir, relativePath, content) {
   return fullPath;
 }
 
-describe('android-preview incremental sync', () => {
-  it('falls back to full windows sync when the changed file list is too large for env', async () => {
-    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-preview-changes-'));
+describe('android-preview source sync', () => {
+  it('uses the Android source sync entry instead of desktop changed-file rsync', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-preview-source-sync-'));
     try {
-      const mockBinDir = path.join(tempRoot, 'bin');
-      await mkdir(mockBinDir);
-      await writeExecutable(tempRoot, 'bin/wslpath', '#!/usr/bin/env bash\necho "/mnt/c/dev/foliole-android-preview"\n');
-      const windowsSync = await writeExecutable(tempRoot, 'windows-sync.sh', [
+      const sourceSync = await writeExecutable(tempRoot, 'source-sync.sh', [
         '#!/usr/bin/env bash',
-        'echo sync-changed:${WINDOWS_SYNC_CHANGED_FILES}',
-        'echo sync-target:${WINDOWS_MIRROR_DIR}'
-      ].join('\n'));
-      const mtimeChanges = await writeExecutable(tempRoot, 'mtime-changes.sh', [
-        '#!/usr/bin/env bash',
-        'resolve_changed_files() {',
-        '  printf "changed-file-%04d\\n" {1..20}',
-        '}'
+        'echo source-sync-workdir:${ANDROID_WINDOWS_WORKDIR}',
+        'echo no-windows-changed-files:${WINDOWS_SYNC_CHANGED_FILES-unset}'
       ].join('\n'));
       const androidSync = await writeExecutable(tempRoot, 'android-sync.sh', '#!/usr/bin/env bash\necho android-sync\n');
       const failIfCalled = await writeExecutable(tempRoot, 'fail-if-called.sh', '#!/usr/bin/env bash\nexit 64\n');
 
       const result = await runAndroidPreview(tempRoot, {
-        PATH: `${mockBinDir}${path.delimiter}${process.env.PATH}`,
-        WINDOWS_SYNC_SCRIPT: windowsSync,
-        WINDOWS_MTIME_CHANGES_SCRIPT: mtimeChanges,
+        ANDROID_SOURCE_SYNC_SCRIPT: sourceSync,
         ANDROID_SYNC_SCRIPT: androidSync,
         ANDROID_EMULATOR_SCRIPT: failIfCalled,
         ANDROID_DEPLOY_SCRIPT: failIfCalled,
         ANDROID_OPEN_SCRIPT: failIfCalled,
         ANDROID_PREVIEW_AVD: '',
-        ANDROID_PREVIEW_CHANGED_FILES_ENV_MAX_BYTES: '20',
         ANDROID_PREVIEW_OPEN_STUDIO: '0'
       });
 
       expect(result.code).toBe(0);
-      expect(result.stderr).toContain('changed file list too large; falling back to full windows sync');
-      expect(result.stdout).toContain('sync-changed:\n');
+      expect(result.stdout).toContain('source-sync-workdir:C:\\dev\\foliole-android-preview');
+      expect(result.stdout).toContain('no-windows-changed-files:unset');
       expect(result.stdout).toContain('android-sync');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });

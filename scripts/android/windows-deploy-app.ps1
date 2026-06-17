@@ -7,6 +7,7 @@ param(
   [int]$LaunchTimeoutSeconds = 20,
   [int]$LaunchStabilitySeconds = 4,
   [int]$DevReverseSyncPort = 38641,
+  [string]$TargetSerial = "",
   [switch]$StopGradleDaemon
 )
 
@@ -114,35 +115,17 @@ function Stop-GradleWrapperDaemon {
   }
 }
 
-function Get-RunningDeviceSerial {
-  param([string]$AdbPath)
-
-  $deviceLines = (Invoke-AdbCommand -AdbPath $AdbPath -Arguments @("devices")) | Select-Object -Skip 1
-  foreach ($line in $deviceLines) {
-    $trimmed = $line.Trim()
-    if ([string]::IsNullOrWhiteSpace($trimmed)) {
-      continue
-    }
-    $parts = $trimmed -split "\s+"
-    if ($parts.Count -lt 2) {
-      continue
-    }
-    if ($parts[1] -eq "device") {
-      return $parts[0]
-    }
-  }
-  return $null
-}
-
 function Wait-ForDeviceReady {
   param(
     [string]$AdbPath,
+    [string]$TargetSerial,
     [int]$TimeoutSeconds
   )
 
   $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
   while ((Get-Date) -lt $deadline) {
-    $serial = Get-RunningDeviceSerial -AdbPath $AdbPath
+    $deviceLines = (Invoke-AdbCommand -AdbPath $AdbPath -Arguments @("devices")) | Select-Object -Skip 1
+    $serial = Resolve-AndroidDeviceSerialFromAdbDevices -DeviceLines $deviceLines -TargetSerial $TargetSerial
     if ($null -eq $serial) {
       Start-Sleep -Seconds 3
       continue
@@ -173,14 +156,19 @@ if (!(Test-Path -Path $adbPath)) {
 
 $nodeExe = Resolve-NodeExe
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+$adbDeviceScript = Join-Path $repoRoot "scripts\android\windows-adb-device.ps1"
 $installCacheScript = Join-Path $repoRoot "scripts\android\windows-deploy-install-cache.ps1"
 $verifyScript = Join-Path $repoRoot "scripts\android\verify-android-launch.mjs"
+if (!(Test-Path -Path $adbDeviceScript)) {
+  throw "Android adb device helper not found: $adbDeviceScript"
+}
 if (!(Test-Path -Path $installCacheScript)) {
   throw "Android deploy install cache script not found: $installCacheScript"
 }
 if (!(Test-Path -Path $verifyScript)) {
   throw "Android launch verification script not found: $verifyScript"
 }
+. $adbDeviceScript
 . $installCacheScript
 
 $androidDir = Join-Path $WindowsWorkDir $AndroidHostDir
@@ -190,7 +178,10 @@ if (!(Test-Path -Path $androidDir)) {
 
 Write-Info "waiting for ready device"
 Invoke-AdbCommand -AdbPath $adbPath -Arguments @("start-server") *> $null
-$serial = Wait-ForDeviceReady -AdbPath $adbPath -TimeoutSeconds $BootTimeoutSeconds
+if (![string]::IsNullOrWhiteSpace($TargetSerial)) {
+  Write-Info "target device: $TargetSerial"
+}
+$serial = Wait-ForDeviceReady -AdbPath $adbPath -TargetSerial $TargetSerial -TimeoutSeconds $BootTimeoutSeconds
 if ($null -eq $serial) {
   throw "No ready Android device found within ${BootTimeoutSeconds}s."
 }
