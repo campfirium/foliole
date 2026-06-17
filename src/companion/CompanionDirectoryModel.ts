@@ -15,7 +15,7 @@ import {
 
 import { toTrashItem, toTrashRootItem, type TrashDirectoryListItem } from './CompanionDirectoryTrashModel';
 
-const INBOX_NODE_ID = 'special-inbox';
+export const INBOX_NODE_ID = 'special-inbox';
 const VIRTUAL_ROOT_NODE_ID = 'special-virtual-root';
 
 export type CompanionDirectorySelection =

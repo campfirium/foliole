@@ -35,8 +35,8 @@ function buildTopBarProps(settingsPage = 'list') {
 }
 
 describe('CompanionTopBarPropsModel', () => {
-  it('keeps the settings landing page anchored by a visible title', () => {
-    expect(buildTopBarProps()).toMatchObject({ title: 'Settings' });
+  it('leaves the settings landing page chrome title-less (the compact screen header carries the title)', () => {
+    expect(buildTopBarProps()).toMatchObject({});
   });
 
   it('keeps settings detail pages on their existing back chrome', () => {

@@ -14,6 +14,7 @@ import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
 import { RecentArticleList } from './CompanionRecentArticleList';
 import { CompanionReviewAnswer, CompanionReviewCard } from './CompanionReviewCard';
 import { CompanionReviewFallback } from './CompanionReviewFallback';
+import { CompanionScreenHeader } from './CompanionScreenHeader';
 import { CompanionSearchContent } from './CompanionSearchContent';
 import {
   createCompanionExistingHighlightDeleteHandler,
@@ -79,12 +80,15 @@ function RecentBrowseContent(props: { surface: Surface; workspaceSync: Workspace
   const t = useTranslation();
   if (props.surface.browsedFolder) {
     return (
-      <NodeBrowseList
-        currentNodeId={props.surface.selectedBrowseNodeId}
-        emptyLabel={t('companion.directory.emptyShell')}
-        items={props.surface.browsedFolder.items}
-        onSelectNode={props.surface.handleSelectBrowseNode}
-      />
+      <>
+        <CompanionScreenHeader title={t('companion.browse.title')} />
+        <NodeBrowseList
+          currentNodeId={props.surface.selectedBrowseNodeId}
+          emptyLabel={t('companion.directory.emptyShell')}
+          items={props.surface.browsedFolder.items}
+          onSelectNode={props.surface.handleSelectBrowseNode}
+        />
+      </>
     );
   }
   if (props.surface.readableArticle && props.surface.selectedBrowseNodeId) {
@@ -95,11 +99,14 @@ function RecentBrowseContent(props: { surface: Surface; workspaceSync: Workspace
     });
   }
   return (
-    <RecentArticleList
-      currentArticleId={props.surface.readableArticle?.nodeId ?? null}
-      onSelectArticle={props.surface.handleSelectRecentArticle}
-      recentArticles={props.surface.recentArticles}
-    />
+    <>
+      <CompanionScreenHeader title={t('companion.browse.title')} />
+      <RecentArticleList
+        currentArticleId={props.surface.readableArticle?.nodeId ?? null}
+        onSelectArticle={props.surface.handleSelectRecentArticle}
+        recentArticles={props.surface.recentArticles}
+      />
+    </>
   );
 }
 

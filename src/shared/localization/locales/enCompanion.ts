@@ -41,6 +41,8 @@ export const EN_COMPANION_TRANSLATIONS = {
   'companion.directory.section.external': 'External',
   'companion.directory.section.virtual': 'Virtual',
   'companion.directory.section.trash': 'Trash',
+  'companion.directory.title': 'Directory',
+  'companion.browse.title': 'Browse',
   'companion.review.breadcrumb': 'Review breadcrumb',
   'companion.review.card': 'Review card',
   'companion.review.noDueTitle': 'No items are due right now',

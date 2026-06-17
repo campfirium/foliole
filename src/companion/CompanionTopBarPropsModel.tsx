@@ -77,7 +77,7 @@ function resolveSettingsTopBar(
   if (settingsPage === 'syncActivity') return { backLabel: t('companion.sync.deviceSync'), onBack: onBackToSyncSettings, title: t('companion.sync.activity.title') };
   if (settingsPage === 'syncConnection') return { backLabel: t('companion.sync.deviceSync'), onBack: onBackToSyncSettings, title: t('companion.sync.connection.title') };
   if (settingsPage === 'syncHandoff') return { backLabel: t('companion.sync.deviceSync'), onBack: onBackToSyncSettings, title: t('companion.sync.handoff.title') };
-  return { title: t('companion.settings.title') };
+  return {};
 }
 
 function resolveBrowseTopBar(args: {

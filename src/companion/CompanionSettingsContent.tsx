@@ -1,5 +1,6 @@
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 
+import { CompanionScreenHeader } from './CompanionScreenHeader';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 
 function ChevronIcon() {
@@ -36,6 +37,7 @@ export function CompanionSettingsList(props: {
   const t = useTranslation();
   return (
     <section className="px-1 pb-4">
+      <CompanionScreenHeader title={t('companion.settings.title')} />
       <div>
         <SettingsListItem detail={t('companion.settings.sync.detail')} onClick={props.onOpenSync} title={t('companion.settings.sync.title')} />
         <SettingsListItem detail={t('companion.settings.device.detail')} onClick={props.onOpenDevice} title={t('companion.settings.device.title')} />

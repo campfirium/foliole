@@ -119,7 +119,7 @@ describe('CompanionShell secondary surfaces', () => {
 
     const bottomBar = screen.getByTestId('companion-bottom-tab-bar');
     fireEvent.click(within(bottomBar).getByRole('button', { name: 'Directory' }));
-    expect(screen.queryByRole('heading', { name: 'Directory' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Directory' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Open folder Trash' })).toBeInTheDocument();
 
     fireEvent.click(within(bottomBar).getByRole('button', { name: 'Browse' }));

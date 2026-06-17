@@ -1,4 +1,4 @@
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, FileText, Folder, FolderOpen, Inbox, Sparkles, Trash2, type LucideIcon } from 'lucide-react';
 import { useMemo } from 'react';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
@@ -21,13 +21,41 @@ import {
   type CompanionDirectorySelection,
   type DirectorySection,
   type DirectoryListItem,
+  INBOX_NODE_ID,
   resolveDirectorySections
 } from './CompanionDirectoryModel';
 import { resolveDirectoryParentSelection } from './CompanionDirectoryParentModel';
 import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
+import { CompanionScreenHeader } from './CompanionScreenHeader';
 import { useCompanionExternalDirectory, useCompanionExternalDocument } from './useCompanionExternalDirectory';
 
 export type { CompanionDirectorySelection } from './CompanionDirectoryModel';
+
+function resolveDirectoryRowIcon(item: DirectoryListItem): { Icon: LucideIcon; isAccent: boolean } {
+  if (item.source === 'trashRoot' || item.source === 'trash') {
+    return { Icon: item.kind === 'folder' ? Folder : Trash2, isAccent: false };
+  }
+  if (item.source === 'virtual') return { Icon: Sparkles, isAccent: false };
+  if (item.source === 'externalFolder' || item.source === 'externalDirectory') {
+    return { Icon: FolderOpen, isAccent: false };
+  }
+  if (item.source === 'externalDocument') return { Icon: FileText, isAccent: false };
+  if (item.nodeId === INBOX_NODE_ID) return { Icon: Inbox, isAccent: true };
+  return { Icon: item.kind === 'folder' ? Folder : FileText, isAccent: false };
+}
+
+function DirectoryRowLeadIcon(props: { isAccent: boolean; Icon: LucideIcon }) {
+  const Icon = props.Icon;
+  return (
+    <span
+      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] ${
+        props.isAccent ? 'bg-companion-accent-soft text-companion-accent' : 'bg-companion-subtle text-companion-text-secondary'
+      }`}
+    >
+      <Icon className="h-[19px] w-[19px]" />
+    </span>
+  );
+}
 
 function DirectoryRow(props: {
   item: DirectoryListItem;
@@ -35,16 +63,18 @@ function DirectoryRow(props: {
 }) {
   const t = useTranslation();
   const title = props.item.source === 'trashRoot' ? t(props.item.titleKey) : props.item.title;
+  const { Icon, isAccent } = resolveDirectoryRowIcon(props.item);
   return (
     <button
       aria-label={t(props.item.kind === 'folder' ? 'companion.directory.openFolder' : 'companion.directory.openTopic', {
         title
       })}
-      className="flex min-h-14 w-full items-center justify-between gap-3 border-b border-companion-divider px-1 py-4 text-left transition-colors hover:bg-companion-subtle/60 active:bg-companion-subtle/80"
+      className="flex min-h-14 w-full items-center gap-3 border-b border-companion-divider px-1 py-3 text-left transition-colors hover:bg-companion-subtle/60 active:bg-companion-subtle/80"
       onClick={() => props.onSelectItem(props.item)}
       type="button"
     >
-      <span className={`min-w-0 flex-1 text-base font-medium text-foreground ${props.item.kind === 'folder' ? 'truncate' : 'line-clamp-2'}`}>{title}</span>
+      <DirectoryRowLeadIcon Icon={Icon} isAccent={isAccent} />
+      <span className={`min-w-0 flex-1 text-base font-semibold text-foreground ${props.item.kind === 'folder' ? 'truncate' : 'line-clamp-2'}`}>{title}</span>
       <ChevronRight className="h-5 w-5 shrink-0 text-companion-text-tertiary" />
     </button>
   );
@@ -69,11 +99,11 @@ function DirectoryList(props: {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {props.sections.map((section, index) => (
         <section className={index === 0 ? '' : 'border-t border-companion-divider'} key={section.id}>
           {section.titleKey ? (
-            <h2 className={`px-1 pb-1 text-xs font-medium text-companion-text-tertiary ${index === 0 ? '' : 'pt-4'}`}>
+            <h2 className={`px-1 pb-2 text-[11.5px] font-bold uppercase tracking-[.07em] text-companion-text-tertiary ${index === 0 ? '' : 'pt-6'}`}>
               {t(section.titleKey)}
             </h2>
           ) : null}
@@ -173,6 +203,7 @@ export function CompanionDirectoryContent(props: {
 
   return (
     <section className="px-1 py-4">
+      <CompanionScreenHeader title={t('companion.directory.title')} />
       <DirectoryList
         emptyLabel={folderView || virtualView ? t('companion.directory.emptyFolder') : t('companion.directory.emptyFolder')}
         onSelectItem={handleSelectItem}
