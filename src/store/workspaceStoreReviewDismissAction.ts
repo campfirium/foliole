@@ -9,6 +9,10 @@ import {
 } from './workspaceActionHistory';
 import { buildCurrentReviewSessionQueueOutput } from './workspaceReviewLiveQueue';
 import {
+  runtimeWorkspaceReviewPersistence,
+  type WorkspaceReviewPersistenceAdapter
+} from './workspaceReviewPersistence';
+import {
   advanceReviewSession,
   buildDismissedReadingProfile,
   completeReviewSession
@@ -133,7 +137,8 @@ export function createDismissReviewTopicAction(set: WorkspaceSet, get: Workspace
 export function createDismissReviewTopicActionWithPending(
   set: WorkspaceSet,
   get: WorkspaceGet,
-  pendingNodeIds: ReadingReviewPendingNodeIds
+  pendingNodeIds: ReadingReviewPendingNodeIds,
+  persistence: WorkspaceReviewPersistenceAdapter = runtimeWorkspaceReviewPersistence
 ) {
   return async (now = new Date().toISOString()) => {
     const snapshot = get();
@@ -150,7 +155,7 @@ export function createDismissReviewTopicActionWithPending(
     });
     pendingNodeIds.add(currentNodeId);
     try {
-      if (!result || !(await persistReadingReviewNodes(result.nextNodesForSync))) {
+      if (!result || !(await persistReadingReviewNodes(result.nextNodesForSync, persistence))) {
         return false;
       }
       set((state) => {

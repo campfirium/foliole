@@ -1,7 +1,7 @@
 import { expect, it, vi } from 'vitest';
 
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
-import { WORKSPACE_STORAGE_KEY } from '../store/workspaceStore';
+import { createInitialWorkspaceState, useWorkspaceStore, WORKSPACE_STORAGE_KEY } from '../store/workspaceStore';
 
 import { canonicalDemoPath, DEFAULT_DEMO_TOPIC, DEMO_TOPICS } from './demoContent';
 import { createDemoWorkspaceSnapshot, installDemoWorkspaceSnapshot, resolveDemoTopicFromPath } from './demoWorkspaceSnapshot';
@@ -73,20 +73,108 @@ it('falls back to the first Demo topic for unknown paths', () => {
     expect(resolveDemoTopicFromPath('/demo/missing/')).toBe(DEFAULT_DEMO_TOPIC);
 });
 
-it('installs the Demo snapshot into the same storage key consumed by the desktop renderer', () => {
-    const storage = new Map<string, string>();
-    vi.stubGlobal('window', {
-      localStorage: {
-        getItem: (key: string) => storage.get(key) ?? null,
-        setItem: (key: string, value: string) => storage.set(key, value)
-      },
-      location: { pathname: canonicalDemoPath(requireTopic(0).slug) }
-    });
+function stubDemoStorage(storage: Map<string, string>, pathname = canonicalDemoPath(requireTopic(0).slug)) {
+  useWorkspaceStore.setState(createInitialWorkspaceState(new Date('2026-06-17T00:00:00.000Z')));
+  vi.stubGlobal('window', {
+    localStorage: {
+      getItem: (key: string) => storage.get(key) ?? null,
+      removeItem: (key: string) => storage.delete(key),
+      setItem: (key: string, value: string) => storage.set(key, value)
+    },
+    location: { pathname }
+  });
+}
 
-    installDemoWorkspaceSnapshot();
+function simulateDemoRefresh(storage: Map<string, string>) {
+  vi.unstubAllGlobals();
+  stubDemoStorage(storage);
+}
+
+it('installs the Demo snapshot into the same storage key consumed by the desktop renderer', async () => {
+    const storage = new Map<string, string>();
+    stubDemoStorage(storage);
+
+    await installDemoWorkspaceSnapshot();
 
     const payload = JSON.parse(storage.get(WORKSPACE_STORAGE_KEY) ?? 'null');
     expect(payload.state.activeNodeId).toBe(`demo-${requireTopic(0).slug}`);
     expect(payload.state.nodesById[INBOX_NODE_ID]).toMatchObject({ specialKind: 'inbox' });
+    vi.unstubAllGlobals();
+});
+
+it('keeps a compatible Demo workspace payload during refresh', async () => {
+    const storage = new Map<string, string>();
+    stubDemoStorage(storage);
+    await installDemoWorkspaceSnapshot();
+    const payload = JSON.parse(storage.get(WORKSPACE_STORAGE_KEY) ?? 'null');
+    payload.state.activeNodeId = `demo-${requireTopic(1).slug}`;
+    payload.state.reviewSession.currentNodeId = `demo-${requireTopic(1).slug}`;
+    payload.state.reviewSession.queueNodeIds = [
+      `demo-${requireTopic(1).slug}`,
+      ...payload.state.reviewSession.queueNodeIds.filter((nodeId: string) => nodeId !== `demo-${requireTopic(1).slug}`)
+    ];
+    storage.set(WORKSPACE_STORAGE_KEY, JSON.stringify(payload));
+    simulateDemoRefresh(storage);
+
+    await installDemoWorkspaceSnapshot();
+
+    const nextPayload = JSON.parse(storage.get(WORKSPACE_STORAGE_KEY) ?? 'null');
+    expect(nextPayload.state.activeNodeId).toBe(`demo-${requireTopic(1).slug}`);
+    expect(nextPayload.state.reviewSession.currentNodeId).toBe(`demo-${requireTopic(1).slug}`);
+    vi.unstubAllGlobals();
+});
+
+it('persists Demo browser-local review actions into the workspace payload', async () => {
+    const storage = new Map<string, string>();
+    const now = '2026-06-17T00:10:00.000Z';
+    stubDemoStorage(storage);
+    await installDemoWorkspaceSnapshot();
+    const activeNodeId = useWorkspaceStore.getState().activeNodeId!;
+
+    await expect(useWorkspaceStore.getState().readReviewTopic(now)).resolves.toBe(true);
+
+    const payload = JSON.parse(storage.get(WORKSPACE_STORAGE_KEY) ?? 'null');
+    expect(payload.state.nodesById[activeNodeId].reading).toMatchObject({
+      lastHandledAt: now,
+      state: 'active'
+    });
+    simulateDemoRefresh(storage);
+    await installDemoWorkspaceSnapshot();
+    expect(useWorkspaceStore.getState().nodesById[activeNodeId]?.reading).toMatchObject({
+      lastHandledAt: now,
+      state: 'active'
+    });
+    vi.unstubAllGlobals();
+});
+
+it('reinstalls the official Demo snapshot when the stored payload is incompatible', async () => {
+    const storage = new Map<string, string>();
+    stubDemoStorage(storage);
+    storage.set(WORKSPACE_STORAGE_KEY, JSON.stringify({
+      state: { capturedWorkspaceVersion: 'old-demo', nodesById: {}, nodeOrder: [], reviewSession: { currentNodeId: null } },
+      version: 0
+    }));
+    storage.set('demo-workspace-v1', 'demo:2026-06-17');
+    simulateDemoRefresh(storage);
+
+    await installDemoWorkspaceSnapshot();
+
+    const payload = JSON.parse(storage.get(WORKSPACE_STORAGE_KEY) ?? 'null');
+    expect(payload.state.activeNodeId).toBe(`demo-${requireTopic(0).slug}`);
+    expect(payload.state.nodesById[INBOX_NODE_ID]).toMatchObject({ specialKind: 'inbox' });
+    vi.unstubAllGlobals();
+});
+
+it('fails visibly instead of reseeding when Demo local storage is unavailable', async () => {
+    vi.stubGlobal('window', {
+      localStorage: {
+        getItem: () => {
+          throw new DOMException('Blocked', 'SecurityError');
+        }
+      },
+      location: { pathname: canonicalDemoPath(requireTopic(0).slug) }
+    });
+
+    await expect(installDemoWorkspaceSnapshot()).rejects.toThrow('Blocked');
     vi.unstubAllGlobals();
 });

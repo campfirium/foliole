@@ -1,6 +1,7 @@
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { ensureInboxNodeInSnapshot, INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { toNodeReviewProfile } from '../features/review/model/reviewTypes';
+import { browserLocalWorkspaceReviewPersistence } from '../store/workspaceReviewPersistence';
 import {
   createInitialWorkspaceState,
   useWorkspaceStore,
@@ -8,6 +9,7 @@ import {
   type ReviewSessionState,
   type WorkspacePersistedState
 } from '../store/workspaceStore';
+import { createWorkspaceReviewActions } from '../store/workspaceStoreReviewActions';
 
 import { canonicalDemoPath, DEFAULT_DEMO_TOPIC, DEMO_TOPICS, type DemoTopic } from './demoContent';
 import type { DemoPackReadingSeed, DemoPackReviewItem, DemoPackReviewScheduleSeed, DemoPackRelativeTime } from './demoPack';
@@ -45,14 +47,59 @@ export function createDemoWorkspaceSnapshot(pathname: string, now = new Date()):
   return snapshot;
 }
 
-export function installDemoWorkspaceSnapshot(pathname = window.location.pathname) {
-  const snapshot = createDemoWorkspaceSnapshot(pathname);
-  window.localStorage.setItem(
-    WORKSPACE_STORAGE_KEY,
-    JSON.stringify({ state: snapshot, version: 0 })
+export async function installDemoWorkspaceSnapshot(pathname = window.location.pathname) {
+  if (!hasCompatibleDemoWorkspacePayload(pathname)) {
+    const snapshot = createDemoWorkspaceSnapshot(pathname);
+    window.localStorage.setItem(
+      WORKSPACE_STORAGE_KEY,
+      JSON.stringify({ state: snapshot, version: 0 })
+    );
+    window.localStorage.setItem(DEMO_SNAPSHOT_VERSION, DEMO_CAPTURED_VERSION);
+  }
+  await useWorkspaceStore.persist.rehydrate();
+  installDemoBrowserLocalReviewActions();
+}
+
+function installDemoBrowserLocalReviewActions() {
+  useWorkspaceStore.setState(createWorkspaceReviewActions(
+    useWorkspaceStore.setState,
+    useWorkspaceStore.getState,
+    undefined,
+    browserLocalWorkspaceReviewPersistence
+  ));
+}
+
+function hasCompatibleDemoWorkspacePayload(pathname: string) {
+  const raw = window.localStorage.getItem(WORKSPACE_STORAGE_KEY);
+  const marker = window.localStorage.getItem(DEMO_SNAPSHOT_VERSION);
+  if (!raw || marker !== DEMO_CAPTURED_VERSION) return false;
+  try {
+    const payload = JSON.parse(raw) as { state?: Partial<WorkspacePersistedState>; version?: number };
+    return payload.version === 0 && isCompatibleDemoWorkspaceState(payload.state, pathname);
+  } catch {
+    return false;
+  }
+}
+
+function isCompatibleDemoWorkspaceState(state: Partial<WorkspacePersistedState> | undefined, pathname: string) {
+  if (!state || state.capturedWorkspaceVersion !== DEMO_CAPTURED_VERSION) return false;
+  if (!state.nodesById || !state.nodeOrder || !state.reviewSession) return false;
+  const activeNodeId = toDemoNodeId(resolveDemoTopicFromPath(pathname));
+  if (state.activeNodeId !== null && state.activeNodeId !== undefined && !state.nodesById[state.activeNodeId]) {
+    return false;
+  }
+  return Boolean(
+    state.nodesById[activeNodeId] &&
+    state.nodeOrder.includes(INBOX_NODE_ID) &&
+    getRequiredDemoNodeIds().every((nodeId) => state.nodesById?.[nodeId])
   );
-  window.localStorage.setItem(DEMO_SNAPSHOT_VERSION, DEMO_CAPTURED_VERSION);
-  useWorkspaceStore.setState((state) => ({ ...state, ...snapshot }));
+}
+
+function getRequiredDemoNodeIds() {
+  return DEMO_TOPICS.flatMap((topic) => [
+    toDemoNodeId(topic),
+    ...topic.reviewItems.map((item) => toDemoReviewItemNodeId(topic, item))
+  ]);
 }
 
 function createTopicNode(topic: DemoTopic, anchor: Date, timestamp: string): Node {

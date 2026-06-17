@@ -46,6 +46,7 @@ export function createInitialWorkspaceState(now = new Date()): Pick<
   WorkspaceState,
   | 'activeNodeId'
   | 'appActionHistory'
+  | 'capturedWorkspaceVersion'
   | 'editorOperationHistory'
   | 'isHydrated'
   | 'workspaceHydrationError'
@@ -64,6 +65,7 @@ export function createInitialWorkspaceState(now = new Date()): Pick<
   return {
     ...createEmptyWorkspaceSnapshot(now, loadWorkspaceLayoutPreferenceSnapshot(defaultLayoutState)),
     appActionHistory: createEmptyWorkspaceActionHistory(),
+    capturedWorkspaceVersion: null,
     editorOperationHistory: createEmptyEditorOperationHistory(),
     isHydrated: false,
     workspaceHydrationError: null,

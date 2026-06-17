@@ -4,11 +4,14 @@ import { advanceReadingScheduleCoreFields } from '../features/review/model/unifi
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
 import {
+  runtimeWorkspaceReviewPersistence,
+  type WorkspaceReviewPersistenceAdapter
+} from './workspaceReviewPersistence';
+import {
   buildNextReadingProfile,
   resolveReadingPriorityChain
 } from './workspaceReviewReading';
 import { calculateReviewStepElapsedMs } from './workspaceReviewSessionProgress';
-import { syncNodeContentToRuntimeNow } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
 import {
   advanceAfterSoonAction,
@@ -59,10 +62,10 @@ export function createPostponeReviewTopicAction(set: WorkspaceSet, get: Workspac
 export function createPostponeReviewTopicActionWithPending(
   set: WorkspaceSet,
   get: WorkspaceGet,
-  pendingNodeIds: ReadingReviewPendingNodeIds
+  pendingNodeIds: ReadingReviewPendingNodeIds,
+  persistence: WorkspaceReviewPersistenceAdapter = runtimeWorkspaceReviewPersistence
 ): WorkspaceState['postponeReviewTopic'] {
-  return async () => {
-    const now = new Date().toISOString();
+  return async (now = new Date().toISOString()) => {
     const snapshot = get();
     const currentNodeId = snapshot.reviewSession.currentNodeId;
     if (!currentNodeId || snapshot.activeNodeId !== currentNodeId) return false;
@@ -76,7 +79,8 @@ export function createPostponeReviewTopicActionWithPending(
       pendingNodeIds,
       set,
       buildPatch: (state) =>
-        buildReadOrPostponeReadingReviewPatch({ currentNodeId, nextReading, now, snapshot, state, title: 'Later Topic' })
+        buildReadOrPostponeReadingReviewPatch({ currentNodeId, nextReading, now, snapshot, state, title: 'Later Topic' }),
+      persistence
     });
   };
 }
@@ -88,7 +92,8 @@ export function createReadReviewTopicAction(set: WorkspaceSet, get: WorkspaceGet
 export function createReadReviewTopicActionWithPending(
   set: WorkspaceSet,
   get: WorkspaceGet,
-  pendingNodeIds: ReadingReviewPendingNodeIds
+  pendingNodeIds: ReadingReviewPendingNodeIds,
+  persistence: WorkspaceReviewPersistenceAdapter = runtimeWorkspaceReviewPersistence
 ): WorkspaceState['readReviewTopic'] {
   return async (now = new Date().toISOString()) => {
     const snapshot = get();
@@ -104,7 +109,8 @@ export function createReadReviewTopicActionWithPending(
       pendingNodeIds,
       set,
       buildPatch: (state) =>
-        buildReadOrPostponeReadingReviewPatch({ currentNodeId, nextReading, now, snapshot, state, title: 'Read Topic' })
+        buildReadOrPostponeReadingReviewPatch({ currentNodeId, nextReading, now, snapshot, state, title: 'Read Topic' }),
+      persistence
     });
   };
 }
@@ -188,12 +194,11 @@ function buildReadOrPostponeReadingReviewPatch(args: {
   };
 }
 
-export async function persistReadingReviewNodes(nodes: Node[]) {
-  for (const node of nodes) {
-    const persisted = await syncNodeContentToRuntimeNow(node);
-    if (!persisted) return false;
-  }
-  return true;
+export async function persistReadingReviewNodes(
+  nodes: Node[],
+  persistence: WorkspaceReviewPersistenceAdapter = runtimeWorkspaceReviewPersistence
+) {
+  return persistence.persistReadingNodes(nodes);
 }
 
 async function persistAndApplyReadingReviewPatch(args: {
@@ -201,12 +206,13 @@ async function persistAndApplyReadingReviewPatch(args: {
   currentNodeId: string;
   get: WorkspaceGet;
   pendingNodeIds: ReadingReviewPendingNodeIds;
+  persistence: WorkspaceReviewPersistenceAdapter;
   set: WorkspaceSet;
 }) {
   args.pendingNodeIds.add(args.currentNodeId);
   try {
     const result = args.buildPatch(args.get());
-    if (!result || !(await persistReadingReviewNodes(result.nextNodesForSync))) {
+    if (!result || !(await persistReadingReviewNodes(result.nextNodesForSync, args.persistence))) {
       return false;
     }
     args.set((state) => {

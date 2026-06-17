@@ -10,7 +10,7 @@ if (!rootElement) {
   throw new Error('Missing #root element in Demo entry.');
 }
 
-installDemoWorkspaceSnapshot();
+await installDemoWorkspaceSnapshot();
 const { App } = await import('../app/App');
 
 ReactDOM.createRoot(rootElement).render(

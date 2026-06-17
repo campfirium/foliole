@@ -3,8 +3,11 @@ import type { Node, NodeReadingProfile } from '../features/nodes/model/nodeTypes
 import { buildReadingScheduleCoreFields } from '../features/review/model/unifiedPushQueueRules';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
+import {
+  runtimeWorkspaceReviewPersistence,
+  type WorkspaceReviewPersistenceAdapter
+} from './workspaceReviewPersistence';
 import { resolveReadingPriorityChain } from './workspaceReviewReading';
-import { syncNodeContentToRuntimeNow } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
 import type { ReadingReviewPendingNodeIds } from './workspaceStoreReadingReviewActions';
 import { advanceOrCompleteAfterReadingAction } from './workspaceStoreReadingReviewSessionFlow';
@@ -108,7 +111,8 @@ function buildTopicDelayPatch(args: {
 export function createSetReviewTopicDelayActionWithPending(
   set: WorkspaceSet,
   get: WorkspaceGet,
-  pendingNodeIds: ReadingReviewPendingNodeIds
+  pendingNodeIds: ReadingReviewPendingNodeIds,
+  persistence: WorkspaceReviewPersistenceAdapter = runtimeWorkspaceReviewPersistence
 ): WorkspaceState['setReviewTopicDelay'] {
   return async (nodeId, level, now = new Date().toISOString()) => {
     const snapshot = get();
@@ -117,7 +121,7 @@ export function createSetReviewTopicDelayActionWithPending(
     pendingNodeIds.add(nodeId);
     try {
       const result = buildTopicDelayPatch({ level, nodeId, now, snapshot, state: get() });
-      if (!result || !(await syncNodeContentToRuntimeNow(result.nextNode))) return false;
+      if (!result || !(await persistence.persistReadingNodes([result.nextNode]))) return false;
       set((state) => {
         const currentNode = state.nodesById[nodeId];
         if (!canDelayTopic(currentNode)) return state;

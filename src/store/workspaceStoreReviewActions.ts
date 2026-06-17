@@ -10,6 +10,10 @@ import {
 import { resolveReviewQueueReadingAvailableAt } from './reviewQueuePlannerReadingPaths';
 import { isReviewProfileDue } from './reviewQueuePlannerTime';
 import { buildCurrentReviewSessionQueueOutput } from './workspaceReviewLiveQueue';
+import {
+  runtimeWorkspaceReviewPersistence,
+  type WorkspaceReviewPersistenceAdapter
+} from './workspaceReviewPersistence';
 import { advanceReviewSession, completeReviewSession, createEmptyReviewSession } from './workspaceReviewReading';
 import type { WorkspaceState } from './workspaceStore';
 import {
@@ -78,7 +82,12 @@ function skipStaleReviewCard(args: {
   });
 }
 
-function createGradeReviewCardAction(set: WorkspaceSet, get: WorkspaceGet, scheduler: ReviewSchedulerAdapter): WorkspaceReviewActions['gradeReviewCard'] {
+function createGradeReviewCardAction(
+  set: WorkspaceSet,
+  get: WorkspaceGet,
+  scheduler: ReviewSchedulerAdapter,
+  persistence: WorkspaceReviewPersistenceAdapter
+): WorkspaceReviewActions['gradeReviewCard'] {
   return async (grade: ReviewGrade, now = new Date().toISOString()) => {
     const snapshot = get();
     const currentNodeId = snapshot.reviewSession.currentNodeId;
@@ -101,14 +110,15 @@ function createGradeReviewCardAction(set: WorkspaceSet, get: WorkspaceGet, sched
     });
     if (!result) return false;
     try {
-      await persistReviewGradeMutation({
+      const persisted = await persistReviewGradeMutation({
         currentNodeId,
         grade,
         reviewedAt: result.reviewedAt,
         schedulerVersion: result.schedulerVersion,
         cardBefore: result.cardBefore,
         cardAfter: result.cardAfter
-      });
+      }, persistence);
+      if (!persisted) return false;
     } catch {
       return false;
     }
@@ -130,7 +140,8 @@ function createExitReviewSessionAction(set: WorkspaceSet): WorkspaceReviewAction
 export function createWorkspaceReviewActions(
   set: WorkspaceSet,
   get: WorkspaceGet,
-  scheduler: ReviewSchedulerAdapter = createReviewSchedulerAdapter()
+  scheduler: ReviewSchedulerAdapter = createReviewSchedulerAdapter(),
+  persistence: WorkspaceReviewPersistenceAdapter = runtimeWorkspaceReviewPersistence
 ): WorkspaceReviewActions {
   const readingPendingNodeIds: ReadingReviewPendingNodeIds = new Set();
   return {
@@ -138,12 +149,12 @@ export function createWorkspaceReviewActions(
     resumeReviewSession: createResumeReviewSessionAction(set),
     setReviewSessionMode: createSetReviewSessionModeAction(set),
     revealReviewAnswer: createRevealReviewAnswerAction(set),
-    gradeReviewCard: createGradeReviewCardAction(set, get, scheduler),
-    readReviewTopic: createReadReviewTopicActionWithPending(set, get, readingPendingNodeIds),
-    postponeReviewTopic: createPostponeReviewTopicActionWithPending(set, get, readingPendingNodeIds),
-    setReviewTopicDelay: createSetReviewTopicDelayActionWithPending(set, get, readingPendingNodeIds),
+    gradeReviewCard: createGradeReviewCardAction(set, get, scheduler, persistence),
+    readReviewTopic: createReadReviewTopicActionWithPending(set, get, readingPendingNodeIds, persistence),
+    postponeReviewTopic: createPostponeReviewTopicActionWithPending(set, get, readingPendingNodeIds, persistence),
+    setReviewTopicDelay: createSetReviewTopicDelayActionWithPending(set, get, readingPendingNodeIds, persistence),
     revisitReviewTopicSoon: createRevisitReviewTopicSoonAction(set, get),
-    dismissReviewTopic: createDismissReviewTopicActionWithPending(set, get, readingPendingNodeIds),
+    dismissReviewTopic: createDismissReviewTopicActionWithPending(set, get, readingPendingNodeIds, persistence),
     exitReviewSession: createExitReviewSessionAction(set)
   };
 }

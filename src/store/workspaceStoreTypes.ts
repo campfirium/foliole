@@ -15,6 +15,7 @@ import type { NodeNavigationResult, WorkspaceNavigationState } from './workspace
 export interface WorkspaceState {
   activeNodeId: string | null;
   appActionHistory: WorkspaceActionHistoryState;
+  capturedWorkspaceVersion: string | null;
   editorOperationHistory: EditorOperationHistoryState;
   isHydrated: boolean;
   workspaceHydrationError: string | null;
@@ -69,7 +70,7 @@ export interface WorkspaceState {
   revealReviewAnswer: () => void;
   gradeReviewCard: (grade: ReviewGrade, now?: string) => Promise<boolean>;
   readReviewTopic: (now?: string) => Promise<boolean>;
-  postponeReviewTopic: () => Promise<boolean>;
+  postponeReviewTopic: (now?: string) => Promise<boolean>;
   setReviewTopicDelay: (nodeId: string, delayLevel: number, now?: string) => Promise<boolean>;
   revisitReviewTopicSoon: (now?: string) => Promise<boolean>;
   dismissReviewTopic: (now?: string) => Promise<boolean>;

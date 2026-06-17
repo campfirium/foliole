@@ -41,6 +41,7 @@ function toPersistedReviewSession(reviewSession: WorkspaceState['reviewSession']
 function partializeWorkspaceState(state: WorkspaceState): WorkspacePersistedState {
   return {
     activeNodeId: state.activeNodeId,
+    capturedWorkspaceVersion: state.capturedWorkspaceVersion,
     layout: state.layout,
     nodeViewById: state.nodeViewById,
     nodeOrder: state.nodeOrder,

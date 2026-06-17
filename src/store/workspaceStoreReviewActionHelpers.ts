@@ -8,9 +8,12 @@ import {
 } from './workspaceActionHistory';
 import { createReviewGradeHistoryEntry } from './workspaceReviewGradeActionHistory';
 import { buildCurrentReviewSessionQueueOutput } from './workspaceReviewLiveQueue';
+import {
+  runtimeWorkspaceReviewPersistence,
+  type WorkspaceReviewPersistenceAdapter
+} from './workspaceReviewPersistence';
 import { advanceReviewSession, completeReviewSession } from './workspaceReviewReading';
 import { calculateReviewStepElapsedMs } from './workspaceReviewSessionProgress';
-import { syncReviewGradeToRuntime } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
 
 type WorkspaceSet = (
@@ -25,15 +28,8 @@ export async function persistReviewGradeMutation(args: {
   schedulerVersion: string;
   cardBefore: SchedulerCard;
   cardAfter: SchedulerCard;
-}): Promise<void> {
-  await syncReviewGradeToRuntime({
-    nodeId: args.currentNodeId,
-    grade: args.grade,
-    reviewedAt: args.reviewedAt,
-    schedulerVersion: args.schedulerVersion,
-    cardBefore: args.cardBefore,
-    cardAfter: args.cardAfter
-  });
+}, persistence: WorkspaceReviewPersistenceAdapter = runtimeWorkspaceReviewPersistence): Promise<boolean> {
+  return persistence.persistReviewGrade(args);
 }
 
 function buildReviewSessionAfterGrade(args: {
