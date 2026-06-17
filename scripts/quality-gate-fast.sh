@@ -214,6 +214,10 @@ if [[ -f "scripts/check-native-dialog-guard.mjs" ]]; then
   run_quality_gate_script "quality-gate-fast" "${pm}" "native-dialog:guard"
 fi
 
+if [[ -f "scripts/check-windows-console-policy.mjs" ]]; then
+  run_quality_gate_script "quality-gate-fast" "${pm}" "windows:console:guard"
+fi
+
 if [[ -f "scripts/check-repository-root-boundary.mjs" ]]; then
   run_quality_gate_command \
     "quality-gate-fast" \

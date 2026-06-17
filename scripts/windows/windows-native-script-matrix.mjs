@@ -14,6 +14,7 @@ export const WINDOWS_NATIVE_MAIN_SCRIPTS = [
   'test:files',
   'windows:native:check',
   'windows:client:native',
+  'windows:dev-service',
   'windows:preview:native',
   'quality:fast:native',
   'test:e2e:desktop:native:hidden',

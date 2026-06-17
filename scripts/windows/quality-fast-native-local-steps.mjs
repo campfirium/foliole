@@ -62,6 +62,7 @@ export async function runNativeLightMidPlan(plan, options) {
   const { env, runner, runStep, splitRelatedTests } = options;
   await runOptionalNpmScript('copy:guard', env, runner, runStep);
   await runOptionalNpmScript('native-dialog:guard', env, runner, runStep);
+  await runOptionalNpmScript('windows:console:guard', env, runner, runStep);
   await runOptionalNodeScript('repository root boundary', 'scripts/check-repository-root-boundary.mjs', env, runner, runStep);
   await runOptionalNodeScript('layer dependency boundary', 'scripts/check-layer-dependency-boundary.mjs', env, runner, runStep);
   await runScopedLint(plan, env, runner, runStep);
