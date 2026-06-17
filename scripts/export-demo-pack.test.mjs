@@ -133,10 +133,22 @@ describe('Demo Pack export', () => {
   it('exports only the selected subtree in manual child order', async () => {
     await withFixture(async ({ dbPath, outputPath }) => {
       const pack = await exportDemoPack({ dbPath, outputPath, rootTitle: 'Foliole Demo Preview' });
+      expect(pack.contractVersion).toBe(2);
       expect(pack.topics.map((topic) => topic.id)).toEqual(['topic-b', 'topic-a']);
+      expect(pack.topics[0].readingSeed).toMatchObject({
+        nextAt: { dayOffset: 0 },
+        priority: 0,
+        state: 'active'
+      });
       expect(pack.topics[0].blocks[0]).toMatchObject({ kind: 'heading', text: 'Reading first' });
       expect(pack.topics[0].highlights[0]).toMatchObject({ excerpt: 'Important phrase' });
       expect(pack.topics[0].reviewItems[0]).toMatchObject({ answer: 'review', kind: 'cloze' });
+      expect(pack.topics[0].reviewScheduleSeeds[0]).toMatchObject({
+        due: { dayOffset: 1 },
+        lastReviewAt: null,
+        reviewItemId: 'cloze-b'
+      });
+      expect(pack.topics[1].readingSeed).toMatchObject({ nextAt: { dayOffset: 1 }, repetitionCount: 1 });
       expect(JSON.stringify(pack)).not.toContain('private');
       expect(pack.source.warnings).toEqual(expect.arrayContaining([
         expect.stringContaining('virtual: Virtual topic'),

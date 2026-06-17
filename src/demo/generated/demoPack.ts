@@ -1,7 +1,7 @@
 import type { DemoPack } from '../demoPack';
 
 export const GENERATED_DEMO_PACK: DemoPack = {
-  contractVersion: 1,
+  contractVersion: 2,
   generatedAt: '2026-06-17T00:00:00.000Z',
   source: {
     rootNodeId: null,
@@ -17,7 +17,39 @@ export const GENERATED_DEMO_PACK: DemoPack = {
       summary: 'Build a quiet loop from reading to review without turning every thought into a task.',
       runtime: { state: 'topic', topicId: 'focused-reading-review' },
       highlights: [],
-      reviewItems: [],
+      readingSeed: {
+        intervalDurationMs: 0,
+        intervalGrowthFactor: 1,
+        lastHandledAt: { dayOffset: 0 },
+        nextAt: { dayOffset: 0 },
+        priority: 0,
+        readingPosition: 0,
+        repetitionCount: 0,
+        state: 'active'
+      },
+      reviewItems: [
+        {
+          id: 'focused-reading-review-item-1',
+          title: 'One clear recall',
+          kind: 'item',
+          prompt: 'What should a steady review queue help you return to?',
+          answer: 'Important ideas that remain connected to the source topic.'
+        }
+      ],
+      reviewScheduleSeeds: [
+        {
+          reviewItemId: 'focused-reading-review-item-1',
+          due: { dayOffset: 1 },
+          lastReviewAt: null,
+          state: 0,
+          stability: 0,
+          difficulty: 0,
+          elapsedDays: 0,
+          scheduledDays: 0,
+          reps: 0,
+          lapses: 0
+        }
+      ],
       blocks: [
         { id: 'focused-reading-review-heading-1', kind: 'heading', text: 'Start with one source topic' },
         {
@@ -57,7 +89,18 @@ export const GENERATED_DEMO_PACK: DemoPack = {
       summary: 'Keep folders and topics simple enough that the next reading step stays visible.',
       runtime: { state: 'topic', topicId: 'organize-source-topics' },
       highlights: [],
+      readingSeed: {
+        intervalDurationMs: 86400000,
+        intervalGrowthFactor: 1.3,
+        lastHandledAt: { dayOffset: 0 },
+        nextAt: { dayOffset: 1 },
+        priority: 1,
+        readingPosition: 0,
+        repetitionCount: 1,
+        state: 'active'
+      },
       reviewItems: [],
+      reviewScheduleSeeds: [],
       blocks: [
         { id: 'organize-source-topics-heading-1', kind: 'heading', text: 'Use folders for stable context' },
         {

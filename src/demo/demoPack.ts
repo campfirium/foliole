@@ -1,4 +1,19 @@
-export const DEMO_PACK_CONTRACT_VERSION = 1;
+export const DEMO_PACK_CONTRACT_VERSION = 2;
+
+export interface DemoPackRelativeTime {
+  dayOffset: number;
+}
+
+export interface DemoPackReadingSeed {
+  intervalDurationMs: number;
+  intervalGrowthFactor: number;
+  lastHandledAt: DemoPackRelativeTime;
+  nextAt: DemoPackRelativeTime;
+  priority: number;
+  readingPosition: number;
+  repetitionCount: number;
+  state: 'active' | 'done' | 'dismissed' | 'locked';
+}
 
 export interface DemoPackBlock {
   id: string;
@@ -27,12 +42,27 @@ export interface DemoPackReviewItem {
   title: string;
 }
 
+export interface DemoPackReviewScheduleSeed {
+  difficulty: number;
+  due: DemoPackRelativeTime;
+  elapsedDays: number;
+  lapses: number;
+  lastReviewAt: DemoPackRelativeTime | null;
+  reps: number;
+  reviewItemId: string;
+  scheduledDays: number;
+  stability: number;
+  state: 0 | 1 | 2 | 3;
+}
+
 export interface DemoPackTopic {
   blocks: DemoPackBlock[];
   description: string;
   highlights: DemoPackHighlight[];
   id: string;
+  readingSeed: DemoPackReadingSeed;
   reviewItems: DemoPackReviewItem[];
+  reviewScheduleSeeds: DemoPackReviewScheduleSeed[];
   runtime: {
     state: 'topic';
     topicId: string;
@@ -81,6 +111,8 @@ export function assertDemoPack(pack: DemoPack): DemoPack {
     if (!topic.title.trim() || !topic.blocks.length) {
       throw new Error(`Demo Pack topic is incomplete: ${topic.id}`);
     }
+    assertReadingSeed(topic);
+    assertReviewScheduleSeeds(topic);
   }
   return pack;
 }
@@ -111,4 +143,38 @@ function blocksToSections(topic: DemoPackTopic): DemoSection[] {
     heading: section.heading,
     body: section.body.length ? section.body : [topic.summary]
   }));
+}
+
+function assertReadingSeed(topic: DemoPackTopic) {
+  const seed = topic.readingSeed;
+  if (!seed || !isRelativeTime(seed.lastHandledAt) || !isRelativeTime(seed.nextAt)) {
+    throw new Error(`Demo Pack topic is missing reading seed: ${topic.id}`);
+  }
+  if (seed.intervalDurationMs < 0 || seed.intervalGrowthFactor <= 0 || seed.priority < 0 || seed.readingPosition < 0 || seed.repetitionCount < 0) {
+    throw new Error(`Demo Pack topic has invalid reading seed: ${topic.id}`);
+  }
+}
+
+function assertReviewScheduleSeeds(topic: DemoPackTopic) {
+  const reviewItemIds = new Set(topic.reviewItems.map((item) => item.id));
+  const scheduleItemIds = new Set<string>();
+  for (const seed of topic.reviewScheduleSeeds) {
+    if (!reviewItemIds.has(seed.reviewItemId)) {
+      throw new Error(`Demo Pack review schedule seed references missing item: ${seed.reviewItemId}`);
+    }
+    if (scheduleItemIds.has(seed.reviewItemId)) {
+      throw new Error(`Duplicate Demo Pack review schedule seed: ${seed.reviewItemId}`);
+    }
+    scheduleItemIds.add(seed.reviewItemId);
+    if (!isRelativeTime(seed.due) || (seed.lastReviewAt !== null && !isRelativeTime(seed.lastReviewAt))) {
+      throw new Error(`Demo Pack review schedule seed has invalid relative time: ${seed.reviewItemId}`);
+    }
+  }
+  if (scheduleItemIds.size !== reviewItemIds.size) {
+    throw new Error(`Demo Pack topic review schedule seed count does not match review items: ${topic.id}`);
+  }
+}
+
+function isRelativeTime(value: DemoPackRelativeTime | null | undefined): value is DemoPackRelativeTime {
+  return Boolean(value && Number.isInteger(value.dayOffset) && value.dayOffset >= 0);
 }

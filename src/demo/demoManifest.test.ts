@@ -19,7 +19,33 @@ const topic = {
   description: 'A practical Demo topic for reading, extracting, and reviewing topics in Foliole.',
   highlights: [],
   id: 'node-1',
-  reviewItems: [],
+  readingSeed: {
+    intervalDurationMs: 0,
+    intervalGrowthFactor: 1,
+    lastHandledAt: { dayOffset: 0 },
+    nextAt: { dayOffset: 0 },
+    priority: 0,
+    readingPosition: 0,
+    repetitionCount: 0,
+    state: 'active' as const
+  },
+  reviewItems: [
+    { answer: 'Use one clear recall.', id: 'item-1', kind: 'item' as const, prompt: 'How should review material stay small?', title: 'Review material' }
+  ],
+  reviewScheduleSeeds: [
+    {
+      difficulty: 0,
+      due: { dayOffset: 1 },
+      elapsedDays: 0,
+      lapses: 0,
+      lastReviewAt: null,
+      reps: 0,
+      reviewItemId: 'item-1',
+      scheduledDays: 0,
+      stability: 0,
+      state: 0 as const
+    }
+  ],
   runtime: { state: 'topic' as const, topicId: 'node-1' },
   summary: 'Build a quiet loop.',
   sections: [{ heading: 'Start with one source topic', body: ['Choose one topic.'] }]
@@ -38,6 +64,8 @@ describe('Demo manifest contract', () => {
       sections: topic.sections,
       summary: topic.summary
     });
+    expect(JSON.stringify(manifestTopic)).not.toContain('reviewScheduleSeeds');
+    expect(JSON.stringify(manifestTopic)).not.toContain('dayOffset');
     expect(manifestTopic.contentHash).toMatch(/^sha256:[a-f0-9]{64}$/);
   });
 

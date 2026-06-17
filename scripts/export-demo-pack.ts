@@ -1,4 +1,3 @@
-import { mkdir, rename, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 
@@ -7,12 +6,15 @@ import { decodeTextBodyBlobData } from '../lib/core/database/contentBodyBlobs.js
 import { parseManualChildOrder } from '../lib/core/nodes/manualChildOrder.js';
 import type { DemoPack, DemoPackBlock, DemoPackHighlight, DemoPackReviewItem } from '../src/demo/demoPack.js';
 
+import { createDemoReadingSeed, createDemoReviewScheduleSeed } from './demo-pack-schedule-seeds.js';
+import { writeDemoPack } from './write-demo-pack.js';
+
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
 
 const DEFAULT_DB_PATH = 'D:\\X\\U\\Foliole\\Data\\foliole.db';
 const DEFAULT_OUTPUT_PATH = 'src/demo/generated/demoPack.ts';
-const DEMO_PACK_CONTRACT_VERSION = 1;
+const DEMO_PACK_CONTRACT_VERSION = 2;
 
 interface ExportArgs {
   dbPath: string;
@@ -168,6 +170,7 @@ function buildTopic(topic: NodeRow, index: number, childIds: Map<string, string[
   const children = (childIds.get(topic.id) ?? []).map((id) => byId.get(id)).filter((row): row is NodeRow => Boolean(row));
   const content = decodeTextBodyBlobData(topic.body_blob_data) ?? topic.content;
   const slug = uniqueSlug(topic.title, topic.id, index);
+  const reviewItems = children.flatMap(reviewItemFromNode);
   return {
     id: topic.id,
     slug,
@@ -175,9 +178,11 @@ function buildTopic(topic: NodeRow, index: number, childIds: Map<string, string[
     description: topic.opening_text ?? firstParagraph(content) ?? topic.title,
     summary: firstParagraph(content) ?? topic.opening_text ?? topic.title,
     runtime: { state: 'topic' as const, topicId: topic.id },
+    readingSeed: createDemoReadingSeed(index),
     blocks: markdownBlocks(slug, content, topic.title),
     highlights: children.flatMap((child) => highlightFromNode(child, warnings)),
-    reviewItems: children.flatMap(reviewItemFromNode)
+    reviewItems,
+    reviewScheduleSeeds: reviewItems.map((item, itemIndex) => createDemoReviewScheduleSeed(item.id, index + itemIndex + 1))
   };
 }
 
@@ -225,14 +230,6 @@ function markdownBlocks(slug: string, content: string, fallbackTitle: string): D
 function uniqueSlug(title: string, id: string, index: number) {
   const base = title.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   return base || `topic-${index + 1}-${id.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
-}
-
-async function writeDemoPack(outputPath: string, pack: DemoPack) {
-  const resolved = path.resolve(outputPath);
-  await mkdir(path.dirname(resolved), { recursive: true });
-  const tempPath = `${resolved}.tmp`;
-  await writeFile(tempPath, `import type { DemoPack } from '../demoPack';\n\nexport const GENERATED_DEMO_PACK: DemoPack = ${JSON.stringify(pack, null, 2)};\n`, 'utf8');
-  await rename(tempPath, resolved);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve('scripts/export-demo-pack.ts')) {
