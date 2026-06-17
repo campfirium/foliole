@@ -4,6 +4,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { getPrCheckSignal, listPrChecks, recordMonitorError, runGh } from './github-monitor-gh.mjs';
 
 const REPO_ROOT = process.cwd();
 const MONITOR_DIR = path.join(REPO_ROOT, '.codex', 'monitors');
@@ -28,14 +29,6 @@ function readJson(filePath, fallback = null) {
 function writeJson(filePath, value) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
-}
-
-function runGh(args) {
-  const result = spawnSync('gh', args, { cwd: REPO_ROOT, encoding: 'utf8' });
-  if (result.status !== 0) {
-    throw new Error(`gh ${args.join(' ')} failed: ${(result.stderr || result.stdout).trim()}`);
-  }
-  return JSON.parse(result.stdout || 'null');
 }
 
 function renderTemplate(templatePath, data) {
@@ -77,12 +70,12 @@ function actionRunEvent(config, run) {
 }
 
 function prEvent(config, pr, checks) {
-  const failing = checks.filter((check) => config.failureBuckets.includes(check.bucket));
+  const checkSignal = getPrCheckSignal(config, checks);
   const data = {
     author: pr.author?.login ?? pr.author?.name ?? '',
     baseRefName: pr.baseRefName,
-    eventId: `${pr.number}:${failing.map((check) => check.name).sort().join('|')}`,
-    failingChecks: failing.map((check) => check.name).join(', '),
+    eventId: `${pr.number}:${checkSignal.eventSuffix}`,
+    failingChecks: checkSignal.label,
     headRefName: pr.headRefName,
     number: String(pr.number),
     repository: config.repository,
@@ -94,29 +87,35 @@ function prEvent(config, pr, checks) {
   return {
     dedupeKey: config.dedupeKeyPattern.replace('{eventId}', data.eventId),
     prompt: renderTemplate(config.template, data),
-    title: `Foliole PR checks failed: #${pr.number}`,
+    title: checkSignal.eventSuffix === 'no-checks' ? `Foliole PR needs checks: #${pr.number}` : `Foliole PR checks failed: #${pr.number}`,
     ...data,
     ttlSeconds: config.defaultTtlSeconds
   };
 }
 
-function listActionEvents(config, state, includeExisting) {
+function listActionEvents(config, state, includeExisting, errors) {
   if (!config?.enabled) return [];
   const events = [];
   const workflows = config.workflows ?? [];
   for (const workflow of workflows) {
-    const runs = runGh([
-      'run',
-      'list',
-      '--repo',
-      config.repository,
-      '--workflow',
-      workflow,
-      '--limit',
-      '10',
-      '--json',
-      'databaseId,conclusion,status,displayTitle,headSha,headBranch,url,workflowName,createdAt'
-    ]);
+    let runs;
+    try {
+      runs = runGh([
+        'run',
+        'list',
+        '--repo',
+        config.repository,
+        '--workflow',
+        workflow,
+        '--limit',
+        '10',
+        '--json',
+        'databaseId,conclusion,status,displayTitle,headSha,headBranch,url,workflowName,createdAt'
+      ]);
+    } catch (error) {
+      recordMonitorError(errors, 'github-actions', workflow, error);
+      continue;
+    }
     const latestId = String(runs[0]?.databaseId ?? '');
     const seenId = state.actions[workflow];
     if (!includeExisting && !seenId) {
@@ -134,24 +133,36 @@ function listActionEvents(config, state, includeExisting) {
   return events;
 }
 
-function listPrEvents(config, state, includeExisting) {
+function listPrEvents(config, state, includeExisting, errors) {
   if (!config?.enabled) return [];
-  const prs = runGh([
-    'pr',
-    'list',
-    '--repo',
-    config.repository,
-    '--state',
-    'open',
-    '--json',
-    'number,title,headRefName,baseRefName,isDraft,author,url,updatedAt',
-    '--limit',
-    '50'
-  ]);
+  let prs;
+  try {
+    prs = runGh([
+      'pr',
+      'list',
+      '--repo',
+      config.repository,
+      '--state',
+      'open',
+      '--json',
+      'number,title,headRefName,baseRefName,isDraft,author,url,updatedAt',
+      '--limit',
+      '50'
+    ]);
+  } catch (error) {
+    recordMonitorError(errors, 'github-pr', 'list', error);
+    return [];
+  }
   const events = [];
   for (const pr of prs) {
     if (pr.isDraft && !config.includeDrafts) continue;
-    const checks = runGh(['pr', 'checks', String(pr.number), '--repo', config.repository, '--json', 'name,state,bucket,workflow,link,description']);
+    let checks;
+    try {
+      checks = listPrChecks(config, pr);
+    } catch (error) {
+      recordMonitorError(errors, 'github-pr-checks', `#${pr.number}`, error);
+      continue;
+    }
     const event = prEvent(config, pr, checks);
     if (!event.failingChecks) continue;
     if (!includeExisting && state.prs[String(pr.number)] === event.eventId) continue;
@@ -186,10 +197,13 @@ function submitEvent(event) {
 function scan({ emit = false, includeExisting = false } = {}) {
   const configs = loadConfigs();
   const state = loadState();
+  const errors = [];
   const events = [
-    ...listActionEvents(configs.actions, state, includeExisting),
-    ...listPrEvents(configs.prs, state, includeExisting)
+    ...listActionEvents(configs.actions, state, includeExisting, errors),
+    ...listPrEvents(configs.prs, state, includeExisting, errors)
   ].filter((event) => includeExisting || !state.submitted[event.dedupeKey]);
+  state.lastErrors = errors;
+  state.lastCheckedAt = new Date().toISOString();
   if (emit) {
     for (const event of events) {
       state.submitted[event.dedupeKey] = { emittedAt: new Date().toISOString(), title: event.title };
