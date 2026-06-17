@@ -6,6 +6,7 @@ skills-lock.json
 ref/
 node_modules/
 dist/
+dist-demo/
 dist-guides/
 electron-dist/
 release/
