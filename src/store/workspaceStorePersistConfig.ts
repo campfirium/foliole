@@ -2,6 +2,7 @@ import { createJSONStorage, type PersistOptions } from 'zustand/middleware';
 
 import { resolveWorkspaceSnapshotActiveNodeId } from '../../lib/core/database/workspaceSnapshotContract';
 import { ensureInboxNodeInSnapshot } from '../features/nodes/model/specialNodes';
+import { hasWorkspaceRuntimeRepository } from '../shared/platform/workspaceRuntimeRepository';
 
 import { mergeHydratedWorkspaceMembership } from './workspaceHydrateObjectMerge';
 import { parsePersistedWorkspaceState } from './workspacePersistedStateParser';
@@ -39,17 +40,21 @@ function toPersistedReviewSession(reviewSession: WorkspaceState['reviewSession']
 }
 
 function partializeWorkspaceState(state: WorkspaceState): WorkspacePersistedState {
+  const nodesById = hasWorkspaceRuntimeRepository()
+    ? trimWorkspaceNodesForRendererBoundary(
+        state.activeNodeId,
+        state.nodesById,
+        collectRendererBoundaryKeepNodeIds(state, state)
+      )
+    : state.nodesById;
+
   return {
     activeNodeId: state.activeNodeId,
     capturedWorkspaceVersion: state.capturedWorkspaceVersion,
     layout: state.layout,
     nodeViewById: state.nodeViewById,
     nodeOrder: state.nodeOrder,
-    nodesById: trimWorkspaceNodesForRendererBoundary(
-      state.activeNodeId,
-      state.nodesById,
-      collectRendererBoundaryKeepNodeIds(state, state)
-    ),
+    nodesById,
     rendererBoundaryKeepNodeIds: state.rendererBoundaryKeepNodeIds,
     reviewSession: toPersistedReviewSession(state.reviewSession),
     trashedNodeDeletedAtById: state.trashedNodeDeletedAtById,

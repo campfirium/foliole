@@ -243,7 +243,7 @@ describe('workspacePersistStorage web fallback', () => {
 });
 
 describe('workspacePersistStorage web fallback renderer boundary', () => {
-  it('rewrites persisted workspace payload to keep only active and pending node documents', async () => {
+  it('keeps full persisted node documents because localStorage is the web fallback database', async () => {
     vi.mocked(getRuntimeInvoke).mockReturnValue(null);
     stagePendingNode1Sync();
     stageLegacyWorkspacePayload();
@@ -267,10 +267,10 @@ describe('workspacePersistStorage web fallback renderer boundary', () => {
     });
     expect(nodesById?.['node-3']).toEqual({
       id: 'node-3',
-      content: '',
+      content: 'Unexpected node 3 body',
       hasContent: true,
       hasReveal: true,
-      reveal: null
+      reveal: 'Unexpected node 3 answer'
     });
     expect(window.localStorage.getItem('foliole-workspace-v1')).toBe(value);
   });

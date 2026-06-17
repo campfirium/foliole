@@ -71,6 +71,38 @@ it('roundtrips a partialized persisted workspace payload through merge', () => {
   expect(merged?.nodesById[INBOX_NODE_ID]?.id).toBe(INBOX_NODE_ID);
 });
 
+it('keeps all node documents in web fallback persisted payloads', () => {
+  const current = createTestWorkspaceState();
+  const state = {
+    ...current,
+    activeNodeId: 'node-1',
+    nodeOrder: ['node-1', 'node-2'],
+    nodesById: {
+      'node-1': {
+        id: 'node-1',
+        content: 'Active node body',
+        hasContent: true,
+        hasReveal: false,
+        reveal: null
+      },
+      'node-2': {
+        id: 'node-2',
+        content: 'Inactive imported Markdown body',
+        hasContent: true,
+        hasReveal: true,
+        reveal: 'Inactive answer'
+      }
+    }
+  };
+
+  const partialized = createConfig().partialize?.(state);
+
+  expect(partialized?.nodesById['node-2']).toMatchObject({
+    content: 'Inactive imported Markdown body',
+    reveal: 'Inactive answer'
+  });
+});
+
 it('drops invalid persisted review next due values', () => {
   const current = createTestWorkspaceState();
   const merged = createConfig().merge?.(
