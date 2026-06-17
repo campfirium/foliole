@@ -1,13 +1,12 @@
+import { ChevronRight } from 'lucide-react';
+
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 
 import { CompanionScreenHeader } from './CompanionScreenHeader';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 
-function ChevronIcon() {
-  return <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6" /></svg>;
-}
-
 function SettingsListItem(props: {
+  accent?: boolean;
   detail: string;
   onClick(): void;
   title: string;
@@ -22,8 +21,20 @@ function SettingsListItem(props: {
         <span className="block text-base font-medium text-foreground">{props.title}</span>
         <span className="mt-1 block line-clamp-2 text-sm leading-5 text-companion-text-secondary">{props.detail}</span>
       </span>
-      <span className="shrink-0 text-companion-text-secondary"><ChevronIcon /></span>
+      <ChevronRight className={`h-5 w-5 shrink-0 ${props.accent ? 'text-companion-accent' : 'text-companion-text-tertiary'}`} />
     </button>
+  );
+}
+
+function SettingsListSection(props: {
+  children: React.ReactNode;
+  title: string;
+}) {
+  return (
+    <section className="border-t border-companion-divider pt-5">
+      <h2 className="px-1 pb-2 text-[11.5px] font-bold uppercase tracking-[.07em] text-companion-text-tertiary">{props.title}</h2>
+      {props.children}
+    </section>
   );
 }
 
@@ -38,12 +49,18 @@ export function CompanionSettingsList(props: {
   return (
     <section className="px-1 pb-4">
       <CompanionScreenHeader title={t('companion.settings.title')} />
-      <div>
-        <SettingsListItem detail={t('companion.settings.sync.detail')} onClick={props.onOpenSync} title={t('companion.settings.sync.title')} />
+      <div className="space-y-6">
+        <SettingsListSection title={t('companion.settings.section.syncDevice')}>
+        <SettingsListItem accent detail={t('companion.settings.sync.detail')} onClick={props.onOpenSync} title={t('companion.settings.sync.title')} />
         <SettingsListItem detail={t('companion.settings.device.detail')} onClick={props.onOpenDevice} title={t('companion.settings.device.title')} />
+        </SettingsListSection>
+        <SettingsListSection title={t('companion.settings.section.dataAppearance')}>
         <SettingsListItem detail={t('companion.settings.storage.detail')} onClick={props.onOpenStorage} title={t('companion.settings.storage.title')} />
         <SettingsListItem detail={t('companion.settings.appearance.detail')} onClick={props.onOpenAppearance} title={t('companion.settings.appearance.title')} />
+        </SettingsListSection>
+        <SettingsListSection title={t('companion.settings.section.development')}>
         <SettingsListItem detail={t('companion.settings.debug.detail')} onClick={props.onOpenDebug} title={t('companion.settings.debug.title')} />
+        </SettingsListSection>
       </div>
     </section>
   );

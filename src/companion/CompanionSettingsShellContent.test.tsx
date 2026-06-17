@@ -20,6 +20,10 @@ describe('CompanionSettingsShellContent', () => {
   it('opens placeholder settings detail rows instead of leaving dead controls', () => {
     render(<SettingsHarness />);
 
+    expect(screen.getByText('Sync and device')).toBeInTheDocument();
+    expect(screen.getByText('Data and appearance')).toBeInTheDocument();
+    expect(screen.getByText('Development')).toBeInTheDocument();
+
     fireEvent.click(screen.getByRole('button', { name: /Device information/ }));
     expect(screen.getByText('Device information')).toBeInTheDocument();
     expect(screen.getByText('Device information will appear here.')).toBeInTheDocument();
