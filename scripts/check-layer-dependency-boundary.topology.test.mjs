@@ -20,7 +20,7 @@ async function createFixtureRoot() {
   await mkdir(path.join(fixtureRoot, 'electron'), { recursive: true });
   await mkdir(path.join(fixtureRoot, 'src', 'app'), { recursive: true });
   await mkdir(path.join(fixtureRoot, 'src', 'companion'), { recursive: true });
-  await mkdir(path.join(fixtureRoot, 'src', 'web-guides'), { recursive: true });
+  await mkdir(path.join(fixtureRoot, 'src', 'demo'), { recursive: true });
   await mkdir(path.join(fixtureRoot, 'src', 'features'), { recursive: true });
   await mkdir(path.join(fixtureRoot, 'src', 'shared', 'platform'), { recursive: true });
   return fixtureRoot;
@@ -38,9 +38,9 @@ describe('layer topology rules', () => {
   it('classifies desktop renderer, mobile renderer, shared renderer, runtime, and host units', () => {
     expect(resolveTopologyUnit('src/app/App.tsx')).toMatchObject({ id: 'desktop-renderer', host: 'desktop' });
     expect(resolveTopologyUnit('src/companion/CompanionApp.tsx')).toMatchObject({ id: 'mobile-renderer', host: 'mobile' });
-    expect(resolveTopologyUnit('src/web-guides/main.tsx')).toMatchObject({
-      id: 'web-guides-renderer',
-      host: 'web-guides'
+    expect(resolveTopologyUnit('src/demo/main.tsx')).toMatchObject({
+      id: 'demo-renderer',
+      host: 'demo'
     });
     expect(resolveTopologyUnit('src/features/review/reviewModel.ts')).toMatchObject({ id: 'renderer-business' });
     expect(resolveTopologyUnit('src/shared/platform/runtimeAppPaths.ts')).toMatchObject({ id: 'runtime-adapter' });
@@ -58,7 +58,7 @@ describe('layer topology rules', () => {
     await writeFixtureFile(repoRoot, 'src/features/badFeature.ts', `
       import { boot } from 'electron/main';
     `);
-    await writeFixtureFile(repoRoot, 'src/web-guides/badGuides.ts', `
+    await writeFixtureFile(repoRoot, 'src/demo/badDemo.ts', `
       import { boot } from '../../electron/main';
     `);
 
@@ -69,22 +69,21 @@ describe('layer topology rules', () => {
         { file: 'src/app/badDesktop.ts', line: 1, kind: 'host-adapter-import' },
         { file: 'src/companion/badMobile.ts', line: 1, kind: 'host-adapter-import' },
         { file: 'src/features/badFeature.ts', line: 1, kind: 'host-adapter-import' },
-        { file: 'src/web-guides/badGuides.ts', line: 1, kind: 'host-adapter-import' }
+        { file: 'src/demo/badDemo.ts', line: 1, kind: 'host-adapter-import' }
       ])
     );
   });
 
-  it('blocks Web Guides from importing renderer shells or runtime bridges', async () => {
+  it('allows Demo to reuse the desktop renderer while blocking runtime bridges', async () => {
     const repoRoot = await createFixtureRoot();
-    await writeFixtureFile(repoRoot, 'src/web-guides/badShell.ts', `
+    await writeFixtureFile(repoRoot, 'src/demo/goodShell.ts', `
       import { App } from '../app/App';
-      import { CompanionApp } from '../companion/CompanionApp';
     `);
-    await writeFixtureFile(repoRoot, 'src/web-guides/badRuntime.ts', `
+    await writeFixtureFile(repoRoot, 'src/demo/badRuntime.ts', `
       import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
       import { loadCompanionAppData } from '../shared/platform/companionAppDataBridge';
     `);
-    await writeFixtureFile(repoRoot, 'src/web-guides/badHostObject.ts', `
+    await writeFixtureFile(repoRoot, 'src/demo/badHostObject.ts', `
       const api = window.electronAPI;
     `);
 
@@ -92,13 +91,12 @@ describe('layer topology rules', () => {
 
     expect(result.violations).toEqual(
       expect.arrayContaining([
-        { file: 'src/web-guides/badShell.ts', line: 1, kind: 'renderer-shell-import' },
-        { file: 'src/web-guides/badShell.ts', line: 2, kind: 'renderer-shell-import' },
-        { file: 'src/web-guides/badRuntime.ts', line: 1, kind: 'runtime-command-import' },
-        { file: 'src/web-guides/badRuntime.ts', line: 2, kind: 'runtime-bridge-import' },
-        { file: 'src/web-guides/badHostObject.ts', line: 1, kind: 'host-object-access' }
+        { file: 'src/demo/badRuntime.ts', line: 1, kind: 'runtime-command-import' },
+        { file: 'src/demo/badRuntime.ts', line: 2, kind: 'runtime-bridge-import' },
+        { file: 'src/demo/badHostObject.ts', line: 1, kind: 'host-object-access' }
       ])
     );
+    expect(result.violations).not.toContainEqual({ file: 'src/demo/goodShell.ts', line: 1, kind: 'renderer-shell-import' });
   });
 
   it('blocks Electron host adapters from importing renderer layers', async () => {
@@ -106,7 +104,7 @@ describe('layer topology rules', () => {
     await writeFixtureFile(repoRoot, 'electron/badHost.ts', `
       import { App } from '../src/app/App';
       import { renderCompanion } from '@/companion/CompanionApp';
-      import { GuidesApp } from '../src/web-guides/main';
+      import { DemoApp } from '../src/demo/main';
       import { useWorkspaceStore } from '../src/store/workspaceStore';
     `);
 

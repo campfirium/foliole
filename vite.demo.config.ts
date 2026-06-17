@@ -4,28 +4,28 @@ import { fileURLToPath } from 'node:url';
 import type { Plugin, Rollup } from 'vite';
 import { defineConfig, mergeConfig } from 'vite';
 
-import { createWebGuidesManifest, WEB_GUIDES_MANIFEST_FILE, type WebGuidesRuntimeAsset } from './src/web-guides/webGuidesManifest';
+import { createDemoManifest, DEMO_MANIFEST_FILE, type DemoRuntimeAsset } from './src/demo/demoManifest';
 import { createSharedViteConfig } from './vite.shared';
 
 const PROJECT_ROOT = path.dirname(fileURLToPath(import.meta.url));
 
-function toRuntimeAsset(output: Rollup.OutputAsset | Rollup.OutputChunk): WebGuidesRuntimeAsset | null {
+function toRuntimeAsset(output: Rollup.OutputAsset | Rollup.OutputChunk): DemoRuntimeAsset | null {
   if (output.type === 'chunk') return { path: output.fileName, type: 'script' };
   if (output.fileName.endsWith('.css')) return { path: output.fileName, type: 'style' };
   return null;
 }
 
-export function webGuidesManifestPlugin(): Plugin {
+export function demoManifestPlugin(): Plugin {
   return {
-    name: 'web-guides-manifest',
+    name: 'demo-manifest',
     generateBundle(_options, bundle) {
       const assets = Object.values(bundle)
         .map(toRuntimeAsset)
-        .filter((asset): asset is WebGuidesRuntimeAsset => asset !== null);
+        .filter((asset): asset is DemoRuntimeAsset => asset !== null);
       this.emitFile({
         type: 'asset',
-        fileName: WEB_GUIDES_MANIFEST_FILE,
-        source: `${JSON.stringify(createWebGuidesManifest({ assets }), null, 2)}\n`
+        fileName: DEMO_MANIFEST_FILE,
+        source: `${JSON.stringify(createDemoManifest({ assets }), null, 2)}\n`
       });
     }
   };
@@ -34,11 +34,12 @@ export function webGuidesManifestPlugin(): Plugin {
 export default mergeConfig(
   createSharedViteConfig(PROJECT_ROOT),
   defineConfig({
-    root: path.resolve(PROJECT_ROOT, 'src/web-guides'),
-    plugins: [webGuidesManifestPlugin()],
+    base: '/',
+    root: path.resolve(PROJECT_ROOT, 'src/demo'),
+    plugins: [demoManifestPlugin()],
     build: {
       emptyOutDir: true,
-      outDir: path.resolve(PROJECT_ROOT, 'dist-guides')
+      outDir: path.resolve(PROJECT_ROOT, 'dist-demo')
     }
   })
 );

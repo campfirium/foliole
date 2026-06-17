@@ -39,11 +39,11 @@ export const TOPOLOGY_UNITS = [
     role: 'Mobile renderer shell, routing, touch interaction, and mobile density.'
   },
   {
-    id: 'web-guides-renderer',
+    id: 'demo-renderer',
     tier: 'renderer-shell',
-    host: 'web-guides',
-    paths: ['src/web-guides/'],
-    role: 'Static Web Guides renderer shell; no host runtime, write path, or native adapter dependencies.'
+    host: 'demo',
+    paths: ['src/demo/'],
+    role: 'Demo Web experience host; reuses desktop renderer UI with a thin browser-safe adapter.'
   },
   {
     id: 'renderer-business',
@@ -82,7 +82,7 @@ export const PRODUCTION_SCAN_DIRS = TOPOLOGY_UNITS.flatMap((unit) =>
 export const RUNTIME_COMMAND_BOUNDARY_DIRS = [
   'src/app/',
   'src/companion/',
-  'src/web-guides/',
+  'src/demo/',
   'src/store/',
   'src/features/',
   'src/shared/diagnostics/'
@@ -93,7 +93,7 @@ export const HOST_ISOLATION_RULES = [
     from: [
       'desktop-renderer',
       'mobile-renderer',
-      'web-guides-renderer',
+      'demo-renderer',
       'renderer-business',
       'runtime-adapter',
       'core',
@@ -103,23 +103,18 @@ export const HOST_ISOLATION_RULES = [
     kind: 'host-adapter-import'
   },
   {
-    from: ['web-guides-renderer'],
-    forbiddenPrefixes: ['src/app/', 'src/companion/'],
-    kind: 'renderer-shell-import'
-  },
-  {
     from: ['electron-host'],
-    forbiddenPrefixes: ['android/', 'ios/', 'src/app/', 'src/companion/', 'src/web-guides/', 'src/features/', 'src/store/'],
+    forbiddenPrefixes: ['android/', 'ios/', 'src/app/', 'src/companion/', 'src/demo/', 'src/features/', 'src/store/'],
     kind: 'host-isolation-import'
   },
   {
     from: ['android-host'],
-    forbiddenPrefixes: ['electron/', 'ios/', 'src/app/', 'src/companion/', 'src/web-guides/', 'src/features/', 'src/store/'],
+    forbiddenPrefixes: ['electron/', 'ios/', 'src/app/', 'src/companion/', 'src/demo/', 'src/features/', 'src/store/'],
     kind: 'host-isolation-import'
   },
   {
     from: ['ios-host'],
-    forbiddenPrefixes: ['electron/', 'android/', 'src/app/', 'src/companion/', 'src/web-guides/', 'src/features/', 'src/store/'],
+    forbiddenPrefixes: ['electron/', 'android/', 'src/app/', 'src/companion/', 'src/demo/', 'src/features/', 'src/store/'],
     kind: 'host-isolation-import'
   }
 ];

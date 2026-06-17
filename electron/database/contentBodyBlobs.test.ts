@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { decodeTextBodyBlobData } from './contentBodyBlobs';
+import { decodeTextBodyBlobData } from '../../lib/core/database/contentBodyBlobs.js';
 
 describe('content body blob decoding', () => {
   it('decodes sqlite text blobs from supported binary shapes', () => {

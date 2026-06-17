@@ -114,7 +114,7 @@ function checksWorkspaceLayoutDomainBoundary(relativeFile) {
 }
 
 function inspectFile(filePath, repoRoot) {
-  const relativeFile = path.relative(repoRoot, filePath);
+  const relativeFile = path.relative(repoRoot, filePath).replace(/\\/g, '/');
   const contents = fs.readFileSync(filePath, 'utf8');
   const lines = contents.split(/\r?\n/);
   const violations = inspectHostIsolation(relativeFile, contents, {

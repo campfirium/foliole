@@ -28,6 +28,7 @@ const EXPLICIT_FILE_SUBDOMAINS = new Map([
   ['src/shared/platform/companionSyncObjects.ts', 'companion-runtime-plugin'],
   ['src/shared/platform/companionSyncTimeoutOwnership.ts', 'companion-sync-transfer'],
   ['src/shared/platform/companionUuid.ts', 'companion-runtime-plugin'],
+  ['src/shared/platform/companionFullTextSearch.ts', 'companion-runtime-plugin'],
   ['src/shared/platform/companionWorkspaceSync.testSupport.ts', 'companion-runtime-plugin'],
   ['src/shared/platform/databaseMaintenanceStatusRuntimeRepository.ts', 'desktop-runtime-repository'],
   ['src/shared/platform/libraryPathSettingsCache.ts', 'desktop-runtime-repository'],

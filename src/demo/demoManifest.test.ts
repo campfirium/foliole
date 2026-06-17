@@ -3,20 +3,20 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  createWebGuideManifestGuide,
-  createWebGuidesManifest,
+  createDemoManifest,
+  createDemoManifestTopic,
+  DEMO_MANIFEST_FILE,
   stableJson,
-  WEB_GUIDES_MANIFEST_FILE
-} from './webGuidesManifest';
+} from './demoManifest';
 
-const guide = {
+const topic = {
   blocks: [
     { id: 'block-1', kind: 'heading' as const, text: 'Start with one source topic' },
     { id: 'block-2', kind: 'paragraph' as const, text: 'Choose one topic.' }
   ],
   slug: 'focused-reading-review',
   title: 'Focused reading and review',
-  description: 'A practical guide to reading, extracting, and reviewing topics in Foliole.',
+  description: 'A practical Demo topic for reading, extracting, and reviewing topics in Foliole.',
   highlights: [],
   id: 'node-1',
   reviewItems: [],
@@ -25,20 +25,20 @@ const guide = {
   sections: [{ heading: 'Start with one source topic', body: ['Choose one topic.'] }]
 };
 
-describe('Web Guides manifest contract', () => {
-  it('projects static guide metadata into the v2 manifest schema', () => {
-    const manifestGuide = createWebGuideManifestGuide(guide);
+describe('Demo manifest contract', () => {
+  it('projects static Demo topic metadata into the v2 manifest schema', () => {
+    const manifestTopic = createDemoManifestTopic(topic);
 
-    expect(WEB_GUIDES_MANIFEST_FILE).toBe('guides-manifest.json');
-    expect(manifestGuide).toMatchObject({
-      slug: guide.slug,
-      title: guide.title,
-      description: guide.description,
-      canonicalPath: '/guides/focused-reading-review/',
-      sections: guide.sections,
-      summary: guide.summary
+    expect(DEMO_MANIFEST_FILE).toBe('demo-manifest.json');
+    expect(manifestTopic).toMatchObject({
+      slug: topic.slug,
+      title: topic.title,
+      description: topic.description,
+      canonicalPath: '/demo/focused-reading-review/',
+      sections: topic.sections,
+      summary: topic.summary
     });
-    expect(manifestGuide.contentHash).toMatch(/^sha256:[a-f0-9]{64}$/);
+    expect(manifestTopic.contentHash).toMatch(/^sha256:[a-f0-9]{64}$/);
   });
 
   it('keeps build hash stable across generated timestamps', () => {
@@ -46,8 +46,8 @@ describe('Web Guides manifest contract', () => {
       { path: 'assets/index-b.css', type: 'style' as const },
       { path: 'assets/index-a.js', type: 'script' as const }
     ];
-    const first = createWebGuidesManifest({ assets, generatedAt: '2026-06-10T00:00:00.000Z', guides: [guide] });
-    const second = createWebGuidesManifest({ assets, generatedAt: '2026-06-11T00:00:00.000Z', guides: [guide] });
+    const first = createDemoManifest({ assets, generatedAt: '2026-06-10T00:00:00.000Z', topics: [topic] });
+    const second = createDemoManifest({ assets, generatedAt: '2026-06-11T00:00:00.000Z', topics: [topic] });
 
     expect(first.contractVersion).toBe(2);
     expect(first.buildHash).toBe(second.buildHash);

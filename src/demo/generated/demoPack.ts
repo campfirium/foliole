@@ -1,19 +1,19 @@
-import type { GuidePack } from '../guidePack';
+import type { DemoPack } from '../demoPack';
 
-export const GENERATED_GUIDE_PACK: GuidePack = {
+export const GENERATED_DEMO_PACK: DemoPack = {
   contractVersion: 1,
   generatedAt: '2026-06-17T00:00:00.000Z',
   source: {
     rootNodeId: null,
-    rootTitle: 'Built-in Web Guides',
-    warnings: ['Built-in development Guide Pack. Run the export script with a Glide root to replace it.']
+    rootTitle: 'Built-in Demo',
+    warnings: ['Built-in development Demo Pack. Run the export script with a Demo root to replace it.']
   },
   topics: [
     {
       id: 'focused-reading-review',
       slug: 'focused-reading-review',
       title: 'Focused reading and review',
-      description: 'A practical guide to reading, extracting, and reviewing topics in Foliole.',
+      description: 'A practical Demo topic for reading, extracting, and reviewing topics in Foliole.',
       summary: 'Build a quiet loop from reading to review without turning every thought into a task.',
       runtime: { state: 'topic', topicId: 'focused-reading-review' },
       highlights: [],
@@ -53,7 +53,7 @@ export const GENERATED_GUIDE_PACK: GuidePack = {
       id: 'organize-source-topics',
       slug: 'organize-source-topics',
       title: 'Organize source topics',
-      description: 'A short guide to keeping source topics easy to return to as a reading collection grows.',
+      description: 'A short Demo topic for keeping source topics easy to return to as a reading collection grows.',
       summary: 'Keep folders and topics simple enough that the next reading step stays visible.',
       runtime: { state: 'topic', topicId: 'organize-source-topics' },
       highlights: [],

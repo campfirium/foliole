@@ -5,14 +5,14 @@ import path from 'node:path';
 import { parseStoredAnchorLink, type StoredAnchorLink } from '../lib/core/database/anchorLinkCodec.js';
 import { decodeTextBodyBlobData } from '../lib/core/database/contentBodyBlobs.js';
 import { parseManualChildOrder } from '../lib/core/nodes/manualChildOrder.js';
-import type { GuidePack, GuidePackBlock, GuidePackHighlight, GuidePackReviewItem } from '../src/web-guides/guidePack.js';
+import type { DemoPack, DemoPackBlock, DemoPackHighlight, DemoPackReviewItem } from '../src/demo/demoPack.js';
 
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
 
 const DEFAULT_DB_PATH = 'D:\\X\\U\\Foliole\\Data\\foliole.db';
-const DEFAULT_OUTPUT_PATH = 'src/web-guides/generated/guidePack.ts';
-const GUIDE_PACK_CONTRACT_VERSION = 1;
+const DEFAULT_OUTPUT_PATH = 'src/demo/generated/demoPack.ts';
+const DEMO_PACK_CONTRACT_VERSION = 1;
 
 interface ExportArgs {
   dbPath: string;
@@ -61,14 +61,14 @@ export function parseExportArgs(argv: string[]): ExportArgs {
   };
 }
 
-export async function exportGuidePack(args: ExportArgs) {
+export async function exportDemoPack(args: ExportArgs) {
   const db = new BetterSqlite3(args.dbPath, { readonly: true, fileMustExist: true });
   try {
     const root = resolveRoot(db, args);
     const rows = queryVisibleSubtreeRows(db, root.id);
     const warnings = querySkippedDescendants(db, root.id).map((row) => `${row.reason}: ${row.title} (${row.id})`);
-    const pack = buildGuidePack(root, rows, warnings);
-    await writeGuidePack(args.outputPath, pack);
+    const pack = buildDemoPack(root, rows, warnings);
+    await writeDemoPack(args.outputPath, pack);
     return pack;
   } finally {
     db.close();
@@ -80,7 +80,7 @@ function resolveRoot(db: import('better-sqlite3').Database, args: ExportArgs) {
     ? db.prepare('SELECT id, title FROM nodes WHERE id = ? AND deleted_at IS NULL').all(args.rootId)
     : db.prepare('SELECT id, title FROM nodes WHERE title = ? AND deleted_at IS NULL ORDER BY id').all(args.rootTitle);
   if (rows.length !== 1) {
-    throw new Error(`Expected exactly one Glide root, found ${rows.length}.`);
+    throw new Error(`Expected exactly one Demo root, found ${rows.length}.`);
   }
   return rows[0] as { id: string; title: string };
 }
@@ -120,18 +120,18 @@ function querySkippedDescendants(db: import('better-sqlite3').Database, rootId: 
   `).all(rootId) as WarningRow[];
 }
 
-function buildGuidePack(root: { id: string; title: string }, rows: NodeRow[], warnings: string[]): GuidePack {
+function buildDemoPack(root: { id: string; title: string }, rows: NodeRow[], warnings: string[]): DemoPack {
   const byId = new Map(rows.map((row) => [row.id, row]));
   const rootRow = byId.get(root.id);
-  if (!rootRow) throw new Error('Glide root is not exportable.');
+  if (!rootRow) throw new Error('Demo root is not exportable.');
   const childIds = buildOrderedChildIds(rows);
   const topics = orderedDescendants(root.id, childIds)
     .map((id) => byId.get(id))
     .filter((row): row is NodeRow => Boolean(row && isPublishTopic(row)))
     .map((topic, index) => buildTopic(topic, index, childIds, byId, warnings));
-  if (!topics.length) throw new Error('Glide root does not contain publishable topics.');
+  if (!topics.length) throw new Error('Demo root does not contain publishable topics.');
   return {
-    contractVersion: GUIDE_PACK_CONTRACT_VERSION,
+    contractVersion: DEMO_PACK_CONTRACT_VERSION,
     generatedAt: new Date().toISOString(),
     source: { rootNodeId: root.id, rootTitle: root.title, warnings },
     topics
@@ -181,7 +181,7 @@ function buildTopic(topic: NodeRow, index: number, childIds: Map<string, string[
   };
 }
 
-function highlightFromNode(row: NodeRow, warnings: string[]): GuidePackHighlight[] {
+function highlightFromNode(row: NodeRow, warnings: string[]): DemoPackHighlight[] {
   const anchor = parseStoredAnchorLink(row.anchor_link);
   if (anchor?.kind !== 'highlight') return [];
   const locator = textLocator(anchor);
@@ -192,7 +192,7 @@ function highlightFromNode(row: NodeRow, warnings: string[]): GuidePackHighlight
   return [{ id: row.id, title: row.title, excerpt: row.title || locatorText(locator), locator }];
 }
 
-function reviewItemFromNode(row: NodeRow): GuidePackReviewItem[] {
+function reviewItemFromNode(row: NodeRow): DemoPackReviewItem[] {
   if (row.kind !== 'item') return [];
   return [{ id: row.id, title: row.title, kind: row.reveal ? 'cloze' : 'item', prompt: row.content, answer: row.reveal }];
 }
@@ -204,7 +204,7 @@ function textLocator(anchor: StoredAnchorLink) {
   return 'from' in locator && 'to' in locator && 'originalText' in locator ? locator : null;
 }
 
-function locatorText(locator: GuidePackHighlight['locator']) {
+function locatorText(locator: DemoPackHighlight['locator']) {
   return 'ranges' in locator ? locator.ranges.map((range) => range.originalText).join(' ') : locator.originalText;
 }
 
@@ -212,7 +212,7 @@ function firstParagraph(content: string) {
   return content.split(/\n{2,}/).map((part) => part.trim()).find(Boolean) ?? null;
 }
 
-function markdownBlocks(slug: string, content: string, fallbackTitle: string): GuidePackBlock[] {
+function markdownBlocks(slug: string, content: string, fallbackTitle: string): DemoPackBlock[] {
   const blocks = content.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean);
   const source = blocks.length ? blocks : [fallbackTitle];
   return source.map((text, index) => ({
@@ -227,17 +227,17 @@ function uniqueSlug(title: string, id: string, index: number) {
   return base || `topic-${index + 1}-${id.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
 }
 
-async function writeGuidePack(outputPath: string, pack: GuidePack) {
+async function writeDemoPack(outputPath: string, pack: DemoPack) {
   const resolved = path.resolve(outputPath);
   await mkdir(path.dirname(resolved), { recursive: true });
   const tempPath = `${resolved}.tmp`;
-  await writeFile(tempPath, `import type { GuidePack } from '../guidePack';\n\nexport const GENERATED_GUIDE_PACK: GuidePack = ${JSON.stringify(pack, null, 2)};\n`, 'utf8');
+  await writeFile(tempPath, `import type { DemoPack } from '../demoPack';\n\nexport const GENERATED_DEMO_PACK: DemoPack = ${JSON.stringify(pack, null, 2)};\n`, 'utf8');
   await rename(tempPath, resolved);
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve('scripts/export-web-guides-guide-pack.ts')) {
-  exportGuidePack(parseExportArgs(process.argv.slice(2))).catch((error) => {
-    console.error(`[web-guides:export] ${error instanceof Error ? error.message : String(error)}`);
+if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve('scripts/export-demo-pack.ts')) {
+  exportDemoPack(parseExportArgs(process.argv.slice(2))).catch((error) => {
+    console.error(`[demo:export] ${error instanceof Error ? error.message : String(error)}`);
     process.exit(1);
   });
 }

@@ -28,13 +28,18 @@ export function upsertTextBodyBlob(driver: DatabaseDriver, content: string, now:
 
 export function decodeTextBodyBlobData(data: unknown) {
   if (ArrayBuffer.isView(data)) {
-    return Buffer.from(data).toString('utf8');
+    const view = data as ArrayBufferView;
+    return Buffer.from(new Uint8Array(view.buffer as ArrayBuffer, view.byteOffset, view.byteLength)).toString('utf8');
   }
-  if (data instanceof ArrayBuffer) {
-    return Buffer.from(data).toString('utf8');
+  if (isArrayBuffer(data)) {
+    return Buffer.from(data as ArrayBuffer).toString('utf8');
   }
   if (typeof data === 'string') {
     return data;
   }
   return null;
+}
+
+function isArrayBuffer(data: unknown) {
+  return Object.prototype.toString.call(data) === '[object ArrayBuffer]';
 }

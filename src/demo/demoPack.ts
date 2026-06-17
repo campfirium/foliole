@@ -1,25 +1,25 @@
-export const GUIDE_PACK_CONTRACT_VERSION = 1;
+export const DEMO_PACK_CONTRACT_VERSION = 1;
 
-export interface GuidePackBlock {
+export interface DemoPackBlock {
   id: string;
   kind: 'heading' | 'paragraph';
   text: string;
 }
 
-export interface GuidePackTextLocator {
+export interface DemoPackTextLocator {
   from: number;
   originalText: string;
   to: number;
 }
 
-export interface GuidePackHighlight {
+export interface DemoPackHighlight {
   id: string;
   excerpt: string;
-  locator: GuidePackTextLocator | { ranges: GuidePackTextLocator[] };
+  locator: DemoPackTextLocator | { ranges: DemoPackTextLocator[] };
   title: string;
 }
 
-export interface GuidePackReviewItem {
+export interface DemoPackReviewItem {
   answer: string | null;
   id: string;
   kind: 'cloze' | 'item';
@@ -27,12 +27,12 @@ export interface GuidePackReviewItem {
   title: string;
 }
 
-export interface GuidePackTopic {
-  blocks: GuidePackBlock[];
+export interface DemoPackTopic {
+  blocks: DemoPackBlock[];
   description: string;
-  highlights: GuidePackHighlight[];
+  highlights: DemoPackHighlight[];
   id: string;
-  reviewItems: GuidePackReviewItem[];
+  reviewItems: DemoPackReviewItem[];
   runtime: {
     state: 'topic';
     topicId: string;
@@ -42,59 +42,59 @@ export interface GuidePackTopic {
   title: string;
 }
 
-export interface GuidePack {
-  contractVersion: typeof GUIDE_PACK_CONTRACT_VERSION;
+export interface DemoPack {
+  contractVersion: typeof DEMO_PACK_CONTRACT_VERSION;
   generatedAt: string;
   source: {
     rootNodeId: string | null;
     rootTitle: string;
     warnings: string[];
   };
-  topics: GuidePackTopic[];
+  topics: DemoPackTopic[];
 }
 
-export interface WebGuideSection {
+export interface DemoSection {
   heading: string;
   body: string[];
 }
 
-export interface WebGuideSeed extends GuidePackTopic {
-  sections: WebGuideSection[];
+export interface DemoTopic extends DemoPackTopic {
+  sections: DemoSection[];
 }
 
-export function assertGuidePack(pack: GuidePack): GuidePack {
-  if (pack.contractVersion !== GUIDE_PACK_CONTRACT_VERSION) {
-    throw new Error(`Unsupported Guide Pack contract version: ${pack.contractVersion}`);
+export function assertDemoPack(pack: DemoPack): DemoPack {
+  if (pack.contractVersion !== DEMO_PACK_CONTRACT_VERSION) {
+    throw new Error(`Unsupported Demo Pack contract version: ${pack.contractVersion}`);
   }
   if (!pack.topics.length) {
-    throw new Error('Guide Pack must include at least one topic.');
+    throw new Error('Demo Pack must include at least one topic.');
   }
   const slugs = new Set<string>();
   for (const topic of pack.topics) {
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(topic.slug)) {
-      throw new Error(`Invalid Guide Pack topic slug: ${topic.slug}`);
+      throw new Error(`Invalid Demo Pack topic slug: ${topic.slug}`);
     }
     if (slugs.has(topic.slug)) {
-      throw new Error(`Duplicate Guide Pack topic slug: ${topic.slug}`);
+      throw new Error(`Duplicate Demo Pack topic slug: ${topic.slug}`);
     }
     slugs.add(topic.slug);
     if (!topic.title.trim() || !topic.blocks.length) {
-      throw new Error(`Guide Pack topic is incomplete: ${topic.id}`);
+      throw new Error(`Demo Pack topic is incomplete: ${topic.id}`);
     }
   }
   return pack;
 }
 
-export function guidePackToWebGuides(pack: GuidePack): WebGuideSeed[] {
-  return assertGuidePack(pack).topics.map((topic) => ({
+export function demoPackToDemoTopics(pack: DemoPack): DemoTopic[] {
+  return assertDemoPack(pack).topics.map((topic) => ({
     ...topic,
     sections: blocksToSections(topic)
   }));
 }
 
-function blocksToSections(topic: GuidePackTopic): WebGuideSection[] {
-  const sections: WebGuideSection[] = [];
-  let current: WebGuideSection | null = null;
+function blocksToSections(topic: DemoPackTopic): DemoSection[] {
+  const sections: DemoSection[] = [];
+  let current: DemoSection | null = null;
   for (const block of topic.blocks) {
     if (block.kind === 'heading') {
       current = { heading: block.text, body: [] };

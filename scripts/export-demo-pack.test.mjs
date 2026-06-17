@@ -6,16 +6,16 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { exportGuidePack } from './export-web-guides-guide-pack.ts';
+import { exportDemoPack } from './export-demo-pack.ts';
 
 const require = createRequire(import.meta.url);
 const Database = require('better-sqlite3');
 
 async function withFixture(test) {
-  const dir = await mkdtemp(path.join(os.tmpdir(), 'foliole-guide-pack-'));
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'foliole-demo-pack-'));
   try {
     const dbPath = path.join(dir, 'foliole.db');
-    const outputPath = path.join(dir, 'guidePack.ts');
+    const outputPath = path.join(dir, 'demoPack.ts');
     const db = new Database(dbPath);
     createSchema(db);
     seedFixture(db);
@@ -81,7 +81,7 @@ function seedFixture(db) {
   insertNode(db, {
     id: 'root',
     kind: 'folder',
-    title: 'Foliole Guide Preview',
+    title: 'Foliole Demo Preview',
     manual_child_order: JSON.stringify(['topic-b', 'topic-a', 'virtual-topic']),
     created_at: '2026-06-01T00:00:00.000Z'
   });
@@ -129,10 +129,10 @@ function seedFixture(db) {
   insertNode(db, { id: 'outside', title: 'Outside', content: 'private', created_at: '2026-06-01T00:07:00.000Z' });
 }
 
-describe('web guides Guide Pack export', () => {
+describe('Demo Pack export', () => {
   it('exports only the selected subtree in manual child order', async () => {
     await withFixture(async ({ dbPath, outputPath }) => {
-      const pack = await exportGuidePack({ dbPath, outputPath, rootTitle: 'Foliole Guide Preview' });
+      const pack = await exportDemoPack({ dbPath, outputPath, rootTitle: 'Foliole Demo Preview' });
       expect(pack.topics.map((topic) => topic.id)).toEqual(['topic-b', 'topic-a']);
       expect(pack.topics[0].blocks[0]).toMatchObject({ kind: 'heading', text: 'Reading first' });
       expect(pack.topics[0].highlights[0]).toMatchObject({ excerpt: 'Important phrase' });
@@ -142,15 +142,15 @@ describe('web guides Guide Pack export', () => {
         expect.stringContaining('virtual: Virtual topic'),
         expect.stringContaining('non-text-anchor: Visual highlight')
       ]));
-      await expect(readFile(outputPath, 'utf8')).resolves.toContain('GENERATED_GUIDE_PACK');
+      await expect(readFile(outputPath, 'utf8')).resolves.toContain('GENERATED_DEMO_PACK');
     });
   });
 
   it('fails without replacing the output when the root is missing', async () => {
     await withFixture(async ({ dbPath, outputPath }) => {
       await writeFile(outputPath, 'keep me', 'utf8');
-      await expect(exportGuidePack({ dbPath, outputPath, rootTitle: 'Missing' })).rejects.toThrow(
-        'Expected exactly one Glide root'
+      await expect(exportDemoPack({ dbPath, outputPath, rootTitle: 'Missing' })).rejects.toThrow(
+        'Expected exactly one Demo root'
       );
       await expect(readFile(outputPath, 'utf8')).resolves.toBe('keep me');
     });

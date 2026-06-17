@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 
 import companionViteConfig, { unwrapCssCascadeLayersForLegacyWebView } from '../vite.companion.config.ts';
-import guidesViteConfig, { webGuidesManifestPlugin } from '../vite.guides.config.ts';
+import demoViteConfig, { demoManifestPlugin } from '../vite.demo.config.ts';
 import viteConfig from '../vite.config.ts';
 import { injectDefaultStartupSkeletonHtml } from '../vite.shared.ts';
 
@@ -57,18 +57,18 @@ describe('vite config', () => {
 
   it('keeps non-desktop targets free from desktop renderer warmup files', () => {
     expect(companionViteConfig.server?.warmup).toBeUndefined();
-    expect(guidesViteConfig.server?.warmup).toBeUndefined();
+    expect(demoViteConfig.server?.warmup).toBeUndefined();
   });
 
-  it('builds Web Guides from an isolated root into its static output directory', () => {
-    expect(normalizePath(guidesViteConfig.root)).toMatch(/src\/web-guides$/);
-    expect(normalizePath(guidesViteConfig.build?.outDir)).toMatch(/dist-guides$/);
-    expect(guidesViteConfig.build?.emptyOutDir).toBe(true);
+  it('builds Demo from its Web host root into its static output directory', () => {
+    expect(normalizePath(demoViteConfig.root)).toMatch(/src\/demo$/);
+    expect(normalizePath(demoViteConfig.build?.outDir)).toMatch(/dist-demo$/);
+    expect(demoViteConfig.build?.emptyOutDir).toBe(true);
   });
 
-  it('emits the Web Guides manifest from public bundle asset names', () => {
+  it('emits the Demo manifest from public bundle asset names', () => {
     const emitted = [];
-    const plugin = webGuidesManifestPlugin();
+    const plugin = demoManifestPlugin();
 
     plugin.generateBundle.call(
       { emitFile: (asset) => emitted.push(asset) },
@@ -81,7 +81,7 @@ describe('vite config', () => {
     );
 
     expect(emitted).toHaveLength(1);
-    expect(emitted[0]).toMatchObject({ fileName: 'guides-manifest.json', type: 'asset' });
+    expect(emitted[0]).toMatchObject({ fileName: 'demo-manifest.json', type: 'asset' });
     const manifest = JSON.parse(emitted[0].source);
     expect(manifest.runtime).toEqual({
       entry: 'index.html',
@@ -90,9 +90,9 @@ describe('vite config', () => {
         { path: 'assets/index-def.css', type: 'style' }
       ]
     });
-    expect(manifest.guides[0]).toMatchObject({
+    expect(manifest.topics[0]).toMatchObject({
       slug: 'focused-reading-review',
-      canonicalPath: '/guides/focused-reading-review/'
+      canonicalPath: '/demo/focused-reading-review/'
     });
   });
 
