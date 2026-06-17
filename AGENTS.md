@@ -43,6 +43,12 @@
 - 根 `AGENTS.md` 只保留全仓硬规则、路由触发器和机械决策入口；平台细则归局部 `AGENTS.md`，长解释和背景归 specs / Atlas，不进入根规则。
 - 机械可判定逻辑优先写成表格或脚本入口；禁止把多维状态机继续扩写成散文段落。
 
+## Windows Command Boundary
+
+- Windows 原生命令默认用已存在的 `npm` / `node` / 项目脚本入口执行；不得把多步验证长期写成内联 PowerShell / cmd 片段。
+- 复杂 Windows 命令若涉及多层引号、环境变量、重定向、后台进程、native exe、`cmd.exe` / PowerShell 交叉调用或 stdout 可靠性判断，优先写成仓库内 Node runner 或已提交脚本；临时诊断必须把 stdout、stderr、exit code 写入 `.tmp/` 后再读取，不得只凭空 stdout 或空日志判定成功。
+- 需要临时调用 Windows PowerShell 承载复杂参数时，使用 `powershell.exe -NoProfile -EncodedCommand` 并记录可复验日志；避免使用多层 `powershell.exe -Command "..."`、复杂 `cmd.exe /c ... && ...` 或嵌套 shell quoting。
+
 ## Task Execution And Risk Routing
 
 1. 任务开工判断是首个动作规则：在第一次读文件、跑命令或改代码前，把最新用户请求归类为 `DIRECT`、`FOLLOW_PLAN`、`NEEDS_EVAL` 或 `STOP_CONFIRM`；只有 `DIRECT` 可以静默执行。
