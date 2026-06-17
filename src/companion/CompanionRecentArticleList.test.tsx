@@ -17,7 +17,31 @@ function testClampsArticlePreviews() {
     />
   );
 
-  expect(screen.getByText('Line one. Line two. Line three. Line four.').className).toContain('line-clamp-3');
+  expect(screen.getByText('Line one. Line two. Line three. Line four.').className).toContain('line-clamp-2');
+}
+
+function testRendersContinueReadingEntry() {
+  render(
+    <RecentArticleList
+      currentArticleId={null}
+      onSelectArticle={vi.fn()}
+      recentArticles={[{
+        nodeId: 'article-1',
+        preview: 'Opening text',
+        title: 'Article 1',
+        updatedAt: '2026-04-21T10:00:00.000Z'
+      }, {
+        nodeId: 'article-2',
+        preview: 'Second opening text',
+        title: 'Article 2',
+        updatedAt: '2026-04-22T10:00:00.000Z'
+      }]}
+    />
+  );
+
+  expect(screen.getByText('Continue reading')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Open topic Article 1' })).toHaveClass('border-l-[3px]');
+  expect(screen.getByRole('button', { name: 'Open topic Article 2' })).toHaveTextContent('Second opening text');
 }
 
 function testKeepsCachingTopicsQuiet() {
@@ -90,7 +114,8 @@ function testKeepsEmptyRecentTopicsPassive() {
 }
 
 describe('RecentArticleList', () => {
-  it('clamps article previews to three lines', testClampsArticlePreviews);
+  it('clamps article previews to two lines', testClampsArticlePreviews);
+  it('renders the first recent topic as a continue reading entry', testRendersContinueReadingEntry);
   it('keeps recent topics quiet while their bodies are still downloading', testKeepsCachingTopicsQuiet);
   it('marks recent topics whose content is empty', testMarksEmptyTopic);
   it('marks recent topics whose body is unavailable', testMarksUnavailableTopicBody);
