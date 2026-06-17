@@ -1,8 +1,20 @@
 import type { DemoPack } from '../demoPack';
 
 export const GENERATED_DEMO_PACK: DemoPack = {
-  contractVersion: 2,
+  contractVersion: 3,
   generatedAt: '2026-06-17T00:00:00.000Z',
+  sourceLocale: 'en',
+  translatableFields: [
+    'topics[].title',
+    'topics[].description',
+    'topics[].summary',
+    'topics[].blocks[].text',
+    'topics[].highlights[].title',
+    'topics[].highlights[].excerpt',
+    'topics[].reviewItems[].title',
+    'topics[].reviewItems[].prompt',
+    'topics[].reviewItems[].answer'
+  ],
   source: {
     rootNodeId: null,
     rootTitle: 'Built-in Demo',

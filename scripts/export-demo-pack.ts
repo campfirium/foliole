@@ -4,7 +4,15 @@ import path from 'node:path';
 import { parseStoredAnchorLink, type StoredAnchorLink } from '../lib/core/database/anchorLinkCodec.js';
 import { decodeTextBodyBlobData } from '../lib/core/database/contentBodyBlobs.js';
 import { parseManualChildOrder } from '../lib/core/nodes/manualChildOrder.js';
-import type { DemoPack, DemoPackBlock, DemoPackHighlight, DemoPackReviewItem } from '../src/demo/demoPack.js';
+import {
+  DEMO_PACK_CONTRACT_VERSION,
+  DEMO_SOURCE_LOCALE_DEFAULT,
+  DEMO_TRANSLATABLE_FIELDS,
+  type DemoPack,
+  type DemoPackBlock,
+  type DemoPackHighlight,
+  type DemoPackReviewItem
+} from '../src/demo/demoPack.js';
 
 import { createDemoReadingSeed, createDemoReviewScheduleSeed } from './demo-pack-schedule-seeds.js';
 import { writeDemoPack } from './write-demo-pack.js';
@@ -14,13 +22,13 @@ const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3
 
 const DEFAULT_DB_PATH = 'D:\\X\\U\\Foliole\\Data\\foliole.db';
 const DEFAULT_OUTPUT_PATH = 'src/demo/generated/demoPack.ts';
-const DEMO_PACK_CONTRACT_VERSION = 2;
 
 interface ExportArgs {
   dbPath: string;
   outputPath: string;
   rootId?: string;
   rootTitle?: string;
+  sourceLocale?: string;
 }
 
 interface NodeRow {
@@ -58,6 +66,7 @@ export function parseExportArgs(argv: string[]): ExportArgs {
   return {
     dbPath: flags.get('db-path') ?? DEFAULT_DB_PATH,
     outputPath: flags.get('output') ?? DEFAULT_OUTPUT_PATH,
+    sourceLocale: flags.get('source-locale') ?? DEMO_SOURCE_LOCALE_DEFAULT,
     ...(rootId ? { rootId } : {}),
     ...(rootTitle ? { rootTitle } : {})
   };
@@ -69,7 +78,7 @@ export async function exportDemoPack(args: ExportArgs) {
     const root = resolveRoot(db, args);
     const rows = queryVisibleSubtreeRows(db, root.id);
     const warnings = querySkippedDescendants(db, root.id).map((row) => `${row.reason}: ${row.title} (${row.id})`);
-    const pack = buildDemoPack(root, rows, warnings);
+    const pack = buildDemoPack(root, rows, warnings, args.sourceLocale ?? DEMO_SOURCE_LOCALE_DEFAULT);
     await writeDemoPack(args.outputPath, pack);
     return pack;
   } finally {
@@ -122,7 +131,7 @@ function querySkippedDescendants(db: import('better-sqlite3').Database, rootId: 
   `).all(rootId) as WarningRow[];
 }
 
-function buildDemoPack(root: { id: string; title: string }, rows: NodeRow[], warnings: string[]): DemoPack {
+function buildDemoPack(root: { id: string; title: string }, rows: NodeRow[], warnings: string[], sourceLocale: string): DemoPack {
   const byId = new Map(rows.map((row) => [row.id, row]));
   const rootRow = byId.get(root.id);
   if (!rootRow) throw new Error('Demo root is not exportable.');
@@ -135,6 +144,8 @@ function buildDemoPack(root: { id: string; title: string }, rows: NodeRow[], war
   return {
     contractVersion: DEMO_PACK_CONTRACT_VERSION,
     generatedAt: new Date().toISOString(),
+    sourceLocale,
+    translatableFields: DEMO_TRANSLATABLE_FIELDS,
     source: { rootNodeId: root.id, rootTitle: root.title, warnings },
     topics
   };

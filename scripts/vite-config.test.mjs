@@ -90,9 +90,14 @@ describe('vite config', () => {
         { path: 'assets/index-def.css', type: 'style' }
       ]
     });
-    expect(manifest.topics[0]).toMatchObject({
+    expect(manifest.contractVersion).toBe(3);
+    expect(manifest.localePublishPacks[0].topics[0]).toMatchObject({
       slug: 'focused-reading-review',
-      canonicalPath: '/demo/focused-reading-review/'
+      locale: 'en',
+      canonicalPath: '/en/demo/focused-reading-review/',
+      alternates: expect.arrayContaining([
+        { locale: 'zh-hans', hreflang: 'zh-Hans', path: '/zh-hans/demo/focused-reading-review/' }
+      ])
     });
   });
 

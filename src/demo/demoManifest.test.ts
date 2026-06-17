@@ -5,7 +5,9 @@ import { describe, expect, it } from 'vitest';
 import {
   createDemoManifest,
   createDemoManifestTopic,
+  DEMO_PUBLISHED_LOCALES,
   DEMO_MANIFEST_FILE,
+  DEMO_X_DEFAULT_PATH,
   stableJson,
 } from './demoManifest';
 
@@ -52,7 +54,7 @@ const topic = {
 };
 
 describe('Demo manifest contract', () => {
-  it('projects static Demo topic metadata into the v2 manifest schema', () => {
+  it('projects static Demo topic metadata into the v3 locale manifest schema', () => {
     const manifestTopic = createDemoManifestTopic(topic);
 
     expect(DEMO_MANIFEST_FILE).toBe('demo-manifest.json');
@@ -60,10 +62,19 @@ describe('Demo manifest contract', () => {
       slug: topic.slug,
       title: topic.title,
       description: topic.description,
-      canonicalPath: '/demo/focused-reading-review/',
+      locale: 'en',
+      hreflang: 'en',
+      canonicalPath: '/en/demo/focused-reading-review/',
+      xDefaultPath: DEMO_X_DEFAULT_PATH,
       sections: topic.sections,
       summary: topic.summary
     });
+    expect(manifestTopic.alternates).toEqual([
+      { locale: 'en', hreflang: 'en', path: '/en/demo/focused-reading-review/' },
+      { locale: 'zh-hans', hreflang: 'zh-Hans', path: '/zh-hans/demo/focused-reading-review/' },
+      { locale: 'zh-hant', hreflang: 'zh-Hant', path: '/zh-hant/demo/focused-reading-review/' },
+      { locale: 'ja', hreflang: 'ja', path: '/ja/demo/focused-reading-review/' }
+    ]);
     expect(JSON.stringify(manifestTopic)).not.toContain('reviewScheduleSeeds');
     expect(JSON.stringify(manifestTopic)).not.toContain('dayOffset');
     expect(manifestTopic.contentHash).toMatch(/^sha256:[a-f0-9]{64}$/);
@@ -77,7 +88,14 @@ describe('Demo manifest contract', () => {
     const first = createDemoManifest({ assets, generatedAt: '2026-06-10T00:00:00.000Z', topics: [topic] });
     const second = createDemoManifest({ assets, generatedAt: '2026-06-11T00:00:00.000Z', topics: [topic] });
 
-    expect(first.contractVersion).toBe(2);
+    expect(first.contractVersion).toBe(3);
+    expect(first.publishedLocales).toEqual(DEMO_PUBLISHED_LOCALES);
+    expect(first.localePublishPacks.map((pack) => pack.locale)).toEqual(['en', 'zh-hans', 'zh-hant', 'ja']);
+    expect(first.localePublishPacks[1].topics[0]).toMatchObject({
+      locale: 'zh-hans',
+      hreflang: 'zh-Hans',
+      canonicalPath: '/zh-hans/demo/focused-reading-review/'
+    });
     expect(first.buildHash).toBe(second.buildHash);
     expect(first.runtime.assets.map((asset) => asset.path)).toEqual(['assets/index-a.js', 'assets/index-b.css']);
   });

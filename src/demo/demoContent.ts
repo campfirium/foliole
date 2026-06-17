@@ -6,6 +6,6 @@ export type { DemoSection, DemoTopic };
 export const DEMO_TOPICS = demoPackToDemoTopics(GENERATED_DEMO_PACK);
 export const DEFAULT_DEMO_TOPIC = DEMO_TOPICS[0];
 
-export function canonicalDemoPath(slug: string) {
-  return `/demo/${slug}/`;
+export function canonicalDemoPath(slug: string, locale = 'en') {
+  return `/${locale}/demo/${slug}/`;
 }

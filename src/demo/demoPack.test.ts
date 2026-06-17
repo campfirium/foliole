@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { assertDemoPack, type DemoPack } from './demoPack';
+import { assertDemoPack, DEMO_SOURCE_LOCALE_DEFAULT, DEMO_TRANSLATABLE_FIELDS, type DemoPack } from './demoPack';
 import { GENERATED_DEMO_PACK } from './generated/demoPack';
 
 function clonePack(): DemoPack {
@@ -8,8 +8,25 @@ function clonePack(): DemoPack {
 }
 
 describe('Demo Pack contract', () => {
-  it('accepts the generated v2 Demo Pack', () => {
+  it('accepts the generated v3 Demo Pack', () => {
     expect(assertDemoPack(clonePack())).toBeTruthy();
+  });
+
+  it('requires source locale and translatable fields', () => {
+    const pack = clonePack();
+
+    expect(pack.sourceLocale).toBe(DEMO_SOURCE_LOCALE_DEFAULT);
+    expect(pack.translatableFields).toEqual(DEMO_TRANSLATABLE_FIELDS);
+
+    delete (pack as Partial<DemoPack>).sourceLocale;
+    expect(() => assertDemoPack(pack)).toThrow('sourceLocale');
+  });
+
+  it('rejects unsupported translatable fields', () => {
+    const pack = clonePack();
+    pack.translatableFields = ['topics[].unknown' as (typeof pack.translatableFields)[number]];
+
+    expect(() => assertDemoPack(pack)).toThrow('Unsupported Demo Pack translatable field');
   });
 
   it('requires topic reading seeds', () => {

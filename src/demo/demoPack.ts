@@ -1,4 +1,16 @@
-export const DEMO_PACK_CONTRACT_VERSION = 2;
+export const DEMO_PACK_CONTRACT_VERSION = 3;
+export const DEMO_SOURCE_LOCALE_DEFAULT = 'en';
+export const DEMO_TRANSLATABLE_FIELDS = [
+  'topics[].title',
+  'topics[].description',
+  'topics[].summary',
+  'topics[].blocks[].text',
+  'topics[].highlights[].title',
+  'topics[].highlights[].excerpt',
+  'topics[].reviewItems[].title',
+  'topics[].reviewItems[].prompt',
+  'topics[].reviewItems[].answer'
+] as const;
 
 export interface DemoPackRelativeTime {
   dayOffset: number;
@@ -75,6 +87,8 @@ export interface DemoPackTopic {
 export interface DemoPack {
   contractVersion: typeof DEMO_PACK_CONTRACT_VERSION;
   generatedAt: string;
+  sourceLocale: string;
+  translatableFields: readonly (typeof DEMO_TRANSLATABLE_FIELDS)[number][];
   source: {
     rootNodeId: string | null;
     rootTitle: string;
@@ -98,6 +112,17 @@ export function assertDemoPack(pack: DemoPack): DemoPack {
   }
   if (!pack.topics.length) {
     throw new Error('Demo Pack must include at least one topic.');
+  }
+  if (!pack.sourceLocale?.trim()) {
+    throw new Error('Demo Pack must include sourceLocale.');
+  }
+  if (!Array.isArray(pack.translatableFields) || !pack.translatableFields.length) {
+    throw new Error('Demo Pack must include translatable fields.');
+  }
+  for (const field of pack.translatableFields) {
+    if (!(DEMO_TRANSLATABLE_FIELDS as readonly string[]).includes(field)) {
+      throw new Error(`Unsupported Demo Pack translatable field: ${field}`);
+    }
   }
   const slugs = new Set<string>();
   for (const topic of pack.topics) {

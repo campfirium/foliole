@@ -133,7 +133,9 @@ describe('Demo Pack export', () => {
   it('exports only the selected subtree in manual child order', async () => {
     await withFixture(async ({ dbPath, outputPath }) => {
       const pack = await exportDemoPack({ dbPath, outputPath, rootTitle: 'Foliole Demo Preview' });
-      expect(pack.contractVersion).toBe(2);
+      expect(pack.contractVersion).toBe(3);
+      expect(pack.sourceLocale).toBe('en');
+      expect(pack.translatableFields).toEqual(expect.arrayContaining(['topics[].title', 'topics[].blocks[].text']));
       expect(pack.topics.map((topic) => topic.id)).toEqual(['topic-b', 'topic-a']);
       expect(pack.topics[0].readingSeed).toMatchObject({
         nextAt: { dayOffset: 0 },
@@ -165,6 +167,14 @@ describe('Demo Pack export', () => {
         'Expected exactly one Demo root'
       );
       await expect(readFile(outputPath, 'utf8')).resolves.toBe('keep me');
+    });
+  });
+
+  it('allows overriding the source locale', async () => {
+    await withFixture(async ({ dbPath, outputPath }) => {
+      const pack = await exportDemoPack({ dbPath, outputPath, rootTitle: 'Foliole Demo Preview', sourceLocale: 'ja' });
+
+      expect(pack.sourceLocale).toBe('ja');
     });
   });
 });

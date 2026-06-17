@@ -3,9 +3,20 @@ import { createHash } from 'node:crypto';
 import { canonicalDemoPath, DEMO_TOPICS, type DemoTopic } from './demoContent';
 
 export const DEMO_MANIFEST_FILE = 'demo-manifest.json';
-export const DEMO_CONTRACT_VERSION = 2;
+export const DEMO_CONTRACT_VERSION = 3;
+export const DEMO_X_DEFAULT_PATH = '/demo/';
+export const DEMO_PUBLISHED_LOCALES = [
+  { locale: 'en', hreflang: 'en' },
+  { locale: 'zh-hans', hreflang: 'zh-Hans' },
+  { locale: 'zh-hant', hreflang: 'zh-Hant' },
+  { locale: 'ja', hreflang: 'ja' }
+] as const;
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const DEMO_TOPIC_PATH_PATTERN = /^\/(?:en|zh-hans|zh-hant|ja)\/demo\/[a-z0-9]+(?:-[a-z0-9]+)*\/$/;
+
+export type DemoLocalePathSegment = (typeof DEMO_PUBLISHED_LOCALES)[number]['locale'];
+export type DemoHreflang = (typeof DEMO_PUBLISHED_LOCALES)[number]['hreflang'];
 
 export interface DemoRuntimeAsset {
   path: string;
@@ -13,27 +24,44 @@ export interface DemoRuntimeAsset {
 }
 
 export interface DemoManifestTopic {
+  alternates: DemoAlternatePath[];
   slug: string;
   title: string;
   description: string;
   canonicalPath: string;
   contentHash: string;
+  hreflang: DemoHreflang;
   highlights: DemoTopic['highlights'];
+  locale: DemoLocalePathSegment;
   reviewItems: DemoTopic['reviewItems'];
   runtime: DemoTopic['runtime'];
   sections: DemoTopic['sections'];
   summary: string;
+  xDefaultPath: typeof DEMO_X_DEFAULT_PATH;
+}
+
+export interface DemoAlternatePath {
+  locale: DemoLocalePathSegment;
+  hreflang: DemoHreflang;
+  path: string;
+}
+
+export interface DemoLocalePublishPack {
+  locale: DemoLocalePathSegment;
+  hreflang: DemoHreflang;
+  topics: DemoManifestTopic[];
 }
 
 export interface DemoManifest {
-  contractVersion: 2;
+  contractVersion: 3;
   generatedAt: string;
   buildHash: string;
+  publishedLocales: readonly (typeof DEMO_PUBLISHED_LOCALES)[number][];
+  localePublishPacks: DemoLocalePublishPack[];
   runtime: {
     entry: 'index.html';
     assets: DemoRuntimeAsset[];
   };
-  topics: DemoManifestTopic[];
 }
 
 export function stableJson(value: unknown): string {
@@ -78,20 +106,45 @@ export function demoManifestProjection(topic: DemoTopic) {
   };
 }
 
-export function createDemoManifestTopic(topic: DemoTopic): DemoManifestTopic {
+function createAlternates(slug: string): DemoAlternatePath[] {
+  return DEMO_PUBLISHED_LOCALES.map((locale) => ({
+    locale: locale.locale,
+    hreflang: locale.hreflang,
+    path: canonicalDemoPath(slug, locale.locale)
+  }));
+}
+
+function assertValidManifestTopic(topic: DemoManifestTopic) {
+  if (!DEMO_TOPIC_PATH_PATTERN.test(topic.canonicalPath)) {
+    throw new Error(`Invalid Demo topic canonicalPath: ${topic.canonicalPath}`);
+  }
+  if (topic.xDefaultPath !== DEMO_X_DEFAULT_PATH) {
+    throw new Error(`Invalid Demo topic xDefaultPath: ${topic.xDefaultPath}`);
+  }
+  const selfReference = topic.alternates.some((alternate) => alternate.locale === topic.locale && alternate.path === topic.canonicalPath);
+  if (!selfReference) throw new Error(`Demo topic alternates must include self-reference: ${topic.slug}`);
+}
+
+export function createDemoManifestTopic(topic: DemoTopic, locale = DEMO_PUBLISHED_LOCALES[0]): DemoManifestTopic {
   const projection = demoManifestProjection(topic);
-  return {
+  const manifestTopic = {
     slug: projection.slug,
     title: projection.title,
     description: projection.description,
-    canonicalPath: projection.canonicalPath,
+    canonicalPath: canonicalDemoPath(projection.slug, locale.locale),
+    alternates: createAlternates(projection.slug),
+    hreflang: locale.hreflang,
     highlights: projection.highlights,
+    locale: locale.locale,
     reviewItems: projection.reviewItems,
     runtime: projection.runtime,
     sections: projection.sections,
     summary: projection.summary,
+    xDefaultPath: DEMO_X_DEFAULT_PATH,
     contentHash: sha256Uri(stableJson(projection))
   };
+  assertValidManifestTopic(manifestTopic);
+  return manifestTopic;
 }
 
 export function createDemoManifest(args: {
@@ -100,7 +153,11 @@ export function createDemoManifest(args: {
   topics?: DemoTopic[];
 }): DemoManifest {
   const topics = args.topics ?? DEMO_TOPICS;
-  const manifestTopics = topics.map(createDemoManifestTopic);
+  const localePublishPacks = DEMO_PUBLISHED_LOCALES.map((locale) => ({
+    locale: locale.locale,
+    hreflang: locale.hreflang,
+    topics: topics.map((topic) => createDemoManifestTopic(topic, locale))
+  }));
   const runtime = {
     entry: 'index.html' as const,
     assets: [...args.assets].sort((left, right) => left.path.localeCompare(right.path))
@@ -108,8 +165,9 @@ export function createDemoManifest(args: {
   return {
     contractVersion: DEMO_CONTRACT_VERSION,
     generatedAt: args.generatedAt ?? new Date().toISOString(),
-    buildHash: sha256Uri(stableJson({ runtime, topics: manifestTopics })),
+    buildHash: sha256Uri(stableJson({ localePublishPacks, runtime })),
+    publishedLocales: DEMO_PUBLISHED_LOCALES,
+    localePublishPacks,
     runtime,
-    topics: manifestTopics
   };
 }
