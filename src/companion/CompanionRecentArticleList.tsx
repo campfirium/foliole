@@ -1,6 +1,10 @@
+import { BookOpen } from 'lucide-react';
+
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import type { CompanionRecentArticle } from '../shared/platform/companionReadableArticle';
 import { AppEmptyState } from '../shared/ui';
+
+import { CompanionEmptyStateIcon } from './CompanionEmptyStateIcon';
 
 function formatRecentDate(value: string) {
   return new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' }).format(new Date(value));
@@ -84,6 +88,7 @@ export function RecentArticleList(props: {
         <AppEmptyState
           className="min-h-0 items-start text-left text-companion-text-secondary"
           description={t('companion.recent.empty.description')}
+          icon={<CompanionEmptyStateIcon Icon={BookOpen} />}
           title={t('companion.recent.empty.title')}
         />
       </section>

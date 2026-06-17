@@ -25,6 +25,7 @@ import {
   resolveDirectorySections
 } from './CompanionDirectoryModel';
 import { resolveDirectoryParentSelection } from './CompanionDirectoryParentModel';
+import { CompanionEmptyStateIcon } from './CompanionEmptyStateIcon';
 import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
 import { CompanionScreenHeader } from './CompanionScreenHeader';
 import { useCompanionExternalDirectory, useCompanionExternalDocument } from './useCompanionExternalDirectory';
@@ -92,6 +93,7 @@ function DirectoryList(props: {
         <AppEmptyState
           className="min-h-0 items-start text-left text-companion-text-secondary"
           description={t('companion.directory.emptyDescription')}
+          icon={<CompanionEmptyStateIcon Icon={FolderOpen} />}
           title={props.emptyLabel}
         />
       </div>

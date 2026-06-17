@@ -71,6 +71,20 @@ describe('AppEmptyState', () => {
     expect(screen.getByText('Nothing to review').className).toContain('text-foreground/72');
     expect(screen.getByText('No due cards.').className).toContain('text-ui-base');
   });
+
+  it('can render a decorative visual anchor before empty copy', () => {
+    render(
+      <AppEmptyState
+        description="No due cards."
+        icon={<span data-testid="empty-icon" />}
+        title="Nothing to review"
+      />
+    );
+
+    const status = screen.getByRole('status');
+    expect(screen.getByTestId('empty-icon')).toBeInTheDocument();
+    expect(status.firstElementChild?.firstElementChild).toHaveAttribute('data-testid', 'empty-icon');
+  });
 });
 
 it('separates document, panel, and floating state surface scope', () => {

@@ -6,6 +6,7 @@ import { cn } from '@/shared/lib/utils';
 interface EmptyStateProps {
   action?: ReactNode;
   className?: string;
+  icon?: ReactNode;
   surface?: StateSurfaceScope;
   title: string;
   description: string;
@@ -30,6 +31,7 @@ interface StateSurfaceProps {
   ariaLabel?: string;
   className?: string;
   description?: string;
+  icon?: ReactNode;
   role: 'alert' | 'status';
   surface: StateSurfaceScope;
   title?: string;
@@ -90,7 +92,7 @@ export function AppSpinner({
   );
 }
 
-function AppStateSurface({ action, ariaBusy, ariaLabel, className, description, role, surface, title, tone }: StateSurfaceProps) {
+function AppStateSurface({ action, ariaBusy, ariaLabel, className, description, icon, role, surface, title, tone }: StateSurfaceProps) {
   return (
     <div
       aria-busy={ariaBusy}
@@ -101,6 +103,7 @@ function AppStateSurface({ action, ariaBusy, ariaLabel, className, description, 
       role={role}
     >
       {tone === 'loading' ? <AppSpinner decorative tone="neutral" /> : null}
+      {icon ? <div className="flex items-center justify-center">{icon}</div> : null}
       {title || description ? (
         <div className="flex flex-col items-center gap-2">
           {title ? <p className={cn('m-0 text-ui-md font-semibold', STATE_SURFACE_TITLE_CLASS_NAMES[tone])}>{title}</p> : null}
@@ -112,7 +115,7 @@ function AppStateSurface({ action, ariaBusy, ariaLabel, className, description, 
   );
 }
 
-export function AppEmptyState({ title, description, action, className, surface = 'document' }: EmptyStateProps) {
+export function AppEmptyState({ title, description, action, className, icon, surface = 'document' }: EmptyStateProps) {
   return (
     <AppStateSurface
       description={description}
@@ -120,7 +123,7 @@ export function AppEmptyState({ title, description, action, className, surface =
       surface={surface}
       title={title}
       tone="empty"
-      {...definedProps({ action, className })}
+      {...definedProps({ action, className, icon })}
     />
   );
 }
