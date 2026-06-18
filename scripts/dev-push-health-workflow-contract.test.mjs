@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 const workflow = fs.readFileSync('.github/workflows/dev-push-health.yml', 'utf8');
 
 function routeForChangedFiles(files) {
-  const output = execFileSync('bash', ['scripts/quality-gate-fast.sh', '--route-json'], {
+  const output = execFileSync('bash', ['scripts/quality/quality-gate-fast.sh', '--route-json'], {
     encoding: 'utf8',
     env: {
       ...process.env,
@@ -29,7 +29,7 @@ describe('dev push health workflow contract', () => {
   });
 
   it('reuses the local quality route and writes the route to the Actions summary', () => {
-    expect(workflow).toContain('bash scripts/quality-gate-fast.sh --route-json');
+    expect(workflow).toContain('bash scripts/quality/quality-gate-fast.sh --route-json');
     expect(workflow).toContain('JSON.parse(process.env.ROUTE_JSON)');
     expect(workflow).toContain('GITHUB_STEP_SUMMARY');
     expect(workflow).toContain('QUALITY_GATE_CHANGED_FILES');
@@ -40,7 +40,7 @@ describe('dev push health workflow contract', () => {
     expect(workflow).toContain("needs.classify.outputs.level != 'light'");
     expect(workflow).toContain('case "${ROUTE_LEVEL}" in');
     expect(workflow).toContain('mid)');
-    expect(workflow).toContain('bash scripts/quality-gate-fast.sh');
+    expect(workflow).toContain('bash scripts/quality/quality-gate-fast.sh');
     expect(workflow).toContain('shared)');
     expect(workflow).toContain('npm run typecheck:shared');
     expect(workflow).not.toContain('quality:release');

@@ -12,8 +12,8 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..
 const HOOK_NAMES = ['commit-msg', 'pre-commit', 'pre-push'];
 const FILE_BUDGET_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'check-file-budget.mjs');
 const AFFECTED_VALIDATION_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'pre-push-affected-validation.mjs');
-const CRITICAL_TEST_ROUTES_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'quality-critical-test-routes.mjs');
-const SEQUENCE_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'check-commit-sequence.mjs');
+const CRITICAL_TEST_ROUTES_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'quality', 'quality-critical-test-routes.mjs');
+const SEQUENCE_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'git', 'check-commit-sequence.mjs');
 const HOOK_INTEGRATION_TIMEOUT_MS = 30_000;
 const tempDirs = [];
 
@@ -46,11 +46,13 @@ async function createRepo() {
   await runCommand('git', ['config', 'user.email', 'hooks@example.com'], repoDir);
   await mkdir(path.join(repoDir, '.githooks'), { recursive: true });
   await mkdir(path.join(repoDir, 'scripts'), { recursive: true });
-  await copyFile(SEQUENCE_SCRIPT_PATH, path.join(repoDir, 'scripts', 'check-commit-sequence.mjs'));
+  await mkdir(path.join(repoDir, 'scripts', 'git'), { recursive: true });
+  await mkdir(path.join(repoDir, 'scripts', 'quality'), { recursive: true });
+  await copyFile(SEQUENCE_SCRIPT_PATH, path.join(repoDir, 'scripts', 'git', 'check-commit-sequence.mjs'));
   await copyFile(FILE_BUDGET_SCRIPT_PATH, path.join(repoDir, 'scripts', 'check-file-budget.mjs'));
   await copyFile(AFFECTED_VALIDATION_SCRIPT_PATH, path.join(repoDir, 'scripts', 'pre-push-affected-validation.mjs'));
-  await copyFile(CRITICAL_TEST_ROUTES_SCRIPT_PATH, path.join(repoDir, 'scripts', 'quality-critical-test-routes.mjs'));
-  await chmod(path.join(repoDir, 'scripts', 'check-commit-sequence.mjs'), 0o755);
+  await copyFile(CRITICAL_TEST_ROUTES_SCRIPT_PATH, path.join(repoDir, 'scripts', 'quality', 'quality-critical-test-routes.mjs'));
+  await chmod(path.join(repoDir, 'scripts', 'git', 'check-commit-sequence.mjs'), 0o755);
   await chmod(path.join(repoDir, 'scripts', 'pre-push-affected-validation.mjs'), 0o755);
   await writeFile(
     path.join(repoDir, 'scripts', 'lint-changed.sh'),

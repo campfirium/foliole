@@ -1,0 +1,142 @@
+// @vitest-environment node
+/* global process */
+
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+
+import { describe, expect, it } from 'vitest';
+
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const QUALITY_GATE_FAST_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality', 'quality-gate-fast.sh');
+const QUALITY_GATE_ROUTING_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality', 'quality-gate-fast-routing.sh');
+const QUALITY_GATE_INTEGRATION_TIMEOUT_MS = 30_000;
+
+function runQualityGate(cwd, env = {}, args = []) {
+  return new Promise((resolve) => {
+    const child = spawn('bash', [QUALITY_GATE_FAST_SCRIPT, ...args], {
+      cwd,
+      env: { ...process.env, QUALITY_GATE_LOG_MODE: 'summary', ...env }
+    });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+    });
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+    });
+    child.on('close', (code) => {
+      resolve({ code, stderr, stdout });
+    });
+  });
+}
+
+function runRoutingHelper(expression) {
+  return new Promise((resolve) => {
+    const child = spawn('bash', ['-lc', `source "${QUALITY_GATE_ROUTING_SCRIPT}"; ${expression}`], {
+      cwd: REPO_ROOT,
+      env: process.env
+    });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+    });
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+    });
+    child.on('close', (code) => {
+      resolve({ code, stderr, stdout });
+    });
+  });
+}
+
+async function writePackageJson(rootDir, scripts) {
+  const fixtureScripts = {
+    'check:android-boundary': 'node -e "console.log(\'android boundary ok\')"',
+    ...scripts
+  };
+  await writeFile(
+    path.join(rootDir, 'package.json'),
+    `${JSON.stringify({ name: 'quality-gate-lib-routing-fixture', private: true, scripts: fixtureScripts }, null, 2)}\n`,
+    'utf8'
+  );
+}
+
+async function writeFixtureFile(rootDir, relativePath, content) {
+  const fullPath = path.join(rootDir, relativePath);
+  await mkdir(path.dirname(fullPath), { recursive: true });
+  await writeFile(fullPath, content, 'utf8');
+}
+
+describe('quality-gate-fast lib routing', () => {
+  it('matches skip lint only for test or skip-governance changes', async () => {
+    await expect(
+      runRoutingHelper("quality_skip_lint_changed_files_match $'src/app/example.test.ts\\nsrc/app/example.ts'")
+    ).resolves.toMatchObject({ code: 0 });
+    await expect(
+      runRoutingHelper("quality_skip_lint_changed_files_match 'scripts/quality/quality-skip-lint.mjs'")
+    ).resolves.toMatchObject({ code: 0 });
+    await expect(
+      runRoutingHelper("quality_skip_lint_changed_files_match 'src/app/example.ts'")
+    ).resolves.toMatchObject({ code: 1 });
+  }, 15000);
+
+  it('delegates lib changes to the shared gate', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-fast-lib-'));
+    try {
+      await writePackageJson(tempRoot, {
+        'lint:shared:full': 'node -e "console.log(\'shared lint ok\')"',
+        'typecheck:shared': 'node -e "console.log(\'shared typecheck ok\')"',
+        'test:shared': 'node -e "console.log(\'shared test ok\')"',
+        'test:quality': 'node -e "console.log(\'quality test ok\')"',
+        build: 'node -e "console.log(\'build ok\')"',
+        'electron:compile': 'node -e "console.log(\'electron compile ok\')"',
+        'android:web:build': 'node -e "console.log(\'android web build ok\')"'
+      });
+      await writeFixtureFile(tempRoot, 'scripts/check-repository-root-boundary.mjs', 'console.log("boundary ok");\n');
+
+      const result = await runQualityGate(tempRoot, {
+        QUALITY_GATE_CHANGED_FILES: 'lib/core/database/desktopFreshSchemaStatements.ts'
+      });
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('[quality-gate-fast] selected level: shared');
+      expect(result.stdout).toContain('[quality-gate:shared] all checks passed.');
+      expect(result.stdout).toContain('boundary ok');
+      expect(result.stdout).toContain('android boundary ok');
+      expect(result.stdout).toContain('shared test ok');
+      expect(result.stdout).toContain('android web build ok');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, QUALITY_GATE_INTEGRATION_TIMEOUT_MS);
+
+  it('explains lib changes as a shared gate route without running checks', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-fast-lib-'));
+    try {
+      await writePackageJson(tempRoot, {
+        lint: 'node -e "console.log(\'full lint should stay unused\')"',
+        'test:full': 'node -e "console.log(\'full test should stay unused\')"'
+      });
+
+      const result = await runQualityGate(
+        tempRoot,
+        { QUALITY_GATE_CHANGED_FILES: 'lib/core/database/desktopFreshSchemaStatements.ts' },
+        ['--route']
+      );
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('[quality-gate-route] selected level: shared');
+      expect(result.stdout).toContain('shared runtime or store changed');
+      expect(result.stdout).toContain('[quality-gate-route] target: quality:shared');
+      expect(result.stdout).not.toContain('full lint should stay unused');
+      expect(result.stdout).not.toContain('full test should stay unused');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, 15000);
+});

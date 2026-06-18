@@ -1,7 +1,7 @@
 // @vitest-environment node
 /* global process */
 
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -15,13 +15,29 @@ const SQLITE_PATTERN = /\b(?:import\b[\s\S]*?\bfrom\s+|require\s*\()\s*['"]bette
 const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
 
 async function testFiles() {
-  const { execFile } = await import('node:child_process');
-  const { promisify } = await import('node:util');
-  const execFileAsync = promisify(execFile);
-  const { stdout } = await execFileAsync('rg', ['--files', '-g', '*.test.*', 'electron', 'src', 'scripts'], {
-    encoding: 'utf8'
-  });
-  return stdout.split(/\r?\n/u).filter(Boolean);
+  return collectTestFiles(['electron', 'src', 'scripts']);
+}
+
+async function collectTestFiles(roots) {
+  const files = [];
+  for (const root of roots) {
+    files.push(...await collectTestFilesFromDir(root));
+  }
+  return files.sort();
+}
+
+async function collectTestFilesFromDir(dirPath) {
+  const entries = await readdir(dirPath, { withFileTypes: true });
+  const files = [];
+  for (const entry of entries) {
+    const entryPath = path.join(dirPath, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...await collectTestFilesFromDir(entryPath));
+    } else if (/\.test\./u.test(entry.name)) {
+      files.push(entryPath.replaceAll('\\', '/'));
+    }
+  }
+  return files;
 }
 
 describe('native sqlite test policy', () => {

@@ -93,13 +93,15 @@ it('starts the native dev runner through a Windows-owned process', async () => {
 });
 
 it('routes the clickable Windows launcher through WSL preview by default', async () => {
-  const launcher = await readFile(path.resolve(process.cwd(), 'Start-Foliole.cmd'), 'utf8');
+  const launcher = await readFile(path.resolve(process.cwd(), 'scripts/windows/start-foliole.cmd'), 'utf8');
   const previewLauncher = await readFile(path.resolve(process.cwd(), 'scripts/windows/start-windows-preview.cmd'), 'utf8');
 
+  expect(launcher).toContain('set "FOLIOLE_REPO_ROOT=%~dp0..\\.."');
+  expect(launcher).toContain('cd /d "%FOLIOLE_REPO_ROOT%"');
   expect(launcher).toContain('if "%FOLIOLE_ACTION%"=="" set "FOLIOLE_ACTION=start"');
   expect(launcher).toContain('if /i "%FOLIOLE_ACTION%"=="dev" set "FOLIOLE_ACTION=start"');
   expect(launcher).toContain('if /i "%FOLIOLE_ACTION%"=="dev-direct"');
-  expect(launcher).toContain('call "%~dp0scripts\\windows\\start-windows-preview.cmd"');
+  expect(launcher).toContain('call "%~dp0start-windows-preview.cmd"');
   expect(launcher).toContain('npm run windows:client:native -- %FOLIOLE_ACTION%');
   expect(previewLauncher).toContain('set "SCRIPT_DIR=%~dp0"');
   expect(previewLauncher).not.toContain('set "SCRIPT_DIR=%~dp0."');

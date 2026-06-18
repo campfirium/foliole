@@ -5,7 +5,17 @@ import { spawn } from 'node:child_process';
 import { readdirSync } from 'node:fs';
 import path from 'node:path';
 
-const SCRIPT_TEST_ROOTS = ['scripts', 'scripts/codex', 'scripts/sync'];
+const SCRIPT_TEST_ROOTS = [
+  'scripts',
+  'scripts/codex',
+  'scripts/demo',
+  'scripts/diagnostics',
+  'scripts/git',
+  'scripts/preview',
+  'scripts/quality',
+  'scripts/sqlite',
+  'scripts/sync'
+];
 const TEST_FILE_PATTERN = /\.test\.mjs$/;
 
 function printUsage() {

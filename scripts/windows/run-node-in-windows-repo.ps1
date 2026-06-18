@@ -26,10 +26,10 @@ function Test-IsBlockedNativeNodeScript {
 
   $normalized = $CandidatePath.Replace('\', '/').TrimStart('./')
   $blockedScripts = @(
-    "scripts/backfill-node-opening-text.ts",
-    "scripts/backfill-source-disposition-states.ts",
-    "scripts/node-kind-report.ts",
-    "scripts/sqlite-maintenance.ts",
+    "scripts/oneoff/backfill-node-opening-text.ts",
+    "scripts/oneoff/backfill-source-disposition-states.ts",
+    "scripts/oneoff/node-kind-report.ts",
+    "scripts/sqlite/sqlite-maintenance.ts",
     "scripts/android/android-device-data-protection.mjs",
     "scripts/android/android-preview-sync-state.mjs",
     "scripts/android/android-reset-sync-data.mjs",

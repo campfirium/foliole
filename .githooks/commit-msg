@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-node scripts/check-commit-sequence.mjs commit-msg "$1"
+node scripts/git/check-commit-sequence.mjs commit-msg "$1"

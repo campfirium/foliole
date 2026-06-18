@@ -2,5 +2,5 @@
 set -euo pipefail
 
 input="$(cat)"
-printf '%s' "$input" | node scripts/check-commit-sequence.mjs pre-push
+printf '%s' "$input" | node scripts/git/check-commit-sequence.mjs pre-push
 printf '%s' "$input" | node scripts/pre-push-affected-validation.mjs

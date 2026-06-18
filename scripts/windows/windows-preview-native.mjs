@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { TARGET_PATHS } from '../preview-dedupe-targets.mjs';
+import { TARGET_PATHS } from '../preview/preview-dedupe-targets.mjs';
 import { inspectElectronDistFreshness } from './check-electron-dist-fresh.mjs';
 import { writeRendererReloadIntent } from './write-renderer-reload-intent.mjs';
 import { writeRestartIntent } from './write-restart-intent.mjs';

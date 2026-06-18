@@ -120,7 +120,7 @@ async function runStep(label, command, args, env = process.env, runner = runInhe
 
 async function resolveRoutePlan(bashExe, changedFiles, env = process.env) {
   const routeEnv = { ...env, QUALITY_GATE_CHANGED_FILES: toEnvFileList(changedFiles) };
-  const result = await runCapture(bashExe, ['scripts/quality-gate-fast.sh', '--route-json'], {
+  const result = await runCapture(bashExe, ['scripts/quality/quality-gate-fast.sh', '--route-json'], {
     cwd: WINDOWS_NATIVE_REPO_ROOT,
     env: routeEnv
   });

@@ -12,6 +12,7 @@ const ANDROID_SYNC_BOUNDARY_PATH_PATTERN =
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
     encoding: 'utf8',
+    shell: options.shell ?? false,
     stdio: options.stdio ?? ['ignore', 'pipe', 'pipe']
   });
   if (result.status !== 0) {
@@ -22,6 +23,10 @@ function run(command, args, options = {}) {
 
 function runGit(args) {
   return run('git', args);
+}
+
+function npmCommand() {
+  return process.platform === 'win32' ? 'npm.cmd' : 'npm';
 }
 
 function parsePrePushInput(input) {
@@ -63,7 +68,7 @@ function runSyncPackCheckIfNeeded(files) {
     return;
   }
   console.log('[pre-push-affected-validation] sync-pack changes detected; running test:sync-pack');
-  run('npm', ['run', 'test:sync-pack'], { stdio: 'inherit' });
+  run(npmCommand(), ['run', 'test:sync-pack'], { shell: process.platform === 'win32', stdio: 'inherit' });
 }
 
 function runAndroidSyncBoundaryCheckIfNeeded(files) {
@@ -71,7 +76,7 @@ function runAndroidSyncBoundaryCheckIfNeeded(files) {
     return;
   }
   console.log('[pre-push-affected-validation] Android sync boundary changes detected; running check:android-boundary');
-  run('npm', ['run', 'check:android-boundary'], { stdio: 'inherit' });
+  run(npmCommand(), ['run', 'check:android-boundary'], { shell: process.platform === 'win32', stdio: 'inherit' });
 }
 
 function main() {

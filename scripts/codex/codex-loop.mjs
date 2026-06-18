@@ -102,7 +102,7 @@ async function withRoundTimeout(operation, task, round, timeoutMs) {
 }
 
 async function runQualityGate() {
-  await runCommand('bash', ['scripts/quality-gate-fast.sh'], {
+  await runCommand('bash', ['scripts/quality/quality-gate-fast.sh'], {
     cwd: REPO_ROOT,
     env: {
       ...process.env,

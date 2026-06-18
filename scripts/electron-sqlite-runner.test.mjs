@@ -24,9 +24,9 @@ describe('electron sqlite runner', () => {
   });
 
   it('runs TypeScript scripts through Electron-as-Node with strip-types enabled', () => {
-    expect(buildElectronNodeArgs('scripts/sqlite-maintenance.ts', ['backup'])).toEqual([
+    expect(buildElectronNodeArgs('scripts/sqlite/sqlite-maintenance.ts', ['backup'])).toEqual([
       '--experimental-strip-types',
-      'scripts/sqlite-maintenance.ts',
+      'scripts/sqlite/sqlite-maintenance.ts',
       'backup'
     ]);
   });

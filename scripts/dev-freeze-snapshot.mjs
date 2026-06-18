@@ -6,7 +6,7 @@ import { appendFile, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/pro
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
-import { summarizePreviewState } from './preview-dedupe-diagnostics.mjs';
+import { summarizePreviewState } from './preview/preview-dedupe-diagnostics.mjs';
 
 const DEFAULT_RUNTIME_DIR = '.lab/internal/runtime';
 const DEFAULT_WATCH_INTERVAL_MS = 20_000;

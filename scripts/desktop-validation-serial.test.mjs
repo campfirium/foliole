@@ -9,7 +9,7 @@ import {
   serialProcess,
   stubCommands,
   withTempFixture
-} from './desktop-validation-serial-test-utils.mjs';
+} from './test-utils/desktop-validation-serial-test-utils.mjs';
 
 async function waitForLogText(logFile, text, timeoutMs = 5000) {
   const start = Date.now();

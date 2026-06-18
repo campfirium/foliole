@@ -5,7 +5,7 @@ import { spawn } from 'node:child_process';
 
 const child = spawn(
   process.execPath,
-  ['scripts/preview-dedupe.mjs', 'windows', '--', process.execPath, 'scripts/windows/windows-preview-native.mjs'],
+  ['scripts/preview/preview-dedupe.mjs', 'windows', '--', process.execPath, 'scripts/windows/windows-preview-native.mjs'],
   {
     env: {
       ...process.env,

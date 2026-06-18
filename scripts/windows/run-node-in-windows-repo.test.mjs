@@ -21,10 +21,10 @@ describe('run-node-in-windows-repo script', () => {
     expect(script).toContain('-RedirectStandardOutput $stdoutLog');
     expect(script).toContain('-RedirectStandardError $stderrLog');
     expect(script).toContain('$script:NodeScriptExitCode = $process.ExitCode');
-    expect(script).toContain('scripts/backfill-node-opening-text.ts');
-    expect(script).toContain('scripts/backfill-source-disposition-states.ts');
-    expect(script).toContain('scripts/node-kind-report.ts');
-    expect(script).toContain('scripts/sqlite-maintenance.ts');
+    expect(script).toContain('scripts/oneoff/backfill-node-opening-text.ts');
+    expect(script).toContain('scripts/oneoff/backfill-source-disposition-states.ts');
+    expect(script).toContain('scripts/oneoff/node-kind-report.ts');
+    expect(script).toContain('scripts/sqlite/sqlite-maintenance.ts');
     expect(script).toContain('scripts/android/android-device-data-protection.mjs');
     expect(script).toContain('scripts/android/android-sync-audit.mjs');
     expect(script).toContain('refusing to run native sqlite script with plain Windows Node');

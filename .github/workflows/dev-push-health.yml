@@ -60,7 +60,7 @@ jobs:
           QUALITY_GATE_CHANGED_FILES: ${{ steps.changed.outputs.changed_files }}
         run: |
           set -euo pipefail
-          route_json="$(bash scripts/quality-gate-fast.sh --route-json)"
+          route_json="$(bash scripts/quality/quality-gate-fast.sh --route-json)"
           level="$(ROUTE_JSON="${route_json}" node -e "const route = JSON.parse(process.env.ROUTE_JSON); console.log(route.level)")"
           target="$(ROUTE_JSON="${route_json}" node -e "const route = JSON.parse(process.env.ROUTE_JSON); console.log(route.target)")"
           if [[ -z "${level}" ]]; then
@@ -123,7 +123,7 @@ jobs:
           case "${ROUTE_LEVEL}" in
             mid)
               echo "- action: running Linux-safe fast gate" >> "${GITHUB_STEP_SUMMARY}"
-              bash scripts/quality-gate-fast.sh
+              bash scripts/quality/quality-gate-fast.sh
               ;;
             shared)
               echo "- action: running Linux-safe shared typecheck" >> "${GITHUB_STEP_SUMMARY}"
