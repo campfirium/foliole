@@ -9,7 +9,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { runCli } from './check-repository-root-boundary.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const TEMP_ROOT_BASE = path.join(REPO_ROOT, '.tmp-tests');
+const TEMP_ROOT_BASE = path.join(REPO_ROOT, '.tmp', 'tests');
 const tempDirs = [];
 
 async function createFixtureRoot() {
@@ -23,7 +23,7 @@ async function createFixtureRoot() {
     '.github',
     '.githooks',
     '.lab',
-    '.tmp-fixture',
+    '.tmp',
     'dist',
     'docs',
     'electron',
@@ -46,6 +46,7 @@ async function createFixtureRoot() {
   ];
 
   const unauthorizedDirectoryNames = [
+    '.tmp-fixture',
     'playwright-report',
     'test-results'
   ];
@@ -91,9 +92,8 @@ describe('check-repository-root-boundary', () => {
     expect(cliResult.result.activeRootSemantics.public).toBe('shared Vite public static copied into target outputs');
     expect(cliResult.result.activeRootSemantics.releases).toBe('release metadata');
     expect(output).toContain('status: VIOLATION');
-    expect(output).toContain('unauthorized=playwright-report,test-results');
+    expect(output).toContain('unauthorized=.tmp-fixture,playwright-report,test-results');
     expect(output).toContain('allowed=android,artifacts,assets,build,docs,electron,ios,lib,public,releases,scripts,src,tests,.agents,.claude,.codex,.git,.github,.githooks,.lab');
-    expect(output).not.toContain('.tmp-fixture');
     expect(output).not.toContain('ref');
     expect(output).not.toContain('src-tauri');
     expect(output).not.toContain('unauthorized=release');

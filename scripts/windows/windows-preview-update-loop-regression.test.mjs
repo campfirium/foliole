@@ -12,7 +12,7 @@ import { startIntentConsumer } from './windows-preview-regression-test-support.m
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const PREVIEW_SCRIPT = path.join(REPO_ROOT, 'scripts', 'windows', 'windows-preview.sh');
-const TEMP_ROOT_BASE = path.join(REPO_ROOT, '.tmp-tests');
+const TEMP_ROOT_BASE = path.join(REPO_ROOT, '.tmp', 'tests');
 const TEST_PREVIEW_TIMEOUTS = {
   WINDOWS_PREVIEW_TIMEOUT_SECONDS: '2',
   WINDOWS_PREVIEW_TIMEOUT_STATUS_SECONDS: '2',

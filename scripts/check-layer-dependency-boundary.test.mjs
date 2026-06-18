@@ -9,7 +9,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { inspectLayerDependencyBoundary } from './check-layer-dependency-boundary.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const TEMP_ROOT_BASE = path.join(REPO_ROOT, '.tmp-tests');
+const TEMP_ROOT_BASE = path.join(REPO_ROOT, '.tmp', 'tests');
 const tempDirs = [];
 
 async function createFixtureRoot() {

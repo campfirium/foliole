@@ -8,7 +8,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 
 import { inspectNativeCommandContracts } from './check-native-command-contracts.mjs';
 
-const TEMP_ROOT_BASE = path.join(process.cwd(), '.tmp-tests');
+const TEMP_ROOT_BASE = path.join(process.cwd(), '.tmp', 'tests');
 const tempDirs = [];
 
 async function createFixtureRoot() {

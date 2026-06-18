@@ -12,8 +12,6 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 export const CLEANUP_ROOTS = [
   '.tmp',
-  '.tmp-tests',
-  '.tmp-vitest-git-state',
   'logs',
   'release',
   'artifacts/windows',

@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const SCAN_SCRIPT = path.join(REPO_ROOT, 'scripts/sync/sql-surface-scan.mjs');
-const TEMP_ROOT_BASE = path.join(REPO_ROOT, '.tmp-tests');
+const TEMP_ROOT_BASE = path.join(REPO_ROOT, '.tmp', 'tests');
 
 function runScan(rootDir) {
   return new Promise((resolve) => {

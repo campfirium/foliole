@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 
@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { buildCommitMessage, buildCommitNotePrompt, commitTrackedChanges, getNextCommitSequence, runCommand } from './git-state.mjs';
 
 const tempDirs = [];
-const tempRoot = path.join(process.cwd(), '.tmp-vitest-git-state');
+const tempRoot = path.join(process.cwd(), '.tmp', 'vitest-git-state');
 
 function createCodexRunner(sequence, subject) {
   return async () =>
@@ -25,7 +25,7 @@ async function createRepo() {
 }
 
 afterEach(async () => {
-  await Promise.all(tempDirs.splice(0).map((dir) => runCommand('rm', ['-rf', dir])));
+  await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { force: true, recursive: true })));
 });
 
 describe('git-state commitTrackedChanges', () => {

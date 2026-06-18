@@ -21,6 +21,7 @@ const ACTIVE_ROOT_SEMANTICS = new Map([
 const ACTIVE_ROOTS = new Set(ACTIVE_ROOT_SEMANTICS.keys());
 const BASELINE_ALLOWED_ROOTS = new Set(['.agents', '.claude', '.codex', '.git', '.github', '.githooks', '.lab']);
 const EXEMPT_ROOTS = new Set([
+  '.tmp',
   'dist',
   'logs',
   'node_modules',
@@ -29,7 +30,6 @@ const EXEMPT_ROOTS = new Set([
   'src-tauri',
   'trees'
 ]);
-const EXEMPT_PATTERNS = [/^\.tmp(?:$|[-_])/, /^_tmp(?:$|[-_])/, /^tmp(?:$|[-_])/];
 
 function resolveRepoRoot() {
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -44,7 +44,7 @@ function listRootDirectories(repoRoot) {
 }
 
 function isExemptRoot(name) {
-  return EXEMPT_ROOTS.has(name) || EXEMPT_PATTERNS.some((pattern) => pattern.test(name));
+  return EXEMPT_ROOTS.has(name);
 }
 
 function isAuthorizedRoot(name) {

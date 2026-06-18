@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* global console */
-import { readFileSync } from 'node:fs';
-import { delimiter, relative } from 'node:path';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { delimiter, join, relative } from 'node:path';
 import { cwd, env, exit } from 'node:process';
 import { execFileSync } from 'node:child_process';
 
@@ -80,12 +80,12 @@ if (hardUnknowns.length > 0) {
 
 function listFiles() {
   const roots = resolveRoots();
-  const output = hasCommand('rg')
-    ? execFileSync('rg', ['--files', ...roots], { encoding: 'utf8' })
-    : execFileSync('git', ['ls-files', ...roots], { encoding: 'utf8' });
-  return output
-    .split('\n')
-    .filter((file) => /\.(?:ts|tsx|js|java|swift)$/.test(file));
+  if (hasCommand('rg')) {
+    return execFileSync('rg', ['--files', ...roots], { encoding: 'utf8' })
+      .split('\n')
+      .filter(isSourceFile);
+  }
+  return roots.flatMap((root) => listFilesFromRoot(root)).filter(isSourceFile);
 }
 
 function resolveRoots() {
@@ -100,6 +100,24 @@ function resolveRoots() {
 function hasCommand(command) {
   const result = execFileSync('sh', ['-lc', `command -v ${command} >/dev/null 2>&1; echo $?`], { encoding: 'utf8' });
   return result.trim() === '0';
+}
+
+function listFilesFromRoot(root) {
+  let stats;
+  try {
+    stats = statSync(root);
+  } catch {
+    return [];
+  }
+  if (stats.isFile()) return [root];
+  if (!stats.isDirectory()) return [];
+  return readdirSync(root, { withFileTypes: true }).flatMap((entry) =>
+    listFilesFromRoot(join(root, entry.name))
+  );
+}
+
+function isSourceFile(file) {
+  return /\.(?:ts|tsx|js|java|swift)$/.test(file);
 }
 
 function extractSqlFragments(text) {
