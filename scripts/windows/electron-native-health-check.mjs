@@ -145,7 +145,7 @@ async function main() {
   };
   delete env.ELECTRON_RUN_AS_NODE;
   resetReadyMarkers(repoRoot);
-  const electron = run(electronPath, ['electron-dist/electron/main.js'], {
+  const electron = run(electronPath, ['dist/electron/main.js'], {
     env,
     shell: false,
     stdio: ['ignore', 'pipe', 'pipe'],

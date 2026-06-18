@@ -87,7 +87,7 @@ function consumeDevShellRestartRequest() {
 }
 
 function launchElectron(viteUrl) {
-  return run(resolveElectronCommand(), createElectronArgs('electron-dist/electron/main.js'), {
+  return run(resolveElectronCommand(), createElectronArgs('dist/electron/main.js'), {
     env: createElectronLaunchEnv(process.env, viteUrl),
     windowsHide: false
   });

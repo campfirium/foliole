@@ -31,7 +31,7 @@ afterEach(async () => {
 async function createPackagedRuntimeHarness() {
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-renderer-loader-'));
   tempRoots.push(tempRoot);
-  const runtimeDir = path.join(tempRoot, 'electron-dist', 'electron');
+  const runtimeDir = path.join(tempRoot, 'dist', 'electron');
   const packagedIndexPath = path.join(tempRoot, 'dist', 'desktop', 'index.html');
   const runtimeHtmlDir = path.join(tempRoot, 'userData');
   const runtimeIndexPath = path.join(runtimeHtmlDir, 'runtime-renderer-index.html');

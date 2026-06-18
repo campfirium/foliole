@@ -57,8 +57,8 @@ async function createMockScripts(root, clientBody) {
     [
       '#!/usr/bin/env bash',
       'set -euo pipefail',
-      'if [ -n "${WINDOWS_SYNC_INCLUDE_ELECTRON_DIST:-}" ]; then',
-      '  echo "[windows-sync] include electron-dist"',
+      'if [ -n "${WINDOWS_SYNC_INCLUDE_DIST:-}" ]; then',
+      '  echo "[windows-sync] include dist"',
       'fi',
       'echo "[windows-sync] status: SYNCED"'
     ].join('\n'),
@@ -158,7 +158,7 @@ describe('windows-preview update loop regressions', { timeout: 15000 }, () => {
 
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('reason: Class B: working tree runtime and renderer changes detected');
-      expect(result.stdout).toContain('[windows-sync] include electron-dist');
+      expect(result.stdout).toContain('[windows-sync] include dist');
       expect(result.stdout).toContain('selected action: restart-intent');
       expect(result.stdout).toContain('status: STARTED');
       expect(await readActions(actionLog)).toEqual(['status', 'status']);

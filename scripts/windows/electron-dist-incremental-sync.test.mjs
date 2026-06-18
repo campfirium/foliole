@@ -10,10 +10,10 @@ import { planElectronDistIncrementalSync } from './electron-dist-incremental-syn
 
 describe('electron-dist-incremental-sync', () => {
   it('plans compiled output sync for runtime TypeScript changes', async () => {
-    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'electron-dist-sync-'));
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'electron-runtime-sync-'));
     try {
-      await mkdir(path.join(tempRoot, 'electron-dist', 'electron'), { recursive: true });
-      await writeFile(path.join(tempRoot, 'electron-dist', 'electron', 'main.js'), 'export {};\n');
+      await mkdir(path.join(tempRoot, 'dist', 'electron'), { recursive: true });
+      await writeFile(path.join(tempRoot, 'dist', 'electron', 'main.js'), 'export {};\n');
       const plan = planElectronDistIncrementalSync({
         changedFiles: 'electron/main.ts',
         mirrorDir: tempRoot,
@@ -21,7 +21,7 @@ describe('electron-dist-incremental-sync', () => {
       });
 
       expect(plan).toEqual({
-        files: ['electron-dist/electron/main.js'],
+        files: ['dist/electron/main.js'],
         reason: 'runtime-outputs',
         status: 'sync'
       });
@@ -31,7 +31,7 @@ describe('electron-dist-incremental-sync', () => {
   });
 
   it('falls back for unsupported runtime paths', async () => {
-    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'electron-dist-sync-'));
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'electron-runtime-sync-'));
     try {
       const plan = planElectronDistIncrementalSync({
         changedFiles: 'electron/preload.cjs',
@@ -47,11 +47,11 @@ describe('electron-dist-incremental-sync', () => {
   });
 
   it('ignores test-only runtime sources in mixed incremental plans', async () => {
-    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'electron-dist-sync-'));
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'electron-runtime-sync-'));
     try {
-      await mkdir(path.join(tempRoot, 'electron-dist', 'electron'), { recursive: true });
-      await writeFile(path.join(tempRoot, 'electron-dist', 'electron', 'main.js'), 'export {};\n');
-      await writeFile(path.join(tempRoot, 'electron-dist', 'electron', 'main.test.js'), 'export {};\n');
+      await mkdir(path.join(tempRoot, 'dist', 'electron'), { recursive: true });
+      await writeFile(path.join(tempRoot, 'dist', 'electron', 'main.js'), 'export {};\n');
+      await writeFile(path.join(tempRoot, 'dist', 'electron', 'main.test.js'), 'export {};\n');
       const plan = planElectronDistIncrementalSync({
         changedFiles: ['electron/main.ts', 'electron/main.test.ts'].join('\n'),
         mirrorDir: tempRoot,
@@ -59,7 +59,28 @@ describe('electron-dist-incremental-sync', () => {
       });
 
       expect(plan).toEqual({
-        files: ['electron-dist/electron/main.js'],
+        files: ['dist/electron/main.js'],
+        reason: 'runtime-outputs',
+        status: 'sync'
+      });
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('plans compiled output sync for shared runtime lib changes', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'electron-runtime-sync-'));
+    try {
+      await mkdir(path.join(tempRoot, 'dist', 'lib', 'core', 'sync'), { recursive: true });
+      await writeFile(path.join(tempRoot, 'dist', 'lib', 'core', 'sync', 'syncObjectPolicy.js'), 'export {};\n');
+      const plan = planElectronDistIncrementalSync({
+        changedFiles: 'lib/core/sync/syncObjectPolicy.ts',
+        mirrorDir: tempRoot,
+        repoRoot: tempRoot
+      });
+
+      expect(plan).toEqual({
+        files: ['dist/lib/core/sync/syncObjectPolicy.js'],
         reason: 'runtime-outputs',
         status: 'sync'
       });

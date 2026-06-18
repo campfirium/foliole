@@ -27,7 +27,6 @@ async function createFixtureRoot() {
     'dist',
     'docs',
     'electron',
-    'electron-dist',
     'android',
     'assets',
     'build',
@@ -36,7 +35,7 @@ async function createFixtureRoot() {
     'logs',
     'ref',
     'release',
-    'release-artifacts',
+    'artifacts/windows',
     'public',
     'scripts',
     'src',
@@ -86,12 +85,12 @@ describe('check-repository-root-boundary', () => {
     expect(cliResult.exitCode).toBe(1);
     expect(output).toContain('status: VIOLATION');
     expect(output).toContain('unauthorized=playwright-report,test-results');
-    expect(output).toContain('allowed=android,assets,build,docs,electron,ios,lib,public,releases,scripts,src,tests,.agents,.claude,.git,.github,.githooks,.lab');
+    expect(output).toContain('allowed=android,artifacts,assets,build,docs,electron,ios,lib,public,releases,scripts,src,tests,.agents,.claude,.codex,.git,.github,.githooks,.lab');
     expect(output).not.toContain('.tmp-fixture');
     expect(output).not.toContain('ref');
     expect(output).not.toContain('src-tauri');
     expect(output).not.toContain('unauthorized=release');
-    expect(output).not.toContain('unauthorized=release-artifacts');
+    expect(output).not.toContain('unauthorized=artifacts/windows');
     expect(output).not.toContain('trees');
   });
 });

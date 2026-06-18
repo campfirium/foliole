@@ -122,7 +122,7 @@ describe('playwright desktop harness', () => {
 
     expect(calls).toEqual([
       {
-        args: [path.join(appRoot, 'electron-dist', 'electron', 'main.js')],
+        args: [path.join(appRoot, 'dist', 'electron', 'main.js')],
         cwd: appRoot,
         env: {
           FOLIOLE_ALLOW_PARALLEL_INSTANCE: '1',

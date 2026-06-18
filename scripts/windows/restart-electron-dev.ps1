@@ -774,8 +774,8 @@ function Stop-StaleFolioleDevProcesses {
   Stop-MatchingProcesses -NamePattern '^cmd(?:\.exe)?$' -CommandPattern ($escapedWorkDir + '.*npm\.cmd"\s+run\s+electron:dev')
   Stop-MatchingProcesses -NamePattern '^cmd(?:\.exe)?$' -CommandPattern ($escapedWorkDir + '.*npm\.cmd"\s+run\s+dev')
   Stop-MatchingProcesses -NamePattern '^node(?:\.exe)?$' -CommandPattern ($escapedWorkDir + '.*npm-cli\.js"\s+run\s+electron:dev')
-  Stop-MatchingProcesses -NamePattern '^node(?:\.exe)?$' -CommandPattern ($escapedWorkDir + '.*npx-cli\.js"\s+electron\s+electron-dist[\\/]+electron[\\/]+main\.js')
-  Stop-MatchingProcesses -NamePattern '^electron(?:\.exe)?$' -CommandPattern ($escapedWorkDir + '.*electron-dist[\\/]+main\.js')
+  Stop-MatchingProcesses -NamePattern '^node(?:\.exe)?$' -CommandPattern ($escapedWorkDir + '.*npx-cli\.js"\s+electron\s+dist[\\/]+electron[\\/]+main\.js')
+  Stop-MatchingProcesses -NamePattern '^electron(?:\.exe)?$' -CommandPattern ($escapedWorkDir + '.*dist[\\/]+electron[\\/]+main\.js')
   Stop-MatchingProcesses -NamePattern '^node(?:\.exe)?$' -CommandPattern ($escapedWorkDir + '.*vite(?:\.js)?')
 }
 
@@ -1147,7 +1147,7 @@ function Restart-ElectronRuntimeOnly {
   try {
     $started = Start-Process `
       -FilePath $runtimePath `
-      -ArgumentList @("electron-dist/electron/main.js") `
+      -ArgumentList @("dist/electron/main.js") `
       -WorkingDirectory $WorkDir `
       -PassThru `
       -RedirectStandardOutput $stdoutLog `
@@ -1219,7 +1219,7 @@ function Start-ElectronRuntimeOnly {
   try {
     $started = Start-Process `
       -FilePath $runtimePath `
-      -ArgumentList @("electron-dist/electron/main.js") `
+      -ArgumentList @("dist/electron/main.js") `
       -WorkingDirectory $WorkDir `
       -PassThru `
       -RedirectStandardOutput $stdoutLog `

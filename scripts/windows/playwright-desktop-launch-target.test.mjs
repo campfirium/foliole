@@ -26,7 +26,7 @@ describe('playwright desktop launch target', () => {
     expect(resolveDesktopLaunchTarget('/workspace/foliole', () => true)).toEqual({
       appRoot,
       launchMode: 'args',
-      mainEntry: path.join(appRoot, 'electron-dist', 'electron', 'main.js'),
+      mainEntry: path.join(appRoot, 'dist', 'electron', 'main.js'),
       missingPaths: [],
       preloadPath: path.join(appRoot, 'electron', 'preload.cjs'),
       rendererIndexPath: path.join(appRoot, 'dist', 'desktop', 'index.html')
@@ -53,7 +53,7 @@ describe('playwright desktop launch target', () => {
     expect(resolveDesktopLaunchTarget('D:\\C\\foliole', () => true)).toEqual({
       appRoot: 'D:\\C\\foliole',
       launchMode: 'args',
-      mainEntry: 'D:\\C\\foliole\\electron-dist\\electron\\main.js',
+      mainEntry: 'D:\\C\\foliole\\dist\\electron\\main.js',
       missingPaths: [],
       preloadPath: 'D:\\C\\foliole\\electron\\preload.cjs',
       rendererIndexPath: 'D:\\C\\foliole\\dist\\desktop\\index.html'
@@ -63,7 +63,7 @@ describe('playwright desktop launch target', () => {
   it('normalizes drive-relative Windows roots before resolving launch outputs', () => {
     expect(resolveDesktopLaunchTarget('D:C\\foliole', () => true)).toMatchObject({
       appRoot: 'D:\\C\\foliole',
-      mainEntry: 'D:\\C\\foliole\\electron-dist\\electron\\main.js'
+      mainEntry: 'D:\\C\\foliole\\dist\\electron\\main.js'
     });
   });
 
@@ -76,12 +76,12 @@ describe('playwright desktop launch target', () => {
       : undefined);
   });
 
-  it('requires the current preload entry instead of historical electron-dist fallback paths', () => {
+  it('requires the current preload entry instead of historical compiled fallback paths', () => {
     const appRoot = path.resolve('/workspace/foliole');
     const target = resolveDesktopLaunchTarget('/workspace/foliole', (filePath) =>
       [
-        path.join(appRoot, 'electron-dist', 'electron', 'main.js'),
-        path.join(appRoot, 'electron-dist', 'preload.cjs'),
+        path.join(appRoot, 'dist', 'electron', 'main.js'),
+        path.join(appRoot, 'dist', 'preload.cjs'),
         path.join(appRoot, 'dist', 'desktop', 'index.html')
       ].includes(filePath)
     );
@@ -108,7 +108,7 @@ describe('playwright desktop launch target', () => {
         FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot
       }, undefined, (filePath) => filePath === path.join(appRoot, 'node_modules', 'electron', 'dist', process.platform === 'win32' ? 'electron.exe' : 'electron'))
     ).toEqual({
-      args: [path.join(appRoot, 'electron-dist', 'electron', 'main.js')],
+      args: [path.join(appRoot, 'dist', 'electron', 'main.js')],
       cwd: appRoot,
       env: { ...isolationEnv, FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE: '1' },
       executablePath: path.join(appRoot, 'node_modules', 'electron', 'dist', process.platform === 'win32' ? 'electron.exe' : 'electron'),
@@ -120,7 +120,7 @@ describe('playwright desktop launch target', () => {
         FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot
       }, undefined, (filePath) => filePath === path.join(appRoot, 'node_modules', 'electron', 'dist', process.platform === 'win32' ? 'electron.exe' : 'electron'), ['/tmp/opened.md'])
     ).toMatchObject({
-      args: [path.join(appRoot, 'electron-dist', 'electron', 'main.js'), '/tmp/opened.md']
+      args: [path.join(appRoot, 'dist', 'electron', 'main.js'), '/tmp/opened.md']
     });
 
     expect(
@@ -177,7 +177,7 @@ describe('playwright desktop launch target', () => {
         '--disable-gpu-compositing',
         '--disable-gpu-sandbox',
         '--no-sandbox',
-        path.join(appRoot, 'electron-dist', 'electron', 'main.js')
+        path.join(appRoot, 'dist', 'electron', 'main.js')
       ]
     });
   });

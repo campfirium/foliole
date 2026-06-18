@@ -8,7 +8,6 @@ export default [
   {
     ignores: [
       'dist/**',
-      'electron-dist/**',
       'coverage/**',
       '.claude/**',
       'node_modules/**',

@@ -97,7 +97,7 @@ export function inspectElectronDistFreshness({
   repoRoot = resolveRepoRoot(),
   sourceExcludes = DEFAULT_SOURCE_EXCLUDES,
   sourceRoots = DEFAULT_SOURCE_ROOTS,
-  distRoot = path.join(repoRoot, 'electron-dist')
+  distRoot = path.join(repoRoot, 'dist')
 } = {}) {
   const resolvedSourceRoots = resolveSourceRoots(repoRoot, sourceRoots);
   const sourceFiles = resolvedSourceRoots.flatMap((sourceRoot) =>
@@ -189,7 +189,7 @@ function printResult(result) {
 
 function runCli() {
   const repoRoot = process.env.FOLIOLE_ELECTRON_FRESHNESS_REPO_ROOT?.trim() || resolveRepoRoot();
-  const distRoot = process.env.FOLIOLE_ELECTRON_DIST_ROOT?.trim() || path.join(repoRoot, 'electron-dist');
+  const distRoot = process.env.FOLIOLE_ELECTRON_DIST_ROOT?.trim() || path.join(repoRoot, 'dist');
   const sourceRoots = process.env.FOLIOLE_ELECTRON_SOURCE_ROOTS?.trim()
     ? process.env.FOLIOLE_ELECTRON_SOURCE_ROOTS.split(path.delimiter).filter(Boolean)
     : DEFAULT_SOURCE_ROOTS;

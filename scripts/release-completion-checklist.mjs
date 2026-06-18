@@ -16,7 +16,7 @@ export const RELEASE_COMPLETION_ITEMS = [
   ['updateManifestPublicLatest', 'update manifest public URL reports latest version'],
   ['externalAnnouncementMarkdownExists', 'external announcement Markdown exists']
 ];
-const DEFAULT_RELEASE_ARTIFACTS_DIR = 'release-artifacts';
+const DEFAULT_RELEASE_ARTIFACTS_DIR = 'artifacts/windows';
 const ATTESTATION_DETAIL = 'attested by release evidence; script does not independently query public URLs';
 
 function parseArgs(argv) {

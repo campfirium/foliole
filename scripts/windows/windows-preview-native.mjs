@@ -31,11 +31,11 @@ const CLIENT_ACTION_TIMEOUT_MS = Number.parseInt(process.env.WINDOWS_CLIENT_ACTI
 async function ensureFreshElectronDist() {
   const freshness = inspectElectronDistFreshness({ repoRoot });
   if (freshness.ok) {
-    console.log(`[windows-preview-native] electron-dist fresh checked_sources=${freshness.checkedSourceCount}`);
+    console.log(`[windows-preview-native] electron runtime output fresh checked_sources=${freshness.checkedSourceCount}`);
     return;
   }
   const compile = npmRunCommand('electron:compile');
-  await runChecked(compile.command, compile.args, 'compile stale electron-dist', repoRoot);
+  await runChecked(compile.command, compile.args, 'compile stale electron runtime output', repoRoot);
 }
 
 async function verifyNodeModules() {
@@ -200,7 +200,7 @@ async function applyAction(selection, currentHead, dryRun) {
 
 async function main() {
   const dryRun = process.argv.includes('--dry-run');
-  console.log('[windows-preview-native] step 1/4: verify electron-dist freshness');
+  console.log('[windows-preview-native] step 1/4: verify electron runtime output freshness');
   await ensureFreshElectronDist();
   console.log('[windows-preview-native] step 2/4: verify Windows-native dependencies');
   await verifyNodeModules();

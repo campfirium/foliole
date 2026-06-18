@@ -12,7 +12,7 @@ import { writeRestartIntent } from './write-restart-intent.mjs';
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const WATCH_ROOTS = ['src', 'electron', 'lib/core', 'lib/platform'];
 const WATCH_FILES = ['package.json', 'package-lock.json', 'vite.config.ts', 'vite.shared.ts', 'postcss.config.js', 'tailwind.config.js'];
-const IGNORE_PARTS = new Set(['.git', '.lab', '.tmp', 'node_modules', 'dist', 'electron-dist', 'logs', 'coverage']);
+const IGNORE_PARTS = new Set(['.git', '.lab', '.tmp', 'node_modules', 'dist', 'logs', 'coverage']);
 const RUNTIME_PREFIXES = ['electron/', 'lib/core/', 'lib/platform/'];
 const RENDERER_PREFIXES = ['src/app/', 'src/features/', 'src/shared/', 'src/store/'];
 const SHELL_FILES = new Set(['package.json', 'package-lock.json', 'vite.config.ts', 'vite.shared.ts', 'postcss.config.js', 'tailwind.config.js']);
@@ -116,7 +116,7 @@ async function syncBatch({ action, changedFiles, hasDeletion, mirrorDir, repoRoo
       WINDOWS_MIRROR_DIR: mirrorDir,
       WINDOWS_SYNC_CHANGED_FILES: hasDeletion || forceFullFallback ? '' : changedFilesText,
       WINDOWS_SYNC_FORCE_FULL: hasDeletion || forceFullFallback ? '1' : process.env.WINDOWS_SYNC_FORCE_FULL ?? '',
-      WINDOWS_SYNC_INCLUDE_ELECTRON_DIST: forceFullFallback ? '1' : process.env.WINDOWS_SYNC_INCLUDE_ELECTRON_DIST ?? ''
+      WINDOWS_SYNC_INCLUDE_DIST: forceFullFallback ? '1' : process.env.WINDOWS_SYNC_INCLUDE_DIST ?? ''
     }
   });
 }

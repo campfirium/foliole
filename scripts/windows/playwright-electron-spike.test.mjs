@@ -27,7 +27,7 @@ describe('playwright electron spike', () => {
     const target = resolveElectronSpikeTarget('/workspace/foliole', () => true);
 
     expect(target.launchMode).toBe('args');
-    expect(target.mainEntry).toBe(path.join(appRoot, 'electron-dist', 'electron', 'main.js'));
+    expect(target.mainEntry).toBe(path.join(appRoot, 'dist', 'electron', 'main.js'));
     expect(target.preloadPath).toBe(path.join(appRoot, 'electron', 'preload.cjs'));
     expect(target.rendererIndexPath).toBe(path.join(appRoot, 'dist', 'desktop', 'index.html'));
     expect(target.missingPaths).toEqual([]);
@@ -117,7 +117,7 @@ describe('playwright electron spike', () => {
 
     expect(calls).toEqual([
       {
-        args: [path.join(appRoot, 'electron-dist', 'electron', 'main.js')],
+        args: [path.join(appRoot, 'dist', 'electron', 'main.js')],
         cwd: appRoot,
         env: {
           FOLIOLE_ALLOW_PARALLEL_INSTANCE: '1',

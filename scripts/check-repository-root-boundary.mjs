@@ -3,16 +3,14 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-const ACTIVE_ROOTS = new Set(['android', 'assets', 'build', 'docs', 'electron', 'ios', 'lib', 'public', 'releases', 'scripts', 'src', 'tests']);
-const BASELINE_ALLOWED_ROOTS = new Set(['.agents', '.claude', '.git', '.github', '.githooks', '.lab']);
+const ACTIVE_ROOTS = new Set(['android', 'artifacts', 'assets', 'build', 'docs', 'electron', 'ios', 'lib', 'public', 'releases', 'scripts', 'src', 'tests']);
+const BASELINE_ALLOWED_ROOTS = new Set(['.agents', '.claude', '.codex', '.git', '.github', '.githooks', '.lab']);
 const EXEMPT_ROOTS = new Set([
   'dist',
-  'electron-dist',
   'logs',
   'node_modules',
   'ref',
   'release',
-  'release-artifacts',
   'src-tauri',
   'trees'
 ]);

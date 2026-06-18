@@ -17,7 +17,6 @@ const UNTRACKED_STAGE_BLOCKLIST = [
   /^blob-report(?:$|\/)/,
   /^coverage(?:$|\/)/,
   /^dist(?:$|\/)/,
-  /^electron-dist(?:$|\/)/,
   /^logs(?:$|\/)/,
   /^node_modules(?:$|\/)/,
   /^playwright-report(?:$|\/)/,

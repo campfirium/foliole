@@ -93,9 +93,12 @@ describe('electron-builder release packaging config', () => {
     expect(config.files).toContain('electron/globalCapturePanelPreload.cjs');
     expect(config.files).toContain('electron/globalCaptureToastPreload.cjs');
     expect(config.files).toEqual(expect.arrayContaining([
-      '!electron-dist/**/*.test.js',
-      '!electron-dist/**/*.test.helpers.js',
-      '!electron-dist/**/*test-support.js'
+      '!dist/electron/**/*.test.js',
+      '!dist/electron/**/*.test.helpers.js',
+      '!dist/electron/**/*test-support.js',
+      '!dist/lib/**/*.test.js',
+      '!dist/lib/**/*.test.helpers.js',
+      '!dist/lib/**/*test-support.js'
     ]));
   });
 
@@ -130,7 +133,7 @@ describe('electron-builder release packaging config', () => {
     const workflow = normalizeLineEndings(workflowSource);
 
     expect(config.publish).toBeUndefined();
-    expect(config.directories.output).toBe('release-artifacts');
+    expect(config.directories.output).toBe('artifacts/windows');
     expect(packageJson.scripts['release:windows:package']).toBe('node scripts/windows/package-windows.mjs --native');
     expect(workflow).toContain('permissions:\n  contents: write');
     expect(workflow).toContain('id-token: write');
@@ -139,17 +142,17 @@ describe('electron-builder release packaging config', () => {
     expect(workflow).toContain('GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}');
     expect(workflow).toContain('npm run windows:package:install');
     expect(workflow).toContain('Generate installer checksum');
-    expect(workflow).toContain('Set-Content -Path release-artifacts/SHA256SUMS.txt -Encoding ascii');
+    expect(workflow).toContain('Set-Content -Path artifacts/windows/SHA256SUMS.txt -Encoding ascii');
     expect(workflow).toContain('actions/attest@v4');
-    expect(workflow).toContain('subject-checksums: release-artifacts/SHA256SUMS.txt');
+    expect(workflow).toContain('subject-checksums: artifacts/windows/SHA256SUMS.txt');
     expect(workflow).toContain('gh release create $tagName $installer.FullName $checksums.FullName --draft');
     expect(workflow).toContain('--title $releaseTitle --target $targetCommit --notes-file $notesFile.FullName');
-    expect(workflow).toContain('node scripts/release-copy-surfaces.mjs --version $version --out release-artifacts');
+    expect(workflow).toContain('node scripts/release-copy-surfaces.mjs --version $version --out artifacts/windows');
     expect(workflow).not.toContain('SmartScreen');
     expect(workflow).not.toContain('Advanced provenance check:');
     expect(workflow).toContain('gh release delete $tagName --yes');
-    expect(workflow).not.toContain('release-artifacts/*.blockmap');
-    expect(workflow).not.toContain('release-artifacts/latest.yml');
+    expect(workflow).not.toContain('artifacts/windows/*.blockmap');
+    expect(workflow).not.toContain('artifacts/windows/latest.yml');
   });
 
   it('uses the branded app icon for packaged desktop targets', async () => {

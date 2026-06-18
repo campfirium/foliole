@@ -208,7 +208,7 @@ it('refuses to reset protected paths for preview sandbox launches', () => {
 });
 
 it('collects machine-checkable runtime diagnostics for the active startup context', () => {
-  const runtimeDir = path.join('C:', 'dev', 'foliole', 'electron-dist', 'electron');
+  const runtimeDir = path.join('C:', 'dev', 'foliole', 'dist', 'electron');
   const preloadPath = path.join('C:', 'dev', 'foliole', 'electron', 'preload.cjs');
   const snapshot = collectRuntimeDiagnosticsSnapshot({
     appName: FOLIOLE_APP_NAME,

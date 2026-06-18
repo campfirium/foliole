@@ -16,7 +16,7 @@ export const CLEANUP_ROOTS = [
   '.tmp-vitest-git-state',
   'logs',
   'release',
-  'release-artifacts',
+  'artifacts/windows',
   'trees'
 ];
 

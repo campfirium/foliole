@@ -77,7 +77,7 @@ describe('windows package runner', () => {
       cwd: '/repo',
       env: {
         WINDOWS_SYNC_FORCE_FULL: '1',
-        WINDOWS_SYNC_INCLUDE_ELECTRON_DIST: '1'
+        WINDOWS_SYNC_INCLUDE_DIST: ''
       }
     });
     expect(steps[1].command).toBe('cmd.exe');
@@ -101,8 +101,7 @@ describe('windows package runner', () => {
       cwd: '/repo'
     });
     expect(steps[1].env).toMatchObject({
-      WINDOWS_SYNC_INCLUDE_DIST: '1',
-      WINDOWS_SYNC_INCLUDE_ELECTRON_DIST: '1'
+      WINDOWS_SYNC_INCLUDE_DIST: '1'
     });
     expect(steps[2].args.join(' ')).toContain('--from-built --skip-built-artifact-check');
   });
@@ -114,31 +113,31 @@ describe('windows package runner', () => {
   it('cleans only known release artifacts before native packaging', () => {
     const root = 'D:\\repo';
     expect(resolveReleaseArtifactPaths(root, '9.8.7')).toEqual([
-      join(root, 'release-artifacts/win-unpacked'),
-      join(root, 'release-artifacts/win-unpacked.tmp'),
-      join(root, 'release-artifacts/Foliole Setup 9.8.7.exe'),
-      join(root, 'release-artifacts/Foliole Setup 9.8.7.exe.blockmap'),
-      join(root, 'release-artifacts/latest.yml'),
-      join(root, 'release-artifacts/builder-debug.yml')
+      join(root, 'artifacts/windows/win-unpacked'),
+      join(root, 'artifacts/windows/win-unpacked.tmp'),
+      join(root, 'artifacts/windows/Foliole Setup 9.8.7.exe'),
+      join(root, 'artifacts/windows/Foliole Setup 9.8.7.exe.blockmap'),
+      join(root, 'artifacts/windows/latest.yml'),
+      join(root, 'artifacts/windows/builder-debug.yml')
     ]);
   });
 
   it('finds the current electron-builder Windows installer artifact', () => {
     const root = mkdtempSync(join(tmpdir(), 'foliole-package-test-'));
     try {
-      mkdirSync(join(root, 'release-artifacts'));
-      writeFileSync(join(root, 'release-artifacts', 'Foliole-Setup-9.8.7-win-x64.exe'), '');
-      writeFileSync(join(root, 'release-artifacts', 'Foliole-Setup-9.8.7-win-x64.exe.blockmap'), '');
-      writeFileSync(join(root, 'release-artifacts', 'Other-Setup-9.8.7-win-x64.exe'), '');
+      mkdirSync(join(root, 'artifacts/windows'), { recursive: true });
+      writeFileSync(join(root, 'artifacts/windows', 'Foliole-Setup-9.8.7-win-x64.exe'), '');
+      writeFileSync(join(root, 'artifacts/windows', 'Foliole-Setup-9.8.7-win-x64.exe.blockmap'), '');
+      writeFileSync(join(root, 'artifacts/windows', 'Other-Setup-9.8.7-win-x64.exe'), '');
 
       expect(collectInstallerArtifactPaths(root, '9.8.7')).toEqual([
-        join(root, 'release-artifacts', 'Foliole-Setup-9.8.7-win-x64.exe')
+        join(root, 'artifacts/windows', 'Foliole-Setup-9.8.7-win-x64.exe')
       ]);
       expect(resolvePackagedInstallerPath(root, '9.8.7')).toBe(
-        join(root, 'release-artifacts', 'Foliole-Setup-9.8.7-win-x64.exe')
+        join(root, 'artifacts/windows', 'Foliole-Setup-9.8.7-win-x64.exe')
       );
       expect(resolveReleaseArtifactPaths(root, '9.8.7')).toContain(
-        join(root, 'release-artifacts', 'Foliole-Setup-9.8.7-win-x64.exe.blockmap')
+        join(root, 'artifacts/windows', 'Foliole-Setup-9.8.7-win-x64.exe.blockmap')
       );
     } finally {
       rmSync(root, { force: true, recursive: true });
@@ -154,7 +153,7 @@ describe('windows package runner', () => {
     try {
       expect(collectBuiltArtifactState(root).missing).toEqual([
         join(root, 'dist/desktop/index.html'),
-        join(root, 'electron-dist/electron/main.js'),
+        join(root, 'dist/electron/main.js'),
         join(root, 'electron/preload.cjs')
       ]);
     } finally {
@@ -168,16 +167,16 @@ describe('windows package runner', () => {
       const oldDate = new Date('2026-01-01T00:00:00Z');
       const currentDate = new Date('2026-01-02T00:00:00Z');
       mkdirSync(join(root, 'dist/desktop'), { recursive: true });
-      mkdirSync(join(root, 'electron-dist/electron'), { recursive: true });
+      mkdirSync(join(root, 'dist/electron'), { recursive: true });
       mkdirSync(join(root, 'electron'), { recursive: true });
       writeFileSync(join(root, 'package.json'), '{}');
       writeFileSync(join(root, 'dist/desktop/index.html'), '');
-      writeFileSync(join(root, 'electron-dist/electron/main.js'), '');
+      writeFileSync(join(root, 'dist/electron/main.js'), '');
       writeFileSync(join(root, 'electron/preload.cjs'), '');
       utimesSync(join(root, 'package.json'), oldDate, oldDate);
       utimesSync(join(root, 'electron/preload.cjs'), oldDate, oldDate);
       utimesSync(join(root, 'dist/desktop/index.html'), currentDate, currentDate);
-      utimesSync(join(root, 'electron-dist/electron/main.js'), currentDate, currentDate);
+      utimesSync(join(root, 'dist/electron/main.js'), currentDate, currentDate);
 
       expect(collectBuiltArtifactState(root)).toMatchObject({
         missing: [],

@@ -6,7 +6,7 @@ const RENDERER_STALE_ALLOW_ENV = 'FOLIOLE_ELECTRON_PLAYWRIGHT_ALLOW_STALE_RENDER
 const SOURCE_EXTENSIONS = new Set(['.cjs', '.css', '.html', '.js', '.json', '.jsx', '.mjs', '.svg', '.ts', '.tsx']);
 const SOURCE_FILES = ['index.html', 'package-lock.json', 'package.json', 'vite.config.ts'];
 const SOURCE_ROOTS = ['src', path.join('lib', 'core'), path.join('lib', 'platform')];
-const SOURCE_SKIP_DIRS = new Set(['.git', '.tmp', 'dist', 'electron-dist', 'logs', 'node_modules']);
+const SOURCE_SKIP_DIRS = new Set(['.git', '.tmp', 'dist', 'logs', 'node_modules']);
 
 function isSourceCandidate(filePath) {
   const basename = path.basename(filePath);

@@ -20,7 +20,7 @@ describe('task-finish helpers', () => {
     expect(
       extractPreviewStatus(
         [
-          '[windows-preview] step 1/3: verify electron-dist freshness',
+          '[windows-preview] step 1/3: verify electron runtime output freshness',
           '[windows-preview] status: SYNCED',
           '[windows-preview] status: STARTED'
         ].join('\n'),

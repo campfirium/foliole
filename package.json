@@ -7,7 +7,7 @@
   "private": true,
   "packageManager": "npm@11.12.0",
   "type": "module",
-  "main": "electron-dist/electron/main.js",
+  "main": "dist/electron/main.js",
   "scripts": {
     "dev": "npm run appearance:colors:generate && vite",
     "build": "npm run appearance:colors:generate && tsc -b && vite build",

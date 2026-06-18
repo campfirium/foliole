@@ -118,7 +118,7 @@ ensure_fresh_electron_dist() {
   fi
 
   printf '%s\n' "${freshness_output}"
-  echo "[windows-preview] electron-dist stale; compiling runtime bundle"
+  echo "[windows-preview] electron runtime output stale; compiling runtime bundle"
   eval "${WINDOWS_ELECTRON_COMPILE_COMMAND}"
   node "${WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT}"
 }

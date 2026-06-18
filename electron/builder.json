@@ -3,7 +3,7 @@
   "productName": "Foliole",
   "copyright": "Copyright (c) 2026 Foliole",
   "directories": {
-    "output": "release-artifacts"
+    "output": "artifacts/windows"
   },
   "electronDist": "node_modules/electron/dist",
   "asar": true,
@@ -25,11 +25,15 @@
     "electron/preload.cjs",
     "electron/globalCapturePanelPreload.cjs",
     "electron/globalCaptureToastPreload.cjs",
-    "electron-dist/**/*",
+    "dist/electron/**/*",
+    "dist/lib/**/*",
     "package.json",
-    "!electron-dist/**/*.test.js",
-    "!electron-dist/**/*.test.helpers.js",
-    "!electron-dist/**/*test-support.js",
+    "!dist/electron/**/*.test.js",
+    "!dist/electron/**/*.test.helpers.js",
+    "!dist/electron/**/*test-support.js",
+    "!dist/lib/**/*.test.js",
+    "!dist/lib/**/*.test.helpers.js",
+    "!dist/lib/**/*test-support.js",
     "!node_modules/@codemirror/**",
     "!node_modules/@capacitor/**",
     "!node_modules/@capacitor-community/**",

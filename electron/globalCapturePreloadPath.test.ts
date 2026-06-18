@@ -29,7 +29,7 @@ it('uses the packaged app electron preload path when it exists', () => {
 });
 
 it('falls back from the compiled dev app path to the source electron preload path', () => {
-  mocks.app.getAppPath.mockReturnValue(path.normalize('/repo/electron-dist/electron'));
+  mocks.app.getAppPath.mockReturnValue(path.normalize('/repo/dist/electron'));
   const preloadPath = path.normalize('/repo/electron/globalCapturePanelPreload.cjs');
   mocks.existingPaths.add(preloadPath);
 

@@ -1,5 +1,3 @@
-/* global process */
-
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -26,7 +24,6 @@ function shouldSkipFile(filePath) {
   const normalized = filePath.replaceAll(path.sep, '/');
   return (
     normalized.includes('/node_modules/') ||
-    normalized.includes('/electron-dist/') ||
     normalized.includes('/dist/') ||
     normalized.endsWith('/scripts/check-windows-console-policy.mjs') ||
     /\.(test|spec)\.(?:cjs|js|mjs|ts|tsx)$/u.test(normalized)

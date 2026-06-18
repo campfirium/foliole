@@ -44,7 +44,7 @@ source "${SCRIPT_DIR}/windows-preview-actions.sh"
 
 CURRENT_HEAD="$(resolve_current_head)"
 
-echo "[windows-preview] step 1/4: verify electron-dist freshness"
+echo "[windows-preview] step 1/4: verify electron runtime output freshness"
 ensure_fresh_electron_dist
 
 echo "[windows-preview] step 2/4: sync to windows mirror"
@@ -61,7 +61,7 @@ elif has_runtime_code_changes "${changed_files}"; then
   if [ "${electron_dist_sync_exit}" -eq 0 ]; then
     WINDOWS_SYNC_CHANGED_FILES="${changed_files}" WINDOWS_SYNC_STAMP_FILE="${WINDOWS_PREVIEW_SYNC_STAMP_FILE}" bash "${WINDOWS_SYNC_SCRIPT}"
   else
-    WINDOWS_SYNC_FORCE_FULL=1 WINDOWS_SYNC_INCLUDE_ELECTRON_DIST=1 WINDOWS_SYNC_STAMP_FILE="${WINDOWS_PREVIEW_SYNC_STAMP_FILE}" bash "${WINDOWS_SYNC_SCRIPT}"
+    WINDOWS_SYNC_FORCE_FULL=1 WINDOWS_SYNC_INCLUDE_DIST=1 WINDOWS_SYNC_STAMP_FILE="${WINDOWS_PREVIEW_SYNC_STAMP_FILE}" bash "${WINDOWS_SYNC_SCRIPT}"
   fi
 else
   WINDOWS_SYNC_CHANGED_FILES="${changed_files}" WINDOWS_SYNC_STAMP_FILE="${WINDOWS_PREVIEW_SYNC_STAMP_FILE}" bash "${WINDOWS_SYNC_SCRIPT}"

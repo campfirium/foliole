@@ -39,8 +39,8 @@ describe('release Windows workflow contract', () => {
   });
 
   it('uses generated release notes instead of the placeholder-only body', () => {
-    expect(workflow).toContain('node scripts/release-copy-surfaces.mjs --version $version --out release-artifacts');
-    expect(workflow).toContain('$notesFile = Get-Item -Path "release-artifacts/release-v$($package.version)-github-body.md"');
+    expect(workflow).toContain('node scripts/release-copy-surfaces.mjs --version $version --out artifacts/windows');
+    expect(workflow).toContain('$notesFile = Get-Item -Path "artifacts/windows/release-v$($package.version)-github-body.md"');
     expect(workflow).toContain('--notes-file $notesFile.FullName');
     expect(workflow).not.toContain('--notes $notes');
   });

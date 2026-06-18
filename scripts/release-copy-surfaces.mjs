@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 const EN_HEADINGS = new Set(['New', 'Improved', 'Fixed', 'Changed']);
 const ZH_HEADINGS = new Set(['新增', '优化', '修复', '变更']);
-const DEFAULT_RELEASE_COPY_OUT_DIR = 'release-artifacts';
+const DEFAULT_RELEASE_COPY_OUT_DIR = 'artifacts/windows';
 
 function parseArgs(argv) {
   const args = { out: DEFAULT_RELEASE_COPY_OUT_DIR, version: '' };

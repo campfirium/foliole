@@ -10,7 +10,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "outDir": "../electron-dist",
+    "outDir": "../dist",
     "rootDir": "..",
     "types": ["node"]
   },

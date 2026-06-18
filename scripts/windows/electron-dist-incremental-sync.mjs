@@ -50,7 +50,7 @@ function isKnownRuntimePath(filePath) {
 }
 
 function distPathForSource(filePath) {
-  return `electron-dist/${normalizePath(filePath).replace(/\.ts$/, '.js')}`;
+  return `dist/${normalizePath(filePath).replace(/\.ts$/, '.js')}`;
 }
 
 function resolveChangedFiles(options) {
@@ -130,19 +130,19 @@ function main() {
   const options = parseArgs(process.argv.slice(2));
   const plan = createSyncPlan(options);
   if (plan.status === 'skip') {
-    console.log(`[electron-dist-sync] status: SKIPPED reason=${plan.reason}`);
+    console.log(`[electron-runtime-sync] status: SKIPPED reason=${plan.reason}`);
     return 0;
   }
   if (plan.status === 'fallback') {
-    console.log(`[electron-dist-sync] status: FALLBACK reason=${plan.reason}`);
+    console.log(`[electron-runtime-sync] status: FALLBACK reason=${plan.reason}`);
     return FALLBACK;
   }
   const exitCode = runRsync(options, plan.files);
   if (exitCode !== 0) {
-    console.log(`[electron-dist-sync] status: FALLBACK reason=rsync-failed code=${exitCode}`);
+    console.log(`[electron-runtime-sync] status: FALLBACK reason=rsync-failed code=${exitCode}`);
     return FALLBACK;
   }
-  console.log(`[electron-dist-sync] status: SYNCED files=${plan.files.length}`);
+  console.log(`[electron-runtime-sync] status: SYNCED files=${plan.files.length}`);
   return 0;
 }
 

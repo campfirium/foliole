@@ -70,7 +70,7 @@ export function resolveDesktopLaunchTarget(appRoot, existsSync = fs.existsSync, 
     };
   }
   const resolvedAppRoot = resolveHostPath(appRoot);
-  const mainEntry = joinHostPath(resolvedAppRoot, 'electron-dist', 'electron', 'main.js');
+  const mainEntry = joinHostPath(resolvedAppRoot, 'dist', 'electron', 'main.js');
   const preloadPath = joinHostPath(resolvedAppRoot, 'electron', 'preload.cjs');
   const rendererIndexPath = joinHostPath(resolvedAppRoot, 'dist', 'desktop', 'index.html');
   const requiredPaths = [mainEntry, preloadPath, rendererIndexPath];

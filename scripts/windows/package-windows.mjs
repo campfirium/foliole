@@ -70,8 +70,7 @@ export function createWslPackageSteps(rootDir = repoRoot, install = resolveInsta
       cwd: rootDir,
       env: {
         WINDOWS_SYNC_FORCE_FULL: '1',
-        WINDOWS_SYNC_INCLUDE_DIST: fromBuilt ? '1' : '',
-        WINDOWS_SYNC_INCLUDE_ELECTRON_DIST: '1'
+        WINDOWS_SYNC_INCLUDE_DIST: fromBuilt ? '1' : ''
       },
       label: 'sync Windows checkout'
     },
@@ -149,7 +148,7 @@ function isInstallerArtifact(fileName, packageVersion) {
 }
 
 export function collectInstallerArtifactPaths(rootDir = repoRoot, packageVersion = readPackageVersion(rootDir)) {
-  const releaseDir = resolve(rootDir, 'release-artifacts');
+  const releaseDir = resolve(rootDir, 'artifacts/windows');
   if (!existsSync(releaseDir)) {
     return [];
   }
@@ -174,14 +173,14 @@ export function resolveReleaseArtifactPaths(rootDir = repoRoot, packageVersion =
   const installerArtifacts = collectInstallerArtifactPaths(rootDir, packageVersion);
   const installerBlockmaps = installerArtifacts.map((artifactPath) => `${artifactPath}.blockmap`);
   return [
-    resolve(rootDir, 'release-artifacts/win-unpacked'),
-    resolve(rootDir, 'release-artifacts/win-unpacked.tmp'),
-    resolve(rootDir, `release-artifacts/${installerBaseName}.exe`),
-    resolve(rootDir, `release-artifacts/${installerBaseName}.exe.blockmap`),
+    resolve(rootDir, 'artifacts/windows/win-unpacked'),
+    resolve(rootDir, 'artifacts/windows/win-unpacked.tmp'),
+    resolve(rootDir, `artifacts/windows/${installerBaseName}.exe`),
+    resolve(rootDir, `artifacts/windows/${installerBaseName}.exe.blockmap`),
     ...installerArtifacts,
     ...installerBlockmaps,
-    resolve(rootDir, 'release-artifacts/latest.yml'),
-    resolve(rootDir, 'release-artifacts/builder-debug.yml')
+    resolve(rootDir, 'artifacts/windows/latest.yml'),
+    resolve(rootDir, 'artifacts/windows/builder-debug.yml')
   ];
 }
 
@@ -193,8 +192,8 @@ export function cleanReleaseArtifacts(rootDir = repoRoot) {
 
 export function collectArtifactSummary(rootDir = process.cwd(), packageVersion = readPackageVersion(rootDir)) {
   const installerPath = collectInstallerArtifactPaths(rootDir, packageVersion)[0] ??
-    resolve(rootDir, `release-artifacts/${resolveInstallerBaseName(packageVersion)}.exe`);
-  const unpackedPath = resolve(rootDir, 'release-artifacts/win-unpacked');
+    resolve(rootDir, `artifacts/windows/${resolveInstallerBaseName(packageVersion)}.exe`);
+  const unpackedPath = resolve(rootDir, 'artifacts/windows/win-unpacked');
   return {
     installer: existsSync(installerPath) ? formatBytes(statSync(installerPath).size) : 'missing',
     unpacked: existsSync(unpackedPath) ? formatBytes(directorySizeBytes(unpackedPath)) : 'missing'
@@ -207,7 +206,7 @@ export async function installPackagedApp(rootDir = repoRoot, packageVersion = re
   await runStep({
     args: ['/S'],
     command: installerPath,
-    cwd: resolve(rootDir, 'release-artifacts'),
+    cwd: resolve(rootDir, 'artifacts/windows'),
     label: 'silent install'
   });
 }

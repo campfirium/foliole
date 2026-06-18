@@ -111,7 +111,7 @@ it('loads the prebuilt dev renderer html without waiting for Vite to render the 
   const originalUrl = process.env.ELECTRON_RENDERER_URL;
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-renderer-loader-'));
   tempRoots.push(tempRoot);
-  const runtimeDir = path.join(tempRoot, 'electron-dist', 'electron');
+  const runtimeDir = path.join(tempRoot, 'dist', 'electron');
   const indexPath = path.join(tempRoot, 'index.html');
   const runtimeHtmlDir = path.join(tempRoot, 'userData');
   const runtimeIndexPath = path.join(runtimeHtmlDir, 'runtime-renderer-index.html');
@@ -176,7 +176,7 @@ it('falls back to the Vite dev renderer when no prebuilt startup html exists', a
 it('keeps startup skeleton variables isolated from workspace css defaults', async () => {
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-renderer-loader-'));
   tempRoots.push(tempRoot);
-  const runtimeDir = path.join(tempRoot, 'electron-dist', 'electron');
+  const runtimeDir = path.join(tempRoot, 'dist', 'electron');
   const indexPath = path.join(tempRoot, 'index.html');
   const runtimeHtmlDir = path.join(tempRoot, 'userData');
   const runtimeIndexPath = path.join(runtimeHtmlDir, 'runtime-renderer-index.html');
@@ -204,7 +204,7 @@ it('keeps startup skeleton variables isolated from workspace css defaults', asyn
 it('prebuilds the startup skeleton with the persisted folder column width', async () => {
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-renderer-loader-'));
   tempRoots.push(tempRoot);
-  const runtimeDir = path.join(tempRoot, 'electron-dist', 'electron');
+  const runtimeDir = path.join(tempRoot, 'dist', 'electron');
   const indexPath = path.join(tempRoot, 'index.html');
   const runtimeHtmlDir = path.join(tempRoot, 'userData');
   const runtimeIndexPath = path.join(runtimeHtmlDir, 'runtime-renderer-index.html');
@@ -234,7 +234,7 @@ it('prebuilds the startup skeleton with the persisted folder column width', asyn
 it('resolves system base color to dark for prebuilt startup html', async () => {
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-renderer-loader-'));
   tempRoots.push(tempRoot);
-  const runtimeDir = path.join(tempRoot, 'electron-dist', 'electron');
+  const runtimeDir = path.join(tempRoot, 'dist', 'electron');
   const indexPath = path.join(tempRoot, 'index.html');
   const runtimeHtmlDir = path.join(tempRoot, 'userData');
   const runtimeIndexPath = path.join(runtimeHtmlDir, 'runtime-renderer-index.html');

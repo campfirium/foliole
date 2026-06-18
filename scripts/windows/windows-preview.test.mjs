@@ -23,6 +23,10 @@ const TEST_PREVIEW_TIMEOUTS = {
   WINDOWS_PREVIEW_TIMEOUT_RESTART_SECONDS: '3'
 };
 
+function quoteBashPath(filePath) {
+  return `'${filePath.replaceAll('\\', '/').replaceAll("'", "'\\''")}'`;
+}
+
 function runScript(env) {
   return new Promise((resolve) => {
     const child = spawn('bash', [PREVIEW_SCRIPT], {
@@ -54,7 +58,7 @@ async function createMockScripts(root, clientBody) {
   const syncScript = path.join(root, 'mock-sync.sh');
   const clientScript = path.join(root, 'mock-client.sh');
   const freshnessScript = path.join(root, 'mock-freshness.mjs');
-  const electronDistSyncScript = path.join(root, 'mock-electron-dist-sync.mjs');
+  const electronDistSyncScript = path.join(root, 'mock-electron-runtime-sync.mjs');
   const compileScript = path.join(root, 'mock-compile.sh');
   const actionLog = path.join(root, 'actions.log');
 
@@ -63,8 +67,8 @@ async function createMockScripts(root, clientBody) {
     [
       '#!/usr/bin/env bash',
       'set -euo pipefail',
-      'if [ -n "${WINDOWS_SYNC_INCLUDE_ELECTRON_DIST:-}" ]; then',
-      '  echo "[windows-sync] include electron-dist"',
+      'if [ -n "${WINDOWS_SYNC_INCLUDE_DIST:-}" ]; then',
+      '  echo "[windows-sync] include dist"',
       'fi',
       'echo "[windows-sync] status: SYNCED"'
     ].join('\n'),
@@ -84,8 +88,8 @@ async function createMockScripts(root, clientBody) {
     electronDistSyncScript,
     [
       'import { appendFileSync } from "node:fs";',
-      'appendFileSync(process.env.ACTION_LOG, "electron-dist-sync\\n");',
-      'process.stdout.write("[electron-dist-sync] status: SYNCED files=1\\n");'
+      'appendFileSync(process.env.ACTION_LOG, "electron-runtime-sync\\n");',
+      'process.stdout.write("[electron-runtime-sync] status: SYNCED files=1\\n");'
     ].join('\n'),
     'utf8'
   );
@@ -288,7 +292,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
     }
   });
 
-  it('rebuilds stale electron-dist before sync instead of failing early', { timeout: 30000 }, async () => {
+  it('rebuilds stale electron runtime output before sync instead of failing early', { timeout: 30000 }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-preview-test-'));
     const consumer = startIntentConsumer(tempRoot, 'renderer-reload');
     try {
@@ -319,7 +323,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
       const result = await runScript({
         ACTION_LOG: actionLog,
         MOCK_FRESHNESS_SCRIPT: freshnessScript,
-        WINDOWS_ELECTRON_COMPILE_COMMAND: `bash ${compileScript}`,
+        WINDOWS_ELECTRON_COMPILE_COMMAND: `bash ${quoteBashPath(compileScript)}`,
         WINDOWS_ELECTRON_DIST_FRESHNESS_SCRIPT: freshnessScript,
         WINDOWS_SYNC_SCRIPT: syncScript,
         WINDOWS_CLIENT_SCRIPT: clientScript,
@@ -328,8 +332,8 @@ describe('windows-preview script', { timeout: 15000 }, () => {
       });
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('step 1/4: verify electron-dist freshness');
-      expect(result.stdout).toContain('electron-dist stale; compiling runtime bundle');
+      expect(result.stdout).toContain('step 1/4: verify electron runtime output freshness');
+      expect(result.stdout).toContain('electron runtime output stale; compiling runtime bundle');
       expect(result.stdout).toContain('[mock-electron-compile] status: COMPILED');
       expect(result.stdout).toContain('[windows-sync] status: SYNCED');
       expect(result.stdout).toContain('[windows-preview] status: STARTED');
@@ -456,8 +460,8 @@ describe('windows-preview script', { timeout: 15000 }, () => {
 
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('reason: Class B: working tree electron changes detected');
-      expect(result.stdout).toContain('[electron-dist-sync] status: SYNCED files=1');
-      expect(result.stdout).not.toContain('[windows-sync] include electron-dist');
+      expect(result.stdout).toContain('[electron-runtime-sync] status: SYNCED files=1');
+      expect(result.stdout).not.toContain('[windows-sync] include dist');
       expect(result.stdout).toContain('selected action: restart-intent');
       expect(result.stdout).toContain('status: REQUESTED nonce=1');
       expect(result.stdout).toContain('restart delivery acknowledged nonce=1');
@@ -470,7 +474,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
         target: 'electron-dev',
         reason: 'Class B: working tree electron changes detected'
       });
-      expect(await readActions(actionLog)).toEqual(['electron-dist-sync', 'status', 'status']);
+      expect(await readActions(actionLog)).toEqual(['electron-runtime-sync', 'status', 'status']);
     } finally {
       consumer.kill('SIGTERM');
       await rm(tempRoot, { recursive: true, force: true });
@@ -783,7 +787,7 @@ describe('windows-preview script', { timeout: 15000 }, () => {
       expect(result.stdout).toContain('reason: Class A: no runtime changes detected');
       expect(result.stdout).toContain('selected action: sync-only');
       expect(result.stdout).toContain('[windows-preview] status: STARTED');
-      expect(result.stdout).not.toContain('[windows-sync] include electron-dist');
+      expect(result.stdout).not.toContain('[windows-sync] include dist');
       expect(await readActions(actionLog)).toEqual(['status', 'status']);
     } finally {
       await rm(tempRoot, { recursive: true, force: true });

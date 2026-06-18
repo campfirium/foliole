@@ -6,7 +6,7 @@ import { resolve } from 'node:path';
 
 const REQUIRED_BUILT_ARTIFACTS = [
   'dist/desktop/index.html',
-  'electron-dist/electron/main.js'
+  'dist/electron/main.js'
 ];
 
 const REQUIRED_PACKAGE_INPUTS = [
@@ -23,7 +23,7 @@ const BUILD_INPUTS = [
   'electron'
 ];
 
-const IGNORED_DIRS = new Set(['dist', 'electron-dist', 'node_modules', 'release', 'release-artifacts', '.git', '.tmp']);
+const IGNORED_DIRS = new Set(['dist', 'node_modules', 'release', 'artifacts', '.git', '.tmp']);
 
 function collectLatestMtimeMs(entryPath) {
   if (!existsSync(entryPath)) {

@@ -22,9 +22,8 @@ resolve_changed_files() {
       -path './node_modules' -o \
       -path './dist' -o \
       -path './release' -o \
-      -path './release-artifacts' -o \
+      -path './artifacts/windows' -o \
       -path './coverage' -o \
-      -path './electron-dist' -o \
       -path './android/.gradle' -o \
       -path './android/build' -o \
       -path './android/app/build' -o \

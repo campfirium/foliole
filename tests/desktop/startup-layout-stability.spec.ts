@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { _electron as electron, expect, test } from '@playwright/test';
 
-import { writePrebuiltRendererHtmlForSettings } from '../../electron-dist/electron/runtimeRendererHtml.js';
+import { writePrebuiltRendererHtmlForSettings } from '../../dist/electron/runtimeRendererHtml.js';
 import {
   createDesktopLaunchOptions,
   resolveDesktopAppRoot,
@@ -16,7 +16,7 @@ const FRAME_INTERVAL_MS = 80;
 
 function prepareRuntimeRendererHtml(userDataPath: string) {
   const appRoot = resolveDesktopAppRoot();
-  const runtimeDir = path.join(appRoot, 'electron-dist', 'electron');
+  const runtimeDir = path.join(appRoot, 'dist', 'electron');
   const targetPath = path.join(userDataPath, 'runtime-renderer-index.html');
   const settings = {
     'foliole-base-color': 'light',

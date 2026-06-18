@@ -49,7 +49,7 @@ describe('release completion checklist', () => {
     expect(labels).toContain('external announcement Markdown exists');
   });
 
-  it('detects the external announcement from release-artifacts by default', async () => {
+  it('detects the external announcement from artifacts/windows by default', async () => {
     const artifactsDir = await mkdtemp(path.join(os.tmpdir(), 'release-completion-'));
     try {
       await mkdir(artifactsDir, { recursive: true });

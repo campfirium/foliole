@@ -14,7 +14,7 @@ it('passes native GPU disable switches before the Electron app path', async () =
   expect(runner).toContain("process.env.FOLIOLE_DISABLE_CHROMIUM_SANDBOX_FOR_DEBUG === '1'");
   expect(runner).toContain("args.push('--no-sandbox');");
   expect(runner).toContain("args.push(entryPath);");
-  expect(runner).toContain("run(resolveElectronCommand(), createElectronArgs('electron-dist/electron/main.js')");
+  expect(runner).toContain("run(resolveElectronCommand(), createElectronArgs('dist/electron/main.js')");
   expect(runner).toContain('consumeDevShellRestartRequest');
   expect(runner).toContain("process.env.FOLIOLE_DEV_SHELL_RESTART_REQUEST_FILE ??= DEV_SHELL_RESTART_REQUEST_FILE");
   expect(runner).toContain(".foliole-dev-shell-restart-request.json");

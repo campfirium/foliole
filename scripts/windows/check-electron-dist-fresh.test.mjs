@@ -8,6 +8,10 @@ import { describe, expect, it } from 'vitest';
 
 import { inspectElectronDistFreshness } from './check-electron-dist-fresh.mjs';
 
+function normalizeOutputPath(filePath) {
+  return filePath.replaceAll(path.sep, '/');
+}
+
 async function writeTimestampedFile(filePath, content, timestampMs) {
   await mkdir(path.dirname(filePath), { recursive: true });
   await writeFile(filePath, content, 'utf8');
@@ -16,10 +20,10 @@ async function writeTimestampedFile(filePath, content, timestampMs) {
 }
 
 describe('check-electron-dist-fresh', () => {
-  it('accepts a fresh compiled electron-dist tree', async () => {
-    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'electron-dist-fresh-'));
+  it('accepts fresh compiled electron runtime output', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'electron-runtime-fresh-'));
     const sourceRoot = path.join(tempRoot, 'electron');
-    const distRoot = path.join(tempRoot, 'electron-dist');
+    const distRoot = path.join(tempRoot, 'dist');
 
     try {
       await writeTimestampedFile(path.join(sourceRoot, 'main.ts'), 'export {};\n', 1_000);
@@ -36,9 +40,9 @@ describe('check-electron-dist-fresh', () => {
   });
 
   it('fails when preload changes after the last electron compile', async () => {
-    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'electron-dist-stale-'));
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'electron-runtime-stale-'));
     const sourceRoot = path.join(tempRoot, 'electron');
-    const distRoot = path.join(tempRoot, 'electron-dist');
+    const distRoot = path.join(tempRoot, 'dist');
 
     try {
       await writeTimestampedFile(path.join(sourceRoot, 'main.ts'), 'export {};\n', 1_000);
@@ -48,9 +52,13 @@ describe('check-electron-dist-fresh', () => {
       const result = inspectElectronDistFreshness({ distRoot, repoRoot: tempRoot, sourceRoots: [sourceRoot] });
 
       expect(result.ok).toBe(false);
-      expect(result.problems).toEqual([
+      expect(result.problems.map((problem) => ({
+        ...problem,
+        newestDist: normalizeOutputPath(problem.newestDist),
+        newestSource: normalizeOutputPath(problem.newestSource)
+      }))).toEqual([
         expect.objectContaining({
-          newestDist: 'electron-dist/electron/main.js',
+          newestDist: 'dist/electron/main.js',
           newestSource: 'electron/preload.cjs',
           reason: 'newest-source-newer-than-dist'
         })
@@ -61,9 +69,9 @@ describe('check-electron-dist-fresh', () => {
   });
 
   it('ignores sources that are excluded from the electron compile', async () => {
-    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'electron-dist-excluded-'));
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'electron-runtime-excluded-'));
     const sourceRoot = path.join(tempRoot, 'lib', 'core');
-    const distRoot = path.join(tempRoot, 'electron-dist');
+    const distRoot = path.join(tempRoot, 'dist');
 
     try {
       await writeTimestampedFile(path.join(sourceRoot, 'database', 'androidCompanionSyncPolicySql.ts'), 'export {};\n', 3_000);
@@ -80,9 +88,9 @@ describe('check-electron-dist-fresh', () => {
   });
 
   it('ignores test sources that are excluded from the electron compile', async () => {
-    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'electron-dist-test-source-'));
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'electron-runtime-test-source-'));
     const sourceRoot = path.join(tempRoot, 'electron');
-    const distRoot = path.join(tempRoot, 'electron-dist');
+    const distRoot = path.join(tempRoot, 'dist');
 
     try {
       await writeTimestampedFile(path.join(sourceRoot, 'main.ts'), 'export {};\n', 1_000);
