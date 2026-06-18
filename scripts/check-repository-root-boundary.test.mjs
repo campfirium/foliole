@@ -83,6 +83,11 @@ describe('check-repository-root-boundary', () => {
     const output = `${stdout.chunks.join('')}${stderr.chunks.join('')}`;
 
     expect(cliResult.exitCode).toBe(1);
+    expect(cliResult.result.activeRootSemantics.assets).toBe(
+      'source assets and documentation/runtime-imported brand assets'
+    );
+    expect(cliResult.result.activeRootSemantics.build).toBe('host packaging and resource inputs, not build output');
+    expect(cliResult.result.activeRootSemantics.public).toBe('shared Vite public static copied into target outputs');
     expect(output).toContain('status: VIOLATION');
     expect(output).toContain('unauthorized=playwright-report,test-results');
     expect(output).toContain('allowed=android,artifacts,assets,build,docs,electron,ios,lib,public,releases,scripts,src,tests,.agents,.claude,.codex,.git,.github,.githooks,.lab');

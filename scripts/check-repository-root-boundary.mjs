@@ -3,7 +3,22 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-const ACTIVE_ROOTS = new Set(['android', 'artifacts', 'assets', 'build', 'docs', 'electron', 'ios', 'lib', 'public', 'releases', 'scripts', 'src', 'tests']);
+const ACTIVE_ROOT_SEMANTICS = new Map([
+  ['android', 'host project'],
+  ['artifacts', 'release artifact root'],
+  ['assets', 'source assets and documentation/runtime-imported brand assets'],
+  ['build', 'host packaging and resource inputs, not build output'],
+  ['docs', 'documentation'],
+  ['electron', 'host runtime'],
+  ['ios', 'host project'],
+  ['lib', 'shared runtime library'],
+  ['public', 'shared Vite public static copied into target outputs'],
+  ['releases', 'release metadata'],
+  ['scripts', 'repository automation'],
+  ['src', 'application source'],
+  ['tests', 'test support']
+]);
+const ACTIVE_ROOTS = new Set(ACTIVE_ROOT_SEMANTICS.keys());
 const BASELINE_ALLOWED_ROOTS = new Set(['.agents', '.claude', '.codex', '.git', '.github', '.githooks', '.lab']);
 const EXEMPT_ROOTS = new Set([
   'dist',
@@ -42,6 +57,7 @@ export function inspectRepositoryRootBoundary({ repoRoot = resolveRepoRoot() } =
 
   return {
     activeRoots: [...ACTIVE_ROOTS],
+    activeRootSemantics: Object.fromEntries(ACTIVE_ROOT_SEMANTICS),
     baselineAllowedRoots: [...BASELINE_ALLOWED_ROOTS],
     checkedRootCount: rootDirectories.length,
     exemptRoots: rootDirectories.filter((name) => isExemptRoot(name)),
