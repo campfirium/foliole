@@ -34,7 +34,7 @@ export function demoManifestPlugin(): Plugin {
 export default mergeConfig(
   createSharedViteConfig(PROJECT_ROOT),
   defineConfig({
-    base: '/demo-runtime/',
+    base: '/assets/demo/',
     root: path.resolve(PROJECT_ROOT, 'src/demo'),
     plugins: [demoManifestPlugin()],
     build: {
