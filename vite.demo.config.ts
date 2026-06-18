@@ -39,7 +39,7 @@ export default mergeConfig(
     plugins: [demoManifestPlugin()],
     build: {
       emptyOutDir: true,
-      outDir: path.resolve(PROJECT_ROOT, 'dist-demo')
+      outDir: path.resolve(PROJECT_ROOT, 'dist/demo')
     }
   })
 );

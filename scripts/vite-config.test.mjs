@@ -62,7 +62,7 @@ describe('vite config', () => {
 
   it('builds Demo from its Web host root into its static output directory', () => {
     expect(normalizePath(demoViteConfig.root)).toMatch(/src\/demo$/);
-    expect(normalizePath(demoViteConfig.build?.outDir)).toMatch(/dist-demo$/);
+    expect(normalizePath(demoViteConfig.build?.outDir)).toMatch(/dist\/demo$/);
     expect(demoViteConfig.build?.emptyOutDir).toBe(true);
   });
 
