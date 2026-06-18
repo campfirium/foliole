@@ -1,4 +1,4 @@
-/* global console, process */
+/* global console, process, setTimeout */
 
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -196,7 +196,8 @@ function submitEvent(event) {
 
 function scan({ emit = false, includeExisting = false } = {}) {
   const configs = loadConfigs();
-  const state = loadState();
+  const persistedState = loadState();
+  const state = emit ? persistedState : JSON.parse(JSON.stringify(persistedState));
   const errors = [];
   const events = [
     ...listActionEvents(configs.actions, state, includeExisting, errors),
@@ -210,7 +211,7 @@ function scan({ emit = false, includeExisting = false } = {}) {
       submitEvent(event);
     }
   }
-  writeJson(STATE_FILE, state);
+  if (emit) writeJson(STATE_FILE, state);
   return { emit, events, stateFile: STATE_FILE };
 }
 
