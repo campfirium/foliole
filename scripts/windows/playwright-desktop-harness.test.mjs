@@ -1,6 +1,4 @@
 // @vitest-environment node
-/* global process */
-
 import { Buffer } from 'node:buffer';
 import { EventEmitter } from 'node:events';
 import path from 'node:path';
@@ -16,13 +14,6 @@ describe('playwright desktop harness', () => {
   it('launches electron and returns a reusable session envelope', async () => {
     const appRoot = path.resolve('/workspace/foliole');
     const stateRoot = path.resolve('/tmp/foliole-playwright-state');
-    const electronExecutable = path.join(
-      appRoot,
-      'node_modules',
-      'electron',
-      'dist',
-      process.platform === 'win32' ? 'electron.exe' : 'electron'
-    );
     const calls = [];
     let closed = false;
     const childProcess = {
@@ -135,7 +126,7 @@ describe('playwright desktop harness', () => {
           FOLIOLE_USER_DATA_PATH: path.join(stateRoot, 'user-data'),
           FOLIOLE_WORKDIR: stateRoot
         },
-        executablePath: electronExecutable,
+        executablePath: undefined,
         timeout: 12_345
       }
     ]);

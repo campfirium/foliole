@@ -6,11 +6,8 @@ test('hidden native desktop presents a visible offscreen renderer without focus'
 }) => {
   expect(desktopSession.launchOptions.env.FOLIOLE_ELECTRON_NATIVE_HIDDEN).toBe('1');
 
-  const presentation = await desktopSession.electronApp.evaluate(({ BrowserWindow }) => {
-    const window = BrowserWindow.getAllWindows()[0];
-    if (!window) {
-      return null;
-    }
+  const browserWindow = await desktopSession.electronApp.browserWindow(desktopWindow);
+  const presentation = await browserWindow.evaluate((window) => {
     return {
       bounds: window.getBounds(),
       isFocusable: window.isFocusable(),

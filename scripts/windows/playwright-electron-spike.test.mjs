@@ -36,7 +36,6 @@ describe('playwright electron spike', () => {
   it('launches electron via args and captures first window metadata', async () => {
     const appRoot = path.resolve('/workspace/foliole');
     const stateRoot = path.resolve('/tmp/foliole-playwright-state');
-    const electronName = process.platform === 'win32' ? 'electron.exe' : 'electron';
     const calls = [];
     let closed = false;
     const windowPage = {
@@ -130,7 +129,7 @@ describe('playwright electron spike', () => {
           FOLIOLE_USER_DATA_PATH: path.join(stateRoot, 'user-data'),
           FOLIOLE_WORKDIR: stateRoot
         },
-        executablePath: path.join(appRoot, 'node_modules', 'electron', 'dist', electronName),
+        executablePath: undefined,
         timeout: 12_345
       }
     ]);

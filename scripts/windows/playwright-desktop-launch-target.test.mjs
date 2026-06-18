@@ -89,7 +89,7 @@ describe('playwright desktop launch target', () => {
     expect(target.missingPaths).toEqual([path.join(appRoot, 'electron', 'preload.cjs')]);
   });
 
-  it('creates args-based launch options with optional executable override', () => {
+  it('creates args-based launch options without overriding Playwright electron loading', () => {
     const appRoot = path.resolve('/workspace/foliole');
     const target = resolveDesktopLaunchTarget('/workspace/foliole', () => true);
     const stateRoot = path.resolve('/tmp/foliole-playwright-state');
@@ -111,7 +111,7 @@ describe('playwright desktop launch target', () => {
       args: [path.join(appRoot, 'dist', 'electron', 'main.js')],
       cwd: appRoot,
       env: { ...isolationEnv, FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE: '1' },
-      executablePath: path.join(appRoot, 'node_modules', 'electron', 'dist', process.platform === 'win32' ? 'electron.exe' : 'electron'),
+      executablePath: undefined,
       timeout: 12_345
     });
 
@@ -122,6 +122,11 @@ describe('playwright desktop launch target', () => {
     ).toMatchObject({
       args: [path.join(appRoot, 'dist', 'electron', 'main.js'), '/tmp/opened.md']
     });
+  });
+
+  it('keeps explicit electron executable overrides for args launch mode', () => {
+    const target = resolveDesktopLaunchTarget('/workspace/foliole', () => true);
+    const stateRoot = path.resolve('/tmp/foliole-playwright-state');
 
     expect(
       createDesktopLaunchOptions(target, 9_999, {
@@ -130,9 +135,14 @@ describe('playwright desktop launch target', () => {
       }, undefined, () => false)
     ).toMatchObject({
       env: {
-        ...isolationEnv,
+        FOLIOLE_ALLOW_PARALLEL_INSTANCE: '1',
         FOLIOLE_ELECTRON_EXECUTABLE_PATH: '../Electron/electron.exe',
-        FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE: '1'
+        FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot,
+        FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE: '1',
+        FOLIOLE_LIBRARY_HOME: path.join(stateRoot, 'library'),
+        FOLIOLE_SESSION_DATA_PATH: path.join(stateRoot, 'session-data'),
+        FOLIOLE_USER_DATA_PATH: path.join(stateRoot, 'user-data'),
+        FOLIOLE_WORKDIR: stateRoot
       },
       executablePath: expect.stringMatching(/Electron[\\/]electron\.exe$/),
       timeout: 9_999

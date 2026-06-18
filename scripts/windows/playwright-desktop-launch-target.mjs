@@ -104,9 +104,7 @@ export function createDesktopLaunchOptions(
   existsSync = fs.existsSync,
   extraArgs = []
 ) {
-  const executablePath = target.launchMode === 'installed'
-    ? target.executablePath
-    : resolveElectronExecutablePath(target.appRoot, env, existsSync);
+  const executablePath = resolvePlaywrightExecutablePath(target, env, existsSync);
   const launchEnv = {
     ...env,
     ...isolation.env,
@@ -120,6 +118,16 @@ export function createDesktopLaunchOptions(
     executablePath: executablePath ? resolveHostPath(executablePath) : undefined,
     timeout: timeoutMs
   };
+}
+
+function resolvePlaywrightExecutablePath(target, env, existsSync) {
+  if (target.launchMode === 'installed') {
+    return target.executablePath;
+  }
+  if (env.FOLIOLE_ELECTRON_EXECUTABLE_PATH?.trim()) {
+    return resolveElectronExecutablePath(target.appRoot, env, existsSync);
+  }
+  return undefined;
 }
 
 function createElectronLaunchArgs(mainEntry, env, extraArgs) {

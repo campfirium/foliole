@@ -7,11 +7,8 @@ test('visible native desktop presents a focusable on-screen renderer', async ({
   expect(desktopSession.launchOptions.env.FOLIOLE_ELECTRON_NATIVE_VISIBLE).toBe('1');
   expect(desktopSession.launchOptions.env.FOLIOLE_ELECTRON_NATIVE_HIDDEN).toBeUndefined();
 
-  const presentation = await desktopSession.electronApp.evaluate(({ BrowserWindow }) => {
-    const window = BrowserWindow.getAllWindows()[0];
-    if (!window) {
-      return null;
-    }
+  const browserWindow = await desktopSession.electronApp.browserWindow(desktopWindow);
+  const presentation = await browserWindow.evaluate((window) => {
     return {
       bounds: window.getBounds(),
       isFocused: window.isFocused(),
