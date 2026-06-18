@@ -95,6 +95,7 @@
 - 改动 sync pack manifest / schema / apply 语义，或 `lib/core/sync/syncPack*`、`electron/database/syncPack*`、`electron/sync/syncPack*`、`src/shared/platform/companionSyncPack*`，必须先跑 `npm run test:sync-pack`。
 - 新增文件、拆分文件或修复 `max-lines` / `max-lines-per-function` 后，先跑 `node scripts/check-file-budget.mjs <file...>`，再跑对应窄 scope lint。
 - 新增或升级 npm 依赖时，额外执行 `npm run deps:hardening:check`；`build` 只在用户明确要求或触及依赖 / 构建根链路且必须验证时执行。
+- npm 默认保留 7 天 release-age 安全窗口；但 Dependabot / GitHub Advisory / `npm audit` 已明确报出的漏洞修复必须定向绕过该窗口，只允许更新被点名的漏洞包或其必要传递依赖，并用 `npm ls <package> --all` 与 `npm audit --omit=dev` 复验。禁止用等待窗口期作为安全告警处理结论。
 - `it.skip` / `test.skip` 必须紧邻 `// SKIP: <reason> | <date YYYY-MM-DD> | revive: <condition>`；看到超过 30 天的 stale `SKIP` 必须复查能否恢复。
 - E2E（Playwright）不进入任何质量闸；它作为 L1/L1b 宿主验收单独执行。桌面日常 agent 自动化验收优先按 `electron/AGENTS.md` 使用不干扰用户桌面的 Playwright 入口，人工预览仍按下表执行。
 - `copy:guard` 默认只报告 warning；若它报 warning，修复前先读 `.lab/specs/_product/terminology-and-copy.md`，禁止机械替换。

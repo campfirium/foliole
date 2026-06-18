@@ -67,6 +67,7 @@ if ! grep -Eq '^min-release-age=7$' .npmrc; then
   exit 1
 fi
 echo "[npm-hardening] ok: .npmrc pins min-release-age=7"
+echo "[npm-hardening] note: advisory-driven security fixes may bypass min-release-age only for named vulnerable packages"
 
 versions_json_file=".tmp/npm-time.json"
 timeout "${NPM_HARDENING_NETWORK_TIMEOUT_SECONDS}s" npm view npm time --json > "${versions_json_file}"
