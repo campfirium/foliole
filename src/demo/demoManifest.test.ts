@@ -91,7 +91,7 @@ describe('Demo manifest contract', () => {
     expect(first.contractVersion).toBe(3);
     expect(first.publishedLocales).toEqual(DEMO_PUBLISHED_LOCALES);
     expect(first.localePublishPacks.map((pack) => pack.locale)).toEqual(['en', 'zh-hans', 'zh-hant', 'ja']);
-    expect(first.localePublishPacks[1].topics[0]).toMatchObject({
+    expect(first.localePublishPacks[1]!.topics[0]!).toMatchObject({
       locale: 'zh-hans',
       hreflang: 'zh-Hans',
       canonicalPath: '/zh-hans/demo/focused-reading-review/'

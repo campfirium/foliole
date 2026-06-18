@@ -4,6 +4,7 @@ import { HOME_NODE_ID, INBOX_NODE_ID } from '../features/nodes/model/specialNode
 
 import { createInitialWorkspaceState, useWorkspaceStore } from './workspaceStore';
 import { createWorkspaceStorePersistConfig } from './workspaceStorePersistConfig';
+import { createPersistedTopicNode } from './workspaceStorePersistConfig.test-support';
 
 function createConfig() {
   return createWorkspaceStorePersistConfig(() => undefined);
@@ -78,20 +79,16 @@ it('keeps all node documents in web fallback persisted payloads', () => {
     activeNodeId: 'node-1',
     nodeOrder: ['node-1', 'node-2'],
     nodesById: {
-      'node-1': {
-        id: 'node-1',
+      'node-1': createPersistedTopicNode('node-1', {
         content: 'Active node body',
-        hasContent: true,
-        hasReveal: false,
-        reveal: null
-      },
-      'node-2': {
-        id: 'node-2',
+        hasContent: true
+      }),
+      'node-2': createPersistedTopicNode('node-2', {
         content: 'Inactive imported Markdown body',
         hasContent: true,
         hasReveal: true,
         reveal: 'Inactive answer'
-      }
+      })
     }
   };
 

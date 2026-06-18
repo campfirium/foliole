@@ -17,6 +17,7 @@ const DEMO_TOPIC_PATH_PATTERN = /^\/(?:en|zh-hans|zh-hant|ja)\/demo\/[a-z0-9]+(?
 
 export type DemoLocalePathSegment = (typeof DEMO_PUBLISHED_LOCALES)[number]['locale'];
 export type DemoHreflang = (typeof DEMO_PUBLISHED_LOCALES)[number]['hreflang'];
+type DemoPublishedLocale = (typeof DEMO_PUBLISHED_LOCALES)[number];
 
 export interface DemoRuntimeAsset {
   path: string;
@@ -125,9 +126,9 @@ function assertValidManifestTopic(topic: DemoManifestTopic) {
   if (!selfReference) throw new Error(`Demo topic alternates must include self-reference: ${topic.slug}`);
 }
 
-export function createDemoManifestTopic(topic: DemoTopic, locale = DEMO_PUBLISHED_LOCALES[0]): DemoManifestTopic {
+export function createDemoManifestTopic(topic: DemoTopic, locale: DemoPublishedLocale = DEMO_PUBLISHED_LOCALES[0]): DemoManifestTopic {
   const projection = demoManifestProjection(topic);
-  const manifestTopic = {
+  const manifestTopic: DemoManifestTopic = {
     slug: projection.slug,
     title: projection.title,
     description: projection.description,

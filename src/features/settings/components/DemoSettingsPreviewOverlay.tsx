@@ -72,9 +72,9 @@ export function DemoSettingsPreviewOverlay({ onClose, requestedCategory }: DemoS
                 sections.map((section) => (
                   <SettingsSection
                     ariaLabel={t(section.titleKey)}
-                    description={section.descriptionKey ? t(section.descriptionKey) : undefined}
                     key={section.id}
                     title={t(section.titleKey)}
+                    {...(section.descriptionKey ? { description: t(section.descriptionKey) } : {})}
                   >
                     {section.items.map((item) => (
                       <SettingsRow
