@@ -35,6 +35,7 @@ async function createFixtureRoot() {
     'logs',
     'ref',
     'release',
+    'releases',
     'artifacts/windows',
     'public',
     'scripts',
@@ -88,6 +89,7 @@ describe('check-repository-root-boundary', () => {
     );
     expect(cliResult.result.activeRootSemantics.build).toBe('host packaging and resource inputs, not build output');
     expect(cliResult.result.activeRootSemantics.public).toBe('shared Vite public static copied into target outputs');
+    expect(cliResult.result.activeRootSemantics.releases).toBe('release metadata');
     expect(output).toContain('status: VIOLATION');
     expect(output).toContain('unauthorized=playwright-report,test-results');
     expect(output).toContain('allowed=android,artifacts,assets,build,docs,electron,ios,lib,public,releases,scripts,src,tests,.agents,.claude,.codex,.git,.github,.githooks,.lab');
