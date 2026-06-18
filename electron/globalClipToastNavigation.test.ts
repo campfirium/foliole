@@ -52,7 +52,7 @@ function createWindow(id: number, overrides: Partial<{
       maximized = false;
     }),
     webContents: {
-      getURL: vi.fn(() => overrides.url ?? 'file:///workspace/foliole/dist/index.html'),
+      getURL: vi.fn(() => overrides.url ?? 'file:///workspace/foliole/dist/desktop/index.html'),
       id,
       send: vi.fn()
     }

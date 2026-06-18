@@ -34,7 +34,7 @@ describe('playwright desktop harness', () => {
     windowPage.evaluate = async (_pageFunction, appReadyFlag) => {
       if (appReadyFlag === APP_READY_FLAG) {
         return {
-          href: 'file:///workspace/foliole/dist/index.html',
+          href: 'file:///workspace/foliole/dist/desktop/index.html',
           readyState: 'complete',
           reported: true
         };
@@ -50,7 +50,7 @@ describe('playwright desktop harness', () => {
       };
       const previousLocation = globalThis.location;
       const previousDocument = globalThis.document;
-      globalThis.location = { href: 'file:///workspace/foliole/dist/index.html' };
+      globalThis.location = { href: 'file:///workspace/foliole/dist/desktop/index.html' };
       globalThis.document = {
         getElementById: (id) => id === 'root' ? {} : null,
         readyState: 'complete'
@@ -63,7 +63,7 @@ describe('playwright desktop harness', () => {
       }
     };
     windowPage.title = async () => 'Foliole';
-    windowPage.url = () => 'file:///workspace/foliole/dist/index.html';
+    windowPage.url = () => 'file:///workspace/foliole/dist/desktop/index.html';
     windowPage.waitForFunction = async (pageFunction, argOrOptions, options) => {
       expect(pageFunction).toEqual(expect.any(Function));
       if (typeof argOrOptions === 'string') {
@@ -142,7 +142,7 @@ describe('playwright desktop harness', () => {
     expect(session.target.launchMode).toBe('args');
     expect(session.target.runtimeStateRoot).toBe(stateRoot);
     expect(session.appReady).toEqual({
-      href: 'file:///workspace/foliole/dist/index.html',
+      href: 'file:///workspace/foliole/dist/desktop/index.html',
       readyState: 'complete',
       reported: true
     });
@@ -163,7 +163,7 @@ describe('playwright desktop harness', () => {
         bridgeAvailable: true,
         pid: 4821,
         preloadPath: '/workspace/foliole/electron/preload.cjs',
-        rendererUrl: 'file:///workspace/foliole/dist/index.html'
+        rendererUrl: 'file:///workspace/foliole/dist/desktop/index.html'
       },
       mainProcessLogs: {
         pid: 4821,
@@ -171,11 +171,11 @@ describe('playwright desktop harness', () => {
       },
       nativeInvokeHistory: [expect.objectContaining({ command: 'resolve_app_paths', status: 'resolved' })],
       rendererPage: {
-        pageUrl: 'file:///workspace/foliole/dist/index.html',
+        pageUrl: 'file:///workspace/foliole/dist/desktop/index.html',
         readyState: 'complete',
         rootPresent: true,
         title: null,
-        url: 'file:///workspace/foliole/dist/index.html'
+        url: 'file:///workspace/foliole/dist/desktop/index.html'
       },
       rendererPageEvents: [],
       runtimeHead: 'head-123'

@@ -29,7 +29,7 @@ describe('playwright electron spike', () => {
     expect(target.launchMode).toBe('args');
     expect(target.mainEntry).toBe(path.join(appRoot, 'electron-dist', 'electron', 'main.js'));
     expect(target.preloadPath).toBe(path.join(appRoot, 'electron', 'preload.cjs'));
-    expect(target.rendererIndexPath).toBe(path.join(appRoot, 'dist', 'index.html'));
+    expect(target.rendererIndexPath).toBe(path.join(appRoot, 'dist', 'desktop', 'index.html'));
     expect(target.missingPaths).toEqual([]);
   });
 
@@ -46,7 +46,7 @@ describe('playwright electron spike', () => {
         }
         expect(appReadyFlag).toBe(APP_READY_FLAG);
         return {
-          href: 'file:///workspace/foliole/dist/index.html',
+          href: 'file:///workspace/foliole/dist/desktop/index.html',
           readyState: 'complete',
           reported: true
         };
@@ -55,7 +55,7 @@ describe('playwright electron spike', () => {
         return 'Foliole';
       },
       url() {
-        return 'file:///workspace/foliole/dist/index.html';
+        return 'file:///workspace/foliole/dist/desktop/index.html';
       },
       async waitForFunction(pageFunction, argOrOptions, options) {
         expect(pageFunction).toEqual(expect.any(Function));
@@ -139,7 +139,7 @@ describe('playwright electron spike', () => {
       appPath: '/workspace/foliole',
       appReady: true,
       firstWindowTitle: 'Foliole',
-      firstWindowUrl: 'file:///workspace/foliole/dist/index.html',
+      firstWindowUrl: 'file:///workspace/foliole/dist/desktop/index.html',
       launchMode: 'args',
       processPid: 4242
     });

@@ -54,7 +54,7 @@ describe('playwright desktop window readiness', () => {
         async evaluate(pageFunction, appReadyFlag) {
           calls.push(['evaluate', pageFunction, appReadyFlag]);
           return {
-            href: 'file:///workspace/foliole/dist/index.html',
+            href: 'file:///workspace/foliole/dist/desktop/index.html',
             readyState: 'complete',
             reported: true
           };
@@ -67,7 +67,7 @@ describe('playwright desktop window readiness', () => {
     );
 
     expect(appReady).toEqual({
-      href: 'file:///workspace/foliole/dist/index.html',
+      href: 'file:///workspace/foliole/dist/desktop/index.html',
       readyState: 'complete',
       reported: true
     });

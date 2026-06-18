@@ -5,9 +5,12 @@ import { existsSync, readdirSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const REQUIRED_BUILT_ARTIFACTS = [
-  'dist/index.html',
-  'electron-dist/electron/main.js',
-  'electron-dist/electron/preload.cjs'
+  'dist/desktop/index.html',
+  'electron-dist/electron/main.js'
+];
+
+const REQUIRED_PACKAGE_INPUTS = [
+  'electron/preload.cjs'
 ];
 
 const BUILD_INPUTS = [
@@ -40,7 +43,8 @@ function collectLatestMtimeMs(entryPath) {
 
 export function collectBuiltArtifactState(rootDir = process.cwd()) {
   const artifacts = REQUIRED_BUILT_ARTIFACTS.map((artifact) => resolve(rootDir, artifact));
-  const missing = artifacts.filter((artifactPath) => !existsSync(artifactPath));
+  const packageInputs = REQUIRED_PACKAGE_INPUTS.map((artifact) => resolve(rootDir, artifact));
+  const missing = [...artifacts, ...packageInputs].filter((artifactPath) => !existsSync(artifactPath));
   const oldestArtifactMtimeMs = missing.length > 0
     ? 0
     : Math.min(...artifacts.map((artifactPath) => statSync(artifactPath).mtimeMs));

@@ -6,5 +6,9 @@ import { createSharedViteConfig, DESKTOP_RENDERER_WARMUP_FILES } from './vite.sh
 const PROJECT_ROOT = path.dirname(fileURLToPath(import.meta.url));
 
 export default createSharedViteConfig(PROJECT_ROOT, {
+  build: {
+    emptyOutDir: true,
+    outDir: path.resolve(PROJECT_ROOT, 'dist/desktop')
+  },
   warmupClientFiles: DESKTOP_RENDERER_WARMUP_FILES
 });

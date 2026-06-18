@@ -29,7 +29,7 @@ describe('playwright desktop launch target', () => {
       mainEntry: path.join(appRoot, 'electron-dist', 'electron', 'main.js'),
       missingPaths: [],
       preloadPath: path.join(appRoot, 'electron', 'preload.cjs'),
-      rendererIndexPath: path.join(appRoot, 'dist', 'index.html')
+      rendererIndexPath: path.join(appRoot, 'dist', 'desktop', 'index.html')
     });
   });
 
@@ -56,7 +56,7 @@ describe('playwright desktop launch target', () => {
       mainEntry: 'D:\\C\\foliole\\electron-dist\\electron\\main.js',
       missingPaths: [],
       preloadPath: 'D:\\C\\foliole\\electron\\preload.cjs',
-      rendererIndexPath: 'D:\\C\\foliole\\dist\\index.html'
+      rendererIndexPath: 'D:\\C\\foliole\\dist\\desktop\\index.html'
     });
   });
 
@@ -82,7 +82,7 @@ describe('playwright desktop launch target', () => {
       [
         path.join(appRoot, 'electron-dist', 'electron', 'main.js'),
         path.join(appRoot, 'electron-dist', 'preload.cjs'),
-        path.join(appRoot, 'dist', 'index.html')
+        path.join(appRoot, 'dist', 'desktop', 'index.html')
       ].includes(filePath)
     );
 

@@ -14,6 +14,11 @@ describe('vite config', () => {
     expect(viteConfig.base).toBe('./');
   });
 
+  it('builds the desktop renderer into its surface output directory', () => {
+    expect(normalizePath(viteConfig.build?.outDir)).toMatch(/dist\/desktop$/);
+    expect(viteConfig.build?.emptyOutDir).toBe(true);
+  });
+
   it('does not reload the dev renderer when Electron rewrites its runtime startup html', () => {
     expect(viteConfig.server?.watch?.ignored).toContain('**/.tmp/electron-user-data*/runtime-renderer-index.html');
   });

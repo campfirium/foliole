@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import type { Plugin } from 'vite';
+import type { Plugin, UserConfig } from 'vite';
 import { defineConfig } from 'vitest/config';
 
 import { createStartupSkeletonAppearance, createStartupSkeletonLayoutFromSettings } from './electron/startupSkeletonLayout';
@@ -148,12 +148,14 @@ function defaultStartupSkeletonPlugin(): Plugin {
 }
 
 interface SharedViteConfigOptions {
+  build?: UserConfig['build'];
   warmupClientFiles?: string[];
 }
 
 export function createSharedViteConfig(projectRoot: string, options: SharedViteConfigOptions = {}) {
   return defineConfig({
     base: './',
+    ...(options.build ? { build: options.build } : {}),
     plugins: [defaultStartupSkeletonPlugin(), react(), tailwindcss(), workspaceChangeTimestampPlugin(projectRoot)],
     resolve: {
       alias: {

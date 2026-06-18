@@ -30,6 +30,10 @@ async function readReleaseWorkflow() {
   return readFile(releaseWorkflowPath, 'utf8');
 }
 
+function normalizeLineEndings(value) {
+  return value.replaceAll('\r\n', '\n');
+}
+
 describe('electron-builder release packaging config', () => {
   it('keeps better-sqlite3 native bindings outside the asar archive', async () => {
     const config = await readBuilderConfig();
@@ -42,6 +46,8 @@ describe('electron-builder release packaging config', () => {
     const config = await readBuilderConfig();
 
     expect(config.electronLanguages).toEqual(['en-US', 'zh-CN']);
+    expect(config.files).toContain('dist/desktop/**/*');
+    expect(config.files).not.toContain('dist/**/*');
     expect(config.files).toEqual(expect.arrayContaining([
       '!node_modules/@capacitor/**',
       '!node_modules/@capacitor-community/**',
@@ -116,11 +122,12 @@ describe('electron-builder release packaging config', () => {
   });
 
   it('publishes only the Windows installer to the private GitHub draft release', async () => {
-    const [config, packageJson, workflow] = await Promise.all([
+    const [config, packageJson, workflowSource] = await Promise.all([
       readBuilderConfig(),
       readPackageJson(),
       readReleaseWorkflow()
     ]);
+    const workflow = normalizeLineEndings(workflowSource);
 
     expect(config.publish).toBeUndefined();
     expect(config.directories.output).toBe('release-artifacts');

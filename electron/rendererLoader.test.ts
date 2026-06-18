@@ -84,9 +84,9 @@ it('injects startup tokens and an absolute Vite module entry into dev renderer h
 it('injects startup tokens and a file base tag into packaged renderer html', () => {
   const html = '<html><head><style>:root{/*STARTUP_INJECTED_CSS*/}</style></head><body></body></html>';
 
-  const result = injectStartupTokensIntoRendererHtml(html, '/app/dist/index.html', '--startup-document-bg:#1f211f;', 'dark');
+  const result = injectStartupTokensIntoRendererHtml(html, '/app/dist/desktop/index.html', '--startup-document-bg:#1f211f;', 'dark');
 
-  expect(result).toMatch(/<base href="file:\/\/\/(?:[A-Z]:\/)?app\/dist\/">/);
+  expect(result).toMatch(/<base href="file:\/\/\/(?:[A-Z]:\/)?app\/dist\/desktop\/">/);
   expect(result).toContain('<html style="--startup-document-bg:#1f211f;"');
   expect(result).toContain(':root{--startup-document-bg:#1f211f;}');
   expect(result).toContain('data-resolved-base-color="dark"');
@@ -97,7 +97,7 @@ it('replaces build-time startup theme attributes when runtime settings generate 
   const html =
     '<html data-base-color="light" data-resolved-base-color="light" style="--startup-document-bg:#ffffff;"><head><style>:root{--startup-document-bg:#ffffff;}</style></head><body></body></html>';
 
-  const result = injectStartupTokensIntoRendererHtml(html, '/app/dist/index.html', '--startup-document-bg:#1f211f;', 'dark');
+  const result = injectStartupTokensIntoRendererHtml(html, '/app/dist/desktop/index.html', '--startup-document-bg:#1f211f;', 'dark');
 
   expect(result.match(/data-base-color=/g)).toHaveLength(1);
   expect(result.match(/data-resolved-base-color=/g)).toHaveLength(1);

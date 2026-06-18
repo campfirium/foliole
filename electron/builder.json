@@ -21,7 +21,7 @@
   "nativeRebuilder": "sequential",
   "files": [
     "build/icon.png",
-    "dist/**/*",
+    "dist/desktop/**/*",
     "electron/preload.cjs",
     "electron/globalCapturePanelPreload.cjs",
     "electron/globalCaptureToastPreload.cjs",

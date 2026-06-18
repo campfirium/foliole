@@ -27,11 +27,11 @@ export function resolvePreloadScriptPath(runtimeDir: string, existsSync: ExistsS
 export function resolveRendererIndexPath(runtimeDir: string, existsSync: ExistsSync) {
   const resolved = resolveFirstExistingPath(
     [
-      path.join(runtimeDir, '..', '..', 'dist', 'index.html'),
-      path.join(runtimeDir, '..', 'dist', 'index.html')
+      path.join(runtimeDir, '..', '..', 'dist', 'desktop', 'index.html'),
+      path.join(runtimeDir, '..', 'dist', 'desktop', 'index.html')
     ],
     existsSync
   );
 
-  return resolved ?? path.join(runtimeDir, '..', '..', 'dist', 'index.html');
+  return resolved ?? path.join(runtimeDir, '..', '..', 'dist', 'desktop', 'index.html');
 }

@@ -57,7 +57,7 @@ describe('playwright desktop diagnostics', () => {
         path.join(logsDir, 'renderer-state.ndjson'),
         `${JSON.stringify({ label: 'did-finish-load', snapshot: {
           bridgeAvailable: false,
-          href: 'file:///workspace/foliole/dist/index.html',
+          href: 'file:///workspace/foliole/dist/desktop/index.html',
           readyState: 'complete',
           rootPresent: true
         } })}\n`,
@@ -73,7 +73,7 @@ describe('playwright desktop diagnostics', () => {
       }, {
         appReady: true,
         readyState: 'complete',
-        rendererUrl: 'file:///workspace/foliole/dist/index.html'
+        rendererUrl: 'file:///workspace/foliole/dist/desktop/index.html'
       });
       const rendererConsoleCollector = createRendererConsoleCollector(windowPage);
       const rendererPageEventCollector = createRendererPageEventCollector(windowPage);
@@ -86,13 +86,13 @@ describe('playwright desktop diagnostics', () => {
 
       windowPage.emit('framenavigated', {
         parentFrame: () => null,
-        url: () => 'file:///workspace/foliole/dist/index.html'
+        url: () => 'file:///workspace/foliole/dist/desktop/index.html'
       });
       windowPage.emit('domcontentloaded');
       windowPage.emit('response', {
         ok: () => true,
         status: () => 200,
-        url: () => 'file:///workspace/foliole/dist/index.html'
+        url: () => 'file:///workspace/foliole/dist/desktop/index.html'
       });
       windowPage.emit('console', {
         location: () => ({ columnNumber: 0, lineNumber: 10, url: 'app://index.html' }),
@@ -123,7 +123,7 @@ describe('playwright desktop diagnostics', () => {
         navigationReady: true,
         pid: 4821,
         preloadPath: '/workspace/foliole/electron/preload.cjs',
-        rendererUrl: 'file:///workspace/foliole/dist/index.html'
+        rendererUrl: 'file:///workspace/foliole/dist/desktop/index.html'
       });
       expect(diagnostics.runtimeHead).toBe('head-123');
       expect(diagnostics.nativeInvokeHistory).toEqual([
@@ -138,12 +138,12 @@ describe('playwright desktop diagnostics', () => {
         readyState: 'complete',
         rootPresent: false,
         title: null,
-        url: 'file:///workspace/foliole/dist/index.html'
+        url: 'file:///workspace/foliole/dist/desktop/index.html'
       });
       expect(diagnostics.rendererPageEvents).toEqual([
-        expect.objectContaining({ type: 'framenavigated', url: 'file:///workspace/foliole/dist/index.html' }),
+        expect.objectContaining({ type: 'framenavigated', url: 'file:///workspace/foliole/dist/desktop/index.html' }),
         expect.objectContaining({ type: 'domcontentloaded' }),
-        expect.objectContaining({ ok: true, status: 200, type: 'response', url: 'file:///workspace/foliole/dist/index.html' })
+        expect.objectContaining({ ok: true, status: 200, type: 'response', url: 'file:///workspace/foliole/dist/desktop/index.html' })
       ]);
       expect(diagnostics.mainProcessLogs.stdoutTail).toEqual(['main ok\n']);
       expect(diagnostics.mainProcessLogs.stderrTail).toEqual(['main failed\n']);
@@ -158,7 +158,7 @@ describe('playwright desktop diagnostics', () => {
         appReady: true,
         bridgeReady: false,
         readyState: 'complete',
-        rendererUrl: 'file:///workspace/foliole/dist/index.html'
+        rendererUrl: 'file:///workspace/foliole/dist/desktop/index.html'
       });
       expect(diagnostics.rendererState).toEqual({
         entries: [
@@ -166,7 +166,7 @@ describe('playwright desktop diagnostics', () => {
             label: 'did-finish-load',
             snapshot: expect.objectContaining({
               bridgeAvailable: false,
-              href: 'file:///workspace/foliole/dist/index.html',
+              href: 'file:///workspace/foliole/dist/desktop/index.html',
               readyState: 'complete',
               rootPresent: true
             })
@@ -174,7 +174,7 @@ describe('playwright desktop diagnostics', () => {
         ],
         latestSnapshot: {
           bridgeAvailable: false,
-          href: 'file:///workspace/foliole/dist/index.html',
+          href: 'file:///workspace/foliole/dist/desktop/index.html',
           readyState: 'complete',
           rootPresent: true
         },
@@ -203,7 +203,7 @@ describe('playwright desktop diagnostics', () => {
       const windowPage = new MockPage(null, {
         appReady: true,
         readyState: 'complete',
-        rendererUrl: 'file:///workspace/foliole/dist/index.html'
+        rendererUrl: 'file:///workspace/foliole/dist/desktop/index.html'
       });
       const rendererConsoleCollector = createRendererConsoleCollector(windowPage);
       const rendererPageEventCollector = createRendererPageEventCollector(windowPage);
@@ -229,7 +229,7 @@ describe('playwright desktop diagnostics', () => {
         navigationReady: true,
         pid: 4821,
         preloadPath: null,
-        rendererUrl: 'file:///workspace/foliole/dist/index.html'
+        rendererUrl: 'file:///workspace/foliole/dist/desktop/index.html'
       });
       expect(diagnostics.bridgeBreakpoint).toEqual({
         kind: 'single_instance_old_window_lock',
@@ -265,7 +265,7 @@ describe('playwright desktop diagnostics', () => {
         path.join(logsDir, 'renderer-state.ndjson'),
         `${JSON.stringify({ label: 'after-1000ms', snapshot: {
           bridgeAvailable: true,
-          href: 'file:///workspace/foliole/dist/index.html',
+          href: 'file:///workspace/foliole/dist/desktop/index.html',
           readyState: 'complete',
           rootPresent: true
         } })}\n`,
@@ -280,7 +280,7 @@ describe('playwright desktop diagnostics', () => {
         appReady: true,
         bridgeReady: true,
         readyState: 'complete',
-        rendererUrl: 'file:///workspace/foliole/dist/index.html'
+        rendererUrl: 'file:///workspace/foliole/dist/desktop/index.html'
       });
       const rendererConsoleCollector = createRendererConsoleCollector(windowPage);
       const rendererPageEventCollector = createRendererPageEventCollector(windowPage);
@@ -305,7 +305,7 @@ describe('playwright desktop diagnostics', () => {
         navigationReady: true,
         pid: 4821,
         preloadPath: '/workspace/foliole/electron/preload.cjs',
-        rendererUrl: 'file:///workspace/foliole/dist/index.html'
+        rendererUrl: 'file:///workspace/foliole/dist/desktop/index.html'
       });
       expect(diagnostics.boot.bridgeReadyMarker).toEqual({
         pid: 4821,
@@ -316,7 +316,7 @@ describe('playwright desktop diagnostics', () => {
         appReady: true,
         bridgeReady: true,
         readyState: 'complete',
-        rendererUrl: 'file:///workspace/foliole/dist/index.html'
+        rendererUrl: 'file:///workspace/foliole/dist/desktop/index.html'
       });
       expect(diagnostics.rendererState.navigationReady).toBe(true);
 

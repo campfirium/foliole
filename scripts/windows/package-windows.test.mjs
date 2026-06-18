@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -153,10 +153,36 @@ describe('windows package runner', () => {
     const root = mkdtempSync(join(tmpdir(), 'foliole-built-artifacts-test-'));
     try {
       expect(collectBuiltArtifactState(root).missing).toEqual([
-        join(root, 'dist/index.html'),
+        join(root, 'dist/desktop/index.html'),
         join(root, 'electron-dist/electron/main.js'),
-        join(root, 'electron-dist/electron/preload.cjs')
+        join(root, 'electron/preload.cjs')
       ]);
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
+  });
+
+  it('does not treat source preload mtime as generated build freshness', () => {
+    const root = mkdtempSync(join(tmpdir(), 'foliole-built-artifacts-test-'));
+    try {
+      const oldDate = new Date('2026-01-01T00:00:00Z');
+      const currentDate = new Date('2026-01-02T00:00:00Z');
+      mkdirSync(join(root, 'dist/desktop'), { recursive: true });
+      mkdirSync(join(root, 'electron-dist/electron'), { recursive: true });
+      mkdirSync(join(root, 'electron'), { recursive: true });
+      writeFileSync(join(root, 'package.json'), '{}');
+      writeFileSync(join(root, 'dist/desktop/index.html'), '');
+      writeFileSync(join(root, 'electron-dist/electron/main.js'), '');
+      writeFileSync(join(root, 'electron/preload.cjs'), '');
+      utimesSync(join(root, 'package.json'), oldDate, oldDate);
+      utimesSync(join(root, 'electron/preload.cjs'), oldDate, oldDate);
+      utimesSync(join(root, 'dist/desktop/index.html'), currentDate, currentDate);
+      utimesSync(join(root, 'electron-dist/electron/main.js'), currentDate, currentDate);
+
+      expect(collectBuiltArtifactState(root)).toMatchObject({
+        missing: [],
+        oldestArtifactMtimeMs: currentDate.getTime()
+      });
     } finally {
       rmSync(root, { force: true, recursive: true });
     }

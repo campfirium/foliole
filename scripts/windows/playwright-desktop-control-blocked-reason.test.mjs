@@ -18,12 +18,12 @@ describe('explainBridgeBackedControlBlockedReason', () => {
           navigationReady: true,
           pid: 4821,
           preloadPath: null,
-          rendererUrl: 'file:///workspace/foliole/dist/index.html'
+          rendererUrl: 'file:///workspace/foliole/dist/desktop/index.html'
         },
         rendererPage: {
           readyState: 'complete',
           rootPresent: true,
-          url: 'file:///workspace/foliole/dist/index.html'
+          url: 'file:///workspace/foliole/dist/desktop/index.html'
         }
       })
     ).toContain('older runtime');
@@ -57,12 +57,12 @@ describe('explainBridgeBackedControlBlockedReason', () => {
           bridgeReady: false,
           navigationReady: true,
           preloadPath: '/workspace/foliole/electron/preload.cjs',
-          rendererUrl: 'file:///workspace/foliole/dist/index.html'
+          rendererUrl: 'file:///workspace/foliole/dist/desktop/index.html'
         },
         rendererPage: {
           readyState: 'complete',
           rootPresent: true,
-          url: 'file:///workspace/foliole/dist/index.html'
+          url: 'file:///workspace/foliole/dist/desktop/index.html'
         }
       })
     ).toContain('bridge_ready');
@@ -77,12 +77,12 @@ describe('explainBridgeBackedControlBlockedReason', () => {
           bridgeReady: true,
           navigationReady: true,
           preloadPath: '/workspace/foliole/electron/preload.cjs',
-          rendererUrl: 'file:///workspace/foliole/dist/index.html'
+          rendererUrl: 'file:///workspace/foliole/dist/desktop/index.html'
         },
         rendererPage: {
           readyState: 'complete',
           rootPresent: true,
-          url: 'file:///workspace/foliole/dist/index.html'
+          url: 'file:///workspace/foliole/dist/desktop/index.html'
         }
       })
     ).toContain('bridge reports healthy');

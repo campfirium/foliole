@@ -12,7 +12,7 @@ it('blocks main window renderer navigation and renderer-created windows', () => 
   const windowOpenHandlers: WindowOpenHandler[] = [];
   const willNavigateHandlers: WillNavigateHandler[] = [];
   const webContents = {
-    getURL: vi.fn(() => 'file:///D:/C/foliole/dist/index.html'),
+    getURL: vi.fn(() => 'file:///D:/C/foliole/dist/desktop/index.html'),
     on: vi.fn((eventName: string, handler: WillNavigateHandler) => {
       if (eventName === 'will-navigate') {
         willNavigateHandlers.push(handler);
@@ -48,8 +48,8 @@ it('allows the main process to load the initial local renderer before blocking l
 
   bindMainWindowNavigationGuard({ webContents } as never);
   const startupNavigationEvent = { preventDefault: vi.fn() };
-  willNavigateHandlers[0]?.(startupNavigationEvent, 'file:///D:/C/foliole/dist/index.html');
-  currentUrl = 'file:///D:/C/foliole/dist/index.html';
+  willNavigateHandlers[0]?.(startupNavigationEvent, 'file:///D:/C/foliole/dist/desktop/index.html');
+  currentUrl = 'file:///D:/C/foliole/dist/desktop/index.html';
   const laterNavigationEvent = { preventDefault: vi.fn() };
   willNavigateHandlers[0]?.(laterNavigationEvent, 'file:///D:/Users/example/secret.txt');
 

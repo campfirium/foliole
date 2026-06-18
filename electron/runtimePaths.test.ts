@@ -28,7 +28,7 @@ it('does not fall back to historical electron-dist preload paths', () => {
 
 it('resolves packaged renderer index from repo dist for electron-dist/electron output', () => {
   const runtimeDir = path.join('C:', 'dev', 'foliole', 'electron-dist', 'electron');
-  const rendererIndex = path.join('C:', 'dev', 'foliole', 'dist', 'index.html');
+  const rendererIndex = path.join('C:', 'dev', 'foliole', 'dist', 'desktop', 'index.html');
 
   expect(resolveRendererIndexPath(runtimeDir, createExistsSync([rendererIndex]))).toBe(rendererIndex);
 });
