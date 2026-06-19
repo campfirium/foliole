@@ -20,6 +20,13 @@ function parseArgs(argv) {
 function resolveVitestCommand() {
   const platform = process.env.VITEST_PLATFORM_FOR_TEST || process.platform;
   if (process.env.VITEST_BIN) {
+    if (/\.[cm]?js$/i.test(process.env.VITEST_BIN)) {
+      return {
+        argsPrefix: [process.env.VITEST_BIN],
+        command: process.execPath,
+        shell: false
+      };
+    }
     return {
       argsPrefix: [],
       command: process.env.VITEST_BIN,

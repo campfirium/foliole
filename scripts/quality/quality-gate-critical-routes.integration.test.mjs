@@ -8,6 +8,8 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+import { toFixtureShellPath } from './quality-gate-fast.test-support.mjs';
+
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const QUALITY_GATE_FAST_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality', 'quality-gate-fast.sh');
 
@@ -48,7 +50,7 @@ async function writeFileWithDirs(root, relativePath, content, mode) {
 describe('quality gate critical routes integration', () => {
   it('runs critical routed tests for backlinks contract changes', async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), 'quality-critical-routes-'));
-    const lintMarker = path.join(root, 'lint.marker');
+    const lintMarker = toFixtureShellPath(path.join(root, 'lint.marker'));
     try {
       await writeFile(
         path.join(root, 'package.json'),
@@ -75,14 +77,13 @@ describe('quality gate critical routes integration', () => {
       );
       await writeFileWithDirs(
         root,
-        'node_modules/.bin/vitest',
-        '#!/usr/bin/env bash\necho "critical test:$*"\n',
-        0o755
+        'node_modules/.bin/vitest.mjs',
+        'console.log(`critical test:${process.argv.slice(2).join(" ")}`);\n'
       );
 
       const result = await runQualityGate(root, {
-        PATH: `${path.join(root, 'node_modules/.bin')}:${process.env.PATH}`,
-        VITEST_BIN: path.join(root, 'node_modules/.bin', 'vitest'),
+        PATH: `${toFixtureShellPath(path.join(root, 'node_modules/.bin'))}:${process.env.PATH}`,
+        VITEST_BIN: path.join(root, 'node_modules/.bin', 'vitest.mjs'),
         QUALITY_GATE_CHANGED_FILES: 'src/app/components/useNodeBacklinks.ts'
       });
 

@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createQualityGateTempRoot,
   runQualityGate,
+  toFixtureShellPath,
   writeExecutable,
   writeFixtureFile,
   writePackageJson
@@ -27,8 +28,8 @@ function expectedVitestArgs(prefix, testFile) {
 describe('quality-gate-fast.sh routing', () => {
   it('uses the light level for local component changes and skips related tests', async () => {
     const tempRoot = await createQualityGateTempRoot();
-    const typecheckMarker = path.join(tempRoot, 'typecheck.marker');
-    const lintMarker = path.join(tempRoot, 'lint.marker');
+    const typecheckMarker = toFixtureShellPath(path.join(tempRoot, 'typecheck.marker'));
+    const lintMarker = toFixtureShellPath(path.join(tempRoot, 'lint.marker'));
     try {
       await writePackageJson(tempRoot, {
         'copy:guard': 'node scripts/check-ui-copy-guard.mjs',
@@ -100,8 +101,8 @@ describe('quality-gate-fast.sh routing', () => {
 
   it('uses the mid level for props signature changes and runs related tests', async () => {
     const tempRoot = await createQualityGateTempRoot();
-    const typecheckMarker = path.join(tempRoot, 'typecheck.marker');
-    const lintMarker = path.join(tempRoot, 'lint.marker');
+    const typecheckMarker = toFixtureShellPath(path.join(tempRoot, 'typecheck.marker'));
+    const lintMarker = toFixtureShellPath(path.join(tempRoot, 'lint.marker'));
     try {
       await writePackageJson(tempRoot, {
         lint: 'node -e "console.log(\'repo lint should stay unused\')"',
@@ -111,7 +112,11 @@ describe('quality-gate-fast.sh routing', () => {
       });
       await writeFixtureFile(tempRoot, 'scripts/check-repository-root-boundary.mjs', 'console.log("repository root boundary ok");\n');
       await writeExecutable(tempRoot, 'node_modules/.bin/eslint', `#!/usr/bin/env bash\nprintf '%s\n' "$*" > "${lintMarker}"\n`);
-      await writeExecutable(tempRoot, 'node_modules/.bin/vitest', '#!/usr/bin/env bash\necho "related test:$*"\n');
+      await writeFixtureFile(
+        tempRoot,
+        'node_modules/.bin/vitest.mjs',
+        'console.log(`related test:${process.argv.slice(2).join(" ")}`);\n'
+      );
       await writeFixtureFile(
         tempRoot,
         'src/app/components/FancyCard.tsx',
@@ -120,8 +125,8 @@ describe('quality-gate-fast.sh routing', () => {
       await writeFixtureFile(tempRoot, 'src/app/components/FancyCard.test.tsx', 'export {};\n');
 
       const result = await runQualityGate(tempRoot, {
-        PATH: `${path.join(tempRoot, 'node_modules/.bin')}:${process.env.PATH}`,
-        VITEST_BIN: path.join(tempRoot, 'node_modules/.bin', 'vitest'),
+        PATH: `${toFixtureShellPath(path.join(tempRoot, 'node_modules/.bin'))}:${process.env.PATH}`,
+        VITEST_BIN: path.join(tempRoot, 'node_modules/.bin', 'vitest.mjs'),
         QUALITY_GATE_CHANGED_FILES: 'src/app/components/FancyCard.tsx'
       });
 

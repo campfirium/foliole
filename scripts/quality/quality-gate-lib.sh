@@ -40,6 +40,15 @@ has_package_script() {
   node -e "const p=require('./package.json'); process.exit(p.scripts && p.scripts['$script_name'] ? 0 : 1)"
 }
 
+is_quality_gate_fixture_package() {
+  node -e "const p=require('./package.json'); process.exit(/^quality-gate-.*fixture$/.test(p.name || '') ? 0 : 1)"
+}
+
+read_package_script_command() {
+  local script_name="$1"
+  SCRIPT_NAME="${script_name}" node -e "const p=require('./package.json'); process.stdout.write(p.scripts?.[process.env.SCRIPT_NAME] || '')"
+}
+
 resolve_quality_gate_limit() {
   local script_name="$1"
   local metric="$2"
@@ -177,7 +186,9 @@ run_quality_gate_script() {
   fi
 
   local -a command_args=()
-  if [[ "${pm}" == "yarn" ]]; then
+  if is_quality_gate_fixture_package; then
+    command_args=(bash -lc "$(read_package_script_command "${script_name}")")
+  elif [[ "${pm}" == "yarn" ]]; then
     command_args=(yarn "${script_name}")
   else
     command_args=("${pm}" run "${script_name}")

@@ -2,14 +2,21 @@
 
 terminate_process_group() {
   local pgid="$1"
+  local pid
 
   if [[ -z "${pgid}" ]]; then
     return 0
   fi
 
   kill -TERM -- "-${pgid}" 2>/dev/null || true
+  for pid in $(list_process_group_pids "${pgid}"); do
+    [[ "${pid}" == "$$" ]] || kill -TERM "${pid}" 2>/dev/null || true
+  done
   sleep 1
   kill -KILL -- "-${pgid}" 2>/dev/null || true
+  for pid in $(list_process_group_pids "${pgid}"); do
+    [[ "${pid}" == "$$" ]] || kill -KILL "${pid}" 2>/dev/null || true
+  done
 }
 
 terminate_quality_gate_child() {
@@ -22,21 +29,32 @@ terminate_quality_gate_child() {
   fi
 
   if [[ -n "${pid}" ]]; then
+    terminate_process_tree "${pid}"
     kill -TERM "${pid}" 2>/dev/null || true
     sleep 1
+    terminate_process_tree "${pid}" KILL
     kill -KILL "${pid}" 2>/dev/null || true
   fi
 }
 
 sum_process_group_rss_kb() {
   local pgid="$1"
+  local pid sum=0
 
   if [[ -z "${pgid}" ]]; then
     printf '0'
     return 0
   fi
 
-  ps -o rss= -g "${pgid}" 2>/dev/null | awk '{sum += $1} END {printf "%d", sum + 0}'
+  if ps -o rss= -g "${pgid}" >/dev/null 2>&1; then
+    ps -o rss= -g "${pgid}" 2>/dev/null | awk '{sum += $1} END {printf "%d", sum + 0}'
+    return 0
+  fi
+
+  for pid in $(list_process_group_pids "${pgid}"); do
+    sum=$((sum + $(read_process_rss_kb "${pid}")))
+  done
+  printf '%d' "${sum}"
 }
 
 sum_process_rss_kb() {
@@ -47,7 +65,58 @@ sum_process_rss_kb() {
     return 0
   fi
 
-  ps -o rss= -p "${pid}" 2>/dev/null | awk '{sum += $1} END {printf "%d", sum + 0}'
+  if ps -o rss= -p "${pid}" >/dev/null 2>&1; then
+    ps -o rss= -p "${pid}" 2>/dev/null | awk '{sum += $1} END {printf "%d", sum + 0}'
+    return 0
+  fi
+
+  read_process_rss_kb "${pid}"
+}
+
+list_process_group_pids() {
+  local pgid="$1"
+
+  ps 2>/dev/null | awk -v pgid="${pgid}" 'NR > 1 && $3 == pgid {print $1}'
+}
+
+list_process_tree_pids() {
+  local root_pid="$1"
+  local frontier="${root_pid}"
+  local next pid
+
+  while [[ -n "${frontier}" ]]; do
+    next=""
+    for pid in ${frontier}; do
+      ps 2>/dev/null | awk -v ppid="${pid}" 'NR > 1 && $2 == ppid {print $1}'
+    done | while read -r pid; do
+      [[ -n "${pid}" ]] || continue
+      printf '%s\n' "${pid}"
+      next="${next} ${pid}"
+    done
+    frontier="${next}"
+  done
+}
+
+terminate_process_tree() {
+  local root_pid="$1"
+  local signal="${2:-TERM}"
+  local pid
+
+  for pid in $(list_process_tree_pids "${root_pid}"); do
+    [[ "${pid}" == "$$" ]] || kill "-${signal}" "${pid}" 2>/dev/null || true
+  done
+}
+
+read_process_rss_kb() {
+  local pid="$1"
+  local status_file="/proc/${pid}/status"
+
+  if [[ ! -r "${status_file}" ]]; then
+    printf '0'
+    return 0
+  fi
+
+  awk '/^VmRSS:/ {print $2; found=1; exit} END {if (!found) print 0}' "${status_file}" 2>/dev/null || printf '0'
 }
 
 sum_guarded_command_rss_kb() {
@@ -60,6 +129,22 @@ sum_guarded_command_rss_kb() {
   fi
 
   sum_process_rss_kb "${pid}"
+}
+
+resolve_process_group_id() {
+  local pid="$1"
+
+  if [[ -z "${pid}" ]]; then
+    printf ''
+    return 0
+  fi
+
+  if ps -o pgid= -p "${pid}" >/dev/null 2>&1; then
+    ps -o pgid= -p "${pid}" 2>/dev/null | awk 'NR == 1 {gsub(/^[ \t]+|[ \t]+$/, "", $0); print; exit}'
+    return 0
+  fi
+
+  ps 2>/dev/null | awk -v pid="${pid}" 'NR > 1 && $1 == pid {print $3; exit}'
 }
 
 run_command_with_limits() {
@@ -78,11 +163,19 @@ run_command_with_limits() {
   local child_pgid=""
   if command -v setsid >/dev/null 2>&1; then
     setsid "$@" >"${output_file}" 2>&1 &
-    child_pgid="$!"
   else
     "$@" >"${output_file}" 2>&1 &
   fi
   local child_pid=$!
+  local child_pgid_unsafe=0
+  child_pgid="$(resolve_process_group_id "${child_pid}")"
+  if [[ "${child_pgid}" == "$(resolve_process_group_id "$$")" ]]; then
+    child_pgid=""
+    child_pgid_unsafe=1
+  fi
+  if [[ "${child_pgid_unsafe}" -eq 0 && -z "${child_pgid}" ]] && command -v setsid >/dev/null 2>&1; then
+    child_pgid="${child_pid}"
+  fi
   QUALITY_GATE_ACTIVE_PGID="${child_pgid}"
   local started_at heartbeat_seconds
   started_at="$(date +%s)"

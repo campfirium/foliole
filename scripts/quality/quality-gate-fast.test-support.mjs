@@ -93,6 +93,10 @@ export function normalizeQualityGateLogPath(filePath) {
   return result.stdout.trim() || filePath;
 }
 
+export function toFixtureShellPath(filePath) {
+  return filePath.replaceAll('\\', '/');
+}
+
 export async function writePackageJson(rootDir, scripts) {
   const fixtureScripts = {
     'check:android-boundary': 'node -e "console.log(\'android boundary ok\')"',

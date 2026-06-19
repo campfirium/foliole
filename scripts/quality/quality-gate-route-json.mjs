@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /* global process */
 
 const SECTION_PREFIX = /^\[quality-gate-route\]\s{3}/u;
