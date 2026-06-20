@@ -11,14 +11,21 @@ import {
 } from '../store/workspaceStore';
 import { createWorkspaceReviewActions } from '../store/workspaceStoreReviewActions';
 
-import { canonicalDemoPath, DEFAULT_DEMO_TOPIC, DEMO_TOPICS, type DemoTopic } from './demoContent';
+import { DEFAULT_DEMO_TOPIC, DEMO_TOPICS, type DemoTopic } from './demoContent';
 import { DEMO_CAPTURED_VERSION, DEMO_SNAPSHOT_VERSION } from './demoLocalStorage';
 import type { DemoPackReadingSeed, DemoPackReviewItem, DemoPackReviewScheduleSeed, DemoPackRelativeTime } from './demoPack';
+import { repairDemoWorkspacePayload } from './demoWorkspaceSnapshotRepair';
 
 export function resolveDemoTopicFromPath(pathname: string, topics: DemoTopic[] = DEMO_TOPICS) {
+  const slug = resolveDemoSlugFromPath(pathname);
   return requireDemoTopic(
-    topics.find((topic) => canonicalDemoPath(topic.slug) === pathname) ?? topics[0] ?? DEFAULT_DEMO_TOPIC
+    topics.find((topic) => topic.slug === slug) ?? topics[0] ?? DEFAULT_DEMO_TOPIC
   );
+}
+
+function resolveDemoSlugFromPath(pathname: string) {
+  if (pathname === '/demo/') return DEFAULT_DEMO_TOPIC?.slug;
+  return /^\/(?:[a-z]{2}(?:-[a-z]+)?\/)?demo\/([^/]+)\/?$/i.exec(pathname)?.[1];
 }
 
 export function createDemoWorkspaceSnapshot(pathname: string, now = new Date()): WorkspacePersistedState {
@@ -46,6 +53,13 @@ export function createDemoWorkspaceSnapshot(pathname: string, now = new Date()):
 }
 
 export async function installDemoWorkspaceSnapshot(pathname = window.location.pathname) {
+  const rawPayload = window.localStorage.getItem(WORKSPACE_STORAGE_KEY);
+  if (rawPayload) {
+    const repairedPayload = repairDemoWorkspacePayload(rawPayload, pathname);
+    if (repairedPayload) {
+      window.localStorage.setItem(WORKSPACE_STORAGE_KEY, repairedPayload);
+    }
+  }
   if (!hasCompatibleDemoWorkspacePayload(pathname)) {
     const snapshot = createDemoWorkspaceSnapshot(pathname);
     window.localStorage.setItem(

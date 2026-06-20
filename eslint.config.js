@@ -10,6 +10,8 @@ export default [
       'dist/**',
       'coverage/**',
       '.claude/**',
+      'android/app/build/**',
+      'android/app/src/main/assets/public/**',
       'node_modules/**',
       'playwright-report/**',
       'test-results/**',

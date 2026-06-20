@@ -14,8 +14,8 @@ import {
   type DemoPackReviewItem
 } from '../../src/demo/demoPack.js';
 
-import { createDemoReadingSeed, createDemoReviewScheduleSeed } from './demo-pack-schedule-seeds.js';
 import type { ExportArgs, NodeRow, WarningRow } from './demo-pack-export-types.js';
+import { createDemoReadingSeed, createDemoReviewScheduleSeed } from './demo-pack-schedule-seeds.js';
 import { writeDemoPack } from './write-demo-pack.js';
 
 const require = createRequire(import.meta.url);

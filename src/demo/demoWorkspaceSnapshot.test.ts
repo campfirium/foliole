@@ -124,6 +124,7 @@ it('keeps a compatible Demo workspace payload during refresh', async () => {
     ];
     storage.set(WORKSPACE_STORAGE_KEY, JSON.stringify(payload));
     simulateDemoRefresh(storage);
+    stubDemoStorage(storage, canonicalDemoPath(requireTopic(1).slug));
 
     await installDemoWorkspaceSnapshot();
 
@@ -152,6 +153,32 @@ it('persists Demo browser-local review actions into the workspace payload', asyn
     expect(useWorkspaceStore.getState().nodesById[activeNodeId]?.reading).toMatchObject({
       lastHandledAt: now,
       state: 'active'
+    });
+    vi.unstubAllGlobals();
+});
+
+it('repairs browser-local Demo nodes stuck in fetching state during refresh', async () => {
+    const storage = new Map<string, string>();
+    stubDemoStorage(storage);
+    await installDemoWorkspaceSnapshot();
+    const payload = JSON.parse(storage.get(WORKSPACE_STORAGE_KEY) ?? 'null');
+    const activeNodeId = payload.state.activeNodeId;
+    payload.state.nodesById[activeNodeId] = {
+      ...payload.state.nodesById[activeNodeId],
+      bodyStatus: 'fetching',
+      content: 'Recovered browser-local content',
+      hasContent: false
+    };
+    storage.set(WORKSPACE_STORAGE_KEY, JSON.stringify(payload));
+    simulateDemoRefresh(storage);
+
+    await installDemoWorkspaceSnapshot();
+
+    const nextPayload = JSON.parse(storage.get(WORKSPACE_STORAGE_KEY) ?? 'null');
+    expect(nextPayload.state.nodesById[activeNodeId]).toMatchObject({
+      bodyStatus: 'ready',
+      content: 'Recovered browser-local content',
+      hasContent: true
     });
     vi.unstubAllGlobals();
 });

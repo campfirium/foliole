@@ -1,3 +1,5 @@
+import { hasWorkspaceRuntimeRepository } from '../shared/platform/workspaceRuntimeRepository';
+
 import { enforceWorkspaceRendererBoundary } from './workspaceRendererBoundary';
 import {
   collectRendererBoundaryKeepNodeIds,
@@ -14,6 +16,10 @@ export function withWorkspaceRendererBoundary<T extends WorkspaceState | Partial
     'rendererBoundaryKeepNodeIds' in state
       ? state
       : { ...state, rendererBoundaryKeepNodeIds: nextRendererBoundaryKeepNodeIds };
+
+  if (!hasWorkspaceRuntimeRepository()) {
+    return nextState as T;
+  }
 
   return enforceWorkspaceRendererBoundary(
     nextState,

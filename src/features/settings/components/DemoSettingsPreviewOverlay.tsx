@@ -1,5 +1,14 @@
 import { useMemo, useState } from 'react';
 
+import { getDemoSettingsPreviewSections, type DemoSettingsPreviewControlKind } from '../model/demoSettingsPreviewCatalog';
+import {
+  getInitialSettingsCategory,
+  getSettingsCategoryOption,
+  type SettingsCategoryId
+} from '../model/settingsPanelOptions';
+
+import { DemoSettingsPreviewSidebar } from './DemoSettingsPreviewSidebar';
+
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/localization/LocalizationProvider';
 import {
@@ -20,15 +29,6 @@ import {
   settingsValueBoxClassName
 } from '@/shared/ui';
 
-import { getDemoSettingsPreviewSections, type DemoSettingsPreviewControlKind } from '../model/demoSettingsPreviewCatalog';
-import {
-  getInitialSettingsCategory,
-  getSettingsCategoryOption,
-  type SettingsCategoryId
-} from '../model/settingsPanelOptions';
-
-import { DemoSettingsPreviewSidebar } from './DemoSettingsPreviewSidebar';
-
 const DESKTOP_DOWNLOAD_URL = 'https://github.com/campfirium/foliole/releases';
 
 export interface DemoSettingsPreviewOverlayProps {
@@ -41,8 +41,6 @@ export function DemoSettingsPreviewOverlay({ onClose, requestedCategory }: DemoS
   const [activeCategory, setActiveCategory] = useState<SettingsCategoryId>(
     requestedCategory ?? getInitialSettingsCategory()
   );
-  const activeCategoryOption = getSettingsCategoryOption(activeCategory, t);
-  const sections = useMemo(() => getDemoSettingsPreviewSections(activeCategory), [activeCategory]);
 
   return (
     <AppDialog modal open onOpenChange={(open) => !open && onClose()}>
@@ -54,56 +52,82 @@ export function DemoSettingsPreviewOverlay({ onClose, requestedCategory }: DemoS
           className={settingsDialogSurfaceClassName('grid h-[min(800px,calc(100dvh-36px))] w-[min(1240px,calc(100vw-36px))] max-w-none grid-cols-[260px_minmax(0,1fr)] overflow-hidden')}
           data-settings-root-dialog="true"
         >
-          <DemoSettingsPreviewSidebar
+          <DemoSettingsPreviewBody
             activeCategory={activeCategory}
             setActiveCategory={setActiveCategory}
           />
-          <div className="flex min-h-0 flex-col bg-settings-group">
-            <div className="flex min-h-[64px] items-center justify-between gap-4 border-b border-settings-divider/55 px-7">
-              <span className="text-ui-md text-foreground/64">{t('settings.demoPreview.readOnlyBadge')}</span>
-              <DesktopDownloadLink />
-            </div>
-            <div className="app-scrollbar min-h-0 flex-1 overflow-auto px-7 py-7">
-              <DemoSettingsPreviewHeader
-                description={activeCategoryOption?.description ?? ''}
-                title={activeCategoryOption?.label ?? t('settings.title')}
-              />
-              {sections.length > 0 ? (
-                sections.map((section) => (
-                  <SettingsSection
-                    ariaLabel={t(section.titleKey)}
-                    key={section.id}
-                    title={t(section.titleKey)}
-                    {...(section.descriptionKey ? { description: t(section.descriptionKey) } : {})}
-                  >
-                    {section.items.map((item) => (
-                      <SettingsRow
-                        description={t(item.descriptionKey)}
-                        key={item.id}
-                        readonly
-                        title={t(item.titleKey)}
-                      >
-                        <SettingsControlSlot>
-                          <PreviewControl kind={item.controlKind} />
-                        </SettingsControlSlot>
-                      </SettingsRow>
-                    ))}
-                  </SettingsSection>
-                ))
-              ) : (
-                <SettingsSection ariaLabel={t('settings.demoPreview.empty')}>
-                  <SettingsRow
-                    description={t('settings.demoPreview.emptyDescription')}
-                    readonly
-                    title={t('settings.demoPreview.empty')}
-                  />
-                </SettingsSection>
-              )}
-            </div>
-          </div>
         </AppDialogContent>
       </AppDialogPortal>
     </AppDialog>
+  );
+}
+
+function DemoSettingsPreviewBody(props: {
+  activeCategory: SettingsCategoryId;
+  setActiveCategory: (category: SettingsCategoryId) => void;
+}) {
+  const t = useTranslation();
+  const { activeCategory, setActiveCategory } = props;
+  const activeCategoryOption = getSettingsCategoryOption(activeCategory, t);
+  const sections = useMemo(() => getDemoSettingsPreviewSections(activeCategory), [activeCategory]);
+
+  return (
+    <>
+      <DemoSettingsPreviewSidebar
+        activeCategory={activeCategory}
+        setActiveCategory={setActiveCategory}
+      />
+      <div className="flex min-h-0 flex-col bg-settings-group">
+        <div className="flex min-h-[64px] items-center justify-between gap-4 border-b border-settings-divider/55 px-7">
+          <span className="text-ui-md text-foreground/64">{t('settings.demoPreview.readOnlyBadge')}</span>
+          <DesktopDownloadLink />
+        </div>
+        <div className="app-scrollbar min-h-0 flex-1 overflow-auto px-7 py-7">
+          <DemoSettingsPreviewHeader
+            description={activeCategoryOption?.description ?? ''}
+            title={activeCategoryOption?.label ?? t('settings.title')}
+          />
+          <DemoSettingsPreviewSections sections={sections} />
+        </div>
+      </div>
+    </>
+  );
+}
+
+function DemoSettingsPreviewSections({ sections }: {
+  sections: ReturnType<typeof getDemoSettingsPreviewSections>;
+}) {
+  const t = useTranslation();
+  if (sections.length === 0) {
+    return (
+      <SettingsSection ariaLabel={t('settings.demoPreview.empty')}>
+        <SettingsRow
+          description={t('settings.demoPreview.emptyDescription')}
+          readonly
+          title={t('settings.demoPreview.empty')}
+        />
+      </SettingsSection>
+    );
+  }
+  return (
+    <>
+      {sections.map((section) => (
+        <SettingsSection
+          ariaLabel={t(section.titleKey)}
+          key={section.id}
+          title={t(section.titleKey)}
+          {...(section.descriptionKey ? { description: t(section.descriptionKey) } : {})}
+        >
+          {section.items.map((item) => (
+            <SettingsRow description={t(item.descriptionKey)} key={item.id} readonly title={t(item.titleKey)}>
+              <SettingsControlSlot>
+                <PreviewControl kind={item.controlKind} />
+              </SettingsControlSlot>
+            </SettingsRow>
+          ))}
+        </SettingsSection>
+      ))}
+    </>
   );
 }
 

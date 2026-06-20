@@ -1,15 +1,15 @@
 import {
-  AppButton,
-  AppPanel,
-  settingsSidebarItemClassName
-} from '@/shared/ui';
-import { useTranslation } from '@/shared/localization/LocalizationProvider';
-
-import {
   getSettingsCategoryGroups,
   getSettingsCategoryOption,
   type SettingsCategoryId
 } from '../model/settingsPanelOptions';
+
+import { useTranslation } from '@/shared/localization/LocalizationProvider';
+import {
+  AppButton,
+  AppPanel,
+  settingsSidebarItemClassName
+} from '@/shared/ui';
 
 export function DemoSettingsPreviewSidebar(props: {
   activeCategory: SettingsCategoryId;

@@ -12,7 +12,7 @@ import {
   writeDemoPreviewDay
 } from './demoLocalStorage';
 import { applyDemoMarkdownImport } from './demoMarkdownImport';
-import { installDemoWorkspaceSnapshot } from './demoWorkspaceSnapshot';
+import { resetDemoWorkspaceSnapshot } from './demoWorkspaceReset';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -62,7 +62,7 @@ export function createBrowserDemoRuntimeController(): DemoRuntimeController {
 async function clearBrowserDemoLocalData(updateState: (partial: Partial<DemoRuntimeState>) => void) {
   try {
     clearDemoLocalStorage();
-    await installDemoWorkspaceSnapshot();
+    resetDemoWorkspaceSnapshot();
     updateState({
       clearError: null,
       importError: null,

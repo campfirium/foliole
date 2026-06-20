@@ -41,6 +41,7 @@ beforeEach(() => {
   window.localStorage.clear();
   vi.restoreAllMocks();
   vi.mocked(getRuntimeInvoke).mockReset();
+  vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn(() => new Promise(() => undefined)));
   resetWorkspaceStore();
 });
 

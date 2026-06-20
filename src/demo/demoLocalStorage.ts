@@ -3,7 +3,7 @@ import { WORKSPACE_STORAGE_KEY } from '../store/workspaceStore';
 export const DEMO_STORAGE_KEY_PREFIX = 'foliole-demo-';
 export const DEMO_PREVIEW_DAY_KEY = `${DEMO_STORAGE_KEY_PREFIX}preview-day-v1`;
 export const DEMO_SNAPSHOT_VERSION = 'demo-workspace-v1';
-export const DEMO_CAPTURED_VERSION = 'demo:2026-06-17';
+export const DEMO_CAPTURED_VERSION = 'demo:2026-06-19';
 
 export function readDemoPreviewDay() {
   const raw = window.localStorage.getItem(DEMO_PREVIEW_DAY_KEY);

@@ -10,6 +10,7 @@ import {
 } from '../store/workspaceMutationRepository';
 
 import { createBrowserDemoRuntimeController } from './demoRuntimeController';
+import { installDemoUrlSync } from './demoUrlSync';
 import { installDemoWorkspaceSnapshot } from './demoWorkspaceSnapshot';
 
 const rootElement = document.getElementById('root');
@@ -21,6 +22,7 @@ if (!rootElement) {
 await installDemoWorkspaceSnapshot();
 installDemoRuntimeController(createBrowserDemoRuntimeController());
 installWorkspaceMutationRepository(createBrowserLocalWorkspaceMutationRepository());
+installDemoUrlSync();
 const { App } = await import('../app/App');
 
 ReactDOM.createRoot(rootElement).render(

@@ -1,5 +1,5 @@
-import { GENERATED_DEMO_PACK } from './generated/demoPack';
 import { demoPackToDemoTopics, type DemoSection, type DemoTopic } from './demoPack';
+import { GENERATED_DEMO_PACK } from './generated/demoPack';
 
 export type { DemoSection, DemoTopic };
 
