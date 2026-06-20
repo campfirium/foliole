@@ -88,8 +88,6 @@ export const ZH_HANS_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, strin
   'settings.appearance.interface.aria': '界面行为设置区',
   'settings.appearance.actionHelp.row': '显示操作提示卡',
   'settings.appearance.actionHelp.description': '在有上下文时，停留在操作上可查看它的作用。',
-  'settings.fallback.import': '导入内容暂不可用。',
-  'settings.fallback.readwiseReader': 'Readwise Reader 内容暂不可用。',
   'settings.about.sectionAria': '关于设置区',
   'settings.about.versionTitle': '版本 {version}',
   'settings.about.update.checking': '检查中',
@@ -219,6 +217,4 @@ export const ZH_HANS_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, strin
   'settings.rail.section.aria': '功能区设置区',
   'settings.rail.show': '显示 {label}',
   'settings.rail.title': '功能区',
-  'settings.icons.node.effect.none': '无',
-  'settings.icons.node.effect.doubleLine': '双线',
 };

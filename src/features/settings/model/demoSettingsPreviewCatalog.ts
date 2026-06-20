@@ -11,8 +11,11 @@ export type DemoSettingsPreviewControlKind =
   | 'status'
   | 'switch';
 
+export type DemoSettingsPreviewNoteKind = 'desktop-only' | 'preview-only' | 'read-only';
+
 export interface DemoSettingsPreviewItem {
   controlKind: DemoSettingsPreviewControlKind;
+  demoNoteKind?: DemoSettingsPreviewNoteKind | null;
   descriptionKey: TranslationKey;
   id: string;
   titleKey: TranslationKey;
@@ -21,6 +24,7 @@ export interface DemoSettingsPreviewItem {
 export interface DemoSettingsPreviewSection {
   categoryId: SettingsCategoryId;
   descriptionKey?: TranslationKey;
+  demoNoteKind?: DemoSettingsPreviewNoteKind;
   id: string;
   items: DemoSettingsPreviewItem[];
   titleKey: TranslationKey;
@@ -30,9 +34,10 @@ export const DEMO_SETTINGS_PREVIEW_SECTIONS: DemoSettingsPreviewSection[] = [
   {
     id: 'about-support',
     categoryId: 'about',
+    demoNoteKind: 'desktop-only',
     titleKey: 'settings.demoPreview.about.title',
     items: [
-      { id: 'version', titleKey: 'settings.about.update.current', descriptionKey: 'settings.about.update.description.current', controlKind: 'status' },
+      { id: 'version', titleKey: 'settings.about.update.current', descriptionKey: 'settings.about.update.description.current', controlKind: 'status', demoNoteKind: null },
       { id: 'releases', titleKey: 'settings.about.openReleases', descriptionKey: 'settings.category.about.description', controlKind: 'button' },
       { id: 'feedback', titleKey: 'settings.about.feedback', descriptionKey: 'settings.category.about.description', controlKind: 'button' }
     ]
@@ -40,15 +45,17 @@ export const DEMO_SETTINGS_PREVIEW_SECTIONS: DemoSettingsPreviewSection[] = [
   {
     id: 'general-system',
     categoryId: 'general',
+    demoNoteKind: 'preview-only',
     titleKey: 'settings.general.system.section',
     items: [
       { id: 'language', titleKey: 'settings.general.language.row', descriptionKey: 'settings.general.language.description', controlKind: 'select' },
-      { id: 'open-at-login', titleKey: 'settings.general.openAtLogin.title', descriptionKey: 'settings.general.openAtLogin.description', controlKind: 'switch' }
+      { id: 'open-at-login', titleKey: 'settings.general.openAtLogin.title', descriptionKey: 'settings.general.openAtLogin.description', controlKind: 'switch', demoNoteKind: 'desktop-only' }
     ]
   },
   {
     id: 'appearance-interface',
     categoryId: 'appearance',
+    demoNoteKind: 'preview-only',
     titleKey: 'settings.appearance.interface.section',
     items: [
       { id: 'color-mode', titleKey: 'settings.appearance.colorMode.row', descriptionKey: 'settings.appearance.colorMode.description', controlKind: 'segmented' },
@@ -58,6 +65,7 @@ export const DEMO_SETTINGS_PREVIEW_SECTIONS: DemoSettingsPreviewSection[] = [
   {
     id: 'editor-live-markdown',
     categoryId: 'editor',
+    demoNoteKind: 'preview-only',
     titleKey: 'settings.editor.liveMarkdown.section',
     items: [
       { id: 'remote-images', titleKey: 'settings.search.editorRemoteImages.title', descriptionKey: 'settings.search.editorRemoteImages.description', controlKind: 'switch' },
@@ -68,6 +76,7 @@ export const DEMO_SETTINGS_PREVIEW_SECTIONS: DemoSettingsPreviewSection[] = [
   {
     id: 'review-scheduler',
     categoryId: 'review',
+    demoNoteKind: 'preview-only',
     titleKey: 'settings.review.section',
     items: [
       { id: 'retention', titleKey: 'settings.search.reviewRetention.title', descriptionKey: 'settings.review.desiredRetention.description', controlKind: 'slider' },
@@ -78,6 +87,7 @@ export const DEMO_SETTINGS_PREVIEW_SECTIONS: DemoSettingsPreviewSection[] = [
   {
     id: 'web-lookup',
     categoryId: 'web-lookup',
+    demoNoteKind: 'preview-only',
     titleKey: 'settings.webLookup.title',
     descriptionKey: 'settings.webLookup.description',
     items: [
@@ -89,6 +99,7 @@ export const DEMO_SETTINGS_PREVIEW_SECTIONS: DemoSettingsPreviewSection[] = [
   {
     id: 'rail-actions',
     categoryId: 'rail',
+    demoNoteKind: 'preview-only',
     titleKey: 'settings.rail.title',
     items: [
       { id: 'import', titleKey: 'settings.rail.item.import', descriptionKey: 'settings.category.rail.description', controlKind: 'switch' },
@@ -99,6 +110,7 @@ export const DEMO_SETTINGS_PREVIEW_SECTIONS: DemoSettingsPreviewSection[] = [
   {
     id: 'hotkeys',
     categoryId: 'hotkeys',
+    demoNoteKind: 'desktop-only',
     titleKey: 'settings.demoPreview.hotkeys.title',
     descriptionKey: 'settings.category.hotkeys.description',
     items: [
@@ -110,6 +122,7 @@ export const DEMO_SETTINGS_PREVIEW_SECTIONS: DemoSettingsPreviewSection[] = [
   {
     id: 'mouse-gestures',
     categoryId: 'mouse-gestures',
+    demoNoteKind: 'desktop-only',
     titleKey: 'settings.demoPreview.mouseGestures.title',
     descriptionKey: 'settings.category.mouseGestures.description',
     items: [
@@ -121,6 +134,7 @@ export const DEMO_SETTINGS_PREVIEW_SECTIONS: DemoSettingsPreviewSection[] = [
   {
     id: 'library-locations',
     categoryId: 'library',
+    demoNoteKind: 'desktop-only',
     titleKey: 'settings.library.title',
     items: [
       { id: 'main-folder', titleKey: 'settings.search.libraryHome.title', descriptionKey: 'settings.search.libraryHome.description', controlKind: 'button' },
@@ -131,27 +145,30 @@ export const DEMO_SETTINGS_PREVIEW_SECTIONS: DemoSettingsPreviewSection[] = [
   {
     id: 'companion-sync',
     categoryId: 'companion-sync',
+    demoNoteKind: 'desktop-only',
     titleKey: 'settings.companionSync.title',
     descriptionKey: 'settings.companionSync.description',
     items: [
       { id: 'enable-desktop', titleKey: 'settings.companionSync.enableDesktop.title', descriptionKey: 'settings.companionSync.description', controlKind: 'switch' },
-      { id: 'connected-devices', titleKey: 'settings.companionSync.connected.title', descriptionKey: 'settings.companionSync.connected.description', controlKind: 'status' },
+      { id: 'connected-devices', titleKey: 'settings.companionSync.connected.title', descriptionKey: 'settings.companionSync.connected.description', controlKind: 'status', demoNoteKind: null },
       { id: 'primary-device', titleKey: 'settings.companionSync.primary.role.title', descriptionKey: 'settings.companionSync.primary.current.description', controlKind: 'select' }
     ]
   },
   {
     id: 'backups',
     categoryId: 'backups',
+    demoNoteKind: 'desktop-only',
     titleKey: 'settings.backups.title',
     items: [
       { id: 'backup-location', titleKey: 'settings.backups.location.title', descriptionKey: 'settings.backups.location.description', controlKind: 'button' },
-      { id: 'backup-scope', titleKey: 'settings.backups.scope.title', descriptionKey: 'settings.backups.scope.description', controlKind: 'status' },
+      { id: 'backup-scope', titleKey: 'settings.backups.scope.title', descriptionKey: 'settings.backups.scope.description', controlKind: 'status', demoNoteKind: null },
       { id: 'create-backup', titleKey: 'settings.backups.create.title', descriptionKey: 'settings.backups.desktopRequired.description', controlKind: 'button' }
     ]
   },
   {
     id: 'sources',
     categoryId: 'external-search',
+    demoNoteKind: 'desktop-only',
     titleKey: 'settings.externalSources.title',
     descriptionKey: 'settings.externalSources.description',
     items: [
@@ -163,6 +180,7 @@ export const DEMO_SETTINGS_PREVIEW_SECTIONS: DemoSettingsPreviewSection[] = [
   {
     id: 'watched-folders',
     categoryId: 'import',
+    demoNoteKind: 'desktop-only',
     titleKey: 'settings.import.linkedFolders.title',
     descriptionKey: 'settings.import.linkedFolders.description',
     items: [
@@ -174,11 +192,12 @@ export const DEMO_SETTINGS_PREVIEW_SECTIONS: DemoSettingsPreviewSection[] = [
   {
     id: 'readwise-reader',
     categoryId: 'readwise-reader',
+    demoNoteKind: 'desktop-only',
     titleKey: 'settings.readwise.row.title',
     descriptionKey: 'settings.readwise.row.description',
     items: [
       { id: 'open-readwise', titleKey: 'settings.readwise.row.open', descriptionKey: 'settings.readwise.row.description', controlKind: 'button' },
-      { id: 'status', titleKey: 'settings.demoPreview.readwise.status', descriptionKey: 'settings.category.readwiseReader.description', controlKind: 'status' },
+      { id: 'status', titleKey: 'settings.demoPreview.readwise.status', descriptionKey: 'settings.category.readwiseReader.description', controlKind: 'status', demoNoteKind: null },
       { id: 'source-handling', titleKey: 'settings.backups.sourceHandling.title', descriptionKey: 'settings.backups.sourceHandling.description', controlKind: 'button' }
     ]
   }
@@ -186,4 +205,11 @@ export const DEMO_SETTINGS_PREVIEW_SECTIONS: DemoSettingsPreviewSection[] = [
 
 export function getDemoSettingsPreviewSections(categoryId: SettingsCategoryId) {
   return DEMO_SETTINGS_PREVIEW_SECTIONS.filter((section) => section.categoryId === categoryId);
+}
+
+export function resolveDemoSettingsPreviewNoteKind(
+  section: DemoSettingsPreviewSection,
+  item: DemoSettingsPreviewItem
+) {
+  return item.demoNoteKind === undefined ? section.demoNoteKind ?? null : item.demoNoteKind;
 }

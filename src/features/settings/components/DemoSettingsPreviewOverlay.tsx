@@ -1,12 +1,17 @@
 import { useMemo, useState } from 'react';
 
-import { getDemoSettingsPreviewSections, type DemoSettingsPreviewControlKind } from '../model/demoSettingsPreviewCatalog';
+import {
+  getDemoSettingsPreviewSections,
+  resolveDemoSettingsPreviewNoteKind,
+  type DemoSettingsPreviewControlKind
+} from '../model/demoSettingsPreviewCatalog';
 import {
   getInitialSettingsCategory,
   getSettingsCategoryOption,
   type SettingsCategoryId
 } from '../model/settingsPanelOptions';
 
+import { DemoSettingsPreviewDescription } from './DemoSettingsPreviewDescription';
 import { DemoSettingsPreviewSidebar } from './DemoSettingsPreviewSidebar';
 
 import { cn } from '@/shared/lib/utils';
@@ -119,7 +124,17 @@ function DemoSettingsPreviewSections({ sections }: {
           {...(section.descriptionKey ? { description: t(section.descriptionKey) } : {})}
         >
           {section.items.map((item) => (
-            <SettingsRow description={t(item.descriptionKey)} key={item.id} readonly title={t(item.titleKey)}>
+            <SettingsRow
+              description={(
+                <DemoSettingsPreviewDescription
+                  descriptionKey={item.descriptionKey}
+                  noteKind={resolveDemoSettingsPreviewNoteKind(section, item)}
+                />
+              )}
+              key={item.id}
+              readonly
+              title={t(item.titleKey)}
+            >
               <SettingsControlSlot>
                 <PreviewControl kind={item.controlKind} />
               </SettingsControlSlot>

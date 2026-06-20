@@ -16,6 +16,8 @@ export const EN_SETTINGS_ICONS_TRANSLATIONS = {
   'settings.icons.node.stateTitle': '{kind} ({state})',
   'settings.icons.node.editMarker': 'Edit {title} marker',
   'settings.icons.node.editShape': 'Edit {title} shape',
+  'settings.icons.node.effect.doubleLine': 'Double line',
+  'settings.icons.node.effect.none': 'None',
   'settings.icons.node.colorFor': 'Color for {title}',
   'settings.icons.node.resetTitle': 'Reset {title}',
   'settings.icons.node.innerRing': 'Inner ring',

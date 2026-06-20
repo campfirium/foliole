@@ -1,0 +1,21 @@
+export const EN_SETTINGS_DEMO_PREVIEW_TRANSLATIONS = {
+  'settings.demoPreview.banner.title': 'Desktop settings preview',
+  'settings.demoPreview.banner.description': 'These controls show Foliole desktop capabilities. They do not change the current Web demo.',
+  'settings.demoPreview.control.desktopOnly': 'Desktop only',
+  'settings.demoPreview.control.previewOnly': 'Preview only',
+  'settings.demoPreview.downloadDesktop': 'Download desktop app',
+  'settings.demoPreview.empty': 'Preview unavailable',
+  'settings.demoPreview.emptyDescription': 'This settings category is represented in the desktop app.',
+  'settings.demoPreview.about.title': 'About Foliole',
+  'settings.demoPreview.hotkeys.title': 'Keyboard shortcuts',
+  'settings.demoPreview.hotkeys.search': 'Search shortcut',
+  'settings.demoPreview.hotkeys.settings': 'Settings shortcut',
+  'settings.demoPreview.hotkeys.study': 'Study shortcut',
+  'settings.demoPreview.mouseGestures.title': 'Mouse gesture behavior',
+  'settings.demoPreview.readwise.status': 'Readwise Reader status',
+  'settings.demoPreview.readOnlyBadge': 'Read-only Web preview',
+  'settings.demoPreview.note.label': 'Web demo note',
+  'settings.demoPreview.note.desktopOnly': 'This capability is available in the desktop app.',
+  'settings.demoPreview.note.previewOnly': 'Shown to match the desktop settings. Changes are not applied in this Web demo.',
+  'settings.demoPreview.note.readOnly': 'This value is shown for context in the Web demo.'
+} as const;
