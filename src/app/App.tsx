@@ -13,6 +13,7 @@ import { AppProviders } from './AppProviders';
 import { AppOverlayStack, prewarmAppOverlayStack } from './components/AppOverlayStack';
 import { prewarmImportSourceWorkspace } from './components/ImportSourceWorkspace';
 import { useGlobalCaptureNavigation } from './components/useGlobalCaptureNavigation';
+import { WorkspaceDemoViewportGate } from './components/WorkspaceDemoViewportGate';
 import { WorkspaceLayout } from './components/WorkspaceLayout';
 import { prewarmWorkspaceRightSidebarPanels } from './components/workspaceRightSidebarPanelLoaders';
 import type { WorkspaceSearchResult } from './components/workspaceSearch';
@@ -65,7 +66,9 @@ function AppContent() {
   return (
     <HotkeySettingsProvider {...controller.hotkeySettings}>
       <>
-        <WorkspaceLayout {...workspaceLayoutProps} />
+        <WorkspaceDemoViewportGate>
+          <WorkspaceLayout {...workspaceLayoutProps} />
+        </WorkspaceDemoViewportGate>
         <AppOverlayStack
           controller={controller}
           isFeedbackOpen={isFeedbackOpen}

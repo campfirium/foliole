@@ -12,8 +12,6 @@ import {
 } from '../../shared/ui';
 import type { ReviewFlowWindow } from '../../store/workspaceReviewFlowWindow';
 
-import { WorkspaceRightSidebarReviewQueueDemoControls } from './WorkspaceRightSidebarReviewQueueDemoControls';
-
 interface WorkspaceRightSidebarReviewQueuePanelProps {
   currentNodeId: string | null;
   flowWindow: ReviewFlowWindow;
@@ -55,7 +53,6 @@ function EmptyQueueState() {
     <section className="min-h-0">
       <QueueHeader />
       <p className={`${inspectorListInsetPaddingClassName} py-3 ${inspectorListMetaClassName}`}>{t('desktop.rightPanel.flow.empty')}</p>
-      <WorkspaceRightSidebarReviewQueueDemoControls hasUpcoming={false} />
     </section>
   );
 }
@@ -154,7 +151,6 @@ export function WorkspaceRightSidebarReviewQueuePanel(props: WorkspaceRightSideb
   const displayQueueNodeIds = buildDisplayQueueNodeIds(props.flowWindow.queueNodeIds, props.currentNodeId);
   const readyIndexOffset = displayQueueNodeIds.length;
   const upcomingIndexOffset = readyIndexOffset + props.flowWindow.readyNodeIds.length;
-  const hasUpcoming = props.flowWindow.upcomingNodeIds.length > 0;
 
   return (
     <section className="flex min-h-0 flex-col">
@@ -183,7 +179,6 @@ export function WorkspaceRightSidebarReviewQueuePanel(props: WorkspaceRightSideb
           showDivider={displayQueueNodeIds.length > 0 || props.flowWindow.readyNodeIds.length > 0}
         />
       </ol>
-      <WorkspaceRightSidebarReviewQueueDemoControls hasUpcoming={hasUpcoming} />
     </section>
   );
 }

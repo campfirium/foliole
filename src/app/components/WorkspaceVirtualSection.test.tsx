@@ -156,3 +156,26 @@ it('does not show a result count on the virtual root', () => {
   fireEvent.keyDown(screen.getByRole('treeitem', { name: 'Virtual' }), { key: 'ArrowRight' });
   expect(screen.getByRole('treeitem', { name: 'Custom virtual' })).toHaveTextContent('2');
 });
+
+it('can be hidden by the Demo shell without changing non-demo virtual rows', () => {
+  const root = createVirtualNode({
+    id: VIRTUAL_ROOT_NODE_ID,
+    parentNodeId: null,
+    specialKind: 'virtual-root',
+    title: 'Virtual'
+  });
+
+  renderWithLocalization(
+    <WorkspaceVirtualSection
+      hideInDemo
+      activeVirtualNodeId={VIRTUAL_ROOT_NODE_ID}
+      isVirtualViewOpen
+      nodeOrder={[VIRTUAL_ROOT_NODE_ID]}
+      nodesById={{ [VIRTUAL_ROOT_NODE_ID]: root }}
+      onOpenVirtualView={vi.fn()}
+      onSelectNodeInVirtualView={vi.fn()}
+    />
+  );
+
+  expect(screen.queryByRole('treeitem', { name: 'Virtual' })).toBeNull();
+});

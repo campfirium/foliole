@@ -9,6 +9,7 @@ import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
 import { definedProps } from '../../shared/lib/definedProps';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
+import { useDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
 import { setWhitelistedLocalStorageItem } from '../../shared/platform/storage';
 import { AppToolbar, ToolbarActionGroup } from '../../shared/ui';
 
@@ -60,10 +61,13 @@ function useWorkspaceRailToolbarState({
   'onOpenSettings' | 'onRunRailAction' | 'onStartClipboardImport' | 'onStartImport'
 >) {
   const demoImport = useDemoMarkdownRailImport();
+  const { isDemo } = useDemoRuntimeState();
   const rail = useWorkspaceRailSettings();
   const [contextMenuPosition, setContextMenuPosition] = useState<{ left: number; top: number } | null>(null);
-  const topItems = getWorkspaceRailSectionItems(rail.items, 'top').filter((item) => item.visible);
-  const bottomItems = getWorkspaceRailSectionItems(rail.items, 'bottom').filter((item) => item.visible);
+  const isVisibleDemoRailItem = (item: { commandId: string; visible: boolean }) =>
+    item.visible && !(isDemo && item.commandId === APP_COMMAND_IDS.sendFeedback);
+  const topItems = getWorkspaceRailSectionItems(rail.items, 'top').filter(isVisibleDemoRailItem);
+  const bottomItems = getWorkspaceRailSectionItems(rail.items, 'bottom').filter(isVisibleDemoRailItem);
 
   function runRailCommand(commandId: string) {
     if (commandId === APP_COMMAND_IDS.importSingleFile) {

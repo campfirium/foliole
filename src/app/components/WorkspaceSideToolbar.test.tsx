@@ -6,6 +6,7 @@ import { WorkspaceRailSettingsProvider } from '../../features/settings/context/W
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { preloadTranslationCatalog } from '../../shared/localization/translations';
+import { installDemoRuntimeController, type DemoRuntimeController, type DemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
 
 import { WorkspaceSideToolbar } from './WorkspaceSideToolbar';
 
@@ -39,9 +40,28 @@ function renderToolbar(isStudyMode: boolean) {
   );
 }
 
+function installDemoState(isDemo: boolean) {
+  const state: DemoRuntimeState = {
+    clearError: null,
+    importError: null,
+    importedTopicCount: 0,
+    isDemo,
+    previewDay: 1
+  };
+  installDemoRuntimeController({
+    clearLocalData: () => Promise.resolve(false),
+    continueToNextPreviewDay: () => undefined,
+    getNowIso: (realNow) => realNow.toISOString(),
+    getState: () => state,
+    importMarkdown: () => Promise.resolve({ ignoredCount: 0, importedTopicCount: 0 }),
+    subscribe: () => () => undefined
+  } satisfies DemoRuntimeController);
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   window.localStorage.clear();
+  installDemoState(false);
 });
 
 it('shows the bottom divider only while review mode is active', () => {
@@ -82,6 +102,15 @@ it('runs the feedback command from the bottom rail', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Send Feedback' }));
 
   expect(onRunRailAction).toHaveBeenCalledWith(APP_COMMAND_IDS.sendFeedback);
+});
+
+it('hides the feedback command in the Demo rail only', () => {
+  installDemoState(true);
+
+  renderToolbar(false);
+
+  expect(screen.queryByRole('button', { name: 'Send Feedback' })).toBeNull();
+  expect(screen.getByRole('button', { name: 'Settings' })).toBeInTheDocument();
 });
 
 it('keeps the Flow button enabled with an empty review queue prompt', () => {

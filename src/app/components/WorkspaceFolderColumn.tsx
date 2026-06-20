@@ -14,6 +14,7 @@ import { WorkspaceVirtualSection } from './WorkspaceVirtualSection';
 interface WorkspaceFolderColumnProps {
   activeFolderId: string | null;
   activeVirtualNodeId?: string | null;
+  hideVirtualSectionInDemo?: boolean;
   externalEntriesByFolderId: Record<string, ExternalLibraryBrowseEntry[] | undefined>;
   externalFolders: ExternalLibraryFolder[];
   externalSelection: ExternalLibrarySelection;
@@ -78,6 +79,7 @@ function renderRegularSection(props: WorkspaceFolderColumnProps) {
       bodyAppendContent={
         <>
           <WorkspaceVirtualSection
+            hideInDemo={props.hideVirtualSectionInDemo}
             isVirtualViewOpen={props.isVirtualViewOpen}
             nodeOrder={props.nodeOrder}
             nodesById={props.nodesById}

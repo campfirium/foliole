@@ -156,6 +156,7 @@ describe('WindowTitleBar', () => {
     expect(screen.getByText('External topic title')).toBeInTheDocument();
     expect(container.querySelector('.window-titlebar-center-title svg')).not.toBeNull();
   });
+
 });
 
 describe('WindowTitleBar view switches', () => {

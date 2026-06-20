@@ -19,6 +19,7 @@ import { getVirtualKeyboardRows, renderVirtualRows, toggleCollapsed } from './Wo
 
 interface WorkspaceVirtualSectionProps {
   activeVirtualNodeId?: string | null;
+  hideInDemo?: boolean;
   isVirtualViewOpen: boolean;
   nodeOrder: string[];
   nodesById: WorkspaceListNodesById;
@@ -86,7 +87,7 @@ export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
     [collapsedIds, keyboardRows, props]
   );
 
-  if (rows.length === 0) return null;
+  if (props.hideInDemo || rows.length === 0) return null;
 
   return (
     <div className="mt-1 flex min-w-0 flex-col">

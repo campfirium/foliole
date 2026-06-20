@@ -3,6 +3,7 @@ import { memo, useCallback, useEffect, useState, type CSSProperties } from 'reac
 
 import { definedProps } from '../../shared/lib/definedProps';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
+import { useDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
 import { useRuntimeAvailability } from '../../shared/platform/runtimeAvailability';
 import {
   closeMainWindow,
@@ -125,14 +126,14 @@ function WindowCenterTitle({ icon, onDoubleClick, title }: { icon?: 'external'; 
   );
 }
 
-function getWindowTitleBarStyle(props: WindowTitleBarProps): CSSProperties {
+function getWindowTitleBarStyle(props: WindowTitleBarProps, controlsWidth: number): CSSProperties {
   return {
     '--window-titlebar-left-width': props.isListCollapsed
       ? 'var(--workspace-rail-width)'
       : `calc(var(--workspace-rail-width) + ${props.listWidth + 1}px)`,
-    '--window-titlebar-controls-width': `${WINDOW_TITLEBAR_CONTROLS_WIDTH}px`,
+    '--window-titlebar-controls-width': `${controlsWidth}px`,
     '--window-titlebar-right-width': props.isRightSidebarCollapsed
-      ? `${WINDOW_TITLEBAR_CONTROLS_WIDTH + WINDOW_TITLEBAR_LEADING_BUTTON_WIDTH}px`
+      ? `${controlsWidth + WINDOW_TITLEBAR_LEADING_BUTTON_WIDTH}px`
       : `${props.rightSidebarWidth}px`,
     '--workspace-list-width': `${props.listWidth}px`,
     '--workspace-titlebar-folder-column-width': props.isListCollapsed ? '0px' : 'var(--workspace-folder-column-width)',
@@ -142,8 +143,30 @@ function getWindowTitleBarStyle(props: WindowTitleBarProps): CSSProperties {
   } as CSSProperties;
 }
 
+function renderWindowControls(args: {
+  controlsEnabled: boolean;
+  isDemo: boolean;
+  isMaximized: boolean;
+  onClose: () => void;
+  onMinimize: () => void;
+  onToggleMaximize: () => void;
+}) {
+  if (args.isDemo) return null;
+  return (
+    <WindowControlButtons
+      controlsEnabled={args.controlsEnabled}
+      isMaximized={args.isMaximized}
+      onClose={args.onClose}
+      onMinimize={args.onMinimize}
+      onToggleMaximize={args.onToggleMaximize}
+    />
+  );
+}
+
 export const WindowTitleBar = memo(function WindowTitleBar(props: WindowTitleBarProps) {
   const { controlsEnabled, isMaximized, syncMaximizedState } = useWindowControlState();
+  const { isDemo } = useDemoRuntimeState();
+  const controlsWidth = isDemo ? 0 : WINDOW_TITLEBAR_CONTROLS_WIDTH;
 
   const handleMinimize = useCallback(() => {
     if (!controlsEnabled) {
@@ -173,7 +196,7 @@ export const WindowTitleBar = memo(function WindowTitleBar(props: WindowTitleBar
     <header
       className="window-titlebar"
       data-window-maximized={isMaximized}
-      style={getWindowTitleBarStyle(props)}
+      style={getWindowTitleBarStyle(props, controlsWidth)}
     >
       <WorkspaceSurfaceRowOverlay row="titlebar" />
       <WorkspaceTitlebarDividers
@@ -193,13 +216,14 @@ export const WindowTitleBar = memo(function WindowTitleBar(props: WindowTitleBar
         onToggleRightSidebarVisibility={props.onToggleRightSidebarVisibility}
         rightSidebarWidth={props.rightSidebarWidth}
       />
-      <WindowControlButtons
-        controlsEnabled={controlsEnabled}
-        isMaximized={isMaximized}
-        onClose={handleClose}
-        onMinimize={handleMinimize}
-        onToggleMaximize={handleToggleMaximize}
-      />
+      {renderWindowControls({
+        controlsEnabled,
+        isDemo,
+        isMaximized,
+        onClose: handleClose,
+        onMinimize: handleMinimize,
+        onToggleMaximize: handleToggleMaximize
+      })}
     </header>
   );
 });

@@ -110,7 +110,7 @@ function renderNodeListHeaderShell(args: {
     >
       <h2 className="sr-only">{t('desktop.nodeList.title')}</h2>
       <button className="sr-only" onClick={args.onOpenNotesView} type="button">
-        {t('desktop.nodeList.title')}
+        {t('desktop.toolbar.openTopicsView')}
       </button>
       {args.showTitleSearch && !args.isVirtualViewOpen ? renderSearchLauncher(args.onOpenSearch) : <span aria-hidden="true" className="size-8" />}
       <span aria-hidden="true" className="min-w-0 flex-1" />

@@ -8,6 +8,7 @@ import {
   logEditorInputDiagnostic
 } from '../../store/workspaceEditorInputDiagnostics';
 
+import { WorkspaceDemoControlsSurface } from './WorkspaceDemoControlsSurface';
 import { useWorkspaceRenderDiagnostic } from './workspaceInputLagRenderDiagnostic';
 import {
   renderWorkspaceRightSidebarPanel,
@@ -82,6 +83,7 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
       headerClassName="hidden"
       title={null}
     >
+      <WorkspaceDemoControlsSurface flowWindow={props.reviewFlowWindow} />
       {renderWorkspaceRightSidebarPanel(panelProps)}
     </AppPanel>
   );

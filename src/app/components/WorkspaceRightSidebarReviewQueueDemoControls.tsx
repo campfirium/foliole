@@ -31,7 +31,11 @@ export function WorkspaceRightSidebarReviewQueueDemoControls({ hasUpcoming }: { 
   };
 
   return (
-    <div className={`${inspectorListInsetPaddingClassName} border-t border-border/55 py-3`}>
+    <section
+      aria-label={t('desktop.rightPanel.flow.demo.controls')}
+      className={`${inspectorListInsetPaddingClassName} border-t border-border/55 py-3`}
+    >
+      <h2 className="sr-only">{t('desktop.rightPanel.flow.demo.controls')}</h2>
       <p className={`m-0 ${inspectorListMetaClassName}`}>
         {hasUpcoming
           ? t('desktop.rightPanel.flow.demo.dayClear', { day: demoState.previewDay })
@@ -49,6 +53,6 @@ export function WorkspaceRightSidebarReviewQueueDemoControls({ hasUpcoming }: { 
           {isClearing ? t('desktop.rightPanel.flow.demo.clearing') : t('desktop.rightPanel.flow.demo.clear')}
         </AppButton>
       </div>
-    </div>
+    </section>
   );
 }

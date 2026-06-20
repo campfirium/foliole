@@ -1,4 +1,5 @@
 import { definedProps } from '../../shared/lib/definedProps';
+import { useDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
 
 import type { WorkspaceDualListContentProps } from './WorkspaceDualListContent';
 import type { useWorkspaceDualListState } from './workspaceDualListState';
@@ -16,6 +17,7 @@ export function WorkspaceDualListFolderColumn({
   props: WorkspaceDualListContentProps;
   virtualResultCountById: ReadonlyMap<string, number>;
 }) {
+  const { isDemo } = useDemoRuntimeState();
   useWorkspaceRenderDiagnostic('workspace-dual-list-folder-column-render', {
     activeFolderId: dualListState.activeFolderId,
     folderNodeOrder: dualListState.folderNodeOrder,
@@ -34,6 +36,7 @@ export function WorkspaceDualListFolderColumn({
       folderTopicCountById={dualListState.folderTopicCountById}
       forceExpandedFolderId={dualListState.revealFolderId}
       highlightedFolderId={dualListState.revealFolderId}
+      hideVirtualSectionInDemo={isDemo}
       isExternalViewOpen={props.isExternalViewOpen}
       isTrashViewOpen={props.isTrashViewOpen}
       isVirtualViewOpen={props.isVirtualViewOpen}
