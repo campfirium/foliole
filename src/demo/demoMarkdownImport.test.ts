@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 
+import { DEMO_GUIDES_NODE_ID } from './demoGuides';
 import {
   applyDemoMarkdownImport,
   createDemoMarkdownFileEntry,
@@ -30,6 +31,7 @@ describe('Demo Markdown import', () => {
     });
     expect(result.state.reviewSession.currentNodeId).toBe(topic.id);
     expect(result.state.reviewSession.queueNodeIds[0]).toBe(topic.id);
+    expectInboxImportRoot(result);
   });
 
   it('imports Markdown files as a Folder tree without overwriting existing topics', () => {
@@ -62,6 +64,7 @@ describe('Demo Markdown import', () => {
     expect(importRootId).toBeTruthy();
     const importRoot = requireNode(result.state.nodesById[importRootId!]);
     expect(importRoot.kind).toBe('folder');
+    expect(importRoot.parentNodeId).toBe(INBOX_NODE_ID);
     expect(importRoot.title).toBe('Imported Markdown');
     expect(importRoot.manualChildOrder).toHaveLength(1);
     const vaultFolder = requireNode(result.state.nodesById[importRoot.manualChildOrder![0]!]);
@@ -71,6 +74,13 @@ describe('Demo Markdown import', () => {
     expect(requireNode(result.state.nodesById[result.importedTopicIds[1]!]).title).toBe('second');
   });
 });
+
+function expectInboxImportRoot(result: ReturnType<typeof applyDemoMarkdownImport>) {
+  const inbox = requireNode(result.state.nodesById[INBOX_NODE_ID]);
+  const importRootId = inbox.manualChildOrder?.at(-1);
+  expect(requireNode(result.state.nodesById[importRootId!]).parentNodeId).toBe(INBOX_NODE_ID);
+  expect(result.state.nodesById[DEMO_GUIDES_NODE_ID]?.manualChildOrder).not.toContain(importRootId);
+}
 
 function requireNode<T>(node: T | undefined): T {
   if (!node) {

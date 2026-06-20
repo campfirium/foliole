@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 
-import { INBOX_NODE_ID, TRASH_NODE_ID } from '../../features/nodes/model/specialNodes';
+import { HOME_NODE_ID, INBOX_NODE_ID, TRASH_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 
 import {
@@ -8,6 +8,7 @@ import {
   buildFolderNavigationNodesById,
   buildTopicNavigationNodesById,
   collectTopicColumnNodeIds,
+  resolveActiveFolderColumnNodeId,
   resolveFocusedFolderNodeId
 } from './workspaceFolderNavigation';
 
@@ -163,6 +164,31 @@ it('pins trash to the end of the folder navigation', () => {
     'folder-a',
     TRASH_NODE_ID
   ]);
+});
+
+it('treats root-level guide folders as Inbox siblings for folder and topic columns', () => {
+  const nodeOrder = [HOME_NODE_ID, INBOX_NODE_ID, 'demo-guides', 'demo-topic'];
+  const nodesById: WorkspaceListNodesById = {
+    [HOME_NODE_ID]: createNode({ id: HOME_NODE_ID, kind: 'folder', title: 'Home' }),
+    [INBOX_NODE_ID]: createNode({ id: INBOX_NODE_ID, kind: 'folder', title: 'Inbox' }),
+    'demo-guides': createNode({ id: 'demo-guides', kind: 'folder', title: 'Guides' }),
+    'demo-topic': createNode({
+      id: 'demo-topic',
+      kind: 'topic',
+      parentNodeId: 'demo-guides',
+      title: 'Focused reading and review'
+    })
+  };
+
+  expect(buildFolderNavigationNodeOrder(nodeOrder, nodesById, [])).toEqual([
+    HOME_NODE_ID,
+    INBOX_NODE_ID,
+    'demo-guides',
+    TRASH_NODE_ID
+  ]);
+  expect(buildFolderNavigationNodesById(nodeOrder, nodesById, [])['demo-guides']?.parentNodeId).toBe(HOME_NODE_ID);
+  expect(resolveActiveFolderColumnNodeId('demo-topic', nodeOrder, nodesById, [])).toBe('demo-guides');
+  expect(collectTopicColumnNodeIds('demo-guides', nodeOrder, nodesById, [])).toEqual(['demo-topic']);
 });
 
 it('builds sparse navigation node maps for the active columns only', () => {

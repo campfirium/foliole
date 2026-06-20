@@ -4,6 +4,7 @@ import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { createInitialWorkspaceState, useWorkspaceStore, WORKSPACE_STORAGE_KEY } from '../store/workspaceStore';
 
 import { canonicalDemoPath, DEFAULT_DEMO_TOPIC, DEMO_TOPICS } from './demoContent';
+import { DEMO_GUIDES_NODE_ID, DEMO_GUIDES_TITLE } from './demoGuides';
 import { clearDemoLocalStorage, readDemoPreviewDay, writeDemoPreviewDay } from './demoLocalStorage';
 import {
   createDemoWorkspaceSnapshot,
@@ -19,7 +20,7 @@ function requireTopic(index: number) {
   return topic;
 }
 
-it('projects Demo topics into the Foliole workspace tree under Inbox', () => {
+it('projects Demo topics into the Foliole workspace tree under Guides', () => {
     const now = new Date('2026-06-17T00:00:00.000Z');
     const snapshot = createDemoWorkspaceSnapshot(canonicalDemoPath(requireTopic(0).slug), now);
     const firstTopic = requireTopic(0);
@@ -29,6 +30,7 @@ it('projects Demo topics into the Foliole workspace tree under Inbox', () => {
 
     expect(snapshot.nodeOrder).toContain(INBOX_NODE_ID);
     expect(snapshot.nodesById[INBOX_NODE_ID]).toMatchObject({ specialKind: 'inbox', title: 'Inbox' });
+    expect(snapshot.nodesById[DEMO_GUIDES_NODE_ID]).toMatchObject({ kind: 'folder', title: DEMO_GUIDES_TITLE });
     expect(snapshot.activeNodeId).toBe(`demo-${DEFAULT_DEMO_TOPIC?.slug}`);
     expect(snapshot.reviewSession.queueNodeIds).toHaveLength(DEMO_TOPICS.length);
     expect(snapshot.reviewSession.queueNodeIds).not.toContain(firstReviewNodeId);
@@ -37,7 +39,7 @@ it('projects Demo topics into the Foliole workspace tree under Inbox', () => {
         bodyStatus: 'ready',
         hasContent: true,
         kind: 'topic',
-        parentNodeId: INBOX_NODE_ID,
+        parentNodeId: DEMO_GUIDES_NODE_ID,
         title: topic.title
       });
     }

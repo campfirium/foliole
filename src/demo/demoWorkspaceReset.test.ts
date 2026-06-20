@@ -3,6 +3,7 @@ import { expect, it, vi } from 'vitest';
 import { createInitialWorkspaceState, useWorkspaceStore, WORKSPACE_STORAGE_KEY } from '../store/workspaceStore';
 
 import { canonicalDemoPath, DEMO_TOPICS } from './demoContent';
+import { DEMO_GUIDES_NODE_ID } from './demoGuides';
 import { DEMO_CAPTURED_VERSION, DEMO_SNAPSHOT_VERSION, readDemoPreviewDay, writeDemoPreviewDay } from './demoLocalStorage';
 import { createBrowserDemoRuntimeController } from './demoRuntimeController';
 import { resetDemoWorkspaceSnapshot } from './demoWorkspaceReset';
@@ -47,8 +48,10 @@ it('forces the current Demo store back to the official snapshot', () => {
   expect(state.nodesById[`demo-${topic.slug}`]).toMatchObject({
     bodyStatus: 'ready',
     hasContent: true,
+    parentNodeId: DEMO_GUIDES_NODE_ID,
     title: topic.title
   });
+  expect(state.nodesById[DEMO_GUIDES_NODE_ID]).toMatchObject({ kind: 'folder', title: 'Guides' });
   expect(payload.state.activeNodeId).toBe(`demo-${topic.slug}`);
   expect(storage.get(DEMO_SNAPSHOT_VERSION)).toBe(DEMO_CAPTURED_VERSION);
   vi.unstubAllGlobals();

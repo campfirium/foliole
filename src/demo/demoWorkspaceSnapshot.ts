@@ -12,6 +12,7 @@ import {
 import { createWorkspaceReviewActions } from '../store/workspaceStoreReviewActions';
 
 import { DEFAULT_DEMO_TOPIC, DEMO_TOPICS, type DemoTopic } from './demoContent';
+import { createDemoGuidesNode, DEMO_GUIDES_NODE_ID } from './demoGuides';
 import { DEMO_CAPTURED_VERSION, DEMO_SNAPSHOT_VERSION } from './demoLocalStorage';
 import type { DemoPackReadingSeed, DemoPackReviewItem, DemoPackReviewScheduleSeed, DemoPackRelativeTime } from './demoPack';
 import { repairDemoWorkspacePayload } from './demoWorkspaceSnapshotRepair';
@@ -33,7 +34,8 @@ export function createDemoWorkspaceSnapshot(pathname: string, now = new Date()):
   const timestamp = now.toISOString();
   const topicNodes = DEMO_TOPICS.map((topic) => createTopicNode(topic, now, timestamp));
   const reviewNodes = DEMO_TOPICS.flatMap((topic) => createReviewItemNodes(topic, now, timestamp));
-  const allNodes = [...topicNodes, ...reviewNodes];
+  const officialNodes = [...topicNodes, ...reviewNodes];
+  const allNodes = [createDemoGuidesNode(topicNodes.map((node) => node.id), timestamp), ...officialNodes];
   const activeTopic = resolveDemoTopicFromPath(pathname);
   const activeNodeId = toDemoNodeId(activeTopic);
   const snapshot = ensureInboxNodeInSnapshot({
@@ -42,7 +44,7 @@ export function createDemoWorkspaceSnapshot(pathname: string, now = new Date()):
     nodeViewById: { [activeNodeId]: { scrollTop: 0, selection: null, updatedAt: timestamp } },
     nodeOrder: [INBOX_NODE_ID, ...allNodes.map((node) => node.id)],
     nodesById: Object.fromEntries(allNodes.map((node) => [node.id, node])),
-    rendererBoundaryKeepNodeIds: allNodes.map((node) => node.id),
+    rendererBoundaryKeepNodeIds: officialNodes.map((node) => node.id),
     reviewSession: createDemoReviewSession(activeNodeId, topicNodes.map((node) => node.id), timestamp),
     trashedNodeDeletedAtById: {},
     trashedNodeIds: [],
@@ -108,17 +110,17 @@ function isCompatibleDemoWorkspaceState(state: Partial<WorkspacePersistedState> 
 }
 
 function getRequiredDemoNodeIds() {
-  return DEMO_TOPICS.flatMap((topic) => [
+  return [DEMO_GUIDES_NODE_ID, ...DEMO_TOPICS.flatMap((topic) => [
     toDemoNodeId(topic),
     ...topic.reviewItems.map((item) => toDemoReviewItemNodeId(topic, item))
-  ]);
+  ])];
 }
 
 function createTopicNode(topic: DemoTopic, anchor: Date, timestamp: string): Node {
   const childNodeIds = topic.reviewItems.map((item) => toDemoReviewItemNodeId(topic, item));
   return {
     id: toDemoNodeId(topic),
-    parentNodeId: INBOX_NODE_ID,
+    parentNodeId: DEMO_GUIDES_NODE_ID,
     kind: 'topic',
     title: topic.title,
     isTitleManual: true,
