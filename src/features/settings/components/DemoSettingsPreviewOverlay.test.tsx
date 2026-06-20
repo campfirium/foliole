@@ -1,13 +1,28 @@
 import { render, screen, within } from '@testing-library/react';
-import { beforeAll, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, expect, it, vi } from 'vitest';
 
 import { DemoSettingsPreviewOverlay } from './DemoSettingsPreviewOverlay';
 
+import { ExternalFoldersSettingsProvider } from '@/features/settings/context/ExternalFoldersSettingsProvider';
 import { LocalizationProvider } from '@/shared/localization/LocalizationProvider';
 import { preloadTranslationCatalog } from '@/shared/localization/translations';
+import {
+  resetExternalSourceSettingsFoldersCacheForTest,
+  type ExternalSourceSettingsFolder
+} from '@/shared/platform/externalSourceSettingsRepository';
+import {
+  installExternalFolderRuntimeProvider,
+  resetExternalFolderRuntimeProviderForTest,
+  type ExternalFolderRuntimeProvider
+} from '@/shared/platform/runtime/externalFolderRuntime';
 
 beforeAll(async () => {
   await preloadTranslationCatalog('en');
+});
+
+afterEach(() => {
+  resetExternalFolderRuntimeProviderForTest();
+  resetExternalSourceSettingsFoldersCacheForTest();
 });
 
 it('renders the demo note after the original setting description', async () => {
@@ -42,3 +57,31 @@ it('does not duplicate the note on status rows that already label desktop-only c
 
   expect(within(versionRow).queryByText('Web demo note:')).not.toBeInTheDocument();
 });
+
+it('renders external document mirrors as an actionable Web demo settings section', async () => {
+  installExternalFolderRuntimeProvider(createEmptyExternalFolderProvider());
+  render(
+    <LocalizationProvider initialLanguagePreference="en">
+      <ExternalFoldersSettingsProvider>
+        <DemoSettingsPreviewOverlay onClose={vi.fn()} requestedCategory="external-search" />
+      </ExternalFoldersSettingsProvider>
+    </LocalizationProvider>
+  );
+
+  expect(await screen.findByText('The Web demo can choose a top-level local folder in supported browsers. Folder access is session-only and does not scan subfolders.')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Add folder' })).not.toBeDisabled();
+});
+
+function createEmptyExternalFolderProvider(): ExternalFolderRuntimeProvider {
+  const folders: ExternalSourceSettingsFolder[] = [];
+  return {
+    importDocument: () => Promise.resolve(null),
+    loadBrowseEntries: () => Promise.resolve([]),
+    loadFolders: () => Promise.resolve(folders),
+    loadPreview: () => Promise.resolve(null),
+    rebuildIndex: () => Promise.resolve(folders),
+    saveFolders: () => Promise.resolve(folders),
+    selectFolderPath: () => Promise.resolve(null),
+    subscribeFolders: () => () => undefined
+  };
+}

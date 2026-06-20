@@ -12,6 +12,7 @@ import {
   selectExternalSourceSettingsFolderPath,
   type ExternalSourceSettingsFolder
 } from './externalSourceSettingsRepository';
+import { resetExternalFolderRuntimeProviderForTest } from './runtime/externalFolderRuntime';
 
 function createExternalSourceFolder(): ExternalSourceSettingsFolder {
   return {
@@ -47,6 +48,7 @@ function createNativeFolder() {
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  resetExternalFolderRuntimeProviderForTest();
   resetExternalSourceSettingsFoldersCacheForTest();
   vi.spyOn(crypto, 'randomUUID').mockReturnValue('00000000-0000-4000-8000-000000000001');
   delete window.electronAPI;

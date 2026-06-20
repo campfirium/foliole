@@ -5,6 +5,7 @@ import {
   type RuntimeExternalSearchFolder
 } from './externalSearchRuntimeRepository';
 import { selectRuntimeFolder } from './folderSelectionRuntimeRepository';
+import { getExternalFolderRuntimeProvider } from './runtime/externalFolderRuntime';
 
 export type ExternalSourceSettingsFolder = RuntimeExternalSearchFolder;
 
@@ -44,7 +45,9 @@ export function loadExternalSourceSettingsFolders() {
   if (externalSourceSettingsFoldersLoadPromise) {
     return externalSourceSettingsFoldersLoadPromise;
   }
-  externalSourceSettingsFoldersLoadPromise = loadRuntimeExternalSearchFolders().then((folders) => {
+  externalSourceSettingsFoldersLoadPromise = getExternalFolderRuntimeProvider().loadFolders().then((providerFolders) =>
+    providerFolders ?? loadRuntimeExternalSearchFolders()
+  ).then((folders) => {
     externalSourceSettingsFoldersCache = folders;
     return folders;
   }).finally(() => {
@@ -54,19 +57,23 @@ export function loadExternalSourceSettingsFolders() {
 }
 
 export function saveExternalSourceSettingsFolders(folders: ExternalSourceSettingsFolder[]) {
-  return saveRuntimeExternalSearchFolders(folders).then((saved) => {
+  return getExternalFolderRuntimeProvider().saveFolders(folders).then((providerSaved) =>
+    providerSaved ?? saveRuntimeExternalSearchFolders(folders)
+  ).then((saved) => {
     externalSourceSettingsFoldersCache = saved;
     return saved;
   });
 }
 
 export function rebuildExternalSourceSettingsIndex(folderId?: string) {
-  return rebuildRuntimeExternalSearchIndex(folderId).then((folders) => {
+  return getExternalFolderRuntimeProvider().rebuildIndex(folderId).then((providerFolders) =>
+    providerFolders ?? rebuildRuntimeExternalSearchIndex(folderId)
+  ).then((folders) => {
     externalSourceSettingsFoldersCache = folders;
     return folders;
   });
 }
 
 export function selectExternalSourceSettingsFolderPath() {
-  return selectRuntimeFolder();
+  return getExternalFolderRuntimeProvider().selectFolderPath().then((path) => path ?? selectRuntimeFolder());
 }

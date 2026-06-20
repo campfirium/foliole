@@ -159,7 +159,7 @@ function createTopicNode(id: string, parentNodeId: string, title: string, conten
 function resolveTopicTitle(markdown: string, fallback: string | undefined) {
   const heading = markdown.match(/^#\s+(.+)$/m)?.[1]?.trim();
   if (heading) return heading;
-  const fallbackTitle = fallback?.replace(/\.md$/i, '').trim();
+  const fallbackTitle = fallback?.replace(/\.(md|txt)$/i, '').trim();
   return fallbackTitle && fallbackTitle.length > 0 ? fallbackTitle : 'Imported Markdown';
 }
 

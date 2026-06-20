@@ -7,24 +7,34 @@ import {
   type RuntimeExternalSearchBrowseEntry,
   type RuntimeExternalSearchFolder
 } from './externalSearchRuntimeRepository';
+import { getExternalFolderRuntimeProvider } from './runtime/externalFolderRuntime';
 
 export type ExternalLibraryBrowseEntry = RuntimeExternalSearchBrowseEntry;
 export type ExternalLibraryFolder = RuntimeExternalSearchFolder;
 
 export function loadExternalLibraryFolders() {
-  return loadRuntimeExternalSearchFolders();
+  return getExternalFolderRuntimeProvider().loadFolders().then((folders) => folders ?? loadRuntimeExternalSearchFolders());
 }
 
 export function loadExternalLibraryBrowseEntries(folderId: string) {
-  return loadRuntimeExternalSearchBrowseEntries(folderId);
+  return getExternalFolderRuntimeProvider().loadBrowseEntries(folderId).then((entries) =>
+    entries ?? loadRuntimeExternalSearchBrowseEntries(folderId)
+  );
 }
 
 export function subscribeExternalLibraryFolders(listener: (folders: ExternalLibraryFolder[]) => void) {
-  return subscribeRuntimeExternalSearchFolders(listener);
+  const unsubscribeProvider = getExternalFolderRuntimeProvider().subscribeFolders(listener);
+  const unsubscribeRuntime = subscribeRuntimeExternalSearchFolders(listener);
+  return () => {
+    unsubscribeProvider();
+    unsubscribeRuntime();
+  };
 }
 
 export function rebuildExternalLibraryIndex(folderId?: string) {
-  return rebuildRuntimeExternalSearchIndex(folderId);
+  return getExternalFolderRuntimeProvider().rebuildIndex(folderId).then((folders) =>
+    folders ?? rebuildRuntimeExternalSearchIndex(folderId)
+  );
 }
 
 export function subscribeExternalLibraryDocumentFileOpened(

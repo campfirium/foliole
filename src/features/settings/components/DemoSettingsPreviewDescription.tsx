@@ -25,6 +25,8 @@ function getDemoSettingsPreviewNoteKey(kind: DemoSettingsPreviewNoteKind): Trans
   switch (kind) {
     case 'desktop-only':
       return 'settings.demoPreview.note.desktopOnly';
+    case 'external-folders':
+      return 'settings.demoPreview.note.externalFolders';
     case 'read-only':
       return 'settings.demoPreview.note.readOnly';
     case 'preview-only':

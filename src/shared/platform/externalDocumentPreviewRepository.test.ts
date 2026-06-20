@@ -4,6 +4,7 @@ import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
 import type { ElectronAPI } from './electronApi';
 import { loadExternalDocumentPreview } from './externalDocumentPreviewRepository';
+import { resetExternalFolderRuntimeProviderForTest } from './runtime/externalFolderRuntime';
 
 function createNativePreview() {
   return {
@@ -19,6 +20,7 @@ function createNativePreview() {
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  resetExternalFolderRuntimeProviderForTest();
   delete window.electronAPI;
 });
 

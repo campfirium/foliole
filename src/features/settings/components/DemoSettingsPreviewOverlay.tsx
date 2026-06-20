@@ -11,6 +11,7 @@ import {
   type SettingsCategoryId
 } from '../model/settingsPanelOptions';
 
+import { DemoSettingsExternalSearchSection } from './DemoSettingsExternalSearchSection';
 import { DemoSettingsPreviewDescription } from './DemoSettingsPreviewDescription';
 import { DemoSettingsPreviewSidebar } from './DemoSettingsPreviewSidebar';
 
@@ -92,17 +93,21 @@ function DemoSettingsPreviewBody(props: {
             description={activeCategoryOption?.description ?? ''}
             title={activeCategoryOption?.label ?? t('settings.title')}
           />
-          <DemoSettingsPreviewSections sections={sections} />
+          <DemoSettingsPreviewSections activeCategory={activeCategory} sections={sections} />
         </div>
       </div>
     </>
   );
 }
 
-function DemoSettingsPreviewSections({ sections }: {
+function DemoSettingsPreviewSections({ activeCategory, sections }: {
+  activeCategory: SettingsCategoryId;
   sections: ReturnType<typeof getDemoSettingsPreviewSections>;
 }) {
   const t = useTranslation();
+  if (activeCategory === 'external-search') {
+    return <DemoSettingsExternalSearchSection />;
+  }
   if (sections.length === 0) {
     return (
       <SettingsSection ariaLabel={t('settings.demoPreview.empty')}>

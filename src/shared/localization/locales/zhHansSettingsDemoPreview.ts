@@ -18,6 +18,7 @@ export const ZH_HANS_SETTINGS_DEMO_PREVIEW_TRANSLATIONS: Partial<Record<Translat
   'settings.demoPreview.readOnlyBadge': '只读 Web 预览',
   'settings.demoPreview.note.label': '体验版备注',
   'settings.demoPreview.note.desktopOnly': '这项能力可在桌面端使用。',
+  'settings.demoPreview.note.externalFolders': 'Web demo 可在支持的浏览器中选择一个本地顶层文件夹；文件夹访问只在当前会话内有效，不扫描子文件夹。',
   'settings.demoPreview.note.previewOnly': '此处用于对应桌面端设置，在当前 Web demo 中不会应用更改。',
   'settings.demoPreview.note.readOnly': '这个值在 Web demo 中仅用于说明当前能力。'
 };

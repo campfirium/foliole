@@ -4,6 +4,7 @@ import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
 import type { ElectronAPI } from './electronApi';
 import { importExternalDocument } from './externalDocumentImportRepository';
+import { resetExternalFolderRuntimeProviderForTest } from './runtime/externalFolderRuntime';
 
 function createNativeImportResult() {
   return {
@@ -15,6 +16,7 @@ function createNativeImportResult() {
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  resetExternalFolderRuntimeProviderForTest();
   delete window.electronAPI;
 });
 

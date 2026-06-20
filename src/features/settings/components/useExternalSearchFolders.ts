@@ -121,11 +121,15 @@ async function addExternalSearchFolder(
   setFeedback: (value: string | null) => void,
   setFolders: (value: (current: ExternalSourceSettingsFolder[]) => ExternalSourceSettingsFolder[]) => void
 ) {
-  const selectedPath = await selectExternalSourceSettingsFolderPath();
-  if (!selectedPath) return;
-  setFolders((current) => [...current, createDraftExternalSourceFolder(selectedPath)]);
-  setFeedback(null);
-  setError(null);
+  try {
+    const selectedPath = await selectExternalSourceSettingsFolderPath();
+    if (!selectedPath) return;
+    setFolders((current) => [...current, createDraftExternalSourceFolder(selectedPath)]);
+    setFeedback(null);
+    setError(null);
+  } catch (error) {
+    setError(error instanceof Error ? error.message : 'Could not choose folder.');
+  }
 }
 
 async function chooseExternalAttachmentRoot(

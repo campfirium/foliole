@@ -4,11 +4,13 @@ import ReactDOM from 'react-dom/client';
 import '../app/styles.css';
 
 import { installDemoRuntimeController } from '../shared/platform/runtime/demoRuntime';
+import { installExternalFolderRuntimeProvider } from '../shared/platform/runtime/externalFolderRuntime';
 import {
   createBrowserLocalWorkspaceMutationRepository,
   installWorkspaceMutationRepository
 } from '../store/workspaceMutationRepository';
 
+import { createDemoExternalFolderProvider } from './demoExternalFolderProvider';
 import { createBrowserDemoRuntimeController } from './demoRuntimeController';
 import { installDemoUrlSync, resolveDemoLanguagePreferenceFromPath } from './demoUrlSync';
 import { DemoUrlSyncBridge } from './DemoUrlSyncBridge';
@@ -22,6 +24,7 @@ if (!rootElement) {
 
 await installDemoWorkspaceSnapshot();
 installDemoRuntimeController(createBrowserDemoRuntimeController());
+installExternalFolderRuntimeProvider(createDemoExternalFolderProvider());
 installWorkspaceMutationRepository(createBrowserLocalWorkspaceMutationRepository());
 installDemoUrlSync();
 const { App } = await import('../app/App');

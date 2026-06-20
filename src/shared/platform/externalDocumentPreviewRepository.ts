@@ -2,6 +2,7 @@ import {
   loadRuntimeExternalSearchPreview,
   type RuntimeExternalSearchPreview
 } from './externalSearchRuntimeRepository';
+import { getExternalFolderRuntimeProvider } from './runtime/externalFolderRuntime';
 
 export type ExternalDocumentPreview = RuntimeExternalSearchPreview;
 
@@ -12,5 +13,7 @@ export function loadExternalDocumentPreview(
     sourceKind?: 'external_document' | 'local_file' | undefined;
   } = {}
 ) {
-  return loadRuntimeExternalSearchPreview(absolutePath, options);
+  return getExternalFolderRuntimeProvider().loadPreview(absolutePath, options).then((preview) =>
+    preview ?? loadRuntimeExternalSearchPreview(absolutePath, options)
+  );
 }

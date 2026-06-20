@@ -25,4 +25,10 @@ describe('demo settings preview catalog', () => {
 
     expect(statusRowsWithNotes).toEqual([]);
   });
+
+  it('marks external source folders as a session-only Web demo capability', () => {
+    const section = DEMO_SETTINGS_PREVIEW_SECTIONS.find((candidate) => candidate.id === 'sources');
+
+    expect(section?.demoNoteKind).toBe('external-folders');
+  });
 });

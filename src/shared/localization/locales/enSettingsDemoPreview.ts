@@ -16,6 +16,7 @@ export const EN_SETTINGS_DEMO_PREVIEW_TRANSLATIONS = {
   'settings.demoPreview.readOnlyBadge': 'Read-only Web preview',
   'settings.demoPreview.note.label': 'Web demo note',
   'settings.demoPreview.note.desktopOnly': 'This capability is available in the desktop app.',
+  'settings.demoPreview.note.externalFolders': 'The Web demo can choose a top-level local folder in supported browsers. Folder access is session-only and does not scan subfolders.',
   'settings.demoPreview.note.previewOnly': 'Shown to match the desktop settings. Changes are not applied in this Web demo.',
   'settings.demoPreview.note.readOnly': 'This value is shown for context in the Web demo.'
 } as const;

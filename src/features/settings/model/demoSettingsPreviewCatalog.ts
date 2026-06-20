@@ -11,7 +11,7 @@ export type DemoSettingsPreviewControlKind =
   | 'status'
   | 'switch';
 
-export type DemoSettingsPreviewNoteKind = 'desktop-only' | 'preview-only' | 'read-only';
+export type DemoSettingsPreviewNoteKind = 'desktop-only' | 'external-folders' | 'preview-only' | 'read-only';
 
 export interface DemoSettingsPreviewItem {
   controlKind: DemoSettingsPreviewControlKind;
@@ -168,7 +168,7 @@ export const DEMO_SETTINGS_PREVIEW_SECTIONS: DemoSettingsPreviewSection[] = [
   {
     id: 'sources',
     categoryId: 'external-search',
-    demoNoteKind: 'desktop-only',
+    demoNoteKind: 'external-folders',
     titleKey: 'settings.externalSources.title',
     descriptionKey: 'settings.externalSources.description',
     items: [
