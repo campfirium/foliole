@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const stateRoot = path.join(repoRoot, '.tmp', 'windows-dev-services');
 const host = '127.0.0.1';
+export const DEMO_PREVIEW_PATH = '/en/demo/focused-reading-review/';
 
 export const SERVICES = {
   companion: {
@@ -20,7 +21,7 @@ export const SERVICES = {
   demo: {
     args: ['node_modules/vite/bin/vite.js', '--config', 'vite.demo.config.ts', '--host', host, '--port', '43077', '--strictPort'],
     port: 43077,
-    readyPath: '/demo/'
+    readyPath: DEMO_PREVIEW_PATH
   }
 };
 
@@ -63,8 +64,14 @@ function processAlive(pid) {
 function probeHttp(url, timeoutMs = 1000) {
   return new Promise((resolve) => {
     const request = http.get(url, (response) => {
-      response.resume();
-      resolve(Boolean(response.statusCode && response.statusCode < 500));
+      let body = '';
+      response.setEncoding('utf8');
+      response.on('data', (chunk) => {
+        body += chunk;
+      });
+      response.on('end', () => {
+        resolve(response.statusCode === 200 && body.includes('id="root"') && body.includes('type="module"'));
+      });
     });
     request.on('error', () => resolve(false));
     request.setTimeout(timeoutMs, () => {

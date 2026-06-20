@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 
 import { HotkeySettingsProvider } from '../features/settings/context/HotkeySettingsProvider';
 import { useReviewSchedulerSettings } from '../features/settings/context/ReviewSchedulerSettingsProvider';
 import { installWorkspaceDebugBridge } from '../shared/diagnostics/workspaceDebugBridge';
+import type { AppLanguagePreference } from '../shared/localization/appLanguage';
 import { readPerformanceDiagnosticsProbe } from '../shared/platform/performanceDiagnosticsProbe';
 import { useDemoRuntimeState } from '../shared/platform/runtime/demoRuntime';
 import { reportRuntimeAppReady, reportRuntimeBootStage } from '../shared/platform/runtimeBootTelemetry';
@@ -171,7 +172,12 @@ function usePrewarmInteractiveSurfacesAfterReady(isWorkspaceHydrated?: boolean, 
   }, [isDemo, isWorkspaceHydrated]);
 }
 
-export function App() {
+interface AppProps {
+  initialLanguagePreference?: AppLanguagePreference | undefined;
+  providerBridge?: ReactNode;
+}
+
+export function App({ initialLanguagePreference, providerBridge }: AppProps = {}) {
   useEffect(() => {
     let cancelled = false;
     let secondFrameId = 0;
@@ -191,7 +197,8 @@ export function App() {
   }, []);
 
   return (
-    <AppProviders>
+    <AppProviders initialLanguagePreference={initialLanguagePreference}>
+      {providerBridge}
       <AppContent />
     </AppProviders>
   );

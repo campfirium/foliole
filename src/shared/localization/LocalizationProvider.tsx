@@ -29,9 +29,18 @@ export type Translate = LocalizationContextValue['t'];
 
 const LocalizationContext = createContext<LocalizationContextValue | null>(null);
 
-export function LocalizationProvider({ children }: { children: ReactNode }) {
-  const [languagePreference, setLanguagePreferenceState] = useState(getStoredAppLanguagePreference);
-  const [locale, setLocaleState] = useState(getStoredAppLocale);
+interface LocalizationProviderProps {
+  children: ReactNode;
+  initialLanguagePreference?: AppLanguagePreference | undefined;
+}
+
+export function LocalizationProvider({ children, initialLanguagePreference }: LocalizationProviderProps) {
+  const [languagePreference, setLanguagePreferenceState] = useState(
+    () => initialLanguagePreference ?? getStoredAppLanguagePreference()
+  );
+  const [locale, setLocaleState] = useState(() =>
+    initialLanguagePreference ? resolveAppLocale(initialLanguagePreference) : getStoredAppLocale()
+  );
   const [, setCatalogVersion] = useState(0);
   const catalogReady = hasTranslationCatalog(locale);
   const setLocale = useCallback((nextLocale: AppLocale) => {

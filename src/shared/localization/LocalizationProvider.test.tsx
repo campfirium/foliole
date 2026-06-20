@@ -73,6 +73,20 @@ it('defaults to system language and resolves supported Chinese locales', async (
   expect(window.localStorage.getItem(APP_LANGUAGE_STORAGE_KEY)).toBeNull();
 });
 
+it('allows an injected initial language without changing stored preferences', async () => {
+  window.localStorage.setItem(APP_LANGUAGE_STORAGE_KEY, 'zh-Hans');
+
+  render(
+    <LocalizationProvider initialLanguagePreference="en">
+      <TranslationHarness />
+    </LocalizationProvider>
+  );
+
+  expect(await screen.findAllByText('en')).toHaveLength(2);
+  expect(screen.getByText('Settings')).toBeInTheDocument();
+  expect(window.localStorage.getItem(APP_LANGUAGE_STORAGE_KEY)).toBe('zh-Hans');
+});
+
 it('falls back to English when the system language is unsupported', () => {
   expect(resolveSystemAppLocale(['fr-FR'])).toBe('en');
 });

@@ -5,12 +5,18 @@ import { ExternalFoldersSettingsProvider } from '../features/settings/context/Ex
 import { MouseGestureSettingsProvider } from '../features/settings/context/MouseGestureSettingsProvider';
 import { ReviewSchedulerSettingsProvider } from '../features/settings/context/ReviewSchedulerSettingsProvider';
 import { WorkspaceRailSettingsProvider } from '../features/settings/context/WorkspaceRailSettingsProvider';
+import type { AppLanguagePreference } from '../shared/localization/appLanguage';
 import { LocalizationProvider } from '../shared/localization/LocalizationProvider';
 import { AppConfirmationProvider } from '../shared/ui';
 
-export function AppProviders({ children }: { children: ReactNode }) {
+interface AppProvidersProps {
+  children: ReactNode;
+  initialLanguagePreference?: AppLanguagePreference | undefined;
+}
+
+export function AppProviders({ children, initialLanguagePreference }: AppProvidersProps) {
   return (
-    <LocalizationProvider>
+    <LocalizationProvider initialLanguagePreference={initialLanguagePreference}>
       <AppearanceSettingsProvider>
         <ExternalFoldersSettingsProvider>
           <MouseGestureSettingsProvider>

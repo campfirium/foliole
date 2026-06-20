@@ -10,7 +10,8 @@ import {
 } from '../store/workspaceMutationRepository';
 
 import { createBrowserDemoRuntimeController } from './demoRuntimeController';
-import { installDemoUrlSync } from './demoUrlSync';
+import { installDemoUrlSync, resolveDemoLanguagePreferenceFromPath } from './demoUrlSync';
+import { DemoUrlSyncBridge } from './DemoUrlSyncBridge';
 import { installDemoWorkspaceSnapshot } from './demoWorkspaceSnapshot';
 
 const rootElement = document.getElementById('root');
@@ -24,9 +25,10 @@ installDemoRuntimeController(createBrowserDemoRuntimeController());
 installWorkspaceMutationRepository(createBrowserLocalWorkspaceMutationRepository());
 installDemoUrlSync();
 const { App } = await import('../app/App');
+const initialLanguagePreference = resolveDemoLanguagePreferenceFromPath(window.location.pathname);
 
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
-    <App />
+    <App initialLanguagePreference={initialLanguagePreference} providerBridge={<DemoUrlSyncBridge />} />
   </React.StrictMode>
 );

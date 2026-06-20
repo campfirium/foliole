@@ -2,9 +2,9 @@
 
 import { spawn } from 'node:child_process';
 
-import { runDevServicesCli } from './windows-dev-services.mjs';
+import { DEMO_PREVIEW_PATH, runDevServicesCli } from './windows-dev-services.mjs';
 
-const PREVIEW_URL = 'http://127.0.0.1:43077/demo/';
+export const PREVIEW_URL = `http://127.0.0.1:43077${DEMO_PREVIEW_PATH}`;
 
 function openBrowser() {
   spawn('cmd.exe', ['/c', 'start', '', PREVIEW_URL], {

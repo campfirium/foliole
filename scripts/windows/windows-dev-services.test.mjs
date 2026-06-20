@@ -6,9 +6,10 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import { createServiceLaunch, SERVICES } from './windows-dev-services.mjs';
+import { createServiceLaunch, DEMO_PREVIEW_PATH, SERVICES } from './windows-dev-services.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const normalizePath = (value) => value.replaceAll('\\', '/');
 
 describe('windows dev services', () => {
   it('defines companion and demo as managed long-lived services', () => {
@@ -34,9 +35,28 @@ describe('windows dev services', () => {
       shell: false,
       windowsHide: true
     });
-    expect(launch.paths.state).toBe('D:/repo/.tmp/windows-dev-services/companion.json');
-    expect(launch.paths.outLog).toBe('D:/repo/.tmp/windows-dev-services/companion.out.log');
-    expect(launch.paths.errLog).toBe('D:/repo/.tmp/windows-dev-services/companion.err.log');
+    expect(normalizePath(launch.paths.state)).toBe('D:/repo/.tmp/windows-dev-services/companion.json');
+    expect(normalizePath(launch.paths.outLog)).toBe('D:/repo/.tmp/windows-dev-services/companion.out.log');
+    expect(normalizePath(launch.paths.errLog)).toBe('D:/repo/.tmp/windows-dev-services/companion.err.log');
+  });
+
+  it('uses the canonical Demo route for service readiness', () => {
+    const launch = createServiceLaunch('demo', {
+      nodePath: 'C:/node/node.exe',
+      root: 'D:/repo',
+      stateDirectory: 'D:/repo/.tmp/windows-dev-services'
+    });
+
+    expect(DEMO_PREVIEW_PATH).toBe('/en/demo/focused-reading-review/');
+    expect(launch.readyUrl).toBe('http://127.0.0.1:43077/en/demo/focused-reading-review/');
+  });
+
+  it('keeps the Demo browser preview URL on the managed service route', async () => {
+    const previewScript = await readFile(path.join(REPO_ROOT, 'scripts/windows/demo-web-preview.mjs'), 'utf8');
+
+    expect(previewScript).toContain("import { DEMO_PREVIEW_PATH, runDevServicesCli }");
+    expect(previewScript).toContain('`http://127.0.0.1:43077${DEMO_PREVIEW_PATH}`');
+    expect(previewScript).not.toContain('127.0.0.1:43077/demo/');
   });
 
   it('exposes package scripts for controlled service start instead of raw Vite terminals', async () => {
