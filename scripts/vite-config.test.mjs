@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 
 import companionViteConfig, { unwrapCssCascadeLayersForLegacyWebView } from '../vite.companion.config.ts';
-import demoViteConfig, { demoManifestPlugin } from '../vite.demo.config.ts';
+import demoViteConfig, { demoManifestPlugin, isDemoCanonicalRoutePath } from '../vite.demo.config.ts';
 import viteConfig from '../vite.config.ts';
 import { injectDefaultStartupSkeletonHtml } from '../vite.shared.ts';
 
@@ -70,6 +70,14 @@ describe('vite config', () => {
     expect(normalizePath(demoViteConfig.root)).toMatch(/src\/demo$/);
     expect(normalizePath(demoViteConfig.build?.outDir)).toMatch(/dist\/demo$/);
     expect(demoViteConfig.build?.emptyOutDir).toBe(true);
+  });
+
+  it('recognizes Demo canonical locale routes for dev serving only', () => {
+    expect(isDemoCanonicalRoutePath('/en/demo/focused-reading-review/')).toBe(true);
+    expect(isDemoCanonicalRoutePath('/zh-hans/demo/focused-reading-review/')).toBe(true);
+    expect(isDemoCanonicalRoutePath('/zh-hant/demo/focused-reading-review/')).toBe(false);
+    expect(isDemoCanonicalRoutePath('/ja/demo/focused-reading-review/')).toBe(false);
+    expect(isDemoCanonicalRoutePath('/assets/demo/')).toBe(false);
   });
 
   it('emits the Demo manifest from public bundle asset names', () => {
