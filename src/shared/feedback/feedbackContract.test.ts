@@ -19,10 +19,10 @@ describe('validateFeedbackSubmission', () => {
   it('keeps submitted app version metadata', () => {
     expect(validateFeedbackSubmission({
       message: 'Please add a lighter feedback path.',
-      metadata: { appVersion: '0.6.4' }
+      metadata: { appVersion: '0.6.4', platform: 'demo' }
     })).toMatchObject({
       ok: true,
-      value: { metadata: { appVersion: '0.6.4' } }
+      value: { metadata: { appVersion: '0.6.4', platform: 'demo' } }
     });
   });
 

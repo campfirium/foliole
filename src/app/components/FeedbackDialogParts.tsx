@@ -25,6 +25,7 @@ export interface FeedbackDraft {
   appVersion: string;
   attachments: FeedbackAttachmentPayload[];
   contact: string;
+  isDemo: boolean;
   message: string;
   name: string;
 }
@@ -96,7 +97,7 @@ export function createFeedbackPayload(draft: FeedbackDraft, turnstileToken: stri
     metadata: {
       appVersion: draft.appVersion,
       language: navigator.language,
-      platform: 'desktop'
+      platform: draft.isDemo ? 'demo' : 'desktop'
     },
     name: draft.name,
     turnstileToken
