@@ -13,6 +13,7 @@ import { useDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
 import { setWhitelistedLocalStorageItem } from '../../shared/platform/storage';
 import { AppToolbar, ToolbarActionGroup } from '../../shared/ui';
 
+import { WorkspaceDemoRailBottomActions } from './WorkspaceDemoRailBottomActions';
 import { RailActionGroup, WorkspaceRailContextMenu } from './WorkspaceRailActions';
 import { WorkspaceRailTooltipButton } from './WorkspaceRailTooltipButton';
 import { useDemoMarkdownRailImport } from './WorkspaceSideToolbarDemoImport';
@@ -130,6 +131,7 @@ export function WorkspaceSideToolbar(props: WorkspaceSideToolbarProps) {
           items={state.bottomItems}
           onRun={state.runRailCommand}
         />
+        {state.demoImport.isDemo ? <WorkspaceDemoRailBottomActions {...definedProps({ onRunRailAction: props.onRunRailAction })} /> : null}
         <WorkspaceThemeModeAction {...definedProps({ onRunRailAction: props.onRunRailAction })} />
         <SettingsAction isSettingsOpen={props.isSettingsOpen} onOpenSettings={props.onOpenSettings} />
       </div>

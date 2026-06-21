@@ -24,7 +24,7 @@ export const ZH_HANS_DESKTOP_NAVIGATION_TRANSLATIONS: Partial<Record<Translation
   'desktop.workspace.moreRightPanels': '更多右侧栏面板',
   'desktop.workspace.pinnedPanel': '置顶',
   'desktop.workspace.demo.actions': 'Demo 操作',
-  'desktop.workspace.demo.officialSite': '官网',
+  'desktop.workspace.demo.home': '主页',
   'desktop.workspace.demo.downloadWindowsAlpha': '下载 Windows Alpha',
   'desktop.workspace.demo.reset': '重置体验',
   'desktop.workspace.demo.reset.title': '重置 Demo？',

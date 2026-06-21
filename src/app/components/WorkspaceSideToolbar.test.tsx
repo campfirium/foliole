@@ -7,8 +7,13 @@ import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { preloadTranslationCatalog } from '../../shared/localization/translations';
 import { installDemoRuntimeController, type DemoRuntimeController, type DemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
+import { openExternalUrl } from '../../shared/platform/runtimeExternalNavigation';
 
 import { WorkspaceSideToolbar } from './WorkspaceSideToolbar';
+
+vi.mock('../../shared/platform/runtimeExternalNavigation', () => ({
+  openExternalUrl: vi.fn()
+}));
 
 beforeAll(async () => {
   await Promise.all([
@@ -104,12 +109,26 @@ it('runs the feedback command from the bottom rail', () => {
   expect(onRunRailAction).toHaveBeenCalledWith(APP_COMMAND_IDS.sendFeedback);
 });
 
-it('hides the feedback command in the Demo rail only', () => {
+it('shows Demo conversion actions in the bottom rail', () => {
   installDemoState(true);
+  const onRunRailAction = vi.fn();
 
-  renderToolbar(false);
+  renderWithLocalization(
+    <AppearanceSettingsProvider>
+      <WorkspaceRailSettingsProvider>{toolbar(false, onRunRailAction)}</WorkspaceRailSettingsProvider>
+    </AppearanceSettingsProvider>
+  );
 
-  expect(screen.queryByRole('button', { name: 'Send Feedback' })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Home' }));
+  expect(openExternalUrl).toHaveBeenCalledWith('https://foliole.app/');
+
+  fireEvent.click(screen.getByRole('button', { name: 'Download Windows Alpha' }));
+  expect(openExternalUrl).toHaveBeenCalledWith('https://github.com/campfirium/foliole/releases');
+
+  fireEvent.click(screen.getByRole('button', { name: 'Send Feedback' }));
+  expect(onRunRailAction).toHaveBeenCalledWith(APP_COMMAND_IDS.sendFeedback);
+
+  expect(screen.getByRole('button', { name: 'Reset Demo' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Settings' })).toBeInTheDocument();
 });
 

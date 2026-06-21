@@ -22,7 +22,7 @@ export const EN_DESKTOP_NAVIGATION_TRANSLATIONS = {
   'desktop.workspace.moreRightPanels': 'More right sidebar panels',
   'desktop.workspace.pinnedPanel': 'Top',
   'desktop.workspace.demo.actions': 'Demo actions',
-  'desktop.workspace.demo.officialSite': 'Official site',
+  'desktop.workspace.demo.home': 'Home',
   'desktop.workspace.demo.downloadWindowsAlpha': 'Download Windows Alpha',
   'desktop.workspace.demo.reset': 'Reset Demo',
   'desktop.workspace.demo.reset.title': 'Reset Demo?',

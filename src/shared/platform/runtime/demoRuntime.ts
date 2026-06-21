@@ -63,6 +63,10 @@ export function clearDemoLocalData() {
   return activeController.clearLocalData();
 }
 
+export async function resetDemoExperience() {
+  return clearDemoLocalData();
+}
+
 export function continueToNextDemoPreviewDay() {
   activeController.continueToNextPreviewDay();
 }
