@@ -1,3 +1,5 @@
+import { canUseBrowserReservedAppShortcuts } from '../platform/browserReservedShortcuts';
+
 import { APP_COMMAND_IDS, type AppCommandId } from './ids';
 import type { CommandShortcut, CommandShortcutSet } from './types';
 
@@ -74,6 +76,26 @@ function isMacPlatform(platform = resolvePlatformText()) {
   return platform.toLowerCase().includes('mac');
 }
 
+interface PlatformDefaultCommandShortcutOptions {
+  includeBrowserReservedShortcuts?: boolean;
+  platform?: string;
+}
+
+function resolveDefaultShortcutOptions(
+  platformOrOptions?: PlatformDefaultCommandShortcutOptions | string
+): PlatformDefaultCommandShortcutOptions {
+  if (typeof platformOrOptions === 'string') {
+    return { platform: platformOrOptions };
+  }
+  return platformOrOptions ?? {};
+}
+
+function shouldKeepDefaultShortcut(commandId: AppCommandId, options: PlatformDefaultCommandShortcutOptions) {
+  const includeBrowserReservedShortcuts =
+    options.includeBrowserReservedShortcuts ?? canUseBrowserReservedAppShortcuts();
+  return commandId !== APP_COMMAND_IDS.toggleImmersiveMode || includeBrowserReservedShortcuts;
+}
+
 function getPlatformShortcut(shortcut: CommandShortcut, platform?: string): CommandShortcut {
   if (!isMacPlatform(platform) || !shortcut.ctrlKey || shortcut.metaKey) {
     return shortcut;
@@ -93,9 +115,15 @@ function getShortcutSignature(shortcut: CommandShortcut) {
   ].join('|');
 }
 
-export function getPlatformDefaultCommandShortcuts(platform?: string): DefaultCommandShortcuts {
+export function getPlatformDefaultCommandShortcuts(
+  platformOrOptions?: PlatformDefaultCommandShortcutOptions | string
+): DefaultCommandShortcuts {
+  const options = resolveDefaultShortcutOptions(platformOrOptions);
   const resolved: DefaultCommandShortcuts = {};
   for (const [commandId, shortcuts] of Object.entries(DEFAULT_APP_COMMAND_SHORTCUTS)) {
+    if (!shouldKeepDefaultShortcut(commandId as AppCommandId, options)) {
+      continue;
+    }
     const nextSet: CommandShortcutSet = {};
     const seen = new Set<string>();
     for (const slot of SHORTCUT_SET_SLOTS) {
@@ -103,7 +131,7 @@ export function getPlatformDefaultCommandShortcuts(platform?: string): DefaultCo
       if (!shortcut) {
         continue;
       }
-      const platformShortcut = getPlatformShortcut(shortcut, platform);
+      const platformShortcut = getPlatformShortcut(shortcut, options.platform);
       const signature = getShortcutSignature(platformShortcut);
       if (seen.has(signature)) {
         continue;

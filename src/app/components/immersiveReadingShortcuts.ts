@@ -1,3 +1,5 @@
+import { canUseBrowserReservedAppShortcuts } from '../../shared/platform/browserReservedShortcuts';
+
 export interface ImmersiveReadingShortcut {
   ariaKeyShortcuts: string;
   key: string;
@@ -12,8 +14,13 @@ export interface ImmersiveReadingShortcut {
     | 'desktop.immersiveShortcuts.exit';
 }
 
-export const IMMERSIVE_READING_SHORTCUTS: ImmersiveReadingShortcut[] = [
-  { ariaKeyShortcuts: 'F11', key: 'F11', summaryKey: 'desktop.immersiveShortcuts.toggle' },
+const IMMERSIVE_READING_TOGGLE_SHORTCUT: ImmersiveReadingShortcut = {
+  ariaKeyShortcuts: 'F11',
+  key: 'F11',
+  summaryKey: 'desktop.immersiveShortcuts.toggle'
+};
+
+const IMMERSIVE_READING_MODE_SHORTCUTS: ImmersiveReadingShortcut[] = [
   { ariaKeyShortcuts: 'Space', key: 'Space', summaryKey: 'desktop.immersiveShortcuts.nextParagraph' },
   { ariaKeyShortcuts: 'Shift+Space', key: 'Shift+Space', summaryKey: 'desktop.immersiveShortcuts.previousParagraph' },
   { ariaKeyShortcuts: 'ArrowDown', key: 'ArrowDown', summaryKey: 'desktop.immersiveShortcuts.nextParagraph' },
@@ -24,3 +31,9 @@ export const IMMERSIVE_READING_SHORTCUTS: ImmersiveReadingShortcut[] = [
   { ariaKeyShortcuts: '?', key: '?', summaryKey: 'desktop.immersiveShortcuts.toggleList' },
   { ariaKeyShortcuts: 'Escape', key: 'Esc', summaryKey: 'desktop.immersiveShortcuts.exit' }
 ];
+
+export function getImmersiveReadingShortcuts() {
+  return canUseBrowserReservedAppShortcuts()
+    ? [IMMERSIVE_READING_TOGGLE_SHORTCUT, ...IMMERSIVE_READING_MODE_SHORTCUTS]
+    : IMMERSIVE_READING_MODE_SHORTCUTS;
+}

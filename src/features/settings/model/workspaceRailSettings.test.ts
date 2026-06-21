@@ -40,7 +40,8 @@ it('normalizes top, bottom, and fixed rail sections independently', () => {
 
   expect(itemIds(getWorkspaceRailSectionItems(normalized, 'top'))).toEqual([
     'system.import-file',
-    'system.import-clipboard'
+    'system.import-clipboard',
+    'system.immersive-reading'
   ]);
   expect(itemIds(getWorkspaceRailSectionItems(normalized, 'bottom'))).toEqual(['user.command', 'system.feedback']);
   expect(itemIds(getWorkspaceRailSectionItems(normalized, 'fixed'))).toEqual(['fixed.review', 'fixed.settings']);
@@ -111,7 +112,7 @@ it('removes user items without affecting the bound command', () => {
 it('moves ordinary items across top and bottom sections', () => {
   const moved = moveWorkspaceRailItem(DEFAULT_WORKSPACE_RAIL_ITEMS, 'system.import-file', 'bottom', 0);
 
-  expect(itemIds(getWorkspaceRailSectionItems(moved, 'top'))).toEqual(['system.import-clipboard']);
+  expect(itemIds(getWorkspaceRailSectionItems(moved, 'top'))).toEqual(['system.import-clipboard', 'system.immersive-reading']);
   expect(itemIds(getWorkspaceRailSectionItems(moved, 'bottom'))).toEqual(['system.import-file', 'system.feedback']);
 });
 
@@ -133,8 +134,21 @@ it('adds a new action to the top rail by default', () => {
   expect(itemIds(getWorkspaceRailSectionItems(nextItems, 'top'))).toEqual([
     'system.import-file',
     'system.import-clipboard',
+    'system.immersive-reading',
     'user.document-findInTopic'
   ]);
+});
+
+it('adds immersive reading to the default top rail', () => {
+  const immersiveReading = getWorkspaceRailSectionItems(resetWorkspaceRailItems(), 'top')[2];
+
+  expect(immersiveReading).toMatchObject({
+    commandId: APP_COMMAND_IDS.toggleImmersiveMode,
+    iconId: 'BookOpen',
+    id: 'system.immersive-reading',
+    source: 'system',
+    visible: true
+  });
 });
 
 it('adds feedback to the default bottom rail with a warning bubble icon', () => {

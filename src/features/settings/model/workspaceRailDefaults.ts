@@ -22,6 +22,15 @@ export const DEFAULT_WORKSPACE_RAIL_ITEMS: WorkspaceRailItemConfig[] = [
     iconId: 'ClipboardPlus'
   },
   {
+    id: 'system.immersive-reading',
+    commandId: APP_COMMAND_IDS.toggleImmersiveMode,
+    section: 'top',
+    order: 2,
+    visible: true,
+    source: 'system',
+    iconId: 'BookOpen'
+  },
+  {
     id: 'system.feedback',
     commandId: APP_COMMAND_IDS.sendFeedback,
     section: 'bottom',
@@ -55,6 +64,7 @@ export const DEFAULT_WORKSPACE_RAIL_ITEMS: WorkspaceRailItemConfig[] = [
 export const WORKSPACE_RAIL_COMMAND_LABELS: Record<string, string> = {
   [APP_COMMAND_IDS.importSingleFile]: 'Import',
   [APP_COMMAND_IDS.clipboardImport]: 'Import Clipboard',
+  [APP_COMMAND_IDS.toggleImmersiveMode]: 'Reading Mode',
   [APP_COMMAND_IDS.sendFeedback]: 'Send Feedback',
   [APP_COMMAND_IDS.startStudyMode]: 'Study',
   [APP_COMMAND_IDS.openSettings]: 'Settings'

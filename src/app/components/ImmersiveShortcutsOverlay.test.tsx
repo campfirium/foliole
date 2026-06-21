@@ -1,11 +1,23 @@
 import { screen } from '@testing-library/react';
-import { expect, it } from 'vitest';
+import { afterEach, expect, it } from 'vitest';
 
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { ImmersiveShortcutsOverlay } from './ImmersiveShortcutsOverlay';
 
+function setElectronHost(enabled: boolean) {
+  Object.defineProperty(window, 'electronAPI', {
+    configurable: true,
+    value: enabled ? {} : undefined
+  });
+}
+
+afterEach(() => {
+  setElectronHost(false);
+});
+
 it('renders the registered immersive reading shortcuts', () => {
+  setElectronHost(true);
   renderWithLocalization(<ImmersiveShortcutsOverlay visible />);
 
   expect(screen.getByLabelText('Immersive reading shortcuts')).toHaveTextContent('Toggle immersive reading');
@@ -16,4 +28,12 @@ it('renders the registered immersive reading shortcuts', () => {
   expect(screen.getByText('ArrowDown').closest('li')).toHaveTextContent('Select the next paragraph');
   expect(screen.getByText('ArrowDown').closest('li')).toHaveAttribute('aria-keyshortcuts', 'ArrowDown');
   expect(screen.getByText('ArrowUp')).toBeInTheDocument();
+});
+
+it('does not advertise F11 for immersive reading in the browser host', () => {
+  renderWithLocalization(<ImmersiveShortcutsOverlay visible />);
+
+  expect(screen.queryByText('F11')).not.toBeInTheDocument();
+  expect(screen.queryByText('Toggle immersive reading')).not.toBeInTheDocument();
+  expect(screen.getByText('ArrowDown')).toBeInTheDocument();
 });

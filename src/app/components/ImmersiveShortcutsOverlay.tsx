@@ -1,10 +1,11 @@
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { appFloatingSurfaceClassName } from '../../shared/ui';
 
-import { IMMERSIVE_READING_SHORTCUTS } from './immersiveReadingShortcuts';
+import { getImmersiveReadingShortcuts } from './immersiveReadingShortcuts';
 
 export function ImmersiveShortcutsOverlay({ visible }: { visible: boolean }) {
   const t = useTranslation();
+  const shortcuts = getImmersiveReadingShortcuts();
   if (!visible) {
     return null;
   }
@@ -19,7 +20,7 @@ export function ImmersiveShortcutsOverlay({ visible }: { visible: boolean }) {
       <h2 className="mt-2 text-sm font-semibold text-foreground">{t('desktop.immersiveShortcuts.title')}</h2>
       <p className="mt-1 text-xs leading-5 text-foreground/65">{t('desktop.immersiveShortcuts.description')}</p>
       <ul className="mt-3 space-y-2 text-sm text-foreground/88">
-        {IMMERSIVE_READING_SHORTCUTS.map((shortcut) => (
+        {shortcuts.map((shortcut) => (
           <li aria-keyshortcuts={shortcut.ariaKeyShortcuts} className="flex items-start justify-between gap-3" key={shortcut.key}>
             <span>{t(shortcut.summaryKey)}</span>
             <kbd className="rounded-md border border-[var(--app-floating-border-color)] bg-[var(--app-floating-muted-bg)] px-2 py-1 text-[11px] font-medium text-foreground/70">

@@ -1,11 +1,22 @@
 import { act, fireEvent, renderHook } from '@testing-library/react';
-import { expect, it, vi } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 
 import { useImmersiveReadingMode } from './useImmersiveReadingMode';
 
 type ImmersiveProps = Parameters<typeof useImmersiveReadingMode>[0];
+
+function setElectronHost(enabled: boolean) {
+  Object.defineProperty(window, 'electronAPI', {
+    configurable: true,
+    value: enabled ? {} : undefined
+  });
+}
+
+afterEach(() => {
+  setElectronHost(false);
+});
 
 function createNode(id: string) {
   return {
@@ -147,6 +158,7 @@ it('exits immersive editing when Escape comes from the editor element', () => {
 it('captures the viewport reading position and starts an applying lock when entering immersive mode', () => {
   const { adapter, props } = buildProps();
   props.isImmersiveMode = false;
+  setElectronHost(true);
   const beginApplyingReadingPosition = vi.fn();
   props.beginApplyingReadingPosition = beginApplyingReadingPosition;
   vi.mocked(adapter.getPrimaryVisiblePosition).mockReturnValue(7);
@@ -162,10 +174,23 @@ it('captures the viewport reading position and starts an applying lock when ente
   expect(adapter.revealSelection).not.toHaveBeenCalled();
 });
 
+it('leaves F11 to browser fullscreen outside Electron', () => {
+  const { props } = buildProps();
+  props.isImmersiveMode = false;
+  renderHook(() => useImmersiveReadingMode(props));
+
+  act(() => {
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F11' }));
+  });
+
+  expect(props.onToggleImmersiveMode).not.toHaveBeenCalled();
+});
+
 it('allows F11 to enter immersive reading while review mode is active', () => {
   const { props } = buildProps();
   props.isImmersiveMode = false;
   props.isStudyMode = true;
+  setElectronHost(true);
   renderHook(() => useImmersiveReadingMode(props));
 
   act(() => {

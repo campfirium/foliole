@@ -109,6 +109,19 @@ it('runs the feedback command from the bottom rail', () => {
   expect(onRunRailAction).toHaveBeenCalledWith(APP_COMMAND_IDS.sendFeedback);
 });
 
+it('runs immersive reading from the top rail', () => {
+  const onRunRailAction = vi.fn();
+  renderWithLocalization(
+    <AppearanceSettingsProvider>
+      <WorkspaceRailSettingsProvider>{toolbar(false, onRunRailAction)}</WorkspaceRailSettingsProvider>
+    </AppearanceSettingsProvider>
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: 'Reading Mode' }));
+
+  expect(onRunRailAction).toHaveBeenCalledWith(APP_COMMAND_IDS.toggleImmersiveMode);
+});
+
 it('shows Demo conversion actions in the bottom rail', () => {
   installDemoState(true);
   const onRunRailAction = vi.fn();
@@ -122,14 +135,29 @@ it('shows Demo conversion actions in the bottom rail', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Home' }));
   expect(openExternalUrl).toHaveBeenCalledWith('https://foliole.app/');
 
-  fireEvent.click(screen.getByRole('button', { name: 'Download Windows Alpha' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Download app' }));
   expect(openExternalUrl).toHaveBeenCalledWith('https://github.com/campfirium/foliole/releases');
 
   fireEvent.click(screen.getByRole('button', { name: 'Send Feedback' }));
   expect(onRunRailAction).toHaveBeenCalledWith(APP_COMMAND_IDS.sendFeedback);
 
-  expect(screen.getByRole('button', { name: 'Reset Demo' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Reset data' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Settings' })).toBeInTheDocument();
+});
+
+it('shows localized Demo conversion actions in the bottom rail', () => {
+  window.localStorage.setItem('foliole-app-language', 'zh-Hans');
+  installDemoState(true);
+
+  renderWithLocalization(
+    <AppearanceSettingsProvider>
+      <WorkspaceRailSettingsProvider>{toolbar(false)}</WorkspaceRailSettingsProvider>
+    </AppearanceSettingsProvider>
+  );
+
+  expect(screen.getByRole('button', { name: '主页' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '下载应用' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '重置数据' })).toBeInTheDocument();
 });
 
 it('keeps the Flow button enabled with an empty review queue prompt', () => {
