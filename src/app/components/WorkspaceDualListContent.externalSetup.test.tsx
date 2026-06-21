@@ -1,7 +1,17 @@
 import { fireEvent, screen } from '@testing-library/react';
-import { expect, it, vi } from 'vitest';
+import { beforeAll, expect, it, vi } from 'vitest';
+
+import { APP_LANGUAGE_STORAGE_KEY } from '../../shared/localization/appLanguage';
+import { preloadTranslationCatalog } from '../../shared/localization/translations';
 
 import { renderWorkspaceContent } from './WorkspaceDualListContent.testUtils';
+
+beforeAll(async () => {
+  await Promise.all([
+    preloadTranslationCatalog('en'),
+    preloadTranslationCatalog('zh-Hans')
+  ]);
+});
 
 it('opens a simplified external folder setup dialog before connecting a folder', () => {
   const onOpenExternalLibrarySettings = vi.fn();
@@ -26,4 +36,15 @@ it('opens a simplified external folder setup dialog before connecting a folder',
   fireEvent.click(screen.getByRole('button', { name: 'Connect folder' }));
 
   expect(onOpenExternalLibrarySettings).toHaveBeenCalledTimes(1);
+});
+
+it('keeps the simplified external folder setup row in English for the Chinese demo navigation', () => {
+  window.localStorage.setItem(APP_LANGUAGE_STORAGE_KEY, 'zh-Hans');
+
+  renderWorkspaceContent({
+    isExternalViewOpen: true
+  });
+
+  expect(screen.getByRole('treeitem', { name: 'External Folder' })).toBeInTheDocument();
+  expect(screen.queryByRole('treeitem', { name: '外部文件夹' })).toBeNull();
 });

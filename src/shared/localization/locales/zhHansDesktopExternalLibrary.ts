@@ -22,7 +22,7 @@ export const ZH_HANS_DESKTOP_EXTERNAL_LIBRARY_TRANSLATIONS: Partial<Record<Trans
   'desktop.externalLibrary.directoryEmpty.description': '所选目录中没有可用文档。',
   'desktop.externalLibrary.folderListView': '文件夹列表视图',
   'desktop.externalLibrary.folderTree': '外部文件夹树',
-  'desktop.externalLibrary.setupLabel': '外部文件夹',
+  'desktop.externalLibrary.setupLabel': 'External Folder',
   'desktop.externalLibrary.setup.title': '连接外部文件夹',
   'desktop.externalLibrary.setup.description': '此 Demo 中的外部文件夹功能经过简化。桌面版包含完整体验：会将已连接文件夹作为外部文档库维护，用于搜索、预览和导入，原始文件仍保留在 Foliole 外部。',
   'desktop.externalLibrary.folderIcon': '外部文件夹',
