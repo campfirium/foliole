@@ -1,9 +1,6 @@
-import { FileClock, HardDrive } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { getNodeListRowSpacing } from '../../features/nodes/components/nodeListRowSpacingSettings';
-import { NodeTreeRow } from '../../features/nodes/components/NodeTreeRow';
-import { useExternalFoldersSettings } from '../../features/settings/context/ExternalFoldersSettingsProvider';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type {
   ExternalLibraryBrowseEntry,
@@ -15,15 +12,20 @@ import {
   type ExternalLibraryFolderOrderItem
 } from '../../shared/platform/externalLibraryFolderOrder';
 
+import {
+  ExternalFolderContextMenu,
+  openExternalSetupContextMenu,
+  type ExternalFolderContextMenuState
+} from './ExternalFolderContextMenu';
+import { ExternalFolderSetupDialog } from './ExternalFolderSetupDialog';
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import { saveExternalCollapsedRowIds } from './externalLibraryCollapseSettings';
+import { ExternalLibraryRow } from './ExternalLibraryRow';
 import { useExternalFolderDrag } from './ExternalLibrarySectionDrag';
 import {
   buildExternalTreeRows,
   buildFolderRowId,
   createExternalRowKeyDown,
-  handleExternalRowKeyDown,
-  openRowSelection,
   type ExternalTreeRowRecord
 } from './ExternalLibrarySectionModel';
 import { ExternalLibrarySetupRow } from './ExternalLibrarySetupRow';
@@ -32,8 +34,11 @@ interface ExternalLibrarySectionProps {
   entriesByFolderId: Record<string, ExternalLibraryBrowseEntry[] | undefined>;
   folders: ExternalLibraryFolder[];
   isExternalViewOpen: boolean;
+  onChangeExternalFolder?: (folderId: string) => void;
   onOpenExternalSelection: (selection: ExternalLibrarySelection) => void;
   onOpenExternalLibrarySettings?: () => void;
+  onRemoveExternalFolder?: (folderId: string) => void;
+  onRescanExternalFolder?: (folderId: string) => void;
   selection: ExternalLibrarySelection;
 }
 
@@ -51,18 +56,15 @@ function toggleCollapsed(nextId: string, setCollapsedIds: React.Dispatch<React.S
 
 export function ExternalLibrarySection(props: ExternalLibrarySectionProps) {
   const t = useTranslation();
-  const { externalFoldersEnabled } = useExternalFoldersSettings();
   const rowSpacing = getNodeListRowSpacing();
   const [folderOrder, setFolderOrder] = useState<ExternalLibraryFolderOrderItem[]>(loadExternalLibraryFolderOrder);
   const orderedFolders = useMemo(() => sortExternalLibraryFolders(props.folders, folderOrder), [folderOrder, props.folders]);
   const [collapsedIds, setCollapsedIds] = useExternalCollapsedIds(orderedFolders);
+  const [contextMenu, setContextMenu] = useState<ExternalFolderContextMenuState | null>(null);
+  const [isSetupDialogOpen, setIsSetupDialogOpen] = useState(false);
   const rows = useExternalTreeRows({ ...props, folders: orderedFolders }, collapsedIds);
   const onRowKeyDown = useExternalRowKeyDown(collapsedIds, rows, props.onOpenExternalSelection, setCollapsedIds);
   const drag = useExternalFolderDrag(orderedFolders, setFolderOrder);
-
-  if (!externalFoldersEnabled) {
-    return null;
-  }
 
   return (
     <div className="mt-1 flex min-w-0 flex-col">
@@ -70,62 +72,60 @@ export function ExternalLibrarySection(props: ExternalLibrarySectionProps) {
       {props.folders.length === 0 ? (
         <ExternalLibrarySetupRow
           isSelected={props.isExternalViewOpen && props.selection.kind === 'root'}
-          onOpenSettings={props.onOpenExternalLibrarySettings ?? (() => undefined)}
+          onContextMenu={(event) => openExternalSetupContextMenu(event, setContextMenu)}
+          onOpenRoot={() => {
+            props.onOpenExternalSelection({ kind: 'root' });
+            setIsSetupDialogOpen(true);
+          }}
         />
       ) : (
         <section aria-label={t('desktop.externalLibrary.folderTree')} className="flex flex-col pb-2 pt-1" role="tree">
           {rows.map((row) => (
-            <NodeTreeRow
-              depth={row.depth}
-              hasChildren={row.hasChildren}
-              isActive={row.isSelected}
-              isCollapsed={collapsedIds.has(row.id)}
-              isDragDisabled={row.secondaryIconKind !== 'external-folder'}
-              isDropTarget={drag.state?.targetId === row.id}
-              isSelected={row.isSelected}
-              descendantCount={row.documentCount ?? 0}
+            <ExternalLibraryRow
+              collapsedIds={collapsedIds}
+              drag={drag}
+              folderId={getMutableExternalFolderRowId(row, orderedFolders)}
               key={row.id}
-              label={row.label}
-              nodeId={row.id}
-              dragDisabledLabel={null}
-              dropIntent={drag.state?.targetId === row.id ? drag.state.dropIntent : null}
-              rowSpacing={rowSpacing}
-              secondaryLabel={row.secondaryLabel}
-              showIcon={false}
-              showLeafChevronPlaceholder={false}
-              trailingLabelContent={renderExternalTrailingLabelContent(row, t('desktop.externalLibrary.folderIcon'))}
-              {...(row.labelTooltipText !== undefined ? { labelTooltipText: row.labelTooltipText } : {})}
-              onDragEnd={drag.onDragEnd}
-              onDragOver={drag.onDragOver}
-              onDragStart={drag.onDragStart}
-              onDrop={drag.onDrop}
-              onKeyDown={(nodeId, event) => handleExternalRowKeyDown(nodeId, event, onRowKeyDown)}
-              onSelect={(nodeId) => openRowSelection(nodeId, rows, props.onOpenExternalSelection)}
+              onOpenExternalSelection={props.onOpenExternalSelection}
+              onRowKeyDown={onRowKeyDown}
               onToggleCollapse={(nodeId) => toggleCollapsed(nodeId, setCollapsedIds)}
+              row={row}
+              rows={rows}
+              rowSpacing={rowSpacing}
+              setContextMenu={setContextMenu}
             />
           ))}
         </section>
       )}
+      <ExternalFolderContextMenu
+        menu={contextMenu}
+        onClose={() => setContextMenu(null)}
+        {...definedExternalFolderMenuActions(props)}
+      />
+      <ExternalFolderSetupDialog
+        open={isSetupDialogOpen}
+        onClose={() => setIsSetupDialogOpen(false)}
+        {...(props.onOpenExternalLibrarySettings ? { onConnectFolder: props.onOpenExternalLibrarySettings } : {})}
+      />
     </div>
   );
 }
 
-function renderExternalTrailingLabelContent(row: ExternalTreeRowRecord, label: string) {
-  if (!row.secondaryIconKind) {
+function definedExternalFolderMenuActions(props: ExternalLibrarySectionProps) {
+  return {
+    ...(props.onChangeExternalFolder ? { onChangeFolder: props.onChangeExternalFolder } : {}),
+    ...(props.onOpenExternalLibrarySettings ? { onConnectFolder: props.onOpenExternalLibrarySettings } : {}),
+    ...(props.onRemoveExternalFolder ? { onRemoveFolder: props.onRemoveExternalFolder } : {}),
+    ...(props.onRescanExternalFolder ? { onRescanFolder: props.onRescanExternalFolder } : {})
+  };
+}
+
+function getMutableExternalFolderRowId(row: ExternalTreeRowRecord, folders: ExternalLibraryFolder[]) {
+  const folderId = row.selection?.kind === 'folder' ? row.selection.folderId : null;
+  if (!folderId || folderId === 'opened-external-documents' || folderId.startsWith('readwise-reader-import-')) {
     return null;
   }
-  if (row.secondaryIconKind === 'recent') {
-    return (
-      <span className="inline-flex size-3.5 items-center justify-center align-middle text-foreground/45" data-external-library-marker="opened">
-        <FileClock aria-hidden="true" className="-translate-y-[1px]" size={14} strokeWidth={1.7} />
-      </span>
-    );
-  }
-  return (
-    <span aria-label={label} className="inline-flex size-3.5 items-center justify-center align-middle text-foreground/45">
-      <HardDrive aria-hidden="true" className="-translate-y-[1px]" size={14} strokeWidth={1.7} />
-    </span>
-  );
+  return folders.some((folder) => folder.id === folderId) ? folderId : null;
 }
 
 function useExternalCollapsedIds(folders: ExternalLibraryFolder[]) {

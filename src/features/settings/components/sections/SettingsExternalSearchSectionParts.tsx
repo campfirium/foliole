@@ -163,12 +163,11 @@ export function ExternalLibraryTable(props: {
   children: ReactNode;
   folders: ExternalSourceSettingsFolder[];
   isDesktopRuntime: boolean;
-  isEnabled: boolean;
   isSaving: boolean;
   onAddFolder: () => void;
 }) {
   const t = useTranslation();
-  const disabled = props.isSaving || !props.isEnabled;
+  const disabled = props.isSaving;
 
   return (
     <div className={settingsActionTableClassName()} role="table" aria-label={t('settings.externalSources.tableAria')}>
@@ -191,7 +190,6 @@ export function ExternalLibraryTable(props: {
 
 export function ExternalLibraryRow(props: {
   folder: ExternalSourceSettingsFolder;
-  isEnabled: boolean;
   isSaving: boolean;
   onChooseAttachmentRoot: (folderId: string) => void;
   onChooseFolder: (folderId: string) => void;
@@ -200,7 +198,7 @@ export function ExternalLibraryRow(props: {
   onUpdateFolder: ExternalLibraryFolderUpdate;
 }) {
   const t = useTranslation();
-  const disabled = props.isSaving || !props.isEnabled;
+  const disabled = props.isSaving;
 
   return (
     <div className={settingsActionTableRowClassName(EXTERNAL_LIBRARY_COLUMNS)}>

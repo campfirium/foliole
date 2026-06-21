@@ -92,7 +92,7 @@ it('groups settings sidebar entries by workspace, data, and sources', async () =
   expect(labels).toContain('Storage');
   expect(labels).toContain('Watched folders');
   expect(labels).toContain('Readwise Reader');
-  expect(labels).toContain('External document mirrors');
+  expect(labels).toContain('External Folder');
   expect(labels.indexOf('Appearance')).toBeGreaterThan(labels.indexOf('General'));
   expect(labels.indexOf('Hotkeys')).toBeGreaterThan(labels.indexOf('Review'));
   expect(labels.indexOf('General')).toBeGreaterThan(labels.indexOf('About'));
@@ -100,8 +100,8 @@ it('groups settings sidebar entries by workspace, data, and sources', async () =
   expect(labels.indexOf('Sync')).toBeGreaterThan(labels.indexOf('Storage'));
   expect(labels.indexOf('Backups')).toBeGreaterThan(labels.indexOf('Sync'));
   expect(labels.indexOf('Watched folders')).toBeGreaterThan(labels.indexOf('Backups'));
-  expect(labels.indexOf('External document mirrors')).toBeGreaterThan(labels.indexOf('Watched folders'));
-  expect(labels.indexOf('Readwise Reader')).toBeGreaterThan(labels.indexOf('External document mirrors'));
+  expect(labels.indexOf('External Folder')).toBeGreaterThan(labels.indexOf('Watched folders'));
+  expect(labels.indexOf('Readwise Reader')).toBeGreaterThan(labels.indexOf('External Folder'));
   expect(screen.getByRole('button', { name: 'Watched folders' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Readwise Reader' })).toBeInTheDocument();
 });

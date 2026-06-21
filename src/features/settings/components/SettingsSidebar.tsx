@@ -49,10 +49,15 @@ const CATEGORY_ICONS: Record<SettingsCategoryId, LucideIcon> = {
 
 export function SettingsSidebar(props: {
   activeCategory: SettingsCategoryId;
+  hiddenCategoryIds?: SettingsCategoryId[];
   setActiveCategory: (category: SettingsCategoryId) => void;
 }) {
   const t = useTranslation();
-  const groups = getSettingsCategoryGroups(t);
+  const hidden = new Set(props.hiddenCategoryIds ?? []);
+  const groups = getSettingsCategoryGroups(t).map((group) => ({
+    ...group,
+    categoryIds: group.categoryIds.filter((categoryId) => !hidden.has(categoryId))
+  }));
   return (
     <AppPanel
       as="aside"

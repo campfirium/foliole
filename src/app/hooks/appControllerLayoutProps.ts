@@ -27,8 +27,7 @@ import { buildLayoutProps } from './layoutPropsBuilder';
 import type { StartStudyModeOptions } from './reviewModeSessionActions';
 import {
   createCloseSettingsHandler,
-  createOpenSettingsHandler,
-  openExternalLibrarySettings
+  createOpenSettingsHandler
 } from './settingsOverlayRequest';
 import type { useAppRuntime } from './useAppRuntime';
 import type { useEditorContextCommands } from './useEditorContextCommands';
@@ -162,7 +161,10 @@ function createLayoutHandlerArgs(
     onOpenSettings: createOpenSettingsHandler(args.runtime),
     onOpenExternalView: args.externalView.openExternalFolder,
     onOpenExternalSelection: createOpenExternalSelection(args),
-    onOpenExternalLibrarySettings: () => openExternalLibrarySettings(args.runtime),
+    onOpenExternalLibrarySettings: () => void args.externalView.connectExternalFolder(),
+    onChangeExternalFolder: args.externalView.changeExternalFolder,
+    onRemoveExternalFolder: args.externalView.removeExternalFolder,
+    onRescanExternalFolder: args.externalView.rescanExternalFolder,
     onCloseSettings: createCloseSettingsHandler(args.runtime),
     onOpenImportManagement: () => args.runtime.setIsImportManagementOpen(true),
     onCloseImportManagement: () => args.runtime.setIsImportManagementOpen(false),

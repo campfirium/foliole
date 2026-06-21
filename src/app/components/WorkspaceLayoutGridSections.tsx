@@ -16,6 +16,7 @@ import type { StudySessionCompleteSummaryProps } from './StudySessionCompleteSum
 import { WorkspaceDocumentSurface } from './WorkspaceDocumentSurface';
 import type { WorkspaceDocumentSurfaceProps } from './workspaceDocumentSurfaceProps';
 import { WorkspaceDualListContent } from './WorkspaceDualListContent';
+import type { WorkspaceDualListContentProps } from './WorkspaceDualListContent';
 import { areWorkspaceListAreaPropsEqual } from './workspaceListAreaMemo';
 import { WorkspaceListEmptyState, WorkspaceListLoadingState } from './WorkspaceListStates';
 
@@ -35,6 +36,9 @@ export interface WorkspaceListAreaProps {
   onOpenNotesView: () => void;
   onOpenExternalSelection: (selection: ExternalLibrarySelection) => void;
   onOpenExternalLibrarySettings: () => void;
+  onChangeExternalFolder?: (folderId: string) => void;
+  onRemoveExternalFolder?: (folderId: string) => void;
+  onRescanExternalFolder?: (folderId: string) => void;
   onOpenTrashView: () => void;
   onOpenVirtualView: (nodeId?: string) => void;
   onSelectNode: (nodeId: string) => void;
@@ -116,6 +120,9 @@ function renderWorkspaceListBody(
     | 'onOpenNotesView'
     | 'onOpenExternalSelection'
     | 'onOpenExternalLibrarySettings'
+    | 'onChangeExternalFolder'
+    | 'onRemoveExternalFolder'
+    | 'onRescanExternalFolder'
     | 'onOpenTrashView'
     | 'onOpenVirtualView'
     | 'onSelectNode'
@@ -136,64 +143,10 @@ function renderWorkspaceListBody(
 }
 
 function renderWorkspaceDualListBody(
-  props: Pick<
-    WorkspaceListAreaProps,
-    | 'activeNodeId'
-    | 'activeVirtualNodeId'
-    | 'externalEntriesByFolderId'
-    | 'externalFolders'
-    | 'externalSelection'
-    | 'isExternalViewOpen'
-    | 'isStudyMode'
-    | 'isTrashViewOpen'
-    | 'isVirtualViewOpen'
-    | 'listNodesById'
-    | 'nodesById'
-    | 'nodeOrder'
-    | 'onOpenMoveToNode'
-    | 'onOpenPostponeTopicPanel'
-    | 'onOpenNotesView'
-    | 'onOpenExternalSelection'
-    | 'onOpenExternalLibrarySettings'
-    | 'onOpenTrashView'
-    | 'onOpenVirtualView'
-    | 'onSelectNode'
-    | 'onSelectNodeInVirtualView'
-    | 'onSelectTrashNode'
-    | 'reviewCurrentNodeId'
-    | 'selectedTrashNodeId'
-    | 'trashedNodeIds'
-  >
+  props: WorkspaceDualListContentProps & { isWorkspaceHydrated?: boolean; shouldShowEmptyState: boolean }
 ) {
-  return (
-    <WorkspaceDualListContent
-      activeNodeId={props.activeNodeId}
-      activeVirtualNodeId={props.activeVirtualNodeId}
-      externalEntriesByFolderId={props.externalEntriesByFolderId}
-      externalFolders={props.externalFolders}
-      externalSelection={props.externalSelection}
-      isExternalViewOpen={props.isExternalViewOpen}
-      isStudyMode={props.isStudyMode}
-      isTrashViewOpen={props.isTrashViewOpen}
-      isVirtualViewOpen={props.isVirtualViewOpen}
-      listNodesById={props.listNodesById}
-      nodesById={props.nodesById}
-      nodeOrder={props.nodeOrder}
-      onOpenMoveToNode={props.onOpenMoveToNode}
-      {...definedProps({ onOpenPostponeTopicPanel: props.onOpenPostponeTopicPanel })}
-      onOpenNotesView={props.onOpenNotesView}
-      onOpenExternalSelection={props.onOpenExternalSelection}
-      onOpenExternalLibrarySettings={props.onOpenExternalLibrarySettings}
-      onOpenTrashView={props.onOpenTrashView}
-      onOpenVirtualView={props.onOpenVirtualView}
-      onSelectNode={props.onSelectNode}
-      onSelectNodeInVirtualView={props.onSelectNodeInVirtualView}
-      onSelectTrashNode={props.onSelectTrashNode}
-      reviewCurrentNodeId={props.reviewCurrentNodeId}
-      selectedTrashNodeId={props.selectedTrashNodeId}
-      trashedNodeIds={props.trashedNodeIds}
-    />
-  );
+  const dualListProps: WorkspaceDualListContentProps = props;
+  return <WorkspaceDualListContent {...dualListProps} />;
 }
 
 export const WorkspaceDocumentArea = memo(function WorkspaceDocumentArea({

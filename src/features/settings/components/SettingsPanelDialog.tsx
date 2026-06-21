@@ -13,6 +13,8 @@ import {
 import { SettingsSearchBox } from './SettingsSearchBox';
 import { SettingsSidebar } from './SettingsSidebar';
 
+import { definedProps } from '@/shared/lib/definedProps';
+
 function resolveSettingsOverlayClassName(args: {
   isBackdropTransparent: boolean;
   isPreviewActive: boolean;
@@ -31,6 +33,7 @@ type SettingsPanelDialogProps = {
   categoryProps: SettingsPanelCategoryProps;
   description: string;
   headerNotice?: ReactNode;
+  hiddenCategoryIds?: SettingsCategoryId[];
   hotkeys: ReturnType<typeof useHotkeySettings>;
   headerActions?: ReactNode;
   isBackdropTransparent: boolean;
@@ -52,6 +55,7 @@ function SettingsPanelDialogBody(props: SettingsPanelDialogProps) {
     <>
       <SettingsSidebar
         activeCategory={props.activeCategory}
+        {...definedProps({ hiddenCategoryIds: props.hiddenCategoryIds })}
         setActiveCategory={props.setActiveCategory}
       />
       <div className="flex min-h-0 flex-col bg-settings-group">

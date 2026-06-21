@@ -41,6 +41,9 @@ export interface WorkspaceDualListContentProps {
   onOpenNotesView: () => void;
   onOpenExternalSelection: (selection: ExternalLibrarySelection) => void;
   onOpenExternalLibrarySettings?: () => void;
+  onChangeExternalFolder?: (folderId: string) => void;
+  onRemoveExternalFolder?: (folderId: string) => void;
+  onRescanExternalFolder?: (folderId: string) => void;
   onOpenTrashView: () => void;
   onOpenVirtualView?: (nodeId?: string) => void;
   onSelectNode: (nodeId: string) => void;

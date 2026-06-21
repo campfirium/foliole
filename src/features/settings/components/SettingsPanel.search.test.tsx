@@ -61,11 +61,11 @@ it('searches settings rows and jumps to the matching category row', async () => 
   expect(screen.getByRole('button', { name: 'Review' })).toHaveAttribute('aria-current', 'page');
 });
 
-it('shows the external document mirrors switch in the category header', () => {
+it('shows the External Folder category without a visibility switch', () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="external-search" />);
 
-  expect(screen.getByRole('heading', { level: 2, name: 'External document mirrors' })).toBeInTheDocument();
-  expect(screen.getByRole('switch', { name: 'Enable external document mirrors' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { level: 2, name: 'External Folder' })).toBeInTheDocument();
+  expect(screen.queryByRole('switch', { name: 'Enable External Folder' })).toBeNull();
 });
 
 it('finds advanced review scheduler rows from settings search', async () => {

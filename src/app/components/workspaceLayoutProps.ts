@@ -163,6 +163,9 @@ export interface WorkspaceLayoutFieldTypes {
   onOpenExternalSelection: (selection: ExternalLibrarySelection) => void;
   onOpenExternalLibrarySettings: () => void;
   onOpenExternalView: (folderId?: string) => void;
+  onChangeExternalFolder: (folderId: string) => void;
+  onRemoveExternalFolder: (folderId: string) => void;
+  onRescanExternalFolder: (folderId: string) => void;
   onEnterImmersiveEdit: () => void;
   onEnterImmersiveMode: () => void;
   onExitImmersiveMode: () => void;

@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import type { MouseEvent as ReactMouseEvent } from 'react';
 
 import { getNodeListRowSpacing } from '../../features/nodes/components/nodeListRowSpacingSettings';
 import { createNodeListRowKeydownHandler } from '../../features/nodes/components/NodeListTreeKeyboard';
@@ -7,18 +8,22 @@ import { useTranslation } from '../../shared/localization/LocalizationProvider';
 
 const EXTERNAL_SETUP_ROW_ID = 'external-library-setup';
 
-export function ExternalLibrarySetupRow(props: { isSelected: boolean; onOpenSettings: () => void }) {
+export function ExternalLibrarySetupRow(props: {
+  isSelected: boolean;
+  onContextMenu?: (event: ReactMouseEvent<HTMLButtonElement>) => void;
+  onOpenRoot: () => void;
+}) {
   const t = useTranslation();
   const rowSpacing = getNodeListRowSpacing();
   const onRowKeyDown = useMemo(
     () =>
       createNodeListRowKeydownHandler({
         collapsedNodeIds: new Set(),
-        onSelect: props.onOpenSettings,
+        onSelect: props.onOpenRoot,
         onToggleCollapse: () => undefined,
         rows: [{ depth: 0, hasChildren: false, id: EXTERNAL_SETUP_ROW_ID }]
       }),
-    [props.onOpenSettings]
+    [props.onOpenRoot]
   );
 
   return (
@@ -34,7 +39,8 @@ export function ExternalLibrarySetupRow(props: { isSelected: boolean; onOpenSett
         rowSpacing={rowSpacing}
         showIcon={false}
         onKeyDown={onRowKeyDown}
-        onSelect={props.onOpenSettings}
+        {...(props.onContextMenu ? { onContextMenu: (_nodeId, event) => props.onContextMenu?.(event) } : {})}
+        onSelect={props.onOpenRoot}
         onToggleCollapse={() => undefined}
       />
     </section>

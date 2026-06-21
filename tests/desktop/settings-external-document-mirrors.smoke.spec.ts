@@ -1,15 +1,13 @@
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell, openSettingsCategory } from './harness/settings';
 
-const EXTERNAL_DOCUMENT_MIRRORS_HEADING = /^(External document mirrors|外部文档镜像)$/;
-const ENABLE_EXTERNAL_DOCUMENT_MIRRORS = /^(Enable external document mirrors|启用外部文档镜像)$/;
+const EXTERNAL_FOLDER_HEADING = /^(External Folder|外部文件夹)$/;
 
-test.describe('desktop settings external document mirrors', () => {
-  test('settings exposes external document mirrors copy', async ({ desktopWindow }) => {
+test.describe('desktop settings External Folder', () => {
+  test('settings exposes External Folder copy', async ({ desktopWindow }) => {
     await expectWorkspaceShell(desktopWindow);
     const settingsDialog = await openSettingsCategory(desktopWindow, 'ExternalDocumentMirrors');
 
-    await expect(settingsDialog.getByRole('heading', { level: 2, name: EXTERNAL_DOCUMENT_MIRRORS_HEADING })).toBeVisible();
-    await expect(settingsDialog.getByRole('switch', { name: ENABLE_EXTERNAL_DOCUMENT_MIRRORS })).toBeVisible();
+    await expect(settingsDialog.getByRole('heading', { level: 2, name: EXTERNAL_FOLDER_HEADING })).toBeVisible();
   });
 });

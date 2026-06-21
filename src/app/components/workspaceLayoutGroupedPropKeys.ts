@@ -73,7 +73,8 @@ export const IMPORT_KEYS = defineLayoutKeys<WorkspaceLayoutImportProps>()([
 
 export const EXTERNAL_LIBRARY_KEYS = defineLayoutKeys<WorkspaceLayoutExternalLibraryProps>()([
   'isExternalViewOpen', 'externalFolders', 'externalEntriesByFolderId', 'externalSelection',
-  'onOpenExternalSelection', 'onOpenExternalLibrarySettings', 'onOpenExternalView'
+  'onOpenExternalSelection', 'onOpenExternalLibrarySettings', 'onOpenExternalView',
+  'onChangeExternalFolder', 'onRemoveExternalFolder', 'onRescanExternalFolder'
 ] as const);
 
 export const SETTINGS_KEYS = defineLayoutKeys<WorkspaceLayoutSettingsProps>()([

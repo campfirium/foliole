@@ -10,7 +10,6 @@ import {
   type SettingsCategoryId
 } from '../model/settingsPanelOptions';
 
-import { SettingsExternalFoldersEnabledSwitch } from './sections/SettingsExternalFoldersEnabledSwitch';
 import {
   SettingsPanelDialog,
   type SettingsPanelCategoryProps
@@ -25,6 +24,8 @@ import {
   useSettingsSearchState,
   useSettingsSearchTarget
 } from './useSettingsSearch';
+
+import { definedProps } from '@/shared/lib/definedProps';
 
 interface SettingsPanelProps {
   headerNotice?: ReactNode;
@@ -42,22 +43,28 @@ export function SettingsPanel(props: SettingsPanelProps) {
 }
 
 function SettingsPanelContent(props: SettingsPanelProps) {
-  const state = useSettingsPanelViewState(props.requestedCategory ?? null);
+  const state = useSettingsPanelViewState(props.requestedCategory ?? null, Boolean(props.previewDesktopSettings));
   return <SettingsPanelBody {...props} {...state} />;
 }
 
-function useSettingsPanelViewState(requestedCategory: SettingsCategoryId | null) {
+function resolvePreviewCategory(category: SettingsCategoryId | null, previewDesktopSettings: boolean) {
+  return previewDesktopSettings && category === 'external-search' ? 'general' : category;
+}
+
+function useSettingsPanelViewState(requestedCategory: SettingsCategoryId | null, previewDesktopSettings: boolean) {
   const t = useTranslation();
-  const [activeCategory, setActiveCategory] = useState<SettingsCategoryId>(() => requestedCategory ?? getInitialSettingsCategory());
+  const [activeCategory, setActiveCategory] = useState<SettingsCategoryId>(() =>
+    resolvePreviewCategory(requestedCategory ?? getInitialSettingsCategory(), previewDesktopSettings) ?? 'general'
+  );
   const libraryPathSettings = useLibraryPathSettings();
   const externalSearchFolders = useExternalSearchFolders();
 
   useEffect(() => setWhitelistedLocalStorageItem(SETTINGS_CATEGORY_STORAGE_KEY, activeCategory), [activeCategory]);
   useEffect(() => {
     if (requestedCategory) {
-      setActiveCategory(requestedCategory);
+      setActiveCategory(resolvePreviewCategory(requestedCategory, previewDesktopSettings) ?? 'general');
     }
-  }, [requestedCategory]);
+  }, [previewDesktopSettings, requestedCategory]);
   const category = getSettingsCategoryOption(activeCategory, t);
   const title = category?.label ?? t('settings.title');
   const description = category?.description ?? t('settings.description');
@@ -128,7 +135,7 @@ function createSettingsCategoryProps(
     externalSearchError: props.externalSearchError,
     externalSearchFeedback: props.externalSearchFeedback,
     externalSearchFolders: props.externalSearchFolders,
-    hideLanguageSetting: props.hideLanguageSetting,
+    ...definedProps({ hideLanguageSetting: props.hideLanguageSetting }),
     inboxPath: props.inboxPath,
     isDesktopRuntime: props.isDesktopRuntime,
     isLoadingLibraryPaths: props.isLoadingLibraryPaths,
@@ -142,7 +149,7 @@ function createSettingsCategoryProps(
     mirrorOutputRebuildError: props.mirrorOutputRebuildError,
     mirrorOutputRebuildFeedback: props.mirrorOutputRebuildFeedback,
     mirrorPath: props.mirrorPath,
-    importCategoryContent: props.importCategoryContent,
+    ...definedProps({ importCategoryContent: props.importCategoryContent }),
     onChangeLocation: props.onChangeLocation,
     onAddExternalSearchFolder: props.onAddExternalSearchFolder,
     onChooseExternalAttachmentRoot: props.onChooseExternalAttachmentRoot,
@@ -150,14 +157,14 @@ function createSettingsCategoryProps(
     onRebuildExternalSearchIndex: props.onRebuildExternalSearchIndex,
     onRemoveExternalSearchFolder: props.onRemoveExternalSearchFolder,
     onRetryLoadExternalSearchFolders: props.onRetryLoadExternalSearchFolders,
-    onRunSupportCommand: props.onRunSupportCommand,
+    ...definedProps({ onRunSupportCommand: props.onRunSupportCommand }),
     onRebuildMirrorLinks: props.onRebuildMirrorLinks,
     onRebuildMirrorOutput: props.onRebuildMirrorOutput,
     onRestoreDefault: props.onRestoreDefault,
     onUpdateExternalSearchFolder: props.onUpdateExternalSearchFolder,
     pendingLocation: props.pendingLocation,
-    previewDesktopSettings: props.previewDesktopSettings,
-    readwiseReaderCategoryContent: props.readwiseReaderCategoryContent,
+    ...definedProps({ previewDesktopSettings: props.previewDesktopSettings }),
+    ...definedProps({ readwiseReaderCategoryContent: props.readwiseReaderCategoryContent }),
     onEnterPreview: () => setIsPreviewActive(true),
     onSettingsBackdropTransparentChange: setIsBackdropTransparent
   };
@@ -181,7 +188,6 @@ function SettingsPanelBody(props: SettingsPanelBodyProps) {
       activeResultIndex={search.activeResultIndex}
       categoryProps={categoryProps}
       description={props.description}
-      headerActions={props.activeCategory === 'external-search' ? <SettingsExternalFoldersEnabledSwitch /> : undefined}
       headerNotice={props.headerNotice}
       hotkeys={hotkeys}
       isBackdropTransparent={isBackdropTransparent}
@@ -195,6 +201,7 @@ function SettingsPanelBody(props: SettingsPanelBodyProps) {
       searchResults={search.results}
       setActiveCategory={props.setActiveCategory}
       title={props.title}
+      hiddenCategoryIds={props.previewDesktopSettings ? ['external-search'] : []}
     />
   );
 }

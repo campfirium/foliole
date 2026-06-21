@@ -14,5 +14,5 @@ export const EN_SETTINGS_DEMO_PREVIEW_TRANSLATIONS = {
   'settings.demoPreview.mouseGestures.title': 'Mouse gesture behavior',
   'settings.demoPreview.readwise.status': 'Readwise Reader status',
   'settings.demoPreview.note.label': 'Folder access',
-  'settings.demoPreview.note.externalFolders': 'Choose a top-level local folder in supported browsers. Folder access is session-only and does not scan subfolders.'
+  'settings.demoPreview.note.externalFolders': 'External folder features are simplified in this demo. The desktop app includes the full experience.'
 } as const;

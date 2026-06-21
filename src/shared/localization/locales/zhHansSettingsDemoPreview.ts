@@ -16,5 +16,5 @@ export const ZH_HANS_SETTINGS_DEMO_PREVIEW_TRANSLATIONS: Partial<Record<Translat
   'settings.demoPreview.mouseGestures.title': '鼠标手势行为',
   'settings.demoPreview.readwise.status': 'Readwise Reader 状态',
   'settings.demoPreview.note.label': '文件夹访问',
-  'settings.demoPreview.note.externalFolders': '可在支持的浏览器中选择一个本地顶层文件夹；文件夹访问只在当前会话内有效，不扫描子文件夹。'
+  'settings.demoPreview.note.externalFolders': '此 Demo 中的外部文件夹功能经过简化。桌面版包含完整体验。'
 };

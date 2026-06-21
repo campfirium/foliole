@@ -153,6 +153,9 @@ export type WorkspaceLayoutExternalLibraryProps = Pick<WorkspaceLayoutFieldTypes
   | 'onOpenExternalSelection'
   | 'onOpenExternalLibrarySettings'
   | 'onOpenExternalView'
+  | 'onChangeExternalFolder'
+  | 'onRemoveExternalFolder'
+  | 'onRescanExternalFolder'
 >;
 
 export type WorkspaceLayoutSettingsProps = Pick<WorkspaceLayoutFieldTypes,

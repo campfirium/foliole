@@ -120,6 +120,9 @@ export interface BuildLayoutPropsArgs {
   onOpenExternalSelection: WorkspaceLayoutExternalLibraryProps['onOpenExternalSelection'];
   onOpenExternalLibrarySettings: WorkspaceLayoutExternalLibraryProps['onOpenExternalLibrarySettings'];
   onOpenExternalView: WorkspaceLayoutExternalLibraryProps['onOpenExternalView'];
+  onChangeExternalFolder: WorkspaceLayoutExternalLibraryProps['onChangeExternalFolder'];
+  onRemoveExternalFolder: WorkspaceLayoutExternalLibraryProps['onRemoveExternalFolder'];
+  onRescanExternalFolder: WorkspaceLayoutExternalLibraryProps['onRescanExternalFolder'];
   onResetLayout: () => void;
   onSelectTrashNode: WorkspaceLayoutTrashProps['onSelectTrashNode'];
   onRevealAnchorInDocument: WorkspaceLayoutDocumentProps['onRevealAnchorInDocument'];

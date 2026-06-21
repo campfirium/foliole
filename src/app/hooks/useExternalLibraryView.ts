@@ -9,6 +9,16 @@ import {
 } from '../../shared/platform/externalLibraryBrowseRepository';
 import type { ExternalLibrarySelection } from '../components/externalLibraryBrowseModel';
 
+import {
+  changeAndOpenExternalFolder,
+  connectAndOpenExternalFolder,
+  removeExternalFolder,
+  rescanExternalFolder
+} from './externalFolderConnection';
+import {
+  resolveExternalSelectionAfterFoldersChanged,
+  retainEntriesForCurrentFolders
+} from './externalLibraryFolderState';
 import { useExternalLibraryViewHistory, type ExternalLibraryViewTarget } from './externalLibraryViewHistory';
 import { useExternalDocumentFileOpenEvents } from './useExternalDocumentFileOpenEvents';
 
@@ -18,16 +28,8 @@ export function useExternalLibraryView() {
   const [entriesByFolderId, setEntriesByFolderId] = useExternalFolderEntries(selection);
   const [folders, setFolders] = useExternalFoldersState(setSelection, setEntriesByFolderId);
   usePreloadExternalFolderEntries(folders, entriesByFolderId, setEntriesByFolderId);
-
-  function applyHistoryTarget(target: ExternalLibraryViewTarget) {
-    if (target.kind === 'notes') {
-      setSelection({ kind: 'root' });
-      setIsExternalViewOpen(false);
-      return;
-    }
-    setSelection(target.selection);
-    setIsExternalViewOpen(true);
-  }
+  const applyHistoryTarget = (target: ExternalLibraryViewTarget) =>
+    applyExternalHistoryTarget(target, setSelection, setIsExternalViewOpen);
   const history = useExternalLibraryViewHistory({ applyTarget: applyHistoryTarget, isExternalViewOpen, selection });
   useExternalDocumentFileOpenEvents({
     folders,
@@ -36,6 +38,7 @@ export function useExternalLibraryView() {
     setEntriesByFolderId,
     setFolders
   });
+  const actions = createExternalLibraryActions({ folders, history, selection, setFolders, setIsExternalViewOpen, setSelection });
 
   return {
     canGoBack: history.canGoBack,
@@ -45,19 +48,7 @@ export function useExternalLibraryView() {
     goBack: history.goBack,
     goForward: history.goForward,
     isExternalViewOpen,
-    openExternalDocument: (args: { absolutePath: string; folderId: string }) => {
-      history.openExternalTarget({ absolutePath: args.absolutePath, folderId: args.folderId, kind: 'document' });
-    },
-    openExternalFolder: (folderId?: string) => {
-      history.openExternalTarget(folderId ? { folderId, kind: 'folder' } : { kind: 'root' });
-    },
-    openExternalSelection: (nextSelection: ExternalLibrarySelection) => {
-      history.openExternalTarget(nextSelection);
-    },
-    closeExternalView: () => {
-      setSelection({ kind: 'root' });
-      setIsExternalViewOpen(false);
-    },
+    ...actions,
     refreshActiveFolderEntries: async (folderId: string) => {
       const result = await loadExternalLibraryBrowseEntries(folderId);
       if (result === null) {
@@ -71,6 +62,67 @@ export function useExternalLibraryView() {
     selection,
     setSelection
   };
+}
+
+function createExternalLibraryActions(args: {
+  folders: ExternalLibraryFolder[];
+  history: ReturnType<typeof useExternalLibraryViewHistory>;
+  selection: ExternalLibrarySelection;
+  setFolders: Dispatch<SetStateAction<ExternalLibraryFolder[]>>;
+  setIsExternalViewOpen: (value: boolean) => void;
+  setSelection: Dispatch<SetStateAction<ExternalLibrarySelection>>;
+}) {
+  return {
+    changeExternalFolder: (folderId: string) => void changeAndOpenExternalFolder({
+      currentFolders: args.folders,
+      folderId,
+      onOpenFolder: (nextFolderId) => args.history.openExternalTarget({ folderId: nextFolderId, kind: 'folder' }),
+      setFolders: args.setFolders
+    }),
+    closeExternalView: () => {
+      args.setSelection({ kind: 'root' });
+      args.setIsExternalViewOpen(false);
+    },
+    connectExternalFolder: () => void connectAndOpenExternalFolder({
+      currentFolders: args.folders,
+      onOpenFolder: (folderId) => args.history.openExternalTarget({ folderId, kind: 'folder' }),
+      setFolders: args.setFolders
+    }),
+    openExternalDocument: (document: { absolutePath: string; folderId: string }) => {
+      args.history.openExternalTarget({ absolutePath: document.absolutePath, folderId: document.folderId, kind: 'document' });
+    },
+    openExternalFolder: (folderId?: string) => {
+      args.history.openExternalTarget(folderId ? { folderId, kind: 'folder' } : { kind: 'root' });
+    },
+    openExternalSelection: (nextSelection: ExternalLibrarySelection) => {
+      args.history.openExternalTarget(nextSelection);
+    },
+    removeExternalFolder: (folderId: string) => void removeExternalFolder(args.folders, folderId).then((nextFolders) => {
+      if (!nextFolders) return;
+      args.setFolders(nextFolders);
+      if (args.selection.kind !== 'root' && args.selection.folderId === folderId) {
+        args.setSelection({ kind: 'root' });
+        args.setIsExternalViewOpen(false);
+      }
+    }),
+    rescanExternalFolder: (folderId: string) => void rescanExternalFolder(folderId).then((nextFolders) => {
+      if (nextFolders) args.setFolders(nextFolders);
+    })
+  };
+}
+
+function applyExternalHistoryTarget(
+  target: ExternalLibraryViewTarget,
+  setSelection: Dispatch<SetStateAction<ExternalLibrarySelection>>,
+  setIsExternalViewOpen: (value: boolean) => void
+) {
+  if (target.kind === 'notes') {
+    setSelection({ kind: 'root' });
+    setIsExternalViewOpen(false);
+    return;
+  }
+  setSelection(target.selection);
+  setIsExternalViewOpen(true);
 }
 
 function usePreloadExternalFolderEntries(
@@ -92,9 +144,7 @@ function usePreloadExternalFolderEntries(
         result: await loadExternalLibraryBrowseEntries(folderId)
       }))
     ).then((results) => {
-      if (!alive) {
-        return;
-      }
+      if (!alive) return;
       setEntriesByFolderId((current) => {
         let changed = false;
         const next = { ...current };
@@ -151,57 +201,6 @@ function useExternalFoldersState(
   );
 
   return [folders, setFolders] as const;
-}
-
-function retainEntriesForCurrentFolders(
-  current: Record<string, ExternalLibraryBrowseEntry[] | undefined>,
-  previousFolders: ExternalLibraryFolder[],
-  nextFolders: ExternalLibraryFolder[]
-) {
-  const previousById = new Map(previousFolders.map((folder) => [folder.id, folder]));
-  const next: Record<string, ExternalLibraryBrowseEntry[] | undefined> = {};
-  let changed = false;
-
-  nextFolders.forEach((folder) => {
-    const cachedEntries = current[folder.id];
-    if (cachedEntries === undefined) {
-      return;
-    }
-    const previousFolder = previousById.get(folder.id);
-    if (previousFolder && isExternalFolderEntryCacheCurrent(previousFolder, folder)) {
-      next[folder.id] = cachedEntries;
-    } else {
-      changed = true;
-    }
-  });
-
-  if (Object.keys(current).some((folderId) => !Object.prototype.hasOwnProperty.call(next, folderId))) {
-    changed = true;
-  }
-
-  return changed ? next : current;
-}
-
-function isExternalFolderEntryCacheCurrent(
-  previousFolder: ExternalLibraryFolder,
-  nextFolder: ExternalLibraryFolder
-) {
-  return (
-    previousFolder.documentCount === nextFolder.documentCount &&
-    previousFolder.folderPath === nextFolder.folderPath &&
-    previousFolder.indexedAt === nextFolder.indexedAt &&
-    previousFolder.status === nextFolder.status
-  );
-}
-
-function resolveExternalSelectionAfterFoldersChanged(
-  current: ExternalLibrarySelection,
-  folders: ExternalLibraryFolder[]
-): ExternalLibrarySelection {
-  if (current.kind === 'root') {
-    return current;
-  }
-  return folders.some((folder) => folder.id === current.folderId) ? current : { kind: 'root' };
 }
 
 function useExternalFolderEntries(selection: ExternalLibrarySelection) {

@@ -199,22 +199,6 @@ it('shows an expand toggle for external folders before their entries finish load
   expect(screen.getByRole('treeitem', { name: /two think/i })).toHaveAttribute('aria-expanded', 'false');
 });
 
-it('opens external library settings from the External placeholder row when no folders are configured', () => {
-  const onOpenExternalLibrarySettings = vi.fn();
-
-  renderWorkspaceContent({
-    isExternalViewOpen: true,
-    onOpenExternalLibrarySettings
-  });
-
-  const setupRow = screen.getByRole('treeitem', { name: 'External' });
-  expect(setupRow).toHaveAttribute('aria-selected', 'true');
-
-  fireEvent.click(setupRow);
-
-  expect(onOpenExternalLibrarySettings).toHaveBeenCalledTimes(1);
-});
-
 it('ignores old external expansion memory and expands only the selected root', () => {
   saveExternalCollapsedRowIds([]);
 

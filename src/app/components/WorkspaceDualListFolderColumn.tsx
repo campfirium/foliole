@@ -53,8 +53,11 @@ export function WorkspaceDualListFolderColumn({
       virtualResultCountById={virtualResultCountById}
       {...definedProps({
         activeVirtualNodeId: props.activeVirtualNodeId,
+        onChangeExternalFolder: props.onChangeExternalFolder,
         onOpenExternalLibrarySettings: props.onOpenExternalLibrarySettings,
-        onOpenVirtualView: props.onOpenVirtualView
+        onOpenVirtualView: props.onOpenVirtualView,
+        onRemoveExternalFolder: props.onRemoveExternalFolder,
+        onRescanExternalFolder: props.onRescanExternalFolder
       })}
     />
   );

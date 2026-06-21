@@ -6,15 +6,8 @@ import { renderWithMouseGestureProvider } from './SettingsPanel.testUtils';
 
 import { APP_COMMAND_IDS } from '@/shared/commands/ids';
 import { preloadTranslationCatalog } from '@/shared/localization/translations';
-import {
-  resetExternalSourceSettingsFoldersCacheForTest,
-  type ExternalSourceSettingsFolder
-} from '@/shared/platform/externalSourceSettingsRepository';
-import {
-  installExternalFolderRuntimeProvider,
-  resetExternalFolderRuntimeProviderForTest,
-  type ExternalFolderRuntimeProvider
-} from '@/shared/platform/runtime/externalFolderRuntime';
+import { resetExternalSourceSettingsFoldersCacheForTest } from '@/shared/platform/externalSourceSettingsRepository';
+import { resetExternalFolderRuntimeProviderForTest } from '@/shared/platform/runtime/externalFolderRuntime';
 
 beforeAll(async () => {
   await preloadTranslationCatalog('en');
@@ -64,17 +57,15 @@ it('keeps the real hotkey settings surface in the Live Demo preview', async () =
   expect(screen.getByRole('button', { name: 'Add shortcut for Open settings' })).toBeInTheDocument();
 });
 
-it('keeps external folders as the real actionable desktop settings section', async () => {
-  installExternalFolderRuntimeProvider(createEmptyExternalFolderProvider());
+it('hides external folders from the Live Demo settings preview', async () => {
   renderWithMouseGestureProvider(
     <DemoSettingsPreviewOverlay onClose={vi.fn()} requestedCategory="external-search" />
   );
 
-  expect(await screen.findAllByText('External document mirrors')).not.toHaveLength(0);
-  expect(screen.getByRole('switch', { name: 'Enable external document mirrors' })).toBeInTheDocument();
-  expect(screen.getByRole('table', { name: 'External document mirrors' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Add folder' })).toBeInTheDocument();
-  expect(screen.queryByText('External document mirrors are available in the desktop app.')).not.toBeInTheDocument();
+  expect(await screen.findByRole('heading', { name: 'General' })).toBeInTheDocument();
+  expect(screen.queryByText('External Folder')).toBeNull();
+  expect(screen.queryByRole('switch', { name: 'Enable External Folder' })).toBeNull();
+  expect(screen.queryByText('External Folder is available in the desktop app.')).not.toBeInTheDocument();
 });
 
 it('renders supplied Readwise settings content instead of the unavailable fallback', async () => {
@@ -103,17 +94,3 @@ it('keeps community links runnable in the Live Demo preview', async () => {
   fireEvent.click(await screen.findByRole('button', { name: 'GitHub' }));
   expect(onRunSupportCommand).toHaveBeenCalledWith(APP_COMMAND_IDS.openGitHubRepository);
 });
-
-function createEmptyExternalFolderProvider(): ExternalFolderRuntimeProvider {
-  const folders: ExternalSourceSettingsFolder[] = [];
-  return {
-    importDocument: () => Promise.resolve(null),
-    loadBrowseEntries: () => Promise.resolve([]),
-    loadFolders: () => Promise.resolve(folders),
-    loadPreview: () => Promise.resolve(null),
-    rebuildIndex: () => Promise.resolve(folders),
-    saveFolders: () => Promise.resolve(folders),
-    selectFolderPath: () => Promise.resolve(null),
-    subscribeFolders: () => () => undefined
-  };
-}

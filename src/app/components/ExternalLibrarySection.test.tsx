@@ -76,23 +76,23 @@ it('groups Readwise-managed external folders under one Readwise row', () => {
   expect(screen.queryByRole('treeitem', { name: /Readwise Articles/i })).toBeNull();
 });
 
-it('opens external settings from the setup row keyboard path', () => {
-  const onOpenExternalLibrarySettings = vi.fn();
+it('opens the external root from the setup row keyboard path', () => {
+  const onOpenExternalSelection = vi.fn();
 
   renderWithLocalization(
     <ExternalLibrarySection
       entriesByFolderId={{}}
       folders={[]}
       isExternalViewOpen
-      onOpenExternalLibrarySettings={onOpenExternalLibrarySettings}
-      onOpenExternalSelection={vi.fn()}
+      onOpenExternalSelection={onOpenExternalSelection}
       selection={{ kind: 'root' }}
     />
   );
 
-  fireEvent.keyDown(screen.getByRole('treeitem', { name: 'External' }), { key: 'Home' });
+  fireEvent.keyDown(screen.getByRole('treeitem', { name: 'External Folder' }), { key: 'Home' });
 
-  expect(onOpenExternalLibrarySettings).toHaveBeenCalledTimes(1);
+  expect(onOpenExternalSelection).toHaveBeenCalledWith({ kind: 'root' });
+  expect(screen.getByRole('dialog', { name: 'Connect an external folder' })).toBeInTheDocument();
 });
 
 it('keeps external folder tree left and right arrow behavior on hierarchical rows', () => {
@@ -134,7 +134,7 @@ it('places the external folder icon after the label and keeps the count separate
   expect(row.querySelector('[aria-label="External folder"]')).toBeInTheDocument();
 });
 
-it('hides the external folder section when external folders are disabled', () => {
+it('keeps the external folder section visible when the legacy enabled flag is false', () => {
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.externalFoldersEnabled, 'false');
 
   renderWithLocalization(
@@ -148,6 +148,69 @@ it('hides the external folder section when external folders are disabled', () =>
     />
   );
 
-  expect(screen.queryByRole('treeitem', { name: 'External' })).toBeNull();
-  expect(screen.queryByRole('treeitem', { name: /1act/i })).toBeNull();
+  expect(screen.queryByRole('treeitem', { name: 'External Folder' })).toBeNull();
+  expect(screen.getByRole('treeitem', { name: /1act/i })).toBeInTheDocument();
+});
+
+it('opens setup context menu with Connect folder', () => {
+  const onOpenExternalLibrarySettings = vi.fn();
+
+  renderWithLocalization(
+    <ExternalLibrarySection
+      entriesByFolderId={{}}
+      folders={[]}
+      isExternalViewOpen
+      onOpenExternalLibrarySettings={onOpenExternalLibrarySettings}
+      onOpenExternalSelection={vi.fn()}
+      selection={{ kind: 'root' }}
+    />
+  );
+
+  fireEvent.contextMenu(screen.getByRole('treeitem', { name: 'External Folder' }), { clientX: 24, clientY: 32 });
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Connect folder' }));
+
+  expect(onOpenExternalLibrarySettings).toHaveBeenCalledTimes(1);
+});
+
+it('opens external folder context menu actions for regular folders only', () => {
+  const onChangeExternalFolder = vi.fn();
+  const onOpenExternalLibrarySettings = vi.fn();
+  const onRemoveExternalFolder = vi.fn();
+  const onRescanExternalFolder = vi.fn();
+
+  renderWithLocalization(
+    <ExternalLibrarySection
+      entriesByFolderId={{}}
+      folders={[
+        externalFolder('folder-1', '/library/1act'),
+        externalFolder('readwise-reader-import-books', '/library/Books')
+      ]}
+      isExternalViewOpen={false}
+      onChangeExternalFolder={onChangeExternalFolder}
+      onOpenExternalLibrarySettings={onOpenExternalLibrarySettings}
+      onOpenExternalSelection={vi.fn()}
+      onRemoveExternalFolder={onRemoveExternalFolder}
+      onRescanExternalFolder={onRescanExternalFolder}
+      selection={{ kind: 'root' }}
+    />
+  );
+
+  fireEvent.contextMenu(screen.getByRole('treeitem', { name: /1act/i }), { clientX: 24, clientY: 32 });
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Add folder' }));
+  expect(onOpenExternalLibrarySettings).toHaveBeenCalledTimes(1);
+
+  fireEvent.contextMenu(screen.getByRole('treeitem', { name: /1act/i }), { clientX: 24, clientY: 32 });
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Rescan' }));
+  expect(onRescanExternalFolder).toHaveBeenCalledWith('folder-1');
+
+  fireEvent.contextMenu(screen.getByRole('treeitem', { name: /1act/i }), { clientX: 24, clientY: 32 });
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Change folder' }));
+  expect(onChangeExternalFolder).toHaveBeenCalledWith('folder-1');
+
+  fireEvent.contextMenu(screen.getByRole('treeitem', { name: /1act/i }), { clientX: 24, clientY: 32 });
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Remove folder' }));
+  expect(onRemoveExternalFolder).toHaveBeenCalledWith('folder-1');
+
+  fireEvent.contextMenu(screen.getByRole('treeitem', { name: /Books/i }), { clientX: 24, clientY: 32 });
+  expect(screen.queryByRole('menuitem', { name: 'Remove folder' })).toBeNull();
 });

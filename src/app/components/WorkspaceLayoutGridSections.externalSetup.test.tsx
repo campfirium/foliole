@@ -43,8 +43,9 @@ function createNode(args: {
   };
 }
 
-it('opens external library settings from the empty External row in the real list area', () => {
+it('opens the simplified external folder setup dialog from the empty External row in the real list area', () => {
   const onOpenExternalLibrarySettings = vi.fn();
+  const onOpenExternalSelection = vi.fn();
   const nodesById: Record<string, Node> = {
     [INBOX_NODE_ID]: createNode({ id: INBOX_NODE_ID, kind: 'folder', title: 'Inbox' }),
     'folder-a': createNode({ id: 'folder-a', kind: 'folder', title: 'Projects' })
@@ -70,8 +71,11 @@ it('opens external library settings from the empty External row in the real list
       nodeOrder={[INBOX_NODE_ID, 'folder-a']}
       onOpenMoveToNode={vi.fn()}
       onOpenNotesView={vi.fn()}
-      onOpenExternalSelection={vi.fn()}
+      onOpenExternalSelection={onOpenExternalSelection}
       onOpenExternalLibrarySettings={onOpenExternalLibrarySettings}
+      onChangeExternalFolder={vi.fn()}
+      onRemoveExternalFolder={vi.fn()}
+      onRescanExternalFolder={vi.fn()}
       onOpenTrashView={vi.fn()}
       onOpenVirtualView={vi.fn()}
       onSelectNode={vi.fn()}
@@ -83,12 +87,15 @@ it('opens external library settings from the empty External row in the real list
     />
   );
 
-  fireEvent.click(screen.getByRole('treeitem', { name: 'External' }));
+  fireEvent.click(screen.getByRole('treeitem', { name: 'External Folder' }));
 
+  expect(onOpenExternalSelection).toHaveBeenCalledWith({ kind: 'root' });
+  expect(screen.getByRole('dialog', { name: 'Connect an external folder' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Connect folder' }));
   expect(onOpenExternalLibrarySettings).toHaveBeenCalledTimes(1);
 });
 
-it('hides the External row when external folders are disabled', () => {
+it('keeps external folders visible when the legacy enabled flag is false', () => {
   const onOpenExternalLibrarySettings = vi.fn();
   const nodesById: Record<string, Node> = {
     [INBOX_NODE_ID]: createNode({ id: INBOX_NODE_ID, kind: 'folder', title: 'Inbox' })
@@ -129,6 +136,9 @@ it('hides the External row when external folders are disabled', () => {
       onOpenNotesView={vi.fn()}
       onOpenExternalSelection={vi.fn()}
       onOpenExternalLibrarySettings={onOpenExternalLibrarySettings}
+      onChangeExternalFolder={vi.fn()}
+      onRemoveExternalFolder={vi.fn()}
+      onRescanExternalFolder={vi.fn()}
       onOpenTrashView={vi.fn()}
       onOpenVirtualView={vi.fn()}
       onSelectNode={vi.fn()}
@@ -140,7 +150,7 @@ it('hides the External row when external folders are disabled', () => {
     />
   );
 
-  expect(screen.queryByRole('treeitem', { name: 'External' })).toBeNull();
-  expect(screen.queryByRole('treeitem', { name: /1act/i })).toBeNull();
+  expect(screen.queryByRole('treeitem', { name: 'External Folder' })).toBeNull();
+  expect(screen.getByRole('treeitem', { name: /1act/i })).toBeInTheDocument();
   expect(onOpenExternalLibrarySettings).not.toHaveBeenCalled();
 });
