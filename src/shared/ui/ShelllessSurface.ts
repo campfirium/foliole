@@ -6,8 +6,8 @@ const shelllessSurfaceBaseClassName = [
 ].join(' ');
 
 const shelllessInputBaseClassName = [
-  'box-border w-full resize-none border-0 bg-shellless-input pb-[var(--app-shellless-input-padding-block-end)] pt-[var(--app-shellless-input-padding-block-start)] font-shellless-input text-[length:var(--app-shellless-input-font-size)] leading-[var(--app-shellless-input-line-height)] text-shellless-fg',
-  'outline-none placeholder:text-shellless-placeholder focus-visible:ring-0',
+  'app-shellless-input box-border w-full resize-none appearance-none border-0 bg-shellless-input pb-[var(--app-shellless-input-padding-block-end)] pt-[var(--app-shellless-input-padding-block-start)] font-shellless-input text-[length:var(--app-shellless-input-font-size)] leading-[var(--app-shellless-input-line-height)] text-shellless-fg shadow-none [box-shadow:none]',
+  'outline-none placeholder:text-shellless-placeholder focus:outline-none focus:ring-0 focus:shadow-none focus:[box-shadow:none] focus:[outline:0] focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-none focus-visible:[box-shadow:none] focus-visible:[outline:0]',
   '[scrollbar-color:var(--app-shellless-muted-fg)_transparent] [scrollbar-width:thin]'
 ].join(' ');
 

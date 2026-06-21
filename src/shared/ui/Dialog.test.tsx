@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { expect, it } from 'vitest';
 
+import { AppButton } from './Button';
 import { AppDialog, AppDialogContent, AppDialogDescription, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from './Dialog';
 
 it('renders dialog content with shared floating surface baseline', async () => {
@@ -26,4 +27,23 @@ it('renders dialog content with shared floating surface baseline', async () => {
   expect(screen.getByText('Shared dialog').className).toContain('text-ui-xl');
   expect(screen.getByText('Body copy').className).toContain('text-foreground/68');
   expect(screen.getByText('Body copy')).toBeInTheDocument();
+});
+
+it('keeps initial dialog focus on the surface instead of the first action', async () => {
+  render(
+    <AppDialog open>
+      <AppDialogPortal>
+        <AppDialogContent aria-describedby={undefined}>
+          <AppDialogTitle>Confirm action</AppDialogTitle>
+          <AppButton>Cancel</AppButton>
+          <AppButton>Continue</AppButton>
+        </AppDialogContent>
+      </AppDialogPortal>
+    </AppDialog>
+  );
+
+  const dialog = await screen.findByRole('dialog', { name: 'Confirm action' });
+  expect(dialog).toHaveAttribute('tabindex', '-1');
+  expect(document.activeElement).toBe(dialog);
+  expect(screen.getByRole('button', { name: 'Cancel' })).not.toHaveFocus();
 });

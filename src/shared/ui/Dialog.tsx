@@ -25,17 +25,43 @@ AppDialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 const AppDialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, ...props }, ref) => (
-  <DialogPrimitive.Content
-    ref={ref}
-    className={cn(
-      appFloatingSurfaceClassName('panel'),
-      'fixed left-1/2 top-1/2 z-modal -translate-x-1/2 -translate-y-1/2 text-foreground outline-none',
-      className
-    )}
-    {...props}
-  />
-));
+>(({ className, onOpenAutoFocus, ...props }, ref) => {
+  const contentRef = React.useRef<React.ElementRef<typeof DialogPrimitive.Content> | null>(null);
+  const setContentRef = React.useCallback(
+    (node: React.ElementRef<typeof DialogPrimitive.Content> | null) => {
+      contentRef.current = node;
+      if (typeof ref === 'function') {
+        ref(node);
+      } else if (ref) {
+        (ref as React.MutableRefObject<React.ElementRef<typeof DialogPrimitive.Content> | null>).current = node;
+      }
+    },
+    [ref]
+  );
+
+  function handleOpenAutoFocus(event: Event) {
+    onOpenAutoFocus?.(event);
+    if (event.defaultPrevented) {
+      return;
+    }
+    event.preventDefault();
+    contentRef.current?.focus({ preventScroll: true });
+  }
+
+  return (
+    <DialogPrimitive.Content
+      ref={setContentRef}
+      className={cn(
+        appFloatingSurfaceClassName('panel'),
+        'fixed left-1/2 top-1/2 z-modal -translate-x-1/2 -translate-y-1/2 text-foreground outline-none',
+        className
+      )}
+      onOpenAutoFocus={handleOpenAutoFocus}
+      tabIndex={-1}
+      {...props}
+    />
+  );
+});
 AppDialogContent.displayName = DialogPrimitive.Content.displayName;
 
 const AppDialogTitle = React.forwardRef<

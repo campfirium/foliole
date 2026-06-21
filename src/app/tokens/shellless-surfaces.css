@@ -38,3 +38,10 @@
   --app-shellless-control-fg: rgb(var(--color-foreground) / 0.58);
   --app-shellless-shadow: 0 10px 26px rgb(0 0 0 / 0.18), 0 1px 3px rgb(0 0 0 / 0.14);
 }
+
+.app-shellless-input:focus,
+.app-shellless-input:focus-visible {
+  outline: 0;
+  outline-offset: 0;
+  box-shadow: none;
+}

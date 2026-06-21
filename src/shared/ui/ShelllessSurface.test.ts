@@ -23,12 +23,21 @@ it('anchors shell-less colors to the floating menu family', () => {
 });
 
 it('keeps shell-less input and metadata typography separated', () => {
+  expect(appShelllessInputClassName()).toContain('app-shellless-input');
   expect(appShelllessInputClassName()).toContain('font-shellless-input');
   expect(appShelllessInputClassName()).toContain('pt-[var(--app-shellless-input-padding-block-start)]');
   expect(appShelllessInputClassName()).toContain('pb-[var(--app-shellless-input-padding-block-end)]');
   expect(appShelllessInputClassName()).toContain('text-[length:var(--app-shellless-input-font-size)]');
   expect(appShelllessInputClassName()).toContain('leading-[var(--app-shellless-input-line-height)]');
   expect(appShelllessInputClassName()).toContain('placeholder:text-shellless-placeholder');
+  expect(appShelllessInputClassName()).toContain('appearance-none');
+  expect(appShelllessInputClassName()).toContain('[box-shadow:none]');
+  expect(appShelllessInputClassName()).toContain('focus:ring-0');
+  expect(appShelllessInputClassName()).toContain('focus:[box-shadow:none]');
+  expect(appShelllessInputClassName()).toContain('focus:[outline:0]');
+  expect(appShelllessInputClassName()).toContain('focus-visible:ring-0');
+  expect(appShelllessInputClassName()).toContain('focus-visible:[box-shadow:none]');
+  expect(appShelllessInputClassName()).toContain('focus-visible:[outline:0]');
   expect(appShelllessMetaClassName()).toContain('font-shellless-ui');
   expect(appShelllessMetaClassName()).toContain('text-shellless-muted');
 });
