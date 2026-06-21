@@ -1,3 +1,5 @@
+import type { Locator } from '@playwright/test';
+
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
@@ -10,6 +12,33 @@ async function dismissSearchEnhancementPrompt(desktopWindow: import('@playwright
     return true;
   }
   return false;
+}
+
+async function expectPaletteInputNoFocusRing(input: Locator) {
+  await expect(input).toHaveClass(/appearance-none/);
+  await expect(input).toHaveClass(/\[box-shadow:none\]/);
+  await expect(input).toHaveClass(/focus:\[box-shadow:none\]/);
+  await expect(input).toHaveClass(/focus-visible:\[box-shadow:none\]/);
+  await expect
+    .poll(() =>
+      input.evaluate((element) => {
+        element.focus({ preventScroll: true });
+        const styles = window.getComputedStyle(element);
+        return {
+          active: document.activeElement === element,
+          appearance: styles.getPropertyValue('appearance'),
+          boxShadow: styles.boxShadow,
+          outlineStyle: styles.outlineStyle,
+          outlineWidth: styles.outlineWidth,
+          webkitAppearance: styles.getPropertyValue('-webkit-appearance')
+        };
+      })
+    )
+    .toMatchObject({
+      boxShadow: 'none',
+      outlineStyle: 'none',
+      outlineWidth: '0px'
+    });
 }
 
 test('workspace rail opens search and command palette panels', async ({ desktopWindow }, testInfo) => {
@@ -26,6 +55,11 @@ test('workspace rail opens search and command palette panels', async ({ desktopW
   await dismissSearchEnhancementPrompt(desktopWindow);
   const searchDialog = desktopWindow.getByRole('dialog', { name: /(Workspace search|工作区搜索)/ });
   await expect(searchDialog).toBeVisible();
+  await expectPaletteInputNoFocusRing(searchDialog.getByRole('textbox', { name: /Search workspace|搜索工作区/ }));
+  await testInfo.attach('search-palette-focus-ring-suppressed', {
+    body: await searchDialog.screenshot(),
+    contentType: 'image/png'
+  });
   await desktopWindow.keyboard.press('Escape');
   await expect(searchDialog).toBeHidden();
 
@@ -37,6 +71,7 @@ test('workspace rail opens search and command palette panels', async ({ desktopW
   await expect(commandInput).toHaveAttribute('data-1p-ignore', 'true');
   await expect(commandInput).toHaveAttribute('data-bwignore', 'true');
   await expect(commandInput).toHaveAttribute('data-lpignore', 'true');
+  await expectPaletteInputNoFocusRing(commandInput);
 
   await testInfo.attach('command-palette-autofill-suppression', {
     body: await commandDialog.screenshot(),

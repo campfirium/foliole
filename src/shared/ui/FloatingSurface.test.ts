@@ -24,12 +24,23 @@ it('keeps command and search surfaces on shared floating tokens', () => {
   expect(appFloatingSurfaceClassName('panel')).toContain('shadow-panel');
   expect(appFloatingSurfaceClassName('popover')).toContain('shadow-popover');
   expect(appFloatingInputClassName()).toContain('bg-[var(--app-floating-input-bg)]');
+  expect(appFloatingInputClassName()).toContain('appearance-none');
   expect(appFloatingInputClassName()).toContain('border-b');
   expect(appFloatingInputClassName()).toContain('border-[var(--app-floating-divider-color)]');
+  expect(appFloatingInputClassName()).toContain('shadow-none');
+  expect(appFloatingInputClassName()).toContain('[box-shadow:none]');
   expect(appFloatingInputClassName()).toContain('focus:outline-none');
   expect(appFloatingInputClassName()).toContain('focus:ring-0');
+  expect(appFloatingInputClassName()).toContain('focus:shadow-none');
+  expect(appFloatingInputClassName()).toContain('focus:[box-shadow:none]');
+  expect(appFloatingInputClassName()).toContain('focus:[outline:0]');
+  expect(appFloatingInputClassName()).toContain('focus:border-[var(--app-floating-divider-color)]');
   expect(appFloatingInputClassName()).toContain('focus-visible:outline-none');
   expect(appFloatingInputClassName()).toContain('focus-visible:ring-0');
+  expect(appFloatingInputClassName()).toContain('focus-visible:shadow-none');
+  expect(appFloatingInputClassName()).toContain('focus-visible:[box-shadow:none]');
+  expect(appFloatingInputClassName()).toContain('focus-visible:[outline:0]');
+  expect(appFloatingInputClassName()).toContain('focus-visible:border-[var(--app-floating-divider-color)]');
   expect(appFloatingInputClassName()).not.toContain('focus-visible:ring-ring');
   expect(appFloatingListClassName()).toContain(
     '[--app-scrollbar-thumb-color:var(--app-floating-scrollbar-thumb-color)]'
