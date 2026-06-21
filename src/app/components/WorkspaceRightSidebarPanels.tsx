@@ -9,6 +9,7 @@ import {
   isWorkspaceRightPanelAvailable,
   resolveWorkspaceRightPanelContext
 } from './workspaceRightPanelAvailability';
+import { areFlowDayBucketsEqual, collectFlowWindowNodeIds } from './workspaceRightSidebarFlowWindow';
 import {
   loadWorkspaceRightSidebarBacklinksPanel,
   loadWorkspaceRightSidebarDevPanel,
@@ -113,6 +114,7 @@ const ReviewQueueSidebarPanel = memo(function ReviewQueueSidebarPanel(props: {
   const previousFlowNodeIds = collectFlowWindowNodeIds(previousProps.flowWindow);
   const nextFlowNodeIds = collectFlowWindowNodeIds(nextProps.flowWindow);
   if (previousFlowNodeIds.length !== nextFlowNodeIds.length) return false;
+  if (!areFlowDayBucketsEqual(previousProps.flowWindow, nextProps.flowWindow)) return false;
   return previousFlowNodeIds.every((nodeId, index) => {
     if (nodeId !== nextFlowNodeIds[index]) return false;
     const previousNode = previousProps.nodesById[nodeId];
@@ -126,10 +128,6 @@ const ReviewQueueSidebarPanel = memo(function ReviewQueueSidebarPanel(props: {
     );
   });
 });
-
-function collectFlowWindowNodeIds(flowWindow: ReviewFlowWindow) {
-  return [...flowWindow.queueNodeIds, ...flowWindow.readyNodeIds, ...flowWindow.upcomingNodeIds];
-}
 
 function renderDevPanel(props: Pick<WorkspaceRightSidebarPanelProps, 'activeNodeId' | 'nodesById' | 'reviewSchedulerSettings'>) {
   return (
@@ -166,6 +164,7 @@ function renderReviewQueuePanel(
     <ReviewQueueSidebarPanel
       currentNodeId={props.reviewCurrentNodeId}
       flowWindow={props.reviewFlowWindow ?? {
+        dayBuckets: [],
         queueNodeIds: props.reviewActiveQueueNodeIds ?? props.reviewQueueNodeIds,
         readyNodeIds: [],
         upcomingNodeIds: []

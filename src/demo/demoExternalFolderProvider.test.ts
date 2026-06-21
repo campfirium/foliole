@@ -42,7 +42,7 @@ function createTextFile(name: string, content: string) {
 
 beforeEach(() => {
   vi.unstubAllGlobals();
-  useWorkspaceStore.setState(createDemoWorkspaceSnapshot(canonicalDemoPath(DEFAULT_DEMO_TOPIC.slug)));
+  useWorkspaceStore.setState(createDemoWorkspaceSnapshot(canonicalDemoPath(DEFAULT_DEMO_TOPIC!.slug)));
 });
 
 it('indexes top-level markdown and text files while ignoring hidden, nested, and unsupported entries', async () => {

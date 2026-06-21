@@ -1,4 +1,4 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
@@ -33,22 +33,23 @@ beforeEach(() => {
 
 it('does not render outside the Demo runtime', () => {
   renderWithLocalization(
-    <WorkspaceDemoControlsSurface flowWindow={{ queueNodeIds: [], readyNodeIds: [], upcomingNodeIds: ['topic-1'] }} />
+    <WorkspaceDemoControlsSurface flowWindow={{ dayBuckets: [{ dayOffset: 1, nodeIds: ['topic-1'] }], queueNodeIds: [], readyNodeIds: [], upcomingNodeIds: ['topic-1'] }} />
   );
 
-  expect(screen.queryByRole('region', { name: 'Demo controls' })).toBeNull();
+  expect(screen.queryByLabelText('Demo Flow notice')).toBeNull();
 });
 
-it('renders Demo controls as an independent surface and keeps the runtime action', () => {
+it('renders a buttonless Demo day-clear notice when later day content exists', () => {
   installDemoState(true);
 
   renderWithLocalization(
-    <WorkspaceDemoControlsSurface flowWindow={{ queueNodeIds: [], readyNodeIds: [], upcomingNodeIds: ['topic-1'] }} />
+    <WorkspaceDemoControlsSurface flowWindow={{ dayBuckets: [{ dayOffset: 1, nodeIds: ['topic-1'] }], queueNodeIds: [], readyNodeIds: [], upcomingNodeIds: ['topic-1'] }} />
   );
 
-  fireEvent.click(screen.getByRole('button', { name: 'Continue to Day 3' }));
-
-  expect(screen.getByRole('region', { name: 'Demo controls' })).toBeInTheDocument();
-  expect(screen.getByText('Day 2 is clear. Continue the preview to see what comes back next.')).toBeInTheDocument();
-  expect(continueToNextPreviewDay).toHaveBeenCalledTimes(1);
+  expect(screen.getByLabelText('Demo Flow notice')).toBeInTheDocument();
+  expect(screen.getByText('Day 3 content is clear.')).toBeInTheDocument();
+  expect(screen.getByText('Keep browsing to see what comes back later, or come back tomorrow.')).toBeInTheDocument();
+  expect(screen.queryByRole('button')).toBeNull();
+  expect(screen.queryByText('Clear local data')).toBeNull();
+  expect(continueToNextPreviewDay).not.toHaveBeenCalled();
 });

@@ -10,6 +10,7 @@ import {
 
 import { WorkspaceDemoControlsSurface } from './WorkspaceDemoControlsSurface';
 import { useWorkspaceRenderDiagnostic } from './workspaceInputLagRenderDiagnostic';
+import { areFlowDayBucketsEqual, areStringArraysEqual } from './workspaceRightSidebarFlowWindow';
 import {
   renderWorkspaceRightSidebarPanel,
   type WorkspaceRightSidebarPanelProps
@@ -35,10 +36,6 @@ function areReviewQueueSidebarPropsEqual(previous: WorkspaceRightSidebarProps, n
   return !Object.values(changed).some(Boolean);
 }
 
-function areStringArraysEqual(previous: readonly string[], next: readonly string[]) {
-  return previous.length === next.length && previous.every((value, index) => value === next[index]);
-}
-
 function areReviewFlowWindowsEqual(
   previous: WorkspaceRightSidebarProps['reviewFlowWindow'],
   next: WorkspaceRightSidebarProps['reviewFlowWindow']
@@ -49,7 +46,8 @@ function areReviewFlowWindowsEqual(
   return (
     areStringArraysEqual(previous.queueNodeIds, next.queueNodeIds) &&
     areStringArraysEqual(previous.readyNodeIds, next.readyNodeIds) &&
-    areStringArraysEqual(previous.upcomingNodeIds, next.upcomingNodeIds)
+    areStringArraysEqual(previous.upcomingNodeIds, next.upcomingNodeIds) &&
+    areFlowDayBucketsEqual(previous, next)
   );
 }
 

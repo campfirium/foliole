@@ -118,13 +118,14 @@ it('rerenders the review queue panel when upcoming flow entries change', async (
     reviewQueuePanelRender.mockClear();
     const node = createNode({ id: 'node-1', title: 'Queued note' });
     const { rerender } = renderWithLocalization(
-      createReviewQueueSidebarElement(node, { queueNodeIds: ['node-1'], readyNodeIds: [], upcomingNodeIds: [] })
+      createReviewQueueSidebarElement(node, { dayBuckets: [], queueNodeIds: ['node-1'], readyNodeIds: [], upcomingNodeIds: [] })
     );
 
     await waitFor(() => expect(reviewQueuePanelRender).toHaveBeenCalledTimes(1));
 
     rerender(createReviewQueueSidebarElement(node, {
       queueNodeIds: ['node-1'],
+      dayBuckets: [{ dayOffset: 1, nodeIds: ['node-2'] }],
       readyNodeIds: [],
       upcomingNodeIds: ['node-2']
     }));
@@ -133,6 +134,7 @@ it('rerenders the review queue panel when upcoming flow entries change', async (
 });
 
 function createReviewQueueSidebarElement(node: Node, reviewFlowWindow?: {
+  dayBuckets: Array<{ dayOffset: number; nodeIds: string[] }>;
   queueNodeIds: string[];
   readyNodeIds: string[];
   upcomingNodeIds: string[];

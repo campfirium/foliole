@@ -67,6 +67,7 @@ it('does not trim resolved pending node sync content without a reloadable runtim
   stagePendingNodeSync({
     nodeId: 'node-1',
     parentNodeId: null,
+    position: 0,
     kind: 'topic',
     title: 'node-1',
     isTitleManual: true,

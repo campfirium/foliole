@@ -20,6 +20,7 @@ import type { BuildLayoutPropsArgs } from './layoutPropsBuilderTypes';
 import { enterReviewModeSession } from './reviewModeSessionActions';
 
 const EMPTY_REVIEW_FLOW_WINDOW = Object.freeze({
+  dayBuckets: [],
   queueNodeIds: [],
   readyNodeIds: [],
   upcomingNodeIds: []

@@ -82,7 +82,6 @@ function renderRegularSection(props: WorkspaceFolderColumnProps) {
       bodyAppendContent={
         <>
           <WorkspaceVirtualSection
-            hideInDemo={props.hideVirtualSectionInDemo}
             isVirtualViewOpen={props.isVirtualViewOpen}
             nodeOrder={props.nodeOrder}
             nodesById={props.nodesById}
@@ -90,6 +89,7 @@ function renderRegularSection(props: WorkspaceFolderColumnProps) {
             virtualResultCountById={props.virtualResultCountById}
             {...definedProps({
               activeVirtualNodeId: props.activeVirtualNodeId,
+              hideInDemo: props.hideVirtualSectionInDemo,
               onOpenVirtualView: props.onOpenVirtualView
             })}
           />

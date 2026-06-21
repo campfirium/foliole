@@ -19,15 +19,17 @@ export function repairDemoWorkspacePayload(raw: string, pathname = '/demo/'): st
   }
 }
 
-function repairInlineDocumentNodes(nodesById: Record<string, Node | undefined>) {
+function repairInlineDocumentNodes(nodesById: Record<string, Node | undefined>): Record<string, Node> {
   let changed = false;
-  const nextNodesById: Record<string, Node | undefined> = {};
+  const nextNodesById: Record<string, Node> = {};
   Object.entries(nodesById).forEach(([nodeId, node]) => {
     const nextNode = repairInlineDocumentNode(node);
     if (nextNode !== node) changed = true;
-    nextNodesById[nodeId] = nextNode;
+    if (nextNode) {
+      nextNodesById[nodeId] = nextNode;
+    }
   });
-  return changed ? nextNodesById : nodesById;
+  return changed ? nextNodesById : Object.fromEntries(Object.entries(nodesById).filter((entry): entry is [string, Node] => Boolean(entry[1])));
 }
 
 function repairInlineDocumentNode(node: Node | undefined) {

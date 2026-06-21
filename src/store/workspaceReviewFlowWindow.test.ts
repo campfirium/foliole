@@ -32,6 +32,7 @@ it('builds a display-only flow window with future topics outside the live queue'
   expect(flowWindow.queueNodeIds).toEqual(['qa-queue']);
   expect(flowWindow.readyNodeIds).toEqual(['qa-ready', 'reading-ready']);
   expect(flowWindow.upcomingNodeIds).toEqual(['reading-upcoming']);
+  expect(flowWindow.dayBuckets).toEqual([{ dayOffset: 10, nodeIds: ['reading-upcoming'] }]);
   expect(liveQueue.taskNodeIds).not.toContain('reading-upcoming');
 });
 
@@ -49,6 +50,14 @@ it('keeps ready and upcoming entries in separate flow windows', () => {
 
   expect(flowWindow.readyNodeIds).toHaveLength(22);
   expect(flowWindow.upcomingNodeIds).toHaveLength(25);
+  expect(flowWindow.dayBuckets[0]).toEqual({
+    dayOffset: 1,
+    nodeIds: ['reading-upcoming-1']
+  });
+  expect(flowWindow.dayBuckets[1]).toEqual({
+    dayOffset: 2,
+    nodeIds: ['reading-upcoming-2']
+  });
   expect(flowWindow.upcomingNodeIds[0]).toBe('reading-upcoming-1');
   expect(flowWindow.upcomingNodeIds).not.toContain('reading-ready-1');
 });
