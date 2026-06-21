@@ -69,6 +69,11 @@ it('keeps tab focus inside the command palette dialog', async () => {
   const result = screen.getByRole('button', { name: 'Open topic' });
 
   expect(dialog).toHaveAttribute('aria-modal', 'true');
+  expect(input).toHaveAttribute('autocomplete', 'off');
+  expect(input).toHaveAttribute('data-1p-ignore', 'true');
+  expect(input).toHaveAttribute('data-bwignore', 'true');
+  expect(input).toHaveAttribute('data-lpignore', 'true');
+  expect(input).toHaveAttribute('spellcheck', 'false');
   expect(result).toHaveAttribute('aria-keyshortcuts', 'Control+P Meta+P');
   expect(screen.getByText('Navigation')).toBeInTheDocument();
   await waitFor(() => expect(input).toHaveFocus());

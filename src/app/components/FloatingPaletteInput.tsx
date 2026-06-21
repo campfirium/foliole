@@ -27,7 +27,11 @@ export function FloatingPaletteInput(props: FloatingPaletteInputProps) {
   return (
     <input
       aria-label={props.inputLabel}
+      autoComplete="off"
       className={appFloatingInputClassName()}
+      data-1p-ignore="true"
+      data-bwignore="true"
+      data-lpignore="true"
       onChange={(event) => props.onQueryChange(event.target.value)}
       onCompositionEnd={(event) => {
         props.onCompositionChange?.(false);
@@ -45,6 +49,7 @@ export function FloatingPaletteInput(props: FloatingPaletteInputProps) {
       }
       placeholder={props.placeholder}
       ref={inputRef}
+      spellCheck={false}
       type="text"
       value={props.query}
     />
