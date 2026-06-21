@@ -45,7 +45,7 @@ it('uses the parent topic as the review anchor for plain child items', () => {
     forceVisibleNodeId: 'review-item',
     nodesById: { 'review-item': reviewItem, 'source-topic': sourceTopic },
     rows: createRows([sourceTopic, reviewItem])
-  })).toEqual({ placement: 'second-visible-row', scrollNodeId: 'source-topic' });
+  })).toEqual({ placement: 'comfort', scrollNodeId: 'source-topic' });
 });
 
 it('keeps the source topic as the review anchor even when a derived child is distant', () => {
@@ -69,7 +69,7 @@ it('keeps the source topic as the review anchor even when a derived child is dis
     forceVisibleNodeId: 'review-item',
     nodesById: { 'review-item': reviewItem, 'source-topic': sourceTopic },
     rows: createRows([sourceTopic, ...highlightNodes, reviewItem])
-  })).toEqual({ placement: 'second-visible-row', scrollNodeId: 'source-topic' });
+  })).toEqual({ placement: 'comfort', scrollNodeId: 'source-topic' });
 });
 
 it('falls back to the focused child when the parent is not visible', () => {
@@ -84,5 +84,5 @@ it('falls back to the focused child when the parent is not visible', () => {
     forceVisibleNodeId: 'review-item',
     nodesById: { 'review-item': reviewItem },
     rows: createRows([reviewItem])
-  })).toEqual({ placement: 'near-visible-row', scrollNodeId: 'review-item' });
+  })).toEqual({ placement: 'comfort', scrollNodeId: 'review-item' });
 });

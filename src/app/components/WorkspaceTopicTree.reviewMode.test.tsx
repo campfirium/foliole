@@ -5,7 +5,6 @@ import { renderWithLocalization } from '../../shared/localization/testLocalizati
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { WorkspaceTopicTree } from './WorkspaceTopicTree';
-import { resolveSecondVisibleRowScrollPadding } from './workspaceTopicTreeScrollPadding';
 
 function createNode(args: {
   anchorLink?: { id: string; kind: 'highlight' };
@@ -93,7 +92,39 @@ it('opens the active review item and its descendants in the item column', () => 
   expect(within(itemColumn).getByRole('treeitem', { name: 'Review Child' })).toHaveAttribute('aria-current', 'page');
 });
 
-it('positions the active review item as the second visible row when possible', async () => {
+it('keeps the topic tree top anchor when the review item is already visible', async () => {
+  const nodesById = {
+    'source-topic': createNode({ id: 'source-topic', title: 'Source Topic' }),
+    'review-item': createNode({ id: 'review-item', title: 'Review Item' })
+  };
+
+  renderWithLocalization(
+    <WorkspaceTopicTree
+      activeFolderId="folder-a"
+      activeNodeId="review-item"
+      forceVisibleNodeId="review-item"
+      itemIds={['source-topic', 'review-item']}
+      nodesById={nodesById}
+      onOpenMoveToNode={() => undefined}
+      onSelectNode={() => undefined}
+    />
+  );
+
+  const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
+  const scrollContainer = itemColumn.querySelector('.app-scrollbar') as HTMLDivElement;
+  const reviewRow = within(itemColumn).getByRole('treeitem', { name: 'Review Item' });
+  expect(within(itemColumn).getByRole('treeitem', { name: 'Review Item' })).toHaveAttribute('aria-current', 'page');
+
+  Object.defineProperty(scrollContainer, 'clientHeight', { configurable: true, value: 100 });
+  Object.defineProperty(scrollContainer, 'scrollHeight', { configurable: true, value: 1000 });
+  Object.defineProperty(reviewRow, 'offsetTop', { configurable: true, value: 40 });
+  Object.defineProperty(reviewRow, 'offsetHeight', { configurable: true, value: 30 });
+  scrollContainer.scrollTop = 0;
+
+  await waitFor(() => expect(scrollContainer.scrollTop).toBe(0));
+});
+
+it('scrolls an offscreen review item into view without second-row anchoring', async () => {
   const nodesById = {
     'earlier-topic': createNode({ id: 'earlier-topic', title: 'Earlier Topic' }),
     'review-item': createNode({ id: 'review-item', title: 'Review Item' })
@@ -113,53 +144,18 @@ it('positions the active review item as the second visible row when possible', a
 
   const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
   const scrollContainer = itemColumn.querySelector('.app-scrollbar') as HTMLDivElement;
-  const earlierRow = within(itemColumn).getByRole('treeitem', { name: 'Earlier Topic' });
-  expect(within(itemColumn).getByRole('treeitem', { name: 'Review Item' })).toHaveAttribute('aria-current', 'page');
+  const reviewRow = within(itemColumn).getByRole('treeitem', { name: 'Review Item' });
+  expect(reviewRow).toHaveAttribute('aria-current', 'page');
 
   Object.defineProperty(scrollContainer, 'clientHeight', { configurable: true, value: 100 });
   Object.defineProperty(scrollContainer, 'scrollHeight', { configurable: true, value: 1000 });
-  Object.defineProperty(earlierRow, 'offsetTop', { configurable: true, value: 160 });
+  Object.defineProperty(reviewRow, 'offsetTop', { configurable: true, value: 260 });
+  Object.defineProperty(reviewRow, 'offsetHeight', { configurable: true, value: 30 });
 
-  await waitFor(() => expect(scrollContainer.scrollTop).toBe(160));
+  await waitFor(() => expect(scrollContainer.scrollTop).toBe(222));
 });
 
-it('uses the source topic as the second-row review anchor for nearby derived items', async () => {
-  const nodesById = {
-    'earlier-topic': createNode({ id: 'earlier-topic', title: 'Earlier Topic' }),
-    'source-topic': createNode({ id: 'source-topic', title: 'Source Topic' }),
-    'review-item': createNode({
-      anchorLink: { id: 'anchor-a', kind: 'highlight' },
-      id: 'review-item',
-      parentNodeId: 'source-topic',
-      title: 'Review Item'
-    })
-  };
-
-  renderWithLocalization(
-    <WorkspaceTopicTree
-      activeFolderId="folder-a"
-      activeNodeId="review-item"
-      forceVisibleNodeId="review-item"
-      itemIds={['earlier-topic', 'source-topic', 'review-item']}
-      nodesById={nodesById}
-      onOpenMoveToNode={() => undefined}
-      onSelectNode={() => undefined}
-    />
-  );
-
-  const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
-  const scrollContainer = itemColumn.querySelector('.app-scrollbar') as HTMLDivElement;
-  const earlierRow = within(itemColumn).getByRole('treeitem', { name: 'Earlier Topic' });
-  expect(within(itemColumn).getByRole('treeitem', { name: 'Review Item' })).toHaveAttribute('aria-current', 'page');
-
-  Object.defineProperty(scrollContainer, 'clientHeight', { configurable: true, value: 100 });
-  Object.defineProperty(scrollContainer, 'scrollHeight', { configurable: true, value: 1000 });
-  Object.defineProperty(earlierRow, 'offsetTop', { configurable: true, value: 160 });
-
-  await waitFor(() => expect(scrollContainer.scrollTop).toBe(160));
-});
-
-it('uses the parent topic as the second-row review anchor for plain child items', async () => {
+it('keeps a visible parent topic anchored for child review items', async () => {
   const nodesById = {
     'earlier-topic': createNode({ id: 'earlier-topic', title: 'Earlier Topic' }),
     'source-topic': createNode({ id: 'source-topic', title: 'Source Topic' }),
@@ -184,46 +180,14 @@ it('uses the parent topic as the second-row review anchor for plain child items'
 
   const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
   const scrollContainer = itemColumn.querySelector('.app-scrollbar') as HTMLDivElement;
-  const earlierRow = within(itemColumn).getByRole('treeitem', { name: 'Earlier Topic' });
+  const sourceRow = within(itemColumn).getByRole('treeitem', { name: 'Source Topic', expanded: true });
   expect(within(itemColumn).getByRole('treeitem', { name: 'Review Item' })).toHaveAttribute('aria-current', 'page');
 
   Object.defineProperty(scrollContainer, 'clientHeight', { configurable: true, value: 100 });
   Object.defineProperty(scrollContainer, 'scrollHeight', { configurable: true, value: 1000 });
-  Object.defineProperty(earlierRow, 'offsetTop', { configurable: true, value: 160 });
+  Object.defineProperty(sourceRow, 'offsetTop', { configurable: true, value: 120 });
+  Object.defineProperty(sourceRow, 'offsetHeight', { configurable: true, value: 30 });
+  scrollContainer.scrollTop = 120;
 
-  await waitFor(() => expect(scrollContainer.scrollTop).toBe(160));
-});
-
-it('reserves the first visual row when the source topic is the first list item', async () => {
-  const nodesById = {
-    'source-topic': createNode({ id: 'source-topic', title: 'Source Topic' }),
-    'review-item': createNode({
-      anchorLink: { id: 'anchor-a', kind: 'highlight' },
-      id: 'review-item',
-      parentNodeId: 'source-topic',
-      title: 'Review Item'
-    })
-  };
-
-  renderWithLocalization(
-    <WorkspaceTopicTree
-      activeFolderId="folder-a"
-      activeNodeId="review-item"
-      forceVisibleNodeId="review-item"
-      itemIds={['source-topic', 'review-item']}
-      nodesById={nodesById}
-      onOpenMoveToNode={() => undefined}
-      onSelectNode={() => undefined}
-    />
-  );
-
-  const tree = screen.getByRole('tree', { name: 'Topic list' });
-  expect(within(tree).getByRole('treeitem', { name: 'Review Item' })).toHaveAttribute('aria-current', 'page');
-  await waitFor(() => expect(Number.parseFloat(tree.style.paddingTop)).toBeGreaterThan(0));
-});
-
-it('keeps enough bottom scroll room to place a tail review item on the second row', () => {
-  expect(resolveSecondVisibleRowScrollPadding(640, 36)).toBe(568);
-  expect(resolveSecondVisibleRowScrollPadding(640, 36, 'near-visible-row')).toBe(532);
-  expect(resolveSecondVisibleRowScrollPadding(64, 36)).toBe(0);
+  await waitFor(() => expect(scrollContainer.scrollTop).toBe(120));
 });

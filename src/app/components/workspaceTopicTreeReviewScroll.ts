@@ -21,11 +21,11 @@ export function resolveWorkspaceTopicTreeReviewScroll(args: {
   const parentRowIndex = findRowIndex(args.rows, parentNodeId);
 
   if (parentNodeId && parentRowIndex !== null) {
-    return { placement: 'second-visible-row', scrollNodeId: parentNodeId };
+    return { placement: 'comfort', scrollNodeId: parentNodeId };
   }
 
   return {
-    placement: parentNodeId ? 'near-visible-row' : 'second-visible-row',
+    placement: 'comfort',
     scrollNodeId: args.focusedNodeId
   };
 }
