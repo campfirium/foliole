@@ -60,7 +60,6 @@
 7. 若方案包含扫描、轮询、自造协议、新依赖、长期双写、运行时迁移、隐式 fallback、局部复制或先污染后清理，必须进入 `STOP_CONFIRM`，并说明方案身份是正式主方案、spike、诊断、兜底还是一次性迁移工具。
 8. 执行中发现不再属于同一能力闭环，或新增 schema / bridge / IPC / 协议 / 依赖 / 后台任务 / fallback / migration / 双写 / scan / poll，必须停下进入 `NEEDS_EVAL` 或 `STOP_CONFIRM`。
 9. 只有用户明确要求 spike，或任务评估把某段代码标为 spike / diagnostic / fallback / one-off migration 时，才允许写临时验证代码；否则临时代码不得接入正式入口。
-10. 需要找文件、符号、测试或脚本入口时，默认先用 `rg --files` / `rg` 在仓库内定位。
 
 ## Delegation
 
@@ -89,7 +88,7 @@
 - 凡本轮改动会进入应用运行时或改变用户可见行为，必须完成一次宿主级 L1 验收；L1 前置验证（文件预算、窄测试、lint、typecheck、copy guard、L0 快检等）必须先按改动范围完成，不得用 L1 替代前置红灯修复。
 - L1 的具体入口由受影响宿主规则决定：桌面按 `electron/AGENTS.md` 选择 Hidden Native 或可见原生自动验收；Android / iOS / companion 按对应局部规则选择等价宿主验收。只改文档、agent 规则、只读诊断、测试代码或脚本内部逻辑，且不改变应用运行时行为时，可跳过 L1，但最终汇报必须写明跳过原因。
 - 默认先执行覆盖本轮能力闭环的最小相关前置验证；只有能力闭环范围或技术风险超过相关验证覆盖面时，才升级到 `quality:desktop`、`quality:android`、`quality:android:device`、`quality:shared`、`quality:full`、`quality:release` 或 `quality:fast`。
-- 定向测试先用 `rg --files` / `rg` 找测试文件和脚本；少量明确测试文件优先 `npm run test:files -- <file...>`，变更范围干净且需要按 diff 自动选测时用 `npm run test:changed`。
+- 少量明确测试文件优先 `npm run test:files -- <file...>`，变更范围干净且需要按 diff 自动选测时用 `npm run test:changed`。
 - 改动用户可见行为、数据 / sync / bridge / adapter / security contract 或测试断言时，按 `.lab/specs/_governance/test-drift-prevention-expectation.md` 定位并维护对应测试 contract；可复现 Bug 修复必须新增至少 1 条自动化回归测试。
 - 处理测试红灯时先完成 contract 归因，不得只改 expected；质量闸失败后先跑失败文件、失败 npm script 或失败 Gradle task 的定向复验，已收敛失败修复后不默认重跑整宿主质量闸。
 - 改动 sync pack manifest / schema / apply 语义，或 `lib/core/sync/syncPack*`、`electron/database/syncPack*`、`electron/sync/syncPack*`、`src/shared/platform/companionSyncPack*`，必须先跑 `npm run test:sync-pack`。
