@@ -37,6 +37,10 @@ export function isDemoCanonicalRoutePath(pathname: string) {
   return DEMO_CANONICAL_ROUTE_PATTERN.test(pathname);
 }
 
+export function normalizeDemoCanonicalRouteHtml(html: string) {
+  return html.replace('src="./main.tsx"', 'src="/main.tsx"');
+}
+
 export function demoCanonicalRouteDevPlugin(): Plugin {
   return {
     name: 'demo-canonical-route-dev',
@@ -53,7 +57,7 @@ export function demoCanonicalRouteDevPlugin(): Plugin {
         }
         const indexPath = path.join(server.config.root, 'index.html');
         const html = await fs.readFile(indexPath, 'utf8');
-        const transformed = await server.transformIndexHtml('/index.html', html);
+        const transformed = normalizeDemoCanonicalRouteHtml(await server.transformIndexHtml('/index.html', html));
         response.statusCode = 200;
         response.setHeader('Content-Type', 'text/html; charset=utf-8');
         response.end(request.method === 'HEAD' ? '' : transformed);

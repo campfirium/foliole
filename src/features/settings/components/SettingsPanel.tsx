@@ -27,8 +27,11 @@ import {
 } from './useSettingsSearch';
 
 interface SettingsPanelProps {
+  headerNotice?: ReactNode;
+  hideLanguageSetting?: boolean;
   importCategoryContent?: ReactNode;
   onClose: () => void;
+  previewDesktopSettings?: boolean;
   onRunSupportCommand?: ((commandId: string) => void) | undefined;
   readwiseReaderCategoryContent?: ReactNode;
   requestedCategory?: SettingsCategoryId | null;
@@ -85,6 +88,8 @@ type SettingsPanelBodyProps = {
   isSavingExternalSearchFolders: boolean;
   libraryHomePath: string;
   description: string;
+  headerNotice?: ReactNode;
+  hideLanguageSetting?: boolean;
   mirrorLinkRebuildError: string | null;
   mirrorLinkRebuildFeedback: string | null;
   mirrorOutputRebuildError: string | null;
@@ -105,6 +110,7 @@ type SettingsPanelBodyProps = {
   onRestoreDefault: (location: 'assets_dir' | 'inbox' | 'library_home' | 'mirror') => void;
   onUpdateExternalSearchFolder: ReturnType<typeof useExternalSearchFolders>['onUpdateExternalSearchFolder'];
   pendingLocation: 'assets_dir' | 'inbox' | 'library_home' | 'mirror' | null;
+  previewDesktopSettings?: boolean;
   readwiseReaderCategoryContent?: ReactNode;
   setActiveCategory: (category: SettingsCategoryId) => void;
   title: string;
@@ -122,6 +128,7 @@ function createSettingsCategoryProps(
     externalSearchError: props.externalSearchError,
     externalSearchFeedback: props.externalSearchFeedback,
     externalSearchFolders: props.externalSearchFolders,
+    hideLanguageSetting: props.hideLanguageSetting,
     inboxPath: props.inboxPath,
     isDesktopRuntime: props.isDesktopRuntime,
     isLoadingLibraryPaths: props.isLoadingLibraryPaths,
@@ -149,6 +156,7 @@ function createSettingsCategoryProps(
     onRestoreDefault: props.onRestoreDefault,
     onUpdateExternalSearchFolder: props.onUpdateExternalSearchFolder,
     pendingLocation: props.pendingLocation,
+    previewDesktopSettings: props.previewDesktopSettings,
     readwiseReaderCategoryContent: props.readwiseReaderCategoryContent,
     onEnterPreview: () => setIsPreviewActive(true),
     onSettingsBackdropTransparentChange: setIsBackdropTransparent
@@ -174,6 +182,7 @@ function SettingsPanelBody(props: SettingsPanelBodyProps) {
       categoryProps={categoryProps}
       description={props.description}
       headerActions={props.activeCategory === 'external-search' ? <SettingsExternalFoldersEnabledSwitch /> : undefined}
+      headerNotice={props.headerNotice}
       hotkeys={hotkeys}
       isBackdropTransparent={isBackdropTransparent}
       isPreviewActive={preview.isPreviewActive}

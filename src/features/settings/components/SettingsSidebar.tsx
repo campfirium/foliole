@@ -59,7 +59,7 @@ export function SettingsSidebar(props: {
       ariaLabel={t('settings.sidebar.aria')}
       bodyClassName="px-4 pb-5 pt-3"
       className="border-r border-settings-divider"
-      headerClassName="min-h-[64px] border-b border-settings-divider/55 px-5 py-3"
+      headerClassName="h-[64px] min-h-0 border-b border-settings-divider/55 px-5 py-0"
       surfaceClassName="bg-settings-sidebar"
       title={<SettingsSidebarBrand />}
     >

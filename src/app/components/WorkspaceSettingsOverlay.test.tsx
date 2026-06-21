@@ -2,11 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
-const workspaceSettingsOverlayMocks = vi.hoisted(() => ({
-  isDemo: false,
-  requestAppConfirmation: vi.fn(),
-  useImportSourceWorkspaceState: vi.fn()
-}));
+const workspaceSettingsOverlayMocks = vi.hoisted(() => ({ isDemo: false, requestAppConfirmation: vi.fn(), useImportSourceWorkspaceState: vi.fn() }));
 
 function createDefaultOverlayImportSettings() {
   return {
@@ -117,15 +113,23 @@ vi.mock('../../shared/ui', async (importOriginal) => {
 });
 
 vi.mock('../../features/settings/components/SettingsPanel', () => ({
-  SettingsPanel: (props: { importCategoryContent?: ReactNode }) => (
-    <div data-testid="settings-panel">{props.importCategoryContent}</div>
+  SettingsPanel: (props: {
+    headerNotice?: ReactNode;
+    hideLanguageSetting?: boolean;
+    importCategoryContent?: ReactNode;
+    onRunSupportCommand?: (commandId: string) => void; previewDesktopSettings?: boolean;
+    readwiseReaderCategoryContent?: ReactNode;
+  }) => (
+    <div data-has-support-command={String(Boolean(props.onRunSupportCommand))} data-hide-language-setting={String(props.hideLanguageSetting)} data-preview-desktop-settings={String(props.previewDesktopSettings)} data-testid="settings-panel">
+      {props.headerNotice}
+      {props.importCategoryContent}
+      {props.previewDesktopSettings ? props.readwiseReaderCategoryContent : null}
+    </div>
   )
 }));
-
 import { WorkspaceSettingsOverlay } from './WorkspaceSettingsOverlay';
 
 const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
-
 beforeEach(() => {
   workspaceSettingsOverlayMocks.isDemo = false;
   workspaceSettingsOverlayMocks.requestAppConfirmation.mockReset();
@@ -155,18 +159,18 @@ it('opens the demo settings preview without loading live settings state', async 
     <WorkspaceSettingsOverlay
       isSettingsOpen
       onClose={() => undefined}
+      onRunSupportCommand={() => undefined}
       requestedCategory="general"
     />
   );
 
+  await vi.dynamicImportSettled();
   expect(await screen.findByText('settings.demoPreview.banner.title')).toBeInTheDocument();
-  expect(screen.getByText('settings.demoPreview.readOnlyBadge')).toBeInTheDocument();
-  expect(screen.getByRole('link', { name: 'settings.demoPreview.downloadDesktop' })).toHaveAttribute(
-    'href',
-    'https://github.com/campfirium/foliole/releases'
-  );
+  expect(screen.getByText('settings.demoPreview.banner.description')).toBeInTheDocument();
+  expect(screen.getByTestId('settings-panel')).toHaveAttribute('data-hide-language-setting', 'true');
+  expect(screen.getByTestId('settings-panel')).toHaveAttribute('data-preview-desktop-settings', 'true');
+  expect(screen.getByTestId('settings-panel')).toHaveAttribute('data-has-support-command', 'true');
   expect(workspaceSettingsOverlayMocks.useImportSourceWorkspaceState).not.toHaveBeenCalled();
-  expect(screen.queryByTestId('settings-panel')).not.toBeInTheDocument();
 });
 
 it('opens the keep import preview dialog from the watch folders table', async () => {
@@ -184,14 +188,14 @@ it('opens the keep import preview dialog from the watch folders table', async ()
   );
 
   await vi.dynamicImportSettled();
-  fireEvent.click(await screen.findByRole('button', { name: 'Preview source-1' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'desktop.importSource.preview source-1' }));
 
   await waitFor(() => expect(handlePreviewKeepImport).toHaveBeenCalledWith('source-1', 'sources'));
-  expect(await screen.findByRole('dialog', { name: 'Import preview' })).toBeInTheDocument();
+  expect(await screen.findByRole('dialog', { name: 'desktop.keepImport.preview.title' })).toBeInTheDocument();
   expect(screen.queryByText('/demo/merged')).not.toBeInTheDocument();
-  expect(screen.queryByText('Result preview')).not.toBeInTheDocument();
-  expect(screen.getByText('Checked 3 full document files; 3 matched highlights.')).toBeInTheDocument();
-  expect(screen.getByText('3 sample highlights shown below. Adjust the linked folder settings and preview again if they do not look right.')).toBeInTheDocument();
+  expect(screen.queryByText('desktop.keepImport.preview.resultPreview')).not.toBeInTheDocument();
+  expect(screen.getByText('desktop.keepImport.preview.result')).toBeInTheDocument();
+  expect(screen.getByText('desktop.keepImport.preview.guidance')).toBeInTheDocument();
   expect(screen.getByText('first highlight')).toBeInTheDocument();
   expect(screen.getByText('second highlight')).toBeInTheDocument();
   expect(screen.getByText('third highlight')).toBeInTheDocument();
@@ -213,7 +217,7 @@ it('confirms before enabling delete handling for a watch folder', async () => {
   );
 
   await vi.dynamicImportSettled();
-  fireEvent.change(await screen.findByRole('combobox', { name: 'Handling source-1' }), {
+  fireEvent.change(await screen.findByRole('combobox', { name: 'desktop.importSource.table.handling source-1' }), {
     target: { value: 'delete' }
   });
 

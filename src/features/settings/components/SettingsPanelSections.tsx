@@ -32,6 +32,7 @@ export interface SettingsCategoryContentProps {
   externalSearchError: string | null;
   externalSearchFeedback: string | null;
   externalSearchFolders: ExternalSourceSettingsFolder[];
+  hideLanguageSetting?: boolean;
   hotkeyItems: HotkeySettingItem[];
   inboxPath: string;
   isDesktopRuntime: boolean;
@@ -59,6 +60,7 @@ export interface SettingsCategoryContentProps {
   onRestoreDefault: (location: 'assets_dir' | 'inbox' | 'library_home' | 'mirror') => void;
   onUpdateExternalSearchFolder: (folderId: string, patch: ExternalSourceSettingsFolderPatch) => void;
   pendingLocation: 'assets_dir' | 'inbox' | 'library_home' | 'mirror' | null;
+  previewDesktopSettings?: boolean;
   readwiseReaderCategoryContent?: ReactNode;
   onHotkeyReset: (commandId: string) => void;
   onHotkeyResetAll: () => void;
@@ -104,6 +106,7 @@ function renderExternalSearchCategory(props: SettingsCategoryContentProps) {
       feedback={props.externalSearchFeedback}
       folders={props.externalSearchFolders}
       isDesktopRuntime={props.isDesktopRuntime}
+      previewDesktopSettings={props.previewDesktopSettings}
       isLoading={props.isLoadingExternalSearchFolders}
       isSaving={props.isSavingExternalSearchFolders}
       onAddFolder={props.onAddExternalSearchFolder}
@@ -160,7 +163,12 @@ export function SettingsCategoryContent(props: SettingsCategoryContentProps) {
     case 'editor':
       return <SettingsEditorSection />;
     case 'general':
-      return <SettingsGeneralSection />;
+      return (
+        <SettingsGeneralSection
+          hideLanguageSetting={props.hideLanguageSetting}
+          previewDesktopSettings={props.previewDesktopSettings}
+        />
+      );
     case 'web-lookup':
       return <SettingsWebLookupSection />;
     case 'appearance':

@@ -27,6 +27,7 @@ interface SettingsExternalSearchSectionProps {
   onRemoveFolder: (folderId: string) => void;
   onRetryLoad: () => void;
   onUpdateFolder: (folderId: string, patch: ExternalSourceSettingsFolderPatch) => void;
+  previewDesktopSettings?: boolean;
 }
 
 export function SettingsExternalSearchSection(props: SettingsExternalSearchSectionProps) {
@@ -54,7 +55,7 @@ export function SettingsExternalSearchSection(props: SettingsExternalSearchSecti
       <div className="min-w-0 overflow-hidden">
         <ExternalLibraryTable
           folders={props.folders}
-          isDesktopRuntime={props.isDesktopRuntime}
+          isDesktopRuntime={props.isDesktopRuntime || Boolean(props.previewDesktopSettings)}
           isEnabled={externalFoldersSettings.externalFoldersEnabled}
           isSaving={props.isSaving}
           onAddFolder={props.onAddFolder}

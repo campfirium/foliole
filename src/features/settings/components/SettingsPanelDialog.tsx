@@ -30,6 +30,7 @@ type SettingsPanelDialogProps = {
   activeResultIndex: number;
   categoryProps: SettingsPanelCategoryProps;
   description: string;
+  headerNotice?: ReactNode;
   hotkeys: ReturnType<typeof useHotkeySettings>;
   headerActions?: ReactNode;
   isBackdropTransparent: boolean;
@@ -54,16 +55,20 @@ function SettingsPanelDialogBody(props: SettingsPanelDialogProps) {
         setActiveCategory={props.setActiveCategory}
       />
       <div className="flex min-h-0 flex-col bg-settings-group">
-        <div className="flex min-h-[64px] items-center justify-end border-b border-settings-divider/55 px-7">
-          <SettingsSearchBox
-            activeResultIndex={props.activeResultIndex}
-            onActiveResultIndexChange={props.onActiveResultIndexChange}
-            onQueryChange={props.onSearchQueryChange}
-            onSelectResult={props.onSearchResultSelect}
-            placeholder={t('settings.search.placeholder')}
-            query={props.searchQuery}
-            results={props.searchResults}
-          />
+        <div className="flex h-[64px] min-h-0 items-center justify-end border-b border-settings-divider/55 px-7">
+          {props.headerNotice ? (
+            <div className="min-w-0 flex-1">{props.headerNotice}</div>
+          ) : (
+            <SettingsSearchBox
+              activeResultIndex={props.activeResultIndex}
+              onActiveResultIndexChange={props.onActiveResultIndexChange}
+              onQueryChange={props.onSearchQueryChange}
+              onSelectResult={props.onSearchResultSelect}
+              placeholder={t('settings.search.placeholder')}
+              query={props.searchQuery}
+              results={props.searchResults}
+            />
+          )}
         </div>
         <div className="app-scrollbar min-h-0 flex-1 overflow-auto px-7 py-7" ref={props.scrollContainerRef}>
           <div className="mb-7 px-5 pb-6">

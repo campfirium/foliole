@@ -1,7 +1,10 @@
 import { Suspense, lazy } from 'react';
 
+import { createDefaultImportManagerSettings } from '../../../lib/core/import/importManagerSettings';
 import type { SettingsCategoryId } from '../../features/settings/model/settingsPanelOptions';
 import { useDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
+
+import { SettingsReadwiseReaderContent } from './SettingsReadwiseReaderContent';
 
 function loadWorkspaceSettingsOverlayContent() {
   return import('./WorkspaceSettingsOverlayContent');
@@ -18,6 +21,8 @@ const WorkspaceSettingsOverlayContent = lazy(() =>
 const DemoSettingsPreviewOverlay = lazy(() =>
   loadDemoSettingsPreviewOverlay().then((module) => ({ default: module.DemoSettingsPreviewOverlay }))
 );
+
+const demoImportSettings = createDefaultImportManagerSettings();
 
 let workspaceSettingsOverlayPrewarm: Promise<void> | null = null;
 
@@ -73,6 +78,8 @@ export function WorkspaceSettingsOverlay({
       <Suspense fallback={null}>
         <DemoSettingsPreviewOverlay
           onClose={onClose}
+          onRunSupportCommand={onRunSupportCommand}
+          readwiseReaderCategoryContent={<DemoReadwiseReaderSettingsPreview />}
           requestedCategory={requestedCategory}
         />
       </Suspense>
@@ -87,5 +94,16 @@ export function WorkspaceSettingsOverlay({
         requestedCategory={requestedCategory}
       />
     </Suspense>
+  );
+}
+
+function DemoReadwiseReaderSettingsPreview() {
+  return (
+    <SettingsReadwiseReaderContent
+      config={demoImportSettings.readwiseReaderConfig}
+      onSave={() => undefined}
+      readwiseRootPath={demoImportSettings.readwiseRootPath}
+      readwiseSources={demoImportSettings.readwiseSources}
+    />
   );
 }

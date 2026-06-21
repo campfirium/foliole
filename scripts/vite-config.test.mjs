@@ -3,7 +3,11 @@
 import { describe, expect, it } from 'vitest';
 
 import companionViteConfig, { unwrapCssCascadeLayersForLegacyWebView } from '../vite.companion.config.ts';
-import demoViteConfig, { demoManifestPlugin, isDemoCanonicalRoutePath } from '../vite.demo.config.ts';
+import demoViteConfig, {
+  demoManifestPlugin,
+  isDemoCanonicalRoutePath,
+  normalizeDemoCanonicalRouteHtml
+} from '../vite.demo.config.ts';
 import viteConfig from '../vite.config.ts';
 import { injectDefaultStartupSkeletonHtml } from '../vite.shared.ts';
 
@@ -78,6 +82,12 @@ describe('vite config', () => {
     expect(isDemoCanonicalRoutePath('/zh-hant/demo/focused-reading-review/')).toBe(false);
     expect(isDemoCanonicalRoutePath('/ja/demo/focused-reading-review/')).toBe(false);
     expect(isDemoCanonicalRoutePath('/assets/demo/')).toBe(false);
+  });
+
+  it('serves Demo canonical dev routes with an absolute module entry', () => {
+    expect(normalizeDemoCanonicalRouteHtml('<script type="module" src="./main.tsx"></script>')).toContain(
+      'src="/main.tsx"'
+    );
   });
 
   it('emits the Demo manifest from public bundle asset names', () => {

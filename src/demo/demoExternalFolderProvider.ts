@@ -80,7 +80,7 @@ function saveFolders(state: DemoExternalFolderProviderState, nextFolders: Runtim
 
 async function selectFolderPath(state: DemoExternalFolderProviderState) {
   const picker = (window as BrowserWindowWithDirectoryPicker).showDirectoryPicker;
-  if (!picker) throw new Error('This browser does not support choosing folders in the Web demo.');
+  if (!picker) throw new Error('This browser does not support choosing folders in the Live Demo.');
   try {
     return await indexFolder(state, await picker());
   } catch (error) {

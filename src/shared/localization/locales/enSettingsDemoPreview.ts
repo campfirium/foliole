@@ -1,6 +1,6 @@
 export const EN_SETTINGS_DEMO_PREVIEW_TRANSLATIONS = {
   'settings.demoPreview.banner.title': 'Desktop settings preview',
-  'settings.demoPreview.banner.description': 'These controls show Foliole desktop capabilities. They do not change the current Web demo.',
+  'settings.demoPreview.banner.description': 'Live Demo shows these desktop app controls as a preview.',
   'settings.demoPreview.control.desktopOnly': 'Desktop only',
   'settings.demoPreview.control.previewOnly': 'Preview only',
   'settings.demoPreview.downloadDesktop': 'Download desktop app',
@@ -13,10 +13,6 @@ export const EN_SETTINGS_DEMO_PREVIEW_TRANSLATIONS = {
   'settings.demoPreview.hotkeys.study': 'Study shortcut',
   'settings.demoPreview.mouseGestures.title': 'Mouse gesture behavior',
   'settings.demoPreview.readwise.status': 'Readwise Reader status',
-  'settings.demoPreview.readOnlyBadge': 'Read-only Web preview',
-  'settings.demoPreview.note.label': 'Web demo note',
-  'settings.demoPreview.note.desktopOnly': 'This capability is available in the desktop app.',
-  'settings.demoPreview.note.externalFolders': 'The Web demo can choose a top-level local folder in supported browsers. Folder access is session-only and does not scan subfolders.',
-  'settings.demoPreview.note.previewOnly': 'Shown to match the desktop settings. Changes are not applied in this Web demo.',
-  'settings.demoPreview.note.readOnly': 'This value is shown for context in the Web demo.'
+  'settings.demoPreview.note.label': 'Folder access',
+  'settings.demoPreview.note.externalFolders': 'Choose a top-level local folder in supported browsers. Folder access is session-only and does not scan subfolders.'
 } as const;
