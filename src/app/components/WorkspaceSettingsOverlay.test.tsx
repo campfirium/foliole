@@ -167,9 +167,10 @@ it('opens the demo settings preview without loading live settings state', async 
   await vi.dynamicImportSettled();
   expect(await screen.findByText('settings.demoPreview.banner.title')).toBeInTheDocument();
   expect(screen.getByText('settings.demoPreview.banner.description')).toBeInTheDocument();
-  expect(screen.getByTestId('settings-panel')).toHaveAttribute('data-hide-language-setting', 'true');
-  expect(screen.getByTestId('settings-panel')).toHaveAttribute('data-preview-desktop-settings', 'true');
-  expect(screen.getByTestId('settings-panel')).toHaveAttribute('data-has-support-command', 'true');
+  const settingsPanel = screen.getByTestId('settings-panel');
+  expect(settingsPanel).toHaveAttribute('data-hide-language-setting', 'true');
+  expect(settingsPanel).toHaveAttribute('data-preview-desktop-settings', 'true');
+  expect(settingsPanel).toHaveAttribute('data-has-support-command', 'true');
   expect(workspaceSettingsOverlayMocks.useImportSourceWorkspaceState).not.toHaveBeenCalled();
 });
 

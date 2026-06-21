@@ -43,18 +43,14 @@ export function SettingsPanel(props: SettingsPanelProps) {
 }
 
 function SettingsPanelContent(props: SettingsPanelProps) {
-  const state = useSettingsPanelViewState(props.requestedCategory ?? null, Boolean(props.previewDesktopSettings));
+  const state = useSettingsPanelViewState(props.requestedCategory ?? null);
   return <SettingsPanelBody {...props} {...state} />;
 }
 
-function resolvePreviewCategory(category: SettingsCategoryId | null, previewDesktopSettings: boolean) {
-  return previewDesktopSettings && category === 'external-search' ? 'general' : category;
-}
-
-function useSettingsPanelViewState(requestedCategory: SettingsCategoryId | null, previewDesktopSettings: boolean) {
+function useSettingsPanelViewState(requestedCategory: SettingsCategoryId | null) {
   const t = useTranslation();
   const [activeCategory, setActiveCategory] = useState<SettingsCategoryId>(() =>
-    resolvePreviewCategory(requestedCategory ?? getInitialSettingsCategory(), previewDesktopSettings) ?? 'general'
+    requestedCategory ?? getInitialSettingsCategory() ?? 'general'
   );
   const libraryPathSettings = useLibraryPathSettings();
   const externalSearchFolders = useExternalSearchFolders();
@@ -62,9 +58,9 @@ function useSettingsPanelViewState(requestedCategory: SettingsCategoryId | null,
   useEffect(() => setWhitelistedLocalStorageItem(SETTINGS_CATEGORY_STORAGE_KEY, activeCategory), [activeCategory]);
   useEffect(() => {
     if (requestedCategory) {
-      setActiveCategory(resolvePreviewCategory(requestedCategory, previewDesktopSettings) ?? 'general');
+      setActiveCategory(requestedCategory);
     }
-  }, [previewDesktopSettings, requestedCategory]);
+  }, [requestedCategory]);
   const category = getSettingsCategoryOption(activeCategory, t);
   const title = category?.label ?? t('settings.title');
   const description = category?.description ?? t('settings.description');
@@ -201,8 +197,6 @@ function SettingsPanelBody(props: SettingsPanelBodyProps) {
       searchResults={search.results}
       setActiveCategory={props.setActiveCategory}
       title={props.title}
-      {...definedProps({ previewDesktopSettings: props.previewDesktopSettings })}
-      hiddenCategoryIds={props.previewDesktopSettings ? ['external-search'] : []}
     />
   );
 }

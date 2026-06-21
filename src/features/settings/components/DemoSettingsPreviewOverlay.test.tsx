@@ -25,6 +25,11 @@ it('uses the real desktop settings panel while hiding only the language setting'
 
   expect(await screen.findByText('Desktop settings preview')).toBeInTheDocument();
   expect(screen.getByText('Live Demo shows these desktop app controls as a preview.')).toBeInTheDocument();
+  const dialog = document.querySelector('[data-settings-root-dialog="true"]');
+  expect(dialog).not.toHaveAttribute('data-settings-desktop-preview');
+  expect(dialog).toHaveClass('w-[min(1240px,calc(100vw-36px))]');
+  expect(dialog).toHaveClass('rounded-lg');
+  expect(screen.queryByPlaceholderText('Search all settings...')).not.toBeInTheDocument();
   expect(screen.queryByText('App language')).not.toBeInTheDocument();
 
   const startupSwitch = await screen.findByRole('switch', { name: 'Start Foliole automatically' });
@@ -57,15 +62,15 @@ it('keeps the real hotkey settings surface in the Live Demo preview', async () =
   expect(screen.getByRole('button', { name: 'Add shortcut for Open settings' })).toBeInTheDocument();
 });
 
-it('hides external folders from the Live Demo settings preview', async () => {
+it('keeps external folders in the Live Demo settings preview', async () => {
   renderWithMouseGestureProvider(
     <DemoSettingsPreviewOverlay onClose={vi.fn()} requestedCategory="external-search" />
   );
 
-  expect(await screen.findByRole('heading', { name: 'General' })).toBeInTheDocument();
-  expect(screen.queryByText('External Folder')).toBeNull();
-  expect(screen.queryByRole('switch', { name: 'Enable External Folder' })).toBeNull();
-  expect(screen.queryByText('External Folder is available in the desktop app.')).not.toBeInTheDocument();
+  expect((await screen.findAllByRole('heading', { name: 'External Folder' })).length).toBeGreaterThan(0);
+  expect(screen.getByRole('button', { name: 'External Folder' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Add folder' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Choose folder' })).toBeInTheDocument();
 });
 
 it('renders supplied Readwise settings content instead of the unavailable fallback', async () => {

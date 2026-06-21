@@ -68,7 +68,7 @@ export function SettingsSidebar(props: {
       surfaceClassName="bg-settings-sidebar"
       title={<SettingsSidebarBrand />}
     >
-      <nav aria-label={t('settings.navigation.aria')} className="flex flex-col gap-4">
+      <nav aria-label={t('settings.navigation.aria')} className="flex w-full flex-col items-stretch gap-4">
         {groups.map((group) => (
           <SettingsSidebarGroup
             activeCategory={props.activeCategory}
@@ -110,11 +110,11 @@ function SettingsSidebarGroup(props: {
 }) {
   const t = useTranslation();
   return (
-    <div className="relative pt-4 before:absolute before:left-3 before:right-3 before:top-0 before:border-t before:border-settings-divider/65 first:pt-0 first:before:hidden">
-      <div className="mb-1 flex items-center gap-2 px-3 text-[0.72rem] font-semibold uppercase leading-5 tracking-[0.12em] text-foreground/58">
+    <div className="relative w-full pt-4 before:absolute before:left-3 before:right-3 before:top-0 before:border-t before:border-settings-divider/65 first:pt-0 first:before:hidden">
+      <div className="mb-1 flex w-full items-center gap-2 px-3 text-[0.72rem] font-semibold uppercase leading-5 tracking-[0.12em] text-foreground/58">
         <span>{props.group.label}</span>
       </div>
-      <div className="flex flex-col gap-0.5">
+      <div className="flex w-full flex-col items-stretch gap-0.5">
         {props.group.categoryIds.map((categoryId) => {
           const category = getSettingsCategoryOption(categoryId, t);
           return category ? (
