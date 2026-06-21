@@ -59,7 +59,7 @@ export function WorkspaceDemoRailBottomActions({
       <DemoRailActionButton
         className={RAIL_BUTTON_CLASS_NAME}
         icon={<MonitorDown aria-hidden="true" size={16} strokeWidth={1.75} />}
-        label={t('desktop.workspace.demo.downloadWindowsAlpha')}
+        label={t('desktop.workspace.demo.downloadApp')}
         onClick={() => void openExternalUrl(FOLIOLE_DOWNLOAD_URL)}
       />
       <DemoRailActionButton
