@@ -21,6 +21,7 @@ import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appCo
 import { createPaletteHistoryActions } from './appPaletteHistoryActions';
 import { createPaletteImportActions } from './appPaletteImportActions';
 import { createSelectionAnnotationPaletteActions } from './appPaletteSelectionActions';
+import { createPaletteSurfaceActions } from './appPaletteSurfaceActions';
 import { restartAppWithReadingProgress } from './appRestartPersistence';
 import { repairEditorTable } from './editorRepairTableCommand';
 import { clearSettingsRequest } from './settingsOverlayRequest';
@@ -197,6 +198,7 @@ export function createPaletteRunnerArgs(args: {
     onRestartApp: createRestartAppCommand(args),
     onOpenHelpSearch: args.onOpenHelpSearch,
     onSendFeedback: args.onSendFeedback,
+    ...createPaletteSurfaceActions(args),
     ...createPaletteAppearanceActions(args),
     ...createPaletteViewActions(),
     ...createPaletteReleaseActions(),

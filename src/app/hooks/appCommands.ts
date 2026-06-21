@@ -39,6 +39,8 @@ interface RunAppCommandActions {
   openNotes: () => void;
   openGuidedSample: () => void | Promise<void>;
   openHelpSearch: () => void;
+  openWorkspaceSearch: () => void;
+  openCommandPalette: () => void;
   checkForUpdates: () => void | Promise<void>;
   openLatestRelease: () => void | Promise<void>;
   openGitHubRepository: () => void | Promise<void>;
@@ -123,6 +125,8 @@ function createWorkspaceCommandHandlers(actions: RunAppCommandActions): Record<s
     [APP_COMMAND_IDS.openNotes]: actions.openNotes,
     [APP_COMMAND_IDS.openGuidedSample]: actions.openGuidedSample,
     [APP_COMMAND_IDS.openHelpSearch]: actions.openHelpSearch,
+    [APP_COMMAND_IDS.openWorkspaceSearch]: actions.openWorkspaceSearch,
+    [APP_COMMAND_IDS.openCommandPalette]: actions.openCommandPalette,
     [APP_COMMAND_IDS.checkForUpdates]: actions.checkForUpdates,
     [APP_COMMAND_IDS.openLatestRelease]: actions.openLatestRelease,
     [APP_COMMAND_IDS.openGitHubRepository]: actions.openGitHubRepository,

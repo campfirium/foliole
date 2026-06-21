@@ -39,6 +39,8 @@ export const ZH_HANS_DESKTOP_COMMAND_TRANSLATIONS: Partial<Record<TranslationKey
   'desktop.command.toggleBothSidebars': '切换两侧侧栏',
   'desktop.command.toggleDevTools': '切换开发者工具',
   'desktop.command.openHelpSearch': 'DEV 打开帮助搜索',
+  'desktop.command.openWorkspaceSearch': '搜索',
+  'desktop.command.openCommandPalette': '命令面板',
   'desktop.command.goBack': '后退',
   'desktop.command.goForward': '前进',
   'desktop.command.goToNode': '跳转到...',

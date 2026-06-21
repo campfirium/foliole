@@ -1,9 +1,10 @@
 import type { PdfReadingMode } from '../../features/settings/model/appearanceSettings';
+import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import type { CommandPaletteItem } from '../../shared/commands/types';
-import { requestAppConfirmation } from '../../shared/ui';
 
 import { runAppCommand, runReviewModeToggle } from './appCommands';
 import { createPaletteHelpCommandActions, type PaletteHelpCommandRunnerArgs } from './appPaletteHelpCommandRunner';
+import { runResetImportDataCommand } from './appPaletteResetImportCommand';
 import { enterReviewModeSession, type StartStudyModeOptions } from './reviewModeSessionActions';
 
 interface PaletteCommandRunnerArgs extends PaletteHelpCommandRunnerArgs {
@@ -53,6 +54,8 @@ interface PaletteCommandRunnerArgs extends PaletteHelpCommandRunnerArgs {
   onToggleListVisibility: () => void;
   onToggleRightSidebarVisibility: () => void;
   onOpenHelpSearch: () => void;
+  onOpenWorkspaceSearch: () => void;
+  onOpenCommandPalette: () => void;
   onSendFeedback: () => void;
   onRestartApp: () => void;
   onSetPdfReadingMode: (value: PdfReadingMode) => void;
@@ -122,18 +125,6 @@ function createPaletteReviewCommandActions(args: PaletteCommandRunnerArgs, toggl
   };
 }
 
-function runResetImportDataCommand(args: PaletteCommandRunnerArgs) {
-  void requestAppConfirmation({
-    confirmLabel: 'Reset',
-    description: 'Imported topics and import records will be removed. This cannot be undone.',
-    title: 'Reset imported topics?'
-  }).then((confirmed) => {
-    if (confirmed) {
-      void args.resetImportData();
-    }
-  });
-}
-
 function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleReviewMode: () => void) {
   return {
     ...createPaletteSettingsActions(args),
@@ -178,6 +169,8 @@ function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleRevie
     },
     openNotes: args.closeTrashView,
     openHelpSearch: args.onOpenHelpSearch,
+    openWorkspaceSearch: args.onOpenWorkspaceSearch,
+    openCommandPalette: args.onOpenCommandPalette,
     sendFeedback: args.onSendFeedback,
     ...createPaletteHelpCommandActions(args),
     openTrash: () => (args.trashViewOpen ? args.closeTrashView() : args.openTrashView()),
@@ -218,6 +211,8 @@ export function createPaletteCommandRunner(args: PaletteCommandRunnerArgs) {
       return;
     }
     args.recordRecentCommand(id);
-    args.setCommandPaletteOpen(false);
+    if (id !== APP_COMMAND_IDS.openCommandPalette) {
+      args.setCommandPaletteOpen(false);
+    }
   };
 }

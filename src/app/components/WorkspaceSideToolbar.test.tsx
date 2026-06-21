@@ -122,6 +122,30 @@ it('runs immersive reading from the top rail', () => {
   expect(onRunRailAction).toHaveBeenCalledWith(APP_COMMAND_IDS.toggleImmersiveMode);
 });
 
+it('runs search and command palette from the top rail', () => {
+  const onRunRailAction = vi.fn();
+  renderWithLocalization(
+    <AppearanceSettingsProvider>
+      <WorkspaceRailSettingsProvider>{toolbar(false, onRunRailAction)}</WorkspaceRailSettingsProvider>
+    </AppearanceSettingsProvider>
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Command Palette' }));
+
+  expect(onRunRailAction).toHaveBeenCalledWith(APP_COMMAND_IDS.openWorkspaceSearch);
+  expect(onRunRailAction).toHaveBeenCalledWith(APP_COMMAND_IDS.openCommandPalette);
+});
+
+it('shows localized search and command palette rail actions', () => {
+  window.localStorage.setItem('foliole-app-language', 'zh-Hans');
+
+  renderToolbar(false);
+
+  expect(screen.getByRole('button', { name: '搜索' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '命令面板' })).toBeInTheDocument();
+});
+
 it('shows Demo conversion actions in the bottom rail', () => {
   installDemoState(true);
   const onRunRailAction = vi.fn();

@@ -62,6 +62,8 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     openNotes: () => undefined,
     openGuidedSample: () => undefined,
     openHelpSearch: () => undefined,
+    openWorkspaceSearch: () => undefined,
+    openCommandPalette: () => undefined,
     checkForUpdates: () => undefined,
     openLatestRelease: () => undefined,
     openGitHubRepository: () => undefined,
@@ -144,6 +146,17 @@ it('runs open help search through the shared command handler', () => {
   expectCommandRuns(APP_COMMAND_IDS.openHelpSearch, { openHelpSearch });
 
   expect(openHelpSearch).toHaveBeenCalledTimes(1);
+});
+
+it('runs search and command palette open commands through the shared command handler', () => {
+  const openWorkspaceSearch = vi.fn();
+  const openCommandPalette = vi.fn();
+
+  expectCommandRuns(APP_COMMAND_IDS.openWorkspaceSearch, { openWorkspaceSearch });
+  expectCommandRuns(APP_COMMAND_IDS.openCommandPalette, { openCommandPalette });
+
+  expect(openWorkspaceSearch).toHaveBeenCalledTimes(1);
+  expect(openCommandPalette).toHaveBeenCalledTimes(1);
 });
 
 it('runs open guided sample through the shared command handler', () => {

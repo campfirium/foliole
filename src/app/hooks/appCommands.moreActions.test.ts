@@ -62,6 +62,8 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     openGuidedSample: () => undefined,
     openNotes: () => undefined,
     openHelpSearch: () => undefined,
+    openWorkspaceSearch: () => undefined,
+    openCommandPalette: () => undefined,
     checkForUpdates: () => undefined,
     openLatestRelease: () => undefined,
     openGitHubRepository: () => undefined,

@@ -63,6 +63,8 @@ describe('getAppPaletteCommands', () => {
     expect(sectionFor(APP_COMMAND_IDS.repairTable)).toBe('Editor');
     expect(sectionFor(APP_COMMAND_IDS.openHelpSearch)).toBe('Workspace');
     expect(sectionFor(APP_COMMAND_IDS.openGuidedSample)).toBe('Workspace');
+    expect(sectionFor(APP_COMMAND_IDS.openWorkspaceSearch)).toBe('Workspace');
+    expect(sectionFor(APP_COMMAND_IDS.openCommandPalette)).toBe('Workspace');
     expect(sectionFor(APP_COMMAND_IDS.renameNode)).toBe('Workspace');
     expect(sectionFor(APP_COMMAND_IDS.setPdfDarkAppearanceWarm)).toBe('Settings');
   });

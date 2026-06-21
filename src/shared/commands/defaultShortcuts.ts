@@ -8,6 +8,8 @@ export type DefaultCommandShortcuts = Partial<Record<AppCommandId, CommandShortc
 export const DEFAULT_APP_COMMAND_SHORTCUTS: DefaultCommandShortcuts = {
   [APP_COMMAND_IDS.toggleCommandPaletteMac]: { primary: { key: 'p', metaKey: true } },
   [APP_COMMAND_IDS.toggleCommandPaletteWin]: { primary: { key: 'p', ctrlKey: true } },
+  [APP_COMMAND_IDS.openCommandPalette]: { primary: { key: 'p', ctrlKey: true }, secondary: { key: 'p', metaKey: true } },
+  [APP_COMMAND_IDS.openWorkspaceSearch]: { primary: { key: 'k', ctrlKey: true }, secondary: { key: 'k', metaKey: true } },
   [APP_COMMAND_IDS.closeCommandPalette]: { primary: { key: 'Escape' } },
   [APP_COMMAND_IDS.closeSettings]: { primary: { key: 'Escape' } },
   [APP_COMMAND_IDS.closeContextMenu]: { primary: { key: 'Escape' } },

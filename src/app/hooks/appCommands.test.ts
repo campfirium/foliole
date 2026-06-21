@@ -77,6 +77,8 @@ function expectCorePaletteEntries() {
   expect(items.some((item) => item.id === APP_COMMAND_IDS.resetImportData)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.openPerformancePanel)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.openGuidedSample)).toBe(true);
+  expect(items.find((item) => item.id === APP_COMMAND_IDS.openWorkspaceSearch)).toMatchObject({ title: 'Search' });
+  expect(items.find((item) => item.id === APP_COMMAND_IDS.openCommandPalette)).toMatchObject({ title: 'Command Palette' });
   expect(items.some((item) => item.id === APP_COMMAND_IDS.checkForUpdates)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.openLatestRelease)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.openGitHubRepository)).toBe(true);

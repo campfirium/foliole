@@ -1,5 +1,7 @@
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import { parseLiteralUnion } from '../../../shared/lib/parseLiteralUnion';
+import { getStoredAppLocale } from '../../../shared/localization/appLanguage';
+import { translate, type TranslationKey } from '../../../shared/localization/translations';
 import {
   getWhitelistedLocalStorageItem,
   setWhitelistedLocalStorageItem
@@ -28,11 +30,21 @@ export interface WorkspaceRailItemConfig {
 
 const WORKSPACE_RAIL_SECTIONS: WorkspaceRailSection[] = ['top', 'bottom', 'fixed'];
 const RETIRED_IMPORT_MANAGEMENT_COMMAND_ID = 'import.openManagement';
+const WORKSPACE_RAIL_COMMAND_LABEL_KEYS: Record<string, TranslationKey> = {
+  'workspace.openSearch': 'desktop.command.openWorkspaceSearch',
+  'workspace.openCommandPalette': 'desktop.command.openCommandPalette'
+};
 
 export { DEFAULT_WORKSPACE_RAIL_ITEMS };
 
 export function getWorkspaceRailItemLabel(item: WorkspaceRailItemConfig) {
-  return item.labelOverride ?? WORKSPACE_RAIL_COMMAND_LABELS[item.commandId] ?? item.commandId;
+  const translationKey = WORKSPACE_RAIL_COMMAND_LABEL_KEYS[item.commandId];
+  return (
+    item.labelOverride ??
+    (translationKey ? translate(getStoredAppLocale(), translationKey) : undefined) ??
+    WORKSPACE_RAIL_COMMAND_LABELS[item.commandId] ??
+    item.commandId
+  );
 }
 
 function cloneItem(item: WorkspaceRailItemConfig): WorkspaceRailItemConfig {

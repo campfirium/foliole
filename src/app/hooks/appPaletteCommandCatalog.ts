@@ -74,6 +74,8 @@ function isWorkspaceCommandEnabled(id: string, options: BuildAppPaletteItemsOpti
   if (
     id === APP_COMMAND_IDS.openHelpSearch ||
     id === APP_COMMAND_IDS.openGuidedSample ||
+    id === APP_COMMAND_IDS.openWorkspaceSearch ||
+    id === APP_COMMAND_IDS.openCommandPalette ||
     isHelpPaletteCommand(id) ||
     id === APP_COMMAND_IDS.openTrash ||
     id === APP_COMMAND_IDS.restartApp ||

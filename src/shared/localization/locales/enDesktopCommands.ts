@@ -37,6 +37,8 @@ export const EN_DESKTOP_COMMAND_TRANSLATIONS = {
   'desktop.command.toggleBothSidebars': 'Toggle Both Sidebars',
   'desktop.command.toggleDevTools': 'Toggle DevTools',
   'desktop.command.openHelpSearch': 'DEV Open Help Search',
+  'desktop.command.openWorkspaceSearch': 'Search',
+  'desktop.command.openCommandPalette': 'Command Palette',
   'desktop.command.goBack': 'Go Back',
   'desktop.command.goForward': 'Go Forward',
   'desktop.command.goToNode': 'Go to...',

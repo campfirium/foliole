@@ -31,6 +31,24 @@ export const DEFAULT_WORKSPACE_RAIL_ITEMS: WorkspaceRailItemConfig[] = [
     iconId: 'BookOpen'
   },
   {
+    id: 'system.workspace-search',
+    commandId: APP_COMMAND_IDS.openWorkspaceSearch,
+    section: 'top',
+    order: 3,
+    visible: true,
+    source: 'system',
+    iconId: 'Search'
+  },
+  {
+    id: 'system.command-palette',
+    commandId: APP_COMMAND_IDS.openCommandPalette,
+    section: 'top',
+    order: 4,
+    visible: true,
+    source: 'system',
+    iconId: 'SquareChevronRight'
+  },
+  {
     id: 'system.feedback',
     commandId: APP_COMMAND_IDS.sendFeedback,
     section: 'bottom',
@@ -62,6 +80,8 @@ export const DEFAULT_WORKSPACE_RAIL_ITEMS: WorkspaceRailItemConfig[] = [
 ];
 
 export const WORKSPACE_RAIL_COMMAND_LABELS: Record<string, string> = {
+  [APP_COMMAND_IDS.openWorkspaceSearch]: 'Search',
+  [APP_COMMAND_IDS.openCommandPalette]: 'Command Palette',
   [APP_COMMAND_IDS.importSingleFile]: 'Import',
   [APP_COMMAND_IDS.clipboardImport]: 'Import Clipboard',
   [APP_COMMAND_IDS.toggleImmersiveMode]: 'Reading Mode',

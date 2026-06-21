@@ -41,7 +41,9 @@ it('normalizes top, bottom, and fixed rail sections independently', () => {
   expect(itemIds(getWorkspaceRailSectionItems(normalized, 'top'))).toEqual([
     'system.import-file',
     'system.import-clipboard',
-    'system.immersive-reading'
+    'system.immersive-reading',
+    'system.workspace-search',
+    'system.command-palette'
   ]);
   expect(itemIds(getWorkspaceRailSectionItems(normalized, 'bottom'))).toEqual(['user.command', 'system.feedback']);
   expect(itemIds(getWorkspaceRailSectionItems(normalized, 'fixed'))).toEqual(['fixed.review', 'fixed.settings']);
@@ -112,7 +114,12 @@ it('removes user items without affecting the bound command', () => {
 it('moves ordinary items across top and bottom sections', () => {
   const moved = moveWorkspaceRailItem(DEFAULT_WORKSPACE_RAIL_ITEMS, 'system.import-file', 'bottom', 0);
 
-  expect(itemIds(getWorkspaceRailSectionItems(moved, 'top'))).toEqual(['system.import-clipboard', 'system.immersive-reading']);
+  expect(itemIds(getWorkspaceRailSectionItems(moved, 'top'))).toEqual([
+    'system.import-clipboard',
+    'system.immersive-reading',
+    'system.workspace-search',
+    'system.command-palette'
+  ]);
   expect(itemIds(getWorkspaceRailSectionItems(moved, 'bottom'))).toEqual(['system.import-file', 'system.feedback']);
 });
 
@@ -135,6 +142,8 @@ it('adds a new action to the top rail by default', () => {
     'system.import-file',
     'system.import-clipboard',
     'system.immersive-reading',
+    'system.workspace-search',
+    'system.command-palette',
     'user.document-findInTopic'
   ]);
 });
@@ -146,6 +155,27 @@ it('adds immersive reading to the default top rail', () => {
     commandId: APP_COMMAND_IDS.toggleImmersiveMode,
     iconId: 'BookOpen',
     id: 'system.immersive-reading',
+    source: 'system',
+    visible: true
+  });
+});
+
+it('adds search and command palette to the default top rail', () => {
+  const [, , immersiveReading, search, commandPalette] = getWorkspaceRailSectionItems(resetWorkspaceRailItems(), 'top');
+
+  expect(immersiveReading.id).toBe('system.immersive-reading');
+
+  expect(search).toMatchObject({
+    commandId: APP_COMMAND_IDS.openWorkspaceSearch,
+    iconId: 'Search',
+    id: 'system.workspace-search',
+    source: 'system',
+    visible: true
+  });
+  expect(commandPalette).toMatchObject({
+    commandId: APP_COMMAND_IDS.openCommandPalette,
+    iconId: 'SquareChevronRight',
+    id: 'system.command-palette',
     source: 'system',
     visible: true
   });
