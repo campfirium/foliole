@@ -58,4 +58,8 @@ it('hides unavailable window controls in the Demo titlebar without keeping reser
   expect(screen.queryByRole('button', { name: 'Maximize' })).toBeNull();
   expect(screen.queryByRole('button', { name: 'Close' })).toBeNull();
   expect(titlebar?.style.getPropertyValue('--window-titlebar-controls-width')).toBe('0px');
+  expect(titlebar?.style.getPropertyValue('--window-titlebar-controls-gap')).toBe('0px');
+  expect(screen.getByRole('button', { name: 'Backlinks panel' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Scheduling panel' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'More right sidebar panels' })).not.toBeInTheDocument();
 });

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  resolveRightPanelAvailableWidth,
   resolveRightPanelAvailableWidthFromSidebarWidth,
   resolveRightSidebarWidthForPanelRow,
   resolveVisibleRightPanelCount
@@ -27,6 +28,12 @@ describe('resolveRightPanelAvailableWidthFromSidebarWidth', () => {
 
   it('never returns a negative budget', () => {
     expect(resolveRightPanelAvailableWidthFromSidebarWidth(120)).toBe(0);
+  });
+});
+
+describe('resolveRightPanelAvailableWidth', () => {
+  it('uses the full right sidebar row budget when window controls are absent', () => {
+    expect(resolveRightPanelAvailableWidth({ controlsWidth: 0, rightSidebarWidth: 240 })).toBe(207);
   });
 });
 

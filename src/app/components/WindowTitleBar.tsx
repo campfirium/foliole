@@ -16,7 +16,7 @@ import {
 
 import { WindowControlButtons } from './WindowControlButtons';
 import { WindowSidebarToggleButton } from './WindowSidebarToggleButton';
-import { WINDOW_TITLEBAR_CONTROLS_WIDTH, WINDOW_TITLEBAR_LEADING_BUTTON_WIDTH } from './windowTitleBarLayout';
+import { WINDOW_TITLEBAR_CONTROLS_WIDTH, WINDOW_TITLEBAR_LEADING_BUTTON_WIDTH, WINDOW_TITLEBAR_RIGHT_ZONE_CONTROL_GAP } from './windowTitleBarLayout';
 import { WindowTitleBarRightSidebarAnchor } from './WindowTitleBarRightSidebarAnchor';
 import { WorkspaceSurfaceRowOverlay, WorkspaceTitlebarDividers } from './WorkspaceSurfaceRowOverlay';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
@@ -132,6 +132,7 @@ function getWindowTitleBarStyle(props: WindowTitleBarProps, controlsWidth: numbe
       ? 'var(--workspace-rail-width)'
       : `calc(var(--workspace-rail-width) + ${props.listWidth + 1}px)`,
     '--window-titlebar-controls-width': `${controlsWidth}px`,
+    '--window-titlebar-controls-gap': `${controlsWidth > 0 ? WINDOW_TITLEBAR_RIGHT_ZONE_CONTROL_GAP : 0}px`,
     '--window-titlebar-right-width': props.isRightSidebarCollapsed
       ? `${controlsWidth + WINDOW_TITLEBAR_LEADING_BUTTON_WIDTH}px`
       : `${props.rightSidebarWidth}px`,
@@ -159,6 +160,19 @@ function renderWindowControls(args: {
       onClose={args.onClose}
       onMinimize={args.onMinimize}
       onToggleMaximize={args.onToggleMaximize}
+    />
+  );
+}
+
+function renderRightSidebarAnchor(props: WindowTitleBarProps, controlsWidth: number) {
+  return (
+    <WindowTitleBarRightSidebarAnchor
+      activeRightPanelId={props.activeRightPanelId}
+      controlsWidth={controlsWidth}
+      isRightSidebarCollapsed={props.isRightSidebarCollapsed}
+      onSelectRightPanel={props.onSelectRightPanel}
+      onToggleRightSidebarVisibility={props.onToggleRightSidebarVisibility}
+      rightSidebarWidth={props.rightSidebarWidth}
     />
   );
 }
@@ -209,13 +223,7 @@ export const WindowTitleBar = memo(function WindowTitleBar(props: WindowTitleBar
         title={props.centerTitle}
         {...definedProps({ icon: props.centerTitleIcon })}
       />
-      <WindowTitleBarRightSidebarAnchor
-        activeRightPanelId={props.activeRightPanelId}
-        isRightSidebarCollapsed={props.isRightSidebarCollapsed}
-        onSelectRightPanel={props.onSelectRightPanel}
-        onToggleRightSidebarVisibility={props.onToggleRightSidebarVisibility}
-        rightSidebarWidth={props.rightSidebarWidth}
-      />
+      {renderRightSidebarAnchor(props, controlsWidth)}
       {renderWindowControls({
         controlsEnabled,
         isDemo,

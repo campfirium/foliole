@@ -821,7 +821,7 @@ b {
   flex: 1 1 auto;
   justify-content: flex-start;
   min-width: 0;
-  padding-right: calc(var(--window-titlebar-controls-width, 138px) + 8px);
+  padding-right: calc(var(--window-titlebar-controls-width, 138px) + var(--window-titlebar-controls-gap, 8px));
   pointer-events: auto;
   -webkit-app-region: no-drag;
 }

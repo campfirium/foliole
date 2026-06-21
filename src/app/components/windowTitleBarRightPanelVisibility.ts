@@ -10,13 +10,24 @@ const TITLEBAR_ACTION_WIDTH = WINDOW_TITLEBAR_LEADING_BUTTON_WIDTH;
 const TITLEBAR_ACTION_ROW_LEFT_PADDING = WINDOW_TITLEBAR_RIGHT_PANEL_GAP;
 
 export function resolveRightPanelAvailableWidthFromSidebarWidth(rightSidebarWidth: number) {
+  return resolveRightPanelAvailableWidth({
+    controlsWidth: WINDOW_TITLEBAR_CONTROLS_WIDTH,
+    rightSidebarWidth
+  });
+}
+
+export function resolveRightPanelAvailableWidth(args: {
+  controlsWidth: number;
+  rightSidebarWidth: number;
+}) {
+  const controlsGap = args.controlsWidth > 0 ? WINDOW_TITLEBAR_RIGHT_ZONE_CONTROL_GAP : 0;
   return Math.max(
     0,
-    rightSidebarWidth -
+    args.rightSidebarWidth -
       WINDOW_TITLEBAR_DIVIDER_WIDTH -
       WINDOW_TITLEBAR_LEADING_BUTTON_WIDTH -
-      WINDOW_TITLEBAR_CONTROLS_WIDTH -
-      WINDOW_TITLEBAR_RIGHT_ZONE_CONTROL_GAP
+      args.controlsWidth -
+      controlsGap
   );
 }
 

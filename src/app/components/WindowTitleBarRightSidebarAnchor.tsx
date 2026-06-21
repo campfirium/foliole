@@ -4,7 +4,7 @@ import { memo, useEffect, useState } from 'react';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 
 import { WindowTitleBarRightPanelActions } from './WindowTitleBarRightPanelActions';
-import { resolveRightPanelAvailableWidthFromSidebarWidth, resolveVisibleRightPanelCount } from './windowTitleBarRightPanelVisibility';
+import { resolveRightPanelAvailableWidth, resolveVisibleRightPanelCount } from './windowTitleBarRightPanelVisibility';
 import { normalizeWorkspaceRightPanelOrder } from './workspaceRightPanelOrder';
 import { loadWorkspaceRightPanelOrderPreference, saveWorkspaceRightPanelOrderPreference } from './workspaceRightPanelPreference';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
@@ -29,6 +29,7 @@ function RightSidebarToggleButton({ active, onClick }: { active: boolean; onClic
 
 interface WindowTitleBarRightSidebarAnchorProps {
   activeRightPanelId: WorkspaceRightPanelId;
+  controlsWidth: number;
   isRightSidebarCollapsed: boolean;
   onSelectRightPanel: (panelId: WorkspaceRightPanelId) => void;
   onToggleRightSidebarVisibility: () => void;
@@ -56,7 +57,10 @@ export const WindowTitleBarRightSidebarAnchor = memo(function WindowTitleBarRigh
   const isCollapsed = props.isRightSidebarCollapsed;
   const orderState = useWorkspaceRightPanelOrder();
   const visiblePanelCount = resolveVisibleRightPanelCount({
-    availableWidth: resolveRightPanelAvailableWidthFromSidebarWidth(props.rightSidebarWidth),
+    availableWidth: resolveRightPanelAvailableWidth({
+      controlsWidth: props.controlsWidth,
+      rightSidebarWidth: props.rightSidebarWidth
+    }),
     panelCount: orderState.orderedPanelIds.length
   });
 
