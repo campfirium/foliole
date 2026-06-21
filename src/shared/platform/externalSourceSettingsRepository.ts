@@ -1,3 +1,4 @@
+import { getExternalFolderRuntimeProvider } from './externalFolderRuntime';
 import {
   loadRuntimeExternalSearchFolders,
   rebuildRuntimeExternalSearchIndex,
@@ -5,7 +6,6 @@ import {
   type RuntimeExternalSearchFolder
 } from './externalSearchRuntimeRepository';
 import { selectRuntimeFolder } from './folderSelectionRuntimeRepository';
-import { getExternalFolderRuntimeProvider } from './runtime/externalFolderRuntime';
 
 export type ExternalSourceSettingsFolder = RuntimeExternalSearchFolder;
 

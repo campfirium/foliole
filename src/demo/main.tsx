@@ -3,8 +3,8 @@ import ReactDOM from 'react-dom/client';
 
 import '../app/styles.css';
 
+import { installExternalFolderRuntimeProvider } from '../shared/platform/externalFolderRuntime';
 import { installDemoRuntimeController } from '../shared/platform/runtime/demoRuntime';
-import { installExternalFolderRuntimeProvider } from '../shared/platform/runtime/externalFolderRuntime';
 import {
   createBrowserLocalWorkspaceMutationRepository,
   installWorkspaceMutationRepository

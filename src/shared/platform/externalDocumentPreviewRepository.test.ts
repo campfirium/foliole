@@ -4,7 +4,7 @@ import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
 import type { ElectronAPI } from './electronApi';
 import { loadExternalDocumentPreview } from './externalDocumentPreviewRepository';
-import { resetExternalFolderRuntimeProviderForTest } from './runtime/externalFolderRuntime';
+import { resetExternalFolderRuntimeProviderForTest } from './externalFolderRuntime';
 
 function createNativePreview() {
   return {

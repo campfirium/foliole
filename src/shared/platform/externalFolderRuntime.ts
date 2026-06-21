@@ -1,9 +1,10 @@
-import type { NativeTextImportResult } from '../../../../lib/platform/nativeImportContract';
+import type { NativeTextImportResult } from '../../../lib/platform/nativeImportContract';
+
 import type {
   RuntimeExternalSearchBrowseEntry,
   RuntimeExternalSearchFolder,
   RuntimeExternalSearchPreview
-} from '../externalSearchRuntimeRepository';
+} from './externalSearchRuntimeRepository';
 
 export interface ExternalFolderRuntimeProvider {
   importDocument: (absolutePath: string) => Promise<NativeTextImportResult | null>;

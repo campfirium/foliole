@@ -1,8 +1,8 @@
+import type { ExternalFolderRuntimeProvider } from '../shared/platform/externalFolderRuntime';
 import type {
   RuntimeExternalSearchBrowseEntry,
   RuntimeExternalSearchFolder
 } from '../shared/platform/externalSearchRuntimeRepository';
-import type { ExternalFolderRuntimeProvider } from '../shared/platform/runtime/externalFolderRuntime';
 
 import {
   type BrowserDirectoryHandle,

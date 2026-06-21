@@ -201,6 +201,7 @@ function SettingsPanelBody(props: SettingsPanelBodyProps) {
       searchResults={search.results}
       setActiveCategory={props.setActiveCategory}
       title={props.title}
+      {...definedProps({ previewDesktopSettings: props.previewDesktopSettings })}
       hiddenCategoryIds={props.previewDesktopSettings ? ['external-search'] : []}
     />
   );

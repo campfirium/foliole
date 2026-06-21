@@ -1,14 +1,14 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import {
-  resetExternalSourceSettingsFoldersCacheForTest,
-  type ExternalSourceSettingsFolder
-} from '../../shared/platform/externalSourceSettingsRepository';
-import {
   installExternalFolderRuntimeProvider,
   resetExternalFolderRuntimeProviderForTest,
   type ExternalFolderRuntimeProvider
-} from '../../shared/platform/runtime/externalFolderRuntime';
+} from '../../shared/platform/externalFolderRuntime';
+import {
+  resetExternalSourceSettingsFoldersCacheForTest,
+  type ExternalSourceSettingsFolder
+} from '../../shared/platform/externalSourceSettingsRepository';
 
 import { connectExternalFolder } from './externalFolderConnection';
 

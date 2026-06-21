@@ -6,8 +6,8 @@ import { renderWithMouseGestureProvider } from './SettingsPanel.testUtils';
 
 import { APP_COMMAND_IDS } from '@/shared/commands/ids';
 import { preloadTranslationCatalog } from '@/shared/localization/translations';
+import { resetExternalFolderRuntimeProviderForTest } from '@/shared/platform/externalFolderRuntime';
 import { resetExternalSourceSettingsFoldersCacheForTest } from '@/shared/platform/externalSourceSettingsRepository';
-import { resetExternalFolderRuntimeProviderForTest } from '@/shared/platform/runtime/externalFolderRuntime';
 
 beforeAll(async () => {
   await preloadTranslationCatalog('en');

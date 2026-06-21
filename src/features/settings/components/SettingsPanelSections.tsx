@@ -25,6 +25,8 @@ import { SettingsRailSection } from './sections/SettingsRailSection';
 import { SettingsReviewSection } from './sections/SettingsReviewSection';
 import { SettingsWebLookupSection } from './sections/SettingsWebLookupSection';
 
+import { definedProps } from '@/shared/lib/definedProps';
+
 export interface SettingsCategoryContentProps {
   activeCategory: SettingsCategoryId;
   assetsPath: string;
@@ -106,7 +108,7 @@ function renderExternalSearchCategory(props: SettingsCategoryContentProps) {
       feedback={props.externalSearchFeedback}
       folders={props.externalSearchFolders}
       isDesktopRuntime={props.isDesktopRuntime}
-      previewDesktopSettings={props.previewDesktopSettings}
+      {...definedProps({ previewDesktopSettings: props.previewDesktopSettings })}
       isLoading={props.isLoadingExternalSearchFolders}
       isSaving={props.isSavingExternalSearchFolders}
       onAddFolder={props.onAddExternalSearchFolder}
@@ -165,8 +167,10 @@ export function SettingsCategoryContent(props: SettingsCategoryContentProps) {
     case 'general':
       return (
         <SettingsGeneralSection
-          hideLanguageSetting={props.hideLanguageSetting}
-          previewDesktopSettings={props.previewDesktopSettings}
+          {...definedProps({
+            hideLanguageSetting: props.hideLanguageSetting,
+            previewDesktopSettings: props.previewDesktopSettings
+          })}
         />
       );
     case 'web-lookup':

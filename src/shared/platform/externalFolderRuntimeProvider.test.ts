@@ -5,6 +5,11 @@ import type { NativeTextImportResult } from '../../../lib/platform/nativeImportC
 import { importExternalDocument } from './externalDocumentImportRepository';
 import { loadExternalDocumentPreview } from './externalDocumentPreviewRepository';
 import {
+  installExternalFolderRuntimeProvider,
+  resetExternalFolderRuntimeProviderForTest,
+  type ExternalFolderRuntimeProvider
+} from './externalFolderRuntime';
+import {
   loadExternalLibraryBrowseEntries,
   loadExternalLibraryFolders,
   rebuildExternalLibraryIndex,
@@ -18,11 +23,6 @@ import {
   selectExternalSourceSettingsFolderPath,
   type ExternalSourceSettingsFolder
 } from './externalSourceSettingsRepository';
-import {
-  installExternalFolderRuntimeProvider,
-  resetExternalFolderRuntimeProviderForTest,
-  type ExternalFolderRuntimeProvider
-} from './runtime/externalFolderRuntime';
 
 const folder = createFolder();
 const browseEntry = {
@@ -86,7 +86,9 @@ it('lets an installed external folder provider handle shared repository calls', 
   expect(await selectExternalSourceSettingsFolderPath()).toBe('Samples');
 
   const stop = subscribeExternalLibraryFolders(listener);
-  provider.subscribeFolders.mock.calls[0]?.[0]([folder]);
+  const subscribedListener = provider.subscribeFolders.mock.calls[0]?.[0];
+  expect(subscribedListener).toBeTypeOf('function');
+  subscribedListener?.([folder]);
   stop();
 
   expect(listener).toHaveBeenCalledWith([folder]);
@@ -109,7 +111,10 @@ it('lets an installed external folder provider handle shared repository calls', 
       rebuildIndex: vi.fn(async () => [folder]),
       saveFolders: vi.fn(async () => [folder]),
       selectFolderPath: vi.fn(async () => 'Samples'),
-      subscribeFolders: vi.fn(() => unsubscribe)
+      subscribeFolders: vi.fn((nextListener: (folders: ExternalSourceSettingsFolder[]) => void) => {
+        void nextListener;
+        return unsubscribe;
+      })
     } satisfies ExternalFolderRuntimeProvider;
   }
 });

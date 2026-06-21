@@ -1,8 +1,8 @@
+import { getExternalFolderRuntimeProvider } from './externalFolderRuntime';
 import {
   loadRuntimeExternalSearchPreview,
   type RuntimeExternalSearchPreview
 } from './externalSearchRuntimeRepository';
-import { getExternalFolderRuntimeProvider } from './runtime/externalFolderRuntime';
 
 export type ExternalDocumentPreview = RuntimeExternalSearchPreview;
 

@@ -3,6 +3,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
 import type { ElectronAPI } from './electronApi';
+import { resetExternalFolderRuntimeProviderForTest } from './externalFolderRuntime';
 import {
   createDraftExternalSourceFolder,
   loadExternalSourceSettingsFolders,
@@ -12,7 +13,6 @@ import {
   selectExternalSourceSettingsFolderPath,
   type ExternalSourceSettingsFolder
 } from './externalSourceSettingsRepository';
-import { resetExternalFolderRuntimeProviderForTest } from './runtime/externalFolderRuntime';
 
 function createExternalSourceFolder(): ExternalSourceSettingsFolder {
   return {

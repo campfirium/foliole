@@ -1,3 +1,4 @@
+import { getExternalFolderRuntimeProvider } from './externalFolderRuntime';
 import {
   loadRuntimeExternalSearchBrowseEntries,
   loadRuntimeExternalSearchFolders,
@@ -7,7 +8,6 @@ import {
   type RuntimeExternalSearchBrowseEntry,
   type RuntimeExternalSearchFolder
 } from './externalSearchRuntimeRepository';
-import { getExternalFolderRuntimeProvider } from './runtime/externalFolderRuntime';
 
 export type ExternalLibraryBrowseEntry = RuntimeExternalSearchBrowseEntry;
 export type ExternalLibraryFolder = RuntimeExternalSearchFolder;

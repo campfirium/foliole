@@ -1,7 +1,7 @@
 import type { NativeTextImportResult } from '../../../lib/platform/nativeImportContract';
 
+import { getExternalFolderRuntimeProvider } from './externalFolderRuntime';
 import { importRuntimeExternalSearchDocument } from './externalSearchRuntimeRepository';
-import { getExternalFolderRuntimeProvider } from './runtime/externalFolderRuntime';
 
 export type ExternalDocumentImportResult = NativeTextImportResult;
 
