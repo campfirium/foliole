@@ -26,6 +26,8 @@ it('keeps command and search surfaces on shared floating tokens', () => {
   expect(appFloatingInputClassName()).toContain('bg-[var(--app-floating-input-bg)]');
   expect(appFloatingInputClassName()).toContain('border-b');
   expect(appFloatingInputClassName()).toContain('border-[var(--app-floating-divider-color)]');
+  expect(appFloatingInputClassName()).toContain('focus:outline-none');
+  expect(appFloatingInputClassName()).toContain('focus:ring-0');
   expect(appFloatingInputClassName()).toContain('focus-visible:outline-none');
   expect(appFloatingInputClassName()).toContain('focus-visible:ring-0');
   expect(appFloatingInputClassName()).not.toContain('focus-visible:ring-ring');

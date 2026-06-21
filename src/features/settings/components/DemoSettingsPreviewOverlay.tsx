@@ -35,11 +35,11 @@ export function DemoSettingsPreviewOverlay({
 function DemoSettingsPreviewNotice() {
   const t = useTranslation();
   return (
-    <div className="flex min-h-12 min-w-0 items-center text-ui-sm leading-5 text-red-600">
-      <span className="shrink-0 font-semibold">
+    <div className="flex min-h-12 min-w-0 items-center gap-2 text-ui-md leading-6">
+      <span className="shrink-0 font-semibold text-foreground/72">
         {t('settings.demoPreview.banner.title')}
       </span>
-      <span className="ml-2 min-w-0 truncate text-red-600/80">{t('settings.demoPreview.banner.description')}</span>
+      <span className="min-w-0 truncate text-foreground/58">{t('settings.demoPreview.banner.description')}</span>
     </div>
   );
 }

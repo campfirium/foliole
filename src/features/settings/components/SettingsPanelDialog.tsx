@@ -55,13 +55,14 @@ function SettingsPanelDialogBody(props: SettingsPanelDialogProps) {
     <>
       <SettingsSidebar
         activeCategory={props.activeCategory}
+        {...definedProps({ brandBadge: props.categoryProps.previewDesktopSettings ? 'Demo' : undefined })}
         {...definedProps({ hiddenCategoryIds: props.hiddenCategoryIds })}
         setActiveCategory={props.setActiveCategory}
       />
       <div className="flex min-h-0 flex-col bg-settings-group">
         <div className="flex h-[64px] min-h-0 items-center justify-end border-b border-settings-divider/55 px-7">
           {props.headerNotice ? (
-            <div className="min-w-0 flex-1">{props.headerNotice}</div>
+            <div className="min-w-0 flex-1 px-5">{props.headerNotice}</div>
           ) : (
             <SettingsSearchBox
               activeResultIndex={props.activeResultIndex}
@@ -99,7 +100,7 @@ export function SettingsPanelDialog(props: SettingsPanelDialogProps) {
         <AppDialogContent
           aria-label={t('settings.dialog.aria')}
           aria-describedby={undefined}
-          className={settingsDialogSurfaceClassName(`grid h-[min(800px,calc(100dvh-36px))] w-[min(1240px,calc(100vw-36px))] max-w-none grid-cols-[260px_minmax(0,1fr)] overflow-hidden ${props.isPreviewActive ? 'pointer-events-none opacity-0' : ''}`)}
+          className={settingsDialogSurfaceClassName(`grid h-[min(860px,calc(100dvh-36px))] w-[min(1240px,calc(100vw-36px))] max-w-none grid-cols-[260px_minmax(0,1fr)] overflow-hidden ${props.isPreviewActive ? 'pointer-events-none opacity-0' : ''}`)}
           data-settings-root-dialog="true"
           onEscapeKeyDown={(event) => {
             if (props.searchQuery.trim().length > 0) {

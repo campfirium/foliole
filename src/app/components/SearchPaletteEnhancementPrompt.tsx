@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
+import { useDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
 import {
   dismissSearchEnhancementPrompt,
   dismissSearchEnhancementPromptIfEnabled,
@@ -45,29 +46,26 @@ interface SearchEnhancementDialogContentProps {
   status: SearchIndexRebuildStatus | null;
 }
 
-function initialPromptState(): PromptState {
+function initialPromptState(isDisabled: boolean): PromptState {
+  if (isDisabled) {
+    return 'hidden';
+  }
   if (isSearchEnhancementEnabled() || isSearchEnhancementPromptDismissed()) {
     return 'hidden';
   }
   return 'prompt';
 }
 
-function useSearchEnhancementPromptState() {
+function useSearchEnhancementPromptState(isDisabled: boolean) {
   const t = useTranslation();
-  const [state, setState] = useState<PromptState>(initialPromptState);
+  const [state, setState] = useState<PromptState>(() => initialPromptState(isDisabled));
   const [error, setError] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [status, setStatus] = useState<SearchIndexRebuildStatus | null>(null);
 
-  useEffect(() => {
-    try {
-      dismissSearchEnhancementPromptIfEnabled();
-    } catch {
-      // The prompt is advisory; storage failures should not block search.
-    }
-  }, []);
-
-  useEffect(() => onSearchIndexRebuildStatus(setStatus), []);
+  useHideSearchEnhancementPromptWhenDisabled(isDisabled, setState);
+  useDismissSearchEnhancementPromptIfEnabled(isDisabled);
+  useSearchIndexRebuildStatusSubscription(isDisabled, setStatus);
 
   const handleTurnOn = async () => {
     setIsUpdating(true);
@@ -114,8 +112,41 @@ function useSearchEnhancementPromptState() {
   };
 }
 
+function useHideSearchEnhancementPromptWhenDisabled(
+  isDisabled: boolean,
+  setState: (state: PromptState) => void
+) {
+  useEffect(() => {
+    if (isDisabled) {
+      setState('hidden');
+    }
+  }, [isDisabled, setState]);
+}
+
+function useDismissSearchEnhancementPromptIfEnabled(isDisabled: boolean) {
+  useEffect(() => {
+    if (isDisabled) return;
+    try {
+      dismissSearchEnhancementPromptIfEnabled();
+    } catch {
+      // The prompt is advisory; storage failures should not block search.
+    }
+  }, [isDisabled]);
+}
+
+function useSearchIndexRebuildStatusSubscription(
+  isDisabled: boolean,
+  setStatus: (status: SearchIndexRebuildStatus | null) => void
+) {
+  useEffect(() => {
+    if (isDisabled) return undefined;
+    return onSearchIndexRebuildStatus(setStatus);
+  }, [isDisabled, setStatus]);
+}
+
 export function SearchPaletteEnhancementPrompt() {
-  const prompt = useSearchEnhancementPromptState();
+  const demoRuntime = useDemoRuntimeState();
+  const prompt = useSearchEnhancementPromptState(demoRuntime.isDemo);
 
   if (prompt.state === 'hidden') return null;
 

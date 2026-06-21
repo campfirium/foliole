@@ -51,8 +51,10 @@ it('keeps settings dividers aligned without title extension lines', () => {
 
   expect(pageTitleShell?.className).not.toContain('border-b');
   expect(sectionHeader?.className).not.toContain('border-b');
-  expect(storageGroup?.className).toContain('before:left-3');
-  expect(storageGroup?.className).toContain('before:right-3');
+  expect(storageGroup?.className).toContain('before:left-7');
+  expect(storageGroup?.className).toContain('before:right-7');
+  expect(storageGroup?.className).toContain('before:h-px');
+  expect(storageGroup?.className).toContain('before:bg-[color:color-mix');
   expect(storageGroup?.className.split(' ')).not.toContain('border-t');
   expect(desiredRetentionRow?.className).toContain('before:left-settings-panel-x');
   expect(desiredRetentionRow?.className).toContain('before:right-settings-panel-x');

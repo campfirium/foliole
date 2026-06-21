@@ -49,6 +49,7 @@ const CATEGORY_ICONS: Record<SettingsCategoryId, LucideIcon> = {
 
 export function SettingsSidebar(props: {
   activeCategory: SettingsCategoryId;
+  brandBadge?: string;
   hiddenCategoryIds?: SettingsCategoryId[];
   setActiveCategory: (category: SettingsCategoryId) => void;
 }) {
@@ -62,11 +63,12 @@ export function SettingsSidebar(props: {
     <AppPanel
       as="aside"
       ariaLabel={t('settings.sidebar.aria')}
-      bodyClassName="px-4 pb-5 pt-3"
+      bodyClassName="px-4 pb-5 pt-3 [--app-scrollbar-thumb-color:var(--workspace-region-main-topic-scrollbar-thumb-color)] [--app-scrollbar-thumb-hover-color:var(--workspace-region-main-topic-scrollbar-thumb-hover-color)] [--app-scrollbar-track-bg:transparent]"
       className="border-r border-settings-divider"
       headerClassName="h-[64px] min-h-0 border-b border-settings-divider/55 px-5 py-0"
+      scrollBody
       surfaceClassName="bg-settings-sidebar"
-      title={<SettingsSidebarBrand />}
+      title={<SettingsSidebarBrand badge={props.brandBadge} />}
     >
       <nav aria-label={t('settings.navigation.aria')} className="flex w-full flex-col items-stretch gap-4">
         {groups.map((group) => (
@@ -82,7 +84,7 @@ export function SettingsSidebar(props: {
   );
 }
 
-function SettingsSidebarBrand() {
+function SettingsSidebarBrand(props: { badge?: string }) {
   const appVersion = useAppVersion();
 
   return (
@@ -93,8 +95,13 @@ function SettingsSidebarBrand() {
         className="size-8 shrink-0 object-contain"
         src={folioleAppIconUrl}
       />
-      <div className="min-w-0 flex-1">
+      <div className="flex min-w-0 flex-1 items-baseline gap-2">
         <div className="truncate text-[1.05rem] font-semibold leading-5 text-foreground">Foliole</div>
+        {props.badge ? (
+          <span className="shrink-0 text-ui-xs font-semibold uppercase tracking-[0.12em] text-foreground/45">
+            {props.badge}
+          </span>
+        ) : null}
       </div>
       <span className={settingsSidebarBadgeClassName('ml-auto')}>
         v{appVersion}
@@ -110,7 +117,7 @@ function SettingsSidebarGroup(props: {
 }) {
   const t = useTranslation();
   return (
-    <div className="relative w-full pt-4 before:absolute before:left-3 before:right-3 before:top-0 before:border-t before:border-settings-divider/65 first:pt-0 first:before:hidden">
+    <div className="relative w-full pt-4 before:absolute before:left-7 before:right-7 before:top-0 before:h-px before:bg-[color:color-mix(in_oklab,var(--app-settings-sidebar-bg)_86%,var(--workspace-divider-mix-target))] before:content-[''] first:pt-0 first:before:hidden">
       <div className="mb-1 flex w-full items-center gap-2 px-3 text-[0.72rem] font-semibold uppercase leading-5 tracking-[0.12em] text-foreground/58">
         <span>{props.group.label}</span>
       </div>

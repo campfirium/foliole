@@ -5,11 +5,35 @@ import { FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY } from '../../../lib/core/d
 import type { NativeInvoke } from '../../../lib/platform/nativeContract';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
+import {
+  installDemoRuntimeController,
+  type DemoRuntimeController,
+  type DemoRuntimeState
+} from '../../shared/platform/runtime/demoRuntime';
 
 import { SearchPaletteEnhancementPrompt } from './SearchPaletteEnhancementPrompt';
 
+function installDemoState(isDemo: boolean) {
+  const state: DemoRuntimeState = {
+    clearError: null,
+    importError: null,
+    importedTopicCount: 0,
+    isDemo,
+    previewDay: 0
+  };
+  installDemoRuntimeController({
+    clearLocalData: () => Promise.resolve(false),
+    continueToNextPreviewDay: () => undefined,
+    getNowIso: (realNow) => realNow.toISOString(),
+    getState: () => state,
+    importMarkdown: () => Promise.resolve({ ignoredCount: 0, importedTopicCount: 0 }),
+    subscribe: () => () => undefined
+  } satisfies DemoRuntimeController);
+}
+
 beforeEach(() => {
   window.localStorage.clear();
+  installDemoState(false);
   const invoke = vi.fn(async (command: string) => {
     if (command === 'save_app_settings_state') return null;
     if (command === 'rebuild_search_index') {
@@ -25,6 +49,16 @@ beforeEach(() => {
     onWindowResized: () => () => undefined
   };
   vi.clearAllMocks();
+});
+
+it('does not offer the CJK search language in the Demo runtime', () => {
+  installDemoState(true);
+
+  renderWithLocalization(<SearchPaletteEnhancementPrompt />);
+
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.searchEnhancementPromptDismissed)).toBeNull();
+  expect(window.electronAPI.invoke).not.toHaveBeenCalled();
 });
 
 it('offers the Chinese, Japanese, or Korean search language once and turns it on', async () => {
