@@ -13,7 +13,7 @@ const REGION_IDS = [
   'main-sidebar'
 ] as const;
 const DEFAULT_LIGHT_PALETTE = ['#b9b1a7', '#e7e3dd', '#f3eee8', '#ffffff', '#fbf9f7'];
-const DEFAULT_DARK_PALETTE = ['#2b2f2a', '#252824', '#2b2f2a', '#1f211f', '#30362f'];
+const DEFAULT_DARK_PALETTE = ['#171b1a', '#1a1f1e', '#1c2221', '#161918', '#1a1f1e'];
 const DEFAULT_ASSIGNMENTS = {
   'titlebar-rail': 0,
   'titlebar-folder': 1,
@@ -87,7 +87,7 @@ export function applyStartupSkeletonSettings(settings: Record<string, string>) {
   root.dataset.baseColor = baseColor;
   root.dataset.resolvedBaseColor = mode;
   root.style.setProperty('--workspace-divider-mix-target', mode === 'dark' ? 'white' : 'black');
-  root.style.setProperty('--workspace-divider-subtle-surface-weight', mode === 'dark' ? '90%' : '92%');
+  root.style.setProperty('--workspace-divider-subtle-surface-weight', mode === 'dark' ? '93%' : '92%');
   for (const regionId of REGION_IDS) {
     const color = palette[normalizeAssignment(assignments, regionId, palette.length)] ?? palette[0] ?? '#ffffff';
     const dividerMixTarget = deriveDividerMixTarget(color);

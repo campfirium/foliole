@@ -73,7 +73,7 @@ it('applies local startup skeleton colors before waiting for the runtime snapsho
   await Promise.resolve();
 
   expect(document.documentElement.dataset.resolvedBaseColor).toBe('dark');
-  expect(document.documentElement.style.getPropertyValue('--startup-region-main-document-bg')).toBe('#1f211f');
+  expect(document.documentElement.style.getPropertyValue('--startup-region-main-document-bg')).toBe('#161918');
 });
 
 it('applies runtime startup skeleton colors before the app mounts', async () => {

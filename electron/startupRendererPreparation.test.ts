@@ -53,7 +53,7 @@ it('falls back to the Windows system dark background when startup html is unavai
   mocks.shouldUseDarkColors = true;
   const { prepareStartupRendererAppearance } = await import('./startupRendererPreparation.js');
 
-  expect(prepareStartupRendererAppearance('/runtime', '/missing')).toEqual({ backgroundColor: '#1f211f' });
+  expect(prepareStartupRendererAppearance('/runtime', '/missing')).toEqual({ backgroundColor: '#161918' });
 });
 
 it('prebuilds the startup renderer html only when settings are saved', async () => {

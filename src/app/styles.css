@@ -133,7 +133,7 @@
   --companion-text-tertiary: rgb(var(--color-muted-foreground) / 0.7);
   --pdf-reading-inverted-surface-color: rgb(23 23 23);
   --pdf-reading-inverted-page-color: rgb(23 23 23);
-  --pdf-reading-inverted-page-filter-source-color: color-mix(in srgb, white 92%, rgb(20 21 20) 8%);
+  --pdf-reading-inverted-page-filter-source-color: color-mix(in srgb, white 92%, rgb(17 20 19) 8%);
   --pdf-reading-warm-surface-color: var(--workspace-region-main-document-bg);
   --font-family-interface: system-ui, -apple-system, 'Segoe UI Variable', 'Segoe UI', sans-serif;
   --font-family-text: system-ui, -apple-system, 'Segoe UI Variable', 'Segoe UI', sans-serif;
@@ -337,12 +337,12 @@
 }
 
 :root[data-resolved-base-color='dark'] {
-  --color-canvas: 24 25 24;
-  --color-background: 20 21 20;
-  --color-bg-subtle: 31 33 31;
-  --color-settings-group: 35 37 35;
-  --color-bg-panel: 37 40 36;
-  --color-bg-elevated: 42 45 41;
+  --color-canvas: 22 25 24;
+  --color-background: 17 20 19;
+  --color-bg-subtle: 23 27 26;
+  --color-settings-group: 26 31 30;
+  --color-bg-panel: 26 31 30;
+  --color-bg-elevated: 32 39 37;
   --color-border: 78 80 75;
   --color-border-strong: 122 124 116;
   --color-settings-divider: 96 99 104;
@@ -354,12 +354,12 @@
   --color-error-foreground: 254 226 226;
   --color-secondary: 49 52 47;
   --color-muted: 38 40 37;
-  --color-card: 35 37 34;
-  --color-popover: 42 45 41;
+  --color-card: 26 31 30;
+  --color-popover: 32 39 37;
   --workspace-divider-mix-target: white;
-  --workspace-divider-subtle-surface-weight: 90%;
-  --workspace-divider-strong-surface-weight: 86%;
-  --workspace-document-content-divider-surface-weight: 89%;
+  --workspace-divider-subtle-surface-weight: 93%;
+  --workspace-divider-strong-surface-weight: 88%;
+  --workspace-document-content-divider-surface-weight: 93%;
   --app-control-border-color: rgb(var(--color-foreground) / 0.34);
   --app-control-border-hover-color: rgb(var(--color-foreground) / 0.5);
   --app-control-bg-hover-color: rgb(var(--color-foreground) / 0.06);

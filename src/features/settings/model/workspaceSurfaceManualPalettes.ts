@@ -87,7 +87,7 @@ export const WORKSPACE_SURFACE_MANUAL_PALETTES: readonly WorkspaceSurfaceManualP
 ] as const;
 
 export const WORKSPACE_SURFACE_DARK_MANUAL_PALETTES: readonly WorkspaceSurfaceManualPaletteDefinition[] = [
-  { family: 'graphite', id: 'dark-graphite-study', tones: ['#1c1d1c', '#242624', '#2c2f2b', '#151615', '#343832'], whiteDocumentTones: ['#1c1d1c', '#242624', '#2c2f2b', '#151615', '#343832'] },
+  { family: 'graphite', id: 'dark-graphite-study', tones: ['#171b1a', '#1a1f1e', '#1c2221', '#161918', '#1a1f1e'], whiteDocumentTones: ['#171b1a', '#1a1f1e', '#1c2221', '#161918', '#1a1f1e'] },
   { family: 'graphite', id: 'dark-graphite-paper', tones: ['#20211f', '#282a27', '#30332f', '#181918', '#383d37'], whiteDocumentTones: ['#20211f', '#282a27', '#30332f', '#181918', '#383d37'] },
   { family: 'moss', id: 'dark-moss-study', tones: ['#1d241f', '#263027', '#2f3a30', '#151916', '#374238'], whiteDocumentTones: ['#1d241f', '#263027', '#2f3a30', '#151916', '#374238'] },
   { family: 'moss', id: 'dark-moss-ledger', tones: ['#20261d', '#2a3226', '#333d2f', '#171a15', '#3b4637'], whiteDocumentTones: ['#20261d', '#2a3226', '#333d2f', '#171a15', '#3b4637'] },

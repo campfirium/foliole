@@ -112,8 +112,8 @@ const WORKSPACE_SURFACE_DARK_RECOMMENDATION_COLLECTIONS: readonly WorkspaceSurfa
   {
     groupId: 'default',
     id: 'dark-default-graphite',
-    tones: ['#1c1d1c', '#242624', '#2b2e2a', '#151615', '#333732'],
-    whiteDocumentTones: ['#1c1d1c', '#242624', '#2b2e2a', '#151615', '#333732']
+    tones: ['#171b1a', '#1a1f1e', '#1c2221', '#161918', '#1a1f1e'],
+    whiteDocumentTones: ['#171b1a', '#1a1f1e', '#1c2221', '#161918', '#1a1f1e']
   },
   {
     groupId: 'recommended',

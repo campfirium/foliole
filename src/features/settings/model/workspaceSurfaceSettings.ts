@@ -43,11 +43,11 @@ export const DEFAULT_WORKSPACE_SURFACE_PALETTE: WorkspaceSurfacePalette = [
 ];
 
 export const DEFAULT_DARK_WORKSPACE_SURFACE_PALETTE: WorkspaceSurfacePalette = [
-  '#2b2f2a',
-  '#252824',
-  '#2b2f2a',
-  '#1f211f',
-  '#30362f'
+  '#171b1a',
+  '#1a1f1e',
+  '#1c2221',
+  '#161918',
+  '#1a1f1e'
 ];
 
 export const DEFAULT_WORKSPACE_SURFACE_ASSIGNMENTS: WorkspaceSurfaceAssignments = {

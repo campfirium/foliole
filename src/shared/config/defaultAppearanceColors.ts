@@ -46,7 +46,7 @@ function blendRgbChannels(sourceRgb: string, targetRgb: string, sourceWeight: nu
 }
 
 export function deriveMutedForegroundRgb(fontRgb: string, mode: AppearanceDefaultColorMode) {
-  const canvasRgb = mode === 'dark' ? '24 25 24' : '255 255 255';
+  const canvasRgb = mode === 'dark' ? '22 25 24' : '255 255 255';
   return blendRgbChannels(fontRgb, canvasRgb, mode === 'dark' ? 0.68 : 0.72);
 }
 

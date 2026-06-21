@@ -35,9 +35,9 @@ function escapeHtml(value: string) {
 function createLocalStartupErrorCss() {
   return `
       :root {
-        --startup-document-bg: #1f211f;
-        --startup-divider: rgba(232, 230, 223, 0.18);
-        --startup-list-bg: #2b2f2a;
+        --startup-document-bg: #161918;
+        --startup-divider: rgba(232, 230, 223, 0.12);
+        --startup-list-bg: #1a1f1e;
         --color-foreground: 232 230 223;
       }
       html, body, #root {
@@ -46,7 +46,7 @@ function createLocalStartupErrorCss() {
         margin: 0;
       }
       body {
-        background: var(--startup-document-bg, #1f211f);
+        background: var(--startup-document-bg, #161918);
         color: rgb(var(--color-foreground, 232 230 223));
         font: 13px/1.5 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
@@ -59,7 +59,7 @@ function createLocalStartupErrorCss() {
         width: min(560px, calc(100vw - 64px));
         padding: 24px;
         border: 1px solid var(--startup-divider, rgba(232, 230, 223, 0.18));
-        background: var(--startup-list-bg, #2b2f2a);
+        background: var(--startup-list-bg, #1a1f1e);
       }
       .startup-error__title {
         margin: 0 0 8px;

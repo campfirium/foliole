@@ -14,11 +14,11 @@ const DEFAULT_LIGHT_SURFACES = {
   titlebar: '#ffffff'
 };
 const DEFAULT_DARK_SURFACES = {
-  document: '#1f211f',
-  divider: 'rgba(232, 230, 223, 0.18)',
-  list: '#2b2f2a',
-  sidebar: '#2b2f2a',
-  titlebar: '#252824'
+  document: '#161918',
+  divider: 'rgba(232, 230, 223, 0.12)',
+  list: '#1a1f1e',
+  sidebar: '#1a1f1e',
+  titlebar: '#161918'
 };
 const DEFAULT_LIGHT_RGB = {
   background: '245 245 243',
@@ -27,10 +27,10 @@ const DEFAULT_LIGHT_RGB = {
   panel: '246 246 246'
 };
 const DEFAULT_DARK_RGB = {
-  background: '20 21 20',
-  canvas: '24 25 24',
+  background: '17 20 19',
+  canvas: '22 25 24',
   foreground: '232 230 223',
-  panel: '37 40 36'
+  panel: '26 31 30'
 };
 const WORKSPACE_SURFACE_REGION_IDS = [
   'titlebar-rail',
@@ -45,7 +45,7 @@ const WORKSPACE_SURFACE_REGION_IDS = [
   'main-sidebar'
 ] as const;
 const DEFAULT_LIGHT_WORKSPACE_SURFACE_PALETTE = ['#b9b1a7', '#e7e3dd', '#f3eee8', '#ffffff', '#fbf9f7'];
-const DEFAULT_DARK_WORKSPACE_SURFACE_PALETTE = ['#2b2f2a', '#252824', '#2b2f2a', '#1f211f', '#30362f'];
+const DEFAULT_DARK_WORKSPACE_SURFACE_PALETTE = ['#171b1a', '#1a1f1e', '#1c2221', '#161918', '#1a1f1e'];
 const DEFAULT_WORKSPACE_SURFACE_ASSIGNMENTS = {
   'titlebar-rail': 0,
   'titlebar-folder': 1,
@@ -196,7 +196,7 @@ export function createStartupSkeletonCss(layout: StartupSkeletonLayout, settings
       cssVar(`startup-region-${regionId}-divider-mix-target`, deriveDividerMixTarget(workspaceSurfaces[regionId]))
     ]),
     cssVar('workspace-divider-mix-target', layout.mode === 'dark' ? 'white' : 'black'),
-    cssVar('workspace-divider-subtle-surface-weight', layout.mode === 'dark' ? '90%' : '92%'),
+    cssVar('workspace-divider-subtle-surface-weight', layout.mode === 'dark' ? '93%' : '92%'),
     cssVar('startup-document-bg', workspaceSurfaces['main-document'] ?? surfaces.document),
     cssVar('startup-divider', surfaces.divider),
     cssVar('startup-list-bg', workspaceSurfaces['main-folder'] ?? surfaces.list),

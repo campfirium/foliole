@@ -68,11 +68,11 @@ it('loads startup errors from a local surface independent of the dev server', as
 it('injects startup tokens and an absolute Vite module entry into dev renderer html without React refresh', () => {
   const html = '<html><head><style>:root{/*STARTUP_INJECTED_CSS*/}</style></head><body><script type="module" src="/src/main.tsx"></script></body></html>';
 
-  const result = injectDevRendererIntoHtml(html, 'http://127.0.0.1:24600/', '--startup-document-bg:#1f211f;', 'dark');
+  const result = injectDevRendererIntoHtml(html, 'http://127.0.0.1:24600/', '--startup-document-bg:#161918;', 'dark');
 
   expect(result).toContain('<base href="http://127.0.0.1:24600/">');
-  expect(result).toContain('<html style="--startup-document-bg:#1f211f;"');
-  expect(result).toContain(':root{--startup-document-bg:#1f211f;}');
+  expect(result).toContain('<html style="--startup-document-bg:#161918;"');
+  expect(result).toContain(':root{--startup-document-bg:#161918;}');
   expect(result).toContain('data-resolved-base-color="dark"');
   expect(result).toContain("entry.type = 'module';");
   expect(result).toContain('entry.src = "http://127.0.0.1:24600/src/main.tsx";');
@@ -84,11 +84,11 @@ it('injects startup tokens and an absolute Vite module entry into dev renderer h
 it('injects startup tokens and a file base tag into packaged renderer html', () => {
   const html = '<html><head><style>:root{/*STARTUP_INJECTED_CSS*/}</style></head><body></body></html>';
 
-  const result = injectStartupTokensIntoRendererHtml(html, '/app/dist/desktop/index.html', '--startup-document-bg:#1f211f;', 'dark');
+  const result = injectStartupTokensIntoRendererHtml(html, '/app/dist/desktop/index.html', '--startup-document-bg:#161918;', 'dark');
 
   expect(result).toMatch(/<base href="file:\/\/\/(?:[A-Z]:\/)?app\/dist\/desktop\/">/);
-  expect(result).toContain('<html style="--startup-document-bg:#1f211f;"');
-  expect(result).toContain(':root{--startup-document-bg:#1f211f;}');
+  expect(result).toContain('<html style="--startup-document-bg:#161918;"');
+  expect(result).toContain(':root{--startup-document-bg:#161918;}');
   expect(result).toContain('data-resolved-base-color="dark"');
   expect(result).not.toContain('/*STARTUP_INJECTED_CSS*/');
 });
@@ -97,7 +97,7 @@ it('replaces build-time startup theme attributes when runtime settings generate 
   const html =
     '<html data-base-color="light" data-resolved-base-color="light" style="--startup-document-bg:#ffffff;"><head><style>:root{--startup-document-bg:#ffffff;}</style></head><body></body></html>';
 
-  const result = injectStartupTokensIntoRendererHtml(html, '/app/dist/desktop/index.html', '--startup-document-bg:#1f211f;', 'dark');
+  const result = injectStartupTokensIntoRendererHtml(html, '/app/dist/desktop/index.html', '--startup-document-bg:#161918;', 'dark');
 
   expect(result.match(/data-base-color=/g)).toHaveLength(1);
   expect(result.match(/data-resolved-base-color=/g)).toHaveLength(1);
@@ -196,7 +196,7 @@ it('keeps startup skeleton variables isolated from workspace css defaults', asyn
     prebuiltHtml.indexOf('@media (max-width: 1279px)')
   );
 
-  expect(prebuiltHtml).toContain('--startup-region-main-document-bg: #1f211f;');
+  expect(prebuiltHtml).toContain('--startup-region-main-document-bg: #161918;');
   expect(skeletonCss).toContain('var(--startup-region-main-document-bg)');
   expect(skeletonCss).not.toContain('var(--workspace-region-main-document-bg)');
 });
@@ -252,5 +252,5 @@ it('resolves system base color to dark for prebuilt startup html', async () => {
   const prebuiltHtml = await fs.readFile(runtimeIndexPath, 'utf8');
 
   expect(prebuiltHtml).toContain('data-resolved-base-color="dark"');
-  expect(prebuiltHtml).toContain('--startup-region-main-document-bg: #1f211f;');
+  expect(prebuiltHtml).toContain('--startup-region-main-document-bg: #161918;');
 });

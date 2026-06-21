@@ -23,7 +23,7 @@ const DEFAULT_AUTO_OPTIONS: WorkspaceSurfaceAutoPaletteOptions = {
 };
 
 const DEFAULT_WORKSPACE_SURFACE_AUTO_SEED = '#7a7a7a';
-const DEFAULT_DARK_WORKSPACE_SURFACE_AUTO_SEED = '#30362f';
+const DEFAULT_DARK_WORKSPACE_SURFACE_AUTO_SEED = '#1a1f1e';
 const WORKSPACE_SURFACE_RANDOM_HISTORY_LIMIT = 8;
 
 function modeKey(mode: WorkspaceSurfaceColorMode, lightKey: string, darkKey: string) {

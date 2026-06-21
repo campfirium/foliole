@@ -40,6 +40,6 @@ export function prepareStartupRendererAppearance(
   runtimeHtmlDir: string
 ): StartupRendererAppearance | null {
   return {
-    backgroundColor: readStartupDocumentBackground(runtimeHtmlDir) ?? (nativeTheme.shouldUseDarkColors ? '#1f211f' : '#ffffff')
+    backgroundColor: readStartupDocumentBackground(runtimeHtmlDir) ?? (nativeTheme.shouldUseDarkColors ? '#161918' : '#ffffff')
   };
 }

@@ -26,9 +26,9 @@ beforeEach(() => {
 it('restores light PDF surface tokens on the first switch after a dark inverted startup', () => {
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.baseColor, 'dark');
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.pdfReadingMode, 'inverted');
-  document.documentElement.style.setProperty('--color-canvas', '24 25 24');
-  document.documentElement.style.setProperty('--color-background', '20 21 20');
-  document.documentElement.style.setProperty('--color-bg-panel', '37 40 36');
+  document.documentElement.style.setProperty('--color-canvas', '22 25 24');
+  document.documentElement.style.setProperty('--color-background', '17 20 19');
+  document.documentElement.style.setProperty('--color-bg-panel', '26 31 30');
 
   render(
     <AppearanceSettingsProvider>
@@ -38,8 +38,8 @@ it('restores light PDF surface tokens on the first switch after a dark inverted 
 
   expect(document.documentElement.dataset.resolvedBaseColor).toBe('dark');
   expect(document.documentElement.dataset.pdfReadingMode).toBe('inverted');
-  expect(document.documentElement.style.getPropertyValue('--color-canvas')).toBe('24 25 24');
-  expect(document.documentElement.style.getPropertyValue('--workspace-region-main-document-bg')).toBe('#1f211f');
+  expect(document.documentElement.style.getPropertyValue('--color-canvas')).toBe('22 25 24');
+  expect(document.documentElement.style.getPropertyValue('--workspace-region-main-document-bg')).toBe('#161918');
 
   fireEvent.click(screen.getByRole('button', { name: 'Toggle light/dark' }));
 
