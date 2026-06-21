@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 
 import folioleAppIconUrl from '../../../../assets/brand/foliole-app-icon.png?url';
+import { definedProps } from '../../../shared/lib/definedProps';
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import {
   getSettingsCategoryOption,
@@ -68,7 +69,7 @@ export function SettingsSidebar(props: {
       headerClassName="h-[64px] min-h-0 border-b border-settings-divider/55 px-5 py-0"
       scrollBody
       surfaceClassName="bg-settings-sidebar"
-      title={<SettingsSidebarBrand badge={props.brandBadge} />}
+      title={<SettingsSidebarBrand {...definedProps({ badge: props.brandBadge })} />}
     >
       <nav aria-label={t('settings.navigation.aria')} className="flex w-full flex-col items-stretch gap-4">
         {groups.map((group) => (
@@ -117,7 +118,7 @@ function SettingsSidebarGroup(props: {
 }) {
   const t = useTranslation();
   return (
-    <div className="relative w-full pt-4 before:absolute before:left-7 before:right-7 before:top-0 before:h-px before:bg-[color:color-mix(in_oklab,var(--app-settings-sidebar-bg)_86%,var(--workspace-divider-mix-target))] before:content-[''] first:pt-0 first:before:hidden">
+    <div className="relative w-full pt-4 before:absolute before:left-3 before:right-3 before:top-0 before:border-t before:border-settings-divider/65 first:pt-0 first:before:hidden">
       <div className="mb-1 flex w-full items-center gap-2 px-3 text-[0.72rem] font-semibold uppercase leading-5 tracking-[0.12em] text-foreground/58">
         <span>{props.group.label}</span>
       </div>

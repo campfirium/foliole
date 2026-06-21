@@ -1,6 +1,6 @@
 export const EN_SETTINGS_DEMO_PREVIEW_TRANSLATIONS = {
-  'settings.demoPreview.banner.title': 'Desktop settings preview',
-  'settings.demoPreview.banner.description': 'Live Demo shows these desktop app controls as a preview.',
+  'settings.demoPreview.banner.title': 'Demo preview',
+  'settings.demoPreview.banner.description': 'These desktop settings are shown for context. Changes are not saved in the web demo.',
   'settings.demoPreview.control.desktopOnly': 'Desktop only',
   'settings.demoPreview.control.previewOnly': 'Preview only',
   'settings.demoPreview.downloadDesktop': 'Download desktop app',

@@ -1,3 +1,4 @@
+import { Info } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import type { SettingsCategoryId } from '../model/settingsPanelOptions';
@@ -21,7 +22,7 @@ export function DemoSettingsPreviewOverlay({
 }: DemoSettingsPreviewOverlayProps) {
   return (
     <SettingsPanel
-      headerNotice={<DemoSettingsPreviewNotice />}
+      contentNotice={<DemoSettingsPreviewNotice />}
       hideLanguageSetting
       onClose={onClose}
       onRunSupportCommand={onRunSupportCommand}
@@ -35,11 +36,12 @@ export function DemoSettingsPreviewOverlay({
 function DemoSettingsPreviewNotice() {
   const t = useTranslation();
   return (
-    <div className="flex min-h-12 min-w-0 items-center gap-2 text-ui-md leading-6">
-      <span className="shrink-0 font-semibold text-foreground/72">
-        {t('settings.demoPreview.banner.title')}
-      </span>
-      <span className="min-w-0 truncate text-foreground/58">{t('settings.demoPreview.banner.description')}</span>
+    <div className="grid w-full grid-cols-[18px_minmax(0,1fr)] gap-3 rounded-md border border-[color:color-mix(in_srgb,var(--app-accent-color)_30%,var(--app-settings-group-bg)_70%)] bg-[color:color-mix(in_srgb,var(--app-accent-color)_10%,var(--app-settings-group-bg)_90%)] px-3.5 py-3 text-ui-md leading-6 text-foreground/62">
+      <Info aria-hidden className="mt-0.5 size-[18px] text-[color:var(--app-accent-color)]" strokeWidth={1.9} />
+      <div className="min-w-0">
+        <div className="font-semibold text-foreground/86">{t('settings.demoPreview.banner.title')}</div>
+        <div>{t('settings.demoPreview.banner.description')}</div>
+      </div>
     </div>
   );
 }

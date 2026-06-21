@@ -29,8 +29,8 @@ it('keeps category groups and rows stretched across the sidebar', () => {
   expect(scrollBody?.className).toContain('--workspace-region-main-topic-scrollbar-thumb-color');
   expect(nav).toHaveClass('w-full');
   expect(nav).toHaveClass('items-stretch');
-  expect(group).toHaveClass('before:left-7');
-  expect(group).toHaveClass('before:right-7');
+  expect(group).toHaveClass('before:left-3');
+  expect(group).toHaveClass('before:right-3');
   expect(group).toHaveClass('w-full');
   expect(editor).toHaveClass('w-full');
 });

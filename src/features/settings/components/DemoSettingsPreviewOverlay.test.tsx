@@ -23,13 +23,13 @@ it('uses the real desktop settings panel while hiding only the language setting'
     <DemoSettingsPreviewOverlay onClose={vi.fn()} requestedCategory="general" />
   );
 
-  expect(await screen.findByText('Desktop settings preview')).toBeInTheDocument();
-  expect(screen.getByText('Live Demo shows these desktop app controls as a preview.')).toBeInTheDocument();
+  expect(await screen.findByText('Demo preview')).toBeInTheDocument();
+  expect(screen.getByText('These desktop settings are shown for context. Changes are not saved in the web demo.')).toBeInTheDocument();
   const dialog = document.querySelector('[data-settings-root-dialog="true"]');
   expect(dialog).not.toHaveAttribute('data-settings-desktop-preview');
   expect(dialog).toHaveClass('w-[min(1240px,calc(100vw-36px))]');
   expect(dialog).toHaveClass('rounded-lg');
-  expect(screen.queryByPlaceholderText('Search all settings...')).not.toBeInTheDocument();
+  expect(screen.getByRole('textbox', { name: 'Search settings' })).toBeInTheDocument();
   expect(screen.queryByText('App language')).not.toBeInTheDocument();
 
   const startupSwitch = await screen.findByRole('switch', { name: 'Start Foliole automatically' });

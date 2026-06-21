@@ -28,6 +28,7 @@ import {
 import { definedProps } from '@/shared/lib/definedProps';
 
 interface SettingsPanelProps {
+  contentNotice?: ReactNode;
   headerNotice?: ReactNode;
   hideLanguageSetting?: boolean;
   importCategoryContent?: ReactNode;
@@ -91,6 +92,7 @@ type SettingsPanelBodyProps = {
   isSavingExternalSearchFolders: boolean;
   libraryHomePath: string;
   description: string;
+  contentNotice?: ReactNode;
   headerNotice?: ReactNode;
   hideLanguageSetting?: boolean;
   mirrorLinkRebuildError: string | null;
@@ -183,6 +185,7 @@ function SettingsPanelBody(props: SettingsPanelBodyProps) {
       activeCategory={props.activeCategory}
       activeResultIndex={search.activeResultIndex}
       categoryProps={categoryProps}
+      contentNotice={props.contentNotice}
       description={props.description}
       headerNotice={props.headerNotice}
       hotkeys={hotkeys}

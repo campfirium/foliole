@@ -13,8 +13,8 @@ describe('settings demo preview translations', () => {
   });
 
   it('uses Chinese text for the demo preview shell keys', () => {
-    expect(ZH_HANS_SETTINGS_DEMO_PREVIEW_TRANSLATIONS['settings.demoPreview.banner.title']).toBe('桌面版设置预览');
-    expect(ZH_HANS_SETTINGS_DEMO_PREVIEW_TRANSLATIONS['settings.demoPreview.banner.description']).toBe('Live Demo 仅预览这些桌面版控件。');
+    expect(ZH_HANS_SETTINGS_DEMO_PREVIEW_TRANSLATIONS['settings.demoPreview.banner.title']).toBe('Demo 预览');
+    expect(ZH_HANS_SETTINGS_DEMO_PREVIEW_TRANSLATIONS['settings.demoPreview.banner.description']).toBe('这里展示桌面端设置控件，方便了解完整体验。Web Demo 中的更改不会保存。');
     expect(ZH_HANS_SETTINGS_DEMO_PREVIEW_TRANSLATIONS['settings.demoPreview.note.label']).toBe('文件夹访问');
   });
 });
