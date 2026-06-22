@@ -56,7 +56,7 @@ function QueueRow(props: {
       <span className={`${inspectorListMetaClassName} text-right tabular-nums text-foreground/28`}>{props.index + 1}</span>
       <QueueKindIcon kind={kind} />
       <button
-        className={`${inspectorListTitleClassName} truncate font-normal text-foreground/82 underline-offset-2 hover:text-foreground hover:underline focus:outline-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring`}
+        className={`${inspectorListTitleClassName} truncate text-left font-normal text-foreground/82 underline-offset-2 hover:text-foreground hover:underline focus:outline-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring`}
         onClick={() => props.onSelectNode(props.nodeId)}
         type="button"
       >
@@ -78,7 +78,6 @@ function FlowSectionHeading({
   }
   return (
     <li className={`${inspectorListInsetPaddingClassName} flex list-none items-center gap-2 pb-2 pt-3 ${inspectorListMetaClassName}`}>
-      <span aria-hidden="true" className={`h-px min-w-4 flex-1 ${inspectorListDividerLineClassName}`} />
       <span>{heading}</span>
       <span aria-hidden="true" className={`h-px min-w-4 flex-1 ${inspectorListDividerLineClassName}`} />
     </li>
