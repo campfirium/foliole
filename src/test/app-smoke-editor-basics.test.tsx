@@ -5,9 +5,10 @@ import './app-smoke.shared';
 
 import { App } from '../app/App';
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
+import type { ElectronAPI, NativeKeyboardInputPayload } from '../shared/platform/electronApi';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
-import { mockEditorState } from './app-smoke.shared';
+import { createSmokeRuntimeInvoke, mockEditorState } from './app-smoke.shared';
 
 const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
 
@@ -53,6 +54,26 @@ function clearActiveNodeSelection() {
   useWorkspaceStore.setState({
     activeNodeId: null
   });
+}
+
+function installNativeKeyboardBridge() {
+  const handlers: Array<(payload: NativeKeyboardInputPayload) => void> = [];
+  window.electronAPI = {
+    invoke: createSmokeRuntimeInvoke(),
+    onManagedInboxUpdated: () => () => undefined,
+    onNativeKeyboardInput: (handler: (payload: NativeKeyboardInputPayload) => void) => {
+      handlers.push(handler);
+      return () => {
+        const index = handlers.indexOf(handler);
+        if (index >= 0) handlers.splice(index, 1);
+      };
+    },
+    onNativeMenuCommand: () => () => undefined,
+    onWindowResized: () => () => undefined
+  } as unknown as ElectronAPI;
+  return (payload: NativeKeyboardInputPayload) => {
+    for (const handler of [...handlers]) handler(payload);
+  };
 }
 
 it('opens the guided sample when no note exists yet', async () => {
@@ -145,6 +166,42 @@ it('keeps first note content unchanged when editing a newly created note', async
     const workspaceAfterEdit = useWorkspaceStore.getState();
     expect(workspaceAfterEdit.nodesById[firstNodeId]?.content).toBe('');
     expect(workspaceAfterEdit.nodesById[newNodeId]?.content).toBe('My second note content');
+  });
+});
+
+it('leaves editing with Escape after typing in a newly created note', async () => {
+  const dispatchNativeKeyboard = installNativeKeyboardBridge();
+  const initialNodeOrder = [...useWorkspaceStore.getState().nodeOrder];
+  render(<App />);
+  createTopicFromHeaderMenu();
+
+  await waitFor(() => {
+    expect(useWorkspaceStore.getState().nodeOrder).toHaveLength(initialNodeOrder.length + 1);
+  });
+  const newNodeId = useWorkspaceStore.getState().activeNodeId;
+  if (!newNodeId) {
+    throw new Error('expected new active node');
+  }
+  fireEvent.change(screen.getByTestId('editor-value'), { target: { value: 'Draft body' } });
+  const editor = screen.getByTestId('editor-value');
+  editor.focus();
+  fireEvent.focusIn(editor);
+  await act(async () => {});
+  dispatchNativeKeyboard({
+    altKey: false,
+    code: 'Escape',
+    controlKey: false,
+    key: 'Escape',
+    metaKey: false,
+    shiftKey: false,
+    type: 'keyDown'
+  });
+
+  await waitFor(() => expect(document.activeElement).not.toBe(editor));
+  fireEvent.keyDown(window, { key: 'Delete' });
+
+  await waitFor(() => {
+    expect(useWorkspaceStore.getState().trashedNodeIds).toContain(newNodeId);
   });
 });
 

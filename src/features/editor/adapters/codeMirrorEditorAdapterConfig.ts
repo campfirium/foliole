@@ -32,6 +32,32 @@ function createEditorUpdateListener(args: {
   });
 }
 
+function blurActiveCodeMirrorElement(view: EditorView) {
+  const activeElement = document.activeElement;
+  if (!(activeElement instanceof HTMLElement) || !view.dom.contains(activeElement)) {
+    return;
+  }
+  activeElement.blur();
+}
+
+function blurCodeMirrorEditorOnEscape(event: KeyboardEvent, view: EditorView) {
+  if (event.key !== 'Escape' || event.defaultPrevented) {
+    return false;
+  }
+  blurActiveCodeMirrorElement(view);
+  window.setTimeout(() => blurActiveCodeMirrorElement(view), 0);
+  return false;
+}
+
+const escapeBlurKeymap = [{
+  key: 'Escape',
+  run: (view: EditorView) => {
+    blurActiveCodeMirrorElement(view);
+    window.setTimeout(() => blurActiveCodeMirrorElement(view), 0);
+    return true;
+  }
+}];
+
 export function createCodeMirrorEditorExtensions(args: {
   diffDecorationsCompartment: import('@codemirror/state').Compartment;
   textAnchorDecorations: readonly import('./EditorAdapter').EditorTextAnchorDecoration[];
@@ -52,7 +78,7 @@ export function createCodeMirrorEditorExtensions(args: {
   return [
     markdown({ base: markdownLanguage, extensions: folioleMarkdownLanguageExtensions }),
     EditorState.allowMultipleSelections.of(true),
-    keymap.of(folioleDefaultKeymap),
+    keymap.of([...escapeBlurKeymap, ...folioleDefaultKeymap]),
     args.readOnlyCompartment.of(createReadOnlyExtensions(args.options.readOnly === true)),
     EditorView.lineWrapping,
     highlightActiveLine(),
@@ -82,6 +108,9 @@ export function createCodeMirrorEditorExtensions(args: {
       compositionend: () => {
         args.onCompositionEnd();
         return false;
+      },
+      keydown: (event, view) => {
+        return blurCodeMirrorEditorOnEscape(event, view);
       }
     }),
     createEditorUpdateListener(args)

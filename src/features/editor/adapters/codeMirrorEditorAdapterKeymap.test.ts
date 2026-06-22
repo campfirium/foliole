@@ -1,6 +1,7 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockKeymapOf = vi.hoisted(() => vi.fn((value) => value));
+const mockDomEventHandlers = vi.hoisted(() => vi.fn((value) => value));
 const mockCreateLiveMarkdownExtensions = vi.hoisted(() => vi.fn(() => 'live-markdown-extensions'));
 const mockToggleComment = vi.hoisted(() => vi.fn());
 
@@ -31,7 +32,7 @@ vi.mock('@codemirror/view', () => ({
   Decoration: { none: 'decoration-none' },
   EditorView: {
     decorations: { of: vi.fn((value) => value) },
-    domEventHandlers: vi.fn((value) => value),
+    domEventHandlers: mockDomEventHandlers,
     lineWrapping: 'line-wrapping',
     updateListener: { of: vi.fn((value) => value) }
   },
@@ -94,16 +95,24 @@ function createEditorExtensionArgs(options: { initialContent: string; liveMarkdo
   };
 }
 
-describe('CodeMirror editor keymap', () => {
-  beforeEach(() => {
-    mockCreateLiveMarkdownExtensions.mockClear();
-    mockKeymapOf.mockClear();
-  });
+beforeEach(() => {
+  mockDomEventHandlers.mockClear();
+  mockCreateLiveMarkdownExtensions.mockClear();
+  mockKeymapOf.mockClear();
+});
 
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+describe('CodeMirror editor keymap', () => {
   it('does not install CodeMirror history or bind its history keymap', () => {
     const extensions = createCodeMirrorEditorExtensions(createEditorExtensionArgs());
 
-    expect(mockKeymapOf).toHaveBeenCalledWith([{ key: 'Mod-a', run: expect.any(Function) }]);
+    expect(mockKeymapOf).toHaveBeenCalledWith([
+      { key: 'Escape', run: expect.any(Function) },
+      { key: 'Mod-a', run: expect.any(Function) }
+    ]);
     expect(extensions).not.toContain('history-extension');
   });
 
@@ -123,5 +132,46 @@ describe('CodeMirror editor keymap', () => {
     expect(liveMarkdownCompartment.of).toHaveBeenCalledWith([]);
     expect(extensions).not.toContain('live-markdown-extensions');
   });
+});
 
+describe('CodeMirror editor Escape blur', () => {
+  it('blurs CodeMirror Escape even if focus returns after the event', () => {
+    vi.useFakeTimers();
+    createCodeMirrorEditorExtensions(createEditorExtensionArgs());
+    const handlers = mockDomEventHandlers.mock.calls.at(-1)?.[0] ?? {};
+    const host = document.createElement('div');
+    const content = document.createElement('div');
+    content.tabIndex = 0;
+    host.append(content);
+    document.body.append(host);
+    content.focus();
+
+    const wasHandled = handlers.keydown(new KeyboardEvent('keydown', { key: 'Escape' }), { dom: host });
+    content.focus();
+    vi.runOnlyPendingTimers();
+
+    expect(wasHandled).toBe(false);
+    expect(document.activeElement).not.toBe(content);
+    host.remove();
+  });
+
+  it('binds Escape to blur the focused CodeMirror content', () => {
+    vi.useFakeTimers();
+    createCodeMirrorEditorExtensions(createEditorExtensionArgs());
+    const escapeBinding = mockKeymapOf.mock.calls.at(-1)?.[0]?.find((binding: { key?: string }) => binding.key === 'Escape');
+    const host = document.createElement('div');
+    const content = document.createElement('div');
+    content.tabIndex = 0;
+    host.append(content);
+    document.body.append(host);
+    content.focus();
+
+    const wasHandled = escapeBinding?.run({ dom: host });
+    content.focus();
+    vi.runOnlyPendingTimers();
+
+    expect(wasHandled).toBe(true);
+    expect(document.activeElement).not.toBe(content);
+    host.remove();
+  });
 });

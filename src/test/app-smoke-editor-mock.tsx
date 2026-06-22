@@ -104,11 +104,13 @@ function useMockReviewEscapeBlur(args: {
 }) {
   useEffect(() => {
     const root = args.rootRef.current;
-    if (!root || !args.enabled) return undefined;
+    if (!root) return undefined;
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         blurActiveElement();
-        dispatchReviewEditorEscapeBlur();
+        if (args.enabled) {
+          dispatchReviewEditorEscapeBlur();
+        }
       }
     };
     root.addEventListener('keydown', handleKeyDown, true);
@@ -133,9 +135,12 @@ interface MockMarkdownEditorSurfaceProps {
 }
 
 function MockMarkdownEditorSurface(props: MockMarkdownEditorSurfaceProps) {
-  const handleKeyDownCapture = (event: ReactKeyboardEvent<HTMLDivElement>) => {
-    if (props.reviewEscapeBlurEnabled && event.key === 'Escape') {
-      blurActiveElement();
+  const handleEscapeKeyDown = (event: KeyboardEvent | ReactKeyboardEvent<HTMLElement>) => {
+    if (event.key !== 'Escape') {
+      return;
+    }
+    blurActiveElement();
+    if (props.reviewEscapeBlurEnabled) {
       dispatchReviewEditorEscapeBlur();
     }
   };
@@ -143,7 +148,7 @@ function MockMarkdownEditorSurface(props: MockMarkdownEditorSurfaceProps) {
     <div
       className={['markdown-editor-host', props.className].filter(Boolean).join(' ')}
       data-review-escape-blur={props.reviewEscapeBlurEnabled ? 'true' : 'false'}
-      onKeyDownCapture={handleKeyDownCapture}
+      onKeyDownCapture={handleEscapeKeyDown}
       ref={props.rootRef}
     >
       <textarea
@@ -156,6 +161,7 @@ function MockMarkdownEditorSurface(props: MockMarkdownEditorSurfaceProps) {
             onDocumentInput: props.onDocumentInput
           })
         }
+        onKeyDown={handleEscapeKeyDown}
         ref={props.textareaRef}
         value={props.value}
       />
