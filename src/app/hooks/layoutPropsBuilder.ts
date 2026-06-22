@@ -43,6 +43,10 @@ function measureLayoutPropsStep<T>(args: BuildLayoutPropsArgs, step: string, com
 }
 
 function createSessionActions(args: BuildLayoutPropsArgs) {
+  const exitReviewMode = () => {
+    args.exitReviewSession();
+    args.exitStudyMode();
+  };
   const enterReviewMode = () =>
     args.reviewSettings.isReviewSchedulerSettingsReady &&
     enterReviewModeSession({
@@ -57,10 +61,10 @@ function createSessionActions(args: BuildLayoutPropsArgs) {
       if (!args.isStudyMode) {
         return enterReviewMode();
       }
-      args.exitReviewSession();
-      args.exitStudyMode();
+      exitReviewMode();
       return true;
-    }
+    },
+    onExitReviewMode: exitReviewMode
   };
 }
 
@@ -193,7 +197,7 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
     onStartClipboardImport: args.onStartClipboardImport,
     onGoBack: args.nav.onGoBack, onGoForward: args.nav.onGoForward, onGoParent: args.nav.onGoParent, onCloseContextMenu: args.editorCtx.onCloseContextMenu, onCopyImage: args.editorCtx.onCopyImage, onCreateHighlight: args.editorCtx.onCreateHighlight, onCreateNote: args.editorCtx.onCreateNote, onOpenSelectionNote: args.editorCtx.onOpenSelectionNote, onDeleteExistingHighlight: args.editorCtx.onDeleteExistingHighlight, onOpenExistingHighlight: args.editorCtx.onOpenExistingHighlight, onRepairTable: args.editorCtx.onRepairTable, onAdjustExistingHighlightRange: args.editorCtx.onAdjustExistingHighlightRange, onCreateSelectionHighlight: args.editorCtx.onCreateSelectionHighlight, onToggleSelectionHighlight: args.editorCtx.onToggleSelectionHighlight, onCreateSelectionNote: args.editorCtx.onCreateSelectionNote, onCreatePdfHighlight: args.editorCtx.onCreatePdfHighlight, onCreateCloze: args.editorCtx.onCreateCloze, onCutImage: args.editorCtx.onCutImage, onDeleteImage: args.editorCtx.onDeleteImage, onExportImage: args.editorCtx.onExportImage, ...definedProps({ onCreateHighlightFromPayload: args.editorCtx.onCreateHighlightFromPayload, onPastedTextAnchors: args.onPastedTextAnchors, onCreateClozeFromPayload: args.editorCtx.onCreateClozeFromPayload }),
     onOpenSettings: args.onOpenSettings, onCloseSettings: args.onCloseSettings, ...sessionActions,
-    onRevealAnswer: args.revealReviewAnswer, onResumeReviewItem: args.onResumeReviewItem, onGradeReview: (grade) => args.updateGrade(grade), onReadReviewTopic: () => args.readReviewTopic(), onPostponeReviewTopic: () => args.postponeReviewTopic(), onOpenPostponeTopicPanel: args.onOpenPostponeTopicPanel, onDismissReviewTopic: () => args.dismissReviewTopic(), onRevisitReviewTopicSoon: () => args.revisitReviewTopicSoon(), onContinueReading: createContinueReadingAction(args), onExitReviewMode: sessionActions.onToggleReviewSession, onSetReviewSessionMode: args.setReviewSessionMode,
+    onRevealAnswer: args.revealReviewAnswer, onResumeReviewItem: args.onResumeReviewItem, onGradeReview: (grade) => args.updateGrade(grade), onReadReviewTopic: () => args.readReviewTopic(), onPostponeReviewTopic: () => args.postponeReviewTopic(), onOpenPostponeTopicPanel: args.onOpenPostponeTopicPanel, onDismissReviewTopic: () => args.dismissReviewTopic(), onRevisitReviewTopicSoon: () => args.revisitReviewTopicSoon(), onContinueReading: createContinueReadingAction(args), onExitReviewMode: sessionActions.onExitReviewMode, onSetReviewSessionMode: args.setReviewSessionMode,
     reviewSchedulerSettings: args.reviewSettings.reviewSchedulerSettings, selectedTrashNodeId: args.selectedTrashNodeId
   };
   return measureLayoutPropsStep(args, 'group_workspace_layout_props', () => groupWorkspaceLayoutProps(flatProps));

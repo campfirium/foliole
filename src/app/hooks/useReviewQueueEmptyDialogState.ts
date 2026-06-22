@@ -25,14 +25,15 @@ export function useReviewQueueEmptyDialogState(flowWindow: ReviewFlowWindow) {
   const demoState = useDemoRuntimeState();
   const openedDemoPreviewDayRef = useRef<number | null>(null);
   const [content, setContent] = useState<ReviewQueueEmptyDialogContent | null>(null);
+  const shouldOpenBeforeStart = demoState.isDemo && shouldShowDemoDayClearDialog(flowWindow);
   const close = useCallback(() => setContent(null), []);
   const openEmpty = useCallback(() => {
     setContent(
-      demoState.isDemo && shouldShowDemoDayClearDialog(flowWindow)
+      shouldOpenBeforeStart
         ? buildDemoDayClearContent(demoState.previewDay)
         : { kind: 'empty' }
     );
-  }, [demoState.isDemo, demoState.previewDay, flowWindow]);
+  }, [demoState.previewDay, shouldOpenBeforeStart]);
 
   useEffect(() => {
     if (!demoState.isDemo || !shouldShowDemoDayClearDialog(flowWindow)) {
@@ -49,25 +50,31 @@ export function useReviewQueueEmptyDialogState(flowWindow: ReviewFlowWindow) {
     close,
     content,
     isOpen: content !== null,
-    openEmpty
+    openEmpty,
+    shouldOpenBeforeStart
   };
 }
 
 export function bindReviewQueueEmptyDialogToLayoutProps(
   layoutProps: WorkspaceLayoutProps,
-  openEmptyDialog: () => void
+  openEmptyDialog: () => void,
+  shouldOpenBeforeStart = false
 ): WorkspaceLayoutProps {
   return {
     ...layoutProps,
     review: {
       ...layoutProps.review,
-      onStartStudyMode: () => startReviewAction(layoutProps.review.onStartStudyMode, openEmptyDialog),
-      onToggleReviewSession: () => startReviewAction(layoutProps.review.onToggleReviewSession, openEmptyDialog)
+      onStartStudyMode: () => startReviewAction(layoutProps.review.onStartStudyMode, openEmptyDialog, shouldOpenBeforeStart),
+      onToggleReviewSession: () => startReviewAction(layoutProps.review.onToggleReviewSession, openEmptyDialog, shouldOpenBeforeStart)
     }
   };
 }
 
-function startReviewAction(action: () => boolean, openEmptyDialog: () => void) {
+function startReviewAction(action: () => boolean, openEmptyDialog: () => void, shouldOpenBeforeStart: boolean) {
+  if (shouldOpenBeforeStart) {
+    openEmptyDialog();
+    return false;
+  }
   if (action()) {
     return true;
   }

@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { useReviewSchedulerSettings } from '../../features/settings/context/ReviewSchedulerSettingsProvider';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
+import { useDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 import { isReviewSessionCompleted } from '../../store/workspaceReviewReading';
 import type { WorkspaceSearchResult } from '../components/workspaceSearch';
@@ -119,6 +120,7 @@ function useReviewFlowAllClearNotice(args: {
   exitStudyMode: () => void;
   isReviewSessionCompleted: boolean;
   isStudyMode: boolean;
+  suppressNotice: boolean;
 }) {
   const t = useTranslation();
   useEffect(() => {
@@ -126,8 +128,24 @@ function useReviewFlowAllClearNotice(args: {
       return;
     }
     args.exitStudyMode();
-    showAppRuntimeNotice(t('desktop.reviewSession.allClear.notice'), 'success');
-  }, [args.exitStudyMode, args.isReviewSessionCompleted, args.isStudyMode, t]);
+    if (!args.suppressNotice) {
+      showAppRuntimeNotice(t('desktop.reviewSession.allClear.notice'), 'success');
+    }
+  }, [args.exitStudyMode, args.isReviewSessionCompleted, args.isStudyMode, args.suppressNotice, t]);
+}
+
+function useControllerReviewCompletionNotice(args: {
+  exitStudyMode: () => void;
+  isStudyMode: boolean;
+  reviewSession: ReturnType<typeof useWorkspaceSelectors>['reviewSession'];
+}) {
+  const demoState = useDemoRuntimeState();
+  useReviewFlowAllClearNotice({
+    exitStudyMode: args.exitStudyMode,
+    isReviewSessionCompleted: isReviewSessionCompleted(args.reviewSession),
+    isStudyMode: args.isStudyMode,
+    suppressNotice: demoState.isDemo
+  });
 }
 
 function useControllerQuickEntryState(args: {
@@ -171,7 +189,7 @@ export function useAppController(args: {
   const { priorityQuickSet, reviewTopicDelayPanel } = useControllerQuickEntryState({ controller, hotkeys, isStudyMode, ws });
   const reviewPreview = useReviewSessionRuntime({ isStudyMode, nowIso, reviewSettings, ws });
   useControllerStartupEffects({ controller, isReviewSchedulerSettingsReady: reviewSettings.isReviewSchedulerSettingsReady, isStudyMode, isWorkspaceHydrated, startStudyMode, ws });
-  useReviewFlowAllClearNotice({ exitStudyMode, isReviewSessionCompleted: isReviewSessionCompleted(ws.reviewSession), isStudyMode });
+  useControllerReviewCompletionNotice({ exitStudyMode, isStudyMode, reviewSession: ws.reviewSession });
   const reviewEditing = useControllerReviewEditingState({
     controller,
     hotkeys,

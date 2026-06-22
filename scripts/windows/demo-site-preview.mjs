@@ -4,13 +4,14 @@ import { spawn } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, URL } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
 const SITE_ROOT = process.env.FOLIOLE_SITE_ROOT || path.resolve(REPO_ROOT, '..', 'foliole-site');
 const SITE_PREVIEW_URL = process.env.FOLIOLE_SITE_PREVIEW_URL || 'http://127.0.0.1:4321/demo/';
 const STALE_COPY_PATTERNS = ['继续到 Day', '清空本地数据', 'Day 0 已清空'];
+const previewUrl = new URL(SITE_PREVIEW_URL);
 
 function npmCommand() {
   return process.platform === 'win32' ? 'npm.cmd' : 'npm';
@@ -100,9 +101,10 @@ async function ensurePreviewServer() {
   if (!existsSync(command)) {
     throw new Error(`Astro executable not found: ${command}`);
   }
-  spawn(command, ['preview', '--host', '127.0.0.1', '--port', '4321'], {
+  spawn(command, ['preview', '--host', previewUrl.hostname, '--port', previewUrl.port || '80'], {
     cwd: SITE_ROOT,
     detached: true,
+    shell: process.platform === 'win32',
     stdio: 'ignore',
     windowsHide: true
   }).unref();

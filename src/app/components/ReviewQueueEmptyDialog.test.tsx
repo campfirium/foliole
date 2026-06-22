@@ -30,12 +30,12 @@ it('shows Demo day-clear copy in the same dialog shell', () => {
     />
   );
 
-  expect(screen.getByRole('dialog', { name: 'Day 2 has no more Flow topics.' })).toBeInTheDocument();
-  expect(screen.getByText('Exit Flow, or continue the Demo with Day 3.')).toBeInTheDocument();
+  expect(screen.getByRole('dialog', { name: 'All clear for Day 2.' })).toBeInTheDocument();
+  expect(screen.getByText('Simulated days are designed specifically for this demo. This makes Foliole’s scheduling easier to experience without waiting in real time. You can leave Flow for now, advance to the next day, or come back tomorrow to continue naturally.')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Stay Here' })).not.toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: 'Exit Flow' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Continue to Day 3' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Advance to Day 3' }));
 
   expect(onExitReviewMode).toHaveBeenCalledTimes(1);
   expect(onContinueDemoDay).toHaveBeenCalledTimes(1);

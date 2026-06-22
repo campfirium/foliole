@@ -47,7 +47,6 @@ export function createDemoWorkspaceSnapshot(pathname: string, now = new Date()):
   const guideChildNodeIds = [...DEMO_TOPICS.map((topic) => getDemoTopicNodeId(topic)), welcomeNode.id];
   const allNodes = [createDemoGuidesNode(guideChildNodeIds, timestamp), ...officialNodes];
   const activeNodeId = getDemoTopicNodeId(activeTopic);
-  const queueNodeIds = DEMO_TOPICS.map((topic) => getDemoTopicNodeId(topic));
   const snapshot = moveDemoGuidesBeforeInbox(ensureInboxNodeInSnapshot({
     activeNodeId,
     layout: initial.layout,
@@ -55,7 +54,7 @@ export function createDemoWorkspaceSnapshot(pathname: string, now = new Date()):
     nodeOrder: allNodes.map((node) => node.id),
     nodesById: Object.fromEntries(allNodes.map((node) => [node.id, node])),
     rendererBoundaryKeepNodeIds: officialNodes.map((node) => node.id),
-    reviewSession: createDemoReviewSession(activeNodeId, queueNodeIds, timestamp),
+    reviewSession: createDemoReviewSession(activeNodeId, timestamp),
     trashedNodeDeletedAtById: {},
     trashedNodeIds: [],
     untitledSequenceByParent: {},
@@ -223,14 +222,14 @@ function isDemoGuidesOrderedBeforeInbox(nodeOrder: readonly string[]) {
   return guidesIndex >= 0 && inboxIndex >= 0 && guidesIndex < inboxIndex;
 }
 
-function createDemoReviewSession(activeNodeId: string, queueNodeIds: string[], timestamp: string): ReviewSessionState {
+function createDemoReviewSession(activeNodeId: string, timestamp: string): ReviewSessionState {
   return {
     currentNodeId: activeNodeId,
     currentItemStartedAt: timestamp,
     isAnswerRevealed: false,
-    queueNodeIds: [activeNodeId, ...queueNodeIds.filter((nodeId) => nodeId !== activeNodeId)],
+    queueNodeIds: [activeNodeId],
     sessionStartedAt: timestamp,
-    totalNodeCount: queueNodeIds.length
+    totalNodeCount: 1
   };
 }
 

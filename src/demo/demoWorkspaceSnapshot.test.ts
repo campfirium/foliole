@@ -41,7 +41,7 @@ it('projects the guided sample tree into the Foliole Demo workspace under Guides
     });
     expect(snapshot.activeNodeId).toBe(topicNodeId);
     expect(snapshot.reviewSession.currentNodeId).toBe(topicNodeId);
-    expect(snapshot.reviewSession.queueNodeIds).toEqual(DEMO_TOPICS.map((demoTopic) => `demo-${demoTopic.slug}`));
+    expect(snapshot.reviewSession.queueNodeIds).toEqual([topicNodeId]);
     expect(welcome).toMatchObject({
       bodyStatus: 'ready',
       content: expect.stringContaining('# Welcome to Foliole'),
@@ -153,6 +153,11 @@ it('persists Demo browser-local review actions into the workspace payload', asyn
     await expect(useWorkspaceStore.getState().readReviewTopic(now)).resolves.toBe(true);
 
     const payload = JSON.parse(storage.get(WORKSPACE_STORAGE_KEY) ?? 'null');
+    expect(payload.state.reviewSession).toMatchObject({
+      completedAt: now,
+      currentNodeId: null,
+      queueNodeIds: []
+    });
     expect(payload.state.nodesById[activeNodeId].reading).toMatchObject({
       lastHandledAt: now,
       state: 'active'

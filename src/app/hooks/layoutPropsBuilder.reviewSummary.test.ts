@@ -118,3 +118,26 @@ it('does not derive review queue state from default scheduler settings before se
   props.review.onStartStudyMode();
   expect(startReviewSession).not.toHaveBeenCalled();
 });
+
+it('does not enter review mode from the explicit exit action', () => {
+  const exitReviewSession = vi.fn();
+  const exitStudyMode = vi.fn();
+  const startReviewSession = vi.fn(() => false);
+  const props = buildLayoutProps({
+    ...reviewGateLayoutArgs,
+    exitReviewSession,
+    exitStudyMode,
+    isStudyMode: false,
+    reviewSettings: {
+      isReviewSchedulerSettingsReady: true,
+      reviewSchedulerSettings: DEFAULT_REVIEW_SCHEDULER_SETTINGS
+    },
+    startReviewSession
+  } as unknown as BuildLayoutPropsArgs);
+
+  props.review.onExitReviewMode();
+
+  expect(exitReviewSession).toHaveBeenCalledTimes(1);
+  expect(exitStudyMode).toHaveBeenCalledTimes(1);
+  expect(startReviewSession).not.toHaveBeenCalled();
+});
