@@ -113,7 +113,7 @@ it('groups the current Demo Flow entries under Day 1', () => {
 
   expect(screen.getByText('Day 1')).toBeInTheDocument();
   expect(screen.getByText('Day 2')).toBeInTheDocument();
-  expect(screen.getByText('Day 1').closest('li')?.firstElementChild).toHaveTextContent('Day 1');
+  expect(screen.getByText('Day 1').closest('li')).toHaveClass('text-center');
   expect(screen.getByRole('button', { name: 'Current Topic' })).toHaveClass('text-left');
   expect(screen.getByRole('button', { name: 'Current Topic' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Future Topic' })).toBeInTheDocument();

@@ -77,8 +77,9 @@ function FlowSectionHeading({
     return showDivider ? <li className={`${inspectorListInsetClassName} my-1.5 h-px list-none ${inspectorListDividerLineClassName}`} role="presentation" /> : null;
   }
   return (
-    <li className={`${inspectorListInsetPaddingClassName} flex list-none items-center gap-2 pb-2 pt-3 ${inspectorListMetaClassName}`}>
-      <span>{heading}</span>
+    <li className={`flex list-none items-center gap-2 px-0 pb-2 pt-3 text-center text-[12px] leading-none ${inspectorListMetaClassName}`}>
+      <span aria-hidden="true" className={`h-px min-w-4 flex-1 ${inspectorListDividerLineClassName}`} />
+      <span className="shrink-0 text-foreground/45">{heading}</span>
       <span aria-hidden="true" className={`h-px min-w-4 flex-1 ${inspectorListDividerLineClassName}`} />
     </li>
   );
