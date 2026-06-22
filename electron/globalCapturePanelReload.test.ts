@@ -1,13 +1,17 @@
 // @vitest-environment node
 
-import { beforeEach, expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, type Mock, vi } from 'vitest';
 
 const clipSettingsMocks = vi.hoisted(() => ({
   isGlobalClipHintVisible: vi.fn(() => true),
   setGlobalClipHintVisible: vi.fn()
 }));
 
-const { chineseDarkTheme, englishTheme } = vi.hoisted(() => {
+const mainWindowRegistryMocks = vi.hoisted(() => ({
+  getMainWindow: vi.fn<() => unknown | null>(() => null)
+}));
+
+const { chineseDarkTheme, cssNotReadyDarkTheme, englishTheme } = vi.hoisted(() => {
   const englishTheme = () => ({
     accent: 'rgb(52, 119, 91)', actionForeground: 'rgba(28, 31, 30, 0.64)',
     actionHoverBackground: 'rgba(28, 31, 30, 0.06)', actionHoverForeground: 'rgba(28, 31, 30, 0.8)',
@@ -34,49 +38,103 @@ const { chineseDarkTheme, englishTheme } = vi.hoisted(() => {
       placeholder: '...', save: '保存', showHint: '?', showHintLabel: '显示提示'
     }
   });
-  return { chineseDarkTheme, englishTheme };
+  const cssNotReadyDarkTheme = () => ({
+    hasAppTheme: false,
+    resolvedBaseColor: 'dark',
+    strings: chineseDarkTheme().strings
+  });
+  return { chineseDarkTheme, cssNotReadyDarkTheme, englishTheme };
 });
+
+function createPanelWebContents(id: number, getURL: string, resolveTheme: () => unknown) {
+  return {
+    executeJavaScript: vi.fn(async () => resolveTheme()),
+    focus: vi.fn(),
+    getURL() {
+      return this.url;
+    },
+    id,
+    on: vi.fn(),
+    send: vi.fn(),
+    url: getURL
+  };
+}
+
+function createWindowRecord(targetWebContents: unknown) {
+  return {
+    isDestroyed: vi.fn(() => false),
+    isMinimized: vi.fn(() => false),
+    isVisible: vi.fn(() => true),
+    webContents: targetWebContents
+  };
+}
 
 const { electronMocks, panelWindow } = vi.hoisted(() => {
   const ipcHandlers = new Map<string, (...args: unknown[]) => void>();
-  let theme = englishTheme();
-  const webContents = { executeJavaScript: vi.fn(async () => theme), focus: vi.fn(), id: 11, on: vi.fn(), send: vi.fn() };
+  let theme: unknown = englishTheme();
+  const staleLightWebContents = createPanelWebContents(13, 'file:///stale-window.html', englishTheme);
+  const webContents = createPanelWebContents(11, 'file:///app/index.html', () => theme);
+  const appWindowRecord = createWindowRecord(webContents);
   const window = {
     close: vi.fn(), focus: vi.fn(), getParentWindow: vi.fn(() => null), isDestroyed: vi.fn(() => false), isMinimized: vi.fn(() => false), isVisible: vi.fn(() => true),
     loadURL: vi.fn<(url: string) => Promise<void>>(async () => undefined),
     moveTop: vi.fn(), on: vi.fn(), setAlwaysOnTop: vi.fn(), setBounds: vi.fn(), setIgnoreMouseEvents: vi.fn(), setOpacity: vi.fn(), setParentWindow: vi.fn(), showInactive: vi.fn(),
     webContents
   };
+  const electronMocks = createElectronMocks(window, appWindowRecord, ipcHandlers);
   return {
-    electronMocks: {
-      app: { getAppPath: vi.fn(() => '/app') }, BrowserWindow: Object.assign(vi.fn(function BrowserWindow() {
-        return window;
-      }), {
-        getAllWindows: vi.fn(() => [{ isDestroyed: vi.fn(() => false), isMinimized: vi.fn(() => false), isVisible: vi.fn(() => true), webContents }]),
-        getFocusedWindow: vi.fn(() => null)
-      }),
-      ipcMain: {
-        on: vi.fn((channel: string, handler: (...args: unknown[]) => void) => ipcHandlers.set(channel, handler)),
-        removeListener: vi.fn()
-      },
-      screen: { getPrimaryDisplay: vi.fn(() => ({ workArea: { height: 900, width: 1400, x: 0, y: 0 } })) }
-    },
-    panelWindow: {
-      ...window,
-      emitCancel: () => ipcHandlers.get('foliole:global-capture-panel:cancel')?.({ sender: { id: 11 } }),
-      emitReady: () => ipcHandlers.get('foliole:global-capture-panel:ready')?.({ sender: { id: 11 } }),
-      setChineseDarkTheme: () => {
-        theme = chineseDarkTheme();
-      },
-      setEnglishTheme: () => {
-        theme = englishTheme();
-      }
-    }
+    electronMocks,
+    panelWindow: createPanelWindowControls({
+      appWindowRecord, electronMocks, ipcHandlers, staleLightWebContents,
+      setTheme: (nextTheme: unknown) => { theme = nextTheme; }, webContents, window
+    })
   };
 });
 
+function createElectronMocks(window: unknown, appWindowRecord: unknown, ipcHandlers: Map<string, (...args: unknown[]) => void>) {
+  return {
+    app: { getAppPath: vi.fn(() => '/app') },
+    BrowserWindow: Object.assign(vi.fn(function BrowserWindow() {
+      return window;
+    }), {
+      getAllWindows: vi.fn(() => [appWindowRecord]),
+      getFocusedWindow: vi.fn(() => null)
+    }),
+    ipcMain: {
+      on: vi.fn((channel: string, handler: (...args: unknown[]) => void) => ipcHandlers.set(channel, handler)),
+      removeListener: vi.fn()
+    },
+    screen: { getPrimaryDisplay: vi.fn(() => ({ workArea: { height: 900, width: 1400, x: 0, y: 0 } })) }
+  };
+}
+
+function createPanelWindowControls(args: {
+  appWindowRecord: unknown;
+  electronMocks: ReturnType<typeof createElectronMocks>;
+  ipcHandlers: Map<string, (...args: unknown[]) => void>;
+  staleLightWebContents: unknown;
+  setTheme: (theme: unknown) => void;
+  webContents: unknown;
+  window: Record<string, unknown> & { loadURL: Mock<(url: string) => Promise<void>> };
+}) {
+  return {
+    ...args.window,
+    emitCancel: () => args.ipcHandlers.get('foliole:global-capture-panel:cancel')?.({ sender: { id: 11 } }),
+    emitReady: () => args.ipcHandlers.get('foliole:global-capture-panel:ready')?.({ sender: { id: 11 } }),
+    addStaleLightWindowBeforeAppWindow: () => args.electronMocks.BrowserWindow.getAllWindows.mockReturnValue([
+      createWindowRecord(args.staleLightWebContents),
+      args.appWindowRecord
+    ]),
+    registerAppWindow: () => mainWindowRegistryMocks.getMainWindow.mockReturnValue(args.appWindowRecord),
+    setChineseDarkTheme: () => args.setTheme(chineseDarkTheme()),
+    setCssNotReadyDarkTheme: () => args.setTheme(cssNotReadyDarkTheme()),
+    setEnglishTheme: () => args.setTheme(englishTheme())
+  };
+}
+
 vi.mock('electron', () => electronMocks);
 vi.mock('./globalClipSettings.js', () => clipSettingsMocks);
+vi.mock('./mainWindowRegistry.js', () => mainWindowRegistryMocks);
 
 import { resetGlobalCapturePanelWindowForTests, showGlobalCapturePanel } from './globalCapturePanel.js';
 
@@ -90,6 +148,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   resetGlobalCapturePanelWindowForTests();
   panelWindow.setEnglishTheme();
+  mainWindowRegistryMocks.getMainWindow.mockReturnValue(null);
 });
 
 it('reloads current theme and language each time the reused capture panel opens', async () => {
@@ -113,6 +172,38 @@ it('reloads current theme and language each time the reused capture panel opens'
   panelWindow.emitReady();
   panelWindow.emitCancel();
   await expect(secondPromise).resolves.toEqual({ type: 'cancelled' });
+});
+
+it('uses the dark fallback when the app window has not exposed floating tokens yet', async () => {
+  panelWindow.setCssNotReadyDarkTheme();
+
+  const promise = showGlobalCapturePanel();
+  await waitForPanelLoadCount(1);
+
+  const html = decodeURIComponent(panelWindow.loadURL.mock.calls.at(-1)?.[0] ?? '');
+  expect(html).toContain('--capture-bg:rgb(42, 45, 41);');
+  expect(html).toContain('--capture-fg:rgb(232, 230, 223);');
+  expect(html).toContain('回车保存，空白时导入剪贴板');
+
+  panelWindow.emitCancel();
+  await expect(promise).resolves.toEqual({ type: 'cancelled' });
+});
+
+it('prefers the registered app window over stale non-app windows when reading the theme', async () => {
+  panelWindow.setChineseDarkTheme();
+  panelWindow.addStaleLightWindowBeforeAppWindow();
+  panelWindow.registerAppWindow();
+
+  const promise = showGlobalCapturePanel();
+  await waitForPanelLoadCount(1);
+
+  const html = decodeURIComponent(panelWindow.loadURL.mock.calls.at(-1)?.[0] ?? '');
+  expect(html).toContain('--capture-bg:rgb(42, 45, 41);');
+  expect(html).toContain('--capture-fg:rgb(232, 230, 223);');
+  expect(html).toContain('>保存<');
+
+  panelWindow.emitCancel();
+  await expect(promise).resolves.toEqual({ type: 'cancelled' });
 });
 
 it('keeps capture shell-less without old dialog chrome', async () => {

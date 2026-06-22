@@ -92,7 +92,7 @@ it('shows a compact shell-less capture panel with an isolated preload', async ()
     webPreferences: expect.objectContaining({
       contextIsolation: true,
       nodeIntegration: false,
-      preload: '/app/electron/globalCapturePanelPreload.cjs',
+      preload: expect.stringMatching(/[\\/]app[\\/]electron[\\/]globalCapturePanelPreload\.cjs$/u),
       sandbox: true
     })
   }));

@@ -1,6 +1,8 @@
 import { BrowserWindow } from 'electron';
 
+import { fallbackFloatingTheme } from './globalCaptureFloatingFallbackTheme.js';
 import { buildFloatingThemeReadScript } from './globalCaptureFloatingThemeScript.js';
+import { getMainWindow } from './mainWindowRegistry.js';
 
 const FLOATING_THEME_READ_TIMEOUT_MS = 120;
 const PREVIEW_LIMIT = 48;
@@ -61,39 +63,6 @@ export function truncateCapturePreview(value: string) {
   return `${chars.slice(0, PREVIEW_LIMIT).join('').trimEnd()}...`;
 }
 
-function fallbackFloatingTheme(): GlobalCaptureFloatingTheme {
-  return {
-    accent: '#3f8f68',
-    actionForeground: 'rgba(32, 33, 36, 0.62)',
-    actionHoverBackground: 'rgba(32, 33, 36, 0.08)',
-    actionHoverForeground: 'rgba(32, 33, 36, 0.78)',
-    background: 'rgb(255, 255, 255)',
-    border: 'rgba(32, 33, 36, 0.10)',
-    controlBorder: 'rgba(32, 33, 36, 0.16)',
-    controlBorderHover: 'rgba(32, 33, 36, 0.24)',
-    controlForeground: 'rgba(32, 33, 36, 0.52)',
-    controlHoverBackground: 'rgba(32, 33, 36, 0.04)',
-    controlRadius: '8px',
-    contentInlinePadding: '26px',
-    foreground: 'rgb(32, 33, 36)',
-    inputBackground: 'rgb(255, 255, 255)',
-    inputFontFamily: '-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI Variable","Segoe UI","Microsoft YaHei UI",sans-serif',
-    inputFontSize: '15.64px',
-    inputLineHeight: '1.75',
-    inputPaddingBlockEnd: '12px',
-    inputPaddingBlockStart: '24px',
-    mutedForeground: 'rgb(94, 95, 97)',
-    placeholderForeground: 'rgba(32, 33, 36, 0.36)',
-    radius: '8px',
-    shadow: '0 8px 22px rgb(15 17 19 / 0.045), 0 1px 2px rgb(15 17 19 / 0.03)',
-    titleForeground: 'rgba(32, 33, 36, 0.68)',
-    uiFontFamily: '-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI Variable","Segoe UI","Microsoft YaHei UI",sans-serif',
-    divider: 'rgba(32, 33, 36, 0.10)',
-    hintVisible: true,
-    strings: resolveCaptureStrings('en')
-  };
-}
-
 function isCssValue(value: unknown): value is string {
   return typeof value === 'string' && /^[#'",(),.%/ 0-9a-zA-Z -]+$/u.test(value.trim());
 }
@@ -108,6 +77,14 @@ function isCaptureStrings(value: unknown): value is GlobalCaptureStrings {
     && typeof candidate.showHintLabel === 'string'
     && typeof candidate.placeholder === 'string'
     && typeof candidate.save === 'string';
+}
+
+function normalizeCaptureStrings(value: unknown, fallback: GlobalCaptureStrings): GlobalCaptureStrings {
+  if (!isCaptureStrings(value)) return fallback;
+  return {
+    ...value,
+    locale: value.locale === 'zh-Hans' ? 'zh-Hans' : 'en'
+  };
 }
 
 function resolveCaptureStrings(locale: string): GlobalCaptureStrings {
@@ -136,10 +113,15 @@ function resolveCaptureStrings(locale: string): GlobalCaptureStrings {
 }
 
 function normalizeFloatingTheme(input: unknown): GlobalCaptureFloatingTheme | null {
-  const fallback = fallbackFloatingTheme();
+  const fallback = fallbackFloatingTheme('light', resolveCaptureStrings('en'));
   if (!input || typeof input !== 'object') return fallback;
-  const candidate = input as Partial<GlobalCaptureFloatingTheme> & { hasAppTheme?: unknown };
-  if (candidate.hasAppTheme !== true) return null;
+  const candidate = input as Partial<GlobalCaptureFloatingTheme> & { hasAppTheme?: unknown; resolvedBaseColor?: unknown };
+  const strings = normalizeCaptureStrings(candidate.strings, fallback.strings);
+  if (candidate.hasAppTheme !== true) {
+    return candidate.resolvedBaseColor === 'dark' || candidate.resolvedBaseColor === 'light'
+      ? fallbackFloatingTheme(candidate.resolvedBaseColor, strings)
+      : null;
+  }
   return {
     accent: isCssValue(candidate.accent) ? candidate.accent : fallback.accent,
     actionForeground: isCssValue(candidate.actionForeground) ? candidate.actionForeground : fallback.actionForeground,
@@ -168,26 +150,50 @@ function normalizeFloatingTheme(input: unknown): GlobalCaptureFloatingTheme | nu
     uiFontFamily: isCssValue(candidate.uiFontFamily) ? candidate.uiFontFamily : fallback.uiFontFamily,
     divider: isCssValue(candidate.divider) ? candidate.divider : fallback.divider,
     hintVisible: typeof candidate.hintVisible === 'boolean' ? candidate.hintVisible : fallback.hintVisible,
-    strings: isCaptureStrings(candidate.strings)
-      ? { ...candidate.strings, locale: candidate.strings.locale === 'zh-Hans' ? 'zh-Hans' : 'en' }
-      : fallback.strings
+    strings
   };
 }
 
-async function readFloatingThemeFromAppWindow(excludedWindow: BrowserWindow): Promise<GlobalCaptureFloatingTheme> {
-  const windows = BrowserWindow.getAllWindows().filter((candidate) => candidate !== excludedWindow && !candidate.isDestroyed());
-  for (const window of windows) {
-    const theme = normalizeFloatingTheme(await window.webContents.executeJavaScript(buildFloatingThemeReadScript(), true));
-    if (theme) return theme;
+function isGlobalCaptureFloatingWindow(window: BrowserWindow) {
+  try {
+    return window.webContents.getURL().startsWith('data:text/html;charset=utf-8,');
+  } catch {
+    return false;
   }
-  return fallbackFloatingTheme();
 }
 
-export function resolveFloatingTheme(excludedWindow: BrowserWindow): Promise<GlobalCaptureFloatingTheme> {
+function canReadFloatingThemeFromWindow(candidate: BrowserWindow, excludedWindow: BrowserWindow) {
+  return candidate !== excludedWindow
+    && !candidate.isDestroyed()
+    && !isGlobalCaptureFloatingWindow(candidate);
+}
+
+async function readFloatingThemeFromWindow(window: BrowserWindow) {
+  const raw = await window.webContents.executeJavaScript(buildFloatingThemeReadScript(), true);
+  const theme = normalizeFloatingTheme(raw);
+  return theme;
+}
+
+async function readFloatingThemeFromAppWindow(excludedWindow: BrowserWindow): Promise<GlobalCaptureFloatingTheme> {
+  const mainWindow = getMainWindow();
+  if (mainWindow && canReadFloatingThemeFromWindow(mainWindow, excludedWindow)) {
+    const theme = await readFloatingThemeFromWindow(mainWindow).catch(() => null);
+    if (theme) return theme;
+  }
+  const windows = BrowserWindow.getAllWindows()
+    .filter((candidate) => candidate !== mainWindow && canReadFloatingThemeFromWindow(candidate, excludedWindow));
+  for (const window of windows) {
+    const theme = await readFloatingThemeFromWindow(window).catch(() => null);
+    if (theme) return theme;
+  }
+  return fallbackFloatingTheme('light', resolveCaptureStrings('en'));
+}
+
+export function resolveFloatingTheme(excludedWindow: BrowserWindow, timeoutMs = FLOATING_THEME_READ_TIMEOUT_MS): Promise<GlobalCaptureFloatingTheme> {
   return Promise.race([
-    readFloatingThemeFromAppWindow(excludedWindow).catch(() => fallbackFloatingTheme()),
+    readFloatingThemeFromAppWindow(excludedWindow).catch(() => fallbackFloatingTheme('light', resolveCaptureStrings('en'))),
     new Promise<GlobalCaptureFloatingTheme>((resolve) => {
-      globalThis.setTimeout(() => resolve(fallbackFloatingTheme()), FLOATING_THEME_READ_TIMEOUT_MS);
+      globalThis.setTimeout(() => resolve(fallbackFloatingTheme('light', resolveCaptureStrings('en'))), timeoutMs);
     })
   ]);
 }

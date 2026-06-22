@@ -21,6 +21,7 @@ const PANEL_GUTTER = 26;
 const SURFACE_MAX_HEIGHT = 420;
 const SURFACE_MIN_HEIGHT = 188;
 const SURFACE_WIDTH = 520;
+const PANEL_THEME_READ_TIMEOUT_MS = 1000;
 const PANEL_MAX_HEIGHT = SURFACE_MAX_HEIGHT + PANEL_GUTTER * 2;
 const PANEL_MIN_HEIGHT = SURFACE_MIN_HEIGHT + PANEL_GUTTER * 2;
 const PANEL_WIDTH = SURFACE_WIDTH + PANEL_GUTTER * 2;
@@ -88,7 +89,7 @@ function loadPanelWindow(panel: BrowserWindow, forceReload = false) {
   if (!cachedPanelLoad || forceReload) {
     const loadVersion = cachedPanelLoadVersion += 1;
     cachedPanelReady = false;
-    cachedPanelLoad = resolveFloatingTheme(panel)
+    cachedPanelLoad = resolveFloatingTheme(panel, PANEL_THEME_READ_TIMEOUT_MS)
       .then((theme) => {
         if (loadVersion !== cachedPanelLoadVersion || panel.isDestroyed()) return undefined;
         return panel.loadURL(buildGlobalCapturePanelHtml({ ...theme, hintVisible: isGlobalClipHintVisible() }));

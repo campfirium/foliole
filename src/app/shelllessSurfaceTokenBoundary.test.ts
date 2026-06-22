@@ -8,25 +8,28 @@ function readWorkspaceFile(path: string) {
 }
 
 describe('shell-less surface token boundary', () => {
-  it('keeps shell-less surfaces anchored to the floating menu family', () => {
+  it('keeps shell-less surfaces anchored to the workspace document background family', () => {
     const appStyles = readWorkspaceFile('src/app/styles.css');
     const styles = readWorkspaceFile('src/app/tokens/shellless-surfaces.css');
 
     expect(appStyles).toContain('@import "./tokens/shellless-surfaces.css";');
-    expect(styles).toContain('--app-shellless-surface-bg: var(--app-floating-surface-bg)');
-    expect(styles).toContain('--app-shellless-border-color: var(--app-floating-border-color)');
-    expect(styles).toContain('--app-shellless-divider-color: var(--app-floating-divider-color)');
+    expect(styles).toContain('--app-shellless-surface-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 88%, var(--workspace-region-main-document-token-bg) 12%)');
+    expect(styles).toContain('--app-shellless-input-bg: var(--app-shellless-surface-bg)');
+    expect(styles).toContain('--app-shellless-border-color: color-mix(in oklab, var(--app-shellless-surface-bg)');
+    expect(styles).toContain('--app-shellless-divider-color: color-mix(in oklab, var(--app-shellless-surface-bg)');
     expect(styles).toContain("--app-shellless-control-fg: rgb(var(--color-foreground) / 0.52)");
     expect(styles).toContain('--app-shellless-shadow: 0 8px 22px rgb(15 17 19 / 0.045)');
+    expect(styles).not.toContain('--app-shellless-surface-bg: var(--app-floating-surface-bg)');
+    expect(styles).not.toContain('--app-shellless-border-color: var(--app-floating-border-color)');
     expect(styles).not.toContain('--app-shellless-shadow: var(--shadow-popover)');
     expect(styles).not.toContain('var(--workspace-region-main-rail-bg)');
   });
 
-  it('keeps dark shell-less surfaces lighter than the raw floating surface', () => {
+  it('keeps dark shell-less surfaces close to the raw document background', () => {
     const styles = readWorkspaceFile('src/app/tokens/shellless-surfaces.css');
 
     expect(styles).toContain(":root[data-resolved-base-color='dark']");
-    expect(styles).toContain('--app-shellless-surface-bg: color-mix(in srgb, var(--app-floating-surface-bg) 88%, rgb(var(--color-foreground)) 12%)');
+    expect(styles).toContain('--app-shellless-surface-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 92%, var(--workspace-region-main-document-token-bg) 8%)');
     expect(styles).toContain('--app-shellless-control-fg: rgb(var(--color-foreground) / 0.58)');
     expect(styles).toContain('--app-shellless-shadow: 0 10px 26px rgb(0 0 0 / 0.18)');
   });

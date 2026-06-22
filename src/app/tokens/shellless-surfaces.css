@@ -1,8 +1,8 @@
 :root {
-  --app-shellless-surface-bg: var(--app-floating-surface-bg);
-  --app-shellless-input-bg: var(--app-floating-surface-bg);
-  --app-shellless-border-color: var(--app-floating-border-color);
-  --app-shellless-divider-color: var(--app-floating-divider-color);
+  --app-shellless-surface-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 88%, var(--workspace-region-main-document-token-bg) 12%);
+  --app-shellless-input-bg: var(--app-shellless-surface-bg);
+  --app-shellless-border-color: color-mix(in oklab, var(--app-shellless-surface-bg) var(--workspace-divider-strong-surface-weight), var(--workspace-region-main-document-token-divider-mix-target, var(--workspace-divider-mix-target)));
+  --app-shellless-divider-color: color-mix(in oklab, var(--app-shellless-surface-bg) var(--workspace-divider-subtle-surface-weight), var(--workspace-region-main-document-token-divider-mix-target, var(--workspace-divider-mix-target)));
   --app-shellless-fg: rgb(var(--color-foreground) / 0.86);
   --app-shellless-title-fg: rgb(var(--color-foreground) / 0.68);
   --app-shellless-muted-fg: rgb(var(--color-foreground) / 0.52);
@@ -28,10 +28,10 @@
 }
 
 :root[data-resolved-base-color='dark'] {
-  --app-shellless-surface-bg: color-mix(in srgb, var(--app-floating-surface-bg) 88%, rgb(var(--color-foreground)) 12%);
+  --app-shellless-surface-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 92%, var(--workspace-region-main-document-token-bg) 8%);
   --app-shellless-input-bg: var(--app-shellless-surface-bg);
-  --app-shellless-border-color: color-mix(in srgb, var(--app-floating-border-color) 76%, rgb(var(--color-foreground)) 24%);
-  --app-shellless-divider-color: color-mix(in srgb, var(--app-floating-divider-color) 82%, rgb(var(--color-foreground)) 18%);
+  --app-shellless-border-color: color-mix(in oklab, var(--app-shellless-surface-bg) var(--workspace-divider-strong-surface-weight), var(--workspace-region-main-document-token-divider-mix-target, var(--workspace-divider-mix-target)));
+  --app-shellless-divider-color: color-mix(in oklab, var(--app-shellless-surface-bg) var(--workspace-divider-subtle-surface-weight), var(--workspace-region-main-document-token-divider-mix-target, var(--workspace-divider-mix-target)));
   --app-shellless-fg: rgb(var(--color-foreground) / 0.78);
   --app-shellless-title-fg: rgb(var(--color-foreground) / 0.64);
   --app-shellless-muted-fg: rgb(var(--color-foreground) / 0.5);

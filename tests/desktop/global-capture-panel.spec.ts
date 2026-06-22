@@ -1,6 +1,11 @@
 import { test, expect, type ElectronApplication, type Page } from '@playwright/test';
 
-import { launchDesktopSession } from '../../scripts/windows/playwright-desktop-harness.mjs';
+import {
+  launchDesktopSession,
+  waitForDesktopAppReady
+} from '../../scripts/windows/playwright-desktop-harness.mjs';
+
+const DARK_PANEL_SCREENSHOT_PATH = '.lab/atlas/0active/global-capture-panel-dark.png';
 
 declare global {
   interface Window {
@@ -60,6 +65,20 @@ async function getCapturePanelBounds(electronApp: ElectronApplication) {
   });
 }
 
+async function setDarkMode(desktopWindow: Page, timeoutMs: number) {
+  await desktopWindow.evaluate(() => {
+    window.localStorage.setItem('foliole-base-color', 'dark');
+  });
+  await desktopWindow.reload();
+  await waitForDesktopAppReady(desktopWindow, timeoutMs);
+}
+
+function readRgbLightness(value: string) {
+  const channels = value.match(/\d+(?:\.\d+)?/gu)?.slice(0, 3).map(Number) ?? [];
+  if (channels.length < 3) throw new Error(`unsupported rgb color: ${value}`);
+  return (channels[0]! + channels[1]! + channels[2]!) / 3;
+}
+
 test('focuses the global capture panel and submits from Enter', async ({ browserName }) => {
   void browserName;
   const session = await launchDesktopSession();
@@ -104,6 +123,36 @@ test('drags the global capture panel from its visible surface', async ({ browser
       const after = await getCapturePanelBounds(session.electronApp);
       return after.y - before.y;
     }).toBeGreaterThan(40);
+  } finally {
+    await session.close();
+  }
+});
+
+test('uses the dark floating surface when the workspace is in dark mode', async ({ browserName }) => {
+  void browserName;
+  const session = await launchDesktopSession();
+  try {
+    await setDarkMode(session.firstWindow, session.timeoutMs);
+    await showCapturePanel(session.electronApp);
+    const panelPage = await getCapturePanelPage(session.electronApp);
+    await expectCaptureFocused(panelPage);
+
+    const colors = await panelPage.evaluate(() => {
+      const root = document.documentElement;
+      const surface = document.querySelector<HTMLElement>('.capture-surface');
+      if (!surface) throw new Error('capture surface not found');
+      const surfaceStyle = getComputedStyle(surface);
+      return {
+        background: surfaceStyle.backgroundColor,
+        foreground: surfaceStyle.color,
+        rootBackground: getComputedStyle(root).getPropertyValue('--capture-bg').trim()
+      };
+    });
+    await panelPage.screenshot({ path: DARK_PANEL_SCREENSHOT_PATH });
+
+    expect(colors.rootBackground).toBe(colors.background);
+    expect(readRgbLightness(colors.background)).toBeLessThan(100);
+    expect(readRgbLightness(colors.foreground)).toBeGreaterThan(140);
   } finally {
     await session.close();
   }

@@ -17,7 +17,14 @@ function buildThemeReadPrelude() {
         const root = document.documentElement;
         const styles = getComputedStyle(root);
         const hasAppTheme = Boolean(styles.getPropertyValue('--app-shellless-surface-bg').trim());
-        if (!hasAppTheme) return { hasAppTheme: false };
+        const readResolvedBaseColor = () => {
+          const datasetMode = root.dataset.resolvedBaseColor;
+          if (datasetMode === 'dark' || datasetMode === 'light') return datasetMode;
+          const storedMode = localStorage.getItem('foliole-base-color');
+          if (storedMode === 'dark' || storedMode === 'light') return storedMode;
+          return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        };
+        if (!hasAppTheme) return { hasAppTheme: false, resolvedBaseColor: readResolvedBaseColor(), strings: ${buildThemeStringsScript()} };
         const readColor = (property, value, fallback) => {
           const probe = document.createElement('div');
           probe.style[property] = value;
@@ -63,7 +70,7 @@ function buildThemeValueFieldsScript() {
           shadow: readValue('boxShadow', 'var(--app-shellless-shadow)', '0 8px 22px rgb(15 17 19 / 0.045)'),
           titleForeground: readColor('color', 'var(--app-shellless-title-fg)', 'rgba(32, 33, 36, 0.68)'),
           uiFontFamily: readValue('fontFamily', 'var(--app-shellless-ui-font-family)', '-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI Variable","Segoe UI","Microsoft YaHei UI",sans-serif'),
-          divider: readColor('borderColor', 'var(--app-shellless-divider-color)', 'rgba(32, 33, 36, 0.10'),`;
+          divider: readColor('borderColor', 'var(--app-shellless-divider-color)', 'rgba(32, 33, 36, 0.10)'),`;
 }
 
 function buildThemeStringsScript() {
