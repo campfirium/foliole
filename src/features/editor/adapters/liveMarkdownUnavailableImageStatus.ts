@@ -1,3 +1,4 @@
+import { getDemoRuntimeState } from '../../../shared/platform/runtime/demoRuntime';
 import type { MarkdownImageMatch } from '../model/markdownImageMatches';
 
 import { createImageStatusElement } from './liveMarkdownImageStatus';
@@ -8,6 +9,7 @@ export function createUnavailableImageStatus(
 ) {
   return createImageStatusElement('unavailable', imageMatch.display, {
     onRemoveImage,
-    sourceUrl: imageMatch.source
+    sourceUrl: imageMatch.source,
+    unavailableCopy: getDemoRuntimeState().isDemo ? 'demo' : 'default'
   });
 }

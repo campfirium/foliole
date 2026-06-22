@@ -61,6 +61,8 @@ export const ZH_HANS_DESKTOP_TRANSLATIONS: Partial<Record<TranslationKey, string
   'desktop.highlightToolbar.more': '更多',
   'desktop.imageStatus.unavailable.inline': '图片不可用',
   'desktop.imageStatus.unavailable.caption': '图片不可用',
+  'desktop.imageStatus.demoUnavailable.inline': 'Demo 不提供图片功能',
+  'desktop.imageStatus.demoUnavailable.caption': 'Demo 不提供图片功能',
   'desktop.imageStatus.retry': '重试',
   'desktop.imageStatus.addSource': '添加来源',
   'desktop.imageStatus.remove': '移除',

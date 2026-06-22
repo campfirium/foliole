@@ -5,8 +5,16 @@ import { REMOTE_IMAGE_PROTOCOL_SCHEME } from '../../../../lib/platform/remoteIma
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import { resetRemoteImageFailureHintDismissalForTests } from '../model/remoteImageFailureHintSetting';
 
+const demoRuntimeMock = vi.hoisted(() => ({
+  isDemo: false
+}));
+
 vi.mock('../../../shared/platform/runtimeInvoke', () => ({
   getRuntimeInvoke: vi.fn(() => null)
+}));
+
+vi.mock('../../../shared/platform/runtime/demoRuntime', () => ({
+  getDemoRuntimeState: () => ({ isDemo: demoRuntimeMock.isDemo })
 }));
 
 vi.mock('../../../shared/platform/bridge', () => ({
@@ -51,8 +59,24 @@ async function waitForRemoteImageSrc(host: HTMLElement) {
   return getRemoteImage(host)?.src ?? '';
 }
 
+async function runDemoRemoteImageLimitCase() {
+  demoRuntimeMock.isDemo = true;
+  const { adapter, host } = createAdapterHost('![Remote](https://example.com/missing.png)');
+
+  getRemoteImage(host)?.dispatchEvent(new Event('error'));
+
+  await waitFor(() => {
+    const status = host.querySelector('.cm-md-image-status[data-md-image-status="unavailable"]');
+    expect(status?.textContent).toContain('Image features are not included in Demo');
+    expect(status?.textContent).toContain('example.com');
+  });
+
+  adapter.destroy();
+}
+
 describe('live markdown remote image rendering', () => {
   beforeEach(() => {
+    demoRuntimeMock.isDemo = false;
     resetRemoteImageFailureHintDismissalForTests();
     window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility, 'hidden');
     window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.autoLocalizeRemoteImages, 'true');
@@ -114,6 +138,10 @@ describe('live markdown remote image rendering', () => {
     });
 
     adapter.destroy();
+  });
+
+  it('explains remote image limits in the Demo runtime', async () => {
+    await runDemoRemoteImageLimitCase();
   });
 
 });

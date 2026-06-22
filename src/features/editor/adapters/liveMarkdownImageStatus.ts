@@ -9,6 +9,7 @@ export interface MarkdownImageStatusActions {
   onRemoveImage?: (() => void) | null;
   onRetry?: (() => void) | null;
   sourceUrl?: string | null;
+  unavailableCopy?: 'default' | 'demo';
 }
 
 export function createImageStatusElement(
@@ -25,7 +26,7 @@ export function createImageStatusElement(
   }
 
   if (display === 'inline') {
-    element.textContent = t('desktop.imageStatus.unavailable.inline');
+    element.textContent = t(resolveInlineUnavailableKey(actions.unavailableCopy));
     return element;
   }
   if (actions.onContextMenu) {
@@ -51,7 +52,7 @@ function createFrame(sourceLabel: string | null, actions: MarkdownImageStatusAct
   copy.className = 'cm-md-image-status-frame-copy';
   const caption = document.createElement('span');
   caption.className = 'cm-md-image-status-frame-caption';
-  caption.textContent = t('desktop.imageStatus.unavailable.caption');
+  caption.textContent = t(resolveCaptionUnavailableKey(actions.unavailableCopy));
   copy.append(caption);
   if (sourceLabel) {
     const source = document.createElement('span');
@@ -64,6 +65,18 @@ function createFrame(sourceLabel: string | null, actions: MarkdownImageStatusAct
   const toolbar = createToolbar(actions);
   if (toolbar) frame.append(toolbar);
   return frame;
+}
+
+function resolveInlineUnavailableKey(copy: MarkdownImageStatusActions['unavailableCopy'] = 'default') {
+  return copy === 'demo'
+    ? 'desktop.imageStatus.demoUnavailable.inline'
+    : 'desktop.imageStatus.unavailable.inline';
+}
+
+function resolveCaptionUnavailableKey(copy: MarkdownImageStatusActions['unavailableCopy'] = 'default') {
+  return copy === 'demo'
+    ? 'desktop.imageStatus.demoUnavailable.caption'
+    : 'desktop.imageStatus.unavailable.caption';
 }
 
 function createToolbar(actions: MarkdownImageStatusActions) {

@@ -3,6 +3,7 @@ import {
   loadRemoteImageSourceContext,
   saveRemoteImageSourceWebsite
 } from '../../../shared/platform/remoteImageSourceRecovery';
+import { getDemoRuntimeState } from '../../../shared/platform/runtime/demoRuntime';
 import { requestAppTextInput } from '../../../shared/ui';
 import type { MarkdownImageMatch } from '../model/markdownImageMatches';
 
@@ -64,6 +65,7 @@ export function createRemoteImageFailureStatus(options: RemoteImageFailureStatus
     onProvideSourceWebsite: provideSourceWebsite,
     onRemoveImage: options.onRemoveImage ?? null,
     onRetry: options.onRetry,
-    sourceUrl: options.imageMatch.source
+    sourceUrl: options.imageMatch.source,
+    unavailableCopy: getDemoRuntimeState().isDemo ? 'demo' : 'default'
   });
 }

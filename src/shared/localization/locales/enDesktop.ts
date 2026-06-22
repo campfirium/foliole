@@ -59,6 +59,8 @@ export const EN_DESKTOP_TRANSLATIONS = {
   'desktop.highlightToolbar.more': 'More',
   'desktop.imageStatus.unavailable.inline': 'image unavailable',
   'desktop.imageStatus.unavailable.caption': 'Image unavailable',
+  'desktop.imageStatus.demoUnavailable.inline': 'Image features are not included in Demo',
+  'desktop.imageStatus.demoUnavailable.caption': 'Image features are not included in Demo',
   'desktop.imageStatus.retry': 'Retry',
   'desktop.imageStatus.addSource': 'Add source',
   'desktop.imageStatus.remove': 'Remove',
