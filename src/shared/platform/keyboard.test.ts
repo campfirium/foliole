@@ -1,7 +1,7 @@
 import { expect, it, vi } from 'vitest';
 
 import type { ElectronAPI, NativeKeyboardInputPayload } from './electronApi';
-import { onWindowEscape, onWindowKeydown } from './keyboard';
+import { onWindowEscape, onWindowKeydown, onWindowPriorityEscape } from './keyboard';
 
 function dispatchKeydown(key: string) {
   window.dispatchEvent(new KeyboardEvent('keydown', { cancelable: true, key }));
@@ -76,6 +76,36 @@ it('falls through when the latest escape handler declines the event', () => {
 
   unlistenInner();
   unlistenOuter();
+});
+
+it('dispatches priority escape handlers before ordinary escape handlers', () => {
+  const ordinary = vi.fn();
+  const priority = vi.fn();
+  const unlistenOrdinary = onWindowEscape(ordinary);
+  const unlistenPriority = onWindowPriorityEscape(priority);
+
+  dispatchKeydown('Escape');
+
+  expect(priority).toHaveBeenCalledTimes(1);
+  expect(ordinary).not.toHaveBeenCalled();
+
+  unlistenPriority();
+  unlistenOrdinary();
+});
+
+it('falls through to ordinary escape handlers when priority handlers decline', () => {
+  const ordinary = vi.fn();
+  const priority = vi.fn(() => false);
+  const unlistenOrdinary = onWindowEscape(ordinary);
+  const unlistenPriority = onWindowPriorityEscape(priority);
+
+  dispatchKeydown('Escape');
+
+  expect(priority).toHaveBeenCalledTimes(1);
+  expect(ordinary).toHaveBeenCalledTimes(1);
+
+  unlistenPriority();
+  unlistenOrdinary();
 });
 
 it('does not consume escape when every escape handler declines it', () => {

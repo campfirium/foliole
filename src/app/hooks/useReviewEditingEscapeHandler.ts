@@ -1,6 +1,6 @@
 import { useEffect, type MutableRefObject } from 'react';
 
-import { onNativeEditingEscape, onWindowEscape } from '../../shared/platform/keyboard';
+import { onNativeEditingEscape, onWindowEscape, onWindowPriorityEscape } from '../../shared/platform/keyboard';
 import { onReviewEditorEscapeBlur } from '../../shared/platform/reviewEditorEscape';
 
 import { blurActiveKeyboardTarget, isEditableKeyboardTarget } from './workspaceKeyboardTarget';
@@ -10,6 +10,10 @@ interface ReviewEditingEscapeHandlerArgs {
   isSearchPaletteOpen: boolean;
   isSettingsOpen: boolean;
   isStudyMode: boolean;
+}
+
+function isReviewEditorEscapeTarget(target: EventTarget | null) {
+  return target instanceof HTMLElement && Boolean(target.closest('.markdown-editor-host[data-review-escape-blur="true"]'));
 }
 
 export function useReviewEditingEscapeHandler(
@@ -40,6 +44,17 @@ export function useReviewEditingEscapeHandler(
       }
       exitEditing();
     };
+    const handleEditorEscapeCapture = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented || document.querySelector('[role="dialog"]')) {
+        return false;
+      }
+      if (!isReviewEditorEscapeTarget(event.target) && !isReviewEditorEscapeTarget(document.activeElement)) {
+        return false;
+      }
+      exitEditing();
+      return true;
+    };
+    const unlistenEditorEscapeCapture = onWindowPriorityEscape(handleEditorEscapeCapture);
     const unlistenEscape = onWindowEscape(handleEscape);
     const unlistenNativeFallback = onNativeEditingEscape({
       exitEditing,
@@ -48,6 +63,7 @@ export function useReviewEditingEscapeHandler(
     });
     const unlistenEditorEscapeBlur = onReviewEditorEscapeBlur(exitEditing);
     return () => {
+      unlistenEditorEscapeCapture();
       unlistenEscape();
       unlistenNativeFallback();
       unlistenEditorEscapeBlur();

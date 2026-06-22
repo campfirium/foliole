@@ -1,6 +1,7 @@
-import { useEffect, useLayoutEffect, useRef, type ChangeEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, type ChangeEvent, type KeyboardEvent as ReactKeyboardEvent, type MutableRefObject } from 'react';
 
 import type { EditorAdapter } from '../features/editor/adapters/EditorAdapter';
+import { dispatchReviewEditorEscapeBlur } from '../shared/platform/reviewEditorEscape';
 
 export const mockEditorState: { content: string; selectionFrom: number; selectionTo: number } = {
   content: '',
@@ -66,6 +67,7 @@ export const mockEditorAdapter: EditorAdapter = {
 
 interface MockMarkdownEditorProps {
   ariaLabel?: string;
+  className?: string;
   readingSelection?: { from: number; to: number } | null;
   nodeId?: string | null;
   nodeViewState?: { selection: { from: number; to: number } };
@@ -90,8 +92,80 @@ function handleMockEditorChange(event: ChangeEvent<HTMLTextAreaElement>, props: 
   props.onChange(nextValue);
 }
 
+function blurActiveElement() {
+  if (document.activeElement instanceof HTMLElement) {
+    document.activeElement.blur();
+  }
+}
+
+function useMockReviewEscapeBlur(args: {
+  enabled: boolean | undefined;
+  rootRef: MutableRefObject<HTMLDivElement | null>;
+}) {
+  useEffect(() => {
+    const root = args.rootRef.current;
+    if (!root || !args.enabled) return undefined;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        blurActiveElement();
+        dispatchReviewEditorEscapeBlur();
+      }
+    };
+    root.addEventListener('keydown', handleKeyDown, true);
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => {
+      root.removeEventListener('keydown', handleKeyDown, true);
+      window.removeEventListener('keydown', handleKeyDown, true);
+    };
+  }, [args.enabled, args.rootRef]);
+}
+
+interface MockMarkdownEditorSurfaceProps {
+  ariaLabel: string | undefined;
+  className: string | undefined;
+  nodeId: string | null;
+  onChange: (value: string) => void;
+  onDocumentInput: ((meta: { nodeId: string | null }) => void) | undefined;
+  reviewEscapeBlurEnabled: boolean | undefined;
+  rootRef: MutableRefObject<HTMLDivElement | null>;
+  textareaRef: MutableRefObject<HTMLTextAreaElement | null>;
+  value: string;
+}
+
+function MockMarkdownEditorSurface(props: MockMarkdownEditorSurfaceProps) {
+  const handleKeyDownCapture = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (props.reviewEscapeBlurEnabled && event.key === 'Escape') {
+      blurActiveElement();
+      dispatchReviewEditorEscapeBlur();
+    }
+  };
+  return (
+    <div
+      className={['markdown-editor-host', props.className].filter(Boolean).join(' ')}
+      data-review-escape-blur={props.reviewEscapeBlurEnabled ? 'true' : 'false'}
+      onKeyDownCapture={handleKeyDownCapture}
+      ref={props.rootRef}
+    >
+      <textarea
+        aria-label={props.ariaLabel ?? 'Mock editor'}
+        data-testid={props.ariaLabel === 'Answer editor' ? 'answer-editor-value' : 'editor-value'}
+        onChange={(event) =>
+          handleMockEditorChange(event, {
+            nodeId: props.nodeId,
+            onChange: props.onChange,
+            onDocumentInput: props.onDocumentInput
+          })
+        }
+        ref={props.textareaRef}
+        value={props.value}
+      />
+    </div>
+  );
+}
+
 export function MarkdownEditor({
   ariaLabel,
+  className,
   readingSelection,
   nodeId,
   nodeViewState,
@@ -102,6 +176,7 @@ export function MarkdownEditor({
   onReady,
   reviewEscapeBlurEnabled
 }: MockMarkdownEditorProps) {
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   mockEditorState.content = value;
   useLayoutEffect(() => {
@@ -115,24 +190,17 @@ export function MarkdownEditor({
   useEffect(() => {
     if (nodeViewState) mockEditorAdapter.restoreSelection(nodeViewState.selection);
   }, [nodeViewState]);
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    if (!textarea || !reviewEscapeBlurEnabled) return undefined;
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        textarea.blur();
-      }
-    };
-    textarea.addEventListener('keydown', handleKeyDown, true);
-    return () => textarea.removeEventListener('keydown', handleKeyDown, true);
-  }, [reviewEscapeBlurEnabled]);
+  useMockReviewEscapeBlur({ enabled: reviewEscapeBlurEnabled, rootRef });
   return (
-    <textarea
-      aria-label={ariaLabel ?? 'Mock editor'}
-      data-review-escape-blur={reviewEscapeBlurEnabled ? 'true' : 'false'}
-      data-testid={ariaLabel === 'Answer editor' ? 'answer-editor-value' : 'editor-value'}
-      onChange={(event) => handleMockEditorChange(event, { nodeId: nodeId ?? null, onChange, onDocumentInput })}
-      ref={textareaRef}
+    <MockMarkdownEditorSurface
+      ariaLabel={ariaLabel}
+      className={className}
+      nodeId={nodeId ?? null}
+      onChange={onChange}
+      onDocumentInput={onDocumentInput}
+      reviewEscapeBlurEnabled={reviewEscapeBlurEnabled}
+      rootRef={rootRef}
+      textareaRef={textareaRef}
       value={value}
     />
   );

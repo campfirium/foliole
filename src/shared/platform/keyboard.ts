@@ -19,6 +19,7 @@ let unlistenNativeKeyboardInput: KeydownUnlisten | null = null;
 const keydownEntries: KeydownEntry[] = [];
 const keydownCaptureEntries: KeydownEntry[] = [];
 const escapeEntries: KeydownEntry[] = [];
+const priorityEscapeEntries: KeydownEntry[] = [];
 
 function removeEntry(entries: KeydownEntry[], id: number) {
   const index = entries.findIndex((entry) => entry.id === id);
@@ -39,7 +40,7 @@ function stopWindowKeydownIfIdle() {
     window.removeEventListener('keydown', dispatchWindowKeydownCapture, true);
     isWindowKeydownCaptureListening = false;
   }
-  if (isWindowEscapeListening && escapeEntries.length === 0) {
+  if (isWindowEscapeListening && escapeEntries.length === 0 && priorityEscapeEntries.length === 0) {
     window.removeEventListener('keydown', dispatchWindowEscapeCapture, true);
     unlistenNativeKeyboardInput?.();
     unlistenNativeKeyboardInput = null;
@@ -47,9 +48,9 @@ function stopWindowKeydownIfIdle() {
   }
 }
 
-function consumeEscape(event: KeyboardEvent) {
-  for (let index = escapeEntries.length - 1; index >= 0; index -= 1) {
-    const entry = escapeEntries[index];
+function consumeEscapeEntries(event: KeyboardEvent, entries: KeydownEntry[]) {
+  for (let index = entries.length - 1; index >= 0; index -= 1) {
+    const entry = entries[index];
     if (!entry || entry.handler(event) === false) {
       continue;
     }
@@ -61,6 +62,10 @@ function consumeEscape(event: KeyboardEvent) {
   return false;
 }
 
+function consumeEscape(event: KeyboardEvent) {
+  return consumeEscapeEntries(event, priorityEscapeEntries) || consumeEscapeEntries(event, escapeEntries);
+}
+
 function createNativeEscapeEvent() {
   return new KeyboardEvent('keydown', {
     bubbles: true,
@@ -70,7 +75,7 @@ function createNativeEscapeEvent() {
 }
 
 function dispatchNativeEscapeFallback(payload: NativeKeyboardInputPayload) {
-  if (payload.type !== 'keyDown' || payload.key !== 'Escape' || escapeEntries.length === 0) {
+  if (payload.type !== 'keyDown' || payload.key !== 'Escape' || (escapeEntries.length === 0 && priorityEscapeEntries.length === 0)) {
     return;
   }
   const fallbackId = nativeEscapeFallbackId + 1;
@@ -147,7 +152,7 @@ function registerWindowKeydown(entries: KeydownEntry[], handler: KeydownHandler)
   const id = nextKeydownEntryId;
   nextKeydownEntryId += 1;
   entries.push({ handler, id });
-  if (entries === escapeEntries) {
+  if (entries === escapeEntries || entries === priorityEscapeEntries) {
     listenWindowEscape();
   } else if (entries === keydownCaptureEntries) {
     listenWindowKeydownCapture();
@@ -170,6 +175,10 @@ export function onWindowKeydownCapture(handler: (event: KeyboardEvent) => void):
 
 export function onWindowEscape(handler: (event: KeyboardEvent) => boolean | void): KeydownUnlisten {
   return registerWindowKeydown(escapeEntries, handler);
+}
+
+export function onWindowPriorityEscape(handler: (event: KeyboardEvent) => boolean | void): KeydownUnlisten {
+  return registerWindowKeydown(priorityEscapeEntries, handler);
 }
 
 export function onNativeEditingEscape(args: {
