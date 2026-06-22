@@ -1,7 +1,7 @@
 /* global console, process, setTimeout */
 
 import { spawn } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync } from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath, URL } from 'node:url';
@@ -10,6 +10,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
 const SITE_ROOT = process.env.FOLIOLE_SITE_ROOT || path.resolve(REPO_ROOT, '..', 'foliole-site');
 const SITE_PREVIEW_URL = process.env.FOLIOLE_SITE_PREVIEW_URL || 'http://127.0.0.1:4321/demo/';
+const SITE_PREVIEW_LOG_ROOT = path.join(REPO_ROOT, '.tmp', 'demo-site-preview');
 const STALE_COPY_PATTERNS = ['继续到 Day', '清空本地数据', 'Day 0 已清空'];
 const previewUrl = new URL(SITE_PREVIEW_URL);
 
@@ -18,9 +19,14 @@ function npmCommand() {
 }
 
 function astroCommand() {
-  return process.platform === 'win32'
-    ? path.join(SITE_ROOT, 'node_modules', '.bin', 'astro.cmd')
-    : path.join(SITE_ROOT, 'node_modules', '.bin', 'astro');
+  return path.join(SITE_ROOT, 'node_modules', 'astro', 'bin', 'astro.mjs');
+}
+
+function previewLogPaths() {
+  return {
+    errLog: path.join(SITE_PREVIEW_LOG_ROOT, 'astro-preview.err.log'),
+    outLog: path.join(SITE_PREVIEW_LOG_ROOT, 'astro-preview.out.log')
+  };
 }
 
 function run(command, args, cwd) {
@@ -101,13 +107,19 @@ async function ensurePreviewServer() {
   if (!existsSync(command)) {
     throw new Error(`Astro executable not found: ${command}`);
   }
-  spawn(command, ['preview', '--host', previewUrl.hostname, '--port', previewUrl.port || '80'], {
+  const logs = previewLogPaths();
+  mkdirSync(SITE_PREVIEW_LOG_ROOT, { recursive: true });
+  const out = openSync(logs.outLog, 'a');
+  const err = openSync(logs.errLog, 'a');
+  spawn(process.execPath, [command, 'preview', '--host', previewUrl.hostname, '--port', previewUrl.port || '80'], {
     cwd: SITE_ROOT,
     detached: true,
-    shell: process.platform === 'win32',
-    stdio: 'ignore',
+    shell: false,
+    stdio: ['ignore', out, err],
     windowsHide: true
   }).unref();
+  closeSync(out);
+  closeSync(err);
   await waitForPreview();
 }
 
