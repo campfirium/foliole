@@ -146,11 +146,11 @@ describe('Demo Pack export', () => {
       expect(pack.topics[0].highlights[0]).toMatchObject({ excerpt: 'Important phrase' });
       expect(pack.topics[0].reviewItems[0]).toMatchObject({ answer: 'review', kind: 'cloze' });
       expect(pack.topics[0].reviewScheduleSeeds[0]).toMatchObject({
-        due: { dayOffset: 1 },
+        due: { dayOffset: 0 },
         lastReviewAt: null,
         reviewItemId: 'cloze-b'
       });
-      expect(pack.topics[1].readingSeed).toMatchObject({ nextAt: { dayOffset: 1 }, repetitionCount: 1 });
+      expect(pack.topics[1].readingSeed).toMatchObject({ nextAt: { dayOffset: 0 }, repetitionCount: 0 });
       expect(JSON.stringify(pack)).not.toContain('private');
       expect(pack.source.warnings).toEqual(expect.arrayContaining([
         expect.stringContaining('virtual: Virtual topic'),

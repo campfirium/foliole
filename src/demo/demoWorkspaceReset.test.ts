@@ -27,6 +27,95 @@ function stubDemoStorage(storage: Map<string, string>, pathname: string) {
   });
 }
 
+function createPollutedDemoLearningState(input: {
+  item: NonNullable<(typeof DEMO_TOPICS)[number]['reviewItems'][number]>;
+  itemNodeId: string;
+  topic: NonNullable<(typeof DEMO_TOPICS)[number]>;
+  topicNodeId: string;
+}) {
+  const topicNode = createPollutedDemoTopicNode(input.topic, input.topicNodeId);
+  const itemNode = createPollutedDemoReviewItemNode(input.item, input.itemNodeId, input.topicNodeId);
+  return {
+    ...createInitialWorkspaceState(new Date('2026-06-19T00:00:00.000Z')),
+    activeNodeId: input.itemNodeId,
+    nodeOrder: [input.topicNodeId, input.itemNodeId],
+    nodesById: {
+      [input.topicNodeId]: topicNode,
+      [input.itemNodeId]: itemNode
+    },
+    reviewSession: {
+      currentNodeId: input.itemNodeId,
+      isAnswerRevealed: true,
+      queueNodeIds: [input.itemNodeId],
+      soonNodeIds: [input.topicNodeId],
+      totalNodeCount: 1
+    },
+    reviewSessionMode: 'reading-only' as const
+  };
+}
+
+function createPollutedDemoTopicNode(topic: NonNullable<(typeof DEMO_TOPICS)[number]>, topicNodeId: string) {
+  return {
+    id: topicNodeId,
+    parentNodeId: null,
+    kind: 'topic' as const,
+    title: topic.title,
+    isTitleManual: true,
+    content: '',
+    openingText: null,
+    reveal: null,
+    reading: {
+      intervalDurationMs: 0,
+      intervalGrowthFactor: 1,
+      lastHandledAt: '2026-06-18T00:00:00.000Z',
+      nextAt: '2026-06-25T00:00:00.000Z',
+      priority: 9,
+      readingPosition: 99,
+      repetitionCount: 99,
+      state: 'dismissed' as const
+    },
+    review: null,
+    bodyStatus: 'ready' as const,
+    hasContent: true,
+    createdAt: '2026-06-19T00:00:00.000Z',
+    updatedAt: '2026-06-19T00:00:00.000Z'
+  };
+}
+
+function createPollutedDemoReviewItemNode(
+  item: NonNullable<(typeof DEMO_TOPICS)[number]['reviewItems'][number]>,
+  itemNodeId: string,
+  topicNodeId: string
+) {
+  return {
+    id: itemNodeId,
+    parentNodeId: topicNodeId,
+    kind: 'item' as const,
+    title: item.title,
+    isTitleManual: true,
+    content: item.prompt,
+    openingText: item.prompt,
+    reveal: item.answer,
+    reading: null,
+    review: {
+      due: '2026-06-25T00:00:00.000Z',
+      lastReviewAt: '2026-06-20T00:00:00.000Z',
+      state: 2 as const,
+      stability: 10,
+      difficulty: 10,
+      elapsedDays: 3,
+      scheduledDays: 5,
+      reps: 99,
+      lapses: 9
+    },
+    bodyStatus: 'ready' as const,
+    hasContent: true,
+    hasReveal: item.answer !== null,
+    createdAt: '2026-06-19T00:00:00.000Z',
+    updatedAt: '2026-06-19T00:00:00.000Z'
+  };
+}
+
 it('forces the current Demo store back to the official snapshot', () => {
   const topic = DEMO_TOPICS[1];
   if (!topic) throw new Error('Demo reset test requires a second topic.');
@@ -54,6 +143,41 @@ it('forces the current Demo store back to the official snapshot', () => {
   expect(state.nodesById[DEMO_GUIDES_NODE_ID]).toMatchObject({ kind: 'folder', title: 'Guides' });
   expect(payload.state.activeNodeId).toBe(`demo-${topic.slug}`);
   expect(storage.get(DEMO_SNAPSHOT_VERSION)).toBe(DEMO_CAPTURED_VERSION);
+  vi.unstubAllGlobals();
+});
+
+it('resets Demo learning state back to the official seed', () => {
+  const topic = DEMO_TOPICS[0];
+  const item = topic?.reviewItems[0];
+  const schedule = topic?.reviewScheduleSeeds[0];
+  if (!topic || !item || !schedule) throw new Error('Demo reset test requires a topic with review items.');
+  const pathname = canonicalDemoPath(topic.slug);
+  const topicNodeId = `demo-${topic.slug}`;
+  const itemNodeId = `demo-${item.id}`;
+  const storage = new Map<string, string>();
+  stubDemoStorage(storage, pathname);
+  useWorkspaceStore.setState(createPollutedDemoLearningState({ item, itemNodeId, topic, topicNodeId }));
+
+  resetDemoWorkspaceSnapshot(pathname);
+
+  const state = useWorkspaceStore.getState();
+  const payload = JSON.parse(storage.get(WORKSPACE_STORAGE_KEY) ?? 'null');
+  expect(state.reviewSessionMode).toBe('recommended');
+  expect(state.reviewSession.isAnswerRevealed).toBe(false);
+  expect(state.reviewSession).not.toHaveProperty('soonNodeIds');
+  expect(state.nodesById[topicNodeId]?.reading).toMatchObject({
+    priority: topic.readingSeed.priority,
+    readingPosition: topic.readingSeed.readingPosition,
+    repetitionCount: topic.readingSeed.repetitionCount,
+    state: topic.readingSeed.state
+  });
+  expect(state.nodesById[itemNodeId]?.review).toMatchObject({
+    lapses: schedule.lapses,
+    reps: schedule.reps,
+    state: schedule.state
+  });
+  expect(payload.state.nodesById[topicNodeId].reading.state).toBe(topic.readingSeed.state);
+  expect(payload.state.nodesById[itemNodeId].review.reps).toBe(schedule.reps);
   vi.unstubAllGlobals();
 });
 

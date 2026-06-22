@@ -75,7 +75,7 @@ export function createDemoGuidesWelcomeNode(locale: GuidedSampleLocale, timestam
     openingText: content.rootTitle,
     reveal: null,
     review: null,
-    reading: createDismissedGuideReading(timestamp),
+    reading: createInitialGuideReading(timestamp),
     bodyStatus: 'ready',
     hasContent: true,
     createdAt: timestamp,
@@ -98,7 +98,7 @@ export function createDemoGuidesWelcomeChildNodes(locale: GuidedSampleLocale, ti
       openingText: title,
       reveal: null,
       review: null,
-      reading: createDismissedGuideReading(timestamp),
+      reading: createInitialGuideReading(timestamp),
       bodyStatus: 'ready',
       hasContent: true,
       createdAt: timestamp,
@@ -107,7 +107,7 @@ export function createDemoGuidesWelcomeChildNodes(locale: GuidedSampleLocale, ti
   });
 }
 
-function createDismissedGuideReading(timestamp: string): NodeReadingProfile {
+function createInitialGuideReading(timestamp: string): NodeReadingProfile {
   return {
     intervalDurationMs: 0,
     intervalGrowthFactor: 1,
@@ -116,7 +116,7 @@ function createDismissedGuideReading(timestamp: string): NodeReadingProfile {
     priority: 0,
     readingPosition: 0,
     repetitionCount: 0,
-    state: 'dismissed'
+    state: 'active'
   };
 }
 

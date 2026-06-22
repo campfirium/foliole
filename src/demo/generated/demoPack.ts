@@ -51,7 +51,7 @@ export const GENERATED_DEMO_PACK: DemoPack = {
       reviewScheduleSeeds: [
         {
           reviewItemId: 'focused-reading-review-item-1',
-          due: { dayOffset: 1 },
+          due: { dayOffset: 0 },
           lastReviewAt: null,
           state: 0,
           stability: 0,
@@ -102,13 +102,13 @@ export const GENERATED_DEMO_PACK: DemoPack = {
       runtime: { state: 'topic', topicId: 'organize-source-topics' },
       highlights: [],
       readingSeed: {
-        intervalDurationMs: 86400000,
-        intervalGrowthFactor: 1.3,
+        intervalDurationMs: 0,
+        intervalGrowthFactor: 1,
         lastHandledAt: { dayOffset: 0 },
-        nextAt: { dayOffset: 1 },
-        priority: 1,
+        nextAt: { dayOffset: 0 },
+        priority: 0,
         readingPosition: 0,
-        repetitionCount: 1,
+        repetitionCount: 0,
         state: 'active'
       },
       reviewItems: [],

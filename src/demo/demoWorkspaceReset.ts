@@ -1,5 +1,5 @@
 import { browserLocalWorkspaceReviewPersistence } from '../store/workspaceReviewPersistence';
-import { useWorkspaceStore, WORKSPACE_STORAGE_KEY } from '../store/workspaceStore';
+import { createInitialWorkspaceState, useWorkspaceStore, WORKSPACE_STORAGE_KEY } from '../store/workspaceStore';
 import { createWorkspaceReviewActions } from '../store/workspaceStoreReviewActions';
 
 import { DEMO_CAPTURED_VERSION, DEMO_SNAPSHOT_VERSION } from './demoLocalStorage';
@@ -13,6 +13,7 @@ export function resetDemoWorkspaceSnapshot(pathname = window.location.pathname) 
   );
   window.localStorage.setItem(DEMO_SNAPSHOT_VERSION, DEMO_CAPTURED_VERSION);
   useWorkspaceStore.setState({
+    ...createInitialWorkspaceState(),
     ...snapshot,
     isHydrated: true,
     workspaceHydrationError: null

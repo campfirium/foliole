@@ -1,22 +1,24 @@
 import type { DemoPackReadingSeed, DemoPackReviewScheduleSeed } from '../../src/demo/demoPack.js';
 
 export function createDemoReadingSeed(index: number): DemoPackReadingSeed {
+  void index;
   return {
-    intervalDurationMs: index === 0 ? 0 : 24 * 60 * 60 * 1000,
-    intervalGrowthFactor: index === 0 ? 1 : 1.3,
+    intervalDurationMs: 0,
+    intervalGrowthFactor: 1,
     lastHandledAt: { dayOffset: 0 },
-    nextAt: { dayOffset: index },
-    priority: index,
+    nextAt: { dayOffset: 0 },
+    priority: 0,
     readingPosition: 0,
-    repetitionCount: index === 0 ? 0 : 1,
+    repetitionCount: 0,
     state: 'active'
   };
 }
 
 export function createDemoReviewScheduleSeed(reviewItemId: string, dueDayOffset: number): DemoPackReviewScheduleSeed {
+  void dueDayOffset;
   return {
     reviewItemId,
-    due: { dayOffset: dueDayOffset },
+    due: { dayOffset: 0 },
     lastReviewAt: null,
     state: 0,
     stability: 0,
