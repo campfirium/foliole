@@ -21,7 +21,7 @@ function createNode(partial: Partial<Node> & Pick<Node, 'id' | 'title' | 'conten
   };
 }
 
-it('blocks moving derived topics and items', () => {
+it('blocks moving derived nodes while allowing regular topics and items', () => {
   expect(
     canNodeBeMoved(createNode({
       id: 'topic-derived',
@@ -31,8 +31,17 @@ it('blocks moving derived topics and items', () => {
       anchorLink: { id: 'hl-1', kind: 'highlight' }
     }))
   ).toBe(false);
+  expect(
+    canNodeBeMoved(createNode({
+      id: 'item-derived',
+      title: 'Derived item',
+      content: 'Prompt',
+      kind: 'item',
+      anchorLink: { id: 'cloze-1', kind: 'cloze' }
+    }))
+  ).toBe(false);
   expect(canNodeBeMoved(createNode({ id: 'topic-1', title: 'Topic', content: 'Body', kind: 'topic' }))).toBe(true);
-  expect(canNodeBeMoved(createNode({ id: 'item-1', title: 'Card', content: 'Prompt', kind: 'item' }))).toBe(false);
+  expect(canNodeBeMoved(createNode({ id: 'item-1', title: 'Card', content: 'Prompt', kind: 'item' }))).toBe(true);
 });
 
 it('allows folders to accept topics but not items to accept children', () => {

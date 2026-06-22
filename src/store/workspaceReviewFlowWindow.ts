@@ -17,6 +17,7 @@ type ReviewFlowWindowState = Pick<
 
 export interface ReviewFlowWindow {
   dayBuckets: ReviewFlowDayBucket[];
+  dayOffsetByNodeId: Record<string, number | undefined>;
   queueNodeIds: string[];
   readyNodeIds: string[];
   upcomingNodeIds: string[];
@@ -69,7 +70,7 @@ function resolveDayOffset(now: string, availableAt: string | null, newDayStartsA
   const nowStart = resolveCurrentDayStart(new Date(now), newDayStartsAtHour).getTime();
   const availableStart = resolveCurrentDayStart(new Date(availableAt), newDayStartsAtHour).getTime();
   if (!Number.isFinite(nowStart) || !Number.isFinite(availableStart)) return 0;
-  return Math.max(0, Math.round((availableStart - nowStart) / 86_400_000));
+  return Math.round((availableStart - nowStart) / 86_400_000);
 }
 
 function buildFlowDayBuckets(args: {
@@ -80,11 +81,11 @@ function buildFlowDayBuckets(args: {
 }) {
   const buckets = new Map<number, string[]>();
   args.nodeIds.forEach((nodeId) => {
-    const dayOffset = resolveDayOffset(
+    const dayOffset = Math.max(0, resolveDayOffset(
       args.now,
       resolveFlowNodeAvailableAt(args.nodesById[nodeId], args.newDayStartsAtHour),
       args.newDayStartsAtHour
-    );
+    ));
     const bucket = buckets.get(dayOffset) ?? [];
     bucket.push(nodeId);
     buckets.set(dayOffset, bucket);
@@ -92,6 +93,22 @@ function buildFlowDayBuckets(args: {
   return [...buckets.entries()]
     .sort(([left], [right]) => left - right)
     .map(([dayOffset, nodeIds]) => ({ dayOffset, nodeIds }));
+}
+
+function buildDayOffsetByNodeId(args: {
+  nodeIds: string[];
+  nodesById: Record<string, Node>;
+  now: string;
+  newDayStartsAtHour: number;
+}) {
+  return Object.fromEntries(args.nodeIds.map((nodeId) => [
+    nodeId,
+    resolveDayOffset(
+      args.now,
+      resolveFlowNodeAvailableAt(args.nodesById[nodeId], args.newDayStartsAtHour),
+      args.newDayStartsAtHour
+    )
+  ]));
 }
 
 export function buildReviewFlowWindow(
@@ -134,5 +151,11 @@ export function buildReviewFlowWindow(
     nodesById: canonicalSource.nodesById,
     now
   });
-  return { dayBuckets, queueNodeIds, readyNodeIds, upcomingNodeIds };
+  const dayOffsetByNodeId = buildDayOffsetByNodeId({
+    newDayStartsAtHour,
+    nodeIds: uniqueNodeIds([...queueNodeIds, ...readyNodeIds, ...upcomingNodeIds]),
+    nodesById: canonicalSource.nodesById,
+    now
+  });
+  return { dayBuckets, dayOffsetByNodeId, queueNodeIds, readyNodeIds, upcomingNodeIds };
 }

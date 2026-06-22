@@ -191,6 +191,28 @@ it('treats root-level guide folders as Inbox siblings for folder and topic colum
   expect(collectTopicColumnNodeIds('demo-guides', nodeOrder, nodesById, [])).toEqual(['demo-topic']);
 });
 
+it('preserves root folder order when Guides is placed before Inbox', () => {
+  const nodeOrder = [HOME_NODE_ID, 'demo-guides', INBOX_NODE_ID, 'demo-topic'];
+  const nodesById: WorkspaceListNodesById = {
+    [HOME_NODE_ID]: createNode({ id: HOME_NODE_ID, kind: 'folder', title: 'Home' }),
+    [INBOX_NODE_ID]: createNode({ id: INBOX_NODE_ID, kind: 'folder', title: 'Inbox' }),
+    'demo-guides': createNode({ id: 'demo-guides', kind: 'folder', title: 'Guides' }),
+    'demo-topic': createNode({
+      id: 'demo-topic',
+      kind: 'topic',
+      parentNodeId: 'demo-guides',
+      title: 'Welcome to Foliole'
+    })
+  };
+
+  expect(buildFolderNavigationNodeOrder(nodeOrder, nodesById, [])).toEqual([
+    HOME_NODE_ID,
+    'demo-guides',
+    INBOX_NODE_ID,
+    TRASH_NODE_ID
+  ]);
+});
+
 it('builds sparse navigation node maps for the active columns only', () => {
   const nodeOrder = [INBOX_NODE_ID, 'folder-a', 'topic-a', 'topic-child'];
   const nodesById: WorkspaceListNodesById = {

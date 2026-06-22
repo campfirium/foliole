@@ -14,7 +14,7 @@ import { AppOverlayStack, prewarmAppOverlayStack } from './components/AppOverlay
 import { prewarmImportSourceWorkspace } from './components/ImportSourceWorkspace';
 import { useGlobalCaptureNavigation } from './components/useGlobalCaptureNavigation';
 import { WorkspaceDemoViewportGate } from './components/WorkspaceDemoViewportGate';
-import { WorkspaceLayout } from './components/WorkspaceLayout';
+import { WorkspaceLayoutWithReviewQueueDialog } from './components/WorkspaceLayoutWithReviewQueueDialog';
 import { prewarmWorkspaceRightSidebarPanels } from './components/workspaceRightSidebarPanelLoaders';
 import type { WorkspaceSearchResult } from './components/workspaceSearch';
 import { prewarmWorkspaceSettingsOverlay } from './components/WorkspaceSettingsOverlay';
@@ -32,6 +32,7 @@ function AppContent() {
   }, []);
   const controller = useAppController({
     onOpenHelpSearch: () => setIsHelpSearchOpen(true),
+    onReviewQueueEmpty: () => undefined,
     onOpenSearchPreview: handleOpenSearchPreview,
     onSendFeedback: () => setIsFeedbackOpen(true)
   });
@@ -55,19 +56,11 @@ function AppContent() {
   useReportAppReadyWhenHydrated(isAppReady);
   usePrewarmInteractiveSurfacesAfterReady(isAppReady, isDemo);
 
-  const workspaceLayoutProps = {
-    ...controller.layoutProps,
-    settings: {
-      ...controller.layoutProps.settings,
-      onRunRailAction: controller.paletteState.onRunCommand
-    }
-  };
-
   return (
     <HotkeySettingsProvider {...controller.hotkeySettings}>
       <>
         <WorkspaceDemoViewportGate>
-          <WorkspaceLayout {...workspaceLayoutProps} />
+          <WorkspaceLayoutWithReviewQueueDialog controller={controller} />
         </WorkspaceDemoViewportGate>
         <AppOverlayStack
           controller={controller}

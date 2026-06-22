@@ -3,6 +3,7 @@ import { expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
+import type { ReviewFlowWindow } from '../../store/workspaceReviewFlowWindow';
 
 const reviewQueuePanelRender = vi.hoisted(() => vi.fn());
 
@@ -118,27 +119,32 @@ it('rerenders the review queue panel when upcoming flow entries change', async (
     reviewQueuePanelRender.mockClear();
     const node = createNode({ id: 'node-1', title: 'Queued note' });
     const { rerender } = renderWithLocalization(
-      createReviewQueueSidebarElement(node, { dayBuckets: [], queueNodeIds: ['node-1'], readyNodeIds: [], upcomingNodeIds: [] })
+      createReviewQueueSidebarElement(node, createFlowWindow({ queueNodeIds: ['node-1'] }))
     );
 
     await waitFor(() => expect(reviewQueuePanelRender).toHaveBeenCalledTimes(1));
 
-    rerender(createReviewQueueSidebarElement(node, {
-      queueNodeIds: ['node-1'],
+    rerender(createReviewQueueSidebarElement(node, createFlowWindow({
       dayBuckets: [{ dayOffset: 1, nodeIds: ['node-2'] }],
-      readyNodeIds: [],
+      queueNodeIds: ['node-1'],
       upcomingNodeIds: ['node-2']
-    }));
+    })));
 
     await waitFor(() => expect(reviewQueuePanelRender).toHaveBeenCalledTimes(2));
 });
 
-function createReviewQueueSidebarElement(node: Node, reviewFlowWindow?: {
-  dayBuckets: Array<{ dayOffset: number; nodeIds: string[] }>;
-  queueNodeIds: string[];
-  readyNodeIds: string[];
-  upcomingNodeIds: string[];
-}) {
+function createFlowWindow(overrides: Partial<ReviewFlowWindow>): ReviewFlowWindow {
+  return {
+    dayBuckets: [],
+    dayOffsetByNodeId: {},
+    queueNodeIds: [],
+    readyNodeIds: [],
+    upcomingNodeIds: [],
+    ...overrides
+  };
+}
+
+function createReviewQueueSidebarElement(node: Node, reviewFlowWindow?: ReviewFlowWindow) {
   return (
     <WorkspaceRightSidebar
       activeNodeId="node-1"

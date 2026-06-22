@@ -4,8 +4,20 @@ import { expect, it, vi } from 'vitest';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { inspectorListInsetClassName, inspectorListInsetPaddingClassName } from '../../shared/ui';
+import type { ReviewFlowWindow } from '../../store/workspaceReviewFlowWindow';
 
 import { WorkspaceRightSidebarReviewQueuePanel } from './WorkspaceRightSidebarReviewQueuePanel';
+
+function createFlowWindow(overrides: Partial<ReviewFlowWindow>): ReviewFlowWindow {
+  return {
+    dayBuckets: [],
+    dayOffsetByNodeId: {},
+    queueNodeIds: [],
+    readyNodeIds: [],
+    upcomingNodeIds: [],
+    ...overrides
+  };
+}
 
 function createNode(overrides: Partial<Node>): Node {
   return {
@@ -52,7 +64,7 @@ it('shows the current actionable item first even when the whole queue starts wit
   renderWithLocalization(
     <WorkspaceRightSidebarReviewQueuePanel
       currentNodeId="reading-now"
-      flowWindow={{ dayBuckets: [], queueNodeIds: ['fsrs-later', 'reading-now'], readyNodeIds: [], upcomingNodeIds: [] }}
+      flowWindow={createFlowWindow({ queueNodeIds: ['fsrs-later', 'reading-now'] })}
       nodesById={nodesById}
       onSelectNode={() => undefined}
     />
@@ -90,8 +102,7 @@ it('keeps the mixed queue cadence after the current reading item', () => {
   renderWithLocalization(
     <WorkspaceRightSidebarReviewQueuePanel
       currentNodeId="reading-1"
-      flowWindow={{
-        dayBuckets: [],
+      flowWindow={createFlowWindow({
         queueNodeIds: [
           'fsrs-1',
           'fsrs-2',
@@ -105,10 +116,8 @@ it('keeps the mixed queue cadence after the current reading item', () => {
           'fsrs-9',
           'fsrs-10',
           'reading-2'
-        ],
-        readyNodeIds: [],
-        upcomingNodeIds: []
-      }}
+        ]
+      })}
       nodesById={nodesById}
       onSelectNode={() => undefined}
     />
@@ -120,17 +129,18 @@ it('keeps the mixed queue cadence after the current reading item', () => {
   expect(items[6]!).toHaveTextContent('7Reading 2');
 });
 
-it('shows an error when the review queue references an unavailable topic', () => {
+it('renders blank when the review queue references an unavailable topic', () => {
   renderWithLocalization(
     <WorkspaceRightSidebarReviewQueuePanel
       currentNodeId={null}
-      flowWindow={{ dayBuckets: [], queueNodeIds: ['missing-topic'], readyNodeIds: [], upcomingNodeIds: [] }}
+      flowWindow={createFlowWindow({ queueNodeIds: ['missing-topic'] })}
       nodesById={{}}
       onSelectNode={() => undefined}
     />
   );
 
-  expect(screen.getByRole('alert')).toHaveTextContent('Flow has an unavailable topic');
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  expect(screen.queryByText('Flow has an unavailable topic')).not.toBeInTheDocument();
   expect(screen.queryByText('Missing topic')).not.toBeInTheDocument();
 });
 
@@ -140,7 +150,7 @@ it('opens the queued node from the title only', () => {
   renderWithLocalization(
     <WorkspaceRightSidebarReviewQueuePanel
       currentNodeId={null}
-      flowWindow={{ dayBuckets: [], queueNodeIds: ['reading-1'], readyNodeIds: [], upcomingNodeIds: [] }}
+      flowWindow={createFlowWindow({ queueNodeIds: ['reading-1'] })}
       nodesById={{
         'reading-1': createNode({ id: 'reading-1', title: 'Reading 1' })
       }}
@@ -159,7 +169,7 @@ it('does not show due times in the flow list', () => {
   renderWithLocalization(
     <WorkspaceRightSidebarReviewQueuePanel
       currentNodeId={null}
-      flowWindow={{ dayBuckets: [], queueNodeIds: ['reading-1', 'fsrs-1'], readyNodeIds: [], upcomingNodeIds: [] }}
+      flowWindow={createFlowWindow({ queueNodeIds: ['reading-1', 'fsrs-1'] })}
       nodesById={{
         'reading-1': createNode({
           id: 'reading-1',
@@ -195,7 +205,7 @@ it('separates queue and ready flow entries with dividers only', () => {
   renderWithLocalization(
     <WorkspaceRightSidebarReviewQueuePanel
       currentNodeId="reading-1"
-      flowWindow={{ dayBuckets: [], queueNodeIds: ['reading-1'], readyNodeIds: ['reading-2'], upcomingNodeIds: [] }}
+      flowWindow={createFlowWindow({ queueNodeIds: ['reading-1'], readyNodeIds: ['reading-2'] })}
       nodesById={{
         'reading-1': createNode({ id: 'reading-1', title: 'Reading 1' }),
         'reading-2': createNode({ id: 'reading-2', title: 'Reading 2' })
@@ -222,7 +232,10 @@ it('shows future-only flow content as scheduled later', () => {
   renderWithLocalization(
     <WorkspaceRightSidebarReviewQueuePanel
       currentNodeId={null}
-      flowWindow={{ dayBuckets: [{ dayOffset: 1, nodeIds: ['reading-later'] }], queueNodeIds: [], readyNodeIds: [], upcomingNodeIds: ['reading-later'] }}
+      flowWindow={createFlowWindow({
+        dayBuckets: [{ dayOffset: 1, nodeIds: ['reading-later'] }],
+        upcomingNodeIds: ['reading-later']
+      })}
       nodesById={{
         'reading-later': createNode({ id: 'reading-later', title: 'Reading Later' })
       }}

@@ -10,19 +10,21 @@ import { filterMovableTopicTreeSelection } from './workspaceTopicTreeDrag';
 
 interface TopicOverrides {
   anchorLink?: { id: string; kind: 'highlight' | 'cloze' } | null;
+  kind?: 'topic' | 'item';
 }
 
 function topic(id: string, title: string, overrides: TopicOverrides = {}) {
+  const kind = overrides.kind ?? 'topic';
   return {
     anchorLink: overrides.anchorLink ?? null,
     content: 'Body',
     createdAt: '2026-04-20T00:00:00.000Z',
     hasContent: true,
-    hasReveal: false,
+    hasReveal: kind === 'item',
     id,
-    kind: 'topic' as const,
+    kind,
     parentNodeId: 'folder-a',
-    reveal: null,
+    reveal: kind === 'item' ? 'Answer' : null,
     review: null,
     title,
     updatedAt: '2026-04-20T00:00:00.000Z'
@@ -172,8 +174,15 @@ it('does not fall back to structural movement for manual child drops', () => {
   expect(useWorkspaceStore.getState().nodesById['topic-b']?.parentNodeId).toBe('folder-a');
 });
 
-it('shows Alt structural drop feedback for movable topics', async () => {
+it('shows Alt structural drop feedback for movable items', async () => {
   seed(['folder-a', 'topic-a', 'topic-b'], ['topic-a', 'topic-b']);
+  useWorkspaceStore.setState((state) => ({
+    ...state,
+    nodesById: {
+      ...state.nodesById,
+      'topic-a': topic('topic-a', 'Alpha', { kind: 'item' })
+    }
+  }));
   renderWithLocalization(<TopicTreeHarness />);
   const dataTransfer = transfer();
   const betaFrame = rowFrame('Beta');

@@ -79,3 +79,24 @@ it('clears browser-local Demo state and immediately reinstalls the official snap
   expect(storage.get(DEMO_SNAPSHOT_VERSION)).toBe(DEMO_CAPTURED_VERSION);
   vi.unstubAllGlobals();
 });
+
+it('combines natural elapsed days with Demo manual day advances', () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date('2026-06-20T00:00:00.000Z'));
+  const storage = new Map<string, string>();
+  stubDemoStorage(storage, canonicalDemoPath(DEMO_TOPICS[0]!.slug));
+  storage.set('foliole-demo-started-at-v1', '2026-06-18T00:00:00.000Z');
+  writeDemoPreviewDay(1);
+
+  const controller = createBrowserDemoRuntimeController();
+
+  expect(controller.getState().previewDay).toBe(3);
+  expect(controller.getNowIso(new Date('2026-06-20T12:00:00.000Z'))).toBe('2026-06-21T12:00:00.000Z');
+
+  controller.continueToNextPreviewDay();
+
+  expect(readDemoPreviewDay()).toBe(2);
+  expect(controller.getState().previewDay).toBe(4);
+  vi.unstubAllGlobals();
+  vi.useRealTimers();
+});

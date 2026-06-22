@@ -5,7 +5,8 @@ import { definedProps } from '../shared/lib/definedProps';
 
 import { buildCachedReviewQueuePlan } from './reviewQueuePlannerCached';
 import { selectCanonicalReviewQueueSource } from './workspaceCanonicalSelectors';
-import type { WorkspaceState } from './workspaceStore';
+import { buildReviewFlowWindow } from './workspaceReviewFlowWindow';
+import type { ReviewSessionStartOptions, WorkspaceState } from './workspaceStore';
 
 const EXTENSION_NODE_LIMIT = 20;
 type ReviewLiveQueueState = Pick<
@@ -63,10 +64,17 @@ function buildExtensionNodeIds(args: {
     .slice(0, EXTENSION_NODE_LIMIT);
 }
 
+function buildScheduledFallbackQueue(state: ReviewLiveQueueState, now: string) {
+  const flowWindow = buildReviewFlowWindow(state, now, []);
+  const firstDayBucket = flowWindow.dayBuckets.find((bucket) => bucket.nodeIds.length > 0);
+  return firstDayBucket?.nodeIds ?? [];
+}
+
 export function buildLiveReviewQueue(
   state: ReviewLiveQueueState,
   now: string,
   overrides: {
+    includeScheduled?: boolean;
     mode?: ReviewSessionMode;
     nodeOrder?: string[];
     nodesById?: Record<string, Node>;
@@ -75,10 +83,17 @@ export function buildLiveReviewQueue(
   return buildLiveReviewQueueOutput(state, now, overrides).taskNodeIds;
 }
 
-export function buildStartReviewSessionQueue(state: ReviewLiveQueueState, now: string) {
+export function buildStartReviewSessionQueue(
+  state: ReviewLiveQueueState,
+  now: string,
+  options: ReviewSessionStartOptions = {}
+) {
   const liveQueue = buildLiveReviewQueueOutput(state, now, { mode: state.reviewSessionMode });
   if (liveQueue.taskNodeIds.length > 0) {
     return liveQueue.taskNodeIds;
+  }
+  if (options.includeScheduledFallback) {
+    return buildScheduledFallbackQueue(state, now);
   }
   if (state.reviewSessionMode === 'recommended') {
     return buildLiveReviewQueue(state, now, { mode: 'reading-only' });
@@ -93,6 +108,7 @@ export function buildLiveReviewQueueOutput(
     mode?: ReviewSessionMode;
     nodeOrder?: string[];
     nodesById?: Record<string, Node>;
+    includeScheduled?: boolean;
     excludedNodeIds?: string[];
     pinnedNodeId?: string | null;
   } = {}
@@ -110,6 +126,7 @@ export function buildLiveReviewQueueOutput(
     nodeOrder: canonicalSource.nodeOrder,
     nodesById: canonicalSource.nodesById,
     now,
+    ...definedProps({ includeScheduled: overrides.includeScheduled }),
     pushQueueRules: getCurrentReviewSchedulerSettings().pushQueue,
     trashedNodeIds: canonicalSource.trashedNodeIds
   });

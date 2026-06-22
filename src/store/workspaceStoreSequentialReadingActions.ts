@@ -14,7 +14,10 @@ function buildSequentialReadingReviewSessionPatch(state: WorkspaceState, nodesBy
   if (!state.reviewSession.currentNodeId) {
     return null;
   }
-  const queue = buildLiveReviewQueueOutput({ ...state, nodesById }, now);
+  const recommendedQueue = buildLiveReviewQueueOutput({ ...state, nodesById }, now);
+  const queue = recommendedQueue.currentNodeId || state.reviewSessionMode !== 'recommended'
+    ? recommendedQueue
+    : buildLiveReviewQueueOutput({ ...state, nodesById }, now, { mode: 'reading-only' });
   const currentNodeId = queue.currentNodeId;
   if (!currentNodeId) {
     return null;

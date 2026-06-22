@@ -5,13 +5,15 @@ export interface StartStudyModeOptions {
 export interface ReviewModeSessionActions {
   exitReviewSession: () => void;
   exitStudyMode: () => void;
+  onReviewQueueEmpty?: () => void;
   onReviewSessionStarted?: () => void;
   startReviewSession: () => boolean;
   startStudyMode: (options?: StartStudyModeOptions) => void;
 }
 
-export function enterReviewModeSession(actions: Pick<ReviewModeSessionActions, 'onReviewSessionStarted' | 'startReviewSession' | 'startStudyMode'>) {
+export function enterReviewModeSession(actions: Pick<ReviewModeSessionActions, 'onReviewQueueEmpty' | 'onReviewSessionStarted' | 'startReviewSession' | 'startStudyMode'>) {
   if (!actions.startReviewSession()) {
+    actions.onReviewQueueEmpty?.();
     return false;
   }
   actions.onReviewSessionStarted?.();

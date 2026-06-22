@@ -37,6 +37,7 @@ function useDerivedControllerState(args: {
   nowIso: string;
   priorityQuickSet: ReturnType<typeof useControllerPriorityQuickSet>;
   reviewTopicDelayPanel: ReturnType<typeof useReviewTopicDelayPanel>;
+  onReviewQueueEmpty: () => void;
   reviewPreview: ReturnType<typeof useReviewSessionRuntime>;
   reviewSettings: ReturnType<typeof useReviewSchedulerSettings>;
   resumeReviewItem: () => void;
@@ -54,6 +55,7 @@ function useDerivedControllerState(args: {
       isWorkspaceHydrated: args.isWorkspaceHydrated,
       nowIso: args.nowIso,
       priorityQuickSet: args.priorityQuickSet,
+      onReviewQueueEmpty: args.onReviewQueueEmpty,
       reviewTopicDelayPanel: args.reviewTopicDelayPanel,
       reviewPreview: args.reviewPreview,
       reviewSettings: args.reviewSettings,
@@ -75,6 +77,7 @@ function buildControllerLayoutState(args: {
   nowIso: string;
   priorityQuickSet: ReturnType<typeof useControllerPriorityQuickSet>;
   reviewTopicDelayPanel: ReturnType<typeof useReviewTopicDelayPanel>;
+  onReviewQueueEmpty: () => void;
   reviewPreview: ReturnType<typeof useReviewSessionRuntime>;
   reviewSettings: ReturnType<typeof useReviewSchedulerSettings>;
   resumeReviewItem: () => void;
@@ -93,6 +96,7 @@ function buildControllerLayoutState(args: {
     nav: args.controller.nav,
     nowIso: args.nowIso,
     priorityQuickSet: args.priorityQuickSet,
+    onReviewQueueEmpty: args.onReviewQueueEmpty,
     reviewTopicDelayPanel: args.reviewTopicDelayPanel,
     reviewPreview: args.reviewPreview,
     reviewSettings: args.reviewSettings,
@@ -157,6 +161,7 @@ function useControllerAuxiliaryResult(args: {
 
 export function useAppController(args: {
   onOpenHelpSearch: () => void;
+  onReviewQueueEmpty: () => void;
   onOpenSearchPreview: (result: WorkspaceSearchResult) => void;
   onSendFeedback: () => void;
 }): AppControllerResult {
@@ -187,6 +192,7 @@ export function useAppController(args: {
     isWorkspaceHydrated,
     nowIso,
     priorityQuickSet,
+    onReviewQueueEmpty: args.onReviewQueueEmpty,
     reviewTopicDelayPanel,
     reviewPreview,
     reviewSettings,
@@ -209,9 +215,5 @@ export function useAppController(args: {
     ws
   });
 
-  return buildAppControllerResult({
-    auxiliaryState, controller, hotkeys, layoutProps,
-    reviewSourceTopicDeleteDialog: reviewEditing.reviewSourceTopicDeleteDialog,
-    reviewTopicDelayPanel
-  });
+  return buildAppControllerResult({ auxiliaryState, controller, hotkeys, layoutProps, reviewSourceTopicDeleteDialog: reviewEditing.reviewSourceTopicDeleteDialog, reviewTopicDelayPanel });
 }

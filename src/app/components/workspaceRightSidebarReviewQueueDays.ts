@@ -8,6 +8,14 @@ export function getDemoPreviewDisplayDay(previewDay: number) {
   return previewDay + 1;
 }
 
+export function getDemoNodeDisplayDay(currentDayIndex: number, dayOffset: number) {
+  return Math.max(1, currentDayIndex + dayOffset + 1);
+}
+
 export function getDemoDayHeading(dayOffset: number, t: Translate) {
   return t('desktop.rightPanel.flow.demo.dayGroup', { day: getDemoDisplayDay(dayOffset) });
+}
+
+export function getDemoDisplayDayHeading(day: number, t: Translate) {
+  return t('desktop.rightPanel.flow.demo.dayGroup', { day });
 }

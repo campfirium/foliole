@@ -21,6 +21,7 @@ import { enterReviewModeSession } from './reviewModeSessionActions';
 
 const EMPTY_REVIEW_FLOW_WINDOW = Object.freeze({
   dayBuckets: [],
+  dayOffsetByNodeId: {},
   queueNodeIds: [],
   readyNodeIds: [],
   upcomingNodeIds: []
@@ -45,16 +46,21 @@ function createSessionActions(args: BuildLayoutPropsArgs) {
   const enterReviewMode = () =>
     args.reviewSettings.isReviewSchedulerSettingsReady &&
     enterReviewModeSession({
+      onReviewQueueEmpty: args.onReviewQueueEmpty,
       onReviewSessionStarted: args.onOpenNotesView,
-      startReviewSession: args.startReviewSession,
+      startReviewSession: () => args.startReviewSession(args.nowIso),
       startStudyMode: args.startStudyMode
     });
   return {
     onStartStudyMode: enterReviewMode,
-    onToggleReviewSession: () =>
-      args.isStudyMode
-        ? (args.exitReviewSession(), args.exitStudyMode())
-        : enterReviewMode()
+    onToggleReviewSession: () => {
+      if (!args.isStudyMode) {
+        return enterReviewMode();
+      }
+      args.exitReviewSession();
+      args.exitStudyMode();
+      return true;
+    }
   };
 }
 

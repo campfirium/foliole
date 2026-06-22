@@ -1,4 +1,5 @@
 import type { Node } from './nodeTypes';
+import { normalizeInjectedRootNodeOrder } from './specialNodeOrder';
 
 export const INBOX_NODE_ID = 'special-inbox';
 export const HOME_NODE_ID = 'special-home';
@@ -211,12 +212,11 @@ export function ensureInboxNodeInSnapshot<T extends WorkspaceNodeSnapshot>(snaps
 
   return {
     ...snapshot,
-    nodeOrder: [
+    nodeOrder: normalizeInjectedRootNodeOrder(snapshot.nodeOrder, [
       HOME_NODE_ID,
       INBOX_NODE_ID,
-      VIRTUAL_ROOT_NODE_ID,
-      ...snapshot.nodeOrder.filter((nodeId) => !isInjectedRootNodeId(nodeId))
-    ],
+      VIRTUAL_ROOT_NODE_ID
+    ]),
     nodesById: {
       ...resolvedNodesById,
       [HOME_NODE_ID]: homeNode,

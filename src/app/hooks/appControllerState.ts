@@ -4,7 +4,7 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { definedProps } from '../../shared/lib/definedProps';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { getDemoRuntimeNowIso, subscribeDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
+import { getDemoRuntimeNowIso, subscribeDemoRuntimeState, useDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 import { buildStartReviewSessionQueue } from '../../store/workspaceReviewLiveQueue';
 
@@ -49,6 +49,35 @@ function useReviewStartBlockedNotice(isReviewSchedulerSettingsReady: boolean) {
     return undefined;
   }
   return () => showAppRuntimeNotice(t('desktop.reviewSession.allClear.notice'), 'success');
+}
+
+function resolveCanStartStudyMode(args: {
+  isDemo: boolean;
+  isReviewSchedulerSettingsReady: boolean;
+  nowIso: string;
+  ws: ReturnType<typeof useWorkspaceSelectors>;
+}) {
+  return args.isReviewSchedulerSettingsReady && buildStartReviewSessionQueue(args.ws, args.nowIso, {
+    includeScheduledFallback: args.isDemo
+  }).length > 0;
+}
+
+function useWorkspaceStudyModeState(args: {
+  isReviewSchedulerSettingsReady: boolean;
+  nowIso: string;
+  ws: ReturnType<typeof useWorkspaceSelectors>;
+}) {
+  const demoRuntime = useDemoRuntimeState();
+  const canStartStudyMode = resolveCanStartStudyMode({
+    isDemo: demoRuntime.isDemo,
+    isReviewSchedulerSettingsReady: args.isReviewSchedulerSettingsReady,
+    nowIso: args.nowIso,
+    ws: args.ws
+  });
+  return useStudyMode({
+    canStartStudyMode,
+    onBlockedStart: useReviewStartBlockedNotice(args.isReviewSchedulerSettingsReady)
+  });
 }
 
 function useWorkspaceReadingProgressPersistence(args: {
@@ -160,12 +189,7 @@ export function useWorkspaceControllerState(
   useRemovedSourcesWarmup(isWorkspaceHydrated);
   const selectedTrashNode = trash.selectedTrashNodeId ? ws.nodesById[trash.selectedTrashNodeId] : undefined;
   const runtime = useAppRuntime(ws.listWidth, ws.rightSidebarWidth);
-  const canStartStudyMode = isReviewSchedulerSettingsReady && buildStartReviewSessionQueue(ws, nowIso).length > 0;
-  const onBlockedStudyStart = useReviewStartBlockedNotice(isReviewSchedulerSettingsReady);
-  const study = useStudyMode({
-    canStartStudyMode,
-    onBlockedStart: onBlockedStudyStart
-  });
+  const study = useWorkspaceStudyModeState({ isReviewSchedulerSettingsReady, nowIso, ws });
   const listResize = useListResizer(ws.listWidth, ws.setListWidth);
   const rightSidebarResize = useRightSidebarResizer(ws.rightSidebarWidth, ws.setRightSidebarWidth);
   const navigationReadingPosition = useNavigationReadingPosition(runtime, ws.nodeViewById, ws.setNodeViewState);

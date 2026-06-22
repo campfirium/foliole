@@ -2,10 +2,12 @@ import { useSyncExternalStore } from 'react';
 
 export interface DemoRuntimeState {
   clearError: string | null;
+  manualAdvanceDays: number;
   importError: string | null;
   importedTopicCount: number;
   isDemo: boolean;
   previewDay: number;
+  startedAt: string | null;
 }
 
 export interface DemoMarkdownRuntimeEntry {
@@ -30,10 +32,12 @@ export interface DemoRuntimeController {
 
 const defaultState: DemoRuntimeState = {
   clearError: null,
+  manualAdvanceDays: 0,
   importError: null,
   importedTopicCount: 0,
   isDemo: false,
-  previewDay: 0
+  previewDay: 0,
+  startedAt: null
 };
 
 const defaultController: DemoRuntimeController = {

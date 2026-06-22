@@ -14,6 +14,11 @@ export function areFlowDayBucketsEqual(previous: ReviewFlowWindow, next: ReviewF
   );
 }
 
+export function areFlowDayOffsetsEqual(previous: ReviewFlowWindow, next: ReviewFlowWindow) {
+  const nodeIds = Array.from(new Set([...collectFlowWindowNodeIds(previous), ...collectFlowWindowNodeIds(next)]));
+  return nodeIds.every((nodeId) => previous.dayOffsetByNodeId[nodeId] === next.dayOffsetByNodeId[nodeId]);
+}
+
 export function collectFlowWindowNodeIds(flowWindow: ReviewFlowWindow) {
   return [
     ...flowWindow.queueNodeIds,

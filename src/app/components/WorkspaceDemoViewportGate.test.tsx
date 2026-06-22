@@ -12,7 +12,9 @@ function installDemoState(isDemo: boolean) {
     importError: null,
     importedTopicCount: 0,
     isDemo,
-    previewDay: 1
+    manualAdvanceDays: 0,
+    previewDay: 1,
+    startedAt: null
   };
   installDemoRuntimeController({
     clearLocalData: () => Promise.resolve(false),

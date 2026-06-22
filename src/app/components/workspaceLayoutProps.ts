@@ -200,8 +200,8 @@ export interface WorkspaceLayoutFieldTypes {
   onCutImage: () => void;
   onDeleteImage: () => void;
   onExportImage: () => void;
-  onStartStudyMode: () => void;
-  onToggleReviewSession: () => void;
+  onStartStudyMode: () => boolean;
+  onToggleReviewSession: () => boolean;
   onOpenSettings: () => void;
   onRunRailAction?: (commandId: string) => void;
   onCloseSettings: () => void;

@@ -71,3 +71,16 @@ it('refreshes the active Flow queue immediately after enabling sequential readin
   expect(state.reviewSession.queueNodeIds).toEqual(['debugging']);
   expect(state.reviewSession.isAnswerRevealed).toBe(false);
 });
+
+it('falls back to the reading queue when refreshing a recommended Flow with no due cards', () => {
+  useWorkspaceStore.setState({ reviewSessionMode: 'recommended' });
+
+  expect(useWorkspaceStore.getState().setNodeSequentialReading('books', true, now)).toBe(true);
+  const state = useWorkspaceStore.getState();
+
+  expect(state.nodesById.debugging?.reading?.state).toBe('active');
+  expect(state.nodesById.drucker?.reading?.state).toBe('locked');
+  expect(state.activeNodeId).toBe('debugging');
+  expect(state.reviewSession.currentNodeId).toBe('debugging');
+  expect(state.reviewSession.queueNodeIds).toEqual(['debugging']);
+});

@@ -19,7 +19,9 @@ function installDemoRuntime() {
     importError: null,
     importedTopicCount: 0,
     isDemo: true,
-    previewDay: 0
+    manualAdvanceDays: 0,
+    previewDay: 0,
+    startedAt: null
   };
   installDemoRuntimeController({
     clearLocalData: async () => true,

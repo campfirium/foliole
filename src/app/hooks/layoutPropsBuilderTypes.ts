@@ -107,6 +107,7 @@ export interface BuildLayoutPropsArgs {
   setNodeViewState: WorkspaceLayoutDocumentProps['setNodeViewState'];
   onEditorReady: WorkspaceLayoutDocumentProps['onEditorReady'];
   onOpenNotesView: () => void;
+  onReviewQueueEmpty: () => void;
   onOpenMoveToNode: () => void;
   onOpenImportManagement: () => void;
   onOpenSettings: () => void;

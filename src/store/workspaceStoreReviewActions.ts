@@ -15,7 +15,7 @@ import {
   type WorkspaceReviewPersistenceAdapter
 } from './workspaceReviewPersistence';
 import { advanceReviewSession, completeReviewSession, createEmptyReviewSession } from './workspaceReviewReading';
-import type { WorkspaceState } from './workspaceStore';
+import type { ReviewSessionStartOptions, WorkspaceState } from './workspaceStore';
 import {
   createReadReviewTopicActionWithPending,
   createPostponeReviewTopicActionWithPending,
@@ -141,11 +141,12 @@ export function createWorkspaceReviewActions(
   set: WorkspaceSet,
   get: WorkspaceGet,
   scheduler: ReviewSchedulerAdapter = createReviewSchedulerAdapter(),
-  persistence: WorkspaceReviewPersistenceAdapter = runtimeWorkspaceReviewPersistence
+  persistence: WorkspaceReviewPersistenceAdapter = runtimeWorkspaceReviewPersistence,
+  options: { startReviewSession?: ReviewSessionStartOptions } = {}
 ): WorkspaceReviewActions {
   const readingPendingNodeIds: ReadingReviewPendingNodeIds = new Set();
   return {
-    startReviewSession: createStartReviewSessionAction(set),
+    startReviewSession: createStartReviewSessionAction(set, options.startReviewSession),
     resumeReviewSession: createResumeReviewSessionAction(set),
     setReviewSessionMode: createSetReviewSessionModeAction(set),
     revealReviewAnswer: createRevealReviewAnswerAction(set),

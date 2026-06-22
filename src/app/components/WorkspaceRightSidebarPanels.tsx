@@ -9,7 +9,7 @@ import {
   isWorkspaceRightPanelAvailable,
   resolveWorkspaceRightPanelContext
 } from './workspaceRightPanelAvailability';
-import { areFlowDayBucketsEqual, collectFlowWindowNodeIds } from './workspaceRightSidebarFlowWindow';
+import { areFlowDayBucketsEqual, areFlowDayOffsetsEqual, collectFlowWindowNodeIds } from './workspaceRightSidebarFlowWindow';
 import {
   loadWorkspaceRightSidebarBacklinksPanel,
   loadWorkspaceRightSidebarDevPanel,
@@ -115,6 +115,7 @@ const ReviewQueueSidebarPanel = memo(function ReviewQueueSidebarPanel(props: {
   const nextFlowNodeIds = collectFlowWindowNodeIds(nextProps.flowWindow);
   if (previousFlowNodeIds.length !== nextFlowNodeIds.length) return false;
   if (!areFlowDayBucketsEqual(previousProps.flowWindow, nextProps.flowWindow)) return false;
+  if (!areFlowDayOffsetsEqual(previousProps.flowWindow, nextProps.flowWindow)) return false;
   return previousFlowNodeIds.every((nodeId, index) => {
     if (nodeId !== nextFlowNodeIds[index]) return false;
     const previousNode = previousProps.nodesById[nodeId];
@@ -165,6 +166,7 @@ function renderReviewQueuePanel(
       currentNodeId={props.reviewCurrentNodeId}
       flowWindow={props.reviewFlowWindow ?? {
         dayBuckets: [],
+        dayOffsetByNodeId: {},
         queueNodeIds: props.reviewActiveQueueNodeIds ?? props.reviewQueueNodeIds,
         readyNodeIds: [],
         upcomingNodeIds: []

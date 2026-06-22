@@ -7,7 +7,7 @@ import type { Node, NodeAnchorLink, NodeImageRegionGroup } from '../../features/
 import type { ReviewSessionMode } from '../../features/review/model/reviewSessionMode';
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 import type { ReviewSchedulerSettingsContextValue } from '../../features/settings/context/reviewSchedulerSettingsContext';
-import type { NodeViewState, ReviewSessionState } from '../../store/workspaceStore';
+import type { NodeViewState, ReviewSessionState, WorkspaceState } from '../../store/workspaceStore';
 
 import { createAnswerChangeHandler, createEditorChangeHandler, createEditorReadyHandler, createNodeContentChangeHandler, type SelectNodeHandler } from './appControllerEditorHandlers';
 import type { useCurrentReviewPreview } from './appControllerHelpers';
@@ -54,6 +54,7 @@ export interface BuildControllerLayoutPropsArgs {
   reviewTopicDelayPanel: {
     open: (nodeId?: string | null) => boolean;
   };
+  onReviewQueueEmpty: () => void;
   listResize: ReturnType<typeof useListResizer>;
   nav: ReturnType<typeof useWorkspaceNavigation>;
   nowIso: string;
@@ -105,7 +106,7 @@ export interface BuildControllerLayoutPropsArgs {
     setNodeViewState: (nodeId: string, viewState: NodeViewState) => void;
     setRightSidebarCollapsed: (collapsed: boolean) => void;
     setRightSidebarWidth: (width: number) => void;
-    startReviewSession: (now?: string) => boolean;
+    startReviewSession: WorkspaceState['startReviewSession'];
     trashedNodeIds: string[];
     pushEditorOperationEntry: (entry: EditorOperationHistoryEntry) => void;
     undoEditorOperation: () => boolean;
@@ -199,6 +200,7 @@ function createLayoutHandlerArgs(
 function createLayoutDocumentHandlers(args: BuildControllerLayoutPropsArgs) {
   return {
     onOpenNotesView: createOpenNotesView(args),
+    onReviewQueueEmpty: args.onReviewQueueEmpty,
     onPastedTextAnchors: createPastedTextAnchorsHandler(args),
     onPersistPdfViewState: createPersistPdfViewState(args),
     onRevealAnchorInDocument: createRevealAnchorInDocument(args),

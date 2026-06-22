@@ -8,26 +8,45 @@ import { useWorkspaceStore } from '../store/workspaceStore';
 
 import {
   clearDemoLocalStorage,
-  readDemoPreviewDay,
-  writeDemoPreviewDay
+  readDemoManualAdvanceDays,
+  readOrCreateDemoStartedAt,
+  writeDemoManualAdvanceDays
 } from './demoLocalStorage';
 import { applyDemoMarkdownImport } from './demoMarkdownImport';
 import { resetDemoWorkspaceSnapshot } from './demoWorkspaceReset';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-export function createBrowserDemoRuntimeController(): DemoRuntimeController {
-  const listeners = new Set<() => void>();
-  let state: DemoRuntimeState = {
+function resolveDemoDayIndex(startedAt: string, manualAdvanceDays: number, realNow = new Date()) {
+  const startedAtMs = Date.parse(startedAt);
+  if (!Number.isFinite(startedAtMs)) {
+    return manualAdvanceDays;
+  }
+  const elapsedDays = Math.max(0, Math.floor((realNow.getTime() - startedAtMs) / DAY_MS));
+  return elapsedDays + manualAdvanceDays;
+}
+
+function createDemoRuntimeState(partial: Partial<DemoRuntimeState> = {}, realNow = new Date()): DemoRuntimeState {
+  const startedAt = readOrCreateDemoStartedAt(realNow);
+  const manualAdvanceDays = readDemoManualAdvanceDays();
+  return {
     clearError: null,
     importError: null,
     importedTopicCount: 0,
     isDemo: true,
-    previewDay: readDemoPreviewDay()
+    manualAdvanceDays,
+    previewDay: resolveDemoDayIndex(startedAt, manualAdvanceDays, realNow),
+    startedAt,
+    ...partial
   };
+}
+
+export function createBrowserDemoRuntimeController(): DemoRuntimeController {
+  const listeners = new Set<() => void>();
+  let state: DemoRuntimeState = createDemoRuntimeState();
 
   const notify = () => listeners.forEach((listener) => listener());
-  const getNowIso = (realNow: Date) => new Date(realNow.getTime() + state.previewDay * DAY_MS).toISOString();
+  const getNowIso = (realNow: Date) => new Date(realNow.getTime() + state.manualAdvanceDays * DAY_MS).toISOString();
   const setState = (nextState: DemoRuntimeState) => {
     state = nextState;
     notify();
@@ -39,9 +58,16 @@ export function createBrowserDemoRuntimeController(): DemoRuntimeController {
       return clearBrowserDemoLocalData(updateState);
     },
     continueToNextPreviewDay() {
-      const previewDay = state.previewDay + 1;
-      writeDemoPreviewDay(previewDay);
-      setState({ ...state, clearError: null, previewDay });
+      const manualAdvanceDays = state.manualAdvanceDays + 1;
+      writeDemoManualAdvanceDays(manualAdvanceDays);
+      const startedAt = state.startedAt ?? readOrCreateDemoStartedAt();
+      setState({
+        ...state,
+        clearError: null,
+        manualAdvanceDays,
+        previewDay: resolveDemoDayIndex(startedAt, manualAdvanceDays),
+        startedAt
+      });
     },
     getNowIso(realNow) {
       return getNowIso(realNow);
@@ -64,11 +90,7 @@ async function clearBrowserDemoLocalData(updateState: (partial: Partial<DemoRunt
     clearDemoLocalStorage();
     resetDemoWorkspaceSnapshot();
     updateState({
-      clearError: null,
-      importError: null,
-      importedTopicCount: 0,
-      isDemo: true,
-      previewDay: readDemoPreviewDay()
+      ...createDemoRuntimeState()
     });
     return true;
   } catch (error) {

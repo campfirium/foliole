@@ -2,14 +2,14 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
 import { useDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
 import {
-  AppErrorState,
   inspectorListHeadingClassName,
   inspectorListInsetPaddingClassName,
   inspectorListMetaClassName
 } from '../../shared/ui';
 import type { ReviewFlowWindow } from '../../store/workspaceReviewFlowWindow';
 
-import { getDemoDayHeading } from './workspaceRightSidebarReviewQueueDays';
+import { getDemoPreviewDisplayDay } from './workspaceRightSidebarReviewQueueDays';
+import { collectDemoFlowNodeIds, DemoDayLabel, renderDemoDaySections } from './WorkspaceRightSidebarReviewQueueDemoSections';
 import { buildDisplayQueueNodeIds, FlowSection } from './WorkspaceRightSidebarReviewQueueSections';
 
 interface WorkspaceRightSidebarReviewQueuePanelProps {
@@ -19,11 +19,14 @@ interface WorkspaceRightSidebarReviewQueuePanelProps {
   onSelectNode: (nodeId: string) => void;
 }
 
-function QueueHeader() {
+function QueueHeader({ demoDay }: { demoDay?: number }) {
   const t = useTranslation();
   return (
     <header className={`${inspectorListInsetPaddingClassName} pb-2 pt-3`}>
-      <h2 className={`m-0 px-0 pb-0 ${inspectorListHeadingClassName}`}>{t('desktop.rightPanel.flow')}</h2>
+      <div className="flex items-center justify-between gap-3">
+        <h2 className={`m-0 px-0 pb-0 ${inspectorListHeadingClassName}`}>{t('desktop.rightPanel.flow')}</h2>
+        {demoDay ? <DemoDayLabel day={demoDay} /> : null}
+      </div>
     </header>
   );
 }
@@ -40,57 +43,6 @@ function EmptyQueueState() {
 
 function collectFlowNodeIds(flowWindow: ReviewFlowWindow) {
   return [...flowWindow.queueNodeIds, ...flowWindow.readyNodeIds, ...flowWindow.upcomingNodeIds];
-}
-
-function collectDemoFlowNodeIds(flowWindow: ReviewFlowWindow) {
-  return [
-    ...flowWindow.queueNodeIds,
-    ...flowWindow.readyNodeIds,
-    ...flowWindow.dayBuckets.flatMap((bucket) => bucket.nodeIds)
-  ];
-}
-
-function renderDemoDaySections(args: {
-  flowWindow: ReviewFlowWindow;
-  indexOffset: number;
-  nodesById: Record<string, Node>;
-  onSelectNode: (nodeId: string) => void;
-  t: Translate;
-}) {
-  let indexOffset = args.indexOffset;
-  return args.flowWindow.dayBuckets.map((bucket) => {
-    const section = (
-      <FlowSection
-        heading={getDemoDayHeading(bucket.dayOffset, args.t)}
-        indexOffset={indexOffset}
-        key={bucket.dayOffset}
-        nodeIds={bucket.nodeIds}
-        nodesById={args.nodesById}
-        onSelectNode={args.onSelectNode}
-        showDivider={indexOffset > 0}
-      />
-    );
-    indexOffset += bucket.nodeIds.length;
-    return section;
-  });
-}
-
-function renderDemoCurrentDaySection(args: {
-  currentNodeIds: string[];
-  nodesById: Record<string, Node>;
-  onSelectNode: (nodeId: string) => void;
-  t: Translate;
-}) {
-  return (
-    <FlowSection
-      heading={getDemoDayHeading(0, args.t)}
-      indexOffset={0}
-      nodeIds={args.currentNodeIds}
-      nodesById={args.nodesById}
-      onSelectNode={args.onSelectNode}
-      showDivider={false}
-    />
-  );
 }
 
 function renderScheduledLaterSection(args: {
@@ -114,44 +66,34 @@ function renderScheduledLaterSection(args: {
 }
 
 function FlowPanelContent(props: WorkspaceRightSidebarReviewQueuePanelProps & {
+  currentDemoDayIndex: number;
   isDemo: boolean;
   t: Translate;
 }) {
   const displayQueueNodeIds = buildDisplayQueueNodeIds(props.flowWindow.queueNodeIds, props.currentNodeId);
-  const currentDemoNodeIds = [...displayQueueNodeIds, ...props.flowWindow.readyNodeIds];
   const readyIndexOffset = displayQueueNodeIds.length;
-  const futureIndexOffset = props.isDemo ? currentDemoNodeIds.length : readyIndexOffset + props.flowWindow.readyNodeIds.length;
+  const futureIndexOffset = readyIndexOffset + props.flowWindow.readyNodeIds.length;
   return (
     <ol aria-label={props.t('desktop.rightPanel.flow.items')} className="min-h-0 flex-1 overflow-y-auto py-1">
       {props.isDemo
-        ? renderDemoSections({ ...props, currentDemoNodeIds, futureIndexOffset })
+        ? renderDemoSections(props)
         : renderStandardSections({ ...props, displayQueueNodeIds, futureIndexOffset, readyIndexOffset })}
     </ol>
   );
 }
 
 function renderDemoSections(args: WorkspaceRightSidebarReviewQueuePanelProps & {
-  currentDemoNodeIds: string[];
-  futureIndexOffset: number;
+  currentDemoDayIndex: number;
   t: Translate;
 }) {
-  return (
-    <>
-      {renderDemoCurrentDaySection({
-        currentNodeIds: args.currentDemoNodeIds,
-        nodesById: args.nodesById,
-        onSelectNode: args.onSelectNode,
-        t: args.t
-      })}
-      {renderDemoDaySections({
-        flowWindow: args.flowWindow,
-        indexOffset: args.futureIndexOffset,
-        nodesById: args.nodesById,
-        onSelectNode: args.onSelectNode,
-        t: args.t
-      })}
-    </>
-  );
+  return renderDemoDaySections({
+    currentDayIndex: args.currentDemoDayIndex,
+    currentNodeId: args.currentNodeId,
+    flowWindow: args.flowWindow,
+    nodesById: args.nodesById,
+    onSelectNode: args.onSelectNode,
+    t: args.t
+  });
 }
 
 function renderStandardSections(args: WorkspaceRightSidebarReviewQueuePanelProps & {
@@ -190,7 +132,8 @@ function renderStandardSections(args: WorkspaceRightSidebarReviewQueuePanelProps
 
 export function WorkspaceRightSidebarReviewQueuePanel(props: WorkspaceRightSidebarReviewQueuePanelProps) {
   const t = useTranslation();
-  const { isDemo } = useDemoRuntimeState();
+  const demoState = useDemoRuntimeState();
+  const { isDemo } = demoState;
   const flowNodeIds = isDemo ? collectDemoFlowNodeIds(props.flowWindow) : collectFlowNodeIds(props.flowWindow);
   if (flowNodeIds.length === 0) {
     return <EmptyQueueState />;
@@ -198,18 +141,13 @@ export function WorkspaceRightSidebarReviewQueuePanel(props: WorkspaceRightSideb
 
   const missingQueueNodeId = flowNodeIds.find((nodeId) => !props.nodesById[nodeId]);
   if (missingQueueNodeId) {
-    return (
-      <AppErrorState
-        description={t('desktop.rightPanel.flow.unavailableDescription')}
-        title={t('desktop.rightPanel.flow.unavailableTitle')}
-      />
-    );
+    return null;
   }
 
   return (
     <section className="flex min-h-0 flex-col">
-      <QueueHeader />
-      <FlowPanelContent {...props} isDemo={isDemo} t={t} />
+      <QueueHeader {...(isDemo ? { demoDay: getDemoPreviewDisplayDay(demoState.previewDay) } : {})} />
+      <FlowPanelContent {...props} currentDemoDayIndex={demoState.previewDay} isDemo={isDemo} t={t} />
     </section>
   );
 }

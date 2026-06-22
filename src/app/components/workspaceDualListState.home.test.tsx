@@ -100,3 +100,30 @@ it('keeps the Home column active while revealing the selected topic folder', () 
   expect(result.current.revealFolderId).toBe('folder-a');
   expect(result.current.topicNodeOrder).toEqual(['topic-a']);
 });
+
+it('keeps Demo Guides above Inbox when the workspace snapshot orders it first', () => {
+  const nodesById: WorkspaceListNodesById = {
+    [HOME_NODE_ID]: createNode({ id: HOME_NODE_ID, kind: 'folder', specialKind: 'home', title: 'Home' }),
+    [INBOX_NODE_ID]: createNode({ id: INBOX_NODE_ID, kind: 'folder', specialKind: 'inbox', title: 'Inbox' }),
+    'demo-guides': createNode({ id: 'demo-guides', kind: 'folder', title: 'Guides' }),
+    'demo-welcome': createNode({
+      id: 'demo-welcome',
+      kind: 'topic',
+      parentNodeId: 'demo-guides',
+      title: 'Welcome to Foliole'
+    })
+  };
+
+  const { result } = renderHook(() =>
+    useWorkspaceDualListState({
+      activeNodeId: 'demo-welcome',
+      isTrashViewOpen: false,
+      listNodesById: nodesById,
+      nodeOrder: [HOME_NODE_ID, 'demo-guides', INBOX_NODE_ID, 'demo-welcome'],
+      trashedNodeIds: []
+    })
+  );
+
+  expect(result.current.folderNodeOrder).toEqual([HOME_NODE_ID, 'demo-guides', INBOX_NODE_ID, TRASH_NODE_ID]);
+  expect(result.current.topicNodeOrder).toEqual(['demo-welcome']);
+});

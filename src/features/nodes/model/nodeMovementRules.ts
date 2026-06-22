@@ -13,7 +13,7 @@ export function canNodeBeMoved(node: MoveRuleNode | null | undefined) {
   if (node.anchorLink) {
     return false;
   }
-  return node.kind !== 'item';
+  return true;
 }
 
 export function canNodeAcceptMovedNode(

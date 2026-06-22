@@ -1,6 +1,5 @@
 import {
   HOME_NODE_ID,
-  INBOX_NODE_ID,
   TRASH_NODE_ID,
   isHomeNode,
   isInboxNode,
@@ -62,22 +61,23 @@ export function buildFolderNavigationNodeOrder(
   trashedNodeIds: readonly string[]
 ) {
   const visibleFolderIds = nodeOrder.filter((nodeId) => isVisibleFolderNode(nodesById[nodeId], nodesById, trashedNodeIds));
-  const regularFolderIds = visibleFolderIds.filter((nodeId) => {
+  const homeNodeIds = visibleFolderIds.filter((nodeId) => {
+    const node = nodesById[nodeId];
+    return nodeId === HOME_NODE_ID || isHomeNode(node);
+  });
+  const rootFolderIds = visibleFolderIds.filter((nodeId) => {
     const node = nodesById[nodeId];
     return (
       nodeId !== HOME_NODE_ID &&
-      nodeId !== INBOX_NODE_ID &&
       nodeId !== TRASH_NODE_ID &&
       !isHomeNode(node) &&
-      !isInboxNode(node) &&
       !isTrashNode(node)
     );
   });
 
   return [
-    ...(isVisibleFolderNode(nodesById[HOME_NODE_ID], nodesById, trashedNodeIds) ? [HOME_NODE_ID] : []),
-    ...(isVisibleFolderNode(nodesById[INBOX_NODE_ID], nodesById, trashedNodeIds) ? [INBOX_NODE_ID] : []),
-    ...regularFolderIds,
+    ...homeNodeIds,
+    ...rootFolderIds,
     TRASH_NODE_ID
   ];
 }

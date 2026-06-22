@@ -19,16 +19,19 @@ it('opens study mode after a review session starts', () => {
 });
 
 it('does not open study mode when the review queue is empty', () => {
+  const onReviewQueueEmpty = vi.fn();
   const onReviewSessionStarted = vi.fn();
   const startStudyMode = vi.fn();
 
   const started = enterReviewModeSession({
+    onReviewQueueEmpty,
     onReviewSessionStarted,
     startReviewSession: () => false,
     startStudyMode
   });
 
   expect(started).toBe(false);
+  expect(onReviewQueueEmpty).toHaveBeenCalledTimes(1);
   expect(onReviewSessionStarted).not.toHaveBeenCalled();
   expect(startStudyMode).not.toHaveBeenCalled();
 });

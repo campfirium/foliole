@@ -163,7 +163,7 @@ it('adds immersive reading to the default top rail', () => {
 it('adds search and command palette to the default top rail', () => {
   const [, , immersiveReading, search, commandPalette] = getWorkspaceRailSectionItems(resetWorkspaceRailItems(), 'top');
 
-  expect(immersiveReading.id).toBe('system.immersive-reading');
+  expect(immersiveReading?.id).toBe('system.immersive-reading');
 
   expect(search).toMatchObject({
     commandId: APP_COMMAND_IDS.openWorkspaceSearch,

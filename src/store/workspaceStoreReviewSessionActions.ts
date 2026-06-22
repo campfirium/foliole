@@ -7,7 +7,7 @@ import {
   createStartedReviewSession
 } from './workspaceReviewReading';
 import { resolveReviewSessionProgress } from './workspaceReviewSessionProgress';
-import type { WorkspaceState } from './workspaceStore';
+import type { ReviewSessionStartOptions, WorkspaceState } from './workspaceStore';
 
 type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)) => void;
 
@@ -29,11 +29,15 @@ function resolveResumeCurrentNodeId(state: WorkspaceState, queueNodeIds: string[
   return queueNodeIds[0] ?? null;
 }
 
-export function createStartReviewSessionAction(set: WorkspaceSet): WorkspaceState['startReviewSession'] {
-  return (now = new Date().toISOString()) => {
+export function createStartReviewSessionAction(
+  set: WorkspaceSet,
+  defaultOptions: ReviewSessionStartOptions = {}
+): WorkspaceState['startReviewSession'] {
+  return (now = new Date().toISOString(), options = {}) => {
     let started = false;
+    const startOptions = { ...defaultOptions, ...options };
     set((state) => {
-      const queueNodeIds = buildStartReviewSessionQueue(state, now);
+      const queueNodeIds = buildStartReviewSessionQueue(state, now, startOptions);
       if (queueNodeIds.length === 0) return state;
       started = true;
       return {

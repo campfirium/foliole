@@ -1,9 +1,7 @@
 import {
   HOME_NODE_ID,
-  INBOX_NODE_ID,
   TRASH_NODE_ID,
   isHomeNode,
-  isInboxNode,
   isTrashNode,
   isVirtualNode,
   isVirtualRootNode
@@ -42,27 +40,24 @@ function buildFolderNodeOrderFromIndex(
   index: WorkspaceListChildrenIndex,
   nodesById: WorkspaceListNodesById
 ) {
-  const regularFolderIds = index.visibleNodeIds.filter((nodeId) => {
+  const homeFolderIds = index.visibleNodeIds.filter((nodeId) => {
+    const node = nodesById[nodeId];
+    return isVisibleFolderId(nodeId, nodesById) && (nodeId === HOME_NODE_ID || isHomeNode(node));
+  });
+  const rootFolderIds = index.visibleNodeIds.filter((nodeId) => {
     const node = nodesById[nodeId];
     return (
       isVisibleFolderId(nodeId, nodesById) &&
       nodeId !== HOME_NODE_ID &&
-      nodeId !== INBOX_NODE_ID &&
       nodeId !== TRASH_NODE_ID &&
       !isHomeNode(node) &&
-      !isInboxNode(node) &&
       !isTrashNode(node)
     );
   });
 
   return [
-    ...(index.visibleNodeIdSet.has(HOME_NODE_ID) && isVisibleFolderId(HOME_NODE_ID, nodesById)
-      ? [HOME_NODE_ID]
-      : []),
-    ...(index.visibleNodeIdSet.has(INBOX_NODE_ID) && isVisibleFolderId(INBOX_NODE_ID, nodesById)
-      ? [INBOX_NODE_ID]
-      : []),
-    ...regularFolderIds,
+    ...homeFolderIds,
+    ...rootFolderIds,
     TRASH_NODE_ID
   ];
 }

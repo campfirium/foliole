@@ -252,12 +252,12 @@ it('blocks placing folders under topics when moving nodes', async () => {
   expect(useWorkspaceStore.getState().nodesById[folderId]?.parentNodeId).toBeNull();
 });
 
-it('blocks moving item nodes even when the target is otherwise valid', async () => {
+it('moves regular item nodes into valid topic parents', async () => {
   const itemId = (await useWorkspaceStore.getState().createRootNode('Card', 'item'))!;
-  const folderId = (await useWorkspaceStore.getState().createRootNode('', 'folder'))!;
+  const topicId = (await useWorkspaceStore.getState().createRootNode('Topic', 'topic'))!;
 
-  const moved = await useWorkspaceStore.getState().moveNode(itemId, folderId);
+  const moved = await useWorkspaceStore.getState().moveNode(itemId, topicId);
 
-  expect(moved).toBe(false);
-  expect(useWorkspaceStore.getState().nodesById[itemId]?.parentNodeId).toBe(INBOX_NODE_ID);
+  expect(moved).toBe(true);
+  expect(useWorkspaceStore.getState().nodesById[itemId]?.parentNodeId).toBe(topicId);
 });

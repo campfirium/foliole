@@ -47,4 +47,23 @@ describe('ensureInboxNodeInSnapshot', () => {
     expect(snapshot.nodesById[VIRTUAL_ROOT_NODE_ID]?.title).toBe('Virtual');
     expect(snapshot.trashedNodeIds).toEqual([]);
   });
+
+  it('preserves explicit root order when all injected roots already exist', () => {
+    const nodesById: Record<string, Node> = {
+      [HOME_NODE_ID]: createNode(HOME_NODE_ID, 'Home'),
+      'guides': createNode('guides', 'Guides'),
+      [INBOX_NODE_ID]: createNode(INBOX_NODE_ID, 'Inbox'),
+      [VIRTUAL_ROOT_NODE_ID]: createNode(VIRTUAL_ROOT_NODE_ID, 'Virtual')
+    };
+    const snapshot = ensureInboxNodeInSnapshot({
+      activeNodeId: 'guides',
+      nodeOrder: [HOME_NODE_ID, 'guides', INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID],
+      nodesById,
+      trashedNodeIds: []
+    });
+
+    expect(snapshot.nodeOrder).toEqual([HOME_NODE_ID, 'guides', INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID]);
+    expect(isInboxNode(snapshot.nodesById[INBOX_NODE_ID])).toBe(true);
+    expect(isVirtualRootNode(snapshot.nodesById[VIRTUAL_ROOT_NODE_ID])).toBe(true);
+  });
 });

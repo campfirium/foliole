@@ -8,9 +8,8 @@ import {
   logEditorInputDiagnostic
 } from '../../store/workspaceEditorInputDiagnostics';
 
-import { WorkspaceDemoControlsSurface } from './WorkspaceDemoControlsSurface';
 import { useWorkspaceRenderDiagnostic } from './workspaceInputLagRenderDiagnostic';
-import { areFlowDayBucketsEqual, areStringArraysEqual } from './workspaceRightSidebarFlowWindow';
+import { areFlowDayBucketsEqual, areFlowDayOffsetsEqual, areStringArraysEqual } from './workspaceRightSidebarFlowWindow';
 import {
   renderWorkspaceRightSidebarPanel,
   type WorkspaceRightSidebarPanelProps
@@ -47,7 +46,8 @@ function areReviewFlowWindowsEqual(
     areStringArraysEqual(previous.queueNodeIds, next.queueNodeIds) &&
     areStringArraysEqual(previous.readyNodeIds, next.readyNodeIds) &&
     areStringArraysEqual(previous.upcomingNodeIds, next.upcomingNodeIds) &&
-    areFlowDayBucketsEqual(previous, next)
+    areFlowDayBucketsEqual(previous, next) &&
+    areFlowDayOffsetsEqual(previous, next)
   );
 }
 
@@ -81,7 +81,6 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
       headerClassName="hidden"
       title={null}
     >
-      <WorkspaceDemoControlsSurface flowWindow={props.reviewFlowWindow} />
       {renderWorkspaceRightSidebarPanel(panelProps)}
     </AppPanel>
   );

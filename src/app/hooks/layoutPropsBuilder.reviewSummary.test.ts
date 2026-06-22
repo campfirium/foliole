@@ -104,7 +104,13 @@ it('does not derive review queue state from default scheduler settings before se
 
   expect(props.review.canStartStudyMode).toBe(false);
   expect(props.review.reviewPanelQueueNodeIds).toEqual([]);
-  expect(props.review.reviewFlowWindow).toEqual({ dayBuckets: [], queueNodeIds: [], readyNodeIds: [], upcomingNodeIds: [] });
+  expect(props.review.reviewFlowWindow).toEqual({
+    dayBuckets: [],
+    dayOffsetByNodeId: {},
+    queueNodeIds: [],
+    readyNodeIds: [],
+    upcomingNodeIds: []
+  });
   expect(props.review.reviewQueueNodeIds).toEqual([]);
   expect(props.review.reviewQueueVisibility).toBeNull();
   expect(props.review.reviewQueueCount).toBe(0);

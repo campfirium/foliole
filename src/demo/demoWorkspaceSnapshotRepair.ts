@@ -1,14 +1,16 @@
 import type { Node } from '../features/nodes/model/nodeTypes';
+import { HOME_NODE_ID, INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import type { WorkspacePersistedState } from '../store/workspaceStore';
 
 import { DEFAULT_DEMO_TOPIC, DEMO_TOPICS } from './demoContent';
+import { DEMO_GUIDES_NODE_ID } from './demoGuides';
 
 export function repairDemoWorkspacePayload(raw: string, pathname = '/demo/'): string | null {
   try {
     const payload = JSON.parse(raw) as { state?: WorkspacePersistedState; version?: number };
     if (!payload.state?.nodesById) return null;
     const nodesById = repairInlineDocumentNodes(payload.state.nodesById);
-    const state = routeStateToDemoPath({ ...payload.state, nodesById }, pathname);
+    const state = repairDemoGuidesOrder(routeStateToDemoPath({ ...payload.state, nodesById }, pathname));
     if (nodesById === payload.state.nodesById && state === payload.state) return null;
     return JSON.stringify({
       ...payload,
@@ -17,6 +19,25 @@ export function repairDemoWorkspacePayload(raw: string, pathname = '/demo/'): st
   } catch {
     return null;
   }
+}
+
+function repairDemoGuidesOrder(state: WorkspacePersistedState): WorkspacePersistedState {
+  const guidesIndex = state.nodeOrder.indexOf(DEMO_GUIDES_NODE_ID);
+  const inboxIndex = state.nodeOrder.indexOf(INBOX_NODE_ID);
+  if (guidesIndex < 0 || inboxIndex < 0 || guidesIndex < inboxIndex) return state;
+  return {
+    ...state,
+    nodeOrder: [
+      ...(state.nodeOrder.includes(HOME_NODE_ID) ? [HOME_NODE_ID] : []),
+      DEMO_GUIDES_NODE_ID,
+      INBOX_NODE_ID,
+      ...state.nodeOrder.filter((nodeId) => (
+        nodeId !== HOME_NODE_ID &&
+        nodeId !== DEMO_GUIDES_NODE_ID &&
+        nodeId !== INBOX_NODE_ID
+      ))
+    ]
+  };
 }
 
 function repairInlineDocumentNodes(nodesById: Record<string, Node | undefined>): Record<string, Node> {
