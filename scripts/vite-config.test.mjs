@@ -115,6 +115,8 @@ describe('vite config', () => {
       {
         'assets/index-abc.js': { type: 'chunk', fileName: 'assets/index-abc.js' },
         'assets/index-def.css': { type: 'asset', fileName: 'assets/index-def.css', source: '' },
+        'assets/styles-stub.js': { type: 'chunk', fileName: 'assets/styles-stub.js' },
+        'assets/styles-real.css': { type: 'asset', fileName: 'assets/styles-real.css', source: '' },
         'assets/logo.png': { type: 'asset', fileName: 'assets/logo.png', source: '' }
       }
     );
@@ -126,7 +128,8 @@ describe('vite config', () => {
       entry: 'index.html',
       assets: [
         { path: 'assets/index-abc.js', type: 'script' },
-        { path: 'assets/index-def.css', type: 'style' }
+        { path: 'assets/index-def.css', type: 'style' },
+        { path: 'assets/styles-real.css', type: 'style' }
       ]
     });
     expect(manifest.contractVersion).toBe(3);

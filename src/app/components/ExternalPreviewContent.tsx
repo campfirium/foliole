@@ -7,7 +7,7 @@ import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type { ExternalDocumentPreview } from '../../shared/platform/externalDocumentPreviewRepository';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 
-import { LinkPanelStack } from './LinkPanelStack';
+import { LazyLinkPanelStack } from './LazyLinkPanelStack';
 import type { useExternalLinkPanels } from './useExternalLinkPanels';
 
 export function ExternalPreviewContent(args: {
@@ -29,7 +29,7 @@ export function ExternalPreviewContent(args: {
     <>
       <ExternalArchivedNotice isPresent={args.preview.isPresent} />
       <ExternalPreviewEditor {...args} />
-      <LinkPanelStack
+      <LazyLinkPanelStack
         anchorRootRef={args.contentAreaRef}
         onClose={args.onCloseExternalLink}
         onStateChange={args.onLinkPanelStateChange}

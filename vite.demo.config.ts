@@ -23,6 +23,7 @@ export function filterDemoModulePreloadDependencies(
 }
 
 function toRuntimeAsset(output: Rollup.OutputAsset | Rollup.OutputChunk): DemoRuntimeAsset | null {
+  if (output.type === 'chunk' && /^assets\/styles-[^/]+\.js$/.test(output.fileName)) return null;
   if (output.type === 'chunk') return { path: output.fileName, type: 'script' };
   if (output.fileName.endsWith('.css')) return { path: output.fileName, type: 'style' };
   return null;

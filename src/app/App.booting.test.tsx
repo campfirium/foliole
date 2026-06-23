@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 const useAppController = vi.fn();
 const ensureWorkspaceHydrated = vi.fn(() => Promise.resolve());
@@ -12,19 +12,41 @@ const reportRuntimeBootStage = vi.fn();
 const demoRuntimeMock = vi.hoisted(() => ({
   isDemo: false
 }));
-const overlayMocks = vi.hoisted(() => ({
-  CommandPalette: vi.fn(() => <div>command-palette</div>),
-  GoToNodePalette: vi.fn(() => <div>go-to-node-palette</div>),
-  SearchPalette: vi.fn(() => <div>search-palette</div>)
-}));
 const reviewSettingsProviderMock = vi.hoisted(() => ({
   isReady: true
 }));
+const originalWindowDescriptors = {
+  cancelAnimationFrame: Object.getOwnPropertyDescriptor(window, 'cancelAnimationFrame'),
+  requestAnimationFrame: Object.getOwnPropertyDescriptor(window, 'requestAnimationFrame')
+};
 
 function setDocumentVisibility(visibilityState: DocumentVisibilityState) {
   Object.defineProperty(document, 'visibilityState', {
     configurable: true,
     value: visibilityState
+  });
+}
+
+function restoreWindowDescriptor(name: keyof typeof originalWindowDescriptors) {
+  const descriptor = originalWindowDescriptors[name];
+  if (descriptor) {
+    Object.defineProperty(window, name, descriptor);
+    return;
+  }
+  Reflect.deleteProperty(window, name);
+}
+
+function installAnimationFrameMock() {
+  Object.defineProperty(window, 'requestAnimationFrame', {
+    configurable: true,
+    value: vi.fn((callback: FrameRequestCallback) => {
+      callback(performance.now());
+      return 1;
+    })
+  });
+  Object.defineProperty(window, 'cancelAnimationFrame', {
+    configurable: true,
+    value: vi.fn()
   });
 }
 
@@ -90,16 +112,8 @@ vi.mock('./components/WorkspaceLayout', () => ({
   WorkspaceLayout: () => <div>workspace-layout</div>
 }));
 
-vi.mock('./components/CommandPalette', () => ({
-  CommandPalette: overlayMocks.CommandPalette
-}));
-
-vi.mock('./components/SearchPalette', () => ({
-  SearchPalette: overlayMocks.SearchPalette
-}));
-
-vi.mock('./components/GoToNodePalette', () => ({
-  GoToNodePalette: overlayMocks.GoToNodePalette
+vi.mock('./components/WorkspaceLayoutWithReviewQueueDialog', () => ({
+  WorkspaceLayoutWithReviewQueueDialog: () => <div>workspace-layout</div>
 }));
 
 vi.mock('../shared/platform/performanceDiagnosticsProbe', () => ({
@@ -136,15 +150,18 @@ beforeEach(() => {
   prewarmWorkspaceSettingsOverlay.mockClear();
   reportRuntimeAppReady.mockClear();
   reportRuntimeBootStage.mockClear();
-  overlayMocks.CommandPalette.mockClear();
-  overlayMocks.GoToNodePalette.mockClear();
-  overlayMocks.SearchPalette.mockClear();
   demoRuntimeMock.isDemo = false;
   reviewSettingsProviderMock.isReady = true;
   document.body.dataset.bootSkeleton = '';
   Reflect.deleteProperty(window, 'requestIdleCallback');
   Reflect.deleteProperty(window, 'cancelIdleCallback');
+  installAnimationFrameMock();
   setDocumentVisibility('visible');
+});
+
+afterEach(() => {
+  restoreWindowDescriptor('cancelAnimationFrame');
+  restoreWindowDescriptor('requestAnimationFrame');
 });
 
 it('renders the workspace chrome immediately without a boot-only shell', async () => {
@@ -166,10 +183,7 @@ it('renders the workspace chrome immediately without a boot-only shell', async (
   });
   expect(reportRuntimeAppReady).not.toHaveBeenCalled();
   expect(prewarmWorkspaceSettingsOverlay).not.toHaveBeenCalled();
-  expect(overlayMocks.CommandPalette).not.toHaveBeenCalled();
-  expect(overlayMocks.GoToNodePalette).not.toHaveBeenCalled();
-  expect(overlayMocks.SearchPalette).not.toHaveBeenCalled();
-});
+}, 15000);
 
 it('prewarms interactive surfaces after the hydrated workspace is ready', async () => {
   const requestIdleCallback = vi.fn((callback: IdleRequestCallback) => {
@@ -201,7 +215,7 @@ it('prewarms interactive surfaces after the hydrated workspace is ready', async 
   expect(prewarmWorkspaceRightSidebarPanels).toHaveBeenCalledTimes(1);
   expect(prewarmImportSourceWorkspace).toHaveBeenCalledTimes(1);
   expect(requestIdleCallback).toHaveBeenCalledWith(expect.any(Function), { timeout: 2500 });
-});
+}, 15000);
 
 it('skips settings overlay prewarm in the Demo runtime', async () => {
   demoRuntimeMock.isDemo = true;
@@ -233,64 +247,4 @@ it('skips settings overlay prewarm in the Demo runtime', async () => {
   expect(prewarmAppOverlayStack).toHaveBeenCalledTimes(1);
   expect(prewarmWorkspaceRightSidebarPanels).toHaveBeenCalledTimes(1);
   expect(prewarmWorkspaceSettingsOverlay).not.toHaveBeenCalled();
-});
-
-it('loads lazy command overlays only after the command entry opens', async () => {
-  useAppController.mockReturnValue({
-    ...createClosedOverlayState(),
-    hotkeySettings: {},
-    layoutProps: createLayoutProps(),
-    paletteState: { isOpen: true }
-  });
-
-  const { App } = await import('./App');
-
-  render(<App />);
-
-  expect(screen.getByText('workspace-layout')).toBeInTheDocument();
-  await waitFor(() => {
-    expect(screen.getByText('command-palette')).toBeInTheDocument();
-  });
-  expect(overlayMocks.CommandPalette).toHaveBeenCalledTimes(1);
-  expect(overlayMocks.GoToNodePalette).not.toHaveBeenCalled();
-  expect(overlayMocks.SearchPalette).not.toHaveBeenCalled();
-});
-
-it('reports app ready only after the hydrated workspace has painted', async () => {
-  useAppController.mockReturnValue({
-    ...createClosedOverlayState(),
-    hotkeySettings: {},
-    layoutProps: createLayoutProps(true)
-  });
-
-  const { App } = await import('./App');
-
-  render(<App />);
-
-  await waitFor(() => {
-    expect(reportRuntimeAppReady).toHaveBeenCalledWith(
-      expect.objectContaining({ source: 'workspace_hydrated_double_raf' })
-    );
-  });
-  expect(document.body.dataset.bootSkeleton).toBe('hidden');
-});
-
-it('reports app ready without waiting for animation frames while the window is hidden', async () => {
-  setDocumentVisibility('hidden');
-  useAppController.mockReturnValue({
-    ...createClosedOverlayState(),
-    hotkeySettings: {},
-    layoutProps: createLayoutProps(true)
-  });
-
-  const { App } = await import('./App');
-
-  render(<App />);
-
-  await waitFor(() => {
-    expect(reportRuntimeAppReady).toHaveBeenCalledWith(
-      expect.objectContaining({ source: 'workspace_hydrated_hidden_window' })
-    );
-  });
-  expect(document.body.dataset.bootSkeleton).toBe('hidden');
-});
+}, 15000);

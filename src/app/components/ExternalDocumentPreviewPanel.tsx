@@ -14,7 +14,7 @@ import { useOpenImportedExternalDocument } from './externalDocumentImportState';
 import { useExternalDocumentPreviewPanelFrame } from './externalDocumentPreviewPanelState';
 import type { ExternalDocumentPreviewRequest } from './externalDocumentPreviewState';
 import { useExternalSearchPreviewDocument } from './externalSearchPreviewState';
-import { LinkPanelStack } from './LinkPanelStack';
+import { LazyLinkPanelStack } from './LazyLinkPanelStack';
 import { useExternalLinkPanels } from './useExternalLinkPanels';
 
 interface ExternalDocumentPreviewPanelProps {
@@ -103,7 +103,7 @@ function PreviewWindow(args: {
             onRetry={args.onRetry}
             preview={args.preview}
           />
-          <LinkPanelStack
+          <LazyLinkPanelStack
             anchorRootRef={contentAreaRef}
             onClose={handleCloseExternalLink}
             onStateChange={handleLinkPanelStateChange}

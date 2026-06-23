@@ -43,6 +43,9 @@ vi.mock('../shared/localization/LocalizationProvider', () => ({
 }));
 vi.mock('./components/LocalFileEditorSurface', () => ({ LocalFileEditorSurface: () => null }));
 vi.mock('./components/WorkspaceLayout', () => ({ WorkspaceLayout: () => <div>workspace-layout</div> }));
+vi.mock('./components/WorkspaceLayoutWithReviewQueueDialog', () => ({
+  WorkspaceLayoutWithReviewQueueDialog: () => <div>workspace-layout</div>
+}));
 vi.mock('../shared/platform/performanceDiagnosticsProbe', () => ({ readPerformanceDiagnosticsProbe: () => undefined }));
 vi.mock('../shared/diagnostics/workspaceDebugBridge', () => ({ installWorkspaceDebugBridge: () => undefined }));
 

@@ -12,8 +12,8 @@ const REGION_IDS = [
   'main-document',
   'main-sidebar'
 ] as const;
-const DEFAULT_LIGHT_PALETTE = ['#b9b1a7', '#e7e3dd', '#f3eee8', '#ffffff', '#fbf9f7'];
-const DEFAULT_DARK_PALETTE = ['#171b1a', '#1a1f1e', '#1c2221', '#161918', '#1a1f1e'];
+export const DEFAULT_STARTUP_LIGHT_PALETTE = ['#b9b1a7', '#e7e3dd', '#f3eee8', '#ffffff', '#fbf9f7'];
+export const DEFAULT_STARTUP_DARK_PALETTE = ['#171b1a', '#1a1f1e', '#1c2221', '#161918', '#1a1f1e'];
 const DEFAULT_ASSIGNMENTS = {
   'titlebar-rail': 0,
   'titlebar-folder': 1,
@@ -46,7 +46,7 @@ function parseJson(value: string | undefined) {
 }
 
 function normalizePalette(input: unknown, mode: 'dark' | 'light') {
-  const fallback = mode === 'dark' ? DEFAULT_DARK_PALETTE : DEFAULT_LIGHT_PALETTE;
+  const fallback = mode === 'dark' ? DEFAULT_STARTUP_DARK_PALETTE : DEFAULT_STARTUP_LIGHT_PALETTE;
   if (!Array.isArray(input)) return fallback;
   const normalized = input.filter((value): value is string => typeof value === 'string' && value.trim().startsWith('#'));
   return normalized.length > 0 ? normalized : fallback;
@@ -100,4 +100,23 @@ export function applyStartupSkeletonSettings(settings: Record<string, string>) {
   root.style.setProperty('--startup-list-bg', root.style.getPropertyValue('--startup-region-main-folder-bg'));
   root.style.setProperty('--startup-sidebar-bg', root.style.getPropertyValue('--startup-region-main-sidebar-bg'));
   root.style.setProperty('--startup-titlebar-bg', root.style.getPropertyValue('--startup-region-titlebar-document-bg'));
+}
+
+export function applyStartupSkeletonLocalStorageSettings() {
+  if (typeof window === 'undefined') return;
+  const keys = [
+    APP_SETTINGS_STORAGE_KEYS.baseColor,
+    APP_SETTINGS_STORAGE_KEYS.workspaceSurfacePalette,
+    APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceAssignments,
+    APP_SETTINGS_STORAGE_KEYS.workspaceSurfacePaletteDark,
+    APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceAssignmentsDark
+  ];
+  const settings: Record<string, string> = {};
+  for (const key of keys) {
+    const value = window.localStorage.getItem(key);
+    if (typeof value === 'string') {
+      settings[key] = value;
+    }
+  }
+  applyStartupSkeletonSettings(settings);
 }

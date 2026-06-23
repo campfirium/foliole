@@ -10,7 +10,7 @@ import { AppEmptyState } from '../../shared/ui';
 
 import { DocumentPanelHeader } from './DocumentPanelHeader';
 import { DocumentRestoreAction } from './DocumentRestoreAction';
-import { LinkPanelStack } from './LinkPanelStack';
+import { LazyLinkPanelStack } from './LazyLinkPanelStack';
 import { setSelectedRemovedSource, useSelectedRemovedSource } from './removedSourceSelectionStore';
 import { useExternalLinkPanels } from './useExternalLinkPanels';
 
@@ -171,7 +171,7 @@ function RemovedSourcePreviewContent(props: {
         readOnly
         value={buildPreviewContent(props.entry)}
       />
-      <LinkPanelStack
+      <LazyLinkPanelStack
         anchorRootRef={props.contentAreaRef}
         onClose={props.onCloseExternalLink}
         onStateChange={props.onLinkPanelStateChange}

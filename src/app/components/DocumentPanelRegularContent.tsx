@@ -8,7 +8,7 @@ import type { NodeViewState } from '../../store/workspaceStore';
 
 import { DocumentPanelBody } from './DocumentPanelBody';
 import { resolvePdfDocumentSurface, renderPdfDocumentSurface } from './documentPanelPdfView';
-import { LinkPanelStack } from './LinkPanelStack';
+import { LazyLinkPanelStack } from './LazyLinkPanelStack';
 import type { LinkPanelRecord } from './linkPanelState';
 import type { PdfHighlightLocator } from './pdfHighlightLocators';
 import { ReadwiseBookDocumentGate } from './ReadwiseBookDocumentGate';
@@ -71,7 +71,7 @@ export function renderPdfOrBodyContent(args: {
   trashedNodeIds: string[];
 }) {
   const panelStack = (
-    <LinkPanelStack
+    <LazyLinkPanelStack
       anchorRootRef={args.contentAreaRef}
       onClose={args.onCloseExternalLink}
       onStateChange={args.onLinkPanelStateChange}

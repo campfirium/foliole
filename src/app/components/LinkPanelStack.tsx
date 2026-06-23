@@ -120,12 +120,14 @@ function LinkPanelCard(props: {
   );
 }
 
-export function LinkPanelStack(props: {
+export interface LinkPanelStackProps {
   anchorRootRef: RefObject<HTMLDivElement | null>;
   onClose: (panelId: string) => void;
   onStateChange: (panelId: string, state: Partial<Pick<LinkPanelRecord, 'canGoBack' | 'canGoForward' | 'currentUrl' | 'title'>>) => void;
   panels: LinkPanelRecord[];
-}) {
+}
+
+export function LinkPanelStack(props: LinkPanelStackProps) {
   const t = useTranslation();
   const { setSize, size } = useLinkPanelSize();
   const bounds = useLinkPanelViewportBounds(props.anchorRootRef);

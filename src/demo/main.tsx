@@ -1,21 +1,4 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-
-import '../app/styles.css';
-
-import { installExternalFolderRuntimeProvider } from '../shared/platform/externalFolderRuntime';
-import { installDemoRuntimeController } from '../shared/platform/runtime/demoRuntime';
-import {
-  createBrowserLocalWorkspaceMutationRepository,
-  installWorkspaceMutationRepository
-} from '../store/workspaceMutationRepository';
-
-import { createDemoExternalFolderProvider } from './demoExternalFolderProvider';
 import { installDemoResumeShell } from './demoResumeShell';
-import { createBrowserDemoRuntimeController } from './demoRuntimeController';
-import { installDemoUrlSync, resolveDemoLanguagePreferenceFromPath } from './demoUrlSync';
-import { DemoUrlSyncBridge } from './DemoUrlSyncBridge';
-import { installDemoWorkspaceSnapshot } from './demoWorkspaceSnapshot';
 
 const rootElement = document.getElementById('root');
 
@@ -23,17 +6,50 @@ if (!rootElement) {
   throw new Error('Missing #root element in Demo entry.');
 }
 
-await installDemoWorkspaceSnapshot();
 installDemoResumeShell();
+
+const [
+  ,
+  React,
+  ReactDOM,
+  { installExternalFolderRuntimeProvider },
+  { installDemoRuntimeController },
+  { createBrowserLocalWorkspaceMutationRepository, installWorkspaceMutationRepository },
+  { createDemoExternalFolderProvider },
+  { createBrowserDemoRuntimeController },
+  { installDemoUrlSync, resolveDemoLanguagePreferenceFromPath },
+  { DemoUrlSyncBridge },
+  { installDemoWorkspaceSnapshot },
+  { App }
+] = await Promise.all([
+  import('../app/styles.css'),
+  import('react'),
+  import('react-dom/client'),
+  import('../shared/platform/externalFolderRuntime'),
+  import('../shared/platform/runtime/demoRuntime'),
+  import('../store/workspaceMutationRepository'),
+  import('./demoExternalFolderProvider'),
+  import('./demoRuntimeController'),
+  import('./demoUrlSync'),
+  import('./DemoUrlSyncBridge'),
+  import('./demoWorkspaceSnapshot'),
+  import('../app/App')
+]);
+
+await installDemoWorkspaceSnapshot();
 installDemoRuntimeController(createBrowserDemoRuntimeController());
 installExternalFolderRuntimeProvider(createDemoExternalFolderProvider());
 installWorkspaceMutationRepository(createBrowserLocalWorkspaceMutationRepository());
 installDemoUrlSync();
-const { App } = await import('../app/App');
 const initialLanguagePreference = resolveDemoLanguagePreferenceFromPath(window.location.pathname);
 
 ReactDOM.createRoot(rootElement).render(
-  <React.StrictMode>
-    <App initialLanguagePreference={initialLanguagePreference} providerBridge={<DemoUrlSyncBridge />} />
-  </React.StrictMode>
+  React.createElement(
+    React.StrictMode,
+    null,
+    React.createElement(App, {
+      initialLanguagePreference,
+      providerBridge: React.createElement(DemoUrlSyncBridge)
+    })
+  )
 );

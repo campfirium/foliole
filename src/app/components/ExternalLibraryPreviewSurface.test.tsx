@@ -87,13 +87,13 @@ it('opens the link panel when an external document preview link is clicked', asy
   expect(screen.getByRole('button', { name: 'Import to Foliole' })).toHaveTextContent('Import');
   expect(screen.getByRole('button', { name: 'Import to Foliole' }).closest('[data-testid="document-header-content-rail"]')).toBeInTheDocument();
   expect(screen.queryByText('/library/to sync/folder/topic.md')).not.toBeInTheDocument();
-  expect(screen.getByTestId('link-panel-count')).toHaveTextContent('0');
+  expect(screen.queryByTestId('link-panel-count')).not.toBeInTheDocument();
   expect(mocks.markdownEditorProps).toHaveBeenCalledWith(expect.objectContaining({ nodeId: null, readOnly: true }));
   expect(mocks.markdownEditorProps).toHaveBeenCalledWith(expect.not.objectContaining({ liveMarkdownEnabled: false }));
 
   fireEvent.click(screen.getByRole('button', { name: 'Open external link' }));
 
-  expect(screen.getByTestId('link-panel-count')).toHaveTextContent('1');
+  expect(await screen.findByTestId('link-panel-count')).toHaveTextContent('1');
 });
 
 it('keeps routine local-file save state out of the preview toolbar', () => {

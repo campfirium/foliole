@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 
 import { HotkeySettingsProvider } from '../features/settings/context/HotkeySettingsProvider';
 import { useReviewSchedulerSettings } from '../features/settings/context/ReviewSchedulerSettingsProvider';
@@ -43,6 +43,7 @@ function AppContent() {
   const { isDemo } = useDemoRuntimeState();
   const { isReviewSchedulerSettingsReady } = useReviewSchedulerSettings();
   const isAppReady = controller.layoutProps.layoutChrome.isWorkspaceHydrated && isReviewSchedulerSettingsReady;
+  const [hasReportedAppReady, setHasReportedAppReady] = useState(false);
   const handleGlobalCaptureNavigation = useCallback((nodeId: string) => {
     controller.layoutProps.imports.onCloseImportManagement();
     controller.layoutProps.navigation.onSelectNode(nodeId);
@@ -53,8 +54,8 @@ function AppContent() {
     installWorkspaceDebugBridge();
     readPerformanceDiagnosticsProbe();
   }, []);
-  useReportAppReadyWhenHydrated(isAppReady);
-  usePrewarmInteractiveSurfacesAfterReady(isAppReady, isDemo);
+  useReportAppReadyWhenHydrated(isAppReady, setHasReportedAppReady);
+  usePrewarmInteractiveSurfacesAfterReady(hasReportedAppReady, isDemo);
 
   return (
     <HotkeySettingsProvider {...controller.hotkeySettings}>
@@ -76,9 +77,13 @@ function AppContent() {
   );
 }
 
-function useReportAppReadyWhenHydrated(isWorkspaceHydrated?: boolean) {
+function useReportAppReadyWhenHydrated(
+  isWorkspaceHydrated: boolean | undefined,
+  setHasReportedAppReady: Dispatch<SetStateAction<boolean>>
+) {
   useEffect(() => {
     if (!isWorkspaceHydrated) {
+      setHasReportedAppReady(false);
       return;
     }
     reportRuntimeBootStage('app_ready_signal_registration', {
@@ -86,6 +91,7 @@ function useReportAppReadyWhenHydrated(isWorkspaceHydrated?: boolean) {
     });
     if (document.visibilityState === 'hidden') {
       document.body.dataset.bootSkeleton = 'hidden';
+      setHasReportedAppReady(true);
       reportRuntimeAppReady({
         href: window.location.href,
         readyState: document.readyState,
@@ -105,6 +111,7 @@ function useReportAppReadyWhenHydrated(isWorkspaceHydrated?: boolean) {
           readyState: document.readyState,
           source: 'workspace_hydrated_double_raf'
         });
+        setHasReportedAppReady(true);
         reportRuntimeAppReady({
           href: window.location.href,
           readyState: document.readyState,
@@ -117,13 +124,14 @@ function useReportAppReadyWhenHydrated(isWorkspaceHydrated?: boolean) {
       window.cancelAnimationFrame(firstFrameId);
       window.cancelAnimationFrame(secondFrameId);
     };
-  }, [isWorkspaceHydrated]);
+  }, [isWorkspaceHydrated, setHasReportedAppReady]);
 }
 
 function scheduleIdleTask(task: () => void) {
-  if ('requestIdleCallback' in window) {
+  if (typeof window.requestIdleCallback === 'function' && typeof window.cancelIdleCallback === 'function') {
+    const cancelIdleCallback = window.cancelIdleCallback.bind(window);
     const idleId = window.requestIdleCallback(task, { timeout: 2500 });
-    return () => window.cancelIdleCallback(idleId);
+    return () => cancelIdleCallback(idleId);
   }
   const timeoutId = globalThis.setTimeout(task, 800);
   return () => globalThis.clearTimeout(timeoutId);
@@ -153,9 +161,9 @@ function runStartupPrewarmQueue(tasks: Array<() => Promise<unknown>>) {
   };
 }
 
-function usePrewarmInteractiveSurfacesAfterReady(isWorkspaceHydrated?: boolean, isDemo = false) {
+function usePrewarmInteractiveSurfacesAfterReady(hasReportedAppReady?: boolean, isDemo = false) {
   useEffect(() => {
-    if (!isWorkspaceHydrated) {
+    if (!hasReportedAppReady) {
       return undefined;
     }
     const prewarmTasks = [
@@ -165,7 +173,7 @@ function usePrewarmInteractiveSurfacesAfterReady(isWorkspaceHydrated?: boolean, 
       prewarmImportSourceWorkspace
     ];
     return runStartupPrewarmQueue(prewarmTasks);
-  }, [isDemo, isWorkspaceHydrated]);
+  }, [hasReportedAppReady, isDemo]);
 }
 
 interface AppProps {
