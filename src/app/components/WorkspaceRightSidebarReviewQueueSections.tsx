@@ -52,7 +52,7 @@ function QueueRow(props: {
   const t = useTranslation();
   const kind = isFsrsReviewItemNode(props.node) ? 'item' : 'topic';
   return (
-    <li className={`grid min-h-10 grid-cols-[2ch_1rem_minmax(0,1fr)] items-center gap-2 py-1.5 hover:bg-[var(--app-inspector-list-row-hover-bg)] ${inspectorListInsetPaddingClassName}`}>
+    <li className={`grid min-h-10 grid-cols-[1rem_1rem_minmax(0,1fr)] items-center gap-x-1 py-1.5 hover:bg-[var(--app-inspector-list-row-hover-bg)] ${inspectorListInsetPaddingClassName}`}>
       <span className={`${inspectorListMetaClassName} text-left tabular-nums text-foreground/28`}>{props.index + 1}</span>
       <QueueKindIcon kind={kind} />
       <button
@@ -77,7 +77,7 @@ function FlowSectionHeading({
     return showDivider ? <li className={`${inspectorListInsetClassName} my-1.5 h-px list-none ${inspectorListDividerLineClassName}`} role="presentation" /> : null;
   }
   return (
-    <li className={`flex list-none items-center gap-2 px-0 pb-2 pt-3 text-center text-[12px] leading-none ${inspectorListMetaClassName}`}>
+    <li className={`flex list-none items-center gap-2 pb-2 ${showDivider ? 'pt-3' : 'pt-0'} ${inspectorListInsetPaddingClassName} ${inspectorListMetaClassName}`}>
       <span aria-hidden="true" className={`h-px min-w-4 flex-1 ${inspectorListDividerLineClassName}`} />
       <span className="shrink-0 text-foreground/45">{heading}</span>
       <span aria-hidden="true" className={`h-px min-w-4 flex-1 ${inspectorListDividerLineClassName}`} />

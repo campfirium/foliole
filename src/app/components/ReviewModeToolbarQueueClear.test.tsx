@@ -49,19 +49,19 @@ function renderToolbar(overrides: Partial<Parameters<typeof ReviewModeToolbar>[0
 }
 
 it('shows review queue clear controls while continuing normal reading after review items are done', () => {
-  renderToolbar();
+  const onSetReviewSessionMode = vi.fn();
+  renderToolbar({ onSetReviewSessionMode });
 
   const queueClearButton = screen.getByRole('button', { name: 'Queue clear' });
   expect(queueClearButton).toBeInTheDocument();
-  expect(queueClearButton).toHaveClass('bg-transparent');
-  expect(queueClearButton).not.toHaveClass('bg-foreground/[0.055]');
-  expect(screen.queryByLabelText('Change session mode')).not.toBeInTheDocument();
-  expect(screen.getByLabelText('Queue summary')).toBeInTheDocument();
+  expect(screen.getByLabelText('Change session mode')).toBeInTheDocument();
+  expect(screen.queryByLabelText('Queue summary')).not.toBeInTheDocument();
 
-  expect(screen.getByLabelText('Queue summary')).toBeInTheDocument();
+  fireEvent.click(screen.getByLabelText('Change session mode'));
+  fireEvent.click(screen.getByText('Review first'));
+  expect(onSetReviewSessionMode).toHaveBeenCalledWith('review-first');
 
-  fireEvent.click(queueClearButton);
-  expect(screen.getByText('Queue clear. Continue Flow.')).toBeInTheDocument();
+  expect(queueClearButton.closest('.grid')?.firstElementChild).toContainElement(screen.getByLabelText('Change session mode'));
 });
 
 it('keeps queue-clear copy after the current queue is empty', () => {
@@ -82,6 +82,5 @@ it('keeps queue-clear copy after the current queue is empty', () => {
   });
 
   const queueClearButton = screen.getByRole('button', { name: 'Queue clear' });
-  fireEvent.click(queueClearButton);
-  expect(screen.getByText('Queue clear. Continue Flow.')).toBeInTheDocument();
+  expect(queueClearButton).toBeInTheDocument();
 });

@@ -141,3 +141,93 @@ it('does not enter review mode from the explicit exit action', () => {
   expect(exitStudyMode).toHaveBeenCalledTimes(1);
   expect(startReviewSession).not.toHaveBeenCalled();
 });
+
+it('changes review session mode with the controller clock', () => {
+  const nowIso = '2026-06-21T12:00:00.000Z';
+  const setReviewSessionMode = vi.fn();
+  const props = buildLayoutProps({
+    ...reviewGateLayoutArgs,
+    nowIso,
+    reviewSettings: {
+      isReviewSchedulerSettingsReady: true,
+      reviewSchedulerSettings: DEFAULT_REVIEW_SCHEDULER_SETTINGS
+    },
+    setReviewSessionMode
+  } as unknown as BuildLayoutPropsArgs);
+
+  props.review.onSetReviewSessionMode('reading-only');
+
+  expect(setReviewSessionMode).toHaveBeenCalledWith('reading-only', nowIso);
+});
+
+it('continues queue-clear reading through the current Flow checkpoint', () => {
+  const nowIso = '2026-06-21T12:00:00.000Z';
+  const onOpenNotesView = vi.fn();
+  const onSelectNode = vi.fn();
+  const continueReviewSessionReading = vi.fn(() => true);
+  const exitReviewSession = vi.fn();
+  const props = buildLayoutProps({
+    ...reviewGateLayoutArgs,
+    activeNodeId: 'review-1',
+    continueReviewSessionReading,
+    exitReviewSession,
+    isStudyMode: true,
+    nav: { onSelectNode },
+    nodesById: {
+      ...reviewGateLayoutArgs.nodesById,
+      'reading-1': createNode('reading-1', 'topic', nowIso)
+    },
+    nowIso,
+    onOpenNotesView,
+    reviewSession: {
+      completedAt: nowIso,
+      continueNodeId: 'reading-1',
+      currentNodeId: null,
+      isAnswerRevealed: false,
+      queueNodeIds: [],
+      reviewedItemCount: 1,
+      totalNodeCount: 1
+    },
+    reviewSettings: {
+      isReviewSchedulerSettingsReady: true,
+      reviewSchedulerSettings: DEFAULT_REVIEW_SCHEDULER_SETTINGS
+    },
+    startReviewSession: vi.fn(() => false)
+  } as unknown as BuildLayoutPropsArgs);
+
+  props.review.onContinueReading();
+
+  expect(onOpenNotesView).toHaveBeenCalledTimes(1);
+  expect(onSelectNode).toHaveBeenCalledWith('reading-1');
+  expect(continueReviewSessionReading).toHaveBeenCalledWith(nowIso);
+  expect(exitReviewSession).not.toHaveBeenCalled();
+});
+
+it('does not mark a pure reading completion as queue-clear continuation', () => {
+  const nowIso = '2026-06-21T12:00:00.000Z';
+  const props = buildLayoutProps({
+    ...reviewGateLayoutArgs,
+    activeNodeId: 'reading-1',
+    nodesById: {
+      ...reviewGateLayoutArgs.nodesById,
+      'reading-1': createNode('reading-1', 'topic', nowIso)
+    },
+    reviewFlowWindow: undefined,
+    reviewSession: {
+      completedAt: nowIso,
+      continueNodeId: 'reading-1',
+      currentNodeId: null,
+      isAnswerRevealed: false,
+      queueNodeIds: [],
+      readTopicCount: 1,
+      reviewedItemCount: 0,
+      totalNodeCount: 1
+    },
+    reviewSettings: {
+      isReviewSchedulerSettingsReady: true,
+      reviewSchedulerSettings: DEFAULT_REVIEW_SCHEDULER_SETTINGS
+    }
+  } as unknown as BuildLayoutPropsArgs);
+
+  expect(props.review.reviewSummary.canContinueReading).toBe(false);
+});

@@ -8,7 +8,7 @@ import { ReviewActionBar } from '../../shared/ui';
 
 import { FsrsRevealAction, ReadingReviewActions, ReviewGradeActions } from './ReviewModeToolbarActions';
 import type { ReadingReviewFeedbackAction } from './reviewModeToolbarFeedback';
-import { QueueClearFlowControl } from './ReviewSessionModeControl';
+import { ReviewSessionModeControl } from './ReviewSessionModeControl';
 import type { ReviewToolbarProgressCounts } from './reviewToolbarProgressLabel';
 import { ReviewToolbarProgressLine, ReviewToolbarSessionActions, type ReviewToolbarSessionSummary } from './ReviewToolbarSessionFrame';
 
@@ -141,7 +141,7 @@ function createActiveReviewPrimary(props: ActiveReviewActionBarProps, showAction
     return (
       <ReviewToolbarSessionActions
         actions={actions}
-        modeControl={<QueueClearFlowControl />}
+        modeControl={<ReviewSessionModeControl mode={props.reviewSessionMode} onChangeMode={props.onSetReviewSessionMode} />}
         {...definedProps({ surface: props.surface })}
         {...definedProps({ summary: props.reviewSummary ? { ...props.reviewSummary, status: 'clear' as const } : undefined })}
       />

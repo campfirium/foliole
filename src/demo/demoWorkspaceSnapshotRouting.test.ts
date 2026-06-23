@@ -1,7 +1,7 @@
 import { expect, it, vi } from 'vitest';
 
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
-import { useWorkspaceStore, WORKSPACE_STORAGE_KEY } from '../store/workspaceStore';
+import { createInitialWorkspaceState, useWorkspaceStore, WORKSPACE_STORAGE_KEY } from '../store/workspaceStore';
 
 import { canonicalGuidePath, DEMO_TOPICS, getDemoTopicNodeId } from './demoContent';
 import { DEMO_GUIDES_NODE_ID } from './demoGuides';
@@ -36,6 +36,30 @@ it('routes a compatible browser-local payload to the current Demo topic URL', as
   expect(nextPayload.state.activeNodeId).toBe(getDemoTopicNodeId(firstTopic));
   expect(nextPayload.state.reviewSession.currentNodeId).toBe(getDemoTopicNodeId(firstTopic));
   expect(nextPayload.state.reviewSession.queueNodeIds[0]).toBe(getDemoTopicNodeId(firstTopic));
+  vi.unstubAllGlobals();
+});
+
+it('keeps a compatible browser-local payload on the Demo app entry', async () => {
+  useWorkspaceStore.setState(createInitialWorkspaceState(new Date('2026-06-17T00:00:00.000Z')));
+  const storage = new Map<string, string>();
+  storage.set(DEMO_SNAPSHOT_VERSION, DEMO_CAPTURED_VERSION);
+  const payload = {
+    state: createDemoWorkspaceSnapshot('/en/demo/'),
+    version: 0
+  };
+  payload.state.activeNodeId = INBOX_NODE_ID;
+  payload.state.reviewSession.currentNodeId = INBOX_NODE_ID;
+  payload.state.reviewSession.queueNodeIds = [INBOX_NODE_ID];
+  storage.set(WORKSPACE_STORAGE_KEY, JSON.stringify(payload));
+  expect(JSON.parse(storage.get(WORKSPACE_STORAGE_KEY) ?? 'null').state.activeNodeId).toBe(INBOX_NODE_ID);
+  stubDemoWindow(storage, '/en/demo/');
+
+  await installDemoWorkspaceSnapshot();
+
+  const nextPayload = JSON.parse(storage.get(WORKSPACE_STORAGE_KEY) ?? 'null');
+  expect(nextPayload.state.activeNodeId).toBe(INBOX_NODE_ID);
+  expect(nextPayload.state.reviewSession.currentNodeId).toBe(INBOX_NODE_ID);
+  expect(nextPayload.state.reviewSession.queueNodeIds[0]).toBe(INBOX_NODE_ID);
   vi.unstubAllGlobals();
 });
 

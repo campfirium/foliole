@@ -25,6 +25,7 @@ function createImmersiveProps(): WorkspaceBottomReviewToolbarProps {
     reviewPreview: null,
     reviewQueueCount: 2,
     reviewSummary: {
+      canContinueReading: false,
       completedAt: null,
       continueNodeId: null,
       createdItemCount: 0,

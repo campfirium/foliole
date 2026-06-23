@@ -77,6 +77,7 @@ export function createWorkspaceState() {
     deleteEditorAnnotationNodes: vi.fn(),
     deleteNodePermanently: vi.fn(),
     dismissReviewTopic: vi.fn(),
+    continueReviewSessionReading: vi.fn(),
     exitReviewSession: vi.fn(),
     goBack: vi.fn(),
     goForward: vi.fn(),

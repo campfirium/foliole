@@ -4,6 +4,7 @@ import {
   resolveReviewSiblingNodeId,
   resolveReviewSourceTopicNodeId
 } from '../../features/review/model/reviewGameNavigation';
+import { getDemoRuntimeNowIso } from '../../shared/platform/runtime/demoRuntime';
 
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
 import { scrollReviewReadingSurface } from './reviewReadingScrollCommand';
@@ -56,16 +57,16 @@ export function createPaletteReviewActions(args: {
   };
   const activeNodeId = args.ws.activeNodeId;
   return {
-    readReviewTopic: args.ws.readReviewTopic,
-    postponeReviewTopic: args.ws.postponeReviewTopic,
+    readReviewTopic: () => args.ws.readReviewTopic(getDemoRuntimeNowIso()),
+    postponeReviewTopic: () => args.ws.postponeReviewTopic(getDemoRuntimeNowIso()),
     deleteCurrentReviewItem: createDeleteCurrentReviewItemCommand({ ws: args.ws }),
     deleteReviewSourceTopic: () => {
       const nodeId = activeNodeId ? resolveReviewSourceTopicNodeId(activeNodeId, navigationSource) : null;
       return nodeId ? args.requestDeleteSourceTopic(nodeId) : false;
     },
-    dismissReviewTopic: args.ws.dismissReviewTopic,
+    dismissReviewTopic: () => args.ws.dismissReviewTopic(getDemoRuntimeNowIso()),
     exitReviewSession: args.ws.exitReviewSession,
-    gradeReviewCard: args.ws.gradeReviewCard,
+    gradeReviewCard: (grade: 1 | 2 | 3 | 4) => args.ws.gradeReviewCard(grade, getDemoRuntimeNowIso()),
     reviewNavigateDown: createSelectReviewNodeCommand({
       nav: args.nav,
       nodeId: activeNodeId ? resolveReviewFirstChildNodeId(activeNodeId, navigationSource) : null
@@ -88,7 +89,7 @@ export function createPaletteReviewActions(args: {
     reviewScrollReadingDown: () => scrollReviewReadingSurface(args.runtime.editorRef.current, 'down'),
     reviewScrollReadingUp: () => scrollReviewReadingSurface(args.runtime.editorRef.current, 'up'),
     revealReviewAnswer: args.ws.revealReviewAnswer,
-    revisitReviewTopicSoon: args.ws.revisitReviewTopicSoon,
-    startReviewSession: args.ws.startReviewSession
+    revisitReviewTopicSoon: () => args.ws.revisitReviewTopicSoon(getDemoRuntimeNowIso()),
+    startReviewSession: () => args.ws.startReviewSession(getDemoRuntimeNowIso())
   };
 }

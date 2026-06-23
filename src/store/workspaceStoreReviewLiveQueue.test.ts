@@ -49,6 +49,23 @@ it('keeps recommended reading fallback for start queue', () => {
   expect(buildStartReviewSessionQueue(state, now)).toEqual(['reading-due']);
 });
 
+it('keeps recommended readings as extension while review items are active', () => {
+  const now = '2026-03-10T12:00:00.000Z';
+  const state = {
+    ...createWorkspaceFixture([
+      createQaNode('qa-due', '2026-03-01T00:00:00.000Z'),
+      createReadingNode('reading-due', '2026-03-01T00:00:00.000Z')
+    ]),
+    reviewSessionMode: 'recommended' as const
+  };
+
+  const output = buildLiveReviewQueueOutput(state, now);
+
+  expect(output.taskNodeIds).toEqual(['qa-due']);
+  expect(output.extensionNodeIds).toEqual(['reading-due']);
+  expect(output.visibleNodeIds).toEqual(['qa-due', 'reading-due']);
+});
+
 it('keeps an actionable current pin at the front without trusting the old session queue', () => {
   const now = '2026-03-10T12:00:00.000Z';
   const state = {

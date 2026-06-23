@@ -65,7 +65,8 @@ export interface WorkspaceState {
   redoEditorOperation: () => boolean;
   relearnNode: (nodeId: string, now?: string) => boolean;
   startReviewSession: (now?: string, options?: ReviewSessionStartOptions) => boolean;
-  resumeReviewSession: (now?: string) => boolean;
+  continueReviewSessionReading: (now?: string) => boolean;
+  resumeReviewSession: (now?: string, options?: ReviewSessionResumeOptions) => boolean;
   setReviewSessionMode: (mode: ReviewSessionMode, now?: string) => void;
   revealReviewAnswer: () => void;
   gradeReviewCard: (grade: ReviewGrade, now?: string) => Promise<boolean>;
@@ -119,6 +120,11 @@ export interface WorkspaceState {
 
 export interface ReviewSessionStartOptions {
   includeScheduledFallback?: boolean;
+}
+
+export interface ReviewSessionResumeOptions {
+  includeScheduledFallback?: boolean;
+  preferredNodeId?: string | null;
 }
 
 export interface WorkspaceNodeCreationOptions {

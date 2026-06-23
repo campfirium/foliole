@@ -1,8 +1,9 @@
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
+import { getDemoRuntimeNowIso } from '../../shared/platform/runtime/demoRuntime';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 
 import type { useReviewSourceTopicDeleteDialog } from './appControllerReviewSourceDelete';
-import type { useWorkspaceControllerState } from './appControllerState';
+import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
 import type { AppControllerResult } from './appControllerTypes';
 import type { useCommandShortcutState } from './reviewHotkeysState';
 import { openCompanionSyncSettings } from './settingsOverlayRequest';
@@ -16,12 +17,19 @@ export function buildAppControllerResult(args: {
   layoutProps: WorkspaceLayoutProps;
   reviewSourceTopicDeleteDialog: ReturnType<typeof useReviewSourceTopicDeleteDialog>;
   reviewTopicDelayPanel: ReturnType<typeof useReviewTopicDelayPanel>;
+  ws: ReturnType<typeof useWorkspaceSelectors>;
 }): AppControllerResult {
   return {
     hotkeySettings: args.auxiliaryState.hotkeySettings,
     goToNodeState: args.auxiliaryState.goToNodeState,
     moveToNodeState: args.auxiliaryState.moveToNodeState,
     layoutProps: args.layoutProps,
+    onStartNextDemoPreviewDayFlow: () => {
+      if (!args.ws.startReviewSession(getDemoRuntimeNowIso(), { includeScheduledFallback: true })) return false;
+      args.layoutProps.nodeList.onOpenNotesView();
+      args.controller.study.startStudyMode({ force: true });
+      return true;
+    },
     onOpenCompanionSyncSettings: () => openCompanionSyncSettings(args.controller.runtime),
     paletteState: args.auxiliaryState.paletteState,
     reviewSourceTopicDeleteDialog: {

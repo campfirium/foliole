@@ -54,10 +54,13 @@ export function selectWorkspaceGridColumnProps({
   };
 }
 
-function selectStudySessionCompleteSummaryProps(
+export function selectStudySessionCompleteSummaryProps(
   props: WorkspaceGridContentProjectionSource
 ): WorkspaceGridColumnProps['studySessionCompleteSummaryProps'] {
   if (!props.review.isStudyMode || props.review.reviewStatus !== 'completed') {
+    return null;
+  }
+  if (!props.review.reviewSummary.canContinueReading) {
     return null;
   }
   return {

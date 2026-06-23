@@ -158,6 +158,7 @@ export interface BuildLayoutPropsArgs {
   onResumeReviewItem: () => void;
   selectedTrashNodeId: string | null;
   showAnswerSection: boolean;
+  continueReviewSessionReading: WorkspaceState['continueReviewSessionReading'];
   startStudyMode: (options?: StartStudyModeOptions) => void;
   startReviewSession: WorkspaceState['startReviewSession'];
   trashedNodeIds: string[];

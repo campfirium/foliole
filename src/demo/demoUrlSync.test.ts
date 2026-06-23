@@ -60,6 +60,36 @@ it('rewrites the active official Demo topic with the provided locale segment', (
   vi.unstubAllGlobals();
 });
 
+it('keeps locale Demo entry URLs stable while active nodes change', () => {
+  const firstTopic = DEMO_TOPICS[0];
+  if (!firstTopic) throw new Error('Demo URL sync test requires one topic.');
+  const replaceState = vi.fn();
+  vi.stubGlobal('window', {
+    history: { replaceState, state: null },
+    location: { pathname: '/en/demo/' }
+  });
+
+  syncDemoUrlToNode(getDemoTopicNodeId(firstTopic), 'en');
+
+  expect(replaceState).not.toHaveBeenCalled();
+  vi.unstubAllGlobals();
+});
+
+it('updates only the locale segment for locale Demo entry URLs', () => {
+  const firstTopic = DEMO_TOPICS[0];
+  if (!firstTopic) throw new Error('Demo URL sync test requires one topic.');
+  const replaceState = vi.fn();
+  vi.stubGlobal('window', {
+    history: { replaceState, state: null },
+    location: { pathname: '/en/demo/' }
+  });
+
+  syncDemoUrlToNode(getDemoTopicNodeId(firstTopic), 'zh-hans');
+
+  expect(replaceState).toHaveBeenCalledWith(null, '', '/zh-hans/demo/');
+  vi.unstubAllGlobals();
+});
+
 it('rewrites non-public Demo workspace nodes to the locale Demo entry', () => {
   const replaceState = vi.fn();
   vi.stubGlobal('window', {

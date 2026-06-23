@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 import { continueToNextDemoPreviewDay } from '../../shared/platform/runtime/demoRuntime';
 import type { useAppController } from '../hooks/useAppController';
@@ -9,10 +9,14 @@ import {
 
 import { ReviewQueueEmptyDialog } from './ReviewQueueEmptyDialog';
 import { WorkspaceLayout } from './WorkspaceLayout';
+import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 
 export function WorkspaceLayoutWithReviewQueueDialog({ controller }: { controller: ReturnType<typeof useAppController> }) {
   const workspaceLayoutProps = buildWorkspaceLayoutProps(controller);
-  const dialog = useReviewQueueEmptyDialogState(workspaceLayoutProps.review.reviewFlowWindow);
+  const openedCompletedSessionRef = useRef<string | null>(null);
+  const dialog = useReviewQueueEmptyDialogState(workspaceLayoutProps.review.reviewFlowWindow, {
+    allowDemoDayClear: !workspaceLayoutProps.review.isStudyMode
+  });
   const layoutProps = bindReviewQueueEmptyDialogToLayoutProps(
     workspaceLayoutProps,
     dialog.openEmpty,
@@ -23,9 +27,26 @@ export function WorkspaceLayoutWithReviewQueueDialog({ controller }: { controlle
     workspaceLayoutProps.review.onExitReviewMode();
   }, [dialog, workspaceLayoutProps.review]);
   const handleContinueDemoDay = useCallback(() => {
+    workspaceLayoutProps.review.onExitReviewMode();
     continueToNextDemoPreviewDay();
     dialog.close();
-  }, [dialog]);
+    window.setTimeout(() => {
+      controller.onStartNextDemoPreviewDayFlow();
+    }, 0);
+  }, [controller, dialog, workspaceLayoutProps.review]);
+  const completedSessionKey = getCompletedNonQueueSessionKey(workspaceLayoutProps.review);
+
+  useEffect(() => {
+    if (!completedSessionKey || openedCompletedSessionRef.current === completedSessionKey) {
+      return;
+    }
+    openedCompletedSessionRef.current = completedSessionKey;
+    if (canContinueReadingNow(workspaceLayoutProps.review)) {
+      workspaceLayoutProps.review.onContinueReading();
+      return;
+    }
+    dialog.openClear();
+  }, [completedSessionKey, dialog, workspaceLayoutProps.review]);
 
   return (
     <>
@@ -49,4 +70,27 @@ function buildWorkspaceLayoutProps(controller: ReturnType<typeof useAppControlle
       onRunRailAction: controller.paletteState.onRunCommand
     }
   };
+}
+
+function getCompletedNonQueueSessionKey(review: WorkspaceLayoutProps['review']) {
+  if (!review.isStudyMode || review.reviewStatus !== 'completed' || review.reviewSummary.canContinueReading) {
+    return null;
+  }
+  return [
+    review.reviewSummary.completedAt ?? 'completed',
+    review.reviewSummary.readTopicCount,
+    review.reviewSummary.reviewedItemCount,
+    review.reviewSummary.continueNodeId ?? ''
+  ].join(':');
+}
+
+function canContinueReadingNow(review: WorkspaceLayoutProps['review']) {
+  const continueNodeId = review.reviewSummary.continueNodeId;
+  return Boolean(
+    continueNodeId &&
+    (
+      review.reviewFlowWindow.queueNodeIds.includes(continueNodeId) ||
+      review.reviewFlowWindow.readyNodeIds.includes(continueNodeId)
+    )
+  );
 }

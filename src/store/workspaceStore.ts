@@ -24,6 +24,7 @@ import type { WorkspaceLayoutState, WorkspaceState } from './workspaceStoreTypes
 export type {
   NodeViewState,
   ReviewSessionState,
+  ReviewSessionResumeOptions,
   ReviewSessionStartOptions,
   WorkspaceLayoutState,
   WorkspacePersistedState,

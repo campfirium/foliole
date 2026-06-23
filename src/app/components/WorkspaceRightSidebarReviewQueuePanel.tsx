@@ -23,12 +23,9 @@ function QueueHeader({ demoDay }: { demoDay?: number }) {
   const t = useTranslation();
   return (
     <header className={`${inspectorListInsetPaddingClassName} pb-2 pt-3`}>
-      <div className="grid grid-cols-[2ch_1rem_minmax(0,1fr)] items-baseline gap-2">
-        <h2 className={`m-0 px-0 pb-0 text-left ${inspectorListHeadingClassName}`}>{t('desktop.rightPanel.flow')}</h2>
-        <span aria-hidden="true" />
-        <div className="flex min-w-0 justify-end">
-          {demoDay ? <DemoDayLabel day={demoDay} /> : null}
-        </div>
+      <div className="flex items-baseline justify-between gap-2">
+        <h2 className={`m-0 shrink-0 whitespace-nowrap px-0 pb-0 text-left ${inspectorListHeadingClassName}`}>{t('desktop.rightPanel.flow')}</h2>
+        {demoDay ? <DemoDayLabel day={demoDay} /> : null}
       </div>
     </header>
   );

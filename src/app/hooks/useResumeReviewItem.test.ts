@@ -2,6 +2,7 @@ import { act, renderHook } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { installDemoRuntimeController, type DemoRuntimeController } from '../../shared/platform/runtime/demoRuntime';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 import type { ReviewSessionState } from '../../store/workspaceStore';
 
@@ -23,6 +24,26 @@ function createSession(overrides: Partial<ReviewSessionState> = {}): ReviewSessi
     totalNodeCount: 2,
     ...overrides
   };
+}
+
+function installDemoRuntime(isDemo: boolean) {
+  const state = {
+    clearError: null,
+    importError: null,
+    importedTopicCount: 0,
+    isDemo,
+    manualAdvanceDays: 0,
+    previewDay: 0,
+    startedAt: null
+  };
+  installDemoRuntimeController({
+    clearLocalData: () => Promise.resolve(false),
+    continueToNextPreviewDay: () => undefined,
+    getNowIso: (realNow) => realNow.toISOString(),
+    getState: () => state,
+    importMarkdown: () => Promise.resolve({ ignoredCount: 0, importedTopicCount: 0 }),
+    subscribe: () => () => undefined
+  } satisfies DemoRuntimeController);
 }
 
 it('uses the true review queue head when it is live', () => {
@@ -80,7 +101,8 @@ it('does not recover future fsrs cards that are absent from the true queue', () 
   ).toBe('review-due');
 });
 
-it('shows a notice when resume has no available review item', () => {
+it('shows a notice when resume has no available Flow entry', () => {
+  installDemoRuntime(false);
   const resumeReviewSession = vi.fn(() => false);
   const { result } = renderHook(() =>
     useResumeReviewItem({

@@ -52,7 +52,9 @@ function resolveWindowTitleBarTitle(nodeId: string | null, nodesById: Record<str
 }
 
 function resolveReviewTitleBarTitle(review: WorkspaceLayoutProps['review'], t: Translate) {
-  return review.isStudyMode && review.reviewStatus === 'completed' ? t('desktop.reviewSession.summary.complete') : null;
+  return review.isStudyMode && review.reviewStatus === 'completed' && review.reviewSummary.canContinueReading
+    ? t('desktop.reviewSession.summary.complete')
+    : null;
 }
 
 export function WorkspaceMainTitleBar({

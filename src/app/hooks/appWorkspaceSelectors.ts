@@ -19,6 +19,7 @@ function selectWorkspaceCreationActions(state: WorkspaceState) {
 
 function selectWorkspaceReviewActions(state: WorkspaceState) {
   return {
+    continueReviewSessionReading: state.continueReviewSessionReading,
     dismissReviewTopic: state.dismissReviewTopic,
     readReviewTopic: state.readReviewTopic,
     postponeReviewTopic: state.postponeReviewTopic,

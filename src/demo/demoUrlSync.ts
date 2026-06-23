@@ -2,7 +2,7 @@ import type { AppLanguagePreference, AppLocale } from '../shared/localization/ap
 import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { canonicalDemoPath, DEMO_TOPICS, getDemoTopicNodeId } from './demoContent';
-import { canonicalGuidePath, resolveDemoLocalePathSegment } from './demoRoutes';
+import { canonicalGuidePath, isLocaleDemoPath, resolveDemoLocalePathSegment } from './demoRoutes';
 
 const DEMO_ROUTE_LOCALE_PATTERN = /^\/([a-z]{2}(?:-[a-z]+)?)\/(?:demo|guides)\//i;
 
@@ -18,6 +18,13 @@ export function installDemoUrlSync() {
 }
 
 export function syncDemoUrlToNode(nodeId: string | null, locale = resolveCurrentLocalePathSegment()) {
+  if (isLocaleDemoPath(window.location.pathname)) {
+    const demoPath = canonicalDemoPath(locale);
+    if (window.location.pathname !== demoPath) {
+      window.history.replaceState(window.history.state, '', demoPath);
+    }
+    return;
+  }
   const topic = DEMO_TOPICS.find((demoTopic) => getDemoTopicNodeId(demoTopic) === nodeId);
   const nextPath = topic ? canonicalGuidePath(topic.slug, locale) : canonicalDemoPath(locale);
   if (window.location.pathname === nextPath) return;

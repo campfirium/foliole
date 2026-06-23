@@ -1,6 +1,7 @@
 import { expect, it } from 'vitest';
 
 import { buildStartReviewSessionQueue } from './workspaceReviewLiveQueue';
+import { buildResumeReviewSessionQueue } from './workspaceReviewResumeQueue';
 import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
 import {
   createReadingNode,
@@ -41,6 +42,14 @@ it('can start from scheduled future entries when the runtime allows Flow preview
   expect(queue).toEqual(['reading-future']);
 });
 
+it('can start from ready fallback entries after the preview day advances', () => {
+  const queue = buildStartReviewSessionQueue(createFutureReadingState(), '2026-03-12T12:00:00.000Z', {
+    includeScheduledFallback: true
+  });
+
+  expect(queue).toEqual(['reading-future']);
+});
+
 it('starts only the first visible future Demo day when multiple days are available', () => {
   const queue = buildStartReviewSessionQueue(createMultiDayFutureReadingState(), '2026-03-10T12:00:00.000Z', {
     includeScheduledFallback: true
@@ -67,4 +76,15 @@ it('starts the persisted session from scheduled fallback when the installed runt
     queueNodeIds: ['reading-future'],
     totalNodeCount: 1
   });
+});
+
+it('resumes from a visible future Flow topic when Demo fallback is allowed', () => {
+  const now = '2026-03-10T12:00:00.000Z';
+  const state = createMultiDayFutureReadingState();
+
+  expect(buildResumeReviewSessionQueue(state, now)).toEqual([]);
+  expect(buildResumeReviewSessionQueue(state, now, {
+    includeScheduledFallback: true,
+    preferredNodeId: 'reading-day-three'
+  })).toEqual(['reading-day-three', 'reading-day-two']);
 });

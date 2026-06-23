@@ -50,7 +50,7 @@ function resolveTaskNodeIds(args: {
 }) {
   if (args.mode === 'review-first') return args.fsrsQueueNodeIds;
   if (args.mode === 'reading-only') return args.readingQueueNodeIds;
-  return args.queueNodeIds.length > 0 ? args.queueNodeIds : args.readingQueueNodeIds;
+  return args.queueNodeIds;
 }
 
 function buildExtensionNodeIds(args: {
@@ -66,6 +66,9 @@ function buildExtensionNodeIds(args: {
 
 function buildScheduledFallbackQueue(state: ReviewLiveQueueState, now: string) {
   const flowWindow = buildReviewFlowWindow(state, now, []);
+  if (flowWindow.readyNodeIds.length > 0) {
+    return flowWindow.readyNodeIds;
+  }
   const firstDayBucket = flowWindow.dayBuckets.find((bucket) => bucket.nodeIds.length > 0);
   return firstDayBucket?.nodeIds ?? [];
 }
@@ -179,4 +182,15 @@ export function buildCurrentReviewSessionQueueOutput(
       nodesById: overrides.nodesById
     })
   });
+}
+
+export function buildReviewSessionReadingContinuationQueue(
+  state: ReviewLiveQueueState,
+  now: string,
+  continueNodeId: string
+) {
+  return buildLiveReviewQueueOutput(state, now, {
+    mode: 'reading-only',
+    pinnedNodeId: continueNodeId
+  }).taskNodeIds;
 }

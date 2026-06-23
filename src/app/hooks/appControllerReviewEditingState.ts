@@ -23,6 +23,7 @@ export function useControllerReviewEditingState(args: {
     hotkeys: args.hotkeys,
     isCurrentReviewItemGradable,
     isStudyMode: args.isStudyMode,
+    nowIso: args.nowIso,
     resumeReviewItem,
     reviewSourceTopicDeleteDialog,
     ws: args.ws

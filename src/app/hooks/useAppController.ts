@@ -3,7 +3,6 @@ import { useEffect } from 'react';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { useReviewSchedulerSettings } from '../../features/settings/context/ReviewSchedulerSettingsProvider';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { useDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 import { isReviewSessionCompleted } from '../../store/workspaceReviewReading';
 import type { WorkspaceSearchResult } from '../components/workspaceSearch';
@@ -127,8 +126,8 @@ function useReviewFlowAllClearNotice(args: {
     if (!args.isStudyMode || !args.isReviewSessionCompleted) {
       return;
     }
-    args.exitStudyMode();
     if (!args.suppressNotice) {
+      args.exitStudyMode();
       showAppRuntimeNotice(t('desktop.reviewSession.allClear.notice'), 'success');
     }
   }, [args.exitStudyMode, args.isReviewSessionCompleted, args.isStudyMode, args.suppressNotice, t]);
@@ -139,12 +138,11 @@ function useControllerReviewCompletionNotice(args: {
   isStudyMode: boolean;
   reviewSession: ReturnType<typeof useWorkspaceSelectors>['reviewSession'];
 }) {
-  const demoState = useDemoRuntimeState();
   useReviewFlowAllClearNotice({
     exitStudyMode: args.exitStudyMode,
     isReviewSessionCompleted: isReviewSessionCompleted(args.reviewSession),
     isStudyMode: args.isStudyMode,
-    suppressNotice: demoState.isDemo
+    suppressNotice: true
   });
 }
 
@@ -233,5 +231,5 @@ export function useAppController(args: {
     ws
   });
 
-  return buildAppControllerResult({ auxiliaryState, controller, hotkeys, layoutProps, reviewSourceTopicDeleteDialog: reviewEditing.reviewSourceTopicDeleteDialog, reviewTopicDelayPanel });
+  return buildAppControllerResult({ auxiliaryState, controller, hotkeys, layoutProps, reviewSourceTopicDeleteDialog: reviewEditing.reviewSourceTopicDeleteDialog, reviewTopicDelayPanel, ws });
 }

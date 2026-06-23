@@ -32,6 +32,7 @@ function createReviewProps(overrides: Partial<WorkspaceBottomReviewToolbarProps>
     reviewSessionMode: 'recommended',
     reviewStatus: 'awaiting-answer',
     reviewSummary: {
+      canContinueReading: false,
       completedAt: null,
       continueNodeId: null,
       createdItemCount: 0,

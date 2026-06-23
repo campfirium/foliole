@@ -1,11 +1,17 @@
+import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
 import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
 
-import { buildCurrentReviewSessionQueue, buildLiveReviewQueue, buildStartReviewSessionQueue } from './workspaceReviewLiveQueue';
+import {
+  buildLiveReviewQueue,
+  buildReviewSessionReadingContinuationQueue,
+  buildStartReviewSessionQueue
+} from './workspaceReviewLiveQueue';
 import {
   advanceReviewSession,
   createEmptyReviewSession,
   createStartedReviewSession
 } from './workspaceReviewReading';
+import { buildResumeReviewSessionQueue } from './workspaceReviewResumeQueue';
 import { resolveReviewSessionProgress } from './workspaceReviewSessionProgress';
 import type { ReviewSessionStartOptions, WorkspaceState } from './workspaceStore';
 
@@ -13,20 +19,6 @@ type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state
 
 function buildReviewQueue(state: WorkspaceState, now: string, mode: ReviewSessionMode): string[] {
   return buildLiveReviewQueue(state, now, { mode });
-}
-
-function buildCurrentSessionQueue(state: WorkspaceState, now: string, mode = state.reviewSessionMode) {
-  return mode === state.reviewSessionMode
-    ? buildCurrentReviewSessionQueue(state, now)
-    : buildLiveReviewQueue(state, now, { mode });
-}
-
-function resolveResumeCurrentNodeId(state: WorkspaceState, queueNodeIds: string[]) {
-  const currentNodeId = state.reviewSession.currentNodeId;
-  if (currentNodeId && queueNodeIds.includes(currentNodeId)) {
-    return currentNodeId;
-  }
-  return queueNodeIds[0] ?? null;
 }
 
 export function createStartReviewSessionAction(
@@ -55,12 +47,36 @@ export function createStartReviewSessionAction(
   };
 }
 
-export function createResumeReviewSessionAction(set: WorkspaceSet): WorkspaceState['resumeReviewSession'] {
+export function createContinueReviewSessionReadingAction(set: WorkspaceSet): WorkspaceState['continueReviewSessionReading'] {
   return (now = new Date().toISOString()) => {
+    let continued = false;
+    set((state) => {
+      const continueNodeId = state.reviewSession.continueNodeId;
+      const continueNode = continueNodeId ? state.nodesById[continueNodeId] : undefined;
+      if (!continueNodeId || !continueNode || state.trashedNodeIds.includes(continueNodeId)) return state;
+      if (!isReadingReviewItemNode(continueNode)) return state;
+      const queueNodeIds = buildReviewSessionReadingContinuationQueue(state, now, continueNodeId);
+      if (!queueNodeIds.includes(continueNodeId)) return state;
+      continued = true;
+      return {
+        activeNodeId: continueNodeId,
+        reviewSession: advanceReviewSession(state.reviewSession, {
+          nextNodeId: continueNodeId,
+          queueNodeIds,
+          totalNodeCount: resolveReviewSessionProgress(state.reviewSession).reviewCompletedCount + queueNodeIds.length
+        })
+      };
+    });
+    return continued;
+  };
+}
+
+export function createResumeReviewSessionAction(set: WorkspaceSet): WorkspaceState['resumeReviewSession'] {
+  return (now = new Date().toISOString(), options = {}) => {
     let resumed = false;
     set((state) => {
-      const queueNodeIds = buildCurrentSessionQueue(state, now);
-      const currentNodeId = resolveResumeCurrentNodeId(state, queueNodeIds);
+      const queueNodeIds = buildResumeReviewSessionQueue(state, now, options);
+      const currentNodeId = queueNodeIds[0] ?? null;
       if (!currentNodeId) return state;
       resumed = true;
       return {

@@ -130,6 +130,9 @@ export function ReviewNoCurrentItemBar({
   style
 }: ReviewNoCurrentItemBarProps) {
   if (reviewStatus === 'completed') {
+    if (!reviewSummary?.canContinueReading) {
+      return null;
+    }
     return (
       <ReviewCompleteBar
         onContinueReading={onContinueReading}

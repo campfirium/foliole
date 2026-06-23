@@ -2,9 +2,9 @@ import type { Node } from '../features/nodes/model/nodeTypes';
 import { HOME_NODE_ID, INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import type { WorkspacePersistedState } from '../store/workspaceStore';
 
-import { DEFAULT_DEMO_TOPIC, getDemoTopicsForLocale, getDemoTopicNodeId } from './demoContent';
+import { getDemoTopicsForLocale, getDemoTopicNodeId } from './demoContent';
 import { DEMO_GUIDES_NODE_ID } from './demoGuides';
-import { isLocaleDemoPath, resolveDemoLocalePathSegment, resolveGuideSlugFromPath } from './demoRoutes';
+import { resolveDemoLocalePathSegment, resolveGuideSlugFromPath } from './demoRoutes';
 
 export function repairDemoWorkspacePayload(raw: string, pathname = '/en/demo/'): string | null {
   try {
@@ -99,7 +99,7 @@ function routeStateToDemoPath(state: WorkspacePersistedState, pathname: string) 
 }
 
 function resolveDemoNodeIdFromPath(pathname: string) {
-  const slug = isLocaleDemoPath(pathname) ? DEFAULT_DEMO_TOPIC?.slug : resolveGuideSlugFromPath(pathname);
+  const slug = resolveGuideSlugFromPath(pathname);
   const topic = getDemoTopicsForLocale(resolveDemoLocalePathSegment(pathname)).find((candidate) => candidate.slug === slug);
   return topic ? getDemoTopicNodeId(topic) : null;
 }

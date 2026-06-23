@@ -2,13 +2,14 @@ import { useCallback } from 'react';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { ReviewSchedulerSettingsContextValue } from '../../features/settings/context/reviewSchedulerSettingsContext';
+import { useDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
-import { buildCurrentReviewSessionQueueOutput } from '../../store/workspaceReviewLiveQueue';
+import { buildResumeReviewSessionQueue } from '../../store/workspaceReviewResumeQueue';
 import type { ReviewSessionState } from '../../store/workspaceStore';
 
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
 
-export const RESUME_REVIEW_UNAVAILABLE_NOTICE = 'No review item is available to resume.';
+export const RESUME_REVIEW_UNAVAILABLE_NOTICE = 'Nothing is available to resume in Flow.';
 
 export function resolveResumeReviewNodeId(args: {
   nodesById: Record<string, Node>;
@@ -30,12 +31,17 @@ export function useResumeReviewItem(args: {
   reviewSettings: ReviewSchedulerSettingsContextValue;
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }) {
+  const demoRuntime = useDemoRuntimeState();
   return useCallback(() => {
     if (!args.reviewSettings.isReviewSchedulerSettingsReady) {
       showAppRuntimeNotice(RESUME_REVIEW_UNAVAILABLE_NOTICE);
       return;
     }
-    const queueNodeIds = buildCurrentReviewSessionQueueOutput(args.ws, args.nowIso).taskNodeIds;
+    const resumeOptions = {
+      includeScheduledFallback: demoRuntime.isDemo,
+      preferredNodeId: args.ws.activeNodeId
+    };
+    const queueNodeIds = buildResumeReviewSessionQueue(args.ws, args.nowIso, resumeOptions);
     const nodeId = resolveResumeReviewNodeId({
       nodesById: args.ws.nodesById,
       queueNodeIds,
@@ -46,7 +52,7 @@ export function useResumeReviewItem(args: {
       showAppRuntimeNotice(RESUME_REVIEW_UNAVAILABLE_NOTICE);
       return;
     }
-    if (!args.ws.resumeReviewSession(args.nowIso)) {
+    if (!args.ws.resumeReviewSession(args.nowIso, resumeOptions)) {
       showAppRuntimeNotice(RESUME_REVIEW_UNAVAILABLE_NOTICE);
       return;
     }
@@ -56,5 +62,5 @@ export function useResumeReviewItem(args: {
     args.controller.externalView.closeExternalView();
     args.controller.virtualView.closeVirtualView();
     args.controller.nav.handleSelectNode(nodeId);
-  }, [args.controller, args.nowIso, args.reviewSettings.isReviewSchedulerSettingsReady, args.reviewSettings.reviewSchedulerSettings.pushQueue, args.ws.nodeOrder, args.ws.nodesById, args.ws.reviewSession, args.ws.trashedNodeIds]);
+  }, [args.controller, args.nowIso, args.reviewSettings.isReviewSchedulerSettingsReady, args.reviewSettings.reviewSchedulerSettings.pushQueue, args.ws.activeNodeId, args.ws.nodeOrder, args.ws.nodesById, args.ws.reviewSession, args.ws.reviewSessionMode, args.ws.trashedNodeIds, demoRuntime.isDemo]);
 }

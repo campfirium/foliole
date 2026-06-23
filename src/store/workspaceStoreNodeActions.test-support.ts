@@ -48,6 +48,7 @@ function createWorkspaceEditActionStubs() {
     redoEditorOperation: () => false,
     relearnNode: () => false,
     startReviewSession: () => false,
+    continueReviewSessionReading: () => false,
     resumeReviewSession: () => false,
     setReviewSessionMode: () => undefined,
     revealReviewAnswer: () => undefined,

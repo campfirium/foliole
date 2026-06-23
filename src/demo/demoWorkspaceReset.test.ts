@@ -1,5 +1,6 @@
 import { expect, it, vi } from 'vitest';
 
+import type { Node } from '../features/nodes/model/nodeTypes';
 import { createInitialWorkspaceState, useWorkspaceStore, WORKSPACE_STORAGE_KEY } from '../store/workspaceStore';
 
 import { canonicalGuidePath, DEMO_TOPICS, getDemoTopicNodeId } from './demoContent';
@@ -26,6 +27,30 @@ function stubDemoStorage(storage: Map<string, string>, pathname: string) {
     },
     location: { pathname }
   });
+}
+
+function createFutureFlowTopic(id: string): Node {
+  return {
+    id,
+    parentNodeId: null,
+    kind: 'topic',
+    title: id,
+    content: `${id} body`,
+    reveal: null,
+    review: null,
+    reading: {
+      intervalDurationMs: 24 * 60 * 60 * 1000,
+      intervalGrowthFactor: 1.3,
+      lastHandledAt: '2026-06-19T00:00:00.000Z',
+      nextAt: '2026-06-22T00:00:00.000Z',
+      priority: 5,
+      readingPosition: 0,
+      repetitionCount: 1,
+      state: 'active'
+    },
+    createdAt: '2026-06-19T00:00:00.000Z',
+    updatedAt: '2026-06-19T00:00:00.000Z'
+  };
 }
 
 it('forces the current Demo store back to the official snapshot', () => {
@@ -103,6 +128,31 @@ it('resets Demo learning state back to the official seed', () => {
     state: topic.readingSeed.state
   });
   expect(payload.state.nodesById[topicNodeId].reading.state).toBe(topic.readingSeed.state);
+  vi.unstubAllGlobals();
+});
+
+it('keeps scheduled Flow fallback available after Demo reset', () => {
+  const topic = DEMO_TOPICS[0];
+  if (!topic) throw new Error('Demo reset test requires a topic.');
+  const pathname = canonicalGuidePath(topic.slug);
+  const storage = new Map<string, string>();
+  stubDemoStorage(storage, pathname);
+
+  resetDemoWorkspaceSnapshot(pathname);
+  useWorkspaceStore.setState({
+    activeNodeId: null,
+    nodeOrder: ['future-topic'],
+    nodesById: { 'future-topic': createFutureFlowTopic('future-topic') },
+    reviewSession: {
+      currentNodeId: null,
+      isAnswerRevealed: false,
+      queueNodeIds: [],
+      totalNodeCount: 0
+    }
+  });
+
+  expect(useWorkspaceStore.getState().startReviewSession('2026-06-20T00:00:00.000Z')).toBe(true);
+  expect(useWorkspaceStore.getState().reviewSession.currentNodeId).toBe('future-topic');
   vi.unstubAllGlobals();
 });
 

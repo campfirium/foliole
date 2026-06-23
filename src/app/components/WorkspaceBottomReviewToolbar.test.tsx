@@ -24,6 +24,7 @@ function createProps(overrides: Partial<WorkspaceBottomReviewToolbarProps> = {})
     reviewPreview: null,
     reviewQueueCount: 2,
     reviewSummary: {
+      canContinueReading: false,
       completedAt: null,
       continueNodeId: null,
       createdItemCount: 0,
@@ -176,6 +177,11 @@ it('hides the footer progress line after review completion', () => {
         reviewCompletedCount: 2,
         reviewCurrentNodeId: null,
         reviewQueueCount: 0,
+        reviewSummary: {
+          ...createProps().reviewSummary,
+          canContinueReading: true,
+          continueNodeId: 'reading-1'
+        },
         reviewStatus: 'completed'
       })}
     />

@@ -82,12 +82,12 @@ export interface BuildControllerLayoutPropsArgs {
     createRootNode: (content?: string, kind?: NodeKind) => Promise<string | null>;
     deleteEditorAnnotationNodes: (nodeIds: string[]) => void;
     exitReviewSession: () => void;
-    gradeReviewCard: (grade: ReviewGrade) => Promise<boolean>;
-    readReviewTopic: () => Promise<boolean>;
-    postponeReviewTopic: () => Promise<boolean>;
+    gradeReviewCard: (grade: ReviewGrade, now?: string) => Promise<boolean>;
+    readReviewTopic: (now?: string) => Promise<boolean>;
+    postponeReviewTopic: (now?: string) => Promise<boolean>;
     setReviewTopicDelay: (nodeId: string, delayLevel: number, now?: string) => Promise<boolean>;
-    dismissReviewTopic: () => Promise<boolean>;
-    revisitReviewTopicSoon: () => Promise<boolean>;
+    dismissReviewTopic: (now?: string) => Promise<boolean>;
+    revisitReviewTopicSoon: (now?: string) => Promise<boolean>;
     isListCollapsed: boolean;
     isRightSidebarCollapsed: boolean;
     listWidth: number;
@@ -95,6 +95,7 @@ export interface BuildControllerLayoutPropsArgs {
     nodesById: Record<string, Node>;
     nodeViewById: Record<string, NodeViewState | undefined>;
     resetLayout: () => void;
+    continueReviewSessionReading: WorkspaceState['continueReviewSessionReading'];
     resumeReviewSession: (now?: string) => boolean;
     revealReviewAnswer: () => void;
     reviewSession: ReviewSessionState;
@@ -188,11 +189,11 @@ function createLayoutHandlerArgs(
     onToggleBothSidebarVisibility: createToggleBothSidebarVisibility(args),
     onToggleImmersiveMode: () => args.runtime.setIsImmersiveMode((current) => !current),
     onToggleRightSidebarVisibility: createToggleRightSidebarVisibility(args),
-    updateGrade: (grade: ReviewGrade) => args.ws.gradeReviewCard(grade),
-    readReviewTopic: () => args.ws.readReviewTopic(),
-    postponeReviewTopic: () => args.ws.postponeReviewTopic(),
-    dismissReviewTopic: () => args.ws.dismissReviewTopic(),
-    revisitReviewTopicSoon: () => args.ws.revisitReviewTopicSoon(),
+    updateGrade: (grade: ReviewGrade) => args.ws.gradeReviewCard(grade, args.nowIso),
+    readReviewTopic: () => args.ws.readReviewTopic(args.nowIso),
+    postponeReviewTopic: () => args.ws.postponeReviewTopic(args.nowIso),
+    dismissReviewTopic: () => args.ws.dismissReviewTopic(args.nowIso),
+    revisitReviewTopicSoon: () => args.ws.revisitReviewTopicSoon(args.nowIso),
     priorityQuickSetShortcutLabel: args.priorityQuickSet.shortcutLabel
   };
 }

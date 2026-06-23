@@ -21,35 +21,50 @@ function buildDemoDayClearContent(previewDay: number): ReviewQueueEmptyDialogCon
   };
 }
 
-export function useReviewQueueEmptyDialogState(flowWindow: ReviewFlowWindow) {
+export function useReviewQueueEmptyDialogState(
+  flowWindow: ReviewFlowWindow,
+  options: { allowDemoDayClear?: boolean } = {}
+) {
   const demoState = useDemoRuntimeState();
   const openedDemoPreviewDayRef = useRef<number | null>(null);
   const [content, setContent] = useState<ReviewQueueEmptyDialogContent | null>(null);
-  const shouldOpenBeforeStart = demoState.isDemo && shouldShowDemoDayClearDialog(flowWindow);
+  const allowDemoDayClear = options.allowDemoDayClear ?? true;
+  const shouldOpenBeforeStart = allowDemoDayClear && demoState.isDemo && shouldShowDemoDayClearDialog(flowWindow);
   const close = useCallback(() => setContent(null), []);
+  const openDemoDayClear = useCallback(() => {
+    openedDemoPreviewDayRef.current = demoState.previewDay;
+    setContent(buildDemoDayClearContent(demoState.previewDay));
+  }, [demoState.previewDay]);
   const openEmpty = useCallback(() => {
-    setContent(
-      shouldOpenBeforeStart
-        ? buildDemoDayClearContent(demoState.previewDay)
-        : { kind: 'empty' }
-    );
-  }, [demoState.previewDay, shouldOpenBeforeStart]);
+    if (shouldOpenBeforeStart) {
+      openDemoDayClear();
+      return;
+    }
+    setContent({ kind: 'empty' });
+  }, [openDemoDayClear, shouldOpenBeforeStart]);
+  const openClear = useCallback(() => {
+    if (demoState.isDemo && shouldShowDemoDayClearDialog(flowWindow)) {
+      openDemoDayClear();
+      return;
+    }
+    setContent({ kind: 'empty' });
+  }, [demoState.isDemo, flowWindow, openDemoDayClear]);
 
   useEffect(() => {
-    if (!demoState.isDemo || !shouldShowDemoDayClearDialog(flowWindow)) {
+    if (!allowDemoDayClear || !demoState.isDemo || !shouldShowDemoDayClearDialog(flowWindow)) {
       return;
     }
     if (openedDemoPreviewDayRef.current === demoState.previewDay) {
       return;
     }
-    openedDemoPreviewDayRef.current = demoState.previewDay;
-    setContent(buildDemoDayClearContent(demoState.previewDay));
-  }, [demoState.isDemo, demoState.previewDay, flowWindow]);
+    openDemoDayClear();
+  }, [allowDemoDayClear, demoState.isDemo, demoState.previewDay, flowWindow, openDemoDayClear]);
 
   return {
     close,
     content,
     isOpen: content !== null,
+    openClear,
     openEmpty,
     shouldOpenBeforeStart
   };

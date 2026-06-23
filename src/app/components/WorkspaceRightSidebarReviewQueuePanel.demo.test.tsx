@@ -138,7 +138,10 @@ it('groups the current Demo Flow entries under Day 1', () => {
   const dayOneLabels = screen.getAllByText('Day 1');
   expect(dayOneLabels).toHaveLength(2);
   expect(screen.getByText('Day 2')).toBeInTheDocument();
-  expect(dayOneLabels.some((label) => label.closest('li')?.className.includes('text-center'))).toBe(true);
+  expect(dayOneLabels.some((label) => label.closest('li')?.className.includes('px-inspector-list-inset'))).toBe(true);
+  expect(dayOneLabels.some((label) => label.closest('li')?.className.includes('pt-0'))).toBe(true);
+  expect(screen.getByText('Flow')).toHaveClass('whitespace-nowrap');
+  expect(screen.getByText('Flow').parentElement).toHaveClass('justify-between');
   expect(screen.getByRole('button', { name: 'Current Topic' })).toHaveClass('text-left');
   expect(screen.getByRole('button', { name: 'Current Topic' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Future Topic' })).toBeInTheDocument();

@@ -182,6 +182,14 @@ it('shows completed without progress and continues reading when the review phase
     reviewCompletedCount: 3,
     reviewCurrentNodeId: null,
     reviewQueueCount: 0,
+    reviewSummary: {
+      canContinueReading: true,
+      continueNodeId: 'reading-1',
+      readingElapsedMs: 34 * 60 * 1000,
+      readTopicCount: 2,
+      reviewElapsedMs: 18 * 60 * 1000,
+      reviewedItemCount: 4
+    },
     reviewStatus: 'completed'
   });
 
@@ -192,6 +200,26 @@ it('shows completed without progress and continues reading when the review phase
 
   fireEvent.click(screen.getByRole('button', { name: 'Continue reading' }));
   expect(onContinueReading).toHaveBeenCalledTimes(1);
+});
+
+it('does not show queue-clear controls when the whole Flow is complete', () => {
+  renderToolbar({
+    reviewCompletedCount: 3,
+    reviewCurrentNodeId: null,
+    reviewQueueCount: 0,
+    reviewSummary: {
+      canContinueReading: false,
+      continueNodeId: null,
+      readingElapsedMs: 34 * 60 * 1000,
+      readTopicCount: 2,
+      reviewElapsedMs: 18 * 60 * 1000,
+      reviewedItemCount: 4
+    },
+    reviewStatus: 'completed'
+  });
+
+  expect(screen.queryByRole('button', { name: 'Queue clear' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Continue reading' })).not.toBeInTheDocument();
 });
 
 it('uses topic units for reading-only progress', () => {

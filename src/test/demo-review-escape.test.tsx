@@ -34,7 +34,7 @@ function installDemoRuntime() {
 }
 
 function seedDemoWorkspace() {
-  const snapshot = createDemoWorkspaceSnapshot('/demo/', new Date('2026-06-17T00:00:00.000Z'));
+  const snapshot = createDemoWorkspaceSnapshot('/en/demo/', new Date('2026-06-17T00:00:00.000Z'));
   useWorkspaceStore.setState({
     ...snapshot,
     isHydrated: true

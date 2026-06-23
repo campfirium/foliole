@@ -54,6 +54,7 @@ function createWorkspaceActionStubs() {
     ...createHistoryActionStubs(),
     relearnNode: () => false,
     startReviewSession: () => false,
+    continueReviewSessionReading: () => false,
     resumeReviewSession: () => false,
     setReviewSessionMode: () => undefined,
     revealReviewAnswer: () => undefined,

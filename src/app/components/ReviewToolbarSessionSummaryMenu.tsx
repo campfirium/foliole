@@ -71,11 +71,13 @@ function QueueSummaryRows({ summary, t }: { summary: ReviewToolbarSessionSummary
 
 export function ReviewToolbarSessionSummaryMenu({ summary }: { summary: ReviewToolbarSessionSummary }) {
   const t = useTranslation();
+  const title = getSummaryTitle(summary.status, t);
+  const triggerLabel = summary.status === 'clear' ? title : t('desktop.reviewSession.summary.label');
   return (
     <AppDropdownMenu>
       <AppDropdownMenuTrigger asChild>
         <button
-          aria-label={t('desktop.reviewSession.summary.label')}
+          aria-label={triggerLabel}
           className="inline-flex size-8 items-center justify-center rounded-md text-foreground/38 outline-none transition-colors hover:bg-foreground/[0.04] hover:text-foreground/65 focus-visible:ring-1 focus-visible:ring-border-strong"
           type="button"
         >
@@ -83,7 +85,7 @@ export function ReviewToolbarSessionSummaryMenu({ summary }: { summary: ReviewTo
         </button>
       </AppDropdownMenuTrigger>
       <AppDropdownMenuContent align="center" avoidCollisions={false} className="w-64 p-4" side="top" sideOffset={10}>
-        <div className="mb-3 text-[11px] font-medium uppercase tracking-[0.02em] text-foreground/45">{getSummaryTitle(summary.status, t)}</div>
+        <div className="mb-3 text-[11px] font-medium uppercase tracking-[0.02em] text-foreground/45">{title}</div>
         <QueueSummaryRows summary={summary} t={t} />
       </AppDropdownMenuContent>
     </AppDropdownMenu>

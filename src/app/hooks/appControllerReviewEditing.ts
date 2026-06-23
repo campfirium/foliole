@@ -40,6 +40,7 @@ function useReviewEditingState(args: {
   isStudyMode: boolean;
   isVirtualViewOpen: boolean;
   nav: ReturnType<typeof useWorkspaceControllerState>['nav'];
+  nowIso: string;
   onResumeReviewItem: () => void;
   onRequestDeleteSourceTopic: (nodeId: string) => boolean;
   runtime: ReturnType<typeof useWorkspaceControllerState>['runtime'];
@@ -67,8 +68,8 @@ function useReviewEditingState(args: {
     isCurrentItemGradable: args.isCurrentReviewItemGradable,
     ...buildReviewShortcutBindings(args.hotkeys.shortcutMap),
     isSourceTopicDeleteDialogOpen: args.isSourceTopicDeleteDialogOpen,
-    readReviewTopic: args.ws.readReviewTopic,
-    postponeReviewTopic: args.ws.postponeReviewTopic,
+    readReviewTopic: () => args.ws.readReviewTopic(args.nowIso),
+    postponeReviewTopic: () => args.ws.postponeReviewTopic(args.nowIso),
     deleteCurrentReviewItem: () => {
       const nodeId = resolveReviewDeleteTargetNodeId(args.ws);
       if (!nodeId) {
@@ -78,7 +79,7 @@ function useReviewEditingState(args: {
       return true;
     },
     deleteReviewSourceTopic: args.onRequestDeleteSourceTopic,
-    dismissReviewTopic: args.ws.dismissReviewTopic,
+    dismissReviewTopic: () => args.ws.dismissReviewTopic(args.nowIso),
     scrollReviewReadingDown: () => scrollReviewReadingSurface(args.runtime.editorRef.current, 'down'),
     scrollReviewReadingUp: () => scrollReviewReadingSurface(args.runtime.editorRef.current, 'up'),
     goBack: args.nav.handleGoBack,
@@ -87,8 +88,8 @@ function useReviewEditingState(args: {
     resumeReviewItem: args.onResumeReviewItem,
     revealReviewAnswer: args.ws.revealReviewAnswer,
     selectNode: args.nav.handleSelectNode,
-    revisitReviewTopicSoon: args.ws.revisitReviewTopicSoon,
-    gradeReviewCard: args.ws.gradeReviewCard
+    revisitReviewTopicSoon: () => args.ws.revisitReviewTopicSoon(args.nowIso),
+    gradeReviewCard: (grade) => args.ws.gradeReviewCard(grade, args.nowIso)
   });
 }
 
@@ -97,6 +98,7 @@ export function useAppControllerReviewEditing(args: {
   hotkeys: ReturnType<typeof useCommandShortcutState>;
   isCurrentReviewItemGradable: boolean;
   isStudyMode: boolean;
+  nowIso: string;
   resumeReviewItem: () => void;
   reviewSourceTopicDeleteDialog: {
     isOpen: boolean;
@@ -111,6 +113,7 @@ export function useAppControllerReviewEditing(args: {
     isSourceTopicDeleteDialogOpen: args.reviewSourceTopicDeleteDialog.isOpen,
     isStudyMode: args.isStudyMode,
     isVirtualViewOpen: args.controller.virtualView.isVirtualViewOpen,
+    nowIso: args.nowIso,
     onResumeReviewItem: args.resumeReviewItem,
     onRequestDeleteSourceTopic: args.reviewSourceTopicDeleteDialog.requestDeleteSourceTopic,
     runtime: args.controller.runtime,

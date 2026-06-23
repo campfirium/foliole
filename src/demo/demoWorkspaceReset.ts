@@ -22,6 +22,7 @@ export function resetDemoWorkspaceSnapshot(pathname = window.location.pathname) 
     useWorkspaceStore.setState,
     useWorkspaceStore.getState,
     undefined,
-    browserLocalWorkspaceReviewPersistence
+    browserLocalWorkspaceReviewPersistence,
+    { startReviewSession: { includeScheduledFallback: true } }
   ));
 }

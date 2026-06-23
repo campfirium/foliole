@@ -88,6 +88,61 @@ it('opens the Demo day-clear dialog before starting a scheduled fallback session
   expect(result.current.content).toEqual({ day: 1, kind: 'demo-day-clear' });
 });
 
+it('does not open Demo day-clear while the current Flow surface is still active', () => {
+  installDemoState({ isDemo: true, previewDay: 0 });
+  const flowWindow = createFlowWindow({
+    dayBuckets: [{ dayOffset: 1, nodeIds: ['day-2-topic'] }],
+    dayOffsetByNodeId: { 'day-2-topic': 1 },
+    upcomingNodeIds: ['day-2-topic']
+  });
+  const { result } = renderHook(() =>
+    useReviewQueueEmptyDialogState(flowWindow, { allowDemoDayClear: false })
+  );
+
+  expect(result.current.content).toBeNull();
+  expect(result.current.shouldOpenBeforeStart).toBe(false);
+
+  act(() => result.current.openEmpty());
+
+  expect(result.current.content).toEqual({ kind: 'empty' });
+});
+
+it('opens Demo day-clear for a completed Flow even while study mode is active', () => {
+  installDemoState({ isDemo: true, previewDay: 0 });
+  const flowWindow = createFlowWindow({
+    dayBuckets: [{ dayOffset: 1, nodeIds: ['day-2-topic'] }],
+    dayOffsetByNodeId: { 'day-2-topic': 1 },
+    upcomingNodeIds: ['day-2-topic']
+  });
+  const { result } = renderHook(() =>
+    useReviewQueueEmptyDialogState(flowWindow, { allowDemoDayClear: false })
+  );
+
+  act(() => result.current.openClear());
+
+  expect(result.current.content).toEqual({ day: 1, kind: 'demo-day-clear' });
+});
+
+it('does not reopen the same Demo day-clear after the completed Flow dialog is closed', () => {
+  installDemoState({ isDemo: true, previewDay: 0 });
+  const flowWindow = createFlowWindow({
+    dayBuckets: [{ dayOffset: 1, nodeIds: ['day-2-topic'] }],
+    dayOffsetByNodeId: { 'day-2-topic': 1 },
+    upcomingNodeIds: ['day-2-topic']
+  });
+  let allowDemoDayClear = false;
+  const { result, rerender } = renderHook(() =>
+    useReviewQueueEmptyDialogState(flowWindow, { allowDemoDayClear })
+  );
+
+  act(() => result.current.openClear());
+  act(() => result.current.close());
+  allowDemoDayClear = true;
+  rerender();
+
+  expect(result.current.content).toBeNull();
+});
+
 it('keeps the normal all-clear dialog outside Demo day-clear state', () => {
   installDemoState({ isDemo: false, previewDay: 0 });
   const flowWindow = createFlowWindow({});

@@ -11,6 +11,7 @@ import {
 } from '../store/workspaceMutationRepository';
 
 import { createDemoExternalFolderProvider } from './demoExternalFolderProvider';
+import { installDemoResumeShell } from './demoResumeShell';
 import { createBrowserDemoRuntimeController } from './demoRuntimeController';
 import { installDemoUrlSync, resolveDemoLanguagePreferenceFromPath } from './demoUrlSync';
 import { DemoUrlSyncBridge } from './DemoUrlSyncBridge';
@@ -23,6 +24,7 @@ if (!rootElement) {
 }
 
 await installDemoWorkspaceSnapshot();
+installDemoResumeShell();
 installDemoRuntimeController(createBrowserDemoRuntimeController());
 installExternalFolderRuntimeProvider(createDemoExternalFolderProvider());
 installWorkspaceMutationRepository(createBrowserLocalWorkspaceMutationRepository());
