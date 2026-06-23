@@ -61,7 +61,7 @@ export function useWorkspaceTopicTreeAutoScroll(args: {
   scrollNodeId?: string | null;
   visibleRowsLength: number;
 }) {
-  const scrollNodeId = args.scrollNodeId ?? args.focusedNodeId;
+  const scrollNodeId = args.scrollNodeId === undefined ? args.focusedNodeId : args.scrollNodeId;
   useNodeTreeActiveItemScroll({
     activeNodeId: scrollNodeId,
     scopeKey: `${args.activeFolderId}:${args.visibleRowsLength}:${args.focusedRowIndex}:${scrollNodeId ?? 'none'}`,

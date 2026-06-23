@@ -4,6 +4,7 @@ import type { WorkspaceListNodesById } from '../../features/nodes/model/workspac
 import type { WorkspaceTopicTreeScrollPlacement } from './WorkspaceTopicTreeRows';
 
 export function resolveWorkspaceTopicTreeReviewScroll(args: {
+  activeFolderId: string;
   focusedNodeId: string | null;
   forceVisibleNodeId: string | null | undefined;
   nodesById: WorkspaceListNodesById;
@@ -19,6 +20,10 @@ export function resolveWorkspaceTopicTreeReviewScroll(args: {
   const focusedNode = args.focusedNodeId ? args.nodesById[args.focusedNodeId] : null;
   const parentNodeId = focusedNode?.parentNodeId ?? null;
   const parentRowIndex = findRowIndex(args.rows, parentNodeId);
+
+  if (parentNodeId === args.activeFolderId) {
+    return { placement: 'comfort', scrollNodeId: null };
+  }
 
   if (parentNodeId && parentRowIndex !== null) {
     return { placement: 'comfort', scrollNodeId: parentNodeId };

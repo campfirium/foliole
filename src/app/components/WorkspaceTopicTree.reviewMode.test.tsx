@@ -155,6 +155,45 @@ it('scrolls an offscreen review item into view without second-row anchoring', as
   await waitFor(() => expect(scrollContainer.scrollTop).toBe(222));
 });
 
+it('keeps folder-root review topics from moving the topic list anchor', async () => {
+  const nodesById = {
+    'earlier-topic': createNode({
+      id: 'earlier-topic',
+      parentNodeId: 'folder-a',
+      title: 'Earlier Topic'
+    }),
+    'review-item': createNode({
+      id: 'review-item',
+      parentNodeId: 'folder-a',
+      title: 'Review Item'
+    })
+  };
+
+  renderWithLocalization(
+    <WorkspaceTopicTree
+      activeFolderId="folder-a"
+      activeNodeId="review-item"
+      forceVisibleNodeId="review-item"
+      itemIds={['earlier-topic', 'review-item']}
+      nodesById={nodesById}
+      onOpenMoveToNode={() => undefined}
+      onSelectNode={() => undefined}
+    />
+  );
+
+  const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
+  const scrollContainer = itemColumn.querySelector('.app-scrollbar') as HTMLDivElement;
+  const reviewRow = within(itemColumn).getByRole('treeitem', { name: 'Review Item' });
+
+  Object.defineProperty(scrollContainer, 'clientHeight', { configurable: true, value: 100 });
+  Object.defineProperty(scrollContainer, 'scrollHeight', { configurable: true, value: 1000 });
+  Object.defineProperty(reviewRow, 'offsetTop', { configurable: true, value: 260 });
+  Object.defineProperty(reviewRow, 'offsetHeight', { configurable: true, value: 30 });
+  scrollContainer.scrollTop = 0;
+
+  await waitFor(() => expect(scrollContainer.scrollTop).toBe(0));
+});
+
 it('keeps a visible parent topic anchored for child review items', async () => {
   const nodesById = {
     'earlier-topic': createNode({ id: 'earlier-topic', title: 'Earlier Topic' }),

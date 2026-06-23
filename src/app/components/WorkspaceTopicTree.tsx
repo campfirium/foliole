@@ -140,6 +140,7 @@ function resolveWorkspaceTopicTreeScrollState(
   return {
     focusedRowIndex: focusedNodeId ? visibleRows.findIndex((row) => row.node.id === focusedNodeId) : -1,
     reviewScroll: resolveWorkspaceTopicTreeReviewScroll({
+      activeFolderId: props.activeFolderId,
       focusedNodeId,
       forceVisibleNodeId: props.forceVisibleNodeId,
       nodesById: props.nodesById,

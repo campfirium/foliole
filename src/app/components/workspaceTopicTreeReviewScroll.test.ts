@@ -41,6 +41,7 @@ it('uses the parent topic as the review anchor for plain child items', () => {
   });
 
   expect(resolveWorkspaceTopicTreeReviewScroll({
+    activeFolderId: 'folder-a',
     focusedNodeId: 'review-item',
     forceVisibleNodeId: 'review-item',
     nodesById: { 'review-item': reviewItem, 'source-topic': sourceTopic },
@@ -65,6 +66,7 @@ it('keeps the source topic as the review anchor even when a derived child is dis
   });
 
   expect(resolveWorkspaceTopicTreeReviewScroll({
+    activeFolderId: 'folder-a',
     focusedNodeId: 'review-item',
     forceVisibleNodeId: 'review-item',
     nodesById: { 'review-item': reviewItem, 'source-topic': sourceTopic },
@@ -80,9 +82,26 @@ it('falls back to the focused child when the parent is not visible', () => {
   });
 
   expect(resolveWorkspaceTopicTreeReviewScroll({
+    activeFolderId: 'folder-a',
     focusedNodeId: 'review-item',
     forceVisibleNodeId: 'review-item',
     nodesById: { 'review-item': reviewItem },
     rows: createRows([reviewItem])
   })).toEqual({ placement: 'comfort', scrollNodeId: 'review-item' });
+});
+
+it('does not auto-scroll root topics whose parent is the active folder', () => {
+  const reviewItem = createNode({
+    id: 'review-item',
+    parentNodeId: 'folder-a',
+    title: 'Review Item'
+  });
+
+  expect(resolveWorkspaceTopicTreeReviewScroll({
+    activeFolderId: 'folder-a',
+    focusedNodeId: 'review-item',
+    forceVisibleNodeId: 'review-item',
+    nodesById: { 'review-item': reviewItem },
+    rows: createRows([reviewItem])
+  })).toEqual({ placement: 'comfort', scrollNodeId: null });
 });
