@@ -69,9 +69,11 @@ export interface DemoPackReviewScheduleSeed {
 
 export interface DemoPackTopic {
   blocks: DemoPackBlock[];
+  childTopicIds: string[];
   description: string;
   highlights: DemoPackHighlight[];
   id: string;
+  parentId: string | null;
   readingSeed: DemoPackReadingSeed;
   reviewItems: DemoPackReviewItem[];
   reviewScheduleSeeds: DemoPackReviewScheduleSeed[];
@@ -125,8 +127,9 @@ export function assertDemoPack(pack: DemoPack): DemoPack {
     }
   }
   const slugs = new Set<string>();
+  const ids = new Set(pack.topics.map((topic) => topic.id));
   for (const topic of pack.topics) {
-    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(topic.slug)) {
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)*$/.test(topic.slug)) {
       throw new Error(`Invalid Demo Pack topic slug: ${topic.slug}`);
     }
     if (slugs.has(topic.slug)) {
@@ -135,6 +138,12 @@ export function assertDemoPack(pack: DemoPack): DemoPack {
     slugs.add(topic.slug);
     if (!topic.title.trim() || !topic.blocks.length) {
       throw new Error(`Demo Pack topic is incomplete: ${topic.id}`);
+    }
+    if (topic.parentId !== null && !ids.has(topic.parentId)) {
+      throw new Error(`Demo Pack topic references missing parent: ${topic.id}`);
+    }
+    for (const childTopicId of topic.childTopicIds) {
+      if (!ids.has(childTopicId)) throw new Error(`Demo Pack topic references missing child: ${childTopicId}`);
     }
     assertReadingSeed(topic);
     assertReviewScheduleSeeds(topic);

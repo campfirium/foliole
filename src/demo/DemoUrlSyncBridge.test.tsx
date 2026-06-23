@@ -5,7 +5,7 @@ import { LocalizationProvider, useLocalization } from '../shared/localization/Lo
 import { preloadTranslationCatalog } from '../shared/localization/translations';
 import { createInitialWorkspaceState, useWorkspaceStore } from '../store/workspaceStore';
 
-import { DEFAULT_DEMO_TOPIC } from './demoContent';
+import { DEFAULT_DEMO_TOPIC, getDemoTopicNodeId } from './demoContent';
 import { DemoUrlSyncBridge } from './DemoUrlSyncBridge';
 
 const DEMO_TOPIC = DEFAULT_DEMO_TOPIC;
@@ -29,10 +29,10 @@ beforeAll(async () => {
 });
 
 beforeEach(() => {
-  window.history.replaceState(null, '', `/en/demo/${DEMO_TOPIC.slug}/`);
+  window.history.replaceState(null, '', `/en/guides/${DEMO_TOPIC.slug}/`);
   useWorkspaceStore.setState({
     ...createInitialWorkspaceState(new Date('2026-06-17T00:00:00.000Z')),
-    activeNodeId: `demo-${DEMO_TOPIC.slug}`
+    activeNodeId: getDemoTopicNodeId(DEMO_TOPIC)
   });
 });
 
@@ -52,7 +52,7 @@ it('keeps the Demo URL prefix aligned with runtime locale changes', async () => 
     expect(replaceState).toHaveBeenCalledWith(
       null,
       '',
-      `/zh-hans/demo/${DEMO_TOPIC.slug}/`
+      `/zh-hans/guides/${DEMO_TOPIC.slug}/`
     );
   });
   replaceState.mockRestore();

@@ -47,16 +47,17 @@ describe('windows dev services', () => {
       stateDirectory: 'D:/repo/.tmp/windows-dev-services'
     });
 
-    expect(DEMO_PREVIEW_PATH).toBe('/en/demo/focused-reading-review/');
-    expect(launch.readyUrl).toBe('http://127.0.0.1:43077/en/demo/focused-reading-review/');
+    expect(DEMO_PREVIEW_PATH).toBe('/en/demo/');
+    expect(launch.readyUrl).toBe('http://127.0.0.1:43210/en/demo/');
   });
 
-  it('keeps the Demo browser preview URL on the managed service route', async () => {
+  it('routes the Demo browser preview through the site preview refresh', async () => {
     const previewScript = await readFile(path.join(REPO_ROOT, 'scripts/windows/demo-web-preview.mjs'), 'utf8');
 
-    expect(previewScript).toContain("import { DEMO_PREVIEW_PATH, runDevServicesCli }");
-    expect(previewScript).toContain('`http://127.0.0.1:43077${DEMO_PREVIEW_PATH}`');
-    expect(previewScript).not.toContain('127.0.0.1:43077/demo/');
+    expect(previewScript).toContain("import { DEMO_SITE_PREVIEW_URL }");
+    expect(previewScript).toContain("import { runDemoSitePreview }");
+    expect(previewScript).not.toContain('runDevServicesCli');
+    expect(previewScript).not.toContain('43077');
   });
 
   it('exposes package scripts for controlled service start instead of raw Vite terminals', async () => {

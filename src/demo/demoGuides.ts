@@ -5,6 +5,8 @@ import type { Node, NodeReadingProfile } from '../features/nodes/model/nodeTypes
 import { HOME_NODE_ID, INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import type { WorkspacePersistedState } from '../store/workspaceStore';
 
+import { resolveDemoLocalePathSegment } from './demoRoutes';
+
 export const DEMO_GUIDES_NODE_ID = 'demo-guides';
 export const DEMO_GUIDES_TITLE = 'Guides';
 export const DEMO_GUIDES_WELCOME_NODE_ID_BY_LOCALE = {
@@ -13,16 +15,12 @@ export const DEMO_GUIDES_WELCOME_NODE_ID_BY_LOCALE = {
 } as const satisfies Record<GuidedSampleLocale, string>;
 
 export function resolveDemoGuideLocaleFromPath(pathname: string): GuidedSampleLocale {
-  return pathname.toLowerCase().startsWith('/zh-hans/demo/') ? 'zh-CN' : 'en-US';
+  return resolveDemoLocalePathSegment(pathname) === 'zh-hans' ? 'zh-CN' : 'en-US';
 }
 
 export function getDemoGuidesRequiredNodeIds(pathname: string) {
-  const locale = resolveDemoGuideLocaleFromPath(pathname);
-  return [
-    DEMO_GUIDES_NODE_ID,
-    DEMO_GUIDES_WELCOME_NODE_ID_BY_LOCALE[locale],
-    ...getDemoGuidesWelcomeChildNodeIds(locale)
-  ];
+  void pathname;
+  return [DEMO_GUIDES_NODE_ID];
 }
 
 export function moveDemoGuidesBeforeInbox<T extends WorkspacePersistedState>(snapshot: T): T {

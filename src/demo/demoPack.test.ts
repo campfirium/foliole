@@ -40,6 +40,13 @@ describe('Demo Pack contract', () => {
     const pack = clonePack();
     const topic = pack.topics[0];
     if (!topic) throw new Error('Missing fixture topic.');
+    topic.reviewItems = [{
+      answer: 'Answer',
+      id: `${topic.id}.sample-item`,
+      kind: 'item',
+      prompt: 'Prompt',
+      title: 'Sample item'
+    }];
     topic.reviewScheduleSeeds = [];
 
     expect(() => assertDemoPack(pack)).toThrow('review schedule seed count does not match review items');

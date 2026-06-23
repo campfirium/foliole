@@ -14,6 +14,7 @@ import {
   type DemoPackReviewItem
 } from '../../src/demo/demoPack.js';
 
+import { assertUniqueSlugs, fallbackSlug, readExistingTopicSlugs } from './demo-pack-existing-slugs.js';
 import type { ExportArgs, NodeRow, WarningRow } from './demo-pack-export-types.js';
 import { createDemoReadingSeed, createDemoReviewScheduleSeed } from './demo-pack-schedule-seeds.js';
 import { writeDemoPack } from './write-demo-pack.js';
@@ -51,7 +52,8 @@ export async function exportDemoPack(args: ExportArgs) {
     const root = resolveRoot(db, args);
     const rows = queryVisibleSubtreeRows(db, root.id);
     const warnings = querySkippedDescendants(db, root.id).map((row) => `${row.reason}: ${row.title} (${row.id})`);
-    const pack = buildDemoPack(root, rows, warnings, args.sourceLocale ?? DEMO_SOURCE_LOCALE_DEFAULT);
+    const existingSlugs = await readExistingTopicSlugs(args.outputPath);
+    const pack = buildDemoPack(root, rows, warnings, args.sourceLocale ?? DEMO_SOURCE_LOCALE_DEFAULT, existingSlugs);
     await writeDemoPack(args.outputPath, pack);
     return pack;
   } finally {
@@ -104,7 +106,13 @@ function querySkippedDescendants(db: import('better-sqlite3').Database, rootId: 
   `).all(rootId) as WarningRow[];
 }
 
-function buildDemoPack(root: { id: string; title: string }, rows: NodeRow[], warnings: string[], sourceLocale: string): DemoPack {
+function buildDemoPack(
+  root: { id: string; title: string },
+  rows: NodeRow[],
+  warnings: string[],
+  sourceLocale: string,
+  existingSlugs: ReadonlyMap<string, string>
+): DemoPack {
   const byId = new Map(rows.map((row) => [row.id, row]));
   const rootRow = byId.get(root.id);
   if (!rootRow) throw new Error('Demo root is not exportable.');
@@ -112,8 +120,9 @@ function buildDemoPack(root: { id: string; title: string }, rows: NodeRow[], war
   const topics = orderedDescendants(root.id, childIds)
     .map((id) => byId.get(id))
     .filter((row): row is NodeRow => Boolean(row && isPublishTopic(row)))
-    .map((topic, index) => buildTopic(topic, index, childIds, byId, warnings));
+    .map((topic, index) => buildTopic(topic, index, childIds, byId, warnings, existingSlugs));
   if (!topics.length) throw new Error('Demo root does not contain publishable topics.');
+  assertUniqueSlugs(topics);
   return {
     contractVersion: DEMO_PACK_CONTRACT_VERSION,
     generatedAt: new Date().toISOString(),
@@ -150,10 +159,17 @@ function isPublishTopic(row: NodeRow) {
   return row.kind === 'topic' && parseStoredAnchorLink(row.anchor_link)?.kind !== 'highlight';
 }
 
-function buildTopic(topic: NodeRow, index: number, childIds: Map<string, string[]>, byId: Map<string, NodeRow>, warnings: string[]) {
+function buildTopic(
+  topic: NodeRow,
+  index: number,
+  childIds: Map<string, string[]>,
+  byId: Map<string, NodeRow>,
+  warnings: string[],
+  existingSlugs: ReadonlyMap<string, string>
+) {
   const children = (childIds.get(topic.id) ?? []).map((id) => byId.get(id)).filter((row): row is NodeRow => Boolean(row));
   const content = decodeTextBodyBlobData(topic.body_blob_data) ?? topic.content;
-  const slug = uniqueSlug(topic.title, topic.id, index);
+  const slug = existingSlugs.get(topic.id) ?? fallbackSlug(topic.title, topic.id, index);
   const reviewItems = children.flatMap(reviewItemFromNode);
   return {
     id: topic.id,
@@ -209,11 +225,6 @@ function markdownBlocks(slug: string, content: string, fallbackTitle: string): D
     kind: /^#{1,3}\s+/.test(text) ? 'heading' : 'paragraph',
     text: text.replace(/^#{1,3}\s+/, '')
   }));
-}
-
-function uniqueSlug(title: string, id: string, index: number) {
-  const base = title.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-  return base || `topic-${index + 1}-${id.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve('scripts/demo/export-demo-pack.ts')) {

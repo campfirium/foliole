@@ -1,9 +1,10 @@
 import type { AppLanguagePreference, AppLocale } from '../shared/localization/appLanguage';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
-import { canonicalDemoPath, DEMO_TOPICS } from './demoContent';
+import { canonicalDemoPath, DEMO_TOPICS, getDemoTopicNodeId } from './demoContent';
+import { canonicalGuidePath, resolveDemoLocalePathSegment } from './demoRoutes';
 
-const DEMO_ROUTE_LOCALE_PATTERN = /^\/([a-z]{2}(?:-[a-z]+)?)\/demo\//i;
+const DEMO_ROUTE_LOCALE_PATTERN = /^\/([a-z]{2}(?:-[a-z]+)?)\/(?:demo|guides)\//i;
 
 export function installDemoUrlSync() {
   let previousNodeId = useWorkspaceStore.getState().activeNodeId;
@@ -17,9 +18,8 @@ export function installDemoUrlSync() {
 }
 
 export function syncDemoUrlToNode(nodeId: string | null, locale = resolveCurrentLocalePathSegment()) {
-  const topic = DEMO_TOPICS.find((demoTopic) => `demo-${demoTopic.slug}` === nodeId);
-  if (!topic) return;
-  const nextPath = canonicalDemoPath(topic.slug, locale);
+  const topic = DEMO_TOPICS.find((demoTopic) => getDemoTopicNodeId(demoTopic) === nodeId);
+  const nextPath = topic ? canonicalGuidePath(topic.slug, locale) : canonicalDemoPath(locale);
   if (window.location.pathname === nextPath) return;
   window.history.replaceState(window.history.state, '', nextPath);
 }
@@ -37,6 +37,5 @@ export function demoPathSegmentFromLocale(locale: AppLocale) {
 }
 
 function resolveCurrentLocalePathSegment() {
-  const match = DEMO_ROUTE_LOCALE_PATTERN.exec(window.location.pathname);
-  return match?.[1]?.toLowerCase() ?? 'en';
+  return resolveDemoLocalePathSegment(window.location.pathname);
 }

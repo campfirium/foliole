@@ -13,7 +13,7 @@ import { createDemoWorkspaceSnapshot } from './demoWorkspaceSnapshot';
 
 describe('Demo Markdown import', () => {
   it('imports pasted Markdown as an active reading topic', () => {
-    const snapshot = createDemoWorkspaceSnapshot('/demo/welcome-to-foliole/', new Date('2026-06-17T00:00:00.000Z'));
+    const snapshot = createDemoWorkspaceSnapshot('/en/demo/', new Date('2026-06-17T00:00:00.000Z'));
     const entry = createDemoMarkdownPasteEntry('# Local Topic\n\nBody');
 
     const result = applyDemoMarkdownImport(snapshot, entry ? [entry] : [], '2026-06-17T10:00:00.000Z');
@@ -35,7 +35,7 @@ describe('Demo Markdown import', () => {
   });
 
   it('imports Markdown files as a Folder tree without overwriting existing topics', () => {
-    const snapshot = createDemoWorkspaceSnapshot('/demo/welcome-to-foliole/', new Date('2026-06-17T00:00:00.000Z'));
+    const snapshot = createDemoWorkspaceSnapshot('/en/demo/', new Date('2026-06-17T00:00:00.000Z'));
     const firstEntry = createDemoMarkdownFileEntry({
       markdown: '# First\n\nBody',
       name: 'first.md',

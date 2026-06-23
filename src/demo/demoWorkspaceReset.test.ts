@@ -2,11 +2,12 @@ import { expect, it, vi } from 'vitest';
 
 import { createInitialWorkspaceState, useWorkspaceStore, WORKSPACE_STORAGE_KEY } from '../store/workspaceStore';
 
-import { canonicalDemoPath, DEMO_TOPICS } from './demoContent';
+import { canonicalGuidePath, DEMO_TOPICS, getDemoTopicNodeId } from './demoContent';
 import { DEMO_GUIDES_NODE_ID } from './demoGuides';
 import { DEMO_CAPTURED_VERSION, DEMO_SNAPSHOT_VERSION, readDemoPreviewDay, writeDemoPreviewDay } from './demoLocalStorage';
 import { createBrowserDemoRuntimeController } from './demoRuntimeController';
 import { resetDemoWorkspaceSnapshot } from './demoWorkspaceReset';
+import { createDemoWorkspaceSnapshot } from './demoWorkspaceSnapshot';
 
 function stubDemoStorage(storage: Map<string, string>, pathname: string) {
   vi.stubGlobal('window', {
@@ -27,99 +28,10 @@ function stubDemoStorage(storage: Map<string, string>, pathname: string) {
   });
 }
 
-function createPollutedDemoLearningState(input: {
-  item: NonNullable<(typeof DEMO_TOPICS)[number]['reviewItems'][number]>;
-  itemNodeId: string;
-  topic: NonNullable<(typeof DEMO_TOPICS)[number]>;
-  topicNodeId: string;
-}) {
-  const topicNode = createPollutedDemoTopicNode(input.topic, input.topicNodeId);
-  const itemNode = createPollutedDemoReviewItemNode(input.item, input.itemNodeId, input.topicNodeId);
-  return {
-    ...createInitialWorkspaceState(new Date('2026-06-19T00:00:00.000Z')),
-    activeNodeId: input.itemNodeId,
-    nodeOrder: [input.topicNodeId, input.itemNodeId],
-    nodesById: {
-      [input.topicNodeId]: topicNode,
-      [input.itemNodeId]: itemNode
-    },
-    reviewSession: {
-      currentNodeId: input.itemNodeId,
-      isAnswerRevealed: true,
-      queueNodeIds: [input.itemNodeId],
-      soonNodeIds: [input.topicNodeId],
-      totalNodeCount: 1
-    },
-    reviewSessionMode: 'reading-only' as const
-  };
-}
-
-function createPollutedDemoTopicNode(topic: NonNullable<(typeof DEMO_TOPICS)[number]>, topicNodeId: string) {
-  return {
-    id: topicNodeId,
-    parentNodeId: null,
-    kind: 'topic' as const,
-    title: topic.title,
-    isTitleManual: true,
-    content: '',
-    openingText: null,
-    reveal: null,
-    reading: {
-      intervalDurationMs: 0,
-      intervalGrowthFactor: 1,
-      lastHandledAt: '2026-06-18T00:00:00.000Z',
-      nextAt: '2026-06-25T00:00:00.000Z',
-      priority: 9,
-      readingPosition: 99,
-      repetitionCount: 99,
-      state: 'dismissed' as const
-    },
-    review: null,
-    bodyStatus: 'ready' as const,
-    hasContent: true,
-    createdAt: '2026-06-19T00:00:00.000Z',
-    updatedAt: '2026-06-19T00:00:00.000Z'
-  };
-}
-
-function createPollutedDemoReviewItemNode(
-  item: NonNullable<(typeof DEMO_TOPICS)[number]['reviewItems'][number]>,
-  itemNodeId: string,
-  topicNodeId: string
-) {
-  return {
-    id: itemNodeId,
-    parentNodeId: topicNodeId,
-    kind: 'item' as const,
-    title: item.title,
-    isTitleManual: true,
-    content: item.prompt,
-    openingText: item.prompt,
-    reveal: item.answer,
-    reading: null,
-    review: {
-      due: '2026-06-25T00:00:00.000Z',
-      lastReviewAt: '2026-06-20T00:00:00.000Z',
-      state: 2 as const,
-      stability: 10,
-      difficulty: 10,
-      elapsedDays: 3,
-      scheduledDays: 5,
-      reps: 99,
-      lapses: 9
-    },
-    bodyStatus: 'ready' as const,
-    hasContent: true,
-    hasReveal: item.answer !== null,
-    createdAt: '2026-06-19T00:00:00.000Z',
-    updatedAt: '2026-06-19T00:00:00.000Z'
-  };
-}
-
 it('forces the current Demo store back to the official snapshot', () => {
-  const topic = DEMO_TOPICS[1];
-  if (!topic) throw new Error('Demo reset test requires a second topic.');
-  const pathname = canonicalDemoPath(topic.slug);
+  const topic = DEMO_TOPICS[0];
+  if (!topic) throw new Error('Demo reset test requires a topic.');
+  const pathname = canonicalGuidePath(topic.slug);
   const storage = new Map<string, string>();
   stubDemoStorage(storage, pathname);
   useWorkspaceStore.setState({
@@ -133,30 +45,49 @@ it('forces the current Demo store back to the official snapshot', () => {
 
   const state = useWorkspaceStore.getState();
   const payload = JSON.parse(storage.get(WORKSPACE_STORAGE_KEY) ?? 'null');
-  expect(state.activeNodeId).toBe(`demo-${topic.slug}`);
-  expect(state.nodesById[`demo-${topic.slug}`]).toMatchObject({
+  expect(state.activeNodeId).toBe(getDemoTopicNodeId(topic));
+  expect(state.nodesById[getDemoTopicNodeId(topic)]).toMatchObject({
     bodyStatus: 'ready',
     hasContent: true,
     parentNodeId: DEMO_GUIDES_NODE_ID,
     title: topic.title
   });
   expect(state.nodesById[DEMO_GUIDES_NODE_ID]).toMatchObject({ kind: 'folder', title: 'Guides' });
-  expect(payload.state.activeNodeId).toBe(`demo-${topic.slug}`);
+  expect(payload.state.activeNodeId).toBe(getDemoTopicNodeId(topic));
   expect(storage.get(DEMO_SNAPSHOT_VERSION)).toBe(DEMO_CAPTURED_VERSION);
   vi.unstubAllGlobals();
 });
 
 it('resets Demo learning state back to the official seed', () => {
   const topic = DEMO_TOPICS[0];
-  const item = topic?.reviewItems[0];
-  const schedule = topic?.reviewScheduleSeeds[0];
-  if (!topic || !item || !schedule) throw new Error('Demo reset test requires a topic with review items.');
-  const pathname = canonicalDemoPath(topic.slug);
-  const topicNodeId = `demo-${topic.slug}`;
-  const itemNodeId = `demo-${item.id}`;
+  if (!topic) throw new Error('Demo reset test requires a topic.');
+  const pathname = canonicalGuidePath(topic.slug);
+  const topicNodeId = getDemoTopicNodeId(topic);
   const storage = new Map<string, string>();
   stubDemoStorage(storage, pathname);
-  useWorkspaceStore.setState(createPollutedDemoLearningState({ item, itemNodeId, topic, topicNodeId }));
+  const pollutedState = createDemoWorkspaceSnapshot(pathname, new Date('2026-06-19T00:00:00.000Z'));
+  pollutedState.nodesById[topicNodeId] = {
+    ...pollutedState.nodesById[topicNodeId]!,
+    reading: {
+      intervalDurationMs: 0,
+      intervalGrowthFactor: 1,
+      lastHandledAt: '2026-06-18T00:00:00.000Z',
+      nextAt: '2026-06-25T00:00:00.000Z',
+      priority: 9,
+      readingPosition: 99,
+      repetitionCount: 99,
+      state: 'dismissed'
+    }
+  };
+  useWorkspaceStore.setState({
+    ...pollutedState,
+    reviewSession: {
+      ...pollutedState.reviewSession,
+      isAnswerRevealed: true,
+      soonNodeIds: [topicNodeId]
+    },
+    reviewSessionMode: 'reading-only'
+  });
 
   resetDemoWorkspaceSnapshot(pathname);
 
@@ -171,20 +102,14 @@ it('resets Demo learning state back to the official seed', () => {
     repetitionCount: topic.readingSeed.repetitionCount,
     state: topic.readingSeed.state
   });
-  expect(state.nodesById[itemNodeId]?.review).toMatchObject({
-    lapses: schedule.lapses,
-    reps: schedule.reps,
-    state: schedule.state
-  });
   expect(payload.state.nodesById[topicNodeId].reading.state).toBe(topic.readingSeed.state);
-  expect(payload.state.nodesById[itemNodeId].review.reps).toBe(schedule.reps);
   vi.unstubAllGlobals();
 });
 
 it('clears browser-local Demo state and immediately reinstalls the official snapshot', async () => {
   const topic = DEMO_TOPICS[0];
   if (!topic) throw new Error('Demo reset test requires a topic.');
-  const pathname = canonicalDemoPath(topic.slug);
+  const pathname = canonicalGuidePath(topic.slug);
   const storage = new Map<string, string>();
   stubDemoStorage(storage, pathname);
   writeDemoPreviewDay(4);
@@ -199,7 +124,7 @@ it('clears browser-local Demo state and immediately reinstalls the official snap
 
   expect(cleared).toBe(true);
   expect(readDemoPreviewDay()).toBe(0);
-  expect(useWorkspaceStore.getState().activeNodeId).toBe(`demo-${topic.slug}`);
+  expect(useWorkspaceStore.getState().activeNodeId).toBe(getDemoTopicNodeId(topic));
   expect(storage.get(DEMO_SNAPSHOT_VERSION)).toBe(DEMO_CAPTURED_VERSION);
   vi.unstubAllGlobals();
 });
@@ -208,7 +133,7 @@ it('combines natural elapsed days with Demo manual day advances', () => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-06-20T00:00:00.000Z'));
   const storage = new Map<string, string>();
-  stubDemoStorage(storage, canonicalDemoPath(DEMO_TOPICS[0]!.slug));
+  stubDemoStorage(storage, canonicalGuidePath(DEMO_TOPICS[0]!.slug));
   storage.set('foliole-demo-started-at-v1', '2026-06-18T00:00:00.000Z');
   writeDemoPreviewDay(1);
 

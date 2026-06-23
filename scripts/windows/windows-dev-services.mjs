@@ -6,10 +6,13 @@ import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { DEMO_PREVIEW_HOST, DEMO_PREVIEW_PATH, DEMO_PREVIEW_PORT } from './demo-preview-config.mjs';
+
+export { DEMO_PREVIEW_PATH } from './demo-preview-config.mjs';
+
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const stateRoot = path.join(repoRoot, '.tmp', 'windows-dev-services');
-const host = '127.0.0.1';
-export const DEMO_PREVIEW_PATH = '/en/demo/focused-reading-review/';
+const host = DEMO_PREVIEW_HOST;
 
 export const SERVICES = {
   companion: {
@@ -19,8 +22,17 @@ export const SERVICES = {
     readyPath: '/'
   },
   demo: {
-    args: ['node_modules/vite/bin/vite.js', '--config', 'vite.demo.config.ts', '--host', host, '--port', '43077', '--strictPort'],
-    port: 43077,
+    args: [
+      'node_modules/vite/bin/vite.js',
+      '--config',
+      'vite.demo.config.ts',
+      '--host',
+      host,
+      '--port',
+      String(DEMO_PREVIEW_PORT),
+      '--strictPort'
+    ],
+    port: DEMO_PREVIEW_PORT,
     readyPath: DEMO_PREVIEW_PATH
   }
 };

@@ -4,23 +4,21 @@ import {
   createInitialWorkspaceState,
   useWorkspaceStore,
   WORKSPACE_STORAGE_KEY,
-  type ReviewSessionState,
   type WorkspacePersistedState
 } from '../store/workspaceStore';
 import { createWorkspaceReviewActions } from '../store/workspaceStoreReviewActions';
 
-import { DEFAULT_DEMO_TOPIC, DEMO_TOPICS, type DemoTopic } from './demoContent';
+import { DEFAULT_DEMO_TOPIC, DEMO_TOPICS, getDemoTopicsForLocale, getDemoTopicNodeId, type DemoTopic } from './demoContent';
 import {
   createDemoGuidesNode,
-  createDemoGuidesWelcomeChildNodes,
-  createDemoGuidesWelcomeNode,
   DEMO_GUIDES_NODE_ID,
   getDemoGuidesRequiredNodeIds,
-  moveDemoGuidesBeforeInbox,
-  resolveDemoGuideLocaleFromPath
+  moveDemoGuidesBeforeInbox
 } from './demoGuides';
 import { DEMO_CAPTURED_VERSION, DEMO_SNAPSHOT_VERSION } from './demoLocalStorage';
 import type { DemoPackReviewItem, DemoPackReviewScheduleSeed } from './demoPack';
+import { isLocaleDemoPath, resolveDemoLocalePathSegment, resolveGuideSlugFromPath } from './demoRoutes';
+import { createDemoReviewSession } from './demoWorkspaceSession';
 import { repairDemoWorkspacePayload } from './demoWorkspaceSnapshotRepair';
 
 export function resolveDemoTopicFromPath(pathname: string, topics: DemoTopic[] = DEMO_TOPICS) {
@@ -31,20 +29,18 @@ export function resolveDemoTopicFromPath(pathname: string, topics: DemoTopic[] =
 }
 
 function resolveDemoSlugFromPath(pathname: string) {
-  if (pathname === '/demo/') return DEFAULT_DEMO_TOPIC?.slug;
-  return /^\/(?:[a-z]{2}(?:-[a-z]+)?\/)?demo\/([^/]+)\/?$/i.exec(pathname)?.[1];
+  if (isLocaleDemoPath(pathname)) return DEFAULT_DEMO_TOPIC?.slug;
+  return resolveGuideSlugFromPath(pathname);
 }
 
 export function createDemoWorkspaceSnapshot(pathname: string, now = new Date()): WorkspacePersistedState {
   const initial = createInitialWorkspaceState(now);
   const timestamp = now.toISOString();
-  const locale = resolveDemoGuideLocaleFromPath(pathname);
-  const activeTopic = resolveDemoTopicFromPath(pathname);
-  const welcomeNode = createDemoGuidesWelcomeNode(locale, timestamp);
-  const welcomeChildNodes = createDemoGuidesWelcomeChildNodes(locale, timestamp);
-  const demoTopicNodes = createDemoTopicNodes(now);
-  const officialNodes = [welcomeNode, ...welcomeChildNodes, ...demoTopicNodes];
-  const guideChildNodeIds = [...DEMO_TOPICS.map((topic) => getDemoTopicNodeId(topic)), welcomeNode.id];
+  const topics = getDemoTopicsForLocale(resolveDemoLocalePathSegment(pathname));
+  const activeTopic = resolveDemoTopicFromPath(pathname, topics);
+  const demoTopicNodes = createDemoTopicNodes(now, topics);
+  const officialNodes = demoTopicNodes;
+  const guideChildNodeIds = topics.filter((topic) => topic.parentId === null).map((topic) => getDemoTopicNodeId(topic));
   const allNodes = [createDemoGuidesNode(guideChildNodeIds, timestamp), ...officialNodes];
   const activeNodeId = getDemoTopicNodeId(activeTopic);
   const snapshot = moveDemoGuidesBeforeInbox(ensureInboxNodeInSnapshot({
@@ -63,19 +59,20 @@ export function createDemoWorkspaceSnapshot(pathname: string, now = new Date()):
   return snapshot;
 }
 
-function createDemoTopicNodes(now: Date) {
+function createDemoTopicNodes(now: Date, topics: DemoTopic[] = DEMO_TOPICS) {
   const timestamp = now.toISOString();
-  return DEMO_TOPICS.flatMap((topic) => {
+  return topics.flatMap((topic) => {
     const topicNodeId = getDemoTopicNodeId(topic);
+    const childTopicNodeIds = topic.childTopicIds.map((topicId) => `demo-${topicId}`);
     const itemNodes = topic.reviewItems.map((item) => createDemoReviewItemNode(item, topicNodeId, topic, now));
     return [
       {
         id: topicNodeId,
-        parentNodeId: DEMO_GUIDES_NODE_ID,
+        parentNodeId: topic.parentId ? `demo-${topic.parentId}` : DEMO_GUIDES_NODE_ID,
         kind: 'topic' as const,
         title: topic.title,
         isTitleManual: true,
-        manualChildOrder: itemNodes.map((node) => node.id),
+        manualChildOrder: [...childTopicNodeIds, ...itemNodes.map((node) => node.id)],
         content: renderDemoTopicMarkdown(topic),
         openingText: topic.summary,
         reveal: null,
@@ -135,11 +132,10 @@ function createDemoReviewItemNode(item: DemoPackReviewItem, parentNodeId: string
 function renderDemoTopicMarkdown(topic: DemoTopic) {
   return [
     `# ${topic.title}`,
-    topic.summary,
-    ...topic.sections.flatMap((section) => [
-      `## ${section.heading}`,
-      ...section.body
-    ])
+    ...topic.blocks.map((block) => {
+      if (block.kind === 'heading') return `## ${block.text}`;
+      return block.text;
+    })
   ].join('\n\n');
 }
 
@@ -155,10 +151,6 @@ function resolveDemoRelativeTime(now: Date, dayOffset: number) {
   const date = new Date(now.getTime());
   date.setUTCDate(date.getUTCDate() + dayOffset);
   return date.toISOString();
-}
-
-function getDemoTopicNodeId(topic: DemoTopic) {
-  return `demo-${topic.slug}`;
 }
 
 export async function installDemoWorkspaceSnapshot(pathname = window.location.pathname) {
@@ -209,10 +201,12 @@ function isCompatibleDemoWorkspaceState(state: Partial<WorkspacePersistedState> 
   if (state.activeNodeId !== null && state.activeNodeId !== undefined && !state.nodesById[state.activeNodeId]) {
     return false;
   }
+  const topics = getDemoTopicsForLocale(resolveDemoLocalePathSegment(pathname));
   return Boolean(
     state.nodeOrder.includes(INBOX_NODE_ID) &&
     isDemoGuidesOrderedBeforeInbox(state.nodeOrder) &&
-    getDemoGuidesRequiredNodeIds(pathname).every((nodeId) => state.nodesById?.[nodeId])
+    getDemoGuidesRequiredNodeIds(pathname).every((nodeId) => state.nodesById?.[nodeId]) &&
+    topics.every((topic) => state.nodesById?.[getDemoTopicNodeId(topic)]?.title === topic.title)
   );
 }
 
@@ -220,17 +214,6 @@ function isDemoGuidesOrderedBeforeInbox(nodeOrder: readonly string[]) {
   const guidesIndex = nodeOrder.indexOf('demo-guides');
   const inboxIndex = nodeOrder.indexOf(INBOX_NODE_ID);
   return guidesIndex >= 0 && inboxIndex >= 0 && guidesIndex < inboxIndex;
-}
-
-function createDemoReviewSession(activeNodeId: string, timestamp: string): ReviewSessionState {
-  return {
-    currentNodeId: activeNodeId,
-    currentItemStartedAt: timestamp,
-    isAnswerRevealed: false,
-    queueNodeIds: [activeNodeId],
-    sessionStartedAt: timestamp,
-    totalNodeCount: 1
-  };
 }
 
 function requireDemoTopic(topic: DemoTopic | undefined) {

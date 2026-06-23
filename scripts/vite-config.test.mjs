@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import companionViteConfig, { unwrapCssCascadeLayersForLegacyWebView } from '../vite.companion.config.ts';
 import demoViteConfig, {
   demoManifestPlugin,
+  filterDemoModulePreloadDependencies,
   isDemoCanonicalRoutePath,
   normalizeDemoCanonicalRouteHtml
 } from '../vite.demo.config.ts';
@@ -74,13 +75,27 @@ describe('vite config', () => {
     expect(normalizePath(demoViteConfig.root)).toMatch(/src\/demo$/);
     expect(normalizePath(demoViteConfig.build?.outDir)).toMatch(/dist\/demo$/);
     expect(demoViteConfig.build?.emptyOutDir).toBe(true);
+    expect(demoViteConfig.build?.modulePreload?.resolveDependencies).toBe(filterDemoModulePreloadDependencies);
+  });
+
+  it('keeps Demo HTML from preloading non-critical JavaScript dependencies', () => {
+    expect(filterDemoModulePreloadDependencies(
+      'assets/index-demo.js',
+      ['assets/App-a.js', 'assets/index-b.css', 'assets/font.woff2'],
+      { hostType: 'html' }
+    )).toEqual(['assets/index-b.css', 'assets/font.woff2']);
+    expect(filterDemoModulePreloadDependencies(
+      'assets/App-a.js',
+      ['assets/panel.js', 'assets/panel.css'],
+      { hostType: 'js' }
+    )).toEqual(['assets/panel.js', 'assets/panel.css']);
   });
 
   it('recognizes Demo canonical locale routes for dev serving only', () => {
-    expect(isDemoCanonicalRoutePath('/en/demo/focused-reading-review/')).toBe(true);
-    expect(isDemoCanonicalRoutePath('/zh-hans/demo/focused-reading-review/')).toBe(true);
-    expect(isDemoCanonicalRoutePath('/zh-hant/demo/focused-reading-review/')).toBe(false);
-    expect(isDemoCanonicalRoutePath('/ja/demo/focused-reading-review/')).toBe(false);
+    expect(isDemoCanonicalRoutePath('/en/demo/')).toBe(true);
+    expect(isDemoCanonicalRoutePath('/zh-hans/guides/welcome-to-foliole/')).toBe(true);
+    expect(isDemoCanonicalRoutePath('/zh-hant/guides/welcome-to-foliole/')).toBe(false);
+    expect(isDemoCanonicalRoutePath('/ja/demo/')).toBe(false);
     expect(isDemoCanonicalRoutePath('/assets/demo/')).toBe(false);
   });
 
@@ -116,11 +131,12 @@ describe('vite config', () => {
     });
     expect(manifest.contractVersion).toBe(3);
     expect(manifest.localePublishPacks[0].topics[0]).toMatchObject({
-      slug: 'focused-reading-review',
+      slug: 'welcome-to-foliole',
       locale: 'en',
-      canonicalPath: '/en/demo/focused-reading-review/',
+      canonicalPath: '/en/guides/welcome-to-foliole/',
+      demoPath: '/en/demo/',
       alternates: expect.arrayContaining([
-        { locale: 'zh-hans', hreflang: 'zh-Hans', path: '/zh-hans/demo/focused-reading-review/' }
+        { locale: 'zh-hans', hreflang: 'zh-Hans', path: '/zh-hans/guides/welcome-to-foliole/' }
       ])
     });
   });

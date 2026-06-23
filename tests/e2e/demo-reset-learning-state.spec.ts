@@ -114,7 +114,7 @@ test.skip(!DEMO_E2E_ENABLED, 'Demo reset e2e requires FOLIOLE_DEMO_E2E=1 and the
 
 test('reset data returns the Demo to its first-run learning state', async ({ page }) => {
   await clearDemoStorage(page);
-  await page.goto('/en/demo/focused-reading-review/', { waitUntil: 'domcontentloaded' });
+  await page.goto('/en/demo/', { waitUntil: 'domcontentloaded' });
   await waitForDemoWorkspace(page);
 
   const firstRun = await readLearningSnapshot(page);

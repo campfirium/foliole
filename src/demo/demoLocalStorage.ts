@@ -4,7 +4,7 @@ export const DEMO_STORAGE_KEY_PREFIX = 'foliole-demo-';
 export const DEMO_PREVIEW_DAY_KEY = `${DEMO_STORAGE_KEY_PREFIX}preview-day-v1`;
 export const DEMO_STARTED_AT_KEY = `${DEMO_STORAGE_KEY_PREFIX}started-at-v1`;
 export const DEMO_SNAPSHOT_VERSION = 'demo-workspace-v1';
-export const DEMO_CAPTURED_VERSION = 'demo:2026-06-23';
+export const DEMO_CAPTURED_VERSION = 'demo:2026-06-23-guides-zh-repeat-period';
 
 export function readDemoManualAdvanceDays() {
   const raw = window.localStorage.getItem(DEMO_PREVIEW_DAY_KEY);

@@ -1,10 +1,9 @@
 import { createHash } from 'node:crypto';
 
-import { canonicalDemoPath, DEMO_TOPICS, type DemoTopic } from './demoContent';
+import { canonicalDemoPath, canonicalGuidePath, getDemoTopicsForLocale, type DemoTopic } from './demoContent';
 
 export const DEMO_MANIFEST_FILE = 'demo-manifest.json';
 export const DEMO_CONTRACT_VERSION = 3;
-export const DEMO_X_DEFAULT_PATH = '/demo/';
 export const DEMO_PUBLISHED_LOCALES = [
   { locale: 'en', hreflang: 'en' },
   { locale: 'zh-hans', hreflang: 'zh-Hans' },
@@ -12,8 +11,8 @@ export const DEMO_PUBLISHED_LOCALES = [
   { locale: 'ja', hreflang: 'ja' }
 ] as const;
 
-const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const DEMO_TOPIC_PATH_PATTERN = /^\/(?:en|zh-hans|zh-hant|ja)\/demo\/[a-z0-9]+(?:-[a-z0-9]+)*\/$/;
+const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)*$/;
+const DEMO_TOPIC_PATH_PATTERN = /^\/(?:en|zh-hans|zh-hant|ja)\/guides\/[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)*\/$/;
 
 export type DemoLocalePathSegment = (typeof DEMO_PUBLISHED_LOCALES)[number]['locale'];
 export type DemoHreflang = (typeof DEMO_PUBLISHED_LOCALES)[number]['hreflang'];
@@ -38,7 +37,8 @@ export interface DemoManifestTopic {
   runtime: DemoTopic['runtime'];
   sections: DemoTopic['sections'];
   summary: string;
-  xDefaultPath: typeof DEMO_X_DEFAULT_PATH;
+  demoPath: string;
+  xDefaultPath: string;
 }
 
 export interface DemoAlternatePath {
@@ -95,7 +95,8 @@ function assertValidTopic(topic: DemoTopic) {
 export function demoManifestProjection(topic: DemoTopic) {
   assertValidTopic(topic);
   return {
-    canonicalPath: canonicalDemoPath(topic.slug),
+    canonicalPath: canonicalGuidePath(topic.slug),
+    demoPath: canonicalDemoPath(),
     highlights: topic.highlights,
     description: topic.description,
     reviewItems: topic.reviewItems,
@@ -111,7 +112,7 @@ function createAlternates(slug: string): DemoAlternatePath[] {
   return DEMO_PUBLISHED_LOCALES.map((locale) => ({
     locale: locale.locale,
     hreflang: locale.hreflang,
-    path: canonicalDemoPath(slug, locale.locale)
+    path: canonicalGuidePath(slug, locale.locale)
   }));
 }
 
@@ -119,7 +120,7 @@ function assertValidManifestTopic(topic: DemoManifestTopic) {
   if (!DEMO_TOPIC_PATH_PATTERN.test(topic.canonicalPath)) {
     throw new Error(`Invalid Demo topic canonicalPath: ${topic.canonicalPath}`);
   }
-  if (topic.xDefaultPath !== DEMO_X_DEFAULT_PATH) {
+  if (topic.xDefaultPath !== canonicalGuidePath(topic.slug)) {
     throw new Error(`Invalid Demo topic xDefaultPath: ${topic.xDefaultPath}`);
   }
   const selfReference = topic.alternates.some((alternate) => alternate.locale === topic.locale && alternate.path === topic.canonicalPath);
@@ -132,7 +133,7 @@ export function createDemoManifestTopic(topic: DemoTopic, locale: DemoPublishedL
     slug: projection.slug,
     title: projection.title,
     description: projection.description,
-    canonicalPath: canonicalDemoPath(projection.slug, locale.locale),
+    canonicalPath: canonicalGuidePath(projection.slug, locale.locale),
     alternates: createAlternates(projection.slug),
     hreflang: locale.hreflang,
     highlights: projection.highlights,
@@ -141,7 +142,8 @@ export function createDemoManifestTopic(topic: DemoTopic, locale: DemoPublishedL
     runtime: projection.runtime,
     sections: projection.sections,
     summary: projection.summary,
-    xDefaultPath: DEMO_X_DEFAULT_PATH,
+    demoPath: canonicalDemoPath(locale.locale),
+    xDefaultPath: canonicalGuidePath(projection.slug),
     contentHash: sha256Uri(stableJson(projection))
   };
   assertValidManifestTopic(manifestTopic);
@@ -153,11 +155,10 @@ export function createDemoManifest(args: {
   generatedAt?: string;
   topics?: DemoTopic[];
 }): DemoManifest {
-  const topics = args.topics ?? DEMO_TOPICS;
   const localePublishPacks = DEMO_PUBLISHED_LOCALES.map((locale) => ({
     locale: locale.locale,
     hreflang: locale.hreflang,
-    topics: topics.map((topic) => createDemoManifestTopic(topic, locale))
+    topics: (args.topics ?? getDemoTopicsForLocale(locale.locale)).map((topic) => createDemoManifestTopic(topic, locale))
   }));
   const runtime = {
     entry: 'index.html' as const,

@@ -9,7 +9,18 @@ import { createDemoManifest, DEMO_MANIFEST_FILE, type DemoRuntimeAsset } from '.
 import { createSharedViteConfig } from './vite.shared';
 
 const PROJECT_ROOT = path.dirname(fileURLToPath(import.meta.url));
-const DEMO_CANONICAL_ROUTE_PATTERN = /^\/(?:en|zh-hans)\/demo\/[a-z0-9]+(?:-[a-z0-9]+)*\/?$/;
+const DEMO_CANONICAL_ROUTE_PATTERN = /^\/(?:en|zh-hans)\/(?:demo|guides\/[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)*)\/?$/;
+
+export function filterDemoModulePreloadDependencies(
+  _filename: string,
+  dependencies: string[],
+  context: { hostType: 'html' | 'js' }
+) {
+  if (context.hostType !== 'html') {
+    return dependencies;
+  }
+  return dependencies.filter((dependency) => !dependency.endsWith('.js'));
+}
 
 function toRuntimeAsset(output: Rollup.OutputAsset | Rollup.OutputChunk): DemoRuntimeAsset | null {
   if (output.type === 'chunk') return { path: output.fileName, type: 'script' };
@@ -74,6 +85,9 @@ export default mergeConfig(
     plugins: [demoManifestPlugin(), demoCanonicalRouteDevPlugin()],
     build: {
       emptyOutDir: true,
+      modulePreload: {
+        resolveDependencies: filterDemoModulePreloadDependencies
+      },
       outDir: path.resolve(PROJECT_ROOT, 'dist/demo')
     }
   })

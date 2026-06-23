@@ -18,6 +18,13 @@ describe('demo site preview', () => {
     expect(script).toContain("stdio: ['ignore', out, err]");
     expect(script).toContain('windowsHide: true');
     expect(script).toContain("path.join(REPO_ROOT, '.tmp', 'demo-site-preview')");
+    expect(script).toContain('DEMO_SITE_PREVIEW_URL');
+    expect(script).toContain('isPreviewPortAvailable');
+    expect(script).toContain('listeningPreviewPids');
+    expect(script).toContain("spawnSync('netstat.exe'");
+    expect(script).toContain("spawnSync('taskkill.exe'");
+    expect(script).toContain('site preview port is occupied and could not be released');
     expect(script).not.toContain("'.bin', 'astro.cmd'");
+    expect(script).not.toContain('127.0.0.1:4321');
   });
 });

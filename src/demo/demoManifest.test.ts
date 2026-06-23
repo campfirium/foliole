@@ -2,12 +2,12 @@
 
 import { describe, expect, it } from 'vitest';
 
+import type { DemoTopic } from './demoContent';
 import {
   createDemoManifest,
   createDemoManifestTopic,
   DEMO_PUBLISHED_LOCALES,
   DEMO_MANIFEST_FILE,
-  DEMO_X_DEFAULT_PATH,
   stableJson,
 } from './demoManifest';
 
@@ -16,9 +16,10 @@ const topic = {
     { id: 'block-1', kind: 'heading' as const, text: 'Start with one source topic' },
     { id: 'block-2', kind: 'paragraph' as const, text: 'Choose one topic.' }
   ],
-  slug: 'focused-reading-review',
-  title: 'Focused reading and review',
-  description: 'A practical Demo topic for reading, extracting, and reviewing topics in Foliole.',
+  childTopicIds: [],
+  slug: 'welcome-to-foliole',
+  title: 'Welcome to Foliole',
+  description: 'Start by clicking Read, or press 3 / F',
   highlights: [],
   id: 'node-1',
   readingSeed: {
@@ -48,10 +49,11 @@ const topic = {
       state: 0 as const
     }
   ],
+  parentId: null,
   runtime: { state: 'topic' as const, topicId: 'node-1' },
   summary: 'Build a quiet loop.',
   sections: [{ heading: 'Start with one source topic', body: ['Choose one topic.'] }]
-};
+} satisfies DemoTopic;
 
 describe('Demo manifest contract', () => {
   it('projects static Demo topic metadata into the v3 locale manifest schema', () => {
@@ -64,16 +66,17 @@ describe('Demo manifest contract', () => {
       description: topic.description,
       locale: 'en',
       hreflang: 'en',
-      canonicalPath: '/en/demo/focused-reading-review/',
-      xDefaultPath: DEMO_X_DEFAULT_PATH,
+      canonicalPath: '/en/guides/welcome-to-foliole/',
+      demoPath: '/en/demo/',
+      xDefaultPath: '/en/guides/welcome-to-foliole/',
       sections: topic.sections,
       summary: topic.summary
     });
     expect(manifestTopic.alternates).toEqual([
-      { locale: 'en', hreflang: 'en', path: '/en/demo/focused-reading-review/' },
-      { locale: 'zh-hans', hreflang: 'zh-Hans', path: '/zh-hans/demo/focused-reading-review/' },
-      { locale: 'zh-hant', hreflang: 'zh-Hant', path: '/zh-hant/demo/focused-reading-review/' },
-      { locale: 'ja', hreflang: 'ja', path: '/ja/demo/focused-reading-review/' }
+      { locale: 'en', hreflang: 'en', path: '/en/guides/welcome-to-foliole/' },
+      { locale: 'zh-hans', hreflang: 'zh-Hans', path: '/zh-hans/guides/welcome-to-foliole/' },
+      { locale: 'zh-hant', hreflang: 'zh-Hant', path: '/zh-hant/guides/welcome-to-foliole/' },
+      { locale: 'ja', hreflang: 'ja', path: '/ja/guides/welcome-to-foliole/' }
     ]);
     expect(JSON.stringify(manifestTopic)).not.toContain('reviewScheduleSeeds');
     expect(JSON.stringify(manifestTopic)).not.toContain('dayOffset');
@@ -94,7 +97,8 @@ describe('Demo manifest contract', () => {
     expect(first.localePublishPacks[1]!.topics[0]!).toMatchObject({
       locale: 'zh-hans',
       hreflang: 'zh-Hans',
-      canonicalPath: '/zh-hans/demo/focused-reading-review/'
+      canonicalPath: '/zh-hans/guides/welcome-to-foliole/',
+      demoPath: '/zh-hans/demo/'
     });
     expect(first.buildHash).toBe(second.buildHash);
     expect(first.runtime.assets.map((asset) => asset.path)).toEqual(['assets/index-a.js', 'assets/index-b.css']);

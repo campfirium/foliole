@@ -85,7 +85,7 @@ function seedFixture(db) {
     manual_child_order: JSON.stringify(['topic-b', 'topic-a', 'virtual-topic']),
     created_at: '2026-06-01T00:00:00.000Z'
   });
-  insertNode(db, { id: 'topic-a', parent_id: 'root', title: 'Topic A', content: 'A body', created_at: '2026-06-01T00:02:00.000Z' });
+  insertNode(db, { id: 'topic-a', parent_id: 'root', title: 'Topic And Review', content: 'A body', created_at: '2026-06-01T00:02:00.000Z' });
   insertNode(db, {
     id: 'topic-b',
     parent_id: 'root',
@@ -137,6 +137,7 @@ describe('Demo Pack export', () => {
       expect(pack.sourceLocale).toBe('en');
       expect(pack.translatableFields).toEqual(expect.arrayContaining(['topics[].title', 'topics[].blocks[].text']));
       expect(pack.topics.map((topic) => topic.id)).toEqual(['topic-b', 'topic-a']);
+      expect(pack.topics.map((topic) => topic.slug)).toEqual(['topic-b', 'topic-and-review']);
       expect(pack.topics[0].readingSeed).toMatchObject({
         nextAt: { dayOffset: 0 },
         priority: 0,
@@ -175,6 +176,27 @@ describe('Demo Pack export', () => {
       const pack = await exportDemoPack({ dbPath, outputPath, rootTitle: 'Foliole Demo Preview', sourceLocale: 'ja' });
 
       expect(pack.sourceLocale).toBe('ja');
+    });
+  });
+
+  it('reuses existing generated slugs by topic id', async () => {
+    await withFixture(async ({ dbPath, outputPath }) => {
+      await writeFile(outputPath, `import type { DemoPack } from '../demoPack';\n\nexport const GENERATED_DEMO_PACK: DemoPack = {\n  contractVersion: 3,\n  generatedAt: 'old',\n  sourceLocale: 'en',\n  translatableFields: [],\n  source: { rootNodeId: 'root', rootTitle: 'Foliole Demo Preview', warnings: [] },\n  topics: [{ id: 'topic-b', slug: 'stable-topic-b', title: 'Old', blocks: [] }]\n};\n`, 'utf8');
+
+      const pack = await exportDemoPack({ dbPath, outputPath, rootTitle: 'Foliole Demo Preview' });
+
+      expect(pack.topics[0].slug).toBe('stable-topic-b');
+      expect(pack.topics[1].slug).toBe('topic-and-review');
+    });
+  });
+
+  it('fails when generated slugs collide', async () => {
+    await withFixture(async ({ dbPath, outputPath }) => {
+      await writeFile(outputPath, `export const GENERATED_DEMO_PACK = {\n  topics: [\n    { id: 'topic-b', slug: 'duplicate' },\n    { id: 'topic-a', slug: 'duplicate' }\n  ]\n};\n`, 'utf8');
+
+      await expect(exportDemoPack({ dbPath, outputPath, rootTitle: 'Foliole Demo Preview' })).rejects.toThrow(
+        'Duplicate Demo Pack topic slug: duplicate'
+      );
     });
   });
 });

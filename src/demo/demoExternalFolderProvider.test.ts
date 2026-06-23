@@ -3,7 +3,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
-import { canonicalDemoPath, DEFAULT_DEMO_TOPIC } from './demoContent';
+import { canonicalGuidePath, DEFAULT_DEMO_TOPIC } from './demoContent';
 import { createDemoExternalFolderProvider } from './demoExternalFolderProvider';
 import { createDemoWorkspaceSnapshot } from './demoWorkspaceSnapshot';
 
@@ -42,7 +42,7 @@ function createTextFile(name: string, content: string) {
 
 beforeEach(() => {
   vi.unstubAllGlobals();
-  useWorkspaceStore.setState(createDemoWorkspaceSnapshot(canonicalDemoPath(DEFAULT_DEMO_TOPIC!.slug)));
+  useWorkspaceStore.setState(createDemoWorkspaceSnapshot(canonicalGuidePath(DEFAULT_DEMO_TOPIC!.slug)));
 });
 
 it('indexes top-level markdown and text files while ignoring hidden, nested, and unsupported entries', async () => {

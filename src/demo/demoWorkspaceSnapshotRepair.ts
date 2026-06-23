@@ -2,10 +2,11 @@ import type { Node } from '../features/nodes/model/nodeTypes';
 import { HOME_NODE_ID, INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import type { WorkspacePersistedState } from '../store/workspaceStore';
 
-import { DEFAULT_DEMO_TOPIC, DEMO_TOPICS } from './demoContent';
+import { DEFAULT_DEMO_TOPIC, getDemoTopicsForLocale, getDemoTopicNodeId } from './demoContent';
 import { DEMO_GUIDES_NODE_ID } from './demoGuides';
+import { isLocaleDemoPath, resolveDemoLocalePathSegment, resolveGuideSlugFromPath } from './demoRoutes';
 
-export function repairDemoWorkspacePayload(raw: string, pathname = '/demo/'): string | null {
+export function repairDemoWorkspacePayload(raw: string, pathname = '/en/demo/'): string | null {
   try {
     const payload = JSON.parse(raw) as { state?: WorkspacePersistedState; version?: number };
     if (!payload.state?.nodesById) return null;
@@ -98,8 +99,7 @@ function routeStateToDemoPath(state: WorkspacePersistedState, pathname: string) 
 }
 
 function resolveDemoNodeIdFromPath(pathname: string) {
-  const slug = pathname === '/demo/'
-    ? DEFAULT_DEMO_TOPIC?.slug
-    : /^\/(?:[a-z]{2}(?:-[a-z]+)?\/)?demo\/([^/]+)\/?$/i.exec(pathname)?.[1];
-  return DEMO_TOPICS.some((topic) => topic.slug === slug) ? `demo-${slug}` : null;
+  const slug = isLocaleDemoPath(pathname) ? DEFAULT_DEMO_TOPIC?.slug : resolveGuideSlugFromPath(pathname);
+  const topic = getDemoTopicsForLocale(resolveDemoLocalePathSegment(pathname)).find((candidate) => candidate.slug === slug);
+  return topic ? getDemoTopicNodeId(topic) : null;
 }
