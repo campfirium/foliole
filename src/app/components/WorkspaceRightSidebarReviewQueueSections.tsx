@@ -53,7 +53,7 @@ function QueueRow(props: {
   const kind = isFsrsReviewItemNode(props.node) ? 'item' : 'topic';
   return (
     <li className={`grid min-h-10 grid-cols-[2ch_1rem_minmax(0,1fr)] items-center gap-2 py-1.5 hover:bg-[var(--app-inspector-list-row-hover-bg)] ${inspectorListInsetPaddingClassName}`}>
-      <span className={`${inspectorListMetaClassName} text-right tabular-nums text-foreground/28`}>{props.index + 1}</span>
+      <span className={`${inspectorListMetaClassName} text-left tabular-nums text-foreground/28`}>{props.index + 1}</span>
       <QueueKindIcon kind={kind} />
       <button
         className={`${inspectorListTitleClassName} truncate text-left font-normal text-foreground/82 underline-offset-2 hover:text-foreground hover:underline focus:outline-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring`}

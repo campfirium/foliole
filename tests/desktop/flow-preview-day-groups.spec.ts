@@ -18,6 +18,7 @@ test('desktop Flow panel does not show Demo preview day controls in normal runti
   await expect(inspector).toBeVisible();
   await expect(inspector).toContainText('Flow');
   await expect(inspector.getByLabel(/Demo Flow (notice|提示)/)).toHaveCount(0);
+  await expect(inspector.getByText(/Scheduled later|稍后出现/)).toHaveCount(0);
   await expect(inspector.getByText('Day 1')).toHaveCount(0);
   await expect(inspector.getByText('Day 2')).toHaveCount(0);
 

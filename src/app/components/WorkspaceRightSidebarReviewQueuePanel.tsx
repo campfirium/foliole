@@ -23,9 +23,12 @@ function QueueHeader({ demoDay }: { demoDay?: number }) {
   const t = useTranslation();
   return (
     <header className={`${inspectorListInsetPaddingClassName} pb-2 pt-3`}>
-      <div className="flex items-center justify-between gap-3">
-        <h2 className={`m-0 px-0 pb-0 ${inspectorListHeadingClassName}`}>{t('desktop.rightPanel.flow')}</h2>
-        {demoDay ? <DemoDayLabel day={demoDay} /> : null}
+      <div className="grid grid-cols-[2ch_1rem_minmax(0,1fr)] items-baseline gap-2">
+        <h2 className={`m-0 px-0 pb-0 text-left ${inspectorListHeadingClassName}`}>{t('desktop.rightPanel.flow')}</h2>
+        <span aria-hidden="true" />
+        <div className="flex min-w-0 justify-end">
+          {demoDay ? <DemoDayLabel day={demoDay} /> : null}
+        </div>
       </div>
     </header>
   );
@@ -42,27 +45,7 @@ function EmptyQueueState() {
 }
 
 function collectFlowNodeIds(flowWindow: ReviewFlowWindow) {
-  return [...flowWindow.queueNodeIds, ...flowWindow.readyNodeIds, ...flowWindow.upcomingNodeIds];
-}
-
-function renderScheduledLaterSection(args: {
-  flowWindow: ReviewFlowWindow;
-  indexOffset: number;
-  nodesById: Record<string, Node>;
-  onSelectNode: (nodeId: string) => void;
-  showDivider: boolean;
-  t: Translate;
-}) {
-  return (
-    <FlowSection
-      heading={args.t('desktop.rightPanel.flow.scheduledLater')}
-      indexOffset={args.indexOffset}
-      nodeIds={args.flowWindow.upcomingNodeIds}
-      nodesById={args.nodesById}
-      onSelectNode={args.onSelectNode}
-      showDivider={args.showDivider}
-    />
-  );
+  return [...flowWindow.queueNodeIds, ...flowWindow.readyNodeIds];
 }
 
 function FlowPanelContent(props: WorkspaceRightSidebarReviewQueuePanelProps & {
@@ -72,12 +55,11 @@ function FlowPanelContent(props: WorkspaceRightSidebarReviewQueuePanelProps & {
 }) {
   const displayQueueNodeIds = buildDisplayQueueNodeIds(props.flowWindow.queueNodeIds, props.currentNodeId);
   const readyIndexOffset = displayQueueNodeIds.length;
-  const futureIndexOffset = readyIndexOffset + props.flowWindow.readyNodeIds.length;
   return (
     <ol aria-label={props.t('desktop.rightPanel.flow.items')} className="min-h-0 flex-1 overflow-y-auto py-1">
       {props.isDemo
         ? renderDemoSections(props)
-        : renderStandardSections({ ...props, displayQueueNodeIds, futureIndexOffset, readyIndexOffset })}
+        : renderStandardSections({ ...props, displayQueueNodeIds, readyIndexOffset })}
     </ol>
   );
 }
@@ -98,7 +80,6 @@ function renderDemoSections(args: WorkspaceRightSidebarReviewQueuePanelProps & {
 
 function renderStandardSections(args: WorkspaceRightSidebarReviewQueuePanelProps & {
   displayQueueNodeIds: string[];
-  futureIndexOffset: number;
   readyIndexOffset: number;
   t: Translate;
 }) {
@@ -118,14 +99,6 @@ function renderStandardSections(args: WorkspaceRightSidebarReviewQueuePanelProps
         onSelectNode={args.onSelectNode}
         showDivider={args.displayQueueNodeIds.length > 0}
       />
-      {renderScheduledLaterSection({
-        flowWindow: args.flowWindow,
-        indexOffset: args.futureIndexOffset,
-        nodesById: args.nodesById,
-        onSelectNode: args.onSelectNode,
-        showDivider: args.displayQueueNodeIds.length > 0 || args.flowWindow.readyNodeIds.length > 0,
-        t: args.t
-      })}
     </>
   );
 }

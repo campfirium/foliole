@@ -11,7 +11,7 @@ export function DemoDayLabel({ day }: { day: number }) {
   return (
     <AppTooltip>
       <AppTooltipTrigger asChild>
-        <span className="rounded-sm px-1 py-0.5 text-[12px] font-medium leading-4 text-foreground/58">
+        <span className="text-ui-sm font-medium leading-5 text-foreground/58">
           {getDemoDisplayDayHeading(day, t)}
         </span>
       </AppTooltipTrigger>
@@ -55,7 +55,6 @@ export function renderDemoDaySections(args: {
   onSelectNode: (nodeId: string) => void;
   t: Translate;
 }) {
-  let indexOffset = 0;
   return buildDemoDaySections({
     currentDayIndex: args.currentDayIndex,
     flowWindow: args.flowWindow,
@@ -64,19 +63,17 @@ export function renderDemoDaySections(args: {
       ...args.flowWindow.readyNodeIds,
       ...args.flowWindow.dayBuckets.flatMap((bucket) => bucket.nodeIds)
     ]
-  }).map((bucket) => {
-    const section = (
+  }).map((bucket, sectionIndex) => {
+    return (
       <FlowSection
         heading={getDemoDisplayDayHeading(bucket.day, args.t)}
-        indexOffset={indexOffset}
+        indexOffset={0}
         key={bucket.day}
         nodeIds={bucket.nodeIds}
         nodesById={args.nodesById}
         onSelectNode={args.onSelectNode}
-        showDivider={indexOffset > 0}
+        showDivider={sectionIndex > 0}
       />
     );
-    indexOffset += bucket.nodeIds.length;
-    return section;
   });
 }

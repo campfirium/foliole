@@ -108,6 +108,8 @@ it('shows Demo future Flow entries as preview day groups', () => {
   expect(screen.queryByText('Scheduled later')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Day One Topic' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Day Two Topic' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Day One Topic' }).closest('li')).toHaveTextContent(/^1Day One Topic$/);
+  expect(screen.getByRole('button', { name: 'Day Two Topic' }).closest('li')).toHaveTextContent(/^1Day Two Topic$/);
 });
 
 it('groups the current Demo Flow entries under Day 1', () => {
