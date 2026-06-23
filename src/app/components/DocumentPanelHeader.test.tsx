@@ -72,7 +72,7 @@ it('shows the breadcrumb title without a kind label in the document header', () 
   expect(screen.queryByText('Item')).not.toBeInTheDocument();
 });
 
-it('keeps breadcrumb and priority controls on the document content rail', () => {
+it('keeps navigation, breadcrumb, and priority controls on the document content rail', () => {
   renderWithLocalization(
     <DocumentPanelHeader
       activeNodeId="node-1"
@@ -104,11 +104,11 @@ it('keeps breadcrumb and priority controls on the document content rail', () => 
   expect(rail.closest('header')?.className).not.toMatch(/(?:^|\s)(?:px-|pl-|pr-)/);
   expect(rail).toHaveClass('max-w-[var(--document-max-width)]');
   expect(rail).toHaveClass('px-[var(--document-content-inline-padding)]');
-  expect(rail).toHaveClass('grid-cols-[minmax(0,1fr)_auto]');
+  expect(rail).toHaveClass('grid-cols-[auto_minmax(0,1fr)_auto]');
   expect(rail.parentElement).toHaveClass('[container-type:inline-size]');
   expect(screen.getAllByLabelText('Document navigation actions')).toHaveLength(1);
+  expect(rail).toContainElement(screen.getByLabelText('Document navigation actions'));
   expect(rail).toContainElement(screen.getByRole('button', { name: 'Inbox' }));
-  expect(rail).not.toContainElement(screen.getByLabelText('Document navigation actions'));
   expect(breadcrumbAligner.className).not.toMatch(/(?:^|\s)(?:pl-|ml-|translate-)/);
   expect(rail).toContainElement(screen.getByRole('button', { name: /Priority P5 from the default fallback/i }));
 });

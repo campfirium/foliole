@@ -10,9 +10,9 @@ import {
 
 interface DocumentPanelHeaderCenterProps {
   activeNodeId: string | null;
-  compactEditorActionsSlot?: ReactNode;
-  compactNavigationSlot?: ReactNode;
+  editorActionsSlot?: ReactNode;
   isFolderListView: boolean;
+  navigationSlot?: ReactNode;
   nodesById: Record<string, Node>;
   onSelectBreadcrumbNode: (nodeId: string) => void;
   rightSlot?: ReactNode;
@@ -20,9 +20,9 @@ interface DocumentPanelHeaderCenterProps {
 
 export function DocumentPanelHeaderCenter({
   activeNodeId,
-  compactEditorActionsSlot,
-  compactNavigationSlot,
+  editorActionsSlot,
   isFolderListView,
+  navigationSlot,
   nodesById,
   onSelectBreadcrumbNode,
   rightSlot
@@ -44,13 +44,12 @@ export function DocumentPanelHeaderCenter({
   return (
     <div className="[container-type:inline-size] min-w-0 flex-1">
       <div
-        className="mx-auto grid w-full max-w-[var(--document-max-width)] grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-[var(--document-content-inline-padding)] data-[compact=true]:grid-cols-[auto_minmax(0,1fr)_auto]"
+        className="mx-auto grid w-full max-w-[var(--document-max-width)] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-[var(--document-content-inline-padding)]"
         data-testid="document-header-content-rail"
-        data-compact={compactNavigationSlot ? true : undefined}
       >
-        {compactNavigationSlot ? (
+        {navigationSlot ? (
           <div className="flex shrink-0 items-center" data-testid="document-header-compact-navigation-aligner">
-            {compactNavigationSlot}
+            {navigationSlot}
           </div>
         ) : null}
         <div className="min-w-0" data-testid="document-header-breadcrumb-aligner">
@@ -60,10 +59,10 @@ export function DocumentPanelHeaderCenter({
             onSelectNode={onSelectBreadcrumbNode}
           />
         </div>
-        {rightSlot || compactEditorActionsSlot ? (
+        {rightSlot || editorActionsSlot ? (
           <div className="flex shrink-0 items-center justify-end gap-1">
             {rightSlot}
-            {compactEditorActionsSlot}
+            {editorActionsSlot}
           </div>
         ) : null}
       </div>

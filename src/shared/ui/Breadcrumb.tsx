@@ -52,7 +52,7 @@ export function AppBreadcrumb({
           <span className="inline" key={item.id}>
             <button
               aria-current={isCurrent ? 'page' : undefined}
-              className="inline-block max-w-[18ch] overflow-hidden border-0 bg-transparent p-0 text-left align-baseline text-ui-md font-normal leading-[1.25] text-foreground/45 text-ellipsis hover:text-foreground/65 aria-[current=page]:max-w-[24ch] aria-[current=page]:cursor-default aria-[current=page]:font-normal aria-[current=page]:text-foreground/45"
+              className="inline-block max-w-[18ch] overflow-hidden whitespace-nowrap border-0 bg-transparent p-0 text-left align-baseline text-ui-md font-normal leading-[1.25] text-foreground/45 text-ellipsis hover:text-foreground/65 aria-[current=page]:max-w-[24ch] aria-[current=page]:cursor-default aria-[current=page]:font-normal aria-[current=page]:text-foreground/45"
               onClick={() => onSelect(item.id)}
               type="button"
             >
