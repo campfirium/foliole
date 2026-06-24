@@ -119,7 +119,7 @@ it('runs immersive reading from the top rail', () => {
     </AppearanceSettingsProvider>
   );
 
-  fireEvent.click(screen.getByRole('button', { name: 'Reading Mode' }));
+  fireEvent.click(screen.getByRole('button', { name: /Immersive Reading/ }));
 
   expect(onRunRailAction).toHaveBeenCalledWith(APP_COMMAND_IDS.toggleImmersiveMode);
 });

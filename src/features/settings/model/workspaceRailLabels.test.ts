@@ -1,0 +1,40 @@
+import { beforeAll, beforeEach, expect, it } from 'vitest';
+
+import { APP_COMMAND_IDS } from '../../../shared/commands/ids';
+import { preloadTranslationCatalog } from '../../../shared/localization/translations';
+
+import {
+  getWorkspaceRailItemLabel,
+  getWorkspaceRailSectionItems,
+  resetWorkspaceRailItems
+} from './workspaceRailSettings';
+
+beforeAll(async () => {
+  await preloadTranslationCatalog('zh-Hans');
+});
+
+beforeEach(() => {
+  window.localStorage.clear();
+});
+
+it('localizes default rail labels from command translations', () => {
+  window.localStorage.setItem('foliole-app-language', 'zh-Hans');
+
+  const labels = getWorkspaceRailSectionItems(resetWorkspaceRailItems(), 'top').map(getWorkspaceRailItemLabel);
+
+  expect(labels).toEqual(['导入', '导入剪贴板', '沉浸阅读', '搜索', '命令面板']);
+});
+
+it('recovers old persisted command translation keys before showing rail labels', () => {
+  window.localStorage.setItem('foliole-app-language', 'zh-Hans');
+
+  expect(getWorkspaceRailItemLabel({
+    commandId: APP_COMMAND_IDS.openCommandPalette,
+    id: 'user.command-palette',
+    labelOverride: 'desktop.command.openCommandPalette',
+    order: 0,
+    section: 'top',
+    source: 'user',
+    visible: true
+  })).toBe('命令面板');
+});

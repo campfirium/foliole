@@ -1,3 +1,4 @@
+import { APP_COMMAND_IDS } from '../../../shared/commands/ids';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import { parseLiteralUnion } from '../../../shared/lib/parseLiteralUnion';
 import { getStoredAppLocale } from '../../../shared/localization/appLanguage';
@@ -30,17 +31,33 @@ export interface WorkspaceRailItemConfig {
 
 const WORKSPACE_RAIL_SECTIONS: WorkspaceRailSection[] = ['top', 'bottom', 'fixed'];
 const RETIRED_IMPORT_MANAGEMENT_COMMAND_ID = 'import.openManagement';
-const WORKSPACE_RAIL_COMMAND_LABEL_KEYS: Record<string, TranslationKey> = {
-  'workspace.openSearch': 'desktop.command.openWorkspaceSearch',
-  'workspace.openCommandPalette': 'desktop.command.openCommandPalette'
+const WORKSPACE_RAIL_COMMAND_LABEL_KEYS: Partial<Record<string, TranslationKey>> = {
+  [APP_COMMAND_IDS.importSingleFile]: 'settings.rail.item.import',
+  [APP_COMMAND_IDS.clipboardImport]: 'settings.rail.item.importClipboard',
+  [APP_COMMAND_IDS.toggleImmersiveMode]: 'desktop.immersiveShortcuts.title',
+  [APP_COMMAND_IDS.openWorkspaceSearch]: 'desktop.command.openWorkspaceSearch',
+  [APP_COMMAND_IDS.openCommandPalette]: 'desktop.command.openCommandPalette',
+  [APP_COMMAND_IDS.sendFeedback]: 'settings.rail.item.feedback',
+  [APP_COMMAND_IDS.startStudyMode]: 'settings.rail.item.study',
+  [APP_COMMAND_IDS.openSettings]: 'settings.rail.item.settings'
 };
 
 export { DEFAULT_WORKSPACE_RAIL_ITEMS };
 
+function resolveRailLabelOverride(labelOverride: string | undefined) {
+  if (!labelOverride) {
+    return undefined;
+  }
+  if (labelOverride.startsWith('desktop.command.')) {
+    return translate(getStoredAppLocale(), labelOverride as TranslationKey);
+  }
+  return labelOverride;
+}
+
 export function getWorkspaceRailItemLabel(item: WorkspaceRailItemConfig) {
   const translationKey = WORKSPACE_RAIL_COMMAND_LABEL_KEYS[item.commandId];
   return (
-    item.labelOverride ??
+    resolveRailLabelOverride(item.labelOverride) ??
     (translationKey ? translate(getStoredAppLocale(), translationKey) : undefined) ??
     WORKSPACE_RAIL_COMMAND_LABELS[item.commandId] ??
     item.commandId
