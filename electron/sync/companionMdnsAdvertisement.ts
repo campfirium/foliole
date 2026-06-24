@@ -1,4 +1,4 @@
-import Bonjour from 'bonjour-service';
+import { Bonjour } from 'bonjour-service';
 
 const COMPANION_SYNC_MDNS_SERVICE_TYPE = 'foliole-sync';
 
