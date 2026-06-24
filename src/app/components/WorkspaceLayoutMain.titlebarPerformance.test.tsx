@@ -203,12 +203,51 @@ describe('WorkspaceLayoutMain review title bar rendering', () => {
       <WorkspaceLayoutMain
         {...createProps({
           isStudyMode: true,
+          reviewSummary: {
+            canContinueReading: true,
+            completedAt: '2026-06-23T00:00:00.000Z',
+            continueNodeId: 'reading-1',
+            createdItemCount: 0,
+            createdTopicCount: 0,
+            nextReviewDueAt: null,
+            readingElapsedMs: 0,
+            readTopicCount: 0,
+            reviewElapsedMs: 0,
+            reviewedItemCount: 1,
+            sessionStartedAt: '2026-06-23T00:00:00.000Z'
+          },
           reviewStatus: 'completed'
         })}
       />
     );
 
     expect(windowTitleBarRender).toHaveBeenCalledWith(expect.objectContaining({ centerTitle: 'Queue clear' }));
+  });
+
+  it('keeps the document title after the whole Flow is complete', () => {
+    renderWithLocalization(
+      <WorkspaceLayoutMain
+        {...createProps({
+          isStudyMode: true,
+          reviewSummary: {
+            canContinueReading: false,
+            completedAt: '2026-06-23T00:00:00.000Z',
+            continueNodeId: null,
+            createdItemCount: 0,
+            createdTopicCount: 0,
+            nextReviewDueAt: null,
+            readingElapsedMs: 0,
+            readTopicCount: 8,
+            reviewElapsedMs: 0,
+            reviewedItemCount: 1,
+            sessionStartedAt: '2026-06-23T00:00:00.000Z'
+          },
+          reviewStatus: 'completed'
+        })}
+      />
+    );
+
+    expect(windowTitleBarRender).toHaveBeenCalledWith(expect.objectContaining({ centerTitle: 'Node 1' }));
   });
 });
 

@@ -32,6 +32,8 @@
 - 启动时只读 `AGENTS.md`。
 - 任务涉及 renderer UI 改动（`src/app/**`、`src/companion/**`、`src/features/**`、`src/shared/ui/**`）时，实施前必须先读取 `DESIGN.md`，再读取 `.lab/specs/shared/ui/llm-ui-rules.md`。
 - 任务涉及 UI 文案、产品对象命名、空状态、按钮、菜单、队列与阅读单元称呼时，实施前必须读取 `.lab/specs/_product/terminology-and-copy.md`。
+- 任务涉及 `docs/i18n/guides/**` 的 Demo Guides 内容时，实施前必须读取 `docs/i18n/guides/README.md`；英文 `en` 文件是每个 slug 的必需源，其他语言可按需补齐并回退英文。
+- 编写 Foliole Demo / Guides 文案时必须保留 Demo 边界：它可以是浏览器里的预置内容体验，但不得暗示为 Foliole Web 版、正式数据环境、桌面版替代品、完整本地文件 / 导入能力、完整桌面功能集或可长期生产使用的在线工作区。
 - 新增或修改用户可见 UI 文案时，必须按 `.lab/specs/_product/terminology-and-copy.md` 的文案分层先区分用户效果、轻原理说明与内部语言；最终文案不得直接从变量名、数据库字段、IPC / action 名、队列流程动词或对话里的临时术语生成。
 - 任务涉及具体现有规范时，按需读取对应 `.lab/specs/**` 条目，不全量通读。
 - 任务涉及新增、重写或审计 agent 规则时，按 `$agents-maintainer` 流程只审根与局部 `AGENTS.md`；不默认扫描其他项目文档。
@@ -110,10 +112,13 @@
 | --- | --- |
 | 用户当次明确要求某宿主预览 | 相关验证通过后执行该宿主预览 |
 | 用户说“阶段验收”且本轮有对应宿主可见面 | 忽略 flag，执行受影响宿主预览 |
+| 本轮改动触及 Demo 可见行为、Demo 入口、Demo 数据 / 生成物、Demo 重置链路或 Demo-only 逻辑 | 相关验证通过后刷新当前已打开的 Demo 页面做可见验收；不写持久开关，不自动新开窗口 |
 | 普通模式、局部宿主规则命中人工预览 | 执行对应宿主预览 |
 | 用户说“打开预览” / “关闭预览” | 只影响当次明确指定的宿主预览动作，不写入持久 preview flag |
 
 预览入口：桌面人工预览按 `electron/AGENTS.md` 当前工作区入口执行；移动按 `npm run android:preview` 执行。预览成功时最终末行可写 `pushed`。
+
+- Demo 可见验收优先复用当前已打开的 Demo 窗口 / 标签页并执行刷新；若没有可刷新目标或当前工具无法控制该窗口，最终汇报必须明确 Demo 可见刷新未完成及原因，不得用 Hidden Native 或普通桌面 smoke 替代。
 
 - 自动化验证通过但仍需要用户最终人工确认的用户可见闭环，最终汇报前必须向 `.lab/atlas/0active/manual-acceptance.md` 追加 1 行待验收记录；仅改 agent 规则 / 文档 / 测试 / 脚本 / 内部 spec 时不追加。同一轮同一验收目标只记 1 行，不按命令、文件、截图拆行；该清单只追加不删除，后续人工结论也用新行追加。
 
