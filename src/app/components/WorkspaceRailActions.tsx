@@ -18,7 +18,7 @@ import {
 import { WorkspaceRailTooltipButton } from './WorkspaceRailTooltipButton';
 
 const RAIL_BUTTON_CLASS_NAME =
-  'size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground';
+  'size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground focus-visible:ring-border-strong';
 const PLATFORM_DEFAULT_APP_COMMAND_SHORTCUTS = getPlatformDefaultCommandShortcuts();
 
 export function RailItemIcon({

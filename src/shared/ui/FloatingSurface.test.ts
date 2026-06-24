@@ -26,7 +26,9 @@ it('keeps command and search surfaces on shared floating tokens', () => {
   expect(appFloatingInputClassName()).toContain('bg-[var(--app-floating-input-bg)]');
   expect(appFloatingInputClassName()).toContain('appearance-none');
   expect(appFloatingInputClassName()).toContain('border-b');
-  expect(appFloatingInputClassName()).toContain('border-[var(--app-floating-divider-color)]');
+  expect(appFloatingInputClassName()).toContain(
+    'border-[color-mix(in_srgb,var(--app-floating-divider-color)_55%,transparent)]'
+  );
   expect(appFloatingInputClassName()).toContain('shadow-none');
   expect(appFloatingInputClassName()).toContain('[box-shadow:none]');
   expect(appFloatingInputClassName()).toContain('focus:outline-none');
@@ -34,13 +36,17 @@ it('keeps command and search surfaces on shared floating tokens', () => {
   expect(appFloatingInputClassName()).toContain('focus:shadow-none');
   expect(appFloatingInputClassName()).toContain('focus:[box-shadow:none]');
   expect(appFloatingInputClassName()).toContain('focus:[outline:0]');
-  expect(appFloatingInputClassName()).toContain('focus:border-[var(--app-floating-divider-color)]');
+  expect(appFloatingInputClassName()).toContain(
+    'focus:border-[color-mix(in_srgb,var(--app-floating-divider-color)_55%,transparent)]'
+  );
   expect(appFloatingInputClassName()).toContain('focus-visible:outline-none');
   expect(appFloatingInputClassName()).toContain('focus-visible:ring-0');
   expect(appFloatingInputClassName()).toContain('focus-visible:shadow-none');
   expect(appFloatingInputClassName()).toContain('focus-visible:[box-shadow:none]');
   expect(appFloatingInputClassName()).toContain('focus-visible:[outline:0]');
-  expect(appFloatingInputClassName()).toContain('focus-visible:border-[var(--app-floating-divider-color)]');
+  expect(appFloatingInputClassName()).toContain(
+    'focus-visible:border-[color-mix(in_srgb,var(--app-floating-divider-color)_55%,transparent)]'
+  );
   expect(appFloatingInputClassName()).not.toContain('focus-visible:ring-ring');
   expect(appFloatingListClassName()).toContain(
     '[--app-scrollbar-thumb-color:var(--app-floating-scrollbar-thumb-color)]'

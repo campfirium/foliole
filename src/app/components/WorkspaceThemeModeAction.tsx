@@ -29,7 +29,7 @@ export function WorkspaceThemeModeAction(props: { onRunRailAction?: (commandId: 
       orientation="vertical"
     >
       <WorkspaceRailTooltipButton
-        className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground"
+        className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground focus-visible:ring-border-strong"
         icon={<Icon aria-hidden="true" size={16} strokeWidth={1.75} />}
         label={t('desktop.workspace.toggleTheme')}
         onClick={runThemeToggle}

@@ -12,7 +12,7 @@ import { WorkspaceRailTooltipButton } from './WorkspaceRailTooltipButton';
 const FOLIOLE_OFFICIAL_SITE_URL = 'https://foliole.app/';
 const FOLIOLE_DOWNLOAD_URL = 'https://github.com/campfirium/foliole/releases';
 const RAIL_BUTTON_CLASS_NAME =
-  'size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground';
+  'size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground focus-visible:ring-border-strong';
 
 function DemoRailActionButton(props: Parameters<typeof WorkspaceRailTooltipButton>[0]) {
   return (

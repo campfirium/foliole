@@ -41,9 +41,21 @@ async function expectPaletteInputNoFocusRing(input: Locator) {
     });
 }
 
+async function expectRailButtonsUseNeutralFocusRing(ribbon: Locator) {
+  const classNames = await ribbon.getByRole('button').evaluateAll((buttons) =>
+    buttons.map((button) => button.className)
+  );
+  expect(classNames.length).toBeGreaterThan(0);
+  for (const className of classNames) {
+    expect(className).toContain('focus-visible:ring-border-strong');
+    expect(className).not.toContain('focus-visible:ring-ring');
+  }
+}
+
 test('workspace rail opens search and command palette panels', async ({ desktopWindow }, testInfo) => {
   await expectWorkspaceShell(desktopWindow);
   const ribbon = desktopWindow.getByRole('region', { name: /Workspace Ribbon|工作区功能区/ });
+  await expectRailButtonsUseNeutralFocusRing(ribbon);
 
   await testInfo.attach('workspace-rail-palette-actions', {
     body: await ribbon.screenshot(),
@@ -72,6 +84,9 @@ test('workspace rail opens search and command palette panels', async ({ desktopW
   await expect(commandInput).toHaveAttribute('data-bwignore', 'true');
   await expect(commandInput).toHaveAttribute('data-lpignore', 'true');
   await expectPaletteInputNoFocusRing(commandInput);
+  await expect(commandDialog.getByText(/desktop\.command\./)).toHaveCount(0);
+  await expect(commandDialog.getByText(/desktop\.command\.section\./)).toHaveCount(0);
+  await expect(commandDialog.getByRole('button', { name: /Command Palette|命令面板/ })).toBeVisible();
 
   await testInfo.attach('command-palette-autofill-suppression', {
     body: await commandDialog.screenshot(),
