@@ -38,23 +38,27 @@ const WORKSPACE_RAIL_COMMAND_LABEL_KEYS: Partial<Record<string, TranslationKey>>
 };
 
 export { DEFAULT_WORKSPACE_RAIL_ITEMS };
+type RailLabelTranslator = (key: TranslationKey) => string;
 
-function resolveRailLabelOverride(labelOverride: string | undefined) {
-  if (!labelOverride) {
-    return undefined;
-  }
-  if (labelOverride.startsWith('desktop.command.')) {
-    return translate(getStoredAppLocale(), labelOverride as TranslationKey);
-  }
-  return labelOverride;
+function translateRailLabel(key: TranslationKey, t?: RailLabelTranslator) {
+  return typeof t === 'function' ? t(key) : translate(getStoredAppLocale(), key);
 }
 
-export function getWorkspaceRailItemLabel(item: WorkspaceRailItemConfig) {
+function resolveRailLabelOverride(labelOverride: string | undefined, t?: RailLabelTranslator) {
+  if (!labelOverride) return undefined;
+  const normalizedLabelOverride = labelOverride.trim();
+  if (normalizedLabelOverride.startsWith('desktop.command.')) {
+    return translateRailLabel(normalizedLabelOverride as TranslationKey, t);
+  }
+  return normalizedLabelOverride;
+}
+
+export function getWorkspaceRailItemLabel(item: WorkspaceRailItemConfig, t?: RailLabelTranslator) {
   const commandId = normalizeWorkspaceRailCommandId(item.commandId);
   const translationKey = WORKSPACE_RAIL_COMMAND_LABEL_KEYS[commandId];
   return (
-    resolveRailLabelOverride(item.labelOverride) ??
-    (translationKey ? translate(getStoredAppLocale(), translationKey) : undefined) ??
+    resolveRailLabelOverride(item.labelOverride, t) ??
+    (translationKey ? translateRailLabel(translationKey, t) : undefined) ??
     WORKSPACE_RAIL_COMMAND_LABELS[commandId] ??
     commandId
   );

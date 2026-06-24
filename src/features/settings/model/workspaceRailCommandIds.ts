@@ -6,5 +6,6 @@ const LEGACY_WORKSPACE_RAIL_COMMAND_IDS: Partial<Record<string, string>> = {
 };
 
 export function normalizeWorkspaceRailCommandId(commandId: string) {
-  return LEGACY_WORKSPACE_RAIL_COMMAND_IDS[commandId] ?? commandId;
+  const normalizedCommandId = commandId.trim();
+  return LEGACY_WORKSPACE_RAIL_COMMAND_IDS[normalizedCommandId] ?? normalizedCommandId;
 }

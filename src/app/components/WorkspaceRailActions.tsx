@@ -43,12 +43,13 @@ function RailCommandButton({
   item: WorkspaceRailItemConfig;
   onRun: (commandId: string) => void;
 }) {
+  const t = useTranslation();
   return (
     <div className="flex h-[var(--workspace-top-toolbar-height)] items-center justify-center">
       <WorkspaceRailTooltipButton
         className={RAIL_BUTTON_CLASS_NAME}
         icon={<RailItemIcon {...(item.iconId ? { iconId: item.iconId } : {})} />}
-        label={getWorkspaceRailItemLabel(item)}
+        label={getWorkspaceRailItemLabel(item, t)}
         onClick={() => onRun(item.commandId)}
         aria-keyshortcuts={formatAriaKeyShortcuts(PLATFORM_DEFAULT_APP_COMMAND_SHORTCUTS[item.commandId as AppCommandId])}
       />
@@ -108,7 +109,7 @@ export function WorkspaceRailContextMenu({
         >
           <span className="inline-flex min-w-0 items-center gap-3">
             <RailItemIcon {...(item.iconId ? { iconId: item.iconId } : {})} />
-            <span className="truncate">{getWorkspaceRailItemLabel(item)}</span>
+            <span className="truncate">{getWorkspaceRailItemLabel(item, t)}</span>
           </span>
           {item.visible ? <Check aria-hidden="true" className="shrink-0" size={15} /> : <span className="size-[15px] shrink-0" />}
         </AppSelectionDropdownMenuItem>

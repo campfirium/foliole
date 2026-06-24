@@ -155,11 +155,12 @@ function RailManagerRows({
   onRemove: (itemId: string) => void;
   onToggle: (itemId: string, visible: boolean) => void;
 }) {
+  const t = useTranslation();
   return items.map((item) => (
     <RailManagerRow
       item={item}
       key={item.id}
-      label={getWorkspaceRailItemLabel(item)}
+      label={getWorkspaceRailItemLabel(item, t)}
       onDragStart={onDragStart}
       onDropItem={onDropItem}
       onRemove={onRemove}
