@@ -9,7 +9,7 @@ export function getDemoPreviewDisplayDay(previewDay: number) {
 }
 
 export function getDemoNodeDisplayDay(currentDayIndex: number, dayOffset: number) {
-  return Math.max(1, currentDayIndex + dayOffset + 1);
+  return getDemoPreviewDisplayDay(currentDayIndex) + Math.max(0, dayOffset);
 }
 
 export function getDemoDayHeading(dayOffset: number, t: Translate) {

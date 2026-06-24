@@ -174,3 +174,28 @@ it('keeps Demo day identity stable after the preview day advances', () => {
   expect(screen.getByRole('button', { name: 'Day Two Ready' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Day Three Ready' })).toBeInTheDocument();
 });
+
+it('keeps overdue Demo Flow entries under the current preview day', () => {
+  installDemoRuntime(true, 1);
+
+  renderWithLocalization(
+    <WorkspaceRightSidebarReviewQueuePanel
+      currentNodeId={null}
+      flowWindow={createFlowWindow({
+        dayOffsetByNodeId: {
+          'overdue-ready': -1
+        },
+        readyNodeIds: ['overdue-ready']
+      })}
+      nodesById={{
+        'overdue-ready': createNode({ id: 'overdue-ready', title: 'Overdue Ready' })
+      }}
+      onSelectNode={() => undefined}
+    />
+  );
+
+  const dayTwoLabels = screen.getAllByText('Day 2');
+  expect(dayTwoLabels).toHaveLength(2);
+  expect(screen.queryByText('Day 1')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Overdue Ready' })).toBeInTheDocument();
+});
