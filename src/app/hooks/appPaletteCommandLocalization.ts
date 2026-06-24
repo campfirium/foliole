@@ -1,7 +1,7 @@
 import type { AppCommandId } from '../../shared/commands/ids';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
-import { getStoredAppLocale } from '../../shared/localization/appLanguage';
-import { translate, type TranslationKey } from '../../shared/localization/translations';
+import type { Translate } from '../../shared/localization/LocalizationProvider';
+import type { TranslationKey } from '../../shared/localization/translations';
 
 const COMMAND_TITLE_KEYS: Partial<Record<AppCommandId, TranslationKey>> = {
   [APP_COMMAND_IDS.createFolder]: 'desktop.command.createFolder',
@@ -91,26 +91,24 @@ const SECTION_KEYS: Record<string, TranslationKey> = {
   Flow: 'desktop.command.section.flow'
 };
 
-export function localizePaletteCommandTitle(id: string, fallback: string) {
+export function localizePaletteCommandTitle(id: string, fallback: string, t: Translate) {
   const key = COMMAND_TITLE_KEYS[id as AppCommandId];
-  return key ? translate(getStoredAppLocale(), key) : fallback;
+  return key ? t(key) : fallback;
 }
 
-export function localizePaletteCommandSection(section: string) {
+export function localizePaletteCommandSection(section: string, t: Translate) {
   const key = SECTION_KEYS[section];
-  return key ? translate(getStoredAppLocale(), key) : section;
+  return key ? t(key) : section;
 }
 
-export function resolveImmersiveModePaletteTitle(isImmersiveMode: boolean) {
-  return translate(
-    getStoredAppLocale(),
+export function resolveImmersiveModePaletteTitle(isImmersiveMode: boolean, t: Translate) {
+  return t(
     isImmersiveMode ? 'desktop.command.exitImmersiveReading' : 'desktop.command.enterImmersiveReading'
   );
 }
 
-export function resolveReviewStatusMemoryPaletteTitle(isEnabled: boolean) {
-  return translate(
-    getStoredAppLocale(),
+export function resolveReviewStatusMemoryPaletteTitle(isEnabled: boolean, t: Translate) {
+  return t(
     isEnabled
       ? 'desktop.command.dev.disableReviewStatusMemory'
       : 'desktop.command.dev.enableReviewStatusMemory'

@@ -9,6 +9,7 @@ export const EN_DESKTOP_COMMAND_TRANSLATIONS = {
   'desktop.command.section.navigation': 'Navigation',
   'desktop.command.section.review': 'Review',
   'desktop.command.section.flow': 'Flow',
+  'desktop.command.section.recent': 'Recent',
   'desktop.command.createFolder': 'Create Folder',
   'desktop.command.createTopic': 'Create Topic',
   'desktop.command.createItem': 'Create Item',

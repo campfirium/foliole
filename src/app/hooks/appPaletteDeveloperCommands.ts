@@ -1,4 +1,5 @@
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
+import type { Translate } from '../../shared/localization/LocalizationProvider';
 
 import { resolveReviewStatusMemoryPaletteTitle } from './appPaletteCommandLocalization';
 
@@ -29,11 +30,15 @@ export const DEVELOPER_PALETTE_COMMANDS = [
   }
 ];
 
-export function resolveDeveloperPaletteTitle(id: string, options: { isDevReviewStatusBarPersistenceEnabled: boolean }) {
+export function resolveDeveloperPaletteTitle(
+  id: string,
+  options: { isDevReviewStatusBarPersistenceEnabled: boolean },
+  t: Translate
+) {
   if (id !== APP_COMMAND_IDS.toggleDevReviewStatusBarPersistence) {
     return null;
   }
-  return resolveReviewStatusMemoryPaletteTitle(options.isDevReviewStatusBarPersistenceEnabled);
+  return resolveReviewStatusMemoryPaletteTitle(options.isDevReviewStatusBarPersistenceEnabled, t);
 }
 
 export function isDeveloperCommandEnabled(

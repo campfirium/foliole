@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import { buildCommandMenuSections } from '../../shared/commands/menuModel';
+import { preloadTranslationCatalog, translate, type TranslationKey } from '../../shared/localization/translations';
 
 import { type BuildAppPaletteItemsOptions, getAppPaletteCommands } from './appPaletteCommandCatalog';
 
@@ -39,12 +40,35 @@ const enabledOptions: BuildAppPaletteItemsOptions = {
   isDevReviewStatusBarPersistenceEnabled: false,
   isReviewMode: false,
   redoWorkspaceActionTitle: 'Redo',
+  t: (key: TranslationKey) => translate('en', key),
   undoWorkspaceActionTitle: 'Undo'
 };
 
 function sectionFor(commandId: string) {
   return getAppPaletteCommands(enabledOptions).find((item) => item.id === commandId)?.section;
 }
+
+beforeAll(async () => {
+  await Promise.all([preloadTranslationCatalog('en'), preloadTranslationCatalog('zh-Hans')]);
+});
+
+describe('getAppPaletteCommands localization', () => {
+  it('keeps localized section titles ordered by stable section identity', () => {
+    const items = getAppPaletteCommands({
+      ...enabledOptions,
+      t: (key) => translate('zh-Hans', key)
+    });
+    const sections = buildCommandMenuSections(items, [], '');
+
+    expect(items.find((item) => item.id === APP_COMMAND_IDS.openCommandPalette)).toMatchObject({
+      section: '工作区',
+      sectionId: 'Workspace',
+      title: '命令面板'
+    });
+    expect(sections.map((section) => section.title).slice(0, 4)).toEqual(['导航', '创建', '工作区', '编辑器']);
+    expect(sections.flatMap((section) => section.items).map((item) => item.title)).not.toContain('desktop.command.openCommandPalette');
+  });
+});
 
 describe('getAppPaletteCommands', () => {
   it('assigns creation commands to the Create section', () => {

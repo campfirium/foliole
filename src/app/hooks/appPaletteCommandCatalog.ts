@@ -1,4 +1,5 @@
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
+import type { Translate } from '../../shared/localization/LocalizationProvider';
 
 import { APP_PALETTE_COMMANDS } from './appPaletteCommandList';
 import {
@@ -39,14 +40,15 @@ export interface BuildAppPaletteItemsOptions extends ReviewPaletteCommandOptions
   isDevReviewStatusBarPersistenceEnabled: boolean;
   isReviewMode: boolean;
   redoWorkspaceActionTitle: string;
+  t: Translate;
   undoWorkspaceActionTitle: string;
 }
 
-function resolveCommandTitle(id: string, title: string) {
+function resolveCommandTitle(id: string, title: string, t: Translate) {
   if (id !== APP_COMMAND_IDS.startStudyMode) {
-    return localizePaletteCommandTitle(id, title);
+    return localizePaletteCommandTitle(id, title, t);
   }
-  return localizePaletteCommandTitle(id, title);
+  return localizePaletteCommandTitle(id, title, t);
 }
 
 function resolvePaletteTitle(id: string, options: BuildAppPaletteItemsOptions, title: string) {
@@ -57,11 +59,11 @@ function resolvePaletteTitle(id: string, options: BuildAppPaletteItemsOptions, t
     return options.redoWorkspaceActionTitle;
   }
   if (id === APP_COMMAND_IDS.toggleImmersiveMode) {
-    return resolveImmersiveModePaletteTitle(options.isImmersiveMode);
+    return resolveImmersiveModePaletteTitle(options.isImmersiveMode, options.t);
   }
-  const developerTitle = resolveDeveloperPaletteTitle(id, options);
+  const developerTitle = resolveDeveloperPaletteTitle(id, options, options.t);
   if (developerTitle) return developerTitle;
-  return resolveCommandTitle(id, title);
+  return resolveCommandTitle(id, title, options.t);
 }
 
 function isWorkspaceCommandEnabled(id: string, options: BuildAppPaletteItemsOptions) {
@@ -173,7 +175,8 @@ export function getAppPaletteCommands(options: BuildAppPaletteItemsOptions) {
     .map((command) => ({
       ...command,
       enabled: isPaletteCommandEnabled(command.id, options),
-      section: localizePaletteCommandSection(command.section),
+      section: localizePaletteCommandSection(command.section, options.t),
+      sectionId: command.section,
       title: resolvePaletteTitle(command.id, options, command.title)
     }));
 }

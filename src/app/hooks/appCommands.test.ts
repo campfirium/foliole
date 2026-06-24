@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
-import { preloadTranslationCatalog } from '../../shared/localization/translations';
+import { preloadTranslationCatalog, translate, type TranslationKey } from '../../shared/localization/translations';
 
 import { buildAppPaletteItems, runReviewModeToggle } from './appCommands';
 
@@ -44,6 +44,7 @@ function createPaletteOptions(isReviewMode: boolean) {
     isDevReviewStatusBarPersistenceEnabled: false,
     isReviewMode,
     redoWorkspaceActionTitle: 'Redo',
+    t: (key: TranslationKey) => translate('en', key),
     undoWorkspaceActionTitle: 'Undo'
   };
 }
@@ -95,6 +96,22 @@ function expectCorePaletteEntries() {
   expect(items.some((item) => item.id === APP_COMMAND_IDS.repairTable)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.restartApp)).toBe(true);
 }
+
+describe('buildAppPaletteItems localization', () => {
+  it('uses localized command titles from the caller translation function', () => {
+    const items = buildAppPaletteItems({
+      ...createPaletteOptions(false),
+      t: (key) => translate('zh-Hans', key)
+    });
+
+    expect(items.find((item) => item.id === APP_COMMAND_IDS.openCommandPalette)).toMatchObject({
+      section: '工作区',
+      sectionId: 'Workspace',
+      title: '命令面板'
+    });
+    expect(items.some((item) => item.title.startsWith('desktop.command.'))).toBe(false);
+  });
+});
 
 describe('buildAppPaletteItems', () => {
   it('includes migrated command entries instead of a minimal fallback list', () => {

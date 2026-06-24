@@ -6,6 +6,10 @@ export interface CommandMenuSection {
   items: CommandPaletteItem[];
 }
 
+interface BuildCommandMenuSectionsOptions {
+  recentTitle?: string;
+}
+
 const SECTION_ORDER = [
   'Navigation',
   'Create',
@@ -48,21 +52,28 @@ function toSectionId(title: string) {
 }
 
 function buildGroupedSections(items: CommandPaletteItem[]): CommandMenuSection[] {
-  const bySection = new Map<string, CommandPaletteItem[]>();
+  const bySection = new Map<string, { items: CommandPaletteItem[]; title: string }>();
   for (const item of items) {
     const title = item.section?.trim() || 'Other';
-    bySection.set(title, [...(bySection.get(title) ?? []), item]);
+    const id = item.sectionId?.trim() || title;
+    const group = bySection.get(id);
+    bySection.set(id, { title, items: [...(group?.items ?? []), item] });
   }
   return [...bySection.entries()]
     .sort(([a], [b]) => compareSectionTitles(a, b))
-    .map(([title, sectionItems]) => ({
-      id: toSectionId(title),
-      title,
-      items: sectionItems.sort(compareCommandItems)
+    .map(([id, section]) => ({
+      id: toSectionId(id),
+      title: section.title,
+      items: section.items.sort(compareCommandItems)
     }));
 }
 
-export function buildCommandMenuSections(items: CommandPaletteItem[], recentCommandIds: string[], query = ''): CommandMenuSection[] {
+export function buildCommandMenuSections(
+  items: CommandPaletteItem[],
+  recentCommandIds: string[],
+  query = '',
+  options: BuildCommandMenuSectionsOptions = {}
+): CommandMenuSection[] {
   const normalizedQuery = query.trim().toLowerCase();
   const recentSet = new Set(recentCommandIds);
   const recentRank = new Map(recentCommandIds.map((id, index) => [id, index]));
@@ -77,7 +88,7 @@ export function buildCommandMenuSections(items: CommandPaletteItem[], recentComm
   if (recentItems.length) {
     sections.unshift({
       id: 'recent',
-      title: 'Recent',
+      title: options.recentTitle ?? 'Recent',
       items: recentItems
     });
   }

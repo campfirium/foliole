@@ -34,7 +34,7 @@ it('skips menu section building while the command palette is closed', () => {
     />
   );
 
-  expect(menuModelMocks.buildCommandMenuSections).toHaveBeenCalledWith([], [], '');
+  expect(menuModelMocks.buildCommandMenuSections).toHaveBeenCalledWith([], [], '', { recentTitle: 'Recent' });
   expect(screen.queryByRole('dialog', { name: 'Command palette' })).not.toBeInTheDocument();
 });
 

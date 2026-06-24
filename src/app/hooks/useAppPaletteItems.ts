@@ -183,7 +183,7 @@ function buildPaletteOptions(
     canDeleteReviewSourceTopic: Boolean(args.isStudyMode && activeNodeId && resolveReviewSourceTopicNodeId(activeNodeId, reviewNavigationSource)),
     isImmersiveMode: args.isImmersiveMode,
     isDevReviewStatusBarPersistenceEnabled: args.study.isDevReviewStatusBarPersistenceEnabled,
-    isReviewMode: args.isStudyMode
+    isReviewMode: args.isStudyMode, t
   };
 }
 

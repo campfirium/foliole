@@ -96,15 +96,18 @@ function CommandPaletteList({
 }
 
 function useCommandPaletteState(
-  args: Pick<CommandPaletteProps, 'isOpen' | 'items' | 'recentCommandIds'>
+  args: Pick<CommandPaletteProps, 'isOpen' | 'items' | 'recentCommandIds'> & { recentTitle: string }
 ) {
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const visibleItemsSource = args.isOpen ? args.items : EMPTY_COMMAND_ITEMS;
   const visibleRecentCommandIds = args.isOpen ? args.recentCommandIds : EMPTY_RECENT_COMMAND_IDS;
   const sections = useMemo(
-    () => buildCommandMenuSections(visibleItemsSource, visibleRecentCommandIds, query),
-    [query, visibleItemsSource, visibleRecentCommandIds]
+    () =>
+      buildCommandMenuSections(visibleItemsSource, visibleRecentCommandIds, query, {
+        recentTitle: args.recentTitle
+      }),
+    [args.recentTitle, query, visibleItemsSource, visibleRecentCommandIds]
   );
   const displaySections = useMemo(() => filterDisplaySections(sections, query), [query, sections]);
   const activeItems = useMemo(
@@ -165,7 +168,8 @@ export function CommandPalette({
     useCommandPaletteState({
       isOpen,
       items,
-      recentCommandIds
+      recentCommandIds,
+      recentTitle: t('desktop.command.section.recent')
     });
 
   if (!isOpen) {

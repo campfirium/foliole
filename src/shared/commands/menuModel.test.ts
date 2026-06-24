@@ -17,6 +17,21 @@ describe('buildCommandMenuSections', () => {
     expect(sections[0]?.items.map((item) => item.id)).toEqual(['workspace.openSettings']);
   });
 
+  it('uses the caller recent title and keeps localized sections in product order', () => {
+    const sections = buildCommandMenuSections(
+      [
+        { id: 'workspace.z', title: 'Z', section: '工作区', sectionId: 'Workspace', enabled: true },
+        { id: 'editor.a', title: 'A', section: '编辑器', sectionId: 'Editor', enabled: true },
+        { id: 'navigation.a', title: 'A', section: '导航', sectionId: 'Navigation', enabled: true }
+      ],
+      ['workspace.z'],
+      '',
+      { recentTitle: '最近' }
+    );
+
+    expect(sections.map((section) => section.title)).toEqual(['最近', '导航', '编辑器']);
+  });
+
   it('filters sections by query', () => {
     const sections = buildCommandMenuSections(baseItems, [], 'preview');
 

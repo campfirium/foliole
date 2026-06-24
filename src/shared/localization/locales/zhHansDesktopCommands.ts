@@ -11,6 +11,7 @@ export const ZH_HANS_DESKTOP_COMMAND_TRANSLATIONS: Partial<Record<TranslationKey
   'desktop.command.section.navigation': '导航',
   'desktop.command.section.review': '复习',
   'desktop.command.section.flow': 'Flow',
+  'desktop.command.section.recent': '最近',
   'desktop.command.createFolder': '创建文件夹',
   'desktop.command.createTopic': '创建主题',
   'desktop.command.createItem': '创建检测项',

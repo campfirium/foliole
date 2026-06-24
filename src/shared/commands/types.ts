@@ -18,6 +18,7 @@ export interface CommandPaletteItem {
   id: string;
   title: string;
   section?: string;
+  sectionId?: string;
   keywords?: string[];
   shortcuts?: CommandShortcutSet;
   enabled: boolean;
