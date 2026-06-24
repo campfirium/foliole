@@ -22,7 +22,9 @@ beforeEach(() => {
 it('localizes default rail labels from command translations', () => {
   window.localStorage.setItem('foliole-app-language', 'zh-Hans');
 
-  const labels = getWorkspaceRailSectionItems(resetWorkspaceRailItems(), 'top').map(getWorkspaceRailItemLabel);
+  const labels = getWorkspaceRailSectionItems(resetWorkspaceRailItems(), 'top').map((item) =>
+    getWorkspaceRailItemLabel(item)
+  );
 
   expect(labels).toEqual(['导入', '导入剪贴板', '沉浸阅读', '搜索', '命令面板']);
 });
