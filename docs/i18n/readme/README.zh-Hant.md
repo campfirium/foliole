@@ -22,11 +22,18 @@
 
 Windows alpha 已開放測試。<br>
 Android alpha 預計在 7 月左右發布。<br>
-macOS 和 iOS alpha 預計在 8 月左右發布。
+macOS 和 iOS alpha 預計在 8 月左右發布。<br>
+也可以先透過[在線體驗版](https://foliole.app/zh-hant/demo/)體驗 Foliole。
 
 <p align="center">
   <img src="../../../assets/screenshots/foliole-desktop.png" alt="Foliole desktop app showing a document library, reading pane, and scheduling panel." width="900">
 </p>
+
+## 在線體驗版
+
+[打開在線體驗版](https://foliole.app/zh-hant/demo/)
+
+一個在瀏覽器本地執行的互動式 Demo，無需安裝即可體驗 Foliole。
 
 ## 演示影片
 

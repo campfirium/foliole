@@ -22,11 +22,18 @@
 
 Windows alpha открыта для тестирования.<br>
 Android alpha ожидается примерно в июле.<br>
-Alpha-сборки для macOS и iOS ожидаются примерно в августе.
+Alpha-сборки для macOS и iOS ожидаются примерно в августе.<br>
+Вы также можете попробовать Foliole в [онлайн-демо](https://foliole.app/ru/demo/).
 
 <p align="center">
   <img src="../../../assets/screenshots/foliole-desktop.png" alt="Foliole desktop app showing a document library, reading pane, and scheduling panel." width="900">
 </p>
+
+## Онлайн-демо
+
+[Открыть онлайн-демо](https://foliole.app/ru/demo/)
+
+Интерактивное локальное демо в браузере, чтобы попробовать Foliole без установки.
 
 ## Демо
 

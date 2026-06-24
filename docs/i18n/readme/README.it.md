@@ -22,11 +22,18 @@ Un'app accessibile per la lettura incrementale.
 
 L'alpha per Windows è aperta ai test.<br>
 L'alpha per Android è prevista intorno a luglio.<br>
-Le build alpha per macOS e iOS sono previste intorno ad agosto.
+Le build alpha per macOS e iOS sono previste intorno ad agosto.<br>
+Puoi anche provare Foliole con la [demo online](https://foliole.app/it/demo/).
 
 <p align="center">
   <img src="../../../assets/screenshots/foliole-desktop.png" alt="Foliole desktop app showing a document library, reading pane, and scheduling panel." width="900">
 </p>
+
+## Demo online
+
+[Apri la demo online](https://foliole.app/it/demo/)
+
+Una demo interattiva locale nel browser per provare Foliole senza installazione.
 
 ## Demo
 

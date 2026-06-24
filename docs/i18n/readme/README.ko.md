@@ -22,11 +22,18 @@
 
 Windows alpha는 테스트용으로 공개되어 있습니다.<br>
 Android alpha는 7월경 공개될 예정입니다.<br>
-macOS와 iOS alpha 빌드는 8월경 공개될 예정입니다.
+macOS와 iOS alpha 빌드는 8월경 공개될 예정입니다.<br>
+[온라인 데모](https://foliole.app/ko/demo/)로도 Foliole을 사용해 볼 수 있습니다.
 
 <p align="center">
   <img src="../../../assets/screenshots/foliole-desktop.png" alt="Foliole desktop app showing a document library, reading pane, and scheduling panel." width="900">
 </p>
+
+## 온라인 데모
+
+[온라인 데모 열기](https://foliole.app/ko/demo/)
+
+설치 없이 Foliole을 사용해 볼 수 있는, 브라우저에서 로컬로 실행되는 인터랙티브 데모입니다.
 
 ## 데모
 
