@@ -2,9 +2,7 @@ import { GripVertical, RotateCcw, Trash2 } from 'lucide-react';
 import { useState, type DragEvent } from 'react';
 
 import { RailItemIcon } from '../../../../app/components/WorkspaceRailActions';
-import { APP_COMMAND_IDS } from '../../../../shared/commands/ids';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
-import type { TranslationKey } from '../../../../shared/localization/translations';
 import {
   AppIconButton,
   SettingsRow,
@@ -25,24 +23,6 @@ import {
 import { AddRailActionRow } from './SettingsRailAddActionRow';
 
 type ManagerSection = Exclude<WorkspaceRailSection, 'fixed'>;
-
-const RAIL_COMMAND_LABEL_KEYS: Partial<Record<string, TranslationKey>> = {
-  [APP_COMMAND_IDS.importSingleFile]: 'settings.rail.item.import',
-  [APP_COMMAND_IDS.clipboardImport]: 'settings.rail.item.importClipboard',
-  [APP_COMMAND_IDS.sendFeedback]: 'settings.rail.item.feedback',
-  [APP_COMMAND_IDS.startStudyMode]: 'settings.rail.item.study',
-  [APP_COMMAND_IDS.openSettings]: 'settings.rail.item.settings'
-};
-
-type Translate = ReturnType<typeof useTranslation>;
-
-function getTranslatedRailItemLabel(t: Translate, item: WorkspaceRailItemConfig) {
-  if (item.labelOverride) {
-    return item.labelOverride;
-  }
-  const key = RAIL_COMMAND_LABEL_KEYS[item.commandId];
-  return key ? t(key) : getWorkspaceRailItemLabel(item);
-}
 
 function RailVisibilitySwitch({ item, label, onToggle }: { item: WorkspaceRailItemConfig; label: string; onToggle: (visible: boolean) => void }) {
   const t = useTranslation();
@@ -175,12 +155,11 @@ function RailManagerRows({
   onRemove: (itemId: string) => void;
   onToggle: (itemId: string, visible: boolean) => void;
 }) {
-  const t = useTranslation();
   return items.map((item) => (
     <RailManagerRow
       item={item}
       key={item.id}
-      label={getTranslatedRailItemLabel(t, item)}
+      label={getWorkspaceRailItemLabel(item)}
       onDragStart={onDragStart}
       onDropItem={onDropItem}
       onRemove={onRemove}

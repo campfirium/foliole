@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+
 import { beforeAll, beforeEach, expect, it } from 'vitest';
 
 import { APP_COMMAND_IDS } from '../../../shared/commands/ids';
@@ -37,4 +39,11 @@ it('recovers old persisted command translation keys before showing rail labels',
     source: 'user',
     visible: true
   })).toBe('命令面板');
+});
+
+it('keeps settings rail labels on the shared rail label resolver', () => {
+  const source = readFileSync('src/features/settings/components/sections/SettingsRailSection.tsx', 'utf8');
+
+  expect(source).toContain('label={getWorkspaceRailItemLabel(item)}');
+  expect(source).not.toContain('return item.labelOverride');
 });
