@@ -325,6 +325,43 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
         "highlights": [],
         "reviewItems": [],
         "reviewScheduleSeeds": []
+      },
+      {
+        "id": "what-the-foliole-demo-is-for",
+        "slug": "what-the-foliole-demo-is-for",
+        "parentId": null,
+        "childTopicIds": [],
+        "title": "What the Foliole Demo Is For",
+        "description": "Maybe you are a longtime SuperMemo user and want to see how Foliole is different.",
+        "summary": "Maybe you are a longtime SuperMemo user and want to see how Foliole is different.",
+        "runtime": {
+          "state": "topic",
+          "topicId": "what-the-foliole-demo-is-for"
+        },
+        "readingSeed": {
+          "intervalDurationMs": 0,
+          "intervalGrowthFactor": 1,
+          "lastHandledAt": {
+            "dayOffset": 0
+          },
+          "nextAt": {
+            "dayOffset": 0
+          },
+          "priority": 0,
+          "readingPosition": 0,
+          "repetitionCount": 0,
+          "state": "active"
+        },
+        "blocks": [
+          {
+            "kind": "paragraph",
+            "text": "Maybe you are a longtime SuperMemo user and want to see how Foliole is different.\nMaybe you use Obsidian or other reading and note-taking tools heavily, and want your material to go beyond reading and highlighting.\nMaybe you are new to incremental reading and still not sure whether it fits you.\nTo make Foliole easier to experience directly, we built this online demo.\nNo installation is required. Open the page and start trying it in your browser. You can read the Foliole Guides here, which will continue to be updated over time, or import your own Markdown documents and work through the core incremental reading flow.\nThe online demo provides simulated dates so you can quickly experience Foliole's material scheduling. The settings panel includes a Desktop Settings Preview: this panel shows the full desktop settings, so you can understand Foliole’s feature structure. Changes there do not affect the online demo.\nThe online demo stores data locally in your browser, so please do not treat it as your only backup. It also does not include many core desktop features, including PDF / EPUB / image viewing, external document libraries, enhanced search, Obsidian integration, Readwise Reader integration, Markdown mirrors, LAN sync, and more.\nThe online demo will continue to update alongside the desktop app, and it may have issues that differ from the desktop version. You can submit feedback directly from the left sidebar, and you are also welcome to follow the project, report issues, or join the discussion on GitHub.",
+            "id": "what-the-foliole-demo-is-for-block-1"
+          }
+        ],
+        "highlights": [],
+        "reviewItems": [],
+        "reviewScheduleSeeds": []
       }
     ]
   },
@@ -647,6 +684,43 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
             "kind": "paragraph",
             "text": "间隔重复，让知识逐步内化。\n渐进阅读，让阅读真正完成。\nFoliole，让渐进阅读流畅发生。",
             "id": "welcome-to-foliole.repeat-internalize-knowledge-block-1"
+          }
+        ],
+        "highlights": [],
+        "reviewItems": [],
+        "reviewScheduleSeeds": []
+      },
+      {
+        "id": "what-the-foliole-demo-is-for",
+        "slug": "what-the-foliole-demo-is-for",
+        "parentId": null,
+        "childTopicIds": [],
+        "title": "在线体验 Foliole",
+        "description": "也许你是 SuperMemo 的老用户，想看看 Foliole 有什么不同。",
+        "summary": "也许你是 SuperMemo 的老用户，想看看 Foliole 有什么不同。",
+        "runtime": {
+          "state": "topic",
+          "topicId": "what-the-foliole-demo-is-for"
+        },
+        "readingSeed": {
+          "intervalDurationMs": 0,
+          "intervalGrowthFactor": 1,
+          "lastHandledAt": {
+            "dayOffset": 0
+          },
+          "nextAt": {
+            "dayOffset": 0
+          },
+          "priority": 0,
+          "readingPosition": 0,
+          "repetitionCount": 0,
+          "state": "active"
+        },
+        "blocks": [
+          {
+            "kind": "paragraph",
+            "text": "也许你是 SuperMemo 的老用户，想看看 Foliole 有什么不同。\n也许你正重度使用 Obsidian 等阅读和笔记工具，希望材料不止于阅读和标注。\n也许你只是第一次听说渐进阅读，还不确定它适不适合自己。\n为了让你更直观地体验 Foliole，我们专门构建了这套在线体验版。\n无需安装，打开网页即可直接体验。你可以在这里阅读 Foliole Guides（后续会持续更新），也可以导入自己的 Markdown 文档，进行渐进阅读的核心流程操作。\n在线体验版提供了模拟日期功能，方便你快速体验 Foliole 的材料调度。设置面板中的「桌面端设置预览」展示桌面版的完整设置，方便了解 Foliole 的功能结构。这里的调整不会影响在线体验版。\n在线体验版将数据保存在浏览器本地，请勿作为唯一备份。它也不具备桌面版的多项核心功能，包括 PDF / EPUB / 图片阅览、外部文档库、搜索增强、Obsidian 集成、Readwise Reader 集成、Markdown 镜像、局域网同步等。\n在线体验版会随着桌面端继续更新，也可能出现与桌面端不同的问题。可以通过左侧功能区入口直接提交反馈，也欢迎在 GitHub 关注项目进展、提交问题或参与交流。",
+            "id": "what-the-foliole-demo-is-for-block-1"
           }
         ],
         "highlights": [],
