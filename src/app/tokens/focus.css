@@ -3,11 +3,11 @@
   .app-focus-control:focus-visible,
   .app-focus-silent:focus,
   .app-focus-silent:focus-visible {
-    outline: none;
+    outline: none !important;
   }
 
   .app-focus-silent:focus,
   .app-focus-silent:focus-visible {
-    --tw-ring-shadow: 0 0 #0000;
+    --tw-ring-shadow: 0 0 #0000 !important;
   }
 }
