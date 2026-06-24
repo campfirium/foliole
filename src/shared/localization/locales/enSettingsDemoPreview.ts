@@ -1,6 +1,6 @@
 export const EN_SETTINGS_DEMO_PREVIEW_TRANSLATIONS = {
-  'settings.demoPreview.banner.title': 'Demo preview',
-  'settings.demoPreview.banner.description': 'These desktop settings are shown for context. Changes are not saved in the web demo.',
+  'settings.demoPreview.banner.title': 'Desktop Settings Preview',
+  'settings.demoPreview.banner.description': 'This panel shows the full desktop settings, so you can understand Foliole’s feature structure. Changes here do not affect the online demo.',
   'settings.demoPreview.control.desktopOnly': 'Desktop only',
   'settings.demoPreview.control.previewOnly': 'Preview only',
   'settings.demoPreview.downloadDesktop': 'Download desktop app',

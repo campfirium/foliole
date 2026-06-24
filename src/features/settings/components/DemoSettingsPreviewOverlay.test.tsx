@@ -23,8 +23,8 @@ it('uses the real desktop settings panel while hiding only the language setting'
     <DemoSettingsPreviewOverlay onClose={vi.fn()} requestedCategory="general" />
   );
 
-  expect(await screen.findByText('Demo preview')).toBeInTheDocument();
-  expect(screen.getByText('These desktop settings are shown for context. Changes are not saved in the web demo.')).toBeInTheDocument();
+  expect(await screen.findByText('Desktop Settings Preview')).toBeInTheDocument();
+  expect(screen.getByText('This panel shows the full desktop settings, so you can understand Foliole’s feature structure. Changes here do not affect the online demo.')).toBeInTheDocument();
   const dialog = document.querySelector('[data-settings-root-dialog="true"]');
   expect(dialog).not.toHaveAttribute('data-settings-desktop-preview');
   expect(dialog).toHaveClass('w-[min(1240px,calc(100vw-36px))]');

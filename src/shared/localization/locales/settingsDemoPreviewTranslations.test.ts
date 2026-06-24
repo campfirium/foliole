@@ -13,8 +13,8 @@ describe('settings demo preview translations', () => {
   });
 
   it('uses Chinese text for the demo preview shell keys', () => {
-    expect(ZH_HANS_SETTINGS_DEMO_PREVIEW_TRANSLATIONS['settings.demoPreview.banner.title']).toBe('Demo 预览');
-    expect(ZH_HANS_SETTINGS_DEMO_PREVIEW_TRANSLATIONS['settings.demoPreview.banner.description']).toBe('这里展示桌面端设置控件，方便了解完整体验。Web Demo 中的更改不会保存。');
+    expect(ZH_HANS_SETTINGS_DEMO_PREVIEW_TRANSLATIONS['settings.demoPreview.banner.title']).toBe('桌面端设置预览');
+    expect(ZH_HANS_SETTINGS_DEMO_PREVIEW_TRANSLATIONS['settings.demoPreview.banner.description']).toBe('本面板展示桌面版的完整设置，方便了解 Foliole 的功能结构。这里的调整不会影响在线体验版。');
     expect(ZH_HANS_SETTINGS_DEMO_PREVIEW_TRANSLATIONS['settings.demoPreview.note.label']).toBe('文件夹访问');
   });
 });

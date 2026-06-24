@@ -22,7 +22,7 @@ async function seedEmptyReviewQueueWorkspace(desktopWindow: import('@playwright/
 }
 
 async function exitFlowIfActive(desktopWindow: import('@playwright/test').Page) {
-  const exitFlow = desktopWindow.getByRole('button', { name: /^(Leave Flow|Exit Flow|退出 Flow)$/ });
+  const exitFlow = desktopWindow.getByRole('button', { name: /^(Exit Flow|退出 Flow)$/ });
   if (await exitFlow.isVisible().catch(() => false)) {
     await exitFlow.click();
     await expect(exitFlow).toBeHidden();
