@@ -22,6 +22,14 @@ it('keeps command and search surfaces on shared floating tokens', () => {
   expect(appFloatingOverlayClassName()).toContain('bg-[var(--app-floating-overlay-bg)]');
   expect(appFloatingSurfaceClassName('panel')).toContain('bg-[var(--app-floating-surface-bg)]');
   expect(appFloatingSurfaceClassName('panel')).toContain('shadow-panel');
+  expect(appFloatingSurfaceClassName('panel')).toContain('focus:!outline-none');
+  expect(appFloatingSurfaceClassName('panel')).toContain('focus:!ring-0');
+  expect(appFloatingSurfaceClassName('panel')).toContain('focus:![--tw-ring-shadow:0_0_#0000]');
+  expect(appFloatingSurfaceClassName('panel')).toContain('focus:![outline:0]');
+  expect(appFloatingSurfaceClassName('panel')).toContain('focus-visible:!outline-none');
+  expect(appFloatingSurfaceClassName('panel')).toContain('focus-visible:!ring-0');
+  expect(appFloatingSurfaceClassName('panel')).toContain('focus-visible:![--tw-ring-shadow:0_0_#0000]');
+  expect(appFloatingSurfaceClassName('panel')).toContain('focus-visible:![outline:0]');
   expect(appFloatingSurfaceClassName('popover')).toContain('shadow-popover');
   expect(appFloatingInputClassName()).toContain('bg-[var(--app-floating-input-bg)]');
   expect(appFloatingInputClassName()).toContain('appearance-none');

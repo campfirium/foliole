@@ -1,7 +1,10 @@
 import { cn } from '@/shared/lib/utils';
 
-const floatingSurfaceBaseClassName =
-  'border border-[var(--app-floating-border-color)] bg-[var(--app-floating-surface-bg)]';
+const floatingSurfaceBaseClassName = [
+  'border border-[var(--app-floating-border-color)] bg-[var(--app-floating-surface-bg)]',
+  'focus:!outline-none focus:!ring-0 focus:![--tw-ring-shadow:0_0_#0000] focus:![outline:0]',
+  'focus-visible:!outline-none focus-visible:!ring-0 focus-visible:![--tw-ring-shadow:0_0_#0000] focus-visible:![outline:0]'
+].join(' ');
 const floatingOverlayBaseClassName =
   'fixed inset-0 z-floating flex items-start justify-center bg-[var(--app-floating-overlay-bg)] px-4 pt-[12vh]';
 const floatingInputBaseClassName = [
