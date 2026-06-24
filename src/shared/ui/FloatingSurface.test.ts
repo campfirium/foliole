@@ -22,14 +22,11 @@ it('keeps command and search surfaces on shared floating tokens', () => {
   expect(appFloatingOverlayClassName()).toContain('bg-[var(--app-floating-overlay-bg)]');
   expect(appFloatingSurfaceClassName('panel')).toContain('bg-[var(--app-floating-surface-bg)]');
   expect(appFloatingSurfaceClassName('panel')).toContain('shadow-panel');
-  expect(appFloatingSurfaceClassName('panel')).toContain('focus:!outline-none');
-  expect(appFloatingSurfaceClassName('panel')).toContain('focus:!ring-0');
-  expect(appFloatingSurfaceClassName('panel')).toContain('focus:![--tw-ring-shadow:0_0_#0000]');
-  expect(appFloatingSurfaceClassName('panel')).toContain('focus:![outline:0]');
-  expect(appFloatingSurfaceClassName('panel')).toContain('focus-visible:!outline-none');
-  expect(appFloatingSurfaceClassName('panel')).toContain('focus-visible:!ring-0');
-  expect(appFloatingSurfaceClassName('panel')).toContain('focus-visible:![--tw-ring-shadow:0_0_#0000]');
-  expect(appFloatingSurfaceClassName('panel')).toContain('focus-visible:![outline:0]');
+  expect(appFloatingSurfaceClassName('panel')).toContain('app-focus-silent');
+  expect(appFloatingSurfaceClassName('panel')).toContain('focus:ring-0');
+  expect(appFloatingSurfaceClassName('panel')).toContain('focus-visible:ring-0');
+  expect(appFloatingSurfaceClassName('panel')).toContain('focus:[--tw-ring-shadow:0_0_#0000]');
+  expect(appFloatingSurfaceClassName('panel')).toContain('focus-visible:[--tw-ring-shadow:0_0_#0000]');
   expect(appFloatingSurfaceClassName('popover')).toContain('shadow-popover');
   expect(appFloatingInputClassName()).toContain('bg-[var(--app-floating-input-bg)]');
   expect(appFloatingInputClassName()).toContain('appearance-none');
@@ -37,18 +34,15 @@ it('keeps command and search surfaces on shared floating tokens', () => {
   expect(appFloatingInputClassName()).toContain('border-transparent');
   expect(appFloatingInputClassName()).toContain('shadow-none');
   expect(appFloatingInputClassName()).toContain('[box-shadow:none]');
-  expect(appFloatingInputClassName()).toContain('focus:!outline-none');
-  expect(appFloatingInputClassName()).toContain('focus:!ring-0');
-  expect(appFloatingInputClassName()).toContain('focus:!shadow-none');
-  expect(appFloatingInputClassName()).toContain('focus:![box-shadow:none]');
-  expect(appFloatingInputClassName()).toContain('focus:![outline:0]');
-  expect(appFloatingInputClassName()).toContain('focus:!border-transparent');
-  expect(appFloatingInputClassName()).toContain('focus-visible:!outline-none');
-  expect(appFloatingInputClassName()).toContain('focus-visible:!ring-0');
-  expect(appFloatingInputClassName()).toContain('focus-visible:!shadow-none');
-  expect(appFloatingInputClassName()).toContain('focus-visible:![box-shadow:none]');
-  expect(appFloatingInputClassName()).toContain('focus-visible:![outline:0]');
-  expect(appFloatingInputClassName()).toContain('focus-visible:!border-transparent');
+  expect(appFloatingInputClassName()).toContain('app-focus-silent');
+  expect(appFloatingInputClassName()).toContain('focus:ring-0');
+  expect(appFloatingInputClassName()).toContain('focus:shadow-none');
+  expect(appFloatingInputClassName()).toContain('focus:[box-shadow:none]');
+  expect(appFloatingInputClassName()).toContain('focus:border-transparent');
+  expect(appFloatingInputClassName()).toContain('focus-visible:ring-0');
+  expect(appFloatingInputClassName()).toContain('focus-visible:shadow-none');
+  expect(appFloatingInputClassName()).toContain('focus-visible:[box-shadow:none]');
+  expect(appFloatingInputClassName()).toContain('focus-visible:border-transparent');
   expect(appFloatingInputClassName()).not.toContain('--app-floating-divider-color');
   expect(appFloatingInputClassName()).not.toContain('focus-visible:ring-ring');
   expect(appFloatingListClassName()).toContain(
@@ -84,4 +78,13 @@ it('keeps formal floating menus from defining private surface colors', () => {
   expect(combined).not.toContain('bg-[color-mix(in_oklab,var(--app-floating-surface-bg)');
   expect(combined).not.toContain('--node-context-menu-item-hover-bg');
   expect(combined).not.toContain('--app-selection-surface-color');
+});
+
+it('keeps focus policy in shared app focus tokens', () => {
+  expect(readWorkspaceFile('src/app/styles.css')).toContain('@import "./tokens/focus.css";');
+
+  const focusTokens = readWorkspaceFile('src/app/tokens/focus.css');
+  expect(focusTokens).toContain('.app-focus-control:focus');
+  expect(focusTokens).toContain('.app-focus-silent:focus');
+  expect(focusTokens).toContain('--tw-ring-shadow: 0 0 #0000');
 });

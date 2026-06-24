@@ -4,7 +4,7 @@ export { AppButton } from './Button';
 export { AppDialog, AppDialogClose, AppDialogContent, AppDialogDescription, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from './Dialog';
 export { AppIconButton } from './IconButton';
 export { AppInput } from './Input';
-export { appInputBorderFocusVisibleClassName, appInputFocusVisibleClassName } from './InputFocus';
+export { appFocusControlClassName, appFocusSilentClassName, appInputBorderFocusVisibleClassName, appInputFocusVisibleClassName } from './InputFocus';
 export { LucideCatalogIcon, LUCIDE_ICON_OPTIONS } from './LucideIconCatalog';
 export { AppPanel } from './Panel';
 export { AppToolbar } from './Toolbar';

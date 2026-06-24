@@ -54,8 +54,10 @@ it('renders shared control wrappers without Radix theme context', () => {
   expect(screen.getByRole('button', { name: 'Save' }).tagName).toBe('BUTTON');
   expect(screen.getByRole('button', { name: 'Topic row' }).className).toContain('focus:outline-none');
   expect(screen.getByRole('button', { name: 'Topic row' }).className).toContain('focus-visible:ring-ring');
+  expect(screen.getByRole('button', { name: 'Topic row' }).className).toContain('app-focus-control');
   expect(screen.getByRole('button', { name: 'Add item' }).className).toContain('focus:outline-none');
   expect(screen.getByRole('button', { name: 'Add item' }).className).toContain('focus-visible:ring-ring');
+  expect(screen.getByRole('button', { name: 'Add item' }).className).toContain('app-focus-control');
   expect(screen.getByRole('textbox', { name: 'Search' }).className).toContain('text-ui-input');
   expect(screen.getByRole('heading', { level: 3, name: 'Queue summary' }).tagName).toBe('H3');
   expect(screen.getByRole('heading', { level: 3, name: 'Queue summary' }).className).toContain('text-ui-md');

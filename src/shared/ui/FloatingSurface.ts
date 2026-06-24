@@ -1,16 +1,18 @@
+import { appFocusSilentClassName } from './InputFocus';
+
 import { cn } from '@/shared/lib/utils';
 
 const floatingSurfaceBaseClassName = [
   'border border-[var(--app-floating-border-color)] bg-[var(--app-floating-surface-bg)]',
-  'focus:!outline-none focus:!ring-0 focus:![--tw-ring-shadow:0_0_#0000] focus:![outline:0]',
-  'focus-visible:!outline-none focus-visible:!ring-0 focus-visible:![--tw-ring-shadow:0_0_#0000] focus-visible:![outline:0]'
+  appFocusSilentClassName
 ].join(' ');
 const floatingOverlayBaseClassName =
   'fixed inset-0 z-floating flex items-start justify-center bg-[var(--app-floating-overlay-bg)] px-4 pt-[12vh]';
 const floatingInputBaseClassName = [
   'w-full appearance-none border-x-0 border-t-0 border-b border-transparent bg-[var(--app-floating-input-bg)] px-4 py-3 text-ui-md text-foreground shadow-none outline-none [box-shadow:none]',
-  'focus:!border-transparent focus:!outline-none focus:!ring-0 focus:!shadow-none focus:![box-shadow:none] focus:![outline:0]',
-  'focus-visible:!border-transparent focus-visible:!outline-none focus-visible:!ring-0 focus-visible:!shadow-none focus-visible:![box-shadow:none] focus-visible:![outline:0]',
+  appFocusSilentClassName,
+  'focus:border-transparent focus:shadow-none focus:[box-shadow:none]',
+  'focus-visible:border-transparent focus-visible:shadow-none focus-visible:[box-shadow:none]',
   'placeholder:text-foreground/42'
 ].join(' ');
 const floatingListBaseClassName =

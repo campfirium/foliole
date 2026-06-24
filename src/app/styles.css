@@ -3,6 +3,7 @@
 @import "./generated/appearance-colors.css";
 @import "./tokens/shadows.css";
 @import "./tokens/shellless-surfaces.css";
+@import "./tokens/focus.css";
 @import "./tokens/z-index.css";
 
 * {
