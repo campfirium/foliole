@@ -23,6 +23,14 @@ updates:
         update-types:
           - version-update:semver-patch
           - version-update:semver-minor
+      - dependency-name: "@tailwindcss/vite"
+        update-types:
+          - version-update:semver-patch
+          - version-update:semver-minor
+      - dependency-name: tailwindcss
+        update-types:
+          - version-update:semver-patch
+          - version-update:semver-minor
     groups:
       electron-native:
         patterns:
