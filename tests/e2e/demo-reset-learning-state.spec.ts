@@ -110,6 +110,7 @@ async function polluteDemoLocalState(page: Page) {
   }, WORKSPACE_STORAGE_KEY);
 }
 
+// SKIP: requires explicit Demo e2e environment | 2026-06-24 | revive: run when FOLIOLE_DEMO_E2E=1 and a Demo site base URL is available
 test.skip(!DEMO_E2E_ENABLED, 'Demo reset e2e requires FOLIOLE_DEMO_E2E=1 and the Demo site base URL.');
 
 test('reset data returns the Demo to its first-run learning state', async ({ page }) => {
