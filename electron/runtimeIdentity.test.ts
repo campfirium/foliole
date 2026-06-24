@@ -6,6 +6,7 @@ import { expect, it, vi } from 'vitest';
 
 import {
   FOLIOLE_APP_NAME,
+  FOLIOLE_WINDOWS_APP_USER_MODEL_ID,
   collectRuntimeDiagnosticsSnapshot,
   configureRuntimeAppIdentity,
   formatRuntimeDiagnosticsSnapshot
@@ -51,7 +52,7 @@ it('pins userData and sessionData to the foliole root on win32', () => {
   expect(configured.userDataPath).toBe(expectedRoot);
   expect(configured.sessionDataPath).toBe(expectedRoot);
   expect(configured.libraryHome).toBeNull();
-  expect(setAppUserModelId).toHaveBeenCalledWith(FOLIOLE_APP_NAME);
+  expect(setAppUserModelId).toHaveBeenCalledWith(FOLIOLE_WINDOWS_APP_USER_MODEL_ID);
   expect(mkdirSync).toHaveBeenCalledWith(expectedRoot, { recursive: true });
 });
 

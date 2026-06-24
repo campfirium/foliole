@@ -33,6 +33,7 @@ export interface ConfiguredAppIdentity {
 }
 
 export const FOLIOLE_APP_NAME = 'foliole';
+export const FOLIOLE_WINDOWS_APP_USER_MODEL_ID = 'com.foliole.desktop';
 
 function resolveFolioleUserDataPath(appDataRoot: string) {
   return path.join(appDataRoot, FOLIOLE_APP_NAME);
@@ -142,7 +143,7 @@ export function configureRuntimeAppIdentity(
   app.setPath('sessionData', sessionDataPath);
 
   if (platform === 'win32') {
-    app.setAppUserModelId?.(FOLIOLE_APP_NAME);
+    app.setAppUserModelId?.(FOLIOLE_WINDOWS_APP_USER_MODEL_ID);
   }
 
   return {
