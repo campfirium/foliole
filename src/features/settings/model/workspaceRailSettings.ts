@@ -3,15 +3,10 @@ import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import { parseLiteralUnion } from '../../../shared/lib/parseLiteralUnion';
 import { getStoredAppLocale } from '../../../shared/localization/appLanguage';
 import { translate, type TranslationKey } from '../../../shared/localization/translations';
-import {
-  getWhitelistedLocalStorageItem,
-  setWhitelistedLocalStorageItem
-} from '../../../shared/platform/storage';
+import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 
-import {
-  DEFAULT_WORKSPACE_RAIL_ITEMS,
-  WORKSPACE_RAIL_COMMAND_LABELS
-} from './workspaceRailDefaults';
+import { normalizeWorkspaceRailCommandId } from './workspaceRailCommandIds';
+import { DEFAULT_WORKSPACE_RAIL_ITEMS, WORKSPACE_RAIL_COMMAND_LABELS } from './workspaceRailDefaults';
 
 export type WorkspaceRailSection = 'top' | 'bottom' | 'fixed';
 
@@ -55,12 +50,13 @@ function resolveRailLabelOverride(labelOverride: string | undefined) {
 }
 
 export function getWorkspaceRailItemLabel(item: WorkspaceRailItemConfig) {
-  const translationKey = WORKSPACE_RAIL_COMMAND_LABEL_KEYS[item.commandId];
+  const commandId = normalizeWorkspaceRailCommandId(item.commandId);
+  const translationKey = WORKSPACE_RAIL_COMMAND_LABEL_KEYS[commandId];
   return (
     resolveRailLabelOverride(item.labelOverride) ??
     (translationKey ? translate(getStoredAppLocale(), translationKey) : undefined) ??
-    WORKSPACE_RAIL_COMMAND_LABELS[item.commandId] ??
-    item.commandId
+    WORKSPACE_RAIL_COMMAND_LABELS[commandId] ??
+    commandId
   );
 }
 
@@ -81,22 +77,25 @@ function isRetiredRailCommand(commandId: string) {
 }
 
 function isValidPersistedItem(item: WorkspaceRailItemConfig) {
-  return Boolean(item.id && item.commandId && !isRetiredRailCommand(item.commandId) && isWorkspaceRailSection(item.section));
+  const commandId = normalizeWorkspaceRailCommandId(item.commandId);
+  return Boolean(item.id && commandId && !isRetiredRailCommand(commandId) && isWorkspaceRailSection(item.section));
 }
 
 function normalizeDefaultItem(item: WorkspaceRailItemConfig) {
-  const defaultItem = defaultItemById(item.id);
+  const normalizedCommandId = normalizeWorkspaceRailCommandId(item.commandId);
+  const normalizedItem = normalizedCommandId === item.commandId ? item : { ...item, commandId: normalizedCommandId };
+  const defaultItem = defaultItemById(normalizedItem.id);
   if (!defaultItem) {
-    return item;
+    return normalizedItem;
   }
 
   return {
     ...defaultItem,
-    section: defaultItem.locked ? defaultItem.section : item.section,
-    order: item.order,
-    visible: defaultItem.locked ? true : item.visible,
+    section: defaultItem.locked ? defaultItem.section : normalizedItem.section,
+    order: normalizedItem.order,
+    visible: defaultItem.locked ? true : normalizedItem.visible,
     ...(defaultItem.iconId ? { iconId: defaultItem.iconId } : {}),
-    ...(item.labelOverride ? { labelOverride: item.labelOverride } : {}),
+    ...(normalizedItem.labelOverride ? { labelOverride: normalizedItem.labelOverride } : {}),
     ...(defaultItem.locked !== undefined ? { locked: defaultItem.locked } : {})
   };
 }
@@ -110,7 +109,9 @@ function normalizeSection(items: WorkspaceRailItemConfig[], section: WorkspaceRa
 
 export function normalizeWorkspaceRailItems(items: WorkspaceRailItemConfig[] = DEFAULT_WORKSPACE_RAIL_ITEMS) {
   const seen = new Set<string>();
-  const persisted = items.filter(isValidPersistedItem);
+  const persisted = items
+    .filter(isValidPersistedItem)
+    .map((item) => ({ ...item, commandId: normalizeWorkspaceRailCommandId(item.commandId) }));
   const byId = new Map(persisted.map((item) => [item.id, item]));
 
   const systemItems = DEFAULT_WORKSPACE_RAIL_ITEMS.map((defaultItem) => {

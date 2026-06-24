@@ -181,6 +181,25 @@ it('adds search and command palette to the default top rail', () => {
   });
 });
 
+it('normalizes old command translation keys stored as rail command ids', () => {
+  const normalized = normalizeWorkspaceRailItems([
+    {
+      id: 'system.command-palette',
+      commandId: 'desktop.command.openCommandPalette',
+      section: 'top',
+      order: 4,
+      visible: true,
+      source: 'system',
+      iconId: 'SquareChevronRight'
+    }
+  ]);
+
+  expect(normalized.find((item) => item.id === 'system.command-palette')).toMatchObject({
+    commandId: APP_COMMAND_IDS.openCommandPalette,
+    visible: true
+  });
+});
+
 it('adds feedback to the default bottom rail with a warning bubble icon', () => {
   const feedback = getWorkspaceRailSectionItems(resetWorkspaceRailItems(), 'bottom')[0];
 

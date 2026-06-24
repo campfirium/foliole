@@ -41,6 +41,19 @@ it('recovers old persisted command translation keys before showing rail labels',
   })).toBe('命令面板');
 });
 
+it('recovers old persisted command translation keys stored as command ids', () => {
+  window.localStorage.setItem('foliole-app-language', 'zh-Hans');
+
+  expect(getWorkspaceRailItemLabel({
+    commandId: 'desktop.command.openCommandPalette',
+    id: 'system.command-palette',
+    order: 4,
+    section: 'top',
+    source: 'system',
+    visible: true
+  })).toBe('命令面板');
+});
+
 it('keeps settings rail labels on the shared rail label resolver', () => {
   const source = readFileSync('src/features/settings/components/sections/SettingsRailSection.tsx', 'utf8');
 
