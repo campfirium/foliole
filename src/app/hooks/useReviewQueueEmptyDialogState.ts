@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 import { useDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
 import type { ReviewFlowWindow } from '../../store/workspaceReviewFlowWindow';
@@ -49,16 +49,6 @@ export function useReviewQueueEmptyDialogState(
     }
     setContent({ kind: 'empty' });
   }, [demoState.isDemo, flowWindow, openDemoDayClear]);
-
-  useEffect(() => {
-    if (!allowDemoDayClear || !demoState.isDemo || !shouldShowDemoDayClearDialog(flowWindow)) {
-      return;
-    }
-    if (openedDemoPreviewDayRef.current === demoState.previewDay) {
-      return;
-    }
-    openDemoDayClear();
-  }, [allowDemoDayClear, demoState.isDemo, demoState.previewDay, flowWindow, openDemoDayClear]);
 
   return {
     close,

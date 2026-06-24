@@ -143,6 +143,23 @@ it('does not reopen the same Demo day-clear after the completed Flow dialog is c
   expect(result.current.content).toBeNull();
 });
 
+it('does not auto open Demo day-clear on refresh but keeps explicit start available', () => {
+  installDemoState({ isDemo: true, previewDay: 0 });
+  const flowWindow = createFlowWindow({
+    dayBuckets: [{ dayOffset: 1, nodeIds: ['day-2-topic'] }],
+    dayOffsetByNodeId: { 'day-2-topic': 1 },
+    upcomingNodeIds: ['day-2-topic']
+  });
+
+  const { result } = renderHook(() => useReviewQueueEmptyDialogState(flowWindow));
+
+  expect(result.current.content).toBeNull();
+
+  act(() => result.current.openEmpty());
+
+  expect(result.current.content).toEqual({ day: 1, kind: 'demo-day-clear' });
+});
+
 it('keeps the normal all-clear dialog outside Demo day-clear state', () => {
   installDemoState({ isDemo: false, previewDay: 0 });
   const flowWindow = createFlowWindow({});
