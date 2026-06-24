@@ -10,8 +10,14 @@ beforeEach(() => {
   window.localStorage.clear();
 });
 
-function Probe({ onBlockedStart }: { onBlockedStart?: () => void }) {
-  const [canStartStudyMode, setCanStartStudyMode] = useState(false);
+function Probe({
+  initialCanStartStudyMode = false,
+  onBlockedStart
+}: {
+  initialCanStartStudyMode?: boolean;
+  onBlockedStart?: () => void;
+}) {
+  const [canStartStudyMode, setCanStartStudyMode] = useState(initialCanStartStudyMode);
   const study = useStudyMode({ canStartStudyMode, onBlockedStart });
   return (
     <>
@@ -82,7 +88,7 @@ it('remembers the review status bar state only while dev memory is enabled', () 
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.devReviewStatusBarOpen)).toBe('true');
 
   unmount();
-  const secondRender = render(<Probe />);
+  const secondRender = render(<Probe initialCanStartStudyMode />);
 
   expect(screen.getByTestId('mode')).toHaveTextContent('on');
   expect(screen.getByTestId('memory')).toHaveTextContent('memory-on');
@@ -98,6 +104,16 @@ it('remembers the review status bar state only while dev memory is enabled', () 
 
   expect(screen.getByTestId('mode')).toHaveTextContent('off');
   expect(screen.getByTestId('memory')).toHaveTextContent('memory-off');
+});
+
+it('does not restore stale dev review status when no review queue can start', () => {
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.devReviewStatusBarPersistenceEnabled, 'true');
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.devReviewStatusBarOpen, 'true');
+
+  render(<Probe />);
+
+  expect(screen.getByTestId('mode')).toHaveTextContent('off');
+  expect(screen.getByTestId('memory')).toHaveTextContent('memory-on');
 });
 
 it('reports blocked guarded starts without opening review mode', () => {

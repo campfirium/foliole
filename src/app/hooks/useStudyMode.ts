@@ -18,7 +18,7 @@ export function useStudyMode({ canStartStudyMode, onBlockedStart }: UseStudyMode
     () => import.meta.env.DEV && isDevReviewStatusBarPersistenceEnabled()
   );
   const [isStudyMode, setIsStudyMode] = useState(
-    () => import.meta.env.DEV && isDevReviewStatusBarPersistenceEnabled() && isDevReviewStatusBarOpen()
+    () => import.meta.env.DEV && canStartStudyMode && isDevReviewStatusBarPersistenceEnabled() && isDevReviewStatusBarOpen()
   );
   const setStudyMode = (next: boolean) => {
     setIsStudyMode(next);
