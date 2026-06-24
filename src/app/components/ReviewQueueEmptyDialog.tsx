@@ -42,7 +42,7 @@ export function ReviewQueueEmptyDialog(props: {
               <AppButton onClick={props.onExitReviewMode} variant="ghost">
                 {t('desktop.reviewQueue.emptyDialog.exitReviewMode')}
               </AppButton>
-              <AppButton onClick={props.onContinueDemoDay} variant="emphasis">
+              <AppButton onClick={props.onContinueDemoDay}>
                 {t('desktop.reviewQueue.emptyDialog.continueDemoDay', { day: demoDayClearContent.day + 1 })}
               </AppButton>
             </div>

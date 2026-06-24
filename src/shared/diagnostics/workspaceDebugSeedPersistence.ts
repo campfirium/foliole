@@ -1,4 +1,9 @@
-import type { NodeAnchorLink, NodeImageRegionGroup } from '../../features/nodes/model/nodeTypes';
+import type {
+  NodeAnchorLink,
+  NodeImageRegionGroup,
+  NodeReadingProfile,
+  NodeReviewProfile
+} from '../../features/nodes/model/nodeTypes';
 import {
   saveCreatedWorkspaceNodeSnapshot,
   saveWorkspaceNodeOrder
@@ -11,11 +16,15 @@ import type {
 export interface DebugNodeSeed {
   anchorLink?: NodeAnchorLink | null;
   content: string;
+  desiredRetention?: number | null;
   id: string;
   imageRegions?: NodeImageRegionGroup[] | null;
   kind?: 'folder' | 'item' | 'topic';
   parentNodeId?: string | null;
+  priority?: number | null;
+  reading?: NodeReadingProfile | null;
   reveal?: string | null;
+  review?: NodeReviewProfile | null;
   title: string;
 }
 
@@ -24,16 +33,16 @@ function createSeedRuntimeNode(node: DebugNodeSeed, index: number): WorkspaceRun
     anchorLink: node.anchorLink ?? null,
     content: node.content,
     createdAt: '2026-04-08T00:00:00.000Z',
-    desiredRetention: null,
+    desiredRetention: node.desiredRetention ?? null,
     hideTitleHeading: false,
     id: node.id,
     imageRegions: node.imageRegions ?? null,
     isTitleManual: true,
     kind: node.kind ?? 'topic',
     parentNodeId: node.parentNodeId ?? null,
-    priority: null,
-    reading: null,
-    review: null,
+    priority: node.priority ?? null,
+    reading: node.reading ?? null,
+    review: node.review ?? null,
     reveal: node.reveal ?? null,
     title: node.title,
     updatedAt: `2026-04-08T00:00:${String(index).padStart(2, '0')}.000Z`,

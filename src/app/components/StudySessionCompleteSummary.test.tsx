@@ -15,7 +15,6 @@ it('shows the completed review phase summary and continues reading', () => {
       readTopicCount={2}
       reviewElapsedMs={18 * 60 * 1000}
       reviewedItemCount={4}
-      nextReviewDueAt="2026-03-11T09:30:00.000Z"
       reviewSessionMode="recommended"
       sessionStartedAt="2026-03-10T12:00:00.000Z"
     />
@@ -32,8 +31,7 @@ it('shows the completed review phase summary and continues reading', () => {
   expect(screen.getByText('34 min')).toBeInTheDocument();
   expect(screen.getByText('Created')).toBeInTheDocument();
   expect(screen.getByText('12')).toBeInTheDocument();
-  expect(screen.getByText('Next review')).toBeInTheDocument();
-  expect(screen.getByText(/11/)).toBeInTheDocument();
+  expect(screen.queryByText('Next review')).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Continue reading' })).not.toBeInTheDocument();
 });
 
@@ -47,7 +45,6 @@ it('uses review-first completion copy without claiming every reading topic is do
       readTopicCount={0}
       reviewElapsedMs={18 * 60 * 1000}
       reviewedItemCount={4}
-      nextReviewDueAt={null}
       reviewSessionMode="review-first"
       sessionStartedAt="2026-03-10T12:00:00.000Z"
     />
@@ -67,7 +64,6 @@ it('uses reading session completion copy without claiming review items are done'
       readTopicCount={2}
       reviewElapsedMs={0}
       reviewedItemCount={0}
-      nextReviewDueAt="2026-03-11T09:30:00.000Z"
       reviewSessionMode="reading-only"
       sessionStartedAt="2026-03-10T12:00:00.000Z"
     />

@@ -5,6 +5,7 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 import { createClipboardImportHandler } from './workspaceDebugAttachmentImport';
 import { isWorkspaceDebugEnabledForRuntime } from './workspaceDebugBridgeGate';
 import { forceUpdateDebugNodeContent } from './workspaceDebugNodeContent';
+import { completeDebugReviewSession } from './workspaceDebugReviewSession';
 import { createSeedNodeDebugApi, type SeedNodeDebugApi } from './workspaceDebugSeedApi';
 import { type WorkspaceSyncDebugApi, createWorkspaceSyncDebugApi } from './workspaceSyncDebugBridge';
 
@@ -30,9 +31,11 @@ interface WorkspaceDebugApi {
     anchorLink: NodeAnchorLink | null;
     content: string;
     id: string;
+    kind: string;
     parentNodeId: string | null;
     reading: { nextAt: string; state: string } | null;
     reveal: string | null;
+    review: { due: string; state: number } | null;
     title: string;
     trashed: boolean;
   } | null;
@@ -48,6 +51,7 @@ interface WorkspaceDebugApi {
     queueNodeIds: string[];
     soonNodeIds?: string[];
   };
+  completeReviewSessionForDebug: (args: { completedAt: string; continueNodeId: string; sessionStartedAt: string }) => void;
   listNodes: () => Array<{ id: string; title: string }>;
   openNode: (nodeId: string) => Promise<boolean>;
   restoreNode: (nodeId: string) => Promise<boolean>;
@@ -95,9 +99,11 @@ function getDebugNode(nodeId: string): ReturnType<WorkspaceDebugApi['getNode']> 
     anchorLink: node.anchorLink ?? null,
     content: node.content,
     id: node.id,
+    kind: node.kind,
     parentNodeId: node.parentNodeId,
     reading: node.reading ? { nextAt: node.reading.nextAt, state: node.reading.state } : null,
     reveal: node.reveal,
+    review: node.review ? { due: node.review.due, state: node.review.state } : null,
     title: node.title,
     trashed: state.trashedNodeIds.includes(nodeId)
   };
@@ -114,9 +120,16 @@ function getDebugReviewSession(): ReturnType<WorkspaceDebugApi['getReviewSession
 
 function createNodeMutationDebugApi(): Pick<
   WorkspaceDebugApi,
-  'createTextClozeChild' | 'createTextHighlightChild' | 'deleteNode' | 'deleteNodePermanently' | 'restoreNode' | 'updateNodeContent'
+  | 'createTextClozeChild'
+  | 'createTextHighlightChild'
+  | 'completeReviewSessionForDebug'
+  | 'deleteNode'
+  | 'deleteNodePermanently'
+  | 'restoreNode'
+  | 'updateNodeContent'
 > {
   return {
+    completeReviewSessionForDebug: completeDebugReviewSession,
     createTextClozeChild: async ({ anchorId, anchorLink, answer, parentNodeId, prompt }) =>
       useWorkspaceStore.getState().createQANodeFromSelection(parentNodeId, prompt, answer, anchorId, anchorLink ?? undefined),
     createTextHighlightChild: async ({ anchorId, anchorLink, parentNodeId, text }) =>

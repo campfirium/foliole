@@ -1,4 +1,13 @@
+import type { ComponentType, ReactNode } from 'react';
+
+import type { AppLanguagePreference } from '../shared/localization/appLanguage';
+
 import { installDemoResumeShell } from './demoResumeShell';
+
+type DemoAppProps = {
+  initialLanguagePreference?: AppLanguagePreference | undefined;
+  providerBridge?: ReactNode;
+};
 
 const rootElement = document.getElementById('root');
 
@@ -42,14 +51,17 @@ installExternalFolderRuntimeProvider(createDemoExternalFolderProvider());
 installWorkspaceMutationRepository(createBrowserLocalWorkspaceMutationRepository());
 installDemoUrlSync();
 const initialLanguagePreference = resolveDemoLanguagePreferenceFromPath(window.location.pathname);
+const DemoReact = React as typeof import('react');
+const DemoReactDOM = ReactDOM as typeof import('react-dom/client');
+const DemoApp = App as ComponentType<DemoAppProps>;
 
-ReactDOM.createRoot(rootElement).render(
-  React.createElement(
-    React.StrictMode,
+DemoReactDOM.createRoot(rootElement).render(
+  DemoReact.createElement(
+    DemoReact.StrictMode,
     null,
-    React.createElement(App, {
+    DemoReact.createElement(DemoApp, {
       initialLanguagePreference,
-      providerBridge: React.createElement(DemoUrlSyncBridge)
+      providerBridge: DemoReact.createElement(DemoUrlSyncBridge)
     })
   )
 );
