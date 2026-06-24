@@ -15,7 +15,10 @@ import { AppToolbar, ToolbarActionGroup } from '../../shared/ui';
 
 import { WorkspaceDemoRailBottomActions } from './WorkspaceDemoRailBottomActions';
 import { RailActionGroup, WorkspaceRailContextMenu } from './WorkspaceRailActions';
-import { WorkspaceRailTooltipButton } from './WorkspaceRailTooltipButton';
+import {
+  WORKSPACE_RAIL_BUTTON_FOCUS_CLASS_NAME,
+  WorkspaceRailTooltipButton
+} from './WorkspaceRailTooltipButton';
 import { useDemoMarkdownRailImport } from './WorkspaceSideToolbarDemoImport';
 import { renderStudyDock } from './WorkspaceStudyDock';
 import { WorkspaceThemeModeAction } from './WorkspaceThemeModeAction';
@@ -42,7 +45,7 @@ function SettingsAction({ isSettingsOpen, onOpenSettings }: { isSettingsOpen: bo
       orientation="vertical"
     >
       <WorkspaceRailTooltipButton
-        className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground focus-visible:ring-border-strong data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground"
+        className={`size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground ${WORKSPACE_RAIL_BUTTON_FOCUS_CLASS_NAME} data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground`}
         data-active={isSettingsOpen}
         icon={<Settings aria-hidden="true" size={16} strokeWidth={1.75} />}
         label={t('desktop.workspace.settings')}

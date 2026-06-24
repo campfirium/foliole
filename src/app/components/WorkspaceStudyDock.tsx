@@ -3,6 +3,7 @@ import { Route } from 'lucide-react';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppIconButton, AppTooltip, AppTooltipContent, AppTooltipTrigger, ToolbarActionGroup } from '../../shared/ui';
 
+import { WORKSPACE_RAIL_BUTTON_FOCUS_CLASS_NAME } from './WorkspaceRailTooltipButton';
 import { getWorkspaceSurfaceDividerColor } from './WorkspaceSurfaceRowOverlay';
 
 function FlowAction({
@@ -31,7 +32,8 @@ function FlowAction({
         <AppTooltipTrigger asChild>
           <span className="inline-flex">
             <AppIconButton
-              className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground focus-visible:ring-border-strong"
+              className={`size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground ${WORKSPACE_RAIL_BUTTON_FOCUS_CLASS_NAME}`}
+              focusRing="none"
               icon={<Route aria-hidden="true" size={16} strokeWidth={1.75} />}
               label={actionLabel}
               onClick={onToggleReviewSession}

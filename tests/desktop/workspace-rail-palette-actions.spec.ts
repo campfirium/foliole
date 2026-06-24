@@ -41,13 +41,16 @@ async function expectPaletteInputNoFocusRing(input: Locator) {
     });
 }
 
-async function expectRailButtonsUseNeutralFocusRing(ribbon: Locator) {
+async function expectRailButtonsSuppressAccentFocusRing(ribbon: Locator) {
   const classNames = await ribbon.getByRole('button').evaluateAll((buttons) =>
     buttons.map((button) => button.className)
   );
   expect(classNames.length).toBeGreaterThan(0);
   for (const className of classNames) {
-    expect(className).toContain('focus-visible:ring-border-strong');
+    expect(className).toContain('focus-visible:ring-0');
+    expect(className).toContain('focus-visible:[box-shadow:none]');
+    expect(className).toContain('focus-visible:[--tw-ring-shadow:0_0_#0000]');
+    expect(className).not.toContain('focus-visible:ring-border-strong');
     expect(className).not.toContain('focus-visible:ring-ring');
   }
 }
@@ -55,7 +58,7 @@ async function expectRailButtonsUseNeutralFocusRing(ribbon: Locator) {
 test('workspace rail opens search and command palette panels', async ({ desktopWindow }, testInfo) => {
   await expectWorkspaceShell(desktopWindow);
   const ribbon = desktopWindow.getByRole('region', { name: /Workspace Ribbon|工作区功能区/ });
-  await expectRailButtonsUseNeutralFocusRing(ribbon);
+  await expectRailButtonsSuppressAccentFocusRing(ribbon);
 
   await testInfo.attach('workspace-rail-palette-actions', {
     body: await ribbon.screenshot(),

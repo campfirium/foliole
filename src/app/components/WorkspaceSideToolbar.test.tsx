@@ -139,11 +139,15 @@ it('runs search and command palette from the top rail', () => {
   expect(onRunRailAction).toHaveBeenCalledWith(APP_COMMAND_IDS.openCommandPalette);
 });
 
-it('keeps rail button focus rings neutral', () => {
+it('suppresses accent focus rings on rail buttons', () => {
   renderToolbar(false);
 
   for (const button of screen.getAllByRole('button')) {
-    expect(button.className).toContain('focus-visible:ring-border-strong');
+    expect(button.className).toContain('focus-visible:bg-foreground/[0.06]');
+    expect(button.className).toContain('focus-visible:ring-0');
+    expect(button.className).toContain('focus-visible:[box-shadow:none]');
+    expect(button.className).toContain('focus-visible:[--tw-ring-shadow:0_0_#0000]');
+    expect(button.className).not.toContain('focus-visible:ring-border-strong');
     expect(button.className).not.toContain('focus-visible:ring-ring');
   }
 });

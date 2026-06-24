@@ -15,10 +15,13 @@ import {
   ToolbarActionGroup
 } from '../../shared/ui';
 
-import { WorkspaceRailTooltipButton } from './WorkspaceRailTooltipButton';
+import {
+  WORKSPACE_RAIL_BUTTON_FOCUS_CLASS_NAME,
+  WorkspaceRailTooltipButton
+} from './WorkspaceRailTooltipButton';
 
 const RAIL_BUTTON_CLASS_NAME =
-  'size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground focus-visible:ring-border-strong';
+  `size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground ${WORKSPACE_RAIL_BUTTON_FOCUS_CLASS_NAME}`;
 const PLATFORM_DEFAULT_APP_COMMAND_SHORTCUTS = getPlatformDefaultCommandShortcuts();
 
 export function RailItemIcon({
