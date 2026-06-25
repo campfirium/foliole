@@ -3,6 +3,7 @@ import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import type { WorkspacePersistedState } from '../store/workspaceStore';
 
 import type { DemoMarkdownImportEntry } from './demoMarkdownImport';
+import { normalizeDemoImportedContent } from './demoPlainTextImport';
 
 const DEFAULT_READING_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_READING_PRIORITY = 0.5;
@@ -40,7 +41,7 @@ export function buildImportNodes(
   let ignoredCount = 0;
 
   entries.forEach((entry, index) => {
-    const markdown = entry.markdown.trim();
+    const markdown = normalizeDemoImportedContent(entry);
     if (!markdown) {
       ignoredCount += 1;
       return;
@@ -188,6 +189,14 @@ export function normalizeRelativePath(path: string) {
 
 export function isMarkdownFileName(name: string) {
   return name.toLowerCase().endsWith('.md');
+}
+
+export function isTextFileName(name: string) {
+  return name.toLowerCase().endsWith('.txt');
+}
+
+export function isSupportedDemoImportFileName(name: string) {
+  return isMarkdownFileName(name) || isTextFileName(name);
 }
 
 export function isHiddenPath(path: string) {

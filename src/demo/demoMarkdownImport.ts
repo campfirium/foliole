@@ -5,7 +5,7 @@ import {
   appendManualChildOrder,
   buildImportNodes,
   isHiddenPath,
-  isMarkdownFileName,
+  isSupportedDemoImportFileName,
   normalizeRelativePath
 } from './demoMarkdownImportBuild';
 
@@ -33,7 +33,7 @@ export function createDemoMarkdownFileEntry(args: {
   relativePath?: string;
 }): DemoMarkdownImportEntry | null {
   const path = normalizeRelativePath(args.relativePath ?? args.name);
-  if (isHiddenPath(path) || (!isMarkdownFileName(args.name) && !isMarkdownFileName(path))) {
+  if (isHiddenPath(path) || (!isSupportedDemoImportFileName(args.name) && !isSupportedDemoImportFileName(path))) {
     return null;
   }
   const trimmed = args.markdown.trim();

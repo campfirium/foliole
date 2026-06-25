@@ -46,5 +46,5 @@ async function readDemoMarkdownFiles(files: File[]): Promise<DemoMarkdownRuntime
 
 function isDemoMarkdownFile(file: File) {
   const path = (file.webkitRelativePath || file.name).replace(/\\/g, '/');
-  return file.name.toLowerCase().endsWith('.md') && !path.split('/').some((segment) => segment.startsWith('.'));
+  return /\.(md|txt)$/i.test(file.name) && !path.split('/').some((segment) => segment.startsWith('.'));
 }

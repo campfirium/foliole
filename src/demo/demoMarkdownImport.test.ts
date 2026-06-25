@@ -75,6 +75,33 @@ describe('Demo Markdown import', () => {
   });
 });
 
+describe('Demo plain text import', () => {
+  it('normalizes pasted plain text articles into readable Markdown paragraphs', () => {
+    const snapshot = createDemoWorkspaceSnapshot('/en/demo/', new Date('2026-06-17T00:00:00.000Z'));
+    const entry = createDemoMarkdownPasteEntry('First paragraph.\nSecond paragraph.\nThird paragraph.');
+
+    const result = applyDemoMarkdownImport(snapshot, entry ? [entry] : [], '2026-06-17T10:00:00.000Z');
+
+    const topic = requireNode(result.state.nodesById[result.importedTopicIds[0]!]);
+    expect(topic.content).toBe('First paragraph.\n\nSecond paragraph.\n\nThird paragraph.');
+  });
+
+  it('imports text files with single-line paragraphs as readable Markdown paragraphs', () => {
+    const snapshot = createDemoWorkspaceSnapshot('/en/demo/', new Date('2026-06-17T00:00:00.000Z'));
+    const entry = createDemoMarkdownFileEntry({
+      markdown: 'Alpha paragraph.\nBeta paragraph.',
+      name: 'article.txt',
+      relativePath: 'Articles/article.txt'
+    });
+
+    const result = applyDemoMarkdownImport(snapshot, entry ? [entry] : [], '2026-06-17T10:00:00.000Z');
+
+    const topic = requireNode(result.state.nodesById[result.importedTopicIds[0]!]);
+    expect(topic.title).toBe('article');
+    expect(topic.content).toBe('Alpha paragraph.\n\nBeta paragraph.');
+  });
+});
+
 function expectInboxImportRoot(result: ReturnType<typeof applyDemoMarkdownImport>) {
   const inbox = requireNode(result.state.nodesById[INBOX_NODE_ID]);
   const importRootId = inbox.manualChildOrder?.at(-1);
