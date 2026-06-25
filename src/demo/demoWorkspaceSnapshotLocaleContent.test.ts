@@ -64,3 +64,27 @@ it('reinstalls the official Demo snapshot when the stored payload belongs to ano
   expect(node.content).not.toContain('欢迎使用 Foliole');
   vi.unstubAllGlobals();
 });
+
+it('reinstalls stale official Guide content after a Demo snapshot version bump', async () => {
+  const storage = new Map<string, string>();
+  const topic = requireTopic('what-the-foliole-demo-is-for');
+  const staleSnapshot = createDemoWorkspaceSnapshot(canonicalGuidePath(topic.slug), new Date('2026-06-17T00:00:00.000Z'));
+  const topicNode = staleSnapshot.nodesById[getDemoTopicNodeId(topic)];
+  if (!topicNode) throw new Error('Missing stale Demo topic node');
+  topicNode.content = topicNode.content.replace(
+    'Maybe you are a longtime SuperMemo user and want to see how Foliole is different.\n\nMaybe you use Obsidian',
+    'Maybe you are a longtime SuperMemo user and want to see how Foliole is different.\nMaybe you use Obsidian'
+  );
+  storage.set(WORKSPACE_STORAGE_KEY, JSON.stringify({ state: staleSnapshot, version: 0 }));
+  storage.set(DEMO_SNAPSHOT_VERSION, 'demo:2026-06-23-guides-zh-repeat-period');
+  stubDemoStorage(storage, canonicalGuidePath(topic.slug, 'en'));
+
+  await installDemoWorkspaceSnapshot();
+
+  const payload = JSON.parse(storage.get(WORKSPACE_STORAGE_KEY) ?? 'null');
+  const node = payload.state.nodesById[getDemoTopicNodeId(topic)];
+  expect(storage.get(DEMO_SNAPSHOT_VERSION)).toBe(DEMO_CAPTURED_VERSION);
+  expect(node.content).toContain('Maybe you are a longtime SuperMemo user and want to see how Foliole is different.\n\nMaybe you use Obsidian');
+  expect(node.content).not.toContain('Maybe you are a longtime SuperMemo user and want to see how Foliole is different.\nMaybe you use Obsidian');
+  vi.unstubAllGlobals();
+});

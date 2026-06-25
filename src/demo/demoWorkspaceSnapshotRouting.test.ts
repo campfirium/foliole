@@ -75,7 +75,9 @@ it('rebuilds Demo sequential reading from the Guides topic order', () => {
   expect(useWorkspaceStore.getState().setNodeSequentialReading(DEMO_GUIDES_NODE_ID, true, now.toISOString())).toBe(true);
   const state = useWorkspaceStore.getState();
   const topicNodeId = getDemoTopicNodeId(topic);
-  const expectedQueue = DEMO_TOPICS.map(getDemoTopicNodeId);
+  const expectedQueue = DEMO_TOPICS
+    .filter((demoTopic) => demoTopic.id === topic.id || demoTopic.parentId === topic.id)
+    .map(getDemoTopicNodeId);
 
   expect(state.activeNodeId).toBe(topicNodeId);
   expect(state.reviewSession.currentNodeId).toBe(topicNodeId);

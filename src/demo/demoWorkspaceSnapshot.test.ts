@@ -28,14 +28,15 @@ it('projects the guided sample tree into the Foliole Demo workspace under Guides
     const topic = requireTopic(0);
     const snapshot = createDemoWorkspaceSnapshot(canonicalGuidePath(topic.slug), now);
     const topicNodeId = getDemoTopicNodeId(topic);
-    const childNodeIds = DEMO_TOPICS.slice(1).map(getDemoTopicNodeId);
+    const topLevelNodeIds = DEMO_TOPICS.filter((demoTopic) => demoTopic.parentId === null).map(getDemoTopicNodeId);
+    const childNodeIds = DEMO_TOPICS.filter((demoTopic) => demoTopic.parentId === topic.id).map(getDemoTopicNodeId);
     const welcome = snapshot.nodesById[topicNodeId];
 
     expect(snapshot.nodeOrder).toContain(INBOX_NODE_ID);
     expect(snapshot.nodesById[INBOX_NODE_ID]).toMatchObject({ specialKind: 'inbox', title: 'Inbox' });
     expect(snapshot.nodesById[DEMO_GUIDES_NODE_ID]).toMatchObject({
       kind: 'folder',
-      manualChildOrder: [topicNodeId],
+      manualChildOrder: topLevelNodeIds,
       title: DEMO_GUIDES_TITLE
     });
     expect(snapshot.activeNodeId).toBe(topicNodeId);
