@@ -27,7 +27,7 @@ Second sentence in the same reading paragraph.
 Section body.
 ```
 
-For short Guide topics, keep the body as one reading paragraph. Use a single line break between sentences when it improves source readability. Use a blank line only when the content should become a separate block, such as a section heading, image, list, or genuinely separate paragraph. The compiler coalesces consecutive paragraph blocks so accidental blank lines do not create oversized gaps in the Demo reader.
+For short Guide topics, keep the body as one reading paragraph. Use a single line break between sentences when it improves source readability. Use a blank line only when the content should become a separate block, such as a section heading, image, list, or genuinely separate paragraph. The compiler preserves blank-line paragraph boundaries because the Demo reader uses them for reading-mode paragraph navigation.
 
 Item files use a horizontal rule to split prompt and answer. Use the local short item slug in `guide.yml`; the Markdown filename uses the expanded dotted id.
 

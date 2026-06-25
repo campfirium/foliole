@@ -13,7 +13,7 @@ async function withContentFixture(test) {
     await mkdir(path.join(dir, 'zh-hans'), { recursive: true });
     await writeFile(path.join(dir, 'guide.yml'), 'alpha-topic\n  alpha-child\n  alpha-recall, item\nbeta-topic\n', 'utf8');
     await writeFile(path.join(dir, 'en', 'alpha-topic.md'), '# Alpha Topic\n\nEnglish summary.\n\n## Read\n\nEnglish body.', 'utf8');
-    await writeFile(path.join(dir, 'en', 'alpha-topic.alpha-child.md'), '# Alpha Child\n\nChild summary.\n\nSecond child line.', 'utf8');
+    await writeFile(path.join(dir, 'en', 'alpha-topic.alpha-child.md'), '# Alpha Child\n\nChild summary.\nSecond child line.', 'utf8');
     await writeFile(path.join(dir, 'en', 'alpha-topic.alpha-recall.md'), '# Alpha Recall\n\nEnglish prompt?\n\n---\n\nEnglish answer.', 'utf8');
     await writeFile(path.join(dir, 'en', 'beta-topic.md'), '# Beta Topic\n\nFallback summary.\n\n## Keep\n\nFallback body.', 'utf8');
     await writeFile(path.join(dir, 'zh-hans', 'alpha-topic.md'), '# 中文主题\n\n中文摘要。\n\n## 阅读\n\n中文正文。', 'utf8');

@@ -121,5 +121,11 @@ export default [
         }
       ]
     }
+  },
+  {
+    files: ['src/demo/generated/**/*.ts'],
+    rules: {
+      'max-lines': 'off'
+    }
   }
 ];

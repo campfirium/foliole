@@ -37,6 +37,15 @@ it('renders short Guide lines as soft line breaks instead of separate spaced par
   expect(content).not.toContain('Spaced repetition internalizes knowledge step by step.\n\nIncremental reading makes reading actually complete.');
 });
 
+it('preserves explicit Guide paragraph breaks for reading-mode navigation', () => {
+  const topic = requireTopic('what-the-foliole-demo-is-for');
+  const snapshot = createDemoWorkspaceSnapshot(canonicalGuidePath(topic.slug), new Date('2026-06-17T00:00:00.000Z'));
+  const content = snapshot.nodesById[getDemoTopicNodeId(topic)]?.content;
+
+  expect(content).toContain('Maybe you are a longtime SuperMemo user and want to see how Foliole is different.\n\nMaybe you use Obsidian');
+  expect(content).toContain('To make Foliole easier to experience directly, we built this online demo.\n\nNo installation is required.');
+});
+
 it('reinstalls the official Demo snapshot when the stored payload belongs to another locale', async () => {
   const storage = new Map<string, string>();
   const topic = requireTopic('welcome-to-foliole');
