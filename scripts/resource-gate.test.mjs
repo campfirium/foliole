@@ -122,6 +122,26 @@ describe('resource gate', () => {
     });
   }, 10000);
 
+  it('terminates timed out commands and lets the next caller proceed', async () => {
+    await withFixture(async ({ logFile, runtimeDir, stub }) => {
+      const env = {
+        FOLIOLE_RESOURCE_GATE_COMMAND_TIMEOUT_MS: '100',
+        FOLIOLE_WINDOWS_PROCESS_EXIT_TIMEOUT_MS: '1000',
+        RESOURCE_GATE_LOG: logFile
+      };
+      const timedOut = await runGate({ className: 'node-heavy', command: [process.execPath, stub, 'slow', '5000'], env, runtimeDir });
+      const next = await runGate({ className: 'node-heavy', command: [process.execPath, stub, 'after-timeout', '1'], env, runtimeDir });
+      const log = await readFile(logFile, 'utf8');
+
+      expect(timedOut.code).toBe(1);
+      expect(timedOut.stdout).toContain('timed out');
+      expect(next.code).toBe(0);
+      expect(log).toContain('slow:start');
+      expect(log).not.toContain('slow:end');
+      expect(log).toContain('after-timeout:end');
+    });
+  }, 10000);
+
   it('takes over stale locks and prints safe queue progress', async () => {
     await withFixture(async ({ logFile, runtimeDir, stub }) => {
       await mkdir(runtimeDir, { recursive: true });

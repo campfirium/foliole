@@ -49,6 +49,7 @@
 
 - Windows 原生命令默认用已存在的 `npm` / `node` / 项目脚本入口执行；不得把多步验证长期写成内联 PowerShell / cmd 片段。
 - 复杂 Windows 命令若涉及多层引号、环境变量、重定向、后台进程、native exe、`cmd.exe` / PowerShell 交叉调用或 stdout 可靠性判断，优先写成仓库内 Node runner 或已提交脚本；临时诊断必须把 stdout、stderr、exit code 写入 `.tmp/` 后再读取，不得只凭空 stdout 或空日志判定成功。
+- 临时 Playwright / browser 验收、生产站点 browser probe、HTTP server + browser 脚本必须通过 `node scripts/with-resource-gate.mjs preview -- <command...>` 执行；Node REPL 只用于短探针，长流程必须转成仓库脚本。只清理 runner 自己启动的子进程树，不按进程名全机杀 `node.exe` / `msedge.exe`。
 - 需要临时调用 Windows PowerShell 承载复杂参数时，使用 `powershell.exe -NoProfile -EncodedCommand` 并记录可复验日志；避免使用多层 `powershell.exe -Command "..."`、复杂 `cmd.exe /c ... && ...` 或嵌套 shell quoting。
 
 ## Task Execution And Risk Routing
