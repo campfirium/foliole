@@ -1,18 +1,21 @@
 import { createHash } from 'node:crypto';
 
 import { canonicalDemoPath, canonicalGuidePath, getDemoTopicsForLocale, type DemoTopic } from './demoContent';
+import { GENERATED_DEMO_PACKS } from './generated/demoPacks';
 
 export const DEMO_MANIFEST_FILE = 'demo-manifest.json';
 export const DEMO_CONTRACT_VERSION = 3;
-export const DEMO_PUBLISHED_LOCALES = [
+const DEMO_LOCALE_REGISTRY = [
   { locale: 'en', hreflang: 'en' },
   { locale: 'zh-hans', hreflang: 'zh-Hans' },
   { locale: 'zh-hant', hreflang: 'zh-Hant' },
   { locale: 'ja', hreflang: 'ja' }
 ] as const;
+const GENERATED_DEMO_PACK_LOCALES = Object.keys(GENERATED_DEMO_PACKS);
+export const DEMO_PUBLISHED_LOCALES = DEMO_LOCALE_REGISTRY.filter((locale) => GENERATED_DEMO_PACK_LOCALES.includes(locale.locale));
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)*$/;
-const DEMO_TOPIC_PATH_PATTERN = /^\/(?:en|zh-hans|zh-hant|ja)\/guides\/[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)*\/$/;
+const DEMO_TOPIC_PATH_PATTERN = /^\/(?:en|zh-hans)\/guides\/[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)*\/$/;
 
 export type DemoLocalePathSegment = (typeof DEMO_PUBLISHED_LOCALES)[number]['locale'];
 export type DemoHreflang = (typeof DEMO_PUBLISHED_LOCALES)[number]['hreflang'];
@@ -108,8 +111,17 @@ export function demoManifestProjection(topic: DemoTopic) {
   };
 }
 
+function fallbackWarningForSlug(slug: string) {
+  return `fallback-en: ${slug}`;
+}
+
+function localeHasTopicSource(locale: DemoPublishedLocale, slug: string) {
+  if (locale.locale === 'en') return true;
+  return !GENERATED_DEMO_PACKS[locale.locale]?.source.warnings.includes(fallbackWarningForSlug(slug));
+}
+
 function createAlternates(slug: string): DemoAlternatePath[] {
-  return DEMO_PUBLISHED_LOCALES.map((locale) => ({
+  return DEMO_PUBLISHED_LOCALES.filter((locale) => localeHasTopicSource(locale, slug)).map((locale) => ({
     locale: locale.locale,
     hreflang: locale.hreflang,
     path: canonicalGuidePath(slug, locale.locale)

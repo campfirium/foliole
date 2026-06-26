@@ -74,10 +74,10 @@ describe('Demo manifest contract', () => {
     });
     expect(manifestTopic.alternates).toEqual([
       { locale: 'en', hreflang: 'en', path: '/en/guides/welcome-to-foliole/' },
-      { locale: 'zh-hans', hreflang: 'zh-Hans', path: '/zh-hans/guides/welcome-to-foliole/' },
-      { locale: 'zh-hant', hreflang: 'zh-Hant', path: '/zh-hant/guides/welcome-to-foliole/' },
-      { locale: 'ja', hreflang: 'ja', path: '/ja/guides/welcome-to-foliole/' }
+      { locale: 'zh-hans', hreflang: 'zh-Hans', path: '/zh-hans/guides/welcome-to-foliole/' }
     ]);
+    expect(JSON.stringify(manifestTopic.alternates)).not.toContain('zh-hant');
+    expect(JSON.stringify(manifestTopic.alternates)).not.toContain('ja');
     expect(JSON.stringify(manifestTopic)).not.toContain('reviewScheduleSeeds');
     expect(JSON.stringify(manifestTopic)).not.toContain('dayOffset');
     expect(manifestTopic.contentHash).toMatch(/^sha256:[a-f0-9]{64}$/);
@@ -93,7 +93,12 @@ describe('Demo manifest contract', () => {
 
     expect(first.contractVersion).toBe(3);
     expect(first.publishedLocales).toEqual(DEMO_PUBLISHED_LOCALES);
-    expect(first.localePublishPacks.map((pack) => pack.locale)).toEqual(['en', 'zh-hans', 'zh-hant', 'ja']);
+    expect(first.localePublishPacks.map((pack) => pack.locale)).toEqual(['en', 'zh-hans']);
+    expect(first.publishedLocales.map((locale) => locale.locale)).toEqual(['en', 'zh-hans']);
+    expect(JSON.stringify(first.publishedLocales)).not.toContain('zh-hant');
+    expect(JSON.stringify(first.publishedLocales)).not.toContain('ja');
+    expect(JSON.stringify(first.localePublishPacks.flatMap((pack) => pack.topics.flatMap((item) => item.alternates)))).not.toContain('zh-hant');
+    expect(JSON.stringify(first.localePublishPacks.flatMap((pack) => pack.topics.flatMap((item) => item.alternates)))).not.toContain('ja');
     expect(first.localePublishPacks[1]!.topics[0]!).toMatchObject({
       locale: 'zh-hans',
       hreflang: 'zh-Hans',

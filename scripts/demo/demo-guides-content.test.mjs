@@ -47,9 +47,11 @@ describe('Demo Guides content source', () => {
         id: 'alpha-topic.alpha-child',
         parentId: 'alpha-topic'
       });
-      expect(packs['zh-hans'].topics[0]).toMatchObject({ id: 'alpha-topic', title: '中文主题' });
+      expect(packs.en.topics[0]).toMatchObject({ description: 'English summary.', summary: 'English summary.' });
+      expect(packs.en.topics[1]).toMatchObject({ description: 'Child summary. Second child line.', summary: 'Child summary. Second child line.' });
+      expect(packs['zh-hans'].topics[0]).toMatchObject({ id: 'alpha-topic', title: '中文主题', description: '中文摘要。', summary: '中文摘要。' });
       expect(packs['zh-hans'].topics[0].reviewItems[0]).toMatchObject({ id: 'alpha-topic.alpha-recall', prompt: '中文问题？' });
-      expect(packs['zh-hans'].topics[1]).toMatchObject({ id: 'alpha-topic.alpha-child', slug: 'alpha-topic.alpha-child', title: 'Alpha Child' });
+      expect(packs['zh-hans'].topics[1]).toMatchObject({ id: 'alpha-topic.alpha-child', slug: 'alpha-topic.alpha-child', title: 'Alpha Child', description: 'Child summary. Second child line.', summary: 'Child summary. Second child line.' });
       expect(packs['zh-hans'].topics[1].blocks).toEqual([{
         id: 'alpha-topic.alpha-child-block-1',
         kind: 'paragraph',
