@@ -28,6 +28,10 @@ function duplicateClassifications() {
   return [...counts].filter(([, count]) => count > 1).map(([file]) => file);
 }
 
+function mainActivitySource() {
+  return fs.readFileSync(path.join(JAVA_ROOT, 'MainActivity.java'), 'utf8');
+}
+
 describe('Android Java adapter boundary', () => {
   it('documents a concrete host responsibility for every classification bucket', () => {
     expect(classificationEntries().map(({ kind, responsibility, files }) => ({
@@ -55,6 +59,13 @@ describe('Android Java adapter boundary', () => {
   it('keeps removed Android business-rule forks out of the production host', () => {
     const files = productionJavaFiles();
     expect(files.filter((file) => REMOVED_BUSINESS_FORKS.includes(file))).toEqual([]);
+  });
+
+  it('registers the packaged Capacitor SQLite plugin used by shared sync-pack apply', () => {
+    expect(mainActivitySource()).toContain(
+      'import com.getcapacitor.community.database.sqlite.CapacitorSQLitePlugin;'
+    );
+    expect(mainActivitySource()).toContain('registerPlugin(CapacitorSQLitePlugin.class);');
   });
 
   it('blocks obvious sync conflict, review scheduling, and schema authoring rules in Java', () => {

@@ -2,6 +2,7 @@
 
 import { describe, expect, it } from 'vitest';
 
+import capacitorConfig from '../capacitor.config.ts';
 import companionViteConfig, { unwrapCssCascadeLayersForLegacyWebView } from '../vite.companion.config.ts';
 import demoViteConfig, {
   demoManifestPlugin,
@@ -63,6 +64,12 @@ describe('vite config', () => {
   it('targets Android 9 WebView-compatible syntax for the companion bundle', () => {
     expect(companionViteConfig.build?.target).toBe('chrome64');
     expect(companionViteConfig.build?.cssTarget).toBe('chrome64');
+  });
+
+  it('initializes the Android Capacitor SQLite plugin without encrypted database setup', () => {
+    expect(capacitorConfig.plugins?.CapacitorSQLite).toMatchObject({
+      androidIsEncryption: false
+    });
   });
 
   it('keeps non-desktop targets free from desktop renderer warmup files', () => {

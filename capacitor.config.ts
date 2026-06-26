@@ -6,6 +6,11 @@ const config: CapacitorConfig = {
   android: {
     loggingBehavior: 'none'
   },
+  plugins: {
+    CapacitorSQLite: {
+      androidIsEncryption: false
+    }
+  },
   webDir: 'dist/companion'
 };
 

@@ -22,6 +22,7 @@ async function renderAutoSyncHook(
     isNativeAndroidCompanionRuntime: () => isNativeRuntime
   }));
   const foregroundHandlers: Array<() => void> = [];
+  const setStatus = vi.fn();
   const subscribeNativeAppForeground = vi.fn(async (handler: () => void) => {
     foregroundHandlers.push(handler);
     return vi.fn();
@@ -31,10 +32,10 @@ async function renderAutoSyncHook(
   }));
   const { useForegroundAutoSync } = await import('./useCompanionWorkspaceAutoSync');
   const hook = renderHook(({ pairingReady, syncState }) =>
-    useForegroundAutoSync(vi.fn(), vi.fn(), vi.fn(), vi.fn(), vi.fn(), pairingReady, syncState, tryForegroundAutoSync),
+    useForegroundAutoSync(vi.fn(), vi.fn(), vi.fn(), vi.fn(), setStatus, pairingReady, syncState, tryForegroundAutoSync),
     { initialProps: { pairingReady: isPairingReady, syncState: createSyncState(endpointUrl) } }
   );
-  return { foregroundHandlers, hook, subscribeNativeAppForeground, tryForegroundAutoSync };
+  return { foregroundHandlers, hook, setStatus, subscribeNativeAppForeground, tryForegroundAutoSync };
 }
 
 function resetAutoSyncTestModules() {
@@ -100,6 +101,34 @@ async function expectLongBacklogUsesFastCadence() {
   }
 
   expect(tryForegroundAutoSync).toHaveBeenCalledTimes(7);
+}
+
+async function expectBacklogKeepsVisibleSyncingUntilContinuationCompletes() {
+  vi.useFakeTimers();
+  vi.spyOn(Date, 'now').mockReturnValue(1_000);
+  const tryForegroundAutoSync = vi.fn()
+    .mockImplementationOnce(async (args: { setStatus(status: string): void }) => {
+      args.setStatus('idle');
+      return 'backlog' as const;
+    })
+    .mockImplementationOnce(async (args: { setStatus(status: string): void }) => {
+      args.setStatus('idle');
+      return 'completed' as const;
+    });
+  const { setStatus } = await renderAutoSyncHook(true, 'http://10.0.2.2:38641', tryForegroundAutoSync);
+
+  await act(async () => {
+    await Promise.resolve();
+  });
+
+  expect(setStatus).toHaveBeenLastCalledWith('syncing');
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1_000);
+  });
+
+  expect(tryForegroundAutoSync).toHaveBeenCalledTimes(2);
+  expect(setStatus).toHaveBeenLastCalledWith('idle');
 }
 
 async function expectSkippedPassDoesNotRetry() {
@@ -224,6 +253,8 @@ describe('useForegroundAutoSync retry cadence', () => {
   it('continues quickly after a backlog sync pass until convergence completes', expectBacklogContinuesUntilCompleted);
 
   it('keeps continuing long backlog sync passes without failure backoff', expectLongBacklogUsesFastCadence);
+
+  it('keeps backlog continuation visibly syncing until the retry completes', expectBacklogKeepsVisibleSyncingUntilContinuationCompletes);
 
   it('does not keep retrying a skipped pass with idle visible backlog', expectSkippedPassDoesNotRetry);
 });

@@ -8,12 +8,14 @@ import android.webkit.WebSettings;
 import androidx.core.view.WindowCompat;
 
 import com.getcapacitor.BridgeActivity;
+import com.getcapacitor.community.database.sqlite.CapacitorSQLitePlugin;
 
 @SuppressLint("Instantiatable")
 public class MainActivity extends BridgeActivity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        registerPlugin(CapacitorSQLitePlugin.class);
         registerPlugin(FolioleCompanionBootstrapPlugin.class);
         registerPlugin(FolioleCompanionAppDataPlugin.class);
         registerPlugin(FolioleCompanionSyncPackTransferPlugin.class);
