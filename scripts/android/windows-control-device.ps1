@@ -34,6 +34,11 @@ function Resolve-ScrcpyPath {
     return $scoopCandidate
   }
 
+  $localCandidate = "C:\tmp\scrcpy\scrcpy-win64-v3.3.4\scrcpy.exe"
+  if (Test-Path -LiteralPath $localCandidate) {
+    return $localCandidate
+  }
+
   throw "scrcpy.exe not found. Install scrcpy or set SCRCPY_PATH."
 }
 

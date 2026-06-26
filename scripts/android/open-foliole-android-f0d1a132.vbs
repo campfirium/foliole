@@ -1,3 +1,4 @@
 Set shell = CreateObject("WScript.Shell")
-shell.CurrentDirectory = "C:\tmp\scrcpy\scrcpy-win64-v3.3.4"
-shell.Run """C:\tmp\scrcpy\scrcpy-win64-v3.3.4\scrcpy.exe"" --serial f0d1a132 --stay-awake --window-title ""Foliole Android f0d1a132""", 1, False
+Set fso = CreateObject("Scripting.FileSystemObject")
+scriptDir = fso.GetParentFolderName(WScript.ScriptFullName)
+shell.Run "powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File """ & scriptDir & "\windows-control-device.ps1""", 0, False
