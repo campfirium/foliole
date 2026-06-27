@@ -51,13 +51,24 @@ if ([string]::IsNullOrWhiteSpace($serial)) {
   $serial = $env:ANDROID_SERIAL
 }
 
-$arguments = @("--stay-awake")
+$arguments = @(
+  "--stay-awake",
+  "--no-audio",
+  "--window-title=Foliole-Android",
+  "--window-x=40",
+  "--window-y=40",
+  "--window-width=450",
+  "--window-height=980"
+)
 if (![string]::IsNullOrWhiteSpace($serial)) {
-  $arguments = @("--serial", $serial) + $arguments
+  $arguments = @("--serial=$serial") + $arguments
   Write-Info "device: $serial"
 } else {
   Write-Info "device: auto"
 }
+
+Write-Info "device screen: kept on"
+Write-Info "stay awake: enabled"
 
 Start-Process `
   -FilePath $scrcpy `
