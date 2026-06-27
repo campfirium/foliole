@@ -59,6 +59,25 @@ describe('workspace node mutation runtime acceptance', () => {
     }));
   });
 
+  it('keeps editor content in store when local publication is deferred', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.mocked(hasWorkspaceNodeMutationRuntime).mockReturnValue(true);
+      const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
+      const actions = createWorkspaceNodeActions(harness.setState);
+
+      const applied = await actions.updateNodeContent('node-1', '# Deferred local publication', { publishLocal: false });
+
+      expect(applied).toBe(true);
+      expect(harness.getState().nodesById['node-1']?.content).toBe('# Deferred local publication');
+      expect(syncWorkspaceNodeDocumentCacheFromNode).not.toHaveBeenCalled();
+      expect(syncNodeContentWithAnchorsMutationToRuntime).not.toHaveBeenCalled();
+    } finally {
+      vi.clearAllTimers();
+      vi.useRealTimers();
+    }
+  });
+
   it('keeps local creation side effects when runtime accepts the created root node', async () => {
     vi.mocked(hasWorkspaceNodeMutationRuntime).mockReturnValue(true);
     vi.mocked(syncCreateNodeMutationToRuntime).mockImplementationOnce(async (node, nodeOrder, activeNodeId) => ({

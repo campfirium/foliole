@@ -33,7 +33,7 @@ function armNodeContentRuntimePersist(nodeId: string, args: Parameters<typeof ru
       return;
     }
     pendingNodeContentRuntimePersists.delete(nodeId);
-    runNodeContentRuntimePersist(pending.args);
+    void runNodeContentRuntimePersist(pending.args);
   }, NODE_CONTENT_RUNTIME_PERSIST_IDLE_DELAY_MS);
   pendingNodeContentRuntimePersists.set(nodeId, { args, timer });
 }
@@ -102,7 +102,7 @@ export function applyNodeContentLocalPatch(args: {
   return applied;
 }
 
-function runNodeContentRuntimePersist(args: {
+async function runNodeContentRuntimePersist(args: {
   contentLength: number;
   diagnosticsEnabled: boolean;
   localState: UpdateNodeContentLocalState;
@@ -110,23 +110,23 @@ function runNodeContentRuntimePersist(args: {
   nextNodeForSync: WorkspaceNode;
 }) {
   const runtimeMetrics = args.diagnosticsEnabled ? createUpdateNodeContentMetrics(true) : args.metrics;
-  void applyNodeContentRuntimePatch({
+  const runtimeAccepted = await applyNodeContentRuntimePatch({
     ...args.localState,
     diagnosticsEnabled: args.diagnosticsEnabled,
     metrics: runtimeMetrics,
     nextNodeForSync: args.nextNodeForSync
-  }).then((runtimeAccepted) => {
-    if (args.diagnosticsEnabled) {
-      logUpdateNodeContentDiagnostic({
-        applied: runtimeAccepted,
-        contentLength: args.contentLength,
-        event: 'update-node-content-runtime-persist',
-        localState: args.localState,
-        metrics: runtimeMetrics,
-        nodeId: args.nextNodeForSync.id
-      });
-    }
   });
+  if (args.diagnosticsEnabled) {
+    logUpdateNodeContentDiagnostic({
+      applied: runtimeAccepted,
+      contentLength: args.contentLength,
+      event: 'update-node-content-runtime-persist',
+      localState: args.localState,
+      metrics: runtimeMetrics,
+      nodeId: args.nextNodeForSync.id
+    });
+  }
+  return runtimeAccepted;
 }
 
 export function scheduleNodeContentRuntimePersist(args: Parameters<typeof runNodeContentRuntimePersist>[0]) {
@@ -145,4 +145,14 @@ export function deferNodeContentRuntimePersist(nodeId: string) {
   }
   globalThis.clearTimeout(previous.timer);
   armNodeContentRuntimePersist(nodeId, previous.args);
+}
+
+export async function drainPendingNodeContentRuntimePersists() {
+  const pending = [...pendingNodeContentRuntimePersists.values()];
+  pendingNodeContentRuntimePersists.clear();
+  const results = await Promise.all(pending.map((entry) => {
+    globalThis.clearTimeout(entry.timer);
+    return runNodeContentRuntimePersist(entry.args);
+  }));
+  return results.every(Boolean);
 }

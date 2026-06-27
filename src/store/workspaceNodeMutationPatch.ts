@@ -117,12 +117,18 @@ export function createWorkspaceNodeMutationPatchWithLocalSideEffects(
   result: WorkspaceNodeMutationPatchResult,
   localPatch: Partial<WorkspaceState> | null
 ): WorkspacePatch & Partial<WorkspaceState> {
+  const localUserNodesById = localPatch?.nodesById
+    ? {
+        ...localPatch.nodesById,
+        ...state.nodesById
+      }
+    : state.nodesById;
   const runtimeBaseState = localPatch?.nodesById
     ? {
         ...state,
         nodesById: {
-          ...state.nodesById,
-          ...localPatch.nodesById
+          ...localPatch.nodesById,
+          ...state.nodesById
         }
       }
     : state;
@@ -133,7 +139,7 @@ export function createWorkspaceNodeMutationPatchWithLocalSideEffects(
     ...runtimePatch,
     nodesById: mergeNodesByIdWithLocalUserFields(
       runtimePatch.nodesById,
-      localPatch.nodesById,
+      localUserNodesById,
       new Set(result.nodes.map((node) => node.nodeId))
     )
   };

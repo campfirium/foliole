@@ -7,6 +7,7 @@ import type { ReadingPositionRestoreCommand } from '../../features/editor/model/
 import type { SettingsCategoryId } from '../../features/settings/model/settingsPanelOptions';
 import { getRecentCommandIds, pushRecentCommandId, setRecentCommandIds } from '../../shared/commands/recentCommands';
 import { flushDirtyWorkspaceNodeSyncVersions } from '../../shared/platform/workspaceRuntimeRepository';
+import { drainPendingNodeContentRuntimePersists } from '../../store/workspaceStoreContentRuntimePersist';
 import { subscribeOpenClozeGuardSettings } from '../clozeGuardSettingsEvent';
 import { getRecentNodeIds, pushRecentNodeId, setRecentNodeIds } from '../components/nodePaletteRecents';
 
@@ -143,8 +144,9 @@ function useEditorDraftFlushRegistry(refs: ReturnType<typeof createRuntimeRefs>)
     async () => {
       const draftFlushed = (await refs.editorDraftCloseFlushRef.current?.()) ?? true;
       try {
+        const contentFlushed = await drainPendingNodeContentRuntimePersists();
         await flushDirtyWorkspaceNodeSyncVersions();
-        return draftFlushed;
+        return draftFlushed && contentFlushed;
       } catch {
         return false;
       }

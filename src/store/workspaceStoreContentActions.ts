@@ -33,6 +33,7 @@ function resolveNodeContentUpdateBlockReason(state: WorkspaceState, nodeId: stri
 }
 
 function prepareNodeContentLocalState(args: {
+  buildHeavyPatch: boolean;
   content: string;
   diagnosticsEnabled: boolean;
   localState: UpdateNodeContentLocalState;
@@ -58,12 +59,19 @@ function prepareNodeContentLocalState(args: {
   args.metrics.guardMs = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() - guardStartedAt : 0;
   const timestamp = new Date().toISOString();
   const nextNode = prepareNextContentNode(node, args.content, timestamp, args);
-  const locatorSync = syncTextAnchorLocatorsForNextContentNode(args, nextNode, timestamp, node.content);
   args.localState.nextNodeForSync = nextNode;
-  args.localState.locatorUpdatedNodesForSync = locatorSync.updatedNodes;
   args.localState.nodeOrderForSync = args.state.nodeOrder;
-  args.localState.localPatch = { nodesById: locatorSync.nextNodesById };
-  return args.state;
+  if (args.buildHeavyPatch) {
+    const locatorSync = syncTextAnchorLocatorsForNextContentNode(args, nextNode, timestamp, node.content);
+    args.localState.locatorUpdatedNodesForSync = locatorSync.updatedNodes;
+    args.localState.localPatch = { nodesById: locatorSync.nextNodesById };
+  }
+  return {
+    nodesById: {
+      ...args.state.nodesById,
+      [args.nodeId]: nextNode
+    }
+  };
 }
 
 function prepareNextContentNode(
@@ -115,6 +123,7 @@ function syncTextAnchorLocatorsForNextContentNode(
 }
 
 function collectUpdateNodeContentLocalState(args: {
+  buildHeavyPatch: boolean;
   content: string;
   diagnosticsEnabled: boolean;
   metrics: UpdateNodeContentMetrics;
@@ -136,7 +145,15 @@ async function updateNodeContent(
 ) {
   const diagnosticsEnabled = isEditorInputDiagnosticEnabled();
   const metrics = createUpdateNodeContentMetrics(diagnosticsEnabled);
-  const localState = collectUpdateNodeContentLocalState({ content, diagnosticsEnabled, metrics, nodeId, set });
+  const publishLocal = options.publishLocal !== false;
+  const localState = collectUpdateNodeContentLocalState({
+    buildHeavyPatch: publishLocal,
+    content,
+    diagnosticsEnabled,
+    metrics,
+    nodeId,
+    set
+  });
   if (!localState.nextNodeForSync) {
     if (diagnosticsEnabled) {
       logUpdateNodeContentDiagnostic({ applied: false, contentLength: content.length, localState, metrics, nodeId });
@@ -145,7 +162,7 @@ async function updateNodeContent(
   }
   const nextNodeForSync = localState.nextNodeForSync;
   const runtimePatchStartedAt = diagnosticsEnabled ? readEditorInputDiagnosticTime() : 0;
-  const applied = options.publishLocal === false
+  const applied = !publishLocal
     ? true
     : applyNodeContentLocalPatch({
       ...localState,
