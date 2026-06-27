@@ -1,7 +1,9 @@
 import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/workspaceRuntimeTypes';
 
+import { markNodeCreatePending } from './workspaceNodeContentVersionGuard';
 import { createWorkspaceNodeMutationPatchWithLocalSideEffects } from './workspaceNodeMutationPatch';
 import type { WorkspaceState } from './workspaceStore';
+import { completeNodeCreateRuntimePersist } from './workspaceStoreContentRuntimePersist';
 
 type WorkspaceNode = WorkspaceState['nodesById'][string];
 type WorkspaceSet = (
@@ -34,6 +36,7 @@ export async function applyCreatedImageClozeNodes(args: {
   }
   const acceptedIds: string[] = [];
   for (const node of args.createdNodes) {
+    markNodeCreatePending(node.id);
     const result = await args.handlers.syncNodeCreation(
       node,
       args.nextNodeOrder,
@@ -43,6 +46,7 @@ export async function applyCreatedImageClozeNodes(args: {
     if (result) {
       args.set((state) => createWorkspaceNodeMutationPatchWithLocalSideEffects(state, result, args.localPatch));
     }
+    await completeNodeCreateRuntimePersist(node.id);
     acceptedIds.push(node.id);
   }
   if (args.updatedParentNode) {

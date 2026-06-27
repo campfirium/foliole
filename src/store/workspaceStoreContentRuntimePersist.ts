@@ -8,6 +8,11 @@ import {
   type UpdateNodeContentLocalState,
   type UpdateNodeContentMetrics
 } from './workspaceNodeContentUpdateDiagnostics';
+import {
+  isNodeCreatePending,
+  markNodeCreateConfirmed,
+  markNodeContentPersisted
+} from './workspaceNodeContentVersionGuard';
 import { syncWorkspaceNodeDocumentCacheFromNode } from './workspaceNodeDocumentCache';
 import {
   hasWorkspaceNodeMutationRuntime,
@@ -21,7 +26,7 @@ const NODE_CONTENT_RUNTIME_PERSIST_IDLE_DELAY_MS = 800;
 
 interface PendingNodeContentRuntimePersist {
   args: Parameters<typeof runNodeContentRuntimePersist>[0];
-  timer: ReturnType<typeof globalThis.setTimeout>;
+  timer: ReturnType<typeof globalThis.setTimeout> | null;
 }
 
 const pendingNodeContentRuntimePersists = new Map<string, PendingNodeContentRuntimePersist>();
@@ -108,6 +113,7 @@ async function runNodeContentRuntimePersist(args: {
   localState: UpdateNodeContentLocalState;
   metrics: UpdateNodeContentMetrics;
   nextNodeForSync: WorkspaceNode;
+  version: number;
 }) {
   const runtimeMetrics = args.diagnosticsEnabled ? createUpdateNodeContentMetrics(true) : args.metrics;
   const runtimeAccepted = await applyNodeContentRuntimePatch({
@@ -126,6 +132,9 @@ async function runNodeContentRuntimePersist(args: {
       nodeId: args.nextNodeForSync.id
     });
   }
+  if (runtimeAccepted) {
+    markNodeContentPersisted(args.nextNodeForSync.id, args.version);
+  }
   return runtimeAccepted;
 }
 
@@ -133,7 +142,13 @@ export function scheduleNodeContentRuntimePersist(args: Parameters<typeof runNod
   const nodeId = args.nextNodeForSync.id;
   const previous = pendingNodeContentRuntimePersists.get(nodeId);
   if (previous) {
-    globalThis.clearTimeout(previous.timer);
+    if (previous.timer) {
+      globalThis.clearTimeout(previous.timer);
+    }
+  }
+  if (isNodeCreatePending(nodeId)) {
+    pendingNodeContentRuntimePersists.set(nodeId, { args, timer: null });
+    return;
   }
   armNodeContentRuntimePersist(nodeId, args);
 }
@@ -143,16 +158,44 @@ export function deferNodeContentRuntimePersist(nodeId: string) {
   if (!previous) {
     return;
   }
-  globalThis.clearTimeout(previous.timer);
+  if (previous.timer) {
+    globalThis.clearTimeout(previous.timer);
+  }
   armNodeContentRuntimePersist(nodeId, previous.args);
 }
 
+export async function drainPendingNodeContentRuntimePersist(nodeId: string) {
+  const pending = pendingNodeContentRuntimePersists.get(nodeId);
+  if (!pending) {
+    return true;
+  }
+  if (isNodeCreatePending(nodeId)) {
+    return false;
+  }
+  pendingNodeContentRuntimePersists.delete(nodeId);
+  if (pending.timer) {
+    globalThis.clearTimeout(pending.timer);
+  }
+  return runNodeContentRuntimePersist(pending.args);
+}
+
+export async function completeNodeCreateRuntimePersist(nodeId: string) {
+  markNodeCreateConfirmed(nodeId);
+  return drainPendingNodeContentRuntimePersist(nodeId);
+}
+
 export async function drainPendingNodeContentRuntimePersists() {
-  const pending = [...pendingNodeContentRuntimePersists.values()];
-  pendingNodeContentRuntimePersists.clear();
-  const results = await Promise.all(pending.map((entry) => {
-    globalThis.clearTimeout(entry.timer);
+  const runnable = [...pendingNodeContentRuntimePersists.entries()]
+    .filter(([nodeId]) => !isNodeCreatePending(nodeId));
+  const blocked = pendingNodeContentRuntimePersists.size - runnable.length;
+  for (const [nodeId, entry] of runnable) {
+    pendingNodeContentRuntimePersists.delete(nodeId);
+    if (entry.timer) {
+      globalThis.clearTimeout(entry.timer);
+    }
+  }
+  const results = await Promise.all(runnable.map(([, entry]) => {
     return runNodeContentRuntimePersist(entry.args);
   }));
-  return results.every(Boolean);
+  return blocked === 0 && results.every(Boolean);
 }

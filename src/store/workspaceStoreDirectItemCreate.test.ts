@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { resetNodeContentVersionGuardForTests } from './workspaceNodeContentVersionGuard';
 import { syncCreateNodeMutationToRuntime } from './workspaceRuntimeSync';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
 import {
@@ -15,6 +16,7 @@ vi.mock('./workspaceRuntimeSync', () => ({
   syncNodeRevealMutationToRuntime: vi.fn(async () => null),
   syncCreateNodeToRuntime: vi.fn(),
   syncDeleteNodesPermanentlyToRuntime: vi.fn(),
+  syncMoveNodesToRuntime: vi.fn(async () => undefined),
   syncNodeContentToRuntime: vi.fn(),
   syncNodeContentWithAnchorsToRuntime: vi.fn(),
   syncNodeOrderToRuntime: vi.fn(),
@@ -26,6 +28,7 @@ vi.mock('./workspaceRuntimeSync', () => ({
 describe('direct item creation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetNodeContentVersionGuardForTests();
   });
 
   it('creates root items with editable answers and review state', async () => {

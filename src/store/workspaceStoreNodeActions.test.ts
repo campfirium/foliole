@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 
+import { resetNodeContentVersionGuardForTests } from './workspaceNodeContentVersionGuard';
 import {
   syncCreateNodeMutationToRuntime,
   syncNodeContentMutationToRuntime,
@@ -25,6 +26,7 @@ vi.mock('./workspaceRuntimeSync', () => ({
   syncNodeRevealMutationToRuntime: vi.fn(async () => null),
   syncCreateNodeToRuntime: vi.fn(),
   syncDeleteNodesPermanentlyToRuntime: vi.fn(),
+  syncMoveNodesToRuntime: vi.fn(async () => undefined),
   syncNodeContentToRuntime: vi.fn(),
   syncNodeContentWithAnchorsToRuntime: vi.fn(),
   syncNodeOrderToRuntime: vi.fn(),
@@ -33,10 +35,13 @@ vi.mock('./workspaceRuntimeSync', () => ({
   syncSoftDeleteNodesToRuntime: vi.fn()
 }));
 
+function resetRuntimeMocks() {
+  vi.clearAllMocks();
+  resetNodeContentVersionGuardForTests();
+}
+
 describe('createWorkspaceNodeActions content/title sync', () => {
-  beforeEach(async () => {
-    vi.clearAllMocks();
-  });
+  beforeEach(resetRuntimeMocks);
 
   it('syncs updateNodeContent through runtime command bridge', async () => {
     vi.useFakeTimers();
@@ -93,9 +98,7 @@ afterEach(() => {
 });
 
 describe('createWorkspaceNodeActions root creation sync', () => {
-  beforeEach(async () => {
-    vi.clearAllMocks();
-  });
+  beforeEach(resetRuntimeMocks);
 
   it('syncs createRootNode through runtime command bridge', async () => {
     const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
@@ -148,7 +151,7 @@ describe('createWorkspaceNodeActions root creation sync', () => {
 });
 
 it('treats a missing Inbox as a workspace invariant violation', async () => {
-  vi.clearAllMocks();
+  resetRuntimeMocks();
   const fixture = createWorkspaceNodeActionsFixture();
   const nodesById = { ...fixture.nodesById };
   delete nodesById[INBOX_NODE_ID];
@@ -165,9 +168,7 @@ it('treats a missing Inbox as a workspace invariant violation', async () => {
 });
 
 describe('createWorkspaceNodeActions reveal sync', () => {
-  beforeEach(async () => {
-    vi.clearAllMocks();
-  });
+  beforeEach(resetRuntimeMocks);
 
   it('syncs updateNodeReveal through runtime command bridge', async () => {
     const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
@@ -200,9 +201,7 @@ describe('createWorkspaceNodeActions reveal sync', () => {
 });
 
 describe('createWorkspaceNodeActions create sync', () => {
-  beforeEach(async () => {
-    vi.clearAllMocks();
-  });
+  beforeEach(resetRuntimeMocks);
 
   it('syncs createChildNode through runtime command bridge', async () => {
     const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());

@@ -1,9 +1,11 @@
 import type { NodeKind } from '../../lib/core/nodes/nodeKind';
 import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/workspaceRuntimeTypes';
 
+import { markNodeCreatePending } from './workspaceNodeContentVersionGuard';
 import { canCreateChildUnderParent } from './workspaceNodeKindRules';
 import { createWorkspaceNodeMutationPatchWithLocalSideEffects } from './workspaceNodeMutationPatch';
 import type { WorkspaceState } from './workspaceStore';
+import { completeNodeCreateRuntimePersist } from './workspaceStoreContentRuntimePersist';
 import { buildCreatedChildState } from './workspaceStoreTreeCreateChildState';
 
 type WorkspaceSet = (
@@ -51,6 +53,7 @@ export function createChildNodeAction(
       return localPatch;
     });
     if (!createdNode) return null;
+    markNodeCreatePending(nodeId);
     const orderForSync = [...(nextNodeOrder ?? [])] as string[];
     const result = await onNodeCreated?.(createdNode, orderForSync, nodeId, orderForSync.indexOf(nodeId));
     if (result) {
@@ -59,6 +62,7 @@ export function createChildNodeAction(
     if (applied && !result && kind === 'folder' && nextNodeOrder) {
       onNodeOrderChanged?.(nextNodeOrder);
     }
+    await completeNodeCreateRuntimePersist(nodeId);
     return applied ? nodeId : null;
   };
 }

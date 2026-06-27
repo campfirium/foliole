@@ -6,9 +6,11 @@ import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { normalizePushQueuePriority } from '../features/review/model/unifiedPushQueueRules';
 
 import { createNewItemReviewProfiles } from './newItemReviewSlots';
+import { markNodeCreatePending } from './workspaceNodeContentVersionGuard';
 import { createWorkspaceNodeMutationPatchWithLocalSideEffects } from './workspaceNodeMutationPatch';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import type { WorkspaceState } from './workspaceStore';
+import { completeNodeCreateRuntimePersist } from './workspaceStoreContentRuntimePersist';
 import { resolveCreatedNodeTitleState } from './workspaceUntitledNodeTitle';
 
 type WorkspaceNode = WorkspaceState['nodesById'][string];
@@ -116,6 +118,7 @@ export function createRootNodeAction(
       return localPatch;
     });
     if (createdNode && nextNodeOrder) {
+      markNodeCreatePending(nodeId);
       const acceptedOrder = [...nextNodeOrder] as string[];
       const result = await handlers.syncNodeCreation(createdNode, acceptedOrder, nodeId, acceptedOrder.indexOf(nodeId));
       if (result) {
@@ -127,6 +130,7 @@ export function createRootNodeAction(
           };
         });
       }
+      await completeNodeCreateRuntimePersist(nodeId);
     }
     return createdNode && applied ? nodeId : null;
   };

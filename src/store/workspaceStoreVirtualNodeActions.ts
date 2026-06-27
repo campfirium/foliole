@@ -3,10 +3,12 @@ import { deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTi
 import { VIRTUAL_ROOT_NODE_ID } from '../features/nodes/model/specialNodes';
 import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/workspaceRuntimeTypes';
 
+import { markNodeCreatePending } from './workspaceNodeContentVersionGuard';
 import { createWorkspaceNodeMutationPatchWithLocalSideEffects } from './workspaceNodeMutationPatch';
 import { insertNodeBlockUnderParent } from './workspaceNodeTreeOrder';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import type { WorkspaceState } from './workspaceStore';
+import { completeNodeCreateRuntimePersist } from './workspaceStoreContentRuntimePersist';
 import { resolveCreatedNodeTitleState } from './workspaceUntitledNodeTitle';
 
 type WorkspaceSet = (
@@ -90,6 +92,7 @@ async function applyCreatedVirtualNode(args: {
   if (!args.createdNode) {
     return null;
   }
+  markNodeCreatePending(args.nodeId);
   const orderForSync = [...(args.nextNodeOrder ?? [])] as string[];
   const result = await args.onNodeCreated?.(
     args.createdNode,
@@ -103,6 +106,7 @@ async function applyCreatedVirtualNode(args: {
   if (!result && args.nextNodeOrder) {
     args.onNodeOrderChanged?.(args.nextNodeOrder);
   }
+  await completeNodeCreateRuntimePersist(args.nodeId);
   return args.nodeId;
 }
 

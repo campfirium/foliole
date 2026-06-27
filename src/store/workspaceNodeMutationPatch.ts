@@ -4,6 +4,7 @@ import type {
   WorkspaceRuntimeNodeSnapshot
 } from '../shared/platform/workspaceRuntimeTypes';
 
+import { shouldKeepLocalNodeContent } from './workspaceNodeContentVersionGuard';
 import type { WorkspaceState } from './workspaceStore';
 
 type WorkspacePatch = Partial<Pick<WorkspaceState, 'activeNodeId' | 'nodeOrder' | 'nodesById'>>;
@@ -37,8 +38,25 @@ function nodeFromSnapshot(snapshot: WorkspaceRuntimeNodeSnapshot, current?: Node
   };
 }
 
-function shouldApplyNodePatch(current: Node | undefined, next: Node) {
-  return !current || next.updatedAt >= current.updatedAt;
+function mergeRuntimeNodePatch(current: Node | undefined, next: Node): Node {
+  if (!current) {
+    return next;
+  }
+  if (next.updatedAt < current.updatedAt) {
+    return current;
+  }
+  if (!shouldKeepLocalNodeContent({
+    currentUpdatedAt: current.updatedAt,
+    incomingUpdatedAt: next.updatedAt,
+    nodeId: next.id
+  })) {
+    return next;
+  }
+  return {
+    ...next,
+    content: current.content,
+    hasContent: current.hasContent ?? current.content.trim().length > 0
+  };
 }
 
 function mergeNodeWithLocalUserFields(runtimeNode: Node | undefined, localNode: Node): Node {
@@ -90,9 +108,7 @@ export function createWorkspaceNodeMutationPatch(
   const nextNodesById = { ...state.nodesById };
   for (const snapshot of result.nodes) {
     const nextNode = nodeFromSnapshot(snapshot, state.nodesById[snapshot.nodeId]);
-    if (shouldApplyNodePatch(nextNodesById[nextNode.id], nextNode)) {
-      nextNodesById[nextNode.id] = nextNode;
-    }
+    nextNodesById[nextNode.id] = mergeRuntimeNodePatch(nextNodesById[nextNode.id], nextNode);
   }
   for (const update of result.anchorUpdates ?? []) {
     const current = nextNodesById[update.nodeId];

@@ -5,10 +5,12 @@ import {
 import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/workspaceRuntimeTypes';
 
 import { createEditorAnnotationCreateEntry } from './workspaceEditorAnnotationOperationEntry';
+import { markNodeCreatePending } from './workspaceNodeContentVersionGuard';
 import { createWorkspaceNodeMutationPatchWithLocalSideEffects } from './workspaceNodeMutationPatch';
 import { createQANodeFromSelectionRecord } from './workspaceQANodeRecord';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import type { WorkspaceState } from './workspaceStore';
+import { completeNodeCreateRuntimePersist } from './workspaceStoreContentRuntimePersist';
 import { createHighlightNodeRecord } from './workspaceStoreHighlightNodeRecord';
 import { resolveCreatedNodeTitleState } from './workspaceUntitledNodeTitle';
 
@@ -45,10 +47,12 @@ async function applyCreatedNode(args: {
   if (!node || !nodeOrder) {
     return null;
   }
+  markNodeCreatePending(nodeId);
   const result = await handlers.syncNodeCreation(node, nodeOrder, activeNodeId, nodeOrder.indexOf(nodeId));
   if (result) {
     set((state) => createWorkspaceNodeMutationPatchWithLocalSideEffects(state, result, localPatch));
   }
+  await completeNodeCreateRuntimePersist(nodeId);
   return nodeId;
 }
 

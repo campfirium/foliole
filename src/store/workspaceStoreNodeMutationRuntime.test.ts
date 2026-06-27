@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { definedProps } from '../shared/lib/definedProps';
 
+import { resetNodeContentVersionGuardForTests } from './workspaceNodeContentVersionGuard';
 import { syncWorkspaceNodeDocumentCacheFromNode } from './workspaceNodeDocumentCache';
 import {
   hasWorkspaceNodeMutationRuntime,
@@ -38,6 +39,7 @@ vi.mock('./workspaceNodeDocumentCache', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resetNodeContentVersionGuardForTests();
   vi.mocked(hasWorkspaceNodeMutationRuntime).mockReturnValue(false);
   vi.mocked(syncCreateNodeMutationToRuntime).mockResolvedValue(null);
   vi.mocked(syncNodeContentWithAnchorsMutationToRuntime).mockResolvedValue(null);
@@ -159,6 +161,7 @@ it('keeps body edits made before root creation confirmation', async () => {
     vi.useRealTimers();
   }
 });
+
 
 it('keeps child creation content local when native persistence rejects creation mutation', async () => {
   vi.mocked(hasWorkspaceNodeMutationRuntime).mockReturnValue(true);

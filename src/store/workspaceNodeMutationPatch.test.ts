@@ -1,7 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 
+import {
+  markNodeContentEdited,
+  markNodeContentPersisted,
+  resetNodeContentVersionGuardForTests
+} from './workspaceNodeContentVersionGuard';
 import {
   createWorkspaceNodeMutationPatch,
   createWorkspaceNodeMutationPatchWithLocalSideEffects
@@ -22,7 +27,28 @@ function createLocalNode(state: ReturnType<typeof createInitialWorkspaceState>) 
   };
 }
 
-describe('createWorkspaceNodeMutationPatch', () => {
+function createRuntimeSnapshot(overrides: Partial<Parameters<typeof createWorkspaceNodeMutationPatch>[1]['nodes'][number]> = {}) {
+  return {
+    nodeId: 'node-local',
+    parentNodeId: INBOX_NODE_ID,
+    kind: 'topic' as const,
+    title: 'Runtime topic',
+    isTitleManual: false,
+    content: 'Runtime body',
+    reveal: null,
+    anchorLink: null,
+    position: 1,
+    createdAt: '2026-03-07T00:00:00.000Z',
+    updatedAt: '2026-03-07T00:00:00.000Z',
+    ...overrides
+  };
+}
+
+beforeEach(() => {
+  resetNodeContentVersionGuardForTests();
+});
+
+describe('createWorkspaceNodeMutationPatch metadata merge', () => {
   it('preserves local special node kind when runtime snapshot omits renderer-only metadata', () => {
     const state = createInitialWorkspaceState(new Date('2026-03-06T00:00:00.000Z'));
     const patch = createWorkspaceNodeMutationPatch(state, {
@@ -78,5 +104,55 @@ describe('createWorkspaceNodeMutationPatch', () => {
     expect(patch.nodesById?.['node-local']?.content).toBe('Local body');
     expect(patch.nodesById?.['node-local']?.title).toBe('Runtime topic');
     expect(patch.nodesById?.['node-local']?.updatedAt).toBe('2026-03-07T00:00:02.000Z');
+  });
+});
+
+describe('createWorkspaceNodeMutationPatch body guard', () => {
+  it('keeps local body when a stale runtime snapshot has the same timestamp', () => {
+    const state = createInitialWorkspaceState(new Date('2026-03-06T00:00:00.000Z'));
+    const localNode = createLocalNode(state);
+    const patch = createWorkspaceNodeMutationPatch({
+      ...state,
+      nodesById: { ...state.nodesById, 'node-local': localNode }
+    }, {
+      nodes: [createRuntimeSnapshot()]
+    });
+
+    expect(patch.nodesById?.['node-local']?.content).toBe('Local body');
+    expect(patch.nodesById?.['node-local']?.title).toBe('Runtime topic');
+  });
+
+  it('accepts newer runtime body when local content is not dirty', () => {
+    const state = createInitialWorkspaceState(new Date('2026-03-06T00:00:00.000Z'));
+    const localNode = createLocalNode(state);
+    const patch = createWorkspaceNodeMutationPatch({
+      ...state,
+      nodesById: { ...state.nodesById, 'node-local': localNode }
+    }, {
+      nodes: [createRuntimeSnapshot({
+        content: 'Remote body',
+        updatedAt: '2026-03-07T00:00:01.000Z'
+      })]
+    });
+
+    expect(patch.nodesById?.['node-local']?.content).toBe('Remote body');
+  });
+
+  it('keeps dirty local body when a newer runtime snapshot arrives before persist completes', () => {
+    const state = createInitialWorkspaceState(new Date('2026-03-06T00:00:00.000Z'));
+    const localNode = createLocalNode(state);
+    markNodeContentEdited('node-local');
+    const patch = createWorkspaceNodeMutationPatch({
+      ...state,
+      nodesById: { ...state.nodesById, 'node-local': localNode }
+    }, {
+      nodes: [createRuntimeSnapshot({
+        content: 'Remote body',
+        updatedAt: '2026-03-07T00:00:01.000Z'
+      })]
+    });
+
+    expect(patch.nodesById?.['node-local']?.content).toBe('Local body');
+    markNodeContentPersisted('node-local', 1);
   });
 });

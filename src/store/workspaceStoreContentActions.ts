@@ -11,6 +11,7 @@ import {
   type UpdateNodeContentLocalState,
   type UpdateNodeContentMetrics
 } from './workspaceNodeContentUpdateDiagnostics';
+import { markNodeContentEdited } from './workspaceNodeContentVersionGuard';
 import { isNodeDocumentLoaded } from './workspaceRendererBoundary';
 import type { WorkspaceState } from './workspaceStore';
 import {
@@ -161,6 +162,7 @@ async function updateNodeContent(
     return false;
   }
   const nextNodeForSync = localState.nextNodeForSync;
+  const version = markNodeContentEdited(nodeId);
   const runtimePatchStartedAt = diagnosticsEnabled ? readEditorInputDiagnosticTime() : 0;
   const applied = !publishLocal
     ? true
@@ -177,7 +179,8 @@ async function updateNodeContent(
     diagnosticsEnabled,
     localState,
     metrics,
-    nextNodeForSync
+    nextNodeForSync,
+    version
   });
   metrics.runtimeAwaitContinuationGapMs = diagnosticsEnabled
     ? metrics.runtimePatchMs - metrics.runtimeApplyTotalMs

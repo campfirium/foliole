@@ -9,8 +9,10 @@ import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/worksp
 
 import { createEditorAnnotationCreateEntry } from './workspaceEditorAnnotationOperationEntry';
 import { createImageClozeReviewProfile } from './workspaceImageClozeReview';
+import { markNodeCreatePending } from './workspaceNodeContentVersionGuard';
 import { createWorkspaceNodeMutationPatchWithLocalSideEffects } from './workspaceNodeMutationPatch';
 import type { WorkspaceState } from './workspaceStore';
+import { completeNodeCreateRuntimePersist } from './workspaceStoreContentRuntimePersist';
 import { resolveCreatedNodeTitleState } from './workspaceUntitledNodeTitle';
 
 type WorkspaceNode = WorkspaceState['nodesById'][string];
@@ -111,10 +113,12 @@ async function applyCreatedFormulaClozeNode(
   if (!node || !nextNodeOrder) {
     return null;
   }
+  markNodeCreatePending(node.id);
   const result = await handlers.syncNodeCreation(node, nextNodeOrder, node.id, nextNodeOrder.indexOf(node.id));
   if (result) {
     set((state) => createWorkspaceNodeMutationPatchWithLocalSideEffects(state, result, localPatch));
   }
+  await completeNodeCreateRuntimePersist(node.id);
   return node.id;
 }
 
