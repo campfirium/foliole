@@ -23,6 +23,7 @@ vi.mock('./workspaceRuntimeSync', () => ({
   syncNodeRevealMutationToRuntime: vi.fn(async () => null),
   syncCreateNodeToRuntime: vi.fn(),
   syncDeleteNodesPermanentlyToRuntime: vi.fn(),
+  syncMoveNodesToRuntime: vi.fn(async () => undefined),
   syncNodeContentToRuntime: vi.fn(),
   syncNodeContentWithAnchorsToRuntime: vi.fn(),
   syncNodeOrderToRuntime: vi.fn(),
@@ -101,6 +102,43 @@ it('keeps root creation content local when native persistence rejects creation m
   expect(createdNodeId).toContain('node-');
   expect(harness.getState().activeNodeId).toBe(createdNodeId);
   expect(harness.getState().nodesById[createdNodeId]?.content).toBe('# Local root');
+});
+
+it('keeps body edits made before root creation confirmation', async () => {
+  vi.useFakeTimers();
+  try {
+    vi.mocked(hasWorkspaceNodeMutationRuntime).mockReturnValue(true);
+    let resolveCreateMutation!: (
+      value: Awaited<ReturnType<typeof syncCreateNodeMutationToRuntime>>
+    ) => void;
+    vi.mocked(syncCreateNodeMutationToRuntime).mockImplementationOnce(
+      () => new Promise((resolve) => {
+        resolveCreateMutation = resolve;
+      })
+    );
+    const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
+    const actions = createWorkspaceNodeActions(harness.setState);
+
+    const createPromise = actions.createRootNode('');
+    const createdNodeId = harness.getState().activeNodeId!;
+    expect(createdNodeId).toContain('node-');
+
+    await actions.updateNodeContent(createdNodeId, 'Typed body before create confirmation');
+    expect(harness.getState().nodesById[createdNodeId]?.content).toBe('Typed body before create confirmation');
+
+    resolveCreateMutation({
+      activeNodeId: createdNodeId,
+      createdNodeIds: [createdNodeId],
+      nodeOrder: harness.getState().nodeOrder,
+      nodes: []
+    });
+    await createPromise;
+
+    expect(harness.getState().nodesById[createdNodeId]?.content).toBe('Typed body before create confirmation');
+  } finally {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  }
 });
 
 it('keeps child creation content local when native persistence rejects creation mutation', async () => {
