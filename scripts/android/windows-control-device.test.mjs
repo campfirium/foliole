@@ -79,13 +79,13 @@ describe('windows-control-device', () => {
     expect(script).toContain('-WindowStyle Normal');
     expect(script).toContain('"--serial=$serial"');
     expect(script).toContain('"--stay-awake"');
+    expect(script).toContain('"--turn-screen-off"');
     expect(script).toContain('"--no-audio"');
     expect(script).toContain('"--window-title=Foliole-Android"');
     expect(script).toContain('"--window-x=40"');
     expect(script).toContain('"--window-y=40"');
     expect(script).toContain('"--window-width=450"');
     expect(script).toContain('"--window-height=980"');
-    expect(script).not.toContain('"--turn-screen-off"');
     expect(script).not.toContain('Wait-ScrcpyWindow');
     expect(script).not.toContain('SetWindowPos');
     expect(script).not.toContain('Test-KeyguardLocked');

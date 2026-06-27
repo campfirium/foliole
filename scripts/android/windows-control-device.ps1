@@ -53,6 +53,7 @@ if ([string]::IsNullOrWhiteSpace($serial)) {
 
 $arguments = @(
   "--stay-awake",
+  "--turn-screen-off",
   "--no-audio",
   "--window-title=Foliole-Android",
   "--window-x=40",
@@ -67,7 +68,7 @@ if (![string]::IsNullOrWhiteSpace($serial)) {
   Write-Info "device: auto"
 }
 
-Write-Info "device screen: kept on"
+Write-Info "device screen: turned off"
 Write-Info "stay awake: enabled"
 
 Start-Process `
