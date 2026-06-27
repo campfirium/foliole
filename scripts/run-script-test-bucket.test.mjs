@@ -1,6 +1,10 @@
 // @vitest-environment node
 /* global process */
 
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -9,7 +13,8 @@ import {
   isQualityGateIntegrationTest,
   isNodeOnlyScriptTest,
   resolveBucketTimeoutSeconds,
-  selectScriptTestBucketFiles
+  selectScriptTestBucketFiles,
+  writeBucketTimeoutReport
 } from './run-script-test-bucket.mjs';
 
 describe('run-script-test-bucket', () => {
@@ -85,6 +90,27 @@ describe('run-script-test-bucket', () => {
       } else {
         process.env.SCRIPT_TEST_BUCKET_TIMEOUT_SECONDS = oldShared;
       }
+    }
+  });
+
+  it('writes a readable timeout report before killing a bucket run', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'script-test-bucket-'));
+    const reportPath = path.join(tempRoot, 'quality-gate-integration.json');
+    try {
+      writeBucketTimeoutReport(reportPath, 'gate-integration', 600, [
+        'scripts/quality/quality-gate-release-targets.test.mjs',
+        'scripts/quality/quality-gate-target.test.mjs'
+      ]);
+
+      const report = JSON.parse(await readFile(reportPath, 'utf8'));
+
+      expect(report.success).toBe(false);
+      expect(report.wasInterrupted).toBe(true);
+      expect(report.numTotalTestSuites).toBe(2);
+      expect(report.testResults[0].name).toBe('scripts/run-script-test-bucket.mjs:gate-integration');
+      expect(report.testResults[0].assertionResults[0].failureMessages[0]).toContain('gate-integration exceeded timeout (600s)');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
     }
   });
 });

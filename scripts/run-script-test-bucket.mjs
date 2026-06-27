@@ -2,7 +2,7 @@
 /* global console, process */
 
 import { spawn, spawnSync } from 'node:child_process';
-import { readdirSync } from 'node:fs';
+import { mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 const SCRIPT_TEST_ROOTS = [
@@ -32,6 +32,50 @@ export function resolveBucketTimeoutSeconds(bucket) {
   const raw = process.env[envName] ?? process.env.SCRIPT_TEST_BUCKET_TIMEOUT_SECONDS ?? `${fallback}`;
   const parsed = Number.parseInt(raw, 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+export function writeBucketTimeoutReport(reportPath, bucket, timeoutSeconds, files) {
+  mkdirSync(path.dirname(reportPath), { recursive: true });
+  const now = Date.now();
+  const message = `[script-test-bucket] ${bucket} exceeded timeout (${timeoutSeconds}s)`;
+  const report = {
+    numFailedTestSuites: 1,
+    numFailedTests: 1,
+    numPassedTestSuites: 0,
+    numPassedTests: 0,
+    numPendingTestSuites: 0,
+    numPendingTests: 0,
+    numRuntimeErrorTestSuites: 0,
+    numTodoTests: 0,
+    numTotalTestSuites: files.length,
+    numTotalTests: 1,
+    openHandles: [],
+    snapshot: {},
+    startTime: now,
+    success: false,
+    testResults: [
+      {
+        assertionResults: [
+          {
+            ancestorTitles: ['script test bucket'],
+            duration: timeoutSeconds * 1000,
+            failureMessages: [message],
+            fullName: `script test bucket ${bucket} completed within ${timeoutSeconds}s`,
+            status: 'failed',
+            title: `${bucket} completed within ${timeoutSeconds}s`
+          }
+        ],
+        endTime: now,
+        message,
+        name: `scripts/run-script-test-bucket.mjs:${bucket}`,
+        startTime: now - timeoutSeconds * 1000,
+        status: 'failed',
+        summary: `${files.length} selected files timed out before Vitest wrote its report.`
+      }
+    ],
+    wasInterrupted: true
+  };
+  writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
 }
 
 function terminateChildTree(child) {
@@ -143,6 +187,7 @@ function runVitest(bucket, reportPath, files) {
     };
     const timer = globalThis.setTimeout(() => {
       console.error(`[script-test-bucket] ${bucket} exceeded timeout (${timeoutSeconds}s)`);
+      writeBucketTimeoutReport(reportPath, bucket, timeoutSeconds, files);
       terminateChildTree(child);
       finish(1);
       process.exitCode = 1;

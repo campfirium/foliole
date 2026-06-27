@@ -1,30 +1,19 @@
-/* global process */
-
 import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+
+import { runManagedCommand } from './quality-gate-fast.test-support.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const TARGET_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality', 'quality-gate-target.sh');
+const TARGET_GATE_TIMEOUT_MS = 90_000;
 
 export function runTargetGate(cwd, target) {
-  return new Promise((resolve) => {
-    const child = spawn('bash', [TARGET_SCRIPT, target], {
-      cwd,
-      env: { ...process.env, QUALITY_GATE_LOG_MODE: 'summary' }
-    });
-    let stdout = '';
-    let stderr = '';
-    child.stdout.on('data', (chunk) => {
-      stdout += chunk.toString();
-    });
-    child.stderr.on('data', (chunk) => {
-      stderr += chunk.toString();
-    });
-    child.on('close', (code) => {
-      resolve({ code, stdout, stderr });
-    });
+  return runManagedCommand('bash', [TARGET_SCRIPT, target], {
+    cwd,
+    env: { QUALITY_GATE_LOG_MODE: 'summary' },
+    label: `quality-gate-target ${target}`,
+    timeoutMs: TARGET_GATE_TIMEOUT_MS
   });
 }
 
