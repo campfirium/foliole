@@ -14,6 +14,7 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 
 export function usePreparedOpenNodeAction(
   action: (nodeId: string) => NodeNavigationResult | null,
+  flushActiveEditorTransaction: (sourceNodeId?: string | null) => boolean,
   flushPendingEditorDraft: () => void,
   flushPendingEditorDraftImmediately: () => Promise<boolean>,
   prepareForNavigation: (nodeIdOverride?: string | null) => void,
@@ -25,7 +26,9 @@ export function usePreparedOpenNodeAction(
   return useCallback(
     async (nodeId: string, focusAnchor: NodeNavigationResult['focusAnchor'] = null) => {
       markRequested(nodeId);
-      flushPendingEditorDraft();
+      if (!flushActiveEditorTransaction(useWorkspaceStore.getState().activeNodeId)) {
+        flushPendingEditorDraft();
+      }
       prepareForNavigation();
       const result = action(nodeId);
       finalize(result ? { ...result, focusAnchor } : result);
@@ -57,7 +60,7 @@ export function usePreparedOpenNodeAction(
         }
       });
     },
-    [action, finalize, flushPendingEditorDraft, flushPendingEditorDraftImmediately, markRequested, prepareForNavigation]
+    [action, finalize, flushActiveEditorTransaction, flushPendingEditorDraft, flushPendingEditorDraftImmediately, markRequested, prepareForNavigation]
   );
 }
 
@@ -66,6 +69,7 @@ export function useBreadcrumbSelectionAction(
   nodesById: Record<string, Node>,
   jumpToAncestorNode: (nodeId: string) => NodeNavigationResult | null,
   openNode: (nodeId: string) => NodeNavigationResult | null,
+  flushActiveEditorTransaction: (sourceNodeId?: string | null) => boolean,
   flushPendingEditorDraft: () => void,
   flushPendingEditorDraftImmediately: () => Promise<boolean>,
   prepareForNavigation: (nodeIdOverride?: string | null) => void,
@@ -92,7 +96,9 @@ export function useBreadcrumbSelectionAction(
       }
 
       markSelectionRequested(nodeId);
-      flushPendingEditorDraft();
+      if (!flushActiveEditorTransaction(activeNodeId)) {
+        flushPendingEditorDraft();
+      }
       prepareForNavigation(activeNodeId);
       const result = jumpToAncestorNode(nodeId) ?? openNode(nodeId);
       finalizeNavigation(result);
@@ -103,6 +109,7 @@ export function useBreadcrumbSelectionAction(
       activeNodeId,
       ensureNodeReady,
       finalizeNavigation,
+      flushActiveEditorTransaction,
       jumpToAncestorNode,
       markSelectionRequested,
       nodesById,

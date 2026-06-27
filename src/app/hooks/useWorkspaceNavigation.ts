@@ -19,6 +19,7 @@ interface WorkspaceNavigationDependencies {
   closeContextMenu: () => void;
   completeAnchorNavigationRestore?: (nodeId: string, reason: string) => void;
   editorRef: MutableRefObject<EditorAdapter | null>;
+  flushActiveEditorTransaction?: (sourceNodeId?: string | null) => boolean;
   flushPendingEditorDraft: () => void;
   flushPendingEditorDraftImmediately: () => Promise<boolean>;
   forwardStackSize: number;
@@ -80,6 +81,7 @@ export function useWorkspaceNavigation({
   completeAnchorNavigationRestore,
   editorRef,
   flushPendingEditorDraft,
+  flushActiveEditorTransaction = () => false,
   flushPendingEditorDraftImmediately,
   forwardStackSize,
   goBack,
@@ -110,6 +112,7 @@ export function useWorkspaceNavigation({
     applyNavigationResult: pendingAnchorNavigation.applyNavigationResult,
     closeContextMenu,
     editorRef,
+    flushActiveEditorTransaction,
     flushPendingEditorDraft,
     flushPendingEditorDraftImmediately,
     goBack,
@@ -122,9 +125,7 @@ export function useWorkspaceNavigation({
   });
 
   return {
-    canGoBack: backStackSize > 0,
-    canGoForward: forwardStackSize > 0,
-    canGoParent: Boolean(activeNodeParentId),
+    canGoBack: backStackSize > 0, canGoForward: forwardStackSize > 0, canGoParent: Boolean(activeNodeParentId),
     shouldSuppressSelectionRestore: pendingAnchorNavigation.shouldSuppressSelectionRestore,
     ...preparedHandlers
   };

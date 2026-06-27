@@ -122,6 +122,7 @@ function useWorkspaceEditorController(
     backStackSize: ws.navigation.backStack.length,
     closeContextMenu: () => undefined,
     editorRef: runtime.editorRef,
+    flushActiveEditorTransaction: runtime.flushActiveEditorTransaction,
     flushPendingEditorDraft: runtime.flushPendingEditorDraft,
     flushPendingEditorDraftImmediately: runtime.flushPendingEditorDraftImmediately,
     forwardStackSize: ws.navigation.forwardStack.length,

@@ -62,4 +62,21 @@ describe('useAppRuntime close flush persistence boundary', () => {
     );
     expect(flushDirtyWorkspaceNodeSyncVersions).toHaveBeenCalledTimes(1);
   });
+
+  it('captures fresh editor content before running close fallback flush', async () => {
+    const { result } = renderHook(() => useAppRuntime(320, 360));
+    const freshFlush = vi.fn(() => true);
+    const closeFlush = vi.fn(async () => true);
+
+    await act(async () => {
+      result.current.editorRef.current = {
+        getContent: () => 'Fresh close body'
+      } as never;
+      result.current.registerPendingEditorDraftFlush(null, closeFlush, freshFlush);
+      await result.current.flushPendingEditorDraftImmediately();
+    });
+
+    expect(freshFlush).toHaveBeenCalledWith(null, 'Fresh close body');
+    expect(closeFlush).toHaveBeenCalledTimes(1);
+  });
 });

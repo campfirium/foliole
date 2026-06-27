@@ -31,6 +31,18 @@ interface FlushPendingDraftArgs {
   timerRef: MutableRefObject<number | null>;
 }
 
+interface FlushFreshDraftArgs {
+  committedContent: string | null;
+  content: string;
+  finalizeTitle: boolean;
+  finalizeTitleRefresh: (nodeId?: string | null) => PendingTitleRefresh | null;
+  nodeId: string | null;
+  onCommit: (nodeId: string | null, content: string, options?: { publishLocal?: boolean }) => void;
+  pendingCommitRef: MutableRefObject<PendingDraftCommit | null>;
+  pendingCommitStartedAtRef: MutableRefObject<number | null>;
+  timerRef: MutableRefObject<number | null>;
+}
+
 export function clearDraftTimer(timerRef: MutableRefObject<number | null>) {
   if (timerRef.current !== null) {
     window.clearTimeout(timerRef.current);
@@ -96,6 +108,54 @@ function flushPendingDraft(args: FlushPendingDraftArgs): DraftFlushResult {
   return { flushed: true, pendingTitle: pendingTitle ?? args.finalizeTitleRefresh(pendingCommit.nodeId) };
 }
 
+function clearPendingCommitForNode(args: {
+  nodeId: string | null;
+  pendingCommitRef: MutableRefObject<PendingDraftCommit | null>;
+  pendingCommitStartedAtRef: MutableRefObject<number | null>;
+}) {
+  if (!args.pendingCommitRef.current || args.pendingCommitRef.current.nodeId !== args.nodeId) {
+    return;
+  }
+  args.pendingCommitRef.current = null;
+  args.pendingCommitStartedAtRef.current = null;
+}
+
+function flushFreshDraft(args: FlushFreshDraftArgs): DraftFlushResult {
+  clearDraftTimer(args.timerRef);
+  clearPendingCommitForNode(args);
+  const pendingTitle = args.finalizeTitle ? args.finalizeTitleRefresh(args.nodeId) : null;
+  if (!args.nodeId || args.content === args.committedContent) {
+    return { flushed: false, pendingTitle };
+  }
+  args.onCommit(args.nodeId, args.content);
+  return { flushed: true, pendingTitle: pendingTitle ?? args.finalizeTitleRefresh(args.nodeId) };
+}
+
+function useFreshDraftFlush(args: {
+  finalizeTitleRefresh: (nodeId?: string | null) => PendingTitleRefresh | null;
+  pendingCommitRef: MutableRefObject<PendingDraftCommit | null>;
+  pendingCommitStartedAtRef: MutableRefObject<number | null>;
+  timerRef: MutableRefObject<number | null>;
+}) {
+  const { finalizeTitleRefresh, pendingCommitRef, pendingCommitStartedAtRef, timerRef } = args;
+  return useCallback((freshArgs: {
+    committedContent: string | null;
+    content: string;
+    finalizeTitle?: boolean;
+    nodeId: string | null;
+    onCommit: PendingDraftCommit['onCommit'];
+  }): DraftFlushResult => {
+    return flushFreshDraft({
+      ...freshArgs,
+      finalizeTitle: freshArgs.finalizeTitle ?? true,
+      finalizeTitleRefresh,
+      pendingCommitRef,
+      pendingCommitStartedAtRef,
+      timerRef
+    });
+  }, [finalizeTitleRefresh, pendingCommitRef, pendingCommitStartedAtRef, timerRef]);
+}
+
 export function runPendingTitleRefresh(
   flushResult: { pendingTitle: PendingTitleRefresh | null },
   onFinalizeNode: ((nodeId: string, content: string) => void) | undefined
@@ -127,6 +187,12 @@ export function usePendingDraftCommit(timerRef: MutableRefObject<number | null>)
       timerRef
     });
   }, [finalizeTitleRefresh, timerRef]);
+  const flushFreshDraftForNode = useFreshDraftFlush({
+    finalizeTitleRefresh,
+    pendingCommitRef,
+    pendingCommitStartedAtRef,
+    timerRef
+  });
   const clearPendingDraftCommit = useCallback(() => {
     pendingCommitRef.current = null;
     pendingCommitStartedAtRef.current = null;
@@ -153,6 +219,7 @@ export function usePendingDraftCommit(timerRef: MutableRefObject<number | null>)
   return {
     clearPendingDraftCommit,
     flushDraft,
+    flushFreshDraftForNode,
     flushPendingDraftForDifferentNode,
     getPendingDraftCommit,
     setPendingDraftCommit,

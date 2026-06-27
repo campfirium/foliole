@@ -6,12 +6,11 @@ import type { EditorViewportMode } from '../../features/editor/adapters/EditorAd
 import type { ReadingPositionRestoreCommand } from '../../features/editor/model/editorRestoreCommand';
 import type { SettingsCategoryId } from '../../features/settings/model/settingsPanelOptions';
 import { getRecentCommandIds, pushRecentCommandId, setRecentCommandIds } from '../../shared/commands/recentCommands';
-import { flushDirtyWorkspaceNodeSyncVersions } from '../../shared/platform/workspaceRuntimeRepository';
-import { drainPendingNodeContentRuntimePersists } from '../../store/workspaceStoreContentRuntimePersist';
 import { subscribeOpenClozeGuardSettings } from '../clozeGuardSettingsEvent';
 import { getRecentNodeIds, pushRecentNodeId, setRecentNodeIds } from '../components/nodePaletteRecents';
 
 import { useMoveToNodeSourceState } from './appMoveToNodeSourceState';
+import { useEditorDraftFlushRegistry, type EditorDraftFreshFlush } from './useAppRuntimeEditorDraftFlush';
 import { useWindowHotkeys } from './useAppRuntimeHotkeys';
 
 export interface ReadingPositionSyncState {
@@ -64,6 +63,7 @@ function createRuntimeRefs(initialListWidth: number, initialRightSidebarWidth: n
     editorRef: useRef<EditorAdapter | null>(null),
     editorDraftCloseFlushRef: useRef<(() => Promise<boolean>) | null>(null),
     editorDraftFlushRef: useRef<(() => boolean) | null>(null),
+    editorDraftFreshFlushRef: useRef<EditorDraftFreshFlush | null>(null),
     readingPositionRef: useRef<{ nodeId: string | null; selection: EditorSelection | null }>({
       nodeId: null,
       selection: null
@@ -136,31 +136,6 @@ function buildRuntimeState(args: {
     setRequestedSettingsDialog: args.setRequestedSettingsDialog,
     setIsViewingTrashNode: args.setIsViewingTrashNode
   };
-}
-
-function useEditorDraftFlushRegistry(refs: ReturnType<typeof createRuntimeRefs>) {
-  const flushPendingEditorDraft = useCallback(() => refs.editorDraftFlushRef.current?.() ?? false, [refs.editorDraftFlushRef]);
-  const flushPendingEditorDraftImmediately = useCallback(
-    async () => {
-      const draftFlushed = (await refs.editorDraftCloseFlushRef.current?.()) ?? true;
-      try {
-        const contentFlushed = await drainPendingNodeContentRuntimePersists();
-        await flushDirtyWorkspaceNodeSyncVersions();
-        return draftFlushed && contentFlushed;
-      } catch {
-        return false;
-      }
-    },
-    [refs.editorDraftCloseFlushRef]
-  );
-  const registerPendingEditorDraftFlush = useCallback(
-    (flush: (() => boolean) | null, closeFlush: (() => Promise<boolean>) | null) => {
-      refs.editorDraftFlushRef.current = flush;
-      refs.editorDraftCloseFlushRef.current = closeFlush;
-    },
-    [refs.editorDraftCloseFlushRef, refs.editorDraftFlushRef]
-  );
-  return { flushPendingEditorDraft, flushPendingEditorDraftImmediately, registerPendingEditorDraftFlush };
 }
 
 function useRuntimeFlags() {

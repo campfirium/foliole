@@ -3,6 +3,7 @@ import { startTransition, useCallback, useEffect, useMemo, useRef, useState, typ
 import type { EditorContentChangeMeta } from '../../features/editor/adapters/EditorAdapter';
 import { deferNodeContentRuntimePersist } from '../../store/workspaceStoreContentRuntimePersist';
 
+import { useDraftFlushCallbacks, type EditorDraftCommit, type EditorDraftFlushRegistration } from './useEditorDraftFlushCallbacks';
 import { useEditorDraftInputHandler } from './useEditorDraftInputHandler';
 import {
   clearDraftTimer,
@@ -13,14 +14,12 @@ import {
   type PendingTitleRefresh
 } from './useEditorDraftPendingCommit';
 
-const EDITOR_DRAFT_FLUSH_DEBOUNCE_MS = 1200;
-
 interface UseEditorDraftSyncArgs {
   committedContent: string;
   nodeId: string | null;
-  onCommit: (nodeId: string | null, content: string, options?: { publishLocal?: boolean }) => void;
+  onCommit: EditorDraftCommit;
   onFinalizeNode?: (nodeId: string, content: string) => void;
-  onRegisterFlush?: (flush: (() => boolean) | null, closeFlush: (() => Promise<boolean>) | null) => void;
+  onRegisterFlush?: EditorDraftFlushRegistration;
 }
 
 interface EditorDraftState {
@@ -146,45 +145,6 @@ function useCommittedContentSync(args: CommittedContentSyncArgs) {
   ]);
 }
 
-function useDraftFlushCallbacks(args: {
-  flushDraft: ReturnType<typeof usePendingDraftCommit>['flushDraft'];
-  onFinalizeNode: ((nodeId: string, content: string) => void) | undefined;
-  onRegisterFlush: UseEditorDraftSyncArgs['onRegisterFlush'];
-  timerRef: MutableRefObject<number | null>;
-}) {
-  const { flushDraft, onFinalizeNode, onRegisterFlush, timerRef } = args;
-  const flushDraftAndFinalize = useCallback(() => {
-    const result = flushDraft(true);
-    runPendingTitleRefresh(result, onFinalizeNode);
-    return result.flushed;
-  }, [flushDraft, onFinalizeNode]);
-  const flushDraftImmediately = useCallback(async () => {
-    flushDraftAndFinalize();
-    return true;
-  }, [flushDraftAndFinalize]);
-  const scheduleFlush = useCallback(() => {
-    clearDraftTimer(timerRef);
-    timerRef.current = window.setTimeout(() => {
-      timerRef.current = null;
-      flushDraft(false);
-    }, EDITOR_DRAFT_FLUSH_DEBOUNCE_MS);
-  }, [flushDraft, timerRef]);
-
-  useEffect(() => () => {
-    flushDraftAndFinalize();
-    clearDraftTimer(timerRef);
-  }, [flushDraftAndFinalize, timerRef]);
-
-  useEffect(() => {
-    onRegisterFlush?.(flushDraftAndFinalize, flushDraftImmediately);
-    return () => {
-      onRegisterFlush?.(null, null);
-    };
-  }, [flushDraftAndFinalize, flushDraftImmediately, onRegisterFlush]);
-
-  return { scheduleFlush };
-}
-
 export function useEditorDraftSync(args: UseEditorDraftSyncArgs) {
   const { committedContent, nodeId, onCommit, onFinalizeNode, onRegisterFlush } = args;
   const { draftState, latestCommittedContentRef, setDraftState } = useEditorDraftState(
@@ -195,6 +155,7 @@ export function useEditorDraftSync(args: UseEditorDraftSyncArgs) {
   const {
     clearPendingDraftCommit,
     flushDraft,
+    flushFreshDraftForNode,
     flushPendingDraftForDifferentNode,
     getPendingDraftCommit,
     setPendingDraftCommit,
@@ -203,6 +164,10 @@ export function useEditorDraftSync(args: UseEditorDraftSyncArgs) {
 
   const { scheduleFlush } = useDraftFlushCallbacks({
     flushDraft,
+    flushFreshDraftForNode,
+    latestCommittedContentRef,
+    nodeId,
+    onCommit,
     onFinalizeNode,
     onRegisterFlush,
     timerRef

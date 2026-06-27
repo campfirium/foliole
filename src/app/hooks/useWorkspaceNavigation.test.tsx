@@ -46,6 +46,10 @@ async function runBreadcrumbSelectionOrderTest() {
   const flushPendingEditorDraft = vi.fn(() => {
     callOrder.push('flush-draft');
   });
+  const flushActiveEditorTransaction = vi.fn(() => {
+    callOrder.push('fresh-transaction');
+    return true;
+  });
   const flushPendingEditorDraftImmediately = vi.fn(async () => {
     callOrder.push('flush-draft-immediate');
     return true;
@@ -68,6 +72,7 @@ async function runBreadcrumbSelectionOrderTest() {
       closeContextMenu: vi.fn(),
       completeAnchorNavigationRestore: vi.fn(),
       editorRef: { current: null },
+      flushActiveEditorTransaction,
       flushPendingEditorDraft,
       flushPendingEditorDraftImmediately,
       forwardStackSize: 0,
@@ -85,8 +90,9 @@ async function runBreadcrumbSelectionOrderTest() {
     await result.current.handleSelectBreadcrumbNode('node-1');
   });
 
-  expect(callOrder).toEqual(['selection-requested', 'flush-draft', 'save-view', 'jump-node', 'flush-draft-immediate']);
+  expect(callOrder).toEqual(['selection-requested', 'fresh-transaction', 'save-view', 'jump-node', 'flush-draft-immediate']);
   expect(saveActiveNodeView).toHaveBeenCalledWith('node-2');
+  expect(flushActiveEditorTransaction).toHaveBeenCalledWith('node-2');
 }
 
 async function runSavePositionBeforeNodeSelectionTest() {
@@ -100,6 +106,10 @@ async function runSavePositionBeforeNodeSelectionTest() {
   });
   const flushPendingEditorDraft = vi.fn(() => {
     callOrder.push('flush-draft');
+  });
+  const flushActiveEditorTransaction = vi.fn(() => {
+    callOrder.push('fresh-transaction');
+    return true;
   });
   const flushPendingEditorDraftImmediately = vi.fn(async () => {
     callOrder.push('flush-draft-immediate');
@@ -119,6 +129,7 @@ async function runSavePositionBeforeNodeSelectionTest() {
       closeContextMenu: vi.fn(),
       completeAnchorNavigationRestore: vi.fn(),
       editorRef: { current: null },
+      flushActiveEditorTransaction,
       flushPendingEditorDraft,
       flushPendingEditorDraftImmediately,
       forwardStackSize: 0,
@@ -136,8 +147,9 @@ async function runSavePositionBeforeNodeSelectionTest() {
     await result.current.handleSelectNode('node-2');
   });
 
-  expect(callOrder).toEqual(['selection-requested', 'flush-draft', 'save-view', 'open-node', 'flush-draft-immediate']);
+  expect(callOrder).toEqual(['selection-requested', 'fresh-transaction', 'save-view', 'open-node', 'flush-draft-immediate']);
   expect(markNodeSelectionRequested).toHaveBeenCalledWith('node-2', navigationTestNodes);
+  expect(flushActiveEditorTransaction).toHaveBeenCalledWith('node-1');
 }
 
 describe('useWorkspaceNavigation', () => {

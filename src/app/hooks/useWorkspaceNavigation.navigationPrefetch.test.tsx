@@ -65,12 +65,15 @@ function createNavigationPrefetchHookHarness(args: {
   const flushPendingEditorDraft = vi.fn(() => {
     callOrder.push('flush-draft');
   });
+  const flushActiveEditorTransaction = vi.fn(() => {
+    callOrder.push('fresh-transaction');
+    return true;
+  });
   const flushPendingEditorDraftImmediately = vi.fn(async () => {
     callOrder.push('flush-draft-immediately');
     return true;
   });
-  const editorAdapter = {} as never;
-  const editorRef = { current: editorAdapter };
+  const editorAdapter = {} as never, editorRef = { current: editorAdapter };
 
   const view = renderHook(() =>
     useWorkspaceNavigation({
@@ -83,6 +86,7 @@ function createNavigationPrefetchHookHarness(args: {
       closeContextMenu: vi.fn(),
       completeAnchorNavigationRestore: vi.fn(),
       editorRef,
+      flushActiveEditorTransaction,
       flushPendingEditorDraft,
       flushPendingEditorDraftImmediately,
       forwardStackSize: (args.forwardStack ?? []).length,
@@ -95,17 +99,14 @@ function createNavigationPrefetchHookHarness(args: {
       saveActiveNodeView
     })
   );
-
   return { action, callOrder, editorAdapter, editorRef, invoke, view };
 }
 
 async function expectPreparedNavigationResult(args: {
   actionName: 'go-back' | 'go-forward' | 'go-parent';
   actionResult: NodeNavigationResult | null;
-  backStack?: string[];
-  forwardStack?: string[];
-  activeNodeId?: string;
-  nodesById?: typeof navigationTestNodes;
+  backStack?: string[]; forwardStack?: string[];
+  activeNodeId?: string; nodesById?: typeof navigationTestNodes;
   expectedTargetNodeId: string;
 }) {
   const { action, callOrder, invoke, view } = createNavigationPrefetchHookHarness(args);
@@ -148,7 +149,7 @@ function expectPreparedNavigationEffects(args: {
 }) {
   expect(args.callOrder).toEqual([
     'selection-requested',
-    'flush-draft',
+    'fresh-transaction',
     'save-view',
     args.actionName,
     'flush-draft-immediately',
