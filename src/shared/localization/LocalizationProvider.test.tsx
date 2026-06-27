@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeAll, beforeEach, expect, it } from 'vitest';
+import { beforeAll, beforeEach, expect, it, vi } from 'vitest';
 
 import { APP_LANGUAGE_STORAGE_KEY, resolveSystemAppLocale } from './appLanguage';
 import { LocalizationProvider, useLocalization, useTranslation } from './LocalizationProvider';
@@ -32,6 +32,7 @@ beforeAll(async () => {
 });
 
 beforeEach(() => {
+  vi.unstubAllEnvs();
   window.localStorage.clear();
   Object.defineProperty(window.navigator, 'languages', {
     configurable: true,
@@ -89,6 +90,26 @@ it('allows an injected initial language without changing stored preferences', as
 
 it('falls back to English when the system language is unsupported', () => {
   expect(resolveSystemAppLocale(['fr-FR'])).toBe('en');
+});
+
+it('allows a dev-only app language override without changing stored preferences', async () => {
+  vi.stubEnv('VITE_FOLIOLE_DEV_APP_LANGUAGE', 'en');
+  vi.stubEnv('VITE_FOLIOLE_INTERNAL_BUILD', '1');
+  window.localStorage.setItem(APP_LANGUAGE_STORAGE_KEY, 'zh-Hans');
+  Object.defineProperty(window.navigator, 'languages', {
+    configurable: true,
+    value: ['zh-CN', 'en-US']
+  });
+
+  render(
+    <LocalizationProvider>
+      <TranslationHarness />
+    </LocalizationProvider>
+  );
+
+  expect(await screen.findByText('Settings')).toBeInTheDocument();
+  expect(screen.getByText('en')).toBeInTheDocument();
+  expect(window.localStorage.getItem(APP_LANGUAGE_STORAGE_KEY)).toBe('zh-Hans');
 });
 
 it('persists language changes through the shared provider', async () => {

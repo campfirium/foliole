@@ -2,6 +2,7 @@ import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeAll, beforeEach, expect, it, vi } from 'vitest';
 
 import type { NativeInvoke } from '../../../../lib/platform/nativeContract';
+import { APP_LANGUAGE_STORAGE_KEY } from '../../../shared/localization/appLanguage';
 import { preloadTranslationCatalog } from '../../../shared/localization/translations';
 
 import { SettingsPanel } from './SettingsPanel';
@@ -94,10 +95,9 @@ it('searches categories without mixing in action help actions', () => {
   expect(screen.getByText('No settings found.')).toBeInTheDocument();
 });
 
-it('updates settings navigation and search results when the app language changes', async () => {
+it('uses the active app language for settings navigation and search results', async () => {
+  window.localStorage.setItem(APP_LANGUAGE_STORAGE_KEY, 'zh-Hans');
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="general" />);
-
-  fireEvent.change(screen.getByLabelText('App language'), { target: { value: 'zh-Hans' } });
 
   expect(await screen.findByRole('heading', { name: '通用' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: '关于' })).toBeInTheDocument();

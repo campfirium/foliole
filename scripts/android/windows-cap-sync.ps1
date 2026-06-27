@@ -111,18 +111,16 @@ function Get-InputFiles {
   }
   return $files | Where-Object { Test-CapSyncInputFile -File $_ } | Sort-Object FullName
 }
-
 function Get-CapSyncInputHash {
   $lines = foreach ($file in Get-InputFiles) {
     $hash = Get-Sha256FileHash -Path $file.FullName
     "$(Get-RelativePath -Path $file.FullName)=$hash"
   }
-  $payload = ($lines -join "`n")
+  $payload = ($lines -join "`n") + "`nenv:VITE_FOLIOLE_DEV_APP_LANGUAGE=$($env:VITE_FOLIOLE_DEV_APP_LANGUAGE);VITE_FOLIOLE_INTERNAL_BUILD=$($env:VITE_FOLIOLE_INTERNAL_BUILD)"
   $bytes = [System.Text.Encoding]::UTF8.GetBytes($payload)
   $sha = [System.Security.Cryptography.SHA256]::Create()
   return ([System.BitConverter]::ToString($sha.ComputeHash($bytes))).Replace('-', '').ToLowerInvariant()
 }
-
 function Get-CachePath {
   $cacheDir = Join-Path $WindowsWorkDir ".lab\internal\runtime"
   New-Item -ItemType Directory -Path $cacheDir -Force | Out-Null

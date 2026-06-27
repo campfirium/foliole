@@ -114,13 +114,14 @@ vi.mock('../../shared/ui', async (importOriginal) => {
 
 vi.mock('../../features/settings/components/SettingsPanel', () => ({
   SettingsPanel: (props: {
+    contentNotice?: ReactNode;
     headerNotice?: ReactNode;
-    hideLanguageSetting?: boolean;
     importCategoryContent?: ReactNode;
     onRunSupportCommand?: (commandId: string) => void; previewDesktopSettings?: boolean;
     readwiseReaderCategoryContent?: ReactNode;
   }) => (
-    <div data-has-support-command={String(Boolean(props.onRunSupportCommand))} data-hide-language-setting={String(props.hideLanguageSetting)} data-preview-desktop-settings={String(props.previewDesktopSettings)} data-testid="settings-panel">
+    <div data-has-support-command={String(Boolean(props.onRunSupportCommand))} data-preview-desktop-settings={String(props.previewDesktopSettings)} data-testid="settings-panel">
+      {props.contentNotice}
       {props.headerNotice}
       {props.importCategoryContent}
       {props.previewDesktopSettings ? props.readwiseReaderCategoryContent : null}
@@ -168,7 +169,6 @@ it('opens the demo settings preview without loading live settings state', async 
   expect(await screen.findByText('settings.demoPreview.banner.title')).toBeInTheDocument();
   expect(screen.getByText('settings.demoPreview.banner.description')).toBeInTheDocument();
   const settingsPanel = screen.getByTestId('settings-panel');
-  expect(settingsPanel).toHaveAttribute('data-hide-language-setting', 'true');
   expect(settingsPanel).toHaveAttribute('data-preview-desktop-settings', 'true');
   expect(settingsPanel).toHaveAttribute('data-has-support-command', 'true');
   expect(workspaceSettingsOverlayMocks.useImportSourceWorkspaceState).not.toHaveBeenCalled();

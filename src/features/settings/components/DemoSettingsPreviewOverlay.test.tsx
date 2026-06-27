@@ -18,7 +18,7 @@ afterEach(() => {
   resetExternalSourceSettingsFoldersCacheForTest();
 });
 
-it('uses the real desktop settings panel while hiding only the language setting', async () => {
+it('uses the real desktop settings panel without exposing app language selection', async () => {
   renderWithMouseGestureProvider(
     <DemoSettingsPreviewOverlay onClose={vi.fn()} requestedCategory="general" />
   );

@@ -1,7 +1,5 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { beforeEach, expect, it } from 'vitest';
-
-import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 
 import { SettingsPanel } from './SettingsPanel';
 import { createProps, renderWithMouseGestureProvider } from './SettingsPanel.testUtils';
@@ -11,15 +9,10 @@ beforeEach(() => {
   delete window.electronAPI;
 });
 
-it('defaults app language to system and persists manual language selection', async () => {
+it('does not expose app language selection in formal settings', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="general" />);
 
-  const languageSelect = screen.getByLabelText('App language');
-  expect(languageSelect).toHaveValue('system');
-
-  fireEvent.change(languageSelect, { target: { value: 'en' } });
-
-  await waitFor(() => {
-    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.appLanguage)).toBe('en');
-  });
+  expect(await screen.findByRole('heading', { level: 2, name: 'General' })).toBeInTheDocument();
+  expect(screen.queryByLabelText('App language')).not.toBeInTheDocument();
+  expect(screen.queryByText('App language')).not.toBeInTheDocument();
 });

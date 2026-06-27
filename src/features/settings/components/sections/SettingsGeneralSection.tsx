@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { isAppLanguagePreference } from '../../../../shared/localization/appLanguage';
-import { useLocalization, useTranslation } from '../../../../shared/localization/LocalizationProvider';
+import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
   getFullTextSearchIndexStrategy,
   updateFullTextSearchIndexStrategy,
@@ -23,7 +22,6 @@ import {
 import { settingsSearchRowProps } from '../../model/settingsSearch';
 import { useLocalizedSettingsSearchRow } from '../useLocalizedSettingsSearchRows';
 
-import { SettingsSelectRow } from './settingsAppearanceControls';
 import { SettingsGeneralSystemSection } from './SettingsGeneralSystemSection';
 
 type Translate = ReturnType<typeof useTranslation>;
@@ -121,40 +119,14 @@ function SearchEnhancementRow() {
   );
 }
 
-function LanguageSection() {
-  const { languagePreference, setLanguagePreference } = useLocalization();
-  const t = useTranslation();
-  return (
-    <SettingsSection ariaLabel={t('settings.general.language.section')} title={t('settings.general.language.section')}>
-      <div {...settingsSearchRowProps({ categoryId: 'general', id: 'general-app-language', title: '', description: '' })}>
-        <SettingsSelectRow
-          ariaLabel={t('settings.general.language.aria')}
-          description={t('settings.general.language.description')}
-          label={t('settings.general.language.row')}
-          onChange={(value) => setLanguagePreference(isAppLanguagePreference(value) ? value : 'system')}
-          options={[
-            { label: t('language.system'), value: 'system' },
-            { label: t('language.en'), value: 'en' },
-            { label: t('language.zhHans'), value: 'zh-Hans' }
-          ]}
-          value={languagePreference}
-        />
-      </div>
-    </SettingsSection>
-  );
-}
-
 export function SettingsGeneralSection({
-  hideLanguageSetting = false,
   previewDesktopSettings = false
 }: {
-  hideLanguageSetting?: boolean;
   previewDesktopSettings?: boolean;
 }) {
   const t = useTranslation();
   return (
     <>
-      {hideLanguageSetting ? null : <LanguageSection />}
       <SettingsGeneralSystemSection previewDesktopSettings={previewDesktopSettings} />
       <SettingsSection ariaLabel={t('settings.general.search.aria')} title={t('settings.general.search.section')}>
         <SearchEnhancementRow />

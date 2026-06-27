@@ -20,7 +20,6 @@ const SETTINGS_SEARCH_ROW_DEFINITIONS: SearchRowDefinition[] = [
   row('about', 'about-community', 'settings.search.aboutCommunity.title', 'settings.search.aboutCommunity.description', 'settings.search.aboutCommunity.terms'),
   row('general', 'general-search-enhancement', 'settings.search.generalSearchEnhancement.title', 'settings.search.generalSearchEnhancement.description', 'settings.search.generalSearchEnhancement.terms'),
   row('general', 'general-open-at-login', 'settings.search.generalOpenAtLogin.title', 'settings.search.generalOpenAtLogin.description', 'settings.search.generalOpenAtLogin.terms'),
-  row('general', 'general-app-language', 'settings.search.language.title', 'settings.search.language.description', 'settings.search.language.terms'),
   row('editor', 'editor-save-remote-images-locally', 'settings.search.editorRemoteImages.title', 'settings.search.editorRemoteImages.description', 'settings.search.editorRemoteImages.terms'),
   row('editor', 'editor-highlight-annotation-prefix', 'settings.search.editorHighlightPrefix.title', 'settings.search.editorHighlightPrefix.description'),
   row('editor', 'editor-frontmatter-meta', 'settings.search.editorFrontmatter.title', 'settings.search.editorFrontmatter.description'),

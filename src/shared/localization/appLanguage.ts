@@ -17,8 +17,23 @@ export function isAppLanguagePreference(value: string): value is AppLanguagePref
   return APP_LANGUAGE_PREFERENCES.includes(value as AppLanguagePreference);
 }
 
+function isAppLocale(value: string): value is AppLocale {
+  return APP_LOCALES.includes(value as AppLocale);
+}
+
 function normalizeAppLanguagePreference(value: string | null | undefined): AppLanguagePreference {
   return value && isAppLanguagePreference(value) ? value : DEFAULT_APP_LANGUAGE_PREFERENCE;
+}
+
+function resolveDevAppLocaleOverride(): AppLocale | null {
+  const overrideEnabled = import.meta.env.DEV ||
+    import.meta.env.MODE === 'test' ||
+    import.meta.env.VITE_FOLIOLE_INTERNAL_BUILD === '1';
+  const override = import.meta.env.VITE_FOLIOLE_DEV_APP_LANGUAGE;
+  if (!overrideEnabled || !override) {
+    return null;
+  }
+  return isAppLocale(override) ? override : null;
 }
 
 export function resolveSystemAppLocale(languages: readonly string[] = getNavigatorLanguages()): AppLocale {
@@ -26,7 +41,7 @@ export function resolveSystemAppLocale(languages: readonly string[] = getNavigat
 }
 
 export function resolveAppLocale(preference: AppLanguagePreference): AppLocale {
-  return preference === 'system' ? resolveSystemAppLocale() : preference;
+  return resolveDevAppLocaleOverride() ?? (preference === 'system' ? resolveSystemAppLocale() : preference);
 }
 
 export function getStoredAppLocale(): AppLocale {

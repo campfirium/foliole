@@ -30,7 +30,6 @@ import { definedProps } from '@/shared/lib/definedProps';
 interface SettingsPanelProps {
   contentNotice?: ReactNode;
   headerNotice?: ReactNode;
-  hideLanguageSetting?: boolean;
   importCategoryContent?: ReactNode;
   onClose: () => void;
   previewDesktopSettings?: boolean;
@@ -94,7 +93,6 @@ type SettingsPanelBodyProps = {
   description: string;
   contentNotice?: ReactNode;
   headerNotice?: ReactNode;
-  hideLanguageSetting?: boolean;
   mirrorLinkRebuildError: string | null;
   mirrorLinkRebuildFeedback: string | null;
   mirrorOutputRebuildError: string | null;
@@ -133,7 +131,6 @@ function createSettingsCategoryProps(
     externalSearchError: props.externalSearchError,
     externalSearchFeedback: props.externalSearchFeedback,
     externalSearchFolders: props.externalSearchFolders,
-    ...definedProps({ hideLanguageSetting: props.hideLanguageSetting }),
     inboxPath: props.inboxPath,
     isDesktopRuntime: props.isDesktopRuntime,
     isLoadingLibraryPaths: props.isLoadingLibraryPaths,

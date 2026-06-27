@@ -23,7 +23,6 @@ export function DemoSettingsPreviewOverlay({
   return (
     <SettingsPanel
       contentNotice={<DemoSettingsPreviewNotice />}
-      hideLanguageSetting
       onClose={onClose}
       onRunSupportCommand={onRunSupportCommand}
       previewDesktopSettings

@@ -33,6 +33,10 @@ function localTimestamp(year: number, month: number, day: number, hour: number, 
   return new Date(year, month - 1, day, hour, minute).toISOString();
 }
 
+function localDateGroupLabel(year: number, month: number, day: number) {
+  return new Date(year, month - 1, day).toLocaleDateString([], { day: 'numeric', month: 'short' });
+}
+
 function summaryEvent(overrides: Partial<ComponentProps<typeof CompanionSyncStatusDetails>['syncEvents'][number]> = {}) {
   return {
     endpoint_url: 'http://10.0.2.2:38641',
@@ -94,7 +98,7 @@ describe('CompanionSyncStatusDetails activity summaries', () => {
 
     expect(screen.getByText('06:42')).toBeInTheDocument();
     expect(screen.getByText('14:47')).toBeInTheDocument();
-    expect(screen.getByText('May 8')).toBeInTheDocument();
+    expect(screen.getByText(localDateGroupLabel(2026, 5, 8))).toBeInTheDocument();
     expect(screen.queryByText('Today')).not.toBeInTheDocument();
   });
 

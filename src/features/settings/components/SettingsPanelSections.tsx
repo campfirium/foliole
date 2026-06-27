@@ -34,7 +34,6 @@ export interface SettingsCategoryContentProps {
   externalSearchError: string | null;
   externalSearchFeedback: string | null;
   externalSearchFolders: ExternalSourceSettingsFolder[];
-  hideLanguageSetting?: boolean;
   hotkeyItems: HotkeySettingItem[];
   inboxPath: string;
   isDesktopRuntime: boolean;
@@ -168,7 +167,6 @@ export function SettingsCategoryContent(props: SettingsCategoryContentProps) {
       return (
         <SettingsGeneralSection
           {...definedProps({
-            hideLanguageSetting: props.hideLanguageSetting,
             previewDesktopSettings: props.previewDesktopSettings
           })}
         />
