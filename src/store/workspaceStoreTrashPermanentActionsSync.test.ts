@@ -21,6 +21,7 @@ vi.mock('./workspaceRuntimeSync', () => ({
     nodeOrder: payload.nodeOrder,
     removedNodeIds: payload.nodeIds
   })),
+  syncMoveNodesToRuntime: vi.fn(),
   syncNodeContentToRuntime: vi.fn(),
   syncNodeContentWithAnchorsToRuntime: vi.fn(),
   syncNodeOrderToRuntime: vi.fn(),

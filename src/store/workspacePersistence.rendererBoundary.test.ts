@@ -51,11 +51,15 @@ function readPersistedWorkspacePayload() {
   return raw ? (JSON.parse(raw) as PersistedWorkspacePayload) : null;
 }
 
-function expectTrimmedNodeDocument(node: PersistedWorkspacePayload['state']['nodesById'][string] | undefined) {
+function expectLoadedNodeDocument(
+  node: PersistedWorkspacePayload['state']['nodesById'][string] | undefined,
+  content: string,
+  reveal: string
+) {
   expect(node).toMatchObject({
-    content: '',
+    content,
     hasContent: true,
-    reveal: null,
+    reveal,
     hasReveal: true
   });
 }
@@ -115,22 +119,17 @@ beforeEach(() => {
   resetWorkspaceState();
 });
 
-describe('workspace persistence renderer boundary hydrate', () => {
-  it('rehydrates only the active node document from persisted workspace payload', async () => {
+describe('workspace persistence fallback hydrate', () => {
+  it('rehydrates local fallback documents when no runtime repository is present', async () => {
     const persisted = createRendererBoundaryPersistedState();
     await rehydrateWorkspaceFromLocalStorage(persisted);
 
     expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
-    expectTrimmedNodeDocument(useWorkspaceStore.getState().nodesById['node-1']);
-    expect(useWorkspaceStore.getState().nodesById['node-2']!).toMatchObject({
-      content: 'Recovered node 2 body',
-      hasContent: true,
-      reveal: 'Recovered node 2 answer',
-      hasReveal: true
-    });
+    expectLoadedNodeDocument(useWorkspaceStore.getState().nodesById['node-1'], 'Recovered node 1 body', 'Recovered node 1 answer');
+    expectLoadedNodeDocument(useWorkspaceStore.getState().nodesById['node-2'], 'Recovered node 2 body', 'Recovered node 2 answer');
   });
 
-  it('rewrites persisted workspace payload with only allowed long-lived renderer documents', async () => {
+  it('rewrites local fallback payload with loaded documents when no runtime repository is present', async () => {
     const persisted = createRendererBoundaryPersistedState(['node-1', 'node-2', 'node-3']);
     await rehydrateWorkspaceFromLocalStorage(persisted);
     useWorkspaceStore.getState().setNodeViewState('node-2', {
@@ -145,14 +144,9 @@ describe('workspace persistence renderer boundary hydrate', () => {
       scrollTop: 128,
       selection: { from: 4, to: 9 }
     });
-    expectTrimmedNodeDocument(payload?.state.nodesById['node-1']);
-    expect(payload?.state.nodesById['node-2']).toMatchObject({
-      content: 'Recovered node 2 body',
-      hasContent: true,
-      reveal: 'Recovered node 2 answer',
-      hasReveal: true
-    });
-    expectTrimmedNodeDocument(payload?.state.nodesById['node-3']);
+    expectLoadedNodeDocument(payload?.state.nodesById['node-1'], 'Recovered node 1 body', 'Recovered node 1 answer');
+    expectLoadedNodeDocument(payload?.state.nodesById['node-2'], 'Recovered node 2 body', 'Recovered node 2 answer');
+    expectLoadedNodeDocument(payload?.state.nodesById['node-3'], 'Recovered node 3 body', 'Recovered node 3 answer');
   });
 });
 

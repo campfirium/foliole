@@ -125,6 +125,7 @@ function createActiveReviewShelveHarness() {
     activeNodeId: 'child',
     nodeOrder: ['source', 'child', 'other'],
     nodesById: { source, child, other },
+    reviewSessionMode: 'reading-only',
     reviewSession: createStartedReviewSession({
       continueNodeId: null,
       currentNodeId: 'child',

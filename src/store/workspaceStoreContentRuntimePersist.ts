@@ -11,7 +11,8 @@ import {
 import {
   isNodeCreatePending,
   markNodeCreateConfirmed,
-  markNodeContentPersisted
+  markNodeContentPersisted,
+  waitForNodeCreateConfirmations
 } from './workspaceNodeContentVersionGuard';
 import { syncWorkspaceNodeDocumentCacheFromNode } from './workspaceNodeDocumentCache';
 import {
@@ -185,6 +186,11 @@ export async function completeNodeCreateRuntimePersist(nodeId: string) {
 }
 
 export async function drainPendingNodeContentRuntimePersists() {
+  const blockedNodeIds = [...pendingNodeContentRuntimePersists.keys()]
+    .filter((nodeId) => isNodeCreatePending(nodeId));
+  if (blockedNodeIds.length) {
+    await waitForNodeCreateConfirmations(blockedNodeIds);
+  }
   const runnable = [...pendingNodeContentRuntimePersists.entries()]
     .filter(([nodeId]) => !isNodeCreatePending(nodeId));
   const blocked = pendingNodeContentRuntimePersists.size - runnable.length;

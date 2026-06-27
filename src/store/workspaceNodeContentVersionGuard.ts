@@ -6,6 +6,7 @@ interface NodeContentVersionState {
 }
 
 const nodeContentVersions = new Map<string, NodeContentVersionState>();
+const nodeCreateConfirmWaiters = new Map<string, Set<() => void>>();
 
 function getOrCreateNodeContentVersionState(nodeId: string) {
   const existing = nodeContentVersions.get(nodeId);
@@ -44,10 +45,30 @@ export function markNodeCreateConfirmed(nodeId: string) {
   if (state) {
     state.createPending = false;
   }
+  const waiters = nodeCreateConfirmWaiters.get(nodeId);
+  if (waiters) {
+    nodeCreateConfirmWaiters.delete(nodeId);
+    waiters.forEach((resolve) => resolve());
+  }
 }
 
 export function isNodeCreatePending(nodeId: string) {
   return nodeContentVersions.get(nodeId)?.createPending === true;
+}
+
+function waitForNodeCreateConfirmation(nodeId: string) {
+  if (!isNodeCreatePending(nodeId)) {
+    return Promise.resolve();
+  }
+  return new Promise<void>((resolve) => {
+    const waiters = nodeCreateConfirmWaiters.get(nodeId) ?? new Set<() => void>();
+    waiters.add(resolve);
+    nodeCreateConfirmWaiters.set(nodeId, waiters);
+  });
+}
+
+export function waitForNodeCreateConfirmations(nodeIds: string[]) {
+  return Promise.all([...new Set(nodeIds)].map(waitForNodeCreateConfirmation));
 }
 
 export function shouldKeepLocalNodeContent(args: {
@@ -67,5 +88,9 @@ export function shouldKeepLocalNodeContent(args: {
 }
 
 export function resetNodeContentVersionGuardForTests() {
+  for (const waiters of nodeCreateConfirmWaiters.values()) {
+    waiters.forEach((resolve) => resolve());
+  }
+  nodeCreateConfirmWaiters.clear();
   nodeContentVersions.clear();
 }

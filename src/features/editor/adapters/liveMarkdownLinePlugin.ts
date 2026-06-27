@@ -2,11 +2,16 @@ import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate
 
 import { logEditorInputDiagnostic, readEditorInputDiagnosticTime } from '../../../store/workspaceEditorInputDiagnostics';
 import { getEditorDisplayMode } from '../model/editorDisplayMode';
+import { collectImageMatches } from '../model/markdownImageMatches';
 import { getMarkdownSyntaxVisibility } from '../model/markdownSyntaxSetting';
 
 import { readVisibleMarkdownSyntaxTree } from './codeMirrorMarkdownSyntaxTree';
 import { buildPreviewAtomicRangeSet } from './liveMarkdownAtomicRanges';
 import { buildPreviewDecorationSet, buildSourceDecorationSet, type PreviewMarkdownParse } from './liveMarkdownDecorations';
+import {
+  canReuseMarkdownImageWidgetDom,
+  updateMarkdownImageWidgetDomRange
+} from './liveMarkdownImageWidgetDom';
 import { getEditedMathRange, isSameEditedMathRange } from './liveMarkdownMathEditState';
 import {
   activeNodeIdFacet,
@@ -115,6 +120,28 @@ export function shouldMapDocumentInputDecorations(args: {
     !args.editedMathRangeChanged;
 }
 
+function syncMappedMarkdownImageWidgetRanges(view: EditorView) {
+  const localDocumentPath = view.state.facet(localDocumentPathFacet);
+  const imageMatches = collectImageMatches(0, view.state.doc.toString(), new Map(), {
+    allowRelativeImages: Boolean(localDocumentPath)
+  });
+  if (imageMatches.length === 0) return;
+  const editorNodeId = view.state.facet(activeNodeIdFacet);
+  const presentationVersion = view.state.facet(imageClozePresentationVersionFacet);
+  const usedWidgets = new Set<HTMLElement>();
+  const widgets = Array.from(view.dom.querySelectorAll<HTMLElement>('.cm-md-image-widget'));
+
+  for (const imageMatch of imageMatches) {
+    const widget = widgets.find((candidate) =>
+      !usedWidgets.has(candidate) &&
+      canReuseMarkdownImageWidgetDom(candidate, imageMatch, editorNodeId, presentationVersion)
+    );
+    if (!widget) continue;
+    updateMarkdownImageWidgetDomRange(widget, imageMatch);
+    usedWidgets.add(widget);
+  }
+}
+
 export const markdownLinePlugin = ViewPlugin.fromClass(
   class {
     atomicRanges: DecorationSet;
@@ -160,6 +187,7 @@ export const markdownLinePlugin = ViewPlugin.fromClass(
         const startedAt = readEditorInputDiagnosticTime();
         this.atomicRanges = this.atomicRanges.map(update.changes);
         this.decorations = this.decorations.map(update.changes);
+        syncMappedMarkdownImageWidgetRanges(update.view);
         logEditorInputDiagnostic('live-markdown-map-decorations', {
           totalMs: readEditorInputDiagnosticTime() - startedAt
         });

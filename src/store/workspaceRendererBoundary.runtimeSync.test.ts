@@ -39,6 +39,7 @@ describe('workspace renderer boundary runtime confirmation', () => {
     useWorkspaceStore.setState({
       activeNodeId: 'node-2',
       nodeOrder: ['node-1', 'node-2'],
+      rendererBoundaryKeepNodeIds: ['node-1'],
       nodesById: {
         'node-1': createLoadedNode('node-1', 'Node 1', '', null),
         'node-2': createLoadedNode('node-2', 'Node 2', 'Active node body', 'Active node answer')

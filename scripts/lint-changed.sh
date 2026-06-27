@@ -36,9 +36,9 @@ filter_by_scope() {
     android)
       grep -E '^(src/companion/|src/shared/(platform|ui|lib|commands|config)/|scripts/android/|android/|capacitor\.config\.ts$|vite\.companion\.config\.ts$)' || true
       ;;
-    shared)
-      grep -E '^(src/(shared|features|store)/|scripts/(check-|layer-|lint-changed|quality-|vite-config)|vite\.config\.ts$|vite\.companion\.config\.ts$|playwright\.desktop\.config\.ts$|capacitor\.config\.ts$)' || true
-      ;;
+  shared)
+    grep -E '^(src/(shared|features|store)/|scripts/(check-|layer-|lint-changed|quality-|quality/|vite-config)|vite\.config\.ts$|vite\.companion\.config\.ts$|playwright\.desktop\.config\.ts$|capacitor\.config\.ts$)' || true
+    ;;
     *)
       echo "[lint-changed] unknown scope: ${scope}" >&2
       exit 1

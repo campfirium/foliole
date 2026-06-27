@@ -118,9 +118,16 @@ test('consecutive created topic bodies survive switching and relaunch', async ({
     await expectWorkspaceShell(secondSession.firstWindow);
     await waitForDebugBridge(secondSession.firstWindow);
 
-    await expect.poll(() => collectNodeContents(secondSession!.firstWindow, nodeIds), {
-      message: 'consecutive created topic bodies should survive relaunch'
-    }).toEqual(expectedContents);
+    for (const nodeId of nodeIds) {
+      await openNode(secondSession.firstWindow, nodeId);
+      await expect.poll(() => collectActiveEditorState(secondSession!.firstWindow), {
+        message: 'consecutive created topic bodies should load from runtime after relaunch'
+      }).toMatchObject({
+        activeNodeId: nodeId,
+        editorContent: expectedContents[nodeId],
+        nodeContent: expectedContents[nodeId]
+      });
+    }
   } finally {
     await secondSession?.close();
   }

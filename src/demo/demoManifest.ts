@@ -21,6 +21,12 @@ export type DemoLocalePathSegment = (typeof DEMO_PUBLISHED_LOCALES)[number]['loc
 export type DemoHreflang = (typeof DEMO_PUBLISHED_LOCALES)[number]['hreflang'];
 type DemoPublishedLocale = (typeof DEMO_PUBLISHED_LOCALES)[number];
 
+function getDefaultDemoPublishedLocale(): DemoPublishedLocale {
+  const locale = DEMO_PUBLISHED_LOCALES[0];
+  if (!locale) throw new Error('Demo manifest requires at least one generated locale.');
+  return locale;
+}
+
 export interface DemoRuntimeAsset {
   path: string;
   type: 'script' | 'style';
@@ -139,7 +145,7 @@ function assertValidManifestTopic(topic: DemoManifestTopic) {
   if (!selfReference) throw new Error(`Demo topic alternates must include self-reference: ${topic.slug}`);
 }
 
-export function createDemoManifestTopic(topic: DemoTopic, locale: DemoPublishedLocale = DEMO_PUBLISHED_LOCALES[0]): DemoManifestTopic {
+export function createDemoManifestTopic(topic: DemoTopic, locale: DemoPublishedLocale = getDefaultDemoPublishedLocale()): DemoManifestTopic {
   const projection = demoManifestProjection(topic);
   const manifestTopic: DemoManifestTopic = {
     slug: projection.slug,

@@ -47,7 +47,10 @@ describe('ensureGuidedSampleTopicTree', () => {
       result.rootNodeId,
       ...directChildIds(result.rootNodeId ?? '')
     ]);
-    expect(buildLiveReviewQueueOutput(state, '2099-05-31T00:00:00.000Z').taskNodeIds).toEqual(result.queueNodeIds);
+    expect(buildLiveReviewQueueOutput(
+      { ...state, reviewSessionMode: 'reading-only' },
+      '2099-05-31T00:00:00.000Z'
+    ).taskNodeIds).toEqual(result.queueNodeIds);
     expect(state.nodesById[result.queueNodeIds[4] ?? '']?.title).toBe('检测：强化记忆');
     expect(state.nodesById[result.queueNodeIds[5] ?? '']?.title).toBe('改写：澄清理解');
   });

@@ -22,11 +22,12 @@ beforeEach(async () => {
   runtimeInvoke.mockReset();
   runtimeInvoke.mockImplementation(async (command: string, payload?: { activeNodeId?: string | null; nodeId?: string; nodeIds?: string[]; nodeOrder?: string[] }) => {
     if (command === 'create_item' && payload?.nodeId) {
+      const createdNode = useWorkspaceStore.getState().nodesById[payload.nodeId];
       return {
         activeNodeId: payload.activeNodeId ?? payload.nodeId,
         createdNodeIds: [payload.nodeId],
         nodeOrder: payload.nodeOrder ?? [payload.nodeId],
-        nodes: [payload]
+        nodes: createdNode ? [createdNode] : [payload]
       };
     }
     if (command === 'update_node_content' && payload?.nodeId) {
@@ -155,7 +156,9 @@ function expectFirstCreatedImageClozeNode(createdIds: string[]) {
   expect(firstNode?.parentNodeId).toBe('node-1');
   expect(firstNode?.kind).toBe('item');
   expect(firstNode?.content).toBe('Before image\n\n![Cover](asset://hash-1.png)\n\nAfter image');
+  expect(firstNode?.hasContent).toBe(true);
   expect(firstNode?.reveal).toBe('![Cover](asset://hash-1.png)');
+  expect(firstNode?.hasReveal).toBe(true);
   expect(firstNode?.review).not.toBeNull();
   expect(firstNode?.anchorLink?.kind).toBe('cloze');
   expect(firstNode?.anchorLink?.id).toBe('region-1');

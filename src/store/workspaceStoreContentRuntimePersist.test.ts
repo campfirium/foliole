@@ -4,13 +4,13 @@ import { createUpdateNodeContentMetrics } from './workspaceNodeContentUpdateDiag
 import { resetNodeContentVersionGuardForTests } from './workspaceNodeContentVersionGuard';
 import {
   markNodeContentEdited,
+  markNodeCreateConfirmed,
   markNodeCreatePending,
   shouldKeepLocalNodeContent
 } from './workspaceNodeContentVersionGuard';
 import { hasWorkspaceNodeMutationRuntime, syncNodeContentWithAnchorsMutationToRuntime } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
 import {
-  completeNodeCreateRuntimePersist,
   drainPendingNodeContentRuntimePersists,
   resetPendingNodeContentRuntimePersistsForTests,
   scheduleNodeContentRuntimePersist
@@ -86,19 +86,22 @@ describe('workspaceStoreContentRuntimePersist queue', () => {
     );
   });
 
-  it('keeps create-pending nodes queued and reports a blocked drain', async () => {
+  it('waits for create-pending nodes before draining queued content', async () => {
     markNodeCreatePending('node-1');
     schedulePersist(createNode('node-1', 'Typed before create confirmation'));
 
-    await expect(drainPendingNodeContentRuntimePersists()).resolves.toBe(false);
+    const drainPromise = drainPendingNodeContentRuntimePersists();
+    await Promise.resolve();
     expect(syncNodeContentWithAnchorsMutationToRuntime).not.toHaveBeenCalled();
 
-    await expect(completeNodeCreateRuntimePersist('node-1')).resolves.toBe(true);
+    markNodeCreateConfirmed('node-1');
+    await expect(drainPromise).resolves.toBe(true);
     expect(syncNodeContentWithAnchorsMutationToRuntime).toHaveBeenCalledWith(
       expect.objectContaining({ content: 'Typed before create confirmation', id: 'node-1' }),
       [],
       ['node-1']
     );
+    expect(syncNodeContentWithAnchorsMutationToRuntime).toHaveBeenCalledTimes(1);
   });
 
   it('returns false when a runtime mutation rejects the pending content', async () => {
