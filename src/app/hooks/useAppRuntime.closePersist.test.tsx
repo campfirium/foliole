@@ -113,6 +113,25 @@ async function runFreshEditorContentCloseFlushCase() {
   expect(closeFlush).toHaveBeenCalledTimes(1);
 }
 
+function runFreshEditorContentFallbackFlushCase() {
+  const { result } = renderHook(() => useAppRuntime(320, 360));
+  const freshFlush = vi.fn(() => false);
+  const pendingFlush = vi.fn(() => true);
+  let flushResult = false;
+
+  act(() => {
+    result.current.editorRef.current = {
+      getContent: () => 'Programmatic close body'
+    } as never;
+    result.current.registerPendingEditorDraftFlush(pendingFlush, null, freshFlush);
+    flushResult = result.current.flushPendingEditorDraft();
+  });
+
+  expect(flushResult).toBe(true);
+  expect(freshFlush).toHaveBeenCalledWith(null, 'Programmatic close body');
+  expect(pendingFlush).toHaveBeenCalledTimes(1);
+}
+
 describe('useAppRuntime close flush persistence boundary', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -125,4 +144,6 @@ describe('useAppRuntime close flush persistence boundary', () => {
   it('waits for create-pending content before the close flush resolves', runCreatePendingCloseFlushCase);
 
   it('captures fresh editor content before running close fallback flush', runFreshEditorContentCloseFlushCase);
+
+  it('falls back to pending draft flush when fresh editor content is not accepted', runFreshEditorContentFallbackFlushCase);
 });

@@ -183,6 +183,7 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
     getReviewSessionSummary(args.reviewSession, args.nodesById)
   );
   const { reviewFlowWindow, reviewPanelQueueNodeIds, reviewQueueVisibility } = buildReviewReadyDerivedState(args, isReviewReady);
+  const editorContent = args.editorNodeId ? args.nodesById[args.editorNodeId]?.content ?? '' : args.documentNode?.content ?? '';
   const reviewSummaryWithContinuation = {
     ...reviewSummary,
     canContinueReading: canContinueReadingInFlowWindow(reviewSummary, reviewFlowWindow)
@@ -190,7 +191,7 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
 
   const flatProps: WorkspaceLayoutFlatProps = {
     activeNodeId: args.activeNodeId, isWorkspaceHydrated: args.isWorkspaceHydrated, canGoBack: args.canGoBack, canGoForward: args.canGoForward, canGoParent: args.canGoParent, contextMenu: args.contextMenu,
-    editorAdapterRef: args.editorAdapterRef, editorContent: args.documentNode?.content ?? '', isImmersiveMode: args.isImmersiveMode, isEditorReadOnly: args.isViewingTrashNode ? true : previewNodeId ? !previewNode || !isNodeDocumentLoaded(previewNode) : false, isPriorityQuickSetActive: args.isPriorityQuickSetActive, editorNodeId: args.editorNodeId, ...definedProps({ editorNodeViewState: args.editorNodeViewState }),
+    editorAdapterRef: args.editorAdapterRef, editorContent, isImmersiveMode: args.isImmersiveMode, isEditorReadOnly: args.isViewingTrashNode ? true : previewNodeId ? !previewNode || !isNodeDocumentLoaded(previewNode) : false, isPriorityQuickSetActive: args.isPriorityQuickSetActive, editorNodeId: args.editorNodeId, ...definedProps({ editorNodeViewState: args.editorNodeViewState }),
     onNodePriorityChange: args.onNodePriorityChange, onNodeDesiredRetentionChange: args.onNodeDesiredRetentionChange, onNodeShortTermChange: args.onNodeShortTermChange, onEnterPriorityQuickSet: args.onEnterPriorityQuickSet, priorityQuickSetShortcutLabel: args.priorityQuickSetShortcutLabel,
     canStartStudyMode: isReviewReady && args.canStartStudyMode, reviewPreview: args.reviewPreview, isStudyMode: args.isStudyMode, isImportManagementOpen: args.isImportManagementOpen, isSettingsOpen: args.isSettingsOpen, requestedSettingsCategory: args.requestedSettingsCategory, requestedSettingsDialog: args.requestedSettingsDialog, isReviewEditing: args.isReviewEditing,
     isAnswerRevealed: args.reviewSession.isAnswerRevealed, isCurrentReviewItemGradable, reviewCurrentNodeId: args.reviewSession.currentNodeId, reviewFlowWindow, reviewPanelQueueNodeIds, reviewQueueNodeIds: isReviewReady ? args.reviewSession.queueNodeIds : [], reviewQueueVisibility, reviewQueueCount: isReviewReady ? reviewQueueCount : 0, reviewCompletedCount, reviewStatus, reviewSummary: reviewSummaryWithContinuation, reviewSessionMode: args.reviewSessionMode, isResizingList: args.isResizingList, isResizingRightSidebar: args.isResizingRightSidebar, isTrashViewOpen: args.isTrashViewOpen, isVirtualViewOpen: args.isVirtualViewOpen, isExternalViewOpen: args.isExternalViewOpen, activeVirtualNodeId: args.activeVirtualNodeId, isViewingTrashNode: args.isViewingTrashNode,

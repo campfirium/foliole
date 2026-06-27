@@ -4,7 +4,7 @@ import type { EditorContentChangeMeta } from '../../features/editor/adapters/Edi
 import { deferNodeContentRuntimePersist } from '../../store/workspaceStoreContentRuntimePersist';
 
 import { useDraftFlushCallbacks, type EditorDraftCommit, type EditorDraftFlushRegistration } from './useEditorDraftFlushCallbacks';
-import { useEditorDraftInputHandler } from './useEditorDraftInputHandler';
+import { useEditorDraftInputWithEvidence } from './useEditorDraftInputWithEvidence';
 import {
   clearDraftTimer,
   runPendingTitleRefresh,
@@ -13,6 +13,7 @@ import {
   type PendingDraftCommit,
   type PendingTitleRefresh
 } from './useEditorDraftPendingCommit';
+import { useEditorDraftUserInputEvidence } from './useEditorDraftUserInputEvidence';
 
 interface UseEditorDraftSyncArgs {
   committedContent: string;
@@ -29,6 +30,8 @@ interface EditorDraftState {
 
 interface DraftChangeHandlerArgs {
   clearPendingDraftCommit: () => void;
+  clearPendingUserInputEvidence: (nodeId: string | null) => void;
+  hasPendingUserInputEvidence: (nodeId: string | null, content: string) => boolean;
   latestCommittedContentRef: MutableRefObject<string>;
   nodeId: string | null;
   onCommit: (nodeId: string | null, content: string, options?: { publishLocal?: boolean }) => void;
@@ -76,7 +79,13 @@ function useDraftChangeHandler(args: DraftChangeHandlerArgs) {
   return useCallback((content: string, meta?: EditorContentChangeMeta) => {
     const sourceNodeId = meta?.nodeId ?? args.nodeId;
     if (!sourceNodeId) {
+      if (content === '') {
+        return;
+      }
       args.onCommit(null, content);
+      return;
+    }
+    if (content === '' && !args.hasPendingUserInputEvidence(sourceNodeId, content)) {
       return;
     }
     const committedContent = sourceNodeId === args.nodeId ? args.latestCommittedContentRef.current : null;
@@ -85,6 +94,7 @@ function useDraftChangeHandler(args: DraftChangeHandlerArgs) {
         args.setDraftState({ content, nodeId: sourceNodeId });
       });
     }
+    args.clearPendingUserInputEvidence(sourceNodeId);
     deferNodeContentRuntimePersist(sourceNodeId);
     args.setPendingTitleRefresh({ content, nodeId: sourceNodeId });
     if (committedContent !== null && content === committedContent) {
@@ -101,6 +111,8 @@ function useDraftChangeHandler(args: DraftChangeHandlerArgs) {
     args.scheduleFlush();
   }, [
     args.clearPendingDraftCommit,
+    args.clearPendingUserInputEvidence,
+    args.hasPendingUserInputEvidence,
     args.latestCommittedContentRef,
     args.nodeId,
     args.onCommit,
@@ -145,12 +157,16 @@ function useCommittedContentSync(args: CommittedContentSyncArgs) {
   ]);
 }
 
+function useEditorContent(nodeId: string | null, draftState: EditorDraftState, committedContent: string) {
+  return useMemo(
+    () => (nodeId && draftState.nodeId === nodeId ? draftState.content : committedContent),
+    [committedContent, draftState.content, draftState.nodeId, nodeId]
+  );
+}
+
 export function useEditorDraftSync(args: UseEditorDraftSyncArgs) {
   const { committedContent, nodeId, onCommit, onFinalizeNode, onRegisterFlush } = args;
-  const { draftState, latestCommittedContentRef, setDraftState } = useEditorDraftState(
-    committedContent,
-    nodeId
-  );
+  const { draftState, latestCommittedContentRef, setDraftState } = useEditorDraftState(committedContent, nodeId);
   const timerRef = useRef<number | null>(null);
   const {
     clearPendingDraftCommit,
@@ -161,10 +177,13 @@ export function useEditorDraftSync(args: UseEditorDraftSyncArgs) {
     setPendingDraftCommit,
     setPendingTitleRefresh
   } = usePendingDraftCommit(timerRef);
+  const userInputEvidence = useEditorDraftUserInputEvidence(getPendingDraftCommit);
 
   const { scheduleFlush } = useDraftFlushCallbacks({
+    clearFreshDraftEvidence: userInputEvidence.clearPendingUserInputEvidence,
     flushDraft,
     flushFreshDraftForNode,
+    hasFreshDraftEvidence: userInputEvidence.hasFreshDraftEvidence,
     latestCommittedContentRef,
     nodeId,
     onCommit,
@@ -175,6 +194,8 @@ export function useEditorDraftSync(args: UseEditorDraftSyncArgs) {
 
   const handleEditorChange = useDraftChangeHandler({
     clearPendingDraftCommit,
+    clearPendingUserInputEvidence: userInputEvidence.clearPendingUserInputEvidence,
+    hasPendingUserInputEvidence: userInputEvidence.hasPendingUserInputEvidence,
     latestCommittedContentRef,
     nodeId,
     onCommit,
@@ -184,13 +205,14 @@ export function useEditorDraftSync(args: UseEditorDraftSyncArgs) {
     setPendingTitleRefresh,
     timerRef
   });
-  const handleEditorInput = useEditorDraftInputHandler(nodeId, () => getPendingDraftCommit() && scheduleFlush());
+  const handleEditorInput = useEditorDraftInputWithEvidence({
+    getPendingDraftCommit,
+    nodeId,
+    scheduleFlush,
+    userInputEvidence
+  });
 
-  const editorContent = useMemo(
-    () => (nodeId && draftState.nodeId === nodeId ? draftState.content : committedContent),
-    [committedContent, draftState.content, draftState.nodeId, nodeId]
-  );
-
+  const editorContent = useEditorContent(nodeId, draftState, committedContent);
   useCommittedContentSync({
     clearPendingDraftCommit,
     committedContent,

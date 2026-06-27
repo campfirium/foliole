@@ -20,43 +20,46 @@ export type EditorDraftFlushRegistration = (
   freshFlush?: ((sourceNodeId: string | null, content: string) => boolean) | null
 ) => void;
 
-export function useDraftFlushCallbacks(args: {
+interface DraftFlushCallbacksArgs {
+  clearFreshDraftEvidence: (nodeId: string | null) => void;
   flushDraft: ReturnType<typeof usePendingDraftCommit>['flushDraft'];
   flushFreshDraftForNode: ReturnType<typeof usePendingDraftCommit>['flushFreshDraftForNode'];
+  hasFreshDraftEvidence: (nodeId: string | null, content: string) => boolean;
   latestCommittedContentRef: MutableRefObject<string>;
   nodeId: string | null;
   onCommit: EditorDraftCommit;
   onFinalizeNode: ((nodeId: string, content: string) => void) | undefined;
   onRegisterFlush: EditorDraftFlushRegistration | undefined;
   timerRef: MutableRefObject<number | null>;
-}) {
-  const {
-    flushDraft,
-    flushFreshDraftForNode,
-    latestCommittedContentRef,
-    nodeId,
-    onCommit,
-    onFinalizeNode,
-    onRegisterFlush,
-    timerRef
-  } = args;
+}
+
+function useFreshDraftFlushCallback(args: DraftFlushCallbacksArgs) {
+  return useCallback((sourceNodeId: string | null, content: string) => {
+    const effectiveNodeId = sourceNodeId ?? args.nodeId;
+    if (!effectiveNodeId || !args.hasFreshDraftEvidence(effectiveNodeId, content)) {
+      return false;
+    }
+    const committedContent = effectiveNodeId === args.nodeId ? args.latestCommittedContentRef.current : null;
+    const result = args.flushFreshDraftForNode({
+      committedContent,
+      content,
+      nodeId: effectiveNodeId,
+      onCommit: args.onCommit
+    });
+    args.clearFreshDraftEvidence(effectiveNodeId);
+    runPendingTitleRefresh(result, args.onFinalizeNode);
+    return result.flushed;
+  }, [args]);
+}
+
+export function useDraftFlushCallbacks(args: DraftFlushCallbacksArgs) {
+  const { flushDraft, onFinalizeNode, onRegisterFlush, timerRef } = args;
   const flushDraftAndFinalize = useCallback(() => {
     const result = flushDraft(true);
     runPendingTitleRefresh(result, onFinalizeNode);
     return result.flushed;
   }, [flushDraft, onFinalizeNode]);
-  const flushFreshDraftAndFinalize = useCallback((sourceNodeId: string | null, content: string) => {
-    const effectiveNodeId = sourceNodeId ?? nodeId;
-    const committedContent = effectiveNodeId === nodeId ? latestCommittedContentRef.current : null;
-    const result = flushFreshDraftForNode({
-      committedContent,
-      content,
-      nodeId: effectiveNodeId,
-      onCommit
-    });
-    runPendingTitleRefresh(result, onFinalizeNode);
-    return result.flushed;
-  }, [flushFreshDraftForNode, latestCommittedContentRef, nodeId, onCommit, onFinalizeNode]);
+  const flushFreshDraftAndFinalize = useFreshDraftFlushCallback(args);
   const flushDraftImmediately = useCallback(async () => {
     flushDraftAndFinalize();
     return true;
