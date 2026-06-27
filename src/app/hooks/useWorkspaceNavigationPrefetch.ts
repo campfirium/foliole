@@ -49,7 +49,7 @@ function useNavigationAction(
     prepareForNavigation(sourceNodeId);
     const result = action();
     finalize(result);
-    void flushPendingEditorDraftImmediately();
+    void flushPendingEditorDraftImmediately(); // fire-and-forget runtime persist drain; navigation stays non-blocking.
     if (targetNodeId) {
       void ensureNodeReady(targetNodeId);
     }
@@ -95,7 +95,7 @@ function useSelectNodeAction(
       prepareForNavigation();
       const result = action(nodeId);
       finalize(result ? { ...result, focusAnchor } : result);
-      void flushPendingEditorDraftImmediately();
+      void flushPendingEditorDraftImmediately(); // fire-and-forget runtime persist drain; navigation stays non-blocking.
       void ensureNodeReady(nodeId);
     },
     [

@@ -199,3 +199,12 @@ export async function drainPendingNodeContentRuntimePersists() {
   }));
   return blocked === 0 && results.every(Boolean);
 }
+
+export function resetPendingNodeContentRuntimePersistsForTests() {
+  for (const entry of pendingNodeContentRuntimePersists.values()) {
+    if (entry.timer) {
+      globalThis.clearTimeout(entry.timer);
+    }
+  }
+  pendingNodeContentRuntimePersists.clear();
+}
