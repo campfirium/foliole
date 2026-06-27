@@ -65,6 +65,16 @@ describe('quality-gate-fast.sh guard limits', () => {
     );
   }, 15000);
 
+  it('reports direct-child fallback when process listing is unavailable', async () => {
+    const result = await runGuardedCommand('printf ok', {
+      QUALITY_GATE_TEST_PRELUDE: 'quality_gate_has_ps() { return 1; }',
+      QUALITY_GATE_TEST_TIMEOUT_SECONDS: '10'
+    });
+
+    expect(result.code).toBe(0);
+    expect(result.stdout).toContain('process tracking: ps unavailable;');
+  }, 15000);
+
   it('applies timeout limits to the lint step too', async () => {
     const tempRoot = await createQualityGateTempRoot();
     const pidFile = path.join(tempRoot, 'lint.pid');

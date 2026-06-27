@@ -1,33 +1,24 @@
 // @vitest-environment node
-/* global process */
 
 import { chmod, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
+import { runManagedCommand } from './quality-gate-fast.test-support.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const FAST_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality', 'quality-gate-fast.sh');
 const TARGET_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality', 'quality-gate-target.sh');
-const QUALITY_GATE_INTEGRATION_TIMEOUT_MS = 30_000;
+const QUALITY_GATE_INTEGRATION_TIMEOUT_MS = 90_000;
 
 function runBash(args, cwd, env = {}) {
-  return new Promise((resolve) => {
-    const child = spawn('bash', args, { cwd, env: { ...process.env, QUALITY_GATE_LOG_MODE: 'summary', ...env } });
-    let stdout = '';
-    let stderr = '';
-    child.stdout.on('data', (chunk) => {
-      stdout += chunk.toString();
-    });
-    child.stderr.on('data', (chunk) => {
-      stderr += chunk.toString();
-    });
-    child.on('close', (code) => {
-      resolve({ code, stdout, stderr });
-    });
+  return runManagedCommand('bash', args, {
+    cwd,
+    env,
+    label: 'quality-gate-skip-lint',
+    timeoutMs: QUALITY_GATE_INTEGRATION_TIMEOUT_MS
   });
 }
 

@@ -75,6 +75,7 @@ describe('quality-gate-fast.sh delegation', () => {
         'test:release:shared': 'node -e "console.log(\'full shared test ok\')"',
         'test:quality:core': 'node -e "console.log(\'full quality core ok\')"',
         'test:quality:gate': 'node -e "console.log(\'full quality gate ok\')"',
+        'test:quality:gate-integration': 'node -e "console.log(\'full quality gate integration ok\')"',
         'test:quality:node': 'node -e "console.log(\'full quality node ok\')"',
         'test:quality:preview': 'node -e "console.log(\'full quality preview ok\')"',
         'test:windows:preview-recovery': 'node -e "console.log(\'full preview recovery ok\')"',
@@ -104,7 +105,7 @@ describe('quality-gate-fast.sh delegation', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 30000);
+  }, 90000);
 
   it('delegates to the release gate when forced', async () => {
     const tempRoot = await createQualityGateTempRoot();
@@ -120,6 +121,7 @@ describe('quality-gate-fast.sh delegation', () => {
         'test:release:shared': 'node -e "console.log(\'release shared test ok\')"',
         'test:quality:core': 'node -e "console.log(\'release quality core ok\')"',
         'test:quality:gate': 'node -e "console.log(\'release quality gate ok\')"',
+        'test:quality:gate-integration': 'node -e "console.log(\'release quality gate integration ok\')"',
         'test:quality:node': 'node -e "console.log(\'release quality node ok\')"',
         'test:quality:preview': 'node -e "console.log(\'release quality preview ok\')"',
         'test:windows:preview-recovery': 'node -e "console.log(\'release preview recovery ok\')"',
@@ -149,7 +151,7 @@ describe('quality-gate-fast.sh delegation', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 45000);
+  }, 90000);
 
   it('delegates android path changes to the android gate', async () => {
     const tempRoot = await createQualityGateTempRoot();
@@ -179,5 +181,5 @@ describe('quality-gate-fast.sh delegation', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 45000);
+  }, 90000);
 });

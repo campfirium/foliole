@@ -18,6 +18,9 @@ function runText(command, args) {
   try {
     return execFileSync(command, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
   } catch (error) {
+    if (error.code === 'ENOENT') {
+      return `[unavailable] ${command} not found`;
+    }
     return `${error.stdout ?? ''}${error.stderr ?? error.message}`.trim();
   }
 }
@@ -31,15 +34,15 @@ async function readJson(filePath) {
 }
 
 function topProcesses() {
-  return runText('ps', ['-eo', 'pid,ppid,stat,pcpu,pmem,etime,cmd', '--sort=-pcpu'])
-    .split('\n')
-    .slice(0, 26);
+  const text = runText('ps', ['-eo', 'pid,ppid,stat,pcpu,pmem,etime,cmd', '--sort=-pcpu']);
+  return text.startsWith('[unavailable]') ? [text] : text.split('\n').slice(0, 26);
 }
 
 function matchingProcesses() {
-  return runText('ps', ['-eo', 'pid,ppid,stat,pcpu,pmem,etime,cmd'])
-    .split('\n')
-    .filter((line, index) => index === 0 || PROCESS_PATTERN.test(line));
+  const text = runText('ps', ['-eo', 'pid,ppid,stat,pcpu,pmem,etime,cmd']);
+  return text.startsWith('[unavailable]')
+    ? [text]
+    : text.split('\n').filter((line, index) => index === 0 || PROCESS_PATTERN.test(line));
 }
 
 async function resourceLocks(runtimeDir) {

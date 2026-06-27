@@ -10,34 +10,84 @@ import { fileURLToPath } from 'node:url';
 export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 export const QUALITY_GATE_FAST_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality', 'quality-gate-fast.sh');
 export const QUALITY_GATE_LIB_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality', 'quality-gate-lib.sh');
+const DEFAULT_QUALITY_GATE_TEST_TIMEOUT_MS = 80_000;
 
 export function createQualityGateTempRoot() {
   return mkdtemp(path.join(os.tmpdir(), 'quality-gate-fast-'));
 }
 
-export function runQualityGate(cwd, env = {}, args = []) {
+function terminateProcessTree(pid) {
+  if (process.platform === 'win32') {
+    spawnSync('taskkill', ['/PID', String(pid), '/T', '/F'], { stdio: 'ignore', timeout: 2000 });
+    return;
+  }
+  try {
+    process.kill(pid, 'SIGTERM');
+  } catch {
+    // Process may already have exited.
+  }
+}
+
+export function runManagedCommand(command, args, options = {}) {
   return new Promise((resolve) => {
-    const child = spawn('bash', [QUALITY_GATE_FAST_SCRIPT, ...args], {
-      cwd,
-      env: { ...process.env, QUALITY_GATE_LOG_MODE: 'summary', ...env }
+    const child = spawn(command, args, {
+      cwd: options.cwd ?? REPO_ROOT,
+      env: {
+        ...process.env,
+        QUALITY_GATE_CHANGED_FILES: '',
+        QUALITY_GATE_LOG_MODE: 'summary',
+        ...options.env
+      }
     });
     let stdout = '';
     let stderr = '';
+    let settled = false;
+    const finish = (code) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      globalThis.clearTimeout(timer);
+      resolve({ code, stderr, stdout });
+    };
+    const timeoutMs = options.timeoutMs ?? DEFAULT_QUALITY_GATE_TEST_TIMEOUT_MS;
+    const timer = globalThis.setTimeout(() => {
+      stderr += `[quality-gate-test] ${options.label ?? command} exceeded timeout (${timeoutMs}ms)\n`;
+      if (child.pid) {
+        terminateProcessTree(child.pid);
+      }
+      finish(1);
+    }, timeoutMs);
+    timer.unref();
     child.stdout.on('data', (chunk) => {
       stdout += chunk.toString();
     });
     child.stderr.on('data', (chunk) => {
       stderr += chunk.toString();
     });
-    child.on('close', (code) => {
-      resolve({ code, stderr, stdout });
+    child.on('error', (error) => {
+      stderr += error.message;
+      finish(1);
     });
+    child.on('close', (code) => {
+      finish(code ?? 1);
+    });
+  });
+}
+
+export function runQualityGate(cwd, env = {}, args = [], options = {}) {
+  return runManagedCommand('bash', [QUALITY_GATE_FAST_SCRIPT, ...args], {
+    cwd,
+    env,
+    label: 'quality-gate-fast',
+    ...options
   });
 }
 
 export function runGuardedCommand(command, env = {}) {
   const script = [
     `source "${QUALITY_GATE_LIB_SCRIPT}"`,
+    'eval "${QUALITY_GATE_TEST_PRELUDE:-:}"',
     'output_file="$(mktemp)"',
     'set +e',
     'run_command_with_limits "quality-gate-fast" "$output_file" "${QUALITY_GATE_TEST_TIMEOUT_SECONDS}" "${QUALITY_GATE_TEST_MAX_RSS_KB}" "test" bash -lc "$QUALITY_GATE_TEST_COMMAND"',
@@ -102,7 +152,7 @@ export async function writePackageJson(rootDir, scripts) {
     'check:android-boundary': 'node -e "console.log(\'android boundary ok\')"',
     ...scripts
   };
-  for (const bucket of ['test:desktop', 'test:desktop:src', 'test:desktop:electron', 'test:windows:core', 'test:windows:preview-recovery', 'test:android', 'test:shared', 'test:sync-pack', 'test:quality', 'test:quality:core', 'test:quality:gate', 'test:quality:node', 'test:quality:preview']) {
+  for (const bucket of ['test:desktop', 'test:desktop:src', 'test:desktop:electron', 'test:windows:core', 'test:windows:preview-recovery', 'test:android', 'test:shared', 'test:sync-pack', 'test:quality', 'test:quality:core', 'test:quality:gate', 'test:quality:gate-integration', 'test:quality:node', 'test:quality:preview']) {
     fixtureScripts[bucket] ??= scripts['test:full'];
   }
   const packageJson = {

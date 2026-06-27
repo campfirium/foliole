@@ -47,6 +47,7 @@ async function writePackageJson(rootDir, scripts) {
     'test:quality',
     'test:quality:core',
     'test:quality:gate',
+    'test:quality:gate-integration',
     'test:quality:node',
     'test:quality:preview'
   ]) {

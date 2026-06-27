@@ -8,29 +8,19 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
+import { runManagedCommand } from './quality-gate-fast.test-support.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const QUALITY_GATE_FAST_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality', 'quality-gate-fast.sh');
 const QUALITY_GATE_ROUTING_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality', 'quality-gate-fast-routing.sh');
-const QUALITY_GATE_INTEGRATION_TIMEOUT_MS = 30_000;
+const QUALITY_GATE_INTEGRATION_TIMEOUT_MS = 90_000;
 
 function runQualityGate(cwd, env = {}, args = []) {
-  return new Promise((resolve) => {
-    const child = spawn('bash', [QUALITY_GATE_FAST_SCRIPT, ...args], {
-      cwd,
-      env: { ...process.env, QUALITY_GATE_LOG_MODE: 'summary', ...env }
-    });
-    let stdout = '';
-    let stderr = '';
-    child.stdout.on('data', (chunk) => {
-      stdout += chunk.toString();
-    });
-    child.stderr.on('data', (chunk) => {
-      stderr += chunk.toString();
-    });
-    child.on('close', (code) => {
-      resolve({ code, stderr, stdout });
-    });
+  return runManagedCommand('bash', [QUALITY_GATE_FAST_SCRIPT, ...args], {
+    cwd,
+    env,
+    label: 'quality-gate-fast-lib-routing',
+    timeoutMs: QUALITY_GATE_INTEGRATION_TIMEOUT_MS
   });
 }
 

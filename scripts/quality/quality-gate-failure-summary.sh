@@ -45,6 +45,7 @@ resolve_vitest_json_report_file() {
     test:quality) printf '.tmp/vitest/quality.json' ;;
     test:quality:core) printf '.tmp/vitest/quality-core.json' ;;
     test:quality:gate) printf '.tmp/vitest/quality-gate.json' ;;
+    test:quality:gate-integration) printf '.tmp/vitest/quality-gate-integration.json' ;;
     test:quality:node) printf '.tmp/vitest/quality-node.json' ;;
     test:quality:preview) printf '.tmp/vitest/quality-preview.json' ;;
     test:full) printf '.tmp/vitest/full.json' ;;

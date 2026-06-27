@@ -46,7 +46,7 @@ describe('quality-gate release split targets', () => {
       expect(result.stdout).toContain('release quality node test ok');
       expect(result.stdout).toContain('release quality preview test ok');
       expect(result.stdout).toContain(
-        '[quality-gate:release-core] running in parallel: test:release:desktop-src test:desktop:electron test:windows:core test:release:android test:release:shared test:quality:core test:quality:gate test:quality:node'
+        '[quality-gate:release-core] running in parallel: test:release:desktop-src test:desktop:electron test:windows:core test:release:android test:release:shared test:quality:core test:quality:gate test:quality:gate-integration test:quality:node'
       );
       expect(result.stdout).not.toContain('release windows preview recovery test ok');
       expect(result.stdout).not.toContain('release android sync ok');

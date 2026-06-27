@@ -89,6 +89,7 @@ describe('quality-gate-target.sh collected failure mode', () => {
         'test:release:shared': 'node -e "console.log(\'shared test still ran\')"',
         'test:quality:core': 'node -e "console.log(\'quality core test still ran\')"',
         'test:quality:gate': 'node -e "console.log(\'quality gate test still ran\')"',
+        'test:quality:gate-integration': 'node -e "console.log(\'quality gate integration test still ran\')"',
         'test:quality:node': 'node -e "console.log(\'quality node test still ran\')"',
         'test:quality:preview': 'node -e "console.log(\'quality preview test still ran\')"',
         'build:vite-only': 'node -e "console.log(\'build still ran\')"',
@@ -114,6 +115,9 @@ describe('quality-gate-target.sh collected failure mode', () => {
       expect(result.stdout).toContain('android web build still ran');
       expect(result.stdout).toContain('[quality-gate:full] electron:compile failed:');
       expect(result.stdout).toContain('[quality-gate:full] collected failures summary:');
+      expect(result.stdout.indexOf('[quality-gate:full] failed summary:')).toBeLessThan(
+        result.stdout.indexOf('android web build still ran')
+      );
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }

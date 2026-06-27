@@ -50,6 +50,7 @@ export function releaseScripts() {
     'test:release:shared': 'node -e "console.log(\'release shared test ok\')"',
     'test:quality:core': 'node -e "console.log(\'release quality core test ok\')"',
     'test:quality:gate': 'node -e "console.log(\'release quality gate test ok\')"',
+    'test:quality:gate-integration': 'node -e "console.log(\'release quality gate integration test ok\')"',
     'test:quality:node': 'node -e "console.log(\'release quality node test ok\')"',
     'test:quality:preview': 'node -e "console.log(\'release quality preview test ok\')"',
     'build:vite-only': 'node -e "console.log(\'release vite build ok\')"',
