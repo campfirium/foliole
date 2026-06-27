@@ -61,14 +61,17 @@ describe('CompanionReviewCard', () => {
     expect(screen.queryByText('Prompt')).not.toBeInTheDocument();
     expect(screen.queryByText('Readable article')).not.toBeInTheDocument();
     expect(screen.queryByText('Due now')).not.toBeInTheDocument();
-    expect(screen.getByText('Readable topic body')).toHaveAttribute('data-hide-title-heading', 'true');
+    expect(screen.getByText('Readable topic body')).toHaveAttribute(
+      'data-hide-title-heading',
+      'true'
+    );
     expect(screen.getByText('Readable topic body')).toHaveAttribute('data-layout', 'review');
   });
 
   it('renders the answer section only when reveal content exists', () => {
     renderWithLocalization(<CompanionReviewAnswer card={createCard()} />);
 
-    expect(screen.queryByText('Answer')).not.toBeInTheDocument();
+    expect(screen.getByText('Answer')).toBeInTheDocument();
     expect(screen.getByRole('separator')).toHaveClass('mx-6');
     expect(screen.getByText('Answer body')).toBeInTheDocument();
     expect(screen.getByText('Answer body')).toHaveAttribute('data-layout', 'review');

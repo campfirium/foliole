@@ -52,6 +52,22 @@ describe('windows-cap-sync.sh', () => {
 
     expect(script).toContain('function Get-CapSyncInputHash');
     expect(script).toContain('function Test-CapSyncInputFile');
+    for (const input of [
+      '"src\\app\\styles.css"',
+      '"src\\app\\tokens"',
+      '"src\\app\\generated\\appearance-colors.css"',
+      '"tailwind.config.js"',
+      '"vite.shared.ts"',
+      '"electron\\startupSkeletonLayout.ts"',
+      '"index.html"',
+      '"public\\favicon.ico"',
+      '"public\\favicon.png"',
+      '"scripts\\android\\android-query-shape-java.mjs"',
+      '"scripts\\android\\android-resource-query-string-java.mjs"',
+      '"scripts\\android\\windows-hash-helpers.ps1"'
+    ]) {
+      expect(script).toContain(input);
+    }
     expect(script).toContain('\\.(test|spec)\\.[^/]+$');
     expect(script).toContain('android-cap-sync-cache.json');
     expect(script).toContain('Test-CapSyncCacheHit -InputHash $inputHash');

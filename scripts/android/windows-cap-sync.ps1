@@ -65,7 +65,6 @@ function Assert-FileExists {
     throw $FailureMessage
   }
 }
-
 $androidDir = Join-Path $WindowsWorkDir $AndroidHostDir
 if (!(Test-Path -Path $androidDir)) {
   throw "Android host not initialized: $androidDir. Create the Capacitor Android host first."
@@ -92,14 +91,14 @@ function Get-InputFiles {
   $paths = @(
     "package.json",
     "package-lock.json",
-    "vite.companion.config.ts",
-    "capacitor.config.ts",
+    "vite.companion.config.ts", "vite.shared.ts", "tailwind.config.js", "index.html", "capacitor.config.ts",
+    "electron\startupSkeletonLayout.ts", "src\app\styles.css", "src\app\tokens", "src\app\generated\appearance-colors.css", "public\favicon.ico", "public\favicon.png",
     "src\companion",
     "src\shared",
     "src\features",
     "lib",
-    "scripts\android\generate-companion-schema.mjs",
-    "scripts\android\windows-cap-sync.ps1"
+    "scripts\android\generate-companion-schema.mjs", "scripts\android\android-query-shape-java.mjs", "scripts\android\android-resource-query-string-java.mjs",
+    "scripts\android\windows-cap-sync.ps1", "scripts\android\windows-hash-helpers.ps1"
   )
   $files = @()
   foreach ($relativePath in $paths) {

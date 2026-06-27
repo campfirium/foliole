@@ -47,8 +47,9 @@ describe('CompanionBottomTabBar', () => {
     renderBottomBar();
 
     const bottomBar = screen.getByTestId('companion-bottom-tab-bar');
-    expect(bottomBar.className).toContain('[height:3.75rem]');
+    expect(bottomBar.className).toContain('[height:4rem]');
     expect(bottomBar.className).toContain('[bottom:0]');
+    expect(bottomBar.className).toContain('[padding-top:0.5rem]');
     expect(bottomBar.className).toContain('[padding-left:1rem]');
     expect(screen.getByRole('button', { name: 'Settings' }).className).toContain('focus:outline-none');
   });

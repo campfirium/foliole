@@ -126,10 +126,10 @@
   --companion-base: rgb(var(--color-canvas));
   --companion-content: rgb(var(--color-canvas));
   --companion-subtle: rgb(var(--color-bg-panel));
-  --companion-divider: color-mix(in oklab, rgb(var(--color-canvas)) 92%, rgb(var(--color-foreground)));
-  --companion-divider-strong: color-mix(in oklab, rgb(var(--color-canvas)) 86%, rgb(var(--color-foreground)));
+  --companion-divider: #eeeeee;
+  --companion-divider-strong: #dddddd;
   --companion-accent: var(--app-accent-color);
-  --companion-accent-soft: rgb(var(--app-accent-color-rgb) / 0.14);
+  --companion-accent-soft: rgb(var(--app-accent-color-rgb) / 0.075);
   --companion-text-secondary: rgb(var(--color-muted-foreground));
   --companion-text-tertiary: rgb(var(--color-muted-foreground) / 0.7);
   --pdf-reading-inverted-surface-color: rgb(23 23 23);
@@ -404,9 +404,9 @@
   --companion-base: rgb(var(--color-canvas));
   --companion-content: rgb(var(--color-bg-elevated));
   --companion-subtle: rgb(var(--color-bg-panel));
-  --companion-divider: color-mix(in oklab, rgb(var(--color-canvas)) 88%, rgb(var(--color-foreground)));
-  --companion-divider-strong: color-mix(in oklab, rgb(var(--color-canvas)) 80%, rgb(var(--color-foreground)));
-  --companion-accent-soft: rgb(var(--app-accent-color-rgb) / 0.2);
+  --companion-divider: #444541;
+  --companion-divider-strong: #555651;
+  --companion-accent-soft: rgb(var(--app-accent-color-rgb) / 0.16);
   color-scheme: dark;
 }
 

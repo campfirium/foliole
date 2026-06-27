@@ -7,10 +7,7 @@ import { CompanionArticleDocument } from './CompanionArticleDocument';
 import type { CompanionReviewBreadcrumbItem } from './companionReviewBreadcrumbs';
 import type { CompanionReviewCard as CompanionReviewCardModel } from './companionReviewSession';
 
-function ReviewBreadcrumb(props: {
-  items: CompanionReviewBreadcrumbItem[];
-  onSelectItem?: (id: string) => void;
-}) {
+function ReviewBreadcrumb(props: { items: CompanionReviewBreadcrumbItem[]; onSelectItem?: (id: string) => void }) {
   const t = useTranslation();
   if (props.items.length === 0) {
     return null;
@@ -42,9 +39,16 @@ function ReviewBreadcrumb(props: {
 }
 
 function ReviewAnswer(props: { nodeId: string; reveal: string }) {
+  const t = useTranslation();
   return (
     <section className="mt-5">
-      <hr className="mx-6 border-0 border-t border-companion-divider" />
+      <div className="mx-6 flex items-center gap-3" role="separator">
+        <span className="h-px flex-1 bg-companion-divider" />
+        <span className="text-[11.5px] font-bold uppercase text-companion-text-tertiary">
+          {t('companion.review.answer')}
+        </span>
+        <span className="h-px flex-1 bg-companion-divider" />
+      </div>
       <div className="pt-5">
         <CompanionArticleDocument content={props.reveal} layout="review" nodeId={`${props.nodeId}::answer`} />
       </div>
@@ -62,7 +66,7 @@ function ReviewSourceEyebrow(props: { items: CompanionReviewBreadcrumbItem[] }) 
     return null;
   }
   return (
-    <div className="mb-3 flex items-center gap-2 px-6 text-[11.5px] font-bold uppercase tracking-[.06em] text-companion-accent">
+    <div className="mb-3 flex items-center gap-2 px-6 text-[11.5px] font-bold uppercase text-companion-accent">
       <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-companion-accent" />
       <span className="line-clamp-1">{label}</span>
     </div>

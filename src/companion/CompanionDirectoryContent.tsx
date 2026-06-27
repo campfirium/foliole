@@ -1,11 +1,7 @@
-import { ChevronRight, FileText, Folder, FolderOpen, Inbox, Sparkles, Trash2, type LucideIcon } from 'lucide-react';
 import { useMemo } from 'react';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
-import type {
-  FolderListSortDirection,
-  FolderListSortKey
-} from '../features/nodes/model/folderListOrdering';
+import type { FolderListSortDirection, FolderListSortKey } from '../features/nodes/model/folderListOrdering';
 import { definedProps } from '../shared/lib/definedProps';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import {
@@ -14,108 +10,29 @@ import {
   resolveCompanionTrashFolderViewByNodeId,
   resolveCompanionTrashView
 } from '../shared/platform/companionBrowseLists';
-import { AppEmptyState } from '../shared/ui';
 
 import { toReadableExternalArticle } from './CompanionDirectoryExternalArticle';
+import { CompanionDirectoryList } from './CompanionDirectoryListSurface';
 import {
   type CompanionDirectorySelection,
-  type DirectorySection,
   type DirectoryListItem,
-  INBOX_NODE_ID,
   resolveDirectorySections
 } from './CompanionDirectoryModel';
 import { resolveDirectoryParentSelection } from './CompanionDirectoryParentModel';
-import { CompanionEmptyStateIcon } from './CompanionEmptyStateIcon';
+import { resolveDirectoryItemCount } from './CompanionDirectoryVisualModel';
 import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
 import { CompanionScreenHeader } from './CompanionScreenHeader';
 import { useCompanionExternalDirectory, useCompanionExternalDocument } from './useCompanionExternalDirectory';
 
 export type { CompanionDirectorySelection } from './CompanionDirectoryModel';
 
-function resolveDirectoryRowIcon(item: DirectoryListItem): { Icon: LucideIcon; isAccent: boolean } {
-  if (item.source === 'trashRoot' || item.source === 'trash') {
-    return { Icon: item.kind === 'folder' ? Folder : Trash2, isAccent: false };
-  }
-  if (item.source === 'virtual') return { Icon: Sparkles, isAccent: false };
-  if (item.source === 'externalFolder' || item.source === 'externalDirectory') {
-    return { Icon: FolderOpen, isAccent: false };
-  }
-  if (item.source === 'externalDocument') return { Icon: FileText, isAccent: false };
-  if (item.nodeId === INBOX_NODE_ID) return { Icon: Inbox, isAccent: true };
-  return { Icon: item.kind === 'folder' ? Folder : FileText, isAccent: false };
-}
-
-function DirectoryRowLeadIcon(props: { isAccent: boolean; Icon: LucideIcon }) {
-  const Icon = props.Icon;
-  return (
-    <span
-      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] ${
-        props.isAccent ? 'bg-companion-accent-soft text-companion-accent' : 'bg-companion-subtle text-companion-text-secondary'
-      }`}
-    >
-      <Icon className="h-[19px] w-[19px]" />
-    </span>
-  );
-}
-
-function DirectoryRow(props: {
-  item: DirectoryListItem;
-  onSelectItem(item: DirectoryListItem): void;
-}) {
-  const t = useTranslation();
-  const title = props.item.source === 'trashRoot' ? t(props.item.titleKey) : props.item.title;
-  const { Icon, isAccent } = resolveDirectoryRowIcon(props.item);
-  return (
-    <button
-      aria-label={t(props.item.kind === 'folder' ? 'companion.directory.openFolder' : 'companion.directory.openTopic', {
-        title
-      })}
-      className="flex min-h-14 w-full items-center gap-3 border-b border-companion-divider px-1 py-3 text-left transition-colors hover:bg-companion-subtle/60 active:bg-companion-subtle/80"
-      onClick={() => props.onSelectItem(props.item)}
-      type="button"
-    >
-      <DirectoryRowLeadIcon Icon={Icon} isAccent={isAccent} />
-      <span className={`min-w-0 flex-1 text-base font-semibold text-foreground ${props.item.kind === 'folder' ? 'truncate' : 'line-clamp-2'}`}>{title}</span>
-      <ChevronRight className="h-5 w-5 shrink-0 text-companion-text-tertiary" />
-    </button>
-  );
-}
-
-function DirectoryList(props: {
-  emptyLabel: string;
-  onSelectItem(item: DirectoryListItem): void;
-  sections: DirectorySection[];
-}) {
-  const t = useTranslation();
-  if (props.sections.length === 0) {
-    return (
-      <div className="border-t border-companion-divider px-1 py-6">
-        <AppEmptyState
-          className="min-h-0 items-start text-left text-companion-text-secondary"
-          description={t('companion.directory.emptyDescription')}
-          icon={<CompanionEmptyStateIcon Icon={FolderOpen} />}
-          title={props.emptyLabel}
-        />
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      {props.sections.map((section, index) => (
-        <section className={index === 0 ? '' : 'border-t border-companion-divider'} key={section.id}>
-          {section.titleKey ? (
-            <h2 className={`px-1 pb-2 text-[11.5px] font-bold uppercase tracking-[.07em] text-companion-text-tertiary ${index === 0 ? '' : 'pt-6'}`}>
-              {t(section.titleKey)}
-            </h2>
-          ) : null}
-          {section.items.map((item) => (
-            <DirectoryRow item={item} key={item.id} onSelectItem={props.onSelectItem} />
-          ))}
-        </section>
-      ))}
-    </div>
-  );
+interface CompanionDirectoryContentProps {
+  selection: CompanionDirectorySelection;
+  onChangeSelection(selection: CompanionDirectorySelection): void;
+  onSelectNode(nodeId: string): void;
+  snapshot: WorkspaceSnapshot | null;
+  sortDirection: FolderListSortDirection;
+  sortKey: FolderListSortKey;
 }
 
 function useCompanionDirectorySections(args: {
@@ -135,18 +52,19 @@ function useCompanionDirectorySections(args: {
     ? resolveCompanionTrashFolderViewByNodeId(args.snapshot, trashFolderNodeId, args.sortKey, args.sortDirection)
     : resolveCompanionTrashView(args.snapshot, args.sortKey, args.sortDirection);
   const sections = useMemo(
-    () => resolveDirectorySections({
-      directory: args.directory,
-      folderView: folderView ?? virtualView,
-      rootView,
-      selection: args.selection,
-      snapshot: args.snapshot,
-      ...definedProps({ trashView: trashView ?? undefined })
-    }),
+    () =>
+      resolveDirectorySections({
+        directory: args.directory,
+        folderView: folderView ?? virtualView,
+        rootView,
+        selection: args.selection,
+        snapshot: args.snapshot,
+        ...definedProps({ trashView: trashView ?? undefined })
+      }),
     [args.directory, args.selection, args.snapshot, folderView, rootView, trashView, virtualView]
   );
 
-  return { folderView, sections, virtualView };
+  return { sections };
 }
 
 function resolveItemSelection(item: DirectoryListItem): CompanionDirectorySelection {
@@ -158,31 +76,34 @@ function resolveItemSelection(item: DirectoryListItem): CompanionDirectorySelect
   if (item.source === 'trash') return { kind: 'trash' };
   if (item.source === 'externalFolder') return { folderId: item.nodeId, kind: 'externalFolder' };
   if (item.source === 'externalDirectory') {
-    return { directoryPath: item.directoryPath, folderId: item.folderId, kind: 'externalDirectory' };
+    return {
+      directoryPath: item.directoryPath,
+      folderId: item.folderId,
+      kind: 'externalDirectory'
+    };
   }
   return { documentId: item.documentId, kind: 'externalDocument' };
 }
 
-export function CompanionDirectoryContent(props: {
-  selection: CompanionDirectorySelection;
-  onChangeSelection(selection: CompanionDirectorySelection): void;
-  onSelectNode(nodeId: string): void;
-  snapshot: WorkspaceSnapshot | null;
-  sortDirection: FolderListSortDirection;
-  sortKey: FolderListSortKey;
-}) {
+export function CompanionDirectoryContent(props: CompanionDirectoryContentProps) {
   const t = useTranslation();
   const directory = useCompanionExternalDirectory();
   const externalDocument = useCompanionExternalDocument(props.selection);
-  const { folderView, sections, virtualView } = useCompanionDirectorySections({
+  const { sections } = useCompanionDirectorySections({
     directory,
     selection: props.selection,
     snapshot: props.snapshot,
     sortDirection: props.sortDirection,
     sortKey: props.sortKey
   });
+  const itemCount = resolveDirectoryItemCount(sections);
   const parentSelection = useMemo(
-    () => resolveDirectoryParentSelection({ directory, selection: props.selection, snapshot: props.snapshot }),
+    () =>
+      resolveDirectoryParentSelection({
+        directory,
+        selection: props.selection,
+        snapshot: props.snapshot
+      }),
     [directory, props.selection, props.snapshot]
   );
   const handleSelectItem = (item: DirectoryListItem) => {
@@ -204,12 +125,18 @@ export function CompanionDirectoryContent(props: {
   }
 
   return (
-    <section className="px-1 py-4">
-      <CompanionScreenHeader title={t('companion.directory.title')} />
-      <DirectoryList
-        emptyLabel={folderView || virtualView ? t('companion.directory.emptyFolder') : t('companion.directory.emptyFolder')}
+    <section className="px-1 py-3">
+      <CompanionScreenHeader
+        metric={t('companion.directory.header.count', { count: itemCount })}
+        subtitle={t('companion.directory.header.subtitle')}
+        title={t('companion.directory.title')}
+      />
+      <CompanionDirectoryList
+        directory={directory}
+        emptyLabel={t('companion.directory.emptyFolder')}
         onSelectItem={handleSelectItem}
         sections={sections}
+        snapshot={props.snapshot}
       />
     </section>
   );

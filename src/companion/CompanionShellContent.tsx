@@ -37,9 +37,7 @@ type WorkspaceSync = ReturnType<typeof useCompanionWorkspaceSync>;
 type ReviewBreadcrumbItem = { id: string; isCurrent?: boolean; label: string; targetNodeId: string };
 
 function resolveShellSyncEndpoint(workspaceSync: WorkspaceSync) {
-  return workspaceSync.state
-    ? resolveCompanionWorkspaceSyncEndpoint(workspaceSync.state)
-    : null;
+  return workspaceSync.state ? resolveCompanionWorkspaceSyncEndpoint(workspaceSync.state) : null;
 }
 
 function handleExitReadableArticle(surface: Surface) {
@@ -54,11 +52,7 @@ function continueAttachmentResourceSync(workspaceSync: WorkspaceSync) {
   void workspaceSync.pullFromDesktop(endpointUrl).catch(() => undefined);
 }
 
-function renderReadableArticle(props: {
-  onExit: () => void;
-  surface: Surface;
-  workspaceSync: WorkspaceSync;
-}) {
+function renderReadableArticle(props: { onExit: () => void; surface: Surface; workspaceSync: WorkspaceSync }) {
   if (!props.surface.readableArticle) return null;
   return (
     <ImmersiveReadableArticle
@@ -79,9 +73,14 @@ function renderReadableArticle(props: {
 function RecentBrowseContent(props: { surface: Surface; workspaceSync: WorkspaceSync }) {
   const t = useTranslation();
   if (props.surface.browsedFolder) {
+    const count = props.surface.browsedFolder.items.length;
     return (
       <>
-        <CompanionScreenHeader title={t('companion.browse.title')} />
+        <CompanionScreenHeader
+          metric={t('companion.browse.header.count', { count })}
+          subtitle={props.surface.browsedFolder.title}
+          title={t('companion.browse.title')}
+        />
         <NodeBrowseList
           currentNodeId={props.surface.selectedBrowseNodeId}
           emptyLabel={t('companion.directory.emptyShell')}
@@ -100,7 +99,11 @@ function RecentBrowseContent(props: { surface: Surface; workspaceSync: Workspace
   }
   return (
     <>
-      <CompanionScreenHeader title={t('companion.browse.title')} />
+      <CompanionScreenHeader
+        metric={t('companion.browse.header.count', { count: props.surface.recentArticles.length })}
+        subtitle={t('companion.browse.header.subtitle')}
+        title={t('companion.browse.title')}
+      />
       <RecentArticleList
         currentArticleId={props.surface.readableArticle?.nodeId ?? null}
         onSelectArticle={props.surface.handleSelectRecentArticle}
@@ -140,12 +143,10 @@ function ReviewContent(props: {
 function renderRecentContent(props: Parameters<typeof renderCompanionShellContent>[0]) {
   if (props.isBrowseDirectoryOpen) {
     if (
-      (
-        props.directorySelection.kind === 'internal' ||
+      (props.directorySelection.kind === 'internal' ||
         props.directorySelection.kind === 'trash' ||
         props.directorySelection.kind === 'trashFolder' ||
-        props.directorySelection.kind === 'virtual'
-      ) &&
+        props.directorySelection.kind === 'virtual') &&
       DirectoryArticle.canRenderCompanionDirectoryArticle(props)
     ) {
       return renderReadableArticle({

@@ -61,7 +61,7 @@ export function CompanionBottomTabBar(props: {
 
   return (
     <footer
-      className="fixed inset-x-0 bottom-0 z-surface-overlay border-t border-companion-divider bg-companion-content px-4 pt-1 pb-2 [left:0] [right:0] [bottom:0] [height:3.75rem] [padding-top:0.25rem] [padding-bottom:0.5rem] [padding-left:1rem] [padding-right:1rem] shadow-panel"
+      className="fixed inset-x-0 bottom-0 z-surface-overlay border-t border-companion-divider bg-companion-content px-4 pt-2 pb-2 [left:0] [right:0] [bottom:0] [height:4rem] [padding-top:0.5rem] [padding-bottom:0.5rem] [padding-left:1rem] [padding-right:1rem]"
       data-testid="companion-bottom-tab-bar"
     >
       <div className={`mx-auto flex h-full w-full max-w-[760px] items-center ${companionFlexRowGap1ClassName}`}>
