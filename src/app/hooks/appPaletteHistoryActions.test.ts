@@ -18,3 +18,20 @@ it('runs editor undo before workspace undo from app commands', () => {
   expect(undoEditorOperation).toHaveBeenCalledTimes(1);
   expect(undoWorkspaceAction).not.toHaveBeenCalled();
 });
+
+it('runs editor redo before workspace redo from app commands', () => {
+  const redoEditorOperation = vi.fn(() => true);
+  const redoWorkspaceAction = vi.fn(() => true);
+  const actions = createPaletteHistoryActions({
+    ws: {
+      redoEditorOperation,
+      redoWorkspaceAction,
+      undoEditorOperation: vi.fn(() => false),
+      undoWorkspaceAction: vi.fn(() => false)
+    }
+  });
+
+  expect(actions.redoWorkspaceAction()).toBe(true);
+  expect(redoEditorOperation).toHaveBeenCalledTimes(1);
+  expect(redoWorkspaceAction).not.toHaveBeenCalled();
+});
