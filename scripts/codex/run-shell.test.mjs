@@ -1,3 +1,5 @@
+/* global process */
+
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -10,6 +12,7 @@ const thisFile = fileURLToPath(import.meta.url);
 const codexDir = path.dirname(thisFile);
 const repoRoot = path.resolve(codexDir, '..', '..');
 const tempDirs = [];
+const bashCommand = resolveBashCommand();
 
 const scripts = [
   {
@@ -36,6 +39,28 @@ function writeStub(binDir, name, body) {
   fs.chmodSync(filePath, 0o755);
 }
 
+function resolveBashCommand() {
+  if (process.platform === 'win32') {
+    const scoopBash = path.join(os.homedir(), 'scoop', 'shims', 'bash.exe');
+    if (fs.existsSync(scoopBash)) {
+      return scoopBash;
+    }
+    const result = spawnSync('where.exe', ['bash'], { encoding: 'utf8' });
+    const matches = result.stdout.trim().split(/\r?\n/u).filter(Boolean);
+    const usableMatch = matches.find((match) => !/\\Windows\\System32\\bash\.exe$/iu.test(match));
+    return result.status === 0 && usableMatch ? usableMatch : 'bash';
+  }
+  return 'bash';
+}
+
+function toBashPath(filePath) {
+  const result = spawnSync(bashCommand, ['-lc', 'cygpath -u "$NATIVE_PATH"'], {
+    encoding: 'utf8',
+    env: { ...process.env, NATIVE_PATH: filePath }
+  });
+  return result.status === 0 ? result.stdout.trim() : filePath.replaceAll('\\', '/');
+}
+
 function createStubEnvironment(codexInstalled) {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-shell-test-'));
   const binDir = path.join(tempDir, 'bin');
@@ -55,14 +80,14 @@ function createStubEnvironment(codexInstalled) {
   return {
     nodeLog,
     npmLog,
-    pathValue: `${binDir}:/usr/bin:/bin`
+    pathValue: `${toBashPath(binDir)}:/usr/bin:/bin`
   };
 }
 
 function runShellScript(shellFile, codexInstalled) {
   const envInfo = createStubEnvironment(codexInstalled);
   const inheritedEnv = globalThis.process?.env ?? {};
-  const result = spawnSync('bash', [path.join(codexDir, shellFile), '--dry-run'], {
+  const result = spawnSync(bashCommand, [toBashPath(path.join(codexDir, shellFile)), '--dry-run'], {
     cwd: repoRoot,
     encoding: 'utf8',
     env: {
