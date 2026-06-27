@@ -74,13 +74,19 @@ describe('windows-control-device', () => {
     const script = await readFile(CONTROL_PS_SCRIPT, 'utf8');
 
     expect(script).toContain('Resolve-ScrcpyPath');
+    expect(script).toContain('Resolve-AdbPath');
     expect(script).toContain('SCRCPY_PATH');
+    expect(script).toContain('ADB_PATH');
     expect(script).toContain('Start-Process');
     expect(script).toContain('-WindowStyle Normal');
     expect(script).toContain('"--serial=$serial"');
-    expect(script).toContain('"--stay-awake"');
+    expect(script).not.toContain('"--stay-awake"');
     expect(script).toContain('"--turn-screen-off"');
     expect(script).toContain('"--no-audio"');
+    expect(script).toContain('stay awake: disabled');
+    expect(script).toContain('stay_on_while_plugged_in 0');
+    expect(script).toContain('KEYCODE_SLEEP');
+    expect(script).toContain('screen sleep: requested');
     expect(script).toContain('"--window-title=Foliole-Android"');
     expect(script).toContain('"--window-x=40"');
     expect(script).toContain('"--window-y=40"');
