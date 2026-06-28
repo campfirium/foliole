@@ -1,0 +1,103 @@
+import { readdirSync } from 'node:fs';
+import path from 'node:path';
+
+const SCRIPT_TEST_ROOTS = [
+  'scripts',
+  'scripts/codex',
+  'scripts/demo',
+  'scripts/diagnostics',
+  'scripts/git',
+  'scripts/preview',
+  'scripts/quality',
+  'scripts/sqlite',
+  'scripts/sync'
+];
+const TEST_FILE_PATTERN = /\.test\.mjs$/;
+
+const GATE_INTEGRATION_BUCKETS = {
+  'gate-integration-fast-delegation': (name) => name === 'quality-gate-fast.delegation.test.mjs',
+  'gate-integration-release-tail': (name) => name === 'quality-gate-release-tail-targets.test.mjs',
+  'gate-integration-release-targets': (name) => name === 'quality-gate-release-targets.test.mjs',
+  'gate-integration-routing': (name) =>
+    name === 'quality-gate-critical-routes.integration.test.mjs' ||
+    name === 'quality-gate-fast-lib-routing.test.mjs' ||
+    name === 'quality-gate-skip-lint-integration.test.mjs',
+  'gate-integration-target-collect': (name) => name === 'quality-gate-target-collect.test.mjs',
+  'gate-integration-target-core': (name) => name === 'quality-gate-target.test.mjs',
+  'gate-integration-target-failures': (name) => name === 'quality-gate-target-failures.test.mjs',
+  'gate-integration-target-telemetry': (name) => name === 'quality-gate-telemetry.test.mjs',
+  'gate-integration-targets': (name) =>
+    name === 'quality-gate-target-collect.test.mjs' ||
+    name === 'quality-gate-target-failures.test.mjs' ||
+    name === 'quality-gate-target.test.mjs' ||
+    name === 'quality-gate-telemetry.test.mjs'
+};
+
+export const GATE_INTEGRATION_SCRIPT_NAMES = Object.keys(GATE_INTEGRATION_BUCKETS)
+  .map((bucket) => `test:quality:${bucket}`);
+
+export function isQualityGateTest(filePath) {
+  return path.basename(filePath).startsWith('quality-');
+}
+
+export function isQualityGateIntegrationTest(filePath) {
+  return Object.values(GATE_INTEGRATION_BUCKETS).some((matchesBucket) => matchesBucket(path.basename(filePath)));
+}
+
+export function isPreviewDedupeTest(filePath) {
+  return path.basename(filePath).startsWith('preview-dedupe');
+}
+
+export function isNodeOnlyScriptTest(filePath) {
+  return path.basename(filePath) === 'test-files.test.mjs';
+}
+
+function collectRootTestFiles(dirPath, recursive) {
+  const files = [];
+  for (const entry of readdirSync(dirPath, { withFileTypes: true })) {
+    const entryPath = path.join(dirPath, entry.name);
+    if (entry.isDirectory()) {
+      if (recursive) {
+        files.push(...collectRootTestFiles(entryPath, true));
+      }
+      continue;
+    }
+    if (TEST_FILE_PATTERN.test(entry.name)) {
+      files.push(entryPath.replaceAll('\\', '/'));
+    }
+  }
+  return files;
+}
+
+export function collectScriptTestFiles() {
+  const files = [];
+  for (const root of SCRIPT_TEST_ROOTS) {
+    files.push(...collectRootTestFiles(root, root !== 'scripts'));
+  }
+  return [...new Set(files)].sort();
+}
+
+export function selectScriptTestBucketFiles(bucket, files) {
+  if (bucket === 'all') {
+    return files;
+  }
+  if (bucket === 'gate') {
+    return files.filter((file) => isQualityGateTest(file) && !isQualityGateIntegrationTest(file));
+  }
+  if (bucket === 'gate-integration') {
+    return files.filter((file) => isQualityGateTest(file) && isQualityGateIntegrationTest(file));
+  }
+  if (bucket in GATE_INTEGRATION_BUCKETS) {
+    return files.filter((file) => GATE_INTEGRATION_BUCKETS[bucket](path.basename(file)));
+  }
+  if (bucket === 'preview') {
+    return files.filter(isPreviewDedupeTest);
+  }
+  if (bucket === 'node') {
+    return files.filter(isNodeOnlyScriptTest);
+  }
+  if (bucket === 'core') {
+    return files.filter((file) => !isQualityGateTest(file) && !isPreviewDedupeTest(file) && !isNodeOnlyScriptTest(file));
+  }
+  return null;
+}

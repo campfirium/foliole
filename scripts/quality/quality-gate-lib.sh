@@ -185,6 +185,11 @@ run_quality_gate_script() {
     exit 1
   fi
 
+  if [[ "${QUALITY_GATE_TEST_DRY_RUN_STEPS:-0}" == "1" ]]; then
+    echo "[${prefix}] dry-run step: ${script_name}"
+    return 0
+  fi
+
   local -a command_args=()
   if is_quality_gate_fixture_package; then
     command_args=(bash -lc "$(read_package_script_command "${script_name}")")

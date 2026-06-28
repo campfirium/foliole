@@ -2,26 +2,18 @@
 /* global console, process */
 
 import { spawn, spawnSync } from 'node:child_process';
-import { mkdirSync, readdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
-const SCRIPT_TEST_ROOTS = [
-  'scripts',
-  'scripts/codex',
-  'scripts/demo',
-  'scripts/diagnostics',
-  'scripts/git',
-  'scripts/preview',
-  'scripts/quality',
-  'scripts/sqlite',
-  'scripts/sync'
-];
-const TEST_FILE_PATTERN = /\.test\.mjs$/;
+import { collectScriptTestFiles, selectScriptTestBucketFiles } from './script-test-bucket-selection.mjs';
+
 const DEFAULT_BUCKET_TIMEOUT_SECONDS = 240;
 const DEFAULT_INTEGRATION_BUCKET_TIMEOUT_SECONDS = 600;
 
 function printUsage() {
-  console.error('Usage: node scripts/run-script-test-bucket.mjs <all|core|gate|gate-integration|node|preview> <report.json>');
+  console.error(
+    'Usage: node scripts/run-script-test-bucket.mjs <all|core|gate|gate-integration*|node|preview> <report.json>'
+  );
 }
 
 export function resolveBucketTimeoutSeconds(bucket) {
@@ -89,77 +81,6 @@ function terminateChildTree(child) {
   }
   child.kill('SIGTERM');
   globalThis.setTimeout(() => child.kill('SIGKILL'), 1000).unref();
-}
-
-export function isQualityGateTest(filePath) {
-  return path.basename(filePath).startsWith('quality-');
-}
-
-export function isQualityGateIntegrationTest(filePath) {
-  const name = path.basename(filePath);
-  return (
-    name.includes('integration') ||
-    name.includes('target') ||
-    name.includes('telemetry') ||
-    name.includes('release') ||
-    name === 'quality-gate-fast.delegation.test.mjs' ||
-    name === 'quality-gate-fast-lib-routing.test.mjs'
-  );
-}
-
-export function isPreviewDedupeTest(filePath) {
-  return path.basename(filePath).startsWith('preview-dedupe');
-}
-
-export function isNodeOnlyScriptTest(filePath) {
-  return path.basename(filePath) === 'test-files.test.mjs';
-}
-
-function collectRootTestFiles(dirPath, recursive) {
-  const files = [];
-  for (const entry of readdirSync(dirPath, { withFileTypes: true })) {
-    const entryPath = path.join(dirPath, entry.name);
-    if (entry.isDirectory()) {
-      if (recursive) {
-        files.push(...collectRootTestFiles(entryPath, true));
-      }
-      continue;
-    }
-    if (TEST_FILE_PATTERN.test(entry.name)) {
-      files.push(entryPath.replaceAll('\\', '/'));
-    }
-  }
-  return files;
-}
-
-function collectScriptTestFiles() {
-  const files = [];
-  for (const root of SCRIPT_TEST_ROOTS) {
-    files.push(...collectRootTestFiles(root, root !== 'scripts'));
-  }
-  return [...new Set(files)].sort();
-}
-
-export function selectScriptTestBucketFiles(bucket, files) {
-  if (bucket === 'all') {
-    return files;
-  }
-  if (bucket === 'gate') {
-    return files.filter((file) => isQualityGateTest(file) && !isQualityGateIntegrationTest(file));
-  }
-  if (bucket === 'gate-integration') {
-    return files.filter((file) => isQualityGateTest(file) && isQualityGateIntegrationTest(file));
-  }
-  if (bucket === 'preview') {
-    return files.filter(isPreviewDedupeTest);
-  }
-  if (bucket === 'node') {
-    return files.filter(isNodeOnlyScriptTest);
-  }
-  if (bucket === 'core') {
-    return files.filter((file) => !isQualityGateTest(file) && !isPreviewDedupeTest(file) && !isNodeOnlyScriptTest(file));
-  }
-  return null;
 }
 
 function runVitest(bucket, reportPath, files) {

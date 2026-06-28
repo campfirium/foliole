@@ -8,6 +8,16 @@ import { describe, expect, it } from 'vitest';
 
 import { releaseScripts, runTargetGate, writePackageJson } from './quality-gate-release-targets.support.mjs';
 
+const DRY_RUN_ENV = { QUALITY_GATE_TEST_DRY_RUN_STEPS: '1' };
+
+function expectStep(stdout, scriptName) {
+  expect(stdout).toContain(`dry-run step: ${scriptName}`);
+}
+
+function expectNoStep(stdout, scriptName) {
+  expect(stdout).not.toContain(`dry-run step: ${scriptName}`);
+}
+
 describe('quality-gate release split targets', () => {
   it('exposes release core and tail package aliases', () => {
     expect(packageJson.scripts['quality:release:core']).toBe('bash scripts/quality/quality-gate-target.sh release-core');
@@ -33,23 +43,33 @@ describe('quality-gate release split targets', () => {
     try {
       await writePackageJson(tempRoot, releaseScripts());
 
-      const result = await runTargetGate(tempRoot, 'release-core');
+      const result = await runTargetGate(tempRoot, 'release-core', DRY_RUN_ENV);
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('release desktop src test ok');
-      expect(result.stdout).toContain('release desktop electron test ok');
-      expect(result.stdout).toContain('release windows core test ok');
-      expect(result.stdout).toContain('release android test ok');
-      expect(result.stdout).toContain('release shared test ok');
-      expect(result.stdout).toContain('release quality core test ok');
-      expect(result.stdout).toContain('release quality gate test ok');
-      expect(result.stdout).toContain('release quality node test ok');
-      expect(result.stdout).toContain('release quality preview test ok');
+      for (const scriptName of [
+        'test:release:desktop-src',
+        'test:desktop:electron',
+        'test:windows:core',
+        'test:release:android',
+        'test:release:shared',
+        'test:quality:core',
+        'test:quality:gate',
+        'test:quality:gate-integration:routing',
+        'test:quality:gate-integration:fast-delegation',
+        'test:quality:gate-integration:target-core',
+        'test:quality:gate-integration:target-failures',
+        'test:quality:gate-integration:target-collect',
+        'test:quality:gate-integration:target-telemetry',
+        'test:quality:gate-integration:release-targets',
+        'test:quality:gate-integration:release-tail',
+        'test:quality:node',
+        'test:quality:preview'
+      ]) expectStep(result.stdout, scriptName);
       expect(result.stdout).toContain(
-        '[quality-gate:release-core] running in parallel: test:release:desktop-src test:desktop:electron test:windows:core test:release:android test:release:shared test:quality:core test:quality:gate test:quality:gate-integration test:quality:node'
+        '[quality-gate:release-core] running in parallel: test:release:desktop-src test:desktop:electron test:windows:core test:release:android test:release:shared test:quality:core test:quality:gate test:quality:gate-integration:routing test:quality:gate-integration:fast-delegation test:quality:gate-integration:target-core test:quality:gate-integration:target-failures test:quality:gate-integration:target-collect test:quality:gate-integration:target-telemetry test:quality:gate-integration:release-targets test:quality:gate-integration:release-tail test:quality:node'
       );
-      expect(result.stdout).not.toContain('release windows preview recovery test ok');
-      expect(result.stdout).not.toContain('release android sync ok');
+      expectNoStep(result.stdout, 'test:windows:preview-recovery');
+      expectNoStep(result.stdout, 'android:sync');
       expect(result.stdout).toContain('[quality-gate:release-core] all checks passed.');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
@@ -58,27 +78,30 @@ describe('quality-gate release split targets', () => {
 
   it.each([
     {
-      expected: ['android boundary ok', 'release lint ok', 'release desktop typecheck ok', 'release android typecheck ok'],
+      expected: ['check:android-boundary', 'lint:full', 'typecheck:desktop', 'typecheck:android'],
       name: 'guards, lint, and typecheck',
-      rejected: ['release desktop src test ok', 'release vite build ok'],
+      rejected: ['test:release:desktop-src', 'build:vite-only'],
       target: 'release-static'
     },
     {
-      expected: ['release desktop src test ok', 'release windows core test ok', 'release android test ok', 'release shared test ok', 'release quality gate test ok'],
+      expected: ['test:release:desktop-src', 'test:windows:core', 'test:release:android', 'test:release:shared', 'test:quality:gate', 'test:quality:gate-integration:routing', 'test:quality:gate-integration:fast-delegation', 'test:quality:gate-integration:target-core',
+        'test:quality:gate-integration:target-failures',
+        'test:quality:gate-integration:target-collect',
+        'test:quality:gate-integration:target-telemetry', 'test:quality:gate-integration:release-targets', 'test:quality:gate-integration:release-tail'],
       name: 'non-preview test buckets',
-      rejected: ['release quality preview test ok', 'release preview recovery test ok', 'release vite build ok'],
+      rejected: ['test:quality:preview', 'test:windows:preview-recovery', 'build:vite-only'],
       target: 'release-tests'
     },
     {
-      expected: ['release quality preview test ok', 'release vite build ok', 'release electron compile ok', 'release android web build ok'],
+      expected: ['test:quality:preview', 'build:vite-only', 'electron:compile', 'android:web:build'],
       name: 'release build outputs',
-      rejected: ['release desktop src test ok', 'release windows preview recovery test ok'],
+      rejected: ['test:release:desktop-src', 'test:windows:preview-recovery'],
       target: 'release-build'
     },
     {
-      expected: ['release quality preview test ok'],
+      expected: ['test:quality:preview'],
       name: 'script preview tests',
-      rejected: ['release desktop src test ok', 'release windows preview recovery test ok'],
+      rejected: ['test:release:desktop-src', 'test:windows:preview-recovery'],
       target: 'release-script-preview'
     }
   ])('keeps $target isolated to $name', async ({ expected, rejected, target }) => {
@@ -86,11 +109,11 @@ describe('quality-gate release split targets', () => {
     try {
       await writePackageJson(tempRoot, releaseScripts());
 
-      const result = await runTargetGate(tempRoot, target);
+      const result = await runTargetGate(tempRoot, target, DRY_RUN_ENV);
 
       expect(result.code).toBe(0);
-      for (const text of expected) expect(result.stdout).toContain(text);
-      for (const text of rejected) expect(result.stdout).not.toContain(text);
+      for (const scriptName of expected) expectStep(result.stdout, scriptName);
+      for (const scriptName of rejected) expectNoStep(result.stdout, scriptName);
       expect(result.stdout).toContain(`[quality-gate:${target}] all checks passed.`);
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
@@ -102,13 +125,13 @@ describe('quality-gate release split targets', () => {
     try {
       await writePackageJson(tempRoot, releaseScripts());
 
-      const result = await runTargetGate(tempRoot, 'release-preview-recovery');
+      const result = await runTargetGate(tempRoot, 'release-preview-recovery', DRY_RUN_ENV);
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('release windows preview recovery test ok');
-      expect(result.stdout).not.toContain('release desktop test ok');
-      expect(result.stdout).not.toContain('release windows core test ok');
-      expect(result.stdout).not.toContain('release android sync ok');
+      expectStep(result.stdout, 'test:windows:preview-recovery');
+      expectNoStep(result.stdout, 'test:desktop');
+      expectNoStep(result.stdout, 'test:windows:core');
+      expectNoStep(result.stdout, 'android:sync');
       expect(result.stdout).toContain('[quality-gate:release-preview-recovery] all checks passed.');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
@@ -120,28 +143,38 @@ describe('quality-gate release split targets', () => {
     try {
       await writePackageJson(tempRoot, releaseScripts());
 
-      const result = await runTargetGate(tempRoot, 'full');
+      const result = await runTargetGate(tempRoot, 'full', DRY_RUN_ENV);
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('release lint ok');
-      expect(result.stdout).toContain('release desktop typecheck ok');
-      expect(result.stdout).toContain('release android typecheck ok');
-      expect(result.stdout).toContain('release desktop src test ok');
-      expect(result.stdout).toContain('release desktop electron test ok');
-      expect(result.stdout).toContain('release windows core test ok');
-      expect(result.stdout).toContain('release windows preview recovery test ok');
-      expect(result.stdout).toContain('release android test ok');
-      expect(result.stdout).toContain('release shared test ok');
-      expect(result.stdout).toContain('release quality core test ok');
-      expect(result.stdout).toContain('release quality gate test ok');
-      expect(result.stdout).toContain('release quality node test ok');
-      expect(result.stdout).toContain('release quality preview test ok');
-      expect(result.stdout).toContain('release vite build ok');
-      expect(result.stdout).toContain('release electron compile ok');
-      expect(result.stdout).toContain('release android web build ok');
-      expect(result.stdout).not.toContain('release android sync ok');
-      expect(result.stdout).not.toContain('release android host lint ok');
-      expect(result.stdout).not.toContain('release android host test ok');
+      for (const scriptName of [
+        'lint:full',
+        'typecheck:desktop',
+        'typecheck:android',
+        'test:release:desktop-src',
+        'test:desktop:electron',
+        'test:windows:core',
+        'test:windows:preview-recovery',
+        'test:release:android',
+        'test:release:shared',
+        'test:quality:core',
+        'test:quality:gate',
+        'test:quality:gate-integration:routing',
+        'test:quality:gate-integration:fast-delegation',
+        'test:quality:gate-integration:target-core',
+        'test:quality:gate-integration:target-failures',
+        'test:quality:gate-integration:target-collect',
+        'test:quality:gate-integration:target-telemetry',
+        'test:quality:gate-integration:release-targets',
+        'test:quality:gate-integration:release-tail',
+        'test:quality:node',
+        'test:quality:preview',
+        'build:vite-only',
+        'electron:compile',
+        'android:web:build'
+      ]) expectStep(result.stdout, scriptName);
+      expectNoStep(result.stdout, 'android:sync');
+      expectNoStep(result.stdout, 'android:host:lint');
+      expectNoStep(result.stdout, 'android:host:test');
       expect(result.stdout).toContain('[quality-gate:full] all checks passed.');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
@@ -153,14 +186,14 @@ describe('quality-gate release split targets', () => {
     try {
       await writePackageJson(tempRoot, releaseScripts());
 
-      const result = await runTargetGate(tempRoot, 'release');
+      const result = await runTargetGate(tempRoot, 'release', DRY_RUN_ENV);
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('release windows core test ok');
-      expect(result.stdout).toContain('release windows preview recovery test ok');
-      expect(result.stdout).toContain('release android sync ok');
-      expect(result.stdout).toContain('release android host lint ok');
-      expect(result.stdout).toContain('release android host test ok');
+      expectStep(result.stdout, 'test:windows:core');
+      expectStep(result.stdout, 'test:windows:preview-recovery');
+      expectStep(result.stdout, 'android:sync');
+      expectStep(result.stdout, 'android:host:lint');
+      expectStep(result.stdout, 'android:host:test');
       expect(result.stdout).toContain('[quality-gate:release] all checks passed.');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
@@ -172,15 +205,15 @@ describe('quality-gate release split targets', () => {
     try {
       await writePackageJson(tempRoot, releaseScripts());
 
-      const result = await runTargetGate(tempRoot, 'release-android-host');
+      const result = await runTargetGate(tempRoot, 'release-android-host', DRY_RUN_ENV);
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('release android sync ok');
-      expect(result.stdout).toContain('release android host lint ok');
-      expect(result.stdout).toContain('release android host test ok');
-      expect(result.stdout).not.toContain('release lint ok');
-      expect(result.stdout).not.toContain('release shared test ok');
-      expect(result.stdout).not.toContain('release android web build ok');
+      expectStep(result.stdout, 'android:sync');
+      expectStep(result.stdout, 'android:host:lint');
+      expectStep(result.stdout, 'android:host:test');
+      expectNoStep(result.stdout, 'lint:full');
+      expectNoStep(result.stdout, 'test:release:shared');
+      expectNoStep(result.stdout, 'android:web:build');
       expect(result.stdout).toContain('[quality-gate:release-android-host] all checks passed.');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });

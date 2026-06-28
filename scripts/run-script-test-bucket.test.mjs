@@ -12,8 +12,10 @@ import {
   isQualityGateTest,
   isQualityGateIntegrationTest,
   isNodeOnlyScriptTest,
+  selectScriptTestBucketFiles
+} from './script-test-bucket-selection.mjs';
+import {
   resolveBucketTimeoutSeconds,
-  selectScriptTestBucketFiles,
   writeBucketTimeoutReport
 } from './run-script-test-bucket.mjs';
 
@@ -37,9 +39,16 @@ describe('run-script-test-bucket', () => {
       'scripts/codex/codex-task.test.mjs',
       'scripts/preview/preview-dedupe.test.mjs',
       'scripts/preview/preview-dedupe-batch.test.mjs',
+      'scripts/quality/quality-gate-critical-routes.integration.test.mjs',
       'scripts/quality/quality-gate-fast.delegation.test.mjs',
+      'scripts/quality/quality-gate-fast-lib-routing.test.mjs',
+      'scripts/quality/quality-gate-release-tail-targets.test.mjs',
+      'scripts/quality/quality-gate-release-targets.test.mjs',
       'scripts/quality/quality-gate-skip-lint-integration.test.mjs',
+      'scripts/quality/quality-gate-target-collect.test.mjs',
+      'scripts/quality/quality-gate-target-failures.test.mjs',
       'scripts/quality/quality-gate-target.test.mjs',
+      'scripts/quality/quality-gate-telemetry.test.mjs',
       'scripts/quality/quality-skip-lint.test.mjs',
       'scripts/test-files.test.mjs',
       'scripts/sync/sql-surface-scan.test.mjs'
@@ -54,9 +63,48 @@ describe('run-script-test-bucket', () => {
       'scripts/quality/quality-skip-lint.test.mjs'
     ]);
     expect(selectScriptTestBucketFiles('gate-integration', files)).toEqual([
+      'scripts/quality/quality-gate-critical-routes.integration.test.mjs',
       'scripts/quality/quality-gate-fast.delegation.test.mjs',
+      'scripts/quality/quality-gate-fast-lib-routing.test.mjs',
+      'scripts/quality/quality-gate-release-tail-targets.test.mjs',
+      'scripts/quality/quality-gate-release-targets.test.mjs',
       'scripts/quality/quality-gate-skip-lint-integration.test.mjs',
+      'scripts/quality/quality-gate-target-collect.test.mjs',
+      'scripts/quality/quality-gate-target-failures.test.mjs',
+      'scripts/quality/quality-gate-target.test.mjs',
+      'scripts/quality/quality-gate-telemetry.test.mjs'
+    ]);
+    expect(selectScriptTestBucketFiles('gate-integration-routing', files)).toEqual([
+      'scripts/quality/quality-gate-critical-routes.integration.test.mjs',
+      'scripts/quality/quality-gate-fast-lib-routing.test.mjs',
+      'scripts/quality/quality-gate-skip-lint-integration.test.mjs'
+    ]);
+    expect(selectScriptTestBucketFiles('gate-integration-fast-delegation', files)).toEqual([
+      'scripts/quality/quality-gate-fast.delegation.test.mjs'
+    ]);
+    expect(selectScriptTestBucketFiles('gate-integration-release-targets', files)).toEqual([
+      'scripts/quality/quality-gate-release-targets.test.mjs'
+    ]);
+    expect(selectScriptTestBucketFiles('gate-integration-release-tail', files)).toEqual([
+      'scripts/quality/quality-gate-release-tail-targets.test.mjs'
+    ]);
+    expect(selectScriptTestBucketFiles('gate-integration-targets', files)).toEqual([
+      'scripts/quality/quality-gate-target-collect.test.mjs',
+      'scripts/quality/quality-gate-target-failures.test.mjs',
+      'scripts/quality/quality-gate-target.test.mjs',
+      'scripts/quality/quality-gate-telemetry.test.mjs'
+    ]);
+    expect(selectScriptTestBucketFiles('gate-integration-target-core', files)).toEqual([
       'scripts/quality/quality-gate-target.test.mjs'
+    ]);
+    expect(selectScriptTestBucketFiles('gate-integration-target-failures', files)).toEqual([
+      'scripts/quality/quality-gate-target-failures.test.mjs'
+    ]);
+    expect(selectScriptTestBucketFiles('gate-integration-target-collect', files)).toEqual([
+      'scripts/quality/quality-gate-target-collect.test.mjs'
+    ]);
+    expect(selectScriptTestBucketFiles('gate-integration-target-telemetry', files)).toEqual([
+      'scripts/quality/quality-gate-telemetry.test.mjs'
     ]);
     expect(selectScriptTestBucketFiles('node', files)).toEqual(['scripts/test-files.test.mjs']);
     expect(selectScriptTestBucketFiles('preview', files)).toEqual([

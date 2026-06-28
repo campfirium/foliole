@@ -11,6 +11,8 @@ import { describe, expect, it } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const TARGET_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality', 'quality-gate-target.sh');
+const ok = (message) => `printf '%s\\n' '${message}'`;
+const fail = (message) => `printf '%s\\n' '${message}'; exit 1`;
 
 function runTargetGate(cwd, target, env = {}) {
   return new Promise((resolve) => {
@@ -51,12 +53,12 @@ describe('quality-gate-target.sh collected failure mode', () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-collect-'));
     try {
       await writePackageJson(tempRoot, {
-        'lint:desktop:full': 'node -e "console.log(\'lint failed details\'); process.exit(1)"',
-        'typecheck:desktop': 'node -e "console.log(\'typecheck failed details\'); process.exit(1)"',
-        'test:desktop': 'node -e "console.log(\'desktop test still ran\')"',
-        'test:quality': 'node -e "console.log(\'quality test still ran\')"',
-        build: 'node -e "console.log(\'build still ran\')"',
-        'electron:compile': 'node -e "console.log(\'electron compile still ran\')"'
+        'lint:desktop:full': fail('lint failed details'),
+        'typecheck:desktop': fail('typecheck failed details'),
+        'test:desktop': ok('desktop test still ran'),
+        'test:quality': ok('quality test still ran'),
+        build: ok('build still ran'),
+        'electron:compile': ok('electron compile still ran')
       });
       await writeRepositoryRootBoundaryScript(tempRoot);
 
@@ -78,23 +80,31 @@ describe('quality-gate-target.sh collected failure mode', () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-collect-'));
     try {
       await writePackageJson(tempRoot, {
-        'check:android-boundary': 'node -e "console.log(\'android boundary ok\')"',
-        'lint:full': 'node -e "console.log(\'lint failed details\'); process.exit(1)"',
-        'typecheck:desktop': 'node -e "console.log(\'desktop typecheck ok\')"',
-        'typecheck:android': 'node -e "console.log(\'android typecheck failed details\'); process.exit(1)"',
-        'test:release:desktop-src': 'node -e "console.log(\'desktop src test still ran\')"',
-        'test:desktop:electron': 'node -e "console.log(\'desktop electron test still ran\')"',
-        'test:windows:core': 'node -e "console.log(\'windows core test still ran\')"',
-        'test:release:android': 'node -e "console.log(\'android test still ran\')"',
-        'test:release:shared': 'node -e "console.log(\'shared test still ran\')"',
-        'test:quality:core': 'node -e "console.log(\'quality core test still ran\')"',
-        'test:quality:gate': 'node -e "console.log(\'quality gate test still ran\')"',
-        'test:quality:gate-integration': 'node -e "console.log(\'quality gate integration test still ran\')"',
-        'test:quality:node': 'node -e "console.log(\'quality node test still ran\')"',
-        'test:quality:preview': 'node -e "console.log(\'quality preview test still ran\')"',
-        'build:vite-only': 'node -e "console.log(\'build still ran\')"',
-        'electron:compile': 'node -e "console.log(\'electron compile failed details\'); process.exit(1)"',
-        'android:web:build': 'node -e "console.log(\'android web build still ran\')"'
+        'check:android-boundary': ok('android boundary ok'),
+        'lint:full': fail('lint failed details'),
+        'typecheck:desktop': ok('desktop typecheck ok'),
+        'typecheck:android': fail('android typecheck failed details'),
+        'test:release:desktop-src': ok('desktop src test still ran'),
+        'test:desktop:electron': ok('desktop electron test still ran'),
+        'test:windows:core': ok('windows core test still ran'),
+        'test:release:android': ok('android test still ran'),
+        'test:release:shared': ok('shared test still ran'),
+        'test:quality:core': ok('quality core test still ran'),
+        'test:quality:gate': ok('quality gate test still ran'),
+        'test:quality:gate-integration:routing': ok('quality gate integration routing test still ran'),
+        'test:quality:gate-integration:fast-delegation': ok('quality gate integration fast delegation test still ran'),
+        'test:quality:gate-integration:targets': ok('quality gate integration targets test still ran'),
+        'test:quality:gate-integration:target-core': ok('quality gate integration target core test still ran'),
+        'test:quality:gate-integration:target-failures': ok('quality gate integration target failures test still ran'),
+        'test:quality:gate-integration:target-collect': ok('quality gate integration target collect test still ran'),
+        'test:quality:gate-integration:target-telemetry': ok('quality gate integration target telemetry test still ran'),
+        'test:quality:gate-integration:release-targets': ok('quality gate integration release targets test still ran'),
+        'test:quality:gate-integration:release-tail': ok('quality gate integration release tail test still ran'),
+        'test:quality:node': ok('quality node test still ran'),
+        'test:quality:preview': ok('quality preview test still ran'),
+        'build:vite-only': ok('build still ran'),
+        'electron:compile': fail('electron compile failed details'),
+        'android:web:build': ok('android web build still ran')
       });
       await writeRepositoryRootBoundaryScript(tempRoot);
 
@@ -110,6 +120,14 @@ describe('quality-gate-target.sh collected failure mode', () => {
       expect(result.stdout).toContain('shared test still ran');
       expect(result.stdout).toContain('quality core test still ran');
       expect(result.stdout).toContain('quality gate test still ran');
+      expect(result.stdout).toContain('quality gate integration routing test still ran');
+      expect(result.stdout).toContain('quality gate integration fast delegation test still ran');
+      expect(result.stdout).toContain('quality gate integration target core test still ran');
+      expect(result.stdout).toContain('quality gate integration target failures test still ran');
+      expect(result.stdout).toContain('quality gate integration target collect test still ran');
+      expect(result.stdout).toContain('quality gate integration target telemetry test still ran');
+      expect(result.stdout).toContain('quality gate integration release targets test still ran');
+      expect(result.stdout).toContain('quality gate integration release tail test still ran');
       expect(result.stdout).toContain('quality node test still ran');
       expect(result.stdout).toContain('quality preview test still ran');
       expect(result.stdout).toContain('android web build still ran');

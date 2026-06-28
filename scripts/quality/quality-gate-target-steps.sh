@@ -36,7 +36,7 @@ run_release_static_gate_steps() {
 }
 
 run_release_test_gate_steps() {
-  run_gate_steps_parallel test:release:desktop-src test:desktop:electron test:windows:core test:release:android test:release:shared test:quality:core test:quality:gate test:quality:gate-integration test:quality:node
+  run_gate_steps_parallel test:release:desktop-src test:desktop:electron test:windows:core test:release:android test:release:shared test:quality:core test:quality:gate test:quality:gate-integration:routing test:quality:gate-integration:fast-delegation test:quality:gate-integration:target-core test:quality:gate-integration:target-failures test:quality:gate-integration:target-collect test:quality:gate-integration:target-telemetry test:quality:gate-integration:release-targets test:quality:gate-integration:release-tail test:quality:node
 }
 
 run_release_build_gate_steps() {
@@ -50,7 +50,7 @@ run_release_script_preview_gate_steps() {
 }
 
 run_release_tooling_gate_steps() {
-  run_gate_steps_parallel test:quality:core test:quality:gate test:quality:gate-integration test:quality:node
+  run_gate_steps_parallel test:quality:core test:quality:gate test:quality:gate-integration:routing test:quality:gate-integration:fast-delegation test:quality:gate-integration:target-core test:quality:gate-integration:target-failures test:quality:gate-integration:target-collect test:quality:gate-integration:target-telemetry test:quality:gate-integration:release-targets test:quality:gate-integration:release-tail test:quality:node
   run_gate_steps test:quality:preview
 }
 

@@ -48,6 +48,11 @@ async function writePackageJson(rootDir, scripts) {
     'test:quality:core',
     'test:quality:gate',
     'test:quality:gate-integration',
+    'test:quality:gate-integration:routing',
+    'test:quality:gate-integration:fast-delegation',
+    'test:quality:gate-integration:targets',
+    'test:quality:gate-integration:release-targets',
+    'test:quality:gate-integration:release-tail',
     'test:quality:node',
     'test:quality:preview'
   ]) {

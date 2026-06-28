@@ -46,6 +46,15 @@ resolve_vitest_json_report_file() {
     test:quality:core) printf '.tmp/vitest/quality-core.json' ;;
     test:quality:gate) printf '.tmp/vitest/quality-gate.json' ;;
     test:quality:gate-integration) printf '.tmp/vitest/quality-gate-integration.json' ;;
+    test:quality:gate-integration:routing) printf '.tmp/vitest/quality-gate-integration-routing.json' ;;
+    test:quality:gate-integration:fast-delegation) printf '.tmp/vitest/quality-gate-integration-fast-delegation.json' ;;
+    test:quality:gate-integration:targets) printf '.tmp/vitest/quality-gate-integration-targets.json' ;;
+    test:quality:gate-integration:target-core) printf '.tmp/vitest/quality-gate-integration-target-core.json' ;;
+    test:quality:gate-integration:target-failures) printf '.tmp/vitest/quality-gate-integration-target-failures.json' ;;
+    test:quality:gate-integration:target-collect) printf '.tmp/vitest/quality-gate-integration-target-collect.json' ;;
+    test:quality:gate-integration:target-telemetry) printf '.tmp/vitest/quality-gate-integration-target-telemetry.json' ;;
+    test:quality:gate-integration:release-targets) printf '.tmp/vitest/quality-gate-integration-release-targets.json' ;;
+    test:quality:gate-integration:release-tail) printf '.tmp/vitest/quality-gate-integration-release-tail.json' ;;
     test:quality:node) printf '.tmp/vitest/quality-node.json' ;;
     test:quality:preview) printf '.tmp/vitest/quality-preview.json' ;;
     test:full) printf '.tmp/vitest/full.json' ;;
