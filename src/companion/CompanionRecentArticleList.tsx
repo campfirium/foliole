@@ -24,7 +24,11 @@ function RecentArticlePreview(props: { preview: string | null }) {
   if (!props.preview) {
     return null;
   }
-  return <p className="mt-1.5 line-clamp-2 text-[13px] leading-5 text-companion-text-secondary">{props.preview}</p>;
+  return (
+    <p className="mt-1 line-clamp-2 break-words text-ui-base leading-5 text-companion-text-secondary [overflow-wrap:anywhere]">
+      {props.preview}
+    </p>
+  );
 }
 
 function RecentArticleRow(props: {
@@ -44,11 +48,12 @@ function RecentArticleRow(props: {
       onClick={() => props.onSelectArticle(props.article.nodeId)}
       type="button"
     >
-      <div className="mb-1 flex items-center gap-2 text-[11.5px] font-semibold leading-4 text-companion-text-secondary">
-        <span aria-hidden="true" className="h-1 w-1 rounded-full bg-companion-accent" />
+      <div className="mb-1 text-ui-sm font-semibold leading-4 text-companion-text-tertiary">
         <time dateTime={props.article.updatedAt}>{formatRecentDate(props.article.updatedAt)}</time>
       </div>
-      <h2 className="line-clamp-2 text-[15px] font-semibold leading-5 text-foreground">{props.article.title}</h2>
+      <h2 className="line-clamp-2 break-words text-ui-lg font-semibold leading-5 text-foreground [overflow-wrap:anywhere]">
+        {props.article.title}
+      </h2>
       {bodyStatusLabel ? (
         <p className="mt-1 text-xs font-medium leading-5 text-companion-text-secondary">{bodyStatusLabel}</p>
       ) : null}
@@ -63,17 +68,19 @@ function ContinueReadingEntry(props: { article: CompanionRecentArticle; onSelect
   return (
     <button
       aria-label={t('desktop.nodeBrowse.openTopic', { title: props.article.title })}
-      className="mb-3 block w-full border-l-[3px] border-companion-accent bg-companion-accent-soft px-3.5 py-3 text-left transition-colors active:bg-companion-accent-soft"
+      className="mb-2 block w-full border-y border-companion-divider bg-companion-subtle/55 px-1 py-3 text-left transition-colors hover:bg-companion-subtle/70 active:bg-companion-subtle"
       onClick={() => props.onSelectArticle(props.article.nodeId)}
       type="button"
     >
-      <div className="flex items-center justify-between gap-3 text-[11.5px] font-semibold uppercase leading-4 text-companion-accent">
+      <div className="flex items-center justify-between gap-3 text-ui-sm font-semibold leading-4 text-companion-text-tertiary">
         <span>{t('desktop.reviewActions.continueReading')}</span>
         <time className="font-semibold text-companion-text-secondary" dateTime={props.article.updatedAt}>
           {formatRecentDate(props.article.updatedAt)}
         </time>
       </div>
-      <h2 className="mt-1.5 line-clamp-2 text-[15.5px] font-semibold leading-5 text-foreground">{props.article.title}</h2>
+      <h2 className="mt-1.5 line-clamp-2 break-words text-ui-lg font-semibold leading-5 text-foreground [overflow-wrap:anywhere]">
+        {props.article.title}
+      </h2>
       {bodyStatusLabel ? (
         <p className="mt-1 text-xs font-medium leading-5 text-companion-text-secondary">{bodyStatusLabel}</p>
       ) : null}

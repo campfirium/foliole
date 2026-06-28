@@ -40,7 +40,7 @@ function testRendersContinueReadingEntry() {
   );
 
   expect(screen.getByText('Continue reading')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Open topic Article 1' })).toHaveClass('border-l-[3px]');
+  expect(screen.getByRole('button', { name: 'Open topic Article 1' })).not.toHaveClass('border-l-[3px]');
   expect(screen.getByRole('button', { name: 'Open topic Article 2' })).toHaveTextContent('Second opening text');
 }
 
