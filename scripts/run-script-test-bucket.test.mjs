@@ -8,6 +8,8 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import {
+  GATE_INTEGRATION_SCRIPT_NAMES,
+  gateIntegrationScriptName,
   isPreviewDedupeTest,
   isQualityGateTest,
   isQualityGateIntegrationTest,
@@ -18,6 +20,7 @@ import {
   resolveBucketTimeoutSeconds,
   writeBucketTimeoutReport
 } from './run-script-test-bucket.mjs';
+import { writeAggregateReport } from './script-test-bucket-aggregate.mjs';
 
 describe('run-script-test-bucket', () => {
   it('classifies quality gate and preview tests outside the script core bucket', () => {
@@ -115,6 +118,29 @@ describe('run-script-test-bucket', () => {
     expect(selectScriptTestBucketFiles('unknown', files)).toBeNull();
   });
 
+  it('keeps gate integration script names aligned with package and shell consumers', async () => {
+    const packageJson = JSON.parse(await readFile('package.json', 'utf8'));
+    const targetSteps = await readFile('scripts/quality/quality-gate-target-steps.sh', 'utf8');
+
+    expect(gateIntegrationScriptName('gate-integration-routing')).toBe('test:quality:gate-integration:routing');
+    expect(GATE_INTEGRATION_SCRIPT_NAMES).toEqual([
+      'test:quality:gate-integration:target-telemetry',
+      'test:quality:gate-integration:target-collect',
+      'test:quality:gate-integration:target-failures',
+      'test:quality:gate-integration:routing',
+      'test:quality:gate-integration:release-targets',
+      'test:quality:gate-integration:fast-delegation',
+      'test:quality:gate-integration:release-tail',
+      'test:quality:gate-integration:target-core'
+    ]);
+    for (const scriptName of GATE_INTEGRATION_SCRIPT_NAMES) {
+      expect(packageJson.scripts[scriptName]).toBeTruthy();
+    }
+    expect(packageJson.scripts['test:quality:gate-integration']).not.toContain('&&');
+    expect(targetSteps).toContain('$(quality_gate_integration_scripts)');
+    expect(targetSteps).not.toContain('test:quality:gate-integration:target-core test:quality:gate-integration:target-failures');
+  });
+
   it('resolves bucket timeout from specific and shared environment overrides', () => {
     const oldSpecific = process.env.SCRIPT_TEST_BUCKET_GATE_TIMEOUT_SECONDS;
     const oldShared = process.env.SCRIPT_TEST_BUCKET_TIMEOUT_SECONDS;
@@ -126,7 +152,7 @@ describe('run-script-test-bucket', () => {
       process.env.SCRIPT_TEST_BUCKET_GATE_TIMEOUT_SECONDS = 'invalid';
       expect(resolveBucketTimeoutSeconds('gate')).toBe(240);
       delete process.env.SCRIPT_TEST_BUCKET_TIMEOUT_SECONDS;
-      expect(resolveBucketTimeoutSeconds('gate-integration')).toBe(600);
+      expect(resolveBucketTimeoutSeconds('gate-integration')).toBe(240);
     } finally {
       if (oldSpecific === undefined) {
         delete process.env.SCRIPT_TEST_BUCKET_GATE_TIMEOUT_SECONDS;
@@ -157,6 +183,31 @@ describe('run-script-test-bucket', () => {
       expect(report.numTotalTestSuites).toBe(2);
       expect(report.testResults[0].name).toBe('scripts/run-script-test-bucket.mjs:gate-integration');
       expect(report.testResults[0].assertionResults[0].failureMessages[0]).toContain('gate-integration exceeded timeout (600s)');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('writes aggregate reports after running every integration script', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'script-test-bucket-'));
+    const reportPath = path.join(tempRoot, 'quality-gate-integration.json');
+    try {
+      writeAggregateReport(reportPath, [
+        { code: 0, scriptName: 'test:quality:gate-integration:routing' },
+        { code: 1, scriptName: 'test:quality:gate-integration:target-core' },
+        { code: 2, scriptName: 'test:quality:gate-integration:release-tail' }
+      ]);
+
+      const report = JSON.parse(await readFile(reportPath, 'utf8'));
+
+      expect(report.success).toBe(false);
+      expect(report.numFailedTests).toBe(2);
+      expect(report.testResults[0].assertionResults.map((result) => result.status)).toEqual([
+        'passed',
+        'failed',
+        'failed'
+      ]);
+      expect(report.testResults[0].summary).toContain('test:quality:gate-integration:release-tail: 2');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }

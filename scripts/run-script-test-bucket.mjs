@@ -6,9 +6,9 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { collectScriptTestFiles, selectScriptTestBucketFiles } from './script-test-bucket-selection.mjs';
+import { runIntegrationAggregate } from './script-test-bucket-aggregate.mjs';
 
 const DEFAULT_BUCKET_TIMEOUT_SECONDS = 240;
-const DEFAULT_INTEGRATION_BUCKET_TIMEOUT_SECONDS = 600;
 
 function printUsage() {
   console.error(
@@ -18,9 +18,7 @@ function printUsage() {
 
 export function resolveBucketTimeoutSeconds(bucket) {
   const envName = `SCRIPT_TEST_BUCKET_${bucket.toUpperCase().replaceAll(/[^A-Z0-9]/gu, '_')}_TIMEOUT_SECONDS`;
-  const fallback = bucket === 'gate-integration'
-    ? DEFAULT_INTEGRATION_BUCKET_TIMEOUT_SECONDS
-    : DEFAULT_BUCKET_TIMEOUT_SECONDS;
+  const fallback = DEFAULT_BUCKET_TIMEOUT_SECONDS;
   const raw = process.env[envName] ?? process.env.SCRIPT_TEST_BUCKET_TIMEOUT_SECONDS ?? `${fallback}`;
   const parsed = Number.parseInt(raw, 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
@@ -121,6 +119,9 @@ function runVitest(bucket, reportPath, files) {
 
 async function main() {
   const [bucket, reportPath] = process.argv.slice(2);
+  if (bucket === 'gate-integration' && reportPath) {
+    return runIntegrationAggregate(reportPath, resolveBucketTimeoutSeconds('gate-integration'));
+  }
   const files = selectScriptTestBucketFiles(bucket, collectScriptTestFiles());
   if (!files || !reportPath) {
     printUsage();

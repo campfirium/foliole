@@ -35,8 +35,12 @@ run_release_static_gate_steps() {
   run_gate_steps_parallel lint:full typecheck:desktop typecheck:android
 }
 
+quality_gate_integration_scripts() {
+  QUALITY_GATE_BUCKET_SELECTION_PATH="${QUALITY_GATE_LIB_DIR}/../script-test-bucket-selection.mjs" node --input-type=module -e "import('node:url').then(({ pathToFileURL }) => import(pathToFileURL(process.env.QUALITY_GATE_BUCKET_SELECTION_PATH).href)).then((m) => console.log(m.GATE_INTEGRATION_SCRIPT_NAMES.join(' ')))"
+}
+
 run_release_test_gate_steps() {
-  run_gate_steps_parallel test:release:desktop-src test:desktop:electron test:windows:core test:release:android test:release:shared test:quality:core test:quality:gate test:quality:gate-integration:routing test:quality:gate-integration:fast-delegation test:quality:gate-integration:target-core test:quality:gate-integration:target-failures test:quality:gate-integration:target-collect test:quality:gate-integration:target-telemetry test:quality:gate-integration:release-targets test:quality:gate-integration:release-tail test:quality:node
+  run_gate_steps_parallel test:release:desktop-src test:desktop:electron test:windows:core test:release:android test:release:shared test:quality:core test:quality:gate $(quality_gate_integration_scripts) test:quality:node
 }
 
 run_release_build_gate_steps() {
@@ -50,7 +54,7 @@ run_release_script_preview_gate_steps() {
 }
 
 run_release_tooling_gate_steps() {
-  run_gate_steps_parallel test:quality:core test:quality:gate test:quality:gate-integration:routing test:quality:gate-integration:fast-delegation test:quality:gate-integration:target-core test:quality:gate-integration:target-failures test:quality:gate-integration:target-collect test:quality:gate-integration:target-telemetry test:quality:gate-integration:release-targets test:quality:gate-integration:release-tail test:quality:node
+  run_gate_steps_parallel test:quality:core test:quality:gate $(quality_gate_integration_scripts) test:quality:node
   run_gate_steps test:quality:preview
 }
 

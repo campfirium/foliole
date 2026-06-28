@@ -14,6 +14,17 @@ const SCRIPT_TEST_ROOTS = [
 ];
 const TEST_FILE_PATTERN = /\.test\.mjs$/;
 
+const GATE_INTEGRATION_PRIMARY_BUCKETS = [
+  'gate-integration-target-telemetry',
+  'gate-integration-target-collect',
+  'gate-integration-target-failures',
+  'gate-integration-routing',
+  'gate-integration-release-targets',
+  'gate-integration-fast-delegation',
+  'gate-integration-release-tail',
+  'gate-integration-target-core'
+];
+
 const GATE_INTEGRATION_BUCKETS = {
   'gate-integration-fast-delegation': (name) => name === 'quality-gate-fast.delegation.test.mjs',
   'gate-integration-release-tail': (name) => name === 'quality-gate-release-tail-targets.test.mjs',
@@ -33,8 +44,11 @@ const GATE_INTEGRATION_BUCKETS = {
     name === 'quality-gate-telemetry.test.mjs'
 };
 
-export const GATE_INTEGRATION_SCRIPT_NAMES = Object.keys(GATE_INTEGRATION_BUCKETS)
-  .map((bucket) => `test:quality:${bucket}`);
+export function gateIntegrationScriptName(bucket) {
+  return `test:quality:${bucket.replace('gate-integration-', 'gate-integration:')}`;
+}
+
+export const GATE_INTEGRATION_SCRIPT_NAMES = GATE_INTEGRATION_PRIMARY_BUCKETS.map(gateIntegrationScriptName);
 
 export function isQualityGateTest(filePath) {
   return path.basename(filePath).startsWith('quality-');

@@ -44,6 +44,10 @@ is_quality_gate_fixture_package() {
   node -e "const p=require('./package.json'); process.exit(/^quality-gate-.*fixture$/.test(p.name || '') ? 0 : 1)"
 }
 
+is_quality_gate_test_context() {
+  [[ "${QUALITY_GATE_TEST_CONTEXT:-0}" == "1" ]] || is_quality_gate_fixture_package
+}
+
 read_package_script_command() {
   local script_name="$1"
   SCRIPT_NAME="${script_name}" node -e "const p=require('./package.json'); process.stdout.write(p.scripts?.[process.env.SCRIPT_NAME] || '')"
@@ -186,6 +190,10 @@ run_quality_gate_script() {
   fi
 
   if [[ "${QUALITY_GATE_TEST_DRY_RUN_STEPS:-0}" == "1" ]]; then
+    if ! is_quality_gate_test_context; then
+      echo "[${prefix}] QUALITY_GATE_TEST_DRY_RUN_STEPS is only allowed in quality gate tests or fixtures."
+      exit 1
+    fi
     echo "[${prefix}] dry-run step: ${script_name}"
     return 0
   fi

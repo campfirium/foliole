@@ -55,7 +55,7 @@
     "test:quality": "node scripts/electron-sqlite-runner.mjs scripts/run-script-test-bucket.mjs all .tmp/vitest/quality.json",
     "test:quality:core": "node scripts/electron-sqlite-runner.mjs scripts/run-script-test-bucket.mjs core .tmp/vitest/quality-core.json",
     "test:quality:gate": "node scripts/electron-sqlite-runner.mjs scripts/run-script-test-bucket.mjs gate .tmp/vitest/quality-gate.json",
-    "test:quality:gate-integration": "npm run test:quality:gate-integration:routing && npm run test:quality:gate-integration:fast-delegation && npm run test:quality:gate-integration:target-core && npm run test:quality:gate-integration:target-failures && npm run test:quality:gate-integration:target-collect && npm run test:quality:gate-integration:target-telemetry && npm run test:quality:gate-integration:release-targets && npm run test:quality:gate-integration:release-tail",
+    "test:quality:gate-integration": "node scripts/electron-sqlite-runner.mjs scripts/run-script-test-bucket.mjs gate-integration .tmp/vitest/quality-gate-integration.json",
     "test:quality:gate-integration:routing": "node scripts/electron-sqlite-runner.mjs scripts/run-script-test-bucket.mjs gate-integration-routing .tmp/vitest/quality-gate-integration-routing.json",
     "test:quality:gate-integration:fast-delegation": "node scripts/electron-sqlite-runner.mjs scripts/run-script-test-bucket.mjs gate-integration-fast-delegation .tmp/vitest/quality-gate-integration-fast-delegation.json",
     "test:quality:gate-integration:targets": "node scripts/electron-sqlite-runner.mjs scripts/run-script-test-bucket.mjs gate-integration-targets .tmp/vitest/quality-gate-integration-targets.json",

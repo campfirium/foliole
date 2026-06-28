@@ -11,12 +11,13 @@ import { describe, expect, it } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const TARGET_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality', 'quality-gate-target.sh');
+const DRY_RUN_ENV = { QUALITY_GATE_TEST_CONTEXT: '1', QUALITY_GATE_TEST_DRY_RUN_STEPS: '1' };
 
 function runTargetGate(cwd, target) {
   return new Promise((resolve) => {
     const child = spawn('bash', [TARGET_SCRIPT, target], {
       cwd,
-      env: { ...process.env, QUALITY_GATE_LOG_MODE: 'summary' }
+      env: { ...process.env, QUALITY_GATE_LOG_MODE: 'summary', ...DRY_RUN_ENV }
     });
     let stdout = '';
     let stderr = '';
@@ -30,6 +31,10 @@ function runTargetGate(cwd, target) {
       resolve({ code, stdout, stderr });
     });
   });
+}
+
+function expectStep(stdout, scriptName) {
+  expect(stdout).toContain(`dry-run step: ${scriptName}`);
 }
 
 async function writePackageJson(rootDir, scripts) {
@@ -68,21 +73,13 @@ async function writePackageJson(rootDir, scripts) {
 async function writeWorkspaceBoundaryScript(rootDir, message = 'workspace boundary ok') {
   const scriptsDir = path.join(rootDir, 'scripts');
   await mkdir(scriptsDir, { recursive: true });
-  await writeFile(
-    path.join(scriptsDir, 'check-workspace-settings-boundary.mjs'),
-    `console.log('${message}')\n`,
-    'utf8'
-  );
+  await writeFile(path.join(scriptsDir, 'check-workspace-settings-boundary.mjs'), `console.log('${message}')\n`, 'utf8');
 }
 
 async function writeRepositoryRootBoundaryScript(rootDir, message = 'repository root boundary ok') {
   const scriptsDir = path.join(rootDir, 'scripts');
   await mkdir(scriptsDir, { recursive: true });
-  await writeFile(
-    path.join(scriptsDir, 'check-repository-root-boundary.mjs'),
-    `console.log('${message}')\n`,
-    'utf8'
-  );
+  await writeFile(path.join(scriptsDir, 'check-repository-root-boundary.mjs'), `console.log('${message}')\n`, 'utf8');
 }
 
 async function writeCopyGuardScript(rootDir, message = 'copy guard ok') {
@@ -112,14 +109,16 @@ describe('quality-gate-target.sh', () => {
       const result = await runTargetGate(tempRoot, 'desktop');
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('copy guard ok');
-      expect(result.stdout).toContain('desktop full lint ok');
-      expect(result.stdout).toContain('desktop typecheck ok');
-      expect(result.stdout).toContain('desktop test ok');
-      expect(result.stdout).toContain('windows core test ok');
-      expect(result.stdout).toContain('quality test ok');
-      expect(result.stdout).toContain('desktop build ok');
-      expect(result.stdout).toContain('electron compile ok');
+      for (const scriptName of [
+        'copy:guard',
+        'lint:desktop:full',
+        'typecheck:desktop',
+        'test:desktop',
+        'test:windows:core',
+        'test:quality',
+        'build',
+        'electron:compile'
+      ]) expectStep(result.stdout, scriptName);
       expect(result.stdout).toContain('repository root boundary ok');
       expect(result.stdout).toContain('workspace boundary ok');
       expect(result.stdout).toContain('[quality-gate:desktop] all checks passed.');
@@ -146,15 +145,17 @@ describe('quality-gate-target.sh', () => {
       const result = await runTargetGate(tempRoot, 'android');
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('android full lint ok');
-      expect(result.stdout).toContain('android typecheck ok');
-      expect(result.stdout).toContain('android test ok');
-      expect(result.stdout).toContain('quality test ok');
-      expect(result.stdout).toContain('android sync ok');
-      expect(result.stdout).toContain('android host lint ok');
-      expect(result.stdout).toContain('android host test ok');
+      for (const scriptName of [
+        'lint:android:full',
+        'typecheck:android',
+        'test:android',
+        'test:quality',
+        'android:sync',
+        'android:host:lint',
+        'android:host:test'
+      ]) expectStep(result.stdout, scriptName);
       expect(result.stdout).toContain('repository root boundary ok');
-      expect(result.stdout).toContain('android boundary ok');
+      expectStep(result.stdout, 'check:android-boundary');
       expect(result.stdout).toContain('[quality-gate:android] all checks passed.');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
@@ -180,15 +181,17 @@ describe('quality-gate-target.sh', () => {
       const result = await runTargetGate(tempRoot, 'android-device');
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('android full lint ok');
-      expect(result.stdout).toContain('android typecheck ok');
-      expect(result.stdout).toContain('android test ok');
-      expect(result.stdout).toContain('quality test ok');
-      expect(result.stdout).toContain('android sync ok');
-      expect(result.stdout).toContain('android host lint ok');
-      expect(result.stdout).toContain('android host test ok');
-      expect(result.stdout).toContain('android emulator ok');
-      expect(result.stdout).toContain('android connected test ok');
+      for (const scriptName of [
+        'lint:android:full',
+        'typecheck:android',
+        'test:android',
+        'test:quality',
+        'android:sync',
+        'android:host:lint',
+        'android:host:test',
+        'android:emulator',
+        'android:host:device-test'
+      ]) expectStep(result.stdout, scriptName);
       expect(result.stdout).toContain('repository root boundary ok');
       expect(result.stdout).toContain('[quality-gate:android-device] all checks passed.');
     } finally {
@@ -214,13 +217,15 @@ describe('quality-gate-target.sh', () => {
       const result = await runTargetGate(tempRoot, 'shared');
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('shared full lint ok');
-      expect(result.stdout).toContain('shared typecheck ok');
-      expect(result.stdout).toContain('shared test ok');
-      expect(result.stdout).toContain('quality test ok');
-      expect(result.stdout).toContain('shared build ok');
-      expect(result.stdout).toContain('shared electron compile ok');
-      expect(result.stdout).toContain('shared android build ok');
+      for (const scriptName of [
+        'lint:shared:full',
+        'typecheck:shared',
+        'test:shared',
+        'test:quality',
+        'build',
+        'electron:compile',
+        'android:web:build'
+      ]) expectStep(result.stdout, scriptName);
       expect(result.stdout).toContain('repository root boundary ok');
       expect(result.stdout).toContain('workspace boundary ok');
       expect(result.stdout).toContain('[quality-gate:shared] all checks passed.');
@@ -231,5 +236,4 @@ describe('quality-gate-target.sh', () => {
       await rm(tempRoot, { recursive: true, force: true });
     }
   }, 60000);
-
 });

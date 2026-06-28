@@ -81,29 +81,6 @@ describe('quality gate telemetry', () => {
             name: 'quality-gate-telemetry-fixture',
             private: true,
             scripts: {
-              'check:android-boundary': 'node -e "console.log(\'android boundary ok\')"',
-              'lint:full': 'node -e "console.log(\'lint full ok\')"',
-              'typecheck:desktop': 'node -e "console.log(\'desktop typecheck ok\')"',
-              'typecheck:android': 'node -e "console.log(\'android typecheck ok\')"',
-              'test:release:desktop-src': 'node -e "console.log(\'desktop src ok\')"',
-              'test:desktop:electron': 'node -e "console.log(\'desktop electron ok\')"',
-              'test:windows:core': 'node -e "console.log(\'windows core ok\')"',
-              'test:windows:preview-recovery': 'node -e "console.log(\'windows preview recovery ok\')"',
-              'test:release:android': 'node -e "console.log(\'android test ok\')"',
-              'test:release:shared': 'node -e "console.log(\'shared test ok\')"',
-              'test:quality:core': 'node -e "console.log(\'quality core ok\')"',
-              'test:quality:gate': 'node -e "console.log(\'quality gate ok\')"',
-              'test:quality:gate-integration': 'node -e "console.log(\'quality gate integration ok\')"',
-              'test:quality:gate-integration:routing': 'node -e "console.log(\'quality gate integration routing ok\')"',
-              'test:quality:gate-integration:fast-delegation': 'node -e "console.log(\'quality gate integration fast delegation ok\')"',
-              'test:quality:gate-integration:targets': 'node -e "console.log(\'quality gate integration targets ok\')"',
-              'test:quality:gate-integration:target-core': 'node -e "console.log(\'quality gate integration target core ok\')"',
-              'test:quality:gate-integration:target-failures': 'node -e "console.log(\'quality gate integration target failures ok\')"',
-              'test:quality:gate-integration:target-collect': 'node -e "console.log(\'quality gate integration target collect ok\')"',
-              'test:quality:gate-integration:target-telemetry': 'node -e "console.log(\'quality gate integration target telemetry ok\')"',
-              'test:quality:gate-integration:release-targets': 'node -e "console.log(\'quality gate integration release targets ok\')"',
-              'test:quality:gate-integration:release-tail': 'node -e "console.log(\'quality gate integration release tail ok\')"',
-              'test:quality:node': 'node -e "console.log(\'quality node ok\')"',
               'test:quality:preview': 'node -e "console.log(\'quality preview ok\')"',
               'build:vite-only': 'node -e "console.log(\'build ok\')"',
               'electron:compile': 'node -e "console.log(\'electron compile ok\')"',
@@ -116,13 +93,12 @@ describe('quality gate telemetry', () => {
         'utf8'
       );
 
-      const result = await runTargetGate(tempRoot, 'full');
+      const result = await runTargetGate(tempRoot, 'release-build');
       const { entries, runDir } = await readTelemetryRun(tempRoot);
       const report = buildQualityGateCostReport(runDir, entries, 3);
 
       expect(result.code).toBe(0);
-      expect(entries.some((entry) => entry.scriptName === 'lint:full')).toBe(true);
-      expect(entries.some((entry) => entry.scriptName === 'typecheck:android')).toBe(true);
+      expect(entries.some((entry) => entry.scriptName === 'test:quality:preview')).toBe(true);
       expect(entries.some((entry) => entry.scriptName === 'build:vite-only')).toBe(true);
       expect(report).toContain('[quality-gate-cost] slowest steps: top 3');
       expect(report).toContain('[quality-gate-cost] benefit review candidates:');
@@ -171,28 +147,6 @@ describe('quality gate telemetry', () => {
             name: 'quality-gate-missing-script-fixture',
             private: true,
             scripts: {
-              'check:android-boundary': 'node -e "console.log(\'android boundary ok\')"',
-              'lint:full': 'node -e "console.log(\'lint full ok\')"',
-              'typecheck:desktop': 'node -e "console.log(\'desktop typecheck ok\')"',
-              'typecheck:android': 'node -e "console.log(\'android typecheck ok\')"',
-              'test:release:desktop-src': 'node -e "console.log(\'desktop src ok\')"',
-              'test:desktop:electron': 'node -e "console.log(\'desktop electron ok\')"',
-              'test:windows:core': 'node -e "console.log(\'windows core ok\')"',
-              'test:release:android': 'node -e "console.log(\'android test ok\')"',
-              'test:release:shared': 'node -e "console.log(\'shared test ok\')"',
-              'test:quality:core': 'node -e "console.log(\'quality core ok\')"',
-              'test:quality:gate': 'node -e "console.log(\'quality gate ok\')"',
-              'test:quality:gate-integration': 'node -e "console.log(\'quality gate integration ok\')"',
-              'test:quality:gate-integration:routing': 'node -e "console.log(\'quality gate integration routing ok\')"',
-              'test:quality:gate-integration:fast-delegation': 'node -e "console.log(\'quality gate integration fast delegation ok\')"',
-              'test:quality:gate-integration:targets': 'node -e "console.log(\'quality gate integration targets ok\')"',
-              'test:quality:gate-integration:target-core': 'node -e "console.log(\'quality gate integration target core ok\')"',
-              'test:quality:gate-integration:target-failures': 'node -e "console.log(\'quality gate integration target failures ok\')"',
-              'test:quality:gate-integration:target-collect': 'node -e "console.log(\'quality gate integration target collect ok\')"',
-              'test:quality:gate-integration:target-telemetry': 'node -e "console.log(\'quality gate integration target telemetry ok\')"',
-              'test:quality:gate-integration:release-targets': 'node -e "console.log(\'quality gate integration release targets ok\')"',
-              'test:quality:gate-integration:release-tail': 'node -e "console.log(\'quality gate integration release tail ok\')"',
-              'test:quality:node': 'node -e "console.log(\'quality node ok\')"',
               'test:quality:preview': 'node -e "console.log(\'quality preview ok\')"',
               'android:web:build': 'node -e "console.log(\'android web build ok\')"',
               'test:windows:preview-recovery': 'node -e "console.log(\'windows preview recovery ok\')"'
@@ -204,7 +158,7 @@ describe('quality gate telemetry', () => {
         'utf8'
       );
 
-      const result = await runTargetGate(tempRoot, 'full');
+      const result = await runTargetGate(tempRoot, 'release-build');
       const { entries } = await readTelemetryRun(tempRoot);
 
       expect(result.code).toBe(1);

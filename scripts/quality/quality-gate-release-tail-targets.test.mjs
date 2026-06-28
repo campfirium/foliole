@@ -13,6 +13,15 @@ import { releaseScripts, runTargetGate, writePackageJson } from './quality-gate-
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const TARGET_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality', 'quality-gate-target.sh');
+const DRY_RUN_ENV = { QUALITY_GATE_TEST_CONTEXT: '1', QUALITY_GATE_TEST_DRY_RUN_STEPS: '1' };
+
+function expectStep(stdout, scriptName) {
+  expect(stdout).toContain(`dry-run step: ${scriptName}`);
+}
+
+function expectNoStep(stdout, scriptName) {
+  expect(stdout).not.toContain(`dry-run step: ${scriptName}`);
+}
 
 function runTargetGateWithEnv(cwd, target, env) {
   return new Promise((resolve) => {
@@ -37,27 +46,27 @@ function runTargetGateWithEnv(cwd, target, env) {
 describe('quality-gate release base and tail targets', () => {
   it.each([
     {
-      expected: ['release desktop src test ok', 'release android test ok', 'release quality preview test ok', 'release android web build ok'],
+      expected: ['test:release:desktop-src', 'test:release:android', 'test:quality:preview', 'android:web:build'],
       name: 'the canonical release base aggregate',
-      rejected: ['release windows preview recovery test ok', 'release android sync ok'],
+      rejected: ['test:windows:preview-recovery', 'android:sync'],
       target: 'release-base'
     },
     {
-      expected: ['release windows preview recovery test ok'],
+      expected: ['test:windows:preview-recovery'],
       name: 'Windows preview recovery',
-      rejected: ['release desktop src test ok', 'release android sync ok'],
+      rejected: ['test:release:desktop-src', 'android:sync'],
       target: 'release-windows-tail'
     },
     {
-      expected: ['release android sync ok', 'release android host lint ok', 'release android host test ok'],
+      expected: ['android:sync', 'android:host:lint', 'android:host:test'],
       name: 'Android host checks',
-      rejected: ['release shared test ok', 'release android web build ok'],
+      rejected: ['test:release:shared', 'android:web:build'],
       target: 'release-android-tail'
     },
     {
-      expected: ['release quality core test ok', 'release quality gate test ok', 'release quality node test ok', 'release quality preview test ok'],
+      expected: ['test:quality:core', 'test:quality:gate', 'test:quality:node', 'test:quality:preview'],
       name: 'quality tooling self-tests',
-      rejected: ['release desktop src test ok', 'release windows preview recovery test ok'],
+      rejected: ['test:release:desktop-src', 'test:windows:preview-recovery'],
       target: 'release-tooling'
     }
   ])('keeps $target isolated to $name', async ({ expected, rejected, target }) => {
@@ -65,11 +74,11 @@ describe('quality-gate release base and tail targets', () => {
     try {
       await writePackageJson(tempRoot, releaseScripts());
 
-      const result = await runTargetGate(tempRoot, target);
+      const result = await runTargetGate(tempRoot, target, DRY_RUN_ENV);
 
       expect(result.code).toBe(0);
-      for (const text of expected) expect(result.stdout).toContain(text);
-      for (const text of rejected) expect(result.stdout).not.toContain(text);
+      for (const scriptName of expected) expectStep(result.stdout, scriptName);
+      for (const scriptName of rejected) expectNoStep(result.stdout, scriptName);
       expect(result.stdout).toContain(`[quality-gate:${target}] all checks passed.`);
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
