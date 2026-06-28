@@ -52,15 +52,10 @@ export function createAnswerChangeHandler(args: BuildControllerLayoutPropsArgs) 
 
 export function createEditorChangeHandler(args: BuildControllerLayoutPropsArgs) {
   return (content: string) => {
-    if (args.runtime.isViewingTrashNode) {
+    if (args.runtime.isViewingTrashNode || content.length === 0) {
       return;
     }
     if (args.ws.activeNodeId) {
-      if (isBlankTextEditAfterAnnotation(args, args.ws.activeNodeId, content)) {
-        return;
-      }
-      pushTextEditOperation(args, args.ws.activeNodeId, content);
-      args.ws.updateNodeContent(args.ws.activeNodeId, content);
       return;
     }
     args.ws.createChildNode(INBOX_NODE_ID, content);

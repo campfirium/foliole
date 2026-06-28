@@ -42,6 +42,7 @@ export interface WorkspaceDualListContentProps {
   onOpenExternalSelection: (selection: ExternalLibrarySelection) => void;
   onOpenExternalLibrarySettings?: () => void;
   onChangeExternalFolder?: (folderId: string) => void;
+  onCreateChildNode?: WorkspaceLayoutNodeListProps['onCreateChildNode'] | undefined;
   onRemoveExternalFolder?: (folderId: string) => void;
   onRescanExternalFolder?: (folderId: string) => void;
   onOpenTrashView: () => void;
@@ -99,6 +100,7 @@ function renderStandardContentColumn(
       itemIds={dualListState.topicNodeOrder}
       nodesById={dualListState.topicNodesById}
       onOpenMoveToNode={topicCallbacks.onOpenMoveToNode}
+      {...definedProps({ onCreateChildNode: props.onCreateChildNode })}
       {...definedProps({ onOpenPostponeTopicPanel: topicCallbacks.onOpenPostponeTopicPanel })}
       onSelectNode={topicCallbacks.onSelectNode}
     />

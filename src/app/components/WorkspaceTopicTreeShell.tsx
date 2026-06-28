@@ -44,7 +44,7 @@ export function renderWorkspaceTopicTreeShell(args: {
         contentSort={args.contentSort}
         hasCollapsedNodes={args.hasCollapsedNodes}
         {...definedProps({ headerDescription: args.headerDescription })}
-        onCreateTopic={(parentNodeId) => args.interaction.createChildNode(parentNodeId, '', 'topic')}
+        onCreateTopic={(parentNodeId) => void args.interaction.createChildNode(parentNodeId, '', 'topic')}
         onToggleDismissedTopicsVisibility={args.onToggleDismissedTopicsVisibility}
         searchQuery={args.searchQuery}
         setCollapsedNodeIds={args.setCollapsedNodeIds}

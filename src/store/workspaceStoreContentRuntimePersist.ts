@@ -141,6 +141,7 @@ async function runNodeContentRuntimePersist(args: {
 
 export function scheduleNodeContentRuntimePersist(args: Parameters<typeof runNodeContentRuntimePersist>[0]) {
   const nodeId = args.nextNodeForSync.id;
+  syncWorkspaceNodeDocumentCacheFromNode(args.nextNodeForSync);
   const previous = pendingNodeContentRuntimePersists.get(nodeId);
   if (previous) {
     if (previous.timer) {

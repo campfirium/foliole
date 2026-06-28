@@ -55,6 +55,7 @@ export function toWorkspaceNodeDocument(node: Node): WorkspaceNodeDocument {
     imageRegions: node.imageRegions ?? null,
     kind: node.kind,
     reveal: node.reveal,
+    updatedAt: node.updatedAt,
     virtualFilter: node.virtualFilter ?? null
   };
 }

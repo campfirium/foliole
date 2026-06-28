@@ -28,6 +28,8 @@ import { resolveWorkspaceTopicTreeReviewScroll } from './workspaceTopicTreeRevie
 import { useWorkspaceTopicTreeSelection } from './workspaceTopicTreeSelection';
 import { renderWorkspaceTopicTreeShell } from './WorkspaceTopicTreeShell';
 
+type CreateTopicTreeNode = ReturnType<typeof useWorkspaceTopicTreeActions>['createChildNode'];
+
 export interface WorkspaceTopicTreeProps {
   activeFolderId: string;
   activeNodeId: string | null;
@@ -36,6 +38,7 @@ export interface WorkspaceTopicTreeProps {
   headerDescription?: string;
   itemIds: string[];
   nodesById: WorkspaceListNodesById;
+  onCreateChildNode?: CreateTopicTreeNode;
   onOpenMoveToNode: () => void;
   onOpenPostponeTopicPanel?: (nodeId: string) => void;
   onSelectNode: (nodeId: string) => void;
@@ -47,6 +50,7 @@ interface WorkspaceTopicTreeInteractionArgs {
   activeNodeId: string | null;
   isManualSort: boolean;
   nodesById: WorkspaceListNodesById;
+  onCreateChildNode?: CreateTopicTreeNode;
   onOpenMoveToNode: () => void;
   onOpenPostponeTopicPanel?: (nodeId: string) => void;
   onSelectNode: (nodeId: string) => void;
@@ -55,6 +59,7 @@ interface WorkspaceTopicTreeInteractionArgs {
 
 export function useWorkspaceTopicTreeInteraction(args: WorkspaceTopicTreeInteractionArgs) {
   const actions = useWorkspaceTopicTreeActions();
+  const createChildNode = args.onCreateChildNode ?? actions.createChildNode;
   const selection = useWorkspaceTopicTreeSelection({
     activeNodeId: args.activeNodeId,
     nodesById: args.nodesById,
@@ -90,6 +95,7 @@ export function useWorkspaceTopicTreeInteraction(args: WorkspaceTopicTreeInterac
 
   return {
     ...actions,
+    createChildNode,
     contextMenu,
     drag,
     handleSelectNode: selection.handleSelectNode,
@@ -100,6 +106,7 @@ export function useWorkspaceTopicTreeInteraction(args: WorkspaceTopicTreeInterac
       contextMenu,
       handleSelectNode: selection.handleSelectNode,
       nodesById: args.nodesById,
+      onCreateChildNode: createChildNode,
       onOpenMoveToNode: args.onOpenMoveToNode,
       ...definedProps({ onOpenPostponeTopicPanel: args.onOpenPostponeTopicPanel }),
       topicTreeState
@@ -170,6 +177,7 @@ export const WorkspaceTopicTree = memo(function WorkspaceTopicTree(props: Worksp
     isManualSort: contentSort.sort.key === 'manual',
     nodesById: props.nodesById,
     onOpenMoveToNode: props.onOpenMoveToNode,
+    ...definedProps({ onCreateChildNode: props.onCreateChildNode }),
     ...definedProps({ onOpenPostponeTopicPanel: props.onOpenPostponeTopicPanel }),
     onSelectNode: props.onSelectNode,
     rowIds: visibleRows.map((row) => row.node.id)

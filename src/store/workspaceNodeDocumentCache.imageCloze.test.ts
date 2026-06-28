@@ -25,6 +25,23 @@ it('keeps cleared image regions as null in cached node documents', () => {
   expect(document.imageRegions).toBeNull();
 });
 
+it('carries node updatedAt into cached workspace documents', () => {
+  expect(toWorkspaceNodeDocument({
+    anchorLink: null,
+    content: 'Body',
+    createdAt: '2026-04-20T00:00:00.000Z',
+    hasContent: true,
+    hasReveal: false,
+    id: 'node-1',
+    kind: 'topic',
+    parentNodeId: null,
+    reveal: null,
+    review: null,
+    title: 'Node 1',
+    updatedAt: '2026-04-20T00:00:03.000Z'
+  }).updatedAt).toBe('2026-04-20T00:00:03.000Z');
+});
+
 it('bounds cached workspace node documents with LRU eviction', () => {
   for (let index = 0; index < 256; index += 1) {
     writeCachedWorkspaceNodeDocument(`node-${index}`, {

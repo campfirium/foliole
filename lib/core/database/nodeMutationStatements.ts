@@ -30,7 +30,8 @@ export function createUpsertNodeStatement(driver: DatabaseDriver) {
        last_modified_by_device_id = excluded.last_modified_by_device_id,
        sync_dirty = excluded.sync_dirty,
        updated_at = excluded.updated_at,
-       deleted_at = NULL`
+       deleted_at = NULL
+     WHERE excluded.updated_at >= nodes.updated_at`
   );
 }
 

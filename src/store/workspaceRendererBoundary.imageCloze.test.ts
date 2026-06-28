@@ -1,7 +1,15 @@
-import { expect, it } from 'vitest';
+import { afterEach, expect, it } from 'vitest';
 
+import {
+  markNodeContentEdited,
+  resetNodeContentVersionGuardForTests
+} from './workspaceNodeContentVersionGuard';
 import { enforceWorkspaceRendererBoundary, mergeWorkspaceNodeDocument } from './workspaceRendererBoundary';
 import { createInitialWorkspaceState } from './workspaceStore';
+
+afterEach(() => {
+  resetNodeContentVersionGuardForTests();
+});
 
 it('clears image regions when a merged document removes them', () => {
   const seedNode = createInitialWorkspaceState(new Date('2026-03-20T00:00:00.000Z')).nodesById['node-1']!;
@@ -89,4 +97,56 @@ it('refreshes the active-node boundary projection when only image regions change
   ) as typeof currentState;
 
   expect(nextState.nodesById['node-1']?.imageRegions).toBeNull();
+});
+
+it('keeps dirty local content when hydrating a stale runtime document', () => {
+  const seedNode = createInitialWorkspaceState(new Date('2026-03-20T00:00:00.000Z')).nodesById['node-1']!;
+  markNodeContentEdited('node-1');
+
+  const mergedNode = mergeWorkspaceNodeDocument(
+    {
+      ...seedNode,
+      id: 'node-1',
+      content: '# Local draft',
+      hasContent: true,
+      updatedAt: '2026-03-20T00:00:01.000Z'
+    },
+    {
+      content: '',
+      hideTitleHeading: false,
+      kind: 'topic',
+      reveal: null,
+      virtualFilter: null
+    }
+  );
+
+  expect(mergedNode.content).toBe('# Local draft');
+  expect(mergedNode.hasContent).toBe(true);
+  expect(mergedNode.bodyStatus).toBe('ready');
+});
+
+it('loads runtime content over an empty renderer boundary projection with the same timestamp', () => {
+  const seedNode = createInitialWorkspaceState(new Date('2026-03-20T00:00:00.000Z')).nodesById['node-1']!;
+
+  const mergedNode = mergeWorkspaceNodeDocument(
+    {
+      ...seedNode,
+      id: 'node-1',
+      content: '',
+      hasContent: true,
+      updatedAt: '2026-03-20T00:00:01.000Z'
+    },
+    {
+      content: '# Runtime body',
+      hideTitleHeading: false,
+      kind: 'topic',
+      reveal: null,
+      updatedAt: '2026-03-20T00:00:01.000Z',
+      virtualFilter: null
+    }
+  );
+
+  expect(mergedNode.content).toBe('# Runtime body');
+  expect(mergedNode.hasContent).toBe(true);
+  expect(mergedNode.bodyStatus).toBe('ready');
 });

@@ -85,6 +85,9 @@ function useDraftChangeHandler(args: DraftChangeHandlerArgs) {
       args.onCommit(null, content);
       return;
     }
+    if (content === '' && sourceNodeId !== args.nodeId) {
+      return;
+    }
     if (content === '' && !args.hasPendingUserInputEvidence(sourceNodeId, content)) {
       return;
     }

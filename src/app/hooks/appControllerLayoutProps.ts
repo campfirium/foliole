@@ -198,8 +198,19 @@ function createLayoutHandlerArgs(
   };
 }
 
+function createFlushBeforeCreateChildNode(args: BuildControllerLayoutPropsArgs) {
+  return async (parentNodeId: string, content = '', kind: NodeKind = 'topic') => {
+    if (!args.runtime.flushActiveEditorTransaction(args.ws.activeNodeId)) {
+      args.runtime.flushPendingEditorDraft();
+    }
+    await args.runtime.flushPendingEditorDraftImmediately();
+    return args.ws.createChildNode(parentNodeId, content, kind);
+  };
+}
+
 function createLayoutDocumentHandlers(args: BuildControllerLayoutPropsArgs) {
   return {
+    onCreateChildNode: createFlushBeforeCreateChildNode(args),
     onOpenNotesView: createOpenNotesView(args),
     onReviewQueueEmpty: args.onReviewQueueEmpty,
     onPastedTextAnchors: createPastedTextAnchorsHandler(args),

@@ -13,6 +13,7 @@ export function renderWorkspaceTopicTreeMenu(args: {
   contextMenu: ReturnType<typeof useNodeListContextMenu>;
   handleSelectNode: ReturnType<typeof useWorkspaceTopicTreeSelection>['handleSelectNode'];
   nodesById: WorkspaceListNodesById;
+  onCreateChildNode: ReturnType<typeof useWorkspaceTopicTreeActions>['createChildNode'];
   onOpenMoveToNode: () => void;
   onOpenPostponeTopicPanel?: (nodeId: string) => void;
   topicTreeState: NodeListState;
@@ -24,6 +25,7 @@ export function renderWorkspaceTopicTreeMenu(args: {
       contextMenu={args.contextMenu}
       handleSelectNode={args.handleSelectNode}
       nodesById={args.nodesById}
+      onCreateChildNode={args.onCreateChildNode}
       onOpenMoveToNode={args.onOpenMoveToNode}
       {...definedProps({ onOpenPostponeTopicPanel: args.onOpenPostponeTopicPanel })}
       topicTreeState={args.topicTreeState}

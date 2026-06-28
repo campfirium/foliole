@@ -136,6 +136,24 @@ function registerEmptyChangeGuardTest() {
     expect(onCommit).toHaveBeenCalledWith('node-1', '', { publishLocal: false });
   });
 
+  it('does not let a stale non-current node empty change overwrite saved content', () => {
+    const onCommit = vi.fn();
+    const { result, rerender } = renderHook(
+      ({ committedContent, nodeId }) => useEditorDraftSync({ committedContent, nodeId, onCommit }),
+      { initialProps: { committedContent: 'Alpha body', nodeId: 'node-1' } }
+    );
+
+    rerender({ committedContent: 'Beta body', nodeId: 'node-2' });
+
+    act(() => {
+      result.current.handleEditorInput({ contentLength: 0, nodeId: 'node-1' });
+      result.current.handleEditorChange('', { nodeId: 'node-1' });
+      vi.advanceTimersByTime(1200);
+    });
+
+    expect(onCommit).not.toHaveBeenCalled();
+  });
+
   it('does not commit a sourceless empty editor change into the active node fallback', () => {
     const onCommit = vi.fn();
     const { result } = renderDraftSyncWithoutNode(onCommit);

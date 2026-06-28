@@ -98,6 +98,7 @@ function selectWorkspaceListAreaProps({
     listNodesById,
     nodesById: props.nodeList.nodesById,
     nodeOrder: props.nodeList.nodeOrder,
+    onCreateChildNode: props.nodeList.onCreateChildNode,
     onOpenMoveToNode: props.nodeList.onOpenMoveToNode,
     onOpenPostponeTopicPanel: props.review.onOpenPostponeTopicPanel,
     onOpenNotesView: props.nodeList.onOpenNotesView,

@@ -75,11 +75,10 @@ export function useDocumentPanelSourceUpdateState(props: DocumentPanelSectionPro
       return;
     }
     if (!draft.nodeId) {
-      props.onEditorChange(draft.content);
       return;
     }
     props.onNodeContentChange(draft.nodeId, draft.content);
-  }, [props.onEditorChange, props.onNodeContentChange]);
+  }, [props.onNodeContentChange]);
 
   const handleSourceUpdatePanelOpenChange = useCallback(
     (open: boolean) => {

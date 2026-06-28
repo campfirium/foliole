@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
+
 import {
   createEditorChangeHandler,
   createNodeContentChangeHandler
@@ -52,13 +54,16 @@ function createEditorOperationHistory(mode: 'after-create' | 'after-undo' = 'aft
 function createArgs(mode?: 'after-create' | 'after-undo') {
   const pushEditorOperationEntry = vi.fn();
   const updateNodeContent = vi.fn();
+  const createChildNode = vi.fn();
   return {
+    createChildNode,
     pushEditorOperationEntry,
     updateNodeContent,
     args: {
       runtime: { isViewingTrashNode: false },
       ws: {
         activeNodeId: 'node-1',
+        createChildNode,
         editorOperationHistory: createEditorOperationHistory(mode),
         nodeOrder: ['node-1', 'highlight-1'],
         nodesById: createNodesById(),
@@ -74,7 +79,7 @@ describe('app controller editor history handlers', () => {
   it('ignores the stale blank editor change that can arrive after creating an annotation', () => {
     const { args, pushEditorOperationEntry, updateNodeContent } = createArgs();
 
-    createEditorChangeHandler(args)('');
+    createNodeContentChangeHandler(args)('node-1', '');
 
     expect(pushEditorOperationEntry).not.toHaveBeenCalled();
     expect(updateNodeContent).not.toHaveBeenCalled();
@@ -83,10 +88,29 @@ describe('app controller editor history handlers', () => {
   it('keeps annotation redo available when a stale blank editor change arrives after undoing it', () => {
     const { args, pushEditorOperationEntry, updateNodeContent } = createArgs('after-undo');
 
-    createEditorChangeHandler(args)('');
+    createNodeContentChangeHandler(args)('node-1', '');
 
     expect(pushEditorOperationEntry).not.toHaveBeenCalled();
     expect(updateNodeContent).not.toHaveBeenCalled();
+  });
+
+  it('does not write normal body edits through the raw active-node fallback', () => {
+    const { args, createChildNode, pushEditorOperationEntry, updateNodeContent } = createArgs();
+
+    createEditorChangeHandler(args)('Alpha Beta Gamma Delta');
+
+    expect(pushEditorOperationEntry).not.toHaveBeenCalled();
+    expect(updateNodeContent).not.toHaveBeenCalled();
+    expect(createChildNode).not.toHaveBeenCalled();
+  });
+
+  it('keeps raw no-node editor input as an Inbox creation fallback', () => {
+    const { args, createChildNode } = createArgs();
+    args.ws.activeNodeId = null;
+
+    createEditorChangeHandler(args)('New inbox body');
+
+    expect(createChildNode).toHaveBeenCalledWith(INBOX_NODE_ID, 'New inbox body');
   });
 
   it('keeps normal text edits after creating an annotation undoable', () => {

@@ -2,6 +2,7 @@ import type { NodeKind } from '../../lib/core/nodes/nodeKind';
 import type { VirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter';
 import type { Node } from '../features/nodes/model/nodeTypes';
 
+import { shouldKeepLocalNodeContent } from './workspaceNodeContentVersionGuard';
 import { resolveNodeContentState, resolveNodeRevealState } from './workspaceRendererBoundaryState';
 
 export interface WorkspaceNodeDocument {
@@ -11,6 +12,7 @@ export interface WorkspaceNodeDocument {
   imageRegions?: Node['imageRegions'];
   kind: NodeKind;
   reveal: string | null;
+  updatedAt?: string;
   virtualFilter?: VirtualNodeFilter | null;
 }
 
@@ -67,12 +69,28 @@ export function isNodeDocumentLoaded(node: WorkspaceDocumentStateNode | null | u
   return (status === 'empty' || status === 'ready') && isRevealLoaded(node);
 }
 
-export function mergeWorkspaceNodeDocument<T extends object>(node: T, document: WorkspaceNodeDocument): T & WorkspaceDocumentStateNode {
+function isEmptyBoundaryContentProjection(node: WorkspaceDocumentStateNode) {
+  return resolveNodeContentState(node) === true && node.content.length === 0;
+}
+
+export function mergeWorkspaceNodeDocument<T extends object & { id?: string; updatedAt?: string }>(
+  node: T,
+  document: WorkspaceNodeDocument
+): T & WorkspaceDocumentStateNode {
+  const stateNode = node as T & WorkspaceDocumentStateNode;
+  const keepLocalContent = !isEmptyBoundaryContentProjection(stateNode) && node.id && node.updatedAt
+    ? shouldKeepLocalNodeContent({
+      currentUpdatedAt: node.updatedAt,
+      incomingUpdatedAt: document.updatedAt ?? node.updatedAt,
+      nodeId: node.id
+    })
+    : false;
+  const content = keepLocalContent ? stateNode.content : document.content;
   return {
     ...node,
-    bodyStatus: document.bodyStatus ?? (document.content.trim().length > 0 ? 'ready' : 'empty'),
-    content: document.content,
-    hasContent: document.content.trim().length > 0,
+    bodyStatus: document.bodyStatus ?? (content.trim().length > 0 ? 'ready' : 'empty'),
+    content,
+    hasContent: content.trim().length > 0,
     hideTitleHeading: document.hideTitleHeading,
     imageRegions: document.imageRegions ?? null,
     kind: document.kind,

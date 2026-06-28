@@ -31,6 +31,7 @@ export interface WorkspaceListAreaProps {
   listNodesById: WorkspaceListNodesById;
   nodesById: Record<string, Node>;
   nodeOrder: string[];
+  onCreateChildNode?: WorkspaceDualListContentProps['onCreateChildNode'] | undefined;
   onOpenMoveToNode: () => void;
   onOpenPostponeTopicPanel?: (nodeId?: string | null) => boolean;
   onOpenNotesView: () => void;
@@ -115,6 +116,7 @@ function renderWorkspaceListBody(
     | 'listNodesById'
     | 'nodesById'
     | 'nodeOrder'
+    | 'onCreateChildNode'
     | 'onOpenMoveToNode'
     | 'onOpenPostponeTopicPanel'
     | 'onOpenNotesView'

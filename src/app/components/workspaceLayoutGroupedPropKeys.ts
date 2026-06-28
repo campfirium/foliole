@@ -83,7 +83,7 @@ export const SETTINGS_KEYS = defineLayoutKeys<WorkspaceLayoutSettingsProps>()([
 ] as const);
 
 export const NODE_LIST_KEYS = defineLayoutKeys<WorkspaceLayoutNodeListProps>()([
-  'nodeOrder', 'nodesById', 'onOpenNotesView', 'onOpenMoveToNode'
+  'nodeOrder', 'nodesById', 'onCreateChildNode', 'onOpenNotesView', 'onOpenMoveToNode'
 ] as const);
 
 export const TRASH_KEYS = defineLayoutKeys<WorkspaceLayoutTrashProps>()([

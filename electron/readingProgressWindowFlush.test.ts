@@ -65,7 +65,7 @@ it('continues closing when renderer close flush times out', async () => {
   bindWindowReadingProgressFlush(window as never);
 
   const closeEvent = window.triggerClose();
-  await vi.advanceTimersByTimeAsync(800);
+  await vi.advanceTimersByTimeAsync(2500);
 
   expect(closeEvent.preventDefault).toHaveBeenCalledTimes(1);
   expect(window.close).toHaveBeenCalledTimes(1);

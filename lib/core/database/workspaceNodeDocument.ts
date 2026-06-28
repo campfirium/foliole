@@ -14,6 +14,7 @@ interface WorkspaceNodeDocumentRow extends DatabaseRow {
   reveal: string | null;
   image_regions: string | null;
   virtual_filter: string | null;
+  updated_at: string;
 }
 
 function parseNodeKind(value: string | null): NodeKind {
@@ -23,7 +24,7 @@ function parseNodeKind(value: string | null): NodeKind {
 export function loadWorkspaceNodeDocument(driver: DatabaseDriver, nodeId: string) {
   const row = driver.queryOne<WorkspaceNodeDocumentRow>(
     `SELECT n.id, n.kind, n.content, cbd.data AS body_blob_data, n.reveal,
-       n.hide_title_heading, n.image_regions, n.virtual_filter
+       n.hide_title_heading, n.image_regions, n.virtual_filter, n.updated_at
      FROM nodes n
      LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
      WHERE n.id = ?`,
@@ -40,6 +41,7 @@ export function loadWorkspaceNodeDocument(driver: DatabaseDriver, nodeId: string
     hideTitleHeading: row.hide_title_heading === 1,
     ...(imageRegions ? { imageRegions } : {}),
     virtualFilter: parseVirtualNodeFilter(row.virtual_filter),
-    reveal: row.reveal
+    reveal: row.reveal,
+    updatedAt: row.updated_at
   };
 }

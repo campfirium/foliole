@@ -41,6 +41,7 @@ describe('native invoke contract dispatch', () => {
       kind: 'topic',
       nodeId: 'node-1',
       reveal: null,
+      updatedAt: '2026-04-27T00:00:00.000Z',
       virtualFilter: null
     });
 

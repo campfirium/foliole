@@ -1,7 +1,7 @@
 import type { BrowserWindow } from 'electron';
 
 const windowsAllowedToClose = new WeakSet<BrowserWindow>();
-const WINDOW_CLOSE_FLUSH_TIMEOUT_MS = 800;
+const WINDOW_CLOSE_FLUSH_TIMEOUT_MS = 2500;
 
 type FlushableWindow = Pick<BrowserWindow, 'close' | 'isDestroyed' | 'webContents'>;
 

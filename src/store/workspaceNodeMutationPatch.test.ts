@@ -155,4 +155,26 @@ describe('createWorkspaceNodeMutationPatch body guard', () => {
     expect(patch.nodesById?.['node-local']?.content).toBe('Local body');
     markNodeContentPersisted('node-local', 1);
   });
+
+});
+
+describe('createWorkspaceNodeMutationPatch empty runtime body guard', () => {
+  it('does not let a newer empty runtime snapshot clear a local non-empty body', () => {
+    const state = createInitialWorkspaceState(new Date('2026-03-06T00:00:00.000Z'));
+    const localNode = createLocalNode(state);
+    const version = markNodeContentEdited('node-local');
+    markNodeContentPersisted('node-local', version);
+    const patch = createWorkspaceNodeMutationPatch({
+      ...state,
+      nodesById: { ...state.nodesById, 'node-local': localNode }
+    }, {
+      nodes: [createRuntimeSnapshot({
+        content: '',
+        updatedAt: '2026-03-07T00:00:01.000Z'
+      })]
+    });
+
+    expect(patch.nodesById?.['node-local']?.content).toBe('Local body');
+    expect(patch.nodesById?.['node-local']?.hasContent).toBe(true);
+  });
 });

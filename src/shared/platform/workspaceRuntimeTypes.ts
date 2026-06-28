@@ -46,6 +46,7 @@ export interface WorkspaceRuntimeNodeDocument {
   imageRegions?: NativeNodeSnapshotArgs['imageRegions'];
   kind: NodeKind;
   reveal: string | null;
+  updatedAt?: string;
   virtualFilter?: VirtualNodeFilter | null;
 }
 

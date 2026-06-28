@@ -1,6 +1,7 @@
 import type { KeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
 import type { MutableRefObject } from 'react';
 
+import type { NodeKind } from '../../../lib/core/nodes/nodeKind';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection, EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
 import type { ClipboardAnchorRange } from '../../features/editor/model/anchorClipboardPayload';
@@ -158,6 +159,7 @@ export interface WorkspaceLayoutFieldTypes {
   onRightSidebarSplitterPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
   onOpenNotesView: () => void;
   onOpenMoveToNode: (sourceSnapshot?: CurrentViewTopicSnapshot[]) => void;
+  onCreateChildNode: (parentNodeId: string, content?: string, kind?: NodeKind) => Promise<string | null>;
   onOpenImportManagement: () => void;
   onOpenTrashView: () => void;
   onOpenVirtualView: (nodeId?: string) => void;

@@ -8,6 +8,10 @@ import {
   markNodeCreatePending,
   shouldKeepLocalNodeContent
 } from './workspaceNodeContentVersionGuard';
+import {
+  readCachedWorkspaceNodeDocument,
+  resetWorkspaceNodeDocumentCacheForTest
+} from './workspaceNodeDocumentCache';
 import { hasWorkspaceNodeMutationRuntime, syncNodeContentWithAnchorsMutationToRuntime } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
 import {
@@ -58,20 +62,22 @@ function schedulePersist(node: WorkspaceNode, version = markNodeContentEdited(no
   return version;
 }
 
+beforeEach(() => {
+  vi.clearAllMocks();
+  resetNodeContentVersionGuardForTests();
+  resetPendingNodeContentRuntimePersistsForTests();
+  resetWorkspaceNodeDocumentCacheForTest();
+  vi.mocked(hasWorkspaceNodeMutationRuntime).mockReturnValue(true);
+  vi.mocked(syncNodeContentWithAnchorsMutationToRuntime).mockResolvedValue({ nodes: [] });
+});
+
+afterEach(() => {
+  resetPendingNodeContentRuntimePersistsForTests();
+  resetNodeContentVersionGuardForTests();
+  resetWorkspaceNodeDocumentCacheForTest();
+});
+
 describe('workspaceStoreContentRuntimePersist queue', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    resetNodeContentVersionGuardForTests();
-    resetPendingNodeContentRuntimePersistsForTests();
-    vi.mocked(hasWorkspaceNodeMutationRuntime).mockReturnValue(true);
-    vi.mocked(syncNodeContentWithAnchorsMutationToRuntime).mockResolvedValue({ nodes: [] });
-  });
-
-  afterEach(() => {
-    resetPendingNodeContentRuntimePersistsForTests();
-    resetNodeContentVersionGuardForTests();
-  });
-
   it('drains only the latest pending content per node', async () => {
     schedulePersist(createNode('node-1', 'First draft'));
     schedulePersist(createNode('node-1', 'Latest draft'));
@@ -110,7 +116,17 @@ describe('workspaceStoreContentRuntimePersist queue', () => {
 
     await expect(drainPendingNodeContentRuntimePersists()).resolves.toBe(false);
   });
+});
 
+describe('workspaceStoreContentRuntimePersist document cache', () => {
+  it('updates the document cache when content is queued for delayed runtime persist', () => {
+    schedulePersist(createNode('node-1', 'Cached delayed draft'));
+
+    expect(readCachedWorkspaceNodeDocument('node-1')?.content).toBe('Cached delayed draft');
+  });
+});
+
+describe('workspaceStoreContentRuntimePersist version guard', () => {
   it('marks the drained version persisted only after runtime accepts it', async () => {
     const node = createNode('node-1', 'Accepted draft');
     const version = markNodeContentEdited(node.id);

@@ -45,6 +45,13 @@ function mergeRuntimeNodePatch(current: Node | undefined, next: Node): Node {
   if (next.updatedAt < current.updatedAt) {
     return current;
   }
+  if (current.content.trim().length > 0 && next.content.trim().length === 0) {
+    return {
+      ...next,
+      content: current.content,
+      hasContent: true
+    };
+  }
   if (!shouldKeepLocalNodeContent({
     currentUpdatedAt: current.updatedAt,
     incomingUpdatedAt: next.updatedAt,

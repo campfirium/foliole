@@ -5,7 +5,10 @@ import { markNodeCreatePending } from './workspaceNodeContentVersionGuard';
 import { canCreateChildUnderParent } from './workspaceNodeKindRules';
 import { createWorkspaceNodeMutationPatchWithLocalSideEffects } from './workspaceNodeMutationPatch';
 import type { WorkspaceState } from './workspaceStore';
-import { completeNodeCreateRuntimePersist } from './workspaceStoreContentRuntimePersist';
+import {
+  completeNodeCreateRuntimePersist,
+  drainPendingNodeContentRuntimePersists
+} from './workspaceStoreContentRuntimePersist';
 import { buildCreatedChildState } from './workspaceStoreTreeCreateChildState';
 
 type WorkspaceSet = (
@@ -27,6 +30,7 @@ export function createChildNodeAction(
   onNodeOrderChanged?: (nodeOrder: string[]) => void
 ): WorkspaceState['createChildNode'] {
   return async (parentNodeId, content = '', kind: NodeKind = 'topic', options) => {
+    await drainPendingNodeContentRuntimePersists();
     const nodeId = `node-${crypto.randomUUID()}`;
     const timestamp = new Date().toISOString();
     let createdNode: NodeSnapshot | null = null;

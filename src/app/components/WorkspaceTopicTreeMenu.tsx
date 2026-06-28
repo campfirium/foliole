@@ -18,6 +18,7 @@ export function WorkspaceTopicTreeMenu(props: {
   contextMenu: NodeListContextMenuController;
   handleSelectNode: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   nodesById: WorkspaceListNodesById;
+  onCreateChildNode: ReturnType<typeof useWorkspaceTopicTreeActions>['createChildNode'];
   onOpenMoveToNode: WorkspaceTopicTreeProps['onOpenMoveToNode'];
   onOpenPostponeTopicPanel?: WorkspaceTopicTreeProps['onOpenPostponeTopicPanel'];
   topicTreeState: ReturnType<typeof useWorkspaceTopicTreeInteraction>['topicTreeState'];
@@ -28,8 +29,8 @@ export function WorkspaceTopicTreeMenu(props: {
       <NodeListTreeMenu
         contextMenu={props.contextMenu}
         createMenuSurface="topics"
-        createChildNode={props.actions.createChildNode}
-        createGlobalNode={(content = '', kind = 'topic') => props.actions.createChildNode(props.activeFolderId, content, kind)}
+        createChildNode={props.onCreateChildNode}
+        createGlobalNode={(content = '', kind = 'topic') => props.onCreateChildNode(props.activeFolderId, content, kind)}
         createVirtualNode={props.actions.createVirtualNode}
         deleteNodes={props.actions.deleteNodes}
         deleteNodesPermanently={props.actions.deleteNodesPermanently}

@@ -40,3 +40,26 @@ it('keeps source update draft commits bound to the node that opened the panel', 
   expect(onNodeContentChange).toHaveBeenCalledWith('node-1', 'Alpha source draft');
   expect(onNodeContentChange).not.toHaveBeenCalledWith('node-2', 'Alpha source draft');
 });
+
+it('does not commit a source update draft through raw editor fallback without a node id', () => {
+  mockSourceUpdatePreview();
+  const onEditorChange = vi.fn();
+  const onNodeContentChange = vi.fn();
+  renderSectionWithProps({
+    activeNodeId: null,
+    editorContent: 'Alpha body',
+    editorNodeId: null,
+    onEditorChange,
+    onNodeContentChange
+  });
+
+  const panelProps = openSourceUpdatePanel();
+
+  act(() => {
+    panelProps?.onCurrentContentChange('Detached source draft');
+    panelProps?.onOpenChange(false);
+  });
+
+  expect(onEditorChange).not.toHaveBeenCalled();
+  expect(onNodeContentChange).not.toHaveBeenCalled();
+});

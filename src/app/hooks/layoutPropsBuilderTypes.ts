@@ -11,6 +11,7 @@ import type {
   WorkspaceLayoutExternalLibraryProps,
   WorkspaceLayoutImportProps,
   WorkspaceLayoutNavigationProps,
+  WorkspaceLayoutNodeListProps,
   WorkspaceLayoutReadingPositionProps,
   WorkspaceLayoutReviewProps,
   WorkspaceLayoutTrashProps
@@ -108,6 +109,7 @@ export interface BuildLayoutPropsArgs {
   onEditorReady: WorkspaceLayoutDocumentProps['onEditorReady'];
   onOpenNotesView: () => void;
   onReviewQueueEmpty: () => void;
+  onCreateChildNode: WorkspaceLayoutNodeListProps['onCreateChildNode'];
   onOpenMoveToNode: () => void;
   onOpenImportManagement: () => void;
   onOpenSettings: () => void;

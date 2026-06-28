@@ -1,6 +1,6 @@
 import { fireEvent, screen, within } from '@testing-library/react';
 import { useState } from 'react';
-import { beforeEach, expect, it } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import {
@@ -154,6 +154,25 @@ it('keeps an expanded branch open when selecting another current-folder topic', 
 
   expect(within(itemColumn).getByRole('treeitem', { name: 'Vue Notes' })).toHaveAttribute('aria-current', 'page');
   expect(within(itemColumn).getByRole('treeitem', { name: 'Hook Summary' })).toBeInTheDocument();
+});
+
+it('uses the injected create action for the topic create button', () => {
+  const onCreateChildNode = vi.fn(async () => 'new-topic');
+  renderWithLocalization(
+    <WorkspaceTopicTree
+      activeFolderId="folder-a"
+      activeNodeId={null}
+      itemIds={[]}
+      nodesById={{}}
+      onCreateChildNode={onCreateChildNode}
+      onOpenMoveToNode={() => undefined}
+      onSelectNode={() => undefined}
+    />
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: 'Create topic' }));
+
+  expect(onCreateChildNode).toHaveBeenCalledWith('folder-a', '', 'topic');
 });
 
 it('collapses a newly opened folder by default', () => {
