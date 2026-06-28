@@ -89,7 +89,7 @@ function registerCloseFlushTest() {
       await expect(closeFlush?.()).resolves.toBe(true);
     });
 
-    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated', undefined);
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated', { publishLocal: false });
   });
 
   it('flushes the pending draft on unmount', () => {
@@ -108,7 +108,7 @@ function registerCloseFlushTest() {
 
     unmount();
 
-    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha unmount draft', undefined);
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha unmount draft', { publishLocal: false });
   });
 
 }
@@ -184,7 +184,7 @@ function registerNodeSwitchCommitIsolationTest() {
       vi.advanceTimersByTime(1200);
     });
 
-    expect(alphaCommit).toHaveBeenCalledWith('node-1', 'Alpha draft', undefined);
+    expect(alphaCommit).toHaveBeenCalledWith('node-1', 'Alpha draft', { publishLocal: false });
     expect(alphaCommit).not.toHaveBeenCalledWith('node-1', 'Beta draft');
     expect(betaCommit).toHaveBeenCalledWith('node-2', 'Beta draft', { publishLocal: false });
   });

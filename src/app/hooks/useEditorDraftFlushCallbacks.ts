@@ -28,7 +28,7 @@ interface DraftFlushCallbacksArgs {
   latestCommittedContentRef: MutableRefObject<string>;
   nodeId: string | null;
   onCommit: EditorDraftCommit;
-  onFinalizeNode: ((nodeId: string, content: string) => void) | undefined;
+  onFinalizeNode: ((nodeId: string, content: string) => unknown) | undefined;
   onRegisterFlush: EditorDraftFlushRegistration | undefined;
   timerRef: MutableRefObject<number | null>;
 }

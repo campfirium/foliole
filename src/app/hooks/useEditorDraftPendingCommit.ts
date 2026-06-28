@@ -92,7 +92,7 @@ function flushPendingDraft(args: FlushPendingDraftArgs): DraftFlushResult {
   const commitPendingDraft = (options?: { publishLocal?: boolean }) =>
     pendingCommit.onCommit(pendingCommit.nodeId, pendingCommit.content, options);
   if (args.finalizeTitle) {
-    commitPendingDraft();
+    commitPendingDraft({ publishLocal: false });
   } else {
     startTransition(() => commitPendingDraft({ publishLocal: false }));
   }
@@ -158,11 +158,18 @@ function useFreshDraftFlush(args: {
 
 export function runPendingTitleRefresh(
   flushResult: { pendingTitle: PendingTitleRefresh | null },
-  onFinalizeNode: ((nodeId: string, content: string) => void) | undefined
+  onFinalizeNode: ((nodeId: string, content: string) => unknown) | undefined
 ) {
   const pendingTitle = flushResult.pendingTitle;
   if (pendingTitle) {
-    onFinalizeNode?.(pendingTitle.nodeId, pendingTitle.content);
+    try {
+      const result = onFinalizeNode?.(pendingTitle.nodeId, pendingTitle.content);
+      if (result && typeof (result as PromiseLike<unknown>).then === 'function') {
+        void Promise.resolve(result).catch(() => undefined);
+      }
+    } catch {
+      // Title derivation must not undo or block a completed body commit.
+    }
   }
 }
 

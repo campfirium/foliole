@@ -52,7 +52,7 @@ function registerBoundaryTitleFinalizationTests() {
       await closeFlush?.();
     });
 
-    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated', undefined);
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated', { publishLocal: false });
     expect(onFinalizeNode).toHaveBeenCalledWith('node-1', 'Alpha body updated');
   });
 
@@ -84,8 +84,73 @@ function registerBoundaryTitleFinalizationTests() {
       nodeId: 'node-2'
     });
 
-    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha draft', undefined);
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha draft', { publishLocal: false });
     expect(onFinalizeNode).toHaveBeenCalledWith('node-1', 'Alpha draft');
+  });
+}
+
+function registerTitleFinalizationFailureTests() {
+  it('does not fail close flush when synchronous title finalization throws', async () => {
+    const onCommit = vi.fn();
+    const onFinalizeNode = vi.fn(() => {
+      throw new Error('title failed');
+    });
+    let closeFlush: (() => Promise<boolean>) | null = null;
+
+    const { result } = renderHook(() =>
+      useEditorDraftSync({
+        committedContent: 'Alpha body',
+        nodeId: 'node-1',
+        onCommit,
+        onFinalizeNode,
+        onRegisterFlush: (_flush, nextCloseFlush) => {
+          closeFlush = nextCloseFlush;
+        }
+      })
+    );
+
+    act(() => {
+      result.current.handleEditorChange('Alpha body updated');
+    });
+
+    await act(async () => {
+      await expect(closeFlush?.()).resolves.toBe(true);
+    });
+
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated', { publishLocal: false });
+    expect(onFinalizeNode).toHaveBeenCalledWith('node-1', 'Alpha body updated');
+  });
+
+  it('does not leave an unhandled rejection when async title finalization fails', async () => {
+    const onCommit = vi.fn();
+    const onFinalizeNode = vi.fn(async () => {
+      throw new Error('title rejected');
+    });
+    let closeFlush: (() => Promise<boolean>) | null = null;
+
+    const { result } = renderHook(() =>
+      useEditorDraftSync({
+        committedContent: 'Alpha body',
+        nodeId: 'node-1',
+        onCommit,
+        onFinalizeNode,
+        onRegisterFlush: (_flush, nextCloseFlush) => {
+          closeFlush = nextCloseFlush;
+        }
+      })
+    );
+
+    act(() => {
+      result.current.handleEditorChange('Alpha body updated');
+    });
+
+    await act(async () => {
+      await expect(closeFlush?.()).resolves.toBe(true);
+      await Promise.resolve();
+    });
+
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated', { publishLocal: false });
+    expect(onFinalizeNode).toHaveBeenCalledWith('node-1', 'Alpha body updated');
   });
 }
 
@@ -100,4 +165,5 @@ describe('useEditorDraftSync title finalization', () => {
 
   registerDebounceTitleFinalizationTest();
   registerBoundaryTitleFinalizationTests();
+  registerTitleFinalizationFailureTests();
 });
