@@ -5,11 +5,23 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { spawn, spawnSync } from 'node:child_process';
 import path from 'node:path';
 
-const DEFAULT_TOTAL_TIMEOUT_SECONDS = 540;
+const DEFAULT_TOTAL_TIMEOUT_SECONDS = 0;
 
 export const SHARED_TEST_BUCKETS = [
   { label: 'shared', report: '.tmp/vitest/shared-src-shared.json', targets: ['src/shared'] },
-  { label: 'features', report: '.tmp/vitest/shared-src-features.json', targets: ['src/features'] },
+  { label: 'features-editor', report: '.tmp/vitest/shared-src-features-editor.json', targets: ['src/features/editor'] },
+  { label: 'features-nodes', report: '.tmp/vitest/shared-src-features-nodes.json', targets: ['src/features/nodes'] },
+  { label: 'features-settings', report: '.tmp/vitest/shared-src-features-settings.json', targets: ['src/features/settings'] },
+  {
+    label: 'features-review-docs',
+    report: '.tmp/vitest/shared-src-features-review-docs.json',
+    targets: ['src/features/review', 'src/features/pdf', 'src/features/image-cloze', 'src/features/formula-cloze']
+  },
+  {
+    label: 'features-guided',
+    report: '.tmp/vitest/shared-src-features-guided.json',
+    targets: ['src/features/guidedSample', 'src/features/help']
+  },
   { label: 'store', report: '.tmp/vitest/shared-src-store.json', targets: ['src/store'] },
   {
     label: 'scripts',
@@ -34,16 +46,17 @@ function readReport(reportPath) {
   }
 }
 
-function parsePositiveInt(value, fallback) {
+function parseNonNegativeInt(value, fallback) {
   const parsed = Number.parseInt(value ?? '', 10);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback;
 }
 
-function resolveTotalTimeoutMs() {
-  return parsePositiveInt(
-    process.env.SHARED_TEST_BUCKET_TOTAL_TIMEOUT_SECONDS,
+export function resolveTotalTimeoutMs(env = process.env) {
+  const seconds = parseNonNegativeInt(
+    env.SHARED_TEST_BUCKET_TOTAL_TIMEOUT_SECONDS,
     DEFAULT_TOTAL_TIMEOUT_SECONDS
-  ) * 1000;
+  );
+  return seconds > 0 ? seconds * 1000 : null;
 }
 
 function addNumber(left, right, key) {
@@ -157,18 +170,22 @@ function runVitestWithBudget(reportPath, targets, timeoutMs) {
         return;
       }
       settled = true;
-      globalThis.clearTimeout(timer);
+      if (timer) {
+        globalThis.clearTimeout(timer);
+      }
       child.stdout?.destroy();
       child.stderr?.destroy();
       resolve({ code, timedOut });
     };
     child.stdout?.on('data', (chunk) => process.stdout.write(chunk));
     child.stderr?.on('data', (chunk) => process.stderr.write(chunk));
-    const timer = globalThis.setTimeout(() => {
-      terminateChildTree(child);
-      finish(1, true);
-    }, timeoutMs);
-    timer.unref();
+    const timer = Number.isFinite(timeoutMs)
+      ? globalThis.setTimeout(() => {
+        terminateChildTree(child);
+        finish(1, true);
+      }, timeoutMs)
+      : null;
+    timer?.unref();
     child.on('close', (code) => finish(code ?? 1));
   });
 }
@@ -181,7 +198,8 @@ async function main() {
   }
 
   let exitCode = 0;
-  const deadline = Date.now() + resolveTotalTimeoutMs();
+  const totalTimeoutMs = resolveTotalTimeoutMs();
+  const deadline = totalTimeoutMs === null ? Number.POSITIVE_INFINITY : Date.now() + totalTimeoutMs;
   removeOldReports(reportPath);
   combineReports(reportPath);
   for (const bucket of SHARED_TEST_BUCKETS) {

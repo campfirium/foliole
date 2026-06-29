@@ -1,12 +1,17 @@
 // @vitest-environment node
 
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { combineReports, writeBucketFailureReport } from './run-shared-test-bucket.mjs';
+import {
+  combineReports,
+  resolveTotalTimeoutMs,
+  SHARED_TEST_BUCKETS,
+  writeBucketFailureReport
+} from './run-shared-test-bucket.mjs';
 
 function report(overrides = {}) {
   return {
@@ -28,6 +33,33 @@ function report(overrides = {}) {
 }
 
 describe('run-shared-test-bucket', () => {
+  it('keeps split feature buckets covering every top-level feature directory', async () => {
+    const featureTargets = SHARED_TEST_BUCKETS.flatMap((bucket) => bucket.targets)
+      .filter((target) => target.startsWith('src/features/'))
+      .map((target) => target.slice('src/features/'.length))
+      .sort();
+    const featureDirectories = (await readdir('src/features', { withFileTypes: true }))
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .sort();
+
+    expect(SHARED_TEST_BUCKETS.some((bucket) => bucket.targets.includes('src/features'))).toBe(false);
+    expect(featureTargets).toEqual(featureDirectories);
+  });
+
+  it('keeps default bucket labels and report paths unique', () => {
+    const labels = SHARED_TEST_BUCKETS.map((bucket) => bucket.label);
+    const reports = SHARED_TEST_BUCKETS.map((bucket) => bucket.report);
+
+    expect(new Set(labels).size).toBe(labels.length);
+    expect(new Set(reports).size).toBe(reports.length);
+  });
+
+  it('leaves the shared bucket total timeout disabled unless explicitly configured', () => {
+    expect(resolveTotalTimeoutMs({})).toBeNull();
+    expect(resolveTotalTimeoutMs({ SHARED_TEST_BUCKET_TOTAL_TIMEOUT_SECONDS: '42' })).toBe(42000);
+  });
+
   it('writes an aggregate report from completed child bucket reports', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'shared-test-bucket-'));
     try {
