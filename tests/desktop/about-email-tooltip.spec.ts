@@ -1,6 +1,13 @@
 import { test, expect } from './harness/fixtures';
 
-test('shows the support email tooltip in About settings', async ({ desktopWindow }, testInfo) => {
+test('shows the support email tooltip in About settings', async ({ desktopApp, desktopWindow }, testInfo) => {
+  await desktopApp.evaluate(({ shell }) => {
+    const openedUrls: string[] = [];
+    globalThis.__FOLIOLE_TEST_OPENED_EXTERNAL_URLS__ = openedUrls;
+    shell.openExternal = async (url: string) => {
+      openedUrls.push(url);
+    };
+  });
   await desktopWindow.getByRole('button', { name: /^(Settings|设置)$/ }).click();
   const settingsDialog = desktopWindow.getByRole('dialog').filter({
     has: desktopWindow.getByRole('button', { name: /^(About|关于)$/ })
@@ -16,6 +23,10 @@ test('shows the support email tooltip in About settings', async ({ desktopWindow
   const tooltip = desktopWindow.getByRole('tooltip', { name: 'hello@foliole.app' });
   await expect(tooltip).toBeVisible();
   await expect(tooltip).toHaveText('hello@foliole.app');
+  await emailButton.click();
+  await expect.poll(() =>
+    desktopApp.evaluate(() => globalThis.__FOLIOLE_TEST_OPENED_EXTERNAL_URLS__)
+  ).toContain('mailto:hello@foliole.app');
   await testInfo.attach('about-email-tooltip', {
     body: await desktopWindow.screenshot({ fullPage: true }),
     contentType: 'image/png'
