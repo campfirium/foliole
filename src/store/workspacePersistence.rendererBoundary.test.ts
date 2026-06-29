@@ -1,5 +1,7 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 
+import { HOME_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../features/nodes/model/specialNodes';
+
 import { stagePendingNodeSync } from './workspacePendingNodeSync';
 import {
   createInitialWorkspaceState,
@@ -173,5 +175,34 @@ describe('workspace persistence renderer boundary pending edits', () => {
       reveal: null,
       hasReveal: false
     });
+  });
+});
+
+describe('workspace direct renderer patch boundary', () => {
+  it('keeps injected roots when a direct patch replaces the membership snapshot', () => {
+    useWorkspaceStore.setState((state) => ({
+      activeNodeId: 'node-1',
+      nodeOrder: ['special-inbox', 'node-1'],
+      nodesById: {
+        'special-inbox': state.nodesById['special-inbox']!,
+        'node-1': {
+          ...state.nodesById['special-inbox']!,
+          id: 'node-1',
+          parentNodeId: 'special-inbox',
+          kind: 'topic',
+          title: 'Node 1'
+        }
+      },
+      trashedNodeIds: []
+    }));
+
+    expect(useWorkspaceStore.getState().nodeOrder).toEqual([
+      HOME_NODE_ID,
+      'special-inbox',
+      VIRTUAL_ROOT_NODE_ID,
+      'node-1'
+    ]);
+    expect(useWorkspaceStore.getState().nodesById[HOME_NODE_ID]?.specialKind).toBe('home');
+    expect(useWorkspaceStore.getState().nodesById[VIRTUAL_ROOT_NODE_ID]?.specialKind).toBe('virtual-root');
   });
 });
