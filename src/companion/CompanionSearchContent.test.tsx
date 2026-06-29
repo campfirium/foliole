@@ -63,6 +63,14 @@ describe('CompanionSearchContent', () => {
     searchCompanionFullText.mockReset();
   });
 
+  it('renders a compact idle search surface', () => {
+    renderWithLocalization(<CompanionSearchContent />);
+
+    expect(screen.getByRole('heading', { name: 'Search' })).toBeInTheDocument();
+    expect(screen.getByText('Local search')).toBeInTheDocument();
+    expect(screen.getByText('Topics, PDF text, and external documents on this device.')).toBeInTheDocument();
+  });
+
   it('searches local companion content and renders result sections', async () => {
     searchCompanionFullText.mockResolvedValue(localSearchResults());
 
@@ -85,5 +93,19 @@ describe('CompanionSearchContent', () => {
     fireEvent.change(screen.getByRole('searchbox', { name: 'Search topics' }), { target: { value: 'missing' } });
 
     expect(await screen.findByText('No local results found.')).toBeInTheDocument();
+  });
+
+  it('shows loading and error states without changing the search contract', async () => {
+    let rejectSearch: (() => void) | null = null;
+    searchCompanionFullText.mockReturnValueOnce(new Promise((_resolve, reject) => {
+      rejectSearch = () => reject(new Error('failed'));
+    }));
+
+    renderWithLocalization(<CompanionSearchContent />);
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search topics' }), { target: { value: 'alpha' } });
+
+    expect(screen.getByText('Searching...')).toBeInTheDocument();
+    rejectSearch?.();
+    expect(await screen.findByText('Search failed on this device.')).toBeInTheDocument();
   });
 });

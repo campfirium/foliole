@@ -9,7 +9,9 @@ import {
   type CompanionTopicSearchResult
 } from '../shared/platform/companionFullTextSearch';
 import type { CompanionPdfPageTextSearchResult } from '../shared/platform/companionSyncObjects';
-import { AppEmptyState, appInputBorderFocusVisibleClassName } from '../shared/ui';
+import { appInputBorderFocusVisibleClassName } from '../shared/ui';
+
+import { CompanionScreenHeader } from './CompanionScreenHeader';
 
 const SEARCH_LIMIT = 20;
 
@@ -22,12 +24,13 @@ export function CompanionSearchContent() {
   const searchState = useCompanionSearch(query);
 
   return (
-    <section className="px-1 py-4">
+    <section className="px-1 pb-4 pt-3">
+      <CompanionScreenHeader title={t('companion.tabs.search')} />
       <label className="block">
         <span className="sr-only">{t('companion.search.label')}</span>
         <input
           className={cn(
-            'h-12 w-full rounded-md border border-companion-divider bg-companion-content px-4 text-base text-foreground transition placeholder:text-companion-text-secondary',
+            'h-11 w-full rounded-md border border-companion-divider bg-companion-content px-4 text-base text-foreground transition placeholder:text-companion-text-secondary',
             appInputBorderFocusVisibleClassName
           )}
           onChange={(event) => setQuery(event.target.value)}
@@ -36,7 +39,7 @@ export function CompanionSearchContent() {
           value={query}
         />
       </label>
-      <div className="mt-6 border-t border-companion-divider py-5">
+      <div className="mt-4 border-t border-companion-divider pt-4">
         <SearchResults state={searchState} />
       </div>
     </section>
@@ -87,13 +90,7 @@ function SearchResults(props: { state: { results: CompanionFullTextSearchResults
   if (status === 'error') return <SearchMessage title={t('companion.search.error')} />;
   if (status === 'ready' && !hasResults) return <SearchMessage title={t('companion.search.empty')} />;
   if (!results || !hasResults) {
-    return (
-      <AppEmptyState
-        className="min-h-0 items-start py-1 text-left text-companion-text-secondary"
-        description={t('companion.search.description')}
-        title={t('companion.search.title')}
-      />
-    );
+    return <SearchIntro />;
   }
   return (
     <div className="space-y-5">
@@ -105,7 +102,17 @@ function SearchResults(props: { state: { results: CompanionFullTextSearchResults
 }
 
 function SearchMessage(props: { title: string }) {
-  return <p className="text-sm text-companion-text-secondary">{props.title}</p>;
+  return <p className="py-2 text-sm leading-6 text-companion-text-secondary">{props.title}</p>;
+}
+
+function SearchIntro() {
+  const t = useTranslation();
+  return (
+    <div className="py-2 text-left">
+      <h2 className="text-sm font-semibold leading-6 text-foreground/75">{t('companion.search.title')}</h2>
+      <p className="mt-1 text-sm leading-6 text-companion-text-secondary">{t('companion.search.description')}</p>
+    </div>
+  );
 }
 
 function TopicResults(props: {
@@ -175,7 +182,7 @@ function ResultSection(props: { children: ReactNode; title: string }) {
 
 function SearchResultItem(props: { excerpt: string; status?: string | null; title: string }) {
   return (
-    <article className="rounded-md border border-companion-divider bg-companion-content px-3 py-2">
+    <article className="border-b border-companion-divider px-1 py-3">
       <div className="flex items-start justify-between gap-3">
         <h3 className="line-clamp-2 text-sm font-medium text-foreground">{props.title}</h3>
         {props.status ? <span className="shrink-0 text-xs text-companion-text-secondary">{props.status}</span> : null}

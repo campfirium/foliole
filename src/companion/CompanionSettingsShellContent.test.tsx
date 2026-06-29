@@ -24,15 +24,15 @@ describe('CompanionSettingsShellContent', () => {
     expect(screen.getByText('Data and appearance')).toBeInTheDocument();
     expect(screen.getByText('Development')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /Device information/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Device details are not available yet/ }));
     expect(screen.getByText('Device information')).toBeInTheDocument();
-    expect(screen.getByText('Device information will appear here.')).toBeInTheDocument();
+    expect(screen.getByText('Device details are not available yet.')).toBeInTheDocument();
   });
 
   it('opens the appearance placeholder page', () => {
     render(<SettingsHarness />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Display preferences/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Display controls are not available yet/ }));
     expect(screen.getByText('Display preferences')).toBeInTheDocument();
   });
 

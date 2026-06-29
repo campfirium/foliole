@@ -90,9 +90,9 @@ export function CompanionSettingsList(props: {
 
 export function CompanionPlaceholderSettingsContent(props: { detail: string; title: string }) {
   return (
-    <section className="px-1 py-4">
-      <h2 className="text-base font-semibold text-foreground">{props.title}</h2>
-      <p className="mt-3 text-sm leading-6 text-companion-text-secondary">{props.detail}</p>
+    <section className="border-t border-companion-divider px-1 py-6">
+      <h2 className="text-sm font-semibold leading-6 text-foreground">{props.title}</h2>
+      <p className="mt-1 max-w-[28rem] text-sm leading-6 text-companion-text-secondary">{props.detail}</p>
     </section>
   );
 }

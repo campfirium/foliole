@@ -21,7 +21,7 @@
 - `android/**`、`scripts/android/**`、`capacitor.config.ts`：读取 `android/AGENTS.md`
 - `src/companion/**`：读取 `src/companion/AGENTS.md`
 - `ios/**`：读取 `ios/AGENTS.md`
-- `src/app/**`：当前没有单独局部 `AGENTS.md`，继续直接执行根 `AGENTS.md` 的 desktop renderer 规则；涉及运行时 UI 行为时，验证按 `electron/AGENTS.md` 的桌面 L0 / L1 规则执行
+- `src/app/**`：当前没有单独局部 `AGENTS.md`，继续直接执行根 `AGENTS.md` 的 desktop renderer 规则；涉及运行时 UI 行为时，验证按 `electron/AGENTS.md` 的桌面验证规则执行
 - `src/features/editor/**`：读取 `src/features/editor/AGENTS.md`
 - `src/features/**`、`src/store/**`、`src/shared/**`：当前没有单独局部 `AGENTS.md`，继续直接执行根 `AGENTS.md` 的 shared / cross-host 规则
 - 若一次任务同时跨多个宿主或表面，必须把相关局部 `AGENTS.md` 全部读齐；冲突时按“更靠近改动目录的规则优先，跨目录共享规则回退到根规则”执行。
@@ -95,8 +95,8 @@
 ## Quality Gates, Preview, And Final Report
 
 - 不允许通过降低检查标准过关；验证前必须从 `package.json` / `npm run` 确认真实入口，当前仓库以 `npm` 为准，不用不存在的 `npm test` 兜底。
-- 凡本轮改动会进入应用运行时或改变用户可见行为，必须完成一次宿主级 L1 验收；L1 前置验证（文件预算、窄测试、lint、typecheck、copy guard、L0 快检等）必须先按改动范围完成，不得用 L1 替代前置红灯修复。
-- L1 的具体入口由受影响宿主规则决定：桌面按 `electron/AGENTS.md` 选择 Hidden Native 或可见原生自动验收；Android / iOS / companion 按对应局部规则选择等价宿主验收。只改文档、agent 规则、只读诊断、测试代码或脚本内部逻辑，且不改变应用运行时行为时，可跳过 L1，但最终汇报必须写明跳过原因。
+- 凡本轮改动会进入应用运行时或改变用户可见行为，必须完成一次受影响宿主的可见验收；文件预算、窄测试、lint、typecheck、copy guard、运行时快检等前置验证必须先按改动范围完成，不得用宿主可见验收替代前置红灯修复。
+- 宿主可见验收的具体入口由受影响宿主规则决定：桌面按 `electron/AGENTS.md` 选择 Hidden Native 或可见原生自动验收；Android / iOS / companion 按对应局部规则选择等价宿主验收。只改文档、agent 规则、只读诊断、测试代码或脚本内部逻辑，且不改变应用运行时行为时，可跳过宿主可见验收，但最终汇报必须写明跳过原因。
 - 默认先执行覆盖本轮能力闭环的最小相关前置验证；只有能力闭环范围或技术风险超过相关验证覆盖面时，才升级到 `quality:desktop`、`quality:android`、`quality:android:device`、`quality:shared`、`quality:full`、`quality:release` 或 `quality:fast`。
 - 少量明确测试文件优先 `npm run test:files -- <file...>`，变更范围干净且需要按 diff 自动选测时用 `npm run test:changed`。
 - 改动用户可见行为、数据 / sync / bridge / adapter / security contract 或测试断言时，按 `.lab/specs/_governance/test-drift-prevention-expectation.md` 定位并维护对应测试 contract；可复现 Bug 修复必须新增至少 1 条自动化回归测试。
@@ -106,7 +106,7 @@
 - 新增或升级 npm 依赖时，额外执行 `npm run deps:hardening:check`；`build` 只在用户明确要求或触及依赖 / 构建根链路且必须验证时执行。
 - npm 默认保留 7 天 release-age 安全窗口；但 Dependabot / GitHub Advisory / `npm audit` 已明确报出的漏洞修复必须定向绕过该窗口，只允许更新被点名的漏洞包或其必要传递依赖，并用 `npm ls <package> --all` 与 `npm audit --omit=dev` 复验。禁止用等待窗口期作为安全告警处理结论。
 - `it.skip` / `test.skip` 必须紧邻 `// SKIP: <reason> | <date YYYY-MM-DD> | revive: <condition>`；看到超过 30 天的 stale `SKIP` 必须复查能否恢复。
-- E2E（Playwright）不进入任何质量闸；它作为 L1/L1b 宿主验收单独执行。桌面日常 agent 自动化验收优先按 `electron/AGENTS.md` 使用不干扰用户桌面的 Playwright 入口，人工预览仍按下表执行。
+- E2E（Playwright）不进入任何质量闸；它作为宿主可见验收单独执行。桌面日常 agent 自动化验收优先按 `electron/AGENTS.md` 使用不干扰用户桌面的 Playwright 入口，人工预览仍按下表执行。
 - `copy:guard` 默认只报告 warning；若它报 warning，修复前先读 `.lab/specs/_product/terminology-and-copy.md`，禁止机械替换。
 
 | 条件 | 预览决策 |
@@ -123,7 +123,7 @@
 
 - 自动化验证通过但仍需要用户最终人工确认的用户可见闭环，最终汇报前必须向 `.lab/atlas/0active/manual-acceptance.md` 追加 1 行待验收记录；仅改 agent 规则 / 文档 / 测试 / 脚本 / 内部 spec 时不追加。同一轮同一验收目标只记 1 行，不按命令、文件、截图拆行；该清单只追加不删除，后续人工结论也用新行追加。
 
-最终汇报默认使用 `C / V / R / pushed`：`C` 写用户问题恢复与已确认根因，`V` 写用户可见验收现象，并明确 L0 / L1a / L1b / L2 的执行状态或跳过原因，`R` 只写真正剩余风险；没有风险时省略 `R`。不列内部字段、数据库对象或可选后续，除非用户追问或验证失败。
+最终汇报默认使用 `C / V / R / pushed`：`C` 写用户问题恢复与已确认根因，`V` 写前置验证、宿主可见验收、人工确认项的执行状态或跳过原因，`R` 只写真正剩余风险；没有风险时省略 `R`。不列内部字段、数据库对象或可选后续，除非用户追问或验证失败。
 
 ## Decision Escalation And Official Sources
 
