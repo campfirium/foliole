@@ -19,28 +19,31 @@ interface RuntimeWorkspaceSnapshotLike {
   nodesById: Record<string, Node>;
 }
 
-export async function hydrateActiveNodeDocument(name: string, snapshot: RuntimeWorkspaceSnapshotLike) {
-  const activeNodeId = snapshot.activeNodeId;
-  if (!hasWorkspaceRuntimeRepository() || typeof activeNodeId !== 'string') {
+export async function hydrateActiveNodeDocument(
+  name: string,
+  snapshot: RuntimeWorkspaceSnapshotLike,
+  documentNodeId = snapshot.activeNodeId
+) {
+  if (!hasWorkspaceRuntimeRepository() || typeof documentNodeId !== 'string') {
     return snapshot;
   }
 
-  const activeNode = snapshot.nodesById[activeNodeId];
+  const activeNode = snapshot.nodesById[documentNodeId];
   if (!activeNode || isNodeDocumentLoaded(activeNode)) {
     return snapshot;
   }
 
   const startedAt = Date.now();
   reportWorkspaceHydrateBootStage('active_document_start', {
-    nodeId: activeNodeId
+    nodeId: documentNodeId
   });
-  const activeDocument = await loadWorkspaceNodeDocumentFromRuntime(activeNodeId).catch((error) => {
+  const activeDocument = await loadWorkspaceNodeDocumentFromRuntime(documentNodeId).catch((error) => {
     logRuntimeWarning('active node document load failed during workspace hydrate', {
       area: 'persistence',
       action: 'hydrate_active_node_document',
       fallback: 'keep_lightweight_node',
       storageKey: name,
-      nodeId: activeNodeId,
+      nodeId: documentNodeId,
       error
     });
     return null;
@@ -52,14 +55,14 @@ export async function hydrateActiveNodeDocument(name: string, snapshot: RuntimeW
 
   reportWorkspaceHydrateBootStage('active_document_complete', {
     durationMs: Date.now() - startedAt,
-    nodeId: activeNodeId
+    nodeId: documentNodeId
   });
   const mergedActiveNode = mergeWorkspaceNodeDocument(activeNode, activeDocument);
   appendReadingPositionTraceLog({
     event: 'workspace.hydrate-active-document',
     payload: {
       durationMs: Date.now() - startedAt,
-      nodeId: activeNodeId,
+      nodeId: documentNodeId,
       storageKey: name
     },
     timestamp: Date.now()
@@ -70,7 +73,7 @@ export async function hydrateActiveNodeDocument(name: string, snapshot: RuntimeW
     nodeOrder: snapshot.nodeOrder,
     nodesById: {
       ...snapshot.nodesById,
-      [activeNodeId]: mergedActiveNode
+      [documentNodeId]: mergedActiveNode
     },
     timestamp
   });

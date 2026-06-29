@@ -72,6 +72,10 @@ type RuntimeWorkspaceSnapshotForNormalization = RuntimeWorkspaceSnapshotLike & {
   trashedNodeIds: string[];
 };
 
+type RuntimeReadingProgressLike = {
+  activeNodeId?: unknown;
+};
+
 function toRuntimeWorkspaceSnapshotForNormalization(snapshot: unknown): RuntimeWorkspaceSnapshotForNormalization {
   return snapshot as RuntimeWorkspaceSnapshotForNormalization;
 }
@@ -100,6 +104,21 @@ function countSnapshotNodeViewStates(snapshot: unknown) {
     return 0;
   }
   return Object.keys(nodeViewById as Record<string, unknown>).length;
+}
+
+function resolveHydrateDocumentNodeId(
+  snapshot: RuntimeWorkspaceSnapshotLike & { trashedNodeIds: string[] },
+  readingProgress: RuntimeReadingProgressLike | null
+) {
+  const readingActiveNodeId = readingProgress?.activeNodeId;
+  if (
+    typeof readingActiveNodeId === 'string' &&
+    snapshot.nodesById[readingActiveNodeId] &&
+    !snapshot.trashedNodeIds.includes(readingActiveNodeId)
+  ) {
+    return readingActiveNodeId;
+  }
+  return snapshot.activeNodeId;
 }
 
 function replayPendingNodeSyncAfterHydrate(name: string) {
@@ -141,6 +160,9 @@ async function loadRuntimeWorkspaceState(name: string) {
   const mergedSnapshot = trimRuntimeWorkspaceSnapshot(
     mergeWorkspaceSnapshotWithReadingProgress(normalizedSnapshot, readingProgress)
   );
+  const hydrateDocumentNodeId = normalizedSnapshot
+    ? resolveHydrateDocumentNodeId(normalizedSnapshot, readingProgress as RuntimeReadingProgressLike | null)
+    : null;
   appendReadingPositionTraceLog({
     event: 'reading-progress.hydrate-merge',
     payload: {
@@ -164,7 +186,7 @@ async function loadRuntimeWorkspaceState(name: string) {
   if (!mergedSnapshot) {
     return null;
   }
-  return hydrateActiveNodeDocument(name, mergedSnapshot);
+  return hydrateActiveNodeDocument(name, mergedSnapshot, hydrateDocumentNodeId);
 }
 
 export async function getRuntimeWorkspaceState(name: string) {
