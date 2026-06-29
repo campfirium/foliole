@@ -14,8 +14,8 @@ function ReviewBreadcrumb(props: { items: CompanionReviewBreadcrumbItem[]; onSel
   }
 
   return (
-    <nav aria-label={t('companion.review.breadcrumb')} className="mb-4 px-6">
-      <div className="line-clamp-2 text-[12px] leading-5 text-companion-text-secondary">
+    <nav aria-label={t('companion.review.breadcrumb')} className="mb-2 px-6">
+      <div className="line-clamp-1 text-[12px] leading-5 text-companion-text-secondary">
         {props.items.map((item, index) => (
           <Fragment key={item.id}>
             <button
@@ -66,8 +66,8 @@ function ReviewSourceEyebrow(props: { items: CompanionReviewBreadcrumbItem[] }) 
     return null;
   }
   return (
-    <div className="mb-3 flex items-center gap-2 px-6 text-[11.5px] font-bold uppercase text-companion-accent">
-      <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-companion-accent" />
+    <div className="mb-2 flex items-center gap-2 px-6 text-[11.5px] font-semibold uppercase text-companion-accent">
+      <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-companion-accent" />
       <span className="line-clamp-1">{label}</span>
     </div>
   );
@@ -81,9 +81,9 @@ export function CompanionReviewCard(props: {
   const t = useTranslation();
   const breadcrumbItems = props.breadcrumbItems ?? [];
   return (
-    <section aria-label={t('companion.review.card')} className="bg-companion-content pb-4">
+    <section aria-label={t('companion.review.card')} className="bg-companion-content pb-4 pt-1">
       <ReviewBreadcrumb items={breadcrumbItems} {...definedProps({ onSelectItem: props.onSelectBreadcrumbItem })} />
-      <div className="pt-1">
+      <div>
         <ReviewSourceEyebrow items={breadcrumbItems} />
         <CompanionArticleDocument
           content={props.card.content}

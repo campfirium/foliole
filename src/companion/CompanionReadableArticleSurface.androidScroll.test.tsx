@@ -1,9 +1,10 @@
 import { render } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
 
 const readableArticleDocumentMock = vi.fn(() => <article>Readable body</article>);
+let chromeVisible = false;
 
 vi.mock('./CompanionReadableArticleDocument', () => ({
   ReadableArticleDocument: () => readableArticleDocumentMock()
@@ -46,7 +47,7 @@ vi.mock('./useImmersiveReadableArticleState', () => ({
     handleSelectOutlineItem: vi.fn(),
     handleSurfaceClick: vi.fn(),
     isActionsSheetOpen: false,
-    isChromeVisible: false,
+    isChromeVisible: chromeVisible,
     isOutlineOpen: false,
     openDocumentSearch: vi.fn(),
     openReadingSheet: null,
@@ -73,6 +74,10 @@ function createReadableArticle() {
 }
 
 describe('ImmersiveReadableArticle Android scrolling', () => {
+  beforeEach(() => {
+    chromeVisible = false;
+  });
+
   it('lets the immersive surface own article scrolling for old Android WebView touch gestures', () => {
     const { container } = render(
       <ImmersiveReadableArticle
@@ -86,5 +91,18 @@ describe('ImmersiveReadableArticle Android scrolling', () => {
     expect(surface).toHaveClass('fixed', 'top-0', 'right-0', 'bottom-0', 'left-0', 'overflow-y-auto');
     expect(surface).not.toHaveClass('inset-0');
     expect(readableArticleDocumentMock).toHaveBeenCalled();
+  });
+
+  it('reserves top space when the fixed reading chrome is visible', () => {
+    chromeVisible = true;
+    const { container } = render(
+      <ImmersiveReadableArticle
+        onExit={vi.fn()}
+        readableArticle={createReadableArticle()}
+        snapshot={null}
+      />
+    );
+
+    expect(container.querySelector('section')).toHaveClass('pt-36');
   });
 });

@@ -10,12 +10,12 @@ type TopBarAction = {
   onClick(): void;
 };
 
-function TopBarIconButton(props: TopBarAction) {
+function TopBarIconButton(props: TopBarAction & { density: 'compact' | 'normal' }) {
   const Icon = props.icon;
   return (
     <button
       aria-label={props.label}
-      className="inline-flex h-10 w-10 items-center justify-center rounded-md text-companion-text-secondary transition hover:bg-bg-subtle/60 hover:text-foreground"
+      className={`${props.density === 'compact' ? 'h-9 w-9' : 'h-10 w-10'} inline-flex items-center justify-center rounded-md text-companion-text-secondary transition hover:bg-bg-subtle/60 hover:text-foreground`}
       onClick={props.onClick}
       type="button"
     >
@@ -26,13 +26,14 @@ function TopBarIconButton(props: TopBarAction) {
 
 function TopBarBackRow(props: {
   backLabel?: string;
+  density: 'compact' | 'normal';
   hasTitleRow: boolean;
   onBack(): void;
   rightSlot?: ReactNode;
 }) {
   const t = useTranslation();
   return (
-    <div className={`flex min-h-10 items-center justify-between gap-3 ${props.hasTitleRow ? 'mb-3' : ''}`}>
+    <div className={`flex ${props.density === 'compact' ? 'min-h-9' : 'min-h-10'} items-center justify-between gap-3 ${props.hasTitleRow ? props.density === 'compact' ? 'mb-2' : 'mb-3' : ''}`}>
       <button aria-label={props.backLabel ?? t('companion.back')} className="inline-flex min-w-0 items-center gap-2 text-sm font-medium text-companion-text-secondary transition hover:text-foreground" onClick={props.onBack} type="button">
         <ArrowLeft className="h-6 w-6 shrink-0" />
       </button>
@@ -58,6 +59,7 @@ function useScrollElevation() {
 
 export function CompanionTopBar(props: {
   backLabel?: string;
+  density?: 'compact' | 'normal';
   leftAction?: TopBarAction;
   onBack?: () => void;
   rightAction?: TopBarAction;
@@ -67,8 +69,12 @@ export function CompanionTopBar(props: {
   visible: boolean;
 }) {
   const headerRef = useScrollElevation();
+  const density = props.density ?? 'normal';
+  const headerClassName = density === 'compact'
+    ? 'sticky top-0 z-surface -mx-6 bg-companion-base/95 px-6 pb-2 pt-3 [margin-left:-1.5rem] [margin-right:-1.5rem] [padding-left:1.5rem] [padding-right:1.5rem] backdrop-blur supports-[padding-top:max(0px)]:pt-[max(env(safe-area-inset-top),12px)] data-[elevated=true]:border-b data-[elevated=true]:border-companion-divider sm:-mx-7 sm:px-7 sm:[margin-left:-1.75rem] sm:[margin-right:-1.75rem] sm:[padding-left:1.75rem] sm:[padding-right:1.75rem]'
+    : 'sticky top-0 z-surface -mx-6 bg-companion-base/95 px-6 pb-3 pt-4 [margin-left:-1.5rem] [margin-right:-1.5rem] [padding-left:1.5rem] [padding-right:1.5rem] backdrop-blur supports-[padding-top:max(0px)]:pt-[max(env(safe-area-inset-top),16px)] data-[elevated=true]:border-b data-[elevated=true]:border-companion-divider sm:-mx-7 sm:px-7 sm:[margin-left:-1.75rem] sm:[margin-right:-1.75rem] sm:[padding-left:1.75rem] sm:[padding-right:1.75rem]';
 
-  const rightActionSlot = props.rightSlot ?? (props.rightAction ? <TopBarIconButton {...props.rightAction} /> : null);
+  const rightActionSlot = props.rightSlot ?? (props.rightAction ? <TopBarIconButton {...props.rightAction} density={density} /> : null);
   const rightSlotInBackRow = Boolean(props.onBack && (rightActionSlot || props.statusSlot));
   const hasTitleRow = Boolean(props.leftAction || (!rightSlotInBackRow && rightActionSlot) || (!props.onBack && props.statusSlot) || props.title);
   const hasChrome = Boolean(props.onBack || hasTitleRow);
@@ -78,13 +84,14 @@ export function CompanionTopBar(props: {
 
   return (
     <header
-      className="sticky top-0 z-surface -mx-6 bg-companion-base/95 px-6 pb-3 pt-4 [margin-left:-1.5rem] [margin-right:-1.5rem] [padding-left:1.5rem] [padding-right:1.5rem] backdrop-blur supports-[padding-top:max(0px)]:pt-[max(env(safe-area-inset-top),16px)] data-[elevated=true]:border-b data-[elevated=true]:border-companion-divider sm:-mx-7 sm:px-7 sm:[margin-left:-1.75rem] sm:[margin-right:-1.75rem] sm:[padding-left:1.75rem] sm:[padding-right:1.75rem]"
+      className={headerClassName}
       data-elevated="false"
       ref={headerRef}
     >
       {props.onBack ? (
         <TopBarBackRow
           hasTitleRow={hasTitleRow}
+          density={density}
           onBack={props.onBack}
           {...definedProps({
             backLabel: props.backLabel,
@@ -93,9 +100,9 @@ export function CompanionTopBar(props: {
         />
       ) : null}
       {hasTitleRow ? (
-        <div className="flex min-h-10 items-center justify-between gap-3">
+        <div className={`flex ${density === 'compact' ? 'min-h-9' : 'min-h-10'} items-center justify-between gap-3`}>
           <div className="flex w-10 justify-start">
-            {props.leftAction ? <TopBarIconButton {...props.leftAction} /> : null}
+            {props.leftAction ? <TopBarIconButton {...props.leftAction} density={density} /> : null}
           </div>
           {props.title ? (
             <h1 className="min-w-0 flex-1 truncate text-center text-2xl font-semibold leading-tight text-foreground">{props.title}</h1>

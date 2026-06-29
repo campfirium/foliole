@@ -131,6 +131,7 @@ function resolveReviewTopBar(
     return { backLabel: t('companion.review.learn'), onBack: onCloseOnlyReview, title: t('companion.review.onlyReview') };
   }
   return {
+    density: 'compact' as const,
     leftAction: { icon: X, label: t('companion.review.exit'), onClick: onExitReview },
     rightAction: { icon: ListFilter, label: t('companion.review.onlyReview'), onClick: onOpenOnlyReview }
   };

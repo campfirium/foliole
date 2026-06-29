@@ -15,7 +15,7 @@ function ReadingChromeButton(props: {
     <button
       aria-disabled={props.disabled ? 'true' : undefined}
       aria-label={props.label}
-      className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-companion-content/90 text-companion-text-secondary shadow-panel transition hover:bg-companion-subtle hover:text-foreground disabled:text-companion-text-tertiary"
+      className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-companion-content/95 text-companion-text-secondary ring-1 ring-companion-divider transition hover:bg-companion-subtle hover:text-foreground disabled:text-companion-text-tertiary"
       disabled={props.disabled}
       onClick={props.onClick}
       type="button"
@@ -34,7 +34,7 @@ export function ReadingChrome(props: {
   const t = useTranslation();
   return (
     <>
-      <div className="fixed inset-x-0 top-0 z-workspace-overlay bg-companion-base/95 px-4 pb-3 pt-3 supports-[padding-top:max(0px)]:pt-[max(env(safe-area-inset-top),12px)] backdrop-blur">
+      <div className="fixed inset-x-0 top-0 z-workspace-overlay bg-companion-base/95 px-4 pb-2 pt-20 supports-[padding-top:max(0px)]:pt-[max(env(safe-area-inset-top),80px)] backdrop-blur">
         <div className={`mx-auto flex max-w-[760px] items-center ${companionFlexRowGap2ClassName}`}>
           <ReadingChromeButton icon={X} label={t('companion.reading.exit')} onClick={props.onExit} />
           <ReadingChromeButton icon={ListTree} label={t('companion.reading.outline')} onClick={props.onOpenOutline} />
@@ -43,7 +43,7 @@ export function ReadingChrome(props: {
           </span>
         </div>
       </div>
-      <div className={`fixed right-5 bottom-5 supports-[bottom:max(0px)]:bottom-[max(env(safe-area-inset-bottom),20px)] z-workspace-overlay flex items-center ${companionFlexRowGap2ClassName}`}>
+      <div className={`fixed right-5 bottom-6 supports-[bottom:calc(0px)]:bottom-[calc(1.5rem+env(safe-area-inset-bottom))] z-workspace-overlay flex items-center ${companionFlexRowGap2ClassName}`}>
         <ReadingChromeButton icon={EllipsisVertical} label={t('companion.reading.more')} onClick={props.onOpenActions} />
       </div>
     </>

@@ -160,9 +160,10 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
     snapshot: props.snapshot
   });
   const reading = useImmersiveReadableArticleState(toolbar.closeSelectionToolbar);
+  const surfaceClassName = `fixed top-0 right-0 bottom-0 left-0 z-surface-raised overflow-y-auto bg-companion-base px-6 ${reading.isChromeVisible ? 'pt-36 supports-[padding-top:calc(0px)]:[padding-top:calc(env(safe-area-inset-top)+9rem)]' : 'pt-6 supports-[padding-top:max(0px)]:pt-[max(env(safe-area-inset-top),24px)]'} pb-20 supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),80px)] text-foreground sm:px-7`;
   return (
     <section
-      className="fixed top-0 right-0 bottom-0 left-0 z-surface-raised overflow-y-auto bg-companion-base px-6 pt-6 pb-20 supports-[padding-top:max(0px)]:pt-[max(env(safe-area-inset-top),24px)] supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),80px)] text-foreground sm:px-7"
+      className={surfaceClassName}
       onClick={reading.handleSurfaceClick}
       onPointerDown={toolbar.closeSelectionToolbar}
       onPointerMove={toolbar.closeSelectionToolbar}

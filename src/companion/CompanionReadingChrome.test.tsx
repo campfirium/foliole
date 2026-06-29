@@ -34,4 +34,13 @@ describe('ReadingChrome', () => {
     expect(screen.queryByRole('button', { name: 'Highlight' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Info' })).not.toBeInTheDocument();
   });
+
+  it('keeps reading controls compact and clear of Android safe areas', () => {
+    renderChrome();
+
+    expect(screen.getByRole('button', { name: 'Exit' }).closest('div')?.parentElement?.className).toContain('pt-20');
+    expect(screen.getByRole('button', { name: 'Exit' }).className).toContain('h-9');
+    expect(screen.getByRole('button', { name: 'Exit' }).className).toContain('ring-companion-divider');
+    expect(screen.getByRole('button', { name: 'More reading actions' }).parentElement?.className).toContain('bottom-[calc(1.5rem+env(safe-area-inset-bottom))]');
+  });
 });

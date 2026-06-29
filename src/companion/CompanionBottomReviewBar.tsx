@@ -27,7 +27,7 @@ export function CompanionBottomReviewBar(props: {
   const canGradeFsrs = props.itemKind === 'fsrs' && props.hasAnswer && props.isAnswerRevealed;
 
   return (
-    <footer className="fixed inset-x-0 bottom-0 z-surface-overlay border-t border-companion-divider bg-companion-content px-4 pt-3 pb-5 [padding-left:1rem] [padding-right:1rem] supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),20px)] shadow-panel">
+    <footer className="fixed inset-x-0 bottom-0 z-surface-overlay border-t border-companion-divider bg-companion-content px-4 pt-3 pb-6 [padding-left:1rem] [padding-right:1rem] supports-[padding-bottom:calc(0px)]:[padding-bottom:calc(1.5rem+env(safe-area-inset-bottom))] shadow-panel">
       <div className="mx-auto w-full max-w-[760px]">
         <ReviewActionBar
           ariaLabel={t('companion.review.toolbar')}

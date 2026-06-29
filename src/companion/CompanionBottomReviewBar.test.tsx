@@ -54,6 +54,12 @@ describe('CompanionBottomReviewBar', () => {
     expect(screen.getByRole('group', { name: 'Reading review actions' }).className).toContain('[&>*+*]:ml-2');
   });
 
+  it('keeps the fixed review footer above Android gesture navigation', () => {
+    const { container } = renderReviewBar('reading:topic-1');
+
+    expect(container.querySelector('footer')?.className).toContain('[padding-bottom:calc(1.5rem+env(safe-area-inset-bottom))]');
+  });
+
   it('does not show grade actions before a synced answer exists', () => {
     renderWithLocalization(
       <CompanionBottomReviewBar

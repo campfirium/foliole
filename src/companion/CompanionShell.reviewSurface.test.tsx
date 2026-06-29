@@ -197,7 +197,7 @@ describe('CompanionShell review surfaces', () => {
     }));
 
     const content = screen.getByTestId('companion-scroll-container').firstElementChild;
-    expect(content?.className).toContain('[padding-bottom:7rem]');
+    expect(content?.className).toContain('[padding-bottom:8rem]');
     expect(content?.className).not.toContain('[padding-bottom:4.5rem]');
   });
 });
