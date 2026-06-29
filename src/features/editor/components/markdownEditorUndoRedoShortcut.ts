@@ -2,11 +2,23 @@ import type { FormEvent, KeyboardEvent } from 'react';
 
 import type { MarkdownEditorProps } from './markdownEditorTypes';
 
+type EditorUndoRedoKeyEvent = Pick<
+  KeyboardEvent<HTMLDivElement> | globalThis.KeyboardEvent,
+  'altKey' | 'ctrlKey' | 'defaultPrevented' | 'key' | 'metaKey' | 'preventDefault' | 'shiftKey' | 'stopPropagation'
+> & {
+  nativeEvent?: Pick<KeyboardEvent<HTMLDivElement>['nativeEvent'], 'isComposing'>;
+  isComposing?: boolean;
+};
+
+function isComposingUndoRedoEvent(event: EditorUndoRedoKeyEvent) {
+  return event.nativeEvent?.isComposing === true || event.isComposing === true;
+}
+
 export function handleEditorUndoRedoKeyDown(
-  event: KeyboardEvent<HTMLDivElement>,
+  event: EditorUndoRedoKeyEvent,
   props: Pick<MarkdownEditorProps, 'onRedo' | 'onUndo'>
 ) {
-  if (event.nativeEvent.isComposing || event.altKey || (!event.ctrlKey && !event.metaKey)) {
+  if (event.defaultPrevented || isComposingUndoRedoEvent(event) || event.altKey || (!event.ctrlKey && !event.metaKey)) {
     return;
   }
   const key = event.key.toLowerCase();

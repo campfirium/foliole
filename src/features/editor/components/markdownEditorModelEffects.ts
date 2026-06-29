@@ -29,5 +29,10 @@ export function useMarkdownEditorModelEffects(args: {
     props.value,
     props.lineDiffDecorations
   );
-  useReviewEditorEscapeBlur({ enabled: props.reviewEscapeBlurEnabled === true, rootRef });
+  useReviewEditorEscapeBlur({
+    enabled: props.reviewEscapeBlurEnabled === true,
+    onRedo: props.onRedo,
+    onUndo: props.onUndo,
+    rootRef
+  });
 }

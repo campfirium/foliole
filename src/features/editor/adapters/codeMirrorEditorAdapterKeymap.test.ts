@@ -76,7 +76,12 @@ function createCompartment() {
   return { of: vi.fn((value) => value) };
 }
 
-function createEditorExtensionArgs(options: { initialContent: string; liveMarkdownEnabled?: boolean } = { initialContent: 'abc' }) {
+function createEditorExtensionArgs(options: {
+  initialContent: string;
+  liveMarkdownEnabled?: boolean;
+  onRedo?: () => boolean;
+  onUndo?: () => boolean;
+} = { initialContent: 'abc' }) {
   return {
     diffDecorationsCompartment: createCompartment() as never,
     hideTitleHeading: false,
@@ -110,10 +115,26 @@ describe('CodeMirror editor keymap', () => {
     const extensions = createCodeMirrorEditorExtensions(createEditorExtensionArgs());
 
     expect(mockKeymapOf).toHaveBeenCalledWith([
+      { key: 'Mod-z', run: expect.any(Function) },
+      { key: 'Mod-Shift-z', run: expect.any(Function) },
+      { key: 'Ctrl-y', run: expect.any(Function) },
       { key: 'Escape', run: expect.any(Function) },
       { key: 'Mod-a', run: expect.any(Function) }
     ]);
     expect(extensions).not.toContain('history-extension');
+  });
+
+  it('routes editor undo and redo before the default CodeMirror keymap', () => {
+    const onUndo = vi.fn(() => true);
+    const onRedo = vi.fn(() => true);
+    createCodeMirrorEditorExtensions(createEditorExtensionArgs({ initialContent: 'abc', onRedo, onUndo }));
+    const installedKeymap = mockKeymapOf.mock.calls.at(-1)?.[0] ?? [];
+
+    expect(installedKeymap[0]?.run()).toBe(true);
+    expect(installedKeymap[1]?.run()).toBe(true);
+    expect(installedKeymap[2]?.run()).toBe(true);
+    expect(onUndo).toHaveBeenCalledTimes(1);
+    expect(onRedo).toHaveBeenCalledTimes(2);
   });
 
   it('does not install CodeMirror comment toggling shortcut', () => {

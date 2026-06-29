@@ -7,6 +7,8 @@ import { createPaletteHelpCommandActions, type PaletteHelpCommandRunnerArgs } fr
 import { runResetImportDataCommand } from './appPaletteResetImportCommand';
 import { enterReviewModeSession, type StartStudyModeOptions } from './reviewModeSessionActions';
 
+const FRESH_STATE_COMMAND_IDS: ReadonlySet<string> = new Set([APP_COMMAND_IDS.undo, APP_COMMAND_IDS.redo]);
+
 interface PaletteCommandRunnerArgs extends PaletteHelpCommandRunnerArgs {
   clearSettingsRequest: () => void;
   closeTrashView: () => void;
@@ -202,7 +204,7 @@ export function createPaletteCommandRunner(args: PaletteCommandRunnerArgs) {
     });
 
   return (id: string) => {
-    const canRun = args.paletteItems.some((item) => item.id === id && item.enabled);
+    const canRun = FRESH_STATE_COMMAND_IDS.has(id) || args.paletteItems.some((item) => item.id === id && item.enabled);
     if (!canRun) {
       return;
     }

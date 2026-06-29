@@ -25,7 +25,7 @@ function createBeforeInputEvent(inputType: string, overrides: Partial<InputEvent
   } as unknown as FormEvent<HTMLDivElement>;
 }
 
-describe('markdown editor undo redo shortcuts', () => {
+function registerKeyDownShortcutTests() {
   it('routes Ctrl/Cmd+Z to undo and redo handlers', () => {
     const onUndo = vi.fn(() => true);
     const onRedo = vi.fn(() => true);
@@ -36,6 +36,22 @@ describe('markdown editor undo redo shortcuts', () => {
 
     expect(onUndo).toHaveBeenCalledTimes(1);
     expect(onRedo).toHaveBeenCalledTimes(2);
+  });
+
+  it('routes native Ctrl+Z before CodeMirror handles it', () => {
+    const onUndo = vi.fn(() => true);
+    const event = new KeyboardEvent('keydown', {
+      cancelable: true,
+      ctrlKey: true,
+      key: 'z'
+    });
+    const stopPropagation = vi.spyOn(event, 'stopPropagation');
+
+    handleEditorUndoRedoKeyDown(event, { onUndo });
+
+    expect(onUndo).toHaveBeenCalledTimes(1);
+    expect(event.defaultPrevented).toBe(true);
+    expect(stopPropagation).toHaveBeenCalledTimes(1);
   });
 
   it('ignores composition and non-editor-history shortcuts', () => {
@@ -52,7 +68,9 @@ describe('markdown editor undo redo shortcuts', () => {
     expect(onUndo).not.toHaveBeenCalled();
     expect(composing.preventDefault).not.toHaveBeenCalled();
   });
+}
 
+function registerBeforeInputShortcutTests() {
   it('routes native beforeinput history events to undo and redo handlers', () => {
     const onUndo = vi.fn(() => true);
     const onRedo = vi.fn(() => true);
@@ -90,4 +108,9 @@ describe('markdown editor undo redo shortcuts', () => {
     expect(onUndo).not.toHaveBeenCalled();
     expect(event.preventDefault).not.toHaveBeenCalled();
   });
+}
+
+describe('markdown editor undo redo shortcuts', () => {
+  registerKeyDownShortcutTests();
+  registerBeforeInputShortcutTests();
 });

@@ -4,6 +4,7 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { createClipboardImportHandler } from './workspaceDebugAttachmentImport';
 import { isWorkspaceDebugEnabledForRuntime } from './workspaceDebugBridgeGate';
+import { getEditorOperationHistory, type WorkspaceDebugOperationHistory } from './workspaceDebugHistory';
 import { forceUpdateDebugNodeContent } from './workspaceDebugNodeContent';
 import { completeDebugReviewSession } from './workspaceDebugReviewSession';
 import { createSeedNodeDebugApi, type SeedNodeDebugApi } from './workspaceDebugSeedApi';
@@ -26,6 +27,7 @@ interface WorkspaceDebugApi {
   deleteNode: (nodeId: string) => Promise<boolean>;
   deleteNodePermanently: (nodeId: string) => Promise<boolean>;
   getActiveNodeId: () => string | null;
+  getEditorOperationHistory: () => WorkspaceDebugOperationHistory;
   getNode: (nodeId: string) => {
     anchorKind: 'highlight' | 'cloze' | null;
     anchorLink: NodeAnchorLink | null;
@@ -165,10 +167,11 @@ function createNodeMutationDebugApi(): Pick<
 
 function createNodeReadDebugApi(): Pick<
   WorkspaceDebugApi,
-  'getActiveNodeId' | 'getNode' | 'getNodeViewState' | 'getReviewSession' | 'listNodes' | 'openNode' | 'setNodeViewState'
+  'getActiveNodeId' | 'getEditorOperationHistory' | 'getNode' | 'getNodeViewState' | 'getReviewSession' | 'listNodes' | 'openNode' | 'setNodeViewState'
 > {
   return {
     getActiveNodeId: () => useWorkspaceStore.getState().activeNodeId,
+    getEditorOperationHistory,
     getNode: getDebugNode,
     getNodeViewState: (nodeId) => useWorkspaceStore.getState().nodeViewById[nodeId] ?? null,
     getReviewSession: getDebugReviewSession,

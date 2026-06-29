@@ -111,7 +111,7 @@ describe('native app menu command state', () => {
     const items = (menuMock.applicationMenu?.items ?? []) as MockMenuItem[];
     expect(findMenuItem(items, 'app.undo')).toMatchObject({ accelerator: 'Control+Z', enabled: true });
     expect(findMenuItem(items, 'app.undo')).not.toHaveProperty('role');
-    expect(findMenuItem(items, 'app.redo')).toMatchObject({ enabled: false });
+    expect(findMenuItem(items, 'app.redo')).toMatchObject({ enabled: true });
     expect(findMenuItem(items, 'app.redo')).not.toHaveProperty('role');
   });
 });

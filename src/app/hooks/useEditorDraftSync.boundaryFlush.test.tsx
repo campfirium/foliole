@@ -51,6 +51,27 @@ function registerPendingDraftBoundaryTest() {
     expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha fresh boundary');
     expect(onCommit).not.toHaveBeenCalledWith('node-1', 'Alpha stale pending', expect.anything());
   });
+
+  it('can synchronously commit a pending draft before editor undo', () => {
+    const onCommit = vi.fn();
+    const onFinalizeNode = vi.fn();
+    const { result } = renderHook(() =>
+      useEditorDraftSync({
+        committedContent: 'Alpha body',
+        nodeId: 'node-1',
+        onCommit,
+        onFinalizeNode
+      })
+    );
+
+    act(() => {
+      result.current.handleEditorChange('Alpha undo candidate');
+      expect(result.current.flushDraftSynchronously()).toBe(true);
+    });
+
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha undo candidate', { publishLocal: false });
+    expect(onFinalizeNode).not.toHaveBeenCalled();
+  });
 }
 
 function registerNoEvidenceBoundaryTest() {

@@ -13,6 +13,7 @@ import {
   type PendingDraftCommit,
   type PendingTitleRefresh
 } from './useEditorDraftPendingCommit';
+import { createEditorDraftSyncApi } from './useEditorDraftSyncApi';
 import { useEditorDraftUserInputEvidence } from './useEditorDraftUserInputEvidence';
 
 interface UseEditorDraftSyncArgs {
@@ -227,5 +228,5 @@ export function useEditorDraftSync(args: UseEditorDraftSyncArgs) {
     setDraftState
   });
 
-  return { editorContent, flushDraft: () => flushDraft(false).flushed, handleEditorChange, handleEditorInput };
+  return createEditorDraftSyncApi({ editorContent, flushDraft, handleEditorChange, handleEditorInput });
 }

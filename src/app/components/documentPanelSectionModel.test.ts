@@ -108,4 +108,13 @@ describe('documentPanelSectionModel', () => {
     ).bodyProps;
     expect(withAnswer.editorContentPaddingBottom).toBeUndefined();
   });
+
+  it('preserves editor undo and redo handlers for the body editor', () => {
+    const onEditorUndo = () => true;
+    const onEditorRedo = () => true;
+    const bodyProps = getDocumentPanelView(buildProps({ onEditorRedo, onEditorUndo }), 'source', 860).bodyProps;
+
+    expect(bodyProps.onEditorUndo).toBe(onEditorUndo);
+    expect(bodyProps.onEditorRedo).toBe(onEditorRedo);
+  });
 });

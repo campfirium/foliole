@@ -2,9 +2,9 @@ import { startTransition, useCallback, useRef, type MutableRefObject } from 'rea
 
 import {
   isEditorInputDiagnosticEnabled,
-  logEditorInputDiagnostic,
+  logDraftFlushDiagnostic,
   readEditorInputDiagnosticTime
-} from '../../store/workspaceEditorInputDiagnostics';
+} from './useEditorDraftFlushDiagnostics';
 
 export interface PendingDraftCommit {
   committedContent: string | null;
@@ -28,6 +28,7 @@ interface FlushPendingDraftArgs {
   finalizeTitleRefresh: (nodeId?: string | null) => PendingTitleRefresh | null;
   pendingCommitRef: MutableRefObject<PendingDraftCommit | null>;
   pendingCommitStartedAtRef: MutableRefObject<number | null>;
+  syncCommit?: boolean;
   timerRef: MutableRefObject<number | null>;
 }
 
@@ -48,22 +49,6 @@ export function clearDraftTimer(timerRef: MutableRefObject<number | null>) {
     window.clearTimeout(timerRef.current);
     timerRef.current = null;
   }
-}
-
-function logDraftFlushDiagnostic(args: {
-  contentLength?: number;
-  finalizeTitle: boolean;
-  flushed: boolean;
-  flushStartedAt: number;
-  pendingAgeMs: number | null;
-}) {
-  logEditorInputDiagnostic('draft-flush', {
-    contentLength: args.contentLength,
-    finalizeTitle: args.finalizeTitle,
-    flushed: args.flushed,
-    pendingAgeMs: args.pendingAgeMs,
-    totalMs: readEditorInputDiagnosticTime() - args.flushStartedAt
-  });
 }
 
 function flushPendingDraft(args: FlushPendingDraftArgs): DraftFlushResult {
@@ -91,7 +76,7 @@ function flushPendingDraft(args: FlushPendingDraftArgs): DraftFlushResult {
   }
   const commitPendingDraft = (options?: { publishLocal?: boolean }) =>
     pendingCommit.onCommit(pendingCommit.nodeId, pendingCommit.content, options);
-  if (args.finalizeTitle) {
+  if (args.finalizeTitle || args.syncCommit === true) {
     commitPendingDraft({ publishLocal: false });
   } else {
     startTransition(() => commitPendingDraft({ publishLocal: false }));
@@ -107,7 +92,6 @@ function flushPendingDraft(args: FlushPendingDraftArgs): DraftFlushResult {
   }
   return { flushed: true, pendingTitle: pendingTitle ?? args.finalizeTitleRefresh(pendingCommit.nodeId) };
 }
-
 function clearPendingCommitForNode(args: {
   nodeId: string | null;
   pendingCommitRef: MutableRefObject<PendingDraftCommit | null>;
@@ -172,7 +156,6 @@ export function runPendingTitleRefresh(
     }
   }
 }
-
 export function usePendingDraftCommit(timerRef: MutableRefObject<number | null>) {
   const pendingCommitRef = useRef<PendingDraftCommit | null>(null);
   const pendingCommitStartedAtRef = useRef<number | null>(null);
@@ -185,12 +168,13 @@ export function usePendingDraftCommit(timerRef: MutableRefObject<number | null>)
     pendingTitleRefreshRef.current = null;
     return pendingTitle;
   }, []);
-  const flushDraft = useCallback((finalizeTitle = false): DraftFlushResult => {
+  const flushDraft = useCallback((finalizeTitle = false, options?: { syncCommit?: boolean }): DraftFlushResult => {
     return flushPendingDraft({
       finalizeTitle,
       finalizeTitleRefresh,
       pendingCommitRef,
       pendingCommitStartedAtRef,
+      ...(options?.syncCommit === undefined ? {} : { syncCommit: options.syncCommit }),
       timerRef
     });
   }, [finalizeTitleRefresh, timerRef]);
@@ -222,7 +206,6 @@ export function usePendingDraftCommit(timerRef: MutableRefObject<number | null>)
     }
     return { flushed: false, pendingTitle: null };
   }, [finalizeTitleRefresh, flushDraft]);
-
   return {
     clearPendingDraftCommit,
     flushDraft,

@@ -29,7 +29,9 @@ function syncEditorAdapterInputRefs(
   refs.onOpenNodeLinkRef.current = args.onOpenNodeLink;
   refs.onPreviewNodeLinkRef.current = args.onPreviewNodeLink;
   refs.onPastedAnchorsRef.current = args.onPastedAnchors;
+  refs.onRedoRef.current = args.onRedo;
   refs.onReadyRef.current = args.onReady;
+  refs.onUndoRef.current = args.onUndo;
   refs.hideTitleHeadingRef.current = args.hideTitleHeading;
   refs.readOnlyRef.current = args.readOnly;
   refs.trailingDividerRef.current = args.trailingDivider;
@@ -48,7 +50,9 @@ function useEditorAdapterInputs(args: {
   onOpenNodeLink: ((title: string) => void) | undefined;
   onPreviewNodeLink: ((request: EditorNodeLinkPreviewRequest | null) => void) | undefined;
   onPastedAnchors: MarkdownEditorProps['onPastedAnchors'];
+  onRedo: MarkdownEditorProps['onRedo'];
   onReady: ((adapter: EditorAdapter | null) => void) | undefined;
+  onUndo: MarkdownEditorProps['onUndo'];
   readOnly: boolean | undefined;
   textAnchorDecorations: MarkdownEditorProps['textAnchorDecorations'];
   trailingDivider: boolean | undefined;
@@ -63,7 +67,9 @@ function useEditorAdapterInputs(args: {
   const onOpenNodeLinkRef = useRef(args.onOpenNodeLink);
   const onPreviewNodeLinkRef = useRef(args.onPreviewNodeLink);
   const onPastedAnchorsRef = useRef(args.onPastedAnchors);
+  const onRedoRef = useRef(args.onRedo);
   const onReadyRef = useRef(args.onReady);
+  const onUndoRef = useRef(args.onUndo);
   const hideTitleHeadingRef = useRef(args.hideTitleHeading);
   const readOnlyRef = useRef(args.readOnly);
   const trailingDividerRef = useRef(args.trailingDivider);
@@ -82,7 +88,9 @@ function useEditorAdapterInputs(args: {
     onOpenNodeLinkRef,
     onPreviewNodeLinkRef,
     onPastedAnchorsRef,
+    onRedoRef,
     onReadyRef,
+    onUndoRef,
     readOnlyRef,
     resolvedTextAnchorDecorations,
     textAnchorDecorationsRef,
@@ -119,9 +127,11 @@ function useEditorAdapterLifecycle(args: {
       onOpenNodeLink: (title) => inputs.onOpenNodeLinkRef.current?.(title),
       onPreviewNodeLink: (request) => inputs.onPreviewNodeLinkRef.current?.(request),
       onPastedAnchors: (payload) => inputs.onPastedAnchorsRef.current?.(payload),
+      onRedo: () => inputs.onRedoRef.current?.() ?? false,
       readOnly: inputs.readOnlyRef.current,
       textAnchorDecorations: inputs.textAnchorDecorationsRef.current,
-      trailingDivider: inputs.trailingDividerRef.current
+      trailingDivider: inputs.trailingDividerRef.current,
+      onUndo: () => inputs.onUndoRef.current?.() ?? false
     });
     adapterRef.current = adapter;
     if (debugId) {
@@ -156,6 +166,8 @@ export function useEditorAdapter(
   onOpenNodeLink: ((title: string) => void) | undefined,
   onPreviewNodeLink: ((request: EditorNodeLinkPreviewRequest | null) => void) | undefined,
   onPastedAnchors: MarkdownEditorProps['onPastedAnchors'],
+  onRedo: MarkdownEditorProps['onRedo'],
+  onUndo: MarkdownEditorProps['onUndo'],
   readOnly: boolean | undefined,
   trailingDivider: boolean | undefined
 ) {
@@ -172,7 +184,9 @@ export function useEditorAdapter(
     onOpenNodeLink,
     onPreviewNodeLink,
     onPastedAnchors,
+    onRedo,
     onReady,
+    onUndo,
     readOnly,
     textAnchorDecorations,
     trailingDivider

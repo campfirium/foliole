@@ -187,7 +187,10 @@ export function createPaletteRunnerArgs(args: {
     createTopic: createDirectNodeCommand('topic', args),
     ...createSelectionAnnotationPaletteActions(args),
     ...createPaletteReviewActions(args),
-    ...createPaletteHistoryActions(args),
+    ...createPaletteHistoryActions({
+      flushPendingEditorDraft: args.runtime.flushPendingEditorDraft,
+      ws: args.ws
+    }),
     ...createPaletteStudyActions(args),
     enterPriorityMode: args.layoutProps.document.onEnterPriorityQuickSet,
     exportCurrentArticle: createExportCurrentArticleCommand(args),

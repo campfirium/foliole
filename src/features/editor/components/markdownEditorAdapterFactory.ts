@@ -19,6 +19,8 @@ export function createMarkdownEditorAdapter(args: {
   onOpenNodeLink: ((title: string) => void) | undefined;
   onPreviewNodeLink: ((request: EditorNodeLinkPreviewRequest | null) => void) | undefined;
   onPastedAnchors: MarkdownEditorProps['onPastedAnchors'];
+  onRedo: MarkdownEditorProps['onRedo'];
+  onUndo: MarkdownEditorProps['onUndo'];
   readOnly: boolean | undefined;
   textAnchorDecorations: readonly EditorTextAnchorDecoration[];
   trailingDivider: boolean | undefined;
@@ -35,6 +37,8 @@ export function createMarkdownEditorAdapter(args: {
     ...(args.onOpenNodeLink ? { onOpenNodeLink: args.onOpenNodeLink } : {}),
     ...(args.onPreviewNodeLink ? { onPreviewNodeLink: args.onPreviewNodeLink } : {}),
     ...(args.onPastedAnchors ? { onPastedAnchors: args.onPastedAnchors } : {}),
+    ...(args.onRedo ? { onRedo: args.onRedo } : {}),
+    ...(args.onUndo ? { onUndo: args.onUndo } : {}),
     ...(args.readOnly !== undefined ? { readOnly: args.readOnly } : {}),
     textAnchorDecorations: args.textAnchorDecorations,
     ...(args.trailingDivider !== undefined ? { trailingDivider: args.trailingDivider } : {})

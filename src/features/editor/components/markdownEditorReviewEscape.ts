@@ -74,6 +74,8 @@ function blurActiveEditorForNativeEscape(enabled: boolean) {
 
 export function useReviewEditorEscapeBlur(args: {
   enabled: boolean;
+  onRedo: MarkdownEditorProps['onRedo'];
+  onUndo: MarkdownEditorProps['onUndo'];
   rootRef: MutableRefObject<HTMLDivElement | null>;
 }) {
   useEffect(() => {
@@ -84,9 +86,13 @@ export function useReviewEditorEscapeBlur(args: {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (args.enabled) {
         blurReviewEditorIfEscape(event);
-        return;
+      } else {
+        blurActiveMarkdownEditorIfEscape(event);
       }
-      blurActiveMarkdownEditorIfEscape(event);
+      handleEditorUndoRedoKeyDown(event, {
+        ...(args.onRedo ? { onRedo: args.onRedo } : {}),
+        ...(args.onUndo ? { onUndo: args.onUndo } : {})
+      });
     };
     const handlePriorityEscape = (event: KeyboardEvent) => {
       if (args.enabled) {
@@ -109,7 +115,7 @@ export function useReviewEditorEscapeBlur(args: {
       unlistenPriorityEscape();
       unlistenNativeEscape();
     };
-  }, [args.enabled, args.rootRef]);
+  }, [args.enabled, args.onRedo, args.onUndo, args.rootRef]);
 }
 
 export function handleMarkdownEditorKeyDownCapture(

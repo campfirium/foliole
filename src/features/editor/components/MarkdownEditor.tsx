@@ -146,6 +146,8 @@ function useMarkdownEditorModel(props: MarkdownEditorProps) {
     props.onOpenNodeLink,
     props.onPreviewNodeLink,
     props.onPastedAnchors,
+    props.onRedo,
+    props.onUndo,
     props.readOnly,
     props.trailingDivider
   );

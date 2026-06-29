@@ -20,6 +20,23 @@ import { markdownInputAssist } from './markdownInputAssist';
 
 const folioleDefaultKeymap = defaultKeymap.filter((binding) => binding.run !== toggleComment);
 
+function createEditorUndoRedoKeymap(options: CodeMirrorEditorAdapterOptions) {
+  return [
+    {
+      key: 'Mod-z',
+      run: () => options.onUndo?.() ?? false
+    },
+    {
+      key: 'Mod-Shift-z',
+      run: () => options.onRedo?.() ?? false
+    },
+    {
+      key: 'Ctrl-y',
+      run: () => options.onRedo?.() ?? false
+    }
+  ];
+}
+
 function createEditorUpdateListener(args: {
   nodeId: string | null;
   onDocChanged: (content: string | null, meta: EditorDocumentChangeMeta) => void;
@@ -78,7 +95,7 @@ export function createCodeMirrorEditorExtensions(args: {
   return [
     markdown({ base: markdownLanguage, extensions: folioleMarkdownLanguageExtensions }),
     EditorState.allowMultipleSelections.of(true),
-    keymap.of([...escapeBlurKeymap, ...folioleDefaultKeymap]),
+    keymap.of([...createEditorUndoRedoKeymap(args.options), ...escapeBlurKeymap, ...folioleDefaultKeymap]),
     args.readOnlyCompartment.of(createReadOnlyExtensions(args.options.readOnly === true)),
     EditorView.lineWrapping,
     highlightActiveLine(),

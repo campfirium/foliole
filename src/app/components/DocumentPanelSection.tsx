@@ -1,8 +1,7 @@
-import { useCallback, useMemo, useRef } from 'react';
+import { useMemo, useRef } from 'react';
 
 import { collectDocumentTextAnchorDecorations } from '../../features/editor/model/documentTextAnchorDecorations';
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import { isProtectedRootNode } from '../../features/nodes/model/specialNodes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { definedProps } from '../../shared/lib/definedProps';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
@@ -10,7 +9,6 @@ import {
   recordComponentRender
 } from '../../shared/platform/performanceDiagnosticsProbe';
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
-import { useEditorDraftSync } from '../hooks/useEditorDraftSync';
 
 import { useDocumentPanelSectionDiagnostic } from './documentPanelSectionDiagnostic';
 import { getDocumentPanelView } from './documentPanelSectionModel';
@@ -25,6 +23,7 @@ import {
 import type { DocumentPanelSectionProps } from './documentPanelSectionTypes';
 import { NodeLinkHoverPreviewPanel } from './NodeLinkHoverPreviewPanel';
 import { useDocumentPanelDocumentRetry } from './useDocumentPanelDocumentRetry';
+import { useDocumentPanelDraftProps } from './useDocumentPanelDraftProps';
 import { useDocumentPanelFormulaClozePresentation } from './useDocumentPanelFormulaClozePresentation';
 import { useDocumentPanelImageClozePresentation } from './useDocumentPanelImageClozePresentation';
 import { useDocumentPanelPerformanceMarkers } from './useDocumentPanelPerformanceMarkers';
@@ -130,53 +129,6 @@ function useDocumentPanelSectionModel(props: DocumentPanelSectionProps) {
     handleSourceUpdatePanelOpenChange,
     sourceUpdatePreview: sourceUpdatePreview.value
   };
-}
-
-function useDocumentPanelDraftProps(props: DocumentPanelSectionProps) {
-  const draftNodeId = useMemo(() => {
-    if (props.editorNodeId) {
-      return props.editorNodeId;
-    }
-    const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
-    if (!activeNode || props.trashedNodeIds.includes(activeNode.id) || isProtectedRootNode(activeNode)) {
-      return null;
-    }
-    return activeNode.id;
-  }, [props.activeNodeId, props.editorNodeId, props.nodesById, props.trashedNodeIds]);
-  const commitEditorContent = useCallback((nodeId: string | null, content: string, options?: { publishLocal?: boolean }) => {
-    if (nodeId) {
-      props.onNodeContentChange(nodeId, content, options);
-      return;
-    }
-    props.onEditorChange(content);
-  }, [props.onEditorChange, props.onNodeContentChange]);
-  const editorDraft = useEditorDraftSync({
-    committedContent: props.editorContent,
-    nodeId: draftNodeId,
-    onCommit: commitEditorContent,
-    ...(props.onFinalizeNodeTitle ? { onFinalizeNode: props.onFinalizeNodeTitle } : {}),
-    ...(props.onRegisterEditorDraftFlush ? { onRegisterFlush: props.onRegisterEditorDraftFlush } : {})
-  });
-  const handleEditorUndo = useCallback(() => {
-    editorDraft.flushDraft();
-    return props.onEditorUndo?.() ?? false;
-  }, [editorDraft.flushDraft, props.onEditorUndo]);
-  const handleEditorRedo = useCallback(() => {
-    editorDraft.flushDraft();
-    return props.onEditorRedo?.() ?? false;
-  }, [editorDraft.flushDraft, props.onEditorRedo]);
-  return useMemo(
-    () => ({
-      ...props,
-      editorContent: editorDraft.editorContent,
-      editorNodeId: draftNodeId,
-      onEditorChange: editorDraft.handleEditorChange,
-      onEditorInput: editorDraft.handleEditorInput,
-      onEditorUndo: handleEditorUndo,
-      onEditorRedo: handleEditorRedo
-    }),
-    [draftNodeId, editorDraft.editorContent, editorDraft.handleEditorChange, editorDraft.handleEditorInput, handleEditorRedo, handleEditorUndo, props]
-  );
 }
 
 export function DocumentPanelSection(props: DocumentPanelSectionProps) {

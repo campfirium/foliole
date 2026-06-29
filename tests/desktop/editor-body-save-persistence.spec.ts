@@ -60,6 +60,11 @@ async function collectActiveEditorState(windowPage: WindowPage) {
   }, SOURCE_ID);
 }
 
+async function collectEditorOperationHistory(windowPage: WindowPage) {
+  return windowPage.evaluate(() =>
+    globalThis.window?.__folioleWorkspaceDebug?.getEditorOperationHistory?.() ?? null);
+}
+
 async function pasteAtEnd(windowPage: WindowPage, text: string) {
   await pasteAtPosition(windowPage, text, BASE_CONTENT.length);
 }
@@ -143,13 +148,15 @@ test('persists a long pasted body after immediate node switch and relaunch', asy
   }
 });
 
-// SKIP: editor undo shortcut does not currently revert a committed body edit in hidden native; tracked by undo/redo follow-up | 2026-06-27 | revive: fix editor history shortcut path
-test.skip('keeps redo available after undoing a committed body edit', async ({ desktopWindow }) => {
+test('keeps redo available after undoing a committed body edit', async ({ desktopWindow }) => {
   await expectWorkspaceShell(desktopWindow);
   await seedSaveWorkspace(desktopWindow);
 
   await pasteAtEnd(desktopWindow, '\nRedo candidate');
   await desktopWindow.waitForTimeout(1500);
+  await expect.poll(() => collectEditorOperationHistory(desktopWindow)).toMatchObject({
+    undoStack: [expect.objectContaining({ nodeId: SOURCE_ID, type: 'text.edit' })]
+  });
   await expect
     .poll(() =>
       desktopWindow.evaluate((position) =>
@@ -157,7 +164,7 @@ test.skip('keeps redo available after undoing a committed body edit', async ({ d
       `${BASE_CONTENT}\nRedo candidate`.length)
     )
     .toBe(true);
-  await desktopWindow.keyboard.press('Control+Z');
+  await desktopWindow.locator('.prompt-editor-host .cm-content').press('Control+Z');
   await expect.poll(() => collectActiveEditorState(desktopWindow)).toMatchObject({
     activeNodeId: SOURCE_ID,
     editorContent: BASE_CONTENT,
@@ -171,7 +178,7 @@ test.skip('keeps redo available after undoing a committed body edit', async ({ d
       BASE_CONTENT.length)
     )
     .toBe(true);
-  await desktopWindow.keyboard.press('Control+Shift+Z');
+  await desktopWindow.locator('.prompt-editor-host .cm-content').press('Control+Shift+Z');
   await expect.poll(() => collectActiveEditorState(desktopWindow)).toMatchObject({
     activeNodeId: SOURCE_ID,
     editorContent: `${BASE_CONTENT}\nRedo candidate`,

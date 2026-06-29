@@ -28,11 +28,15 @@ const defaultMenuState: MenuState = {
   enabledSet: null
 };
 
+function shouldAlwaysDispatchCommand(commandId: string) {
+  return commandId === 'app.undo' || commandId === 'app.redo';
+}
+
 function commandItem(label: string, commandId: string, state: MenuState): MenuItemConstructorOptions {
   const accelerator = state.acceleratorsById.get(commandId);
   return {
     ...(accelerator ? { accelerator } : {}),
-    enabled: state.enabledSet ? state.enabledSet.has(commandId) : true,
+    enabled: state.enabledSet ? shouldAlwaysDispatchCommand(commandId) || state.enabledSet.has(commandId) : true,
     id: commandId,
     label,
     click: () => {
