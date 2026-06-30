@@ -4,6 +4,7 @@ import {
   resolveFullTextSearchIndexStrategy,
   type FullTextSearchIndexStrategy
 } from '../../lib/core/database/fullTextSearchIndexStrategy.js';
+import { assertLibraryHomeMigrationCanOpenDatabase } from '../ipc/libraryPathMigrationRuntime.js';
 
 import { resolveDatabasePath } from './connection.js';
 import { resolveExternalSearchDatabasePath } from './databaseFilePaths.js';
@@ -30,6 +31,7 @@ function readExternalSearchIndexStrategy() {
 }
 
 export function openExternalSearchCacheDatabase() {
+  assertLibraryHomeMigrationCanOpenDatabase(resolveDatabasePath());
   if (cachedCacheDb) {
     ensureExternalSearchCacheStrategy(readExternalSearchIndexStrategy());
     return cachedCacheDb;

@@ -18,11 +18,17 @@ import { assertNoUnsafePathOverlap } from '../libraryPathSafety.js';
 import {
   readLegacyLibraryPathOverrides,
   resolveBootstrapLibraryHome,
-  resolveBootstrapLibraryPaths,
+  resolveDefaultBootstrapLibraryPaths,
   resolveExplicitLibraryHome,
-  saveCurrentLibraryHome
+  saveCurrentLibraryHome,
+  saveDefaultLibraryHome
 } from './libraryPathBootstrap.js';
 import { migrateLibraryPathChange } from './libraryPathMigration.js';
+import {
+  allowLibraryHomeDatabaseRestore,
+  beginLibraryHomeMigration,
+  endLibraryHomeMigration
+} from './libraryPathMigrationRuntime.js';
 import { loadAppSettingsState } from './storage.js';
 
 const LIBRARY_PATH_SETTINGS_KEY = 'library_path_settings';
@@ -93,11 +99,17 @@ function saveStoredLibraryPathOverrides(overrides: LibraryPathOverrides) {
   saveJsonSetting(LIBRARY_PATH_SETTINGS_KEY, overrides, overrides.updated_at);
 }
 
-function toNativeLibraryPaths(overrides: LibraryPathOverrides): NativeLibraryPaths {
-  const bootstrapLibraryHome = resolveBootstrapLibraryPaths().library_home;
-  return resolveLibraryPaths(bootstrapLibraryHome, {
+function toNativeLibraryPaths(
+  overrides: LibraryPathOverrides,
+  options: { preferDefaultLibraryHome?: boolean } = {}
+): NativeLibraryPaths {
+  const defaultLibraryHome = resolveDefaultBootstrapLibraryPaths().library_home;
+  const fallbackLibraryHome = options.preferDefaultLibraryHome
+    ? defaultLibraryHome
+    : resolveBootstrapLibraryHome() ?? defaultLibraryHome;
+  return resolveLibraryPaths(defaultLibraryHome, {
     ...overrides,
-    library_home: normalizeLibraryPath(overrides.library_home) ?? resolveBootstrapLibraryHome() ?? bootstrapLibraryHome
+    library_home: normalizeLibraryPath(overrides.library_home) ?? fallbackLibraryHome
   });
 }
 
@@ -152,8 +164,14 @@ export async function updateLibraryPathSetting(
   if (args.location !== 'library_home' && resolveExplicitLibraryHome()) {
     throw new Error('library path overrides are disabled for explicit --library-home launches');
   }
+  const isRestoringDefaultLibraryHome = args.location === 'library_home' && args.path === null;
+  if (isRestoringDefaultLibraryHome) {
+    allowLibraryHomeDatabaseRestore(resolveDefaultBootstrapLibraryPaths().database_path);
+  }
   const currentOverrides = await loadStoredLibraryPathOverrides();
   const location = args.location;
+  const updatedLibraryHome = location === 'library_home' ? normalizeUpdatedLibraryPath(args) : null;
+  const shouldRestoreDefaultLibraryHome = location === 'library_home' && updatedLibraryHome === null;
   const nextOverrides: LibraryPathOverrides = {
     ...currentOverrides,
     ...(location === 'library_home' ? {} : { [location]: normalizeUpdatedLibraryPath(args) }),
@@ -161,12 +179,14 @@ export async function updateLibraryPathSetting(
   };
   const migrationNextOverrides =
     location === 'library_home'
-      ? { ...nextOverrides, library_home: normalizeUpdatedLibraryPath(args) }
+      ? { ...nextOverrides, library_home: updatedLibraryHome }
       : nextOverrides;
   const currentPaths = toNativeLibraryPaths(currentOverrides);
-  const nextPaths = toNativeLibraryPaths(migrationNextOverrides);
+  const nextPaths = toNativeLibraryPaths(migrationNextOverrides, {
+    preferDefaultLibraryHome: shouldRestoreDefaultLibraryHome
+  });
   assertSafeLibraryPathLayout(nextPaths);
-  await migrateLibraryPathChange({
+  const applyMigration = async () => migrateLibraryPathChange({
     currentOverrides,
     currentPaths,
     ...(args.confirm_existing_library_home === true ? { confirmExistingLibraryHome: true } : {}),
@@ -175,10 +195,22 @@ export async function updateLibraryPathSetting(
     nextPaths
   });
   if (location === 'library_home') {
-    saveCurrentLibraryHome(nextPaths.library_home);
-  } else {
-    saveStoredLibraryPathOverrides(nextOverrides);
+    beginLibraryHomeMigration();
+    try {
+      await applyMigration();
+      if (shouldRestoreDefaultLibraryHome) {
+        saveDefaultLibraryHome();
+      } else {
+        saveCurrentLibraryHome(nextPaths.library_home);
+      }
+      ensureLibraryPathLayout(nextPaths);
+      return nextPaths;
+    } finally {
+      endLibraryHomeMigration();
+    }
   }
+  await applyMigration();
+  saveStoredLibraryPathOverrides(nextOverrides);
   ensureLibraryPathLayout(nextPaths);
   return nextPaths;
 }

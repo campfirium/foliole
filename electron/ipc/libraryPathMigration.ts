@@ -1,91 +1,24 @@
-import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
 import type { LibraryPathOverrides, ResolvedLibraryPaths } from '../../lib/platform/libraryPaths.js';
 import { closeDatabaseConnection } from '../database/connection.js';
+import { closeExternalSearchCacheDatabase } from '../database/externalSearchCacheDatabase.js';
 
-async function pathExists(targetPath: string) {
-  try {
-    await fs.access(targetPath);
-    return true;
-  } catch {
-    return false;
-  }
+import { moveDirectoryContents, pathExists } from './libraryPathFileMove.js';
+import {
+  beginLibraryHomeMigration,
+  endLibraryHomeMigration,
+  markLibraryHomeDatabaseMoved
+} from './libraryPathMigrationRuntime.js';
+
+function releaseLibraryMigrationDatabaseHandles() {
+  closeExternalSearchCacheDatabase();
+  closeDatabaseConnection();
 }
 
-async function moveFile(sourcePath: string, targetPath: string) {
-  if (sourcePath === targetPath) {
-    return;
-  }
-
-  await fs.mkdir(path.dirname(targetPath), { recursive: true });
-  if (!(await pathExists(targetPath))) {
-    try {
-      await fs.rename(sourcePath, targetPath);
-      return;
-    } catch (error) {
-      if (!isRecoverableMoveError(error)) {
-        throw error;
-      }
-    }
-  }
-
-  if (await pathExists(targetPath)) {
-    const [sourceBytes, targetBytes] = await Promise.all([fs.readFile(sourcePath), fs.readFile(targetPath)]);
-    if (!sourceBytes.equals(targetBytes)) {
-      throw new Error(`library path move conflict: ${targetPath}`);
-    }
-    await fs.unlink(sourcePath);
-    return;
-  }
-
-  await fs.copyFile(sourcePath, targetPath);
-  await fs.unlink(sourcePath);
-}
-
-function isRecoverableMoveError(error: unknown) {
-  if (!error || typeof error !== 'object') {
-    return false;
-  }
-
-  const code = 'code' in error ? error.code : null;
-  return code === 'EXDEV' || code === 'EEXIST' || code === 'ENOTEMPTY' || code === 'EACCES' || code === 'EPERM';
-}
-
-async function moveDirectoryContents(sourcePath: string, targetPath: string) {
-  if (sourcePath === targetPath) {
-    return;
-  }
-
-  if (!(await pathExists(sourcePath))) {
-    await fs.mkdir(targetPath, { recursive: true });
-    return;
-  }
-
-  await fs.mkdir(path.dirname(targetPath), { recursive: true });
-  if (!(await pathExists(targetPath))) {
-    try {
-      await fs.rename(sourcePath, targetPath);
-      return;
-    } catch (error) {
-      if (!isRecoverableMoveError(error)) {
-        throw error;
-      }
-    }
-  }
-
-  await fs.mkdir(targetPath, { recursive: true });
-  const entries = await fs.readdir(sourcePath, { withFileTypes: true });
-  for (const entry of entries) {
-    const currentSourcePath = path.join(sourcePath, entry.name);
-    const currentTargetPath = path.join(targetPath, entry.name);
-    if (entry.isDirectory()) {
-      await moveDirectoryContents(currentSourcePath, currentTargetPath);
-      continue;
-    }
-    await moveFile(currentSourcePath, currentTargetPath);
-  }
-  await fs.rm(sourcePath, { recursive: true, force: true });
+async function pauseExternalSearchRefresh() {
+  const runtime = await import('../externalSearchBackgroundRefreshRuntime.js');
+  await runtime.pauseExternalSearchBackgroundRefresh();
 }
 
 function isPathInside(parentPath: string, candidatePath: string) {
@@ -120,6 +53,39 @@ async function assertExistingLibraryConfirmed(args: {
     (await pathExists(args.nextPaths.database_path))
   ) {
     throw new Error('existing_library_home_requires_confirmation');
+  }
+}
+
+async function migrateLibraryHome(args: {
+  confirmExistingLibraryHome: boolean;
+  currentOverrides: LibraryPathOverrides;
+  currentPaths: ResolvedLibraryPaths;
+  nextOverrides: LibraryPathOverrides;
+  nextPaths: ResolvedLibraryPaths;
+}) {
+  beginLibraryHomeMigration();
+  try {
+    await pauseExternalSearchRefresh();
+    releaseLibraryMigrationDatabaseHandles();
+    await assertExistingLibraryConfirmed({ ...args, location: 'library_home' });
+    if (await shouldAdoptExistingLibrary({ ...args, location: 'library_home' })) {
+      return;
+    }
+
+    await moveDirectoryContents(args.currentPaths.data_dir, args.nextPaths.data_dir, releaseLibraryMigrationDatabaseHandles);
+    markLibraryHomeDatabaseMoved(args.currentPaths.database_path);
+
+    if (shouldMoveDefaultScopedPath(args.currentOverrides.assets_dir, args.nextOverrides.assets_dir)) {
+      await moveDirectoryContents(args.currentPaths.assets_dir, args.nextPaths.assets_dir, releaseLibraryMigrationDatabaseHandles);
+    }
+    if (shouldMoveDefaultScopedPath(args.currentOverrides.inbox, args.nextOverrides.inbox)) {
+      await moveDirectoryContents(args.currentPaths.inbox, args.nextPaths.inbox, releaseLibraryMigrationDatabaseHandles);
+    }
+    if (shouldMoveDefaultScopedPath(args.currentOverrides.mirror, args.nextOverrides.mirror)) {
+      await moveDirectoryContents(args.currentPaths.mirror, args.nextPaths.mirror, releaseLibraryMigrationDatabaseHandles);
+    }
+  } finally {
+    endLibraryHomeMigration();
   }
 }
 
@@ -162,29 +128,11 @@ export async function migrateLibraryPathChange(args: {
     return;
   }
 
-  closeDatabaseConnection();
-  await assertExistingLibraryConfirmed({
+  await migrateLibraryHome({
     confirmExistingLibraryHome: shouldConfirmExistingLibraryHome,
-    location,
+    currentOverrides,
+    currentPaths,
+    nextOverrides,
     nextPaths
   });
-  if (await shouldAdoptExistingLibrary({
-    confirmExistingLibraryHome: shouldConfirmExistingLibraryHome,
-    location,
-    nextPaths
-  })) {
-    return;
-  }
-
-  await moveDirectoryContents(currentPaths.data_dir, nextPaths.data_dir);
-
-  if (shouldMoveDefaultScopedPath(currentOverrides.assets_dir, nextOverrides.assets_dir)) {
-    await moveDirectoryContents(currentPaths.assets_dir, nextPaths.assets_dir);
-  }
-  if (shouldMoveDefaultScopedPath(currentOverrides.inbox, nextOverrides.inbox)) {
-    await moveDirectoryContents(currentPaths.inbox, nextPaths.inbox);
-  }
-  if (shouldMoveDefaultScopedPath(currentOverrides.mirror, nextOverrides.mirror)) {
-    await moveDirectoryContents(currentPaths.mirror, nextPaths.mirror);
-  }
 }

@@ -88,6 +88,42 @@ it('runs an immediate refresh when folders change', async () => {
   controller.stop();
 });
 
+it('pauses pending startup refresh and waits for in-flight work', async () => {
+  vi.useFakeTimers();
+  const rebuildResolvers: Array<() => void> = [];
+  const rebuild = vi.fn().mockImplementation(
+    () =>
+      new Promise<void>((resolve) => {
+        rebuildResolvers.push(resolve);
+      })
+  );
+  const controller = createController({
+    readFolders: () => [{ id: 'folder-1' }],
+    rebuild
+  });
+
+  controller.start();
+  await controller.pause();
+  await advanceStartupDelay();
+  expect(rebuild).not.toHaveBeenCalled();
+
+  controller.refreshNow();
+  await Promise.resolve();
+  expect(rebuild).toHaveBeenCalledTimes(1);
+  const pausePromise = controller.pause();
+  let paused = false;
+  void pausePromise.then(() => {
+    paused = true;
+  });
+  await Promise.resolve();
+  expect(paused).toBe(false);
+
+  rebuildResolvers.shift()?.();
+  await pausePromise;
+  expect(paused).toBe(true);
+  controller.stop();
+});
+
 it('throttles user-triggered refreshes', async () => {
   vi.useFakeTimers();
   const rebuild = vi.fn().mockResolvedValue(undefined);

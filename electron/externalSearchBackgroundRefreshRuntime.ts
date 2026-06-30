@@ -45,3 +45,7 @@ export function notifyExternalSearchSecondInstance() {
     notifyExternalSearchUserActivity();
   }
 }
+
+export async function pauseExternalSearchBackgroundRefresh() {
+  await externalSearchBackgroundRefresh.pause();
+}

@@ -7,6 +7,7 @@ const USER_TRIGGER_MIN_INTERVAL_MS = 5 * 60_000;
 
 interface ExternalSearchBackgroundRefreshController {
   notifyUserActivity(): void;
+  pause(): Promise<void>;
   refreshNow(): void;
   start(): void;
   stop(): void;
@@ -96,6 +97,13 @@ export function createExternalSearchBackgroundRefreshController(args?: ExternalS
         return;
       }
       void runRefresh();
+    },
+    async pause() {
+      if (timers.startupTimer) {
+        clearTimeoutHandle(timers.startupTimer);
+        timers.startupTimer = null;
+      }
+      await runtime.refreshInFlight;
     },
     refreshNow() {
       if (runtime.disposed) {

@@ -103,3 +103,28 @@ it('leaves the data location unchanged when existing library confirmation is can
   expect(result.current.libraryHomePath).toBe(defaultLibraryPaths.libraryHome);
   expect(result.current.errorByLocation.library_home).toBeNull();
 });
+
+it('confirms before restoring the default folder to an existing library database', async () => {
+  mockedUpdateRuntimeLibraryPathSetting
+    .mockRejectedValueOnce(new Error(EXISTING_LIBRARY_HOME_CONFIRMATION_ERROR))
+    .mockResolvedValueOnce(defaultLibraryPaths);
+
+  const { result } = renderHook(() => useLibraryPathSettings(), { wrapper: ConfirmationWrapper });
+  await waitFor(() => expect(result.current.isLoadingLibraryPaths).toBe(false));
+
+  let restorePromise: Promise<void> | undefined;
+  act(() => {
+    restorePromise = result.current.onRestoreDefault('library_home');
+  });
+  const dialog = await screen.findByRole('dialog', { name: 'Use this existing library?' });
+  expect(within(dialog).getByText('Foliole found an existing database in the default main folder.')).toBeInTheDocument();
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Use this library' }));
+  await act(async () => {
+    await restorePromise;
+  });
+
+  expect(mockedUpdateRuntimeLibraryPathSetting).toHaveBeenNthCalledWith(1, 'library_home', null);
+  expect(mockedUpdateRuntimeLibraryPathSetting).toHaveBeenNthCalledWith(2, 'library_home', null, {
+    confirmExistingLibraryHome: true
+  });
+});

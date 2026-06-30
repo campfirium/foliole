@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { resolveBootstrapLibraryPaths } from '../ipc/libraryPathBootstrap.js';
+import { assertLibraryHomeMigrationCanOpenDatabase } from '../ipc/libraryPathMigrationRuntime.js';
 import { ensureLibraryPathLayout } from '../ipc/libraryPaths.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
@@ -48,10 +49,12 @@ export function openDatabaseConnection(options: OpenDatabaseConnectionOptions = 
   if (cachedConnection) {
     return cachedConnection;
   }
+  assertLibraryHomeMigrationCanOpenDatabase();
 
   const { applyJournalMode = true } = options;
   const libraryPaths = resolveBootstrapLibraryPaths();
   const dbPath = libraryPaths.database_path;
+  assertLibraryHomeMigrationCanOpenDatabase(dbPath);
   const searchDbPath = resolveSearchDatabasePath(dbPath);
   ensureLibraryPathLayout(libraryPaths);
   migrateDatabaseFileNames(path.dirname(dbPath)).forEach((result) => {

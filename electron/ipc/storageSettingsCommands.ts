@@ -43,6 +43,36 @@ function handleSourceDispositionCommand(command: string, window: BrowserWindow |
   return undefined;
 }
 
+async function refreshAfterLibraryHomeChange() {
+  try {
+    await rebuildMirrorAttachmentLinks();
+    await refreshManagedInboxMonitorFromSettings();
+  } catch (error) {
+    console.error('[library-paths] post Library Home update refresh failed', error);
+  }
+}
+
+async function handleLibraryPathUpdateCommand(args: Record<string, unknown>) {
+  const location = asLiteralUnion(args.location, LIBRARY_PATH_LOCATIONS, 'location');
+  const result = await updateLibraryPathSetting({
+    confirm_existing_library_home:
+      args.confirm_existing_library_home === undefined
+        ? false
+        : asBoolean(args.confirm_existing_library_home, 'confirm_existing_library_home'),
+    location,
+    path: asNullableString(args.path, 'path')
+  });
+  if (location === 'library_home') {
+    void refreshAfterLibraryHomeChange();
+    return result;
+  }
+  if (location === 'assets_dir') {
+    await rebuildMirrorAttachmentLinks();
+  }
+  await refreshManagedInboxMonitorFromSettings();
+  return result;
+}
+
 export async function handleSettingsStorageCommand(
   command: string,
   args: Record<string, unknown>,
@@ -76,20 +106,7 @@ export async function handleSettingsStorageCommand(
   if (command === NATIVE_COMMANDS.rebuildMirrorAttachmentLinks) return rebuildMirrorAttachmentLinks();
   if (command === NATIVE_COMMANDS.exportCurrentArticleMirror) return exportCurrentArticleMirror(asString(args.node_id, 'node_id'), window);
   if (command === NATIVE_COMMANDS.updateLibraryPathSetting) {
-    const location = asLiteralUnion(args.location, LIBRARY_PATH_LOCATIONS, 'location');
-    const result = await updateLibraryPathSetting({
-      confirm_existing_library_home:
-        args.confirm_existing_library_home === undefined
-          ? false
-          : asBoolean(args.confirm_existing_library_home, 'confirm_existing_library_home'),
-      location,
-      path: asNullableString(args.path, 'path')
-    });
-    if (location === 'assets_dir' || location === 'library_home') {
-      await rebuildMirrorAttachmentLinks();
-    }
-    await refreshManagedInboxMonitorFromSettings();
-    return result;
+    return handleLibraryPathUpdateCommand(args);
   }
   if (command === NATIVE_COMMANDS.saveBackupSettings) return saveBackupSettings(readSettingsObject(args.settings));
   if (command === NATIVE_COMMANDS.saveImportManagerSettings) {

@@ -13,8 +13,11 @@ import { resolveAppPaths } from './paths.js';
 const CURRENT_LIBRARY_FILE = 'current-library.json';
 const LEGACY_LIBRARY_PATH_SETTINGS_FILE = 'library-path-settings.json';
 
+let runtimeCurrentLibraryHome: string | null | undefined;
+
 interface StoredCurrentLibrary {
   library_home?: unknown;
+  use_default?: unknown;
   updated_at?: unknown;
 }
 
@@ -58,9 +61,20 @@ export function readLegacyLibraryPathOverrides(): LibraryPathOverrides | null {
   };
 }
 
-function readCurrentLibraryHome() {
+function readCurrentLibraryHome(): string | null | undefined {
+  if (runtimeCurrentLibraryHome !== undefined) {
+    return runtimeCurrentLibraryHome;
+  }
   const payload = readJsonFile(resolveConfigFile(CURRENT_LIBRARY_FILE)) as StoredCurrentLibrary | null;
-  return normalizeLibraryPath(payload?.library_home);
+  if (!payload) {
+    return undefined;
+  }
+  if (payload.use_default === true || payload.library_home === null) {
+    runtimeCurrentLibraryHome = null;
+    return null;
+  }
+  runtimeCurrentLibraryHome = normalizeLibraryPath(payload.library_home) ?? undefined;
+  return runtimeCurrentLibraryHome;
 }
 
 function resolveDocumentsPathFallback() {
@@ -69,12 +83,23 @@ function resolveDocumentsPathFallback() {
 }
 
 export function resolveBootstrapLibraryHome(env: NodeJS.ProcessEnv = process.env) {
-  return (
-    resolveExplicitLibraryHome(env) ??
-    readCurrentLibraryHome() ??
-    readLegacyLibraryPathOverrides()?.library_home ??
-    null
-  );
+  if (runtimeCurrentLibraryHome !== undefined) {
+    return runtimeCurrentLibraryHome;
+  }
+  const explicitLibraryHome = resolveExplicitLibraryHome(env);
+  if (explicitLibraryHome) {
+    return explicitLibraryHome;
+  }
+  const currentLibraryHome = readCurrentLibraryHome();
+  if (currentLibraryHome !== undefined) {
+    return currentLibraryHome;
+  }
+  return readLegacyLibraryPathOverrides()?.library_home ?? null;
+}
+
+export function resolveDefaultBootstrapLibraryPaths() {
+  const documentsPath = resolveDocumentsPathFallback();
+  return resolveLibraryPaths(documentsPath, { library_home: resolveExplicitLibraryHome() });
 }
 
 export function resolveBootstrapLibraryPaths(env: NodeJS.ProcessEnv = process.env) {
@@ -84,10 +109,21 @@ export function resolveBootstrapLibraryPaths(env: NodeJS.ProcessEnv = process.en
 }
 
 export function saveCurrentLibraryHome(libraryHome: string) {
+  runtimeCurrentLibraryHome = libraryHome;
   const currentLibraryPath = resolveConfigFile(CURRENT_LIBRARY_FILE);
   fs.mkdirSync(path.dirname(currentLibraryPath), { recursive: true });
   fs.writeFileSync(
     currentLibraryPath,
     JSON.stringify({ library_home: libraryHome, updated_at: new Date().toISOString() }, null, 2)
+  );
+}
+
+export function saveDefaultLibraryHome() {
+  runtimeCurrentLibraryHome = null;
+  const currentLibraryPath = resolveConfigFile(CURRENT_LIBRARY_FILE);
+  fs.mkdirSync(path.dirname(currentLibraryPath), { recursive: true });
+  fs.writeFileSync(
+    currentLibraryPath,
+    JSON.stringify({ library_home: null, use_default: true, updated_at: new Date().toISOString() }, null, 2)
   );
 }

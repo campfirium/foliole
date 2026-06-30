@@ -51,17 +51,22 @@ function isLibraryHomeSwitchCancelledError(error: unknown) {
   return error instanceof Error && error.message.includes(LIBRARY_HOME_SWITCH_CANCELLED_ERROR);
 }
 
-async function updateSelectedRuntimeLibraryPath(location: RuntimeLibraryPathLocation, selectedPath: string, t: LibraryPathTranslate) {
+async function updateRuntimeLibraryPathWithConfirmation(args: {
+  confirmationPath: string;
+  location: RuntimeLibraryPathLocation;
+  nextPath: string | null;
+  t: LibraryPathTranslate;
+}) {
   try {
-    return await updateRuntimeLibraryPathSetting(location, selectedPath);
+    return await updateRuntimeLibraryPathSetting(args.location, args.nextPath);
   } catch (error) {
-    if (location !== 'library_home' || !isExistingLibraryHomeConfirmationError(error)) {
+    if (args.location !== 'library_home' || !isExistingLibraryHomeConfirmationError(error)) {
       throw error;
     }
-    if (!(await confirmExistingLibraryHome(selectedPath, t))) {
+    if (!(await confirmExistingLibraryHome(args.confirmationPath, args.t))) {
       throw new Error(LIBRARY_HOME_SWITCH_CANCELLED_ERROR);
     }
-    return updateRuntimeLibraryPathSetting(location, selectedPath, {
+    return updateRuntimeLibraryPathSetting(args.location, args.nextPath, {
       confirmExistingLibraryHome: true
     });
   }
@@ -125,6 +130,45 @@ function useInitialLibraryPathSettings(
   }, [reloadKey, setIsDesktopRuntime, setIsLoading, setPaths]);
 }
 
+function createRestoreDefaultUpdate(args: {
+  location: RuntimeLibraryPathLocation;
+  t: LibraryPathTranslate;
+}) {
+  return updateRuntimeLibraryPathWithConfirmation({
+    confirmationPath: args.location === 'library_home'
+      ? args.t('settings.library.paths.defaultLibraryHome')
+      : args.t('settings.library.paths.unavailable'),
+    location: args.location,
+    nextPath: null,
+    t: args.t
+  });
+}
+
+function createLibraryPathSettingsState(args: {
+  errors: LibraryPathErrorState;
+  handleChangeRequest: (location: RuntimeLibraryPathLocation) => Promise<void>;
+  handleRestoreDefault: (location: RuntimeLibraryPathLocation) => Promise<void>;
+  isDesktopRuntime: boolean;
+  isLoading: boolean;
+  mirrorRebuildState: ReturnType<typeof useMirrorRebuildState>;
+  paths: RuntimeLibraryPaths;
+  pendingLocation: RuntimeLibraryPathLocation | null;
+}) {
+  return {
+    assetsPath: args.paths.assetsDir,
+    errorByLocation: args.errors,
+    isDesktopRuntime: args.isDesktopRuntime,
+    isLoadingLibraryPaths: args.isLoading,
+    libraryHomePath: args.paths.libraryHome,
+    mirrorPath: args.paths.mirror,
+    pendingLocation: args.pendingLocation,
+    inboxPath: args.paths.inbox,
+    onChangeLocation: args.handleChangeRequest,
+    onRestoreDefault: args.handleRestoreDefault,
+    ...args.mirrorRebuildState
+  };
+}
+
 export function useLibraryPathSettings() {
   const t = useTranslation();
   const [paths, setPaths] = useState<RuntimeLibraryPaths>(() => createUnavailableLibraryPaths(t));
@@ -132,10 +176,9 @@ export function useLibraryPathSettings() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDesktopRuntime, setIsDesktopRuntime] = useState(false);
   const [pendingLocation, setPendingLocation] = useState<RuntimeLibraryPathLocation | null>(null);
-  const [reloadKey] = useState(0);
   const mirrorRebuildState = useMirrorRebuildState();
 
-  useInitialLibraryPathSettings(reloadKey, setIsDesktopRuntime, setIsLoading, setPaths);
+  useInitialLibraryPathSettings(0, setIsDesktopRuntime, setIsLoading, setPaths);
 
   async function handleChangeRequest(location: RuntimeLibraryPathLocation) {
     try {
@@ -146,7 +189,12 @@ export function useLibraryPathSettings() {
       await runLocationUpdate({
         getErrorMessage: (nextLocation) => getLibraryPathChangeErrorMessage(nextLocation, t),
         location,
-        performUpdate: () => updateSelectedRuntimeLibraryPath(location, selectedPath, t),
+        performUpdate: () => updateRuntimeLibraryPathWithConfirmation({
+          confirmationPath: selectedPath,
+          location,
+          nextPath: selectedPath,
+          t
+        }),
         resetMirrorRebuildState: mirrorRebuildState.resetMirrorRebuildState,
         setErrors,
         setPaths,
@@ -165,7 +213,7 @@ export function useLibraryPathSettings() {
     await runLocationUpdate({
       getErrorMessage: (nextLocation) => getLibraryPathRestoreErrorMessage(nextLocation, t),
       location,
-      performUpdate: () => updateRuntimeLibraryPathSetting(location, null),
+      performUpdate: () => createRestoreDefaultUpdate({ location, t }),
       resetMirrorRebuildState: mirrorRebuildState.resetMirrorRebuildState,
       setErrors,
       setPaths,
@@ -174,17 +222,14 @@ export function useLibraryPathSettings() {
     });
   }
 
-  return {
-    assetsPath: paths.assetsDir,
-    errorByLocation: errors,
+  return createLibraryPathSettingsState({
+    errors,
+    handleChangeRequest,
+    handleRestoreDefault,
     isDesktopRuntime,
-    isLoadingLibraryPaths: isLoading,
-    libraryHomePath: paths.libraryHome,
-    mirrorPath: paths.mirror,
-    pendingLocation,
-    inboxPath: paths.inbox,
-    onChangeLocation: handleChangeRequest,
-    onRestoreDefault: handleRestoreDefault,
-    ...mirrorRebuildState
-  };
+    isLoading,
+    mirrorRebuildState,
+    paths,
+    pendingLocation
+  });
 }

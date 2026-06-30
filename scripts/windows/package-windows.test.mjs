@@ -37,8 +37,20 @@ describe('windows package runner', () => {
   });
 
   it('only installs when explicitly requested', () => {
-    expect(resolveInstallMode(['node', 'script'])).toBe(false);
-    expect(resolveInstallMode(['node', 'script', '--install'])).toBe(true);
+    const previousInstallFlag = process.env.npm_config_install;
+    try {
+      delete process.env.npm_config_install;
+      expect(resolveInstallMode(['node', 'script'])).toBe(false);
+      expect(resolveInstallMode(['node', 'script', '--install'])).toBe(true);
+      process.env.npm_config_install = 'true';
+      expect(resolveInstallMode(['node', 'script'])).toBe(true);
+    } finally {
+      if (previousInstallFlag === undefined) {
+        delete process.env.npm_config_install;
+      } else {
+        process.env.npm_config_install = previousInstallFlag;
+      }
+    }
   });
 
   it('uses the internal package channel only when explicitly requested', () => {

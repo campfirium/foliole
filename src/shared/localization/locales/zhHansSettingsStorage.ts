@@ -47,6 +47,7 @@ export const ZH_HANS_SETTINGS_STORAGE_TRANSLATIONS: Partial<Record<TranslationKe
   'settings.library.paths.error.restoreAssets': '无法恢复默认附件文件夹。',
   'settings.library.paths.error.restoreMirror': '无法恢复默认镜像文件夹。',
   'settings.library.paths.error.restoreInbox': '无法恢复默认收件箱文件夹。',
+  'settings.library.paths.defaultLibraryHome': '默认主文件夹',
   'settings.library.paths.error.retryWritable': '{message} 请重试，或检查文件夹是否存在且可写。',
   'settings.library.existingHome.confirm': '使用这个资料库',
   'settings.library.existingHome.foundDatabase': 'Foliole 在 {path} 中发现了已有数据库。',

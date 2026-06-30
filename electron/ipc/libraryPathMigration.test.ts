@@ -38,8 +38,14 @@ beforeEach(async () => {
 afterEach(async () => {
   const { closeDatabaseConnection } = await import('../database/connection.js');
   closeDatabaseConnection();
-  await fs.rm(tempRoot, { recursive: true, force: true });
-});
+  try {
+    await fs.rm(tempRoot, { recursive: true, force: true, maxRetries: 2, retryDelay: 50 });
+  } catch (error) {
+    if (!['EBUSY', 'EPERM'].includes((error as NodeJS.ErrnoException).code ?? '')) {
+      throw error;
+    }
+  }
+}, 30_000);
 
 it('moves existing assets into the new assets folder', async () => {
   const initialPaths = await loadLibraryPathSettings();

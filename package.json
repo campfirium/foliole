@@ -103,6 +103,7 @@
     "windows:package:internal": "node scripts/windows/package-windows.mjs --native --internal",
     "windows:package:internal:install": "node scripts/windows/package-windows.mjs --native --internal --install",
     "windows:package:native": "node scripts/windows/package-windows.mjs --native",
+    "windows:package:native:install": "node scripts/windows/package-windows.mjs --native --install",
     "oneoff:workspace:migrate": "node scripts/oneoff/migrate-workspace-data.mjs",
     "oneoff:workspace:backfill-opening-text": "node scripts/electron-sqlite-runner.mjs scripts/oneoff/backfill-node-opening-text.ts",
     "oneoff:source-dispositions:backfill": "node scripts/electron-sqlite-runner.mjs scripts/oneoff/backfill-source-disposition-states.ts",

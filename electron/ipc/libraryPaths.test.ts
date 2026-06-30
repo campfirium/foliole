@@ -187,6 +187,40 @@ it('stores Library Home switches in the bootstrap pointer instead of runtime set
   expect(settingsStore.saveJsonSetting).not.toHaveBeenCalled();
 });
 
+it('restores Library Home to the real default without falling back to legacy settings', async () => {
+  const nextLibraryHome = path.join(tempRoot, 'NextLibrary');
+  const legacyLibraryHome = path.join(tempRoot, 'LegacyLibrary');
+  await writeLegacyLibraryPathSettings({ library_home: legacyLibraryHome });
+  await updateLibraryPathSetting({ location: 'library_home', path: nextLibraryHome });
+
+  await expect(updateLibraryPathSetting({ location: 'library_home', path: null })).resolves.toMatchObject({
+    library_home: path.join(mockedDocumentsDir, 'Foliole')
+  });
+
+  const pointer = JSON.parse(
+    await fs.readFile(path.join(mockedAppConfigDir, 'current-library.json'), 'utf8')
+  ) as Record<string, unknown>;
+  expect(pointer).toMatchObject({ library_home: null, use_default: true });
+  await expect(loadLibraryPathSettings()).resolves.toMatchObject({
+    library_home: path.join(mockedDocumentsDir, 'Foliole')
+  });
+});
+
+it('restores Library Home to the explicit launch home without appending the default folder name', async () => {
+  const explicitLibraryHome = path.join(tempRoot, 'ExplicitLibrary');
+  const nextLibraryHome = path.join(tempRoot, 'NextLibrary');
+  process.env.FOLIOLE_LIBRARY_HOME = explicitLibraryHome;
+  try {
+    await updateLibraryPathSetting({ location: 'library_home', path: nextLibraryHome });
+
+    await expect(updateLibraryPathSetting({ location: 'library_home', path: null })).resolves.toMatchObject({
+      library_home: explicitLibraryHome
+    });
+  } finally {
+    delete process.env.FOLIOLE_LIBRARY_HOME;
+  }
+});
+
 it('rejects inbox and mirror locations that overlap', async () => {
   const inboxPath = path.join(tempRoot, 'Capture');
   const mirrorInsideInbox = path.join(inboxPath, 'Mirror');

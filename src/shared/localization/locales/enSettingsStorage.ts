@@ -45,6 +45,7 @@ export const EN_SETTINGS_STORAGE_TRANSLATIONS = {
   'settings.library.paths.error.restoreAssets': 'Could not restore the default Attachments folder.',
   'settings.library.paths.error.restoreMirror': 'Could not restore the default mirror folder.',
   'settings.library.paths.error.restoreInbox': 'Could not restore the default Inbox folder.',
+  'settings.library.paths.defaultLibraryHome': 'the default main folder',
   'settings.library.paths.error.retryWritable': '{message} Please retry, or check the folder exists and is writable.',
   'settings.library.existingHome.confirm': 'Use this library',
   'settings.library.existingHome.foundDatabase': 'Foliole found an existing database in {path}.',

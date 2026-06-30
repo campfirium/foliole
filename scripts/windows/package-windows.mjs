@@ -32,7 +32,7 @@ export function resolvePackageMode(argv = process.argv, platform = process.platf
 }
 
 export function resolveInstallMode(argv = process.argv) {
-  return argv.includes('--install');
+  return argv.includes('--install') || process.env.npm_config_install === 'true';
 }
 
 export function resolveInternalMode(argv = process.argv) {
