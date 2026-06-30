@@ -4,7 +4,8 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { getPrCheckSignal, listPrChecks, recordMonitorError, runGh } from './github-monitor-gh.mjs';
+import { buildPrHandoffData } from './github-desktop-handoff-title.mjs';
+import { listPrChecks, recordMonitorError, runGh } from './github-monitor-gh.mjs';
 
 const REPO_ROOT = process.cwd();
 const MONITOR_DIR = path.join(REPO_ROOT, '.codex', 'monitors');
@@ -70,25 +71,12 @@ function actionRunEvent(config, run) {
 }
 
 function prEvent(config, pr, checks) {
-  const checkSignal = getPrCheckSignal(config, checks);
-  const data = {
-    author: pr.author?.login ?? pr.author?.name ?? '',
-    baseRefName: pr.baseRefName,
-    eventId: `${pr.number}:${checkSignal.eventSuffix}`,
-    failingChecks: checkSignal.label,
-    headRefName: pr.headRefName,
-    number: String(pr.number),
-    repository: config.repository,
-    source: 'foliole/github-pr',
-    title: pr.title,
-    url: pr.url,
-    workspace: config.workspace
-  };
+  const data = buildPrHandoffData(config, pr, checks);
   return {
     dedupeKey: config.dedupeKeyPattern.replace('{eventId}', data.eventId),
     prompt: renderTemplate(config.template, data),
-    title: checkSignal.eventSuffix === 'no-checks' ? `Foliole PR needs checks: #${pr.number}` : `Foliole PR checks failed: #${pr.number}`,
     ...data,
+    title: data.handoffTitle,
     ttlSeconds: config.defaultTtlSeconds
   };
 }
