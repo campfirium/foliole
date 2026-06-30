@@ -76,6 +76,8 @@ function createSnapshot(): WorkspaceSnapshot {
 
     expect(result[0]).toMatchObject({
       bodyStatus: 'missing',
+      authorLabel: null,
+      folderLabel: null,
       nodeId: 'topic-1',
       preview: 'Opening text from the synced pack'
     });
@@ -93,6 +95,8 @@ function createSnapshot(): WorkspaceSnapshot {
 
     expect(result[0]).toMatchObject({
       bodyStatus: 'empty',
+      authorLabel: null,
+      folderLabel: null,
       nodeId: 'topic-1',
       preview: null
     });

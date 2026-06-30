@@ -7,6 +7,7 @@ import {
   type FolderListSortDirection,
   type FolderListSortKey
 } from '../../features/nodes/model/folderListOrdering';
+import { getWorkspaceListNodeAuthor } from '../../features/nodes/model/workspaceListNode';
 import {
   isCanonicalTrashedNodeId,
   isCanonicalVisibleNodeId,
@@ -21,8 +22,10 @@ import { isCompanionArticleNode } from './companionReadableArticleTitleSlot';
 type CompanionReadableNode = WorkspaceSnapshot['nodesById'][string];
 
 export interface CompanionRecentArticle {
+  authorLabel?: string | null;
   bodyBlobHash?: string | null;
   bodyStatus?: 'empty' | 'failed' | 'fetching' | 'missing' | 'ready';
+  folderLabel?: string | null;
   nodeId: string;
   preview: string | null;
   title: string;
@@ -72,6 +75,13 @@ function isActiveFolderNode(node: CompanionReadableNode | undefined): node is Co
 
 function isRootFolderNode(node: CompanionReadableNode | undefined): node is CompanionReadableNode {
   return Boolean(node && node.kind === 'folder' && !node.parentNodeId);
+}
+
+function resolveParentFolderLabel(snapshot: WorkspaceSnapshot, node: CompanionReadableNode): string | null {
+  if (!node.parentNodeId) return null;
+  const parentNode = snapshot.nodesById[node.parentNodeId];
+  if (!parentNode || parentNode.kind !== 'folder') return null;
+  return parentNode.title.trim() || resolveCompanionUntitledLabel();
 }
 
 function buildCompanionFolderListEntry(node: CompanionReadableNode): CompanionFolderListEntry {
@@ -167,10 +177,13 @@ export function resolveCompanionRecentArticles(
     .filter(hasReadableContent);
   return sortCompanionBrowseNodes(normalizedSnapshot, articles, sortKey, sortDirection).map((node) => {
     const bodyStatus = normalizeBodyStatus(node.bodyStatus);
+    const readableText = node.content || (node.openingText ?? '');
     return {
       nodeId: node.id,
+      authorLabel: getWorkspaceListNodeAuthor(node),
       bodyBlobHash: node.bodyBlobHash ?? null,
-      preview: resolveNodeOpeningText(node.content || (node.openingText ?? ''), node.title),
+      folderLabel: resolveParentFolderLabel(normalizedSnapshot, node),
+      preview: resolveNodeOpeningText(readableText, node.title),
       ...(bodyStatus ? { bodyStatus } : {}),
       title: resolveCompanionArticleTitle(node),
       updatedAt: node.updatedAt

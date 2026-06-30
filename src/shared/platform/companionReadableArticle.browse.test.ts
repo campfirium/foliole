@@ -43,7 +43,7 @@ function createSnapshot(): WorkspaceSnapshot {
       'folder-2': createNodeRecord({ id: 'folder-2', kind: 'folder', parentNodeId: 'folder-1', title: 'Nested folder' }),
       'folder-3': createNodeRecord({ deletedAt: '2026-04-22T11:00:00.000Z', id: 'folder-3', kind: 'folder', title: 'Archived folder' }),
       'node-1': createNodeRecord({ content: '# Older\n\nOlder body', id: 'node-1', parentNodeId: 'folder-1', title: 'Older note', updatedAt: '2026-04-20T10:00:00.000Z' }),
-      'node-2': createNodeRecord({ content: '# Newer\n\nLatest body', id: 'node-2', parentNodeId: 'folder-2', title: 'Newer note', updatedAt: '2026-04-21T10:00:00.000Z' }),
+      'node-2': createNodeRecord({ content: '---\nauthor: Ada\n---\n# Newer\n\nLatest body', id: 'node-2', parentNodeId: 'folder-2', title: 'Newer note', updatedAt: '2026-04-21T10:00:00.000Z' }),
       'node-3': createNodeRecord({ id: 'node-3', parentNodeId: 'folder-1', title: 'Empty note', updatedAt: '2026-04-22T10:00:00.000Z' }),
       'node-4': createNodeRecord({ content: '# Hidden\n\nShould not show', deletedAt: '2026-04-22T12:00:00.000Z', id: 'node-4', parentNodeId: 'folder-1', title: 'Hidden note' }),
       'node-5': createNodeRecord({ content: '# Child\n\nShould not show', id: 'node-5', parentNodeId: 'node-2', title: 'Child topic' }),
@@ -76,6 +76,8 @@ describe('companionReadableArticle recent browse helpers', () => {
 
     expect(result.map((article) => article.nodeId)).toEqual(['node-2', 'node-1', 'node-7']);
     expect(result[0]).toMatchObject({
+      authorLabel: 'Ada',
+      folderLabel: 'Nested folder',
       preview: 'Latest body',
       title: 'Newer',
       updatedAt: '2026-04-21T10:00:00.000Z'
@@ -104,6 +106,19 @@ describe('companionReadableArticle recent browse helpers', () => {
 
     expect(result.some((article) => article.nodeId === 'node-1')).toBe(true);
     expect(result.some((article) => article.nodeId === 'node-2')).toBe(true);
+  });
+
+  it('reuses the desktop author metadata rule for recent articles', () => {
+    const result = resolveCompanionRecentArticles(createSnapshot());
+
+    expect(result.find((article) => article.nodeId === 'node-2')).toMatchObject({
+      authorLabel: 'Ada',
+      folderLabel: 'Nested folder'
+    });
+    expect(result.find((article) => article.nodeId === 'node-7')).toMatchObject({
+      authorLabel: null,
+      folderLabel: null
+    });
   });
 });
 

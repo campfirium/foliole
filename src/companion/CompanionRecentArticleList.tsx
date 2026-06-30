@@ -1,4 +1,5 @@
 import { BookOpen } from 'lucide-react';
+import { useLayoutEffect, useRef, useState } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import type { CompanionRecentArticle } from '../shared/platform/companionReadableArticle';
@@ -6,8 +7,48 @@ import { AppEmptyState } from '../shared/ui';
 
 import { CompanionEmptyStateIcon } from './CompanionEmptyStateIcon';
 
-function formatRecentDate(value: string) {
-  return new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' }).format(new Date(value));
+const RECENT_ARTICLE_TEXT_LINE_BUDGET = 4;
+
+export function resolveRecentArticlePreviewLineClamp(titleLineCount: number, hasPreview: boolean) {
+  if (!hasPreview) return 0;
+  const titleLines = Math.min(RECENT_ARTICLE_TEXT_LINE_BUDGET, Math.max(1, Math.ceil(titleLineCount)));
+  return Math.max(0, RECENT_ARTICLE_TEXT_LINE_BUDGET - titleLines);
+}
+
+function getPreviewClampClass(lineClamp: number) {
+  if (lineClamp === 1) return 'line-clamp-1';
+  if (lineClamp === 2) return 'line-clamp-2';
+  return 'line-clamp-3';
+}
+
+function measureElementLineCount(element: HTMLElement) {
+  const lineHeight = Number.parseFloat(window.getComputedStyle(element).lineHeight);
+  if (!Number.isFinite(lineHeight) || lineHeight <= 0) return 1;
+  return Math.max(1, Math.round(element.scrollHeight / lineHeight));
+}
+
+function useMeasuredTitleLineCount(title: string) {
+  const ref = useRef<HTMLHeadingElement | null>(null);
+  const [lineCount, setLineCount] = useState(1);
+
+  useLayoutEffect(() => {
+    const element = ref.current;
+    if (!element) return undefined;
+    const measure = () => setLineCount((current) => {
+      const next = measureElementLineCount(element);
+      return current === next ? current : next;
+    });
+    measure();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', measure);
+      return () => window.removeEventListener('resize', measure);
+    }
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [title]);
+
+  return { lineCount, ref };
 }
 
 function renderBodyStatus(status: CompanionRecentArticle['bodyStatus'], t: ReturnType<typeof useTranslation>) {
@@ -20,13 +61,30 @@ function renderBodyStatus(status: CompanionRecentArticle['bodyStatus'], t: Retur
   return null;
 }
 
-function RecentArticlePreview(props: { preview: string | null }) {
-  if (!props.preview) {
+function RecentArticlePreview(props: { lineClamp: number; preview: string | null }) {
+  if (!props.preview || props.lineClamp <= 0) {
     return null;
   }
   return (
-    <p className="mt-1 line-clamp-2 break-words text-ui-base leading-5 text-companion-text-secondary [overflow-wrap:anywhere]">
+    <p className={`mt-1 ${getPreviewClampClass(props.lineClamp)} break-words text-ui-base leading-5 text-companion-text-secondary [overflow-wrap:anywhere]`}>
       {props.preview}
+    </p>
+  );
+}
+
+function buildRecentArticleMeta(article: CompanionRecentArticle, t: ReturnType<typeof useTranslation>) {
+  const bodyStatusLabel = renderBodyStatus(article.bodyStatus, t);
+  return [
+    article.folderLabel,
+    article.authorLabel,
+    bodyStatusLabel
+  ].filter((item): item is string => Boolean(item));
+}
+
+function RecentArticleMetaFooter(props: { items: string[] }) {
+  return (
+    <p className="mt-2 line-clamp-1 min-h-4 break-words text-xs font-medium leading-4 text-companion-text-secondary [overflow-wrap:anywhere]">
+      {props.items.join(' · ')}
     </p>
   );
 }
@@ -37,8 +95,10 @@ function RecentArticleRow(props: {
   onSelectArticle(nodeId: string): void;
 }) {
   const t = useTranslation();
-  const bodyStatusLabel = renderBodyStatus(props.article.bodyStatus, t);
+  const metaItems = buildRecentArticleMeta(props.article, t);
   const isCurrent = props.article.nodeId === props.currentArticleId;
+  const { lineCount: titleLineCount, ref: titleRef } = useMeasuredTitleLineCount(props.article.title);
+  const previewLineClamp = resolveRecentArticlePreviewLineClamp(titleLineCount, Boolean(props.article.preview));
   return (
     <button
       aria-label={t('desktop.nodeBrowse.openTopic', { title: props.article.title })}
@@ -48,43 +108,11 @@ function RecentArticleRow(props: {
       onClick={() => props.onSelectArticle(props.article.nodeId)}
       type="button"
     >
-      <div className="mb-1 text-ui-sm font-semibold leading-4 text-companion-text-tertiary">
-        <time dateTime={props.article.updatedAt}>{formatRecentDate(props.article.updatedAt)}</time>
-      </div>
-      <h2 className="line-clamp-2 break-words text-ui-lg font-semibold leading-5 text-foreground [overflow-wrap:anywhere]">
+      <h2 ref={titleRef} className="line-clamp-4 break-words text-ui-lg font-semibold leading-5 text-foreground [overflow-wrap:anywhere]">
         {props.article.title}
       </h2>
-      {bodyStatusLabel ? (
-        <p className="mt-1 text-xs font-medium leading-5 text-companion-text-secondary">{bodyStatusLabel}</p>
-      ) : null}
-      <RecentArticlePreview preview={props.article.preview} />
-    </button>
-  );
-}
-
-function ContinueReadingEntry(props: { article: CompanionRecentArticle; onSelectArticle(nodeId: string): void }) {
-  const t = useTranslation();
-  const bodyStatusLabel = renderBodyStatus(props.article.bodyStatus, t);
-  return (
-    <button
-      aria-label={t('desktop.nodeBrowse.openTopic', { title: props.article.title })}
-      className="mb-2 block w-full border-y border-companion-divider bg-companion-subtle/55 px-1 py-3 text-left transition-colors hover:bg-companion-subtle/70 active:bg-companion-subtle"
-      onClick={() => props.onSelectArticle(props.article.nodeId)}
-      type="button"
-    >
-      <div className="flex items-center justify-between gap-3 text-ui-sm font-semibold leading-4 text-companion-text-tertiary">
-        <span>{t('desktop.reviewActions.continueReading')}</span>
-        <time className="font-semibold text-companion-text-secondary" dateTime={props.article.updatedAt}>
-          {formatRecentDate(props.article.updatedAt)}
-        </time>
-      </div>
-      <h2 className="mt-1.5 line-clamp-2 break-words text-ui-lg font-semibold leading-5 text-foreground [overflow-wrap:anywhere]">
-        {props.article.title}
-      </h2>
-      {bodyStatusLabel ? (
-        <p className="mt-1 text-xs font-medium leading-5 text-companion-text-secondary">{bodyStatusLabel}</p>
-      ) : null}
-      <RecentArticlePreview preview={props.article.preview} />
+      <RecentArticlePreview lineClamp={previewLineClamp} preview={props.article.preview} />
+      <RecentArticleMetaFooter items={metaItems} />
     </button>
   );
 }
@@ -108,16 +136,9 @@ export function RecentArticleList(props: {
     );
   }
 
-  const firstArticle = props.recentArticles[0];
-  const remainingArticles = props.recentArticles.slice(1);
-  if (!firstArticle) {
-    return null;
-  }
-
   return (
     <section className="border-t border-companion-divider pt-3">
-      <ContinueReadingEntry article={firstArticle} onSelectArticle={props.onSelectArticle} />
-      {remainingArticles.map((article) => (
+      {props.recentArticles.map((article) => (
         <RecentArticleRow
           article={article}
           currentArticleId={props.currentArticleId}
