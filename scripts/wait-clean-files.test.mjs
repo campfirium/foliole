@@ -20,6 +20,10 @@ async function writePackageJson(cwd, packageJson) {
   await writeFile(path.join(cwd, 'package.json'), `${JSON.stringify(packageJson, null, 2)}\n`, 'utf8');
 }
 
+async function writePackageLock(cwd, packageLock) {
+  await writeFile(path.join(cwd, 'package-lock.json'), `${JSON.stringify(packageLock, null, 2)}\n`, 'utf8');
+}
+
 async function createRepo() {
   const repo = await mkdtemp(path.join(os.tmpdir(), 'wait-clean-files-'));
   git(repo, ['init']);
@@ -29,7 +33,22 @@ async function createRepo() {
     scripts: { test: 'node test.mjs' },
     dependencies: { example: '1.0.0' }
   });
-  git(repo, ['add', 'package.json']);
+  await writePackageLock(repo, {
+    name: 'wait-clean-files-fixture',
+    lockfileVersion: 3,
+    packages: {
+      '': {
+        name: 'wait-clean-files-fixture',
+        dependencies: { example: '1.0.0' }
+      },
+      'node_modules/example': {
+        version: '1.0.0',
+        resolved: 'https://registry.npmjs.org/example/-/example-1.0.0.tgz',
+        integrity: 'sha512-old'
+      }
+    }
+  });
+  git(repo, ['add', 'package.json', 'package-lock.json']);
   git(repo, ['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-m', 'init']);
   return repo;
 }
@@ -94,6 +113,93 @@ describe('wait-clean-files package.json scripts edit isolation', () => {
 
       expect(result.status).toBe(1);
       expect(result.stderr).toContain('package.json');
+    } finally {
+      await rm(repo, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('wait-clean-files package dependency edit isolation', () => {
+  it('allows dependency-only package.json and package-lock.json dirty state', async () => {
+    const repo = await createRepo();
+    try {
+      await writePackageJson(repo, {
+        name: 'wait-clean-files-fixture',
+        private: true,
+        scripts: { test: 'node test.mjs' },
+        dependencies: { example: '1.0.1' }
+      });
+      await writePackageLock(repo, {
+        name: 'wait-clean-files-fixture',
+        lockfileVersion: 3,
+        packages: {
+          '': {
+            name: 'wait-clean-files-fixture',
+            dependencies: { example: '1.0.1' }
+          },
+          'node_modules/example': {
+            version: '1.0.1',
+            resolved: 'https://registry.npmjs.org/example/-/example-1.0.1.tgz',
+            integrity: 'sha512-new'
+          }
+        }
+      });
+
+      const result = runWaitClean(repo, [
+        '--allow-package-dependency-edit',
+        'package.json',
+        'package-lock.json'
+      ]);
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain('[wait-clean-files] clean');
+    } finally {
+      await rm(repo, { recursive: true, force: true });
+    }
+  });
+
+  it('blocks package.json non-dependency dirty state', async () => {
+    const repo = await createRepo();
+    try {
+      await writePackageJson(repo, {
+        name: 'changed-name',
+        private: true,
+        scripts: { test: 'node test.mjs' },
+        dependencies: { example: '1.0.1' }
+      });
+
+      const result = runWaitClean(repo, ['--allow-package-dependency-edit', 'package.json']);
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('package.json');
+    } finally {
+      await rm(repo, { recursive: true, force: true });
+    }
+  });
+
+  it('blocks package-lock.json root metadata dirty state', async () => {
+    const repo = await createRepo();
+    try {
+      await writePackageLock(repo, {
+        name: 'changed-lock-name',
+        lockfileVersion: 3,
+        packages: {
+          '': {
+            name: 'wait-clean-files-fixture',
+            dependencies: { example: '1.0.1' }
+          },
+          'node_modules/example': {
+            version: '1.0.1',
+            resolved: 'https://registry.npmjs.org/example/-/example-1.0.1.tgz',
+            integrity: 'sha512-new'
+          }
+        }
+      });
+
+      const result = runWaitClean(repo, ['--allow-package-dependency-edit', 'package-lock.json']);
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('package-lock.json');
     } finally {
       await rm(repo, { recursive: true, force: true });
     }
