@@ -88,8 +88,8 @@ function scan({ emit = false, includeExisting = false } = {}) {
   state.lastCheckedAt = new Date().toISOString();
   if (emit) {
     for (const event of events) {
-      state.submitted[event.dedupeKey] = { emittedAt: new Date().toISOString(), title: event.title };
       submitEvent(event);
+      state.submitted[event.dedupeKey] = { emittedAt: new Date().toISOString(), title: event.title };
     }
   }
   if (emit) writeJson(STATE_FILE, state);
