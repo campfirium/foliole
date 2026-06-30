@@ -33,12 +33,14 @@ describe('cleanup-local-artifacts', () => {
       touch(join(root, '.tmp', 'recent-cache'), recentTime);
       touch(join(root, 'release', 'old-installer.exe'), oldTime);
       touch(join(root, 'artifacts/windows', 'old-installer.exe'), oldTime);
+      touch(join(root, 'artifacts/windows-internal', 'old-internal-installer.exe'), oldTime);
       touch(join(root, 'docs', 'old-doc.md'), oldTime);
 
       const result = runCleanup({ apply: false, days: 7, dryRun: true, nowMs, rootDir: root });
 
       expect(result.entries.map((entry) => entry.path)).toEqual([
         join(root, '.tmp', 'old-cache'),
+        join(root, 'artifacts/windows-internal', 'old-internal-installer.exe'),
         join(root, 'artifacts/windows', 'old-installer.exe'),
         join(root, 'release', 'old-installer.exe')
       ]);

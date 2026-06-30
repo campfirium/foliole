@@ -15,6 +15,7 @@ export const CLEANUP_ROOTS = [
   'logs',
   'release',
   'artifacts/windows',
+  'artifacts/windows-internal',
   'trees'
 ];
 

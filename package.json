@@ -100,6 +100,8 @@
     "electron:build": "npm run build && npm run electron:compile && electron-builder --config electron/builder.json",
     "windows:package": "node scripts/windows/package-windows.mjs",
     "windows:package:install": "node scripts/windows/package-windows.mjs --install",
+    "windows:package:internal": "node scripts/windows/package-windows.mjs --native --internal",
+    "windows:package:internal:install": "node scripts/windows/package-windows.mjs --native --internal --install",
     "windows:package:native": "node scripts/windows/package-windows.mjs --native",
     "oneoff:workspace:migrate": "node scripts/oneoff/migrate-workspace-data.mjs",
     "oneoff:workspace:backfill-opening-text": "node scripts/electron-sqlite-runner.mjs scripts/oneoff/backfill-node-opening-text.ts",

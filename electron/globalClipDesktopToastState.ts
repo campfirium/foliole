@@ -39,8 +39,8 @@ export function resolveToastText(status: GlobalClipToastStatus, locale: GlobalCl
       case 'pending':
       default:
         return {
-          meta: '正在捕获选中文本或剪贴板',
-          title: '正在剪辑到收件箱'
+          meta: '',
+          title: ''
         };
     }
   }
@@ -68,8 +68,8 @@ export function resolveToastText(status: GlobalClipToastStatus, locale: GlobalCl
     case 'pending':
     default:
       return {
-        meta: 'Capturing selection or clipboard',
-        title: 'Clipping to Inbox'
+        meta: '',
+        title: ''
       };
   }
 }

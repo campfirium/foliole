@@ -40,7 +40,6 @@ const { clipboardImage, electronMocks } = vi.hoisted(() => {
 vi.mock('electron', () => electronMocks);
 vi.mock('./diagnostics/mainProcessDiagnostics.js', () => ({ appendMainProcessDiagnosticLog: vi.fn() }));
 vi.mock('./database/databaseReadiness.js', () => ({ waitForDatabaseReady: vi.fn(async () => undefined) }));
-vi.mock('./globalClipTextSelection.js', () => ({ detectWindowsTextSelection: vi.fn(async () => null) }));
 vi.mock('./ipc/importClipboard.js', () => ({ runClipboardImport: vi.fn(async () => null) }));
 vi.mock('./ipc/importTextCapture.js', () => ({ runTextCaptureToInbox: vi.fn(async () => null) }));
 
@@ -152,7 +151,6 @@ it('shows an empty result when changed clipboard content is not importable', asy
 
   await expect(runGlobalClipToInbox({
     clipboardRef: createClipboardSnapshotSource('new selected text'),
-    detectTextSelection: vi.fn(async () => true),
     log,
     runImport: vi.fn(async () => null),
     sendCopyShortcut: vi.fn(async () => true),
@@ -174,7 +172,6 @@ it('opens the capture panel when copy cannot be sent', async () => {
 
   await expect(runGlobalClipToInbox({
     clipboardRef: createClipboardSnapshotSource('new selected text'),
-    detectTextSelection: vi.fn(async () => true),
     log: vi.fn(),
     runImport,
     sendCopyShortcut,
@@ -197,7 +194,6 @@ it('shows a failure result when database readiness fails', async () => {
 
   await expect(runGlobalClipToInbox({
     clipboardRef: createClipboardSnapshotSource('new selected text'),
-    detectTextSelection: vi.fn(async () => true),
     log,
     runImport,
     sendCopyShortcut: vi.fn(async () => true),
@@ -220,7 +216,6 @@ it('logs import errors and shows a failure result', async () => {
 
   await expect(runGlobalClipToInbox({
     clipboardRef: createClipboardSnapshotSource('new selected text'),
-    detectTextSelection: vi.fn(async () => true),
     log,
     runImport: vi.fn(async () => {
       throw new Error('unsupported clipboard content');

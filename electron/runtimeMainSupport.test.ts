@@ -3,7 +3,7 @@ import path from 'node:path';
 import { expect, it, vi } from 'vitest';
 
 const { appMock } = vi.hoisted(() => ({
-  appMock: { isPackaged: false }
+  appMock: { getName: vi.fn(() => 'foliole'), isPackaged: false }
 }));
 
 vi.mock('electron', () => ({
@@ -16,7 +16,8 @@ import {
   applyHiddenNativeDesktopWindowOptions,
   createMainWindowOptions,
   isAllowedEmbeddedLinkPanelUrl,
-  resolveMainWindowIconPath
+  resolveMainWindowIconPath,
+  resolveMainWindowTitle
 } from './runtimeMainSupport.js';
 
 it('keeps the startup renderer unthrottled while the hidden window is loading', () => {
@@ -36,6 +37,15 @@ it('uses the branded runtime window icon next to the electron preload source', (
   const expectedIconPath = path.resolve('/workspace/foliole/build/icon.png');
   expect(resolveMainWindowIconPath('/workspace/foliole/electron/preload.cjs')).toBe(expectedIconPath);
   expect(createMainWindowOptions('/workspace/foliole/electron/preload.cjs').icon).toBe(expectedIconPath);
+});
+
+it('uses the internal product title for internal Windows builds', () => {
+  expect(resolveMainWindowTitle('foliole-internal')).toBe('Foliole Internal');
+  expect(createMainWindowOptions('/workspace/foliole/electron/preload.cjs').title).toBe('Foliole');
+
+  appMock.getName.mockReturnValue('foliole-internal');
+  expect(createMainWindowOptions('/workspace/foliole/electron/preload.cjs').title).toBe('Foliole Internal');
+  appMock.getName.mockReturnValue('foliole');
 });
 
 it('pins hidden native desktop test windows offscreen and out of the taskbar', () => {

@@ -11,7 +11,11 @@ import {
   logActiveRuntimeDiagnostics,
   type StartupRendererView
 } from './rendererLoader.js';
-import type { RuntimeDiagnosticsSnapshot } from './runtimeIdentity.js';
+import {
+  FOLIOLE_INTERNAL_APP_NAME,
+  FOLIOLE_INTERNAL_PRODUCT_NAME,
+  type RuntimeDiagnosticsSnapshot
+} from './runtimeIdentity.js';
 import { logWindowStateLifecycleEvent, logWindowStateRestoreDecision } from './windowStateDiagnostics.js';
 
 const guardedEmbeddedLinkPanelSessions = new WeakSet<Session>();
@@ -21,6 +25,7 @@ export function resolveMainWindowIconPath(preloadPath: string) {
 
 export function createMainWindowOptions(preloadPath: string): BrowserWindowConstructorOptions {
   const previewTitle = resolvePreviewWindowTitle();
+  const windowTitle = previewTitle || resolveMainWindowTitle();
   return {
     width: 1400,
     height: 900,
@@ -31,7 +36,7 @@ export function createMainWindowOptions(preloadPath: string): BrowserWindowConst
     autoHideMenuBar: false,
     icon: resolveMainWindowIconPath(preloadPath),
     show: false,
-    ...(previewTitle ? { title: previewTitle } : {}),
+    title: windowTitle,
     webPreferences: {
       backgroundThrottling: false,
       devTools: !app.isPackaged,
@@ -42,6 +47,12 @@ export function createMainWindowOptions(preloadPath: string): BrowserWindowConst
       webviewTag: true
     }
   };
+}
+
+export function resolveMainWindowTitle(appName = app.getName()) {
+  return appName === FOLIOLE_INTERNAL_APP_NAME || appName === FOLIOLE_INTERNAL_PRODUCT_NAME
+    ? FOLIOLE_INTERNAL_PRODUCT_NAME
+    : 'Foliole';
 }
 
 export function resolvePreviewWindowTitle(env: NodeJS.ProcessEnv = process.env) {
@@ -100,10 +111,10 @@ export function bindMainWindowNavigationGuard(window: import('electron').Browser
     event.preventDefault();
   });
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
-  const previewTitle = resolvePreviewWindowTitle();
-  if (previewTitle) {
+  const windowTitle = resolvePreviewWindowTitle() || resolveMainWindowTitle();
+  if (windowTitle) {
     const restorePreviewTitle = () => {
-      window.setTitle(previewTitle);
+      window.setTitle(windowTitle);
     };
     const preventRendererTitle = (event: { preventDefault: () => void }) => {
       event.preventDefault();

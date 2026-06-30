@@ -8,6 +8,13 @@ import { describe, expect, it } from 'vitest';
 
 import { collectBuiltArtifactState } from './package-built-artifacts.mjs';
 import {
+  INTERNAL_APP_ID,
+  INTERNAL_OUTPUT_DIR,
+  INTERNAL_PRODUCT_NAME,
+  createInternalBuilderConfig,
+  formatInternalBuildVersion
+} from './package-windows-internal-config.mjs';
+import {
   collectInstallerArtifactPaths,
   createNativePackageSteps,
   createWslPackageSteps,
@@ -15,6 +22,7 @@ import {
   readPackageVersion,
   resolveReleaseArtifactPaths,
   resolveInstallMode,
+  resolveInternalMode,
   resolveBuiltArtifactMode,
   resolvePackageStatusLabel,
   resolvePackagedInstallerPath,
@@ -31,6 +39,11 @@ describe('windows package runner', () => {
   it('only installs when explicitly requested', () => {
     expect(resolveInstallMode(['node', 'script'])).toBe(false);
     expect(resolveInstallMode(['node', 'script', '--install'])).toBe(true);
+  });
+
+  it('uses the internal package channel only when explicitly requested', () => {
+    expect(resolveInternalMode(['node', 'script'])).toBe(false);
+    expect(resolveInternalMode(['node', 'script', '--internal'])).toBe(true);
   });
 
   it('only reuses built artifacts when explicitly requested', () => {
@@ -68,6 +81,12 @@ describe('windows package runner', () => {
     expect(steps.map((step) => step.label)).toEqual(['electron-builder nsis']);
   });
 
+  it('uses a generated electron-builder config for native internal packages', () => {
+    const steps = createNativePackageSteps(true, true);
+
+    expect(steps[0].args.join(' ')).toContain('--config .tmp/electron-builder-internal.json');
+  });
+
   it('syncs the Windows checkout before delegating to native packaging from WSL', () => {
     const steps = createWslPackageSteps('/repo');
 
@@ -90,6 +109,12 @@ describe('windows package runner', () => {
     const steps = createWslPackageSteps('/repo', true);
 
     expect(steps[1].args.join(' ')).toContain('npm run windows:package:native -- --install');
+  });
+
+  it('passes the internal flag through to the Windows-native package runner', () => {
+    const steps = createWslPackageSteps('/repo', true, false, true);
+
+    expect(steps[1].args.join(' ')).toContain('--install --internal');
   });
 
   it('checks built artifacts before delegating WSL from-built packaging', () => {
@@ -159,6 +184,45 @@ describe('windows package runner', () => {
     } finally {
       rmSync(root, { force: true, recursive: true });
     }
+  });
+
+  it('finds internal installer artifacts in the internal output directory', () => {
+    const root = mkdtempSync(join(tmpdir(), 'foliole-package-test-'));
+    try {
+      mkdirSync(join(root, INTERNAL_OUTPUT_DIR), { recursive: true });
+      writeFileSync(join(root, INTERNAL_OUTPUT_DIR, 'Foliole Internal-Setup-9.8.7-internal.20260630120000-internal-win-x64.exe'), '');
+
+      expect(collectInstallerArtifactPaths(root, '9.8.7-internal.20260630120000', INTERNAL_OUTPUT_DIR)).toEqual([
+        join(root, INTERNAL_OUTPUT_DIR, 'Foliole Internal-Setup-9.8.7-internal.20260630120000-internal-win-x64.exe')
+      ]);
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
+  });
+
+  it('creates an internal builder config with separate install identity and internal version metadata', () => {
+    const internalVersion = formatInternalBuildVersion('9.8.7', new Date('2026-06-30T12:00:00Z'));
+    const config = createInternalBuilderConfig({
+      appId: 'com.foliole.desktop',
+      directories: { output: 'artifacts/windows' },
+      nsis: { shortcutName: 'Foliole' },
+      productName: 'Foliole',
+      win: { artifactName: '${productName}-Setup-${version}-win-${arch}.${ext}' }
+    }, internalVersion);
+
+    expect(internalVersion).toBe('9.8.7-internal.20260630120000');
+    expect(config.appId).toBe(INTERNAL_APP_ID);
+    expect(config.productName).toBe(INTERNAL_PRODUCT_NAME);
+    expect(config.directories.output).toBe(INTERNAL_OUTPUT_DIR);
+    expect(config.directories.buildResources).toBe('.tmp/windows-internal-build-resources');
+    expect(config.extraMetadata).toMatchObject({
+      folioleBuildChannel: 'internal',
+      name: 'foliole-internal',
+      productName: INTERNAL_PRODUCT_NAME,
+      version: internalVersion
+    });
+    expect(config.nsis.shortcutName).toBe(INTERNAL_PRODUCT_NAME);
+    expect(config.win.artifactName).toContain('internal-win');
   });
 
   it('does not treat source preload mtime as generated build freshness', () => {

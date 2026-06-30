@@ -27,6 +27,7 @@
     "electron/globalCaptureToastPreload.cjs",
     "dist/electron/**/*",
     "dist/lib/**/*",
+    "dist/src/shared/config/**/*",
     "package.json",
     "!dist/electron/**/*.test.js",
     "!dist/electron/**/*.test.helpers.js",

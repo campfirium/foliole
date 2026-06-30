@@ -40,11 +40,10 @@ const { clipboardImage, electronMocks } = vi.hoisted(() => {
 vi.mock('electron', () => electronMocks);
 vi.mock('./diagnostics/mainProcessDiagnostics.js', () => ({ appendMainProcessDiagnosticLog: vi.fn() }));
 vi.mock('./database/databaseReadiness.js', () => ({ waitForDatabaseReady: vi.fn(async () => undefined) }));
-vi.mock('./globalClipTextSelection.js', () => ({ detectWindowsTextSelection: vi.fn(async () => null) }));
 vi.mock('./ipc/importClipboard.js', () => ({ runClipboardImport: vi.fn(async () => null) }));
 vi.mock('./ipc/importTextCapture.js', () => ({ runTextCaptureToInbox: vi.fn(async () => null) }));
 
-import { runGlobalClipToInbox } from './globalClipToInbox.js';
+import { resolveWindowsCopyCommandForTests, runGlobalClipToInbox } from './globalClipToInbox.js';
 
 function createClipboardSnapshotSource(text: string, formats: string[]) {
   return {
@@ -56,14 +55,13 @@ function createClipboardSnapshotSource(text: string, formats: string[]) {
   };
 }
 
-it('opens the capture panel without copy probing when there is no text selection', async () => {
+it('tries to copy before opening the capture panel', async () => {
   const sendCopyShortcut = vi.fn(async () => true);
   const showCapturePanel = vi.fn(async () => ({ type: 'cancelled' as const }));
-  const waitForClipboardChange = vi.fn(async () => true);
+  const waitForClipboardChange = vi.fn(async () => false);
 
   await expect(runGlobalClipToInbox({
     clipboardRef: createClipboardSnapshotSource('old clipboard', ['text/plain']),
-    detectTextSelection: vi.fn(async () => false),
     log: vi.fn(),
     runImport: vi.fn(),
     sendCopyShortcut,
@@ -74,41 +72,8 @@ it('opens the capture panel without copy probing when there is no text selection
   })).resolves.toBeNull();
 
   expect(showCapturePanel).toHaveBeenCalledTimes(1);
-  expect(sendCopyShortcut).not.toHaveBeenCalled();
-  expect(waitForClipboardChange).not.toHaveBeenCalled();
-});
-
-it('opens the capture panel promptly when text selection detection stalls', async () => {
-  vi.useFakeTimers();
-  const sendCopyShortcut = vi.fn(async () => true);
-  const showCapturePanel = vi.fn(async () => ({ type: 'cancelled' as const }));
-  const waitForClipboardChange = vi.fn(async () => true);
-  const stalledSelectionDetection = vi.fn(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    return false;
-  });
-  try {
-    const result = runGlobalClipToInbox({
-      clipboardRef: createClipboardSnapshotSource('old clipboard', ['text/plain']),
-      detectTextSelection: stalledSelectionDetection,
-      log: vi.fn(),
-      runImport: vi.fn(),
-      sendCopyShortcut,
-      showCapturePanel,
-      showDesktopToast: vi.fn(),
-      waitForClipboardChange,
-      waitForReady: vi.fn(async () => undefined)
-    });
-
-    await vi.advanceTimersByTimeAsync(91);
-
-    await expect(result).resolves.toBeNull();
-    expect(showCapturePanel).toHaveBeenCalledTimes(1);
-    expect(sendCopyShortcut).not.toHaveBeenCalled();
-    expect(waitForClipboardChange).not.toHaveBeenCalled();
-  } finally {
-    vi.useRealTimers();
-  }
+  expect(sendCopyShortcut).toHaveBeenCalledTimes(1);
+  expect(waitForClipboardChange).toHaveBeenCalledTimes(1);
 });
 
 it('opens the capture panel when copy cannot be sent', async () => {
@@ -178,4 +143,13 @@ it('opens the capture panel when copied selection is not strict text', async () 
   expect(showDesktopToast).not.toHaveBeenCalled();
   expect(showCapturePanel).toHaveBeenCalledTimes(1);
   expect(log).toHaveBeenCalledWith('global_clip_opening_capture_panel');
+});
+
+it('uses native Windows key events instead of WinForms SendKeys for copy', () => {
+  const command = resolveWindowsCopyCommandForTests();
+
+  expect(command).toContain('user32.dll');
+  expect(command).toContain('keybd_event');
+  expect(command).not.toContain('System.Windows.Forms');
+  expect(command).not.toContain('SendKeys');
 });

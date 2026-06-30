@@ -112,11 +112,8 @@ it('shows an app-owned desktop toast and closes it automatically', async () => {
     x: 1020,
     y: 788
   }));
-  expect(electronMocks.BrowserWindow).toHaveBeenCalledWith(expect.objectContaining({
-    webPreferences: expect.objectContaining({
-      preload: '/app/electron/globalCaptureToastPreload.cjs'
-    })
-  }));
+  const windowCalls = JSON.stringify(electronMocks.BrowserWindow.mock.calls).replaceAll('\\\\', '/');
+  expect(windowCalls).toContain('/app/electron/globalCaptureToastPreload.cjs');
   expect(toastWindow.setAlwaysOnTop).toHaveBeenCalledWith(true, 'screen-saver');
   expect(toastWindow.setIgnoreMouseEvents).toHaveBeenCalledWith(false);
   expect(toastWindow.hookWindowMessage).toHaveBeenCalledWith(0x0202, expect.any(Function));
@@ -125,9 +122,11 @@ it('shows an app-owned desktop toast and closes it automatically', async () => {
   const html = decodeURIComponent(loadedUrl);
   expect(html).toContain('Clipped');
   expect(html).toContain('Saved to Inbox');
+  expect(html).toContain('data-status="success"');
   expect(html).toContain('--capture-bg:rgb(255, 255, 255);');
   expect(html).toContain('body{padding:22px;}');
   expect(html).toContain('grid-template-columns:16px 1fr 18px');
+  expect(html).toContain('animation:spin .9s linear infinite');
   expect(html).toContain('font-weight:500');
   expect(html).toContain('data:image/svg+xml;base64');
   expect(html).toContain('height:18px');
@@ -170,6 +169,9 @@ it('updates the same pending toast before closing it', async () => {
   await flushToastLoad(toastWindow);
 
   expect(toastWindow.showInactive).toHaveBeenCalledTimes(1);
+  expect(decodeURIComponent(toastWindow.loadURL.mock.calls[0]?.[0] ?? '')).toContain('data-status="pending"');
+  expect(decodeURIComponent(toastWindow.loadURL.mock.calls[0]?.[0] ?? '')).not.toContain('Clipping to Inbox');
+  expect(decodeURIComponent(toastWindow.loadURL.mock.calls[0]?.[0] ?? '')).not.toContain('Clipping</span>');
   vi.advanceTimersByTime(1800);
   expect(toastWindow.close).not.toHaveBeenCalled();
 

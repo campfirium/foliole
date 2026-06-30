@@ -2,10 +2,25 @@
 /* global console, process */
 
 import { spawn } from 'node:child_process';
-import { existsSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { rmSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assertBuiltArtifactsFresh } from './package-built-artifacts.mjs';
+import {
+  cleanReleaseArtifacts,
+  collectArtifactSummary as collectPackageArtifactSummary,
+  collectInstallerArtifactPaths,
+  formatBytes,
+  readPackageVersion as readPackageVersionFromArtifacts,
+  resolveInstallerBaseName,
+  resolvePackagedInstallerPath,
+  resolveReleaseArtifactPaths
+} from './package-windows-artifacts.mjs';
+import {
+  INTERNAL_OUTPUT_DIR,
+  formatInternalBuildVersion,
+  writeInternalBuilderConfig
+} from './package-windows-internal-config.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, '../..');
@@ -18,6 +33,10 @@ export function resolvePackageMode(argv = process.argv, platform = process.platf
 
 export function resolveInstallMode(argv = process.argv) {
   return argv.includes('--install');
+}
+
+export function resolveInternalMode(argv = process.argv) {
+  return argv.includes('--internal');
 }
 
 export function resolveBuiltArtifactMode(argv = process.argv) {
@@ -36,24 +55,28 @@ function createCmdStep(label, command) {
   };
 }
 
-export function createNativePackageSteps(fromBuilt = resolveBuiltArtifactMode()) {
+export function createNativePackageSteps(fromBuilt = resolveBuiltArtifactMode(), internal = resolveInternalMode()) {
   const buildSteps = fromBuilt ? [] : [
     createCmdStep('renderer build', 'npm run build'),
     createCmdStep('electron compile', 'npm run electron:compile')
   ];
+  const builderConfig = internal ? '.tmp/electron-builder-internal.json' : 'electron/builder.json';
   return [
     ...buildSteps,
-    createCmdStep('electron-builder nsis', 'npm exec -- electron-builder --config electron/builder.json --win nsis --publish never')
+    createCmdStep('electron-builder nsis', `npm exec -- electron-builder --config ${builderConfig} --win nsis --publish never`)
   ];
 }
 
-export function createWslPackageSteps(rootDir = repoRoot, install = resolveInstallMode(), fromBuilt = resolveBuiltArtifactMode()) {
+export function createWslPackageSteps(rootDir = repoRoot, install = resolveInstallMode(), fromBuilt = resolveBuiltArtifactMode(), internal = resolveInternalMode()) {
   const nativeArgs = [];
   if (fromBuilt) {
     nativeArgs.push('--from-built', '--skip-built-artifact-check');
   }
   if (install) {
     nativeArgs.push('--install');
+  }
+  if (internal) {
+    nativeArgs.push('--internal');
   }
   const nativeArgText = nativeArgs.length > 0 ? ` -- ${nativeArgs.join(' ')}` : '';
   const preflightSteps = fromBuilt ? [{
@@ -112,101 +135,34 @@ function runStep(step) {
   });
 }
 
-function directorySizeBytes(path) {
-  let total = 0;
-  for (const entry of readdirSync(path, { withFileTypes: true })) {
-    const childPath = resolve(path, entry.name);
-    if (entry.isDirectory()) {
-      total += directorySizeBytes(childPath);
-    } else if (entry.isFile()) {
-      total += statSync(childPath).size;
-    }
-  }
-  return total;
-}
-
-export function formatBytes(bytes) {
-  return `${Math.round(bytes / 1024 / 1024)}MB`;
-}
+export {
+  cleanReleaseArtifacts,
+  collectInstallerArtifactPaths,
+  formatBytes,
+  resolvePackagedInstallerPath,
+  resolveReleaseArtifactPaths
+};
 
 export function readPackageVersion(rootDir = repoRoot) {
-  const packageJson = JSON.parse(readFileSync(resolve(rootDir, 'package.json'), 'utf8'));
-  return packageJson.version;
+  return readPackageVersionFromArtifacts(rootDir);
 }
 
-function resolveInstallerBaseName(packageVersion) {
-  return `Foliole Setup ${packageVersion}`;
+export function collectArtifactSummary(rootDir = process.cwd(), packageVersion = readPackageVersion(rootDir), outputDir = 'artifacts/windows') {
+  return collectPackageArtifactSummary({
+    collectInstallers: () => collectInstallerArtifactPaths(rootDir, packageVersion, outputDir),
+    installerBaseName: resolveInstallerBaseName(packageVersion),
+    outputDir,
+    rootDir
+  });
 }
 
-function isInstallerArtifact(fileName, packageVersion) {
-  return (
-    fileName.endsWith('.exe') &&
-    fileName.includes('Foliole') &&
-    fileName.includes('Setup') &&
-    fileName.includes(packageVersion)
-  );
-}
-
-export function collectInstallerArtifactPaths(rootDir = repoRoot, packageVersion = readPackageVersion(rootDir)) {
-  const releaseDir = resolve(rootDir, 'artifacts/windows');
-  if (!existsSync(releaseDir)) {
-    return [];
-  }
-  return readdirSync(releaseDir)
-    .filter((fileName) => isInstallerArtifact(fileName, packageVersion))
-    .sort()
-    .map((fileName) => resolve(releaseDir, fileName));
-}
-
-export function resolvePackagedInstallerPath(rootDir = repoRoot, packageVersion = readPackageVersion(rootDir)) {
-  const candidates = collectInstallerArtifactPaths(rootDir, packageVersion);
-  if (candidates.length === 0) {
-    throw new Error(`No Foliole Windows installer found for version ${packageVersion}`);
-  }
-  return candidates
-    .map((candidate) => ({ path: candidate, mtimeMs: statSync(candidate).mtimeMs }))
-    .sort((left, right) => right.mtimeMs - left.mtimeMs)[0].path;
-}
-
-export function resolveReleaseArtifactPaths(rootDir = repoRoot, packageVersion = readPackageVersion(rootDir)) {
-  const installerBaseName = resolveInstallerBaseName(packageVersion);
-  const installerArtifacts = collectInstallerArtifactPaths(rootDir, packageVersion);
-  const installerBlockmaps = installerArtifacts.map((artifactPath) => `${artifactPath}.blockmap`);
-  return [
-    resolve(rootDir, 'artifacts/windows/win-unpacked'),
-    resolve(rootDir, 'artifacts/windows/win-unpacked.tmp'),
-    resolve(rootDir, `artifacts/windows/${installerBaseName}.exe`),
-    resolve(rootDir, `artifacts/windows/${installerBaseName}.exe.blockmap`),
-    ...installerArtifacts,
-    ...installerBlockmaps,
-    resolve(rootDir, 'artifacts/windows/latest.yml'),
-    resolve(rootDir, 'artifacts/windows/builder-debug.yml')
-  ];
-}
-
-export function cleanReleaseArtifacts(rootDir = repoRoot) {
-  for (const artifactPath of resolveReleaseArtifactPaths(rootDir)) {
-    rmSync(artifactPath, { force: true, recursive: true });
-  }
-}
-
-export function collectArtifactSummary(rootDir = process.cwd(), packageVersion = readPackageVersion(rootDir)) {
-  const installerPath = collectInstallerArtifactPaths(rootDir, packageVersion)[0] ??
-    resolve(rootDir, `artifacts/windows/${resolveInstallerBaseName(packageVersion)}.exe`);
-  const unpackedPath = resolve(rootDir, 'artifacts/windows/win-unpacked');
-  return {
-    installer: existsSync(installerPath) ? formatBytes(statSync(installerPath).size) : 'missing',
-    unpacked: existsSync(unpackedPath) ? formatBytes(directorySizeBytes(unpackedPath)) : 'missing'
-  };
-}
-
-export async function installPackagedApp(rootDir = repoRoot, packageVersion = readPackageVersion(rootDir)) {
-  const installerPath = resolvePackagedInstallerPath(rootDir, packageVersion);
+export async function installPackagedApp(rootDir = repoRoot, packageVersion = readPackageVersion(rootDir), outputDir = 'artifacts/windows') {
+  const installerPath = resolvePackagedInstallerPath(rootDir, packageVersion, outputDir);
   console.log(`[windows-package] installer: ${installerPath}`);
   await runStep({
     args: ['/S'],
     command: installerPath,
-    cwd: resolve(rootDir, 'artifacts/windows'),
+    cwd: resolve(rootDir, outputDir),
     label: 'silent install'
   });
 }
@@ -214,13 +170,25 @@ export async function installPackagedApp(rootDir = repoRoot, packageVersion = re
 async function main() {
   const mode = resolvePackageMode();
   const install = resolveInstallMode();
+  const internal = resolveInternalMode();
   const fromBuilt = resolveBuiltArtifactMode();
-  const steps = mode === 'native' ? createNativePackageSteps() : createWslPackageSteps();
+  const packageVersion = readPackageVersion();
+  const buildVersion = internal ? formatInternalBuildVersion(packageVersion) : packageVersion;
+  const outputDir = internal ? INTERNAL_OUTPUT_DIR : 'artifacts/windows';
+  const steps = mode === 'native' ? createNativePackageSteps(fromBuilt, internal) : createWslPackageSteps();
   console.log(`[windows-package] mode: ${mode}`);
+  console.log(`[windows-package] channel: ${internal ? 'internal' : 'release'}`);
   console.log(`[windows-package] install: ${install ? 'yes' : 'no'}`);
   console.log(`[windows-package] from-built: ${fromBuilt ? 'yes' : 'no'}`);
+  console.log(`[windows-package] build version: ${buildVersion}`);
   if (mode === 'native') {
-    cleanReleaseArtifacts();
+    if (internal) {
+      writeInternalBuilderConfig(repoRoot, buildVersion);
+      rmSync(resolve(repoRoot, INTERNAL_OUTPUT_DIR), { force: true, recursive: true });
+      console.log('[windows-package] internal library: D:\\X\\U\\Foliole');
+    } else {
+      cleanReleaseArtifacts(repoRoot, packageVersion);
+    }
     if (fromBuilt && !process.argv.includes('--skip-built-artifact-check')) {
       assertBuiltArtifactsFresh();
     }
@@ -229,10 +197,10 @@ async function main() {
     await runStep(step);
   }
   if (mode === 'native') {
-    const summary = collectArtifactSummary();
+    const summary = collectArtifactSummary(repoRoot, buildVersion, outputDir);
     console.log(`[windows-package] artifact installer=${summary.installer} unpacked=${summary.unpacked}`);
     if (install) {
-      await installPackagedApp();
+      await installPackagedApp(repoRoot, buildVersion, outputDir);
     }
     console.log(`[windows-package] status: ${resolvePackageStatusLabel(install)}`);
   }

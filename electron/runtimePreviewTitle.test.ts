@@ -3,7 +3,7 @@ import { Buffer } from 'node:buffer';
 import { expect, it, vi } from 'vitest';
 
 const { appMock } = vi.hoisted(() => ({
-  appMock: { isPackaged: false }
+  appMock: { getName: vi.fn(() => 'foliole'), isPackaged: false }
 }));
 
 vi.mock('electron', () => ({
@@ -34,9 +34,9 @@ it('uses the preview label as the native window title', () => {
   }
 });
 
-it('keeps the default title behavior when no preview label is set', () => {
+it('uses the app title when no preview label is set', () => {
   expect(resolvePreviewWindowTitle({})).toBe('');
-  expect(createMainWindowOptions('/tmp/preload.cjs').title).toBeUndefined();
+  expect(createMainWindowOptions('/tmp/preload.cjs').title).toBe('Foliole');
 });
 
 it('prevents renderer title updates from overriding the preview label', () => {
@@ -78,6 +78,40 @@ it('prevents renderer title updates from overriding the preview label', () => {
     expect(window.setTitle).toHaveBeenCalledTimes(7);
     expect(event.preventDefault).toHaveBeenCalledTimes(2);
   } finally {
+    if (oldLabel === undefined) delete process.env.FOLIOLE_PREVIEW_LABEL;
+    else process.env.FOLIOLE_PREVIEW_LABEL = oldLabel;
+    vi.useRealTimers();
+  }
+});
+
+it('prevents renderer title updates from overriding the app title', () => {
+  vi.useFakeTimers();
+  const oldLabel = process.env.FOLIOLE_PREVIEW_LABEL;
+  delete process.env.FOLIOLE_PREVIEW_LABEL;
+  appMock.getName.mockReturnValue('foliole-internal');
+  const webContentsHandlers: Array<(event: { preventDefault: () => void }) => void> = [];
+  const webContents = {
+    on: vi.fn((eventName: string, handler: ((event: { preventDefault: () => void }) => void) | (() => void)) => {
+      if (eventName === 'page-title-updated') webContentsHandlers.push(handler as (event: { preventDefault: () => void }) => void);
+    }),
+    setWindowOpenHandler: vi.fn()
+  };
+  const window = {
+    isDestroyed: vi.fn(() => false),
+    on: vi.fn(),
+    once: vi.fn(),
+    setTitle: vi.fn(),
+    webContents
+  };
+  try {
+    bindMainWindowNavigationGuard(window as never);
+    const event = { preventDefault: vi.fn() };
+    webContentsHandlers[0]?.(event);
+
+    expect(window.setTitle).toHaveBeenCalledWith('Foliole Internal');
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
+  } finally {
+    appMock.getName.mockReturnValue('foliole');
     if (oldLabel === undefined) delete process.env.FOLIOLE_PREVIEW_LABEL;
     else process.env.FOLIOLE_PREVIEW_LABEL = oldLabel;
     vi.useRealTimers();

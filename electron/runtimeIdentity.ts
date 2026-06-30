@@ -33,10 +33,21 @@ export interface ConfiguredAppIdentity {
 }
 
 export const FOLIOLE_APP_NAME = 'foliole';
+export const FOLIOLE_INTERNAL_APP_NAME = 'foliole-internal';
+export const FOLIOLE_INTERNAL_DEFAULT_LIBRARY_HOME = 'D:\\X\\U\\Foliole';
+export const FOLIOLE_INTERNAL_PRODUCT_NAME = 'Foliole Internal';
 export const FOLIOLE_WINDOWS_APP_USER_MODEL_ID = 'com.foliole.desktop';
+export const FOLIOLE_WINDOWS_INTERNAL_APP_USER_MODEL_ID = 'com.foliole.desktop.internal';
 
 function resolveFolioleUserDataPath(appDataRoot: string) {
   return path.join(appDataRoot, FOLIOLE_APP_NAME);
+}
+
+function resolveRuntimeAppName(initialAppName: string, env: NodeJS.ProcessEnv) {
+  if (env.FOLIOLE_BUILD_CHANNEL === 'internal' || initialAppName === FOLIOLE_INTERNAL_PRODUCT_NAME) {
+    return FOLIOLE_INTERNAL_APP_NAME;
+  }
+  return FOLIOLE_APP_NAME;
 }
 
 function resolveOverridePath(envValue: string | undefined) {
@@ -61,6 +72,34 @@ function readFlagValue(argv: string[], name: string) {
 function resolveLibraryHomeArg(argv = process.argv) {
   const value = readFlagValue(argv, '--library-home');
   return value ? path.resolve(value) : null;
+}
+
+function resolveRuntimeLibraryHome(args: {
+  argv: string[];
+  env: NodeJS.ProcessEnv;
+  internalBuild: boolean;
+  sandboxLibraryHome: string | null;
+}) {
+  return resolveOverridePath(args.env.FOLIOLE_LIBRARY_HOME)
+    ?? resolveLibraryHomeArg(args.argv)
+    ?? args.sandboxLibraryHome
+    ?? (args.internalBuild ? FOLIOLE_INTERNAL_DEFAULT_LIBRARY_HOME : null);
+}
+
+function resolveRuntimeUserDataPath(args: {
+  appDataRoot: string;
+  env: NodeJS.ProcessEnv;
+  internalBuild: boolean;
+  sandboxRoot: string | null;
+}) {
+  const defaultUserDataPath = args.internalBuild
+    ? path.join(args.appDataRoot, FOLIOLE_INTERNAL_APP_NAME)
+    : resolveFolioleUserDataPath(args.appDataRoot);
+  const sandboxUserDataPath = args.sandboxRoot ? path.join(args.sandboxRoot, 'user-data') : null;
+  return {
+    defaultUserDataPath,
+    userDataPath: resolveOverridePath(args.env.FOLIOLE_USER_DATA_PATH) ?? sandboxUserDataPath ?? defaultUserDataPath
+  };
 }
 
 function hasFlag(argv: string[], name: string) {
@@ -105,7 +144,9 @@ export function configureRuntimeAppIdentity(
   argv = process.argv,
   rmSync?: RmSync
 ): ConfiguredAppIdentity {
-  app.setName(FOLIOLE_APP_NAME);
+  const runtimeAppName = resolveRuntimeAppName(app.getName(), env);
+  const internalBuild = runtimeAppName === FOLIOLE_INTERNAL_APP_NAME;
+  app.setName(internalBuild ? FOLIOLE_INTERNAL_PRODUCT_NAME : 'Foliole');
   const sampleLaunch = hasFlagOrValue(argv, '--sample-locale');
   const previewSandbox = env.FOLIOLE_PREVIEW_SANDBOX === '1' || hasFlag(argv, '--preview-sandbox') || sampleLaunch;
   if (previewSandbox) {
@@ -117,15 +158,12 @@ export function configureRuntimeAppIdentity(
     env.FOLIOLE_GUIDED_SAMPLE_LOCALE = sampleLocale;
   }
   const sandboxLibraryHome = sandboxRoot ? path.join(sandboxRoot, 'library') : null;
-  const libraryHome =
-    resolveOverridePath(env.FOLIOLE_LIBRARY_HOME) ?? resolveLibraryHomeArg(argv) ?? sandboxLibraryHome;
+  const libraryHome = resolveRuntimeLibraryHome({ argv, env, internalBuild, sandboxLibraryHome });
   if (libraryHome) {
     env.FOLIOLE_LIBRARY_HOME = libraryHome;
   }
   const appDataRoot = app.getPath('appData');
-  const defaultUserDataPath = resolveFolioleUserDataPath(appDataRoot);
-  const sandboxUserDataPath = sandboxRoot ? path.join(sandboxRoot, 'user-data') : null;
-  const userDataPath = resolveOverridePath(env.FOLIOLE_USER_DATA_PATH) ?? sandboxUserDataPath ?? defaultUserDataPath;
+  const { defaultUserDataPath, userDataPath } = resolveRuntimeUserDataPath({ appDataRoot, env, internalBuild, sandboxRoot });
   const sessionDataPath = resolveOverridePath(env.FOLIOLE_SESSION_DATA_PATH) ?? userDataPath;
   if (previewSandbox && env.FOLIOLE_PREVIEW_SANDBOX_RESET !== '0') {
     resetPreviewSandboxPaths(
@@ -143,7 +181,9 @@ export function configureRuntimeAppIdentity(
   app.setPath('sessionData', sessionDataPath);
 
   if (platform === 'win32') {
-    app.setAppUserModelId?.(FOLIOLE_WINDOWS_APP_USER_MODEL_ID);
+    app.setAppUserModelId?.(internalBuild
+      ? FOLIOLE_WINDOWS_INTERNAL_APP_USER_MODEL_ID
+      : FOLIOLE_WINDOWS_APP_USER_MODEL_ID);
   }
 
   return {

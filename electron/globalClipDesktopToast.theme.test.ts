@@ -140,6 +140,10 @@ it('keeps localized toast status text when the notification updates', async () =
 
   const toast = showGlobalClipDesktopToast('pending');
   await flushToastLoad(toastWindow);
+  const pendingHtml = decodeURIComponent(toastWindow.loadURL.mock.calls[0]?.[0] ?? '');
+  expect(pendingHtml).toContain('data-status="pending"');
+  expect(pendingHtml).not.toContain('剪辑中');
+  expect(pendingHtml).not.toContain('正在剪辑到收件箱');
   toast.update('success', 'node-1', 'Captured source preview');
 
   const latestCall = toastWindow.webContents.executeJavaScript.mock.calls.at(-1) as [string, boolean] | undefined;

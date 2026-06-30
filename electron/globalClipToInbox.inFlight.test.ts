@@ -23,7 +23,6 @@ const { clipboardImage, electronMocks } = vi.hoisted(() => {
 vi.mock('electron', () => electronMocks);
 vi.mock('./diagnostics/mainProcessDiagnostics.js', () => ({ appendMainProcessDiagnosticLog: vi.fn() }));
 vi.mock('./database/databaseReadiness.js', () => ({ waitForDatabaseReady: vi.fn(async () => undefined) }));
-vi.mock('./globalClipTextSelection.js', () => ({ detectWindowsTextSelection: vi.fn(async () => null) }));
 vi.mock('./ipc/importClipboard.js', () => ({ runClipboardImport: vi.fn(async () => null) }));
 vi.mock('./ipc/importTextCapture.js', () => ({ runTextCaptureToInbox: vi.fn(async () => null) }));
 
@@ -55,9 +54,9 @@ it('raises the open capture panel when the global shortcut repeats during captur
 
   const firstRun = runGlobalClipToInbox({
     clipboardRef: createClipboardSnapshotSource('old clipboard'),
-    detectTextSelection: vi.fn(async () => false),
     log,
     raiseCapturePanel,
+    sendCopyShortcut: vi.fn(async () => false),
     showCapturePanel,
     showDesktopToast: vi.fn(() => ({ close: vi.fn(), update: vi.fn() })),
     waitForReady: vi.fn(async () => undefined)
