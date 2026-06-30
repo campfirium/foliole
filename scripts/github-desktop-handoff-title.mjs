@@ -11,7 +11,7 @@ export function buildPrHandoffData(config, pr, checks) {
   return {
     author: pr.author?.login ?? pr.author?.name ?? '',
     baseRefName: pr.baseRefName,
-    eventId: `${number}:${checkSignal.eventSuffix}`,
+    eventId: number,
     failingChecks: checkSignal.label,
     handoffTitle,
     headRefName: pr.headRefName,
@@ -20,6 +20,28 @@ export function buildPrHandoffData(config, pr, checks) {
     repository: config.repository,
     source: 'foliole/github-pr',
     url: pr.url,
+    workspace: config.workspace
+  };
+}
+
+export function buildIssueHandoffData(config, issue) {
+  const number = String(issue.number);
+  const labels = (issue.labels ?? [])
+    .map((label) => label.name)
+    .filter(Boolean)
+    .join(', ');
+
+  return {
+    author: issue.author?.login ?? issue.author?.name ?? '',
+    eventId: number,
+    handoffTitle: `Issue #${number}: ${issue.title}`,
+    issueTitle: issue.title,
+    labels,
+    number,
+    repository: config.repository,
+    source: 'foliole/github-issue',
+    updatedAt: issue.updatedAt ?? '',
+    url: issue.url,
     workspace: config.workspace
   };
 }

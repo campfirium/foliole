@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "name": "github-issues",
+  "enabled": true,
+  "kind": "github-issue-handoff",
+  "workspace": "D:\\C\\foliole",
+  "template": ".codex/monitors/templates/github-issues.md",
+  "defaultPriority": "normal",
+  "defaultTtlSeconds": 1800,
+  "pollIntervalSeconds": 900,
+  "repository": "campfirium/foliole",
+  "limit": 50,
+  "dedupeKeyPattern": "foliole:github-issue:{eventId}",
+  "notes": "Consumed by scripts/github-desktop-handoff-monitor.mjs. Opens one Codex Desktop handoff for each newly observed open issue."
+}

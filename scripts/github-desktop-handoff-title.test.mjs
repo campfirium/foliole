@@ -3,7 +3,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { describe, expect, it } from 'vitest';
 
-import { buildPrHandoffData } from './github-desktop-handoff-title.mjs';
+import { buildIssueHandoffData, buildPrHandoffData } from './github-desktop-handoff-title.mjs';
 
 const config = {
   failureBuckets: ['fail'],
@@ -30,7 +30,7 @@ describe('GitHub desktop handoff title data', () => {
 
     expect(data.handoffTitle).toBe('PR #42 failed: test:desktop');
     expect(data.prTitle).toBe('Repair desktop handoff labels');
-    expect(data.eventId).toBe('42:test:desktop');
+    expect(data.eventId).toBe('42');
   });
 
   it('uses a distinct title for PRs that have no reported checks', () => {
@@ -38,7 +38,7 @@ describe('GitHub desktop handoff title data', () => {
 
     expect(data.handoffTitle).toBe('PR #42 needs checks');
     expect(data.failingChecks).toBe('No checks reported');
-    expect(data.eventId).toBe('42:no-checks');
+    expect(data.eventId).toBe('42');
   });
 
   it('renders the PR handoff title as the first prompt line', () => {
@@ -49,5 +49,24 @@ describe('GitHub desktop handoff title data', () => {
 
     expect(rendered.split(/\r?\n/u)[0]).toBe('# PR #42 failed: quality:desktop');
     expect(rendered).toContain('PR: #42 Repair desktop handoff labels');
+  });
+
+  it('renders GitHub issue handoff prompts from issue data', () => {
+    const templatePath = path.join(process.cwd(), '.codex', 'monitors', 'templates', 'github-issues.md');
+    const template = fs.readFileSync(templatePath, 'utf8');
+    const data = buildIssueHandoffData(config, {
+      author: { login: 'octocat' },
+      labels: [{ name: 'bug' }, { name: 'desktop' }],
+      number: 38,
+      title: 'Sequential reading only enqueue the first chapter',
+      updatedAt: '2026-06-28T07:58:01Z',
+      url: 'https://github.com/campfirium/foliole/issues/38'
+    });
+    const rendered = template.replace(/\{\{(\w+)\}\}/g, (_match, key) => String(data[key] ?? ''));
+
+    expect(data.eventId).toBe('38');
+    expect(rendered.split(/\r?\n/u)[0]).toBe('# Issue #38: Sequential reading only enqueue the first chapter');
+    expect(rendered).toContain('Labels: bug, desktop');
+    expect(rendered).toContain('gh issue view 38 --repo campfirium/foliole --comments');
   });
 });

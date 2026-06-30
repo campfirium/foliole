@@ -4,8 +4,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { buildPrHandoffData } from './github-desktop-handoff-title.mjs';
-import { listPrChecks, recordMonitorError, runGh } from './github-monitor-gh.mjs';
+import { listGithubMonitorEvents } from './github-desktop-handoff-events.mjs';
 
 const REPO_ROOT = process.cwd();
 const MONITOR_DIR = path.join(REPO_ROOT, '.codex', 'monitors');
@@ -40,124 +39,20 @@ function renderTemplate(templatePath, data) {
 function loadConfigs() {
   return {
     actions: readJson(path.join(MONITOR_DIR, 'github-actions.json')),
+    issues: readJson(path.join(MONITOR_DIR, 'github-issues.json')),
     prs: readJson(path.join(MONITOR_DIR, 'github-prs.json'))
   };
 }
 
 function loadState() {
-  return readJson(STATE_FILE, { actions: {}, prs: {}, submitted: {} });
-}
-
-function actionRunEvent(config, run) {
-  const data = {
-    branch: run.headBranch,
-    eventId: String(run.databaseId),
-    headSha: run.headSha,
-    repository: config.repository,
-    runId: String(run.databaseId),
-    runTitle: run.displayTitle,
-    source: 'foliole/github-actions',
-    url: run.url,
-    workflow: run.workflowName,
-    workspace: config.workspace
-  };
+  const state = readJson(STATE_FILE, {});
   return {
-    dedupeKey: config.dedupeKeyPattern.replace('{eventId}', data.eventId),
-    prompt: renderTemplate(config.template, data),
-    title: `Foliole Actions failed: ${run.workflowName}`,
-    ...data,
-    ttlSeconds: config.defaultTtlSeconds
+    ...state,
+    actions: state.actions ?? {},
+    issues: state.issues ?? {},
+    prs: state.prs ?? {},
+    submitted: state.submitted ?? {}
   };
-}
-
-function prEvent(config, pr, checks) {
-  const data = buildPrHandoffData(config, pr, checks);
-  return {
-    dedupeKey: config.dedupeKeyPattern.replace('{eventId}', data.eventId),
-    prompt: renderTemplate(config.template, data),
-    ...data,
-    title: data.handoffTitle,
-    ttlSeconds: config.defaultTtlSeconds
-  };
-}
-
-function listActionEvents(config, state, includeExisting, errors) {
-  if (!config?.enabled) return [];
-  const events = [];
-  const workflows = config.workflows ?? [];
-  for (const workflow of workflows) {
-    let runs;
-    try {
-      runs = runGh([
-        'run',
-        'list',
-        '--repo',
-        config.repository,
-        '--workflow',
-        workflow,
-        '--limit',
-        '10',
-        '--json',
-        'databaseId,conclusion,status,displayTitle,headSha,headBranch,url,workflowName,createdAt'
-      ]);
-    } catch (error) {
-      recordMonitorError(errors, 'github-actions', workflow, error);
-      continue;
-    }
-    const latestId = String(runs[0]?.databaseId ?? '');
-    const seenId = state.actions[workflow];
-    if (!includeExisting && !seenId) {
-      state.actions[workflow] = latestId;
-      continue;
-    }
-    for (const run of runs) {
-      if (!includeExisting && String(run.databaseId) === seenId) break;
-      if (run.status === 'completed' && config.failureConclusions.includes(run.conclusion)) {
-        events.push(actionRunEvent(config, run));
-      }
-    }
-    state.actions[workflow] = latestId;
-  }
-  return events;
-}
-
-function listPrEvents(config, state, includeExisting, errors) {
-  if (!config?.enabled) return [];
-  let prs;
-  try {
-    prs = runGh([
-      'pr',
-      'list',
-      '--repo',
-      config.repository,
-      '--state',
-      'open',
-      '--json',
-      'number,title,headRefName,baseRefName,isDraft,author,url,updatedAt',
-      '--limit',
-      '50'
-    ]);
-  } catch (error) {
-    recordMonitorError(errors, 'github-pr', 'list', error);
-    return [];
-  }
-  const events = [];
-  for (const pr of prs) {
-    if (pr.isDraft && !config.includeDrafts) continue;
-    let checks;
-    try {
-      checks = listPrChecks(config, pr);
-    } catch (error) {
-      recordMonitorError(errors, 'github-pr-checks', `#${pr.number}`, error);
-      continue;
-    }
-    const event = prEvent(config, pr, checks);
-    if (!event.failingChecks) continue;
-    if (!includeExisting && state.prs[String(pr.number)] === event.eventId) continue;
-    events.push(event);
-    state.prs[String(pr.number)] = event.eventId;
-  }
-  return events;
 }
 
 function submitEvent(event) {
@@ -187,10 +82,8 @@ function scan({ emit = false, includeExisting = false } = {}) {
   const persistedState = loadState();
   const state = emit ? persistedState : JSON.parse(JSON.stringify(persistedState));
   const errors = [];
-  const events = [
-    ...listActionEvents(configs.actions, state, includeExisting, errors),
-    ...listPrEvents(configs.prs, state, includeExisting, errors)
-  ].filter((event) => includeExisting || !state.submitted[event.dedupeKey]);
+  const events = listGithubMonitorEvents(configs, state, includeExisting, errors, renderTemplate)
+    .filter((event) => includeExisting || !state.submitted[event.dedupeKey]);
   state.lastErrors = errors;
   state.lastCheckedAt = new Date().toISOString();
   if (emit) {
@@ -205,7 +98,7 @@ function scan({ emit = false, includeExisting = false } = {}) {
 
 async function monitor() {
   const configs = loadConfigs();
-  const interval = Math.max(configs.actions?.pollIntervalSeconds ?? 900, configs.prs?.pollIntervalSeconds ?? 900);
+  const interval = Math.max(configs.actions?.pollIntervalSeconds ?? 900, configs.prs?.pollIntervalSeconds ?? 900, configs.issues?.pollIntervalSeconds ?? 900);
   for (;;) {
     console.log(JSON.stringify({ ...scan({ emit: true }), checkedAt: new Date().toISOString() }));
     await new Promise((resolve) => setTimeout(resolve, interval * 1000));
