@@ -7,6 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { DEMO_PREVIEW_HOST, DEMO_PREVIEW_PATH, DEMO_PREVIEW_PORT } from './demo-preview-config.mjs';
+import { processAlive } from './windows-process-alive.mjs';
 
 export { DEMO_PREVIEW_PATH } from './demo-preview-config.mjs';
 
@@ -63,17 +64,7 @@ function readState(name, root = stateRoot) {
   }
 }
 
-function processAlive(pid) {
-  if (!Number.isInteger(pid) || pid <= 0) return false;
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function probeHttp(url, timeoutMs = 1000) {
+function probeHttp(url, timeoutMs = 3000) {
   return new Promise((resolve) => {
     const request = http.get(url, (response) => {
       let body = '';
@@ -82,7 +73,7 @@ function probeHttp(url, timeoutMs = 1000) {
         body += chunk;
       });
       response.on('end', () => {
-        resolve(response.statusCode === 200 && body.includes('id="root"') && body.includes('type="module"'));
+        resolve(response.statusCode === 200 && body.includes('/@vite/client') && body.includes('type="module"'));
       });
     });
     request.on('error', () => resolve(false));

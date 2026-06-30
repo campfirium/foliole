@@ -67,6 +67,7 @@
 ## Pre-Edit Dirty File Gate
 
 - 任何任务首次编辑文件前，必须先列出本轮计划编辑的文件清单；大任务以实施说明为准，小任务以编辑前的简短实现思路为准。
+- 规则维护任务编辑任意 `AGENTS.md` 时不受本节 dirty-file gate 限制；仍必须只改本轮规则目标，不得借机重写无关规则。
 - 对计划编辑文件执行 `node scripts/wait-clean-files.mjs <file...>`；脚本通过后才允许编辑这些文件。
 - 若本轮只编辑 `package.json` 的 `scripts` 区，使用 `node scripts/wait-clean-files.mjs --allow-package-json-scripts-edit package.json`；该例外只免疫 `scripts` 以外的既有 package dirty，不免疫 `scripts` dirty、`package-lock.json` 或依赖 / 版本编辑。
 - 若脚本发现计划编辑文件已有未提交改动，会持续等待，直到这些文件在当前 Git 工作区变干净；超时或被打断时，不得编辑仍 dirty 的文件，必须汇报仍占用的文件。
@@ -119,7 +120,7 @@
 | 普通模式、局部宿主规则命中人工预览 | 执行对应宿主预览 |
 | 用户说“打开预览” / “关闭预览” | 只影响当次明确指定的宿主预览动作，不写入持久 preview flag |
 
-预览入口：桌面人工预览按 `electron/AGENTS.md` 当前工作区入口执行；移动按 `npm run android:preview` 执行。预览成功时最终末行可写 `pushed`。
+预览入口：桌面人工预览按 `electron/AGENTS.md` 当前工作区入口执行；移动按 `android/AGENTS.md` 的局部入口执行。预览成功时最终末行可写 `pushed`。
 
 - Demo 可见验收优先复用当前已打开的 Demo 窗口 / 标签页并执行刷新；若没有可刷新目标或当前工具无法控制该窗口，最终汇报必须明确 Demo 可见刷新未完成及原因，不得用 Hidden Native 或普通桌面 smoke 替代。
 

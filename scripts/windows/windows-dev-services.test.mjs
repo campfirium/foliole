@@ -67,5 +67,22 @@ describe('windows dev services', () => {
     expect(packageJson.scripts['android:web:dev']).toBe(
       'node scripts/windows/windows-dev-services.mjs start companion'
     );
+    expect(packageJson.scripts['android:preview:dev-server']).toBe(
+      'bash scripts/android/android-preview-dev-server.sh'
+    );
+  });
+
+  it('treats Windows EPERM from kill zero as a live process', async () => {
+    const script = await readFile(path.join(REPO_ROOT, 'scripts/windows/windows-process-alive.mjs'), 'utf8');
+
+    expect(script).toContain("error?.code === 'EPERM'");
+  });
+
+  it('recognizes current Vite HTML as service-ready', async () => {
+    const script = await readFile(path.join(REPO_ROOT, 'scripts/windows/windows-dev-services.mjs'), 'utf8');
+
+    expect(script).toContain('function probeHttp(url, timeoutMs = 3000)');
+    expect(script).toContain("body.includes('/@vite/client')");
+    expect(script).not.toContain('id=\"root\"');
   });
 });

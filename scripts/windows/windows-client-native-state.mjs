@@ -1,7 +1,9 @@
-/* global process */
-
 import fs from 'node:fs';
 import { rm, writeFile } from 'node:fs/promises';
+
+import { processAlive } from './windows-process-alive.mjs';
+
+export { processAlive };
 
 function readJson(filePath) {
   try {
@@ -16,18 +18,6 @@ function readBootEvents(filePath) {
     return fs.readFileSync(filePath, 'utf8').split(/\r?\n/u).filter(Boolean);
   } catch {
     return [];
-  }
-}
-
-export function processAlive(pid) {
-  if (!Number.isInteger(pid) || pid <= 0) {
-    return false;
-  }
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
   }
 }
 

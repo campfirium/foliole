@@ -129,6 +129,7 @@
     "android:emulator": "bash scripts/android/windows-run-emulator.sh",
     "android:logcat": "bash scripts/android/windows-logcat.sh",
     "android:preview": "node scripts/preview/preview-dedupe.mjs android -- bash scripts/android/android-preview.sh",
+    "android:preview:dev-server": "bash scripts/android/android-preview-dev-server.sh",
     "android:preview:lite": "bash scripts/android/android-preview-lite.sh",
     "android:screenshot": "bash scripts/android/windows-screenshot.sh",
     "android:sync:audit": "node scripts/electron-sqlite-runner.mjs scripts/android/android-sync-audit.mjs",
