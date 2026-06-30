@@ -11,8 +11,10 @@ import { describe, expect, it } from 'vitest';
 
 import {
   QUALITY_SCRIPT_STEPS,
+  expectNoParallelFanOut,
   expectNoQualityMonolithStep,
-  expectStep
+  expectStep,
+  extractQualityScriptSteps
 } from './quality-gate-target-test-support.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -78,6 +80,38 @@ describe('quality-gate-target.sh shared segments', () => {
         expectStep(result.stdout, step);
       }
       expectNoQualityMonolithStep(result.stdout);
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, 60000);
+
+  it('keeps shared quality tests on the sequential heavy-bucket route', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-shared-segments-'));
+    try {
+      await writePackageJson(tempRoot);
+
+      const result = await runTargetGate(tempRoot, 'shared-quality-tests');
+
+      expect(result.code).toBe(0);
+      expectNoParallelFanOut(result.stdout);
+      expect(extractQualityScriptSteps(result.stdout)).toEqual([...QUALITY_SCRIPT_STEPS].sort());
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, 60000);
+
+  it('keeps sequential and parallel quality script helpers on the same bucket set', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-shared-segments-'));
+    try {
+      await writePackageJson(tempRoot);
+
+      const sequentialResult = await runTargetGate(tempRoot, 'shared-quality-tests');
+      const parallelResult = await runTargetGate(tempRoot, 'release-tooling');
+
+      expect(sequentialResult.code).toBe(0);
+      expect(parallelResult.code).toBe(0);
+      expect(parallelResult.stdout).toContain('running in parallel:');
+      expect(extractQualityScriptSteps(sequentialResult.stdout)).toEqual(extractQualityScriptSteps(parallelResult.stdout));
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }

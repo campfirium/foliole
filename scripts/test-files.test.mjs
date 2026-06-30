@@ -11,10 +11,14 @@ import { describe, expect, it } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SCRIPT = path.join(REPO_ROOT, 'scripts', 'test-files.mjs');
+const ABI_GUARD_TEST_TIMEOUT_MS = 15000;
+const ORDINARY_NODE = process.versions.electron
+  ? process.env.FOLIOLE_WINDOWS_NODE_EXE || 'node'
+  : process.execPath;
 
 function runTestFiles(args, env = {}) {
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, [SCRIPT, ...args], {
+    const child = spawn(ORDINARY_NODE, [SCRIPT, ...args], {
       cwd: REPO_ROOT,
       env: {
         ...process.env,
@@ -59,7 +63,7 @@ async function createFakeVitest(tempRoot) {
   );
   await chmod(fakeVitestPath, 0o755);
   if (process.platform === 'win32') {
-    await writeFile(fakeVitestCommandPath, `@echo off\r\n"${process.execPath}" "${fakeVitestPath}" %*\r\n`, 'utf8');
+    await writeFile(fakeVitestCommandPath, `@echo off\r\n"${ORDINARY_NODE}" "${fakeVitestPath}" %*\r\n`, 'utf8');
   }
   return { argsPath, fakeVitestPath: fakeVitestCommandPath };
 }
@@ -110,7 +114,7 @@ describe('test-files', () => {
     expect(result.code).toBe(1);
     expect(result.stderr).toContain('real sqlite tests cannot run under the ordinary Node ABI');
     expect(result.stderr).toContain('npm run test:sqlite:electron');
-  });
+  }, ABI_GUARD_TEST_TIMEOUT_MS);
 
   it('refuses indirect database connection tests outside the Electron ABI runner', async () => {
     const result = await runTestFiles(['electron/database/externalDocumentImportVisibility.test.ts']);
@@ -118,7 +122,7 @@ describe('test-files', () => {
     expect(result.code).toBe(1);
     expect(result.stderr).toContain('real sqlite tests cannot run under the ordinary Node ABI');
     expect(result.stderr).toContain('electron/database/externalDocumentImportVisibility.test.ts');
-  });
+  }, ABI_GUARD_TEST_TIMEOUT_MS);
 
   it('refuses spoofed Electron-as-Node environment under the ordinary Node ABI', async () => {
     const result = await runTestFiles(['src/shared/platform/companionSyncStateObjects.test.ts'], {
@@ -127,5 +131,5 @@ describe('test-files', () => {
 
     expect(result.code).toBe(1);
     expect(result.stderr).toContain('real sqlite tests cannot run under the ordinary Node ABI');
-  });
+  }, ABI_GUARD_TEST_TIMEOUT_MS);
 });

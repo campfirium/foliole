@@ -9,6 +9,9 @@ import { collectScriptTestFiles, selectScriptTestBucketFiles } from './script-te
 import { runIntegrationAggregate } from './script-test-bucket-aggregate.mjs';
 
 const DEFAULT_BUCKET_TIMEOUT_SECONDS = 240;
+const BUCKET_TIMEOUT_SECONDS = {
+  core: 360
+};
 
 function printUsage() {
   console.error(
@@ -18,7 +21,7 @@ function printUsage() {
 
 export function resolveBucketTimeoutSeconds(bucket) {
   const envName = `SCRIPT_TEST_BUCKET_${bucket.toUpperCase().replaceAll(/[^A-Z0-9]/gu, '_')}_TIMEOUT_SECONDS`;
-  const fallback = DEFAULT_BUCKET_TIMEOUT_SECONDS;
+  const fallback = BUCKET_TIMEOUT_SECONDS[bucket] ?? DEFAULT_BUCKET_TIMEOUT_SECONDS;
   const raw = process.env[envName] ?? process.env.SCRIPT_TEST_BUCKET_TIMEOUT_SECONDS ?? `${fallback}`;
   const parsed = Number.parseInt(raw, 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;

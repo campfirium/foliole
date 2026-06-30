@@ -8,6 +8,8 @@ import { describe, expect, it } from 'vitest';
 
 import { buildFreezeSnapshot, buildLightSample } from './dev-freeze-snapshot.mjs';
 
+const PROCESS_LIST_PATTERN = /PID|\[unavailable\] ps (not found|process listing unsupported)/u;
+
 describe('dev freeze snapshot', () => {
   it('captures system, process, preview, and resource lock evidence', async () => {
     const runtimeDir = await mkdtemp(path.join(os.tmpdir(), 'freeze-snapshot-'));
@@ -30,7 +32,7 @@ describe('dev freeze snapshot', () => {
 
     expect(snapshot.preview.activeRun).toMatchObject({ runId: 'active', status: 'running' });
     expect(snapshot.resourceLocks).toHaveLength(1);
-    expect(snapshot.processes.topCpu[0]).toMatch(/PID|\[unavailable\] ps not found/u);
+    expect(snapshot.processes.topCpu[0]).toMatch(PROCESS_LIST_PATTERN);
     expect(snapshot.memory).toMatch(/Mem:|\[unavailable\] free not found/u);
     expect(snapshot.git.statusShort).toEqual(expect.any(String));
     await expect(readFile(path.join(runtimeDir, 'resource-gate.preview.lock'), 'utf8')).resolves.toContain('preview');
@@ -43,6 +45,6 @@ describe('dev freeze snapshot', () => {
 
     expect(sample).not.toHaveProperty('git');
     expect(sample.loadAverage).toEqual(expect.any(Array));
-    expect(sample.processes.topCpu[0]).toMatch(/PID|\[unavailable\] ps not found/u);
+    expect(sample.processes.topCpu[0]).toMatch(PROCESS_LIST_PATTERN);
   });
 });

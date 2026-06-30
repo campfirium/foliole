@@ -25,6 +25,10 @@ function runText(command, args) {
   }
 }
 
+function unavailablePsOutput(text) {
+  return text.startsWith('[unavailable]') || /unknown option|invalid option|not recognized/u.test(text);
+}
+
 async function readJson(filePath) {
   try {
     return JSON.parse(await readFile(filePath, 'utf8'));
@@ -35,13 +39,13 @@ async function readJson(filePath) {
 
 function topProcesses() {
   const text = runText('ps', ['-eo', 'pid,ppid,stat,pcpu,pmem,etime,cmd', '--sort=-pcpu']);
-  return text.startsWith('[unavailable]') ? [text] : text.split('\n').slice(0, 26);
+  return unavailablePsOutput(text) ? ['[unavailable] ps process listing unsupported'] : text.split('\n').slice(0, 26);
 }
 
 function matchingProcesses() {
   const text = runText('ps', ['-eo', 'pid,ppid,stat,pcpu,pmem,etime,cmd']);
-  return text.startsWith('[unavailable]')
-    ? [text]
+  return unavailablePsOutput(text)
+    ? ['[unavailable] ps process listing unsupported']
     : text.split('\n').filter((line, index) => index === 0 || PROCESS_PATTERN.test(line));
 }
 

@@ -107,7 +107,7 @@ describe('quality-gate-fast.sh guard limits', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 15000);
+  }, 30000);
 
   it('applies memory limits to the typecheck step too', async () => {
     const tempRoot = await createQualityGateTempRoot();

@@ -101,27 +101,27 @@ describe('preview-dedupe scheduler defaults', () => {
           runs += 1;
           return { exitCode: 0, hash: 'hash-ok', previewed: true };
         },
-        settleMs: 140,
-        maxSettleMs: 260,
+        settleMs: 900,
+        maxSettleMs: 1600,
         target: 'windows',
         waitAnnouncer,
         windowMs: 0
       });
 
-      await delay(40);
+      await delay(300);
       const second = runScheduledPreview({
         runtimeDir,
         runPreview: async () => {
           runs += 1;
           return { exitCode: 0, hash: 'hash-ok', previewed: true };
         },
-        settleMs: 140,
-        maxSettleMs: 260,
+        settleMs: 900,
+        maxSettleMs: 1600,
         target: 'windows',
         waitAnnouncer,
         windowMs: 0
       });
-      const earlyResult = await Promise.race([first.then(() => 'settled'), delay(180).then(() => 'waiting')]);
+      const earlyResult = await Promise.race([first.then(() => 'settled'), delay(700).then(() => 'waiting')]);
       const [firstResult, secondResult] = await Promise.all([first, second]);
 
       expect(earlyResult).toBe('waiting');

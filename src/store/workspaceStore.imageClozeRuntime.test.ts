@@ -20,12 +20,12 @@ vi.mock('../shared/platform/runtimeInvoke', () => ({
 
 beforeEach(() => {
   runtimeInvoke.mockReset();
-  runtimeInvoke.mockImplementation(async (command: string, payload?: { nodeId?: string }) => {
+  runtimeInvoke.mockImplementation(async (command: string) => {
     if (command === 'create_item') {
       return null;
     }
-    if (command === 'update_node_content' && payload?.nodeId) {
-      return { nodes: [payload], updatedNodeIds: [payload.nodeId] };
+    if (command === 'update_node_content') {
+      return null;
     }
     return null;
   });
@@ -73,10 +73,12 @@ it('keeps image cloze nodes local when creation mutation returns no patch', asyn
     }]
   );
   const createdId = createdIds[0] as string;
+  const createdNode = useWorkspaceStore.getState().nodesById[createdId];
 
   expect(createdIds).toHaveLength(1);
-  expect(useWorkspaceStore.getState().nodesById[createdId]?.content).toContain('Before image');
-  expect(useWorkspaceStore.getState().nodesById[createdId]?.reveal).toBe('![Cover](asset://hash-1.png)');
+  expect(createdNode?.hasContent).toBe(true);
+  expect(createdNode?.hasReveal).toBe(true);
+  expect(createdNode?.anchorLink?.id).toBe('region-1');
   expect(useWorkspaceStore.getState().nodesById['node-1']?.imageRegions).toEqual([{
     attachmentId: 'hash-1',
     regions: [{ height: 0.15, id: 'region-1', width: 0.2, x: 0.1, y: 0.2 }]

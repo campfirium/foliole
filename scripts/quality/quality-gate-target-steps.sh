@@ -48,6 +48,10 @@ run_quality_script_gate_steps() {
   run_gate_steps test:quality:preview
 }
 
+run_quality_script_gate_steps_sequential() {
+  run_gate_steps test:quality:core test:quality:gate $(quality_gate_integration_scripts) test:quality:node test:quality:preview
+}
+
 run_shared_static_gate_steps() {
   run_renderer_guards_if_present
   run_repository_root_boundary_check_if_present
@@ -59,7 +63,7 @@ run_shared_test_gate_steps() {
 }
 
 run_shared_quality_test_gate_steps() {
-  run_quality_script_gate_steps
+  run_quality_script_gate_steps_sequential
 }
 
 run_shared_build_gate_steps() {

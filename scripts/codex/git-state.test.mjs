@@ -25,7 +25,7 @@ async function createRepo() {
 }
 
 afterEach(async () => {
-  await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { force: true, recursive: true })));
+  await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { force: true, maxRetries: 3, recursive: true, retryDelay: 100 })));
 });
 
 describe('git-state commitTrackedChanges', () => {
@@ -147,7 +147,7 @@ describe('git-state commitTrackedChanges', () => {
     const stagedNames = await runCommand('git', ['show', '--pretty=', '--name-only', 'HEAD'], { cwd: repoDir });
     expect(stagedNames.stdout).toContain('scripts/new-task.mjs');
     expect(stagedNames.stdout).not.toContain('.tmp-vitest/node-compile-cache/cache.bin');
-  });
+  }, 10000);
 
   it('skips commit when only ignored .lab files changed', async () => {
     const repoDir = await createRepo();

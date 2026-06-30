@@ -14,6 +14,20 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..
 const QUALITY_GATE_FAST_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality', 'quality-gate-fast.sh');
 const QUALITY_GATE_ROUTING_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality', 'quality-gate-fast-routing.sh');
 const QUALITY_GATE_INTEGRATION_TIMEOUT_MS = 90_000;
+const QUALITY_SCRIPT_STEPS = [
+  'test:quality:core',
+  'test:quality:gate',
+  'test:quality:gate-integration:target-telemetry',
+  'test:quality:gate-integration:target-collect',
+  'test:quality:gate-integration:target-failures',
+  'test:quality:gate-integration:routing',
+  'test:quality:gate-integration:release-targets',
+  'test:quality:gate-integration:fast-delegation',
+  'test:quality:gate-integration:release-tail',
+  'test:quality:gate-integration:target-core',
+  'test:quality:node',
+  'test:quality:preview'
+];
 
 function runQualityGate(cwd, env = {}, args = []) {
   return runManagedCommand('bash', [QUALITY_GATE_FAST_SCRIPT, ...args], {
@@ -49,6 +63,9 @@ async function writePackageJson(rootDir, scripts) {
     'check:android-boundary': 'node -e "console.log(\'android boundary ok\')"',
     ...scripts
   };
+  for (const step of QUALITY_SCRIPT_STEPS) {
+    fixtureScripts[step] ??= scripts['test:quality'];
+  }
   await writeFile(
     path.join(rootDir, 'package.json'),
     `${JSON.stringify({ name: 'quality-gate-lib-routing-fixture', private: true, scripts: fixtureScripts }, null, 2)}\n`,

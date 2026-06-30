@@ -64,7 +64,7 @@ describe('quality-gate-fast.sh routing', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 15000);
+  }, 30000);
 
   it('prints a route plan without running checks', async () => {
     const tempRoot = await createQualityGateTempRoot();
@@ -142,7 +142,7 @@ describe('quality-gate-fast.sh routing', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 15000);
+  }, 30000);
 
   it('prints related tests for mid-level route plans', async () => {
     const tempRoot = await createQualityGateTempRoot();

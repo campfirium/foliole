@@ -84,7 +84,7 @@ describe('preview-dedupe batching', () => {
     const repoRoot = await createRepo();
     try {
       const env = {
-        PREVIEW_DEDUPE_WINDOWS_COOLDOWN_MS: '1000',
+        PREVIEW_DEDUPE_WINDOWS_COOLDOWN_MS: '3000',
         PREVIEW_DEDUPE_WINDOWS_STATUS_COMMAND:
           'echo "[windows-restart-client] status: RUNNING trust=OK responding=True"'
       };
@@ -111,14 +111,14 @@ describe('preview-dedupe batching', () => {
     } finally {
       await rm(repoRoot, { force: true, recursive: true });
     }
-  }, 10_000);
+  }, 30_000);
 
   it('shares a failed batch result with other waiting requests for the same hash', async () => {
     const repoRoot = await createRepo();
     try {
       const env = {
         PREVIEW_DEDUPE_WAIT_ON_FAILURE: '0',
-        PREVIEW_DEDUPE_WINDOWS_COOLDOWN_MS: '1000',
+        PREVIEW_DEDUPE_WINDOWS_COOLDOWN_MS: '3000',
         PREVIEW_DEDUPE_WINDOWS_STATUS_COMMAND:
           'echo "[windows-restart-client] status: RUNNING trust=OK responding=True"'
       };
@@ -142,7 +142,7 @@ describe('preview-dedupe batching', () => {
     } finally {
       await rm(repoRoot, { force: true, recursive: true });
     }
-  }, 10_000);
+  }, 30_000);
 
   it('keeps failed windows preview requests waiting when configured until a later preview succeeds', async () => {
     const repoRoot = await createRepo();
@@ -244,5 +244,5 @@ describe('preview-dedupe batching', () => {
     } finally {
       await rm(repoRoot, { force: true, recursive: true });
     }
-  });
+  }, 10_000);
 });

@@ -225,7 +225,10 @@ it('preloads recent history, active neighbors, and visible rows without merging 
 
   requestWorkspaceNodeDocumentPreload();
   await vi.waitFor(() => {
-    expect(invoke.mock.calls.map(([, payload]) => payload?.nodeId)).toEqual(['node-1', 'node-3', 'node-5', 'node-4']);
+    const userNodeLoads = invoke.mock.calls
+      .map(([, payload]) => payload?.nodeId)
+      .filter((nodeId) => nodeId?.startsWith('node-'));
+    expect(userNodeLoads).toEqual(['node-1', 'node-3', 'node-5', 'node-4']);
   });
   expect(useWorkspaceStore.getState().nodesById['node-3']!).toMatchObject({ content: '' });
   expect(useWorkspaceStore.getState().nodesById['node-4']!).toMatchObject({ content: '' });

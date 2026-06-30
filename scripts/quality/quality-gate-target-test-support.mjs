@@ -22,3 +22,11 @@ export function expectStep(stdout, scriptName) {
 export function expectNoQualityMonolithStep(stdout) {
   expect(stdout).not.toMatch(/dry-run step: test:quality\r?\n/u);
 }
+
+export function expectNoParallelFanOut(stdout) {
+  expect(stdout).not.toContain('running in parallel:');
+}
+
+export function extractQualityScriptSteps(stdout) {
+  return Array.from(stdout.matchAll(/dry-run step: (test:quality(?::[a-z-]+)*)/gu), (match) => match[1]).sort();
+}

@@ -96,16 +96,16 @@ describe('CompanionSearchContent', () => {
   });
 
   it('shows loading and error states without changing the search contract', async () => {
-    let rejectSearch: (() => void) | null = null;
+    const searchFailure: { reject: (() => void) | null } = { reject: null };
     searchCompanionFullText.mockReturnValueOnce(new Promise((_resolve, reject) => {
-      rejectSearch = () => reject(new Error('failed'));
+      searchFailure.reject = () => reject(new Error('failed'));
     }));
 
     renderWithLocalization(<CompanionSearchContent />);
     fireEvent.change(screen.getByRole('searchbox', { name: 'Search topics' }), { target: { value: 'alpha' } });
 
     expect(screen.getByText('Searching...')).toBeInTheDocument();
-    rejectSearch?.();
+    searchFailure.reject?.();
     expect(await screen.findByText('Search failed on this device.')).toBeInTheDocument();
   });
 });

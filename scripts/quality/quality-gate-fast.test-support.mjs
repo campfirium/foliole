@@ -153,7 +153,7 @@ export async function writePackageJson(rootDir, scripts) {
     ...scripts
   };
   for (const bucket of ['test:desktop', 'test:desktop:src', 'test:desktop:electron', 'test:windows:core', 'test:windows:preview-recovery', 'test:android', 'test:shared', 'test:sync-pack', 'test:quality', 'test:quality:core', 'test:quality:gate', 'test:quality:gate-integration', 'test:quality:gate-integration:routing', 'test:quality:gate-integration:fast-delegation', 'test:quality:gate-integration:targets', 'test:quality:gate-integration:target-core', 'test:quality:gate-integration:target-failures', 'test:quality:gate-integration:target-collect', 'test:quality:gate-integration:target-telemetry', 'test:quality:gate-integration:release-targets', 'test:quality:gate-integration:release-tail', 'test:quality:node', 'test:quality:preview']) {
-    fixtureScripts[bucket] ??= scripts['test:full'];
+    fixtureScripts[bucket] ??= scripts['test:quality'] ?? scripts['test:full'];
   }
   const packageJson = {
     name: 'quality-gate-fixture',

@@ -94,15 +94,15 @@ describe('preview-dedupe waiting requests', () => {
     const repoRoot = await createRepo();
     try {
       const env = {
-        PREVIEW_DEDUPE_WINDOWS_COOLDOWN_MS: '800',
-        PREVIEW_DEDUPE_WINDOWS_WINDOW_MS: '800',
+        PREVIEW_DEDUPE_WINDOWS_COOLDOWN_MS: '3000',
+        PREVIEW_DEDUPE_WINDOWS_WINDOW_MS: '3000',
         PREVIEW_DEDUPE_WINDOWS_STATUS_COMMAND:
           'echo "[windows-restart-client] status: RUNNING trust=OK responding=True"'
       };
       await writeFile(path.join(repoRoot, 'src', 'app', 'App.tsx'), 'export const app = 2;\n', 'utf8');
       const first = await runDedupe(repoRoot, 'first', env);
       const second = runDedupe(repoRoot, 'second', env);
-      const earlyResult = await Promise.race([second.then(() => 'settled'), delay(80).then(() => 'waiting')]);
+      const earlyResult = await Promise.race([second.then(() => 'settled'), delay(120).then(() => 'waiting')]);
       const secondResult = await second;
 
       expect(first.code).toBe(0);

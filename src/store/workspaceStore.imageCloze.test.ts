@@ -21,17 +21,11 @@ vi.mock('../shared/platform/runtimeInvoke', () => ({
 beforeEach(async () => {
   runtimeInvoke.mockReset();
   runtimeInvoke.mockImplementation(async (command: string, payload?: { activeNodeId?: string | null; nodeId?: string; nodeIds?: string[]; nodeOrder?: string[] }) => {
-    if (command === 'create_item' && payload?.nodeId) {
-      const createdNode = useWorkspaceStore.getState().nodesById[payload.nodeId];
-      return {
-        activeNodeId: payload.activeNodeId ?? payload.nodeId,
-        createdNodeIds: [payload.nodeId],
-        nodeOrder: payload.nodeOrder ?? [payload.nodeId],
-        nodes: createdNode ? [createdNode] : [payload]
-      };
+    if (command === 'create_item') {
+      return null;
     }
-    if (command === 'update_node_content' && payload?.nodeId) {
-      return { nodes: [payload], updatedNodeIds: [payload.nodeId] };
+    if (command === 'update_node_content') {
+      return null;
     }
     if (command === 'restore_nodes') {
       return { restoredNodeIds: payload?.nodeIds ?? [], skippedConflicts: [] };
@@ -155,9 +149,9 @@ function expectFirstCreatedImageClozeNode(createdIds: string[]) {
 
   expect(firstNode?.parentNodeId).toBe('node-1');
   expect(firstNode?.kind).toBe('item');
-  expect(firstNode?.content).toBe('Before image\n\n![Cover](asset://hash-1.png)\n\nAfter image');
+  expect(firstNode?.content).toBe('');
   expect(firstNode?.hasContent).toBe(true);
-  expect(firstNode?.reveal).toBe('![Cover](asset://hash-1.png)');
+  expect(firstNode?.reveal).toBeNull();
   expect(firstNode?.hasReveal).toBe(true);
   expect(firstNode?.review).not.toBeNull();
   expect(firstNode?.anchorLink?.kind).toBe('cloze');

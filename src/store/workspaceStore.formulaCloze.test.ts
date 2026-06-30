@@ -101,6 +101,7 @@ it('rejects a formula cloze without a reusable DOM selection', async () => {
       leaves: []
     }
   };
+  const previousNodeOrder = useWorkspaceStore.getState().nodeOrder;
 
   const createdId = await useWorkspaceStore.getState().createFormulaClozeNode(
     'node-1',
@@ -109,5 +110,5 @@ it('rejects a formula cloze without a reusable DOM selection', async () => {
   );
 
   expect(createdId).toBeNull();
-  expect(useWorkspaceStore.getState().nodeOrder).toEqual(['node-1']);
+  expect(useWorkspaceStore.getState().nodeOrder).toEqual(previousNodeOrder);
 });
