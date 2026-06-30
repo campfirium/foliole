@@ -43,6 +43,30 @@ run_release_test_gate_steps() {
   run_gate_steps_parallel test:release:desktop-src test:desktop:electron test:windows:core test:release:android test:release:shared test:quality:core test:quality:gate $(quality_gate_integration_scripts) test:quality:node
 }
 
+run_quality_script_gate_steps() {
+  run_gate_steps_parallel test:quality:core test:quality:gate $(quality_gate_integration_scripts) test:quality:node
+  run_gate_steps test:quality:preview
+}
+
+run_shared_static_gate_steps() {
+  run_renderer_guards_if_present
+  run_repository_root_boundary_check_if_present
+  run_gate_steps check:android-boundary lint:shared:full typecheck:shared
+}
+
+run_shared_test_gate_steps() {
+  run_gate_steps test:shared
+}
+
+run_shared_quality_test_gate_steps() {
+  run_quality_script_gate_steps
+}
+
+run_shared_build_gate_steps() {
+  run_gate_steps build electron:compile android:web:build
+  run_workspace_boundary_check_if_present
+}
+
 run_release_build_gate_steps() {
   run_gate_steps test:quality:preview
   run_gate_steps_parallel build:vite-only electron:compile android:web:build
@@ -54,8 +78,7 @@ run_release_script_preview_gate_steps() {
 }
 
 run_release_tooling_gate_steps() {
-  run_gate_steps_parallel test:quality:core test:quality:gate $(quality_gate_integration_scripts) test:quality:node
-  run_gate_steps test:quality:preview
+  run_quality_script_gate_steps
 }
 
 run_release_preview_recovery_gate_steps() {

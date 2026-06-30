@@ -16,7 +16,11 @@ const SMOKE_STEPS = [
 
 const FULL_STEPS = [
   { kind: 'npm', label: 'shared tests', script: 'test:shared' },
-  { kind: 'npm', label: 'quality tests', script: 'test:quality' },
+  { kind: 'npm', label: 'quality core tests', script: 'test:quality:core' },
+  { kind: 'npm', label: 'quality gate tests', script: 'test:quality:gate' },
+  { kind: 'npm', label: 'quality gate integration tests', script: 'test:quality:gate-integration' },
+  { kind: 'npm', label: 'quality node tests', script: 'test:quality:node' },
+  { kind: 'npm', label: 'quality preview tests', script: 'test:quality:preview' },
   { kind: 'npm', label: 'desktop typecheck', script: 'typecheck:desktop' },
   { kind: 'npm', label: 'desktop lint', script: 'lint:desktop' }
 ];

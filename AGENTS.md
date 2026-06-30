@@ -68,6 +68,7 @@
 
 - 任何任务首次编辑文件前，必须先列出本轮计划编辑的文件清单；大任务以实施说明为准，小任务以编辑前的简短实现思路为准。
 - 对计划编辑文件执行 `node scripts/wait-clean-files.mjs <file...>`；脚本通过后才允许编辑这些文件。
+- 若本轮只编辑 `package.json` 的 `scripts` 区，使用 `node scripts/wait-clean-files.mjs --allow-package-json-scripts-edit package.json`；该例外只免疫 `scripts` 以外的既有 package dirty，不免疫 `scripts` dirty、`package-lock.json` 或依赖 / 版本编辑。
 - 若脚本发现计划编辑文件已有未提交改动，会持续等待，直到这些文件在当前 Git 工作区变干净；超时或被打断时，不得编辑仍 dirty 的文件，必须汇报仍占用的文件。
 - 该 gate 只检查计划编辑文件，不扫描其他线程、不使用 worktree、不维护 ownership，也不要求在任务刚开始时精确判断改动范围。
 - 编辑根 `AGENTS.md` 或局部 `AGENTS.md` 时免于执行本 gate；改前仍必须阅读当前 diff，并只做用户要求的规则改动，不能覆盖已有未提交改动。

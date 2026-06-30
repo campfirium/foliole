@@ -8,6 +8,7 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
+import { expectNoQualityMonolithStep, expectStep, QUALITY_SCRIPT_STEPS } from './quality-gate-target-test-support.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const TARGET_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality', 'quality-gate-target.sh');
@@ -33,10 +34,6 @@ function runTargetGate(cwd, target) {
   });
 }
 
-function expectStep(stdout, scriptName) {
-  expect(stdout).toContain(`dry-run step: ${scriptName}`);
-}
-
 async function writePackageJson(rootDir, scripts) {
   const fixtureScripts = {
     'check:android-boundary': 'node -e "console.log(\'android boundary ok\')"',
@@ -56,12 +53,16 @@ async function writePackageJson(rootDir, scripts) {
     'test:quality:gate-integration:routing',
     'test:quality:gate-integration:fast-delegation',
     'test:quality:gate-integration:targets',
+    'test:quality:gate-integration:target-core',
+    'test:quality:gate-integration:target-failures',
+    'test:quality:gate-integration:target-collect',
+    'test:quality:gate-integration:target-telemetry',
     'test:quality:gate-integration:release-targets',
     'test:quality:gate-integration:release-tail',
     'test:quality:node',
     'test:quality:preview'
   ]) {
-    fixtureScripts[bucket] ??= scripts['test:full'];
+    fixtureScripts[bucket] ??= scripts['test:full'] ?? 'node -e "console.log(\'bucket ok\')"';
   }
   await writeFile(
     path.join(rootDir, 'package.json'),
@@ -98,7 +99,6 @@ describe('quality-gate-target.sh', () => {
         'typecheck:desktop': 'node -e "console.log(\'desktop typecheck ok\')"',
         'test:desktop': 'node -e "console.log(\'desktop test ok\')"',
         'test:windows:core': 'node -e "console.log(\'windows core test ok\')"',
-        'test:quality': 'node -e "console.log(\'quality test ok\')"',
         build: 'node -e "console.log(\'desktop build ok\')"',
         'electron:compile': 'node -e "console.log(\'electron compile ok\')"'
       });
@@ -115,10 +115,11 @@ describe('quality-gate-target.sh', () => {
         'typecheck:desktop',
         'test:desktop',
         'test:windows:core',
-        'test:quality',
+        ...QUALITY_SCRIPT_STEPS,
         'build',
         'electron:compile'
       ]) expectStep(result.stdout, scriptName);
+      expectNoQualityMonolithStep(result.stdout);
       expect(result.stdout).toContain('repository root boundary ok');
       expect(result.stdout).toContain('workspace boundary ok');
       expect(result.stdout).toContain('[quality-gate:desktop] all checks passed.');
@@ -135,7 +136,6 @@ describe('quality-gate-target.sh', () => {
         'lint:android:full': 'node -e "console.log(\'android full lint ok\')"',
         'typecheck:android': 'node -e "console.log(\'android typecheck ok\')"',
         'test:android': 'node -e "console.log(\'android test ok\')"',
-        'test:quality': 'node -e "console.log(\'quality test ok\')"',
         'android:sync': 'node -e "console.log(\'android sync ok\')"',
         'android:host:lint': 'node -e "console.log(\'android host lint ok\')"',
         'android:host:test': 'node -e "console.log(\'android host test ok\')"'
@@ -149,11 +149,12 @@ describe('quality-gate-target.sh', () => {
         'lint:android:full',
         'typecheck:android',
         'test:android',
-        'test:quality',
+        ...QUALITY_SCRIPT_STEPS,
         'android:sync',
         'android:host:lint',
         'android:host:test'
       ]) expectStep(result.stdout, scriptName);
+      expectNoQualityMonolithStep(result.stdout);
       expect(result.stdout).toContain('repository root boundary ok');
       expectStep(result.stdout, 'check:android-boundary');
       expect(result.stdout).toContain('[quality-gate:android] all checks passed.');
@@ -169,7 +170,6 @@ describe('quality-gate-target.sh', () => {
         'lint:android:full': 'node -e "console.log(\'android full lint ok\')"',
         'typecheck:android': 'node -e "console.log(\'android typecheck ok\')"',
         'test:android': 'node -e "console.log(\'android test ok\')"',
-        'test:quality': 'node -e "console.log(\'quality test ok\')"',
         'android:sync': 'node -e "console.log(\'android sync ok\')"',
         'android:host:lint': 'node -e "console.log(\'android host lint ok\')"',
         'android:host:test': 'node -e "console.log(\'android host test ok\')"',
@@ -185,13 +185,14 @@ describe('quality-gate-target.sh', () => {
         'lint:android:full',
         'typecheck:android',
         'test:android',
-        'test:quality',
+        ...QUALITY_SCRIPT_STEPS,
         'android:sync',
         'android:host:lint',
         'android:host:test',
         'android:emulator',
         'android:host:device-test'
       ]) expectStep(result.stdout, scriptName);
+      expectNoQualityMonolithStep(result.stdout);
       expect(result.stdout).toContain('repository root boundary ok');
       expect(result.stdout).toContain('[quality-gate:android-device] all checks passed.');
     } finally {
@@ -206,7 +207,6 @@ describe('quality-gate-target.sh', () => {
         'lint:shared:full': 'node -e "console.log(\'shared full lint ok\')"',
         'typecheck:shared': 'node -e "console.log(\'shared typecheck ok\')"',
         'test:shared': 'node -e "console.log(\'shared test ok\')"',
-        'test:quality': 'node -e "console.log(\'quality test ok\')"',
         build: 'node -e "console.log(\'shared build ok\')"',
         'electron:compile': 'node -e "console.log(\'shared electron compile ok\')"',
         'android:web:build': 'node -e "console.log(\'shared android build ok\')"'
@@ -221,11 +221,12 @@ describe('quality-gate-target.sh', () => {
         'lint:shared:full',
         'typecheck:shared',
         'test:shared',
-        'test:quality',
+        ...QUALITY_SCRIPT_STEPS,
         'build',
         'electron:compile',
         'android:web:build'
       ]) expectStep(result.stdout, scriptName);
+      expectNoQualityMonolithStep(result.stdout);
       expect(result.stdout).toContain('repository root boundary ok');
       expect(result.stdout).toContain('workspace boundary ok');
       expect(result.stdout).toContain('[quality-gate:shared] all checks passed.');

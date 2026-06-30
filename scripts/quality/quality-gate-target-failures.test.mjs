@@ -78,7 +78,7 @@ async function writePackageJson(rootDir, scripts) {
     'test:quality:node',
     'test:quality:preview'
   ]) {
-    fixtureScripts[bucket] ??= scripts['test:full'];
+    fixtureScripts[bucket] ??= scripts['test:full'] ?? ok('bucket ok');
   }
   await writeFile(
     path.join(rootDir, 'package.json'),
@@ -170,7 +170,7 @@ describe('quality-gate-target.sh failure reporting', () => {
       expect(result.code).toBe(1);
       expect(result.stdout).toContain('[quality-gate-target] unknown target: unknown-target');
       expect(result.stdout).toContain(
-        'Usage: bash scripts/quality/quality-gate-target.sh <desktop|android|android-device|shared|full|release|release-core|release-static|release-tests|release-build|release-script-preview|release-base|release-windows-tail|release-android-tail|release-ios-tail|release-tooling|release-preview-recovery|release-android-host>'
+        'Usage: bash scripts/quality/quality-gate-target.sh <desktop|android|android-device|shared|shared-static|shared-test|shared-quality-tests|shared-build|full|release|release-core|release-static|release-tests|release-build|release-script-preview|release-base|release-windows-tail|release-android-tail|release-ios-tail|release-tooling|release-preview-recovery|release-android-host>'
       );
     } finally {
       await rm(tempRoot, { recursive: true, force: true });

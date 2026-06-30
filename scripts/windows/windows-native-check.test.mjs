@@ -16,7 +16,11 @@ it('includes heavy validation entries only when requested', () => {
     'preflight',
     'native path tests',
     'shared tests',
-    'quality tests',
+    'quality core tests',
+    'quality gate tests',
+    'quality gate integration tests',
+    'quality node tests',
+    'quality preview tests',
     'desktop typecheck',
     'desktop lint'
   ]);

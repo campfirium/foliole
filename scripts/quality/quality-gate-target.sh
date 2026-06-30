@@ -11,7 +11,7 @@ if [[ ! -f "package.json" ]]; then
   exit 1
 fi
 
-target="${1:-}"; usage="Usage: bash scripts/quality/quality-gate-target.sh <desktop|android|android-device|shared|full|release|release-core|release-static|release-tests|release-build|release-script-preview|release-base|release-windows-tail|release-android-tail|release-ios-tail|release-tooling|release-preview-recovery|release-android-host> [--fail-fast]"
+target="${1:-}"; usage="Usage: bash scripts/quality/quality-gate-target.sh <desktop|android|android-device|shared|shared-static|shared-test|shared-quality-tests|shared-build|full|release|release-core|release-static|release-tests|release-build|release-script-preview|release-base|release-windows-tail|release-android-tail|release-ios-tail|release-tooling|release-preview-recovery|release-android-host> [--fail-fast]"
 QUALITY_GATE_COLLECT_FAILURES=1
 case "${2:-}" in
   --fail-fast) QUALITY_GATE_COLLECT_FAILURES=0 ;;
@@ -97,24 +97,42 @@ case "${target}" in
   desktop)
     run_renderer_guards_if_present
     run_repository_root_boundary_check_if_present
-    run_gate_steps lint:desktop:full typecheck:desktop test:desktop test:windows:core test:quality build electron:compile
+    run_gate_steps lint:desktop:full typecheck:desktop test:desktop test:windows:core
+    run_quality_script_gate_steps
+    run_gate_steps build electron:compile
     run_workspace_boundary_check_if_present
     ;;
   android)
     run_renderer_guards_if_present
     run_repository_root_boundary_check_if_present
-    run_gate_steps check:android-boundary lint:android:full typecheck:android test:android test:quality android:sync android:host:lint android:host:test
+    run_gate_steps check:android-boundary lint:android:full typecheck:android test:android
+    run_quality_script_gate_steps
+    run_gate_steps android:sync android:host:lint android:host:test
     ;;
   android-device)
     run_renderer_guards_if_present
     run_repository_root_boundary_check_if_present
-    run_gate_steps check:android-boundary lint:android:full typecheck:android test:android test:quality android:sync android:host:lint android:host:test android:emulator android:host:device-test
+    run_gate_steps check:android-boundary lint:android:full typecheck:android test:android
+    run_quality_script_gate_steps
+    run_gate_steps android:sync android:host:lint android:host:test android:emulator android:host:device-test
     ;;
   shared)
-    run_renderer_guards_if_present
-    run_repository_root_boundary_check_if_present
-    run_gate_steps check:android-boundary lint:shared:full typecheck:shared test:shared test:quality build electron:compile android:web:build
-    run_workspace_boundary_check_if_present
+    run_shared_static_gate_steps
+    run_shared_test_gate_steps
+    run_shared_quality_test_gate_steps
+    run_shared_build_gate_steps
+    ;;
+  shared-static)
+    run_shared_static_gate_steps
+    ;;
+  shared-test)
+    run_shared_test_gate_steps
+    ;;
+  shared-quality-tests)
+    run_shared_quality_test_gate_steps
+    ;;
+  shared-build)
+    run_shared_build_gate_steps
     ;;
   full|release|release-core|release-static|release-tests|release-build|release-script-preview|release-base|release-windows-tail|release-android-tail|release-ios-tail|release-tooling|release-preview-recovery|release-android-host)
     apply_release_gate_acceleration_defaults

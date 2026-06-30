@@ -114,13 +114,25 @@ describe('run-script-test-bucket', () => {
       'scripts/preview/preview-dedupe.test.mjs',
       'scripts/preview/preview-dedupe-batch.test.mjs'
     ]);
+    const segmented = new Set([
+      ...selectScriptTestBucketFiles('core', files),
+      ...selectScriptTestBucketFiles('gate', files),
+      ...GATE_INTEGRATION_SCRIPT_NAMES.flatMap((scriptName) =>
+        selectScriptTestBucketFiles(scriptName.replace('test:quality:', '').replace(':', '-'), files)
+      ),
+      ...selectScriptTestBucketFiles('node', files),
+      ...selectScriptTestBucketFiles('preview', files)
+    ]);
+    expect([...segmented].sort()).toEqual([...files].sort());
     expect(selectScriptTestBucketFiles('all', files)).toEqual(files);
     expect(selectScriptTestBucketFiles('unknown', files)).toBeNull();
   });
 
   it('keeps gate integration script names aligned with package and shell consumers', async () => {
     const packageJson = JSON.parse(await readFile('package.json', 'utf8'));
+    const targetGate = await readFile('scripts/quality/quality-gate-target.sh', 'utf8');
     const targetSteps = await readFile('scripts/quality/quality-gate-target-steps.sh', 'utf8');
+    const windowsNativeCheck = await readFile('scripts/windows/windows-native-check.mjs', 'utf8');
 
     expect(gateIntegrationScriptName('gate-integration-routing')).toBe('test:quality:gate-integration:routing');
     expect(GATE_INTEGRATION_SCRIPT_NAMES).toEqual([
@@ -138,7 +150,10 @@ describe('run-script-test-bucket', () => {
     }
     expect(packageJson.scripts['test:quality:gate-integration']).not.toContain('&&');
     expect(targetSteps).toContain('$(quality_gate_integration_scripts)');
+    expect(targetSteps).toContain('run_quality_script_gate_steps()');
     expect(targetSteps).not.toContain('test:quality:gate-integration:target-core test:quality:gate-integration:target-failures');
+    expect(targetGate).not.toMatch(/run_gate_steps[^\n]*\btest:quality\b/u);
+    expect(windowsNativeCheck).not.toMatch(/script: 'test:quality'/u);
   });
 
   it('resolves bucket timeout from specific and shared environment overrides', () => {

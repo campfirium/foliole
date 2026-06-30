@@ -13,6 +13,20 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..
 const TARGET_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality', 'quality-gate-target.sh');
 const ok = (message) => `printf '%s\\n' '${message}'`;
 const fail = (message) => `printf '%s\\n' '${message}'; exit 1`;
+const qualityScriptEntries = {
+  'test:quality:core': ok('quality core test still ran'),
+  'test:quality:gate': ok('quality gate test still ran'),
+  'test:quality:gate-integration:target-telemetry': ok('quality telemetry test still ran'),
+  'test:quality:gate-integration:target-collect': ok('quality collect test still ran'),
+  'test:quality:gate-integration:target-failures': ok('quality failures test still ran'),
+  'test:quality:gate-integration:routing': ok('quality routing test still ran'),
+  'test:quality:gate-integration:release-targets': ok('quality release target test still ran'),
+  'test:quality:gate-integration:fast-delegation': ok('quality fast delegation test still ran'),
+  'test:quality:gate-integration:release-tail': ok('quality release tail test still ran'),
+  'test:quality:gate-integration:target-core': ok('quality target core test still ran'),
+  'test:quality:node': ok('quality node test still ran'),
+  'test:quality:preview': ok('quality preview test still ran')
+};
 
 function runTargetGate(cwd, target, env = {}) {
   return new Promise((resolve) => {
@@ -56,7 +70,7 @@ describe('quality-gate-target.sh collected failure mode', () => {
         'lint:desktop:full': fail('lint failed details'),
         'typecheck:desktop': fail('typecheck failed details'),
         'test:desktop': ok('desktop test still ran'),
-        'test:quality': ok('quality test still ran'),
+        ...qualityScriptEntries,
         build: ok('build still ran'),
         'electron:compile': ok('electron compile still ran')
       });
@@ -68,6 +82,8 @@ describe('quality-gate-target.sh collected failure mode', () => {
       expect(result.stdout).toContain('[quality-gate:desktop] failed: lint:desktop:full');
       expect(result.stdout).toContain('[quality-gate:desktop] failed: typecheck:desktop');
       expect(result.stdout).toContain('desktop test still ran');
+      expect(result.stdout).toContain('quality core test still ran');
+      expect(result.stdout).toContain('quality preview test still ran');
       expect(result.stdout).toContain('build still ran');
       expect(result.stdout).toContain('[quality-gate:desktop] collected failures summary:');
       expect(result.stdout).not.toContain('[quality-gate:desktop] all checks passed.');
