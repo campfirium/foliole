@@ -98,8 +98,8 @@ $arguments = @(
   "--window-title=Foliole-Android",
   "--window-x=40",
   "--window-y=40",
-  "--window-width=450",
-  "--window-height=980"
+  "--window-width=840",
+  "--window-height=1530"
 )
 if (![string]::IsNullOrWhiteSpace($serial)) {
   $arguments = @("--serial=$serial") + $arguments
