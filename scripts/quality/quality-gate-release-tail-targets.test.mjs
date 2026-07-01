@@ -105,7 +105,7 @@ describe('quality-gate release base and tail targets', () => {
     }
   }, 60000);
 
-  it('accelerates release gates by default', async () => {
+  it('keeps release gate acceleration scoped to bucket-level parallelism by default', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-release-target-'));
     try {
       await writePackageJson(tempRoot, {
@@ -117,7 +117,7 @@ describe('quality-gate release base and tail targets', () => {
       const result = await runTargetGate(tempRoot, 'release-ios-tail');
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('workers=4;file=1;jobs=4');
+      expect(result.stdout).toContain('workers=undefined;file=undefined;jobs=4');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }

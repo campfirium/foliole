@@ -122,6 +122,4 @@ run_gate_steps_parallel() {
 
 apply_release_gate_acceleration_defaults() {
   export QUALITY_GATE_PARALLEL_MAX_JOBS="${QUALITY_GATE_PARALLEL_MAX_JOBS:-4}"
-  export VITEST_FILE_PARALLELISM="${VITEST_FILE_PARALLELISM:-1}"
-  export VITEST_MAX_WORKERS="${VITEST_MAX_WORKERS:-4}"
 }
