@@ -131,6 +131,33 @@ it('starts runtime services before renderer shell loading completes', async () =
   await vi.waitFor(() => expect(activateMainWindow).toHaveBeenCalledWith(window));
 });
 
+it('reuses the startup main window when a second instance arrives during initial creation', async () => {
+  const window = { isDestroyed: vi.fn(() => false), isVisible: vi.fn(() => false), show: vi.fn() };
+  const windowCreation = createDeferred<typeof window>();
+  const activateMainWindow = vi.fn().mockResolvedValue(undefined);
+  const createMainWindow = vi.fn(() => windowCreation.promise as never);
+  mocks.app.whenReady.mockResolvedValue(undefined);
+
+  const { installMainLifecycle } = await import('./mainLifecycle.js');
+  installMainLifecycle({
+    activateMainWindow,
+    createMainWindow,
+    installInvokeHandler: vi.fn(),
+    loadMainWindow: vi.fn().mockResolvedValue(undefined),
+    runtimeMode: { allowParallelInstance: false } as never
+  });
+  await vi.waitFor(() => expect(createMainWindow).toHaveBeenCalledTimes(1));
+
+  const secondInstanceHandler = mocks.app.on.mock.calls.find(([event]) => event === 'second-instance')?.[1];
+  expect(secondInstanceHandler).toBeTypeOf('function');
+  secondInstanceHandler?.({}, ['Foliole Internal.exe']);
+  expect(createMainWindow).toHaveBeenCalledTimes(1);
+
+  windowCreation.resolve(window);
+  await vi.waitFor(() => expect(activateMainWindow).toHaveBeenCalledWith(window));
+  expect(createMainWindow).toHaveBeenCalledTimes(1);
+});
+
 it('prioritizes the workspace shell error when renderer and database startup both fail', async () => {
   const window = { isDestroyed: vi.fn(() => false), isVisible: vi.fn(() => false), show: vi.fn() };
   const loadMainWindow = vi.fn()

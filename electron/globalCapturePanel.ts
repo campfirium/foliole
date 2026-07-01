@@ -68,7 +68,6 @@ function createPanelWindow() {
   });
   panel.setOpacity(0);
   panel.setIgnoreMouseEvents(true);
-  panel.showInactive();
   bindGlobalCapturePanelDrag(panel);
   const handlePanelReady = (event: IpcMainEvent) => {
     if (event.sender.id === panel.webContents.id) cachedPanelReady = true;

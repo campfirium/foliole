@@ -98,9 +98,14 @@ it('shows a compact shell-less capture panel with an isolated preload', async ()
   }));
   const panelOptions = (electronMocks.BrowserWindow.mock.calls[0] as unknown[] | undefined)?.[0];
   expect(panelOptions).not.toHaveProperty('alwaysOnTop');
-  expect(panelWindow.showInactive).toHaveBeenCalledTimes(1);
+  expect(panelOptions).toMatchObject({ show: false, skipTaskbar: true });
+  expect(panelWindow.showInactive).not.toHaveBeenCalled();
   expect(panelWindow.setOpacity).toHaveBeenCalledWith(0);
   expect(panelWindow.setIgnoreMouseEvents).toHaveBeenCalledWith(true);
+  panelWindow.isVisible.mockReturnValue(false);
+  panelWindow.emitReady();
+  await waitForPanelReveal();
+  expect(panelWindow.showInactive).toHaveBeenCalledTimes(1);
   panelWindow.emitCancel();
   await expect(promise).resolves.toEqual({ type: 'cancelled' });
 });

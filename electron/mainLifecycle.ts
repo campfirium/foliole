@@ -164,22 +164,28 @@ function installAppProcessDiagnostics() {
   app.on('web-contents-created', (_, contents) => bindEmbeddedLinkPanelContents(contents));
 }
 
-function installActivateLifecycle(
-  args: MainLifecycleArgs,
-  onWindowReady: (window: BrowserWindow) => void
-) {
+function installActivateLifecycle(openMainWindow: () => Promise<BrowserWindow | null>) {
   app.on('activate', async () => {
     notifyExternalSearchUserActivity();
-    await openOrCreateMainWindow(args, onWindowReady);
+    await openMainWindow();
   });
 }
-
 export function installMainLifecycle(args: MainLifecycleArgs) {
   const externalDocumentFileOpen = installExternalDocumentFileOpenLifecycle();
+  let startupMainWindowPromise: Promise<BrowserWindow> | null = null;
+  const openMainWindow = () => {
+    if (startupMainWindowPromise) {
+      return startupMainWindowPromise.then((window) => {
+        externalDocumentFileOpen.setReadyWindow(window);
+        return window;
+      });
+    }
+    return openOrCreateMainWindow(args, externalDocumentFileOpen.setReadyWindow);
+  };
   installSingleInstanceGate(args.runtimeMode);
   installBeforeQuitLifecycle();
   app.on('second-instance', (_event, argv) => {
-    void openOrCreateMainWindow(args, externalDocumentFileOpen.setReadyWindow);
+    void openMainWindow();
     externalDocumentFileOpen.enqueueFromArgv(argv);
     notifyExternalSearchSecondInstance();
   });
@@ -190,26 +196,34 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
     installGlobalCaptureToastOpenHandler();
     installBackgroundTray({
       getMainWindow,
-      openMainWindow: () => openOrCreateMainWindow(args, externalDocumentFileOpen.setReadyWindow)
+      openMainWindow
     });
     await appendBootEvent('app_when_ready');
     beginDatabaseStartup();
-    const mainWindow = await args.createMainWindow(args.prepareStartupAppearance?.() ?? null);
-    setMainWindow(mainWindow);
-    await startInitialMainWindow(args, {
-      failDatabaseStartup: markDatabaseStartupFailed,
-      initializeRuntimeServices,
-      installPairingFocusHandler: () => installPairingFocusHandler(() => openOrCreateMainWindow(args, externalDocumentFileOpen.setReadyWindow)),
-      loadStartupErrorSurface: (input) => loadStartupErrorSurface({ ...input, loadMainWindow: args.loadMainWindow }),
-      mainWindow,
-      startCompanionSyncIfEnabled: () => startCompanionSyncIfEnabled({
-        appVersion: resolveFolioleAppVersion(app),
-        isEnabled: isDesktopCompanionSyncEnabled,
-        peerId: loadOrCreateDesktopDeviceId()
-      })
-    });
-    externalDocumentFileOpen.setReadyWindow(mainWindow);
-    installActivateLifecycle(args, externalDocumentFileOpen.setReadyWindow);
+    startupMainWindowPromise = (async () => {
+      const mainWindow = await args.createMainWindow(args.prepareStartupAppearance?.() ?? null);
+      setMainWindow(mainWindow);
+      await startInitialMainWindow(args, {
+        failDatabaseStartup: markDatabaseStartupFailed,
+        initializeRuntimeServices,
+        installPairingFocusHandler: () => installPairingFocusHandler(openMainWindow),
+        loadStartupErrorSurface: (input) => loadStartupErrorSurface({ ...input, loadMainWindow: args.loadMainWindow }),
+        mainWindow,
+        startCompanionSyncIfEnabled: () => startCompanionSyncIfEnabled({
+          appVersion: resolveFolioleAppVersion(app),
+          isEnabled: isDesktopCompanionSyncEnabled,
+          peerId: loadOrCreateDesktopDeviceId()
+        })
+      });
+      externalDocumentFileOpen.setReadyWindow(mainWindow);
+      return mainWindow;
+    })();
+    try {
+      await startupMainWindowPromise;
+    } finally {
+      startupMainWindowPromise = null;
+    }
+    installActivateLifecycle(openMainWindow);
   });
   app.on('window-all-closed', () => {
     if (process.platform !== 'darwin' && process.platform !== 'win32') app.quit();
