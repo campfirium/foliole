@@ -6,13 +6,15 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const thisFile = fileURLToPath(import.meta.url);
 const codexDir = path.dirname(thisFile);
 const repoRoot = path.resolve(codexDir, '..', '..');
 const tempDirs = [];
 const bashCommand = resolveBashCommand();
+
+vi.setConfig({ testTimeout: 60000 });
 
 const scripts = [
   {

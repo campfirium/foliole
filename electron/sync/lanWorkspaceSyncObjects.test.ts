@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -8,7 +7,7 @@ import { createTestPairingKeyPair, decryptTestPairingSecret } from './companionP
 import { postSigned, signRequest } from './lanWorkspaceSyncObjects.testSupport.js';
 
 const electronMock = vi.hoisted(() => ({
-  userDataPath: `/tmp/foliole-sync-objects-${Math.random().toString(16).slice(2)}`
+  userDataPath: `${process.cwd()}/.tmp/foliole-sync-objects-${Math.random().toString(16).slice(2)}`
 }));
 
 const syncDatabaseMock = vi.hoisted(() => ({
@@ -125,7 +124,7 @@ async function resetTestState() {
   clearCompanionRequestNonceCache();
   delete process.env.FOLIOLE_COMPANION_SYNC_PORT;
   fs.rmSync(electronMock.userDataPath, { force: true, recursive: true });
-  electronMock.userDataPath = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-sync-objects-'));
+  electronMock.userDataPath = fs.mkdtempSync(path.join(process.cwd(), '.tmp', 'foliole-sync-objects-'));
 }
 
 async function fetchSignedGet(endpoint: string, pathWithQuery: string, paired: { device_id: string; device_secret: string }) {

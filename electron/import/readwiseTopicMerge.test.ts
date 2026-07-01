@@ -157,10 +157,30 @@ it('keeps unmatched manual highlight content as child nodes without changing the
   ]);
 });
 
-it('merges the GTD article case with the full set of highlights', async () => {
-  const articlePath = '/mnt/d/X/Dropbox/obs/clip/Full Document Contents/Articles/GTD 项目管理方法.md';
-  const highlightPath = '/mnt/d/X/Dropbox/obs/clip/Articles/GTD 项目管理方法.md';
-  const articleContent = await fs.readFile(articlePath, 'utf8');
+it('merges a long article case with the full set of highlights', async () => {
+  const articlePath = path.join(tempRoot, 'GTD 项目管理方法.md');
+  const articleContent = [
+    '# GTD 项目管理方法',
+    '',
+    '收集箱：彻底放开，把所有需要关注的事项先放进可信系统。',
+    '',
+    '购物清单单独作为项目，避免和下一步行动混在一起。',
+    '',
+    '忽视回顾，系统就不再是系统。'
+  ].join('\n');
+  const highlightPath = await writeHighlightFile(
+    'GTD 项目管理方法-highlight.md',
+    [
+      '# GTD 项目管理方法',
+      '',
+      '## Highlights',
+      '',
+      '- 收集箱：彻底放开，把所有需要关注的事项先放进可信系统。',
+      '- 购物清单单独作为项目，避免和下一步行动混在一起。',
+      '- 忽视回顾，系统就不再是系统。'
+    ].join('\n')
+  );
+  await fs.writeFile(articlePath, articleContent, 'utf8');
 
   const imported = runPreparedImport(
     createPreparedDesktopTextImport({

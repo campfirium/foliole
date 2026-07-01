@@ -1,5 +1,7 @@
 // @vitest-environment node
 
+import path from 'node:path';
+
 import { expect, it } from 'vitest';
 
 import { canRunGuiHealth, resolveElectronExecutablePath } from './electron-native-health-check.mjs';
@@ -43,8 +45,12 @@ it('uses the existing renderer reload intent contract', () => {
 });
 
 it('resolves the Electron executable for the current host platform', () => {
-  expect(resolveElectronExecutablePath('/repo', 'win32')).toBe('/repo/node_modules/electron/dist/electron.exe');
-  expect(resolveElectronExecutablePath('/repo', 'linux')).toBe('/repo/node_modules/electron/dist/electron');
+  expect(resolveElectronExecutablePath('/repo', 'win32')).toBe(
+    path.join('/repo', 'node_modules', 'electron', 'dist', 'electron.exe')
+  );
+  expect(resolveElectronExecutablePath('/repo', 'linux')).toBe(
+    path.join('/repo', 'node_modules', 'electron', 'dist', 'electron')
+  );
 });
 
 it('keeps GUI health gated to Windows or display-capable hosts', () => {

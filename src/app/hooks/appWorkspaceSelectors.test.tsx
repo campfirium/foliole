@@ -2,6 +2,7 @@ import { renderHook } from '@testing-library/react';
 import { beforeEach, expect, it } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { HOME_NODE_ID, INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../../features/nodes/model/specialNodes';
 import { createInitialWorkspaceState, useWorkspaceStore } from '../../store/workspaceStore';
 
 import { useWorkspaceSelectors } from './appWorkspaceSelectors';
@@ -46,7 +47,7 @@ it('exposes canonical visible and trash membership to desktop consumers', () => 
 
   const { result } = renderHook(() => useWorkspaceSelectors());
 
-  expect(result.current.nodeOrder).toEqual(['visible-1', 'restored-1']);
+  expect(result.current.nodeOrder).toEqual([HOME_NODE_ID, INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID, 'visible-1', 'restored-1']);
   expect(result.current.trashedNodeIds).toEqual(['deleted-1']);
 });
 

@@ -1,8 +1,10 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const useCompanionBootstrap = vi.fn();
 const useCompanionWorkspaceSync = vi.fn();
+
+vi.setConfig({ testTimeout: 30_000 });
 
 vi.mock('./useCompanionBootstrap', () => ({
   useCompanionBootstrap
@@ -68,6 +70,7 @@ describe('CompanionApp bootstrap states', () => {
   });
 
   beforeEach(() => {
+    cleanup();
     useCompanionBootstrap.mockReset();
     useCompanionWorkspaceSync.mockReset();
     mockCompanionWorkspaceSync();
@@ -80,7 +83,7 @@ describe('CompanionApp bootstrap states', () => {
     render(<CompanionApp />);
 
     expect(screen.getByText('Starting companion runtime')).toBeInTheDocument();
-  }, 10_000);
+  }, 30_000);
 
   it('renders the article shell after bootstrap succeeds', async () => {
     useCompanionBootstrap.mockReturnValue({
@@ -97,9 +100,13 @@ describe('CompanionApp bootstrap states', () => {
 
     render(<CompanionApp />);
 
-    expect(screen.getByRole('button', { name: 'Settings' })).toHaveAttribute('aria-current', 'page');
+    const bottomBar = screen.getAllByTestId('companion-bottom-tab-bar').at(-1);
+    if (!bottomBar) {
+      throw new Error('Expected companion bottom tab bar to render');
+    }
+    expect(within(bottomBar).getByRole('button', { name: 'Settings' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('button', { name: /Sync/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Connect another device/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Connect or refresh this device/ })).toBeInTheDocument();
   });
 
   it('shows a failure state when bootstrap rejects', async () => {

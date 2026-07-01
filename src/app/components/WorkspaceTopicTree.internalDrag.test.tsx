@@ -1,12 +1,15 @@
 import { createEvent, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, expect, it } from 'vitest';
 
+import { HOME_NODE_ID, INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../../features/nodes/model/specialNodes';
 import { toWorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { WorkspaceTopicTree } from './WorkspaceTopicTree';
 import { filterMovableTopicTreeSelection } from './workspaceTopicTreeDrag';
+
+const SPECIAL_NODE_ORDER = [HOME_NODE_ID, INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID];
 
 interface TopicOverrides {
   anchorLink?: { id: string; kind: 'highlight' | 'cloze' } | null;
@@ -151,7 +154,7 @@ it('does not apply topic-to-topic drops outside manual sorting', () => {
 
   expect(alphaFrame).toHaveAttribute('draggable', 'true');
   expect(betaFrame).not.toHaveClass('border');
-  expect(useWorkspaceStore.getState().nodeOrder).toEqual(['folder-a', 'topic-a', 'topic-b']);
+  expect(useWorkspaceStore.getState().nodeOrder).toEqual([...SPECIAL_NODE_ORDER, 'folder-a', 'topic-a', 'topic-b']);
   expect(useWorkspaceStore.getState().nodesById['topic-a']?.parentNodeId).toBe('folder-a');
   expect(useWorkspaceStore.getState().nodesById['topic-b']?.parentNodeId).toBe('folder-a');
 });
@@ -168,7 +171,7 @@ it('does not fall back to structural movement for manual child drops', () => {
   dropAt(betaFrame, dataTransfer, 50);
 
   expect(betaFrame).not.toHaveClass('border');
-  expect(useWorkspaceStore.getState().nodeOrder).toEqual(['folder-a', 'topic-a', 'topic-b']);
+  expect(useWorkspaceStore.getState().nodeOrder).toEqual([...SPECIAL_NODE_ORDER, 'folder-a', 'topic-a', 'topic-b']);
   expect(useWorkspaceStore.getState().nodesById['folder-a']?.manualChildOrder).toEqual(['topic-b', 'topic-a']);
   expect(useWorkspaceStore.getState().nodesById['topic-a']?.parentNodeId).toBe('folder-a');
   expect(useWorkspaceStore.getState().nodesById['topic-b']?.parentNodeId).toBe('folder-a');
@@ -208,7 +211,7 @@ it('keeps derived topics as manual sort anchors but not drag sources', () => {
   dropAt(derivedFrame, dataTransfer, 50);
 
   expect(derivedFrame).not.toHaveClass('border');
-  expect(useWorkspaceStore.getState().nodeOrder).toEqual(['folder-a', 'topic-a', 'topic-b', 'topic-derived']);
+  expect(useWorkspaceStore.getState().nodeOrder).toEqual([...SPECIAL_NODE_ORDER, 'folder-a', 'topic-a', 'topic-b', 'topic-derived']);
   expect(useWorkspaceStore.getState().nodesById['folder-a']?.manualChildOrder).toEqual(['topic-derived', 'topic-b', 'topic-a']);
   expect(useWorkspaceStore.getState().nodesById['topic-derived']?.parentNodeId).toBe('folder-a');
 });

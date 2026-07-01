@@ -33,7 +33,7 @@ it('runs go to node from the command palette without replacing workspace search'
 
   render(<App />);
 
-  fireEvent.keyDown(window, { ctrlKey: true, key: 'p' });
+  fireEvent.click(screen.getByRole('button', { name: 'Command Palette' }));
   const commandDialog = await screen.findByRole('dialog', { name: 'Command palette' }, RELEASE_GATE_WAIT_OPTIONS);
   const commandInput = within(commandDialog).getByLabelText('Search commands');
 
@@ -82,7 +82,7 @@ it('shows nodes immediately and puts the last used target first when reopened', 
 
   render(<App />);
 
-  fireEvent.keyDown(window, { ctrlKey: true, key: 'p' });
+  fireEvent.click(screen.getByRole('button', { name: 'Command Palette' }));
   let commandDialog = await screen.findByRole('dialog', { name: 'Command palette' });
   let commandInput = within(commandDialog).getByLabelText('Search commands');
   fireEvent.change(commandInput, { target: { value: 'go to' } });
@@ -92,7 +92,7 @@ it('shows nodes immediately and puts the last used target first when reopened', 
   expect(within(firstDialog).getByRole('button', { name: /Welcome to Foliole/i })).toBeInTheDocument();
   fireEvent.click(within(firstDialog).getByRole('button', { name: /Project Atlas/i }));
 
-  fireEvent.keyDown(window, { ctrlKey: true, key: 'p' });
+  fireEvent.click(screen.getByRole('button', { name: 'Command Palette' }));
   commandDialog = await screen.findByRole('dialog', { name: 'Command palette' });
   commandInput = within(commandDialog).getByLabelText('Search commands');
   fireEvent.change(commandInput, { target: { value: 'go to' } });

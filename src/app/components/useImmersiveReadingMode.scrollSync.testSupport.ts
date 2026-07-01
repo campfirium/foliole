@@ -9,7 +9,7 @@ type ImmersiveProps = Parameters<typeof useImmersiveReadingMode>[0];
 function createNode(id: string) {
   return {
     anchorLink: null,
-    content: '',
+    content: 'Alpha\n\nBeta',
     createdAt: '',
     id,
     kind: 'topic' as const,
@@ -120,6 +120,7 @@ export function buildImageScrollProps() {
 }
 
 export function mountViewportHost() {
+  Object.defineProperty(window, 'electronAPI', { configurable: true, value: {} });
   const scroller = document.createElement('div');
   scroller.className = 'cm-scroller';
   Object.defineProperty(scroller, 'getBoundingClientRect', {

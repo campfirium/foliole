@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
@@ -28,7 +27,7 @@ vi.mock('./companionMdnsAdvertisement.js', () => ({
 }));
 
 beforeEach(() => {
-  electronMock.userDataPath = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-companion-pairing-'));
+  electronMock.userDataPath = fs.mkdtempSync(path.join(process.cwd(), '.tmp', 'foliole-companion-pairing-'));
 });
 
 afterEach(async () => {

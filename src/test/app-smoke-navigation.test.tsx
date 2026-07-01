@@ -4,13 +4,15 @@ import { expect, it, vi } from 'vitest';
 import './app-smoke.shared';
 
 import { App } from '../app/App';
-import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
+import { HOME_NODE_ID, INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../features/nodes/model/specialNodes';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createTextAnchorLink, mockMoveRuntime } from './app-smoke-navigation.support';
 import { createNode, getCurrentFolderPanel, getCurrentFolderTreeItem, getTopicListPanel } from './app-smoke.shared';
 
 vi.mock('../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: vi.fn() }));
+
+const SPECIAL_NODE_ORDER = [HOME_NODE_ID, INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID];
 
 it('supports ctrl/cmd multi-select and shift range select in node list', async () => {
   useWorkspaceStore.setState((state) => ({
@@ -144,7 +146,7 @@ it('moves selected nodes as one drag group and preserves selection order', async
   const state = useWorkspaceStore.getState();
   expect(state.nodesById['node-3']?.parentNodeId).toBe('node-4');
   expect(state.nodesById['node-2']?.parentNodeId).toBe('node-4');
-  expect(state.nodeOrder).toEqual([INBOX_NODE_ID, 'node-1', 'node-4', 'node-2', 'node-3']);
+  expect(state.nodeOrder).toEqual([...SPECIAL_NODE_ORDER, 'node-1', 'node-4', 'node-2', 'node-3']);
 });
 
 it('renders breadcrumbs in document header and jumps to ancestor node', async () => {

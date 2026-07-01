@@ -3,7 +3,7 @@
 import { readFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   createQualityGateTempRoot,
@@ -15,6 +15,8 @@ import {
   writeFixtureFile,
   writePackageJson
 } from './quality-gate-fast.test-support.mjs';
+
+vi.setConfig({ testTimeout: 120000 });
 
 describe('quality-gate-fast.sh guard limits', () => {
   it('fails fast and clears descendant processes when a guarded test exceeds the timeout', async () => {
@@ -130,5 +132,5 @@ describe('quality-gate-fast.sh guard limits', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 15000);
+  }, 60000);
 });

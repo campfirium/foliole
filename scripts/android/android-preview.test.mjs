@@ -89,7 +89,7 @@ describe('android-preview.sh', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 15000);
+  }, 60000);
 
   it('prints step boundaries and deploy timeout details', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-preview-'));

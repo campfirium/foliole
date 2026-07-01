@@ -1,4 +1,4 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
@@ -87,7 +87,7 @@ it('offers last opened sorting for external documents', () => {
   expect(screen.getByRole('menuitem', { name: /Last opened/i })).toBeInTheDocument();
 });
 
-it('refreshes the selected external folder from the document list toolbar', () => {
+it('refreshes the selected external folder from the document list toolbar', async () => {
   const invoke = vi.fn(async () => folders);
   window.electronAPI = { invoke } as unknown as ElectronAPI;
 
@@ -102,7 +102,9 @@ it('refreshes the selected external folder from the document list toolbar', () =
 
   fireEvent.click(screen.getByRole('button', { name: 'Refresh external documents' }));
 
-  expect(invoke).toHaveBeenCalledWith(NATIVE_COMMANDS.rebuildExternalSearchIndex, { folder_id: 'folder-1' });
+  await waitFor(() => {
+    expect(invoke).toHaveBeenCalledWith(NATIVE_COMMANDS.rebuildExternalSearchIndex, { folder_id: 'folder-1' });
+  });
 });
 
 it('shows a loading state while the selected external folder entries are not loaded yet', () => {

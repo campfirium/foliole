@@ -40,7 +40,9 @@ quality_gate_integration_scripts() {
 }
 
 run_release_test_gate_steps() {
-  run_gate_steps_parallel test:release:desktop-src test:desktop:electron test:windows:core test:release:android test:release:shared test:quality:core test:quality:gate $(quality_gate_integration_scripts) test:quality:node
+  run_gate_steps_parallel test:release:desktop-src test:windows:core test:release:android test:release:shared test:quality:core test:quality:gate test:quality:node
+  run_gate_steps test:desktop:electron
+  run_gate_steps $(quality_gate_integration_scripts)
 }
 
 run_quality_script_gate_steps() {

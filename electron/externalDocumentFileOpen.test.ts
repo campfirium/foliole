@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -33,8 +35,8 @@ it('extracts supported Markdown file paths from launch arguments', () => {
     '/Users/example/Inbox/skip.pdf',
     '/Users/example/Inbox/reference.markdown'
   ])).toEqual([
-    '/Users/example/Inbox/read.md',
-    '/Users/example/Inbox/reference.markdown'
+    path.resolve('/Users/example/Inbox/read.md'),
+    path.resolve('/Users/example/Inbox/reference.markdown')
   ]);
 });
 
@@ -49,7 +51,7 @@ it('sends OS-opened files outside external search folders through the opened fil
   lifecycle.enqueueFromArgv(['/app/foliole', '/outside/read.md']);
   await vi.waitFor(() => {
     expect(window.webContents.send).toHaveBeenCalledWith('foliole:external-document-file-opened', {
-      absolutePath: '/outside/read.md',
+      absolutePath: path.resolve('/outside/read.md'),
       folderId: 'opened-external-documents',
       sourceKind: 'local_file'
     });
@@ -69,11 +71,11 @@ it('sends OS-opened files inside external search folders through the editable lo
   lifecycle.enqueueFromArgv(['/app/foliole', '/library/read.md']);
   await vi.waitFor(() => {
     expect(window.webContents.send).toHaveBeenCalledWith('foliole:external-document-file-opened', {
-      absolutePath: '/library/read.md',
+      absolutePath: path.resolve('/library/read.md'),
       folderId: 'opened-external-documents',
       sourceKind: 'local_file'
     });
   });
-  expect(mocks.readLocalFile).toHaveBeenCalledWith('/library/read.md');
+  expect(mocks.readLocalFile).toHaveBeenCalledWith(path.resolve('/library/read.md'));
   expect(mocks.recordOpenedExternalDocument).not.toHaveBeenCalled();
 });

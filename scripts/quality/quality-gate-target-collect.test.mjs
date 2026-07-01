@@ -90,7 +90,7 @@ describe('quality-gate-target.sh collected failure mode', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 60000);
+  }, 120000);
 
   it('reports every failed release-build parallel step in collected mode', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-collect-'));

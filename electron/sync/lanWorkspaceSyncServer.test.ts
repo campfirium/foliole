@@ -1,6 +1,5 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -8,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createTestPairingKeyPair, decryptTestPairingSecret } from './companionPairingProtocolTestSupport.js';
 
 const electronMock = vi.hoisted(() => ({
-  userDataPath: `/tmp/foliole-companion-pairing-${Math.random().toString(16).slice(2)}`
+  userDataPath: `${process.cwd()}/.tmp/foliole-companion-pairing-${Math.random().toString(16).slice(2)}`
 }));
 
 vi.mock('electron', () => ({
@@ -110,7 +109,7 @@ async function resetLanWorkspaceSyncServerTestState() {
   clearCompanionRequestNonceCache();
   delete process.env.FOLIOLE_COMPANION_SYNC_PORT;
   fs.rmSync(electronMock.userDataPath, { force: true, recursive: true });
-  electronMock.userDataPath = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-companion-pairing-'));
+  electronMock.userDataPath = fs.mkdtempSync(path.join(process.cwd(), '.tmp', 'foliole-companion-pairing-'));
 }
 
 function registerSnapshotProtectionTest() {

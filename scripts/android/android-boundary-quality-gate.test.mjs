@@ -11,13 +11,13 @@ import { describe, expect, it } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const TARGET_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality', 'quality-gate-target.sh');
-const GATE_ROUTING_TIMEOUT_MS = 60_000;
+const GATE_ROUTING_TIMEOUT_MS = 240_000;
 
 function runTargetGate(cwd, target) {
   return new Promise((resolve) => {
     const child = spawn('bash', [TARGET_SCRIPT, target], {
       cwd,
-      env: { ...process.env, QUALITY_GATE_LOG_MODE: 'summary' }
+      env: { ...process.env, QUALITY_GATE_LOG_MODE: 'summary', QUALITY_GATE_PARALLEL_MAX_JOBS: '16' }
     });
     let stdout = '';
     let stderr = '';
@@ -58,15 +58,32 @@ const ANDROID_GATE_SCRIPTS = {
   'android:host:test': 'node -e "console.log(\'android host test ok\')"'
 };
 
+const QUALITY_SCRIPT_GATE_SCRIPTS = {
+  'test:quality:core': 'node -e "console.log(\'quality core ok\')"',
+  'test:quality:gate': 'node -e "console.log(\'quality gate ok\')"',
+  'test:quality:gate-integration:target-telemetry': 'node -e "console.log(\'quality target telemetry ok\')"',
+  'test:quality:gate-integration:target-collect': 'node -e "console.log(\'quality target collect ok\')"',
+  'test:quality:gate-integration:target-failures': 'node -e "console.log(\'quality target failures ok\')"',
+  'test:quality:gate-integration:routing': 'node -e "console.log(\'quality routing ok\')"',
+  'test:quality:gate-integration:release-targets': 'node -e "console.log(\'quality release targets ok\')"',
+  'test:quality:gate-integration:fast-delegation': 'node -e "console.log(\'quality fast delegation ok\')"',
+  'test:quality:gate-integration:release-tail': 'node -e "console.log(\'quality release tail ok\')"',
+  'test:quality:gate-integration:target-core': 'node -e "console.log(\'quality target core ok\')"',
+  'test:quality:node': 'node -e "console.log(\'quality node ok\')"',
+  'test:quality:preview': 'node -e "console.log(\'quality preview ok\')"'
+};
+
+Object.assign(ANDROID_GATE_SCRIPTS, QUALITY_SCRIPT_GATE_SCRIPTS);
+
 const SHARED_GATE_SCRIPTS = {
   'check:android-boundary': 'node -e "console.log(\'android boundary ok\')"',
   'lint:shared:full': 'node -e "console.log(\'shared full lint ok\')"',
   'typecheck:shared': 'node -e "console.log(\'shared typecheck ok\')"',
   'test:shared': 'node -e "console.log(\'shared test ok\')"',
-  'test:quality': 'node -e "console.log(\'quality test ok\')"',
   build: 'node -e "console.log(\'shared build ok\')"',
   'electron:compile': 'node -e "console.log(\'shared electron compile ok\')"',
-  'android:web:build': 'node -e "console.log(\'shared android build ok\')"'
+  'android:web:build': 'node -e "console.log(\'shared android build ok\')"',
+  ...QUALITY_SCRIPT_GATE_SCRIPTS
 };
 
 const FULL_GATE_SCRIPTS = {

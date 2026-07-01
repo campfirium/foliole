@@ -14,19 +14,43 @@ import {
 let tempRoot = '';
 let appDataDir = '';
 let originalHome = '';
+let originalUserProfile = '';
 
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-webview-migration-'));
   appDataDir = path.join(tempRoot, 'AppData', 'Roaming', 'Foliole');
   originalHome = process.env.HOME ?? '';
+  originalUserProfile = process.env.USERPROFILE ?? '';
   process.env.HOME = path.join(tempRoot, 'home');
+  process.env.USERPROFILE = process.env.HOME;
   await fs.mkdir(process.env.HOME, { recursive: true });
 });
 
 afterEach(async () => {
   process.env.HOME = originalHome;
+  process.env.USERPROFILE = originalUserProfile;
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
+
+function resolveCurrentPlatformCandidate() {
+  const homeDir = process.platform === 'win32' ? process.env.USERPROFILE ?? '' : process.env.HOME ?? '';
+  const [candidate] = resolveLegacyWebviewProfileCandidates(appDataDir, process.platform, homeDir);
+  if (!candidate) {
+    throw new Error('Missing legacy profile candidate.');
+  }
+  return candidate;
+}
+
+function resolveCurrentPlatformEbWebViewCandidate() {
+  const homeDir = process.platform === 'win32' ? process.env.USERPROFILE ?? '' : process.env.HOME ?? '';
+  const candidates = resolveLegacyWebviewProfileCandidates(appDataDir, process.platform, homeDir);
+  const suffix = path.normalize(path.join('com.foliole.desktop', 'EBWebView'));
+  const candidate = candidates.find((item) => item.endsWith(suffix));
+  if (!candidate) {
+    throw new Error('Missing EBWebView legacy profile candidate.');
+  }
+  return candidate;
+}
 
 it('includes tauri webview-main candidate directory on linux', () => {
   const homeDir = process.env.HOME ?? '';
@@ -38,8 +62,7 @@ it('includes tauri webview-main candidate directory on linux', () => {
 });
 
 it('copies local storage from legacy profile when target storage is empty', async () => {
-  const homeDir = process.env.HOME ?? '';
-  const sourceProfile = path.join(homeDir, '.local', 'share', 'Foliole', 'Foliole', 'data', 'webview-main');
+  const sourceProfile = resolveCurrentPlatformCandidate();
   const sourceLocalStorage = path.join(sourceProfile, 'Local Storage', 'leveldb');
   await fs.mkdir(sourceLocalStorage, { recursive: true });
   await fs.writeFile(path.join(sourceLocalStorage, '000003.log'), 'foliole-ui-font-preset', 'utf8');
@@ -59,8 +82,7 @@ it('copies local storage from legacy profile when target storage is empty', asyn
 });
 
 it('copies local storage from legacy EBWebView Default profile', async () => {
-  const homeDir = process.env.HOME ?? '';
-  const sourceProfile = path.join(homeDir, '.local', 'share', 'com.foliole.desktop', 'EBWebView');
+  const sourceProfile = resolveCurrentPlatformEbWebViewCandidate();
   const sourceLocalStorage = path.join(sourceProfile, 'Default', 'Local Storage', 'leveldb');
   await fs.mkdir(sourceLocalStorage, { recursive: true });
   await fs.writeFile(path.join(sourceLocalStorage, '000007.log'), 'foliole-accent-color', 'utf8');
@@ -79,8 +101,7 @@ it('copies local storage from legacy EBWebView Default profile', async () => {
 });
 
 it('does not overwrite existing target local storage', async () => {
-  const homeDir = process.env.HOME ?? '';
-  const sourceProfile = path.join(homeDir, '.local', 'share', 'Foliole', 'Foliole', 'data', 'webview-main');
+  const sourceProfile = resolveCurrentPlatformCandidate();
   const sourceLocalStorage = path.join(sourceProfile, 'Local Storage', 'leveldb');
   await fs.mkdir(sourceLocalStorage, { recursive: true });
   await fs.writeFile(path.join(sourceLocalStorage, '000003.log'), 'legacy', 'utf8');

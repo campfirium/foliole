@@ -1,6 +1,6 @@
 {
   "name": "foliole",
-  "version": "0.6.4",
+  "version": "0.6.5",
   "description": "Desktop knowledge workspace for local reading and review.",
   "author": "Foliole",
   "license": "Apache-2.0",
@@ -43,7 +43,7 @@
     "typecheck:android:raw": "tsc -p tsconfig.android.json --noEmit",
     "test:desktop": "node scripts/electron-sqlite-runner.mjs scripts/run-vitest-with-summary.mjs .tmp/vitest/desktop.json -- --silent=passed-only --pool=threads --maxWorkers=2 --no-file-parallelism src/app src/features src/shared/platform src/shared/ui src/test src/startupBootstrap.test.ts src/startupViewMode.test.ts electron",
     "test:desktop:src": "node scripts/electron-sqlite-runner.mjs scripts/run-vitest-with-summary.mjs .tmp/vitest/desktop-src.json -- --silent=passed-only --pool=threads --maxWorkers=2 --no-file-parallelism src/app src/features src/shared/platform src/shared/ui src/test src/startupBootstrap.test.ts src/startupViewMode.test.ts",
-    "test:desktop:electron": "node scripts/electron-sqlite-runner.mjs scripts/run-vitest-with-summary.mjs .tmp/vitest/desktop-electron.json -- --silent=passed-only --pool=threads --maxWorkers=2 --no-file-parallelism --testTimeout=30000 electron",
+    "test:desktop:electron": "node scripts/run-desktop-electron-test-bucket.mjs .tmp/vitest/desktop-electron.json",
     "test:release:desktop-src": "node scripts/electron-sqlite-runner.mjs scripts/run-vitest-with-summary.mjs .tmp/vitest/release-desktop-src.json -- --silent=passed-only --pool=threads --maxWorkers=2 --no-file-parallelism --testTimeout=15000 src/app src/test src/startupBootstrap.test.ts src/startupViewMode.test.ts",
     "test:windows": "node scripts/electron-sqlite-runner.mjs scripts/run-windows-test-bucket.mjs all .tmp/vitest/windows.json",
     "test:windows:core": "node scripts/electron-sqlite-runner.mjs scripts/run-windows-test-bucket.mjs core .tmp/vitest/windows-core.json",

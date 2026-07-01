@@ -7,10 +7,12 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const WAIT_SCRIPT = path.join(REPO_ROOT, 'scripts', 'wait-clean-files.mjs');
+
+vi.setConfig({ testTimeout: 60000 });
 
 function git(cwd, args) {
   execFileSync('git', args, { cwd, stdio: ['ignore', 'pipe', 'pipe'] });

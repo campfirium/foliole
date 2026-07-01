@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -8,7 +7,7 @@ import { createTestPairingKeyPair, decryptTestPairingSecret } from './companionP
 import { postSigned } from './lanWorkspaceSyncObjects.testSupport.js';
 
 const electronMock = vi.hoisted(() => ({
-  userDataPath: `/tmp/foliole-sync-push-endpoint-${Math.random().toString(16).slice(2)}`
+  userDataPath: `${process.cwd()}/.tmp/foliole-sync-push-endpoint-${Math.random().toString(16).slice(2)}`
 }));
 const pushApplyMock = vi.hoisted(() => ({
   applyCompanionSyncPushAsync: vi.fn(async () => ({
@@ -84,7 +83,7 @@ async function resetTestState() {
   syncAppliedEventsMock.notifyWorkspaceSyncApplied.mockClear();
   delete process.env.FOLIOLE_COMPANION_SYNC_PORT;
   fs.rmSync(electronMock.userDataPath, { force: true, recursive: true });
-  electronMock.userDataPath = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-sync-push-endpoint-'));
+  electronMock.userDataPath = fs.mkdtempSync(path.join(process.cwd(), '.tmp', 'foliole-sync-push-endpoint-'));
 }
 
 function buildPushBody() {

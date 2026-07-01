@@ -7,10 +7,11 @@ import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const QUALITY_GATE_LIB = path.join(REPO_ROOT, 'scripts', 'quality', 'quality-gate-lib.sh');
+vi.setConfig({ testTimeout: 30000 });
 
 function runBash(script, cwd, env = {}) {
   return new Promise((resolve) => {

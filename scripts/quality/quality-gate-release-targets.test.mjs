@@ -66,7 +66,7 @@ describe('quality-gate release split targets', () => {
         'test:quality:preview'
       ]) expectStep(result.stdout, scriptName);
       expect(result.stdout).toContain(
-        '[quality-gate:release-core] running in parallel: test:release:desktop-src test:desktop:electron test:windows:core test:release:android test:release:shared test:quality:core test:quality:gate test:quality:gate-integration:target-telemetry test:quality:gate-integration:target-collect test:quality:gate-integration:target-failures test:quality:gate-integration:routing test:quality:gate-integration:release-targets test:quality:gate-integration:fast-delegation test:quality:gate-integration:release-tail test:quality:gate-integration:target-core test:quality:node'
+        '[quality-gate:release-core] running in parallel: test:release:desktop-src test:windows:core test:release:android test:release:shared test:quality:core test:quality:gate test:quality:node'
       );
       expectNoStep(result.stdout, 'test:windows:preview-recovery');
       expectNoStep(result.stdout, 'android:sync');

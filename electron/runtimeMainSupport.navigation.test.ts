@@ -1,7 +1,7 @@
 import { expect, it, vi } from 'vitest';
 
 vi.mock('electron', () => ({
-  app: { isPackaged: false }
+  app: { getName: () => 'Foliole', isPackaged: false }
 }));
 
 import { bindMainWindowNavigationGuard } from './runtimeMainSupport.js';
@@ -22,8 +22,15 @@ it('blocks main window renderer navigation and renderer-created windows', () => 
       windowOpenHandlers.push(handler);
     })
   };
+  const window = {
+    isDestroyed: vi.fn(() => false),
+    on: vi.fn(),
+    once: vi.fn(),
+    setTitle: vi.fn(),
+    webContents
+  };
 
-  bindMainWindowNavigationGuard({ webContents } as never);
+  bindMainWindowNavigationGuard(window as never);
   const navigationEvent = { preventDefault: vi.fn() };
   willNavigateHandlers[0]?.(navigationEvent, 'https://example.com');
 
@@ -45,8 +52,15 @@ it('allows the main process to load the initial local renderer before blocking l
     }),
     setWindowOpenHandler: vi.fn()
   };
+  const window = {
+    isDestroyed: vi.fn(() => false),
+    on: vi.fn(),
+    once: vi.fn(),
+    setTitle: vi.fn(),
+    webContents
+  };
 
-  bindMainWindowNavigationGuard({ webContents } as never);
+  bindMainWindowNavigationGuard(window as never);
   const startupNavigationEvent = { preventDefault: vi.fn() };
   willNavigateHandlers[0]?.(startupNavigationEvent, 'file:///D:/C/foliole/dist/desktop/index.html');
   currentUrl = 'file:///D:/C/foliole/dist/desktop/index.html';

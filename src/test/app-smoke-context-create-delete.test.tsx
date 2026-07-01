@@ -5,13 +5,15 @@ import './app-smoke.shared';
 
 import { App } from '../app/App';
 import { CLIPBOARD_IMPORT_REQUEST_EVENT } from '../app/components/importActivityRequests';
-import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
+import { HOME_NODE_ID, INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../features/nodes/model/specialNodes';
 import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode, createSmokeRuntimeInvoke, getCurrentFolderPanel, getCurrentFolderTreeItem } from './app-smoke.shared';
 
 vi.mock('../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: vi.fn(() => null) }));
+
+const SPECIAL_NODE_ORDER = [HOME_NODE_ID, INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID];
 
 beforeEach(() => {
   vi.mocked(getRuntimeInvoke).mockReset();
@@ -180,7 +182,7 @@ it('deletes all selected nodes from node-list context menu', async () => {
 
     const workspace = useWorkspaceStore.getState();
     expect(workspace.trashedNodeIds).toEqual(expect.arrayContaining(['node-2', 'node-3']));
-    expect(workspace.nodeOrder).toEqual([INBOX_NODE_ID, 'node-1', 'node-2', 'node-3']);
+    expect(workspace.nodeOrder).toEqual([...SPECIAL_NODE_ORDER, 'node-1', 'node-2', 'node-3']);
     expect(workspace.activeNodeId).toBe(INBOX_NODE_ID);
   } finally {
     vi.useRealTimers();

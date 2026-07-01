@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /* global process */
 
 import { spawn } from 'node:child_process';

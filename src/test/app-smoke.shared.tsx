@@ -14,43 +14,41 @@ import { mockEditorState } from './app-smoke-editor-mock';
 
 export { mockEditorState } from './app-smoke-editor-mock';
 
-const smokeRuntimeMocks = vi.hoisted(() => ({
+const smokeRuntimeMocks = vi.hoisted(() => {
+  function createNodeMutationResult(command: string, payload?: Record<string, unknown>) {
+    if (Array.isArray(payload?.nodeOrder)) {
+      return null;
+    }
+    const nodeId = typeof payload?.nodeId === 'string' ? payload.nodeId : 'node-created';
+    const parentNodeId = typeof payload?.parentNodeId === 'string' ? payload.parentNodeId : null;
+    const content = typeof payload?.content === 'string' ? payload.content : '';
+    const reveal = typeof payload?.reveal === 'string' ? payload.reveal : null;
+    const kind =
+      typeof payload?.kind === 'string'
+        ? payload.kind
+        : command === 'create_folder'
+          ? 'folder'
+          : command === 'create_item'
+            ? 'item'
+            : 'topic';
+    return {
+      activeNodeId: typeof payload?.activeNodeId === 'string' ? payload.activeNodeId : nodeId,
+      createdNodeIds: [nodeId],
+      nodeOrder: Array.isArray(payload?.nodeOrder) ? payload.nodeOrder : [nodeId],
+      nodes: [{
+        nodeId, parentNodeId, kind,
+        title: typeof payload?.title === 'string' ? payload.title : '',
+        content, hasContent: typeof payload?.hasContent === 'boolean' ? payload.hasContent : content.trim().length > 0,
+        reveal, hasReveal: typeof payload?.hasReveal === 'boolean' ? payload.hasReveal : reveal != null,
+        anchorLink: null, reading: null, review: null,
+        createdAt: '2026-02-25T00:00:00.000Z', updatedAt: '2026-02-25T00:00:00.000Z'
+      }]
+    };
+  }
+  return {
   createRuntimeInvoke: () => vi.fn(async (command: string, payload?: Record<string, unknown>) => {
     if (command === 'create_folder' || command === 'create_topic' || command === 'create_item') {
-      const nodeId = typeof payload?.nodeId === 'string' ? payload.nodeId : 'node-created';
-      const parentNodeId = typeof payload?.parentNodeId === 'string' ? payload.parentNodeId : null;
-      const content = typeof payload?.content === 'string' ? payload.content : '';
-      const reveal = typeof payload?.reveal === 'string' ? payload.reveal : null;
-      const kind =
-        typeof payload?.kind === 'string'
-          ? payload.kind
-          : command === 'create_folder'
-            ? 'folder'
-            : command === 'create_item'
-              ? 'item'
-              : 'topic';
-      return {
-        activeNodeId: typeof payload?.activeNodeId === 'string' ? payload.activeNodeId : nodeId,
-        createdNodeIds: [nodeId],
-        nodeOrder: Array.isArray(payload?.nodeOrder) ? payload.nodeOrder : [nodeId],
-        nodes: [
-          {
-            nodeId,
-            parentNodeId,
-            kind,
-            title: typeof payload?.title === 'string' ? payload.title : '',
-            content,
-            hasContent: typeof payload?.hasContent === 'boolean' ? payload.hasContent : content.trim().length > 0,
-            reveal,
-            hasReveal: typeof payload?.hasReveal === 'boolean' ? payload.hasReveal : reveal != null,
-            anchorLink: null,
-            reading: null,
-            review: null,
-            createdAt: '2026-02-25T00:00:00.000Z',
-            updatedAt: '2026-02-25T00:00:00.000Z'
-          }
-        ]
-      };
+      return createNodeMutationResult(command, payload);
     }
     if (command === 'update_node_content' || command === 'update_node_reveal') {
       return { nodes: payload ? [payload] : [], updatedNodeIds: typeof payload?.nodeId === 'string' ? [payload.nodeId] : [] };
@@ -73,7 +71,8 @@ const smokeRuntimeMocks = vi.hoisted(() => ({
     if (command === 'load_readwise_books_inventory') return { books: [] };
     return null;
   })
-}));
+  };
+});
 
 export function createSmokeRuntimeInvoke() {
   return smokeRuntimeMocks.createRuntimeInvoke();

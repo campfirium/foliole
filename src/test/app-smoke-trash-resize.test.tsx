@@ -55,7 +55,7 @@ it('restores and permanently deletes nodes from trash context menu actions', asy
   fireEvent.click(screen.getByRole('menuitem', { name: 'Restore' }));
   await waitFor(() => expect(useWorkspaceStore.getState().trashedNodeIds).not.toContain('node-2'));
 
-  fireEvent.click(screen.getAllByRole('button', { name: 'Topics' })[0]!);
+  fireEvent.click(screen.getByRole('treeitem', { name: 'Inbox' }));
   openCurrentFolderItemContextMenu('Child');
   fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
   await openTrashView();

@@ -1,5 +1,5 @@
-import { render, waitFor } from '@testing-library/react';
-import { beforeEach, expect, it, vi } from 'vitest';
+import { act, render, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 const useAppController = vi.fn();
 const prewarmAppOverlayStack = vi.fn(() => Promise.resolve());
@@ -8,6 +8,15 @@ const prewarmWorkspaceRightSidebarPanels = vi.fn(() => Promise.resolve());
 const prewarmWorkspaceSettingsOverlay = vi.fn(() => Promise.resolve());
 const reportRuntimeAppReady = vi.fn();
 const reviewSettingsProviderMock = vi.hoisted(() => ({ isReady: false }));
+const originalWindowDescriptors = {
+  cancelAnimationFrame: Object.getOwnPropertyDescriptor(window, 'cancelAnimationFrame'),
+  cancelIdleCallback: Object.getOwnPropertyDescriptor(window, 'cancelIdleCallback'),
+  requestAnimationFrame: Object.getOwnPropertyDescriptor(window, 'requestAnimationFrame'),
+  requestIdleCallback: Object.getOwnPropertyDescriptor(window, 'requestIdleCallback')
+};
+
+let animationFrameCallbacks: FrameRequestCallback[] = [];
+let idleCallbacks: IdleRequestCallback[] = [];
 
 vi.mock('./hooks/useAppController', () => ({ useAppController }));
 vi.mock('../store/workspaceStoreHydration', () => ({ ensureWorkspaceHydrated: vi.fn(() => Promise.resolve()) }));
@@ -53,6 +62,70 @@ function setDocumentVisibility(visibilityState: DocumentVisibilityState) {
   Object.defineProperty(document, 'visibilityState', { configurable: true, value: visibilityState });
 }
 
+function restoreWindowDescriptor(name: keyof typeof originalWindowDescriptors) {
+  const descriptor = originalWindowDescriptors[name];
+  if (descriptor) {
+    Object.defineProperty(window, name, descriptor);
+    return;
+  }
+  Reflect.deleteProperty(window, name);
+}
+
+function installFrameAndIdleMocks() {
+  Object.defineProperty(window, 'requestAnimationFrame', {
+    configurable: true,
+    value: vi.fn((callback: FrameRequestCallback) => {
+      animationFrameCallbacks.push(callback);
+      return animationFrameCallbacks.length;
+    })
+  });
+  Object.defineProperty(window, 'cancelAnimationFrame', { configurable: true, value: vi.fn() });
+  Object.defineProperty(window, 'requestIdleCallback', {
+    configurable: true,
+    value: vi.fn((callback: IdleRequestCallback) => {
+      idleCallbacks.push(callback);
+      return idleCallbacks.length;
+    })
+  });
+  Object.defineProperty(window, 'cancelIdleCallback', { configurable: true, value: vi.fn() });
+}
+
+function flushNextAnimationFrame() {
+  const callback = animationFrameCallbacks.shift();
+  if (callback) {
+    callback(performance.now());
+  }
+}
+
+function flushNextIdleCallback() {
+  const callback = idleCallbacks.shift();
+  if (callback) {
+    callback({ didTimeout: false, timeRemaining: () => 20 });
+  }
+}
+
+async function flushNextScheduledIdleCallback() {
+  await waitFor(() => {
+    expect(idleCallbacks.length).toBeGreaterThan(0);
+  });
+  act(() => flushNextIdleCallback());
+}
+
+async function flushIdleQueueUntilSettingsPrewarmed() {
+  for (let index = 0; index < 4 && prewarmWorkspaceSettingsOverlay.mock.calls.length === 0; index += 1) {
+    await flushNextScheduledIdleCallback();
+  }
+}
+
+async function flushAnimationFramesUntilAppReady() {
+  for (let index = 0; index < 8 && reportRuntimeAppReady.mock.calls.length === 0; index += 1) {
+    await waitFor(() => {
+      expect(animationFrameCallbacks.length).toBeGreaterThan(0);
+    });
+    act(() => flushNextAnimationFrame());
+  }
+}
+
 beforeEach(() => {
   useAppController.mockReturnValue({
     goToNodeState: { isOpen: false },
@@ -69,16 +142,18 @@ beforeEach(() => {
   prewarmWorkspaceSettingsOverlay.mockClear();
   reportRuntimeAppReady.mockClear();
   reviewSettingsProviderMock.isReady = false;
+  animationFrameCallbacks = [];
+  idleCallbacks = [];
   document.body.dataset.bootSkeleton = '';
   setDocumentVisibility('visible');
-  Object.defineProperty(window, 'requestIdleCallback', {
-    configurable: true,
-    value: vi.fn((callback: IdleRequestCallback) => {
-      callback({ didTimeout: false, timeRemaining: () => 20 });
-      return 1;
-    })
-  });
-  Object.defineProperty(window, 'cancelIdleCallback', { configurable: true, value: vi.fn() });
+  installFrameAndIdleMocks();
+});
+
+afterEach(() => {
+  restoreWindowDescriptor('cancelAnimationFrame');
+  restoreWindowDescriptor('cancelIdleCallback');
+  restoreWindowDescriptor('requestAnimationFrame');
+  restoreWindowDescriptor('requestIdleCallback');
 });
 
 it('waits for review scheduler settings before reporting app ready or prewarming', async () => {
@@ -91,11 +166,13 @@ it('waits for review scheduler settings before reporting app ready or prewarming
   reviewSettingsProviderMock.isReady = true;
   view.rerender(<App />);
 
+  await flushAnimationFramesUntilAppReady();
   await waitFor(() => {
     expect(reportRuntimeAppReady).toHaveBeenCalledWith(
       expect.objectContaining({ source: 'workspace_hydrated_double_raf' })
     );
   });
+  await flushIdleQueueUntilSettingsPrewarmed();
   expect(prewarmWorkspaceSettingsOverlay).toHaveBeenCalledTimes(1);
 });
 

@@ -9,6 +9,7 @@ const DEFAULT_NUMERIC_Z_CLASS_PATTERN = /\bz-(?:10|20|30|40|50)\b/;
 const NUMERIC_TS_Z_INDEX_PATTERN = /\bzIndex:\s*['"]?\d+/;
 const NUMERIC_CSS_Z_INDEX_PATTERN = /z-index:\s*\d+/;
 const ALLOWED_NUMERIC_Z_INDEX = [
+  { path: 'src/demo/demoResumeShell.ts', owner: 'startup skeleton top layer', reason: 'Boot skeleton must cover the app before semantic z-index CSS is available.' },
   { path: 'src/features/editor/adapters/liveMarkdownMathTheme.ts', owner: 'math inline overlay local stacking', reason: 'CodeMirror math source and render layers stack inside one editor line.' },
   { path: 'src/features/settings/components/SettingsSearchBox.tsx', owner: 'settings search suggestions popover', reason: 'Existing settings search menu uses a local popover layer.' },
   { path: 'src/features/settings/components/sections/nodeIconSettingFields.tsx', owner: 'node icon setting popover', reason: 'Existing node icon menu uses a local popover layer.' }
@@ -47,7 +48,7 @@ function collectProductSourceFiles(dir: string, files: string[] = []) {
       continue;
     }
     if (/\.(css|ts|tsx)$/.test(entry) && !/\.test\./.test(entry)) {
-      files.push(path);
+      files.push(path.replaceAll('\\', '/'));
     }
   }
   return files;

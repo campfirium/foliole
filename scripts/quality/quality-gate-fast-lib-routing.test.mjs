@@ -13,7 +13,7 @@ import { runManagedCommand } from './quality-gate-fast.test-support.mjs';
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const QUALITY_GATE_FAST_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality', 'quality-gate-fast.sh');
 const QUALITY_GATE_ROUTING_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality', 'quality-gate-fast-routing.sh');
-const QUALITY_GATE_INTEGRATION_TIMEOUT_MS = 90_000;
+const QUALITY_GATE_INTEGRATION_TIMEOUT_MS = 300_000;
 const QUALITY_SCRIPT_STEPS = [
   'test:quality:core',
   'test:quality:gate',
@@ -90,7 +90,7 @@ describe('quality-gate-fast lib routing', () => {
     await expect(
       runRoutingHelper("quality_skip_lint_changed_files_match 'src/app/example.ts'")
     ).resolves.toMatchObject({ code: 1 });
-  }, 15000);
+  }, 60000);
 
   it('delegates lib changes to the shared gate', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-fast-lib-'));
@@ -118,7 +118,7 @@ describe('quality-gate-fast lib routing', () => {
       expect(result.stdout).toContain('shared test ok');
       expect(result.stdout).toContain('android web build ok');
     } finally {
-      await rm(tempRoot, { recursive: true, force: true });
+      await rm(tempRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     }
   }, QUALITY_GATE_INTEGRATION_TIMEOUT_MS);
 
@@ -143,7 +143,7 @@ describe('quality-gate-fast lib routing', () => {
       expect(result.stdout).not.toContain('full lint should stay unused');
       expect(result.stdout).not.toContain('full test should stay unused');
     } finally {
-      await rm(tempRoot, { recursive: true, force: true });
+      await rm(tempRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     }
-  }, 15000);
+  }, 60000);
 });

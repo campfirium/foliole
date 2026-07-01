@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -8,7 +7,7 @@ import { createTestPairingKeyPair, decryptTestPairingSecret } from './companionP
 import { postSigned } from './lanWorkspaceSyncObjects.testSupport.js';
 
 const electronMock = vi.hoisted(() => ({
-  userDataPath: `/tmp/foliole-sync-push-events-${Math.random().toString(16).slice(2)}`
+  userDataPath: `${process.cwd()}/.tmp/foliole-sync-push-events-${Math.random().toString(16).slice(2)}`
 }));
 const syncAppliedEventsMock = vi.hoisted(() => ({ notifyWorkspaceSyncApplied: vi.fn() }));
 
@@ -67,7 +66,7 @@ async function resetTestState() {
   syncAppliedEventsMock.notifyWorkspaceSyncApplied.mockClear();
   delete process.env.FOLIOLE_COMPANION_SYNC_PORT;
   fs.rmSync(electronMock.userDataPath, { force: true, recursive: true });
-  electronMock.userDataPath = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-sync-push-events-'));
+  electronMock.userDataPath = fs.mkdtempSync(path.join(process.cwd(), '.tmp', 'foliole-sync-push-events-'));
 }
 
 async function expectRetiredNodeAndReviewPushes(endpoint: string, paired: { device_id: string; device_secret: string }) {

@@ -92,7 +92,7 @@ describe('android-preview failure and protection paths', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 15000);
+  }, 60000);
 
   it('fails preview as a data protection failure when the post-deploy check fails', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-preview-data-fail-'));

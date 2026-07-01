@@ -83,6 +83,6 @@ describe('windows dev services', () => {
 
     expect(script).toContain('function probeHttp(url, timeoutMs = 3000)');
     expect(script).toContain("body.includes('/@vite/client')");
-    expect(script).not.toContain('id=\"root\"');
+    expect(script).not.toContain('id="root"');
   });
 });

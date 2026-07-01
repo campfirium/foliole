@@ -1,4 +1,6 @@
 // @vitest-environment node
+import path from 'node:path';
+
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { NativeInvokeRequest } from '../../lib/platform/nativeContract.js';
@@ -177,7 +179,7 @@ it('handles typed native utility commands', async () => {
     status: 'generated'
   });
   expect(openExternal).toHaveBeenCalledWith('https://example.com');
-  expect(openPath).toHaveBeenCalledWith('/log/source.md');
+  expect(openPath).toHaveBeenCalledWith(path.normalize('/log/source.md'));
   expect(syncAppMenuState).toHaveBeenCalledWith(['node.create'], []);
 });
 
@@ -212,7 +214,7 @@ it('opens app-managed log directories through the native utility command', async
     })
   ).resolves.toBeNull();
 
-  expect(openPath).toHaveBeenCalledWith('/log');
+  expect(openPath).toHaveBeenCalledWith(path.normalize('/log'));
 });
 
 it('handles the dev app restart command through a shell restart request', async () => {
@@ -238,7 +240,8 @@ it('handles window commands through invoke channel', async () => {
   expect(mockApp.exit).toHaveBeenCalledWith(0);
   expect(mockWindow.webContents.toggleDevTools).toHaveBeenCalledTimes(1);
   expect(mockWindow.maximize).toHaveBeenCalledTimes(1);
-  expect(mockWindow.close).toHaveBeenCalledTimes(1);
+  expect(mockWindow.hide).toHaveBeenCalledTimes(1);
+  expect(mockWindow.close).not.toHaveBeenCalled();
 });
 
 it('does not open DevTools from packaged native window command', async () => {

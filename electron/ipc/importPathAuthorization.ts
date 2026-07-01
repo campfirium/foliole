@@ -24,7 +24,9 @@ function assertImportPathShape(filePath: string) {
 }
 
 async function resolveRealImportPath(filePath: string) {
-  const resolvedPath = path.resolve(filePath.trim());
+  const trimmedPath = filePath.trim();
+  assertImportPathShape(trimmedPath);
+  const resolvedPath = path.resolve(trimmedPath);
   assertImportPathShape(resolvedPath);
   const realPath = typeof fs.realpath === 'function' ? await fs.realpath(resolvedPath) : resolvedPath;
   assertImportPathShape(realPath);

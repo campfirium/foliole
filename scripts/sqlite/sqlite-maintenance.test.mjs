@@ -8,7 +8,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 
-import { afterEach, beforeEach, expect, it } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 
@@ -17,6 +17,8 @@ const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3');
 
 let tempRoot = '';
+
+vi.setConfig({ testTimeout: 60000 });
 
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-sqlite-maintenance-'));

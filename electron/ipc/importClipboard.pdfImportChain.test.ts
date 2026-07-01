@@ -40,6 +40,11 @@ vi.mock('./paths.js', () => ({
   })
 }));
 
+vi.mock('../database/pdfIndexing.js', async () => ({
+  ...await vi.importActual<typeof import('../database/pdfIndexing.js')>('../database/pdfIndexing.js'),
+  enqueuePdfAttachmentIndexing: vi.fn()
+}));
+
 import { buildAttachmentAssetUrl } from '../attachments/attachmentAssetUrl.js';
 import { resolveAttachmentFile } from '../attachments/resourceResolver.js';
 import { listNodeAttachments } from '../database/attachments.js';

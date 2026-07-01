@@ -90,7 +90,7 @@ function expectCompletedImportLogLine(line: string) {
 }
 
 async function createTempRoot(prefix: string) {
-  const parentDir = path.join(process.cwd(), '.tmp-tests');
+  const parentDir = path.join(process.cwd(), '.tmp', 'tests');
   await fs.mkdir(parentDir, { recursive: true });
   const root = await fs.mkdtemp(path.join(parentDir, `${prefix}-`));
   tempRoots.push(root);

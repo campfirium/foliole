@@ -39,6 +39,7 @@ describe('windows desktop test script', () => {
       const mockBinDir = path.join(tempRoot, 'bin');
       const callsLog = path.join(tempRoot, 'calls.log');
       const mockPowerShell = path.join(mockBinDir, 'powershell.exe');
+      const mockWslpath = path.join(mockBinDir, 'wslpath');
       await mkdir(mockBinDir, { recursive: true });
       await writeFile(
         mockPowerShell,
@@ -50,6 +51,16 @@ describe('windows desktop test script', () => {
         'utf8'
       );
       await chmod(mockPowerShell, 0o755);
+      await writeFile(
+        mockWslpath,
+        [
+          '#!/usr/bin/env bash',
+          'set -euo pipefail',
+          'printf "%s\\n" "$2"'
+        ].join('\n'),
+        'utf8'
+      );
+      await chmod(mockWslpath, 0o755);
 
       const result = await runScript(
         {

@@ -1,5 +1,7 @@
 // @vitest-environment node
 
+import path from 'node:path';
+
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -79,7 +81,7 @@ it('installs a minimal Windows tray with open and quit actions', async () => {
   });
 
   const tray = mocks.trayInstances[0]!;
-  expect(mocks.createFromPath).toHaveBeenCalledWith('/app/build/icon.ico');
+  expect(mocks.createFromPath).toHaveBeenCalledWith(path.join('/app', 'build', 'icon.ico'));
   expect(tray.setToolTip).toHaveBeenCalledWith('Foliole');
   const menu = tray.menu as Array<{ click?: () => void; label?: string }>;
   expect(menu.map((item) => item.label).filter(Boolean)).toEqual(['Open Foliole', 'Quit Foliole']);
@@ -140,7 +142,7 @@ it('uses the installed Windows resource icon outside the app asar', async () => 
     platform: 'win32'
   });
 
-  expect(mocks.createFromPath).toHaveBeenCalledWith('/installed/resources/build/icon.ico');
+  expect(mocks.createFromPath).toHaveBeenCalledWith(path.join('/installed/resources', 'build', 'icon.ico'));
   expect(mocks.trayInstances).toHaveLength(1);
 
   Object.defineProperty(process, 'resourcesPath', {
@@ -161,7 +163,7 @@ it('does not install a transparent tray when the icon cannot be decoded', async 
 
   expect(mocks.trayInstances).toHaveLength(0);
   expect(mocks.appendMainProcessDiagnosticLog).toHaveBeenCalledWith('tray_icon_empty', {
-    icon_path: '/app/build/icon.ico',
+    icon_path: path.join('/app', 'build', 'icon.ico'),
     is_packaged: false,
     platform: 'win32'
   });

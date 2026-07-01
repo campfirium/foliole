@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const electronMock = vi.hoisted(() => ({
-  userDataPath: `/tmp/foliole-companion-pairing-${Math.random().toString(16).slice(2)}`
+  userDataPath: `${process.cwd()}/.tmp/foliole-companion-pairing-${Math.random().toString(16).slice(2)}`
 }));
 
 vi.mock('electron', () => ({

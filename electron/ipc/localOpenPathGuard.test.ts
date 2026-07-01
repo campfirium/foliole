@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import { resolveAllowedLocalOpenPath } from './localOpenPathGuard.js';
@@ -10,6 +12,8 @@ const appPaths: AppPaths = {
   app_log_dir: '/app/logs',
   documents_dir: '/Users/me/Documents'
 };
+
+const normalizedPath = (filePath: string) => path.normalize(filePath);
 
 describe('resolveAllowedLocalOpenPath', () => {
   it('rejects empty, relative, URL, and network paths', () => {
@@ -31,19 +35,21 @@ describe('resolveAllowedLocalOpenPath', () => {
 
   it('accepts document file paths only inside allowed roots', () => {
     expect(resolveAllowedLocalOpenPath('/tmp/source.md', appPaths)).toBeNull();
-    expect(resolveAllowedLocalOpenPath('/Users/me/Documents/source.md', appPaths)).toBe('/Users/me/Documents/source.md');
+    expect(resolveAllowedLocalOpenPath('/Users/me/Documents/source.md', appPaths)).toBe(
+      normalizedPath('/Users/me/Documents/source.md')
+    );
     expect(resolveAllowedLocalOpenPath('C:\\Users\\me\\book.pdf', appPaths)).toBeNull();
   });
 
   it('accepts only allowed directories', () => {
-    expect(resolveAllowedLocalOpenPath('/app/logs', appPaths)).toBe('/app/logs');
-    expect(resolveAllowedLocalOpenPath('/app/data/session', appPaths)).toBe('/app/data/session');
-    expect(resolveAllowedLocalOpenPath('/Users/me/Documents', appPaths)).toBe('/Users/me/Documents');
+    expect(resolveAllowedLocalOpenPath('/app/logs', appPaths)).toBe(normalizedPath('/app/logs'));
+    expect(resolveAllowedLocalOpenPath('/app/data/session', appPaths)).toBe(normalizedPath('/app/data/session'));
+    expect(resolveAllowedLocalOpenPath('/Users/me/Documents', appPaths)).toBe(normalizedPath('/Users/me/Documents'));
     expect(resolveAllowedLocalOpenPath('/tmp', appPaths)).toBeNull();
   });
 
   it('normalizes paths before checking app-managed directory prefixes', () => {
-    expect(resolveAllowedLocalOpenPath('/app/logs/../data', appPaths)).toBe('/app/data');
+    expect(resolveAllowedLocalOpenPath('/app/logs/../data', appPaths)).toBe(normalizedPath('/app/data'));
     expect(resolveAllowedLocalOpenPath('/app/logs/../../tmp', appPaths)).toBeNull();
   });
 });

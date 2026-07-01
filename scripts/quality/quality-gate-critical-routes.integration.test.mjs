@@ -82,7 +82,7 @@ describe('quality gate critical routes integration', () => {
       expect(result.stdout).toContain(expectedVitestArgs('critical test:', 'src/app/components/DocumentPanelSection.runtimeBacklinks.test.tsx'));
       expect(await readFile(lintMarker, 'utf8')).toContain('src/app/components/useNodeBacklinks.ts');
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await rm(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     }
   }, 30000);
 });

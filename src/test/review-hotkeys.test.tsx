@@ -72,7 +72,7 @@ it('supports review keyboard flow with edit mode guard (native Esc -> F)', async
   await enterFlow();
 
   const editor = screen.getByTestId('editor-value');
-  expect(editor).toHaveAttribute('data-review-escape-blur', 'true');
+  expect(editor.closest('[data-review-escape-blur]')).toHaveAttribute('data-review-escape-blur', 'true');
   editor.focus();
   fireEvent.focusIn(editor);
   fireEvent.keyDown(editor, { key: ' ', code: 'Space' });

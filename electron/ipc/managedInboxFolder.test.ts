@@ -25,7 +25,7 @@ import {
 const tempRoots: string[] = [];
 
 async function createTempRoot(prefix: string) {
-  const parentDir = path.join(process.cwd(), '.tmp-tests');
+  const parentDir = path.join(process.cwd(), '.tmp', 'tests');
   await fs.mkdir(parentDir, { recursive: true });
   const root = await fs.mkdtemp(path.join(parentDir, `${prefix}-`));
   tempRoots.push(root);
@@ -43,11 +43,11 @@ it('resolves the managed inbox root under the runtime app data directory', () =>
   expect(resolveDirectoryImportConsumePolicy('foliole_managed_inbox_folder', 'archive')).toBe('archive');
 
   expect(resolveManagedInboxPaths('/tmp/foliole')).toEqual({
-    archiveRootPath: '/tmp/foliole/inbox-archive',
-    rootPath: '/tmp/foliole/inbox'
+    archiveRootPath: path.join('/tmp/foliole', 'inbox-archive'),
+    rootPath: path.join('/tmp/foliole', 'inbox')
   });
   expect(resolveManagedInboxPaths('/tmp/foliole', '/custom/inbox')).toEqual({
-    archiveRootPath: '/tmp/foliole/inbox-archive',
+    archiveRootPath: path.join('/tmp/foliole', 'inbox-archive'),
     rootPath: '/custom/inbox'
   });
 });

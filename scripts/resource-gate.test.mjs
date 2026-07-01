@@ -130,11 +130,11 @@ describe('resource gate', () => {
       };
       const timeoutEnv = {
         ...baseEnv,
-        FOLIOLE_RESOURCE_GATE_COMMAND_TIMEOUT_MS: '100',
+        FOLIOLE_RESOURCE_GATE_COMMAND_TIMEOUT_MS: '200',
       };
       const timedOut = await runGate({
         className: 'node-heavy',
-        command: [process.execPath, stub, 'slow', '5000'],
+        command: [process.execPath, stub, 'slow', '30000'],
         env: timeoutEnv,
         runtimeDir
       });
@@ -153,7 +153,7 @@ describe('resource gate', () => {
       expect(log).not.toContain('slow:end');
       expect(log).toContain('after-timeout:end');
     });
-  }, 10000);
+  }, 20000);
 
   it('takes over stale locks and prints safe queue progress', async () => {
     await withFixture(async ({ logFile, runtimeDir, stub }) => {

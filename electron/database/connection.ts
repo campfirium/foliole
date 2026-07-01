@@ -28,6 +28,11 @@ interface OpenDatabaseConnectionOptions {
 }
 
 let cachedConnection: DatabaseConnection | null = null;
+const connectionCleanupCallbacks = new Set<() => void>();
+
+export function registerDatabaseConnectionCleanup(callback: () => void) {
+  connectionCleanupCallbacks.add(callback);
+}
 
 function resolveConfiguredDatabasePath(): string {
   return resolveBootstrapLibraryPaths().database_path;
@@ -82,6 +87,9 @@ export function enableDatabaseWriteAheadLog(connection: DatabaseConnection) {
 }
 
 export function closeDatabaseConnection() {
+  for (const callback of connectionCleanupCallbacks) {
+    callback();
+  }
   if (!cachedConnection) {
     return;
   }

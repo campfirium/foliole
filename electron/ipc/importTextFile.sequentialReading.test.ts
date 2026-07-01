@@ -1,5 +1,7 @@
 // @vitest-environment node
 
+import path from 'node:path';
+
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const { readFile, runPreparedImport, showOpenDialog } = vi.hoisted(() => ({
@@ -16,6 +18,8 @@ const { loadEpubPreview, runEpubImport } = vi.hoisted(() => ({
 const { notifyManagedInboxUpdated } = vi.hoisted(() => ({
   notifyManagedInboxUpdated: vi.fn()
 }));
+
+const epubPath = path.resolve('/tmp/book.epub');
 
 vi.mock('electron', () => ({
   dialog: { showOpenDialog }
@@ -61,16 +65,16 @@ beforeEach(() => {
     resultStatus: 'imported',
     sourceFingerprint: 'epub-source-fingerprint',
     sourceKind: 'epub',
-    sourceLocator: '/tmp/book.epub',
+    sourceLocator: epubPath,
     sourceName: 'book.epub'
   });
 });
 
 it('imports the selected EPUB path with the requested release mode without reopening the picker', async () => {
-  await authorizeSelectedImportFilePath('/tmp/book.epub');
+  await authorizeSelectedImportFilePath(epubPath);
 
   await expect(runTextFileImport(undefined, {
-    file_path: '/tmp/book.epub',
+    file_path: epubPath,
     sequential_reading_mode: 'sequential'
   })).resolves.toMatchObject({
     import_id: 'import-epub',
@@ -79,7 +83,7 @@ it('imports the selected EPUB path with the requested release mode without reope
 
   expect(showOpenDialog).not.toHaveBeenCalled();
   expect(runEpubImport).toHaveBeenCalledWith(
-    expect.objectContaining({ filePath: '/tmp/book.epub', kind: 'epub', sourceName: 'book.epub' }),
+    expect.objectContaining({ filePath: epubPath, kind: 'epub', sourceName: 'book.epub' }),
     expect.any(String),
     { sequentialReadingMode: 'sequential' }
   );
@@ -88,7 +92,7 @@ it('imports the selected EPUB path with the requested release mode without reope
 
 it('rejects renderer-provided EPUB paths that were not selected by the main process', async () => {
   await expect(runTextFileImport(undefined, {
-    file_path: '/tmp/book.epub',
+    file_path: epubPath,
     sequential_reading_mode: 'sequential'
   })).rejects.toThrow('Import file path is not authorized.');
 });

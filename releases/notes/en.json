@@ -1,4 +1,15 @@
 {
+  "0.6.5": {
+    "notes": [
+      "Improved",
+      "Flow now handles day groups, queue clearing, and resume state more consistently.",
+      "Fixed",
+      "Changing the storage location now works again.",
+      "Quick Clipping now captures selected text directly.",
+      "Quick Capture now matches the dark theme more reliably.",
+      "Editor drafts are no longer lost in cases such as switching topics, creating topics, undo, or redo."
+    ]
+  },
   "0.6.4": {
     "notes": [
       "Improved",

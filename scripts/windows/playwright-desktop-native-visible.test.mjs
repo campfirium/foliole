@@ -12,6 +12,8 @@ import {
 } from './playwright-desktop-native-visible.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const WINDOWS_WORKDIR = String.raw`D:\C\foliole`;
+const WINDOWS_NODE = String.raw`C:\Node\node.exe`;
 
 describe('playwright desktop native visible runner', () => {
   it('exposes a visible native desktop npm entry', async () => {
@@ -25,7 +27,7 @@ describe('playwright desktop native visible runner', () => {
   it('requires explicit task specs instead of defaulting to a regression suite', () => {
     expect(() => createNativeVisibleDesktopGateCommand({
       argv: [],
-      cwd: 'D:\\C\\foliole',
+      cwd: WINDOWS_WORKDIR,
       env: {},
       nodeBin: 'node'
     })).toThrow('requires at least one explicit Playwright spec');
@@ -34,9 +36,9 @@ describe('playwright desktop native visible runner', () => {
   it('runs Playwright through the preview resource gate in visible native mode', () => {
     const command = createNativeVisibleDesktopGateCommand({
       argv: ['tests/desktop/visible-native-presentation.spec.ts', '--project=chromium'],
-      cwd: 'D:\\C\\foliole',
+      cwd: WINDOWS_WORKDIR,
       env: { FOLIOLE_ELECTRON_NATIVE_HIDDEN: '1' },
-      nodeBin: 'C:\\Node\\node.exe'
+      nodeBin: WINDOWS_NODE
     });
 
     expect(command).toMatchObject({
@@ -44,7 +46,7 @@ describe('playwright desktop native visible runner', () => {
         'scripts/with-resource-gate.mjs',
         'preview',
         '--',
-        'C:\\Node\\node.exe',
+        WINDOWS_NODE,
         'node_modules/playwright/cli.js',
         'test',
         '--config',
@@ -52,14 +54,14 @@ describe('playwright desktop native visible runner', () => {
         'tests/desktop/visible-native-presentation.spec.ts',
         '--project=chromium'
       ],
-      bin: 'C:\\Node\\node.exe',
-      cwd: path.resolve('D:\\C\\foliole'),
+      bin: WINDOWS_NODE,
+      cwd: path.resolve(WINDOWS_WORKDIR),
       env: {
         FOLIOLE_DISABLE_CHROMIUM_SANDBOX_FOR_DEBUG: '1',
         FOLIOLE_DISABLE_HARDWARE_ACCELERATION: '1',
-        FOLIOLE_ELECTRON_APP_ROOT: path.resolve('D:\\C\\foliole'),
+        FOLIOLE_ELECTRON_APP_ROOT: path.resolve(WINDOWS_WORKDIR),
         FOLIOLE_ELECTRON_NATIVE_VISIBLE: '1',
-        FOLIOLE_WINDOWS_WORKDIR: path.resolve('D:\\C\\foliole')
+        FOLIOLE_WINDOWS_WORKDIR: path.resolve(WINDOWS_WORKDIR)
       }
     });
     expect(command.env.FOLIOLE_ELECTRON_NATIVE_HIDDEN).toBeUndefined();
@@ -67,16 +69,16 @@ describe('playwright desktop native visible runner', () => {
 
   it('builds renderer and Electron output unless explicitly skipped', () => {
     expect(createNativeVisibleDesktopBuildCommands({
-      cwd: 'D:\\C\\foliole',
+      cwd: WINDOWS_WORKDIR,
       env: {},
       npmBin: 'npm.cmd'
     })).toEqual([
-      { args: ['run', 'build'], bin: 'npm.cmd', cwd: path.resolve('D:\\C\\foliole'), env: {} },
-      { args: ['run', 'electron:compile'], bin: 'npm.cmd', cwd: path.resolve('D:\\C\\foliole'), env: {} }
+      { args: ['run', 'build'], bin: 'npm.cmd', cwd: path.resolve(WINDOWS_WORKDIR), env: {} },
+      { args: ['run', 'electron:compile'], bin: 'npm.cmd', cwd: path.resolve(WINDOWS_WORKDIR), env: {} }
     ]);
 
     expect(createNativeVisibleDesktopBuildCommands({
-      cwd: 'D:\\C\\foliole',
+      cwd: WINDOWS_WORKDIR,
       env: { FOLIOLE_DESKTOP_NATIVE_SKIP_BUILD: '1' },
       npmBin: 'npm.cmd'
     })).toEqual([]);

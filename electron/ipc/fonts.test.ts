@@ -15,7 +15,7 @@ it('lists Windows fonts from PowerShell output with Unicode names', () => {
 
   const catalog = listSystemFontsForPlatform('win32', exec as never);
 
-  expect(catalog.fonts).toEqual([
+  expect([...catalog.fonts].sort()).toEqual([
     'Cascadia Mono',
     'UD Digi Kyokasho N',
     'UD Digi Kyokasho NP',
@@ -23,7 +23,7 @@ it('lists Windows fonts from PowerShell output with Unicode names', () => {
     '微软雅黑',
     '微软雅黑 Bold',
     '微软雅黑 Semibold'
-  ]);
+  ].sort());
   expect(catalog.monospace_fonts).toEqual(['Cascadia Mono']);
 });
 

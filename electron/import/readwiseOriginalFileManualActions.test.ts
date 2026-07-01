@@ -31,6 +31,11 @@ vi.mock('../sync/primaryDeviceState.js', () => ({
   canDesktopRunExternalSources: vi.fn(() => true)
 }));
 
+vi.mock('../database/pdfIndexing.js', async () => ({
+  ...await vi.importActual<typeof import('../database/pdfIndexing.js')>('../database/pdfIndexing.js'),
+  enqueuePdfAttachmentIndexing: vi.fn()
+}));
+
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 import { listNodeAttachments } from '../database/attachments.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
@@ -53,7 +58,7 @@ beforeEach(async () => {
 afterEach(async () => {
   closeDatabaseConnection();
   await fs.rm(tempRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
-});
+}, 30_000);
 
 async function seedReadwisePdfTopic() {
   const readwiseRoot = path.join(tempRoot, 'Readwise');

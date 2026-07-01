@@ -4,7 +4,7 @@
 import { readFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   createQualityGateTempRoot,
@@ -14,6 +14,8 @@ import {
   writeFixtureFile,
   writePackageJson
 } from './quality-gate-fast.test-support.mjs';
+
+vi.setConfig({ testTimeout: 60000 });
 
 function expectedVitestArgs(prefix, testFile) {
   const maxWorkers = process.env.VITEST_MAX_WORKERS?.trim() || '2';

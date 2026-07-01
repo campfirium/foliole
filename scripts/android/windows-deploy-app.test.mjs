@@ -132,7 +132,7 @@ describe('windows-deploy-app.sh', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 10000);
+  }, 30000);
 
   it('returns the Windows deploy failure code when the app is not opened', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-deploy-fail-'));

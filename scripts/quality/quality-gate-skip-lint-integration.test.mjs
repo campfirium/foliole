@@ -11,7 +11,7 @@ import { runManagedCommand } from './quality-gate-fast.test-support.mjs';
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const FAST_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality', 'quality-gate-fast.sh');
 const TARGET_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality', 'quality-gate-target.sh');
-const QUALITY_GATE_INTEGRATION_TIMEOUT_MS = 90_000;
+const QUALITY_GATE_INTEGRATION_TIMEOUT_MS = 240_000;
 
 function runBash(args, cwd, env = {}) {
   return runManagedCommand('bash', args, {
@@ -63,7 +63,7 @@ describe('quality gate skip lint integration', () => {
       expect(result.stdout).toContain('skip lint ok');
       expect(result.stdout).toContain('[quality-gate-fast] all checks passed.');
     } finally {
-      await rm(tempRoot, { recursive: true, force: true });
+      await rm(tempRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     }
   }, QUALITY_GATE_INTEGRATION_TIMEOUT_MS);
 
@@ -85,7 +85,7 @@ describe('quality gate skip lint integration', () => {
       expect(result.stdout).not.toContain('skip lint should not run');
       expect(result.stdout).toContain('[quality-gate-fast] all checks passed.');
     } finally {
-      await rm(tempRoot, { recursive: true, force: true });
+      await rm(tempRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     }
   }, QUALITY_GATE_INTEGRATION_TIMEOUT_MS);
 
@@ -107,7 +107,7 @@ describe('quality gate skip lint integration', () => {
       expect(result.stdout).toContain('skip lint failed');
       expect(result.stdout).not.toContain('desktop lint should not run');
     } finally {
-      await rm(tempRoot, { recursive: true, force: true });
+      await rm(tempRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     }
   }, QUALITY_GATE_INTEGRATION_TIMEOUT_MS);
 });

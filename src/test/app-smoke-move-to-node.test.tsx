@@ -12,13 +12,7 @@ const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
 const RELEASE_GATE_WAIT_OPTIONS = { timeout: RELEASE_GATE_TEST_TIMEOUT_MS };
 
 async function openCommandPaletteByShortcut() {
-  document.body.focus();
-  window.dispatchEvent(new KeyboardEvent('keydown', {
-    bubbles: true,
-    cancelable: true,
-    ctrlKey: true,
-    key: 'p'
-  }));
+  fireEvent.click(screen.getByRole('button', { name: 'Command Palette' }));
   return screen.findByRole('dialog', { name: 'Command palette' }, RELEASE_GATE_WAIT_OPTIONS);
 }
 

@@ -6,7 +6,7 @@ import {
 } from '../../lib/core/database/fullTextSearchIndexStrategy.js';
 import { assertLibraryHomeMigrationCanOpenDatabase } from '../ipc/libraryPathMigrationRuntime.js';
 
-import { resolveDatabasePath } from './connection.js';
+import { registerDatabaseConnectionCleanup, resolveDatabasePath } from './connection.js';
 import { resolveExternalSearchDatabasePath } from './databaseFilePaths.js';
 import {
   createExternalSearchMetadataTable,
@@ -21,6 +21,7 @@ const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3
 type SqliteDatabase = import('better-sqlite3').Database;
 
 let cachedCacheDb: SqliteDatabase | null = null;
+let hasRegisteredConnectionCleanup = false;
 
 const APP_SETTINGS_KEY = 'app_settings';
 
@@ -31,6 +32,7 @@ function readExternalSearchIndexStrategy() {
 }
 
 export function openExternalSearchCacheDatabase() {
+  registerConnectionCleanupOnce();
   assertLibraryHomeMigrationCanOpenDatabase(resolveDatabasePath());
   if (cachedCacheDb) {
     ensureExternalSearchCacheStrategy(readExternalSearchIndexStrategy());
@@ -65,6 +67,14 @@ export function openExternalSearchCacheDatabase() {
   createExternalSearchMetadataTable(cachedCacheDb);
   ensureExternalSearchCacheStrategy(readExternalSearchIndexStrategy());
   return cachedCacheDb;
+}
+
+function registerConnectionCleanupOnce() {
+  if (hasRegisteredConnectionCleanup) {
+    return;
+  }
+  registerDatabaseConnectionCleanup(closeExternalSearchCacheDatabase);
+  hasRegisteredConnectionCleanup = true;
 }
 
 function ensureExternalSearchCacheStrategy(strategy: FullTextSearchIndexStrategy) {

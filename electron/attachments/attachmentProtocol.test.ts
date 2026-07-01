@@ -1,5 +1,7 @@
 // @vitest-environment node
 
+import { pathToFileURL } from 'node:url';
+
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const { handle, registerSchemesAsPrivileged } = vi.hoisted(() => ({
@@ -58,9 +60,10 @@ it('registers the attachment scheme with secure standard privileges', () => {
 
 it('serves attachment resources with mime and cache headers but no page CSP', async () => {
   fetch.mockResolvedValue(new Response(Buffer.from('image-bytes'), { status: 200 }));
+  const filePath = '/tmp/attachment-hash';
   resolveAttachmentFile.mockReturnValue({
     status: 'ready',
-    filePath: '/tmp/attachment-hash',
+    filePath,
     mimeType: 'image/png'
   });
 
@@ -71,7 +74,7 @@ it('serves attachment resources with mime and cache headers but no page CSP', as
   const response = await handler({ url: buildAttachmentAssetUrl('hash-1') });
 
   expect(resolveAttachmentFile).toHaveBeenCalledWith('hash-1');
-  expect(fetch).toHaveBeenCalledWith('file:///tmp/attachment-hash');
+  expect(fetch).toHaveBeenCalledWith(pathToFileURL(filePath).toString());
   expect(response.status).toBe(200);
   expect(response.headers.get('content-type')).toBe('image/png');
   expect(response.headers.get('content-security-policy')).toBeNull();

@@ -24,7 +24,7 @@ function collectProductSourceFiles(dir: string, files: string[] = []) {
       continue;
     }
     if (/\.(css|ts|tsx)$/.test(entry) && !/\.test\./.test(entry)) {
-      files.push(path);
+      files.push(path.replaceAll('\\', '/'));
     }
   }
   return files;

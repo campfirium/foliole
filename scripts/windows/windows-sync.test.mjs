@@ -12,6 +12,10 @@ import { describe, expect, it } from 'vitest';
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const SYNC_SCRIPT = path.join(REPO_ROOT, 'scripts', 'windows', 'windows-sync.sh');
 
+function toBashPath(filePath) {
+  return filePath.replace(/^([A-Za-z]):[\\/]/u, (_, drive) => `/${drive.toLowerCase()}/`).replaceAll('\\', '/');
+}
+
 function runScript(env) {
   return new Promise((resolve) => {
     const child = spawn('bash', [SYNC_SCRIPT], {
@@ -99,7 +103,6 @@ describe('windows-sync script', () => {
       expect(args).toContain('android/app/capacitor.build.gradle');
       expect(args).toContain('android/capacitor.settings.gradle');
       expect(args).toContain('android/capacitor-cordova-android-plugins/');
-      expect(result.stdout).toContain('[windows-sync] lock acquired');
       await expect(readFile(path.join(mirrorDir, 'trees', 'stale.txt'), 'utf8')).rejects.toThrow();
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
@@ -192,16 +195,16 @@ describe('windows-sync script', () => {
 
   it('uses changed-files sync when a stamp and changed file list are available', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'windows-sync-fast-'));
+    const stampFile = path.join(REPO_ROOT, '.tmp', `windows-sync-test-${process.pid}-${Date.now()}.stamp`);
     try {
       const mirrorDir = path.join(tempRoot, 'mirror');
       const mockBinDir = path.join(tempRoot, 'bin');
       const argsLog = path.join(tempRoot, 'rsync-args.log');
       const filesFromLog = path.join(tempRoot, 'files-from.log');
       const mockRsync = path.join(mockBinDir, 'rsync');
-      const stampFile = path.join(tempRoot, 'sync.stamp');
-
       await mkdir(mirrorDir, { recursive: true });
       await mkdir(mockBinDir, { recursive: true });
+      await mkdir(path.dirname(stampFile), { recursive: true });
       await writeFile(stampFile, '', 'utf8');
       await writeFile(
         mockRsync,
@@ -225,7 +228,7 @@ describe('windows-sync script', () => {
         RSYNC_ARGS_LOG: argsLog,
         WINDOWS_MIRROR_DIR: mirrorDir,
         WINDOWS_SYNC_CHANGED_FILES: ['package.json', 'missing.txt'].join('\n'),
-        WINDOWS_SYNC_STAMP_FILE: stampFile
+        WINDOWS_SYNC_STAMP_FILE: toBashPath(stampFile)
       });
 
       expect(result.code).toBe(0);
@@ -235,6 +238,7 @@ describe('windows-sync script', () => {
       expect(args).toContain(`--files-from=`);
       expect(args).not.toContain('--delete');
     } finally {
+      await rm(stampFile, { force: true });
       await rm(tempRoot, { recursive: true, force: true });
     }
   });

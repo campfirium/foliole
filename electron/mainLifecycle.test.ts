@@ -5,7 +5,9 @@ const mocks = vi.hoisted(() => ({
   appendBootEvent: vi.fn().mockResolvedValue(undefined),
   appendMainProcessDiagnosticLog: vi.fn(),
   app: {
+    getAppPath: vi.fn(() => '/app'),
     getVersion: vi.fn(() => '0.1.0-test'),
+    isPackaged: false,
     on: vi.fn(),
     quit: vi.fn(),
     requestSingleInstanceLock: vi.fn(() => true),
@@ -56,6 +58,10 @@ vi.mock('./externalSearchBackgroundRefreshRuntime.js', () => ({
 }));
 vi.mock('./globalClipToastNavigation.js', () => ({ installGlobalCaptureToastOpenHandler: vi.fn() }));
 vi.mock('./globalClipToInbox.js', () => ({ installGlobalClipToInboxShortcut: vi.fn() }));
+vi.mock('./backgroundPresence.js', () => ({
+  installBackgroundTray: vi.fn(),
+  markAppQuittingForBackgroundPresence: vi.fn()
+}));
 vi.mock('./import/keepImportMonitor.js', () => ({ startKeepImportMonitor: vi.fn(), stopKeepImportMonitor: vi.fn() }));
 vi.mock('./import/managedInboxMonitor.js', () => ({ startManagedInboxMonitor: vi.fn(), stopManagedInboxMonitor: vi.fn() }));
 vi.mock('./ipc/boot.js', () => ({ appendBootEvent: mocks.appendBootEvent }));
