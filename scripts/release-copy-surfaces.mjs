@@ -76,7 +76,9 @@ export function formatExternalAnnouncement({ enNotes, version, zhNotes }) {
     .map((item) => `- ${item}`);
 
   return [
-    `## 更新 v${version}`,
+    '## 中文论坛帖',
+    '',
+    `### 更新 v${version}`,
     '',
     ...zhSections.flatMap((section) => [
       section.heading ? `### ${section.heading}` : '### 更新',
@@ -85,7 +87,7 @@ export function formatExternalAnnouncement({ enNotes, version, zhNotes }) {
     ]),
     '---',
     '',
-    '## English Short Copy',
+    '## English Twitter/X Post',
     '',
     `Foliole v${version} for Windows is available.`,
     ...englishShortCopy,

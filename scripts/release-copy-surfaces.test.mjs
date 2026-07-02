@@ -29,17 +29,18 @@ describe('release copy surfaces', () => {
     expect(body.trim()).not.toBe('');
   });
 
-  it('formats the external announcement as Chinese copy plus English short copy', () => {
+  it('formats the external announcement as a Chinese forum post plus English Twitter/X post', () => {
     const announcement = formatExternalAnnouncement({
       enNotes: ['Improved', 'Quick Capture is easier to use.'],
       version: '0.6.4',
       zhNotes: ['优化', '快速捕获现在更容易使用。']
     });
 
-    expect(announcement).toContain('## 更新 v0.6.4');
+    expect(announcement).toContain('## 中文论坛帖');
+    expect(announcement).toContain('### 更新 v0.6.4');
     expect(announcement).toContain('### 优化');
     expect(announcement).toContain('- 快速捕获现在更容易使用。');
-    expect(announcement).toContain('## English Short Copy');
+    expect(announcement).toContain('## English Twitter/X Post');
     expect(announcement).toContain('Foliole v0.6.4 for Windows is available.');
   });
 
@@ -51,7 +52,7 @@ describe('release copy surfaces', () => {
       expect(fs.existsSync(result.githubBodyPath)).toBe(true);
       expect(fs.existsSync(result.announcementPath)).toBe(true);
       await expect(readFile(result.githubBodyPath, 'utf8')).resolves.toContain('### Fixed');
-      await expect(readFile(result.announcementPath, 'utf8')).resolves.toContain('## 更新 v0.6.4');
+      await expect(readFile(result.announcementPath, 'utf8')).resolves.toContain('## 中文论坛帖');
     } finally {
       await rm(outDir, { force: true, recursive: true });
     }
