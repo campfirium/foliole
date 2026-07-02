@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 
 import { CompanionBottomSheet } from './CompanionBottomSheet';
+import type { CompanionHighlightPanelItem } from './companionHighlightPanelModel';
 
 import { extractDocumentOutline } from '@/features/editor/model/documentOutline';
 import { AppEmptyState } from '@/shared/ui';
@@ -137,18 +138,31 @@ export function ReadingFontSheet(props: {
 }
 
 export function ReadingHighlightSheet(props: {
+  highlights: readonly CompanionHighlightPanelItem[];
   onOpenChange(open: boolean): void;
+  onSelect(item: { from: number; to: number }): void;
   open: boolean;
 }) {
   const t = useTranslation();
   return (
     <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.highlight')}>
-      <div className="border-t border-companion-divider py-5">
-        <AppEmptyState
-          className="min-h-0 items-start text-left text-companion-text-secondary"
-          description={t('companion.reading.highlightComing.description')}
-          title={t('companion.reading.highlightComing.title')}
-        />
+      <div className="border-t border-companion-divider">
+        {props.highlights.length > 0 ? props.highlights.map((highlight) => (
+          <button
+            className="block w-full border-b border-companion-divider py-3 text-left text-sm text-foreground active:bg-companion-subtle/80"
+            key={highlight.nodeId ?? `${highlight.from}-${highlight.to}`}
+            onClick={() => props.onSelect(highlight)}
+            type="button"
+          >
+            <span className="line-clamp-2">{highlight.text}</span>
+          </button>
+        )) : (
+          <AppEmptyState
+            className="min-h-0 items-start py-5 text-left text-companion-text-secondary"
+            description={t('companion.reading.noHighlights.description')}
+            title={t('companion.reading.noHighlights.title')}
+          />
+        )}
       </div>
     </ReadingBottomSheet>
   );

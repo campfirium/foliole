@@ -1,6 +1,7 @@
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 
 import { CompanionDocumentSearchSheet } from './CompanionDocumentSearchSheet';
+import { buildCompanionHighlightPanelItems } from './companionHighlightPanelModel';
 import { ReadableArticleDocument } from './CompanionReadableArticleDocument';
 import { SelectionAnnotationToolbarLayer } from './CompanionReadableArticleSelectionToolbarLayer';
 import { ReadingChrome } from './CompanionReadingChrome';
@@ -52,6 +53,14 @@ function ReadingSheetsLayer(props: {
   outlineOpen: boolean;
   readableArticle: ReadableArticle;
 }) {
+  const highlights = buildCompanionHighlightPanelItems({
+    content: props.readableArticle.content,
+    textAnchorDecorations: props.readableArticle.textAnchorDecorations
+  });
+  const selectHighlight = (item: { from: number; to: number }) => {
+    props.onSelectOutlineItem(item);
+    props.onOpenReadingSheet(null);
+  };
   return (
     <>
       <OutlineSheet
@@ -61,7 +70,12 @@ function ReadingSheetsLayer(props: {
         open={props.outlineOpen}
       />
       <ReadingFontSheet onOpenChange={(open) => props.onOpenReadingSheet(open ? 'font' : null)} open={props.openReadingSheet === 'font'} />
-      <ReadingHighlightSheet onOpenChange={(open) => props.onOpenReadingSheet(open ? 'highlight' : null)} open={props.openReadingSheet === 'highlight'} />
+      <ReadingHighlightSheet
+        highlights={highlights}
+        onOpenChange={(open) => props.onOpenReadingSheet(open ? 'highlight' : null)}
+        onSelect={selectHighlight}
+        open={props.openReadingSheet === 'highlight'}
+      />
       <ReadingInfoSheet
         hasPdf={Boolean(props.readableArticle.pdfAttachmentId)}
         onOpenChange={(open) => props.onOpenReadingSheet(open ? 'info' : null)}

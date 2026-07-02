@@ -112,7 +112,7 @@ function createReadableSurface() {
       nodeId: 'topic-1',
       persistedNodeViewState: null,
       pdfAttachmentId: 'pdf-1',
-      textAnchorDecorations: [],
+      textAnchorDecorations: [{ from: 20, kind: 'highlight', nodeId: 'highlight-1', to: 39 }],
       title: 'Readable article'
     },
     selectedBrowseNodeId: 'topic-1'
@@ -223,8 +223,10 @@ describe('CompanionShell navigation', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     openReadingAction('Highlight');
     expect(screen.getByRole('dialog', { name: 'Highlight' })).toBeInTheDocument();
-    expect(screen.getByText('Highlight tools are not available on Android yet.')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Readable topic body' }));
+    expect(screen.queryByRole('dialog', { name: 'Highlight' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('companion-article-document')).toHaveAttribute('data-reading-from', '20');
+    expect(screen.getByTestId('companion-article-document')).toHaveAttribute('data-reading-to', '39');
     openReadingAction('Info');
     expect(screen.getByRole('dialog', { name: 'Info' })).toBeInTheDocument();
     expect(screen.getByText('PDF and text')).toBeInTheDocument();
