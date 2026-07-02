@@ -8,7 +8,6 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import {
-  formatExternalAnnouncement,
   formatGithubBody,
   writeReleaseCopySurfaces
 } from './release-copy-surfaces.mjs';
@@ -29,41 +28,13 @@ describe('release copy surfaces', () => {
     expect(body.trim()).not.toBe('');
   });
 
-  it('formats the external announcement as a Chinese forum post plus English Twitter/X post', () => {
-    const announcement = formatExternalAnnouncement({
-      enNotes: ['Improved', 'Quick Capture is easier to use.'],
-      version: '0.6.4',
-      zhNotes: ['优化', '快速捕获现在更容易使用。']
-    });
-
-    expect(announcement).toContain('# 中文论坛帖');
-    expect(announcement).toContain('## 更新 v0.6.4');
-    expect(announcement).toContain('### 优化');
-    expect(announcement).toContain('- 快速捕获现在更容易使用。');
-    expect(announcement).toContain('# English Twitter/X Post');
-    expect(announcement).toContain('Main post:\n\nFoliole v0.6.4 for Windows is available.');
-    expect(announcement).toContain('Foliole v0.6.4 for Windows is available.');
-    expect(announcement).toContain('Quick Capture is easier to use.\n\nhttps://github.com/campfirium/foliole/releases/tag/v0.6.4');
-    expect(announcement).not.toContain('- Quick Capture is easier to use.');
-    expect(announcement).not.toContain('\n\nReply:\n\n');
-    const mainPost = announcement.match(/Main post:\n\n(?<body>[\s\S]*)$/u)?.groups?.body.trimEnd() ?? '';
-    const xCount = mainPost.replace(/https:\/\/\S+/gu, 'x'.repeat(23)).length;
-    expect(xCount).toBeLessThanOrEqual(280);
-  });
-
-  it('writes both release copy artifacts from the notes catalogs', async () => {
+  it('writes the GitHub release body from the notes catalog', async () => {
     const outDir = await mkdtemp(path.join(os.tmpdir(), 'release-copy-surfaces-'));
-    const postingFile = path.join(outDir, 'change', '0.6.4.md');
     try {
-      const result = writeReleaseCopySurfaces({ outDir, postingFile, version: '0.6.4' });
+      const result = writeReleaseCopySurfaces({ outDir, version: '0.6.4' });
 
       expect(fs.existsSync(result.githubBodyPath)).toBe(true);
-      expect(fs.existsSync(result.announcementPath)).toBe(true);
-      expect(result.postingPath).toBe(postingFile);
-      expect(fs.existsSync(postingFile)).toBe(true);
       await expect(readFile(result.githubBodyPath, 'utf8')).resolves.toContain('### Fixed');
-      await expect(readFile(result.announcementPath, 'utf8')).resolves.toContain('# 中文论坛帖');
-      await expect(readFile(postingFile, 'utf8')).resolves.toContain('## 更新 v0.6.4');
     } finally {
       await rm(outDir, { force: true, recursive: true });
     }
