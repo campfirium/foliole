@@ -149,7 +149,8 @@ describe('electron-builder release packaging config', () => {
     expect(workflow).toContain('subject-checksums: artifacts/windows/SHA256SUMS.txt');
     expect(workflow).toContain('gh release create $tagName $installer.FullName $checksums.FullName --draft');
     expect(workflow).toContain('--title $releaseTitle --target $targetCommit --notes-file $notesFile.FullName');
-    expect(workflow).toContain('node scripts/release-copy-surfaces.mjs --version $version --out artifacts/windows');
+    expect(workflow).toContain('$reviewedNotesFile = "releases/github/v$version.md"');
+    expect(workflow).toContain('Copy-Item $reviewedNotesFile "artifacts/windows/release-v$version-github-body.md"');
     expect(workflow).not.toContain('SmartScreen');
     expect(workflow).not.toContain('Advanced provenance check:');
     expect(workflow).toContain('gh release delete $tagName --yes');

@@ -83,12 +83,17 @@ jobs:
           $hash = (Get-FileHash -Algorithm SHA256 $installer.FullName).Hash.ToLowerInvariant()
           "$hash *$($installer.Name)" | Set-Content -Path artifacts/windows/SHA256SUMS.txt -Encoding ascii
 
-      - name: Generate release copy surfaces
+      - name: Copy reviewed release body
         shell: pwsh
         run: |
           $package = Get-Content package.json | ConvertFrom-Json
           $version = $package.version
-          node scripts/release-copy-surfaces.mjs --version $version --out artifacts/windows
+          $reviewedNotesFile = "releases/github/v$version.md"
+          if (-not (Test-Path $reviewedNotesFile)) {
+            throw "Reviewed GitHub release body was not found: $reviewedNotesFile"
+          }
+          New-Item -ItemType Directory -Force -Path artifacts/windows | Out-Null
+          Copy-Item $reviewedNotesFile "artifacts/windows/release-v$version-github-body.md"
 
       - name: Generate artifact attestation
         uses: actions/attest@v4
@@ -111,7 +116,7 @@ jobs:
             throw "Installer checksums were not generated."
           }
           if (-not $notesFile) {
-            throw "GitHub release body was not generated."
+            throw "GitHub release body was not copied."
           }
 
           $existingDraft = gh release view $tagName --json isDraft --jq ".isDraft" 2>$null

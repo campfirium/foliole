@@ -38,8 +38,9 @@ describe('release Windows workflow contract', () => {
     expect(workflow).not.toContain('run: npm run release:windows:package');
   });
 
-  it('uses generated release notes instead of the placeholder-only body', () => {
-    expect(workflow).toContain('node scripts/release-copy-surfaces.mjs --version $version --out artifacts/windows');
+  it('uses the reviewed release body instead of the placeholder-only body', () => {
+    expect(workflow).toContain('$reviewedNotesFile = "releases/github/v$version.md"');
+    expect(workflow).toContain('Copy-Item $reviewedNotesFile "artifacts/windows/release-v$version-github-body.md"');
     expect(workflow).toContain('$notesFile = Get-Item -Path "artifacts/windows/release-v$($package.version)-github-body.md"');
     expect(workflow).toContain('--notes-file $notesFile.FullName');
     expect(workflow).not.toContain('--notes $notes');
