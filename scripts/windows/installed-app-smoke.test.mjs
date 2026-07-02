@@ -83,6 +83,7 @@ describe('installed app smoke', () => {
         exePath: executablePath,
         launchEnv: expect.objectContaining({
           FOLIOLE_BOOT_SESSION: 'installed-app-smoke-42',
+          FOLIOLE_DISABLE_HARDWARE_ACCELERATION: '1',
           FOLIOLE_ELECTRON_INSTALLED_EXE_PATH: executablePath,
           FOLIOLE_ELECTRON_LAUNCH_MODE: 'installed',
           FOLIOLE_ELECTRON_PLAYWRIGHT_ALLOW_STALE_RENDERER: '1',
@@ -114,6 +115,7 @@ describe('installed app smoke', () => {
 
   it('marks installed smoke as packaged-app launch mode', () => {
     expect(resolveInstalledAppSmokeEnv({})).toMatchObject({
+      FOLIOLE_DISABLE_HARDWARE_ACCELERATION: '1',
       FOLIOLE_ELECTRON_LAUNCH_MODE: 'installed',
       FOLIOLE_ELECTRON_PLAYWRIGHT_ALLOW_STALE_RENDERER: '1'
     });
