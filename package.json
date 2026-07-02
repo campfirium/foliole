@@ -92,6 +92,7 @@
     "windows:preview:native": "node scripts/windows/windows-preview-native-entry.mjs",
     "electron:compile": "tsc -p electron/tsconfig.json",
     "release:doctor": "node scripts/release-doctor.mjs",
+    "release:verify:post": "node scripts/release-doctor.mjs --phase=post",
     "release:windows:package": "node scripts/windows/package-windows.mjs --native",
     "electron:dev": "node scripts/electron-dev.mjs",
     "electron:dev:native": "node scripts/windows/electron-dev-native.mjs",

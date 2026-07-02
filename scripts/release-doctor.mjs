@@ -14,6 +14,10 @@ import {
   parseArgs,
   runCommand
 } from './release-doctor-core.mjs';
+import {
+  checkGithubReleaseSignals,
+  collectPostPublishChecks
+} from './release-doctor-post-publish.mjs';
 
 export { formatReleaseDoctorReport, hasFailures } from './release-doctor-core.mjs';
 
@@ -124,85 +128,11 @@ function checkWorkingTree(rootDir, commandRunner = runCommand) {
   return createCheck('WARN', 'working tree', `working tree has ${changed.length} changed path(s).`);
 }
 
-function parseGhJson(result) {
-  try {
-    return JSON.parse(result.stdout);
-  } catch {
-    return null;
-  }
-}
-
-function classifyGhFailure(result) {
-  if (result.error?.code === 'ENOENT') {
-    return createCheck('SKIPPED', 'GitHub release remote', 'gh is not installed.');
-  }
-  const output = `${result.stderr ?? ''}\n${result.stdout ?? ''}`.toLowerCase();
-  if (output.includes('authentication') || output.includes('not logged') || output.includes('login')) {
-    return createCheck('SKIPPED', 'GitHub release remote', 'gh is not authenticated.');
-  }
-  return createCheck('UNKNOWN', 'GitHub release remote', `gh release check failed: ${(result.stderr || result.stdout || '').trim()}`);
-}
-
-function checkGithubRemote(version, phase, rootDir, commandRunner = runCommand) {
-  const candidate = commandRunner('gh', [
-    'release',
-    'view',
-    `v${version}`,
-    '-R',
-    'campfirium/foliole',
-    '--json',
-    'body,isDraft,tagName,url,assets'
-  ], rootDir);
-  if (candidate.error || candidate.status !== 0) {
-    const missing = (candidate.stderr ?? '').toLowerCase().includes('not found');
-    if (missing) {
-      return [createCheck(
-        phase === 'post' ? 'FAIL' : 'WARN',
-        'GitHub release remote',
-        `v${version} was not found on GitHub; phase=${phase}.`
-      )];
-    }
-    return [classifyGhFailure(candidate)];
-  }
-
-  const candidateJson = parseGhJson(candidate);
-  const checks = [
-    createCheck(
-      candidateJson?.tagName === `v${version}` ? 'PASS' : 'FAIL',
-      'GitHub release tag',
-      `GitHub release tag is ${candidateJson?.tagName ?? '<unknown>'}.`
-    ),
-    createCheck(
-      phase === 'post' ? (candidateJson?.isDraft ? 'FAIL' : 'PASS') : (candidateJson?.isDraft ? 'PASS' : 'WARN'),
-      'GitHub release draft',
-      `GitHub release draft=${String(candidateJson?.isDraft)}; phase=${phase}.`
-    )
-  ];
-
-  const latest = commandRunner('gh', [
-    'release',
-    'view',
-    '-R',
-    'campfirium/foliole',
-    '--json',
-    'tagName,isDraft,url'
-  ], rootDir);
-  if (latest.error || latest.status !== 0) {
-    checks.push(createCheck('UNKNOWN', 'GitHub latest release', `latest release check failed: ${(latest.stderr || latest.stdout || '').trim()}`));
-    return checks;
-  }
-  const latestJson = parseGhJson(latest);
-  checks.push(createCheck(
-    latestJson?.tagName === `v${version}` ? 'PASS' : (phase === 'post' ? 'FAIL' : 'WARN'),
-    'GitHub latest release',
-    `GitHub latest is ${latestJson?.tagName ?? '<unknown>'}; phase=${phase}.`
-  ));
-  return checks;
-}
-
 export async function collectReleaseDoctorChecks({
   argv = [],
   commandRunner = runCommand,
+  fetcher,
+  marketingRoot,
   rootDir = repoRoot
 } = {}) {
   const args = parseArgs(argv);
@@ -212,6 +142,9 @@ export async function collectReleaseDoctorChecks({
   const phase = args.phase;
   const packageJson = await readJsonFile(rootDir, 'package.json');
   const version = packageJson.version;
+  const localBody = existsSync(join(rootDir, `releases/github/v${version}.md`))
+    ? await readTextFile(rootDir, `releases/github/v${version}.md`)
+    : '';
   const [manifest, enNotes, zhNotes, workflow] = await Promise.all([
     readJsonFile(rootDir, 'releases/update-manifest.json'),
     readJsonFile(rootDir, 'releases/notes/en.json'),
@@ -226,7 +159,8 @@ export async function collectReleaseDoctorChecks({
     ...checkManifest(manifest, version, phase),
     checkReleaseWorkflow(workflow, version),
     checkWorkingTree(rootDir, commandRunner),
-    ...checkGithubRemote(version, phase, rootDir, commandRunner)
+    ...checkGithubReleaseSignals(version, phase, rootDir, commandRunner, localBody),
+    ...(await collectPostPublishChecks({ fetcher, marketingRoot, phase, version }))
   ];
   return { checks, phase, version };
 }

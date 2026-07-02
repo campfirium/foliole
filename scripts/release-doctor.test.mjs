@@ -1,7 +1,6 @@
 // @vitest-environment node
 
 import { mkdir, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -11,61 +10,12 @@ import {
   formatReleaseDoctorReport,
   hasFailures
 } from './release-doctor.mjs';
-
-async function writeJson(rootDir, relativePath, value) {
-  await writeFile(join(rootDir, relativePath), `${JSON.stringify(value, null, 2)}\n`);
-}
-
-async function createFixture(overrides = {}) {
-  const rootDir = join(tmpdir(), `foliole-release-doctor-${Date.now()}-${Math.random().toString(16).slice(2)}`);
-  await mkdir(join(rootDir, 'releases/github'), { recursive: true });
-  await mkdir(join(rootDir, 'releases/notes'), { recursive: true });
-  await mkdir(join(rootDir, '.github/workflows'), { recursive: true });
-  const version = overrides.version ?? '0.9.0';
-  await writeJson(rootDir, 'package.json', {
-    name: 'foliole',
-    scripts: { 'release:doctor': 'node scripts/release-doctor.mjs' },
-    version
-  });
-  await writeJson(rootDir, 'releases/update-manifest.json', overrides.manifest ?? {
-    latest: version,
-    releases: [{
-      platforms: ['windows'],
-      url: `https://github.com/campfirium/foliole/releases/tag/v${version}`,
-      version
-    }]
-  });
-  await writeJson(rootDir, 'releases/notes/en.json', overrides.enNotes ?? { [version]: { notes: ['Fixed', 'A fix.'] } });
-  await writeJson(rootDir, 'releases/notes/zh-Hans.json', overrides.zhNotes ?? { [version]: { notes: ['修复', '一个修复。'] } });
-  await writeFile(join(rootDir, `releases/github/v${version}.md`), '### Fixed\n- A fix.\n');
-  await writeFile(join(rootDir, '.github/workflows/release-windows.yml'), [
-    'release_ref:',
-    'ref: ${{ inputs.release_ref }}',
-    '$expectedTag = "v$($package.version)"',
-    '$expectedBranch = "release/$($package.version)"'
-  ].join('\n'));
-  return { rootDir, version };
-}
-
-function commandRunner(responses = {}) {
-  return (command, args) => {
-    const key = `${command} ${args.join(' ')}`;
-    if (responses[key]) {
-      return responses[key];
-    }
-    if (command === 'git') {
-      return { status: 0, stdout: '', stderr: '' };
-    }
-    if (command === 'gh') {
-      return { error: Object.assign(new Error('not found'), { code: 'ENOENT' }), status: null, stdout: '', stderr: '' };
-    }
-    return { status: 0, stdout: '', stderr: '' };
-  };
-}
-
-function findCheck(result, title) {
-  return result.checks.find((check) => check.title === title);
-}
+import {
+  commandRunner,
+  createFixture,
+  findCheck,
+  onlineManifest
+} from './release-doctor.test-support.mjs';
 
 describe('release doctor', () => {
   it('reports a clean local pre-publish candidate while skipping missing gh', async () => {
@@ -91,6 +41,8 @@ describe('release doctor', () => {
     const post = await collectReleaseDoctorChecks({
       argv: ['--phase=post'],
       commandRunner: commandRunner(),
+      fetcher: async () => onlineManifest(fixture.version),
+      marketingRoot: join(fixture.rootDir, 'missing-marketing'),
       rootDir: fixture.rootDir
     });
 
@@ -137,7 +89,7 @@ describe('release doctor', () => {
     const responses = {
       [`gh release view v${version} -R campfirium/foliole --json body,isDraft,tagName,url,assets`]: {
         status: 0,
-        stdout: JSON.stringify({ isDraft: true, tagName: `v${version}`, url: 'https://example.test' }),
+        stdout: JSON.stringify({ assets: [], body: '### Fixed\n- A fix.\n', isDraft: true, tagName: `v${version}`, url: 'https://example.test' }),
         stderr: ''
       },
       'gh release view -R campfirium/foliole --json tagName,isDraft,url': {
@@ -151,6 +103,8 @@ describe('release doctor', () => {
     const post = await collectReleaseDoctorChecks({
       argv: ['--phase=post'],
       commandRunner: commandRunner(responses),
+      fetcher: async () => onlineManifest(version),
+      marketingRoot: join(rootDir, 'missing-marketing'),
       rootDir
     });
 
@@ -160,10 +114,76 @@ describe('release doctor', () => {
     expect(findCheck(post, 'GitHub latest release').status).toBe('FAIL');
   });
 
+  it('checks post-publish body, assets, online manifest, and posting file', async () => {
+    const { rootDir, version } = await createFixture();
+    const marketingRoot = join(rootDir, 'marketing');
+    await mkdir(join(marketingRoot, 'change'), { recursive: true });
+    await writeFile(join(marketingRoot, 'change', `${version}.md`), '# Post\n');
+    const result = await collectReleaseDoctorChecks({
+      argv: ['--phase=post'],
+      commandRunner: commandRunner({
+        [`gh release view v${version} -R campfirium/foliole --json body,isDraft,tagName,url,assets`]: {
+          status: 0,
+          stdout: JSON.stringify({
+            assets: [{ name: `Foliole-Setup-${version}-win-x64.exe` }, { name: 'SHA256SUMS.txt' }],
+            body: '### Fixed\n- A fix.\n',
+            isDraft: false,
+            tagName: `v${version}`,
+            url: `https://github.com/campfirium/foliole/releases/tag/v${version}`
+          }),
+          stderr: ''
+        },
+        'gh release view -R campfirium/foliole --json tagName,isDraft,url': {
+          status: 0,
+          stdout: JSON.stringify({ isDraft: false, tagName: `v${version}`, url: 'https://example.test' }),
+          stderr: ''
+        }
+      }),
+      fetcher: async () => onlineManifest(version),
+      marketingRoot,
+      rootDir
+    });
+
+    expect(findCheck(result, 'GitHub release body remote').status).toBe('PASS');
+    expect(findCheck(result, 'GitHub release installer asset').status).toBe('PASS');
+    expect(findCheck(result, 'GitHub release checksum asset').status).toBe('PASS');
+    expect(findCheck(result, 'Pages manifest latest').status).toBe('PASS');
+    expect(findCheck(result, 'marketing posting file').status).toBe('PASS');
+    expect(hasFailures(result.checks)).toBe(false);
+  });
+
+  it('keeps post-publish external failures read-only and explicit', async () => {
+    const { rootDir, version } = await createFixture();
+    const result = await collectReleaseDoctorChecks({
+      argv: ['--phase=post'],
+      commandRunner: commandRunner({
+        [`gh release view v${version} -R campfirium/foliole --json body,isDraft,tagName,url,assets`]: {
+          status: 0,
+          stdout: JSON.stringify({ assets: [], body: 'different', isDraft: false, tagName: `v${version}`, url: 'https://example.test' }),
+          stderr: ''
+        },
+        'gh release view -R campfirium/foliole --json tagName,isDraft,url': {
+          status: 0,
+          stdout: JSON.stringify({ isDraft: false, tagName: `v${version}`, url: 'https://example.test' }),
+          stderr: ''
+        }
+      }),
+      fetcher: async () => { throw new Error('offline'); },
+      marketingRoot: join(rootDir, 'missing-marketing'),
+      rootDir
+    });
+
+    expect(findCheck(result, 'GitHub release body remote').status).toBe('FAIL');
+    expect(findCheck(result, 'GitHub release installer asset').status).toBe('FAIL');
+    expect(findCheck(result, 'Pages manifest').status).toBe('UNKNOWN');
+    expect(findCheck(result, 'marketing posting file').status).toBe('SKIPPED');
+  });
+
   it('keeps the npm script contract registered', async () => {
     const source = await import('node:fs/promises').then((fs) => fs.readFile('package.json', 'utf8'));
     const packageJson = JSON.parse(source);
 
     expect(packageJson.scripts['release:doctor']).toBe('node scripts/release-doctor.mjs');
+    expect(packageJson.scripts['release:verify:post']).toBe('node scripts/release-doctor.mjs --phase=post');
   });
 });
