@@ -97,10 +97,7 @@ export function formatExternalAnnouncement({ enNotes, version, zhNotes }) {
     '',
     englishMainPost,
     '',
-    'Reply:',
-    '',
-    'Source code and Windows releases:',
-    'https://github.com/campfirium/foliole',
+    `https://github.com/campfirium/foliole/releases/tag/v${version}`,
     ''
   ].join('\n');
 }

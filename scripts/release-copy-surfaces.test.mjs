@@ -43,11 +43,12 @@ describe('release copy surfaces', () => {
     expect(announcement).toContain('# English Twitter/X Post');
     expect(announcement).toContain('Main post:\n\nFoliole v0.6.4 for Windows is available.');
     expect(announcement).toContain('Foliole v0.6.4 for Windows is available.');
-    expect(announcement).toContain('Quick Capture is easier to use.\n\nReply:');
-    expect(announcement).toContain('Source code and Windows releases:\nhttps://github.com/campfirium/foliole');
+    expect(announcement).toContain('Quick Capture is easier to use.\n\nhttps://github.com/campfirium/foliole/releases/tag/v0.6.4');
     expect(announcement).not.toContain('- Quick Capture is easier to use.');
-    const mainPost = announcement.match(/Main post:\n\n(?<body>[\s\S]*?)\n\nReply:/u)?.groups?.body ?? '';
-    expect(mainPost.length).toBeLessThanOrEqual(280);
+    expect(announcement).not.toContain('\n\nReply:\n\n');
+    const mainPost = announcement.match(/Main post:\n\n(?<body>[\s\S]*)$/u)?.groups?.body.trimEnd() ?? '';
+    const xCount = mainPost.replace(/https:\/\/\S+/gu, 'x'.repeat(23)).length;
+    expect(xCount).toBeLessThanOrEqual(280);
   });
 
   it('writes both release copy artifacts from the notes catalogs', async () => {
