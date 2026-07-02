@@ -91,6 +91,7 @@
     "windows:preview:sandbox": "PREVIEW_DEDUPE_FORCE=1 PREVIEW_DEDUPE_WAIT_ON_FAILURE=0 PREVIEW_DEDUPE_RUNTIME_DIR=.lab/internal/runtime/windows-sandbox node scripts/preview/preview-dedupe.mjs windows -- bash scripts/windows/windows-preview-sandbox.sh",
     "windows:preview:native": "node scripts/windows/windows-preview-native-entry.mjs",
     "electron:compile": "tsc -p electron/tsconfig.json",
+    "release:doctor": "node scripts/release-doctor.mjs",
     "release:windows:package": "node scripts/windows/package-windows.mjs --native",
     "electron:dev": "node scripts/electron-dev.mjs",
     "electron:dev:native": "node scripts/windows/electron-dev-native.mjs",
