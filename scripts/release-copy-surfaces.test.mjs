@@ -36,23 +36,33 @@ describe('release copy surfaces', () => {
       zhNotes: ['优化', '快速捕获现在更容易使用。']
     });
 
-    expect(announcement).toContain('## 中文论坛帖');
-    expect(announcement).toContain('### 更新 v0.6.4');
+    expect(announcement).toContain('# 中文论坛帖');
+    expect(announcement).toContain('## 更新 v0.6.4');
     expect(announcement).toContain('### 优化');
     expect(announcement).toContain('- 快速捕获现在更容易使用。');
-    expect(announcement).toContain('## English Twitter/X Post');
+    expect(announcement).toContain('# English Twitter/X Post');
+    expect(announcement).toContain('Main post:\n\nFoliole v0.6.4 for Windows is available.');
     expect(announcement).toContain('Foliole v0.6.4 for Windows is available.');
+    expect(announcement).toContain('Quick Capture is easier to use.\n\nReply:');
+    expect(announcement).toContain('Source code and Windows releases:\nhttps://github.com/campfirium/foliole');
+    expect(announcement).not.toContain('- Quick Capture is easier to use.');
+    const mainPost = announcement.match(/Main post:\n\n(?<body>[\s\S]*?)\n\nReply:/u)?.groups?.body ?? '';
+    expect(mainPost.length).toBeLessThanOrEqual(280);
   });
 
   it('writes both release copy artifacts from the notes catalogs', async () => {
     const outDir = await mkdtemp(path.join(os.tmpdir(), 'release-copy-surfaces-'));
+    const postingFile = path.join(outDir, 'change', '0.6.4.md');
     try {
-      const result = writeReleaseCopySurfaces({ outDir, version: '0.6.4' });
+      const result = writeReleaseCopySurfaces({ outDir, postingFile, version: '0.6.4' });
 
       expect(fs.existsSync(result.githubBodyPath)).toBe(true);
       expect(fs.existsSync(result.announcementPath)).toBe(true);
+      expect(result.postingPath).toBe(postingFile);
+      expect(fs.existsSync(postingFile)).toBe(true);
       await expect(readFile(result.githubBodyPath, 'utf8')).resolves.toContain('### Fixed');
-      await expect(readFile(result.announcementPath, 'utf8')).resolves.toContain('## 中文论坛帖');
+      await expect(readFile(result.announcementPath, 'utf8')).resolves.toContain('# 中文论坛帖');
+      await expect(readFile(postingFile, 'utf8')).resolves.toContain('## 更新 v0.6.4');
     } finally {
       await rm(outDir, { force: true, recursive: true });
     }
