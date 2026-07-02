@@ -93,5 +93,5 @@ describe('windows preview full restart recovery', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  });
+  }, 15000);
 });

@@ -44,12 +44,24 @@ source "${SCRIPT_DIR}/windows-preview-actions.sh"
 
 CURRENT_HEAD="$(resolve_current_head)"
 
+normalize_preview_path() {
+  local input_path="$1"
+  local unix_path=""
+  if command -v cygpath >/dev/null 2>&1; then
+    unix_path="$(cygpath -u "${input_path}" 2>/dev/null || true)"
+  fi
+  if [ -z "${unix_path}" ]; then
+    unix_path="${input_path}"
+  fi
+  realpath -m "${unix_path}"
+}
+
 echo "[windows-preview] step 1/4: verify electron runtime output freshness"
 ensure_fresh_electron_dist
 
 echo "[windows-preview] step 2/4: sync to windows mirror"
 changed_files=""
-if [ "$(realpath -m "${REPO_ROOT}")" = "$(realpath -m "${WINDOWS_MIRROR_DIR}")" ]; then
+if [ "$(normalize_preview_path "${REPO_ROOT}")" = "$(normalize_preview_path "${WINDOWS_MIRROR_DIR}")" ]; then
   echo "[windows-preview] sync skipped: running inside windows mirror"
 elif changed_files="$(resolve_changed_files)" && [ -z "${changed_files}" ] && [ -f "${WINDOWS_PREVIEW_SYNC_STAMP_FILE}" ]; then
   echo "[windows-preview] sync skipped: no changed files since last mirror sync"

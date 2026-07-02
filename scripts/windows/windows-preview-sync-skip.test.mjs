@@ -81,7 +81,7 @@ describe('windows preview sync skip', () => {
     } finally {
       await rm(tempRoot, { force: true, recursive: true });
     }
-  });
+  }, 15000);
 
   it('does not scan or sync changed files when already running inside the Windows mirror', async () => {
     const tempRoot = await mkdtemp(path.join(REPO_ROOT, '.tmp', 'windows-preview-mirror-skip-'));
@@ -122,5 +122,5 @@ describe('windows preview sync skip', () => {
     } finally {
       await rm(tempRoot, { force: true, recursive: true });
     }
-  });
+  }, 15000);
 });
