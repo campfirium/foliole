@@ -36,6 +36,7 @@ describe('installed app smoke', () => {
     const child = {
       exitCode: null,
       kill: () => {},
+      once: (_event, resolve) => resolve(),
       pid: 1234,
       stderr: new EventEmitter(),
       stdout: new EventEmitter()
@@ -110,6 +111,47 @@ describe('installed app smoke', () => {
       launchMode: 'installed',
       runtimePid: 4321,
       session: 'installed-app-smoke-42'
+    });
+  });
+
+  it('does not fail a passed smoke when temporary cleanup is locked', async () => {
+    const executablePath = winPath('D:', 'Apps', 'Foliole', 'Foliole.exe');
+    const child = {
+      exitCode: 0,
+      kill: () => {},
+      pid: 1234,
+      stderr: new EventEmitter(),
+      stdout: new EventEmitter()
+    };
+    const result = await runInstalledAppSmoke({
+      env: {
+        FOLIOLE_ELECTRON_INSTALLED_EXE_PATH: executablePath
+      },
+      exists: () => true,
+      createIsolation: () => ({
+        cleanup: () => {
+          throw new Error('EBUSY');
+        },
+        env: { FOLIOLE_WORKDIR: winPath('T:', 'locked-smoke') },
+        runtimeStateRoot: winPath('T:', 'locked-smoke')
+      }),
+      launchApp: () => ({ child, outputTail: [] }),
+      resetMarkers: () => {},
+      stopRuntime: () => {},
+      waitForMarkers: async (input) => ({
+        appReady: { pid: 4321, session: input.session, stage: 'app_ready' },
+        bridgeReady: {
+          payload: { bridgeAvailable: true },
+          pid: 4321,
+          session: input.session,
+          stage: 'bridge_ready'
+        }
+      })
+    });
+
+    expect(result).toMatchObject({
+      launchMode: 'installed',
+      runtimePid: 4321
     });
   });
 

@@ -13,6 +13,7 @@ import {
 
 const DEFAULT_TIMEOUT_MS = 300_000;
 const OUTPUT_TAIL_LIMIT = 120;
+const PROCESS_EXIT_WAIT_MS = 5_000;
 
 function resolveTimeoutMs(env = process.env) {
   const parsed = Number.parseInt(
@@ -86,6 +87,25 @@ function wait(ms) {
   });
 }
 
+async function waitForProcessExit(child, timeoutMs = PROCESS_EXIT_WAIT_MS) {
+  if (!child || child.exitCode !== null) return;
+  await Promise.race([
+    new Promise((resolve) => child.once('exit', resolve)),
+    wait(timeoutMs)
+  ]);
+}
+
+async function cleanupIsolation(isolation) {
+  try {
+    isolation.cleanup();
+  } catch (error) {
+    console.warn(
+      `[installed-app-smoke] cleanup skipped path=${isolation.runtimeStateRoot} ` +
+        `reason=${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+}
+
 export async function waitForInstalledReadyMarkers(input) {
   const deadline = Date.now() + input.timeoutMs;
   const markerReader = input.readMarker ?? readMarker;
@@ -155,7 +175,8 @@ export async function runInstalledAppSmoke({
   } finally {
     stopRuntime(child.pid);
     stopRuntime(markers?.appReady?.pid);
-    isolation.cleanup();
+    await waitForProcessExit(child);
+    await cleanupIsolation(isolation);
   }
 }
 
