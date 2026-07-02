@@ -1,4 +1,5 @@
 // @vitest-environment node
+/* global process */
 
 import { chmod, copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
@@ -19,7 +20,7 @@ const tempDirs = [];
 
 function runCommand(command, args, cwd, options = {}) {
   return new Promise((resolve) => {
-    const child = spawn(command, args, { cwd });
+    const child = spawn(command, args, { cwd, env: options.env ?? process.env });
     let stdout = '';
     let stderr = '';
     child.stdout.on('data', (chunk) => {
@@ -150,6 +151,24 @@ describe('git hooks', () => {
 
     expect(result.code).not.toBe(0);
     expect(result.stderr).toContain('contains an unnumbered commit subject');
+  }, HOOK_INTEGRATION_TIMEOUT_MS);
+
+  it('does not depend on an external cat binary in pre-push', async () => {
+    const repoDir = await createRepo();
+    await expect(commitFile(repoDir, 'a.txt', 'a\n', '000001 seed')).resolves.toMatchObject({ code: 0 });
+    const fakeBin = path.join(repoDir, 'fake-bin');
+    await mkdir(fakeBin, { recursive: true });
+    await writeFile(path.join(fakeBin, 'cat'), '#!/usr/bin/env bash\necho BAD_CAT_USED >&2\nexit 126\n', { mode: 0o755 });
+
+    const head = (await runCommand('git', ['rev-parse', 'HEAD'], repoDir)).stdout.trim();
+    const hook = path.join(repoDir, '.githooks', 'pre-push');
+    const result = await runCommand('bash', [hook], repoDir, {
+      env: { ...process.env, PATH: `${fakeBin}${path.delimiter}${process.env.PATH}` },
+      input: `refs/heads/main ${head} refs/heads/main ${'0'.repeat(40)}\n`
+    });
+
+    expect(result.code, result.stderr).toBe(0);
+    expect(result.stderr).not.toContain('BAD_CAT_USED');
   }, HOOK_INTEGRATION_TIMEOUT_MS);
 
   it('routes sync-pack affected checks through pre-push', async () => {

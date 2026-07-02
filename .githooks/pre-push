@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-input="$(cat)"
+input=""
+while IFS= read -r line || [ -n "$line" ]; do
+  input+="${line}"$'\n'
+done
 printf '%s' "$input" | node scripts/git/check-commit-sequence.mjs pre-push
 printf '%s' "$input" | node scripts/pre-push-affected-validation.mjs
