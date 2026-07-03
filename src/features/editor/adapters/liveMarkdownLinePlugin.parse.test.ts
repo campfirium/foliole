@@ -31,8 +31,8 @@ describe('live Markdown parse reuse', () => {
     expect(parseSpy).not.toHaveBeenCalled();
   });
 
-  it('does not reparse preview markdown for viewport-only updates', () => {
-    expect(shouldReparsePreviewMarkdown({ docChanged: false })).toBe(false);
+  it('reparses preview markdown for viewport-only updates so parser-backed projections reach newly visible lines', () => {
+    expect(shouldReparsePreviewMarkdown({ docChanged: false, viewportChanged: true })).toBe(true);
   });
 });
 

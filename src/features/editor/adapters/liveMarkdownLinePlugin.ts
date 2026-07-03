@@ -74,8 +74,8 @@ function buildAtomicRanges(view: EditorView, parsedPreviewMarkdown: PreviewMarkd
   return ranges;
 }
 
-export function shouldReparsePreviewMarkdown(update: Pick<ViewUpdate, 'docChanged'>) {
-  return update.docChanged;
+export function shouldReparsePreviewMarkdown(update: Pick<ViewUpdate, 'docChanged' | 'viewportChanged'>) {
+  return update.docChanged || update.viewportChanged;
 }
 
 export function hasMarkdownDecorationContext(lineText: string) {
