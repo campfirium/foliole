@@ -31,6 +31,10 @@ function writeJson(filePath, value) {
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
 }
 
+function cloneJson(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
 function renderTemplate(templatePath, data) {
   const template = fs.readFileSync(path.join(REPO_ROOT, templatePath), 'utf8');
   return template.replace(/\{\{(\w+)\}\}/g, (_match, key) => String(data[key] ?? ''));
@@ -80,19 +84,20 @@ function submitEvent(event) {
 function scan({ emit = false, includeExisting = false } = {}) {
   const configs = loadConfigs();
   const persistedState = loadState();
-  const state = emit ? persistedState : JSON.parse(JSON.stringify(persistedState));
+  const state = emit ? persistedState : cloneJson(persistedState);
   const errors = [];
   const events = listGithubMonitorEvents(configs, state, includeExisting, errors, renderTemplate)
     .filter((event) => includeExisting || !state.submitted[event.dedupeKey]);
   state.lastErrors = errors;
   state.lastCheckedAt = new Date().toISOString();
+  if (emit) writeJson(STATE_FILE, state);
   if (emit) {
     for (const event of events) {
       submitEvent(event);
       state.submitted[event.dedupeKey] = { emittedAt: new Date().toISOString(), title: event.title };
+      writeJson(STATE_FILE, state);
     }
   }
-  if (emit) writeJson(STATE_FILE, state);
   return { emit, events, stateFile: STATE_FILE };
 }
 

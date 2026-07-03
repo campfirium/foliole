@@ -1,0 +1,62 @@
+name: T5 Nightly Remote Quality
+
+on:
+  schedule:
+    # 12:00 Asia/Shanghai, covering the 06:00-12:00 work block.
+    - cron: '0 4 * * *'
+    # 00:00 Asia/Shanghai, covering the rest of the day.
+    - cron: '0 16 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: t5-nightly-remote-quality-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-base-quality:
+    name: Release base quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Check out dev
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run remote release-base subset
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "## T5 nightly remote quality"
+            echo
+            echo "- scope: remote release-base subset"
+            echo "- branch: dev"
+            echo "- schedule: 12:00 and 00:00 Asia/Shanghai"
+          } >> "${GITHUB_STEP_SUMMARY}"
+          npm run lint:full
+          npm run typecheck:desktop
+          npm run typecheck:android
+          npm run test:release:desktop-src
+          npm run test:release:android
+          npm run test:release:shared
+          npm run test:quality:core
+          npm run test:quality:gate
+          npm run test:quality:node
+          npm run test:quality:preview
+          npm run build:vite-only
+          npm run electron:compile
+          npm run android:web:build

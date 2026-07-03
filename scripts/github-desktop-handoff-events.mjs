@@ -1,7 +1,18 @@
 import { buildIssueHandoffData, buildPrHandoffData } from './github-desktop-handoff-title.mjs';
 import { listPrChecks, recordMonitorError, runGh } from './github-monitor-gh.mjs';
+import { hasPendingBarrierForRun } from './t4-archive-barrier-state.mjs';
+
+const ACTION_WORKFLOW_TIERS = new Map([
+  ['Branch Push Health', 'T4'],
+  ['T5 Nightly Remote Quality', 'T5']
+]);
+
+function actionWorkflowTier(workflowName) {
+  return ACTION_WORKFLOW_TIERS.get(workflowName) ?? 'Actions';
+}
 
 function actionRunEvent(config, run, renderTemplate) {
+  const tier = actionWorkflowTier(run.workflowName);
   const data = {
     branch: run.headBranch,
     eventId: String(run.databaseId),
@@ -10,6 +21,7 @@ function actionRunEvent(config, run, renderTemplate) {
     runId: String(run.databaseId),
     runTitle: run.displayTitle,
     source: 'foliole/github-actions',
+    tier,
     url: run.url,
     workflow: run.workflowName,
     workspace: config.workspace
@@ -17,9 +29,48 @@ function actionRunEvent(config, run, renderTemplate) {
   return {
     dedupeKey: config.dedupeKeyPattern.replace('{eventId}', data.eventId),
     prompt: renderTemplate(config.template, data),
-    title: `Foliole Actions failed: ${run.workflowName}`,
+    title: `Foliole ${tier} failed: ${run.workflowName}`,
     ...data,
     ttlSeconds: config.defaultTtlSeconds
+  };
+}
+
+function normalizeWorkflowState(state, workflow) {
+  const existing = state.actions[workflow];
+  if (existing && typeof existing === 'object') {
+    existing.runs ??= {};
+    existing.initialized ??= true;
+    return existing;
+  }
+  const normalized = {
+    baselineRunId: existing ? String(existing) : '',
+    initialized: Boolean(existing),
+    runs: existing ? { [String(existing)]: { status: 'unknown' } } : {}
+  };
+  state.actions[workflow] = normalized;
+  return normalized;
+}
+
+function allowedBranch(config, run) {
+  const branches = config.branches ?? [];
+  return branches.length === 0 || branches.includes(run.headBranch);
+}
+
+function isFailureRun(config, run) {
+  return run.status === 'completed' && config.failureConclusions.includes(run.conclusion);
+}
+
+function shouldSuppressBarrierOwnedFailure(run) {
+  return run.workflowName === 'Branch Push Health' && hasPendingBarrierForRun(run);
+}
+
+function recordObservedRun(workflowState, run) {
+  workflowState.runs[String(run.databaseId)] = {
+    conclusion: run.conclusion ?? '',
+    headBranch: run.headBranch ?? '',
+    headSha: run.headSha ?? '',
+    observedAt: new Date().toISOString(),
+    status: run.status ?? ''
   };
 }
 
@@ -50,6 +101,7 @@ function listActionEvents(config, state, includeExisting, errors, renderTemplate
   const events = [];
   const workflows = config.workflows ?? [];
   for (const workflow of workflows) {
+    const workflowState = normalizeWorkflowState(state, workflow);
     let runs;
     try {
       runs = runGh([
@@ -68,19 +120,24 @@ function listActionEvents(config, state, includeExisting, errors, renderTemplate
       recordMonitorError(errors, 'github-actions', workflow, error);
       continue;
     }
-    const latestId = String(runs[0]?.databaseId ?? '');
-    const seenId = state.actions[workflow];
-    if (!includeExisting && !seenId) {
-      state.actions[workflow] = latestId;
-      continue;
-    }
     for (const run of runs) {
-      if (!includeExisting && String(run.databaseId) === seenId) break;
-      if (run.status === 'completed' && config.failureConclusions.includes(run.conclusion)) {
-        events.push(actionRunEvent(config, run, renderTemplate));
+      if (!allowedBranch(config, run)) continue;
+      const event = actionRunEvent(config, run, renderTemplate);
+      const runId = String(run.databaseId);
+      const isBaselineRun = workflowState.baselineRunId && runId === workflowState.baselineRunId;
+      const shouldEmit = (includeExisting || workflowState.initialized)
+        && isFailureRun(config, run)
+        && !shouldSuppressBarrierOwnedFailure(run)
+        && !state.submitted[event.dedupeKey];
+      recordObservedRun(workflowState, run);
+      if (shouldEmit) {
+        events.push(event);
       }
+      if (!includeExisting && isBaselineRun) break;
     }
-    state.actions[workflow] = latestId;
+    workflowState.initialized = true;
+    workflowState.latestObservedRunId = String(runs.find((run) => allowedBranch(config, run))?.databaseId ?? '');
+    workflowState.lastObservedAt = new Date().toISOString();
   }
   return events;
 }
@@ -155,6 +212,7 @@ function listIssueEvents(config, state, includeExisting, errors, renderTemplate)
 }
 
 export function listGithubMonitorEvents(configs, state, includeExisting, errors, renderTemplate) {
+  state.submitted ??= {};
   return [
     ...listActionEvents(configs.actions, state, includeExisting, errors, renderTemplate),
     ...listPrEvents(configs.prs, state, includeExisting, errors, renderTemplate),

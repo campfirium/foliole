@@ -19,13 +19,14 @@ function routeForChangedFiles(files) {
 }
 
 describe('dev push health workflow contract', () => {
-  it('runs only as dev/native-migration push or manual advisory feedback', () => {
+  it('runs only as dev push or manual advisory feedback', () => {
     expect(workflow).toContain('push:');
     expect(workflow).toContain('- dev');
-    expect(workflow).toContain('- windows-native-codex-migration');
+    expect(workflow).not.toContain('- windows-native-codex-migration');
     expect(workflow).toContain('workflow_dispatch:');
     expect(workflow).toContain('group: branch-push-health-${{ github.event_name }}-${{ github.ref }}');
-    expect(workflow).toContain("cancel-in-progress: ${{ github.event_name == 'push' }}");
+    expect(workflow).toContain('cancel-in-progress: false');
+    expect(workflow).not.toContain('queue: max');
   });
 
   it('reuses the local quality route and writes the route to the Actions summary', () => {
