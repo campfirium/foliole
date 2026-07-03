@@ -76,6 +76,9 @@ describe('windows-control-device', () => {
     expect(script).toContain('Resolve-ScrcpyPath');
     expect(script).toContain('Resolve-AdbPath');
     expect(script).toContain('Get-FolioleScrcpyProcesses');
+    expect(script).toContain('param([string]$Serial)');
+    expect(script).toContain('CommandLine -like "*--serial=$Serial*"');
+    expect(script).toContain('Get-FolioleScrcpyProcesses -Serial $serial');
     expect(script).toContain('Stop-ExtraFolioleScrcpyProcesses');
     expect(script).toContain('mirror: reused');
     expect(script).toContain('SCRCPY_PATH');

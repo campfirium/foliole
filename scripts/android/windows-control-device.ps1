@@ -67,8 +67,13 @@ function Resolve-AdbPath {
 }
 
 function Get-FolioleScrcpyProcesses {
+  param([string]$Serial)
+
   Get-CimInstance Win32_Process -Filter "Name = 'scrcpy.exe'" |
-    Where-Object { $_.CommandLine -like "*--window-title=Foliole-Android*" } |
+    Where-Object {
+      $_.CommandLine -like "*--window-title=Foliole-Android*" -and
+        ([string]::IsNullOrWhiteSpace($Serial) -or $_.CommandLine -like "*--serial=$Serial*")
+    } |
     Sort-Object ProcessId
 }
 
@@ -128,7 +133,7 @@ if (![string]::IsNullOrWhiteSpace($serial)) {
   Write-Info "device: auto"
 }
 
-$existingMirrors = @(Get-FolioleScrcpyProcesses)
+$existingMirrors = @(Get-FolioleScrcpyProcesses -Serial $serial)
 if ($existingMirrors.Count -gt 0) {
   Stop-ExtraFolioleScrcpyProcesses -Processes $existingMirrors
   Write-Info "mirror: reused"
