@@ -18,6 +18,11 @@ describe('T5 nightly remote quality workflow contract', () => {
   it('checks the dev branch with a remote release-base subset without publishing release artifacts', () => {
     expect(workflow).toContain('ref: dev');
     expect(workflow).toContain('remote release-base subset');
+    expect(workflow).toContain('npm run electron:rebuild:native');
+    expect(workflow).toContain('node scripts/electron-sqlite-runner.mjs --preflight');
+    expect(workflow.indexOf('npm run electron:rebuild:native')).toBeLessThan(
+      workflow.indexOf('npm run test:release:desktop-src')
+    );
     for (const command of [
       'npm run lint:full',
       'npm run typecheck:desktop',

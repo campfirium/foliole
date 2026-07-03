@@ -36,6 +36,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Rebuild Electron native modules
+        run: |
+          npm run electron:rebuild:native
+          node scripts/electron-sqlite-runner.mjs --preflight
+
       - name: Run remote release-base subset
         shell: bash
         run: |
