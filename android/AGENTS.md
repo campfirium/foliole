@@ -47,6 +47,7 @@
 - 若改动触及 Android 权限、生命周期、Capacitor 插件、intent、安装 / 启动链路，或问题只会在模拟器 / 设备上暴露，必须升级执行 `npm run quality:android:device`。
 - Android 设备侧验证默认优先使用本轮显式指定的 `FOLIOLE_ANDROID_SERIAL` / `ANDROID_SERIAL`；未指定时使用已连接且 ready 的真机 ADB 链路。除非用户明确要求、真机不可用、需要破坏性 instrumentation 测试、多 Android 版本矩阵或原生工程配置诊断，否则不启动模拟器或 Android Studio。
 - Android 调试命令不得批量弹出终端窗口：自动化验证、ADB、PowerShell、Node、bash、截图、sync、deploy 等后台步骤必须使用隐藏窗口或无窗口进程；只有用户明确要操作手机时，才允许打开一个可见的 `scrcpy` 设备镜像窗口。
+- 打开手机镜像必须走 `npm run android:control` 或 `scripts/android/open-foliole-android-*.vbs` 这类受控入口；入口必须复用既有 `Foliole-Android` 镜像并清理重复实例，执行后用进程探针确认同一设备镜像窗口不超过 1 个。
 - `npm run android:preview` 只在用户当次明确要求 Android 预览、用户当次要求阶段验收且本轮有 Android 可见面、或 Android 局部规则命中必须设备预览时执行；不再读取持久 preview flag 自动触发。
 - Android companion UI 的人工验收默认以真机为准；需要查看真实内容、列表密度、文章正文、学习卡片、状态栏 / 安全区、触摸手感、Android WebView、Capacitor bridge、SQLite、sync、安装部署或 scrcpy / 锁屏行为时，必须回到 `npm run android:preview` 或 `npm run quality:android:device` 做最终 L1 验收。
 - 高频 companion UI 迭代若需要真实内容、Android WebView、SQLite 与 Capacitor bridge，但本轮未改原生源码、权限、插件、Gradle、发布构建或离线 assets 语义，优先使用 `npm run android:preview:dev-server` 做快速真机预览；它是 Capacitor dev-server / adb reverse 路线，不替代发布前或原生变更后的 `npm run android:preview` / `npm run quality:android:device` 最终验收。
