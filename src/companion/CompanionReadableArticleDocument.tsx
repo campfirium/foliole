@@ -100,10 +100,12 @@ export function ReadableArticleDocument(props: {
   const [isViewingPdfOriginal, setIsViewingPdfOriginal] = useState(false);
   const pdfAttachmentId = props.readableArticle.pdfAttachmentId;
   const { canEdit, editorState } = useReadableArticleEditorState({
-    allowContentEditing: props.allowContentEditing,
     isViewingPdfOriginal,
     readableArticle: props.readableArticle,
-    ...definedProps({ onSaveContent: props.onSaveContent })
+    ...definedProps({
+      allowContentEditing: props.allowContentEditing,
+      onSaveContent: props.onSaveContent
+    })
   });
   const syncMissingAttachmentResource = useCallback(async (attachmentId: string) => {
     if (!props.syncEndpointUrl) return;

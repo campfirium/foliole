@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 
 import type { CompanionSelectionAnnotationToolbarState } from './CompanionSelectionAnnotationToolbar';
+import { resolveCompanionSelectionCommandPayload } from './companionSelectionCommandPayload';
 import {
   getDefaultSelectionClientPoint,
   isExistingHighlightTarget,
@@ -15,7 +16,6 @@ import {
 } from './companionSelectionToolbarState';
 
 import type { EditorAdapter } from '@/features/editor/adapters/EditorAdapter';
-import { getSelectionCommandPayload } from '@/shared/selectionCommandPayload';
 
 const RECENT_SELECTION_INTERACTION_MS = 2_000;
 const SELECTION_SETTLE_DELAY_MS = 240;
@@ -85,7 +85,7 @@ function useCompanionSelectionAnnotationOpenHandler(args: {
     args.lastFallbackRef.current = fallback;
     args.lastSelectionInteractionAtRef.current = Date.now();
     window.requestAnimationFrame(() => {
-      const payload = getSelectionCommandPayload(args.nodeId, args.editorRef.current);
+      const payload = resolveCompanionSelectionCommandPayload(args.nodeId, args.editorRef.current);
       if (payload) args.setSelectionToolbar(resolveSelectionToolbarState({ fallback, payload, snapshot: args.snapshot }));
       else if (isExistingHighlightTarget(event.target)) {
         const existingHighlight = resolveExistingHighlightAtCurrentCursor(args);
@@ -124,7 +124,7 @@ function useCompanionSelectionAnnotationScheduler(args: {
         frameRef.current = null;
         settleTimerRef.current = null;
         if (!args.canCreateAnnotation) return;
-        const payload = getSelectionCommandPayload(args.nodeId, args.editorRef.current);
+        const payload = resolveCompanionSelectionCommandPayload(args.nodeId, args.editorRef.current);
         if (payload) {
           args.setSelectionToolbar(resolveSelectionToolbarState({ fallback, payload, snapshot: args.snapshot }));
           return;
@@ -172,7 +172,9 @@ export function useCompanionSelectionAnnotationToolbar(props: {
     editorRef.current?.setSelection({ from: collapseAt, to: collapseAt });
     setSelectionToolbar(null);
   }, [scheduler]);
-  const resolveSelectionPayload = useCallback(() => getSelectionCommandPayload(props.nodeId, editorRef.current), [props.nodeId]);
+  const resolveSelectionPayload = useCallback(() => (
+    resolveCompanionSelectionCommandPayload(props.nodeId, editorRef.current)
+  ), [props.nodeId]);
 
   const openSelectionToolbar = useCompanionSelectionAnnotationOpenHandler({
     canCreateAnnotation: props.canCreateAnnotation,

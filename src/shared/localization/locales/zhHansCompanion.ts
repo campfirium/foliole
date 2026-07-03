@@ -81,6 +81,8 @@ export const ZH_HANS_COMPANION_TRANSLATIONS: Partial<Record<TranslationKey, stri
   'companion.reading.info': '信息',
   'companion.reading.outline': '大纲',
   'companion.reading.more': '更多阅读操作',
+  'companion.reading.editTopic': '编辑主题',
+  'companion.reading.doneEditing': '完成编辑',
   'companion.reading.restoreFromTrash': '从废纸篓恢复',
   'companion.reading.noHeadings.title': '这个主题没有标题',
   'companion.reading.noHeadings.description': '当这个主题包含标题时，大纲会显示在这里。',

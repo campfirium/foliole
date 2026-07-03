@@ -1,14 +1,14 @@
-import { EllipsisVertical, ListTree, X, type LucideIcon } from 'lucide-react';
+import { Check, EllipsisVertical, ListTree, Pencil, X, type LucideIcon } from 'lucide-react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 
 import { companionFlexRowGap2ClassName } from './companionCssCompatibility';
 
 function ReadingChromeButton(props: {
-  disabled?: boolean;
+  disabled?: boolean | undefined;
   icon: LucideIcon;
   label: string;
-  onClick?: () => void;
+  onClick?: (() => void) | undefined;
 }) {
   const Icon = props.icon;
   return (
@@ -26,7 +26,10 @@ function ReadingChromeButton(props: {
 }
 
 export function ReadingChrome(props: {
+  canEditContent?: boolean;
+  isContentEditing?: boolean;
   onExit(): void;
+  onToggleContentEditing?: () => void;
   onOpenActions(): void;
   onOpenOutline(): void;
   title: string;
@@ -44,6 +47,13 @@ export function ReadingChrome(props: {
         </div>
       </div>
       <div className={`fixed right-5 bottom-6 supports-[bottom:calc(0px)]:bottom-[calc(1.5rem+env(safe-area-inset-bottom))] z-workspace-overlay flex items-center ${companionFlexRowGap2ClassName}`}>
+        {props.canEditContent ? (
+          <ReadingChromeButton
+            icon={props.isContentEditing ? Check : Pencil}
+            label={props.isContentEditing ? t('companion.reading.doneEditing') : t('companion.reading.editTopic')}
+            onClick={props.onToggleContentEditing ?? (() => undefined)}
+          />
+        ) : null}
         <ReadingChromeButton icon={EllipsisVertical} label={t('companion.reading.more')} onClick={props.onOpenActions} />
       </div>
     </>

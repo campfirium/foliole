@@ -60,6 +60,31 @@ describe('useCompanionTopicEditAutosave scheduling', () => {
   });
 });
 
+describe('useCompanionTopicEditAutosave mode changes', () => {
+  it('flushes pending changes when editing is turned off', async () => {
+    const onSaveContent = vi.fn(async () => undefined);
+    let canEdit = true;
+    const { rerender, result } = renderHook(() => useCompanionTopicEditAutosave({
+      canEdit,
+      initialContent: 'Original',
+      nodeId: 'topic-1',
+      onSaveContent
+    }));
+
+    act(() => {
+      result.current.handleChange('Draft');
+      canEdit = false;
+      rerender();
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(onSaveContent).toHaveBeenCalledWith('Draft');
+  });
+});
+
 describe('useCompanionTopicEditAutosave flushing', () => {
   it('does not start a second save for content already being saved', async () => {
     const onSaveContent = vi.fn(() => new Promise<void>((resolve) => {

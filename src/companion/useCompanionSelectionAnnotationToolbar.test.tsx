@@ -22,6 +22,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
   vi.clearAllMocks();
 });
 
@@ -30,6 +31,7 @@ function createEditorAdapter(selection: { from: number; to: number }[]) {
     destroy: vi.fn(),
     focus: vi.fn(),
     getContent: vi.fn(() => 'Welcome to Foliole'),
+    getDocumentPositionAtClientPoint: vi.fn((clientX: number) => (clientX < 50 ? 0 : 7)),
     getDocumentPositionAtViewportY: vi.fn(() => 0),
     getLineBlockHeight: vi.fn(() => 24),
     getScrollMetrics: vi.fn(),
@@ -50,6 +52,30 @@ function createEditorAdapter(selection: { from: number; to: number }[]) {
     setSelection: vi.fn(),
     setSelectionRanges: vi.fn()
   };
+}
+
+function stubDomSelection() {
+  const content = document.createElement('div');
+  content.className = 'cm-content';
+  const textNode = document.createTextNode('Welcome');
+  content.append(textNode);
+  document.body.append(content);
+  const range = {
+    getBoundingClientRect: () => ({ bottom: 30, height: 20, left: 10, right: 80, top: 10, width: 70 }),
+    getClientRects: () => ({
+      0: { height: 20, left: 10, right: 80, top: 10 },
+      length: 1
+    })
+  };
+  vi.spyOn(window, 'getSelection').mockReturnValue({
+    anchorNode: textNode,
+    focusNode: textNode,
+    getRangeAt: () => range,
+    isCollapsed: false,
+    rangeCount: 1,
+    removeAllRanges: vi.fn(),
+    toString: () => 'Welcome'
+  } as unknown as Selection);
 }
 
 function createSnapshot(): WorkspaceSnapshot {
@@ -123,6 +149,27 @@ it('opens after a dragged mobile selection settles without an extra tap', () => 
     left: expect.any(Number),
     top: expect.any(Number)
   });
+});
+
+it('opens from an Android DOM text selection when the editor selection is read-only', () => {
+  const { result } = renderHook(() =>
+    useCompanionSelectionAnnotationToolbar({
+      canCreateAnnotation: true,
+      nodeId: 'node-1',
+      snapshot: null
+    })
+  );
+
+  act(() => {
+    stubDomSelection();
+    result.current.handleEditorReady(createEditorAdapter([]) as never);
+    document.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 80, clientY: 120 }));
+    document.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, clientX: 96, clientY: 136 }));
+    document.dispatchEvent(new Event('selectionchange'));
+    vi.advanceTimersByTime(240);
+  });
+
+  expect(result.current.selectionToolbar?.payload?.selectionText).toBe('Welcome');
 });
 
 it('opens existing highlight actions when tapping a rendered highlight without text selection', () => {

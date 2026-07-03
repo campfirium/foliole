@@ -82,6 +82,8 @@ export const EN_COMPANION_TRANSLATIONS = {
   'companion.reading.info': 'Info',
   'companion.reading.outline': 'Outline',
   'companion.reading.more': 'More reading actions',
+  'companion.reading.editTopic': 'Edit topic',
+  'companion.reading.doneEditing': 'Done editing',
   'companion.reading.restoreFromTrash': 'Restore from Trash',
   'companion.reading.noHeadings.title': 'No headings in this topic',
   'companion.reading.noHeadings.description': 'Headings will appear here when this topic contains an outline.',

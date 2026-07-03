@@ -1,10 +1,14 @@
 import { render } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
 
-const readableArticleDocumentMock = vi.fn(() => <article>Readable body</article>);
+const readableArticleDocumentMock = vi.fn<(props: Record<string, unknown>) => ReactNode>(() => <article>Readable body</article>);
+const readingChromeMock = vi.fn<(props: Record<string, unknown>) => ReactNode>(() => null);
+const toolbarHookMock = vi.fn();
 let chromeVisible = false;
+let contentEditing = false;
 
 vi.mock('./CompanionReadableArticleDocument', () => ({
   ReadableArticleDocument: (props: Record<string, unknown>) => readableArticleDocumentMock(props)
@@ -15,7 +19,7 @@ vi.mock('./CompanionReadableArticleSelectionToolbarLayer', () => ({
 }));
 
 vi.mock('./CompanionReadingChrome', () => ({
-  ReadingChrome: () => null
+  ReadingChrome: (props: Record<string, unknown>) => readingChromeMock(props)
 }));
 
 vi.mock('./CompanionReadingSheets', () => ({
@@ -31,7 +35,9 @@ vi.mock('./CompanionDocumentSearchSheet', () => ({
 }));
 
 vi.mock('./useCompanionSelectionAnnotationToolbar', () => ({
-  useCompanionSelectionAnnotationToolbar: () => ({
+  useCompanionSelectionAnnotationToolbar: (props: Record<string, unknown>) => {
+    toolbarHookMock(props);
+    return {
     clearSelectionAndCloseToolbar: vi.fn(),
     closeSelectionToolbar: vi.fn(),
     editorRef: { current: null },
@@ -39,7 +45,8 @@ vi.mock('./useCompanionSelectionAnnotationToolbar', () => ({
     openSelectionToolbar: vi.fn(),
     resolveSelectionPayload: vi.fn(),
     selectionToolbar: null
-  })
+  };
+  }
 }));
 
 vi.mock('./useImmersiveReadableArticleState', () => ({
@@ -48,11 +55,14 @@ vi.mock('./useImmersiveReadableArticleState', () => ({
     handleSurfaceClick: vi.fn(),
     isActionsSheetOpen: false,
     isChromeVisible: chromeVisible,
+    isContentEditing: contentEditing,
     isOutlineOpen: false,
     openDocumentSearch: vi.fn(),
     openReadingSheet: null,
     readingSelection: null,
     searchOpen: false,
+    enterContentEditing: vi.fn(),
+    exitContentEditing: vi.fn(),
     setIsActionsSheetOpen: vi.fn(),
     setIsOutlineOpen: vi.fn(),
     setIsSearchSheetOpen: vi.fn(),
@@ -76,6 +86,10 @@ function createReadableArticle() {
 describe('ImmersiveReadableArticle Android scrolling', () => {
   beforeEach(() => {
     chromeVisible = false;
+    contentEditing = false;
+    readingChromeMock.mockClear();
+    readableArticleDocumentMock.mockClear();
+    toolbarHookMock.mockClear();
   });
 
   it('lets the immersive surface own article scrolling for old Android WebView touch gestures', () => {
@@ -104,5 +118,26 @@ describe('ImmersiveReadableArticle Android scrolling', () => {
     );
 
     expect(container.querySelector('section')).toHaveClass('pt-36');
+  });
+
+  it('enables article editing only after the explicit reading edit mode is active', () => {
+    chromeVisible = true;
+    contentEditing = true;
+    render(
+      <ImmersiveReadableArticle
+        onExit={vi.fn()}
+        onCreateSelectionAnnotation={vi.fn()}
+        onSaveArticleContent={vi.fn()}
+        readableArticle={createReadableArticle()}
+        snapshot={null}
+      />
+    );
+
+    expect(readableArticleDocumentMock).toHaveBeenCalledWith(expect.objectContaining({ allowContentEditing: true }));
+    expect(toolbarHookMock).toHaveBeenCalledWith(expect.objectContaining({ canCreateAnnotation: false }));
+    expect(readingChromeMock).toHaveBeenCalledWith(expect.objectContaining({
+      canEditContent: true,
+      isContentEditing: true
+    }));
   });
 });

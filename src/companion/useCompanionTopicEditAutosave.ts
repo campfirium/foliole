@@ -44,8 +44,7 @@ function useAutosaveCallbacks(args: {
 
   const saveContent = useCallback(async (content: string) => {
     if (
-      !refs.canEditRef.current
-      || content === refs.lastSavedRef.current
+      content === refs.lastSavedRef.current
       || content === refs.savingContentRef.current
     ) {
       return;
@@ -119,6 +118,12 @@ export function useCompanionTopicEditAutosave(args: UseCompanionTopicEditAutosav
       void saveContent(pendingContent);
     }
   }, [clearTimer, refs.canEditRef, refs.draftRef, refs.lastSavedRef, saveContent]);
+
+  useEffect(() => {
+    if (!args.canEdit) {
+      void flushPendingSave();
+    }
+  }, [args.canEdit, flushPendingSave]);
 
   return {
     error,
