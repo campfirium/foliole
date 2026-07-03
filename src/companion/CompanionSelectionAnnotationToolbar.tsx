@@ -120,6 +120,10 @@ function resolveApplyPayload(props: CompanionSelectionAnnotationToolbarProps) {
   return currentPayload.selectionText.length >= cachedPayload.selectionText.length ? currentPayload : cachedPayload;
 }
 
+function reportAnnotationError(error: unknown) {
+  console.error('[companion-selection-toolbar] annotation action failed', error);
+}
+
 export function CompanionSelectionAnnotationToolbar(props: CompanionSelectionAnnotationToolbarProps) {
   const [noteDraft, setNoteDraft] = useState('');
   const [isNoteOpen, setIsNoteOpen] = useState(false);
@@ -131,22 +135,25 @@ export function CompanionSelectionAnnotationToolbar(props: CompanionSelectionAnn
   function apply(kind: CompanionSelectionAnnotationKind, note?: string) {
     const payload = resolveApplyPayload(props);
     if (!payload) return;
-    props.onClose();
-    void Promise.resolve(props.onApply(kind, payload, note)).catch(() => undefined);
+    void Promise.resolve(props.onApply(kind, payload, note))
+      .then(() => props.onClose())
+      .catch(reportAnnotationError);
   }
 
   function applyExistingNote(note: string) {
     if (!props.state?.existingHighlight) return;
     const { nodeId, originalText } = props.state.existingHighlight;
-    props.onClose();
-    void Promise.resolve(props.onAddExistingHighlightNote(nodeId, originalText, note)).catch(() => undefined);
+    void Promise.resolve(props.onAddExistingHighlightNote(nodeId, originalText, note))
+      .then(() => props.onClose())
+      .catch(reportAnnotationError);
   }
 
   function deleteExistingHighlight() {
     const nodeId = props.state?.existingHighlight?.nodeId;
     if (!nodeId) return;
-    props.onClose();
-    void Promise.resolve(props.onDeleteExistingHighlight(nodeId)).catch(() => undefined);
+    void Promise.resolve(props.onDeleteExistingHighlight(nodeId))
+      .then(() => props.onClose())
+      .catch(reportAnnotationError);
   }
 
   const isExistingHighlight = Boolean(props.state.existingHighlight);

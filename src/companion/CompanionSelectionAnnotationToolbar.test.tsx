@@ -87,13 +87,13 @@ it('applies a highlight with the current selection payload', async () => {
   const { onClose } = renderToolbar(onApply);
 
   const button = screen.getByRole('button', { name: 'Highlight' });
-  expect(fireEvent.pointerDown(button)).toBe(true);
+  expect(fireEvent.pointerDown(button)).toBe(false);
   fireEvent.click(button);
 
   expect(onApply).toHaveBeenCalledWith('highlight', payload, undefined);
-  expect(onClose).toHaveBeenCalledTimes(1);
+  expect(onClose).not.toHaveBeenCalled();
   resolveApply();
-  await waitFor(() => expect(onApply).toHaveBeenCalledTimes(1));
+  await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
 });
 
 it('refreshes the selection payload before applying a highlight', () => {
@@ -105,19 +105,19 @@ it('refreshes the selection payload before applying a highlight', () => {
   expect(onApply).toHaveBeenCalledWith('highlight', longerPayload, undefined);
 });
 
-it('deletes an existing highlight and closes immediately', () => {
+it('deletes an existing highlight after the action succeeds', async () => {
   const { onClose, onDeleteExistingHighlight } = renderExistingToolbar();
 
   const button = screen.getByRole('button', { name: 'Close Highlight' });
-  expect(fireEvent.pointerDown(button)).toBe(true);
+  expect(fireEvent.pointerDown(button)).toBe(false);
   fireEvent.click(button);
 
   expect(onDeleteExistingHighlight).toHaveBeenCalledWith('highlight-1');
-  expect(onClose).toHaveBeenCalledTimes(1);
+  await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
   expect(screen.queryByRole('button', { name: 'Cloze' })).toBeNull();
 });
 
-it('adds a note to an existing highlight', () => {
+it('adds a note to an existing highlight after the action succeeds', async () => {
   const { onAddExistingHighlightNote, onClose } = renderExistingToolbar();
 
   fireEvent.click(screen.getByRole('button', { name: 'Add Comment' }));
@@ -127,7 +127,7 @@ it('adds a note to an existing highlight', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
   expect(onAddExistingHighlightNote).toHaveBeenCalledWith('highlight-1', 'Beta', 'Existing note');
-  expect(onClose).toHaveBeenCalledTimes(1);
+  await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
 });
 
 it('saves a note annotation from the inline note panel', async () => {
@@ -136,7 +136,7 @@ it('saves a note annotation from the inline note panel', async () => {
   const { onClose } = renderToolbar(onApply);
 
   const addCommentButton = screen.getByRole('button', { name: 'Add Comment' });
-  expect(fireEvent.pointerDown(addCommentButton)).toBe(true);
+  expect(fireEvent.pointerDown(addCommentButton)).toBe(false);
   fireEvent.click(addCommentButton);
   fireEvent.change(screen.getByPlaceholderText('Add annotation...'), {
     target: { value: 'Reader note' }
@@ -146,7 +146,24 @@ it('saves a note annotation from the inline note panel', async () => {
   fireEvent.click(saveButton);
 
   expect(onApply).toHaveBeenCalledWith('note', payload, 'Reader note');
-  expect(onClose).toHaveBeenCalledTimes(1);
+  expect(onClose).not.toHaveBeenCalled();
   resolveApply();
-  await waitFor(() => expect(onApply).toHaveBeenCalledTimes(1));
+  await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+});
+
+it('keeps the toolbar open and reports apply failures', async () => {
+  const error = new Error('write failed');
+  const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  const { onClose } = renderToolbar(vi.fn(async () => {
+    throw error;
+  }));
+
+  fireEvent.click(screen.getByRole('button', { name: 'Highlight' }));
+
+  await waitFor(() => expect(consoleError).toHaveBeenCalledWith(
+    '[companion-selection-toolbar] annotation action failed',
+    error
+  ));
+  expect(onClose).not.toHaveBeenCalled();
+  consoleError.mockRestore();
 });

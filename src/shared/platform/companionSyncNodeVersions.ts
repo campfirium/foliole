@@ -47,7 +47,10 @@ export async function applyCompanionSyncNodeVersionsWithSharedCore(
   nodes: NativeSyncNodeRecord[]
 ) {
   const port = createCapacitorSqliteDbPort(connection);
-  const result = await applySyncNodesWithDbPort(port, nodes, { includeAlreadyApplied: true });
+  const result = await applySyncNodesWithDbPort(port, nodes, {
+    enqueueSearchInvalidations: false,
+    includeAlreadyApplied: true
+  });
   if (result.conflictNodes.length > 0) {
     throw new Error('shared_node_conflict_copy_not_migrated');
   }

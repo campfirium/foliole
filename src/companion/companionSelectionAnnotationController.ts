@@ -24,7 +24,7 @@ export function createCompanionSelectionAnnotationHandler(workspaceSync: ReturnT
     if (!result) {
       return null;
     }
-    await workspaceSync.replaceSnapshot(result.snapshot, result.nodeId);
+    await workspaceSync.replaceSnapshot(result.snapshot, payload.parentNodeId);
     return result.nodeId;
   };
 }

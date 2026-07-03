@@ -34,6 +34,7 @@ export interface ApplySyncNodesWithDbPortResult {
 }
 
 export interface ApplySyncNodesWithDbPortOptions {
+  enqueueSearchInvalidations?: boolean;
   hashTextBody?: (content: string) => Promise<string> | string;
   includeAlreadyApplied?: boolean;
 }
@@ -216,7 +217,9 @@ export async function applySyncNodesWithDbPort(
       const decision = decideIncomingNodeApply(localNode, record);
       if (decision === 'apply_missing_local' || decision === 'apply_fast_forward') {
         await applyRemoteNode(tx, record, options);
-        await enqueueAppliedNodeSearchInvalidations(tx, localNode, record, invalidatedAt);
+        if (options.enqueueSearchInvalidations !== false) {
+          await enqueueAppliedNodeSearchInvalidations(tx, localNode, record, invalidatedAt);
+        }
         result.appliedIds.push(record.object_id);
         continue;
       }
