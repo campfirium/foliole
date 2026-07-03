@@ -75,6 +75,9 @@ describe('windows-control-device', () => {
 
     expect(script).toContain('Resolve-ScrcpyPath');
     expect(script).toContain('Resolve-AdbPath');
+    expect(script).toContain('Get-FolioleScrcpyProcesses');
+    expect(script).toContain('Stop-ExtraFolioleScrcpyProcesses');
+    expect(script).toContain('mirror: reused');
     expect(script).toContain('SCRCPY_PATH');
     expect(script).toContain('ADB_PATH');
     expect(script).toContain('Start-Process');

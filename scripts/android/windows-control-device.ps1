@@ -66,6 +66,26 @@ function Resolve-AdbPath {
   throw "adb.exe not found. Install Android platform-tools or set ADB_PATH."
 }
 
+function Get-FolioleScrcpyProcesses {
+  Get-CimInstance Win32_Process -Filter "Name = 'scrcpy.exe'" |
+    Where-Object { $_.CommandLine -like "*--window-title=Foliole-Android*" } |
+    Sort-Object ProcessId
+}
+
+function Stop-ExtraFolioleScrcpyProcesses {
+  param([object[]]$Processes)
+
+  if ($Processes.Count -le 1) {
+    return
+  }
+
+  $extraProcesses = $Processes | Select-Object -Skip 1
+  foreach ($process in $extraProcesses) {
+    Stop-Process -Id $process.ProcessId -Force -ErrorAction SilentlyContinue
+  }
+  Write-Info "closed duplicate mirrors: $($extraProcesses.Count)"
+}
+
 function Set-DeviceScreenOff {
   param(
     [string]$Adb,
@@ -106,6 +126,14 @@ if (![string]::IsNullOrWhiteSpace($serial)) {
   Write-Info "device: $serial"
 } else {
   Write-Info "device: auto"
+}
+
+$existingMirrors = @(Get-FolioleScrcpyProcesses)
+if ($existingMirrors.Count -gt 0) {
+  Stop-ExtraFolioleScrcpyProcesses -Processes $existingMirrors
+  Write-Info "mirror: reused"
+  Write-Info "status: OPENED"
+  exit 0
 }
 
 Write-Info "device screen: turned off"
