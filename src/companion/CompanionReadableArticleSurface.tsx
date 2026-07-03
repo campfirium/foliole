@@ -12,9 +12,7 @@ import {
   ReadingHighlightSheet,
   ReadingInfoSheet
 } from './CompanionReadingSheets';
-import {
-  type CompanionSelectionAnnotationKind
-} from './CompanionSelectionAnnotationToolbar';
+import { type CompanionSelectionAnnotationKind } from './CompanionSelectionAnnotationToolbar';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { useCompanionSelectionAnnotationToolbar } from './useCompanionSelectionAnnotationToolbar';
 import { useImmersiveReadableArticleState } from './useImmersiveReadableArticleState';
@@ -153,6 +151,7 @@ function ImmersiveArticleContent(props: {
   return (
     <div className="mx-auto min-h-full w-full max-w-[760px]">
       <ReadableArticleDocument
+        allowContentEditing={false}
         onEditorReady={props.onEditorReady}
         readableArticle={props.readableArticle}
         readingSelection={props.readingSelection}

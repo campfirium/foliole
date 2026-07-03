@@ -49,12 +49,17 @@ function renderOriginalPdf(
 }
 
 function useReadableArticleEditorState(props: {
+  allowContentEditing?: boolean;
   isViewingPdfOriginal: boolean;
   onSaveContent?: (nodeId: string, content: string) => Promise<void>;
   readableArticle: ReadableArticle;
 }) {
   const saveContent = props.onSaveContent;
-  const canEdit = Boolean(saveContent && (!props.readableArticle.bodyStatus || props.readableArticle.bodyStatus === 'ready'));
+  const canEdit = Boolean(
+    props.allowContentEditing !== false &&
+    saveContent &&
+    (!props.readableArticle.bodyStatus || props.readableArticle.bodyStatus === 'ready')
+  );
   const editorState = useCompanionTopicEditAutosave({
     canEdit: canEdit && !props.isViewingPdfOriginal,
     initialContent: props.readableArticle.content,
@@ -68,7 +73,22 @@ function useReadableArticleEditorState(props: {
   return { canEdit, editorState };
 }
 
+function PdfTextVersionToolbar(props: {
+  onOpenPdf(): void;
+}) {
+  const t = useTranslation();
+  return (
+    <div className="mb-3 flex items-center justify-between border-b border-companion-divider px-1 pb-3">
+      <span className="text-xs text-companion-text-secondary">{t('companion.reading.textVersion')}</span>
+      <AppButton onClick={props.onOpenPdf} variant="ghost">
+        {t('companion.reading.openPdf')}
+      </AppButton>
+    </div>
+  );
+}
+
 export function ReadableArticleDocument(props: {
+  allowContentEditing?: boolean;
   onAttachmentResourceSynced?: () => void;
   onEditorReady?: (adapter: EditorAdapter | null) => void;
   onSaveContent?: (nodeId: string, content: string) => Promise<void>;
@@ -77,10 +97,10 @@ export function ReadableArticleDocument(props: {
   scrollContainer?: 'editor' | 'outer';
   syncEndpointUrl?: string | null;
 }) {
-  const t = useTranslation();
   const [isViewingPdfOriginal, setIsViewingPdfOriginal] = useState(false);
   const pdfAttachmentId = props.readableArticle.pdfAttachmentId;
   const { canEdit, editorState } = useReadableArticleEditorState({
+    allowContentEditing: props.allowContentEditing,
     isViewingPdfOriginal,
     readableArticle: props.readableArticle,
     ...definedProps({ onSaveContent: props.onSaveContent })
@@ -101,14 +121,7 @@ export function ReadableArticleDocument(props: {
 
   return (
     <>
-      {pdfAttachmentId ? (
-        <div className="mb-3 flex items-center justify-between border-b border-companion-divider px-1 pb-3">
-          <span className="text-xs text-companion-text-secondary">{t('companion.reading.textVersion')}</span>
-          <AppButton onClick={() => setIsViewingPdfOriginal(true)} variant="ghost">
-            {t('companion.reading.openPdf')}
-          </AppButton>
-        </div>
-      ) : null}
+      {pdfAttachmentId ? <PdfTextVersionToolbar onOpenPdf={() => setIsViewingPdfOriginal(true)} /> : null}
       <CompanionArticleDocument
         content={editorState.value}
         hideTitleHeading={props.readableArticle.hideTitleHeading}

@@ -59,6 +59,23 @@ describe('ReadableArticleDocument editing', () => {
     expect(onSaveContent).toHaveBeenCalledWith('topic-1', 'Edited body');
   });
 
+  it('keeps the document read-only when content editing is disabled', () => {
+    const onSaveContent = vi.fn(async () => undefined);
+    render(
+      <ReadableArticleDocument
+        allowContentEditing={false}
+        onSaveContent={onSaveContent}
+        readableArticle={createReadableArticle()}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText('Topic body'), { target: { value: 'Edited body' } });
+    fireEvent.blur(screen.getByLabelText('Topic body'));
+
+    expect(screen.getByLabelText('Topic body')).toHaveAttribute('readonly');
+    expect(onSaveContent).not.toHaveBeenCalled();
+  });
+
   it('keeps unavailable bodies out of editable mode', () => {
     render(
       <ReadableArticleDocument

@@ -7,7 +7,7 @@ const readableArticleDocumentMock = vi.fn(() => <article>Readable body</article>
 let chromeVisible = false;
 
 vi.mock('./CompanionReadableArticleDocument', () => ({
-  ReadableArticleDocument: () => readableArticleDocumentMock()
+  ReadableArticleDocument: (props: Record<string, unknown>) => readableArticleDocumentMock(props)
 }));
 
 vi.mock('./CompanionReadableArticleSelectionToolbarLayer', () => ({
@@ -90,7 +90,7 @@ describe('ImmersiveReadableArticle Android scrolling', () => {
     const surface = container.querySelector('section');
     expect(surface).toHaveClass('fixed', 'top-0', 'right-0', 'bottom-0', 'left-0', 'overflow-y-auto');
     expect(surface).not.toHaveClass('inset-0');
-    expect(readableArticleDocumentMock).toHaveBeenCalled();
+    expect(readableArticleDocumentMock).toHaveBeenCalledWith(expect.objectContaining({ allowContentEditing: false }));
   });
 
   it('reserves top space when the fixed reading chrome is visible', () => {
