@@ -72,7 +72,6 @@ function useImmersiveReadableArticleModel(props: ImmersiveReadableArticleProps) 
     }
     toolbar.clearSelectionAndCloseToolbar();
     reading.enterContentEditing();
-    window.requestAnimationFrame(() => toolbar.editorRef.current?.focus());
   }
   function selectOutlineItem(item: { from: number; to: number }) {
     reading.handleSelectOutlineItem(item);

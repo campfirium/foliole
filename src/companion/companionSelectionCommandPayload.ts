@@ -32,10 +32,22 @@ function getDomSelectionRanges(adapter: EditorAdapter): EditorSelection[] {
   if (!selection || selection.isCollapsed || !selection.toString().trim() || !isSelectionInsideEditor(selection)) {
     return [];
   }
+  const textRange = getTextSelectionRange(adapter.getContent(), selection.toString());
+  if (textRange) {
+    return [textRange];
+  }
   return Array.from({ length: selection.rangeCount }, (_, index) => {
     const rects = selection.getRangeAt(index).getClientRects();
     return rects.length > 0 ? getRectPositionRange(adapter, rects) : null;
   }).filter((range): range is EditorSelection => range !== null);
+}
+
+function getTextSelectionRange(content: string, selectionText: string): EditorSelection | null {
+  const selectedText = selectionText.trim();
+  if (!selectedText) return null;
+  const from = content.indexOf(selectedText);
+  if (from < 0) return null;
+  return { from, to: from + selectedText.length };
 }
 
 function getDomSelectionCommandPayload(parentNodeId: string, adapter: EditorAdapter | null) {

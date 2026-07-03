@@ -67,7 +67,7 @@ function stubDomSelection() {
       length: 1
     })
   };
-  vi.spyOn(window, 'getSelection').mockReturnValue({
+  return vi.spyOn(window, 'getSelection').mockReturnValue({
     anchorNode: textNode,
     focusNode: textNode,
     getRangeAt: () => range,
@@ -170,6 +170,28 @@ it('opens from an Android DOM text selection when the editor selection is read-o
   });
 
   expect(result.current.selectionToolbar?.payload?.selectionText).toBe('Welcome');
+});
+
+it('keeps the last Android DOM selection payload after toolbar button focus clears the selection', () => {
+  const { result } = renderHook(() =>
+    useCompanionSelectionAnnotationToolbar({
+      canCreateAnnotation: true,
+      nodeId: 'node-1',
+      snapshot: null
+    })
+  );
+
+  act(() => {
+    const selectionSpy = stubDomSelection();
+    result.current.handleEditorReady(createEditorAdapter([]) as never);
+    document.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 80, clientY: 120 }));
+    document.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, clientX: 96, clientY: 136 }));
+    document.dispatchEvent(new Event('selectionchange'));
+    vi.advanceTimersByTime(240);
+    selectionSpy.mockReturnValue(null);
+  });
+
+  expect(result.current.resolveSelectionPayload()?.selectionText).toBe('Welcome');
 });
 
 it('opens existing highlight actions when tapping a rendered highlight without text selection', () => {

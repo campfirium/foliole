@@ -72,6 +72,7 @@ function useCompanionSelectionAnnotationDocumentEvents(args: {
 function useCompanionSelectionAnnotationOpenHandler(args: {
   canCreateAnnotation: boolean;
   editorRef: MutableRefObject<EditorAdapter | null>;
+  lastPayloadRef: MutableRefObject<CompanionSelectionAnnotationToolbarState['payload']>;
   lastFallbackRef: MutableRefObject<CompanionSelectionClientPoint | null>;
   lastSelectionInteractionAtRef: MutableRefObject<number>;
   nodeId: string;
@@ -86,7 +87,10 @@ function useCompanionSelectionAnnotationOpenHandler(args: {
     args.lastSelectionInteractionAtRef.current = Date.now();
     window.requestAnimationFrame(() => {
       const payload = resolveCompanionSelectionCommandPayload(args.nodeId, args.editorRef.current);
-      if (payload) args.setSelectionToolbar(resolveSelectionToolbarState({ fallback, payload, snapshot: args.snapshot }));
+      if (payload) {
+        args.lastPayloadRef.current = payload;
+        args.setSelectionToolbar(resolveSelectionToolbarState({ fallback, payload, snapshot: args.snapshot }));
+      }
       else if (isExistingHighlightTarget(event.target)) {
         const existingHighlight = resolveExistingHighlightAtCurrentCursor(args);
         args.setSelectionToolbar(existingHighlight ? resolveExistingHighlightToolbarState(existingHighlight, fallback) : null);
@@ -99,6 +103,7 @@ function useCompanionSelectionAnnotationOpenHandler(args: {
 function useCompanionSelectionAnnotationScheduler(args: {
   canCreateAnnotation: boolean;
   editorRef: MutableRefObject<EditorAdapter | null>;
+  lastPayloadRef: MutableRefObject<CompanionSelectionAnnotationToolbarState['payload']>;
   nodeId: string;
   setSelectionToolbar: (state: CompanionSelectionAnnotationToolbarState | null) => void;
   snapshot: WorkspaceSnapshot | null;
@@ -126,6 +131,7 @@ function useCompanionSelectionAnnotationScheduler(args: {
         if (!args.canCreateAnnotation) return;
         const payload = resolveCompanionSelectionCommandPayload(args.nodeId, args.editorRef.current);
         if (payload) {
+          args.lastPayloadRef.current = payload;
           args.setSelectionToolbar(resolveSelectionToolbarState({ fallback, payload, snapshot: args.snapshot }));
           return;
         }
@@ -142,6 +148,34 @@ function useCompanionSelectionAnnotationScheduler(args: {
   };
 }
 
+function useSelectionPayloadResolver(args: {
+  editorRef: MutableRefObject<EditorAdapter | null>;
+  lastPayloadRef: MutableRefObject<CompanionSelectionAnnotationToolbarState['payload']>;
+  nodeId: string;
+}) {
+  const { editorRef, lastPayloadRef, nodeId } = args;
+  return useCallback(() => (
+    resolveCompanionSelectionCommandPayload(nodeId, editorRef.current) ?? lastPayloadRef.current
+  ), [editorRef, lastPayloadRef, nodeId]);
+}
+
+function useClearSelectionAndCloseToolbar(args: {
+  editorRef: MutableRefObject<EditorAdapter | null>;
+  scheduler: ReturnType<typeof useCompanionSelectionAnnotationScheduler>;
+  setSelectionToolbar: (state: CompanionSelectionAnnotationToolbarState | null) => void;
+}) {
+  const { editorRef, scheduler, setSelectionToolbar } = args;
+  return useCallback(() => {
+    scheduler.clearScheduledOpen();
+    scheduler.lastSelectionInteractionAtRef.current = 0;
+    const selection = editorRef.current?.getSelection();
+    const collapseAt = selection ? Math.max(selection.from, selection.to) : 0;
+    window.getSelection()?.removeAllRanges();
+    editorRef.current?.setSelection({ from: collapseAt, to: collapseAt });
+    setSelectionToolbar(null);
+  }, [editorRef, scheduler, setSelectionToolbar]);
+}
+
 export function useCompanionSelectionAnnotationToolbar(props: {
   canCreateAnnotation: boolean;
   nodeId: string;
@@ -149,9 +183,11 @@ export function useCompanionSelectionAnnotationToolbar(props: {
 }) {
   const [selectionToolbar, setSelectionToolbar] = useState<CompanionSelectionAnnotationToolbarState | null>(null);
   const editorRef = useRef<EditorAdapter | null>(null);
+  const lastPayloadRef = useRef<CompanionSelectionAnnotationToolbarState['payload']>(null);
   const scheduler = useCompanionSelectionAnnotationScheduler({
     canCreateAnnotation: props.canCreateAnnotation,
     editorRef,
+    lastPayloadRef,
     nodeId: props.nodeId,
     setSelectionToolbar,
     snapshot: props.snapshot
@@ -163,22 +199,13 @@ export function useCompanionSelectionAnnotationToolbar(props: {
   const handleEditorReady = useCallback((adapter: EditorAdapter | null) => {
     editorRef.current = adapter;
   }, []);
-  const clearSelectionAndCloseToolbar = useCallback(() => {
-    scheduler.clearScheduledOpen();
-    scheduler.lastSelectionInteractionAtRef.current = 0;
-    const selection = editorRef.current?.getSelection();
-    const collapseAt = selection ? Math.max(selection.from, selection.to) : 0;
-    window.getSelection()?.removeAllRanges();
-    editorRef.current?.setSelection({ from: collapseAt, to: collapseAt });
-    setSelectionToolbar(null);
-  }, [scheduler]);
-  const resolveSelectionPayload = useCallback(() => (
-    resolveCompanionSelectionCommandPayload(props.nodeId, editorRef.current)
-  ), [props.nodeId]);
+  const clearSelectionAndCloseToolbar = useClearSelectionAndCloseToolbar({ editorRef, scheduler, setSelectionToolbar });
+  const resolveSelectionPayload = useSelectionPayloadResolver({ editorRef, lastPayloadRef, nodeId: props.nodeId });
 
   const openSelectionToolbar = useCompanionSelectionAnnotationOpenHandler({
     canCreateAnnotation: props.canCreateAnnotation,
     editorRef,
+    lastPayloadRef,
     lastFallbackRef: scheduler.lastFallbackRef,
     lastSelectionInteractionAtRef: scheduler.lastSelectionInteractionAtRef,
     nodeId: props.nodeId,

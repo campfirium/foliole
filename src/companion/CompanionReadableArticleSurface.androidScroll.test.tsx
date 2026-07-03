@@ -7,6 +7,8 @@ import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
 const readableArticleDocumentMock = vi.fn<(props: Record<string, unknown>) => ReactNode>(() => <article>Readable body</article>);
 const readingChromeMock = vi.fn<(props: Record<string, unknown>) => ReactNode>(() => null);
 const toolbarHookMock = vi.fn();
+const editorFocusMock = vi.fn();
+const enterContentEditingMock = vi.fn();
 let chromeVisible = false;
 let contentEditing = false;
 
@@ -40,7 +42,7 @@ vi.mock('./useCompanionSelectionAnnotationToolbar', () => ({
     return {
     clearSelectionAndCloseToolbar: vi.fn(),
     closeSelectionToolbar: vi.fn(),
-    editorRef: { current: null },
+    editorRef: { current: { focus: editorFocusMock } },
     handleEditorReady: vi.fn(),
     openSelectionToolbar: vi.fn(),
     resolveSelectionPayload: vi.fn(),
@@ -61,7 +63,7 @@ vi.mock('./useImmersiveReadableArticleState', () => ({
     openReadingSheet: null,
     readingSelection: null,
     searchOpen: false,
-    enterContentEditing: vi.fn(),
+    enterContentEditing: enterContentEditingMock,
     exitContentEditing: vi.fn(),
     setIsActionsSheetOpen: vi.fn(),
     setIsOutlineOpen: vi.fn(),
@@ -90,6 +92,8 @@ describe('ImmersiveReadableArticle Android scrolling', () => {
     readingChromeMock.mockClear();
     readableArticleDocumentMock.mockClear();
     toolbarHookMock.mockClear();
+    editorFocusMock.mockClear();
+    enterContentEditingMock.mockClear();
   });
 
   it('lets the immersive surface own article scrolling for old Android WebView touch gestures', () => {
@@ -139,5 +143,36 @@ describe('ImmersiveReadableArticle Android scrolling', () => {
       canEditContent: true,
       isContentEditing: true
     }));
+  });
+});
+
+describe('ImmersiveReadableArticle edit mode', () => {
+  beforeEach(() => {
+    chromeVisible = false;
+    contentEditing = false;
+    readingChromeMock.mockClear();
+    readableArticleDocumentMock.mockClear();
+    toolbarHookMock.mockClear();
+    editorFocusMock.mockClear();
+    enterContentEditingMock.mockClear();
+  });
+
+  it('enters edit mode from the pencil without focusing the editor immediately', () => {
+    chromeVisible = true;
+    render(
+      <ImmersiveReadableArticle
+        onExit={vi.fn()}
+        onCreateSelectionAnnotation={vi.fn()}
+        onSaveArticleContent={vi.fn()}
+        readableArticle={createReadableArticle()}
+        snapshot={null}
+      />
+    );
+
+    const chromeProps = readingChromeMock.mock.calls.at(-1)?.[0] as { onToggleContentEditing(): void };
+    chromeProps.onToggleContentEditing();
+
+    expect(enterContentEditingMock).toHaveBeenCalledTimes(1);
+    expect(editorFocusMock).not.toHaveBeenCalled();
   });
 });
