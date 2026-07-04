@@ -42,9 +42,9 @@ jobs:
           before="${{ github.event.before }}"
           after="${{ github.sha }}"
           if [[ -z "${before}" || "${before}" =~ ^0+$ ]]; then
-            changed="$(git diff-tree --no-commit-id --name-only -r "${after}" -- . | sort -u || true)"
+            changed="$(git diff-tree --no-commit-id --name-only --diff-filter=ACMR -r "${after}" -- . | sort -u || true)"
           else
-            changed="$(git diff --name-only "${before}" "${after}" -- . | sort -u || true)"
+            changed="$(git diff --name-only --diff-filter=ACMR "${before}" "${after}" -- . | sort -u || true)"
           fi
           {
             echo 'changed_files<<EOF'

@@ -141,7 +141,14 @@ resolve_quality_gate_target() {
 
 collect_lint_targets() {
   local changed="$1"
-  printf '%s\n' "${changed}" | grep -E '\.(js|jsx|ts|tsx|cjs|mjs)$' | grep -v '^\s*$' || true
+  printf '%s\n' "${changed}" | grep -E '\.(js|jsx|ts|tsx|cjs|mjs)$' | filter_existing_files || true
+}
+
+filter_existing_files() {
+  local file_path
+  while IFS= read -r file_path; do
+    [[ -n "${file_path}" && -f "${file_path}" ]] && printf '%s\n' "${file_path}"
+  done
 }
 
 collect_critical_test_files() {
@@ -178,7 +185,7 @@ collect_related_test_files() {
     return 0
   fi
 
-  direct_tests="$(echo "${source_changed}" | grep -E '\.(test|spec)\.' || true)"
+  direct_tests="$(echo "${source_changed}" | grep -E '\.(test|spec)\.' | filter_existing_files || true)"
   source_files="$(echo "${source_changed}" | grep -vE '\.(test|spec)\.' || true)"
   inferred_tests=""
 

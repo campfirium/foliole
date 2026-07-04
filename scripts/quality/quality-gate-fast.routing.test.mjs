@@ -101,6 +101,43 @@ describe('quality-gate-fast.sh routing', () => {
     }
   }, 15000);
 
+  it('keeps deleted override files out of lint and related test targets', async () => {
+    const tempRoot = await createQualityGateTempRoot();
+    try {
+      await writePackageJson(tempRoot, {
+        lint: 'node -e "console.log(\'repo lint should stay unused\')"',
+        typecheck: 'node -e "console.log(\'typecheck should stay unused\')"'
+      });
+      await writeFixtureFile(tempRoot, 'scripts/current-tool.mjs', 'console.log("current");\n');
+
+      const result = await runQualityGate(
+        tempRoot,
+        {
+          QUALITY_GATE_CHANGED_FILES: [
+            'scripts/current-tool.mjs',
+            'scripts/deleted-tool.mjs',
+            'scripts/deleted-tool.test.mjs'
+          ].join('\n')
+        },
+        ['--route-json']
+      );
+
+      expect(result.code).toBe(0);
+      expect(JSON.parse(result.stdout)).toMatchObject({
+        changedFiles: [
+          'scripts/current-tool.mjs',
+          'scripts/deleted-tool.mjs',
+          'scripts/deleted-tool.test.mjs'
+        ],
+        level: 'mid',
+        lintTargets: ['scripts/current-tool.mjs'],
+        relatedTests: []
+      });
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, 15000);
+
   it('uses the mid level for props signature changes and runs related tests', async () => {
     const tempRoot = await createQualityGateTempRoot();
     const typecheckMarker = toFixtureShellPath(path.join(tempRoot, 'typecheck.marker'));

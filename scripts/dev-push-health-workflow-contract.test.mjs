@@ -34,6 +34,7 @@ describe('dev push health workflow contract', () => {
     expect(workflow).toContain('JSON.parse(process.env.ROUTE_JSON)');
     expect(workflow).toContain('GITHUB_STEP_SUMMARY');
     expect(workflow).toContain('QUALITY_GATE_CHANGED_FILES');
+    expect(workflow).toContain('--diff-filter=ACMR');
     expect(workflow).toContain('- scope: portable');
   });
 
@@ -73,6 +74,10 @@ describe('dev push health workflow contract', () => {
     expect(routeForChangedFiles(['electron/main.ts'])).toMatchObject({
       level: 'desktop',
       target: 'quality:desktop'
+    });
+    expect(routeForChangedFiles(['scripts/deleted-tool.mjs'])).toMatchObject({
+      lintTargets: [],
+      relatedTests: []
     });
   }, 30000);
 });
