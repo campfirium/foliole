@@ -34,7 +34,7 @@ export function isBootEventAfterIntent(event, intent) {
 }
 
 export function isShellConfigFile(file) {
-  return /^(tailwind\.config\.(js|cjs|mjs|ts)|postcss\.config\.(js|cjs|mjs|ts)|vite\.config\.(js|cjs|mjs|ts)|vite\.shared\.ts|package\.json|package-lock\.json|scripts\/electron-dev\.mjs|scripts\/electron-dev-server\.mjs|scripts\/windows\/electron-dev-native\.mjs|scripts\/windows\/windows-client-native.*\.mjs|scripts\/windows\/windows-preview-native.*\.mjs|scripts\/windows\/start-electron-dev-native\.ps1)$/u.test(file);
+  return /^(tailwind\.config\.(js|cjs|mjs|ts)|postcss\.config\.(js|cjs|mjs|ts)|vite\.config\.(js|cjs|mjs|ts)|vite\.shared\.ts|package\.json|package-lock\.json|scripts\/electron-dev\.mjs|scripts\/electron-dev-server\.mjs|scripts\/windows\/electron-dev-native\.mjs|scripts\/windows\/start-electron-dev-native\.ps1)$/u.test(file);
 }
 
 export function isRuntimeFile(file) {
@@ -91,10 +91,10 @@ export function selectNativePreviewActionWithCommittedFiles({
       return { action: 'full-restart', reason: 'Class D: runtime behind committed shell/vite config changes' };
     }
     if (hasFile(changedFiles, isStartupRendererFile)) {
-      return { action: 'full-restart', reason: 'Class D: working tree startup renderer changes detected' };
+      return { action: 'renderer-reload-intent', reason: 'Class A: working tree startup renderer changes detected' };
     }
     if (hasFile(committedFilesSinceRuntime, isStartupRendererFile)) {
-      return { action: 'full-restart', reason: 'Class D: runtime behind committed startup renderer changes' };
+      return { action: 'renderer-reload-intent', reason: 'Class A: runtime behind committed startup renderer changes' };
     }
     if (hasFile(changedFiles, isRuntimeFile)) {
       if (hasFile(changedFiles, isRendererSourceFile)) {

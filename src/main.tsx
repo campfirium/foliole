@@ -16,6 +16,7 @@ import { logRuntimeError } from './shared/platform/runtimeLogging';
 import { renderStartupErrorView } from './shared/ui/StartupSurface';
 import { bootstrapApp } from './startupBootstrap';
 import { createStartupErrorActions, resolveStartupView } from './startupViewMode';
+import { registerStartupWatchdog } from './startupWatchdog';
 
 const ROOT_ID = 'root';
 const STARTUP_RESOURCE_SAMPLE_LIMIT = 16;
@@ -116,19 +117,6 @@ function registerBootDiagnostics() {
   });
 }
 
-function registerStartupWatchdog() {
-  setTimeout(() => {
-    if (window.__FOLIOLE_APP_READY_REPORTED__) {
-      return;
-    }
-    reportRuntimeBootStage('app_ready_timeout', {
-      href: window.location.href,
-      readyState: document.readyState,
-      rootPresent: Boolean(document.getElementById(ROOT_ID))
-    });
-  }, 5000);
-}
-
 function reportPendingModuleImport(stage: string, startedAt: number) {
   reportRuntimeBootStage(stage, {
     durationMs: Math.round(performance.now() - startedAt),
@@ -201,7 +189,7 @@ async function mountApp() {
   );
   reportRuntimeBootStage('react_render_call_complete');
   reportRuntimeBootStage('react_render_committed');
-  registerStartupWatchdog();
+  registerStartupWatchdog(ROOT_ID);
 }
 
 async function reportDesktopBridgeReady() {

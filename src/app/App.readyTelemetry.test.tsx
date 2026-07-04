@@ -3,6 +3,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 const useAppController = vi.fn();
 const reportRuntimeAppReady = vi.fn();
+const reportRuntimeBootStage = vi.fn();
 
 function setDocumentVisibility(visibilityState: DocumentVisibilityState) {
   Object.defineProperty(document, 'visibilityState', {
@@ -39,7 +40,7 @@ vi.mock('../shared/platform/performanceDiagnosticsProbe', () => ({ readPerforman
 vi.mock('../shared/platform/runtime/demoRuntime', () => ({ useDemoRuntimeState: () => ({ isDemo: false }) }));
 vi.mock('../shared/platform/runtimeBootTelemetry', () => ({
   reportRuntimeAppReady,
-  reportRuntimeBootStage: vi.fn()
+  reportRuntimeBootStage
 }));
 
 beforeEach(() => {
@@ -52,6 +53,7 @@ beforeEach(() => {
     }
   });
   reportRuntimeAppReady.mockClear();
+  reportRuntimeBootStage.mockClear();
   document.body.dataset.bootSkeleton = '';
   setDocumentVisibility('visible');
 });
@@ -67,6 +69,28 @@ it('reports app ready only after the hydrated workspace has painted', async () =
     );
   });
   expect(document.body.dataset.bootSkeleton).toBe('hidden');
+});
+
+it('reports which ready gate is still pending', async () => {
+  useAppController.mockReturnValue({
+    hotkeySettings: {},
+    layoutProps: {
+      imports: { onCloseImportManagement: vi.fn() },
+      layoutChrome: { isWorkspaceHydrated: false },
+      navigation: { onSelectNode: vi.fn() }
+    }
+  });
+  const { App } = await import('./App');
+
+  render(<App />);
+
+  await waitFor(() => {
+    expect(reportRuntimeBootStage).toHaveBeenCalledWith('app_ready_gate_pending', {
+      isReviewSchedulerSettingsReady: true,
+      isWorkspaceHydrated: false
+    });
+  });
+  expect(reportRuntimeAppReady).not.toHaveBeenCalled();
 });
 
 it('reports app ready without waiting for animation frames while the window is hidden', async () => {

@@ -25,7 +25,8 @@ import { resolveWindowsNativePaths } from './windows-native-paths.mjs';
 
 const { appReadyFile, clientScript, nativeAbiScript, reloadDeliveryFile, repoRoot, restartDeliveryFile } =
   resolveWindowsNativePaths();
-const PREVIEW_TIMEOUT_MS = Number.parseInt(process.env.WINDOWS_PREVIEW_TIMEOUT_MS ?? '25000', 10);
+const CLIENT_HEALTH_TIMEOUT_MS = Number.parseInt(process.env.FOLIOLE_ELECTRON_HEALTHCHECK_MS ?? '60000', 10);
+const PREVIEW_TIMEOUT_MS = Number.parseInt(process.env.WINDOWS_PREVIEW_TIMEOUT_MS ?? String(CLIENT_HEALTH_TIMEOUT_MS + 15000), 10);
 const CLIENT_ACTION_TIMEOUT_MS = Number.parseInt(process.env.WINDOWS_CLIENT_ACTION_TIMEOUT_MS ?? '120000', 10);
 
 async function ensureFreshElectronDist() {
@@ -68,9 +69,8 @@ async function runDirectRestart(reason) {
   const result = await runClientAction('restart');
   const trusted = await waitForTrustedRunningResult('direct restart status');
   if (
-    result.code !== 0 ||
-    !/(status:\s*(STARTED|RUNNING|RESTARTED))/u.test(result.output) ||
-    !trusted.ok
+    !trusted.ok &&
+    (result.code !== 0 || !/(status:\s*(STARTED|RUNNING|RESTARTED))/u.test(result.output))
   ) {
     throw new Error(formatPreviewActionFailure('direct restart', result, trusted));
   }
@@ -189,9 +189,8 @@ async function applyAction(selection, currentHead, dryRun) {
   const result = await runClientAction(action);
   const trusted = await waitForTrustedRunningResult(`${action} status`, currentHead);
   if (
-    result.code !== 0 ||
-    !/(status:\s*(STARTED|RUNNING|RESTARTED))/u.test(result.output) ||
-    !trusted.ok
+    !trusted.ok &&
+    (result.code !== 0 || !/(status:\s*(STARTED|RUNNING|RESTARTED))/u.test(result.output))
   ) {
     throw new Error(formatPreviewActionFailure(action, result, trusted));
   }

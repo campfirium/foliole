@@ -38,7 +38,10 @@ it('starts the native dev runner through a Windows-owned process', async () => {
   expect(startRunnerScript).toContain('native dev runner start failed');
   expect(script).toContain('if (existing.ready.appReady.head === head)');
   expect(script).toContain('await stopClient({ print: false })');
-  expect(script).toContain('} else {\n    await stopClient({ print: false });\n  }');
+  expect(script).toContain('listRepoElectronPids(repoRoot)');
+  expect(script).toContain('untrusted repo runtime still running');
+  expect(script).not.toContain('listRepoDevShellPids(repoRoot)');
+  expect(script).not.toContain('} else {\n    await stopClient({ print: false });\n  }');
   expect(script).toContain('stopNativeClient');
   expect(script).toContain('removeShellRestartRequest(shellRestartRequestFile)');
   expect(startScript).toContain('Start-Process');
@@ -82,7 +85,9 @@ it('starts the native dev runner through a Windows-owned process', async () => {
   expect(restartScript).not.toContain('forced-cleanup');
   expect(script).toContain('recoverClientStateFromReady');
   expect(recoveredStateScript).toContain('ready.appReady.head ?? state?.head');
-  expect(recoveredStateScript).toContain('if (!ready || state?.runtimePid)');
+  expect(recoveredStateScript).toContain('if (!ready)');
+  expect(recoveredStateScript).toContain('failedAt: undefined');
+  expect(script).toContain('recoverClientStateFromStatus');
   expect(recoveredStateScript).toContain('runtimePid: ready.windowVisible.pid');
   expect(script).toContain('resetMarkers');
   expect(script).toContain('windowVisibleFile');

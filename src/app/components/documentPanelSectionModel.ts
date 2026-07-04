@@ -141,6 +141,13 @@ function getEditorReadingProps(props: DocumentPanelSectionProps) {
   };
 }
 
+function createPromptImageLoadStateChangeHandler(editorNodeId: string | null) {
+  return (state: { loadedCount: number; totalCount: number }) => {
+    if (!editorNodeId) return;
+    updateNodeImageState(editorNodeId, state.totalCount, state.loadedCount);
+  };
+}
+
 function getDocumentPanelBodyProps(
   props: DocumentPanelSectionProps,
   panelState: ReturnType<typeof getDocumentPanelState>,
@@ -185,12 +192,7 @@ function getDocumentPanelBodyProps(
     onEditorReady: props.onEditorReady,
     onShouldSuppressSelectionRestore: props.onShouldSuppressSelectionRestore,
     onSetReadingPositionSelection: props.onSetReadingPositionSelection,
-    onPromptImageLoadStateChange: (state: { loadedCount: number; totalCount: number }) => {
-      if (!props.editorNodeId) {
-        return;
-      }
-      updateNodeImageState(props.editorNodeId, state.totalCount, state.loadedCount);
-    },
+    onPromptImageLoadStateChange: createPromptImageLoadStateChangeHandler(props.editorNodeId),
     onRevealDocumentPosition: props.onRevealDocumentPosition,
     onRevealDocumentSelection: props.onRevealDocumentSelection,
     onResolveDocumentPositionAtViewportY: props.onResolveDocumentPositionAtViewportY,

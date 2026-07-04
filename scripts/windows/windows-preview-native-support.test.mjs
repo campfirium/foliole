@@ -1,5 +1,7 @@
 // @vitest-environment node
 
+import { URL } from 'node:url';
+
 import { expect, it } from 'vitest';
 
 import {
@@ -58,10 +60,10 @@ it('classifies native preview file groups', () => {
   expect(isShellConfigFile('scripts/electron-dev.mjs')).toBe(true);
   expect(isShellConfigFile('scripts/electron-dev-server.mjs')).toBe(true);
   expect(isShellConfigFile('scripts/windows/electron-dev-native.mjs')).toBe(true);
-  expect(isShellConfigFile('scripts/windows/windows-client-native.mjs')).toBe(true);
-  expect(isShellConfigFile('scripts/windows/windows-client-native-stop.mjs')).toBe(true);
-  expect(isShellConfigFile('scripts/windows/windows-preview-native-support.mjs')).toBe(true);
   expect(isShellConfigFile('scripts/windows/start-electron-dev-native.ps1')).toBe(true);
+  expect(isShellConfigFile('scripts/windows/windows-client-native.mjs')).toBe(false);
+  expect(isShellConfigFile('scripts/windows/windows-client-native-stop.mjs')).toBe(false);
+  expect(isShellConfigFile('scripts/windows/windows-preview-native-support.mjs')).toBe(false);
   expect(isRuntimeFile('electron/main.ts')).toBe(true);
   expect(isRuntimeFile('electron/main.test.ts')).toBe(false);
   expect(isRendererSourceFile('src/app/App.tsx')).toBe(true);
@@ -101,36 +103,36 @@ it('does not full restart when the runtime is only behind committed renderer fil
   });
 });
 
-it('full restarts when startup renderer files changed', () => {
+it('uses renderer reload when startup renderer files changed', () => {
   expect(selectNativePreviewAction({
     changedFiles: ['src/app/App.tsx'],
     currentHead: 'abc123',
     status: parseWindowsClientStatus('[windows-restart-client] status: RUNNING trust=OK runtime_pid=501 head=abc123')
   })).toMatchObject({
-    action: 'full-restart',
-    reason: 'Class D: working tree startup renderer changes detected'
+    action: 'renderer-reload-intent',
+    reason: 'Class A: working tree startup renderer changes detected'
   });
 });
 
-it('full restarts when workspace shell renderer files changed', () => {
+it('uses renderer reload when workspace shell renderer files changed', () => {
   expect(selectNativePreviewAction({
     changedFiles: ['src/app/components/WorkspaceRightSidebarPanels.tsx'],
     currentHead: 'abc123',
     status: parseWindowsClientStatus('[windows-restart-client] status: RUNNING trust=OK runtime_pid=501 head=abc123')
   })).toMatchObject({
-    action: 'full-restart',
-    reason: 'Class D: working tree startup renderer changes detected'
+    action: 'renderer-reload-intent',
+    reason: 'Class A: working tree startup renderer changes detected'
   });
 });
 
-it('full restarts when workspace overlay entry files changed', () => {
+it('uses renderer reload when workspace overlay entry files changed', () => {
   expect(selectNativePreviewAction({
     changedFiles: ['src/app/components/WorkspaceSettingsOverlay.tsx'],
     currentHead: 'abc123',
     status: parseWindowsClientStatus('[windows-restart-client] status: RUNNING trust=OK runtime_pid=501 head=abc123')
   })).toMatchObject({
-    action: 'full-restart',
-    reason: 'Class D: working tree startup renderer changes detected'
+    action: 'renderer-reload-intent',
+    reason: 'Class A: working tree startup renderer changes detected'
   });
 });
 
@@ -155,12 +157,22 @@ it('uses renderer reload for renderer-only changes on trusted clients', () => {
   });
 });
 
-it('full restarts when the native preview controller changes', () => {
+it('does not restart the app when the native preview controller changes', () => {
   expect(selectNativePreviewAction({
     changedFiles: ['scripts/windows/windows-client-native-stop.mjs'],
     currentHead: 'abc123',
     status: parseWindowsClientStatus('[windows-restart-client] status: RUNNING trust=OK runtime_pid=501 head=abc123')
   })).toMatchObject({
-    action: 'full-restart'
+    action: 'sync-only'
   });
+});
+
+it('keeps the native preview wait longer than the client healthcheck by default', async () => {
+  const script = await import('node:fs/promises').then((fs) =>
+    fs.readFile(new URL('./windows-preview-native.mjs', import.meta.url), 'utf8')
+  );
+
+  expect(script).toContain("FOLIOLE_ELECTRON_HEALTHCHECK_MS ?? '60000'");
+  expect(script).toContain("WINDOWS_PREVIEW_TIMEOUT_MS ?? String(CLIENT_HEALTH_TIMEOUT_MS + 15000)");
+  expect(script).toContain('!trusted.ok &&');
 });

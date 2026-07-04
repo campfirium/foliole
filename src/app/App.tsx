@@ -42,7 +42,7 @@ function AppContent() {
   useReleaseUpdateCheck();
   const { isDemo } = useDemoRuntimeState();
   const { isReviewSchedulerSettingsReady } = useReviewSchedulerSettings();
-  const isAppReady = controller.layoutProps.layoutChrome.isWorkspaceHydrated && isReviewSchedulerSettingsReady;
+  const isAppReady = Boolean(controller.layoutProps.layoutChrome.isWorkspaceHydrated && isReviewSchedulerSettingsReady);
   const [hasReportedAppReady, setHasReportedAppReady] = useState(false);
   const handleGlobalCaptureNavigation = useCallback((nodeId: string) => {
     controller.layoutProps.imports.onCloseImportManagement();
@@ -54,6 +54,10 @@ function AppContent() {
     installWorkspaceDebugBridge();
     readPerformanceDiagnosticsProbe();
   }, []);
+  useReportAppReadyGate(isAppReady, {
+    isReviewSchedulerSettingsReady,
+    isWorkspaceHydrated: controller.layoutProps.layoutChrome.isWorkspaceHydrated
+  });
   useReportAppReadyWhenHydrated(isAppReady, setHasReportedAppReady);
   usePrewarmInteractiveSurfacesAfterReady(hasReportedAppReady, isDemo);
 
@@ -75,6 +79,18 @@ function AppContent() {
       </>
     </HotkeySettingsProvider>
   );
+}
+
+function useReportAppReadyGate(
+  isAppReady: boolean,
+  gate: { isReviewSchedulerSettingsReady: boolean; isWorkspaceHydrated: boolean | undefined }
+) {
+  useEffect(() => {
+    if (isAppReady) {
+      return;
+    }
+    reportRuntimeBootStage('app_ready_gate_pending', gate);
+  }, [gate.isReviewSchedulerSettingsReady, gate.isWorkspaceHydrated, isAppReady]);
 }
 
 function useReportAppReadyWhenHydrated(
@@ -184,17 +200,25 @@ interface AppProps {
 export function App({ initialLanguagePreference, providerBridge }: AppProps = {}) {
   useEffect(() => {
     let cancelled = false;
+    let didRequestHydration = false;
     let secondFrameId = 0;
+    const requestHydration = () => {
+      if (cancelled || didRequestHydration) {
+        return;
+      }
+      didRequestHydration = true;
+      void ensureWorkspaceHydrated();
+    };
     const firstFrameId = window.requestAnimationFrame(() => {
       secondFrameId = window.requestAnimationFrame(() => {
-        if (!cancelled) {
-          void ensureWorkspaceHydrated();
-        }
+        requestHydration();
       });
     });
+    const fallbackTimeoutId = window.setTimeout(requestHydration, 1000);
 
     return () => {
       cancelled = true;
+      window.clearTimeout(fallbackTimeoutId);
       window.cancelAnimationFrame(firstFrameId);
       window.cancelAnimationFrame(secondFrameId);
     };

@@ -4,12 +4,12 @@ import { fileURLToPath } from 'node:url';
 import { closeClientLogStreams, createClientLogStreams, printStartupLogTail } from './windows-client-native-logs.mjs';
 import { forceRestartClient } from './windows-client-native-force-restart.mjs';
 import { runCapture } from './windows-client-native-process.mjs';
-import { recoverClientStateFromReady } from './windows-client-native-recovered-state.mjs';
+import { recoverClientStateFromReady, recoverClientStateFromStatus } from './windows-client-native-recovered-state.mjs';
 import { restartRuntimeClient } from './windows-client-native-runtime-restart.mjs';
 import { removeShellRestartRequest } from './windows-client-native-shell-request.mjs';
 import { startNativeDevRunner } from './windows-client-native-start-runner.mjs';
 import { createStatusPrinter } from './windows-client-native-status.mjs';
-import { stopNativeClient } from './windows-client-native-stop.mjs';
+import { listRepoElectronPids, stopNativeClient } from './windows-client-native-stop.mjs';
 import { readNativeWindowHealth } from './windows-client-native-window-health.mjs';
 import { resolveWindowsClientAction } from './windows-client-native-actions.mjs';
 import * as nativeState from './windows-client-native-state.mjs';
@@ -94,10 +94,15 @@ async function startClient({ print = true } = {}) {
   const existing = await printStatus();
   if (existing.ok) {
     if (existing.ready.appReady.head === head) {
-      return { alreadyRunning: true, ready: existing.ready, state: existing.state };
+      await recoverClientStateFromReady({ currentHead, ready: existing.ready, saveState, state: existing.state });
+      return { alreadyRunning: true, ready: existing.ready, state: readClientState() };
     }
     await stopClient({ print: false });
   } else {
+    const repoElectronPids = await listRepoElectronPids(repoRoot);
+    if (repoElectronPids.length > 0) {
+      throw new Error(`untrusted repo runtime still running electron_pids=${repoElectronPids.join(',')}`);
+    }
     await stopClient({ print: false });
   }
   await resetMarkers();
@@ -194,7 +199,7 @@ async function main() {
   console.log(`[windows-client-native] action=${action}`);
   console.log(`[windows-client-native] workdir=${repoRoot}`);
   if (action === 'status') {
-    await printStatus();
+    await recoverClientStateFromStatus({ currentHead, saveState, status: await printStatus() });
   } else if (action === 'start') {
     await startClient();
   } else if (action === 'stop') {
