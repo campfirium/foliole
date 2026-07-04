@@ -70,7 +70,7 @@ describe('documentPanelSectionModel', () => {
     expect(hasVisibleTitleHeading('---\nauthor: Jane\n---\n# Node title\nBody', false)).toBe(true);
     expect(hasVisibleTitleHeading(' **# Node title**\nBody', false)).toBe(false);
     expect(hasVisibleTitleHeading('Node title\nBody', false)).toBe(false);
-    expect(hasVisibleTitleHeading('# Node title\nBody', true)).toBe(false);
+    expect(hasVisibleTitleHeading('# Node title\nBody', true)).toBe(true);
   });
 
   it('reserves title space for cards without a visible title heading', () => {
@@ -78,6 +78,7 @@ describe('documentPanelSectionModel', () => {
     expect(getDocumentPanelView(buildProps({ editorContent: '# Node 1\nBody' }), 'preview', 860).bodyProps.editorContentPaddingTop).toBeUndefined();
     expect(getDocumentPanelView(buildProps({ editorContent: '---\nauthor: Jane\n---\n# Node 1\nBody' }), 'preview', 860).bodyProps.editorContentPaddingTop).toBeUndefined();
     expect(getDocumentPanelView(buildProps({ editorContent: '**# Node 1**\nBody' }), 'preview', 860).bodyProps.editorContentPaddingTop).toBeUndefined();
+    expect(getDocumentPanelView(buildProps({ editorContent: '# Node 1\nBody', nodesById: { 'node-1': { ...baseNode, hideTitleHeading: true } } }), 'preview', 860).bodyProps.editorContentPaddingTop).toBeUndefined();
   });
 
   it('reserves title space for every node without a visible title heading', () => {

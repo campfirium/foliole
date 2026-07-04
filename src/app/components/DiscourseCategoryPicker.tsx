@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { appInputFocusVisibleClassName } from '../../shared/ui';
+import { appFloatingSurfaceClassName, appInputFocusVisibleClassName } from '../../shared/ui';
 
 import type { PublishFormState } from './discoursePublishDialogModel';
 import { categoryParts, orderedCategories, type Category } from './discoursePublishFieldUtils';
@@ -53,7 +53,7 @@ function CategoryPopover(props: {
   const t = useTranslation();
   const visibleCategories = props.categories.filter((category) => category.name.toLowerCase().includes(props.query.trim().toLowerCase()));
   return (
-    <div className="absolute left-0 top-full z-floating mt-1 w-full overflow-hidden rounded-lg border border-border bg-bg-elevated shadow-popover" role="listbox">
+    <div className={appFloatingSurfaceClassName('popover', 'absolute left-0 top-full z-floating mt-1 w-full overflow-hidden')} role="listbox">
       <div className="border-b border-border/60 px-3 py-2">
         <input
           aria-label={t('desktop.discoursePublish.category')}

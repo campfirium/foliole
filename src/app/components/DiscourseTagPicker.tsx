@@ -1,6 +1,7 @@
 import { useState, type KeyboardEvent } from 'react';
 
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
+import { appFloatingSurfaceClassName } from '../../shared/ui';
 
 import { toTags, type PublishFormState } from './discoursePublishDialogModel';
 import { addMissingTag, removeTag, type Tag } from './discoursePublishFieldUtils';
@@ -39,7 +40,7 @@ function AllTagsPanel(props: {
 }) {
   const t = useTranslation();
   return (
-    <div className="absolute left-0 top-full z-floating mt-1 w-full overflow-hidden rounded-lg border border-border bg-bg-elevated shadow-popover">
+    <div className={appFloatingSurfaceClassName('popover', 'absolute left-0 top-full z-floating mt-1 w-full overflow-hidden')}>
       <div className="border-b border-border/60 px-3 py-2">
         <input
           aria-label={t('desktop.discoursePublish.tags')}

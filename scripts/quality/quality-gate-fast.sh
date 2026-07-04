@@ -4,6 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/quality-gate-lib.sh"
 source "${SCRIPT_DIR}/quality-gate-fast-routing.sh"
+source "${SCRIPT_DIR}/quality-gate-fast-static-guards.sh"
 
 if [[ ! -f "package.json" ]]; then
   echo "[quality-gate-fast] package.json not found."
@@ -186,6 +187,8 @@ if quality_gate_should_print_step; then
   echo "[quality-gate-fast] selected level: ${level}"
 fi
 
+run_quality_gate_fast_t0_static_guards
+
 if [[ "${level}" == "full" ]]; then
   run_critical_tests_if_needed "${all_changed}"
   exec bash "${SCRIPT_DIR}/quality-gate-target.sh" full
@@ -206,33 +209,7 @@ if [[ "${level}" == "android" ]]; then
   exec bash "${SCRIPT_DIR}/quality-gate-target.sh" android
 fi
 
-if [[ -f "scripts/check-ui-copy-guard.mjs" ]]; then
-  run_quality_gate_script "quality-gate-fast" "${pm}" "copy:guard"
-fi
-
-if [[ -f "scripts/check-native-dialog-guard.mjs" ]]; then
-  run_quality_gate_script "quality-gate-fast" "${pm}" "native-dialog:guard"
-fi
-
-if [[ -f "scripts/check-windows-console-policy.mjs" ]]; then
-  run_quality_gate_script "quality-gate-fast" "${pm}" "windows:console:guard"
-fi
-
-if [[ -f "scripts/check-repository-root-boundary.mjs" ]]; then
-  run_quality_gate_command \
-    "quality-gate-fast" \
-    "repository-root-boundary" \
-    "repository root boundary" \
-    node scripts/check-repository-root-boundary.mjs
-fi
-
-if [[ -f "scripts/check-layer-dependency-boundary.mjs" ]]; then
-  run_quality_gate_command \
-    "quality-gate-fast" \
-    "layer-dependency-boundary" \
-    "layer dependency boundary" \
-    node scripts/check-layer-dependency-boundary.mjs
-fi
+run_quality_gate_fast_light_mid_static_guards
 if [[ -f "scripts/quality/quality-skip-lint.mjs" ]] && quality_skip_lint_changed_files_match "${all_changed}"; then
   run_quality_gate_command "quality-gate-fast" "quality-skip-lint" "quality skip lint" node scripts/quality/quality-skip-lint.mjs
 fi

@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { controlledElectronSqliteTests } from '../native-sqlite-test-policy.mjs';
-import { runNativeLightMidPlan } from './quality-fast-native-local-steps.mjs';
+import { resolveCappedTypecheckScripts, runNativeLightMidPlan } from './quality-fast-native-local-steps.mjs';
 import { npmRunCommand, resolveChangedFiles, runCapture } from './windows-preview-native-runtime.mjs';
 import { WINDOWS_NATIVE_REPO_ROOT } from './windows-native-paths.mjs';
 
@@ -156,20 +156,11 @@ function splitRelatedTests(tests) {
   return { electron, ordinary };
 }
 
-function resolveCappedTypecheckScripts(level) {
-  if (level === 'shared') {
-    return ['typecheck:shared'];
-  }
-  if (level === 'android') {
-    return ['typecheck:android'];
-  }
-  if (level === 'full') {
-    return ['typecheck:desktop', 'typecheck:shared', 'typecheck:android'];
-  }
-  return ['typecheck:desktop'];
-}
-
 async function runCappedHeavyPlan(plan, env = process.env, runner = runInherited) {
+  if (fs.existsSync(path.join(WINDOWS_NATIVE_REPO_ROOT, 'scripts/check-specialized-surface-usage.mjs'))) {
+    await runStep('specialized surface usage', process.execPath, ['scripts/check-specialized-surface-usage.mjs'], env, runner);
+  }
+
   if (plan.lintTargets.length > 0) {
     await runStep('scoped lint', process.execPath, [
       'node_modules/eslint/bin/eslint.js',

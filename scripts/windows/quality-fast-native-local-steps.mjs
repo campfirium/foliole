@@ -58,11 +58,25 @@ async function runRelatedTests(plan, env, runner, runStep, splitRelatedTests) {
   }
 }
 
+export function resolveCappedTypecheckScripts(level) {
+  if (level === 'shared') {
+    return ['typecheck:shared'];
+  }
+  if (level === 'android') {
+    return ['typecheck:android'];
+  }
+  if (level === 'full') {
+    return ['typecheck:desktop', 'typecheck:shared', 'typecheck:android'];
+  }
+  return ['typecheck:desktop'];
+}
+
 export async function runNativeLightMidPlan(plan, options) {
   const { env, runner, runStep, splitRelatedTests } = options;
   await runOptionalNpmScript('copy:guard', env, runner, runStep);
   await runOptionalNpmScript('native-dialog:guard', env, runner, runStep);
   await runOptionalNpmScript('windows:console:guard', env, runner, runStep);
+  await runOptionalNodeScript('specialized surface usage', 'scripts/check-specialized-surface-usage.mjs', env, runner, runStep);
   await runOptionalNodeScript('repository root boundary', 'scripts/check-repository-root-boundary.mjs', env, runner, runStep);
   await runOptionalNodeScript('layer dependency boundary', 'scripts/check-layer-dependency-boundary.mjs', env, runner, runStep);
   await runScopedLint(plan, env, runner, runStep);
