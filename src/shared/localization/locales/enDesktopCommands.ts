@@ -27,6 +27,7 @@ export const EN_DESKTOP_COMMAND_TRANSLATIONS = {
   'desktop.command.openGuidedSample': 'Open Guided Sample',
   'desktop.command.rename': 'Rename',
   'desktop.command.exportCurrentTopic': 'Export Current Topic',
+  'desktop.command.publishToDiscourse': 'Publish to Discourse',
   'desktop.command.mergeHighlights': 'Merge highlights',
   'desktop.command.highlightSelection': 'Highlight Selection',
   'desktop.command.clozeSelection': 'Cloze Selection',

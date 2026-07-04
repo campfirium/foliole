@@ -16,6 +16,7 @@ interface RunAppCommandActions {
   createTopic: () => void;
   enterPriorityMode: () => void;
   exportCurrentArticle: () => void | Promise<void>;
+  publishToDiscourse?: () => void | Promise<void>;
   findInTopic: () => void;
   mergeHighlightsIntoTopic: () => void | Promise<void>;
   createSelectionHighlight: () => void;
@@ -137,6 +138,7 @@ function createWorkspaceCommandHandlers(actions: RunAppCommandActions): Record<s
     [APP_COMMAND_IDS.openYouTubePlaylist]: actions.openYouTubePlaylist,
     [APP_COMMAND_IDS.openTrash]: actions.openTrash,
     [APP_COMMAND_IDS.exportCurrentArticle]: actions.exportCurrentArticle,
+    [APP_COMMAND_IDS.publishToDiscourse]: actions.publishToDiscourse ?? (() => false),
     [APP_COMMAND_IDS.enterPriorityMode]: actions.enterPriorityMode,
     [APP_COMMAND_IDS.findInTopic]: actions.findInTopic,
     [APP_COMMAND_IDS.mergeHighlightsIntoTopic]: actions.mergeHighlightsIntoTopic,

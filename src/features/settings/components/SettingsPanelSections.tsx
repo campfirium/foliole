@@ -21,6 +21,7 @@ import { SettingsExternalSearchSection } from './sections/SettingsExternalSearch
 import { SettingsGeneralSection } from './sections/SettingsGeneralSection';
 import { SettingsImportSection } from './sections/SettingsImportSection';
 import { SettingsMouseGesturesSection } from './sections/SettingsMouseGesturesSection';
+import { SettingsPublishingSection } from './sections/SettingsPublishingSection';
 import { SettingsRailSection } from './sections/SettingsRailSection';
 import { SettingsReviewSection } from './sections/SettingsReviewSection';
 import { SettingsWebLookupSection } from './sections/SettingsWebLookupSection';
@@ -173,6 +174,8 @@ export function SettingsCategoryContent(props: SettingsCategoryContentProps) {
       );
     case 'web-lookup':
       return <SettingsWebLookupSection />;
+    case 'publishing':
+      return <SettingsPublishingSection />;
     case 'appearance':
       return <SettingsAppearanceSection onEnterPreview={props.onEnterPreview} onSettingsBackdropTransparentChange={props.onSettingsBackdropTransparentChange} />;
     case 'rail':

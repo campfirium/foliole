@@ -29,6 +29,7 @@ export const ZH_HANS_DESKTOP_COMMAND_TRANSLATIONS: Partial<Record<TranslationKey
   'desktop.command.openGuidedSample': '打开引导样例',
   'desktop.command.rename': '重命名',
   'desktop.command.exportCurrentTopic': '导出当前主题',
+  'desktop.command.publishToDiscourse': '发布到 Discourse',
   'desktop.command.mergeHighlights': '合并高亮',
   'desktop.command.highlightSelection': '高亮所选内容',
   'desktop.command.clozeSelection': '挖空所选内容',

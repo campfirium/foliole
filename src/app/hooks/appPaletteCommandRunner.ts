@@ -21,6 +21,7 @@ interface PaletteCommandRunnerArgs extends PaletteHelpCommandRunnerArgs {
   repairTable: () => boolean;
   enterPriorityMode: () => void;
   exportCurrentArticle: () => Promise<boolean>;
+  publishToDiscourse: () => Promise<boolean>;
   findInTopic: () => void;
   mergeHighlightsIntoTopic: () => Promise<boolean>;
   exitReviewSession: () => void;
@@ -127,19 +128,9 @@ function createPaletteReviewCommandActions(args: PaletteCommandRunnerArgs, toggl
   };
 }
 
-function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleReviewMode: () => void) {
+function createPaletteEditorCommandActions(args: PaletteCommandRunnerArgs) {
   return {
-    ...createPaletteSettingsActions(args),
-    ...createPaletteReviewCommandActions(args, toggleReviewMode),
-    undo: () => args.undoWorkspaceAction(),
-    redo: () => args.redoWorkspaceAction(),
-    createFolder: args.createFolder,
-    createItem: args.createItem,
-    createSelectionCloze: args.createSelectionCloze,
-    createSelectionHighlight: args.createSelectionHighlight,
-    createTopic: args.createTopic,
     addSelectionNote: args.addSelectionNote,
-    repairTable: args.repairTable,
     enterPriorityMode: args.enterPriorityMode,
     exportCurrentArticle: () => {
       void args.exportCurrentArticle();
@@ -148,6 +139,25 @@ function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleRevie
     mergeHighlightsIntoTopic: () => {
       void args.mergeHighlightsIntoTopic();
     },
+    publishToDiscourse: () => {
+      void args.publishToDiscourse();
+    },
+    repairTable: args.repairTable
+  };
+}
+
+function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleReviewMode: () => void) {
+  return {
+    ...createPaletteSettingsActions(args),
+    ...createPaletteReviewCommandActions(args, toggleReviewMode),
+    ...createPaletteEditorCommandActions(args),
+    undo: () => args.undoWorkspaceAction(),
+    redo: () => args.redoWorkspaceAction(),
+    createFolder: args.createFolder,
+    createItem: args.createItem,
+    createSelectionCloze: args.createSelectionCloze,
+    createSelectionHighlight: args.createSelectionHighlight,
+    createTopic: args.createTopic,
     goBack: args.goBack,
     goForward: args.goForward,
     goToNode: () => args.setGoToNodePaletteOpen(true),

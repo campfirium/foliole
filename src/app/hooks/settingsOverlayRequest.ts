@@ -38,3 +38,9 @@ export function openCompanionSyncSettings(runtime: AppRuntime) {
   runtime.setRequestedSettingsCategory('companion-sync');
   runtime.setIsSettingsOpen(true);
 }
+
+export function openDiscoursePublishSettings(runtime: AppRuntime) {
+  runtime.setRequestedSettingsDialog(null);
+  runtime.setRequestedSettingsCategory('publishing');
+  runtime.setIsSettingsOpen(true);
+}

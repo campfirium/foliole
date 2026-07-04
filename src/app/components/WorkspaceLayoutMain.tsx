@@ -5,6 +5,7 @@ import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { definedProps } from '../../shared/lib/definedProps';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 
+import { DiscoursePublishDialogHost } from './DiscoursePublishDialogHost';
 import { selectImmersiveReadingModeSource } from './immersiveReadingModeSource';
 import { ImmersiveShortcutsOverlay } from './ImmersiveShortcutsOverlay';
 import { CLIPBOARD_IMPORT_REQUEST_EVENT, FILE_IMPORT_REQUEST_EVENT } from './importActivityRequests';
@@ -157,6 +158,7 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
       />
       {renderWorkspaceActivityNotice(clipboardImportNotice)}
       <WorkspaceRuntimeNotice />
+      <DiscoursePublishDialogHost />
       <ImmersiveShortcutsOverlay visible={layoutChrome.isImmersiveMode && !immersive.isImmersiveEditing && immersive.isShortcutsOverlayOpen} />
       <ImportSourceWorkspace
         onOpenChange={(open) => (open ? imports.onOpenImportManagement() : imports.onCloseImportManagement())}

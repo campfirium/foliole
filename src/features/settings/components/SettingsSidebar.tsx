@@ -13,6 +13,7 @@ import {
   PanelLeft,
   Pencil,
   RefreshCw,
+  Send,
   SlidersHorizontal,
   type LucideIcon
 } from 'lucide-react';
@@ -36,6 +37,7 @@ const CATEGORY_ICONS: Record<SettingsCategoryId, LucideIcon> = {
   appearance: Palette,
   editor: Pencil,
   'web-lookup': Globe2,
+  publishing: Send,
   review: ListChecks,
   rail: PanelLeft,
   hotkeys: Keyboard,

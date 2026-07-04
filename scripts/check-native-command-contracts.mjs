@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const CONTRACT_FILES = [
   'lib/platform/nativeContract.ts',
+  'lib/platform/nativeDiscoursePublishContract.ts',
   'lib/platform/nativeExternalSearchCommandMap.ts',
   'lib/platform/nativeImportCommandMap.ts',
   'lib/platform/nativeLocalFileCommandMap.ts',

@@ -71,6 +71,18 @@ function canMergeHighlightsIntoTopic(args: {
   return Boolean(activeNode && activeNode.kind === 'topic' && !activeNode.anchorLink);
 }
 
+function canPublishToDiscourse(args: {
+  activeNodeId: string | null;
+  isViewingTrashNode: boolean;
+  ws: Pick<ReturnType<typeof useWorkspaceSelectors>, 'nodesById' | 'trashedNodeIds'>;
+}) {
+  if (!args.activeNodeId || args.isViewingTrashNode || args.ws.trashedNodeIds.includes(args.activeNodeId)) {
+    return false;
+  }
+  const activeNode = args.ws.nodesById[args.activeNodeId];
+  return Boolean(activeNode && activeNode.kind === 'topic' && !activeNode.anchorLink);
+}
+
 function canReimportSelectedTopic(args: {
   activeNodeId: string | null;
   formalImportAvailable: boolean;
@@ -104,6 +116,19 @@ function canAnnotateSelection(args: {
     return false;
   }
   return args.ws.nodesById[args.activeNodeId]?.kind !== 'folder';
+}
+
+function buildEditorPaletteOptions(args: Parameters<typeof useAppPaletteItems>[0], canUseCurrentTopic: boolean) {
+  return {
+    canAnnotateSelection: canAnnotateSelection(args),
+    canExportCurrentArticle: canExportCurrentArticle(args),
+    canFindInCurrentTopic: canUseCurrentTopic,
+    canMergeHighlightsIntoTopic: canUseCurrentTopic,
+    canPublishToDiscourse: canPublishToDiscourse(args),
+    canRepairTable: canAnnotateSelection(args),
+    canSetNodePriority: Boolean(args.activeNodeId) && !args.isViewingTrashNode,
+    canToggleImmersiveMode: canToggleImmersiveMode(args)
+  };
 }
 
 export function resolveEditorAwarePaletteHistoryOptions(args: {
@@ -146,12 +171,9 @@ function buildPaletteOptions(
   });
   return {
     ...historyOptions,
-    canExportCurrentArticle: canExportCurrentArticle(args),
-    canAnnotateSelection: canAnnotateSelection(args),
+    ...buildEditorPaletteOptions(args, canUseCurrentTopic),
     canImportFile: args.formalImportAvailable,
     canImportFolder: args.formalImportAvailable,
-    canMergeHighlightsIntoTopic: canUseCurrentTopic,
-    canRepairTable: canAnnotateSelection(args),
     canRenameNode: Boolean(args.activeNodeId) && !args.isViewingTrashNode,
     canReimportSelectedTopic: canReimportSelectedTopic(args),
     canResetImportData: args.formalImportAvailable,
@@ -161,9 +183,6 @@ function buildPaletteOptions(
     canGoToNode: hasNavigableNodes,
     canMoveToNode,
     canGoParent: args.nav.canGoParent,
-    canFindInCurrentTopic: canUseCurrentTopic,
-    canToggleImmersiveMode: canToggleImmersiveMode(args),
-    canSetNodePriority: Boolean(args.activeNodeId) && !args.isViewingTrashNode,
     canRevealAnswer: args.hasReviewCard && args.isCurrentReviewItemGradable && !args.reviewSession.isAnswerRevealed,
     canToggleReviewMode: args.isStudyMode || args.study.canStartStudyMode,
     canGradeReview: args.hasReviewCard && args.isCurrentReviewItemGradable && args.reviewSession.isAnswerRevealed,

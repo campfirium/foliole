@@ -9,6 +9,12 @@ import {
   summarizeSourceDispositions
 } from '../database/sourceDispositionStates.js';
 import { loadSyncPeers, saveSyncPeers } from '../database/syncPeers.js';
+import {
+  loadDiscoursePublishCatalog,
+  loadDiscoursePublishSettings,
+  publishTopicToDiscourse,
+  saveDiscoursePublishSettings
+} from '../discourse/discoursePublish.js';
 import { loadImportManagerSettings, saveImportManagerSettings } from '../import/importManagerSettings.js';
 import { refreshKeepImportMonitorFromSettings } from '../import/keepImportMonitor.js';
 import { refreshManagedInboxMonitorFromSettings } from '../import/managedInboxMonitor.js';
@@ -106,6 +112,16 @@ export async function handleSettingsStorageCommand(
   if (command === NATIVE_COMMANDS.rebuildMirrorOutput) return rebuildMirrorOutput();
   if (command === NATIVE_COMMANDS.rebuildMirrorAttachmentLinks) return rebuildMirrorAttachmentLinks();
   if (command === NATIVE_COMMANDS.exportCurrentArticleMirror) return exportCurrentArticleMirror(asString(args.node_id, 'node_id'), window);
+  if (command === NATIVE_COMMANDS.loadDiscoursePublishSettings) return loadDiscoursePublishSettings();
+  if (command === NATIVE_COMMANDS.loadDiscoursePublishCatalog) {
+    return loadDiscoursePublishCatalog(readSettingsObject(args) as Parameters<typeof loadDiscoursePublishCatalog>[0]);
+  }
+  if (command === NATIVE_COMMANDS.saveDiscoursePublishSettings) {
+    return saveDiscoursePublishSettings(readSettingsObject(args.settings) as unknown as Parameters<typeof saveDiscoursePublishSettings>[0]);
+  }
+  if (command === NATIVE_COMMANDS.publishTopicToDiscourse) {
+    return publishTopicToDiscourse(readSettingsObject(args) as unknown as Parameters<typeof publishTopicToDiscourse>[0]);
+  }
   if (command === NATIVE_COMMANDS.updateLibraryPathSetting) {
     return handleLibraryPathUpdateCommand(args);
   }

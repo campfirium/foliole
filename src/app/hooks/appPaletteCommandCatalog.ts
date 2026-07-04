@@ -18,6 +18,7 @@ export interface BuildAppPaletteItemsOptions extends ReviewPaletteCommandOptions
   canRedoWorkspaceAction: boolean;
   canUndoWorkspaceAction: boolean;
   canExportCurrentArticle: boolean;
+  canPublishToDiscourse?: boolean;
   canImportFile: boolean;
   canImportFolder: boolean;
   canMergeHighlightsIntoTopic: boolean;
@@ -109,6 +110,9 @@ function isImportCommandEnabled(id: string) {
 function isEditorCommandEnabled(id: string, options: BuildAppPaletteItemsOptions) {
   if (id === APP_COMMAND_IDS.exportCurrentArticle) {
     return options.canExportCurrentArticle;
+  }
+  if (id === APP_COMMAND_IDS.publishToDiscourse) {
+    return Boolean(options.canPublishToDiscourse);
   }
   if (id === APP_COMMAND_IDS.mergeHighlightsIntoTopic) {
     return options.canMergeHighlightsIntoTopic;
