@@ -1,12 +1,14 @@
 import type { ReactNode } from 'react';
 
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
+import { openImportRoot } from '../../../../shared/platform/runtimeExternalNavigation';
 import {
   ObjectConfigPathControl,
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
   SettingsControlSlot,
   SettingsLoadingState,
-  SettingsRow
+  SettingsRow,
+  settingsButtonClassName
 } from '../../../../shared/ui';
 import {
   settingsSearchRowProps,
@@ -24,6 +26,7 @@ export function getLibraryRows(t: ReturnType<typeof useTranslation>) {
   );
   return {
     assets: rows.get('library-assets')!,
+    importRoot: rows.get('library-import-root')!,
     inbox: rows.get('library-inbox')!,
     libraryHome: rows.get('library-home')!,
     mirror: rows.get('library-mirror')!,
@@ -98,7 +101,63 @@ function LibraryPathLoadingRows() {
   return <SettingsLoadingState />;
 }
 
-function LibraryAvailablePathRows(props: SettingsImportSectionProps) {
+function ImportRootOpenRow(props: {
+  isDesktopRuntime: boolean;
+  searchRow: SettingsSearchRowMeta;
+}) {
+  const t = useTranslation();
+
+  return (
+    <SettingsRow
+      {...settingsSearchRowProps(props.searchRow)}
+      description={t('settings.library.importRoot.description')}
+      title={props.searchRow.title}
+    >
+      <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
+        <button
+          aria-label={t('settings.library.importRoot.openAria')}
+          className={settingsButtonClassName()}
+          disabled={!props.isDesktopRuntime}
+          onClick={() => void openImportRoot()}
+          type="button"
+        >
+          {t('settings.library.importRoot.open')}
+        </button>
+      </SettingsControlSlot>
+    </SettingsRow>
+  );
+}
+
+function ImportAvailablePathRows(props: SettingsImportSectionProps) {
+  const t = useTranslation();
+  const libraryRow = getLibraryRows(t);
+
+  return (
+    <>
+      <LibraryLocationRow
+        description={t('settings.library.inbox.description')}
+        errorMessage={props.errorByLocation.inbox}
+        isDesktopRuntime={props.isDesktopRuntime}
+        isPending={props.pendingLocation === 'inbox'}
+        location="inbox"
+        onChangeLocation={props.onChangeLocation}
+        onRestoreDefault={props.onRestoreDefault}
+        path={props.inboxPath}
+        searchRow={libraryRow.inbox}
+        title={libraryRow.inbox.title}
+      />
+      <ImportRootOpenRow
+        isDesktopRuntime={props.isDesktopRuntime}
+        searchRow={libraryRow.importRoot}
+      />
+      {!props.isDesktopRuntime ? (
+        <p className="text-sm text-foreground/60">{t('settings.library.desktopRequired')}</p>
+      ) : null}
+    </>
+  );
+}
+
+function StorageAvailablePathRows(props: SettingsImportSectionProps) {
   const t = useTranslation();
   const libraryRow = getLibraryRows(t);
 
@@ -128,21 +187,6 @@ function LibraryAvailablePathRows(props: SettingsImportSectionProps) {
         searchRow={libraryRow.assets}
         title={libraryRow.assets.title}
       />
-      <LibraryLocationRow
-        description={t('settings.library.inbox.description')}
-        errorMessage={props.errorByLocation.inbox}
-        isDesktopRuntime={props.isDesktopRuntime}
-        isPending={props.pendingLocation === 'inbox'}
-        location="inbox"
-        onChangeLocation={props.onChangeLocation}
-        onRestoreDefault={props.onRestoreDefault}
-        path={props.inboxPath}
-        searchRow={libraryRow.inbox}
-        title={libraryRow.inbox.title}
-      />
-      {!props.isDesktopRuntime ? (
-        <p className="text-sm text-foreground/60">{t('settings.library.desktopRequired')}</p>
-      ) : null}
       <MirrorLocationRow
         errorMessage={props.errorByLocation.mirror}
         isDesktopRuntime={props.isDesktopRuntime}
@@ -158,9 +202,16 @@ function LibraryAvailablePathRows(props: SettingsImportSectionProps) {
   );
 }
 
+export function ImportPathRows(props: SettingsImportSectionProps) {
+  if (props.isLoadingLibraryPaths) {
+    return <LibraryPathLoadingRows />;
+  }
+  return <ImportAvailablePathRows {...props} />;
+}
+
 export function LibraryPathRows(props: SettingsImportSectionProps) {
   if (props.isLoadingLibraryPaths) {
     return <LibraryPathLoadingRows />;
   }
-  return <LibraryAvailablePathRows {...props} />;
+  return <StorageAvailablePathRows {...props} />;
 }

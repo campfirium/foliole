@@ -65,3 +65,20 @@ export async function openLocalPath(targetPath: string) {
     });
   }
 }
+
+export async function openImportRoot() {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) return;
+
+  try {
+    await runtimeInvoke(NATIVE_COMMANDS.openImportRoot);
+  } catch (error) {
+    logRuntimeWarning('native Import folder open failed', {
+      area: 'bridge',
+      action: 'open_import_root',
+      command: NATIVE_COMMANDS.openImportRoot,
+      fallback: 'skip_open',
+      error
+    });
+  }
+}

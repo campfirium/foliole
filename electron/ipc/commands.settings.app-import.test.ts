@@ -2,7 +2,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { handleInvokeRequest, resetCommandsSettingsTestDoubles } from './commands.settings.testSupport.js';
-import { updateLibraryPathSetting } from './libraryPaths.js';
+import { openImportRoot, updateLibraryPathSetting } from './libraryPaths.js';
 
 const RELEASE_GATE_TEST_TIMEOUT_MS = 30_000;
 
@@ -17,6 +17,8 @@ async function expectLibraryPathCommands() {
     inbox: '/library/Inbox',
     mirror: '/library/Mirror'
   });
+  await expect(handleInvokeRequest({ command: 'open_import_root' })).resolves.toBeNull();
+  expect(openImportRoot).toHaveBeenCalledOnce();
   await expect(handleInvokeRequest({ command: 'rebuild_mirror_output' })).resolves.toMatchObject({
     queued_article_count: 2,
     rebuilt_article_count: 2,

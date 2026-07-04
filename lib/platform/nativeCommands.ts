@@ -7,6 +7,7 @@ export const NATIVE_COMMANDS = {
   loadPerformanceMemorySnapshot: 'load_performance_memory_snapshot',
   openExternalUrl: 'open_external_url',
   openLocalPath: 'open_local_path',
+  openImportRoot: 'open_import_root',
   inspectReadwiseReaderSetup: 'inspect_readwise_reader_setup',
   previewReadwiseReaderImport: 'preview_readwise_reader_import',
   runReadwiseReaderImport: 'run_readwise_reader_import',

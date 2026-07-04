@@ -156,6 +156,7 @@ const SYNC_MUTATION_COMMANDS = [
 
 const FILESYSTEM_OPEN_COMMANDS = [
   NATIVE_COMMANDS.openLocalPath,
+  NATIVE_COMMANDS.openImportRoot,
   NATIVE_COMMANDS.openExternalDocumentFile
 ] as const satisfies readonly NativeCommandName[];
 

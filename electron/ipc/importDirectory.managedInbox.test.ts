@@ -24,8 +24,12 @@ const { trashItem } = vi.hoisted(() => ({
   })
 }));
 const { notifyManagedInboxUpdated } = vi.hoisted(() => ({ notifyManagedInboxUpdated: vi.fn() }));
+const { resolveManagedImportTargetParentNodeId } = vi.hoisted(() => ({
+  resolveManagedImportTargetParentNodeId: vi.fn(() => 'node-memo')
+}));
 
 vi.mock('../database/importPipeline.js', () => ({ recordPreparedImportFailure, runPreparedImport }));
+vi.mock('../import/importFolderTargets.js', () => ({ resolveManagedImportTargetParentNodeId }));
 vi.mock('../import/importRunLogger.js', () => ({ logDirectoryImportCompleted, logDirectoryImportFailed }));
 vi.mock('./paths.js', () => ({ resolveAppPaths }));
 vi.mock('./libraryPaths.js', () => ({ loadLibraryPathSettings, loadLibraryPathSettingsSync }));
@@ -36,7 +40,7 @@ vi.mock('electron', () => ({
   shell: { trashItem }
 }));
 
-import { runDirectoryImport } from './importDirectory.js';
+import { runDirectoryImport, runManagedInboxImport } from './importDirectory.js';
 import { createPersistedRecord, createTempRoot } from './importDirectory.test-support.js';
 
 const tempRoots: string[] = [];
@@ -107,4 +111,39 @@ it('resolves the managed inbox folder from runtime settings and trashes only imp
     expect.objectContaining({ failed_count: 1, source_adapter: 'foliole_managed_inbox_folder' })
   );
   expect(notifyManagedInboxUpdated.mock.calls[0]?.[0]).toEqual(expect.any(String));
+});
+
+it('imports from Import subfolders without deleting the folder or prefixing source names', async () => {
+  const appDataDir = await createTempRoot('managed-import-root-runtime', tempRoots);
+  const importRoot = path.join(appDataDir, 'Import');
+  const memoDir = path.join(importRoot, 'Memo');
+  const importedPath = path.join(memoDir, 'memo.md');
+  resolveAppPaths.mockReturnValue({
+    app_cache_dir: path.join(appDataDir, 'cache'),
+    app_config_dir: path.join(appDataDir, 'config'),
+    app_data_dir: appDataDir,
+    app_log_dir: path.join(appDataDir, 'logs')
+  });
+  loadLibraryPathSettings.mockResolvedValue({
+    inbox: path.join(importRoot, 'Inbox'),
+    library_home: appDataDir,
+    mirror: path.join(appDataDir, 'Mirror')
+  });
+  await fs.mkdir(memoDir, { recursive: true });
+  await fs.writeFile(importedPath, '# Memo title', 'utf8');
+
+  const result = await runManagedInboxImport(importRoot, { importRootPath: importRoot });
+
+  expect(result).toEqual(expect.objectContaining({ consumed_count: 1, discovered_count: 1 }));
+  expect(result.entries[0]).toEqual(expect.objectContaining({
+    result_status: 'imported',
+    source_name: 'memo.md'
+  }));
+  expect(runPreparedImport.mock.calls[0]?.[0]).toEqual(expect.objectContaining({
+    sourceName: 'memo.md'
+  }));
+  await expect(fs.stat(importedPath)).rejects.toThrow();
+  const memoDirStats = await fs.stat(memoDir);
+  expect(memoDirStats.isDirectory()).toBe(true);
+  expect(trashItem).toHaveBeenCalledWith(importedPath);
 });

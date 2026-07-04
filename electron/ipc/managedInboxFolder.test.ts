@@ -81,6 +81,31 @@ it('moves imported managed inbox files to trash while leaving failed sources beh
   expect(result).toEqual({ archiveRootPath: null, consumedCount: 1 });
 });
 
+it('keeps user-created Import folders when consuming imported files', async () => {
+  const appDataDir = await createTempRoot('managed-import-clear');
+  const { archiveRootPath, rootPath } = resolveManagedInboxPaths(appDataDir);
+  const memoDir = path.join(rootPath, 'Memo');
+  const importedPath = path.join(memoDir, 'note.md');
+  await fs.mkdir(memoDir, { recursive: true });
+  await fs.writeFile(importedPath, '# Imported', 'utf8');
+
+  const result = await applyManagedInboxConsumePolicy(
+    [{ result_status: 'imported', source_locator: importedPath }],
+    {
+      archiveRootPath,
+      importedAt: '2026-03-22T12:00:00.000Z',
+      policy: 'clear',
+      pruneEmptyDirectories: false,
+      rootPath
+    }
+  );
+
+  await expect(fs.stat(importedPath)).rejects.toThrow();
+  const memoDirStats = await fs.stat(memoDir);
+  expect(memoDirStats.isDirectory()).toBe(true);
+  expect(result).toEqual({ archiveRootPath: null, consumedCount: 1 });
+});
+
 it('archives imported managed inbox files with preserved relative paths', async () => {
   const appDataDir = await createTempRoot('managed-inbox-archive');
   const { archiveRootPath, rootPath } = resolveManagedInboxPaths(appDataDir);

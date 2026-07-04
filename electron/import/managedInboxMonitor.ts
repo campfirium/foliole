@@ -3,12 +3,11 @@ import fs from 'node:fs';
 import type { NativeDirectoryImportResult } from '../../lib/platform/nativeContract.js';
 import type { NativeNodeMutationPatchResult } from '../../lib/platform/nativeContract.js';
 import { runManagedInboxImport } from '../ipc/importDirectory.js';
-import { loadLibraryPathSettings } from '../ipc/libraryPaths.js';
-import { ensureManagedInboxRoot, resolveManagedInboxPaths } from '../ipc/managedInboxFolder.js';
-import { resolveAppPaths } from '../ipc/paths.js';
+import { ensureManagedInboxRoot } from '../ipc/managedInboxFolder.js';
 
 import { submitImportMonitorTask } from './importMonitorTaskScheduler.js';
 import { notifyManagedInboxUpdated } from './managedInboxEvents.js';
+import { areSameManagedInboxRootSpecs, loadConfiguredManagedInboxRootPaths, type ManagedInboxRootSpec } from './managedInboxRoots.js';
 
 interface ManagedInboxWatchHandle {
   close(): void;
@@ -17,10 +16,10 @@ interface ManagedInboxWatchHandle {
 interface ManagedInboxMonitorDeps {
   debounceMs: number;
   ensureRoot(rootPath: string): Promise<void>;
-  loadConfiguredRootPath(): Promise<string>;
+  loadConfiguredRootPaths(): Promise<ManagedInboxRootSpec[]>;
   logError(message: string, error: unknown): void;
   notifyUpdate(importId: string, nodeMutationPatch?: NativeNodeMutationPatchResult | null): void;
-  runImport(rootPath: string): Promise<NativeDirectoryImportResult>;
+  runImport(rootPath: string, options?: { importRootPath?: string }): Promise<NativeDirectoryImportResult>;
   watch(rootPath: string, listener: () => void): ManagedInboxWatchHandle;
 }
 
@@ -28,10 +27,6 @@ export interface ManagedInboxMonitor {
   refreshFromSettings(): Promise<void>;
   start(): Promise<void>;
   stop(): void;
-}
-
-async function loadConfiguredManagedInboxRootPath() {
-  return resolveManagedInboxPaths(resolveAppPaths().app_data_dir, (await loadLibraryPathSettings()).inbox).rootPath;
 }
 
 function watchManagedInboxDirectory(rootPath: string, listener: () => void): ManagedInboxWatchHandle {
@@ -56,7 +51,7 @@ function createDefaultManagedInboxMonitorDeps(): ManagedInboxMonitorDeps {
   return {
     debounceMs: 250,
     ensureRoot: ensureManagedInboxRoot,
-    loadConfiguredRootPath: loadConfiguredManagedInboxRootPath,
+    loadConfiguredRootPaths: loadConfiguredManagedInboxRootPaths,
     logError(message, error) {
       console.error(message, error);
     },
@@ -67,22 +62,22 @@ function createDefaultManagedInboxMonitorDeps(): ManagedInboxMonitorDeps {
 }
 
 interface ManagedInboxMonitorState {
-  currentRootPath: string | null;
+  currentRootPaths: string[];
   debounceTimer: ReturnType<typeof setTimeout> | null;
   importInFlight: boolean;
   rerunRequested: boolean;
   started: boolean;
-  watcher: ManagedInboxWatchHandle | null;
+  watchers: ManagedInboxWatchHandle[];
 }
 
 function createManagedInboxMonitorState(): ManagedInboxMonitorState {
   return {
-    currentRootPath: null,
+    currentRootPaths: [],
     debounceTimer: null,
     importInFlight: false,
     rerunRequested: false,
     started: false,
-    watcher: null
+    watchers: []
   };
 }
 
@@ -95,8 +90,8 @@ function clearScheduledRun(state: ManagedInboxMonitorState) {
 }
 
 function closeWatcher(state: ManagedInboxMonitorState) {
-  state.watcher?.close();
-  state.watcher = null;
+  state.watchers.forEach((watcher) => watcher.close());
+  state.watchers = [];
 }
 
 function requestRerun(state: ManagedInboxMonitorState) {
@@ -117,32 +112,34 @@ function resolveLatestWorkspaceImportId(result: NativeDirectoryImportResult) {
   return null;
 }
 
-async function ensureWatcher(
+async function ensureWatchers(
   deps: ManagedInboxMonitorDeps,
   state: ManagedInboxMonitorState,
   scheduleRun: () => void,
-  rootPath: string
+  rootSpecs: ManagedInboxRootSpec[]
 ) {
-  if (state.currentRootPath === rootPath && state.watcher) {
+  if (areSameManagedInboxRootSpecs(state.currentRootPaths, rootSpecs) && state.watchers.length === rootSpecs.length) {
     return;
   }
   closeWatcher(state);
-  state.currentRootPath = rootPath;
-  await deps.ensureRoot(rootPath);
-  state.watcher = deps.watch(rootPath, () => {
-    if (state.importInFlight) {
-      requestRerun(state);
-      return;
-    }
-    scheduleRun();
-  });
+  state.currentRootPaths = rootSpecs.map((spec) => spec.rootPath);
+  for (const spec of rootSpecs) {
+    await deps.ensureRoot(spec.rootPath);
+    state.watchers.push(deps.watch(spec.rootPath, () => {
+      if (state.importInFlight) {
+        requestRerun(state);
+        return;
+      }
+      scheduleRun();
+    }));
+  }
 }
 
 async function runImportCycle(
   deps: ManagedInboxMonitorDeps,
   state: ManagedInboxMonitorState,
   scheduleRun: () => void,
-  initialRootPath?: string
+  initialRootSpecs?: ManagedInboxRootSpec[]
 ) {
   if (!state.started) {
     return;
@@ -153,16 +150,21 @@ async function runImportCycle(
   }
   state.importInFlight = true;
   try {
-    let nextRootPath = initialRootPath ?? null;
+    let nextRootSpecs = initialRootSpecs ?? null;
     do {
       state.rerunRequested = false;
-      const rootPath = nextRootPath ?? (await deps.loadConfiguredRootPath());
-      nextRootPath = null;
-      await ensureWatcher(deps, state, scheduleRun, rootPath);
-      const result = await deps.runImport(rootPath);
-      const latestImportId = resolveLatestWorkspaceImportId(result);
-      if (latestImportId) {
-        deps.notifyUpdate(latestImportId, result.node_mutation_patch);
+      const rootSpecs = nextRootSpecs ?? (await deps.loadConfiguredRootPaths());
+      nextRootSpecs = null;
+      await ensureWatchers(deps, state, scheduleRun, rootSpecs);
+      for (const spec of rootSpecs) {
+        const result = await deps.runImport(
+          spec.rootPath,
+          spec.importRootPath ? { importRootPath: spec.importRootPath } : undefined
+        );
+        const latestImportId = resolveLatestWorkspaceImportId(result);
+        if (latestImportId) {
+          deps.notifyUpdate(latestImportId, result.node_mutation_patch);
+        }
       }
     } while (state.rerunRequested && state.started);
   } catch (error) {
@@ -199,10 +201,10 @@ export function createManagedInboxMonitor(
     if (!state.started) {
       return;
     }
-    const rootPath = await deps.loadConfiguredRootPath();
-    await ensureWatcher(deps, state, () => scheduleRun(), rootPath);
+    const rootSpecs = await deps.loadConfiguredRootPaths();
+    await ensureWatchers(deps, state, () => scheduleRun(), rootSpecs);
     clearScheduledRun(state);
-    await runImportCycle(deps, state, () => scheduleRun(), rootPath);
+    await runImportCycle(deps, state, () => scheduleRun(), rootSpecs);
   }
 
   return {
@@ -218,7 +220,7 @@ export function createManagedInboxMonitor(
       state.started = false;
       clearScheduledRun(state);
       closeWatcher(state);
-      state.currentRootPath = null;
+      state.currentRootPaths = [];
       state.rerunRequested = false;
     }
   };

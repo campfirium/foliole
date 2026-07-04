@@ -4,6 +4,7 @@ export const LIBRARY_HOME_DEFAULT_DIRNAME = 'Foliole';
 export const LIBRARY_DATA_DIRNAME = 'Data';
 export const LIBRARY_DATABASE_FILENAME = 'foliole.db';
 export const LIBRARY_ASSETS_DIRNAME = 'Assets';
+export const LIBRARY_IMPORT_DIRNAME = 'Import';
 export const LIBRARY_INBOX_DIRNAME = 'Inbox';
 export const LIBRARY_MIRROR_DIRNAME = 'Mirror';
 
@@ -56,13 +57,25 @@ export function resolveDefaultLibraryHome(documentsPath: string) {
   return path.join(documentsPath, LIBRARY_HOME_DEFAULT_DIRNAME);
 }
 
+export function resolveDefaultImportRoot(libraryHome: string) {
+  return path.join(libraryHome, LIBRARY_IMPORT_DIRNAME);
+}
+
+export function resolveDefaultInboxPath(libraryHome: string) {
+  return path.join(resolveDefaultImportRoot(libraryHome), LIBRARY_INBOX_DIRNAME);
+}
+
+export function resolveLegacyDefaultInboxPath(libraryHome: string) {
+  return path.join(libraryHome, LIBRARY_INBOX_DIRNAME);
+}
+
 export function resolveLibraryPaths(
   documentsPath: string,
   overrides: Partial<LibraryPathOverrides> = {}
 ): ResolvedLibraryPaths {
   const libraryHome = normalizeLibraryPath(overrides.library_home) ?? resolveDefaultLibraryHome(documentsPath);
   const assetsDir = normalizeLibraryPath(overrides.assets_dir) ?? path.join(libraryHome, LIBRARY_ASSETS_DIRNAME);
-  const inbox = normalizeLibraryPath(overrides.inbox) ?? path.join(libraryHome, LIBRARY_INBOX_DIRNAME);
+  const inbox = normalizeLibraryPath(overrides.inbox) ?? resolveDefaultInboxPath(libraryHome);
   const mirror = normalizeLibraryPath(overrides.mirror) ?? path.join(libraryHome, LIBRARY_MIRROR_DIRNAME);
   const dataDir = path.join(libraryHome, LIBRARY_DATA_DIRNAME);
   return {

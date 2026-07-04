@@ -11,11 +11,15 @@ let mockedAppConfigDir = '/config';
 const { loadAppSettingsState } = vi.hoisted(() => ({
   loadAppSettingsState: vi.fn()
 }));
+const electronShell = vi.hoisted(() => ({
+  openPath: vi.fn()
+}));
 const settingsStore = vi.hoisted(() => ({
   loadJsonSetting: vi.fn(),
   saveJsonSetting: vi.fn()
 }));
 
+vi.mock('electron', () => ({ shell: electronShell }));
 vi.mock('./paths.js', () => ({
   resolveAppPaths: () => ({
     app_cache_dir: '/cache',
@@ -48,6 +52,8 @@ beforeEach(async () => {
   settingsStore.saveJsonSetting.mockImplementation((_key, payload) => {
     settingsStore.loadJsonSetting.mockReturnValue(payload);
   });
+  electronShell.openPath.mockReset();
+  electronShell.openPath.mockResolvedValue('');
 });
 
 afterEach(async () => {
@@ -69,7 +75,7 @@ it('loads default library paths under Documents/Foliole with internal Data and A
     assets_dir: path.join(mockedDocumentsDir, 'Foliole', 'Assets'),
     data_dir: path.join(mockedDocumentsDir, 'Foliole', 'Data'),
     database_path: path.join(mockedDocumentsDir, 'Foliole', 'Data', 'foliole.db'),
-    inbox: path.join(mockedDocumentsDir, 'Foliole', 'Inbox'),
+    inbox: path.join(mockedDocumentsDir, 'Foliole', 'Import', 'Inbox'),
     library_home: path.join(mockedDocumentsDir, 'Foliole'),
     mirror: path.join(mockedDocumentsDir, 'Foliole', 'Mirror'),
     updated_at: '1970-01-01T00:00:00.000Z'
@@ -137,11 +143,11 @@ it('rejects non-object stored library path settings on async and sync loads', as
   await writeStoredLibraryPathSettings(['not', 'settings']);
 
   await expect(loadLibraryPathSettings()).resolves.toMatchObject({
-    inbox: path.join(mockedDocumentsDir, 'Foliole', 'Inbox'),
+    inbox: path.join(mockedDocumentsDir, 'Foliole', 'Import', 'Inbox'),
     library_home: path.join(mockedDocumentsDir, 'Foliole')
   });
   expect(loadLibraryPathSettingsSync()).toMatchObject({
-    inbox: path.join(mockedDocumentsDir, 'Foliole', 'Inbox'),
+    inbox: path.join(mockedDocumentsDir, 'Foliole', 'Import', 'Inbox'),
     library_home: path.join(mockedDocumentsDir, 'Foliole')
   });
 });

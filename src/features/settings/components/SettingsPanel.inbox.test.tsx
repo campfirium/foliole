@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { selectRuntimeFolder } from '../../../shared/platform/folderSelectionRuntimeRepository';
@@ -49,11 +49,22 @@ const defaultLibraryPaths = {
   assetsDir: 'C:\\Users\\Tester\\Documents\\Foliole\\Assets',
   dataDir: 'C:\\Users\\Tester\\Documents\\Foliole\\Data',
   databasePath: 'C:\\Users\\Tester\\Documents\\Foliole\\Data\\foliole.db',
-  inbox: 'C:\\Users\\Tester\\Documents\\Foliole\\Inbox',
+  inbox: 'C:\\Users\\Tester\\Documents\\Foliole\\Import\\Inbox',
   libraryHome: 'C:\\Users\\Tester\\Documents\\Foliole',
   mirror: 'C:\\Users\\Tester\\Documents\\Foliole\\Mirror',
   updatedAt: '2026-03-30T00:00:00.000Z'
 };
+let currentLibraryPaths = defaultLibraryPaths;
+
+function clickChangeForPath(pathTitle: string) {
+  fireEvent.click(screen.getByTitle(pathTitle));
+}
+
+function clickRestoreForPath(pathTitle: string) {
+  const control = screen.getByTitle(pathTitle).closest('[data-settings-path-control]');
+  expect(control).not.toBeNull();
+  fireEvent.click(within(control as HTMLElement).getByRole('button', { name: 'Restore default' }));
+}
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -61,7 +72,8 @@ beforeEach(() => {
   mockedListAvailableSystemFonts.mockReset();
   mockedListAvailableSystemFonts.mockResolvedValue({ fonts: [], monospaceFonts: [] });
   mockedLoadRuntimeLibraryPathSettings.mockReset();
-  mockedLoadRuntimeLibraryPathSettings.mockResolvedValue(defaultLibraryPaths);
+  currentLibraryPaths = defaultLibraryPaths;
+  mockedLoadRuntimeLibraryPathSettings.mockImplementation(async () => currentLibraryPaths);
   mockedRebuildRuntimeMirrorAttachmentLinks.mockReset();
   mockedRebuildRuntimeMirrorAttachmentLinks.mockResolvedValue({
     scannedDocumentCount: 2,
@@ -81,26 +93,30 @@ beforeEach(() => {
   mockedUpdateRuntimeLibraryPathSetting.mockImplementation(async (location, nextPath) => {
     if (location === 'library_home') {
       const libraryHome = nextPath ?? defaultLibraryPaths.libraryHome;
-      return {
-        ...defaultLibraryPaths,
+      currentLibraryPaths = {
+        ...currentLibraryPaths,
         assetsDir: `${libraryHome}\\Assets`,
         dataDir: `${libraryHome}\\Data`,
         databasePath: `${libraryHome}\\Data\\foliole.db`,
-        inbox: `${libraryHome}\\Inbox`,
+        inbox: `${libraryHome}\\Import\\Inbox`,
         libraryHome,
         mirror: `${libraryHome}\\Mirror`
       };
+      return currentLibraryPaths;
     }
     if (location === 'assets_dir') {
-      return {
-        ...defaultLibraryPaths,
+      currentLibraryPaths = {
+        ...currentLibraryPaths,
         assetsDir: nextPath ?? defaultLibraryPaths.assetsDir
       };
+      return currentLibraryPaths;
     }
-    return {
-      ...defaultLibraryPaths,
-      [location === 'inbox' ? 'inbox' : 'mirror']: nextPath ?? defaultLibraryPaths[location === 'inbox' ? 'inbox' : 'mirror']
+    currentLibraryPaths = {
+      ...currentLibraryPaths,
+      [location === 'inbox' ? 'inbox' : 'mirror']:
+        nextPath ?? defaultLibraryPaths[location === 'inbox' ? 'inbox' : 'mirror']
     };
+    return currentLibraryPaths;
   });
   mockedSelectRuntimeFolder.mockReset();
   mockedSelectRuntimeFolder.mockResolvedValue(null);
@@ -114,10 +130,10 @@ it('shows the default inbox path and lets the user choose a custom location thro
   fireEvent.click(screen.getByRole('button', { name: 'Storage' }));
 
   await waitFor(() => {
-    expect(screen.getByTitle('C:\\Users\\Tester\\Documents\\Foliole\\Inbox')).toBeInTheDocument();
+    expect(screen.getByTitle('C:\\Users\\Tester\\Documents\\Foliole\\Import\\Inbox')).toBeInTheDocument();
   });
 
-  fireEvent.click(screen.getAllByRole('button', { name: 'Change location' })[2] as HTMLButtonElement);
+  clickChangeForPath('C:\\Users\\Tester\\Documents\\Foliole\\Import\\Inbox');
 
   await waitFor(() => {
     expect(screen.getByTitle('D:\\Capture\\Inbox')).toBeInTheDocument();
@@ -140,15 +156,15 @@ it('restores the default inbox path through the runtime bridge', async () => {
     expect(screen.getByTitle('D:\\Capture\\Inbox')).toBeInTheDocument();
   });
 
-  fireEvent.click(screen.getAllByRole('button', { name: 'Restore default' })[2] as HTMLButtonElement);
+  clickRestoreForPath('D:\\Capture\\Inbox');
 
   await waitFor(() => {
-    expect(screen.getByTitle('C:\\Users\\Tester\\Documents\\Foliole\\Inbox')).toBeInTheDocument();
+    expect(screen.getByTitle('C:\\Users\\Tester\\Documents\\Foliole\\Import\\Inbox')).toBeInTheDocument();
   });
   expect(mockedUpdateRuntimeLibraryPathSetting).toHaveBeenCalledWith('inbox', null);
 });
 
-it('shows Main folder, Attachments folder, Inbox folder, and Mirror folder without exposing internal data folders', async () => {
+it('shows Import and Storage folders without exposing internal data folders', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Storage' }));
@@ -157,11 +173,13 @@ it('shows Main folder, Attachments folder, Inbox folder, and Mirror folder witho
     expect(screen.getByText('Main folder')).toBeInTheDocument();
     expect(screen.getAllByText('Attachments folder').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Inbox folder').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Import folder').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Mirror folder').length).toBeGreaterThan(0);
   });
 
   expect(screen.getByText(/Stores the database and app data/i)).toBeInTheDocument();
-  expect(screen.getByText(/Files placed here are imported as internal documents/i)).toBeInTheDocument();
+  expect(screen.getByText(/Files placed here are imported as topics/i)).toBeInTheDocument();
+  expect(screen.getByText(/Create folders here to import files into matching Foliole folders/i)).toBeInTheDocument();
   expect(screen.getByText(/Use after recovery or mirror rule changes/i)).toBeInTheDocument();
   expect(screen.getByText(/Use after moving the mirror folder/i)).toBeInTheDocument();
   expect(screen.getByText('Mirror maintenance')).toBeInTheDocument();
@@ -202,20 +220,20 @@ it('updates Main folder, Attachments folder, and Mirror folder through the same 
     expect(screen.getByTitle('C:\\Users\\Tester\\Documents\\Foliole')).toBeInTheDocument();
   });
 
-  fireEvent.click(screen.getAllByRole('button', { name: 'Change location' })[0] as HTMLButtonElement);
+  clickChangeForPath('C:\\Users\\Tester\\Documents\\Foliole');
 
   await waitFor(() => {
     expect(screen.getByTitle('E:\\LibraryRoot')).toBeInTheDocument();
     expect(screen.getByTitle('E:\\LibraryRoot\\Mirror')).toBeInTheDocument();
   });
 
-  fireEvent.click(screen.getAllByRole('button', { name: 'Change location' })[1] as HTMLButtonElement);
+  clickChangeForPath('E:\\LibraryRoot\\Assets');
 
   await waitFor(() => {
     expect(screen.getByTitle('G:\\AttachmentVault')).toBeInTheDocument();
   });
 
-  fireEvent.click(screen.getAllByRole('button', { name: 'Change location' })[3] as HTMLButtonElement);
+  clickChangeForPath('E:\\LibraryRoot\\Mirror');
 
   await waitFor(() => {
     expect(screen.getByTitle('F:\\MirrorVault')).toBeInTheDocument();
@@ -240,7 +258,7 @@ it('restores the default assets path through the runtime bridge', async () => {
     expect(screen.getByTitle('G:\\AttachmentVault')).toBeInTheDocument();
   });
 
-  fireEvent.click(screen.getAllByRole('button', { name: 'Restore default' })[1] as HTMLButtonElement);
+  clickRestoreForPath('G:\\AttachmentVault');
 
   await waitFor(() => {
     expect(screen.getByTitle('C:\\Users\\Tester\\Documents\\Foliole\\Assets')).toBeInTheDocument();

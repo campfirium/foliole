@@ -10,7 +10,10 @@ vi.mock('electron', () => ({
     getFocusedWindow: vi.fn(() => null)
   },
   app: { getVersion: () => '1.0.0' },
-  shell: { openExternal: vi.fn().mockResolvedValue(undefined) }
+  shell: {
+    openExternal: vi.fn().mockResolvedValue(undefined),
+    openPath: vi.fn().mockResolvedValue('')
+  }
 }));
 vi.mock('./menu.js', () => ({ syncAppMenuState: vi.fn() }));
 vi.mock('./paths.js', () => ({
@@ -86,6 +89,7 @@ vi.mock('./libraryPaths.js', () => ({
     mirror: '/library/Mirror',
     updated_at: '2026-03-30T00:00:00.000Z'
   }),
+  openImportRoot: vi.fn().mockResolvedValue(null),
   updateLibraryPathSetting: vi.fn().mockImplementation(({ location, path }) => ({
     assets_dir: location === 'assets_dir' && path ? path : '/library/Assets',
     data_dir: '/library/Data',

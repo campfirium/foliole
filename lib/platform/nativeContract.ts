@@ -72,6 +72,10 @@ export type NativeCommandMap = NativeUtilityCommandMap & NativeReadwiseCommandMa
     };
     result: null;
   };
+  [NATIVE_COMMANDS.openImportRoot]: {
+    args: undefined;
+    result: null;
+  };
   [NATIVE_COMMANDS.importClipboardImageAttachment]: {
     args: NativeImportClipboardImageAttachmentArgs;
     result: NativeImportLocalImageAttachmentResult;

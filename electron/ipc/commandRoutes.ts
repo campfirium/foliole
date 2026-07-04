@@ -61,6 +61,7 @@ const STORAGE_COMMANDS = [
   NATIVE_COMMANDS.rebuildMirrorOutput,
   NATIVE_COMMANDS.rebuildMirrorAttachmentLinks,
   NATIVE_COMMANDS.exportCurrentArticleMirror,
+  NATIVE_COMMANDS.openImportRoot,
   NATIVE_COMMANDS.updateLibraryPathSetting,
   NATIVE_COMMANDS.saveBackupSettings,
   NATIVE_COMMANDS.loadWorkspaceListSnapshot,

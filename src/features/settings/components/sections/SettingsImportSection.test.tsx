@@ -6,6 +6,14 @@ import { renderWithLocalization } from '../../../../shared/localization/testLoca
 import { SettingsImportSection } from './SettingsImportSection';
 import type { SettingsImportSectionProps } from './settingsImportSectionTypes';
 
+const { openImportRoot } = vi.hoisted(() => ({
+  openImportRoot: vi.fn().mockResolvedValue(undefined)
+}));
+
+vi.mock('../../../../shared/platform/runtimeExternalNavigation', () => ({
+  openImportRoot
+}));
+
 const baseProps: SettingsImportSectionProps = {
   assetsPath: '/library/Assets',
   errorByLocation: {
@@ -14,7 +22,7 @@ const baseProps: SettingsImportSectionProps = {
     library_home: null,
     mirror: null
   },
-  inboxPath: '/library/Inbox',
+  inboxPath: '/library/Import/Inbox',
   isDesktopRuntime: true,
   isLoadingLibraryPaths: false,
   isRebuildingMirrorLinks: false,
@@ -33,15 +41,19 @@ const baseProps: SettingsImportSectionProps = {
 };
 
 beforeEach(() => {
+  openImportRoot.mockClear();
   window.localStorage.clear();
 });
 
 it('shows progress rows while library paths load', async () => {
   renderWithLocalization(<SettingsImportSection {...baseProps} isLoadingLibraryPaths />);
 
-  const status = await screen.findByRole('status');
-  expect(status).toHaveAttribute('aria-busy', 'true');
-  expect(status).toHaveTextContent('');
+  const statuses = await screen.findAllByRole('status');
+  expect(statuses).toHaveLength(2);
+  for (const status of statuses) {
+    expect(status).toHaveAttribute('aria-busy', 'true');
+    expect(status).toHaveTextContent('');
+  }
 });
 
 it('marks library path and mirror rebuild errors as alerts', async () => {
@@ -72,4 +84,15 @@ it('keeps mirror rows mapped to mirror copy and controls', async () => {
   expect(await screen.findByRole('heading', { name: 'Mirror folder' })).toBeInTheDocument();
   expect(screen.getAllByRole('button', { name: 'Change location' })[3]).toHaveTextContent('Mirror');
   expect(screen.queryByText('Use current clipboard when nothing is selected')).not.toBeInTheDocument();
+});
+
+it('shows Import above storage and opens the Import folder without making it configurable', async () => {
+  renderWithLocalization(<SettingsImportSection {...baseProps} />);
+
+  expect(await screen.findByRole('heading', { name: 'Import' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Storage locations' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Import folder' })).toBeInTheDocument();
+  screen.getByRole('button', { name: 'Open Import folder' }).click();
+  expect(openImportRoot).toHaveBeenCalledOnce();
+  expect(screen.getAllByRole('button', { name: 'Change location' })).toHaveLength(4);
 });

@@ -78,19 +78,28 @@ async function pruneEmptyDirectories(rootPath: string, startDir: string) {
 async function archiveManagedEntry(
   entry: ManagedInboxImportEntry,
   rootPath: string,
-  archiveBatchPath: string
+  archiveBatchPath: string,
+  shouldPruneEmptyDirectories: boolean
 ) {
   const relativePath = resolveManagedRelativePath(rootPath, entry.source_locator);
   const archiveTargetPath = path.join(archiveBatchPath, relativePath);
   await fs.mkdir(path.dirname(archiveTargetPath), { recursive: true });
   await fs.rename(entry.source_locator, archiveTargetPath);
-  await pruneEmptyDirectories(rootPath, path.dirname(entry.source_locator));
+  if (shouldPruneEmptyDirectories) {
+    await pruneEmptyDirectories(rootPath, path.dirname(entry.source_locator));
+  }
 }
 
-async function clearManagedEntry(entry: ManagedInboxImportEntry, rootPath: string) {
+async function clearManagedEntry(
+  entry: ManagedInboxImportEntry,
+  rootPath: string,
+  shouldPruneEmptyDirectories: boolean
+) {
   resolveManagedRelativePath(rootPath, entry.source_locator);
   await shell.trashItem(entry.source_locator);
-  await pruneEmptyDirectories(rootPath, path.dirname(entry.source_locator));
+  if (shouldPruneEmptyDirectories) {
+    await pruneEmptyDirectories(rootPath, path.dirname(entry.source_locator));
+  }
 }
 
 export async function applyManagedInboxConsumePolicy(
@@ -99,6 +108,7 @@ export async function applyManagedInboxConsumePolicy(
     archiveRootPath: string;
     importedAt: string;
     policy: Extract<NativeDirectoryImportConsumePolicy, 'archive' | 'clear'>;
+    pruneEmptyDirectories?: boolean;
     rootPath: string;
   }
 ) {
@@ -117,13 +127,14 @@ export async function applyManagedInboxConsumePolicy(
   if (archiveBatchPath) {
     await fs.mkdir(archiveBatchPath, { recursive: true });
   }
+  const shouldPruneEmptyDirectories = options.pruneEmptyDirectories !== false;
 
   for (const entry of importedEntries) {
     if (archiveBatchPath) {
-      await archiveManagedEntry(entry, options.rootPath, archiveBatchPath);
+      await archiveManagedEntry(entry, options.rootPath, archiveBatchPath, shouldPruneEmptyDirectories);
       continue;
     }
-    await clearManagedEntry(entry, options.rootPath);
+    await clearManagedEntry(entry, options.rootPath, shouldPruneEmptyDirectories);
   }
 
   return {

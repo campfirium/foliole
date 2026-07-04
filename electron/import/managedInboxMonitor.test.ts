@@ -21,13 +21,13 @@ it('starts with an immediate import and reconfigures when the inbox path changes
   const runImport = vi.fn().mockResolvedValue(undefined);
   runImport.mockResolvedValue(createManagedInboxImportResult({ root_path: '/tmp/inbox-a' }));
   const loadConfiguredRootPath = vi
-    .fn<() => Promise<string>>()
-    .mockResolvedValueOnce('/tmp/inbox-a')
-    .mockResolvedValueOnce('/tmp/inbox-b');
+    .fn<() => Promise<Array<{ rootPath: string }>>>()
+    .mockResolvedValueOnce([{ rootPath: '/tmp/inbox-a' }])
+    .mockResolvedValueOnce([{ rootPath: '/tmp/inbox-b' }]);
   const monitor = createManagedInboxMonitor({
     debounceMs: 0,
     ensureRoot,
-    loadConfiguredRootPath,
+    loadConfiguredRootPaths: loadConfiguredRootPath,
     logError: vi.fn(),
     notifyUpdate,
     runImport,
@@ -39,11 +39,11 @@ it('starts with an immediate import and reconfigures when the inbox path changes
 
   expect(ensureRoot).toHaveBeenNthCalledWith(1, '/tmp/inbox-a');
   expect(watch).toHaveBeenNthCalledWith(1, '/tmp/inbox-a', expect.any(Function));
-  expect(runImport).toHaveBeenNthCalledWith(1, '/tmp/inbox-a');
+  expect(runImport).toHaveBeenNthCalledWith(1, '/tmp/inbox-a', undefined);
   expect(close).toHaveBeenCalledTimes(1);
   expect(ensureRoot).toHaveBeenNthCalledWith(2, '/tmp/inbox-b');
   expect(watch).toHaveBeenNthCalledWith(2, '/tmp/inbox-b', expect.any(Function));
-  expect(runImport).toHaveBeenNthCalledWith(2, '/tmp/inbox-b');
+  expect(runImport).toHaveBeenNthCalledWith(2, '/tmp/inbox-b', undefined);
   expect(notifyUpdate.mock.calls[0]?.[0]).toBe('import-a');
   expect(notifyUpdate.mock.calls[1]?.[0]).toBe('import-a');
 });
@@ -53,7 +53,7 @@ it('does not notify the renderer when a managed inbox cycle has no imported node
   const monitor = createManagedInboxMonitor({
     debounceMs: 0,
     ensureRoot: vi.fn().mockResolvedValue(undefined),
-    loadConfiguredRootPath: vi.fn().mockResolvedValue('/tmp/inbox'),
+    loadConfiguredRootPaths: vi.fn().mockResolvedValue([{ rootPath: '/tmp/inbox' }]),
     logError: vi.fn(),
     notifyUpdate,
     runImport: vi.fn().mockResolvedValue(createManagedInboxImportResult({
@@ -78,7 +78,7 @@ it('does not notify the renderer when a managed inbox cycle only finds duplicate
   const monitor = createManagedInboxMonitor({
     debounceMs: 0,
     ensureRoot: vi.fn().mockResolvedValue(undefined),
-    loadConfiguredRootPath: vi.fn().mockResolvedValue('/tmp/inbox'),
+    loadConfiguredRootPaths: vi.fn().mockResolvedValue([{ rootPath: '/tmp/inbox' }]),
     logError: vi.fn(),
     notifyUpdate,
     runImport: vi.fn().mockResolvedValue(createManagedInboxImportResult({
@@ -105,7 +105,7 @@ it('coalesces watch bursts into a follow-up import after the current run finishe
   const monitor = createManagedInboxMonitor({
     debounceMs: 0,
     ensureRoot: vi.fn().mockResolvedValue(undefined),
-    loadConfiguredRootPath: vi.fn().mockResolvedValue('/tmp/inbox'),
+    loadConfiguredRootPaths: vi.fn().mockResolvedValue([{ rootPath: '/tmp/inbox' }]),
     logError: vi.fn(),
     notifyUpdate: vi.fn(),
     runImport,

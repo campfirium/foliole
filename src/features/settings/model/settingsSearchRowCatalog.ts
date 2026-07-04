@@ -40,6 +40,7 @@ const SETTINGS_SEARCH_ROW_DEFINITIONS: SearchRowDefinition[] = [
   row('library', 'library-home', 'settings.search.libraryHome.title', 'settings.search.libraryHome.description'),
   row('library', 'library-assets', 'settings.search.libraryAssets.title', 'settings.search.libraryAssets.description'),
   row('library', 'library-inbox', 'settings.search.libraryInbox.title', 'settings.search.libraryInbox.description'),
+  row('library', 'library-import-root', 'settings.search.libraryImportRoot.title', 'settings.search.libraryImportRoot.description'),
   row('library', 'library-mirror', 'settings.search.libraryMirror.title', 'settings.search.libraryMirror.description'),
   row('library', 'library-mirror-output', 'settings.search.libraryMirrorOutput.title', 'settings.search.libraryMirrorOutput.description'),
   row('library', 'library-mirror-links', 'settings.search.libraryMirrorLinks.title', 'settings.search.libraryMirrorLinks.description')

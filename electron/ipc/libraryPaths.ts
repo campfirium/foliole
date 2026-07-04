@@ -1,9 +1,12 @@
 import fs from 'node:fs';
 
+import { shell } from 'electron';
+
 import {
   createEmptyLibraryPathOverrides,
   isLibraryPathLocation,
   normalizeLibraryPath,
+  resolveDefaultImportRoot,
   resolveLibraryPaths,
   type LibraryPathOverrides
 } from '../../lib/platform/libraryPaths.js';
@@ -23,6 +26,7 @@ import {
   saveCurrentLibraryHome,
   saveDefaultLibraryHome
 } from './libraryPathBootstrap.js';
+import { migrateLegacyDefaultInbox } from './libraryPathLegacyInboxMigration.js';
 import { migrateLibraryPathChange } from './libraryPathMigration.js';
 import {
   allowLibraryHomeDatabaseRestore,
@@ -127,8 +131,20 @@ export function loadLibraryPathSettingsSync(): NativeLibraryPaths {
 export function ensureLibraryPathLayout(paths = loadLibraryPathSettingsSync()) {
   fs.mkdirSync(paths.data_dir, { recursive: true });
   fs.mkdirSync(paths.assets_dir, { recursive: true });
+  fs.mkdirSync(resolveDefaultImportRoot(paths.library_home), { recursive: true });
   fs.mkdirSync(paths.inbox, { recursive: true });
+  migrateLegacyDefaultInbox(paths);
   fs.mkdirSync(paths.mirror, { recursive: true });
+}
+
+export async function openImportRoot() {
+  const importRoot = resolveDefaultImportRoot(loadLibraryPathSettingsSync().library_home);
+  fs.mkdirSync(importRoot, { recursive: true });
+  const errorMessage = await shell.openPath(importRoot);
+  if (errorMessage) {
+    throw new Error(`failed to open Import folder: ${errorMessage}`);
+  }
+  return null;
 }
 
 function normalizeUpdatedLibraryPath(args: NativeUpdateLibraryPathSettingArgs): string | null {

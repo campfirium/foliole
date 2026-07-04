@@ -25,6 +25,8 @@ import {
 export interface DirectoryImportBatchOptions {
   consumePolicy: NativeDirectoryImportConsumePolicy;
   highlightPolicy: ImportHighlightPolicy;
+  resolveTargetParentNodeId?: (source: DirectoryImportSourceDescriptor, importedAt: string) => string | undefined;
+  importRootPath?: string;
   rootPath: string;
   sourceAdapter: NativeDirectoryImportSourceAdapter;
   sources: DirectoryImportSourceDescriptor[];
@@ -56,9 +58,11 @@ function toNativeDirectoryImportEntry(
 async function runSingleDirectoryImport(
   source: DirectoryImportSourceDescriptor,
   highlightPolicy: ImportHighlightPolicy,
+  resolveTargetParentNodeId: DirectoryImportBatchOptions['resolveTargetParentNodeId'],
   titleStrategy: ImportNodeTitleStrategy
 ) {
   const importedAt = new Date().toISOString();
+  const targetParentNodeId = resolveTargetParentNodeId?.(source, importedAt);
   try {
     if (source.kind === 'epub') {
       return toNativeDirectoryImportEntry(source.adapterId, await runEpubImport(source, importedAt));
@@ -79,12 +83,14 @@ async function runSingleDirectoryImport(
             highlightPolicy,
             importedAt,
             sourceTrackingMode: 'untracked',
+            ...(targetParentNodeId ? { targetParentNodeId } : {}),
             titleStrategy
           })
         : await loadPreparedImportRecord(source, {
             highlightPolicy,
             importedAt,
             sourceTrackingMode: 'untracked',
+            ...(targetParentNodeId ? { targetParentNodeId } : {}),
             titleStrategy
           });
     return toNativeDirectoryImportEntry(
@@ -101,6 +107,7 @@ async function runSingleDirectoryImport(
           highlightPolicy,
           importedAt,
           sourceTrackingMode: 'untracked',
+          ...(targetParentNodeId ? { targetParentNodeId } : {}),
           titleStrategy
         }),
         failureReason
@@ -111,7 +118,12 @@ async function runSingleDirectoryImport(
 
 export async function runDirectoryImportBatch(options: DirectoryImportBatchOptions): Promise<NativeDirectoryImportResult> {
   const entries = await Promise.all(
-    options.sources.map((source) => runSingleDirectoryImport(source, options.highlightPolicy, options.titleStrategy))
+    options.sources.map((source) => runSingleDirectoryImport(
+      source,
+      options.highlightPolicy,
+      options.resolveTargetParentNodeId,
+      options.titleStrategy
+    ))
   );
 
   let archiveRootPath: string | null = null;
@@ -122,6 +134,7 @@ export async function runDirectoryImportBatch(options: DirectoryImportBatchOptio
       archiveRootPath: managedPaths.archiveRootPath,
       importedAt: new Date().toISOString(),
       policy: options.consumePolicy,
+      pruneEmptyDirectories: options.rootPath !== options.importRootPath,
       rootPath: options.rootPath
     });
     archiveRootPath = consumed.archiveRootPath;

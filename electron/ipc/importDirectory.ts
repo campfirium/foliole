@@ -2,6 +2,7 @@ import { dialog, type BrowserWindow } from 'electron';
 
 import type { NativeDirectoryImportArgs, NativeDirectoryImportResult } from '../../lib/platform/nativeContract.js';
 import { runDirectoryImportBatch } from '../import/directoryImportBatch.js';
+import { resolveManagedImportTargetParentNodeId } from '../import/importFolderTargets.js';
 import { loadImportManagerSettings } from '../import/importManagerSettings.js';
 import { withDirectoryImportNodeMutationPatch } from '../import/importNodeMutationPatch.js';
 import { logDirectoryImportCompleted, logDirectoryImportFailed } from '../import/importRunLogger.js';
@@ -131,24 +132,40 @@ export async function runDirectoryImport(
   }
 }
 
-export async function runManagedInboxImport(rootPath: string) {
+export async function runManagedInboxImport(
+  rootPath: string,
+  options: { importRootPath?: string } = {}
+) {
   try {
     const libraryPaths = await loadLibraryPathSettings();
+    const importedAt = new Date().toISOString();
+    const isImportRoot = options.importRootPath === rootPath;
     assertSafeDirectoryImportRoot(rootPath, 'foliole_managed_inbox_folder');
     assertMirrorSeparatedFromImportPath({
       importPath: rootPath,
-      label: 'Inbox',
+      label: isImportRoot ? 'Import' : 'Inbox',
       mirrorPath: libraryPaths.mirror
     });
     const titleStrategy = loadImportManagerSettings().titleStrategy;
     const result = withDirectoryImportNodeMutationPatch(await runDirectoryImportBatch({
       consumePolicy: 'clear',
       highlightPolicy: 'reference_only',
+      ...(isImportRoot
+        ? {
+            importRootPath: rootPath,
+            resolveTargetParentNodeId: (source) => resolveManagedImportTargetParentNodeId({
+              filePath: source.filePath,
+              importedAt,
+              importRootPath: rootPath
+            })
+          }
+        : {}),
       rootPath,
       sourceAdapter: 'foliole_managed_inbox_folder',
       sources: await discoverDirectoryImportSources(rootPath, {
-        excludedPaths: [libraryPaths.mirror],
+        excludedPaths: isImportRoot ? [libraryPaths.mirror, libraryPaths.inbox] : [libraryPaths.mirror],
         includeLocalImages: true,
+        ...(isImportRoot ? { sourceNameMode: 'basename' } : {}),
         supportedKinds: MANAGED_INBOX_SUPPORTED_KINDS
       }),
       titleStrategy

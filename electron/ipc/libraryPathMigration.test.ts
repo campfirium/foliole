@@ -125,14 +125,14 @@ it('moves data and default library folders when library home changes', async () 
     library_home: nextLibraryHome,
     data_dir: path.join(nextLibraryHome, 'Data'),
     assets_dir: path.join(nextLibraryHome, 'Assets'),
-    inbox: path.join(nextLibraryHome, 'Inbox'),
+    inbox: path.join(nextLibraryHome, 'Import', 'Inbox'),
     mirror: path.join(nextLibraryHome, 'Mirror')
   });
 
   expect(resolveDatabasePath()).toBe(path.join(nextLibraryHome, 'Data', 'foliole.db'));
   expect(openDatabaseConnection().sqlite.prepare('SELECT COUNT(*) FROM nodes').pluck().get()).toBe(1);
   await expect(fs.readFile(path.join(nextLibraryHome, 'Assets', 'hash-1.png'), 'utf8')).resolves.toBe('asset');
-  await expect(fs.readFile(path.join(nextLibraryHome, 'Inbox', 'draft.md'), 'utf8')).resolves.toBe('# draft');
+  await expect(fs.readFile(path.join(nextLibraryHome, 'Import', 'Inbox', 'draft.md'), 'utf8')).resolves.toBe('# draft');
   await expect(fs.readFile(path.join(nextLibraryHome, 'Mirror', 'entry.md'), 'utf8')).resolves.toBe('# entry');
 });
 
@@ -234,7 +234,7 @@ it('keeps independently configured child folders in place when library home chan
   await expect(fs.readFile(path.join(customInboxDir, 'custom-inbox.md'), 'utf8')).resolves.toBe('# custom inbox');
   await expect(fs.readFile(path.join(customMirrorDir, 'custom-entry.md'), 'utf8')).resolves.toBe('# custom mirror');
   await expect(fs.access(path.join(nextLibraryHome, 'Assets', 'custom-asset.png'))).rejects.toThrow();
-  await expect(fs.access(path.join(nextLibraryHome, 'Inbox', 'custom-inbox.md'))).rejects.toThrow();
+  await expect(fs.access(path.join(nextLibraryHome, 'Import', 'Inbox', 'custom-inbox.md'))).rejects.toThrow();
   await expect(fs.access(path.join(nextLibraryHome, 'Mirror', 'custom-entry.md'))).rejects.toThrow();
 });
 

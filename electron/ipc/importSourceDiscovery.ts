@@ -72,10 +72,12 @@ async function collectFileSource(args: {
   includeLocalImages: boolean;
   rootDir: string;
   rootIsObsidianVault: boolean;
+  sourceNameMode: 'basename' | 'relative';
   supportedKinds: ReadonlySet<ImportSourceKind>;
 }, entryName: string, filePath: string) {
   const adapterId = resolveDirectoryAdapter(args.rootIsObsidianVault, path.extname(entryName).toLowerCase(), args.supportedKinds);
   const stats = await fs.stat(filePath);
+  const sourceName = args.sourceNameMode === 'basename' ? path.basename(filePath) : path.relative(args.rootDir, filePath);
   if (!adapterId) {
     const importMode = args.includeLocalImages ? resolveLocalImageInboxImportMode(filePath) : null;
     if (!importMode) return;
@@ -86,7 +88,7 @@ async function collectFileSource(args: {
       kind: 'markdown',
       mtimeMs: stats.mtimeMs,
       sizeBytes: stats.size,
-      sourceName: path.relative(args.rootDir, filePath)
+      sourceName
     });
     return;
   }
@@ -96,7 +98,7 @@ async function collectFileSource(args: {
     kind: resolveImportKind(filePath),
     mtimeMs: stats.mtimeMs,
     sizeBytes: stats.size,
-    sourceName: path.relative(args.rootDir, filePath)
+    sourceName
   });
 }
 
@@ -107,6 +109,7 @@ async function collectDirectorySources(args: {
   includeLocalImages: boolean;
   rootDir: string;
   rootIsObsidianVault: boolean;
+  sourceNameMode: 'basename' | 'relative';
   supportedKinds: ReadonlySet<ImportSourceKind>;
 }) {
   const entries = await fs.readdir(args.currentDir, { withFileTypes: true });
@@ -124,7 +127,12 @@ async function collectDirectorySources(args: {
 
 export async function discoverDirectoryImportSources(
   rootDir: string,
-  options?: { excludedPaths?: string[]; includeLocalImages?: boolean; supportedKinds?: ImportSourceKind[] }
+  options?: {
+    excludedPaths?: string[];
+    includeLocalImages?: boolean;
+    sourceNameMode?: 'basename' | 'relative';
+    supportedKinds?: ImportSourceKind[];
+  }
 ) {
   const collected: DirectoryImportSourceDescriptor[] = [];
   await collectDirectorySources({
@@ -134,6 +142,7 @@ export async function discoverDirectoryImportSources(
     includeLocalImages: options?.includeLocalImages ?? false,
     rootDir,
     rootIsObsidianVault: await detectObsidianVaultRoot(rootDir),
+    sourceNameMode: options?.sourceNameMode ?? 'relative',
     supportedKinds: new Set<ImportSourceKind>(options?.supportedKinds ?? ['html', 'markdown'])
   });
   return collected;
