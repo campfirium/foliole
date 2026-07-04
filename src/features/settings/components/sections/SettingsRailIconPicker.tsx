@@ -59,7 +59,7 @@ export function IconPicker(props: {
 }) {
   const t = useTranslation();
   const filteredIcons = useMemo(
-    () => LUCIDE_ICON_OPTIONS.filter((icon) => matchesIconQuery([icon.id, icon.label], props.query)),
+    () => LUCIDE_ICON_OPTIONS.filter((icon) => matchesIconQuery(icon.searchTerms, props.query)),
     [props.query]
   );
   return (
