@@ -76,7 +76,6 @@ function addPreviewPrefixDecorations(
   const prefixRanges = context.prefixRangesByLineFrom.get(lineFrom);
   addPrefixDecoration(ranges, lineFrom, lineText, plan.showSyntaxOnLine, {
     ...(calloutPrefixRange ? { calloutPrefixRange } : {}),
-    forceHideHeadingSyntax: true,
     ...(prefixRanges ? { prefixRanges } : {})
   });
 }

@@ -44,7 +44,9 @@ function addParserPrefixDecoration(
   const prefixRanges = options.prefixRanges ?? [];
   const heading = prefixRanges.find((range) => range.kind === 'heading');
   if (heading) {
-    const className = showSyntax && options.forceHideHeadingSyntax !== true ? 'cm-md-syntax-visible' : 'cm-md-heading-syntax-hidden';
+    const headingContent = text.slice(heading.to - from).trim();
+    const shouldShowSyntax = headingContent.length === 0 || (showSyntax && options.forceHideHeadingSyntax !== true);
+    const className = shouldShowSyntax ? 'cm-md-syntax-visible' : 'cm-md-heading-syntax-hidden';
     if (heading.hiddenRanges?.length) {
       for (const range of heading.hiddenRanges) addMark(ranges, range.from, range.to, className);
     } else {

@@ -4,6 +4,7 @@ import {
   type EditorOperationHistoryEntry,
   type EditorTextEditOperationEntry
 } from '../features/editor/model/editorOperationHistory';
+import { extractUniqueArticleTitleHeading } from '../features/nodes/model/articleTitleHeading';
 import { deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
 
 import { createEditorAnnotationDeleteEntry } from './workspaceEditorAnnotationOperationEntry';
@@ -92,6 +93,19 @@ function resolveTextEditApply(entry: EditorTextEditOperationEntry, mode: 'redo' 
     : { expectedContent: entry.beforeContent, nextContent: entry.afterContent };
 }
 
+function resolveTextEditTitle(
+  node: WorkspaceState['nodesById'][string],
+  content: string
+) {
+  if (node.kind === 'topic') {
+    const articleTitle = extractUniqueArticleTitleHeading(content)?.title;
+    if (articleTitle) {
+      return articleTitle;
+    }
+  }
+  return node.isTitleManual ? node.title : deriveNodeTitleFromContent(content);
+}
+
 function applyTextEditOperation(
   set: WorkspaceSet,
   snapshot: WorkspaceState,
@@ -108,7 +122,7 @@ function applyTextEditOperation(
     content: nextContent,
     hasContent: nextContent.trim().length > 0,
     hideTitleHeading: false,
-    title: node.isTitleManual ? node.title : deriveNodeTitleFromContent(nextContent),
+    title: resolveTextEditTitle(node, nextContent),
     updatedAt: new Date().toISOString()
   };
   set({

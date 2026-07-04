@@ -53,7 +53,7 @@ function registerContentEditCoverage() {
       expect.objectContaining({
         id: 'node-1',
         hideTitleHeading: false,
-        title: 'Seed'
+        title: 'Updated title'
       }),
       [],
       expect.any(Array)

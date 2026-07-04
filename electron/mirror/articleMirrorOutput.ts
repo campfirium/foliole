@@ -12,6 +12,7 @@ import {
   preserveNoteLines,
   stripAnchorTags
 } from './articleMirrorText.js';
+import { hasArticleBodyTitleHeading } from './articleMirrorTitle.js';
 import { collectArticleData } from './articleMirrorTree.js';
 import { rewriteMirrorMarkdownAttachmentPaths } from './markdownAttachmentPaths.js';
 import {
@@ -147,14 +148,12 @@ function createExtraNote(
 }
 
 function renderArticleBody(article: ArticleNode, derivedByAnchorKey: Map<string, ArticleNode[]>) {
-  const articleTitle = article.title.trim() || 'Untitled';
-  const rendered = renderArticleBodyFromLocators({
+  return renderArticleBodyFromLocators({
     articleContent: article.content,
     createExtraNote: (span) =>
       createExtraNote(article, span.kind, span.sourceText, span.anchorId, span.from, span.to, derivedByAnchorKey),
     derivedByAnchorKey
   });
-  return stripLeadingMatchingHeading(rendered, articleTitle);
 }
 
 function renderManualTopicAppendix(manualTopics: ArticleNode[]) {
@@ -180,7 +179,7 @@ function renderArticleMarkdown(article: ArticleNode, derivedByAnchorKey: Map<str
   if (body.length === 0) {
     return rewriteMirrorMarkdownAttachmentPaths(`# ${title}\n`);
   }
-  if (article.hideTitleHeading) {
+  if (hasArticleBodyTitleHeading(body)) {
     return rewriteMirrorMarkdownAttachmentPaths(`${body}\n`);
   }
   return rewriteMirrorMarkdownAttachmentPaths(`# ${title}\n\n${body}\n`);

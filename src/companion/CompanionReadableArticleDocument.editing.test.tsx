@@ -7,6 +7,7 @@ const markdownEditorMock = vi.hoisted(() => ({
   props: null as null | {
     onBlurCapture?: () => void;
     onChange: (content: string) => void;
+    hideTitleHeading?: boolean;
     readOnly?: boolean;
     value: string;
   }
@@ -86,5 +87,19 @@ describe('ReadableArticleDocument editing', () => {
 
     expect(screen.queryByLabelText('Topic body')).not.toBeInTheDocument();
     expect(screen.getByText('Waiting for topic body.')).toBeInTheDocument();
+  });
+
+  it('keeps a legacy hidden body H1 available to the shared editor', () => {
+    render(
+      <ReadableArticleDocument
+        readableArticle={createReadableArticle({
+          content: '# Article title\n\nBody',
+          hideTitleHeading: true
+        })}
+      />
+    );
+
+    expect(screen.getByLabelText('Topic body')).toHaveValue('# Article title\n\nBody');
+    expect(markdownEditorMock.props?.hideTitleHeading).toBe(true);
   });
 });

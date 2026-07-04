@@ -116,7 +116,7 @@ it('persists new, duplicate, updated and degraded import semantics with traceabi
     hide_title_heading: 1,
     opening_text: 'Updated body',
     parent_id: 'special-inbox',
-    title: 'note'
+    title: 'Imported'
   });
 });
 
@@ -156,7 +156,7 @@ it('persists explicit degraded reasons while still writing converted content', (
     hide_title_heading: 1,
     opening_text: '[Table degraded] Name | Value',
     parent_id: 'special-inbox',
-    title: 'note'
+    title: 'Imported'
   });
 });
 
@@ -180,7 +180,7 @@ it('adopts markdown highlight markers into Foliole highlight anchors when config
     hide_title_heading: 1,
     opening_text: 'Use important text',
     parent_id: 'special-inbox',
-    title: 'note'
+    title: 'Imported'
   });
   expect(childRows.map((row) => ({
     anchorLink: parseAnchorLink(row.anchor_link),
@@ -216,8 +216,8 @@ it('keeps the newest inbox import at the top of inbox children', () => {
   );
 
   expect(readInboxChildTitlesByOrder()).toEqual([
-    { title: 'second' },
-    { title: 'note' }
+    { title: 'Second' },
+    { title: 'First' }
   ]);
 });
 
@@ -229,7 +229,7 @@ it('treats untracked imports from the same path as separate inbox items', () => 
   expect(second.duplicateSemantic).toBe('new');
   expect(second.nodeId).not.toBe(first.nodeId);
   expect(second.sourceFingerprint).not.toBe(first.sourceFingerprint);
-  expect(readInboxChildTitlesByOrder()).toEqual([{ title: 'note 2' }, { title: 'note' }]);
+  expect(readInboxChildTitlesByOrder()).toEqual([{ title: 'Imported 2' }, { title: 'Imported' }]);
 });
 
 it('lets untracked imports re-enter after the earlier inbox item was deleted', () => {
@@ -243,7 +243,7 @@ it('lets untracked imports re-enter after the earlier inbox item was deleted', (
   const second = runPreparedImport(createUntrackedImport('# Imported\nBody', '2026-03-22T10:05:00.000Z'));
   const connection = openDatabaseConnection();
   const nodeRows = connection.sqlite
-    .prepare(`SELECT id, deleted_at FROM nodes WHERE title = 'note' ORDER BY created_at ASC`)
+    .prepare(`SELECT id, deleted_at FROM nodes WHERE title = 'Imported' ORDER BY created_at ASC`)
     .all() as Array<{ deleted_at: string | null; id: string }>;
 
   expect(second.duplicateSemantic).toBe('new');

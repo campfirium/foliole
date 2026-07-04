@@ -67,11 +67,9 @@ export function resolveImportedNodeTitle(input: {
   titleStrategy: ImportNodeTitleStrategy;
 }) {
   const fallbackTitle = stripImportFileExtension(input.sourceName).trim();
-  if (input.titleStrategy === 'heading') {
-    const headingTitle = extractUniqueLevelOneHeading(input.content);
-    if (headingTitle) {
-      return headingTitle;
-    }
+  const headingTitle = extractUniqueLevelOneHeading(input.content);
+  if (headingTitle) {
+    return headingTitle;
   }
   return fallbackTitle || input.sourceName.trim() || 'Untitled';
 }

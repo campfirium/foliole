@@ -1,3 +1,7 @@
+import {
+  extractUniqueArticleTitleHeading,
+  replaceUniqueArticleTitleHeading
+} from '../features/nodes/model/articleTitleHeading';
 import { deriveNodeTitleFromContent, UNTITLED_NODE_TITLE } from '../features/nodes/model/deriveNodeTitle';
 import { isProtectedRootNode } from '../features/nodes/model/specialNodes';
 
@@ -46,6 +50,26 @@ function preserveCurrentBodyInPatch(
   };
 }
 
+function syncUniqueArticleHeadingFromTitle(
+  node: WorkspaceState['nodesById'][string],
+  title: string
+) {
+  if (node.kind !== 'topic') {
+    return node.content;
+  }
+  return replaceUniqueArticleTitleHeading(node.content, title) ?? node.content;
+}
+
+function resolveDerivedTitle(node: WorkspaceState['nodesById'][string], content: string) {
+  if (node.kind === 'topic') {
+    const articleTitle = extractUniqueArticleTitleHeading(content)?.title;
+    if (articleTitle) {
+      return articleTitle;
+    }
+  }
+  return node.isTitleManual ? node.title : deriveNodeTitleFromContent(content);
+}
+
 export function createUpdateNodeTitleAction(set: WorkspaceSet): WorkspaceState['updateNodeTitle'] {
   return async (nodeId, title) => {
     let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
@@ -55,9 +79,14 @@ export function createUpdateNodeTitleAction(set: WorkspaceSet): WorkspaceState['
       if (!node || isProtectedRootNode(node)) {
         return state;
       }
+      const nextTitle = title.trim() || UNTITLED_NODE_TITLE;
+      const nextContent = syncUniqueArticleHeadingFromTitle(node, nextTitle);
       const nextNode = {
         ...node,
-        title: title.trim() || UNTITLED_NODE_TITLE,
+        content: nextContent,
+        hasContent: nextContent.trim().length > 0,
+        hideTitleHeading: false,
+        title: nextTitle,
         isTitleManual: true,
         updatedAt: new Date().toISOString()
       };
@@ -95,10 +124,10 @@ export function createUpdateNodeDerivedTitleAction(set: WorkspaceSet): Workspace
     let localPatch: Partial<WorkspaceState> | null = null;
     set((state) => {
       const node = state.nodesById[nodeId];
-      if (!node || node.isTitleManual || isProtectedRootNode(node)) {
+      if (!node || isProtectedRootNode(node)) {
         return state;
       }
-      const nextTitle = deriveNodeTitleFromContent(content ?? node.content);
+      const nextTitle = resolveDerivedTitle(node, content ?? node.content);
       if (node.title === nextTitle) {
         return state;
       }

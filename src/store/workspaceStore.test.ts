@@ -147,12 +147,12 @@ it('uses Untitled when content has no usable text', async () => {
   expect(useWorkspaceStore.getState().nodesById[seedNodeId]?.title).toBe('Untitled');
 });
 
-it('keeps manual title when content changes after rename', async () => {
+it('syncs a unique body H1 over a manual title when content changes after rename', async () => {
   const seedNodeId = getSeedNodeId();
   await useWorkspaceStore.getState().updateNodeTitle(seedNodeId, 'Manual Title');
   await useWorkspaceStore.getState().updateNodeContent(seedNodeId, '# Auto Title\nBody');
 
-  expect(useWorkspaceStore.getState().nodesById[seedNodeId]?.title).toBe('Manual Title');
+  expect(useWorkspaceStore.getState().nodesById[seedNodeId]?.title).toBe('Auto Title');
 });
 
 it('keeps empty parent topics editable after they gain child nodes', async () => {

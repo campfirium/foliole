@@ -8,10 +8,8 @@ export interface NodeTitleSlotNode {
   specialKind?: string;
 }
 
-export function hasVisibleTitleHeading(content: string, hideTitleHeading: boolean) {
-  if (hideTitleHeading) {
-    return false;
-  }
+export function hasVisibleTitleHeading(content: string, _hideTitleHeading: boolean) {
+  void _hideTitleHeading;
   const visibleStart = resolveVisibleContentStart(content);
   return visibleStart.startsWith('# ') || visibleStart.startsWith('**# ');
 }

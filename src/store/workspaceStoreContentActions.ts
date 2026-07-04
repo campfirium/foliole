@@ -1,3 +1,4 @@
+import { extractUniqueArticleTitleHeading } from '../features/nodes/model/articleTitleHeading';
 import { isProtectedRootNode } from '../features/nodes/model/specialNodes';
 
 import {
@@ -22,6 +23,13 @@ import { syncTextAnchorLocatorsForParentContent } from './workspaceTextAnchorLoc
 
 type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)) => void;
 type WorkspaceNode = WorkspaceState['nodesById'][string];
+
+function resolveSyncedArticleTitle(node: WorkspaceNode, content: string) {
+  if (node.kind !== 'topic') {
+    return node.title;
+  }
+  return extractUniqueArticleTitleHeading(content)?.title ?? node.title;
+}
 
 function resolveNodeContentUpdateBlockReason(state: WorkspaceState, nodeId: string, node: WorkspaceNode) {
   if (!isNodeDocumentLoaded(node)) {
@@ -87,6 +95,7 @@ function prepareNextContentNode(
     content,
     hasContent: content.trim().length > 0,
     hideTitleHeading: false,
+    title: resolveSyncedArticleTitle(node, content),
     updatedAt: timestamp
   };
   args.metrics.nextNodeMs = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() - nextNodeStartedAt : 0;

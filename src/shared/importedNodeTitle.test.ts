@@ -3,7 +3,17 @@ import { describe, expect, it } from 'vitest';
 import { extractUniqueLevelOneHeading, resolveImportedNodeTitle } from '../../lib/core/import/importedNodeTitle';
 
 describe('importedNodeTitle', () => {
-  it('falls back to the source name without extension', () => {
+  it('uses the unique level-one heading even when the file-name strategy is selected', () => {
+    expect(
+      resolveImportedNodeTitle({
+        content: '# Imported title\n\nBody',
+        sourceName: 'Daily/note.md',
+        titleStrategy: 'file_name'
+      })
+    ).toBe('Imported title');
+  });
+
+  it('falls back to the source name without extension when there is no unique h1', () => {
     expect(
       resolveImportedNodeTitle({
         content: 'Body only',
@@ -11,16 +21,6 @@ describe('importedNodeTitle', () => {
         titleStrategy: 'file_name'
       })
     ).toBe('Daily/note');
-  });
-
-  it('uses the only level-one heading when the heading strategy is enabled', () => {
-    expect(
-      resolveImportedNodeTitle({
-        content: '# Imported title\n\nBody',
-        sourceName: 'note.md',
-        titleStrategy: 'heading'
-      })
-    ).toBe('Imported title');
   });
 
   it('falls back to the file name when there are multiple level-one headings', () => {

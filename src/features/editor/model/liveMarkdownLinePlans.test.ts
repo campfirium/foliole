@@ -37,7 +37,7 @@ describe('liveMarkdown preview line plans', () => {
     ).toMatchObject({
       imageVisible: true,
       isCodeFenceLine: false,
-      lineClass: 'cm-line-title-heading-hidden',
+      lineClass: 'cm-line-h1',
       nextInCodeBlock: false,
       prefixVisible: true
     });
