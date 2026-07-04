@@ -4,6 +4,7 @@ import type { ReviewSessionMode } from '../../features/review/model/reviewSessio
 import type { ReviewGrade, SchedulerPreviewResult } from '../../features/review/model/reviewTypes';
 import { definedProps } from '../../shared/lib/definedProps';
 import { ReviewActionBar } from '../../shared/ui';
+import type { ReadReviewTopicOptions } from '../../store/workspaceStore';
 
 import { ResumeReviewAction } from './ReviewModeToolbarActions';
 import { ActiveReviewActionBar } from './ReviewModeToolbarActive';
@@ -34,9 +35,10 @@ interface ReviewModeToolbarProps {
   reviewSummary?: ReviewToolbarSessionSummaryValues;
   reviewStatus: 'idle' | 'awaiting-answer' | 'answer-revealed' | 'completed';
   reviewSessionMode: ReviewSessionMode;
+  readActionAdvanceReady?: boolean;
   surface?: 'panel' | 'overlay';
   onGrade: (grade: ReviewGrade) => Promise<boolean>;
-  onReadReviewTopic: () => Promise<boolean>;
+  onReadReviewTopic: (options?: ReadReviewTopicOptions) => Promise<boolean>;
   onPostponeReviewTopic: () => Promise<boolean>;
   onDismissReviewTopic: () => Promise<boolean>;
   onRevisitReviewTopicSoon: () => Promise<boolean>;
@@ -127,7 +129,7 @@ export function ReviewModeToolbar(props: ReviewModeToolbarProps) {
     isReadingActive: !toolbarProps.isCurrentItemGradable && toolbarProps.isCurrentReviewItemVisible,
     onDismissReviewTopic: toolbarProps.onDismissReviewTopic,
     onPostponeReviewTopic: toolbarProps.onPostponeReviewTopic,
-    onReadReviewTopic: toolbarProps.onReadReviewTopic,
+    onReadReviewTopic: () => toolbarProps.onReadReviewTopic({ releaseSequentialReading: toolbarProps.readActionAdvanceReady === true }),
     onRevisitReviewTopicSoon: toolbarProps.onRevisitReviewTopicSoon,
     reviewCurrentNodeId: toolbarProps.reviewCurrentNodeId
   });
@@ -165,6 +167,7 @@ export function ReviewModeToolbar(props: ReviewModeToolbarProps) {
       isSubmitting={gradeFeedback.isSubmitting}
       readingErrorMessage={readingFeedback.errorMessage}
       readingIsSubmitting={readingFeedback.isSubmitting}
+      readActionAdvanceReady={toolbarProps.readActionAdvanceReady === true}
       submitGrade={gradeFeedback.submitGrade}
       submitReadingAction={readingFeedback.submitReadingAction}
       {...definedProps({ reviewSummary: withSummaryStatus(toolbarProps.reviewSummary, 'in-progress') })}

@@ -26,4 +26,10 @@ describe('help knowledge', () => {
       title: 'Relearn'
     });
   });
+
+  it('explains how sequential reading advances after a read near the content end', () => {
+    expect(getHelpKnowledgeItem('actionHelp.nodeList.sequentialReadingEnable')).toMatchObject({
+      detail: 'The next topic appears after you click Read at the end of the previous topic, or use Dismiss / Shelve.'
+    });
+  });
 });

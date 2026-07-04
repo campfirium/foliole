@@ -67,7 +67,7 @@ export const EN_DESKTOP_ACTION_HELP_TRANSLATIONS = {
   'desktop.actionHelp.nodeList.sequentialReadingDisable.sourceLabel': 'Topic list menu',
   'desktop.actionHelp.nodeList.sequentialReadingEnable.title': 'Enable sequential reading',
   'desktop.actionHelp.nodeList.sequentialReadingEnable.body': 'Show contained topics one at a time, in order.',
-  'desktop.actionHelp.nodeList.sequentialReadingEnable.detail': 'The next topic appears after the previous one is dismissed or shelved.',
+  'desktop.actionHelp.nodeList.sequentialReadingEnable.detail': 'The next topic appears after you click Read at the end of the previous topic, or use Dismiss / Shelve.',
   'desktop.actionHelp.nodeList.sequentialReadingEnable.sourceLabel': 'Topic list menu',
   'desktop.actionHelp.nodeList.shelveTopic.title': 'Shelve entire topic',
   'desktop.actionHelp.nodeList.shelveTopic.body': 'Set this topic and its derived topics aside.',

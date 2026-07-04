@@ -11,7 +11,9 @@ function createReviewProps(overrides: Partial<WorkspaceBottomReviewToolbarProps>
     isImmersiveMode: false,
     isListCollapsed: false,
     isReviewEditing: false,
+    isSequentialReadingReviewTopic: false,
     isStudyMode: true,
+    editorAdapterRef: { current: null },
     onContinueReading: vi.fn(),
     onDismissReviewTopic: vi.fn(async () => true),
     onExitReviewMode: vi.fn(),
@@ -53,6 +55,7 @@ it('treats external, trash, and virtual surfaces as paused review surfaces', () 
   const onSelectNode = vi.fn();
   const onResumeReviewItem = vi.fn();
   const source = {
+    document: { editorAdapterRef: { current: null } },
     externalLibrary: { isExternalViewOpen: true },
     layoutChrome: { isImmersiveMode: false, isListCollapsed: false },
     navigation: { activeNodeId: 'node-1', onSelectNode },
@@ -83,6 +86,7 @@ it('treats external, trash, and virtual surfaces as paused review surfaces', () 
 
 it('treats a different queued topic as a paused review surface', () => {
   const source = {
+    document: { editorAdapterRef: { current: null } },
     externalLibrary: { isExternalViewOpen: false },
     layoutChrome: { isImmersiveMode: false, isListCollapsed: false },
     navigation: { activeNodeId: 'node-2', onSelectNode: vi.fn() },

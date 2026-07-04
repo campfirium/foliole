@@ -66,7 +66,7 @@ export const NODE_LIST_CONTEXT_ACTION_HELP = {
   },
   sequentialReadingEnable: {
     body: 'Show contained topics one at a time, in order.',
-    detail: 'The next topic appears after the previous one is dismissed or shelved.',
+    detail: 'The next topic appears after you click Read at the end of the previous topic, or use Dismiss / Shelve.',
     id: 'actionHelp.nodeList.sequentialReadingEnable',
     keywords: ['book', 'order', 'sequence'],
     sourceLabel: 'Topic list menu',

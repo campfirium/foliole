@@ -16,7 +16,7 @@ import type {
   ExternalLibraryFolder
 } from '../../shared/platform/externalLibraryBrowseRepository';
 import type { ReviewFlowWindow } from '../../store/workspaceReviewFlowWindow';
-import type { NodeViewState } from '../../store/workspaceStore';
+import type { NodeViewState, ReadReviewTopicOptions } from '../../store/workspaceStore';
 import type { SelectionCommandPayload } from '../contextCommands';
 import type { CurrentViewTopicSnapshot } from '../currentViewTopicSnapshot';
 import type { LongClozeGuardOptions } from '../hooks/editorClozeGuardrail';
@@ -210,7 +210,7 @@ export interface WorkspaceLayoutFieldTypes {
   onCloseSettings: () => void;
   onRevealAnswer: () => void;
   onGradeReview: (grade: ReviewGrade) => Promise<boolean>;
-  onReadReviewTopic: () => Promise<boolean>;
+  onReadReviewTopic: (options?: ReadReviewTopicOptions) => Promise<boolean>;
   onPostponeReviewTopic: () => Promise<boolean>;
   onOpenPostponeTopicPanel: (nodeId?: string | null) => boolean;
   onDismissReviewTopic: () => Promise<boolean>;

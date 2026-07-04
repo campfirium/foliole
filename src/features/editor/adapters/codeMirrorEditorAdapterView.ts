@@ -102,8 +102,10 @@ export function resolveDocumentPositionAtViewportY(view: EditorView, clientY: nu
 }
 
 export function readEditorScrollMetrics(view: EditorView) {
+  const contentPaddingBottom = Number.parseFloat(getComputedStyle(view.contentDOM).paddingBottom);
   return {
     clientHeight: view.scrollDOM.clientHeight,
+    contentPaddingBottom: Number.isFinite(contentPaddingBottom) ? contentPaddingBottom : 0,
     scrollHeight: view.scrollDOM.scrollHeight,
     scrollTop: view.scrollDOM.scrollTop
   };

@@ -180,10 +180,10 @@ export function findEnabledSequentialReadingSourceId(
   return null;
 }
 
-export function buildSequentialReadingDismissPatch(args: SequentialReadingArgs & {
-  dismissedNodeId: string;
+function buildSequentialReadingAdvancePatch(args: SequentialReadingArgs & {
+  handledNodeId: string;
 }) {
-  const sourceNodeId = findEnabledSequentialReadingSourceId(args.dismissedNodeId, args.nodesById);
+  const sourceNodeId = findEnabledSequentialReadingSourceId(args.handledNodeId, args.nodesById);
   if (!sourceNodeId) {
     return null;
   }
@@ -193,6 +193,9 @@ export function buildSequentialReadingDismissPatch(args: SequentialReadingArgs &
   const sourceNode = nextNodesById[sourceNodeId];
   let released = false;
   for (const nodeId of derivedNodeIds) {
+    if (nodeId === args.handledNodeId) {
+      continue;
+    }
     const node = nextNodesById[nodeId];
     if (isUnavailableSequentialTopic(node)) {
       released ||= unavailableFolderTopicOccupiesSlot({ ...args, nodeId, sourceNode });
@@ -212,18 +215,14 @@ export function buildSequentialReadingDismissPatch(args: SequentialReadingArgs &
   return changes.length === 0 ? null : { changes, nodesById: nextNodesById, sourceNodeId };
 }
 
-export function findSequentialReadingSourcesForNode(
-  nodeId: string,
-  nodesById: WorkspaceState['nodesById']
-) {
-  const sources = new Set<string>();
-  const enabledSourceId = findEnabledSequentialReadingSourceId(nodeId, nodesById);
-  if (enabledSourceId) {
-    sources.add(enabledSourceId);
-  }
-  const node = nodesById[nodeId];
-  if (node && isSequentialReadingSourceNode(node, nodesById) && node.sequentialReadingEnabled === true) {
-    sources.add(nodeId);
-  }
-  return sources;
+export function buildSequentialReadingDismissPatch(args: SequentialReadingArgs & {
+  dismissedNodeId: string;
+}) {
+  return buildSequentialReadingAdvancePatch({ ...args, handledNodeId: args.dismissedNodeId });
+}
+
+export function buildSequentialReadingReadPatch(args: SequentialReadingArgs & {
+  readNodeId: string;
+}) {
+  return buildSequentialReadingAdvancePatch({ ...args, handledNodeId: args.readNodeId });
 }

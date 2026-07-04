@@ -69,7 +69,7 @@ export const ZH_HANS_DESKTOP_ACTION_HELP_TRANSLATIONS: Partial<Record<Translatio
   'desktop.actionHelp.nodeList.sequentialReadingDisable.sourceLabel': '主题列表菜单',
   'desktop.actionHelp.nodeList.sequentialReadingEnable.title': '开启顺序阅读',
   'desktop.actionHelp.nodeList.sequentialReadingEnable.body': '按顺序逐个显示子主题。',
-  'desktop.actionHelp.nodeList.sequentialReadingEnable.detail': '前一个子主题 Dismiss 或搁置后，下一个才会出现。',
+  'desktop.actionHelp.nodeList.sequentialReadingEnable.detail': '在前一个子主题末尾点击 Read 后，下一个子主题会出现；也可以用 Dismiss / 搁置。',
   'desktop.actionHelp.nodeList.sequentialReadingEnable.sourceLabel': '主题列表菜单',
   'desktop.actionHelp.nodeList.shelveTopic.title': '搁置整个主题',
   'desktop.actionHelp.nodeList.shelveTopic.body': '把这个主题及其派生主题暂时放到一边。',

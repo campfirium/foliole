@@ -8,6 +8,7 @@ import type { ReviewSessionMode } from '../../features/review/model/reviewSessio
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 import type { ReviewSchedulerSettingsContextValue } from '../../features/settings/context/reviewSchedulerSettingsContext';
 import type { NodeViewState, ReviewSessionState, WorkspaceState } from '../../store/workspaceStore';
+import type { ReadReviewTopicOptions } from '../../store/workspaceStore';
 
 import { createAnswerChangeHandler, createEditorChangeHandler, createEditorReadyHandler, createNodeContentChangeHandler, type SelectNodeHandler } from './appControllerEditorHandlers';
 import type { useCurrentReviewPreview } from './appControllerHelpers';
@@ -83,7 +84,7 @@ export interface BuildControllerLayoutPropsArgs {
     deleteEditorAnnotationNodes: (nodeIds: string[]) => void;
     exitReviewSession: () => void;
     gradeReviewCard: (grade: ReviewGrade, now?: string) => Promise<boolean>;
-    readReviewTopic: (now?: string) => Promise<boolean>;
+    readReviewTopic: WorkspaceState['readReviewTopic'];
     postponeReviewTopic: (now?: string) => Promise<boolean>;
     setReviewTopicDelay: (nodeId: string, delayLevel: number, now?: string) => Promise<boolean>;
     dismissReviewTopic: (now?: string) => Promise<boolean>;
@@ -190,7 +191,7 @@ function createLayoutHandlerArgs(
     onToggleImmersiveMode: () => args.runtime.setIsImmersiveMode((current) => !current),
     onToggleRightSidebarVisibility: createToggleRightSidebarVisibility(args),
     updateGrade: (grade: ReviewGrade) => args.ws.gradeReviewCard(grade, args.nowIso),
-    readReviewTopic: () => args.ws.readReviewTopic(args.nowIso),
+    readReviewTopic: (_now?: string, options?: ReadReviewTopicOptions) => args.ws.readReviewTopic(args.nowIso, options),
     postponeReviewTopic: () => args.ws.postponeReviewTopic(args.nowIso),
     dismissReviewTopic: () => args.ws.dismissReviewTopic(args.nowIso),
     revisitReviewTopicSoon: () => args.ws.revisitReviewTopicSoon(args.nowIso),

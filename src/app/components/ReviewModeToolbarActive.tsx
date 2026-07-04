@@ -27,6 +27,7 @@ export interface ActiveReviewActionBarProps {
   onRevisitReviewTopicSoon: () => Promise<boolean>;
   readingErrorMessage: string | null;
   readingIsSubmitting: boolean;
+  readActionAdvanceReady?: boolean;
   retryReadingAction?: () => Promise<void>;
   retryGrade?: () => Promise<void>;
   reviewPreview: SchedulerPreviewResult | null;
@@ -71,6 +72,7 @@ function createActiveReviewActions(props: Pick<
   | 'onRevealAnswer'
   | 'readingErrorMessage'
   | 'readingIsSubmitting'
+  | 'readActionAdvanceReady'
   | 'retryReadingAction'
   | 'retryGrade'
   | 'reviewPreview'
@@ -87,6 +89,7 @@ function createActiveReviewActions(props: Pick<
         onPostponeReviewTopic={() => void props.submitReadingAction('later')}
         onReadReviewTopic={() => void props.submitReadingAction('read')}
         onRevisitReviewTopicSoon={() => void props.submitReadingAction('soon')}
+        readActionAdvanceReady={props.readActionAdvanceReady === true}
         {...definedProps({ onRetry: props.retryReadingAction })}
         showActionHelp={props.showActionHelp}
         {...definedProps({ surface: props.surface })}
@@ -126,6 +129,7 @@ function createActiveReviewPrimary(props: ActiveReviewActionBarProps, showAction
     onRevealAnswer: props.onRevealAnswer,
     readingErrorMessage: props.readingErrorMessage,
     readingIsSubmitting: props.readingIsSubmitting,
+    ...definedProps({ readActionAdvanceReady: props.readActionAdvanceReady }),
     ...definedProps({ retryReadingAction: props.retryReadingAction }),
     ...definedProps({ retryGrade: props.retryGrade }),
     reviewPreview: props.reviewPreview,

@@ -32,6 +32,7 @@ export const EMPTY_EDITOR_TEXT_ANCHOR_DECORATIONS: readonly EditorTextAnchorDeco
 
 export interface EditorScrollMetrics {
   clientHeight: number;
+  contentPaddingBottom?: number;
   scrollHeight: number;
   scrollTop: number;
 }

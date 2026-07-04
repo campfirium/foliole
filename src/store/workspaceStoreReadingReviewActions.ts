@@ -1,18 +1,15 @@
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
-import { advanceReadingScheduleCoreFields } from '../features/review/model/unifiedPushQueueRules';
-import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
 import {
   runtimeWorkspaceReviewPersistence,
   type WorkspaceReviewPersistenceAdapter
 } from './workspaceReviewPersistence';
-import {
-  buildNextReadingProfile,
-  resolveReadingPriorityChain
-} from './workspaceReviewReading';
+import { buildNextReadingProfile } from './workspaceReviewReading';
 import { calculateReviewStepElapsedMs } from './workspaceReviewSessionProgress';
 import type { WorkspaceState } from './workspaceStore';
+import { buildNextReadingReviewState } from './workspaceStoreReadingReviewSchedule';
+import { buildReadReviewSequentialRelease } from './workspaceStoreReadingReviewSequentialRelease';
 import {
   advanceAfterSoonAction,
   advanceOrCompleteAfterReadingAction,
@@ -27,32 +24,6 @@ export type ReadingReviewPendingNodeIds = Set<string>;
 interface ReadingReviewPatchResult {
   nextNodesForSync: Node[];
   patch: Partial<WorkspaceState>;
-}
-
-function buildNextReadingReviewState(args: {
-  currentNodeId: string;
-  currentNode: Node;
-  growthFactorExponent?: number;
-  now: string;
-  snapshot: WorkspaceState;
-}) {
-  const pushQueueSettings = getCurrentReviewSchedulerSettings().pushQueue;
-  const initialIntervalMs = pushQueueSettings.readingInitialIntervalMs;
-  return advanceReadingScheduleCoreFields({
-    ...(args.growthFactorExponent !== undefined ? { growthFactorExponent: args.growthFactorExponent } : {}),
-    lastHandledAt: args.now,
-    minimumIntervalMs: initialIntervalMs,
-    ...(args.currentNode.reading?.intervalDurationMs !== undefined ? { previousIntervalDurationMs: args.currentNode.reading.intervalDurationMs } : {}),
-    previousRepetitionCount: args.currentNode.reading?.repetitionCount ?? 0,
-    priorityChain: resolveReadingPriorityChain({
-      currentNodeId: args.currentNodeId,
-      currentReading: args.currentNode.reading,
-      defaultPriority: pushQueueSettings.defaultPriority,
-      nodesById: args.snapshot.nodesById
-    }),
-    ...(initialIntervalMs !== undefined ? { initialIntervalMs } : {}),
-    ...(pushQueueSettings.readingIntervalGrowthFactorRange ? { range: pushQueueSettings.readingIntervalGrowthFactorRange } : {})
-  });
 }
 
 export function createPostponeReviewTopicAction(set: WorkspaceSet, get: WorkspaceGet): WorkspaceState['postponeReviewTopic'] {
@@ -95,7 +66,7 @@ export function createReadReviewTopicActionWithPending(
   pendingNodeIds: ReadingReviewPendingNodeIds,
   persistence: WorkspaceReviewPersistenceAdapter = runtimeWorkspaceReviewPersistence
 ): WorkspaceState['readReviewTopic'] {
-  return async (now = new Date().toISOString()) => {
+  return async (now = new Date().toISOString(), options = {}) => {
     const snapshot = get();
     const currentNodeId = snapshot.reviewSession.currentNodeId;
     if (!currentNodeId || snapshot.activeNodeId !== currentNodeId) return false;
@@ -109,7 +80,7 @@ export function createReadReviewTopicActionWithPending(
       pendingNodeIds,
       set,
       buildPatch: (state) =>
-        buildReadOrPostponeReadingReviewPatch({ currentNodeId, nextReading, now, snapshot, state, title: 'Read Topic' }),
+        buildReadOrPostponeReadingReviewPatch({ currentNodeId, nextReading, now, releaseSequentialReading: options.releaseSequentialReading === true, snapshot, state, title: 'Read Topic' }),
       persistence
     });
   };
@@ -157,6 +128,7 @@ function buildReadOrPostponeReadingReviewPatch(args: {
   currentNodeId: string;
   nextReading: ReturnType<typeof buildNextReadingReviewState>;
   now: string;
+  releaseSequentialReading?: boolean;
   snapshot: WorkspaceState;
   state: WorkspaceState;
   title: 'Read Topic' | 'Later Topic';
@@ -165,7 +137,16 @@ function buildReadOrPostponeReadingReviewPatch(args: {
   if (!node) return null;
   const nextReadingProfile = buildNextReadingProfile(args.nextReading, node.reading);
   const nextNode: Node = { ...node, reading: nextReadingProfile, updatedAt: args.now };
-  const nextNodesById = { ...args.state.nodesById, [args.currentNodeId]: nextNode };
+  let nextNodesById = { ...args.state.nodesById, [args.currentNodeId]: nextNode };
+  const sequentialPatch = args.releaseSequentialReading
+    ? buildReadReviewSequentialRelease({ currentNodeId: args.currentNodeId, nextNodesById, now: args.now, state: args.state })
+    : null;
+  if (sequentialPatch) {
+    nextNodesById = sequentialPatch.nodesById;
+  }
+  const nextNodesForSync = sequentialPatch
+    ? [nextNode, ...sequentialPatch.nodesForSync]
+    : [nextNode];
   const reviewSession = advanceOrCompleteAfterReadingAction({
     currentNodeId: args.currentNodeId,
     nextNodesById,
@@ -176,7 +157,7 @@ function buildReadOrPostponeReadingReviewPatch(args: {
     state: args.state
   });
   return {
-    nextNodesForSync: [nextNode],
+    nextNodesForSync,
     patch: {
       activeNodeId: reviewSession.currentNodeId ?? reviewSession.continueNodeId ?? args.state.activeNodeId,
       ...createReadingReviewHistoryPatch({
@@ -185,6 +166,7 @@ function buildReadOrPostponeReadingReviewPatch(args: {
         beforeReading: node.reading,
         beforeReviewSession: args.snapshot.reviewSession,
         nodeId: args.currentNodeId,
+        ...(sequentialPatch?.changes.length ? { relatedReadings: sequentialPatch.changes } : {}),
         state: args.state,
         title: args.title
       }),

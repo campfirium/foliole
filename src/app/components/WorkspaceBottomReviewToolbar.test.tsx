@@ -17,6 +17,8 @@ function createProps(overrides: Partial<WorkspaceBottomReviewToolbarProps> = {})
     isReviewEditing: false,
     isStudyMode: true,
     isCurrentReviewItemVisible: true,
+    isSequentialReadingReviewTopic: false,
+    editorAdapterRef: { current: null },
     reviewCompletedCount: 0,
     reviewCurrentNodeId: 'node-1',
     reviewCurrentTitle: 'Review topic',

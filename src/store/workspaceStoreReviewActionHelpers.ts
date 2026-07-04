@@ -14,6 +14,7 @@ import {
 } from './workspaceReviewPersistence';
 import { advanceReviewSession, completeReviewSession } from './workspaceReviewReading';
 import { calculateReviewStepElapsedMs } from './workspaceReviewSessionProgress';
+import type { SequentialReadingChange } from './workspaceSequentialReading';
 import type { WorkspaceState } from './workspaceStore';
 
 type WorkspaceSet = (
@@ -121,6 +122,7 @@ export function createReadingReviewHistoryPatch(args: {
   beforeReading: WorkspaceState['nodesById'][string]['reading'] | null | undefined;
   beforeReviewSession: WorkspaceState['reviewSession'];
   nodeId: string;
+  relatedReadings?: SequentialReadingChange[];
   state: WorkspaceState;
   title: WorkspaceTopicReadingActionTitle;
 }) {
@@ -133,6 +135,7 @@ export function createReadingReviewHistoryPatch(args: {
         beforeReading: args.beforeReading,
         beforeReviewSession: args.beforeReviewSession,
         nodeId: args.nodeId,
+        ...(args.relatedReadings?.length ? { relatedReadings: args.relatedReadings } : {}),
         title: args.title
       })
     )

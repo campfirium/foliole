@@ -10,21 +10,39 @@ import { overlayDividerClass, type ReviewActionSurface } from './reviewActionLay
 import { renderOverlayDividedActions, ReviewOverlayActionButton } from './ReviewOverlayActionButton';
 import { ToolbarActionGroup } from './ToolbarActionGroup';
 
+import { cn } from '@/shared/lib/utils';
+
 type ReviewActionItem = { key: string; node: ReactNode };
 
 function ReadingReviewButton(props: {
   className: string;
   disabled: boolean;
+  isAdvanceReady?: boolean;
   label: string;
   onClick: () => void;
   surface: ReviewActionSurface;
 }) {
   if (props.surface === 'overlay') {
-    return <ReviewOverlayActionButton disabled={props.disabled} label={props.label} onClick={props.onClick} />;
+    return (
+      <ReviewOverlayActionButton
+        {...(props.isAdvanceReady ? { className: 'text-foreground font-medium' } : {})}
+        disabled={props.disabled}
+        label={props.label}
+        onClick={props.onClick}
+      />
+    );
   }
 
   return (
-    <AppButton aria-label={props.label} className={props.className} disabled={props.disabled} onClick={props.onClick} size="md" variant="default">
+    <AppButton
+      aria-label={props.label}
+      className={cn(props.className, props.isAdvanceReady && 'border-2 border-border-strong font-medium text-foreground')}
+      data-advance-ready={props.isAdvanceReady ? 'true' : undefined}
+      disabled={props.disabled}
+      onClick={props.onClick}
+      size="md"
+      variant="default"
+    >
       {props.label}
     </AppButton>
   );
@@ -38,6 +56,7 @@ type ReadingReviewActionsProps = {
   onReadReviewTopic: () => void;
   onPostponeReviewTopic: () => void;
   onDismissReviewTopic: () => void;
+  readActionAdvanceReady?: boolean;
   onRetry?: () => void;
   onRevisitReviewTopicSoon?: () => void;
   showActionHelp?: boolean;
@@ -50,6 +69,7 @@ type ResolvedReadingReviewActionsProps = Required<
   buttonClassName: string;
   isSubmitting: boolean;
   onRevisitReviewTopicSoon?: () => void;
+  readActionAdvanceReady: boolean;
 };
 
 function createReadingReviewActionItems(props: ResolvedReadingReviewActionsProps) {
@@ -80,7 +100,7 @@ function createReadingReviewActionItems(props: ResolvedReadingReviewActionsProps
     {
       key: 'read',
       node: wrapWithHelpCard(
-        <ReadingReviewButton className={props.buttonClassName} disabled={props.isSubmitting} label={t('desktop.reviewActions.reading.read')} onClick={props.onReadReviewTopic} surface={props.surface} />,
+        <ReadingReviewButton className={props.buttonClassName} disabled={props.isSubmitting} isAdvanceReady={props.readActionAdvanceReady} label={t('desktop.reviewActions.reading.read')} onClick={props.onReadReviewTopic} surface={props.surface} />,
         READING_REVIEW_ACTION_HELP.read
       )
     },
@@ -104,6 +124,7 @@ export function ReadingReviewActions(props: ReadingReviewActionsProps) {
     onDismissReviewTopic: props.onDismissReviewTopic,
     onPostponeReviewTopic: props.onPostponeReviewTopic,
     onReadReviewTopic: props.onReadReviewTopic,
+    readActionAdvanceReady: props.readActionAdvanceReady ?? false,
     ...(props.onRevisitReviewTopicSoon ? { onRevisitReviewTopicSoon: props.onRevisitReviewTopicSoon } : {}),
     showActionHelp: props.showActionHelp ?? false,
     surface

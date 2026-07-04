@@ -4,9 +4,9 @@ import type { PushQueuePriority } from '../features/review/model/unifiedPushQueu
 import {
   buildSequentialReadingSourcePatch,
   findEnabledSequentialReadingSourceId,
-  findSequentialReadingSourcesForNode,
   type SequentialReadingChange
 } from './workspaceSequentialReading';
+import { findSequentialReadingSourcesForNode } from './workspaceSequentialReadingLookup';
 import type { WorkspaceState } from './workspaceStore';
 
 function collectSubtreeNodeIds(

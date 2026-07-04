@@ -70,7 +70,7 @@ export interface WorkspaceState {
   setReviewSessionMode: (mode: ReviewSessionMode, now?: string) => void;
   revealReviewAnswer: () => void;
   gradeReviewCard: (grade: ReviewGrade, now?: string) => Promise<boolean>;
-  readReviewTopic: (now?: string) => Promise<boolean>;
+  readReviewTopic: (now?: string, options?: ReadReviewTopicOptions) => Promise<boolean>;
   postponeReviewTopic: (now?: string) => Promise<boolean>;
   setReviewTopicDelay: (nodeId: string, delayLevel: number, now?: string) => Promise<boolean>;
   revisitReviewTopicSoon: (now?: string) => Promise<boolean>;
@@ -125,6 +125,10 @@ export interface ReviewSessionStartOptions {
 export interface ReviewSessionResumeOptions {
   includeScheduledFallback?: boolean;
   preferredNodeId?: string | null;
+}
+
+export interface ReadReviewTopicOptions {
+  releaseSequentialReading?: boolean;
 }
 
 export interface WorkspaceNodeCreationOptions {

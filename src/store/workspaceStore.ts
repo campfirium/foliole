@@ -23,6 +23,7 @@ import type { WorkspaceLayoutState, WorkspaceState } from './workspaceStoreTypes
 
 export type {
   NodeViewState,
+  ReadReviewTopicOptions,
   ReviewSessionState,
   ReviewSessionResumeOptions,
   ReviewSessionStartOptions,

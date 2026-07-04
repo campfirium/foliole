@@ -167,7 +167,7 @@ export interface BuildLayoutPropsArgs {
   exitReviewSession: WorkspaceState['exitReviewSession'];
   exitStudyMode: () => void;
   updateGrade: (grade: ReviewGrade) => Promise<boolean>;
-  readReviewTopic: () => Promise<boolean>;
+  readReviewTopic: WorkspaceState['readReviewTopic'];
   postponeReviewTopic: () => Promise<boolean>;
   dismissReviewTopic: () => Promise<boolean>;
   revisitReviewTopicSoon: () => Promise<boolean>;

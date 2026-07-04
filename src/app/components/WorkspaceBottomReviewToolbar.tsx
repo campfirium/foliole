@@ -1,10 +1,16 @@
 import type { ReviewSessionMode } from '../../features/review/model/reviewSessionMode';
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 import { definedProps } from '../../shared/lib/definedProps';
+import { findEnabledSequentialReadingSourceId } from '../../store/workspaceSequentialReading';
 
+import { useReadActionAdvanceState } from './readActionAdvanceState';
 import { ReviewModeToolbar } from './ReviewModeToolbar';
 import type { ReviewToolbarProgressCounts } from './reviewToolbarProgressLabel';
 import { ReviewToolbarProgressLine } from './ReviewToolbarSessionFrame';
+import {
+  getReviewCurrentTitle,
+  getReviewProgressCounts
+} from './workspaceBottomReviewToolbarModel';
 import { getWorkspaceGridColumns } from './workspaceGridColumns';
 import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 import { WorkspaceStudyDockTrigger } from './WorkspaceStudyDock';
@@ -19,6 +25,7 @@ export interface WorkspaceBottomReviewToolbarProps {
   isReviewEditing: boolean;
   isStudyMode: boolean;
   isCurrentReviewItemVisible: boolean;
+  isSequentialReadingReviewTopic: boolean;
   reviewCompletedCount: number;
   reviewCurrentNodeId: string | null;
   reviewCurrentTitle: string | undefined;
@@ -28,7 +35,8 @@ export interface WorkspaceBottomReviewToolbarProps {
   reviewSummary: WorkspaceLayoutProps['review']['reviewSummary'];
   reviewStatus: WorkspaceLayoutProps['review']['reviewStatus'];
   reviewSessionMode: ReviewSessionMode;
-  onReadReviewTopic: () => Promise<boolean>;
+  editorAdapterRef: WorkspaceLayoutProps['document']['editorAdapterRef'];
+  onReadReviewTopic: WorkspaceLayoutProps['review']['onReadReviewTopic'];
   onPostponeReviewTopic: () => Promise<boolean>;
   onDismissReviewTopic: () => Promise<boolean>;
   onRevisitReviewTopicSoon: () => Promise<boolean>;
@@ -43,38 +51,14 @@ export interface WorkspaceBottomReviewToolbarProps {
 
 export type WorkspaceBottomReviewToolbarSource = Pick<
   WorkspaceLayoutProps,
-  'externalLibrary' | 'layoutChrome' | 'navigation' | 'nodeList' | 'review' | 'trash' | 'virtualView'
+  'document' | 'externalLibrary' | 'layoutChrome' | 'navigation' | 'nodeList' | 'review' | 'trash' | 'virtualView'
 >;
 
-function getReviewCurrentTitle(source: WorkspaceBottomReviewToolbarSource) {
-  const currentNodeId = source.review.reviewCurrentNodeId;
-  if (!currentNodeId) {
-    return undefined;
-  }
-  return source.nodeList.nodesById[currentNodeId]?.title;
-}
+type WorkspaceBottomReviewToolbarRenderProps = WorkspaceBottomReviewToolbarProps & {
+  readActionAdvanceReady: boolean;
+};
 
-function getReviewProgressCounts(source: WorkspaceBottomReviewToolbarSource): ReviewToolbarProgressCounts {
-  const existingCounts = (source.review as Partial<WorkspaceBottomReviewToolbarProps>).reviewProgressCounts;
-  if (existingCounts) return existingCounts;
-
-  const queueNodeIds = (source.review as { reviewQueueNodeIds?: string[] }).reviewQueueNodeIds ?? [];
-  let queuedItemCount = 0;
-  let queuedTopicCount = 0;
-  for (const nodeId of queueNodeIds) {
-    const kind = source.nodeList.nodesById[nodeId]?.kind;
-    if (kind === 'item') queuedItemCount += 1;
-    if (kind === 'topic') queuedTopicCount += 1;
-  }
-  return {
-    completedItemCount: source.review.reviewSummary.reviewedItemCount,
-    completedTopicCount: source.review.reviewSummary.readTopicCount,
-    queuedItemCount,
-    queuedTopicCount
-  };
-}
-
-function BottomReviewModeToolbar(props: WorkspaceBottomReviewToolbarProps) {
+function BottomReviewModeToolbar(props: WorkspaceBottomReviewToolbarRenderProps) {
   return (
     <ReviewModeToolbar
       className={`${props.isImmersiveMode ? 'col-start-1 pointer-events-auto' : 'col-start-3 bg-transparent pl-4 pr-0 max-[1080px]:pl-2'} row-start-1 h-full max-[1080px]:col-start-1`}
@@ -94,6 +78,7 @@ function BottomReviewModeToolbar(props: WorkspaceBottomReviewToolbarProps) {
       reviewQueueCount={props.reviewQueueCount}
       reviewSummary={props.reviewSummary}
       reviewStatus={props.reviewStatus}
+      readActionAdvanceReady={props.readActionAdvanceReady}
       onReadReviewTopic={props.onReadReviewTopic}
       onContinueReading={props.onContinueReading}
       onPostponeReviewTopic={props.onPostponeReviewTopic}
@@ -112,6 +97,10 @@ function BottomReviewModeToolbar(props: WorkspaceBottomReviewToolbarProps) {
 
 export function selectWorkspaceBottomReviewToolbarProps(props: WorkspaceBottomReviewToolbarSource): WorkspaceBottomReviewToolbarProps {
   const { externalLibrary, layoutChrome, navigation, review, trash, virtualView } = props;
+  const isSequentialReadingReviewTopic = Boolean(
+    review.reviewCurrentNodeId &&
+      findEnabledSequentialReadingSourceId(review.reviewCurrentNodeId, props.nodeList.nodesById)
+  );
   const isCurrentReviewItemVisible = Boolean(
     review.reviewCurrentNodeId &&
     navigation.activeNodeId === review.reviewCurrentNodeId &&
@@ -129,6 +118,8 @@ export function selectWorkspaceBottomReviewToolbarProps(props: WorkspaceBottomRe
     isListCollapsed: layoutChrome.isListCollapsed,
     isReviewEditing: review.isReviewEditing,
     isStudyMode: review.isStudyMode,
+    isSequentialReadingReviewTopic,
+    editorAdapterRef: props.document.editorAdapterRef,
     onReadReviewTopic: review.onReadReviewTopic,
     onContinueReading: review.onContinueReading,
     onPostponeReviewTopic: review.onPostponeReviewTopic,
@@ -152,7 +143,7 @@ export function selectWorkspaceBottomReviewToolbarProps(props: WorkspaceBottomRe
   };
 }
 
-function WorkspaceBottomReviewToolbarContent(props: WorkspaceBottomReviewToolbarProps) {
+function WorkspaceBottomReviewToolbarContent(props: WorkspaceBottomReviewToolbarRenderProps) {
   const showReviewProgressLine = props.isCurrentReviewItemGradable && props.reviewStatus !== 'completed' && props.reviewStatus !== 'idle';
   return (
     <div
@@ -186,6 +177,11 @@ function WorkspaceBottomReviewToolbarContent(props: WorkspaceBottomReviewToolbar
 }
 
 export function WorkspaceBottomReviewToolbar(props: WorkspaceBottomReviewToolbarProps) {
+  const readActionAdvanceReady = useReadActionAdvanceState({
+    editorAdapterRef: props.editorAdapterRef,
+    enabled: props.isStudyMode && props.isCurrentReviewItemVisible && !props.isCurrentReviewItemGradable && props.isSequentialReadingReviewTopic,
+    resetKey: props.reviewCurrentNodeId
+  });
   if (!props.isStudyMode) {
     return null;
   }
@@ -213,7 +209,7 @@ export function WorkspaceBottomReviewToolbar(props: WorkspaceBottomReviewToolbar
           </div>
         )}
         <div className="relative z-local-raised min-w-0">
-          <WorkspaceBottomReviewToolbarContent {...props} />
+          <WorkspaceBottomReviewToolbarContent {...props} readActionAdvanceReady={readActionAdvanceReady} />
         </div>
       </div>
     </div>
