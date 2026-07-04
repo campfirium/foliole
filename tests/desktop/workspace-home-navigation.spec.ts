@@ -3,7 +3,7 @@ import path from 'node:path';
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
-const SCREENSHOT_PATH = path.resolve('.lab/atlas/0active/workspace-home-navigation-hidden-native.png');
+const SCREENSHOT_PATH = path.resolve('.tmp/artifacts/workspace-home-navigation-hidden-native.png');
 const NODE_LIST_PANEL_NAME = /^(Node list panel|主题列表面板)$/;
 
 test('workspace navigation keeps root folders under Home after renderer patch seeding', async ({

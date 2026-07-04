@@ -2,14 +2,23 @@ import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
 import {
   toRuntimeNodeSourceDetails,
-  toRuntimeNodeSourceUpdatePreview,
-  type RuntimeNodeSourceDetails,
-  type RuntimeNodeSourceUpdatePreview
+  type RuntimeNodeSourceDetails
 } from './nodeSourceRuntimePayloads';
+import {
+  toRuntimeNodeSourceUpdatePreview,
+  type RuntimeNodeSourceUpdatePreview
+} from './nodeSourceUpdateRuntimePayloads';
 import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeWarning } from './runtimeLogging';
 
-export type { RuntimeNodeSourceDetails, RuntimeNodeSourceUpdatePreview } from './nodeSourceRuntimePayloads';
+export type { RuntimeNodeSourceDetails } from './nodeSourceRuntimePayloads';
+export type { RuntimeNodeSourceUpdatePreview } from './nodeSourceUpdateRuntimePayloads';
+
+export interface RuntimeIncomingUpdateActionResult {
+  incomingUpdateId: string;
+  nodeId: string | null;
+  status: 'accepted' | 'dismissed' | 'unavailable';
+}
 
 export async function loadRuntimeNodeSourceDetails(nodeId: string): Promise<RuntimeNodeSourceDetails | null> {
   const runtimeInvoke = getRuntimeInvoke();
@@ -75,4 +84,53 @@ export async function loadRuntimeNodeSourceUpdatePreview(nodeId: string): Promis
     });
     return null;
   }
+}
+
+function toRuntimeIncomingUpdateActionResult(value: unknown): RuntimeIncomingUpdateActionResult | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+  const payload = value as Record<string, unknown>;
+  if (
+    typeof payload.incoming_update_id !== 'string' ||
+    (payload.node_id !== null && typeof payload.node_id !== 'string') ||
+    (payload.status !== 'accepted' &&
+      payload.status !== 'dismissed' &&
+      payload.status !== 'unavailable')
+  ) {
+    return null;
+  }
+  return {
+    incomingUpdateId: payload.incoming_update_id,
+    nodeId: payload.node_id,
+    status: payload.status
+  };
+}
+
+export async function acceptRuntimeIncomingUpdate(
+  incomingUpdateId: string,
+  content: string
+): Promise<RuntimeIncomingUpdateActionResult | null> {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return null;
+  }
+  return toRuntimeIncomingUpdateActionResult(
+    await runtimeInvoke(NATIVE_COMMANDS.acceptIncomingUpdate, {
+      content,
+      incoming_update_id: incomingUpdateId
+    })
+  );
+}
+
+export async function dismissRuntimeIncomingUpdate(incomingUpdateId: string): Promise<RuntimeIncomingUpdateActionResult | null> {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return null;
+  }
+  return toRuntimeIncomingUpdateActionResult(
+    await runtimeInvoke(NATIVE_COMMANDS.dismissIncomingUpdate, {
+      incoming_update_id: incomingUpdateId
+    })
+  );
 }

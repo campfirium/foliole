@@ -4,6 +4,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { DocumentSourceUpdatePanel } from './DocumentSourceUpdatePanel';
+import {
+  attachPanelAdapters,
+  createScrollAdapter,
+  type PanelBodyCall
+} from './DocumentSourceUpdatePanel.testSupport';
 
 const { documentPanelBodyMock } = vi.hoisted(() => ({
   documentPanelBodyMock: vi.fn((props: unknown) => {
@@ -18,33 +23,6 @@ vi.mock('./DocumentPanelBody', () => ({
     return <div data-testid="document-panel-body" />;
   }
 }));
-
-interface PanelBodyCall {
-  editorDiffDecorations?: unknown;
-  onEditorReady?: (adapter: unknown) => void;
-}
-
-function createScrollAdapter(options?: {
-  getScrollTop?: () => number;
-  onScroll?: (listener: () => void) => () => void;
-  revealPosition?: ReturnType<typeof vi.fn>;
-  scrollTop?: number;
-  setScrollTop?: (scrollTop: number) => void;
-}) {
-  let scrollTop = options?.scrollTop ?? 0;
-
-  return {
-    getLineBlockHeight: () => 24,
-    getScrollMetrics: () => ({ clientHeight: 300, scrollHeight: 1200, scrollTop: options?.getScrollTop?.() ?? scrollTop }),
-    getScrollTop: () => options?.getScrollTop?.() ?? scrollTop,
-    onScroll: options?.onScroll ?? (() => () => undefined),
-    revealPosition: options?.revealPosition ?? vi.fn(),
-    setScrollTop: vi.fn((nextScrollTop: number) => {
-      scrollTop = nextScrollTop;
-      options?.setScrollTop?.(nextScrollTop);
-    })
-  };
-}
 
 function renderPanel(currentContent: string, updatedContent: string) {
   renderWithLocalization(
@@ -65,16 +43,6 @@ function renderPanel(currentContent: string, updatedContent: string) {
 
 function getPanelBodyCall(callNumber: number) {
   return (documentPanelBodyMock.mock.calls[callNumber]?.[0] ?? {}) as PanelBodyCall;
-}
-
-function attachPanelAdapters(currentAdapter: ReturnType<typeof createScrollAdapter>, updatedAdapter: ReturnType<typeof createScrollAdapter>) {
-  const currentReady = getPanelBodyCall(0).onEditorReady;
-  const updatedReady = getPanelBodyCall(1).onEditorReady;
-
-  act(() => {
-    currentReady?.(currentAdapter as never);
-    updatedReady?.(updatedAdapter as never);
-  });
 }
 
 function resetPanelBodyMock() {
@@ -111,22 +79,15 @@ describe('DocumentSourceUpdatePanel rendering', () => {
     expect(screen.getAllByTestId('document-panel-body')).toHaveLength(2);
   });
 
-  it('shows the revised panel copy that matches the main document framing', () => {
+  it('shows a compact review chrome while keeping the overview ruler', () => {
     renderPanel('first\nsecond\nfourth', 'first\nsecond\nthird\nfourth changed');
 
-    expect(
-      screen.getByText(
-        'This side keeps the same reading and editing feel as the main document, stays vertically synced with the updated source, and leaves aligned gaps where the source has extra lines.'
-      )
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        'This side uses the same document rendering, stays read-only, follows the current draft while you scroll, and leaves aligned gaps where the draft has extra lines.'
-      )
-    ).toBeInTheDocument();
+    expect(screen.getByText('Review update')).toBeInTheDocument();
+    expect(screen.getByText('Current')).toBeInTheDocument();
+    expect(screen.getByText('Incoming update')).toBeInTheDocument();
     expect(screen.getByLabelText('Comparison overview ruler')).toBeInTheDocument();
-    expect(screen.getByText('1 highlight')).toBeInTheDocument();
-    expect(screen.getByText('Highlights grow from 1 to 2')).toBeInTheDocument();
+    expect(screen.queryByText('1 highlight')).not.toBeInTheDocument();
+    expect(screen.queryByText('Incoming has 2 highlights, from 1')).not.toBeInTheDocument();
   });
 
 });
@@ -239,7 +200,7 @@ describe('DocumentSourceUpdatePanel overview ruler', () => {
     const currentAdapter = createScrollAdapter();
     const updatedAdapter = createScrollAdapter();
 
-    attachPanelAdapters(currentAdapter, updatedAdapter);
+    attachPanelAdapters(documentPanelBodyMock.mock.calls, currentAdapter, updatedAdapter);
 
     const markers = screen.getAllByTestId('source-update-overview-marker');
     expect(markers).toHaveLength(1);
@@ -256,7 +217,7 @@ describe('DocumentSourceUpdatePanel overview ruler', () => {
     const currentAdapter = createScrollAdapter();
     const updatedAdapter = createScrollAdapter();
 
-    attachPanelAdapters(currentAdapter, updatedAdapter);
+    attachPanelAdapters(documentPanelBodyMock.mock.calls, currentAdapter, updatedAdapter);
 
     const previousButton = screen.getByLabelText('Jump to previous diff') as HTMLButtonElement;
     const nextButton = screen.getByLabelText('Jump to next diff') as HTMLButtonElement;

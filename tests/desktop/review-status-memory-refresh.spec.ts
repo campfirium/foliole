@@ -3,7 +3,7 @@ import path from 'node:path';
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
-const SCREENSHOT_PATH = path.resolve('.lab/atlas/0active/review-status-memory-refresh-hidden.png');
+const SCREENSHOT_PATH = path.resolve('.tmp/artifacts/review-status-memory-refresh-hidden.png');
 const DUE_REVIEW = {
   difficulty: 0,
   due: '2026-04-08T00:00:00.000Z',

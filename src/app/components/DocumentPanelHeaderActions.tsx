@@ -1,3 +1,4 @@
+import { FileUp } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import type { BacklinkItem } from '../../features/nodes/model/internalLinks';
@@ -15,7 +16,7 @@ import {
 } from '../../shared/ui';
 
 import { DocumentPanelHeaderBacklinksMenu } from './DocumentPanelHeaderBacklinksMenu';
-import { MoreOptionsIcon, SplitPanelIcon } from './DocumentPanelHeaderIcons';
+import { MoreOptionsIcon } from './DocumentPanelHeaderIcons';
 import { DocumentPriorityControl } from './DocumentPriorityControl';
 
 function SourceUpdateAction({
@@ -37,7 +38,7 @@ function SourceUpdateAction({
       aria-pressed={isOpen}
       className="text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground"
       data-active={isOpen}
-      icon={<SplitPanelIcon />}
+      icon={<FileUp aria-hidden="true" size={16} strokeWidth={1.8} />}
       label={t('desktop.document.toggleSourceUpdatePanel')}
       onClick={onToggle}
     />

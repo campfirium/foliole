@@ -7,13 +7,12 @@ import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { DocumentPanelBody } from './DocumentPanelBody';
 import type { SourceUpdateOverviewSegment } from './sourceUpdateDiffModel';
 import { SourceUpdateOverviewRuler } from './SourceUpdateOverviewRuler';
-import { SourceUpdateSummaryBar } from './SourceUpdateSummaryBar';
 
 const DOCUMENT_PREVIEW_PANE_CLASS_NAME =
   'flex min-h-0 min-w-0 flex-col overflow-hidden bg-[var(--workspace-region-main-document-bg)]';
 const REFERENCE_PREVIEW_PANE_CLASS_NAME =
-  'flex min-h-0 min-w-0 flex-col overflow-hidden border-l border-border bg-[var(--app-floating-muted-bg)]';
-const REFERENCE_HEADER_SURFACE_CLASS_NAME = 'border-l border-border bg-[var(--app-floating-muted-bg)]';
+  'flex min-h-0 min-w-0 flex-col overflow-hidden border-l border-border bg-[var(--workspace-region-main-document-bg)]';
+const REFERENCE_HEADER_SURFACE_CLASS_NAME = 'border-l border-border bg-[var(--workspace-region-main-document-bg)]';
 const OVERVIEW_PANE_CLASS_NAME =
   'flex min-h-0 min-w-0 flex-col overflow-hidden border-l border-border bg-[var(--app-floating-muted-bg)]';
 
@@ -46,11 +45,10 @@ interface SourceUpdatePanelColumnsProps {
   updatedMeasuredHighlights: EditorDiffDecorations | null;
 }
 
-function PanelColumnLabel({ description, title }: { description: string; title: string }) {
+function PanelColumnLabel({ title }: { title: string }) {
   return (
-    <header className="flex flex-none flex-col gap-1 border-b border-border px-4 py-3">
-      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-      <p className="text-xs text-foreground/55">{description}</p>
+    <header className="flex h-9 flex-none items-center border-b border-border px-4">
+      <h3 className="text-[11px] font-medium text-foreground/55">{title}</h3>
     </header>
   );
 }
@@ -146,20 +144,10 @@ export function SourceUpdatePanelColumns(props: SourceUpdatePanelColumnsProps) {
 
   return (
     <>
-      <SourceUpdateSummaryBar
-        currentHighlightCount={props.props.currentHighlightCount}
-        updatedHighlightCount={props.props.updatedHighlightCount}
-      />
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1fr)_2.75rem] grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
-        <PanelColumnLabel
-          description={t('desktop.sourceUpdate.current.description')}
-          title={t('desktop.sourceUpdate.current.title')}
-        />
+        <PanelColumnLabel title={t('desktop.sourceUpdate.current.title')} />
         <div className={REFERENCE_HEADER_SURFACE_CLASS_NAME}>
-          <PanelColumnLabel
-            description={t('desktop.sourceUpdate.updated.description')}
-            title={t('desktop.sourceUpdate.updated.title')}
-          />
+          <PanelColumnLabel title={t('desktop.sourceUpdate.updated.title')} />
         </div>
         <div aria-hidden="true" className={`${REFERENCE_HEADER_SURFACE_CLASS_NAME} border-b`} />
         <SourceUpdatePaneBody

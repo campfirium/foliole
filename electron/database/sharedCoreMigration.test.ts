@@ -215,3 +215,15 @@ it('creates new nodes columns required by sync-aware schema', () => {
     ])
   );
 });
+
+it('adds incoming updates table to existing v48 desktop databases', () => {
+  const connection = openDatabaseConnection();
+  connection.sqlite.pragma('user_version = 48');
+
+  initializeDatabaseConnection(connection);
+
+  expect(connection.sqlite
+    .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'incoming_updates'")
+    .get()).toEqual({ name: 'incoming_updates' });
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+});

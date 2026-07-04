@@ -1,11 +1,9 @@
-import { X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorDiffDecorations } from '../../features/editor/adapters/EditorAdapter';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
-  AppButton,
   AppDialog,
   AppDialogContent,
   AppDialogOverlay,
@@ -15,6 +13,7 @@ import {
 
 import { buildSourceUpdateDiffModel } from './sourceUpdateDiffModel';
 import { SourceUpdatePanelColumns } from './SourceUpdatePanelColumns';
+import { SourceUpdatePanelHeader } from './SourceUpdatePanelHeader';
 
 interface DocumentSourceUpdatePanelProps {
   currentContent: string;
@@ -22,8 +21,10 @@ interface DocumentSourceUpdatePanelProps {
   currentNodeId: string | null;
   documentMaxWidth: number;
   editorAppearanceKey: string;
+  onAcceptIncomingUpdate?: () => Promise<void>;
   onCurrentContentChange: (content: string) => void;
   onCurrentEditorReady?: (adapter: EditorAdapter | null) => void;
+  onDismissIncomingUpdate?: () => Promise<void>;
   onOpenChange: (open: boolean) => void;
   open: boolean;
   onUpdatedEditorReady?: (adapter: EditorAdapter | null) => void;
@@ -142,11 +143,15 @@ function SourceUpdatePanelDialog(props: {
         >
           <section className="flex h-full min-h-0 flex-col overflow-hidden">
             <AppDialogTitle className="sr-only">{t('desktop.sourceUpdate.dialogTitle')}</AppDialogTitle>
-            <header className="flex h-12 flex-none items-center justify-end border-b border-border px-4">
-              <AppButton aria-label={t('desktop.sourceUpdate.close')} className="size-8 px-0" onClick={() => props.panelProps.onOpenChange(false)} variant="ghost">
-                <X aria-hidden="true" size={15} strokeWidth={1.9} />
-              </AppButton>
-            </header>
+            <SourceUpdatePanelHeader
+              {...(props.panelProps.onAcceptIncomingUpdate
+                ? { onAcceptIncomingUpdate: props.panelProps.onAcceptIncomingUpdate }
+                : {})}
+              {...(props.panelProps.onDismissIncomingUpdate
+                ? { onDismissIncomingUpdate: props.panelProps.onDismissIncomingUpdate }
+                : {})}
+              onOpenChange={props.panelProps.onOpenChange}
+            />
             <SourceUpdatePanelColumns
               currentEditor={props.currentEditor}
               currentMeasuredHighlights={props.currentMeasuredHighlights}

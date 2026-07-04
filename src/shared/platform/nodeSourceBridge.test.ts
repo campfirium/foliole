@@ -143,6 +143,8 @@ it('normalizes node source update previews from the runtime bridge', async () =>
     checked_at: '2026-03-28T04:00:00.000Z',
     current_highlight_count: 2,
     current_content: 'Current content',
+    incoming_update_id: 'incoming-update-1',
+    kind: 'incoming_update',
     source_node_id: 'node-1',
     updated_highlight_count: 3,
     updated_content: 'Updated content'
@@ -153,6 +155,8 @@ it('normalizes node source update previews from the runtime bridge', async () =>
     checkedAt: '2026-03-28T04:00:00.000Z',
     currentHighlightCount: 2,
     currentContent: 'Current content',
+    incomingUpdateId: 'incoming-update-1',
+    kind: 'incoming_update',
     sourceNodeId: 'node-1',
     updatedHighlightCount: 3,
     updatedContent: 'Updated content'

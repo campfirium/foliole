@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-import { onWindowKeydown } from '../../shared/platform/keyboard';
+import { onWindowKeydownCapture } from '../../shared/platform/keyboard';
 import { toggleMainWindowDevTools } from '../../shared/platform/windowControls';
 
 interface CommandPaletteToggleShortcutEvent {
@@ -52,7 +52,7 @@ export function useWindowHotkeys(args: {
 }) {
   useEffect(
     () =>
-      onWindowKeydown((event) => {
+      onWindowKeydownCapture((event) => {
         if (shouldHandleDevToolsToggleShortcut(event, args.canToggleDevTools ?? import.meta.env.DEV)) {
           event.preventDefault();
           void toggleMainWindowDevTools();

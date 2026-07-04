@@ -4,7 +4,7 @@ import path from 'node:path';
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
-const ARTIFACT_DIR = path.resolve('.lab/atlas/0active');
+const ARTIFACT_DIR = path.resolve('.tmp/artifacts');
 const RAIL_COPY_SCREENSHOT_PATH = path.join(ARTIFACT_DIR, 'demo-rail-copy-hidden-native.png');
 
 async function switchToSimplifiedChinese() {

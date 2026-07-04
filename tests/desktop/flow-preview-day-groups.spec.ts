@@ -4,10 +4,10 @@ import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
 const SCREENSHOT_PATH = path.resolve(
-  '.lab/atlas/0active/flow-preview-day-groups-hidden.png'
+  '.tmp/artifacts/flow-preview-day-groups-hidden.png'
 );
 const RESUME_SCREENSHOT_PATH = path.resolve(
-  '.lab/atlas/0active/flow-resume-desktop-hidden.png'
+  '.tmp/artifacts/flow-resume-desktop-hidden.png'
 );
 
 test('desktop Flow panel does not show Demo preview day controls in normal runtime', async ({

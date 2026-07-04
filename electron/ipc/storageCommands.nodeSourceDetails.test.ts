@@ -8,6 +8,13 @@ const { loadNodeSourceDetails } = vi.hoisted(() => ({
 const { loadNodeSourceUpdatePreview } = vi.hoisted(() => ({
   loadNodeSourceUpdatePreview: vi.fn()
 }));
+const { acceptPendingIncomingUpdate, dismissPendingIncomingUpdate } = vi.hoisted(() => ({
+  acceptPendingIncomingUpdate: vi.fn(),
+  dismissPendingIncomingUpdate: vi.fn()
+}));
+const { notifyManagedInboxUpdated } = vi.hoisted(() => ({
+  notifyManagedInboxUpdated: vi.fn()
+}));
 const { mergeReadwiseTopicHighlights } = vi.hoisted(() => ({
   mergeReadwiseTopicHighlights: vi.fn()
 }));
@@ -47,6 +54,8 @@ vi.mock('../import/importManagerSettings.js', () => ({
   loadImportManagerSettings,
   saveImportManagerSettings: vi.fn()
 }));
+vi.mock('../import/incomingUpdateActions.js', () => ({ acceptPendingIncomingUpdate, dismissPendingIncomingUpdate }));
+vi.mock('../import/managedInboxEvents.js', () => ({ notifyManagedInboxUpdated }));
 vi.mock('../import/nodeSourceUpdatePreview.js', () => ({ loadNodeSourceUpdatePreview }));
 vi.mock('../import/readwiseTopicMerge.js', () => ({ mergeReadwiseTopicHighlights }));
 vi.mock('../import/keepImportMonitor.js', () => ({ refreshKeepImportMonitorFromSettings: vi.fn() }));
@@ -57,127 +66,11 @@ vi.mock('./storage.js', () => ({
 }));
 
 import { handleStorageCommand } from './storageCommands.js';
-
-const NODE_SOURCE_DETAILS_RECORD = {
-  importRuns: [
-    {
-      content_fingerprint: 'content-1',
-      degraded_reason: null,
-      duplicate_semantic: 'new',
-      failure_reason: null,
-      id: 'import-1',
-      imported_at: '2026-03-26T10:00:00.000Z',
-      node_id: 'node-1',
-      provider: 'desktop_text_file',
-      result_status: 'imported',
-      source_fingerprint: 'source-1',
-      source_kind: 'markdown',
-      source_locator: '/tmp/note.md',
-      source_name: 'note.md'
-    }
-  ],
-  importSource: {
-    first_imported_at: '2026-03-25T10:00:00.000Z',
-    last_content_fingerprint: 'content-1',
-    last_imported_at: '2026-03-26T10:00:00.000Z',
-    latest_node_id: 'node-1',
-    provider: 'desktop_text_file',
-    source_fingerprint: 'source-1',
-    source_kind: 'markdown',
-    source_locator: '/tmp/note.md',
-    source_name: 'note.md'
-  },
-  inheritedFromParent: true,
-  keepImportItem: {
-    first_seen_at: '2026-03-25T10:00:00.000Z',
-    has_source_update: 1,
-    last_imported_at: '2026-03-26T10:00:00.000Z',
-    last_seen_at: '2026-03-26T10:05:00.000Z',
-    last_status: 'imported',
-    rule_id: 'draft-import-source-1',
-    source_mtime_ms: 123,
-    source_path: '/Users/me/Readwise/Full Document Contents/Articles/note.md',
-    source_size_bytes: 456
-  },
-  pdfPageDimensions: [
-    { page: 1, page_height: 1131, page_width: 800 },
-    { page: 2, page_height: 1200, page_width: 820 }
-  ],
-  sourceNodeId: 'node-parent'
-};
-
-const IMPORT_MANAGER_SETTINGS_RECORD = {
-  readwiseReaderConfig: {},
-  readwiseRootPath: '/Users/me/Readwise',
-  readwiseSources: [
-    {
-      highlightMode: 'split',
-      highlightPath: '/Users/me/Readwise/Articles',
-      id: 'draft-import-source-1',
-      keepPreview: null,
-      keepState: 'enabled',
-      kind: 'articles',
-      primaryPath: '/Users/me/Readwise/Full Document Contents/Articles'
-    }
-  ],
-  sources: [],
-  updatedAt: '2026-03-26T00:00:00.000Z',
-  version: 3
-};
-
-const EXPECTED_NODE_SOURCE_PAYLOAD = {
-  import_runs: [
-    {
-      content_fingerprint: 'content-1',
-      degraded_reason: null,
-      duplicate_semantic: 'new',
-      failure_reason: null,
-      import_id: 'import-1',
-      imported_at: '2026-03-26T10:00:00.000Z',
-      node_id: 'node-1',
-      provider: 'desktop_text_file',
-      result_status: 'imported',
-      source_fingerprint: 'source-1',
-      source_kind: 'markdown',
-      source_locator: '/tmp/note.md',
-      source_name: 'note.md'
-    }
-  ],
-  import_source: {
-    first_imported_at: '2026-03-25T10:00:00.000Z',
-    last_content_fingerprint: 'content-1',
-    last_imported_at: '2026-03-26T10:00:00.000Z',
-    latest_node_id: 'node-1',
-    provider: 'desktop_text_file',
-    source_fingerprint: 'source-1',
-    source_kind: 'markdown',
-    source_locator: '/tmp/note.md',
-    source_name: 'note.md'
-  },
-  inherited_from_parent: true,
-  keep_import_item: {
-    first_seen_at: '2026-03-25T10:00:00.000Z',
-    has_source_update: true,
-    highlight_path: '/Users/me/Readwise/Articles',
-    keep_state: 'enabled',
-    last_imported_at: '2026-03-26T10:00:00.000Z',
-    last_seen_at: '2026-03-26T10:05:00.000Z',
-    last_status: 'imported',
-    primary_path: '/Users/me/Readwise/Full Document Contents/Articles',
-    rule_id: 'draft-import-source-1',
-    rule_label: 'Readwise articles',
-    resolved_source_path: '/Users/me/Readwise/Full Document Contents/Articles/note.md',
-    source_mtime_ms: 123,
-    source_path: '/Users/me/Readwise/Full Document Contents/Articles/note.md',
-    source_size_bytes: 456,
-    source_type: 'readwise'
-  },
-  pdf_page_dimensions: [
-    { page: 1, page_height: 1131, page_width: 800 },
-    { page: 2, page_height: 1200, page_width: 820 }
-  ],
-  source_node_id: 'node-parent'
-};
+import {
+  EXPECTED_NODE_SOURCE_PAYLOAD,
+  IMPORT_MANAGER_SETTINGS_RECORD,
+  NODE_SOURCE_DETAILS_RECORD
+} from './storageCommands.nodeSourceDetails.testSupport.js';
 
 async function expectNodeSourcePayload() {
   await expect(handleStorageCommand('load_node_source_details', { node_id: 'node-1' })).resolves.toEqual(
@@ -200,6 +93,8 @@ it('returns node source update preview payloads', async () => {
     checked_at: '2026-03-28T04:00:00.000Z',
     current_highlight_count: 2,
     current_content: 'Current content',
+    incoming_update_id: 'incoming-update-1',
+    kind: 'incoming_update',
     source_node_id: 'node-1',
     updated_highlight_count: 3,
     updated_content: 'Updated content'
@@ -209,10 +104,55 @@ it('returns node source update preview payloads', async () => {
     checked_at: '2026-03-28T04:00:00.000Z',
     current_highlight_count: 2,
     current_content: 'Current content',
+    incoming_update_id: 'incoming-update-1',
+    kind: 'incoming_update',
     source_node_id: 'node-1',
     updated_highlight_count: 3,
     updated_content: 'Updated content'
   });
+});
+
+it('accepts incoming updates and notifies workspace refresh channels', async () => {
+  const mockWindow = { id: 1 } as never;
+  acceptPendingIncomingUpdate.mockReturnValue({
+    incoming_update_id: 'incoming-update-1',
+    node_id: 'node-1',
+    status: 'accepted'
+  });
+
+  await expect(handleStorageCommand('accept_incoming_update', {
+    content: 'Accepted content',
+    incoming_update_id: 'incoming-update-1'
+  }, mockWindow)).resolves.toEqual({
+    incoming_update_id: 'incoming-update-1',
+    node_id: 'node-1',
+    status: 'accepted'
+  });
+
+  expect(acceptPendingIncomingUpdate).toHaveBeenCalledWith({
+    content: 'Accepted content',
+    id: 'incoming-update-1'
+  });
+  expect(notifyManagedInboxUpdated).toHaveBeenCalledWith('incoming-update-1');
+});
+
+it('dismisses incoming updates without a workspace content mutation', async () => {
+  dismissPendingIncomingUpdate.mockReturnValue({
+    incoming_update_id: 'incoming-update-1',
+    node_id: 'node-1',
+    status: 'dismissed'
+  });
+
+  await expect(handleStorageCommand('dismiss_incoming_update', {
+    incoming_update_id: 'incoming-update-1'
+  })).resolves.toEqual({
+    incoming_update_id: 'incoming-update-1',
+    node_id: 'node-1',
+    status: 'dismissed'
+  });
+
+  expect(dismissPendingIncomingUpdate).toHaveBeenCalledWith('incoming-update-1');
+  expect(notifyManagedInboxUpdated).toHaveBeenCalledWith('incoming-update-1');
 });
 
 it('passes the current window into merge highlights command handling', async () => {

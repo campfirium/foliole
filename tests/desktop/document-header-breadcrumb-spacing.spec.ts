@@ -4,7 +4,7 @@ import path from 'node:path';
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
-const EVIDENCE_DIR = path.resolve('.lab/atlas/0active');
+const EVIDENCE_DIR = path.resolve('.tmp/artifacts');
 const METRICS_PATH = path.join(EVIDENCE_DIR, 'document-header-breadcrumb-spacing.json');
 const SCREENSHOT_PATH = path.join(EVIDENCE_DIR, 'document-header-breadcrumb-spacing.png');
 

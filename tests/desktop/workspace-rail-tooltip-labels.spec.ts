@@ -26,7 +26,7 @@ test('workspace rail command palette tooltip uses localized copy', async ({ desk
   const tooltip = desktopWindow.getByRole('tooltip', { name: '命令面板' });
   await expect(tooltip).toBeVisible();
   await expect(desktopWindow.getByText(/desktop\.command\./)).toHaveCount(0);
-  const screenshotPath = '.lab/atlas/0active/workspace-rail-command-palette-tooltip.png';
+  const screenshotPath = '.tmp/artifacts/workspace-rail-command-palette-tooltip.png';
   await testInfo.attach('workspace-rail-command-palette-tooltip', {
     body: await desktopWindow.screenshot({ path: screenshotPath }),
     contentType: 'image/png'

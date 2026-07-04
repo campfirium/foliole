@@ -94,6 +94,8 @@ function useDocumentPanelSectionModel(props: DocumentPanelSectionProps) {
   const textAnchorState = useDocumentPanelTextAnchorState(props);
   const {
     currentSourceUpdateContent,
+    handleIncomingUpdateAccept,
+    handleIncomingUpdateDismiss,
     handleSourceUpdateDraftChange,
     handleSourceUpdatePanelOpenChange,
     isSourceUpdatePanelOpen,
@@ -126,9 +128,34 @@ function useDocumentPanelSectionModel(props: DocumentPanelSectionProps) {
     currentSourceUpdateContent,
     backlinks,
     handleSourceUpdateDraftChange,
+    handleIncomingUpdateAccept,
+    handleIncomingUpdateDismiss,
     handleSourceUpdatePanelOpenChange,
     sourceUpdatePreview: sourceUpdatePreview.value
   };
+}
+
+function DocumentPanelSectionOverlayHost(args: {
+  editorAdapter: ReturnType<typeof useDocumentPanelInteractions>['editorAdapter'];
+  model: ReturnType<typeof useDocumentPanelSectionModel>;
+  props: DocumentPanelSectionProps;
+}) {
+  return (
+    <DocumentPanelSectionOverlays
+      {...definedProps({
+        currentSourceUpdateContent: args.model.currentSourceUpdateContent,
+        documentMaxWidth: args.model.bodyProps.documentMaxWidth,
+        editorAdapter: args.editorAdapter,
+        handleIncomingUpdateAccept: args.model.handleIncomingUpdateAccept,
+        handleIncomingUpdateDismiss: args.model.handleIncomingUpdateDismiss,
+        handleSourceUpdateDraftChange: args.model.handleSourceUpdateDraftChange,
+        handleSourceUpdatePanelOpenChange: args.model.handleSourceUpdatePanelOpenChange,
+        isSourceUpdatePanelOpen: args.model.isSourceUpdatePanelOpen,
+        props: args.props,
+        sourceUpdatePreview: args.model.sourceUpdatePreview
+      })}
+    />
+  );
 }
 
 export function DocumentPanelSection(props: DocumentPanelSectionProps) {
@@ -178,16 +205,7 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
         showSourceUpdateAction={Boolean(model.sourceUpdatePreview)}
       />
       <NodeLinkHoverPreviewPanel preview={nodeLinkPreview.preview} />
-      <DocumentPanelSectionOverlays
-        currentSourceUpdateContent={model.currentSourceUpdateContent}
-        documentMaxWidth={model.bodyProps.documentMaxWidth}
-        editorAdapter={interactions.editorAdapter}
-        handleSourceUpdateDraftChange={model.handleSourceUpdateDraftChange}
-        handleSourceUpdatePanelOpenChange={model.handleSourceUpdatePanelOpenChange}
-        isSourceUpdatePanelOpen={model.isSourceUpdatePanelOpen}
-        props={draftProps}
-        sourceUpdatePreview={model.sourceUpdatePreview}
-      />
+      <DocumentPanelSectionOverlayHost editorAdapter={interactions.editorAdapter} model={model} props={draftProps} />
     </section>
   );
 }

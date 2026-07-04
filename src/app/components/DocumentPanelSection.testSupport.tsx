@@ -37,10 +37,29 @@ const documentSourceUpdatePanelMocks = vi.hoisted(() => ({
 const documentSourceUpdatePanelMock = documentSourceUpdatePanelMocks.documentSourceUpdatePanelMock;
 
 vi.mock('./DocumentSourceUpdatePanel', () => ({
-  DocumentSourceUpdatePanel: (props: { open: boolean; onCurrentContentChange: (content: string) => void; onOpenChange: (open: boolean) => void }) => {
+  DocumentSourceUpdatePanel: (props: {
+    onAcceptIncomingUpdate?: () => Promise<void>;
+    onCurrentContentChange: (content: string) => void;
+    onDismissIncomingUpdate?: () => Promise<void>;
+    onOpenChange: (open: boolean) => void;
+    open: boolean;
+  }) => {
     documentSourceUpdatePanelMock(props);
     return props.open ? <div data-testid="document-source-update-panel">Source update panel</div> : null;
   }
+}));
+
+const nodeSourceRuntimeRepositoryMocks = vi.hoisted(() => ({
+  acceptRuntimeIncomingUpdate: vi.fn(),
+  dismissRuntimeIncomingUpdate: vi.fn()
+}));
+export const acceptRuntimeIncomingUpdate = nodeSourceRuntimeRepositoryMocks.acceptRuntimeIncomingUpdate;
+export const dismissRuntimeIncomingUpdate = nodeSourceRuntimeRepositoryMocks.dismissRuntimeIncomingUpdate;
+
+vi.mock('../../shared/platform/nodeSourceRuntimeRepository', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../shared/platform/nodeSourceRuntimeRepository')>()),
+  acceptRuntimeIncomingUpdate: nodeSourceRuntimeRepositoryMocks.acceptRuntimeIncomingUpdate,
+  dismissRuntimeIncomingUpdate: nodeSourceRuntimeRepositoryMocks.dismissRuntimeIncomingUpdate
 }));
 
 const sourceUpdatePreviewMocks = vi.hoisted(() => ({
@@ -166,6 +185,22 @@ export function mockSourceUpdatePreview() {
   } as never);
 }
 
+export function mockIncomingUpdatePreview() {
+  useNodeSourceUpdatePreview.mockReturnValue({
+    isLoading: false,
+    value: {
+      checkedAt: '2026-03-28T04:00:00.000Z',
+      currentHighlightCount: 0,
+      currentContent: 'Current content',
+      incomingUpdateId: 'incoming-update-1',
+      kind: 'incoming_update',
+      sourceNodeId: 'node-1',
+      updatedHighlightCount: 0,
+      updatedContent: 'Incoming content'
+    }
+  } as never);
+}
+
 export function openSourceUpdatePanel() {
   const trigger = screen.getAllByRole('button', { name: 'Toggle source update panel' }).at(-1);
   if (!trigger) {
@@ -182,6 +217,10 @@ beforeEach(() => {
   loadRuntimeNodeBacklinks.mockResolvedValue(null);
   ensureWorkspaceNodeDocumentReady.mockReset();
   ensureWorkspaceNodeDocumentReady.mockResolvedValue(null);
+  acceptRuntimeIncomingUpdate.mockReset();
+  acceptRuntimeIncomingUpdate.mockResolvedValue({ incomingUpdateId: 'incoming-update-1', nodeId: 'node-1', status: 'accepted' });
+  dismissRuntimeIncomingUpdate.mockReset();
+  dismissRuntimeIncomingUpdate.mockResolvedValue({ incomingUpdateId: 'incoming-update-1', nodeId: 'node-1', status: 'dismissed' });
   useNodeSourceUpdatePreview.mockReturnValue({
     isLoading: false,
     value: null

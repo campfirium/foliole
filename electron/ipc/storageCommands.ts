@@ -2,6 +2,8 @@ import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { resetImportData } from '../database/importMaintenance.js';
 import { searchWorkspace } from '../database/workspaceSearch.js';
 import { reimportCurrentTopicSource } from '../import/currentSourceReimport.js';
+import { acceptPendingIncomingUpdate, dismissPendingIncomingUpdate } from '../import/incomingUpdateActions.js';
+import { notifyManagedInboxUpdated } from '../import/managedInboxEvents.js';
 import { loadNodeSourceUpdatePreview } from '../import/nodeSourceUpdatePreview.js';
 import { mergeReadwiseTopicHighlights } from '../import/readwiseTopicMerge.js';
 import { restoreRemovedSource } from '../import/removedSourceRestore.js';
@@ -104,6 +106,22 @@ async function handleImportMutationCommand(
     if (result.status === 'merged') {
       notifyWorkspaceContentChanged();
     }
+    return result;
+  }
+  if (command === NATIVE_COMMANDS.acceptIncomingUpdate) {
+    const result = acceptPendingIncomingUpdate({
+      content: asString(args.content, 'content'),
+      id: asString(args.incoming_update_id, 'incoming_update_id')
+    });
+    if (result.status === 'accepted' && result.node_id) {
+      notifyWorkspaceContentChanged(window);
+    }
+    notifyManagedInboxUpdated(result.incoming_update_id);
+    return result;
+  }
+  if (command === NATIVE_COMMANDS.dismissIncomingUpdate) {
+    const result = dismissPendingIncomingUpdate(asString(args.incoming_update_id, 'incoming_update_id'));
+    notifyManagedInboxUpdated(result.incoming_update_id);
     return result;
   }
   if (command === NATIVE_COMMANDS.resetImportData) {

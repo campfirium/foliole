@@ -31,7 +31,7 @@ test('external folder setup dialog opens without an initial button focus ring', 
     });
 
   const screenshot = await dialog.screenshot({
-    path: '.lab/atlas/0active/external-folder-dialog-initial-focus.png'
+    path: '.tmp/artifacts/external-folder-dialog-initial-focus.png'
   });
   await testInfo.attach('external-folder-dialog-initial-focus', {
     body: screenshot,

@@ -27,8 +27,17 @@ const { notifyManagedInboxUpdated } = vi.hoisted(() => ({ notifyManagedInboxUpda
 const { resolveManagedImportTargetParentNodeId } = vi.hoisted(() => ({
   resolveManagedImportTargetParentNodeId: vi.fn(() => 'node-memo')
 }));
+const { resolveIncomingUpdateTarget, upsertPendingIncomingUpdate } = vi.hoisted(() => ({
+  resolveIncomingUpdateTarget: vi.fn((): { sourcePath: string; topicId: string } | null => null),
+  upsertPendingIncomingUpdate: vi.fn(() => 'incoming-update-1')
+}));
 
 vi.mock('../database/importPipeline.js', () => ({ recordPreparedImportFailure, runPreparedImport }));
+vi.mock('../import/incomingUpdates.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../import/incomingUpdates.js')>()),
+  resolveIncomingUpdateTarget,
+  upsertPendingIncomingUpdate
+}));
 vi.mock('../import/importFolderTargets.js', () => ({ resolveManagedImportTargetParentNodeId }));
 vi.mock('../import/importRunLogger.js', () => ({ logDirectoryImportCompleted, logDirectoryImportFailed }));
 vi.mock('./paths.js', () => ({ resolveAppPaths }));
@@ -50,6 +59,8 @@ beforeEach(() => {
   logDirectoryImportCompleted.mockResolvedValue(undefined);
   logDirectoryImportFailed.mockResolvedValue(undefined);
   runPreparedImport.mockImplementation((prepared) => createPersistedRecord(prepared));
+  resolveIncomingUpdateTarget.mockReturnValue(null);
+  upsertPendingIncomingUpdate.mockReturnValue('incoming-update-1');
   recordPreparedImportFailure.mockImplementation((prepared, failureReason: string) =>
     createPersistedRecord(prepared, { failureReason, nodeId: null, resultStatus: 'failed' })
   );
@@ -111,6 +122,49 @@ it('resolves the managed inbox folder from runtime settings and trashes only imp
     expect.objectContaining({ failed_count: 1, source_adapter: 'foliole_managed_inbox_folder' })
   );
   expect(notifyManagedInboxUpdated.mock.calls[0]?.[0]).toEqual(expect.any(String));
+});
+
+it('turns Import files matching mirror relative paths into incoming updates', async () => {
+  const appDataDir = await createTempRoot('managed-import-update-runtime', tempRoots);
+  const importRoot = path.join(appDataDir, 'Import');
+  const incomingPath = path.join(importRoot, 'Projects', 'plan.md');
+  resolveIncomingUpdateTarget.mockReturnValue({
+    sourcePath: 'Projects/plan.md',
+    topicId: 'topic-1'
+  });
+  resolveAppPaths.mockReturnValue({
+    app_cache_dir: path.join(appDataDir, 'cache'),
+    app_config_dir: path.join(appDataDir, 'config'),
+    app_data_dir: appDataDir,
+    app_log_dir: path.join(appDataDir, 'logs')
+  });
+  loadLibraryPathSettings.mockResolvedValue({
+    inbox: path.join(importRoot, 'Inbox'),
+    library_home: appDataDir,
+    mirror: path.join(appDataDir, 'Mirror')
+  });
+  await fs.mkdir(path.dirname(incomingPath), { recursive: true });
+  await fs.writeFile(incomingPath, '# Updated plan', 'utf8');
+
+  const result = await runManagedInboxImport(importRoot, { importRootPath: importRoot });
+
+  expect(result.entries[0]).toEqual(expect.objectContaining({
+    duplicate_semantic: 'updated',
+    import_id: 'incoming-update-1',
+    node_id: 'topic-1',
+    result_status: 'imported'
+  }));
+  expect(resolveIncomingUpdateTarget).toHaveBeenCalledWith({
+    relativePath: 'Projects/plan.md',
+    sourceLocator: incomingPath
+  });
+  expect(upsertPendingIncomingUpdate).toHaveBeenCalledWith(expect.objectContaining({
+    sourcePath: 'Projects/plan.md',
+    topicId: 'topic-1',
+    updatedContent: expect.stringContaining('Updated plan')
+  }));
+  expect(runPreparedImport).not.toHaveBeenCalled();
+  await expect(fs.stat(incomingPath)).rejects.toThrow();
 });
 
 it('imports from Import subfolders without deleting the folder or prefixing source names', async () => {

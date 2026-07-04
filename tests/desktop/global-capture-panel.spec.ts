@@ -5,7 +5,7 @@ import {
   waitForDesktopAppReady
 } from '../../scripts/windows/playwright-desktop-harness.mjs';
 
-const DARK_PANEL_SCREENSHOT_PATH = '.lab/atlas/0active/global-capture-panel-dark.png';
+const DARK_PANEL_SCREENSHOT_PATH = '.tmp/artifacts/global-capture-panel-dark.png';
 
 declare global {
   interface Window {

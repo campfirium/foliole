@@ -6,7 +6,9 @@ interface DocumentPanelSourceUpdatePanelProps {
   documentMaxWidth: number;
   editorAppearanceKey: string;
   editorNodeId: string | null;
+  onAcceptIncomingUpdate?: () => Promise<void>;
   onCurrentContentChange: (content: string) => void;
+  onDismissIncomingUpdate?: () => Promise<void>;
   onOpenChange: (open: boolean) => void;
   open: boolean;
   updatedHighlightCount: number;
@@ -21,7 +23,9 @@ export function DocumentPanelSourceUpdatePanel(props: DocumentPanelSourceUpdateP
       currentNodeId={props.editorNodeId}
       documentMaxWidth={props.documentMaxWidth}
       editorAppearanceKey={props.editorAppearanceKey}
+      {...(props.onAcceptIncomingUpdate ? { onAcceptIncomingUpdate: props.onAcceptIncomingUpdate } : {})}
       onCurrentContentChange={props.onCurrentContentChange}
+      {...(props.onDismissIncomingUpdate ? { onDismissIncomingUpdate: props.onDismissIncomingUpdate } : {})}
       onOpenChange={props.onOpenChange}
       open={props.open}
       updatedHighlightCount={props.updatedHighlightCount}

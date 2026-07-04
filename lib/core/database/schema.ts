@@ -134,6 +134,17 @@ export const mirrorArticles = sqliteTable('mirror_articles', {
   mirroredAt: text('mirrored_at').notNull()
 });
 
+export const incomingUpdates = sqliteTable('incoming_updates', {
+  id: text('id').primaryKey(),
+  topicId: text('topic_id').notNull(),
+  sourceType: text('source_type').notNull(),
+  sourcePath: text('source_path').notNull(),
+  updatedContent: text('updated_content').notNull(),
+  status: text('status').notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull()
+});
+
 export const attachments = sqliteTable('attachments', {
   id: text('id').primaryKey(),
   originalName: text('original_name'),

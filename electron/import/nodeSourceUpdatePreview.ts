@@ -7,6 +7,7 @@ import { loadNodeSourceDetails } from '../database/nodeSourceDetails.js';
 import { resolveImportKind, type DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
+import { loadPendingIncomingUpdate } from './incomingUpdates.js';
 import { loadPreparedKeepImportRecord, resolveKeepImportSourceSignature } from './keepImportPreparedRecord.js';
 import type { KeepImportRuleConfig } from './keepImportService.js';
 
@@ -20,6 +21,8 @@ export interface NodeSourceUpdatePreview {
   checked_at: string;
   current_highlight_count: number;
   current_content: string;
+  incoming_update_id?: string;
+  kind?: 'incoming_update' | 'source_update';
   source_node_id: string;
   updated_highlight_count: number;
   updated_content: string;
@@ -57,6 +60,27 @@ function normalizeComparableContent(content: string) {
 
 export function normalizeNodeSourcePreviewContent(content: string) {
   return content.replace(/\r\n?/g, '\n');
+}
+
+function loadIncomingUpdatePreview(nodeId: string): NodeSourceUpdatePreview | null {
+  const incomingUpdate = loadPendingIncomingUpdate(nodeId);
+  if (!incomingUpdate) {
+    return null;
+  }
+  const sourceNode = readSourceNode(nodeId);
+  if (!sourceNode) {
+    return null;
+  }
+  return {
+    checked_at: incomingUpdate.updatedAt,
+    current_highlight_count: countCurrentHighlights(sourceNode.id),
+    current_content: normalizeNodeSourcePreviewContent(sourceNode.content),
+    incoming_update_id: incomingUpdate.id,
+    kind: 'incoming_update',
+    source_node_id: sourceNode.id,
+    updated_highlight_count: 0,
+    updated_content: normalizeNodeSourcePreviewContent(incomingUpdate.updatedContent)
+  };
 }
 
 function resolveRuleConfig(ruleId: string) {
@@ -144,6 +168,11 @@ function shouldExposeReadwiseUpdate(input: {
 }
 
 export async function loadNodeSourceUpdatePreview(nodeId: string): Promise<NodeSourceUpdatePreview | null> {
+  const incomingPreview = loadIncomingUpdatePreview(nodeId);
+  if (incomingPreview) {
+    return incomingPreview;
+  }
+
   const sourceDetails = loadNodeSourceDetails(nodeId);
   if (!sourceDetails || sourceDetails.sourceNodeId !== nodeId || !sourceDetails.keepImportItem) {
     return null;
@@ -195,6 +224,7 @@ export async function loadNodeSourceUpdatePreview(nodeId: string): Promise<NodeS
     checked_at: checkedAt,
     current_highlight_count: countCurrentHighlights(sourceNode.id),
     current_content: normalizeNodeSourcePreviewContent(sourceNode.content),
+    kind: 'source_update',
     source_node_id: sourceNode.id,
     updated_highlight_count: prepared.matchedHighlights?.length ?? 0,
     updated_content: normalizeNodeSourcePreviewContent(prepared.content)

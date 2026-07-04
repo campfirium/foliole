@@ -17,6 +17,11 @@ import { applyManagedInboxConsumePolicy, resolveManagedInboxPaths } from '../ipc
 import { resolveAppPaths } from '../ipc/paths.js';
 
 import {
+  resolveImportRelativePath,
+  resolveIncomingUpdateTarget,
+  upsertPendingIncomingUpdate
+} from './incomingUpdates.js';
+import {
   createLocalImageInboxMarkdown,
   createUnsupportedLocalImageMessage,
   validateLocalImageInboxFile
@@ -55,14 +60,82 @@ function toNativeDirectoryImportEntry(
   };
 }
 
+async function tryCreateIncomingUpdateEntry(
+  source: DirectoryImportSourceDescriptor,
+  options: DirectoryImportBatchOptions,
+  importedAt: string
+): Promise<NativeDirectoryImportEntry | null> {
+  if (options.sourceAdapter !== 'foliole_managed_inbox_folder' || !options.importRootPath) {
+    return null;
+  }
+  const relativePath = resolveImportRelativePath(options.importRootPath, source.filePath);
+  const target = relativePath
+    ? resolveIncomingUpdateTarget({ relativePath, sourceLocator: source.filePath })
+    : null;
+  if (!target) {
+    return null;
+  }
+  const prepared = await loadPreparedImportRecord(source, {
+    highlightPolicy: options.highlightPolicy,
+    importedAt,
+    sourceTrackingMode: 'untracked',
+    titleStrategy: options.titleStrategy
+  });
+  const importId = upsertPendingIncomingUpdate({
+    importedAt,
+    sourcePath: target.sourcePath,
+    topicId: target.topicId,
+    updatedContent: prepared.content
+  });
+  return {
+    adapter: source.adapterId,
+    content_fingerprint: prepared.contentFingerprint,
+    degraded_reason: prepared.degradedReason,
+    duplicate_semantic: 'updated',
+    failure_reason: null,
+    import_id: importId,
+    imported_at: importedAt,
+    node_id: target.topicId,
+    provider: prepared.provider,
+    result_status: 'imported',
+    source_fingerprint: prepared.sourceFingerprint,
+    source_kind: prepared.sourceKind,
+    source_locator: prepared.sourceLocator,
+    source_name: prepared.sourceName
+  };
+}
+
+async function prepareDirectoryImportRecord(
+  source: DirectoryImportSourceDescriptor,
+  options: DirectoryImportBatchOptions,
+  importedAt: string,
+  targetParentNodeId: string | null | undefined
+) {
+  const commonOptions = {
+    highlightPolicy: options.highlightPolicy,
+    importedAt,
+    sourceTrackingMode: 'untracked' as const,
+    ...(targetParentNodeId ? { targetParentNodeId } : {}),
+    titleStrategy: options.titleStrategy
+  };
+  return source.importMode === 'local_image'
+    ? buildPreparedImportRecord(source, {
+        ...commonOptions,
+        content: createLocalImageInboxMarkdown(source.filePath)
+      })
+    : loadPreparedImportRecord(source, commonOptions);
+}
+
 async function runSingleDirectoryImport(
   source: DirectoryImportSourceDescriptor,
-  highlightPolicy: ImportHighlightPolicy,
-  resolveTargetParentNodeId: DirectoryImportBatchOptions['resolveTargetParentNodeId'],
-  titleStrategy: ImportNodeTitleStrategy
+  options: DirectoryImportBatchOptions
 ) {
   const importedAt = new Date().toISOString();
-  const targetParentNodeId = resolveTargetParentNodeId?.(source, importedAt);
+  const incomingUpdateEntry = await tryCreateIncomingUpdateEntry(source, options, importedAt);
+  if (incomingUpdateEntry) {
+    return incomingUpdateEntry;
+  }
+  const targetParentNodeId = options.resolveTargetParentNodeId?.(source, importedAt);
   try {
     if (source.kind === 'epub') {
       return toNativeDirectoryImportEntry(source.adapterId, await runEpubImport(source, importedAt));
@@ -76,23 +149,7 @@ async function runSingleDirectoryImport(
         throw new Error(imageValidationFailure);
       }
     }
-    const preparedRecord =
-      source.importMode === 'local_image'
-        ? buildPreparedImportRecord(source, {
-            content: createLocalImageInboxMarkdown(source.filePath),
-            highlightPolicy,
-            importedAt,
-            sourceTrackingMode: 'untracked',
-            ...(targetParentNodeId ? { targetParentNodeId } : {}),
-            titleStrategy
-          })
-        : await loadPreparedImportRecord(source, {
-            highlightPolicy,
-            importedAt,
-            sourceTrackingMode: 'untracked',
-            ...(targetParentNodeId ? { targetParentNodeId } : {}),
-            titleStrategy
-          });
+    const preparedRecord = await prepareDirectoryImportRecord(source, options, importedAt, targetParentNodeId);
     return toNativeDirectoryImportEntry(
       source.adapterId,
       runPreparedImport(preparedRecord)
@@ -104,11 +161,11 @@ async function runSingleDirectoryImport(
       recordPreparedImportFailure(
         buildPreparedImportRecord(source, {
           content: '',
-          highlightPolicy,
+          highlightPolicy: options.highlightPolicy,
           importedAt,
           sourceTrackingMode: 'untracked',
           ...(targetParentNodeId ? { targetParentNodeId } : {}),
-          titleStrategy
+          titleStrategy: options.titleStrategy
         }),
         failureReason
       )
@@ -118,12 +175,7 @@ async function runSingleDirectoryImport(
 
 export async function runDirectoryImportBatch(options: DirectoryImportBatchOptions): Promise<NativeDirectoryImportResult> {
   const entries = await Promise.all(
-    options.sources.map((source) => runSingleDirectoryImport(
-      source,
-      options.highlightPolicy,
-      options.resolveTargetParentNodeId,
-      options.titleStrategy
-    ))
+    options.sources.map((source) => runSingleDirectoryImport(source, options))
   );
 
   let archiveRootPath: string | null = null;

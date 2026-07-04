@@ -8,6 +8,7 @@ import { NATIVE_COMMANDS, isTypedNativeCommand } from '../../../lib/platform/nat
 const PLATFORM_DIR = join(process.cwd(), 'lib/platform');
 const CONTRACT_FILES = [
   'nativeContract.ts',
+  'nativeDiscoursePublishContract.ts',
   'nativeExternalSearchCommandMap.ts',
   'nativeImportCommandMap.ts',
   'nativeLocalFileCommandMap.ts',

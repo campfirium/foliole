@@ -1,21 +1,16 @@
 import { useCallback, useEffect, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
 
+import { acceptRuntimeIncomingUpdate, dismissRuntimeIncomingUpdate } from '../../shared/platform/nodeSourceRuntimeRepository';
+
 import type { DocumentPanelSectionProps } from './DocumentPanelSection';
+import {
+  createSourceUpdateDraft,
+  type SourceUpdateDraft,
+  type SourceUpdateDraftRefs,
+  useClearIncomingUpdateDraft,
+  useFlushSourceUpdateDraft
+} from './sourceUpdateDraftState';
 import { useNodeSourceUpdatePreview } from './useNodeSourceUpdatePreview';
-
-interface SourceUpdateDraft {
-  baseContent: string;
-  content: string;
-  nodeId: string | null;
-}
-
-function createSourceUpdateDraft(args: Pick<DocumentPanelSectionProps, 'editorContent' | 'editorNodeId'>): SourceUpdateDraft {
-  return {
-    baseContent: args.editorContent,
-    content: args.editorContent,
-    nodeId: args.editorNodeId
-  };
-}
 
 function useSourceUpdatePreviewAutoClose(args: {
   handleSourceUpdatePanelOpenChange: (open: boolean) => void;
@@ -31,6 +26,7 @@ function useSourceUpdatePreviewAutoClose(args: {
 
 function useSourceUpdateDraftSync(args: {
   flushSourceUpdateDraft: () => void;
+  isIncomingUpdatePreview: boolean;
   isSourceUpdatePanelOpen: boolean;
   props: DocumentPanelSectionProps;
   setSourceUpdateDraftContent: Dispatch<SetStateAction<string | null>>;
@@ -44,7 +40,9 @@ function useSourceUpdateDraftSync(args: {
     }
     const currentDraft = args.sourceUpdateDraftRef.current;
     if (!currentDraft || currentDraft.nodeId !== args.props.editorNodeId) {
-      args.flushSourceUpdateDraft();
+      if (!args.isIncomingUpdatePreview) {
+        args.flushSourceUpdateDraft();
+      }
       args.sourceUpdateDraftRef.current = createSourceUpdateDraft(args.props);
       args.setSourceUpdateDraftContent(args.props.editorContent);
       return;
@@ -56,6 +54,7 @@ function useSourceUpdateDraftSync(args: {
     args.setSourceUpdateDraftContent((current) => (current === args.props.editorContent ? current : args.props.editorContent));
   }, [
     args.flushSourceUpdateDraft,
+    args.isIncomingUpdatePreview,
     args.isSourceUpdatePanelOpen,
     args.props,
     args.setSourceUpdateDraftContent,
@@ -63,43 +62,127 @@ function useSourceUpdateDraftSync(args: {
   ]);
 }
 
+function useIncomingUpdateActions(args: {
+  clearIncomingUpdateDraft: () => void;
+  incomingUpdateId: string | null;
+  props: DocumentPanelSectionProps;
+  sourceUpdatePreview: ReturnType<typeof useNodeSourceUpdatePreview>;
+} & SourceUpdateDraftRefs) {
+  const handleIncomingUpdateAccept = useCallback(async () => {
+    if (!args.incomingUpdateId) {
+      return;
+    }
+    const draft = args.sourceUpdateDraftRef.current;
+    const acceptedContent =
+      draft && draft.content !== draft.baseContent
+        ? draft.content
+        : args.sourceUpdatePreview.value?.updatedContent ?? args.sourceUpdateDraftContent ?? args.props.editorContent;
+    const result = await acceptRuntimeIncomingUpdate(args.incomingUpdateId, acceptedContent);
+    if (result?.status === 'accepted' && result.nodeId) {
+      args.props.onNodeContentChange(result.nodeId, acceptedContent, { publishLocal: false });
+    }
+    args.clearIncomingUpdateDraft();
+  }, [args]);
+
+  const handleIncomingUpdateDismiss = useCallback(async () => {
+    if (!args.incomingUpdateId) {
+      return;
+    }
+    await dismissRuntimeIncomingUpdate(args.incomingUpdateId);
+    args.clearIncomingUpdateDraft();
+  }, [args]);
+
+  return {
+    handleIncomingUpdateAccept: args.incomingUpdateId ? handleIncomingUpdateAccept : undefined,
+    handleIncomingUpdateDismiss: args.incomingUpdateId ? handleIncomingUpdateDismiss : undefined
+  };
+}
+
+function useSourceUpdatePanelOpenChange(args: {
+  flushSourceUpdateDraft: () => void;
+  isIncomingUpdatePreview: boolean;
+  props: DocumentPanelSectionProps;
+  setIsSourceUpdatePanelOpen: Dispatch<SetStateAction<boolean>>;
+  setSourceUpdateDraftContent: Dispatch<SetStateAction<string | null>>;
+  sourceUpdateDraftRef: MutableRefObject<SourceUpdateDraft | null>;
+}) {
+  return useCallback(
+    (open: boolean) => {
+      if (open) {
+        const nextDraft = args.sourceUpdateDraftRef.current ?? createSourceUpdateDraft(args.props);
+        args.sourceUpdateDraftRef.current = nextDraft;
+        args.setSourceUpdateDraftContent(nextDraft.content);
+        args.setIsSourceUpdatePanelOpen(true);
+        return;
+      }
+      if (!args.isIncomingUpdatePreview) {
+        args.flushSourceUpdateDraft();
+      }
+      args.sourceUpdateDraftRef.current = null;
+      args.setSourceUpdateDraftContent(null);
+      args.setIsSourceUpdatePanelOpen(false);
+    },
+    [args]
+  );
+}
+
+function createSourceUpdateDraftChangeHandler(
+  args: Pick<DocumentPanelSectionProps, 'editorContent' | 'editorNodeId'> & {
+    setSourceUpdateDraftContent: Dispatch<SetStateAction<string | null>>;
+    sourceUpdateDraftRef: MutableRefObject<SourceUpdateDraft | null>;
+  }
+) {
+  return (content: string) => {
+    args.sourceUpdateDraftRef.current = {
+      baseContent: args.sourceUpdateDraftRef.current?.baseContent ?? args.editorContent,
+      content,
+      nodeId: args.sourceUpdateDraftRef.current?.nodeId ?? args.editorNodeId
+    };
+    args.setSourceUpdateDraftContent(content);
+  };
+}
+
 export function useDocumentPanelSourceUpdateState(props: DocumentPanelSectionProps) {
   const [isSourceUpdatePanelOpen, setIsSourceUpdatePanelOpen] = useState(false);
   const [sourceUpdateDraftContent, setSourceUpdateDraftContent] = useState<string | null>(null);
   const sourceUpdateDraftRef = useRef<SourceUpdateDraft | null>(null);
   const sourceUpdatePreview = useNodeSourceUpdatePreview(props.activeNodeId);
+  const incomingUpdateId = sourceUpdatePreview.value?.incomingUpdateId ?? null;
+  const isIncomingUpdatePreview = sourceUpdatePreview.value?.kind === 'incoming_update' && Boolean(incomingUpdateId);
 
-  const flushSourceUpdateDraft = useCallback(() => {
-    const draft = sourceUpdateDraftRef.current;
-    if (draft === null || draft.content === draft.baseContent) {
-      return;
-    }
-    if (!draft.nodeId) {
-      return;
-    }
-    props.onNodeContentChange(draft.nodeId, draft.content);
-  }, [props.onNodeContentChange]);
+  const flushSourceUpdateDraft = useFlushSourceUpdateDraft({
+    onNodeContentChange: props.onNodeContentChange,
+    sourceUpdateDraftRef
+  });
 
-  const handleSourceUpdatePanelOpenChange = useCallback(
-    (open: boolean) => {
-      if (open) {
-        const nextDraft = sourceUpdateDraftRef.current ?? createSourceUpdateDraft(props);
-        sourceUpdateDraftRef.current = nextDraft;
-        setSourceUpdateDraftContent(nextDraft.content);
-        setIsSourceUpdatePanelOpen(true);
-        return;
-      }
-      flushSourceUpdateDraft();
-      sourceUpdateDraftRef.current = null;
-      setSourceUpdateDraftContent(null);
-      setIsSourceUpdatePanelOpen(false);
-    },
-    [flushSourceUpdateDraft, props.editorContent]
-  );
+  const handleSourceUpdatePanelOpenChange = useSourceUpdatePanelOpenChange({
+    flushSourceUpdateDraft,
+    isIncomingUpdatePreview,
+    props,
+    setIsSourceUpdatePanelOpen,
+    setSourceUpdateDraftContent,
+    sourceUpdateDraftRef
+  });
+
+  const clearIncomingUpdateDraft = useClearIncomingUpdateDraft({
+    setIsSourceUpdatePanelOpen,
+    setSourceUpdateDraftContent,
+    sourceUpdateDraftRef
+  });
+
+  const incomingUpdateActions = useIncomingUpdateActions({
+    clearIncomingUpdateDraft,
+    incomingUpdateId,
+    props,
+    sourceUpdatePreview,
+    sourceUpdateDraftContent,
+    sourceUpdateDraftRef
+  });
 
   useSourceUpdatePreviewAutoClose({ handleSourceUpdatePanelOpenChange, isSourceUpdatePanelOpen, sourceUpdatePreview });
   useSourceUpdateDraftSync({
     flushSourceUpdateDraft,
+    isIncomingUpdatePreview,
     isSourceUpdatePanelOpen,
     props,
     setSourceUpdateDraftContent,
@@ -108,14 +191,13 @@ export function useDocumentPanelSourceUpdateState(props: DocumentPanelSectionPro
 
   return {
     currentSourceUpdateContent: sourceUpdateDraftContent ?? props.editorContent,
-    handleSourceUpdateDraftChange: (content: string) => {
-      sourceUpdateDraftRef.current = {
-        baseContent: sourceUpdateDraftRef.current?.baseContent ?? props.editorContent,
-        content,
-        nodeId: sourceUpdateDraftRef.current?.nodeId ?? props.editorNodeId
-      };
-      setSourceUpdateDraftContent(content);
-    },
+    handleSourceUpdateDraftChange: createSourceUpdateDraftChangeHandler({
+      editorContent: props.editorContent,
+      editorNodeId: props.editorNodeId,
+      setSourceUpdateDraftContent,
+      sourceUpdateDraftRef
+    }),
+    ...incomingUpdateActions,
     handleSourceUpdatePanelOpenChange,
     isSourceUpdatePanelOpen,
     sourceUpdatePreview

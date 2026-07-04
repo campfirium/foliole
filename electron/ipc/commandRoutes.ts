@@ -38,6 +38,8 @@ const STORAGE_COMMANDS = [
   NATIVE_COMMANDS.saveLocalFile,
   NATIVE_COMMANDS.loadNodeSourceDetails,
   NATIVE_COMMANDS.loadNodeSourceUpdatePreview,
+  NATIVE_COMMANDS.acceptIncomingUpdate,
+  NATIVE_COMMANDS.dismissIncomingUpdate,
   NATIVE_COMMANDS.mergeReadwiseTopicHighlights,
   NATIVE_COMMANDS.loadImportOverview,
   NATIVE_COMMANDS.loadRemovedSources,

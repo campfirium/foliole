@@ -39,9 +39,19 @@ export type NativeImportCommandMap = {
     result: {
       checked_at: string;
       current_content: string;
+      incoming_update_id?: string;
+      kind?: 'incoming_update' | 'source_update';
       source_node_id: string;
       updated_content: string;
     } | null;
+  };
+  [NATIVE_COMMANDS.acceptIncomingUpdate]: {
+    args: { incoming_update_id: string; content: string };
+    result: { incoming_update_id: string; node_id: string | null; status: 'accepted' | 'unavailable' };
+  };
+  [NATIVE_COMMANDS.dismissIncomingUpdate]: {
+    args: { incoming_update_id: string };
+    result: { incoming_update_id: string; node_id: string | null; status: 'dismissed' | 'unavailable' };
   };
   [NATIVE_COMMANDS.mergeReadwiseTopicHighlights]: {
     args: { node_id: string };

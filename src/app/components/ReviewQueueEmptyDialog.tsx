@@ -2,7 +2,6 @@ import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   AppButton,
   AppDialog,
-  AppDialogClose,
   AppDialogContent,
   AppDialogDescription,
   AppDialogOverlay,
@@ -46,13 +45,7 @@ export function ReviewQueueEmptyDialog(props: {
                 {t('desktop.reviewQueue.emptyDialog.continueDemoDay', { day: demoDayClearContent.day + 1 })}
               </AppButton>
             </div>
-          ) : (
-            <div className="mt-5 flex justify-end">
-              <AppDialogClose asChild>
-                <AppButton variant="emphasis">{t('desktop.reviewQueue.emptyDialog.confirm')}</AppButton>
-              </AppDialogClose>
-            </div>
-          )}
+          ) : null}
         </AppDialogContent>
       </AppDialogPortal>
     </AppDialog>

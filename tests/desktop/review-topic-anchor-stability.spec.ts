@@ -11,7 +11,7 @@ const SOURCE_ID = 'playwright-review-anchor-source';
 const CHILD_ID = 'playwright-review-anchor-child';
 const ROOT_FOLDER_ID = 'playwright-root-review-anchor-folder';
 const ROOT_TOPIC_PREFIX = 'playwright-root-review-anchor-topic-';
-const SCREENSHOT_PATH = path.resolve('.lab/atlas/0active/review-topic-anchor-stability.png');
+const SCREENSHOT_PATH = path.resolve('.tmp/artifacts/review-topic-anchor-stability.png');
 
 async function seedReviewAnchorWorkspace(page: Page) {
   await page.evaluate(async ({ childId, folderId, sourceId }) => {

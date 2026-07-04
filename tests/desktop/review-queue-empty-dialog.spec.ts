@@ -1,9 +1,10 @@
+import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
-const SCREENSHOT_PATH = path.resolve('.lab/atlas/0active/review-queue-empty-dialog-hidden.png');
+const SCREENSHOT_PATH = path.resolve('.tmp/artifacts/review-queue-empty-dialog-hidden.png');
 
 async function seedEmptyReviewQueueWorkspace(desktopWindow: import('@playwright/test').Page) {
   await desktopWindow.evaluate(async () => {
@@ -45,5 +46,6 @@ test('clicking the empty review queue action opens a desktop dialog', async ({ d
   const dialog = desktopWindow.getByRole('dialog', { name: /^All clear for now\.$/ });
   await expect(dialog).toBeVisible();
   await expect(desktopWindow.getByText(/Flow has an unavailable topic|Flow 中有不可用主题/)).toHaveCount(0);
+  await mkdir(path.dirname(SCREENSHOT_PATH), { recursive: true });
   await desktopWindow.screenshot({ path: SCREENSHOT_PATH });
 });

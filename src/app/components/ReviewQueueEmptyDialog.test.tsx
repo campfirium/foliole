@@ -11,10 +11,7 @@ it('uses the existing all-clear copy when the review queue is empty', () => {
 
   expect(screen.getByRole('dialog', { name: 'All clear for now.' })).toBeInTheDocument();
   expect(screen.queryByText('Create or schedule review items, then start Flow again.')).not.toBeInTheDocument();
-
-  fireEvent.click(screen.getByRole('button', { name: 'OK' }));
-
-  expect(onClose).toHaveBeenCalledTimes(1);
+  expect(screen.queryByRole('button', { name: 'OK' })).not.toBeInTheDocument();
 });
 
 it('shows Demo day-clear copy in the same dialog shell', () => {

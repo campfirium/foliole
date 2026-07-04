@@ -49,9 +49,9 @@ test('Escape leaves current node editing after command palette closes outside Fl
   await focusPromptEditor(desktopWindow);
 
   await desktopWindow.keyboard.press('Control+P');
-  await expect(desktopWindow.getByRole('textbox', { name: 'Search commands' })).toBeVisible();
+  await expect(desktopWindow.getByRole('textbox', { name: /Search commands|搜索命令/ })).toBeVisible();
   await desktopWindow.keyboard.press('Escape');
-  await expect(desktopWindow.getByRole('textbox', { name: 'Search commands' })).toBeHidden();
+  await expect(desktopWindow.getByRole('textbox', { name: /Search commands|搜索命令/ })).toBeHidden();
 
   await desktopWindow.keyboard.press('Delete');
   await expect.poll(() => getNodeSnapshot(desktopWindow, nodeId)).toMatchObject({ trashed: false });
@@ -72,5 +72,5 @@ test('Ctrl+M opens priority quick set while editing outside Flow', async ({ desk
 
   await desktopWindow.keyboard.press('Control+M');
 
-  await expect(desktopWindow.getByRole('dialog', { name: 'Set priority' })).toBeVisible();
+  await expect(desktopWindow.getByRole('dialog', { name: /Set priority|设置优先级/ })).toBeVisible();
 });

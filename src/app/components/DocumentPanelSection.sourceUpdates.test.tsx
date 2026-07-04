@@ -2,6 +2,9 @@ import { act } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  acceptRuntimeIncomingUpdate,
+  dismissRuntimeIncomingUpdate,
+  mockIncomingUpdatePreview,
   mockSourceUpdatePreview,
   openSourceUpdatePanel,
   renderSection,
@@ -59,5 +62,75 @@ describe('DocumentPanelSection source updates', () => {
     });
 
     expect(onNodeContentChange).not.toHaveBeenCalled();
+  });
+
+  it('dismisses incoming updates without accepting content', async () => {
+    mockIncomingUpdatePreview();
+
+    renderSectionWithProps({});
+
+    const panelProps = openSourceUpdatePanel();
+    await act(async () => {
+      await panelProps?.onDismissIncomingUpdate?.();
+    });
+
+    expect(dismissRuntimeIncomingUpdate).toHaveBeenCalledWith('incoming-update-1');
+    expect(acceptRuntimeIncomingUpdate).not.toHaveBeenCalled();
+  });
+});
+
+describe('DocumentPanelSection incoming updates', () => {
+  it('does not accept incoming updates when the panel only closes', () => {
+    const onNodeContentChange = vi.fn();
+    mockIncomingUpdatePreview();
+
+    renderSectionWithProps({ onNodeContentChange });
+
+    const panelProps = openSourceUpdatePanel();
+    act(() => {
+      panelProps?.onCurrentContentChange('Edited incoming update');
+    });
+    act(() => {
+      panelProps?.onOpenChange(false);
+    });
+
+    expect(onNodeContentChange).not.toHaveBeenCalled();
+    expect(acceptRuntimeIncomingUpdate).not.toHaveBeenCalled();
+    expect(dismissRuntimeIncomingUpdate).not.toHaveBeenCalled();
+  });
+
+  it('accepts incoming updates with the incoming content when the current draft is unchanged', async () => {
+    const onNodeContentChange = vi.fn();
+    mockIncomingUpdatePreview();
+
+    renderSectionWithProps({ editorContent: 'Current content', onNodeContentChange });
+
+    const panelProps = openSourceUpdatePanel();
+    await act(async () => {
+      await panelProps?.onAcceptIncomingUpdate?.();
+    });
+
+    expect(acceptRuntimeIncomingUpdate).toHaveBeenCalledWith('incoming-update-1', 'Incoming content');
+    expect(onNodeContentChange).toHaveBeenCalledWith('node-1', 'Incoming content', { publishLocal: false });
+    expect(dismissRuntimeIncomingUpdate).not.toHaveBeenCalled();
+  });
+
+  it('accepts incoming updates with the edited draft content', async () => {
+    const onNodeContentChange = vi.fn();
+    mockIncomingUpdatePreview();
+
+    renderSectionWithProps({ onNodeContentChange });
+
+    const panelProps = openSourceUpdatePanel();
+    act(() => {
+      panelProps?.onCurrentContentChange('Accepted incoming draft');
+    });
+    await act(async () => {
+      await panelProps?.onAcceptIncomingUpdate?.();
+    });
+
+    expect(acceptRuntimeIncomingUpdate).toHaveBeenCalledWith('incoming-update-1', 'Accepted incoming draft');
+    expect(onNodeContentChange).toHaveBeenCalledWith('node-1', 'Accepted incoming draft', { publishLocal: false });
+    expect(dismissRuntimeIncomingUpdate).not.toHaveBeenCalled();
   });
 });

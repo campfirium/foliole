@@ -37,7 +37,7 @@ test('feedback dialog text field focus stays visually quiet', async ({ desktopWi
     });
 
   const screenshot = await dialog.screenshot({
-    path: '.lab/atlas/0active/feedback-dialog-input-focus.png'
+    path: '.tmp/artifacts/feedback-dialog-input-focus.png'
   });
   await testInfo.attach('feedback-dialog-input-focus', {
     body: screenshot,
