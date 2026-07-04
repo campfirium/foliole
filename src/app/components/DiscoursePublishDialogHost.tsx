@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
@@ -35,6 +35,49 @@ import { DiscoursePublishFields, type CatalogState } from './DiscoursePublishFie
 
 type PublishState = 'idle' | 'publishing';
 type TargetState = { siteUrl: string } | null;
+type SetCatalogState = (state: CatalogState | ((current: CatalogState) => CatalogState)) => void;
+
+async function loadDialogCatalog(args: {
+  currentRequestSeq: () => number;
+  requestSeq: number;
+  setCatalog: SetCatalogState;
+  t: ReturnType<typeof useTranslation>;
+}) {
+  const isCurrentRequest = () => args.requestSeq === args.currentRequestSeq();
+  try {
+    const cachedCatalog = await loadDiscoursePublishCatalogFromRuntime();
+    if (!isCurrentRequest()) return;
+    if (!cachedCatalog) {
+      args.setCatalog({ catalog: null, error: null, loading: false });
+      return;
+    }
+    if (!cachedCatalog.from_cache) {
+      args.setCatalog({ catalog: cachedCatalog, error: null, loading: false });
+      return;
+    }
+    args.setCatalog({ catalog: cachedCatalog, error: null, loading: true });
+  } catch {
+    if (!isCurrentRequest()) return;
+    args.setCatalog({ catalog: null, error: args.t('desktop.discoursePublish.catalog.error'), loading: false });
+    return;
+  }
+  try {
+    const nextCatalog = await loadDiscoursePublishCatalogFromRuntime({ refresh: true });
+    if (!isCurrentRequest()) return;
+    args.setCatalog({
+      catalog: nextCatalog,
+      error: nextCatalog?.from_cache ? args.t('desktop.discoursePublish.catalog.error') : null,
+      loading: false
+    });
+  } catch {
+    if (!isCurrentRequest()) return;
+    args.setCatalog((current) => ({
+      catalog: current.catalog,
+      error: args.t('desktop.discoursePublish.catalog.error'),
+      loading: false
+    }));
+  }
+}
 
 function useDiscoursePublishDialogRequest() {
   const t = useTranslation();
@@ -43,10 +86,13 @@ function useDiscoursePublishDialogRequest() {
   const [form, setForm] = useState<PublishFormState>({ categoryId: '', tags: '' });
   const [catalog, setCatalog] = useState<CatalogState>({ catalog: null, error: null, loading: false });
   const [showAllTags, setShowAllTags] = useState(false);
+  const requestSeqRef = useRef(0);
   useEffect(() => {
     const handleRequest = (event: Event) => {
       const nextRequest = readDiscoursePublishDialogRequest(event);
       if (!nextRequest) return;
+      const requestSeq = requestSeqRef.current + 1;
+      requestSeqRef.current = requestSeq;
       setRequest(nextRequest);
       const details = readPublishDetails(nextRequest.content);
       setForm({
@@ -61,31 +107,17 @@ function useDiscoursePublishDialogRequest() {
       }
       setCatalog({ catalog: null, error: null, loading: true });
       void loadDiscoursePublishSettingsFromRuntime().then((settings) => {
+        if (requestSeq !== requestSeqRef.current) return;
         setTarget(settings ? {
           siteUrl: settings.site_url
         } : null);
       });
-      void loadDiscoursePublishCatalogFromRuntime({ refresh: true })
-        .then((nextCatalog) => {
-          setCatalog({
-            catalog: nextCatalog,
-            error: nextCatalog?.from_cache ? t('desktop.discoursePublish.catalog.error') : null,
-            loading: false
-          });
-        })
-        .catch((error) => {
-          void loadDiscoursePublishCatalogFromRuntime()
-            .then((cachedCatalog) => setCatalog({
-              catalog: cachedCatalog,
-              error: error instanceof Error ? error.message : 'Could not refresh categories and tags.',
-              loading: false
-            }))
-            .catch((cachedError) => setCatalog({
-              catalog: null,
-              error: cachedError instanceof Error ? cachedError.message : 'Could not load categories and tags.',
-              loading: false
-            }));
-        });
+      void loadDialogCatalog({
+        currentRequestSeq: () => requestSeqRef.current,
+        requestSeq,
+        setCatalog,
+        t
+      });
     };
     window.addEventListener(DISCOURSE_PUBLISH_DIALOG_REQUEST_EVENT, handleRequest);
     return () => window.removeEventListener(DISCOURSE_PUBLISH_DIALOG_REQUEST_EVENT, handleRequest);
