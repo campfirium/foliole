@@ -110,7 +110,7 @@ it('limits automatic mirror flushes to scheduled articles', async () => {
 
 it('does not resolve mirror articles until flush', async () => {
   saveNode('node-first', null, 'topic', 'First Title', 'First body.', '2026-03-30T00:00:00.000Z', 0);
-  const resolveSpy = vi.spyOn(articleMirror, 'resolveArticleIdFromNodeId');
+  const resolveSpy = vi.spyOn(articleMirror, 'resolveArticleIdsFromNodeId');
 
   scheduleMirrorSync(['node-first']);
 
@@ -119,6 +119,34 @@ it('does not resolve mirror articles until flush', async () => {
   await flushMirrorSync();
 
   expect(resolveSpy).toHaveBeenCalledWith('node-first');
+});
+
+it('syncs article mirrors when their parent folder moves', async () => {
+  saveNode('folder-projects', null, 'folder', 'Projects', '', '2026-03-30T00:00:00.000Z', 0);
+  saveNode('folder-research', 'folder-projects', 'folder', 'Research', '', '2026-03-30T00:00:00.000Z', 1);
+  saveNode('node-article', 'folder-research', 'topic', 'Mirror Demo', 'Nested body.', '2026-03-30T00:00:00.000Z', 2);
+  await rebuildMirrorOutput();
+
+  saveNode('folder-research', 'folder-projects', 'folder', 'Archive', '', '2030-03-30T00:00:00.000Z', 1);
+
+  scheduleMirrorSync(['folder-research']);
+  await flushMirrorSync();
+
+  await expect(fs.access(mirrorPath(path.join('Projects', 'Research', 'Mirror Demo.md')))).rejects.toThrow();
+  await expect(fs.readFile(mirrorPath(path.join('Projects', 'Archive', 'Mirror Demo.md')), 'utf8')).resolves.toContain('Nested body.');
+});
+
+it('syncs the owning article when a manual child topic changes', async () => {
+  saveNode('node-article', null, 'topic', 'Mirror Demo', 'Parent body.', '2026-03-30T00:00:00.000Z', 0);
+  saveNode('node-child-topic', 'node-article', 'topic', 'Key Point', 'Child body.', '2026-03-30T00:00:00.000Z', 1);
+  await rebuildMirrorOutput();
+
+  saveNode('node-child-topic', 'node-article', 'topic', 'Key Point', 'Child body updated.', '2030-03-30T00:00:00.000Z', 1);
+
+  scheduleMirrorSync(['node-child-topic']);
+  await flushMirrorSync();
+
+  await expect(fs.readFile(mirrorPath('Mirror Demo.md'), 'utf8')).resolves.toContain('Child body updated.');
 });
 
 it('does not run an incremental full scan when scheduled nodes resolve to no articles', async () => {

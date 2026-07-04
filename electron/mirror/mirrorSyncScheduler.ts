@@ -27,8 +27,7 @@ async function drainQueue() {
 
   const articleIds = new Set<string>();
   for (const nodeId of nodeIds) {
-    const articleId = articleMirror.resolveArticleIdFromNodeId(nodeId);
-    if (articleId) {
+    for (const articleId of articleMirror.resolveArticleIdsFromNodeId(nodeId)) {
       articleIds.add(articleId);
     }
   }

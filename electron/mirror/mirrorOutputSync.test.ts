@@ -215,6 +215,22 @@ it('moves article mirrors when the parent folder path changes', async () => {
   await expect(fs.access(mirrorPath(path.join('Projects', 'Research', 'Mirror Demo.md')))).rejects.toThrow();
 });
 
+it('prunes stale mirror output that is no longer in the current target set', async () => {
+  seedArticles();
+  await rebuildMirrorOutput();
+  await fs.mkdir(mirrorPath(path.join('Old Folder', 'Nested')), { recursive: true });
+  await fs.writeFile(mirrorPath(path.join('Old Folder', 'Nested', 'stale.md')), 'stale', 'utf8');
+  await fs.writeFile(mirrorPath('stale-root.md'), 'stale', 'utf8');
+
+  saveNode('node-second', null, 'Plain body updated.', '2030-03-30T00:18:00.000Z', { title: 'Second Demo', position: 3 });
+
+  await expect(syncIncrementalMirrorOutput(['node-second'])).resolves.toMatchObject({ rebuilt_article_count: 1 });
+  await expect(fs.access(mirrorPath(path.join('Old Folder')))).rejects.toThrow();
+  await expect(fs.access(mirrorPath('stale-root.md'))).rejects.toThrow();
+  await expect(readMirror('Mirror Demo.md')).resolves.toContain('Keep ==bright text== here.');
+  await expect(readMirror('Second Demo.md')).resolves.toContain('Plain body updated.');
+});
+
 it('appends manual child topics to the parent article mirror instead of exporting extra files', async () => {
   saveNode('folder-root', null, '', '2026-03-30T00:00:00.000Z', { kind: 'folder', title: 'test' });
   saveNode('node-parent-topic', 'folder-root', 'Parent body.', '2026-03-30T00:00:00.000Z', {

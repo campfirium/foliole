@@ -8,6 +8,7 @@ import type { DesktopTaskContext } from '../desktopTaskTypes.js';
 import { loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
 
 import { collectArticleMirrorTargets } from './articleMirrorOutput.js';
+import { pruneMirrorOutputToTargets } from './mirrorOutputPrune.js';
 
 type MirrorSyncMode = 'full' | 'incremental' | 'missing';
 
@@ -216,6 +217,8 @@ async function syncMirrorOutput(
 
   if (mode === 'full') {
     await prepareFullMirrorRebuild(paths.mirror);
+  } else if (mode === 'incremental') {
+    await pruneMirrorOutputToTargets(paths.mirror, targets.map((target) => target.targetPath));
   }
 
   await removeObsoleteMirrorRecords(mode, paths.mirror, recordsByArticleId, targetArticleIds, selectedArticleIds);

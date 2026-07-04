@@ -6,6 +6,7 @@ import { openDatabaseConnection } from '../database/connection.js';
 import { loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
 
 import { renderSingleArticleMirror } from './articleMirrorOutput.js';
+export { resolveArticleIdFromNodeId, resolveArticleIdsFromNodeId } from './mirrorArticleResolver.js';
 
 const INBOX_NODE_ID = 'special-inbox';
 
@@ -171,27 +172,6 @@ async function removeMirrorFile(filePath: string) {
   await fs.rm(filePath, { force: true });
   const legacyDir = path.join(path.dirname(filePath), path.basename(filePath, '.md'));
   await fs.rm(legacyDir, { force: true, recursive: true });
-}
-
-export function resolveArticleIdFromNodeId(nodeId: string): string | null {
-  const db = openDatabaseConnection().sqlite;
-  const row = db.prepare(
-    'SELECT id, parent_id, kind, anchor_link, deleted_at FROM nodes WHERE id = ?'
-  ).get(nodeId) as { id: string; parent_id: string | null; kind: string; anchor_link: string | null; deleted_at: string | null } | undefined;
-
-  if (!row) {
-    return null;
-  }
-
-  if (row.kind === 'folder') {
-    return null;
-  }
-
-  if (row.kind === 'topic' && !row.anchor_link) {
-    return row.id;
-  }
-
-  return row.parent_id;
 }
 
 export async function exportArticleToMirror(articleId: string): Promise<boolean> {
