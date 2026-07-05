@@ -47,6 +47,8 @@ interface DiscourseTagResponse {
   }>;
 }
 
+const DISCOURSE_PUBLISH_CONNECTION_ERROR = "The forum isn't responding right now. Try Publish again in a moment.";
+
 function readDiscourseErrorMessage(text: string) {
   try {
     const payload = JSON.parse(text) as { error?: unknown; errors?: unknown; message?: unknown };
@@ -71,6 +73,14 @@ function buildHeaders(options: DiscourseClientOptions) {
 
 function buildUrl(siteUrl: string, path: string) {
   return `${siteUrl.replace(/\/+$/g, '')}${path}`;
+}
+
+async function fetchPublishResponse(input: string, init: RequestInit) {
+  try {
+    return await fetch(input, init);
+  } catch {
+    throw new Error(DISCOURSE_PUBLISH_CONNECTION_ERROR);
+  }
 }
 
 async function readJsonResponse(response: Response) {
@@ -150,7 +160,7 @@ export async function loadDiscoursePublishCatalog(options: DiscourseClientOption
 }
 
 export async function createDiscourseTopic(options: DiscourseClientOptions, input: DiscourseCreateTopicInput) {
-  const response = await fetch(buildUrl(options.siteUrl, '/posts.json'), {
+  const response = await fetchPublishResponse(buildUrl(options.siteUrl, '/posts.json'), {
     body: JSON.stringify({
       category: input.categoryId ?? undefined,
       raw: input.raw,
@@ -172,12 +182,12 @@ export async function createDiscourseTopic(options: DiscourseClientOptions, inpu
 }
 
 export async function updateDiscourseTopic(options: DiscourseClientOptions, input: DiscourseUpdateTopicInput) {
-  await readJsonResponse(await fetch(buildUrl(options.siteUrl, `/posts/${input.postId}.json`), {
+  await readJsonResponse(await fetchPublishResponse(buildUrl(options.siteUrl, `/posts/${input.postId}.json`), {
     body: JSON.stringify({ raw: input.raw }),
     headers: buildHeaders(options),
     method: 'PUT'
   }));
-  await readJsonResponse(await fetch(buildUrl(options.siteUrl, `/t/${input.topicId}.json`), {
+  await readJsonResponse(await fetchPublishResponse(buildUrl(options.siteUrl, `/t/${input.topicId}.json`), {
     body: JSON.stringify({
       category_id: input.categoryId ?? undefined,
       tags: input.tags,

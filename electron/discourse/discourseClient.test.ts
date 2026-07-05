@@ -28,6 +28,24 @@ it('formats Discourse validation errors without exposing raw JSON', async () => 
   await expect(publish).rejects.not.toThrow('create_post');
 });
 
+it('uses a user-facing message when the forum does not respond during publishing', async () => {
+  const fetchMock = vi.fn().mockRejectedValue(new TypeError('fetch failed'));
+  vi.stubGlobal('fetch', fetchMock);
+
+  const { createDiscourseTopic } = await import('./discourseClient.js');
+  const publish = createDiscourseTopic({
+    apiKey: 'user-key',
+    siteUrl: 'https://forum.example.com'
+  }, {
+    categoryId: 7,
+    raw: 'Long enough body for Discourse publishing.',
+    tags: ['new-tag'],
+    title: 'Publish topic'
+  });
+  await expect(publish).rejects.toThrow("The forum isn't responding right now. Try Publish again in a moment.");
+  await expect(publish).rejects.not.toThrow('fetch failed');
+});
+
 it('loads Discourse categories and tags for publish choices', async () => {
   const fetchMock = vi.fn()
     .mockResolvedValueOnce(new Response(JSON.stringify({
