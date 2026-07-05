@@ -56,7 +56,7 @@ function useReadableArticleEditorState(props: {
 }) {
   const saveContent = props.onSaveContent;
   const canEdit = Boolean(
-    props.allowContentEditing !== false &&
+    props.allowContentEditing === true &&
     saveContent &&
     (!props.readableArticle.bodyStatus || props.readableArticle.bodyStatus === 'ready')
   );

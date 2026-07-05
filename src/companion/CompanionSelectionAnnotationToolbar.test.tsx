@@ -88,7 +88,7 @@ it('applies a highlight with the current selection payload', async () => {
 
   const button = screen.getByRole('button', { name: 'Highlight' });
   expect(fireEvent.pointerDown(button)).toBe(false);
-  fireEvent.click(button);
+  fireEvent.pointerUp(button);
 
   expect(onApply).toHaveBeenCalledWith('highlight', payload, undefined);
   expect(onClose).not.toHaveBeenCalled();
@@ -100,9 +100,22 @@ it('refreshes the selection payload before applying a highlight', () => {
   const onApply = vi.fn();
   renderToolbar(onApply, () => longerPayload);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Highlight' }));
+  fireEvent.pointerDown(screen.getByRole('button', { name: 'Highlight' }));
+  fireEvent.pointerUp(screen.getByRole('button', { name: 'Highlight' }));
 
   expect(onApply).toHaveBeenCalledWith('highlight', longerPayload, undefined);
+});
+
+it('does not apply twice when Android emits a click after pointer activation', () => {
+  const onApply = vi.fn();
+  renderToolbar(onApply);
+
+  const button = screen.getByRole('button', { name: 'Highlight' });
+  fireEvent.pointerDown(button);
+  fireEvent.pointerUp(button);
+  fireEvent.click(button);
+
+  expect(onApply).toHaveBeenCalledTimes(1);
 });
 
 it('deletes an existing highlight after the action succeeds', async () => {
@@ -110,7 +123,7 @@ it('deletes an existing highlight after the action succeeds', async () => {
 
   const button = screen.getByRole('button', { name: 'Close Highlight' });
   expect(fireEvent.pointerDown(button)).toBe(false);
-  fireEvent.click(button);
+  fireEvent.pointerUp(button);
 
   expect(onDeleteExistingHighlight).toHaveBeenCalledWith('highlight-1');
   await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));

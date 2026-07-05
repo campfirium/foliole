@@ -1,5 +1,5 @@
 import { Highlighter, MessageSquare, MoreHorizontal, RectangleEllipsis, X } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { cn } from '../shared/lib/utils';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
@@ -24,14 +24,31 @@ function ToolbarButton(props: {
   label: string;
   onClick: () => void;
 }) {
+  const pointerActionHandledRef = useRef(false);
+  function runAction() {
+    props.onClick();
+  }
   return (
     <button
       aria-label={props.label}
       className="flex size-9 items-center justify-center rounded-sm text-foreground/72 transition-colors hover:bg-foreground/8 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-selection-blue/40"
-      onClick={props.onClick}
+      onClick={(event) => {
+        event.stopPropagation();
+        if (pointerActionHandledRef.current) {
+          pointerActionHandledRef.current = false;
+          return;
+        }
+        runAction();
+      }}
       onPointerDown={(event) => {
         event.preventDefault();
         event.stopPropagation();
+      }}
+      onPointerUp={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        pointerActionHandledRef.current = true;
+        runAction();
       }}
       title={props.label}
       type="button"

@@ -91,7 +91,7 @@ function Stop-ExtraFolioleScrcpyProcesses {
   Write-Info "closed duplicate mirrors: $($extraProcesses.Count)"
 }
 
-function Set-DeviceScreenOff {
+function Set-DeviceStayAwake {
   param(
     [string]$Adb,
     [string]$Serial
@@ -102,9 +102,8 @@ function Set-DeviceScreenOff {
     $adbArgs = @("-s", $Serial)
   }
 
-  & $Adb @adbArgs shell svc power stayon false | Out-Null
-  & $Adb @adbArgs shell settings put global stay_on_while_plugged_in 0 | Out-Null
-  & $Adb @adbArgs shell input keyevent KEYCODE_SLEEP | Out-Null
+  & $Adb @adbArgs shell svc power stayon true | Out-Null
+  & $Adb @adbArgs shell input keyevent KEYCODE_WAKEUP | Out-Null
 }
 
 $scrcpy = Resolve-ScrcpyPath -PreferredPath $ScrcpyPath
@@ -118,7 +117,7 @@ if ([string]::IsNullOrWhiteSpace($serial)) {
 }
 
 $arguments = @(
-  "--turn-screen-off",
+  "--stay-awake",
   "--no-audio",
   "--window-title=Foliole-Android",
   "--window-x=40",
@@ -141,14 +140,14 @@ if ($existingMirrors.Count -gt 0) {
   exit 0
 }
 
-Write-Info "device screen: turned off"
-Write-Info "stay awake: disabled"
+Write-Info "device screen: kept on"
+Write-Info "stay awake: enabled"
 
 Start-Process `
   -FilePath $scrcpy `
   -ArgumentList $arguments `
   -WindowStyle Normal
 Start-Sleep -Milliseconds 750
-Set-DeviceScreenOff -Adb $adb -Serial $serial
-Write-Info "screen sleep: requested"
+Set-DeviceStayAwake -Adb $adb -Serial $serial
+Write-Info "screen wake: requested"
 Write-Info "status: OPENED"
