@@ -23,6 +23,8 @@ export interface EditorViewState {
   } | null;
 }
 
+export type MarkdownReadOnlyInteractionMode = 'editor' | 'document';
+
 export interface MarkdownEditorProps {
   ariaLabel?: string;
   blockImageMaxHeightOverride?: number;
@@ -67,6 +69,7 @@ export interface MarkdownEditorProps {
   onRedo?: () => boolean;
   onShouldSuppressSelectionRestore?: () => boolean;
   readOnly?: boolean;
+  readOnlyInteractionMode?: MarkdownReadOnlyInteractionMode;
   reviewCaretLineHighlight?: boolean;
   reviewEscapeBlurEnabled?: boolean;
   scrollContainer?: 'editor' | 'outer';

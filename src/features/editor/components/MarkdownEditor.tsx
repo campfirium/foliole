@@ -41,6 +41,7 @@ function MarkdownEditorSurface(args: {
   onDoubleClick: MarkdownEditorProps['onDoubleClick'];
   onKeyDownCapture: MarkdownEditorProps['onKeyDownCapture'];
   readOnly: boolean;
+  readOnlyInteractionMode: MarkdownEditorProps['readOnlyInteractionMode'];
   reviewCaretLineHighlight: boolean;
   reviewEscapeBlurEnabled: boolean;
   rootRef: MutableRefObject<HTMLDivElement | null>;
@@ -66,6 +67,7 @@ function MarkdownEditorSurface(args: {
         }
         data-fit-block-images={args.fitBlockImagesToViewport ? 'true' : 'false'}
         data-immersive-editing={args.immersiveEditing ? 'true' : 'false'}
+        data-read-only-interaction-mode={args.readOnlyInteractionMode ?? 'editor'}
         data-read-only={args.readOnly ? 'true' : 'false'}
         data-review-caret-line={args.reviewCaretLineHighlight ? 'true' : 'false'}
         data-review-escape-blur={args.reviewEscapeBlurEnabled ? 'true' : 'false'}
@@ -149,6 +151,7 @@ function useMarkdownEditorModel(props: MarkdownEditorProps) {
     props.onRedo,
     props.onUndo,
     props.readOnly,
+    props.readOnlyInteractionMode,
     props.trailingDivider
   );
   const { closePreview, previewImage } = useMarkdownImagePreview(hostRef);
@@ -197,6 +200,7 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
         onDoubleClick={props.onDoubleClick}
         onKeyDownCapture={(event) => handleMarkdownEditorKeyDownCapture(event, props)}
         readOnly={props.readOnly === true}
+        readOnlyInteractionMode={props.readOnlyInteractionMode}
         reviewCaretLineHighlight={props.reviewCaretLineHighlight === true}
         reviewEscapeBlurEnabled={props.reviewEscapeBlurEnabled === true}
         rootRef={rootRef}

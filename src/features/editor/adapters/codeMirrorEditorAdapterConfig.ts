@@ -75,6 +75,18 @@ const escapeBlurKeymap = [{
   }
 }];
 
+function createReadOnlyInteractionExtensions(options: CodeMirrorEditorAdapterOptions) {
+  if (options.readOnlyInteractionMode !== 'document') {
+    return [];
+  }
+  return [
+    EditorView.contentAttributes.of({
+      'aria-readonly': 'true',
+      tabindex: '-1'
+    })
+  ];
+}
+
 export function createCodeMirrorEditorExtensions(args: {
   diffDecorationsCompartment: import('@codemirror/state').Compartment;
   textAnchorDecorations: readonly import('./EditorAdapter').EditorTextAnchorDecoration[];
@@ -97,6 +109,7 @@ export function createCodeMirrorEditorExtensions(args: {
     EditorState.allowMultipleSelections.of(true),
     keymap.of([...createEditorUndoRedoKeymap(args.options), ...escapeBlurKeymap, ...folioleDefaultKeymap]),
     args.readOnlyCompartment.of(createReadOnlyExtensions(args.options.readOnly === true)),
+    ...createReadOnlyInteractionExtensions(args.options),
     EditorView.lineWrapping,
     highlightActiveLine(),
     markdownInputAssist,

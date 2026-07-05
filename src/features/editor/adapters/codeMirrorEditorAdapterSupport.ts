@@ -28,6 +28,7 @@ export interface CodeMirrorEditorAdapterOptions {
   onRedo?: () => boolean;
   onUndo?: () => boolean;
   readOnly?: boolean;
+  readOnlyInteractionMode?: 'editor' | 'document';
   trailingDivider?: boolean;
 }
 

@@ -34,8 +34,36 @@ function syncEditorAdapterInputRefs(
   refs.onUndoRef.current = args.onUndo;
   refs.hideTitleHeadingRef.current = args.hideTitleHeading;
   refs.readOnlyRef.current = args.readOnly;
+  refs.readOnlyInteractionModeRef.current = args.readOnlyInteractionMode;
   refs.trailingDividerRef.current = args.trailingDivider;
   refs.textAnchorDecorationsRef.current = resolvedTextAnchorDecorations;
+}
+
+function useEditorAdapterInputRefs(
+  args: Parameters<typeof useEditorAdapterInputs>[0],
+  resolvedTextAnchorDecorations: readonly EditorTextAnchorDecoration[]
+) {
+  return {
+    hideTitleHeadingRef: useRef(args.hideTitleHeading),
+    initialValueRef: useRef(args.initialValue),
+    liveMarkdownEnabledRef: useRef(args.liveMarkdownEnabled),
+    localDocumentPathRef: useRef(args.localDocumentPath ?? null),
+    onChangeRef: useRef(args.onChange),
+    onDocumentInputRef: useRef(args.onDocumentInput),
+    onMissingAttachmentResourceRef: useRef(args.onMissingAttachmentResource),
+    onOpenExternalLinkRef: useRef(args.onOpenExternalLink),
+    onOpenNodeLinkRef: useRef(args.onOpenNodeLink),
+    onPreviewNodeLinkRef: useRef(args.onPreviewNodeLink),
+    onPastedAnchorsRef: useRef(args.onPastedAnchors),
+    onReadyRef: useRef(args.onReady),
+    onRedoRef: useRef(args.onRedo),
+    onUndoRef: useRef(args.onUndo),
+    readOnlyInteractionModeRef: useRef(args.readOnlyInteractionMode),
+    readOnlyRef: useRef(args.readOnly),
+    resolvedTextAnchorDecorations,
+    textAnchorDecorationsRef: useRef(resolvedTextAnchorDecorations),
+    trailingDividerRef: useRef(args.trailingDivider)
+  };
 }
 
 function useEditorAdapterInputs(args: {
@@ -54,48 +82,12 @@ function useEditorAdapterInputs(args: {
   onReady: ((adapter: EditorAdapter | null) => void) | undefined;
   onUndo: MarkdownEditorProps['onUndo'];
   readOnly: boolean | undefined;
+  readOnlyInteractionMode: MarkdownEditorProps['readOnlyInteractionMode'];
   textAnchorDecorations: MarkdownEditorProps['textAnchorDecorations'];
   trailingDivider: boolean | undefined;
 }) {
-  const initialValueRef = useRef(args.initialValue);
-  const liveMarkdownEnabledRef = useRef(args.liveMarkdownEnabled);
-  const localDocumentPathRef = useRef(args.localDocumentPath ?? null);
-  const onChangeRef = useRef(args.onChange);
-  const onDocumentInputRef = useRef(args.onDocumentInput);
-  const onMissingAttachmentResourceRef = useRef(args.onMissingAttachmentResource);
-  const onOpenExternalLinkRef = useRef(args.onOpenExternalLink);
-  const onOpenNodeLinkRef = useRef(args.onOpenNodeLink);
-  const onPreviewNodeLinkRef = useRef(args.onPreviewNodeLink);
-  const onPastedAnchorsRef = useRef(args.onPastedAnchors);
-  const onRedoRef = useRef(args.onRedo);
-  const onReadyRef = useRef(args.onReady);
-  const onUndoRef = useRef(args.onUndo);
-  const hideTitleHeadingRef = useRef(args.hideTitleHeading);
-  const readOnlyRef = useRef(args.readOnly);
-  const trailingDividerRef = useRef(args.trailingDivider);
   const resolvedTextAnchorDecorations = resolveTextAnchorDecorations(args.textAnchorDecorations);
-  const textAnchorDecorationsRef = useRef(resolvedTextAnchorDecorations);
-
-  const refs = {
-    hideTitleHeadingRef,
-    initialValueRef,
-    liveMarkdownEnabledRef,
-    localDocumentPathRef,
-    onChangeRef,
-    onDocumentInputRef,
-    onMissingAttachmentResourceRef,
-    onOpenExternalLinkRef,
-    onOpenNodeLinkRef,
-    onPreviewNodeLinkRef,
-    onPastedAnchorsRef,
-    onRedoRef,
-    onReadyRef,
-    onUndoRef,
-    readOnlyRef,
-    resolvedTextAnchorDecorations,
-    textAnchorDecorationsRef,
-    trailingDividerRef
-  };
+  const refs = useEditorAdapterInputRefs(args, resolvedTextAnchorDecorations);
   syncEditorAdapterInputRefs(refs, args, resolvedTextAnchorDecorations);
   return refs;
 }
@@ -129,6 +121,7 @@ function useEditorAdapterLifecycle(args: {
       onPastedAnchors: (payload) => inputs.onPastedAnchorsRef.current?.(payload),
       onRedo: () => inputs.onRedoRef.current?.() ?? false,
       readOnly: inputs.readOnlyRef.current,
+      readOnlyInteractionMode: inputs.readOnlyInteractionModeRef.current,
       textAnchorDecorations: inputs.textAnchorDecorationsRef.current,
       trailingDivider: inputs.trailingDividerRef.current,
       onUndo: () => inputs.onUndoRef.current?.() ?? false
@@ -169,6 +162,7 @@ export function useEditorAdapter(
   onRedo: MarkdownEditorProps['onRedo'],
   onUndo: MarkdownEditorProps['onUndo'],
   readOnly: boolean | undefined,
+  readOnlyInteractionMode: MarkdownEditorProps['readOnlyInteractionMode'],
   trailingDivider: boolean | undefined
 ) {
   const adapterRef = useRef<CodeMirrorEditorAdapter | null>(null);
@@ -188,6 +182,7 @@ export function useEditorAdapter(
     onReady,
     onUndo,
     readOnly,
+    readOnlyInteractionMode,
     textAnchorDecorations,
     trailingDivider
   });

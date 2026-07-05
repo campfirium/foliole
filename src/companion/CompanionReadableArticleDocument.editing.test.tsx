@@ -13,6 +13,13 @@ const markdownEditorMock = vi.hoisted(() => ({
   }
 }));
 
+const defaultReadingTypographySettings = {
+  contrast: 'default',
+  fontFamily: 'sans',
+  fontSize: 'default',
+  lineHeight: 'default'
+} as const;
+
 vi.mock('@/features/editor/components/MarkdownEditor', () => ({
   MarkdownEditor: (props: typeof markdownEditorMock.props) => {
     markdownEditorMock.props = props;
@@ -45,6 +52,7 @@ function renderReadableArticleDocument(props: Partial<Parameters<typeof Readable
   return render(
     <ReadableArticleDocument
       readableArticle={createReadableArticle(props.readableArticle)}
+      readingTypographySettings={defaultReadingTypographySettings}
       {...props}
     />
   );

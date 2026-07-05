@@ -22,6 +22,7 @@ export function createMarkdownEditorAdapter(args: {
   onRedo: MarkdownEditorProps['onRedo'];
   onUndo: MarkdownEditorProps['onUndo'];
   readOnly: boolean | undefined;
+  readOnlyInteractionMode: MarkdownEditorProps['readOnlyInteractionMode'];
   textAnchorDecorations: readonly EditorTextAnchorDecoration[];
   trailingDivider: boolean | undefined;
 }) {
@@ -40,6 +41,7 @@ export function createMarkdownEditorAdapter(args: {
     ...(args.onRedo ? { onRedo: args.onRedo } : {}),
     ...(args.onUndo ? { onUndo: args.onUndo } : {}),
     ...(args.readOnly !== undefined ? { readOnly: args.readOnly } : {}),
+    ...(args.readOnlyInteractionMode !== undefined ? { readOnlyInteractionMode: args.readOnlyInteractionMode } : {}),
     textAnchorDecorations: args.textAnchorDecorations,
     ...(args.trailingDivider !== undefined ? { trailingDivider: args.trailingDivider } : {})
   });

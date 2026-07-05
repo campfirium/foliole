@@ -40,6 +40,7 @@ export function CompanionArticleDocument(props: {
         nodeId={props.nodeId}
         onChange={(content) => props.onChange?.(content)}
         readOnly={!props.onChange}
+        readOnlyInteractionMode={!props.onChange ? 'document' : 'editor'}
         value={props.content}
         {...definedProps({
           contentPaddingTop: props.contentPaddingTop,
