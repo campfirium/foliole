@@ -5,7 +5,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { controlledElectronSqliteTests } from '../native-sqlite-test-policy.mjs';
-import { resolveCappedTypecheckScripts, runNativeLightMidPlan } from './quality-fast-native-local-steps.mjs';
+import {
+  resolveCappedTypecheckScripts,
+  runNativeLightMidPlan,
+  runNativeT0StaticGuards
+} from './quality-fast-native-local-steps.mjs';
 import { npmRunCommand, resolveChangedFiles, runCapture } from './windows-preview-native-runtime.mjs';
 import { WINDOWS_NATIVE_REPO_ROOT } from './windows-native-paths.mjs';
 
@@ -157,10 +161,6 @@ function splitRelatedTests(tests) {
 }
 
 async function runCappedHeavyPlan(plan, env = process.env, runner = runInherited) {
-  if (fs.existsSync(path.join(WINDOWS_NATIVE_REPO_ROOT, 'scripts/check-specialized-surface-usage.mjs'))) {
-    await runStep('specialized surface usage', process.execPath, ['scripts/check-specialized-surface-usage.mjs'], env, runner);
-  }
-
   if (plan.lintTargets.length > 0) {
     await runStep('scoped lint', process.execPath, [
       'node_modules/eslint/bin/eslint.js',
@@ -201,11 +201,13 @@ export async function runQualityT0Native(options = {}) {
   const resolvedChangedFiles = changedFiles.length > 0 ? changedFiles : await resolveChangedFiles(WINDOWS_NATIVE_REPO_ROOT);
   const plan = options.plan ?? (await resolveRoutePlan(bashExe, resolvedChangedFiles, env));
   const runner = options.runner ?? runInherited;
+  const routeEnv = { ...env, QUALITY_GATE_CHANGED_FILES: toEnvFileList(resolvedChangedFiles) };
 
   console.log(`[quality-fast-native] selected level: ${plan.level || '(unknown)'}`);
+  await runNativeT0StaticGuards(routeEnv, runner, runStep);
   if (!HEAVY_LEVELS.has(plan.level)) {
     await runNativeLightMidPlan(plan, {
-      env: { ...env, QUALITY_GATE_CHANGED_FILES: toEnvFileList(resolvedChangedFiles) },
+      env: routeEnv,
       runner,
       runStep,
       splitRelatedTests
@@ -213,7 +215,7 @@ export async function runQualityT0Native(options = {}) {
     return plan;
   }
 
-  await runCappedHeavyPlan(plan, env, runner);
+  await runCappedHeavyPlan(plan, routeEnv, runner);
   const deferred = plan.level === 'full' ? 'quality:full' : `quality:${plan.level}`;
   console.log(`[quality-fast-native] ${plan.level}-class change detected -> T0 follow-up gate deferred: npm run ${deferred}`);
   return plan;

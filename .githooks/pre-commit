@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-blocked_paths="$(git diff --cached --name-only --diff-filter=ACMRTUXB | sed -n '/^\.lab\//p')"
+git_cmd="git"
+if command -v git.exe >/dev/null 2>&1; then
+  git_cmd="git.exe"
+fi
+
+blocked_paths="$("${git_cmd}" diff --cached --name-only --diff-filter=ACMRTUXB -- .lab)"
 
 if [[ -n "$blocked_paths" ]]; then
   {
@@ -12,4 +17,8 @@ if [[ -n "$blocked_paths" ]]; then
     echo "Remove them from the index with: git restore --staged .lab"
   } >&2
   exit 1
+fi
+
+if [[ -f "scripts/check-repository-root-boundary.mjs" ]]; then
+  node scripts/check-repository-root-boundary.mjs
 fi

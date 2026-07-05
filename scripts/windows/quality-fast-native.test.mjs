@@ -137,6 +137,7 @@ describe('quality-fast-native T0 routing', () => {
 
     expect(calls.map((call) => call.label)).toEqual([
       'specialized surface usage',
+      'repository root boundary',
       'scoped lint',
       'typecheck:desktop',
       'related tests',
@@ -175,9 +176,13 @@ describe('quality-fast-native T0 routing', () => {
   });
 
   it.each([
-    ['shared', ['specialized surface usage', 'typecheck:shared'], 'quality:shared'],
-    ['android', ['specialized surface usage', 'typecheck:android'], 'quality:android'],
-    ['full', ['specialized surface usage', 'typecheck:desktop', 'typecheck:shared', 'typecheck:android'], 'quality:full']
+    ['shared', ['specialized surface usage', 'repository root boundary', 'typecheck:shared'], 'quality:shared'],
+    ['android', ['specialized surface usage', 'repository root boundary', 'typecheck:android'], 'quality:android'],
+    [
+      'full',
+      ['specialized surface usage', 'repository root boundary', 'typecheck:desktop', 'typecheck:shared', 'typecheck:android'],
+      'quality:full'
+    ]
   ])('caps %s routes and reports the deferred comprehensive gate', async (level, expectedTypechecks, deferredGate) => {
     const calls = [];
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
