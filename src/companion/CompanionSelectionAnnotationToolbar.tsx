@@ -24,9 +24,17 @@ function ToolbarButton(props: {
   label: string;
   onClick: () => void;
 }) {
-  const pointerActionHandledRef = useRef(false);
+  const lastPressActionAtRef = useRef(0);
+  function wasRecentlyHandled() {
+    return Date.now() - lastPressActionAtRef.current < 350;
+  }
   function runAction() {
     props.onClick();
+  }
+  function runPressAction() {
+    if (wasRecentlyHandled()) return;
+    lastPressActionAtRef.current = Date.now();
+    runAction();
   }
   return (
     <button
@@ -34,10 +42,7 @@ function ToolbarButton(props: {
       className="flex size-9 items-center justify-center rounded-sm text-foreground/72 transition-colors hover:bg-foreground/8 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-selection-blue/40"
       onClick={(event) => {
         event.stopPropagation();
-        if (pointerActionHandledRef.current) {
-          pointerActionHandledRef.current = false;
-          return;
-        }
+        if (wasRecentlyHandled()) return;
         runAction();
       }}
       onPointerDown={(event) => {
@@ -47,8 +52,12 @@ function ToolbarButton(props: {
       onPointerUp={(event) => {
         event.preventDefault();
         event.stopPropagation();
-        pointerActionHandledRef.current = true;
-        runAction();
+        runPressAction();
+      }}
+      onTouchEnd={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        runPressAction();
       }}
       title={props.label}
       type="button"

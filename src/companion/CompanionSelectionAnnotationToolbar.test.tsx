@@ -118,6 +118,19 @@ it('does not apply twice when Android emits a click after pointer activation', (
   expect(onApply).toHaveBeenCalledTimes(1);
 });
 
+it('applies a highlight when Android ends the toolbar activation as touchend', () => {
+  const onApply = vi.fn();
+  renderToolbar(onApply);
+
+  const button = screen.getByRole('button', { name: 'Highlight' });
+  fireEvent.pointerDown(button);
+  fireEvent.touchEnd(button);
+  fireEvent.click(button);
+
+  expect(onApply).toHaveBeenCalledTimes(1);
+  expect(onApply).toHaveBeenCalledWith('highlight', payload, undefined);
+});
+
 it('deletes an existing highlight after the action succeeds', async () => {
   const { onClose, onDeleteExistingHighlight } = renderExistingToolbar();
 

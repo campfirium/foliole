@@ -97,6 +97,7 @@ describe('ImmersiveReadableArticle Android scrolling', () => {
   });
 
   it('lets the immersive surface own article scrolling for old Android WebView touch gestures', () => {
+    chromeVisible = true;
     const { container } = render(
       <ImmersiveReadableArticle
         onExit={vi.fn()}
@@ -109,6 +110,7 @@ describe('ImmersiveReadableArticle Android scrolling', () => {
     expect(surface).toHaveClass('fixed', 'top-0', 'right-0', 'bottom-0', 'left-0', 'overflow-y-auto');
     expect(surface).not.toHaveClass('inset-0');
     expect(readableArticleDocumentMock).toHaveBeenCalledWith(expect.objectContaining({ allowContentEditing: false }));
+    expect(readingChromeMock).toHaveBeenCalledWith(expect.objectContaining({ isContentEditing: false }));
   });
 
   it('reserves top space when the fixed reading chrome is visible', () => {
@@ -174,5 +176,22 @@ describe('ImmersiveReadableArticle edit mode', () => {
 
     expect(enterContentEditingMock).toHaveBeenCalledTimes(1);
     expect(editorFocusMock).not.toHaveBeenCalled();
+  });
+
+  it('does not enter edit mode when the reader taps the article text', () => {
+    const { container } = render(
+      <ImmersiveReadableArticle
+        onExit={vi.fn()}
+        onCreateSelectionAnnotation={vi.fn()}
+        onSaveArticleContent={vi.fn()}
+        readableArticle={createReadableArticle()}
+        snapshot={null}
+      />
+    );
+
+    container.querySelector('section')?.click();
+
+    expect(enterContentEditingMock).not.toHaveBeenCalled();
+    expect(readableArticleDocumentMock).toHaveBeenCalledWith(expect.objectContaining({ allowContentEditing: false }));
   });
 });
