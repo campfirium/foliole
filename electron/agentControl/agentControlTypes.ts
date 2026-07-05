@@ -21,6 +21,11 @@ export interface AgentControlAuditEvent {
   targetId?: string;
 }
 
+export interface AgentControlCapabilityStatus {
+  enabled: boolean;
+  name: AgentControlCapability;
+}
+
 export interface AgentControlServerStatus {
   endpoint: string | null;
   last_error: string | null;

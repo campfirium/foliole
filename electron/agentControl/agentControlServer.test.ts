@@ -47,6 +47,13 @@ function listenBlocker() {
   });
 }
 
+function expectedCapabilityStatuses() {
+  return AGENT_CONTROL_CAPABILITIES.map((name) => ({
+    enabled: name === 'materials.read' || name === 'materials.search',
+    name
+  }));
+}
+
 function closeServer(server: http.Server) {
   return new Promise<void>((resolve, reject) => {
     server.close((error) => {
@@ -116,7 +123,7 @@ it('exposes health without auth and protects token-scoped discovery routes', asy
   });
   expect(capabilities.status).toBe(200);
   expect(await responseJson(capabilities)).toEqual({
-    capabilities: AGENT_CONTROL_CAPABILITIES.map((name) => ({ enabled: false, name })),
+    capabilities: expectedCapabilityStatuses(),
     protocol_version: AGENT_CONTROL_PROTOCOL_VERSION
   });
 

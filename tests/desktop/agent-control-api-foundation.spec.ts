@@ -60,12 +60,28 @@ test('desktop runtime exposes the local Agent Control API foundation', async ({ 
   expect(capabilities.status).toBe(200);
   expect(await responseJson(capabilities)).toEqual({
     capabilities: [
-      { enabled: false, name: 'materials.read' },
-      { enabled: false, name: 'materials.search' },
+      { enabled: true, name: 'materials.read' },
+      { enabled: true, name: 'materials.search' },
       { enabled: false, name: 'virtualFolders.write' },
       { enabled: false, name: 'materials.update' },
       { enabled: false, name: 'materials.deleteSoft' }
     ],
     protocol_version: 1
   });
+
+  const emptySearch = await fetch(`${endpoint}/agent-control/v1/materials/search`, {
+    body: JSON.stringify({ query: '   ' }),
+    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    method: 'POST'
+  });
+  expect(emptySearch.status).toBe(400);
+  expect(await responseJson(emptySearch)).toEqual({ error: 'invalid_request' });
+
+  const missingMaterial = await fetch(`${endpoint}/agent-control/v1/materials/read`, {
+    body: JSON.stringify({ id: 'missing-hidden-native-material' }),
+    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    method: 'POST'
+  });
+  expect(missingMaterial.status).toBe(404);
+  expect(await responseJson(missingMaterial)).toEqual({ error: 'not_found' });
 });
