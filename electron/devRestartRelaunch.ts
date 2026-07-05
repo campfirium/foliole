@@ -16,6 +16,7 @@ export interface RestartIntentWindow {
   isDestroyed?(): boolean;
   webContents?: {
     executeJavaScript: (code: string, userGesture?: boolean) => Promise<unknown>;
+    getURL(): string;
     isDestroyed(): boolean;
   };
 }
@@ -28,10 +29,21 @@ function applyRuntimeHeadForRelaunch(intent: RestartIntentForRelaunch) {
   process.env.FOLIOLE_RUNTIME_HEAD = nextHead;
 }
 
+function isMainAppWindow(window: RestartIntentWindow) {
+  if (window.isDestroyed?.()) {
+    return false;
+  }
+  if (!window.webContents || window.webContents.isDestroyed()) {
+    return false;
+  }
+  const url = window.webContents.getURL();
+  return url.startsWith('file:') || url.startsWith('http://localhost') || url.startsWith('http://127.0.0.1');
+}
+
 export async function prepareWindowsForDevRestart(windows: RestartIntentWindow[]) {
   await flushReadingProgressForWindows(windows as never[]);
   for (const window of windows) {
-    if (window.isDestroyed?.()) {
+    if (!isMainAppWindow(window)) {
       continue;
     }
     allowWindowCloseWithoutReadingProgressFlush(window as never);

@@ -8,6 +8,11 @@ import {
   DEV_RESTART_INTENT_FILE,
   installDevRestartIntentWatcher
 } from './devRestartIntent.js';
+import type { RestartIntentWindow } from './devRestartRelaunch.js';
+
+export type TestRestartIntentWindow = RestartIntentWindow & {
+  webContents: NonNullable<RestartIntentWindow['webContents']>;
+};
 
 export function createIntentContent(overrides: Partial<{
   head: string;
@@ -70,22 +75,28 @@ function createTestFileSystem(args: {
   };
 }
 
-function createHarnessWindows() {
-  return [
-    {
-      isDestroyed: () => false,
-      webContents: {
-        executeJavaScript: vi.fn(() => Promise.resolve(true)),
-        isDestroyed: () => false
-      }
-    },
-    {
-      isDestroyed: () => true,
-      webContents: {
-        executeJavaScript: vi.fn(() => Promise.resolve(true)),
-        isDestroyed: () => false
-      }
+export function createTestRestartWindow(args: {
+  destroyed?: boolean;
+  webContentsDestroyed?: boolean;
+  url: string;
+}): TestRestartIntentWindow {
+  return {
+    isDestroyed: () => args.destroyed === true,
+    webContents: {
+      executeJavaScript: vi.fn(() => Promise.resolve(true)) as NonNullable<
+        TestRestartIntentWindow['webContents']
+      >['executeJavaScript'],
+      getURL: () => args.url,
+      isDestroyed: () => args.webContentsDestroyed === true
     }
+  };
+}
+
+function createHarnessWindows(extraWindows: TestRestartIntentWindow[] = []) {
+  return [
+    createTestRestartWindow({ url: 'file:///D:/C/foliole/.tmp/electron-user-data/runtime-renderer-index.html' }),
+    createTestRestartWindow({ destroyed: true, url: 'data:text/html;charset=utf-8,destroyed' }),
+    ...extraWindows
   ];
 }
 
@@ -114,7 +125,10 @@ function createHarnessState() {
   };
 }
 
-export function createWatcherHarness(options: { env?: NodeJS.ProcessEnv } = {}) {
+export function createWatcherHarness(options: {
+  env?: NodeJS.ProcessEnv;
+  extraWindows?: TestRestartIntentWindow[];
+} = {}) {
   const repoRoot = path.join('C:', 'dev', 'foliole');
   const intentPath = path.join(repoRoot, DEV_RESTART_INTENT_FILE);
   const deliveryPath = path.join(repoRoot, DEV_RESTART_DELIVERY_FILE);
@@ -124,7 +138,7 @@ export function createWatcherHarness(options: { env?: NodeJS.ProcessEnv } = {}) 
   const error = vi.fn();
   const writeDeliveryFile = vi.fn();
   const state = createHarnessState();
-  const windows = createHarnessWindows();
+  const windows = createHarnessWindows(options.extraWindows);
   const fileSystem = createTestFileSystem({
     deliveryPath,
     getIntentContent: state.getIntentContent,

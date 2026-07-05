@@ -22,8 +22,10 @@ vi.mock('./readingProgressWindowFlush.js', () => ({
 
 import {
   createIntentContent,
+  createTestRestartWindow,
   createWatcherHarness
 } from './devRestartIntent.testSupport.js';
+import { prepareWindowsForDevRestart } from './devRestartRelaunch.js';
 
 const originalRuntimeHead = process.env.FOLIOLE_RUNTIME_HEAD;
 const originalBootSession = process.env.FOLIOLE_BOOT_SESSION;
@@ -60,6 +62,28 @@ function createTempDir() {
   tempDirs.push(dir);
   return dir;
 }
+
+describe('prepareWindowsForDevRestart', () => {
+  it('saves only the main app window before restarting', async () => {
+    const windows = [
+      createTestRestartWindow({ url: 'file:///D:/C/foliole/.tmp/electron-user-data/runtime-renderer-index.html' }),
+      createTestRestartWindow({ url: 'data:text/html;charset=utf-8,toast' }),
+      createTestRestartWindow({ url: 'data:text/html;charset=utf-8,capture-panel' }),
+      createTestRestartWindow({
+        url: 'file:///D:/C/foliole/.tmp/electron-user-data/runtime-renderer-index.html',
+        webContentsDestroyed: true
+      })
+    ];
+
+    await prepareWindowsForDevRestart(windows);
+
+    expect(flushReadingProgressForWindows).toHaveBeenCalledWith(windows);
+    expect(allowWindowCloseWithoutReadingProgressFlush).toHaveBeenCalledTimes(1);
+    expect(allowWindowCloseWithoutReadingProgressFlush).toHaveBeenCalledWith(windows[0]);
+    expect(saveWindowStateNow).toHaveBeenCalledTimes(1);
+    expect(saveWindowStateNow).toHaveBeenCalledWith(windows[0]);
+  });
+});
 
 function expectFirstIntentConsumption(harness: ReturnType<typeof createWatcherHarness>) {
   expect(harness.relaunch).toHaveBeenCalledTimes(1);
