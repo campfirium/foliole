@@ -58,3 +58,32 @@ it('keeps bounds that are already in DIP units', async () => {
     y: 60
   });
 });
+
+it('falls back to rect-relative conversion when maximized window bounds are returned as physical pixels', async () => {
+  vi.stubGlobal('process', { ...process, platform: 'win32' });
+  screenMock.screenToDipRect.mockImplementation((window: unknown, rect) =>
+    window
+      ? rect
+      : {
+          height: rect.height / 2,
+          width: rect.width / 2,
+          x: rect.x / 2,
+          y: rect.y / 2
+        }
+  );
+  const { normalizeWindowBoundsToDip } = await import('./windowBoundsDpi.js');
+
+  expect(
+    normalizeWindowBoundsToDip({} as never, {
+      height: 2106,
+      width: 3866,
+      x: -13,
+      y: -13
+    })
+  ).toEqual({
+    height: 1053,
+    width: 1933,
+    x: -6,
+    y: -6
+  });
+});

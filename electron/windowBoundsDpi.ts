@@ -27,6 +27,10 @@ export function normalizeWindowBoundsToDip(window: BrowserWindow | null, rect: R
   if (process.platform !== 'win32' || typeof screen.screenToDipRect !== 'function') {
     return roundRect(rect);
   }
-  const converted = screen.screenToDipRect(window, rect);
-  return roundRect(isLikelyPhysicalRect(rect, converted) ? converted : rect);
+  const convertedForWindow = screen.screenToDipRect(window, rect);
+  if (isLikelyPhysicalRect(rect, convertedForWindow)) {
+    return roundRect(convertedForWindow);
+  }
+  const convertedForRect = window ? screen.screenToDipRect(null, rect) : convertedForWindow;
+  return roundRect(isLikelyPhysicalRect(rect, convertedForRect) ? convertedForRect : rect);
 }
