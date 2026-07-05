@@ -1,6 +1,5 @@
 // @vitest-environment node
 import { afterEach, expect, it, vi } from 'vitest';
-
 const mocks = vi.hoisted(() => ({
   appendBootEvent: vi.fn().mockResolvedValue(undefined),
   appendMainProcessDiagnosticLog: vi.fn(),
@@ -15,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   },
   initializeDatabase: vi.fn(),
   installAppMenu: vi.fn(),
+  ensureAgentControlApiServer: vi.fn().mockResolvedValue(undefined),
   ensureLanWorkspaceSyncServer: vi.fn().mockResolvedValue(undefined),
   isDesktopCompanionSyncEnabled: vi.fn(() => false),
   presentInitialRendererWindow: vi.fn(),
@@ -30,6 +30,7 @@ vi.mock('electron', () => ({
   },
   app: mocks.app
 }));
+vi.mock('./agentControl/agentControlServer.js', () => ({ ensureAgentControlApiServer: mocks.ensureAgentControlApiServer, stopAgentControlApiServer: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('./attachments/attachmentProtocol.js', () => ({ registerAttachmentProtocol: mocks.registerAttachmentProtocol }));
 vi.mock('./attachments/extDocImageProtocol.js', () => ({ registerExtDocImageProtocol: mocks.registerExtDocImageProtocol }));
 vi.mock('./attachments/remoteImageProtocol.js', () => ({ registerRemoteImageProtocol: mocks.registerRemoteImageProtocol }));
@@ -43,7 +44,6 @@ vi.mock('./devRestartIntent.js', () => ({ installDevRestartIntentWatcher: vi.fn(
 vi.mock('./diagnostics/mainProcessDiagnostics.js', () => ({
   appendMainProcessDiagnosticLog: mocks.appendMainProcessDiagnosticLog
 }));
-
 function firstInvocationOrder(mock: { mock: { invocationCallOrder: number[] } }) {
   const [order] = mock.mock.invocationCallOrder;
   expect(order).toBeDefined();

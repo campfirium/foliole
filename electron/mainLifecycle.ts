@@ -1,5 +1,6 @@
 import { app, BrowserWindow } from 'electron';
 
+import { ensureAgentControlApiServer, stopAgentControlApiServer } from './agentControl/agentControlServer.js';
 import { resolveFolioleAppVersion } from './appVersion.js';
 import { installBackgroundTray, markAppQuittingForBackgroundPresence } from './backgroundPresence.js';
 import { beginDatabaseStartup, markDatabaseReady, markDatabaseStartupFailed } from './database/databaseReadiness.js';
@@ -20,7 +21,6 @@ import { stopKeepImportMonitor } from './import/keepImportMonitor.js';
 import { stopManagedInboxMonitor } from './import/managedInboxMonitor.js';
 import { appendBootEvent } from './ipc/boot.js';
 import { installAppMenu } from './ipc/menu.js';
-import { resolveAppPaths } from './ipc/paths.js';
 import { startInitialMainWindow } from './mainStartup.js';
 import { installPairingFocusHandler, openOrCreateMainWindow, startCompanionSyncIfEnabled } from './mainWindowLifecycle.js';
 import { getMainWindow, setMainWindow } from './mainWindowRegistry.js';
@@ -28,6 +28,7 @@ import { flushMirrorSync } from './mirror/mirrorSyncScheduler.js';
 import type { StartupRendererView } from './rendererLoader.js';
 import { bindEmbeddedLinkPanelContents, installMainRuntimeDiagnostics } from './runtimeMainSupport.js';
 import type { RuntimeMode } from './runtimeMode.js';
+import { loadStartupErrorSurface } from './startupErrorSurface.js';
 import { isDesktopCompanionSyncEnabled } from './sync/desktopCompanionSyncPreference.js';
 import { stopLanWorkspaceSyncServer } from './sync/lanWorkspaceSyncServer.js';
 
@@ -64,6 +65,7 @@ function installBeforeQuitLifecycle() {
     stopManagedInboxMonitor();
     stopKeepImportMonitor();
     void stopDevScreenshotServer().catch((error) => appendMainProcessDiagnosticLog('dev_screenshot_stop_failed', { error }));
+    void stopAgentControlApiServer().catch((error) => appendMainProcessDiagnosticLog('agent_control_stop_failed', { error }));
     void stopLanWorkspaceSyncServer().catch((error) => appendMainProcessDiagnosticLog('lan_sync_stop_failed', { error }));
     if (mirrorFlushed) return;
     mirrorFlushed = true;
@@ -109,54 +111,6 @@ async function initializeRuntimeServices() {
   }
 }
 
-function toStartupErrorSummary(error: unknown) {
-  const message = error instanceof Error ? error.message : String(error);
-  if (!message.trim()) {
-    return 'Unknown startup exception';
-  }
-  return message.trim().slice(0, 900);
-}
-
-function resolveStartupLogPath() {
-  try {
-    return resolveAppPaths().app_log_dir;
-  } catch {
-    return null;
-  }
-}
-
-function createStartupErrorView(error: unknown, moduleLabel: string): StartupRendererView {
-  return {
-    errorSummary: toStartupErrorSummary(error),
-    kind: 'startup-error',
-    logPath: resolveStartupLogPath(),
-    moduleLabel
-  };
-}
-
-async function reportStartupRuntimeServicesFailure(error: unknown, moduleLabel: string) {
-  appendMainProcessDiagnosticLog('startup_runtime_services_failed', { error });
-  await appendBootEvent('startup_runtime_services_failed', {
-    message: toStartupErrorSummary(error),
-    moduleLabel
-  });
-}
-
-async function loadStartupErrorSurface(args: {
-  error: unknown;
-  moduleLabel: string;
-  window: BrowserWindow;
-  loadMainWindow: MainLifecycleArgs['loadMainWindow'];
-}) {
-  await reportStartupRuntimeServicesFailure(args.error, args.moduleLabel);
-  if (!args.window.isDestroyed()) {
-    await args.loadMainWindow(args.window, createStartupErrorView(args.error, args.moduleLabel));
-    if (!args.window.isVisible()) {
-      args.window.show();
-    }
-  }
-}
-
 function installAppProcessDiagnostics() {
   installMainRuntimeDiagnostics();
   app.on('render-process-gone', (_, webContents, details) => appendMainProcessDiagnosticLog('render_process_gone', { ...details, url: webContents.getURL() }));
@@ -170,6 +124,13 @@ function installActivateLifecycle(openMainWindow: () => Promise<BrowserWindow | 
     await openMainWindow();
   });
 }
+
+function startAgentControlApiLifecycle() {
+  void ensureAgentControlApiServer({ appVersion: resolveFolioleAppVersion(app) }).catch((error) => {
+    appendMainProcessDiagnosticLog('agent_control_start_failed', { error });
+  });
+}
+
 export function installMainLifecycle(args: MainLifecycleArgs) {
   const externalDocumentFileOpen = installExternalDocumentFileOpenLifecycle();
   let startupMainWindowPromise: Promise<BrowserWindow> | null = null;
@@ -199,6 +160,7 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
       openMainWindow
     });
     await appendBootEvent('app_when_ready');
+    startAgentControlApiLifecycle();
     beginDatabaseStartup();
     startupMainWindowPromise = (async () => {
       const mainWindow = await args.createMainWindow(args.prepareStartupAppearance?.() ?? null);
