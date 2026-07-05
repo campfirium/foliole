@@ -52,7 +52,7 @@ it('creates a Discourse topic and returns updated markdown binding without leaki
   });
   expect(createDiscourseTopic).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
     categoryId: 7,
-    raw: '# Title\n\nBody',
+    raw: 'Body',
     tags: ['release']
   }));
   expect(readDiscourseTopicBinding(result.updated_content)).toMatchObject({ postId: 456, topicId: 123 });
@@ -77,6 +77,7 @@ it('uses the first body H1 as the Discourse title before the Topic title fallbac
     title: 'Folder Title'
   });
   expect(createDiscourseTopic).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+    raw: 'Long enough body for Discourse.',
     title: 'Body Title'
   }));
 });
@@ -96,7 +97,7 @@ it('updates an existing Discourse topic from the frontmatter binding', async () 
   expect(updateDiscourseTopic).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
     categoryId: 8,
     postId: 456,
-    raw: '# Updated',
+    raw: '',
     topicId: 123
   }));
   expect(result.mode).toBe('updated');

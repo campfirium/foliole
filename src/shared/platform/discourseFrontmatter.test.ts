@@ -31,7 +31,13 @@ describe('Discourse publish frontmatter', () => {
   it('preserves existing frontmatter and publishes only markdown body', () => {
     const updated = writeDiscourseTopicBinding('---\nauthor: Ada\n---\n# Title\n\nBody', binding);
     expect(updated).toContain('author: Ada');
-    expect(readDiscoursePublishMarkdown(updated)).toBe('# Title\n\nBody');
+    expect(readDiscoursePublishMarkdown(updated)).toBe('Body');
+  });
+
+  it('keeps local markdown intact while omitting the opening H1 from the publish body', () => {
+    const content = '# Title\n\n## Section\n\nBody';
+    expect(writeDiscourseTopicBinding(content, binding).endsWith(content)).toBe(true);
+    expect(readDiscoursePublishMarkdown(content)).toBe('## Section\n\nBody');
   });
 
   it('updates the managed binding in place', () => {

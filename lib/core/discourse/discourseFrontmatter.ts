@@ -105,7 +105,12 @@ export function readDiscourseTopicBinding(content: string): DiscourseTopicBindin
 }
 
 export function readDiscoursePublishMarkdown(content: string) {
-  return splitFrontmatter(content).body;
+  return stripOpeningH1(splitFrontmatter(content).body);
+}
+
+function stripOpeningH1(content: string) {
+  const match = /^(?:[ \t]*\r?\n)*[ \t]{0,3}#(?!#)[ \t]+[^\r\n]*(?:\r?\n)?(?:[ \t]*\r?\n)?/u.exec(content);
+  return match ? content.slice(match[0].length) : content;
 }
 
 function serializeBinding(binding: DiscourseTopicBinding) {
