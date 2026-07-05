@@ -19,7 +19,7 @@ const DEFAULT_WORKSPACE_CONTENT_SORT: WorkspaceContentSortState = {
 };
 
 function compareText(left: string, right: string) {
-  return left.trim().localeCompare(right.trim(), undefined, { numeric: true, sensitivity: 'base' });
+  return left.trim().localeCompare(right.trim(), 'en', { numeric: true, sensitivity: 'base' });
 }
 
 function resolveTimestamp(value: string | null | undefined) {

@@ -1,4 +1,4 @@
-import { fireEvent, screen, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { useState } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
@@ -92,6 +92,12 @@ function WorkspaceTopicTreeCollapseHarness() {
   );
 }
 
+function chooseNameSort() {
+  const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
+  fireEvent.keyDown(within(itemColumn).getByRole('button', { name: /Sort list by / }), { key: 'ArrowDown' });
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Name' }));
+}
+
 beforeEach(() => {
   window.localStorage.clear();
   resetPerformanceDiagnosticsProbe();
@@ -154,6 +160,35 @@ it('keeps an expanded branch open when selecting another current-folder topic', 
 
   expect(within(itemColumn).getByRole('treeitem', { name: 'Vue Notes' })).toHaveAttribute('aria-current', 'page');
   expect(within(itemColumn).getByRole('treeitem', { name: 'Hook Summary' })).toBeInTheDocument();
+});
+
+it('applies name sorting to sibling topics without reordering native children', async () => {
+  const nodesById = {
+    'article-cn': createNode({ id: 'article-cn', title: '中文 Article' }),
+    'article-ai': createNode({ id: 'article-ai', title: 'AI Article' }),
+    'article-cn-child': createNode({ id: 'article-cn-child', parentNodeId: 'article-cn', title: 'Native Child' })
+  };
+
+  renderWithLocalization(
+    <WorkspaceTopicTree
+      activeFolderId="folder-a"
+      activeNodeId="article-cn"
+      itemIds={['article-cn', 'article-ai', 'article-cn-child']}
+      nodesById={nodesById}
+      onOpenMoveToNode={() => undefined}
+      onSelectNode={() => undefined}
+    />
+  );
+
+  chooseNameSort();
+  await waitFor(() => {
+    expect(screen.getByRole('button', { name: 'Sort list by Name' })).toBeInTheDocument();
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Expand all topics' }));
+
+  const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
+  const rowIds = within(itemColumn).getAllByRole('treeitem').map((row) => row.getAttribute('data-node-id'));
+  expect(rowIds).toEqual(['article-ai', 'article-cn', 'article-cn-child']);
 });
 
 it('uses the injected create action for the topic create button', () => {

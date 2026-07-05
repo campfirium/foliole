@@ -171,3 +171,23 @@ it('keeps child tree order independent from workspace content sort', () => {
     'lower'
   ]);
 });
+
+it('keeps native topic children in structural order when sorting siblings by name', () => {
+  const nodesById: WorkspaceListNodesById = {
+    topic: createRow('topic', 'Topic', '2026-04-20T00:00:00.000Z').node,
+    childCn: {
+      ...createRow('childCn', '中文 child', '2026-04-20T00:00:00.000Z').node,
+      parentNodeId: 'topic'
+    },
+    childAi: {
+      ...createRow('childAi', 'AI child', '2026-04-20T00:00:00.000Z').node,
+      parentNodeId: 'topic'
+    }
+  };
+
+  expect(sortWorkspaceContentNodeIds(['topic', 'childCn', 'childAi'], nodesById, { direction: 'asc', key: 'name' })).toEqual([
+    'topic',
+    'childCn',
+    'childAi'
+  ]);
+});
