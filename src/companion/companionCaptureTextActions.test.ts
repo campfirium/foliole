@@ -27,7 +27,6 @@ function createSnapshot(): WorkspaceSnapshot {
         reading: null,
         reveal: null,
         review: null,
-        specialKind: 'inbox',
         title: 'Inbox',
         updatedAt: '2026-05-03T00:00:00.000Z'
       }

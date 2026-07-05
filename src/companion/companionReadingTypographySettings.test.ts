@@ -40,7 +40,7 @@ describe('companion reading typography settings', () => {
       setItem: () => {
         throw new Error('blocked');
       }
-    } as Storage;
+    } as unknown as Storage;
 
     expect(saveReadingTypographySettings(DEFAULT_READING_TYPOGRAPHY_SETTINGS, storage)).toBe(false);
   });
