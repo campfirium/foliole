@@ -38,7 +38,7 @@ test('shows Discourse published date metadata in the desktop editor', async ({ d
   }, { content: TOPIC_CONTENT, topicId: TOPIC_ID });
 
   const publishedMeta = desktopWindow.locator('.prompt-editor-host .cm-md-frontmatter-meta-link');
-  await expect(publishedMeta).toHaveText(/^(Published|发布于) .+/);
+  await expect(publishedMeta).toHaveText(/^(Posted|发布|發布) .+/);
   await expect(publishedMeta).toHaveAttribute('data-md-link-url', 'https://forum.campfirium.com/t/topic/869');
 
   await mkdir('.tmp/artifacts', { recursive: true });

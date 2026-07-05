@@ -31,7 +31,7 @@ import {
 } from './discoursePublishDialogRequest';
 import { DiscoursePublishFields, type CatalogState } from './DiscoursePublishFields';
 import { withCatalogDefaults } from './discoursePublishFieldUtils';
-import { useDiscourseEscapeClose } from './DiscourseShortcutPicker';
+import { useDiscoursePublishDialogEscape } from './useDiscoursePublishDialogEscape';
 
 type PublishState = 'idle' | 'publishing';
 type SetCatalogState = (state: CatalogState | ((current: CatalogState) => CatalogState)) => void;
@@ -140,16 +140,28 @@ function DiscoursePublishDialog(props: {
 }) {
   const t = useTranslation();
   const canPublish = props.state === 'idle' && !props.details.parseError && props.form.categoryId.trim().length > 0;
+  const panelsOpen = props.showAllCategories || props.showAllTags;
   const handleKeyDownCapture = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== 'Enter' || (!event.ctrlKey && !event.metaKey) || !canPublish) return;
+    if (event.key !== 'Enter' || (!event.ctrlKey && !event.metaKey)) return;
     event.preventDefault();
+    event.stopPropagation();
+    if (!canPublish) return;
     props.onPublish();
   };
-  useDiscourseEscapeClose(props.showAllCategories || props.showAllTags, props.onClosePanels);
+  useDiscoursePublishDialogEscape({
+    onClose: props.onClose,
+    onClosePanels: props.onClosePanels,
+    panelsOpen,
+    state: props.state
+  });
   const handleEscapeKeyDown = (event: Event) => {
-    if (!props.showAllCategories && !props.showAllTags) return;
     event.preventDefault();
-    props.onClosePanels();
+    if (props.state !== 'idle') return;
+    if (panelsOpen) {
+      props.onClosePanels();
+      return;
+    }
+    props.onClose();
   };
   return (
     <AppDialog open onOpenChange={(open) => !open && props.state === 'idle' && props.onClose()}>

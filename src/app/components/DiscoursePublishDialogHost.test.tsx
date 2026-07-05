@@ -107,11 +107,8 @@ it('uses catalog defaults and publishes only through the publish shortcut', asyn
   await waitFor(() => expect(category).toHaveTextContent('Cached Category'));
   expect(screen.getAllByText('cached-tag').length).toBeGreaterThan(0);
 
-  fireEvent.keyDown(category, { key: 'Enter' });
-  expect(discourseRepositoryMocks.publishTopicToDiscourse).not.toHaveBeenCalled();
-  expect(await screen.findByRole('listbox')).toBeInTheDocument();
-
   fireEvent.keyDown(category, { ctrlKey: true, key: 'Enter' });
+  expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
   await waitFor(() =>
     expect(discourseRepositoryMocks.publishTopicToDiscourse).toHaveBeenCalledWith(expect.objectContaining({
       category_id: 17,
@@ -119,4 +116,20 @@ it('uses catalog defaults and publishes only through the publish shortcut', asyn
     }))
   );
   expect(workspaceStoreMocks.updateNodeContent).toHaveBeenCalledWith('test-topic', '# Cached-first topic\n\nLong enough body for preview.');
+});
+
+it('keeps plain Enter scoped to the focused category control', async () => {
+  discourseRepositoryMocks.loadDiscoursePublishCatalogFromRuntime.mockResolvedValue(
+    catalog({ categoryId: 17, categoryName: 'Cached Category', fromCache: false, tag: 'cached-tag' })
+  );
+
+  render(<DiscoursePublishDialogHost />);
+  requestPublishDialog();
+
+  const category = await screen.findByRole('button', { name: 'Category' });
+  await waitFor(() => expect(category).toHaveTextContent('Cached Category'));
+
+  fireEvent.keyDown(category, { key: 'Enter' });
+  expect(discourseRepositoryMocks.publishTopicToDiscourse).not.toHaveBeenCalled();
+  expect(await screen.findByRole('listbox')).toBeInTheDocument();
 });

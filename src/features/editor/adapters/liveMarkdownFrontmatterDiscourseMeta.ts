@@ -10,7 +10,13 @@ export interface FrontmatterMetaItem {
 function formatPublishedDate(value: string) {
   const date = new Date(value);
   if (!Number.isFinite(date.getTime())) return null;
-  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(date);
+  return new Intl.DateTimeFormat(undefined, { dateStyle: 'short' }).format(date);
+}
+
+function getPostedLabel(locale: string) {
+  if (locale.startsWith('zh-Hant') || locale === 'zh-TW' || locale === 'zh-HK') return '發布';
+  if (locale.startsWith('zh')) return '发布';
+  return 'Posted';
 }
 
 export function createDiscoursePublishedMetaItem(meta: DiscoursePublishedMeta | null): FrontmatterMetaItem | null {
@@ -20,7 +26,7 @@ export function createDiscoursePublishedMetaItem(meta: DiscoursePublishedMeta | 
   if (!dateText) return null;
   return {
     href: meta.url,
-    text: locale.startsWith('zh') ? `发布于 ${dateText}` : `Published ${dateText}`,
+    text: `${getPostedLabel(locale)} ${dateText}`,
     tooltip: meta.url
   };
 }

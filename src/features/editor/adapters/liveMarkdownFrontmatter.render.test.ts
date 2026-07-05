@@ -132,7 +132,7 @@ describe('live markdown frontmatter Discourse metadata', () => {
 
     const metaLine = host.querySelector('.cm-md-frontmatter-meta-line');
     const link = host.querySelector<HTMLElement>('[data-md-link-url="https://forum.campfirium.com/t/topic/869"]');
-    expect(metaLine?.textContent).toBe(`Published ${new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date('2026-07-05T03:10:07.438Z'))}`);
+    expect(metaLine?.textContent).toBe(`Posted ${new Intl.DateTimeFormat(undefined, { dateStyle: 'short' }).format(new Date('2026-07-05T03:10:07.438Z'))}`);
     expect(link?.textContent).toBe(metaLine?.textContent);
     link?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(onOpenExternalLink).toHaveBeenCalledWith(expect.objectContaining({

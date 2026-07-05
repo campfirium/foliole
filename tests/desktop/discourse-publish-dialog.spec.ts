@@ -53,6 +53,25 @@ test('shows Discourse publish choices and prefers the body H1 title', async ({ d
   await expect(dialog.getByText('二语习得').first()).toBeVisible();
 });
 
+test('closes the Discourse publish dialog on Escape', async ({ desktopWindow }) => {
+  await desktopWindow.evaluate((catalog) => {
+    window.dispatchEvent(new CustomEvent('foliole:discourse-publish-dialog-request', {
+      detail: {
+        catalog,
+        content: '# Escape topic\n\nLong enough body for preview.',
+        nodeId: 'playwright-topic',
+        targetSiteUrl: 'https://forum.example.com',
+        title: 'Folder title'
+      }
+    }));
+  }, discourseCatalog);
+
+  const dialog = desktopWindow.getByRole('dialog', { name: /^(Publish to Discourse|发布到 Discourse)$/ });
+  await expect(dialog).toBeVisible();
+  await desktopWindow.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+});
+
 test('supports keyboard-first Discourse category selection', async ({ desktopWindow }) => {
   await desktopWindow.evaluate((catalog) => {
     window.dispatchEvent(new CustomEvent('foliole:discourse-publish-dialog-request', {
@@ -98,6 +117,7 @@ test('supports keyboard-first Discourse tag selection and creation', async ({ de
 
   const dialog = desktopWindow.getByRole('dialog', { name: /^(Publish to Discourse|发布到 Discourse)$/ });
   await expect(dialog).toBeVisible();
+  await expect(dialog.getByLabel(/^(Category|分类)$/)).toContainText('作业赏');
   await desktopWindow.keyboard.press('Tab');
   const tags = dialog.getByLabel(/^(Tags|标签)$/).first();
   await expect(tags).toBeFocused();
