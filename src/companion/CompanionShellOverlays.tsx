@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, type ComponentProps } from 'react';
 
 import { CompanionBottomReviewBar } from './CompanionBottomReviewBar';
 import { CompanionCaptureSheet } from './CompanionCaptureSheet';
@@ -18,6 +18,7 @@ export const CompanionShellOverlays = memo(function CompanionShellOverlays(props
   isReviewAnswerRevealed: boolean;
   isCaptureSheetOpen: boolean;
   isNavigationVisible: boolean;
+  onCaptureSave: ComponentProps<typeof CompanionCaptureSheet>['onSave'];
   onCaptureSheetOpenChange(open: boolean): void;
   onDismissReviewTopic: Surface['handleDismissReviewTopic'];
   onGradeReview: Surface['handleGradeReview'];
@@ -39,7 +40,11 @@ export const CompanionShellOverlays = memo(function CompanionShellOverlays(props
         onSecondaryDestination={props.onSecondaryDestination}
         visible={props.isNavigationVisible && !props.isReadableArticleImmersive}
       />
-      <CompanionCaptureSheet onOpenChange={props.onCaptureSheetOpenChange} open={props.isCaptureSheetOpen} />
+      <CompanionCaptureSheet
+        onOpenChange={props.onCaptureSheetOpenChange}
+        onSave={props.onCaptureSave}
+        open={props.isCaptureSheetOpen}
+      />
       <CompanionBottomReviewBar
         disabled={props.isBottomBarDisabled}
         hasAnswer={Boolean(currentReviewCard?.reveal)}
@@ -57,3 +62,4 @@ export const CompanionShellOverlays = memo(function CompanionShellOverlays(props
     </>
   );
 });
+

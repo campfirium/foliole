@@ -1,9 +1,11 @@
 import type { TranslationKey } from '../translations';
 
+import { ZH_HANS_COMPANION_CAPTURE_TRANSLATIONS } from './zhHansCompanionCapture';
 import { ZH_HANS_COMPANION_READING_TYPOGRAPHY_TRANSLATIONS } from './zhHansCompanionReadingTypography';
 import { ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS } from './zhHansCompanionSettings';
 
 export const ZH_HANS_COMPANION_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  ...ZH_HANS_COMPANION_CAPTURE_TRANSLATIONS,
   ...ZH_HANS_COMPANION_READING_TYPOGRAPHY_TRANSLATIONS,
   ...ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS,
   'companion.app.retry': '重试',
@@ -33,11 +35,6 @@ export const ZH_HANS_COMPANION_TRANSLATIONS: Partial<Record<TranslationKey, stri
   'companion.browse.syncing': '同步中',
   'companion.browse.theme': '主题',
   'companion.browse.themeUnavailable': '暂不可用',
-  'companion.capture.title': '捕获',
-  'companion.capture.text': '捕获文本',
-  'companion.capture.placeholder': '输入或朗读一个新主题',
-  'companion.capture.paste': '从剪贴板粘贴',
-  'companion.capture.upload': '上传文件',
   'companion.directory.emptyFolder': '这个文件夹是空的',
   'companion.directory.emptyDescription': '从桌面端添加主题或文件夹后，会显示在这里。',
   'companion.directory.emptyShell': '这个文件夹还没有同步主题或文件夹。',
@@ -214,3 +211,4 @@ export const ZH_HANS_COMPANION_TRANSLATIONS: Partial<Record<TranslationKey, stri
   'companion.onlyReview.noDueTitle': '现在没有到期检测项',
   'companion.onlyReview.noDueDescription': '下一个检测项：{date}'
 };
+

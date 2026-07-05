@@ -105,6 +105,7 @@ export function CompanionShellView(props: { model: CompanionShellModel }) {
         isNavigationVisible={model.isNavigationVisible}
         isReadableArticleImmersive={isReadableArticleImmersive(model)}
         isReviewAnswerRevealed={model.surface.isAnswerRevealed}
+        onCaptureSave={model.handleSaveCaptureText}
         onCaptureSheetOpenChange={model.setIsCaptureSheetOpen}
         onDismissReviewTopic={model.surface.handleDismissReviewTopic}
         onGradeReview={model.surface.handleGradeReview}
@@ -117,3 +118,4 @@ export function CompanionShellView(props: { model: CompanionShellModel }) {
     </>
   );
 }
+

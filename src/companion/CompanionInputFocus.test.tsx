@@ -31,7 +31,7 @@ function expectInputFocusVisible(element: HTMLElement) {
 }
 
 it('keeps the capture textarea keyboard focus visible', () => {
-  renderWithLocalization(<CompanionCaptureSheet onOpenChange={vi.fn()} open />);
+  renderWithLocalization(<CompanionCaptureSheet onOpenChange={vi.fn()} onSave={vi.fn()} open />);
 
   expectInputFocusVisible(screen.getByLabelText('Capture text'));
 });
@@ -66,3 +66,4 @@ it('keeps the companion search input on the shared focus-visible class', () => {
   expectInputFocusVisible(search);
   expect(search.className).toContain('focus-visible:border-border-strong');
 });
+

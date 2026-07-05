@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type UIEvent as ReactUIEvent
 
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
 
+import { createCompanionCaptureTextSaveHandler } from './companionCaptureTextController';
 import type { CompanionTabAction } from './CompanionFloatingBars';
 import { useReviewBreadcrumbItems } from './companionReviewBreadcrumbs';
 import { CompanionShellView } from './CompanionShellView';
@@ -93,6 +94,7 @@ function buildCompanionShellModel(args: {
   directoryState: ReturnType<typeof useCompanionDirectorySelectionState>;
   floatingBar: ReturnType<typeof useFloatingBarVisibility>;
   handleContainerScroll: ReturnType<typeof useCompanionShellScrollHandler>;
+  handleSaveCaptureText: ReturnType<typeof createCompanionCaptureTextSaveHandler>;
   isBrowseDirectoryOpen: boolean;
   isCaptureSheetOpen: boolean;
   isOnlyReviewOpen: boolean;
@@ -116,6 +118,7 @@ function buildCompanionShellModel(args: {
     handleExitSearchArticle: args.searchArticle.handleExitSearchArticle,
     handleNavigationAction: args.actions.handleNavigationAction,
     handleOpenSearchTopic: args.searchArticle.handleOpenSearchTopic,
+    handleSaveCaptureText: args.handleSaveCaptureText,
     handleSecondaryDestination: args.actions.secondaryDestinations.handleSecondaryDestination,
     isBottomBarDisabled: args.reviewChrome.isBottomBarDisabled,
     isBrowseDirectoryOpen: args.isBrowseDirectoryOpen,
@@ -147,9 +150,7 @@ function useCompanionShellModel(bootstrapState: NativeCompanionBootstrapState) {
   const surface = useCompanionArticleSurface(workspaceSync, floatingBar, {
     sortDirection: browseSort.browseSortDirection,
     sortKey: browseSort.browseSortKey
-  }, {
-    isOnlyReviewOpen
-  });
+  }, { isOnlyReviewOpen });
   const companionTabs = useCompanionTabsConfig();
   const { setSettingsPage, settingsPage } = useCompanionSyncSettingsPage({
     activeAction: surface.activeAction,
@@ -160,6 +161,7 @@ function useCompanionShellModel(bootstrapState: NativeCompanionBootstrapState) {
   const directoryState = useCompanionDirectorySelectionState(isBrowseDirectoryOpen);
   const externalDirectory = useCompanionExternalDirectory();
   const handleContainerScroll = useCompanionShellScrollHandler(floatingBar, surface);
+  const handleSaveCaptureText = useMemo(() => createCompanionCaptureTextSaveHandler(workspaceSync), [workspaceSync]);
   const actions = useCompanionShellActions({
     browseSortDirection: browseSort.browseSortDirection,
     browseSortKey: browseSort.browseSortKey,
@@ -186,6 +188,7 @@ function useCompanionShellModel(bootstrapState: NativeCompanionBootstrapState) {
     directoryState,
     floatingBar,
     handleContainerScroll,
+    handleSaveCaptureText,
     isBrowseDirectoryOpen,
     isCaptureSheetOpen,
     isOnlyReviewOpen,
@@ -206,3 +209,4 @@ export function CompanionShell(props: { bootstrapState: NativeCompanionBootstrap
 
   return <CompanionShellView model={model} />;
 }
+

@@ -1,7 +1,9 @@
+import { EN_COMPANION_CAPTURE_TRANSLATIONS } from './enCompanionCapture';
 import { EN_COMPANION_READING_TYPOGRAPHY_TRANSLATIONS } from './enCompanionReadingTypography';
 import { EN_COMPANION_SETTINGS_TRANSLATIONS } from './enCompanionSettings';
 
 export const EN_COMPANION_TRANSLATIONS = {
+  ...EN_COMPANION_CAPTURE_TRANSLATIONS,
   ...EN_COMPANION_READING_TYPOGRAPHY_TRANSLATIONS,
   ...EN_COMPANION_SETTINGS_TRANSLATIONS,
   'companion.app.retry': 'Retry',
@@ -33,11 +35,6 @@ export const EN_COMPANION_TRANSLATIONS = {
   'companion.browse.syncing': 'Syncing',
   'companion.browse.theme': 'Theme',
   'companion.browse.themeUnavailable': 'Not available yet',
-  'companion.capture.title': 'Capture',
-  'companion.capture.text': 'Capture text',
-  'companion.capture.placeholder': 'Type or speak a new topic',
-  'companion.capture.paste': 'Paste from Clipboard',
-  'companion.capture.upload': 'Upload File',
   'companion.directory.emptyFolder': 'This folder is empty',
   'companion.directory.emptyDescription': 'Add a topic or folder from desktop to see it here.',
   'companion.directory.emptyShell': 'This folder does not have any synced topics or folders yet.',
@@ -218,3 +215,4 @@ export const EN_COMPANION_TRANSLATIONS = {
   'companion.onlyReview.noDueTitle': 'No review items are due right now',
   'companion.onlyReview.noDueDescription': 'Next review item: {date}'
 } as const;
+

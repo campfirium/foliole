@@ -16,6 +16,7 @@ function createOverlayProps() {
     isNavigationVisible: false,
     isReadableArticleImmersive: false,
     isReviewAnswerRevealed: false,
+    onCaptureSave: vi.fn(async () => ({ nodeId: 'captured' })),
     onCaptureSheetOpenChange: vi.fn(),
     onDismissReviewTopic: vi.fn(),
     onGradeReview: vi.fn(),
@@ -49,3 +50,4 @@ describe('CompanionShellOverlays', () => {
     expect(screen.getByRole('button', { name: 'Flow' })).toBeInTheDocument();
   });
 });
+
