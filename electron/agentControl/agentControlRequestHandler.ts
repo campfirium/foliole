@@ -1,22 +1,21 @@
 import type http from 'node:http';
 
 import { recordAgentControlAuditEvent, type AgentControlAuditSink } from './agentControlAudit.js';
-import {
-  AGENT_CONTROL_MATERIAL_SEARCH_LIMIT,
-  AGENT_CONTROL_MATERIAL_SEARCH_MAX_LIMIT,
-  normalizeBodyObject,
-  normalizeOptionalLimit,
-  readAgentControlJsonBody,
-  readAgentControlMaterial,
-  searchAgentControlMaterials
-} from './agentControlMaterials.js';
+import { handleMaterialRead, handleMaterialSearch } from './agentControlMaterialHandlers.js';
 import { isBearerTokenAuthorized } from './agentControlToken.js';
 import {
   AGENT_CONTROL_CAPABILITIES,
   AGENT_CONTROL_PROTOCOL_VERSION
 } from './agentControlTypes.js';
 import type { AgentControlCapability, AgentControlCapabilityStatus } from './agentControlTypes.js';
-import { handleVirtualFolderList, handleVirtualFolderRead } from './agentControlVirtualFolderHandlers.js';
+import {
+  handleVirtualFolderAddItems,
+  handleVirtualFolderCreate,
+  handleVirtualFolderList,
+  handleVirtualFolderRead,
+  handleVirtualFolderRemoveItems,
+  handleVirtualFolderReorder
+} from './agentControlVirtualFolderHandlers.js';
 
 export interface AgentControlRequestHandlerOptions {
   appVersion: string;
@@ -139,6 +138,22 @@ async function handleRequest(
     await handleVirtualFolderRead(request, response, options);
     return;
   }
+  if (request.method === 'POST' && url.pathname === '/agent-control/v1/virtual-folders/create') {
+    await handleVirtualFolderCreate(request, response, options);
+    return;
+  }
+  if (request.method === 'POST' && url.pathname === '/agent-control/v1/virtual-folders/add-items') {
+    await handleVirtualFolderAddItems(request, response, options);
+    return;
+  }
+  if (request.method === 'POST' && url.pathname === '/agent-control/v1/virtual-folders/remove-items') {
+    await handleVirtualFolderRemoveItems(request, response, options);
+    return;
+  }
+  if (request.method === 'POST' && url.pathname === '/agent-control/v1/virtual-folders/reorder') {
+    await handleVirtualFolderReorder(request, response, options);
+    return;
+  }
   recordRequest({
     capability: 'foundation.route',
     errorCategory: 'not_found',
@@ -153,72 +168,9 @@ function isCapabilityEnabled(name: AgentControlCapability): AgentControlCapabili
   return name === 'materials.read' ||
     name === 'materials.search' ||
     name === 'virtualFolders.list' ||
-    name === 'virtualFolders.read';
-}
-
-async function readJsonBodyOrFail(
-  request: http.IncomingMessage,
-  response: http.ServerResponse,
-  options: AgentControlRequestHandlerOptions,
-  capability: string
-) {
-  const body = await readAgentControlJsonBody(request);
-  if (!body.ok) {
-    recordRequest({ capability, errorCategory: body.errorCategory, options, request, result: 'failed' });
-    sendJson(response, body.statusCode, { error: body.error });
-    return null;
-  }
-  const object = normalizeBodyObject(body.value);
-  if (!object) {
-    recordRequest({ capability, errorCategory: 'invalid_request', options, request, result: 'failed' });
-    sendJson(response, 400, { error: 'invalid_request' });
-    return null;
-  }
-  return object;
-}
-
-async function handleMaterialRead(
-  request: http.IncomingMessage,
-  response: http.ServerResponse,
-  options: AgentControlRequestHandlerOptions
-) {
-  const capability = 'materials.read';
-  if (!requireAuthorized(request, response, options, capability)) return;
-  const body = await readJsonBodyOrFail(request, response, options, capability);
-  if (!body) return;
-  const id = typeof body.id === 'string' ? body.id.trim() : '';
-  if (!id) {
-    recordRequest({ capability, errorCategory: 'invalid_request', options, request, result: 'failed' });
-    sendJson(response, 400, { error: 'invalid_request' });
-    return;
-  }
-  const material = readAgentControlMaterial(id);
-  if (!material) {
-    recordRequest({ capability, errorCategory: 'not_found', options, request, result: 'failed', targetId: id });
-    sendJson(response, 404, { error: 'not_found' });
-    return;
-  }
-  recordRequest({ capability, options, request, result: 'success', targetId: id });
-  sendJson(response, 200, { material });
-}
-
-async function handleMaterialSearch(
-  request: http.IncomingMessage,
-  response: http.ServerResponse,
-  options: AgentControlRequestHandlerOptions
-) {
-  const capability = 'materials.search';
-  if (!requireAuthorized(request, response, options, capability)) return;
-  const body = await readJsonBodyOrFail(request, response, options, capability);
-  if (!body) return;
-  const query = typeof body.query === 'string' ? body.query.trim() : '';
-  if (!query) {
-    recordRequest({ capability, errorCategory: 'invalid_request', options, request, result: 'failed' });
-    sendJson(response, 400, { error: 'invalid_request' });
-    return;
-  }
-  const limit = normalizeOptionalLimit(body.limit, AGENT_CONTROL_MATERIAL_SEARCH_LIMIT, AGENT_CONTROL_MATERIAL_SEARCH_MAX_LIMIT);
-  const payload = searchAgentControlMaterials(query, limit);
-  recordRequest({ capability, options, request, result: 'success' });
-  sendJson(response, 200, payload as unknown as Record<string, unknown>);
+    name === 'virtualFolders.read' ||
+    name === 'virtualFolders.create' ||
+    name === 'virtualFolders.addItems' ||
+    name === 'virtualFolders.removeItems' ||
+    name === 'virtualFolders.reorder';
 }

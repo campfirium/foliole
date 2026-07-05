@@ -5,6 +5,10 @@ export const AGENT_CONTROL_CAPABILITIES = [
   'materials.search',
   'virtualFolders.list',
   'virtualFolders.read',
+  'virtualFolders.create',
+  'virtualFolders.addItems',
+  'virtualFolders.removeItems',
+  'virtualFolders.reorder',
   'virtualFolders.write',
   'materials.update',
   'materials.deleteSoft'

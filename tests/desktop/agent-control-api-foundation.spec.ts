@@ -3,6 +3,34 @@ import path from 'node:path';
 
 import { expect, test } from './harness/fixtures';
 
+const EXPECTED_DESCRIPTOR_CAPABILITIES = [
+  'materials.read',
+  'materials.search',
+  'virtualFolders.list',
+  'virtualFolders.read',
+  'virtualFolders.create',
+  'virtualFolders.addItems',
+  'virtualFolders.removeItems',
+  'virtualFolders.reorder',
+  'virtualFolders.write',
+  'materials.update',
+  'materials.deleteSoft'
+];
+
+const EXPECTED_CAPABILITY_STATUSES = [
+  { enabled: true, name: 'materials.read' },
+  { enabled: true, name: 'materials.search' },
+  { enabled: true, name: 'virtualFolders.list' },
+  { enabled: true, name: 'virtualFolders.read' },
+  { enabled: true, name: 'virtualFolders.create' },
+  { enabled: true, name: 'virtualFolders.addItems' },
+  { enabled: true, name: 'virtualFolders.removeItems' },
+  { enabled: true, name: 'virtualFolders.reorder' },
+  { enabled: false, name: 'virtualFolders.write' },
+  { enabled: false, name: 'materials.update' },
+  { enabled: false, name: 'materials.deleteSoft' }
+];
+
 async function readJson(filePath: string) {
   return JSON.parse(await fs.readFile(filePath, 'utf8')) as Record<string, unknown>;
 }
@@ -33,15 +61,7 @@ test('desktop runtime exposes the local Agent Control API foundation', async ({ 
   expect(endpoint).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
   expect(token.length).toBeGreaterThan(20);
   expect(descriptor).toMatchObject({
-    capabilities: [
-      'materials.read',
-      'materials.search',
-      'virtualFolders.list',
-      'virtualFolders.read',
-      'virtualFolders.write',
-      'materials.update',
-      'materials.deleteSoft'
-    ],
+    capabilities: EXPECTED_DESCRIPTOR_CAPABILITIES,
     protocol_version: 1
   });
 
@@ -61,15 +81,7 @@ test('desktop runtime exposes the local Agent Control API foundation', async ({ 
   });
   expect(capabilities.status).toBe(200);
   expect(await responseJson(capabilities)).toEqual({
-    capabilities: [
-      { enabled: true, name: 'materials.read' },
-      { enabled: true, name: 'materials.search' },
-      { enabled: true, name: 'virtualFolders.list' },
-      { enabled: true, name: 'virtualFolders.read' },
-      { enabled: false, name: 'virtualFolders.write' },
-      { enabled: false, name: 'materials.update' },
-      { enabled: false, name: 'materials.deleteSoft' }
-    ],
+    capabilities: EXPECTED_CAPABILITY_STATUSES,
     protocol_version: 1
   });
 

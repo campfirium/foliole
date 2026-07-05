@@ -52,7 +52,11 @@ function expectedCapabilityStatuses() {
     enabled: name === 'materials.read' ||
       name === 'materials.search' ||
       name === 'virtualFolders.list' ||
-      name === 'virtualFolders.read',
+      name === 'virtualFolders.read' ||
+      name === 'virtualFolders.create' ||
+      name === 'virtualFolders.addItems' ||
+      name === 'virtualFolders.removeItems' ||
+      name === 'virtualFolders.reorder',
     name
   }));
 }
