@@ -1,16 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   loadDiscoursePublishCatalogFromRuntime,
-  loadDiscoursePublishSettingsFromRuntime,
   publishTopicToDiscourse
 } from '../../shared/platform/discoursePublishRepository';
 import {
   AppButton,
   AppDialog,
   AppDialogContent,
-  AppDialogDescription,
   AppDialogOverlay,
   AppDialogPortal,
   AppDialogTitle
@@ -32,9 +30,10 @@ import {
   type DiscoursePublishDialogRequest
 } from './discoursePublishDialogRequest';
 import { DiscoursePublishFields, type CatalogState } from './DiscoursePublishFields';
+import { withCatalogDefaults } from './discoursePublishFieldUtils';
+import { useDiscourseEscapeClose } from './DiscourseShortcutPicker';
 
 type PublishState = 'idle' | 'publishing';
-type TargetState = { siteUrl: string } | null;
 type SetCatalogState = (state: CatalogState | ((current: CatalogState) => CatalogState)) => void;
 
 async function loadDialogCatalog(args: {
@@ -82,9 +81,9 @@ async function loadDialogCatalog(args: {
 function useDiscoursePublishDialogRequest() {
   const t = useTranslation();
   const [request, setRequest] = useState<DiscoursePublishDialogRequest | null>(null);
-  const [target, setTarget] = useState<TargetState>(null);
   const [form, setForm] = useState<PublishFormState>({ categoryId: '', tags: '' });
   const [catalog, setCatalog] = useState<CatalogState>({ catalog: null, error: null, loading: false });
+  const [showAllCategories, setShowAllCategories] = useState(false);
   const [showAllTags, setShowAllTags] = useState(false);
   const requestSeqRef = useRef(0);
   useEffect(() => {
@@ -99,19 +98,13 @@ function useDiscoursePublishDialogRequest() {
         categoryId: details.categoryId ? String(details.categoryId) : '',
         tags: details.tags.join(', ')
       });
+      setShowAllCategories(false);
       setShowAllTags(false);
       if (nextRequest.catalog) {
-        setTarget(nextRequest.targetSiteUrl ? { siteUrl: nextRequest.targetSiteUrl } : null);
         setCatalog({ catalog: nextRequest.catalog, error: null, loading: false });
         return;
       }
       setCatalog({ catalog: null, error: null, loading: true });
-      void loadDiscoursePublishSettingsFromRuntime().then((settings) => {
-        if (requestSeq !== requestSeqRef.current) return;
-        setTarget(settings ? {
-          siteUrl: settings.site_url
-        } : null);
-      });
       void loadDialogCatalog({
         currentRequestSeq: () => requestSeqRef.current,
         requestSeq,
@@ -122,23 +115,12 @@ function useDiscoursePublishDialogRequest() {
     window.addEventListener(DISCOURSE_PUBLISH_DIALOG_REQUEST_EVENT, handleRequest);
     return () => window.removeEventListener(DISCOURSE_PUBLISH_DIALOG_REQUEST_EVENT, handleRequest);
   }, [t]);
-  return { catalog, form, request, setForm, setRequest, setShowAllTags, showAllTags, target };
-}
-
-function DiscoursePublishDetails(props: {
-  details: PublishDetails;
-  request: DiscoursePublishDialogRequest;
-  target: TargetState;
-}) {
-  const t = useTranslation();
-  return (
-    <div className="mt-4 grid gap-3 rounded-md border border-border/70 bg-muted/25 p-4 text-sm">
-      <div><span className="text-muted-foreground">{t('desktop.discoursePublish.topic')}</span> {readPublishTitle(props.request.content, props.request.title)}</div>
-      <div><span className="text-muted-foreground">{t('desktop.discoursePublish.target')}</span> {props.target?.siteUrl || '-'}</div>
-      <div><span className="text-muted-foreground">{t('desktop.discoursePublish.mode')}</span> {t(props.details.mode === 'create' ? 'desktop.discoursePublish.mode.create' : 'desktop.discoursePublish.mode.update')}</div>
-      {props.details.bindingUrl ? <div><span className="text-muted-foreground">{t('desktop.discoursePublish.bound')}</span> {props.details.bindingUrl}</div> : null}
-    </div>
-  );
+  useEffect(() => {
+    const currentCatalog = catalog.catalog;
+    if (!request || !currentCatalog) return;
+    setForm((current) => withCatalogDefaults(current, currentCatalog));
+  }, [catalog.catalog, request]);
+  return { catalog, form, request, setForm, setRequest, setShowAllCategories, setShowAllTags, showAllCategories, showAllTags };
 }
 
 function DiscoursePublishDialog(props: {
@@ -147,26 +129,35 @@ function DiscoursePublishDialog(props: {
   catalog: CatalogState;
   form: PublishFormState;
   onClose: () => void;
+  onClosePanels: () => void;
   onPublish: () => void;
-  request: DiscoursePublishDialogRequest;
   setForm: (form: PublishFormState) => void;
+  showAllCategories: boolean;
   showAllTags: boolean;
   state: PublishState;
-  target: TargetState;
+  toggleShowAllCategories: () => void;
   toggleShowAllTags: () => void;
 }) {
   const t = useTranslation();
   const canPublish = props.state === 'idle' && !props.details.parseError && props.form.categoryId.trim().length > 0;
+  const handleKeyDownCapture = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Enter' || (!event.ctrlKey && !event.metaKey) || !canPublish) return;
+    event.preventDefault();
+    props.onPublish();
+  };
+  useDiscourseEscapeClose(props.showAllCategories || props.showAllTags, props.onClosePanels);
+  const handleEscapeKeyDown = (event: Event) => {
+    if (!props.showAllCategories && !props.showAllTags) return;
+    event.preventDefault();
+    props.onClosePanels();
+  };
   return (
     <AppDialog open onOpenChange={(open) => !open && props.state === 'idle' && props.onClose()}>
       <AppDialogPortal>
         <AppDialogOverlay />
-        <AppDialogContent aria-describedby={undefined} className="w-[min(680px,calc(100vw-32px))] p-5">
+        <AppDialogContent aria-describedby={undefined} className="w-[min(960px,calc(100vw-32px))] p-6" onEscapeKeyDown={handleEscapeKeyDown} onKeyDownCapture={handleKeyDownCapture}>
           <AppDialogTitle>{t('desktop.discoursePublish.title')}</AppDialogTitle>
-          <AppDialogDescription className="mt-2 text-sm leading-6 text-foreground/70">{t('desktop.discoursePublish.description')}</AppDialogDescription>
-          <DiscoursePublishDetails details={props.details} request={props.request} target={props.target} />
-          <DiscoursePublishFields catalog={props.catalog} form={props.form} setForm={props.setForm} showAllTags={props.showAllTags} toggleShowAllTags={props.toggleShowAllTags} />
-          {props.catalog.loading ? <p className="mt-3 text-sm text-muted-foreground">{t('desktop.discoursePublish.catalog.loading')}</p> : null}
+          <DiscoursePublishFields catalog={props.catalog} form={props.form} setForm={props.setForm} showAllCategories={props.showAllCategories} showAllTags={props.showAllTags} toggleShowAllCategories={props.toggleShowAllCategories} toggleShowAllTags={props.toggleShowAllTags} />
           {props.catalog.error ? <p className="mt-3 text-sm text-muted-foreground">{t('desktop.discoursePublish.catalog.error')}</p> : null}
           {props.details.parseError ? <p className="mt-3 text-sm text-destructive" role="alert">{props.details.parseError}</p> : null}
           {props.error ? <p className="mt-3 text-sm text-destructive" role="alert">{props.error}</p> : null}
@@ -182,12 +173,16 @@ function DiscoursePublishDialog(props: {
 
 export function DiscoursePublishDialogHost() {
   const t = useTranslation();
-  const { catalog, form, request, setForm, setRequest, setShowAllTags, showAllTags, target } = useDiscoursePublishDialogRequest();
+  const { catalog, form, request, setForm, setRequest, setShowAllCategories, setShowAllTags, showAllCategories, showAllTags } = useDiscoursePublishDialogRequest();
   const [state, setState] = useState<PublishState>('idle');
   const [error, setError] = useState<string | null>(null);
   if (!request) return null;
   const details = readPublishDetails(request.content);
   const close = () => setRequest(null);
+  const closePanels = () => {
+    setShowAllCategories(false);
+    setShowAllTags(false);
+  };
   const publish = async () => {
     if (details.parseError) {
       setError(details.parseError);
@@ -212,5 +207,5 @@ export function DiscoursePublishDialogHost() {
       setState('idle');
     }
   };
-  return <DiscoursePublishDialog catalog={catalog} details={details} error={error} form={form} onClose={close} onPublish={publish} request={request} setForm={setForm} showAllTags={showAllTags} state={state} target={target} toggleShowAllTags={() => setShowAllTags((current) => !current)} />;
+  return <DiscoursePublishDialog catalog={catalog} details={details} error={error} form={form} onClose={close} onClosePanels={closePanels} onPublish={publish} setForm={setForm} showAllCategories={showAllCategories} showAllTags={showAllTags} state={state} toggleShowAllCategories={() => setShowAllCategories((current) => !current)} toggleShowAllTags={() => setShowAllTags((current) => !current)} />;
 }

@@ -1,6 +1,6 @@
 import type { NativeDiscoursePublishCatalog } from '../../../lib/platform/nativeDiscoursePublishContract';
 
-import { toTags } from './discoursePublishDialogModel';
+import { toTags, type PublishFormState } from './discoursePublishDialogModel';
 
 export type Category = NativeDiscoursePublishCatalog['categories'][number];
 export type Tag = NativeDiscoursePublishCatalog['tags'][number];
@@ -29,6 +29,16 @@ export function mergeRecentTags(tags: Tag[], recentTags: string[]) {
     .filter((name) => !existing.has(name))
     .map((name) => ({ id: name, name }));
   return [...recentOnly, ...tags];
+}
+
+export function withCatalogDefaults(form: PublishFormState, catalog: NativeDiscoursePublishCatalog): PublishFormState {
+  const hasSelectedCategory = catalog.categories.some((category) => String(category.id) === form.categoryId);
+  const recentCategoryId = catalog.recent_category_ids.find((id) => catalog.categories.some((category) => category.id === id));
+  const fallbackCategoryId = recentCategoryId ?? catalog.categories[0]?.id;
+  return {
+    categoryId: hasSelectedCategory ? form.categoryId : (fallbackCategoryId ? String(fallbackCategoryId) : ''),
+    tags: form.tags || catalog.recent_tags.join(', ')
+  };
 }
 
 export function addMissingTag(value: string, tag: string) {

@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useState, type KeyboardEvent } from 'react';
 
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { appFloatingSurfaceClassName, appInputFocusVisibleClassName } from '../../shared/ui';
 
 import type { PublishFormState } from './discoursePublishDialogModel';
-import { categoryParts, orderedCategories, type Category } from './discoursePublishFieldUtils';
+import { categoryParts, type Category } from './discoursePublishFieldUtils';
+import { DiscourseShortcutGrid } from './DiscourseShortcutPicker';
 
 const SHORTCUT_LIMIT = 9;
 
@@ -45,6 +46,7 @@ function CategoryOption(props: {
 
 function CategoryPopover(props: {
   categories: Category[];
+  close: () => void;
   query: string;
   selectedCategoryId: string;
   selectCategory: (category: Category) => void;
@@ -53,91 +55,115 @@ function CategoryPopover(props: {
   const t = useTranslation();
   const visibleCategories = props.categories.filter((category) => category.name.toLowerCase().includes(props.query.trim().toLowerCase()));
   return (
-    <div className={appFloatingSurfaceClassName('popover', 'absolute left-0 top-full z-floating mt-1 w-full overflow-hidden')} role="listbox">
-      <div className="border-b border-border/60 px-3 py-2">
-        <input
-          aria-label={t('desktop.discoursePublish.category')}
-          className="h-8 w-full border-0 bg-transparent text-ui-md text-foreground outline-none placeholder:text-foreground/42"
-          onChange={(event) => props.setQuery(event.target.value)}
-          placeholder={t('desktop.discoursePublish.category.placeholder')}
-          value={props.query}
-        />
-      </div>
-      <div className="app-scrollbar max-h-72 overflow-y-auto p-1.5">
-        {visibleCategories.map((category, index) => (
-          <CategoryOption
-            category={category}
-            index={index}
-            key={category.id}
-            selectCategory={props.selectCategory}
-            selected={String(category.id) === props.selectedCategoryId}
+    <div className="fixed inset-0 z-modal flex items-center justify-center bg-foreground/10 px-5">
+      <div className={appFloatingSurfaceClassName('popover', 'w-[min(860px,calc(100vw-40px))] overflow-hidden p-4')} role="listbox">
+        <div className="mb-3 grid grid-cols-[1fr_auto] items-center gap-3">
+          <input
+            aria-label={t('desktop.discoursePublish.category')}
+            autoFocus
+            className="h-8 rounded-md border border-settings-control-border bg-settings-control px-2 text-ui-md text-foreground outline-none placeholder:text-foreground/42 focus:border-settings-control-border-hover focus:bg-settings-control-hover focus:ring-1 focus:ring-ring"
+            onChange={(event) => props.setQuery(event.target.value)}
+            placeholder=""
+            value={props.query}
           />
-        ))}
+          <button className="h-8 rounded-md px-2 text-sm text-foreground/62 hover:bg-settings-control-hover hover:text-foreground" onClick={props.close} type="button">
+            {t('common.cancel')}
+          </button>
+        </div>
+        <div className="app-scrollbar grid max-h-[min(420px,calc(100vh-180px))] grid-cols-2 gap-2 overflow-y-auto">
+          {visibleCategories.map((category, index) => (
+            <CategoryOption
+              category={category}
+              index={index}
+              key={category.id}
+              selectCategory={props.selectCategory}
+              selected={String(category.id) === props.selectedCategoryId}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
 }
 
+function CategoryShortcuts(props: {
+  categories: Category[];
+  selectedCategoryId: string;
+  onMore: () => void;
+  selectCategory: (category: Category) => void;
+}) {
+  return (
+    <DiscourseShortcutGrid
+      items={props.categories.map((category) => ({
+        id: String(category.id),
+        label: categoryParts(category).name,
+        selected: String(category.id) === props.selectedCategoryId
+      }))}
+      onMore={props.onMore}
+      onSelect={(item) => {
+        const category = props.categories.find((entry) => String(entry.id) === item.id);
+        if (category) props.selectCategory(category);
+      }}
+    />
+  );
+}
+
+function categoryForShortcut(categories: Category[], key: string) {
+  const shortcut = Number(key);
+  return shortcut >= 1 && shortcut <= SHORTCUT_LIMIT ? categories[shortcut - 1] : null;
+}
+
 export function DiscourseCategoryPicker(props: {
   categories: Category[];
   form: PublishFormState;
-  recentCategoryIds: number[];
   setForm: (form: PublishFormState) => void;
+  showAll: boolean;
+  toggleShowAll: () => void;
 }) {
   const t = useTranslation();
-  const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const rootRef = useRef<HTMLDivElement>(null);
   const selectedCategory = props.categories.find((category) => String(category.id) === props.form.categoryId);
-  const categories = useMemo(() => orderedCategories(props.categories, props.recentCategoryIds), [props.categories, props.recentCategoryIds]);
-
-  useEffect(() => {
-    const close = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
-    };
-    window.addEventListener('pointerdown', close);
-    return () => window.removeEventListener('pointerdown', close);
-  }, []);
 
   const selectCategory = (category: Category) => {
     props.setForm({ ...props.form, categoryId: String(category.id) });
-    setOpen(false);
+    if (props.showAll) props.toggleShowAll();
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
-    const shortcut = Number(event.key);
-    if (shortcut >= 1 && shortcut <= SHORTCUT_LIMIT) {
-      const category = categories[shortcut - 1];
-      if (category) {
-        event.preventDefault();
-        selectCategory(category);
-      }
+    const category = categoryForShortcut(props.categories, event.key);
+    if (category) {
+      event.preventDefault();
+      selectCategory(category);
+      return;
+    }
+    if (event.key === '0' && props.categories.length > SHORTCUT_LIMIT) {
+      event.preventDefault();
+      props.toggleShowAll();
       return;
     }
     if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-      setOpen(true);
+      props.toggleShowAll();
     }
   };
 
   return (
-    <div className="relative" ref={rootRef}>
+    <div className="relative grid gap-2.5">
       <button
-        aria-expanded={open}
+        aria-expanded={props.showAll}
         aria-haspopup="listbox"
         aria-label={t('desktop.discoursePublish.category')}
         autoFocus
-        className={`flex h-9 w-full items-center justify-between rounded-md border border-settings-control-border bg-settings-control px-3 text-left text-ui-md text-foreground transition-colors hover:border-settings-control-border-hover hover:bg-settings-control-hover ${appInputFocusVisibleClassName}`}
-        onClick={() => setOpen((current) => !current)}
+        className={`flex h-10 w-full items-center justify-between rounded-md border border-settings-control-border bg-settings-control px-3 text-left text-ui-md text-foreground transition-colors hover:border-settings-control-border-hover hover:bg-settings-control-hover ${appInputFocusVisibleClassName}`}
+        onClick={props.toggleShowAll}
         onKeyDown={handleKeyDown}
         type="button"
       >
-        <span className="min-w-0 truncate">{selectedCategory?.name ?? t('desktop.discoursePublish.category.placeholder')}</span>
+        <span className="min-w-0 truncate">{selectedCategory?.name ?? props.categories[0]?.name ?? t('desktop.discoursePublish.category.placeholder')}</span>
         <span className="ml-2 text-foreground/55">...</span>
       </button>
-      {open ? (
-        <CategoryPopover categories={categories} query={query} selectedCategoryId={props.form.categoryId} selectCategory={selectCategory} setQuery={setQuery} />
-      ) : null}
+      <CategoryShortcuts categories={props.categories} onMore={props.toggleShowAll} selectCategory={selectCategory} selectedCategoryId={props.form.categoryId} />
+      {props.showAll ? <CategoryPopover categories={props.categories} close={props.toggleShowAll} query={query} selectedCategoryId={props.form.categoryId} selectCategory={selectCategory} setQuery={setQuery} /> : null}
     </div>
   );
 }

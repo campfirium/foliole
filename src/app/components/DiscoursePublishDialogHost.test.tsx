@@ -10,8 +10,10 @@ const discourseRepositoryMocks = vi.hoisted(() => ({
   loadDiscoursePublishSettingsFromRuntime: vi.fn(),
   publishTopicToDiscourse: vi.fn()
 }));
+const workspaceStoreMocks = vi.hoisted(() => ({ updateNodeContent: vi.fn() }));
 
 vi.mock('../../shared/platform/discoursePublishRepository', () => discourseRepositoryMocks);
+vi.mock('../../store/workspaceStore', () => ({ useWorkspaceStore: { getState: () => workspaceStoreMocks } }));
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -51,11 +53,13 @@ beforeEach(() => {
   discourseRepositoryMocks.loadDiscoursePublishCatalogFromRuntime.mockReset();
   discourseRepositoryMocks.loadDiscoursePublishSettingsFromRuntime.mockReset();
   discourseRepositoryMocks.publishTopicToDiscourse.mockReset();
+  workspaceStoreMocks.updateNodeContent.mockReset();
   discourseRepositoryMocks.loadDiscoursePublishSettingsFromRuntime.mockResolvedValue({
     has_api_key: true,
     site_url: 'https://forum.example.com',
     updated_at: '2026-07-02T00:00:00.000Z'
   });
+  workspaceStoreMocks.updateNodeContent.mockResolvedValue(true);
 });
 
 it('shows cached Discourse catalog before replacing it with refreshed forum data', async () => {
@@ -69,9 +73,10 @@ it('shows cached Discourse catalog before replacing it with refreshed forum data
   render(<DiscoursePublishDialogHost />);
   requestPublishDialog();
 
-  fireEvent.click(await screen.findByRole('button', { name: 'Category' }));
-  expect(await screen.findByText('Cached Category')).toBeInTheDocument();
-  expect(screen.getByText('cached-tag')).toBeInTheDocument();
+  const category = await screen.findByRole('button', { name: 'Category' });
+  fireEvent.click(category);
+  await waitFor(() => expect(category).toHaveTextContent('Cached Category'));
+  expect(screen.getAllByText('cached-tag').length).toBeGreaterThan(0);
   await waitFor(() =>
     expect(discourseRepositoryMocks.loadDiscoursePublishCatalogFromRuntime.mock.calls.map(([input]) => input))
       .toEqual([undefined, { refresh: true }])
@@ -79,6 +84,39 @@ it('shows cached Discourse catalog before replacing it with refreshed forum data
 
   refresh.resolve(catalog({ categoryId: 18, categoryName: 'Fresh Category', fromCache: false, tag: 'fresh-tag' }));
 
-  expect(await screen.findByText('Fresh Category')).toBeInTheDocument();
-  expect(screen.getByText('fresh-tag')).toBeInTheDocument();
+  await waitFor(() => expect(category).toHaveTextContent('Fresh Category'));
+  expect(screen.getAllByText('fresh-tag').length).toBeGreaterThan(0);
+});
+
+it('uses catalog defaults and publishes only through the publish shortcut', async () => {
+  discourseRepositoryMocks.loadDiscoursePublishCatalogFromRuntime.mockResolvedValue(
+    catalog({ categoryId: 17, categoryName: 'Cached Category', fromCache: false, tag: 'cached-tag' })
+  );
+  discourseRepositoryMocks.publishTopicToDiscourse.mockResolvedValue({
+    mode: 'created',
+    post_id: 1,
+    topic_id: 2,
+    updated_content: '# Cached-first topic\n\nLong enough body for preview.',
+    url: 'https://forum.example.com/t/2'
+  });
+
+  render(<DiscoursePublishDialogHost />);
+  requestPublishDialog();
+
+  const category = await screen.findByRole('button', { name: 'Category' });
+  await waitFor(() => expect(category).toHaveTextContent('Cached Category'));
+  expect(screen.getAllByText('cached-tag').length).toBeGreaterThan(0);
+
+  fireEvent.keyDown(category, { key: 'Enter' });
+  expect(discourseRepositoryMocks.publishTopicToDiscourse).not.toHaveBeenCalled();
+  expect(await screen.findByRole('listbox')).toBeInTheDocument();
+
+  fireEvent.keyDown(category, { ctrlKey: true, key: 'Enter' });
+  await waitFor(() =>
+    expect(discourseRepositoryMocks.publishTopicToDiscourse).toHaveBeenCalledWith(expect.objectContaining({
+      category_id: 17,
+      tags: ['cached-tag']
+    }))
+  );
+  expect(workspaceStoreMocks.updateNodeContent).toHaveBeenCalledWith('test-topic', '# Cached-first topic\n\nLong enough body for preview.');
 });
