@@ -98,4 +98,6 @@ it('keeps community links runnable in the Live Demo preview', async () => {
 
   fireEvent.click(await screen.findByRole('button', { name: 'GitHub' }));
   expect(onRunSupportCommand).toHaveBeenCalledWith(APP_COMMAND_IDS.openGitHubRepository);
+  expect(screen.queryByText(/^Version /)).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Check for Updates' })).not.toBeInTheDocument();
 });

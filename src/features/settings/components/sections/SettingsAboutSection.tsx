@@ -114,11 +114,16 @@ function DiagnosticExportRow() {
   );
 }
 
-function ApplicationInfo(props: { onRunSupportCommand?: ((commandId: string) => void) | undefined }) {
+interface SettingsAboutSectionProps {
+  onRunSupportCommand?: ((commandId: string) => void) | undefined;
+  previewDesktopSettings?: boolean;
+}
+
+function ApplicationInfo(props: SettingsAboutSectionProps) {
   const t = useTranslation();
   return (
     <>
-      <SettingsAppSection onRunSupportCommand={props.onRunSupportCommand} />
+      {props.previewDesktopSettings ? null : <SettingsAppSection onRunSupportCommand={props.onRunSupportCommand} />}
       <SettingsSection ariaLabel={t('settings.about.support.aria')} title={t('settings.about.support.section')}>
         <FeedbackRow onRunSupportCommand={props.onRunSupportCommand} />
         <DiagnosticExportRow />
@@ -128,6 +133,6 @@ function ApplicationInfo(props: { onRunSupportCommand?: ((commandId: string) => 
   );
 }
 
-export function SettingsAboutSection(props: { onRunSupportCommand?: ((commandId: string) => void) | undefined }) {
+export function SettingsAboutSection(props: SettingsAboutSectionProps) {
   return <ApplicationInfo {...props} />;
 }

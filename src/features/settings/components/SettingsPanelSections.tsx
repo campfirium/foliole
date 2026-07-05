@@ -143,7 +143,12 @@ function renderFallbackCategory(props: LocalizedSettingsCategoryContentProps) {
     return <SettingsBackupsSection />;
   }
   if (props.activeCategory === 'about') {
-    return <SettingsAboutSection onRunSupportCommand={props.onRunSupportCommand} />;
+    return (
+      <SettingsAboutSection
+        onRunSupportCommand={props.onRunSupportCommand}
+        {...definedProps({ previewDesktopSettings: props.previewDesktopSettings })}
+      />
+    );
   }
   if (props.activeCategory === 'companion-sync') {
     return <SettingsCompanionSyncSection />;

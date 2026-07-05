@@ -163,7 +163,7 @@
   --workspace-region-footer-rail-bg: rgb(var(--color-bg-subtle));
   --workspace-region-footer-folder-bg: rgb(var(--color-bg-subtle));
   --workspace-region-footer-topic-bg: rgb(var(--color-bg-subtle));
-  --workspace-region-footer-document-bg: rgb(var(--color-bg-subtle));
+  --workspace-region-footer-document-bg: rgb(var(--color-canvas));
   --workspace-region-footer-sidebar-bg: rgb(var(--color-bg-subtle));
   --workspace-region-main-rail-scrollbar-thumb-color: color-mix(
     in srgb,
