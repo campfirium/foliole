@@ -68,6 +68,24 @@ function useCompanionReviewChrome(args: {
   return { isBottomBarDisabled, isReviewTaskActive, reviewBreadcrumbItems, ...navigation };
 }
 
+function useCompanionSearchArticleReturn(surface: ReturnType<typeof useCompanionArticleSurface>) {
+  const [searchArticleNodeId, setSearchArticleNodeId] = useState<string | null>(null);
+  const handleOpenSearchTopic = useCallback((nodeId: string) => {
+    setSearchArticleNodeId(nodeId);
+    surface.handleSelectBrowseNode(nodeId);
+  }, [surface]);
+  const handleExitSearchArticle = useCallback(() => {
+    setSearchArticleNodeId(null);
+    surface.handleExitSearchArticle();
+  }, [surface]);
+  const isSearchArticleOpen = Boolean(
+    searchArticleNodeId &&
+    surface.selectedBrowseNodeId === searchArticleNodeId &&
+    surface.readableArticle?.nodeId === searchArticleNodeId
+  );
+  return { handleExitSearchArticle, handleOpenSearchTopic, isSearchArticleOpen };
+}
+
 function buildCompanionShellModel(args: {
   actions: ReturnType<typeof useCompanionShellActions>;
   browseSort: ReturnType<typeof useCompanionBrowseSortState>;
@@ -79,6 +97,7 @@ function buildCompanionShellModel(args: {
   isCaptureSheetOpen: boolean;
   isOnlyReviewOpen: boolean;
   reviewChrome: ReturnType<typeof useCompanionReviewChrome>;
+  searchArticle: ReturnType<typeof useCompanionSearchArticleReturn>;
   setIsCaptureSheetOpen(open: boolean): void;
   setSettingsPage: ReturnType<typeof useCompanionSyncSettingsPage>['setSettingsPage'];
   settingsPage: ReturnType<typeof useCompanionSyncSettingsPage>['settingsPage'];
@@ -94,12 +113,15 @@ function buildCompanionShellModel(args: {
     floatingBar: args.floatingBar,
     handleContainerScroll: args.handleContainerScroll,
     handleContentTap: args.reviewChrome.handleContentTap,
+    handleExitSearchArticle: args.searchArticle.handleExitSearchArticle,
     handleNavigationAction: args.actions.handleNavigationAction,
+    handleOpenSearchTopic: args.searchArticle.handleOpenSearchTopic,
     handleSecondaryDestination: args.actions.secondaryDestinations.handleSecondaryDestination,
     isBottomBarDisabled: args.reviewChrome.isBottomBarDisabled,
     isBrowseDirectoryOpen: args.isBrowseDirectoryOpen,
     isCaptureSheetOpen: args.isCaptureSheetOpen,
     isOnlyReviewOpen: args.isOnlyReviewOpen,
+    isSearchArticleOpen: args.searchArticle.isSearchArticleOpen,
     isNavigationVisible: args.workspaceSync.isWorkspaceSyncStateReady && args.reviewChrome.isNavigationVisible,
     isReviewTaskActive: args.reviewChrome.isReviewTaskActive,
     reviewBreadcrumbItems: args.reviewChrome.reviewBreadcrumbItems,
@@ -132,6 +154,7 @@ function useCompanionShellModel(bootstrapState: NativeCompanionBootstrapState) {
     syncOnboardingStatus: workspaceSync.state.sync_onboarding_status
   });
   const reviewChrome = useCompanionReviewChrome({ floatingBar, surface, workspaceSync });
+  const searchArticle = useCompanionSearchArticleReturn(surface);
   const directoryState = useCompanionDirectorySelectionState(isBrowseDirectoryOpen);
   const externalDirectory = useCompanionExternalDirectory();
   const handleContainerScroll = useCompanionShellScrollHandler(floatingBar, surface);
@@ -165,6 +188,7 @@ function useCompanionShellModel(bootstrapState: NativeCompanionBootstrapState) {
     isCaptureSheetOpen,
     isOnlyReviewOpen,
     reviewChrome,
+    searchArticle,
     setIsCaptureSheetOpen,
     setSettingsPage,
     settingsPage,

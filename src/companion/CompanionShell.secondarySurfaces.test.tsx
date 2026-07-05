@@ -18,6 +18,12 @@ vi.mock('./CompanionReviewCard', () => ({
   CompanionReviewCard: () => <div data-testid="companion-review-card" />
 }));
 
+vi.mock('./CompanionArticleDocument', () => ({
+  CompanionArticleDocument: (props: { content: string }) => (
+    <article data-testid="companion-article-document">{props.content}</article>
+  )
+}));
+
 function mockFloatingBar() {
   useFloatingBarVisibility.mockReturnValue({
     handleContainerScroll: vi.fn(),
@@ -53,13 +59,14 @@ function createSurface(activeAction: 'recent' | 'review' | 'search') {
     handleDismissReviewTopic: vi.fn(),
     handleGradeReview: vi.fn(),
     handleRevealAnswer: vi.fn(),
+    handleExitSearchArticle: vi.fn(),
     handleSelectBrowseNode: vi.fn(),
     handleSelectRecentArticle: vi.fn(),
     handleTabAction: vi.fn(),
     isAnswerRevealed: false,
     isSubmittingGrade: false,
     isSubmittingReadingAction: false,
-    readableArticle: null,
+    readableArticle: null as null | Record<string, unknown>,
     recentArticles: [],
     readingError: null,
     reviewError: null,
@@ -77,7 +84,44 @@ function createSurface(activeAction: 'recent' | 'review' | 'search') {
       scheduledFsrsCount: 0,
       scheduledReadingCount: 0
     },
-    selectedBrowseNodeId: null
+    selectedBrowseNodeId: null as string | null
+  };
+}
+
+function localSearchResults() {
+  return {
+    external: [{
+      bodyStatus: 'ready',
+      document_id: 'doc-1',
+      excerpt: 'External alpha excerpt',
+      extension: '.md',
+      file_name: 'external.md',
+      folder_id: 'folder-1',
+      match_start: 9,
+      opening_text: 'External opening',
+      relative_path: 'notes/external.md',
+      title: 'External Alpha',
+      updated_at: '2026-06-15T08:00:00.000Z'
+    }],
+    pdf: [{
+      attachment_id: 'attachment-1',
+      excerpt: 'PDF alpha excerpt',
+      match_start: 4,
+      page: 2,
+      page_height: null,
+      page_width: null,
+      text: 'PDF alpha text'
+    }],
+    strategy: 'word-based',
+    topics: [{
+      bodyStatus: 'ready',
+      excerpt: 'Topic alpha excerpt',
+      matchStart: 1,
+      nodeId: 'topic-1',
+      openingText: 'Topic opening',
+      title: 'Topic Alpha',
+      updatedAt: '2026-06-15T08:00:00.000Z'
+    }]
   };
 }
 
@@ -97,6 +141,27 @@ async function renderShellWithSurface(surface: unknown) {
       }}
     />
   );
+}
+
+function makeSearchSurfaceOpenReadable(surface: ReturnType<typeof createSurface>) {
+  surface.handleSelectBrowseNode = vi.fn((nodeId: string) => {
+    surface.activeAction = 'recent';
+    surface.readableArticle = {
+      content: '# Topic Alpha\n\nSearch-opened body',
+      hideTitleHeading: false,
+      nodeId,
+      persistedNodeViewState: null,
+      pdfAttachmentId: null,
+      textAnchorDecorations: [],
+      title: 'Topic Alpha'
+    };
+    surface.selectedBrowseNodeId = nodeId;
+  });
+  surface.handleExitSearchArticle = vi.fn(() => {
+    surface.activeAction = 'search';
+    surface.readableArticle = null;
+    surface.selectedBrowseNodeId = null;
+  });
 }
 
 function expectCaptureSheet() {
@@ -158,4 +223,25 @@ describe('CompanionShell secondary surfaces', () => {
     expect(input).toBeEnabled();
     expect(await screen.findByText('No local results found.')).toBeInTheDocument();
   });
+
+});
+
+describe('CompanionShell search topic routing', () => {
+  it('opens a search topic through the readable article path and exits back to Search', async () => {
+    searchCompanionFullText.mockResolvedValue(localSearchResults());
+    const surface = createSurface('search');
+    makeSearchSurfaceOpenReadable(surface);
+
+    await renderShellWithSurface(surface);
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search topics' }), { target: { value: 'alpha' } });
+    fireEvent.click(await screen.findByRole('button', { name: /Topic Alpha/u }));
+
+    expect(surface.handleSelectBrowseNode).toHaveBeenCalledWith('topic-1');
+    expect(await screen.findByText(/Search-opened body/u)).toBeInTheDocument();
+    fireEvent.click(screen.getByText(/Search-opened body/u));
+    fireEvent.click(screen.getByRole('button', { name: 'Exit' }));
+
+    expect(surface.handleExitSearchArticle).toHaveBeenCalled();
+    expect(screen.getByRole('searchbox', { name: 'Search topics' })).toBeInTheDocument();
+  }, 15000);
 });

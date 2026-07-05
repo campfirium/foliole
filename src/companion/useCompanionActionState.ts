@@ -8,7 +8,7 @@ import type { useFloatingBarVisibility } from './useFloatingBarVisibility';
 type FloatingBarVisibilityApi = ReturnType<typeof useFloatingBarVisibility>;
 type CompanionWorkspaceSyncApi = ReturnType<typeof useCompanionWorkspaceSync>;
 
-export function useCompanionActionState(args: {
+type CompanionActionStateArgs = {
   browseReturnNodeId: string | null;
   browsedFolderNodeId: string | null;
   floatingBar: FloatingBarVisibilityApi;
@@ -19,7 +19,9 @@ export function useCompanionActionState(args: {
   setSelectedBrowseNodeId: (nodeId: string | null) => void;
   snapshot: WorkspaceSnapshot | null;
   workspaceSync: CompanionWorkspaceSyncApi;
-}) {
+};
+
+export function useCompanionActionState(args: CompanionActionStateArgs) {
   function markOpened(nodeId: string) {
     void markCompanionNodeOpened({
       nodeId,
@@ -63,5 +65,17 @@ export function useCompanionActionState(args: {
     handleTabAction('recent');
   }
 
-  return { handleExitBrowseArticle, handleSelectBrowseNode, handleSelectRecentArticle, handleTabAction };
+  function handleExitSearchArticle() {
+    args.setBrowseReturnNodeId(null);
+    args.setSelectedBrowseNodeId(null);
+    handleTabAction('search');
+  }
+
+  return {
+    handleExitBrowseArticle,
+    handleExitSearchArticle,
+    handleSelectBrowseNode,
+    handleSelectRecentArticle,
+    handleTabAction
+  };
 }

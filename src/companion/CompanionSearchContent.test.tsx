@@ -86,6 +86,19 @@ describe('CompanionSearchContent', () => {
     expect(screen.getByText('External Alpha')).toBeInTheDocument();
   });
 
+  it('opens topic results without making PDF or external results clickable', async () => {
+    const onOpenTopic = vi.fn();
+    searchCompanionFullText.mockResolvedValue(localSearchResults());
+
+    renderWithLocalization(<CompanionSearchContent onOpenTopic={onOpenTopic} />);
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search topics' }), { target: { value: 'alpha' } });
+
+    fireEvent.click(await screen.findByRole('button', { name: /Topic Alpha/u }));
+    expect(onOpenTopic).toHaveBeenCalledWith('topic-1');
+    expect(screen.queryByRole('button', { name: /PDF page 2/u })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /External Alpha/u })).not.toBeInTheDocument();
+  });
+
   it('shows an empty local result state', async () => {
     searchCompanionFullText.mockResolvedValue(emptySearchResults());
 

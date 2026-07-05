@@ -60,7 +60,13 @@ function useCompanionInteractionState(
     workspaceSync
   });
   const [isAnswerRevealed, setIsAnswerRevealed] = useState(false);
-  const { handleExitBrowseArticle, handleSelectBrowseNode, handleSelectRecentArticle, handleTabAction } = useCompanionBrowseActions({
+  const {
+    handleExitBrowseArticle,
+    handleExitSearchArticle,
+    handleSelectBrowseNode,
+    handleSelectRecentArticle,
+    handleTabAction
+  } = useCompanionBrowseActions({
     browsedFolderNodeId,
     floatingBar,
     setActiveAction,
@@ -83,6 +89,7 @@ function useCompanionInteractionState(
     ...reviewActions,
     handleRevealAnswer,
     handleExitBrowseArticle,
+    handleExitSearchArticle,
     handleSelectBrowseNode,
     handleSelectRecentArticle,
     handleTabAction,

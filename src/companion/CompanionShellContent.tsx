@@ -10,21 +10,16 @@ import { CompanionDirectoryContent, type CompanionDirectorySelection } from './C
 import * as DirectoryArticle from './CompanionDirectoryReadableArticleModel';
 import { CompanionOnlyReviewContent } from './CompanionOnlyReviewContent';
 import { ReadableArticleOrFallback } from './CompanionReadableArticleFallback';
-import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
 import { RecentArticleList } from './CompanionRecentArticleList';
 import { CompanionReviewAnswer, CompanionReviewCard } from './CompanionReviewCard';
 import { CompanionReviewFallback } from './CompanionReviewFallback';
 import { CompanionScreenHeader } from './CompanionScreenHeader';
 import { CompanionSearchContent } from './CompanionSearchContent';
-import {
-  createCompanionExistingHighlightDeleteHandler,
-  createCompanionExistingHighlightNoteHandler,
-  createCompanionSelectionAnnotationHandler
-} from './companionSelectionAnnotationController';
 import { renderCompanionSettingsContent } from './CompanionSettingsShellContent';
-import { createCompanionTopicContentSaveHandler } from './companionTopicEditingController';
-import { createCompanionTrashRestoreHandler } from './companionTrashController';
-import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
+import {
+  CompanionShellReadableArticle,
+  continueCompanionAttachmentResourceSync
+} from './CompanionShellReadableArticle';
 import { CompanionWorkspaceSyncLoading } from './CompanionWorkspaceSyncLoading';
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
@@ -35,39 +30,34 @@ import { NodeBrowseList } from '@/shared/ui';
 type Surface = ReturnType<typeof useCompanionArticleSurface>;
 type WorkspaceSync = ReturnType<typeof useCompanionWorkspaceSync>;
 type ReviewBreadcrumbItem = { id: string; isCurrent?: boolean; label: string; targetNodeId: string };
-
-function resolveShellSyncEndpoint(workspaceSync: WorkspaceSync) {
-  return workspaceSync.state ? resolveCompanionWorkspaceSyncEndpoint(workspaceSync.state) : null;
-}
+type CompanionShellContentProps = {
+  directorySelection: CompanionDirectorySelection;
+  browseSortDirection?: FolderListSortDirection;
+  browseSortKey?: FolderListSortKey;
+  hasSnapshot: boolean;
+  isBrowseDirectoryOpen: boolean;
+  isOnlyReviewOpen: boolean;
+  isSearchArticleOpen: boolean;
+  onBackToSettingsList: () => void;
+  onBackDirectorySelection: () => void;
+  onChangeBrowseSortDirection?: (sortDirection: FolderListSortDirection) => void;
+  onChangeBrowseSortKey?: (sortKey: FolderListSortKey) => void;
+  onChangeDirectorySelection: (selection: CompanionDirectorySelection) => void;
+  onExitSearchArticle: () => void;
+  onOpenSyncSettingsPage: (page: CompanionSettingsPage) => void;
+  onOpenSyncSettings: () => void;
+  onOpenSearchTopic: (nodeId: string) => void;
+  onResetDirectorySelection: () => void;
+  onSelectReviewBreadcrumbItem: (id: string) => void;
+  reviewBreadcrumbItems: ReviewBreadcrumbItem[];
+  settingsPage: CompanionSettingsPage;
+  surface: Surface;
+  workspaceError: string | null;
+  workspaceSync: WorkspaceSync;
+};
 
 function handleExitReadableArticle(surface: Surface) {
   surface.handleExitBrowseArticle();
-}
-
-function continueAttachmentResourceSync(workspaceSync: WorkspaceSync) {
-  const endpointUrl = resolveShellSyncEndpoint(workspaceSync);
-  if (!endpointUrl || workspaceSync.status === 'syncing') {
-    return;
-  }
-  void workspaceSync.pullFromDesktop(endpointUrl).catch(() => undefined);
-}
-
-function renderReadableArticle(props: { onExit: () => void; surface: Surface; workspaceSync: WorkspaceSync }) {
-  if (!props.surface.readableArticle) return null;
-  return (
-    <ImmersiveReadableArticle
-      onAttachmentResourceSynced={() => continueAttachmentResourceSync(props.workspaceSync)}
-      onAddExistingHighlightNote={createCompanionExistingHighlightNoteHandler(props.workspaceSync)}
-      onCreateSelectionAnnotation={createCompanionSelectionAnnotationHandler(props.workspaceSync)}
-      onDeleteExistingHighlight={createCompanionExistingHighlightDeleteHandler(props.workspaceSync)}
-      onExit={props.onExit}
-      onRestoreFromTrash={createCompanionTrashRestoreHandler(props.workspaceSync)}
-      onSaveArticleContent={createCompanionTopicContentSaveHandler(props.workspaceSync)}
-      readableArticle={props.surface.readableArticle}
-      snapshot={props.workspaceSync.state.workspace_snapshot}
-      syncEndpointUrl={resolveShellSyncEndpoint(props.workspaceSync)}
-    />
-  );
 }
 
 function RecentBrowseContent(props: { surface: Surface; workspaceSync: WorkspaceSync }) {
@@ -91,11 +81,13 @@ function RecentBrowseContent(props: { surface: Surface; workspaceSync: Workspace
     );
   }
   if (props.surface.readableArticle && props.surface.selectedBrowseNodeId) {
-    return renderReadableArticle({
-      onExit: () => handleExitReadableArticle(props.surface),
-      surface: props.surface,
-      workspaceSync: props.workspaceSync
-    });
+    return (
+      <CompanionShellReadableArticle
+        onExit={() => handleExitReadableArticle(props.surface)}
+        surface={props.surface}
+        workspaceSync={props.workspaceSync}
+      />
+    );
   }
   return (
     <>
@@ -140,7 +132,7 @@ function ReviewContent(props: {
   );
 }
 
-function renderRecentContent(props: Parameters<typeof renderCompanionShellContent>[0]) {
+function renderRecentContent(props: CompanionShellContentProps) {
   if (props.isBrowseDirectoryOpen) {
     if (
       (props.directorySelection.kind === 'internal' ||
@@ -149,11 +141,13 @@ function renderRecentContent(props: Parameters<typeof renderCompanionShellConten
         props.directorySelection.kind === 'virtual') &&
       DirectoryArticle.canRenderCompanionDirectoryArticle(props)
     ) {
-      return renderReadableArticle({
-        onExit: DirectoryArticle.resolveCompanionDirectoryArticleExit(props),
-        surface: props.surface,
-        workspaceSync: props.workspaceSync
-      });
+      return (
+        <CompanionShellReadableArticle
+          onExit={DirectoryArticle.resolveCompanionDirectoryArticleExit(props)}
+          surface={props.surface}
+          workspaceSync={props.workspaceSync}
+        />
+      );
     }
     return (
       <CompanionDirectoryContent
@@ -169,30 +163,18 @@ function renderRecentContent(props: Parameters<typeof renderCompanionShellConten
   return <RecentBrowseContent surface={props.surface} workspaceSync={props.workspaceSync} />;
 }
 
-export function renderCompanionShellContent(props: {
-  directorySelection: CompanionDirectorySelection;
-  browseSortDirection?: FolderListSortDirection;
-  browseSortKey?: FolderListSortKey;
-  hasSnapshot: boolean;
-  isBrowseDirectoryOpen: boolean;
-  isOnlyReviewOpen: boolean;
-  onBackToSettingsList: () => void;
-  onBackDirectorySelection: () => void;
-  onChangeBrowseSortDirection?: (sortDirection: FolderListSortDirection) => void;
-  onChangeBrowseSortKey?: (sortKey: FolderListSortKey) => void;
-  onChangeDirectorySelection: (selection: CompanionDirectorySelection) => void;
-  onOpenSyncSettingsPage: (page: CompanionSettingsPage) => void;
-  onOpenSyncSettings: () => void;
-  onResetDirectorySelection: () => void;
-  onSelectReviewBreadcrumbItem: (id: string) => void;
-  reviewBreadcrumbItems: ReviewBreadcrumbItem[];
-  settingsPage: CompanionSettingsPage;
-  surface: Surface;
-  workspaceError: string | null;
-  workspaceSync: WorkspaceSync;
-}) {
+export function renderCompanionShellContent(props: CompanionShellContentProps) {
   if (!props.workspaceSync.isWorkspaceSyncStateReady) {
     return <CompanionWorkspaceSyncLoading />;
+  }
+  if (props.isSearchArticleOpen) {
+    return (
+      <CompanionShellReadableArticle
+        onExit={props.onExitSearchArticle}
+        surface={props.surface}
+        workspaceSync={props.workspaceSync}
+      />
+    );
   }
   if (props.surface.activeAction === 'more') {
     return renderCompanionSettingsContent(props);
@@ -215,13 +197,13 @@ export function renderCompanionShellContent(props: {
     );
   }
   if (props.surface.activeAction === 'search') {
-    return <CompanionSearchContent />;
+    return <CompanionSearchContent onOpenTopic={props.onOpenSearchTopic} />;
   }
   return (
     <ReadableArticleOrFallback
       error={props.workspaceError}
       hasSnapshot={props.hasSnapshot}
-      onAttachmentResourceSynced={() => continueAttachmentResourceSync(props.workspaceSync)}
+      onAttachmentResourceSynced={() => continueCompanionAttachmentResourceSync(props.workspaceSync)}
       surface={props.surface}
       workspaceSync={props.workspaceSync}
     />

@@ -64,4 +64,16 @@ describe('useCompanionActionState browse exit', () => {
     expect(setBrowseReturnNodeId).toHaveBeenCalledWith('folder-1');
     expect(setSelectedBrowseNodeId).toHaveBeenCalledWith('topic-1');
   });
+
+  it('returns search article opens to the search tab without changing browse exit semantics', () => {
+    const { actions, setActiveAction, setBrowseReturnNodeId, setSelectedBrowseNodeId } = createActionState({
+      browseReturnNodeId: 'folder-1'
+    });
+
+    actions.handleExitSearchArticle();
+
+    expect(setBrowseReturnNodeId).toHaveBeenCalledWith(null);
+    expect(setSelectedBrowseNodeId).toHaveBeenCalledWith(null);
+    expect(setActiveAction).toHaveBeenLastCalledWith('search');
+  });
 });

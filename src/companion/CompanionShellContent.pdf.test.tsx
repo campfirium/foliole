@@ -139,11 +139,14 @@ function renderSurfaceElement(surface: unknown, workspaceSync: unknown = createW
     hasSnapshot: true,
     isBrowseDirectoryOpen: false,
     isOnlyReviewOpen: false,
+    isSearchArticleOpen: false,
     onBackDirectorySelection: vi.fn(),
     onChangeDirectorySelection: vi.fn(),
     onBackToSettingsList: vi.fn(),
+    onExitSearchArticle: vi.fn(),
     onOpenSyncSettingsPage: vi.fn(),
     onOpenSyncSettings: vi.fn(),
+    onOpenSearchTopic: vi.fn(),
     onResetDirectorySelection: vi.fn(),
     onSelectReviewBreadcrumbItem: vi.fn(),
     reviewBreadcrumbItems: [],
@@ -162,12 +165,12 @@ async function testPrimaryPdfReadingSurface() {
   renderSurface(createPdfReadableSurface());
 
   expect(screen.getByText('Text version')).toBeInTheDocument();
-  expect(screen.getByText(/Extracted PDF text/)).toBeInTheDocument();
+  expect(screen.getAllByText(/Extracted PDF text/).length).toBeGreaterThan(0);
   expect(screen.queryByText('PDF original viewer')).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Open PDF' }));
   expect(await screen.findByText('PDF original viewer')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Text' }));
-  expect(screen.getByText(/Extracted PDF text/)).toBeInTheDocument();
+  expect(screen.getAllByText(/Extracted PDF text/).length).toBeGreaterThan(0);
 }
 
 async function testInlineAttachmentSync() {
