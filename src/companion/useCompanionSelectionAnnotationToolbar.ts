@@ -20,7 +20,7 @@ import type { EditorAdapter } from '@/features/editor/adapters/EditorAdapter';
 const RECENT_SELECTION_INTERACTION_MS = 2_000;
 const SELECTION_SETTLE_DELAY_MS = 240;
 
-function isSelectionToolbarTarget(target: EventTarget | null) {
+export function isCompanionSelectionToolbarTarget(target: EventTarget | null) {
   return target instanceof Element && target.closest('[data-companion-selection-toolbar="true"]') !== null;
 }
 
@@ -36,13 +36,13 @@ function useCompanionSelectionAnnotationDocumentEvents(args: {
 }) {
   useEffect(() => {
     const rememberSelectionInteraction = (event: MouseEvent | PointerEvent | TouchEvent) => {
-      if (isSelectionToolbarTarget(event.target)) return;
+      if (isCompanionSelectionToolbarTarget(event.target)) return;
       args.lastFallbackRef.current = readSelectionClientPoint(event) ?? args.lastFallbackRef.current ?? getDefaultSelectionClientPoint();
       args.lastSelectionInteractionAtRef.current = Date.now();
       args.closeSelectionToolbar();
     };
     const handleSelectionEnd = (event: MouseEvent | PointerEvent | TouchEvent) => {
-      if (isSelectionToolbarTarget(event.target)) return;
+      if (isCompanionSelectionToolbarTarget(event.target)) return;
       args.lastFallbackRef.current = readSelectionClientPoint(event) ?? args.lastFallbackRef.current ?? getDefaultSelectionClientPoint();
       args.lastSelectionInteractionAtRef.current = Date.now();
       args.scheduleSelectionToolbarOpen(args.lastFallbackRef.current, isExistingHighlightTarget(event.target));
@@ -81,7 +81,7 @@ function useCompanionSelectionAnnotationOpenHandler(args: {
   snapshot: WorkspaceSnapshot | null;
 }) {
   return useCallback((event: ReactMouseEvent<HTMLElement>) => {
-    if (isSelectionToolbarTarget(event.target) || !args.canCreateAnnotation) return;
+    if (isCompanionSelectionToolbarTarget(event.target) || !args.canCreateAnnotation) return;
     const fallback = readSelectionClientPoint(event) ?? getDefaultSelectionClientPoint();
     args.lastFallbackRef.current = fallback;
     args.lastSelectionInteractionAtRef.current = Date.now();

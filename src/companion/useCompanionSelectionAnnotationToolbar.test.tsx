@@ -54,9 +54,9 @@ function createEditorAdapter(selection: { from: number; to: number }[]) {
   };
 }
 
-function stubDomSelection() {
+function stubDomSelection(hostClassName = 'cm-content') {
   const content = document.createElement('div');
-  content.className = 'cm-content';
+  content.className = hostClassName;
   const textNode = document.createTextNode('Welcome');
   content.append(textNode);
   document.body.append(content);
@@ -161,7 +161,7 @@ it('opens from an Android DOM text selection when the editor selection is read-o
   );
 
   act(() => {
-    stubDomSelection();
+    stubDomSelection('markdown-editor-host');
     result.current.handleEditorReady(createEditorAdapter([]) as never);
     document.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 80, clientY: 120 }));
     document.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, clientX: 96, clientY: 136 }));

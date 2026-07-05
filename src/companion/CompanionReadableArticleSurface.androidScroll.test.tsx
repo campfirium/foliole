@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react';
+import { fireEvent, render } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -9,6 +9,7 @@ const readingChromeMock = vi.fn<(props: Record<string, unknown>) => ReactNode>((
 const toolbarHookMock = vi.fn();
 const editorFocusMock = vi.fn();
 const enterContentEditingMock = vi.fn();
+let toolbarHookOverride: Record<string, unknown> | null = null;
 let chromeVisible = false;
 let contentEditing = false;
 
@@ -17,7 +18,11 @@ vi.mock('./CompanionReadableArticleDocument', () => ({
 }));
 
 vi.mock('./CompanionReadableArticleSelectionToolbarLayer', () => ({
-  SelectionAnnotationToolbarLayer: () => null
+  SelectionAnnotationToolbarLayer: () => (
+    <button data-companion-selection-toolbar="true" data-testid="selection-toolbar-action" type="button">
+      Highlight
+    </button>
+  )
 }));
 
 vi.mock('./CompanionReadingChrome', () => ({
@@ -37,8 +42,11 @@ vi.mock('./CompanionDocumentSearchSheet', () => ({
 }));
 
 vi.mock('./useCompanionSelectionAnnotationToolbar', () => ({
+  isCompanionSelectionToolbarTarget: (target: EventTarget | null) =>
+    target instanceof Element && target.closest('[data-companion-selection-toolbar="true"]') !== null,
   useCompanionSelectionAnnotationToolbar: (props: Record<string, unknown>) => {
     toolbarHookMock(props);
+    if (toolbarHookOverride) return toolbarHookOverride;
     return {
     clearSelectionAndCloseToolbar: vi.fn(),
     closeSelectionToolbar: vi.fn(),
@@ -92,6 +100,7 @@ describe('ImmersiveReadableArticle Android scrolling', () => {
     readingChromeMock.mockClear();
     readableArticleDocumentMock.mockClear();
     toolbarHookMock.mockClear();
+    toolbarHookOverride = null;
     editorFocusMock.mockClear();
     enterContentEditingMock.mockClear();
   });
@@ -155,6 +164,7 @@ describe('ImmersiveReadableArticle edit mode', () => {
     readingChromeMock.mockClear();
     readableArticleDocumentMock.mockClear();
     toolbarHookMock.mockClear();
+    toolbarHookOverride = null;
     editorFocusMock.mockClear();
     enterContentEditingMock.mockClear();
   });
@@ -193,5 +203,36 @@ describe('ImmersiveReadableArticle edit mode', () => {
 
     expect(enterContentEditingMock).not.toHaveBeenCalled();
     expect(readableArticleDocumentMock).toHaveBeenCalledWith(expect.objectContaining({ allowContentEditing: false }));
+  });
+
+});
+
+describe('ImmersiveReadableArticle selection toolbar pointer guard', () => {
+  it('does not close the selection toolbar from toolbar pointer events', () => {
+    const closeSelectionToolbar = vi.fn();
+    const openSelectionToolbar = vi.fn();
+    toolbarHookOverride = {
+      clearSelectionAndCloseToolbar: vi.fn(),
+      closeSelectionToolbar,
+      editorRef: { current: null },
+      handleEditorReady: vi.fn(),
+      openSelectionToolbar,
+      resolveSelectionPayload: vi.fn(),
+      selectionToolbar: null
+    };
+    const { getByTestId } = render(
+      <ImmersiveReadableArticle
+        onExit={vi.fn()}
+        onCreateSelectionAnnotation={vi.fn()}
+        readableArticle={createReadableArticle()}
+        snapshot={null}
+      />
+    );
+
+    fireEvent.pointerDown(getByTestId('selection-toolbar-action'));
+    fireEvent.pointerUp(getByTestId('selection-toolbar-action'));
+
+    expect(closeSelectionToolbar).not.toHaveBeenCalled();
+    expect(openSelectionToolbar).not.toHaveBeenCalled();
   });
 });

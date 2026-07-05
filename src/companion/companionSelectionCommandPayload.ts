@@ -9,10 +9,11 @@ function toElement(node: Node | null) {
   return node instanceof Element ? node : node?.parentElement ?? null;
 }
 
-function isSelectionInsideEditor(selection: Selection) {
+function isSelectionInsideReadableArticle(selection: Selection) {
   const anchor = toElement(selection.anchorNode);
   const focus = toElement(selection.focusNode);
-  return Boolean(anchor?.closest('.cm-content') && focus?.closest('.cm-content'));
+  const selector = '.cm-content, .markdown-editor-host, [data-companion-readable-document="true"]';
+  return Boolean(anchor?.closest(selector) && focus?.closest(selector));
 }
 
 function getRectPositionRange(adapter: EditorAdapter, rects: DOMRectList): EditorSelection | null {
@@ -29,7 +30,7 @@ function getRectPositionRange(adapter: EditorAdapter, rects: DOMRectList): Edito
 
 function getDomSelectionRanges(adapter: EditorAdapter): EditorSelection[] {
   const selection = window.getSelection();
-  if (!selection || selection.isCollapsed || !selection.toString().trim() || !isSelectionInsideEditor(selection)) {
+  if (!selection || selection.isCollapsed || !selection.toString().trim() || !isSelectionInsideReadableArticle(selection)) {
     return [];
   }
   const textRange = getTextSelectionRange(adapter.getContent(), selection.toString());

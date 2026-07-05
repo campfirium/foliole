@@ -105,6 +105,8 @@ describe('CodeMirror mobile read-only mode', () => {
     expect(mockReadOnlyOf).toHaveBeenCalledWith(true);
     expect(mockContentAttributesOf).toHaveBeenCalledWith({
       'aria-readonly': 'true',
+      inputmode: 'none',
+      role: 'document',
       tabindex: '-1'
     });
   });

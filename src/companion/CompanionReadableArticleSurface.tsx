@@ -1,3 +1,5 @@
+import type { PointerEvent as ReactPointerEvent } from 'react';
+
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 
 import { ImmersiveChromeLayer } from './CompanionReadableArticleChromeLayer';
@@ -7,7 +9,10 @@ import type { CompanionReadingTypographySettings } from './companionReadingTypog
 import { type CompanionSelectionAnnotationKind } from './CompanionSelectionAnnotationToolbar';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { useCompanionReadingTypographySettings } from './useCompanionReadingTypographySettings';
-import { useCompanionSelectionAnnotationToolbar } from './useCompanionSelectionAnnotationToolbar';
+import {
+  isCompanionSelectionToolbarTarget,
+  useCompanionSelectionAnnotationToolbar
+} from './useCompanionSelectionAnnotationToolbar';
 import { useImmersiveReadableArticleState } from './useImmersiveReadableArticleState';
 
 import type { EditorAdapter, EditorSelection } from '@/features/editor/adapters/EditorAdapter';
@@ -81,8 +86,24 @@ function useImmersiveReadableArticleModel(props: ImmersiveReadableArticleProps) 
     reading.handleSelectOutlineItem(item);
     toolbar.closeSelectionToolbar();
   }
+  function closeToolbarFromArticlePointer(event: ReactPointerEvent<HTMLElement>) {
+    if (isCompanionSelectionToolbarTarget(event.target)) return;
+    toolbar.closeSelectionToolbar();
+  }
+  function openToolbarFromArticlePointer(event: ReactPointerEvent<HTMLElement>) {
+    if (isCompanionSelectionToolbarTarget(event.target)) return;
+    toolbar.openSelectionToolbar(event);
+  }
   const surfaceClassName = `fixed top-0 right-0 bottom-0 left-0 z-surface-raised overflow-y-auto bg-companion-base px-6 ${reading.isChromeVisible ? 'pt-36 supports-[padding-top:calc(0px)]:[padding-top:calc(env(safe-area-inset-top)+9rem)]' : 'pt-6 supports-[padding-top:max(0px)]:pt-[max(env(safe-area-inset-top),24px)]'} pb-20 supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),80px)] text-foreground sm:px-7`;
-  return { reading, selectOutlineItem, surfaceClassName, toggleContentEditing, toolbar };
+  return {
+    closeToolbarFromArticlePointer,
+    openToolbarFromArticlePointer,
+    reading,
+    selectOutlineItem,
+    surfaceClassName,
+    toggleContentEditing,
+    toolbar
+  };
 }
 
 export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
@@ -92,9 +113,9 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
     <section
       className={model.surfaceClassName}
       onClick={model.reading.handleSurfaceClick}
-      onPointerDown={model.toolbar.closeSelectionToolbar}
-      onPointerMove={model.toolbar.closeSelectionToolbar}
-      onPointerUp={model.toolbar.openSelectionToolbar}
+      onPointerDown={model.closeToolbarFromArticlePointer}
+      onPointerMove={model.closeToolbarFromArticlePointer}
+      onPointerUp={model.openToolbarFromArticlePointer}
       onTouchMove={model.toolbar.closeSelectionToolbar}
     >
       {model.reading.isChromeVisible ? (

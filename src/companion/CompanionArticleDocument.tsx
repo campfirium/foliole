@@ -32,7 +32,7 @@ export function CompanionArticleDocument(props: {
     ? 'pt-1 min-h-0'
     : `pt-1 ${companionArticleMinHeightClassName}`;
   return (
-    <section className={sectionClassName}>
+    <section className={sectionClassName} data-companion-readable-document="true">
       <MarkdownEditor
         blockImageWidthOverride="min(100%, 40rem)"
         className="h-full"

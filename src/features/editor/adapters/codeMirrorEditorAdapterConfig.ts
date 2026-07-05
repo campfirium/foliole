@@ -82,9 +82,23 @@ function createReadOnlyInteractionExtensions(options: CodeMirrorEditorAdapterOpt
   return [
     EditorView.contentAttributes.of({
       'aria-readonly': 'true',
+      inputmode: 'none',
+      role: 'document',
       tabindex: '-1'
     })
   ];
+}
+
+function createReadOnlyDocumentDomHandlers(options: CodeMirrorEditorAdapterOptions) {
+  if (options.readOnlyInteractionMode !== 'document') {
+    return {};
+  }
+  return {
+    focus: (_event: FocusEvent, view: EditorView) => {
+      window.setTimeout(() => blurActiveCodeMirrorElement(view), 0);
+      return false;
+    }
+  };
 }
 
 export function createCodeMirrorEditorExtensions(args: {
@@ -139,6 +153,7 @@ export function createCodeMirrorEditorExtensions(args: {
         args.onCompositionEnd();
         return false;
       },
+      ...createReadOnlyDocumentDomHandlers(args.options),
       keydown: (event, view) => {
         return blurCodeMirrorEditorOnEscape(event, view);
       }
