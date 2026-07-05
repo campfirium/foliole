@@ -118,6 +118,34 @@ it('keeps embedded images attached to their own fragment section only', async ()
   expect(listNodeAttachments(children[1]?.id ?? '').map((entry) => entry.attachment.originalName)).toEqual(['two.jpeg']);
 });
 
+it('bounds same-file fragments by physical html order when ncx order differs', async () => {
+  const filePath = await writeEpub(createFragmentBookEntries({
+    body:
+      '<h1 id="toc">目录</h1><p>目录内容。</p><ol><li>Chapter 1</li></ol>' +
+      '<h1 id="chapter-1">Chapter 1</h1><p>Chapter body.</p><img src="../images/one.jpeg" alt="One"/>' +
+      '<h1 id="chapter-2">Chapter 2</h1><p>Second body.</p>',
+    extraEntries: [
+      { content: new Uint8Array([0xff, 0xd8, 0xff, 0xd9]), name: 'OPS/images/one.jpeg' }
+    ],
+    manifestExtra: '<item id="one" href="images/one.jpeg" media-type="image/jpeg"/>',
+    navPoints: `${navPoint('Chapter 1', 'chapter-1')}${navPoint('Chapter 2', 'chapter-2')}${navPoint('目录', 'toc')}`
+  }));
+
+  const imported = await runEpubImport(
+    { adapterId: 'text_file', filePath, kind: 'epub', sourceName: path.basename(filePath) },
+    '2026-04-01T12:06:00.000Z'
+  );
+  const children = readImportedChildren(imported.nodeId as string);
+  const toc = children.find((child) => child.title === '目录');
+  const chapter = children.find((child) => child.title === 'Chapter 1');
+
+  expect(toc?.content).toContain('目录内容');
+  expect(toc?.content).not.toContain('Chapter body.');
+  expect(chapter?.content).toContain('Chapter body.');
+  expect(listNodeAttachments(toc?.id ?? '').map((entry) => entry.attachment.originalName)).toEqual([]);
+  expect(listNodeAttachments(chapter?.id ?? '').map((entry) => entry.attachment.originalName)).toEqual(['one.jpeg']);
+});
+
 it('handles name and inline anchors while reporting missing and duplicate fragments', async () => {
   const filePath = await writeEpub(createFragmentBookEntries({
     body:

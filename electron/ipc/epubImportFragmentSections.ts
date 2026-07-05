@@ -118,13 +118,18 @@ function splitChapterByFragments(
     return { blockIndex, entry, fragment, matches };
   });
 
+  const findNextPhysicalBlockIndex = (blockIndex: number) => located.reduce<number | null>((next, candidate) => {
+    if (candidate.blockIndex <= blockIndex) return next;
+    return next === null ? candidate.blockIndex : Math.min(next, candidate.blockIndex);
+  }, null);
+
   return located.map((item, index) => {
     if (!item.fragment || item.blockIndex < 0) {
       return buildMissingFragmentChapter(chapter, item.entry, `EPUB TOC fragment could not be matched: ${item.entry.href ?? item.fragment}`);
     }
-    const next = located.slice(index + 1).find((candidate) => candidate.blockIndex > item.blockIndex);
+    const nextBlockIndex = findNextPhysicalBlockIndex(item.blockIndex);
     const start = index === 0 && includePreambleInFirstFragment ? 0 : item.blockIndex;
-    const end = next?.blockIndex ?? blocks.length;
+    const end = nextBlockIndex ?? blocks.length;
     const duplicateReason = item.matches > 1 ? `EPUB TOC fragment matched multiple anchors: ${item.entry.href}` : null;
     return buildFragmentChapter({
       blocks: blocks.slice(start, end),
