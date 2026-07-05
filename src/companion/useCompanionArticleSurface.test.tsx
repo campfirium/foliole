@@ -22,6 +22,14 @@ const desktopSyncMock = vi.hoisted(() => ({
 vi.mock('../shared/platform/companionSyncObjects', () => syncObjectMock);
 vi.mock('../shared/platform/companionDesktopSyncObjects', () => desktopSyncMock);
 
+const readingActions = [
+  ['read', 'handleReadReviewTopic'],
+  ['later', 'handlePostponeReviewTopic'],
+  ['dismiss', 'handleDismissReviewTopic']
+] as const;
+type ReadingActionMethod = typeof readingActions[number][1];
+type CompanionArticleSurface = ReturnType<typeof useCompanionArticleSurface>;
+
 function createReadingArticleSnapshot() {
   const snapshot = createCompanionArticleSnapshot();
   snapshot.nodesById['article-1'] = {
@@ -40,13 +48,17 @@ function createReadingArticleSnapshot() {
   return snapshot;
 }
 
-async function expectReadingReviewActionPersists() {
+async function invokeReadingAction(surface: CompanionArticleSurface, method: ReadingActionMethod) {
+  await surface[method]();
+}
+
+async function expectReadingReviewActionPersists(method: ReadingActionMethod) {
   const snapshot = createReadingArticleSnapshot();
   const workspaceSync = createWorkspaceSync(snapshot);
   const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
 
   await act(async () => {
-    await result.current.handleReadReviewTopic();
+    await invokeReadingAction(result.current, method);
   });
 
   expect(workspaceSync.replaceSnapshot).toHaveBeenCalledWith(expect.any(Object), 'article-1');
@@ -185,31 +197,33 @@ describe('useCompanionArticleSurface browse state', () => {
 });
 
 describe('useCompanionArticleSurface reading review persistence', () => {
-  it('persists reading review actions as single-node companion updates', expectReadingReviewActionPersists);
+  it.each(readingActions)('persists %s review actions as single-node companion updates', async (_label, method) => {
+    await expectReadingReviewActionPersists(method);
+  });
 
-  it('does not replace the snapshot when reading review persistence fails', async () => {
+  it.each(readingActions)('does not replace the snapshot when %s persistence fails', async (_label, method) => {
     syncObjectMock.saveCompanionSyncNodeReadingRecord.mockResolvedValueOnce(null as never);
     const snapshot = createReadingArticleSnapshot();
     const workspaceSync = createWorkspaceSync(snapshot);
     const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
 
     await act(async () => {
-      await result.current.handleReadReviewTopic();
+      await invokeReadingAction(result.current, method);
     });
 
     expect(workspaceSync.replaceSnapshot).not.toHaveBeenCalled();
     expect(result.current.readingError).toBe('Failed to persist the reading topic.');
   });
 
-  it('ignores duplicate reading review actions while persistence is in flight', async () => {
+  it.each(readingActions)('ignores duplicate %s actions while persistence is in flight', async (_label, method) => {
     const snapshot = createReadingArticleSnapshot();
     const workspaceSync = createWorkspaceSync(snapshot);
     const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
     syncObjectMock.saveCompanionSyncNodeReadingRecord.mockClear();
 
     await act(async () => {
-      const first = result.current.handleReadReviewTopic();
-      const second = result.current.handleReadReviewTopic();
+      const first = invokeReadingAction(result.current, method);
+      const second = invokeReadingAction(result.current, method);
       await Promise.all([first, second]);
     });
 
