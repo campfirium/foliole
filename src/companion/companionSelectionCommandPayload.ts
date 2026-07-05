@@ -33,14 +33,14 @@ function getDomSelectionRanges(adapter: EditorAdapter): EditorSelection[] {
   if (!selection || selection.isCollapsed || !selection.toString().trim() || !isSelectionInsideReadableArticle(selection)) {
     return [];
   }
-  const textRange = getTextSelectionRange(adapter.getContent(), selection.toString());
-  if (textRange) {
-    return [textRange];
-  }
-  return Array.from({ length: selection.rangeCount }, (_, index) => {
+  const rectRanges = Array.from({ length: selection.rangeCount }, (_, index) => {
     const rects = selection.getRangeAt(index).getClientRects();
     return rects.length > 0 ? getRectPositionRange(adapter, rects) : null;
   }).filter((range): range is EditorSelection => range !== null);
+  if (rectRanges.length > 0) return rectRanges;
+
+  const textRange = getTextSelectionRange(adapter.getContent(), selection.toString());
+  return textRange ? [textRange] : [];
 }
 
 function getTextSelectionRange(content: string, selectionText: string): EditorSelection | null {

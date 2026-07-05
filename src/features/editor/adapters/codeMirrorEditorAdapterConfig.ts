@@ -80,6 +80,11 @@ function createReadOnlyInteractionExtensions(options: CodeMirrorEditorAdapterOpt
     return [];
   }
   return [
+    EditorView.editorAttributes.of({
+      'aria-readonly': 'true',
+      role: 'document',
+      tabindex: '-1'
+    }),
     EditorView.contentAttributes.of({
       'aria-readonly': 'true',
       inputmode: 'none',
@@ -93,11 +98,14 @@ function createReadOnlyDocumentDomHandlers(options: CodeMirrorEditorAdapterOptio
   if (options.readOnlyInteractionMode !== 'document') {
     return {};
   }
+  const blurReadOnlyDocument = (_event: FocusEvent, view: EditorView) => {
+    blurActiveCodeMirrorElement(view);
+    window.setTimeout(() => blurActiveCodeMirrorElement(view), 0);
+    return false;
+  };
   return {
-    focus: (_event: FocusEvent, view: EditorView) => {
-      window.setTimeout(() => blurActiveCodeMirrorElement(view), 0);
-      return false;
-    }
+    focus: blurReadOnlyDocument,
+    focusin: blurReadOnlyDocument
   };
 }
 

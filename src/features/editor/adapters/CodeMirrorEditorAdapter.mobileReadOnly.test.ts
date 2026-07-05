@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
-const { mockContentAttributesOf, mockReadOnlyOf } = vi.hoisted(() => ({
+const { mockContentAttributesOf, mockEditorAttributesOf, mockReadOnlyOf } = vi.hoisted(() => ({
   mockContentAttributesOf: vi.fn((value) => ({ contentAttributes: value })),
+  mockEditorAttributesOf: vi.fn((value) => ({ editorAttributes: value })),
   mockReadOnlyOf: vi.fn((value) => ({ readOnly: value }))
 }));
 
@@ -40,6 +41,7 @@ vi.mock('@codemirror/view', () => ({
   },
   EditorView: {
     contentAttributes: { of: mockContentAttributesOf },
+    editorAttributes: { of: mockEditorAttributesOf },
     decorations: { of: vi.fn((value) => value) },
     domEventHandlers: vi.fn((value) => value),
     editable: { of: vi.fn((value) => ({ editable: value })) },
@@ -103,6 +105,11 @@ describe('CodeMirror mobile read-only mode', () => {
     });
 
     expect(mockReadOnlyOf).toHaveBeenCalledWith(true);
+    expect(mockEditorAttributesOf).toHaveBeenCalledWith({
+      'aria-readonly': 'true',
+      role: 'document',
+      tabindex: '-1'
+    });
     expect(mockContentAttributesOf).toHaveBeenCalledWith({
       'aria-readonly': 'true',
       inputmode: 'none',
