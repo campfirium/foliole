@@ -97,7 +97,7 @@ function createActiveReviewActions(props: Pick<
     );
   }
   if (!props.isAnswerRevealed) {
-    return <FsrsRevealAction onRevealAnswer={props.onRevealAnswer} />;
+    return <FsrsRevealAction onRevealAnswer={props.onRevealAnswer} {...definedProps({ surface: props.surface })} />;
   }
   return (
       <ReviewGradeActions

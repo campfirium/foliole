@@ -145,13 +145,26 @@ export function ReviewGradeActions({
   );
 }
 
-export function FsrsRevealAction({ disabled = false, onRevealAnswer }: { disabled?: boolean; onRevealAnswer: () => void }) {
+export function FsrsRevealAction({
+  disabled = false,
+  onRevealAnswer,
+  surface = 'panel'
+}: {
+  disabled?: boolean;
+  onRevealAnswer: () => void;
+  surface?: ReviewActionSurface;
+}) {
   const t = useTranslation();
+  const label = t('desktop.reviewActions.showAnswer');
+
+  if (surface === 'overlay') {
+    return <ReviewOverlayActionButton disabled={disabled} label={label} onClick={onRevealAnswer} />;
+  }
 
   return (
     <ToolbarActionGroup ariaLabel={t('desktop.reviewActions.reveal.group')} className="gap-2" data-review-toolbar-kind="fsrs-prompt">
-      <AppButton aria-label={t('desktop.reviewActions.showAnswer')} className="min-w-32 px-5" disabled={disabled} onClick={onRevealAnswer} size="md" variant="default">
-        {t('desktop.reviewActions.showAnswer')}
+      <AppButton aria-label={label} className="min-w-32 px-5" disabled={disabled} onClick={onRevealAnswer} size="md" variant="default">
+        {label}
       </AppButton>
     </ToolbarActionGroup>
   );

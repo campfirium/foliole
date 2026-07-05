@@ -57,3 +57,17 @@ it('uses the overlay action button style when resuming from a reading queue', ()
   expect(resumeButton.className).toContain('min-w-20');
   expect(document.querySelectorAll('[data-review-overlay-divider]')).toHaveLength(0);
 });
+
+it('uses the overlay action button style for unrevealed FSRS prompts', () => {
+  renderOverlayResume({
+    isCurrentItemGradable: true,
+    isCurrentReviewItemVisible: true,
+    reviewStatus: 'awaiting-answer'
+  });
+
+  const showAnswerButton = screen.getByRole('button', { name: 'Show Answer' });
+  expect(showAnswerButton).toHaveStyle({ border: '0', borderRadius: '0' });
+  expect(showAnswerButton.className).toContain('min-w-20');
+  expect(showAnswerButton.className).toContain('rounded-none');
+  expect(showAnswerButton.className).not.toContain('min-w-32');
+});
