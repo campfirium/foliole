@@ -1,4 +1,5 @@
 import { ReadableArticleDocument } from './CompanionReadableArticleDocument';
+import { DEFAULT_READING_TYPOGRAPHY_SETTINGS } from './companionReadingTypographySettings';
 import { CompanionReviewFallback } from './CompanionReviewFallback';
 import { createCompanionTopicContentSaveHandler } from './companionTopicEditingController';
 import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
@@ -21,6 +22,7 @@ export function ReadableArticleOrFallback(props: {
         onAttachmentResourceSynced={props.onAttachmentResourceSynced}
         onSaveContent={createCompanionTopicContentSaveHandler(props.workspaceSync)}
         readableArticle={props.surface.readableArticle}
+        readingTypographySettings={DEFAULT_READING_TYPOGRAPHY_SETTINGS}
         syncEndpointUrl={resolveCompanionWorkspaceSyncEndpoint(props.workspaceSync.state)}
       />
     );

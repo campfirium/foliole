@@ -1,6 +1,8 @@
+import { EN_COMPANION_READING_TYPOGRAPHY_TRANSLATIONS } from './enCompanionReadingTypography';
 import { EN_COMPANION_SETTINGS_TRANSLATIONS } from './enCompanionSettings';
 
 export const EN_COMPANION_TRANSLATIONS = {
+  ...EN_COMPANION_READING_TYPOGRAPHY_TRANSLATIONS,
   ...EN_COMPANION_SETTINGS_TRANSLATIONS,
   'companion.app.retry': 'Retry',
   'companion.app.starting.eyebrow': 'Companion runtime',
@@ -87,8 +89,6 @@ export const EN_COMPANION_TRANSLATIONS = {
   'companion.reading.restoreFromTrash': 'Restore from Trash',
   'companion.reading.noHeadings.title': 'No headings in this topic',
   'companion.reading.noHeadings.description': 'Headings will appear here when this topic contains an outline.',
-  'companion.reading.fontComing.title': 'Font controls are coming soon',
-  'companion.reading.fontComing.description': 'Reading font controls are not available on Android yet.',
   'companion.reading.noHighlights.title': 'No highlights in this topic',
   'companion.reading.noHighlights.description': 'Highlights you create in this topic will appear here.',
   'companion.reading.info.topic': 'Topic',

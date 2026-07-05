@@ -8,19 +8,18 @@ function readWorkspaceFile(path: string) {
 }
 
 describe('companion readable typography', () => {
-  it('keeps companion article surfaces free of private reading typography overrides', () => {
+  it('keeps Android reading typography local to companion surfaces', () => {
     const companionFiles = [
       'src/companion/CompanionReadableArticleDocument.tsx',
-      'src/companion/CompanionArticleDocument.tsx',
-      'src/companion/CompanionReadableArticleSurface.tsx',
-      'src/companion/CompanionReadingSheets.tsx'
+      'src/companion/CompanionReadingTypographyControls.tsx',
+      'src/companion/useCompanionReadingTypographySettings.ts'
     ];
 
     const combined = companionFiles.map(readWorkspaceFile).join('\n');
 
-    expect(combined).not.toContain('--content-panel-line-height');
-    expect(combined).not.toContain('--content-panel-font-family');
-    expect(combined).not.toMatch(/fontFamily\s*:/);
-    expect(combined).not.toMatch(/lineHeight\s*:/);
+    expect(combined).toContain('--content-panel-line-height');
+    expect(combined).toContain('--content-panel-font-family');
+    expect(combined).not.toContain('saveCompanionSyncSettingRecord');
+    expect(combined).not.toContain('appSettingsClassification');
   });
 });

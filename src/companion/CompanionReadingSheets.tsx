@@ -5,6 +5,8 @@ import { useTranslation } from '../shared/localization/LocalizationProvider';
 
 import { CompanionBottomSheet } from './CompanionBottomSheet';
 import type { CompanionHighlightPanelItem } from './companionHighlightPanelModel';
+import { CompanionReadingTypographyControls } from './CompanionReadingTypographyControls';
+import type { CompanionReadingTypographySettings } from './companionReadingTypographySettings';
 
 import { extractDocumentOutline } from '@/features/editor/model/documentOutline';
 import { AppEmptyState } from '@/shared/ui';
@@ -120,19 +122,15 @@ export function OutlineSheet(props: {
 }
 
 export function ReadingFontSheet(props: {
+  onChange(settings: CompanionReadingTypographySettings): void;
   onOpenChange(open: boolean): void;
   open: boolean;
+  settings: CompanionReadingTypographySettings;
 }) {
   const t = useTranslation();
   return (
     <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.font')}>
-      <div className="border-t border-companion-divider py-5">
-        <AppEmptyState
-          className="min-h-0 items-start text-left text-companion-text-secondary"
-          description={t('companion.reading.fontComing.description')}
-          title={t('companion.reading.fontComing.title')}
-        />
-      </div>
+      <CompanionReadingTypographyControls onChange={props.onChange} settings={props.settings} />
     </ReadingBottomSheet>
   );
 }

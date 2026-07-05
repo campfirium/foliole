@@ -67,6 +67,20 @@ function mockWorkspaceSync() {
 }
 
 function createSurface(activeAction: 'recent' | 'review' | 'search') {
+  const reviewSession = {
+    currentCard: activeAction === 'review'
+      ? {
+          content: 'Readable topic body',
+          itemKind: 'reading' as const,
+          nodeId: 'topic-1',
+          title: 'Readable article'
+        }
+      : null,
+    nextFsrsDueAt: null,
+    nextReadingDueAt: null,
+    scheduledFsrsCount: 0,
+    scheduledReadingCount: 0
+  };
   return {
     activeAction,
     browsedFolder: null,
@@ -85,20 +99,9 @@ function createSurface(activeAction: 'recent' | 'review' | 'search') {
     recentArticles: [],
     readingError: null,
     reviewError: null,
-    reviewSession: {
-      currentCard: activeAction === 'review'
-        ? {
-            content: 'Readable topic body',
-            itemKind: 'reading',
-            nodeId: 'topic-1',
-            title: 'Readable article'
-          }
-        : null,
-      nextFsrsDueAt: null,
-      nextReadingDueAt: null,
-      scheduledFsrsCount: 0,
-      scheduledReadingCount: 0
-    },
+    effectiveReviewSession: reviewSession,
+    onlyReviewSession: { ...reviewSession, currentCard: null, scheduledReadingCount: 0 },
+    reviewSession,
     selectedBrowseNodeId: null
   };
 }
@@ -205,7 +208,6 @@ describe('CompanionShell navigation', () => {
     await renderShellWithSurface(surface);
 
     expect(screen.queryByTestId('companion-bottom-tab-bar')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Exit' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByText(/Readable topic body/));
 
@@ -219,7 +221,8 @@ describe('CompanionShell navigation', () => {
     expect(screen.getByText('Readable article')).toBeInTheDocument();
     openReadingAction('Font');
     expect(screen.getByRole('dialog', { name: 'Font' })).toBeInTheDocument();
-    expect(screen.getByText('Reading font controls are not available on Android yet.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Extra large' }));
+    expect(screen.getByTestId('companion-article-document').parentElement).toHaveAttribute('data-reading-font-size', 'xlarge');
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     openReadingAction('Highlight');
     expect(screen.getByRole('dialog', { name: 'Highlight' })).toBeInTheDocument();

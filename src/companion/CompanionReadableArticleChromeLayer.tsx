@@ -10,6 +10,7 @@ import {
   ReadingHighlightSheet,
   ReadingInfoSheet
 } from './CompanionReadingSheets';
+import type { CompanionReadingTypographySettings } from './companionReadingTypographySettings';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 
 import type { EditorAdapter } from '@/features/editor/adapters/EditorAdapter';
@@ -22,8 +23,10 @@ function ReadingSheetsLayer(props: {
   onOpenReadingSheet(sheet: 'font' | 'highlight' | 'info' | null): void;
   onOpenSearchSheet(open: boolean): void;
   onOpenOutline(open: boolean): void;
+  onReadingTypographySettingsChange(settings: CompanionReadingTypographySettings): void;
   onSelectOutlineItem(item: { from: number; to: number }): void;
   openReadingSheet: 'font' | 'highlight' | 'info' | null;
+  readingTypographySettings: CompanionReadingTypographySettings;
   searchOpen: boolean;
   outlineOpen: boolean;
   readableArticle: ReadableArticle;
@@ -44,7 +47,12 @@ function ReadingSheetsLayer(props: {
         onSelect={props.onSelectOutlineItem}
         open={props.outlineOpen}
       />
-      <ReadingFontSheet onOpenChange={(open) => props.onOpenReadingSheet(open ? 'font' : null)} open={props.openReadingSheet === 'font'} />
+      <ReadingFontSheet
+        onChange={props.onReadingTypographySettingsChange}
+        onOpenChange={(open) => props.onOpenReadingSheet(open ? 'font' : null)}
+        open={props.openReadingSheet === 'font'}
+        settings={props.readingTypographySettings}
+      />
       <ReadingHighlightSheet
         highlights={highlights}
         onOpenChange={(open) => props.onOpenReadingSheet(open ? 'highlight' : null)}
@@ -78,12 +86,14 @@ export function ImmersiveChromeLayer(props: {
   onOpenOutline(open: boolean): void;
   onOpenReadingSheet(sheet: 'font' | 'highlight' | 'info' | null): void;
   onOpenSearchSheet(open: boolean): void;
+  onReadingTypographySettingsChange(settings: CompanionReadingTypographySettings): void;
   onRestoreFromTrash?: (nodeId: string) => Promise<void> | void;
   onSelectOutlineItem(item: { from: number; to: number }): void;
   onToggleContentEditing(): void;
   openReadingSheet: 'font' | 'highlight' | 'info' | null;
   outlineOpen: boolean;
   readableArticle: ReadableArticle;
+  readingTypographySettings: CompanionReadingTypographySettings;
   searchOpen: boolean;
   snapshot?: WorkspaceSnapshot | null;
 }) {
@@ -114,8 +124,10 @@ export function ImmersiveChromeLayer(props: {
         onOpenOutline={props.onOpenOutline}
         onOpenReadingSheet={props.onOpenReadingSheet}
         onOpenSearchSheet={props.onOpenSearchSheet}
+        onReadingTypographySettingsChange={props.onReadingTypographySettingsChange}
         onSelectOutlineItem={props.onSelectOutlineItem}
         openReadingSheet={props.openReadingSheet}
+        readingTypographySettings={props.readingTypographySettings}
         searchOpen={props.searchOpen}
         outlineOpen={props.outlineOpen}
         readableArticle={props.readableArticle}

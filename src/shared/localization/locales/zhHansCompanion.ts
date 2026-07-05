@@ -1,8 +1,10 @@
 import type { TranslationKey } from '../translations';
 
+import { ZH_HANS_COMPANION_READING_TYPOGRAPHY_TRANSLATIONS } from './zhHansCompanionReadingTypography';
 import { ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS } from './zhHansCompanionSettings';
 
 export const ZH_HANS_COMPANION_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  ...ZH_HANS_COMPANION_READING_TYPOGRAPHY_TRANSLATIONS,
   ...ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS,
   'companion.app.retry': '重试',
   'companion.app.starting.eyebrow': '移动端运行环境',
@@ -86,8 +88,6 @@ export const ZH_HANS_COMPANION_TRANSLATIONS: Partial<Record<TranslationKey, stri
   'companion.reading.restoreFromTrash': '从废纸篓恢复',
   'companion.reading.noHeadings.title': '这个主题没有标题',
   'companion.reading.noHeadings.description': '当这个主题包含标题时，大纲会显示在这里。',
-  'companion.reading.fontComing.title': '字体控制即将可用',
-  'companion.reading.fontComing.description': 'Android 上暂时还不能使用阅读字体控制。',
   'companion.reading.noHighlights.title': '这个主题没有高亮',
   'companion.reading.noHighlights.description': '你在这个主题中创建的高亮会显示在这里。',
   'companion.reading.info.topic': '主题',

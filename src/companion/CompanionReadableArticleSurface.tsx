@@ -3,8 +3,10 @@ import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapsho
 import { ImmersiveChromeLayer } from './CompanionReadableArticleChromeLayer';
 import { ReadableArticleDocument } from './CompanionReadableArticleDocument';
 import { SelectionAnnotationToolbarLayer } from './CompanionReadableArticleSelectionToolbarLayer';
+import type { CompanionReadingTypographySettings } from './companionReadingTypographySettings';
 import { type CompanionSelectionAnnotationKind } from './CompanionSelectionAnnotationToolbar';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
+import { useCompanionReadingTypographySettings } from './useCompanionReadingTypographySettings';
 import { useCompanionSelectionAnnotationToolbar } from './useCompanionSelectionAnnotationToolbar';
 import { useImmersiveReadableArticleState } from './useImmersiveReadableArticleState';
 
@@ -37,6 +39,7 @@ function ImmersiveArticleContent(props: {
   onEditorReady(adapter: EditorAdapter | null): void;
   onSaveArticleContent?: (nodeId: string, content: string) => Promise<void>;
   readableArticle: ReadableArticle;
+  readingTypographySettings: CompanionReadingTypographySettings;
   readingSelection: EditorSelection | null;
   syncEndpointUrl?: string | null;
 }) {
@@ -46,6 +49,7 @@ function ImmersiveArticleContent(props: {
         allowContentEditing={props.isContentEditing}
         onEditorReady={props.onEditorReady}
         readableArticle={props.readableArticle}
+        readingTypographySettings={props.readingTypographySettings}
         readingSelection={props.readingSelection}
         scrollContainer="outer"
         {...definedProps({
@@ -83,6 +87,7 @@ function useImmersiveReadableArticleModel(props: ImmersiveReadableArticleProps) 
 
 export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
   const model = useImmersiveReadableArticleModel(props);
+  const readingTypography = useCompanionReadingTypographySettings();
   return (
     <section
       className={model.surfaceClassName}
@@ -104,11 +109,13 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
           onOpenOutline={model.reading.setIsOutlineOpen}
           onOpenReadingSheet={model.reading.setOpenReadingSheet}
           onOpenSearchSheet={model.reading.setIsSearchSheetOpen}
+          onReadingTypographySettingsChange={readingTypography.updateSettings}
           onSelectOutlineItem={model.selectOutlineItem}
           onToggleContentEditing={model.toggleContentEditing}
           openReadingSheet={model.reading.openReadingSheet}
           outlineOpen={model.reading.isOutlineOpen}
           readableArticle={props.readableArticle}
+          readingTypographySettings={readingTypography.settings}
           searchOpen={model.reading.isSearchSheetOpen}
           {...definedProps({ onRestoreFromTrash: props.onRestoreFromTrash })}
         />
@@ -117,6 +124,7 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
         isContentEditing={model.reading.isContentEditing}
         onEditorReady={model.toolbar.handleEditorReady}
         readableArticle={props.readableArticle}
+        readingTypographySettings={readingTypography.settings}
         readingSelection={model.reading.readingSelection}
         {...definedProps({
           onAttachmentResourceSynced: props.onAttachmentResourceSynced,
