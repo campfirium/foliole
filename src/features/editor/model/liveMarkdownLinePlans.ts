@@ -81,6 +81,7 @@ function collectPreviewTextDecorationPlans(args: {
 }
 
 function resolvePreviewLineClass(args: {
+  hideTitleHeading: boolean;
   inCodeBlock: boolean;
   isCodeFenceLine: boolean;
   lineClassByFrom?: ReadonlyMap<number, string>;
@@ -96,6 +97,9 @@ function resolvePreviewLineClass(args: {
       : args.linkReferenceLineFroms?.has(args.lineFrom)
         ? 'cm-line-link-reference-hidden'
       : args.lineClassByFrom?.get(args.lineFrom) ?? null;
+  if (args.hideTitleHeading && args.lineNumber === 1 && baseLineClass === 'cm-line-h1') {
+    return 'cm-line-title-heading-hidden';
+  }
   return args.isCodeFenceLine && !args.showSyntaxOnLine
       ? 'cm-line-code-fence-hidden'
     : baseLineClass;
@@ -126,6 +130,7 @@ export function collectPreviewLineDecorationPlan(args: PreviewLineDecorationPlan
   const showSyntaxOnLine = args.markdownSyntaxVisible && args.isCursorLine;
   const linkReferences = args.linkReferences ?? new Map();
   const lineClass = resolvePreviewLineClass({
+    hideTitleHeading: args.hideTitleHeading,
     inCodeBlock: args.inCodeBlock,
     isCodeFenceLine,
     ...(args.lineClassByFrom ? { lineClassByFrom: args.lineClassByFrom } : {}),

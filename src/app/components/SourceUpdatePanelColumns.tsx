@@ -11,10 +11,9 @@ import { SourceUpdateOverviewRuler } from './SourceUpdateOverviewRuler';
 const DOCUMENT_PREVIEW_PANE_CLASS_NAME =
   'flex min-h-0 min-w-0 flex-col overflow-hidden bg-[var(--workspace-region-main-document-bg)]';
 const REFERENCE_PREVIEW_PANE_CLASS_NAME =
-  'flex min-h-0 min-w-0 flex-col overflow-hidden border-l border-border bg-[var(--workspace-region-main-document-bg)]';
-const REFERENCE_HEADER_SURFACE_CLASS_NAME = 'border-l border-border bg-[var(--workspace-region-main-document-bg)]';
+  'flex min-h-0 min-w-0 flex-col overflow-hidden border-l border-foreground/[0.10] bg-[var(--workspace-region-main-document-bg)]';
 const OVERVIEW_PANE_CLASS_NAME =
-  'flex min-h-0 min-w-0 flex-col overflow-hidden border-l border-border bg-[var(--app-floating-muted-bg)]';
+  'flex min-h-0 min-w-0 flex-col overflow-hidden bg-[var(--workspace-region-main-document-bg)]';
 
 interface DocumentSourceUpdatePanelLayoutProps {
   currentContent: string;
@@ -45,11 +44,13 @@ interface SourceUpdatePanelColumnsProps {
   updatedMeasuredHighlights: EditorDiffDecorations | null;
 }
 
-function PanelColumnLabel({ title }: { title: string }) {
+function PaneLabel({ mode, title }: { mode: string; title: string }) {
   return (
-    <header className="flex h-9 flex-none items-center border-b border-border px-4">
-      <h3 className="text-[11px] font-medium text-foreground/55">{title}</h3>
-    </header>
+    <div className="flex h-8 flex-none items-center gap-1.5 pl-[calc(1rem+var(--document-content-inline-padding))] pr-4 pt-1 text-[11px] font-medium text-foreground/45">
+      <span>{title}</span>
+      <span aria-hidden="true" className="text-foreground/25">·</span>
+      <span className="text-foreground/35">{mode}</span>
+    </div>
   );
 }
 
@@ -100,10 +101,13 @@ function PreviewDocumentPane({
 
 function SourceUpdatePaneBody(props: {
   className: string;
+  labelMode: string;
+  labelTitle: string;
   paneProps: ComponentProps<typeof PreviewDocumentPane>;
 }) {
   return (
     <section className={props.className}>
+      <PaneLabel mode={props.labelMode} title={props.labelTitle} />
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <PreviewDocumentPane {...props.paneProps} />
       </div>
@@ -144,18 +148,17 @@ export function SourceUpdatePanelColumns(props: SourceUpdatePanelColumnsProps) {
 
   return (
     <>
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1fr)_2.75rem] grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
-        <PanelColumnLabel title={t('desktop.sourceUpdate.current.title')} />
-        <div className={REFERENCE_HEADER_SURFACE_CLASS_NAME}>
-          <PanelColumnLabel title={t('desktop.sourceUpdate.updated.title')} />
-        </div>
-        <div aria-hidden="true" className={`${REFERENCE_HEADER_SURFACE_CLASS_NAME} border-b`} />
+      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1fr)_3.5rem] overflow-hidden">
         <SourceUpdatePaneBody
           className={DOCUMENT_PREVIEW_PANE_CLASS_NAME}
+          labelMode={t('desktop.sourceUpdate.current.mode')}
+          labelTitle={t('desktop.sourceUpdate.current.title')}
           paneProps={currentPaneProps}
         />
         <SourceUpdatePaneBody
           className={REFERENCE_PREVIEW_PANE_CLASS_NAME}
+          labelMode={t('desktop.sourceUpdate.updated.mode')}
+          labelTitle={t('desktop.sourceUpdate.updated.title')}
           paneProps={updatedPaneProps}
         />
         <section className={OVERVIEW_PANE_CLASS_NAME}>

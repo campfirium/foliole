@@ -8,6 +8,11 @@ export interface DiscourseTopicBinding {
   url: string;
 }
 
+export interface DiscoursePublishedMeta {
+  lastPublishedAt: string;
+  url: string;
+}
+
 export type DiscoursePublishMode = 'create' | 'update';
 
 export class DiscourseFrontmatterError extends Error {
@@ -102,6 +107,15 @@ export function readDiscourseTopicBinding(content: string): DiscourseTopicBindin
     topicId,
     url
   };
+}
+
+export function readDiscoursePublishedMeta(content: string): DiscoursePublishedMeta | null {
+  try {
+    const binding = readDiscourseTopicBinding(content);
+    return binding ? { lastPublishedAt: binding.lastPublishedAt, url: binding.url } : null;
+  } catch {
+    return null;
+  }
 }
 
 export function readDiscoursePublishMarkdown(content: string) {

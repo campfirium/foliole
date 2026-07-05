@@ -40,6 +40,7 @@ const STORAGE_COMMANDS = [
   NATIVE_COMMANDS.loadNodeSourceUpdatePreview,
   NATIVE_COMMANDS.acceptIncomingUpdate,
   NATIVE_COMMANDS.dismissIncomingUpdate,
+  NATIVE_COMMANDS.importIncomingUpdateAsNew,
   NATIVE_COMMANDS.mergeReadwiseTopicHighlights,
   NATIVE_COMMANDS.loadImportOverview,
   NATIVE_COMMANDS.loadRemovedSources,

@@ -7,6 +7,9 @@ import { appSurfaceControlClassName } from '../../shared/ui';
 
 import type { SourceUpdateOverviewKind, SourceUpdateOverviewSegment } from './sourceUpdateDiffModel';
 
+const MAX_MARKER_BLOCK_ROWS = 2;
+const MIN_MARKER_HEIGHT_PERCENT = 2.8;
+
 function buildLineStartPositions(content: string) {
   const starts = [0];
   let position = 0;
@@ -28,12 +31,12 @@ function getLineStartPosition(lineStarts: number[], lineNumber: number | null) {
 
 function getMarkerClassName(kind: SourceUpdateOverviewKind, active: boolean) {
   if (kind === 'current-only') {
-    return active ? 'bg-destructive' : 'bg-destructive/75 hover:bg-destructive';
+    return active ? 'text-foreground/[0.16]' : 'text-foreground/[0.08] hover:text-foreground/[0.14]';
   }
   if (kind === 'updated-only') {
-    return active ? 'bg-accent' : 'bg-accent/70 hover:bg-accent';
+    return active ? 'text-foreground/[0.16]' : 'text-foreground/[0.08] hover:text-foreground/[0.14]';
   }
-  return active ? 'bg-foreground/85' : 'bg-foreground/55 hover:bg-foreground';
+  return active ? 'text-foreground/[0.16]' : 'text-foreground/[0.08] hover:text-foreground/[0.14]';
 }
 
 type Translate = ReturnType<typeof useTranslation>;
@@ -99,21 +102,24 @@ function revealSegmentAtIndex(
   onRevealSegment(segment);
 }
 
-function OverviewNavButton(props: {
-  ariaLabel: string;
-  children: ReactNode;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      aria-label={props.ariaLabel}
-      className={appSurfaceControlClassName('pointer-events-auto flex h-5 w-5 items-center justify-center px-0 text-foreground/70')}
-      onClick={props.onClick}
-      type="button"
-    >
-      {props.children}
-    </button>
-  );
+function getSegmentRows(segment: SourceUpdateOverviewSegment) {
+  return Math.max(segment.endRow - segment.row + 1, 1);
+}
+
+function getMarkerBlockCount(segment: SourceUpdateOverviewSegment) {
+  return Math.max(Math.ceil(getSegmentRows(segment) / MAX_MARKER_BLOCK_ROWS), 1);
+}
+
+function renderMarkerBlocks(segment: SourceUpdateOverviewSegment) {
+  const blockCount = getMarkerBlockCount(segment);
+  return Array.from({ length: blockCount }, (_, index) => (
+    <span
+      aria-hidden="true"
+      className="min-h-2 flex-1 rounded-sm bg-current"
+      data-testid="source-update-overview-marker-block"
+      key={`${segment.id}-block-${index}`}
+    />
+  ));
 }
 
 function renderOverviewMarkers(
@@ -125,12 +131,12 @@ function renderOverviewMarkers(
 ) {
   return overviewSegments.map((segment, index) => {
     const top = ((segment.row - 1) / totalRows) * 100;
-    const height = (Math.max(segment.endRow - segment.row + 1, 1) / totalRows) * 100;
+    const height = Math.max((getSegmentRows(segment) / totalRows) * 100, MIN_MARKER_HEIGHT_PERCENT);
 
     return (
       <button
         aria-label={getMarkerLabel(t, segment)}
-        className={`pointer-events-auto absolute inset-x-0 transition-colors ${getMarkerClassName(segment.kind, index === activeIndex)}`}
+        className={`pointer-events-auto absolute left-1/2 flex w-6 -translate-x-1/2 flex-col gap-1 rounded-sm transition-colors ${getMarkerClassName(segment.kind, index === activeIndex)}`}
         data-kind={segment.kind}
         data-testid="source-update-overview-marker"
         key={segment.id}
@@ -138,14 +144,30 @@ function renderOverviewMarkers(
           event.stopPropagation();
           onMarkerClick(index);
         }}
-        style={{
-          height: `max(${height}%, 6px)`,
-          top: `${top}%`
-        }}
+        style={{ top: `${top}%`, height: `${height}%` }}
         type="button"
-      />
+      >
+        {renderMarkerBlocks(segment)}
+      </button>
     );
   });
+}
+
+function OverviewNavButton(props: {
+  ariaLabel: string;
+  children: ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      aria-label={props.ariaLabel}
+      className={appSurfaceControlClassName('pointer-events-auto flex h-5 w-5 items-center justify-center px-0 text-foreground/55')}
+      onClick={props.onClick}
+      type="button"
+    >
+      {props.children}
+    </button>
+  );
 }
 
 export function SourceUpdateOverviewRuler({
@@ -187,13 +209,13 @@ export function SourceUpdateOverviewRuler({
   return (
     <aside
       aria-label={t('desktop.sourceUpdate.overview.aria')}
-      className="flex min-h-0 flex-1 flex-col items-center gap-2 px-1 py-3"
+      className="flex min-h-0 flex-1 flex-col items-center gap-3 px-1 py-4"
       data-testid="source-update-overview-ruler"
     >
       <OverviewNavButton ariaLabel={t('desktop.sourceUpdate.overview.previous')} onClick={moveToPrevious}>
         <ChevronUp aria-hidden="true" size={12} strokeWidth={2.2} />
       </OverviewNavButton>
-      <div className="pointer-events-none relative flex-1 w-3">
+      <div className="pointer-events-none relative w-full flex-1">
         {renderOverviewMarkers(t, activeIndex, overviewSegments, totalRows, (index) =>
           revealSegmentAtIndex(index, overviewSegments, handleRevealSegment, setActiveIndex)
         )}

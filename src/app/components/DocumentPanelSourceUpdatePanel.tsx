@@ -9,6 +9,7 @@ interface DocumentPanelSourceUpdatePanelProps {
   onAcceptIncomingUpdate?: () => Promise<void>;
   onCurrentContentChange: (content: string) => void;
   onDismissIncomingUpdate?: () => Promise<void>;
+  onImportIncomingUpdateAsNew?: () => Promise<void>;
   onOpenChange: (open: boolean) => void;
   open: boolean;
   updatedHighlightCount: number;
@@ -26,6 +27,7 @@ export function DocumentPanelSourceUpdatePanel(props: DocumentPanelSourceUpdateP
       {...(props.onAcceptIncomingUpdate ? { onAcceptIncomingUpdate: props.onAcceptIncomingUpdate } : {})}
       onCurrentContentChange={props.onCurrentContentChange}
       {...(props.onDismissIncomingUpdate ? { onDismissIncomingUpdate: props.onDismissIncomingUpdate } : {})}
+      {...(props.onImportIncomingUpdateAsNew ? { onImportIncomingUpdateAsNew: props.onImportIncomingUpdateAsNew } : {})}
       onOpenChange={props.onOpenChange}
       open={props.open}
       updatedHighlightCount={props.updatedHighlightCount}

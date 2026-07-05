@@ -11,9 +11,10 @@ type KeydownEntry = {
 
 let nextKeydownEntryId = 1;
 let isWindowEscapeListening = false;
+let isDocumentEscapeListening = false;
 let isWindowKeydownCaptureListening = false;
 let isWindowKeydownListening = false;
-let lastDomEscapeAt = 0;
+let lastConsumedDomEscapeAt = 0;
 let nativeEscapeFallbackId = 0;
 let unlistenNativeKeyboardInput: KeydownUnlisten | null = null;
 const keydownEntries: KeydownEntry[] = [];
@@ -42,9 +43,11 @@ function stopWindowKeydownIfIdle() {
   }
   if (isWindowEscapeListening && escapeEntries.length === 0 && priorityEscapeEntries.length === 0) {
     window.removeEventListener('keydown', dispatchWindowEscapeCapture, true);
+    document.removeEventListener('keydown', dispatchWindowEscapeCapture, true);
     unlistenNativeKeyboardInput?.();
     unlistenNativeKeyboardInput = null;
     isWindowEscapeListening = false;
+    isDocumentEscapeListening = false;
   }
 }
 
@@ -82,7 +85,7 @@ function dispatchNativeEscapeFallback(payload: NativeKeyboardInputPayload) {
   nativeEscapeFallbackId = fallbackId;
   const scheduledAt = Date.now();
   window.setTimeout(() => {
-    if (nativeEscapeFallbackId !== fallbackId || lastDomEscapeAt >= scheduledAt) {
+    if (nativeEscapeFallbackId !== fallbackId || lastConsumedDomEscapeAt >= scheduledAt) {
       return;
     }
     consumeEscape(createNativeEscapeEvent());
@@ -105,9 +108,8 @@ function dispatchWindowEscapeCapture(event: KeyboardEvent) {
   if (event.defaultPrevented || event.key !== 'Escape') {
     return;
   }
-  lastDomEscapeAt = Date.now();
   if (consumeEscape(event)) {
-    return;
+    lastConsumedDomEscapeAt = Date.now();
   }
 }
 
@@ -141,6 +143,10 @@ function listenWindowEscape() {
   if (!isWindowEscapeListening) {
     window.addEventListener('keydown', dispatchWindowEscapeCapture, true);
     isWindowEscapeListening = true;
+  }
+  if (!isDocumentEscapeListening && typeof document !== 'undefined') {
+    document.addEventListener('keydown', dispatchWindowEscapeCapture, true);
+    isDocumentEscapeListening = true;
   }
   listenNativeKeyboardInput();
 }

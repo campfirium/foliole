@@ -32,6 +32,7 @@ export const NATIVE_COMMANDS = {
   loadNodeSourceUpdatePreview: 'load_node_source_update_preview',
   acceptIncomingUpdate: 'accept_incoming_update',
   dismissIncomingUpdate: 'dismiss_incoming_update',
+  importIncomingUpdateAsNew: 'import_incoming_update_as_new',
   mergeReadwiseTopicHighlights: 'merge_readwise_topic_highlights',
   previewKeepImportRule: 'preview_keep_import_rule',
   loadImportOverview: 'load_import_overview',

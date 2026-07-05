@@ -53,6 +53,10 @@ export type NativeImportCommandMap = {
     args: { incoming_update_id: string };
     result: { incoming_update_id: string; node_id: string | null; status: 'dismissed' | 'unavailable' };
   };
+  [NATIVE_COMMANDS.importIncomingUpdateAsNew]: {
+    args: { incoming_update_id: string };
+    result: { incoming_update_id: string; node_id: string | null; status: 'imported_as_new' | 'unavailable' };
+  };
   [NATIVE_COMMANDS.mergeReadwiseTopicHighlights]: {
     args: { node_id: string };
     result: NativeMergeReadwiseTopicHighlightsResult;

@@ -1,5 +1,9 @@
+import path from 'node:path';
+
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
+import { writeNewNode } from '../../lib/core/database/importPipelineNodes.js';
 import type { NodeAnchorLinkPayload, NodeImageRegionGroupPayload } from '../../lib/core/database/nodeMutationPayloads.js';
+import { resolveImportedNodeTitle, shouldHideImportedTitleHeading } from '../../lib/core/import/importedNodeTitle.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { enqueueCoalescedWorkspaceSearchInvalidation } from '../database/searchIndexInvalidationCoalescer.js';
@@ -184,4 +188,33 @@ export function dismissPendingIncomingUpdate(id: string) {
   }
   clearPendingIncomingUpdate(id);
   return { incoming_update_id: id, node_id: update.topicId, status: 'dismissed' as const };
+}
+
+export function importPendingIncomingUpdateAsNewTopic(id: string) {
+  const update = loadPendingIncomingUpdateById(id);
+  if (!update) {
+    return { incoming_update_id: id, node_id: null, status: 'unavailable' as const };
+  }
+  const node = readIncomingUpdateNode(update);
+  if (!node) {
+    clearPendingIncomingUpdate(id);
+    return { incoming_update_id: id, node_id: update.topicId, status: 'unavailable' as const };
+  }
+  const importedAt = new Date().toISOString();
+  const sourceName = path.basename(update.sourcePath) || 'incoming-update.md';
+  const newNodeId = writeNewNode({
+    content: update.updatedContent,
+    driver: openDatabaseConnection().driver,
+    hideTitleHeading: shouldHideImportedTitleHeading(update.updatedContent),
+    importedAt,
+    targetParentNodeId: node.parent_id,
+    title: resolveImportedNodeTitle({
+      content: update.updatedContent,
+      sourceName,
+      titleStrategy: 'heading'
+    })
+  });
+  clearPendingIncomingUpdate(id);
+  scheduleMirrorSync([newNodeId]);
+  return { incoming_update_id: id, node_id: newNodeId, status: 'imported_as_new' as const };
 }

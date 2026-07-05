@@ -24,7 +24,7 @@ vi.mock('./DocumentPanelBody', () => ({
   }
 }));
 
-function renderPanel(currentContent: string, updatedContent: string) {
+function renderPanel(currentContent: string, updatedContent: string, onOpenChange = () => undefined) {
   renderWithLocalization(
     <DocumentSourceUpdatePanel
       currentContent={currentContent}
@@ -33,7 +33,7 @@ function renderPanel(currentContent: string, updatedContent: string) {
       documentMaxWidth={760}
       editorAppearanceKey="appearance-1"
       onCurrentContentChange={() => undefined}
-      onOpenChange={() => undefined}
+      onOpenChange={onOpenChange}
       open
       updatedHighlightCount={2}
       updatedContent={updatedContent}
@@ -80,14 +80,28 @@ describe('DocumentSourceUpdatePanel rendering', () => {
   });
 
   it('shows a compact review chrome while keeping the overview ruler', () => {
-    renderPanel('first\nsecond\nfourth', 'first\nsecond\nthird\nfourth changed');
+    renderPanel('# Existing title\nsecond\nfourth', '# Updated topic\nsecond\nthird\nfourth changed');
 
-    expect(screen.getByText('Review update')).toBeInTheDocument();
-    expect(screen.getByText('Current')).toBeInTheDocument();
     expect(screen.getByText('Incoming update')).toBeInTheDocument();
+    expect(screen.getByText('Compare imported file with current document')).toBeInTheDocument();
+    expect(screen.queryByText('Updated topic')).not.toBeInTheDocument();
+    expect(screen.getByText('Current')).toBeInTheDocument();
+    expect(screen.getByText('editable')).toBeInTheDocument();
+    expect(screen.getByText('Incoming')).toBeInTheDocument();
+    expect(screen.getByText('read-only')).toBeInTheDocument();
     expect(screen.getByLabelText('Comparison overview ruler')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Close source update panel')).not.toBeInTheDocument();
     expect(screen.queryByText('1 highlight')).not.toBeInTheDocument();
     expect(screen.queryByText('Incoming has 2 highlights, from 1')).not.toBeInTheDocument();
+  });
+
+  it('closes with Escape without a visible close button', () => {
+    const onOpenChange = vi.fn();
+
+    renderPanel('alpha', 'beta', onOpenChange);
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+
+    expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
 });
@@ -211,39 +225,15 @@ describe('DocumentSourceUpdatePanel overview ruler', () => {
     expect(updatedAdapter.revealPosition).toHaveBeenCalledWith(11);
   });
 
-  it('jumps between diff segments with overview navigation buttons', () => {
-    renderPanel('one\ntwo\nleft only\nfour\nleft tail', 'one\ntwo\nright only\nfour\nright tail');
+  it('splits a tall overview marker into blocks while keeping jump controls', () => {
+    renderPanel(
+      'one\ntwo\nthree\nfour\nfive\nsix\nseven',
+      'one\ntwo updated\nthree updated\nfour updated\nfive updated\nsix updated\nseven'
+    );
 
-    const currentAdapter = createScrollAdapter();
-    const updatedAdapter = createScrollAdapter();
-
-    attachPanelAdapters(documentPanelBodyMock.mock.calls, currentAdapter, updatedAdapter);
-
-    const previousButton = screen.getByLabelText('Jump to previous diff') as HTMLButtonElement;
-    const nextButton = screen.getByLabelText('Jump to next diff') as HTMLButtonElement;
-
-    expect(previousButton.disabled).toBe(false);
-    expect(nextButton.disabled).toBe(false);
-
-    fireEvent.click(previousButton);
-
-    expect(currentAdapter.revealPosition).toHaveBeenLastCalledWith(23);
-    expect(updatedAdapter.revealPosition).toHaveBeenLastCalledWith(24);
-
-    fireEvent.click(nextButton);
-
-    expect(currentAdapter.revealPosition).toHaveBeenLastCalledWith(8);
-    expect(updatedAdapter.revealPosition).toHaveBeenLastCalledWith(8);
-
-    fireEvent.click(previousButton);
-
-    expect(currentAdapter.revealPosition).toHaveBeenLastCalledWith(23);
-    expect(updatedAdapter.revealPosition).toHaveBeenLastCalledWith(24);
-
-    fireEvent.click(nextButton);
-    fireEvent.click(nextButton);
-
-    expect(currentAdapter.revealPosition).toHaveBeenLastCalledWith(23);
-    expect(updatedAdapter.revealPosition).toHaveBeenLastCalledWith(24);
+    expect(screen.getAllByTestId('source-update-overview-marker')).toHaveLength(1);
+    expect(screen.getAllByTestId('source-update-overview-marker-block')).toHaveLength(3);
+    expect(screen.getByLabelText('Jump to previous diff')).toBeInTheDocument();
+    expect(screen.getByLabelText('Jump to next diff')).toBeInTheDocument();
   });
 });

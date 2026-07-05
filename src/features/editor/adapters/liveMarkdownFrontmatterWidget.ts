@@ -1,20 +1,19 @@
 import { StateEffect } from '@codemirror/state';
 import { EditorView, WidgetType } from '@codemirror/view';
 
+import type { DiscoursePublishedMeta } from '../../../../lib/core/discourse/discourseFrontmatter';
 import { getStoredAppLocale } from '../../../shared/localization/appLanguage';
 import { translate, type TranslationKey } from '../../../shared/localization/translations';
 import { parseFrontmatterMetaFieldGroups } from '../model/frontmatterMetaFieldsSetting';
 import type { FrontmatterEntry } from '../model/markdownFrontmatterProjection';
 
+import {
+  createDiscoursePublishedMetaItem,
+  type FrontmatterMetaItem
+} from './liveMarkdownFrontmatterDiscourseMeta';
 import { openExternalLinkFacet } from './liveMarkdownState';
 
 export const setFrontmatterModeEffect = StateEffect.define<'compact' | 'full'>();
-
-interface FrontmatterMetaItem {
-  href: string | null;
-  text: string;
-  tooltip: string;
-}
 
 function t(key: TranslationKey) {
   return translate(getStoredAppLocale(), key);
@@ -123,20 +122,21 @@ function createSeparator() {
 export class FrontmatterCompactWidget extends WidgetType {
   constructor(
     private readonly entries: readonly FrontmatterEntry[],
-    private readonly metaFields: string
+    private readonly metaFields: string,
+    private readonly discourseMeta: DiscoursePublishedMeta | null
   ) {
     super();
   }
 
   override eq(other: FrontmatterCompactWidget) {
-    return other.metaFields === this.metaFields && other.entries === this.entries;
+    return other.metaFields === this.metaFields && other.entries === this.entries && other.discourseMeta === this.discourseMeta;
   }
 
   override toDOM(view: EditorView) {
     const element = document.createElement('div');
     element.className = 'cm-md-frontmatter-compact';
 
-    const metaLine = createFrontmatterMetaLine(view, this.entries, this.metaFields);
+    const metaLine = createFrontmatterMetaLine(view, this.entries, this.metaFields, this.discourseMeta);
     const button = createFrontmatterToggle(t('desktop.editor.frontmatter.meta'), () => {
       view.dispatch({ effects: setFrontmatterModeEffect.of('full') });
     });
@@ -159,21 +159,35 @@ function createFrontmatterToggle(label: string, onToggle: () => void) {
   return button;
 }
 
-function createFrontmatterMetaLine(view: EditorView, entries: readonly FrontmatterEntry[], metaFields: string) {
+function createFrontmatterMetaLine(
+  view: EditorView,
+  entries: readonly FrontmatterEntry[],
+  metaFields: string,
+  discourseMeta: DiscoursePublishedMeta | null
+) {
   const metaLine = document.createElement('div');
   metaLine.className = 'cm-md-frontmatter-meta-line';
-  resolveFrontmatterMetaItems(entries, metaFields).forEach((item, index) => {
+  const items = [
+    ...resolveFrontmatterMetaItems(entries, metaFields),
+    createDiscoursePublishedMetaItem(discourseMeta)
+  ].filter((item): item is FrontmatterMetaItem => Boolean(item));
+  items.forEach((item, index) => {
     if (index > 0) metaLine.append(createSeparator());
     metaLine.append(createFrontmatterMetaNode(view, item));
   });
   return metaLine;
 }
 
-function createFrontmatterHeader(view: EditorView, entries: readonly FrontmatterEntry[], metaFields: string) {
+function createFrontmatterHeader(
+  view: EditorView,
+  entries: readonly FrontmatterEntry[],
+  metaFields: string,
+  discourseMeta: DiscoursePublishedMeta | null
+) {
   const header = document.createElement('div');
   header.className = 'cm-md-frontmatter-header';
   header.append(
-    createFrontmatterMetaLine(view, entries, metaFields),
+    createFrontmatterMetaLine(view, entries, metaFields, discourseMeta),
     createFrontmatterToggle(t('desktop.editor.frontmatter.close'), () => {
       view.dispatch({ effects: setFrontmatterModeEffect.of('compact') });
     })
@@ -185,6 +199,7 @@ export class FrontmatterYamlWidget extends WidgetType {
   constructor(
     private readonly entries: readonly FrontmatterEntry[],
     private readonly metaFields: string,
+    private readonly discourseMeta: DiscoursePublishedMeta | null,
     private readonly from: number,
     private readonly text: string,
     private readonly to: number
@@ -195,6 +210,7 @@ export class FrontmatterYamlWidget extends WidgetType {
   override eq(other: FrontmatterYamlWidget) {
     return other.from === this.from
       && other.metaFields === this.metaFields
+      && other.discourseMeta === this.discourseMeta
       && other.text === this.text
       && other.to === this.to
       && other.entries === this.entries;
@@ -214,7 +230,7 @@ export class FrontmatterYamlWidget extends WidgetType {
       view.dispatch({ changes: { from: this.from, insert: input.value, to: this.to } });
     });
 
-    element.append(createFrontmatterHeader(view, this.entries, this.metaFields), input);
+    element.append(createFrontmatterHeader(view, this.entries, this.metaFields, this.discourseMeta), input);
     return element;
   }
 }

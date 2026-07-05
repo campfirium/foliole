@@ -28,7 +28,10 @@ import { initializeDatabase } from '../database/migrate.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 
 import { saveImportManagerSettings } from './importManagerSettings.js';
-import { acceptPendingIncomingUpdate, dismissPendingIncomingUpdate } from './incomingUpdateActions.js';
+import {
+  acceptPendingIncomingUpdate,
+  dismissPendingIncomingUpdate
+} from './incomingUpdateActions.js';
 import {
   resolveIncomingUpdateTarget,
   upsertPendingIncomingUpdate

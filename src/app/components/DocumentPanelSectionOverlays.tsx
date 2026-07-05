@@ -12,6 +12,7 @@ interface DocumentPanelSectionOverlaysProps {
   editorAdapter: EditorAdapter | null;
   handleIncomingUpdateAccept?: () => Promise<void>;
   handleIncomingUpdateDismiss?: () => Promise<void>;
+  handleIncomingUpdateImportAsNew?: () => Promise<void>;
   handleSourceUpdateDraftChange: (content: string) => void;
   handleSourceUpdatePanelOpenChange: (open: boolean) => void;
   isSourceUpdatePanelOpen: boolean;
@@ -44,6 +45,7 @@ export function DocumentPanelSectionOverlays({
   editorAdapter,
   handleIncomingUpdateAccept,
   handleIncomingUpdateDismiss,
+  handleIncomingUpdateImportAsNew,
   handleSourceUpdateDraftChange,
   handleSourceUpdatePanelOpenChange,
   isSourceUpdatePanelOpen,
@@ -63,6 +65,7 @@ export function DocumentPanelSectionOverlays({
           {...(handleIncomingUpdateAccept ? { onAcceptIncomingUpdate: handleIncomingUpdateAccept } : {})}
           onCurrentContentChange={handleSourceUpdateDraftChange}
           {...(handleIncomingUpdateDismiss ? { onDismissIncomingUpdate: handleIncomingUpdateDismiss } : {})}
+          {...(handleIncomingUpdateImportAsNew ? { onImportIncomingUpdateAsNew: handleIncomingUpdateImportAsNew } : {})}
           onOpenChange={handleSourceUpdatePanelOpenChange}
           open={isSourceUpdatePanelOpen}
           updatedHighlightCount={sourceUpdatePreview.updatedHighlightCount}

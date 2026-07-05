@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorDiffDecorations } from '../../features/editor/adapters/EditorAdapter';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
+import { getElectronAPI } from '../../shared/platform/electronApi';
+import { onWindowPriorityEscape } from '../../shared/platform/keyboard';
 import {
   AppDialog,
   AppDialogContent,
@@ -12,8 +14,7 @@ import {
 } from '../../shared/ui';
 
 import { buildSourceUpdateDiffModel } from './sourceUpdateDiffModel';
-import { SourceUpdatePanelColumns } from './SourceUpdatePanelColumns';
-import { SourceUpdatePanelHeader } from './SourceUpdatePanelHeader';
+import { SourceUpdatePanelDialogBody } from './SourceUpdatePanelDialogBody';
 
 interface DocumentSourceUpdatePanelProps {
   currentContent: string;
@@ -25,6 +26,7 @@ interface DocumentSourceUpdatePanelProps {
   onCurrentContentChange: (content: string) => void;
   onCurrentEditorReady?: (adapter: EditorAdapter | null) => void;
   onDismissIncomingUpdate?: () => Promise<void>;
+  onImportIncomingUpdateAsNew?: () => Promise<void>;
   onOpenChange: (open: boolean) => void;
   open: boolean;
   onUpdatedEditorReady?: (adapter: EditorAdapter | null) => void;
@@ -117,6 +119,30 @@ function useSourceUpdatePanelDiffState(
   };
 }
 
+function useSourceUpdatePanelEscape(open: boolean, onOpenChange: (open: boolean) => void) {
+  useLayoutEffect(() => {
+    if (!open) {
+      return;
+    }
+    const closePanel = () => {
+      onOpenChange(false);
+    };
+    const unlistenPriorityEscape = onWindowPriorityEscape(() => {
+      closePanel();
+      return true;
+    });
+    const unlistenNativeEscape = getElectronAPI()?.onNativeKeyboardInput?.((payload) => {
+      if (payload.type === 'keyDown' && payload.key === 'Escape') {
+        closePanel();
+      }
+    }) ?? null;
+    return () => {
+      unlistenPriorityEscape();
+      unlistenNativeEscape?.();
+    };
+  }, [onOpenChange, open]);
+}
+
 function SourceUpdatePanelDialog(props: {
   currentEditor: EditorAdapter | null;
   currentMeasuredHighlights: EditorDiffDecorations | null;
@@ -133,38 +159,29 @@ function SourceUpdatePanelDialog(props: {
   updatedMeasuredHighlights: EditorDiffDecorations | null;
 }) {
   const t = useTranslation();
+  useSourceUpdatePanelEscape(props.panelProps.open, props.panelProps.onOpenChange);
+
+  const closePanelFromEscape = (event: { key?: string; preventDefault: () => void; stopPropagation: () => void }) => {
+    if (event.key !== 'Escape') {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    props.panelProps.onOpenChange(false);
+  };
+
   return (
     <AppDialog onOpenChange={props.panelProps.onOpenChange} open={props.panelProps.open}>
       <AppDialogPortal>
         <AppDialogOverlay />
         <AppDialogContent
           aria-describedby={undefined}
-          className="h-[min(820px,calc(100vh-88px))] w-[min(1520px,calc(100vw-72px))] p-0"
+          className="h-[min(900px,calc(100vh-48px))] w-[min(1680px,calc(100vw-48px))] p-0"
+          onEscapeKeyDown={closePanelFromEscape}
+          onKeyDownCapture={closePanelFromEscape}
         >
-          <section className="flex h-full min-h-0 flex-col overflow-hidden">
-            <AppDialogTitle className="sr-only">{t('desktop.sourceUpdate.dialogTitle')}</AppDialogTitle>
-            <SourceUpdatePanelHeader
-              {...(props.panelProps.onAcceptIncomingUpdate
-                ? { onAcceptIncomingUpdate: props.panelProps.onAcceptIncomingUpdate }
-                : {})}
-              {...(props.panelProps.onDismissIncomingUpdate
-                ? { onDismissIncomingUpdate: props.panelProps.onDismissIncomingUpdate }
-                : {})}
-              onOpenChange={props.panelProps.onOpenChange}
-            />
-            <SourceUpdatePanelColumns
-              currentEditor={props.currentEditor}
-              currentMeasuredHighlights={props.currentMeasuredHighlights}
-              handleCurrentEditorReady={props.handleCurrentEditorReady}
-              handleUpdatedEditorReady={props.handleUpdatedEditorReady}
-              lineHighlights={props.lineHighlights}
-              overviewSegments={props.overviewSegments}
-              props={props.panelProps}
-              totalRows={props.totalRows}
-              updatedEditor={props.updatedEditor}
-              updatedMeasuredHighlights={props.updatedMeasuredHighlights}
-            />
-          </section>
+          <AppDialogTitle className="sr-only">{t('desktop.sourceUpdate.dialogTitle')}</AppDialogTitle>
+          <SourceUpdatePanelDialogBody {...props} />
         </AppDialogContent>
       </AppDialogPortal>
     </AppDialog>

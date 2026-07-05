@@ -29,6 +29,24 @@ function getLineTexts(host: HTMLElement, selector = '.cm-line') {
   );
 }
 
+const DISCOURSE_FRONTMATTER_CONTENT = [
+  '---',
+  '# foliole:discourse-publish',
+  'publish:',
+  '  discourse:',
+  '    site: https://forum.campfirium.com',
+  '    topicId: 869',
+  '    postId: 1041',
+  '    url: https://forum.campfirium.com/t/topic/869',
+  '    categoryId: 5',
+  '    tags:',
+  '      - health',
+  '    lastPublishedAt: 2026-07-05T03:10:07.438Z',
+  '# /foliole:discourse-publish',
+  '---',
+  '# Title'
+].join('\n');
+
 afterEach(() => {
   document.body.innerHTML = '';
   setFrontmatterDisplayMode('compact');
@@ -103,6 +121,26 @@ describe('live markdown frontmatter rendering', () => {
 
     adapter.destroy();
   });
+
+});
+
+describe('live markdown frontmatter Discourse metadata', () => {
+  it('shows a linked published date for Discourse-managed frontmatter', () => {
+    setFrontmatterMetaFields(' ,,, ');
+    const onOpenExternalLink = vi.fn();
+    const { adapter, host } = createAdapterHost(DISCOURSE_FRONTMATTER_CONTENT, { onOpenExternalLink });
+
+    const metaLine = host.querySelector('.cm-md-frontmatter-meta-line');
+    const link = host.querySelector<HTMLElement>('[data-md-link-url="https://forum.campfirium.com/t/topic/869"]');
+    expect(metaLine?.textContent).toBe(`Published ${new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date('2026-07-05T03:10:07.438Z'))}`);
+    expect(link?.textContent).toBe(metaLine?.textContent);
+    link?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(onOpenExternalLink).toHaveBeenCalledWith(expect.objectContaining({
+      href: 'https://forum.campfirium.com/t/topic/869'
+    }));
+
+    adapter.destroy();
+  });
 });
 
 describe('live markdown frontmatter interactions', () => {
@@ -168,6 +206,7 @@ describe('live markdown frontmatter interactions', () => {
 
 describe('live markdown block rendering', () => {
   it('hides the lone level-one heading in live preview to avoid a duplicated page title', () => {
+    setEditorDisplayMode('preview');
     const host = document.createElement('div');
     document.body.append(host);
 

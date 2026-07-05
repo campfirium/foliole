@@ -82,6 +82,7 @@ const DATA_MUTATION_COMMANDS = [
   NATIVE_COMMANDS.loadReadwiseBookEpub,
   NATIVE_COMMANDS.acceptIncomingUpdate,
   NATIVE_COMMANDS.dismissIncomingUpdate,
+  NATIVE_COMMANDS.importIncomingUpdateAsNew,
   NATIVE_COMMANDS.mergeReadwiseTopicHighlights,
   NATIVE_COMMANDS.restoreRemovedSource,
   NATIVE_COMMANDS.devReimportCurrentTopicSource,

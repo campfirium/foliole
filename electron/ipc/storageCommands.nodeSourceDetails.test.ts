@@ -8,9 +8,10 @@ const { loadNodeSourceDetails } = vi.hoisted(() => ({
 const { loadNodeSourceUpdatePreview } = vi.hoisted(() => ({
   loadNodeSourceUpdatePreview: vi.fn()
 }));
-const { acceptPendingIncomingUpdate, dismissPendingIncomingUpdate } = vi.hoisted(() => ({
+const { acceptPendingIncomingUpdate, dismissPendingIncomingUpdate, importPendingIncomingUpdateAsNewTopic } = vi.hoisted(() => ({
   acceptPendingIncomingUpdate: vi.fn(),
-  dismissPendingIncomingUpdate: vi.fn()
+  dismissPendingIncomingUpdate: vi.fn(),
+  importPendingIncomingUpdateAsNewTopic: vi.fn()
 }));
 const { notifyManagedInboxUpdated } = vi.hoisted(() => ({
   notifyManagedInboxUpdated: vi.fn()
@@ -54,7 +55,11 @@ vi.mock('../import/importManagerSettings.js', () => ({
   loadImportManagerSettings,
   saveImportManagerSettings: vi.fn()
 }));
-vi.mock('../import/incomingUpdateActions.js', () => ({ acceptPendingIncomingUpdate, dismissPendingIncomingUpdate }));
+vi.mock('../import/incomingUpdateActions.js', () => ({
+  acceptPendingIncomingUpdate,
+  dismissPendingIncomingUpdate,
+  importPendingIncomingUpdateAsNewTopic
+}));
 vi.mock('../import/managedInboxEvents.js', () => ({ notifyManagedInboxUpdated }));
 vi.mock('../import/nodeSourceUpdatePreview.js', () => ({ loadNodeSourceUpdatePreview }));
 vi.mock('../import/readwiseTopicMerge.js', () => ({ mergeReadwiseTopicHighlights }));
@@ -152,6 +157,26 @@ it('dismisses incoming updates without a workspace content mutation', async () =
   });
 
   expect(dismissPendingIncomingUpdate).toHaveBeenCalledWith('incoming-update-1');
+  expect(notifyManagedInboxUpdated).toHaveBeenCalledWith('incoming-update-1');
+});
+
+it('imports mismatched incoming updates as new topics and notifies refresh channels', async () => {
+  const mockWindow = { id: 1 } as never;
+  importPendingIncomingUpdateAsNewTopic.mockReturnValue({
+    incoming_update_id: 'incoming-update-1',
+    node_id: 'node-new',
+    status: 'imported_as_new'
+  });
+
+  await expect(handleStorageCommand('import_incoming_update_as_new', {
+    incoming_update_id: 'incoming-update-1'
+  }, mockWindow)).resolves.toEqual({
+    incoming_update_id: 'incoming-update-1',
+    node_id: 'node-new',
+    status: 'imported_as_new'
+  });
+
+  expect(importPendingIncomingUpdateAsNewTopic).toHaveBeenCalledWith('incoming-update-1');
   expect(notifyManagedInboxUpdated).toHaveBeenCalledWith('incoming-update-1');
 });
 

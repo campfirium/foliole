@@ -93,6 +93,17 @@ it('dispatches priority escape handlers before ordinary escape handlers', () => 
   unlistenOrdinary();
 });
 
+it('dispatches escape handlers from document-level events', () => {
+  const escape = vi.fn();
+  const unlistenEscape = onWindowEscape(escape);
+
+  document.dispatchEvent(new KeyboardEvent('keydown', { cancelable: true, key: 'Escape' }));
+
+  expect(escape).toHaveBeenCalledTimes(1);
+
+  unlistenEscape();
+});
+
 it('falls through to ordinary escape handlers when priority handlers decline', () => {
   const ordinary = vi.fn();
   const priority = vi.fn(() => false);

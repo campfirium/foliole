@@ -17,7 +17,7 @@ export type { RuntimeNodeSourceUpdatePreview } from './nodeSourceUpdateRuntimePa
 export interface RuntimeIncomingUpdateActionResult {
   incomingUpdateId: string;
   nodeId: string | null;
-  status: 'accepted' | 'dismissed' | 'unavailable';
+  status: 'accepted' | 'dismissed' | 'imported_as_new' | 'unavailable';
 }
 
 export async function loadRuntimeNodeSourceDetails(nodeId: string): Promise<RuntimeNodeSourceDetails | null> {
@@ -96,6 +96,7 @@ function toRuntimeIncomingUpdateActionResult(value: unknown): RuntimeIncomingUpd
     (payload.node_id !== null && typeof payload.node_id !== 'string') ||
     (payload.status !== 'accepted' &&
       payload.status !== 'dismissed' &&
+      payload.status !== 'imported_as_new' &&
       payload.status !== 'unavailable')
   ) {
     return null;
@@ -130,6 +131,18 @@ export async function dismissRuntimeIncomingUpdate(incomingUpdateId: string): Pr
   }
   return toRuntimeIncomingUpdateActionResult(
     await runtimeInvoke(NATIVE_COMMANDS.dismissIncomingUpdate, {
+      incoming_update_id: incomingUpdateId
+    })
+  );
+}
+
+export async function importRuntimeIncomingUpdateAsNew(incomingUpdateId: string): Promise<RuntimeIncomingUpdateActionResult | null> {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return null;
+  }
+  return toRuntimeIncomingUpdateActionResult(
+    await runtimeInvoke(NATIVE_COMMANDS.importIncomingUpdateAsNew, {
       incoming_update_id: incomingUpdateId
     })
   );

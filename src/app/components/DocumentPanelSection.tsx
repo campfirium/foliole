@@ -96,6 +96,7 @@ function useDocumentPanelSectionModel(props: DocumentPanelSectionProps) {
     currentSourceUpdateContent,
     handleIncomingUpdateAccept,
     handleIncomingUpdateDismiss,
+    handleIncomingUpdateImportAsNew,
     handleSourceUpdateDraftChange,
     handleSourceUpdatePanelOpenChange,
     isSourceUpdatePanelOpen,
@@ -130,6 +131,7 @@ function useDocumentPanelSectionModel(props: DocumentPanelSectionProps) {
     handleSourceUpdateDraftChange,
     handleIncomingUpdateAccept,
     handleIncomingUpdateDismiss,
+    handleIncomingUpdateImportAsNew,
     handleSourceUpdatePanelOpenChange,
     sourceUpdatePreview: sourceUpdatePreview.value
   };
@@ -148,6 +150,7 @@ function DocumentPanelSectionOverlayHost(args: {
         editorAdapter: args.editorAdapter,
         handleIncomingUpdateAccept: args.model.handleIncomingUpdateAccept,
         handleIncomingUpdateDismiss: args.model.handleIncomingUpdateDismiss,
+        handleIncomingUpdateImportAsNew: args.model.handleIncomingUpdateImportAsNew,
         handleSourceUpdateDraftChange: args.model.handleSourceUpdateDraftChange,
         handleSourceUpdatePanelOpenChange: args.model.handleSourceUpdatePanelOpenChange,
         isSourceUpdatePanelOpen: args.model.isSourceUpdatePanelOpen,

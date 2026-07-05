@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
 
-import { acceptRuntimeIncomingUpdate, dismissRuntimeIncomingUpdate } from '../../shared/platform/nodeSourceRuntimeRepository';
+import {
+  acceptRuntimeIncomingUpdate,
+  dismissRuntimeIncomingUpdate,
+  importRuntimeIncomingUpdateAsNew
+} from '../../shared/platform/nodeSourceRuntimeRepository';
 
 import type { DocumentPanelSectionProps } from './DocumentPanelSection';
 import {
@@ -92,9 +96,18 @@ function useIncomingUpdateActions(args: {
     args.clearIncomingUpdateDraft();
   }, [args]);
 
+  const handleIncomingUpdateImportAsNew = useCallback(async () => {
+    if (!args.incomingUpdateId) {
+      return;
+    }
+    await importRuntimeIncomingUpdateAsNew(args.incomingUpdateId);
+    args.clearIncomingUpdateDraft();
+  }, [args]);
+
   return {
     handleIncomingUpdateAccept: args.incomingUpdateId ? handleIncomingUpdateAccept : undefined,
-    handleIncomingUpdateDismiss: args.incomingUpdateId ? handleIncomingUpdateDismiss : undefined
+    handleIncomingUpdateDismiss: args.incomingUpdateId ? handleIncomingUpdateDismiss : undefined,
+    handleIncomingUpdateImportAsNew: args.incomingUpdateId ? handleIncomingUpdateImportAsNew : undefined
   };
 }
 

@@ -1,6 +1,7 @@
 import { StateField, type EditorState, type Extension, type Range, type Transaction } from '@codemirror/state';
 import { Decoration, EditorView, type DecorationSet } from '@codemirror/view';
 
+import { readDiscoursePublishedMeta } from '../../../../lib/core/discourse/discourseFrontmatter';
 import { getEditorDisplayMode } from '../model/editorDisplayMode';
 import type { FrontmatterDisplayMode } from '../model/frontmatterDisplayModeSetting';
 import { getFrontmatterMetaFields } from '../model/frontmatterMetaFieldsSetting';
@@ -121,6 +122,7 @@ function buildFrontmatterDecorationState(
   const from = doc.line(bounds.startLine).from;
   const to = doc.line(bounds.endLine).to;
   const metaFields = getFrontmatterMetaFields();
+  const discourseMeta = readDiscoursePublishedMeta(doc.toString());
 
   if (resolveEffectiveMode(override) === 'full') {
     addFullFrontmatterDecorations(ranges, state, bounds);
@@ -128,7 +130,7 @@ function buildFrontmatterDecorationState(
       Decoration.widget({
         block: true,
         side: 1,
-        widget: new FrontmatterYamlWidget(projection.entries, metaFields, from, doc.sliceString(from, to), to)
+        widget: new FrontmatterYamlWidget(projection.entries, metaFields, discourseMeta, from, doc.sliceString(from, to), to)
       }).range(anchor)
     );
     return {
@@ -146,7 +148,7 @@ function buildFrontmatterDecorationState(
     Decoration.widget({
       block: true,
       side: 1,
-      widget: new FrontmatterCompactWidget(projection.entries, metaFields)
+      widget: new FrontmatterCompactWidget(projection.entries, metaFields, discourseMeta)
     }).range(anchor)
   );
 

@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   acceptRuntimeIncomingUpdate,
   dismissRuntimeIncomingUpdate,
+  importRuntimeIncomingUpdateAsNew,
   mockIncomingUpdatePreview,
   mockSourceUpdatePreview,
   openSourceUpdatePanel,
@@ -94,6 +95,23 @@ describe('DocumentPanelSection incoming updates', () => {
       panelProps?.onOpenChange(false);
     });
 
+    expect(onNodeContentChange).not.toHaveBeenCalled();
+    expect(acceptRuntimeIncomingUpdate).not.toHaveBeenCalled();
+    expect(dismissRuntimeIncomingUpdate).not.toHaveBeenCalled();
+  });
+
+  it('imports mismatched incoming updates as a new topic without changing the current document', async () => {
+    const onNodeContentChange = vi.fn();
+    mockIncomingUpdatePreview();
+
+    renderSectionWithProps({ onNodeContentChange });
+
+    const panelProps = openSourceUpdatePanel();
+    await act(async () => {
+      await panelProps?.onImportIncomingUpdateAsNew?.();
+    });
+
+    expect(importRuntimeIncomingUpdateAsNew).toHaveBeenCalledWith('incoming-update-1');
     expect(onNodeContentChange).not.toHaveBeenCalled();
     expect(acceptRuntimeIncomingUpdate).not.toHaveBeenCalled();
     expect(dismissRuntimeIncomingUpdate).not.toHaveBeenCalled();
