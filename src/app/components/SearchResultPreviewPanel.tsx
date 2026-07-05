@@ -1,4 +1,4 @@
-import { Maximize2, Minimize2, X } from 'lucide-react';
+import { Maximize2, Minimize2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 
@@ -7,6 +7,7 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type { ExternalDocumentPreview } from '../../shared/platform/externalDocumentPreviewRepository';
+import { useDismissibleSurface } from '../../shared/platform/useDismissibleSurface';
 import { AppButton, AppErrorState, AppIconButton, AppLoadingState, appFloatingSurfaceClassName } from '../../shared/ui';
 import { ensureWorkspaceNodeDocumentReady } from '../../store/workspaceNodePreparation';
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -69,6 +70,7 @@ function resolvePreviewContent(args: {
 
 export function SearchResultPreviewPanel(props: SearchResultPreviewPanelProps) {
   const { editorAppearanceKey } = useAppearanceSettings();
+  useDismissibleSurface({ enabled: Boolean(props.result), onDismiss: props.onClose });
   const overlayRef = useRef<HTMLDivElement>(null);
   const frame = useExternalDocumentPreviewPanelFrame(overlayRef, Boolean(props.result));
   const externalPath = props.result?.kind === 'external' ? props.result.externalMatch?.absolutePath ?? null : null;
@@ -93,7 +95,6 @@ export function SearchResultPreviewPanel(props: SearchResultPreviewPanelProps) {
       error={error}
       frame={frame}
       isLoading={isLoading}
-      onClose={props.onClose}
       onOpenResult={props.onOpenResult}
       overlayRef={overlayRef}
       result={result}
@@ -107,7 +108,6 @@ function SearchResultPreviewWindow(props: {
   error: string | null;
   frame: ReturnType<typeof useExternalDocumentPreviewPanelFrame>;
   isLoading: boolean;
-  onClose: () => void;
   onOpenResult: (result: WorkspaceSearchResult) => void;
   overlayRef: RefObject<HTMLDivElement>;
   result: WorkspaceSearchResult;
@@ -118,7 +118,6 @@ function SearchResultPreviewWindow(props: {
       <section className={appFloatingSurfaceClassName('panel', 'pointer-events-auto absolute flex flex-col overflow-hidden')} style={props.frame.panelStyle}>
         <SearchResultPreviewHeader
           frame={props.frame}
-          onClose={props.onClose}
           onOpen={() => props.onOpenResult(props.result)}
           title={props.result.title}
         />
@@ -131,7 +130,6 @@ function SearchResultPreviewWindow(props: {
 
 function SearchResultPreviewHeader(props: {
   frame: ReturnType<typeof useExternalDocumentPreviewPanelFrame>;
-  onClose: () => void;
   onOpen: () => void;
   title: string;
 }) {
@@ -155,7 +153,6 @@ function SearchResultPreviewHeader(props: {
           label={props.frame.isFullscreen ? t('desktop.searchPreview.restoreWindow') : t('desktop.searchPreview.fullScreen')}
           onClick={props.frame.onToggleFullscreen}
         />
-        <AppIconButton icon={<X className="size-4" />} label={t('desktop.searchPreview.close')} onClick={props.onClose} />
       </div>
     </header>
   );

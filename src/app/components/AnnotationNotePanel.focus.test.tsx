@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
@@ -21,4 +21,22 @@ it('keeps the annotation note textarea keyboard focus visible', () => {
   expect(textarea.className).toContain('focus-visible:outline-none');
   expect(textarea.className).toContain('focus-visible:ring-1');
   expect(textarea.className).toContain('focus-visible:ring-ring');
+});
+
+it('cancels the annotation note panel on Escape', () => {
+  const onCancel = vi.fn();
+  renderWithLocalization(
+    <AnnotationNotePanel
+      draft=""
+      left={12}
+      onCancel={onCancel}
+      onChange={vi.fn()}
+      onSave={vi.fn()}
+      top={24}
+    />
+  );
+
+  fireEvent.keyDown(window, { key: 'Escape' });
+
+  expect(onCancel).toHaveBeenCalledTimes(1);
 });

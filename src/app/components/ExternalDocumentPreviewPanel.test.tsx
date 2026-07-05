@@ -95,6 +95,7 @@ it('renders the external document preview panel as a floating window for a reque
   expect(panel?.style.width).toBeTruthy();
   expect(panel?.style.height).toBeTruthy();
   expect(screen.getByRole('button', { name: 'Full screen preview' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Close preview' })).not.toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: 'Open in External library' }));
 

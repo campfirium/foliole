@@ -1,4 +1,4 @@
-import { Maximize2, Minimize2, X } from 'lucide-react';
+import { Maximize2, Minimize2 } from 'lucide-react';
 import { useRef } from 'react';
 import type { MutableRefObject, PointerEvent as ReactPointerEvent } from 'react';
 
@@ -8,6 +8,7 @@ import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type { ExternalDocumentImportResult } from '../../shared/platform/externalDocumentImportRepository';
 import type { ExternalDocumentPreview } from '../../shared/platform/externalDocumentPreviewRepository';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
+import { useDismissibleSurface } from '../../shared/platform/useDismissibleSurface';
 import { AppButton, AppErrorState, AppIconButton, AppLoadingState, appFloatingSurfaceClassName } from '../../shared/ui';
 
 import { useOpenImportedExternalDocument } from './externalDocumentImportState';
@@ -26,6 +27,7 @@ interface ExternalDocumentPreviewPanelProps {
 
 export function ExternalDocumentPreviewPanel(props: ExternalDocumentPreviewPanelProps) {
   const { editorAppearanceKey } = useAppearanceSettings();
+  useDismissibleSurface({ enabled: Boolean(props.request), onDismiss: props.onClose });
   const { error, isLoading, preview, retry } = useExternalSearchPreviewDocument(props.request?.absolutePath ?? null);
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const frame = useExternalDocumentPreviewPanelFrame(overlayRef, Boolean(props.request));
@@ -44,7 +46,6 @@ export function ExternalDocumentPreviewPanel(props: ExternalDocumentPreviewPanel
       frame={frame}
       isImporting={isImporting}
       isLoading={isLoading}
-      onClose={props.onClose}
       onImport={() => void handleImport()}
       onOpenInExternalLibrary={() => {
         props.onOpenInExternalLibrary(request);
@@ -64,7 +65,6 @@ function PreviewWindow(args: {
   frame: ReturnType<typeof useExternalDocumentPreviewPanelFrame>;
   isImporting: boolean;
   isLoading: boolean;
-  onClose: () => void;
   onImport: () => void;
   onOpenInExternalLibrary: () => void;
   onRetry: () => void;
@@ -87,7 +87,6 @@ function PreviewWindow(args: {
           isFullscreen={args.frame.isFullscreen}
           isImporting={args.isImporting}
           pathLabel={args.preview?.relativePath ?? args.request.absolutePath}
-          onClose={args.onClose}
           onDragStart={args.frame.startDrag}
           onImport={args.onImport}
           onOpenInExternalLibrary={args.onOpenInExternalLibrary}
@@ -133,7 +132,6 @@ function PreviewHeader(args: {
   fileLabel: string;
   isFullscreen: boolean;
   isImporting: boolean;
-  onClose: () => void;
   onDragStart: (event: ReactPointerEvent<HTMLElement>) => void;
   onImport: () => void;
   onOpenInExternalLibrary: () => void;
@@ -168,7 +166,6 @@ function PreviewHeader(args: {
           label={args.isFullscreen ? t('desktop.externalLibrary.preview.restore') : t('desktop.externalLibrary.preview.fullscreen')}
           onClick={args.onToggleFullscreen}
         />
-        <AppIconButton icon={<X className="size-4" />} label={t('desktop.externalLibrary.preview.close')} onClick={args.onClose} />
       </div>
     </header>
   );

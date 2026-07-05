@@ -1,5 +1,6 @@
 import { cn } from '../../shared/lib/utils';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
+import { useDismissibleSurface } from '../../shared/platform/useDismissibleSurface';
 import { AppButton, appFloatingSurfaceClassName, appInputFocusVisibleClassName } from '../../shared/ui';
 
 export function AnnotationNotePanel(props: {
@@ -11,6 +12,8 @@ export function AnnotationNotePanel(props: {
   top: number;
 }) {
   const t = useTranslation();
+  useDismissibleSurface({ onDismiss: props.onCancel });
+
   return (
     <div
       className={cn(appFloatingSurfaceClassName('popover'), 'fixed z-floating w-60 p-2')}

@@ -2,6 +2,7 @@ import { Settings2 } from 'lucide-react';
 
 import { cn } from '../../shared/lib/utils';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
+import { useDismissibleSurface } from '../../shared/platform/useDismissibleSurface';
 import { AppButton, appFloatingSurfaceClassName } from '../../shared/ui';
 import { dispatchOpenClozeGuardSettings } from '../clozeGuardSettingsEvent';
 
@@ -20,6 +21,8 @@ export function ClozeGuardPanel(props: {
   top: number;
 }) {
   const t = useTranslation();
+  useDismissibleSurface({ onDismiss: props.onCancel });
+
   return (
     <div
       className={CLOZE_GUARD_CARD_CLASS_NAME}
