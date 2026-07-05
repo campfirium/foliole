@@ -21,7 +21,7 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { closeDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
-import { upsertNodeSnapshot } from '../database/nodeMutations.js';
+import { softDeleteNodes, upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { updateLibraryPathSetting } from '../ipc/libraryPaths.js';
 
 import {
@@ -169,4 +169,32 @@ it('removes stale empty parent folders when an article mirror moves path', async
   await expect(exportArticleToMirror('node-moving')).resolves.toBe(true);
   await expect(fs.readFile(path.join(tempRoot, 'Library', 'Mirror', 'New Folder', 'Moving Topic.md'), 'utf8')).resolves.toContain('Moving body.');
   await expect(fs.access(path.join(tempRoot, 'Library', 'Mirror', 'Old Folder'))).rejects.toThrow();
+});
+
+it('removes stale empty parent folders when an article mirror is deleted', async () => {
+  saveMirrorNode({ kind: 'folder', nodeId: 'folder-delete', parentNodeId: null, title: 'Delete Folder', updatedAt: '2026-03-30T00:00:00.000Z' });
+  saveMirrorNode({ content: 'Deleted body.', nodeId: 'node-delete', parentNodeId: 'folder-delete', title: 'Deleted Topic', updatedAt: '2026-03-30T00:00:00.000Z' });
+
+  await expect(exportArticleToMirror('node-delete')).resolves.toBe(true);
+  await expect(fs.readFile(path.join(tempRoot, 'Library', 'Mirror', 'Delete Folder', 'Deleted Topic.md'), 'utf8')).resolves.toContain('Deleted body.');
+
+  softDeleteNodes({ deletedAt: '2030-03-30T00:00:00.000Z', nodeIds: ['node-delete'] });
+
+  await expect(exportArticleToMirror('node-delete')).resolves.toBe(true);
+  await expect(fs.access(path.join(tempRoot, 'Library', 'Mirror', 'Delete Folder'))).rejects.toThrow();
+});
+
+it('keeps stale parent folders when they contain other files', async () => {
+  saveMirrorNode({ kind: 'folder', nodeId: 'folder-nonempty-old', parentNodeId: null, title: 'Nonempty Old', updatedAt: '2026-03-30T00:00:00.000Z' });
+  saveMirrorNode({ kind: 'folder', nodeId: 'folder-nonempty-new', parentNodeId: null, title: 'Nonempty New', updatedAt: '2026-03-30T00:00:00.000Z' });
+  saveMirrorNode({ content: 'Nonempty body.', nodeId: 'node-nonempty', parentNodeId: 'folder-nonempty-old', title: 'Nonempty Topic', updatedAt: '2026-03-30T00:00:00.000Z' });
+
+  await expect(exportArticleToMirror('node-nonempty')).resolves.toBe(true);
+  await fs.writeFile(path.join(tempRoot, 'Library', 'Mirror', 'Nonempty Old', 'manual.txt'), 'manual note', 'utf8');
+
+  saveMirrorNode({ content: 'Nonempty body.', nodeId: 'node-nonempty', parentNodeId: 'folder-nonempty-new', title: 'Nonempty Topic', updatedAt: '2030-03-30T00:00:00.000Z' });
+
+  await expect(exportArticleToMirror('node-nonempty')).resolves.toBe(true);
+  await expect(fs.readFile(path.join(tempRoot, 'Library', 'Mirror', 'Nonempty Old', 'manual.txt'), 'utf8')).resolves.toBe('manual note');
+  await expect(fs.access(path.join(tempRoot, 'Library', 'Mirror', 'Nonempty Old', 'Nonempty Topic.md'))).rejects.toThrow();
 });
