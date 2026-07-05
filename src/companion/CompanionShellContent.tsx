@@ -184,7 +184,13 @@ export function renderCompanionShellContent(props: CompanionShellContentProps) {
   }
   if (props.surface.activeAction === 'review') {
     if (props.isOnlyReviewOpen) {
-      return <CompanionOnlyReviewContent />;
+      return (
+        <CompanionOnlyReviewContent
+          hasSnapshot={props.hasSnapshot}
+          isAnswerRevealed={props.surface.isAnswerRevealed}
+          reviewSession={props.surface.onlyReviewSession}
+        />
+      );
     }
     return (
       <ReviewContent

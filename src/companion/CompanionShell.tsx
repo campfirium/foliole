@@ -59,10 +59,10 @@ function useCompanionReviewChrome(args: {
   workspaceSync: ReturnType<typeof useCompanionWorkspaceSync>;
 }) {
   const isBottomBarDisabled = args.surface.isSubmittingGrade || args.surface.isSubmittingReadingAction;
-  const isReviewTaskActive = args.surface.activeAction === 'review' && Boolean(args.surface.reviewSession.currentCard);
+  const isReviewTaskActive = args.surface.activeAction === 'review' && Boolean(args.surface.effectiveReviewSession.currentCard);
   const reviewBreadcrumbItems = useReviewBreadcrumbItems(
     args.workspaceSync.state.workspace_snapshot,
-    args.surface.reviewSession.currentCard?.nodeId ?? null
+    args.surface.effectiveReviewSession.currentCard?.nodeId ?? null
   );
   const navigation = useCompanionNavigationVisibility(args.floatingBar, isReviewTaskActive);
   return { isBottomBarDisabled, isReviewTaskActive, reviewBreadcrumbItems, ...navigation };
@@ -147,6 +147,8 @@ function useCompanionShellModel(bootstrapState: NativeCompanionBootstrapState) {
   const surface = useCompanionArticleSurface(workspaceSync, floatingBar, {
     sortDirection: browseSort.browseSortDirection,
     sortKey: browseSort.browseSortKey
+  }, {
+    isOnlyReviewOpen
   });
   const companionTabs = useCompanionTabsConfig();
   const { setSettingsPage, settingsPage } = useCompanionSyncSettingsPage({

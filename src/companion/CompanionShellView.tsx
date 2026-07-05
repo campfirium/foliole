@@ -99,7 +99,7 @@ export function CompanionShellView(props: { model: CompanionShellModel }) {
         activeSecondaryDestinationId={model.activeSecondaryDestinationId}
         activeAction={model.surface.activeAction}
         companionTabConfig={model.companionTabs.config}
-        currentReviewCard={model.surface.reviewSession.currentCard}
+        currentReviewCard={model.surface.effectiveReviewSession.currentCard}
         isBottomBarDisabled={model.isBottomBarDisabled}
         isCaptureSheetOpen={model.isCaptureSheetOpen}
         isNavigationVisible={model.isNavigationVisible}

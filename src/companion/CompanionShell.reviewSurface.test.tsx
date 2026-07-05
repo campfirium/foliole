@@ -122,6 +122,15 @@ async function renderShellWithSurface(surface: Record<string, unknown>) {
 }
 
 function reviewSurface(currentCard: Record<string, unknown> | null) {
+  const reviewSession = {
+    currentCard,
+    nextFsrsDueAt: currentCard ? null : '2026-04-23T05:55:34.233Z',
+    nextReadingDueAt: currentCard ? '2026-04-22T08:00:00.000Z' : '2026-04-23T05:52:15.743Z',
+    queueNodeIds: currentCard ? ['topic-1'] : [],
+    scheduledFsrsCount: currentCard ? 0 : 9,
+    scheduledReadingCount: currentCard ? 1 : 2,
+    totalCount: currentCard ? 1 : 0
+  };
   return {
     activeAction: 'review',
     browsedFolder: null,
@@ -140,15 +149,9 @@ function reviewSurface(currentCard: Record<string, unknown> | null) {
     recentArticles: [],
     readingError: null,
     reviewError: null,
-    reviewSession: {
-      currentCard,
-      nextFsrsDueAt: currentCard ? null : '2026-04-23T05:55:34.233Z',
-      nextReadingDueAt: currentCard ? '2026-04-22T08:00:00.000Z' : '2026-04-23T05:52:15.743Z',
-      queueNodeIds: currentCard ? ['topic-1'] : [],
-      scheduledFsrsCount: currentCard ? 0 : 9,
-      scheduledReadingCount: currentCard ? 1 : 2,
-      totalCount: currentCard ? 1 : 0
-    },
+    effectiveReviewSession: reviewSession,
+    onlyReviewSession: reviewSession,
+    reviewSession,
     selectedBrowseNodeId: null
   };
 }

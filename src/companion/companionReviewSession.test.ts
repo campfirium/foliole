@@ -3,7 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { getCurrentReviewSchedulerSettings, getReviewSchedulerVersion } from '../features/settings/model/reviewSchedulerSettings';
 
-import { gradeCompanionReviewCard, postponeCompanionReviewTopic, resolveCompanionReviewSession } from './companionReviewSession';
+import { resolveCompanionFsrsReviewSession } from './companionFsrsReviewSession';
+import {
+  gradeCompanionReviewCard,
+  postponeCompanionReviewTopic,
+  resolveCompanionReviewSession
+} from './companionReviewSession';
 
 const schedulerGrade = vi.fn();
 
@@ -216,6 +221,19 @@ describe('companion reading review session actions', () => {
 
     expect(session.queueNodeIds).toContain('topic-1');
     expect(session.scheduledReadingCount).toBe(1);
+  });
+
+  it('builds an FSRS-only queue without changing the mixed review queue', () => {
+    const snapshot = createSnapshot();
+    snapshot.nodesById['topic-1'] = createDueReadingTopic();
+
+    const onlyReview = resolveCompanionFsrsReviewSession(snapshot, '2026-04-22T08:10:00.000Z');
+    const mixed = resolveCompanionReviewSession(snapshot, '2026-04-22T08:10:00.000Z');
+
+    expect([...onlyReview.queueNodeIds].sort()).toEqual(['item-1', 'item-2']);
+    expect(onlyReview.currentCard?.itemKind).toBe('fsrs');
+    expect(onlyReview.scheduledReadingCount).toBe(1);
+    expect(mixed.queueNodeIds).toContain('topic-1');
   });
 
   it('postpones companion reading topics with the same shorter Later interval as desktop', () => {

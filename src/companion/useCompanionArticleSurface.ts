@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { CompanionTabAction } from './CompanionFloatingBars';
+import { resolveCompanionFsrsReviewSession } from './companionFsrsReviewSession';
 import { resolveCompanionReviewSession } from './companionReviewSession';
 import { useCompanionActionState } from './useCompanionActionState';
 import type { CompanionBrowseSortState } from './useCompanionBrowseState';
@@ -113,11 +114,20 @@ function useReadableArticleWithBodySyncStatus(
   }, [fetchingBodyKey, readableArticle]);
 }
 
-export function useCompanionArticleSurface(
-  workspaceSync: CompanionWorkspaceSyncApi,
-  floatingBar: FloatingBarVisibilityApi,
-  browseSort?: CompanionBrowseSortState
-) {
+function useCompanionEffectiveReviewSession(args: {
+  isOnlyReviewOpen?: boolean | undefined;
+  reviewSession: ReturnType<typeof resolveCompanionReviewSession>;
+  snapshot: CompanionWorkspaceSyncApi['state']['workspace_snapshot'];
+}) {
+  const onlyReviewSession = useMemo(
+    () => resolveCompanionFsrsReviewSession(args.snapshot),
+    [args.snapshot]
+  );
+  const effectiveReviewSession = args.isOnlyReviewOpen ? onlyReviewSession : args.reviewSession;
+  return { effectiveReviewSession, onlyReviewSession };
+}
+
+function useCompanionActiveAction(workspaceSync: CompanionWorkspaceSyncApi) {
   const isActiveActionUserOwnedRef = useRef(false);
   const [activeAction, setActiveAction] = useState<CompanionTabAction>(() => {
     return workspaceSync.state.workspace_snapshot ? 'review' : 'more';
@@ -126,36 +136,46 @@ export function useCompanionArticleSurface(
     isActiveActionUserOwnedRef.current = true;
     setActiveAction(action);
   };
-  const browseState = useCompanionBrowseState(workspaceSync, browseSort);
-  const handleViewScroll = useCompanionViewStateSync({
-    activeAction,
-    readableArticleNodeId: browseState.readableArticle?.nodeId ?? null,
-    reviewNodeId: browseState.reviewSession.currentCard?.nodeId ?? null,
-    selectedBrowseNodeId: browseState.selectedBrowseNodeId
-  });
-  const interactionState = useCompanionInteractionState(
-    browseState.browsedFolder?.nodeId ?? null,
-    floatingBar,
-    browseState.reviewSession,
-    setUserActiveAction,
-    browseState.setSelectedBrowseNodeId,
-    browseState.snapshot,
-    workspaceSync
-  );
-
   useEffect(() => {
-    if (!workspaceSync.isWorkspaceSyncStateReady) {
-      return;
-    }
+    if (!workspaceSync.isWorkspaceSyncStateReady) return;
     if (!workspaceSync.state.workspace_snapshot) {
       setActiveAction('more');
       isActiveActionUserOwnedRef.current = false;
       return;
     }
-    if (!isActiveActionUserOwnedRef.current) {
-      setActiveAction('review');
-    }
+    if (!isActiveActionUserOwnedRef.current) setActiveAction('review');
   }, [workspaceSync.isWorkspaceSyncStateReady, workspaceSync.state.workspace_snapshot]);
+  return { activeAction, setUserActiveAction };
+}
+
+export function useCompanionArticleSurface(
+  workspaceSync: CompanionWorkspaceSyncApi,
+  floatingBar: FloatingBarVisibilityApi,
+  browseSort?: CompanionBrowseSortState,
+  options: { isOnlyReviewOpen?: boolean } = {}
+) {
+  const { activeAction, setUserActiveAction } = useCompanionActiveAction(workspaceSync);
+  const browseState = useCompanionBrowseState(workspaceSync, browseSort);
+  const reviewSessions = useCompanionEffectiveReviewSession({
+    isOnlyReviewOpen: options.isOnlyReviewOpen,
+    reviewSession: browseState.reviewSession,
+    snapshot: browseState.snapshot
+  });
+  const handleViewScroll = useCompanionViewStateSync({
+    activeAction,
+    readableArticleNodeId: browseState.readableArticle?.nodeId ?? null,
+    reviewNodeId: reviewSessions.effectiveReviewSession.currentCard?.nodeId ?? null,
+    selectedBrowseNodeId: browseState.selectedBrowseNodeId
+  });
+  const interactionState = useCompanionInteractionState(
+    browseState.browsedFolder?.nodeId ?? null,
+    floatingBar,
+    reviewSessions.effectiveReviewSession,
+    setUserActiveAction,
+    browseState.setSelectedBrowseNodeId,
+    browseState.snapshot,
+    workspaceSync
+  );
 
   const missingBodySync = useCompanionMissingBodySync({ readableArticle: browseState.readableArticle, workspaceSync });
   const readableArticle = useReadableArticleWithBodySyncStatus(
@@ -168,6 +188,8 @@ export function useCompanionArticleSurface(
     browsedFolder: browseState.browsedFolder,
     readableArticle,
     recentArticles: browseState.recentArticles,
+    effectiveReviewSession: reviewSessions.effectiveReviewSession,
+    onlyReviewSession: reviewSessions.onlyReviewSession,
     reviewSession: browseState.reviewSession,
     selectedBrowseNodeId: browseState.selectedBrowseNodeId,
     handleViewScroll,

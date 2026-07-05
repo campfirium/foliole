@@ -212,7 +212,9 @@ export const EN_COMPANION_TRANSLATIONS = {
   'companion.sync.diagnostic.failed': 'Sync diagnostic failed',
   'companion.sync.diagnostic.running.description': 'Collecting sync state from this device and desktop.',
   'companion.sync.diagnostic.running.title': 'Running sync diagnostic',
-  'companion.onlyReview.title': 'Only Review mode is coming soon',
-  'companion.onlyReview.description':
-    'Review-only filtering is not connected yet, so mixed learning cards stay hidden here for now.'
+  'companion.onlyReview.noTopicsTitle': 'No topics synced yet',
+  'companion.onlyReview.noScheduledTitle': 'No review items on this device',
+  'companion.onlyReview.noScheduledDescription': 'Only Review shows due review items, not reading topics.',
+  'companion.onlyReview.noDueTitle': 'No review items are due right now',
+  'companion.onlyReview.noDueDescription': 'Next review item: {date}'
 } as const;

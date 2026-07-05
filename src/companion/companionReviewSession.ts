@@ -42,12 +42,24 @@ export interface CompanionReviewSession {
   totalCount: number;
 }
 
+export function emptyCompanionReviewSession(): CompanionReviewSession {
+  return {
+    currentCard: null,
+    nextFsrsDueAt: null,
+    nextReadingDueAt: null,
+    queueNodeIds: [],
+    scheduledFsrsCount: 0,
+    scheduledReadingCount: 0,
+    totalCount: 0
+  };
+}
+
 function normalizeTitle(title: string) {
   const trimmed = title.trim();
   return trimmed || translate(getStoredAppLocale(), 'desktop.search.context.untitled');
 }
 
-function buildCurrentCard(snapshot: WorkspaceSnapshot, queueNodeIds: string[]) {
+export function buildCurrentCard(snapshot: WorkspaceSnapshot, queueNodeIds: string[]) {
   const currentNodeId = queueNodeIds[0];
   if (!currentNodeId) {
     return null;
@@ -70,7 +82,7 @@ function buildCurrentCard(snapshot: WorkspaceSnapshot, queueNodeIds: string[]) {
   } satisfies CompanionReviewCard;
 }
 
-function resolveScheduledReviewSummary(snapshot: WorkspaceSnapshot) {
+export function resolveScheduledReviewSummary(snapshot: WorkspaceSnapshot) {
   let nextFsrsDueAt: string | null = null;
   let nextReadingDueAt: string | null = null;
   let scheduledFsrsCount = 0;
@@ -113,15 +125,7 @@ export function resolveCompanionReviewSession(
 ): CompanionReviewSession {
   const normalizedSnapshot = snapshot ? normalizeWorkspaceSnapshot(snapshot) : null;
   if (!normalizedSnapshot) {
-    return {
-      currentCard: null,
-      nextFsrsDueAt: null,
-      nextReadingDueAt: null,
-      queueNodeIds: [],
-      scheduledFsrsCount: 0,
-      scheduledReadingCount: 0,
-      totalCount: 0
-    };
+    return emptyCompanionReviewSession();
   }
 
   const plan = buildReviewQueuePlan({

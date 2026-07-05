@@ -51,6 +51,31 @@ function mockWorkspaceSync() {
 }
 
 function createSurface(activeAction: 'recent' | 'review' | 'search') {
+  const reviewSession = {
+    currentCard: activeAction === 'review'
+      ? {
+          content: 'Readable topic body',
+          itemKind: 'reading',
+          nodeId: 'topic-1',
+          title: 'Readable article'
+        }
+      : null,
+    nextFsrsDueAt: null,
+    nextReadingDueAt: null,
+    queueNodeIds: activeAction === 'review' ? ['topic-1'] : [],
+    scheduledFsrsCount: 0,
+    scheduledReadingCount: activeAction === 'review' ? 1 : 0,
+    totalCount: activeAction === 'review' ? 1 : 0
+  };
+  const onlyReviewSession = {
+    currentCard: null,
+    nextFsrsDueAt: null,
+    nextReadingDueAt: reviewSession.nextReadingDueAt,
+    queueNodeIds: [],
+    scheduledFsrsCount: 0,
+    scheduledReadingCount: reviewSession.scheduledReadingCount,
+    totalCount: 0
+  };
   return {
     activeAction,
     browsedFolder: null,
@@ -70,48 +95,17 @@ function createSurface(activeAction: 'recent' | 'review' | 'search') {
     recentArticles: [],
     readingError: null,
     reviewError: null,
-    reviewSession: {
-      currentCard: activeAction === 'review'
-        ? {
-            content: 'Readable topic body',
-            itemKind: 'reading',
-            nodeId: 'topic-1',
-            title: 'Readable article'
-          }
-        : null,
-      nextFsrsDueAt: null,
-      nextReadingDueAt: null,
-      scheduledFsrsCount: 0,
-      scheduledReadingCount: 0
-    },
+    effectiveReviewSession: reviewSession,
+    onlyReviewSession,
+    reviewSession,
     selectedBrowseNodeId: null as string | null
   };
 }
 
 function localSearchResults() {
   return {
-    external: [{
-      bodyStatus: 'ready',
-      document_id: 'doc-1',
-      excerpt: 'External alpha excerpt',
-      extension: '.md',
-      file_name: 'external.md',
-      folder_id: 'folder-1',
-      match_start: 9,
-      opening_text: 'External opening',
-      relative_path: 'notes/external.md',
-      title: 'External Alpha',
-      updated_at: '2026-06-15T08:00:00.000Z'
-    }],
-    pdf: [{
-      attachment_id: 'attachment-1',
-      excerpt: 'PDF alpha excerpt',
-      match_start: 4,
-      page: 2,
-      page_height: null,
-      page_width: null,
-      text: 'PDF alpha text'
-    }],
+    external: [],
+    pdf: [],
     strategy: 'word-based',
     topics: [{
       bodyStatus: 'ready',
@@ -199,15 +193,15 @@ describe('CompanionShell secondary surfaces', () => {
     expectBrowseMenuSheet();
   }, 15000);
 
-  it('opens Only Review as a Learn placeholder without mixed cards', async () => {
+  it('opens Only Review as an FSRS-only empty state without mixed cards', async () => {
     await renderShellWithSurface(createSurface('review'));
 
     const topOnlyReviewButton = screen.getAllByRole('button', { name: 'Only Review' }).at(0);
     if (!topOnlyReviewButton) throw new Error('missing top Only Review button');
     fireEvent.click(topOnlyReviewButton);
 
-    expect(screen.getByRole('heading', { name: 'Only Review' })).toBeInTheDocument();
-    expect(screen.getByText('Only Review mode is coming soon')).toBeInTheDocument();
+    expect(screen.getByText('No topics synced yet')).toBeInTheDocument();
+    expect(screen.getByText('Connect to desktop to bring review work onto this device.')).toBeInTheDocument();
     expect(screen.queryByTestId('companion-review-card')).not.toBeInTheDocument();
   }, 15000);
 

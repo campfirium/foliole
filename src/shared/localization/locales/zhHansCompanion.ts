@@ -208,6 +208,9 @@ export const ZH_HANS_COMPANION_TRANSLATIONS: Partial<Record<TranslationKey, stri
   'companion.sync.diagnostic.failed': '同步诊断失败',
   'companion.sync.diagnostic.running.description': '正在收集这台设备和桌面端的同步状态。',
   'companion.sync.diagnostic.running.title': '正在运行同步诊断',
-  'companion.onlyReview.title': '仅复习模式即将可用',
-  'companion.onlyReview.description': '仅复习过滤还没有接好，因此混合学习卡片暂时会隐藏在这里。'
+  'companion.onlyReview.noTopicsTitle': '还没有同步主题',
+  'companion.onlyReview.noScheduledTitle': '这台设备上没有检测项',
+  'companion.onlyReview.noScheduledDescription': '仅复习只显示到期的检测项，不包含阅读主题。',
+  'companion.onlyReview.noDueTitle': '现在没有到期检测项',
+  'companion.onlyReview.noDueDescription': '下一个检测项：{date}'
 };
