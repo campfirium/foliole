@@ -21,6 +21,7 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { closeDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
+import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { updateLibraryPathSetting } from '../ipc/libraryPaths.js';
 
 import {
@@ -130,4 +131,42 @@ it('exports unresolved zero-width locator articles without reintroducing inline 
   expect(output).toBe('# Mirror Export Unresolved Demo\n\nKeep  here.\n');
   expect(output).not.toContain('<highlight');
   expect(output).not.toContain('==bright text==');
+});
+function saveMirrorNode(args: {
+  content?: string;
+  kind?: 'folder' | 'item' | 'topic';
+  nodeId: string;
+  parentNodeId: string | null;
+  title: string;
+  updatedAt: string;
+}) {
+  upsertNodeSnapshot({
+    nodeId: args.nodeId,
+    parentNodeId: args.parentNodeId,
+    kind: args.kind ?? 'topic',
+    title: args.title,
+    isTitleManual: true,
+    hideTitleHeading: false,
+    content: args.content ?? '',
+    reveal: null,
+    anchorLink: null,
+    position: 0,
+    createdAt: '2026-03-30T00:00:00.000Z',
+    updatedAt: args.updatedAt
+  });
+}
+
+it('removes stale empty parent folders when an article mirror moves path', async () => {
+  saveMirrorNode({ kind: 'folder', nodeId: 'folder-old', parentNodeId: null, title: 'Old Folder', updatedAt: '2026-03-30T00:00:00.000Z' });
+  saveMirrorNode({ kind: 'folder', nodeId: 'folder-new', parentNodeId: null, title: 'New Folder', updatedAt: '2026-03-30T00:00:00.000Z' });
+  saveMirrorNode({ content: 'Moving body.', nodeId: 'node-moving', parentNodeId: 'folder-old', title: 'Moving Topic', updatedAt: '2026-03-30T00:00:00.000Z' });
+
+  await expect(exportArticleToMirror('node-moving')).resolves.toBe(true);
+  await expect(fs.readFile(path.join(tempRoot, 'Library', 'Mirror', 'Old Folder', 'Moving Topic.md'), 'utf8')).resolves.toContain('Moving body.');
+
+  saveMirrorNode({ content: 'Moving body.', nodeId: 'node-moving', parentNodeId: 'folder-new', title: 'Moving Topic', updatedAt: '2030-03-30T00:00:00.000Z' });
+
+  await expect(exportArticleToMirror('node-moving')).resolves.toBe(true);
+  await expect(fs.readFile(path.join(tempRoot, 'Library', 'Mirror', 'New Folder', 'Moving Topic.md'), 'utf8')).resolves.toContain('Moving body.');
+  await expect(fs.access(path.join(tempRoot, 'Library', 'Mirror', 'Old Folder'))).rejects.toThrow();
 });

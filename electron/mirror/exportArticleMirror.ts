@@ -174,6 +174,29 @@ async function removeMirrorFile(filePath: string) {
   await fs.rm(legacyDir, { force: true, recursive: true });
 }
 
+function isInsideRoot(rootPath: string, targetPath: string) {
+  const relativePath = path.relative(rootPath, targetPath);
+  return relativePath === '' || (!relativePath.startsWith('..') && !path.isAbsolute(relativePath));
+}
+
+async function removeEmptyMirrorParentDirectories(mirrorRoot: string, filePath: string) {
+  const rootPath = path.resolve(mirrorRoot);
+  let directoryPath = path.resolve(path.dirname(filePath));
+  while (directoryPath !== rootPath && isInsideRoot(rootPath, directoryPath)) {
+    try {
+      await fs.rmdir(directoryPath);
+    } catch {
+      return;
+    }
+    directoryPath = path.dirname(directoryPath);
+  }
+}
+
+async function removeMirrorFileAndEmptyParents(mirrorRoot: string, filePath: string) {
+  await removeMirrorFile(filePath);
+  await removeEmptyMirrorParentDirectories(mirrorRoot, filePath);
+}
+
 export async function exportArticleToMirror(articleId: string): Promise<boolean> {
   const articleRow = loadArticleNode(articleId);
   if (!articleRow) {
@@ -185,7 +208,7 @@ export async function exportArticleToMirror(articleId: string): Promise<boolean>
     if (existingRecord) {
       const paths = loadLibraryPathSettingsSync();
       const absolutePath = path.join(paths.mirror, ...existingRecord.relativePath.split('/'));
-      await removeMirrorFile(absolutePath);
+      await removeMirrorFileAndEmptyParents(paths.mirror, absolutePath);
       openDatabaseConnection().sqlite
         .prepare('DELETE FROM mirror_articles WHERE article_id = ?')
         .run(articleId);
@@ -203,7 +226,7 @@ export async function exportArticleToMirror(articleId: string): Promise<boolean>
   const existingRecord = loadMirrorArticleRecord(articleId);
   if (existingRecord && existingRecord.relativePath !== relativePath) {
     const oldAbsolutePath = path.join(paths.mirror, ...existingRecord.relativePath.split('/'));
-    await removeMirrorFile(oldAbsolutePath);
+    await removeMirrorFileAndEmptyParents(paths.mirror, oldAbsolutePath);
   }
 
   await fs.mkdir(path.dirname(targetPath), { recursive: true });
