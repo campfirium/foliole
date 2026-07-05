@@ -49,7 +49,10 @@ function listenBlocker() {
 
 function expectedCapabilityStatuses() {
   return AGENT_CONTROL_CAPABILITIES.map((name) => ({
-    enabled: name === 'materials.read' || name === 'materials.search',
+    enabled: name === 'materials.read' ||
+      name === 'materials.search' ||
+      name === 'virtualFolders.list' ||
+      name === 'virtualFolders.read',
     name
   }));
 }

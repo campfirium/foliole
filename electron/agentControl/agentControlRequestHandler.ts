@@ -16,6 +16,7 @@ import {
   AGENT_CONTROL_PROTOCOL_VERSION
 } from './agentControlTypes.js';
 import type { AgentControlCapability, AgentControlCapabilityStatus } from './agentControlTypes.js';
+import { handleVirtualFolderList, handleVirtualFolderRead } from './agentControlVirtualFolderHandlers.js';
 
 export interface AgentControlRequestHandlerOptions {
   appVersion: string;
@@ -130,6 +131,14 @@ async function handleRequest(
     await handleMaterialSearch(request, response, options);
     return;
   }
+  if (request.method === 'POST' && url.pathname === '/agent-control/v1/virtual-folders/list') {
+    await handleVirtualFolderList(request, response, options);
+    return;
+  }
+  if (request.method === 'POST' && url.pathname === '/agent-control/v1/virtual-folders/read') {
+    await handleVirtualFolderRead(request, response, options);
+    return;
+  }
   recordRequest({
     capability: 'foundation.route',
     errorCategory: 'not_found',
@@ -141,7 +150,10 @@ async function handleRequest(
 }
 
 function isCapabilityEnabled(name: AgentControlCapability): AgentControlCapabilityStatus['enabled'] {
-  return name === 'materials.read' || name === 'materials.search';
+  return name === 'materials.read' ||
+    name === 'materials.search' ||
+    name === 'virtualFolders.list' ||
+    name === 'virtualFolders.read';
 }
 
 async function readJsonBodyOrFail(

@@ -46,7 +46,7 @@ it('initializes a fresh database with the current schema', () => {
        `SELECT name
        FROM sqlite_master
        WHERE type = 'table' AND name IN (
-         'attachment_blobs', 'content_blob_data', 'content_blobs', 'external_documents', 'node_reading_device_state', 'node_sync_conflicts', 'node_sync_versions', 'node_view_state', 'nodes', 'node_reading', 'node_review', 'review_log', 'search_index_invalidations', 'setting_records', 'settings', 'source_disposition_states', 'sync_change_log', 'sync_object_state', 'sync_peer_cursors', 'sync_peers', 'workspace_meta'
+         'attachment_blobs', 'content_blob_data', 'content_blobs', 'external_documents', 'node_reading_device_state', 'node_sync_conflicts', 'node_sync_versions', 'node_view_state', 'nodes', 'node_reading', 'node_review', 'review_log', 'search_index_invalidations', 'setting_records', 'settings', 'source_disposition_states', 'sync_change_log', 'sync_object_state', 'sync_peer_cursors', 'sync_peers', 'virtual_folder_items', 'virtual_folders', 'workspace_meta'
        )
        ORDER BY name ASC`
     )
@@ -73,6 +73,8 @@ it('initializes a fresh database with the current schema', () => {
     { name: 'sync_object_state' },
     { name: 'sync_peer_cursors' },
     { name: 'sync_peers' },
+    { name: 'virtual_folder_items' },
+    { name: 'virtual_folders' },
     { name: 'workspace_meta' }
   ]);
 });

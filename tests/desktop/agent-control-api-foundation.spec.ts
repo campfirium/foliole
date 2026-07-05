@@ -36,6 +36,8 @@ test('desktop runtime exposes the local Agent Control API foundation', async ({ 
     capabilities: [
       'materials.read',
       'materials.search',
+      'virtualFolders.list',
+      'virtualFolders.read',
       'virtualFolders.write',
       'materials.update',
       'materials.deleteSoft'
@@ -62,6 +64,8 @@ test('desktop runtime exposes the local Agent Control API foundation', async ({ 
     capabilities: [
       { enabled: true, name: 'materials.read' },
       { enabled: true, name: 'materials.search' },
+      { enabled: true, name: 'virtualFolders.list' },
+      { enabled: true, name: 'virtualFolders.read' },
       { enabled: false, name: 'virtualFolders.write' },
       { enabled: false, name: 'materials.update' },
       { enabled: false, name: 'materials.deleteSoft' }
