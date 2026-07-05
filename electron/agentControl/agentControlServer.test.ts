@@ -51,6 +51,8 @@ function expectedCapabilityStatuses() {
   return AGENT_CONTROL_CAPABILITIES.map((name) => ({
     enabled: name === 'materials.read' ||
       name === 'materials.search' ||
+      name === 'materials.update' ||
+      name === 'materials.deleteSoft' ||
       name === 'virtualFolders.list' ||
       name === 'virtualFolders.read' ||
       name === 'virtualFolders.create' ||

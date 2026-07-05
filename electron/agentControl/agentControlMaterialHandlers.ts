@@ -2,6 +2,11 @@ import type http from 'node:http';
 
 import { recordAgentControlAuditEvent } from './agentControlAudit.js';
 import {
+  AgentMaterialMutationError,
+  softDeleteAgentControlMaterial,
+  updateAgentControlMaterial
+} from './agentControlMaterialMutations.js';
+import {
   AGENT_CONTROL_MATERIAL_SEARCH_LIMIT,
   AGENT_CONTROL_MATERIAL_SEARCH_MAX_LIMIT,
   normalizeBodyObject,
@@ -120,4 +125,92 @@ export async function handleMaterialSearch(
   const payload = searchAgentControlMaterials(query, limit);
   recordRequest({ capability, options, request, result: 'success' });
   sendJson(response, 200, payload as unknown as Record<string, unknown>);
+}
+
+export async function handleMaterialUpdate(
+  request: http.IncomingMessage,
+  response: http.ServerResponse,
+  options: AgentControlRequestHandlerOptions
+) {
+  const capability = 'materials.update';
+  if (!requireAuthorized(request, response, options, capability)) return;
+  const body = await readJsonBodyOrFail(request, response, options, capability);
+  if (!body) return;
+  const id = typeof body.id === 'string' ? body.id.trim() : '';
+  const expectedUpdatedAt = typeof body.expected_updated_at === 'string' ? body.expected_updated_at.trim() : '';
+  const patch = normalizeUpdatePatch(body);
+  if (!id || !expectedUpdatedAt || !patch) {
+    sendInvalidRequest(request, response, options, capability);
+    return;
+  }
+  try {
+    const material = updateAgentControlMaterial({ ...patch, expectedUpdatedAt, id });
+    recordRequest({ capability, options, request, result: 'success', targetId: id });
+    sendJson(response, 200, { material });
+  } catch (error) {
+    handleMutationError(error, request, response, options, capability, id);
+  }
+}
+
+export async function handleMaterialDeleteSoft(
+  request: http.IncomingMessage,
+  response: http.ServerResponse,
+  options: AgentControlRequestHandlerOptions
+) {
+  const capability = 'materials.deleteSoft';
+  if (!requireAuthorized(request, response, options, capability)) return;
+  const body = await readJsonBodyOrFail(request, response, options, capability);
+  if (!body) return;
+  const id = typeof body.id === 'string' ? body.id.trim() : '';
+  const expectedUpdatedAt = typeof body.expected_updated_at === 'string' ? body.expected_updated_at.trim() : undefined;
+  if (!id) {
+    sendInvalidRequest(request, response, options, capability);
+    return;
+  }
+  try {
+    const payload = softDeleteAgentControlMaterial({
+      ...(expectedUpdatedAt ? { expectedUpdatedAt } : {}),
+      id
+    });
+    recordRequest({ capability, options, request, result: 'success', targetId: id });
+    sendJson(response, 200, payload as unknown as Record<string, unknown>);
+  } catch (error) {
+    handleMutationError(error, request, response, options, capability, id);
+  }
+}
+
+function normalizeUpdatePatch(body: Record<string, unknown>) {
+  const patch: { content?: string; title?: string } = {};
+  if (Object.hasOwn(body, 'title')) {
+    if (typeof body.title !== 'string') return null;
+    patch.title = body.title;
+  }
+  if (Object.hasOwn(body, 'content')) {
+    if (typeof body.content !== 'string') return null;
+    patch.content = body.content;
+  }
+  return Object.hasOwn(patch, 'title') || Object.hasOwn(patch, 'content') ? patch : null;
+}
+
+function sendInvalidRequest(
+  request: http.IncomingMessage,
+  response: http.ServerResponse,
+  options: AgentControlRequestHandlerOptions,
+  capability: string
+) {
+  recordRequest({ capability, errorCategory: 'invalid_request', options, request, result: 'failed' });
+  sendJson(response, 400, { error: 'invalid_request' });
+}
+
+function handleMutationError(
+  error: unknown,
+  request: http.IncomingMessage,
+  response: http.ServerResponse,
+  options: AgentControlRequestHandlerOptions,
+  capability: string,
+  targetId: string
+) {
+  if (!(error instanceof AgentMaterialMutationError)) throw error;
+  recordRequest({ capability, errorCategory: error.category, options, request, result: 'failed', targetId });
+  sendJson(response, error.statusCode, { error: error.category });
 }

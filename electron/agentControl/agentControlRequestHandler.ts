@@ -1,7 +1,12 @@
 import type http from 'node:http';
 
 import { recordAgentControlAuditEvent, type AgentControlAuditSink } from './agentControlAudit.js';
-import { handleMaterialRead, handleMaterialSearch } from './agentControlMaterialHandlers.js';
+import {
+  handleMaterialDeleteSoft,
+  handleMaterialRead,
+  handleMaterialSearch,
+  handleMaterialUpdate
+} from './agentControlMaterialHandlers.js';
 import { isBearerTokenAuthorized } from './agentControlToken.js';
 import {
   AGENT_CONTROL_CAPABILITIES,
@@ -122,36 +127,10 @@ async function handleRequest(
     handleVerify(request, response, options);
     return;
   }
-  if (request.method === 'POST' && url.pathname === '/agent-control/v1/materials/read') {
-    await handleMaterialRead(request, response, options);
+  if (await handleMaterialRoutes(request, response, options, url.pathname)) {
     return;
   }
-  if (request.method === 'POST' && url.pathname === '/agent-control/v1/materials/search') {
-    await handleMaterialSearch(request, response, options);
-    return;
-  }
-  if (request.method === 'POST' && url.pathname === '/agent-control/v1/virtual-folders/list') {
-    await handleVirtualFolderList(request, response, options);
-    return;
-  }
-  if (request.method === 'POST' && url.pathname === '/agent-control/v1/virtual-folders/read') {
-    await handleVirtualFolderRead(request, response, options);
-    return;
-  }
-  if (request.method === 'POST' && url.pathname === '/agent-control/v1/virtual-folders/create') {
-    await handleVirtualFolderCreate(request, response, options);
-    return;
-  }
-  if (request.method === 'POST' && url.pathname === '/agent-control/v1/virtual-folders/add-items') {
-    await handleVirtualFolderAddItems(request, response, options);
-    return;
-  }
-  if (request.method === 'POST' && url.pathname === '/agent-control/v1/virtual-folders/remove-items') {
-    await handleVirtualFolderRemoveItems(request, response, options);
-    return;
-  }
-  if (request.method === 'POST' && url.pathname === '/agent-control/v1/virtual-folders/reorder') {
-    await handleVirtualFolderReorder(request, response, options);
+  if (await handleVirtualFolderRoutes(request, response, options, url.pathname)) {
     return;
   }
   recordRequest({
@@ -164,9 +143,43 @@ async function handleRequest(
   sendJson(response, 404, { error: 'not_found' });
 }
 
+async function handleMaterialRoutes(
+  request: http.IncomingMessage,
+  response: http.ServerResponse,
+  options: AgentControlRequestHandlerOptions,
+  pathname: string
+) {
+  if (request.method !== 'POST') return false;
+  if (pathname === '/agent-control/v1/materials/read') await handleMaterialRead(request, response, options);
+  else if (pathname === '/agent-control/v1/materials/search') await handleMaterialSearch(request, response, options);
+  else if (pathname === '/agent-control/v1/materials/update') await handleMaterialUpdate(request, response, options);
+  else if (pathname === '/agent-control/v1/materials/delete-soft') await handleMaterialDeleteSoft(request, response, options);
+  else return false;
+  return true;
+}
+
+async function handleVirtualFolderRoutes(
+  request: http.IncomingMessage,
+  response: http.ServerResponse,
+  options: AgentControlRequestHandlerOptions,
+  pathname: string
+) {
+  if (request.method !== 'POST') return false;
+  if (pathname === '/agent-control/v1/virtual-folders/list') await handleVirtualFolderList(request, response, options);
+  else if (pathname === '/agent-control/v1/virtual-folders/read') await handleVirtualFolderRead(request, response, options);
+  else if (pathname === '/agent-control/v1/virtual-folders/create') await handleVirtualFolderCreate(request, response, options);
+  else if (pathname === '/agent-control/v1/virtual-folders/add-items') await handleVirtualFolderAddItems(request, response, options);
+  else if (pathname === '/agent-control/v1/virtual-folders/remove-items') await handleVirtualFolderRemoveItems(request, response, options);
+  else if (pathname === '/agent-control/v1/virtual-folders/reorder') await handleVirtualFolderReorder(request, response, options);
+  else return false;
+  return true;
+}
+
 function isCapabilityEnabled(name: AgentControlCapability): AgentControlCapabilityStatus['enabled'] {
   return name === 'materials.read' ||
     name === 'materials.search' ||
+    name === 'materials.update' ||
+    name === 'materials.deleteSoft' ||
     name === 'virtualFolders.list' ||
     name === 'virtualFolders.read' ||
     name === 'virtualFolders.create' ||
