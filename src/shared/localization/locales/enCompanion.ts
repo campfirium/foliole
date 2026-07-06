@@ -59,6 +59,7 @@ export const EN_COMPANION_TRANSLATIONS = {
   'companion.browse.header.subtitle': 'Recent synced topics with readable body text on this device.',
   'companion.browse.title': 'Browse',
   'companion.review.answer': 'Answer',
+  'companion.review.answerUnavailable': 'Answer not synced to this device yet.',
   'companion.review.breadcrumb': 'Review breadcrumb',
   'companion.review.card': 'Review card',
   'companion.review.noDueTitle': 'No items are due right now',

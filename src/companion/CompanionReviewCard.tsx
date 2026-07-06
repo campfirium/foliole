@@ -55,6 +55,15 @@ function ReviewAnswer(props: { nodeId: string; reveal: string }) {
   );
 }
 
+function ReviewAnswerUnavailable() {
+  const t = useTranslation();
+  return (
+    <section className="mt-5 rounded-md border border-companion-divider bg-companion-subtle/45 px-3 py-3 text-sm leading-6 text-companion-text-secondary">
+      {t('companion.review.answerUnavailable')}
+    </section>
+  );
+}
+
 function resolveReviewSourceLabel(items: CompanionReviewBreadcrumbItem[]) {
   return items.find((item) => item.isCurrent)?.label ?? items.at(-1)?.label ?? null;
 }
@@ -96,8 +105,8 @@ export function CompanionReviewCard(props: {
 }
 
 export function CompanionReviewAnswer(props: { card: CompanionReviewCardModel }) {
-  if (!props.card.reveal) {
-    return null;
+  if (!props.card.reveal?.trim()) {
+    return props.card.hasAnswer ? <ReviewAnswerUnavailable /> : null;
   }
   return <ReviewAnswer nodeId={props.card.nodeId} reveal={props.card.reveal} />;
 }

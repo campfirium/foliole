@@ -47,7 +47,7 @@ export const CompanionShellOverlays = memo(function CompanionShellOverlays(props
       />
       <CompanionBottomReviewBar
         disabled={props.isBottomBarDisabled}
-        hasAnswer={Boolean(currentReviewCard?.reveal)}
+        hasAnswer={Boolean(currentReviewCard?.hasAnswer)}
         isAnswerRevealed={props.isReviewAnswerRevealed}
         itemKind={currentReviewCard?.itemKind ?? 'reading'}
         onReadReviewTopic={props.onReadReviewTopic}

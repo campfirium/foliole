@@ -22,6 +22,7 @@ import {
 export interface CompanionReviewCard {
   content: string;
   due: string;
+  hasAnswer: boolean;
   hideTitleHeading: boolean;
   itemKind: 'fsrs' | 'reading';
   nodeId: string;
@@ -59,6 +60,10 @@ function normalizeTitle(title: string) {
   return trimmed || translate(getStoredAppLocale(), 'desktop.search.context.untitled');
 }
 
+function hasReviewAnswer(node: WorkspaceSnapshot['nodesById'][string]) {
+  return Boolean(node.reveal?.trim()) || Boolean((node as { hasReveal?: boolean }).hasReveal);
+}
+
 export function buildCurrentCard(snapshot: WorkspaceSnapshot, queueNodeIds: string[]) {
   const currentNodeId = queueNodeIds[0];
   if (!currentNodeId) {
@@ -71,6 +76,7 @@ export function buildCurrentCard(snapshot: WorkspaceSnapshot, queueNodeIds: stri
   return {
     content: node.content,
     due: node.review?.due ?? node.reading?.nextAt ?? node.updatedAt,
+    hasAnswer: hasReviewAnswer(node),
     hideTitleHeading: Boolean(node.hideTitleHeading),
     itemKind: getReviewItemKind(node) === 'fsrs' ? 'fsrs' : 'reading',
     nodeId: currentNodeId,

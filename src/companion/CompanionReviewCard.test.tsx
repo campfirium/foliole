@@ -31,6 +31,7 @@ function createCard() {
   return {
     content: 'Readable topic body',
     due: '2026-04-22T08:00:00.000Z',
+    hasAnswer: true,
     hideTitleHeading: true,
     itemKind: 'reading' as const,
     nodeId: 'topic-1',
@@ -66,6 +67,13 @@ describe('CompanionReviewCard', () => {
       'true'
     );
     expect(screen.getByText('Readable topic body')).toHaveAttribute('data-layout', 'review');
+  });
+
+  it('renders an unavailable answer state when the answer body is not synced', () => {
+    renderWithLocalization(<CompanionReviewAnswer card={{ ...createCard(), reveal: null }} />);
+
+    expect(screen.getByText('Answer not synced to this device yet.')).toBeInTheDocument();
+    expect(screen.queryByRole('separator')).not.toBeInTheDocument();
   });
 
   it('renders the answer section only when reveal content exists', () => {

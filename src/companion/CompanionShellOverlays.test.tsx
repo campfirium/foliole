@@ -49,5 +49,29 @@ describe('CompanionShellOverlays', () => {
 
     expect(screen.getByRole('button', { name: 'Flow' })).toBeInTheDocument();
   });
+
+  it('enables the reveal action when a review card has an answer without synced body text', () => {
+    render(
+      <CompanionShellOverlays
+        {...createOverlayProps()}
+        currentReviewCard={{
+          content: 'Prompt',
+          due: '2026-04-22T08:00:00.000Z',
+          hasAnswer: true,
+          hideTitleHeading: false,
+          itemKind: 'fsrs',
+          nodeId: 'item-1',
+          queuePosition: 1,
+          remainingCount: 1,
+          reveal: null,
+          title: 'Prompt',
+          totalCount: 1
+        }}
+      />
+    );
+
+    expect(screen.getByLabelText('Show Answer')).not.toBeDisabled();
+    expect(screen.queryByLabelText('Again')).not.toBeInTheDocument();
+  });
 });
 
