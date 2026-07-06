@@ -29,7 +29,7 @@ export function WorkspaceRuntimeNotice() {
       key={notice.id}
       role="status"
     >
-      <div className={appShelllessSurfaceClassName('flex min-h-32 w-[min(540px,100%)] items-center justify-center px-8 py-6 text-center text-ui-md font-medium leading-6 text-shellless-title')}>
+      <div className={appShelllessSurfaceClassName('flex min-h-[52px] w-[min(300px,100%)] items-center justify-center px-[18px] py-[14px] text-center text-ui-md font-medium leading-5 text-shellless-title')}>
         {notice.message}
       </div>
     </div>

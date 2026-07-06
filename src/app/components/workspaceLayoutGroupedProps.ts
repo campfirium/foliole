@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 import {
   DOCUMENT_KEYS,
   EDITOR_COMMAND_KEYS,
@@ -30,6 +32,7 @@ import type {
 } from './workspaceLayoutPropGroups';
 
 export interface WorkspaceLayoutProps {
+  overlay?: ReactNode;
   navigation: WorkspaceLayoutNavigationProps;
   document: WorkspaceLayoutDocumentProps;
   editorCommands: WorkspaceLayoutEditorCommandProps;

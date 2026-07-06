@@ -30,7 +30,7 @@ async function exitFlowIfActive(desktopWindow: import('@playwright/test').Page) 
   }
 }
 
-test('clicking the empty review queue action opens a desktop dialog', async ({ desktopWindow }) => {
+test('clicking the empty review queue action opens a workspace notice', async ({ desktopWindow }) => {
   await expectWorkspaceShell(desktopWindow);
   await exitFlowIfActive(desktopWindow);
   await seedEmptyReviewQueueWorkspace(desktopWindow);
@@ -43,8 +43,10 @@ test('clicking the empty review queue action opens a desktop dialog', async ({ d
     return Boolean(reviewAction);
   });
 
-  const dialog = desktopWindow.getByRole('dialog', { name: /^All clear for now\.$/ });
-  await expect(dialog).toBeVisible();
+  const notice = desktopWindow.getByTestId('review-queue-empty-notice');
+  await expect(notice).toBeVisible();
+  await expect(notice).toContainText('All clear for now.');
+  await expect(desktopWindow.getByRole('dialog', { name: /^All clear for now\.$/ })).toHaveCount(0);
   await expect(desktopWindow.getByText(/Flow has an unavailable topic|Flow 中有不可用主题/)).toHaveCount(0);
   await mkdir(path.dirname(SCREENSHOT_PATH), { recursive: true });
   await desktopWindow.screenshot({ path: SCREENSHOT_PATH });

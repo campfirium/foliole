@@ -156,6 +156,7 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
         gridProps={gridProps}
         titleBarProps={props}
       />
+      {props.overlay}
       {renderWorkspaceActivityNotice(clipboardImportNotice)}
       <WorkspaceRuntimeNotice />
       <DiscoursePublishDialogHost />

@@ -7,7 +7,7 @@ import {
   useReviewQueueEmptyDialogState
 } from '../hooks/useReviewQueueEmptyDialogState';
 
-import { ReviewQueueEmptyDialog } from './ReviewQueueEmptyDialog';
+import { ReviewQueueEmptyDialog, ReviewQueueEmptyNotice } from './ReviewQueueEmptyDialog';
 import { WorkspaceLayout } from './WorkspaceLayout';
 import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 
@@ -50,7 +50,10 @@ export function WorkspaceLayoutWithReviewQueueDialog({ controller }: { controlle
 
   return (
     <>
-      <WorkspaceLayout {...layoutProps} />
+      <WorkspaceLayout
+        {...layoutProps}
+        overlay={<ReviewQueueEmptyNotice content={dialog.content} onClose={dialog.close} open={dialog.isOpen} />}
+      />
       <ReviewQueueEmptyDialog
         content={dialog.content}
         onContinueDemoDay={handleContinueDemoDay}

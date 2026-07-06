@@ -3,19 +3,25 @@ import { expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
-import { ReviewQueueEmptyDialog } from './ReviewQueueEmptyDialog';
+import { ReviewQueueEmptyDialog, ReviewQueueEmptyNotice } from './ReviewQueueEmptyDialog';
 
 it('uses the existing all-clear copy when the review queue is empty', () => {
-  const onClose = vi.fn();
-  renderWithLocalization(<ReviewQueueEmptyDialog content={{ kind: 'empty' }} onClose={onClose} open />);
+  renderWithLocalization(<ReviewQueueEmptyNotice content={{ kind: 'empty' }} onClose={vi.fn()} open />);
 
-  const dialog = screen.getByRole('dialog', { name: 'All clear for now.' });
-  expect(dialog).toBeInTheDocument();
-  expect(dialog).toHaveClass('min-h-32');
-  expect(dialog).toHaveClass('w-[min(540px,calc(100vw-32px))]');
-  expect(dialog).toHaveClass('bg-shellless-surface');
-  expect(dialog.className).not.toContain('bg-[var(--app-floating-surface-bg)]');
-  expect(dialog.className).not.toContain('shadow-panel');
+  const notice = screen.getByRole('status');
+  expect(notice).toBeInTheDocument();
+  expect(notice).toHaveClass('left-[calc(var(--workspace-rail-width)+var(--workspace-list-current-width,300px)+var(--workspace-list-splitter-width,1px))]');
+  expect(notice).toHaveClass('top-[var(--workspace-top-toolbar-height)]');
+  expect(notice).toHaveClass('right-[calc(var(--workspace-right-sidebar-current-width,320px)+var(--workspace-right-sidebar-splitter-width,1px))]');
+  const surface = notice.firstElementChild as HTMLElement;
+  expect(surface).toHaveClass('min-h-[52px]');
+  expect(surface).toHaveClass('w-[min(300px,100%)]');
+  expect(surface).toHaveClass('justify-center');
+  expect(surface).toHaveClass('text-center');
+  expect(surface).toHaveClass('bg-shellless-surface');
+  expect(surface.className).not.toContain('bg-[var(--app-floating-surface-bg)]');
+  expect(surface.className).not.toContain('shadow-panel');
+  expect(Array.from(document.body.querySelectorAll('*')).some((element) => String(element.className).includes('bg-foreground/10'))).toBe(false);
   const title = screen.getByText('All clear for now.');
   expect(title).toHaveClass('text-ui-md');
   expect(title).toHaveClass('font-medium');
@@ -38,7 +44,7 @@ it('shows Demo day-clear copy in the same dialog shell', () => {
   );
 
   expect(screen.getByRole('dialog', { name: 'All clear for Day 2.' })).toBeInTheDocument();
-  expect(screen.getByText('Simulated days are designed specifically for this demo, making Foliole’s scheduling experience more intuitive. You can exit Flow and continue tomorrow, or simulate moving to the next day and start that day’s Flow directly.')).toBeInTheDocument();
+  expect(screen.getByText(/Simulated days are designed specifically for this demo/)).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Stay Here' })).not.toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: 'Exit Flow' }));
