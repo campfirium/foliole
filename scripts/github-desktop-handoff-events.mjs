@@ -1,5 +1,6 @@
 import { buildIssueHandoffData, buildPrHandoffData } from './github-desktop-handoff-title.mjs';
 import { listPrChecks, recordMonitorError, runGh } from './github-monitor-gh.mjs';
+import { isCompletedNonFailureRun, markRecoveredIncident, recordIncidentFailure, shouldSuppressIncidentFailure } from './github-desktop-handoff-action-incidents.mjs';
 import { hasPendingBarrierForRun } from './t4-archive-barrier-state.mjs';
 
 const ACTION_WORKFLOW_TIERS = new Map([
@@ -7,12 +8,8 @@ const ACTION_WORKFLOW_TIERS = new Map([
   ['T5 Nightly Remote Quality', 'T5']
 ]);
 
-function actionWorkflowTier(workflowName) {
-  return ACTION_WORKFLOW_TIERS.get(workflowName) ?? 'Actions';
-}
-
 function actionRunEvent(config, run, renderTemplate) {
-  const tier = actionWorkflowTier(run.workflowName);
+  const tier = ACTION_WORKFLOW_TIERS.get(run.workflowName) ?? 'Actions';
   const data = {
     branch: run.headBranch,
     eventId: String(run.databaseId),
@@ -39,21 +36,22 @@ function normalizeWorkflowState(state, workflow) {
   const existing = state.actions[workflow];
   if (existing && typeof existing === 'object') {
     existing.runs ??= {};
+    existing.incidents ??= {};
     existing.initialized ??= true;
     return existing;
   }
   const normalized = {
     baselineRunId: existing ? String(existing) : '',
     initialized: Boolean(existing),
-    runs: existing ? { [String(existing)]: { status: 'unknown' } } : {}
+    runs: existing ? { [String(existing)]: { status: 'unknown' } } : {},
+    incidents: {}
   };
   state.actions[workflow] = normalized;
   return normalized;
 }
 
 function allowedBranch(config, run) {
-  const branches = config.branches ?? [];
-  return branches.length === 0 || branches.includes(run.headBranch);
+  return (config.branches ?? []).length === 0 || (config.branches ?? []).includes(run.headBranch);
 }
 
 function isFailureRun(config, run) {
@@ -120,20 +118,33 @@ function listActionEvents(config, state, includeExisting, errors, renderTemplate
       recordMonitorError(errors, 'github-actions', workflow, error);
       continue;
     }
-    for (const run of runs) {
+    const orderedRuns = [...runs].sort((left, right) => (Date.parse(left.createdAt || '') || 0) - (Date.parse(right.createdAt || '') || 0));
+    let reachedBaseline = includeExisting || !workflowState.baselineRunId;
+    for (const run of orderedRuns) {
       if (!allowedBranch(config, run)) continue;
-      const event = actionRunEvent(config, run, renderTemplate);
       const runId = String(run.databaseId);
       const isBaselineRun = workflowState.baselineRunId && runId === workflowState.baselineRunId;
+      recordObservedRun(workflowState, run);
+      if (!includeExisting && isBaselineRun) {
+        reachedBaseline = true;
+        continue;
+      }
+      if (!reachedBaseline) continue;
+      const event = actionRunEvent(config, run, renderTemplate);
+      if (isCompletedNonFailureRun(config, run)) markRecoveredIncident(workflowState, run);
+      const barrierSuppressed = shouldSuppressBarrierOwnedFailure(run);
+      const incidentSuppressed = shouldSuppressIncidentFailure(workflowState, run);
       const shouldEmit = (includeExisting || workflowState.initialized)
         && isFailureRun(config, run)
-        && !shouldSuppressBarrierOwnedFailure(run)
+        && !barrierSuppressed
+        && !incidentSuppressed
         && !state.submitted[event.dedupeKey];
-      recordObservedRun(workflowState, run);
+      if ((includeExisting || workflowState.initialized) && isFailureRun(config, run) && !barrierSuppressed) {
+        recordIncidentFailure(workflowState, run, event, shouldEmit || Boolean(state.submitted[event.dedupeKey]));
+      }
       if (shouldEmit) {
         events.push(event);
       }
-      if (!includeExisting && isBaselineRun) break;
     }
     workflowState.initialized = true;
     workflowState.latestObservedRunId = String(runs.find((run) => allowedBranch(config, run))?.databaseId ?? '');

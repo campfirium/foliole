@@ -39,10 +39,23 @@ function resolveGhExecutable() {
   return commandNames[0];
 }
 
-export function runGh(args, { cwd = process.cwd() } = {}) {
-  const result = spawnSync(GH_EXECUTABLE, args, { cwd, encoding: 'utf8' });
-  if (result.status !== 0) {
-    throw new Error(`${GH_EXECUTABLE} ${args.join(' ')} failed: ${(result.stderr || result.stdout).trim()}`);
+export const DEFAULT_GH_TIMEOUT_MS = Number(process.env.GITHUB_MONITOR_GH_TIMEOUT_MS || 120000);
+
+export function formatGhFailure(command, args, result, timeoutMs) {
+  const detail = (result.stderr || result.stdout || '').trim();
+  const parts = [`${command} ${args.join(' ')} failed`];
+  if (result.status !== null && result.status !== undefined) parts.push(`status=${result.status}`);
+  if (result.signal) parts.push(`signal=${result.signal}`);
+  if (result.error) parts.push(`error=${result.error.message || result.error}`);
+  if (timeoutMs) parts.push(`timeoutMs=${timeoutMs}`);
+  if (detail) parts.push(detail);
+  return parts.join(': ');
+}
+
+export function runGh(args, { cwd = process.cwd(), timeoutMs = DEFAULT_GH_TIMEOUT_MS } = {}) {
+  const result = spawnSync(GH_EXECUTABLE, args, { cwd, encoding: 'utf8', timeout: timeoutMs });
+  if (result.status !== 0 || result.error) {
+    throw new Error(formatGhFailure(GH_EXECUTABLE, args, result, timeoutMs));
   }
   return JSON.parse(result.stdout || 'null');
 }
