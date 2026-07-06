@@ -1,5 +1,6 @@
 import { expect, it } from 'vitest';
 
+import { hashTextBody } from '../../lib/core/database/contentBodyBlobs.js';
 import { computeNodeSyncHash } from '../../lib/core/database/nodeSyncHash.js';
 
 function input(overrides: { manualChildOrder?: string | null; sequentialReadingEnabled: boolean | null; shelvedAt?: string | null }) {
@@ -49,4 +50,13 @@ it('includes manual child order in node sync hashes', () => {
   expect(computeNodeSyncHash(input({ manualChildOrder: '["node-a","node-b"]', sequentialReadingEnabled: null }))).not.toBe(
     computeNodeSyncHash(input({ manualChildOrder: '["node-b","node-a"]', sequentialReadingEnabled: null }))
   );
+});
+
+it('uses content as node identity while body blob hash stays derived', () => {
+  const base = input({ sequentialReadingEnabled: null });
+  const changed = { ...base, content: 'Changed body' };
+
+  expect(computeNodeSyncHash(base)).not.toBe(computeNodeSyncHash(changed));
+  expect(hashTextBody(base.content)).toBe(hashTextBody('Body'));
+  expect(hashTextBody(base.content)).not.toBe(hashTextBody(changed.content));
 });

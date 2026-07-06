@@ -26,6 +26,7 @@ export const CORE_TABLES = [
 
 export const DESKTOP_ONLY_TABLES = new Set([
   'import_runs',
+  'incoming_updates',
   'keep_import_item_cache',
   'keep_import_items',
   'mirror_articles',

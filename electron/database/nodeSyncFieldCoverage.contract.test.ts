@@ -13,7 +13,7 @@ import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract
 
 const NODE_SYNC_METADATA_COLUMNS = ['current_version_id', 'last_modified_by_device_id', 'sync_dirty'];
 const NODE_HASH_SIDE_PAYLOAD_FIELDS = ['attachments'];
-const NODE_BODY_HASH_PENDING_COLUMNS = ['body_blob_hash'];
+const NODE_DERIVED_BODY_RESOURCE_IDENTITY_COLUMNS = ['body_blob_hash'];
 const SYNC_PACK_NODE_UPSERT_PENDING_COLUMNS = [
   'anchor_link',
   'desired_retention',
@@ -66,6 +66,7 @@ it('keeps node sync field coverage explicit across schema, hash, snapshot, and a
   expectComparableFields(remoteNodeUpsertColumns(), desktopColumns);
   expectComparableFields(wireSnapshotFields(), expectedSnapshotFields(desktopColumns));
   expect(syncPackNodeUpsertPendingColumns(desktopColumns)).toEqual(SYNC_PACK_NODE_UPSERT_PENDING_COLUMNS);
+  expectDerivedBodyResourceIdentityCoverage();
 });
 
 it('reports a contract drift when a companion node schema field is missing', () => {
@@ -153,7 +154,7 @@ function syncPackNodeUpsertPendingColumns(schemaColumns: string[]) {
 
 function expectedHashPayloadFields(schemaColumns: string[]) {
   return [
-    ...withoutFields(schemaColumns, [...NODE_SYNC_METADATA_COLUMNS, ...NODE_BODY_HASH_PENDING_COLUMNS]),
+    ...withoutFields(schemaColumns, [...NODE_SYNC_METADATA_COLUMNS, ...NODE_DERIVED_BODY_RESOURCE_IDENTITY_COLUMNS]),
     ...NODE_HASH_SIDE_PAYLOAD_FIELDS
   ].sort();
 }
@@ -177,6 +178,15 @@ function missingFields(expected: readonly string[], actual: readonly string[]) {
 
 function expectComparableFields(actual: readonly string[], expected: readonly string[]) {
   expect(actual).toEqual([...expected].sort());
+}
+
+function expectDerivedBodyResourceIdentityCoverage() {
+  const bodyHash = 'body_blob_hash';
+  expect(canonicalHashFields()).not.toContain(bodyHash);
+  expect(desktopSnapshotFields()).toContain(bodyHash);
+  expect(wireSnapshotFields()).toContain(bodyHash);
+  expect(remoteNodeUpsertColumns()).toContain(bodyHash);
+  expect(syncPackNodeUpsertColumns()).toContain(bodyHash);
 }
 
 function extractInsertColumns(sql: string, table: string) {

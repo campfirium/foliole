@@ -197,10 +197,11 @@ describe('schema inventory drift gate', () => {
     expect(report.sources).toEqual({
       androidAssetStatements: 41,
       androidJavaMigrationStatements: 0,
-      desktopStatements: 58
+      desktopStatements: 59
     });
     expect(report.desktopOnly).toEqual([
       { classification: 'known-platform-only', table: 'import_runs' },
+      { classification: 'known-platform-only', table: 'incoming_updates' },
       { classification: 'known-platform-only', table: 'keep_import_item_cache' },
       { classification: 'known-platform-only', table: 'keep_import_items' },
       { classification: 'known-platform-only', table: 'mirror_articles' },
