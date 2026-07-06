@@ -153,6 +153,23 @@ describe('git hooks', () => {
     expect(result.stderr).toContain('contains an unnumbered commit subject');
   }, HOOK_INTEGRATION_TIMEOUT_MS);
 
+  it('checks only new commit subjects for existing branch pushes', async () => {
+    const repoDir = await createRepo();
+    await expect(commitFile(repoDir, 'a.txt', 'a\n', '000001 seed')).resolves.toMatchObject({ code: 0 });
+    await writeFile(path.join(repoDir, 'remote.txt'), 'remote\n');
+    await runCommand('git', ['add', 'remote.txt'], repoDir);
+    await runCommand('git', ['commit', '--no-verify', '-m', 'remote merge without local sequence'], repoDir);
+    const remoteSha = (await runCommand('git', ['rev-parse', 'HEAD'], repoDir)).stdout.trim();
+    await expect(commitFile(repoDir, 'b.txt', 'b\n', '000002 local change')).resolves.toMatchObject({ code: 0 });
+
+    const head = (await runCommand('git', ['rev-parse', 'HEAD'], repoDir)).stdout.trim();
+    const hook = path.join(repoDir, '.githooks', 'pre-push');
+    const result = await runCommand('bash', [hook], repoDir, {
+      input: `refs/heads/main ${head} refs/heads/main ${remoteSha}\n`
+    });
+
+    expect(result.code, result.stderr).toBe(0);
+  }, HOOK_INTEGRATION_TIMEOUT_MS);
   it('does not depend on an external cat binary in pre-push', async () => {
     const repoDir = await createRepo();
     await expect(commitFile(repoDir, 'a.txt', 'a\n', '000001 seed')).resolves.toMatchObject({ code: 0 });

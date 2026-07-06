@@ -60,13 +60,18 @@ function checkCommitMessage(messagePath) {
   process.exit(1);
 }
 
-function readBranchSubjects(localSha) {
-  return runGit(['log', '--first-parent', '--reverse', '--pretty=%s', localSha]).split('\n').filter(Boolean);
+function readSubjects(revision) {
+  return runGit(['log', '--first-parent', '--reverse', '--pretty=%s', revision]).split('\n').filter(Boolean);
 }
 
-function checkContinuousSubjects(subjects, refName) {
+function getMaxSequence(subjects) {
+  const numbers = subjects.map(parseNumberedSubject).filter((value) => value !== null);
+  return numbers.length > 0 ? Math.max(...numbers) : 0;
+}
+
+function checkContinuousSubjects(subjects, refName, start = 1) {
   const seen = new Set();
-  let expected = 1;
+  let expected = start;
 
   subjects.forEach((subject) => {
     const actual = parseNumberedSubject(subject);
@@ -98,7 +103,12 @@ function checkPrePush(input) {
     if (ZERO_SHA.test(update.localSha) || !update.localRef.startsWith('refs/heads/')) {
       continue;
     }
-    checkContinuousSubjects(readBranchSubjects(update.localSha), update.remoteRef);
+    if (ZERO_SHA.test(update.remoteSha)) {
+      checkContinuousSubjects(readSubjects(update.localSha), update.remoteRef);
+      continue;
+    }
+    const expected = getMaxSequence(readSubjects(update.remoteSha)) + 1;
+    checkContinuousSubjects(readSubjects(`${update.remoteSha}..${update.localSha}`), update.remoteRef, expected);
   }
 }
 
