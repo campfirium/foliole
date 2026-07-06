@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 const DEFAULT_BACKUP_DIR = path.join('.tmp', 'agent-control', 'backups');
 const JSON_HEADERS = { 'content-type': 'application/json' };
 const ROUTES = {
-  capabilities: { capability: 'foundation.capabilities', method: 'GET', path: 'capabilities' },
+  capabilities: { method: 'GET', path: 'capabilities' },
   health: { auth: false, method: 'GET', path: 'health' },
   'materials/delete-soft': { capability: 'materials.deleteSoft', method: 'POST', path: 'materials/delete-soft', write: true },
   'materials/read': { capability: 'materials.read', method: 'POST', path: 'materials/read' },

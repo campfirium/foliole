@@ -126,7 +126,14 @@ function installActivateLifecycle(openMainWindow: () => Promise<BrowserWindow | 
 }
 
 function startAgentControlApiLifecycle() {
-  void ensureAgentControlApiServer({ appVersion: resolveFolioleAppVersion(app) }).catch((error) => {
+  void (async () => {
+    const status = await ensureAgentControlApiServer({ appVersion: resolveFolioleAppVersion(app) });
+    if (status.state !== 'failed') return;
+    appendMainProcessDiagnosticLog('agent_control_start_failed', {
+      message: status.last_error ?? 'Agent Control API failed to start',
+      state: status.state
+    });
+  })().catch((error) => {
     appendMainProcessDiagnosticLog('agent_control_start_failed', { error });
   });
 }

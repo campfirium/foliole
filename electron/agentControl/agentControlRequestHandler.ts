@@ -109,12 +109,49 @@ export function createAgentControlRequestHandler(options: AgentControlRequestHan
   };
 }
 
+function readOrigin(request: http.IncomingMessage) {
+  const header = request.headers.origin;
+  return Array.isArray(header) ? header[0] : header;
+}
+
+function capabilityForProtectedPath(method: string | undefined, pathname: string): string | null {
+  if (method === 'GET' && pathname === '/agent-control/v1/capabilities') return 'foundation.capabilities';
+  if (method === 'POST' && pathname === '/agent-control/v1/auth/verify') return 'foundation.auth.verify';
+  if ((method === 'POST' || method === 'OPTIONS') && pathname === '/agent-control/v1/materials/read') return 'materials.read';
+  if ((method === 'POST' || method === 'OPTIONS') && pathname === '/agent-control/v1/materials/search') return 'materials.search';
+  if ((method === 'POST' || method === 'OPTIONS') && pathname === '/agent-control/v1/materials/update') return 'materials.update';
+  if ((method === 'POST' || method === 'OPTIONS') && pathname === '/agent-control/v1/materials/delete-soft') return 'materials.deleteSoft';
+  if ((method === 'POST' || method === 'OPTIONS') && pathname === '/agent-control/v1/virtual-folders/list') return 'virtualFolders.list';
+  if ((method === 'POST' || method === 'OPTIONS') && pathname === '/agent-control/v1/virtual-folders/read') return 'virtualFolders.read';
+  if ((method === 'POST' || method === 'OPTIONS') && pathname === '/agent-control/v1/virtual-folders/create') return 'virtualFolders.create';
+  if ((method === 'POST' || method === 'OPTIONS') && pathname === '/agent-control/v1/virtual-folders/add-items') return 'virtualFolders.addItems';
+  if ((method === 'POST' || method === 'OPTIONS') && pathname === '/agent-control/v1/virtual-folders/remove-items') return 'virtualFolders.removeItems';
+  if ((method === 'POST' || method === 'OPTIONS') && pathname === '/agent-control/v1/virtual-folders/reorder') return 'virtualFolders.reorder';
+  return null;
+}
+
+function rejectForbiddenOrigin(
+  request: http.IncomingMessage,
+  response: http.ServerResponse,
+  options: AgentControlRequestHandlerOptions,
+  pathname: string
+) {
+  if (!readOrigin(request)) return false;
+  const capability = capabilityForProtectedPath(request.method, pathname);
+  if (!capability) return false;
+  recordRequest({ capability, errorCategory: 'forbidden_origin', options, request, result: 'auth_failed' });
+  sendJson(response, 403, { error: 'forbidden_origin' });
+  return true;
+}
 async function handleRequest(
   request: http.IncomingMessage,
   response: http.ServerResponse,
   options: AgentControlRequestHandlerOptions
 ) {
   const url = new URL(request.url ?? '/', 'http://127.0.0.1');
+  if (rejectForbiddenOrigin(request, response, options, url.pathname)) {
+    return;
+  }
   if (request.method === 'GET' && url.pathname === '/agent-control/v1/health') {
     handleHealth(request, response, options);
     return;

@@ -116,15 +116,15 @@ it('exposes health without auth and protects token-scoped discovery routes', asy
     version: '0.1.0-test'
   });
 
-  const missingToken = await fetch(`${endpoint}/agent-control/v1/capabilities`);
+  const missingToken = await fetch(`${status.endpoint}/agent-control/v1/capabilities`);
   expect(missingToken.status).toBe(401);
 
-  const wrongToken = await fetch(`${endpoint}/agent-control/v1/capabilities`, {
+  const wrongToken = await fetch(`${status.endpoint}/agent-control/v1/capabilities`, {
     headers: { authorization: 'Bearer wrong-token' }
   });
   expect(wrongToken.status).toBe(401);
 
-  const capabilities = await fetch(`${endpoint}/agent-control/v1/capabilities`, {
+  const capabilities = await fetch(`${status.endpoint}/agent-control/v1/capabilities`, {
     headers: {
       authorization: `Bearer ${token}`,
       'x-foliole-agent-id': 'codex-local-test'
@@ -152,6 +152,39 @@ it('exposes health without auth and protects token-scoped discovery routes', asy
   ]));
 });
 
+it('rejects browser-origin requests for protected routes without enabling CORS', async () => {
+  const descriptorPath = descriptorPathFor('origin');
+  const auditEvents: AgentControlAuditEvent[] = [];
+  const status = await ensureAgentControlApiServer({
+    appVersion: '0.1.0-test',
+    auditSink: (event) => {
+      auditEvents.push(event);
+    },
+    descriptorPath
+  });
+  const token = String((await readJson(descriptorPath)).token);
+
+  const forbidden = await fetch(`${status.endpoint}/agent-control/v1/capabilities`, {
+    headers: { authorization: `Bearer ${token}`, origin: 'https://example.invalid' }
+  });
+  expect(forbidden.status).toBe(403);
+  expect(await responseJson(forbidden)).toEqual({ error: 'forbidden_origin' });
+  const preflight = await fetch(`${status.endpoint}/agent-control/v1/materials/search`, {
+    headers: { 'access-control-request-headers': 'authorization, content-type', 'access-control-request-method': 'POST', origin: 'https://example.invalid' },
+    method: 'OPTIONS'
+  });
+  expect(preflight.status).toBe(403);
+  expect(preflight.headers.get('access-control-allow-origin')).toBeNull();
+  const allowed = await fetch(`${status.endpoint}/agent-control/v1/capabilities`, {
+    headers: { authorization: `Bearer ${token}` }
+  });
+  expect(allowed.status).toBe(200);
+  expect(JSON.stringify(auditEvents)).not.toContain(token);
+  expect(auditEvents).toEqual(expect.arrayContaining([
+    expect.objectContaining({ errorCategory: 'forbidden_origin', result: 'auth_failed' }),
+    expect.objectContaining({ capability: 'foundation.capabilities', result: 'success' })
+  ]));
+});
 it('records non-sensitive failures for unopened routes', async () => {
   const descriptorPath = descriptorPathFor('not-found');
   const auditEvents: AgentControlAuditEvent[] = [];

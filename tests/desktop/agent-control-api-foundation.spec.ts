@@ -1,6 +1,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+import { runAgentCli } from '../../scripts/agent-control/foliole-agent.mjs';
+
 import { expect, test } from './harness/fixtures';
 
 const EXPECTED_DESCRIPTOR_CAPABILITIES = [
@@ -27,8 +29,8 @@ const EXPECTED_CAPABILITY_STATUSES = [
   { enabled: true, name: 'virtualFolders.removeItems' },
   { enabled: true, name: 'virtualFolders.reorder' },
   { enabled: false, name: 'virtualFolders.write' },
-  { enabled: false, name: 'materials.update' },
-  { enabled: false, name: 'materials.deleteSoft' }
+  { enabled: true, name: 'materials.update' },
+  { enabled: true, name: 'materials.deleteSoft' }
 ];
 
 async function readJson(filePath: string) {
@@ -49,6 +51,10 @@ async function readDescriptor(filePath: string) {
 
 async function responseJson(response: Response) {
   return JSON.parse(await response.text()) as Record<string, unknown>;
+}
+
+function expectWithoutToken(value: unknown, token: string) {
+  expect(JSON.stringify(value)).not.toContain(token);
 }
 
 test('desktop runtime exposes the local Agent Control API foundation', async ({ desktopApp }) => {
@@ -100,4 +106,21 @@ test('desktop runtime exposes the local Agent Control API foundation', async ({ 
   });
   expect(missingMaterial.status).toBe(404);
   expect(await responseJson(missingMaterial)).toEqual({ error: 'not_found' });
+
+  const cliHealth = await runAgentCli(['health', '--descriptor', descriptorPath]);
+  expect(cliHealth.status).toBe(0);
+  expect(cliHealth.output).toMatchObject({ ok: true, service: 'foliole-agent-control' });
+  expectWithoutToken(cliHealth.output, token);
+
+  const cliCapabilities = await runAgentCli(['capabilities', '--descriptor', descriptorPath]);
+  expect(cliCapabilities.status).toBe(0);
+  expect(cliCapabilities.output).toEqual({
+    capabilities: EXPECTED_CAPABILITY_STATUSES,
+    protocol_version: 1
+  });
+  expectWithoutToken(cliCapabilities.output, token);
+
+  const cliEmptySearch = await runAgentCli(['materials/search', '--descriptor', descriptorPath, '--query', '   ']);
+  expect(cliEmptySearch).toEqual({ output: { error: 'invalid_request' }, status: 1 });
+  expectWithoutToken(cliEmptySearch.output, token);
 });

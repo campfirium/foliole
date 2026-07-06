@@ -71,6 +71,24 @@ describe('foliole agent cli', () => {
     expect(JSON.stringify(result.output)).not.toContain('secret-token');
   });
 
+  it('calls capabilities even when the descriptor omits foundation capabilities', async () => {
+    const descriptor = await descriptorPath({ capabilities: ['materials.search'] });
+    const calls = [];
+    const result = await runAgentCli(['capabilities', '--descriptor', descriptor], {
+      fetch: async (url, init) => {
+        calls.push({ init, url });
+        return response({ capabilities: [{ enabled: true, name: 'materials.search' }], protocol_version: 1 });
+      }
+    });
+
+    expect(result).toEqual({
+      output: { capabilities: [{ enabled: true, name: 'materials.search' }], protocol_version: 1 },
+      status: 0
+    });
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe('http://127.0.0.1:3456/agent-control/v1/capabilities');
+    expect(calls[0].init.headers.authorization).toBe('Bearer secret-token');
+  });
   it('returns structured descriptor and capability errors', async () => {
     const missing = await runAgentCli(['materials/read', '--id', 'node-1'], { env: {} });
     const descriptor = await descriptorPath({ capabilities: ['materials.read'] });
