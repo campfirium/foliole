@@ -5,12 +5,7 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 
 const sourceDetailsMocks = vi.hoisted(() => ({
   importExternalDocument: vi.fn(),
-  loadRuntimeNodeSourceDetails: vi.fn(),
   refreshWorkspaceState: vi.fn()
-}));
-
-vi.mock('../../shared/platform/nodeSourceRuntimeRepository', () => ({
-  loadRuntimeNodeSourceDetails: sourceDetailsMocks.loadRuntimeNodeSourceDetails
 }));
 
 vi.mock('../../shared/platform/externalDocumentImportRepository', () => ({
@@ -23,6 +18,7 @@ vi.mock('../../store/workspaceRefreshScheduler', () => ({
 
 import {
   baseNode,
+  loadRuntimeNodeSourceDetails,
   renderSectionWithProps
 } from './DocumentPanelSection.testSupport';
 
@@ -49,10 +45,10 @@ function createSourceDetails(sourceLocator: string) {
 
 beforeEach(() => {
   sourceDetailsMocks.importExternalDocument.mockReset();
-  sourceDetailsMocks.loadRuntimeNodeSourceDetails.mockReset();
+  loadRuntimeNodeSourceDetails.mockReset();
   sourceDetailsMocks.refreshWorkspaceState.mockReset();
   sourceDetailsMocks.importExternalDocument.mockResolvedValue(null);
-  sourceDetailsMocks.loadRuntimeNodeSourceDetails.mockResolvedValue(null);
+  loadRuntimeNodeSourceDetails.mockResolvedValue(null);
   sourceDetailsMocks.refreshWorkspaceState.mockResolvedValue(undefined);
 });
 
@@ -131,7 +127,7 @@ it('shows a Trash breadcrumb and Import action for a selected deleted source top
   const restoreNode = vi.fn();
   const onSelectNode = vi.fn();
   useWorkspaceStore.setState((state) => ({ ...state, restoreNode }));
-  sourceDetailsMocks.loadRuntimeNodeSourceDetails.mockResolvedValue(createSourceDetails('/library/deleted-topic.md'));
+  loadRuntimeNodeSourceDetails.mockResolvedValue(createSourceDetails('/library/deleted-topic.md'));
   sourceDetailsMocks.importExternalDocument.mockResolvedValue({
     imported_at: '2026-04-02T09:30:00.000Z',
     node_id: 'imported-topic',

@@ -53,17 +53,20 @@ vi.mock('./DocumentSourceUpdatePanel', () => ({
 const nodeSourceRuntimeRepositoryMocks = vi.hoisted(() => ({
   acceptRuntimeIncomingUpdate: vi.fn(),
   dismissRuntimeIncomingUpdate: vi.fn(),
-  importRuntimeIncomingUpdateAsNew: vi.fn()
+  importRuntimeIncomingUpdateAsNew: vi.fn(),
+  loadRuntimeNodeSourceDetails: vi.fn(() => null)
 }));
 export const acceptRuntimeIncomingUpdate = nodeSourceRuntimeRepositoryMocks.acceptRuntimeIncomingUpdate;
 export const dismissRuntimeIncomingUpdate = nodeSourceRuntimeRepositoryMocks.dismissRuntimeIncomingUpdate;
 export const importRuntimeIncomingUpdateAsNew = nodeSourceRuntimeRepositoryMocks.importRuntimeIncomingUpdateAsNew;
+export const loadRuntimeNodeSourceDetails = nodeSourceRuntimeRepositoryMocks.loadRuntimeNodeSourceDetails;
 
 vi.mock('../../shared/platform/nodeSourceRuntimeRepository', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../shared/platform/nodeSourceRuntimeRepository')>()),
   acceptRuntimeIncomingUpdate: nodeSourceRuntimeRepositoryMocks.acceptRuntimeIncomingUpdate,
   dismissRuntimeIncomingUpdate: nodeSourceRuntimeRepositoryMocks.dismissRuntimeIncomingUpdate,
-  importRuntimeIncomingUpdateAsNew: nodeSourceRuntimeRepositoryMocks.importRuntimeIncomingUpdateAsNew
+  importRuntimeIncomingUpdateAsNew: nodeSourceRuntimeRepositoryMocks.importRuntimeIncomingUpdateAsNew,
+  loadRuntimeNodeSourceDetails: nodeSourceRuntimeRepositoryMocks.loadRuntimeNodeSourceDetails
 }));
 
 const sourceUpdatePreviewMocks = vi.hoisted(() => ({
@@ -227,6 +230,8 @@ beforeEach(() => {
   dismissRuntimeIncomingUpdate.mockResolvedValue({ incomingUpdateId: 'incoming-update-1', nodeId: 'node-1', status: 'dismissed' });
   importRuntimeIncomingUpdateAsNew.mockReset();
   importRuntimeIncomingUpdateAsNew.mockResolvedValue({ incomingUpdateId: 'incoming-update-1', nodeId: 'node-2', status: 'imported_as_new' });
+  loadRuntimeNodeSourceDetails.mockReset();
+  loadRuntimeNodeSourceDetails.mockResolvedValue(null);
   useNodeSourceUpdatePreview.mockReturnValue({
     isLoading: false,
     value: null

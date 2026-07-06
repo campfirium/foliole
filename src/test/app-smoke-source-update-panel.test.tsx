@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { expect, it } from 'vitest';
 
 import './reactPdfMock';
@@ -9,7 +9,7 @@ import { useNodeSourceUpdatePreviewMock } from './app-smoke.shared';
 
 const { App } = await import('../app/App');
 
-it('writes split panel edits back to the active document content', () => {
+it('writes split panel edits back to the active document content', async () => {
   useNodeSourceUpdatePreviewMock.mockReturnValue({
     isLoading: false,
     value: {
@@ -31,10 +31,10 @@ it('writes split panel edits back to the active document content', () => {
   fireEvent.change(editors[0]!, {
     target: { value: '# Welcome to Foliole\n\nChanged from source update panel.' }
   });
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Close source update panel' }));
+  fireEvent.keyDown(dialog, { key: 'Escape' });
 
-  expect(useWorkspaceStore.getState().nodesById['node-1']?.content).toBe(
-    '# Welcome to Foliole\n\nChanged from source update panel.'
-  );
-  expect(screen.getAllByTestId('editor-value')[0]).toHaveValue('# Welcome to Foliole\n\nChanged from source update panel.');
+  const updatedContent = '# Welcome to Foliole\n\nChanged from source update panel.';
+  expect(useWorkspaceStore.getState().nodesById['node-1']?.content).toBe(updatedContent);
+  await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Source update panel' })).not.toBeInTheDocument());
+  expect(screen.getAllByTestId('editor-value')[0]).toHaveValue(updatedContent);
 });

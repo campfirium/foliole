@@ -144,8 +144,7 @@ it('enters review mode with the reading queue when no FSRS cards are due', async
   expect(screen.queryByRole('button', { name: 'Good' })).not.toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: 'Read' }));
-  const allClearDialog = await screen.findByRole('dialog', { name: 'All clear for now.' });
-  fireEvent.click(within(allClearDialog).getByRole('button', { name: 'OK' }));
+  await screen.findByRole('dialog', { name: 'All clear for now.' });
   expect(screen.queryByRole('button', { name: 'Continue reading' })).not.toBeInTheDocument();
   expect(screen.queryByRole('toolbar', { name: 'Flow toolbar' })).not.toBeInTheDocument();
 });
@@ -213,8 +212,7 @@ it('closes review toolbar and shows all-clear notice when the session completes'
   fireEvent.click(await screen.findByRole('button', { name: 'Show Answer' }));
   fireEvent.click(screen.getByRole('button', { name: 'Good' }));
 
-  const allClearDialog = await screen.findByRole('dialog', { name: 'All clear for now.' });
-  fireEvent.click(within(allClearDialog).getByRole('button', { name: 'OK' }));
+  await screen.findByRole('dialog', { name: 'All clear for now.' });
   expect(screen.queryByRole('button', { name: 'Continue reading' })).not.toBeInTheDocument();
   expect(screen.queryByRole('toolbar', { name: 'Flow toolbar' })).not.toBeInTheDocument();
 });

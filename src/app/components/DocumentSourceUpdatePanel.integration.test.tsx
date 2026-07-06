@@ -31,7 +31,8 @@ describe('DocumentSourceUpdatePanel integration', () => {
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getAllByText('Current').length).toBeGreaterThan(0);
-    expect(screen.getByText('Updated Source')).toBeInTheDocument();
+    expect(screen.getByText('Incoming update')).toBeInTheDocument();
+    expect(screen.getByText('Incoming')).toBeInTheDocument();
     expect(screen.getAllByTestId('source-update-pane')).toHaveLength(2);
   });
 });
