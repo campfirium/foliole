@@ -192,11 +192,17 @@ function buildSequentialReadingAdvancePatch(args: SequentialReadingArgs & {
   const derivedNodeIds = collectSequentialDerivedTopicIds({ ...args, sourceNodeId });
   const sourceNode = nextNodesById[sourceNodeId];
   let released = false;
+  let passedHandledNode = false;
   for (const nodeId of derivedNodeIds) {
+    const node = nextNodesById[nodeId];
     if (nodeId === args.handledNodeId) {
+      released ||= isUnavailableSequentialTopic(node) && unavailableFolderTopicOccupiesSlot({ ...args, nodeId, sourceNode });
+      passedHandledNode = true;
       continue;
     }
-    const node = nextNodesById[nodeId];
+    if (!passedHandledNode) {
+      continue;
+    }
     if (isUnavailableSequentialTopic(node)) {
       released ||= unavailableFolderTopicOccupiesSlot({ ...args, nodeId, sourceNode });
       continue;
