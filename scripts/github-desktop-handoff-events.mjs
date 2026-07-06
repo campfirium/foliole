@@ -82,7 +82,6 @@ function prEvent(config, pr, checks, renderTemplate) {
     ttlSeconds: config.defaultTtlSeconds
   };
 }
-
 function issueEvent(config, issue, renderTemplate) {
   const data = buildIssueHandoffData(config, issue);
   return {
@@ -93,7 +92,6 @@ function issueEvent(config, issue, renderTemplate) {
     ttlSeconds: config.defaultTtlSeconds
   };
 }
-
 function listActionEvents(config, state, includeExisting, errors, renderTemplate) {
   if (!config?.enabled) return [];
   const events = [];
@@ -185,7 +183,7 @@ function listPrEvents(config, state, includeExisting, errors, renderTemplate) {
     }
     const event = prEvent(config, pr, checks, renderTemplate);
     if (!event.failingChecks) continue;
-    if (!includeExisting && state.prs[String(pr.number)]) continue;
+    if (!includeExisting && (state.prs[String(pr.number)] === event.eventId || (state.prs[String(pr.number)] === String(pr.number) && event.checkSignalSuffix === 'no-checks'))) continue;
     events.push(event);
     state.prs[String(pr.number)] = event.eventId;
   }

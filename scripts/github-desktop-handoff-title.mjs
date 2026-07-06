@@ -5,13 +5,14 @@ export function buildPrHandoffData(config, pr, checks) {
   const number = String(pr.number);
   const noChecks = checkSignal.eventSuffix === 'no-checks';
   const handoffTitle = noChecks
-    ? `PR #${number} needs checks`
+    ? `PR #${number} needs PR handling`
     : `PR #${number} failed: ${checkSignal.label}`;
 
   return {
     author: pr.author?.login ?? pr.author?.name ?? '',
     baseRefName: pr.baseRefName,
-    eventId: number,
+    checkSignalSuffix: checkSignal.eventSuffix,
+    eventId: `${number}:${checkSignal.eventSuffix}`,
     failingChecks: checkSignal.label,
     handoffTitle,
     headRefName: pr.headRefName,

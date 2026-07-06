@@ -30,15 +30,16 @@ describe('GitHub desktop handoff title data', () => {
 
     expect(data.handoffTitle).toBe('PR #42 failed: test:desktop');
     expect(data.prTitle).toBe('Repair desktop handoff labels');
-    expect(data.eventId).toBe('42');
+    expect(data.eventId).toBe('42:test:desktop');
   });
 
-  it('uses a distinct title for PRs that have no reported checks', () => {
+  it('uses a dedicated PR handling title for PRs that have no reported checks', () => {
     const data = buildPrHandoffData(config, pr, []);
 
-    expect(data.handoffTitle).toBe('PR #42 needs checks');
+    expect(data.handoffTitle).toBe('PR #42 needs PR handling');
     expect(data.failingChecks).toBe('No checks reported');
-    expect(data.eventId).toBe('42');
+    expect(data.checkSignalSuffix).toBe('no-checks');
+    expect(data.eventId).toBe('42:no-checks');
   });
 
   it('renders the PR handoff title as the first prompt line', () => {
@@ -49,6 +50,8 @@ describe('GitHub desktop handoff title data', () => {
 
     expect(rendered.split(/\r?\n/u)[0]).toBe('# PR #42 failed: quality:desktop');
     expect(rendered).toContain('PR: #42 Repair desktop handoff labels');
+    expect(rendered).toContain('Use `$gh-pr-handler` for this thread.');
+    expect(rendered).toContain('Treat this as a PR handling task, not only a check inspection.');
   });
 
   it('renders GitHub issue handoff prompts from issue data', () => {
