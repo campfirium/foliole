@@ -79,7 +79,6 @@ function CompanionSelectionNotePanel(props: {
   return (
     <div className={cn(appFloatingSurfaceClassName('popover'), 'mt-2 w-64 rounded-md p-2')} style={{ left: props.left, position: 'absolute', top: props.top }}>
       <textarea
-        autoFocus
         className={cn(
           'min-h-16 w-full resize-none border-0 bg-transparent px-1 py-1 text-sm leading-5 text-foreground placeholder:text-foreground/45',
           appInputFocusVisibleClassName
@@ -161,25 +160,22 @@ export function CompanionSelectionAnnotationToolbar(props: CompanionSelectionAnn
   function apply(kind: CompanionSelectionAnnotationKind, note?: string) {
     const payload = resolveApplyPayload(props);
     if (!payload) return;
-    void Promise.resolve(props.onApply(kind, payload, note))
-      .then(() => props.onClose())
-      .catch(reportAnnotationError);
+    props.onClose();
+    void Promise.resolve(props.onApply(kind, payload, note)).catch(reportAnnotationError);
   }
 
   function applyExistingNote(note: string) {
     if (!props.state?.existingHighlight) return;
     const { nodeId, originalText } = props.state.existingHighlight;
-    void Promise.resolve(props.onAddExistingHighlightNote(nodeId, originalText, note))
-      .then(() => props.onClose())
-      .catch(reportAnnotationError);
+    props.onClose();
+    void Promise.resolve(props.onAddExistingHighlightNote(nodeId, originalText, note)).catch(reportAnnotationError);
   }
 
   function deleteExistingHighlight() {
     const nodeId = props.state?.existingHighlight?.nodeId;
     if (!nodeId) return;
-    void Promise.resolve(props.onDeleteExistingHighlight(nodeId))
-      .then(() => props.onClose())
-      .catch(reportAnnotationError);
+    props.onClose();
+    void Promise.resolve(props.onDeleteExistingHighlight(nodeId)).catch(reportAnnotationError);
   }
 
   const isExistingHighlight = Boolean(props.state.existingHighlight);

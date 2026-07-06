@@ -6,6 +6,11 @@ import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
 
 const readableArticleDocumentMock = vi.fn<(props: Record<string, unknown>) => ReactNode>(() => <article>Readable body</article>);
 const readingChromeMock = vi.fn<(props: Record<string, unknown>) => ReactNode>(() => null);
+const selectionToolbarLayerMock = vi.fn<(props: Record<string, unknown>) => ReactNode>(() => (
+  <button data-companion-selection-toolbar={'true'} data-testid={'selection-toolbar-action'} type={'button'}>
+    Highlight
+  </button>
+));
 const toolbarHookMock = vi.fn();
 const editorFocusMock = vi.fn();
 const enterContentEditingMock = vi.fn();
@@ -18,11 +23,7 @@ vi.mock('./CompanionReadableArticleDocument', () => ({
 }));
 
 vi.mock('./CompanionReadableArticleSelectionToolbarLayer', () => ({
-  SelectionAnnotationToolbarLayer: () => (
-    <button data-companion-selection-toolbar="true" data-testid="selection-toolbar-action" type="button">
-      Highlight
-    </button>
-  )
+  SelectionAnnotationToolbarLayer: (props: Record<string, unknown>) => selectionToolbarLayerMock(props)
 }));
 
 vi.mock('./CompanionReadingChrome', () => ({
@@ -100,6 +101,7 @@ describe('ImmersiveReadableArticle Android scrolling', () => {
     readingChromeMock.mockClear();
     readableArticleDocumentMock.mockClear();
     toolbarHookMock.mockClear();
+    selectionToolbarLayerMock.mockClear();
     toolbarHookOverride = null;
     editorFocusMock.mockClear();
     enterContentEditingMock.mockClear();
@@ -164,6 +166,7 @@ describe('ImmersiveReadableArticle edit mode', () => {
     readingChromeMock.mockClear();
     readableArticleDocumentMock.mockClear();
     toolbarHookMock.mockClear();
+    selectionToolbarLayerMock.mockClear();
     toolbarHookOverride = null;
     editorFocusMock.mockClear();
     enterContentEditingMock.mockClear();
@@ -208,7 +211,7 @@ describe('ImmersiveReadableArticle edit mode', () => {
 });
 
 describe('ImmersiveReadableArticle selection toolbar pointer guard', () => {
-  it('does not close the selection toolbar from toolbar pointer events', () => {
+  it('does not close the selection toolbar from toolbar pointer or touchmove events', () => {
     const closeSelectionToolbar = vi.fn();
     const openSelectionToolbar = vi.fn();
     toolbarHookOverride = {

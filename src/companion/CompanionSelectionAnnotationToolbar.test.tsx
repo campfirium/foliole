@@ -81,9 +81,8 @@ function renderExistingToolbar() {
   return { onAddExistingHighlightNote, onClose, onDeleteExistingHighlight };
 }
 
-it('applies a highlight with the current selection payload', async () => {
-  let resolveApply: () => void = () => undefined;
-  const onApply = vi.fn(() => new Promise<void>((resolve) => { resolveApply = resolve; }));
+it('applies a highlight with the current selection payload and closes immediately', () => {
+  const onApply = vi.fn(() => new Promise<void>(() => undefined));
   const { onClose } = renderToolbar(onApply);
 
   const button = screen.getByRole('button', { name: 'Highlight' });
@@ -91,9 +90,7 @@ it('applies a highlight with the current selection payload', async () => {
   fireEvent.pointerUp(button);
 
   expect(onApply).toHaveBeenCalledWith('highlight', payload, undefined);
-  expect(onClose).not.toHaveBeenCalled();
-  resolveApply();
-  await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+  expect(onClose).toHaveBeenCalledTimes(1);
 });
 
 it('refreshes the selection payload before applying a highlight', () => {
@@ -131,7 +128,7 @@ it('applies a highlight when Android ends the toolbar activation as touchend', (
   expect(onApply).toHaveBeenCalledWith('highlight', payload, undefined);
 });
 
-it('deletes an existing highlight after the action succeeds', async () => {
+it('deletes an existing highlight and closes immediately', () => {
   const { onClose, onDeleteExistingHighlight } = renderExistingToolbar();
 
   const button = screen.getByRole('button', { name: 'Close Highlight' });
@@ -139,11 +136,11 @@ it('deletes an existing highlight after the action succeeds', async () => {
   fireEvent.pointerUp(button);
 
   expect(onDeleteExistingHighlight).toHaveBeenCalledWith('highlight-1');
-  await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+  expect(onClose).toHaveBeenCalledTimes(1);
   expect(screen.queryByRole('button', { name: 'Cloze' })).toBeNull();
 });
 
-it('adds a note to an existing highlight after the action succeeds', async () => {
+it('adds a note to an existing highlight and closes immediately', () => {
   const { onAddExistingHighlightNote, onClose } = renderExistingToolbar();
 
   fireEvent.click(screen.getByRole('button', { name: 'Add Comment' }));
@@ -153,12 +150,11 @@ it('adds a note to an existing highlight after the action succeeds', async () =>
   fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
   expect(onAddExistingHighlightNote).toHaveBeenCalledWith('highlight-1', 'Beta', 'Existing note');
-  await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+  expect(onClose).toHaveBeenCalledTimes(1);
 });
 
-it('saves a note annotation from the inline note panel', async () => {
-  let resolveApply: () => void = () => undefined;
-  const onApply = vi.fn(() => new Promise<void>((resolve) => { resolveApply = resolve; }));
+it('saves a note annotation from the inline note panel and closes immediately', () => {
+  const onApply = vi.fn(() => new Promise<void>(() => undefined));
   const { onClose } = renderToolbar(onApply);
 
   const addCommentButton = screen.getByRole('button', { name: 'Add Comment' });
@@ -172,12 +168,10 @@ it('saves a note annotation from the inline note panel', async () => {
   fireEvent.click(saveButton);
 
   expect(onApply).toHaveBeenCalledWith('note', payload, 'Reader note');
-  expect(onClose).not.toHaveBeenCalled();
-  resolveApply();
-  await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+  expect(onClose).toHaveBeenCalledTimes(1);
 });
 
-it('keeps the toolbar open and reports apply failures', async () => {
+it('closes immediately and reports apply failures', async () => {
   const error = new Error('write failed');
   const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
   const { onClose } = renderToolbar(vi.fn(async () => {
@@ -190,6 +184,6 @@ it('keeps the toolbar open and reports apply failures', async () => {
     '[companion-selection-toolbar] annotation action failed',
     error
   ));
-  expect(onClose).not.toHaveBeenCalled();
+  expect(onClose).toHaveBeenCalledTimes(1);
   consoleError.mockRestore();
 });

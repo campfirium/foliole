@@ -26,12 +26,12 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-function createEditorAdapter(selection: { from: number; to: number }[]) {
+function createEditorAdapter(selection: { from: number; to: number }[], pointPosition = 7) {
   return {
     destroy: vi.fn(),
     focus: vi.fn(),
     getContent: vi.fn(() => 'Welcome to Foliole'),
-    getDocumentPositionAtClientPoint: vi.fn((clientX: number) => (clientX < 50 ? 0 : 7)),
+    getDocumentPositionAtClientPoint: vi.fn((clientX: number) => (clientX < 50 ? 0 : pointPosition)),
     getDocumentPositionAtViewportY: vi.fn(() => 0),
     getLineBlockHeight: vi.fn(() => 24),
     getScrollMetrics: vi.fn(),
@@ -195,7 +195,7 @@ it('keeps the last Android DOM selection payload after toolbar button focus clea
 });
 
 it('opens existing highlight actions when tapping a rendered highlight without text selection', () => {
-  const selection = [{ from: 9, to: 9 }];
+  const selection = [{ from: 0, to: 0 }];
   const target = document.createElement('span');
   target.className = 'cm-md-highlight';
   const { result } = renderHook(() =>
@@ -207,7 +207,7 @@ it('opens existing highlight actions when tapping a rendered highlight without t
   );
 
   act(() => {
-    result.current.handleEditorReady(createEditorAdapter(selection) as never);
+    result.current.handleEditorReady(createEditorAdapter(selection, 9) as never);
     result.current.openSelectionToolbar({
       clientX: 100,
       clientY: 120,
@@ -220,6 +220,7 @@ it('opens existing highlight actions when tapping a rendered highlight without t
     originalText: 'to'
   });
   expect(result.current.selectionToolbar?.payload).toBeNull();
+  expect(target).toHaveClass('cm-md-highlight-active');
 });
 
 it('clears editor selection when closing after an action', () => {

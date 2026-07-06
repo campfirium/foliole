@@ -1,74 +1,22 @@
-import type { MouseEvent as ReactMouseEvent } from 'react';
-import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 'react';
+import { useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type MutableRefObject } from 'react';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 
 import type { CompanionSelectionAnnotationToolbarState } from './CompanionSelectionAnnotationToolbar';
 import { resolveCompanionSelectionCommandPayload } from './companionSelectionCommandPayload';
+import * as toolbarDom from './companionSelectionToolbarDom';
 import {
   getDefaultSelectionClientPoint,
   isExistingHighlightTarget,
   readSelectionClientPoint,
-  resolveExistingHighlightAtCurrentCursor,
+  resolveExistingHighlightAtPoint,
   resolveExistingHighlightToolbarState,
   resolveSelectionToolbarState,
   type CompanionSelectionClientPoint
 } from './companionSelectionToolbarState';
+import { useCompanionSelectionAnnotationDocumentEvents } from './useCompanionSelectionAnnotationDocumentEvents';
 
 import type { EditorAdapter } from '@/features/editor/adapters/EditorAdapter';
-
-const RECENT_SELECTION_INTERACTION_MS = 2_000;
-const SELECTION_SETTLE_DELAY_MS = 240;
-
-export function isCompanionSelectionToolbarTarget(target: EventTarget | null) {
-  return target instanceof Element && target.closest('[data-companion-selection-toolbar="true"]') !== null;
-}
-
-function hasRecentSelectionInteraction(lastInteractionAt: number) {
-  return lastInteractionAt > 0 && Date.now() - lastInteractionAt < RECENT_SELECTION_INTERACTION_MS;
-}
-
-function useCompanionSelectionAnnotationDocumentEvents(args: {
-  closeSelectionToolbar: () => void;
-  lastFallbackRef: MutableRefObject<CompanionSelectionClientPoint | null>;
-  lastSelectionInteractionAtRef: MutableRefObject<number>;
-  scheduleSelectionToolbarOpen: (fallback?: CompanionSelectionClientPoint, allowExistingHighlight?: boolean) => void;
-}) {
-  useEffect(() => {
-    const rememberSelectionInteraction = (event: MouseEvent | PointerEvent | TouchEvent) => {
-      if (isCompanionSelectionToolbarTarget(event.target)) return;
-      args.lastFallbackRef.current = readSelectionClientPoint(event) ?? args.lastFallbackRef.current ?? getDefaultSelectionClientPoint();
-      args.lastSelectionInteractionAtRef.current = Date.now();
-      args.closeSelectionToolbar();
-    };
-    const handleSelectionEnd = (event: MouseEvent | PointerEvent | TouchEvent) => {
-      if (isCompanionSelectionToolbarTarget(event.target)) return;
-      args.lastFallbackRef.current = readSelectionClientPoint(event) ?? args.lastFallbackRef.current ?? getDefaultSelectionClientPoint();
-      args.lastSelectionInteractionAtRef.current = Date.now();
-      args.scheduleSelectionToolbarOpen(args.lastFallbackRef.current, isExistingHighlightTarget(event.target));
-    };
-    const handleSelectionChange = () => {
-      if (hasRecentSelectionInteraction(args.lastSelectionInteractionAtRef.current)) {
-        args.scheduleSelectionToolbarOpen(undefined, false);
-      }
-    };
-    document.addEventListener('pointerdown', rememberSelectionInteraction, true);
-    document.addEventListener('pointermove', rememberSelectionInteraction, true);
-    document.addEventListener('pointerup', handleSelectionEnd, true);
-    document.addEventListener('selectionchange', handleSelectionChange);
-    document.addEventListener('touchend', handleSelectionEnd, true);
-    document.addEventListener('touchmove', rememberSelectionInteraction, true);
-    return () => {
-      document.removeEventListener('pointerdown', rememberSelectionInteraction, true);
-      document.removeEventListener('pointermove', rememberSelectionInteraction, true);
-      document.removeEventListener('pointerup', handleSelectionEnd, true);
-      document.removeEventListener('selectionchange', handleSelectionChange);
-      document.removeEventListener('touchend', handleSelectionEnd, true);
-      document.removeEventListener('touchmove', rememberSelectionInteraction, true);
-    };
-  }, [args]);
-}
-
 function useCompanionSelectionAnnotationOpenHandler(args: {
   canCreateAnnotation: boolean;
   editorRef: MutableRefObject<EditorAdapter | null>;
@@ -81,19 +29,25 @@ function useCompanionSelectionAnnotationOpenHandler(args: {
   snapshot: WorkspaceSnapshot | null;
 }) {
   return useCallback((event: ReactMouseEvent<HTMLElement>) => {
-    if (isCompanionSelectionToolbarTarget(event.target) || !args.canCreateAnnotation) return;
+    if (toolbarDom.isCompanionSelectionToolbarTarget(event.target) || !args.canCreateAnnotation) return;
     const fallback = readSelectionClientPoint(event) ?? getDefaultSelectionClientPoint();
     args.lastFallbackRef.current = fallback;
     args.lastSelectionInteractionAtRef.current = Date.now();
     window.requestAnimationFrame(() => {
+      if (isExistingHighlightTarget(event.target)) {
+        const existingHighlight = resolveExistingHighlightAtPoint({ ...args, point: fallback });
+        if (existingHighlight) {
+          toolbarDom.activateCompanionHighlightTarget(event.target);
+          args.setSelectionToolbar(resolveExistingHighlightToolbarState(existingHighlight, fallback));
+          return;
+        }
+        toolbarDom.clearCompanionActiveHighlightElements();
+      }
       const payload = resolveCompanionSelectionCommandPayload(args.nodeId, args.editorRef.current);
       if (payload) {
+        toolbarDom.clearCompanionActiveHighlightElements();
         args.lastPayloadRef.current = payload;
         args.setSelectionToolbar(resolveSelectionToolbarState({ fallback, payload, snapshot: args.snapshot }));
-      }
-      else if (isExistingHighlightTarget(event.target)) {
-        const existingHighlight = resolveExistingHighlightAtCurrentCursor(args);
-        args.setSelectionToolbar(existingHighlight ? resolveExistingHighlightToolbarState(existingHighlight, fallback) : null);
       }
       else args.scheduleSelectionToolbarOpen(fallback, false);
     });
@@ -129,16 +83,21 @@ function useCompanionSelectionAnnotationScheduler(args: {
         frameRef.current = null;
         settleTimerRef.current = null;
         if (!args.canCreateAnnotation) return;
+        const existingHighlight = allowExistingHighlight ? resolveExistingHighlightAtPoint({ ...args, point: fallback }) : null;
+        if (existingHighlight) {
+          args.setSelectionToolbar(resolveExistingHighlightToolbarState(existingHighlight, fallback));
+          return;
+        }
         const payload = resolveCompanionSelectionCommandPayload(args.nodeId, args.editorRef.current);
         if (payload) {
+          toolbarDom.clearCompanionActiveHighlightElements();
           args.lastPayloadRef.current = payload;
           args.setSelectionToolbar(resolveSelectionToolbarState({ fallback, payload, snapshot: args.snapshot }));
           return;
         }
-        const existingHighlight = allowExistingHighlight ? resolveExistingHighlightAtCurrentCursor(args) : null;
-        args.setSelectionToolbar(existingHighlight ? resolveExistingHighlightToolbarState(existingHighlight, fallback) : null);
+        args.setSelectionToolbar(null);
       });
-    }, SELECTION_SETTLE_DELAY_MS);
+    }, toolbarDom.SELECTION_SETTLE_DELAY_MS);
   }, [args, clearScheduledOpen]);
   return {
     clearScheduledOpen,
@@ -161,19 +120,22 @@ function useSelectionPayloadResolver(args: {
 
 function useClearSelectionAndCloseToolbar(args: {
   editorRef: MutableRefObject<EditorAdapter | null>;
+  lastPayloadRef: MutableRefObject<CompanionSelectionAnnotationToolbarState['payload']>;
   scheduler: ReturnType<typeof useCompanionSelectionAnnotationScheduler>;
   setSelectionToolbar: (state: CompanionSelectionAnnotationToolbarState | null) => void;
 }) {
-  const { editorRef, scheduler, setSelectionToolbar } = args;
+  const { editorRef, lastPayloadRef, scheduler, setSelectionToolbar } = args;
   return useCallback(() => {
     scheduler.clearScheduledOpen();
     scheduler.lastSelectionInteractionAtRef.current = 0;
+    toolbarDom.clearCompanionActiveHighlightElements();
+    lastPayloadRef.current = null;
     const selection = editorRef.current?.getSelection();
     const collapseAt = selection ? Math.max(selection.from, selection.to) : 0;
     window.getSelection()?.removeAllRanges();
     editorRef.current?.setSelection({ from: collapseAt, to: collapseAt });
     setSelectionToolbar(null);
-  }, [editorRef, scheduler, setSelectionToolbar]);
+  }, [editorRef, lastPayloadRef, scheduler, setSelectionToolbar]);
 }
 
 export function useCompanionSelectionAnnotationToolbar(props: {
@@ -194,12 +156,14 @@ export function useCompanionSelectionAnnotationToolbar(props: {
   });
   const closeSelectionToolbar = useCallback(() => {
     scheduler.clearScheduledOpen();
+    toolbarDom.clearCompanionActiveHighlightElements();
+    lastPayloadRef.current = null;
     setSelectionToolbar(null);
-  }, [scheduler]);
+  }, [lastPayloadRef, scheduler]);
   const handleEditorReady = useCallback((adapter: EditorAdapter | null) => {
     editorRef.current = adapter;
   }, []);
-  const clearSelectionAndCloseToolbar = useClearSelectionAndCloseToolbar({ editorRef, scheduler, setSelectionToolbar });
+  const clearSelectionAndCloseToolbar = useClearSelectionAndCloseToolbar({ editorRef, lastPayloadRef, scheduler, setSelectionToolbar });
   const resolveSelectionPayload = useSelectionPayloadResolver({ editorRef, lastPayloadRef, nodeId: props.nodeId });
 
   const openSelectionToolbar = useCompanionSelectionAnnotationOpenHandler({

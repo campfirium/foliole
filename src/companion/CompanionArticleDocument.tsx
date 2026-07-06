@@ -8,6 +8,8 @@ import type {
 import { MarkdownEditor } from '../features/editor/components/MarkdownEditor';
 import type { EditorViewState } from '../features/editor/components/markdownEditorTypes';
 
+import './companionReadableArticleAnchors.css';
+
 import { companionArticleMinHeightClassName } from './companionCssCompatibility';
 
 import { definedProps } from '@/shared/lib/definedProps';

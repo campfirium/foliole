@@ -13,6 +13,8 @@ import type { CompanionSelectionAnnotationToolbarState } from './CompanionSelect
 import type { EditorAdapter } from '@/features/editor/adapters/EditorAdapter';
 import type { SelectionCommandPayload } from '@/shared/selectionCommandPayload';
 
+const HIGHLIGHT_TARGET_SELECTOR = '.cm-md-highlight, .cm-md-highlight-overlap, .cm-md-cloze, .cm-md-anchor-overlap';
+
 export type CompanionSelectionClientPoint = { clientX: number; clientY: number };
 
 export function getDefaultSelectionClientPoint(): CompanionSelectionClientPoint {
@@ -71,19 +73,23 @@ export function resolveExistingHighlightToolbarState(
 }
 
 export function isExistingHighlightTarget(target: EventTarget | null) {
-  return target instanceof Element && target.closest('.cm-md-highlight, .cm-md-highlight-overlap') !== null;
+  return target instanceof Element && target.closest(HIGHLIGHT_TARGET_SELECTOR) !== null;
 }
 
-export function resolveExistingHighlightAtCurrentCursor(args: {
+export function resolveExistingHighlightAtPoint(args: {
   editorRef: MutableRefObject<EditorAdapter | null>;
   nodeId: string;
+  point: CompanionSelectionClientPoint;
   snapshot: WorkspaceSnapshot | null;
 }) {
+  const clickedPosition = args.editorRef.current?.getDocumentPositionAtClientPoint?.(args.point.clientX, args.point.clientY);
   const selection = args.editorRef.current?.getSelection();
-  if (!selection) return null;
+  const fallbackPosition = selection ? Math.max(selection.from, selection.to) : null;
+  const position = clickedPosition ?? fallbackPosition;
+  if (position === null) return null;
   return findCompanionExistingHighlightAtPosition({
     parentNodeId: args.nodeId,
-    position: Math.max(selection.from, selection.to),
+    position,
     snapshot: args.snapshot
   });
 }
