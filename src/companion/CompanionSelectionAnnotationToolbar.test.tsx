@@ -58,7 +58,7 @@ function renderToolbar(onApply = vi.fn(), resolveSelectionPayload?: () => typeof
   return { onAddExistingHighlightNote, onApply, onClose, onDeleteExistingHighlight };
 }
 
-function renderExistingToolbar() {
+function renderExistingToolbar(note?: string) {
   const onAddExistingHighlightNote = vi.fn();
   const onClose = vi.fn();
   const onDeleteExistingHighlight = vi.fn();
@@ -69,7 +69,11 @@ function renderExistingToolbar() {
       onClose={onClose}
       onDeleteExistingHighlight={onDeleteExistingHighlight}
       state={{
-        existingHighlight: { nodeId: 'highlight-1', originalText: 'Beta' },
+        existingHighlight: {
+          nodeId: 'highlight-1',
+          originalText: 'Beta',
+          ...definedProps({ note })
+        },
         left: 12,
         noteLeft: 12,
         noteTop: 52,
@@ -151,6 +155,14 @@ it('adds a note to an existing highlight and closes immediately', () => {
 
   expect(onAddExistingHighlightNote).toHaveBeenCalledWith('highlight-1', 'Beta', 'Existing note');
   expect(onClose).toHaveBeenCalledTimes(1);
+});
+
+it('loads the existing highlight note before saving', () => {
+  renderExistingToolbar('Saved note');
+
+  fireEvent.click(screen.getByRole('button', { name: 'Add Comment' }));
+
+  expect(screen.getByPlaceholderText('Add annotation...')).toHaveValue('Saved note');
 });
 
 it('saves a note annotation from the inline note panel and closes immediately', () => {

@@ -156,6 +156,7 @@ export function CompanionSelectionAnnotationToolbar(props: CompanionSelectionAnn
   if (!props.state) {
     return null;
   }
+  const state = props.state;
 
   function apply(kind: CompanionSelectionAnnotationKind, note?: string) {
     const payload = resolveApplyPayload(props);
@@ -165,20 +166,24 @@ export function CompanionSelectionAnnotationToolbar(props: CompanionSelectionAnn
   }
 
   function applyExistingNote(note: string) {
-    if (!props.state?.existingHighlight) return;
-    const { nodeId, originalText } = props.state.existingHighlight;
+    if (!state.existingHighlight) return;
+    const { nodeId, originalText } = state.existingHighlight;
     props.onClose();
     void Promise.resolve(props.onAddExistingHighlightNote(nodeId, originalText, note)).catch(reportAnnotationError);
   }
 
   function deleteExistingHighlight() {
-    const nodeId = props.state?.existingHighlight?.nodeId;
+    const nodeId = state.existingHighlight?.nodeId;
     if (!nodeId) return;
     props.onClose();
     void Promise.resolve(props.onDeleteExistingHighlight(nodeId)).catch(reportAnnotationError);
   }
 
-  const isExistingHighlight = Boolean(props.state.existingHighlight);
+  const isExistingHighlight = Boolean(state.existingHighlight);
+  function openNotePanel() {
+    setNoteDraft(state.existingHighlight?.note ?? '');
+    setIsNoteOpen(true);
+  }
 
   return (
     <div
@@ -186,22 +191,22 @@ export function CompanionSelectionAnnotationToolbar(props: CompanionSelectionAnn
       data-companion-selection-toolbar="true"
       onContextMenu={(event) => event.preventDefault()}
       onPointerDown={(event) => event.stopPropagation()}
-      style={{ left: props.state.left, top: props.state.top }}
+      style={{ left: state.left, top: state.top }}
     >
       <CompanionSelectionToolbarActions
         isExistingHighlight={isExistingHighlight}
-        onAddNote={() => setIsNoteOpen(true)}
+        onAddNote={openNotePanel}
         onApply={apply}
         onDeleteExistingHighlight={deleteExistingHighlight}
       />
       {isNoteOpen ? (
         <CompanionSelectionNotePanel
           draft={noteDraft}
-          left={props.state.noteLeft - props.state.left}
+          left={state.noteLeft - state.left}
           onCancel={() => setIsNoteOpen(false)}
           onChange={setNoteDraft}
           onSave={() => (isExistingHighlight ? applyExistingNote(noteDraft) : apply('note', noteDraft))}
-          top={props.state.noteTop - props.state.top}
+          top={state.noteTop - state.top}
         />
       ) : null}
     </div>

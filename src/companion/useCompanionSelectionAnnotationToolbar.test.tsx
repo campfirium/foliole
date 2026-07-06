@@ -89,7 +89,7 @@ function createSnapshot(): WorkspaceSnapshot {
           kind: 'highlight',
           locator: { from: 8, originalText: 'to', to: 10 }
         },
-        content: 'to',
+        content: 'to\n※ Saved note',
         createdAt: '2026-05-03T00:00:00.000Z',
         hideTitleHeading: false,
         id: 'highlight-1',
@@ -217,6 +217,7 @@ it('opens existing highlight actions when tapping a rendered highlight without t
 
   expect(result.current.selectionToolbar?.existingHighlight).toEqual({
     nodeId: 'highlight-1',
+    note: 'Saved note',
     originalText: 'to'
   });
   expect(result.current.selectionToolbar?.payload).toBeNull();

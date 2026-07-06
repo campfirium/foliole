@@ -1,10 +1,14 @@
-import { appendHighlightCardNote } from '../../lib/core/annotations/textAnnotationContent';
+import {
+  appendHighlightCardNote,
+  DEFAULT_HIGHLIGHT_ANNOTATION_PREFIX
+} from '../../lib/core/annotations/textAnnotationContent';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
 
 import type { SelectionCommandPayload } from '@/shared/selectionCommandPayload';
 
 export interface CompanionExistingHighlightTarget {
+  note?: string;
   nodeId: string;
   originalText: string;
 }
@@ -28,6 +32,25 @@ function getLocators(node: WorkspaceNodeSnapshot) {
   return [];
 }
 
+function getHighlightNote(node: WorkspaceNodeSnapshot) {
+  const marker = `\n${DEFAULT_HIGHLIGHT_ANNOTATION_PREFIX}`;
+  const markerIndex = node.content.indexOf(marker);
+  if (markerIndex < 0) return null;
+  const note = node.content.slice(markerIndex + marker.length).trim();
+  return note || null;
+}
+
+function toExistingHighlightTarget(node: WorkspaceNodeSnapshot | undefined): CompanionExistingHighlightTarget | null {
+  const originalText = node ? getLocators(node)[0]?.originalText : null;
+  const note = node ? getHighlightNote(node) : null;
+  if (!node || !originalText) return null;
+  return {
+    nodeId: node.id,
+    originalText,
+    ...(note ? { note } : {})
+  };
+}
+
 export function findCompanionExistingHighlightFromPayload(
   snapshot: WorkspaceSnapshot | null,
   payload: SelectionCommandPayload | null
@@ -47,8 +70,7 @@ export function findCompanionExistingHighlightFromPayload(
       match.originalText === locator.originalText
     )
   );
-  const originalText = node ? getLocators(node)[0]?.originalText : null;
-  return node && originalText ? { nodeId: node.id, originalText } : null;
+  return toExistingHighlightTarget(node);
 }
 
 export function findCompanionExistingHighlightAtPosition(args: {
@@ -64,8 +86,7 @@ export function findCompanionExistingHighlightAtPosition(args: {
     !trashed.has(candidate.id) &&
     getLocators(candidate).some((locator) => locator.from <= args.position && args.position <= locator.to)
   );
-  const originalText = node ? getLocators(node)[0]?.originalText : null;
-  return node && originalText ? { nodeId: node.id, originalText } : null;
+  return toExistingHighlightTarget(node);
 }
 
 export function appendCompanionExistingHighlightNote(args: {
