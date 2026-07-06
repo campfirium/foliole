@@ -6,7 +6,7 @@ export function CompanionScreenHeader(props: {
   title: string;
 }) {
   return (
-    <div className="px-1 pb-3 pt-1">
+    <div className="pb-3 pt-1">
       <div className="flex items-end justify-between gap-4">
         <h1 className="text-[28px] font-bold leading-8 text-foreground">{props.title}</h1>
         {props.metric ? (

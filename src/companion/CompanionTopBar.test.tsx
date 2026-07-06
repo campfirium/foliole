@@ -24,6 +24,8 @@ describe('CompanionTopBar', () => {
     const { container } = render(<CompanionTopBar title="Browse" visible />);
     const header = container.querySelector('header');
     expect(header?.dataset.elevated).toBe('false');
+    expect(header?.className).toContain('px-2.5');
+    expect(header?.className).toContain('-mx-5');
   });
 
   it('keeps sync status in the top-right back row on detail pages', expectStatusSlotInBackRow);

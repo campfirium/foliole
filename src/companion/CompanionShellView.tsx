@@ -1,5 +1,6 @@
 import {
   companionMainBottomInsetClassName,
+  companionMobileRailClassName,
   companionReviewBottomInsetClassName,
   companionViewportHeightClassName
 } from './companionCssCompatibility';
@@ -30,13 +31,13 @@ function renderCompanionMainContent(model: CompanionShellModel) {
     : companionMainBottomInsetClassName;
   if (!model.workspaceSync.isWorkspaceSyncStateReady) {
     return (
-      <div className={`mx-auto flex min-h-full w-full max-w-[760px] flex-col px-6 pt-4 ${bottomInsetClassName} [padding-left:1.5rem] [padding-right:1.5rem] sm:px-7 sm:[padding-left:1.75rem] sm:[padding-right:1.75rem]`}>
+      <div className={`mx-auto flex min-h-full w-full max-w-[760px] flex-col ${companionMobileRailClassName} pt-4 ${bottomInsetClassName}`}>
         <CompanionWorkspaceSyncLoading />
       </div>
     );
   }
   return (
-    <div className={`mx-auto flex min-h-full w-full max-w-[760px] flex-col px-6 pt-4 ${bottomInsetClassName} [padding-left:1.5rem] [padding-right:1.5rem] sm:px-7 sm:[padding-left:1.75rem] sm:[padding-right:1.75rem]`}>
+    <div className={`mx-auto flex min-h-full w-full max-w-[760px] flex-col ${companionMobileRailClassName} pt-4 ${bottomInsetClassName}`}>
       <CompanionShellTopBar
         onOpenSyncSettings={() => openCompanionSyncSettings(model)}
         topBarProps={model.topBarProps}
@@ -118,4 +119,3 @@ export function CompanionShellView(props: { model: CompanionShellModel }) {
     </>
   );
 }
-

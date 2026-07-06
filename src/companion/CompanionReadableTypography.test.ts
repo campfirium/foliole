@@ -18,6 +18,10 @@ describe('companion readable typography', () => {
     const combined = companionFiles.map(readWorkspaceFile).join('\n');
 
     expect(combined).toContain('--content-panel-line-height');
+    expect(combined).toContain('--content-panel-paragraph-spacing');
+    expect(combined).toContain('--document-content-inline-padding');
+    expect(combined).toContain('0px');
+    expect(combined).toContain('0.35em');
     expect(combined).toContain('--content-panel-font-family');
     expect(combined).not.toContain('saveCompanionSyncSettingRecord');
     expect(combined).not.toContain('appSettingsClassification');

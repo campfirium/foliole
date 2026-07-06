@@ -18,6 +18,53 @@ import { definedProps } from '@/shared/lib/definedProps';
 
 type ReadableArticle = NonNullable<ReturnType<typeof useCompanionArticleSurface>['readableArticle']>;
 
+function ReadingChromeControls(props: {
+  canEditContent?: boolean;
+  isChromeVisible: boolean;
+  isContentEditing: boolean;
+  onExit(): void;
+  onOpenActions(open: boolean): void;
+  onOpenOutline(open: boolean): void;
+  onToggleContentEditing(): void;
+  readableArticle: ReadableArticle;
+}) {
+  return (
+    <ReadingChrome
+      canEditContent={props.canEditContent === true}
+      isContentEditing={props.isContentEditing}
+      visible={props.isChromeVisible}
+      onExit={props.onExit}
+      onOpenActions={() => props.onOpenActions(true)}
+      onOpenOutline={() => props.onOpenOutline(true)}
+      onToggleContentEditing={props.onToggleContentEditing}
+      title={props.readableArticle.title}
+    />
+  );
+}
+
+function ReadingActionsLayer(props: {
+  actionsOpen: boolean;
+  onFindInDocument(): void;
+  onOpenActions(open: boolean): void;
+  onOpenReadingSheet(sheet: 'font' | 'highlight' | 'info' | null): void;
+  onRestoreFromTrash?: (nodeId: string) => Promise<void> | void;
+  readableArticle: ReadableArticle;
+}) {
+  return (
+    <ReadingActionsSheet
+      onFindInDocument={props.onFindInDocument}
+      onOpenChange={props.onOpenActions}
+      onOpenReadingSheet={props.onOpenReadingSheet}
+      open={props.actionsOpen}
+      {...definedProps({
+        onRestoreFromTrash: props.readableArticle.isTrashed
+          ? () => props.onRestoreFromTrash?.(props.readableArticle.nodeId)
+          : undefined
+      })}
+    />
+  );
+}
+
 function ReadingSheetsLayer(props: {
   editor: EditorAdapter | null;
   onOpenReadingSheet(sheet: 'font' | 'highlight' | 'info' | null): void;
@@ -79,6 +126,7 @@ export function ImmersiveChromeLayer(props: {
   actionsOpen: boolean;
   canEditContent?: boolean;
   editor: EditorAdapter | null;
+  isChromeVisible: boolean;
   isContentEditing: boolean;
   onExit(): void;
   onFindInDocument(): void;
@@ -99,25 +147,23 @@ export function ImmersiveChromeLayer(props: {
 }) {
   return (
     <>
-      <ReadingChrome
-        canEditContent={props.canEditContent === true}
+      <ReadingChromeControls
+        canEditContent={props.canEditContent}
+        isChromeVisible={props.isChromeVisible}
         isContentEditing={props.isContentEditing}
         onExit={props.onExit}
-        onOpenActions={() => props.onOpenActions(true)}
-        onOpenOutline={() => props.onOpenOutline(true)}
+        onOpenActions={props.onOpenActions}
+        onOpenOutline={props.onOpenOutline}
         onToggleContentEditing={props.onToggleContentEditing}
-        title={props.readableArticle.title}
+        readableArticle={props.readableArticle}
       />
-      <ReadingActionsSheet
+      <ReadingActionsLayer
+        actionsOpen={props.actionsOpen}
         onFindInDocument={props.onFindInDocument}
-        onOpenChange={props.onOpenActions}
+        onOpenActions={props.onOpenActions}
         onOpenReadingSheet={props.onOpenReadingSheet}
-        open={props.actionsOpen}
-        {...definedProps({
-          onRestoreFromTrash: props.readableArticle.isTrashed
-            ? () => props.onRestoreFromTrash?.(props.readableArticle.nodeId)
-            : undefined
-        })}
+        readableArticle={props.readableArticle}
+        {...definedProps({ onRestoreFromTrash: props.onRestoreFromTrash })}
       />
       <ReadingSheetsLayer
         editor={props.editor}

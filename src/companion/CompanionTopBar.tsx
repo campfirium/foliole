@@ -4,6 +4,8 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import { definedProps } from '../shared/lib/definedProps';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 
+import { companionMobileChromeHitRailClassName, companionMobileRailBleedClassName } from './companionCssCompatibility';
+
 type TopBarAction = {
   icon: LucideIcon;
   label: string;
@@ -71,8 +73,8 @@ export function CompanionTopBar(props: {
   const headerRef = useScrollElevation();
   const density = props.density ?? 'normal';
   const headerClassName = density === 'compact'
-    ? 'sticky top-0 z-surface -mx-6 bg-companion-base/95 px-6 pb-2 pt-3 [margin-left:-1.5rem] [margin-right:-1.5rem] [padding-left:1.5rem] [padding-right:1.5rem] backdrop-blur supports-[padding-top:max(0px)]:pt-[max(env(safe-area-inset-top),12px)] data-[elevated=true]:border-b data-[elevated=true]:border-companion-divider sm:-mx-7 sm:px-7 sm:[margin-left:-1.75rem] sm:[margin-right:-1.75rem] sm:[padding-left:1.75rem] sm:[padding-right:1.75rem]'
-    : 'sticky top-0 z-surface -mx-6 bg-companion-base/95 px-6 pb-3 pt-4 [margin-left:-1.5rem] [margin-right:-1.5rem] [padding-left:1.5rem] [padding-right:1.5rem] backdrop-blur supports-[padding-top:max(0px)]:pt-[max(env(safe-area-inset-top),16px)] data-[elevated=true]:border-b data-[elevated=true]:border-companion-divider sm:-mx-7 sm:px-7 sm:[margin-left:-1.75rem] sm:[margin-right:-1.75rem] sm:[padding-left:1.75rem] sm:[padding-right:1.75rem]';
+    ? `${companionMobileRailBleedClassName} ${companionMobileChromeHitRailClassName} sticky top-0 z-surface bg-companion-base/95 pb-2 pt-3 backdrop-blur supports-[padding-top:max(0px)]:pt-[max(env(safe-area-inset-top),12px)] data-[elevated=true]:border-b data-[elevated=true]:border-companion-divider`
+    : `${companionMobileRailBleedClassName} ${companionMobileChromeHitRailClassName} sticky top-0 z-surface bg-companion-base/95 pb-3 pt-4 backdrop-blur supports-[padding-top:max(0px)]:pt-[max(env(safe-area-inset-top),16px)] data-[elevated=true]:border-b data-[elevated=true]:border-companion-divider`;
 
   const rightActionSlot = props.rightSlot ?? (props.rightAction ? <TopBarIconButton {...props.rightAction} density={density} /> : null);
   const rightSlotInBackRow = Boolean(props.onBack && (rightActionSlot || props.statusSlot));

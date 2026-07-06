@@ -1,8 +1,8 @@
-import { Check, EllipsisVertical, ListTree, Pencil, Undo2, X, type LucideIcon } from 'lucide-react';
+import { ChevronLeft, EllipsisVertical, ListTree, Pencil, type LucideIcon } from 'lucide-react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 
-import { companionFlexRowGap2ClassName } from './companionCssCompatibility';
+import { companionFlexRowGap2ClassName, companionMobileChromeHitRailClassName } from './companionCssCompatibility';
 
 function ReadingChromeButton(props: {
   disabled?: boolean | undefined;
@@ -15,13 +15,53 @@ function ReadingChromeButton(props: {
     <button
       aria-disabled={props.disabled ? 'true' : undefined}
       aria-label={props.label}
-      className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-companion-content/95 text-companion-text-secondary ring-1 ring-companion-divider transition hover:bg-companion-subtle hover:text-foreground disabled:text-companion-text-tertiary"
+      className="inline-flex h-10 w-10 items-center justify-center rounded-md text-companion-text-secondary transition hover:bg-companion-subtle hover:text-foreground disabled:text-companion-text-tertiary"
       disabled={props.disabled}
       onClick={props.onClick}
       type="button"
     >
       <Icon className="h-5 w-5" />
     </button>
+  );
+}
+
+function ReadingChromeTextButton(props: {
+  label: string;
+  onClick?: (() => void) | undefined;
+  primary?: boolean | undefined;
+}) {
+  return (
+    <button
+      aria-label={props.label}
+      className={props.primary
+        ? 'inline-flex h-9 min-w-[56px] items-center justify-center rounded-md border border-companion-divider bg-companion-content/80 px-3 text-sm font-medium text-foreground transition hover:bg-companion-subtle'
+        : 'inline-flex h-9 min-w-[56px] items-center justify-center rounded-md px-3 text-sm font-medium text-companion-text-secondary transition hover:bg-companion-subtle hover:text-foreground'}
+      onClick={props.onClick}
+      type="button"
+    >
+      {props.label}
+    </button>
+  );
+}
+
+function ChromeSpacer() {
+  return <div aria-hidden="true" className="h-10" />;
+}
+
+function EditingChrome(props: {
+  onToggleContentEditing?: (() => void) | undefined;
+}) {
+  const t = useTranslation();
+  return (
+    <div className={`fixed inset-x-0 top-0 z-workspace-overlay bg-companion-base/95 ${companionMobileChromeHitRailClassName} pt-10 supports-[padding-top:max(0px)]:pt-[max(env(safe-area-inset-top),40px)] backdrop-blur`}>
+      <div className={`mx-auto flex max-w-[760px] items-center ${companionFlexRowGap2ClassName}`}>
+        <ReadingChromeTextButton label={t('companion.reading.cancelEditing')} onClick={props.onToggleContentEditing} />
+        <span className="min-w-0 flex-1 text-center text-sm font-semibold text-foreground">
+          {t('companion.reading.editContent')}
+        </span>
+        <ReadingChromeTextButton label={t('companion.reading.doneEditing')} onClick={props.onToggleContentEditing} primary={true} />
+      </div>
+    </div>
   );
 }
 
@@ -33,45 +73,44 @@ export function ReadingChrome(props: {
   onOpenActions(): void;
   onOpenOutline(): void;
   title: string;
+  visible?: boolean;
 }) {
   const t = useTranslation();
-  const exitLabel = props.isContentEditing ? t('companion.reading.cancelEditing') : t('companion.reading.exit');
+  if (props.isContentEditing) {
+    return <EditingChrome onToggleContentEditing={props.onToggleContentEditing} />;
+  }
+  const controlsVisible = props.visible !== false;
   return (
     <>
-      <div className="fixed inset-x-0 top-0 z-workspace-overlay bg-companion-base/95 px-4 pb-2 pt-20 supports-[padding-top:max(0px)]:pt-[max(env(safe-area-inset-top),80px)] backdrop-blur">
+      <div className={`fixed inset-x-0 top-0 z-workspace-overlay bg-companion-base/95 ${companionMobileChromeHitRailClassName} pt-10 supports-[padding-top:max(0px)]:pt-[max(env(safe-area-inset-top),40px)] backdrop-blur`}>
         <div className={`mx-auto flex max-w-[760px] items-center ${companionFlexRowGap2ClassName}`}>
-          <ReadingChromeButton
-            icon={props.isContentEditing ? Undo2 : X}
-            label={exitLabel}
-            onClick={props.isContentEditing ? props.onToggleContentEditing : props.onExit}
-          />
-          {props.isContentEditing ? null : (
-            <ReadingChromeButton icon={ListTree} label={t('companion.reading.outline')} onClick={props.onOpenOutline} />
-          )}
-          <span className="min-w-0 flex-1 truncate text-center text-sm font-medium text-foreground">
-            {props.title}
-          </span>
-          {props.isContentEditing ? (
-            <ReadingChromeButton
-              icon={Check}
-              label={t('companion.reading.doneEditing')}
-              onClick={props.onToggleContentEditing ?? (() => undefined)}
-            />
-          ) : null}
+          {controlsVisible ? (
+            <>
+              <ReadingChromeButton icon={ChevronLeft} label={t('companion.reading.exit')} onClick={props.onExit} />
+              <ReadingChromeButton icon={ListTree} label={t('companion.reading.outline')} onClick={props.onOpenOutline} />
+              <span className="min-w-0 max-w-[52vw] flex-1 truncate pl-2 text-left text-sm font-medium text-foreground sm:max-w-sm">
+                {props.title}
+              </span>
+            </>
+          ) : <ChromeSpacer />}
         </div>
       </div>
-      {props.isContentEditing ? null : (
-        <div className={`fixed right-5 bottom-6 supports-[bottom:calc(0px)]:bottom-[calc(1.5rem+env(safe-area-inset-bottom))] z-workspace-overlay flex items-center ${companionFlexRowGap2ClassName}`}>
-          {props.canEditContent ? (
-            <ReadingChromeButton
-              icon={Pencil}
-              label={t('companion.reading.editTopic')}
-              onClick={props.onToggleContentEditing ?? (() => undefined)}
-            />
-          ) : null}
-          <ReadingChromeButton icon={EllipsisVertical} label={t('companion.reading.more')} onClick={props.onOpenActions} />
+      <div className={`fixed inset-x-0 bottom-0 z-workspace-overlay bg-companion-base/95 ${companionMobileChromeHitRailClassName} py-2 backdrop-blur supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),8px)]`}>
+        <div className={`mx-auto flex max-w-[760px] items-center justify-end ${companionFlexRowGap2ClassName}`}>
+          {controlsVisible ? (
+            <>
+              {props.canEditContent ? (
+                <ReadingChromeButton
+                  icon={Pencil}
+                  label={t('companion.reading.editTopic')}
+                  onClick={props.onToggleContentEditing ?? (() => undefined)}
+                />
+              ) : null}
+              <ReadingChromeButton icon={EllipsisVertical} label={t('companion.reading.more')} onClick={props.onOpenActions} />
+            </>
+          ) : <ChromeSpacer />}
         </div>
-      )}
+      </div>
     </>
   );
 }

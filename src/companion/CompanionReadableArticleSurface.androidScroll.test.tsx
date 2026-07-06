@@ -94,18 +94,20 @@ function createReadableArticle() {
   } as const;
 }
 
+function resetArticleSurfaceMocks() {
+  chromeVisible = false;
+  contentEditing = false;
+  readingChromeMock.mockClear();
+  readableArticleDocumentMock.mockClear();
+  toolbarHookMock.mockClear();
+  selectionToolbarLayerMock.mockClear();
+  toolbarHookOverride = null;
+  editorFocusMock.mockClear();
+  enterContentEditingMock.mockClear();
+}
+
 describe('ImmersiveReadableArticle Android scrolling', () => {
-  beforeEach(() => {
-    chromeVisible = false;
-    contentEditing = false;
-    readingChromeMock.mockClear();
-    readableArticleDocumentMock.mockClear();
-    toolbarHookMock.mockClear();
-    selectionToolbarLayerMock.mockClear();
-    toolbarHookOverride = null;
-    editorFocusMock.mockClear();
-    enterContentEditingMock.mockClear();
-  });
+  beforeEach(resetArticleSurfaceMocks);
 
   it('lets the immersive surface own article scrolling for old Android WebView touch gestures', () => {
     chromeVisible = true;
@@ -134,8 +136,10 @@ describe('ImmersiveReadableArticle Android scrolling', () => {
       />
     );
 
-    expect(container.querySelector('section')).toHaveClass('pt-36');
+    expect(container.querySelector('section')).toHaveClass('pt-24');
+    expect(container.querySelector('section')).toHaveClass('pb-20');
   });
+
 
   it('enables article editing only after the explicit reading edit mode is active', () => {
     chromeVisible = true;
@@ -159,18 +163,28 @@ describe('ImmersiveReadableArticle Android scrolling', () => {
   });
 });
 
-describe('ImmersiveReadableArticle edit mode', () => {
-  beforeEach(() => {
+
+describe('ImmersiveReadableArticle chrome visibility spacing', () => {
+  beforeEach(resetArticleSurfaceMocks);
+
+  it('keeps chrome spacing reserved while chrome is hidden', () => {
     chromeVisible = false;
-    contentEditing = false;
-    readingChromeMock.mockClear();
-    readableArticleDocumentMock.mockClear();
-    toolbarHookMock.mockClear();
-    selectionToolbarLayerMock.mockClear();
-    toolbarHookOverride = null;
-    editorFocusMock.mockClear();
-    enterContentEditingMock.mockClear();
+    const { container } = render(
+      <ImmersiveReadableArticle
+        onExit={vi.fn()}
+        readableArticle={createReadableArticle()}
+        snapshot={null}
+      />
+    );
+
+    expect(container.querySelector('section')).toHaveClass('pt-24');
+    expect(container.querySelector('section')).toHaveClass('pb-20');
+    expect(readingChromeMock).toHaveBeenCalledWith(expect.objectContaining({ visible: false }));
   });
+});
+
+describe('ImmersiveReadableArticle edit mode', () => {
+  beforeEach(resetArticleSurfaceMocks);
 
   it('requests edit mode and focuses the editor from the pencil', () => {
     chromeVisible = true;

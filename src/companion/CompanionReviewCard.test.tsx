@@ -72,7 +72,8 @@ describe('CompanionReviewCard', () => {
     renderWithLocalization(<CompanionReviewAnswer card={createCard()} />);
 
     expect(screen.getByText('Answer')).toBeInTheDocument();
-    expect(screen.getByRole('separator')).toHaveClass('mx-6');
+    expect(screen.getByRole('separator')).not.toHaveClass('mx-5');
+    expect(screen.getByRole('separator')).not.toHaveClass('mx-6');
     expect(screen.getByText('Answer body')).toBeInTheDocument();
     expect(screen.getByText('Answer body')).toHaveAttribute('data-layout', 'review');
   });

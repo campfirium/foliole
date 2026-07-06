@@ -4,7 +4,7 @@ import { useState } from 'react';
 import type { EditorSelection } from '@/features/editor/adapters/EditorAdapter';
 
 export function useImmersiveReadableArticleState() {
-  const [isChromeVisible, setIsChromeVisible] = useState(true);
+  const [isChromeVisible, setIsChromeVisible] = useState(false);
   const [isOutlineOpen, setIsOutlineOpen] = useState(false);
   const [isActionsSheetOpen, setIsActionsSheetOpen] = useState(false);
   const [isContentEditing, setIsContentEditing] = useState(false);
@@ -16,6 +16,7 @@ export function useImmersiveReadableArticleState() {
     if ((event.target as HTMLElement).closest('button, a, input, textarea, select')) {
       return;
     }
+    setIsChromeVisible((visible) => !visible);
   }
 
   function handleSelectOutlineItem(item: { from: number; to: number }) {

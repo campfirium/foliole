@@ -38,12 +38,36 @@ describe('ReadingChrome', () => {
   it('keeps reading controls compact and clear of Android safe areas', () => {
     renderChrome();
 
-    expect(screen.getByRole('button', { name: 'Exit' }).closest('div')?.parentElement?.className).toContain('pt-20');
-    expect(screen.getByRole('button', { name: 'Exit' }).className).toContain('h-9');
-    expect(screen.getByRole('button', { name: 'Exit' }).className).toContain('ring-companion-divider');
-    expect(screen.getByRole('button', { name: 'More reading actions' }).parentElement?.className).toContain('bottom-[calc(1.5rem+env(safe-area-inset-bottom))]');
+    expect(screen.getByRole('button', { name: 'Exit' }).closest('div')?.parentElement?.className).toContain('pt-10');
+    expect(screen.getByRole('button', { name: 'Exit' }).className).toContain('h-10');
+    expect(screen.getByRole('button', { name: 'Exit' }).className).not.toContain('ring-companion-divider');
+    expect(screen.getByText('Long reading title').className).toContain('text-left');
+    expect(screen.getByText('Long reading title').closest('div')?.parentElement?.className).toContain('px-2.5');
+    expect(screen.getByRole('button', { name: 'More reading actions' }).parentElement?.className).toContain('justify-end');
+    expect(screen.getByRole('button', { name: 'More reading actions' }).parentElement?.parentElement?.className).toContain('bottom-0');
+    expect(screen.getByRole('button', { name: 'More reading actions' }).parentElement?.parentElement?.className).not.toContain('border-t');
   });
+});
 
+describe('ReadingChrome hidden blockers', () => {
+  it('keeps blank chrome blockers mounted while reading controls are hidden', () => {
+    render(
+      <ReadingChrome
+        onExit={vi.fn()}
+        onOpenActions={vi.fn()}
+        onOpenOutline={vi.fn()}
+        title="Long reading title"
+        visible={false}
+      />
+    );
+
+    expect(screen.queryByRole('button', { name: 'Exit' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'More reading actions' })).not.toBeInTheDocument();
+    expect(document.querySelectorAll('.bg-companion-base\\/95')).toHaveLength(2);
+  });
+});
+
+describe('ReadingChrome editing', () => {
   it('moves editing controls to the top chrome while the keyboard owns the bottom area', () => {
     const onToggleContentEditing = vi.fn();
 
@@ -59,8 +83,9 @@ describe('ReadingChrome', () => {
       />
     );
 
-    expect(screen.getByRole('button', { name: 'Cancel editing' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Done editing' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+    expect(screen.getByText('Edit content')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'More reading actions' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Edit topic' })).not.toBeInTheDocument();
   });

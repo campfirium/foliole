@@ -1,3 +1,5 @@
+import type { CSSProperties } from 'react';
+
 import type {
   EditorMissingAttachmentResourceHandler,
   EditorAdapter,
@@ -34,7 +36,7 @@ export function CompanionArticleDocument(props: {
     ? 'pt-1 min-h-0'
     : `pt-1 ${companionArticleMinHeightClassName}`;
   return (
-    <section className={sectionClassName} data-companion-readable-document="true">
+    <section className={sectionClassName} data-companion-readable-document="true" style={{ '--document-content-inline-padding': '0px' } as CSSProperties}>
       <MarkdownEditor
         blockImageWidthOverride="min(100%, 40rem)"
         className="h-full"

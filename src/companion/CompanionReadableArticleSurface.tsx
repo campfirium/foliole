@@ -3,6 +3,7 @@ import { flushSync } from 'react-dom';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 
+import { companionMobileRailClassName } from './companionCssCompatibility';
 import { ImmersiveChromeLayer } from './CompanionReadableArticleChromeLayer';
 import { ReadableArticleDocument } from './CompanionReadableArticleDocument';
 import { SelectionAnnotationToolbarLayer } from './CompanionReadableArticleSelectionToolbarLayer';
@@ -110,7 +111,8 @@ function useImmersiveReadableArticleModel(props: ImmersiveReadableArticleProps) 
     if (isImmersiveArticleInteractiveTarget(event.target)) return;
     toolbar.openSelectionToolbar(event);
   }
-  const surfaceClassName = `fixed top-0 right-0 bottom-0 left-0 z-surface-raised overflow-y-auto bg-companion-base px-6 ${reading.isChromeVisible ? 'pt-36 supports-[padding-top:calc(0px)]:[padding-top:calc(env(safe-area-inset-top)+9rem)]' : 'pt-6 supports-[padding-top:max(0px)]:pt-[max(env(safe-area-inset-top),24px)]'} pb-20 supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),80px)] text-foreground sm:px-7`;
+  const chromeReservedSpacing = 'pt-24 supports-[padding-top:calc(0px)]:[padding-top:calc(env(safe-area-inset-top)+6rem)] pb-20 supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),80px)]';
+  const surfaceClassName = `fixed top-0 right-0 bottom-0 left-0 z-surface-raised overflow-y-auto bg-companion-base ${companionMobileRailClassName} ${chromeReservedSpacing} text-foreground`;
   return {
     closeToolbarFromArticlePointer,
     closeToolbarFromArticleTouch,
@@ -129,12 +131,12 @@ function ImmersiveArticleChrome(props: {
   readingTypography: ReturnType<typeof useCompanionReadingTypographySettings>;
 }) {
   const { articleProps, model, readingTypography } = props;
-  if (!model.reading.isChromeVisible) return null;
   return (
     <ImmersiveChromeLayer
       actionsOpen={model.reading.isActionsSheetOpen}
       canEditContent={Boolean(articleProps.onSaveArticleContent)}
       editor={model.toolbar.editorRef.current}
+      isChromeVisible={model.reading.isChromeVisible}
       isContentEditing={model.reading.isContentEditing}
       onExit={articleProps.onExit}
       onFindInDocument={model.reading.openDocumentSearch}

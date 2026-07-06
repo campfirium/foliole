@@ -16,6 +16,7 @@ describe('CompanionArticleDocument', () => {
     expect(className).toContain('min-h-[calc(100vh-9rem)]');
     expect(className).toContain('min-h-[calc(100dvh-9rem)]');
     expect(className.indexOf('100vh')).toBeLessThan(className.indexOf('100dvh'));
+    expect(surface?.style.getPropertyValue('--document-content-inline-padding')).toBe('0px');
   });
 
   it('keeps review cards free of article viewport minimums', () => {

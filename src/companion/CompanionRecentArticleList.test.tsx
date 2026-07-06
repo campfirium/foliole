@@ -59,6 +59,7 @@ function testRendersRecentTopicRowsWithFolderMeta() {
   expect(screen.queryByText('Continue reading')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Open topic Article 1' })).not.toHaveClass('border-l-[3px]');
   expect(screen.getByRole('button', { name: 'Open topic Article 1' })).not.toHaveClass('-mx-6');
+  expect(screen.getByRole('button', { name: 'Open topic Article 1' })).not.toHaveClass('px-1');
   expect(screen.getByText('Article 1')).toHaveClass('line-clamp-4');
   expect(screen.getByRole('button', { name: 'Open topic Article 1' })).not.toHaveTextContent('Apr 21');
   expect(screen.getByRole('button', { name: 'Open topic Article 2' })).not.toHaveTextContent('Apr 22');

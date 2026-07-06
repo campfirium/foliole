@@ -14,6 +14,7 @@ import {
 } from '../shared/ui';
 
 import type { CompanionCaptureTextSaveError } from './companionCaptureTextController';
+import { companionMobileRailClassName } from './companionCssCompatibility';
 
 type CaptureSaveResult = { error: CompanionCaptureTextSaveError } | { nodeId: string };
 
@@ -138,7 +139,7 @@ export function CompanionCaptureSheet(props: {
     <AppDialog onOpenChange={handleOpenChange} open={open}>
       <AppDialogPortal>
         <AppDialogOverlay className="companion-sheet-overlay" />
-        <AppDialogContent className="companion-sheet bottom-0 left-0 top-auto w-full translate-x-0 translate-y-0 [transform:translate(0,0)] rounded-b-none rounded-t-xl border-x-0 border-b-0 px-6 pt-3 pb-6 supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),24px)]">
+        <AppDialogContent className={`companion-sheet bottom-0 left-0 top-auto w-full translate-x-0 translate-y-0 [transform:translate(0,0)] rounded-b-none rounded-t-xl border-x-0 border-b-0 ${companionMobileRailClassName} pt-3 pb-6 supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),24px)]`}>
           <div aria-hidden="true" className="mx-auto mb-3 h-1 w-9 rounded-full bg-companion-divider-strong" />
           <div className="mx-auto w-full max-w-[760px]">
             <CaptureSheetHeader canSave={canSave} isSaving={isSaving} onCancel={resetDraft} onSave={handleSave} />
@@ -154,4 +155,3 @@ export function CompanionCaptureSheet(props: {
     </AppDialog>
   );
 }
-

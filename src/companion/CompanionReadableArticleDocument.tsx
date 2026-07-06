@@ -28,10 +28,12 @@ const FONT_SIZE_VALUES: Record<CompanionReadingTypographySettings['fontSize'], s
 };
 
 const LINE_HEIGHT_VALUES: Record<CompanionReadingTypographySettings['lineHeight'], string> = {
-  compact: '1.55',
-  default: '1.75',
-  relaxed: '1.95'
+  compact: '1.45',
+  default: '1.62',
+  relaxed: '1.78'
 };
+
+const PARAGRAPH_SPACING = '0.35em';
 
 const FONT_FAMILY_VALUES: Record<CompanionReadingTypographySettings['fontFamily'], string> = {
   sans: 'var(--font-family-sans)',
@@ -43,6 +45,8 @@ function typographyStyle(settings: CompanionReadingTypographySettings): CSSPrope
     '--content-panel-font-family': FONT_FAMILY_VALUES[settings.fontFamily],
     '--content-panel-font-size': FONT_SIZE_VALUES[settings.fontSize],
     '--content-panel-line-height': LINE_HEIGHT_VALUES[settings.lineHeight],
+    '--content-panel-paragraph-spacing': PARAGRAPH_SPACING,
+    '--document-content-inline-padding': '0px',
     '--content-panel-text-color': settings.contrast === 'high'
       ? 'var(--color-text-primary)'
       : 'color-mix(in srgb, var(--color-text-primary) 92%, var(--color-text-secondary))'

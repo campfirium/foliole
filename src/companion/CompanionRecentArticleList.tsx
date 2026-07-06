@@ -102,7 +102,7 @@ function RecentArticleRow(props: {
   return (
     <button
       aria-label={t('desktop.nodeBrowse.openTopic', { title: props.article.title })}
-      className={`block w-full border-b border-companion-divider px-1 py-3.5 text-left transition-colors ${
+      className={`block w-full border-b border-companion-divider py-3.5 text-left transition-colors ${
         isCurrent ? 'bg-companion-subtle' : 'bg-transparent hover:bg-companion-subtle/60 active:bg-companion-subtle/80'
       }`}
       onClick={() => props.onSelectArticle(props.article.nodeId)}
@@ -125,7 +125,7 @@ export function RecentArticleList(props: {
   const t = useTranslation();
   if (props.recentArticles.length === 0) {
     return (
-      <section className="border-t border-companion-divider px-1 py-6">
+      <section className="border-t border-companion-divider py-6">
         <AppEmptyState
           className="min-h-0 items-start text-left text-companion-text-secondary"
           description={t('companion.recent.empty.description')}

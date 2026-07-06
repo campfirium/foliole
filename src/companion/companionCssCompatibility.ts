@@ -1,3 +1,7 @@
+export const companionMobileRailClassName = 'px-5 [padding-left:1.25rem] [padding-right:1.25rem] sm:px-7 sm:[padding-left:1.75rem] sm:[padding-right:1.75rem]';
+export const companionMobileChromeHitRailClassName = 'px-2.5 [padding-left:0.625rem] [padding-right:0.625rem] sm:[padding-left:1.125rem] sm:[padding-right:1.125rem]';
+export const companionMobileRailBleedClassName = '-mx-5 [margin-left:-1.25rem] [margin-right:-1.25rem] sm:-mx-7 sm:[margin-left:-1.75rem] sm:[margin-right:-1.75rem]';
+export const companionMobileRailInsetMarginClassName = 'mx-5 [margin-left:1.25rem] [margin-right:1.25rem] sm:mx-7 sm:[margin-left:1.75rem] sm:[margin-right:1.75rem]';
 export const companionFlexRowGap1ClassName = 'gap-1 [&>*+*]:ml-1';
 export const companionFlexRowGap2ClassName = 'gap-2 [&>*+*]:ml-2';
 export const companionFlexColumnGapHalfClassName = 'gap-0.5 [&>*+*]:mt-0.5';
