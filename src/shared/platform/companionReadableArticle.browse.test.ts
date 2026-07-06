@@ -137,6 +137,20 @@ describe('companionReadableArticle directory browse helpers', () => {
     });
   });
 
+  it('opens topic containers as direct-child folder views without blocking leaf topics', () => {
+    const snapshot = createSnapshot();
+    snapshot.nodesById['node-8'] = createNodeRecord({ content: '# Nested child\n\nChild body', id: 'node-8', parentNodeId: 'node-5', title: 'Nested child' });
+    snapshot.nodeOrder.push('node-8');
+
+    expect(resolveCompanionFolderViewByNodeId(snapshot, 'node-5')).toMatchObject({
+      items: [
+        { kind: 'topic', nodeId: 'node-8', preview: 'Child body', title: 'Nested child' }
+      ],
+      nodeId: 'node-5',
+      title: 'Child topic'
+    });
+    expect(resolveCompanionFolderViewByNodeId(snapshot, 'node-1')).toBeNull();
+  });
   it('builds folder views in descending last opened time order when view state is available', () => {
     const snapshot = createSnapshot();
     snapshot.persistedNodeViewById = {

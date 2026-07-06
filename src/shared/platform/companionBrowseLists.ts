@@ -69,8 +69,8 @@ function hasReadableContent(node: CompanionReadableNode | undefined) {
   ));
 }
 
-function isActiveFolderNode(node: CompanionReadableNode | undefined): node is CompanionReadableNode {
-  return Boolean(node && node.kind === 'folder');
+function isBrowseContainerNode(node: CompanionReadableNode | undefined): node is CompanionReadableNode {
+  return Boolean(node && (node.kind === 'folder' || node.kind === 'topic'));
 }
 
 function isRootFolderNode(node: CompanionReadableNode | undefined): node is CompanionReadableNode {
@@ -105,10 +105,11 @@ export function resolveCompanionFolderViewByNodeId(
   const normalizedSnapshot = snapshot ? normalizeWorkspaceSnapshot(snapshot) : null;
   if (!normalizedSnapshot || !nodeId || !isCanonicalVisibleNodeId(normalizedSnapshot, nodeId)) return null;
   const folderNode = normalizedSnapshot.nodesById[nodeId];
-  if (!isActiveFolderNode(folderNode)) return null;
+  if (!isBrowseContainerNode(folderNode)) return null;
   const childNodes = selectCanonicalVisibleNodeIds(normalizedSnapshot)
     .map((childNodeId) => normalizedSnapshot.nodesById[childNodeId])
     .filter((childNode): childNode is CompanionReadableNode => Boolean(childNode && childNode.parentNodeId === nodeId));
+  if (folderNode.kind === 'topic' && childNodes.length === 0) return null;
   return {
     items: sortCompanionBrowseNodes(normalizedSnapshot, childNodes, sortKey, sortDirection).map(buildCompanionFolderListEntry),
     nodeId: folderNode.id,
@@ -153,10 +154,11 @@ export function resolveCompanionTrashFolderViewByNodeId(
   const normalizedSnapshot = snapshot ? normalizeWorkspaceSnapshot(snapshot) : null;
   if (!normalizedSnapshot || !nodeId || !isCanonicalTrashedNodeId(normalizedSnapshot, nodeId)) return null;
   const folderNode = normalizedSnapshot.nodesById[nodeId];
-  if (!isActiveFolderNode(folderNode)) return null;
+  if (!isBrowseContainerNode(folderNode)) return null;
   const childNodes = selectCanonicalTrashedNodeIds(normalizedSnapshot)
     .map((childNodeId) => normalizedSnapshot.nodesById[childNodeId])
     .filter((childNode): childNode is CompanionReadableNode => Boolean(childNode && childNode.parentNodeId === nodeId));
+  if (folderNode.kind === 'topic' && childNodes.length === 0) return null;
   return {
     items: sortCompanionBrowseNodes(normalizedSnapshot, childNodes, sortKey, sortDirection).map(buildCompanionFolderListEntry),
     nodeId: folderNode.id,

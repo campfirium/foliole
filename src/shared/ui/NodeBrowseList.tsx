@@ -1,3 +1,5 @@
+import { ChevronRight, FileText, Folder } from 'lucide-react';
+
 import { useTranslation, type Translate } from '../localization/LocalizationProvider';
 
 export interface NodeBrowseListItem {
@@ -25,6 +27,15 @@ function renderBodyStatus(status: NodeBrowseListItem['bodyStatus'], t: Translate
   return null;
 }
 
+function NodeBrowseIcon(props: { kind?: NodeBrowseListItem['kind'] }) {
+  const Icon = props.kind === 'folder' ? Folder : FileText;
+  return (
+    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-companion-subtle/45 text-companion-text-secondary">
+      <Icon className="h-[18px] w-[18px]" />
+    </span>
+  );
+}
+
 export function NodeBrowseList(props: {
   currentNodeId: string | null;
   emptyLabel: string;
@@ -48,7 +59,7 @@ export function NodeBrowseList(props: {
           <button
             key={item.nodeId}
             aria-label={buildOpenLabel(item.title, t, item.kind)}
-            className={`block w-full border-b px-1 py-4 text-left transition-colors ${
+            className={`flex min-h-16 w-full items-center gap-2.5 border-b px-1 py-2 text-left transition-colors ${
               item.nodeId === props.currentNodeId
                 ? 'border-companion-divider bg-companion-subtle'
                 : 'border-companion-divider bg-transparent hover:bg-companion-subtle/60 active:bg-companion-subtle/80'
@@ -56,11 +67,17 @@ export function NodeBrowseList(props: {
             onClick={() => props.onSelectNode(item.nodeId)}
             type="button"
           >
-            <h2 className={`text-ui-xl font-semibold leading-7 text-foreground ${item.kind === 'folder' ? 'truncate' : 'line-clamp-2'}`}>{item.title}</h2>
-            {bodyStatusLabel ? (
-              <p className="mt-1 text-xs font-medium leading-5 text-companion-text-secondary">{bodyStatusLabel}</p>
-            ) : null}
-            {item.preview ? <p className="mt-2 line-clamp-3 text-sm leading-6 text-companion-text-secondary">{item.preview}</p> : null}
+            <NodeBrowseIcon kind={item.kind} />
+            <span className="min-w-0 flex-1">
+              <h2 className={`text-[15.5px] font-medium leading-5 text-foreground/90 ${item.kind === 'folder' ? 'truncate' : 'line-clamp-2'}`}>{item.title}</h2>
+              {bodyStatusLabel ? (
+                <span className="mt-1 block text-[13px] font-medium leading-[18px] text-companion-text-tertiary">{bodyStatusLabel}</span>
+              ) : null}
+              {item.preview ? (
+                <span className="mt-1 block line-clamp-1 text-[13px] leading-[18px] text-companion-text-tertiary">{item.preview}</span>
+              ) : null}
+            </span>
+            <ChevronRight className="h-4 w-4 shrink-0 text-companion-text-tertiary/90" />
           </button>
         );
       })}

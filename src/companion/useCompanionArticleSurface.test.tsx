@@ -182,6 +182,26 @@ describe('useCompanionArticleSurface browse state', () => {
     });
   });
 
+  it('opens topic containers as browse surfaces while keeping leaf topics readable', () => {
+    const snapshot = createCompanionArticleSnapshot();
+    snapshot.nodesById['article-3'] = {
+      ...snapshot.nodesById['article-2']!,
+      content: '# Child\n\nNested body',
+      id: 'article-3',
+      parentNodeId: 'article-2',
+      title: 'Nested child'
+    };
+    snapshot.nodeOrder.push('article-3');
+    const { result } = renderHook(() => useCompanionArticleSurface(createWorkspaceSync(snapshot), createFloatingBar()));
+
+    act(() => result.current.handleSelectBrowseNode('article-2'));
+    expect(result.current.browsedFolder?.nodeId).toBe('article-2');
+    expect(result.current.browsedFolder?.items.map((item) => item.nodeId)).toEqual(['article-3']);
+
+    act(() => result.current.handleSelectBrowseNode('article-1'));
+    expect(result.current.browsedFolder).toBeNull();
+    expect(result.current.readableArticle?.nodeId).toBe('article-1');
+  });
   it('opens folder breadcrumbs as folder browse surfaces', () => {
     const { result } = renderHook(() => useCompanionArticleSurface(createWorkspaceSync(), createFloatingBar()));
 
