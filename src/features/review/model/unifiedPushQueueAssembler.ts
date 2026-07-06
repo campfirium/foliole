@@ -1,4 +1,9 @@
-import { disperseReadingMaterial, type ReadingMaterialDispersionOptions } from './readingMaterialDispersion';
+import {
+  disperseOrderedMaterial,
+  disperseReadingMaterial,
+  type OrderedMaterialDispersionOptions,
+  type ReadingMaterialDispersionOptions
+} from './readingMaterialDispersion';
 import {
   compareReadingNextAtAscending,
   DEFAULT_UNIFIED_PUSH_QUEUE_RULES,
@@ -11,6 +16,7 @@ import {
 } from './unifiedPushQueueRules';
 
 export interface FsrsPushQueueEntry {
+  pathNodeIds?: readonly string[];
   priority: PushQueuePriority;
   retrievability: number;
 }
@@ -27,6 +33,10 @@ export interface ReadingPushQueueEntry {
 export interface RouletteSelectionOptions {
   priorityRatio?: number;
   random?: () => number;
+}
+
+export interface FsrsPushQueueOptions extends RouletteSelectionOptions {
+  materialDispersion?: OrderedMaterialDispersionOptions;
 }
 
 export interface ReadingPushQueueOptions extends RouletteSelectionOptions {
@@ -133,9 +143,14 @@ function assembleRouletteBuckets<T>(
 
 export function assembleFsrsPushQueue<T extends FsrsPushQueueEntry>(
   entries: readonly T[],
-  options: RouletteSelectionOptions = {}
+  options: FsrsPushQueueOptions = {}
 ) {
   const buckets = bucketFsrsPushQueueEntries(entries);
+  if (options.materialDispersion) {
+    REGULAR_PUSH_QUEUE_PRIORITIES.forEach((priority) => {
+      buckets.regular[priority] = disperseOrderedMaterial(buckets.regular[priority], options.materialDispersion!);
+    });
+  }
   return [...buckets.absolute, ...assembleRouletteBuckets(buckets.regular, options)];
 }
 

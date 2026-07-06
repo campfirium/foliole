@@ -1,6 +1,10 @@
 import { expect, it } from 'vitest';
 
-import { disperseReadingMaterial, type ReadingMaterialDispersionEntry } from './readingMaterialDispersion';
+import {
+  disperseOrderedMaterial,
+  disperseReadingMaterial,
+  type ReadingMaterialDispersionEntry
+} from './readingMaterialDispersion';
 
 function entry(id: string, overrides: Partial<ReadingMaterialDispersionEntry> = {}): ReadingMaterialDispersionEntry {
   return {
@@ -55,4 +59,18 @@ it('uses dueAt then path then node id for exact relative-overdue ties', () => {
   );
 
   expect(queue.map((item) => item.id)).toEqual(['same-path-a', 'same-path-b', 'later']);
+});
+
+it('disperses an already ordered material window by taking the nearest different material', () => {
+  const queue = disperseOrderedMaterial(
+    [
+      { id: 'a-1', pathNodeIds: ['source-a', 'a-1'] },
+      { id: 'a-2', pathNodeIds: ['source-a', 'a-2'] },
+      { id: 'b-1', pathNodeIds: ['source-b', 'b-1'] },
+      { id: 'c-1', pathNodeIds: ['source-c', 'c-1'] }
+    ],
+    { batchSize: 4 }
+  );
+
+  expect(queue.map((item) => item.id)).toEqual(['a-1', 'b-1', 'a-2', 'c-1']);
 });

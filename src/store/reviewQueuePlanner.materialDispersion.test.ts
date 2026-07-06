@@ -3,7 +3,7 @@ import { expect, it } from 'vitest';
 import type { Node } from '../features/nodes/model/nodeTypes';
 
 import { buildReviewQueuePlan } from './reviewQueuePlanner';
-import { createReadingNode, createReadingProfile } from './reviewQueuePlanner.test-support';
+import { createReadingNode, createReadingProfile, createReviewNode } from './reviewQueuePlanner.test-support';
 
 function folder(id: string, parentNodeId: string | null = null, priority?: number): Node {
   return {
@@ -107,4 +107,41 @@ it('keeps non-active reading states out before material dispersion', () => {
   nodes[4]!.reading = { ...nodes[4]!.reading!, state: 'done' };
 
   expect(buildPlan(nodes).readingQueueNodeIds).toEqual(['active']);
+});
+
+function review(id: string, parentNodeId: string) {
+  return {
+    ...createReviewNode(id, '2026-03-16T09:00:00.000Z', { lastReviewAt: '2026-03-15T09:00:00.000Z', reps: 2, stability: 1, state: 2 }),
+    parentNodeId
+  };
+}
+
+it('material-disperses due FSRS items by full node path after retrievability ordering', () => {
+  const sourceA = folder('source-a');
+  const sourceB = folder('source-b');
+  const nodes = [
+    sourceA,
+    sourceB,
+    ...Array.from({ length: 19 }, (_, index) => review(`a-${String(index + 1).padStart(2, '0')}`, sourceA.id)),
+    review('b-01', sourceB.id)
+  ];
+
+  expect(buildPlan(nodes).fsrsQueueNodeIds.slice(0, 4)).toEqual(['a-01', 'b-01', 'a-02', 'a-03']);
+});
+
+it('does not material-disperse scheduled FSRS inspection output', () => {
+  const sourceA = folder('source-a');
+  const sourceB = folder('source-b');
+  const nodes = [sourceA, sourceB, review('a-01', sourceA.id), review('a-02', sourceA.id), review('b-01', sourceB.id)];
+  const nodesById = Object.fromEntries(nodes.map((node) => [node.id, node]));
+
+  const plan = buildReviewQueuePlan({
+    includeScheduled: true,
+    nodeOrder: nodes.map((node) => node.id),
+    nodesById,
+    now: '2026-03-21T09:00:00.000Z',
+    trashedNodeIds: []
+  });
+
+  expect(plan.fsrsQueueNodeIds).toEqual(['a-01', 'a-02', 'b-01']);
 });

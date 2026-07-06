@@ -13,6 +13,12 @@ export interface ReadingMaterialDispersionOptions {
   now: string;
 }
 
+export type OrderedMaterialDispersionEntry = Pick<ReadingMaterialDispersionEntry, 'id' | 'pathNodeIds'>;
+
+export interface OrderedMaterialDispersionOptions {
+  batchSize?: number;
+}
+
 const DEFAULT_BATCH_SIZE = 20;
 
 function parseTimestamp(timestamp: string) {
@@ -113,6 +119,41 @@ export function disperseReadingMaterial<T extends ReadingMaterialDispersionEntry
   for (let index = 0; index < pressureOrdered.length; index += batchSize) {
     const batch = pressureOrdered.slice(index, index + batchSize).sort(compareMaterialPath);
     queue.push(...strideMaterialBatch(batch));
+  }
+
+  return queue;
+}
+
+function resolveOrderedMaterialKey(entry: OrderedMaterialDispersionEntry) {
+  const path = entry.pathNodeIds ?? [];
+  if (path.length > 1) return path.slice(0, -1).join('>');
+  return path[0] ?? entry.id ?? '';
+}
+
+function shiftNextOrderedMaterialEntry<T extends OrderedMaterialDispersionEntry>(batch: T[], lastMaterialKey: string | null) {
+  const nextIndex = lastMaterialKey === null
+    ? 0
+    : batch.findIndex((entry) => resolveOrderedMaterialKey(entry) !== lastMaterialKey);
+  const index = nextIndex >= 0 ? nextIndex : 0;
+  const [entry] = batch.splice(index, 1);
+  return entry!;
+}
+
+export function disperseOrderedMaterial<T extends OrderedMaterialDispersionEntry>(
+  entries: readonly T[],
+  options: OrderedMaterialDispersionOptions = {}
+) {
+  const batchSize = options.batchSize ?? DEFAULT_BATCH_SIZE;
+  const queue: T[] = [];
+  let lastMaterialKey: string | null = null;
+
+  for (let index = 0; index < entries.length; index += batchSize) {
+    const batch = entries.slice(index, index + batchSize);
+    while (batch.length > 0) {
+      const entry = shiftNextOrderedMaterialEntry(batch, lastMaterialKey);
+      queue.push(entry);
+      lastMaterialKey = resolveOrderedMaterialKey(entry);
+    }
   }
 
   return queue;

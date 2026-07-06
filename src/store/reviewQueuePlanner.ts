@@ -1,10 +1,7 @@
-import { default_w, forgetting_curve } from 'ts-fsrs';
-
 import { hasNodeContent, type Node } from '../features/nodes/model/nodeTypes';
 import { isFsrsReviewItemNode, isReadingReviewItemNode, type ReviewItemNodeLike } from '../features/review/model/reviewItemKind';
 import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
-import { toSchedulerCard } from '../features/review/model/reviewTypes';
-import { assembleFsrsPushQueue, assembleReadingPushQueue } from '../features/review/model/unifiedPushQueueAssembler';
+import { assembleReadingPushQueue } from '../features/review/model/unifiedPushQueueAssembler';
 import {
   normalizePushQueuePriority,
   resolveInheritedPushQueuePriority,
@@ -12,6 +9,7 @@ import {
 } from '../features/review/model/unifiedPushQueueRules';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
+import { resolveFsrsQueueNodeIds } from './reviewQueuePlannerFsrs';
 import { createSeededRandom, hasShelvedAncestor } from './reviewQueuePlannerHelpers';
 import { resolveModeQueueNodeIds } from './reviewQueuePlannerMode';
 import { resolveReviewQueueNodePathNodeIds, resolveReviewQueueReadingAvailableAt, resolveReviewQueueReadingDueAt } from './reviewQueuePlannerReadingPaths';
@@ -89,34 +87,6 @@ function resolveNodePriority(node: ReviewQueueNode, nodesById: Record<string, Re
   }
 
   return normalizePushQueuePriority(node.reading?.priority, defaultPriority);
-}
-
-function resolveFsrsRetrievability(node: ReviewQueueNode, now: string) {
-  const card = toSchedulerCard(node.review, now);
-  if (!card.last_review || card.stability <= 0) {
-    return 0;
-  }
-  const elapsedDays = Math.max((parseReviewQueueTimestamp(now) - parseReviewQueueTimestamp(card.last_review)) / (24 * 60 * 60 * 1000), 0);
-  const retrievability = forgetting_curve(default_w, elapsedDays, card.stability);
-  return Number.isFinite(retrievability) ? retrievability : 0;
-}
-
-function resolveFsrsQueueNodeIds(args: {
-  candidates: ReviewQueueNode[];
-  nodeOrder: string[];
-  nodesById: Record<string, ReviewQueueNode | undefined>;
-  now: string;
-  pushQueueRules: UnifiedPushQueueRules;
-}) {
-  const random = createSeededRandom(`fsrs|${args.nodeOrder.join('|')}`);
-  return assembleFsrsPushQueue(
-    args.candidates.map((node) => ({
-      id: node.id,
-      priority: resolveNodePriority(node, args.nodesById, args.pushQueueRules.defaultPriority),
-      retrievability: resolveFsrsRetrievability(node, args.now)
-    })),
-    { priorityRatio: args.pushQueueRules.priorityRatio, random }
-  ).map((entry) => entry.id);
 }
 
 function resolveReadingQueueNodeIds(args: {
@@ -206,10 +176,12 @@ export function buildReviewQueuePlan(args: {
 
   const fsrsQueueNodeIds = resolveFsrsQueueNodeIds({
     candidates: fsrsCandidates,
+    disperseMaterial: !includeScheduled,
     nodeOrder: args.nodeOrder,
     nodesById: args.nodesById,
     now: args.now,
-    pushQueueRules
+    pushQueueRules,
+    resolvePriority: resolveNodePriority
   });
   const readingQueueNodeIds = resolveReadingQueueNodeIds({
     candidates: readingCandidates,

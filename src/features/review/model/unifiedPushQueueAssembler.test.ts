@@ -200,3 +200,51 @@ it('places absolute priority cards before regular buckets', () => {
 
   expect(queue.map((item) => item.id)).toEqual(['absolute-1', 'absolute-2', 'regular-1', 'regular-9']);
 });
+
+it('disperses FSRS material inside an ordered regular priority bucket', () => {
+  const entries = [
+    ...Array.from({ length: 19 }, (_, index) => ({
+      id: `a-${String(index + 1).padStart(2, '0')}`,
+      pathNodeIds: ['source-a', `a-${String(index + 1).padStart(2, '0')}`],
+      priority: 4 as const,
+      retrievability: 0.01 + index / 100
+    })),
+    {
+      id: 'b-01',
+      pathNodeIds: ['source-b', 'b-01'],
+      priority: 4 as const,
+      retrievability: 0.99
+    }
+  ];
+
+  const queue = assembleFsrsPushQueue(entries, { materialDispersion: {} });
+
+  expect(queue.map((item) => item.id).slice(0, 4)).toEqual(['a-01', 'b-01', 'a-02', 'a-03']);
+});
+
+it('keeps absolute FSRS priority cards ahead of dispersed regular buckets', () => {
+  const queue = assembleFsrsPushQueue(
+    [
+      { id: 'regular-a-1', pathNodeIds: ['a', '1'], priority: 4, retrievability: 0.1 },
+      { id: 'absolute', pathNodeIds: ['absolute'], priority: 0, retrievability: 0.9 },
+      { id: 'regular-b-1', pathNodeIds: ['b', '1'], priority: 4, retrievability: 0.2 }
+    ],
+    { materialDispersion: {} }
+  );
+
+  expect(queue.map((item) => item.id)).toEqual(['absolute', 'regular-a-1', 'regular-b-1']);
+});
+
+it('does not disperse FSRS material across regular priority buckets', () => {
+  const queue = assembleFsrsPushQueue(
+    [
+      { id: 'p1-a-1', pathNodeIds: ['a', '1'], priority: 1, retrievability: 0.1 },
+      { id: 'p9-b-1', pathNodeIds: ['b', '1'], priority: 9, retrievability: 0.1 },
+      { id: 'p1-a-2', pathNodeIds: ['a', '2'], priority: 1, retrievability: 0.2 },
+      { id: 'p9-b-2', pathNodeIds: ['b', '2'], priority: 9, retrievability: 0.2 }
+    ],
+    { materialDispersion: {}, random: () => 0 }
+  );
+
+  expect(queue.map((item) => item.id)).toEqual(['p1-a-1', 'p1-a-2', 'p9-b-1', 'p9-b-2']);
+});
