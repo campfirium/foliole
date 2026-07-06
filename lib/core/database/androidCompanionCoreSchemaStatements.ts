@@ -1,4 +1,4 @@
-import { CORE_INDEX_SCHEMA_STATEMENTS } from './coreIndexSchemaStatements.ts';
+import { CORE_INDEX_SCHEMA_STATEMENTS } from './coreIndexSchemaStatements.js';
 
 export const ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS nodes (

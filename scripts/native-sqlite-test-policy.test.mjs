@@ -59,4 +59,8 @@ describe('native sqlite test policy', () => {
   it('keeps Readwise sqlite visibility coverage on the Electron ABI test entry', () => {
     expect(controlledElectronSqliteTests).toContain('electron/database/externalDocumentImportVisibility.test.ts');
   });
+
+  it('keeps schema inventory coverage on the Electron ABI test entry', () => {
+    expect(controlledElectronSqliteTests).toContain('scripts/android/schema-inventory.test.mjs');
+  });
 });

@@ -1,6 +1,9 @@
 import type { NativeWorkspaceNodeSnapshot } from '../../../lib/platform/nativeStorageContract';
 
-import type { WorkspaceRuntimeNodeSnapshot, WorkspaceRuntimeSnapshot } from './workspaceRuntimeTypes';
+import type {
+  WorkspaceRuntimeNodeSnapshot,
+  WorkspaceRuntimeSnapshot
+} from './workspaceRuntimeTypes';
 
 const PENDING_NODE_SYNC_STORAGE_KEY = 'foliole-pending-node-sync-v1';
 
@@ -9,6 +12,8 @@ interface PendingNodeSyncSnapshot {
 }
 
 type PendingNodeSyncResolvedListener = (nodeId: string) => void;
+
+export type PendingNodeSyncReplayDecision = 'apply' | 'block' | 'resolve';
 
 let pendingNodeSyncResolvedListener: PendingNodeSyncResolvedListener | null = null;
 
@@ -30,7 +35,11 @@ function readPendingSnapshot(): PendingNodeSyncSnapshot {
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
       return { nodesById: {} };
     }
-    if (!parsed.nodesById || typeof parsed.nodesById !== 'object' || Array.isArray(parsed.nodesById)) {
+    if (
+      !parsed.nodesById ||
+      typeof parsed.nodesById !== 'object' ||
+      Array.isArray(parsed.nodesById)
+    ) {
       return { nodesById: {} };
     }
     return { nodesById: parsed.nodesById as Record<string, WorkspaceRuntimeNodeSnapshot> };
@@ -51,6 +60,48 @@ function writePendingSnapshot(snapshot: PendingNodeSyncSnapshot) {
   storage.setItem(PENDING_NODE_SYNC_STORAGE_KEY, JSON.stringify(snapshot));
 }
 
+function resolveRuntimeDeletedAt(
+  snapshot: WorkspaceRuntimeSnapshot,
+  nodeId: string,
+  currentNode: NativeWorkspaceNodeSnapshot | undefined
+) {
+  return currentNode?.deletedAt ?? snapshot.trashedNodeDeletedAtById?.[nodeId] ?? null;
+}
+
+function isRuntimeNodeTrashed(
+  snapshot: WorkspaceRuntimeSnapshot,
+  nodeId: string,
+  currentNode: NativeWorkspaceNodeSnapshot | undefined
+) {
+  return Boolean(
+    currentNode?.deletedAt ||
+    snapshot.trashedNodeDeletedAtById?.[nodeId] ||
+    snapshot.trashedNodeIds.includes(nodeId)
+  );
+}
+
+export function decidePendingNodeSyncReplay(
+  snapshot: WorkspaceRuntimeSnapshot,
+  pendingNode: WorkspaceRuntimeNodeSnapshot
+): PendingNodeSyncReplayDecision {
+  const currentNode = snapshot.nodesById[pendingNode.nodeId];
+  if (!currentNode) {
+    return 'apply';
+  }
+  if (isRuntimeNodeTrashed(snapshot, pendingNode.nodeId, currentNode)) {
+    const deletedAt = resolveRuntimeDeletedAt(snapshot, pendingNode.nodeId, currentNode);
+    if (pendingNode.updatedAt === currentNode.updatedAt || pendingNode.updatedAt === deletedAt) {
+      return 'resolve';
+    }
+    return 'block';
+  }
+  const updateCompare = pendingNode.updatedAt.localeCompare(currentNode.updatedAt);
+  if (updateCompare > 0) {
+    return 'apply';
+  }
+  return updateCompare === 0 ? 'resolve' : 'block';
+}
+
 function toPendingWorkspaceNode(
   currentNode: NativeWorkspaceNodeSnapshot | undefined,
   pendingNode: WorkspaceRuntimeNodeSnapshot
@@ -64,17 +115,21 @@ function toPendingWorkspaceNode(
     enableShortTerm: pendingNode.enableShortTerm ?? null,
     sequentialReadingEnabled: pendingNode.sequentialReadingEnabled ?? null,
     shelvedAt: pendingNode.shelvedAt ?? null,
-    manualChildOrder: pendingNode.kind === 'folder' ? pendingNode.manualChildOrder ?? null : null,
+    manualChildOrder: pendingNode.kind === 'folder' ? (pendingNode.manualChildOrder ?? null) : null,
     title: pendingNode.title,
     isTitleManual: pendingNode.isTitleManual,
     hideTitleHeading: pendingNode.hideTitleHeading === true,
     content: pendingNode.content,
+    ...(currentNode?.currentVersionId !== undefined
+      ? { currentVersionId: currentNode.currentVersionId }
+      : {}),
     reveal: pendingNode.reveal,
     anchorLink: pendingNode.anchorLink,
     imageRegions: pendingNode.imageRegions ?? null,
     reading: pendingNode.reading ?? null,
     review: pendingNode.review ?? currentNode?.review ?? null,
     createdAt: pendingNode.createdAt,
+    ...(currentNode?.deletedAt !== undefined ? { deletedAt: currentNode.deletedAt } : {}),
     updatedAt: pendingNode.updatedAt
   };
 }
@@ -99,7 +154,9 @@ export function resolvePendingNodeSync(nodeId: string, updatedAt: string) {
   pendingNodeSyncResolvedListener?.(nodeId);
 }
 
-export function setPendingNodeSyncResolvedListener(listener: PendingNodeSyncResolvedListener | null) {
+export function setPendingNodeSyncResolvedListener(
+  listener: PendingNodeSyncResolvedListener | null
+) {
   pendingNodeSyncResolvedListener = listener;
 }
 
@@ -138,7 +195,20 @@ export function mergePendingNodeSyncIntoSnapshot(
         blockedNodes.push(pendingNode);
         continue;
       }
-      nodesById[pendingNode.nodeId] = toPendingWorkspaceNode(nodesById[pendingNode.nodeId], pendingNode);
+      const decision = decidePendingNodeSyncReplay({ ...snapshot, nodesById }, pendingNode);
+      if (decision === 'block') {
+        blockedNodes.push(pendingNode);
+        continue;
+      }
+      if (decision === 'resolve') {
+        resolvePendingNodeSync(pendingNode.nodeId, pendingNode.updatedAt);
+        mergedCount += 1;
+        continue;
+      }
+      nodesById[pendingNode.nodeId] = toPendingWorkspaceNode(
+        nodesById[pendingNode.nodeId],
+        pendingNode
+      );
       knownNodeIds.add(pendingNode.nodeId);
       mergedCount += 1;
     }
