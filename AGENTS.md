@@ -64,17 +64,6 @@
 8. 执行中发现不再属于同一能力闭环，或新增 schema / bridge / IPC / 协议 / 依赖 / 后台任务 / fallback / migration / 双写 / scan / poll，必须停下进入 `NEEDS_EVAL` 或 `STOP_CONFIRM`。
 9. 只有用户明确要求 spike，或任务评估把某段代码标为 spike / diagnostic / fallback / one-off migration 时，才允许写临时验证代码；否则临时代码不得接入正式入口。
 
-## Pre-Edit Dirty File Gate
-
-- 任何任务首次编辑文件前，必须先列出本轮计划编辑的文件清单；大任务以实施说明为准，小任务以编辑前的简短实现思路为准。
-- 规则维护任务编辑任意 `AGENTS.md` 时不受本节 dirty-file gate 限制；仍必须只改本轮规则目标，不得借机重写无关规则。
-- 对计划编辑文件执行 `node scripts/wait-clean-files.mjs <file...>`；脚本通过后才允许编辑这些文件。
-- 若本轮只编辑 `package.json` 的 `scripts` 区，使用 `node scripts/wait-clean-files.mjs --allow-package-json-scripts-edit package.json`；该例外只免疫 `scripts` 以外的既有 package dirty，不免疫 `scripts` dirty、`package-lock.json` 或依赖 / 版本编辑。
-- 若本轮是简单 npm 依赖版本闭环，且计划只编辑 `package.json` / `package-lock.json` 的依赖声明与 lockfile 解析条目，使用 `node scripts/wait-clean-files.mjs --allow-package-dependency-edit package.json package-lock.json`；该例外不得用于 `scripts`、包元数据、构建配置或非 npm 依赖语义改动。
-- 若脚本发现计划编辑文件已有未提交改动，会持续等待，直到这些文件在当前 Git 工作区变干净；超时或被打断时，不得编辑仍 dirty 的文件，必须汇报仍占用的文件。
-- 该 gate 只检查计划编辑文件，不扫描其他线程、不使用 worktree、不维护 ownership，也不要求在任务刚开始时精确判断改动范围。
-- 编辑根 `AGENTS.md` 或局部 `AGENTS.md` 时免于执行本 gate；改前仍必须阅读当前 diff，并只做用户要求的规则改动，不能覆盖已有未提交改动。
-
 ## Delegation
 
 - 只有用户当次明确授权使用子代理、并行 agent work、高风险会诊或等价表述时，才允许开子代理；未授权时继续由主进程处理，并只在开工判断中提示建议升档。
