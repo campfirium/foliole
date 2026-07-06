@@ -63,6 +63,7 @@ function useCompanionInteractionState(
   const [isAnswerRevealed, setIsAnswerRevealed] = useState(false);
   const {
     handleExitBrowseArticle,
+    handleExitDirectoryArticle,
     handleExitSearchArticle,
     handleSelectBrowseNode,
     handleSelectRecentArticle,
@@ -90,6 +91,7 @@ function useCompanionInteractionState(
     ...reviewActions,
     handleRevealAnswer,
     handleExitBrowseArticle,
+    handleExitDirectoryArticle,
     handleExitSearchArticle,
     handleSelectBrowseNode,
     handleSelectRecentArticle,

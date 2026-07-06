@@ -29,6 +29,7 @@ export type { CompanionDirectorySelection } from './CompanionDirectoryModel';
 interface CompanionDirectoryContentProps {
   selection: CompanionDirectorySelection;
   onChangeSelection(selection: CompanionDirectorySelection): void;
+  onExitArticle(selection: CompanionDirectorySelection): void;
   onSelectNode(nodeId: string): void;
   snapshot: WorkspaceSnapshot | null;
   sortDirection: FolderListSortDirection;
@@ -117,7 +118,7 @@ export function CompanionDirectoryContent(props: CompanionDirectoryContentProps)
   if (props.selection.kind === 'externalDocument' && externalDocument) {
     return (
       <ImmersiveReadableArticle
-        onExit={() => props.onChangeSelection(parentSelection ?? { kind: 'root' })}
+        onExit={() => props.onExitArticle(parentSelection ?? { kind: 'root' })}
         readableArticle={toReadableExternalArticle(externalDocument)}
         snapshot={null}
       />

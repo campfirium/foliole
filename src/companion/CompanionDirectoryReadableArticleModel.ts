@@ -28,5 +28,8 @@ export function resolveCompanionDirectoryArticleExit(args: {
   if (args.directorySelection.kind === 'trash' || args.directorySelection.kind === 'trashFolder') {
     return () => args.surface.handleTabAction('recent');
   }
-  return args.onBackDirectorySelection;
+  return () => {
+    args.surface.handleExitDirectoryArticle();
+    args.onBackDirectorySelection();
+  };
 }

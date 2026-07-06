@@ -37,6 +37,24 @@ describe('canRenderCompanionDirectoryArticle', () => {
 });
 
 describe('resolveCompanionDirectoryArticleExit', () => {
+  it('clears directory article detail before returning to the directory parent', () => {
+    const handleExitDirectoryArticle = vi.fn();
+    const onBackDirectorySelection = vi.fn();
+    const onExit = resolveCompanionDirectoryArticleExit({
+      directorySelection: { kind: 'internal', nodeId: 'folder-1' },
+      onBackDirectorySelection,
+      surface: { handleExitDirectoryArticle } as never
+    });
+
+    onExit();
+
+    expect(handleExitDirectoryArticle).toHaveBeenCalledTimes(1);
+    expect(onBackDirectorySelection).toHaveBeenCalledTimes(1);
+    expect(handleExitDirectoryArticle.mock.invocationCallOrder[0]).toBeLessThan(
+      onBackDirectorySelection.mock.invocationCallOrder[0]
+    );
+  });
+
   it('keeps trash open when exiting a trashed topic', () => {
     const handleTabAction = vi.fn();
     const onBackDirectorySelection = vi.fn();

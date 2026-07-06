@@ -26,6 +26,13 @@ function mockWorkspaceSync() {
 }
 
 function mockBrowseSurface() {
+  const reviewSession = {
+    currentCard: null,
+    nextFsrsDueAt: null,
+    nextReadingDueAt: null,
+    scheduledFsrsCount: 0,
+    scheduledReadingCount: 0
+  };
   useCompanionArticleSurface.mockReturnValue({
     activeAction: 'recent',
     browsedFolder: null,
@@ -37,6 +44,7 @@ function mockBrowseSurface() {
     handleSelectBrowseNode: vi.fn(),
     handleSelectRecentArticle: vi.fn(),
     handleTabAction: vi.fn(),
+    effectiveReviewSession: reviewSession,
     isAnswerRevealed: false,
     isSubmittingGrade: false,
     isSubmittingReadingAction: false,

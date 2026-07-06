@@ -152,6 +152,10 @@ function renderRecentContent(props: CompanionShellContentProps) {
     return (
       <CompanionDirectoryContent
         onChangeSelection={props.onChangeDirectorySelection}
+        onExitArticle={(selection) => {
+          props.surface.handleExitDirectoryArticle();
+          props.onChangeDirectorySelection(selection);
+        }}
         onSelectNode={props.surface.handleSelectBrowseNode}
         selection={props.directorySelection}
         snapshot={props.workspaceSync.state.workspace_snapshot}

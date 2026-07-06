@@ -65,6 +65,19 @@ describe('useCompanionActionState browse exit', () => {
     expect(setSelectedBrowseNodeId).toHaveBeenCalledWith('topic-1');
   });
 
+  it('clears directory article detail without using the folder return node', () => {
+    const { actions, setActiveAction, setBrowseReturnNodeId, setSelectedBrowseNodeId } = createActionState({
+      browseReturnNodeId: 'folder-1'
+    });
+
+    actions.handleExitDirectoryArticle();
+
+    expect(setBrowseReturnNodeId).toHaveBeenCalledWith(null);
+    expect(setSelectedBrowseNodeId).toHaveBeenCalledWith(null);
+    expect(setSelectedBrowseNodeId).not.toHaveBeenCalledWith('folder-1');
+    expect(setActiveAction).toHaveBeenLastCalledWith('recent');
+  });
+
   it('returns search article opens to the search tab without changing browse exit semantics', () => {
     const { actions, setActiveAction, setBrowseReturnNodeId, setSelectedBrowseNodeId } = createActionState({
       browseReturnNodeId: 'folder-1'

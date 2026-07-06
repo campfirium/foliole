@@ -71,7 +71,13 @@ export function useCompanionActionState(args: CompanionActionStateArgs) {
     handleTabAction('search');
   }
 
+  function handleExitDirectoryArticle() {
+    args.setBrowseReturnNodeId(null);
+    handleTabAction('recent');
+  }
+
   return {
+    handleExitDirectoryArticle,
     handleExitBrowseArticle,
     handleExitSearchArticle,
     handleSelectBrowseNode,
