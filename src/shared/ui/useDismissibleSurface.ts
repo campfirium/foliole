@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-import { onWindowEscape } from './keyboard';
+import { onWindowEscape } from '../platform/keyboard';
 
 export function useDismissibleSurface(args: {
   enabled?: boolean;

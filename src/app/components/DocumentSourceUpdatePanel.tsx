@@ -3,7 +3,6 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorDiffDecorations } from '../../features/editor/adapters/EditorAdapter';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { getElectronAPI } from '../../shared/platform/electronApi';
 import { onWindowPriorityEscape } from '../../shared/platform/keyboard';
 import {
   AppDialog,
@@ -131,14 +130,8 @@ function useSourceUpdatePanelEscape(open: boolean, onOpenChange: (open: boolean)
       closePanel();
       return true;
     });
-    const unlistenNativeEscape = getElectronAPI()?.onNativeKeyboardInput?.((payload) => {
-      if (payload.type === 'keyDown' && payload.key === 'Escape') {
-        closePanel();
-      }
-    }) ?? null;
     return () => {
       unlistenPriorityEscape();
-      unlistenNativeEscape?.();
     };
   }, [onOpenChange, open]);
 }

@@ -1,7 +1,7 @@
 import { cn } from '../../shared/lib/utils';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { useDismissibleSurface } from '../../shared/platform/useDismissibleSurface';
 import { AppButton, appFloatingSurfaceClassName, appInputFocusVisibleClassName } from '../../shared/ui';
+import { useDismissibleSurface } from '../../shared/ui/useDismissibleSurface';
 
 export function AnnotationNotePanel(props: {
   draft: string;

@@ -8,8 +8,8 @@ import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type { ExternalDocumentImportResult } from '../../shared/platform/externalDocumentImportRepository';
 import type { ExternalDocumentPreview } from '../../shared/platform/externalDocumentPreviewRepository';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
-import { useDismissibleSurface } from '../../shared/platform/useDismissibleSurface';
 import { AppButton, AppErrorState, AppIconButton, AppLoadingState, appFloatingSurfaceClassName } from '../../shared/ui';
+import { useDismissibleSurface } from '../../shared/ui/useDismissibleSurface';
 
 import { useOpenImportedExternalDocument } from './externalDocumentImportState';
 import { useExternalDocumentPreviewPanelFrame } from './externalDocumentPreviewPanelState';

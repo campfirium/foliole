@@ -7,8 +7,8 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type { ExternalDocumentPreview } from '../../shared/platform/externalDocumentPreviewRepository';
-import { useDismissibleSurface } from '../../shared/platform/useDismissibleSurface';
 import { AppButton, AppErrorState, AppIconButton, AppLoadingState, appFloatingSurfaceClassName } from '../../shared/ui';
+import { useDismissibleSurface } from '../../shared/ui/useDismissibleSurface';
 import { ensureWorkspaceNodeDocumentReady } from '../../store/workspaceNodePreparation';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 

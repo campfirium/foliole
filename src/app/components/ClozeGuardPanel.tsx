@@ -2,8 +2,8 @@ import { Settings2 } from 'lucide-react';
 
 import { cn } from '../../shared/lib/utils';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { useDismissibleSurface } from '../../shared/platform/useDismissibleSurface';
 import { AppButton, appFloatingSurfaceClassName } from '../../shared/ui';
+import { useDismissibleSurface } from '../../shared/ui/useDismissibleSurface';
 import { dispatchOpenClozeGuardSettings } from '../clozeGuardSettingsEvent';
 
 const CLOZE_GUARD_CARD_CLASS_NAME = cn(
