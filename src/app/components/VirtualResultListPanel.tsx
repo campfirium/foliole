@@ -17,6 +17,7 @@ interface VirtualResultListPanelProps {
   nodes: Node[];
   nodesById: Record<string, Node>;
   onSelectNode: (nodeId: string) => void;
+  preserveItemOrder?: boolean;
 }
 
 function resolveVirtualFolderId(props: VirtualResultListPanelProps) {
@@ -44,6 +45,7 @@ export function VirtualResultListPanel(props: VirtualResultListPanelProps) {
       nodesById={toWorkspaceListNodesById(props.nodesById)}
       onOpenMoveToNode={() => undefined}
       onSelectNode={props.onSelectNode}
+      preserveItemOrder={props.preserveItemOrder ?? false}
       showCreateTopic={false}
     />
   );

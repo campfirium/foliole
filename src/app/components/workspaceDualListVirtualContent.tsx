@@ -99,6 +99,7 @@ export function renderVirtualContentColumn(
       nodes={items}
       nodesById={props.nodesById}
       onSelectNode={props.onSelectNodeInVirtualView}
+      preserveItemOrder={Boolean(activeManualCollection)}
     />
   );
 }

@@ -37,6 +37,9 @@ export async function runAgentCli(argv, options = {}) {
   const bodyResult = buildBody(parsed.command, parsed.flags);
   if (!bodyResult.ok) return failure(bodyResult.error, bodyResult.statusCode);
   if (route.write) return runWriteCommand(parsed.command, bodyResult.body, descriptor, parsed.flags, options);
+  if (parsed.command === 'virtual-folders/reorder' && bodyResult.body.material_ids) {
+    return runVirtualFolderReorderByMaterialIds(bodyResult.body, descriptor, options);
+  }
   return callApi(route, descriptor, bodyResult.body, options);
 }
 
@@ -89,7 +92,16 @@ function buildBody(command, flags) {
   if (command === 'virtual-folders/list') return requireFields(flags, [], ['limit']);
   if (command === 'virtual-folders/read') return requireFields(flags, ['id'], ['limit']);
   if (command === 'virtual-folders/create') return requireFields(flags, ['title'], ['description']);
+  if (command === 'virtual-folders/reorder') return buildVirtualFolderReorderBody(flags);
   return requireFields(flags, ['folder_id'], command.endsWith('add-items') ? ['material_ids'] : ['item_ids']);
+}
+
+function buildVirtualFolderReorderBody(flags) {
+  const base = requireFields(flags, ['folder_id']);
+  if (!base.ok) return base;
+  if (flags.item_ids) return { body: { ...base.body, item_ids: normalizeFieldValue('item_ids', flags.item_ids) }, ok: true };
+  if (flags.material_ids) return { body: { ...base.body, material_ids: normalizeFieldValue('material_ids', flags.material_ids) }, ok: true };
+  return { error: 'missing_item_ids', ok: false, statusCode: 2 };
 }
 
 function requireFields(flags, required, optional = []) {
@@ -115,6 +127,26 @@ function normalizeFieldValue(field, value) {
   if (field === 'limit') return Number(value);
   if (field === 'item_ids' || field === 'material_ids') return value.split(',').map((item) => item.trim()).filter(Boolean);
   return value;
+}
+
+async function runVirtualFolderReorderByMaterialIds(body, descriptor, options) {
+  const read = await callApi(ROUTES['virtual-folders/read'], descriptor, { id: body.folder_id }, options);
+  if (read.status !== 0) return read;
+  const itemIds = resolveReorderItemIds(read.output.items, body.material_ids);
+  if (!itemIds.ok) return failure(itemIds.error, 2);
+  return callApi(ROUTES['virtual-folders/reorder'], descriptor, { folder_id: body.folder_id, item_ids: itemIds.itemIds }, options);
+}
+
+function resolveReorderItemIds(items, materialIds) {
+  if (!Array.isArray(items)) return { error: 'invalid_folder_items', ok: false };
+  const byMaterialId = new Map(items.map((item) => [item?.material_id, item?.id]));
+  const itemIds = [];
+  for (const materialId of materialIds) {
+    const itemId = byMaterialId.get(materialId);
+    if (typeof itemId !== 'string') return { error: 'material_not_in_folder', ok: false };
+    itemIds.push(itemId);
+  }
+  return { itemIds, ok: true };
 }
 
 async function runWriteCommand(command, body, descriptor, flags, options) {

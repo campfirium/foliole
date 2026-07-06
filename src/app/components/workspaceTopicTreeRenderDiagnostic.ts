@@ -39,6 +39,7 @@ export function areWorkspaceTopicTreePropsEqual(
     forceVisibleNodeId: previous.forceVisibleNodeId !== next.forceVisibleNodeId,
     headerDescription: previous.headerDescription !== next.headerDescription,
     itemIds: previous.itemIds !== next.itemIds,
+    preserveItemOrder: previous.preserveItemOrder !== next.preserveItemOrder,
     nodesById: previous.nodesById !== next.nodesById,
     onOpenMoveToNode: previous.onOpenMoveToNode !== next.onOpenMoveToNode,
     onOpenPostponeTopicPanel: previous.onOpenPostponeTopicPanel !== next.onOpenPostponeTopicPanel,

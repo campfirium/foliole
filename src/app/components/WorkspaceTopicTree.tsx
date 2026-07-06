@@ -37,6 +37,7 @@ export interface WorkspaceTopicTreeProps {
   forceVisibleNodeId?: string | null;
   headerDescription?: string;
   itemIds: string[];
+  preserveItemOrder?: boolean;
   nodesById: WorkspaceListNodesById;
   onCreateChildNode?: CreateTopicTreeNode;
   onOpenMoveToNode: () => void;
@@ -118,6 +119,8 @@ function useWorkspaceTopicTreeData(props: WorkspaceTopicTreeProps) {
   const contentSort = useWorkspaceContentSort();
   const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
   const dismissedTopicVisibility = useDismissedTopicVisibility();
+  const sort = contentSort.sort;
+  const manualChildOrder = props.preserveItemOrder ? props.itemIds : props.nodesById[props.activeFolderId]?.manualChildOrder ?? null;
   const childrenByParent = useMemo(
     () => props.childrenByParent ?? buildTopicChildrenByParent(props.itemIds, props.nodesById),
     [props.childrenByParent, props.itemIds, props.nodesById]
@@ -128,11 +131,11 @@ function useWorkspaceTopicTreeData(props: WorkspaceTopicTreeProps) {
     activeNodeId: props.activeNodeId,
     childrenByParent,
     itemIds: rootItemIds,
-    manualChildOrder: props.nodesById[props.activeFolderId]?.manualChildOrder ?? null,
+    manualChildOrder,
     nodeViewById,
     nodesById: props.nodesById,
     sortRefreshVersion: contentSort.sortRefreshVersion,
-    sort: contentSort.sort,
+    sort,
     hideDismissedTopics: dismissedTopicVisibility.viewHideDismissedTopics,
     ...definedProps({ forceVisibleNodeId: props.forceVisibleNodeId })
   });

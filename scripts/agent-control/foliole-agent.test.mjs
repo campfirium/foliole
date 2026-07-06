@@ -89,6 +89,60 @@ describe('foliole agent cli', () => {
     expect(calls[0].url).toBe('http://127.0.0.1:3456/agent-control/v1/capabilities');
     expect(calls[0].init.headers.authorization).toBe('Bearer secret-token');
   });
+  it('reorders a virtual folder by material ids through existing item ids', async () => {
+    const descriptor = await descriptorPath({
+      capabilities: ['virtualFolders.read', 'virtualFolders.reorder']
+    });
+    const calls = [];
+    const result = await runAgentCli([
+      'virtual-folders/reorder',
+      '--descriptor', descriptor,
+      '--folder-id', 'folder-1',
+      '--material-ids', 'node-b,node-a'
+    ], {
+      fetch: async (url, init) => {
+        calls.push({ body: init.body, url });
+        return calls.length === 1
+          ? response({
+            items: [
+              { id: 'item-a', material_id: 'node-a' },
+              { id: 'item-b', material_id: 'node-b' }
+            ]
+          })
+          : response({ folder_id: 'folder-1', item_ids: ['item-b', 'item-a'] });
+      }
+    });
+
+    expect(result).toEqual({ output: { folder_id: 'folder-1', item_ids: ['item-b', 'item-a'] }, status: 0 });
+    expect(calls.map((call) => call.url)).toEqual([
+      'http://127.0.0.1:3456/agent-control/v1/virtual-folders/read',
+      'http://127.0.0.1:3456/agent-control/v1/virtual-folders/reorder'
+    ]);
+    expect(JSON.parse(calls[0].body)).toEqual({ id: 'folder-1' });
+    expect(JSON.parse(calls[1].body)).toEqual({ folder_id: 'folder-1', item_ids: ['item-b', 'item-a'] });
+  });
+
+  it('does not reorder when a material id is not in the virtual folder', async () => {
+    const descriptor = await descriptorPath({
+      capabilities: ['virtualFolders.read', 'virtualFolders.reorder']
+    });
+    const calls = [];
+    const result = await runAgentCli([
+      'virtual-folders/reorder',
+      '--descriptor', descriptor,
+      '--folder-id', 'folder-1',
+      '--material-ids', 'node-missing'
+    ], {
+      fetch: async (url, init) => {
+        calls.push({ body: init.body, url });
+        return response({ items: [{ id: 'item-a', material_id: 'node-a' }] });
+      }
+    });
+
+    expect(result).toEqual({ output: { error: 'material_not_in_folder' }, status: 2 });
+    expect(calls).toHaveLength(1);
+  });
+
   it('returns structured descriptor and capability errors', async () => {
     const missing = await runAgentCli(['materials/read', '--id', 'node-1'], { env: {} });
     const descriptor = await descriptorPath({ capabilities: ['materials.read'] });
