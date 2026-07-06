@@ -1,4 +1,4 @@
-import { Check, EllipsisVertical, ListTree, Pencil, X, type LucideIcon } from 'lucide-react';
+import { Check, EllipsisVertical, ListTree, Pencil, Undo2, X, type LucideIcon } from 'lucide-react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 
@@ -35,27 +35,43 @@ export function ReadingChrome(props: {
   title: string;
 }) {
   const t = useTranslation();
+  const exitLabel = props.isContentEditing ? t('companion.reading.cancelEditing') : t('companion.reading.exit');
   return (
     <>
       <div className="fixed inset-x-0 top-0 z-workspace-overlay bg-companion-base/95 px-4 pb-2 pt-20 supports-[padding-top:max(0px)]:pt-[max(env(safe-area-inset-top),80px)] backdrop-blur">
         <div className={`mx-auto flex max-w-[760px] items-center ${companionFlexRowGap2ClassName}`}>
-          <ReadingChromeButton icon={X} label={t('companion.reading.exit')} onClick={props.onExit} />
-          <ReadingChromeButton icon={ListTree} label={t('companion.reading.outline')} onClick={props.onOpenOutline} />
+          <ReadingChromeButton
+            icon={props.isContentEditing ? Undo2 : X}
+            label={exitLabel}
+            onClick={props.isContentEditing ? props.onToggleContentEditing : props.onExit}
+          />
+          {props.isContentEditing ? null : (
+            <ReadingChromeButton icon={ListTree} label={t('companion.reading.outline')} onClick={props.onOpenOutline} />
+          )}
           <span className="min-w-0 flex-1 truncate text-center text-sm font-medium text-foreground">
             {props.title}
           </span>
+          {props.isContentEditing ? (
+            <ReadingChromeButton
+              icon={Check}
+              label={t('companion.reading.doneEditing')}
+              onClick={props.onToggleContentEditing ?? (() => undefined)}
+            />
+          ) : null}
         </div>
       </div>
-      <div className={`fixed right-5 bottom-6 supports-[bottom:calc(0px)]:bottom-[calc(1.5rem+env(safe-area-inset-bottom))] z-workspace-overlay flex items-center ${companionFlexRowGap2ClassName}`}>
-        {props.canEditContent ? (
-          <ReadingChromeButton
-            icon={props.isContentEditing ? Check : Pencil}
-            label={props.isContentEditing ? t('companion.reading.doneEditing') : t('companion.reading.editTopic')}
-            onClick={props.onToggleContentEditing ?? (() => undefined)}
-          />
-        ) : null}
-        <ReadingChromeButton icon={EllipsisVertical} label={t('companion.reading.more')} onClick={props.onOpenActions} />
-      </div>
+      {props.isContentEditing ? null : (
+        <div className={`fixed right-5 bottom-6 supports-[bottom:calc(0px)]:bottom-[calc(1.5rem+env(safe-area-inset-bottom))] z-workspace-overlay flex items-center ${companionFlexRowGap2ClassName}`}>
+          {props.canEditContent ? (
+            <ReadingChromeButton
+              icon={Pencil}
+              label={t('companion.reading.editTopic')}
+              onClick={props.onToggleContentEditing ?? (() => undefined)}
+            />
+          ) : null}
+          <ReadingChromeButton icon={EllipsisVertical} label={t('companion.reading.more')} onClick={props.onOpenActions} />
+        </div>
+      )}
     </>
   );
 }

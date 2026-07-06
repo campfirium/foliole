@@ -1,4 +1,5 @@
-import { type PointerEvent as ReactPointerEvent, type TouchEvent as ReactTouchEvent } from 'react';
+import { useEffect, type PointerEvent as ReactPointerEvent, type TouchEvent as ReactTouchEvent } from 'react';
+import { flushSync } from 'react-dom';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 
@@ -19,6 +20,12 @@ import { definedProps } from '@/shared/lib/definedProps';
 import type { SelectionCommandPayload } from '@/shared/selectionCommandPayload';
 
 type ReadableArticle = NonNullable<ReturnType<typeof useCompanionArticleSurface>['readableArticle']>;
+const ARTICLE_INTERACTIVE_TARGET_SELECTOR = 'button, a, input, textarea, select, [role="button"], [contenteditable="true"]';
+
+function isImmersiveArticleInteractiveTarget(target: EventTarget | null) {
+  return isCompanionSelectionToolbarTarget(target) ||
+    (target instanceof Element && target.closest(ARTICLE_INTERACTIVE_TARGET_SELECTOR) !== null);
+}
 
 interface ImmersiveReadableArticleProps {
   onAttachmentResourceSynced?: () => void;
@@ -73,28 +80,34 @@ function useImmersiveReadableArticleModel(props: ImmersiveReadableArticleProps) 
     nodeId: props.readableArticle.nodeId,
     snapshot: props.snapshot
   });
+  useEffect(() => {
+    if (reading.isContentEditing) toolbar.editorRef.current?.focus();
+  }, [reading.isContentEditing, toolbar.editorRef]);
   function toggleContentEditing() {
     if (reading.isContentEditing) {
       reading.exitContentEditing();
       return;
     }
     toolbar.clearSelectionAndCloseToolbar();
-    reading.enterContentEditing();
+    flushSync(() => {
+      reading.enterContentEditing();
+    });
+    toolbar.editorRef.current?.focus();
   }
   function selectOutlineItem(item: { from: number; to: number }) {
     reading.handleSelectOutlineItem(item);
     toolbar.closeSelectionToolbar();
   }
   function closeToolbarFromArticlePointer(event: ReactPointerEvent<HTMLElement>) {
-    if (isCompanionSelectionToolbarTarget(event.target)) return;
+    if (isImmersiveArticleInteractiveTarget(event.target)) return;
     toolbar.closeSelectionToolbar();
   }
   function closeToolbarFromArticleTouch(event: ReactTouchEvent<HTMLElement>) {
-    if (isCompanionSelectionToolbarTarget(event.target)) return;
+    if (isImmersiveArticleInteractiveTarget(event.target)) return;
     toolbar.closeSelectionToolbar();
   }
   function openToolbarFromArticlePointer(event: ReactPointerEvent<HTMLElement>) {
-    if (isCompanionSelectionToolbarTarget(event.target)) return;
+    if (isImmersiveArticleInteractiveTarget(event.target)) return;
     toolbar.openSelectionToolbar(event);
   }
   const surfaceClassName = `fixed top-0 right-0 bottom-0 left-0 z-surface-raised overflow-y-auto bg-companion-base px-6 ${reading.isChromeVisible ? 'pt-36 supports-[padding-top:calc(0px)]:[padding-top:calc(env(safe-area-inset-top)+9rem)]' : 'pt-6 supports-[padding-top:max(0px)]:pt-[max(env(safe-area-inset-top),24px)]'} pb-20 supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),80px)] text-foreground sm:px-7`;

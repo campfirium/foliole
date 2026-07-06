@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { CompanionDirectoryContent } from './CompanionDirectoryContent';
+import { CompanionDirectoryContent, type CompanionDirectorySelection } from './CompanionDirectoryContent';
 
 const mocks = vi.hoisted(() => ({
   useCompanionExternalDirectory: vi.fn(),
@@ -43,11 +43,11 @@ const externalDirectory = {
 };
 
 function renderExternalDocumentArticle(args: {
-  onChangeSelection?: ReturnType<typeof vi.fn>;
-  onExitArticle?: ReturnType<typeof vi.fn>;
+  onChangeSelection?: (selection: CompanionDirectorySelection) => void;
+  onExitArticle?: (selection: CompanionDirectorySelection) => void;
 }) {
-  const onChangeSelection = args.onChangeSelection ?? vi.fn();
-  const onExitArticle = args.onExitArticle ?? vi.fn();
+  const onChangeSelection = args.onChangeSelection ?? vi.fn<(selection: CompanionDirectorySelection) => void>();
+  const onExitArticle = args.onExitArticle ?? vi.fn<(selection: CompanionDirectorySelection) => void>();
   render(
     <CompanionDirectoryContent
       onChangeSelection={onChangeSelection}

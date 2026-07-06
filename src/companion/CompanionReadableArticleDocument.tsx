@@ -136,6 +136,7 @@ function ReadableArticleTextDocument(props: {
       style={typographyStyle(props.readingTypographySettings)}
     >
       <CompanionArticleDocument
+        key={props.canEdit ? `${props.readableArticle.nodeId}:editing` : `${props.readableArticle.nodeId}:reading`}
         content={props.editorState.value}
         hideTitleHeading={props.readableArticle.hideTitleHeading}
         nodeId={props.readableArticle.nodeId}

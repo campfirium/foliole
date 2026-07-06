@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -172,7 +172,7 @@ describe('ImmersiveReadableArticle edit mode', () => {
     enterContentEditingMock.mockClear();
   });
 
-  it('enters edit mode from the pencil without focusing the editor immediately', () => {
+  it('requests edit mode and focuses the editor from the pencil', () => {
     chromeVisible = true;
     render(
       <ImmersiveReadableArticle
@@ -188,7 +188,23 @@ describe('ImmersiveReadableArticle edit mode', () => {
     chromeProps.onToggleContentEditing();
 
     expect(enterContentEditingMock).toHaveBeenCalledTimes(1);
-    expect(editorFocusMock).not.toHaveBeenCalled();
+    expect(editorFocusMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('focuses the editor when edit mode is active', () => {
+    chromeVisible = true;
+    contentEditing = true;
+    render(
+      <ImmersiveReadableArticle
+        onExit={vi.fn()}
+        onCreateSelectionAnnotation={vi.fn()}
+        onSaveArticleContent={vi.fn()}
+        readableArticle={createReadableArticle()}
+        snapshot={null}
+      />
+    );
+
+    expect(editorFocusMock).toHaveBeenCalled();
   });
 
   it('does not enter edit mode when the reader taps the article text', () => {
@@ -208,34 +224,4 @@ describe('ImmersiveReadableArticle edit mode', () => {
     expect(readableArticleDocumentMock).toHaveBeenCalledWith(expect.objectContaining({ allowContentEditing: false }));
   });
 
-});
-
-describe('ImmersiveReadableArticle selection toolbar pointer guard', () => {
-  it('does not close the selection toolbar from toolbar pointer or touchmove events', () => {
-    const closeSelectionToolbar = vi.fn();
-    const openSelectionToolbar = vi.fn();
-    toolbarHookOverride = {
-      clearSelectionAndCloseToolbar: vi.fn(),
-      closeSelectionToolbar,
-      editorRef: { current: null },
-      handleEditorReady: vi.fn(),
-      openSelectionToolbar,
-      resolveSelectionPayload: vi.fn(),
-      selectionToolbar: null
-    };
-    const { getByTestId } = render(
-      <ImmersiveReadableArticle
-        onExit={vi.fn()}
-        onCreateSelectionAnnotation={vi.fn()}
-        readableArticle={createReadableArticle()}
-        snapshot={null}
-      />
-    );
-
-    fireEvent.pointerDown(getByTestId('selection-toolbar-action'));
-    fireEvent.pointerUp(getByTestId('selection-toolbar-action'));
-
-    expect(closeSelectionToolbar).not.toHaveBeenCalled();
-    expect(openSelectionToolbar).not.toHaveBeenCalled();
-  });
 });

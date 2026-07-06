@@ -43,4 +43,25 @@ describe('ReadingChrome', () => {
     expect(screen.getByRole('button', { name: 'Exit' }).className).toContain('ring-companion-divider');
     expect(screen.getByRole('button', { name: 'More reading actions' }).parentElement?.className).toContain('bottom-[calc(1.5rem+env(safe-area-inset-bottom))]');
   });
+
+  it('moves editing controls to the top chrome while the keyboard owns the bottom area', () => {
+    const onToggleContentEditing = vi.fn();
+
+    render(
+      <ReadingChrome
+        canEditContent={true}
+        isContentEditing={true}
+        onExit={vi.fn()}
+        onOpenActions={vi.fn()}
+        onOpenOutline={vi.fn()}
+        onToggleContentEditing={onToggleContentEditing}
+        title="Long reading title"
+      />
+    );
+
+    expect(screen.getByRole('button', { name: 'Cancel editing' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Done editing' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'More reading actions' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit topic' })).not.toBeInTheDocument();
+  });
 });

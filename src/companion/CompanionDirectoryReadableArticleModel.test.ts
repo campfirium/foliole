@@ -50,8 +50,8 @@ describe('resolveCompanionDirectoryArticleExit', () => {
 
     expect(handleExitDirectoryArticle).toHaveBeenCalledTimes(1);
     expect(onBackDirectorySelection).toHaveBeenCalledTimes(1);
-    expect(handleExitDirectoryArticle.mock.invocationCallOrder[0]).toBeLessThan(
-      onBackDirectorySelection.mock.invocationCallOrder[0]
+    expect(handleExitDirectoryArticle.mock.invocationCallOrder[0]!).toBeLessThan(
+      onBackDirectorySelection.mock.invocationCallOrder[0]!
     );
   });
 
