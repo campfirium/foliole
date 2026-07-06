@@ -148,7 +148,7 @@ export function ImmersiveChromeLayer(props: {
   return (
     <>
       <ReadingChromeControls
-        canEditContent={props.canEditContent}
+        {...definedProps({ canEditContent: props.canEditContent })}
         isChromeVisible={props.isChromeVisible}
         isContentEditing={props.isContentEditing}
         onExit={props.onExit}
