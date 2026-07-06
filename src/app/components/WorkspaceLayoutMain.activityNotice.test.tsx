@@ -231,6 +231,11 @@ it('shows app runtime notices inside the workspace surface', async () => {
   expect(notice).toHaveClass('left-[calc(var(--workspace-rail-width)+var(--workspace-list-current-width,300px)+var(--workspace-list-splitter-width,1px))]');
   expect(notice).toHaveClass('top-[var(--workspace-top-toolbar-height)]');
   expect(notice).toHaveClass('right-[calc(var(--workspace-right-sidebar-current-width,320px)+var(--workspace-right-sidebar-splitter-width,1px))]');
+  const surface = notice.firstElementChild as HTMLElement;
+  expect(surface).toHaveClass('min-h-32');
+  expect(surface).toHaveClass('w-[min(540px,100%)]');
+  expect(surface).toHaveClass('bg-shellless-surface');
+  expect(surface).toHaveClass('text-shellless-title');
   expect(notice).toHaveTextContent(
     'Selected topic is not backed by an active keep import source.'
   );

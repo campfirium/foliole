@@ -29,6 +29,10 @@ import { useWorkspaceNavigation } from './useWorkspaceNavigation';
 
 export { useWorkspaceSelectors };
 
+type WorkspaceControllerStateInput = Omit<ReturnType<typeof useWorkspaceSelectors>, 'manualVirtualCollections'> & {
+  manualVirtualCollections?: ReturnType<typeof useWorkspaceSelectors>['manualVirtualCollections'];
+};
+
 export function useNowIso(tickMs = 15_000) {
   const [nowIso, setNowIso] = useState(() => getDemoRuntimeNowIso());
   useEffect(() => {
@@ -55,7 +59,7 @@ function resolveCanStartStudyMode(args: {
   isDemo: boolean;
   isReviewSchedulerSettingsReady: boolean;
   nowIso: string;
-  ws: ReturnType<typeof useWorkspaceSelectors>;
+  ws: WorkspaceControllerStateInput;
 }) {
   return args.isReviewSchedulerSettingsReady && buildStartReviewSessionQueue(args.ws, args.nowIso, {
     includeScheduledFallback: args.isDemo
@@ -65,7 +69,7 @@ function resolveCanStartStudyMode(args: {
 function useWorkspaceStudyModeState(args: {
   isReviewSchedulerSettingsReady: boolean;
   nowIso: string;
-  ws: ReturnType<typeof useWorkspaceSelectors>;
+  ws: WorkspaceControllerStateInput;
 }) {
   const demoRuntime = useDemoRuntimeState();
   const canStartStudyMode = resolveCanStartStudyMode({
@@ -107,7 +111,7 @@ function useWorkspaceReadingProgressPersistence(args: {
 }
 
 function useWorkspaceEditorController(
-  ws: ReturnType<typeof useWorkspaceSelectors>,
+  ws: WorkspaceControllerStateInput,
   runtime: ReturnType<typeof useAppRuntime>,
   activeNode: Node | undefined,
   saveActiveNodeView: ReturnType<typeof useSaveActiveNodeView>,
@@ -176,7 +180,7 @@ function useEditorDraftCloseFlushRegistration(
 }
 
 export function useWorkspaceControllerState(
-  ws: ReturnType<typeof useWorkspaceSelectors>,
+  ws: WorkspaceControllerStateInput,
   isWorkspaceHydrated: boolean,
   nowIso = new Date().toISOString(),
   isReviewSchedulerSettingsReady = true

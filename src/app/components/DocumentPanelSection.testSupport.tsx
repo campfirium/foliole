@@ -5,6 +5,7 @@ import { beforeEach, vi } from 'vitest';
 import '../../test/reactPdfMock';
 
 import { LocalizationProvider } from '../../shared/localization/LocalizationProvider';
+import type { loadRuntimeNodeSourceDetails as loadRuntimeNodeSourceDetailsRuntime } from '../../shared/platform/nodeSourceRuntimeRepository';
 
 import { DocumentPanelSection } from './DocumentPanelSection';
 
@@ -54,7 +55,7 @@ const nodeSourceRuntimeRepositoryMocks = vi.hoisted(() => ({
   acceptRuntimeIncomingUpdate: vi.fn(),
   dismissRuntimeIncomingUpdate: vi.fn(),
   importRuntimeIncomingUpdateAsNew: vi.fn(),
-  loadRuntimeNodeSourceDetails: vi.fn(() => null)
+  loadRuntimeNodeSourceDetails: vi.fn<typeof loadRuntimeNodeSourceDetailsRuntime>(async () => null)
 }));
 export const acceptRuntimeIncomingUpdate = nodeSourceRuntimeRepositoryMocks.acceptRuntimeIncomingUpdate;
 export const dismissRuntimeIncomingUpdate = nodeSourceRuntimeRepositoryMocks.dismissRuntimeIncomingUpdate;

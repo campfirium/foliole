@@ -10,6 +10,7 @@ import type { WorkspaceListNode } from '../../features/nodes/model/workspaceList
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
+import { toManualVirtualCollectionNodeId } from './manualVirtualCollectionModel';
 import { WorkspaceVirtualSection } from './WorkspaceVirtualSection';
 
 function createVirtualNode(args: {
@@ -157,6 +158,43 @@ it('does not show a result count on the virtual root', () => {
   expect(screen.getByRole('treeitem', { name: 'Custom virtual' })).toHaveTextContent('2');
 });
 
+it('opens manual virtual collection rows without selecting a virtual node entity', () => {
+  const onOpenVirtualView = vi.fn();
+  const onSelectNodeInVirtualView = vi.fn();
+  const root = createVirtualNode({
+    id: VIRTUAL_ROOT_NODE_ID,
+    parentNodeId: null,
+    specialKind: 'virtual-root',
+    title: 'Virtual'
+  });
+  const manualNodeId = toManualVirtualCollectionNodeId('manual-a');
+
+  renderWithLocalization(
+    <WorkspaceVirtualSection
+      activeVirtualNodeId={VIRTUAL_ROOT_NODE_ID}
+      isVirtualViewOpen
+      manualVirtualCollections={[
+        {
+          availableMaterialNodeIds: ['topic-a', 'topic-b'],
+          description: 'Agent-created folder',
+          id: 'manual-a',
+          itemCount: 2,
+          title: 'Reading queue',
+          updatedAt: '2026-05-01T00:00:00.000Z'
+        }
+      ]}
+      nodeOrder={[VIRTUAL_ROOT_NODE_ID]}
+      nodesById={{ [VIRTUAL_ROOT_NODE_ID]: root }}
+      onOpenVirtualView={onOpenVirtualView}
+      onSelectNodeInVirtualView={onSelectNodeInVirtualView}
+    />
+  );
+
+  fireEvent.click(screen.getByRole('treeitem', { name: /Reading queue/ }));
+
+  expect(onOpenVirtualView).toHaveBeenCalledWith(manualNodeId);
+  expect(onSelectNodeInVirtualView).not.toHaveBeenCalled();
+});
 it('can be hidden by the Demo shell without changing non-demo virtual rows', () => {
   const root = createVirtualNode({
     id: VIRTUAL_ROOT_NODE_ID,

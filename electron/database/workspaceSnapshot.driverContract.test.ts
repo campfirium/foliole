@@ -53,6 +53,7 @@ const workspaceSnapshotRow = {
 
 const expectedWorkspaceSnapshot = {
   activeNodeId: 'node-1',
+  manualVirtualCollections: [],
   nodeOrder: ['node-1'],
   nodesById: {
     'node-1': {
@@ -98,7 +99,7 @@ it('loads workspace snapshot through query helpers only', () => {
 
   expect(loadWorkspaceSnapshot(driver)).toEqual(expectedWorkspaceSnapshot);
 
-  expect(queryAllSpy).toHaveBeenCalledTimes(3);
+  expect(queryAllSpy).toHaveBeenCalledTimes(4);
   expect(queryOneSpy).toHaveBeenCalledTimes(5);
   expect(queryAllSpy.mock.calls[0]?.[0]).not.toContain('content_blob_data');
 });

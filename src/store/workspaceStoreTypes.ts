@@ -12,6 +12,15 @@ import type { ReviewGrade } from '../features/review/model/reviewTypes';
 import type { WorkspaceActionHistoryState } from './workspaceActionHistory';
 import type { NodeNavigationResult, WorkspaceNavigationState } from './workspaceNavigation';
 
+export interface WorkspaceManualVirtualCollection {
+  availableMaterialNodeIds: string[];
+  description: string;
+  id: string;
+  itemCount: number;
+  title: string;
+  updatedAt: string;
+}
+
 export interface WorkspaceState {
   activeNodeId: string | null;
   appActionHistory: WorkspaceActionHistoryState;
@@ -20,6 +29,7 @@ export interface WorkspaceState {
   isHydrated: boolean;
   workspaceHydrationError: string | null;
   layout: WorkspaceLayoutState;
+  manualVirtualCollections: WorkspaceManualVirtualCollection[];
   navigation: WorkspaceNavigationState;
   nodeViewById: Record<string, NodeViewState | undefined>;
   nodeOrder: string[];
@@ -139,6 +149,7 @@ export interface WorkspacePersistedState {
   activeNodeId: string | null;
   capturedWorkspaceVersion?: string | null;
   layout: WorkspaceLayoutState;
+  manualVirtualCollections?: WorkspaceManualVirtualCollection[];
   nodeViewById: Record<string, NodeViewState | undefined>;
   nodeOrder: string[];
   nodesById: Record<string, Node>;

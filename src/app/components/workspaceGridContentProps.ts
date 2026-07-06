@@ -96,6 +96,7 @@ function selectWorkspaceListAreaProps({
     isTrashViewOpen: props.trash.isTrashViewOpen,
     isVirtualViewOpen: props.virtualView.isVirtualViewOpen,
     listNodesById,
+    manualVirtualCollections: props.virtualView.manualVirtualCollections,
     nodesById: props.nodeList.nodesById,
     nodeOrder: props.nodeList.nodeOrder,
     onCreateChildNode: props.nodeList.onCreateChildNode,

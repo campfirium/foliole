@@ -6,6 +6,7 @@ import type {
   ExternalLibraryBrowseEntry,
   ExternalLibraryFolder
 } from '../../shared/platform/externalLibraryBrowseRepository';
+import type { WorkspaceManualVirtualCollection } from '../../store/workspaceStore';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import { ExternalLibrarySection } from './ExternalLibrarySection';
@@ -21,6 +22,7 @@ interface WorkspaceFolderColumnProps {
   isExternalViewOpen: boolean;
   isTrashViewOpen: boolean;
   isVirtualViewOpen: boolean;
+  manualVirtualCollections?: readonly WorkspaceManualVirtualCollection[];
   forceExpandedFolderId?: string | null;
   highlightedFolderId?: string | null;
   folderNodeOrder: string[];
@@ -51,6 +53,21 @@ function getActiveFolderSelectionId(props: WorkspaceFolderColumnProps) {
   return props.isTrashViewOpen ? TRASH_NODE_ID : props.activeFolderId;
 }
 
+function isNonRegularFolderViewOpen(props: WorkspaceFolderColumnProps) {
+  return props.isTrashViewOpen || props.isVirtualViewOpen || props.isExternalViewOpen;
+}
+
+function selectRegularNode(props: WorkspaceFolderColumnProps, nodeId: string) {
+  if (nodeId === TRASH_NODE_ID) {
+    props.onOpenTrashView();
+    return;
+  }
+  if (isNonRegularFolderViewOpen(props)) {
+    props.onOpenNotesView();
+  }
+  props.onSelectNode(nodeId);
+}
+
 function renderRegularSection(props: WorkspaceFolderColumnProps) {
   return (
     <NodeListTree
@@ -65,16 +82,7 @@ function renderRegularSection(props: WorkspaceFolderColumnProps) {
       rowCountByNodeId={props.folderTopicCountById}
       onOpenMoveToNode={props.onOpenMoveToNode}
       onOpenNotesView={props.onOpenNotesView}
-      onSelectNode={(nodeId) => {
-        if (nodeId === TRASH_NODE_ID) {
-          props.onOpenTrashView();
-          return;
-        }
-        if (props.isTrashViewOpen || props.isVirtualViewOpen || props.isExternalViewOpen) {
-          props.onOpenNotesView();
-        }
-        props.onSelectNode(nodeId);
-      }}
+      onSelectNode={(nodeId) => selectRegularNode(props, nodeId)}
       onSelectTrashNode={props.onSelectTrashNode}
       selectedTrashNodeId={props.selectedTrashNodeId}
       scrollTargetNodeId={props.highlightedFolderId ?? getActiveFolderSelectionId(props)}
@@ -83,6 +91,7 @@ function renderRegularSection(props: WorkspaceFolderColumnProps) {
         <>
           <WorkspaceVirtualSection
             isVirtualViewOpen={props.isVirtualViewOpen}
+            manualVirtualCollections={props.manualVirtualCollections ?? []}
             nodeOrder={props.nodeOrder}
             nodesById={props.nodesById}
             onSelectNodeInVirtualView={props.onSelectNodeInVirtualView}

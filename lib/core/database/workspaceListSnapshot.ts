@@ -1,4 +1,5 @@
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
+import { loadWorkspaceManualVirtualCollections } from './manualVirtualCollections.js';
 import { loadDatabaseDeviceId } from './syncDeviceIdentity.js';
 import { WORKSPACE_BODY_STATUS_SQL } from './workspaceBodyStatus.js';
 import {
@@ -168,6 +169,7 @@ export function loadWorkspaceListSnapshot(
   return normalizeWorkspaceSnapshot({
     activeNodeId,
     capturedWorkspaceVersion: resolveCapturedWorkspaceVersion(rows),
+    manualVirtualCollections: loadWorkspaceManualVirtualCollections(driver),
     nodeOrder,
     nodesById,
     trashedNodeDeletedAtById,

@@ -9,7 +9,17 @@ it('uses the existing all-clear copy when the review queue is empty', () => {
   const onClose = vi.fn();
   renderWithLocalization(<ReviewQueueEmptyDialog content={{ kind: 'empty' }} onClose={onClose} open />);
 
-  expect(screen.getByRole('dialog', { name: 'All clear for now.' })).toBeInTheDocument();
+  const dialog = screen.getByRole('dialog', { name: 'All clear for now.' });
+  expect(dialog).toBeInTheDocument();
+  expect(dialog).toHaveClass('min-h-32');
+  expect(dialog).toHaveClass('w-[min(540px,calc(100vw-32px))]');
+  expect(dialog).toHaveClass('bg-shellless-surface');
+  expect(dialog.className).not.toContain('bg-[var(--app-floating-surface-bg)]');
+  expect(dialog.className).not.toContain('shadow-panel');
+  const title = screen.getByText('All clear for now.');
+  expect(title).toHaveClass('text-ui-md');
+  expect(title).toHaveClass('font-medium');
+  expect(title).toHaveClass('text-shellless-title');
   expect(screen.queryByText('Create or schedule review items, then start Flow again.')).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'OK' })).not.toBeInTheDocument();
 });

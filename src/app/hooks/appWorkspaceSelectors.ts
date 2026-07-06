@@ -75,6 +75,7 @@ function selectWorkspaceHookState(state: WorkspaceState) {
     appActionHistory: state.appActionHistory,
     editorOperationHistory: state.editorOperationHistory,
     isHydrated: state.isHydrated,
+    manualVirtualCollections: state.manualVirtualCollections,
     navigation: state.navigation,
     nodesById: state.nodesById,
     nodeOrder: state.nodeOrder,

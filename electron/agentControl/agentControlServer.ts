@@ -1,8 +1,12 @@
+import { createHash, randomUUID } from 'node:crypto';
 import fs from 'node:fs/promises';
 import http from 'node:http';
 import path from 'node:path';
 
+import { loadDatabaseDeviceId } from '../../lib/core/database/syncDeviceIdentity.js';
+import { openDatabaseConnection } from '../database/connection.js';
 import { resolveAppPaths } from '../ipc/paths.js';
+import { notifyWorkspaceContentChanged } from '../ipc/workspaceContentChangedEvents.js';
 
 import { createDiagnosticAgentControlAuditSink, type AgentControlAuditSink } from './agentControlAudit.js';
 import { createAgentControlRequestHandler } from './agentControlRequestHandler.js';
@@ -10,6 +14,7 @@ import { createAgentControlToken } from './agentControlToken.js';
 import {
   AGENT_CONTROL_CAPABILITIES,
   AGENT_CONTROL_PROTOCOL_VERSION,
+  type AgentControlRuntimeIdentity,
   type AgentControlServerStatus,
   type AgentControlSessionDescriptor
 } from './agentControlTypes.js';
@@ -32,8 +37,12 @@ let activeStatus: AgentControlServerStatus = {
   state: 'stopped'
 };
 
-export function createAgentControlHttpServer(options: { appVersion: string; auditSink: AgentControlAuditSink; token: string }) {
-  const server = http.createServer(createAgentControlRequestHandler(options));
+export function createAgentControlHttpServer(options: { appVersion: string; auditSink: AgentControlAuditSink; notifyWorkspaceContentChanged?: () => void; runtimeIdentity?: AgentControlRuntimeIdentity; token: string }) {
+  const server = http.createServer(createAgentControlRequestHandler({
+    ...options,
+    notifyWorkspaceContentChanged: options.notifyWorkspaceContentChanged ?? notifyWorkspaceContentChanged,
+    runtimeIdentity: options.runtimeIdentity ?? createFallbackRuntimeIdentity()
+  }));
   server.headersTimeout = AGENT_CONTROL_HTTP_LIMITS.headersTimeout;
   server.keepAliveTimeout = AGENT_CONTROL_HTTP_LIMITS.keepAliveTimeout;
   server.requestTimeout = AGENT_CONTROL_HTTP_LIMITS.requestTimeout;
@@ -52,13 +61,45 @@ function listen(server: http.Server, port: number) {
   });
 }
 
-function buildDescriptor(endpoint: string, token: string): AgentControlSessionDescriptor {
+
+function createFallbackRuntimeIdentity(): AgentControlRuntimeIdentity {
+  const startedAt = new Date().toISOString();
+  return {
+    boot_id: 'unbound-test-runtime',
+    database_device_id_hash: null,
+    pid: process.pid,
+    started_at: startedAt
+  };
+}
+
+function hashRuntimeDeviceId(deviceId: string | null) {
+  return deviceId ? createHash('sha256').update(deviceId).digest('hex').slice(0, 16) : null;
+}
+
+function loadRuntimeDatabaseDeviceId() {
+  try {
+    return loadDatabaseDeviceId(openDatabaseConnection().driver);
+  } catch {
+    return null;
+  }
+}
+
+function createRuntimeIdentity(startedAt: string): AgentControlRuntimeIdentity {
+  return {
+    boot_id: randomUUID(),
+    database_device_id_hash: hashRuntimeDeviceId(loadRuntimeDatabaseDeviceId()),
+    pid: process.pid,
+    started_at: startedAt
+  };
+}
+function buildDescriptor(endpoint: string, token: string, runtimeIdentity: AgentControlRuntimeIdentity): AgentControlSessionDescriptor {
   return {
     capabilities: [...AGENT_CONTROL_CAPABILITIES],
     endpoint,
     pid: process.pid,
     protocol_version: AGENT_CONTROL_PROTOCOL_VERSION,
-    started_at: new Date().toISOString(),
+    started_at: runtimeIdentity.started_at,
+    runtime_identity: runtimeIdentity,
     token
   };
 }
@@ -81,16 +122,18 @@ export async function ensureAgentControlApiServer(args: {
   if (activeServer) return activeStatus;
 
   const token = createAgentControlToken();
+  const runtimeIdentity = createRuntimeIdentity(new Date().toISOString());
   const server = createAgentControlHttpServer({
     appVersion: args.appVersion,
     auditSink: args.auditSink ?? createDiagnosticAgentControlAuditSink(),
+    runtimeIdentity,
     token
   });
   try {
     const port = await listen(server, args.port ?? 0);
     const endpoint = `http://${LOOPBACK_HOST}:${port}`;
     const descriptorPath = args.descriptorPath ?? getAgentControlSessionDescriptorPath();
-    await writeDescriptor(descriptorPath, buildDescriptor(endpoint, token));
+    await writeDescriptor(descriptorPath, buildDescriptor(endpoint, token, runtimeIdentity));
     activeServer = server;
     activeDescriptorPath = descriptorPath;
     activeStatus = { endpoint, last_error: null, port, state: 'running' };

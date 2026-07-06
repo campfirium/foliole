@@ -12,6 +12,7 @@ import type {
   NativeRestoreNodesResult,
   NativeSaveReadingProgressArgs,
   NativeSoftDeleteNodesResult,
+  NativeManualVirtualCollection,
   NativeWorkspaceSnapshot
 } from '../../../lib/platform/nativeContract';
 
@@ -52,6 +53,7 @@ export interface WorkspaceRuntimeNodeDocument {
 
 export type WorkspaceRuntimeNodeSnapshot = NativeNodeSnapshotArgs;
 export type WorkspaceNodeMutationPatchResult = NativeNodeMutationPatchResult;
+export type WorkspaceManualVirtualCollection = NativeManualVirtualCollection;
 export type WorkspaceRuntimeSnapshot = NativeWorkspaceSnapshot;
 export type WorkspaceMoveNodesPayload = NativeMoveNodesArgs;
 export type WorkspaceMoveNodesResult = NativeMoveNodesResult;

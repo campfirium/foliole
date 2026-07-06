@@ -127,7 +127,7 @@ it('shows a Trash breadcrumb and Import action for a selected deleted source top
   const restoreNode = vi.fn();
   const onSelectNode = vi.fn();
   useWorkspaceStore.setState((state) => ({ ...state, restoreNode }));
-  loadRuntimeNodeSourceDetails.mockResolvedValue(createSourceDetails('/library/deleted-topic.md'));
+  loadRuntimeNodeSourceDetails.mockResolvedValue(createSourceDetails('/library/deleted-topic.md') as never);
   sourceDetailsMocks.importExternalDocument.mockResolvedValue({
     imported_at: '2026-04-02T09:30:00.000Z',
     node_id: 'imported-topic',

@@ -1,7 +1,5 @@
 // @vitest-environment node
 import { promises as fs } from 'node:fs';
-import http from 'node:http';
-import type { AddressInfo } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -24,7 +22,7 @@ import { initializeDatabase } from '../database/migrate.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 
 import { AGENT_CONTROL_MATERIAL_WRITE_CONTENT_LIMIT } from './agentControlMaterialMutations.js';
-import { createAgentControlHttpServer } from './agentControlServer.js';
+import { closeAgentControlTestServer, startAgentControlTestServer } from './agentControlTestServer.js';
 import type { AgentControlAuditEvent } from './agentControlTypes.js';
 
 let tempRoot = '';
@@ -65,23 +63,6 @@ function insertNode(input: { content: string; id: string; title: string; updated
   });
 }
 
-async function startServer(auditEvents: AgentControlAuditEvent[] = []) {
-  const server = createAgentControlHttpServer({
-    appVersion: '0.1.0-test',
-    auditSink: (event) => {
-      auditEvents.push(event);
-    },
-    token: 'test-token'
-  });
-  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-  return { endpoint: `http://127.0.0.1:${(server.address() as AddressInfo).port}`, server };
-}
-
-function closeServer(server: http.Server) {
-  return new Promise<void>((resolve, reject) => {
-    server.close((error) => error ? reject(error) : resolve());
-  });
-}
 
 async function post(endpoint: string, route: string, body: Record<string, unknown>) {
   return fetch(`${endpoint}/agent-control/v1/${route}`, {
@@ -103,10 +84,39 @@ function readNode(id: string) {
   return openDatabaseConnection().driver.queryOne<Record<string, unknown>>('SELECT * FROM nodes WHERE id = ?', [id]);
 }
 
+
+it('notifies workspace refresh only after successful material writes', async () => {
+  insertNode({ content: 'Original', id: 'material-1', title: 'Original title' });
+  const notifyWorkspaceContentChanged = vi.fn();
+  const { endpoint, server } = await startAgentControlTestServer([], notifyWorkspaceContentChanged);
+  try {
+    const invalid = await post(endpoint, 'materials/update', {
+      content: 'No expected timestamp',
+      id: 'material-1'
+    });
+    expect(invalid.status).toBe(400);
+    expect(notifyWorkspaceContentChanged).not.toHaveBeenCalled();
+
+    const updated = await post(endpoint, 'materials/update', {
+      content: 'Updated',
+      expected_updated_at: '2026-07-05T00:00:00.000Z',
+      id: 'material-1'
+    });
+    expect(updated.status).toBe(200);
+    expect(notifyWorkspaceContentChanged).toHaveBeenCalledTimes(1);
+
+    const deleted = await post(endpoint, 'materials/delete-soft', { id: 'material-1' });
+    expect(deleted.status).toBe(200);
+    expect(notifyWorkspaceContentChanged).toHaveBeenCalledTimes(2);
+  } finally {
+    await closeAgentControlTestServer(server);
+  }
+});
+
 it('updates material title and content while preserving existing node fields', async () => {
   insertNode({ content: 'Old body', id: 'material-1', title: 'Old title' });
   const auditEvents: AgentControlAuditEvent[] = [];
-  const { endpoint, server } = await startServer(auditEvents);
+  const { endpoint, server } = await startAgentControlTestServer(auditEvents);
   try {
     const response = await post(endpoint, 'materials/update', {
       content: 'New body',
@@ -133,13 +143,13 @@ it('updates material title and content while preserving existing node fields', a
     });
     expect(JSON.stringify(auditEvents)).not.toContain('New body');
   } finally {
-    await closeServer(server);
+    await closeAgentControlTestServer(server);
   }
 });
 
 it('supports partial updates and empty content with optimistic locking', async () => {
   insertNode({ content: 'First body', id: 'material-2', title: 'First title' });
-  const { endpoint, server } = await startServer();
+  const { endpoint, server } = await startAgentControlTestServer();
   try {
     const titleOnly = await post(endpoint, 'materials/update', {
       expected_updated_at: '2026-07-05T00:00:00.000Z',
@@ -161,13 +171,13 @@ it('supports partial updates and empty content with optimistic locking', async (
       material: { content: '', id: 'material-2', title: 'Title only' }
     });
   } finally {
-    await closeServer(server);
+    await closeAgentControlTestServer(server);
   }
 });
 
 it('rejects stale, empty-title, and oversized material updates without writing', async () => {
   insertNode({ content: 'Stable body', id: 'material-3', title: 'Stable title' });
-  const { endpoint, server } = await startServer();
+  const { endpoint, server } = await startAgentControlTestServer();
   try {
     const stale = await post(endpoint, 'materials/update', {
       content: 'Should not write',
@@ -190,13 +200,13 @@ it('rejects stale, empty-title, and oversized material updates without writing',
     expect(oversized.status).toBe(400);
     expect(readNode('material-3')).toMatchObject({ content: 'Stable body', title: 'Stable title' });
   } finally {
-    await closeServer(server);
+    await closeAgentControlTestServer(server);
   }
 });
 
 it('soft-deletes materials idempotently and leaves virtual-folder items visible as deleted', async () => {
   insertNode({ content: 'Queue body', id: 'material-4', title: 'Queue title' });
-  const { endpoint, server } = await startServer();
+  const { endpoint, server } = await startAgentControlTestServer();
   try {
     const folder = await responseJson(await post(endpoint, 'virtual-folders/create', { title: 'Queue' }));
     await post(endpoint, 'virtual-folders/add-items', {
@@ -218,13 +228,13 @@ it('soft-deletes materials idempotently and leaves virtual-folder items visible 
       items: [expect.objectContaining({ material: expect.objectContaining({ id: 'material-4' }), status: 'deleted' })]
     });
   } finally {
-    await closeServer(server);
+    await closeAgentControlTestServer(server);
   }
 });
 
 it('rejects soft-delete expected_updated_at mismatches without tombstoning', async () => {
   insertNode({ content: 'Keep body', id: 'material-5', title: 'Keep title' });
-  const { endpoint, server } = await startServer();
+  const { endpoint, server } = await startAgentControlTestServer();
   try {
     const response = await post(endpoint, 'materials/delete-soft', {
       expected_updated_at: '2026-07-04T00:00:00.000Z',
@@ -234,6 +244,6 @@ it('rejects soft-delete expected_updated_at mismatches without tombstoning', asy
     expect(response.status).toBe(409);
     expect(readNode('material-5')).toMatchObject({ deleted_at: null });
   } finally {
-    await closeServer(server);
+    await closeAgentControlTestServer(server);
   }
 });

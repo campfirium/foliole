@@ -92,7 +92,7 @@ export const TRASH_KEYS = defineLayoutKeys<WorkspaceLayoutTrashProps>()([
 ] as const);
 
 export const VIRTUAL_VIEW_KEYS = defineLayoutKeys<WorkspaceLayoutVirtualViewProps>()([
-  'isVirtualViewOpen', 'activeVirtualNodeId', 'onOpenVirtualView'
+  'manualVirtualCollections', 'isVirtualViewOpen', 'activeVirtualNodeId', 'onOpenVirtualView'
 ] as const);
 
 export function pickLayoutProps<K extends keyof WorkspaceLayoutFlatProps>(

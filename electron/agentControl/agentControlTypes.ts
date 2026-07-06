@@ -32,6 +32,13 @@ export interface AgentControlCapabilityStatus {
   name: AgentControlCapability;
 }
 
+export interface AgentControlRuntimeIdentity {
+  boot_id: string;
+  database_device_id_hash: string | null;
+  pid: number;
+  started_at: string;
+}
+
 export interface AgentControlServerStatus {
   endpoint: string | null;
   last_error: string | null;
@@ -45,5 +52,6 @@ export interface AgentControlSessionDescriptor {
   pid: number;
   protocol_version: typeof AGENT_CONTROL_PROTOCOL_VERSION;
   started_at: string;
+  runtime_identity: AgentControlRuntimeIdentity;
   token: string;
 }

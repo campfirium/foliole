@@ -49,8 +49,18 @@ export interface NativeWorkspaceNodeSnapshot {
   updatedAt: string;
 }
 
+export interface NativeManualVirtualCollection {
+  availableMaterialNodeIds: string[];
+  description: string;
+  id: string;
+  itemCount: number;
+  title: string;
+  updatedAt: string;
+}
+
 export interface NativeWorkspaceSnapshot {
   activeNodeId: string | null;
+  manualVirtualCollections?: NativeManualVirtualCollection[];
   nodeOrder: string[];
   nodesById: Record<string, NativeWorkspaceNodeSnapshot>;
   trashedNodeDeletedAtById?: Record<string, string>;

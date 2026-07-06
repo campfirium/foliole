@@ -1,7 +1,5 @@
 // @vitest-environment node
 import { promises as fs } from 'node:fs';
-import http from 'node:http';
-import type { AddressInfo } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -23,7 +21,7 @@ import { closeExternalSearchCacheDatabase } from '../database/externalSearchCach
 import { initializeDatabase } from '../database/migrate.js';
 import { softDeleteNodes, upsertNodeSnapshot } from '../database/nodeMutations.js';
 
-import { createAgentControlHttpServer } from './agentControlServer.js';
+import { closeAgentControlTestServer, startAgentControlTestServer } from './agentControlTestServer.js';
 import type { AgentControlAuditEvent } from './agentControlTypes.js';
 
 let tempRoot = '';
@@ -66,21 +64,6 @@ function insertFolder() {
   );
 }
 
-async function startServer(auditEvents: AgentControlAuditEvent[] = []) {
-  const server = createAgentControlHttpServer({
-    appVersion: '0.1.0-test',
-    auditSink: (event) => {
-      auditEvents.push(event);
-    },
-    token: 'test-token'
-  });
-  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-  return { endpoint: `http://127.0.0.1:${(server.address() as AddressInfo).port}`, server };
-}
-
-function closeServer(server: http.Server) {
-  return new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
-}
 
 async function post(endpoint: string, pathName: string, body: Record<string, unknown>, token = 'test-token') {
   return fetch(`${endpoint}/agent-control/v1/${pathName}`, {
@@ -106,9 +89,36 @@ function activeItemCount(materialId: string) {
   )?.count ?? 0;
 }
 
+
+it('notifies workspace refresh only after successful virtual folder writes', async () => {
+  insertFolder();
+  insertNode('material-a');
+  const notifyWorkspaceContentChanged = vi.fn();
+  const { endpoint, server } = await startAgentControlTestServer([], notifyWorkspaceContentChanged);
+  try {
+    const unauthorized = await fetch(`${endpoint}/agent-control/v1/virtual-folders/create`, { method: 'POST' });
+    expect(unauthorized.status).toBe(401);
+    expect(notifyWorkspaceContentChanged).not.toHaveBeenCalled();
+
+    const invalid = await post(endpoint, 'virtual-folders/add-items', { folder_id: 'vf-1', material_ids: [] });
+    expect(invalid.status).toBe(400);
+    expect(notifyWorkspaceContentChanged).not.toHaveBeenCalled();
+
+    const added = await post(endpoint, 'virtual-folders/add-items', { folder_id: 'vf-1', material_ids: ['material-a'] });
+    expect(added.status).toBe(200);
+    expect(notifyWorkspaceContentChanged).toHaveBeenCalledTimes(1);
+
+    const created = await post(endpoint, 'virtual-folders/create', { title: 'Agent list' });
+    expect(created.status).toBe(200);
+    expect(notifyWorkspaceContentChanged).toHaveBeenCalledTimes(2);
+  } finally {
+    await closeAgentControlTestServer(server);
+  }
+});
+
 it('creates a virtual folder and records bounded audit events', async () => {
   const auditEvents: AgentControlAuditEvent[] = [];
-  const { endpoint, server } = await startServer(auditEvents);
+  const { endpoint, server } = await startAgentControlTestServer(auditEvents);
   try {
     const unauthorized = await fetch(`${endpoint}/agent-control/v1/virtual-folders/create`, { method: 'POST' });
     expect(unauthorized.status).toBe(401);
@@ -127,7 +137,7 @@ it('creates a virtual folder and records bounded audit events', async () => {
       expect.objectContaining({ capability: 'virtualFolders.create', result: 'success' })
     ]));
   } finally {
-    await closeServer(server);
+    await closeAgentControlTestServer(server);
   }
 });
 
@@ -137,7 +147,7 @@ it('adds, restores, and removes virtual folder items without moving materials', 
   insertNode('material-b', 'Deleted');
   softDeleteNodes({ deletedAt: '2026-07-05T00:01:00.000Z', nodeIds: ['material-b'] });
   const auditEvents: AgentControlAuditEvent[] = [];
-  const { endpoint, server } = await startServer(auditEvents);
+  const { endpoint, server } = await startAgentControlTestServer(auditEvents);
   try {
     const add = await post(endpoint, 'virtual-folders/add-items', {
       folder_id: 'vf-1',
@@ -172,14 +182,14 @@ it('adds, restores, and removes virtual folder items without moving materials', 
       expect.objectContaining({ capability: 'virtualFolders.removeItems', result: 'success', targetId: 'vf-1' })
     ]));
   } finally {
-    await closeServer(server);
+    await closeAgentControlTestServer(server);
   }
 });
 
 it('keeps concurrent add-items idempotent without a schema uniqueness constraint', async () => {
   insertFolder();
   insertNode('material-a');
-  const { endpoint, server } = await startServer();
+  const { endpoint, server } = await startAgentControlTestServer();
   try {
     const [first, second] = await Promise.all([
       post(endpoint, 'virtual-folders/add-items', { folder_id: 'vf-1', material_ids: ['material-a'] }),
@@ -189,7 +199,7 @@ it('keeps concurrent add-items idempotent without a schema uniqueness constraint
     expect(second.status).toBe(200);
     expect(activeItemCount('material-a')).toBe(1);
   } finally {
-    await closeServer(server);
+    await closeAgentControlTestServer(server);
   }
 });
 
@@ -198,7 +208,7 @@ it('reorders only complete active item sets and reports conflicts', async () => 
   insertNode('material-a');
   insertNode('material-b');
   const auditEvents: AgentControlAuditEvent[] = [];
-  const { endpoint, server } = await startServer(auditEvents);
+  const { endpoint, server } = await startAgentControlTestServer(auditEvents);
   try {
     const add = await post(endpoint, 'virtual-folders/add-items', { folder_id: 'vf-1', material_ids: ['material-a', 'material-b'] });
     const itemIds = (await responseJson(add)).added as string[];
@@ -220,6 +230,6 @@ it('reorders only complete active item sets and reports conflicts', async () => 
       targetId: 'vf-1'
     }));
   } finally {
-    await closeServer(server);
+    await closeAgentControlTestServer(server);
   }
 });

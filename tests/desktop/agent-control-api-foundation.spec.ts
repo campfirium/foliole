@@ -57,6 +57,15 @@ function expectWithoutToken(value: unknown, token: string) {
   expect(JSON.stringify(value)).not.toContain(token);
 }
 
+function expectRuntimeIdentity(value: unknown) {
+  expect(value).toMatchObject({
+    boot_id: expect.any(String),
+    pid: expect.any(Number),
+    started_at: expect.any(String)
+  });
+  expect(value && typeof value === 'object' && 'database_device_id_hash' in value).toBe(true);
+}
+
 test('desktop runtime exposes the local Agent Control API foundation', async ({ desktopApp }) => {
   const userDataPath = await desktopApp.evaluate(({ app }) => app.getPath('userData'));
   const descriptorPath = path.join(userDataPath, 'cache', 'agent-control-session.json');
@@ -86,10 +95,12 @@ test('desktop runtime exposes the local Agent Control API foundation', async ({ 
     headers: { authorization: `Bearer ${token}` }
   });
   expect(capabilities.status).toBe(200);
-  expect(await responseJson(capabilities)).toEqual({
+  const capabilitiesPayload = await responseJson(capabilities);
+  expect(capabilitiesPayload).toMatchObject({
     capabilities: EXPECTED_CAPABILITY_STATUSES,
     protocol_version: 1
   });
+  expectRuntimeIdentity(capabilitiesPayload.runtime_identity);
 
   const emptySearch = await fetch(`${endpoint}/agent-control/v1/materials/search`, {
     body: JSON.stringify({ query: '   ' }),
@@ -114,10 +125,7 @@ test('desktop runtime exposes the local Agent Control API foundation', async ({ 
 
   const cliCapabilities = await runAgentCli(['capabilities', '--descriptor', descriptorPath]);
   expect(cliCapabilities.status).toBe(0);
-  expect(cliCapabilities.output).toEqual({
-    capabilities: EXPECTED_CAPABILITY_STATUSES,
-    protocol_version: 1
-  });
+  expectCapabilitiesPayload(cliCapabilities.output);
   expectWithoutToken(cliCapabilities.output, token);
 
   const cliEmptySearch = await runAgentCli(['materials/search', '--descriptor', descriptorPath, '--query', '   ']);

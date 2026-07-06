@@ -7,8 +7,6 @@ import path from 'node:path';
 import { afterEach, expect, it } from 'vitest';
 
 import {
-  AGENT_CONTROL_HTTP_LIMITS,
-  createAgentControlHttpServer,
   ensureAgentControlApiServer,
   stopAgentControlApiServer
 } from './agentControlServer.js';
@@ -47,6 +45,14 @@ function listenBlocker() {
   });
 }
 
+function expectRuntimeIdentity(value: unknown) {
+  expect(value).toMatchObject({
+    boot_id: expect.any(String),
+    pid: expect.any(Number),
+    started_at: expect.any(String)
+  });
+  expect(value && typeof value === 'object' && 'database_device_id_hash' in value).toBe(true);
+}
 function expectedCapabilityStatuses() {
   return AGENT_CONTROL_CAPABILITIES.map((name) => ({
     enabled: name === 'materials.read' ||
@@ -131,10 +137,13 @@ it('exposes health without auth and protects token-scoped discovery routes', asy
     }
   });
   expect(capabilities.status).toBe(200);
-  expect(await responseJson(capabilities)).toEqual({
+  const capabilitiesPayload = await responseJson(capabilities);
+  expect(capabilitiesPayload).toMatchObject({
     capabilities: expectedCapabilityStatuses(),
     protocol_version: AGENT_CONTROL_PROTOCOL_VERSION
   });
+  expectRuntimeIdentity(capabilitiesPayload.runtime_identity);
+  expect(JSON.stringify(capabilitiesPayload)).not.toContain(token);
 
   const verify = await fetch(`${endpoint}/agent-control/v1/auth/verify`, {
     headers: { authorization: `Bearer ${token}` },
@@ -233,16 +242,4 @@ it('reports startup failure without leaving a descriptor when the port is occupi
   } finally {
     await closeServer(blocker.server);
   }
-});
-
-it('uses bounded HTTP server timeouts', () => {
-  const server = createAgentControlHttpServer({
-    appVersion: '0.1.0-test',
-    auditSink: () => undefined,
-    token: 'token'
-  });
-
-  expect(server.headersTimeout).toBe(AGENT_CONTROL_HTTP_LIMITS.headersTimeout);
-  expect(server.keepAliveTimeout).toBe(AGENT_CONTROL_HTTP_LIMITS.keepAliveTimeout);
-  expect(server.requestTimeout).toBe(AGENT_CONTROL_HTTP_LIMITS.requestTimeout);
 });

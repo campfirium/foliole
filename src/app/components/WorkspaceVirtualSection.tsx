@@ -11,8 +11,9 @@ import {
 } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { useWorkspaceStore } from '../../store/workspaceStore';
+import { useWorkspaceStore, type WorkspaceManualVirtualCollection } from '../../store/workspaceStore';
 
+import { isManualVirtualCollectionNodeId } from './manualVirtualCollectionModel';
 import { compareVirtualNodeTitle } from './workspaceVirtualNodeSort';
 import { WorkspaceVirtualSavedSearchContextMenu } from './WorkspaceVirtualSavedSearchContextMenu';
 import { getVirtualKeyboardRows, renderVirtualRows, toggleCollapsed } from './WorkspaceVirtualSectionRows';
@@ -21,6 +22,7 @@ interface WorkspaceVirtualSectionProps {
   activeVirtualNodeId?: string | null;
   hideInDemo?: boolean;
   isVirtualViewOpen: boolean;
+  manualVirtualCollections?: readonly WorkspaceManualVirtualCollection[];
   nodeOrder: string[];
   nodesById: WorkspaceListNodesById;
   onOpenVirtualView?: (nodeId?: string) => void;
@@ -34,7 +36,9 @@ function selectVirtualKeyboardRow(nodeId: string, props: WorkspaceVirtualSection
     return;
   }
   props.onOpenVirtualView?.(nodeId);
-  props.onSelectNodeInVirtualView(nodeId);
+  if (!isManualVirtualCollectionNodeId(nodeId)) {
+    props.onSelectNodeInVirtualView(nodeId);
+  }
 }
 
 function getContextMenuPosition(event: ReactMouseEvent<HTMLElement>) {
@@ -75,7 +79,7 @@ export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
     }).sort((leftId, rightId) => compareVirtualNodeTitle(leftId, rightId, props.nodesById));
     return buildVisibleNodeTreeRows(buildNodeTree(virtualNodeIds, props.nodesById).rows, collapsedIds);
   }, [collapsedIds, props.nodeOrder, props.nodesById]);
-  const keyboardRows = useMemo(() => getVirtualKeyboardRows(rows, collapsedIds), [collapsedIds, rows]);
+  const keyboardRows = useMemo(() => getVirtualKeyboardRows(rows, collapsedIds, props.manualVirtualCollections), [collapsedIds, props.manualVirtualCollections, rows]);
   const onRowKeyDown = useMemo(
     () =>
       createNodeListRowKeydownHandler({

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-import { appFloatingSurfaceClassName } from '../../shared/ui';
+import { appShelllessSurfaceClassName } from '../../shared/ui';
 import { clearAppRuntimeNotice, useAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 
 function useAutoClearAppRuntimeNotice(notice: ReturnType<typeof useAppRuntimeNotice>) {
@@ -29,7 +29,7 @@ export function WorkspaceRuntimeNotice() {
       key={notice.id}
       role="status"
     >
-      <div className={appFloatingSurfaceClassName('panel', 'flex min-h-32 w-[min(540px,100%)] items-center justify-center px-8 py-6 text-center text-ui-md leading-6 text-foreground/72')}>
+      <div className={appShelllessSurfaceClassName('flex min-h-32 w-[min(540px,100%)] items-center justify-center px-8 py-6 text-center text-ui-md font-medium leading-6 text-shellless-title')}>
         {notice.message}
       </div>
     </div>

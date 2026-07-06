@@ -28,6 +28,7 @@ export type {
   ReviewSessionResumeOptions,
   ReviewSessionStartOptions,
   WorkspaceLayoutState,
+  WorkspaceManualVirtualCollection,
   WorkspacePersistedState,
   WorkspaceState
 } from './workspaceStoreTypes';
@@ -54,6 +55,7 @@ export function createInitialWorkspaceState(now = new Date()): Pick<
   | 'isHydrated'
   | 'workspaceHydrationError'
   | 'layout'
+  | 'manualVirtualCollections'
   | 'navigation'
   | 'nodeOrder'
   | 'nodesById'

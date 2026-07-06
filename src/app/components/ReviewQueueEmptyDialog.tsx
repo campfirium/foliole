@@ -6,7 +6,8 @@ import {
   AppDialogDescription,
   AppDialogOverlay,
   AppDialogPortal,
-  AppDialogTitle
+  AppDialogTitle,
+  AppShelllessDialogContent
 } from '../../shared/ui';
 import type { ReviewQueueEmptyDialogContent } from '../hooks/useReviewQueueEmptyDialogState';
 
@@ -25,12 +26,16 @@ export function ReviewQueueEmptyDialog(props: {
   const description = demoDayClearContent
     ? t('desktop.rightPanel.flow.demo.dayClearDescription', { day: demoDayClearContent.day + 1 })
     : null;
+  const contentClassName = demoDayClearContent
+    ? 'w-[min(420px,calc(100vw-32px))] p-5'
+    : 'flex min-h-32 w-[min(540px,calc(100vw-32px))] items-center justify-center px-8 py-6 text-center';
+  const Content = demoDayClearContent ? AppDialogContent : AppShelllessDialogContent;
   return (
     <AppDialog open={props.open} onOpenChange={(open) => (!open ? props.onClose() : undefined)}>
       <AppDialogPortal>
         <AppDialogOverlay />
-        <AppDialogContent className="w-[min(420px,calc(100vw-32px))] p-5">
-          <AppDialogTitle>{title}</AppDialogTitle>
+        <Content className={contentClassName}>
+          <AppDialogTitle className={demoDayClearContent ? undefined : 'text-ui-md font-medium leading-6 text-shellless-title'}>{title}</AppDialogTitle>
           {description ? (
             <AppDialogDescription className="mt-2">
               {description}
@@ -46,7 +51,7 @@ export function ReviewQueueEmptyDialog(props: {
               </AppButton>
             </div>
           ) : null}
-        </AppDialogContent>
+        </Content>
       </AppDialogPortal>
     </AppDialog>
   );

@@ -8,11 +8,13 @@ import {
 import { buildVirtualNodeResultIndex, getVirtualNodePrimaryKeyword } from '../../features/nodes/model/virtualNodeDetail';
 import type { Translate } from '../../shared/localization/LocalizationProvider';
 
+import { findManualVirtualCollection } from './manualVirtualCollectionModel';
 import { VirtualResultListPanel } from './VirtualResultListPanel';
 import type { WorkspaceDualListContentProps } from './WorkspaceDualListContent';
 import { resolveVirtualContentItemIds } from './workspaceVirtualContentModel';
 
 function resolveVirtualHeader(args: {
+  activeManualCollection: ReturnType<typeof findManualVirtualCollection>;
   activeVirtualNode: Node | undefined;
   activeVirtualNodeId: string;
   isRemovedView: boolean;
@@ -21,6 +23,13 @@ function resolveVirtualHeader(args: {
 }) {
   if (args.activeVirtualNodeId === VIRTUAL_ROOT_NODE_ID) {
     return { kind: 'root' as const };
+  }
+  if (args.activeManualCollection) {
+    return {
+      kind: 'description' as const,
+      text: args.activeManualCollection.description,
+      title: args.activeManualCollection.title
+    };
   }
   if (isVirtualNode(args.activeVirtualNode)) {
     return {
@@ -55,6 +64,7 @@ export function renderVirtualContentColumn(
   if (activeVirtualNodeId === VIRTUAL_ROOT_NODE_ID) {
     return <div aria-label={t('desktop.workspace.currentFolderContents')} className="flex min-h-0 min-w-0 flex-1" />;
   }
+  const activeManualCollection = findManualVirtualCollection(props.manualVirtualCollections ?? [], activeVirtualNodeId);
   const isRemovedView = activeVirtualNodeId === VIRTUAL_REMOVED_NODE_ID;
   const isShelvedView = activeVirtualNodeId === VIRTUAL_SHELVED_NODE_ID;
   const itemIds = resolveVirtualContentItemIds(props, virtualResultIndex);
@@ -78,6 +88,7 @@ export function renderVirtualContentColumn(
           : t('desktop.virtualSearch.empty.title')
       }}
       header={resolveVirtualHeader({
+        activeManualCollection,
         activeVirtualNode: props.nodesById[activeVirtualNodeId],
         activeVirtualNodeId,
         isRemovedView,

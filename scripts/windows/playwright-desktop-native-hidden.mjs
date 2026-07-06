@@ -6,7 +6,10 @@ import { pathToFileURL } from 'node:url';
 
 import { normalizeSpawnCommand } from '../lib/windows-spawn-command.mjs';
 
-export const HIDDEN_MODE_HEALTH_SPECS = ['tests/desktop/hidden-native-presentation.spec.ts'];
+export const HIDDEN_MODE_HEALTH_SPECS = [
+  'tests/desktop/hidden-native-presentation.spec.ts',
+  'tests/desktop/agent-control-visible-write.spec.ts'
+];
 
 function resolveNpmBin() {
   return process.platform === 'win32' ? 'npm.cmd' : 'npm';

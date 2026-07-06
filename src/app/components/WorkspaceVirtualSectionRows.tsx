@@ -11,10 +11,14 @@ import {
   isVirtualNode
 } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import type { WorkspaceManualVirtualCollection } from '../../store/workspaceStore';
+
+import { collectManualVirtualCollectionTopicIds, toManualVirtualCollectionNodeId } from './manualVirtualCollectionModel';
 
 interface WorkspaceVirtualRowsProps {
   activeVirtualNodeId?: string | null;
   isVirtualViewOpen: boolean;
+  manualVirtualCollections?: readonly WorkspaceManualVirtualCollection[];
   nodesById: WorkspaceListNodesById;
   onContextMenuSavedSearch: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
   onDeleteVirtualNode: (nodeId: string) => void;
@@ -84,7 +88,7 @@ function renderVirtualRow(args: Parameters<typeof renderVirtualRows>[0] & {
   const isSavedSearch = isVirtualNode(args.row.node);
   const virtualRow = renderMainVirtualRow({ ...args, isSavedSearch, isSelected, isVirtualRoot });
   return isVirtualRoot && !isVirtualRootCollapsed
-    ? [virtualRow, renderShelvedRow(args), renderRemovedRow(args)]
+    ? [virtualRow, renderShelvedRow(args), renderRemovedRow(args), ...renderManualCollectionRows(args)]
     : [virtualRow];
 }
 
@@ -128,6 +132,31 @@ function VirtualRootMarker() {
   );
 }
 
+
+function renderManualCollectionRows(args: Parameters<typeof renderVirtualRows>[0]) {
+  return (args.props.manualVirtualCollections ?? []).map((collection) => {
+    const nodeId = toManualVirtualCollectionNodeId(collection.id);
+    return (
+      <NodeTreeRow
+        depth={1}
+        descendantCount={collectManualVirtualCollectionTopicIds(collection, args.props.nodesById).length}
+        hasChildren={false}
+        isActive={args.props.isVirtualViewOpen && args.props.activeVirtualNodeId === nodeId}
+        isCollapsed={false}
+        isSelected={args.props.isVirtualViewOpen && args.props.activeVirtualNodeId === nodeId}
+        key={nodeId}
+        label={collection.title}
+        nodeId={nodeId}
+        rowSpacing={args.rowSpacing}
+        showIcon={false}
+        showLeafChevronPlaceholder={false}
+        onKeyDown={args.onRowKeyDown}
+        onSelect={() => args.props.onOpenVirtualView?.(nodeId)}
+        onToggleCollapse={() => undefined}
+      />
+    );
+  });
+}
 function renderShelvedRow(args: Parameters<typeof renderVirtualRows>[0]) {
   return renderBuiltinVirtualRow({ ...args.props, label: 'Shelved', nodeId: VIRTUAL_SHELVED_NODE_ID, onRowKeyDown: args.onRowKeyDown, rowSpacing: args.rowSpacing });
 }
@@ -138,14 +167,20 @@ function renderRemovedRow(args: Parameters<typeof renderVirtualRows>[0]) {
 
 export function getVirtualKeyboardRows(
   rows: ReturnType<typeof buildVisibleNodeTreeRows>,
-  collapsedIds: Set<string>
+  collapsedIds: Set<string>,
+  manualVirtualCollections: readonly WorkspaceManualVirtualCollection[] = []
 ) {
   return rows.flatMap((row) =>
     row.node.id === VIRTUAL_ROOT_NODE_ID && !collapsedIds.has(VIRTUAL_ROOT_NODE_ID)
       ? [
           { ...row, hasChildren: true },
           { depth: 1, hasChildren: false, id: VIRTUAL_SHELVED_NODE_ID },
-          { depth: 1, hasChildren: false, id: VIRTUAL_REMOVED_NODE_ID }
+          { depth: 1, hasChildren: false, id: VIRTUAL_REMOVED_NODE_ID },
+          ...manualVirtualCollections.map((collection) => ({
+            depth: 1,
+            hasChildren: false,
+            id: toManualVirtualCollectionNodeId(collection.id)
+          }))
         ]
       : row.node.id === VIRTUAL_ROOT_NODE_ID
         ? [{ ...row, hasChildren: true }]

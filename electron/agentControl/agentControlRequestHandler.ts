@@ -1,6 +1,7 @@
 import type http from 'node:http';
 
 import { recordAgentControlAuditEvent, type AgentControlAuditSink } from './agentControlAudit.js';
+import { isCapabilityEnabled } from './agentControlCapabilities.js';
 import {
   handleMaterialDeleteSoft,
   handleMaterialRead,
@@ -12,7 +13,7 @@ import {
   AGENT_CONTROL_CAPABILITIES,
   AGENT_CONTROL_PROTOCOL_VERSION
 } from './agentControlTypes.js';
-import type { AgentControlCapability, AgentControlCapabilityStatus } from './agentControlTypes.js';
+import type { AgentControlRuntimeIdentity } from './agentControlTypes.js';
 import {
   handleVirtualFolderAddItems,
   handleVirtualFolderCreate,
@@ -21,10 +22,13 @@ import {
   handleVirtualFolderRemoveItems,
   handleVirtualFolderReorder
 } from './agentControlVirtualFolderHandlers.js';
+import { isMaterialWritePath, isVirtualFolderWritePath, notifyAfterSuccessfulWrite } from './agentControlWriteNotifications.js';
 
 export interface AgentControlRequestHandlerOptions {
   appVersion: string;
   auditSink: AgentControlAuditSink;
+  notifyWorkspaceContentChanged?: () => void;
+  runtimeIdentity: AgentControlRuntimeIdentity;
   token: string;
 }
 
@@ -65,6 +69,7 @@ function handleHealth(request: http.IncomingMessage, response: http.ServerRespon
   sendJson(response, 200, {
     ok: true,
     protocol_version: AGENT_CONTROL_PROTOCOL_VERSION,
+    runtime_identity: options.runtimeIdentity,
     service: 'foliole-agent-control',
     version: options.appVersion
   });
@@ -90,7 +95,8 @@ function handleCapabilities(request: http.IncomingMessage, response: http.Server
   recordRequest({ capability, options, request, result: 'success' });
   sendJson(response, 200, {
     capabilities: AGENT_CONTROL_CAPABILITIES.map((name) => ({ enabled: isCapabilityEnabled(name), name })),
-    protocol_version: AGENT_CONTROL_PROTOCOL_VERSION
+    protocol_version: AGENT_CONTROL_PROTOCOL_VERSION,
+    runtime_identity: options.runtimeIdentity
   });
 }
 
@@ -108,7 +114,6 @@ export function createAgentControlRequestHandler(options: AgentControlRequestHan
     });
   };
 }
-
 function readOrigin(request: http.IncomingMessage) {
   const header = request.headers.origin;
   return Array.isArray(header) ? header[0] : header;
@@ -192,6 +197,9 @@ async function handleMaterialRoutes(
   else if (pathname === '/agent-control/v1/materials/update') await handleMaterialUpdate(request, response, options);
   else if (pathname === '/agent-control/v1/materials/delete-soft') await handleMaterialDeleteSoft(request, response, options);
   else return false;
+  if (isMaterialWritePath(pathname)) {
+    notifyAfterSuccessfulWrite(response, options.notifyWorkspaceContentChanged);
+  }
   return true;
 }
 
@@ -209,18 +217,8 @@ async function handleVirtualFolderRoutes(
   else if (pathname === '/agent-control/v1/virtual-folders/remove-items') await handleVirtualFolderRemoveItems(request, response, options);
   else if (pathname === '/agent-control/v1/virtual-folders/reorder') await handleVirtualFolderReorder(request, response, options);
   else return false;
+  if (isVirtualFolderWritePath(pathname)) {
+    notifyAfterSuccessfulWrite(response, options.notifyWorkspaceContentChanged);
+  }
   return true;
-}
-
-function isCapabilityEnabled(name: AgentControlCapability): AgentControlCapabilityStatus['enabled'] {
-  return name === 'materials.read' ||
-    name === 'materials.search' ||
-    name === 'materials.update' ||
-    name === 'materials.deleteSoft' ||
-    name === 'virtualFolders.list' ||
-    name === 'virtualFolders.read' ||
-    name === 'virtualFolders.create' ||
-    name === 'virtualFolders.addItems' ||
-    name === 'virtualFolders.removeItems' ||
-    name === 'virtualFolders.reorder';
 }

@@ -94,6 +94,8 @@ it('loads workspace snapshot from sqlite without localStorage dependency', () =>
   expect(snapshot?.untitledSequenceByParent).toEqual({});
 });
 
+
+
 it('loads full workspace node content from body blob data before inline content', () => {
   const connection = openDatabaseConnection();
   const bodyBlobHash = upsertTextBodyBlob(connection.driver, 'blob body', '2026-04-27T00:00:00.000Z');
