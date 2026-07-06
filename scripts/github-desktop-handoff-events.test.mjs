@@ -18,9 +18,6 @@ vi.mock('./github-monitor-gh.mjs', () => ({
   runGh: gh.runGh
 }));
 
-vi.mock('./t4-archive-barrier-state.mjs', () => ({
-  hasPendingBarrierForRun: vi.fn((run) => run.headSha === 'barrier-owned')
-}));
 
 const { listGithubMonitorEvents } = await import('./github-desktop-handoff-events.mjs');
 
@@ -34,7 +31,7 @@ function run(overrides = {}) {
     headSha: overrides.headSha ?? 'abc123',
     status: overrides.status ?? 'completed',
     url: overrides.url ?? 'https://github.com/campfirium/foliole/actions/runs/100',
-    workflowName: overrides.workflowName ?? 'Branch Push Health'
+    workflowName: overrides.workflowName ?? 'T5 Nightly Remote Quality'
   };
 }
 
@@ -48,7 +45,7 @@ function config(overrides = {}) {
       failureConclusions: ['failure', 'timed_out', 'action_required'],
       repository: 'campfirium/foliole',
       template: '.codex/monitors/templates/github-actions.md',
-      workflows: ['Branch Push Health'],
+      workflows: ['T5 Nightly Remote Quality'],
       workspace: 'D:\\C\\foliole',
       ...overrides
     },
@@ -69,7 +66,7 @@ describe('GitHub desktop handoff action events', () => {
     const events = listGithubMonitorEvents(config(), state, false, [], renderTemplate);
 
     expect(events).toEqual([]);
-    expect(state.actions['Branch Push Health']).toMatchObject({
+    expect(state.actions['T5 Nightly Remote Quality']).toMatchObject({
       initialized: true,
       latestObservedRunId: '101'
     });
@@ -87,7 +84,7 @@ describe('GitHub desktop handoff action events', () => {
     expect(events[0]).toMatchObject({
       branch: 'dev',
       dedupeKey: 'foliole:github-actions:102',
-      title: 'Foliole T4 failed: Branch Push Health'
+      title: 'Foliole T5 failed: T5 Nightly Remote Quality'
     });
   });
 
@@ -97,7 +94,7 @@ describe('GitHub desktop handoff action events', () => {
       run({ databaseId: 104, headBranch: 'dev' })
     ];
     const state = {
-      actions: { 'Branch Push Health': { initialized: true, runs: {} } },
+      actions: { 'T5 Nightly Remote Quality': { initialized: true, runs: {} } },
       issues: {},
       prs: {},
       submitted: { 'foliole:github-actions:104': { emittedAt: '2026-07-03T01:00:00Z' } }
@@ -106,23 +103,32 @@ describe('GitHub desktop handoff action events', () => {
     const events = listGithubMonitorEvents(config(), state, false, [], renderTemplate);
 
     expect(events).toEqual([]);
-    expect(state.actions['Branch Push Health'].runs['103']).toBeUndefined();
-    expect(state.actions['Branch Push Health'].runs['104']).toBeDefined();
+    expect(state.actions['T5 Nightly Remote Quality'].runs['103']).toBeUndefined();
+    expect(state.actions['T5 Nightly Remote Quality'].runs['104']).toBeDefined();
   });
 
-  it('suppresses standalone action events for barrier-owned failures', () => {
-    gh.runs = [run({ databaseId: 105, headSha: 'barrier-owned' })];
+  it('emits configured non-T5 action workflows without T4 barrier suppression', () => {
+    gh.runs = [run({
+      databaseId: 105,
+      headSha: 'barrier-owned',
+      workflowName: 'Other Workflow'
+    })];
     const state = {
-      actions: { 'Branch Push Health': { initialized: true, runs: {} } },
+      actions: { 'Other Workflow': { initialized: true, runs: {} } },
       issues: {},
       prs: {},
       submitted: {}
     };
 
-    const events = listGithubMonitorEvents(config(), state, false, [], renderTemplate);
+    const events = listGithubMonitorEvents(config({ workflows: ['Other Workflow'] }), state, false, [], renderTemplate);
 
-    expect(events).toEqual([]);
-    expect(state.actions['Branch Push Health'].runs['105']).toBeDefined();
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      prompt: 'Actions:Other Workflow:dev:105',
+      tier: 'Actions',
+      title: 'Foliole Actions failed: Other Workflow'
+    });
+    expect(state.actions['Other Workflow'].runs['105']).toBeDefined();
   });
 
   it('emits T5 nightly remote quality failures as independent handoffs', () => {

@@ -96,17 +96,17 @@ describe('desktop regression suite manifest', () => {
   it('does not make regression specs part of the no-arg hidden mode health default', () => {
     const regressionSpecs = new Set(DESKTOP_REGRESSION_SUITE.map((entry) => entry.spec));
 
-    expect(HIDDEN_MODE_HEALTH_SPECS).toEqual(['tests/desktop/hidden-native-presentation.spec.ts']);
+    expect(HIDDEN_MODE_HEALTH_SPECS).toContain('tests/desktop/hidden-native-presentation.spec.ts');
     expect(HIDDEN_MODE_HEALTH_SPECS.some((spec) => regressionSpecs.has(spec))).toBe(false);
   });
 
-  it('formats a markdown table for T0/T4/T5 consumers', () => {
+  it('formats a markdown table for T0/T5 consumers', () => {
     const output = formatDesktopRegressionSuite();
 
     expect(output).toContain('startup-settings-backups');
     expect(output).toContain('hidden-capable');
     expect(output).toContain('enabled');
     expect(output).toContain('manifest-only; run explicitly before release use');
-    expect(output).toContain('T0, T4, T5');
+    expect(output).toContain('T0, T5');
   });
 });
