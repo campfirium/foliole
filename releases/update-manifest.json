@@ -1,18 +1,18 @@
 {
   "schemaVersion": 1,
   "channel": "alpha",
-  "latest": "0.6.5",
+  "latest": "0.6.6",
   "checkPolicy": {
     "intervalMinutes": 1440,
     "failureRetryMinutes": 15
   },
   "releases": [
     {
-      "version": "0.6.5",
-      "date": "2026-07-02",
+      "version": "0.6.6",
+      "date": "2026-07-07",
       "platforms": ["windows"],
       "severity": "normal",
-      "url": "https://github.com/campfirium/foliole/releases/tag/v0.6.5"
+      "url": "https://github.com/campfirium/foliole/releases/tag/v0.6.6"
     },
     {
       "version": "0.6.4",

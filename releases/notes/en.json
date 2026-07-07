@@ -1,4 +1,10 @@
 {
+  "0.6.6": {
+    "notes": [
+      "Fixed",
+      "Content created from highlights and clozes now appears correctly after creation."
+    ]
+  },
   "0.6.5": {
     "notes": [
       "Improved",
