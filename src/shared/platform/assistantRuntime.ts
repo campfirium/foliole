@@ -8,7 +8,7 @@ import type {
 } from '../../../lib/platform/nativeAssistantContract';
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
-import { getRuntimeInvoke } from './bridge';
+import { getRuntimeInvoke } from './runtimeInvoke';
 
 export async function loadAssistantStatus(): Promise<NativeAssistantStatusResult | null> {
   const invoke = getRuntimeInvoke();

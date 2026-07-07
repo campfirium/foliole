@@ -12,7 +12,7 @@ import {
 
 const bridge = vi.hoisted(() => ({ getRuntimeInvoke: vi.fn() }));
 
-vi.mock('./bridge', () => ({ getRuntimeInvoke: bridge.getRuntimeInvoke }));
+vi.mock('./runtimeInvoke', () => ({ getRuntimeInvoke: bridge.getRuntimeInvoke }));
 
 beforeEach(() => {
   bridge.getRuntimeInvoke.mockReset();
