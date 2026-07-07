@@ -4,7 +4,7 @@ import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let mockedAppDataDir = '/tmp/foliole-assistant-commands-tests';
 const adapterSendMessage = vi.hoisted(() => vi.fn());
@@ -50,14 +50,13 @@ beforeEach(async () => {
   adapterGetStatus.mockReset();
   resetAssistantCommandAdapterForTests();
   initializeDatabaseConnection(openDatabaseConnection());
-});
 
+});
 afterEach(async () => {
   closeDatabaseConnection();
   await fs.rm(tempRoot, { force: true, recursive: true });
-});
 
-describe('assistant send message commands', () => {
+});
   it('records a thread index when send message succeeds with an opening location', async () => {
     adapterSendMessage.mockResolvedValue({
       message: { text: 'Answer', threadId: 'thread-1', turnId: 'turn-1' },
@@ -105,9 +104,7 @@ describe('assistant send message commands', () => {
       state: 'failed'
     });
   });
-});
 
-describe('assistant continue commands', () => {
   it('continues a thread only when the saved location matches', async () => {
     adapterSendMessage
       .mockResolvedValueOnce({
@@ -142,9 +139,7 @@ describe('assistant continue commands', () => {
       providerThreadId: 'thread-1'
     });
   });
-});
 
-describe('assistant continue guards', () => {
   it('does not send a turn when the requested thread belongs to another location', async () => {
     adapterSendMessage.mockResolvedValueOnce({
       message: { text: 'Answer', threadId: 'thread-1', turnId: 'turn-1' },
@@ -196,9 +191,7 @@ describe('assistant continue guards', () => {
     });
     expect(adapterSendMessage).not.toHaveBeenCalled();
   });
-});
 
-describe('assistant thread index commands', () => {
   it('updates Foliole-only index status', async () => {
     adapterSendMessage.mockResolvedValue({
       message: { text: 'Answer', threadId: 'thread-1' },
@@ -221,4 +214,3 @@ describe('assistant thread index commands', () => {
       })
     ).resolves.toMatchObject({ status: 'deleted' });
   });
-});

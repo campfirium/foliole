@@ -2,7 +2,7 @@
 import { EventEmitter } from 'node:events';
 import { PassThrough } from 'node:stream';
 
-import { describe, expect, it, vi } from 'vitest';
+import { expect, it, vi } from 'vitest';
 
 import { CodexAppServerAdapter } from './codexAppServerAdapter.js';
 
@@ -26,7 +26,6 @@ function createAdapter(process: FakeCodexProcess) {
   });
 }
 
-describe('CodexAppServerAdapter status', () => {
   it('reports ready without starting app-server when the codex command is available', async () => {
     const probeCommand = vi.fn(async () => true);
     const spawnCommand = vi.fn();
@@ -55,9 +54,7 @@ describe('CodexAppServerAdapter status', () => {
       state: 'unavailable'
     });
   });
-});
 
-describe('CodexAppServerAdapter turn protocol success', () => {
   it('aggregates assistant deltas from a short-lived app-server turn', async () => {
     const process = new FakeCodexProcess();
     const adapter = createAdapter(process);
@@ -93,9 +90,7 @@ describe('CodexAppServerAdapter turn protocol success', () => {
     );
     expect(seenMethods).not.toContain('thread/start');
   });
-});
 
-describe('CodexAppServerAdapter turn protocol failures', () => {
   it('rejects a resume response for a different thread', async () => {
     const process = new FakeCodexProcess();
     const adapter = createAdapter(process);
@@ -144,7 +139,6 @@ describe('CodexAppServerAdapter turn protocol failures', () => {
     });
     await expect(result).resolves.toMatchObject({ failure: { category: 'overloaded' } });
   });
-});
 
 function respondToTurnProtocol(process: FakeCodexProcess, chunk: Buffer, seenMethods: string[]) {
   for (const line of chunk.toString().trim().split('\n').filter(Boolean)) {
