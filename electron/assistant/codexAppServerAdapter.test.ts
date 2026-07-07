@@ -6,6 +6,9 @@ import { expect, it, vi } from 'vitest';
 
 import { CodexAppServerAdapter } from './codexAppServerAdapter.js';
 
+const TEST_LAUNCHER_CWD = 'C:\\Foliole\\Widgets\\Foliole Aide';
+const testMkdirSync = () => undefined;
+
 class FakeCodexProcess extends EventEmitter {
   readonly stderr = new PassThrough();
   readonly stdin = new PassThrough();
@@ -21,6 +24,8 @@ function createAdapter(process: FakeCodexProcess) {
   const spawnCommand = vi.fn(() => process);
   return new CodexAppServerAdapter({
     appVersion: '0.6.5-test',
+    launcherCwd: TEST_LAUNCHER_CWD,
+    mkdirSync: testMkdirSync,
     probeCommand: async () => true,
     spawnCommand,
     timeoutMs: 1000
@@ -32,6 +37,8 @@ function createAdapter(process: FakeCodexProcess) {
     const spawnCommand = vi.fn();
     const adapter = new CodexAppServerAdapter({
       appVersion: '0.6.5-test',
+      launcherCwd: TEST_LAUNCHER_CWD,
+      mkdirSync: testMkdirSync,
       probeCommand,
       spawnCommand
     });
@@ -40,13 +47,18 @@ function createAdapter(process: FakeCodexProcess) {
       provider: 'codex-app-server',
       state: 'ready'
     });
-    expect(probeCommand).toHaveBeenCalledWith('codex');
+    expect(probeCommand).toHaveBeenCalledWith(
+      'codex',
+      expect.objectContaining({ cwd: TEST_LAUNCHER_CWD })
+    );
     expect(spawnCommand).not.toHaveBeenCalled();
   });
 
   it('reports not_configured status when codex is unavailable', async () => {
     const adapter = new CodexAppServerAdapter({
       appVersion: '0.6.5-test',
+      launcherCwd: TEST_LAUNCHER_CWD,
+      mkdirSync: testMkdirSync,
       probeCommand: async () => false
     });
 
@@ -117,6 +129,8 @@ function createAdapter(process: FakeCodexProcess) {
     const spawnCommand = vi.fn(() => process);
     const adapter = new CodexAppServerAdapter({
       appVersion: '0.6.5-test',
+      launcherCwd: TEST_LAUNCHER_CWD,
+      mkdirSync: testMkdirSync,
       probeCommand: async () => true,
       spawnCommand,
       timeoutMs: 1000
@@ -170,6 +184,8 @@ function createAdapter(process: FakeCodexProcess) {
   it('maps launch and protocol failures to sanitized categories', async () => {
     const unavailable = new CodexAppServerAdapter({
       appVersion: '0.6.5-test',
+      launcherCwd: TEST_LAUNCHER_CWD,
+      mkdirSync: testMkdirSync,
       spawnCommand: throwMissingCodex
     });
     await expect(unavailable.sendMessage({ clientTurnId: 'client-1', message: 'Hi' })).resolves.toMatchObject({

@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { app, type WebContents } from 'electron';
 
 import type {
@@ -18,10 +20,20 @@ import {
 
 let adapter: CodexAppServerAdapter | null = null;
 const IPC_ASSISTANT_TURN_EVENT_CHANNEL = 'foliole:assistant-turn-event';
+const ASSISTANT_WIDGETS_DIRNAME = 'Widgets';
+const ASSISTANT_WORKDIR_DIRNAME = 'Foliole Aide';
 
 function getAdapter() {
-  adapter ??= new CodexAppServerAdapter({ appVersion: resolveFolioleAppVersion(app) });
+  adapter ??= new CodexAppServerAdapter({
+    appVersion: resolveFolioleAppVersion(app),
+    launcherCwd: resolveAssistantLauncherCwd(app.getPath('userData'), process.env)
+  });
   return adapter;
+}
+
+export function resolveAssistantLauncherCwd(userDataPath: string, env: NodeJS.ProcessEnv) {
+  const libraryHome = env.FOLIOLE_LIBRARY_HOME?.trim();
+  return path.join(libraryHome || userDataPath, ASSISTANT_WIDGETS_DIRNAME, ASSISTANT_WORKDIR_DIRNAME);
 }
 
 export async function handleAssistantCommand(

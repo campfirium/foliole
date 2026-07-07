@@ -12,7 +12,7 @@ const adapterGetStatus = vi.hoisted(() => vi.fn());
 const adapterDispose = vi.hoisted(() => vi.fn());
 
 vi.mock('electron', () => ({
-  app: { getVersion: () => '0.6.5-test' }
+  app: { getPath: () => mockedAppDataDir, getVersion: () => '0.6.5-test' }
 }));
 
 vi.mock('../ipc/paths.js', () => ({
@@ -44,7 +44,6 @@ import {
 } from './assistantCommands.js';
 
 let tempRoot = '';
-
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-assistant-commands-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
@@ -53,12 +52,10 @@ beforeEach(async () => {
   adapterDispose.mockReset();
   resetAssistantCommandAdapterForTests();
   initializeDatabaseConnection(openDatabaseConnection());
-
 });
 afterEach(async () => {
   closeDatabaseConnection();
   await fs.rm(tempRoot, { force: true, recursive: true });
-
 });
   it('records a thread index when send message succeeds with an opening location', async () => {
     adapterSendMessage.mockResolvedValue({
