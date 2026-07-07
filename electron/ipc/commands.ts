@@ -3,6 +3,7 @@ import { BrowserWindow, type WebContents } from 'electron';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { waitForDatabaseReady } from '../database/databaseReadiness.js';
 
+import { handleAssistantCommand } from './assistantCommands.js';
 import { resolveCommandRoute, type CommandRouteFamily } from './commandRoutes.js';
 import type { InvokeRequest } from './contracts.js';
 import { handleImportCommand } from './importCommands.js';
@@ -60,7 +61,7 @@ export async function handleInvokeRequest(request: InvokeRequest, context?: Invo
 }
 
 function shouldWaitForDatabaseReady(command: string, route: CommandRouteFamily) {
-  return command !== NATIVE_COMMANDS.bootReport && route !== 'windowAndUtility';
+  return command !== NATIVE_COMMANDS.bootReport && route !== 'assistant' && route !== 'windowAndUtility';
 }
 
 function throwUnsupportedCommand(command: string): never {
@@ -75,6 +76,9 @@ function dispatchRoutedCommand(
 ) {
   if (route === 'import') {
     return handleImportCommand(request, context);
+  }
+  if (route === 'assistant') {
+    return handleAssistantCommand(request.command, args);
   }
   if (route === 'storage') {
     return handleStorageCommand(request.command, args, resolveTargetWindow(context));

@@ -17,7 +17,9 @@ import type {
   NativeMirrorAttachmentLinkRebuildResult,
   NativeMirrorOutputRebuildResult,
   NativePerformanceMemorySnapshot,
+  NativeResolvedAppPaths,
   NativeReadingPositionTraceLogAppendArgs,
+  NativeSystemFontCatalog,
   NativeSqliteBackupEntry,
   NativeSqliteBackupResult,
   NativeSqliteRestoreResult,
@@ -25,9 +27,76 @@ import type {
 } from './nativeUtilityContract.js';
 
 export type NativeUtilityCommandMap = {
+  [NATIVE_COMMANDS.appGetVersion]: {
+    args: undefined;
+    result: string;
+  };
   [NATIVE_COMMANDS.appendReadingPositionTraceLog]: {
     args: NativeReadingPositionTraceLogAppendArgs;
     result: string;
+  };
+  [NATIVE_COMMANDS.listSystemFonts]: {
+    args: undefined;
+    result: NativeSystemFontCatalog;
+  };
+  [NATIVE_COMMANDS.loadLoginItemSettings]: {
+    args: undefined;
+    result: {
+      enabled: boolean;
+      effective: boolean;
+      supported: boolean;
+    };
+  };
+  [NATIVE_COMMANDS.openExternalUrl]: {
+    args: { url: string };
+    result: null;
+  };
+  [NATIVE_COMMANDS.openLocalPath]: {
+    args: { path: string };
+    result: null;
+  };
+  [NATIVE_COMMANDS.openImportRoot]: {
+    args: undefined;
+    result: null;
+  };
+  [NATIVE_COMMANDS.resolveAppPaths]: {
+    args: undefined;
+    result: NativeResolvedAppPaths;
+  };
+  [NATIVE_COMMANDS.syncAppMenuState]: {
+    args: {
+      enabledCommandIds: string[];
+      shortcutAccelerators?: { accelerator: string; commandId: string }[];
+    };
+    result: null;
+  };
+  [NATIVE_COMMANDS.windowClose]: {
+    args: undefined;
+    result: null;
+  };
+  [NATIVE_COMMANDS.windowIsMaximized]: {
+    args: undefined;
+    result: boolean;
+  };
+  [NATIVE_COMMANDS.windowMinimize]: {
+    args: undefined;
+    result: null;
+  };
+  [NATIVE_COMMANDS.windowRestartApp]: {
+    args: undefined;
+    result: null;
+  };
+  [NATIVE_COMMANDS.windowRestartDevApp]: {
+    args: undefined;
+    result: null;
+  };
+  [NATIVE_COMMANDS.windowToggleDevTools]: {
+    args: undefined;
+    result: null;
+  };
+  [NATIVE_COMMANDS.windowToggleMaximize]: {
+    args: undefined;
+    result: null;
   };
   [NATIVE_COMMANDS.copyAttachmentImageToClipboard]: {
     args: {

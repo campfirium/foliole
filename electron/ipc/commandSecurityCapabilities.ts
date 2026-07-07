@@ -3,6 +3,7 @@ import { NATIVE_COMMANDS, type NativeCommandName } from '../../lib/platform/nati
 import { COMMAND_SECURITY_CAPABILITY_GROUPS } from './commandSecurityCapabilityGroups.js';
 
 export type CommandSecurityCapability =
+  | 'assistant'
   | 'clipboardWrite'
   | 'dataMutation'
   | 'destructiveMutation'

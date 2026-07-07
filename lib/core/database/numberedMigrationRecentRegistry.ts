@@ -1,3 +1,4 @@
+import { ASSISTANT_THREAD_INDEX_SCHEMA_STATEMENTS } from './assistantThreadIndexSchemaStatements.js';
 import { addColumnIfMissing } from './numberedMigrationHelpers.js';
 import { createIncomingUpdatesTable } from './numberedMigrationIncomingUpdates.js';
 import { migrateLocalFilesRegistry, resetOpenedLocalFileHistory } from './numberedMigrationLocalFiles.js';
@@ -44,5 +45,13 @@ export const RECENT_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   {
     version: 50,
     migrate: createVirtualFolderTables
+  },
+  {
+    version: 51,
+    migrate: (sqlite) => {
+      for (const statement of ASSISTANT_THREAD_INDEX_SCHEMA_STATEMENTS) {
+        sqlite.exec(statement);
+      }
+    }
   }
 ];

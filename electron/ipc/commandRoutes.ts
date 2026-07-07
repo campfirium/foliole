@@ -1,6 +1,6 @@
 import { NATIVE_COMMANDS, type NativeCommandName } from '../../lib/platform/nativeCommands.js';
 
-export type CommandRouteFamily = 'import' | 'review' | 'storage' | 'windowAndUtility';
+export type CommandRouteFamily = 'assistant' | 'import' | 'review' | 'storage' | 'windowAndUtility';
 
 export interface CommandRouteEntry {
   command: NativeCommandName;
@@ -24,6 +24,14 @@ const IMPORT_COMMANDS = [
   NATIVE_COMMANDS.runDirectoryImport,
   NATIVE_COMMANDS.selectImportTextFile,
   NATIVE_COMMANDS.importExternalSearchDocument
+] as const satisfies readonly NativeCommandName[];
+
+const ASSISTANT_COMMANDS = [
+  NATIVE_COMMANDS.assistantGetStatus,
+  NATIVE_COMMANDS.assistantSendMessage,
+  NATIVE_COMMANDS.assistantListThreadIndex,
+  NATIVE_COMMANDS.assistantArchiveThreadIndex,
+  NATIVE_COMMANDS.assistantDeleteThreadIndex
 ] as const satisfies readonly NativeCommandName[];
 
 const STORAGE_COMMANDS = [
@@ -156,6 +164,7 @@ const REVIEW_COMMANDS = [
 ] as const satisfies readonly NativeCommandName[];
 
 export const COMMAND_ROUTE_ENTRIES = [
+  ...toRouteEntries(ASSISTANT_COMMANDS, 'assistant'),
   ...toRouteEntries(IMPORT_COMMANDS, 'import'),
   ...toRouteEntries(STORAGE_COMMANDS, 'storage'),
   ...toRouteEntries(WINDOW_AND_UTILITY_COMMANDS, 'windowAndUtility'),

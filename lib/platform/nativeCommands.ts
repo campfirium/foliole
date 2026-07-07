@@ -1,6 +1,11 @@
 export const NATIVE_COMMANDS = {
   appGetVersion: 'app_get_version',
   appendReadingPositionTraceLog: 'append_reading_position_trace_log',
+  assistantGetStatus: 'assistant_get_status',
+  assistantSendMessage: 'assistant_send_message',
+  assistantListThreadIndex: 'assistant_list_thread_index',
+  assistantArchiveThreadIndex: 'assistant_archive_thread_index',
+  assistantDeleteThreadIndex: 'assistant_delete_thread_index',
   bootReport: 'boot_report',
   listSystemFonts: 'list_system_fonts',
   loadLoginItemSettings: 'load_login_item_settings',

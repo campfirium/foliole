@@ -18,8 +18,9 @@ import {
   resolveCommandSecurityCapability
 } from './commandSecurityCapabilities.js';
 
-const { handleImportCommand, handleReviewCommand, handleStorageCommand, handleWindowAndUtilityCommand } = vi.hoisted(
+const { handleAssistantCommand, handleImportCommand, handleReviewCommand, handleStorageCommand, handleWindowAndUtilityCommand } = vi.hoisted(
   () => ({
+    handleAssistantCommand: vi.fn(),
     handleImportCommand: vi.fn(),
     handleReviewCommand: vi.fn(),
     handleStorageCommand: vi.fn(),
@@ -34,6 +35,7 @@ vi.mock('electron', () => ({
   }
 }));
 
+vi.mock('./assistantCommands.js', () => ({ handleAssistantCommand }));
 vi.mock('./importCommands.js', () => ({ handleImportCommand }));
 vi.mock('./reviewCommands.js', () => ({ handleReviewCommand }));
 vi.mock('./storageCommands.js', () => ({ handleStorageCommand }));
@@ -184,15 +186,18 @@ describe('database readiness routing', () => {
     expect(handleStorageCommand).toHaveBeenCalledTimes(1);
   });
 
-  it('lets window and boot diagnostic commands bypass database readiness', async () => {
+  it('lets window, assistant, and boot diagnostic commands bypass database readiness', async () => {
     beginDatabaseStartup();
     handleWindowAndUtilityCommand.mockResolvedValueOnce('version');
+    handleAssistantCommand.mockResolvedValueOnce('assistant-status');
     handleReviewCommand.mockResolvedValueOnce('reported');
 
     await expect(handleInvokeRequest({ command: NATIVE_COMMANDS.appGetVersion })).resolves.toBe('version');
+    await expect(handleInvokeRequest({ command: NATIVE_COMMANDS.assistantGetStatus })).resolves.toBe('assistant-status');
     await expect(handleInvokeRequest({ command: NATIVE_COMMANDS.bootReport })).resolves.toBe('reported');
 
     expect(handleWindowAndUtilityCommand).toHaveBeenCalledTimes(1);
+    expect(handleAssistantCommand).toHaveBeenCalledTimes(1);
     expect(handleReviewCommand).toHaveBeenCalledTimes(1);
   });
 

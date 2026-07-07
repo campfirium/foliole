@@ -59,6 +59,14 @@ const READ_COMMANDS = [
   NATIVE_COMMANDS.loadSourceDispositionSummary
 ] as const satisfies readonly NativeCommandName[];
 
+const ASSISTANT_COMMANDS = [
+  NATIVE_COMMANDS.assistantGetStatus,
+  NATIVE_COMMANDS.assistantSendMessage,
+  NATIVE_COMMANDS.assistantListThreadIndex,
+  NATIVE_COMMANDS.assistantArchiveThreadIndex,
+  NATIVE_COMMANDS.assistantDeleteThreadIndex
+] as const satisfies readonly NativeCommandName[];
+
 const DIAGNOSTIC_COMMANDS = [
   NATIVE_COMMANDS.appGetVersion,
   NATIVE_COMMANDS.appendReadingPositionTraceLog,
@@ -175,6 +183,7 @@ const FILESYSTEM_WRITE_COMMANDS = [
 ] as const satisfies readonly NativeCommandName[];
 
 export const COMMAND_SECURITY_CAPABILITY_GROUPS = [
+  { capability: 'assistant', commands: ASSISTANT_COMMANDS },
   { capability: 'read', commands: READ_COMMANDS },
   { capability: 'diagnostic', commands: DIAGNOSTIC_COMMANDS },
   { capability: 'windowControl', commands: WINDOW_CONTROL_COMMANDS },

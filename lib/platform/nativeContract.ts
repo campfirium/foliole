@@ -1,3 +1,4 @@
+import type { NativeAssistantCommandMap } from './nativeAssistantContract.js';
 import { NATIVE_COMMANDS } from './nativeCommands.js';
 import type { NativeDiscoursePublishCommandMap } from './nativeDiscoursePublishContract.js';
 import type { NativeExternalSearchCommandMap } from './nativeExternalSearchCommandMap.js';
@@ -24,57 +25,17 @@ import type {
 import type { NativeSyncCommandMap } from './nativeSyncCommandMap.js';
 import type { NativeTrashCommandMap } from './nativeTrashCommandMap.js';
 import type { NativeUtilityCommandMap } from './nativeUtilityCommandMap.js';
-import type { NativeAttachmentResourceResolution, NativeResolvedAppPaths, NativeReviewGradeArgs, NativeReviewGradeResult, NativeReviewPreviewArgs, NativeReviewPreviewResult, NativeSystemFontCatalog } from './nativeUtilityContract.js';
+import type { NativeAttachmentResourceResolution, NativeReviewGradeArgs, NativeReviewGradeResult, NativeReviewPreviewArgs, NativeReviewPreviewResult } from './nativeUtilityContract.js';
 export type * from './nativeStorageContract.js'; export type * from './nativeDiscoursePublishContract.js'; export type * from './nativeImportContract.js'; export type * from './nativeLocalFileCommandMap.js'; export type * from './nativeNodeMutationContract.js';
 export type * from './nativeReadwiseContract.js'; export type * from './nativeUtilityContract.js';
 export type * from './nativeSourceDispositionContract.js';
 
-export type NativeCommandMap = NativeUtilityCommandMap & NativeReadwiseCommandMap & NativeExternalSearchCommandMap & NativeDiscoursePublishCommandMap & NativeLocalFileCommandMap & NativeSearchIndexCommandMap & NativeSyncCommandMap & NativeImportCommandMap & NativeRemoteImageCommandMap & NativeMoveCommandMap & NativeTrashCommandMap & {
-  [NATIVE_COMMANDS.appGetVersion]: {
-    args: undefined;
-    result: string;
-  };
-  [NATIVE_COMMANDS.appendReadingPositionTraceLog]: {
-    args: {
-      event: string;
-      payload?: unknown;
-      timestamp: number;
-    };
-    result: string;
-  };
+export type NativeCommandMap = NativeAssistantCommandMap & NativeUtilityCommandMap & NativeReadwiseCommandMap & NativeExternalSearchCommandMap & NativeDiscoursePublishCommandMap & NativeLocalFileCommandMap & NativeSearchIndexCommandMap & NativeSyncCommandMap & NativeImportCommandMap & NativeRemoteImageCommandMap & NativeMoveCommandMap & NativeTrashCommandMap & {
   [NATIVE_COMMANDS.bootReport]: {
     args: {
       stage: string;
       payload?: unknown;
     };
-    result: null;
-  };
-  [NATIVE_COMMANDS.listSystemFonts]: {
-    args: undefined;
-    result: NativeSystemFontCatalog;
-  };
-  [NATIVE_COMMANDS.loadLoginItemSettings]: {
-    args: undefined;
-    result: {
-      enabled: boolean;
-      effective: boolean;
-      supported: boolean;
-    };
-  };
-  [NATIVE_COMMANDS.openExternalUrl]: {
-    args: {
-      url: string;
-    };
-    result: null;
-  };
-  [NATIVE_COMMANDS.openLocalPath]: {
-    args: {
-      path: string;
-    };
-    result: null;
-  };
-  [NATIVE_COMMANDS.openImportRoot]: {
-    args: undefined;
     result: null;
   };
   [NATIVE_COMMANDS.importClipboardImageAttachment]: {
@@ -95,10 +56,6 @@ export type NativeCommandMap = NativeUtilityCommandMap & NativeReadwiseCommandMa
     };
     result: NativeAttachmentResourceResolution;
   };
-  [NATIVE_COMMANDS.resolveAppPaths]: {
-    args: undefined;
-    result: NativeResolvedAppPaths;
-  };
   [NATIVE_COMMANDS.reviewGrade]: {
     args: NativeReviewGradeArgs;
     result: NativeReviewGradeResult;
@@ -106,44 +63,6 @@ export type NativeCommandMap = NativeUtilityCommandMap & NativeReadwiseCommandMa
   [NATIVE_COMMANDS.reviewPreview]: {
     args: NativeReviewPreviewArgs;
     result: NativeReviewPreviewResult;
-  };
-  [NATIVE_COMMANDS.syncAppMenuState]: {
-    args: {
-      enabledCommandIds: string[];
-      shortcutAccelerators?: {
-        accelerator: string;
-        commandId: string;
-      }[];
-    };
-    result: null;
-  };
-  [NATIVE_COMMANDS.windowClose]: {
-    args: undefined;
-    result: null;
-  };
-  [NATIVE_COMMANDS.windowIsMaximized]: {
-    args: undefined;
-    result: boolean;
-  };
-  [NATIVE_COMMANDS.windowMinimize]: {
-    args: undefined;
-    result: null;
-  };
-  [NATIVE_COMMANDS.windowRestartApp]: {
-    args: undefined;
-    result: null;
-  };
-  [NATIVE_COMMANDS.windowRestartDevApp]: {
-    args: undefined;
-    result: null;
-  };
-  [NATIVE_COMMANDS.windowToggleDevTools]: {
-    args: undefined;
-    result: null;
-  };
-  [NATIVE_COMMANDS.windowToggleMaximize]: {
-    args: undefined;
-    result: null;
   };
   [NATIVE_COMMANDS.loadWorkspaceListSnapshot]: {
     args: { includePdfOpenings?: boolean } | undefined;
