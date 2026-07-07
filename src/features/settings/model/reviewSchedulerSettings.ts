@@ -25,9 +25,31 @@ function syncCurrentReviewSchedulerSettings(settings: ReviewSchedulerSettings) {
   return settings;
 }
 
+function isReviewSchedulerSettingsPayload(payload: unknown) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return false;
+  }
+  return [
+    'algorithm',
+    'desiredRetention',
+    'maximumIntervalDays',
+    'newDayStartsAtHour',
+    'enableShortTerm',
+    'pushQueue',
+    'updatedAt'
+  ].some((key) => Object.hasOwn(payload, key));
+}
+
+export function hydrateCurrentReviewSchedulerSettings(payload: unknown) {
+  if (!isReviewSchedulerSettingsPayload(payload)) {
+    return null;
+  }
+  return syncCurrentReviewSchedulerSettings(normalizeReviewSchedulerSettings(payload));
+}
+
 export async function loadReviewSchedulerSettings(): Promise<ReviewSchedulerSettings> {
   if (!hasReviewSchedulerSettingsRuntimeRepository()) {
-    return syncCurrentReviewSchedulerSettings(DEFAULT_REVIEW_SCHEDULER_SETTINGS);
+    return getCurrentReviewSchedulerSettings();
   }
   try {
     return syncCurrentReviewSchedulerSettings(

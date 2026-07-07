@@ -15,6 +15,7 @@ import {
   saveCompanionWorkspaceSyncEndpoint
 } from '../shared/platform/companionWorkspaceSync';
 
+import { hydrateCompanionReviewSchedulerSettings } from './companionReviewSchedulerSettingsHydration';
 import { loadCompanionStateAfterStructureSync } from './companionStructureSyncSnapshot';
 import {
   hasFastRetryWork,
@@ -154,6 +155,7 @@ export async function runCompanionStreamSync(args: RunCompanionStreamSyncArgs) {
     state: completedState,
     workspaceSnapshot: latestWorkspaceSnapshot
   });
+  await hydrateCompanionReviewSchedulerSettings().catch(() => null);
   applyRemainingProgress({ result, setSyncProgress: args.setSyncProgress });
   args.onContinuationModeChange?.(resolveCompanionSyncContinuationMode(result));
   if (passResult.outcome === 'skipped' && hasFastRetryWork(result)) {

@@ -10,6 +10,7 @@ import {
   loadCompanionWorkspaceSyncState
 } from '../shared/platform/companionWorkspaceSync';
 
+import { hydrateCompanionReviewSchedulerSettings } from './companionReviewSchedulerSettingsHydration';
 import { mergeCompanionSyncProgressSession } from './companionSyncProgressSession';
 import { createWorkspaceSnapshotActions } from './companionWorkspaceSyncActions';
 import {
@@ -44,6 +45,7 @@ async function initializeWorkspaceSyncState(args: {
   args.setState(nextState);
   args.setReadableArticle(await syncReadableArticle(nextState.workspace_snapshot));
   args.setSyncConflictCount((await loadCompanionSyncNodeConflicts()).length);
+  await hydrateCompanionReviewSchedulerSettings().catch(() => null);
   args.setIsStateReady(true);
   args.setStatus('idle');
 }

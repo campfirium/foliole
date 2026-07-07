@@ -2,6 +2,11 @@ import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import {
+  DEFAULT_REVIEW_SCHEDULER_SETTINGS,
+  getReviewSchedulerVersion,
+  hydrateCurrentReviewSchedulerSettings
+} from '../features/settings/model/reviewSchedulerSettings';
 
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
 
@@ -12,6 +17,11 @@ const syncObjectMock = vi.hoisted(() => ({
   saveCompanionSyncNodeViewState: vi.fn()
 }));
 const schedulerGrade = vi.hoisted(() => vi.fn());
+const hydratedReviewSchedulerSettings = {
+  ...DEFAULT_REVIEW_SCHEDULER_SETTINGS,
+  desiredRetention: 0.82,
+  updatedAt: '2026-04-22T08:05:00.000Z'
+};
 
 function createTakeoverResponse() {
   return {
@@ -157,13 +167,14 @@ function expectFsrsReviewRecordSaved() {
       }),
       grade: 3,
       reviewedAt: '2026-04-22T08:10:00.000Z',
-      schedulerVersion: 'ts-fsrs@5.4.1 using FSRS-6.0|dr=0.90|mi=36500|ds=4|st=0|pqdp=5|pqpr=5.00|pqmx=1:5|pqii=86400000|pqgr=1.10-1.50'
+      schedulerVersion: getReviewSchedulerVersion(hydratedReviewSchedulerSettings)
     })
   }));
 }
 
 describe('useCompanionArticleSurface fsrs sync', () => {
   beforeEach(() => {
+    hydrateCurrentReviewSchedulerSettings(hydratedReviewSchedulerSettings);
     schedulerGrade.mockReset();
     schedulerGrade.mockResolvedValue({
       card: {

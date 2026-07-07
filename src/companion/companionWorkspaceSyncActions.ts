@@ -15,6 +15,7 @@ import {
   saveCompanionWorkspaceSyncEndpoint
 } from '../shared/platform/companionWorkspaceSync';
 
+import { hydrateCompanionReviewSchedulerSettings } from './companionReviewSchedulerSettingsHydration';
 import { formatCompanionSyncFailureMessage } from './companionSyncFailureMessage';
 import { runCompanionSyncAsOwner } from './companionSyncRunOwner';
 import {
@@ -48,6 +49,7 @@ async function refreshConflictAwareState(args: {
   args.setState(nextState);
   args.setReadableArticle(await loadCompanionReadableArticle(nextState.workspace_snapshot));
   args.setSyncConflictCount((await loadCompanionSyncNodeConflicts()).length);
+  await hydrateCompanionReviewSchedulerSettings().catch(() => null);
   return nextState;
 }
 
@@ -87,6 +89,7 @@ function createPullFromDesktop(args: WorkspaceSnapshotActionArgs) {
           startedAt,
           workspaceSnapshot: args.state.workspace_snapshot
         });
+        await hydrateCompanionReviewSchedulerSettings().catch(() => null);
         args.setStatus('idle');
         return nextState;
       } catch (syncError) {
