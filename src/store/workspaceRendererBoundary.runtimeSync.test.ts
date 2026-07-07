@@ -6,6 +6,7 @@ vi.mock('../shared/platform/runtimeInvoke', () => ({
 
 import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 
+import { resolvePendingNodeSync, stagePendingNodeSync } from './workspacePendingNodeSync';
 import { createInitialWorkspaceState, useWorkspaceStore } from './workspaceStore';
 
 function resetWorkspaceStore() {
@@ -23,6 +24,48 @@ function createLoadedNode(nodeId: string, title: string, content: string, reveal
     reveal,
     hasReveal: reveal !== null
   };
+}
+
+function stageRecentlyCreatedHighlightDocument() {
+  const createdAt = '2026-03-20T00:00:00.000Z';
+  const updatedAt = '2026-03-20T00:00:01.000Z';
+
+  useWorkspaceStore.setState({
+    activeNodeId: 'node-2',
+    nodeOrder: ['node-1', 'node-2'],
+    nodesById: {
+      'node-1': createLoadedNode('node-1', 'Existing child', '', null),
+      'node-2': createLoadedNode('node-2', 'Parent', 'Parent body', null)
+    },
+    trashedNodeIds: []
+  });
+  useWorkspaceStore.setState({
+    nodeOrder: ['node-1', 'node-2'],
+    rendererBoundaryKeepNodeIds: ['node-1'],
+    nodesById: {
+      ...useWorkspaceStore.getState().nodesById,
+      'node-1': {
+        ...createLoadedNode('node-1', 'Selected excerpt', 'Selected excerpt', null),
+        anchorLink: { id: 'hl-1', kind: 'highlight' }
+      }
+    }
+  });
+  stagePendingNodeSync({
+    anchorLink: { id: 'hl-1', kind: 'highlight' },
+    content: 'Selected excerpt',
+    createdAt,
+    hideTitleHeading: false,
+    isTitleManual: false,
+    kind: 'topic',
+    nodeId: 'node-1',
+    parentNodeId: 'node-2',
+    position: 0,
+    reveal: null,
+    title: 'Selected excerpt',
+    updatedAt
+  });
+
+  return updatedAt;
 }
 
 describe('workspace renderer boundary runtime confirmation', () => {
@@ -70,6 +113,19 @@ describe('workspace renderer boundary runtime confirmation', () => {
       hasContent: true,
       reveal: 'Active node answer',
       hasReveal: true
+    });
+  });
+
+  it('keeps recently created annotation documents after runtime confirmation resolves pending sync', () => {
+    vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn().mockResolvedValue(null));
+    const updatedAt = stageRecentlyCreatedHighlightDocument();
+
+    resolvePendingNodeSync('node-1', updatedAt);
+
+    expect(useWorkspaceStore.getState().nodesById['node-1']!).toMatchObject({
+      content: 'Selected excerpt',
+      hasContent: true,
+      reveal: null
     });
   });
 });

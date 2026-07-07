@@ -12,6 +12,8 @@ import {
 } from './workspaceRuntimeSync';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
 import {
+  createClozeLocator,
+  createHighlightLocator,
   createWorkspaceNodeActionsFixture,
   createWorkspaceNodeActionsSetStateHarness
 } from './workspaceStoreNodeActions.test-support';
@@ -175,6 +177,49 @@ it('keeps child creation content local when native persistence rejects creation 
   expect(createdNodeId).toContain('node-');
   expect(harness.getState().activeNodeId).toBe(createdNodeId);
   expect(harness.getState().nodesById[createdNodeId]?.content).toBe('Local child');
+});
+
+it('caches selection highlight content before runtime creation confirmation', async () => {
+  vi.mocked(hasWorkspaceNodeMutationRuntime).mockReturnValue(true);
+  vi.mocked(syncCreateNodeMutationToRuntime).mockResolvedValueOnce(null);
+  const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
+  const actions = createWorkspaceNodeActions(harness.setState);
+
+  const createdNodeId = (await actions.createHighlightNodeFromSelection(
+    'node-1',
+    ' Selected excerpt ',
+    'hl-1',
+    createHighlightLocator('hl-1', 'Selected excerpt')
+  ))!;
+
+  expect(createdNodeId).toContain('node-');
+  expect(syncWorkspaceNodeDocumentCacheFromNode).toHaveBeenCalledWith(expect.objectContaining({
+    content: 'Selected excerpt',
+    id: createdNodeId,
+    title: 'Selected excerpt'
+  }));
+});
+
+it('caches selection cloze prompt and reveal before runtime creation confirmation', async () => {
+  vi.mocked(hasWorkspaceNodeMutationRuntime).mockReturnValue(true);
+  vi.mocked(syncCreateNodeMutationToRuntime).mockResolvedValueOnce(null);
+  const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
+  const actions = createWorkspaceNodeActions(harness.setState);
+
+  const createdNodeId = (await actions.createQANodeFromSelection(
+    'node-1',
+    'Prompt [...]',
+    ' hidden answer ',
+    'cloze-1',
+    createClozeLocator('cloze-1', 'hidden answer')
+  ))!;
+
+  expect(createdNodeId).toContain('node-');
+  expect(syncWorkspaceNodeDocumentCacheFromNode).toHaveBeenCalledWith(expect.objectContaining({
+    content: 'Prompt [...]',
+    id: createdNodeId,
+    reveal: 'hidden answer'
+  }));
 });
 
 it('keeps virtual node metadata when runtime accepts a newly created virtual node', async () => {
