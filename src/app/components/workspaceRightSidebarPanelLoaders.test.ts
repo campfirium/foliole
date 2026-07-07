@@ -1,6 +1,7 @@
 import { expect, it, vi } from 'vitest';
 
 const sidebarPrewarmMocks = vi.hoisted(() => ({
+  loadAssistantModule: vi.fn(),
   loadBacklinksModule: vi.fn(),
   loadDevModule: vi.fn(),
   loadHighlightsModule: vi.fn(),
@@ -8,6 +9,11 @@ const sidebarPrewarmMocks = vi.hoisted(() => ({
   loadPerformanceModule: vi.fn(),
   loadReviewQueueModule: vi.fn()
 }));
+
+vi.mock('./WorkspaceRightSidebarAssistantPanel', () => {
+  sidebarPrewarmMocks.loadAssistantModule();
+  return { WorkspaceRightSidebarAssistantPanel: () => null };
+});
 
 vi.mock('./WorkspaceRightSidebarOutlinePanel', () => {
   sidebarPrewarmMocks.loadOutlineModule();
@@ -40,11 +46,13 @@ vi.mock('./WorkspaceRightSidebarPerformancePanel', () => {
 });
 
 it('prewarms lazy right sidebar panel modules once after startup', async () => {
-  const { prewarmWorkspaceRightSidebarPanels } = await import('./workspaceRightSidebarPanelLoaders');
+  const { prewarmWorkspaceRightSidebarPanels } =
+    await import('./workspaceRightSidebarPanelLoaders');
 
   await prewarmWorkspaceRightSidebarPanels();
   await prewarmWorkspaceRightSidebarPanels();
 
+  expect(sidebarPrewarmMocks.loadAssistantModule).toHaveBeenCalledTimes(1);
   expect(sidebarPrewarmMocks.loadOutlineModule).toHaveBeenCalledTimes(1);
   expect(sidebarPrewarmMocks.loadBacklinksModule).toHaveBeenCalledTimes(1);
   expect(sidebarPrewarmMocks.loadHighlightsModule).toHaveBeenCalledTimes(1);

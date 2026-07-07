@@ -132,7 +132,7 @@ it('does not use a derived highlight topic as a highlight browsing scope', () =>
   expect(screen.queryByRole('button', { name: 'Beta' })).not.toBeInTheDocument();
 });
 
-it('keeps only outline and performance available for external documents', () => {
+it('keeps only external-document safe panels available for external documents', () => {
   const context = resolveWorkspaceRightPanelContext({
     activeNodeId: 'topic-1',
     hasExternalDocument: true,
@@ -140,6 +140,7 @@ it('keeps only outline and performance available for external documents', () => 
   });
 
   expect(isWorkspaceRightPanelAvailable('outline', context)).toBe(true);
+  expect(isWorkspaceRightPanelAvailable('assistant', context)).toBe(true);
   expect(isWorkspaceRightPanelAvailable('performance', context)).toBe(true);
   expect(isWorkspaceRightPanelAvailable('highlights', context)).toBe(false);
   expect(isWorkspaceRightPanelAvailable('review-queue', context)).toBe(false);

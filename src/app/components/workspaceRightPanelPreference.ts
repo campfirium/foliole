@@ -12,6 +12,7 @@ const RIGHT_PANEL_IDS: WorkspaceRightPanelId[] = [
   'outline',
   'highlights',
   'backlinks',
+  'assistant',
   'performance',
   'dev'
 ];
@@ -21,6 +22,7 @@ export const VISIBLE_RIGHT_PANEL_IDS: WorkspaceRightPanelId[] = [
   'outline',
   'highlights',
   'backlinks',
+  'assistant',
   'dev'
 ];
 
@@ -28,7 +30,9 @@ function isWorkspaceRightPanelId(value: string | null): value is WorkspaceRightP
   return parseLiteralUnion(value, RIGHT_PANEL_IDS) !== null;
 }
 
-export function loadWorkspaceRightPanelPreference(fallback: WorkspaceRightPanelId = 'review-queue') {
+export function loadWorkspaceRightPanelPreference(
+  fallback: WorkspaceRightPanelId = 'review-queue'
+) {
   const value = getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.rightSidebarActivePanel);
   return isWorkspaceRightPanelId(value) ? value : fallback;
 }

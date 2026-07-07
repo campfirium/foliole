@@ -34,11 +34,21 @@ describe('assistantRuntime', () => {
     bridge.getRuntimeInvoke.mockReturnValue(invoke);
     const location = { nodeId: 'node-1', type: 'node' as const };
 
-    await expect(loadAssistantStatus()).resolves.toEqual({ command: NATIVE_COMMANDS.assistantGetStatus });
-    await expect(sendAssistantMessage({ message: 'Hi', openingLocation: location })).resolves.toEqual({
+    await expect(loadAssistantStatus()).resolves.toEqual({
+      command: NATIVE_COMMANDS.assistantGetStatus
+    });
+    await expect(
+      sendAssistantMessage({
+        message: 'Hi',
+        openingLocation: location,
+        providerThreadId: 'thread-1'
+      })
+    ).resolves.toEqual({
       command: NATIVE_COMMANDS.assistantSendMessage
     });
-    await expect(listAssistantThreadIndex({ location })).resolves.toEqual({ command: NATIVE_COMMANDS.assistantListThreadIndex });
+    await expect(listAssistantThreadIndex({ location })).resolves.toEqual({
+      command: NATIVE_COMMANDS.assistantListThreadIndex
+    });
     await expect(archiveAssistantThreadIndex({ providerThreadId: 'thread-1' })).resolves.toEqual({
       command: NATIVE_COMMANDS.assistantArchiveThreadIndex
     });
@@ -47,9 +57,19 @@ describe('assistantRuntime', () => {
     });
 
     expect(invoke).toHaveBeenNthCalledWith(1, NATIVE_COMMANDS.assistantGetStatus);
-    expect(invoke).toHaveBeenNthCalledWith(2, NATIVE_COMMANDS.assistantSendMessage, { message: 'Hi', openingLocation: location });
-    expect(invoke).toHaveBeenNthCalledWith(3, NATIVE_COMMANDS.assistantListThreadIndex, { location });
-    expect(invoke).toHaveBeenNthCalledWith(4, NATIVE_COMMANDS.assistantArchiveThreadIndex, { providerThreadId: 'thread-1' });
-    expect(invoke).toHaveBeenNthCalledWith(5, NATIVE_COMMANDS.assistantDeleteThreadIndex, { providerThreadId: 'thread-1' });
+    expect(invoke).toHaveBeenNthCalledWith(2, NATIVE_COMMANDS.assistantSendMessage, {
+      message: 'Hi',
+      openingLocation: location,
+      providerThreadId: 'thread-1'
+    });
+    expect(invoke).toHaveBeenNthCalledWith(3, NATIVE_COMMANDS.assistantListThreadIndex, {
+      location
+    });
+    expect(invoke).toHaveBeenNthCalledWith(4, NATIVE_COMMANDS.assistantArchiveThreadIndex, {
+      providerThreadId: 'thread-1'
+    });
+    expect(invoke).toHaveBeenNthCalledWith(5, NATIVE_COMMANDS.assistantDeleteThreadIndex, {
+      providerThreadId: 'thread-1'
+    });
   });
 });

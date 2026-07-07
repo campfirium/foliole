@@ -30,15 +30,25 @@ describe('CodexAppServerAdapter status', () => {
   it('reports ready without starting app-server when the codex command is available', async () => {
     const probeCommand = vi.fn(async () => true);
     const spawnCommand = vi.fn();
-    const adapter = new CodexAppServerAdapter({ appVersion: '0.6.5-test', probeCommand, spawnCommand });
+    const adapter = new CodexAppServerAdapter({
+      appVersion: '0.6.5-test',
+      probeCommand,
+      spawnCommand
+    });
 
-    await expect(adapter.getStatus()).resolves.toMatchObject({ provider: 'codex-app-server', state: 'ready' });
+    await expect(adapter.getStatus()).resolves.toMatchObject({
+      provider: 'codex-app-server',
+      state: 'ready'
+    });
     expect(probeCommand).toHaveBeenCalledWith('codex');
     expect(spawnCommand).not.toHaveBeenCalled();
   });
 
   it('reports not_configured status when codex is unavailable', async () => {
-    const adapter = new CodexAppServerAdapter({ appVersion: '0.6.5-test', probeCommand: async () => false });
+    const adapter = new CodexAppServerAdapter({
+      appVersion: '0.6.5-test',
+      probeCommand: async () => false
+    });
 
     await expect(adapter.getStatus()).resolves.toMatchObject({
       failure: { category: 'not_configured' },
@@ -47,7 +57,7 @@ describe('CodexAppServerAdapter status', () => {
   });
 });
 
-describe('CodexAppServerAdapter turn protocol', () => {
+describe('CodexAppServerAdapter turn protocol success', () => {
   it('aggregates assistant deltas from a short-lived app-server turn', async () => {
     const process = new FakeCodexProcess();
     const adapter = createAdapter(process);
@@ -59,8 +69,45 @@ describe('CodexAppServerAdapter turn protocol', () => {
       provider: 'codex-app-server',
       state: 'ready'
     });
-    expect(seenMethods).toEqual(expect.arrayContaining(['initialize', 'thread/start', 'turn/start']));
+    expect(seenMethods).toEqual(
+      expect.arrayContaining(['initialize', 'thread/start', 'turn/start'])
+    );
     expect(process.kill).toHaveBeenCalled();
+  });
+
+  it('resumes an existing thread before starting a turn', async () => {
+    const process = new FakeCodexProcess();
+    const adapter = createAdapter(process);
+    const seenMethods: string[] = [];
+    process.stdin.on('data', (chunk) => respondToTurnProtocol(process, chunk, seenMethods));
+
+    await expect(
+      adapter.sendMessage({ message: 'Continue', providerThreadId: 'thr_existing' })
+    ).resolves.toEqual({
+      message: { text: 'Hello world', threadId: 'thr_existing', turnId: 'turn_1' },
+      provider: 'codex-app-server',
+      state: 'ready'
+    });
+    expect(seenMethods).toEqual(
+      expect.arrayContaining(['initialize', 'thread/resume', 'turn/start'])
+    );
+    expect(seenMethods).not.toContain('thread/start');
+  });
+});
+
+describe('CodexAppServerAdapter turn protocol failures', () => {
+  it('rejects a resume response for a different thread', async () => {
+    const process = new FakeCodexProcess();
+    const adapter = createAdapter(process);
+    const result = adapter.sendMessage({ message: 'Continue', providerThreadId: 'thr_existing' });
+
+    writeMessage(process, { id: 0, result: {} });
+    writeMessage(process, { id: 1, result: { thread: { id: 'thr_other' } } });
+
+    await expect(result).resolves.toMatchObject({
+      failure: { category: 'protocol_error' },
+      state: 'failed'
+    });
   });
 
   it('returns busy for a concurrent send without cancelling the active turn', async () => {
@@ -80,7 +127,10 @@ describe('CodexAppServerAdapter turn protocol', () => {
   });
 
   it('maps launch and protocol failures to sanitized categories', async () => {
-    const unavailable = new CodexAppServerAdapter({ appVersion: '0.6.5-test', spawnCommand: throwMissingCodex });
+    const unavailable = new CodexAppServerAdapter({
+      appVersion: '0.6.5-test',
+      spawnCommand: throwMissingCodex
+    });
     await expect(unavailable.sendMessage({ message: 'Hi' })).resolves.toMatchObject({
       failure: { category: 'not_configured' }
     });
@@ -88,7 +138,10 @@ describe('CodexAppServerAdapter turn protocol', () => {
     const overloadedProcess = new FakeCodexProcess();
     const overloaded = createAdapter(overloadedProcess);
     const result = overloaded.sendMessage({ message: 'Hi' });
-    writeMessage(overloadedProcess, { error: { code: -32001, message: 'Server overloaded; retry later.' }, id: 0 });
+    writeMessage(overloadedProcess, {
+      error: { code: -32001, message: 'Server overloaded; retry later.' },
+      id: 0
+    });
     await expect(result).resolves.toMatchObject({ failure: { category: 'overloaded' } });
   });
 });
@@ -98,7 +151,13 @@ function respondToTurnProtocol(process: FakeCodexProcess, chunk: Buffer, seenMet
     const message = JSON.parse(line);
     seenMethods.push(message.method);
     if (message.id === 0) writeMessage(process, { id: 0, result: {} });
-    if (message.id === 1) writeMessage(process, { id: 1, result: { thread: { id: 'thr_1' } } });
+    if (message.id === 1)
+      writeMessage(process, {
+        id: 1,
+        result: {
+          thread: { id: message.method === 'thread/resume' ? message.params.threadId : 'thr_1' }
+        }
+      });
     if (message.id === 2) completeTurn(process);
   }
 }

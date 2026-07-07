@@ -42,7 +42,7 @@ export function isWorkspaceRightPanelAvailable(
   panelId: WorkspaceRightPanelId,
   context: WorkspaceRightPanelContext
 ) {
-  if (panelId === 'performance') {
+  if (panelId === 'performance' || panelId === 'assistant') {
     return true;
   }
   if (context.kind === 'external-document') {

@@ -45,7 +45,9 @@ export interface AssistantThreadIndexListInput {
   location?: NativeAssistantThreadOpeningLocation;
 }
 
-export function upsertAssistantThreadIndex(input: AssistantThreadIndexUpsertInput): NativeAssistantThreadIndexRecord {
+export function upsertAssistantThreadIndex(
+  input: AssistantThreadIndexUpsertInput
+): NativeAssistantThreadIndexRecord {
   const location = normalizeOpeningLocation(input.location);
   const providerThreadId = normalizeRequiredString(input.providerThreadId, 'providerThreadId');
   const now = input.now ?? new Date().toISOString();
@@ -76,7 +78,9 @@ export function upsertAssistantThreadIndex(input: AssistantThreadIndexUpsertInpu
   return readAssistantThreadIndexRecord(provider, providerThreadId);
 }
 
-export function listAssistantThreadIndex(input: AssistantThreadIndexListInput = {}): NativeAssistantThreadIndexRecord[] {
+export function listAssistantThreadIndex(
+  input: AssistantThreadIndexListInput = {}
+): NativeAssistantThreadIndexRecord[] {
   const filters: string[] = [];
   const params: DatabaseBindValue[] = [];
   if (!input.includeArchived) filters.push("status != 'archived'");
@@ -90,8 +94,8 @@ export function listAssistantThreadIndex(input: AssistantThreadIndexListInput = 
   }
   const limit = Math.max(1, Math.min(input.limit ?? 50, 200));
   const where = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
-  return openDatabaseConnection().driver
-    .queryAll<AssistantThreadIndexRow>(
+  return openDatabaseConnection()
+    .driver.queryAll<AssistantThreadIndexRow>(
       `SELECT * FROM assistant_thread_index ${where}
        ORDER BY updated_at DESC, provider_thread_id ASC
        LIMIT ?`,
@@ -100,11 +104,24 @@ export function listAssistantThreadIndex(input: AssistantThreadIndexListInput = 
     .map(rowToRecord);
 }
 
-export function archiveAssistantThreadIndex(providerThreadId: string, now = new Date().toISOString()) {
+export function getAssistantThreadIndex(providerThreadId: string) {
+  return readAssistantThreadIndexRecord(
+    DEFAULT_PROVIDER,
+    normalizeRequiredString(providerThreadId, 'providerThreadId')
+  );
+}
+
+export function archiveAssistantThreadIndex(
+  providerThreadId: string,
+  now = new Date().toISOString()
+) {
   return updateAssistantThreadIndexStatus(providerThreadId, 'archived', now);
 }
 
-export function deleteAssistantThreadIndex(providerThreadId: string, now = new Date().toISOString()) {
+export function deleteAssistantThreadIndex(
+  providerThreadId: string,
+  now = new Date().toISOString()
+) {
   return updateAssistantThreadIndexStatus(providerThreadId, 'deleted', now);
 }
 
@@ -118,12 +135,22 @@ function updateAssistantThreadIndexStatus(
     `UPDATE assistant_thread_index
      SET status = ?, updated_at = ?, archived_at = ?, deleted_at = ?
      WHERE provider = ? AND provider_thread_id = ?`,
-    [status, now, status === 'archived' ? now : null, status === 'deleted' ? now : null, provider, normalizeRequiredString(providerThreadId, 'providerThreadId')]
+    [
+      status,
+      now,
+      status === 'archived' ? now : null,
+      status === 'deleted' ? now : null,
+      provider,
+      normalizeRequiredString(providerThreadId, 'providerThreadId')
+    ]
   );
   return readAssistantThreadIndexRecord(provider, providerThreadId);
 }
 
-function readAssistantThreadIndexRecord(provider: NativeAssistantProviderId, providerThreadId: string) {
+function readAssistantThreadIndexRecord(
+  provider: NativeAssistantProviderId,
+  providerThreadId: string
+) {
   const row = openDatabaseConnection().driver.queryOne<AssistantThreadIndexRow>(
     'SELECT * FROM assistant_thread_index WHERE provider = ? AND provider_thread_id = ?',
     [provider, providerThreadId]
@@ -132,9 +159,12 @@ function readAssistantThreadIndexRecord(provider: NativeAssistantProviderId, pro
   return rowToRecord(row);
 }
 
-function normalizeOpeningLocation(location: NativeAssistantThreadOpeningLocation): NativeAssistantThreadOpeningLocation {
+function normalizeOpeningLocation(
+  location: NativeAssistantThreadOpeningLocation
+): NativeAssistantThreadOpeningLocation {
   if (location?.type === 'workspace') return { type: 'workspace' };
-  if (location?.type === 'node') return { nodeId: normalizeRequiredString(location.nodeId, 'nodeId'), type: 'node' };
+  if (location?.type === 'node')
+    return { nodeId: normalizeRequiredString(location.nodeId, 'nodeId'), type: 'node' };
   throw new Error('invalid_assistant_thread_location');
 }
 
@@ -150,9 +180,10 @@ function rowToRecord(row: AssistantThreadIndexRow): NativeAssistantThreadIndexRe
     createdAt: row.created_at,
     deletedAt: row.deleted_at,
     lastOpenedAt: row.last_opened_at,
-    location: row.location_type === 'node'
-      ? { nodeId: row.location_node_id ?? '', type: 'node' }
-      : { type: 'workspace' },
+    location:
+      row.location_type === 'node'
+        ? { nodeId: row.location_node_id ?? '', type: 'node' }
+        : { type: 'workspace' },
     preview: row.preview,
     provider: row.provider,
     providerThreadId: row.provider_thread_id,

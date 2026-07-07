@@ -1,8 +1,18 @@
 import { Grid2x2 } from 'lucide-react';
-import { useState, type Dispatch, type DragEvent as ReactDragEvent, type SetStateAction } from 'react';
+import {
+  useState,
+  type Dispatch,
+  type DragEvent as ReactDragEvent,
+  type SetStateAction
+} from 'react';
 
 import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
-import { AppDropdownMenu, AppDropdownMenuContent, AppDropdownMenuItem, AppDropdownMenuTrigger } from '../../shared/ui';
+import {
+  AppDropdownMenu,
+  AppDropdownMenuContent,
+  AppDropdownMenuItem,
+  AppDropdownMenuTrigger
+} from '../../shared/ui';
 
 import { getWorkspaceRightPanelDefinition } from './workspaceRightPanelDefinitions';
 import { moveWorkspaceRightPanel } from './workspaceRightPanelOrder';
@@ -19,11 +29,14 @@ function getRightPanelLabel(panelId: WorkspaceRightPanelId, t: Translate) {
   if (panelId === 'outline') return t('desktop.rightPanel.outline');
   if (panelId === 'highlights') return t('desktop.rightPanel.highlights');
   if (panelId === 'backlinks') return t('desktop.rightPanel.backlinks');
+  if (panelId === 'assistant') return t('desktop.rightPanel.assistant');
   if (panelId === 'performance') return t('desktop.rightPanel.performance');
   return t('desktop.rightPanel.scheduling');
 }
 
-function useWorkspaceRightPanelDrag(setOrderedPanelIds: Dispatch<SetStateAction<WorkspaceRightPanelId[]>>) {
+function useWorkspaceRightPanelDrag(
+  setOrderedPanelIds: Dispatch<SetStateAction<WorkspaceRightPanelId[]>>
+) {
   const [draggingPanelId, setDraggingPanelId] = useState<WorkspaceRightPanelId | null>(null);
 
   return {
@@ -33,7 +46,9 @@ function useWorkspaceRightPanelDrag(setOrderedPanelIds: Dispatch<SetStateAction<
       if (!draggingPanelId || draggingPanelId === targetId) return;
       event.preventDefault();
       event.dataTransfer.dropEffect = 'move';
-      setOrderedPanelIds((currentOrder) => moveWorkspaceRightPanel(currentOrder, draggingPanelId, targetId));
+      setOrderedPanelIds((currentOrder) =>
+        moveWorkspaceRightPanel(currentOrder, draggingPanelId, targetId)
+      );
     },
     handleDragStart: (panelId: WorkspaceRightPanelId, event: ReactDragEvent<HTMLElement>) => {
       setDraggingPanelId(panelId);
@@ -56,7 +71,12 @@ function RightSidebarPanelButton(props: {
     <button
       aria-label={props.t('desktop.rightPanel.aria', { label })}
       aria-pressed={props.active}
-      className={[RIGHT_PANEL_ACTION_BASE_CLASS, props.active ? RIGHT_PANEL_ACTION_ACTIVE_CLASS : ''].filter(Boolean).join(' ')}
+      className={[
+        RIGHT_PANEL_ACTION_BASE_CLASS,
+        props.active ? RIGHT_PANEL_ACTION_ACTIVE_CLASS : ''
+      ]
+        .filter(Boolean)
+        .join(' ')}
       data-panel-id={props.panelId}
       draggable
       onClick={props.onClick}
@@ -81,44 +101,77 @@ function OverflowPanelMenu(props: {
 }) {
   const overflowPanelIds = props.orderedPanelIds.slice(props.visiblePanelCount);
   if (overflowPanelIds.length === 0) return null;
-  const isActive = overflowPanelIds.includes(props.activeRightPanelId) || !props.orderedPanelIds.includes(props.activeRightPanelId);
+  const isActive =
+    overflowPanelIds.includes(props.activeRightPanelId) ||
+    !props.orderedPanelIds.includes(props.activeRightPanelId);
   return (
     <AppDropdownMenu>
       <AppDropdownMenuTrigger asChild>
         <button
           aria-label={props.t('desktop.workspace.moreRightPanels')}
           aria-pressed={isActive}
-          className={[RIGHT_PANEL_ACTION_BASE_CLASS, isActive ? RIGHT_PANEL_ACTION_ACTIVE_CLASS : ''].filter(Boolean).join(' ')}
+          className={[
+            RIGHT_PANEL_ACTION_BASE_CLASS,
+            isActive ? RIGHT_PANEL_ACTION_ACTIVE_CLASS : ''
+          ]
+            .filter(Boolean)
+            .join(' ')}
           type="button"
         >
-          <Grid2x2 aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
+          <Grid2x2
+            aria-hidden="true"
+            size={TITLEBAR_ICON_SIZE}
+            strokeWidth={TITLEBAR_ICON_STROKE}
+          />
         </button>
       </AppDropdownMenuTrigger>
       <AppDropdownMenuContent align="end" className="min-w-[188px]" sideOffset={6}>
-        {props.orderedPanelIds.map((panelId) => {
-          const definition = getWorkspaceRightPanelDefinition(panelId);
-          const isPinned = !overflowPanelIds.includes(panelId);
-          return (
-            <AppDropdownMenuItem
-              key={panelId}
-              className="gap-2"
-              data-panel-id={panelId}
-              draggable
-              onDragEnd={props.drag.handleDragEnd}
-              onDragOver={(event) => props.drag.handleDragOver(panelId, event)}
-              onDragStart={(event) => props.drag.handleDragStart(panelId, event)}
-              onSelect={() => props.onSelectRightPanel(panelId)}
-            >
-              <span aria-hidden="true" className="inline-flex size-4 items-center justify-center text-foreground/70">
-                {definition.icon}
-              </span>
-              <span className="flex-1">{getRightPanelLabel(panelId, props.t)}</span>
-              {isPinned ? <span aria-hidden="true" className="text-xs uppercase text-foreground/35">{props.t('desktop.workspace.pinnedPanel')}</span> : null}
-            </AppDropdownMenuItem>
-          );
-        })}
+        {props.orderedPanelIds.map((panelId) => (
+          <OverflowPanelMenuItem
+            key={panelId}
+            drag={props.drag}
+            isPinned={!overflowPanelIds.includes(panelId)}
+            onSelectRightPanel={props.onSelectRightPanel}
+            panelId={panelId}
+            t={props.t}
+          />
+        ))}
       </AppDropdownMenuContent>
     </AppDropdownMenu>
+  );
+}
+
+function OverflowPanelMenuItem(props: {
+  drag: ReturnType<typeof useWorkspaceRightPanelDrag>;
+  isPinned: boolean;
+  onSelectRightPanel: (panelId: WorkspaceRightPanelId) => void;
+  panelId: WorkspaceRightPanelId;
+  t: Translate;
+}) {
+  const definition = getWorkspaceRightPanelDefinition(props.panelId);
+  return (
+    <AppDropdownMenuItem
+      className="gap-2"
+      data-panel-id={props.panelId}
+      draggable
+      onDragEnd={props.drag.handleDragEnd}
+      onDragOver={(event) => props.drag.handleDragOver(props.panelId, event)}
+      onDragStart={(event) => props.drag.handleDragStart(props.panelId, event)}
+      onSelect={() => props.onSelectRightPanel(props.panelId)}
+    >
+      <span
+        aria-hidden="true"
+        className="inline-flex size-4 items-center justify-center text-foreground/70"
+      >
+        {definition.icon}
+      </span>
+      <span className="flex-1">{getRightPanelLabel(props.panelId, props.t)}</span>
+      {props.isPinned ? (
+        <span aria-hidden="true" className="text-xs uppercase text-foreground/35">
+          {props.t('desktop.workspace.pinnedPanel')}
+        </span>
+      ) : null}
+    </AppDropdownMenuItem>
   );
 }
 

@@ -1,3 +1,7 @@
+export function loadWorkspaceRightSidebarAssistantPanel() {
+  return import('./WorkspaceRightSidebarAssistantPanel');
+}
+
 export function loadWorkspaceRightSidebarBacklinksPanel() {
   return import('./WorkspaceRightSidebarBacklinksPanel');
 }
@@ -26,6 +30,7 @@ let workspaceRightSidebarPanelsPrewarm: Promise<void> | null = null;
 
 export function prewarmWorkspaceRightSidebarPanels() {
   workspaceRightSidebarPanelsPrewarm ??= Promise.allSettled([
+    loadWorkspaceRightSidebarAssistantPanel(),
     loadWorkspaceRightSidebarOutlinePanel(),
     loadWorkspaceRightSidebarBacklinksPanel(),
     loadWorkspaceRightSidebarHighlightsPanel(),

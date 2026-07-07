@@ -36,7 +36,10 @@ import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 
-import { handleAssistantCommand, resetAssistantCommandAdapterForTests } from './assistantCommands.js';
+import {
+  handleAssistantCommand,
+  resetAssistantCommandAdapterForTests
+} from './assistantCommands.js';
 
 let tempRoot = '';
 
@@ -54,7 +57,7 @@ afterEach(async () => {
   await fs.rm(tempRoot, { force: true, recursive: true });
 });
 
-describe('assistant commands', () => {
+describe('assistant send message commands', () => {
   it('records a thread index when send message succeeds with an opening location', async () => {
     adapterSendMessage.mockResolvedValue({
       message: { text: 'Answer', threadId: 'thread-1', turnId: 'turn-1' },
@@ -62,10 +65,12 @@ describe('assistant commands', () => {
       state: 'ready'
     });
 
-    await expect(handleAssistantCommand(NATIVE_COMMANDS.assistantSendMessage, {
-      message: 'Prompt body',
-      openingLocation: { nodeId: 'node-1', type: 'node' }
-    })).resolves.toMatchObject({
+    await expect(
+      handleAssistantCommand(NATIVE_COMMANDS.assistantSendMessage, {
+        message: 'Prompt body',
+        openingLocation: { nodeId: 'node-1', type: 'node' }
+      })
+    ).resolves.toMatchObject({
       message: { threadId: 'thread-1' },
       state: 'ready',
       threadIndex: {
@@ -75,9 +80,11 @@ describe('assistant commands', () => {
       }
     });
 
-    await expect(handleAssistantCommand(NATIVE_COMMANDS.assistantListThreadIndex, {
-      location: { nodeId: 'node-1', type: 'node' }
-    })).resolves.toMatchObject([{ providerThreadId: 'thread-1' }]);
+    await expect(
+      handleAssistantCommand(NATIVE_COMMANDS.assistantListThreadIndex, {
+        location: { nodeId: 'node-1', type: 'node' }
+      })
+    ).resolves.toMatchObject([{ providerThreadId: 'thread-1' }]);
   });
 
   it('returns persistence failure when index writing fails after provider success', async () => {
@@ -87,16 +94,111 @@ describe('assistant commands', () => {
       state: 'ready'
     });
 
-    await expect(handleAssistantCommand(NATIVE_COMMANDS.assistantSendMessage, {
-      message: 'Prompt body',
-      openingLocation: { nodeId: 'node-1', type: 'node' }
-    })).resolves.toEqual({
+    await expect(
+      handleAssistantCommand(NATIVE_COMMANDS.assistantSendMessage, {
+        message: 'Prompt body',
+        openingLocation: { nodeId: 'node-1', type: 'node' }
+      })
+    ).resolves.toEqual({
       failure: { category: 'persistence_failed' },
       provider: 'codex-app-server',
       state: 'failed'
     });
   });
+});
 
+describe('assistant continue commands', () => {
+  it('continues a thread only when the saved location matches', async () => {
+    adapterSendMessage
+      .mockResolvedValueOnce({
+        message: { text: 'Answer', threadId: 'thread-1', turnId: 'turn-1' },
+        provider: 'codex-app-server',
+        state: 'ready'
+      })
+      .mockResolvedValueOnce({
+        message: { text: 'Follow-up answer', threadId: 'thread-1', turnId: 'turn-2' },
+        provider: 'codex-app-server',
+        state: 'ready'
+      });
+
+    await handleAssistantCommand(NATIVE_COMMANDS.assistantSendMessage, {
+      message: 'Prompt body',
+      openingLocation: { nodeId: 'node-1', type: 'node' }
+    });
+
+    await expect(
+      handleAssistantCommand(NATIVE_COMMANDS.assistantSendMessage, {
+        message: 'Follow-up',
+        openingLocation: { nodeId: 'node-1', type: 'node' },
+        providerThreadId: ' thread-1 '
+      })
+    ).resolves.toMatchObject({
+      message: { threadId: 'thread-1' },
+      state: 'ready',
+      threadIndex: { providerThreadId: 'thread-1', preview: 'Follow-up' }
+    });
+    expect(adapterSendMessage).toHaveBeenLastCalledWith({
+      message: 'Follow-up',
+      providerThreadId: 'thread-1'
+    });
+  });
+});
+
+describe('assistant continue guards', () => {
+  it('does not send a turn when the requested thread belongs to another location', async () => {
+    adapterSendMessage.mockResolvedValueOnce({
+      message: { text: 'Answer', threadId: 'thread-1', turnId: 'turn-1' },
+      provider: 'codex-app-server',
+      state: 'ready'
+    });
+    await handleAssistantCommand(NATIVE_COMMANDS.assistantSendMessage, {
+      message: 'Prompt body',
+      openingLocation: { nodeId: 'node-1', type: 'node' }
+    });
+    adapterSendMessage.mockClear();
+
+    await expect(
+      handleAssistantCommand(NATIVE_COMMANDS.assistantSendMessage, {
+        message: 'Wrong place',
+        openingLocation: { nodeId: 'node-2', type: 'node' },
+        providerThreadId: 'thread-1'
+      })
+    ).resolves.toEqual({
+      failure: { category: 'protocol_error' },
+      provider: 'codex-app-server',
+      state: 'failed'
+    });
+    expect(adapterSendMessage).not.toHaveBeenCalled();
+  });
+
+  it('returns a controlled failure for invalid assistant thread ids and locations', async () => {
+    await expect(
+      handleAssistantCommand(NATIVE_COMMANDS.assistantSendMessage, {
+        message: 'Prompt body',
+        openingLocation: { nodeId: ' ', type: 'node' }
+      })
+    ).resolves.toEqual({
+      failure: { category: 'protocol_error' },
+      provider: 'codex-app-server',
+      state: 'failed'
+    });
+
+    await expect(
+      handleAssistantCommand(NATIVE_COMMANDS.assistantSendMessage, {
+        message: 'Prompt body',
+        openingLocation: { type: 'workspace' },
+        providerThreadId: ' '
+      })
+    ).resolves.toEqual({
+      failure: { category: 'protocol_error' },
+      provider: 'codex-app-server',
+      state: 'failed'
+    });
+    expect(adapterSendMessage).not.toHaveBeenCalled();
+  });
+});
+
+describe('assistant thread index commands', () => {
   it('updates Foliole-only index status', async () => {
     adapterSendMessage.mockResolvedValue({
       message: { text: 'Answer', threadId: 'thread-1' },
@@ -108,11 +210,15 @@ describe('assistant commands', () => {
       openingLocation: { type: 'workspace' }
     });
 
-    await expect(handleAssistantCommand(NATIVE_COMMANDS.assistantArchiveThreadIndex, {
-      providerThreadId: 'thread-1'
-    })).resolves.toMatchObject({ status: 'archived' });
-    await expect(handleAssistantCommand(NATIVE_COMMANDS.assistantDeleteThreadIndex, {
-      providerThreadId: 'thread-1'
-    })).resolves.toMatchObject({ status: 'deleted' });
+    await expect(
+      handleAssistantCommand(NATIVE_COMMANDS.assistantArchiveThreadIndex, {
+        providerThreadId: 'thread-1'
+      })
+    ).resolves.toMatchObject({ status: 'archived' });
+    await expect(
+      handleAssistantCommand(NATIVE_COMMANDS.assistantDeleteThreadIndex, {
+        providerThreadId: 'thread-1'
+      })
+    ).resolves.toMatchObject({ status: 'deleted' });
   });
 });

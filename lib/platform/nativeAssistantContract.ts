@@ -2,7 +2,8 @@ import { NATIVE_COMMANDS } from './nativeCommands.js';
 
 export type NativeAssistantProviderId = 'codex-app-server';
 
-export type NativeAssistantStatusState = 'busy' | 'disconnected' | 'failed' | 'ready' | 'unavailable';
+export type NativeAssistantStatusState =
+  'busy' | 'disconnected' | 'failed' | 'ready' | 'unavailable';
 
 export type NativeAssistantFailureCategory =
   | 'auth_failed'
@@ -35,8 +36,7 @@ export interface NativeAssistantThreadWorkspaceLocation {
 }
 
 export type NativeAssistantThreadOpeningLocation =
-  | NativeAssistantThreadNodeLocation
-  | NativeAssistantThreadWorkspaceLocation;
+  NativeAssistantThreadNodeLocation | NativeAssistantThreadWorkspaceLocation;
 
 export type NativeAssistantThreadIndexStatus = 'active' | 'archived' | 'deleted';
 export type NativeAssistantThreadReadState = 'available' | 'failed' | 'not_requested';
@@ -68,6 +68,7 @@ export interface NativeAssistantSendMessageArgs {
   message: string;
   openingLocation?: NativeAssistantThreadOpeningLocation;
   provider?: NativeAssistantProviderId;
+  providerThreadId?: string;
 }
 
 export interface NativeAssistantThreadIndexListArgs {

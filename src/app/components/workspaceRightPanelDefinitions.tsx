@@ -1,4 +1,12 @@
-import { CalendarClock, Gauge, Highlighter, Link2, TableOfContents, Waypoints } from 'lucide-react';
+import {
+  CalendarClock,
+  Gauge,
+  Highlighter,
+  Link2,
+  MessageSquareText,
+  TableOfContents,
+  Waypoints
+} from 'lucide-react';
 
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
@@ -14,17 +22,31 @@ interface WorkspaceRightPanelDefinition {
 
 const WORKSPACE_RIGHT_PANEL_DEFINITIONS: WorkspaceRightPanelDefinition[] = [
   {
-    icon: <Waypoints aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />,
+    icon: (
+      <Waypoints aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
+    ),
     menuLabel: 'Flow',
     panelId: 'review-queue'
   },
   {
-    icon: <TableOfContents aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />,
+    icon: (
+      <TableOfContents
+        aria-hidden="true"
+        size={TITLEBAR_ICON_SIZE}
+        strokeWidth={TITLEBAR_ICON_STROKE}
+      />
+    ),
     menuLabel: 'Outline',
     panelId: 'outline'
   },
   {
-    icon: <Highlighter aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />,
+    icon: (
+      <Highlighter
+        aria-hidden="true"
+        size={TITLEBAR_ICON_SIZE}
+        strokeWidth={TITLEBAR_ICON_STROKE}
+      />
+    ),
     menuLabel: 'Highlights',
     panelId: 'highlights'
   },
@@ -34,13 +56,30 @@ const WORKSPACE_RIGHT_PANEL_DEFINITIONS: WorkspaceRightPanelDefinition[] = [
     panelId: 'backlinks'
   },
   {
+    icon: (
+      <MessageSquareText
+        aria-hidden="true"
+        size={TITLEBAR_ICON_SIZE}
+        strokeWidth={TITLEBAR_ICON_STROKE}
+      />
+    ),
+    menuLabel: 'Assistant',
+    panelId: 'assistant'
+  },
+  {
     icon: <Gauge aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />,
     menuLabel: 'Performance',
     panelId: 'performance',
     visibleInTitlebar: false
   },
   {
-    icon: <CalendarClock aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />,
+    icon: (
+      <CalendarClock
+        aria-hidden="true"
+        size={TITLEBAR_ICON_SIZE}
+        strokeWidth={TITLEBAR_ICON_STROKE}
+      />
+    ),
     menuLabel: 'Scheduling',
     panelId: 'dev'
   }

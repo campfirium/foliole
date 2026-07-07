@@ -12,9 +12,9 @@ beforeEach(() => {
 });
 
 it('persists and reloads the active right sidebar panel', () => {
-  saveWorkspaceRightPanelPreference('highlights');
+  saveWorkspaceRightPanelPreference('assistant');
 
-  expect(loadWorkspaceRightPanelPreference()).toBe('highlights');
+  expect(loadWorkspaceRightPanelPreference()).toBe('assistant');
 });
 
 it('falls back when the stored right sidebar panel is invalid', () => {
