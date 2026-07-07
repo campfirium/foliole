@@ -8,6 +8,25 @@ export interface SyncPackNodeApplyOptions {
   incomingHasCurrentVersionId?: boolean;
 }
 
+const SYNC_PACK_NODE_COLUMNS = [
+  'id',
+  'parent_id',
+  'kind',
+  'title',
+  'is_title_manual',
+  'hide_title_heading',
+  'shelved_at',
+  'body_blob_hash',
+  'opening_text',
+  'content',
+  'current_version_id',
+  'created_at',
+  'updated_at',
+  'deleted_at'
+] as const;
+
+const SYNC_PACK_NODE_UPDATE_COLUMNS = SYNC_PACK_NODE_COLUMNS.filter((column) => column !== 'id');
+
 function incomingAlias(options: { incomingAlias?: string }) {
   return options.incomingAlias ?? 'inc';
 }
@@ -47,14 +66,13 @@ export function buildSyncPackNodeUpsertSql(options: SyncPackNodeApplyOptions = {
     `UNION SELECT child.id, parent.depth + 1 FROM ${alias}.nodes child ` +
     `INNER JOIN node_depth parent ON parent.id = child.parent_id ` +
     `WHERE child.id IN (SELECT id FROM applyable_node_ids)` +
-    `) INSERT OR REPLACE INTO main.nodes (` +
-    `id, parent_id, kind, title, is_title_manual, hide_title_heading, shelved_at, body_blob_hash, ` +
-    `opening_text, content, current_version_id, created_at, updated_at, deleted_at) ` +
+    `) INSERT INTO main.nodes (${SYNC_PACK_NODE_COLUMNS.join(', ')}) ` +
     `SELECT incoming.id, incoming.parent_id, incoming.kind, incoming.title, incoming.is_title_manual, ` +
     `incoming.hide_title_heading, incoming.shelved_at, incoming.body_blob_hash, incoming.opening_text, incoming.content, ` +
     `${versionExpr}, incoming.created_at, incoming.updated_at, incoming.deleted_at FROM ${alias}.nodes incoming ` +
     `INNER JOIN (SELECT id, MIN(depth) AS depth FROM node_depth GROUP BY id) sorted ON sorted.id = incoming.id ` +
-    `ORDER BY sorted.depth ASC, incoming.updated_at ASC, incoming.id ASC`;
+    `WHERE true ORDER BY sorted.depth ASC, incoming.updated_at ASC, incoming.id ASC ` +
+    `ON CONFLICT(id) DO UPDATE SET ${SYNC_PACK_NODE_UPDATE_COLUMNS.map((column) => `${column} = excluded.${column}`).join(', ')}`;
 }
 
 export function buildSyncPackNodeOrderUpsertSql(options: SyncPackApplyableRowsOptions = {}) {

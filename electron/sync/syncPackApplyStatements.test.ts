@@ -45,6 +45,14 @@ it('builds content blob metadata upsert for referenced body blobs', () => {
 });
 
 it('builds node and attachment pack apply statements against an incoming alias', () => {
+  const nodeSql = buildSyncPackNodeUpsertSql({ incomingAlias: 'incoming' });
+
+  expect(nodeSql).not.toContain('INSERT OR REPLACE INTO main.nodes');
+  expect(nodeSql).toContain('INSERT INTO main.nodes');
+  expect(nodeSql).toContain('WHERE true ORDER BY sorted.depth ASC');
+  expect(nodeSql).toContain('ON CONFLICT(id) DO UPDATE SET');
+  expect(nodeSql).toContain('title = excluded.title');
+  expect(nodeSql).not.toContain('priority = excluded.priority');
   expect(buildSyncPackNodeUpsertSql({ incomingAlias: 'incoming' })).toContain(
     'FROM incoming.nodes incoming'
   );
