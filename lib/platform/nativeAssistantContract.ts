@@ -70,6 +70,14 @@ export interface NativeAssistantSendMessageArgs {
   openingLocation?: NativeAssistantThreadOpeningLocation;
   provider?: NativeAssistantProviderId;
   providerThreadId?: string;
+  workspaceContext?: NativeAssistantWorkspaceContext;
+}
+
+export interface NativeAssistantWorkspaceContext {
+  activeNodeId?: string;
+  activeTitle?: string;
+  path?: string[];
+  scope: 'node' | 'workspace';
 }
 
 export interface NativeAssistantThreadIndexListArgs {

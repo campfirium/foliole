@@ -4,6 +4,7 @@ import type {
   NativeAssistantFailureCategory,
   NativeAssistantSendMessageResult,
   NativeAssistantTurnEvent,
+  NativeAssistantWorkspaceContext,
   NativeAssistantStatusResult
 } from '../../lib/platform/nativeAssistantContract.js';
 
@@ -50,6 +51,7 @@ export class CodexAppServerAdapter {
     message: string;
     onEvent?: (event: NativeAssistantTurnEvent) => void;
     providerThreadId?: string;
+    workspaceContext?: NativeAssistantWorkspaceContext;
   }): Promise<NativeAssistantSendMessageResult> {
     if (this.active) return sendFailure('busy', 'busy');
     const message = input.message.trim();
@@ -66,6 +68,7 @@ export class CodexAppServerAdapter {
         message,
         ...(input.onEvent ? { onEvent: input.onEvent } : {}),
         ...(providerThreadId ? { providerThreadId } : {}),
+        ...(input.workspaceContext ? { workspaceContext: input.workspaceContext } : {}),
         timeoutMs: this.timeoutMs
       });
     } catch (error) {

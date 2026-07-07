@@ -1,7 +1,8 @@
 import type {
   NativeAssistantSendMessageResult,
   NativeAssistantThreadIndexRecord,
-  NativeAssistantThreadOpeningLocation
+  NativeAssistantThreadOpeningLocation,
+  NativeAssistantWorkspaceContext
 } from '../../../lib/platform/nativeAssistantContract';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 
@@ -46,6 +47,32 @@ export function resolveAssistantLocation(
   return activeNode?.kind === 'topic' && !activeNode.anchorLink && !activeNode.specialKind
     ? { nodeId: activeNode.id, type: 'node' }
     : { type: 'workspace' };
+}
+
+export function resolveAssistantWorkspaceContext(
+  activeNodeId: string | null,
+  nodesById: Record<string, Node>
+): NativeAssistantWorkspaceContext {
+  const activeNode = activeNodeId ? nodesById[activeNodeId] : null;
+  if (!activeNode || activeNode.specialKind || activeNode.anchorLink) return { scope: 'workspace' };
+  return {
+    activeNodeId: activeNode.id,
+    activeTitle: activeNode.title,
+    path: resolveNodePath(activeNode, nodesById),
+    scope: 'node'
+  };
+}
+
+function resolveNodePath(activeNode: Node, nodesById: Record<string, Node>) {
+  const path: string[] = [];
+  let node: Node | null | undefined = activeNode;
+  const seen = new Set<string>();
+  while (node && !seen.has(node.id)) {
+    seen.add(node.id);
+    if (node.title.trim()) path.unshift(node.title.trim());
+    node = node.parentNodeId ? nodesById[node.parentNodeId] : null;
+  }
+  return path;
 }
 
 export function upsertRecord(

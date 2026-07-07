@@ -21,6 +21,7 @@ import {
   messageCacheReducer,
   PENDING_THREAD_KEY,
   resolveAssistantLocation,
+  resolveAssistantWorkspaceContext,
   upsertRecord
 } from './workspaceRightSidebarAssistantPanelModel';
 
@@ -33,6 +34,10 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: {
 }) {
   const location = useMemo(
     () => resolveAssistantLocation(args.activeNodeId, args.nodesById),
+    [args.activeNodeId, args.nodesById]
+  );
+  const workspaceContext = useMemo(
+    () => resolveAssistantWorkspaceContext(args.activeNodeId, args.nodesById),
     [args.activeNodeId, args.nodesById]
   );
   const threads = useAssistantThreadRecords(location);
@@ -66,7 +71,8 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: {
       sending,
       setMessageText,
       setSending,
-      threads
+      threads,
+      workspaceContext
     }),
     loading: threads.loading,
     messageText,
@@ -91,7 +97,7 @@ function createHandleSubmit(args: SubmitHandlerArgs) {
     args.dispatchCache(createUserMessageAction(threadKey, pendingId, prompt));
     args.dispatchCache(createPendingMessageAction(threadKey, pendingId, args.pendingText));
     try {
-      const result = await sendAssistantTurn(prompt, args.location, args.threads.selectedThreadId, pendingId);
+      const result = await sendAssistantTurn(args, pendingId, prompt);
       applySendResult({ ...args, pendingId, prompt, result, threadKey });
     } finally {
       args.activeTurnRef.current = null;
@@ -159,12 +165,13 @@ function findSelectedRecord(
   return records.find((record) => record.providerThreadId === selectedThreadId) ?? null;
 }
 
-async function sendAssistantTurn(message: string, openingLocation: ReturnType<typeof resolveAssistantLocation>, providerThreadId: string | null, clientTurnId: string) {
+async function sendAssistantTurn(args: SubmitHandlerArgs, clientTurnId: string, message: string) {
   return sendAssistantMessage({
     clientTurnId,
     message,
-    openingLocation,
-    ...(providerThreadId ? { providerThreadId } : {})
+    openingLocation: args.location,
+    workspaceContext: args.workspaceContext,
+    ...(args.threads.selectedThreadId ? { providerThreadId: args.threads.selectedThreadId } : {})
   });
 }
 
@@ -216,4 +223,5 @@ type SubmitHandlerArgs = {
   setMessageText: (text: string) => void;
   setSending: (sending: boolean) => void;
   threads: ReturnType<typeof useAssistantThreadRecords>;
+  workspaceContext: ReturnType<typeof resolveAssistantWorkspaceContext>;
 };

@@ -2,7 +2,8 @@ import { app, type WebContents } from 'electron';
 
 import type {
   NativeAssistantThreadOpeningLocation,
-  NativeAssistantTurnEvent
+  NativeAssistantTurnEvent,
+  NativeAssistantWorkspaceContext
 } from '../../lib/platform/nativeAssistantContract.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { resolveFolioleAppVersion } from '../appVersion.js';
@@ -62,10 +63,12 @@ async function sendMessage(args: Record<string, unknown>, sender?: WebContents) 
   let clientTurnId: string;
   let openingLocation: NativeAssistantThreadOpeningLocation | undefined;
   let providerThreadId: string | undefined;
+  let workspaceContext: NativeAssistantWorkspaceContext | undefined;
   try {
     clientTurnId = readOptionalClientTurnId(args.clientTurnId) ?? createClientTurnId();
     openingLocation = readOpeningLocation(args.openingLocation);
     providerThreadId = readOptionalProviderThreadId(args.providerThreadId);
+    workspaceContext = readOptionalWorkspaceContext(args.workspaceContext);
   } catch {
     return {
       failure: { category: 'protocol_error' as const },
@@ -84,7 +87,8 @@ async function sendMessage(args: Record<string, unknown>, sender?: WebContents) 
     clientTurnId,
     message,
     ...(sender ? { onEvent: createAssistantTurnEventSender(sender, clientTurnId) } : {}),
-    ...(providerThreadId ? { providerThreadId } : {})
+    ...(providerThreadId ? { providerThreadId } : {}),
+    ...(workspaceContext ? { workspaceContext } : {})
   });
   if (result.state !== 'ready' || !openingLocation || !result.message?.threadId) return result;
   try {
@@ -120,6 +124,22 @@ function readOptionalClientTurnId(value: unknown) {
   if (value === undefined) return undefined;
   if (typeof value !== 'string') throw new Error('invalid_client_turn_id');
   return normalizeRequiredString(value, 'client_turn_id');
+}
+
+function readOptionalWorkspaceContext(value: unknown): NativeAssistantWorkspaceContext | undefined {
+  if (value === undefined) return undefined;
+  if (!value || typeof value !== 'object') throw new Error('invalid_workspace_context');
+  const context = value as Record<string, unknown>;
+  if (context.scope !== 'node' && context.scope !== 'workspace')
+    throw new Error('invalid_workspace_context_scope');
+  return {
+    ...(typeof context.activeNodeId === 'string' ? { activeNodeId: context.activeNodeId.slice(0, 200) } : {}),
+    ...(typeof context.activeTitle === 'string' ? { activeTitle: context.activeTitle.slice(0, 300) } : {}),
+    ...(Array.isArray(context.path)
+      ? { path: context.path.filter((item) => typeof item === 'string').slice(0, 12) }
+      : {}),
+    scope: context.scope
+  };
 }
 
 function readOpeningLocation(value: unknown): NativeAssistantThreadOpeningLocation | undefined {

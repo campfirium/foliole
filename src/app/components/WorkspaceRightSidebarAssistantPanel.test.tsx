@@ -63,7 +63,10 @@ it('loads Assistant threads for the active topic location', async () => {
   renderWithLocalization(
     <WorkspaceRightSidebarAssistantPanel
       activeNodeId="node-1"
-      nodesById={{ 'node-1': createNode({ id: 'node-1' }) }}
+      nodesById={{
+        parent: createNode({ id: 'parent', title: 'Parent' }),
+        'node-1': createNode({ id: 'node-1', parentNodeId: 'parent' })
+      }}
       onSelectNode={vi.fn()}
     />
   );
@@ -90,7 +93,10 @@ it('creates a new thread and moves pending messages into the returned thread cac
   renderWithLocalization(
     <WorkspaceRightSidebarAssistantPanel
       activeNodeId="node-1"
-      nodesById={{ 'node-1': createNode({ id: 'node-1' }) }}
+      nodesById={{
+        parent: createNode({ id: 'parent', title: 'Parent' }),
+        'node-1': createNode({ id: 'node-1', parentNodeId: 'parent' })
+      }}
       onSelectNode={vi.fn()}
     />
   );
@@ -102,7 +108,13 @@ it('creates a new thread and moves pending messages into the returned thread cac
     expect(assistantRuntime.sendAssistantMessage).toHaveBeenCalledWith({
       clientTurnId: expect.any(String),
       message: 'New prompt',
-      openingLocation: { nodeId: 'node-1', type: 'node' }
+      openingLocation: { nodeId: 'node-1', type: 'node' },
+      workspaceContext: {
+        activeNodeId: 'node-1',
+        activeTitle: 'Topic',
+        path: ['Parent', 'Topic'],
+        scope: 'node'
+      }
     })
   );
   expect(await screen.findByText('Assistant answer')).toBeInTheDocument();
@@ -139,7 +151,13 @@ it('continues a selected thread and switches to its saved node location', async 
       clientTurnId: expect.any(String),
       message: 'Follow-up',
       openingLocation: { nodeId: 'node-2', type: 'node' },
-      providerThreadId: 'thread-1'
+      providerThreadId: 'thread-1',
+      workspaceContext: {
+        activeNodeId: 'node-2',
+        activeTitle: 'Topic',
+        path: ['Topic'],
+        scope: 'node'
+      }
     })
   );
   expect(await screen.findByText('Follow-up answer')).toBeInTheDocument();
@@ -172,7 +190,13 @@ it('starts a new thread after clearing the selected history thread', async () =>
     expect(assistantRuntime.sendAssistantMessage).toHaveBeenCalledWith({
       clientTurnId: expect.any(String),
       message: 'Fresh prompt',
-      openingLocation: { nodeId: 'node-1', type: 'node' }
+      openingLocation: { nodeId: 'node-1', type: 'node' },
+      workspaceContext: {
+        activeNodeId: 'node-1',
+        activeTitle: 'Topic',
+        path: ['Topic'],
+        scope: 'node'
+      }
     })
   );
   expect(await screen.findByText('Fresh answer')).toBeInTheDocument();

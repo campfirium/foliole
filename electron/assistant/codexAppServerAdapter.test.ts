@@ -60,11 +60,17 @@ function createAdapter(process: FakeCodexProcess) {
     const process = new FakeCodexProcess();
     const adapter = createAdapter(process);
     const seenMethods: string[] = [];
+    const seenInputs: string[] = [];
     const events: unknown[] = [];
-    process.stdin.on('data', (chunk) => respondToTurnProtocol(process, chunk, seenMethods));
+    process.stdin.on('data', (chunk) => respondToTurnProtocol(process, chunk, seenMethods, seenInputs));
 
     await expect(
-      adapter.sendMessage({ clientTurnId: 'client-1', message: 'Summarize', onEvent: (event) => events.push(event) })
+      adapter.sendMessage({
+        clientTurnId: 'client-1',
+        message: 'Summarize',
+        onEvent: (event) => events.push(event),
+        workspaceContext: { activeTitle: 'Topic', path: ['Parent', 'Topic'], scope: 'node' }
+      })
     ).resolves.toEqual({
       message: { text: 'Hello world', threadId: 'thr_1', turnId: 'turn_1' },
       provider: 'codex-app-server',
@@ -79,6 +85,9 @@ function createAdapter(process: FakeCodexProcess) {
         expect.objectContaining({ clientTurnId: 'client-1', kind: 'completed' })
       ])
     );
+    expect(seenInputs[0]).toContain('Current Foliole scope: node');
+    expect(seenInputs[0]).toContain('Active path: Parent / Topic');
+    expect(seenInputs[0]).toContain('User message:\nSummarize');
     expect(process.kill).not.toHaveBeenCalled();
     adapter.dispose();
     expect(process.kill).toHaveBeenCalledOnce();
@@ -177,7 +186,7 @@ function createAdapter(process: FakeCodexProcess) {
     await expect(result).resolves.toMatchObject({ failure: { category: 'overloaded' } });
   });
 
-function respondToTurnProtocol(process: FakeCodexProcess, chunk: Buffer, seenMethods: string[]) {
+function respondToTurnProtocol(process: FakeCodexProcess, chunk: Buffer, seenMethods: string[], seenInputs: string[] = []) {
   for (const line of chunk.toString().trim().split('\n').filter(Boolean)) {
     const message = JSON.parse(line);
     seenMethods.push(message.method);
@@ -189,7 +198,10 @@ function respondToTurnProtocol(process: FakeCodexProcess, chunk: Buffer, seenMet
           thread: { id: message.method === 'thread/resume' ? message.params.threadId : 'thr_1' }
         }
       });
-    if (message.method === 'turn/start') completeTurn(process);
+    if (message.method === 'turn/start') {
+      seenInputs.push(message.params.input[0].text);
+      completeTurn(process);
+    }
   }
 }
 

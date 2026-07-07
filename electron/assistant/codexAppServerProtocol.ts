@@ -1,6 +1,7 @@
 import type {
   NativeAssistantFailureCategory,
-  NativeAssistantSendMessageResult
+  NativeAssistantSendMessageResult,
+  NativeAssistantWorkspaceContext
 } from '../../lib/platform/nativeAssistantContract.js';
 
 export type JsonRpcRecord = Record<string, unknown>;
@@ -68,4 +69,23 @@ export function sendFailure(
     provider: CODEX_APP_SERVER_PROVIDER,
     state
   } satisfies NativeAssistantSendMessageResult;
+}
+
+export function composeAssistantTurnInput(
+  message: string,
+  context?: NativeAssistantWorkspaceContext
+) {
+  if (!context) return message;
+  const lines = [
+    'Foliole Assistant context:',
+    `- Current product surface: Foliole Desktop workspace Assistant panel.`,
+    `- Current Foliole scope: ${context.scope}.`,
+    ...(context.activeTitle ? [`- Active title: ${context.activeTitle}.`] : []),
+    ...(context.path?.length ? [`- Active path: ${context.path.join(' / ')}.`] : []),
+    '- Do not answer location questions from the process working directory unless the user explicitly asks about the development repository.',
+    '',
+    'User message:',
+    message
+  ];
+  return lines.join('\n');
 }

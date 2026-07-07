@@ -3,11 +3,13 @@ import readline from 'node:readline';
 import type {
   NativeAssistantFailureCategory,
   NativeAssistantSendMessageResult,
-  NativeAssistantTurnEvent
+  NativeAssistantTurnEvent,
+  NativeAssistantWorkspaceContext
 } from '../../lib/platform/nativeAssistantContract.js';
 
 import {
   CODEX_APP_SERVER_PROVIDER,
+  composeAssistantTurnInput,
   createInitializeMessage,
   mapJsonRpcError,
   parseMessage,
@@ -36,6 +38,7 @@ export class CodexAppServerSession {
   async sendMessage(args: {
     clientTurnId: string;
     message: string;
+    workspaceContext?: NativeAssistantWorkspaceContext;
     providerThreadId?: string;
     timeoutMs: number;
     onEvent?: (event: NativeAssistantTurnEvent) => void;
@@ -57,7 +60,7 @@ export class CodexAppServerSession {
         threadId: null,
         threadRequestId,
         timeout,
-        userMessage: args.message
+        userMessage: composeAssistantTurnInput(args.message, args.workspaceContext)
       };
       this.write(
         args.providerThreadId
