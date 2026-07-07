@@ -6,8 +6,10 @@ import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/worksp
 
 import { createEditorAnnotationCreateEntry } from './workspaceEditorAnnotationOperationEntry';
 import { markNodeCreatePending } from './workspaceNodeContentVersionGuard';
+import { syncWorkspaceNodeDocumentCacheFromNode } from './workspaceNodeDocumentCache';
 import { createWorkspaceNodeMutationPatchWithLocalSideEffects } from './workspaceNodeMutationPatch';
 import { createQANodeFromSelectionRecord } from './workspaceQANodeRecord';
+import { RECENT_RENDERER_BOUNDARY_NODE_LIMIT } from './workspaceRendererBoundaryKeepNodeIds';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import type { WorkspaceState } from './workspaceStore';
 import { completeNodeCreateRuntimePersist } from './workspaceStoreContentRuntimePersist';
@@ -34,6 +36,13 @@ interface RuntimeSyncHandlers {
 
 type WorkspaceNode = WorkspaceState['nodesById'][string];
 
+function keepCreatedNodeDocumentInRendererBoundary(state: WorkspaceState, nodeId: string) {
+  return [
+    nodeId,
+    ...state.rendererBoundaryKeepNodeIds.filter((keepNodeId) => keepNodeId !== nodeId)
+  ].slice(0, RECENT_RENDERER_BOUNDARY_NODE_LIMIT);
+}
+
 async function applyCreatedNode(args: {
   activeNodeId: string;
   handlers: RuntimeSyncHandlers;
@@ -47,6 +56,7 @@ async function applyCreatedNode(args: {
   if (!node || !nodeOrder) {
     return null;
   }
+  syncWorkspaceNodeDocumentCacheFromNode(node);
   markNodeCreatePending(nodeId);
   const result = await handlers.syncNodeCreation(node, nodeOrder, activeNodeId, nodeOrder.indexOf(nodeId));
   if (result) {
@@ -103,6 +113,7 @@ export function createHighlightFromSelectionAction(
           : {}),
         nodeOrder: nextNodeOrder,
         nodesById: nextNodesById,
+        rendererBoundaryKeepNodeIds: keepCreatedNodeDocumentInRendererBoundary(state, childNodeId),
         untitledSequenceByParent: untitledState.untitledSequenceByParent,
         reviewSession: reconcileReviewSession({
           ...state,
@@ -161,6 +172,7 @@ export function createQAFromSelectionAction(
           : {}),
         nodeOrder: nextNodeOrder,
         nodesById: nextNodesById,
+        rendererBoundaryKeepNodeIds: keepCreatedNodeDocumentInRendererBoundary(state, childNodeId),
         untitledSequenceByParent: created.untitledSequenceByParent,
         reviewSession: reconcileReviewSession({
           ...state,

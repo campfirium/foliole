@@ -15,7 +15,7 @@ export function registerPendingNodeSyncRendererBoundary(workspaceStore: Workspac
     }
 
     workspaceStore.setState((state: WorkspaceState) => {
-      if (state.activeNodeId === nodeId) {
+      if (state.activeNodeId === nodeId || state.rendererBoundaryKeepNodeIds.includes(nodeId)) {
         return state;
       }
       const node = state.nodesById[nodeId];

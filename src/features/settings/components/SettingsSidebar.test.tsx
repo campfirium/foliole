@@ -48,5 +48,5 @@ it('labels the demo settings brand separately from the version when supplied', (
 
   expect(screen.getByText('Foliole')).toBeInTheDocument();
   expect(screen.getByText('Demo')).toBeInTheDocument();
-  expect(screen.getByText('v0.6.5')).toBeInTheDocument();
+  expect(screen.getByText('v0.6.6')).toBeInTheDocument();
 });

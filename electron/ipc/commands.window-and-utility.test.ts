@@ -108,6 +108,10 @@ vi.mock('../database/importPipeline.js', () => ({
   recordPreparedImportFailure,
   runPreparedImport
 }));
+vi.mock('../import/importNodeMutationPatch.js', () => ({
+  buildImportNodeMutationPatch: vi.fn(),
+  withTextImportNodeMutationPatch: vi.fn((result) => result)
+}));
 vi.mock('./storage.js', () => ({
   loadAppSettingsState: vi.fn().mockResolvedValue({ 'foliole-ui-font-preset': 'inter' }),
   saveAppSettingsState: vi.fn().mockResolvedValue(undefined)
