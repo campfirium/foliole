@@ -2,7 +2,7 @@
   "0.6.6": {
     "notes": [
       "Fixed",
-      "Newly created nodes from highlights or clozes now show their content immediately."
+      "Fixed an issue where content created from highlights or clozes might not show immediately."
     ]
   },
   "0.6.5": {
