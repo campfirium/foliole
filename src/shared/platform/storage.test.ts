@@ -22,11 +22,18 @@ it('derives localStorage whitelist from settings classification', () => {
   expect(getLocalStorageWhitelist()).toContain(APP_SETTINGS_STORAGE_KEYS.uiFont);
   expect(getLocalStorageWhitelist()).toContain(APP_SETTINGS_STORAGE_KEYS.searchEnhancementPromptDismissed);
   expect(getLocalStorageWhitelist()).toContain(APP_SETTINGS_STORAGE_KEYS.actionHelpCardsEnabled);
+  expect(getLocalStorageWhitelist()).toContain(APP_SETTINGS_STORAGE_KEYS.folioleAideEnabled);
   expect(getLocalStorageWhitelist()).not.toContain(APP_SETTINGS_STORAGE_KEYS.desktopDeviceSyncEnabled);
 });
 
 it('classifies the search enhancement prompt as runtime-mirrored, not cross-host sync', () => {
   expect(APP_SETTINGS_CLASSIFICATIONS.searchEnhancementPromptDismissed.kind).toBe(
+    APP_SETTINGS_PERSISTENCE_KINDS.runtimeMirroredRendererSnapshot
+  );
+});
+
+it('classifies Foliole Aide enablement as a runtime-mirrored local setting', () => {
+  expect(APP_SETTINGS_CLASSIFICATIONS.folioleAideEnabled.kind).toBe(
     APP_SETTINGS_PERSISTENCE_KINDS.runtimeMirroredRendererSnapshot
   );
 });

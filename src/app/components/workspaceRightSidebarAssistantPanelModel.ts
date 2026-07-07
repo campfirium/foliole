@@ -93,6 +93,19 @@ export function createUserMessageAction(key: string, pendingId: string, text: st
   };
 }
 
+export type ThreadLocationLabelKind = 'topic' | 'topicUnavailable' | 'workspace' | 'thisTopic';
+
+export function getThreadLocationLabelKind(
+  record: NativeAssistantThreadIndexRecord,
+  activeNodeId: string | null,
+  nodesById: Record<string, Node>
+): ThreadLocationLabelKind {
+  if (record.location.type === 'workspace') return 'workspace';
+  if (!nodesById[record.location.nodeId]) return 'topicUnavailable';
+  if (record.location.nodeId === activeNodeId) return 'thisTopic';
+  return 'topic';
+}
+
 export function createPendingMessageAction(key: string, pendingId: string, text: string) {
   return {
     key,

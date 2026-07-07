@@ -1,63 +1,46 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import type { NativeAssistantThreadIndexRecord } from '../../../lib/platform/nativeAssistantContract';
-import type { Node } from '../../features/nodes/model/nodeTypes';
+import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { WorkspaceRightSidebarAssistantPanel } from './WorkspaceRightSidebarAssistantPanel';
+import {
+  createAssistantPanelNode as createNode,
+  createAssistantPanelThread as createThread
+} from './WorkspaceRightSidebarAssistantPanel.testUtils';
 
 const assistantRuntime = vi.hoisted(() => ({
   listAssistantThreadIndex: vi.fn(),
+  loadAssistantStatus: vi.fn(),
   sendAssistantMessage: vi.fn(),
   subscribeAssistantTurnEvents: vi.fn()
 }));
 
 vi.mock('../../shared/platform/assistantRuntime', () => assistantRuntime);
 
-function createNode(overrides: Partial<Node>): Node {
-  return {
-    id: overrides.id ?? 'node-1',
-    parentNodeId: overrides.parentNodeId ?? null,
-    kind: overrides.kind ?? 'topic',
-    title: overrides.title ?? 'Topic',
-    content: overrides.content ?? '',
-    anchorLink: overrides.anchorLink ?? null,
-    reveal: overrides.reveal ?? null,
-    review: overrides.review ?? null,
-    createdAt: '2026-07-07T00:00:00.000Z',
-    updatedAt: '2026-07-07T00:00:00.000Z'
-  };
-}
-
-function createThread(
-  overrides: Partial<NativeAssistantThreadIndexRecord>
-): NativeAssistantThreadIndexRecord {
-  return {
-    archivedAt: null,
-    createdAt: '2026-07-07T00:00:00.000Z',
-    deletedAt: null,
-    lastOpenedAt: '2026-07-07T00:00:00.000Z',
-    location: { nodeId: 'node-1', type: 'node' },
-    preview: 'Original prompt',
-    provider: 'codex-app-server',
-    providerThreadId: 'thread-1',
-    readError: null,
-    readState: 'not_requested',
-    status: 'active',
-    title: 'Original prompt',
-    updatedAt: '2026-07-07T00:00:00.000Z',
-    ...overrides
-  };
-}
-
 beforeEach(() => {
   vi.clearAllMocks();
+  window.localStorage.clear();
+  assistantRuntime.loadAssistantStatus.mockResolvedValue({
+    capabilities: [
+      { enabled: true, name: 'status' },
+      { enabled: true, name: 'sendMessage' },
+      { enabled: true, name: 'threadIndex' }
+    ],
+    provider: 'codex-app-server',
+    state: 'ready'
+  });
   assistantRuntime.listAssistantThreadIndex.mockResolvedValue([]);
   assistantRuntime.subscribeAssistantTurnEvents.mockReturnValue(() => undefined);
 });
 
+function enableFolioleAide() {
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.folioleAideEnabled, 'true');
+}
+
 it('loads Assistant threads for the active topic location', async () => {
+  enableFolioleAide();
   assistantRuntime.listAssistantThreadIndex.mockResolvedValueOnce([createThread({})]);
 
   renderWithLocalization(
@@ -71,6 +54,9 @@ it('loads Assistant threads for the active topic location', async () => {
     />
   );
 
+  expect(screen.getByRole('button', { name: 'Check' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Check' }));
+
   expect(await screen.findByRole('button', { name: /original prompt/i })).toBeInTheDocument();
   expect(assistantRuntime.listAssistantThreadIndex).toHaveBeenCalledWith({
     location: { nodeId: 'node-1', type: 'node' }
@@ -79,6 +65,7 @@ it('loads Assistant threads for the active topic location', async () => {
 });
 
 it('creates a new thread and moves pending messages into the returned thread cache', async () => {
+  enableFolioleAide();
   assistantRuntime.sendAssistantMessage.mockResolvedValueOnce({
     message: { text: 'Assistant answer', threadId: 'thread-new', turnId: 'turn-1' },
     provider: 'codex-app-server',
@@ -100,8 +87,10 @@ it('creates a new thread and moves pending messages into the returned thread cac
       onSelectNode={vi.fn()}
     />
   );
+  fireEvent.click(screen.getByRole('button', { name: 'Check' }));
+  await screen.findByLabelText('Foliole Aide message');
 
-  fireEvent.change(screen.getByLabelText('Assistant message'), { target: { value: 'New prompt' } });
+  fireEvent.change(screen.getByLabelText('Foliole Aide message'), { target: { value: 'New prompt' } });
   fireEvent.click(screen.getByRole('button', { name: 'Send' }));
 
   await waitFor(() =>
@@ -122,6 +111,7 @@ it('creates a new thread and moves pending messages into the returned thread cac
 });
 
 it('continues a selected thread and switches to its saved node location', async () => {
+  enableFolioleAide();
   const onSelectNode = vi.fn();
   assistantRuntime.listAssistantThreadIndex.mockResolvedValueOnce([
     createThread({ location: { nodeId: 'node-2', type: 'node' } })
@@ -140,10 +130,11 @@ it('continues a selected thread and switches to its saved node location', async 
       onSelectNode={onSelectNode}
     />
   );
+  fireEvent.click(screen.getByRole('button', { name: 'Check' }));
 
   fireEvent.click(await screen.findByRole('button', { name: /original prompt/i }));
   expect(onSelectNode).toHaveBeenCalledWith('node-2');
-  fireEvent.change(screen.getByLabelText('Assistant message'), { target: { value: 'Follow-up' } });
+  fireEvent.change(screen.getByLabelText('Foliole Aide message'), { target: { value: 'Follow-up' } });
   fireEvent.submit(screen.getByRole('button', { name: 'Send' }).closest('form')!);
 
   await waitFor(() =>
@@ -164,6 +155,7 @@ it('continues a selected thread and switches to its saved node location', async 
 });
 
 it('starts a new thread after clearing the selected history thread', async () => {
+  enableFolioleAide();
   assistantRuntime.listAssistantThreadIndex.mockResolvedValueOnce([createThread({})]);
   assistantRuntime.sendAssistantMessage.mockResolvedValueOnce({
     message: { text: 'Fresh answer', threadId: 'thread-new', turnId: 'turn-3' },
@@ -179,9 +171,10 @@ it('starts a new thread after clearing the selected history thread', async () =>
       onSelectNode={vi.fn()}
     />
   );
+  fireEvent.click(screen.getByRole('button', { name: 'Check' }));
 
   fireEvent.click(await screen.findByRole('button', { name: 'New' }));
-  fireEvent.change(screen.getByLabelText('Assistant message'), {
+  fireEvent.change(screen.getByLabelText('Foliole Aide message'), {
     target: { value: 'Fresh prompt' }
   });
   fireEvent.click(screen.getByRole('button', { name: 'Send' }));
@@ -203,6 +196,7 @@ it('starts a new thread after clearing the selected history thread', async () =>
 });
 
 it('updates the pending assistant bubble from turn delta events', async () => {
+  enableFolioleAide();
   let turnEventHandler:
     | ((event: { clientTurnId: string; kind: string; provider: string; text?: string }) => void)
     | null = null;
@@ -233,8 +227,10 @@ it('updates the pending assistant bubble from turn delta events', async () => {
       onSelectNode={vi.fn()}
     />
   );
+  fireEvent.click(screen.getByRole('button', { name: 'Check' }));
+  await screen.findByLabelText('Foliole Aide message');
 
-  fireEvent.change(screen.getByLabelText('Assistant message'), { target: { value: 'New prompt' } });
+  fireEvent.change(screen.getByLabelText('Foliole Aide message'), { target: { value: 'New prompt' } });
   fireEvent.click(screen.getByRole('button', { name: 'Send' }));
 
   expect(await screen.findByText('Partial answer')).toBeInTheDocument();

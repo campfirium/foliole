@@ -6,12 +6,9 @@ import type {
   NativeAssistantTurnEvent
 } from '../../../lib/platform/nativeAssistantContract';
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import {
-  listAssistantThreadIndex,
-  sendAssistantMessage,
-  subscribeAssistantTurnEvents
-} from '../../shared/platform/assistantRuntime';
+import { sendAssistantMessage, subscribeAssistantTurnEvents } from '../../shared/platform/assistantRuntime';
 
+import { useWorkspaceRightSidebarAssistantThreads } from './useWorkspaceRightSidebarAssistantThreads';
 import {
   createFailedMessageAction,
   createPendingMessageAction,
@@ -21,16 +18,17 @@ import {
   messageCacheReducer,
   PENDING_THREAD_KEY,
   resolveAssistantLocation,
-  resolveAssistantWorkspaceContext,
-  upsertRecord
+  resolveAssistantWorkspaceContext
 } from './workspaceRightSidebarAssistantPanelModel';
 
 export function useWorkspaceRightSidebarAssistantPanelController(args: {
   activeNodeId: string | null;
+  aideReady: boolean;
   failedText: string;
   nodesById: Record<string, Node>;
   onSelectNode: (nodeId: string) => void;
   pendingText: string;
+  topicUnavailableText: string;
 }) {
   const location = useMemo(
     () => resolveAssistantLocation(args.activeNodeId, args.nodesById),
@@ -40,7 +38,7 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: {
     () => resolveAssistantWorkspaceContext(args.activeNodeId, args.nodesById),
     [args.activeNodeId, args.nodesById]
   );
-  const threads = useAssistantThreadRecords(location);
+  const threads = useWorkspaceRightSidebarAssistantThreads(location, args.aideReady);
   const [messageText, setMessageText] = useState('');
   const [messagesByThread, dispatchCache] = useReducer(messageCacheReducer, {});
   const [sending, setSending] = useState(false);
@@ -62,6 +60,7 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: {
     handleSelectRecord: (record: NativeAssistantThreadIndexRecord) =>
       selectRecord(record, args.nodesById, args.onSelectNode, threads.selectThreadId),
     handleSubmit: createHandleSubmit({
+      aideReady: args.aideReady,
       activeTurnRef,
       dispatchCache,
       failedText: args.failedText,
@@ -77,6 +76,7 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: {
     loading: threads.loading,
     messageText,
     records: threads.records,
+    selectedThreadNotice: getSelectedThreadNotice(selectedRecord, args.nodesById, args.topicUnavailableText),
     selectedRecord,
     selectedThreadId: threads.selectedThreadId,
     sending,
@@ -88,7 +88,7 @@ function createHandleSubmit(args: SubmitHandlerArgs) {
   return async (event: FormEvent) => {
     event.preventDefault();
     const prompt = args.messageText.trim();
-    if (!prompt || args.sending) return;
+    if (!args.aideReady || !prompt || args.sending) return;
     args.setMessageText('');
     args.setSending(true);
     const threadKey = args.threads.selectedThreadId ?? PENDING_THREAD_KEY;
@@ -103,33 +103,6 @@ function createHandleSubmit(args: SubmitHandlerArgs) {
       args.activeTurnRef.current = null;
       args.setSending(false);
     }
-  };
-}
-
-function useAssistantThreadRecords(location: ReturnType<typeof resolveAssistantLocation>) {
-  const [records, setRecords] = useState<NativeAssistantThreadIndexRecord[]>([]);
-  const [selectedThreadId, selectThreadId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    void listAssistantThreadIndex({ location }).then((nextRecords) => {
-      if (!active) return;
-      setRecords(nextRecords ?? []);
-      selectThreadId((current) => selectThreadIdFromRecords(current, nextRecords ?? []));
-      setLoading(false);
-    });
-    return () => {
-      active = false;
-    };
-  }, [location]);
-  return {
-    loading,
-    records,
-    selectedThreadId,
-    selectThreadId,
-    upsertRecord: (record: NativeAssistantThreadIndexRecord) =>
-      setRecords((current) => upsertRecord(current, record))
   };
 }
 
@@ -165,6 +138,16 @@ function findSelectedRecord(
   return records.find((record) => record.providerThreadId === selectedThreadId) ?? null;
 }
 
+function getSelectedThreadNotice(
+  record: NativeAssistantThreadIndexRecord | null,
+  nodesById: Record<string, Node>,
+  unavailableText: string
+) {
+  return record?.location.type === 'node' && !nodesById[record.location.nodeId]
+    ? unavailableText
+    : null;
+}
+
 async function sendAssistantTurn(args: SubmitHandlerArgs, clientTurnId: string, message: string) {
   return sendAssistantMessage({
     clientTurnId,
@@ -188,14 +171,6 @@ function applyAssistantTurnEvent(
     dispatchCache(createFailedMessageAction(activeTurn.threadKey, activeTurn.clientTurnId, failedText));
 }
 
-function selectThreadIdFromRecords(
-  current: string | null,
-  records: NativeAssistantThreadIndexRecord[]
-): string | null {
-  if (current && records.some((record) => record.providerThreadId === current)) return current;
-  return records[0]?.providerThreadId ?? null;
-}
-
 type SendResultArgs = {
   dispatchCache: (action: Parameters<typeof messageCacheReducer>[1]) => void;
   failedText: string;
@@ -204,7 +179,7 @@ type SendResultArgs = {
   result: NativeAssistantSendMessageResult | null;
   setMessageText: (text: string) => void;
   threadKey: string;
-  threads: ReturnType<typeof useAssistantThreadRecords>;
+  threads: ReturnType<typeof useWorkspaceRightSidebarAssistantThreads>;
 };
 
 type ActiveTurn = {
@@ -213,6 +188,7 @@ type ActiveTurn = {
 };
 
 type SubmitHandlerArgs = {
+  aideReady: boolean;
   activeTurnRef: { current: ActiveTurn | null };
   dispatchCache: (action: Parameters<typeof messageCacheReducer>[1]) => void;
   failedText: string;
@@ -222,6 +198,6 @@ type SubmitHandlerArgs = {
   sending: boolean;
   setMessageText: (text: string) => void;
   setSending: (sending: boolean) => void;
-  threads: ReturnType<typeof useAssistantThreadRecords>;
+  threads: ReturnType<typeof useWorkspaceRightSidebarAssistantThreads>;
   workspaceContext: ReturnType<typeof resolveAssistantWorkspaceContext>;
 };

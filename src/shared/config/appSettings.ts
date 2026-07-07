@@ -121,6 +121,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   rightSidebarWidth: 'foliole-workspace-right-sidebar-width',
   rightSidebarActivePanel: 'foliole-workspace-right-sidebar-active-panel',
   rightSidebarPanelOrder: 'foliole-workspace-right-sidebar-panel-order',
+  folioleAideEnabled: 'foliole-aide-enabled',
   importManagementActivePage: 'foliole-import-management-active-page',
   globalClipExistingClipboardFallbackEnabled: 'foliole-global-clip-existing-clipboard-fallback-enabled',
   globalClipHintVisible: 'foliole-global-clip-hint-visible',
