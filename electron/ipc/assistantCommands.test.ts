@@ -9,6 +9,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 let mockedAppDataDir = '/tmp/foliole-assistant-commands-tests';
 const adapterSendMessage = vi.hoisted(() => vi.fn());
 const adapterGetStatus = vi.hoisted(() => vi.fn());
+const adapterDispose = vi.hoisted(() => vi.fn());
 
 vi.mock('electron', () => ({
   app: { getVersion: () => '0.6.5-test' }
@@ -26,6 +27,7 @@ vi.mock('../ipc/paths.js', () => ({
 vi.mock('../assistant/codexAppServerAdapter.js', () => ({
   CodexAppServerAdapter: vi.fn(function CodexAppServerAdapter() {
     return {
+      dispose: adapterDispose,
       getStatus: adapterGetStatus,
       sendMessage: adapterSendMessage
     };
@@ -48,6 +50,7 @@ beforeEach(async () => {
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   adapterSendMessage.mockReset();
   adapterGetStatus.mockReset();
+  adapterDispose.mockReset();
   resetAssistantCommandAdapterForTests();
   initializeDatabaseConnection(openDatabaseConnection());
 
@@ -134,9 +137,38 @@ afterEach(async () => {
       state: 'ready',
       threadIndex: { providerThreadId: 'thread-1', preview: 'Follow-up' }
     });
-    expect(adapterSendMessage).toHaveBeenLastCalledWith({
+    expect(adapterSendMessage).toHaveBeenLastCalledWith(expect.objectContaining({
       message: 'Follow-up',
       providerThreadId: 'thread-1'
+    }));
+  });
+
+  it('forwards typed turn events only to the requesting sender', async () => {
+    adapterSendMessage.mockImplementation(async (input) => {
+      input.onEvent({ clientTurnId: input.clientTurnId, kind: 'delta', provider: 'codex-app-server', text: 'Partial' });
+      return {
+        message: { text: 'Answer', threadId: 'thread-1' },
+        provider: 'codex-app-server',
+        state: 'ready'
+      };
+    });
+    const sender = { isDestroyed: () => false, send: vi.fn() };
+
+    await handleAssistantCommand(
+      NATIVE_COMMANDS.assistantSendMessage,
+      {
+        clientTurnId: 'client-1',
+        message: 'Prompt body',
+        openingLocation: { type: 'workspace' }
+      },
+      sender as never
+    );
+
+    expect(sender.send).toHaveBeenCalledWith('foliole:assistant-turn-event', {
+      clientTurnId: 'client-1',
+      kind: 'delta',
+      provider: 'codex-app-server',
+      text: 'Partial'
     });
   });
 

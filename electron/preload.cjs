@@ -19,6 +19,13 @@ const IPC_HOTKEY_RECORDER_ACTIVE_CHANNEL = 'foliole:hotkey-recorder-active';
 const IPC_NATIVE_KEYBOARD_INPUT_EVENT_CHANNEL = 'foliole:native-keyboard-input';
 const IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL = 'foliole:companion-pairing-requests-changed';
 const IPC_EXTERNAL_DOCUMENT_FILE_OPENED_CHANNEL = 'foliole:external-document-file-opened';
+const IPC_ASSISTANT_TURN_EVENT_CHANNEL = 'foliole:assistant-turn-event';
+
+const SUBSCRIBABLE_CHANNELS = new Set([
+  IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL, IPC_GLOBAL_CAPTURE_NAVIGATE_CHANNEL, IPC_MENU_EVENT_CHANNEL, IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL, IPC_READWISE_READER_IMPORT_PROGRESS_EVENT_CHANNEL,
+  IPC_SEARCH_INDEX_REBUILD_STATUS_EVENT_CHANNEL, IPC_WORKSPACE_CONTENT_CHANGED_EVENT_CHANNEL, IPC_WORKSPACE_SYNC_APPLIED_EVENT_CHANNEL, IPC_WINDOW_RESIZED_EVENT_CHANNEL, IPC_NATIVE_KEYBOARD_INPUT_EVENT_CHANNEL,
+  IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL, IPC_EXTERNAL_DOCUMENT_FILE_OPENED_CHANNEL, IPC_ASSISTANT_TURN_EVENT_CHANNEL
+]);
 
 function isDesktopDebugProbeEnabled() {
   return process.env.FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE === '1' || Boolean(process.env.ELECTRON_RENDERER_URL);
@@ -31,7 +38,6 @@ function isWorkspaceDebugBridgeEnabled() {
   const workdir = process.env.FOLIOLE_WORKDIR;
   return process.env.FOLIOLE_ALLOW_PARALLEL_INSTANCE === '1' && Boolean(workdir) && workdir !== process.cwd?.();
 }
-
 function isWorkspaceDebugSeedPersistenceEnabled() {
   const stateRoot = process.env.FOLIOLE_ELECTRON_TEST_STATE_ROOT;
   return isWorkspaceDebugBridgeEnabled() && Boolean(stateRoot?.trim() && process.env.FOLIOLE_WORKDIR === stateRoot);
@@ -65,22 +71,7 @@ function normalizeReadwiseBookEpubProgressPayload(payload) {
 }
 
 function subscribe(channel, handler) {
-  if (
-    channel !== IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL &&
-    channel !== IPC_GLOBAL_CAPTURE_NAVIGATE_CHANNEL &&
-    channel !== IPC_MENU_EVENT_CHANNEL &&
-    channel !== IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL &&
-    channel !== IPC_READWISE_READER_IMPORT_PROGRESS_EVENT_CHANNEL &&
-    channel !== IPC_SEARCH_INDEX_REBUILD_STATUS_EVENT_CHANNEL &&
-    channel !== IPC_WORKSPACE_CONTENT_CHANGED_EVENT_CHANNEL &&
-    channel !== IPC_WORKSPACE_SYNC_APPLIED_EVENT_CHANNEL &&
-    channel !== IPC_WINDOW_RESIZED_EVENT_CHANNEL &&
-    channel !== IPC_NATIVE_KEYBOARD_INPUT_EVENT_CHANNEL &&
-    channel !== IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL &&
-    channel !== IPC_EXTERNAL_DOCUMENT_FILE_OPENED_CHANNEL
-  ) {
-    return () => undefined;
-  }
+  if (!SUBSCRIBABLE_CHANNELS.has(channel)) return () => undefined;
 
   const listener = (_event, payload) => {
     if (channel === IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL) {
@@ -119,6 +110,18 @@ function subscribe(channel, handler) {
         sourceKind: payload?.sourceKind === 'local_file' || payload?.sourceKind === 'external_document'
           ? payload.sourceKind
           : undefined
+      });
+      return;
+    }
+    if (channel === IPC_ASSISTANT_TURN_EVENT_CHANNEL) {
+      const kind = payload?.kind;
+      if (kind !== 'started' && kind !== 'delta' && kind !== 'completed' && kind !== 'failed') return;
+      handler({
+        clientTurnId: typeof payload?.clientTurnId === 'string' ? payload.clientTurnId : '', kind,
+        failure: payload?.failure?.category ? { category: payload.failure.category } : undefined,
+        provider: 'codex-app-server', text: typeof payload?.text === 'string' ? payload.text : undefined,
+        providerThreadId: typeof payload?.providerThreadId === 'string' ? payload.providerThreadId : undefined,
+        turnId: typeof payload?.turnId === 'string' ? payload.turnId : undefined
       });
       return;
     }
@@ -207,17 +210,15 @@ const electronApi = {
   onNativeMenuCommand: (handler) => subscribe(IPC_MENU_EVENT_CHANNEL, handler),
   onNativeKeyboardInput: (handler) => subscribe(IPC_NATIVE_KEYBOARD_INPUT_EVENT_CHANNEL, handler),
   onReadwiseBookEpubProgress: (handler) => subscribe(IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL, handler),
-  onReadwiseReaderImportProgress: (handler) =>
-    subscribe(IPC_READWISE_READER_IMPORT_PROGRESS_EVENT_CHANNEL, handler),
+  onReadwiseReaderImportProgress: (handler) => subscribe(IPC_READWISE_READER_IMPORT_PROGRESS_EVENT_CHANNEL, handler),
   onSearchIndexRebuildStatus: (handler) => subscribe(IPC_SEARCH_INDEX_REBUILD_STATUS_EVENT_CHANNEL, handler),
   onWorkspaceContentChanged: (handler) => subscribe(IPC_WORKSPACE_CONTENT_CHANGED_EVENT_CHANNEL, handler),
   onWorkspaceSyncApplied: (handler) => subscribe(IPC_WORKSPACE_SYNC_APPLIED_EVENT_CHANNEL, handler),
   onCompanionPairingRequestsChanged: (handler) => subscribe(IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL, handler),
   onExternalDocumentFileOpened: (handler) => subscribe(IPC_EXTERNAL_DOCUMENT_FILE_OPENED_CHANNEL, handler),
+  onAssistantTurnEvent: (handler) => subscribe(IPC_ASSISTANT_TURN_EVENT_CHANNEL, handler),
   onWindowResized: (handler) => subscribe(IPC_WINDOW_RESIZED_EVENT_CHANNEL, handler),
-  runtimeConfig: {
-    guidedSampleLocale: resolveGuidedSampleLocaleOverride()
-  },
+  runtimeConfig: { guidedSampleLocale: resolveGuidedSampleLocaleOverride() },
   setNativeHotkeyRecordingActive: (active) => ipcRenderer.send(IPC_HOTKEY_RECORDER_ACTIVE_CHANNEL, active === true)
 };
 

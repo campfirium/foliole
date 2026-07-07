@@ -9,7 +9,8 @@ import { WorkspaceRightSidebarAssistantPanel } from './WorkspaceRightSidebarAssi
 
 const assistantRuntime = vi.hoisted(() => ({
   listAssistantThreadIndex: vi.fn(),
-  sendAssistantMessage: vi.fn()
+  sendAssistantMessage: vi.fn(),
+  subscribeAssistantTurnEvents: vi.fn()
 }));
 
 vi.mock('../../shared/platform/assistantRuntime', () => assistantRuntime);
@@ -53,6 +54,7 @@ function createThread(
 beforeEach(() => {
   vi.clearAllMocks();
   assistantRuntime.listAssistantThreadIndex.mockResolvedValue([]);
+  assistantRuntime.subscribeAssistantTurnEvents.mockReturnValue(() => undefined);
 });
 
 it('loads Assistant threads for the active topic location', async () => {
@@ -98,6 +100,7 @@ it('creates a new thread and moves pending messages into the returned thread cac
 
   await waitFor(() =>
     expect(assistantRuntime.sendAssistantMessage).toHaveBeenCalledWith({
+      clientTurnId: expect.any(String),
       message: 'New prompt',
       openingLocation: { nodeId: 'node-1', type: 'node' }
     })
@@ -133,6 +136,7 @@ it('continues a selected thread and switches to its saved node location', async 
 
   await waitFor(() =>
     expect(assistantRuntime.sendAssistantMessage).toHaveBeenCalledWith({
+      clientTurnId: expect.any(String),
       message: 'Follow-up',
       openingLocation: { nodeId: 'node-2', type: 'node' },
       providerThreadId: 'thread-1'
@@ -166,9 +170,49 @@ it('starts a new thread after clearing the selected history thread', async () =>
 
   await waitFor(() =>
     expect(assistantRuntime.sendAssistantMessage).toHaveBeenCalledWith({
+      clientTurnId: expect.any(String),
       message: 'Fresh prompt',
       openingLocation: { nodeId: 'node-1', type: 'node' }
     })
   );
   expect(await screen.findByText('Fresh answer')).toBeInTheDocument();
+});
+
+it('updates the pending assistant bubble from turn delta events', async () => {
+  let turnEventHandler:
+    | ((event: { clientTurnId: string; kind: string; provider: string; text?: string }) => void)
+    | null = null;
+  assistantRuntime.subscribeAssistantTurnEvents.mockImplementation((handler) => {
+    turnEventHandler = handler;
+    return () => undefined;
+  });
+  assistantRuntime.sendAssistantMessage.mockImplementationOnce(async (args) => {
+    turnEventHandler?.({
+      clientTurnId: args.clientTurnId,
+      kind: 'delta',
+      provider: 'codex-app-server',
+      text: 'Partial answer'
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    return {
+      message: { text: 'Final answer', threadId: 'thread-new', turnId: 'turn-1' },
+      provider: 'codex-app-server',
+      state: 'ready',
+      threadIndex: createThread({ providerThreadId: 'thread-new' })
+    };
+  });
+
+  renderWithLocalization(
+    <WorkspaceRightSidebarAssistantPanel
+      activeNodeId="node-1"
+      nodesById={{ 'node-1': createNode({ id: 'node-1' }) }}
+      onSelectNode={vi.fn()}
+    />
+  );
+
+  fireEvent.change(screen.getByLabelText('Assistant message'), { target: { value: 'New prompt' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+
+  expect(await screen.findByText('Partial answer')).toBeInTheDocument();
+  expect(await screen.findByText('Final answer')).toBeInTheDocument();
 });

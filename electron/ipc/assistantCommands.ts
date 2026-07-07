@@ -1,6 +1,9 @@
-import { app } from 'electron';
+import { app, type WebContents } from 'electron';
 
-import type { NativeAssistantThreadOpeningLocation } from '../../lib/platform/nativeAssistantContract.js';
+import type {
+  NativeAssistantThreadOpeningLocation,
+  NativeAssistantTurnEvent
+} from '../../lib/platform/nativeAssistantContract.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { resolveFolioleAppVersion } from '../appVersion.js';
 import { CodexAppServerAdapter } from '../assistant/codexAppServerAdapter.js';
@@ -13,15 +16,20 @@ import {
 } from '../database/assistantThreadIndex.js';
 
 let adapter: CodexAppServerAdapter | null = null;
+const IPC_ASSISTANT_TURN_EVENT_CHANNEL = 'foliole:assistant-turn-event';
 
 function getAdapter() {
   adapter ??= new CodexAppServerAdapter({ appVersion: resolveFolioleAppVersion(app) });
   return adapter;
 }
 
-export async function handleAssistantCommand(command: string, args: Record<string, unknown>) {
+export async function handleAssistantCommand(
+  command: string,
+  args: Record<string, unknown>,
+  sender?: WebContents
+) {
   if (command === NATIVE_COMMANDS.assistantGetStatus) return getAdapter().getStatus();
-  if (command === NATIVE_COMMANDS.assistantSendMessage) return sendMessage(args);
+  if (command === NATIVE_COMMANDS.assistantSendMessage) return sendMessage(args, sender);
   if (command === NATIVE_COMMANDS.assistantListThreadIndex) {
     const location = readOpeningLocation(args.location);
     return listAssistantThreadIndex({
@@ -41,14 +49,21 @@ export async function handleAssistantCommand(command: string, args: Record<strin
 }
 
 export function resetAssistantCommandAdapterForTests() {
+  disposeAssistantCommandAdapter();
+}
+
+export function disposeAssistantCommandAdapter() {
+  adapter?.dispose();
   adapter = null;
 }
 
-async function sendMessage(args: Record<string, unknown>) {
+async function sendMessage(args: Record<string, unknown>, sender?: WebContents) {
   const message = typeof args.message === 'string' ? args.message : '';
+  let clientTurnId: string;
   let openingLocation: NativeAssistantThreadOpeningLocation | undefined;
   let providerThreadId: string | undefined;
   try {
+    clientTurnId = readOptionalClientTurnId(args.clientTurnId) ?? createClientTurnId();
     openingLocation = readOpeningLocation(args.openingLocation);
     providerThreadId = readOptionalProviderThreadId(args.providerThreadId);
   } catch {
@@ -66,7 +81,9 @@ async function sendMessage(args: Record<string, unknown>) {
     };
   }
   const result = await getAdapter().sendMessage({
+    clientTurnId,
     message,
+    ...(sender ? { onEvent: createAssistantTurnEventSender(sender, clientTurnId) } : {}),
     ...(providerThreadId ? { providerThreadId } : {})
   });
   if (result.state !== 'ready' || !openingLocation || !result.message?.threadId) return result;
@@ -86,6 +103,23 @@ async function sendMessage(args: Record<string, unknown>) {
       state: 'failed' as const
     };
   }
+}
+
+function createAssistantTurnEventSender(sender: WebContents, clientTurnId: string) {
+  return (event: NativeAssistantTurnEvent) => {
+    if (event.clientTurnId !== clientTurnId || sender.isDestroyed()) return;
+    sender.send(IPC_ASSISTANT_TURN_EVENT_CHANNEL, event);
+  };
+}
+
+function createClientTurnId() {
+  return `assistant-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function readOptionalClientTurnId(value: unknown) {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'string') throw new Error('invalid_client_turn_id');
+  return normalizeRequiredString(value, 'client_turn_id');
 }
 
 function readOpeningLocation(value: unknown): NativeAssistantThreadOpeningLocation | undefined {

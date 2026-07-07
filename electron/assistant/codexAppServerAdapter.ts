@@ -3,10 +3,12 @@ import { spawn } from 'node:child_process';
 import type {
   NativeAssistantFailureCategory,
   NativeAssistantSendMessageResult,
+  NativeAssistantTurnEvent,
   NativeAssistantStatusResult
 } from '../../lib/platform/nativeAssistantContract.js';
 
-import { runCodexAppServerTurn, type SpawnedCodexProcess } from './codexAppServerTurn.js';
+import type { SpawnedCodexProcess } from './codexAppServerSessionTypes.js';
+import { CodexAppServerSession } from './codexAppServerTurn.js';
 
 const PROVIDER = 'codex-app-server' as const;
 const DEFAULT_TIMEOUT_MS = 45_000;
@@ -24,6 +26,7 @@ export class CodexAppServerAdapter {
   private readonly appVersion: string;
   private readonly command: string;
   private readonly probeCommand: (command: string) => Promise<boolean>;
+  private session: CodexAppServerSession | null = null;
   private readonly spawnCommand: (command: string, args: string[]) => SpawnedCodexProcess;
   private readonly timeoutMs: number;
 
@@ -43,7 +46,9 @@ export class CodexAppServerAdapter {
   }
 
   async sendMessage(input: {
+    clientTurnId: string;
     message: string;
+    onEvent?: (event: NativeAssistantTurnEvent) => void;
     providerThreadId?: string;
   }): Promise<NativeAssistantSendMessageResult> {
     if (this.active) return sendFailure('busy', 'busy');
@@ -52,10 +57,14 @@ export class CodexAppServerAdapter {
     if (!message) return sendFailure('failed', 'protocol_error');
     this.active = true;
     try {
-      return await runCodexAppServerTurn({
+      this.session ??= new CodexAppServerSession({
         appVersion: this.appVersion,
-        child: this.spawnCommand(this.command, ['app-server']),
+        spawn: () => this.spawnCommand(this.command, ['app-server'])
+      });
+      return await this.session.sendMessage({
+        clientTurnId: input.clientTurnId,
         message,
+        ...(input.onEvent ? { onEvent: input.onEvent } : {}),
         ...(providerThreadId ? { providerThreadId } : {}),
         timeoutMs: this.timeoutMs
       });
@@ -64,6 +73,12 @@ export class CodexAppServerAdapter {
     } finally {
       this.active = false;
     }
+  }
+
+  dispose() {
+    this.session?.dispose();
+    this.session = null;
+    this.active = false;
   }
 }
 
@@ -127,6 +142,10 @@ function normalizeOptionalThreadId(value: string | undefined) {
 }
 
 function failureFromError(error: unknown): NativeAssistantFailureCategory {
+  if (error && typeof error === 'object' && 'category' in error) {
+    const category = error.category;
+    if (typeof category === 'string') return category as NativeAssistantFailureCategory;
+  }
   return error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT'
     ? 'not_configured'
     : 'internal_error';

@@ -1,4 +1,5 @@
 import type {
+  NativeAssistantSendMessageResult,
   NativeAssistantThreadIndexRecord,
   NativeAssistantThreadOpeningLocation
 } from '../../../lib/platform/nativeAssistantContract';
@@ -55,4 +56,56 @@ export function upsertRecord(
     nextRecord,
     ...records.filter((record) => record.providerThreadId !== nextRecord.providerThreadId)
   ];
+}
+
+export function createUserMessageAction(key: string, pendingId: string, text: string) {
+  return {
+    key,
+    message: { id: `user-${pendingId}`, role: 'user' as const, state: 'ready' as const, text },
+    type: 'append' as const
+  };
+}
+
+export function createPendingMessageAction(key: string, pendingId: string, text: string) {
+  return {
+    key,
+    message: { id: pendingId, role: 'assistant' as const, state: 'pending' as const, text },
+    type: 'append' as const
+  };
+}
+
+export function createReadyMessageAction(
+  key: string,
+  pendingId: string,
+  result: NativeAssistantSendMessageResult
+) {
+  return {
+    key,
+    message: {
+      id: pendingId,
+      role: 'assistant' as const,
+      state: 'ready' as const,
+      text: result.message?.text ?? ''
+    },
+    messageId: pendingId,
+    type: 'replace' as const
+  };
+}
+
+export function createFailedMessageAction(key: string, pendingId: string, text: string) {
+  return {
+    key,
+    message: { id: pendingId, role: 'assistant' as const, state: 'failed' as const, text },
+    messageId: pendingId,
+    type: 'replace' as const
+  };
+}
+
+export function createStreamingMessageAction(key: string, pendingId: string, text: string) {
+  return {
+    key,
+    message: { id: pendingId, role: 'assistant' as const, state: 'pending' as const, text },
+    messageId: pendingId,
+    type: 'replace' as const
+  };
 }

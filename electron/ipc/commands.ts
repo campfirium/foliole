@@ -78,7 +78,7 @@ function dispatchRoutedCommand(
     return handleImportCommand(request, context);
   }
   if (route === 'assistant') {
-    return handleAssistantCommand(request.command, args);
+    return handleAssistantCommand(request.command, args, context?.sender);
   }
   if (route === 'storage') {
     return handleStorageCommand(request.command, args, resolveTargetWindow(context));

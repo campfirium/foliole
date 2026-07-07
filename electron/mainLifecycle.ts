@@ -19,6 +19,7 @@ import { installGlobalCaptureToastOpenHandler } from './globalClipToastNavigatio
 import { installGlobalClipToInboxShortcut } from './globalClipToInbox.js';
 import { stopKeepImportMonitor } from './import/keepImportMonitor.js';
 import { stopManagedInboxMonitor } from './import/managedInboxMonitor.js';
+import { disposeAssistantCommandAdapter } from './ipc/assistantCommands.js';
 import { appendBootEvent } from './ipc/boot.js';
 import { installAppMenu } from './ipc/menu.js';
 import { startInitialMainWindow } from './mainStartup.js';
@@ -64,6 +65,7 @@ function installBeforeQuitLifecycle() {
     stopSearchIndexInvalidationScheduler();
     stopManagedInboxMonitor();
     stopKeepImportMonitor();
+    disposeAssistantCommandAdapter();
     void stopDevScreenshotServer().catch((error) => appendMainProcessDiagnosticLog('dev_screenshot_stop_failed', { error }));
     void stopAgentControlApiServer().catch((error) => appendMainProcessDiagnosticLog('agent_control_stop_failed', { error }));
     void stopLanWorkspaceSyncServer().catch((error) => appendMainProcessDiagnosticLog('lan_sync_stop_failed', { error }));

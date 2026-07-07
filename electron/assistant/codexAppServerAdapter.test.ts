@@ -18,10 +18,11 @@ function writeMessage(process: FakeCodexProcess, message: unknown) {
 }
 
 function createAdapter(process: FakeCodexProcess) {
+  const spawnCommand = vi.fn(() => process);
   return new CodexAppServerAdapter({
     appVersion: '0.6.5-test',
     probeCommand: async () => true,
-    spawnCommand: () => process,
+    spawnCommand,
     timeoutMs: 1000
   });
 }
@@ -55,13 +56,16 @@ function createAdapter(process: FakeCodexProcess) {
     });
   });
 
-  it('aggregates assistant deltas from a short-lived app-server turn', async () => {
+  it('aggregates assistant deltas from a reusable app-server session', async () => {
     const process = new FakeCodexProcess();
     const adapter = createAdapter(process);
     const seenMethods: string[] = [];
+    const events: unknown[] = [];
     process.stdin.on('data', (chunk) => respondToTurnProtocol(process, chunk, seenMethods));
 
-    await expect(adapter.sendMessage({ message: 'Summarize' })).resolves.toEqual({
+    await expect(
+      adapter.sendMessage({ clientTurnId: 'client-1', message: 'Summarize', onEvent: (event) => events.push(event) })
+    ).resolves.toEqual({
       message: { text: 'Hello world', threadId: 'thr_1', turnId: 'turn_1' },
       provider: 'codex-app-server',
       state: 'ready'
@@ -69,7 +73,15 @@ function createAdapter(process: FakeCodexProcess) {
     expect(seenMethods).toEqual(
       expect.arrayContaining(['initialize', 'thread/start', 'turn/start'])
     );
-    expect(process.kill).toHaveBeenCalled();
+    expect(events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ clientTurnId: 'client-1', kind: 'delta', text: 'Hello world' }),
+        expect.objectContaining({ clientTurnId: 'client-1', kind: 'completed' })
+      ])
+    );
+    expect(process.kill).not.toHaveBeenCalled();
+    adapter.dispose();
+    expect(process.kill).toHaveBeenCalledOnce();
   });
 
   it('resumes an existing thread before starting a turn', async () => {
@@ -79,7 +91,7 @@ function createAdapter(process: FakeCodexProcess) {
     process.stdin.on('data', (chunk) => respondToTurnProtocol(process, chunk, seenMethods));
 
     await expect(
-      adapter.sendMessage({ message: 'Continue', providerThreadId: 'thr_existing' })
+      adapter.sendMessage({ clientTurnId: 'client-1', message: 'Continue', providerThreadId: 'thr_existing' })
     ).resolves.toEqual({
       message: { text: 'Hello world', threadId: 'thr_existing', turnId: 'turn_1' },
       provider: 'codex-app-server',
@@ -91,12 +103,36 @@ function createAdapter(process: FakeCodexProcess) {
     expect(seenMethods).not.toContain('thread/start');
   });
 
+  it('keeps the app-server child alive across sequential sends', async () => {
+    const process = new FakeCodexProcess();
+    const spawnCommand = vi.fn(() => process);
+    const adapter = new CodexAppServerAdapter({
+      appVersion: '0.6.5-test',
+      probeCommand: async () => true,
+      spawnCommand,
+      timeoutMs: 1000
+    });
+    const seenMethods: string[] = [];
+    process.stdin.on('data', (chunk) => respondToTurnProtocol(process, chunk, seenMethods));
+
+    await adapter.sendMessage({ clientTurnId: 'client-1', message: 'First' });
+    await adapter.sendMessage({ clientTurnId: 'client-2', message: 'Second', providerThreadId: 'thr_1' });
+
+    expect(spawnCommand).toHaveBeenCalledOnce();
+    expect(seenMethods.filter((method) => method === 'initialize')).toHaveLength(1);
+    expect(seenMethods).toEqual(
+      expect.arrayContaining(['thread/start', 'thread/resume'])
+    );
+    expect(process.kill).not.toHaveBeenCalled();
+  });
+
   it('rejects a resume response for a different thread', async () => {
     const process = new FakeCodexProcess();
     const adapter = createAdapter(process);
-    const result = adapter.sendMessage({ message: 'Continue', providerThreadId: 'thr_existing' });
+    const result = adapter.sendMessage({ clientTurnId: 'client-1', message: 'Continue', providerThreadId: 'thr_existing' });
 
     writeMessage(process, { id: 0, result: {} });
+    await Promise.resolve();
     writeMessage(process, { id: 1, result: { thread: { id: 'thr_other' } } });
 
     await expect(result).resolves.toMatchObject({
@@ -108,17 +144,18 @@ function createAdapter(process: FakeCodexProcess) {
   it('returns busy for a concurrent send without cancelling the active turn', async () => {
     const process = new FakeCodexProcess();
     const adapter = createAdapter(process);
-    const first = adapter.sendMessage({ message: 'First' });
+    const first = adapter.sendMessage({ clientTurnId: 'client-1', message: 'First' });
 
-    await expect(adapter.sendMessage({ message: 'Second' })).resolves.toMatchObject({
+    await expect(adapter.sendMessage({ clientTurnId: 'client-2', message: 'Second' })).resolves.toMatchObject({
       failure: { category: 'busy' },
       state: 'busy'
     });
     writeMessage(process, { id: 0, result: {} });
+    await Promise.resolve();
     writeMessage(process, { id: 1, result: { thread: { id: 'thr_1' } } });
     writeMessage(process, { method: 'turn/completed', params: {} });
     await first;
-    expect(process.kill).toHaveBeenCalledTimes(1);
+    expect(process.kill).not.toHaveBeenCalled();
   });
 
   it('maps launch and protocol failures to sanitized categories', async () => {
@@ -126,13 +163,13 @@ function createAdapter(process: FakeCodexProcess) {
       appVersion: '0.6.5-test',
       spawnCommand: throwMissingCodex
     });
-    await expect(unavailable.sendMessage({ message: 'Hi' })).resolves.toMatchObject({
+    await expect(unavailable.sendMessage({ clientTurnId: 'client-1', message: 'Hi' })).resolves.toMatchObject({
       failure: { category: 'not_configured' }
     });
 
     const overloadedProcess = new FakeCodexProcess();
     const overloaded = createAdapter(overloadedProcess);
-    const result = overloaded.sendMessage({ message: 'Hi' });
+    const result = overloaded.sendMessage({ clientTurnId: 'client-1', message: 'Hi' });
     writeMessage(overloadedProcess, {
       error: { code: -32001, message: 'Server overloaded; retry later.' },
       id: 0
@@ -145,14 +182,14 @@ function respondToTurnProtocol(process: FakeCodexProcess, chunk: Buffer, seenMet
     const message = JSON.parse(line);
     seenMethods.push(message.method);
     if (message.id === 0) writeMessage(process, { id: 0, result: {} });
-    if (message.id === 1)
+    if (message.method === 'thread/start' || message.method === 'thread/resume')
       writeMessage(process, {
-        id: 1,
+        id: message.id,
         result: {
           thread: { id: message.method === 'thread/resume' ? message.params.threadId : 'thr_1' }
         }
       });
-    if (message.id === 2) completeTurn(process);
+    if (message.method === 'turn/start') completeTurn(process);
   }
 }
 

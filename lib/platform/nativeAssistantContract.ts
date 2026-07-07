@@ -65,6 +65,7 @@ export interface NativeAssistantStatusResult {
 }
 
 export interface NativeAssistantSendMessageArgs {
+  clientTurnId?: string;
   message: string;
   openingLocation?: NativeAssistantThreadOpeningLocation;
   provider?: NativeAssistantProviderId;
@@ -94,6 +95,18 @@ export interface NativeAssistantSendMessageResult {
   provider: NativeAssistantProviderId;
   state: NativeAssistantStatusState;
   threadIndex?: NativeAssistantThreadIndexRecord;
+}
+
+export type NativeAssistantTurnEventKind = 'completed' | 'delta' | 'failed' | 'started';
+
+export interface NativeAssistantTurnEvent {
+  clientTurnId: string;
+  failure?: NativeAssistantFailure;
+  kind: NativeAssistantTurnEventKind;
+  provider: NativeAssistantProviderId;
+  providerThreadId?: string;
+  text?: string;
+  turnId?: string;
 }
 
 export type NativeAssistantCommandMap = {

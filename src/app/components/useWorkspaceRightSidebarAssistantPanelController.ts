@@ -1,16 +1,23 @@
-import { useEffect, useMemo, useReducer, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useReducer, useRef, useState, type FormEvent } from 'react';
 
 import type {
   NativeAssistantSendMessageResult,
-  NativeAssistantThreadIndexRecord
+  NativeAssistantThreadIndexRecord,
+  NativeAssistantTurnEvent
 } from '../../../lib/platform/nativeAssistantContract';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import {
   listAssistantThreadIndex,
-  sendAssistantMessage
+  sendAssistantMessage,
+  subscribeAssistantTurnEvents
 } from '../../shared/platform/assistantRuntime';
 
 import {
+  createFailedMessageAction,
+  createPendingMessageAction,
+  createReadyMessageAction,
+  createStreamingMessageAction,
+  createUserMessageAction,
   messageCacheReducer,
   PENDING_THREAD_KEY,
   resolveAssistantLocation,
@@ -32,44 +39,35 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: {
   const [messageText, setMessageText] = useState('');
   const [messagesByThread, dispatchCache] = useReducer(messageCacheReducer, {});
   const [sending, setSending] = useState(false);
+  const activeTurnRef = useRef<ActiveTurn | null>(null);
   const activeMessages = messagesByThread[threads.selectedThreadId ?? PENDING_THREAD_KEY] ?? [];
   const selectedRecord = findSelectedRecord(threads.records, threads.selectedThreadId);
 
-  async function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-    const prompt = messageText.trim();
-    if (!prompt || sending) return;
-    setMessageText('');
-    setSending(true);
-    const threadKey = threads.selectedThreadId ?? PENDING_THREAD_KEY;
-    const pendingId = `assistant-${Date.now()}`;
-    dispatchCache(createUserMessageAction(threadKey, pendingId, prompt));
-    dispatchCache(createPendingMessageAction(threadKey, pendingId, args.pendingText));
-    const result = await sendAssistantTurn(prompt, location, threads.selectedThreadId);
-    applySendResult({ failedText: args.failedText, pendingId, prompt, result, threadKey });
-    setSending(false);
-  }
-
-  function applySendResult(result: SendResultArgs) {
-    const threadId = result.result?.message?.threadId;
-    if (result.result?.state === 'ready' && threadId) {
-      if (threads.selectedThreadId === null)
-        dispatchCache({ fromKey: PENDING_THREAD_KEY, toKey: threadId, type: 'move' });
-      dispatchCache(createReadyMessageAction(threadId, result.pendingId, result.result));
-      if (result.result.threadIndex) threads.upsertRecord(result.result.threadIndex);
-      threads.selectThreadId(threadId);
-      return;
-    }
-    dispatchCache(createFailedMessageAction(result.threadKey, result.pendingId, result.failedText));
-    setMessageText(result.prompt);
-  }
+  useEffect(
+    () =>
+      subscribeAssistantTurnEvents((event) =>
+        applyAssistantTurnEvent(event, activeTurnRef.current, args.failedText, dispatchCache)
+      ),
+    [args.failedText]
+  );
 
   return {
     activeMessages,
     handleNewThread: () => threads.selectThreadId(null),
     handleSelectRecord: (record: NativeAssistantThreadIndexRecord) =>
       selectRecord(record, args.nodesById, args.onSelectNode, threads.selectThreadId),
-    handleSubmit,
+    handleSubmit: createHandleSubmit({
+      activeTurnRef,
+      dispatchCache,
+      failedText: args.failedText,
+      location,
+      messageText,
+      pendingText: args.pendingText,
+      sending,
+      setMessageText,
+      setSending,
+      threads
+    }),
     loading: threads.loading,
     messageText,
     records: threads.records,
@@ -77,6 +75,28 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: {
     selectedThreadId: threads.selectedThreadId,
     sending,
     setMessageText
+  };
+}
+
+function createHandleSubmit(args: SubmitHandlerArgs) {
+  return async (event: FormEvent) => {
+    event.preventDefault();
+    const prompt = args.messageText.trim();
+    if (!prompt || args.sending) return;
+    args.setMessageText('');
+    args.setSending(true);
+    const threadKey = args.threads.selectedThreadId ?? PENDING_THREAD_KEY;
+    const pendingId = `assistant-${Date.now()}`;
+    args.activeTurnRef.current = { clientTurnId: pendingId, threadKey };
+    args.dispatchCache(createUserMessageAction(threadKey, pendingId, prompt));
+    args.dispatchCache(createPendingMessageAction(threadKey, pendingId, args.pendingText));
+    try {
+      const result = await sendAssistantTurn(prompt, args.location, args.threads.selectedThreadId, pendingId);
+      applySendResult({ ...args, pendingId, prompt, result, threadKey });
+    } finally {
+      args.activeTurnRef.current = null;
+      args.setSending(false);
+    }
   };
 }
 
@@ -107,6 +127,20 @@ function useAssistantThreadRecords(location: ReturnType<typeof resolveAssistantL
   };
 }
 
+function applySendResult(result: SendResultArgs) {
+  const threadId = result.result?.message?.threadId;
+  if (result.result?.state === 'ready' && threadId) {
+    if (result.threads.selectedThreadId === null)
+      result.dispatchCache({ fromKey: PENDING_THREAD_KEY, toKey: threadId, type: 'move' });
+    result.dispatchCache(createReadyMessageAction(threadId, result.pendingId, result.result));
+    if (result.result.threadIndex) result.threads.upsertRecord(result.result.threadIndex);
+    result.threads.selectThreadId(threadId);
+    return;
+  }
+  result.dispatchCache(createFailedMessageAction(result.threadKey, result.pendingId, result.failedText));
+  result.setMessageText(result.prompt);
+}
+
 function selectRecord(
   record: NativeAssistantThreadIndexRecord,
   nodesById: Record<string, Node>,
@@ -125,16 +159,26 @@ function findSelectedRecord(
   return records.find((record) => record.providerThreadId === selectedThreadId) ?? null;
 }
 
-async function sendAssistantTurn(
-  message: string,
-  openingLocation: ReturnType<typeof resolveAssistantLocation>,
-  providerThreadId: string | null
-) {
+async function sendAssistantTurn(message: string, openingLocation: ReturnType<typeof resolveAssistantLocation>, providerThreadId: string | null, clientTurnId: string) {
   return sendAssistantMessage({
+    clientTurnId,
     message,
     openingLocation,
     ...(providerThreadId ? { providerThreadId } : {})
   });
+}
+
+function applyAssistantTurnEvent(
+  event: NativeAssistantTurnEvent,
+  activeTurn: ActiveTurn | null,
+  failedText: string,
+  dispatchCache: (action: Parameters<typeof messageCacheReducer>[1]) => void
+) {
+  if (!activeTurn || event.clientTurnId !== activeTurn.clientTurnId) return;
+  if (event.kind === 'delta')
+    dispatchCache(createStreamingMessageAction(activeTurn.threadKey, activeTurn.clientTurnId, event.text ?? ''));
+  if (event.kind === 'failed')
+    dispatchCache(createFailedMessageAction(activeTurn.threadKey, activeTurn.clientTurnId, failedText));
 }
 
 function selectThreadIdFromRecords(
@@ -145,53 +189,31 @@ function selectThreadIdFromRecords(
   return records[0]?.providerThreadId ?? null;
 }
 
-function createUserMessageAction(key: string, pendingId: string, text: string) {
-  return {
-    key,
-    message: { id: `user-${pendingId}`, role: 'user' as const, state: 'ready' as const, text },
-    type: 'append' as const
-  };
-}
-
-function createPendingMessageAction(key: string, pendingId: string, text: string) {
-  return {
-    key,
-    message: { id: pendingId, role: 'assistant' as const, state: 'pending' as const, text },
-    type: 'append' as const
-  };
-}
-
-function createReadyMessageAction(
-  key: string,
-  pendingId: string,
-  result: NativeAssistantSendMessageResult
-) {
-  return {
-    key,
-    message: {
-      id: pendingId,
-      role: 'assistant' as const,
-      state: 'ready' as const,
-      text: result.message?.text ?? ''
-    },
-    messageId: pendingId,
-    type: 'replace' as const
-  };
-}
-
-function createFailedMessageAction(key: string, pendingId: string, text: string) {
-  return {
-    key,
-    message: { id: pendingId, role: 'assistant' as const, state: 'failed' as const, text },
-    messageId: pendingId,
-    type: 'replace' as const
-  };
-}
-
 type SendResultArgs = {
+  dispatchCache: (action: Parameters<typeof messageCacheReducer>[1]) => void;
   failedText: string;
   pendingId: string;
   prompt: string;
   result: NativeAssistantSendMessageResult | null;
+  setMessageText: (text: string) => void;
   threadKey: string;
+  threads: ReturnType<typeof useAssistantThreadRecords>;
+};
+
+type ActiveTurn = {
+  clientTurnId: string;
+  threadKey: string;
+};
+
+type SubmitHandlerArgs = {
+  activeTurnRef: { current: ActiveTurn | null };
+  dispatchCache: (action: Parameters<typeof messageCacheReducer>[1]) => void;
+  failedText: string;
+  location: ReturnType<typeof resolveAssistantLocation>;
+  messageText: string;
+  pendingText: string;
+  sending: boolean;
+  setMessageText: (text: string) => void;
+  setSending: (sending: boolean) => void;
+  threads: ReturnType<typeof useAssistantThreadRecords>;
 };

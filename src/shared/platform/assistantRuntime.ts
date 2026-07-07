@@ -4,10 +4,12 @@ import type {
   NativeAssistantStatusResult,
   NativeAssistantThreadIndexListArgs,
   NativeAssistantThreadIndexMutationArgs,
-  NativeAssistantThreadIndexRecord
+  NativeAssistantThreadIndexRecord,
+  NativeAssistantTurnEvent
 } from '../../../lib/platform/nativeAssistantContract';
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
+import { getElectronAPI } from './electronApi';
 import { getRuntimeInvoke } from './runtimeInvoke';
 
 export async function loadAssistantStatus(): Promise<NativeAssistantStatusResult | null> {
@@ -22,6 +24,12 @@ export async function sendAssistantMessage(
   const invoke = getRuntimeInvoke();
   if (!invoke) return null;
   return invoke(NATIVE_COMMANDS.assistantSendMessage, args);
+}
+
+export function subscribeAssistantTurnEvents(
+  handler: (event: NativeAssistantTurnEvent) => void
+) {
+  return getElectronAPI()?.onAssistantTurnEvent?.(handler) ?? (() => undefined);
 }
 
 export async function listAssistantThreadIndex(
