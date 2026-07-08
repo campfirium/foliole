@@ -70,18 +70,18 @@ export const EN_DESKTOP_NAVIGATION_TRANSLATIONS = {
   'desktop.rightPanel.performance': 'Performance',
   'desktop.rightPanel.scheduling': 'Scheduling',
   'desktop.rightPanel.aria': '{label} panel',
-  'desktop.rightPanel.assistant.description': 'Work with the current Foliole location.',
-  'desktop.rightPanel.assistant.enableDescription':
-    'Enable Foliole Aide to use your local Codex app connection from this workspace.',
-  'desktop.rightPanel.assistant.needsCheck':
-    'Foliole Aide is enabled. Check your local Codex app connection before sending.',
-  'desktop.rightPanel.assistant.checking': 'Checking your local Codex app connection...',
+  'desktop.rightPanel.assistant.description': 'Use Codex inside Foliole.',
+  'desktop.rightPanel.assistant.codexDescription':
+    'Requires Codex installed and signed in.',
+  'desktop.rightPanel.assistant.quotaDescription':
+    'Uses your Codex quota. Conversations also appear in Codex.',
+  'desktop.rightPanel.assistant.checking': 'Connecting to your local Codex app...',
   'desktop.rightPanel.assistant.unavailable':
-    'Foliole Aide cannot use Codex right now. Open Codex and try again.',
-  'desktop.rightPanel.assistant.enable': 'Enable',
-  'desktop.rightPanel.assistant.check': 'Check',
+    'Foliole Aide cannot connect to the local Codex app. Open Codex, then try again.',
+  'desktop.rightPanel.assistant.enable': 'Connect',
+  'desktop.rightPanel.assistant.check': 'Connect',
   'desktop.rightPanel.assistant.retry': 'Retry',
-  'desktop.rightPanel.assistant.checkingAction': 'Checking...',
+  'desktop.rightPanel.assistant.checkingAction': 'Connecting...',
   'desktop.rightPanel.assistant.threads': 'Foliole Aide threads',
   'desktop.rightPanel.assistant.loading': 'Loading Foliole Aide threads...',
   'desktop.rightPanel.assistant.empty': 'No Foliole Aide threads for this location yet.',
@@ -90,10 +90,12 @@ export const EN_DESKTOP_NAVIGATION_TRANSLATIONS = {
   'desktop.rightPanel.assistant.failed':
     'Foliole Aide could not reply. Check the message and send again.',
   'desktop.rightPanel.assistant.sessionOnly': 'Messages from this app session will appear here.',
+  'desktop.rightPanel.assistant.selectedThread': 'Selected thread. Earlier messages stay in Codex; new messages from this app session will appear here.',
   'desktop.rightPanel.assistant.currentSession': 'Current session messages',
   'desktop.rightPanel.assistant.input': 'Foliole Aide message',
   'desktop.rightPanel.assistant.placeholder': 'Ask Foliole Aide...',
   'desktop.rightPanel.assistant.newThread': 'New',
+  'desktop.rightPanel.assistant.removeThread': 'Remove thread from this list',
   'desktop.rightPanel.assistant.send': 'Send',
   'desktop.rightPanel.assistant.location.thisTopic': 'This topic',
   'desktop.rightPanel.assistant.location.topic': 'Topic',

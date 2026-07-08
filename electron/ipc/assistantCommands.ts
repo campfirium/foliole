@@ -26,6 +26,7 @@ const ASSISTANT_WORKDIR_DIRNAME = 'Foliole Aide';
 function getAdapter() {
   adapter ??= new CodexAppServerAdapter({
     appVersion: resolveFolioleAppVersion(app),
+    env: resolveAssistantLauncherEnv(process.env),
     launcherCwd: resolveAssistantLauncherCwd(app.getPath('userData'), process.env)
   });
   return adapter;
@@ -34,6 +35,16 @@ function getAdapter() {
 export function resolveAssistantLauncherCwd(userDataPath: string, env: NodeJS.ProcessEnv) {
   const libraryHome = env.FOLIOLE_LIBRARY_HOME?.trim();
   return path.join(libraryHome || userDataPath, ASSISTANT_WIDGETS_DIRNAME, ASSISTANT_WORKDIR_DIRNAME);
+}
+
+export function resolveAssistantLauncherEnv(env: NodeJS.ProcessEnv) {
+  if (env.CODEX_HOME?.trim()) return env;
+  const userProfile = env.USERPROFILE?.trim();
+  if (!userProfile) return env;
+  return {
+    ...env,
+    CODEX_HOME: path.join(userProfile, '.codex')
+  };
 }
 
 export async function handleAssistantCommand(

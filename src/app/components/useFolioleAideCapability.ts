@@ -1,18 +1,27 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
 import { loadAssistantStatus } from '../../shared/platform/assistantRuntime';
 import {
-  getWhitelistedLocalStorageItem,
-  setWhitelistedLocalStorageItem
-} from '../../shared/platform/storage';
+  getFolioleAideEnabled,
+  setFolioleAideEnabled,
+  subscribeFolioleAideEnabled
+} from '../../shared/platform/folioleAideSettings';
 
 export type FolioleAideCapabilityState = 'checking' | 'notEnabled' | 'ready' | 'unavailable' | 'needsCheck';
 
 export function useFolioleAideCapability() {
-  const [enabled, setEnabled] = useState(() => loadFolioleAideEnabled());
+  const [enabled, setEnabled] = useState(() => getFolioleAideEnabled());
   const [state, setState] = useState<FolioleAideCapabilityState>(() =>
     enabled ? 'needsCheck' : 'notEnabled'
+  );
+
+  useEffect(
+    () =>
+      subscribeFolioleAideEnabled((nextEnabled) => {
+        setEnabled(nextEnabled);
+        setState(nextEnabled ? 'needsCheck' : 'notEnabled');
+      }),
+    []
   );
 
   const check = useCallback(async () => {
@@ -22,7 +31,7 @@ export function useFolioleAideCapability() {
   }, []);
 
   const enable = useCallback(async () => {
-    saveFolioleAideEnabled();
+    setFolioleAideEnabled(true);
     setEnabled(true);
     await check();
   }, [check]);
@@ -37,12 +46,4 @@ export function useFolioleAideCapability() {
     }),
     [check, enable, enabled, state]
   );
-}
-
-function loadFolioleAideEnabled() {
-  return getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.folioleAideEnabled) === 'true';
-}
-
-function saveFolioleAideEnabled() {
-  setWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.folioleAideEnabled, 'true');
 }

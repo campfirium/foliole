@@ -60,6 +60,16 @@ export function mapJsonRpcError(error: {
   return 'protocol_error';
 }
 
+export function mapAppServerEventError(params: JsonRpcRecord | undefined) {
+  const text = [
+    readNestedString(params, ['error', 'message']),
+    typeof params?.additionalDetails === 'string' ? params.additionalDetails : null
+  ].filter(Boolean).join('\n').toLowerCase();
+  if (text.includes('401 unauthorized') || text.includes('missing bearer')) return 'auth_failed';
+  if (text.includes('overloaded')) return 'overloaded';
+  return null;
+}
+
 export function sendFailure(
   state: NativeAssistantSendMessageResult['state'],
   category: NativeAssistantFailureCategory

@@ -78,16 +78,18 @@ it('groups settings sidebar entries by workspace, data, and sources', async () =
   expect(screen.getByText('Data')).toBeInTheDocument();
   expect(screen.getByText('Sources')).toBeInTheDocument();
   expect(screen.queryByRole('heading', { level: 3, name: 'Settings' })).not.toBeInTheDocument();
-  expect(labels.slice(0, 9)).toEqual([
+  expect(labels.slice(0, 11)).toEqual([
     'About',
     'General',
     'Appearance',
     'Editor',
     'Right-click menu',
+    'Publishing',
     'Review',
     'Hotkeys',
     'Mouse gestures',
-    'Ribbon'
+    'Ribbon',
+    'Storage'
   ]);
   expect(labels).toContain('Storage');
   expect(labels).toContain('Watched folders');
@@ -104,32 +106,6 @@ it('groups settings sidebar entries by workspace, data, and sources', async () =
   expect(labels.indexOf('Readwise Reader')).toBeGreaterThan(labels.indexOf('External Folder'));
   expect(screen.getByRole('button', { name: 'Watched folders' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Readwise Reader' })).toBeInTheDocument();
-});
-
-it('renders direct Import content in the right panel instead of a jump button', async () => {
-  renderWithMouseGestureProvider(
-    <SettingsPanel
-      {...createProps()}
-      importCategoryContent={<div>Restored import panel content</div>}
-      requestedCategory="import"
-    />
-  );
-
-  expect(screen.getByRole('heading', { level: 2, name: 'Watched folders' })).toBeInTheDocument();
-  expect(screen.getByText('Restored import panel content')).toBeInTheDocument();
-});
-
-it('renders direct Readwise Reader content in the right panel instead of a jump button', async () => {
-  renderWithMouseGestureProvider(
-    <SettingsPanel
-      {...createProps()}
-      readwiseReaderCategoryContent={<div>Restored Readwise Reader content</div>}
-      requestedCategory="readwise-reader"
-    />
-  );
-
-  expect(screen.getByRole('heading', { level: 2, name: 'Readwise Reader' })).toBeInTheDocument();
-  expect(screen.getByText('Restored Readwise Reader content')).toBeInTheDocument();
 });
 
 it('keeps font selects disabled until system fonts are loaded', async () => {

@@ -11,6 +11,7 @@ import {
   CODEX_APP_SERVER_PROVIDER,
   composeAssistantTurnInput,
   createInitializeMessage,
+  mapAppServerEventError,
   mapJsonRpcError,
   parseMessage,
   readDeltaText,
@@ -46,10 +47,7 @@ export class CodexAppServerSession {
     if (this.activeTurn) return sendFailure('busy', 'busy');
     await this.ensureInitialized();
     return new Promise((resolve) => {
-      const timeout = setTimeout(
-        () => this.failActiveTurn('timeout', true),
-        args.timeoutMs
-      );
+      const timeout = setTimeout(() => this.failActiveTurn('timeout', true), args.timeoutMs);
       const threadRequestId = this.nextId++;
       this.activeTurn = {
         clientTurnId: args.clientTurnId,
@@ -83,7 +81,6 @@ export class CodexAppServerSession {
     child?.stdin.end?.();
     child?.kill();
   }
-
   private ensureInitialized() {
     if (this.initialized) return this.initialized;
     this.child = this.args.spawn();
@@ -125,10 +122,12 @@ export class CodexAppServerSession {
     if (!turn) return;
     if (message.id === turn.threadRequestId) this.handleThreadReady(message, turn);
     else if (message.method === 'turn/started') this.handleTurnStarted(message, turn);
-    else if (message.method === 'item/agentMessage/delta') this.handleDelta(message, turn);
+    else if (message.method === 'error') {
+      const category = mapAppServerEventError(message.params);
+      if (category) this.failActiveTurn(category, true);
+    } else if (message.method === 'item/agentMessage/delta') this.handleDelta(message, turn);
     else if (message.method === 'turn/completed') this.finishTurn(turn);
   }
-
   private handleThreadReady(message: JsonRpcMessage, turn: TurnState) {
     const threadId = readNestedString(message.result, ['thread', 'id']);
     if (!threadId || (turn.providerThreadId && threadId !== turn.providerThreadId)) {
@@ -143,7 +142,6 @@ export class CodexAppServerSession {
       params: { input: [{ text: turn.userMessage, type: 'text' }], threadId }
     });
   }
-
   private handleTurnStarted(message: JsonRpcMessage, turn: TurnState) {
     const turnId = readNestedString(message.params, ['turn', 'id']);
     if (turnId) turn.turnId = turnId;
@@ -166,6 +164,7 @@ export class CodexAppServerSession {
     this.emitTurnEvent(turn, { kind: 'completed', text: turn.text });
     this.finishActiveTurn(result);
   }
+
   private failActiveTurn(category: NativeAssistantFailureCategory, dispose: boolean) {
     if (!this.activeTurn && this.initializedReject) {
       const error = new Error(category) as Error & { category?: NativeAssistantFailureCategory };
@@ -180,7 +179,6 @@ export class CodexAppServerSession {
     this.finishActiveTurn(result);
     if (dispose) this.dispose();
   }
-
   private finishActiveTurn(result: NativeAssistantSendMessageResult) {
     const turn = this.activeTurn;
     if (!turn) return;
@@ -188,7 +186,6 @@ export class CodexAppServerSession {
     this.activeTurn = null;
     turn.finish(result);
   }
-
   private emitTurnEvent(
     turn: TurnState,
     event: Pick<NativeAssistantTurnEvent, 'failure' | 'kind' | 'text'> & {
@@ -206,7 +203,6 @@ export class CodexAppServerSession {
       ...(turn.turnId ? { turnId: turn.turnId } : {})
     });
   }
-
   private resetSession(kill: boolean) {
     const child = this.child;
     this.initialized = null;
@@ -218,7 +214,6 @@ export class CodexAppServerSession {
     child?.removeAllListeners?.();
     if (kill) child?.kill();
   }
-
   private write(message: JsonRpcMessage) {
     try {
       this.child?.stdin.write(`${JSON.stringify(message)}\n`);
@@ -226,5 +221,4 @@ export class CodexAppServerSession {
       this.failActiveTurn('protocol_error', true);
     }
   }
-
 }

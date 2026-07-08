@@ -13,6 +13,7 @@ import {
 const assistantRuntime = vi.hoisted(() => ({
   listAssistantThreadIndex: vi.fn(),
   loadAssistantStatus: vi.fn(),
+  deleteAssistantThreadIndex: vi.fn(),
   sendAssistantMessage: vi.fn(),
   subscribeAssistantTurnEvents: vi.fn()
 }));
@@ -35,20 +36,20 @@ beforeEach(() => {
   assistantRuntime.subscribeAssistantTurnEvents.mockReturnValue(() => undefined);
 });
 
-it('does not probe Codex or show the composer before Foliole Aide is enabled', () => {
+it('does not probe Codex or show the composer before the user connects', () => {
   renderPanel();
 
-  expect(screen.getByRole('button', { name: 'Enable' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Connect' })).toBeInTheDocument();
   expect(screen.queryByLabelText('Foliole Aide message')).not.toBeInTheDocument();
   expect(assistantRuntime.loadAssistantStatus).not.toHaveBeenCalled();
   expect(assistantRuntime.listAssistantThreadIndex).not.toHaveBeenCalled();
   expect(assistantRuntime.sendAssistantMessage).not.toHaveBeenCalled();
 });
 
-it('checks Codex only after the user enables Foliole Aide', async () => {
+it('checks Codex only after the user connects Foliole Aide', async () => {
   renderPanel();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Enable' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
 
   await waitFor(() => expect(assistantRuntime.loadAssistantStatus).toHaveBeenCalledTimes(1));
   expect(await screen.findByLabelText('Foliole Aide message')).toBeInTheDocument();
@@ -70,19 +71,17 @@ it('keeps the composer hidden when the Codex check is unavailable', async () => 
   });
 
   renderPanel();
-  fireEvent.click(screen.getByRole('button', { name: 'Enable' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
 
   expect(await screen.findByRole('button', { name: 'Retry' })).toBeInTheDocument();
   expect(screen.queryByLabelText('Foliole Aide message')).not.toBeInTheDocument();
   expect(assistantRuntime.listAssistantThreadIndex).not.toHaveBeenCalled();
 });
 
-it('does not auto-check Codex after reload when Foliole Aide was enabled earlier', () => {
-  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.folioleAideEnabled, 'true');
-
+it('does not auto-check Codex after reload while Foliole Aide stays enabled', () => {
   renderPanel();
 
-  expect(screen.getByRole('button', { name: 'Check' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Connect' })).toBeInTheDocument();
   expect(screen.queryByLabelText('Foliole Aide message')).not.toBeInTheDocument();
   expect(assistantRuntime.loadAssistantStatus).not.toHaveBeenCalled();
 });
@@ -101,7 +100,7 @@ it('shows an unavailable location for history threads whose topic cannot be rest
       onSelectNode={onSelectNode}
     />
   );
-  fireEvent.click(screen.getByRole('button', { name: 'Check' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
   fireEvent.click(await screen.findByRole('button', { name: /original prompt/i }));
 
   expect(screen.getAllByText('Topic not available in this workspace')).not.toHaveLength(0);

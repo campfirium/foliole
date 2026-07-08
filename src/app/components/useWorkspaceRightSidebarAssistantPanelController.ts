@@ -1,19 +1,18 @@
-import { useEffect, useMemo, useReducer, useRef, useState, type FormEvent } from 'react';
+import { useMemo, useReducer, useRef, useState, type FormEvent } from 'react';
 
 import type {
   NativeAssistantSendMessageResult,
-  NativeAssistantThreadIndexRecord,
-  NativeAssistantTurnEvent
+  NativeAssistantThreadIndexRecord
 } from '../../../lib/platform/nativeAssistantContract';
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import { sendAssistantMessage, subscribeAssistantTurnEvents } from '../../shared/platform/assistantRuntime';
+import { sendAssistantMessage } from '../../shared/platform/assistantRuntime';
 
+import { useAssistantTurnEventSubscription, type AssistantActiveTurn } from './useAssistantTurnEventSubscription';
 import { useWorkspaceRightSidebarAssistantThreads } from './useWorkspaceRightSidebarAssistantThreads';
 import {
   createFailedMessageAction,
   createPendingMessageAction,
   createReadyMessageAction,
-  createStreamingMessageAction,
   createUserMessageAction,
   messageCacheReducer,
   PENDING_THREAD_KEY,
@@ -21,7 +20,7 @@ import {
   resolveAssistantWorkspaceContext
 } from './workspaceRightSidebarAssistantPanelModel';
 
-export function useWorkspaceRightSidebarAssistantPanelController(args: {
+type AssistantPanelControllerArgs = {
   activeNodeId: string | null;
   aideReady: boolean;
   failedText: string;
@@ -29,7 +28,9 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: {
   onSelectNode: (nodeId: string) => void;
   pendingText: string;
   topicUnavailableText: string;
-}) {
+};
+
+export function useWorkspaceRightSidebarAssistantPanelController(args: AssistantPanelControllerArgs) {
   const location = useMemo(
     () => resolveAssistantLocation(args.activeNodeId, args.nodesById),
     [args.activeNodeId, args.nodesById]
@@ -42,20 +43,21 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: {
   const [messageText, setMessageText] = useState('');
   const [messagesByThread, dispatchCache] = useReducer(messageCacheReducer, {});
   const [sending, setSending] = useState(false);
-  const activeTurnRef = useRef<ActiveTurn | null>(null);
+  const activeTurnRef = useRef<AssistantActiveTurn | null>(null);
   const activeMessages = messagesByThread[threads.selectedThreadId ?? PENDING_THREAD_KEY] ?? [];
   const selectedRecord = findSelectedRecord(threads.records, threads.selectedThreadId);
 
-  useEffect(
-    () =>
-      subscribeAssistantTurnEvents((event) =>
-        applyAssistantTurnEvent(event, activeTurnRef.current, args.failedText, dispatchCache)
-      ),
-    [args.failedText]
-  );
+  useAssistantTurnEventSubscription({
+    activeTurnRef,
+    dispatchCache,
+    failedText: args.failedText,
+    setMessageText,
+    setSending
+  });
 
   return {
     activeMessages,
+    handleRemoveRecord: threads.deleteRecord,
     handleNewThread: () => threads.selectThreadId(null),
     handleSelectRecord: (record: NativeAssistantThreadIndexRecord) =>
       selectRecord(record, args.nodesById, args.onSelectNode, threads.selectThreadId),
@@ -76,6 +78,7 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: {
     loading: threads.loading,
     messageText,
     records: threads.records,
+    removingThreadId: threads.removingThreadId,
     selectedThreadNotice: getSelectedThreadNotice(selectedRecord, args.nodesById, args.topicUnavailableText),
     selectedRecord,
     selectedThreadId: threads.selectedThreadId,
@@ -83,7 +86,6 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: {
     setMessageText
   };
 }
-
 function createHandleSubmit(args: SubmitHandlerArgs) {
   return async (event: FormEvent) => {
     event.preventDefault();
@@ -93,7 +95,7 @@ function createHandleSubmit(args: SubmitHandlerArgs) {
     args.setSending(true);
     const threadKey = args.threads.selectedThreadId ?? PENDING_THREAD_KEY;
     const pendingId = `assistant-${Date.now()}`;
-    args.activeTurnRef.current = { clientTurnId: pendingId, threadKey };
+    args.activeTurnRef.current = { clientTurnId: pendingId, prompt, threadKey };
     args.dispatchCache(createUserMessageAction(threadKey, pendingId, prompt));
     args.dispatchCache(createPendingMessageAction(threadKey, pendingId, args.pendingText));
     try {
@@ -158,19 +160,6 @@ async function sendAssistantTurn(args: SubmitHandlerArgs, clientTurnId: string, 
   });
 }
 
-function applyAssistantTurnEvent(
-  event: NativeAssistantTurnEvent,
-  activeTurn: ActiveTurn | null,
-  failedText: string,
-  dispatchCache: (action: Parameters<typeof messageCacheReducer>[1]) => void
-) {
-  if (!activeTurn || event.clientTurnId !== activeTurn.clientTurnId) return;
-  if (event.kind === 'delta')
-    dispatchCache(createStreamingMessageAction(activeTurn.threadKey, activeTurn.clientTurnId, event.text ?? ''));
-  if (event.kind === 'failed')
-    dispatchCache(createFailedMessageAction(activeTurn.threadKey, activeTurn.clientTurnId, failedText));
-}
-
 type SendResultArgs = {
   dispatchCache: (action: Parameters<typeof messageCacheReducer>[1]) => void;
   failedText: string;
@@ -182,14 +171,9 @@ type SendResultArgs = {
   threads: ReturnType<typeof useWorkspaceRightSidebarAssistantThreads>;
 };
 
-type ActiveTurn = {
-  clientTurnId: string;
-  threadKey: string;
-};
-
 type SubmitHandlerArgs = {
   aideReady: boolean;
-  activeTurnRef: { current: ActiveTurn | null };
+  activeTurnRef: { current: AssistantActiveTurn | null };
   dispatchCache: (action: Parameters<typeof messageCacheReducer>[1]) => void;
   failedText: string;
   location: ReturnType<typeof resolveAssistantLocation>;

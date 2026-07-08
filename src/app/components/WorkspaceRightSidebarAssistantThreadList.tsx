@@ -1,7 +1,10 @@
+import { Trash2 } from 'lucide-react';
+
 import type { NativeAssistantThreadIndexRecord } from '../../../lib/platform/nativeAssistantContract';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
+  AppIconButton,
   InspectorList,
   InspectorListRow,
   inspectorListBodyClassName,
@@ -18,6 +21,8 @@ export function WorkspaceRightSidebarAssistantThreadList(props: {
   records: NativeAssistantThreadIndexRecord[];
   selectedThreadId: string | null;
   onSelectRecord: (record: NativeAssistantThreadIndexRecord) => void;
+  onRemoveRecord: (record: NativeAssistantThreadIndexRecord) => void;
+  removingThreadId: string | null;
 }) {
   const t = useTranslation();
   return (
@@ -26,10 +31,10 @@ export function WorkspaceRightSidebarAssistantThreadList(props: {
       className="min-h-0 shrink-0 py-1"
     >
       {props.records.map((record) => (
-        <li className={inspectorListDividerClassName} key={record.providerThreadId}>
+        <li className={`${inspectorListDividerClassName} flex min-w-0 items-stretch`} key={record.providerThreadId}>
           <InspectorListRow
             active={record.providerThreadId === props.selectedThreadId}
-            className={`${inspectorListInsetPaddingClassName} py-2`}
+            className={`${inspectorListInsetPaddingClassName} min-w-0 flex-1 py-2`}
             onClick={() => props.onSelectRecord(record)}
           >
             <span className="min-w-0">
@@ -43,6 +48,14 @@ export function WorkspaceRightSidebarAssistantThreadList(props: {
               </span>
             </span>
           </InspectorListRow>
+          <div className="flex shrink-0 items-center pr-2">
+            <AppIconButton
+              disabled={props.removingThreadId === record.providerThreadId}
+              icon={<Trash2 aria-hidden className="size-4" strokeWidth={1.8} />}
+              label={t('desktop.rightPanel.assistant.removeThread')}
+              onClick={() => props.onRemoveRecord(record)}
+            />
+          </div>
         </li>
       ))}
     </InspectorList>

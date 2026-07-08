@@ -13,6 +13,7 @@ import {
 const assistantRuntime = vi.hoisted(() => ({
   listAssistantThreadIndex: vi.fn(),
   loadAssistantStatus: vi.fn(),
+  deleteAssistantThreadIndex: vi.fn(),
   sendAssistantMessage: vi.fn(),
   subscribeAssistantTurnEvents: vi.fn()
 }));
@@ -32,6 +33,7 @@ beforeEach(() => {
     state: 'ready'
   });
   assistantRuntime.listAssistantThreadIndex.mockResolvedValue([]);
+  assistantRuntime.deleteAssistantThreadIndex.mockResolvedValue(null);
   assistantRuntime.subscribeAssistantTurnEvents.mockReturnValue(() => undefined);
 });
 
@@ -54,14 +56,14 @@ it('loads Assistant threads for the active topic location', async () => {
     />
   );
 
-  expect(screen.getByRole('button', { name: 'Check' })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Check' }));
+  expect(screen.getByRole('button', { name: 'Connect' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
 
   expect(await screen.findByRole('button', { name: /original prompt/i })).toBeInTheDocument();
   expect(assistantRuntime.listAssistantThreadIndex).toHaveBeenCalledWith({
     location: { nodeId: 'node-1', type: 'node' }
   });
-  expect(screen.getByText('Messages from this app session will appear here.')).toBeInTheDocument();
+  expect(screen.getByText(/Earlier messages stay in Codex/i)).toBeInTheDocument();
 });
 
 it('creates a new thread and moves pending messages into the returned thread cache', async () => {
@@ -87,7 +89,7 @@ it('creates a new thread and moves pending messages into the returned thread cac
       onSelectNode={vi.fn()}
     />
   );
-  fireEvent.click(screen.getByRole('button', { name: 'Check' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
   await screen.findByLabelText('Foliole Aide message');
 
   fireEvent.change(screen.getByLabelText('Foliole Aide message'), { target: { value: 'New prompt' } });
@@ -130,7 +132,7 @@ it('continues a selected thread and switches to its saved node location', async 
       onSelectNode={onSelectNode}
     />
   );
-  fireEvent.click(screen.getByRole('button', { name: 'Check' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
 
   fireEvent.click(await screen.findByRole('button', { name: /original prompt/i }));
   expect(onSelectNode).toHaveBeenCalledWith('node-2');
@@ -171,7 +173,7 @@ it('starts a new thread after clearing the selected history thread', async () =>
       onSelectNode={vi.fn()}
     />
   );
-  fireEvent.click(screen.getByRole('button', { name: 'Check' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
 
   fireEvent.click(await screen.findByRole('button', { name: 'New' }));
   fireEvent.change(screen.getByLabelText('Foliole Aide message'), {
@@ -227,7 +229,7 @@ it('updates the pending assistant bubble from turn delta events', async () => {
       onSelectNode={vi.fn()}
     />
   );
-  fireEvent.click(screen.getByRole('button', { name: 'Check' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
   await screen.findByLabelText('Foliole Aide message');
 
   fireEvent.change(screen.getByLabelText('Foliole Aide message'), { target: { value: 'New prompt' } });

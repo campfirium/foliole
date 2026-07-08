@@ -29,25 +29,25 @@ export function WorkspaceRightSidebarAssistantPanel(props: {
 
   return (
     <div className="flex min-h-full flex-col">
+      {capability.ready ? (
       <header className={`${inspectorListInsetPaddingClassName} pb-2 pt-1`}>
         <div className="flex items-center justify-between gap-2">
           <h2 className={`m-0 ${inspectorListHeadingClassName}`}>
             {t('desktop.rightPanel.assistant')}
           </h2>
-          {capability.ready ? (
-            <AppButton
-              disabled={controller.selectedThreadId === null}
-              onClick={controller.handleNewThread}
-              type="button"
-            >
-              {t('desktop.rightPanel.assistant.newThread')}
-            </AppButton>
-          ) : null}
+          <AppButton
+            disabled={controller.selectedThreadId === null}
+            onClick={controller.handleNewThread}
+            type="button"
+          >
+            {t('desktop.rightPanel.assistant.newThread')}
+          </AppButton>
         </div>
         <p className={inspectorListMetaClassName}>
           {t('desktop.rightPanel.assistant.description')}
         </p>
       </header>
+      ) : null}
       {!capability.ready ? (
         <FolioleAideCapabilityGate
           onEnable={capability.enable}
@@ -77,8 +77,10 @@ function FolioleAideReadyContent(props: {
       <WorkspaceRightSidebarAssistantThreadList
         activeNodeId={props.activeNodeId}
         nodesById={props.nodesById}
+        onRemoveRecord={props.controller.handleRemoveRecord}
         onSelectRecord={props.controller.handleSelectRecord}
         records={props.controller.records}
+        removingThreadId={props.controller.removingThreadId}
         selectedThreadId={props.controller.selectedThreadId}
       />
       <AssistantThreadStatus
@@ -114,14 +116,41 @@ function FolioleAideCapabilityGate(props: {
   const checking = props.state === 'checking';
   const enabled = props.state !== 'notEnabled';
   const action = enabled ? props.onRetry : props.onEnable;
+  const statusKey = getCapabilityStatusKey(props.state);
   return (
-    <section className={`${inspectorListInsetPaddingClassName} py-4`}>
-      <p className={`m-0 ${inspectorListMetaClassName}`}>
-        {t(getCapabilityDescriptionKey(props.state))}
-      </p>
-      <AppButton className="mt-3" disabled={checking} onClick={action} type="button">
-        {t(getCapabilityActionKey(props.state))}
-      </AppButton>
+    <section className={`${inspectorListInsetPaddingClassName} flex flex-1 items-center justify-center py-10`}>
+      <div className="mx-auto flex w-full max-w-[13.5rem] -translate-y-[6vh] flex-col items-center text-center">
+        <div className="flex flex-col items-center gap-3">
+          <h2 className="m-0 text-[26px] font-semibold leading-8 text-foreground/62">
+            {t('desktop.rightPanel.assistant')}
+          </h2>
+          <p className="m-0 text-ui-md leading-6 text-foreground/54">
+            {t('desktop.rightPanel.assistant.description')}
+          </p>
+        </div>
+        <div className="mt-6 flex flex-col items-center gap-2">
+          <p className="m-0 text-ui-md leading-6 text-foreground/50">
+            {t('desktop.rightPanel.assistant.codexDescription')}
+          </p>
+          <p className="m-0 text-ui-md leading-6 text-foreground/50">
+            {t('desktop.rightPanel.assistant.quotaDescription')}
+          </p>
+        </div>
+        {statusKey ? (
+          <p className="m-0 mt-5 max-w-[16rem] text-ui-sm leading-5 text-foreground/50">
+            {t(statusKey)}
+          </p>
+        ) : null}
+        <AppButton
+          className="mt-6 min-w-32"
+          disabled={checking}
+          onClick={action}
+          size="md"
+          type="button"
+        >
+          {t(getCapabilityActionKey(props.state))}
+        </AppButton>
+      </div>
     </section>
   );
 }
@@ -146,20 +175,19 @@ function resolveSessionLabel(
   t: ReturnType<typeof useTranslation>
 ) {
   return controller.selectedRecord && controller.activeMessages.length === 0
-    ? t('desktop.rightPanel.assistant.sessionOnly')
+    ? t('desktop.rightPanel.assistant.selectedThread')
     : t('desktop.rightPanel.assistant.currentSession');
 }
 
-function getCapabilityDescriptionKey(state: FolioleAideCapabilityState) {
+function getCapabilityStatusKey(state: FolioleAideCapabilityState) {
   if (state === 'checking') return 'desktop.rightPanel.assistant.checking';
   if (state === 'unavailable') return 'desktop.rightPanel.assistant.unavailable';
-  if (state === 'needsCheck') return 'desktop.rightPanel.assistant.needsCheck';
-  return 'desktop.rightPanel.assistant.enableDescription';
+  return null;
 }
 
 function getCapabilityActionKey(state: FolioleAideCapabilityState) {
   if (state === 'checking') return 'desktop.rightPanel.assistant.checkingAction';
   if (state === 'unavailable') return 'desktop.rightPanel.assistant.retry';
   if (state === 'needsCheck') return 'desktop.rightPanel.assistant.check';
-  return 'desktop.rightPanel.assistant.enable';
+  return 'desktop.rightPanel.assistant.check';
 }
