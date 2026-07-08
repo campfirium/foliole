@@ -16,6 +16,8 @@ const controlledElectronSqliteTests = [
   'electron/sync/syncPackNodeApplyParentOrder.test.ts',
   'electron/sync/syncPackLearningDependencyApply.test.ts',
   'electron/sync/syncPackNodeApplyExecutor.test.ts',
+  'electron/sync/syncPackNodeFieldPreservation.test.ts',
+  'electron/sync/syncPackPushAcksExecutor.test.ts',
   'scripts/demo/export-demo-pack.test.mjs',
   'scripts/android/schema-inventory.test.mjs',
   'scripts/android/android-reset-sync-data.test.mjs',

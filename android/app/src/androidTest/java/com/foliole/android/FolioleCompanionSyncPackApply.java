@@ -50,7 +50,7 @@ final class FolioleCompanionSyncPackApply {
                     appliedReviewOpIds = FolioleCompanionSyncPackApplyExtras.applyReviewLog(database);
                     appliedObjects = upsertStateRows(database, deviceId);
                 }
-                clearConfirmedPushAcks(database, packCursor.toStateSeq);
+                clearConfirmedPushAcks(database);
                 database.setTransactionSuccessful();
             } finally {
                 database.endTransaction();
@@ -178,7 +178,7 @@ final class FolioleCompanionSyncPackApply {
         return parts.length == 5 && parts[1].equals("android") && parts[3].equals(deviceId);
     }
 
-    private static void clearConfirmedPushAcks(SQLiteDatabase database, int toStateSeq) {
+    private static void clearConfirmedPushAcks(SQLiteDatabase database) {
         database.execSQL(
             "UPDATE sync_object_state SET sync_dirty = 0, base_content_hash = NULL " +
                 "WHERE sync_dirty = 1 AND EXISTS (" +
@@ -189,15 +189,6 @@ final class FolioleCompanionSyncPackApply {
                 "AND ack.state_seq IS NOT NULL " +
                 "AND incoming.state_seq >= ack.state_seq " +
                 "AND incoming.content_hash = sync_object_state.content_hash)"
-        );
-        database.execSQL(
-            "UPDATE sync_object_state SET sync_dirty = 0, base_content_hash = NULL " +
-                "WHERE sync_dirty = 1 AND EXISTS (" +
-                "SELECT 1 FROM sync_push_ack ack WHERE ack.object_type = sync_object_state.object_type " +
-                "AND ack.object_id = sync_object_state.object_id " +
-                "AND ack.status IN ('accepted', 'already_applied') " +
-                "AND ack.state_seq IS NOT NULL AND ack.state_seq <= ?)",
-            new Object[] { toStateSeq }
         );
         database.execSQL(
             "DELETE FROM sync_push_ack WHERE EXISTS (" +

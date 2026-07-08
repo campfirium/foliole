@@ -22,15 +22,6 @@ export async function clearConfirmedSyncPushAcksWithDbPort(
     `AND incoming.content_hash = sync_object_state.content_hash)`
   );
   await port.run(
-    `UPDATE sync_object_state SET sync_dirty = 0 ` +
-    `WHERE sync_dirty = 1 AND EXISTS (` +
-    `SELECT 1 FROM sync_push_ack ack WHERE ack.object_type = sync_object_state.object_type ` +
-    `AND ack.object_id = sync_object_state.object_id ` +
-    `AND ack.status IN ('accepted', 'already_applied') ` +
-    `AND ack.state_seq IS NOT NULL AND ack.state_seq <= ?)`,
-    [options.toStateSeq]
-  );
-  await port.run(
     `DELETE FROM sync_push_ack WHERE EXISTS (` +
     `SELECT 1 FROM sync_object_state state WHERE state.object_type = sync_push_ack.object_type ` +
     `AND state.object_id = sync_push_ack.object_id AND state.sync_dirty = 0)`
