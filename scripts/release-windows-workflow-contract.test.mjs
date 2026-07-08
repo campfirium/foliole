@@ -13,6 +13,12 @@ describe('release Windows workflow contract', () => {
     expect(workflow).toContain('fetch-depth: 0');
   });
 
+  it('serializes draft release creation by fixed release ref', () => {
+    expect(workflow).toContain('concurrency:');
+    expect(workflow).toContain('group: release-windows-${{ inputs.release_ref }}');
+    expect(workflow).toContain('cancel-in-progress: false');
+  });
+
   it('rejects non-release refs before building artifacts', () => {
     expect(workflow).toContain('$releaseRef.StartsWith("release/") -or $releaseRef.StartsWith("v")');
     expect(workflow).toContain('release_ref must be a release branch or version tag.');

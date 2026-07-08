@@ -1,0 +1,54 @@
+name: Release Candidate Quality
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_ref:
+        description: "Fixed release branch or tag to validate, e.g. release/0.6.6 or v0.6.6"
+        required: true
+        type: string
+  push:
+    branches:
+      - "release/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-candidate-quality-${{ inputs.release_ref || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-candidate-quality:
+    name: Release candidate quality
+    runs-on: windows-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Check out release candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_ref || github.ref }}
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Rebuild Electron native modules
+        run: |
+          npm run electron:rebuild:native
+          node scripts/electron-sqlite-runner.mjs --preflight
+
+      - name: Run release base quality
+        run: npm run quality:release:base
+
+      - name: Run desktop golden journey acceptance
+        env:
+          FOLIOLE_DESKTOP_NATIVE_SKIP_BUILD: "1"
+        run: npm run test:e2e:desktop:rc-golden-journey

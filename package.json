@@ -181,6 +181,7 @@
     "test:e2e:desktop": "node node_modules/playwright/cli.js test --config playwright.desktop.config.ts",
     "test:e2e:desktop:agent": "FOLIOLE_ELECTRON_APP_ROOT=$(pwd) node scripts/with-resource-gate.mjs preview -- xvfb-run --auto-servernum node node_modules/playwright/cli.js test --config playwright.desktop.config.ts",
     "test:e2e:desktop:native:hidden": "node scripts/windows/playwright-desktop-native-hidden.mjs",
+    "test:e2e:desktop:rc-golden-journey": "node scripts/windows/playwright-desktop-native-hidden.mjs tests/desktop/rc-golden-journey.spec.ts",
     "test:e2e:desktop:native:visible": "node scripts/windows/playwright-desktop-native-visible.mjs",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",
