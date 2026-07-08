@@ -40,9 +40,17 @@ function mockWorkspaceSync(isWorkspaceSyncStateReady: boolean) {
 }
 
 function mockSurface() {
+  const reviewSession = {
+    currentCard: null,
+    nextFsrsDueAt: null,
+    nextReadingDueAt: null,
+    scheduledFsrsCount: 0,
+    scheduledReadingCount: 0
+  };
   useCompanionArticleSurface.mockReturnValue({
     activeAction: 'more',
     browsedFolder: null,
+    effectiveReviewSession: reviewSession,
     handleDismissReviewTopic: vi.fn(),
     handleGradeReview: vi.fn(),
     handlePostponeReviewTopic: vi.fn(),
@@ -58,13 +66,7 @@ function mockSurface() {
     recentArticles: [],
     readingError: null,
     reviewError: null,
-    reviewSession: {
-      currentCard: null,
-      nextFsrsDueAt: null,
-      nextReadingDueAt: null,
-      scheduledFsrsCount: 0,
-      scheduledReadingCount: 0
-    },
+    reviewSession,
     selectedBrowseNodeId: null
   });
 }

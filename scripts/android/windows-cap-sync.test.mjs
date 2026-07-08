@@ -96,7 +96,7 @@ describe('windows-cap-sync.sh', () => {
     expect(script).toContain('-WindowStyle Hidden');
     expect(script).not.toContain('-NoNewWindow');
     expect(script).toContain('if ($process.ExitCode -ne 0)');
-    expect(script).toContain('Invoke-NodeTool -Arguments @("scripts\\android\\generate-companion-schema.mjs")');
+    expect(script).toContain('Invoke-NodeTool -Arguments @("--experimental-loader", "./scripts/android/ts-js-extension-loader.mjs", "scripts\\android\\generate-companion-schema.mjs")');
     expect(script).toContain('Invoke-NodeTool -Arguments @("node_modules\\vite\\bin\\vite.js", "build", "--config", "vite.companion.config.ts")');
     expect(script).toContain('Invoke-NodeTool -Arguments @($capCliPath, "sync", "android")');
     expect(script).toContain('function Assert-FileExists');

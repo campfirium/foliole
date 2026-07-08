@@ -123,6 +123,7 @@ describe('CompanionShell article exit navigation', () => {
 
     expect(screen.queryByTestId('companion-bottom-tab-bar')).not.toBeInTheDocument();
 
+    fireEvent.click(screen.getByTestId('companion-article-document'));
     fireEvent.click(screen.getByRole('button', { name: 'Exit' }));
     expect(surface.handleExitBrowseArticle).toHaveBeenCalledTimes(1);
 

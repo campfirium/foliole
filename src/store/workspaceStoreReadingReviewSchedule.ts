@@ -10,7 +10,7 @@ export function buildNextReadingReviewState(args: {
   currentNode: Node;
   growthFactorExponent?: number;
   now: string;
-  snapshot: WorkspaceState;
+  snapshot: Pick<WorkspaceState, 'nodesById'>;
 }) {
   const pushQueueSettings = getCurrentReviewSchedulerSettings().pushQueue;
   const initialIntervalMs = pushQueueSettings.readingInitialIntervalMs;

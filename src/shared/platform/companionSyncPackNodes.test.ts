@@ -46,7 +46,7 @@ it('attaches a sync pack before applying pack nodes through the shared core', as
   expect(connection.execute).toHaveBeenLastCalledWith('DETACH DATABASE inc', false);
   expect(connection.close).toHaveBeenCalledTimes(1);
   expect(manager.closeConnection).toHaveBeenCalledWith('foliole-companion', false);
-  expect(connection.execute).toHaveBeenCalledWith(expect.stringContaining('INSERT OR REPLACE INTO main.nodes'), false);
+  expect(connection.execute).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO main.nodes'), false);
 });
 
 it('loads and advances the pack cursor around the shared core apply', async () => {

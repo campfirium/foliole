@@ -4,9 +4,9 @@ import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapsho
 import { getCurrentReviewSchedulerSettings, getReviewSchedulerVersion } from '../features/settings/model/reviewSchedulerSettings';
 
 import { resolveCompanionFsrsReviewSession } from './companionFsrsReviewSession';
+import { postponeCompanionReviewTopic } from './companionReadingReviewSessionActions';
 import {
   gradeCompanionReviewCard,
-  postponeCompanionReviewTopic,
   resolveCompanionReviewSession
 } from './companionReviewSession';
 
@@ -140,7 +140,7 @@ function createGradedCardResult() {
   };
 }
 
-function expectCompanionLaterUsesShortReadingInterval() {
+function expectCompanionLaterUsesDesktopReadingInterval() {
   const snapshot = createSnapshot();
   snapshot.nodesById['topic-1'] = createDueReadingTopic();
 
@@ -152,7 +152,7 @@ function expectCompanionLaterUsesShortReadingInterval() {
 
   expect(result?.snapshot.nodesById['topic-1']?.reading).toMatchObject({
     lastHandledAt: '2026-04-22T08:10:00.000Z',
-    nextAt: '2026-04-22T08:11:08.411Z',
+    nextAt: '2026-04-23T08:10:00.000Z',
     repetitionCount: 2
   });
 }
@@ -236,8 +236,8 @@ describe('companion reading review session actions', () => {
     expect(mixed.queueNodeIds).toContain('topic-1');
   });
 
-  it('postpones companion reading topics with the same shorter Later interval as desktop', () => {
-    expectCompanionLaterUsesShortReadingInterval();
+  it('postpones companion reading topics with the same Later interval as desktop', () => {
+    expectCompanionLaterUsesDesktopReadingInterval();
   });
 
 });

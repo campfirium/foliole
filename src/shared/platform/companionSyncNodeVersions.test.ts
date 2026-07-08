@@ -1,12 +1,15 @@
 import Database from 'better-sqlite3';
 import { afterEach, expect, it, vi } from 'vitest';
 
+import { ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS } from '../../../lib/core/database/androidCompanionCoreSchemaStatements';
+import { ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS } from '../../../lib/core/database/androidCompanionSyncSchemaStatements';
 import type { NativeSyncNodeRecord } from '../../../lib/platform/nativeSyncContract';
 
 import {
   applyCompanionSyncNodeVersionsWithSharedCore,
   applyCompanionSyncNodeVersionsWithSharedCoreOnDevice
 } from './companionSyncNodeVersions';
+import { createFakeCapacitorConnection } from './companionSyncNodeVersionsTestSupport';
 
 let db: Database.Database | null = null;
 
@@ -36,7 +39,7 @@ it('applies node versions through the Capacitor DbPort adapter and shared core',
 it('opens the Android companion database before running the shared core', async () => {
   db = new Database(':memory:');
   installNodeApplySchema(db);
-  const connection = createFakeCapacitorConnection(db);
+  const connection = createMockCapacitorConnection(db);
   const manager = {
     createConnection: vi.fn(async () => connection),
     isConnection: vi.fn(async () => ({ result: false })),
@@ -53,7 +56,7 @@ it('opens the Android companion database before running the shared core', async 
 it('retrieves the Android companion database when create reports an existing connection', async () => {
   db = new Database(':memory:');
   installNodeApplySchema(db);
-  const connection = createFakeCapacitorConnection(db);
+  const connection = createMockCapacitorConnection(db);
   const manager = {
     createConnection: vi.fn(async () => {
       throw new Error('CreateConnection: Connection foliole-companion already exists');
@@ -72,7 +75,7 @@ it('retrieves the Android companion database when create reports an existing con
 it('recreates the Android companion database connection when the cached handle is stale', async () => {
   db = new Database(':memory:');
   installNodeApplySchema(db);
-  const connection = createFakeCapacitorConnection(db);
+  const connection = createMockCapacitorConnection(db);
   const manager = {
     checkConnectionsConsistency: vi.fn(async () => ({ result: true })),
     createConnection: vi.fn(async () => connection),
@@ -125,65 +128,19 @@ function nodeVersion(): NativeSyncNodeRecord {
   };
 }
 
-function createFakeCapacitorConnection(database: Database.Database) {
+function createMockCapacitorConnection(database: Database.Database) {
+  const connection = createFakeCapacitorConnection(database);
   return {
-    beginTransaction: async () => {
-      database.exec('BEGIN');
-    },
-    commitTransaction: async () => {
-      database.exec('COMMIT');
-    },
-    close: vi.fn(async () => undefined),
-    execute: async (sql: string) => {
-      database.exec(sql);
-      const row = database.prepare('SELECT changes() AS count').get() as { count: number };
-      return { changes: { changes: row.count } };
-    },
-    open: vi.fn(async () => undefined),
-    query: async (sql: string, params: unknown[] = []) => ({
-      values: database.prepare(sql).all(...decodeParams(params))
-    }),
-    rollbackTransaction: async () => {
-      database.exec('ROLLBACK');
-    },
-    run: async (sql: string, params: unknown[] = []) => {
-      const info = database.prepare(sql).run(...decodeParams(params));
-      return { changes: { changes: info.changes, lastId: Number(info.lastInsertRowid) } };
-    }
+    ...connection,
+    close: vi.fn(connection.close),
+    open: vi.fn(connection.open)
   };
 }
 
-function decodeParams(params: unknown[]) {
-  return params.map((param) => {
-    if (isBufferJson(param)) return Uint8Array.from(param.data);
-    return param;
-  });
-}
-
-function isBufferJson(value: unknown): value is { data: number[]; type: 'Buffer' } {
-  return value !== null && typeof value === 'object' && 'type' in value && 'data' in value;
-}
-
 function installNodeApplySchema(database: Database.Database) {
-  installNodeTable(database);
+  database.exec(ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS.join(';\n'));
+  database.exec(ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS.join(';\n'));
   database.exec(`
-    CREATE TABLE node_sync_versions (
-      version_id TEXT PRIMARY KEY,
-      object_id TEXT NOT NULL,
-      parent_version_id TEXT,
-      device_id TEXT NOT NULL,
-      created_at TEXT NOT NULL,
-      content_hash TEXT,
-      snapshot_json TEXT NOT NULL
-    );
-    CREATE TABLE node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL);
-    CREATE TABLE attachments (id TEXT PRIMARY KEY);
-    CREATE TABLE node_attachments (
-      node_id TEXT NOT NULL,
-      attachment_id TEXT NOT NULL,
-      role TEXT NOT NULL,
-      PRIMARY KEY (node_id, attachment_id, role)
-    );
     CREATE TABLE search_index_invalidations (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       invalidation_type TEXT NOT NULL,
@@ -198,39 +155,6 @@ function installNodeApplySchema(database: Database.Database) {
     );
   `);
   installContentBlobSchema(database);
-}
-
-function installNodeTable(database: Database.Database) {
-  database.exec(`
-    CREATE TABLE nodes (
-      id TEXT PRIMARY KEY,
-      parent_id TEXT,
-      kind TEXT NOT NULL,
-      priority INTEGER,
-      desired_retention REAL,
-      enable_short_term INTEGER,
-      sequential_reading_enabled INTEGER,
-      shelved_at TEXT,
-      manual_child_order TEXT,
-      title TEXT NOT NULL,
-      is_title_manual INTEGER NOT NULL DEFAULT 0,
-      hide_title_heading INTEGER NOT NULL DEFAULT 0,
-      content TEXT NOT NULL DEFAULT '',
-      body_blob_hash TEXT,
-      opening_text TEXT,
-      virtual_filter TEXT,
-      reveal TEXT,
-      anchor_link TEXT,
-      image_regions TEXT,
-      position INTEGER,
-      current_version_id TEXT,
-      last_modified_by_device_id TEXT,
-      sync_dirty INTEGER NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL,
-      deleted_at TEXT
-    );
-  `);
 }
 
 function installContentBlobSchema(database: Database.Database) {

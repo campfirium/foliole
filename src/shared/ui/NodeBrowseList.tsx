@@ -69,12 +69,12 @@ export function NodeBrowseList(props: {
           >
             <NodeBrowseIcon kind={item.kind} />
             <span className="min-w-0 flex-1">
-              <h2 className={`text-[15.5px] font-medium leading-5 text-foreground/90 ${item.kind === 'folder' ? 'truncate' : 'line-clamp-2'}`}>{item.title}</h2>
+              <h2 className={`text-base font-medium leading-5 text-foreground/90 ${item.kind === 'folder' ? 'truncate' : 'line-clamp-2'}`}>{item.title}</h2>
               {bodyStatusLabel ? (
-                <span className="mt-1 block text-[13px] font-medium leading-[18px] text-companion-text-tertiary">{bodyStatusLabel}</span>
+                <span className="mt-1 block text-xs font-medium leading-[18px] text-companion-text-tertiary">{bodyStatusLabel}</span>
               ) : null}
               {item.preview ? (
-                <span className="mt-1 block line-clamp-1 text-[13px] leading-[18px] text-companion-text-tertiary">{item.preview}</span>
+                <span className="mt-1 block line-clamp-1 text-xs leading-[18px] text-companion-text-tertiary">{item.preview}</span>
               ) : null}
             </span>
             <ChevronRight className="h-4 w-4 shrink-0 text-companion-text-tertiary/90" />

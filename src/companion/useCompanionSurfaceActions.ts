@@ -4,7 +4,9 @@ import type { BottomBarGrade } from './CompanionFloatingBars';
 import {
   readCompanionReviewTopic,
   postponeCompanionReviewTopic,
-  dismissCompanionReviewTopic,
+  dismissCompanionReviewTopic
+} from './companionReadingReviewSessionActions';
+import {
   gradeCompanionReviewCard,
   resolveCompanionReviewSession
 } from './companionReviewSession';
@@ -79,6 +81,7 @@ function useCompanionReadingReviewActions(
       const persisted = await persistCompanionReviewSyncObject({
         itemKind: 'reading',
         nodeId: reviewSession.currentCard.nodeId,
+        nodeIds: result.syncNodeIds,
         snapshot: result.snapshot
       });
       if (!persisted) throw new Error('Failed to persist the reading topic.');

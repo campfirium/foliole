@@ -13,12 +13,6 @@ import {
 } from '../shared/workspaceCanonicalSelectors';
 import { buildReviewQueuePlan } from '../store/reviewQueuePlanner';
 
-import {
-  readCompanionReviewTopic as readCompanionReviewTopicBase,
-  postponeCompanionReviewTopic as postponeCompanionReviewTopicBase,
-  dismissCompanionReviewTopic as dismissCompanionReviewTopicBase
-} from './companionReadingReview';
-
 export interface CompanionReviewCard {
   content: string;
   due: string;
@@ -155,22 +149,6 @@ export function resolveCompanionReviewSession(
   };
 }
 
-function toCompanionReviewResult(snapshot: WorkspaceSnapshot, now: string) {
-  return {
-    nextSession: resolveCompanionReviewSession(snapshot, now),
-    snapshot
-  };
-}
-
-function applyCompanionReadingReviewTopic(
-  action: (args: { nodeId: string; now: string; snapshot: WorkspaceSnapshot }) => WorkspaceSnapshot | null,
-  args: { nodeId: string; now?: string; snapshot: WorkspaceSnapshot }
-) {
-  const now = args.now ?? new Date().toISOString();
-  const nextSnapshot = action({ ...args, now });
-  return nextSnapshot ? toCompanionReviewResult(nextSnapshot, now) : null;
-}
-
 export async function gradeCompanionReviewCard(args: {
   grade: ReviewGrade;
   nodeId: string;
@@ -214,28 +192,4 @@ export async function gradeCompanionReviewCard(args: {
     reviewedAt: result.reviewedAt,
     snapshot: nextSnapshot
   };
-}
-
-export function readCompanionReviewTopic(args: {
-  nodeId: string;
-  now?: string;
-  snapshot: WorkspaceSnapshot;
-}) {
-  return applyCompanionReadingReviewTopic(readCompanionReviewTopicBase, args);
-}
-
-export function postponeCompanionReviewTopic(args: {
-  nodeId: string;
-  now?: string;
-  snapshot: WorkspaceSnapshot;
-}) {
-  return applyCompanionReadingReviewTopic(postponeCompanionReviewTopicBase, args);
-}
-
-export function dismissCompanionReviewTopic(args: {
-  nodeId: string;
-  now?: string;
-  snapshot: WorkspaceSnapshot;
-}) {
-  return applyCompanionReadingReviewTopic(dismissCompanionReviewTopicBase, args);
 }

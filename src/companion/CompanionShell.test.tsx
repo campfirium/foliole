@@ -149,9 +149,19 @@ async function renderShellWithSurface(surface: MockSurface) {
 
 
 function createReviewEmptySurface() {
+  const reviewSession = {
+    currentCard: null,
+    nextFsrsDueAt: '2026-04-23T05:55:34.233Z',
+    nextReadingDueAt: '2026-04-23T05:52:15.743Z',
+    queueNodeIds: [],
+    scheduledFsrsCount: 9,
+    scheduledReadingCount: 2,
+    totalCount: 0
+  };
   return {
     activeAction: 'review',
     browsedFolder: null,
+    effectiveReviewSession: reviewSession,
     handleGradeReview: vi.fn(),
     handleReadReviewTopic: vi.fn(),
     handlePostponeReviewTopic: vi.fn(),
@@ -171,15 +181,7 @@ function createReviewEmptySurface() {
     recentArticles: [],
     readingError: null,
     reviewError: null,
-    reviewSession: {
-      currentCard: null,
-      nextFsrsDueAt: '2026-04-23T05:55:34.233Z',
-      nextReadingDueAt: '2026-04-23T05:52:15.743Z',
-      queueNodeIds: [],
-      scheduledFsrsCount: 9,
-      scheduledReadingCount: 2,
-      totalCount: 0
-    },
+    reviewSession,
     selectedBrowseNodeId: null
   };
 }

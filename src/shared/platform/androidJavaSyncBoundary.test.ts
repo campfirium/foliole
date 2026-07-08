@@ -6,6 +6,7 @@ import { expect, it } from 'vitest';
 const ROOT = process.cwd();
 const ANDROID_MAIN_JAVA = 'android/app/src/main/java/com/foliole/android';
 const ANDROID_SYNC_QUERY_DEFINITIONS = 'lib/core/database/androidCompanionSyncQueryDefinitions.ts';
+const LEARNING_PAYLOAD_STORE = `${ANDROID_MAIN_JAVA}/FolioleCompanionLearningPayloadStore.java`;
 const SYNC_PAYLOAD_QUERY_STORE = `${ANDROID_MAIN_JAVA}/FolioleCompanionSyncPayloadQueryStore.java`;
 const SYNC_PAYLOAD_QUERY_NAME_PATTERN =
   /\bsyncPayload(?:Attachment|ExternalDocument|ExternalFolder|ImportSource|NodeReading|NodeReview|PdfPageText|Setting|ViewActiveNode|ViewNodeState)\b/;
@@ -44,7 +45,7 @@ it('keeps desktop sync-pack apply out of Android production Java', () => {
   const violations = listJavaFiles(ANDROID_MAIN_JAVA).filter((path) => {
     const source = readFileSync(join(ROOT, path), 'utf8');
     return FORBIDDEN_MAIN_PATTERNS.some((pattern) => pattern.test(source)) ||
-      (path !== SYNC_PAYLOAD_QUERY_STORE && SYNC_PAYLOAD_QUERY_NAME_PATTERN.test(source));
+      (![LEARNING_PAYLOAD_STORE, SYNC_PAYLOAD_QUERY_STORE].includes(path) && SYNC_PAYLOAD_QUERY_NAME_PATTERN.test(source));
   });
 
   expect(violations).toEqual([]);

@@ -1,83 +1,54 @@
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
-import { advanceReadingScheduleCoreFields } from '../features/review/model/unifiedPushQueueRules';
-import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 import { definedProps } from '../shared/lib/definedProps';
-import { buildNextReadingProfile, resolveReadingPriorityChain } from '../store/workspaceReviewReading';
+import { buildReadingReviewDomainPatch } from '../store/workspaceReadingReviewDomain';
+import type { WorkspaceState } from '../store/workspaceStore';
 
-type ReadingReviewNode = WorkspaceSnapshot['nodesById'][string];
-
-function patchReadingReviewNode(args: {
-  node: ReadingReviewNode;
-  nodeId: string;
-  patch: Partial<ReadingReviewNode>;
+interface CompanionReadingReviewResult {
   snapshot: WorkspaceSnapshot;
-}) {
-  return {
-    ...args.snapshot,
-    nodesById: {
-      ...args.snapshot.nodesById,
-      [args.nodeId]: {
-        ...args.node,
-        ...args.patch
-      }
-    }
-  } satisfies WorkspaceSnapshot;
+  syncNodeIds: string[];
 }
 
 function buildNextReadingSnapshot(args: {
   action: 'read' | 'later' | 'dismiss';
   nodeId: string;
   now: string;
+  releaseSequentialReading?: boolean;
   snapshot: WorkspaceSnapshot;
-}) {
+}): CompanionReadingReviewResult | null {
   const node = args.snapshot.nodesById[args.nodeId];
   if (!node || !isReadingReviewItemNode(node)) {
     return null;
   }
-
-  if (args.action === 'dismiss') {
-    return patchReadingReviewNode({
-      node,
-      nodeId: args.nodeId,
-      patch: { reading: node.reading ? { ...node.reading, state: 'dismissed' } : node.reading, updatedAt: args.now },
-      snapshot: args.snapshot
-    });
-  }
-
-  const pushQueueSettings = getCurrentReviewSchedulerSettings().pushQueue;
-  const nextReading = advanceReadingScheduleCoreFields({
-    ...(args.action === 'later' ? { growthFactorExponent: 0.5 } : {}),
-    lastHandledAt: args.now,
-    previousRepetitionCount: node.reading?.repetitionCount ?? 0,
-    priorityChain: resolveReadingPriorityChain({
-      currentNodeId: args.nodeId,
-      currentReading: node.reading,
-      defaultPriority: pushQueueSettings.defaultPriority,
-      nodesById: args.snapshot.nodesById
-    }),
-    initialIntervalMs: pushQueueSettings.readingInitialIntervalMs,
-    range: pushQueueSettings.readingIntervalGrowthFactorRange,
-    ...definedProps({ previousIntervalDurationMs: node.reading?.intervalDurationMs })
+  const domainPatch = buildReadingReviewDomainPatch({
+    action: args.action,
+    currentNodeId: args.nodeId,
+    now: args.now,
+    ...definedProps({ releaseSequentialReading: args.releaseSequentialReading }),
+    snapshot: args.snapshot as Pick<WorkspaceState, 'nodesById'>,
+    state: args.snapshot as Pick<WorkspaceState, 'nodeOrder' | 'nodesById'>
   });
-
-  return patchReadingReviewNode({
-    node,
-    nodeId: args.nodeId,
-    patch: { reading: buildNextReadingProfile(nextReading, node.reading), updatedAt: args.now },
-    snapshot: args.snapshot
-  });
+  if (!domainPatch) return null;
+  return {
+    snapshot: {
+      ...args.snapshot,
+      nodesById: domainPatch.nextNodesById as WorkspaceSnapshot['nodesById']
+    },
+    syncNodeIds: domainPatch.nextNodesForSync.map((nextNode) => nextNode.id)
+  };
 }
 
 export function readCompanionReviewTopic(args: {
   nodeId: string;
   now?: string;
+  releaseSequentialReading?: boolean;
   snapshot: WorkspaceSnapshot;
 }) {
   return buildNextReadingSnapshot({
     action: 'read',
     nodeId: args.nodeId,
     now: args.now ?? new Date().toISOString(),
+    ...definedProps({ releaseSequentialReading: args.releaseSequentialReading }),
     snapshot: args.snapshot
   });
 }

@@ -1,12 +1,11 @@
-import type { Node } from '../features/nodes/model/nodeTypes';
 import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
-import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
 import {
   cloneReadingProfile,
   createTopicDismissHistoryEntry,
   pushWorkspaceUndoEntry
 } from './workspaceActionHistory';
+import { buildReadingReviewDomainPatch } from './workspaceReadingReviewDomain';
 import { buildCurrentReviewSessionQueueOutput } from './workspaceReviewLiveQueue';
 import {
   runtimeWorkspaceReviewPersistence,
@@ -14,12 +13,10 @@ import {
 } from './workspaceReviewPersistence';
 import {
   advanceReviewSession,
-  buildDismissedReadingProfile,
   completeReviewSession
 } from './workspaceReviewReading';
 import { calculateReviewStepElapsedMs } from './workspaceReviewSessionProgress';
 import { syncNodeContentToRuntime } from './workspaceRuntimeSync';
-import { buildSequentialReadingDismissPatch } from './workspaceSequentialReading';
 import type { WorkspaceState } from './workspaceStore';
 import {
   persistReadingReviewNodes,
@@ -86,31 +83,19 @@ function buildDismissReviewPatch(args: {
   snapshot: WorkspaceState;
   state: WorkspaceState;
 }): DismissReviewPatchResult | null {
-  const node = args.state.nodesById[args.currentNodeId];
-  if (!node) return null;
-  const beforeReading = cloneReadingProfile(node.reading);
-  const afterReading = buildDismissedReadingProfile({
+  const result = buildReadingReviewDomainPatch({
+    action: 'dismiss',
     currentNodeId: args.currentNodeId,
-    currentReading: node.reading,
-    defaultPriority: getCurrentReviewSchedulerSettings().pushQueue.defaultPriority,
-    nodesById: args.state.nodesById,
-    now: args.now
+    now: args.now,
+    snapshot: args.snapshot,
+    state: args.state
   });
-  const nextNode: Node = { ...node, reading: afterReading, updatedAt: args.now };
-  const nextNodesById = { ...args.state.nodesById, [args.currentNodeId]: nextNode };
-  const sequentialPatch = buildSequentialReadingDismissPatch({
-    defaultPriority: getCurrentReviewSchedulerSettings().pushQueue.defaultPriority,
-    dismissedNodeId: args.currentNodeId,
-    nodeOrder: args.state.nodeOrder,
-    nodesById: nextNodesById,
-    now: args.now
-  });
-  const finalNodesById = sequentialPatch?.nodesById ?? nextNodesById;
-  const { nextNodeId, nextReviewSession } = buildNextDismissReviewSession({ ...args, nextNodesById: finalNodesById });
+  if (!result) return null;
+  const beforeReading = cloneReadingProfile(result.beforeReading);
+  const afterReading = cloneReadingProfile(result.afterReading);
+  const { nextNodeId, nextReviewSession } = buildNextDismissReviewSession({ ...args, nextNodesById: result.nextNodesById });
   return {
-    nextNodesForSync: [nextNode, ...(sequentialPatch?.changes ?? [])
-      .map((change) => finalNodesById[change.nodeId])
-      .filter((changedNode): changedNode is Node => Boolean(changedNode))],
+    nextNodesForSync: result.nextNodesForSync,
     patch: {
       activeNodeId: nextNodeId ?? nextReviewSession.continueNodeId ?? args.state.activeNodeId,
       appActionHistory: pushWorkspaceUndoEntry(
@@ -121,10 +106,10 @@ function buildDismissReviewPatch(args: {
           beforeReading,
           beforeReviewSession: args.snapshot.reviewSession,
           nodeId: args.currentNodeId,
-          ...(sequentialPatch?.changes.length ? { relatedReadings: sequentialPatch.changes } : {})
+          ...(result.sequentialChanges.length ? { relatedReadings: result.sequentialChanges } : {})
         })
       ),
-      nodesById: finalNodesById,
+      nodesById: result.nextNodesById,
       reviewSession: nextReviewSession
     }
   };

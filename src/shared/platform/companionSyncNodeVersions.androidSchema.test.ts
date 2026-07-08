@@ -1,9 +1,12 @@
 import Database from 'better-sqlite3';
 import { afterEach, expect, it } from 'vitest';
 
+import { ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS } from '../../../lib/core/database/androidCompanionCoreSchemaStatements';
+import { ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS } from '../../../lib/core/database/androidCompanionSyncSchemaStatements';
 import type { NativeSyncNodeRecord } from '../../../lib/platform/nativeSyncContract';
 
 import { applyCompanionSyncNodeVersionsWithSharedCore } from './companionSyncNodeVersions';
+import { createFakeCapacitorConnection } from './companionSyncNodeVersionsTestSupport';
 
 let db: Database.Database | null = null;
 
@@ -16,7 +19,7 @@ it('applies node versions against the Android companion schema without desktop s
   db = new Database(':memory:');
   installAndroidNodeApplySchema(db);
 
-  await expect(applyCompanionSyncNodeVersionsWithSharedCore(createFakeConnection(db) as never, [
+  await expect(applyCompanionSyncNodeVersionsWithSharedCore(createFakeCapacitorConnection(db) as never, [
     nodeVersion()
   ])).resolves.toEqual(['node-android']);
 
@@ -61,69 +64,9 @@ function nodeVersion(): NativeSyncNodeRecord {
   };
 }
 
-function createFakeConnection(database: Database.Database) {
-  return {
-    beginTransaction: async () => database.exec('BEGIN'),
-    commitTransaction: async () => database.exec('COMMIT'),
-    query: async (sql: string, params: unknown[] = []) => ({
-      values: database.prepare(sql).all(...params)
-    }),
-    rollbackTransaction: async () => database.exec('ROLLBACK'),
-    run: async (sql: string, params: unknown[] = []) => {
-      const info = database.prepare(sql).run(...params);
-      return { changes: { changes: info.changes, lastId: Number(info.lastInsertRowid) } };
-    }
-  };
-}
-
 function installAndroidNodeApplySchema(database: Database.Database) {
-  database.exec(`
-    CREATE TABLE nodes (
-      id TEXT PRIMARY KEY,
-      parent_id TEXT,
-      kind TEXT NOT NULL,
-      priority INTEGER,
-      desired_retention REAL,
-      enable_short_term INTEGER,
-      sequential_reading_enabled INTEGER,
-      shelved_at TEXT,
-      manual_child_order TEXT,
-      title TEXT NOT NULL,
-      is_title_manual INTEGER NOT NULL DEFAULT 0,
-      hide_title_heading INTEGER NOT NULL DEFAULT 0,
-      content TEXT NOT NULL DEFAULT '',
-      body_blob_hash TEXT,
-      opening_text TEXT,
-      virtual_filter TEXT,
-      reveal TEXT,
-      anchor_link TEXT,
-      image_regions TEXT,
-      position INTEGER,
-      current_version_id TEXT,
-      last_modified_by_device_id TEXT,
-      sync_dirty INTEGER NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL,
-      deleted_at TEXT
-    );
-    CREATE TABLE node_sync_versions (
-      version_id TEXT PRIMARY KEY,
-      object_id TEXT NOT NULL,
-      parent_version_id TEXT,
-      device_id TEXT NOT NULL,
-      created_at TEXT NOT NULL,
-      content_hash TEXT,
-      snapshot_json TEXT NOT NULL
-    );
-    CREATE TABLE node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL);
-    CREATE TABLE attachments (id TEXT PRIMARY KEY);
-    CREATE TABLE node_attachments (
-      node_id TEXT NOT NULL,
-      attachment_id TEXT NOT NULL,
-      role TEXT NOT NULL,
-      PRIMARY KEY (node_id, attachment_id, role)
-    );
-  `);
+  database.exec(ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS.join(';\n'));
+  database.exec(ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS.join(';\n'));
   installContentBlobSchema(database);
 }
 

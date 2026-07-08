@@ -1,15 +1,13 @@
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
 
+import { buildReadingReviewDomainPatch } from './workspaceReadingReviewDomain';
 import {
   runtimeWorkspaceReviewPersistence,
   type WorkspaceReviewPersistenceAdapter
 } from './workspaceReviewPersistence';
-import { buildNextReadingProfile } from './workspaceReviewReading';
 import { calculateReviewStepElapsedMs } from './workspaceReviewSessionProgress';
 import type { WorkspaceState } from './workspaceStore';
-import { buildNextReadingReviewState } from './workspaceStoreReadingReviewSchedule';
-import { buildReadReviewSequentialRelease } from './workspaceStoreReadingReviewSequentialRelease';
 import {
   advanceAfterSoonAction,
   advanceOrCompleteAfterReadingAction,
@@ -43,14 +41,13 @@ export function createPostponeReviewTopicActionWithPending(
     const currentNode = snapshot.nodesById[currentNodeId];
     if (!currentNode || !isReadingReviewItemNode(currentNode)) return false;
     if (pendingNodeIds.has(currentNodeId)) return false;
-    const nextReading = buildNextReadingReviewState({ currentNode, currentNodeId, growthFactorExponent: 0.5, now, snapshot });
     return persistAndApplyReadingReviewPatch({
       currentNodeId,
       get,
       pendingNodeIds,
       set,
       buildPatch: (state) =>
-        buildReadOrPostponeReadingReviewPatch({ currentNodeId, nextReading, now, snapshot, state, title: 'Later Topic' }),
+        buildReadOrPostponeReadingReviewPatch({ action: 'later', currentNodeId, now, snapshot, state, title: 'Later Topic' }),
       persistence
     });
   };
@@ -73,14 +70,21 @@ export function createReadReviewTopicActionWithPending(
     const currentNode = snapshot.nodesById[currentNodeId];
     if (!currentNode || !isReadingReviewItemNode(currentNode)) return false;
     if (pendingNodeIds.has(currentNodeId)) return false;
-    const nextReading = buildNextReadingReviewState({ currentNode, currentNodeId, now, snapshot });
     return persistAndApplyReadingReviewPatch({
       currentNodeId,
       get,
       pendingNodeIds,
       set,
       buildPatch: (state) =>
-        buildReadOrPostponeReadingReviewPatch({ currentNodeId, nextReading, now, releaseSequentialReading: options.releaseSequentialReading === true, snapshot, state, title: 'Read Topic' }),
+        buildReadOrPostponeReadingReviewPatch({
+          action: 'read',
+          currentNodeId,
+          now,
+          releaseSequentialReading: options.releaseSequentialReading === true,
+          snapshot,
+          state,
+          title: 'Read Topic'
+        }),
       persistence
     });
   };
@@ -125,31 +129,19 @@ export function createRevisitReviewTopicSoonAction(set: WorkspaceSet, get: Works
 }
 
 function buildReadOrPostponeReadingReviewPatch(args: {
+  action: 'read' | 'later';
   currentNodeId: string;
-  nextReading: ReturnType<typeof buildNextReadingReviewState>;
   now: string;
   releaseSequentialReading?: boolean;
   snapshot: WorkspaceState;
   state: WorkspaceState;
   title: 'Read Topic' | 'Later Topic';
 }): ReadingReviewPatchResult | null {
-  const node = args.state.nodesById[args.currentNodeId];
-  if (!node) return null;
-  const nextReadingProfile = buildNextReadingProfile(args.nextReading, node.reading);
-  const nextNode: Node = { ...node, reading: nextReadingProfile, updatedAt: args.now };
-  let nextNodesById = { ...args.state.nodesById, [args.currentNodeId]: nextNode };
-  const sequentialPatch = args.releaseSequentialReading
-    ? buildReadReviewSequentialRelease({ currentNodeId: args.currentNodeId, nextNodesById, now: args.now, state: args.state })
-    : null;
-  if (sequentialPatch) {
-    nextNodesById = sequentialPatch.nodesById;
-  }
-  const nextNodesForSync = sequentialPatch
-    ? [nextNode, ...sequentialPatch.nodesForSync]
-    : [nextNode];
+  const result = buildReadingReviewDomainPatch(args);
+  if (!result) return null;
   const reviewSession = advanceOrCompleteAfterReadingAction({
     currentNodeId: args.currentNodeId,
-    nextNodesById,
+    nextNodesById: result.nextNodesById,
     now: args.now,
     progressDelta: isExistingQueueTopic(args.snapshot.reviewSession, args.currentNodeId) ? 1 : 0,
     readingElapsedMsDelta: calculateReviewStepElapsedMs(args.snapshot.reviewSession, args.now),
@@ -157,20 +149,20 @@ function buildReadOrPostponeReadingReviewPatch(args: {
     state: args.state
   });
   return {
-    nextNodesForSync,
+    nextNodesForSync: result.nextNodesForSync,
     patch: {
       activeNodeId: reviewSession.currentNodeId ?? reviewSession.continueNodeId ?? args.state.activeNodeId,
       ...createReadingReviewHistoryPatch({
-        afterReading: nextReadingProfile,
+        afterReading: result.afterReading,
         afterReviewSession: reviewSession,
-        beforeReading: node.reading,
+        beforeReading: result.beforeReading,
         beforeReviewSession: args.snapshot.reviewSession,
         nodeId: args.currentNodeId,
-        ...(sequentialPatch?.changes.length ? { relatedReadings: sequentialPatch.changes } : {}),
+        ...(result.sequentialChanges.length ? { relatedReadings: result.sequentialChanges } : {}),
         state: args.state,
         title: args.title
       }),
-      nodesById: nextNodesById,
+      nodesById: result.nextNodesById,
       reviewSession
     }
   };

@@ -17,15 +17,25 @@ export interface CompanionReviewLogInput {
 export async function persistCompanionReviewSyncObject(args: {
   itemKind: 'fsrs' | 'reading';
   nodeId: string;
+  nodeIds?: string[];
   reviewLog?: CompanionReviewLogInput;
   snapshot: WorkspaceSnapshot;
 }) {
+  const nodeIds = args.nodeIds ?? [args.nodeId];
   const node = args.snapshot.nodesById[args.nodeId];
   if (!node) {
     return null;
   }
   if (args.itemKind === 'reading' && node.reading) {
-    return saveCompanionSyncNodeReadingRecord({ nodeId: args.nodeId, reading: node.reading });
+    const persisted = [];
+    for (const nodeId of nodeIds) {
+      const readingNode = args.snapshot.nodesById[nodeId];
+      if (!readingNode?.reading) return null;
+      const result = await saveCompanionSyncNodeReadingRecord({ nodeId, reading: readingNode.reading });
+      if (!result) return null;
+      persisted.push(result);
+    }
+    return persisted;
   }
   if (args.itemKind === 'fsrs' && node.review) {
     return saveCompanionSyncNodeReviewRecord({
