@@ -56,8 +56,9 @@ it('applies nodes and node attachments from an attached sync pack', async () => 
     await port.run('DETACH DATABASE inc');
   }
 
-  expect(connection.sqlite.prepare('SELECT title, current_version_id FROM nodes WHERE id = ?').get('node-1')).toEqual({
+  expect(connection.sqlite.prepare('SELECT title, reveal, current_version_id FROM nodes WHERE id = ?').get('node-1')).toEqual({
     current_version_id: 'desktop#1',
+    reveal: 'Packed answer',
     title: 'Packed Node'
   });
   expect(connection.sqlite.prepare('SELECT node_id, position FROM node_order WHERE node_id = ?').get('node-1')).toEqual({
@@ -189,9 +190,9 @@ function createIncomingPack(filePath: string) {
     db.prepare(
       `INSERT INTO nodes (
          id, parent_id, kind, title, is_title_manual, hide_title_heading, body_blob_hash,
-         opening_text, content, current_version_id, created_at, updated_at, deleted_at
-       ) VALUES (?, NULL, 'topic', 'Packed Node', 0, 0, NULL, NULL, '', ?, ?, ?, NULL)`
-    ).run('node-1', 'desktop#1', '2026-05-04T01:00:00.000Z', '2026-05-04T01:00:00.000Z');
+         opening_text, reveal, content, current_version_id, created_at, updated_at, deleted_at
+       ) VALUES (?, NULL, 'topic', 'Packed Node', 0, 0, NULL, NULL, ?, '', ?, ?, ?, NULL)`
+    ).run('node-1', 'Packed answer', 'desktop#1', '2026-05-04T01:00:00.000Z', '2026-05-04T01:00:00.000Z');
     db.prepare(
       `INSERT INTO node_order (node_id, position)
        VALUES ('node-1', 5)`

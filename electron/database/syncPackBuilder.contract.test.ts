@@ -49,10 +49,10 @@ function insertNodeSyncState() {
   const bodyHash = upsertTextBodyBlob(driver, 'node body must stay out of pack', '2026-04-27T00:00:00.000Z');
   driver.execute(
     `INSERT INTO nodes (
-       id, kind, title, is_title_manual, hide_title_heading, opening_text, content, body_blob_hash, created_at, updated_at
-     ) VALUES (?, 'topic', ?, 1, 0, ?, ?, ?, ?, ?)`,
+       id, kind, title, is_title_manual, hide_title_heading, opening_text, content, body_blob_hash, reveal, created_at, updated_at
+     ) VALUES (?, 'topic', ?, 1, 0, ?, ?, ?, ?, ?, ?)`,
     ['node-1', 'Node 1', 'Node opening preview', 'node body must stay out of pack', bodyHash,
-      '2026-04-27T00:00:00.000Z', '2026-04-27T00:00:00.000Z']
+      'Contract answer', '2026-04-27T00:00:00.000Z', '2026-04-27T00:00:00.000Z']
   );
   driver.execute(
     `INSERT INTO sync_object_state (
@@ -139,7 +139,7 @@ function readPackRows(packPath: string) {
       manifest,
       nodeAttachments: db.prepare('SELECT node_id, attachment_id, role FROM node_attachments').all(),
       nodeOrder: db.prepare('SELECT node_id, position FROM node_order').all(),
-      nodes: db.prepare('SELECT id, content, body_blob_hash, opening_text FROM nodes').all()
+      nodes: db.prepare('SELECT id, content, body_blob_hash, opening_text, reveal FROM nodes').all()
     };
   } finally {
     db.close();
@@ -192,6 +192,11 @@ it('keeps the Android sync pack contract fixture deterministic', async () => {
     }),
     nodeAttachments: [{ attachment_id: 'att-1', node_id: 'node-1', role: 'image' }],
     nodeOrder: [{ node_id: 'node-1', position: 3 }],
-    nodes: [expect.objectContaining({ content: '', id: 'node-1', opening_text: 'Node opening preview' })]
+    nodes: [expect.objectContaining({
+      content: '',
+      id: 'node-1',
+      opening_text: 'Node opening preview',
+      reveal: 'Contract answer'
+    })]
   });
 });

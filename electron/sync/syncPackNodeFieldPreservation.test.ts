@@ -68,7 +68,7 @@ it('preserves node fields that are not carried by the pack node table', async ()
 function createIncomingPack(filePath: string) {
   const db = new Database(filePath);
   try {
-    for (const statement of PACK_SCHEMA) db.exec(statement);
+    for (const statement of legacyPackSchema()) db.exec(statement);
     db.prepare(
       `INSERT INTO sync_object_state (object_type, object_id, state_seq, content_hash, updated_at, deleted_at)
        VALUES ('node', 'node-1', 1, 'hash-node-1', '2026-05-04T01:00:00.000Z', NULL)`
@@ -82,6 +82,14 @@ function createIncomingPack(filePath: string) {
   } finally {
     db.close();
   }
+}
+
+function legacyPackSchema() {
+  return PACK_SCHEMA.map((statement) => (
+    statement.includes('CREATE TABLE nodes')
+      ? statement.replace('    reveal TEXT,\n', '')
+      : statement
+  ));
 }
 
 function insertRestoredNode() {

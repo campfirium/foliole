@@ -52,6 +52,7 @@ it('builds node and attachment pack apply statements against an incoming alias',
   expect(nodeSql).toContain('WHERE true ORDER BY sorted.depth ASC');
   expect(nodeSql).toContain('ON CONFLICT(id) DO UPDATE SET');
   expect(nodeSql).toContain('title = excluded.title');
+  expect(nodeSql).toContain('reveal = excluded.reveal');
   expect(nodeSql).not.toContain('priority = excluded.priority');
   expect(buildSyncPackNodeUpsertSql({ incomingAlias: 'incoming' })).toContain(
     'FROM incoming.nodes incoming'
@@ -61,6 +62,9 @@ it('builds node and attachment pack apply statements against an incoming alias',
   );
   expect(buildSyncPackNodeUpsertSql({ incomingAlias: 'incoming', incomingHasCurrentVersionId: false })).toContain(
     'SELECT existing.current_version_id FROM main.nodes existing WHERE existing.id = incoming.id'
+  );
+  expect(buildSyncPackNodeUpsertSql({ incomingAlias: 'incoming', incomingHasReveal: false })).toContain(
+    'SELECT existing.reveal FROM main.nodes existing WHERE existing.id = incoming.id'
   );
   expect(buildSyncPackNodeAttachmentDeleteSql({ incomingAlias: 'incoming' })).toContain(
     'DELETE FROM main.node_attachments WHERE node_id IN'

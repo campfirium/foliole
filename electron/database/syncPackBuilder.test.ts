@@ -93,7 +93,8 @@ function expectNodePackRows(packPath: string) {
       content: '',
       current_version_id: 'desktop#node-1-v1',
       id: 'node-1',
-      opening_text: 'Node opening preview'
+      opening_text: 'Node opening preview',
+      reveal: 'answer'
     })],
     stateRows: [
       { object_id: 'node-1', object_type: 'node', state_seq: 1 },

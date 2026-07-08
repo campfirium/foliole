@@ -53,12 +53,30 @@ async function applySyncPackNodeRowsWithDbPort(
   port: DbPort,
   options: SyncPackNodeApplyOptions = {}
 ) {
+  const resolvedOptions = await resolveSyncPackNodeApplyOptions(port, options);
   await dropNodeIndexes(port);
   try {
-    await port.run(buildSyncPackNodeUpsertSql(options));
+    await port.run(buildSyncPackNodeUpsertSql(resolvedOptions));
   } finally {
     await createNodeIndexes(port);
   }
+}
+
+async function resolveSyncPackNodeApplyOptions(
+  port: DbPort,
+  options: SyncPackNodeApplyOptions
+): Promise<SyncPackNodeApplyOptions> {
+  if (options.incomingHasReveal !== undefined) return options;
+  return {
+    ...options,
+    incomingHasReveal: await incomingNodesHasColumn(port, options.incomingAlias ?? 'inc', 'reveal')
+  };
+}
+
+async function incomingNodesHasColumn(port: DbPort, alias: string, columnName: string) {
+  const schemaName = alias.replaceAll('"', '""');
+  const rows = await port.query<{ name: unknown }>(`PRAGMA "${schemaName}".table_info(nodes)`);
+  return rows.some((row) => row.name === columnName);
 }
 
 const NODE_INDEX_NAMES = [

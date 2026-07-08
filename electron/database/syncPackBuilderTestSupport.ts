@@ -38,10 +38,10 @@ export function insertNodeSyncState() {
   driver.execute(
     `INSERT INTO nodes (
        id, kind, title, is_title_manual, hide_title_heading, opening_text, content, body_blob_hash,
-       current_version_id, created_at, updated_at
-     ) VALUES (?, 'topic', ?, 1, 0, ?, ?, ?, ?, ?, ?)`,
+       reveal, current_version_id, created_at, updated_at
+     ) VALUES (?, 'topic', ?, 1, 0, ?, ?, ?, ?, ?, ?, ?)`,
     ['node-1', 'Node 1', 'Node opening preview', 'node body must stay out of pack', bodyHash,
-      'desktop#node-1-v1', '2026-04-27T00:00:00.000Z', '2026-04-27T00:00:00.000Z']
+      'answer', 'desktop#node-1-v1', '2026-04-27T00:00:00.000Z', '2026-04-27T00:00:00.000Z']
   );
   driver.execute(
     `INSERT INTO sync_object_state (

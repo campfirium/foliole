@@ -6,6 +6,7 @@ export interface SyncPackApplyableRowsOptions {
 export interface SyncPackNodeApplyOptions {
   incomingAlias?: string;
   incomingHasCurrentVersionId?: boolean;
+  incomingHasReveal?: boolean;
 }
 
 const SYNC_PACK_NODE_COLUMNS = [
@@ -18,6 +19,7 @@ const SYNC_PACK_NODE_COLUMNS = [
   'shelved_at',
   'body_blob_hash',
   'opening_text',
+  'reveal',
   'content',
   'current_version_id',
   'created_at',
@@ -57,6 +59,9 @@ export function buildSyncPackNodeUpsertSql(options: SyncPackNodeApplyOptions = {
   const versionExpr = options.incomingHasCurrentVersionId === false
     ? `(SELECT existing.current_version_id FROM main.nodes existing WHERE existing.id = incoming.id)`
     : 'current_version_id';
+  const revealExpr = options.incomingHasReveal === false
+    ? `(SELECT existing.reveal FROM main.nodes existing WHERE existing.id = incoming.id)`
+    : 'incoming.reveal';
   const applyableRowsSql = buildSyncPackApplyableRowsSql({ incomingAlias: alias, objectType: 'node' });
   return `WITH RECURSIVE applyable_node_ids(id) AS (` +
     `SELECT object_id FROM ${applyableRowsSql}` +
@@ -68,7 +73,7 @@ export function buildSyncPackNodeUpsertSql(options: SyncPackNodeApplyOptions = {
     `WHERE child.id IN (SELECT id FROM applyable_node_ids)` +
     `) INSERT INTO main.nodes (${SYNC_PACK_NODE_COLUMNS.join(', ')}) ` +
     `SELECT incoming.id, incoming.parent_id, incoming.kind, incoming.title, incoming.is_title_manual, ` +
-    `incoming.hide_title_heading, incoming.shelved_at, incoming.body_blob_hash, incoming.opening_text, incoming.content, ` +
+    `incoming.hide_title_heading, incoming.shelved_at, incoming.body_blob_hash, incoming.opening_text, ${revealExpr}, incoming.content, ` +
     `${versionExpr}, incoming.created_at, incoming.updated_at, incoming.deleted_at FROM ${alias}.nodes incoming ` +
     `INNER JOIN (SELECT id, MIN(depth) AS depth FROM node_depth GROUP BY id) sorted ON sorted.id = incoming.id ` +
     `WHERE true ORDER BY sorted.depth ASC, incoming.updated_at ASC, incoming.id ASC ` +
