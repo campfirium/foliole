@@ -31,6 +31,7 @@ const GATE_INTEGRATION_BUCKETS = {
   'gate-integration-release-targets': (name) => name === 'quality-gate-release-targets.test.mjs',
   'gate-integration-routing': (name) =>
     name === 'quality-gate-critical-routes.integration.test.mjs' ||
+    name === 'quality-gate-fast-light-related.test.mjs' ||
     name === 'quality-gate-fast-lib-routing.test.mjs' ||
     name === 'quality-gate-skip-lint-integration.test.mjs',
   'gate-integration-target-collect': (name) => name === 'quality-gate-target-collect.test.mjs',

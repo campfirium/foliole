@@ -229,6 +229,7 @@ else
     run_parallel_lint_and_typecheck "scoped lint" ""
   else
     run_parallel_lint_and_typecheck "scoped lint" "${lint_targets}"
+    run_related_tests_if_needed "${all_changed}"
   fi
 fi
 

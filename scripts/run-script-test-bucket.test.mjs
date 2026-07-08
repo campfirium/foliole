@@ -44,6 +44,7 @@ describe('run-script-test-bucket', () => {
       'scripts/preview/preview-dedupe-batch.test.mjs',
       'scripts/quality/quality-gate-critical-routes.integration.test.mjs',
       'scripts/quality/quality-gate-fast.delegation.test.mjs',
+      'scripts/quality/quality-gate-fast-light-related.test.mjs',
       'scripts/quality/quality-gate-fast-lib-routing.test.mjs',
       'scripts/quality/quality-gate-release-tail-targets.test.mjs',
       'scripts/quality/quality-gate-release-targets.test.mjs',
@@ -68,6 +69,7 @@ describe('run-script-test-bucket', () => {
     expect(selectScriptTestBucketFiles('gate-integration', files)).toEqual([
       'scripts/quality/quality-gate-critical-routes.integration.test.mjs',
       'scripts/quality/quality-gate-fast.delegation.test.mjs',
+      'scripts/quality/quality-gate-fast-light-related.test.mjs',
       'scripts/quality/quality-gate-fast-lib-routing.test.mjs',
       'scripts/quality/quality-gate-release-tail-targets.test.mjs',
       'scripts/quality/quality-gate-release-targets.test.mjs',
@@ -79,6 +81,7 @@ describe('run-script-test-bucket', () => {
     ]);
     expect(selectScriptTestBucketFiles('gate-integration-routing', files)).toEqual([
       'scripts/quality/quality-gate-critical-routes.integration.test.mjs',
+      'scripts/quality/quality-gate-fast-light-related.test.mjs',
       'scripts/quality/quality-gate-fast-lib-routing.test.mjs',
       'scripts/quality/quality-gate-skip-lint-integration.test.mjs'
     ]);

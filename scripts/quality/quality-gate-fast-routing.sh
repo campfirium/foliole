@@ -133,7 +133,7 @@ resolve_quality_gate_target() {
       if [[ -z "${changed}" ]]; then
         printf 'typecheck only'
       else
-        printf 'scoped lint + typecheck'
+        printf 'scoped lint + typecheck + related tests when present'
       fi
       ;;
   esac
