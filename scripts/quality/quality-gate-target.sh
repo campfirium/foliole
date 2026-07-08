@@ -98,7 +98,7 @@ case "${target}" in
     run_renderer_guards_if_present
     run_repository_root_boundary_check_if_present
     run_gate_steps lint:desktop:full typecheck:desktop test:desktop test:windows:core
-    run_quality_script_gate_steps
+    run_quality_script_gate_steps_if_related "${changed_files_for_skip_lint}"
     run_gate_steps build electron:compile
     run_workspace_boundary_check_if_present
     ;;
@@ -106,20 +106,20 @@ case "${target}" in
     run_renderer_guards_if_present
     run_repository_root_boundary_check_if_present
     run_gate_steps check:android-boundary lint:android:full typecheck:android test:android
-    run_quality_script_gate_steps
+    run_quality_script_gate_steps_if_related "${changed_files_for_skip_lint}"
     run_gate_steps android:sync android:host:lint android:host:test
     ;;
   android-device)
     run_renderer_guards_if_present
     run_repository_root_boundary_check_if_present
     run_gate_steps check:android-boundary lint:android:full typecheck:android test:android
-    run_quality_script_gate_steps
+    run_quality_script_gate_steps_if_related "${changed_files_for_skip_lint}"
     run_gate_steps android:sync android:host:lint android:host:test android:emulator android:host:device-test
     ;;
   shared)
     run_shared_static_gate_steps
     run_shared_test_gate_steps
-    run_shared_quality_test_gate_steps
+    run_quality_script_gate_steps_if_related "${changed_files_for_skip_lint}"
     run_shared_build_gate_steps
     ;;
   shared-static)

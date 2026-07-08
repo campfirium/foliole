@@ -22,11 +22,11 @@ const TARGET_SCRIPT = path.join(REPO_ROOT, 'scripts', 'quality', 'quality-gate-t
 const DRY_RUN_ENV = { QUALITY_GATE_TEST_CONTEXT: '1', QUALITY_GATE_TEST_DRY_RUN_STEPS: '1' };
 const ok = (message) => `node -e "console.log('${message}')"`;
 
-function runTargetGate(cwd, target) {
+function runTargetGate(cwd, target, env = {}) {
   return new Promise((resolve) => {
     const child = spawn('bash', [TARGET_SCRIPT, target], {
       cwd,
-      env: { ...process.env, QUALITY_GATE_LOG_MODE: 'summary', ...DRY_RUN_ENV }
+      env: { ...process.env, QUALITY_GATE_LOG_MODE: 'summary', ...DRY_RUN_ENV, ...env }
     });
     let stdout = '';
     let stderr = '';
@@ -95,6 +95,48 @@ describe('quality-gate-target.sh shared segments', () => {
       expect(result.code).toBe(0);
       expectNoParallelFanOut(result.stdout);
       expect(extractQualityScriptSteps(result.stdout)).toEqual([...QUALITY_SCRIPT_STEPS].sort());
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, 60000);
+
+  it('skips shared quality script self-tests for ordinary product changes', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-shared-segments-'));
+    try {
+      await writePackageJson(tempRoot);
+
+      const result = await runTargetGate(tempRoot, 'shared', { QUALITY_GATE_CHANGED_FILES: 'src/app/example.ts' });
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('dry-run step: lint:shared:full');
+      expect(result.stdout).toContain('dry-run step: typecheck:shared');
+      expect(result.stdout).toContain('dry-run step: test:shared');
+      expect(result.stdout).toContain('dry-run step: build');
+      expect(result.stdout).toContain('skipped quality script self-tests');
+      for (const step of QUALITY_SCRIPT_STEPS) {
+        expect(result.stdout).not.toContain(`dry-run step: ${step}`);
+      }
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, 60000);
+
+  it.each([
+    ['empty changed files', ''],
+    ['quality gate script change', 'scripts/quality/quality-gate-target.sh'],
+    ['script bucket root change', 'scripts/demo/export-demo-pack.mjs'],
+    ['bucket selector change', 'scripts/script-test-bucket-selection.mjs']
+  ])('keeps shared quality script self-tests for %s', async (_label, changedFiles) => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-shared-segments-'));
+    try {
+      await writePackageJson(tempRoot);
+
+      const result = await runTargetGate(tempRoot, 'shared', { QUALITY_GATE_CHANGED_FILES: changedFiles });
+
+      expect(result.code).toBe(0);
+      for (const step of QUALITY_SCRIPT_STEPS) {
+        expectStep(result.stdout, step);
+      }
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }

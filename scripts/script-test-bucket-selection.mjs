@@ -1,7 +1,10 @@
-import { readdirSync } from 'node:fs';
-import path from 'node:path';
+/* global console, process */
 
-const SCRIPT_TEST_ROOTS = [
+import { readFileSync, readdirSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+export const SCRIPT_TEST_ROOTS = [
   'scripts',
   'scripts/codex',
   'scripts/demo',
@@ -67,6 +70,28 @@ export function isNodeOnlyScriptTest(filePath) {
   return path.basename(filePath) === 'test-files.test.mjs';
 }
 
+export function isScriptTestRootPath(filePath) {
+  const normalized = filePath.replaceAll('\\', '/');
+  for (const root of SCRIPT_TEST_ROOTS) {
+    if (root === 'scripts') {
+      const relative = normalized.startsWith('scripts/') ? normalized.slice('scripts/'.length) : '';
+      if (relative && !relative.includes('/')) {
+        return true;
+      }
+      continue;
+    }
+    if (normalized === root || normalized.startsWith(`${root}/`)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export function changedFilesNeedScriptTests(files) {
+  const changed = files.map((file) => file.replaceAll('\\', '/').trim()).filter(Boolean);
+  return changed.length === 0 || changed.some(isScriptTestRootPath);
+}
+
 function collectRootTestFiles(dirPath, recursive) {
   const files = [];
   for (const entry of readdirSync(dirPath, { withFileTypes: true })) {
@@ -115,4 +140,19 @@ export function selectScriptTestBucketFiles(bucket, files) {
     return files.filter((file) => !isQualityGateTest(file) && !isPreviewDedupeTest(file) && !isNodeOnlyScriptTest(file));
   }
   return null;
+}
+
+function main() {
+  const [command] = process.argv.slice(2);
+  if (command === 'changed-files-need-script-tests') {
+    const input = process.stdin.isTTY ? '' : readFileSync(0, 'utf8');
+    process.exitCode = changedFilesNeedScriptTests(input.split(/\r?\n/u)) ? 0 : 1;
+    return;
+  }
+  console.error('Usage: node scripts/script-test-bucket-selection.mjs changed-files-need-script-tests');
+  process.exitCode = 1;
+}
+
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+  main();
 }

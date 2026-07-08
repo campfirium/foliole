@@ -39,6 +39,20 @@ quality_gate_integration_scripts() {
   QUALITY_GATE_BUCKET_SELECTION_PATH="${QUALITY_GATE_LIB_DIR}/../script-test-bucket-selection.mjs" node --input-type=module -e "import('node:url').then(({ pathToFileURL }) => import(pathToFileURL(process.env.QUALITY_GATE_BUCKET_SELECTION_PATH).href)).then((m) => console.log(m.GATE_INTEGRATION_SCRIPT_NAMES.join(' ')))"
 }
 
+quality_script_self_tests_changed_files_match() {
+  local changed="$1"
+  printf '%s\n' "${changed}" | node "${QUALITY_GATE_LIB_DIR}/../script-test-bucket-selection.mjs" changed-files-need-script-tests
+}
+
+run_quality_script_gate_steps_if_related() {
+  local changed="$1"
+  if quality_script_self_tests_changed_files_match "${changed}"; then
+    run_quality_script_gate_steps
+  elif quality_gate_should_print_step; then
+    echo "[${prefix}] skipped quality script self-tests: changed files do not touch script test roots"
+  fi
+}
+
 run_release_test_gate_steps() {
   run_gate_steps_parallel test:release:desktop-src test:windows:core test:release:android test:release:shared test:quality:core test:quality:gate test:quality:node
   run_gate_steps test:desktop:electron
