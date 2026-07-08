@@ -93,13 +93,30 @@ it('keeps bare legacy trash ids as derived membership without overriding restore
 it('uses the same active resolver for persisted, runtime, and reading-progress callers', () => {
   expect(resolveWorkspaceSnapshotActiveNodeId({
     activeNodeId: 'missing-node',
-    nodeOrder: ['deleted-node', 'visible-node'],
+    nodeOrder: ['visible-node'],
     nodesById: {
       'deleted-node': createNode('deleted-node'),
       'visible-node': createNode('visible-node')
-    },
-    trashedNodeIds: ['deleted-node']
+    }
   })).toBe('visible-node');
+});
+
+it('keeps live descendants under deleted ancestors out of visible order without trashing them', () => {
+  const snapshot = normalizeWorkspaceSnapshot({
+    activeNodeId: 'hidden-child',
+    nodeOrder: ['deleted-parent', 'hidden-child', 'visible-node'],
+    nodesById: {
+      'deleted-parent': createNode('deleted-parent', { deletedAt: '2026-05-24T00:03:00.000Z' }),
+      'hidden-child': createNode('hidden-child', { parentNodeId: 'deleted-parent' }),
+      'visible-node': createNode('visible-node')
+    },
+    trashedNodeIds: []
+  });
+
+  expect(snapshot.nodeOrder).toEqual(['visible-node']);
+  expect(snapshot.trashedNodeIds).toEqual(['deleted-parent']);
+  expect(snapshot.nodesById['hidden-child']?.deletedAt).toBeUndefined();
+  expect(snapshot.activeNodeId).toBe('visible-node');
 });
 
 it('keeps all non-deleted node ids visible when no trash facts exist', () => {

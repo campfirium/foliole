@@ -1,6 +1,7 @@
 import type { NativeSyncObjectRecord } from '../../platform/nativeSyncContract.js';
 
 import type { DbPort, DbRow } from './dbPort.js';
+import { pruneLearningRowsWithoutVisibleNodes } from './syncNodeVisibilityPruning.js';
 import { applySyncObjectPayloadWithDbPort } from './syncObjectPayloadExecutor.js';
 import type { SyncPackSyncObjectRecord } from './syncPackSyncObjectsExecutor.js';
 
@@ -74,6 +75,9 @@ async function applySyncObjectBatch(
     for (const record of records) {
       const appliedId = await applySingleSyncObjectInTransaction(tx, record, options);
       if (appliedId) appliedIds.push(appliedId);
+    }
+    if (appliedIds.some((id) => id.startsWith('node_reading:') || id.startsWith('node_review:'))) {
+      await pruneLearningRowsWithoutVisibleNodes(tx);
     }
     return appliedIds;
   });

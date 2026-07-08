@@ -1,10 +1,10 @@
 import type { DatabaseDriver } from './driver.js';
 import {
-  VISIBLE_NODES_CTE_SQL,
   type WorkspacePdfCrossPageSearchRow,
   type WorkspacePdfSearchRow,
   type WorkspaceSearchRow
 } from './workspaceSearchSql.js';
+import { VISIBLE_NODES_CTE_SQL } from './workspaceVisibleNodesSql.js';
 
 export function normalizeSearchHaystack(value: string) {
   return value.toLowerCase().replace(/\s+/g, ' ').trim();

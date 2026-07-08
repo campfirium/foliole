@@ -131,15 +131,13 @@ function buildNodeOrder(driver: DatabaseDriver, rows: WorkspaceNodeRow[], nodesB
 function resolveActiveNodeId(
   driver: DatabaseDriver,
   nodeOrder: string[],
-  nodesById: Record<string, WorkspaceListNodeSnapshot>,
-  trashedNodeIds: string[]
+  nodesById: Record<string, WorkspaceListNodeSnapshot>
 ) {
   const persistedActiveNodeId = loadPersistedActiveNodeId(driver);
   return resolveWorkspaceSnapshotActiveNodeId({
     activeNodeId: persistedActiveNodeId,
     nodeOrder,
-    nodesById,
-    trashedNodeIds
+    nodesById
   });
 }
 
@@ -164,7 +162,7 @@ export function loadWorkspaceListSnapshot(
     : buildPdfOpeningById(queryPdfOpeningRows(driver), nodesById);
   const nodeOrder = buildNodeOrder(driver, rows, nodesById);
   applyResolvedOpenings({ directOpeningById, nodeOrder, nodesById, pdfOpeningById });
-  const activeNodeId = resolveActiveNodeId(driver, nodeOrder, nodesById, trashedNodeIds);
+  const activeNodeId = resolveActiveNodeId(driver, nodeOrder, nodesById);
 
   return normalizeWorkspaceSnapshot({
     activeNodeId,

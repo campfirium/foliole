@@ -47,6 +47,20 @@ function insertNode(nodeId: string) {
   );
 }
 
+function insertHiddenChild() {
+  const connection = openDatabaseConnection();
+  connection.driver.execute(
+    `INSERT INTO nodes (id, kind, title, content, created_at, updated_at, deleted_at)
+     VALUES ('deleted-parent', 'folder', 'Deleted Parent', '', '2026-04-22T07:00:00.000Z',
+       '2026-04-22T07:30:00.000Z', '2026-04-22T07:30:00.000Z')`
+  );
+  connection.driver.execute(
+    `INSERT INTO nodes (id, parent_id, kind, title, content, created_at, updated_at)
+     VALUES ('node-1', 'deleted-parent', 'item', 'Hidden Child', '', '2026-04-22T08:00:00.000Z',
+       '2026-04-22T08:00:00.000Z')`
+  );
+}
+
 function androidStateRecords(): NativeSyncObjectRecord[] {
   return [{
     content_hash: 'hash-reading-android',
@@ -130,6 +144,21 @@ it('makes Android-applied reading and review visible while keeping view state de
   expect(openDatabaseConnection().sqlite
     .prepare('SELECT COUNT(*) AS count FROM node_view_state')
     .get()).toEqual({ count: 0 });
+});
+
+it('prunes Android-applied reading and review for live children hidden under deleted parents', async () => {
+  insertHiddenChild();
+
+  await expect(applySyncObjectsAsync(androidStateRecords())).resolves.toEqual([
+    'node_reading:node-1',
+    'node_review:node-1'
+  ]);
+
+  const connection = openDatabaseConnection();
+  expect(connection.sqlite.prepare('SELECT node_id FROM node_reading WHERE node_id = ?').get('node-1')).toBeUndefined();
+  expect(connection.sqlite.prepare('SELECT node_id FROM node_review WHERE node_id = ?').get('node-1')).toBeUndefined();
+  expect(loadWorkspaceSnapshot()?.nodesById['node-1']?.reading).toBeNull();
+  expect(loadWorkspaceSnapshot()?.nodesById['node-1']?.review).toBeNull();
 });
 
 it('rejects unknown Android reading states instead of downcasting them', async () => {

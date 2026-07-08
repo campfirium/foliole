@@ -1,4 +1,5 @@
-import { ANDROID_COMPANION_RESOURCE_STATUSES } from './androidCompanionSyncProtocolDefinitions.ts';
+import { ANDROID_COMPANION_RESOURCE_STATUSES } from './androidCompanionSyncProtocolDefinitions.js';
+import { VISIBLE_NODES_CTE_SQL } from './workspaceVisibleNodesSql.js';
 
 const RESOURCE_STATUS = ANDROID_COMPANION_RESOURCE_STATUSES;
 
@@ -6,15 +7,16 @@ export const ANDROID_COMPANION_CONTENT_RESOURCE_QUERY_DEFINITIONS = {
   contentBlobMissingHashes: {
     resultKey: 'blobs',
     sql:
-      'WITH body_refs AS (' +
+      `${VISIBLE_NODES_CTE_SQL}, body_refs AS (` +
       'SELECT n.body_blob_hash AS hash, ' +
       "CASE WHEN n.id = (SELECT value FROM workspace_meta WHERE key = 'active_node_id' LIMIT 1) THEN 0 " +
       "WHEN nr.due IS NOT NULL AND nr.due <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now') THEN 1 " +
       'WHEN n.parent_id IS NULL THEN 2 ELSE 3 END AS priority, ' +
       'COALESCE(rd.last_handled_at, n.updated_at) AS updated_at ' +
-      'FROM nodes n LEFT JOIN node_review nr ON nr.node_id = n.id ' +
+      'FROM nodes n INNER JOIN visible_nodes visible ON visible.id = n.id ' +
+      'LEFT JOIN node_review nr ON nr.node_id = n.id ' +
       'LEFT JOIN node_reading rd ON rd.node_id = n.id ' +
-      'WHERE n.body_blob_hash IS NOT NULL AND n.deleted_at IS NULL ' +
+      'WHERE n.body_blob_hash IS NOT NULL ' +
       'UNION ALL SELECT ed.body_blob_hash AS hash, 4 AS priority, ed.updated_at AS updated_at ' +
       'FROM external_documents ed WHERE ed.body_blob_hash IS NOT NULL AND ed.is_present = 1' +
       '), ranked_refs AS (' +
@@ -34,8 +36,8 @@ export const ANDROID_COMPANION_CONTENT_RESOURCE_QUERY_DEFINITIONS = {
   contentBlobMissingSummaryRows: {
     resultKey: 'blobs',
     sql:
-      'WITH body_refs AS (' +
-      'SELECT n.body_blob_hash AS hash FROM nodes n WHERE n.body_blob_hash IS NOT NULL AND n.deleted_at IS NULL ' +
+      `${VISIBLE_NODES_CTE_SQL}, body_refs AS (` +
+      'SELECT n.body_blob_hash AS hash FROM nodes n INNER JOIN visible_nodes visible ON visible.id = n.id WHERE n.body_blob_hash IS NOT NULL ' +
       'UNION SELECT ed.body_blob_hash AS hash FROM external_documents ed ' +
       'WHERE ed.body_blob_hash IS NOT NULL AND ed.is_present = 1' +
       ') SELECT cb.hash, COALESCE(cb.stored_size_bytes, 0) AS size_bytes, cb.availability FROM content_blobs cb ' +

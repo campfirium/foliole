@@ -56,6 +56,18 @@ const SYNC_PAYLOAD_ROUTING_RULES = path.join(
   'android',
   'FolioleCompanionSyncPayloadRoutingRules.java'
 );
+const LEARNING_PAYLOAD_STORE = path.join(
+  REPO_ROOT,
+  'android',
+  'app',
+  'src',
+  'main',
+  'java',
+  'com',
+  'foliole',
+  'android',
+  'FolioleCompanionLearningPayloadStore.java'
+);
 
 describe('Android sync payload routing metadata', () => {
   it('generates payload routes and compound view-state object identity rules', async () => {
@@ -118,6 +130,7 @@ describe('Android sync payload routing metadata', () => {
 
   it('keeps Java payload routing and view-state object ids driven by generated metadata', async () => {
     const payloadStore = await readFile(SYNC_PAYLOAD_QUERY_STORE, 'utf8');
+    const learningPayloadStore = await readFile(LEARNING_PAYLOAD_STORE, 'utf8');
     const payloadJson = await readFile(SYNC_PAYLOAD_JSON, 'utf8');
     const payloadRoutingRules = await readFile(SYNC_PAYLOAD_ROUTING_RULES, 'utf8');
     const viewStateStore = await readFile(VIEW_STATE_SYNC_STORE, 'utf8');
@@ -128,6 +141,8 @@ describe('Android sync payload routing metadata', () => {
     expect(payloadStore).toContain('routingInt(context, "objectIdPartLimit")');
     expect(payloadStore).toContain('FolioleCompanionSyncPayloadRoutingRules.rowString(context, row, "objectTypeKey")');
     expect(payloadStore).toContain('FolioleCompanionSyncPayloadRoutingRules.routeString(context, route, "queryNameKey")');
+    expect(payloadStore).toContain('FolioleCompanionLearningPayloadStore.loadPayload(context, database, queryName, args)');
+    expect(learningPayloadStore).toContain('FolioleCompanionNamedQueryStore.loadFirstRow(context, database, queryName, args)');
     expect(payloadJson).toContain('FolioleCompanionSyncPayloadRoutingRules.string(context, "payloadJsonKey")');
     expect(payloadRoutingRules).toContain('static String rowString');
     expect(payloadRoutingRules).toContain('static String routeString');

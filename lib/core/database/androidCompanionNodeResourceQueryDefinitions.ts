@@ -4,7 +4,8 @@ import {
   androidReadableArticleReferencePdfAttachmentSql,
   androidReadableArticleSql,
   androidSearchExcerptExpression,
-} from './androidCompanionDerivedReadSql.ts';
+} from './androidCompanionDerivedReadSql.js';
+import { VISIBLE_NODES_CTE_SQL } from './workspaceVisibleNodesSql.js';
 
 const TOPIC_INLINE_CONTENT = 'n.content';
 const TOPIC_BODY_BLOB_DATA = 'CAST(cbd.data AS TEXT)';
@@ -64,13 +65,15 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
   topicSearch: {
     resultKey: 'results',
     sql:
+      `${VISIBLE_NODES_CTE_SQL} ` +
       'SELECT n.id, COALESCE(NULLIF(TRIM(n.title), \'\'), \'Untitled\') AS title, n.opening_text, ' +
       `${TOPIC_STATUS} AS content_status, n.updated_at, ` +
       'max(0, instr(lower(' + TOPIC_CONTENT + '), ?) - 1) AS match_start, ' +
       `${androidSearchExcerptExpression(TOPIC_CONTENT, '?', 80)} AS excerpt ` +
       'FROM nodes n LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash ' +
-      'LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE n.deleted_at IS NULL ' +
-      'AND (instr(lower(COALESCE(n.title, \'\')), ?) > 0 OR instr(lower(COALESCE(n.opening_text, \'\')), ?) > 0 ' +
+      'LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash ' +
+      'INNER JOIN visible_nodes visible ON visible.id = n.id ' +
+      'WHERE (instr(lower(COALESCE(n.title, \'\')), ?) > 0 OR instr(lower(COALESCE(n.opening_text, \'\')), ?) > 0 ' +
       `OR instr(lower(${TOPIC_CONTENT}), ?) > 0) ` +
       'ORDER BY n.updated_at DESC, n.created_at DESC, n.id ASC LIMIT ?',
     columns: [
@@ -96,7 +99,10 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
   readableArticleFirstNode: {
     resultKey: 'articles',
     sql:
-      androidReadableArticleSql("WHERE n.body_blob_hash IS NOT NULL OR TRIM(COALESCE(n.content, '')) <> ''") +
+      `${VISIBLE_NODES_CTE_SQL} ` +
+      androidReadableArticleSql(
+        "INNER JOIN visible_nodes visible ON visible.id = n.id WHERE n.body_blob_hash IS NOT NULL OR TRIM(COALESCE(n.content, '')) <> ''"
+      ) +
       ' ORDER BY n.updated_at DESC, n.created_at DESC, n.id ASC LIMIT 1',
     columns: androidReadableArticleColumns()
   },
@@ -133,7 +139,8 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
   workspaceOrderedNodeIds: {
     resultKey: 'nodes',
     sql:
-      'SELECT n.id FROM nodes n LEFT JOIN node_order no ON no.node_id = n.id ' +
+      `${VISIBLE_NODES_CTE_SQL} ` +
+      'SELECT n.id FROM nodes n INNER JOIN visible_nodes visible ON visible.id = n.id LEFT JOIN node_order no ON no.node_id = n.id ' +
       'ORDER BY COALESCE(no.position, 2147483647) ASC, ' +
       'n.updated_at DESC, n.created_at DESC, n.id ASC',
     columns: [{ key: 'id', source: 'id', type: 'string' }]
@@ -146,16 +153,17 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
   workspaceSnapshotNodes: {
     resultKey: 'nodes',
     sql:
+      `${VISIBLE_NODES_CTE_SQL} ` +
       'SELECT n.id, n.parent_id, n.kind, n.priority, n.desired_retention, n.enable_short_term, n.sequential_reading_enabled, n.shelved_at, n.manual_child_order, n.title, n.is_title_manual, ' +
       'n.hide_title_heading, __CONTENT_EXPRESSION__ AS content, n.opening_text, __BODY_STATUS_EXPRESSION__ AS body_status, ' +
       'n.virtual_filter, n.reveal, n.anchor_link, n.image_regions, n.created_at, n.updated_at, n.deleted_at, n.current_version_id, ' +
       'rd.interval_duration_ms, rd.interval_growth_factor, rd.last_handled_at, rd.next_at, rd.priority AS reading_priority, ' +
       'rds.reading_position, rd.repetition_count, rd.state AS reading_state, nr.due, nr.last_review_at, nr.state AS review_state, ' +
       'nr.stability, nr.difficulty, nr.elapsed_days, nr.scheduled_days, nr.reps, nr.lapses, n.body_blob_hash ' +
-      'FROM nodes n __CONTENT_BLOB_JOIN__ ' +
-      'LEFT JOIN node_reading rd ON rd.node_id = n.id ' +
-      'LEFT JOIN node_reading_device_state rds ON rds.node_id = n.id AND rds.device_id = ? ' +
-      'LEFT JOIN node_review nr ON nr.node_id = n.id ' +
+      'FROM nodes n LEFT JOIN visible_nodes visible ON visible.id = n.id __CONTENT_BLOB_JOIN__ ' +
+      'LEFT JOIN node_reading rd ON rd.node_id = n.id AND visible.id IS NOT NULL ' +
+      'LEFT JOIN node_reading_device_state rds ON rds.node_id = n.id AND rds.device_id = ? AND visible.id IS NOT NULL ' +
+      'LEFT JOIN node_review nr ON nr.node_id = n.id AND visible.id IS NOT NULL ' +
       'ORDER BY COALESCE((SELECT no.position FROM node_order no WHERE no.node_id = n.id), 2147483647), ' +
       'n.updated_at DESC, n.created_at DESC, n.id ASC',
     columns: [

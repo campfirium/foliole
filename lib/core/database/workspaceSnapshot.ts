@@ -5,15 +5,15 @@ import { loadWorkspaceManualVirtualCollections } from './manualVirtualCollection
 import type { WorkspaceManualVirtualCollection } from './manualVirtualCollections.js';
 import { loadDatabaseDeviceId } from './syncDeviceIdentity.js';
 import { attachWorkspaceNodeAttachments } from './workspaceSnapshotAttachments.js';
-import { normalizeWorkspaceSnapshot } from './workspaceSnapshotContract.js';
+import { normalizeWorkspaceSnapshot, resolveWorkspaceSnapshotActiveNodeId } from './workspaceSnapshotContract.js';
 import {
   buildOrderedNodeIds,
   buildWorkspaceSnapshotNode,
-  resolveSnapshotActiveNodeId,
   type WorkspaceNodeSnapshot
 } from './workspaceSnapshotHelpers.js';
 import { loadPersistedNodeViewById } from './workspaceSnapshotNodeViewState.js';
 import { loadUntitledSequenceByParent } from './workspaceUntitledSequence.js';
+import { VISIBLE_NODES_CTE_SQL } from './workspaceVisibleNodesSql.js';
 
 export interface WorkspaceSnapshot {
   activeNodeId: string | null;
@@ -108,7 +108,8 @@ function queryWorkspaceRows(driver: DatabaseDriver, options: WorkspaceSnapshotLo
   const deviceId = loadDatabaseDeviceId(driver) ?? '*';
   const { bodyJoin, bodyStatusExpression, contentExpression } = buildBodySelection(options);
   return driver.queryAll<WorkspaceNodeRow>(
-    `SELECT
+    `${VISIBLE_NODES_CTE_SQL}
+     SELECT
        n.id,
        n.parent_id,
        n.kind,
@@ -150,11 +151,12 @@ function queryWorkspaceRows(driver: DatabaseDriver, options: WorkspaceSnapshotLo
        nr.reps AS review_reps,
        nr.lapses AS review_lapses
      FROM nodes n
+     LEFT JOIN visible_nodes visible ON visible.id = n.id
      LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash
      ${bodyJoin}
-     LEFT JOIN node_reading rd ON rd.node_id = n.id
-     LEFT JOIN node_reading_device_state rds ON rds.node_id = n.id AND rds.device_id = ?
-     LEFT JOIN node_review nr ON nr.node_id = n.id`
+     LEFT JOIN node_reading rd ON rd.node_id = n.id AND visible.id IS NOT NULL
+     LEFT JOIN node_reading_device_state rds ON rds.node_id = n.id AND rds.device_id = ? AND visible.id IS NOT NULL
+     LEFT JOIN node_review nr ON nr.node_id = n.id AND visible.id IS NOT NULL`
     , [deviceId]
   );
 }
@@ -187,9 +189,11 @@ function buildSnapshotRows(
   attachWorkspaceNodeAttachments(driver, nodesById);
   const nodeOrder = buildOrderedNodeIds(rows, orderedRows, nodesById);
   const persistedNodeViewById = loadPersistedNodeViewById(driver);
+  const activeRow = driver.queryOne<{ value: string }>('SELECT value FROM workspace_meta WHERE key = ?', [ACTIVE_NODE_META_KEY]);
+  const activeNodeId = activeRow && activeRow.value !== '' ? activeRow.value : null;
 
   return normalizeWorkspaceSnapshot({
-    activeNodeId: resolveSnapshotActiveNodeId(driver, nodeOrder, nodesById, trashedNodeIds, ACTIVE_NODE_META_KEY),
+    activeNodeId: resolveWorkspaceSnapshotActiveNodeId({ activeNodeId, nodeOrder, nodesById }),
     manualVirtualCollections: loadWorkspaceManualVirtualCollections(driver),
     nodeOrder,
     nodesById,

@@ -1,4 +1,5 @@
-import { ANDROID_COMPANION_RESOURCE_STATUSES } from './androidCompanionSyncProtocolDefinitions.ts';
+import { ANDROID_COMPANION_RESOURCE_STATUSES } from './androidCompanionSyncProtocolDefinitions.js';
+import { VISIBLE_NODES_CTE_SQL } from './workspaceVisibleNodesSql.js';
 
 const RESOURCE_STATUS = ANDROID_COMPANION_RESOURCE_STATUSES;
 
@@ -6,12 +7,13 @@ export const ANDROID_COMPANION_ATTACHMENT_RESOURCE_QUERY_DEFINITIONS = {
   attachmentResourceMissingRows: {
     resultKey: 'resources',
     sql:
-      'WITH attachment_refs AS (' +
+      `${VISIBLE_NODES_CTE_SQL}, attachment_refs AS (` +
       'SELECT na.attachment_id AS attachment_id, ' +
       "CASE WHEN n.id = (SELECT value FROM workspace_meta WHERE key = 'active_node_id' LIMIT 1) THEN 0 " +
       "WHEN nr.due IS NOT NULL AND nr.due <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now') THEN 1 ELSE 2 END AS priority, " +
       'n.updated_at AS updated_at FROM node_attachments na JOIN nodes n ON n.id = na.node_id ' +
-      'LEFT JOIN node_review nr ON nr.node_id = n.id WHERE n.deleted_at IS NULL' +
+      'INNER JOIN visible_nodes visible ON visible.id = n.id ' +
+      'LEFT JOIN node_review nr ON nr.node_id = n.id' +
       '), ranked_refs AS (' +
       'SELECT attachment_id, MIN(priority) AS priority, MAX(updated_at) AS updated_at FROM attachment_refs GROUP BY attachment_id' +
       ') SELECT b.attachment_id, b.content_hash, COALESCE(b.size_bytes, 0) AS size_bytes, b.availability, b.storage_key ' +
@@ -32,14 +34,17 @@ export const ANDROID_COMPANION_ATTACHMENT_RESOURCE_QUERY_DEFINITIONS = {
   attachmentResourceMissingSummaryRows: {
     resultKey: 'resources',
     sql:
+      `${VISIBLE_NODES_CTE_SQL} ` +
       "SELECT b.availability, b.storage_key, COALESCE(b.size_bytes, 0) AS size_bytes, lower(COALESCE(b.mime_type, '')) AS mime_type, " +
       'EXISTS(SELECT 1 FROM node_attachments na JOIN nodes n ON n.id = na.node_id ' +
+      'JOIN visible_nodes visible ON visible.id = n.id ' +
       'JOIN node_review nr ON nr.node_id = n.id WHERE na.attachment_id = b.attachment_id ' +
-      "AND n.deleted_at IS NULL AND nr.due <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now') LIMIT 1) AS due_review, " +
+      "AND nr.due <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now') LIMIT 1) AS due_review, " +
       'EXISTS(SELECT 1 FROM node_attachments na JOIN nodes n ON n.id = na.node_id ' +
-      'WHERE na.attachment_id = b.attachment_id AND n.deleted_at IS NULL ' +
+      'JOIN visible_nodes visible ON visible.id = n.id ' +
+      'WHERE na.attachment_id = b.attachment_id ' +
       "AND n.id = (SELECT value FROM workspace_meta WHERE key = 'active_node_id' LIMIT 1) LIMIT 1) AS active_topic " +
-      "FROM attachment_blobs b WHERE b.content_hash IS NOT NULL AND TRIM(b.content_hash) != ''",
+      `FROM attachment_blobs b WHERE b.content_hash IS NOT NULL AND TRIM(b.content_hash) != ''`,
     columns: [
       { key: 'availability', source: 'availability', type: 'string' },
       { key: 'storage_key', source: 'storage_key', type: 'nullableString' },

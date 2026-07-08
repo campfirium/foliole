@@ -4,9 +4,7 @@ import { parseVirtualNodeFilter, type VirtualNodeFilter } from '../nodes/virtual
 import { isReadingState, type ReadingState } from '../review/readingState.js';
 
 import { parseStoredAnchorLink, type StoredAnchorLink } from './anchorLinkCodec.js';
-import type { DatabaseDriver } from './driver.js';
 import { parseStoredImageRegions, type StoredImageRegionGroup } from './imageRegionCodec.js';
-import { resolveWorkspaceSnapshotActiveNodeId } from './workspaceSnapshotContract.js';
 
 interface WorkspaceReviewProfile {
   due: string;
@@ -217,21 +215,4 @@ export function buildOrderedNodeIds<T extends { id: string }>(
     }
   }
   return nodeOrder;
-}
-
-export function resolveSnapshotActiveNodeId(
-  driver: DatabaseDriver,
-  nodeOrder: string[],
-  nodesById: Record<string, WorkspaceNodeSnapshot>,
-  trashedNodeIds: string[],
-  activeNodeMetaKey: string
-) {
-  const row = driver.queryOne<{ value: string }>('SELECT value FROM workspace_meta WHERE key = ?', [activeNodeMetaKey]);
-  const persistedActiveNodeId = row && row.value !== '' ? row.value : null;
-  return resolveWorkspaceSnapshotActiveNodeId({
-    activeNodeId: persistedActiveNodeId,
-    nodeOrder,
-    nodesById,
-    trashedNodeIds
-  });
 }

@@ -25,3 +25,16 @@ export function hasShelvedAncestor(node: ReviewQueueNode, nodesById: Record<stri
   }
   return false;
 }
+
+export function hasDeletedAncestor(node: ReviewQueueNode, nodesById: Record<string, ReviewQueueNode | undefined>) {
+  const visitedNodeIds = new Set<string>();
+  let currentNode: ReviewQueueNode | undefined = node;
+  while (currentNode && !visitedNodeIds.has(currentNode.id)) {
+    if (currentNode.deletedAt) {
+      return true;
+    }
+    visitedNodeIds.add(currentNode.id);
+    currentNode = currentNode.parentNodeId ? nodesById[currentNode.parentNodeId] : undefined;
+  }
+  return false;
+}

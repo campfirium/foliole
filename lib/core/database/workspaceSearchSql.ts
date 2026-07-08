@@ -1,4 +1,5 @@
 import type { DatabaseRow } from './driver.js';
+import { VISIBLE_NODES_CTE_SQL } from './workspaceVisibleNodesSql.js';
 
 export interface WorkspaceSearchRow extends DatabaseRow {
   content: string;
@@ -35,19 +36,6 @@ export interface WorkspacePdfCrossPageSearchRow extends DatabaseRow {
 }
 
 export const MAX_RESULTS = 40;
-export const VISIBLE_NODES_CTE_SQL = `WITH RECURSIVE visible_nodes(id) AS (
-  SELECT id
-  FROM nodes
-  WHERE parent_id IS NULL
-    AND deleted_at IS NULL
-  UNION ALL
-  SELECT child.id
-  FROM nodes child
-  INNER JOIN visible_nodes parent
-    ON parent.id = child.parent_id
-  WHERE child.deleted_at IS NULL
-)`;
-
 export const TITLE_FALLBACK_SQL = `${VISIBLE_NODES_CTE_SQL}
 SELECT n.id, n.title, COALESCE(CAST(cbd.data AS TEXT), n.content) AS content, n.updated_at
   FROM nodes n

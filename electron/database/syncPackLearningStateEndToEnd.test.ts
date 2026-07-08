@@ -70,6 +70,33 @@ it('builds and applies a desktop learning-state pack after its node row', async 
   ).get()).toEqual({ object_id: 'node-reading-1', object_type: 'node_reading' });
 });
 
+it('prunes packed learning rows for live children hidden under deleted parents', async () => {
+  const packPath = await buildHiddenChildLearningDesktopPack();
+  const incomingPath = extractIncomingPack(packPath, path.join(tempRoot, 'incoming-hidden-child.db'));
+  const target = openTargetDatabase();
+  const port = createBetterSqliteDbPort(target.sqlite, { name: 'hidden-child-learning-target' });
+
+  await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
+  try {
+    await expect(applySyncPackNodeSurfaceWithDbPort(port, {
+      currentCursor: 0,
+      deviceId: 'android-target'
+    })).resolves.toMatchObject({
+      applied: true,
+      fromStateSeq: 0,
+      toStateSeq: 3
+    });
+  } finally {
+    await port.run('DETACH DATABASE inc');
+  }
+
+  expect(target.sqlite.prepare('SELECT parent_id, deleted_at FROM nodes WHERE id = ?').get('hidden-child')).toEqual({
+    deleted_at: null,
+    parent_id: 'deleted-parent'
+  });
+  expect(target.sqlite.prepare('SELECT node_id FROM node_reading WHERE node_id = ?').get('hidden-child')).toBeUndefined();
+});
+
 async function buildLearningOnlyDesktopPack() {
   mockedAppDataDir = path.join(tempRoot, 'source-app-data');
   initializeDatabaseConnection(openDatabaseConnection());
@@ -81,6 +108,23 @@ async function buildLearningOnlyDesktopPack() {
     fromStateSeq: 0,
     outputPath: packPath,
     packId: 'desktop-learning-only',
+    toPeerId: 'android-target'
+  });
+  closeDatabaseConnection();
+  return packPath;
+}
+
+async function buildHiddenChildLearningDesktopPack() {
+  mockedAppDataDir = path.join(tempRoot, 'hidden-source-app-data');
+  initializeDatabaseConnection(openDatabaseConnection());
+  insertHiddenChildLearningState();
+  const packPath = path.join(tempRoot, 'desktop-hidden-child-learning.syncpack');
+  await buildDesktopSyncPack({
+    createdAt: '2026-05-06T11:00:00.000Z',
+    fromDeviceId: 'desktop-source',
+    fromStateSeq: 0,
+    outputPath: packPath,
+    packId: 'desktop-hidden-child-learning',
     toPeerId: 'android-target'
   });
   closeDatabaseConnection();
@@ -128,6 +172,42 @@ function insertSourceLearningState() {
        object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
      ) VALUES ('node_reading', 'node-reading-1', 2, 'reading-hash',
        'desktop-source', '2026-05-06T09:05:00.000Z', 1)`
+  );
+}
+
+function insertHiddenChildLearningState() {
+  const driver = openDatabaseConnection().driver;
+  driver.execute(
+    `INSERT INTO nodes (id, kind, title, content, created_at, updated_at, deleted_at)
+     VALUES ('deleted-parent', 'folder', 'Deleted Parent', '', '2026-05-06T10:00:00.000Z',
+       '2026-05-06T10:10:00.000Z', '2026-05-06T10:10:00.000Z')`
+  );
+  driver.execute(
+    `INSERT INTO nodes (id, parent_id, kind, title, content, created_at, updated_at)
+     VALUES ('hidden-child', 'deleted-parent', 'topic', 'Hidden Child', '', '2026-05-06T10:05:00.000Z',
+       '2026-05-06T10:15:00.000Z')`
+  );
+  driver.execute(
+    `INSERT INTO sync_object_state (
+       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, deleted_at, sync_dirty
+     ) VALUES
+       ('node', 'deleted-parent', 1, 'deleted-parent-hash', 'desktop-source',
+         '2026-05-06T10:10:00.000Z', '2026-05-06T10:10:00.000Z', 1),
+       ('node', 'hidden-child', 2, 'hidden-child-hash', 'desktop-source',
+         '2026-05-06T10:15:00.000Z', NULL, 1)`
+  );
+  driver.execute(
+    `INSERT INTO node_reading (
+       node_id, interval_duration_ms, interval_growth_factor, last_handled_at,
+       next_at, priority, repetition_count, state
+     ) VALUES ('hidden-child', 120000, 1.5, '2026-05-06T10:16:00.000Z',
+       '2026-05-07T10:16:00.000Z', 0.75, 2, 'active')`
+  );
+  driver.execute(
+    `INSERT INTO sync_object_state (
+       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+     ) VALUES ('node_reading', 'hidden-child', 3, 'hidden-child-reading-hash',
+       'desktop-source', '2026-05-06T10:16:00.000Z', 1)`
   );
 }
 

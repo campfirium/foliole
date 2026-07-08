@@ -1,6 +1,7 @@
 import { CORE_INDEX_SCHEMA_STATEMENTS } from '../database/coreIndexSchemaStatements.js';
 
 import type { DbPort } from './dbPort.js';
+import { pruneLearningRowsWithoutVisibleNodes } from './syncNodeVisibilityPruning.js';
 import {
   buildSyncPackNodeAttachmentDeleteSql,
   buildSyncPackNodeAttachmentInsertSql,
@@ -83,21 +84,6 @@ async function createNodeIndexes(port: DbPort) {
   }
 }
 
-async function pruneLearningRowsWithoutActiveNodes(port: DbPort) {
-  await port.run(
-    `DELETE FROM node_reading_device_state WHERE node_id NOT IN ` +
-    `(SELECT id FROM nodes WHERE deleted_at IS NULL)`
-  );
-  await port.run(
-    `DELETE FROM node_reading WHERE node_id NOT IN ` +
-    `(SELECT id FROM nodes WHERE deleted_at IS NULL)`
-  );
-  await port.run(
-    `DELETE FROM node_review WHERE node_id NOT IN ` +
-    `(SELECT id FROM nodes WHERE deleted_at IS NULL)`
-  );
-}
-
 async function applySyncPackNodeAttachmentsWithDbPort(
   port: DbPort,
   options: SyncPackNodeApplyOptions = {}
@@ -136,11 +122,12 @@ async function applySyncPackSurfaceInTransaction(
   const appliedBlobCount = await applySyncPackContentBlobsWithDbPort(port, options);
   await applySyncPackNodeRowsWithDbPort(port, options);
   await applySyncPackNodeOrderRowsWithDbPort(port, options);
-  await pruneLearningRowsWithoutActiveNodes(port);
+  await pruneLearningRowsWithoutVisibleNodes(port);
   await applySyncPackExternalDocumentsWithDbPort(port, options);
   await applySyncPackSettingObjectsWithDbPort(port, options);
   await applySyncPackMetadataObjectsWithDbPort(port, options);
   await applySyncPackLearningObjectsWithDbPort(port, options);
+  await pruneLearningRowsWithoutVisibleNodes(port);
   await applySyncPackAttachmentObjectsWithDbPort(port, options);
   await applySyncPackNodeAttachmentsWithDbPort(port, options);
   await applySyncPackViewStateObjectsWithDbPort(port, options);

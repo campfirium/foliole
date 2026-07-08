@@ -42,6 +42,30 @@ describe('Android learning sync payload metadata', () => {
       reviewLogGradeInputKey: 'grade',
       reviewLogReviewedAtInputKey: 'reviewedAt'
     });
+    expect(definitions.queries.syncPayloadNodeReading.sql).not.toContain('json_object');
+    expect(definitions.queries.syncPayloadNodeReview.sql).not.toContain('json_object');
+    expect(definitions.queries.syncPayloadNodeReading.columns.map((column) => column.key)).toEqual([
+      'node_id',
+      'interval_duration_ms',
+      'interval_growth_factor',
+      'last_handled_at',
+      'next_at',
+      'priority',
+      'repetition_count',
+      'state'
+    ]);
+    expect(definitions.queries.syncPayloadNodeReview.columns.map((column) => column.key)).toEqual([
+      'node_id',
+      'due',
+      'last_review_at',
+      'state',
+      'stability',
+      'difficulty',
+      'elapsed_days',
+      'scheduled_days',
+      'reps',
+      'lapses'
+    ]);
   });
 
   it('keeps Java learning sync writes wired to generated payload metadata', async () => {

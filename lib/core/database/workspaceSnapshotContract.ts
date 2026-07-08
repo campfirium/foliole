@@ -66,6 +66,40 @@ function isTrashedSnapshotNode<TNode extends WorkspaceSnapshotNodeContract>(
   return Boolean(deletedAtById[nodeId] || legacyTrashIds.has(nodeId));
 }
 
+function hasTrashedAncestor<TNode extends WorkspaceSnapshotNodeContract>(
+  node: TNode,
+  nodesById: Record<string, TNode>,
+  deletedAtById: Record<string, string | undefined>,
+  legacyTrashIds: Set<string>
+) {
+  const visitedNodeIds = new Set<string>([node.id]);
+  let parentNodeId = node.parentNodeId ?? null;
+  while (parentNodeId && !visitedNodeIds.has(parentNodeId)) {
+    visitedNodeIds.add(parentNodeId);
+    const parentNode = nodesById[parentNodeId];
+    if (!parentNode) return false;
+    if (isTrashedSnapshotNode(parentNodeId, parentNode, deletedAtById, legacyTrashIds)) {
+      return true;
+    }
+    parentNodeId = parentNode.parentNodeId ?? null;
+  }
+  return false;
+}
+
+function isVisibleSnapshotNode<TNode extends WorkspaceSnapshotNodeContract>(
+  nodeId: string,
+  node: TNode | undefined,
+  nodesById: Record<string, TNode>,
+  deletedAtById: Record<string, string | undefined>,
+  legacyTrashIds: Set<string>
+) {
+  return Boolean(
+    node &&
+    !isTrashedSnapshotNode(nodeId, node, deletedAtById, legacyTrashIds) &&
+    !hasTrashedAncestor(node, nodesById, deletedAtById, legacyTrashIds)
+  );
+}
+
 function normalizeNodesById<TNode extends WorkspaceSnapshotNodeContract>(
   nodesById: Record<string, TNode>,
   deletedAtById: Record<string, string | undefined> | undefined
@@ -87,13 +121,11 @@ export function resolveWorkspaceSnapshotActiveNodeId<TNode>(args: {
   activeNodeId: string | null | undefined;
   nodeOrder: readonly string[];
   nodesById: Record<string, TNode>;
-  trashedNodeIds: readonly string[];
 }) {
-  const trashedNodeIds = new Set(args.trashedNodeIds);
   return (
-    (args.activeNodeId && args.nodesById[args.activeNodeId] && !trashedNodeIds.has(args.activeNodeId)
+    (args.activeNodeId && args.nodesById[args.activeNodeId] && args.nodeOrder.includes(args.activeNodeId)
       ? args.activeNodeId
-      : null) ?? args.nodeOrder.find((nodeId) => args.nodesById[nodeId] && !trashedNodeIds.has(nodeId)) ?? null
+      : null) ?? args.nodeOrder.find((nodeId) => args.nodesById[nodeId]) ?? null
   );
 }
 
@@ -111,12 +143,11 @@ export function normalizeWorkspaceSnapshot<
   const trashedNodeIds = uniqueIds(snapshot.trashedNodeIds, Object.keys(trashedNodeDeletedAtById), Object.keys(nodesById))
     .filter((nodeId) => isTrashedSnapshotNode(nodeId, nodesById[nodeId], trashedNodeDeletedAtById, legacyTrashIds));
   const nodeOrder = uniqueIds(snapshot.nodeOrder, Object.keys(nodesById))
-    .filter((nodeId) => Boolean(nodesById[nodeId] && !isTrashedSnapshotNode(nodeId, nodesById[nodeId], trashedNodeDeletedAtById, legacyTrashIds)));
+    .filter((nodeId) => isVisibleSnapshotNode(nodeId, nodesById[nodeId], nodesById, trashedNodeDeletedAtById, legacyTrashIds));
   const activeNodeId = resolveWorkspaceSnapshotActiveNodeId({
     activeNodeId: snapshot.activeNodeId,
     nodeOrder,
-    nodesById,
-    trashedNodeIds
+    nodesById
   });
 
   return {

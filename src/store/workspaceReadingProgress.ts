@@ -126,12 +126,11 @@ export function mergeWorkspaceSnapshotWithReadingProgress(
 
   const nodeViewById = toLocalNodeViewById(readingProgressSnapshot.nodeViewStateById);
   const activeNodeId = readingProgressSnapshot.activeNodeId
-    ? resolveWorkspaceSnapshotActiveNodeId({
-        activeNodeId: readingProgressSnapshot.activeNodeId,
-        nodeOrder: snapshot.nodeOrder,
-        nodesById: snapshot.nodesById,
-        trashedNodeIds: snapshot.trashedNodeIds
-      })
+      ? resolveWorkspaceSnapshotActiveNodeId({
+          activeNodeId: readingProgressSnapshot.activeNodeId,
+          nodeOrder: snapshot.nodeOrder,
+          nodesById: snapshot.nodesById
+        })
     : snapshot.activeNodeId;
 
   return {

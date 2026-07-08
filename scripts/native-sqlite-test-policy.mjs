@@ -1,4 +1,5 @@
 const controlledElectronSqliteTests = [
+  'electron/database/androidCompanionVisibleNodesQueryDefinitions.contract.test.ts',
   'electron/database/betterSqliteDbPort.conformance.test.ts',
   'electron/database/companionSyncPushVerticalSlice.test.ts',
   'electron/database/externalDocumentImportVisibility.test.ts',

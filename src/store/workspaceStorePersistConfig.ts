@@ -24,8 +24,7 @@ function canKeepCurrentActiveNode(current: WorkspaceState, next: WorkspaceState)
     resolveWorkspaceSnapshotActiveNodeId({
       activeNodeId: current.activeNodeId,
       nodeOrder: normalizedNext.nodeOrder,
-      nodesById: normalizedNext.nodesById,
-      trashedNodeIds: normalizedNext.trashedNodeIds
+      nodesById: normalizedNext.nodesById
     }) === current.activeNodeId;
 }
 

@@ -19,6 +19,7 @@ import {
   buildRemoteNodeUpsert,
   buildRemoteNodeVersionUpsert
 } from './syncNodeApplyStatements.js';
+import { pruneLearningRowsWithoutVisibleNodes } from './syncNodeVisibilityPruning.js';
 
 interface LocalSyncNodeStateRow extends DbRow, LocalSyncNodeState {
   parent_id: string | null;
@@ -236,6 +237,9 @@ export async function applySyncNodesWithDbPort(
       }
       result.conflictRecords.push(toConflictRecord(record));
       result.conflictNodes.push(record);
+    }
+    if (result.appliedIds.length > 0) {
+      await pruneLearningRowsWithoutVisibleNodes(tx);
     }
   });
 

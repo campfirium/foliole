@@ -10,7 +10,7 @@ import {
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
 import { resolveFsrsQueueNodeIds } from './reviewQueuePlannerFsrs';
-import { createSeededRandom, hasShelvedAncestor } from './reviewQueuePlannerHelpers';
+import { createSeededRandom, hasDeletedAncestor, hasShelvedAncestor } from './reviewQueuePlannerHelpers';
 import { resolveModeQueueNodeIds } from './reviewQueuePlannerMode';
 import { resolveReviewQueueNodePathNodeIds, resolveReviewQueueReadingAvailableAt, resolveReviewQueueReadingDueAt } from './reviewQueuePlannerReadingPaths';
 import { isReviewProfileDue, parseReviewQueueTimestamp } from './reviewQueuePlannerTime';
@@ -24,7 +24,7 @@ export interface ReviewQueuePlan {
   readingQueueNodeIds: string[];
 }
 
-export type ReviewQueueNode = ReviewItemNodeLike & Pick<Node, 'content' | 'createdAt' | 'hasContent' | 'id' | 'parentNodeId' | 'priority' | 'reading' | 'shelvedAt'>;
+export type ReviewQueueNode = ReviewItemNodeLike & Pick<Node, 'content' | 'createdAt' | 'deletedAt' | 'hasContent' | 'id' | 'parentNodeId' | 'priority' | 'reading' | 'shelvedAt'>;
 
 function isQueueableReadingNode(
   node: ReviewQueueNode | undefined,
@@ -34,7 +34,7 @@ function isQueueableReadingNode(
   if (!node || !isReadingReviewItemNode(node) || !hasNodeContent(node)) {
     return false;
   }
-  if (hasShelvedAncestor(node, nodesById)) {
+  if (hasDeletedAncestor(node, nodesById) || hasShelvedAncestor(node, nodesById)) {
     return false;
   }
   if (node.reading && node.reading.state !== 'active') {
@@ -50,7 +50,7 @@ function isSchedulableReadingNode(
   if (!node || !isReadingReviewItemNode(node) || !hasNodeContent(node)) {
     return false;
   }
-  if (hasShelvedAncestor(node, nodesById)) {
+  if (hasDeletedAncestor(node, nodesById) || hasShelvedAncestor(node, nodesById)) {
     return false;
   }
   if (node.reading && node.reading.state !== 'active') {
@@ -59,15 +59,25 @@ function isSchedulableReadingNode(
   return true;
 }
 
-function isDueFsrsNode(node: ReviewQueueNode | undefined, now: string): node is ReviewQueueNode {
+function isDueFsrsNode(
+  node: ReviewQueueNode | undefined,
+  nodesById: Record<string, ReviewQueueNode | undefined>,
+  now: string
+): node is ReviewQueueNode {
   if (!node || !isFsrsReviewItemNode(node)) {
+    return false;
+  }
+  if (hasDeletedAncestor(node, nodesById)) {
     return false;
   }
   return isReviewProfileDue(node.review, now, getCurrentReviewSchedulerSettings().newDayStartsAtHour);
 }
 
-function isSchedulableFsrsNode(node: ReviewQueueNode | undefined): node is ReviewQueueNode {
-  return Boolean(node && isFsrsReviewItemNode(node));
+function isSchedulableFsrsNode(
+  node: ReviewQueueNode | undefined,
+  nodesById: Record<string, ReviewQueueNode | undefined>
+): node is ReviewQueueNode {
+  return Boolean(node && isFsrsReviewItemNode(node) && !hasDeletedAncestor(node, nodesById));
 }
 
 function resolveNodePriority(node: ReviewQueueNode, nodesById: Record<string, ReviewQueueNode | undefined>, defaultPriority: UnifiedPushQueueRules['defaultPriority']) {
@@ -145,8 +155,8 @@ function collectReviewQueueCandidates(args: {
       return;
     }
     const isFsrsCandidate = args.includeScheduled
-      ? isSchedulableFsrsNode(node)
-      : isDueFsrsNode(node, args.now);
+      ? isSchedulableFsrsNode(node, args.nodesById)
+      : isDueFsrsNode(node, args.nodesById, args.now);
     if (node && isFsrsCandidate) fsrsCandidates.push(node);
   });
   return { fsrsCandidates, readingCandidates };
