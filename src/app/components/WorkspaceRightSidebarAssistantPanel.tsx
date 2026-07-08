@@ -2,15 +2,12 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   AppButton,
-  inspectorListHeadingClassName,
-  inspectorListInsetPaddingClassName,
-  inspectorListMetaClassName
+  inspectorListInsetPaddingClassName
 } from '../../shared/ui';
 
 import { useFolioleAideCapability, type FolioleAideCapabilityState } from './useFolioleAideCapability';
 import { useWorkspaceRightSidebarAssistantPanelController } from './useWorkspaceRightSidebarAssistantPanelController';
-import { WorkspaceRightSidebarAssistantConversation } from './WorkspaceRightSidebarAssistantConversation';
-import { WorkspaceRightSidebarAssistantThreadList } from './WorkspaceRightSidebarAssistantThreadList';
+import { FolioleAideReadyContent } from './WorkspaceRightSidebarAssistantReadyContent';
 
 export function WorkspaceRightSidebarAssistantPanel(props: {
   activeNodeId: string | null;
@@ -29,25 +26,6 @@ export function WorkspaceRightSidebarAssistantPanel(props: {
 
   return (
     <div className="flex min-h-full flex-col">
-      {capability.ready ? (
-      <header className={`${inspectorListInsetPaddingClassName} pb-2 pt-1`}>
-        <div className="flex items-center justify-between gap-2">
-          <h2 className={`m-0 ${inspectorListHeadingClassName}`}>
-            {t('desktop.rightPanel.assistant')}
-          </h2>
-          <AppButton
-            disabled={controller.selectedThreadId === null}
-            onClick={controller.handleNewThread}
-            type="button"
-          >
-            {t('desktop.rightPanel.assistant.newThread')}
-          </AppButton>
-        </div>
-        <p className={inspectorListMetaClassName}>
-          {t('desktop.rightPanel.assistant.description')}
-        </p>
-      </header>
-      ) : null}
       {!capability.ready ? (
         <FolioleAideCapabilityGate
           onEnable={capability.enable}
@@ -63,47 +41,6 @@ export function WorkspaceRightSidebarAssistantPanel(props: {
         />
       ) : null}
     </div>
-  );
-}
-
-function FolioleAideReadyContent(props: {
-  activeNodeId: string | null;
-  controller: ReturnType<typeof useWorkspaceRightSidebarAssistantPanelController>;
-  nodesById: Record<string, Node>;
-}) {
-  const t = useTranslation();
-  return (
-    <>
-      <WorkspaceRightSidebarAssistantThreadList
-        activeNodeId={props.activeNodeId}
-        nodesById={props.nodesById}
-        onRemoveRecord={props.controller.handleRemoveRecord}
-        onSelectRecord={props.controller.handleSelectRecord}
-        records={props.controller.records}
-        removingThreadId={props.controller.removingThreadId}
-        selectedThreadId={props.controller.selectedThreadId}
-      />
-      <AssistantThreadStatus
-        empty={props.controller.records.length === 0}
-        loading={props.controller.loading}
-      />
-      {props.controller.selectedThreadNotice ? (
-        <p className={`${inspectorListInsetPaddingClassName} py-2 ${inspectorListMetaClassName}`}>
-          {props.controller.selectedThreadNotice}
-        </p>
-      ) : null}
-      <WorkspaceRightSidebarAssistantConversation
-        activeMessages={props.controller.activeMessages}
-        inputLabel={t('desktop.rightPanel.assistant.input')}
-        messageText={props.controller.messageText}
-        onMessageTextChange={props.controller.setMessageText}
-        onSubmit={props.controller.handleSubmit}
-        placeholder={t('desktop.rightPanel.assistant.placeholder')}
-        sendLabel={t('desktop.rightPanel.assistant.send')}
-        sending={props.controller.sending}
-        sessionLabel={resolveSessionLabel(props.controller, t)}
-      />
-    </>
   );
 }
 
@@ -153,30 +90,6 @@ function FolioleAideCapabilityGate(props: {
       </div>
     </section>
   );
-}
-
-function AssistantThreadStatus(props: { empty: boolean; loading: boolean }) {
-  const t = useTranslation();
-  const text = props.loading
-    ? t('desktop.rightPanel.assistant.loading')
-    : props.empty
-      ? t('desktop.rightPanel.assistant.empty')
-      : null;
-  if (!text) return null;
-  return (
-    <p className={`${inspectorListInsetPaddingClassName} py-3 ${inspectorListMetaClassName}`}>
-      {text}
-    </p>
-  );
-}
-
-function resolveSessionLabel(
-  controller: ReturnType<typeof useWorkspaceRightSidebarAssistantPanelController>,
-  t: ReturnType<typeof useTranslation>
-) {
-  return controller.selectedRecord && controller.activeMessages.length === 0
-    ? t('desktop.rightPanel.assistant.selectedThread')
-    : t('desktop.rightPanel.assistant.currentSession');
 }
 
 function getCapabilityStatusKey(state: FolioleAideCapabilityState) {

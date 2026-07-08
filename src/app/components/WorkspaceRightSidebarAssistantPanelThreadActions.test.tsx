@@ -50,7 +50,7 @@ it('removes a history thread from the local list', async () => {
       onSelectNode={vi.fn()}
     />
   );
-  fireEvent.click(screen.getByRole('button', { name: 'Check' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
   await screen.findByRole('button', { name: /first prompt/i });
 
   const removeButtons = screen.getAllByRole('button', { name: 'Remove thread from this list' });

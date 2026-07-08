@@ -58,7 +58,10 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: Assistant
   return {
     activeMessages,
     handleRemoveRecord: threads.deleteRecord,
-    handleNewThread: () => threads.selectThreadId(null),
+    handleNewThread: () => {
+      setMessageText('');
+      threads.selectThreadId(null);
+    },
     handleSelectRecord: (record: NativeAssistantThreadIndexRecord) =>
       selectRecord(record, args.nodesById, args.onSelectNode, threads.selectThreadId),
     handleSubmit: createHandleSubmit({

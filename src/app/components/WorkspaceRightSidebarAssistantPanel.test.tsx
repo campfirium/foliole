@@ -63,6 +63,8 @@ it('loads Assistant threads for the active topic location', async () => {
   expect(assistantRuntime.listAssistantThreadIndex).toHaveBeenCalledWith({
     location: { nodeId: 'node-1', type: 'node' }
   });
+  expect(screen.queryByText(/Earlier messages stay in Codex/i)).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /original prompt/i }));
   expect(screen.getByText(/Earlier messages stay in Codex/i)).toBeInTheDocument();
 });
 
@@ -109,6 +111,8 @@ it('creates a new thread and moves pending messages into the returned thread cac
     })
   );
   expect(await screen.findByText('Assistant answer')).toBeInTheDocument();
+  expect(screen.getAllByText('New prompt')).toHaveLength(2);
+  fireEvent.click(screen.getByRole('button', { name: 'Back to history' }));
   expect(screen.getByRole('button', { name: /new prompt/i })).toBeInTheDocument();
 });
 

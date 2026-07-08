@@ -1,11 +1,11 @@
 import type { FormEvent } from 'react';
 
 import {
-  AppButton,
   inspectorListInsetPaddingClassName,
   inspectorListMetaClassName
 } from '../../shared/ui';
 
+import { WorkspaceRightSidebarAssistantComposer } from './WorkspaceRightSidebarAssistantComposer';
 import { WorkspaceRightSidebarAssistantMessageRow } from './WorkspaceRightSidebarAssistantMessageRow';
 import type { AssistantMessage } from './workspaceRightSidebarAssistantPanelModel';
 
@@ -30,18 +30,15 @@ export function WorkspaceRightSidebarAssistantConversation(props: {
           <WorkspaceRightSidebarAssistantMessageRow key={message.id} message={message} />
         ))}
       </div>
-      <form className="flex gap-2" onSubmit={props.onSubmit}>
-        <input
-          aria-label={props.inputLabel}
-          className="min-w-0 flex-1 rounded-md border border-border bg-bg-subtle px-3 py-2 text-ui-md text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          onChange={(event) => props.onMessageTextChange(event.target.value)}
-          placeholder={props.placeholder}
-          value={props.messageText}
-        />
-        <AppButton disabled={props.sending || !props.messageText.trim()} type="submit">
-          {props.sendLabel}
-        </AppButton>
-      </form>
+      <WorkspaceRightSidebarAssistantComposer
+        inputLabel={props.inputLabel}
+        messageText={props.messageText}
+        onMessageTextChange={props.onMessageTextChange}
+        onSubmit={props.onSubmit}
+        placeholder={props.placeholder}
+        sendLabel={props.sendLabel}
+        sending={props.sending}
+      />
     </section>
   );
 }

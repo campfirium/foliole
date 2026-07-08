@@ -70,5 +70,5 @@ function selectThreadIdFromRecords(
   records: NativeAssistantThreadIndexRecord[]
 ): string | null {
   if (current && records.some((record) => record.providerThreadId === current)) return current;
-  return records[0]?.providerThreadId ?? null;
+  return null;
 }
