@@ -1,4 +1,5 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { toWorkspaceNodeDocument, writeCachedWorkspaceNodeDocument } from '../../store/workspaceNodeDocumentCache';
 import { createInitialWorkspaceState, useWorkspaceStore } from '../../store/workspaceStore';
 
 import { type DebugNodeSeed, persistSeedNodes } from './workspaceDebugSeedPersistence';
@@ -38,6 +39,12 @@ function buildSeededNodes(nodes: DebugNodeSeed[], createdAt: string, initialNode
   );
 }
 
+function cacheSeededNodeDocuments(nodesById: Record<string, Node>) {
+  for (const node of Object.values(nodesById)) {
+    writeCachedWorkspaceNodeDocument(node.id, toWorkspaceNodeDocument(node));
+  }
+}
+
 export function createSeedNodeDebugApi(canPersistSeeds: () => boolean = () => false): SeedNodeDebugApi {
   return {
     seedNodes: async (nodes, options) => {
@@ -47,6 +54,7 @@ export function createSeedNodeDebugApi(canPersistSeeds: () => boolean = () => fa
         '2026-04-08T00:00:00.000Z',
         initial.nodesById['node-1'] ?? Object.values(initial.nodesById)[0]!
       );
+      cacheSeededNodeDocuments(seededNodesById);
       useWorkspaceStore.setState({
         ...initial,
         activeNodeId: nodes[0]?.id ?? null,
@@ -56,6 +64,7 @@ export function createSeedNodeDebugApi(canPersistSeeds: () => boolean = () => fa
           ...initial.nodesById,
           ...seededNodesById
         },
+        rendererBoundaryKeepNodeIds: nodes.map((node) => node.id),
         trashedNodeIds: []
       });
       if (options?.persist !== false && canPersistSeeds()) {

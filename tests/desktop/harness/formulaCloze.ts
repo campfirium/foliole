@@ -69,6 +69,20 @@ export async function collectFormulaRegionState(desktopWindow: Page) {
   });
 }
 
+export async function installFormulaClozeCreateEventCounter(desktopWindow: Page) {
+  await desktopWindow.evaluate(() => {
+    const target = window as typeof window & { __formulaClozeCreateEventCount?: number };
+    target.__formulaClozeCreateEventCount = 0;
+    window.addEventListener('foliole:formula-cloze-create', () => {
+      target.__formulaClozeCreateEventCount = (target.__formulaClozeCreateEventCount ?? 0) + 1;
+    });
+  });
+}
+
+export async function readFormulaClozeCreateEventCount(desktopWindow: Page) {
+  return desktopWindow.evaluate(() => (window as typeof window & { __formulaClozeCreateEventCount?: number }).__formulaClozeCreateEventCount ?? 0);
+}
+
 export async function dragFormulaClozeRegion(desktopWindow: Page) {
   await desktopWindow.waitForSelector('.prompt-editor-host .cm-md-math-widget-block');
   const box = await desktopWindow.evaluate(() => {
@@ -145,5 +159,23 @@ export async function findFormulaClozeChildId(desktopWindow: Page) {
       if (node?.parentNodeId === 'playwright-formula-drag-parent' && node.anchorKind === 'cloze') return id;
     }
     return null;
+  });
+}
+
+export async function collectFormulaClozeDebugState(desktopWindow: Page) {
+  return desktopWindow.evaluate(() => {
+    const api = globalThis.window?.__folioleWorkspaceDebug;
+    return {
+      activeNodeId: api?.getActiveNodeId?.() ?? null,
+      clozeNodes: (api?.listNodes?.() ?? [])
+        .map(({ id }) => api?.getNode?.(id))
+        .filter((node) => node?.anchorKind === 'cloze')
+        .map((node) => ({
+          id: node!.id,
+          parentNodeId: node!.parentNodeId,
+          title: node!.title
+        })),
+      nodes: api?.listNodes?.() ?? []
+    };
   });
 }

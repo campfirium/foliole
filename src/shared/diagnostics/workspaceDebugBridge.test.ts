@@ -51,7 +51,10 @@ it('opens debug nodes through the prepared open path', async () => {
   const opened = await debugApi?.openNode(seedNodeId);
 
   expect(opened).toBe(true);
-  expect(openWorkspaceNodeWithPreparedDocument).toHaveBeenCalledWith(seedNodeId);
+  expect(openWorkspaceNodeWithPreparedDocument).toHaveBeenCalledWith(seedNodeId, {
+    forceLoad: false,
+    preloadedDocument: null
+  });
 });
 
 function getDebugApi() {
@@ -87,14 +90,10 @@ function getDebugApi() {
         nodeId: string;
         originalName?: string;
       }) => Promise<string | null>;
+      openNode: (nodeId: string) => Promise<boolean>;
       restoreNode: (nodeId: string) => Promise<boolean>;
       setNodeViewState: (args: { from: number; nodeId: string; scrollTop?: number; to: number }) => boolean;
-      seedNodes: (nodes: Array<{
-        content: string;
-        id: string;
-        kind?: 'folder' | 'item' | 'topic';
-        title: string;
-      }>) => Promise<void>;
+      seedNodes: (nodes: Array<{ content: string; id: string; kind?: 'folder' | 'item' | 'topic'; title: string }>) => Promise<void>;
       updateNodeContent: (nodeId: string, content: string) => Promise<boolean>;
     };
   }).__folioleWorkspaceDebug;
@@ -128,8 +127,13 @@ async function seedSingleDebugNode() {
 it('reads active node id and saved node view state through the debug bridge', async () => {
   installWorkspaceDebugBridge();
   await seedSingleDebugNode();
-  setNodeViewState();
   const debugApi = getDebugApi();
+  await debugApi?.openNode('debug-node-1');
+  expect(openWorkspaceNodeWithPreparedDocument).toHaveBeenLastCalledWith('debug-node-1', {
+    forceLoad: true,
+    preloadedDocument: expect.objectContaining({ content: 'Seed body' })
+  });
+  setNodeViewState();
 
   expect(debugApi?.getActiveNodeId()).toBe('debug-node-1');
   expect(debugApi?.getNodeViewState('debug-node-1')).toEqual({

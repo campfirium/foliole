@@ -1,6 +1,7 @@
 import { ensureInboxNodeInSnapshot } from '../features/nodes/model/specialNodes';
 import { hasWorkspaceRuntimeRepository } from '../shared/platform/workspaceRuntimeRepository';
 
+import { isCanonicalVisibleNodeId } from './workspaceCanonicalSelectors';
 import { enforceWorkspaceRendererBoundary } from './workspaceRendererBoundary';
 import {
   collectRendererBoundaryKeepNodeIds,
@@ -8,17 +9,42 @@ import {
 } from './workspaceRendererBoundaryKeepNodeIds';
 import type { WorkspaceState } from './workspaceStore';
 
+function resolveVisibleActiveNodeId<T extends WorkspaceState | Partial<WorkspaceState>>(
+  state: T,
+  currentState: WorkspaceState
+) {
+  const activeNodeId = 'activeNodeId' in state ? state.activeNodeId ?? null : currentState.activeNodeId;
+  if (!activeNodeId) {
+    return null;
+  }
+  const source = {
+    nodeOrder: 'nodeOrder' in state ? state.nodeOrder ?? [] : currentState.nodeOrder,
+    nodesById: 'nodesById' in state ? state.nodesById ?? {} : currentState.nodesById,
+    trashedNodeDeletedAtById:
+      'trashedNodeDeletedAtById' in state
+        ? state.trashedNodeDeletedAtById ?? {}
+        : currentState.trashedNodeDeletedAtById,
+    trashedNodeIds: 'trashedNodeIds' in state ? state.trashedNodeIds ?? [] : currentState.trashedNodeIds
+  };
+  if (isCanonicalVisibleNodeId(source, activeNodeId)) {
+    return activeNodeId;
+  }
+  return currentState.activeNodeId && isCanonicalVisibleNodeId(currentState, currentState.activeNodeId)
+    ? currentState.activeNodeId
+    : null;
+}
+
 function withWorkspaceSpecialRoots<T extends WorkspaceState | Partial<WorkspaceState>>(
   state: T,
   currentState: WorkspaceState
 ): T {
-  if (!('nodeOrder' in state) && !('nodesById' in state) && !('trashedNodeIds' in state)) {
+  if (!('activeNodeId' in state) && !('nodeOrder' in state) && !('nodesById' in state) && !('trashedNodeIds' in state)) {
     return state;
   }
   return {
     ...state,
     ...ensureInboxNodeInSnapshot({
-      activeNodeId: 'activeNodeId' in state ? state.activeNodeId ?? null : currentState.activeNodeId,
+      activeNodeId: resolveVisibleActiveNodeId(state, currentState),
       nodeOrder: 'nodeOrder' in state ? state.nodeOrder ?? [] : currentState.nodeOrder,
       nodesById: 'nodesById' in state ? state.nodesById ?? {} : currentState.nodesById,
       trashedNodeIds: 'trashedNodeIds' in state ? state.trashedNodeIds ?? [] : currentState.trashedNodeIds

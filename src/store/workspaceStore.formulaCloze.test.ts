@@ -2,6 +2,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { FormulaClozeCreatePayload } from '../features/formula-cloze/model/formulaCloze';
 
+import { readCachedWorkspaceNodeDocument, resetWorkspaceNodeDocumentCacheForTest } from './workspaceNodeDocumentCache';
 import { useWorkspaceStore } from './workspaceStore';
 
 const nodeStorage = vi.hoisted(() => ({
@@ -17,6 +18,7 @@ vi.mock('../../lib/platform/storage', () => ({
 
 beforeEach(() => {
   useWorkspaceStore.persist.clearStorage();
+  resetWorkspaceNodeDocumentCacheForTest();
   useWorkspaceStore.setState({
     activeNodeId: 'node-1',
     nodeOrder: ['node-1'],
@@ -90,6 +92,10 @@ it('creates a formula cloze child without storing formula regions as image attac
       kind: 'formula-region',
       occurrenceKey: 'inline:7:15:E=mc^2'
     }
+  });
+  expect(readCachedWorkspaceNodeDocument(createdId as string)).toMatchObject({
+    content: '$E=mc^2$',
+    reveal: '$E=mc^2$'
   });
 });
 

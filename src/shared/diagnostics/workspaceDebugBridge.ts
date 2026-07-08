@@ -1,4 +1,5 @@
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+import { readCachedWorkspaceNodeDocument } from '../../store/workspaceNodeDocumentCache';
 import { openWorkspaceNodeWithPreparedDocument } from '../../store/workspaceNodePreparation';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
@@ -184,7 +185,11 @@ function createNodeReadDebugApi(): Pick<
         return false;
       }
       try {
-        await openWorkspaceNodeWithPreparedDocument(nodeId);
+        const cachedDocument = readCachedWorkspaceNodeDocument(nodeId);
+        await openWorkspaceNodeWithPreparedDocument(nodeId, {
+          forceLoad: Boolean(cachedDocument),
+          preloadedDocument: cachedDocument
+        });
         return true;
       } catch {
         return false;

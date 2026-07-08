@@ -51,6 +51,15 @@ async function openNode(windowPage: WindowPage, nodeId: string) {
   }, nodeId);
 }
 
+async function expectActiveNode(windowPage: WindowPage, nodeId: string) {
+  await expect.poll(() => windowPage.evaluate(() =>
+    globalThis.window?.__folioleWorkspaceDebug?.getActiveNodeId?.() ?? null)).toBe(nodeId);
+}
+
+async function expectFormulaRegion(windowPage: WindowPage) {
+  await expect(windowPage.locator('.prompt-editor-host .cm-md-formula-cloze-region')).toHaveCount(1);
+}
+
 async function collectNodeContent(windowPage: WindowPage, nodeId: string) {
   return windowPage.evaluate((targetNodeId) =>
     globalThis.window?.__folioleWorkspaceDebug?.getNode?.(targetNodeId)?.content ?? null,
@@ -136,6 +145,9 @@ test('keeps a dragged formula cloze visible before and after relaunch', async ({
       await api?.seedNodes?.([{ content: formula, id: 'playwright-formula-drag-parent', kind: 'topic', title: 'RC Golden Formula Parent' }]);
       await api?.openNode?.('playwright-formula-drag-parent');
     }, { formula: FORMULA });
+    await expectActiveNode(desktopWindow, 'playwright-formula-drag-parent');
+    await openNode(desktopWindow, 'playwright-formula-drag-parent');
+    await expectActiveNode(desktopWindow, 'playwright-formula-drag-parent');
 
     await dragFormulaClozeRegion(desktopWindow);
     await expect.poll(() => findFormulaClozeChildId(desktopWindow)).not.toBeNull();
@@ -149,6 +161,8 @@ test('keeps a dragged formula cloze visible before and after relaunch', async ({
     expect(parentState.height).toBeGreaterThan(8);
 
     await openNode(desktopWindow, childId!);
+    await expectActiveNode(desktopWindow, childId!);
+    await expectFormulaRegion(desktopWindow);
     const childState = await collectFormulaRegionState(desktopWindow);
     expect(childState.hidden).toBe('true');
     expect(childState.outlined).toBe('false');
@@ -161,12 +175,16 @@ test('keeps a dragged formula cloze visible before and after relaunch', async ({
     secondSession = await relaunchDesktopSession(desktopSession);
     await expectWorkspaceShell(secondSession.firstWindow);
     await openNode(secondSession.firstWindow, 'playwright-formula-drag-parent');
+    await expectActiveNode(secondSession.firstWindow, 'playwright-formula-drag-parent');
+    await expectFormulaRegion(secondSession.firstWindow);
     const parentStateAfterRelaunch = await collectFormulaRegionState(secondSession.firstWindow);
     expect(parentStateAfterRelaunch.outlined).toBe('true');
     expect(parentStateAfterRelaunch.width).toBeGreaterThan(8);
     expect(parentStateAfterRelaunch.height).toBeGreaterThan(8);
 
     await openNode(secondSession.firstWindow, childId!);
+    await expectActiveNode(secondSession.firstWindow, childId!);
+    await expectFormulaRegion(secondSession.firstWindow);
     const childStateAfterRelaunch = await collectFormulaRegionState(secondSession.firstWindow);
     expect(childStateAfterRelaunch.hidden).toBe('true');
     expect(childStateAfterRelaunch.opacity).toBe('1');

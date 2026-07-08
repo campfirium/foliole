@@ -10,6 +10,7 @@ import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/worksp
 import { createEditorAnnotationCreateEntry } from './workspaceEditorAnnotationOperationEntry';
 import { createImageClozeReviewProfile } from './workspaceImageClozeReview';
 import { markNodeCreatePending } from './workspaceNodeContentVersionGuard';
+import { syncWorkspaceNodeDocumentCacheFromNode } from './workspaceNodeDocumentCache';
 import { createWorkspaceNodeMutationPatchWithLocalSideEffects } from './workspaceNodeMutationPatch';
 import type { WorkspaceState } from './workspaceStore';
 import { completeNodeCreateRuntimePersist } from './workspaceStoreContentRuntimePersist';
@@ -113,6 +114,7 @@ async function applyCreatedFormulaClozeNode(
   if (!node || !nextNodeOrder) {
     return null;
   }
+  syncWorkspaceNodeDocumentCacheFromNode(node);
   markNodeCreatePending(node.id);
   const result = await handlers.syncNodeCreation(node, nextNodeOrder, node.id, nextNodeOrder.indexOf(node.id));
   if (result) {

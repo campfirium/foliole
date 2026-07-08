@@ -87,7 +87,7 @@ function isPointInsideElement(element: HTMLElement, point: { x: number; y: numbe
   return point.x >= box.left && point.x <= box.right && point.y >= box.top && point.y <= box.bottom;
 }
 
-function canStartFormulaSelection(wrapper: HTMLElement, event: PointerEvent) {
+function canStartFormulaSelection(wrapper: HTMLElement, event: MouseEvent | PointerEvent) {
   if (event.target instanceof HTMLElement && event.target.closest('.cm-md-math-source-button')) return false;
   const visualRoot = findFormulaVisualRoot(wrapper);
   if (visualRoot && isPointInsideElement(visualRoot, { x: event.clientX, y: event.clientY })) return true;
@@ -97,28 +97,34 @@ function canStartFormulaSelection(wrapper: HTMLElement, event: PointerEvent) {
 function attachFormulaSelectionHandlers(wrapper: HTMLElement, overlay: HTMLElement, mathRange: MarkdownMathRange) {
   let start: { x: number; y: number } | null = null;
   let draft: HTMLElement | null = null;
-  const handlePointerDown = (event: PointerEvent) => {
+  const removeWindowMouseHandlers = () => {
+    window.removeEventListener('mousemove', handleSelectionMove, { capture: true });
+    window.removeEventListener('mouseup', handleSelectionEnd, { capture: true });
+  };
+  const handleSelectionStart = (event: MouseEvent | PointerEvent) => {
+    if (start) return;
     if (event.button !== 0) return;
     if (!canStartFormulaSelection(wrapper, event)) return;
     start = { x: event.clientX, y: event.clientY };
     draft = document.createElement('span');
     draft.className = 'cm-md-formula-cloze-draft';
     overlay.append(draft);
-    wrapper.setPointerCapture?.(event.pointerId);
+    if ('pointerId' in event) wrapper.setPointerCapture?.(event.pointerId);
     event.preventDefault();
     event.stopPropagation();
   };
-  const handlePointerMove = (event: PointerEvent) => {
+  const handleSelectionMove = (event: MouseEvent | PointerEvent) => {
     if (!start || !draft) return;
     setDraftRectStyle(draft, wrapper.getBoundingClientRect(), start, { x: event.clientX, y: event.clientY });
     event.preventDefault();
     event.stopPropagation();
   };
-  const handlePointerUp = (event: PointerEvent) => {
+  const handleSelectionEnd = (event: MouseEvent | PointerEvent) => {
     if (!start || !draft) return;
     dispatchFormulaSelection(wrapper, draft, start, { x: event.clientX, y: event.clientY }, mathRange);
     draft = null;
     start = null;
+    removeWindowMouseHandlers();
     event.preventDefault();
     event.stopPropagation();
   };
@@ -126,11 +132,21 @@ function attachFormulaSelectionHandlers(wrapper: HTMLElement, overlay: HTMLEleme
     draft?.remove();
     draft = null;
     start = null;
+    removeWindowMouseHandlers();
   };
-  wrapper.addEventListener('pointerdown', handlePointerDown, { capture: true });
-  wrapper.addEventListener('pointermove', handlePointerMove, { capture: true });
-  wrapper.addEventListener('pointerup', handlePointerUp, { capture: true });
+  const handleMouseDown = (event: MouseEvent) => {
+    handleSelectionStart(event);
+    if (!start) return;
+    window.addEventListener('mousemove', handleSelectionMove, { capture: true });
+    window.addEventListener('mouseup', handleSelectionEnd, { capture: true });
+  };
+  wrapper.addEventListener('pointerdown', handleSelectionStart, { capture: true });
+  wrapper.addEventListener('pointermove', handleSelectionMove, { capture: true });
+  wrapper.addEventListener('pointerup', handleSelectionEnd, { capture: true });
   wrapper.addEventListener('pointercancel', resetDraft, { capture: true });
+  wrapper.addEventListener('mousedown', handleMouseDown, { capture: true });
+  wrapper.addEventListener('mousemove', handleSelectionMove, { capture: true });
+  wrapper.addEventListener('mouseup', handleSelectionEnd, { capture: true });
 }
 
 function dispatchFormulaSelection(

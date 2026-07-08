@@ -71,3 +71,23 @@ it('avoids full reconciliation for active-node-only patches during node switchin
 
   expect(nextState.nodesById['node-999']!).toBe(guardedNode);
 });
+
+it('keeps the current active node when a patch points at a missing active node', () => {
+  useWorkspaceStore.setState({
+    ...createInitialWorkspaceState(new Date('2026-03-20T00:00:00.000Z')),
+    activeNodeId: 'node-1',
+    nodeOrder: ['node-1'],
+    nodesById: {
+      'node-1': {
+        ...useWorkspaceStore.getState().nodesById['node-1']!,
+        id: 'node-1',
+        title: 'Node 1'
+      }
+    },
+    trashedNodeIds: []
+  });
+
+  useWorkspaceStore.setState({ activeNodeId: 'missing-node' });
+
+  expect(useWorkspaceStore.getState().activeNodeId).toBe('node-1');
+});
