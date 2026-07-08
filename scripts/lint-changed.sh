@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 collect_changed_files() {
   local staged unstaged untracked
   if [[ -n "${LINT_CHANGED_FILES:-}" ]]; then
@@ -30,15 +32,9 @@ filter_by_scope() {
     "")
       cat
       ;;
-    desktop)
-      grep -E '^(src/(app|features)/|src/shared/(ui|platform)/|electron/|scripts/windows/|vite\.config\.ts$|playwright\.desktop\.config\.ts$)' || true
+    desktop|android|shared)
+      node "${SCRIPT_DIR}/lib/path-domains.mjs" lint-scope "${scope}" || true
       ;;
-    android)
-      grep -E '^(src/companion/|src/shared/(platform|ui|lib|commands|config)/|scripts/android/|android/|capacitor\.config\.ts$|vite\.companion\.config\.ts$)' || true
-      ;;
-  shared)
-    grep -E '^(src/(shared|features|store)/|scripts/(check-|layer-|lint-changed|quality-|quality/|vite-config)|vite\.config\.ts$|vite\.companion\.config\.ts$|playwright\.desktop\.config\.ts$|capacitor\.config\.ts$)' || true
-    ;;
     *)
       echo "[lint-changed] unknown scope: ${scope}" >&2
       exit 1

@@ -1,0 +1,59 @@
+const PREVIEW_SHARED_PATHS = [
+  'scripts/preview/preview-dedupe-scheduler.mjs',
+  'scripts/preview/preview-dedupe-scheduler-state.mjs',
+  'scripts/preview/preview-dedupe-scheduler-timeout.mjs',
+  'scripts/preview/preview-dedupe-state-store.mjs',
+  'scripts/preview/preview-dedupe-event-log.mjs',
+  'scripts/preview/preview-dedupe-targets.mjs',
+  'scripts/preview/preview-dedupe-time-budget.mjs',
+  'scripts/preview/preview-dedupe-wait-status.mjs',
+  'scripts/preview/preview-dedupe-command-runner.mjs',
+  'scripts/preview/preview-dedupe.mjs'
+];
+
+export const PREVIEW_TARGET_PATHS = {
+  android: [
+    'android/',
+    ...PREVIEW_SHARED_PATHS,
+    'scripts/android/',
+    'src/companion/',
+    'src/app/styles.css',
+    'src/app/tokens/',
+    'src/app/generated/appearance-colors.css',
+    'electron/startupSkeletonLayout.ts',
+    'src/shared/',
+    'src/features/',
+    'lib/',
+    'package.json',
+    'package-lock.json',
+    'index.html',
+    'public/favicon.ico',
+    'public/favicon.png',
+    'tailwind.config.js',
+    'capacitor.config.ts',
+    'vite.shared.ts',
+    'vite.companion.config.ts'
+  ],
+  windows: [
+    'electron/',
+    ...PREVIEW_SHARED_PATHS,
+    'scripts/electron-dev-env.mjs',
+    'scripts/electron-dev-server.mjs',
+    'scripts/electron-dev.mjs',
+    'scripts/windows/',
+    'src/global.d.ts',
+    'src/main.tsx',
+    'src/app/',
+    'src/features/',
+    'src/shared/',
+    'src/startupBootstrap.ts',
+    'src/startupViewMode.ts',
+    'src/store/',
+    'lib/',
+    'package.json',
+    'package-lock.json',
+    'index.html',
+    'vite.config.ts',
+    'playwright.desktop.config.ts'
+  ]
+};

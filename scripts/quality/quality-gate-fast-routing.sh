@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+QUALITY_GATE_ROUTING_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 has_quality_gate_arg() {
   local expected="$1"
   shift || true
@@ -39,39 +41,11 @@ diff_has_mid_scope_signature() {
 
 resolve_quality_gate_route() {
   local changed="$1"
+  local static_route
 
-  if [[ -z "${changed}" ]]; then
-    printf 'light\tno changed files detected'
-    return 0
-  fi
-
-  if ! printf '%s\n' "${changed}" | grep -E -v '\.(test|spec)\.[^.]+$' >/dev/null; then
-    printf 'mid\ttest files changed'
-    return 0
-  fi
-
-  if printf '%s\n' "${changed}" | grep -E -q '^(package\.json|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?$)'; then
-    printf 'full\tdependency root changed'
-    return 0
-  fi
-
-  if printf '%s\n' "${changed}" | grep -E -q '^electron/'; then
-    printf 'desktop\tdesktop runtime changed'
-    return 0
-  fi
-
-  if printf '%s\n' "${changed}" | grep -E -q '^(lib/|src/store/|src/shared/platform/)'; then
-    printf 'shared\tshared runtime or store changed'
-    return 0
-  fi
-
-  if printf '%s\n' "${changed}" | grep -E '^scripts/' | grep -E -v -q '^scripts/android/'; then
-    printf 'mid\tnon-Android script changed'
-    return 0
-  fi
-
-  if printf '%s\n' "${changed}" | grep -E -q '^(android/|scripts/android/|src/companion/|capacitor\.config\.ts$|vite\.companion\.config\.ts$)'; then
-    printf 'android\tandroid or companion path changed'
+  static_route="$(printf '%s\n' "${changed}" | node "${QUALITY_GATE_ROUTING_DIR}/../lib/path-domains.mjs" quality-route 2>/dev/null || true)"
+  if [[ -n "${static_route}" ]]; then
+    printf '%s' "${static_route}"
     return 0
   fi
 
@@ -79,10 +53,6 @@ resolve_quality_gate_route() {
   while IFS= read -r file_path; do
     [[ -z "${file_path}" ]] && continue
     [[ "${file_path}" =~ \.(test|spec)\.[^.]+$ ]] && continue
-    if [[ "${file_path}" =~ ^src/shared/ui/ ]]; then
-      printf 'mid\tshared UI surface changed'
-      return 0
-    fi
     if [[ "${file_path}" =~ ^src/(features/|app/components/) ]]; then
       base_name="$(basename "${file_path}")"
       if [[ "${base_name}" =~ ^index\.(ts|tsx)$ || "${base_name}" =~ types?\.[^.]+$ ]] || diff_has_mid_scope_signature "${file_path}"; then

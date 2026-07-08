@@ -4,11 +4,9 @@
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
-const ZERO_SHA = /^0{40}$/u;
-const SYNC_PACK_PATH_PATTERN = /^(lib\/core\/sync\/syncPack|electron\/database\/syncPack|electron\/sync\/syncPack|src\/shared\/platform\/companionSyncPack)/u;
-const ANDROID_SYNC_BOUNDARY_PATH_PATTERN =
-  /^(lib\/core\/database\/androidCompanion.*(?:Definitions|SchemaStatements)\.ts|android\/app\/src\/main\/assets\/companion-.*\.json|android\/app\/src\/main\/java\/com\/foliole\/android\/FolioleCompanionSync.*\.java)/u;
+import { isAndroidSyncBoundaryPath, isSyncPackPath } from './lib/path-domains.mjs';
 
+const ZERO_SHA = /^0{40}$/u;
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
     encoding: 'utf8',
@@ -64,7 +62,7 @@ function affectedFiles(input) {
 }
 
 function runSyncPackCheckIfNeeded(files) {
-  if (!files.some((file) => SYNC_PACK_PATH_PATTERN.test(file))) {
+  if (!files.some(isSyncPackPath)) {
     return;
   }
   console.log('[pre-push-affected-validation] sync-pack changes detected; running test:sync-pack');
@@ -72,7 +70,7 @@ function runSyncPackCheckIfNeeded(files) {
 }
 
 function runAndroidSyncBoundaryCheckIfNeeded(files) {
-  if (!files.some((file) => ANDROID_SYNC_BOUNDARY_PATH_PATTERN.test(file))) {
+  if (!files.some(isAndroidSyncBoundaryPath)) {
     return;
   }
   console.log('[pre-push-affected-validation] Android sync boundary changes detected; running check:android-boundary');

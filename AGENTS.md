@@ -26,6 +26,7 @@
 - `src/features/**`、`src/store/**`、`src/shared/**`：当前没有单独局部 `AGENTS.md`，继续直接执行根 `AGENTS.md` 的 shared / cross-host 规则
 - 若一次任务同时跨多个宿主或表面，必须把相关局部 `AGENTS.md` 全部读齐；冲突时按“更靠近改动目录的规则优先，跨目录共享规则回退到根规则”执行。
 - 关键平台约束必须落在根或对应目录 `AGENTS.md`，不得只放在普通项目文档里。
+- 脚本级路径域分类以 `scripts/lib/path-domains.mjs` 为机械真相；根路由表只保留人类读规则触发器，质量闸、preview、lint scope 与 pre-push 不得另起一套路由表。
 
 ## Document Read Order
 

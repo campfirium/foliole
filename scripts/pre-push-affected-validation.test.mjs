@@ -73,6 +73,8 @@ describe('pre-push affected validation', () => {
       const remoteSha = await commitAll(repoDir, '000001 seed');
       await mkdir(path.join(repoDir, 'electron', 'database'), { recursive: true });
       await writeFile(path.join(repoDir, 'electron', 'database', 'syncPackBuilder.ts'), 'export const value = 1;\n');
+      await mkdir(path.join(repoDir, 'src', 'shared', 'platform'), { recursive: true });
+      await writeFile(path.join(repoDir, 'src', 'shared', 'platform', 'companionSyncPackApply.ts'), 'export const value = 1;\n');
       const localSha = await commitAll(repoDir, '000002 sync pack');
 
       const result = await runCommand('node', [AFFECTED_VALIDATION_SCRIPT], repoDir, {

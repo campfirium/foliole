@@ -165,13 +165,14 @@ describe('lint-changed.sh', () => {
         '--scope',
         'shared',
         'src/shared/platform/runtime.ts',
+        'src/store/workspaceStore.ts',
         'src/companion/App.tsx',
         'scripts/quality/quality-gate-fast.test.mjs'
       ], tempRoot);
 
       expect(sharedResult.code).toBe(0);
       expect(await readFile(marker, 'utf8')).toBe(
-        '--cache\n--cache-location\n.tmp/eslint-cache/changed/\nsrc/shared/platform/runtime.ts\nscripts/quality/quality-gate-fast.test.mjs\n'
+        '--cache\n--cache-location\n.tmp/eslint-cache/changed/\nsrc/shared/platform/runtime.ts\nsrc/store/workspaceStore.ts\nscripts/quality/quality-gate-fast.test.mjs\n'
       );
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
