@@ -7,13 +7,15 @@ import { renderWithLocalization } from '../../shared/localization/testLocalizati
 import { WorkspaceRightSidebarAssistantPanel } from './WorkspaceRightSidebarAssistantPanel';
 import {
   createAssistantPanelNode as createNode,
-  createAssistantPanelThread as createThread
+  createAssistantPanelThread as createThread,
+  createReadyAssistantStatus
 } from './WorkspaceRightSidebarAssistantPanel.testUtils';
 
 const assistantRuntime = vi.hoisted(() => ({
   listAssistantThreadIndex: vi.fn(),
+  listAssistantThreadMessages: vi.fn(),
   loadAssistantStatus: vi.fn(),
-  deleteAssistantThreadIndex: vi.fn(),
+  removeAssistantThreadFromHistory: vi.fn(),
   sendAssistantMessage: vi.fn(),
   subscribeAssistantTurnEvents: vi.fn()
 }));
@@ -23,17 +25,10 @@ vi.mock('../../shared/platform/assistantRuntime', () => assistantRuntime);
 beforeEach(() => {
   vi.clearAllMocks();
   window.localStorage.clear();
-  assistantRuntime.loadAssistantStatus.mockResolvedValue({
-    capabilities: [
-      { enabled: true, name: 'status' },
-      { enabled: true, name: 'sendMessage' },
-      { enabled: true, name: 'threadIndex' }
-    ],
-    provider: 'codex-app-server',
-    state: 'ready'
-  });
+  assistantRuntime.loadAssistantStatus.mockResolvedValue(createReadyAssistantStatus());
   assistantRuntime.listAssistantThreadIndex.mockResolvedValue([]);
-  assistantRuntime.deleteAssistantThreadIndex.mockResolvedValue(null);
+  assistantRuntime.listAssistantThreadMessages.mockResolvedValue([]);
+  assistantRuntime.removeAssistantThreadFromHistory.mockResolvedValue(null);
   assistantRuntime.subscribeAssistantTurnEvents.mockReturnValue(() => undefined);
 });
 
@@ -41,7 +36,7 @@ function enableFolioleAide() {
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.folioleAideEnabled, 'true');
 }
 
-it('loads Assistant threads for the active topic location', async () => {
+it('loads Assistant threads from the local global history', async () => {
   enableFolioleAide();
   assistantRuntime.listAssistantThreadIndex.mockResolvedValueOnce([createThread({})]);
 
@@ -50,22 +45,18 @@ it('loads Assistant threads for the active topic location', async () => {
       activeNodeId="node-1"
       nodesById={{
         parent: createNode({ id: 'parent', title: 'Parent' }),
-        'node-1': createNode({ id: 'node-1', parentNodeId: 'parent' })
+        'node-1': createNode({ id: 'node-1', parentNodeId: 'parent' }),
+        sibling: createNode({ id: 'sibling', openingText: 'Sibling preview', parentNodeId: 'parent', title: 'Sibling' })
       }}
       onSelectNode={vi.fn()}
     />
   );
 
-  expect(screen.getByRole('button', { name: 'Connect' })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
-
   expect(await screen.findByRole('button', { name: /original prompt/i })).toBeInTheDocument();
-  expect(assistantRuntime.listAssistantThreadIndex).toHaveBeenCalledWith({
-    location: { nodeId: 'node-1', type: 'node' }
-  });
-  expect(screen.queryByText(/Earlier messages stay in Codex/i)).not.toBeInTheDocument();
+  expect(assistantRuntime.listAssistantThreadIndex).toHaveBeenCalledWith();
+  expect(screen.queryByText(/Saved local messages appear here/i)).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: /original prompt/i }));
-  expect(screen.getByText(/Earlier messages stay in Codex/i)).toBeInTheDocument();
+  expect(screen.getByText(/Saved local messages appear here/i)).toBeInTheDocument();
 });
 
 it('creates a new thread and moves pending messages into the returned thread cache', async () => {
@@ -86,12 +77,12 @@ it('creates a new thread and moves pending messages into the returned thread cac
       activeNodeId="node-1"
       nodesById={{
         parent: createNode({ id: 'parent', title: 'Parent' }),
-        'node-1': createNode({ id: 'node-1', parentNodeId: 'parent' })
+        'node-1': createNode({ id: 'node-1', parentNodeId: 'parent' }),
+        sibling: createNode({ id: 'sibling', openingText: 'Sibling preview', parentNodeId: 'parent', title: 'Sibling' })
       }}
       onSelectNode={vi.fn()}
     />
   );
-  fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
   await screen.findByLabelText('Foliole Aide message');
 
   fireEvent.change(screen.getByLabelText('Foliole Aide message'), { target: { value: 'New prompt' } });
@@ -102,12 +93,17 @@ it('creates a new thread and moves pending messages into the returned thread cac
       clientTurnId: expect.any(String),
       message: 'New prompt',
       openingLocation: { nodeId: 'node-1', type: 'node' },
-      workspaceContext: {
+      workspaceContext: expect.objectContaining({
         activeNodeId: 'node-1',
-        activeTitle: 'Topic',
+        parentFolder: expect.objectContaining({
+          children: expect.arrayContaining([
+            expect.objectContaining({ isActive: true, nodeId: 'node-1' }),
+            expect.objectContaining({ nodeId: 'sibling', preview: 'Sibling preview' })
+          ])
+        }),
         path: ['Parent', 'Topic'],
         scope: 'node'
-      }
+      })
     })
   );
   expect(await screen.findByText('Assistant answer')).toBeInTheDocument();
@@ -115,7 +111,6 @@ it('creates a new thread and moves pending messages into the returned thread cac
   fireEvent.click(screen.getByRole('button', { name: 'Back to history' }));
   expect(screen.getByRole('button', { name: /new prompt/i })).toBeInTheDocument();
 });
-
 it('continues a selected thread and switches to its saved node location', async () => {
   enableFolioleAide();
   const onSelectNode = vi.fn();
@@ -136,8 +131,6 @@ it('continues a selected thread and switches to its saved node location', async 
       onSelectNode={onSelectNode}
     />
   );
-  fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
-
   fireEvent.click(await screen.findByRole('button', { name: /original prompt/i }));
   expect(onSelectNode).toHaveBeenCalledWith('node-2');
   fireEvent.change(screen.getByLabelText('Foliole Aide message'), { target: { value: 'Follow-up' } });
@@ -149,17 +142,16 @@ it('continues a selected thread and switches to its saved node location', async 
       message: 'Follow-up',
       openingLocation: { nodeId: 'node-2', type: 'node' },
       providerThreadId: 'thread-1',
-      workspaceContext: {
+      workspaceContext: expect.objectContaining({
         activeNodeId: 'node-2',
         activeTitle: 'Topic',
         path: ['Topic'],
         scope: 'node'
-      }
+      })
     })
   );
   expect(await screen.findByText('Follow-up answer')).toBeInTheDocument();
 });
-
 it('starts a new thread after clearing the selected history thread', async () => {
   enableFolioleAide();
   assistantRuntime.listAssistantThreadIndex.mockResolvedValueOnce([createThread({})]);
@@ -177,8 +169,6 @@ it('starts a new thread after clearing the selected history thread', async () =>
       onSelectNode={vi.fn()}
     />
   );
-  fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
-
   fireEvent.click(await screen.findByRole('button', { name: 'New' }));
   fireEvent.change(screen.getByLabelText('Foliole Aide message'), {
     target: { value: 'Fresh prompt' }
@@ -190,12 +180,14 @@ it('starts a new thread after clearing the selected history thread', async () =>
       clientTurnId: expect.any(String),
       message: 'Fresh prompt',
       openingLocation: { nodeId: 'node-1', type: 'node' },
-      workspaceContext: {
+      workspaceContext: expect.objectContaining({
         activeNodeId: 'node-1',
+        activeKind: 'topic',
         activeTitle: 'Topic',
         path: ['Topic'],
+        schemaVersion: 1,
         scope: 'node'
-      }
+      })
     })
   );
   expect(await screen.findByText('Fresh answer')).toBeInTheDocument();
@@ -233,7 +225,6 @@ it('updates the pending assistant bubble from turn delta events', async () => {
       onSelectNode={vi.fn()}
     />
   );
-  fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
   await screen.findByLabelText('Foliole Aide message');
 
   fireEvent.change(screen.getByLabelText('Foliole Aide message'), { target: { value: 'New prompt' } });

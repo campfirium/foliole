@@ -1,10 +1,16 @@
 import type {
   NativeAssistantSendMessageResult,
+  NativeAssistantThreadMessageRecord,
   NativeAssistantThreadIndexRecord,
   NativeAssistantThreadOpeningLocation,
   NativeAssistantWorkspaceContext
 } from '../../../lib/platform/nativeAssistantContract';
+import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { Node } from '../../features/nodes/model/nodeTypes';
+
+import { resolveAssistantWorkspaceContext } from './workspaceRightSidebarAssistantContext';
+
+export { resolveAssistantWorkspaceContext };
 
 export interface AssistantMessage {
   id: string;
@@ -18,6 +24,7 @@ export type MessageCache = Record<string, AssistantMessage[]>;
 type CacheAction =
   | { key: string; message: AssistantMessage; type: 'append' }
   | { fromKey: string; toKey: string; type: 'move' }
+  | { key: string; messages: AssistantMessage[]; type: 'set' }
   | { key: string; messageId: string; message: AssistantMessage; type: 'replace' };
 
 export const PENDING_THREAD_KEY = '__pending_assistant_thread__';
@@ -33,6 +40,7 @@ export function messageCacheReducer(state: MessageCache, action: CacheAction): M
       )
     };
   }
+  if (action.type === 'set') return { ...state, [action.key]: action.messages };
   const nextMessages = [...(state[action.toKey] ?? []), ...(state[action.fromKey] ?? [])];
   const rest = { ...state };
   delete rest[action.fromKey];
@@ -44,35 +52,42 @@ export function resolveAssistantLocation(
   nodesById: Record<string, Node>
 ): NativeAssistantThreadOpeningLocation {
   const activeNode = activeNodeId ? nodesById[activeNodeId] : null;
-  return activeNode?.kind === 'topic' && !activeNode.anchorLink && !activeNode.specialKind
+  return activeNode
     ? { nodeId: activeNode.id, type: 'node' }
     : { type: 'workspace' };
 }
 
-export function resolveAssistantWorkspaceContext(
+export function resolveAssistantWorkspaceContextForLocation(
+  location: NativeAssistantThreadOpeningLocation,
   activeNodeId: string | null,
-  nodesById: Record<string, Node>
+  nodesById: Record<string, Node>,
+  editorAdapter: EditorAdapter | null
 ): NativeAssistantWorkspaceContext {
-  const activeNode = activeNodeId ? nodesById[activeNodeId] : null;
-  if (!activeNode || activeNode.specialKind || activeNode.anchorLink) return { scope: 'workspace' };
-  return {
-    activeNodeId: activeNode.id,
-    activeTitle: activeNode.title,
-    path: resolveNodePath(activeNode, nodesById),
-    scope: 'node'
-  };
+  if (location.type === 'workspace') return resolveAssistantWorkspaceContext(null, nodesById);
+  if (!nodesById[location.nodeId]) {
+    return {
+      activeNodeId: location.nodeId,
+      document: { bodyStatus: 'missing' },
+      schemaVersion: 1,
+      scope: 'node'
+    };
+  }
+  return resolveAssistantWorkspaceContext(
+    location.nodeId,
+    nodesById,
+    location.nodeId === activeNodeId ? editorAdapter : null
+  );
 }
 
-function resolveNodePath(activeNode: Node, nodesById: Record<string, Node>) {
-  const path: string[] = [];
-  let node: Node | null | undefined = activeNode;
-  const seen = new Set<string>();
-  while (node && !seen.has(node.id)) {
-    seen.add(node.id);
-    if (node.title.trim()) path.unshift(node.title.trim());
-    node = node.parentNodeId ? nodesById[node.parentNodeId] : null;
-  }
-  return path;
+export function threadMessagesToAssistantMessages(
+  records: NativeAssistantThreadMessageRecord[]
+): AssistantMessage[] {
+  return records.map((record) => ({
+    id: record.id,
+    role: record.role,
+    state: 'ready',
+    text: record.text
+  }));
 }
 
 export function upsertRecord(
@@ -104,6 +119,29 @@ export function getThreadLocationLabelKind(
   if (!nodesById[record.location.nodeId]) return 'topicUnavailable';
   if (record.location.nodeId === activeNodeId) return 'thisTopic';
   return 'topic';
+}
+
+export function resolveThreadLocationPath(
+  record: NativeAssistantThreadIndexRecord,
+  nodesById: Record<string, Node>,
+  untitledTitle = 'Untitled topic'
+) {
+  if (record.location.type !== 'node') return null;
+  const node = nodesById[record.location.nodeId];
+  if (!node) return null;
+  const path: string[] = [];
+  const seen = new Set<string>();
+  let current: Node | null | undefined = node;
+  while (current && !seen.has(current.id)) {
+    seen.add(current.id);
+    path.unshift(normalizeNodeTitle(current, untitledTitle));
+    current = current.parentNodeId ? nodesById[current.parentNodeId] : null;
+  }
+  return path.join(' / ');
+}
+
+function normalizeNodeTitle(node: Node, untitledTitle: string) {
+  return node.title.trim() || untitledTitle;
 }
 
 export function createPendingMessageAction(key: string, pendingId: string, text: string) {

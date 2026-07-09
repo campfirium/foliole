@@ -6,6 +6,7 @@ export type NativeAssistantStatusState =
   'busy' | 'disconnected' | 'failed' | 'ready' | 'unavailable';
 
 export type NativeAssistantFailureCategory =
+  | 'agent_control_unavailable'
   | 'auth_failed'
   | 'busy'
   | 'internal_error'
@@ -23,7 +24,7 @@ export interface NativeAssistantFailure {
 
 export interface NativeAssistantCapabilityStatus {
   enabled: boolean;
-  name: 'sendMessage' | 'status' | 'threadIndex';
+  name: 'agentControl' | 'sendMessage' | 'status' | 'threadIndex';
 }
 
 export interface NativeAssistantThreadNodeLocation {
@@ -57,7 +58,17 @@ export interface NativeAssistantThreadIndexRecord {
   updatedAt: string;
 }
 
+export interface NativeAssistantThreadMessageRecord {
+  createdAt: string;
+  id: string;
+  provider: NativeAssistantProviderId;
+  providerThreadId: string;
+  role: 'assistant' | 'user';
+  text: string;
+}
+
 export interface NativeAssistantStatusResult {
+  agentControl?: NativeAssistantAgentControlContext;
   capabilities: NativeAssistantCapabilityStatus[];
   failure?: NativeAssistantFailure;
   provider: NativeAssistantProviderId;
@@ -73,10 +84,83 @@ export interface NativeAssistantSendMessageArgs {
   workspaceContext?: NativeAssistantWorkspaceContext;
 }
 
+export interface NativeAssistantWorkspaceChildSummary {
+  anchorKind?: 'cloze' | 'highlight';
+  bodyStatus?: 'empty' | 'failed' | 'fetching' | 'missing' | 'ready';
+  hasContent: boolean;
+  isActive?: boolean;
+  kind: string;
+  nodeId: string;
+  preview?: string;
+  specialKind?: string;
+  title: string;
+  updatedAt?: string;
+}
+
+export interface NativeAssistantWorkspaceDocumentContext {
+  bodyStatus: 'empty' | 'failed' | 'fetching' | 'missing' | 'ready';
+  charCount?: number;
+  preview?: string;
+  truncated?: boolean;
+}
+
+export interface NativeAssistantWorkspaceFolderContext {
+  childCount: number;
+  children: NativeAssistantWorkspaceChildSummary[];
+  truncated: boolean;
+}
+
+export interface NativeAssistantWorkspaceSelectionContext {
+  charCount: number;
+  ranges: Array<{ from: number; to: number }>;
+  text: string;
+  truncated: boolean;
+}
+
+export interface NativeAssistantWorkspaceAnchorContext {
+  id: string;
+  kind: 'cloze' | 'highlight';
+  page?: number;
+  parentNodeId?: string;
+  parentTitle?: string;
+  text?: string;
+}
+
+export interface NativeAssistantAgentControlContext {
+  capabilities: string[];
+  cliPath?: string;
+  descriptorEnvVar: 'FOLIOLE_AGENT_DESCRIPTOR';
+  descriptorPath: string;
+  endpoint?: string;
+  lastError?: string;
+  state: 'failed' | 'running' | 'stopped';
+  trace?: NativeAssistantAgentControlTraceSummary;
+  tracePath?: string;
+}
+
+export interface NativeAssistantAgentControlTraceSummary {
+  count: number;
+  lastError?: string;
+  lastStatus?: 'error' | 'ok';
+  lastTimestamp?: string;
+  lastTool?: string;
+  missing?: boolean;
+}
+
 export interface NativeAssistantWorkspaceContext {
   activeNodeId?: string;
+  activeParentNodeId?: string;
+  activeKind?: string;
+  activeSpecialKind?: string;
   activeTitle?: string;
+  agentControl?: NativeAssistantAgentControlContext;
+  anchor?: NativeAssistantWorkspaceAnchorContext;
+  document?: NativeAssistantWorkspaceDocumentContext;
+  folder?: NativeAssistantWorkspaceFolderContext;
   path?: string[];
+  parentFolder?: NativeAssistantWorkspaceFolderContext;
+  selection?: NativeAssistantWorkspaceSelectionContext;
+  schemaVersion?: 1;
   scope: 'node' | 'workspace';
 }
 
@@ -88,6 +172,10 @@ export interface NativeAssistantThreadIndexListArgs {
 }
 
 export interface NativeAssistantThreadIndexMutationArgs {
+  providerThreadId: string;
+}
+
+export interface NativeAssistantThreadMessageListArgs {
   providerThreadId: string;
 }
 
@@ -130,11 +218,15 @@ export type NativeAssistantCommandMap = {
     args: NativeAssistantThreadIndexListArgs | undefined;
     result: NativeAssistantThreadIndexRecord[];
   };
+  [NATIVE_COMMANDS.assistantListThreadMessages]: {
+    args: NativeAssistantThreadMessageListArgs;
+    result: NativeAssistantThreadMessageRecord[];
+  };
   [NATIVE_COMMANDS.assistantArchiveThreadIndex]: {
     args: NativeAssistantThreadIndexMutationArgs;
     result: NativeAssistantThreadIndexRecord;
   };
-  [NATIVE_COMMANDS.assistantDeleteThreadIndex]: {
+  [NATIVE_COMMANDS.assistantRemoveThreadFromHistory]: {
     args: NativeAssistantThreadIndexMutationArgs;
     result: NativeAssistantThreadIndexRecord;
   };
