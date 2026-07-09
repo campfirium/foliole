@@ -2,6 +2,7 @@ import { expect, it } from 'vitest';
 
 import { createAssistantPanelNode as createNode } from './WorkspaceRightSidebarAssistantPanel.testUtils';
 import {
+  messageCacheReducer,
   resolveAssistantLocation,
   resolveAssistantWorkspaceContextForLocation
 } from './workspaceRightSidebarAssistantPanelModel';
@@ -42,4 +43,14 @@ it('marks a saved topic location as missing when the topic is unavailable', () =
     schemaVersion: 1,
     scope: 'node'
   });
+});
+
+it('removes cached local messages for a deleted history thread', () => {
+  const state = messageCacheReducer({}, {
+    key: 'thread-1',
+    message: { id: 'message-1', role: 'assistant', state: 'ready', text: 'Cached answer' },
+    type: 'append'
+  });
+
+  expect(messageCacheReducer(state, { key: 'thread-1', type: 'delete' })).toEqual({});
 });

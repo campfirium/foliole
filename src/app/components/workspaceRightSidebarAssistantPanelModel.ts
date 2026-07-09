@@ -23,6 +23,7 @@ export type MessageCache = Record<string, AssistantMessage[]>;
 
 type CacheAction =
   | { key: string; message: AssistantMessage; type: 'append' }
+  | { key: string; type: 'delete' }
   | { fromKey: string; toKey: string; type: 'move' }
   | { key: string; messages: AssistantMessage[]; type: 'set' }
   | { key: string; messageId: string; message: AssistantMessage; type: 'replace' };
@@ -41,6 +42,11 @@ export function messageCacheReducer(state: MessageCache, action: CacheAction): M
     };
   }
   if (action.type === 'set') return { ...state, [action.key]: action.messages };
+  if (action.type === 'delete') {
+    const next = { ...state };
+    delete next[action.key];
+    return next;
+  }
   const nextMessages = [...(state[action.toKey] ?? []), ...(state[action.fromKey] ?? [])];
   const rest = { ...state };
   delete rest[action.fromKey];

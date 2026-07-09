@@ -1,6 +1,7 @@
 import { useMemo, useReducer, useRef, useState, type FormEvent } from 'react';
 
 import type {
+  NativeAssistantFailureCategory,
   NativeAssistantSendMessageResult,
   NativeAssistantThreadIndexRecord
 } from '../../../lib/platform/nativeAssistantContract';
@@ -8,7 +9,9 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import { sendAssistantMessage } from '../../shared/platform/assistantRuntime';
 
 import { useAssistantTurnEventSubscription, type AssistantActiveTurn } from './useAssistantTurnEventSubscription';
+import { useWorkspaceRightSidebarAssistantThreadMessages } from './useWorkspaceRightSidebarAssistantThreadMessages';
 import { useWorkspaceRightSidebarAssistantThreads } from './useWorkspaceRightSidebarAssistantThreads';
+import type { WorkspaceLayoutDocumentProps } from './workspaceLayoutPropGroups';
 import {
   createFailedMessageAction,
   createPendingMessageAction,
@@ -17,14 +20,16 @@ import {
   messageCacheReducer,
   PENDING_THREAD_KEY,
   resolveAssistantLocation,
-  resolveAssistantWorkspaceContext
+  resolveAssistantWorkspaceContextForLocation
 } from './workspaceRightSidebarAssistantPanelModel';
 
 type AssistantPanelControllerArgs = {
   activeNodeId: string | null;
   aideReady: boolean;
+  editorAdapterRef?: WorkspaceLayoutDocumentProps['editorAdapterRef'] | undefined;
   failedText: string;
   nodesById: Record<string, Node>;
+  onCapabilityFailure: (category: NativeAssistantFailureCategory) => void;
   onSelectNode: (nodeId: string) => void;
   pendingText: string;
   topicUnavailableText: string;
@@ -35,11 +40,7 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: Assistant
     () => resolveAssistantLocation(args.activeNodeId, args.nodesById),
     [args.activeNodeId, args.nodesById]
   );
-  const workspaceContext = useMemo(
-    () => resolveAssistantWorkspaceContext(args.activeNodeId, args.nodesById),
-    [args.activeNodeId, args.nodesById]
-  );
-  const threads = useWorkspaceRightSidebarAssistantThreads(location, args.aideReady);
+  const threads = useWorkspaceRightSidebarAssistantThreads(args.aideReady);
   const [messageText, setMessageText] = useState('');
   const [messagesByThread, dispatchCache] = useReducer(messageCacheReducer, {});
   const [sending, setSending] = useState(false);
@@ -47,48 +48,70 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: Assistant
   const activeMessages = messagesByThread[threads.selectedThreadId ?? PENDING_THREAD_KEY] ?? [];
   const selectedRecord = findSelectedRecord(threads.records, threads.selectedThreadId);
 
+  const threadMessageStatus = useThreadMessageStatus(dispatchCache, messagesByThread, threads.selectedThreadId);
+
   useAssistantTurnEventSubscription({
     activeTurnRef,
     dispatchCache,
     failedText: args.failedText,
+    onCapabilityFailure: args.onCapabilityFailure,
     setMessageText,
     setSending
   });
 
   return {
     activeMessages,
-    handleRemoveRecord: threads.deleteRecord,
-    handleNewThread: () => {
-      setMessageText('');
-      threads.selectThreadId(null);
+    handleRemoveRecord: async (record: NativeAssistantThreadIndexRecord) => {
+      if (await threads.removeRecord(record))
+        dispatchCache({ key: record.providerThreadId, type: 'delete' });
     },
-    handleSelectRecord: (record: NativeAssistantThreadIndexRecord) =>
-      selectRecord(record, args.nodesById, args.onSelectNode, threads.selectThreadId),
+    handleNewThread: () => { setMessageText(''); threads.selectThreadId(null); },
+    handleSelectRecord: (record: NativeAssistantThreadIndexRecord) => selectRecord(record, args.nodesById, args.onSelectNode, threads.selectThreadId),
     handleSubmit: createHandleSubmit({
+      activeNodeId: args.activeNodeId,
       aideReady: args.aideReady,
       activeTurnRef,
       dispatchCache,
+      editorAdapterRef: args.editorAdapterRef,
       failedText: args.failedText,
       location,
       messageText,
+      nodesById: args.nodesById,
+      onCapabilityFailure: args.onCapabilityFailure,
       pendingText: args.pendingText,
+      selectedRecord,
       sending,
       setMessageText,
       setSending,
-      threads,
-      workspaceContext
+      threads
     }),
     loading: threads.loading,
     messageText,
     records: threads.records,
+    reloadThreads: threads.reload,
     removingThreadId: threads.removingThreadId,
+    threadError: threads.error,
     selectedThreadNotice: getSelectedThreadNotice(selectedRecord, args.nodesById, args.topicUnavailableText),
     selectedRecord,
     selectedThreadId: threads.selectedThreadId,
     sending,
-    setMessageText
+    setMessageText,
+    threadMessageStatus
   };
 }
+
+function useThreadMessageStatus(
+  dispatchCache: (action: Parameters<typeof messageCacheReducer>[1]) => void,
+  messagesByThread: ReturnType<typeof messageCacheReducer>,
+  selectedThreadId: string | null
+) {
+  return useWorkspaceRightSidebarAssistantThreadMessages({
+    dispatchCache,
+    messagesByThread,
+    selectedThreadId
+  });
+}
+
 function createHandleSubmit(args: SubmitHandlerArgs) {
   return async (event: FormEvent) => {
     event.preventDefault();
@@ -103,10 +126,16 @@ function createHandleSubmit(args: SubmitHandlerArgs) {
     args.dispatchCache(createPendingMessageAction(threadKey, pendingId, args.pendingText));
     try {
       const result = await sendAssistantTurn(args, pendingId, prompt);
-      applySendResult({ ...args, pendingId, prompt, result, threadKey });
+      if (args.activeTurnRef.current?.clientTurnId === pendingId)
+        applySendResult({ ...args, pendingId, prompt, result, threadKey });
+    } catch {
+      if (args.activeTurnRef.current?.clientTurnId === pendingId)
+        applySendResult({ ...args, pendingId, prompt, result: null, threadKey });
     } finally {
-      args.activeTurnRef.current = null;
-      args.setSending(false);
+      if (args.activeTurnRef.current?.clientTurnId === pendingId) {
+        args.activeTurnRef.current = null;
+        args.setSending(false);
+      }
     }
   };
 }
@@ -121,6 +150,8 @@ function applySendResult(result: SendResultArgs) {
     result.threads.selectThreadId(threadId);
     return;
   }
+  const failureCategory = result.result?.failure?.category;
+  if (failureCategory) result.onCapabilityFailure(failureCategory);
   result.dispatchCache(createFailedMessageAction(result.threadKey, result.pendingId, result.failedText));
   result.setMessageText(result.prompt);
 }
@@ -154,11 +185,17 @@ function getSelectedThreadNotice(
 }
 
 async function sendAssistantTurn(args: SubmitHandlerArgs, clientTurnId: string, message: string) {
+  const openingLocation = args.selectedRecord?.location ?? args.location;
   return sendAssistantMessage({
     clientTurnId,
     message,
-    openingLocation: args.location,
-    workspaceContext: args.workspaceContext,
+    openingLocation,
+    workspaceContext: resolveAssistantWorkspaceContextForLocation(
+      openingLocation,
+      args.activeNodeId,
+      args.nodesById,
+      args.editorAdapterRef?.current ?? null
+    ),
     ...(args.threads.selectedThreadId ? { providerThreadId: args.threads.selectedThreadId } : {})
   });
 }
@@ -169,22 +206,27 @@ type SendResultArgs = {
   pendingId: string;
   prompt: string;
   result: NativeAssistantSendMessageResult | null;
+  onCapabilityFailure: (category: NativeAssistantFailureCategory) => void;
   setMessageText: (text: string) => void;
   threadKey: string;
   threads: ReturnType<typeof useWorkspaceRightSidebarAssistantThreads>;
 };
 
 type SubmitHandlerArgs = {
+  activeNodeId: string | null;
   aideReady: boolean;
   activeTurnRef: { current: AssistantActiveTurn | null };
   dispatchCache: (action: Parameters<typeof messageCacheReducer>[1]) => void;
+  editorAdapterRef: WorkspaceLayoutDocumentProps['editorAdapterRef'] | undefined;
   failedText: string;
   location: ReturnType<typeof resolveAssistantLocation>;
   messageText: string;
+  nodesById: Record<string, Node>;
+  onCapabilityFailure: (category: NativeAssistantFailureCategory) => void;
   pendingText: string;
+  selectedRecord: NativeAssistantThreadIndexRecord | null;
   sending: boolean;
   setMessageText: (text: string) => void;
   setSending: (sending: boolean) => void;
   threads: ReturnType<typeof useWorkspaceRightSidebarAssistantThreads>;
-  workspaceContext: ReturnType<typeof resolveAssistantWorkspaceContext>;
 };
