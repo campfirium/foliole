@@ -8,7 +8,12 @@ import {
   handleMaterialSearch,
   handleMaterialUpdate
 } from './agentControlMaterialHandlers.js';
+import { handleMaterialListChildren } from './agentControlMaterialListHandlers.js';
 import { isBearerTokenAuthorized } from './agentControlToken.js';
+import {
+  capabilityForProtectedPath,
+  isProtectedRouteCapabilityDisabled
+} from './agentControlRouteCapabilities.js';
 import {
   AGENT_CONTROL_CAPABILITIES,
   AGENT_CONTROL_PROTOCOL_VERSION
@@ -119,20 +124,17 @@ function readOrigin(request: http.IncomingMessage) {
   return Array.isArray(header) ? header[0] : header;
 }
 
-function capabilityForProtectedPath(method: string | undefined, pathname: string): string | null {
-  if (method === 'GET' && pathname === '/agent-control/v1/capabilities') return 'foundation.capabilities';
-  if (method === 'POST' && pathname === '/agent-control/v1/auth/verify') return 'foundation.auth.verify';
-  if ((method === 'POST' || method === 'OPTIONS') && pathname === '/agent-control/v1/materials/read') return 'materials.read';
-  if ((method === 'POST' || method === 'OPTIONS') && pathname === '/agent-control/v1/materials/search') return 'materials.search';
-  if ((method === 'POST' || method === 'OPTIONS') && pathname === '/agent-control/v1/materials/update') return 'materials.update';
-  if ((method === 'POST' || method === 'OPTIONS') && pathname === '/agent-control/v1/materials/delete-soft') return 'materials.deleteSoft';
-  if ((method === 'POST' || method === 'OPTIONS') && pathname === '/agent-control/v1/virtual-folders/list') return 'virtualFolders.list';
-  if ((method === 'POST' || method === 'OPTIONS') && pathname === '/agent-control/v1/virtual-folders/read') return 'virtualFolders.read';
-  if ((method === 'POST' || method === 'OPTIONS') && pathname === '/agent-control/v1/virtual-folders/create') return 'virtualFolders.create';
-  if ((method === 'POST' || method === 'OPTIONS') && pathname === '/agent-control/v1/virtual-folders/add-items') return 'virtualFolders.addItems';
-  if ((method === 'POST' || method === 'OPTIONS') && pathname === '/agent-control/v1/virtual-folders/remove-items') return 'virtualFolders.removeItems';
-  if ((method === 'POST' || method === 'OPTIONS') && pathname === '/agent-control/v1/virtual-folders/reorder') return 'virtualFolders.reorder';
-  return null;
+function rejectDisabledCapability(
+  request: http.IncomingMessage,
+  response: http.ServerResponse,
+  options: AgentControlRequestHandlerOptions,
+  pathname: string
+) {
+  const capability = capabilityForProtectedPath(request.method, pathname);
+  if (!capability || !isProtectedRouteCapabilityDisabled(capability)) return false;
+  recordRequest({ capability, errorCategory: 'capability_disabled', options, request, result: 'failed' });
+  sendJson(response, 403, { error: 'capability_disabled' });
+  return true;
 }
 
 function rejectForbiddenOrigin(
@@ -155,6 +157,9 @@ async function handleRequest(
 ) {
   const url = new URL(request.url ?? '/', 'http://127.0.0.1');
   if (rejectForbiddenOrigin(request, response, options, url.pathname)) {
+    return;
+  }
+  if (rejectDisabledCapability(request, response, options, url.pathname)) {
     return;
   }
   if (request.method === 'GET' && url.pathname === '/agent-control/v1/health') {
@@ -194,6 +199,7 @@ async function handleMaterialRoutes(
   if (request.method !== 'POST') return false;
   if (pathname === '/agent-control/v1/materials/read') await handleMaterialRead(request, response, options);
   else if (pathname === '/agent-control/v1/materials/search') await handleMaterialSearch(request, response, options);
+  else if (pathname === '/agent-control/v1/materials/list-children') await handleMaterialListChildren(request, response, options);
   else if (pathname === '/agent-control/v1/materials/update') await handleMaterialUpdate(request, response, options);
   else if (pathname === '/agent-control/v1/materials/delete-soft') await handleMaterialDeleteSoft(request, response, options);
   else return false;
