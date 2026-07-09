@@ -143,6 +143,7 @@
     "agent:codex:dry-run": "bash scripts/codex/run-task.sh --dry-run",
     "agent:loop": "bash scripts/codex/run-loop.sh",
     "agent:loop:dry-run": "bash scripts/codex/run-loop.sh --dry-run",
+    "aide:online-smoke": "node scripts/agent-control/foliole-aide-online-smoke.mjs",
     "hooks:install": "node scripts/install-git-hooks.mjs",
     "prepare": "npm run hooks:install",
     "task:finish": "node scripts/task-finish.mjs",
