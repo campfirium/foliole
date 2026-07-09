@@ -40,6 +40,30 @@ it('keeps debug seed persistence disabled unless the runtime explicitly allows i
   expect(persistSeedNodes).not.toHaveBeenCalled();
 });
 
+it('keeps debug seed shelved state in the renderer store', async () => {
+  await createSeedNodeDebugApi(() => false).seedNodes([{
+    ...debugSeed,
+    id: 'debug-shelved-topic',
+    shelvedAt: '2026-07-09T00:00:00.000Z'
+  }]);
+
+  expect(useWorkspaceStore.getState().nodesById['debug-shelved-topic']).toMatchObject({
+    shelvedAt: '2026-07-09T00:00:00.000Z',
+    title: 'Debug Seed Topic'
+  });
+});
+
+it('passes debug seed shelved state to persistence when authorized', async () => {
+  const shelvedSeed = {
+    ...debugSeed,
+    id: 'debug-persist-shelved-topic',
+    shelvedAt: '2026-07-09T00:00:00.000Z'
+  };
+  await createSeedNodeDebugApi(() => true).seedNodes([shelvedSeed]);
+
+  expect(persistSeedNodes).toHaveBeenCalledWith([shelvedSeed]);
+});
+
 it('persists debug seeds only after isolated runtime authorization', async () => {
   await createSeedNodeDebugApi(() => true).seedNodes([debugSeed]);
 

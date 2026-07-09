@@ -1,72 +1,15 @@
-import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { readCachedWorkspaceNodeDocument } from '../../store/workspaceNodeDocumentCache';
 import { openWorkspaceNodeWithPreparedDocument } from '../../store/workspaceNodePreparation';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { createClipboardImportHandler } from './workspaceDebugAttachmentImport';
 import { isWorkspaceDebugEnabledForRuntime } from './workspaceDebugBridgeGate';
-import { getEditorOperationHistory, type WorkspaceDebugOperationHistory } from './workspaceDebugHistory';
+import type { WorkspaceDebugApi, WorkspaceDebugWindow } from './workspaceDebugBridgeTypes';
+import { getEditorOperationHistory } from './workspaceDebugHistory';
 import { forceUpdateDebugNodeContent } from './workspaceDebugNodeContent';
 import { completeDebugReviewSession } from './workspaceDebugReviewSession';
-import { createSeedNodeDebugApi, type SeedNodeDebugApi } from './workspaceDebugSeedApi';
+import { createSeedNodeDebugApi } from './workspaceDebugSeedApi';
 import { type WorkspaceSyncDebugApi, createWorkspaceSyncDebugApi } from './workspaceSyncDebugBridge';
-
-interface WorkspaceDebugApi {
-  createTextClozeChild: (args: {
-    anchorId: string;
-    anchorLink?: NodeAnchorLink | null;
-    answer: string;
-    parentNodeId: string;
-    prompt: string;
-  }) => Promise<string | null>;
-  createTextHighlightChild: (args: {
-    anchorId: string;
-    anchorLink?: NodeAnchorLink | null;
-    parentNodeId: string;
-    text: string;
-  }) => Promise<string | null>;
-  deleteNode: (nodeId: string) => Promise<boolean>;
-  deleteNodePermanently: (nodeId: string) => Promise<boolean>;
-  getActiveNodeId: () => string | null;
-  getEditorOperationHistory: () => WorkspaceDebugOperationHistory;
-  getNode: (nodeId: string) => {
-    anchorKind: 'highlight' | 'cloze' | null;
-    anchorLink: NodeAnchorLink | null;
-    content: string;
-    id: string;
-    kind: string;
-    parentNodeId: string | null;
-    reading: { nextAt: string; state: string } | null;
-    reveal: string | null;
-    review: { due: string; state: number } | null;
-    title: string;
-    trashed: boolean;
-  } | null;
-  importClipboardImageAttachment: (args: {
-    bytesBase64: string;
-    mimeType: string;
-    nodeId: string;
-    originalName?: string;
-  }) => Promise<string | null>;
-  getNodeViewState: (nodeId: string) => { scrollTop: number; selection: { from: number; to: number } | null } | null;
-  getReviewSession: () => {
-    currentNodeId: string | null;
-    queueNodeIds: string[];
-    soonNodeIds?: string[];
-  };
-  completeReviewSessionForDebug: (args: { completedAt: string; continueNodeId: string; sessionStartedAt: string }) => void;
-  listNodes: () => Array<{ id: string; title: string }>;
-  openNode: (nodeId: string) => Promise<boolean>;
-  restoreNode: (nodeId: string) => Promise<boolean>;
-  setNodeViewState: (args: { from: number; nodeId: string; scrollTop?: number; to: number }) => boolean;
-  seedNodes: SeedNodeDebugApi['seedNodes'];
-  updateNodeContent: (nodeId: string, content: string) => Promise<boolean>;
-}
-
-type WorkspaceDebugWindow = Window & {
-  electronAPI?: { debug?: { workspaceDebugBridge?: boolean; workspaceDebugSeedPersistence?: boolean } };
-  __folioleWorkspaceDebug?: WorkspaceDebugApi;
-};
 
 function isWorkspaceDebugEnabled() {
   if (typeof window === 'undefined') {
@@ -107,6 +50,7 @@ function getDebugNode(nodeId: string): ReturnType<WorkspaceDebugApi['getNode']> 
     reading: node.reading ? { nextAt: node.reading.nextAt, state: node.reading.state } : null,
     reveal: node.reveal,
     review: node.review ? { due: node.review.due, state: node.review.state } : null,
+    shelvedAt: node.shelvedAt ?? null,
     title: node.title,
     trashed: state.trashedNodeIds.includes(nodeId)
   };
@@ -129,7 +73,9 @@ function createNodeMutationDebugApi(): Pick<
   | 'deleteNode'
   | 'deleteNodePermanently'
   | 'restoreNode'
+  | 'shelveNode'
   | 'updateNodeContent'
+  | 'upsertTopicForDebug'
 > {
   return {
     completeReviewSessionForDebug: completeDebugReviewSession,
@@ -155,6 +101,10 @@ function createNodeMutationDebugApi(): Pick<
       await state.restoreNode(nodeId);
       return true;
     },
+    shelveNode: (nodeId, now) => {
+      const state = getExistingNodeState(nodeId);
+      return state ? state.shelveNode(nodeId, now) : false;
+    },
     updateNodeContent: async (nodeId, content) => {
       const state = getExistingNodeState(nodeId);
       if (!state) return false;
@@ -162,19 +112,55 @@ function createNodeMutationDebugApi(): Pick<
       if (useWorkspaceStore.getState().nodesById[nodeId]?.content === content) return true;
       forceUpdateDebugNodeContent(nodeId, content);
       return true;
+    },
+    upsertTopicForDebug: ({ content, id, title }) => {
+      const state = useWorkspaceStore.getState();
+      const baseNode = Object.values(state.nodesById).find((node) => !node.specialKind) ??
+        Object.values(state.nodesById)[0];
+      if (!baseNode) return false;
+      const node = {
+        ...baseNode,
+        anchorLink: null,
+        bodyStatus: content.trim() ? 'ready' as const : 'empty' as const,
+        content,
+        hasContent: content.trim().length > 0,
+        id,
+        kind: 'topic' as const,
+        parentNodeId: null,
+        shelvedAt: null,
+        title,
+        updatedAt: new Date().toISOString()
+      };
+      delete node.specialKind;
+      delete node.virtualFilter;
+      useWorkspaceStore.setState({
+        nodeOrder: state.nodeOrder.includes(id) ? state.nodeOrder : [...state.nodeOrder, id],
+        nodesById: { ...state.nodesById, [id]: node },
+        rendererBoundaryKeepNodeIds: Array.from(new Set([...state.rendererBoundaryKeepNodeIds, id]))
+      });
+      return true;
     }
   };
 }
 
 function createNodeReadDebugApi(): Pick<
   WorkspaceDebugApi,
-  'getActiveNodeId' | 'getEditorOperationHistory' | 'getNode' | 'getNodeViewState' | 'getReviewSession' | 'listNodes' | 'openNode' | 'setNodeViewState'
+  | 'getActiveNodeId'
+  | 'getEditorOperationHistory'
+  | 'getNode'
+  | 'getNodeViewState'
+  | 'getReviewSession'
+  | 'isHydrated'
+  | 'listNodes'
+  | 'openNode'
+  | 'setNodeViewState'
 > {
   return {
     getActiveNodeId: () => useWorkspaceStore.getState().activeNodeId,
     getEditorOperationHistory,
     getNode: getDebugNode,
     getNodeViewState: (nodeId) => useWorkspaceStore.getState().nodeViewById[nodeId] ?? null,
+    isHydrated: () => useWorkspaceStore.getState().isHydrated,
     getReviewSession: getDebugReviewSession,
     listNodes: () => {
       const state = useWorkspaceStore.getState();

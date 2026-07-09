@@ -32,6 +32,7 @@ function buildSeededNodes(nodes: DebugNodeSeed[], createdAt: string, initialNode
         reading: node.reading ?? null,
         reveal: node.reveal ?? null,
         review: node.review ?? null,
+        shelvedAt: node.shelvedAt ?? null,
         title: node.title,
         updatedAt: `2026-04-08T00:00:${String(index).padStart(2, '0')}.000Z`
       }

@@ -99,11 +99,21 @@ function renderPerformancePanel(
 }
 
 function renderAssistantPanel(
-  props: Pick<WorkspaceRightSidebarPanelProps, 'activeNodeId' | 'nodesById' | 'onSelectNode'>
+  props: Pick<
+    WorkspaceRightSidebarPanelProps,
+    | 'activeNodeId'
+    | 'assistantActiveNodeId'
+    | 'assistantWorkspaceContext'
+    | 'editorAdapterRef'
+    | 'nodesById'
+    | 'onSelectNode'
+  >
 ) {
   return (
     <WorkspaceRightSidebarAssistantPanel
-      activeNodeId={props.activeNodeId}
+      activeNodeId={props.assistantActiveNodeId ?? props.activeNodeId}
+      workspaceContextOverride={props.assistantWorkspaceContext}
+      editorAdapterRef={props.editorAdapterRef}
       nodesById={props.nodesById}
       onSelectNode={props.onSelectNode}
     />

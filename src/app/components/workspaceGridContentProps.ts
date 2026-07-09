@@ -9,6 +9,7 @@ import type { WorkspaceListSplitterProps } from './WorkspaceListSplitter';
 import type { WorkspaceRightSidebarProps } from './WorkspaceRightSidebar';
 import type { WorkspaceRightSidebarSplitterProps } from './WorkspaceRightSidebarSplitter';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
+import { resolveAssistantMainPanelWorkspaceContext } from './workspaceAssistantMainPanelContext';
 
 export type WorkspaceGridContentProjectionSource = Pick<
   WorkspaceLayoutProps,
@@ -151,7 +152,10 @@ function selectWorkspaceRightSidebarProps({
   return {
     activePanelId: activeRightPanelId,
     activeNodeId: documentNodeId,
+    assistantActiveNodeId: resolveAssistantMainPanelNodeId({ documentNodeId, props }),
+    assistantWorkspaceContext: resolveAssistantMainPanelWorkspaceContext({ props }),
     outlineActivePosition,
+    editorAdapterRef: props.document.editorAdapterRef,
     nodeOrder: props.nodeList.nodeOrder,
     nodesById: props.nodeList.nodesById,
     onRevealAnchorInDocument: props.document.onRevealAnchorInDocument,
@@ -169,6 +173,19 @@ function selectWorkspaceRightSidebarProps({
       outlineDocument: externalOutlineDocument
     })
   };
+}
+
+export function resolveAssistantMainPanelNodeId({
+  documentNodeId,
+  props
+}: {
+  documentNodeId: string | null;
+  props: Pick<WorkspaceGridContentProjectionSource, 'virtualView'>;
+}) {
+  if (props.virtualView.isVirtualViewOpen && props.virtualView.activeVirtualNodeId) {
+    return props.virtualView.activeVirtualNodeId;
+  }
+  return documentNodeId;
 }
 
 function selectWorkspaceRightSidebarSplitterProps(

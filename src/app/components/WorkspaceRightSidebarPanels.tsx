@@ -1,10 +1,12 @@
 import { Suspense } from 'react';
 
+import type { NativeAssistantWorkspaceContext } from '../../../lib/platform/nativeAssistantContract';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import type { ReviewFlowWindow } from '../../store/workspaceReviewFlowWindow';
 
 import { measureWorkspaceDiagnostic } from './workspaceInputLagRenderDiagnostic';
+import type { WorkspaceLayoutDocumentProps } from './workspaceLayoutPropGroups';
 import {
   isWorkspaceRightPanelAvailable,
   resolveWorkspaceRightPanelContext
@@ -23,6 +25,9 @@ interface WorkspaceRightSidebarOutlineDocument {
 export interface WorkspaceRightSidebarPanelProps {
   activeNodeId: string | null;
   activePanelId: WorkspaceRightPanelId;
+  assistantActiveNodeId?: string | null;
+  assistantWorkspaceContext?: NativeAssistantWorkspaceContext | undefined;
+  editorAdapterRef?: WorkspaceLayoutDocumentProps['editorAdapterRef'] | undefined;
   isWorkspaceHydrated?: boolean;
   outlineActivePosition: number;
   nodeOrder: string[];

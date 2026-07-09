@@ -1,7 +1,10 @@
 import { expect, it } from 'vitest';
 
 import type { WorkspaceGridContentProjectionSource } from './workspaceGridContentProps';
-import { selectStudySessionCompleteSummaryProps } from './workspaceGridContentProps';
+import {
+  resolveAssistantMainPanelNodeId,
+  selectStudySessionCompleteSummaryProps
+} from './workspaceGridContentProps';
 import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 
 function createProjectionSource(canContinueReading: boolean): WorkspaceGridContentProjectionSource {
@@ -34,4 +37,28 @@ it('projects the queue-clear summary only when the completed Flow has reading to
   });
 
   expect(selectStudySessionCompleteSummaryProps(createProjectionSource(false))).toBeNull();
+});
+
+it('uses the visible virtual collection as the assistant context instead of a stale document topic', () => {
+  expect(resolveAssistantMainPanelNodeId({
+    documentNodeId: 'previous-topic',
+    props: {
+      virtualView: {
+        activeVirtualNodeId: 'virtual-collection',
+        isVirtualViewOpen: true
+      } as WorkspaceLayoutProps['virtualView']
+    }
+  })).toBe('virtual-collection');
+});
+
+it('uses the document node as the assistant context outside virtual views', () => {
+  expect(resolveAssistantMainPanelNodeId({
+    documentNodeId: 'topic-1',
+    props: {
+      virtualView: {
+        activeVirtualNodeId: 'virtual-collection',
+        isVirtualViewOpen: false
+      } as WorkspaceLayoutProps['virtualView']
+    }
+  })).toBe('topic-1');
 });

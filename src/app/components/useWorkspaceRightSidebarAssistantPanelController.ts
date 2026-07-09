@@ -3,15 +3,16 @@ import { useMemo, useReducer, useRef, useState, type FormEvent } from 'react';
 import type {
   NativeAssistantFailureCategory,
   NativeAssistantSendMessageResult,
-  NativeAssistantThreadIndexRecord
+  NativeAssistantThreadIndexRecord,
+  NativeAssistantWorkspaceContext
 } from '../../../lib/platform/nativeAssistantContract';
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import { sendAssistantMessage } from '../../shared/platform/assistantRuntime';
 
 import { useAssistantTurnEventSubscription, type AssistantActiveTurn } from './useAssistantTurnEventSubscription';
 import { useWorkspaceRightSidebarAssistantThreadMessages } from './useWorkspaceRightSidebarAssistantThreadMessages';
 import { useWorkspaceRightSidebarAssistantThreads } from './useWorkspaceRightSidebarAssistantThreads';
 import type { WorkspaceLayoutDocumentProps } from './workspaceLayoutPropGroups';
+import { sendAssistantTurn } from './workspaceRightSidebarAssistantSend';
 import {
   createFailedMessageAction,
   createPendingMessageAction,
@@ -19,8 +20,7 @@ import {
   createUserMessageAction,
   messageCacheReducer,
   PENDING_THREAD_KEY,
-  resolveAssistantLocation,
-  resolveAssistantWorkspaceContextForLocation
+  resolveAssistantLocation
 } from './workspaceRightSidebarAssistantPanelModel';
 
 type AssistantPanelControllerArgs = {
@@ -33,6 +33,7 @@ type AssistantPanelControllerArgs = {
   onSelectNode: (nodeId: string) => void;
   pendingText: string;
   topicUnavailableText: string;
+  workspaceContextOverride?: NativeAssistantWorkspaceContext | undefined;
 };
 
 export function useWorkspaceRightSidebarAssistantPanelController(args: AssistantPanelControllerArgs) {
@@ -83,7 +84,8 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: Assistant
       sending,
       setMessageText,
       setSending,
-      threads
+      threads,
+      workspaceContextOverride: args.workspaceContextOverride
     }),
     loading: threads.loading,
     messageText,
@@ -125,7 +127,11 @@ function createHandleSubmit(args: SubmitHandlerArgs) {
     args.dispatchCache(createUserMessageAction(threadKey, pendingId, prompt));
     args.dispatchCache(createPendingMessageAction(threadKey, pendingId, args.pendingText));
     try {
-      const result = await sendAssistantTurn(args, pendingId, prompt);
+      const result = await sendAssistantTurn(
+        { ...args, selectedThreadId: args.threads.selectedThreadId },
+        pendingId,
+        prompt
+      );
       if (args.activeTurnRef.current?.clientTurnId === pendingId)
         applySendResult({ ...args, pendingId, prompt, result, threadKey });
     } catch {
@@ -184,22 +190,6 @@ function getSelectedThreadNotice(
     : null;
 }
 
-async function sendAssistantTurn(args: SubmitHandlerArgs, clientTurnId: string, message: string) {
-  const openingLocation = args.selectedRecord?.location ?? args.location;
-  return sendAssistantMessage({
-    clientTurnId,
-    message,
-    openingLocation,
-    workspaceContext: resolveAssistantWorkspaceContextForLocation(
-      openingLocation,
-      args.activeNodeId,
-      args.nodesById,
-      args.editorAdapterRef?.current ?? null
-    ),
-    ...(args.threads.selectedThreadId ? { providerThreadId: args.threads.selectedThreadId } : {})
-  });
-}
-
 type SendResultArgs = {
   dispatchCache: (action: Parameters<typeof messageCacheReducer>[1]) => void;
   failedText: string;
@@ -229,4 +219,5 @@ type SubmitHandlerArgs = {
   setMessageText: (text: string) => void;
   setSending: (sending: boolean) => void;
   threads: ReturnType<typeof useWorkspaceRightSidebarAssistantThreads>;
+  workspaceContextOverride?: NativeAssistantWorkspaceContext | undefined;
 };

@@ -67,8 +67,10 @@ export function resolveAssistantWorkspaceContextForLocation(
   location: NativeAssistantThreadOpeningLocation,
   activeNodeId: string | null,
   nodesById: Record<string, Node>,
-  editorAdapter: EditorAdapter | null
+  editorAdapter: EditorAdapter | null,
+  currentContextOverride?: NativeAssistantWorkspaceContext | undefined
 ): NativeAssistantWorkspaceContext {
+  if (currentContextOverride) return currentContextOverride;
   if (location.type === 'workspace') return resolveAssistantWorkspaceContext(null, nodesById);
   if (!nodesById[location.nodeId]) {
     return {
@@ -82,6 +84,23 @@ export function resolveAssistantWorkspaceContextForLocation(
     location.nodeId,
     nodesById,
     location.nodeId === activeNodeId ? editorAdapter : null
+  );
+}
+
+export function resolveAssistantTurnWorkspaceContext(args: {
+  activeNodeId: string | null;
+  editorAdapter: EditorAdapter | null;
+  location: NativeAssistantThreadOpeningLocation;
+  nodesById: Record<string, Node>;
+  selectedRecord: NativeAssistantThreadIndexRecord | null;
+  workspaceContextOverride?: NativeAssistantWorkspaceContext | undefined;
+}): NativeAssistantWorkspaceContext {
+  return resolveAssistantWorkspaceContextForLocation(
+    args.selectedRecord?.location ?? args.location,
+    args.activeNodeId,
+    args.nodesById,
+    args.editorAdapter,
+    args.selectedRecord ? undefined : args.workspaceContextOverride
   );
 }
 

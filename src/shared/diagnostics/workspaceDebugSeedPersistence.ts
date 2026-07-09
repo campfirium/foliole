@@ -25,6 +25,7 @@ export interface DebugNodeSeed {
   reading?: NodeReadingProfile | null;
   reveal?: string | null;
   review?: NodeReviewProfile | null;
+  shelvedAt?: string | null;
   title: string;
 }
 
@@ -44,6 +45,7 @@ function createSeedRuntimeNode(node: DebugNodeSeed, index: number): WorkspaceRun
     reading: node.reading ?? null,
     review: node.review ?? null,
     reveal: node.reveal ?? null,
+    shelvedAt: node.shelvedAt ?? null,
     title: node.title,
     updatedAt: `2026-04-08T00:00:${String(index).padStart(2, '0')}.000Z`,
     virtualFilter: null

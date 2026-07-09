@@ -45,6 +45,26 @@ export function resolveAssistantWorkspaceContext(
   return context;
 }
 
+export function resolveAssistantVisibleListWorkspaceContext(args: {
+  activeNodeId: string;
+  itemNodeIds: string[];
+  nodesById: Record<string, Node>;
+  title: string;
+}): NativeAssistantWorkspaceContext {
+  const children = args.itemNodeIds
+    .map((nodeId) => args.nodesById[nodeId])
+    .filter((node): node is Node => Boolean(node));
+  return {
+    activeKind: 'folder',
+    activeNodeId: args.activeNodeId,
+    activeTitle: args.title,
+    folder: toFolderContext(children, args.itemNodeIds),
+    path: [args.title],
+    schemaVersion: 1,
+    scope: 'node'
+  };
+}
+
 function resolveAnchorContext(
   node: Node,
   nodesById: Record<string, Node>
