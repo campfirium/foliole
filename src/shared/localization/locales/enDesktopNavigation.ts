@@ -78,19 +78,61 @@ export const EN_DESKTOP_NAVIGATION_TRANSLATIONS = {
   'desktop.rightPanel.assistant.checking': 'Connecting to your local Codex app...',
   'desktop.rightPanel.assistant.unavailable':
     'Foliole Aide cannot connect to the local Codex app. Open Codex, then try again.',
+  'desktop.rightPanel.assistant.unavailable.agentControl':
+    'Foliole Aide is connected to Codex, but Foliole tools are not ready yet.',
+  'desktop.rightPanel.assistant.unavailable.authFailed':
+    'Open Codex and sign in, then retry Foliole Aide.',
+  'desktop.rightPanel.assistant.unavailable.busy':
+    'Codex is busy right now. Wait a moment, then try again.',
+  'desktop.rightPanel.assistant.unavailable.interrupted':
+    'Foliole Aide connection ended before the reply. Retry to reconnect.',
+  'desktop.rightPanel.assistant.unavailable.launchFailed':
+    'Foliole Aide could not start the local Codex connection.',
+  'desktop.rightPanel.assistant.unavailable.missingSendMessage':
+    'The local Codex app is reachable, but message sending is not available.',
+  'desktop.rightPanel.assistant.unavailable.missingThreadIndex':
+    'Foliole Aide cannot load local history right now.',
+  'desktop.rightPanel.assistant.unavailable.notConfigured':
+    'Foliole Aide is not configured for the local Codex app yet.',
+  'desktop.rightPanel.assistant.diagnostic':
+    'Check result: Codex {codex}; Foliole tools {tools}; tool calls {trace}.',
+  'desktop.rightPanel.assistant.diagnostic.lastTool': 'Last tool: {tool}.',
+  'desktop.rightPanel.assistant.diagnostic.toolError': 'Tool detail: {error}.',
+  'desktop.rightPanel.assistant.diagnostic.codex.authFailed': 'needs sign-in',
+  'desktop.rightPanel.assistant.diagnostic.codex.busy': 'is busy',
+  'desktop.rightPanel.assistant.diagnostic.codex.launchFailed': 'could not start',
+  'desktop.rightPanel.assistant.diagnostic.codex.notConfigured': 'is not configured',
+  'desktop.rightPanel.assistant.diagnostic.codex.ready': 'is ready',
+  'desktop.rightPanel.assistant.diagnostic.codex.unavailable': 'is unavailable',
+  'desktop.rightPanel.assistant.diagnostic.codex.unknown': 'was not reached',
+  'desktop.rightPanel.assistant.diagnostic.tools.failed': 'failed',
+  'desktop.rightPanel.assistant.diagnostic.tools.running': 'running',
+  'desktop.rightPanel.assistant.diagnostic.tools.stopped': 'stopped',
+  'desktop.rightPanel.assistant.diagnostic.tools.unknown': 'not checked',
+  'desktop.rightPanel.assistant.diagnostic.trace.error': 'ended with an error',
+  'desktop.rightPanel.assistant.diagnostic.trace.missing': 'not recorded yet',
+  'desktop.rightPanel.assistant.diagnostic.trace.none': 'not used yet',
+  'desktop.rightPanel.assistant.diagnostic.trace.ok': 'recorded',
   'desktop.rightPanel.assistant.enable': 'Connect',
   'desktop.rightPanel.assistant.check': 'Connect',
   'desktop.rightPanel.assistant.retry': 'Retry',
   'desktop.rightPanel.assistant.checkingAction': 'Connecting...',
-  'desktop.rightPanel.assistant.threads': 'Foliole Aide threads',
-  'desktop.rightPanel.assistant.loading': 'Loading Foliole Aide threads...',
-  'desktop.rightPanel.assistant.empty': 'No Foliole Aide threads for this location yet.',
+  'desktop.rightPanel.assistant.threads': 'Local Foliole Aide history',
+  'desktop.rightPanel.assistant.loading': 'Loading local Foliole Aide history...',
+  'desktop.rightPanel.assistant.historyLoadFailed':
+    'Foliole Aide could not load local history. Try again later.',
+  'desktop.rightPanel.assistant.historyRemoveFailed':
+    'Foliole Aide could not remove that thread from local history.',
+  'desktop.rightPanel.assistant.empty': 'No local Foliole Aide history yet.',
   'desktop.rightPanel.assistant.noPreview': 'No preview yet',
   'desktop.rightPanel.assistant.pending': 'Waiting for Foliole Aide...',
   'desktop.rightPanel.assistant.failed':
     'Foliole Aide could not reply. Check the message and send again.',
   'desktop.rightPanel.assistant.sessionOnly': 'Messages from this app session will appear here.',
-  'desktop.rightPanel.assistant.selectedThread': 'Selected thread. Earlier messages stay in Codex; new messages from this app session will appear here.',
+  'desktop.rightPanel.assistant.selectedThread': 'Selected thread. Saved local messages appear here; if they are unavailable, Foliole Aide shows the local preview.',
+  'desktop.rightPanel.assistant.threadMessagesLoadFailed':
+    'Foliole Aide could not load saved local messages. Showing the local preview.',
+  'desktop.rightPanel.assistant.threadPreview': 'Local history preview: {preview}',
   'desktop.rightPanel.assistant.currentSession': 'Current session messages',
   'desktop.rightPanel.assistant.input': 'Foliole Aide message',
   'desktop.rightPanel.assistant.placeholder': 'Ask anything...',
@@ -98,11 +140,14 @@ export const EN_DESKTOP_NAVIGATION_TRANSLATIONS = {
   'desktop.rightPanel.assistant.backToHistory': 'Back to history',
   'desktop.rightPanel.assistant.newConversation': 'New conversation',
   'desktop.rightPanel.assistant.newThread': 'New',
-  'desktop.rightPanel.assistant.removeThread': 'Remove thread from this list',
+  'desktop.rightPanel.assistant.removeThread': 'Remove from local Foliole Aide history',
   'desktop.rightPanel.assistant.send': 'Send',
   'desktop.rightPanel.assistant.location.thisTopic': 'This topic',
+  'desktop.rightPanel.assistant.location.thisTopicNamed': 'This topic: {title}',
   'desktop.rightPanel.assistant.location.topic': 'Topic',
+  'desktop.rightPanel.assistant.location.topicNamed': 'Topic: {title}',
   'desktop.rightPanel.assistant.location.topicUnavailable': 'Topic not available in this workspace',
+  'desktop.rightPanel.assistant.location.untitledTopic': 'Untitled topic',
   'desktop.rightPanel.assistant.location.workspace': 'Workspace',
   'desktop.rightPanel.flow.missingTopic': 'Missing topic',
   'desktop.rightPanel.flow.untitledTopic': 'Untitled topic',
