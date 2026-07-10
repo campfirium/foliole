@@ -3,9 +3,10 @@ import type http from 'node:http';
 import { readCompanionRequestBody } from './companionLanRequestBody.js';
 import { encryptCompanionPairingSecret, isSupportedPairingPublicKey } from './companionPairingEncryption.js';
 import {
-  consumeApprovedCompanionPairRequest,
+  completeCompanionPairRequest,
   countPendingCompanionPairRequests,
   createCompanionPairRequest,
+  loadCompanionPairRequestForCompletion,
   reservePairCompletionSlot
 } from './companionPairingRequests.js';
 import { countPairedCompanionDevices, registerPairedCompanionDevice } from './companionPairingStore.js';
@@ -21,6 +22,7 @@ type JsonResponder = (
   statusCode: number,
   payload: unknown
 ) => void;
+type PairCompletionState = NonNullable<ReturnType<typeof loadCompanionPairRequestForCompletion>>;
 
 function writePairingStatus(updatePairingStatus: PairingStatusUpdater) {
   updatePairingStatus({
@@ -58,6 +60,28 @@ function writePairCompletionRateLimit(
   return true;
 }
 
+function loadApprovedPairCompletionState(
+  pairRequestId: string,
+  request: http.IncomingMessage,
+  response: http.ServerResponse,
+  writeJson: JsonResponder
+): PairCompletionState | null {
+  const completionState = loadCompanionPairRequestForCompletion(pairRequestId);
+  if (!completionState) {
+    writeJson(request, response, 404, { error: 'pair_request_not_found' });
+    return null;
+  }
+  if (completionState.request.status === 'pending') {
+    writeJson(request, response, 409, { error: 'pair_request_pending' });
+    return null;
+  }
+  if (completionState.request.status === 'rejected') {
+    writeJson(request, response, 403, { error: 'pair_request_rejected' });
+    return null;
+  }
+  return completionState;
+}
+
 export async function handlePairRequest(
   request: http.IncomingMessage,
   response: http.ServerResponse,
@@ -80,25 +104,24 @@ export async function handlePairRequest(
     writeJson(request, response, 400, { error: 'invalid_pair_request' });
     return;
   }
-  const approvedRequest = consumeApprovedCompanionPairRequest(pairRequestId);
-  if (!approvedRequest) {
-    writeJson(request, response, 404, { error: 'pair_request_not_found' });
+  const completionState = loadApprovedPairCompletionState(pairRequestId, request, response, writeJson);
+  if (!completionState) {
     return;
   }
-  if (approvedRequest.status === 'pending') {
-    writeJson(request, response, 409, { error: 'pair_request_pending' });
-    return;
-  }
-  if (approvedRequest.status === 'rejected') {
-    writeJson(request, response, 403, { error: 'pair_request_rejected' });
-    return;
-  }
-  const paired = registerPairedCompanionDevice({
+  const approvedRequest = completionState.request;
+  const paired = completionState.completion ?? registerPairedCompanionDevice({
     clientAddress: approvedRequest.client_address,
     deviceId: approvedRequest.device_id,
     deviceKind: approvedRequest.device_kind,
     deviceName: approvedRequest.device_name
   });
+  if (!completionState.completion) {
+    completeCompanionPairRequest(pairRequestId, {
+      device_id: paired.device_id,
+      device_secret: paired.device_secret,
+      paired_at: paired.paired_at
+    });
+  }
   const encryptedDeviceSecret = await encryptCompanionPairingSecret({
     clientPublicKey: approvedRequest.pairing_public_key,
     deviceSecret: paired.device_secret

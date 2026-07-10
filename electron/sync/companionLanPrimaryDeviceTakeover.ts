@@ -32,7 +32,12 @@ function reject(reason: string, statusCode = 409) {
 }
 
 export function handlePrimaryDeviceTakeover(bodyText: string, authenticatedDeviceId: string) {
-  const payload = JSON.parse(bodyText) as unknown;
+  let payload: unknown;
+  try {
+    payload = JSON.parse(bodyText) as unknown;
+  } catch {
+    return reject('invalid_primary_device_takeover_payload', 400);
+  }
   if (!isTakeoverRequest(payload)) {
     return reject('invalid_primary_device_takeover_payload', 400);
   }

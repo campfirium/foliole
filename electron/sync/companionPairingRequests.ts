@@ -18,7 +18,14 @@ export interface PendingCompanionPairRequest {
   status: 'approved' | 'pending' | 'rejected';
 }
 
+export interface CompletedCompanionPairRequest {
+  device_id: string;
+  device_secret: string;
+  paired_at: string;
+}
+
 interface StoredCompanionPairRequest extends PendingCompanionPairRequest {
+  completion: CompletedCompanionPairRequest | null;
   expires_at_ms: number;
 }
 
@@ -108,6 +115,7 @@ export function createCompanionPairRequest(args: {
     device_name: args.deviceName.trim(),
     expires_at: new Date(expiresAtMs).toISOString(),
     expires_at_ms: expiresAtMs,
+    completion: null,
     pairing_public_key: args.pairingPublicKey.trim(),
     pair_request_id: randomUUID(),
     requested_at: new Date(nowMs).toISOString(),
@@ -161,6 +169,32 @@ export function consumeApprovedCompanionPairRequest(pairRequestId: string, nowMs
   }
   requestsById.delete(pairRequestId);
   return toPublicRequest(request);
+}
+
+export function loadCompanionPairRequestForCompletion(pairRequestId: string, nowMs = Date.now()) {
+  pruneExpiredRequests(nowMs);
+  const request = requestsById.get(pairRequestId);
+  if (!request) {
+    return null;
+  }
+  return {
+    completion: request.completion,
+    request: toPublicRequest(request)
+  };
+}
+
+export function completeCompanionPairRequest(
+  pairRequestId: string,
+  completion: CompletedCompanionPairRequest,
+  nowMs = Date.now()
+) {
+  pruneExpiredRequests(nowMs);
+  const request = requestsById.get(pairRequestId);
+  if (!request || request.status !== 'approved') {
+    return false;
+  }
+  request.completion = completion;
+  return true;
 }
 
 export function reservePairCompletionSlot(args: { clientAddress?: string | null; nowMs?: number }) {

@@ -1,5 +1,6 @@
 // @vitest-environment node
 
+import { createHash, createHmac } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -71,8 +72,9 @@ it('replaces an existing paired device with the same device id', () => {
   ]);
 });
 
-it('replaces a re-paired Android device after local data reset changes its device id', () => {
-  registerPairedCompanionDevice({
+it('keeps paired devices with different ids even when their LAN labels match', () => {
+  const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  const beforeReset = registerPairedCompanionDevice({
     clientAddress: '127.0.0.1',
     deviceId: 'device-before-reset',
     deviceKind: 'android-capacitor',
@@ -88,8 +90,14 @@ it('replaces a re-paired Android device after local data reset changes its devic
     pairedAt: '2026-05-10T02:00:00.000Z'
   });
 
-  expect(countPairedCompanionDevices()).toBe(1);
+  expect(countPairedCompanionDevices()).toBe(2);
   expect(loadPairedCompanionDevices()).toEqual([
+    expect.objectContaining({
+      client_address: '127.0.0.1',
+      device_id: 'device-before-reset',
+      device_kind: 'android-capacitor',
+      device_name: 'Android Emulator'
+    }),
     expect.objectContaining({
       client_address: '127.0.0.1',
       device_id: 'device-after-reset',
@@ -97,6 +105,23 @@ it('replaces a re-paired Android device after local data reset changes its devic
       device_name: 'Android Emulator'
     })
   ]);
+  expect(warnSpy).toHaveBeenCalledWith(
+    '[companion-sync] paired companion device has matching LAN label with a different device id',
+    expect.objectContaining({ deviceKind: 'android-capacitor' })
+  );
+  expect(authenticateCompanionRequest({
+    nowMs: Date.parse('2026-05-10T01:00:30.000Z'),
+    request: createSignedRequest({
+      deviceId: 'device-before-reset',
+      deviceSecret: beforeReset.device_secret,
+      nonce: 'nonce-before-reset',
+      timestamp: '2026-05-10T01:00:30.000Z'
+    })
+  })).toEqual({
+    device_id: 'device-before-reset',
+    ok: true
+  });
+  warnSpy.mockRestore();
 });
 
 it('quarantines an unreadable encrypted paired-device cache and continues unpaired', async () => {
@@ -170,3 +195,24 @@ it('rejects signed companion requests as unknown devices when paired-device ciph
     status_code: 401
   });
 });
+
+function createSignedRequest(args: {
+  deviceId: string;
+  deviceSecret: string;
+  nonce: string;
+  timestamp: string;
+}) {
+  const bodyHash = createHash('sha256').update('').digest('hex');
+  const canonicalPayload = ['GET', '/companion/workspace-version', args.timestamp, args.nonce, bodyHash].join('\n');
+  const signature = createHmac('sha256', args.deviceSecret).update(canonicalPayload).digest('hex');
+  return {
+    headers: {
+      'x-device-id': args.deviceId,
+      'x-nonce': args.nonce,
+      'x-signature': signature,
+      'x-timestamp': args.timestamp
+    },
+    method: 'GET',
+    url: '/companion/workspace-version'
+  } as never;
+}

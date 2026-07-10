@@ -183,6 +183,13 @@ export function registerPairedCompanionDevice(args: {
     paired_at: now
   };
   const store = readStoreStrict();
+  if (store.devices.some((device) => isSameLanLabel(device, next))) {
+    console.warn('[companion-sync] paired companion device has matching LAN label with a different device id', {
+      clientAddress: next.client_address,
+      deviceKind: next.device_kind,
+      deviceName: next.device_name
+    });
+  }
   store.devices = store.devices.filter((device) => !isSamePairedDevice(device, next));
   store.devices.push(next);
   writeStore(store);
@@ -194,10 +201,12 @@ export function clearPairedCompanionDevices() {
 }
 
 function isSamePairedDevice(left: PairedCompanionDevice, right: PairedCompanionDevice) {
-  if (left.device_id === right.device_id) {
-    return true;
-  }
+  return left.device_id === right.device_id;
+}
+
+function isSameLanLabel(left: PairedCompanionDevice, right: PairedCompanionDevice) {
   return Boolean(
+    left.device_id !== right.device_id &&
     left.client_address &&
     right.client_address &&
     left.client_address === right.client_address &&

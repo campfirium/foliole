@@ -50,6 +50,17 @@ export {
   SYNC_STATE_PATH
 };
 
+function writeUnhandledRequestError(
+  request: http.IncomingMessage,
+  response: http.ServerResponse,
+  error: unknown
+) {
+  console.warn('[companion-sync] unhandled LAN request error', { error, url: request.url ?? null });
+  if (!response.writableEnded) {
+    writeJson(request, response, 500, { error: 'internal_server_error' });
+  }
+}
+
 function handleWorkspaceMetadataGet(
   request: http.IncomingMessage,
   response: http.ServerResponse,
@@ -152,6 +163,7 @@ export function createLanWorkspaceSyncRequestHandler(args: {
   updatePairingStatus: (pairing: { paired_device_count: number; pending_pair_request_count: number }) => void;
 }) {
   return async (request: http.IncomingMessage, response: http.ServerResponse) => {
+    try {
     const parsedRequestUrl = new URL(request.url ?? '/', 'http://127.0.0.1');
     if (request.method === 'OPTIONS') {
       writeOptions(request, response);
@@ -183,5 +195,8 @@ export function createLanWorkspaceSyncRequestHandler(args: {
       authenticatedDeviceId: auth.device_id,
       getSyncStatus: args.getSyncStatus ?? (() => null)
     });
+    } catch (error) {
+      writeUnhandledRequestError(request, response, error);
+    }
   };
 }

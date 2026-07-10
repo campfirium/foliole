@@ -90,3 +90,16 @@ it('rejects takeover when authenticated device differs from candidate', async ()
     value: { error: 'candidate_device_mismatch' }
   });
 });
+
+it('rejects malformed takeover json without throwing', async () => {
+  const { handlePrimaryDeviceTakeover } = await import('./companionLanPrimaryDeviceTakeover.js');
+
+  const result = handlePrimaryDeviceTakeover('{not-json', 'device-android');
+
+  expect(takeoverMocks.commitPrimaryDeviceToPeer).not.toHaveBeenCalled();
+  expect(result).toEqual({
+    ok: false,
+    statusCode: 400,
+    value: { error: 'invalid_primary_device_takeover_payload' }
+  });
+});
