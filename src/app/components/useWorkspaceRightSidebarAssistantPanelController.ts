@@ -12,6 +12,7 @@ import { useAssistantTurnEventSubscription, type AssistantActiveTurn } from './u
 import { useWorkspaceRightSidebarAssistantThreadMessages } from './useWorkspaceRightSidebarAssistantThreadMessages';
 import { useWorkspaceRightSidebarAssistantThreads } from './useWorkspaceRightSidebarAssistantThreads';
 import type { WorkspaceLayoutDocumentProps } from './workspaceLayoutPropGroups';
+import { resetPendingAssistantConversation } from './workspaceRightSidebarAssistantConversationReset';
 import {
   createFailedMessageAction,
   createPendingMessageAction,
@@ -62,7 +63,8 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: Assistant
     activeMessages,
     handleRemoveRecord: (record: NativeAssistantThreadIndexRecord) =>
       removeRecord(record, threads.removeRecord, dispatchCache),
-    handleNewThread: () => { setMessageText(''); threads.selectThreadId(null); },
+    handleNewThread: () =>
+      resetPendingAssistantConversation(dispatchCache, setMessageText, threads.selectThreadId),
     handleSelectRecord: (record: NativeAssistantThreadIndexRecord) => selectRecord(record, args.nodesById, args.onSelectNode, threads.selectThreadId),
     handleSubmit: createHandleSubmit({
       activeNodeId: args.activeNodeId,

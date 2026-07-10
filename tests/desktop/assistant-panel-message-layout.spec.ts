@@ -43,6 +43,27 @@ test('Aide renders a titled Markdown conversation with live progress', async ({
   });
 });
 
+test('Aide returns to saved history after an unpersisted turn fails', async ({
+  desktopApp,
+  desktopWindow
+}) => {
+  await desktopWindow.evaluate(() => {
+    localStorage.setItem('foliole-workspace-right-sidebar-active-panel', 'assistant');
+    localStorage.setItem('foliole-aide-enabled', 'true');
+  });
+  await desktopWindow.reload();
+  await installAssistantIpcMock(desktopApp);
+  await openAssistantPanel(desktopWindow);
+
+  await desktopWindow.getByLabel(/^(Foliole Aide message|Foliole Aide 消息)$/).fill('Fail this turn');
+  await desktopWindow.getByRole('button', { name: /^(Send|发送)$/ }).click();
+  await expect(desktopWindow.getByText(/could not reply|未能回复/)).toBeVisible();
+  await desktopWindow.getByRole('button', { name: /^(Back to history|返回历史)$/ }).click();
+
+  await expect(desktopWindow.getByRole('button', { name: /Saved conversation/ })).toBeVisible();
+  await expect(desktopWindow.getByText('Fail this turn')).toBeHidden();
+});
+
 async function openAssistantPanel(page: Page) {
   const directButton = page.getByRole('button', { name: /Foliole Aide.*panel|Foliole Aide面板/ });
   if (await directButton.count()) {
@@ -54,19 +75,32 @@ async function openAssistantPanel(page: Page) {
 }
 
 async function installAssistantIpcMock(electronApp: ElectronApplication) {
+  const response = createAssistantResponse();
   await electronApp.evaluate(({ ipcMain }, fixture) => {
     ipcMain.removeHandler('foliole:invoke');
-    ipcMain.handle('foliole:invoke', async (_event, request: { command?: string }) => {
+    ipcMain.handle('foliole:invoke', async (_event, request: { args?: { message?: string }; command?: string }) => {
       if (request.command === 'assistant_get_status') return fixture.status;
-      if (request.command === 'assistant_list_thread_index') return [];
+      if (request.command === 'assistant_list_thread_index') return [fixture.savedThread];
       if (request.command === 'assistant_list_thread_messages') return [];
       if (request.command === 'assistant_send_message') {
         await new Promise((resolve) => setTimeout(resolve, 500));
+        if (request.args?.message === 'Fail this turn') {
+          return { failure: { category: 'protocol_error' }, provider: 'codex-app-server', state: 'failed' };
+        }
         return fixture.response;
       }
       return null;
     });
-  }, { response: createAssistantResponse(), status: ASSISTANT_READY_STATUS });
+  }, {
+    response,
+    savedThread: {
+      ...response.threadIndex,
+      preview: 'Saved conversation',
+      providerThreadId: 'thread-saved',
+      title: 'Saved conversation'
+    },
+    status: ASSISTANT_READY_STATUS
+  });
 }
 
 function createAssistantResponse() {

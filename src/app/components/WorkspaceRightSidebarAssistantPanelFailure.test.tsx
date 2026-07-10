@@ -7,6 +7,7 @@ import { renderWithLocalization } from '../../shared/localization/testLocalizati
 import { WorkspaceRightSidebarAssistantPanel } from './WorkspaceRightSidebarAssistantPanel';
 import {
   createAssistantPanelNode as createNode,
+  createAssistantPanelThread as createThread,
   createReadyAssistantStatus
 } from './WorkspaceRightSidebarAssistantPanel.testUtils';
 
@@ -126,6 +127,26 @@ it('restores the input when the send call rejects before a provider result', asy
   expect(await screen.findByText('Foliole Aide could not reply. Check the message and send again.')).toBeInTheDocument();
   expect(screen.getByLabelText('Foliole Aide message')).toHaveValue('Retry me');
   expect(screen.getByRole('button', { name: 'Send' })).toBeEnabled();
+});
+
+it('returns to saved history after a new conversation fails', async () => {
+  assistantRuntime.listAssistantThreadIndex.mockResolvedValueOnce([
+    createThread({ title: 'Saved conversation' })
+  ]);
+  assistantRuntime.subscribeAssistantTurnEvents.mockReturnValue(() => undefined);
+  assistantRuntime.sendAssistantMessage.mockRejectedValueOnce(new Error('send failed'));
+
+  renderPanel();
+  fireEvent.change(await screen.findByLabelText('Foliole Aide message'), {
+    target: { value: 'Failed prompt' }
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+  expect(await screen.findByText('Foliole Aide could not reply. Check the message and send again.')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Back to history' }));
+
+  expect(screen.getByRole('button', { name: /saved conversation/i })).toBeInTheDocument();
+  expect(screen.queryByText('Failed prompt')).not.toBeInTheDocument();
 });
 
 it('returns to the capability gate when a send result reports an auth failure', async () => {
