@@ -6,11 +6,15 @@ import { logRuntimeError, logRuntimeWarning } from '../shared/platform/runtimeLo
 import {
   hasWorkspaceRuntimeRepository,
   loadReadingProgressFromRuntime,
-  loadWorkspaceListSnapshotFromRuntime,
-  replayPendingWorkspaceNodeSync
+  loadWorkspaceListSnapshotFromRuntime
 } from '../shared/platform/workspaceRuntimeRepository';
 
 import { reportWorkspaceHydrateBootStage } from './workspaceHydrateBootTelemetry';
+import {
+  mergePendingDurableReadingProgress,
+  mergePendingDurableWorkspaceSnapshot,
+  replayPendingWorkspaceMutations
+} from './workspacePendingDurableHydrate';
 import { listPendingNodeSyncNodeIds, mergePendingNodeSyncIntoSnapshot } from './workspacePendingNodeSync';
 import {
   appendWorkspaceHydrateCompletedLog,
@@ -125,7 +129,7 @@ function resolveHydrateDocumentNodeId(
 }
 
 function replayPendingNodeSyncAfterHydrate(name: string) {
-  void replayPendingWorkspaceNodeSync().catch((error) => {
+  void replayPendingWorkspaceMutations().catch((error) => {
     logRuntimeWarning('pending node sync replay failed during workspace hydrate', {
       area: 'persistence',
       action: 'replay_pending_node_sync',
@@ -156,15 +160,18 @@ async function loadRuntimeWorkspaceState(name: string) {
   const normalizedSnapshot = snapshot
     ? ensureInboxNodeInSnapshot(
         normalizeWorkspaceSnapshot<Node, RuntimeWorkspaceSnapshotForNormalization>(
-          toRuntimeWorkspaceSnapshotForNormalization(mergePendingNodeSyncIntoSnapshot(snapshot) ?? snapshot)
+          toRuntimeWorkspaceSnapshotForNormalization(
+            mergePendingDurableWorkspaceSnapshot(mergePendingNodeSyncIntoSnapshot(snapshot) ?? snapshot)
+          )
         )
       )
     : null;
+  const durableReadingProgress = mergePendingDurableReadingProgress(readingProgress);
   const mergedSnapshot = trimRuntimeWorkspaceSnapshot(
-    mergeWorkspaceSnapshotWithReadingProgress(normalizedSnapshot, readingProgress)
+    mergeWorkspaceSnapshotWithReadingProgress(normalizedSnapshot, durableReadingProgress)
   );
   const hydrateDocumentNodeId = normalizedSnapshot
-    ? resolveHydrateDocumentNodeId(normalizedSnapshot, readingProgress as RuntimeReadingProgressLike | null)
+    ? resolveHydrateDocumentNodeId(normalizedSnapshot, durableReadingProgress as RuntimeReadingProgressLike | null)
     : null;
   appendReadingPositionTraceLog({
     event: 'reading-progress.hydrate-merge',
@@ -172,8 +179,8 @@ async function loadRuntimeWorkspaceState(name: string) {
       durationMs: Date.now() - snapshotStartedAt,
       runtimeActiveNodeId: snapshot?.activeNodeId ?? null,
       readingActiveNodeId:
-        readingProgress && typeof readingProgress === 'object' && 'activeNodeId' in readingProgress
-          ? (readingProgress as { activeNodeId?: string | null }).activeNodeId ?? null
+        durableReadingProgress && typeof durableReadingProgress === 'object' && 'activeNodeId' in durableReadingProgress
+          ? (durableReadingProgress as { activeNodeId?: string | null }).activeNodeId ?? null
           : null,
       mergedActiveNodeId: mergedSnapshot?.activeNodeId ?? null,
       nodeViewStateCount: countSnapshotNodeViewStates(mergedSnapshot),

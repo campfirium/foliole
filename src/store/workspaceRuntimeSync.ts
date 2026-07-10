@@ -135,7 +135,7 @@ export async function syncNodeRevealMutationToRuntime(
 }
 
 export function syncNodeOrderToRuntime(nodeOrder: string[]) {
-  saveWorkspaceNodeOrder(nodeOrder);
+  return saveWorkspaceNodeOrder(nodeOrder);
 }
 
 export async function syncMoveNodesToRuntime(payload: WorkspaceMoveNodesPayload): Promise<WorkspaceMoveNodesResult | undefined> {
@@ -147,7 +147,7 @@ export async function syncReviewGradeToRuntime(payload: WorkspaceReviewGradeSync
 }
 
 export function syncRelearnNodeToRuntime(payload: WorkspaceRelearnNodePayload) {
-  saveWorkspaceRelearnNode(payload);
+  return saveWorkspaceRelearnNode(payload);
 }
 
 export async function syncSoftDeleteNodesToRuntime(
@@ -167,5 +167,5 @@ export async function syncDeleteNodesPermanentlyToRuntime(
 }
 
 export function syncReadingProgressToRuntime(payload: WorkspaceReadingProgressSavePayload) {
-  saveWorkspaceReadingProgress(payload);
+  return saveWorkspaceReadingProgress(payload);
 }

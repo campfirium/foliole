@@ -1,7 +1,8 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { isDesktopRuntime } from '../shared/platform/runtime';
 import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
+import { resetPendingDurableMutationsForTests, stagePendingRelearnNode } from '../shared/platform/workspacePendingDurableMutations';
 
 import {
   syncNodeContentToRuntime,
@@ -39,7 +40,16 @@ function createNodeFixture() {
   };
 }
 
-describe('workspaceRuntimeSync misc behavior', () => {
+function resetRuntimeSyncTestState() {
+  vi.restoreAllMocks();
+  window.localStorage.clear();
+  resetPendingDurableMutationsForTests();
+  vi.clearAllMocks();
+}
+
+describe('workspaceRuntimeSync persistence behavior', () => {
+  beforeEach(resetRuntimeSyncTestState);
+
   it('logs node order sync failures instead of swallowing them silently', async () => {
     const invoke = vi.fn().mockRejectedValue(new Error('database offline'));
     const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -47,7 +57,7 @@ describe('workspaceRuntimeSync misc behavior', () => {
     syncNodeOrderToRuntime(['node-1', 'node-2']);
     await Promise.resolve();
     await Promise.resolve();
-    expect(error).toHaveBeenCalledWith('[native] runtime sync failed', expect.objectContaining({ action: 'sync_node_order' }));
+    expect(error).toHaveBeenCalledWith('[native] runtime sync deferred for replay', expect.objectContaining({ action: 'sync_node_order' }));
   });
 
   it('skips sync when runtime invoke is unavailable', () => {
@@ -74,12 +84,26 @@ describe('workspaceRuntimeSync misc behavior', () => {
     await expect(syncNodeContentToRuntimeNow(createNodeFixture())).resolves.toBe(false);
     expect(error).toHaveBeenCalledWith('[native] runtime sync failed', expect.objectContaining({ action: 'sync_node_content_now' }));
   });
+});
+
+describe('workspaceRuntimeSync review behavior', () => {
+  beforeEach(resetRuntimeSyncTestState);
 
   it('syncs review grade mutations through apply_review_grade command', async () => {
     const invoke = vi.fn().mockResolvedValue(null);
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
     await expect(syncReviewGradeToRuntime(REVIEW_GRADE_PAYLOAD)).resolves.toBeUndefined();
     expect(invoke).toHaveBeenCalledWith('apply_review_grade', REVIEW_GRADE_PAYLOAD);
+  });
+
+  it('drains pending relearn before applying a newer review grade', async () => {
+    const invoke = vi.fn().mockResolvedValue(null);
+    vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+    stagePendingRelearnNode(REVIEW_GRADE_PAYLOAD.nodeId);
+
+    await syncReviewGradeToRuntime(REVIEW_GRADE_PAYLOAD);
+
+    expect(invoke.mock.calls.map(([command]) => command)).toEqual(['relearn_node', 'apply_review_grade']);
   });
 
   it('throws when runtime review mutation fails', async () => {

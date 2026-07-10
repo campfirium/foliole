@@ -23,7 +23,7 @@ vi.mock('./workspaceRuntimeSync', async (importOriginal) => {
     ...actual,
     syncNodeContentToRuntime: vi.fn(),
     syncNodeContentToRuntimeNow: vi.fn(async () => true),
-    syncRelearnNodeToRuntime: vi.fn(),
+    syncRelearnNodeToRuntime: vi.fn(() => true),
     syncReviewGradeToRuntime: vi.fn()
   };
 });

@@ -73,6 +73,7 @@ export function handleSelectionRestore(args: {
 }
 
 function clearRestoreTrackingWhenEmpty(args: {
+  completeApplyingReadingPosition: ((reason: string, selection?: NonNullable<EditorViewState['selection']>, commandId?: string) => void) | undefined;
   lastRestoredSelectionKeyRef: MutableRefObject<string | null>;
   nodeId: string | null;
   pendingRestoreSelectionKeyRef: MutableRefObject<string | null>;
@@ -86,6 +87,13 @@ function clearRestoreTrackingWhenEmpty(args: {
   if (!args.nodeId || !hasCommandRestoreTarget) {
     args.lastRestoredSelectionKeyRef.current = null;
     args.pendingRestoreSelectionKeyRef.current = null;
+    if (args.nodeId && args.readingRestoreCommandId) {
+      args.completeApplyingReadingPosition?.(
+        'editor-restore-empty-target',
+        undefined,
+        args.readingRestoreCommandId
+      );
+    }
   }
 }
 

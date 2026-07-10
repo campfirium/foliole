@@ -5,12 +5,11 @@ import type {
   NodeReviewProfile
 } from '../../features/nodes/model/nodeTypes';
 import {
-  saveCreatedWorkspaceNodeSnapshot,
+  saveCreatedWorkspaceNodeMutationSnapshot,
   saveWorkspaceNodeOrder
 } from '../platform/workspaceRuntimeRepository';
 import type {
-  WorkspaceRuntimeNode,
-  WorkspaceRuntimeNodeDocument
+  WorkspaceRuntimeNode
 } from '../platform/workspaceRuntimeTypes';
 
 export interface DebugNodeSeed {
@@ -53,16 +52,14 @@ function createSeedRuntimeNode(node: DebugNodeSeed, index: number): WorkspaceRun
 }
 
 export async function persistSeedNodes(nodes: DebugNodeSeed[]) {
-  nodes.forEach((node, index) => {
-    saveCreatedWorkspaceNodeSnapshot({
-      isDocumentLoaded: () => true,
-      mergeDocument: (runtimeNode: WorkspaceRuntimeNode, document: WorkspaceRuntimeNodeDocument) => ({
-        ...runtimeNode,
-        ...document
-      }),
+  const nodeOrder = nodes.map((node) => node.id);
+  for (const [index, node] of nodes.entries()) {
+    await saveCreatedWorkspaceNodeMutationSnapshot({
+      activeNodeId: nodes[0]?.id ?? null,
       node: createSeedRuntimeNode(node, index),
+      nodeOrder,
       position: index
     });
-  });
-  saveWorkspaceNodeOrder(nodes.map((node) => node.id));
+  }
+  saveWorkspaceNodeOrder(nodeOrder);
 }

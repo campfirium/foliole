@@ -89,7 +89,7 @@ function handleNodeSnapshotSyncResult(
     return;
   }
 
-  stagePendingNodeSync(payload);
+  stagePendingNodeSync(payload, { optimistic: true });
   void runtimeInvoke(command, payload).then(
     () => resolvePendingNodeSync(payload.nodeId, payload.updatedAt),
     (error) => {
@@ -120,7 +120,7 @@ function runNodeSnapshotSync(args: {
 }) {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
-    stagePendingNodeSync(createWorkspaceRuntimeNodeSnapshot(args.node, args.position));
+    stagePendingNodeSync(createWorkspaceRuntimeNodeSnapshot(args.node, args.position), { optimistic: true });
     return;
   }
   if (args.isDocumentLoaded(args.node)) {
@@ -161,7 +161,7 @@ export function saveWorkspaceNodeContentSnapshotWithAnchors(args: {
   const runtimeInvoke = getRuntimeInvoke();
   const parentPayload = createWorkspaceRuntimeNodeSnapshot(args.parentNode, args.nodeOrder.indexOf(args.parentNode.id));
   const anchorPayloads = args.affectedAnchorNodes.map(toNodeAnchorLocatorUpdatePayload);
-  stagePendingNodeSync(parentPayload);
+  stagePendingNodeSync(parentPayload, { optimistic: true });
   if (!runtimeInvoke) {
     return;
   }

@@ -4,6 +4,10 @@ import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeError } from './runtimeLogging';
 import { resolvePendingNodeSync, stagePendingNodeSync } from './workspacePendingNodeSync';
 import {
+  capturePendingNodeOrderAck,
+  resolveCapturedPendingNodeOrder
+} from './workspaceRuntimeDurableRepository';
+import {
   isCreateNodeMutationPatchResult,
   isNodeMutationPatchResult
 } from './workspaceRuntimeMutationResults';
@@ -52,10 +56,11 @@ export async function saveCreatedWorkspaceNodeMutationSnapshot(args: {
   const command = resolveCreateWorkspaceNodeCommand(args.node.kind);
   const payload = createWorkspaceRuntimeNodeSnapshot(args.node, args.position);
   if (!runtimeInvoke || !command) {
-    stagePendingNodeSync(payload);
+    stagePendingNodeSync(payload, { optimistic: true });
     return null;
   }
-  stagePendingNodeSync(payload);
+  const pendingOrderAck = capturePendingNodeOrderAck();
+  stagePendingNodeSync(payload, { optimistic: true });
   try {
     const result = await runtimeInvoke(command, {
       ...payload,
@@ -66,6 +71,7 @@ export async function saveCreatedWorkspaceNodeMutationSnapshot(args: {
       return null;
     }
     resolvePendingNodeSync(payload.nodeId, payload.updatedAt);
+    resolveCapturedPendingNodeOrder(pendingOrderAck);
     return result;
   } catch (error) {
     logRuntimeError('runtime sync failed', {

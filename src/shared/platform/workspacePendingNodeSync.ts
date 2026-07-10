@@ -16,6 +16,7 @@ type PendingNodeSyncResolvedListener = (nodeId: string) => void;
 export type PendingNodeSyncReplayDecision = 'apply' | 'block' | 'resolve';
 
 let pendingNodeSyncResolvedListener: PendingNodeSyncResolvedListener | null = null;
+const optimisticPendingNodeSyncById = new Map<string, string>();
 
 function getLocalStorage(): Storage | null {
   if (typeof window === 'undefined') {
@@ -95,11 +96,17 @@ export function decidePendingNodeSyncReplay(
     }
     return 'block';
   }
+  if (!currentNode.updatedAt) {
+    return 'apply';
+  }
   const updateCompare = pendingNode.updatedAt.localeCompare(currentNode.updatedAt);
   if (updateCompare > 0) {
     return 'apply';
   }
-  return updateCompare === 0 ? 'resolve' : 'block';
+  if (updateCompare === 0) {
+    return optimisticPendingNodeSyncById.get(pendingNode.nodeId) === pendingNode.updatedAt ? 'apply' : 'resolve';
+  }
+  return 'block';
 }
 
 function toPendingWorkspaceNode(
@@ -120,6 +127,7 @@ function toPendingWorkspaceNode(
     isTitleManual: pendingNode.isTitleManual,
     hideTitleHeading: pendingNode.hideTitleHeading === true,
     content: pendingNode.content,
+    virtualFilter: pendingNode.virtualFilter ?? null,
     ...(currentNode?.currentVersionId !== undefined
       ? { currentVersionId: currentNode.currentVersionId }
       : {}),
@@ -138,10 +146,11 @@ function hasMergeableParent(pendingNode: WorkspaceRuntimeNodeSnapshot, knownNode
   return !pendingNode.parentNodeId || knownNodeIds.has(pendingNode.parentNodeId);
 }
 
-export function stagePendingNodeSync(payload: WorkspaceRuntimeNodeSnapshot) {
+export function stagePendingNodeSync(payload: WorkspaceRuntimeNodeSnapshot, options: { optimistic?: boolean } = {}) {
   const snapshot = readPendingSnapshot();
   snapshot.nodesById[payload.nodeId] = payload;
   writePendingSnapshot(snapshot);
+  if (options.optimistic) optimisticPendingNodeSyncById.set(payload.nodeId, payload.updatedAt);
 }
 
 export function resolvePendingNodeSync(nodeId: string, updatedAt: string) {
@@ -151,6 +160,7 @@ export function resolvePendingNodeSync(nodeId: string, updatedAt: string) {
   }
   delete snapshot.nodesById[nodeId];
   writePendingSnapshot(snapshot);
+  if (optimisticPendingNodeSyncById.get(nodeId) === updatedAt) optimisticPendingNodeSyncById.delete(nodeId);
   pendingNodeSyncResolvedListener?.(nodeId);
 }
 

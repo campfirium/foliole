@@ -17,7 +17,7 @@ vi.mock('./workspaceRuntimeSync', () => ({
   syncNodeContentWithAnchorsToRuntime: vi.fn(),
   syncNodeOrderToRuntime: vi.fn(),
   syncNodeRevealToRuntime: vi.fn(),
-  syncRelearnNodeToRuntime: vi.fn(),
+  syncRelearnNodeToRuntime: vi.fn(() => true),
   syncRestoreNodesToRuntime: vi.fn(),
   syncSoftDeleteNodesToRuntime: vi.fn()
 }));
@@ -65,6 +65,18 @@ vi.mock('./workspaceRuntimeSync', () => ({
     expect(relearned).toBe(true);
     expect(harness.getState().nodesById[seedNodeId]?.review).toBeNull();
     expect(syncRelearnNodeToRuntime).toHaveBeenCalledWith({ nodeId: seedNodeId });
+  });
+
+  it('keeps item review state when durable relearn staging fails', async () => {
+    const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
+    const actions = createWorkspaceNodeActions(harness.setState);
+    const seedNodeId = (await actions.createRootNode('Prompt', 'item'))!;
+    const node = harness.getState().nodesById[seedNodeId]!;
+    harness.setState({ nodesById: { ...harness.getState().nodesById, [seedNodeId]: { ...node, reveal: 'Answer' } } });
+    vi.mocked(syncRelearnNodeToRuntime).mockReturnValueOnce(false);
+
+    expect(actions.relearnNode(seedNodeId, '2026-03-18T00:00:00.000Z')).toBe(false);
+    expect(harness.getState().nodesById[seedNodeId]?.review).toEqual(node.review);
   });
 
   it('accepts ordinary empty topics without creating progress or sync work', () => {

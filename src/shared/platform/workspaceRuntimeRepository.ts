@@ -1,10 +1,14 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
-import type { NativeCommandArgs, NativeCommandName } from '../../../lib/platform/nativeContract';
 
 import { refreshRuntimeRemovedSources } from './removedSourcesRuntimeRepository';
 import { isDesktopRuntime } from './runtime';
 import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeError } from './runtimeLogging';
+import {
+  capturePendingNodeOrderAck,
+  drainPendingWorkspaceRelearnNode,
+  resolveCapturedPendingNodeOrder
+} from './workspaceRuntimeDurableRepository';
 import {
   isDeleteNodesPermanentlyResult,
   isMoveNodesResult,
@@ -14,6 +18,13 @@ import {
 } from './workspaceRuntimeMutationResults';
 export { loadWorkspaceNodeDocumentFromRuntime } from './workspaceRuntimeDocumentRepository';
 export { replayPendingWorkspaceNodeSync } from './workspacePendingNodeReplay';
+export {
+  replayPendingWorkspaceDurableMutations,
+  saveWorkspaceNodeOrder,
+  saveWorkspaceReadingProgress,
+  saveWorkspaceReadingProgressNow,
+  saveWorkspaceRelearnNode
+} from './workspaceRuntimeDurableRepository';
 export {
   createWorkspaceRuntimeNodeSnapshot,
   saveCreatedWorkspaceNodeSnapshot,
@@ -29,9 +40,7 @@ export type { RuntimeNodeContentMutationDiagnostics } from './workspaceRuntimeNo
 export { saveWorkspaceNodeContentSnapshotNow } from './workspaceRuntimeNodeSnapshotNow';
 export { saveWorkspaceNodeMutationSnapshotNow } from './workspaceRuntimeNodeSnapshotNow';
 import type {
-  WorkspaceReadingProgressSavePayload,
   WorkspaceReadingProgressSnapshot,
-  WorkspaceRelearnNodePayload,
   WorkspaceDeleteNodesPermanentlyResult,
   WorkspaceMoveNodesPayload,
   WorkspaceMoveNodesResult,
@@ -40,49 +49,6 @@ import type {
   WorkspaceSoftDeleteNodesResult,
   WorkspaceRuntimeSnapshot
 } from './workspaceRuntimeTypes';
-
-type FireAndForgetRuntimeCommand = Extract<
-  NativeCommandName,
-  | typeof NATIVE_COMMANDS.relearnNode
-  | typeof NATIVE_COMMANDS.replaceNodeOrder
-  | typeof NATIVE_COMMANDS.saveReadingProgress
->;
-
-function runFireAndForgetRuntimeSync<T extends FireAndForgetRuntimeCommand>(
-  command: T,
-  payload: NativeCommandArgs<T>,
-  action: string,
-  onSynced?: () => Promise<unknown> | unknown
-) {
-  const runtimeInvoke = getRuntimeInvoke();
-  if (!runtimeInvoke) {
-    return;
-  }
-  void runtimeInvoke(command, payload as Record<string, unknown>)
-    .then(() => {
-      if (!onSynced) {
-        return undefined;
-      }
-      return Promise.resolve(onSynced()).catch((error) => {
-        logRuntimeError('runtime post-sync refresh failed', {
-          area: 'native',
-          action: `${action}_post_refresh`,
-          command,
-          fallback: 'keep_cached',
-          error
-        });
-      });
-    })
-    .catch((error) => {
-      logRuntimeError('runtime sync failed', {
-        area: 'native',
-        action,
-        command,
-        fallback: 'skip_sync',
-        error
-      });
-    });
-}
 
 export function hasWorkspaceRuntimeRepository() {
   return Boolean(getRuntimeInvoke());
@@ -106,18 +72,17 @@ export async function loadReadingProgressFromRuntime(): Promise<WorkspaceReading
   return runtimeInvoke(NATIVE_COMMANDS.loadReadingProgress);
 }
 
-export function saveWorkspaceNodeOrder(nodeOrder: string[]) {
-  runFireAndForgetRuntimeSync(NATIVE_COMMANDS.replaceNodeOrder, { nodeIds: nodeOrder }, 'sync_node_order');
-}
-
 export async function moveWorkspaceNodes(payload: WorkspaceMoveNodesPayload): Promise<WorkspaceMoveNodesResult | undefined> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
     return undefined;
   }
+  const pendingOrderAck = capturePendingNodeOrderAck();
   try {
     const result = await runtimeInvoke(NATIVE_COMMANDS.moveNodes, payload);
-    return isMoveNodesResult(result) ? result : undefined;
+    if (!isMoveNodesResult(result)) return undefined;
+    resolveCapturedPendingNodeOrder(pendingOrderAck);
+    return result;
   } catch (error) {
     logWorkspaceRuntimeMutationError('sync_move_nodes', NATIVE_COMMANDS.moveNodes, error);
     return undefined;
@@ -135,6 +100,7 @@ export async function saveWorkspaceReviewGrade(payload: WorkspaceReviewGradeSync
     throw error;
   }
   try {
+    await drainPendingWorkspaceRelearnNode(payload.nodeId);
     await runtimeInvoke(NATIVE_COMMANDS.applyReviewGrade, payload);
   } catch (error) {
     logReviewGradeRuntimeError(error);
@@ -149,10 +115,6 @@ function logReviewGradeRuntimeError(error: unknown) {
     fallback: 'throw',
     error
   });
-}
-
-export function saveWorkspaceRelearnNode(payload: WorkspaceRelearnNodePayload) {
-  runFireAndForgetRuntimeSync(NATIVE_COMMANDS.relearnNode, payload, 'sync_relearn_node');
 }
 
 export async function restoreWorkspaceNodes(payload: { nodeIds: string[] }): Promise<WorkspaceRestoreNodesResult | undefined> {
@@ -211,18 +173,6 @@ export async function deleteWorkspaceNodesPermanently(
     logWorkspaceRuntimeMutationError('sync_delete_nodes_permanently', NATIVE_COMMANDS.deleteNodesPermanently, error);
     return undefined;
   }
-}
-
-export function saveWorkspaceReadingProgress(payload: WorkspaceReadingProgressSavePayload) {
-  runFireAndForgetRuntimeSync(NATIVE_COMMANDS.saveReadingProgress, payload, 'sync_reading_progress');
-}
-
-export async function saveWorkspaceReadingProgressNow(payload: WorkspaceReadingProgressSavePayload): Promise<void> {
-  const runtimeInvoke = getRuntimeInvoke();
-  if (!runtimeInvoke) {
-    return;
-  }
-  await runtimeInvoke(NATIVE_COMMANDS.saveReadingProgress, payload);
 }
 
 export async function flushDirtyWorkspaceNodeSyncVersions(): Promise<string[]> {

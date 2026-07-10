@@ -3,6 +3,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import type { NativeWorkspaceNodeSnapshot } from '../../lib/platform/nativeStorageContract';
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
+import { readPendingNodeOrder, stagePendingNodeOrder } from '../shared/platform/workspacePendingDurableMutations';
 
 import { mergePendingNodeSyncIntoSnapshot } from './workspacePendingNodeSync';
 import {
@@ -200,6 +201,7 @@ it('syncs full node order through replace_node_order command', () => {
 it('syncs move nodes through move_nodes command and returns the confirmed patch', async () => {
     const invoke = vi.fn().mockResolvedValue({ movedNodeIds: ['node-1'], nodeOrder: ['node-2', 'node-1'] });
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+    stagePendingNodeOrder(['node-1', 'node-2']);
 
     await expect(syncMoveNodesToRuntime({
       nodeOrder: ['node-2', 'node-1'],
@@ -211,6 +213,7 @@ it('syncs move nodes through move_nodes command and returns the confirmed patch'
         updatedAt: '2026-03-06T00:00:01.000Z'
       }]
     })).resolves.toEqual({ movedNodeIds: ['node-1'], nodeOrder: ['node-2', 'node-1'] });
+    expect(readPendingNodeOrder()).toBeNull();
 
     expect(invoke).toHaveBeenCalledWith('move_nodes', {
       nodeOrder: ['node-2', 'node-1'],

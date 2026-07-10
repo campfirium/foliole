@@ -62,3 +62,26 @@ it('does not restore from persisted node view state without an explicit command'
 
   expect(mockRestoreSelection).not.toHaveBeenCalled();
 });
+
+it('completes an explicit restore command when there is no saved position', () => {
+  const onCompleteApplyingReadingPosition = vi.fn();
+
+  renderEditor(
+    <MarkdownEditor
+      nodeId="node-1"
+      onChange={vi.fn()}
+      onCompleteApplyingReadingPosition={onCompleteApplyingReadingPosition}
+      readingRestoreCommandId="empty-restore-1"
+      readingRestoreScrollTop={0}
+      readingSelection={null}
+      value="Body"
+    />
+  );
+
+  expect(onCompleteApplyingReadingPosition).toHaveBeenCalledWith(
+    'editor-restore-empty-target',
+    undefined,
+    'empty-restore-1'
+  );
+  expect(mockRestoreSelection).not.toHaveBeenCalled();
+});

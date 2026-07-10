@@ -12,6 +12,7 @@ export function createRelearnNodeAction(set: WorkspaceSet): WorkspaceState['rele
     let relearned = false;
     let shouldSyncReviewReset = false;
     let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
+    let localPatch: Partial<WorkspaceState> | null = null;
     set((state) => {
       const node = state.nodesById[nodeId];
       if (!node || isProtectedRootNode(node) || node.specialKind) {
@@ -33,17 +34,21 @@ export function createRelearnNodeAction(set: WorkspaceSet): WorkspaceState['rele
         updatedAt: now
       };
       nextNodeForSync = nextNode;
-      return {
+      localPatch = {
         nodesById: {
           ...state.nodesById,
           [nodeId]: nextNode
         }
       };
+      return state;
     });
+    if (!relearned || !localPatch) return relearned;
     if (shouldSyncReviewReset) {
-      syncRelearnNodeToRuntime({ nodeId });
-      return relearned;
+      if (!syncRelearnNodeToRuntime({ nodeId })) return false;
+      set(localPatch);
+      return true;
     }
+    set(localPatch);
     if (nextNodeForSync) {
       syncNodeContentToRuntime(nextNodeForSync);
     }
