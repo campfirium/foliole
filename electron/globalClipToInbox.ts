@@ -19,9 +19,11 @@ import {
   type GlobalCapturePanelResult
 } from './globalCapturePanel.js';
 import {
+  createClipboardRestoreContext,
   hasClipboardChanged,
   hasStrictTextSelectionClipboard,
   readClipboardSnapshot,
+  readRestorableClipboardSnapshot,
   type ClipboardSnapshot
 } from './globalClipClipboardEvidence.js';
 import { prepareGlobalClipDesktopToastWindow, showGlobalClipDesktopToast } from './globalClipDesktopToast.js';
@@ -35,7 +37,9 @@ const COPY_POLL_INTERVAL_MS = 25;
 const POWERSHELL_COPY_COMMAND = [
   '$code = \'[DllImport("user32.dll")] public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);\';',
   'Add-Type -Namespace FolioleNativeInput -Name Keyboard -MemberDefinition $code;',
-  '$ctrl = 0x11; $c = 0x43; $up = 0x0002; $zero = [UIntPtr]::Zero;',
+  '$shift = 0x10; $ctrl = 0x11; $alt = 0x12; $c = 0x43; $up = 0x0002; $zero = [UIntPtr]::Zero;',
+  '[FolioleNativeInput.Keyboard]::keybd_event($alt, 0, $up, $zero);',
+  '[FolioleNativeInput.Keyboard]::keybd_event($shift, 0, $up, $zero);',
   '[FolioleNativeInput.Keyboard]::keybd_event($ctrl, 0, 0, $zero);',
   '[FolioleNativeInput.Keyboard]::keybd_event($c, 0, 0, $zero);',
   'Start-Sleep -Milliseconds 40;',
@@ -51,7 +55,10 @@ export function resolveWindowsCopyCommandForTests() {
 
 export interface GlobalClipToInboxDeps {
   appRef?: Pick<App, 'on'>;
-  clipboardRef?: Pick<Clipboard, 'availableFormats' | 'readBuffer' | 'readHTML' | 'readImage' | 'readText'>;
+  clipboardRef?: Pick<
+    Clipboard,
+    'availableFormats' | 'clear' | 'readBookmark' | 'readBuffer' | 'readHTML' | 'readImage' | 'readRTF' | 'readText' | 'write'
+  >;
   globalShortcutRef?: Pick<GlobalShortcut, 'register' | 'unregister'>;
   log?: (event: string, payload?: Record<string, unknown>) => void;
   platform?: NodeJS.Platform;
@@ -147,16 +154,28 @@ async function runGlobalClipToInboxOnce(args: {
   waitForChange: NonNullable<GlobalClipToInboxDeps['waitForClipboardChange']>;
   waitForReady: typeof waitForDatabaseReady;
 }) {
-  const before = readClipboardSnapshot(args.clipboardRef);
-  if (await args.sendCopyShortcut() && await args.waitForChange(before, args.clipboardRef)) {
+  const before = readRestorableClipboardSnapshot(args.clipboardRef);
+  let clipboardRestore: Parameters<typeof importWithGlobalClipToast>[0]['clipboardRestore'];
+  if (await args.sendCopyShortcut() && await args.waitForChange(before.snapshot, args.clipboardRef)) {
     const after = readClipboardSnapshot(args.clipboardRef);
+    clipboardRestore = {
+      clipboardRef: args.clipboardRef,
+      context: createClipboardRestoreContext(before, after)
+    };
     if (hasStrictTextSelectionClipboard(after)) {
       const toast = args.showDesktopToast('pending');
-      return importWithGlobalClipToast({ log: args.log, run: args.runImport, toast, waitForReady: args.waitForReady });
+      return importWithGlobalClipToast({
+        clipboardRestore,
+        log: args.log,
+        run: args.runImport,
+        toast,
+        waitForReady: args.waitForReady
+      });
     }
   }
   args.log('global_clip_opening_capture_panel');
   return handleGlobalCapturePanelResult({
+    ...(clipboardRestore ? { clipboardRestore } : {}),
     log: args.log,
     panelResult: await args.showCapturePanel(),
     runImport: args.runImport,

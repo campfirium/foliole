@@ -12,10 +12,14 @@ const { clipboardImage, electronMocks } = vi.hoisted(() => {
       app: { on: vi.fn() },
       clipboard: {
         availableFormats: vi.fn(() => []),
+        clear: vi.fn(),
+        readBookmark: vi.fn(() => ({ title: '', url: '' })),
         readBuffer: vi.fn(() => Buffer.alloc(0)),
         readHTML: vi.fn(() => ''),
         readImage: vi.fn(() => image),
-        readText: vi.fn(() => '')
+        readRTF: vi.fn(() => ''),
+        readText: vi.fn(() => ''),
+        write: vi.fn()
       },
       globalShortcut: {
         register: vi.fn(() => true),
@@ -49,10 +53,14 @@ import { runTextCaptureToInbox } from './ipc/importTextCapture.js';
 function createClipboardSnapshotSource(text: string) {
   return {
     availableFormats: vi.fn(() => ['text/plain']),
+    clear: vi.fn(),
+    readBookmark: vi.fn(() => ({ title: '', url: '' })),
     readBuffer: vi.fn((format: string) => (format === 'text/plain' ? Buffer.from(text) : Buffer.alloc(0))),
     readHTML: vi.fn(() => ''),
     readImage: vi.fn(() => clipboardImage as never),
-    readText: vi.fn(() => text)
+    readRTF: vi.fn(() => ''),
+    readText: vi.fn(() => text),
+    write: vi.fn()
   };
 }
 

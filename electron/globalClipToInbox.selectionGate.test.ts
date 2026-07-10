@@ -12,10 +12,14 @@ const { clipboardImage, electronMocks } = vi.hoisted(() => {
       app: { on: vi.fn() },
       clipboard: {
         availableFormats: vi.fn(() => []),
+        clear: vi.fn(),
+        readBookmark: vi.fn(() => ({ title: '', url: '' })),
         readBuffer: vi.fn(() => Buffer.alloc(0)),
         readHTML: vi.fn(() => ''),
         readImage: vi.fn(() => image),
-        readText: vi.fn(() => '')
+        readRTF: vi.fn(() => ''),
+        readText: vi.fn(() => ''),
+        write: vi.fn()
       },
       globalShortcut: {
         register: vi.fn(() => true),
@@ -48,10 +52,14 @@ import { resolveWindowsCopyCommandForTests, runGlobalClipToInbox } from './globa
 function createClipboardSnapshotSource(text: string, formats: string[]) {
   return {
     availableFormats: vi.fn(() => formats),
+    clear: vi.fn(),
+    readBookmark: vi.fn(() => ({ title: '', url: '' })),
     readBuffer: vi.fn((format: string) => (formats.includes(format) ? Buffer.from(text) : Buffer.alloc(0))),
     readHTML: vi.fn(() => ''),
     readImage: vi.fn(() => clipboardImage as never),
-    readText: vi.fn(() => text)
+    readRTF: vi.fn(() => ''),
+    readText: vi.fn(() => text),
+    write: vi.fn()
   };
 }
 
@@ -150,6 +158,10 @@ it('uses native Windows key events instead of WinForms SendKeys for copy', () =>
 
   expect(command).toContain('user32.dll');
   expect(command).toContain('keybd_event');
+  expect(command).toContain('$alt = 0x12');
+  expect(command).toContain('$shift = 0x10');
+  expect(command.indexOf('keybd_event($alt, 0, $up, $zero)')).toBeLessThan(command.indexOf('keybd_event($ctrl, 0, 0, $zero)'));
+  expect(command.indexOf('keybd_event($shift, 0, $up, $zero)')).toBeLessThan(command.indexOf('keybd_event($ctrl, 0, 0, $zero)'));
   expect(command).not.toContain('System.Windows.Forms');
   expect(command).not.toContain('SendKeys');
 });
