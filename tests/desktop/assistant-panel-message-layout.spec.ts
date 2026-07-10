@@ -28,7 +28,7 @@ test('Aide renders a titled Markdown conversation with live progress', async ({
   await desktopWindow.getByRole('button', { name: /^(Send|发送)$/ }).click();
 
   await expect(desktopWindow.getByRole('status')).toContainText(/Thinking|正在思考/);
-  await expect(desktopWindow.getByRole('heading', { name: 'Foliole Aide' })).toBeVisible();
+  await expect(desktopWindow.getByRole('heading', { name: 'Foliole Aide' })).toBeHidden();
   await expect(desktopWindow.getByRole('button', { name: /^(History|历史)$/ })).toBeVisible();
   await expect(desktopWindow.getByRole('button', { name: /^(New|新建)$/ })).toBeVisible();
   await expect(desktopWindow.getByRole('heading', { name: 'Explain this topic' })).toBeVisible();
@@ -37,6 +37,9 @@ test('Aide renders a titled Markdown conversation with live progress', async ({
   await expect(desktopWindow.getByText('const ready = true;')).toBeVisible();
   await expect(desktopWindow.locator('[data-message-role="user"] p')).toHaveClass(/rounded-lg/);
   await expect(desktopWindow.locator('[data-message-role="assistant"]')).not.toHaveClass(/rounded|bg-/);
+  expect(await desktopWindow.getByTestId('assistant-message-scroll').evaluate((element) =>
+    window.innerWidth - element.getBoundingClientRect().right
+  )).toBeLessThanOrEqual(2);
 
   await mkdir(path.dirname(screenshotPath), { recursive: true });
   await desktopWindow.screenshot({ path: screenshotPath });

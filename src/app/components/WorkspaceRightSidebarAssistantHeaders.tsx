@@ -9,7 +9,9 @@ import {
 } from '../../shared/ui';
 
 export function AssistantPanelToolbar(props: {
+  conversationTitle: string | null;
   historyVisible: boolean;
+  onBack: () => void;
   onShowHistory: () => void;
   onNewThread: () => void;
 }) {
@@ -17,9 +19,21 @@ export function AssistantPanelToolbar(props: {
   return (
     <header className={`${inspectorListInsetPaddingClassName} sticky top-0 z-10 border-b border-border/70 bg-bg/95 py-1 backdrop-blur-sm`}>
       <div className="flex items-center justify-between gap-2">
-        <h2 className={`m-0 ${inspectorListHeadingClassName}`}>
-          {t('desktop.rightPanel.assistant')}
-        </h2>
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          {props.conversationTitle ? (
+            <AppIconButton
+              icon={<ArrowLeft aria-hidden className="size-4" strokeWidth={1.8} />}
+              label={t('desktop.rightPanel.assistant.backToHistory')}
+              onClick={props.onBack}
+            />
+          ) : null}
+          <h2
+            className={`m-0 min-w-0 truncate ${props.conversationTitle ? 'text-ui-md font-medium leading-6 text-foreground/86' : inspectorListHeadingClassName}`}
+            title={props.conversationTitle ?? undefined}
+          >
+            {props.conversationTitle ?? t('desktop.rightPanel.assistant')}
+          </h2>
+        </div>
         <div className="flex items-center gap-1">
           <AppIconButton
             aria-pressed={props.historyVisible}
@@ -45,29 +59,5 @@ export function AssistantHomeIntro() {
     <p className={`${inspectorListInsetPaddingClassName} ${inspectorListMetaClassName} py-2`}>
       {t('desktop.rightPanel.assistant.description')}
     </p>
-  );
-}
-
-export function AssistantConversationHeader(props: {
-  onBack: () => void;
-  title: string;
-}) {
-  const t = useTranslation();
-  return (
-    <header className={`${inspectorListInsetPaddingClassName} border-b border-border/70 py-1.5`}>
-      <div className="flex items-center gap-2">
-        <AppIconButton
-          icon={<ArrowLeft aria-hidden className="size-4" strokeWidth={1.8} />}
-          label={t('desktop.rightPanel.assistant.backToHistory')}
-          onClick={props.onBack}
-        />
-        <h2
-          className="m-0 min-w-0 flex-1 truncate text-ui-md font-medium leading-6 text-foreground/86"
-          title={props.title}
-        >
-          {props.title}
-        </h2>
-      </div>
-    </header>
   );
 }

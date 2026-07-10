@@ -12,7 +12,6 @@ import { useWorkspaceRightSidebarAssistantPanelController } from './useWorkspace
 import { WorkspaceRightSidebarAssistantComposer } from './WorkspaceRightSidebarAssistantComposer';
 import { WorkspaceRightSidebarAssistantConversation } from './WorkspaceRightSidebarAssistantConversation';
 import {
-  AssistantConversationHeader,
   AssistantHomeIntro,
   AssistantPanelToolbar
 } from './WorkspaceRightSidebarAssistantHeaders';
@@ -23,12 +22,15 @@ export function FolioleAideReadyContent(props: {
   controller: ReturnType<typeof useWorkspaceRightSidebarAssistantPanelController>;
   nodesById: Record<string, Node>;
 }) {
+  const t = useTranslation();
   const [showHistory, setShowHistory] = useState(true);
   const conversationOpen = isConversationOpen(props.controller);
   return (
     <>
       <AssistantPanelToolbar
+        conversationTitle={conversationOpen ? resolveConversationTitle(props.controller, t) : null}
         historyVisible={!conversationOpen && showHistory}
+        onBack={props.controller.handleNewThread}
         onNewThread={props.controller.handleNewThread}
         onShowHistory={() => {
           if (conversationOpen) {
@@ -57,10 +59,6 @@ function AssistantConversationView(props: {
   const t = useTranslation();
   return (
     <>
-      <AssistantConversationHeader
-        onBack={props.controller.handleNewThread}
-        title={resolveConversationTitle(props.controller, t)}
-      />
       {props.controller.selectedThreadNotice ? (
         <p className={`${inspectorListInsetPaddingClassName} py-2 ${inspectorListMetaClassName}`}>
           {props.controller.selectedThreadNotice}
@@ -92,7 +90,7 @@ function AssistantHomeView(props: {
 }) {
   const t = useTranslation();
   return (
-    <>
+    <div className="app-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto py-3">
       <AssistantHomeIntro />
       {props.historyVisible ? <AssistantHistoryList {...props} /> : null}
       <div className={`${inspectorListInsetPaddingClassName} mt-auto py-3`}>
@@ -106,7 +104,7 @@ function AssistantHomeView(props: {
           sending={props.controller.sending}
         />
       </div>
-    </>
+    </div>
   );
 }
 

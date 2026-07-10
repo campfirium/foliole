@@ -76,7 +76,9 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
     <AppPanel
       aria-label={t('desktop.workspace.inspector')}
       as="aside"
-      bodyClassName="app-scrollbar overflow-y-auto px-3 py-3"
+      bodyClassName={props.activePanelId === 'assistant'
+        ? 'min-h-0 overflow-hidden'
+        : 'app-scrollbar overflow-y-auto px-3 py-3'}
       className="workspace-region-main-sidebar hidden min-h-0 h-full flex-col overflow-hidden text-foreground [--app-inspector-section-bg:transparent] [--app-inspector-section-border-color:transparent] [--app-inspector-section-border-width:0] [--app-inspector-section-padding:0] [--app-inspector-section-radius:0] [--app-inspector-section-shadow-color:transparent] xl:flex"
       headerClassName="hidden"
       title={null}

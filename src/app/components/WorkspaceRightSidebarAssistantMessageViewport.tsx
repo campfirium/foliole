@@ -17,19 +17,21 @@ export function WorkspaceRightSidebarAssistantMessageViewport(props: {
   return (
     <div className="relative min-h-24 flex-1">
       <div
-        className="app-scrollbar absolute inset-0 space-y-5 overflow-y-auto pr-1"
+        className="app-scrollbar absolute inset-0 overflow-y-auto"
         data-testid="assistant-message-scroll"
         onScroll={scroll.onScroll}
         ref={scroll.scrollRef}
       >
-        {props.messages.map((message) => (
-          <WorkspaceRightSidebarAssistantMessageRow
-            key={message.id}
-            message={message}
-            onEditMessage={props.onEditMessage}
-            pendingLabel={props.pendingLabel}
-          />
-        ))}
+        <div className="space-y-5 px-3 pb-1">
+          {props.messages.map((message) => (
+            <WorkspaceRightSidebarAssistantMessageRow
+              key={message.id}
+              message={message}
+              onEditMessage={props.onEditMessage}
+              pendingLabel={props.pendingLabel}
+            />
+          ))}
+        </div>
       </div>
       {scroll.showScrollToLatest ? (
         <AppIconButton

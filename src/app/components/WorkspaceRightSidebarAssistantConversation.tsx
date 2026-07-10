@@ -1,10 +1,7 @@
 import { useRef } from 'react';
 import type { FormEvent } from 'react';
 
-import {
-  inspectorListInsetPaddingClassName,
-  inspectorListMetaClassName
-} from '../../shared/ui';
+import { inspectorListMetaClassName } from '../../shared/ui';
 
 import { WorkspaceRightSidebarAssistantComposer } from './WorkspaceRightSidebarAssistantComposer';
 import { WorkspaceRightSidebarAssistantMessageViewport } from './WorkspaceRightSidebarAssistantMessageViewport';
@@ -30,32 +27,34 @@ export function WorkspaceRightSidebarAssistantConversation(props: {
     inputRef.current?.focus();
   };
   return (
-    <section
-      className={`${inspectorListInsetPaddingClassName} flex min-h-0 flex-1 flex-col gap-3 py-3`}
-    >
+    <section className="flex min-h-0 flex-1 flex-col gap-3 pt-3">
       {props.threadStatusLabel ? (
-        <p className={`${inspectorListMetaClassName} m-0`}>{props.threadStatusLabel}</p>
+        <p className={`${inspectorListMetaClassName} m-0 px-3`}>{props.threadStatusLabel}</p>
       ) : null}
       {props.threadPreviewLabel ? (
-        <p className={`${inspectorListMetaClassName} m-0 rounded-sm bg-foreground/[0.035] px-2 py-1.5`}>
-          {props.threadPreviewLabel}
-        </p>
+        <div className="px-3">
+          <p className={`${inspectorListMetaClassName} m-0 rounded-sm bg-foreground/[0.035] px-2 py-1.5`}>
+            {props.threadPreviewLabel}
+          </p>
+        </div>
       ) : null}
       <WorkspaceRightSidebarAssistantMessageViewport
         messages={props.activeMessages}
         onEditMessage={editMessage}
         pendingLabel={props.pendingLabel}
       />
-      <WorkspaceRightSidebarAssistantComposer
-        inputLabel={props.inputLabel}
-        inputRef={inputRef}
-        messageText={props.messageText}
-        onMessageTextChange={props.onMessageTextChange}
-        onSubmit={props.onSubmit}
-        placeholder={props.placeholder}
-        sendLabel={props.sendLabel}
-        sending={props.sending}
-      />
+      <div className="px-3 pb-3">
+        <WorkspaceRightSidebarAssistantComposer
+          inputLabel={props.inputLabel}
+          inputRef={inputRef}
+          messageText={props.messageText}
+          onMessageTextChange={props.onMessageTextChange}
+          onSubmit={props.onSubmit}
+          placeholder={props.placeholder}
+          sendLabel={props.sendLabel}
+          sending={props.sending}
+        />
+      </div>
     </section>
   );
 }
