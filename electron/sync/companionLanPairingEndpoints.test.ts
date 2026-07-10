@@ -8,17 +8,28 @@ const pairingStoreMock = vi.hoisted(() => ({
   registerPairedCompanionDevice: vi.fn(),
   removePairedCompanionDevice: vi.fn()
 }));
+const pairingEncryptionMock = vi.hoisted(() => ({
+  encryptCompanionPairingSecret: vi.fn(async () => 'encrypted-device-secret'),
+  isSupportedPairingPublicKey: vi.fn(() => true)
+}));
 
 vi.mock('./companionPairingStore.js', () => pairingStoreMock);
+vi.mock('./companionPairingEncryption.js', () => pairingEncryptionMock);
 
 import { handlePairRequest, handlePairRequestCreate } from './companionLanPairingEndpoints.js';
-import { clearCompanionPairRequests } from './companionPairingRequests.js';
+import {
+  approveCompanionPairRequest,
+  clearCompanionPairRequests,
+  createCompanionPairRequest
+} from './companionPairingRequests.js';
 
 const TEST_PAIRING_PUBLIC_KEY = Buffer.concat([Buffer.from([4]), Buffer.alloc(64)]).toString('base64url');
 
 afterEach(() => {
   clearCompanionPairRequests();
   vi.clearAllMocks();
+  pairingEncryptionMock.encryptCompanionPairingSecret.mockResolvedValue('encrypted-device-secret');
+  pairingEncryptionMock.isSupportedPairingPublicKey.mockReturnValue(true);
 });
 
 function createRequest(payload: unknown, remoteAddress = '192.168.1.22') {
@@ -84,3 +95,83 @@ it('rate limits pair completion attempts by client address before consuming appr
     error: 'pair_completion_rate_limited'
   }));
 });
+
+it('retries half-committed pair completion without re-registering the device', async () => {
+  pairingStoreMock.registerPairedCompanionDevice.mockReturnValue({
+    device_id: 'android-1',
+    device_secret: 'device-secret-1',
+    paired_at: '2026-05-10T01:00:00.000Z'
+  });
+  pairingEncryptionMock.encryptCompanionPairingSecret
+    .mockRejectedValueOnce(new Error('encrypt failed'))
+    .mockResolvedValueOnce('encrypted-device-secret-1');
+  const created = createApprovedPairRequest('android-1');
+  const writeJson = vi.fn();
+
+  await expect(handlePairRequest(
+    createRequest({ pair_request_id: created.pair_request_id }),
+    createResponse(),
+    '0.1.0-test',
+    'desktop-local',
+    vi.fn(),
+    writeJson
+  )).rejects.toThrow('encrypt failed');
+  await handlePairRequest(
+    createRequest({ pair_request_id: created.pair_request_id }),
+    createResponse(),
+    '0.1.0-test',
+    'desktop-local',
+    vi.fn(),
+    writeJson
+  );
+
+  expect(pairingStoreMock.registerPairedCompanionDevice).toHaveBeenCalledTimes(1);
+  expect(pairingEncryptionMock.encryptCompanionPairingSecret).toHaveBeenLastCalledWith({
+    clientPublicKey: TEST_PAIRING_PUBLIC_KEY,
+    deviceSecret: 'device-secret-1'
+  });
+  expect(writeJson).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), 200, expect.objectContaining({
+    encrypted_device_secret: 'encrypted-device-secret-1'
+  }));
+});
+
+it('rotates the device secret for a new approved pair request with the same device id', async () => {
+  pairingStoreMock.registerPairedCompanionDevice
+    .mockReturnValueOnce({
+      device_id: 'android-1',
+      device_secret: 'device-secret-1',
+      paired_at: '2026-05-10T01:00:00.000Z'
+    })
+    .mockReturnValueOnce({
+      device_id: 'android-1',
+      device_secret: 'device-secret-2',
+      paired_at: '2026-05-10T02:00:00.000Z'
+    });
+  const first = createApprovedPairRequest('android-1');
+  const second = createApprovedPairRequest('android-1');
+  const writeJson = vi.fn();
+
+  await handlePairRequest(createRequest({ pair_request_id: first.pair_request_id }), createResponse(), '0.1.0-test', 'desktop-local', vi.fn(), writeJson);
+  await handlePairRequest(createRequest({ pair_request_id: second.pair_request_id }), createResponse(), '0.1.0-test', 'desktop-local', vi.fn(), writeJson);
+
+  expect(pairingStoreMock.registerPairedCompanionDevice).toHaveBeenCalledTimes(2);
+  expect(pairingEncryptionMock.encryptCompanionPairingSecret).toHaveBeenLastCalledWith({
+    clientPublicKey: TEST_PAIRING_PUBLIC_KEY,
+    deviceSecret: 'device-secret-2'
+  });
+});
+
+function createApprovedPairRequest(deviceId: string) {
+  const created = createCompanionPairRequest({
+    clientAddress: '192.168.1.22',
+    deviceId,
+    deviceKind: 'android-capacitor',
+    deviceName: 'Pixel 9',
+    pairingPublicKey: TEST_PAIRING_PUBLIC_KEY
+  });
+  if (created.rate_limited) {
+    throw new Error('unexpected_pair_request_rate_limit');
+  }
+  approveCompanionPairRequest(created.request.pair_request_id);
+  return created.request;
+}
