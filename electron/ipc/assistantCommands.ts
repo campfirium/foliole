@@ -23,10 +23,9 @@ import {
 import {
   resolveAssistantAgentDescriptorPath,
   resolveAssistantAgentControlTracePath,
-  resolveAssistantAppServerArgs,
-  withAgentControlContext
+  resolveAssistantAppServerArgs
 } from './assistantAgentControlContext.js';
-import { ensureAssistantAgentControlContext, mergeAssistantStatusWithAgentControl } from './assistantAgentControlStatus.js';
+import { loadAssistantAgentControlContext, mergeAssistantStatusWithAgentControl } from './assistantAgentControlStatus.js';
 import {
   readOpeningLocation,
   readOptionalClientTurnId,
@@ -110,7 +109,7 @@ export async function handleAssistantCommand(
 
 async function getAssistantStatus() {
   const status = await getAdapter().getStatus();
-  const agentControl = await ensureAssistantAgentControlContext(
+  const agentControl = await loadAssistantAgentControlContext(
     process.env,
     resolveFolioleAppVersion(app),
     resolveAssistantAgentControlScriptRoot()
@@ -145,14 +144,11 @@ async function sendMessage(args: Record<string, unknown>, sender?: WebContents) 
     return assistantProtocolFailure();
   }
   const scriptRoot = resolveAssistantAgentControlScriptRoot();
-  const agentControl = await ensureAssistantAgentControlContext(process.env, resolveFolioleAppVersion(app), scriptRoot);
-  if (agentControl.state !== 'running') {
-    return {
-      failure: { category: 'agent_control_unavailable' as const },
-      provider: 'codex-app-server' as const,
-      state: 'failed' as const
-    };
-  }
+  const agentControl = await loadAssistantAgentControlContext(
+    process.env,
+    resolveFolioleAppVersion(app),
+    scriptRoot
+  );
   let result: Awaited<ReturnType<CodexAppServerAdapter['sendMessage']>>;
   try {
     result = await getAdapter().sendMessage({
@@ -160,7 +156,7 @@ async function sendMessage(args: Record<string, unknown>, sender?: WebContents) 
       message,
       ...(sender ? { onEvent: createAssistantTurnEventSender(sender, clientTurnId) } : {}),
       ...(providerThreadId ? { providerThreadId } : {}),
-      ...(workspaceContext ? { workspaceContext: withAgentControlContext(workspaceContext, process.env, scriptRoot) } : {})
+      ...(workspaceContext ? { workspaceContext: { ...workspaceContext, agentControl } } : {})
     });
   } catch {
     return assistantProtocolFailure();

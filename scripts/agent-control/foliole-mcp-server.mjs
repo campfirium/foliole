@@ -135,7 +135,11 @@ function jsonError(id, code, message) {
 
 function parseServerArgv(argv) {
   const descriptorIndex = argv.indexOf('--descriptor');
-  return descriptorIndex >= 0 ? { descriptor: argv[descriptorIndex + 1] } : {};
+  const traceIndex = argv.indexOf('--trace');
+  return {
+    ...(descriptorIndex >= 0 ? { descriptor: argv[descriptorIndex + 1] } : {}),
+    ...(traceIndex >= 0 ? { tracePath: argv[traceIndex + 1] } : {})
+  };
 }
 
 async function runStdioServer(options = {}) {

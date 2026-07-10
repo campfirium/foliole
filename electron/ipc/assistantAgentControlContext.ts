@@ -34,11 +34,12 @@ export function resolveAssistantAgentControlTracePath(env: NodeJS.ProcessEnv) {
 export function resolveAssistantAppServerArgs(env: NodeJS.ProcessEnv, appRoot = process.cwd()) {
   const descriptorPath = resolveAssistantAgentDescriptorPath(env);
   const serverPath = resolveAssistantAgentControlMcpServerPath(env, appRoot);
+  const tracePath = resolveAssistantAgentControlTracePath(env);
   return [
     '-c',
     'mcp_servers.foliole_agent_control.command="node"',
     '-c',
-    `mcp_servers.foliole_agent_control.args=[${tomlString(serverPath)},'--descriptor',${tomlString(descriptorPath)}]`
+    `mcp_servers.foliole_agent_control.args=[${tomlString(serverPath)},'--descriptor',${tomlString(descriptorPath)},'--trace',${tomlString(tracePath)}]`
   ];
 }
 

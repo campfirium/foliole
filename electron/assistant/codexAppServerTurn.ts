@@ -7,6 +7,7 @@ import type {
   NativeAssistantWorkspaceContext
 } from '../../lib/platform/nativeAssistantContract.js';
 
+import { CodexAppServerMcpApprovalPolicy } from './codexAppServerMcpApproval.js';
 import {
   CODEX_APP_SERVER_PROVIDER,
   composeAssistantTurnInput,
@@ -29,6 +30,7 @@ export class CodexAppServerSession {
   private initializedReject: ((error: Error & { category?: NativeAssistantFailureCategory }) => void) | null = null;
   private initializeId = 0;
   private initializedResolve: (() => void) | null = null;
+  private readonly mcpApprovalPolicy = new CodexAppServerMcpApprovalPolicy();
   private nextId = 1;
   private rl: readline.Interface | null = null;
   constructor(
@@ -113,6 +115,11 @@ export class CodexAppServerSession {
     this.handleMessage(parsed.message);
   }
   private handleMessage(message: JsonRpcMessage) {
+    const mcpApproval = this.mcpApprovalPolicy.observe(message);
+    if (mcpApproval) {
+      this.write(mcpApproval);
+      return;
+    }
     if (message.error) {
       this.failActiveTurn(mapJsonRpcError(message.error), true);
       return;

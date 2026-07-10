@@ -10,7 +10,7 @@ export type JsonRpcRecord = Record<string, unknown>;
 
 export interface JsonRpcMessage {
   error?: JsonRpcError;
-  id?: number;
+  id?: number | string;
   method?: string;
   params?: JsonRpcRecord;
   result?: JsonRpcRecord;

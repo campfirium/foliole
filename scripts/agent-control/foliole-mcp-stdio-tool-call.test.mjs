@@ -102,10 +102,13 @@ async function createAgentControlApi(apiRequests) {
 }
 
 async function runMcpStdio(descriptorPath, tracePath, messages) {
-  const child = spawn(process.execPath, ['scripts/agent-control/foliole-mcp-server.mjs', '--descriptor', descriptorPath], {
-    cwd: path.resolve('.'),
-    env: { ...process.env, FOLIOLE_AGENT_MCP_TRACE_PATH: tracePath }
-  });
+  const child = spawn(process.execPath, [
+    'scripts/agent-control/foliole-mcp-server.mjs',
+    '--descriptor',
+    descriptorPath,
+    '--trace',
+    tracePath
+  ], { cwd: path.resolve('.') });
   let stdout = '';
   child.stdout.on('data', (chunk) => {
     stdout += chunk;

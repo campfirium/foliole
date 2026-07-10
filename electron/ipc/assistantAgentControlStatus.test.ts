@@ -16,7 +16,7 @@ const readyStatus: NativeAssistantStatusResult = {
   state: 'ready'
 };
 
-it('keeps Aide unavailable when Codex is ready but Agent Control is not running', () => {
+it('keeps App Server chat ready when Agent Control is not running', () => {
   expect(mergeAssistantStatusWithAgentControl(readyStatus, {
     capabilities: ['materials.read'],
     descriptorEnvVar: 'FOLIOLE_AGENT_DESCRIPTOR',
@@ -25,10 +25,9 @@ it('keeps Aide unavailable when Codex is ready but Agent Control is not running'
   })).toMatchObject({
     capabilities: expect.arrayContaining([
       { enabled: false, name: 'agentControl' },
-      { enabled: false, name: 'sendMessage' }
+      { enabled: true, name: 'sendMessage' }
     ]),
-    failure: { category: 'agent_control_unavailable' },
-    state: 'unavailable'
+    state: 'ready'
   });
 });
 

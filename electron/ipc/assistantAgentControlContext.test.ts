@@ -41,14 +41,15 @@ beforeEach(() => {
 it('builds Codex app-server MCP config overrides for Foliole Agent Control', () => {
   const args = resolveAssistantAppServerArgs({
     FOLIOLE_AGENT_CONTROL_MCP_SERVER: 'D:\\C\\foliole\\scripts\\agent-control\\foliole-mcp-server.mjs',
-    FOLIOLE_AGENT_DESCRIPTOR: 'C:\\Foliole\\cache\\agent-control-session.json'
+    FOLIOLE_AGENT_DESCRIPTOR: 'C:\\Foliole\\cache\\agent-control-session.json',
+    FOLIOLE_AGENT_MCP_TRACE_PATH: 'C:\\Foliole\\cache\\agent-control-mcp-trace.jsonl'
   });
 
   expect(args).toEqual([
     '-c',
     'mcp_servers.foliole_agent_control.command="node"',
     '-c',
-    "mcp_servers.foliole_agent_control.args=['D:\\C\\foliole\\scripts\\agent-control\\foliole-mcp-server.mjs','--descriptor','C:\\Foliole\\cache\\agent-control-session.json']"
+    "mcp_servers.foliole_agent_control.args=['D:\\C\\foliole\\scripts\\agent-control\\foliole-mcp-server.mjs','--descriptor','C:\\Foliole\\cache\\agent-control-session.json','--trace','C:\\Foliole\\cache\\agent-control-mcp-trace.jsonl']"
   ]);
 });
 

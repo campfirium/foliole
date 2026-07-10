@@ -13,12 +13,11 @@ import type { SpawnedCodexProcess } from './codexAppServerSessionTypes.js';
 import { CodexAppServerSession } from './codexAppServerTurn.js';
 
 const PROVIDER = 'codex-app-server' as const;
-const DEFAULT_TIMEOUT_MS = 45_000;
+const DEFAULT_TIMEOUT_MS = 180_000;
 
 export interface CodexAppServerAdapterOptions {
   appServerArgs?: string[];
   appVersion: string;
-  authProbeCommand?: (command: string, options: CodexLauncherOptions) => Promise<boolean>;
   command?: string;
   env?: NodeJS.ProcessEnv;
   launcherCwd: string;
@@ -41,10 +40,6 @@ export class CodexAppServerAdapter {
   private active = false;
   private readonly appServerArgs: string[];
   private readonly appVersion: string;
-  private readonly authProbeCommand: (
-    command: string,
-    options: CodexLauncherOptions
-  ) => Promise<boolean>;
   private readonly command: string;
   private readonly env: NodeJS.ProcessEnv;
   private readonly launcherCwd: string;
@@ -64,7 +59,6 @@ export class CodexAppServerAdapter {
   constructor(options: CodexAppServerAdapterOptions) {
     this.appServerArgs = options.appServerArgs ?? [];
     this.appVersion = options.appVersion;
-    this.authProbeCommand = options.authProbeCommand ?? probeCodexLoginStatus;
     this.command = options.command ?? 'codex';
     this.env = options.env ?? process.env;
     this.launcherCwd = options.launcherCwd;
@@ -80,9 +74,7 @@ export class CodexAppServerAdapter {
       const launcherOptions = this.createLauncherOptions();
       if (!await this.probeCommand(this.command, launcherOptions))
         return status('unavailable', 'not_configured');
-      return (await this.authProbeCommand(this.command, launcherOptions))
-        ? status('ready')
-        : status('unavailable', 'auth_failed');
+      return status('ready');
     } catch (error) {
       return status('unavailable', failureFromError(error));
     }
@@ -168,10 +160,6 @@ function sendFailure(
 
 async function probeCodexCommand(command: string, options: CodexLauncherOptions) {
   return probeCodexExitCode(command, ['--version'], options, 2_000);
-}
-
-async function probeCodexLoginStatus(command: string, options: CodexLauncherOptions) {
-  return probeCodexExitCode(command, ['login', 'status'], options, 5_000);
 }
 
 async function probeCodexExitCode(command: string, args: string[], options: CodexLauncherOptions, timeoutMs: number) {

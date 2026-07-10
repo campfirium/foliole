@@ -18,6 +18,18 @@ export async function ensureAssistantAgentControlContext(
   return resolveAssistantAgentControlContext(env, appRoot);
 }
 
+export async function loadAssistantAgentControlContext(
+  env: NodeJS.ProcessEnv,
+  appVersion: string,
+  appRoot?: string
+) {
+  try {
+    return await ensureAssistantAgentControlContext(env, appVersion, appRoot);
+  } catch {
+    return resolveAssistantAgentControlContext(env, appRoot);
+  }
+}
+
 export function mergeAssistantStatusWithAgentControl(
   status: NativeAssistantStatusResult,
   agentControl: NativeAssistantAgentControlContext
@@ -28,18 +40,7 @@ export function mergeAssistantStatusWithAgentControl(
     'agentControl',
     agentControlEnabled
   );
-  if (status.state !== 'ready' || agentControlEnabled) {
-    return { ...status, agentControl, capabilities };
-  }
-  return {
-    ...status,
-    agentControl,
-    capabilities: capabilities.map((capability) =>
-      capability.name === 'sendMessage' ? { ...capability, enabled: false } : capability
-    ),
-    failure: { category: 'agent_control_unavailable' },
-    state: 'unavailable'
-  };
+  return { ...status, agentControl, capabilities };
 }
 
 function upsertAssistantCapability(

@@ -13,14 +13,15 @@ import { isOnlineSmokeSuccessful } from './foliole-aide-online-smoke-success.mjs
 
 it('builds Codex app-server args with the Foliole MCP server descriptor', () => {
   const descriptorPath = 'C:\\Foliole\\cache\\agent-control-session.json';
-  const args = buildCodexAppServerArgs(descriptorPath);
+  const tracePath = 'C:\\Foliole\\cache\\agent-control-mcp-trace.jsonl';
+  const args = buildCodexAppServerArgs(descriptorPath, tracePath);
 
   expect(args).toEqual([
     'app-server',
     '-c',
     'mcp_servers.foliole_agent_control.command="node"',
     '-c',
-    `mcp_servers.foliole_agent_control.args=['${path.resolve('scripts', 'agent-control', 'foliole-mcp-server.mjs')}','--descriptor','${descriptorPath}']`
+    `mcp_servers.foliole_agent_control.args=['${path.resolve('scripts', 'agent-control', 'foliole-mcp-server.mjs')}','--descriptor','${descriptorPath}','--trace','${tracePath}']`
   ]);
 });
 
@@ -39,8 +40,9 @@ it('classifies Codex app-server auth failures for actionable smoke output', () =
     .toBe('not_configured');
 });
 
-it('describes auth failures with a next action', () => {
-  expect(describeOnlineSmokeFailure('auth_failed')).toContain('sign in');
+it('describes App Server account failures without requiring CLI login', () => {
+  expect(describeOnlineSmokeFailure('auth_failed')).toContain('authenticated account');
+  expect(describeOnlineSmokeFailure('auth_failed')).not.toContain('sign in');
 });
 
 it('requires both the MCP trace and expected assistant answer for success', () => {

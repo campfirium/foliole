@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* global clearTimeout, console, process, setTimeout */
+/* global console, process */
 
 import { spawn } from 'node:child_process';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
@@ -8,10 +8,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { createOnlineSmokeJsonRpcSession } from './foliole-aide-online-smoke-session.mjs';
 import { EXPECTED_SMOKE_ANSWER, isOnlineSmokeSuccessful } from './foliole-aide-online-smoke-success.mjs';
 
 const MCP_PROTOCOL_VERSION = 1;
-const CODEX_TIMEOUT_MS = 90_000;
+const CODEX_TIMEOUT_MS = 180_000;
 const SMOKE_MATERIAL_ID = 'smoke-topic';
 const SMOKE_TITLE = 'Aide MCP Smoke Topic';
 const SMOKE_TOKEN = 'smoke-token';
@@ -77,20 +78,20 @@ export function classifyOnlineSmokeError(error) {
 }
 
 export function describeOnlineSmokeFailure(category) {
-  if (category === 'auth_failed') return 'Codex app-server rejected the session. Open Codex and sign in before rerunning the smoke.';
+  if (category === 'auth_failed') return 'Codex app-server did not expose an authenticated account to Foliole.';
   if (category === 'not_configured') return 'The codex command was not available to the smoke runner.';
   if (category === 'timeout') return 'Codex app-server did not complete the turn before the smoke timeout.';
   return 'Inspect the smoke error and Codex app-server logs.';
 }
 
-export function buildCodexAppServerArgs(descriptorPath) {
+export function buildCodexAppServerArgs(descriptorPath, tracePath) {
   const mcpServerPath = path.resolve('scripts', 'agent-control', 'foliole-mcp-server.mjs');
   return [
     'app-server',
     '-c',
     'mcp_servers.foliole_agent_control.command="node"',
     '-c',
-    `mcp_servers.foliole_agent_control.args=[${tomlString(mcpServerPath)},'--descriptor',${tomlString(descriptorPath)}]`
+    `mcp_servers.foliole_agent_control.args=[${tomlString(mcpServerPath)},'--descriptor',${tomlString(descriptorPath)},'--trace',${tomlString(tracePath)}]`
   ];
 }
 
@@ -134,75 +135,27 @@ async function createSmokeApi(apiRequests) {
 }
 
 async function runCodexTurn(input) {
-  const child = spawn(input.codexCommand, buildCodexAppServerArgs(input.descriptorPath), {
+  const child = spawn(input.codexCommand, buildCodexAppServerArgs(input.descriptorPath, input.tracePath), {
     cwd: path.resolve('.'),
     env: { ...process.env, FOLIOLE_AGENT_MCP_TRACE_PATH: input.tracePath },
     shell: process.platform === 'win32',
     stdio: ['pipe', 'pipe', 'pipe'],
     windowsHide: true
   });
-  const session = createJsonRpcSession(child);
+  const session = createOnlineSmokeJsonRpcSession(child, CODEX_TIMEOUT_MS);
   try {
     await session.request({ id: 0, method: 'initialize', params: { clientInfo: { name: 'foliole_aide_smoke', version: '0.1.0' } } });
     session.notify({ method: 'initialized', params: {} });
     const thread = await session.request({ id: 1, method: 'thread/start', params: {} });
     const threadId = thread.result?.thread?.id;
     if (typeof threadId !== 'string') throw new Error('missing_thread_id');
-    child.stdin.write(`${JSON.stringify({ id: 2, method: 'turn/start', params: { input: [{ text: input.prompt, type: 'text' }], threadId } })}\n`);
-    const assistantText = await session.waitForTurn();
+    const completed = session.waitForTurn();
+    await session.request({ id: 2, method: 'turn/start', params: { input: [{ text: input.prompt, type: 'text' }], threadId } });
+    const assistantText = await completed;
     return { assistantText, providerThreadId: threadId };
   } finally {
     child.kill();
   }
-}
-
-function createJsonRpcSession(child) {
-  const pending = new Map();
-  let assistantText = '';
-  let turnComplete;
-  let stderr = '';
-  const timeout = setTimeout(() => {
-    const error = new Error(`codex_app_server_timeout${stderr ? `: ${stderr.slice(0, 500)}` : ''}`);
-    for (const item of pending.values()) item.reject(error);
-    turnComplete?.reject(error);
-    child.kill();
-  }, CODEX_TIMEOUT_MS);
-  child.stderr.on('data', (chunk) => {
-    stderr += String(chunk);
-  });
-  child.stdout.on('data', (chunk) => {
-    for (const line of String(chunk).split(/\r?\n/u).filter(Boolean)) handleMessage(JSON.parse(line));
-  });
-  child.on('error', (error) => {
-    for (const item of pending.values()) item.reject(error);
-    turnComplete?.reject(error);
-  });
-  function handleMessage(message) {
-    if (message.id !== undefined && pending.has(message.id)) {
-      const item = pending.get(message.id);
-      pending.delete(message.id);
-      if (message.error) item.reject(new Error(JSON.stringify(message.error)));
-      else item.resolve(message);
-      return;
-    }
-    if (message.method === 'item/agentMessage/delta') assistantText += message.params?.delta ?? message.params?.text ?? '';
-    if (message.method === 'turn/completed') turnComplete?.resolve(assistantText);
-    if (message.method === 'error') turnComplete?.reject(new Error(JSON.stringify(message.params ?? message)));
-  }
-  return {
-    notify(message) {
-      child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', ...message })}\n`);
-    },
-    request(message) {
-      child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', ...message })}\n`);
-      return new Promise((resolve, reject) => pending.set(message.id, { reject, resolve }));
-    },
-    waitForTurn() {
-      return new Promise((resolve, reject) => {
-        turnComplete = { reject, resolve };
-      }).finally(() => clearTimeout(timeout));
-    }
-  };
 }
 
 async function readTrace(tracePath) {
