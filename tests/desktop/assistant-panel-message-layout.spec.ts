@@ -214,7 +214,7 @@ const DEFAULT_ASSISTANT_MARKDOWN = [
 ].join('\n\n');
 
 const ASSISTANT_READY_STATUS = {
-  agentControl: { state: 'running', trace: { count: 0 } },
+  agentControl: { capabilities: ['materials.read'], state: 'running' },
   capabilities: [
     { enabled: true, name: 'status' },
     { enabled: true, name: 'sendMessage' },

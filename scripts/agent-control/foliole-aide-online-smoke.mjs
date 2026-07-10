@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-/* global console, process */
+/* global console, process, setTimeout */
 
 import { spawn } from 'node:child_process';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
@@ -11,15 +11,14 @@ import { fileURLToPath } from 'node:url';
 import { createOnlineSmokeJsonRpcSession } from './foliole-aide-online-smoke-session.mjs';
 import { EXPECTED_SMOKE_ANSWER, isOnlineSmokeSuccessful } from './foliole-aide-online-smoke-success.mjs';
 
-const MCP_PROTOCOL_VERSION = 1;
+const AGENT_CONTROL_PROTOCOL_VERSION = 1;
 const CODEX_TIMEOUT_MS = 180_000;
 const SMOKE_MATERIAL_ID = 'smoke-topic';
-const SMOKE_TITLE = 'Aide MCP Smoke Topic';
+const SMOKE_TITLE = 'Aide CLI Smoke Topic';
 const SMOKE_TOKEN = 'smoke-token';
 
 export async function runOnlineSmoke(options = {}) {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'foliole-aide-online-smoke-'));
-  const tracePath = path.join(tempRoot, 'agent-control-mcp-trace.jsonl');
   const descriptorPath = path.join(tempRoot, 'agent-control-session.json');
   const apiRequests = [];
   const apiServer = await createSmokeApi(apiRequests);
@@ -27,7 +26,7 @@ export async function runOnlineSmoke(options = {}) {
   await writeFile(descriptorPath, JSON.stringify({
     capabilities: ['materials.read'],
     endpoint,
-    protocol_version: MCP_PROTOCOL_VERSION,
+    protocol_version: AGENT_CONTROL_PROTOCOL_VERSION,
     token: 'smoke-token'
   }));
 
@@ -36,27 +35,24 @@ export async function runOnlineSmoke(options = {}) {
       codexCommand: options.codexCommand ?? 'codex',
       cwd: tempRoot,
       descriptorPath,
-      prompt: createSmokePrompt(),
-      tracePath
+      prompt: createSmokePrompt()
     });
-    const trace = await readTrace(tracePath);
     return {
       apiRequests,
       assistantText: result.assistantText,
-      ok: isOnlineSmokeSuccessful(result.assistantText, trace, apiRequests),
-      providerThreadId: result.providerThreadId,
-      trace,
-      tracePath
+      ok: isOnlineSmokeSuccessful(result.assistantText, apiRequests),
+      providerThreadId: result.providerThreadId
     };
   } finally {
     await closeServer(apiServer);
-    if (!options.keepTemp) await rm(tempRoot, { force: true, recursive: true });
+    if (!options.keepTemp) await rm(tempRoot, { force: true, maxRetries: 5, recursive: true, retryDelay: 200 });
   }
 }
 
 export function createSmokePrompt() {
   return [
-    'Use the Foliole MCP tool foliole_materials_read with id smoke-topic.',
+    'Use the self-describing foliole command to read the Foliole Topic with id smoke-topic.',
+    'Discover its syntax with foliole help --json if needed.',
     `Then answer exactly: ${EXPECTED_SMOKE_ANSWER}.`
   ].join(' ');
 }
@@ -85,24 +81,12 @@ export function describeOnlineSmokeFailure(category) {
   return 'Inspect the smoke error and Codex app-server logs.';
 }
 
-export function buildCodexAppServerArgs(descriptorPath, tracePath) {
-  const mcpServerPath = path.resolve('scripts', 'agent-control', 'foliole-mcp-server.mjs');
-  return [
-    'app-server',
-    '-c',
-    'mcp_servers.foliole_agent_control.command="node"',
-    '-c',
-    `mcp_servers.foliole_agent_control.args=[${tomlString(mcpServerPath)},'--descriptor',${tomlString(descriptorPath)},'--trace',${tomlString(tracePath)}]`
-  ];
+export function buildCodexAppServerArgs() {
+  return ['app-server'];
 }
 
 export function createSmokeThreadStartParams(cwd) {
   return { cwd, ephemeral: true };
-}
-
-function tomlString(value) {
-  if (value.includes("'")) return JSON.stringify(value);
-  return `'${value}'`;
 }
 
 async function createSmokeApi(apiRequests) {
@@ -140,9 +124,15 @@ async function createSmokeApi(apiRequests) {
 }
 
 async function runCodexTurn(input) {
-  const child = spawn(input.codexCommand, buildCodexAppServerArgs(input.descriptorPath, input.tracePath), {
+  const commandDir = path.resolve('scripts', 'agent-control');
+  const pathKey = Object.keys(process.env).find((key) => key.toUpperCase() === 'PATH') ?? 'PATH';
+  const child = spawn(input.codexCommand, buildCodexAppServerArgs(), {
     cwd: input.cwd,
-    env: { ...process.env, FOLIOLE_AGENT_MCP_TRACE_PATH: input.tracePath },
+    env: {
+      ...process.env,
+      FOLIOLE_AGENT_DESCRIPTOR: input.descriptorPath,
+      [pathKey]: `${commandDir}${path.delimiter}${process.env[pathKey] ?? ''}`
+    },
     shell: process.platform === 'win32',
     stdio: ['pipe', 'pipe', 'pipe'],
     windowsHide: true
@@ -159,20 +149,37 @@ async function runCodexTurn(input) {
     const threadId = thread.result?.thread?.id;
     if (typeof threadId !== 'string') throw new Error('missing_thread_id');
     const completed = session.waitForTurn();
-    await session.request({ id: 2, method: 'turn/start', params: { input: [{ text: input.prompt, type: 'text' }], threadId } });
+    await session.request({
+      id: 2,
+      method: 'turn/start',
+      params: {
+        approvalPolicy: 'never', cwd: input.cwd,
+        input: [{ text: input.prompt, type: 'text' }],
+        sandboxPolicy: {
+          excludeSlashTmp: true, excludeTmpdirEnvVar: true, networkAccess: true,
+          type: 'workspaceWrite', writableRoots: [input.cwd]
+        },
+        threadId
+      }
+    });
     const assistantText = await completed;
     return { assistantText, providerThreadId: threadId };
   } finally {
-    child.kill();
+    await stopCodexAppServer(child);
   }
 }
 
-async function readTrace(tracePath) {
-  try {
-    const text = await readFile(tracePath, 'utf8');
-    return text.trim().split(/\r?\n/u).filter(Boolean).map((line) => JSON.parse(line));
-  } catch {
-    return [];
+async function stopCodexAppServer(child) {
+  if (child.exitCode !== null) return;
+  child.stdin.end();
+  const exited = new Promise((resolve) => child.once('exit', resolve));
+  const graceful = await Promise.race([
+    exited.then(() => true),
+    new Promise((resolve) => setTimeout(() => resolve(false), 2_000))
+  ]);
+  if (!graceful && child.exitCode === null) {
+    child.kill();
+    await Promise.race([exited, new Promise((resolve) => setTimeout(resolve, 1_000))]);
   }
 }
 

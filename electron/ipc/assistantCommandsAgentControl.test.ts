@@ -85,11 +85,8 @@ it('sets the Agent Control descriptor path in the assistant launcher environment
 
   await expect(handleAssistantCommand(NATIVE_COMMANDS.assistantGetStatus, {})).resolves.toMatchObject({
     agentControl: {
-      cliPath: path.join(mockedAppRoot, 'scripts', 'agent-control', 'foliole-agent.mjs'),
-      endpoint: expect.stringMatching(/^http:\/\/127\.0\.0\.1:\d+$/),
-      descriptorPath: path.join(mockedAppDataDir, 'cache', 'agent-control-session.json'),
-      state: 'running',
-      tracePath: path.join(mockedAppDataDir, 'cache', 'agent-control-mcp-trace.jsonl')
+      capabilities: expect.arrayContaining(['materials.create', 'materials.update', 'materials.restore']),
+      state: 'running'
     },
     capabilities: expect.arrayContaining([
       { enabled: true, name: 'agentControl' },
@@ -99,24 +96,19 @@ it('sets the Agent Control descriptor path in the assistant launcher environment
   });
 
   expect(adapterConstructorArgs[0]).toMatchObject({
-    appServerArgs: expect.arrayContaining([
-      'mcp_servers.foliole_agent_control.command="node"'
-    ]),
     env: expect.objectContaining({
-      FOLIOLE_AGENT_DESCRIPTOR: path.join(mockedAppDataDir, 'cache', 'agent-control-session.json'),
-      FOLIOLE_AGENT_MCP_TRACE_PATH: path.join(mockedAppDataDir, 'cache', 'agent-control-mcp-trace.jsonl')
+      FOLIOLE_AGENT_DESCRIPTOR: path.join(mockedAppDataDir, 'cache', 'agent-control-session.json')
     })
   });
-  const appServerArgs = readAdapterAppServerArgs();
-  expect(appServerArgs.join(' ')).toContain('foliole-mcp-server.mjs');
-  expect(appServerArgs.join(' ')).toContain(tomlStringContent(path.join(
+  expect(readAdapterEnv().PATH).toContain(path.join(
     mockedAppRoot,
     'scripts',
     'agent-control'
-  )));
+  ));
+  expect(readAdapterAppServerArgs()).toEqual([]);
 });
 
-it('resolves the Agent Control MCP server from packaged resources', async () => {
+it('resolves the stable Foliole command from packaged resources', async () => {
   const originalResourcesPath = process.resourcesPath;
   Object.defineProperty(process, 'resourcesPath', {
     configurable: true,
@@ -136,9 +128,9 @@ it('resolves the Agent Control MCP server from packaged resources', async () => 
   try {
     await handleAssistantCommand(NATIVE_COMMANDS.assistantGetStatus, {});
 
-    expect(readAdapterAppServerArgs().join(' ')).toContain(tomlStringContent(
+    expect(readAdapterEnv().PATH).toContain(
       path.join(tempRoot, 'packaged-resources', 'scripts', 'agent-control')
-    ));
+    );
   } finally {
     Object.defineProperty(process, 'resourcesPath', {
       configurable: true,
@@ -161,7 +153,6 @@ it('preserves Codex auth failures while exposing the running Agent Control tools
 
   await expect(handleAssistantCommand(NATIVE_COMMANDS.assistantGetStatus, {})).resolves.toMatchObject({
     agentControl: {
-      endpoint: expect.stringMatching(/^http:\/\/127\.0\.0\.1:\d+$/),
       state: 'running'
     },
     capabilities: expect.arrayContaining([
@@ -179,8 +170,9 @@ function readAdapterAppServerArgs() {
   return options.appServerArgs.filter((arg): arg is string => typeof arg === 'string');
 }
 
-function tomlStringContent(value: string) {
-  return value;
+function readAdapterEnv() {
+  const options = adapterConstructorArgs[0] as { env?: NodeJS.ProcessEnv };
+  return options.env ?? {};
 }
 
 it('passes the local Agent Control API descriptor to Codex app-server turns', async () => {
@@ -199,13 +191,10 @@ it('passes the local Agent Control API descriptor to Codex app-server turns', as
   expect(adapterSendMessage).toHaveBeenCalledWith(expect.objectContaining({
     workspaceContext: expect.objectContaining({
       agentControl: expect.objectContaining({
-        capabilities: expect.not.arrayContaining(['virtualFolders.write']),
-        cliPath: path.join(mockedAppRoot, 'scripts', 'agent-control', 'foliole-agent.mjs'),
-        descriptorEnvVar: 'FOLIOLE_AGENT_DESCRIPTOR',
-        descriptorPath: path.join(mockedAppDataDir, 'cache', 'agent-control-session.json'),
-        endpoint: expect.stringMatching(/^http:\/\/127\.0\.0\.1:\d+$/),
-        state: 'running',
-        tracePath: path.join(mockedAppDataDir, 'cache', 'agent-control-mcp-trace.jsonl')
+        capabilities: expect.arrayContaining([
+          'materials.create', 'materials.move', 'materials.restore', 'virtualFolders.update'
+        ]),
+        state: 'running'
       }),
       scope: 'workspace'
     })

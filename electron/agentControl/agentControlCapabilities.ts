@@ -2,19 +2,9 @@ import type { AgentControlCapability, AgentControlCapabilityStatus } from './age
 import { AGENT_CONTROL_CAPABILITIES } from './agentControlTypes.js';
 
 export function isCapabilityEnabled(name: AgentControlCapability): AgentControlCapabilityStatus['enabled'] {
-  return name === 'materials.read' ||
-    name === 'materials.search' ||
-    name === 'materials.listChildren' ||
-    name === 'materials.update' ||
-    name === 'materials.deleteSoft' ||
-    name === 'virtualFolders.list' ||
-    name === 'virtualFolders.read' ||
-    name === 'virtualFolders.create' ||
-    name === 'virtualFolders.addItems' ||
-    name === 'virtualFolders.removeItems' ||
-    name === 'virtualFolders.reorder';
+  return AGENT_CONTROL_CAPABILITIES.includes(name);
 }
 
 export function getEnabledAgentControlCapabilities(): AgentControlCapability[] {
-  return AGENT_CONTROL_CAPABILITIES.filter(isCapabilityEnabled);
+  return [...AGENT_CONTROL_CAPABILITIES];
 }

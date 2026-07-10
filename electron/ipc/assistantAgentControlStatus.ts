@@ -8,25 +8,21 @@ import { ensureAgentControlApiServer } from '../agentControl/agentControlServer.
 import { resolveAssistantAgentControlContext } from './assistantAgentControlContext.js';
 
 export async function ensureAssistantAgentControlContext(
-  env: NodeJS.ProcessEnv,
-  appVersion: string,
-  appRoot?: string
+  appVersion: string
 ) {
-  const current = resolveAssistantAgentControlContext(env, appRoot);
+  const current = resolveAssistantAgentControlContext();
   if (current.state === 'running') return current;
   await ensureAgentControlApiServer({ appVersion });
-  return resolveAssistantAgentControlContext(env, appRoot);
+  return resolveAssistantAgentControlContext();
 }
 
 export async function loadAssistantAgentControlContext(
-  env: NodeJS.ProcessEnv,
-  appVersion: string,
-  appRoot?: string
+  appVersion: string
 ) {
   try {
-    return await ensureAssistantAgentControlContext(env, appVersion, appRoot);
+    return await ensureAssistantAgentControlContext(appVersion);
   } catch {
-    return resolveAssistantAgentControlContext(env, appRoot);
+    return resolveAssistantAgentControlContext();
   }
 }
 

@@ -13,7 +13,7 @@ const screenshotPath = path.join(
 );
 const selectedThreadNotice = /(this panel shows new messages from this app session|这个面板会显示本次应用会话的新消息)/;
 const assistantReadyStatus = {
-  agentControl: { state: 'running', trace: { count: 0 } },
+  agentControl: { capabilities: ['materials.read'], state: 'running' },
   capabilities: [
     { enabled: true, name: 'status' },
     { enabled: true, name: 'sendMessage' },
@@ -103,7 +103,7 @@ test('Aide panel shows the Foliole tools startup failure detail', async ({ deskt
   await desktopWindow.reload();
   await installAssistantIpcMock(desktopApp, { status: {
     ...assistantReadyStatus,
-    agentControl: { lastError: 'listen EADDRINUSE 127.0.0.1:5000', state: 'failed', trace: { count: 0 } },
+    agentControl: { capabilities: [], lastError: 'listen EADDRINUSE 127.0.0.1:5000', state: 'failed' },
     capabilities: assistantReadyStatus.capabilities.map((capability) =>
       capability.name === 'agentControl' || capability.name === 'sendMessage' ? { ...capability, enabled: false } : capability
     ),

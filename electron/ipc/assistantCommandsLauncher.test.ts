@@ -83,3 +83,18 @@ it('preserves an explicit Codex home from the parent environment', async () => {
     })
   });
 });
+
+it('prepends the stable Foliole command for Aide', async () => {
+  process.env.PATH = 'C:\\Windows\\System32';
+
+  await handleAssistantCommand(NATIVE_COMMANDS.assistantGetStatus, {});
+
+  expect(adapterOptions[0]).toMatchObject({
+    env: expect.objectContaining({
+      PATH: expect.stringMatching(/scripts[\\/]agent-control/)
+    })
+  });
+  expect((adapterOptions[0] as { env: NodeJS.ProcessEnv }).env.PATH?.endsWith(
+    `${path.delimiter}C:\\Windows\\System32`
+  )).toBe(true);
+});

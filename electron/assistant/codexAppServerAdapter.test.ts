@@ -37,8 +37,6 @@ function createAdapter(process: FakeCodexProcess) {
           activeTitle: 'Topic',
           agentControl: {
             capabilities: ['materials.read', 'materials.search'],
-            descriptorEnvVar: 'FOLIOLE_AGENT_DESCRIPTOR',
-            descriptorPath: 'C:\\Foliole\\agent-control.json',
             state: 'running'
           },
           document: { bodyStatus: 'ready', charCount: 11, preview: 'Loaded body', truncated: false },
@@ -69,8 +67,8 @@ function createAdapter(process: FakeCodexProcess) {
     expect(seenInputs[0]).toContain('Active path: Parent / Topic');
     expect(seenInputs[0]).toContain('Active Foliole document body status: ready, 11 chars.');
     expect(seenInputs[0]).toContain('Active Foliole material id: topic-1');
-    expect(seenInputs[0]).toContain('foliole_materials_read');
-    expect(seenInputs[0]).toContain('Use foliole_materials_read with the active material id');
+    expect(seenInputs[0]).toContain('read a Topic or Folder');
+    expect(seenInputs[0]).toContain('read the active Foliole item');
     expect(seenInputs[0]).toContain('User message:\nSummarize');
     expect(process.kill).not.toHaveBeenCalled();
     adapter.dispose();

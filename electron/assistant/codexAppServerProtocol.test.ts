@@ -4,7 +4,7 @@ import { expect, it } from 'vitest';
 
 import { composeAssistantTurnInput } from './codexAppServerProtocol.js';
 
-it('formats Agent Control API availability as on-demand context access', () => {
+it('formats complete Foliole actions without exposing implementation details', () => {
   const input = composeAssistantTurnInput('Find notes about embeddings', {
     agentControl: {
       capabilities: [
@@ -14,53 +14,29 @@ it('formats Agent Control API availability as on-demand context access', () => {
         'materials.update',
         'virtualFolders.list',
         'virtualFolders.read',
-        'virtualFolders.create'
+        'virtualFolders.create',
+        'materials.create',
+        'materials.move',
+        'materials.restore',
+        'virtualFolders.update',
+        'virtualFolders.deleteSoft'
       ],
-      cliPath: 'C:\\Foliole\\resources\\scripts\\agent-control\\foliole-agent.mjs',
-      descriptorEnvVar: 'FOLIOLE_AGENT_DESCRIPTOR',
-      descriptorPath: 'C:\\Foliole\\cache\\agent-control-session.json',
-      endpoint: 'http://127.0.0.1:3841',
-      state: 'running',
-      tracePath: 'C:\\Foliole\\cache\\agent-control-mcp-trace.jsonl'
+      state: 'running'
     },
     activeParentNodeId: 'workspace-parent',
     schemaVersion: 1,
     scope: 'workspace'
   });
 
-  expect(input).toContain('Local Agent Control API state: running');
-  expect(input).toContain('Agent Control enabled capabilities: materials.read, materials.search, materials.listChildren, materials.update, virtualFolders.list, virtualFolders.read, virtualFolders.create');
-  expect(input).toContain('Agent Control descriptor env var: FOLIOLE_AGENT_DESCRIPTOR');
-  expect(input).toContain('Agent Control CLI path: C:\\Foliole\\resources\\scripts\\agent-control\\foliole-agent.mjs');
-  expect(input).toContain('Agent Control MCP trace path: C:\\Foliole\\cache\\agent-control-mcp-trace.jsonl');
+  expect(input).toContain('Foliole tools are available through the self-describing `foliole` command');
   expect(input).toContain('Active Foliole parent material id: workspace-parent');
-  expect(input).toContain('foliole_materials_read');
-  expect(input).toContain('foliole_materials_search');
-  expect(input).toContain('foliole_materials_list_children');
-  expect(input).toContain('use parent.id/title/kind/special_kind/parent_titles');
-  expect(input).toContain('foliole_virtual_folders_list');
-  expect(input).toContain('foliole_virtual_folders_read');
-  expect(input).toContain('MCP exposes only discovery and read tools');
-  expect(input).toContain('enabled write capabilities in the descriptor do not mean write tools are available through MCP');
-  expect(input).toContain('read-only MCP tools cannot update, delete, or create Foliole materials');
-  expect(input).toContain('MCP tool calls are recorded in the local trace path for diagnostics');
-  expect(input).toContain('Descriptor write routes such as materials/update');
-  expect(input).toContain('node C:\\Foliole\\resources\\scripts\\agent-control\\foliole-agent.mjs <route>');
-  expect(input).toContain('backup_path for recovery evidence');
-  expect(input).toContain('If the local CLI entrypoint is unavailable');
-  expect(input).toContain('list top-level materials');
-  expect(input).toContain('curated material sets');
-  expect(input).toContain('parent_titles for node path disambiguation');
-  expect(input).toContain('anchor_kind/special_kind material identity');
-  expect(input).toContain('Treat anchor_kind=highlight/cloze as derived Topic identity');
-  expect(input).toContain('special_kind as Home/Inbox/Trash/Virtual entry identity');
-  expect(input).toContain('source.readable_material_id');
-  expect(input).toContain('direct child summaries');
-  expect(input).toContain('returned parent_id');
-  expect(input).toContain('active parent material id');
-  expect(input).toContain('search first, compare parent_titles, then read');
-  expect(input).toContain('Use foliole_materials_read with the active material id');
-  expect(input).toContain('Do not call Agent Control write routes');
+  expect(input).toContain('create a Topic or Folder');
+  expect(input).toContain('move a Topic or Folder');
+  expect(input).toContain('move materials to trash or restore them');
+  expect(input).toContain('Change Foliole data only when the user explicitly requests');
+  for (const leak of ['Agent Control', 'MCP', 'FOLIOLE_AGENT_DESCRIPTOR', 'foliole-agent', '127.0.0.1']) {
+    expect(input).not.toContain(leak);
+  }
 });
 
 it('formats a stopped Agent Control context without claiming unread content access', () => {
@@ -73,41 +49,28 @@ it('formats a stopped Agent Control context without claiming unread content acce
         'virtualFolders.list',
         'virtualFolders.read'
       ],
-      descriptorEnvVar: 'FOLIOLE_AGENT_DESCRIPTOR',
-      descriptorPath: 'C:\\Foliole\\cache\\agent-control-session.json',
       state: 'stopped'
     },
     schemaVersion: 1,
     scope: 'workspace'
   });
 
-  expect(input).toContain('Local Agent Control API state: stopped');
-  expect(input).toContain('Agent Control is not running for this turn');
-  expect(input).not.toContain('search first, compare parent_titles');
-  expect(input).not.toContain('Use foliole_materials_read with the active material id');
-  expect(input).not.toContain('list top-level materials');
+  expect(input).toContain('Foliole tools are unavailable for this turn');
+  expect(input).not.toContain('Available Foliole actions');
 });
 
 it('formats missing Agent Control read/search capabilities as unavailable', () => {
   const input = composeAssistantTurnInput('Find related notes', {
     agentControl: {
       capabilities: ['foundation.capabilities'],
-      descriptorEnvVar: 'FOLIOLE_AGENT_DESCRIPTOR',
-      descriptorPath: 'C:\\Foliole\\cache\\agent-control-session.json',
       state: 'running'
     },
     schemaVersion: 1,
     scope: 'workspace'
   });
 
-  expect(input).toContain('Agent Control enabled capabilities: foundation.capabilities');
-  expect(input).toContain('materials.read is not enabled');
-  expect(input).toContain('materials.search is not enabled');
-  expect(input).toContain('materials.listChildren is not enabled');
-  expect(input).toContain('virtualFolders.list is not enabled');
-  expect(input).toContain('virtualFolders.read is not enabled');
-  expect(input).not.toContain('source.readable_material_id');
-  expect(input).not.toContain('search first, compare parent_titles');
+  expect(input).toContain('Foliole tools are available through the self-describing `foliole` command');
+  expect(input).not.toContain('Available Foliole actions');
 });
 
 it('formats current editor selection as explicit assistant context', () => {
@@ -166,7 +129,7 @@ it('formats folder children with ids for follow-up Agent Control reads', () => {
   expect(input).toContain('Direct Foliole children: 2 of 2.');
   expect(input).toContain('Child A [topic, id=child-a, anchor=highlight]: Opening text');
   expect(input).toContain('Child B [folder, id=child-b, special=virtual]');
-  expect(input).toContain('use the included direct topics and folders first');
+  expect(input).toContain('use the included direct Topics and Folders first');
   expect(input).toContain('Foliole Aide history is a local global thread index');
   expect(input).toContain('only removes the local Foliole history entry');
 });
@@ -179,8 +142,6 @@ it('formats special folder entries without treating their own id as the preferre
     activeTitle: 'Inbox',
     agentControl: {
       capabilities: ['materials.read', 'materials.search'],
-      descriptorEnvVar: 'FOLIOLE_AGENT_DESCRIPTOR',
-      descriptorPath: 'C:\\Foliole\\cache\\agent-control-session.json',
       state: 'running'
     },
     folder: {
@@ -193,8 +154,7 @@ it('formats special folder entries without treating their own id as the preferre
   });
 
   expect(input).toContain('Active Foliole special entry: inbox');
-  expect(input).toContain('prefer the included direct children or search');
-  expect(input).toContain('use foliole_materials_read on child ids');
+  expect(input).toContain('For a special Folder, use included children first and search');
 });
 
 it('formats active anchors with parent material read guidance', () => {
@@ -204,8 +164,6 @@ it('formats active anchors with parent material read guidance', () => {
     activeTitle: 'Highlight note',
     agentControl: {
       capabilities: ['materials.read'],
-      descriptorEnvVar: 'FOLIOLE_AGENT_DESCRIPTOR',
-      descriptorPath: 'C:\\Foliole\\cache\\agent-control-session.json',
       state: 'running'
     },
     anchor: {
@@ -223,5 +181,5 @@ it('formats active anchors with parent material read guidance', () => {
   expect(input).toContain('Active Foliole anchor: highlight, id=anchor-1');
   expect(input).toContain('Anchor parent material id: parent-1');
   expect(input).toContain('Anchor text:\nImportant highlighted text');
-  expect(input).toContain('use foliole_materials_read with the parent material id');
+  expect(input).toContain('read its parent Topic for source context');
 });

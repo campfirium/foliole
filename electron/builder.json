@@ -31,6 +31,7 @@
     "electron/globalCaptureToastPreload.cjs",
     "dist/electron/**/*",
     "dist/lib/**/*",
+    "dist/scripts/agent-control/foliole-agent-routes.mjs",
     "dist/src/shared/config/**/*",
     "package.json",
     "!dist/electron/**/*.test.js",

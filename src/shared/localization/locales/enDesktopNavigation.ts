@@ -95,9 +95,7 @@ export const EN_DESKTOP_NAVIGATION_TRANSLATIONS = {
   'desktop.rightPanel.assistant.unavailable.notConfigured':
     'Foliole Aide is not configured for the local Codex app yet.',
   'desktop.rightPanel.assistant.diagnostic':
-    'Check result: Codex {codex}; Foliole tools {tools}; tool calls {trace}.',
-  'desktop.rightPanel.assistant.diagnostic.lastTool': 'Last tool: {tool}.',
-  'desktop.rightPanel.assistant.diagnostic.toolError': 'Tool detail: {error}.',
+    'Check result: Codex {codex}; Foliole tools {tools}.',
   'desktop.rightPanel.assistant.diagnostic.codex.authFailed': 'needs sign-in',
   'desktop.rightPanel.assistant.diagnostic.codex.busy': 'is busy',
   'desktop.rightPanel.assistant.diagnostic.codex.launchFailed': 'could not start',
@@ -109,10 +107,6 @@ export const EN_DESKTOP_NAVIGATION_TRANSLATIONS = {
   'desktop.rightPanel.assistant.diagnostic.tools.running': 'running',
   'desktop.rightPanel.assistant.diagnostic.tools.stopped': 'stopped',
   'desktop.rightPanel.assistant.diagnostic.tools.unknown': 'not checked',
-  'desktop.rightPanel.assistant.diagnostic.trace.error': 'ended with an error',
-  'desktop.rightPanel.assistant.diagnostic.trace.missing': 'not recorded yet',
-  'desktop.rightPanel.assistant.diagnostic.trace.none': 'not used yet',
-  'desktop.rightPanel.assistant.diagnostic.trace.ok': 'recorded',
   'desktop.rightPanel.assistant.enable': 'Connect',
   'desktop.rightPanel.assistant.check': 'Connect',
   'desktop.rightPanel.assistant.retry': 'Retry',

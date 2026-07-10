@@ -118,8 +118,7 @@ it('keeps the composer hidden when Foliole tools are not ready', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
 
   expect(await screen.findByText('Foliole Aide is connected to Codex, but Foliole tools are not ready yet.')).toBeInTheDocument();
-  expect(screen.getByText('Check result: Codex is unavailable; Foliole tools failed; tool calls not used yet.')).toBeInTheDocument();
-  expect(screen.getByText('Tool detail: listen EADDRINUSE 127.0.0.1:5000.')).toBeInTheDocument();
+  expect(screen.getByText('Check result: Codex is unavailable; Foliole tools failed.')).toBeInTheDocument();
   expect(screen.queryByLabelText('Foliole Aide message')).not.toBeInTheDocument();
   expect(assistantRuntime.listAssistantThreadIndex).not.toHaveBeenCalled();
 });
@@ -173,15 +172,7 @@ it('requires running Foliole tools even when Codex reports message sending ready
 
 it('shows an auth-specific unavailable reason when Codex rejects the session', async () => {
   assistantRuntime.loadAssistantStatus.mockResolvedValueOnce({
-    agentControl: {
-      ...createAgentControl('running'),
-      trace: {
-        count: 1,
-        lastStatus: 'ok',
-        lastTimestamp: '2026-07-09T01:00:00.000Z',
-        lastTool: 'foliole_materials_read'
-      }
-    },
+    agentControl: createAgentControl('running'),
     capabilities: [
       { enabled: true, name: 'status' },
       { enabled: false, name: 'sendMessage' },
@@ -197,8 +188,7 @@ it('shows an auth-specific unavailable reason when Codex rejects the session', a
   fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
 
   expect(await screen.findByText('Open Codex and sign in, then retry Foliole Aide.')).toBeInTheDocument();
-  expect(screen.getByText('Check result: Codex needs sign-in; Foliole tools running; tool calls recorded.')).toBeInTheDocument();
-  expect(screen.getByText('Last tool: foliole_materials_read.')).toBeInTheDocument();
+  expect(screen.getByText('Check result: Codex needs sign-in; Foliole tools running.')).toBeInTheDocument();
   expect(screen.queryByLabelText('Foliole Aide message')).not.toBeInTheDocument();
 });
 
@@ -243,10 +233,9 @@ function renderPanel() {
 
 function createAgentControl(state: 'failed' | 'running' | 'stopped', lastError?: string) {
   return {
-    capabilities: ['materials.read'], descriptorEnvVar: 'FOLIOLE_AGENT_DESCRIPTOR',
-    descriptorPath: 'C:\\Foliole\\cache\\agent-control-session.json',
+    capabilities: ['materials.read'],
     ...(lastError ? { lastError } : {}),
-    state, trace: { count: 0 }
+    state
   };
 }
 

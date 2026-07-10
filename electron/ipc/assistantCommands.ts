@@ -20,11 +20,6 @@ import {
   listAssistantThreadMessages
 } from '../database/assistantThreadMessages.js';
 
-import {
-  resolveAssistantAgentDescriptorPath,
-  resolveAssistantAgentControlTracePath,
-  resolveAssistantAppServerArgs
-} from './assistantAgentControlContext.js';
 import { loadAssistantAgentControlContext, mergeAssistantStatusWithAgentControl } from './assistantAgentControlStatus.js';
 import {
   readOpeningLocation,
@@ -32,6 +27,7 @@ import {
   readOptionalProviderThreadId,
   readProviderThreadId
 } from './assistantCommandInputs.js';
+import { resolveAssistantLauncherEnv } from './assistantLauncherEnvironment.js';
 import { recordAssistantThreadSuccess } from './assistantThreadPersistence.js';
 import { readOptionalWorkspaceContext } from './assistantWorkspaceContextReader.js';
 
@@ -42,10 +38,10 @@ const ASSISTANT_WORKDIR_DIRNAME = 'Foliole Aide';
 const LEGACY_ASSISTANT_DELETE_THREAD_INDEX_COMMAND = 'assistant_delete_thread_index';
 
 function getAdapter() {
+  const scriptRoot = resolveAssistantAgentControlScriptRoot();
   adapter ??= new CodexAppServerAdapter({
-    appServerArgs: resolveAssistantAppServerArgs(process.env, resolveAssistantAgentControlScriptRoot()),
     appVersion: resolveFolioleAppVersion(app),
-    env: resolveAssistantLauncherEnv(process.env),
+    env: resolveAssistantLauncherEnv(process.env, scriptRoot),
     launcherCwd: resolveAssistantLauncherCwd(app.getPath('userData'), process.env)
   });
   return adapter;
@@ -59,21 +55,6 @@ function resolveAssistantAgentControlScriptRoot() {
 export function resolveAssistantLauncherCwd(userDataPath: string, env: NodeJS.ProcessEnv) {
   const libraryHome = env.FOLIOLE_LIBRARY_HOME?.trim();
   return path.join(libraryHome || userDataPath, ASSISTANT_WIDGETS_DIRNAME, ASSISTANT_WORKDIR_DIRNAME);
-}
-
-export function resolveAssistantLauncherEnv(env: NodeJS.ProcessEnv) {
-  const userProfile = env.USERPROFILE?.trim();
-  const next: NodeJS.ProcessEnv = {
-    ...env,
-    FOLIOLE_AGENT_DESCRIPTOR: resolveAssistantAgentDescriptorPath(env),
-    FOLIOLE_AGENT_MCP_TRACE_PATH: resolveAssistantAgentControlTracePath(env)
-  };
-  if (next.CODEX_HOME?.trim()) return next;
-  if (!userProfile) return next;
-  return {
-    ...next,
-    CODEX_HOME: path.join(userProfile, '.codex')
-  };
 }
 
 export async function handleAssistantCommand(
@@ -109,11 +90,7 @@ export async function handleAssistantCommand(
 
 async function getAssistantStatus() {
   const status = await getAdapter().getStatus();
-  const agentControl = await loadAssistantAgentControlContext(
-    process.env,
-    resolveFolioleAppVersion(app),
-    resolveAssistantAgentControlScriptRoot()
-  );
+  const agentControl = await loadAssistantAgentControlContext(resolveFolioleAppVersion(app));
   return mergeAssistantStatusWithAgentControl(status, agentControl);
 }
 
@@ -143,12 +120,7 @@ async function sendMessage(args: Record<string, unknown>, sender?: WebContents) 
   if (!isThreadLocationAllowed(providerThreadId, openingLocation)) {
     return assistantProtocolFailure();
   }
-  const scriptRoot = resolveAssistantAgentControlScriptRoot();
-  const agentControl = await loadAssistantAgentControlContext(
-    process.env,
-    resolveFolioleAppVersion(app),
-    scriptRoot
-  );
+  const agentControl = await loadAssistantAgentControlContext(resolveFolioleAppVersion(app));
   let result: Awaited<ReturnType<CodexAppServerAdapter['sendMessage']>>;
   try {
     result = await getAdapter().sendMessage({

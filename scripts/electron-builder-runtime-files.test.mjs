@@ -20,4 +20,14 @@ describe('electron-builder runtime file coverage', () => {
 
     expect(config.files).toContain('dist/src/shared/config/**/*');
   });
+
+  it('packages the Agent Control registry for both Electron and the public CLI', async () => {
+    const config = await readBuilderConfig();
+
+    expect(config.files).toContain('dist/scripts/agent-control/foliole-agent-routes.mjs');
+    expect(config.extraResources).toContainEqual({
+      from: 'scripts/agent-control',
+      to: 'scripts/agent-control'
+    });
+  });
 });

@@ -8,12 +8,13 @@
     "exactOptionalPropertyTypes": true,
     "noUncheckedIndexedAccess": true,
     "esModuleInterop": true,
+    "allowJs": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "outDir": "../dist",
     "rootDir": "..",
     "types": ["node"]
   },
-  "include": ["./**/*.ts", "../lib/**/*.ts"],
+  "include": ["./**/*.ts", "../lib/**/*.ts", "../scripts/agent-control/foliole-agent-routes.mjs"],
   "exclude": ["../lib/core/database/androidCompanion*.ts"]
 }

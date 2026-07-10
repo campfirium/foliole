@@ -127,11 +127,11 @@ export function composeAssistantTurnInput(
     ...formatFolderContext(context),
     ...formatParentFolderContext(context),
     '- Do not answer location questions from the process working directory unless the user explicitly asks about the development repository.',
-    '- When the user asks what you know, can see, or have as context, summarize the concrete fields in this context packet and the available Agent Control read tools instead of giving only the path.',
+    '- When the user asks what you know, can see, or have as context, summarize the concrete fields in this context packet and the available Foliole actions instead of giving only the path.',
     '- Foliole Aide history is a local global thread index; it is not split by the currently opened folder or topic.',
     '- Removing a thread from Foliole Aide history only removes the local Foliole history entry; do not claim it deletes the Codex conversation unless a separate Codex-side deletion is explicitly available and requested.',
-    '- Answer from the Foliole facts included above and from explicit Agent Control API results you obtain during this turn.',
-    '- If you need content, folders, or search results that were not included, use the Agent Control API when it is available; otherwise say they were not provided.',
+    '- Answer from the Foliole facts included above and from explicit Foliole action results you obtain during this turn.',
+    '- When needed content, Folders, or search results were not included, use the available Foliole actions; otherwise say they were not provided.',
     '',
     'User message:',
     message
@@ -155,7 +155,7 @@ function formatWorkspaceScopeGuidance(context: NativeAssistantWorkspaceContext) 
     if (context.scope === 'workspace') {
       lines.push('- The included direct topics and folders are workspace-level top-level Foliole materials.');
     }
-    lines.push('- For folder questions, use the included direct topics and folders first; if the list is truncated or details are needed, use Agent Control child listing or reads when available.');
+    lines.push('- For Folder questions, use the included direct Topics and Folders first; when the list is truncated or details are needed, use the available Foliole actions.');
   }
   if (context.parentFolder) {
     lines.push('- The included parent-folder entries are the active material directory siblings; use them for nearby-material questions before broad search.');

@@ -51,10 +51,7 @@ export function createReadyAssistantStatus(
   return {
     agentControl: {
       capabilities: ['materials.read'],
-      descriptorEnvVar: 'FOLIOLE_AGENT_DESCRIPTOR',
-      descriptorPath: 'C:\\Foliole\\cache\\agent-control-session.json',
       state: 'running',
-      trace: { count: 0 }
     },
     capabilities: [
       { enabled: true, name: 'status' },

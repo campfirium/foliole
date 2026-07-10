@@ -3,7 +3,7 @@ import type { ElectronApplication, Page } from '@playwright/test';
 import { expect, test } from './harness/fixtures';
 
 const readyStatus = {
-  agentControl: { state: 'running', trace: { count: 0 } },
+  agentControl: { capabilities: ['materials.read'], state: 'running' },
   capabilities: [
     { enabled: true, name: 'status' },
     { enabled: true, name: 'sendMessage' },

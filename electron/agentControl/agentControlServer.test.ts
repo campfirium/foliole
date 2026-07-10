@@ -56,17 +56,7 @@ function expectRuntimeIdentity(value: unknown) {
 }
 function expectedCapabilityStatuses() {
   return AGENT_CONTROL_CAPABILITIES.map((name) => ({
-    enabled: name === 'materials.read' ||
-      name === 'materials.search' ||
-      name === 'materials.listChildren' ||
-      name === 'materials.update' ||
-      name === 'materials.deleteSoft' ||
-      name === 'virtualFolders.list' ||
-      name === 'virtualFolders.read' ||
-      name === 'virtualFolders.create' ||
-      name === 'virtualFolders.addItems' ||
-      name === 'virtualFolders.removeItems' ||
-      name === 'virtualFolders.reorder',
+    enabled: true,
     name
   }));
 }

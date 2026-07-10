@@ -4,7 +4,6 @@ import readline from 'node:readline';
 
 export function createOnlineSmokeJsonRpcSession(child, timeoutMs) {
   const pending = new Map();
-  const pendingTools = new Map();
   let assistantText = '';
   let turnComplete;
   let stderr = '';
@@ -32,11 +31,6 @@ export function createOnlineSmokeJsonRpcSession(child, timeoutMs) {
       else item.resolve(message);
       return;
     }
-    trackToolCall(message, pendingTools);
-    if (message.method === 'mcpServer/elicitation/request' && message.id !== undefined) {
-      child.stdin.write(`${JSON.stringify(createElicitationResponse(message, pendingTools))}\n`);
-      return;
-    }
     if (message.method === 'item/agentMessage/delta') {
       assistantText += message.params?.delta ?? message.params?.text ?? '';
     }
@@ -60,30 +54,4 @@ export function createOnlineSmokeJsonRpcSession(child, timeoutMs) {
       }).finally(() => clearTimeout(timeout));
     }
   };
-}
-
-function trackToolCall(message, pendingTools) {
-  if (message.method !== 'item/started' || message.params?.item?.type !== 'mcpToolCall') return;
-  const { server, tool } = message.params.item;
-  const key = turnKey(message.params);
-  if (server === 'foliole_agent_control' && typeof tool === 'string' && key) pendingTools.set(key, tool);
-}
-
-function createElicitationResponse(message, pendingTools) {
-  const key = turnKey(message.params);
-  const tool = key ? pendingTools.get(key) : null;
-  const accept = message.params?.serverName === 'foliole_agent_control' &&
-    message.params?.mode === 'form' &&
-    tool === 'foliole_materials_read';
-  return {
-    id: message.id,
-    jsonrpc: '2.0',
-    result: accept ? { action: 'accept', content: {} } : { action: 'decline', content: null }
-  };
-}
-
-function turnKey(params) {
-  return typeof params?.threadId === 'string' && typeof params?.turnId === 'string'
-    ? `${params.threadId}:${params.turnId}`
-    : null;
 }

@@ -9,30 +9,27 @@ const EXPECTED_DESCRIPTOR_CAPABILITIES = [
   'materials.read',
   'materials.search',
   'materials.listChildren',
+  'materials.create',
+  'materials.move',
+  'materials.reorder',
+  'materials.restore',
   'virtualFolders.list',
   'virtualFolders.read',
   'virtualFolders.create',
   'virtualFolders.addItems',
   'virtualFolders.removeItems',
   'virtualFolders.reorder',
+  'virtualFolders.update',
+  'virtualFolders.deleteSoft',
+  'virtualFolders.restore',
   'materials.update',
   'materials.deleteSoft'
 ];
 
-const EXPECTED_CAPABILITY_STATUSES = [
-  { enabled: true, name: 'materials.read' },
-  { enabled: true, name: 'materials.search' },
-  { enabled: true, name: 'materials.listChildren' },
-  { enabled: true, name: 'virtualFolders.list' },
-  { enabled: true, name: 'virtualFolders.read' },
-  { enabled: true, name: 'virtualFolders.create' },
-  { enabled: true, name: 'virtualFolders.addItems' },
-  { enabled: true, name: 'virtualFolders.removeItems' },
-  { enabled: true, name: 'virtualFolders.reorder' },
-  { enabled: false, name: 'virtualFolders.write' },
-  { enabled: true, name: 'materials.update' },
-  { enabled: true, name: 'materials.deleteSoft' }
-];
+const EXPECTED_CAPABILITY_STATUSES = EXPECTED_DESCRIPTOR_CAPABILITIES.map((name) => ({
+  enabled: true,
+  name
+}));
 
 async function readJson(filePath: string) {
   return JSON.parse(await fs.readFile(filePath, 'utf8')) as Record<string, unknown>;

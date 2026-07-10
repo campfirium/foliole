@@ -21,6 +21,7 @@ export function areWorkspaceListAreaPropsEqual(
     isVirtualViewOpen: previous.isVirtualViewOpen !== next.isVirtualViewOpen,
     isWorkspaceHydrated: previous.isWorkspaceHydrated !== next.isWorkspaceHydrated,
     listNodesById: previous.listNodesById !== next.listNodesById,
+    manualVirtualCollections: previous.manualVirtualCollections !== next.manualVirtualCollections,
     nodeOrder: previous.nodeOrder !== next.nodeOrder,
     reviewCurrentNodeId: previous.reviewCurrentNodeId !== next.reviewCurrentNodeId,
     selectedTrashNodeId: previous.selectedTrashNodeId !== next.selectedTrashNodeId,

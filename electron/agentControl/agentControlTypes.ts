@@ -1,21 +1,13 @@
+import { AGENT_CONTROL_PRODUCT_CAPABILITIES } from '../../scripts/agent-control/foliole-agent-routes.mjs';
+
 export const AGENT_CONTROL_PROTOCOL_VERSION = 1;
 
-export const AGENT_CONTROL_CAPABILITIES = [
-  'materials.read',
-  'materials.search',
-  'materials.listChildren',
-  'virtualFolders.list',
-  'virtualFolders.read',
-  'virtualFolders.create',
-  'virtualFolders.addItems',
-  'virtualFolders.removeItems',
-  'virtualFolders.reorder',
-  'virtualFolders.write',
-  'materials.update',
-  'materials.deleteSoft'
-] as const;
+export const AGENT_CONTROL_CAPABILITIES = AGENT_CONTROL_PRODUCT_CAPABILITIES;
 
-export type AgentControlCapability = (typeof AGENT_CONTROL_CAPABILITIES)[number];
+type RegisteredAgentControlCapability = (typeof AGENT_CONTROL_CAPABILITIES)[number];
+export type AgentControlCapability = string extends RegisteredAgentControlCapability
+  ? never
+  : RegisteredAgentControlCapability;
 
 export type AgentControlAuditResult = 'auth_failed' | 'failed' | 'success';
 

@@ -117,24 +117,9 @@ function FolioleAideDiagnosticText(props: {
       <p className="m-0 mt-2 max-w-[16rem] text-ui-xs leading-5 text-foreground/45">
         {t('desktop.rightPanel.assistant.diagnostic', {
           codex: t(getCodexDiagnosticKey(props.diagnostic.codex)),
-          trace: t(getTraceDiagnosticKey(props.diagnostic.trace)),
           tools: t(getToolsDiagnosticKey(props.diagnostic.tools))
         })}
       </p>
-      {props.diagnostic.traceTool ? (
-        <p className="m-0 mt-1 max-w-[16rem] break-words text-ui-xs leading-5 text-foreground/42">
-          {t('desktop.rightPanel.assistant.diagnostic.lastTool', {
-            tool: props.diagnostic.traceTool
-          })}
-        </p>
-      ) : null}
-      {props.diagnostic.toolError ? (
-        <p className="m-0 mt-1 max-w-[16rem] break-words text-ui-xs leading-5 text-foreground/42">
-          {t('desktop.rightPanel.assistant.diagnostic.toolError', {
-            error: props.diagnostic.toolError
-          })}
-        </p>
-      ) : null}
     </>
   );
 }
@@ -154,13 +139,6 @@ function getToolsDiagnosticKey(state: FolioleAideCapabilityDiagnostic['tools']) 
   if (state === 'running') return 'desktop.rightPanel.assistant.diagnostic.tools.running';
   if (state === 'stopped') return 'desktop.rightPanel.assistant.diagnostic.tools.stopped';
   return 'desktop.rightPanel.assistant.diagnostic.tools.unknown';
-}
-
-function getTraceDiagnosticKey(state: FolioleAideCapabilityDiagnostic['trace']) {
-  if (state === 'error') return 'desktop.rightPanel.assistant.diagnostic.trace.error';
-  if (state === 'none') return 'desktop.rightPanel.assistant.diagnostic.trace.none';
-  if (state === 'ok') return 'desktop.rightPanel.assistant.diagnostic.trace.ok';
-  return 'desktop.rightPanel.assistant.diagnostic.trace.missing';
 }
 
 function getCapabilityStatusKey(

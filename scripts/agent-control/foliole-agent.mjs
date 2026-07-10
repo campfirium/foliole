@@ -5,30 +5,16 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { readAgentTrace } from './foliole-agent-trace.mjs';
+import { buildAgentCliBody } from './foliole-agent-arguments.mjs';
+import { AGENT_CLI_ROUTES as ROUTES, createAgentCliHelp } from './foliole-agent-routes.mjs';
 import { writeAgentBackup } from './foliole-agent-write-backup.mjs';
 
 const JSON_HEADERS = { 'content-type': 'application/json' };
-const ROUTES = {
-  capabilities: { method: 'GET', path: 'capabilities' },
-  health: { auth: false, method: 'GET', path: 'health' },
-  'materials/delete-soft': { capability: 'materials.deleteSoft', method: 'POST', path: 'materials/delete-soft', writeKind: 'material' },
-  'materials/list-children': { capability: 'materials.listChildren', method: 'POST', path: 'materials/list-children' },
-  'materials/read': { capability: 'materials.read', method: 'POST', path: 'materials/read' },
-  'materials/search': { capability: 'materials.search', method: 'POST', path: 'materials/search' },
-  'materials/update': { capability: 'materials.update', method: 'POST', path: 'materials/update', writeKind: 'material' },
-  'virtual-folders/add-items': { capability: 'virtualFolders.addItems', method: 'POST', path: 'virtual-folders/add-items', writeKind: 'virtual_folder' },
-  'virtual-folders/create': { capability: 'virtualFolders.create', method: 'POST', path: 'virtual-folders/create', writeKind: 'virtual_folder' },
-  'virtual-folders/list': { capability: 'virtualFolders.list', method: 'POST', path: 'virtual-folders/list' },
-  'virtual-folders/read': { capability: 'virtualFolders.read', method: 'POST', path: 'virtual-folders/read' },
-  'virtual-folders/remove-items': { capability: 'virtualFolders.removeItems', method: 'POST', path: 'virtual-folders/remove-items', writeKind: 'virtual_folder' },
-  'virtual-folders/reorder': { capability: 'virtualFolders.reorder', method: 'POST', path: 'virtual-folders/reorder', writeKind: 'virtual_folder' }
-};
 
 export async function runAgentCli(argv, options = {}) {
+  if (argv[0] === 'help') return runHelp(argv);
   const parsed = parseArgv(argv);
   if (!parsed.ok) return failure(parsed.error, parsed.statusCode);
-  if (parsed.command === 'trace/read') return readAgentTrace(parsed.flags, options);
   const route = ROUTES[parsed.command];
   if (!route) return failure('unknown_command', 2);
   const descriptorResult = await readDescriptor(parsed.flags.descriptor, options);
@@ -37,7 +23,7 @@ export async function runAgentCli(argv, options = {}) {
   if (route.capability && !descriptor.capabilities?.includes(route.capability)) {
     return failure('capability_disabled', 3);
   }
-  const bodyResult = buildBody(parsed.command, parsed.flags);
+  const bodyResult = buildAgentCliBody(parsed.command, parsed.flags);
   if (!bodyResult.ok) return failure(bodyResult.error, bodyResult.statusCode);
   if (parsed.command === 'virtual-folders/reorder' && bodyResult.body.material_ids) {
     return runVirtualFolderReorderByMaterialIds(bodyResult.body, descriptor, parsed.flags, options);
@@ -45,6 +31,12 @@ export async function runAgentCli(argv, options = {}) {
   if (route.writeKind === 'material') return runMaterialWriteCommand(parsed.command, bodyResult.body, descriptor, parsed.flags, options);
   if (route.writeKind === 'virtual_folder') return runVirtualFolderWriteCommand(parsed.command, bodyResult.body, descriptor, parsed.flags, options);
   return callApi(route, descriptor, bodyResult.body, options);
+}
+
+function runHelp(argv) {
+  return argv.length === 2 && argv[1] === '--json'
+    ? { output: createAgentCliHelp(), status: 0 }
+    : failure('invalid_help_arguments', 2);
 }
 
 function parseArgv(argv) {
@@ -87,53 +79,6 @@ function isDescriptor(value) {
     typeof value.token === 'string' && Array.isArray(value.capabilities));
 }
 
-function buildBody(command, flags) {
-  if (command === 'health' || command === 'capabilities') return { body: null, ok: true };
-  if (command === 'materials/list-children') return requireFields(flags, [], ['parent_id', 'limit']);
-  if (command === 'materials/read') return requireFields(flags, ['id']);
-  if (command === 'materials/search') return requireFields(flags, ['query'], ['limit']);
-  if (command === 'materials/update') return buildUpdateBody(flags);
-  if (command === 'materials/delete-soft') return requireFields(flags, ['id'], ['expected_updated_at']);
-  if (command === 'virtual-folders/list') return requireFields(flags, [], ['limit']);
-  if (command === 'virtual-folders/read') return requireFields(flags, ['id'], ['limit']);
-  if (command === 'virtual-folders/create') return requireFields(flags, ['title'], ['description']);
-  if (command === 'virtual-folders/reorder') return buildVirtualFolderReorderBody(flags);
-  return requireFields(flags, ['folder_id'], command.endsWith('add-items') ? ['material_ids'] : ['item_ids']);
-}
-
-function buildVirtualFolderReorderBody(flags) {
-  const base = requireFields(flags, ['folder_id']);
-  if (!base.ok) return base;
-  if (flags.item_ids) return { body: { ...base.body, item_ids: normalizeFieldValue('item_ids', flags.item_ids) }, ok: true };
-  if (flags.material_ids) return { body: { ...base.body, material_ids: normalizeFieldValue('material_ids', flags.material_ids) }, ok: true };
-  return { error: 'missing_item_ids', ok: false, statusCode: 2 };
-}
-
-function requireFields(flags, required, optional = []) {
-  const body = {};
-  for (const field of required) {
-    if (!flags[field]) return { error: `missing_${field}`, ok: false, statusCode: 2 };
-    body[field] = flags[field];
-  }
-  for (const field of optional) {
-    if (flags[field]) body[field] = normalizeFieldValue(field, flags[field]);
-  }
-  return { body, ok: true };
-}
-
-function buildUpdateBody(flags) {
-  const base = requireFields(flags, ['id', 'expected_updated_at']);
-  if (!base.ok) return base;
-  if (!flags.title && !Object.hasOwn(flags, 'content')) return { error: 'missing_patch', ok: false, statusCode: 2 };
-  return { body: { ...base.body, ...(flags.title ? { title: flags.title } : {}), ...(Object.hasOwn(flags, 'content') ? { content: flags.content } : {}) }, ok: true };
-}
-
-function normalizeFieldValue(field, value) {
-  if (field === 'limit') return Number(value);
-  if (field === 'item_ids' || field === 'material_ids') return value.split(',').map((item) => item.trim()).filter(Boolean);
-  return value;
-}
-
 async function runVirtualFolderReorderByMaterialIds(body, descriptor, flags, options) {
   const read = await callApi(ROUTES['virtual-folders/read'], descriptor, { id: body.folder_id }, options);
   if (read.status !== 0) return read;
@@ -159,6 +104,22 @@ function resolveReorderItemIds(items, materialIds) {
 }
 
 async function runMaterialWriteCommand(command, body, descriptor, flags, options) {
+  if (command === 'materials/create') {
+    const backup = await writeBackup(command, 'material', 'new', null, body, flags, options);
+    if (!backup.ok) return failure(backup.error, 4);
+    const result = await callApi(ROUTES[command], descriptor, body, options);
+    return { ...result, output: { ...result.output, backup_path: backup.path } };
+  }
+  if (command === 'materials/reorder') {
+    if (!descriptor.capabilities?.includes('materials.listChildren')) return failure('backup_capability_disabled', 3);
+    const previous = await callApi(ROUTES['materials/list-children'], descriptor, { parent_id: body.parent_id }, options);
+    if (previous.status !== 0) return previous;
+    const targetId = body.parent_id ?? 'root';
+    const backup = await writeBackup(command, 'material', targetId, previous.output, body, flags, options);
+    if (!backup.ok) return failure(backup.error, 4);
+    const result = await callApi(ROUTES[command], descriptor, body, options);
+    return { ...result, output: { ...result.output, backup_path: backup.path } };
+  }
   if (!descriptor.capabilities?.includes('materials.read')) {
     return failure('backup_capability_disabled', 3);
   }
@@ -183,11 +144,17 @@ function buildMaterialMutationBody(command, body, material) {
 }
 
 async function runVirtualFolderWriteCommand(command, body, descriptor, flags, options) {
-  const folderId = body.folder_id ?? 'new';
-  if (body.folder_id && !descriptor.capabilities?.includes('virtualFolders.read')) {
+  const folderId = body.folder_id ?? body.id ?? 'new';
+  if (command === 'virtual-folders/restore') {
+    const backup = await writeBackup(command, 'virtual_folder', body.id, null, body, flags, options);
+    if (!backup.ok) return failure(backup.error, 4);
+    const result = await callApi(ROUTES[command], descriptor, body, options);
+    return { ...result, output: { ...result.output, backup_path: backup.path } };
+  }
+  if (folderId !== 'new' && !descriptor.capabilities?.includes('virtualFolders.read')) {
     return failure('backup_capability_disabled', 3);
   }
-  const previous = body.folder_id ? await callApi(ROUTES['virtual-folders/read'], descriptor, { id: body.folder_id }, options) : null;
+  const previous = folderId !== 'new' ? await callApi(ROUTES['virtual-folders/read'], descriptor, { id: folderId }, options) : null;
   if (previous && previous.status !== 0) return previous;
   const backup = await writeBackup(command, 'virtual_folder', folderId, previous?.output ?? null, body, flags, options);
   if (!backup.ok) return failure(backup.error, 4);

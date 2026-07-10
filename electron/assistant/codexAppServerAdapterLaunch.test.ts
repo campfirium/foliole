@@ -8,19 +8,13 @@ import { CodexAppServerAdapter } from './codexAppServerAdapter.js';
 import { FakeCodexProcess, testMkdirSync, writeMessage } from './codexAppServerAdapter.testSupport.js';
 import type { JsonRpcMessage } from './codexAppServerProtocol.js';
 
-it('starts app-server with Agent Control MCP overrides and sends tool guidance', async () => {
+it('starts a plain app-server and sends product-level Foliole guidance', async () => {
   const process = new FakeCodexProcess();
   const capturedTurnInputs: string[] = [];
+  const capturedTurnRequests: JsonRpcMessage[] = [];
   const spawnCommand = vi.fn(() => process);
-  const appServerArgs = createAgentControlAppServerArgs();
   const workspaceContext = createAgentControlWorkspaceContext();
-  const cliPath = workspaceContext.agentControl?.cliPath;
-  const cliCommand = `node ${cliPath} <route>`;
-  const expectedCliPath = `Agent Control CLI path: ${cliPath}`;
-  const expectedCliCommand = cliCommand;
-  if (!cliPath) throw new Error('missing test cliPath');
   const adapter = new CodexAppServerAdapter({
-    appServerArgs,
     appVersion: '0.6.5-test',
     launcherCwd: 'C:\\Foliole\\Widgets\\Foliole Aide',
     mkdirSync: testMkdirSync,
@@ -30,7 +24,7 @@ it('starts app-server with Agent Control MCP overrides and sends tool guidance',
   });
   process.stdin.on('data', (chunk) => {
     for (const line of String(chunk).trim().split('\n')) {
-      if (line) handleAppServerRequest(process, JSON.parse(line), capturedTurnInputs);
+      if (line) handleAppServerRequest(process, JSON.parse(line), capturedTurnInputs, capturedTurnRequests);
     }
   });
 
@@ -42,28 +36,25 @@ it('starts app-server with Agent Control MCP overrides and sends tool guidance',
 
   expect(spawnCommand).toHaveBeenCalledWith(
     'codex',
-    ['app-server', ...appServerArgs],
+    ['app-server'],
     expect.objectContaining({ cwd: 'C:\\Foliole\\Widgets\\Foliole Aide' })
   );
   expect(result).toMatchObject({ message: { text: 'Ready', threadId: 'thread-1' }, state: 'ready' });
   expect(capturedTurnInputs).toHaveLength(1);
-  expect(capturedTurnInputs[0]).toContain('foliole_materials_read');
-  expect(capturedTurnInputs[0]).toContain('foliole_materials_search');
-  expect(capturedTurnInputs[0]).toContain('foliole_materials_list_children');
-  expect(capturedTurnInputs[0]).toContain(expectedCliPath);
-  expect(capturedTurnInputs[0]).toContain(expectedCliCommand);
+  expect(capturedTurnInputs[0]).toContain('read a Topic or Folder');
+  expect(capturedTurnInputs[0]).toContain('update a Topic');
+  expect(capturedTurnInputs[0]).not.toContain('MCP');
+  expect(capturedTurnInputs[0]).not.toContain('FOLIOLE_AGENT_DESCRIPTOR');
+  expect(capturedTurnRequests[0]?.params).toMatchObject({
+    approvalPolicy: 'never',
+    cwd: 'C:\\Foliole\\Widgets\\Foliole Aide',
+    sandboxPolicy: {
+      networkAccess: true,
+      type: 'workspaceWrite',
+      writableRoots: ['C:\\Foliole\\Widgets\\Foliole Aide']
+    }
+  });
 });
-
-function createAgentControlAppServerArgs() {
-  const descriptorPath = 'C:\\Foliole\\cache\\agent-control-session.json';
-  const mcpServerPath = 'C:\\Foliole\\resources\\scripts\\agent-control\\foliole-mcp-server.mjs';
-  return [
-    '-c',
-    'mcp_servers.foliole_agent_control.command="node"',
-    '-c',
-    `mcp_servers.foliole_agent_control.args=['${mcpServerPath}','--descriptor','${descriptorPath}']`
-  ];
-}
 
 function createAgentControlWorkspaceContext(): NativeAssistantWorkspaceContext {
   return {
@@ -76,10 +67,6 @@ function createAgentControlWorkspaceContext(): NativeAssistantWorkspaceContext {
         'virtualFolders.list',
         'virtualFolders.read'
       ],
-      cliPath: 'C:\\Foliole\\resources\\scripts\\agent-control\\foliole-agent.mjs',
-      descriptorEnvVar: 'FOLIOLE_AGENT_DESCRIPTOR',
-      descriptorPath: 'C:\\Foliole\\cache\\agent-control-session.json',
-      endpoint: 'http://127.0.0.1:3841',
       state: 'running'
     },
     schemaVersion: 1,
@@ -90,7 +77,8 @@ function createAgentControlWorkspaceContext(): NativeAssistantWorkspaceContext {
 function handleAppServerRequest(
   process: FakeCodexProcess,
   message: JsonRpcMessage,
-  capturedTurnInputs: string[]
+  capturedTurnInputs: string[],
+  capturedTurnRequests: JsonRpcMessage[]
 ) {
   if (message.id === 0) {
     writeMessage(process, { id: 0, result: {} });
@@ -101,6 +89,7 @@ function handleAppServerRequest(
     return;
   }
   if (message.method === 'turn/start') {
+    capturedTurnRequests.push(message);
     capturedTurnInputs.push(readTurnInput(message));
     writeMessage(process, { method: 'turn/started', params: { turn: { id: 'turn-1' } } });
     writeMessage(process, { method: 'item/agentMessage/delta', params: { delta: 'Ready' } });

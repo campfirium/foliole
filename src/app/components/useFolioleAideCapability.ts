@@ -26,14 +26,10 @@ export type FolioleAideDiagnosticState =
   | 'unavailable'
   | 'unknown';
 export type FolioleAideToolsDiagnosticState = 'failed' | 'running' | 'stopped' | 'unknown';
-export type FolioleAideTraceDiagnosticState = 'error' | 'missing' | 'none' | 'ok';
 
 export interface FolioleAideCapabilityDiagnostic {
   codex: FolioleAideDiagnosticState;
   tools: FolioleAideToolsDiagnosticState;
-  trace: FolioleAideTraceDiagnosticState;
-  traceTool?: string;
-  toolError?: string;
 }
 
 export function useFolioleAideCapability() {
@@ -67,7 +63,7 @@ export function useFolioleAideCapability() {
       setUnavailableReason(readUnavailableReason(status));
       setState('unavailable');
     } catch {
-      setDiagnostic({ codex: 'unknown', tools: 'unknown', trace: 'missing' });
+      setDiagnostic({ codex: 'unknown', tools: 'unknown' });
       setUnavailableReason('statusFailed');
       setState('unavailable');
     }
@@ -150,10 +146,7 @@ function readDiagnostic(
 ): FolioleAideCapabilityDiagnostic {
   return {
     codex: readCodexDiagnostic(status),
-    tools: readToolsDiagnostic(status),
-    trace: readTraceDiagnostic(status),
-    ...readToolErrorDiagnostic(status),
-    ...readTraceToolDiagnostic(status)
+    tools: readToolsDiagnostic(status)
   };
 }
 
@@ -178,30 +171,6 @@ function readToolsDiagnostic(
   return 'stopped';
 }
 
-function readTraceDiagnostic(
-  status: NativeAssistantStatusResult | null | undefined
-): FolioleAideTraceDiagnosticState {
-  const trace = status?.agentControl?.trace;
-  if (!trace) return 'missing';
-  if (trace.missing) return 'missing';
-  if (trace.count === 0) return 'none';
-  return trace.lastStatus === 'error' ? 'error' : 'ok';
-}
-
-function readTraceToolDiagnostic(status: NativeAssistantStatusResult | null | undefined) {
-  const tool = status?.agentControl?.trace?.lastTool;
-  return typeof tool === 'string' && tool.trim()
-    ? { traceTool: tool.trim().slice(0, 80) }
-    : {};
-}
-
-function readToolErrorDiagnostic(status: NativeAssistantStatusResult | null | undefined) {
-  const error = status?.agentControl?.lastError ?? status?.agentControl?.trace?.lastError;
-  return typeof error === 'string' && error.trim()
-    ? { toolError: error.trim().slice(0, 180) }
-    : {};
-}
-
 function isCapabilityFailureCategory(category: NativeAssistantFailureCategory) {
   return category === 'agent_control_unavailable' ||
     category === 'auth_failed' ||
@@ -219,8 +188,7 @@ function createFailureDiagnostic(
 ): FolioleAideCapabilityDiagnostic {
   return {
     codex: readFailureCodexDiagnostic(category),
-    tools: category === 'agent_control_unavailable' ? 'stopped' : current?.tools ?? 'unknown',
-    trace: current?.trace ?? 'missing'
+    tools: category === 'agent_control_unavailable' ? 'stopped' : current?.tools ?? 'unknown'
   };
 }
 

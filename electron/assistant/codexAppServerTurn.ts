@@ -7,7 +7,7 @@ import type {
   NativeAssistantWorkspaceContext
 } from '../../lib/platform/nativeAssistantContract.js';
 
-import { CodexAppServerMcpApprovalPolicy } from './codexAppServerMcpApproval.js';
+import { createAideThreadStartParams, createAideTurnStartParams } from './codexAppServerAidePolicy.js';
 import {
   CODEX_APP_SERVER_PROVIDER,
   composeAssistantTurnInput,
@@ -30,12 +30,12 @@ export class CodexAppServerSession {
   private initializedReject: ((error: Error & { category?: NativeAssistantFailureCategory }) => void) | null = null;
   private initializeId = 0;
   private initializedResolve: (() => void) | null = null;
-  private readonly mcpApprovalPolicy = new CodexAppServerMcpApprovalPolicy();
   private nextId = 1;
   private rl: readline.Interface | null = null;
   constructor(
     private readonly args: {
       appVersion: string;
+      launcherCwd: string;
       spawn: () => SpawnedCodexProcess;
     }
   ) {}
@@ -71,7 +71,11 @@ export class CodexAppServerSession {
       this.write(
         args.providerThreadId
           ? { id: threadRequestId, method: 'thread/resume', params: { threadId: args.providerThreadId } }
-          : { id: threadRequestId, method: 'thread/start', params: {} }
+          : {
+              id: threadRequestId,
+              method: 'thread/start',
+              params: createAideThreadStartParams(this.args.launcherCwd)
+            }
       );
     });
   }
@@ -115,11 +119,6 @@ export class CodexAppServerSession {
     this.handleMessage(parsed.message);
   }
   private handleMessage(message: JsonRpcMessage) {
-    const mcpApproval = this.mcpApprovalPolicy.observe(message);
-    if (mcpApproval) {
-      this.write(mcpApproval);
-      return;
-    }
     if (message.error) {
       this.failActiveTurn(mapJsonRpcError(message.error), true);
       return;
@@ -152,7 +151,7 @@ export class CodexAppServerSession {
     this.write({
       id: this.nextId++,
       method: 'turn/start',
-      params: { input: [{ text: turn.userMessage, type: 'text' }], threadId }
+      params: createAideTurnStartParams(this.args.launcherCwd, threadId, turn.userMessage)
     });
   }
   private handleTurnStarted(message: JsonRpcMessage, turn: TurnState) {

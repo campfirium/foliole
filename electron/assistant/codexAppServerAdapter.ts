@@ -16,7 +16,6 @@ const PROVIDER = 'codex-app-server' as const;
 const DEFAULT_TIMEOUT_MS = 180_000;
 
 export interface CodexAppServerAdapterOptions {
-  appServerArgs?: string[];
   appVersion: string;
   command?: string;
   env?: NodeJS.ProcessEnv;
@@ -38,7 +37,6 @@ export interface CodexLauncherOptions {
 
 export class CodexAppServerAdapter {
   private active = false;
-  private readonly appServerArgs: string[];
   private readonly appVersion: string;
   private readonly command: string;
   private readonly env: NodeJS.ProcessEnv;
@@ -57,7 +55,6 @@ export class CodexAppServerAdapter {
   private readonly timeoutMs: number;
 
   constructor(options: CodexAppServerAdapterOptions) {
-    this.appServerArgs = options.appServerArgs ?? [];
     this.appVersion = options.appVersion;
     this.command = options.command ?? 'codex';
     this.env = options.env ?? process.env;
@@ -95,7 +92,8 @@ export class CodexAppServerAdapter {
     try {
       this.session ??= new CodexAppServerSession({
         appVersion: this.appVersion,
-        spawn: () => this.spawnCommand(this.command, ['app-server', ...this.appServerArgs], this.createLauncherOptions())
+        launcherCwd: this.launcherCwd,
+        spawn: () => this.spawnCommand(this.command, ['app-server'], this.createLauncherOptions())
       });
       return await this.session.sendMessage({
         clientTurnId: input.clientTurnId,

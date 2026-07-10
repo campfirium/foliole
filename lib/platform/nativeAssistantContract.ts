@@ -128,23 +128,8 @@ export interface NativeAssistantWorkspaceAnchorContext {
 
 export interface NativeAssistantAgentControlContext {
   capabilities: string[];
-  cliPath?: string;
-  descriptorEnvVar: 'FOLIOLE_AGENT_DESCRIPTOR';
-  descriptorPath: string;
-  endpoint?: string;
   lastError?: string;
   state: 'failed' | 'running' | 'stopped';
-  trace?: NativeAssistantAgentControlTraceSummary;
-  tracePath?: string;
-}
-
-export interface NativeAssistantAgentControlTraceSummary {
-  count: number;
-  lastError?: string;
-  lastStatus?: 'error' | 'ok';
-  lastTimestamp?: string;
-  lastTool?: string;
-  missing?: boolean;
 }
 
 export interface NativeAssistantWorkspaceContext {

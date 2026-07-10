@@ -3,31 +3,19 @@ import type http from 'node:http';
 import { recordAgentControlAuditEvent, type AgentControlAuditSink } from './agentControlAudit.js';
 import { isCapabilityEnabled } from './agentControlCapabilities.js';
 import {
-  handleMaterialDeleteSoft,
-  handleMaterialRead,
-  handleMaterialSearch,
-  handleMaterialUpdate
-} from './agentControlMaterialHandlers.js';
-import { handleMaterialListChildren } from './agentControlMaterialListHandlers.js';
-import { isBearerTokenAuthorized } from './agentControlToken.js';
-import {
   capabilityForProtectedPath,
   isProtectedRouteCapabilityDisabled
 } from './agentControlRouteCapabilities.js';
+import {
+  handleAgentControlMaterialRoute,
+  handleAgentControlVirtualFolderRoute
+} from './agentControlRouteDispatch.js';
+import { isBearerTokenAuthorized } from './agentControlToken.js';
 import {
   AGENT_CONTROL_CAPABILITIES,
   AGENT_CONTROL_PROTOCOL_VERSION
 } from './agentControlTypes.js';
 import type { AgentControlRuntimeIdentity } from './agentControlTypes.js';
-import {
-  handleVirtualFolderAddItems,
-  handleVirtualFolderCreate,
-  handleVirtualFolderList,
-  handleVirtualFolderRead,
-  handleVirtualFolderRemoveItems,
-  handleVirtualFolderReorder
-} from './agentControlVirtualFolderHandlers.js';
-import { isMaterialWritePath, isVirtualFolderWritePath, notifyAfterSuccessfulWrite } from './agentControlWriteNotifications.js';
 
 export interface AgentControlRequestHandlerOptions {
   appVersion: string;
@@ -174,10 +162,10 @@ async function handleRequest(
     handleVerify(request, response, options);
     return;
   }
-  if (await handleMaterialRoutes(request, response, options, url.pathname)) {
+  if (await handleAgentControlMaterialRoute(request, response, options, url.pathname)) {
     return;
   }
-  if (await handleVirtualFolderRoutes(request, response, options, url.pathname)) {
+  if (await handleAgentControlVirtualFolderRoute(request, response, options, url.pathname)) {
     return;
   }
   recordRequest({
@@ -188,43 +176,4 @@ async function handleRequest(
     result: 'failed'
   });
   sendJson(response, 404, { error: 'not_found' });
-}
-
-async function handleMaterialRoutes(
-  request: http.IncomingMessage,
-  response: http.ServerResponse,
-  options: AgentControlRequestHandlerOptions,
-  pathname: string
-) {
-  if (request.method !== 'POST') return false;
-  if (pathname === '/agent-control/v1/materials/read') await handleMaterialRead(request, response, options);
-  else if (pathname === '/agent-control/v1/materials/search') await handleMaterialSearch(request, response, options);
-  else if (pathname === '/agent-control/v1/materials/list-children') await handleMaterialListChildren(request, response, options);
-  else if (pathname === '/agent-control/v1/materials/update') await handleMaterialUpdate(request, response, options);
-  else if (pathname === '/agent-control/v1/materials/delete-soft') await handleMaterialDeleteSoft(request, response, options);
-  else return false;
-  if (isMaterialWritePath(pathname)) {
-    notifyAfterSuccessfulWrite(response, options.notifyWorkspaceContentChanged);
-  }
-  return true;
-}
-
-async function handleVirtualFolderRoutes(
-  request: http.IncomingMessage,
-  response: http.ServerResponse,
-  options: AgentControlRequestHandlerOptions,
-  pathname: string
-) {
-  if (request.method !== 'POST') return false;
-  if (pathname === '/agent-control/v1/virtual-folders/list') await handleVirtualFolderList(request, response, options);
-  else if (pathname === '/agent-control/v1/virtual-folders/read') await handleVirtualFolderRead(request, response, options);
-  else if (pathname === '/agent-control/v1/virtual-folders/create') await handleVirtualFolderCreate(request, response, options);
-  else if (pathname === '/agent-control/v1/virtual-folders/add-items') await handleVirtualFolderAddItems(request, response, options);
-  else if (pathname === '/agent-control/v1/virtual-folders/remove-items') await handleVirtualFolderRemoveItems(request, response, options);
-  else if (pathname === '/agent-control/v1/virtual-folders/reorder') await handleVirtualFolderReorder(request, response, options);
-  else return false;
-  if (isVirtualFolderWritePath(pathname)) {
-    notifyAfterSuccessfulWrite(response, options.notifyWorkspaceContentChanged);
-  }
-  return true;
 }

@@ -12,7 +12,7 @@ const screenshotPath = path.join(
   'assistant-panel-main-surface-context.png'
 );
 const readyStatus = {
-  agentControl: { state: 'running', trace: { count: 0 } },
+  agentControl: { capabilities: ['materials.read'], state: 'running' },
   capabilities: [
     { enabled: true, name: 'status' },
     { enabled: true, name: 'sendMessage' },

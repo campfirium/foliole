@@ -12,24 +12,16 @@ import {
 } from './foliole-aide-online-smoke.mjs';
 import { isOnlineSmokeSuccessful } from './foliole-aide-online-smoke-success.mjs';
 
-it('builds Codex app-server args with the Foliole MCP server descriptor', () => {
-  const descriptorPath = 'C:\\Foliole\\cache\\agent-control-session.json';
-  const tracePath = 'C:\\Foliole\\cache\\agent-control-mcp-trace.jsonl';
-  const args = buildCodexAppServerArgs(descriptorPath, tracePath);
-
-  expect(args).toEqual([
-    'app-server',
-    '-c',
-    'mcp_servers.foliole_agent_control.command="node"',
-    '-c',
-    `mcp_servers.foliole_agent_control.args=['${path.resolve('scripts', 'agent-control', 'foliole-mcp-server.mjs')}','--descriptor','${descriptorPath}','--trace','${tracePath}']`
-  ]);
+it('starts Codex app-server without Foliole MCP registration', () => {
+  expect(buildCodexAppServerArgs()).toEqual(['app-server']);
 });
 
-it('asks the online smoke turn to use the material read MCP tool', () => {
-  expect(createSmokePrompt()).toContain('foliole_materials_read');
+it('asks the online smoke turn to discover the stable CLI without internal tool names', () => {
+  expect(createSmokePrompt()).not.toContain('foliole_materials_read');
+  expect(createSmokePrompt()).not.toContain('MCP');
+  expect(createSmokePrompt()).toContain('foliole help --json');
   expect(createSmokePrompt()).toContain('smoke-topic');
-  expect(createSmokePrompt()).toContain('TRACE_SMOKE_OK Aide MCP Smoke Topic');
+  expect(createSmokePrompt()).toContain('TRACE_SMOKE_OK Aide CLI Smoke Topic');
 });
 
 it('keeps online smoke threads ephemeral and outside the repository', () => {
@@ -53,8 +45,7 @@ it('describes App Server account failures without requiring CLI login', () => {
   expect(describeOnlineSmokeFailure('auth_failed')).not.toContain('sign in');
 });
 
-it('requires both the MCP trace and expected assistant answer for success', () => {
-  const trace = [{ status: 'ok', tool: 'foliole_materials_read' }];
+it('requires both the CLI-backed API read and expected assistant answer for success', () => {
   const apiRequests = [{
     authorization: 'Bearer smoke-token',
     body: { id: 'smoke-topic' },
@@ -62,10 +53,9 @@ it('requires both the MCP trace and expected assistant answer for success', () =
     url: '/agent-control/v1/materials/read'
   }];
 
-  expect(isOnlineSmokeSuccessful('TRACE_SMOKE_OK Aide MCP Smoke Topic', trace, apiRequests)).toBe(true);
-  expect(isOnlineSmokeSuccessful('I read it.', trace, apiRequests)).toBe(false);
-  expect(isOnlineSmokeSuccessful('TRACE_SMOKE_OK Aide MCP Smoke Topic', [], apiRequests)).toBe(false);
-  expect(isOnlineSmokeSuccessful('TRACE_SMOKE_OK Aide MCP Smoke Topic', trace, [])).toBe(false);
+  expect(isOnlineSmokeSuccessful('TRACE_SMOKE_OK Aide CLI Smoke Topic', apiRequests)).toBe(true);
+  expect(isOnlineSmokeSuccessful('I read it.', apiRequests)).toBe(false);
+  expect(isOnlineSmokeSuccessful('TRACE_SMOKE_OK Aide CLI Smoke Topic', [])).toBe(false);
 });
 
 it('exposes the online smoke as a package script', async () => {
