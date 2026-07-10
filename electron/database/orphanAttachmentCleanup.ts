@@ -101,8 +101,7 @@ function listStillReferencedInlineAttachmentIds(candidateIds: string[]) {
   const rows = openDatabaseConnection().driver.queryAll<NodeContentRow>(
     `SELECT content
      FROM nodes
-     WHERE deleted_at IS NULL
-       AND content LIKE '%asset://%'`
+     WHERE content LIKE '%asset://%'`
   );
   const referencedAttachmentIds = new Set<string>();
   for (const row of rows) {
@@ -125,8 +124,7 @@ function listStillMountedAttachmentIds(candidateIds: string[]) {
      INNER JOIN nodes n
        ON n.id = na.node_id
      WHERE na.attachment_id IN (${buildInClause(candidateIds.length)})
-       AND na.role = 'reference'
-       AND n.deleted_at IS NULL`,
+       AND na.role = 'reference'`,
     candidateIds
   );
   return new Set(rows.map((row) => row.attachment_id));
@@ -178,7 +176,7 @@ function deleteAttachmentRows(driver: DatabaseDriver, attachmentIds: string[]) {
   }
 }
 
-function deleteAttachmentFiles(rows: AttachmentFileRow[]) {
+export function deleteAttachmentFiles(rows: AttachmentFileRow[]) {
   const { assetsDir } = resolveRuntimeDataPaths();
   for (const row of rows) {
     for (const filePath of resolveAttachmentStoragePathCandidates(row.id, row.original_name, assetsDir)) {
@@ -195,5 +193,5 @@ export function cleanupOrphanAttachments(driver: DatabaseDriver, plan: Attachmen
   const orphanAttachmentIds = resolveOrphanAttachmentIds(plan);
   const attachmentFiles = listAttachmentFileRows(orphanAttachmentIds);
   deleteAttachmentRows(driver, orphanAttachmentIds);
-  deleteAttachmentFiles(attachmentFiles);
+  return attachmentFiles;
 }

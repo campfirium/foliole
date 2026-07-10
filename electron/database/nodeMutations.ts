@@ -23,7 +23,11 @@ import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
 import { markKeepImportItemsLocallyDeletedByNodeDeletedAt } from './keepImportItems.js';
 import { flushDirtyNodeSyncVersions, flushNodeSyncVersion } from './nodeSyncVersions.js';
-import { cleanupOrphanAttachments, createAttachmentCleanupPlan } from './orphanAttachmentCleanup.js';
+import {
+  cleanupOrphanAttachments,
+  createAttachmentCleanupPlan,
+  deleteAttachmentFiles
+} from './orphanAttachmentCleanup.js';
 import {
   clearNodeSourceDisposition,
   recordNodeSourceDisposition
@@ -163,16 +167,34 @@ export function restoreNodes(input: RestoreNodesInput): RestoreNodesResult {
 export function deleteNodesPermanently(input: DeleteNodesPermanentlyInput): string[] {
   const connection = openDatabaseConnection();
   const deletedAt = new Date().toISOString();
+  const deviceId = loadOrCreateDesktopDeviceId(deletedAt);
   const attachmentCleanupPlan = createAttachmentCleanupPlan(input.nodeIds);
   const nodeDeletedAt = readNodeDeletedAtForPermanentDelete(input.nodeIds, deletedAt);
   for (const row of nodeDeletedAt) {
     recordNodeSourceDisposition(row.nodeId, 'hard_deleted', row.deletedAt);
   }
   markKeepImportItemsLocallyDeletedByNodeDeletedAt(nodeDeletedAt);
-  const affectedParentNodeIds = deleteNodesPermanentlyViaDriver(connection.driver, input);
   withTransaction(connection.driver, () => {
-    cleanupOrphanAttachments(connection.driver, attachmentCleanupPlan);
+    for (const nodeId of input.nodeIds) {
+      connection.driver.execute(
+        `UPDATE nodes
+         SET deleted_at = ?, updated_at = ?, last_modified_by_device_id = ?, sync_dirty = 1
+         WHERE id = ?`,
+        [deletedAt, deletedAt, deviceId, nodeId]
+      );
+    }
   });
+  for (const nodeId of input.nodeIds) {
+    flushNodeSyncVersion(nodeId, deletedAt);
+  }
+  const affectedParentNodeIds = deleteNodesPermanentlyViaDriver(connection.driver, {
+    ...input,
+    deletedAt
+  });
+  const attachmentFilesToDelete = withTransaction(connection.driver, () => {
+    return cleanupOrphanAttachments(connection.driver, attachmentCleanupPlan);
+  });
+  deleteAttachmentFiles(attachmentFilesToDelete);
   return affectedParentNodeIds;
 }
 
