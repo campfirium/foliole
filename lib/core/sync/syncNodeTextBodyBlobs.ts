@@ -1,11 +1,14 @@
 import type { DbPort } from './dbPort.js';
-import type { ApplySyncNodesWithDbPortOptions } from './syncNodeApplyExecutor.js';
+
+export interface TextBodyHashOptions {
+  hashTextBody?: (content: string) => Promise<string> | string;
+}
 
 function textBodyBlobBytes(content: string) {
   return new TextEncoder().encode(content);
 }
 
-async function hashTextBody(content: string, options: ApplySyncNodesWithDbPortOptions) {
+export async function hashTextBodyContent(content: string, options: TextBodyHashOptions) {
   if (options.hashTextBody) {
     return options.hashTextBody(content);
   }
@@ -20,9 +23,8 @@ export async function upsertTextBodyBlob(
   port: DbPort,
   content: string,
   now: string,
-  options: ApplySyncNodesWithDbPortOptions
+  hash: string
 ) {
-  const hash = await hashTextBody(content, options);
   const size = textBodyBlobBytes(content).byteLength;
   await port.run(
     `INSERT INTO content_blobs (

@@ -9,6 +9,7 @@ import { ensureLibraryPathLayout } from '../ipc/libraryPaths.js';
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { migrateDatabaseFileNames, type DatabaseFileNameMigrationResult } from './databaseFileNameMigration.js';
 import { resolveSearchDatabasePath as resolveSearchDatabasePathFromDatabasePath } from './databaseFilePaths.js';
+import { guardBetterSqliteDatabase } from './guardedBetterSqliteDatabase.js';
 
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
@@ -66,12 +67,13 @@ export function openDatabaseConnection(options: OpenDatabaseConnectionOptions = 
     options.reportFileNameMigration?.(result);
   });
 
-  const sqlite = new BetterSqlite3(dbPath);
+  const rawSqlite = new BetterSqlite3(dbPath);
   if (applyJournalMode) {
-    sqlite.pragma('journal_mode = WAL');
+    rawSqlite.pragma('journal_mode = WAL');
   }
-  sqlite.pragma('foreign_keys = ON');
-  attachSearchDatabase(sqlite, searchDbPath);
+  rawSqlite.pragma('foreign_keys = ON');
+  attachSearchDatabase(rawSqlite, searchDbPath);
+  const sqlite = guardBetterSqliteDatabase(rawSqlite);
 
   cachedConnection = {
     driver: createBetterSqlite3Driver(sqlite),

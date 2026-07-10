@@ -4,6 +4,12 @@ import type BetterSqlite3 from 'better-sqlite3';
 
 import type { DbParams, DbPort, DbRow, DbRunResult } from '../../lib/core/sync/dbPort.js';
 
+import {
+  getSqliteConnectionCoordinator,
+  SqliteConnectionOwnerError,
+  type SqliteConnectionOwner
+} from './sqliteConnectionCoordinator.js';
+
 type SqliteDatabase = BetterSqlite3.Database;
 
 export interface BetterSqliteDbPortOptions {
@@ -11,34 +17,93 @@ export interface BetterSqliteDbPortOptions {
 }
 
 export function createBetterSqliteDbPort(sqlite: SqliteDatabase, options: BetterSqliteDbPortOptions = {}): DbPort {
-  let transactionDepth = 0;
+  const coordinator = getSqliteConnectionCoordinator(sqlite);
   const port: DbPort & { readonly __dbPortName?: string } = {
     ...(options.name ? { __dbPortName: options.name } : {}),
     async run(sql, params = []) {
-      return normalizeRunResult(() => sqlite.prepare(sql).run(...params));
+      return coordinator.runExclusive(() => normalizeRunResult(() => sqlite.prepare(sql).run(...params)));
     },
     async query<T extends DbRow = DbRow>(sql: string, params: DbParams = []) {
-      return sqlite.prepare(sql).all(...params) as T[];
+      return coordinator.runExclusive(() => sqlite.prepare(sql).all(...params) as T[]);
     },
     async transaction<T>(execute: (tx: DbPort) => Promise<T>) {
-      if (transactionDepth > 0) {
-        return execute(port);
-      }
-      sqlite.prepare('BEGIN IMMEDIATE').run();
-      transactionDepth += 1;
-      try {
-        const result = await execute(port);
-        sqlite.prepare('COMMIT').run();
-        return result;
-      } catch (error) {
-        sqlite.prepare('ROLLBACK').run();
-        throw normalizeSqliteError(error);
-      } finally {
-        transactionDepth -= 1;
-      }
+      return coordinator.runExclusive(async (owner, nested) => (
+        runTransaction({ coordinator, execute, nested, owner, port, sqlite })
+      ));
     }
   };
   return port;
+}
+
+async function runTransaction<T>(input: {
+  coordinator: ReturnType<typeof getSqliteConnectionCoordinator>;
+  execute: (tx: DbPort) => Promise<T>;
+  nested: boolean;
+  owner: SqliteConnectionOwner;
+  port: DbPort;
+  sqlite: SqliteDatabase;
+}) {
+  if (input.nested) {
+    if (!input.sqlite.inTransaction) {
+      throw new SqliteConnectionOwnerError('nested sqlite owner has no active transaction');
+    }
+    return runScopedTransaction(input.coordinator, input.owner, input.port, input.execute);
+  }
+  if (input.sqlite.inTransaction) {
+    throw new SqliteConnectionOwnerError('sqlite connection has an uncoordinated active transaction');
+  }
+  input.sqlite.prepare('BEGIN IMMEDIATE').run();
+  try {
+    const result = await runScopedTransaction(input.coordinator, input.owner, input.port, input.execute);
+    input.sqlite.prepare('COMMIT').run();
+    return result;
+  } catch (error) {
+    rollbackPreservingOriginalError(input.sqlite, error);
+    throw normalizeSqliteError(error);
+  }
+}
+
+async function runScopedTransaction<T>(
+  coordinator: ReturnType<typeof getSqliteConnectionCoordinator>,
+  owner: SqliteConnectionOwner,
+  port: DbPort,
+  execute: (tx: DbPort) => Promise<T>
+) {
+  let active = true;
+  const scopedPort: DbPort = {
+    run(sql, params) {
+      coordinator.assertScopedOwner(owner, active);
+      return port.run(sql, params);
+    },
+    query(sql, params) {
+      coordinator.assertScopedOwner(owner, active);
+      return port.query(sql, params);
+    },
+    transaction(run) {
+      coordinator.assertScopedOwner(owner, active);
+      return port.transaction(run);
+    }
+  };
+  try {
+    return await execute(scopedPort);
+  } finally {
+    active = false;
+  }
+}
+
+function rollbackPreservingOriginalError(sqlite: SqliteDatabase, originalError: unknown) {
+  if (!sqlite.inTransaction) return;
+  try {
+    sqlite.prepare('ROLLBACK').run();
+  } catch (rollbackError) {
+    if (originalError && typeof originalError === 'object') {
+      try {
+        Object.defineProperty(originalError, 'rollbackError', { configurable: true, value: rollbackError });
+      } catch {
+        // Keep the original transaction error primary even when it cannot be annotated.
+      }
+    }
+  }
 }
 
 export function openBetterSqliteDbPort(

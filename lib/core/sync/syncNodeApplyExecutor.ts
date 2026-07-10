@@ -25,6 +25,7 @@ import {
   buildRemoteNodeVersionUpsert
 } from './syncNodeApplyStatements.js';
 import { toSyncNodeConflictRecord } from './syncNodeConflictRecord.js';
+import { prepareSyncNodeTextBodyHashes } from './syncNodePreparedTextBodyHashes.js';
 import { enqueueAppliedNodeSearchInvalidations } from './syncNodeSearchInvalidations.js';
 import { upsertAppliedNodeSyncState } from './syncNodeStateApplyExecutor.js';
 import { upsertTextBodyBlob } from './syncNodeTextBodyBlobs.js';
@@ -77,11 +78,15 @@ async function upsertRemoteVersion(port: DbPort, record: NativeSyncNodeRecord) {
 async function upsertRemoteNode(
   port: DbPort,
   record: NativeSyncNodeRecord,
-  options: ApplySyncNodesWithDbPortOptions
+  preparedTextBodyHashes: ReadonlyMap<NativeSyncNodeRecord, string>
 ) {
   const content = record.snapshot.content ?? '';
+  const preparedHash = preparedTextBodyHashes.get(record);
+  if (!record.snapshot.body_blob_hash && !preparedHash) {
+    throw new Error('sync_text_body_hash_not_prepared');
+  }
   const bodyBlobHash = record.snapshot.body_blob_hash
-    ?? await upsertTextBodyBlob(port, content, record.snapshot.updated_at, options);
+    ?? await upsertTextBodyBlob(port, content, record.snapshot.updated_at, preparedHash!);
   const statement = buildRemoteNodeUpsert(record, bodyBlobHash);
   await port.run(statement.sql, statement.params);
 }
@@ -106,9 +111,9 @@ async function replaceNodeAttachmentLinks(port: DbPort, record: NativeSyncNodeRe
 async function applyRemoteNode(
   port: DbPort,
   record: NativeSyncNodeRecord,
-  options: ApplySyncNodesWithDbPortOptions
+  preparedTextBodyHashes: ReadonlyMap<NativeSyncNodeRecord, string>
 ) {
-  await upsertRemoteNode(port, record, options);
+  await upsertRemoteNode(port, record, preparedTextBodyHashes);
   await upsertRemoteVersion(port, record);
   await replaceNodeOrder(port, record);
   await replaceNodeAttachmentLinks(port, record);
@@ -118,11 +123,12 @@ async function applyAcceptedRemoteNode(input: {
   invalidatedAt: string;
   localNode: LocalSyncNodeStateRow | null;
   options: ApplySyncNodesWithDbPortOptions;
+  preparedTextBodyHashes: ReadonlyMap<NativeSyncNodeRecord, string>;
   record: NativeSyncNodeRecord;
   result: ApplySyncNodesWithDbPortResult;
   tx: DbPort;
 }) {
-  await applyRemoteNode(input.tx, input.record, input.options);
+  await applyRemoteNode(input.tx, input.record, input.preparedTextBodyHashes);
   if (!input.record.snapshot.deleted_at && input.record.snapshot.content !== undefined) {
     const repairResult = await repairDirectChildAnchorsForAppliedParent({
       content: input.record.snapshot.content,
@@ -175,6 +181,7 @@ export async function applySyncNodesWithDbPort(
     unmappedAnchorRecords: []
   };
   const ordered = orderNodesForApply(latestBranchHeadRecords(records));
+  const preparedTextBodyHashes = await prepareSyncNodeTextBodyHashes(ordered, options);
   const invalidatedAt = new Date().toISOString();
 
   await port.transaction(async (tx) => {
@@ -189,7 +196,7 @@ export async function applySyncNodesWithDbPort(
       const localNode = await loadLocalNodeSyncState(tx, record.object_id);
       const decision = decideIncomingNodeApply(localNode, record);
       if (decision === 'apply_missing_local' || decision === 'apply_fast_forward') {
-        await applyAcceptedRemoteNode({ invalidatedAt, localNode, options, record, result, tx });
+        await applyAcceptedRemoteNode({ invalidatedAt, localNode, options, preparedTextBodyHashes, record, result, tx });
         continue;
       }
       await upsertRemoteVersion(tx, record);
