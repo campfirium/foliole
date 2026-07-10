@@ -34,6 +34,7 @@ test('Aide renders a titled Markdown conversation with live progress', async ({
   await expect(desktopWindow.getByRole('heading', { name: 'Explain this topic' })).toBeVisible();
   await expect(desktopWindow.getByRole('heading', { name: 'Assistant answer' })).toBeVisible();
   await expect(desktopWindow.getByRole('list')).toContainText('First item');
+  await expect(desktopWindow.getByRole('table')).toContainText('Follow current material');
   await expect(desktopWindow.getByText('const ready = true;')).toBeVisible();
   await expect(desktopWindow.locator('[data-message-role="user"] p')).toHaveClass(/rounded-lg/);
   await expect(desktopWindow.locator('[data-message-role="assistant"]')).not.toHaveClass(/rounded|bg-/);
@@ -143,7 +144,7 @@ async function installAssistantIpcMock(electronApp: ElectronApplication) {
   });
 }
 
-function createAssistantResponse(text = '## Assistant answer\n\nThis is the first paragraph.\n\n- First item\n- Second item\n\n`inline code`\n\n```ts\nconst ready = true;\n```') {
+function createAssistantResponse(text = DEFAULT_ASSISTANT_MARKDOWN) {
   return {
     message: {
       text,
@@ -169,6 +170,15 @@ function createAssistantResponse(text = '## Assistant answer\n\nThis is the firs
     }
   };
 }
+
+const DEFAULT_ASSISTANT_MARKDOWN = [
+  '## Assistant answer',
+  'This is the first paragraph.',
+  '- First item\n- Second item',
+  '| State | Copy |\n| --- | --- |\n| On | Follow current material |',
+  '`inline code`',
+  '```ts\nconst ready = true;\n```'
+].join('\n\n');
 
 const ASSISTANT_READY_STATUS = {
   agentControl: { state: 'running', trace: { count: 0 } },

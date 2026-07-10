@@ -61,6 +61,25 @@ it('copies assistant messages and confirms the action', async () => {
   expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument();
 });
 
+it('renders GFM tables, task lists, and strikethrough without exposing source markers', () => {
+  const { container } = renderWithLocalization(
+    <WorkspaceRightSidebarAssistantMessageRow
+      message={{
+        id: 'assistant-gfm',
+        role: 'assistant',
+        text: '| State | Copy |\n| --- | --- |\n| Off | Follow current material |\n\n- [x] Ready\n\n~~Removed~~'
+      }}
+      pendingLabel="Thinking"
+    />
+  );
+
+  expect(screen.getByRole('table')).toHaveTextContent('Follow current material');
+  expect(screen.getAllByRole('row')).toHaveLength(2);
+  expect(container.querySelector('input[type="checkbox"]')).toBeChecked();
+  expect(screen.getByText('Removed')).toHaveProperty('tagName', 'S');
+  expect(screen.queryByText('| --- | --- |')).not.toBeInTheDocument();
+});
+
 it('shows a live animated thinking state before response text arrives', () => {
   const { container } = renderWithLocalization(
     <WorkspaceRightSidebarAssistantMessageRow

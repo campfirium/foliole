@@ -1,6 +1,12 @@
-import { parser as markdownParser } from '@lezer/markdown';
+import {
+  parser as baseMarkdownParser,
+  Strikethrough,
+  Table,
+  TaskList
+} from '@lezer/markdown';
 import type { ReactNode } from 'react';
 
+const markdownParser = baseMarkdownParser.configure([Table, TaskList, Strikethrough]);
 type MarkdownNode = ReturnType<typeof markdownParser.parse>['topNode'];
 
 const MARKER_NODES = new Set([
@@ -35,9 +41,61 @@ function renderNode(node: MarkdownNode, source: string): ReactNode {
   if (node.name === 'InlineCode') return <code className="rounded-sm bg-foreground/[0.065] px-1 py-0.5 font-mono text-ui-sm" key={key}>{trimCodeMarks(source.slice(node.from, node.to))}</code>;
   if (node.name === 'FencedCode' || node.name === 'IndentedCode') return renderCodeBlock(node, source, key);
   if (node.name === 'Link') return renderLink(node, source, key);
+  if (node.name === 'Table') return renderTable(node, source, key);
+  if (node.name === 'TaskMarker') return renderTaskMarker(node, source, key);
   if (node.name === 'HorizontalRule') return <hr className="my-2 border-border/80" key={key} />;
   if (node.name === 'HardBreak') return <br key={key} />;
   return <span key={key}>{renderChildren(node, source)}</span>;
+}
+
+function renderTable(node: MarkdownNode, source: string, key: string) {
+  const header = findChildren(node, 'TableHeader');
+  const rows = findChildren(node, 'TableRow');
+  return (
+    <div className="app-scrollbar overflow-x-auto" key={key}>
+      <table className="w-max min-w-full border-collapse text-left text-ui-sm leading-5">
+        <thead className="bg-foreground/[0.045]">
+          {header.map((row) => renderTableRow(row, source, true))}
+        </thead>
+        <tbody>{rows.map((row) => renderTableRow(row, source, false))}</tbody>
+      </table>
+    </div>
+  );
+}
+
+function renderTableRow(node: MarkdownNode, source: string, header: boolean) {
+  const cells = findChildren(node, 'TableCell');
+  return (
+    <tr key={`${node.name}-${node.from}-${node.to}`}>
+      {cells.map((cell) => {
+        const Cell = header ? 'th' : 'td';
+        return (
+          <Cell
+            className="border border-border/80 px-2 py-1.5 align-top font-normal"
+            key={`${cell.name}-${cell.from}-${cell.to}`}
+          >
+            {renderChildren(cell, source, true)}
+          </Cell>
+        );
+      })}
+    </tr>
+  );
+}
+
+function renderTaskMarker(node: MarkdownNode, source: string, key: string) {
+  const checked = /x/iu.test(source.slice(node.from, node.to));
+  return (
+    <input
+      aria-hidden
+      checked={checked}
+      className="mr-1.5 size-3.5 align-[-0.1em] accent-current"
+      disabled
+      key={key}
+      readOnly
+      tabIndex={-1}
+      type="checkbox"
+    />
+  );
 }
 
 function renderChildren(node: MarkdownNode, source: string, trimStart = false) {
@@ -89,6 +147,16 @@ function findChild(node: MarkdownNode, name: string) {
     child = child.nextSibling;
   }
   return null;
+}
+
+function findChildren(node: MarkdownNode, name: string) {
+  const children: MarkdownNode[] = [];
+  let child = node.firstChild;
+  while (child) {
+    if (child.name === name) children.push(child);
+    child = child.nextSibling;
+  }
+  return children;
 }
 
 function trimCodeMarks(value: string) {
