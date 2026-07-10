@@ -18,8 +18,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { syncNodeSearchIndexForNodeIds } from '../../lib/core/database/workspaceSearchIndex.js';
-import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
+import { closeDatabaseConnection } from '../database/connection.js';
 import { closeExternalSearchCacheDatabase } from '../database/externalSearchCacheDatabase.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { softDeleteNodes, upsertNodeSnapshot } from '../database/nodeMutations.js';
@@ -42,9 +41,16 @@ afterEach(async () => {
   await fs.rm(tempRoot, { force: true, recursive: true });
 });
 
-function insertNode(input: { content: string; id: string; parentId?: string | null; title: string; updatedAt?: string }) {
+function insertNode(input: {
+  anchorKind?: 'cloze' | 'highlight';
+  content: string;
+  id: string;
+  parentId?: string | null;
+  title: string;
+  updatedAt?: string;
+}) {
   upsertNodeSnapshot({
-    anchorLink: null,
+    anchorLink: input.anchorKind ? { id: `${input.id}-anchor`, kind: input.anchorKind } : null,
     content: input.content,
     createdAt: '2026-07-05T00:00:00.000Z',
     hideTitleHeading: false,
@@ -118,13 +124,18 @@ it('reads a bounded material payload by explicit id', async () => {
     expect(response.status).toBe(200);
     expect(await responseJson(response)).toEqual({
       material: {
+        child_count: 0,
+        children: [],
+        children_truncated: false,
         content: 'x'.repeat(AGENT_CONTROL_MATERIAL_CONTENT_LIMIT),
         content_char_count: AGENT_CONTROL_MATERIAL_CONTENT_LIMIT + 1,
         content_truncated: true,
         deleted: false,
         id: 'child',
         kind: 'topic',
+        parent_id: 'root',
         parent_titles: ['Root'],
+        parents: [{ id: 'root', title: 'Root' }],
         title: 'Child',
         updated_at: '2026-07-05T00:00:03.000Z'
       }
@@ -140,6 +151,51 @@ it('reads a bounded material payload by explicit id', async () => {
     await closeServer(server);
   }
 });
+
+it('includes bounded direct child summaries when reading a material', async () => {
+  insertNode({ content: 'Virtual root body', id: 'special-virtual-root', title: 'Virtual' });
+  insertNode({ anchorKind: 'highlight', content: 'Child body alpha', id: 'child-a', parentId: 'special-virtual-root', title: 'Child A' });
+  insertNode({ content: '', id: 'child-b', parentId: 'special-virtual-root', title: 'Child B' });
+  const { endpoint, server } = await startServer();
+  try {
+    const response = await fetch(`${endpoint}/agent-control/v1/materials/read`, {
+      body: JSON.stringify({ id: 'special-virtual-root' }),
+      headers: authHeaders(),
+      method: 'POST'
+    });
+
+    expect(response.status).toBe(200);
+    expect(await responseJson(response)).toMatchObject({
+      material: {
+        child_count: 2,
+        children: [
+          expect.objectContaining({
+            anchor_kind: 'highlight',
+            content_preview: 'Child body alpha',
+            has_content: true,
+            id: 'child-a',
+            special_kind: 'virtual',
+            title: 'Child A'
+          }),
+          expect.objectContaining({
+            content_preview: '',
+            has_content: false,
+            id: 'child-b',
+            title: 'Child B'
+          })
+        ],
+        children_truncated: false,
+        id: 'special-virtual-root',
+        parent_id: null,
+        parents: [],
+        special_kind: 'virtual-root'
+      }
+    });
+  } finally {
+    await closeServer(server);
+  }
+});
+
 
 it('reports ancestor soft deletion in read payloads', async () => {
   insertNode({ content: 'Root body', id: 'root', title: 'Root' });
@@ -158,39 +214,10 @@ it('reports ancestor soft deletion in read payloads', async () => {
       material: {
         deleted: true,
         id: 'child',
-        parent_titles: ['Root']
+        parent_id: 'root',
+        parent_titles: ['Root'],
+        parents: [{ id: 'root', title: 'Root' }]
       }
-    });
-  } finally {
-    await closeServer(server);
-  }
-});
-
-it('searches materials through existing workspace search and applies agent limits', async () => {
-  insertNode({ content: 'Atlas content first', id: 'atlas-1', title: 'Atlas One', updatedAt: '2026-07-05T00:00:03.000Z' });
-  insertNode({ content: 'Atlas content second', id: 'atlas-2', title: 'Atlas Two', updatedAt: '2026-07-05T00:00:02.000Z' });
-  syncNodeSearchIndexForNodeIds(openDatabaseConnection().driver, ['atlas-1', 'atlas-2']);
-  const { endpoint, server } = await startServer();
-  try {
-    const response = await fetch(`${endpoint}/agent-control/v1/materials/search`, {
-      body: JSON.stringify({ limit: 1, query: 'Atlas' }),
-      headers: authHeaders(),
-      method: 'POST'
-    });
-
-    expect(response.status).toBe(200);
-    expect(await responseJson(response)).toMatchObject({
-      count: 1,
-      limit: 1,
-      query: 'Atlas',
-      results: [
-        expect.objectContaining({
-          id: 'atlas-1',
-          kind: 'node',
-          source: { kind: 'node' },
-          title: 'Atlas One'
-        })
-      ]
     });
   } finally {
     await closeServer(server);

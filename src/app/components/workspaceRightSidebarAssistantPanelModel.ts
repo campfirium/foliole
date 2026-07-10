@@ -100,7 +100,7 @@ export function resolveAssistantTurnWorkspaceContext(args: {
     args.activeNodeId,
     args.nodesById,
     args.editorAdapter,
-    args.selectedRecord ? undefined : args.workspaceContextOverride
+    args.workspaceContextOverride
   );
 }
 

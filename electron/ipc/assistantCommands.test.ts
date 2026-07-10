@@ -5,7 +5,6 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-
 let mockedAppDataDir = '/tmp/foliole-assistant-commands-tests';
 const adapterSendMessage = vi.hoisted(() => vi.fn());
 const adapterGetStatus = vi.hoisted(() => vi.fn());
@@ -38,11 +37,7 @@ import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 
-import {
-  handleAssistantCommand,
-  resetAssistantCommandAdapterForTests
-} from './assistantCommands.js';
-
+import { handleAssistantCommand, resetAssistantCommandAdapterForTests } from './assistantCommands.js';
 let tempRoot = '';
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-assistant-commands-'));
@@ -63,7 +58,6 @@ afterEach(async () => {
       provider: 'codex-app-server',
       state: 'ready'
     });
-
     await expect(
       handleAssistantCommand(NATIVE_COMMANDS.assistantSendMessage, {
         message: 'Prompt body',
@@ -132,7 +126,7 @@ afterEach(async () => {
     ).resolves.toMatchObject({
       message: { threadId: 'thread-1' },
       state: 'ready',
-      threadIndex: { providerThreadId: 'thread-1', preview: 'Follow-up' }
+      threadIndex: { providerThreadId: 'thread-1', preview: 'Follow-up', title: 'Prompt body' }
     });
     expect(adapterSendMessage).toHaveBeenLastCalledWith(expect.objectContaining({
       message: 'Follow-up',
@@ -238,8 +232,9 @@ afterEach(async () => {
       })
     ).resolves.toMatchObject({ status: 'archived' });
     await expect(
-      handleAssistantCommand(NATIVE_COMMANDS.assistantDeleteThreadIndex, {
+      handleAssistantCommand(NATIVE_COMMANDS.assistantRemoveThreadFromHistory, {
         providerThreadId: 'thread-1'
       })
     ).resolves.toMatchObject({ status: 'deleted' });
+    expect(adapterSendMessage).toHaveBeenCalledTimes(1);
   });

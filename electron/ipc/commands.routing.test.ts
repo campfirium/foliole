@@ -129,6 +129,16 @@ describe('native command route registry', () => {
     expect(handleReviewCommand).not.toHaveBeenCalled();
   });
 
+  it('routes legacy assistant history removal aliases to the assistant handler only', async () => {
+    beginDatabaseStartup();
+    handleAssistantCommand.mockResolvedValue('removed');
+
+    await expect(handleInvokeRequest({ command: 'assistant_delete_thread_index' })).resolves.toBe('removed');
+
+    expect(handleAssistantCommand).toHaveBeenCalledWith('assistant_delete_thread_index', {}, undefined);
+    expect(handleStorageCommand).not.toHaveBeenCalled();
+  });
+
 });
 
 describe('native command security capability inventory', () => {

@@ -3,6 +3,7 @@ export const AGENT_CONTROL_PROTOCOL_VERSION = 1;
 export const AGENT_CONTROL_CAPABILITIES = [
   'materials.read',
   'materials.search',
+  'materials.listChildren',
   'virtualFolders.list',
   'virtualFolders.read',
   'virtualFolders.create',

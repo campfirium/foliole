@@ -1,57 +1,21 @@
 #!/usr/bin/env node
 /* global process */
 
+import { appendFile, mkdir, readFile } from 'node:fs/promises';
 import readline from 'node:readline';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { runAgentCli } from './foliole-agent.mjs';
+import {
+  buildMcpToolArgv,
+  isMcpToolAvailable,
+  listMcpToolsForCapabilities,
+  MCP_TOOLS
+} from './foliole-mcp-tools.mjs';
 
 export const MCP_PROTOCOL_VERSION = '2025-06-18';
-
-export const MCP_TOOLS = [
-  {
-    description: 'Check whether the Foliole Agent Control API is reachable.',
-    inputSchema: { additionalProperties: false, properties: {}, type: 'object' },
-    name: 'foliole_health',
-    title: 'Foliole health'
-  },
-  {
-    description: 'List capabilities enabled for the current Agent Control session.',
-    inputSchema: { additionalProperties: false, properties: {}, type: 'object' },
-    name: 'foliole_capabilities',
-    title: 'Foliole capabilities'
-  },
-  {
-    description: 'Search readable Foliole materials by query.',
-    inputSchema: {
-      additionalProperties: false,
-      properties: { limit: { minimum: 1, type: 'number' }, query: { minLength: 1, type: 'string' } },
-      required: ['query'],
-      type: 'object'
-    },
-    name: 'foliole_materials_search',
-    title: 'Search Foliole materials'
-  },
-  {
-    description: 'Read a Foliole material by id.',
-    inputSchema: {
-      additionalProperties: false,
-      properties: { id: { minLength: 1, type: 'string' } },
-      required: ['id'],
-      type: 'object'
-    },
-    name: 'foliole_materials_read',
-    title: 'Read Foliole material'
-  }
-];
-
-const TOOL_COMMANDS = {
-  foliole_capabilities: { argv: () => ['capabilities'] },
-  foliole_health: { argv: () => ['health'] },
-  foliole_materials_read: { argv: (args) => requireArgs(args, ['id'], () => ['materials/read', '--id', args.id]) },
-  foliole_materials_search: { argv: (args) => requireArgs(args, ['query'], () => searchArgv(args)) }
-};
+export { MCP_TOOLS };
 
 export async function handleMcpLine(line, state = {}, options = {}) {
   try {
@@ -66,7 +30,7 @@ export async function handleMcpMessage(message, state = {}, options = {}) {
   if (!Object.hasOwn(message, 'id')) return handleNotification(message, state);
   if (message.method === 'initialize') return handleInitialize(message, state);
   if (!state.initialized) return jsonError(message.id, -32002, 'not_initialized');
-  if (message.method === 'tools/list') return jsonResult(message.id, { tools: MCP_TOOLS });
+  if (message.method === 'tools/list') return listTools(message.id, options);
   if (message.method === 'tools/call') return callTool(message.id, message.params, options);
   return jsonError(message.id, -32601, 'method_not_found');
 }
@@ -90,30 +54,55 @@ function handleInitialize(message, state) {
 
 async function callTool(id, params, options) {
   if (!params || typeof params.name !== 'string') return jsonError(id, -32602, 'invalid_params');
-  const tool = TOOL_COMMANDS[params.name];
-  if (!tool) return jsonError(id, -32602, 'unknown_tool');
-  const argvResult = tool.argv(params.arguments ?? {});
-  if (!argvResult.ok) return jsonError(id, -32602, argvResult.error);
+  const capabilities = await readDescriptorCapabilities(options.descriptor);
+  if (!isMcpToolAvailable(params.name, capabilities)) {
+    await writeToolTrace(params.name, 'error', 'unknown_tool', options);
+    return jsonError(id, -32602, 'unknown_tool');
+  }
+  const argvResult = buildMcpToolArgv(params.name, params.arguments ?? {});
+  if (!argvResult.ok) {
+    await writeToolTrace(params.name, 'error', argvResult.error, options);
+    return jsonError(id, -32602, argvResult.error);
+  }
   const argv = withDescriptor(argvResult.argv, options.descriptor);
   const cli = options.runAgentCli ?? runAgentCli;
   const result = await cli(argv, { env: options.env });
+  await writeToolTrace(params.name, result.status === 0 ? 'ok' : 'error', result.output?.error, options);
   return jsonResult(id, {
     content: [{ text: safeJson(result.output, options), type: 'text' }],
     isError: result.status !== 0
   });
 }
 
-function requireArgs(args, names, build) {
-  for (const name of names) {
-    if (typeof args[name] !== 'string' || args[name].length === 0) return { error: `missing_${name}`, ok: false };
+async function writeToolTrace(tool, status, error, options) {
+  const tracePath = options.tracePath ?? options.env?.FOLIOLE_AGENT_MCP_TRACE_PATH ?? process.env.FOLIOLE_AGENT_MCP_TRACE_PATH;
+  if (!tracePath) return;
+  try {
+    await mkdir(path.dirname(tracePath), { recursive: true });
+    await appendFile(tracePath, `${JSON.stringify({
+      ...(error ? { error } : {}),
+      status,
+      timestamp: new Date().toISOString(),
+      tool
+    })}\n`);
+  } catch {
+    // Trace failures must not corrupt the MCP stdio protocol.
   }
-  return { argv: build(), ok: true };
 }
 
-function searchArgv(args) {
-  const argv = ['materials/search', '--query', args.query];
-  if (args.limit !== undefined) argv.push('--limit', String(args.limit));
-  return argv;
+async function listTools(id, options) {
+  const capabilities = await readDescriptorCapabilities(options.descriptor);
+  return jsonResult(id, { tools: listMcpToolsForCapabilities(capabilities) });
+}
+
+async function readDescriptorCapabilities(descriptorPath) {
+  if (!descriptorPath) return [];
+  try {
+    const descriptor = JSON.parse(await readFile(descriptorPath, 'utf8'));
+    return Array.isArray(descriptor.capabilities) ? descriptor.capabilities : [];
+  } catch {
+    return [];
+  }
 }
 
 function withDescriptor(argv, descriptor) {

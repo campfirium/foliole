@@ -20,6 +20,7 @@ import {
   type JsonRpcMessage
 } from './codexAppServerProtocol.js';
 import type { SpawnedCodexProcess, TurnState } from './codexAppServerSessionTypes.js';
+import { emitCodexAppServerTurnEvent } from './codexAppServerTurnEvents.js';
 
 export class CodexAppServerSession {
   private activeTurn: TurnState | null = null;
@@ -45,7 +46,12 @@ export class CodexAppServerSession {
     onEvent?: (event: NativeAssistantTurnEvent) => void;
   }): Promise<NativeAssistantSendMessageResult> {
     if (this.activeTurn) return sendFailure('busy', 'busy');
-    await this.ensureInitialized();
+    const initializeTimeout = setTimeout(() => this.failActiveTurn('timeout', true), args.timeoutMs);
+    try {
+      await this.ensureInitialized();
+    } finally {
+      clearTimeout(initializeTimeout);
+    }
     return new Promise((resolve) => {
       const timeout = setTimeout(() => this.failActiveTurn('timeout', true), args.timeoutMs);
       const threadRequestId = this.nextId++;
@@ -87,7 +93,7 @@ export class CodexAppServerSession {
     this.rl = readline.createInterface({ input: this.child.stdout });
     this.child.on('error', () => this.failActiveTurn('not_configured', true));
     this.child.on('exit', (code) => {
-      if (code !== 0) this.failActiveTurn('launch_failed', false);
+      this.failActiveTurn(code === 0 ? 'interrupted' : 'launch_failed', false);
       this.resetSession(false);
     });
     this.rl.on('line', (line) => this.handleLine(line));
@@ -135,7 +141,7 @@ export class CodexAppServerSession {
       return;
     }
     turn.threadId = threadId;
-    this.emitTurnEvent(turn, { kind: 'started', providerThreadId: threadId });
+    emitCodexAppServerTurnEvent(turn, { kind: 'started', providerThreadId: threadId });
     this.write({
       id: this.nextId++,
       method: 'turn/start',
@@ -145,13 +151,17 @@ export class CodexAppServerSession {
   private handleTurnStarted(message: JsonRpcMessage, turn: TurnState) {
     const turnId = readNestedString(message.params, ['turn', 'id']);
     if (turnId) turn.turnId = turnId;
-    this.emitTurnEvent(turn, { kind: 'started' });
+    emitCodexAppServerTurnEvent(turn, { kind: 'started' });
   }
   private handleDelta(message: JsonRpcMessage, turn: TurnState) {
     turn.text += readDeltaText(message.params);
-    this.emitTurnEvent(turn, { kind: 'delta', text: turn.text });
+    emitCodexAppServerTurnEvent(turn, { kind: 'delta', text: turn.text });
   }
   private finishTurn(turn: TurnState) {
+    if (!turn.text.trim()) {
+      this.failActiveTurn('protocol_error', true);
+      return;
+    }
     const result = {
       message: {
         text: turn.text,
@@ -161,7 +171,7 @@ export class CodexAppServerSession {
       provider: CODEX_APP_SERVER_PROVIDER,
       state: 'ready'
     } satisfies NativeAssistantSendMessageResult;
-    this.emitTurnEvent(turn, { kind: 'completed', text: turn.text });
+    emitCodexAppServerTurnEvent(turn, { kind: 'completed', text: turn.text });
     this.finishActiveTurn(result);
   }
 
@@ -175,7 +185,7 @@ export class CodexAppServerSession {
       return;
     }
     const result = sendFailure('failed', category);
-    if (this.activeTurn) this.emitTurnEvent(this.activeTurn, { failure: result.failure, kind: 'failed' });
+    if (this.activeTurn) emitCodexAppServerTurnEvent(this.activeTurn, { failure: result.failure, kind: 'failed' });
     this.finishActiveTurn(result);
     if (dispose) this.dispose();
   }
@@ -185,23 +195,6 @@ export class CodexAppServerSession {
     clearTimeout(turn.timeout);
     this.activeTurn = null;
     turn.finish(result);
-  }
-  private emitTurnEvent(
-    turn: TurnState,
-    event: Pick<NativeAssistantTurnEvent, 'failure' | 'kind' | 'text'> & {
-      providerThreadId?: string;
-    }
-  ) {
-    const providerThreadId = event.providerThreadId ?? turn.threadId;
-    turn.onEvent?.({
-      clientTurnId: turn.clientTurnId,
-      provider: CODEX_APP_SERVER_PROVIDER,
-      ...(event.failure ? { failure: event.failure } : {}),
-      kind: event.kind,
-      ...(providerThreadId ? { providerThreadId } : {}),
-      ...(event.text !== undefined ? { text: event.text } : {}),
-      ...(turn.turnId ? { turnId: turn.turnId } : {})
-    });
   }
   private resetSession(kill: boolean) {
     const child = this.child;
@@ -221,4 +214,5 @@ export class CodexAppServerSession {
       this.failActiveTurn('protocol_error', true);
     }
   }
+
 }

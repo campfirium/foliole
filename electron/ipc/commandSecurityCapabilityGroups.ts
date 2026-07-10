@@ -63,8 +63,9 @@ const ASSISTANT_COMMANDS = [
   NATIVE_COMMANDS.assistantGetStatus,
   NATIVE_COMMANDS.assistantSendMessage,
   NATIVE_COMMANDS.assistantListThreadIndex,
+  NATIVE_COMMANDS.assistantListThreadMessages,
   NATIVE_COMMANDS.assistantArchiveThreadIndex,
-  NATIVE_COMMANDS.assistantDeleteThreadIndex
+  NATIVE_COMMANDS.assistantRemoveThreadFromHistory
 ] as const satisfies readonly NativeCommandName[];
 
 const DIAGNOSTIC_COMMANDS = [

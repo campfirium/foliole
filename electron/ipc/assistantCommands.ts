@@ -14,22 +14,47 @@ import {
   archiveAssistantThreadIndex,
   deleteAssistantThreadIndex,
   getAssistantThreadIndex,
-  listAssistantThreadIndex,
-  upsertAssistantThreadIndex
+  listAssistantThreadIndex
 } from '../database/assistantThreadIndex.js';
+import {
+  listAssistantThreadMessages
+} from '../database/assistantThreadMessages.js';
+
+import {
+  resolveAssistantAgentDescriptorPath,
+  resolveAssistantAgentControlTracePath,
+  resolveAssistantAppServerArgs,
+  withAgentControlContext
+} from './assistantAgentControlContext.js';
+import { ensureAssistantAgentControlContext, mergeAssistantStatusWithAgentControl } from './assistantAgentControlStatus.js';
+import {
+  readOpeningLocation,
+  readOptionalClientTurnId,
+  readOptionalProviderThreadId,
+  readProviderThreadId
+} from './assistantCommandInputs.js';
+import { recordAssistantThreadSuccess } from './assistantThreadPersistence.js';
+import { readOptionalWorkspaceContext } from './assistantWorkspaceContextReader.js';
 
 let adapter: CodexAppServerAdapter | null = null;
 const IPC_ASSISTANT_TURN_EVENT_CHANNEL = 'foliole:assistant-turn-event';
 const ASSISTANT_WIDGETS_DIRNAME = 'Widgets';
 const ASSISTANT_WORKDIR_DIRNAME = 'Foliole Aide';
+const LEGACY_ASSISTANT_DELETE_THREAD_INDEX_COMMAND = 'assistant_delete_thread_index';
 
 function getAdapter() {
   adapter ??= new CodexAppServerAdapter({
+    appServerArgs: resolveAssistantAppServerArgs(process.env, resolveAssistantAgentControlScriptRoot()),
     appVersion: resolveFolioleAppVersion(app),
     env: resolveAssistantLauncherEnv(process.env),
     launcherCwd: resolveAssistantLauncherCwd(app.getPath('userData'), process.env)
   });
   return adapter;
+}
+
+function resolveAssistantAgentControlScriptRoot() {
+  if (app.isPackaged) return process.resourcesPath;
+  return typeof app.getAppPath === 'function' ? app.getAppPath() : process.cwd();
 }
 
 export function resolveAssistantLauncherCwd(userDataPath: string, env: NodeJS.ProcessEnv) {
@@ -38,11 +63,16 @@ export function resolveAssistantLauncherCwd(userDataPath: string, env: NodeJS.Pr
 }
 
 export function resolveAssistantLauncherEnv(env: NodeJS.ProcessEnv) {
-  if (env.CODEX_HOME?.trim()) return env;
   const userProfile = env.USERPROFILE?.trim();
-  if (!userProfile) return env;
-  return {
+  const next: NodeJS.ProcessEnv = {
     ...env,
+    FOLIOLE_AGENT_DESCRIPTOR: resolveAssistantAgentDescriptorPath(env),
+    FOLIOLE_AGENT_MCP_TRACE_PATH: resolveAssistantAgentControlTracePath(env)
+  };
+  if (next.CODEX_HOME?.trim()) return next;
+  if (!userProfile) return next;
+  return {
+    ...next,
     CODEX_HOME: path.join(userProfile, '.codex')
   };
 }
@@ -52,7 +82,7 @@ export async function handleAssistantCommand(
   args: Record<string, unknown>,
   sender?: WebContents
 ) {
-  if (command === NATIVE_COMMANDS.assistantGetStatus) return getAdapter().getStatus();
+  if (command === NATIVE_COMMANDS.assistantGetStatus) return getAssistantStatus();
   if (command === NATIVE_COMMANDS.assistantSendMessage) return sendMessage(args, sender);
   if (command === NATIVE_COMMANDS.assistantListThreadIndex) {
     const location = readOpeningLocation(args.location);
@@ -63,13 +93,29 @@ export async function handleAssistantCommand(
       ...(location ? { location } : {})
     });
   }
+  if (command === NATIVE_COMMANDS.assistantListThreadMessages) {
+    return listAssistantThreadMessages(readProviderThreadId(args));
+  }
   if (command === NATIVE_COMMANDS.assistantArchiveThreadIndex) {
     return archiveAssistantThreadIndex(readProviderThreadId(args));
   }
-  if (command === NATIVE_COMMANDS.assistantDeleteThreadIndex) {
+  if (command === NATIVE_COMMANDS.assistantRemoveThreadFromHistory) {
+    return deleteAssistantThreadIndex(readProviderThreadId(args));
+  }
+  if (command === LEGACY_ASSISTANT_DELETE_THREAD_INDEX_COMMAND) {
     return deleteAssistantThreadIndex(readProviderThreadId(args));
   }
   return undefined;
+}
+
+async function getAssistantStatus() {
+  const status = await getAdapter().getStatus();
+  const agentControl = await ensureAssistantAgentControlContext(
+    process.env,
+    resolveFolioleAppVersion(app),
+    resolveAssistantAgentControlScriptRoot()
+  );
+  return mergeAssistantStatusWithAgentControl(status, agentControl);
 }
 
 export function resetAssistantCommandAdapterForTests() {
@@ -93,35 +139,44 @@ async function sendMessage(args: Record<string, unknown>, sender?: WebContents) 
     providerThreadId = readOptionalProviderThreadId(args.providerThreadId);
     workspaceContext = readOptionalWorkspaceContext(args.workspaceContext);
   } catch {
-    return {
-      failure: { category: 'protocol_error' as const },
-      provider: 'codex-app-server' as const,
-      state: 'failed' as const
-    };
+    return assistantProtocolFailure();
   }
   if (!isThreadLocationAllowed(providerThreadId, openingLocation)) {
+    return assistantProtocolFailure();
+  }
+  const scriptRoot = resolveAssistantAgentControlScriptRoot();
+  const agentControl = await ensureAssistantAgentControlContext(process.env, resolveFolioleAppVersion(app), scriptRoot);
+  if (agentControl.state !== 'running') {
     return {
-      failure: { category: 'protocol_error' as const },
+      failure: { category: 'agent_control_unavailable' as const },
       provider: 'codex-app-server' as const,
       state: 'failed' as const
     };
   }
-  const result = await getAdapter().sendMessage({
-    clientTurnId,
-    message,
-    ...(sender ? { onEvent: createAssistantTurnEventSender(sender, clientTurnId) } : {}),
-    ...(providerThreadId ? { providerThreadId } : {}),
-    ...(workspaceContext ? { workspaceContext } : {})
-  });
-  if (result.state !== 'ready' || !openingLocation || !result.message?.threadId) return result;
+  let result: Awaited<ReturnType<CodexAppServerAdapter['sendMessage']>>;
   try {
+    result = await getAdapter().sendMessage({
+      clientTurnId,
+      message,
+      ...(sender ? { onEvent: createAssistantTurnEventSender(sender, clientTurnId) } : {}),
+      ...(providerThreadId ? { providerThreadId } : {}),
+      ...(workspaceContext ? { workspaceContext: withAgentControlContext(workspaceContext, process.env, scriptRoot) } : {})
+    });
+  } catch {
+    return assistantProtocolFailure();
+  }
+  if (result.state !== 'ready' || !openingLocation || !result.message?.threadId) return result;
+  if (typeof result.message.text === 'string' && !result.message.text.trim()) return assistantProtocolFailure();
+  try {
+    const threadIndex = recordAssistantThreadSuccess({
+      clientTurnId,
+      location: openingLocation,
+      message,
+      result: result.message
+    });
     return {
       ...result,
-      threadIndex: upsertAssistantThreadIndex({
-        location: openingLocation,
-        message,
-        providerThreadId: result.message.threadId
-      })
+      threadIndex
     };
   } catch {
     return {
@@ -130,6 +185,14 @@ async function sendMessage(args: Record<string, unknown>, sender?: WebContents) 
       state: 'failed' as const
     };
   }
+}
+
+function assistantProtocolFailure() {
+  return {
+    failure: { category: 'protocol_error' as const },
+    provider: 'codex-app-server' as const,
+    state: 'failed' as const
+  };
 }
 
 function createAssistantTurnEventSender(sender: WebContents, clientTurnId: string) {
@@ -141,50 +204,6 @@ function createAssistantTurnEventSender(sender: WebContents, clientTurnId: strin
 
 function createClientTurnId() {
   return `assistant-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function readOptionalClientTurnId(value: unknown) {
-  if (value === undefined) return undefined;
-  if (typeof value !== 'string') throw new Error('invalid_client_turn_id');
-  return normalizeRequiredString(value, 'client_turn_id');
-}
-
-function readOptionalWorkspaceContext(value: unknown): NativeAssistantWorkspaceContext | undefined {
-  if (value === undefined) return undefined;
-  if (!value || typeof value !== 'object') throw new Error('invalid_workspace_context');
-  const context = value as Record<string, unknown>;
-  if (context.scope !== 'node' && context.scope !== 'workspace')
-    throw new Error('invalid_workspace_context_scope');
-  return {
-    ...(typeof context.activeNodeId === 'string' ? { activeNodeId: context.activeNodeId.slice(0, 200) } : {}),
-    ...(typeof context.activeTitle === 'string' ? { activeTitle: context.activeTitle.slice(0, 300) } : {}),
-    ...(Array.isArray(context.path)
-      ? { path: context.path.filter((item) => typeof item === 'string').slice(0, 12) }
-      : {}),
-    scope: context.scope
-  };
-}
-
-function readOpeningLocation(value: unknown): NativeAssistantThreadOpeningLocation | undefined {
-  if (!value || typeof value !== 'object') return undefined;
-  const location = value as Record<string, unknown>;
-  if (location.type === 'workspace') return { type: 'workspace' };
-  if (location.type === 'node' && typeof location.nodeId === 'string') {
-    const nodeId = normalizeRequiredString(location.nodeId, 'node_id');
-    return { nodeId, type: 'node' };
-  }
-  throw new Error('invalid_assistant_thread_location');
-}
-
-function readProviderThreadId(args: Record<string, unknown>) {
-  if (typeof args.providerThreadId !== 'string') throw new Error('invalid_provider_thread_id');
-  return normalizeRequiredString(args.providerThreadId, 'provider_thread_id');
-}
-
-function readOptionalProviderThreadId(value: unknown) {
-  if (value === undefined) return undefined;
-  if (typeof value !== 'string') throw new Error('invalid_provider_thread_id');
-  return normalizeRequiredString(value, 'provider_thread_id');
 }
 
 function isThreadLocationAllowed(
@@ -207,10 +226,4 @@ function areOpeningLocationsEqual(
 ) {
   if (left.type !== right.type) return false;
   return left.type === 'workspace' || left.nodeId === (right as { nodeId: string }).nodeId;
-}
-
-function normalizeRequiredString(value: string, field: string) {
-  const normalized = value.trim();
-  if (!normalized) throw new Error(`invalid_${field}`);
-  return normalized;
 }

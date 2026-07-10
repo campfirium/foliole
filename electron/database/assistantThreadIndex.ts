@@ -7,6 +7,7 @@ import type {
   NativeAssistantThreadReadState
 } from '../../lib/platform/nativeAssistantContract.js';
 
+import { deleteAssistantThreadMessages } from './assistantThreadMessages.js';
 import { openDatabaseConnection } from './connection.js';
 
 const DEFAULT_PROVIDER: NativeAssistantProviderId = 'codex-app-server';
@@ -65,7 +66,6 @@ export function upsertAssistantThreadIndex(
      ON CONFLICT(provider, provider_thread_id) DO UPDATE SET
        location_type = excluded.location_type,
        location_node_id = excluded.location_node_id,
-       title = excluded.title,
        preview = excluded.preview,
        status = 'active',
        updated_at = excluded.updated_at,
@@ -122,7 +122,9 @@ export function deleteAssistantThreadIndex(
   providerThreadId: string,
   now = new Date().toISOString()
 ) {
-  return updateAssistantThreadIndexStatus(providerThreadId, 'deleted', now);
+  const record = updateAssistantThreadIndexStatus(providerThreadId, 'deleted', now);
+  deleteAssistantThreadMessages(providerThreadId);
+  return record;
 }
 
 function updateAssistantThreadIndexStatus(

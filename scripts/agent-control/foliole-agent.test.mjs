@@ -23,6 +23,7 @@ async function descriptorPath(overrides = {}) {
       'foundation.capabilities',
       'materials.read',
       'materials.search',
+      'materials.listChildren',
       'materials.update',
       'materials.deleteSoft',
       'virtualFolders.create'
@@ -41,6 +42,9 @@ function response(payload, ok = true) {
 
 function material(overrides = {}) {
   return {
+    child_count: 0,
+    children: [],
+    children_truncated: false,
     content: 'Old body',
     content_char_count: 8,
     content_truncated: false,
@@ -89,6 +93,7 @@ describe('foliole agent cli', () => {
     expect(calls[0].url).toBe('http://127.0.0.1:3456/agent-control/v1/capabilities');
     expect(calls[0].init.headers.authorization).toBe('Bearer secret-token');
   });
+
   it('reorders a virtual folder by material ids through existing item ids', async () => {
     const descriptor = await descriptorPath({
       capabilities: ['virtualFolders.read', 'virtualFolders.reorder']
@@ -113,7 +118,8 @@ describe('foliole agent cli', () => {
       }
     });
 
-    expect(result).toEqual({ output: { folder_id: 'folder-1', item_ids: ['item-b', 'item-a'] }, status: 0 });
+    expect(result).toMatchObject({ output: { folder_id: 'folder-1', item_ids: ['item-b', 'item-a'] }, status: 0 });
+    expect(result.output.backup_path).toContain('agent-virtual_folder-virtual-folders-reorder-folder-1');
     expect(calls.map((call) => call.url)).toEqual([
       'http://127.0.0.1:3456/agent-control/v1/virtual-folders/read',
       'http://127.0.0.1:3456/agent-control/v1/virtual-folders/reorder'

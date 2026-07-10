@@ -4,9 +4,10 @@ import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
 import {
   archiveAssistantThreadIndex,
-  deleteAssistantThreadIndex,
   listAssistantThreadIndex,
+  listAssistantThreadMessages,
   loadAssistantStatus,
+  removeAssistantThreadFromHistory,
   sendAssistantMessage
 } from './assistantRuntime';
 
@@ -25,8 +26,9 @@ describe('assistantRuntime', () => {
     await expect(loadAssistantStatus()).resolves.toBeNull();
     await expect(sendAssistantMessage({ message: 'Hi' })).resolves.toBeNull();
     await expect(listAssistantThreadIndex()).resolves.toBeNull();
+    await expect(listAssistantThreadMessages({ providerThreadId: 'thread-1' })).resolves.toBeNull();
     await expect(archiveAssistantThreadIndex({ providerThreadId: 'thread-1' })).resolves.toBeNull();
-    await expect(deleteAssistantThreadIndex({ providerThreadId: 'thread-1' })).resolves.toBeNull();
+    await expect(removeAssistantThreadFromHistory({ providerThreadId: 'thread-1' })).resolves.toBeNull();
   });
 
   it('routes assistant calls through typed native commands', async () => {
@@ -49,11 +51,14 @@ describe('assistantRuntime', () => {
     await expect(listAssistantThreadIndex({ location })).resolves.toEqual({
       command: NATIVE_COMMANDS.assistantListThreadIndex
     });
+    await expect(listAssistantThreadMessages({ providerThreadId: 'thread-1' })).resolves.toEqual({
+      command: NATIVE_COMMANDS.assistantListThreadMessages
+    });
     await expect(archiveAssistantThreadIndex({ providerThreadId: 'thread-1' })).resolves.toEqual({
       command: NATIVE_COMMANDS.assistantArchiveThreadIndex
     });
-    await expect(deleteAssistantThreadIndex({ providerThreadId: 'thread-1' })).resolves.toEqual({
-      command: NATIVE_COMMANDS.assistantDeleteThreadIndex
+    await expect(removeAssistantThreadFromHistory({ providerThreadId: 'thread-2' })).resolves.toEqual({
+      command: NATIVE_COMMANDS.assistantRemoveThreadFromHistory
     });
 
     expect(invoke).toHaveBeenNthCalledWith(1, NATIVE_COMMANDS.assistantGetStatus);
@@ -65,11 +70,14 @@ describe('assistantRuntime', () => {
     expect(invoke).toHaveBeenNthCalledWith(3, NATIVE_COMMANDS.assistantListThreadIndex, {
       location
     });
-    expect(invoke).toHaveBeenNthCalledWith(4, NATIVE_COMMANDS.assistantArchiveThreadIndex, {
+    expect(invoke).toHaveBeenNthCalledWith(4, NATIVE_COMMANDS.assistantListThreadMessages, {
       providerThreadId: 'thread-1'
     });
-    expect(invoke).toHaveBeenNthCalledWith(5, NATIVE_COMMANDS.assistantDeleteThreadIndex, {
+    expect(invoke).toHaveBeenNthCalledWith(5, NATIVE_COMMANDS.assistantArchiveThreadIndex, {
       providerThreadId: 'thread-1'
+    });
+    expect(invoke).toHaveBeenNthCalledWith(6, NATIVE_COMMANDS.assistantRemoveThreadFromHistory, {
+      providerThreadId: 'thread-2'
     });
   });
 });

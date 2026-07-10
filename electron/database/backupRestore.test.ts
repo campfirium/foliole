@@ -17,6 +17,11 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { upsertAssistantThreadIndex } from './assistantThreadIndex.js';
+import {
+  appendAssistantThreadMessages,
+  listAssistantThreadMessages
+} from './assistantThreadMessages.js';
 import {
   applyFollowupReviewGrade,
   createRestoredWorkspaceSnapshot,
@@ -28,6 +33,7 @@ import { createApplicationDatabaseBackup, restoreApplicationDatabaseBackup } fro
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { resetSeededWorkspace } from './databaseTestWorkspace.js';
 import { initializeDatabase } from './migrate.js';
+import { flushNodeSyncVersion } from './nodeSyncVersions.js';
 import { saveReadingProgress } from './readingProgress.js';
 import { loadWorkspaceSnapshot } from './workspaceSnapshot.js';
 
@@ -63,6 +69,7 @@ it('restores the application sqlite state from an online backup snapshot', async
 
   expect(loadWorkspaceSnapshot({ includeBody: true })).toEqual({
     activeNodeId: 'node-1',
+    manualVirtualCollections: [],
     nodeOrder: ['node-1'],
     nodesById: {
       'node-1': {
@@ -119,6 +126,69 @@ it('restores review history, node lifecycle state, and backup truth after later 
   expect(selectReviewLogCount('node-qa')).toBe(2);
 });
 
+it('stamps a restore incarnation before minting post-restore node sync versions', async () => {
+  seedNode('node-1', '# original');
+  const preBackupVersionId = flushNodeSyncVersion('node-1', '2026-03-14T10:00:30.000Z');
+  const backup = await createApplicationDatabaseBackup();
+
+  seedNode('node-1', '# after backup');
+  const distributedAfterBackupVersionId = flushNodeSyncVersion('node-1', '2026-03-14T10:01:30.000Z');
+
+  await restoreApplicationDatabaseBackup({ sourcePath: backup.destinationPath });
+
+  seedNode('node-1', '# restored mutation');
+  const restoredVersionId = flushNodeSyncVersion('node-1', '2026-03-14T10:02:30.000Z');
+
+  expect(preBackupVersionId).toMatch(/^device-.*#0$/);
+  expect(distributedAfterBackupVersionId).toMatch(/^device-.*#1$/);
+  expect(restoredVersionId).toMatch(/^device-.*#zrestore-[0-9a-f-]+#1$/);
+  expect(restoredVersionId).not.toBe(distributedAfterBackupVersionId);
+  expect(selectSettingSyncRecordCount('desktop_node_sync_restore_incarnation')).toBe(0);
+});
+
+it('restores local assistant transcript messages from the backup snapshot', async () => {
+  upsertAssistantThreadIndex({
+    location: { nodeId: 'node-1', type: 'node' },
+    message: 'Before backup',
+    now: '2026-03-14T10:00:00.000Z',
+    providerThreadId: 'thread-1'
+  });
+  appendAssistantThreadMessages([
+    {
+      createdAt: '2026-03-14T10:00:01.000Z',
+      id: 'turn-1:user',
+      providerThreadId: 'thread-1',
+      role: 'user',
+      text: 'Before backup'
+    },
+    {
+      createdAt: '2026-03-14T10:00:02.000Z',
+      id: 'turn-1:assistant',
+      providerThreadId: 'thread-1',
+      role: 'assistant',
+      text: 'Persisted answer'
+    }
+  ]);
+
+  const backup = await createApplicationDatabaseBackup();
+  appendAssistantThreadMessages([
+    {
+      createdAt: '2026-03-14T10:01:00.000Z',
+      id: 'turn-2:user',
+      providerThreadId: 'thread-1',
+      role: 'user',
+      text: 'Later drift'
+    }
+  ]);
+
+  await restoreApplicationDatabaseBackup({ sourcePath: backup.destinationPath });
+
+  expect(listAssistantThreadMessages('thread-1').map((message) => message.text)).toEqual([
+    'Before backup',
+    'Persisted answer'
+  ]);
+});
+
 function selectReviewLogCount(nodeId: string) {
   const connection = openDatabaseConnection();
   const row = connection.sqlite
@@ -132,5 +202,20 @@ function selectNodeCount(nodeId: string) {
   const row = connection.sqlite
     .prepare('SELECT COUNT(*) as count FROM nodes WHERE id = ?')
     .get(nodeId) as { count: number };
+  return row.count;
+}
+
+function selectSettingSyncRecordCount(key: string) {
+  const connection = openDatabaseConnection();
+  const row = connection.sqlite
+    .prepare(
+      `SELECT (
+         SELECT COUNT(*) FROM setting_records WHERE key = @key
+       ) + (
+         SELECT COUNT(*) FROM sync_object_state
+         WHERE object_type = 'setting' AND object_id LIKE '%' || @key
+       ) AS count`
+    )
+    .get({ key }) as { count: number };
   return row.count;
 }

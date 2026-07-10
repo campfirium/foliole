@@ -4,6 +4,8 @@ import type {
   NativeAssistantStatusResult,
   NativeAssistantThreadIndexListArgs,
   NativeAssistantThreadIndexMutationArgs,
+  NativeAssistantThreadMessageListArgs,
+  NativeAssistantThreadMessageRecord,
   NativeAssistantThreadIndexRecord,
   NativeAssistantTurnEvent
 } from '../../../lib/platform/nativeAssistantContract';
@@ -40,6 +42,14 @@ export async function listAssistantThreadIndex(
   return invoke(NATIVE_COMMANDS.assistantListThreadIndex, args);
 }
 
+export async function listAssistantThreadMessages(
+  args: NativeAssistantThreadMessageListArgs
+): Promise<NativeAssistantThreadMessageRecord[] | null> {
+  const invoke = getRuntimeInvoke();
+  if (!invoke) return null;
+  return invoke(NATIVE_COMMANDS.assistantListThreadMessages, args);
+}
+
 export async function archiveAssistantThreadIndex(
   args: NativeAssistantThreadIndexMutationArgs
 ): Promise<NativeAssistantThreadIndexRecord | null> {
@@ -48,10 +58,10 @@ export async function archiveAssistantThreadIndex(
   return invoke(NATIVE_COMMANDS.assistantArchiveThreadIndex, args);
 }
 
-export async function deleteAssistantThreadIndex(
+export async function removeAssistantThreadFromHistory(
   args: NativeAssistantThreadIndexMutationArgs
 ): Promise<NativeAssistantThreadIndexRecord | null> {
   const invoke = getRuntimeInvoke();
   if (!invoke) return null;
-  return invoke(NATIVE_COMMANDS.assistantDeleteThreadIndex, args);
+  return invoke(NATIVE_COMMANDS.assistantRemoveThreadFromHistory, args);
 }

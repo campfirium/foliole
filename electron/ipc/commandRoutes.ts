@@ -30,8 +30,9 @@ const ASSISTANT_COMMANDS = [
   NATIVE_COMMANDS.assistantGetStatus,
   NATIVE_COMMANDS.assistantSendMessage,
   NATIVE_COMMANDS.assistantListThreadIndex,
+  NATIVE_COMMANDS.assistantListThreadMessages,
   NATIVE_COMMANDS.assistantArchiveThreadIndex,
-  NATIVE_COMMANDS.assistantDeleteThreadIndex
+  NATIVE_COMMANDS.assistantRemoveThreadFromHistory
 ] as const satisfies readonly NativeCommandName[];
 
 const STORAGE_COMMANDS = [
@@ -195,7 +196,9 @@ export function buildCommandRouteMap(
 }
 
 const COMMAND_ROUTE_MAP = buildCommandRouteMap(COMMAND_ROUTE_ENTRIES);
+const LEGACY_ASSISTANT_COMMAND_ROUTES = new Set(['assistant_delete_thread_index']);
 
 export function resolveCommandRoute(command: string): CommandRouteFamily | null {
+  if (LEGACY_ASSISTANT_COMMAND_ROUTES.has(command)) return 'assistant';
   return COMMAND_ROUTE_MAP.get(command as NativeCommandName) ?? null;
 }

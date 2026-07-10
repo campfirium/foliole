@@ -8,13 +8,13 @@ import { expect, test } from './harness/fixtures';
 const EXPECTED_DESCRIPTOR_CAPABILITIES = [
   'materials.read',
   'materials.search',
+  'materials.listChildren',
   'virtualFolders.list',
   'virtualFolders.read',
   'virtualFolders.create',
   'virtualFolders.addItems',
   'virtualFolders.removeItems',
   'virtualFolders.reorder',
-  'virtualFolders.write',
   'materials.update',
   'materials.deleteSoft'
 ];
@@ -22,6 +22,7 @@ const EXPECTED_DESCRIPTOR_CAPABILITIES = [
 const EXPECTED_CAPABILITY_STATUSES = [
   { enabled: true, name: 'materials.read' },
   { enabled: true, name: 'materials.search' },
+  { enabled: true, name: 'materials.listChildren' },
   { enabled: true, name: 'virtualFolders.list' },
   { enabled: true, name: 'virtualFolders.read' },
   { enabled: true, name: 'virtualFolders.create' },
@@ -66,6 +67,65 @@ function expectRuntimeIdentity(value: unknown) {
   expect(value && typeof value === 'object' && 'database_device_id_hash' in value).toBe(true);
 }
 
+function expectCapabilitiesPayload(value: unknown) {
+  expect(value).toMatchObject({
+    capabilities: EXPECTED_CAPABILITY_STATUSES,
+    protocol_version: 1
+  });
+  expectRuntimeIdentity((value as { runtime_identity?: unknown })?.runtime_identity);
+}
+
+async function expectMaterialApiRoutes(endpoint: string, token: string) {
+  const emptySearch = await fetch(`${endpoint}/agent-control/v1/materials/search`, {
+    body: JSON.stringify({ query: '   ' }),
+    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    method: 'POST'
+  });
+  expect(emptySearch.status).toBe(400);
+  expect(await responseJson(emptySearch)).toEqual({ error: 'invalid_request' });
+
+  const missingMaterial = await fetch(`${endpoint}/agent-control/v1/materials/read`, {
+    body: JSON.stringify({ id: 'missing-hidden-native-material' }),
+    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    method: 'POST'
+  });
+  expect(missingMaterial.status).toBe(404);
+  expect(await responseJson(missingMaterial)).toEqual({ error: 'not_found' });
+
+  const topLevelMaterials = await fetch(`${endpoint}/agent-control/v1/materials/list-children`, {
+    body: JSON.stringify({ limit: 5 }),
+    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    method: 'POST'
+  });
+  expect(topLevelMaterials.status).toBe(200);
+  expect(await responseJson(topLevelMaterials)).toMatchObject({
+    children: expect.any(Array),
+    limit: 5,
+    parent_id: null
+  });
+}
+
+async function expectCliRoutes(descriptorPath: string, token: string) {
+  const cliHealth = await runAgentCli(['health', '--descriptor', descriptorPath]);
+  expect(cliHealth.status).toBe(0);
+  expect(cliHealth.output).toMatchObject({ ok: true, service: 'foliole-agent-control' });
+  expectWithoutToken(cliHealth.output, token);
+
+  const cliCapabilities = await runAgentCli(['capabilities', '--descriptor', descriptorPath]);
+  expect(cliCapabilities.status).toBe(0);
+  expectCapabilitiesPayload(cliCapabilities.output);
+  expectWithoutToken(cliCapabilities.output, token);
+
+  const cliEmptySearch = await runAgentCli(['materials/search', '--descriptor', descriptorPath, '--query', '   ']);
+  expect(cliEmptySearch).toEqual({ output: { error: 'invalid_request' }, status: 1 });
+  expectWithoutToken(cliEmptySearch.output, token);
+
+  const cliTopLevelMaterials = await runAgentCli(['materials/list-children', '--descriptor', descriptorPath, '--limit', '5']);
+  expect(cliTopLevelMaterials.status).toBe(0);
+  expect(cliTopLevelMaterials.output).toMatchObject({ children: expect.any(Array), limit: 5, parent_id: null });
+  expectWithoutToken(cliTopLevelMaterials.output, token);
+}
+
 test('desktop runtime exposes the local Agent Control API foundation', async ({ desktopApp }) => {
   const userDataPath = await desktopApp.evaluate(({ app }) => app.getPath('userData'));
   const descriptorPath = path.join(userDataPath, 'cache', 'agent-control-session.json');
@@ -96,39 +156,8 @@ test('desktop runtime exposes the local Agent Control API foundation', async ({ 
   });
   expect(capabilities.status).toBe(200);
   const capabilitiesPayload = await responseJson(capabilities);
-  expect(capabilitiesPayload).toMatchObject({
-    capabilities: EXPECTED_CAPABILITY_STATUSES,
-    protocol_version: 1
-  });
-  expectRuntimeIdentity(capabilitiesPayload.runtime_identity);
+  expectCapabilitiesPayload(capabilitiesPayload);
 
-  const emptySearch = await fetch(`${endpoint}/agent-control/v1/materials/search`, {
-    body: JSON.stringify({ query: '   ' }),
-    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-    method: 'POST'
-  });
-  expect(emptySearch.status).toBe(400);
-  expect(await responseJson(emptySearch)).toEqual({ error: 'invalid_request' });
-
-  const missingMaterial = await fetch(`${endpoint}/agent-control/v1/materials/read`, {
-    body: JSON.stringify({ id: 'missing-hidden-native-material' }),
-    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-    method: 'POST'
-  });
-  expect(missingMaterial.status).toBe(404);
-  expect(await responseJson(missingMaterial)).toEqual({ error: 'not_found' });
-
-  const cliHealth = await runAgentCli(['health', '--descriptor', descriptorPath]);
-  expect(cliHealth.status).toBe(0);
-  expect(cliHealth.output).toMatchObject({ ok: true, service: 'foliole-agent-control' });
-  expectWithoutToken(cliHealth.output, token);
-
-  const cliCapabilities = await runAgentCli(['capabilities', '--descriptor', descriptorPath]);
-  expect(cliCapabilities.status).toBe(0);
-  expectCapabilitiesPayload(cliCapabilities.output);
-  expectWithoutToken(cliCapabilities.output, token);
-
-  const cliEmptySearch = await runAgentCli(['materials/search', '--descriptor', descriptorPath, '--query', '   ']);
-  expect(cliEmptySearch).toEqual({ output: { error: 'invalid_request' }, status: 1 });
-  expectWithoutToken(cliEmptySearch.output, token);
+  await expectMaterialApiRoutes(endpoint, token);
+  await expectCliRoutes(descriptorPath, token);
 });

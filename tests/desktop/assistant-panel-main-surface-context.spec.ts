@@ -22,8 +22,23 @@ const readyStatus = {
   provider: 'codex-app-server',
   state: 'ready'
 };
+const existingThread = {
+  archivedAt: null,
+  createdAt: '2026-07-07T00:00:00.000Z',
+  deletedAt: null,
+  lastOpenedAt: '2026-07-07T00:00:00.000Z',
+  location: { type: 'workspace' },
+  preview: 'Existing Aide prompt',
+  provider: 'codex-app-server',
+  providerThreadId: 'thread-main-surface',
+  readError: null,
+  readState: 'not_requested',
+  status: 'active',
+  title: 'Existing Aide thread',
+  updatedAt: '2026-07-07T00:00:00.000Z'
+};
 
-test('Aide sends the visible virtual main panel list as workspace context', async ({
+test('Aide continues a saved thread with the visible main panel as current context', async ({
   desktopApp,
   desktopWindow
 }, testInfo) => {
@@ -39,6 +54,7 @@ test('Aide sends the visible virtual main panel list as workspace context', asyn
   await desktopWindow.getByRole('treeitem', { name: /^(Shelved|已搁置)$/ }).click();
   await expect(desktopWindow.getByTestId('folder-list-title-aide-visible-shelved')).toBeVisible();
   await openAssistantPanel(desktopWindow);
+  await desktopWindow.getByRole('button', { name: /Existing Aide thread/ }).click();
   await desktopWindow.getByLabel(/^(Foliole Aide message|Foliole Aide 消息)$/).fill('What can you see?');
   const sendButton = desktopWindow.getByRole('button', { name: /^(Send|发送)$/ });
   await expect(sendButton).toBeEnabled();
@@ -48,6 +64,8 @@ test('Aide sends the visible virtual main panel list as workspace context', asyn
   expect(await getAssistantSendRequests(desktopApp)).toEqual(expect.arrayContaining([
     expect.objectContaining({
       args: expect.objectContaining({
+        openingLocation: { type: 'workspace' },
+        providerThreadId: 'thread-main-surface',
         workspaceContext: expect.objectContaining({
           activeNodeId: 'special-virtual-shelved',
           folder: expect.objectContaining({
@@ -123,13 +141,13 @@ async function openAssistantPanel(desktopWindow: Page) {
 }
 
 async function installAssistantIpcMock(electronApp: ElectronApplication) {
-  await electronApp.evaluate(({ ipcMain }, status) => {
+  await electronApp.evaluate(({ ipcMain }, payload) => {
     globalThis.__folioleAssistantInvokeRequests = [];
     ipcMain.removeHandler('foliole:invoke');
     ipcMain.handle('foliole:invoke', async (_event, request: { args?: unknown; command?: string }) => {
       globalThis.__folioleAssistantInvokeRequests.push(request);
-      if (request.command === 'assistant_get_status') return status;
-      if (request.command === 'assistant_list_thread_index') return [];
+      if (request.command === 'assistant_get_status') return payload.readyStatus;
+      if (request.command === 'assistant_list_thread_index') return [payload.existingThread];
       if (request.command === 'assistant_list_thread_messages') return [];
       if (request.command === 'assistant_send_message') {
         return {
@@ -140,7 +158,7 @@ async function installAssistantIpcMock(electronApp: ElectronApplication) {
       }
       return null;
     });
-  }, readyStatus);
+  }, { existingThread, readyStatus });
 }
 
 declare global {

@@ -1,31 +1,34 @@
 #!/usr/bin/env node
 /* global console, fetch, process */
 
-import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const DEFAULT_BACKUP_DIR = path.join('.tmp', 'agent-control', 'backups');
+import { readAgentTrace } from './foliole-agent-trace.mjs';
+import { writeAgentBackup } from './foliole-agent-write-backup.mjs';
+
 const JSON_HEADERS = { 'content-type': 'application/json' };
 const ROUTES = {
   capabilities: { method: 'GET', path: 'capabilities' },
   health: { auth: false, method: 'GET', path: 'health' },
-  'materials/delete-soft': { capability: 'materials.deleteSoft', method: 'POST', path: 'materials/delete-soft', write: true },
+  'materials/delete-soft': { capability: 'materials.deleteSoft', method: 'POST', path: 'materials/delete-soft', writeKind: 'material' },
+  'materials/list-children': { capability: 'materials.listChildren', method: 'POST', path: 'materials/list-children' },
   'materials/read': { capability: 'materials.read', method: 'POST', path: 'materials/read' },
   'materials/search': { capability: 'materials.search', method: 'POST', path: 'materials/search' },
-  'materials/update': { capability: 'materials.update', method: 'POST', path: 'materials/update', write: true },
-  'virtual-folders/add-items': { capability: 'virtualFolders.addItems', method: 'POST', path: 'virtual-folders/add-items' },
-  'virtual-folders/create': { capability: 'virtualFolders.create', method: 'POST', path: 'virtual-folders/create' },
+  'materials/update': { capability: 'materials.update', method: 'POST', path: 'materials/update', writeKind: 'material' },
+  'virtual-folders/add-items': { capability: 'virtualFolders.addItems', method: 'POST', path: 'virtual-folders/add-items', writeKind: 'virtual_folder' },
+  'virtual-folders/create': { capability: 'virtualFolders.create', method: 'POST', path: 'virtual-folders/create', writeKind: 'virtual_folder' },
   'virtual-folders/list': { capability: 'virtualFolders.list', method: 'POST', path: 'virtual-folders/list' },
   'virtual-folders/read': { capability: 'virtualFolders.read', method: 'POST', path: 'virtual-folders/read' },
-  'virtual-folders/remove-items': { capability: 'virtualFolders.removeItems', method: 'POST', path: 'virtual-folders/remove-items' },
-  'virtual-folders/reorder': { capability: 'virtualFolders.reorder', method: 'POST', path: 'virtual-folders/reorder' }
+  'virtual-folders/remove-items': { capability: 'virtualFolders.removeItems', method: 'POST', path: 'virtual-folders/remove-items', writeKind: 'virtual_folder' },
+  'virtual-folders/reorder': { capability: 'virtualFolders.reorder', method: 'POST', path: 'virtual-folders/reorder', writeKind: 'virtual_folder' }
 };
 
 export async function runAgentCli(argv, options = {}) {
   const parsed = parseArgv(argv);
   if (!parsed.ok) return failure(parsed.error, parsed.statusCode);
+  if (parsed.command === 'trace/read') return readAgentTrace(parsed.flags, options);
   const route = ROUTES[parsed.command];
   if (!route) return failure('unknown_command', 2);
   const descriptorResult = await readDescriptor(parsed.flags.descriptor, options);
@@ -36,10 +39,11 @@ export async function runAgentCli(argv, options = {}) {
   }
   const bodyResult = buildBody(parsed.command, parsed.flags);
   if (!bodyResult.ok) return failure(bodyResult.error, bodyResult.statusCode);
-  if (route.write) return runWriteCommand(parsed.command, bodyResult.body, descriptor, parsed.flags, options);
   if (parsed.command === 'virtual-folders/reorder' && bodyResult.body.material_ids) {
-    return runVirtualFolderReorderByMaterialIds(bodyResult.body, descriptor, options);
+    return runVirtualFolderReorderByMaterialIds(bodyResult.body, descriptor, parsed.flags, options);
   }
+  if (route.writeKind === 'material') return runMaterialWriteCommand(parsed.command, bodyResult.body, descriptor, parsed.flags, options);
+  if (route.writeKind === 'virtual_folder') return runVirtualFolderWriteCommand(parsed.command, bodyResult.body, descriptor, parsed.flags, options);
   return callApi(route, descriptor, bodyResult.body, options);
 }
 
@@ -85,6 +89,7 @@ function isDescriptor(value) {
 
 function buildBody(command, flags) {
   if (command === 'health' || command === 'capabilities') return { body: null, ok: true };
+  if (command === 'materials/list-children') return requireFields(flags, [], ['parent_id', 'limit']);
   if (command === 'materials/read') return requireFields(flags, ['id']);
   if (command === 'materials/search') return requireFields(flags, ['query'], ['limit']);
   if (command === 'materials/update') return buildUpdateBody(flags);
@@ -129,12 +134,16 @@ function normalizeFieldValue(field, value) {
   return value;
 }
 
-async function runVirtualFolderReorderByMaterialIds(body, descriptor, options) {
+async function runVirtualFolderReorderByMaterialIds(body, descriptor, flags, options) {
   const read = await callApi(ROUTES['virtual-folders/read'], descriptor, { id: body.folder_id }, options);
   if (read.status !== 0) return read;
   const itemIds = resolveReorderItemIds(read.output.items, body.material_ids);
   if (!itemIds.ok) return failure(itemIds.error, 2);
-  return callApi(ROUTES['virtual-folders/reorder'], descriptor, { folder_id: body.folder_id, item_ids: itemIds.itemIds }, options);
+  const patch = { folder_id: body.folder_id, item_ids: itemIds.itemIds, material_ids: body.material_ids };
+  const backup = await writeBackup('virtual-folders/reorder', 'virtual_folder', body.folder_id, read.output, patch, flags, options);
+  if (!backup.ok) return failure(backup.error, 4);
+  const result = await callApi(ROUTES['virtual-folders/reorder'], descriptor, { folder_id: body.folder_id, item_ids: itemIds.itemIds }, options);
+  return { ...result, output: { ...result.output, backup_path: backup.path } };
 }
 
 function resolveReorderItemIds(items, materialIds) {
@@ -149,45 +158,64 @@ function resolveReorderItemIds(items, materialIds) {
   return { itemIds, ok: true };
 }
 
-async function runWriteCommand(command, body, descriptor, flags, options) {
+async function runMaterialWriteCommand(command, body, descriptor, flags, options) {
+  if (!descriptor.capabilities?.includes('materials.read')) {
+    return failure('backup_capability_disabled', 3);
+  }
   const materialId = body.id;
   const read = await callApi(ROUTES['materials/read'], descriptor, { id: materialId }, options);
   if (read.status !== 0) return read;
   const material = read.output.material;
   if (material?.content_truncated) return failure('backup_source_truncated', 4);
-  const backup = await writeBackup(command, materialId, material, body, flags, options);
+  const mutationBody = buildMaterialMutationBody(command, body, material);
+  if (!mutationBody.ok) return failure(mutationBody.error, 4);
+  const backup = await writeBackup(command, 'material', materialId, material, mutationBody.body, flags, options);
+  if (!backup.ok) return failure(backup.error, 4);
+  const result = await callApi(ROUTES[command], descriptor, mutationBody.body, options);
+  return { ...result, output: { ...result.output, backup_path: backup.path } };
+}
+
+function buildMaterialMutationBody(command, body, material) {
+  if (command !== 'materials/delete-soft' || body.expected_updated_at) return { body, ok: true };
+  const expectedUpdatedAt = typeof material?.updated_at === 'string' ? material.updated_at.trim() : '';
+  if (!expectedUpdatedAt) return { error: 'backup_source_missing_updated_at', ok: false };
+  return { body: { ...body, expected_updated_at: expectedUpdatedAt }, ok: true };
+}
+
+async function runVirtualFolderWriteCommand(command, body, descriptor, flags, options) {
+  const folderId = body.folder_id ?? 'new';
+  if (body.folder_id && !descriptor.capabilities?.includes('virtualFolders.read')) {
+    return failure('backup_capability_disabled', 3);
+  }
+  const previous = body.folder_id ? await callApi(ROUTES['virtual-folders/read'], descriptor, { id: body.folder_id }, options) : null;
+  if (previous && previous.status !== 0) return previous;
+  const backup = await writeBackup(command, 'virtual_folder', folderId, previous?.output ?? null, body, flags, options);
   if (!backup.ok) return failure(backup.error, 4);
   const result = await callApi(ROUTES[command], descriptor, body, options);
   return { ...result, output: { ...result.output, backup_path: backup.path } };
 }
 
-async function writeBackup(command, materialId, material, patch, flags, options) {
-  const backupDir = flags.backup_dir ?? options.env?.FOLIOLE_AGENT_BACKUP_DIR ?? process.env.FOLIOLE_AGENT_BACKUP_DIR ?? DEFAULT_BACKUP_DIR;
-  const runId = options.randomId?.() ?? randomUUID();
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const backupPath = path.resolve(backupDir, `agent-material-${command.replace('/', '-')}-${materialId}-${timestamp}-${runId}.json`);
-  const payload = { command, created_at: new Date().toISOString(), material_id: materialId, previous_material: material, request_patch: patch, run_id: runId };
-  try {
-    await mkdir(path.dirname(backupPath), { recursive: true });
-    await writeFile(backupPath, `${JSON.stringify(payload, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
-    return { ok: true, path: backupPath };
-  } catch {
-    return { error: 'backup_write_failed', ok: false };
-  }
+async function writeBackup(command, kind, targetId, previous, patch, flags, options) {
+  return writeAgentBackup({ command, flags, kind, options, patch, previous, targetId });
 }
 
 async function callApi(route, descriptor, body, options) {
   const url = `${descriptor.endpoint.replace(/\/$/u, '')}/agent-control/v1/${route.path}`;
+  let response;
   try {
-    const response = await (options.fetch ?? fetch)(url, {
+    response = await (options.fetch ?? fetch)(url, {
       body: route.method === 'GET' ? undefined : JSON.stringify(body ?? {}),
       headers: route.auth === false ? JSON_HEADERS : { ...JSON_HEADERS, authorization: `Bearer ${descriptor.token}` },
       method: route.method
     });
+  } catch {
+    return failure('connection_failed', 3);
+  }
+  try {
     const output = await response.json();
     return { output, status: response.ok ? 0 : 1 };
   } catch {
-    return failure('connection_failed', 3);
+    return failure('invalid_response', 3);
   }
 }
 

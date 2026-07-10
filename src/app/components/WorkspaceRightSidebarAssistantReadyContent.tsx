@@ -3,6 +3,7 @@ import { useState } from 'react';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
+  AppButton,
   inspectorListInsetPaddingClassName,
   inspectorListMetaClassName
 } from '../../shared/ui';
@@ -58,6 +59,8 @@ function AssistantConversationView(props: {
         sendLabel={t('desktop.rightPanel.assistant.send')}
         sending={props.controller.sending}
         sessionLabel={resolveSessionLabel(props.controller, t)}
+        threadPreviewLabel={resolveThreadPreviewLabel(props.controller, t)}
+        threadStatusLabel={resolveThreadStatusLabel(props.controller, t)}
       />
     </>
   );
@@ -112,24 +115,45 @@ function AssistantHistoryList(props: {
       />
       <AssistantThreadStatus
         empty={props.controller.records.length === 0}
+        error={props.controller.threadError}
         loading={props.controller.loading}
+        onRetry={props.controller.reloadThreads}
       />
     </>
   );
 }
 
-function AssistantThreadStatus(props: { empty: boolean; loading: boolean }) {
+function AssistantThreadStatus(props: {
+  empty: boolean;
+  error: ReturnType<typeof useWorkspaceRightSidebarAssistantPanelController>['threadError'];
+  loading: boolean;
+  onRetry: () => void;
+}) {
   const t = useTranslation();
   const text = props.loading
     ? t('desktop.rightPanel.assistant.loading')
+    : props.error === 'loadFailed'
+      ? t('desktop.rightPanel.assistant.historyLoadFailed')
+      : props.error === 'removeFailed'
+        ? t('desktop.rightPanel.assistant.historyRemoveFailed')
     : props.empty
       ? t('desktop.rightPanel.assistant.empty')
       : null;
   if (!text) return null;
   return (
-    <p className={`${inspectorListInsetPaddingClassName} py-3 ${inspectorListMetaClassName}`}>
-      {text}
-    </p>
+    <div className={`${inspectorListInsetPaddingClassName} flex items-center gap-2 py-3 ${inspectorListMetaClassName}`}>
+      <span className="min-w-0 flex-1">{text}</span>
+      {props.error === 'loadFailed' ? (
+        <AppButton
+          disabled={props.loading}
+          onClick={props.onRetry}
+          size="sm"
+          type="button"
+        >
+          {t('desktop.rightPanel.assistant.retry')}
+        </AppButton>
+      ) : null}
+    </div>
   );
 }
 
@@ -146,4 +170,24 @@ function resolveSessionLabel(
   return controller.selectedRecord && controller.activeMessages.length === 0
     ? t('desktop.rightPanel.assistant.selectedThread')
     : t('desktop.rightPanel.assistant.currentSession');
+}
+
+function resolveThreadPreviewLabel(
+  controller: ReturnType<typeof useWorkspaceRightSidebarAssistantPanelController>,
+  t: ReturnType<typeof useTranslation>
+) {
+  if (controller.activeMessages.length > 0) return null;
+  const preview = controller.selectedRecord?.preview.trim();
+  return preview
+    ? t('desktop.rightPanel.assistant.threadPreview', { preview })
+    : null;
+}
+
+function resolveThreadStatusLabel(
+  controller: ReturnType<typeof useWorkspaceRightSidebarAssistantPanelController>,
+  t: ReturnType<typeof useTranslation>
+) {
+  return controller.selectedRecord && controller.threadMessageStatus === 'failed'
+    ? t('desktop.rightPanel.assistant.threadMessagesLoadFailed')
+    : null;
 }

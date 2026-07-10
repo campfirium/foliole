@@ -8,7 +8,7 @@ import {
 const FOLIOLE_AIDE_ENABLED_EVENT = 'foliole-aide-enabled-change';
 
 export function getFolioleAideEnabled() {
-  return getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.folioleAideEnabled) !== 'false';
+  return getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.folioleAideEnabled) === 'true';
 }
 
 export function setFolioleAideEnabled(enabled: boolean) {

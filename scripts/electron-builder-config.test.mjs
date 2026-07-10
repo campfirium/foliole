@@ -166,6 +166,10 @@ describe('electron-builder release packaging config', () => {
       from: 'build/icon.ico',
       to: 'build/icon.ico'
     });
+    expect(config.extraResources).toContainEqual({
+      from: 'scripts/agent-control',
+      to: 'scripts/agent-control'
+    });
     expect(config.win.icon).toBe('build/icon.ico');
     expect(config.linux.icon).toBe('build/icon.png');
   });

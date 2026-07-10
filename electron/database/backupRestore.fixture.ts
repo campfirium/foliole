@@ -40,6 +40,7 @@ export function mutateWorkspaceAfterBackup() {
 export function createRestoredWorkspaceSnapshot() {
   return {
     activeNodeId: 'node-root',
+    manualVirtualCollections: [],
     nodeOrder: ['node-root', 'node-qa'],
     nodesById: {
       'node-root': createRestoredNodeSnapshot('node-root', '# root'),

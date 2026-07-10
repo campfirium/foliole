@@ -14,6 +14,7 @@ import { closeDatabaseConnection, openDatabaseConnection } from './connection.js
 import { copyExtraBackup, disabledExtraBackupResult, type ExtraBackupCopyResult } from './extraBackupCopies.js';
 import { createInternalDatabaseSnapshotWithBackup } from './internalSnapshots.js';
 import { initializeDatabase } from './migrate.js';
+import { markNodeSyncRestoreIncarnation } from './nodeSyncVersions.js';
 import {
   backupSqliteDatabase,
   restoreSqliteDatabase,
@@ -175,6 +176,7 @@ export async function restoreApplicationDatabaseBackup(
   closeDatabaseConnection();
   const result = await restoreSqliteDatabase({ sourcePath: options.sourcePath, targetPath });
   initializeDatabase();
+  markNodeSyncRestoreIncarnation();
   await pruneBackupsNow();
   return result;
 }

@@ -9,10 +9,10 @@ import { resolveAppPaths } from '../ipc/paths.js';
 import { notifyWorkspaceContentChanged } from '../ipc/workspaceContentChangedEvents.js';
 
 import { createDiagnosticAgentControlAuditSink, type AgentControlAuditSink } from './agentControlAudit.js';
+import { getEnabledAgentControlCapabilities } from './agentControlCapabilities.js';
 import { createAgentControlRequestHandler } from './agentControlRequestHandler.js';
 import { createAgentControlToken } from './agentControlToken.js';
 import {
-  AGENT_CONTROL_CAPABILITIES,
   AGENT_CONTROL_PROTOCOL_VERSION,
   type AgentControlRuntimeIdentity,
   type AgentControlServerStatus,
@@ -27,6 +27,9 @@ export const AGENT_CONTROL_HTTP_LIMITS = {
 
 const LOOPBACK_HOST = '127.0.0.1';
 const SESSION_FILE = 'agent-control-session.json';
+const DYNAMIC_PORT_MIN = 49_152;
+const DYNAMIC_PORT_RANGE = 16_384;
+const LISTEN_ATTEMPTS = 8;
 
 let activeServer: http.Server | null = null;
 let activeDescriptorPath: string | null = null;
@@ -50,15 +53,30 @@ export function createAgentControlHttpServer(options: { appVersion: string; audi
 }
 
 function listen(server: http.Server, port: number) {
+  return listenAttempt(server, port, port === 0 ? LISTEN_ATTEMPTS : 1);
+}
+
+function listenAttempt(server: http.Server, port: number, attempts: number): Promise<number> {
+  const targetPort = port === 0 ? pickDynamicPort() : port;
   return new Promise<number>((resolve, reject) => {
-    const onError = (error: Error) => reject(error);
+    const onError = (error: NodeJS.ErrnoException) => {
+      if (port === 0 && error.code === 'EADDRINUSE' && attempts > 1) {
+        void listenAttempt(server, port, attempts - 1).then(resolve, reject);
+        return;
+      }
+      reject(error);
+    };
     server.once('error', onError);
-    server.listen(port, LOOPBACK_HOST, () => {
+    server.listen(targetPort, LOOPBACK_HOST, () => {
       server.off('error', onError);
       const address = server.address();
-      resolve(typeof address === 'object' && address ? address.port : port);
+      resolve(typeof address === 'object' && address ? address.port : targetPort);
     });
   });
+}
+
+function pickDynamicPort() {
+  return DYNAMIC_PORT_MIN + Math.floor(Math.random() * DYNAMIC_PORT_RANGE);
 }
 
 
@@ -94,7 +112,7 @@ function createRuntimeIdentity(startedAt: string): AgentControlRuntimeIdentity {
 }
 function buildDescriptor(endpoint: string, token: string, runtimeIdentity: AgentControlRuntimeIdentity): AgentControlSessionDescriptor {
   return {
-    capabilities: [...AGENT_CONTROL_CAPABILITIES],
+    capabilities: getEnabledAgentControlCapabilities(),
     endpoint,
     pid: process.pid,
     protocol_version: AGENT_CONTROL_PROTOCOL_VERSION,

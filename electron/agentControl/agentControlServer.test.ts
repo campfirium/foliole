@@ -6,6 +6,7 @@ import path from 'node:path';
 
 import { afterEach, expect, it } from 'vitest';
 
+import { getEnabledAgentControlCapabilities } from './agentControlCapabilities.js';
 import {
   ensureAgentControlApiServer,
   stopAgentControlApiServer
@@ -57,6 +58,7 @@ function expectedCapabilityStatuses() {
   return AGENT_CONTROL_CAPABILITIES.map((name) => ({
     enabled: name === 'materials.read' ||
       name === 'materials.search' ||
+      name === 'materials.listChildren' ||
       name === 'materials.update' ||
       name === 'materials.deleteSoft' ||
       name === 'virtualFolders.list' ||
@@ -91,10 +93,11 @@ it('starts a loopback-only service and writes a local session descriptor', async
   expect(status).toMatchObject({ last_error: null, state: 'running' });
   expect(status.endpoint).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
   expect(descriptor).toMatchObject({
-    capabilities: AGENT_CONTROL_CAPABILITIES,
+    capabilities: getEnabledAgentControlCapabilities(),
     endpoint: status.endpoint,
     protocol_version: AGENT_CONTROL_PROTOCOL_VERSION
   });
+  expect(descriptor.capabilities).not.toContain('virtualFolders.write');
   expect(typeof descriptor.token).toBe('string');
   expect(String(descriptor.token).length).toBeGreaterThan(20);
 });

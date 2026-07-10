@@ -1,8 +1,10 @@
 import type { AgentControlCapability, AgentControlCapabilityStatus } from './agentControlTypes.js';
+import { AGENT_CONTROL_CAPABILITIES } from './agentControlTypes.js';
 
 export function isCapabilityEnabled(name: AgentControlCapability): AgentControlCapabilityStatus['enabled'] {
   return name === 'materials.read' ||
     name === 'materials.search' ||
+    name === 'materials.listChildren' ||
     name === 'materials.update' ||
     name === 'materials.deleteSoft' ||
     name === 'virtualFolders.list' ||
@@ -11,4 +13,8 @@ export function isCapabilityEnabled(name: AgentControlCapability): AgentControlC
     name === 'virtualFolders.addItems' ||
     name === 'virtualFolders.removeItems' ||
     name === 'virtualFolders.reorder';
+}
+
+export function getEnabledAgentControlCapabilities(): AgentControlCapability[] {
+  return AGENT_CONTROL_CAPABILITIES.filter(isCapabilityEnabled);
 }

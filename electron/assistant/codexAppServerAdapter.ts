@@ -16,7 +16,9 @@ const PROVIDER = 'codex-app-server' as const;
 const DEFAULT_TIMEOUT_MS = 45_000;
 
 export interface CodexAppServerAdapterOptions {
+  appServerArgs?: string[];
   appVersion: string;
+  authProbeCommand?: (command: string, options: CodexLauncherOptions) => Promise<boolean>;
   command?: string;
   env?: NodeJS.ProcessEnv;
   launcherCwd: string;
@@ -37,7 +39,12 @@ export interface CodexLauncherOptions {
 
 export class CodexAppServerAdapter {
   private active = false;
+  private readonly appServerArgs: string[];
   private readonly appVersion: string;
+  private readonly authProbeCommand: (
+    command: string,
+    options: CodexLauncherOptions
+  ) => Promise<boolean>;
   private readonly command: string;
   private readonly env: NodeJS.ProcessEnv;
   private readonly launcherCwd: string;
@@ -55,7 +62,9 @@ export class CodexAppServerAdapter {
   private readonly timeoutMs: number;
 
   constructor(options: CodexAppServerAdapterOptions) {
+    this.appServerArgs = options.appServerArgs ?? [];
     this.appVersion = options.appVersion;
+    this.authProbeCommand = options.authProbeCommand ?? probeCodexLoginStatus;
     this.command = options.command ?? 'codex';
     this.env = options.env ?? process.env;
     this.launcherCwd = options.launcherCwd;
@@ -68,9 +77,12 @@ export class CodexAppServerAdapter {
   async getStatus(): Promise<NativeAssistantStatusResult> {
     if (this.active) return status('busy');
     try {
-      return (await this.probeCommand(this.command, this.createLauncherOptions()))
+      const launcherOptions = this.createLauncherOptions();
+      if (!await this.probeCommand(this.command, launcherOptions))
+        return status('unavailable', 'not_configured');
+      return (await this.authProbeCommand(this.command, launcherOptions))
         ? status('ready')
-        : status('unavailable', 'not_configured');
+        : status('unavailable', 'auth_failed');
     } catch (error) {
       return status('unavailable', failureFromError(error));
     }
@@ -91,7 +103,7 @@ export class CodexAppServerAdapter {
     try {
       this.session ??= new CodexAppServerSession({
         appVersion: this.appVersion,
-        spawn: () => this.spawnCommand(this.command, ['app-server'], this.createLauncherOptions())
+        spawn: () => this.spawnCommand(this.command, ['app-server', ...this.appServerArgs], this.createLauncherOptions())
       });
       return await this.session.sendMessage({
         clientTurnId: input.clientTurnId,
@@ -155,8 +167,16 @@ function sendFailure(
 }
 
 async function probeCodexCommand(command: string, options: CodexLauncherOptions) {
+  return probeCodexExitCode(command, ['--version'], options, 2_000);
+}
+
+async function probeCodexLoginStatus(command: string, options: CodexLauncherOptions) {
+  return probeCodexExitCode(command, ['login', 'status'], options, 5_000);
+}
+
+async function probeCodexExitCode(command: string, args: string[], options: CodexLauncherOptions, timeoutMs: number) {
   return new Promise<boolean>((resolve) => {
-    const child = spawnCodexCommand(command, ['--version'], options);
+    const child = spawnCodexCommand(command, args, options);
     let settled = false;
     const finish = (ok: boolean) => {
       if (settled) return;
@@ -168,7 +188,7 @@ async function probeCodexCommand(command: string, options: CodexLauncherOptions)
     setTimeout(() => {
       child.kill();
       finish(false);
-    }, 2_000).unref?.();
+    }, timeoutMs).unref?.();
   });
 }
 

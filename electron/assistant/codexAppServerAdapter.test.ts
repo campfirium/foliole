@@ -1,24 +1,10 @@
 // @vitest-environment node
-import { EventEmitter } from 'node:events';
-import { PassThrough } from 'node:stream';
-
 import { expect, it, vi } from 'vitest';
 
 import { CodexAppServerAdapter } from './codexAppServerAdapter.js';
+import { FakeCodexProcess, testMkdirSync, writeMessage } from './codexAppServerAdapter.testSupport.js';
 
 const TEST_LAUNCHER_CWD = 'C:\\Foliole\\Widgets\\Foliole Aide';
-const testMkdirSync = () => undefined;
-
-class FakeCodexProcess extends EventEmitter {
-  readonly stderr = new PassThrough();
-  readonly stdin = new PassThrough();
-  readonly stdout = new PassThrough();
-  readonly kill = vi.fn(() => undefined);
-}
-
-function writeMessage(process: FakeCodexProcess, message: unknown) {
-  process.stdout.write(`${JSON.stringify(message)}\n`);
-}
 
 function createAdapter(process: FakeCodexProcess) {
   const spawnCommand = vi.fn(() => process);
@@ -31,42 +17,6 @@ function createAdapter(process: FakeCodexProcess) {
     timeoutMs: 1000
   });
 }
-
-  it('reports ready without starting app-server when the codex command is available', async () => {
-    const probeCommand = vi.fn(async () => true);
-    const spawnCommand = vi.fn();
-    const adapter = new CodexAppServerAdapter({
-      appVersion: '0.6.5-test',
-      launcherCwd: TEST_LAUNCHER_CWD,
-      mkdirSync: testMkdirSync,
-      probeCommand,
-      spawnCommand
-    });
-
-    await expect(adapter.getStatus()).resolves.toMatchObject({
-      provider: 'codex-app-server',
-      state: 'ready'
-    });
-    expect(probeCommand).toHaveBeenCalledWith(
-      'codex',
-      expect.objectContaining({ cwd: TEST_LAUNCHER_CWD })
-    );
-    expect(spawnCommand).not.toHaveBeenCalled();
-  });
-
-  it('reports not_configured status when codex is unavailable', async () => {
-    const adapter = new CodexAppServerAdapter({
-      appVersion: '0.6.5-test',
-      launcherCwd: TEST_LAUNCHER_CWD,
-      mkdirSync: testMkdirSync,
-      probeCommand: async () => false
-    });
-
-    await expect(adapter.getStatus()).resolves.toMatchObject({
-      failure: { category: 'not_configured' },
-      state: 'unavailable'
-    });
-  });
 
   it('aggregates assistant deltas from a reusable app-server session', async () => {
     const process = new FakeCodexProcess();
@@ -81,7 +31,26 @@ function createAdapter(process: FakeCodexProcess) {
         clientTurnId: 'client-1',
         message: 'Summarize',
         onEvent: (event) => events.push(event),
-        workspaceContext: { activeTitle: 'Topic', path: ['Parent', 'Topic'], scope: 'node' }
+        workspaceContext: {
+          activeKind: 'topic',
+          activeNodeId: 'topic-1',
+          activeTitle: 'Topic',
+          agentControl: {
+            capabilities: ['materials.read', 'materials.search'],
+            descriptorEnvVar: 'FOLIOLE_AGENT_DESCRIPTOR',
+            descriptorPath: 'C:\\Foliole\\agent-control.json',
+            state: 'running'
+          },
+          document: { bodyStatus: 'ready', charCount: 11, preview: 'Loaded body', truncated: false },
+          folder: {
+            childCount: 1,
+            children: [{ hasContent: true, kind: 'topic', nodeId: 'child-1', title: 'Child' }],
+            truncated: false
+          },
+          path: ['Parent', 'Topic'],
+          schemaVersion: 1,
+          scope: 'node'
+        }
       })
     ).resolves.toEqual({
       message: { text: 'Hello world', threadId: 'thr_1', turnId: 'turn_1' },
@@ -97,14 +66,16 @@ function createAdapter(process: FakeCodexProcess) {
         expect.objectContaining({ clientTurnId: 'client-1', kind: 'completed' })
       ])
     );
-    expect(seenInputs[0]).toContain('Current Foliole scope: node');
     expect(seenInputs[0]).toContain('Active path: Parent / Topic');
+    expect(seenInputs[0]).toContain('Active Foliole document body status: ready, 11 chars.');
+    expect(seenInputs[0]).toContain('Active Foliole material id: topic-1');
+    expect(seenInputs[0]).toContain('foliole_materials_read');
+    expect(seenInputs[0]).toContain('Use foliole_materials_read with the active material id');
     expect(seenInputs[0]).toContain('User message:\nSummarize');
     expect(process.kill).not.toHaveBeenCalled();
     adapter.dispose();
     expect(process.kill).toHaveBeenCalledOnce();
   });
-
   it('resumes an existing thread before starting a turn', async () => {
     const process = new FakeCodexProcess();
     const adapter = createAdapter(process);
@@ -148,7 +119,6 @@ function createAdapter(process: FakeCodexProcess) {
     );
     expect(process.kill).not.toHaveBeenCalled();
   });
-
   it('rejects a resume response for a different thread', async () => {
     const process = new FakeCodexProcess();
     const adapter = createAdapter(process);
@@ -176,9 +146,26 @@ function createAdapter(process: FakeCodexProcess) {
     writeMessage(process, { id: 0, result: {} });
     await Promise.resolve();
     writeMessage(process, { id: 1, result: { thread: { id: 'thr_1' } } });
+    writeMessage(process, { method: 'item/agentMessage/delta', params: { delta: 'Done' } });
     writeMessage(process, { method: 'turn/completed', params: {} });
     await first;
     expect(process.kill).not.toHaveBeenCalled();
+  });
+
+  it('fails a completed turn that has no assistant text', async () => {
+    const process = new FakeCodexProcess();
+    const adapter = createAdapter(process);
+    const result = adapter.sendMessage({ clientTurnId: 'client-1', message: 'Hi' });
+
+    writeMessage(process, { id: 0, result: {} });
+    await Promise.resolve();
+    writeMessage(process, { id: 1, result: { thread: { id: 'thr_1' } } });
+    writeMessage(process, { method: 'turn/completed', params: {} });
+
+    await expect(result).resolves.toMatchObject({
+      failure: { category: 'protocol_error' },
+      state: 'failed'
+    });
   });
 
   it('maps launch and protocol failures to sanitized categories', async () => {

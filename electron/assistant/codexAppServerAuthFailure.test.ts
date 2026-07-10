@@ -41,3 +41,30 @@ it('maps app-server authentication events before waiting for timeout', async () 
   await expect(result).resolves.toMatchObject({ failure: { category: 'auth_failed' } });
   expect(process.kill).toHaveBeenCalledOnce();
 });
+
+it('maps app-server JSON-RPC 401 response stream errors to auth_failed', async () => {
+  const process = new FakeCodexProcess();
+  const adapter = new CodexAppServerAdapter({
+    appVersion: '0.6.5-test',
+    launcherCwd: 'C:\\Foliole\\Widgets\\Foliole Aide',
+    mkdirSync: () => undefined,
+    probeCommand: async () => true,
+    spawnCommand: () => process,
+    timeoutMs: 1000
+  });
+  const result = adapter.sendMessage({ clientTurnId: 'client-1', message: 'Hi' });
+  writeMessage(process, { id: 0, result: {} });
+  await Promise.resolve();
+  writeMessage(process, { id: 1, result: { thread: { id: 'thr_1' } } });
+  writeMessage(process, {
+    error: {
+      additionalDetails: 'unexpected status 401 Unauthorized: Missing bearer or basic authentication in header',
+      codexErrorInfo: { responseStreamDisconnected: { httpStatusCode: 401 } },
+      message: 'Reconnecting... 2/5'
+    },
+    id: 2
+  });
+
+  await expect(result).resolves.toMatchObject({ failure: { category: 'auth_failed' } });
+  expect(process.kill).toHaveBeenCalledOnce();
+});

@@ -13,7 +13,10 @@ import {
   inspectorListTitleClassName
 } from '../../shared/ui';
 
-import { getThreadLocationLabelKind } from './workspaceRightSidebarAssistantPanelModel';
+import {
+  getThreadLocationLabelKind,
+  resolveThreadLocationPath
+} from './workspaceRightSidebarAssistantPanelModel';
 
 export function WorkspaceRightSidebarAssistantThreadList(props: {
   activeNodeId: string | null;
@@ -42,7 +45,7 @@ export function WorkspaceRightSidebarAssistantThreadList(props: {
                 {record.title}
               </span>
               <span className={`${inspectorListBodyClassName} block truncate`}>
-                {t(getThreadLocationTranslationKey(record, props.activeNodeId, props.nodesById))}
+                {getThreadLocationText(record, props.activeNodeId, props.nodesById, t)}
                 {' · '}
                 {record.preview || t('desktop.rightPanel.assistant.noPreview')}
               </span>
@@ -72,4 +75,23 @@ function getThreadLocationTranslationKey(
   if (kind === 'topicUnavailable') return 'desktop.rightPanel.assistant.location.topicUnavailable';
   if (kind === 'workspace') return 'desktop.rightPanel.assistant.location.workspace';
   return 'desktop.rightPanel.assistant.location.topic';
+}
+
+function getThreadLocationText(
+  record: NativeAssistantThreadIndexRecord,
+  activeNodeId: string | null,
+  nodesById: Record<string, Node>,
+  t: ReturnType<typeof useTranslation>
+) {
+  const kind = getThreadLocationLabelKind(record, activeNodeId, nodesById);
+  const path = resolveThreadLocationPath(
+    record,
+    nodesById,
+    t('desktop.rightPanel.assistant.location.untitledTopic')
+  );
+  if (!path) return t(getThreadLocationTranslationKey(record, activeNodeId, nodesById));
+  const key = kind === 'thisTopic'
+    ? 'desktop.rightPanel.assistant.location.thisTopicNamed'
+    : 'desktop.rightPanel.assistant.location.topicNamed';
+  return t(key, { title: path });
 }

@@ -14,6 +14,10 @@
     {
       "from": "build/icon.ico",
       "to": "build/icon.ico"
+    },
+    {
+      "from": "scripts/agent-control",
+      "to": "scripts/agent-control"
     }
   ],
   "electronLanguages": ["en-US", "zh-CN"],
