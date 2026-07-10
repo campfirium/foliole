@@ -53,7 +53,7 @@
 ## Validation
 
 - Windows 原生本地快检优先使用 `npm run quality:fast:native`。它是 T0 快速检查：复用既有路由但封顶在 light / mid，不启动真实 Electron 窗口，不自动运行 `quality:desktop` / `quality:shared` / `quality:android` / `quality:full`；当它提示 T0 后置综合门 deferred 时，按风险、交接或 push 需要再显式运行对应综合机械门。
-- 凡本轮改动会进入 Windows 桌面运行时或改变桌面用户可见行为，必须先完成本轮相关前置验证并运行 T0 快速检查 `npm run quality:fast:native`，再完成一次 T1 / T2 / T3 检查。首选 T1 隐藏检查：新增或复用本轮任务相关 spec，并运行 `npm run test:e2e:desktop:native:hidden -- <spec>`；若行为不适合 hidden-capable 自动化，再升级到 T2 可见检查 `npm run test:e2e:desktop:native:visible -- <spec>` 或 T3 人工检查。只改文档、agent 规则、只读诊断、测试代码或脚本内部逻辑，且不改变桌面运行时行为时，可跳过 T0 / T1 / T2 / T3，但最终汇报必须写明跳过原因。
+- 凡本轮改动会进入 Windows 桌面运行时或改变桌面用户可见行为，必须先完成本轮相关前置验证并运行 T0 快速检查 `npm run quality:fast:native`，再完成一次 T1 / T2 / T3 检查。首选 T1 隐藏检查：新增或复用本轮任务相关 spec，并运行 `npm run test:e2e:desktop:native:hidden -- <spec>`；若行为不适合 hidden-capable 自动化，再升级到 T2 可见检查 `npm run test:e2e:desktop:native:visible -- <spec>` 或 T3 人工检查。命中根 `AGENTS.md` 的非运行时改动豁免时，可跳过桌面 T0 / T1 / T2 / T3，并在最终汇报写明原因。
 - 桌面相关改动仍应先执行覆盖本轮能力闭环的最小前置验证；只有当能力闭环触及桌面根链路、桌面多子系统联动、共享层 / 依赖、或你无法用相关验证证明影响已被覆盖时，才升级为 `npm run quality:desktop`、`npm run quality:shared`、`npm run quality:android` 或 `npm run quality:full`；同时进入发布候选、安装包或跨宿主发布验收时才升级到 `npm run quality:release`。
 - Windows 原生 Codex 会话执行 Windows 桌面人工预览时使用 `npm run windows:preview:native`。桌面人工预览只在用户明确要求 Windows 预览、阶段验收、发布 / 安装包验收、或本节 Windows 专属风险命中时执行；不再读取持久 preview flag 自动升级日常桌面可见改动。
 - Agent 日常 T1 / T2 自动化验收先按验收目标选入口：纯 renderer / Web UI 行为若属于桌面产品表面，仍优先使用 `npm run test:e2e:desktop:native:hidden -- <spec>` 覆盖真实 Electron renderer；只有非桌面表面才使用 headless browser。Windows 原生 Codex 会话必须运行本轮任务相关的 hidden-capable Playwright spec，不得用无参 hidden health 替代功能验收。

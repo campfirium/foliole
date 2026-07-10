@@ -33,4 +33,4 @@
 - companion 改动默认先执行覆盖本轮能力闭环的最小验证；只有当能力闭环触及移动共享 bridge、Capacitor / Android 宿主主链路、共享层 / 依赖、跨宿主联动、或你无法用相关验证证明影响已被覆盖时，才升级为 `npm run quality:android`、`npm run quality:shared` 或 `npm run quality:full`。
 - `npm run android:web:dev` 只作为 companion Web 入口、空态壳层或启动烟测的可选诊断；它运行在 `web-preview` bootstrap 下，`database_ready` 为 `false`，不作为 Android companion UI 人工验收路线。
 - 需要快速查看真实 companion 内容时，使用 `npm run android:preview:dev-server` 走真机 WebView + Vite dev server；该路线保留 Android WebView、SQLite、Capacitor bridge 与 adb reverse，但仍属于开发预览，不验证离线打包后的 companion assets。
-- companion UI 只要需要查看真实内容、最近主题、列表密度、文章正文、学习卡片、SQLite、Capacitor bridge、sync、持久化结果、Android WebView CSS 兼容、状态栏 / 安全区或触摸手感，仍必须按 `android/AGENTS.md` 走真机最终 L1。
+- companion UI 最终验收的真机 L1 触发条件由 `android/AGENTS.md` 维护；凡需要查看真实 companion 内容、持久化结果或 Android WebView CSS 兼容，仍必须按该规则走真机最终 L1。
