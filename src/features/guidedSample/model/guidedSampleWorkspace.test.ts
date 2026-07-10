@@ -22,6 +22,16 @@ function directChildIds(rootNodeId: string) {
   return state.nodeOrder.filter((nodeId) => state.nodesById[nodeId]?.parentNodeId === rootNodeId);
 }
 
+function expectChineseGuidedSampleCopy(result: Awaited<ReturnType<typeof ensureGuidedSampleTopicTree>>) {
+  const state = useWorkspaceStore.getState();
+  const rootNode = result.rootNodeId ? state.nodesById[result.rootNodeId] : null;
+  const readingNode = state.nodesById[result.queueNodeIds[1] ?? ''];
+  expect(rootNode?.content).toContain('请先点击底部动作条里的 Read，或按 3 或 F。');
+  expect(readingNode?.content).toContain('在 Foliole 中，阅读不必一次完成。');
+  expect(readingNode?.content).toContain('如果没有看到底部动作条，请点击左下角的“进入 Flow”按钮。');
+  expect(readingNode?.content).toContain('![image](asset://');
+}
+
 describe('ensureGuidedSampleTopicTree', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -39,6 +49,7 @@ describe('ensureGuidedSampleTopicTree', () => {
     expect(rootNode?.title).toBe('欢迎使用 Foliole');
     expect(rootNode?.hasContent).toBe(true);
     expect(rootNode?.content).not.toContain(GUIDED_SAMPLE_MARKER);
+    expectChineseGuidedSampleCopy(result);
     expect(directChildIds(result.rootNodeId ?? '')).toHaveLength(7);
     expect(result.queueNodeIds.map((nodeId) => state.nodesById[nodeId]?.priority)).toEqual(Array(8).fill(0));
     expect(rootNode?.sequentialReadingEnabled).toBeUndefined();
@@ -57,10 +68,16 @@ describe('ensureGuidedSampleTopicTree', () => {
 
   it('does not treat traditional Chinese as Chinese sample content', async () => {
     const result = await ensureGuidedSampleTopicTree(() => useWorkspaceStore.getState(), ['zh-TW']);
-    const rootNode = result.rootNodeId ? useWorkspaceStore.getState().nodesById[result.rootNodeId] : null;
+    const state = useWorkspaceStore.getState();
+    const rootNode = result.rootNodeId ? state.nodesById[result.rootNodeId] : null;
+    const readingNode = state.nodesById[result.queueNodeIds[1] ?? ''];
 
     expect(result.locale).toBe('en-US');
     expect(rootNode?.title).toBe('Welcome to Foliole');
+    expect(rootNode?.content).toContain('Start by clicking Read in the bottom action bar, or press 3 or F.');
+    expect(readingNode?.content).toContain('Reading does not need to be completed in one pass.');
+    expect(readingNode?.content).toContain('If the bottom action bar is not visible, click Enter Flow in the bottom-left corner.');
+    expect(readingNode?.content).toContain('![image](asset://');
   });
 
   it('reuses an existing visible sample instead of inserting a duplicate', async () => {
@@ -70,6 +87,14 @@ describe('ensureGuidedSampleTopicTree', () => {
     expect(second).toMatchObject({ rootNodeId: first.rootNodeId, wasCreated: false });
     expect(findGuidedSampleRootNodeId(useWorkspaceStore.getState())).toBe(first.rootNodeId);
     expect(useWorkspaceStore.getState().nodeOrder.filter((nodeId) => useWorkspaceStore.getState().nodesById[nodeId]?.title === 'Welcome to Foliole')).toHaveLength(1);
+  });
+
+});
+
+describe('ensureGuidedSampleTopicTree asset imports', () => {
+  beforeEach(() => {
+    importGuidedSampleTopicAssets.mockClear();
+    resetWorkspaceStore();
   });
 
   it('keeps the complete sample tree when packaged asset import fails', async () => {
