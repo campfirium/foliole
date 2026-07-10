@@ -1,0 +1,65 @@
+name: Dev Push Health
+
+on:
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dev-push-health-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dev-push-health:
+    name: Dev push health
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Check out dev push
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Rebuild Electron native modules
+        run: |
+          npm run electron:rebuild:native
+          node scripts/electron-sqlite-runner.mjs --preflight
+
+      - name: Run dev push blocking subset
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "## Dev push health"
+            echo
+            echo "- scope: Linux-safe remote blocking subset"
+            echo "- branch: dev"
+            echo "- enforcement: branch protection required status check must be configured separately"
+          } >> "${GITHUB_STEP_SUMMARY}"
+          npm run lint:full
+          npm run typecheck:desktop
+          npm run typecheck:android
+          npm run test:release:desktop-src
+          npm run test:release:android
+          npm run test:release:shared
+          npm run test:quality:core
+          npm run test:quality:gate
+          npm run test:quality:node
+          npm run test:quality:preview
+          npm run build:vite-only
+          npm run electron:compile
+          npm run android:web:build
