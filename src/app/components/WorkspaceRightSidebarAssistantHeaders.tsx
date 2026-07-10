@@ -56,7 +56,10 @@ export function AssistantConversationHeader(props: {
           label={t('desktop.rightPanel.assistant.backToHistory')}
           onClick={props.onBack}
         />
-        <h2 className="m-0 min-w-0 flex-1 truncate text-ui-md font-medium leading-6 text-foreground/86">
+        <h2
+          className="m-0 min-w-0 flex-1 truncate text-ui-md font-medium leading-6 text-foreground/86"
+          title={props.title}
+        >
           {props.title}
         </h2>
         <AppIconButton

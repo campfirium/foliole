@@ -13,6 +13,7 @@ import { resolveAssistantWorkspaceContext } from './workspaceRightSidebarAssista
 export { resolveAssistantWorkspaceContext };
 
 export interface AssistantMessage {
+  activity?: 'thinking';
   id: string;
   role: 'assistant' | 'user';
   state?: 'failed' | 'pending' | 'ready';
@@ -169,10 +170,16 @@ function normalizeNodeTitle(node: Node, untitledTitle: string) {
   return node.title.trim() || untitledTitle;
 }
 
-export function createPendingMessageAction(key: string, pendingId: string, text: string) {
+export function createPendingMessageAction(key: string, pendingId: string) {
   return {
     key,
-    message: { id: pendingId, role: 'assistant' as const, state: 'pending' as const, text },
+    message: {
+      activity: 'thinking' as const,
+      id: pendingId,
+      role: 'assistant' as const,
+      state: 'pending' as const,
+      text: ''
+    },
     type: 'append' as const
   };
 }

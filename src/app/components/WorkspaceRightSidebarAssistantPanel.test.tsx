@@ -54,9 +54,8 @@ it('loads Assistant threads from the local global history', async () => {
 
   expect(await screen.findByRole('button', { name: /original prompt/i })).toBeInTheDocument();
   expect(assistantRuntime.listAssistantThreadIndex).toHaveBeenCalledWith();
-  expect(screen.queryByText(/Saved local messages appear here/i)).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: /original prompt/i }));
-  expect(screen.getByText(/Saved local messages appear here/i)).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Original prompt' })).toBeInTheDocument();
 });
 
 it('creates a new thread and moves pending messages into the returned thread cache', async () => {
@@ -87,6 +86,7 @@ it('creates a new thread and moves pending messages into the returned thread cac
 
   fireEvent.change(screen.getByLabelText('Foliole Aide message'), { target: { value: 'New prompt' } });
   fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+  expect(screen.getByRole('heading', { name: 'New prompt' })).toBeInTheDocument();
 
   await waitFor(() =>
     expect(assistantRuntime.sendAssistantMessage).toHaveBeenCalledWith({
@@ -193,8 +193,10 @@ it('starts a new thread after clearing the selected history thread', async () =>
   expect(await screen.findByText('Fresh answer')).toBeInTheDocument();
 });
 
-it('updates the pending assistant bubble from turn delta events', async () => {
+it('updates the pending assistant response from turn delta events', async () => {
   enableFolioleAide();
+  let releaseResponse!: () => void;
+  const responseGate = new Promise<void>((resolve) => { releaseResponse = resolve; });
   let turnEventHandler:
     | ((event: { clientTurnId: string; kind: string; provider: string; text?: string }) => void)
     | null = null;
@@ -209,7 +211,7 @@ it('updates the pending assistant bubble from turn delta events', async () => {
       provider: 'codex-app-server',
       text: 'Partial answer'
     });
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await responseGate;
     return {
       message: { text: 'Final answer', threadId: 'thread-new', turnId: 'turn-1' },
       provider: 'codex-app-server',
@@ -231,5 +233,6 @@ it('updates the pending assistant bubble from turn delta events', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Send' }));
 
   expect(await screen.findByText('Partial answer')).toBeInTheDocument();
+  releaseResponse();
   expect(await screen.findByText('Final answer')).toBeInTheDocument();
 });

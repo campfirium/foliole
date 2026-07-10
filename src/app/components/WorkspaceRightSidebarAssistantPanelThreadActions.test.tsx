@@ -139,7 +139,7 @@ it('shows the local history preview when a thread is selected', async () => {
   fireEvent.click(await screen.findByRole('button', { name: /saved thread/i }));
 
   expect(screen.getByText('Local history preview: Saved prompt preview')).toBeInTheDocument();
-  expect(screen.getByText(/Saved local messages appear here/i)).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Saved thread' })).toBeInTheDocument();
 });
 
 it('shows persisted local messages when a history thread is selected', async () => {

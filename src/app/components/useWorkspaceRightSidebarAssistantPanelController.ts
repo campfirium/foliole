@@ -12,7 +12,6 @@ import { useAssistantTurnEventSubscription, type AssistantActiveTurn } from './u
 import { useWorkspaceRightSidebarAssistantThreadMessages } from './useWorkspaceRightSidebarAssistantThreadMessages';
 import { useWorkspaceRightSidebarAssistantThreads } from './useWorkspaceRightSidebarAssistantThreads';
 import type { WorkspaceLayoutDocumentProps } from './workspaceLayoutPropGroups';
-import { sendAssistantTurn } from './workspaceRightSidebarAssistantSend';
 import {
   createFailedMessageAction,
   createPendingMessageAction,
@@ -22,6 +21,7 @@ import {
   PENDING_THREAD_KEY,
   resolveAssistantLocation
 } from './workspaceRightSidebarAssistantPanelModel';
+import { sendAssistantTurn } from './workspaceRightSidebarAssistantSend';
 
 type AssistantPanelControllerArgs = {
   activeNodeId: string | null;
@@ -31,7 +31,6 @@ type AssistantPanelControllerArgs = {
   nodesById: Record<string, Node>;
   onCapabilityFailure: (category: NativeAssistantFailureCategory) => void;
   onSelectNode: (nodeId: string) => void;
-  pendingText: string;
   topicUnavailableText: string;
   workspaceContextOverride?: NativeAssistantWorkspaceContext | undefined;
 };
@@ -48,7 +47,6 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: Assistant
   const activeTurnRef = useRef<AssistantActiveTurn | null>(null);
   const activeMessages = messagesByThread[threads.selectedThreadId ?? PENDING_THREAD_KEY] ?? [];
   const selectedRecord = findSelectedRecord(threads.records, threads.selectedThreadId);
-
   const threadMessageStatus = useThreadMessageStatus(dispatchCache, messagesByThread, threads.selectedThreadId);
 
   useAssistantTurnEventSubscription({
@@ -62,10 +60,8 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: Assistant
 
   return {
     activeMessages,
-    handleRemoveRecord: async (record: NativeAssistantThreadIndexRecord) => {
-      if (await threads.removeRecord(record))
-        dispatchCache({ key: record.providerThreadId, type: 'delete' });
-    },
+    handleRemoveRecord: (record: NativeAssistantThreadIndexRecord) =>
+      removeRecord(record, threads.removeRecord, dispatchCache),
     handleNewThread: () => { setMessageText(''); threads.selectThreadId(null); },
     handleSelectRecord: (record: NativeAssistantThreadIndexRecord) => selectRecord(record, args.nodesById, args.onSelectNode, threads.selectThreadId),
     handleSubmit: createHandleSubmit({
@@ -79,7 +75,6 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: Assistant
       messageText,
       nodesById: args.nodesById,
       onCapabilityFailure: args.onCapabilityFailure,
-      pendingText: args.pendingText,
       selectedRecord,
       sending,
       setMessageText,
@@ -100,6 +95,14 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: Assistant
     setMessageText,
     threadMessageStatus
   };
+}
+
+async function removeRecord(
+  record: NativeAssistantThreadIndexRecord,
+  remove: (record: NativeAssistantThreadIndexRecord) => Promise<boolean>,
+  dispatchCache: (action: Parameters<typeof messageCacheReducer>[1]) => void
+) {
+  if (await remove(record)) dispatchCache({ key: record.providerThreadId, type: 'delete' });
 }
 
 function useThreadMessageStatus(
@@ -125,7 +128,7 @@ function createHandleSubmit(args: SubmitHandlerArgs) {
     const pendingId = `assistant-${Date.now()}`;
     args.activeTurnRef.current = { clientTurnId: pendingId, prompt, threadKey };
     args.dispatchCache(createUserMessageAction(threadKey, pendingId, prompt));
-    args.dispatchCache(createPendingMessageAction(threadKey, pendingId, args.pendingText));
+    args.dispatchCache(createPendingMessageAction(threadKey, pendingId));
     try {
       const result = await sendAssistantTurn(
         { ...args, selectedThreadId: args.threads.selectedThreadId },
@@ -213,7 +216,6 @@ type SubmitHandlerArgs = {
   messageText: string;
   nodesById: Record<string, Node>;
   onCapabilityFailure: (category: NativeAssistantFailureCategory) => void;
-  pendingText: string;
   selectedRecord: NativeAssistantThreadIndexRecord | null;
   sending: boolean;
   setMessageText: (text: string) => void;

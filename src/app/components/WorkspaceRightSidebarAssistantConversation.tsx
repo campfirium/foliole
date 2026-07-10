@@ -16,17 +16,16 @@ export function WorkspaceRightSidebarAssistantConversation(props: {
   onMessageTextChange: (text: string) => void;
   onSubmit: (event: FormEvent) => void;
   placeholder: string;
+  pendingLabel: string;
   sendLabel: string;
   sending: boolean;
   threadPreviewLabel: string | null;
   threadStatusLabel: string | null;
-  sessionLabel: string;
 }) {
   return (
     <section
-      className={`${inspectorListInsetPaddingClassName} flex min-h-0 flex-1 flex-col gap-2 py-3`}
+      className={`${inspectorListInsetPaddingClassName} flex min-h-0 flex-1 flex-col gap-3 py-3`}
     >
-      <p className={inspectorListMetaClassName}>{props.sessionLabel}</p>
       {props.threadStatusLabel ? (
         <p className={`${inspectorListMetaClassName} m-0`}>{props.threadStatusLabel}</p>
       ) : null}
@@ -35,9 +34,13 @@ export function WorkspaceRightSidebarAssistantConversation(props: {
           {props.threadPreviewLabel}
         </p>
       ) : null}
-      <div className="app-scrollbar min-h-24 flex-1 space-y-2 overflow-y-auto">
+      <div className="app-scrollbar min-h-24 flex-1 space-y-5 overflow-y-auto pr-1">
         {props.activeMessages.map((message) => (
-          <WorkspaceRightSidebarAssistantMessageRow key={message.id} message={message} />
+          <WorkspaceRightSidebarAssistantMessageRow
+            key={message.id}
+            message={message}
+            pendingLabel={props.pendingLabel}
+          />
         ))}
       </div>
       <WorkspaceRightSidebarAssistantComposer

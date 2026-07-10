@@ -30,7 +30,6 @@ export function WorkspaceRightSidebarAssistantPanel(props: {
     aideReady: capability.ready,
     failedText: t('desktop.rightPanel.assistant.failed'),
     onCapabilityFailure: capability.markUnavailableFromFailure,
-    pendingText: t('desktop.rightPanel.assistant.pending'),
     topicUnavailableText: t('desktop.rightPanel.assistant.location.topicUnavailable')
   });
 

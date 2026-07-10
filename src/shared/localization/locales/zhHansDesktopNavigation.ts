@@ -114,7 +114,7 @@ export const ZH_HANS_DESKTOP_NAVIGATION_TRANSLATIONS: Partial<Record<Translation
   'desktop.rightPanel.assistant.historyRemoveFailed': 'Foliole Aide 未能从本地历史移除该线程。',
   'desktop.rightPanel.assistant.empty': '还没有本地 Foliole Aide 历史。',
   'desktop.rightPanel.assistant.noPreview': '暂无预览',
-  'desktop.rightPanel.assistant.pending': '正在等待 Foliole Aide...',
+  'desktop.rightPanel.assistant.pending': '正在思考',
   'desktop.rightPanel.assistant.failed': 'Foliole Aide 未能回复。请检查消息后重新发送。',
   'desktop.rightPanel.assistant.sessionOnly': '本次应用会话中的消息会显示在这里。',
   'desktop.rightPanel.assistant.selectedThread': '已选择线程。本地保存的消息会显示在这里；如果暂时不可用，Foliole Aide 会显示本地预览。',

@@ -42,7 +42,7 @@ function AssistantConversationView(props: {
       <AssistantConversationHeader
         onBack={props.controller.handleNewThread}
         onNewThread={props.controller.handleNewThread}
-        title={props.controller.selectedRecord?.title ?? t('desktop.rightPanel.assistant.newConversation')}
+        title={resolveConversationTitle(props.controller, t)}
       />
       {props.controller.selectedThreadNotice ? (
         <p className={`${inspectorListInsetPaddingClassName} py-2 ${inspectorListMetaClassName}`}>
@@ -56,9 +56,9 @@ function AssistantConversationView(props: {
         onMessageTextChange={props.controller.setMessageText}
         onSubmit={props.controller.handleSubmit}
         placeholder={t('desktop.rightPanel.assistant.placeholder')}
+        pendingLabel={t('desktop.rightPanel.assistant.pending')}
         sendLabel={t('desktop.rightPanel.assistant.send')}
         sending={props.controller.sending}
-        sessionLabel={resolveSessionLabel(props.controller, t)}
         threadPreviewLabel={resolveThreadPreviewLabel(props.controller, t)}
         threadStatusLabel={resolveThreadStatusLabel(props.controller, t)}
       />
@@ -163,13 +163,14 @@ function isConversationOpen(
   return controller.selectedThreadId !== null || controller.activeMessages.length > 0 || controller.sending;
 }
 
-function resolveSessionLabel(
+function resolveConversationTitle(
   controller: ReturnType<typeof useWorkspaceRightSidebarAssistantPanelController>,
   t: ReturnType<typeof useTranslation>
 ) {
-  return controller.selectedRecord && controller.activeMessages.length === 0
-    ? t('desktop.rightPanel.assistant.selectedThread')
-    : t('desktop.rightPanel.assistant.currentSession');
+  const title = controller.selectedRecord?.title.trim();
+  if (title) return title;
+  const firstPrompt = controller.activeMessages.find((message) => message.role === 'user')?.text.trim();
+  return firstPrompt ? firstPrompt.slice(0, 80) : t('desktop.rightPanel.assistant.newConversation');
 }
 
 function resolveThreadPreviewLabel(

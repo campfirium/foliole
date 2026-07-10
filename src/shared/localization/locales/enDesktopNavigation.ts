@@ -125,7 +125,7 @@ export const EN_DESKTOP_NAVIGATION_TRANSLATIONS = {
     'Foliole Aide could not remove that thread from local history.',
   'desktop.rightPanel.assistant.empty': 'No local Foliole Aide history yet.',
   'desktop.rightPanel.assistant.noPreview': 'No preview yet',
-  'desktop.rightPanel.assistant.pending': 'Waiting for Foliole Aide...',
+  'desktop.rightPanel.assistant.pending': 'Thinking',
   'desktop.rightPanel.assistant.failed':
     'Foliole Aide could not reply. Check the message and send again.',
   'desktop.rightPanel.assistant.sessionOnly': 'Messages from this app session will appear here.',
