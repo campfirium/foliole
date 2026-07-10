@@ -1,10 +1,11 @@
-import { SendHorizontal } from 'lucide-react';
-import type { FormEvent } from 'react';
+import { LoaderCircle, SendHorizontal } from 'lucide-react';
+import type { FormEvent, KeyboardEvent, RefObject } from 'react';
 
 import { AppIconButton } from '../../shared/ui';
 
 export function WorkspaceRightSidebarAssistantComposer(props: {
   inputLabel: string;
+  inputRef?: RefObject<HTMLTextAreaElement>;
   messageText: string;
   onMessageTextChange: (text: string) => void;
   onSubmit: (event: FormEvent) => void;
@@ -21,7 +22,9 @@ export function WorkspaceRightSidebarAssistantComposer(props: {
         aria-label={props.inputLabel}
         className="min-h-20 w-full resize-none bg-transparent text-ui-md leading-5 text-foreground outline-none placeholder:text-foreground/42"
         onChange={(event) => props.onMessageTextChange(event.target.value)}
+        onKeyDown={submitOnEnter}
         placeholder={props.placeholder}
+        ref={props.inputRef}
         rows={3}
         value={props.messageText}
       />
@@ -29,11 +32,19 @@ export function WorkspaceRightSidebarAssistantComposer(props: {
         <AppIconButton
           className="rounded-full bg-foreground/8 text-foreground hover:bg-foreground/12 disabled:bg-foreground/8"
           disabled={props.sending || !props.messageText.trim()}
-          icon={<SendHorizontal aria-hidden className="size-4" strokeWidth={1.8} />}
+          icon={props.sending
+            ? <LoaderCircle aria-hidden className="size-4 animate-spin" strokeWidth={1.8} />
+            : <SendHorizontal aria-hidden className="size-4" strokeWidth={1.8} />}
           label={props.sendLabel}
           type="submit"
         />
       </div>
     </form>
   );
+}
+
+function submitOnEnter(event: KeyboardEvent<HTMLTextAreaElement>) {
+  if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) return;
+  event.preventDefault();
+  event.currentTarget.form?.requestSubmit();
 }

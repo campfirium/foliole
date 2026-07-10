@@ -8,14 +8,14 @@ import {
   inspectorListMetaClassName
 } from '../../shared/ui';
 
-export function AssistantHomeHeader(props: {
+export function AssistantPanelToolbar(props: {
   historyVisible: boolean;
+  onShowHistory: () => void;
   onNewThread: () => void;
-  onToggleHistory: () => void;
 }) {
   const t = useTranslation();
   return (
-    <header className={`${inspectorListInsetPaddingClassName} pb-2 pt-1`}>
+    <header className={`${inspectorListInsetPaddingClassName} sticky top-0 z-10 border-b border-border/70 bg-bg/95 py-1 backdrop-blur-sm`}>
       <div className="flex items-center justify-between gap-2">
         <h2 className={`m-0 ${inspectorListHeadingClassName}`}>
           {t('desktop.rightPanel.assistant')}
@@ -26,7 +26,7 @@ export function AssistantHomeHeader(props: {
             className={props.historyVisible ? 'bg-foreground/[0.06] text-foreground' : undefined}
             icon={<History aria-hidden className="size-4" strokeWidth={1.8} />}
             label={t('desktop.rightPanel.assistant.history')}
-            onClick={props.onToggleHistory}
+            onClick={props.onShowHistory}
           />
           <AppIconButton
             icon={<PenLine aria-hidden className="size-4" strokeWidth={1.8} />}
@@ -35,21 +35,26 @@ export function AssistantHomeHeader(props: {
           />
         </div>
       </div>
-      <p className={inspectorListMetaClassName}>
-        {t('desktop.rightPanel.assistant.description')}
-      </p>
     </header>
+  );
+}
+
+export function AssistantHomeIntro() {
+  const t = useTranslation();
+  return (
+    <p className={`${inspectorListInsetPaddingClassName} ${inspectorListMetaClassName} py-2`}>
+      {t('desktop.rightPanel.assistant.description')}
+    </p>
   );
 }
 
 export function AssistantConversationHeader(props: {
   onBack: () => void;
-  onNewThread: () => void;
   title: string;
 }) {
   const t = useTranslation();
   return (
-    <header className={`${inspectorListInsetPaddingClassName} border-b border-border/70 pb-2 pt-1`}>
+    <header className={`${inspectorListInsetPaddingClassName} border-b border-border/70 py-1.5`}>
       <div className="flex items-center gap-2">
         <AppIconButton
           icon={<ArrowLeft aria-hidden className="size-4" strokeWidth={1.8} />}
@@ -62,11 +67,6 @@ export function AssistantConversationHeader(props: {
         >
           {props.title}
         </h2>
-        <AppIconButton
-          icon={<PenLine aria-hidden className="size-4" strokeWidth={1.8} />}
-          label={t('desktop.rightPanel.assistant.newThread')}
-          onClick={props.onNewThread}
-        />
       </div>
     </header>
   );

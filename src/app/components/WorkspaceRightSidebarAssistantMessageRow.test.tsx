@@ -1,18 +1,31 @@
-import { render, screen } from '@testing-library/react';
-import { expect, it } from 'vitest';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { beforeEach, expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { WorkspaceRightSidebarAssistantMessageRow } from './WorkspaceRightSidebarAssistantMessageRow';
 
+beforeEach(() => {
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: { writeText: vi.fn().mockResolvedValue(undefined) }
+  });
+});
+
 it('keeps user prompts in a bubble and renders assistant Markdown as unframed content', () => {
-  const { container, rerender } = render(
+  const onEditMessage = vi.fn();
+  const { container, rerender } = renderWithLocalization(
     <WorkspaceRightSidebarAssistantMessageRow
       message={{ id: 'user-1', role: 'user', text: 'User prompt' }}
+      onEditMessage={onEditMessage}
       pendingLabel="Thinking"
     />
   );
 
   const userRow = container.querySelector('[data-message-role="user"]');
   expect(userRow?.querySelector('p')).toHaveClass('rounded-lg');
+  fireEvent.click(screen.getByRole('button', { name: 'Edit and resend' }));
+  expect(onEditMessage).toHaveBeenCalledWith('User prompt');
 
   rerender(
     <WorkspaceRightSidebarAssistantMessageRow
@@ -34,8 +47,22 @@ it('keeps user prompts in a bubble and renders assistant Markdown as unframed co
   expect(screen.getByText('const value = 1;')).toHaveProperty('tagName', 'CODE');
 });
 
+it('copies assistant messages and confirms the action', async () => {
+  renderWithLocalization(
+    <WorkspaceRightSidebarAssistantMessageRow
+      message={{ id: 'assistant-copy', role: 'assistant', text: 'Copy this answer' }}
+      pendingLabel="Thinking"
+    />
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: 'Copy message' }));
+
+  await waitFor(() => expect(navigator.clipboard.writeText).toHaveBeenCalledWith('Copy this answer'));
+  expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument();
+});
+
 it('shows a live animated thinking state before response text arrives', () => {
-  const { container } = render(
+  const { container } = renderWithLocalization(
     <WorkspaceRightSidebarAssistantMessageRow
       message={{
         activity: 'thinking',

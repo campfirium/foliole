@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import type { FormEvent } from 'react';
 
 import {
@@ -6,7 +7,7 @@ import {
 } from '../../shared/ui';
 
 import { WorkspaceRightSidebarAssistantComposer } from './WorkspaceRightSidebarAssistantComposer';
-import { WorkspaceRightSidebarAssistantMessageRow } from './WorkspaceRightSidebarAssistantMessageRow';
+import { WorkspaceRightSidebarAssistantMessageViewport } from './WorkspaceRightSidebarAssistantMessageViewport';
 import type { AssistantMessage } from './workspaceRightSidebarAssistantPanelModel';
 
 export function WorkspaceRightSidebarAssistantConversation(props: {
@@ -14,6 +15,7 @@ export function WorkspaceRightSidebarAssistantConversation(props: {
   inputLabel: string;
   messageText: string;
   onMessageTextChange: (text: string) => void;
+  onEditMessage: (text: string) => void;
   onSubmit: (event: FormEvent) => void;
   placeholder: string;
   pendingLabel: string;
@@ -22,6 +24,11 @@ export function WorkspaceRightSidebarAssistantConversation(props: {
   threadPreviewLabel: string | null;
   threadStatusLabel: string | null;
 }) {
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const editMessage = (text: string) => {
+    props.onEditMessage(text);
+    inputRef.current?.focus();
+  };
   return (
     <section
       className={`${inspectorListInsetPaddingClassName} flex min-h-0 flex-1 flex-col gap-3 py-3`}
@@ -34,17 +41,14 @@ export function WorkspaceRightSidebarAssistantConversation(props: {
           {props.threadPreviewLabel}
         </p>
       ) : null}
-      <div className="app-scrollbar min-h-24 flex-1 space-y-5 overflow-y-auto pr-1">
-        {props.activeMessages.map((message) => (
-          <WorkspaceRightSidebarAssistantMessageRow
-            key={message.id}
-            message={message}
-            pendingLabel={props.pendingLabel}
-          />
-        ))}
-      </div>
+      <WorkspaceRightSidebarAssistantMessageViewport
+        messages={props.activeMessages}
+        onEditMessage={editMessage}
+        pendingLabel={props.pendingLabel}
+      />
       <WorkspaceRightSidebarAssistantComposer
         inputLabel={props.inputLabel}
+        inputRef={inputRef}
         messageText={props.messageText}
         onMessageTextChange={props.onMessageTextChange}
         onSubmit={props.onSubmit}

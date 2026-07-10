@@ -11,7 +11,11 @@ import {
 import { useWorkspaceRightSidebarAssistantPanelController } from './useWorkspaceRightSidebarAssistantPanelController';
 import { WorkspaceRightSidebarAssistantComposer } from './WorkspaceRightSidebarAssistantComposer';
 import { WorkspaceRightSidebarAssistantConversation } from './WorkspaceRightSidebarAssistantConversation';
-import { AssistantConversationHeader, AssistantHomeHeader } from './WorkspaceRightSidebarAssistantHeaders';
+import {
+  AssistantConversationHeader,
+  AssistantHomeIntro,
+  AssistantPanelToolbar
+} from './WorkspaceRightSidebarAssistantHeaders';
 import { WorkspaceRightSidebarAssistantThreadList } from './WorkspaceRightSidebarAssistantThreadList';
 
 export function FolioleAideReadyContent(props: {
@@ -20,15 +24,29 @@ export function FolioleAideReadyContent(props: {
   nodesById: Record<string, Node>;
 }) {
   const [showHistory, setShowHistory] = useState(true);
-  return isConversationOpen(props.controller)
-    ? <AssistantConversationView {...props} />
-    : (
+  const conversationOpen = isConversationOpen(props.controller);
+  return (
+    <>
+      <AssistantPanelToolbar
+        historyVisible={!conversationOpen && showHistory}
+        onNewThread={props.controller.handleNewThread}
+        onShowHistory={() => {
+          if (conversationOpen) {
+            props.controller.handleNewThread();
+            setShowHistory(true);
+          } else {
+            setShowHistory((current) => !current);
+          }
+        }}
+      />
+      {conversationOpen ? <AssistantConversationView {...props} /> : (
       <AssistantHomeView
         {...props}
         historyVisible={showHistory}
-        onToggleHistory={() => setShowHistory((current) => !current)}
       />
-    );
+      )}
+    </>
+  );
 }
 
 function AssistantConversationView(props: {
@@ -41,7 +59,6 @@ function AssistantConversationView(props: {
     <>
       <AssistantConversationHeader
         onBack={props.controller.handleNewThread}
-        onNewThread={props.controller.handleNewThread}
         title={resolveConversationTitle(props.controller, t)}
       />
       {props.controller.selectedThreadNotice ? (
@@ -53,6 +70,7 @@ function AssistantConversationView(props: {
         activeMessages={props.controller.activeMessages}
         inputLabel={t('desktop.rightPanel.assistant.input')}
         messageText={props.controller.messageText}
+        onEditMessage={props.controller.setMessageText}
         onMessageTextChange={props.controller.setMessageText}
         onSubmit={props.controller.handleSubmit}
         placeholder={t('desktop.rightPanel.assistant.placeholder')}
@@ -71,16 +89,11 @@ function AssistantHomeView(props: {
   controller: ReturnType<typeof useWorkspaceRightSidebarAssistantPanelController>;
   historyVisible: boolean;
   nodesById: Record<string, Node>;
-  onToggleHistory: () => void;
 }) {
   const t = useTranslation();
   return (
     <>
-      <AssistantHomeHeader
-        historyVisible={props.historyVisible}
-        onNewThread={props.controller.handleNewThread}
-        onToggleHistory={props.onToggleHistory}
-      />
+      <AssistantHomeIntro />
       {props.historyVisible ? <AssistantHistoryList {...props} /> : null}
       <div className={`${inspectorListInsetPaddingClassName} mt-auto py-3`}>
         <WorkspaceRightSidebarAssistantComposer

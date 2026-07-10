@@ -28,6 +28,9 @@ test('Aide renders a titled Markdown conversation with live progress', async ({
   await desktopWindow.getByRole('button', { name: /^(Send|发送)$/ }).click();
 
   await expect(desktopWindow.getByRole('status')).toContainText(/Thinking|正在思考/);
+  await expect(desktopWindow.getByRole('heading', { name: 'Foliole Aide' })).toBeVisible();
+  await expect(desktopWindow.getByRole('button', { name: /^(History|历史)$/ })).toBeVisible();
+  await expect(desktopWindow.getByRole('button', { name: /^(New|新建)$/ })).toBeVisible();
   await expect(desktopWindow.getByRole('heading', { name: 'Explain this topic' })).toBeVisible();
   await expect(desktopWindow.getByRole('heading', { name: 'Assistant answer' })).toBeVisible();
   await expect(desktopWindow.getByRole('list')).toContainText('First item');
@@ -64,6 +67,35 @@ test('Aide returns to saved history after an unpersisted turn fails', async ({
   await expect(desktopWindow.getByText('Fail this turn')).toBeHidden();
 });
 
+test('Aide exposes a return-to-latest control after reading earlier content', async ({
+  desktopApp,
+  desktopWindow
+}) => {
+  await desktopWindow.evaluate(() => {
+    localStorage.setItem('foliole-workspace-right-sidebar-active-panel', 'assistant');
+    localStorage.setItem('foliole-aide-enabled', 'true');
+  });
+  await desktopWindow.reload();
+  await installAssistantIpcMock(desktopApp);
+  await openAssistantPanel(desktopWindow);
+
+  await desktopWindow.getByLabel(/^(Foliole Aide message|Foliole Aide 消息)$/).fill('Long response');
+  await desktopWindow.getByRole('button', { name: /^(Send|发送)$/ }).click();
+  await expect(desktopWindow.getByText('Paragraph 30')).toBeVisible();
+
+  const viewport = desktopWindow.getByTestId('assistant-message-scroll');
+  await viewport.evaluate((element) => {
+    element.scrollTop = 0;
+    element.dispatchEvent(new Event('scroll'));
+  });
+  const returnButton = desktopWindow.getByRole('button', {
+    name: /^(Scroll to latest message|回到最新消息)$/
+  });
+  await expect(returnButton).toBeVisible();
+  await returnButton.click();
+  await expect(returnButton).toBeHidden();
+});
+
 async function openAssistantPanel(page: Page) {
   const directButton = page.getByRole('button', { name: /Foliole Aide.*panel|Foliole Aide面板/ });
   if (await directButton.count()) {
@@ -76,6 +108,9 @@ async function openAssistantPanel(page: Page) {
 
 async function installAssistantIpcMock(electronApp: ElectronApplication) {
   const response = createAssistantResponse();
+  const longResponse = createAssistantResponse(
+    `## Long answer\n\n${Array.from({ length: 30 }, (_, index) => `Paragraph ${index + 1}`).join('\n\n')}`
+  );
   await electronApp.evaluate(({ ipcMain }, fixture) => {
     ipcMain.removeHandler('foliole:invoke');
     ipcMain.handle('foliole:invoke', async (_event, request: { args?: { message?: string }; command?: string }) => {
@@ -87,11 +122,13 @@ async function installAssistantIpcMock(electronApp: ElectronApplication) {
         if (request.args?.message === 'Fail this turn') {
           return { failure: { category: 'protocol_error' }, provider: 'codex-app-server', state: 'failed' };
         }
+        if (request.args?.message === 'Long response') return fixture.longResponse;
         return fixture.response;
       }
       return null;
     });
   }, {
+    longResponse,
     response,
     savedThread: {
       ...response.threadIndex,
@@ -103,10 +140,10 @@ async function installAssistantIpcMock(electronApp: ElectronApplication) {
   });
 }
 
-function createAssistantResponse() {
+function createAssistantResponse(text = '## Assistant answer\n\nThis is the first paragraph.\n\n- First item\n- Second item\n\n`inline code`\n\n```ts\nconst ready = true;\n```') {
   return {
     message: {
-      text: '## Assistant answer\n\nThis is the first paragraph.\n\n- First item\n- Second item\n\n`inline code`\n\n```ts\nconst ready = true;\n```',
+      text,
       threadId: 'thread-new',
       turnId: 'turn-1'
     },
