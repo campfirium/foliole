@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
@@ -121,7 +121,7 @@ async function renderShellWithSurface(surface: Record<string, unknown>) {
   );
 }
 
-function reviewSurface(currentCard: Record<string, unknown> | null) {
+function reviewSurface(currentCard: Record<string, unknown> | null, onlyReviewCard = currentCard) {
   const reviewSession = {
     currentCard,
     nextFsrsDueAt: currentCard ? null : '2026-04-23T05:55:34.233Z',
@@ -131,6 +131,7 @@ function reviewSurface(currentCard: Record<string, unknown> | null) {
     scheduledReadingCount: currentCard ? 1 : 2,
     totalCount: currentCard ? 1 : 0
   };
+  const onlyReviewSession = { ...reviewSession, currentCard: onlyReviewCard, queueNodeIds: onlyReviewCard ? ['item-1'] : [] };
   return {
     activeAction: 'review',
     browsedFolder: null,
@@ -142,19 +143,43 @@ function reviewSurface(currentCard: Record<string, unknown> | null) {
     handleRevealAnswer: vi.fn(),
     handleSelectRecentArticle: vi.fn(),
     handleTabAction: vi.fn(),
-    isAnswerRevealed: false,
+    isAnswerRevealed: true,
     isSubmittingGrade: false,
     isSubmittingReadingAction: false,
     readableArticle: currentCard ? null : { content: '# Readable article', nodeId: 'topic-1', title: 'Readable article' },
     recentArticles: [],
     readingError: null,
     reviewError: null,
-    effectiveReviewSession: reviewSession,
-    onlyReviewSession: reviewSession,
+    effectiveReviewSession: onlyReviewSession,
+    onlyReviewSession,
     reviewSession,
     selectedBrowseNodeId: null
   };
 }
+
+const readingReviewCard = {
+  content: 'Readable topic body',
+  due: '2026-04-22T08:00:00.000Z',
+  itemKind: 'reading',
+  nodeId: 'topic-1',
+  queuePosition: 1,
+  remainingCount: 1,
+  reveal: null,
+  title: 'Readable article',
+  totalCount: 1
+};
+
+const fsrsReviewCard = {
+  content: 'Question prompt',
+  due: '2026-04-22T08:00:00.000Z',
+  itemKind: 'fsrs',
+  nodeId: 'item-1',
+  queuePosition: 1,
+  remainingCount: 1,
+  reveal: 'Answer',
+  title: 'Card one',
+  totalCount: 1
+};
 
 describe('CompanionShell review surfaces', () => {
   const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
@@ -168,17 +193,7 @@ describe('CompanionShell review surfaces', () => {
   }, RELEASE_GATE_TEST_TIMEOUT_MS);
 
   it('shows reading actions when the current review card is a reading item', async () => {
-    await renderShellWithSurface(reviewSurface({
-      content: 'Readable topic body',
-      due: '2026-04-22T08:00:00.000Z',
-      itemKind: 'reading',
-      nodeId: 'topic-1',
-      queuePosition: 1,
-      remainingCount: 1,
-      reveal: null,
-      title: 'Readable article',
-      totalCount: 1
-    }));
+    await renderShellWithSurface(reviewSurface(readingReviewCard));
 
     expect(screen.getByLabelText('Later')).toBeInTheDocument();
     expect(screen.getByLabelText('Read')).toBeInTheDocument();
@@ -186,18 +201,17 @@ describe('CompanionShell review surfaces', () => {
     expect(screen.queryByLabelText('Again')).not.toBeInTheDocument();
   });
 
+  it('uses the FSRS-only card for Only Review content and footer actions', async () => {
+    await renderShellWithSurface(reviewSurface(readingReviewCard, fsrsReviewCard));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Only Review' })[0]!);
+
+    expect(screen.getByRole('group', { name: 'Companion review toolbar' })).toHaveAttribute('data-review-item-kind', 'fsrs');
+    expect(screen.getByLabelText('Show Answer')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Read')).not.toBeInTheDocument();
+  });
+
   it('reserves review footer space separately from the normal bottom tabs', async () => {
-    await renderShellWithSurface(reviewSurface({
-      content: 'Readable topic body',
-      due: '2026-04-22T08:00:00.000Z',
-      itemKind: 'reading',
-      nodeId: 'topic-1',
-      queuePosition: 1,
-      remainingCount: 1,
-      reveal: null,
-      title: 'Readable article',
-      totalCount: 1
-    }));
+    await renderShellWithSurface(reviewSurface(readingReviewCard));
 
     const content = screen.getByTestId('companion-scroll-container').firstElementChild;
     expect(content?.className).toContain('[padding-bottom:8rem]');

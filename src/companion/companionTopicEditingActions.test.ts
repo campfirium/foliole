@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
-import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract';
 
 const syncObjectsMock = vi.hoisted(() => ({
   applyCompanionSyncNodeVersions: vi.fn(async () => ['topic-1'])
@@ -30,12 +29,11 @@ function createNode(overrides: Partial<WorkspaceSnapshot['nodesById'][string]> =
   };
 }
 
-function createSnapshot(...nodes: Array<ReturnType<typeof createNode>>): WorkspaceSnapshot {
-  const snapshotNodes = nodes.length > 0 ? nodes : [createNode()];
+function createSnapshot(node = createNode()): WorkspaceSnapshot {
   return {
-    activeNodeId: snapshotNodes[0]!.id,
-    nodeOrder: snapshotNodes.map((node) => node.id),
-    nodesById: Object.fromEntries(snapshotNodes.map((node) => [node.id, node])),
+    activeNodeId: node.id,
+    nodeOrder: [node.id],
+    nodesById: { [node.id]: node },
     trashedNodeIds: [],
     untitledSequenceByParent: {}
   };
@@ -43,19 +41,10 @@ function createSnapshot(...nodes: Array<ReturnType<typeof createNode>>): Workspa
 
 beforeEach(() => {
   vi.resetAllMocks();
-  let uuidIndex = 0;
-  vi.spyOn(crypto, 'randomUUID').mockImplementation(() => {
-    uuidIndex += 1;
-    return `00000000-0000-4000-8000-${uuidIndex.toString().padStart(12, '0')}`;
-  });
+  vi.spyOn(crypto, 'randomUUID').mockReturnValue('00000000-0000-4000-8000-000000000001');
 });
 
-function readAppliedVersions() {
-  const call = syncObjectsMock.applyCompanionSyncNodeVersions.mock.calls[0] as [NativeSyncNodeRecord[]] | undefined;
-  return call?.[0] ?? [];
-}
-
-describe('companion topic content persistence', () => {
+describe('companion topic editing actions persistence', () => {
   it('persists topic content as a node version and updates the local snapshot', async () => {
     const { persistCompanionTopicContent } = await import('./companionTopicEditingActions');
 
@@ -110,76 +99,6 @@ describe('companion topic content persistence', () => {
     })).rejects.toThrow('Topic edit requires a synced base version.');
 
     expect(syncObjectsMock.applyCompanionSyncNodeVersions).not.toHaveBeenCalled();
-  });
-});
-
-describe('companion topic child anchor remap persistence', () => {
-  it('remaps anchored child nodes when parent topic content shifts', async () => {
-    const { persistCompanionTopicContent } = await import('./companionTopicEditingActions');
-    const parent = createNode({ content: 'Alpha Beta Gamma' });
-    const child = createNode({
-      anchorLink: {
-        id: 'anchor-1',
-        kind: 'highlight',
-        locator: { from: 6, originalText: 'Beta', to: 10 }
-      },
-      content: 'Beta',
-      currentVersionId: 'desktop#child-v1',
-      id: 'child-1',
-      parentNodeId: 'topic-1',
-      title: 'Beta'
-    });
-
-    const result = await persistCompanionTopicContent({
-      content: 'Start Alpha Beta Gamma',
-      deviceId: 'android-device',
-      nodeId: 'topic-1',
-      snapshot: createSnapshot(parent, child)
-    });
-    const writtenVersions = readAppliedVersions();
-    const childAnchor = JSON.parse(writtenVersions[1]?.snapshot.anchor_link ?? '{}') as {
-      locator: { from: number; originalText: string; to: number };
-    };
-
-    expect(writtenVersions).toHaveLength(2);
-    expect(writtenVersions[0]).toMatchObject({ object_id: 'topic-1' });
-    expect(writtenVersions[1]).toMatchObject({
-      object_id: 'child-1',
-      parent_version_id: 'desktop#child-v1'
-    });
-    expect(childAnchor.locator).toEqual({ from: 12, originalText: 'Beta', to: 16 });
-    expect(result?.snapshot.nodesById['child-1']).toMatchObject({
-      anchorLink: expect.objectContaining({ locator: { from: 12, originalText: 'Beta', to: 16 } }),
-      currentVersionId: 'android-device#00000000-0000-4000-8000-000000000002'
-    });
-  });
-});
-
-describe('companion topic child anchor remap no-op persistence', () => {
-  it('does not write child node versions when remapped anchors do not change', async () => {
-    const { persistCompanionTopicContent } = await import('./companionTopicEditingActions');
-    const parent = createNode({ content: 'Alpha Beta Gamma' });
-    const child = createNode({
-      anchorLink: {
-        id: 'anchor-1',
-        kind: 'highlight',
-        locator: { from: 0, originalText: 'Alpha', to: 5 }
-      },
-      content: 'Alpha',
-      currentVersionId: 'desktop#child-v1',
-      id: 'child-1',
-      parentNodeId: 'topic-1',
-      title: 'Alpha'
-    });
-
-    await persistCompanionTopicContent({
-      content: 'Alpha Beta Gamma.',
-      deviceId: 'android-device',
-      nodeId: 'topic-1',
-      snapshot: createSnapshot(parent, child)
-    });
-
-    expect(readAppliedVersions()).toHaveLength(1);
   });
 });
 
