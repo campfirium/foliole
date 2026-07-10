@@ -43,7 +43,7 @@ vi.mock('../database/workspaceSnapshot.js', () => ({
   loadWorkspaceVersionMetadata: workspaceSnapshotMock.loadWorkspaceVersionMetadata
 }));
 vi.mock('./companionRequestAuth.js', () => ({
-  authenticateCompanionRequest: vi.fn(() => ({ ok: true }))
+  authenticateCompanionRequest: vi.fn(() => ({ device_id: 'android-fixture', ok: true }))
 }));
 vi.mock('./companionLanContentBlobs.js', () => ({
   CONTENT_BLOB_ACK_PATH: '/companion/content-blob/ack',
@@ -158,7 +158,7 @@ it('serves signed sync pack containers without loading the workspace snapshot', 
   expect(response.end).toHaveBeenCalledWith(Buffer.from('sqlite-pack'));
   expect(syncPackMock.buildCompanionSyncPackResource).toHaveBeenCalledWith(expect.objectContaining({
     pathname: SYNC_PACK_PATH
-  }));
+  }), 'android-fixture');
   expect(workspaceSnapshotMock.loadWorkspaceSnapshot).not.toHaveBeenCalled();
 });
 

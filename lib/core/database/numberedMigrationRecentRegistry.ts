@@ -7,6 +7,7 @@ import { createIncomingUpdatesTable } from './numberedMigrationIncomingUpdates.j
 import { migrateLocalFilesRegistry, resetOpenedLocalFileHistory } from './numberedMigrationLocalFiles.js';
 import { createNodeSyncTombstoneTable } from './numberedMigrationNodeSyncTombstones.js';
 import type { NumberedSchemaMigration } from './numberedMigrations.js';
+import { migrateSettingSingleTruth } from './numberedMigrationSettingSingleTruth.js';
 import { createVirtualFolderTables } from './numberedMigrationVirtualFolders.js';
 
 export const RECENT_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
@@ -69,5 +70,9 @@ export const RECENT_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
         sqlite.exec(statement);
       }
     }
+  },
+  {
+    version: 54,
+    migrate: migrateSettingSingleTruth
   }
 ];

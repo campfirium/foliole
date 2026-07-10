@@ -145,7 +145,13 @@ async function handleAuthenticatedGet(
     }
     return;
   }
-  if (await handleSyncPackGet(request, response, parsedRequestUrl, writeJson)) return;
+  if (await handleSyncPackGet(
+    request,
+    response,
+    parsedRequestUrl,
+    args.authenticatedDeviceId,
+    writeJson
+  )) return;
   if (handleWorkspaceMetadataGet(request, response, parsedRequestUrl, args)) return;
   if (parsedRequestUrl.pathname !== WORKSPACE_SNAPSHOT_PATH) {
     writeJson(request, response, 404, { error: 'not_found' });

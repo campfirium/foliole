@@ -46,6 +46,10 @@ final class FolioleCompanionPairingStore {
         return result;
     }
 
+    static String loadPairedDeviceId(Context context) throws Exception {
+        return requireMeta(context, FolioleCompanionBridgeContractDefinitions.pairingDeviceIdPreferenceKey(context));
+    }
+
     static JSObject savePairingCredentials(
         Context context,
         String deviceId,

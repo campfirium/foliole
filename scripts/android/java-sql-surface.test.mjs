@@ -10,6 +10,22 @@ const SQL_LITERAL_PATTERN = /"[^"\n]*\b(?:ALTER|CREATE|DELETE|DROP|INSERT|PRAGMA
 
 const ALLOWED_SQL_LITERALS = [
   {
+    file: 'FolioleCompanionSyncPackDatabaseValidator.java',
+    literal: '"PRAGMA quick_check(1)"'
+  },
+  {
+    file: 'FolioleCompanionSyncPackDatabaseValidator.java',
+    literal: '"PRAGMA table_info("'
+  },
+  {
+    file: 'FolioleCompanionSyncPackDatabaseValidator.java',
+    literal: '"SELECT COUNT(*) FROM "'
+  },
+  {
+    file: 'FolioleCompanionSyncPackDatabaseValidator.java',
+    literal: '"SELECT value FROM pack_manifest WHERE key = ?"'
+  },
+  {
     file: 'FolioleCompanionSqliteRuntime.java',
     literal: '"PRAGMA wal_checkpoint(FULL)"'
   },
@@ -94,6 +110,9 @@ function directNamedMutationLines(filePath) {
 }
 
 function isAllowedAccessLine(entry) {
+  if (entry.file === 'FolioleCompanionSyncPackDatabaseValidator.java') {
+    return true;
+  }
   if (entry.file === 'FolioleCompanionNamedQueryStore.java') {
     return entry.text.includes('database.rawQuery(sql, args)');
   }

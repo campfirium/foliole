@@ -29,6 +29,7 @@ export interface ApplySyncObjectsWithDbPortOptions {
   includeAlreadyApplied?: boolean;
   deviceId?: string;
   onSkippedRecord?: (record: unknown, reason: unknown) => void;
+  onPayloadAppliedInTransaction?: (port: DbPort, record: SyncPackSyncObjectRecord) => Promise<void>;
 }
 
 type SyncObjectApplyStatus = 'apply' | 'already_applied' | 'stale';
@@ -115,6 +116,7 @@ async function applySingleSyncObjectInTransaction(
     options.deviceId === undefined ? {} : { deviceId: options.deviceId }
   );
   if (appliedPayload === false) return null;
+  await options.onPayloadAppliedInTransaction?.(port, record);
   await upsertAppliedSyncObjectState(port, record);
   return `${record.object_type}:${record.object_id}`;
 }

@@ -23,7 +23,10 @@ function parseStateSeq(value: string | null) {
   return Number.isInteger(parsed) && parsed >= 0 ? parsed : null;
 }
 
-export async function buildCompanionSyncPackResource(parsedRequestUrl: URL): Promise<CompanionSyncPackResource> {
+export async function buildCompanionSyncPackResource(
+  parsedRequestUrl: URL,
+  authenticatedDeviceId: string
+): Promise<CompanionSyncPackResource> {
   const fromStateSeq = parseStateSeq(parsedRequestUrl.searchParams.get('after_state_seq'));
   if (fromStateSeq == null) {
     return { error: 'invalid_after_state_seq', status: 'error', statusCode: 400 };
@@ -32,7 +35,7 @@ export async function buildCompanionSyncPackResource(parsedRequestUrl: URL): Pro
   const packId = randomUUID();
   const outputPath = path.join(tempRoot, `${packId}.syncpack`);
   try {
-    await buildDesktopSyncPack({ fromStateSeq, outputPath, packId });
+    await buildDesktopSyncPack({ fromStateSeq, outputPath, packId, toPeerId: authenticatedDeviceId });
     return {
       body: await fs.readFile(outputPath),
       fileName: `${packId}.syncpack`,

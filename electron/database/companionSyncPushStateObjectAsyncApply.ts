@@ -9,6 +9,7 @@ import type {
   SyncObjectIdentity
 } from './companionSyncPushTypes.js';
 import { openDatabaseConnection } from './connection.js';
+import { materializeDesktopSettingRecord } from './desktopSettingMaterializer.js';
 
 const REMOTE_DEVICE_ID = 'companion-push';
 
@@ -62,6 +63,7 @@ async function applyStateObjectPushWithDbPort(
       });
     }
     await applySyncObjectPayloadWithDbPort(tx, record);
+    await materializeDesktopSettingRecord(tx, record);
     await upsertState(tx, record);
     const updated = await currentState(tx, item.identity);
     return {

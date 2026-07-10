@@ -5,6 +5,12 @@ import path from 'node:path';
 import { deflateSync } from 'node:zlib';
 
 import { DATABASE_SCHEMA_VERSION } from '../../lib/core/database/migrations.js';
+import {
+  SYNC_PACK_COMPRESSION,
+  SYNC_PACK_DATABASE_ENTRY,
+  SYNC_PACK_FORMAT,
+  SYNC_PACK_FORMAT_VERSION
+} from '../../lib/core/sync/syncPackEnvelopeContract.js';
 import { buildSyncPackManifest } from '../../lib/core/sync/syncPackManifest.js';
 import { PACK_SCHEMA } from '../../lib/core/sync/syncPackSchema.js';
 import { writeStoredZip } from '../diagnostics/zipStore.js';
@@ -61,16 +67,16 @@ function buildContainerManifest(args: {
     toStateSeq: args.toStateSeq
   });
   return {
-    format: 'foliole.sync-pack',
-    format_version: 1,
+    format: SYNC_PACK_FORMAT,
+    format_version: SYNC_PACK_FORMAT_VERSION,
     pack_id: args.input.packId,
     from_device_id: args.fromDeviceId,
     to_peer_id: args.input.toPeerId ?? '*',
     schema_version: DATABASE_SCHEMA_VERSION,
     from_state_seq: args.fromStateSeq,
     to_state_seq: args.toStateSeq,
-    compression: 'zlib',
-    database_file: 'incoming.db.deflate',
+    compression: SYNC_PACK_COMPRESSION,
+    database_file: SYNC_PACK_DATABASE_ENTRY,
     database_uncompressed_sha256: sha256Uri(args.uncompressedBytes),
     database_compressed_sha256: sha256Uri(args.compressedBytes),
     tables: innerManifest.tables,
@@ -116,7 +122,7 @@ export async function buildDesktopSyncPack(input: BuildDesktopSyncPackInput) {
     });
     await writeStoredZip(input.outputPath, [
       { name: 'manifest.json', content: Buffer.from(JSON.stringify(containerManifest, null, 2), 'utf8') },
-      { name: 'incoming.db.deflate', content: compressedBytes }
+      { name: SYNC_PACK_DATABASE_ENTRY, content: compressedBytes }
     ]);
     return {
       outputPath: input.outputPath,

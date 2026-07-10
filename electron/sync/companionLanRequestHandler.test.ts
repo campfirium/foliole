@@ -59,7 +59,7 @@ vi.mock('../database/workspaceSnapshot.js', () => ({
 }));
 
 vi.mock('./companionRequestAuth.js', () => ({
-  authenticateCompanionRequest: vi.fn(() => ({ ok: true }))
+  authenticateCompanionRequest: vi.fn(() => ({ device_id: 'android-fixture', ok: true }))
 }));
 vi.mock('./companionLanAttachmentResources.js', () => ({
   ATTACHMENT_RESOURCE_PATH: '/companion/attachment-resource',

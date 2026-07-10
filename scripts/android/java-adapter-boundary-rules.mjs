@@ -56,6 +56,7 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionSyncDiagnosticQueryRules.java',
       'FolioleCompanionSyncObjectQueryRules.java',
       'FolioleCompanionSyncPayloadRoutingRules.java',
+      'FolioleCompanionSyncPackContract.java',
       'FolioleCompanionSyncProtocolDefinitions.java',
       'FolioleCompanionSyncPushAckRules.java',
       'FolioleCompanionSyncReviewLogRecordRules.java',
@@ -79,6 +80,7 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionNetworkPluginActions.java',
       'FolioleCompanionNsdDiscovery.java',
       'FolioleCompanionPairingStore.java',
+      'FolioleCompanionSyncPackEnvelopeValidator.java',
       'FolioleCompanionSyncPackTransfer.java',
       'FolioleCompanionWebView.java',
       'MainActivity.java'
@@ -90,6 +92,7 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionDatabaseMigration.java',
       'FolioleCompanionSchemaInstaller.java',
       'FolioleCompanionSchemaRepair.java',
+      'FolioleCompanionSyncPackDatabaseValidator.java',
       'FolioleCompanionSqliteRuntime.java'
     ]
   },

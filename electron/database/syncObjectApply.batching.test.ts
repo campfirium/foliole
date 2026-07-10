@@ -108,3 +108,22 @@ it('rolls back a failed batch and retries records individually', async () => {
     ['user_space:*:*:*:batch_2']
   )).toBeUndefined();
 });
+
+it('rolls back canonical payload and state when the transaction callback fails', async () => {
+  const skipped = vi.fn();
+  const records = [settingRecord(1), settingRecord(2), settingRecord(3)];
+  const counting = createCountingPort();
+
+  await expect(applySyncObjectsWithDbPort(counting.port, records, {
+    onPayloadAppliedInTransaction: async (_port, record) => {
+      if (record.object_id.endsWith('batch_2')) throw new Error('materialization failed');
+    },
+    onSkippedRecord: skipped
+  })).resolves.toEqual(['setting:user_space:*:*:*:batch_1', 'setting:user_space:*:*:*:batch_3']);
+
+  expect(skipped).toHaveBeenCalledTimes(1);
+  expect(openDatabaseConnection().driver.queryOne('SELECT key FROM setting_records WHERE key = ?', ['batch_2']))
+    .toBeUndefined();
+  expect(openDatabaseConnection().driver.queryOne('SELECT object_id FROM sync_object_state WHERE object_id LIKE ?', ['%batch_2']))
+    .toBeUndefined();
+});

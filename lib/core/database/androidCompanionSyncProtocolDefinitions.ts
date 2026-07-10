@@ -1,3 +1,5 @@
+import { SYNC_PACK_ENVELOPE_CONTRACT } from '../sync/syncPackEnvelopeContract.js';
+
 import {
   ANDROID_COMPANION_SYNC_OBJECT_POLICY_DEFINITIONS,
   ANDROID_COMPANION_SYNC_OBJECT_TYPES
@@ -30,6 +32,7 @@ export const ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS = {
     statuses: ['accepted', 'already_applied', 'conflict', 'rejected']
   },
   resourceStatuses: ANDROID_COMPANION_RESOURCE_STATUSES,
+  syncPackEnvelope: SYNC_PACK_ENVELOPE_CONTRACT,
   syncEvents: {
     completedStatus: 'completed',
     fullSyncCompletedMessage: 'Sync fully completed.',

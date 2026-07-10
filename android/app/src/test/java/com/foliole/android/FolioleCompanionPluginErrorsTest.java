@@ -9,11 +9,11 @@ public class FolioleCompanionPluginErrorsTest {
     public void withCauseKeepsExceptionTypeAndMessageVisibleToJs() {
         String message = FolioleCompanionPluginErrors.withCause(
             "Failed to download companion desktop sync pack.",
-            new IllegalArgumentException("Invalid sync pack container.")
+            new IllegalArgumentException("sync_pack_target_mismatch")
         );
 
         assertEquals(
-            "Failed to download companion desktop sync pack. Cause: IllegalArgumentException: Invalid sync pack container.",
+            "Failed to download companion desktop sync pack. Cause: IllegalArgumentException: sync_pack_target_mismatch",
             message
         );
     }

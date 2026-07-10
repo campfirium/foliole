@@ -3,6 +3,7 @@ import type { NativeSyncObjectRecord } from '../../lib/platform/nativeSyncContra
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { openDatabaseConnection } from './connection.js';
+import { materializeDesktopSettingRecord } from './desktopSettingMaterializer.js';
 
 interface ApplySyncObjectsOptions {
   deviceId?: string;
@@ -28,6 +29,7 @@ export async function applySyncObjectsAsync(records: NativeSyncObjectRecord[], o
   const port = createBetterSqliteDbPort(connection.sqlite, { name: 'desktop-sync-object-apply' });
   return applySyncObjectsWithDbPort(port, records, {
     ...options,
+    onPayloadAppliedInTransaction: materializeDesktopSettingRecord,
     onSkippedRecord: warnSkippedSyncObject
   });
 }

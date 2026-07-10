@@ -21,6 +21,7 @@ import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 
 import { applyCompanionSyncPushAsync } from './companionSyncPushAsyncApply.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { loadJsonSetting, saveJsonSetting } from './settingsStore.js';
 
 type SyncPushPayload = import('./companionSyncPushTypes.js').CompanionSyncPushPayload;
 
@@ -34,6 +35,7 @@ beforeEach(async () => {
     `INSERT INTO nodes (id, kind, title, content, created_at, updated_at)
      VALUES ('node-1', 'item', 'Node 1', '', '2026-04-30T00:00:00.000Z', '2026-04-30T00:00:00.000Z')`
   );
+  saveJsonSetting('device_id', 'desktop-device', '2026-04-30T00:00:00.000Z');
   openDatabaseConnection().driver.execute(
     `INSERT INTO sync_object_state (
        object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
@@ -89,6 +91,22 @@ function createReviewLogPush(opId = 'op-1'): SyncPushPayload {
   };
 }
 
+async function verifyDesktopWorkspaceSettingPush() {
+  const result = await applyCompanionSyncPushAsync([createSettingPush({
+    base: { baseContentHash: null, kind: 'content_hash' },
+    clientOpId: 'setting:user_space:windows:desktop:*:app_settings:14',
+    contentHash: 'desktop-next',
+    identity: { objectId: 'user_space:windows:desktop:*:app_settings', objectType: 'setting', scope: 'user_space' },
+    payloadJson: JSON.stringify({
+      device_id: '*', form_factor: 'desktop', key: 'app_settings', platform: 'windows',
+      scope: 'user_space', value_json: '{"theme":"dark"}'
+    })
+  })]);
+
+  expect(result.acks).toMatchObject([{ status: 'accepted' }]);
+  expect(loadJsonSetting('app_settings')).toEqual({ theme: 'dark' });
+}
+
 describe('companion sync push async apply', () => {
   it('accepts state object pushes through the shared async executor', async () => {
     const result = await applyCompanionSyncPushAsync([createSettingPush()]);
@@ -98,7 +116,10 @@ describe('companion sync push async apply', () => {
     expect(openDatabaseConnection().driver.queryOne<{ value_json: string }>(
       `SELECT value_json FROM setting_records WHERE key = 'app_settings'`
     )).toEqual({ value_json: '{"theme":"dark"}' });
+    expect(loadJsonSetting('app_settings')).toBeNull();
   });
+
+  it('materializes accepted desktop workspace setting pushes', verifyDesktopWorkspaceSettingPush);
 
   it('reports content-hash conflicts without applying state object pushes', async () => {
     const result = await applyCompanionSyncPushAsync([createSettingPush({
