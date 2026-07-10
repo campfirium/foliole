@@ -34,6 +34,7 @@ export async function runOnlineSmoke(options = {}) {
   try {
     const result = await runCodexTurn({
       codexCommand: options.codexCommand ?? 'codex',
+      cwd: tempRoot,
       descriptorPath,
       prompt: createSmokePrompt(),
       tracePath
@@ -95,6 +96,10 @@ export function buildCodexAppServerArgs(descriptorPath, tracePath) {
   ];
 }
 
+export function createSmokeThreadStartParams(cwd) {
+  return { cwd, ephemeral: true };
+}
+
 function tomlString(value) {
   if (value.includes("'")) return JSON.stringify(value);
   return `'${value}'`;
@@ -136,7 +141,7 @@ async function createSmokeApi(apiRequests) {
 
 async function runCodexTurn(input) {
   const child = spawn(input.codexCommand, buildCodexAppServerArgs(input.descriptorPath, input.tracePath), {
-    cwd: path.resolve('.'),
+    cwd: input.cwd,
     env: { ...process.env, FOLIOLE_AGENT_MCP_TRACE_PATH: input.tracePath },
     shell: process.platform === 'win32',
     stdio: ['pipe', 'pipe', 'pipe'],
@@ -146,7 +151,11 @@ async function runCodexTurn(input) {
   try {
     await session.request({ id: 0, method: 'initialize', params: { clientInfo: { name: 'foliole_aide_smoke', version: '0.1.0' } } });
     session.notify({ method: 'initialized', params: {} });
-    const thread = await session.request({ id: 1, method: 'thread/start', params: {} });
+    const thread = await session.request({
+      id: 1,
+      method: 'thread/start',
+      params: createSmokeThreadStartParams(input.cwd)
+    });
     const threadId = thread.result?.thread?.id;
     if (typeof threadId !== 'string') throw new Error('missing_thread_id');
     const completed = session.waitForTurn();

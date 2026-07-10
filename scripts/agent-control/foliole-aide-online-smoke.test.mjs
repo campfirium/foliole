@@ -7,6 +7,7 @@ import {
   buildCodexAppServerArgs,
   classifyOnlineSmokeError,
   createSmokePrompt,
+  createSmokeThreadStartParams,
   describeOnlineSmokeFailure
 } from './foliole-aide-online-smoke.mjs';
 import { isOnlineSmokeSuccessful } from './foliole-aide-online-smoke-success.mjs';
@@ -29,6 +30,13 @@ it('asks the online smoke turn to use the material read MCP tool', () => {
   expect(createSmokePrompt()).toContain('foliole_materials_read');
   expect(createSmokePrompt()).toContain('smoke-topic');
   expect(createSmokePrompt()).toContain('TRACE_SMOKE_OK Aide MCP Smoke Topic');
+});
+
+it('keeps online smoke threads ephemeral and outside the repository', () => {
+  const cwd = 'C:\\Users\\Tester\\AppData\\Local\\Temp\\foliole-aide-smoke';
+
+  expect(createSmokeThreadStartParams(cwd)).toEqual({ cwd, ephemeral: true });
+  expect(createSmokeThreadStartParams(cwd).cwd).not.toBe(path.resolve('.'));
 });
 
 it('classifies Codex app-server auth failures for actionable smoke output', () => {
