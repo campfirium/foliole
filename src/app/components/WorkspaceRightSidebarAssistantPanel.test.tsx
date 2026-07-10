@@ -95,12 +95,6 @@ it('creates a new thread and moves pending messages into the returned thread cac
       openingLocation: { nodeId: 'node-1', type: 'node' },
       workspaceContext: expect.objectContaining({
         activeNodeId: 'node-1',
-        parentFolder: expect.objectContaining({
-          children: expect.arrayContaining([
-            expect.objectContaining({ isActive: true, nodeId: 'node-1' }),
-            expect.objectContaining({ nodeId: 'sibling', preview: 'Sibling preview' })
-          ])
-        }),
         path: ['Parent', 'Topic'],
         scope: 'node'
       })

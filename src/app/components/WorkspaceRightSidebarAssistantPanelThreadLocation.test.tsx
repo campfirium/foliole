@@ -31,7 +31,7 @@ beforeEach(() => {
   assistantRuntime.subscribeAssistantTurnEvents.mockReturnValue(() => undefined);
 });
 
-it('continues a workspace thread from a topic view using the saved location', async () => {
+it('continues a workspace thread while using the visible topic as context', async () => {
   assistantRuntime.listAssistantThreadIndex.mockResolvedValueOnce([
     createThread({ location: { type: 'workspace' } })
   ]);
@@ -60,14 +60,16 @@ it('continues a workspace thread from a topic view using the saved location', as
         openingLocation: { type: 'workspace' },
         providerThreadId: 'thread-1',
         workspaceContext: expect.objectContaining({
-          scope: 'workspace'
+          activeNodeId: 'node-1',
+          activeTitle: 'Topic',
+          scope: 'node'
         })
       })
     )
   );
 });
 
-it('continues a node thread using its saved node context before navigation catches up', async () => {
+it('continues a node thread while keeping the current main panel as context', async () => {
   const onSelectNode = vi.fn();
   assistantRuntime.listAssistantThreadIndex.mockResolvedValueOnce([
     createThread({ location: { nodeId: 'node-2', type: 'node' } })
@@ -101,8 +103,8 @@ it('continues a node thread using its saved node context before navigation catch
         openingLocation: { nodeId: 'node-2', type: 'node' },
         providerThreadId: 'thread-1',
         workspaceContext: expect.objectContaining({
-          activeNodeId: 'node-2',
-          activeTitle: 'Saved topic',
+          activeNodeId: 'node-1',
+          activeTitle: 'Current topic',
           scope: 'node'
         })
       })
@@ -110,7 +112,7 @@ it('continues a node thread using its saved node context before navigation catch
   );
 });
 
-it('continues an unavailable topic thread without replacing its context with the current workspace', async () => {
+it('continues an unavailable topic thread with the visible main panel context', async () => {
   assistantRuntime.listAssistantThreadIndex.mockResolvedValueOnce([
     createThread({ location: { nodeId: 'missing-topic', type: 'node' } })
   ]);
@@ -137,8 +139,10 @@ it('continues an unavailable topic thread without replacing its context with the
       expect.objectContaining({
         openingLocation: { nodeId: 'missing-topic', type: 'node' },
         workspaceContext: {
-          activeNodeId: 'missing-topic',
-          document: { bodyStatus: 'missing' },
+          activeKind: 'topic',
+          activeNodeId: 'node-1',
+          activeTitle: 'Current topic',
+          path: ['Current topic'],
           schemaVersion: 1,
           scope: 'node'
         }
@@ -179,22 +183,7 @@ it('starts a folder thread using the active folder node location', async () => {
         workspaceContext: expect.objectContaining({
           activeKind: 'folder',
           activeNodeId: 'folder-1',
-          folder: expect.objectContaining({
-            childCount: 2,
-            children: expect.arrayContaining([
-              expect.objectContaining({
-                anchorKind: 'highlight',
-                nodeId: 'child-1',
-                preview: 'First child opening',
-                title: 'First child'
-              }),
-              expect.objectContaining({
-                nodeId: 'child-2',
-                specialKind: 'virtual',
-                title: 'Saved collection'
-              })
-            ])
-          }),
+          activeTitle: 'Folder',
           scope: 'node'
         })
       })

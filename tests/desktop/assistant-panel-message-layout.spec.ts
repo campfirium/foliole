@@ -120,7 +120,7 @@ test('Aide omits current material after the follow switch is turned off', async 
     .toHaveAttribute('aria-checked', 'false');
   await desktopWindow.getByLabel(/^(Foliole Aide message|Foliole Aide 消息)$/).fill('No context');
   await desktopWindow.getByRole('button', { name: /^(Send|发送)$/ }).click();
-  await expect(desktopWindow.getByText('context:absent')).toBeVisible();
+  await expect(desktopWindow.getByText('focus:absent')).toBeVisible();
 });
 
 async function openAssistantPanel(page: Page) {
@@ -151,11 +151,12 @@ async function installAssistantIpcMock(electronApp: ElectronApplication) {
         }
         if (request.args?.message === 'Long response') return fixture.longResponse;
         if (request.args?.message === 'No context') {
+          const context = request.args.workspaceContext as { activeNodeId?: string } | undefined;
           return {
             ...fixture.response,
             message: {
               ...fixture.response.message,
-              text: request.args.workspaceContext ? 'context:present' : 'context:absent'
+              text: context?.activeNodeId ? 'focus:present' : 'focus:absent'
             }
           };
         }

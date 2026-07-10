@@ -9,7 +9,7 @@ vi.mock('../../shared/platform/assistantRuntime', () => ({ sendAssistantMessage:
 
 beforeEach(() => vi.mocked(sendAssistantMessage).mockReset());
 
-it('omits workspace context while preserving the opening location when following is off', async () => {
+it('keeps tool context but omits current material focus when following is off', async () => {
   const node = createAssistantPanelNode({ id: 'node-1', title: 'Current material' });
   await sendAssistantTurn({
     activeNodeId: node.id,
@@ -25,7 +25,38 @@ it('omits workspace context while preserving the opening location when following
   expect(payload).toMatchObject({
     clientTurnId: 'turn-1',
     message: 'Question',
-    openingLocation: { nodeId: 'node-1', type: 'node' }
+    openingLocation: { nodeId: 'node-1', type: 'node' },
+    workspaceContext: { schemaVersion: 1, scope: 'workspace' }
   });
-  expect(payload).not.toHaveProperty('workspaceContext');
+});
+
+it('sends only a material pointer when following is on', async () => {
+  const node = createAssistantPanelNode({
+    bodyStatus: 'ready',
+    content: 'Body text should be read through Agent Control instead',
+    id: 'node-1',
+    openingText: 'Opening preview should not be sent eagerly',
+    title: 'Current material'
+  });
+  await sendAssistantTurn({
+    activeNodeId: node.id,
+    editorAdapterRef: undefined,
+    followCurrentMaterial: true,
+    location: { nodeId: node.id, type: 'node' },
+    nodesById: { [node.id]: node },
+    selectedRecord: null,
+    selectedThreadId: null
+  }, 'turn-2', 'Question');
+
+  const payload = vi.mocked(sendAssistantMessage).mock.calls[0]?.[0];
+  expect(payload?.workspaceContext).toMatchObject({
+    activeNodeId: 'node-1',
+    activeTitle: 'Current material',
+    path: ['Current material'],
+    schemaVersion: 1,
+    scope: 'node'
+  });
+  expect(payload?.workspaceContext).not.toHaveProperty('document');
+  expect(payload?.workspaceContext).not.toHaveProperty('folder');
+  expect(payload?.workspaceContext).not.toHaveProperty('selection');
 });

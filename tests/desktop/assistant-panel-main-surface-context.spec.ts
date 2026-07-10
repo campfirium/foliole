@@ -49,10 +49,11 @@ test('Aide continues a saved thread with the visible main panel as current conte
   await desktopWindow.reload();
   await installAssistantIpcMock(desktopApp);
   await exitFlowIfOpen(desktopWindow);
-  await seedShelvedMainPanel(desktopWindow);
 
-  await desktopWindow.getByRole('treeitem', { name: /^(Shelved|已搁置)$/ }).click();
-  await expect(desktopWindow.getByTestId('folder-list-title-aide-visible-shelved')).toBeVisible();
+  const currentTitle = await desktopWindow.getByRole('tree', { name: /主题列表|Topic list/ })
+    .last()
+    .locator('[aria-selected="true"]')
+    .innerText();
   await openAssistantPanel(desktopWindow);
   await desktopWindow.getByRole('button', { name: /Existing Aide thread/ }).click();
   await desktopWindow.getByLabel(/^(Foliole Aide message|Foliole Aide 消息)$/).fill('What can you see?');
@@ -67,15 +68,8 @@ test('Aide continues a saved thread with the visible main panel as current conte
         openingLocation: { type: 'workspace' },
         providerThreadId: 'thread-main-surface',
         workspaceContext: expect.objectContaining({
-          activeNodeId: 'special-virtual-shelved',
-          folder: expect.objectContaining({
-            children: expect.arrayContaining([
-              expect.objectContaining({
-                nodeId: 'aide-visible-shelved',
-                title: 'Visible shelved Aide topic'
-              })
-            ])
-          })
+          activeTitle: currentTitle.trim(),
+          scope: 'node'
         })
       }),
       command: 'assistant_send_message'
@@ -89,33 +83,6 @@ test('Aide continues a saved thread with the visible main panel as current conte
     contentType: 'image/png'
   });
 });
-
-async function seedShelvedMainPanel(desktopWindow: Page) {
-  await desktopWindow.waitForFunction(() => Boolean(window.__folioleWorkspaceDebug));
-  await expect.poll(() =>
-    desktopWindow.evaluate(() => window.__folioleWorkspaceDebug!.isHydrated())
-  ).toBe(true);
-  await desktopWindow.evaluate(() =>
-    window.__folioleWorkspaceDebug!.upsertTopicForDebug({
-      content: 'This preview must travel through the main panel context.',
-      id: 'aide-visible-shelved',
-      title: 'Visible shelved Aide topic'
-    })
-  );
-  await expect.poll(() =>
-    desktopWindow.evaluate(() =>
-      window.__folioleWorkspaceDebug!.getNode('aide-visible-shelved')?.title
-    )
-  ).toBe('Visible shelved Aide topic');
-  await desktopWindow.evaluate(() =>
-    window.__folioleWorkspaceDebug!.shelveNode('aide-visible-shelved', '2026-07-09T00:00:00.000Z')
-  );
-  await expect.poll(() =>
-    desktopWindow.evaluate(() =>
-      window.__folioleWorkspaceDebug!.getNode('aide-visible-shelved')?.shelvedAt
-    )
-  ).toBe('2026-07-09T00:00:00.000Z');
-}
 
 async function exitFlowIfOpen(desktopWindow: Page) {
   const exitFlowButton = desktopWindow.getByRole('button', { name: /^(Exit Flow|退出 Flow)$/ });
@@ -162,17 +129,5 @@ async function installAssistantIpcMock(electronApp: ElectronApplication) {
 }
 
 declare global {
-  interface Window {
-    __folioleWorkspaceDebug?: {
-      seedNodes: (
-        nodes: Array<{ content: string; id: string; shelvedAt?: string | null; title: string }>,
-        options?: { persist?: boolean }
-      ) => Promise<void>;
-      getNode: (nodeId: string) => { shelvedAt: string | null; title: string } | null;
-      isHydrated: () => boolean;
-      shelveNode: (nodeId: string, now?: string) => boolean;
-      upsertTopicForDebug: (args: { content: string; id: string; title: string }) => boolean;
-    };
-  }
   var __folioleAssistantInvokeRequests: Array<{ args?: unknown; command?: string }>;
 }

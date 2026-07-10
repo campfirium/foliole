@@ -14,7 +14,7 @@ const readyStatus = {
   state: 'ready'
 };
 
-test('Aide keeps a missing saved topic context explicit when continuing a thread', async ({
+test('Aide keeps thread location separate from the visible main panel context', async ({
   desktopApp,
   desktopWindow
 }) => {
@@ -36,12 +36,11 @@ test('Aide keeps a missing saved topic context explicit when continuing a thread
       args: expect.objectContaining({
         openingLocation: { nodeId: 'missing-topic', type: 'node' },
         providerThreadId: 'thread-1',
-        workspaceContext: {
-          activeNodeId: 'missing-topic',
-          document: { bodyStatus: 'missing' },
+        workspaceContext: expect.objectContaining({
+          activeTitle: expect.any(String),
           schemaVersion: 1,
           scope: 'node'
-        }
+        })
       }),
       command: 'assistant_send_message'
     })
