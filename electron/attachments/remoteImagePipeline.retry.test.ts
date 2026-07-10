@@ -24,12 +24,15 @@ vi.mock('./remoteImageLearnedSources.js', () => ({
 
 import {
   configureRemoteImageFetchTransportForTests,
+  configureRemoteImageHostResolverForTests,
   configureRemoteImagePipelineCacheRoot,
   fetchRemoteImageResource,
   resetRemoteImagePipelineForTests
 } from './remoteImagePipeline.js';
 
 let tempRoot: string;
+const PNG_BYTES = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+const JPEG_BYTES = new Uint8Array([0xff, 0xd8, 0xff]);
 
 beforeEach(async () => {
   vi.clearAllMocks();
@@ -37,6 +40,7 @@ beforeEach(async () => {
   resetRemoteImagePipelineForTests();
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-remote-image-cache-'));
   configureRemoteImagePipelineCacheRoot(tempRoot);
+  configureRemoteImageHostResolverForTests(async () => ['93.184.216.34']);
 });
 
 afterEach(async () => {
@@ -60,15 +64,16 @@ it('rejects non-image responses even when the URL extension looks supported', as
 it('rejects empty image responses without writing them into the render cache', async () => {
   const fetchMock = vi.fn()
     .mockResolvedValueOnce(new Response(new Uint8Array([]), { headers: { 'content-type': 'image/jpeg' }, status: 200 }))
-    .mockResolvedValueOnce(new Response(new Uint8Array([4, 5]), { headers: { 'content-type': 'image/jpeg' }, status: 200 }));
+    .mockResolvedValueOnce(new Response(JPEG_BYTES, { headers: { 'content-type': 'image/jpeg' }, status: 200 }));
   vi.stubGlobal('fetch', fetchMock);
 
   await expect(fetchRemoteImageResource('https://example.com/images/cover.jpg')).resolves.toMatchObject({ status: 'error' });
   resetRemoteImagePipelineForTests();
   configureRemoteImagePipelineCacheRoot(tempRoot);
+  configureRemoteImageHostResolverForTests(async () => ['93.184.216.34']);
 
   await expect(fetchRemoteImageResource('https://example.com/images/cover.jpg')).resolves.toMatchObject({
-    resource: { bytes: new Uint8Array([4, 5]) },
+    resource: { bytes: JPEG_BYTES },
     status: 'ready'
   });
 });
@@ -76,12 +81,12 @@ it('rejects empty image responses without writing them into the render cache', a
 it('retries with the source origin after a direct anti-hotlink response', async () => {
   const fetchTransport = vi.fn()
     .mockResolvedValueOnce(new Response(new TextEncoder().encode('<html></html>'), { headers: { 'content-type': 'text/html' }, status: 200 }))
-    .mockResolvedValueOnce(new Response(new Uint8Array([8, 9]), { headers: { 'content-type': 'image/jpeg' }, status: 200 }));
+    .mockResolvedValueOnce(new Response(JPEG_BYTES, { headers: { 'content-type': 'image/jpeg' }, status: 200 }));
   configureRemoteImageFetchTransportForTests(fetchTransport);
 
   await expect(fetchRemoteImageResource('https://cdn.example/images/cover.jpg', { sourceOrigin: 'https://source.example/' }))
     .resolves.toMatchObject({
-      resource: { bytes: new Uint8Array([8, 9]), mimeType: 'image/jpeg' },
+      resource: { bytes: JPEG_BYTES, mimeType: 'image/jpeg' },
       status: 'ready'
     });
 
@@ -100,7 +105,7 @@ it('retries with the source origin after a direct anti-hotlink response', async 
 
 it('does not learn a source rule when the direct request succeeds', async () => {
   const fetchTransport = vi.fn().mockResolvedValue(
-    new Response(new Uint8Array([1, 2]), { headers: { 'content-type': 'image/png' }, status: 200 })
+    new Response(PNG_BYTES, { headers: { 'content-type': 'image/png' }, status: 200 })
   );
   configureRemoteImageFetchTransportForTests(fetchTransport);
 
@@ -118,7 +123,7 @@ it('keeps in-flight source-origin retries separate from direct fetches', async (
   });
   const fetchTransport = vi.fn(async (_sourceUrl: string, init: RequestInit) => {
     if (!(init.headers as Record<string, string>).Referer) await directGate;
-    return new Response(new Uint8Array([1]), { headers: { 'content-type': 'image/png' }, status: 200 });
+    return new Response(PNG_BYTES, { headers: { 'content-type': 'image/png' }, status: 200 });
   });
   configureRemoteImageFetchTransportForTests(fetchTransport);
 

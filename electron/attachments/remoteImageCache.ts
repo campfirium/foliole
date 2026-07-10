@@ -2,6 +2,8 @@ import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+import { isSupportedImageMimeType, validateSupportedImageBytes } from './supportedImageFormats.js';
+
 interface RemoteImageCacheMetadata {
   cachedAt: string;
   cacheKey: string;
@@ -47,7 +49,7 @@ function isCacheMetadata(value: unknown, cacheKey: string): value is RemoteImage
     candidate.cacheKey === cacheKey &&
     typeof candidate.sourceUrl === 'string' &&
     typeof candidate.mimeType === 'string' &&
-    candidate.mimeType.startsWith('image/') &&
+    isSupportedImageMimeType(candidate.mimeType) &&
     typeof candidate.originalName === 'string' &&
     typeof sizeBytes === 'number' &&
     Number.isInteger(sizeBytes) &&
@@ -101,7 +103,11 @@ export async function readRemoteImageCache(cacheKey: string): Promise<RemoteImag
       fs.readFile(paths.bytesPath)
     ]);
     const metadata: unknown = JSON.parse(metadataText);
-    if (!isCacheMetadata(metadata, cacheKey) || metadata.sizeBytes !== bytes.byteLength) {
+    if (
+      !isCacheMetadata(metadata, cacheKey) ||
+      metadata.sizeBytes !== bytes.byteLength ||
+      !validateSupportedImageBytes(bytes, metadata.mimeType)
+    ) {
       await deleteCacheEntry(cacheKey);
       return null;
     }

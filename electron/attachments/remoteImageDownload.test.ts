@@ -11,6 +11,7 @@ import { downloadRemoteImageBytes, resolveRemoteImageCacheKey, type RemoteImageF
 
 const SOURCE_URL = 'https://example.com/images/cover.png';
 const CACHE_KEY = 'https://example.com/images/cover.png';
+const PNG_BYTES = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 afterEach(() => {
   configureRemoteImageDiagnosticSinkForTests(null);
@@ -28,13 +29,17 @@ function createTransport(response: Response): RemoteImageFetchTransport {
   return vi.fn(async () => response);
 }
 
+function createAllowedResolver() {
+  return vi.fn(async () => ['93.184.216.34']);
+}
+
 async function downloadWith(response: Response) {
-  return downloadRemoteImageBytes(SOURCE_URL, CACHE_KEY, null, createTransport(response));
+  return downloadRemoteImageBytes(SOURCE_URL, CACHE_KEY, null, createTransport(response), createAllowedResolver());
 }
 
 it('keeps normal remote image responses downloadable', async () => {
-  await expect(downloadWith(createImageResponse(new Uint8Array([1, 2, 3])))).resolves.toMatchObject({
-    resource: { bytes: new Uint8Array([1, 2, 3]), mimeType: 'image/png' },
+  await expect(downloadWith(createImageResponse(PNG_BYTES))).resolves.toMatchObject({
+    resource: { bytes: PNG_BYTES, mimeType: 'image/png' },
     status: 'ready'
   });
 });
@@ -77,11 +82,11 @@ it('rejects remote images when content-length is larger than the byte limit', as
 
 it('keeps reading when content-length is invalid and the actual body fits', async () => {
   await expect(
-    downloadWith(createImageResponse(new Uint8Array([4, 5]), {
+    downloadWith(createImageResponse(PNG_BYTES, {
       'content-length': 'not-a-number'
     }))
   ).resolves.toMatchObject({
-    resource: { bytes: new Uint8Array([4, 5]) },
+    resource: { bytes: PNG_BYTES },
     status: 'ready'
   });
 });
@@ -153,7 +158,7 @@ it('keeps the fetch timeout active while reading the response body', async () =>
 
 it('checks the fallback arrayBuffer path when response.body is unavailable', async () => {
   const response = {
-    arrayBuffer: vi.fn(async () => new Uint8Array([6, 7]).buffer),
+    arrayBuffer: vi.fn(async () => PNG_BYTES.buffer),
     body: null,
     headers: new Headers({ 'content-type': 'image/png' }),
     ok: true,
@@ -161,7 +166,7 @@ it('checks the fallback arrayBuffer path when response.body is unavailable', asy
   } as unknown as Response;
 
   await expect(downloadWith(response)).resolves.toMatchObject({
-    resource: { bytes: new Uint8Array([6, 7]) },
+    resource: { bytes: PNG_BYTES },
     status: 'ready'
   });
 });

@@ -12,13 +12,11 @@ import {
 import { openDatabaseConnection } from '../database/connection.js';
 import { readImageIntrinsicSize } from '../import/imageIntrinsicSize.js';
 
-import { hasSupportedImageSignature } from './imageByteSignature.js';
 import { resolveAttachmentStoragePath } from './resourceResolver.js';
 import { buildAttachmentStorageFileName } from './storagePath.js';
+import { SUPPORTED_IMAGE_MIME_TYPES, validateSupportedImageBytes as hasValidSupportedImageBytes } from './supportedImageFormats.js';
 
 const IMAGE_ATTACHMENT_ROLE = 'image';
-
-const SUPPORTED_IMAGE_MIME_TYPES = new Set(['image/gif', 'image/jpeg', 'image/png', 'image/webp']);
 
 const MIME_TYPE_EXTENSION_MAP = new Map([
   ['image/gif', '.gif'],
@@ -53,7 +51,7 @@ function validateSupportedImageBytes(input: ImportImageAttachmentBytesInput, nor
     );
   }
 
-  if (!hasSupportedImageSignature(input.bytes, normalizedMimeType)) {
+  if (!hasValidSupportedImageBytes(input.bytes, normalizedMimeType)) {
     return createErrorResult(
       'unsupported_format',
       'The image bytes do not match the declared image format.',

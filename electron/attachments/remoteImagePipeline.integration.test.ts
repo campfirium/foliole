@@ -33,18 +33,25 @@ vi.mock('./remoteImageSourceContext.js', () => ({
 
 import { buildRemoteImageRenderUrl } from '../../lib/platform/remoteImageProtocolUrl.js';
 
-import { importRemoteImageAttachment, resetRemoteImagePipelineForTests } from './remoteImagePipeline.js';
+import {
+  configureRemoteImageHostResolverForTests,
+  importRemoteImageAttachment,
+  resetRemoteImagePipelineForTests
+} from './remoteImagePipeline.js';
 import { registerRemoteImageProtocol } from './remoteImageProtocol.js';
+
+const PNG_BYTES = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 beforeEach(() => {
   vi.clearAllMocks();
   vi.unstubAllGlobals();
   resetRemoteImagePipelineForTests();
+  configureRemoteImageHostResolverForTests(async () => ['93.184.216.34']);
 });
 
 it('shares one remote fetch across protocol renders and auto localization', async () => {
   const fetchMock = vi.fn().mockResolvedValue(
-    new Response(new Uint8Array([1, 2, 3]), {
+    new Response(PNG_BYTES, {
       headers: { 'content-type': 'image/png' },
       status: 200
     })
