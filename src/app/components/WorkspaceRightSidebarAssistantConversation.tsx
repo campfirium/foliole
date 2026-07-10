@@ -9,9 +9,13 @@ import type { AssistantMessage } from './workspaceRightSidebarAssistantPanelMode
 
 export function WorkspaceRightSidebarAssistantConversation(props: {
   activeMessages: AssistantMessage[];
+  contextFollowDescription: string;
+  contextFollowEnabled: boolean;
+  contextFollowLabel: string;
   inputLabel: string;
   messageText: string;
   onMessageTextChange: (text: string) => void;
+  onToggleContextFollow: () => void;
   onEditMessage: (text: string) => void;
   onSubmit: (event: FormEvent) => void;
   placeholder: string;
@@ -45,10 +49,14 @@ export function WorkspaceRightSidebarAssistantConversation(props: {
       />
       <div className="px-3 pb-3">
         <WorkspaceRightSidebarAssistantComposer
+          contextFollowDescription={props.contextFollowDescription}
+          contextFollowEnabled={props.contextFollowEnabled}
+          contextFollowLabel={props.contextFollowLabel}
           inputLabel={props.inputLabel}
           inputRef={inputRef}
           messageText={props.messageText}
           onMessageTextChange={props.onMessageTextChange}
+          onToggleContextFollow={props.onToggleContextFollow}
           onSubmit={props.onSubmit}
           placeholder={props.placeholder}
           sendLabel={props.sendLabel}

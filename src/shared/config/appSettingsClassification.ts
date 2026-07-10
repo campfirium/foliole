@@ -139,6 +139,7 @@ const RUNTIME_MIRRORED_APP_SETTING_NAMES = [
   'rightSidebarActivePanel',
   'rightSidebarPanelOrder',
   'folioleAideEnabled',
+  'folioleAideFollowCurrentMaterial',
   'importManagementActivePage',
   'globalClipExistingClipboardFallbackEnabled',
   'globalClipHintVisible',

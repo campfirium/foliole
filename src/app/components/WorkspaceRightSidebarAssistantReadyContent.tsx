@@ -66,10 +66,14 @@ function AssistantConversationView(props: {
       ) : null}
       <WorkspaceRightSidebarAssistantConversation
         activeMessages={props.controller.activeMessages}
+        contextFollowDescription={t('desktop.rightPanel.assistant.followCurrentMaterialDescription')}
+        contextFollowEnabled={props.controller.followCurrentMaterial}
+        contextFollowLabel={resolveContextFollowLabel(props, t)}
         inputLabel={t('desktop.rightPanel.assistant.input')}
         messageText={props.controller.messageText}
         onEditMessage={props.controller.setMessageText}
         onMessageTextChange={props.controller.setMessageText}
+        onToggleContextFollow={() => props.controller.setFollowCurrentMaterial(!props.controller.followCurrentMaterial)}
         onSubmit={props.controller.handleSubmit}
         placeholder={t('desktop.rightPanel.assistant.placeholder')}
         pendingLabel={t('desktop.rightPanel.assistant.pending')}
@@ -95,9 +99,13 @@ function AssistantHomeView(props: {
       {props.historyVisible ? <AssistantHistoryList {...props} /> : null}
       <div className={`${inspectorListInsetPaddingClassName} mt-auto py-3`}>
         <WorkspaceRightSidebarAssistantComposer
+          contextFollowDescription={t('desktop.rightPanel.assistant.followCurrentMaterialDescription')}
+          contextFollowEnabled={props.controller.followCurrentMaterial}
+          contextFollowLabel={resolveContextFollowLabel(props, t)}
           inputLabel={t('desktop.rightPanel.assistant.input')}
           messageText={props.controller.messageText}
           onMessageTextChange={props.controller.setMessageText}
+          onToggleContextFollow={() => props.controller.setFollowCurrentMaterial(!props.controller.followCurrentMaterial)}
           onSubmit={props.controller.handleSubmit}
           placeholder={t('desktop.rightPanel.assistant.placeholder')}
           sendLabel={t('desktop.rightPanel.assistant.send')}
@@ -202,4 +210,16 @@ function resolveThreadStatusLabel(
   return controller.selectedRecord && controller.threadMessageStatus === 'failed'
     ? t('desktop.rightPanel.assistant.threadMessagesLoadFailed')
     : null;
+}
+
+function resolveContextFollowLabel(
+  props: Pick<Parameters<typeof FolioleAideReadyContent>[0], 'activeNodeId' | 'controller' | 'nodesById'>,
+  t: ReturnType<typeof useTranslation>
+) {
+  if (!props.controller.followCurrentMaterial)
+    return t('desktop.rightPanel.assistant.followCurrentMaterial');
+  const title = props.activeNodeId ? props.nodesById[props.activeNodeId]?.title.trim() : '';
+  return t('desktop.rightPanel.assistant.followingCurrentMaterial', {
+    title: title || t('desktop.rightPanel.assistant.location.workspace')
+  });
 }

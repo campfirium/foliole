@@ -3,11 +3,17 @@ import type { FormEvent, KeyboardEvent, RefObject } from 'react';
 
 import { AppIconButton } from '../../shared/ui';
 
+import { WorkspaceRightSidebarAssistantContextFollowControl } from './WorkspaceRightSidebarAssistantContextFollowControl';
+
 export function WorkspaceRightSidebarAssistantComposer(props: {
+  contextFollowDescription: string;
+  contextFollowEnabled: boolean;
+  contextFollowLabel: string;
   inputLabel: string;
   inputRef?: RefObject<HTMLTextAreaElement>;
   messageText: string;
   onMessageTextChange: (text: string) => void;
+  onToggleContextFollow: () => void;
   onSubmit: (event: FormEvent) => void;
   placeholder: string;
   sendLabel: string;
@@ -28,7 +34,13 @@ export function WorkspaceRightSidebarAssistantComposer(props: {
         rows={3}
         value={props.messageText}
       />
-      <div className="flex items-center justify-end">
+      <div className="flex items-center justify-between gap-2">
+        <WorkspaceRightSidebarAssistantContextFollowControl
+          description={props.contextFollowDescription}
+          enabled={props.contextFollowEnabled}
+          label={props.contextFollowLabel}
+          onToggle={props.onToggleContextFollow}
+        />
         <AppIconButton
           className="rounded-full bg-foreground/8 text-foreground hover:bg-foreground/12 disabled:bg-foreground/8"
           disabled={props.sending || !props.messageText.trim()}

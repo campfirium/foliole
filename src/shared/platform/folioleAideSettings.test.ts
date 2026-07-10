@@ -3,13 +3,25 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { APP_SETTINGS_STORAGE_KEYS } from '../config/appSettings';
 
 import {
+  getFolioleAideFollowCurrentMaterial,
   getFolioleAideEnabled,
+  setFolioleAideFollowCurrentMaterial,
   setFolioleAideEnabled,
   subscribeFolioleAideEnabled
 } from './folioleAideSettings';
 
 beforeEach(() => {
   window.localStorage.clear();
+});
+
+it('defaults material following on and persists explicit changes', () => {
+  expect(getFolioleAideFollowCurrentMaterial()).toBe(true);
+
+  setFolioleAideFollowCurrentMaterial(false);
+  expect(getFolioleAideFollowCurrentMaterial()).toBe(false);
+  expect(
+    window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.folioleAideFollowCurrentMaterial)
+  ).toBe('false');
 });
 
 it('keeps Foliole Aide disabled until the user explicitly enables it', () => {

@@ -23,3 +23,16 @@ export function subscribeFolioleAideEnabled(listener: (enabled: boolean) => void
   window.addEventListener(FOLIOLE_AIDE_ENABLED_EVENT, handler);
   return () => window.removeEventListener(FOLIOLE_AIDE_ENABLED_EVENT, handler);
 }
+
+export function getFolioleAideFollowCurrentMaterial() {
+  return getWhitelistedLocalStorageItem(
+    APP_SETTINGS_STORAGE_KEYS.folioleAideFollowCurrentMaterial
+  ) !== 'false';
+}
+
+export function setFolioleAideFollowCurrentMaterial(enabled: boolean) {
+  setWhitelistedLocalStorageItem(
+    APP_SETTINGS_STORAGE_KEYS.folioleAideFollowCurrentMaterial,
+    String(enabled)
+  );
+}

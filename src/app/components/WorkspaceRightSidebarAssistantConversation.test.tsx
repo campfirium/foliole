@@ -10,11 +10,15 @@ it('returns a selected user prompt to the focused composer for resending', () =>
   renderWithLocalization(
     <WorkspaceRightSidebarAssistantConversation
       activeMessages={[{ id: 'user-1', role: 'user', text: 'Refine this prompt' }]}
+      contextFollowDescription="Attach current material"
+      contextFollowEnabled
+      contextFollowLabel="Following: Topic"
       inputLabel="Message"
       messageText=""
       onEditMessage={onEditMessage}
       onMessageTextChange={vi.fn()}
       onSubmit={vi.fn()}
+      onToggleContextFollow={vi.fn()}
       pendingLabel="Thinking"
       placeholder="Ask"
       sendLabel="Send"
