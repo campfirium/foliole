@@ -40,7 +40,7 @@ final class FolioleCompanionSyncStateWriteStore {
     }
 
     static JSObject saveNodeReading(Context context, SQLiteDatabase database, JSONObject input, String modifiedByDeviceId) throws Exception {
-        String queryName = FolioleCompanionSyncPayloadQueryStore.nodeReadingPayloadQueryName();
+        String queryName = FolioleCompanionLearningPayloadStore.nodeReadingPayloadQueryName();
         String nodeId = FolioleCompanionLearningPayloadRules.nodeId(context, input, queryName);
         JSONObject payload = FolioleCompanionLearningPayloadRules.inputPayload(context, input, queryName);
         String now = Instant.now().toString();
@@ -61,7 +61,7 @@ final class FolioleCompanionSyncStateWriteStore {
     }
 
     static JSObject saveNodeReview(Context context, SQLiteDatabase database, JSONObject input, String modifiedByDeviceId) throws Exception {
-        String queryName = FolioleCompanionSyncPayloadQueryStore.nodeReviewPayloadQueryName();
+        String queryName = FolioleCompanionLearningPayloadStore.nodeReviewPayloadQueryName();
         String nodeId = FolioleCompanionLearningPayloadRules.nodeId(context, input, queryName);
         JSONObject payload = FolioleCompanionLearningPayloadRules.inputPayload(context, input, queryName);
         JSONObject reviewLog = FolioleCompanionLearningPayloadRules.reviewLogInput(context, input);

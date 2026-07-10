@@ -21,6 +21,10 @@
       "statementName": "appDataClearNodeSyncConflicts"
     },
     {
+      "table": "node_sync_tombstones",
+      "statementName": "appDataClearNodeSyncTombstones"
+    },
+    {
       "table": "node_sync_versions",
       "statementName": "appDataClearNodeSyncVersions"
     },
@@ -201,6 +205,7 @@
     "appDataClearSyncChangeLog": "DELETE FROM sync_change_log",
     "appDataClearSyncObjectState": "DELETE FROM sync_object_state",
     "appDataClearNodeSyncConflicts": "DELETE FROM node_sync_conflicts",
+    "appDataClearNodeSyncTombstones": "DELETE FROM node_sync_tombstones",
     "appDataClearNodeSyncVersions": "DELETE FROM node_sync_versions",
     "appDataClearNodeViewState": "DELETE FROM node_view_state",
     "appDataClearNodeReadingDeviceState": "DELETE FROM node_reading_device_state",

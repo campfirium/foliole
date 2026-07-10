@@ -10,6 +10,7 @@ import { PACK_SCHEMA } from '../../lib/core/sync/syncPackSchema.js';
 import { writeStoredZip } from '../diagnostics/zipStore.js';
 
 import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
+import { backfillMissingNodeSyncState } from './nodeSyncStateRows.js';
 import { writePackManifest, writePackRows } from './syncPackBuilderRows.js';
 import { loadMaxStateSeq, loadPackRows, type LoadedSyncPackRows } from './syncPackRows.js';
 
@@ -79,8 +80,9 @@ function buildContainerManifest(args: {
 
 export async function buildDesktopSyncPack(input: BuildDesktopSyncPackInput) {
   const fromStateSeq = normalizeSeq(input.fromStateSeq);
-  const toStateSeq = normalizeSeq(input.toStateSeq ?? loadMaxStateSeq());
   const createdAt = input.createdAt ?? new Date().toISOString();
+  backfillMissingNodeSyncState();
+  const toStateSeq = normalizeSeq(input.toStateSeq ?? loadMaxStateSeq());
   const fromDeviceId = input.fromDeviceId ?? loadOrCreateDesktopDeviceId(createdAt);
   await fs.mkdir(path.dirname(input.outputPath), { recursive: true });
   await fs.rm(input.outputPath, { force: true });

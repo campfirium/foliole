@@ -3,6 +3,7 @@ import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract
 
 import { openDatabaseConnection } from './connection.js';
 import { isConflictCopyNodeId } from './syncConflictCopyIdentity.js';
+import { loadSyncNodeTombstoneVersionsSince } from './syncNodeTombstones.js';
 
 interface SyncNodeRow extends DatabaseRow {
   anchor_link: string | null;
@@ -56,9 +57,9 @@ function listNodeAttachmentRefs(nodeId: string) {
   );
 }
 
-function listAncestorVersionIds(versionId: string | null) {
+function listAncestorVersionIds(versionId: string | null, parentVersionId: string | null = null) {
   if (!versionId) {
-    return [];
+    return parentVersionId ? [parentVersionId] : [];
   }
   const driver = openDatabaseConnection().driver;
   const ancestors: string[] = [];
@@ -77,6 +78,9 @@ function listAncestorVersionIds(versionId: string | null) {
        WHERE version_id = ?`,
       [cursor]
     )?.parent_version_id ?? null;
+  }
+  if (ancestors.length === 0 && parentVersionId) {
+    ancestors.push(parentVersionId);
   }
   return ancestors;
 }
@@ -124,7 +128,7 @@ function parseSnapshot(row: SyncNodeRow): NativeSyncNodeRecord['snapshot'] {
 function toNativeSyncNodeRecord(row: SyncNodeRow): NativeSyncNodeRecord {
   const snapshot = parseSnapshot(row);
   return {
-    ancestor_version_ids: listAncestorVersionIds(row.version_id),
+    ancestor_version_ids: listAncestorVersionIds(row.version_id, row.parent_version_id),
     content_hash: row.content_hash,
     device_id: row.device_id,
     object_id: snapshot.id,
@@ -169,6 +173,15 @@ const SYNC_NODE_SELECT_COLUMNS = `
   v.content_hash,
   v.snapshot_json`;
 
+function normalizeLimit(limit: number) {
+  return Math.max(1, Math.min(1000, Math.trunc(limit)));
+}
+
+function compareSyncNodeRecords(left: NativeSyncNodeRecord, right: NativeSyncNodeRecord) {
+  const created = (left.version_created_at ?? '').localeCompare(right.version_created_at ?? '');
+  return created === 0 ? (left.version_id ?? '').localeCompare(right.version_id ?? '') : created;
+}
+
 export function loadSyncNodes(objectIds: string[]) {
   if (objectIds.length === 0) {
     return [];
@@ -190,7 +203,9 @@ export function loadSyncNodes(objectIds: string[]) {
 }
 
 export function loadSyncNodeVersionsSince(cursor: { createdAt: string; versionId: string } | null, limit = 500) {
-  const rows = openDatabaseConnection().driver.queryAll<SyncNodeRow>(
+  const limitValue = normalizeLimit(limit);
+  const driver = openDatabaseConnection().driver;
+  const rows = driver.queryAll<SyncNodeRow>(
     `SELECT
        ${SYNC_NODE_SELECT_COLUMNS}
      FROM nodes n
@@ -202,9 +217,13 @@ export function loadSyncNodeVersionsSince(cursor: { createdAt: string; versionId
      ORDER BY v.created_at ASC, v.version_id ASC
      LIMIT ?`,
     cursor
-      ? [cursor.createdAt, cursor.createdAt, cursor.versionId, Math.max(1, Math.min(1000, Math.trunc(limit)))]
-      : [Math.max(1, Math.min(1000, Math.trunc(limit)))]
+      ? [cursor.createdAt, cursor.createdAt, cursor.versionId, limitValue]
+      : [limitValue]
   );
+  const tombstoneRecords = loadSyncNodeTombstoneVersionsSince(cursor, limitValue);
 
-  return rows.filter((row) => !isConflictCopyNodeId(row.id)).map((row) => toNativeSyncNodeRecord(row));
+  return [...rows.filter((row) => !isConflictCopyNodeId(row.id)).map((row) => toNativeSyncNodeRecord(row)), ...tombstoneRecords]
+    .filter((row) => !isConflictCopyNodeId(row.object_id))
+    .sort(compareSyncNodeRecords)
+    .slice(0, limitValue)
 }

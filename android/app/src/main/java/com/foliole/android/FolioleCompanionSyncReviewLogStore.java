@@ -79,7 +79,7 @@ final class FolioleCompanionSyncReviewLogStore {
     }
 
     private static String draftKey(Context context, String key) throws Exception {
-        return FolioleCompanionSyncPayloadQueryStore.metadata(context, FolioleCompanionSyncPayloadQueryStore.nodeReviewPayloadQueryName(), key);
+        return FolioleCompanionSyncPayloadQueryStore.metadata(context, FolioleCompanionLearningPayloadStore.nodeReviewPayloadQueryName(), key);
     }
 
     private static int recordInt(Context context, String queryName, JSONObject record, String key) throws Exception {

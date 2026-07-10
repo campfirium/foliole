@@ -1,8 +1,8 @@
-import { ANDROID_COMPANION_DIAGNOSTIC_QUERY_DEFINITIONS } from './androidCompanionDiagnosticQueryDefinitions.ts';
-import { ANDROID_COMPANION_MIGRATION_QUERY_DEFINITIONS } from './androidCompanionMigrationQueryDefinitions.ts';
-import { ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS } from './androidCompanionPayloadQueryDefinitions.ts';
-import { ANDROID_COMPANION_RESOURCE_QUERY_DEFINITIONS } from './androidCompanionResourceQueryDefinitions.ts';
-import { ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS } from './androidCompanionSyncQueryDefinitions.ts';
+import { ANDROID_COMPANION_DIAGNOSTIC_QUERY_DEFINITIONS } from './androidCompanionDiagnosticQueryDefinitions.js';
+import { ANDROID_COMPANION_MIGRATION_QUERY_DEFINITIONS } from './androidCompanionMigrationQueryDefinitions.js';
+import { ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS } from './androidCompanionPayloadQueryDefinitions.js';
+import { ANDROID_COMPANION_RESOURCE_QUERY_DEFINITIONS } from './androidCompanionResourceQueryDefinitions.js';
+import { ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS } from './androidCompanionSyncQueryDefinitions.js';
 
 export const ANDROID_COMPANION_QUERY_DEFINITIONS = {
   ...ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS,

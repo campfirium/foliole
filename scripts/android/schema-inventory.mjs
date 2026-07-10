@@ -24,6 +24,7 @@ const REPO_ROOT = path.resolve(__dirname, '../..');
 
 const DESKTOP_SCHEMA_FILES = {
   CORE_INDEX_SCHEMA_STATEMENTS: 'lib/core/database/coreIndexSchemaStatements.ts',
+  NODE_SYNC_TOMBSTONE_SCHEMA_STATEMENTS: 'lib/core/database/nodeSyncTombstoneSchemaStatements.ts',
   DESKTOP_CORE_SCHEMA_STATEMENTS: 'lib/core/database/desktopCoreSchemaStatements.ts',
   DESKTOP_FRESH_SCHEMA_STATEMENTS: 'lib/core/database/desktopFreshSchemaStatements.ts',
   DESKTOP_RESOURCE_SCHEMA_STATEMENTS: 'lib/core/database/desktopResourceSchemaStatements.ts',

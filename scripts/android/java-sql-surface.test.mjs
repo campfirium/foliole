@@ -26,6 +26,10 @@ const ALLOWED_DIRECT_NAMED_QUERY = [
   {
     file: 'FolioleCompanionGeneratedQueryRunner.java',
     text: 'FolioleCompanionNamedQueryStore.'
+  },
+  {
+    file: 'FolioleCompanionLearningPayloadStore.java',
+    text: 'FolioleCompanionNamedQueryStore.'
   }
 ];
 const ALLOWED_DIRECT_NAMED_MUTATION = [

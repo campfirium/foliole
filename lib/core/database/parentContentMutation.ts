@@ -1,12 +1,12 @@
-import { expandMarkdownImageTextLocator } from '../anchors/markdownImageTextAnchor.js';
-import { remapTextAnchorLocator, type TextAnchorLocator } from '../anchors/textAnchorLocator.js';
 import { resolveNodeOpeningText } from '../nodes/nodeOpeningPreview.js';
 
-import { parseStoredAnchorLink } from './anchorLinkCodec.js';
 import { upsertTextBodyBlob } from './contentBodyBlobs.js';
 import type { DatabaseDriver } from './driver.js';
-import { deriveImportedHighlightImageRegions } from './importedHighlightImageRegions.js';
 import { enqueueWorkspaceSearchInvalidationForNodeIds } from './searchIndexInvalidations.js';
+import {
+  remapRawStoredAnchorLink,
+  type StoredAnchorLinkRemapSkipReason
+} from './storedAnchorLinkRemap.js';
 
 interface ParentNodeRow {
   [column: string]: unknown;
@@ -31,7 +31,7 @@ export interface ParentContentChangeResult {
 }
 
 type RawAnchorRemapResult =
-  | { reason: ParentContentChangeResult['skippedAnchors'][number]['reason'] }
+  | { reason: StoredAnchorLinkRemapSkipReason }
   | { imageRegions: string | null; value: string };
 
 function readParentNode(driver: DatabaseDriver, nodeId: string) {
@@ -52,66 +52,12 @@ function readChildAnchors(driver: DatabaseDriver, parentNodeId: string) {
   );
 }
 
-function isTextLocator(locator: unknown): locator is TextAnchorLocator {
-  return Boolean(
-    locator &&
-      typeof locator === 'object' &&
-      !('ranges' in locator) &&
-      typeof (locator as { from?: unknown }).from === 'number' &&
-      typeof (locator as { to?: unknown }).to === 'number' &&
-      typeof (locator as { originalText?: unknown }).originalText === 'string'
-  );
-}
-
-function isTextLocatorGroup(locator: unknown): locator is { ranges: TextAnchorLocator[] } {
-  return Boolean(
-    locator &&
-      typeof locator === 'object' &&
-      Array.isArray((locator as { ranges?: unknown }).ranges) &&
-      (locator as { ranges: unknown[] }).ranges.every(isTextLocator)
-  );
-}
-
 function remapRawAnchorLink(value: string, previousContent: string, nextContent: string): RawAnchorRemapResult {
-  const parsed = parseStoredAnchorLink(value);
-  if (!parsed) {
-    return { reason: 'invalid_anchor_link' as const };
-  }
-  const raw = JSON.parse(value) as { id?: unknown; locator?: unknown };
-  if (!raw.locator) {
-    return { reason: 'no_locator' as const };
-  }
-  if (isTextLocatorGroup(raw.locator)) {
-    const remappedRanges = raw.locator.ranges.map((locator) =>
-      expandMarkdownImageTextLocator(nextContent, remapTextAnchorLocator(nextContent, locator, previousContent), locator)
-    );
-    raw.locator = { ranges: remappedRanges };
-    return {
-      imageRegions: toDerivedImageRegionsJson(nextContent, raw.id, remappedRanges),
-      value: JSON.stringify(raw)
-    };
-  }
-  if (isTextLocator(raw.locator)) {
-    const remappedLocator = expandMarkdownImageTextLocator(
-      nextContent,
-      remapTextAnchorLocator(nextContent, raw.locator, previousContent),
-      raw.locator
-    );
-    raw.locator = remappedLocator;
-    return {
-      imageRegions: toDerivedImageRegionsJson(nextContent, raw.id, [remappedLocator]),
-      value: JSON.stringify(raw)
-    };
-  }
-  return { reason: 'non_text_locator' as const };
-}
-
-function toDerivedImageRegionsJson(content: string, anchorId: unknown, locators: TextAnchorLocator[]) {
-  if (typeof anchorId !== 'string' || anchorId.trim().length === 0) {
-    return null;
-  }
-  const regions = deriveImportedHighlightImageRegions({ anchorId, content, locators });
-  return regions ? JSON.stringify(regions) : null;
+  return remapRawStoredAnchorLink({
+    nextContent,
+    previousContent,
+    value
+  });
 }
 
 function writeParentContent(input: {

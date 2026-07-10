@@ -1,4 +1,4 @@
-import { ANDROID_COMPANION_RESOURCE_STATUSES as RESOURCE_STATUS } from './androidCompanionSyncProtocolDefinitions.ts';
+import { ANDROID_COMPANION_RESOURCE_STATUSES as RESOURCE_STATUS } from './androidCompanionSyncProtocolDefinitions.js';
 
 export function androidSqlString(value: string) {
   return `'${value.replaceAll("'", "''")}'`;

@@ -1,4 +1,5 @@
-import { REVIEW_REQUIRED_PUSH_ISSUE_TYPES_SQL } from './androidCompanionSyncPolicySql.ts';
+import { ANDROID_COMPANION_SYNC_NODE_VERSIONS_SQL } from './androidCompanionSyncNodeVersionSql.js';
+import { REVIEW_REQUIRED_PUSH_ISSUE_TYPES_SQL } from './androidCompanionSyncPolicySql.js';
 
 export const ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS = {
   syncIndex: {
@@ -91,19 +92,14 @@ export const ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS = {
   },
   syncNodeVersions: {
     resultKey: 'nodes',
-    sql:
-      "SELECT v.version_id, v.object_id, 'node' AS object_type, v.parent_version_id, v.device_id, " +
-      'v.created_at AS version_created_at, n.updated_at AS updated_at, ' +
-      'v.content_hash, v.snapshot_json AS snapshot FROM node_sync_versions v INNER JOIN nodes n ON n.id = v.object_id ' +
-      "WHERE v.device_id = ? AND (? = '' OR ? = '' OR v.created_at > ? OR (v.created_at = ? AND v.version_id > ?)) " +
-      "AND v.object_id NOT LIKE 'conflict-copy-%' " +
-      'AND n.current_version_id = v.version_id AND n.deleted_at IS NULL ORDER BY v.created_at ASC, v.version_id ASC LIMIT ?',
+    sql: ANDROID_COMPANION_SYNC_NODE_VERSIONS_SQL,
     columns: [
       { key: 'version_id', source: 'version_id', type: 'string' },
       { key: 'object_id', source: 'object_id', type: 'string' },
       { key: 'object_type', source: 'object_type', type: 'string' },
       { key: 'parent_version_id', source: 'parent_version_id', type: 'nullableString' },
       { key: 'device_id', source: 'device_id', type: 'string' },
+      { key: 'is_tombstone', source: 'is_tombstone', type: 'long' },
       { key: 'version_created_at', source: 'version_created_at', type: 'string' },
       { key: 'updated_at', source: 'updated_at', type: 'string' },
       { key: 'content_hash', source: 'content_hash', type: 'string' },

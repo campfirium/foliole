@@ -11,6 +11,20 @@ interface ApplySyncNodesOptions {
   includeAlreadyApplied?: boolean;
 }
 
+function warnUnmappedAnchor(record: {
+  anchorId: string | null;
+  nodeId: string;
+  parentNodeId: string;
+  reason: string;
+}) {
+  console.warn('[sync] unmapped child text anchor after parent apply', {
+    anchorId: record.anchorId,
+    nodeId: record.nodeId,
+    parentNodeId: record.parentNodeId,
+    reason: record.reason
+  });
+}
+
 export async function applySyncNodesAsync(records: NativeSyncNodeRecord[], options: ApplySyncNodesOptions = {}) {
   if (records.length === 0) {
     return [];
@@ -22,6 +36,7 @@ export async function applySyncNodesAsync(records: NativeSyncNodeRecord[], optio
     records,
     options.includeAlreadyApplied === undefined ? {} : { includeAlreadyApplied: options.includeAlreadyApplied }
   );
+  result.unmappedAnchorRecords.forEach(warnUnmappedAnchor);
   const conflictCopyIds: string[] = [];
   const timestamp = new Date().toISOString();
 

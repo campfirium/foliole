@@ -39,10 +39,10 @@ afterEach(async () => {
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
-function insertNode(input: { content: string; deletedAt?: string | null; id: string; title: string; updatedAt: string }) {
+function insertNode(input: { content: string; deletedAt?: string | null; id: string; parentId?: string | null; title: string; updatedAt: string }) {
   upsertNodeSnapshot({
     nodeId: input.id,
-    parentNodeId: null,
+    parentNodeId: input.parentId ?? null,
     kind: 'topic',
     title: input.title,
     isTitleManual: true,

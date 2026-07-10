@@ -120,7 +120,7 @@
     "demo:content:build": "node --experimental-strip-types scripts/demo/build-demo-guides-content.ts",
     "demo:build": "npm run demo:content:build && vite build --config vite.demo.config.ts",
     "demo:site:preview": "node scripts/windows/demo-site-preview.mjs",
-    "android:schema:generate": "node scripts/android/generate-companion-schema.mjs",
+    "android:schema:generate": "node --experimental-loader ./scripts/android/ts-js-extension-loader.mjs scripts/android/generate-companion-schema.mjs",
     "android:web:build": "npm run android:schema:generate && vite build --config vite.companion.config.ts",
     "android:icons:generate": "python3 scripts/android/generate-launcher-icons.py",
     "android:open": "bash scripts/android/windows-open.sh",

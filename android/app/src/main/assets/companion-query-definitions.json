@@ -217,7 +217,7 @@
     },
     "syncNodeVersions": {
       "resultKey": "nodes",
-      "sql": "SELECT v.version_id, v.object_id, 'node' AS object_type, v.parent_version_id, v.device_id, v.created_at AS version_created_at, n.updated_at AS updated_at, v.content_hash, v.snapshot_json AS snapshot FROM node_sync_versions v INNER JOIN nodes n ON n.id = v.object_id WHERE v.device_id = ? AND (? = '' OR ? = '' OR v.created_at > ? OR (v.created_at = ? AND v.version_id > ?)) AND v.object_id NOT LIKE 'conflict-copy-%' AND n.current_version_id = v.version_id AND n.deleted_at IS NULL ORDER BY v.created_at ASC, v.version_id ASC LIMIT ?",
+      "sql": "SELECT * FROM (SELECT v.version_id, v.object_id, 'node' AS object_type, v.parent_version_id, v.device_id, 0 AS is_tombstone, v.created_at AS version_created_at, n.updated_at AS updated_at, v.content_hash, v.snapshot_json AS snapshot FROM node_sync_versions v INNER JOIN nodes n ON n.id = v.object_id WHERE v.device_id = ?1 AND (?2 = '' OR ?3 = '' OR v.created_at > ?4 OR (v.created_at = ?5 AND v.version_id > ?6)) AND v.object_id NOT LIKE 'conflict-copy-%' AND n.current_version_id = v.version_id AND n.deleted_at IS NULL UNION ALL SELECT t.version_id, t.node_id AS object_id, 'node' AS object_type, t.parent_version_id, t.device_id, 1 AS is_tombstone, t.created_at AS version_created_at, t.deleted_at AS updated_at, t.content_hash, t.snapshot_json AS snapshot FROM node_sync_tombstones t WHERE t.device_id = ?1 AND (?2 = '' OR ?3 = '' OR t.created_at > ?4 OR (t.created_at = ?5 AND t.version_id > ?6)) AND t.node_id NOT LIKE 'conflict-copy-%') ORDER BY version_created_at ASC, version_id ASC LIMIT ?7",
       "columns": [
         {
           "key": "version_id",
@@ -243,6 +243,11 @@
           "key": "device_id",
           "source": "device_id",
           "type": "string"
+        },
+        {
+          "key": "is_tombstone",
+          "source": "is_tombstone",
+          "type": "long"
         },
         {
           "key": "version_created_at",
@@ -407,7 +412,7 @@
     },
     "topicSearch": {
       "resultKey": "results",
-      "sql": "SELECT n.id, COALESCE(NULLIF(TRIM(n.title), ''), 'Untitled') AS title, n.opening_text, CASE WHEN n.body_blob_hash IS NOT NULL AND TRIM(n.body_blob_hash) <> '' AND CAST(cbd.data AS TEXT) IS NULL THEN CASE WHEN cb.availability IN ('fetching', 'failed') THEN cb.availability ELSE 'missing' END WHEN TRIM(COALESCE(CASE WHEN n.body_blob_hash IS NOT NULL AND TRIM(n.body_blob_hash) <> '' THEN CAST(cbd.data AS TEXT) ELSE n.content END, '')) = '' THEN 'empty' ELSE 'ready' END AS content_status, n.updated_at, max(0, instr(lower(CASE WHEN n.body_blob_hash IS NOT NULL AND TRIM(n.body_blob_hash) <> '' THEN CAST(cbd.data AS TEXT) ELSE n.content END), ?) - 1) AS match_start, trim(substr(CASE WHEN n.body_blob_hash IS NOT NULL AND TRIM(n.body_blob_hash) <> '' THEN CAST(cbd.data AS TEXT) ELSE n.content END, max(1, instr(lower(CASE WHEN n.body_blob_hash IS NOT NULL AND TRIM(n.body_blob_hash) <> '' THEN CAST(cbd.data AS TEXT) ELSE n.content END), ?) - 80), 160)) AS excerpt FROM nodes n LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE n.deleted_at IS NULL AND (instr(lower(COALESCE(n.title, '')), ?) > 0 OR instr(lower(COALESCE(n.opening_text, '')), ?) > 0 OR instr(lower(CASE WHEN n.body_blob_hash IS NOT NULL AND TRIM(n.body_blob_hash) <> '' THEN CAST(cbd.data AS TEXT) ELSE n.content END), ?) > 0) ORDER BY n.updated_at DESC, n.created_at DESC, n.id ASC LIMIT ?",
+      "sql": "WITH RECURSIVE visible_nodes(id) AS (\n  SELECT id\n  FROM nodes\n  WHERE parent_id IS NULL\n    AND deleted_at IS NULL\n  UNION ALL\n  SELECT child.id\n  FROM nodes child\n  INNER JOIN visible_nodes parent\n    ON parent.id = child.parent_id\n  WHERE child.deleted_at IS NULL\n) SELECT n.id, COALESCE(NULLIF(TRIM(n.title), ''), 'Untitled') AS title, n.opening_text, CASE WHEN n.body_blob_hash IS NOT NULL AND TRIM(n.body_blob_hash) <> '' AND CAST(cbd.data AS TEXT) IS NULL THEN CASE WHEN cb.availability IN ('fetching', 'failed') THEN cb.availability ELSE 'missing' END WHEN TRIM(COALESCE(CASE WHEN n.body_blob_hash IS NOT NULL AND TRIM(n.body_blob_hash) <> '' THEN CAST(cbd.data AS TEXT) ELSE n.content END, '')) = '' THEN 'empty' ELSE 'ready' END AS content_status, n.updated_at, max(0, instr(lower(CASE WHEN n.body_blob_hash IS NOT NULL AND TRIM(n.body_blob_hash) <> '' THEN CAST(cbd.data AS TEXT) ELSE n.content END), ?) - 1) AS match_start, trim(substr(CASE WHEN n.body_blob_hash IS NOT NULL AND TRIM(n.body_blob_hash) <> '' THEN CAST(cbd.data AS TEXT) ELSE n.content END, max(1, instr(lower(CASE WHEN n.body_blob_hash IS NOT NULL AND TRIM(n.body_blob_hash) <> '' THEN CAST(cbd.data AS TEXT) ELSE n.content END), ?) - 80), 160)) AS excerpt FROM nodes n LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash INNER JOIN visible_nodes visible ON visible.id = n.id WHERE (instr(lower(COALESCE(n.title, '')), ?) > 0 OR instr(lower(COALESCE(n.opening_text, '')), ?) > 0 OR instr(lower(CASE WHEN n.body_blob_hash IS NOT NULL AND TRIM(n.body_blob_hash) <> '' THEN CAST(cbd.data AS TEXT) ELSE n.content END), ?) > 0) ORDER BY n.updated_at DESC, n.created_at DESC, n.id ASC LIMIT ?",
       "columns": [
         {
           "key": "id",
@@ -495,7 +500,7 @@
     },
     "readableArticleFirstNode": {
       "resultKey": "articles",
-      "sql": "SELECT n.id, COALESCE(NULLIF(TRIM(n.title), ''), 'Untitled') AS title, n.body_blob_hash, CASE WHEN instr(COALESCE(COALESCE(CAST(cbd.data AS TEXT), n.content), ''), 'Linked PDF source ready for the reader surface.') > 0 AND (SELECT group_concat(page_text.text, char(10) || char(10)) FROM (SELECT TRIM(ppt.text) AS text FROM pdf_page_text ppt WHERE ppt.attachment_id = (SELECT na.attachment_id FROM node_attachments na INNER JOIN attachments a ON a.id = na.attachment_id AND a.mime_type = 'application/pdf' WHERE na.node_id = n.id AND na.role = 'reference' ORDER BY na.attachment_id ASC LIMIT 1) AND TRIM(ppt.text) <> '' ORDER BY ppt.page ASC) page_text) IS NOT NULL THEN '# ' || COALESCE(NULLIF(TRIM(n.title), ''), 'Untitled') || char(10) || char(10) || (SELECT group_concat(page_text.text, char(10) || char(10)) FROM (SELECT TRIM(ppt.text) AS text FROM pdf_page_text ppt WHERE ppt.attachment_id = (SELECT na.attachment_id FROM node_attachments na INNER JOIN attachments a ON a.id = na.attachment_id AND a.mime_type = 'application/pdf' WHERE na.node_id = n.id AND na.role = 'reference' ORDER BY na.attachment_id ASC LIMIT 1) AND TRIM(ppt.text) <> '' ORDER BY ppt.page ASC) page_text) ELSE COALESCE(CAST(cbd.data AS TEXT), n.content) END AS content, CASE WHEN n.body_blob_hash IS NOT NULL AND TRIM(n.body_blob_hash) <> '' AND CAST(cbd.data AS TEXT) IS NULL THEN CASE WHEN cb.availability IN ('fetching', 'failed') THEN cb.availability ELSE 'missing' END WHEN TRIM(COALESCE(COALESCE(CAST(cbd.data AS TEXT), n.content), '')) = '' THEN 'empty' ELSE 'ready' END AS content_status, (SELECT na.attachment_id FROM node_attachments na INNER JOIN attachments a ON a.id = na.attachment_id AND a.mime_type = 'application/pdf' WHERE na.node_id = n.id AND na.role = 'reference' ORDER BY na.attachment_id ASC LIMIT 1) AS pdf_attachment_id FROM nodes n LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE n.body_blob_hash IS NOT NULL OR TRIM(COALESCE(n.content, '')) <> '' ORDER BY n.updated_at DESC, n.created_at DESC, n.id ASC LIMIT 1",
+      "sql": "WITH RECURSIVE visible_nodes(id) AS (\n  SELECT id\n  FROM nodes\n  WHERE parent_id IS NULL\n    AND deleted_at IS NULL\n  UNION ALL\n  SELECT child.id\n  FROM nodes child\n  INNER JOIN visible_nodes parent\n    ON parent.id = child.parent_id\n  WHERE child.deleted_at IS NULL\n) SELECT n.id, COALESCE(NULLIF(TRIM(n.title), ''), 'Untitled') AS title, n.body_blob_hash, CASE WHEN instr(COALESCE(COALESCE(CAST(cbd.data AS TEXT), n.content), ''), 'Linked PDF source ready for the reader surface.') > 0 AND (SELECT group_concat(page_text.text, char(10) || char(10)) FROM (SELECT TRIM(ppt.text) AS text FROM pdf_page_text ppt WHERE ppt.attachment_id = (SELECT na.attachment_id FROM node_attachments na INNER JOIN attachments a ON a.id = na.attachment_id AND a.mime_type = 'application/pdf' WHERE na.node_id = n.id AND na.role = 'reference' ORDER BY na.attachment_id ASC LIMIT 1) AND TRIM(ppt.text) <> '' ORDER BY ppt.page ASC) page_text) IS NOT NULL THEN '# ' || COALESCE(NULLIF(TRIM(n.title), ''), 'Untitled') || char(10) || char(10) || (SELECT group_concat(page_text.text, char(10) || char(10)) FROM (SELECT TRIM(ppt.text) AS text FROM pdf_page_text ppt WHERE ppt.attachment_id = (SELECT na.attachment_id FROM node_attachments na INNER JOIN attachments a ON a.id = na.attachment_id AND a.mime_type = 'application/pdf' WHERE na.node_id = n.id AND na.role = 'reference' ORDER BY na.attachment_id ASC LIMIT 1) AND TRIM(ppt.text) <> '' ORDER BY ppt.page ASC) page_text) ELSE COALESCE(CAST(cbd.data AS TEXT), n.content) END AS content, CASE WHEN n.body_blob_hash IS NOT NULL AND TRIM(n.body_blob_hash) <> '' AND CAST(cbd.data AS TEXT) IS NULL THEN CASE WHEN cb.availability IN ('fetching', 'failed') THEN cb.availability ELSE 'missing' END WHEN TRIM(COALESCE(COALESCE(CAST(cbd.data AS TEXT), n.content), '')) = '' THEN 'empty' ELSE 'ready' END AS content_status, (SELECT na.attachment_id FROM node_attachments na INNER JOIN attachments a ON a.id = na.attachment_id AND a.mime_type = 'application/pdf' WHERE na.node_id = n.id AND na.role = 'reference' ORDER BY na.attachment_id ASC LIMIT 1) AS pdf_attachment_id FROM nodes n LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash INNER JOIN visible_nodes visible ON visible.id = n.id WHERE n.body_blob_hash IS NOT NULL OR TRIM(COALESCE(n.content, '')) <> '' ORDER BY n.updated_at DESC, n.created_at DESC, n.id ASC LIMIT 1",
       "columns": [
         {
           "key": "id",
@@ -594,7 +599,7 @@
     },
     "workspaceOrderedNodeIds": {
       "resultKey": "nodes",
-      "sql": "SELECT n.id FROM nodes n LEFT JOIN node_order no ON no.node_id = n.id ORDER BY COALESCE(no.position, 2147483647) ASC, n.updated_at DESC, n.created_at DESC, n.id ASC",
+      "sql": "WITH RECURSIVE visible_nodes(id) AS (\n  SELECT id\n  FROM nodes\n  WHERE parent_id IS NULL\n    AND deleted_at IS NULL\n  UNION ALL\n  SELECT child.id\n  FROM nodes child\n  INNER JOIN visible_nodes parent\n    ON parent.id = child.parent_id\n  WHERE child.deleted_at IS NULL\n) SELECT n.id FROM nodes n INNER JOIN visible_nodes visible ON visible.id = n.id LEFT JOIN node_order no ON no.node_id = n.id ORDER BY COALESCE(no.position, 2147483647) ASC, n.updated_at DESC, n.created_at DESC, n.id ASC",
       "columns": [
         {
           "key": "id",
@@ -616,7 +621,7 @@
     },
     "workspaceSnapshotNodes": {
       "resultKey": "nodes",
-      "sql": "SELECT n.id, n.parent_id, n.kind, n.priority, n.desired_retention, n.enable_short_term, n.sequential_reading_enabled, n.shelved_at, n.manual_child_order, n.title, n.is_title_manual, n.hide_title_heading, __CONTENT_EXPRESSION__ AS content, n.opening_text, __BODY_STATUS_EXPRESSION__ AS body_status, n.virtual_filter, n.reveal, n.anchor_link, n.image_regions, n.created_at, n.updated_at, n.deleted_at, n.current_version_id, rd.interval_duration_ms, rd.interval_growth_factor, rd.last_handled_at, rd.next_at, rd.priority AS reading_priority, rds.reading_position, rd.repetition_count, rd.state AS reading_state, nr.due, nr.last_review_at, nr.state AS review_state, nr.stability, nr.difficulty, nr.elapsed_days, nr.scheduled_days, nr.reps, nr.lapses, n.body_blob_hash FROM nodes n __CONTENT_BLOB_JOIN__ LEFT JOIN node_reading rd ON rd.node_id = n.id LEFT JOIN node_reading_device_state rds ON rds.node_id = n.id AND rds.device_id = ? LEFT JOIN node_review nr ON nr.node_id = n.id ORDER BY COALESCE((SELECT no.position FROM node_order no WHERE no.node_id = n.id), 2147483647), n.updated_at DESC, n.created_at DESC, n.id ASC",
+      "sql": "WITH RECURSIVE visible_nodes(id) AS (\n  SELECT id\n  FROM nodes\n  WHERE parent_id IS NULL\n    AND deleted_at IS NULL\n  UNION ALL\n  SELECT child.id\n  FROM nodes child\n  INNER JOIN visible_nodes parent\n    ON parent.id = child.parent_id\n  WHERE child.deleted_at IS NULL\n) SELECT n.id, n.parent_id, n.kind, n.priority, n.desired_retention, n.enable_short_term, n.sequential_reading_enabled, n.shelved_at, n.manual_child_order, n.title, n.is_title_manual, n.hide_title_heading, __CONTENT_EXPRESSION__ AS content, n.opening_text, __BODY_STATUS_EXPRESSION__ AS body_status, n.virtual_filter, n.reveal, n.anchor_link, n.image_regions, n.created_at, n.updated_at, n.deleted_at, n.current_version_id, rd.interval_duration_ms, rd.interval_growth_factor, rd.last_handled_at, rd.next_at, rd.priority AS reading_priority, rds.reading_position, rd.repetition_count, rd.state AS reading_state, nr.due, nr.last_review_at, nr.state AS review_state, nr.stability, nr.difficulty, nr.elapsed_days, nr.scheduled_days, nr.reps, nr.lapses, n.body_blob_hash FROM nodes n LEFT JOIN visible_nodes visible ON visible.id = n.id __CONTENT_BLOB_JOIN__ LEFT JOIN node_reading rd ON rd.node_id = n.id AND visible.id IS NOT NULL LEFT JOIN node_reading_device_state rds ON rds.node_id = n.id AND rds.device_id = ? AND visible.id IS NOT NULL LEFT JOIN node_review nr ON nr.node_id = n.id AND visible.id IS NOT NULL ORDER BY COALESCE((SELECT no.position FROM node_order no WHERE no.node_id = n.id), 2147483647), n.updated_at DESC, n.created_at DESC, n.id ASC",
       "columns": [
         {
           "key": "id",
@@ -827,7 +832,7 @@
     },
     "contentBlobMissingHashes": {
       "resultKey": "blobs",
-      "sql": "WITH body_refs AS (SELECT n.body_blob_hash AS hash, CASE WHEN n.id = (SELECT value FROM workspace_meta WHERE key = 'active_node_id' LIMIT 1) THEN 0 WHEN nr.due IS NOT NULL AND nr.due <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now') THEN 1 WHEN n.parent_id IS NULL THEN 2 ELSE 3 END AS priority, COALESCE(rd.last_handled_at, n.updated_at) AS updated_at FROM nodes n LEFT JOIN node_review nr ON nr.node_id = n.id LEFT JOIN node_reading rd ON rd.node_id = n.id WHERE n.body_blob_hash IS NOT NULL AND n.deleted_at IS NULL UNION ALL SELECT ed.body_blob_hash AS hash, 4 AS priority, ed.updated_at AS updated_at FROM external_documents ed WHERE ed.body_blob_hash IS NOT NULL AND ed.is_present = 1), ranked_refs AS (SELECT hash, MIN(priority) AS priority, MAX(updated_at) AS updated_at FROM body_refs GROUP BY hash) SELECT cb.hash, COALESCE(cb.stored_size_bytes, 0) AS size_bytes FROM content_blobs cb JOIN ranked_refs refs ON refs.hash = cb.hash LEFT JOIN content_blob_data cbd ON cbd.hash = cb.hash WHERE cb.kind = 'text_body' AND cbd.hash IS NULL ORDER BY CASE WHEN refs.priority = 0 THEN 0 WHEN cb.availability = 'failed' THEN 2 ELSE 1 END ASC, refs.priority ASC, refs.updated_at DESC, cb.created_at ASC LIMIT ?",
+      "sql": "WITH RECURSIVE visible_nodes(id) AS (\n  SELECT id\n  FROM nodes\n  WHERE parent_id IS NULL\n    AND deleted_at IS NULL\n  UNION ALL\n  SELECT child.id\n  FROM nodes child\n  INNER JOIN visible_nodes parent\n    ON parent.id = child.parent_id\n  WHERE child.deleted_at IS NULL\n), body_refs AS (SELECT n.body_blob_hash AS hash, CASE WHEN n.id = (SELECT value FROM workspace_meta WHERE key = 'active_node_id' LIMIT 1) THEN 0 WHEN nr.due IS NOT NULL AND nr.due <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now') THEN 1 WHEN n.parent_id IS NULL THEN 2 ELSE 3 END AS priority, COALESCE(rd.last_handled_at, n.updated_at) AS updated_at FROM nodes n INNER JOIN visible_nodes visible ON visible.id = n.id LEFT JOIN node_review nr ON nr.node_id = n.id LEFT JOIN node_reading rd ON rd.node_id = n.id WHERE n.body_blob_hash IS NOT NULL UNION ALL SELECT ed.body_blob_hash AS hash, 4 AS priority, ed.updated_at AS updated_at FROM external_documents ed WHERE ed.body_blob_hash IS NOT NULL AND ed.is_present = 1), ranked_refs AS (SELECT hash, MIN(priority) AS priority, MAX(updated_at) AS updated_at FROM body_refs GROUP BY hash) SELECT cb.hash, COALESCE(cb.stored_size_bytes, 0) AS size_bytes FROM content_blobs cb JOIN ranked_refs refs ON refs.hash = cb.hash LEFT JOIN content_blob_data cbd ON cbd.hash = cb.hash WHERE cb.kind = 'text_body' AND cbd.hash IS NULL ORDER BY CASE WHEN refs.priority = 0 THEN 0 WHEN cb.availability = 'failed' THEN 2 ELSE 1 END ASC, refs.priority ASC, refs.updated_at DESC, cb.created_at ASC LIMIT ?",
       "columns": [
         {
           "key": "hash",
@@ -843,7 +848,7 @@
     },
     "contentBlobMissingSummaryRows": {
       "resultKey": "blobs",
-      "sql": "WITH body_refs AS (SELECT n.body_blob_hash AS hash FROM nodes n WHERE n.body_blob_hash IS NOT NULL AND n.deleted_at IS NULL UNION SELECT ed.body_blob_hash AS hash FROM external_documents ed WHERE ed.body_blob_hash IS NOT NULL AND ed.is_present = 1) SELECT cb.hash, COALESCE(cb.stored_size_bytes, 0) AS size_bytes, cb.availability FROM content_blobs cb JOIN body_refs refs ON refs.hash = cb.hash LEFT JOIN content_blob_data cbd ON cbd.hash = cb.hash WHERE cb.kind = 'text_body' AND cbd.hash IS NULL",
+      "sql": "WITH RECURSIVE visible_nodes(id) AS (\n  SELECT id\n  FROM nodes\n  WHERE parent_id IS NULL\n    AND deleted_at IS NULL\n  UNION ALL\n  SELECT child.id\n  FROM nodes child\n  INNER JOIN visible_nodes parent\n    ON parent.id = child.parent_id\n  WHERE child.deleted_at IS NULL\n), body_refs AS (SELECT n.body_blob_hash AS hash FROM nodes n INNER JOIN visible_nodes visible ON visible.id = n.id WHERE n.body_blob_hash IS NOT NULL UNION SELECT ed.body_blob_hash AS hash FROM external_documents ed WHERE ed.body_blob_hash IS NOT NULL AND ed.is_present = 1) SELECT cb.hash, COALESCE(cb.stored_size_bytes, 0) AS size_bytes, cb.availability FROM content_blobs cb JOIN body_refs refs ON refs.hash = cb.hash LEFT JOIN content_blob_data cbd ON cbd.hash = cb.hash WHERE cb.kind = 'text_body' AND cbd.hash IS NULL",
       "columns": [
         {
           "key": "hash",
@@ -942,7 +947,7 @@
     },
     "attachmentResourceMissingRows": {
       "resultKey": "resources",
-      "sql": "WITH attachment_refs AS (SELECT na.attachment_id AS attachment_id, CASE WHEN n.id = (SELECT value FROM workspace_meta WHERE key = 'active_node_id' LIMIT 1) THEN 0 WHEN nr.due IS NOT NULL AND nr.due <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now') THEN 1 ELSE 2 END AS priority, n.updated_at AS updated_at FROM node_attachments na JOIN nodes n ON n.id = na.node_id LEFT JOIN node_review nr ON nr.node_id = n.id WHERE n.deleted_at IS NULL), ranked_refs AS (SELECT attachment_id, MIN(priority) AS priority, MAX(updated_at) AS updated_at FROM attachment_refs GROUP BY attachment_id) SELECT b.attachment_id, b.content_hash, COALESCE(b.size_bytes, 0) AS size_bytes, b.availability, b.storage_key FROM attachment_blobs b LEFT JOIN ranked_refs refs ON refs.attachment_id = b.attachment_id WHERE b.content_hash IS NOT NULL AND TRIM(b.content_hash) != '' ORDER BY CASE WHEN refs.priority = 0 THEN 0 WHEN b.availability = 'failed' THEN 2 ELSE 1 END ASC, COALESCE(refs.priority, 3) ASC, refs.updated_at DESC, b.created_at ASC",
+      "sql": "WITH RECURSIVE visible_nodes(id) AS (\n  SELECT id\n  FROM nodes\n  WHERE parent_id IS NULL\n    AND deleted_at IS NULL\n  UNION ALL\n  SELECT child.id\n  FROM nodes child\n  INNER JOIN visible_nodes parent\n    ON parent.id = child.parent_id\n  WHERE child.deleted_at IS NULL\n), attachment_refs AS (SELECT na.attachment_id AS attachment_id, CASE WHEN n.id = (SELECT value FROM workspace_meta WHERE key = 'active_node_id' LIMIT 1) THEN 0 WHEN nr.due IS NOT NULL AND nr.due <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now') THEN 1 ELSE 2 END AS priority, n.updated_at AS updated_at FROM node_attachments na JOIN nodes n ON n.id = na.node_id INNER JOIN visible_nodes visible ON visible.id = n.id LEFT JOIN node_review nr ON nr.node_id = n.id), ranked_refs AS (SELECT attachment_id, MIN(priority) AS priority, MAX(updated_at) AS updated_at FROM attachment_refs GROUP BY attachment_id) SELECT b.attachment_id, b.content_hash, COALESCE(b.size_bytes, 0) AS size_bytes, b.availability, b.storage_key FROM attachment_blobs b LEFT JOIN ranked_refs refs ON refs.attachment_id = b.attachment_id WHERE b.content_hash IS NOT NULL AND TRIM(b.content_hash) != '' ORDER BY CASE WHEN refs.priority = 0 THEN 0 WHEN b.availability = 'failed' THEN 2 ELSE 1 END ASC, COALESCE(refs.priority, 3) ASC, refs.updated_at DESC, b.created_at ASC",
       "columns": [
         {
           "key": "attachment_id",
@@ -973,7 +978,7 @@
     },
     "attachmentResourceMissingSummaryRows": {
       "resultKey": "resources",
-      "sql": "SELECT b.availability, b.storage_key, COALESCE(b.size_bytes, 0) AS size_bytes, lower(COALESCE(b.mime_type, '')) AS mime_type, EXISTS(SELECT 1 FROM node_attachments na JOIN nodes n ON n.id = na.node_id JOIN node_review nr ON nr.node_id = n.id WHERE na.attachment_id = b.attachment_id AND n.deleted_at IS NULL AND nr.due <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now') LIMIT 1) AS due_review, EXISTS(SELECT 1 FROM node_attachments na JOIN nodes n ON n.id = na.node_id WHERE na.attachment_id = b.attachment_id AND n.deleted_at IS NULL AND n.id = (SELECT value FROM workspace_meta WHERE key = 'active_node_id' LIMIT 1) LIMIT 1) AS active_topic FROM attachment_blobs b WHERE b.content_hash IS NOT NULL AND TRIM(b.content_hash) != ''",
+      "sql": "WITH RECURSIVE visible_nodes(id) AS (\n  SELECT id\n  FROM nodes\n  WHERE parent_id IS NULL\n    AND deleted_at IS NULL\n  UNION ALL\n  SELECT child.id\n  FROM nodes child\n  INNER JOIN visible_nodes parent\n    ON parent.id = child.parent_id\n  WHERE child.deleted_at IS NULL\n) SELECT b.availability, b.storage_key, COALESCE(b.size_bytes, 0) AS size_bytes, lower(COALESCE(b.mime_type, '')) AS mime_type, EXISTS(SELECT 1 FROM node_attachments na JOIN nodes n ON n.id = na.node_id JOIN visible_nodes visible ON visible.id = n.id JOIN node_review nr ON nr.node_id = n.id WHERE na.attachment_id = b.attachment_id AND nr.due <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now') LIMIT 1) AS due_review, EXISTS(SELECT 1 FROM node_attachments na JOIN nodes n ON n.id = na.node_id JOIN visible_nodes visible ON visible.id = n.id WHERE na.attachment_id = b.attachment_id AND n.id = (SELECT value FROM workspace_meta WHERE key = 'active_node_id' LIMIT 1) LIMIT 1) AS active_topic FROM attachment_blobs b WHERE b.content_hash IS NOT NULL AND TRIM(b.content_hash) != ''",
       "columns": [
         {
           "key": "availability",
@@ -1322,6 +1327,49 @@
       "sql": "SELECT json_object('source_fingerprint', source_fingerprint, 'provider', provider, 'source_kind', source_kind, 'source_name', source_name, 'source_locator', source_locator, 'first_imported_at', first_imported_at, 'last_imported_at', last_imported_at, 'last_content_fingerprint', last_content_fingerprint, 'latest_node_id', latest_node_id) AS payload_json FROM import_sources WHERE source_fingerprint = ? LIMIT 1"
     },
     "syncPayloadNodeReading": {
+      "columns": [
+        {
+          "key": "node_id",
+          "source": "node_id",
+          "type": "string"
+        },
+        {
+          "key": "interval_duration_ms",
+          "source": "interval_duration_ms",
+          "type": "long"
+        },
+        {
+          "key": "interval_growth_factor",
+          "source": "interval_growth_factor",
+          "type": "double"
+        },
+        {
+          "key": "last_handled_at",
+          "source": "last_handled_at",
+          "type": "string"
+        },
+        {
+          "key": "next_at",
+          "source": "next_at",
+          "type": "string"
+        },
+        {
+          "key": "priority",
+          "source": "priority",
+          "type": "double"
+        },
+        {
+          "key": "repetition_count",
+          "source": "repetition_count",
+          "type": "long"
+        },
+        {
+          "key": "state",
+          "source": "state",
+          "type": "string"
+        }
+      ],
+      "resultKey": "payloads",
       "syncPayload": {
         "argMode": "object_id",
         "defaultDeviceId": "*",
@@ -1350,9 +1398,62 @@
         "repetitionCountPayloadKey": "repetition_count",
         "statePayloadKey": "state"
       },
-      "sql": "SELECT json_object('node_id', node_id, 'interval_duration_ms', interval_duration_ms, 'interval_growth_factor', interval_growth_factor, 'last_handled_at', last_handled_at, 'next_at', next_at, 'priority', priority, 'repetition_count', repetition_count, 'state', state) AS payload_json FROM node_reading WHERE node_id = ? LIMIT 1"
+      "sql": "WITH RECURSIVE visible_nodes(id) AS (\n  SELECT id\n  FROM nodes\n  WHERE parent_id IS NULL\n    AND deleted_at IS NULL\n  UNION ALL\n  SELECT child.id\n  FROM nodes child\n  INNER JOIN visible_nodes parent\n    ON parent.id = child.parent_id\n  WHERE child.deleted_at IS NULL\n) SELECT node_id, interval_duration_ms, interval_growth_factor, last_handled_at, next_at, priority, repetition_count, state FROM node_reading INNER JOIN visible_nodes visible ON visible.id = node_reading.node_id WHERE node_id = ? LIMIT 1"
     },
     "syncPayloadNodeReview": {
+      "columns": [
+        {
+          "key": "node_id",
+          "source": "node_id",
+          "type": "string"
+        },
+        {
+          "key": "due",
+          "source": "due",
+          "type": "string"
+        },
+        {
+          "key": "last_review_at",
+          "source": "last_review_at",
+          "type": "string"
+        },
+        {
+          "key": "state",
+          "source": "state",
+          "type": "long"
+        },
+        {
+          "key": "stability",
+          "source": "stability",
+          "type": "double"
+        },
+        {
+          "key": "difficulty",
+          "source": "difficulty",
+          "type": "double"
+        },
+        {
+          "key": "elapsed_days",
+          "source": "elapsed_days",
+          "type": "long"
+        },
+        {
+          "key": "scheduled_days",
+          "source": "scheduled_days",
+          "type": "long"
+        },
+        {
+          "key": "reps",
+          "source": "reps",
+          "type": "long"
+        },
+        {
+          "key": "lapses",
+          "source": "lapses",
+          "type": "long"
+        }
+      ],
+      "resultKey": "payloads",
       "syncPayload": {
         "argMode": "object_id",
         "defaultDifficulty": 0,
@@ -1386,7 +1487,7 @@
         "stabilityPayloadKey": "stability",
         "statePayloadKey": "state"
       },
-      "sql": "SELECT json_object('node_id', node_id, 'due', due, 'last_review_at', last_review_at, 'state', state, 'stability', stability, 'difficulty', difficulty, 'elapsed_days', elapsed_days, 'scheduled_days', scheduled_days, 'reps', reps, 'lapses', lapses) AS payload_json FROM node_review WHERE node_id = ? LIMIT 1"
+      "sql": "WITH RECURSIVE visible_nodes(id) AS (\n  SELECT id\n  FROM nodes\n  WHERE parent_id IS NULL\n    AND deleted_at IS NULL\n  UNION ALL\n  SELECT child.id\n  FROM nodes child\n  INNER JOIN visible_nodes parent\n    ON parent.id = child.parent_id\n  WHERE child.deleted_at IS NULL\n) SELECT node_id, due, last_review_at, state, stability, difficulty, elapsed_days, scheduled_days, reps, lapses FROM node_review INNER JOIN visible_nodes visible ON visible.id = node_review.node_id WHERE node_id = ? LIMIT 1"
     },
     "syncPayloadPdfPageText": {
       "syncPayload": {

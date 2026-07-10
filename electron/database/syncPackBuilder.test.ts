@@ -4,6 +4,7 @@ import { expect, it, vi } from 'vitest';
 
 import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorageContract.js';
 
+import { openDatabaseConnection } from './connection.js';
 import { upsertExternalDocuments } from './externalDocuments.js';
 import { buildDesktopSyncPack } from './syncPackBuilder.js';
 import {
@@ -160,5 +161,38 @@ it('packs external document structure with body blob manifests but no body bytes
       tables: EXTERNAL_DOCUMENT_PACK_TABLES
     }),
     stateRows: [{ object_id: 'folder-1:doc.md', object_type: 'external_document', state_seq: 1 }]
+  });
+});
+
+it('backfills missing node sync state before building a pack', async () => {
+  const driver = openDatabaseConnection().driver;
+  driver.execute(
+    `INSERT INTO nodes (
+       id, kind, title, content, current_version_id, last_modified_by_device_id, sync_dirty, created_at, updated_at
+     ) VALUES ('node-backfill', 'topic', 'Backfilled node', '', 'android#node-v1', 'android', 0,
+       '2026-04-27T03:00:00.000Z', '2026-04-27T03:00:00.000Z')`
+  );
+  driver.execute(
+    `INSERT INTO node_sync_versions (
+       version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
+     ) VALUES ('android#node-v1', 'node-backfill', NULL, 'android', '2026-04-27T03:00:00.000Z',
+       'backfill-node-hash', '{"id":"node-backfill","title":"Backfilled node"}')`
+  );
+  const packPath = resolveSyncPackPath('incoming-backfill.db');
+
+  const result = await buildDesktopSyncPack({
+    createdAt: '2026-04-27T03:01:00.000Z',
+    outputPath: packPath,
+    packId: 'pack-backfill',
+    fromStateSeq: 0
+  });
+
+  expect(result).toMatchObject({ objectCount: 1, toStateSeq: 1 });
+  expect(readPackRows(packPath)).toMatchObject({
+    nodes: [expect.objectContaining({
+      current_version_id: 'android#node-v1',
+      id: 'node-backfill'
+    })],
+    stateRows: [{ object_id: 'node-backfill', object_type: 'node', state_seq: 1 }]
   });
 });

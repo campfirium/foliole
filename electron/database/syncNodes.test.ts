@@ -223,4 +223,5 @@ describe('loadSyncNodes', () => {
     expect(version?.snapshot.title)
       .toBe('Historical title');
   });
+
 });

@@ -2,7 +2,7 @@ import {
   SYNC_OBJECT_POLICIES,
   SYNC_POLICY_DEVICE_PRIVATE_OBJECT_TYPES,
   SYNC_POLICY_REVIEW_REQUIRED_PUSH_ISSUE_TYPES
-} from '../sync/syncObjectPolicy.ts';
+} from '../sync/syncObjectPolicy.js';
 
 export const ANDROID_COMPANION_SYNC_OBJECT_TYPES = {
   nodeReading: 'node_reading',

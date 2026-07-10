@@ -12,12 +12,9 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
-
 final class FolioleCompanionSyncPayloadQueryStore {
     private static final String QUERY_ASSET_PATH = "companion-query-definitions.json";
     static final String EXTERNAL_DOCUMENT_PAYLOAD_QUERY_NAME = "syncPayloadExternalDocument";
-    private static final String NODE_READING_PAYLOAD_QUERY_NAME = "syncPayloadNodeReading";
-    private static final String NODE_REVIEW_PAYLOAD_QUERY_NAME = "syncPayloadNodeReview";
     static final String SETTING_PAYLOAD_QUERY_NAME = "syncPayloadSetting";
     static final String VIEW_ACTIVE_NODE_PAYLOAD_QUERY_NAME = "syncPayloadViewActiveNode";
     static final String VIEW_NODE_STATE_PAYLOAD_QUERY_NAME = "syncPayloadViewNodeState";
@@ -100,14 +97,6 @@ final class FolioleCompanionSyncPayloadQueryStore {
         return metadata(context, VIEW_ACTIVE_NODE_PAYLOAD_QUERY_NAME, "scope");
     }
 
-    static String nodeReadingPayloadQueryName() {
-        return NODE_READING_PAYLOAD_QUERY_NAME;
-    }
-
-    static String nodeReviewPayloadQueryName() {
-        return NODE_REVIEW_PAYLOAD_QUERY_NAME;
-    }
-
     static String viewObjectId(Context context, String deviceId, String key) throws Exception {
         return scopedObjectId(context, viewScope(context), viewPlatform(context), viewFormFactor(context), deviceId, key);
     }
@@ -171,11 +160,13 @@ final class FolioleCompanionSyncPayloadQueryStore {
             return "{}";
         }
         String queryName = FolioleCompanionSyncPayloadRoutingRules.routeString(context, route, "queryNameKey");
+        String[] args = queryArgs(context, route, objectId, objectIdKey, viewObjectIdDeviceId(context, objectId));
+        if (FolioleCompanionLearningPayloadStore.owns(queryName)) return FolioleCompanionLearningPayloadStore.loadPayload(context, database, queryName, args);
         String payload = FolioleCompanionGeneratedQueryRunner.loadString(
             context,
             database,
             queryName,
-            queryArgs(context, route, objectId, objectIdKey, viewObjectIdDeviceId(context, objectId))
+            args
         );
         return payload == null ? "{}" : payload;
     }
@@ -234,7 +225,6 @@ final class FolioleCompanionSyncPayloadQueryStore {
     private static String routingString(Context context, String key) throws Exception {
         return FolioleCompanionSyncPayloadRoutingRules.string(context, key);
     }
-
     private static int routingInt(Context context, String key) throws Exception {
         return FolioleCompanionSyncPayloadRoutingRules.intValue(context, key);
     }

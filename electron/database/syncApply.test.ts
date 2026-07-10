@@ -84,39 +84,28 @@ function insertLocalNodeVersion(versionId: string) {
   );
 }
 
-function insertDeletedLocalNodeVersion() {
+function insertDeletedParentWithLiveChildLearning() {
   const connection = openDatabaseConnection();
   connection.driver.execute(
     `INSERT INTO nodes (
        id, kind, title, content, current_version_id, last_modified_by_device_id, sync_dirty,
        created_at, updated_at, deleted_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      'node-1',
-      'item',
-      'Deleted Local Node',
-      'deleted local body',
-      'desktop#delete',
-      'desktop',
-      0,
-      '2026-04-21T09:00:00.000Z',
-      '2026-04-21T12:00:00.000Z',
-      '2026-04-21T12:00:00.000Z'
-    ]
+     ) VALUES ('deleted-parent', 'folder', 'Deleted Parent', '', 'desktop-parent#delete', 'desktop', 0,
+       '2026-04-21T08:00:00.000Z', '2026-04-21T12:00:00.000Z', '2026-04-21T12:00:00.000Z')`
   );
   connection.driver.execute(
-    `INSERT INTO node_sync_versions (
-       version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
-     ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [
-      'desktop#delete',
-      'node-1',
-      'desktop#0',
-      'desktop',
-      '2026-04-21T12:00:00.000Z',
-      'hash-delete',
-      JSON.stringify({ id: 'node-1', deleted_at: '2026-04-21T12:00:00.000Z' })
-    ]
+    `INSERT INTO nodes (
+       id, parent_id, kind, title, content, current_version_id, last_modified_by_device_id, sync_dirty,
+       created_at, updated_at
+     ) VALUES ('node-1', 'deleted-parent', 'item', 'Hidden Child', '', 'desktop-child#1', 'desktop', 0,
+       '2026-04-21T09:00:00.000Z', '2026-04-21T09:30:00.000Z')`
+  );
+  connection.driver.execute(
+    `INSERT INTO node_review (node_id, due, state) VALUES ('node-1', '2026-04-22T00:00:00.000Z', 0)`
+  );
+  connection.driver.execute(
+    `INSERT INTO node_reading (node_id, last_handled_at, next_at, state)
+     VALUES ('node-1', '2026-04-21T10:00:00.000Z', '2026-04-22T10:00:00.000Z', 'active')`
   );
 }
 
@@ -209,6 +198,20 @@ it('fast-forwards remote node versions when the local version is an ancestor', a
   expect(connection.sqlite.prepare('SELECT conflict_version_id FROM node_sync_conflicts').all()).toEqual([]);
 });
 
+it('prunes learning rows when accepted remote nodes remain hidden under deleted parents', async () => {
+  insertDeletedParentWithLiveChildLearning();
+  const record = createRemoteNodeRecord();
+  record.parent_version_id = 'desktop-child#1';
+  record.ancestor_version_ids = ['desktop-child#1'];
+  record.snapshot.parent_id = 'deleted-parent';
+
+  await expect(applySyncNodesAsync([record])).resolves.toEqual(['node-1']);
+
+  const connection = openDatabaseConnection();
+  expect(connection.sqlite.prepare('SELECT node_id FROM node_review WHERE node_id = ?').get('node-1')).toBeUndefined();
+  expect(connection.sqlite.prepare('SELECT node_id FROM node_reading WHERE node_id = ?').get('node-1')).toBeUndefined();
+});
+
 it('records divergent remote node versions without overwriting the local node', async () => {
   insertLocalNodeVersion('desktop#2');
   const record = createRemoteNodeRecord();
@@ -237,29 +240,4 @@ it('records divergent remote node versions without overwriting the local node', 
       parent_version_id: 'desktop#0'
     }
   ]);
-});
-
-it('does not let an old active remote version revive a locally deleted node', async () => {
-  insertDeletedLocalNodeVersion();
-  const record = createRemoteNodeRecord();
-  record.parent_version_id = 'desktop#0';
-  record.ancestor_version_ids = ['desktop#0'];
-
-  await expect(applySyncNodesAsync([record])).resolves.toEqual([]);
-
-  const connection = openDatabaseConnection();
-  expect(
-    connection.sqlite.prepare('SELECT current_version_id, content, deleted_at FROM nodes WHERE id = ?').get('node-1')
-  ).toEqual({
-    content: 'deleted local body',
-    current_version_id: 'desktop#delete',
-    deleted_at: '2026-04-21T12:00:00.000Z'
-  });
-  expect(connection.sqlite.prepare('SELECT COUNT(*) AS count FROM node_sync_conflicts').get()).toEqual({ count: 0 });
-});
-
-it('can acknowledge already applied node versions for push cursor delivery', async () => {
-  insertLocalNodeVersion('phone#1');
-
-  await expect(applySyncNodesAsync([createRemoteNodeRecord()], { includeAlreadyApplied: true })).resolves.toEqual(['node-1']);
 });

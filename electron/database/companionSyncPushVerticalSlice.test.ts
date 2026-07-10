@@ -48,13 +48,20 @@ afterEach(async () => {
 function insertDesktopBaseReview() {
   const driver = openDatabaseConnection().driver;
   driver.execute(
-    `INSERT INTO nodes (id, kind, title, content, created_at, updated_at)
-     VALUES ('node-1', 'topic', 'Review Topic', '', '2026-04-30T00:00:00.000Z', '2026-04-30T00:00:00.000Z')`
+    `INSERT INTO nodes (
+       id, kind, title, content, current_version_id, last_modified_by_device_id, sync_dirty, created_at, updated_at
+     ) VALUES ('node-1', 'topic', 'Review Topic', '', 'desktop#node-1', 'desktop', 0,
+       '2026-04-30T00:00:00.000Z', '2026-04-30T00:00:00.000Z')`
   );
   driver.execute(
     `INSERT INTO sync_object_state (
        object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
-     ) VALUES ('node_review', 'node-1', 1, 'desktop-base', 'desktop', '2026-04-30T00:00:00.000Z', 0)`
+     ) VALUES ('node', 'node-1', 1, 'desktop-node-base', 'desktop', '2026-04-30T00:00:00.000Z', 0)`
+  );
+  driver.execute(
+    `INSERT INTO sync_object_state (
+       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+     ) VALUES ('node_review', 'node-1', 2, 'desktop-base', 'desktop', '2026-04-30T00:00:00.000Z', 0)`
   );
 }
 
@@ -103,6 +110,49 @@ function reviewLogPush(): SyncPushPayload {
   };
 }
 
+function nodeVersionPush(): SyncPushPayload {
+  const updatedAt = '2026-04-30T02:00:00.000Z';
+  return {
+    base: { ancestorVersionIds: [], kind: 'node_version', parentVersionId: null },
+    clientOpId: 'node:android#1',
+    contentHash: 'android-node-hash',
+    identity: { objectId: 'node-android', objectType: 'node', scope: 'workspace' },
+    payloadJson: JSON.stringify({
+      ancestor_version_ids: [],
+      content_hash: 'android-node-hash',
+      device_id: 'android-device',
+      object_id: 'node-android',
+      object_type: 'node',
+      parent_version_id: null,
+      snapshot: {
+        anchor_link: null,
+        attachments: [],
+        content: 'Android body',
+        created_at: updatedAt,
+        deleted_at: null,
+        desired_retention: null,
+        hide_title_heading: false,
+        id: 'node-android',
+        image_regions: null,
+        is_title_manual: true,
+        kind: 'topic',
+        opening_text: null,
+        parent_id: null,
+        position: null,
+        priority: null,
+        reveal: null,
+        title: 'Android topic',
+        updated_at: updatedAt,
+        virtual_filter: null
+      },
+      updated_at: updatedAt,
+      version_created_at: updatedAt,
+      version_id: 'android-device#1'
+    }),
+    updatedAt
+  };
+}
+
 function readPackRows(packPath: string) {
   const entries = readStoredZipEntries(packPath);
   const incomingBytes = inflateSync(entries.get('incoming.db.deflate') ?? Buffer.alloc(0));
@@ -112,6 +162,7 @@ function readPackRows(packPath: string) {
   try {
     return {
       manifest: JSON.parse(entries.get('manifest.json')?.toString('utf8') ?? '{}'),
+      nodes: db.prepare('SELECT id, current_version_id, title FROM nodes').all(),
       reviewLog: db.prepare('SELECT op_id, node_id, grade FROM review_log').all(),
       stateRows: db.prepare('SELECT object_type, object_id, state_seq FROM sync_object_state').all(),
       syncObjects: db.prepare('SELECT object_type, object_id, payload_json FROM sync_objects').all()
@@ -146,23 +197,47 @@ describe('companion sync push vertical slice', () => {
     const pack = await buildDesktopSyncPack({
       outputPath: packPath,
       packId: 'pack-after-android-review-push',
-      fromStateSeq: 1
+      fromStateSeq: 2
     });
 
     expect(push.acks).toMatchObject([
-      { identity: { objectType: 'node_review' }, stateSeq: 2, status: 'accepted' },
+      { identity: { objectType: 'node_review' }, stateSeq: 3, status: 'accepted' },
       { identity: { objectType: 'review_log' }, status: 'accepted' }
     ]);
-    expect(pack).toMatchObject({ objectCount: 1, toStateSeq: 2 });
+    expect(pack).toMatchObject({ objectCount: 2, toStateSeq: 3 });
     expect(readPackRows(packPath)).toMatchObject({
-      manifest: expect.objectContaining({ from_state_seq: 1, to_state_seq: 2 }),
+      manifest: expect.objectContaining({ from_state_seq: 2, to_state_seq: 3 }),
       reviewLog: [{ grade: 3, node_id: 'node-1', op_id: 'op-android-1' }],
-      stateRows: [{ object_id: 'node-1', object_type: 'node_review', state_seq: 2 }],
+      stateRows: [
+        { object_id: 'node-1', object_type: 'node', state_seq: 1 },
+        { object_id: 'node-1', object_type: 'node_review', state_seq: 3 }
+      ],
       syncObjects: [expect.objectContaining({
         object_id: 'node-1',
         object_type: 'node_review',
         payload_json: expect.stringContaining('last_review_at')
       })]
+    });
+  });
+
+  it('packs accepted node version pushes for Android pull confirmation', async () => {
+    const push = await applyCompanionSyncPushAsync([nodeVersionPush()]);
+    const packPath = path.join(tempRoot, 'node-version-pack.syncpack');
+
+    const pack = await buildDesktopSyncPack({
+      outputPath: packPath,
+      packId: 'pack-after-android-node-push',
+      fromStateSeq: 2
+    });
+
+    expect(push.acks).toMatchObject([
+      { identity: { objectType: 'node' }, status: 'accepted', versionId: 'android-device#1' }
+    ]);
+    expect(pack).toMatchObject({ objectCount: 1, toStateSeq: 3 });
+    expect(readPackRows(packPath)).toMatchObject({
+      manifest: expect.objectContaining({ from_state_seq: 2, to_state_seq: 3 }),
+      nodes: [{ current_version_id: 'android-device#1', id: 'node-android', title: 'Android topic' }],
+      stateRows: [{ object_id: 'node-android', object_type: 'node', state_seq: 3 }]
     });
   });
 });

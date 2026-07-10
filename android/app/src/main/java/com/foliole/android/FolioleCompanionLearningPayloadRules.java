@@ -20,7 +20,7 @@ final class FolioleCompanionLearningPayloadRules {
     }
 
     static JSONObject reviewLogInput(Context context, JSONObject input) throws Exception {
-        String key = metadata(context, FolioleCompanionSyncPayloadQueryStore.nodeReviewPayloadQueryName(), "reviewLogInputPayloadKey");
+        String key = metadata(context, FolioleCompanionLearningPayloadStore.nodeReviewPayloadQueryName(), "reviewLogInputPayloadKey");
         return input.has(key) && !input.isNull(key) ? new JSONObject(input.optString(key, "{}")) : null;
     }
 
@@ -28,7 +28,7 @@ final class FolioleCompanionLearningPayloadRules {
         JSONObject hashPayload = new JSONObject(payload.toString());
         Set<String> ignoredKeys = metadataSet(
             context,
-            FolioleCompanionSyncPayloadQueryStore.nodeReadingPayloadQueryName(),
+            FolioleCompanionLearningPayloadStore.nodeReadingPayloadQueryName(),
             "hashIgnoredPayloadKeys"
         );
         for (String ignoredKey : ignoredKeys) {

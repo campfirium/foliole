@@ -1,7 +1,11 @@
-import { ASSISTANT_THREAD_INDEX_SCHEMA_STATEMENTS } from './assistantThreadIndexSchemaStatements.js';
+import {
+  ASSISTANT_THREAD_INDEX_SCHEMA_STATEMENTS,
+  ASSISTANT_THREAD_MESSAGE_SCHEMA_STATEMENTS
+} from './assistantThreadIndexSchemaStatements.js';
 import { addColumnIfMissing } from './numberedMigrationHelpers.js';
 import { createIncomingUpdatesTable } from './numberedMigrationIncomingUpdates.js';
 import { migrateLocalFilesRegistry, resetOpenedLocalFileHistory } from './numberedMigrationLocalFiles.js';
+import { createNodeSyncTombstoneTable } from './numberedMigrationNodeSyncTombstones.js';
 import type { NumberedSchemaMigration } from './numberedMigrations.js';
 import { createVirtualFolderTables } from './numberedMigrationVirtualFolders.js';
 
@@ -50,6 +54,18 @@ export const RECENT_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
     version: 51,
     migrate: (sqlite) => {
       for (const statement of ASSISTANT_THREAD_INDEX_SCHEMA_STATEMENTS) {
+        sqlite.exec(statement);
+      }
+    }
+  },
+  {
+    version: 52,
+    migrate: createNodeSyncTombstoneTable
+  },
+  {
+    version: 53,
+    migrate: (sqlite) => {
+      for (const statement of ASSISTANT_THREAD_MESSAGE_SCHEMA_STATEMENTS) {
         sqlite.exec(statement);
       }
     }

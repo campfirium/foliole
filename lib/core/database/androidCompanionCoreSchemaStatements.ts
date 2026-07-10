@@ -1,4 +1,5 @@
 import { CORE_INDEX_SCHEMA_STATEMENTS } from './coreIndexSchemaStatements.js';
+import { NODE_SYNC_TOMBSTONE_SCHEMA_STATEMENTS } from './nodeSyncTombstoneSchemaStatements.js';
 
 export const ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS nodes (
@@ -82,6 +83,7 @@ export const ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS = [
     content_hash TEXT NOT NULL,
     snapshot_json TEXT
   )`,
+  ...NODE_SYNC_TOMBSTONE_SCHEMA_STATEMENTS,
   `CREATE TABLE IF NOT EXISTS node_sync_conflicts (
     conflict_version_id TEXT PRIMARY KEY,
     object_id TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,

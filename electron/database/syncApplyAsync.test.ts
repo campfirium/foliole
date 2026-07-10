@@ -142,13 +142,30 @@ it('applies remote sync nodes through the async desktop DbPort entry', async () 
     sync_dirty: 0,
     title: 'Remote Node'
   });
+  expect(
+    connection.sqlite.prepare(
+      `SELECT current_version_id, content_hash, last_modified_by_device_id, sync_dirty
+       FROM sync_object_state WHERE object_type = 'node' AND object_id = ?`
+    ).get('node-1')
+  ).toEqual({
+    content_hash: 'hash-1',
+    current_version_id: 'phone#1',
+    last_modified_by_device_id: 'phone',
+    sync_dirty: 0
+  });
 });
 
 it('covers create, repeated apply, and modify through the shared desktop DbPort path', async () => {
   const first = createRemoteNodeRecord();
 
   await expect(applySyncNodesAsync([first])).resolves.toEqual(['node-1']);
+  const initialStateSeq = (openDatabaseConnection().sqlite.prepare(
+    `SELECT state_seq FROM sync_object_state WHERE object_type = 'node' AND object_id = ?`
+  ).get('node-1') as { state_seq: number }).state_seq;
   await expect(applySyncNodesAsync([first])).resolves.toEqual([]);
+  expect(openDatabaseConnection().sqlite.prepare(
+    `SELECT state_seq FROM sync_object_state WHERE object_type = 'node' AND object_id = ?`
+  ).get('node-1')).toEqual({ state_seq: initialStateSeq });
   await expect(applySyncNodesAsync([createModifiedRemoteNodeRecord()])).resolves.toEqual(['node-1']);
 
   const connection = openDatabaseConnection();
@@ -167,6 +184,16 @@ it('covers create, repeated apply, and modify through the shared desktop DbPort 
   expect(
     connection.sqlite.prepare('SELECT COUNT(*) AS count FROM node_sync_versions WHERE object_id = ?').get('node-1')
   ).toEqual({ count: 2 });
+  expect(
+    connection.sqlite.prepare(
+      `SELECT current_version_id, content_hash, sync_dirty
+       FROM sync_object_state WHERE object_type = 'node' AND object_id = ?`
+    ).get('node-1')
+  ).toEqual({
+    content_hash: 'hash-2',
+    current_version_id: 'phone#2',
+    sync_dirty: 0
+  });
 });
 
 it('covers create, modify, delete, and repeated tombstone through the shared desktop DbPort path', async () => {

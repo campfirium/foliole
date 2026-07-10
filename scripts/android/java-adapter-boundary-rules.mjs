@@ -129,6 +129,7 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionContentBlobStore.java',
       'FolioleCompanionDocumentSyncPayload.java',
       'FolioleCompanionExternalDocumentStore.java',
+      'FolioleCompanionLearningPayloadStore.java',
       'FolioleCompanionLearningSyncPayload.java',
       'FolioleCompanionMetaRecords.java',
       'FolioleCompanionNodeAttachmentStore.java',

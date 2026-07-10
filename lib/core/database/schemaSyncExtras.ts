@@ -33,6 +33,37 @@ export const syncChangeLog = sqliteTable('sync_change_log', {
   appliedAt: text('applied_at')
 });
 
+export const nodeSyncVersions = sqliteTable('node_sync_versions', {
+  versionId: text('version_id').primaryKey(),
+  objectId: text('object_id').notNull(),
+  parentVersionId: text('parent_version_id'),
+  deviceId: text('device_id').notNull(),
+  createdAt: text('created_at').notNull(),
+  contentHash: text('content_hash').notNull(),
+  snapshotJson: text('snapshot_json')
+});
+
+export const nodeSyncConflicts = sqliteTable('node_sync_conflicts', {
+  conflictVersionId: text('conflict_version_id').primaryKey(),
+  objectId: text('object_id').notNull(),
+  parentVersionId: text('parent_version_id'),
+  deviceId: text('device_id'),
+  contentHash: text('content_hash'),
+  snapshotJson: text('snapshot_json').notNull(),
+  detectedAt: text('detected_at').notNull()
+});
+
+export const nodeSyncTombstones = sqliteTable('node_sync_tombstones', {
+  nodeId: text('node_id').primaryKey(),
+  versionId: text('version_id').notNull(),
+  parentVersionId: text('parent_version_id'),
+  deviceId: text('device_id').notNull(),
+  contentHash: text('content_hash').notNull(),
+  snapshotJson: text('snapshot_json').notNull(),
+  deletedAt: text('deleted_at').notNull(),
+  createdAt: text('created_at').notNull()
+});
+
 export const syncPeerCursors = sqliteTable(
   'sync_peer_cursors',
   {

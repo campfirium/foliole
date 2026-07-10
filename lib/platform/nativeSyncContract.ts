@@ -95,6 +95,7 @@ export interface NativeSyncNodeRecord {
   ancestor_version_ids: string[];
   content_hash: string | null;
   device_id: string | null;
+  is_tombstone?: boolean;
   object_id: string;
   object_type: 'node';
   parent_version_id: string | null;

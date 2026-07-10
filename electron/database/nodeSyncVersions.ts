@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 
 import { openDatabaseConnection } from './connection.js';
@@ -14,6 +16,26 @@ interface SettingsRow extends DatabaseRow {
 }
 
 const NODE_SYNC_VERSION_COUNTER_KEY = 'desktop_node_sync_version_counter';
+const NODE_SYNC_RESTORE_INCARNATION_KEY = 'desktop_node_sync_restore_incarnation';
+
+function loadNodeSyncRestoreIncarnation() {
+  return openDatabaseConnection().driver.queryOne<SettingsRow>('SELECT value FROM settings WHERE key = ?', [
+    NODE_SYNC_RESTORE_INCARNATION_KEY
+  ])?.value ?? null;
+}
+
+export function markNodeSyncRestoreIncarnation(now = new Date().toISOString()) {
+  const incarnation = randomUUID();
+  openDatabaseConnection().driver.execute(
+    `INSERT INTO settings (key, value, updated_at)
+     VALUES (?, ?, ?)
+     ON CONFLICT(key) DO UPDATE SET
+       value = excluded.value,
+       updated_at = excluded.updated_at`,
+    [NODE_SYNC_RESTORE_INCARNATION_KEY, incarnation, now]
+  );
+  return incarnation;
+}
 
 function nextNodeSyncVersionId(deviceId: string, now: string) {
   const connection = openDatabaseConnection();
@@ -29,7 +51,8 @@ function nextNodeSyncVersionId(deviceId: string, now: string) {
        updated_at = excluded.updated_at`,
     [NODE_SYNC_VERSION_COUNTER_KEY, String(nextCounter + 1), now]
   );
-  return `${deviceId}#${nextCounter}`;
+  const incarnation = loadNodeSyncRestoreIncarnation();
+  return incarnation ? `${deviceId}#zrestore-${incarnation}#${nextCounter}` : `${deviceId}#${nextCounter}`;
 }
 
 function insertNodeSyncVersion(args: {

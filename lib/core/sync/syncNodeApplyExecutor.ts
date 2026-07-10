@@ -5,6 +5,11 @@ import type {
 
 import type { DbPort, DbRow } from './dbPort.js';
 import {
+  repairDirectChildAnchorsForAppliedParent,
+  type SyncNodeAnchorRepairRecord,
+  type SyncNodeAnchorUnmappedRecord
+} from './syncNodeAnchorRepair.js';
+import {
   decideIncomingNodeApply,
   isConflictCopyNodeId,
   latestBranchHeadRecords,
@@ -19,6 +24,11 @@ import {
   buildRemoteNodeUpsert,
   buildRemoteNodeVersionUpsert
 } from './syncNodeApplyStatements.js';
+import { toSyncNodeConflictRecord } from './syncNodeConflictRecord.js';
+import { enqueueAppliedNodeSearchInvalidations } from './syncNodeSearchInvalidations.js';
+import { upsertAppliedNodeSyncState } from './syncNodeStateApplyExecutor.js';
+import { upsertTextBodyBlob } from './syncNodeTextBodyBlobs.js';
+import { applyRemoteNodeTombstone, loadNodeSyncTombstone } from './syncNodeTombstoneApply.js';
 import { pruneLearningRowsWithoutVisibleNodes } from './syncNodeVisibilityPruning.js';
 
 interface LocalSyncNodeStateRow extends DbRow, LocalSyncNodeState {
@@ -28,10 +38,13 @@ interface LocalSyncNodeStateRow extends DbRow, LocalSyncNodeState {
 
 export interface ApplySyncNodesWithDbPortResult {
   appliedIds: string[];
+  anchorRepairRecords: SyncNodeAnchorRepairRecord[];
   blockedIds: string[];
   conflictRecords: NativeSyncNodeConflictRecord[];
   conflictNodes: NativeSyncNodeRecord[];
   skippedConflictCopyIds: string[];
+  tombstoneBlockedIds: string[];
+  unmappedAnchorRecords: SyncNodeAnchorUnmappedRecord[];
 }
 
 export interface ApplySyncNodesWithDbPortOptions {
@@ -40,49 +53,9 @@ export interface ApplySyncNodesWithDbPortOptions {
   includeAlreadyApplied?: boolean;
 }
 
-function textBodyBlobBytes(content: string) {
-  return new TextEncoder().encode(content);
-}
-
-async function hashTextBody(content: string, options: ApplySyncNodesWithDbPortOptions) {
-  if (options.hashTextBody) {
-    return options.hashTextBody(content);
-  }
-  const digest = await globalThis.crypto?.subtle.digest('SHA-256', textBodyBlobBytes(content));
-  if (!digest) {
-    throw new Error('sync_text_body_hash_unavailable');
-  }
-  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
-}
-
 async function queryOne<T extends DbRow>(port: DbPort, sql: string, params: readonly (string | number | bigint | Uint8Array | null)[] = []) {
   const rows = await port.query<T>(sql, params);
   return rows[0] ?? null;
-}
-
-async function upsertTextBodyBlob(
-  port: DbPort,
-  content: string,
-  now: string,
-  options: ApplySyncNodesWithDbPortOptions
-) {
-  const hash = await hashTextBody(content, options);
-  const size = textBodyBlobBytes(content).byteLength;
-  await port.run(
-    `INSERT INTO content_blobs (
-       hash, storage_key, kind, mime_type, compression, original_size_bytes, stored_size_bytes,
-       original_sha256, stored_sha256, availability, created_at, cached_at, last_verified_at
-     ) VALUES (?, ?, 'text_body', 'text/plain', 'none', ?, ?, ?, ?, 'local', ?, ?, ?)
-     ON CONFLICT(hash) DO NOTHING`,
-    [hash, `text/${hash}`, size, size, hash, hash, now, now, now]
-  );
-  await port.run(
-    `INSERT INTO content_blob_data (hash, data)
-     VALUES (?, ?)
-     ON CONFLICT(hash) DO NOTHING`,
-    [hash, textBodyBlobBytes(content)]
-  );
-  return hash;
 }
 
 async function loadLocalNodeSyncState(port: DbPort, nodeId: string) {
@@ -141,56 +114,49 @@ async function applyRemoteNode(
   await replaceNodeAttachmentLinks(port, record);
 }
 
-function toConflictRecord(record: NativeSyncNodeRecord): NativeSyncNodeConflictRecord {
-  return {
-    conflict_version_id: record.version_id,
-    content_hash: record.content_hash,
-    device_id: record.device_id,
-    object_id: record.object_id,
-    parent_version_id: record.parent_version_id,
-    snapshot: record.snapshot,
-    updated_at: record.updated_at
-  };
+async function applyAcceptedRemoteNode(input: {
+  invalidatedAt: string;
+  localNode: LocalSyncNodeStateRow | null;
+  options: ApplySyncNodesWithDbPortOptions;
+  record: NativeSyncNodeRecord;
+  result: ApplySyncNodesWithDbPortResult;
+  tx: DbPort;
+}) {
+  await applyRemoteNode(input.tx, input.record, input.options);
+  if (!input.record.snapshot.deleted_at && input.record.snapshot.content !== undefined) {
+    const repairResult = await repairDirectChildAnchorsForAppliedParent({
+      content: input.record.snapshot.content,
+      parentNodeId: input.record.object_id,
+      port: input.tx,
+      updatedAt: input.record.snapshot.updated_at
+    });
+    input.result.anchorRepairRecords.push(...repairResult.repaired);
+    input.result.unmappedAnchorRecords.push(...repairResult.unmapped);
+  }
+  await upsertAppliedNodeSyncState(input.tx, input.record);
+  if (input.options.enqueueSearchInvalidations !== false) {
+    await enqueueAppliedNodeSearchInvalidations(input.tx, input.localNode, input.record, input.invalidatedAt);
+  }
+  input.result.appliedIds.push(input.record.object_id);
 }
 
-async function enqueueNodeSearchInvalidation(port: DbPort, type: string, nodeId: string, updatedAt: string) {
-  const refreshed = await port.run(
-    `UPDATE search_index_invalidations
-     SET updated_at = ?, last_error = NULL
-     WHERE invalidation_type = ?
-       AND target_id = ?
-       AND status = 'pending'`,
-    [updatedAt, type, nodeId]
-  );
-  if (refreshed.changes > 0) {
-    return;
+async function handleTombstoneGuard(input: {
+  record: NativeSyncNodeRecord;
+  result: ApplySyncNodesWithDbPortResult;
+  tx: DbPort;
+}) {
+  const localTombstone = await loadNodeSyncTombstone(input.tx, input.record.object_id);
+  if (input.record.is_tombstone) {
+    if (await applyRemoteNodeTombstone(input.tx, input.record)) {
+      input.result.appliedIds.push(input.record.object_id);
+    }
+    return true;
   }
-  await port.run(
-    `INSERT INTO search_index_invalidations (
-       invalidation_type, target_id, status, attempts, last_error, created_at, updated_at, claimed_at, completed_at
-     ) VALUES (?, ?, 'pending', 0, NULL, ?, ?, NULL, NULL)`,
-    [type, nodeId, updatedAt, updatedAt]
-  );
-}
-
-async function enqueueAppliedNodeSearchInvalidations(
-  port: DbPort,
-  localNode: LocalSyncNodeStateRow | null,
-  record: NativeSyncNodeRecord,
-  updatedAt: string
-) {
-  if (record.snapshot.deleted_at) {
-    await enqueueNodeSearchInvalidation(port, 'node_subtree_deleted', record.object_id, updatedAt);
-    return;
+  if (localTombstone) {
+    input.result.tombstoneBlockedIds.push(input.record.object_id);
+    return true;
   }
-  if (localNode?.deleted_at) {
-    await enqueueNodeSearchInvalidation(port, 'node_subtree_restored', record.object_id, updatedAt);
-    return;
-  }
-  await enqueueNodeSearchInvalidation(port, 'node_workspace', record.object_id, updatedAt);
-  if (localNode && (localNode.parent_id !== record.snapshot.parent_id || localNode.title !== record.snapshot.title)) {
-    await enqueueNodeSearchInvalidation(port, 'node_subtree_path', record.object_id, updatedAt);
-  }
+  return false;
 }
 
 export async function applySyncNodesWithDbPort(
@@ -200,10 +166,13 @@ export async function applySyncNodesWithDbPort(
 ): Promise<ApplySyncNodesWithDbPortResult> {
   const result: ApplySyncNodesWithDbPortResult = {
     appliedIds: [],
+    anchorRepairRecords: [],
     blockedIds: [],
     conflictRecords: [],
     conflictNodes: [],
-    skippedConflictCopyIds: []
+    skippedConflictCopyIds: [],
+    tombstoneBlockedIds: [],
+    unmappedAnchorRecords: []
   };
   const ordered = orderNodesForApply(latestBranchHeadRecords(records));
   const invalidatedAt = new Date().toISOString();
@@ -214,18 +183,18 @@ export async function applySyncNodesWithDbPort(
         result.skippedConflictCopyIds.push(record.object_id);
         continue;
       }
+      if (await handleTombstoneGuard({ record, result, tx })) {
+        continue;
+      }
       const localNode = await loadLocalNodeSyncState(tx, record.object_id);
       const decision = decideIncomingNodeApply(localNode, record);
       if (decision === 'apply_missing_local' || decision === 'apply_fast_forward') {
-        await applyRemoteNode(tx, record, options);
-        if (options.enqueueSearchInvalidations !== false) {
-          await enqueueAppliedNodeSearchInvalidations(tx, localNode, record, invalidatedAt);
-        }
-        result.appliedIds.push(record.object_id);
+        await applyAcceptedRemoteNode({ invalidatedAt, localNode, options, record, result, tx });
         continue;
       }
       await upsertRemoteVersion(tx, record);
       if (decision === 'already_applied') {
+        await upsertAppliedNodeSyncState(tx, record);
         if (options.includeAlreadyApplied) {
           result.appliedIds.push(record.object_id);
         }
@@ -235,7 +204,7 @@ export async function applySyncNodesWithDbPort(
         result.blockedIds.push(record.object_id);
         continue;
       }
-      result.conflictRecords.push(toConflictRecord(record));
+      result.conflictRecords.push(toSyncNodeConflictRecord(record));
       result.conflictNodes.push(record);
     }
     if (result.appliedIds.length > 0) {

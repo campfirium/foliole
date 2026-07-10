@@ -1,7 +1,7 @@
 import {
   androidBodyStatusExpression,
   androidResolvedContentExpression
-} from './androidCompanionDerivedReadSql.ts';
+} from './androidCompanionDerivedReadSql.js';
 
 const WORKSPACE_INLINE_CONTENT = 'n.content';
 const WORKSPACE_BODY_BLOB_DATA = 'CAST(cbd.data AS TEXT)';

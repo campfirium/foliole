@@ -1,9 +1,9 @@
-import { ANDROID_COMPANION_ATTACHMENT_RESOURCE_QUERY_DEFINITIONS } from './androidCompanionAttachmentResourceQueryDefinitions.ts';
-import { ANDROID_COMPANION_CONTENT_READ_RULES } from './androidCompanionContentReadDefinitions.ts';
-import { ANDROID_COMPANION_CONTENT_RESOURCE_QUERY_DEFINITIONS } from './androidCompanionContentResourceQueryDefinitions.ts';
-import { ANDROID_COMPANION_DOCUMENT_RESOURCE_QUERY_DEFINITIONS } from './androidCompanionDocumentResourceQueryDefinitions.ts';
-import { ANDROID_COMPANION_MISSING_RESOURCE_READ_RULES } from './androidCompanionMissingResourceQueryDefinitions.ts';
-import { ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS } from './androidCompanionNodeResourceQueryDefinitions.ts';
+import { ANDROID_COMPANION_ATTACHMENT_RESOURCE_QUERY_DEFINITIONS } from './androidCompanionAttachmentResourceQueryDefinitions.js';
+import { ANDROID_COMPANION_CONTENT_READ_RULES } from './androidCompanionContentReadDefinitions.js';
+import { ANDROID_COMPANION_CONTENT_RESOURCE_QUERY_DEFINITIONS } from './androidCompanionContentResourceQueryDefinitions.js';
+import { ANDROID_COMPANION_DOCUMENT_RESOURCE_QUERY_DEFINITIONS } from './androidCompanionDocumentResourceQueryDefinitions.js';
+import { ANDROID_COMPANION_MISSING_RESOURCE_READ_RULES } from './androidCompanionMissingResourceQueryDefinitions.js';
+import { ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS } from './androidCompanionNodeResourceQueryDefinitions.js';
 
 export const ANDROID_COMPANION_RESOURCE_QUERY_DEFINITIONS = {
   ...ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS,
@@ -16,7 +16,7 @@ export { ANDROID_COMPANION_MISSING_RESOURCE_READ_RULES };
 
 export { ANDROID_COMPANION_CONTENT_READ_RULES };
 
-export { ANDROID_COMPANION_WORKSPACE_READ_RULES } from './androidCompanionWorkspaceReadDefinitions.ts';
+export { ANDROID_COMPANION_WORKSPACE_READ_RULES } from './androidCompanionWorkspaceReadDefinitions.js';
 
 export const ANDROID_COMPANION_NODE_ATTACHMENT_READ_RULES = {
   groupKeys: {

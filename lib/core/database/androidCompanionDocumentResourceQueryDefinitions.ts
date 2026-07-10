@@ -2,7 +2,7 @@ import {
   androidBodyStatusExpression,
   androidResolvedContentExpression,
   androidSearchExcerptExpression
-} from './androidCompanionDerivedReadSql.ts';
+} from './androidCompanionDerivedReadSql.js';
 
 const EXTERNAL_DOCUMENT_INLINE_CONTENT = 'ed.content';
 const EXTERNAL_DOCUMENT_BODY_BLOB_DATA = 'CAST(cbd.data AS TEXT)';

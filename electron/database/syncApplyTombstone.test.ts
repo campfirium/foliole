@@ -30,6 +30,7 @@ function tombstoneRecord(): NativeSyncNodeRecord {
     ancestor_version_ids: ['desktop#2', 'desktop#1'],
     content_hash: 'hash-delete',
     device_id: 'desktop',
+    is_tombstone: true,
     object_id: 'node-1',
     object_type: 'node',
     parent_version_id: 'desktop#2',
@@ -94,10 +95,57 @@ it('applies remote tombstone over a dirty active local node', async () => {
   await expect(applySyncNodesAsync([tombstoneRecord()])).resolves.toEqual(['node-1']);
 
   expect(
-    connection.sqlite.prepare('SELECT current_version_id, sync_dirty, deleted_at FROM nodes WHERE id = ?').get('node-1')
+    connection.sqlite.prepare('SELECT id FROM nodes WHERE id = ?').get('node-1')
+  ).toBeUndefined();
+  expect(
+    connection.sqlite.prepare(
+      `SELECT node_id, version_id, deleted_at, created_at
+       FROM node_sync_tombstones WHERE node_id = ?`
+    ).get('node-1')
+  ).toEqual({
+    created_at: '2026-04-21T12:00:00.000Z',
+    deleted_at: '2026-04-21T12:00:00.000Z',
+    node_id: 'node-1',
+    version_id: 'desktop#delete'
+  });
+  expect(
+    connection.sqlite.prepare(
+      `SELECT current_version_id, deleted_at, sync_dirty
+       FROM sync_object_state WHERE object_type = 'node' AND object_id = ?`
+    ).get('node-1')
   ).toEqual({
     current_version_id: 'desktop#delete',
     deleted_at: '2026-04-21T12:00:00.000Z',
     sync_dirty: 0
   });
+});
+
+it('does not let an old active remote version revive a permanent-delete tombstone', async () => {
+  const connection = openDatabaseConnection();
+  connection.driver.execute(
+    `INSERT INTO node_sync_tombstones (
+       node_id, version_id, parent_version_id, device_id, content_hash, snapshot_json, deleted_at, created_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      'node-1',
+      'desktop#delete',
+      'desktop#2',
+      'desktop',
+      'hash-delete',
+      JSON.stringify({ id: 'node-1', deleted_at: '2026-04-21T12:00:00.000Z' }),
+      '2026-04-21T12:00:00.000Z',
+      '2026-04-21T12:00:00.000Z'
+    ]
+  );
+  const oldActive = tombstoneRecord();
+  oldActive.is_tombstone = false;
+  oldActive.snapshot.deleted_at = null;
+  oldActive.version_id = 'desktop#old-live';
+
+  await expect(applySyncNodesAsync([oldActive])).resolves.toEqual([]);
+
+  expect(connection.sqlite.prepare('SELECT id FROM nodes WHERE id = ?').get('node-1')).toBeUndefined();
+  expect(connection.sqlite.prepare('SELECT COUNT(*) AS count FROM node_sync_conflicts').get()).toEqual({ count: 0 });
+  expect(connection.sqlite.prepare('SELECT version_id FROM node_sync_tombstones WHERE node_id = ?').get('node-1'))
+    .toEqual({ version_id: 'desktop#delete' });
 });

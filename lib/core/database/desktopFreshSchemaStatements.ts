@@ -1,4 +1,4 @@
-import { ASSISTANT_THREAD_INDEX_SCHEMA_STATEMENTS } from './assistantThreadIndexSchemaStatements.js';
+import { ASSISTANT_THREAD_SCHEMA_STATEMENTS } from './assistantThreadIndexSchemaStatements.js';
 import { DESKTOP_CORE_SCHEMA_STATEMENTS } from './desktopCoreSchemaStatements.js';
 import { DESKTOP_RESOURCE_SCHEMA_STATEMENTS } from './desktopResourceSchemaStatements.js';
 import { EXTERNAL_DOCUMENT_SCHEMA_STATEMENTS } from './externalDocumentSchemaStatements.js';
@@ -20,5 +20,5 @@ export const DESKTOP_FRESH_SCHEMA_STATEMENTS = [
   ...LOCAL_FILE_SCHEMA_STATEMENTS,
   ...SOURCE_DISPOSITION_SCHEMA_STATEMENTS,
   ...SEARCH_INDEX_INVALIDATION_SCHEMA_STATEMENTS,
-  ...ASSISTANT_THREAD_INDEX_SCHEMA_STATEMENTS
+  ...ASSISTANT_THREAD_SCHEMA_STATEMENTS
 ];

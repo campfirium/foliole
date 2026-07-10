@@ -17,7 +17,7 @@ import {
   createUpsertNodeReadingStatement,
   createUpsertNodeStatement
 } from './nodeMutationStatements.js';
-import { rewriteExistingNodeOrder } from './nodeOrderMutations.js';
+import { deleteNodesPermanently, type DeleteNodesPermanentlyInput } from './nodePermanentDeleteMutations.js';
 import { writeNodeReadingSnapshotWithSync } from './nodeReadingSyncState.js';
 import { resolveRestoreNodesResult, type RestoreNodesResult } from './nodeRestoreConflicts.js';
 import { createUpsertNodeReviewStatement } from './nodeReviewMutationStatements.js';
@@ -28,13 +28,13 @@ import {
   enqueueWorkspaceSearchDeleteInvalidationForSubtreeRootIds,
   enqueueWorkspaceSearchRestoreInvalidationForSubtreeRootIds
 } from './searchIndexInvalidations.js';
-import { deleteWorkspaceSearchIndexForExistingSubtreeRootIds } from './workspaceSearchSubtreeIndex.js';
 import { bumpUntitledSequenceByParent } from './workspaceUntitledSequence.js';
 
 export type { RestoreNodesResult } from './nodeRestoreConflicts.js';
 export type { UpsertNodeSnapshotInput } from './nodeMutationPayloads.js';
 export type { MoveNodePatchInput, MoveNodesInput, MoveNodesResult } from './nodeMoveMutations.js';
 export { moveNodes } from './nodeMoveMutations.js';
+export { deleteNodesPermanently };
 export { replaceNodeOrder } from './nodeOrderMutations.js';
 
 export interface SoftDeleteNodesInput {
@@ -46,10 +46,7 @@ export interface RestoreNodesInput {
   nodeIds: string[];
 }
 
-export interface DeleteNodesPermanentlyInput {
-  nodeIds: string[];
-  nodeOrder: string[];
-}
+export type { DeleteNodesPermanentlyInput };
 
 export interface UpdateNodeAnchorLinkInput {
   anchorLink: NodeAnchorLinkPayload;
@@ -215,29 +212,4 @@ export function restoreNodes(driver: DatabaseDriver, input: RestoreNodesInput): 
     enqueueWorkspaceSearchRestoreInvalidationForSubtreeRootIds(driver, result.restoredNodeIds);
     return result;
   });
-}
-
-export function deleteNodesPermanently(driver: DatabaseDriver, input: DeleteNodesPermanentlyInput): string[] {
-  const deleteReviewLogStatement = driver.prepare('DELETE FROM review_log WHERE node_id = ?');
-  const deleteNodeReviewStatement = driver.prepare('DELETE FROM node_review WHERE node_id = ?');
-  const deleteNodeReadingStatement = driver.prepare('DELETE FROM node_reading WHERE node_id = ?');
-  const deleteNodeReadingDeviceStateStatement = driver.prepare('DELETE FROM node_reading_device_state WHERE node_id = ?');
-  const deleteNodeOrderStatement = driver.prepare('DELETE FROM node_order WHERE node_id = ?');
-  const deleteNodeStatement = driver.prepare('DELETE FROM nodes WHERE id = ?');
-  driver.transaction(() => {
-    deleteWorkspaceSearchIndexForExistingSubtreeRootIds(driver, input.nodeIds);
-    for (const nodeId of input.nodeIds) {
-      deleteReviewLogStatement.run([nodeId]);
-      deleteNodeReviewStatement.run([nodeId]);
-      deleteNodeReadingStatement.run([nodeId]);
-      deleteNodeReadingDeviceStateStatement.run([nodeId]);
-      deleteNodeOrderStatement.run([nodeId]);
-    }
-    for (const nodeId of [...input.nodeIds].reverse()) {
-      deleteNodeStatement.run([nodeId]);
-    }
-    rewriteExistingNodeOrder(driver, input.nodeOrder);
-  });
-
-  return [];
 }

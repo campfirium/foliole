@@ -1,4 +1,5 @@
 import { CORE_INDEX_SCHEMA_STATEMENTS } from './coreIndexSchemaStatements.js';
+import { NODE_SYNC_TOMBSTONE_SCHEMA_STATEMENTS } from './nodeSyncTombstoneSchemaStatements.js';
 
 export const DESKTOP_CORE_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS nodes (
@@ -40,6 +41,7 @@ export const DESKTOP_CORE_SCHEMA_STATEMENTS = [
   )`,
   `CREATE INDEX IF NOT EXISTS idx_node_sync_versions_object_created
     ON node_sync_versions (object_id, created_at)`,
+  ...NODE_SYNC_TOMBSTONE_SCHEMA_STATEMENTS,
   `CREATE TABLE IF NOT EXISTS node_sync_conflicts (
     conflict_version_id TEXT PRIMARY KEY,
     object_id TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,

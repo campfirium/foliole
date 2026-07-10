@@ -9,7 +9,7 @@ final class FolioleCompanionLearningSyncPayload {
     private FolioleCompanionLearningSyncPayload() {}
 
     static void applyReading(Context context, SQLiteDatabase database, String objectId, JSONObject record) throws Exception {
-        String queryName = FolioleCompanionSyncPayloadQueryStore.nodeReadingPayloadQueryName();
+        String queryName = FolioleCompanionLearningPayloadStore.nodeReadingPayloadQueryName();
         if (FolioleCompanionLearningPayloadRules.isDeleted(context, record, queryName)) {
             FolioleCompanionGeneratedMutationRunner.execute(context, database, mutationRule(context, "readingDeleteMutationName"), new Object[] { objectId });
             FolioleCompanionGeneratedMutationRunner.execute(context, database, mutationRule(context, "readingDeviceStateDeleteMutationName"), new Object[] { objectId });
@@ -38,7 +38,7 @@ final class FolioleCompanionLearningSyncPayload {
     }
 
     static void applyReview(Context context, SQLiteDatabase database, String objectId, JSONObject record) throws Exception {
-        String queryName = FolioleCompanionSyncPayloadQueryStore.nodeReviewPayloadQueryName();
+        String queryName = FolioleCompanionLearningPayloadStore.nodeReviewPayloadQueryName();
         if (FolioleCompanionLearningPayloadRules.isDeleted(context, record, queryName)) {
             FolioleCompanionGeneratedMutationRunner.execute(context, database, mutationRule(context, "reviewDeleteMutationName"), new Object[] { objectId });
             return;
@@ -62,7 +62,7 @@ final class FolioleCompanionLearningSyncPayload {
     private static String defaultReadingState(Context context) throws Exception {
         return FolioleCompanionSyncPayloadQueryStore.metadata(
             context,
-            FolioleCompanionSyncPayloadQueryStore.nodeReadingPayloadQueryName(),
+            FolioleCompanionLearningPayloadStore.nodeReadingPayloadQueryName(),
             "defaultState"
         );
     }
@@ -70,7 +70,7 @@ final class FolioleCompanionLearningSyncPayload {
     private static String defaultReadingDeviceId(Context context) throws Exception {
         return FolioleCompanionSyncPayloadQueryStore.metadata(
             context,
-            FolioleCompanionSyncPayloadQueryStore.nodeReadingPayloadQueryName(),
+            FolioleCompanionLearningPayloadStore.nodeReadingPayloadQueryName(),
             "defaultDeviceId"
         );
     }

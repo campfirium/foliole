@@ -29,26 +29,6 @@ export const nodes = sqliteTable('nodes', {
   deletedAt: text('deleted_at')
 });
 
-export const nodeSyncVersions = sqliteTable('node_sync_versions', {
-  versionId: text('version_id').primaryKey(),
-  objectId: text('object_id').notNull(),
-  parentVersionId: text('parent_version_id'),
-  deviceId: text('device_id').notNull(),
-  createdAt: text('created_at').notNull(),
-  contentHash: text('content_hash').notNull(),
-  snapshotJson: text('snapshot_json')
-});
-
-export const nodeSyncConflicts = sqliteTable('node_sync_conflicts', {
-  conflictVersionId: text('conflict_version_id').primaryKey(),
-  objectId: text('object_id').notNull(),
-  parentVersionId: text('parent_version_id'),
-  deviceId: text('device_id'),
-  contentHash: text('content_hash'),
-  snapshotJson: text('snapshot_json').notNull(),
-  detectedAt: text('detected_at').notNull()
-});
-
 export const syncPeers = sqliteTable('sync_peers', {
   peerId: text('peer_id').primaryKey(),
   status: text('status').notNull().default('paired'),
@@ -246,6 +226,9 @@ export {
   attachmentBlobs,
   contentBlobData,
   contentBlobs,
+  nodeSyncConflicts,
+  nodeSyncTombstones,
+  nodeSyncVersions,
   pdfPageText,
   settingRecords,
   syncChangeLog,

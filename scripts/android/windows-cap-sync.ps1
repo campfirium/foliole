@@ -97,7 +97,7 @@ function Get-InputFiles {
     "src\shared",
     "src\features",
     "lib",
-    "scripts\android\generate-companion-schema.mjs", "scripts\android\android-query-shape-java.mjs", "scripts\android\android-resource-query-string-java.mjs",
+    "scripts\android\generate-companion-schema.mjs", "scripts\android\ts-js-extension-loader.mjs", "scripts\android\android-query-shape-java.mjs", "scripts\android\android-resource-query-string-java.mjs",
     "scripts\android\windows-cap-sync.ps1", "scripts\android\windows-hash-helpers.ps1"
   )
   $files = @()
@@ -219,7 +219,7 @@ try {
   if (Test-Path -Path $webOutDir) {
     Remove-Item -Path $webOutDir -Recurse -Force
   }
-  Invoke-NodeTool -Arguments @("scripts\android\generate-companion-schema.mjs") -FailureMessage "Android companion schema generation failed."
+  Invoke-NodeTool -Arguments @("--experimental-loader", "./scripts/android/ts-js-extension-loader.mjs", "scripts\android\generate-companion-schema.mjs") -FailureMessage "Android companion schema generation failed."
   Invoke-NodeTool -Arguments @("node_modules\vite\bin\vite.js", "build", "--config", "vite.companion.config.ts") -FailureMessage "Android companion web build failed."
   Assert-FileExists `
     -Path (Join-Path $WindowsWorkDir "dist\companion\index.html") `

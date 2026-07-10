@@ -103,6 +103,12 @@ final class FolioleCompanionNamedQueryStore {
         return rows.length() <= 0 ? null : rows.getJSONObject(0);
     }
 
+    static JSONObject loadFirstRow(Context context, SQLiteDatabase database, String queryName, String[] args) throws Exception {
+        JSONObject query = loadQuery(context, queryName);
+        String resultKey = query.getString(FolioleCompanionQueryDefinitionShapeKeys.queryKey(context, "resultKey"));
+        return loadFirstRow(context, database, queryName, resultKey, args);
+    }
+
     static boolean hasRows(Context context, SQLiteDatabase database, String queryName, String resultKey, String[] args) throws Exception {
         return loadFirstRow(context, database, queryName, resultKey, args) != null;
     }

@@ -17,7 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { closeDatabaseConnection } from './connection.js';
+import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import {
   deleteNodesPermanently,
@@ -35,6 +35,7 @@ import {
   seedDismissedReadingNode,
   seedNode
 } from './nodeMutations.test.helpers.js';
+import { flushNodeSyncVersion } from './nodeSyncVersions.js';
 
 let tempRoot = '';
 
@@ -117,6 +118,45 @@ it('deletes subtree nodes and rewrites node_order while clearing review side tab
   expect(getNodeRow('node-keep')).toBeDefined();
   expect(getReviewCounts('node-child')).toEqual({ reviewCount: 0, reviewLogCount: 0 });
   expect(getNodeReadingRow('node-child')).toBeUndefined();
+});
+
+it('keeps a permanent-delete tombstone for an already versioned live node', () => {
+  seedNode('node-root', null, 0);
+  const activeVersionId = flushNodeSyncVersion('node-root', '2026-03-06T00:01:00.000Z');
+
+  deleteNodesPermanently({
+    nodeIds: ['node-root'],
+    nodeOrder: []
+  });
+
+  const connection = openDatabaseConnection();
+  const tombstone = connection.sqlite.prepare(
+    `SELECT version_id, parent_version_id, snapshot_json, deleted_at, created_at
+     FROM node_sync_tombstones WHERE node_id = ?`
+  ).get('node-root') as {
+    created_at: string;
+    deleted_at: string;
+    parent_version_id: string | null;
+    snapshot_json: string;
+    version_id: string;
+  };
+  expect(tombstone.version_id).not.toBe(activeVersionId);
+  expect(tombstone.parent_version_id).toBe(activeVersionId);
+  expect(tombstone.created_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  expect(tombstone.deleted_at).toBe(tombstone.created_at);
+  expect(JSON.parse(tombstone.snapshot_json)).toMatchObject({
+    deleted_at: tombstone.created_at,
+    id: 'node-root',
+    updated_at: tombstone.created_at
+  });
+  expect(connection.sqlite.prepare('SELECT id FROM nodes WHERE id = ?').get('node-root')).toBeUndefined();
+  expect(connection.sqlite.prepare(
+    `SELECT current_version_id, deleted_at FROM sync_object_state
+     WHERE object_type = 'node' AND object_id = ?`
+  ).get('node-root')).toEqual({
+    current_version_id: tombstone.version_id,
+    deleted_at: tombstone.created_at
+  });
 });
 
 it('keeps surviving parent content unchanged when permanently deleting linked child nodes', () => {
