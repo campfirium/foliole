@@ -47,7 +47,7 @@ interface NativeTopicSearchResult {
 
 export async function searchCompanionFullText(query: string, limit?: number): Promise<CompanionFullTextSearchResults> {
   const normalizedQuery = query.trim();
-  const strategy = await loadCompanionFullTextSearchStrategy();
+  const strategy = await loadCompanionFullTextSearchStrategyOrDefault();
   if (!normalizedQuery || !isNativeAndroidCompanionRuntime()) {
     return { external: [], pdf: [], strategy, topics: [] };
   }
@@ -58,6 +58,14 @@ export async function searchCompanionFullText(query: string, limit?: number): Pr
     searchCompanionExternalDocuments(normalizedQuery, limit)
   ]);
   return { external, pdf, strategy, topics };
+}
+
+async function loadCompanionFullTextSearchStrategyOrDefault() {
+  try {
+    return await loadCompanionFullTextSearchStrategy();
+  } catch {
+    return normalizeFullTextSearchIndexStrategy(null);
+  }
 }
 
 export async function loadCompanionFullTextSearchStrategy() {

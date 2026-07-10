@@ -100,6 +100,21 @@ describe('companion full text search', () => {
     await expect(api.loadCompanionFullTextSearchStrategy()).resolves.toBe('cjk-trigram');
   });
 
+  it('keeps native search available when synced app settings cannot be read', async () => {
+    capacitorMock.plugin.loadSyncIndex.mockResolvedValueOnce({
+      entries: [{ object_id: 'user_space:windows:desktop:*:app_settings', object_type: 'setting' }]
+    });
+    capacitorMock.plugin.loadSyncObjects.mockRejectedValueOnce(new Error('no such function: json_object'));
+    const api = await import('./companionFullTextSearch');
+
+    await expect(api.searchCompanionFullText('alpha', 5)).resolves.toEqual({
+      external: [expect.objectContaining({ bodyStatus: 'failed', document_id: 'folder-1:doc.md' })],
+      pdf: [expect.objectContaining({ attachment_id: 'pdf-1', page: 3 })],
+      strategy: 'word-based',
+      topics: [expect.objectContaining({ bodyStatus: 'missing', nodeId: 'topic-1', title: 'Topic One' })]
+    });
+  });
+
   it('returns empty results outside Android or for an empty query', async () => {
     const api = await import('./companionFullTextSearch');
 
