@@ -9,24 +9,17 @@ import { DESKTOP_CORE_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopC
 import { buildCanonicalNodeSyncPayload, type NodeSyncHashInput } from '../../lib/core/database/nodeSyncHash.js';
 import { UPSERT_REMOTE_NODE_SQL } from '../../lib/core/sync/syncNodeApplyStatements.js';
 import { buildSyncPackNodeUpsertSql } from '../../lib/core/sync/syncPackApplyStatements.js';
+import { SYNC_PACK_NODE_COLUMNS } from '../../lib/core/sync/syncPackNodeFields.js';
+import { PACK_SCHEMA } from '../../lib/core/sync/syncPackSchema.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
 const NODE_SYNC_METADATA_COLUMNS = ['current_version_id', 'last_modified_by_device_id', 'sync_dirty'];
 const NODE_HASH_SIDE_PAYLOAD_FIELDS = ['attachments'];
 const NODE_DERIVED_BODY_RESOURCE_IDENTITY_COLUMNS = ['body_blob_hash'];
 const SYNC_PACK_NODE_UPSERT_PENDING_COLUMNS = [
-  'anchor_link',
-  'desired_retention',
-  'enable_short_term',
-  'image_regions',
   'last_modified_by_device_id',
-  'manual_child_order',
   'position',
-  'priority',
-  'reveal',
-  'sequential_reading_enabled',
-  'sync_dirty',
-  'virtual_filter'
+  'sync_dirty'
 ];
 
 const WIRE_SNAPSHOT_FIELDS = expectCompleteWireSnapshotFields([
@@ -65,6 +58,8 @@ it('keeps node sync field coverage explicit across schema, hash, snapshot, and a
   expectComparableFields(desktopSnapshotFields(), expectedSnapshotFields(desktopColumns));
   expectComparableFields(remoteNodeUpsertColumns(), desktopColumns);
   expectComparableFields(wireSnapshotFields(), expectedSnapshotFields(desktopColumns));
+  expect(loadNodeColumns(PACK_SCHEMA)).toEqual([...SYNC_PACK_NODE_COLUMNS].sort());
+  expect(SYNC_PACK_NODE_COLUMNS).not.toContain('position');
   expect(syncPackNodeUpsertPendingColumns(desktopColumns)).toEqual(SYNC_PACK_NODE_UPSERT_PENDING_COLUMNS);
   expectDerivedBodyResourceIdentityCoverage();
 });

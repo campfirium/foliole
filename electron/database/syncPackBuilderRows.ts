@@ -1,4 +1,5 @@
 import { buildSyncPackManifest } from '../../lib/core/sync/syncPackManifest.js';
+import { SYNC_PACK_NODE_COLUMNS } from '../../lib/core/sync/syncPackNodeFields.js';
 
 import type { LoadedSyncPackRows } from './syncPackRows.js';
 
@@ -81,12 +82,9 @@ function writeNodePackRows(db: import('better-sqlite3').Database, rows: LoadedSy
   copyRows({
     db,
     table: 'nodes',
-    columns: ['id', 'parent_id', 'kind', 'title', 'is_title_manual', 'hide_title_heading', 'shelved_at',
-      'body_blob_hash', 'opening_text', 'reveal', 'content', 'current_version_id', 'created_at', 'updated_at', 'deleted_at'],
+    columns: SYNC_PACK_NODE_COLUMNS,
     rows: rows.nodes,
-    values: (row) => [row.id, row.parent_id, row.kind, row.title, row.is_title_manual,
-      row.hide_title_heading, row.shelved_at, row.body_blob_hash, row.opening_text, row.reveal, '', row.current_version_id,
-      row.created_at, row.updated_at, row.deleted_at]
+    values: (row) => SYNC_PACK_NODE_COLUMNS.map((column) => column === 'content' ? '' : row[column])
   });
   copyRows({
     db,

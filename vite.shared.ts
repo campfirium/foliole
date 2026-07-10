@@ -175,7 +175,13 @@ export function createSharedViteConfig(projectRoot: string, options: SharedViteC
     },
     test: {
       environment: 'jsdom',
-      include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'electron/**/*.test.ts', 'scripts/**/*.test.mjs'],
+      include: [
+        'src/**/*.test.ts',
+        'src/**/*.test.tsx',
+        'electron/**/*.test.ts',
+        'lib/core/sync/**/*.test.ts',
+        'scripts/**/*.test.mjs'
+      ],
       exclude: ['tests/**', 'node_modules/**', 'dist/**'],
       setupFiles: './src/test/setup.ts',
       globals: true

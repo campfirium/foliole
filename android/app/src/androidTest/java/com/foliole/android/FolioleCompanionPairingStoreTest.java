@@ -54,7 +54,8 @@ public class FolioleCompanionPairingStoreTest {
             "android-capacitor",
             "Android Test",
             "secret-1",
-            "2026-04-27T06:00:00.000Z"
+            "2026-04-27T06:00:00.000Z",
+            "primary-device-1"
         );
 
         JSObject state = FolioleCompanionPairingStore.loadPairingState(context);

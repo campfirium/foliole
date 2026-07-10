@@ -72,6 +72,14 @@ public class FolioleCompanionWebViewBridgeSmokeTest {
             assertEquals(2, result.getInt("applied_blob_count"));
             assertEquals(3, result.getInt("to_state_seq"));
             assertEquals(3, countPackStateRows(context));
+            assertEquals("4", selectNodeValue(context, "priority"));
+            assertEquals("0.92", selectNodeValue(context, "desired_retention"));
+            assertEquals("0", selectNodeValue(context, "enable_short_term"));
+            assertEquals("1", selectNodeValue(context, "sequential_reading_enabled"));
+            assertEquals("[\"child-2\",\"child-1\"]", selectNodeValue(context, "manual_child_order"));
+            assertEquals("{\"kind\":\"manual\"}", selectNodeValue(context, "virtual_filter"));
+            assertEquals("{\"id\":\"anchor-1\",\"kind\":\"highlight\"}", selectNodeValue(context, "anchor_link"));
+            assertEquals("[{\"source\":\"contract\"}]", selectNodeValue(context, "image_regions"));
         } finally {
             instrumentation.runOnMainSync(activity::finish);
             deleteFile(packFile);
@@ -211,6 +219,10 @@ public class FolioleCompanionWebViewBridgeSmokeTest {
             cursor.moveToFirst();
             return cursor.getInt(0);
         }
+    }
+
+    private static String selectNodeValue(Context context, String column) {
+        return FolioleCompanionWebViewBridgeDatabaseAssertions.selectNodeValue(context, column);
     }
 
     private static void deleteFile(File file) {

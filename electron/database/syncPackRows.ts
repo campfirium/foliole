@@ -6,6 +6,10 @@ import {
   SYNC_PACK_OBJECT_TYPE_TABLES,
   type SyncPackObjectType
 } from '../../lib/core/sync/syncPackManifest.js';
+import {
+  SYNC_PACK_NODE_COLUMNS,
+  type SyncPackNodeRow
+} from '../../lib/core/sync/syncPackNodeFields.js';
 import type { NativeSyncObjectRecord, NativeSyncReviewLogRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { openDatabaseConnection } from './connection.js';
@@ -27,23 +31,7 @@ export interface SyncStatePackRow extends RawSyncStatePackRow {
 
 export type SyncObjectPackRow = NativeSyncObjectRecord;
 
-export interface NodePackRow extends DatabaseRow {
-  body_blob_hash: string | null;
-  content: string;
-  created_at: string;
-  current_version_id: string | null;
-  deleted_at: string | null;
-  hide_title_heading: number;
-  id: string;
-  is_title_manual: number;
-  kind: string;
-  opening_text: string | null;
-  parent_id: string | null;
-  reveal: string | null;
-  shelved_at: string | null;
-  title: string;
-  updated_at: string;
-}
+export type NodePackRow = SyncPackNodeRow;
 
 interface NodeAttachmentPackRow extends DatabaseRow {
   attachment_id: string;
@@ -208,8 +196,7 @@ export function loadPackRows(fromStateSeq: number, toStateSeq: number) {
   ])];
   const externalDocumentIds = idsForObjectTable(stateRows, 'external_documents');
   const nodes = queryRowsByIds<NodePackRow>(
-    `SELECT id, parent_id, kind, shelved_at, title, is_title_manual, hide_title_heading, body_blob_hash,
-       opening_text, reveal, content, current_version_id, created_at, updated_at, deleted_at
+    `SELECT ${SYNC_PACK_NODE_COLUMNS.join(', ')}
      FROM nodes WHERE id IN (__IDS__)`,
     nodeIds
   );

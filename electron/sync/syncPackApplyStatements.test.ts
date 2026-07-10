@@ -10,6 +10,7 @@ import {
   buildSyncPackNodeOrderUpsertSql,
   buildSyncPackNodeUpsertSql
 } from '../../lib/core/sync/syncPackApplyStatements.js';
+import { SYNC_PACK_NODE_COLUMNS } from '../../lib/core/sync/syncPackNodeFields.js';
 
 it('builds the applyable row filter used by sync pack apply', () => {
   expect(buildSyncPackApplyableRowsSql({ objectType: 'node' })).toContain(
@@ -53,18 +54,32 @@ it('builds node and attachment pack apply statements against an incoming alias',
   expect(nodeSql).toContain('ON CONFLICT(id) DO UPDATE SET');
   expect(nodeSql).toContain('title = excluded.title');
   expect(nodeSql).toContain('reveal = excluded.reveal');
-  expect(nodeSql).not.toContain('priority = excluded.priority');
+  expect(nodeSql).toContain('priority = excluded.priority');
+  expect(nodeSql).toContain('manual_child_order = excluded.manual_child_order');
+  expect(nodeSql).not.toContain('position = excluded.position');
   expect(buildSyncPackNodeUpsertSql({ incomingAlias: 'incoming' })).toContain(
     'FROM incoming.nodes incoming'
   );
   expect(buildSyncPackNodeUpsertSql({ incomingAlias: 'incoming' })).toContain(
     "incoming.object_type = 'node'"
   );
-  expect(buildSyncPackNodeUpsertSql({ incomingAlias: 'incoming', incomingHasCurrentVersionId: false })).toContain(
+  const legacySql = buildSyncPackNodeUpsertSql({
+    incomingAlias: 'incoming',
+    incomingNodeColumns: SYNC_PACK_NODE_COLUMNS.filter((column) => ![
+      'current_version_id', 'manual_child_order', 'priority', 'reveal'
+    ].includes(column))
+  });
+  expect(legacySql).toContain(
     'SELECT existing.current_version_id FROM main.nodes existing WHERE existing.id = incoming.id'
   );
-  expect(buildSyncPackNodeUpsertSql({ incomingAlias: 'incoming', incomingHasReveal: false })).toContain(
+  expect(legacySql).toContain(
     'SELECT existing.reveal FROM main.nodes existing WHERE existing.id = incoming.id'
+  );
+  expect(legacySql).toContain(
+    'SELECT existing.manual_child_order FROM main.nodes existing WHERE existing.id = incoming.id'
+  );
+  expect(legacySql).toContain(
+    'SELECT existing.priority FROM main.nodes existing WHERE existing.id = incoming.id'
   );
   expect(buildSyncPackNodeAttachmentDeleteSql({ incomingAlias: 'incoming' })).toContain(
     'DELETE FROM main.node_attachments WHERE node_id IN'

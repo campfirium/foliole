@@ -49,10 +49,14 @@ function insertNodeSyncState() {
   const bodyHash = upsertTextBodyBlob(driver, 'node body must stay out of pack', '2026-04-27T00:00:00.000Z');
   driver.execute(
     `INSERT INTO nodes (
-       id, kind, title, is_title_manual, hide_title_heading, opening_text, content, body_blob_hash, reveal, created_at, updated_at
-     ) VALUES (?, 'topic', ?, 1, 0, ?, ?, ?, ?, ?, ?)`,
-    ['node-1', 'Node 1', 'Node opening preview', 'node body must stay out of pack', bodyHash,
-      'Contract answer', '2026-04-27T00:00:00.000Z', '2026-04-27T00:00:00.000Z']
+       id, kind, priority, desired_retention, enable_short_term, sequential_reading_enabled,
+       manual_child_order, title, is_title_manual, hide_title_heading, opening_text, content,
+       body_blob_hash, virtual_filter, reveal, anchor_link, image_regions, created_at, updated_at
+     ) VALUES (?, 'folder', 4, 0.92, 0, 1, ?, ?, 1, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['node-1', '["child-2","child-1"]', 'Node 1', 'Node opening preview',
+      'node body must stay out of pack', bodyHash, '{"kind":"manual"}', 'Contract answer',
+      '{"id":"anchor-1","kind":"highlight"}', '[{"source":"contract"}]',
+      '2026-04-27T00:00:00.000Z', '2026-04-27T00:00:00.000Z']
   );
   driver.execute(
     `INSERT INTO sync_object_state (
@@ -139,7 +143,11 @@ function readPackRows(packPath: string) {
       manifest,
       nodeAttachments: db.prepare('SELECT node_id, attachment_id, role FROM node_attachments').all(),
       nodeOrder: db.prepare('SELECT node_id, position FROM node_order').all(),
-      nodes: db.prepare('SELECT id, content, body_blob_hash, opening_text, reveal FROM nodes').all()
+      nodes: db.prepare(
+        `SELECT id, priority, desired_retention, enable_short_term, sequential_reading_enabled,
+                manual_child_order, virtual_filter, anchor_link, image_regions,
+                content, body_blob_hash, opening_text, reveal FROM nodes`
+      ).all()
     };
   } finally {
     db.close();
@@ -193,10 +201,18 @@ it('keeps the Android sync pack contract fixture deterministic', async () => {
     nodeAttachments: [{ attachment_id: 'att-1', node_id: 'node-1', role: 'image' }],
     nodeOrder: [{ node_id: 'node-1', position: 3 }],
     nodes: [expect.objectContaining({
+      anchor_link: '{"id":"anchor-1","kind":"highlight"}',
       content: '',
+      desired_retention: 0.92,
+      enable_short_term: 0,
       id: 'node-1',
+      image_regions: '[{"source":"contract"}]',
+      manual_child_order: '["child-2","child-1"]',
       opening_text: 'Node opening preview',
-      reveal: 'Contract answer'
+      priority: 4,
+      reveal: 'Contract answer',
+      sequential_reading_enabled: 1,
+      virtual_filter: '{"kind":"manual"}'
     })]
   });
 });

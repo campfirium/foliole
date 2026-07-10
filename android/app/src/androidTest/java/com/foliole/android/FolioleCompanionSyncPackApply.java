@@ -97,15 +97,32 @@ final class FolioleCompanionSyncPackApply {
         String incomingCurrentVersionId = incomingColumnExists(database, "nodes", "current_version_id")
             ? "current_version_id"
             : "(SELECT existing.current_version_id FROM main.nodes existing WHERE existing.id = inc.nodes.id)";
+        StringBuilder columns = new StringBuilder(
+            "id, parent_id, kind, title, is_title_manual, hide_title_heading, body_blob_hash, " +
+                "opening_text, content, current_version_id, created_at, updated_at, deleted_at"
+        );
+        StringBuilder values = new StringBuilder(
+            "id, parent_id, kind, title, is_title_manual, hide_title_heading, body_blob_hash, " +
+                "opening_text, content, " + incomingCurrentVersionId + ", created_at, updated_at, deleted_at"
+        );
+        for (String field : CANONICAL_OPTIONAL_NODE_FIELDS) {
+            if (!mainColumnExists(database, "nodes", field)) continue;
+            columns.append(", ").append(field);
+            values.append(", ").append(incomingColumnExists(database, "nodes", field)
+                ? field
+                : "(SELECT existing." + field + " FROM main.nodes existing WHERE existing.id = inc.nodes.id)");
+        }
         database.execSQL(
-            "INSERT OR REPLACE INTO main.nodes (" +
-                "id, parent_id, kind, title, is_title_manual, hide_title_heading, body_blob_hash, " +
-                "opening_text, content, current_version_id, created_at, updated_at, deleted_at) " +
-                "SELECT id, parent_id, kind, title, is_title_manual, hide_title_heading, body_blob_hash, " +
-                "opening_text, content, " + incomingCurrentVersionId + ", created_at, updated_at, deleted_at FROM inc.nodes " +
+            "INSERT OR REPLACE INTO main.nodes (" + columns + ") " +
+                "SELECT " + values + " FROM inc.nodes " +
                 "WHERE id IN (SELECT object_id FROM " + FolioleCompanionSyncPackApplyableRows.sql("node") + ")"
         );
     }
+
+    private static final String[] CANONICAL_OPTIONAL_NODE_FIELDS = {
+        "priority", "desired_retention", "enable_short_term", "sequential_reading_enabled",
+        "manual_child_order", "virtual_filter", "anchor_link", "image_regions", "reveal"
+    };
 
     private static void upsertExternalDocuments(SQLiteDatabase database) {
         database.execSQL(
@@ -161,6 +178,15 @@ final class FolioleCompanionSyncPackApply {
                 if (columnName.equals(cursor.getString(1))) {
                     return true;
                 }
+            }
+        }
+        return false;
+    }
+
+    private static boolean mainColumnExists(SQLiteDatabase database, String tableName, String columnName) {
+        try (Cursor cursor = database.rawQuery("PRAGMA main.table_info(" + tableName + ")", null)) {
+            while (cursor.moveToNext()) {
+                if (columnName.equals(cursor.getString(1))) return true;
             }
         }
         return false;

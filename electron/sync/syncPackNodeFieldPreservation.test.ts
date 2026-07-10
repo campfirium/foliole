@@ -65,6 +65,33 @@ it('preserves node fields that are not carried by the pack node table', async ()
   });
 });
 
+it('uses nullable defaults when a legacy pack creates a new node', async () => {
+  const connection = openDatabaseConnection();
+  connection.sqlite.prepare('DELETE FROM nodes WHERE id = ?').run('node-1');
+  const port = createBetterSqliteDbPort(connection.sqlite, { name: 'sync-pack-node-legacy-new-fields-test' });
+  await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
+  try {
+    await applySyncPackNodesWithDbPort(port);
+  } finally {
+    await port.run('DETACH DATABASE inc');
+  }
+
+  expect(connection.sqlite.prepare(
+    `SELECT priority, desired_retention, enable_short_term, sequential_reading_enabled,
+            manual_child_order, virtual_filter, anchor_link, image_regions
+     FROM nodes WHERE id = ?`
+  ).get('node-1')).toEqual({
+    anchor_link: null,
+    desired_retention: null,
+    enable_short_term: null,
+    image_regions: null,
+    manual_child_order: null,
+    priority: null,
+    sequential_reading_enabled: null,
+    virtual_filter: null
+  });
+});
+
 function createIncomingPack(filePath: string) {
   const db = new Database(filePath);
   try {
@@ -85,10 +112,20 @@ function createIncomingPack(filePath: string) {
 }
 
 function legacyPackSchema() {
-  return PACK_SCHEMA.map((statement) => (
-    statement.includes('CREATE TABLE nodes')
-      ? statement.replace('    reveal TEXT,\n', '')
-      : statement
+  const missingColumns = [
+    'anchor_link',
+    'desired_retention',
+    'enable_short_term',
+    'image_regions',
+    'manual_child_order',
+    'priority',
+    'reveal',
+    'sequential_reading_enabled',
+    'virtual_filter'
+  ];
+  return PACK_SCHEMA.map((statement) => missingColumns.reduce(
+    (result, column) => result.replace(new RegExp(`    ${column} [^\\n]+,\\n`), ''),
+    statement
   ));
 }
 

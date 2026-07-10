@@ -1,3 +1,5 @@
+import { buildSyncPackNodesTableSql } from './syncPackNodeFields.js';
+
 export const PACK_SCHEMA = [
   `CREATE TABLE pack_manifest (
     key TEXT PRIMARY KEY,
@@ -21,23 +23,7 @@ export const PACK_SCHEMA = [
     deleted_at TEXT,
     PRIMARY KEY (object_type, object_id)
   )`,
-  `CREATE TABLE nodes (
-    id TEXT PRIMARY KEY,
-    parent_id TEXT,
-    kind TEXT NOT NULL,
-    title TEXT NOT NULL,
-    is_title_manual INTEGER NOT NULL DEFAULT 0,
-    hide_title_heading INTEGER NOT NULL DEFAULT 0,
-    shelved_at TEXT,
-    body_blob_hash TEXT,
-    opening_text TEXT,
-    reveal TEXT,
-    content TEXT NOT NULL DEFAULT '',
-    current_version_id TEXT,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
-    deleted_at TEXT
-  )`,
+  buildSyncPackNodesTableSql(),
   `CREATE TABLE node_attachments (
     node_id TEXT NOT NULL,
     attachment_id TEXT NOT NULL,

@@ -1,3 +1,9 @@
+import {
+  SYNC_PACK_LEGACY_OPTIONAL_NODE_COLUMNS,
+  SYNC_PACK_NODE_COLUMNS,
+  type SyncPackNodeColumn
+} from './syncPackNodeFields.js';
+
 export interface SyncPackApplyableRowsOptions {
   incomingAlias?: string;
   objectType?: string;
@@ -5,27 +11,8 @@ export interface SyncPackApplyableRowsOptions {
 
 export interface SyncPackNodeApplyOptions {
   incomingAlias?: string;
-  incomingHasCurrentVersionId?: boolean;
-  incomingHasReveal?: boolean;
+  incomingNodeColumns?: readonly string[];
 }
-
-const SYNC_PACK_NODE_COLUMNS = [
-  'id',
-  'parent_id',
-  'kind',
-  'title',
-  'is_title_manual',
-  'hide_title_heading',
-  'shelved_at',
-  'body_blob_hash',
-  'opening_text',
-  'reveal',
-  'content',
-  'current_version_id',
-  'created_at',
-  'updated_at',
-  'deleted_at'
-] as const;
 
 const SYNC_PACK_NODE_UPDATE_COLUMNS = SYNC_PACK_NODE_COLUMNS.filter((column) => column !== 'id');
 
@@ -56,12 +43,6 @@ export function buildSyncPackApplyableRowsSql(options: SyncPackApplyableRowsOpti
 
 export function buildSyncPackNodeUpsertSql(options: SyncPackNodeApplyOptions = {}) {
   const alias = incomingAlias(options);
-  const versionExpr = options.incomingHasCurrentVersionId === false
-    ? `(SELECT existing.current_version_id FROM main.nodes existing WHERE existing.id = incoming.id)`
-    : 'current_version_id';
-  const revealExpr = options.incomingHasReveal === false
-    ? `(SELECT existing.reveal FROM main.nodes existing WHERE existing.id = incoming.id)`
-    : 'incoming.reveal';
   const applyableRowsSql = buildSyncPackApplyableRowsSql({ incomingAlias: alias, objectType: 'node' });
   return `WITH RECURSIVE applyable_node_ids(id) AS (` +
     `SELECT object_id FROM ${applyableRowsSql}` +
@@ -72,12 +53,19 @@ export function buildSyncPackNodeUpsertSql(options: SyncPackNodeApplyOptions = {
     `INNER JOIN node_depth parent ON parent.id = child.parent_id ` +
     `WHERE child.id IN (SELECT id FROM applyable_node_ids)` +
     `) INSERT INTO main.nodes (${SYNC_PACK_NODE_COLUMNS.join(', ')}) ` +
-    `SELECT incoming.id, incoming.parent_id, incoming.kind, incoming.title, incoming.is_title_manual, ` +
-    `incoming.hide_title_heading, incoming.shelved_at, incoming.body_blob_hash, incoming.opening_text, ${revealExpr}, incoming.content, ` +
-    `${versionExpr}, incoming.created_at, incoming.updated_at, incoming.deleted_at FROM ${alias}.nodes incoming ` +
+    `SELECT ${SYNC_PACK_NODE_COLUMNS.map((column) => incomingNodeColumnExpression(column, options)).join(', ')} ` +
+    `FROM ${alias}.nodes incoming ` +
     `INNER JOIN (SELECT id, MIN(depth) AS depth FROM node_depth GROUP BY id) sorted ON sorted.id = incoming.id ` +
     `WHERE true ORDER BY sorted.depth ASC, incoming.updated_at ASC, incoming.id ASC ` +
     `ON CONFLICT(id) DO UPDATE SET ${SYNC_PACK_NODE_UPDATE_COLUMNS.map((column) => `${column} = excluded.${column}`).join(', ')}`;
+}
+
+function incomingNodeColumnExpression(column: SyncPackNodeColumn, options: SyncPackNodeApplyOptions) {
+  const incomingColumns = options.incomingNodeColumns;
+  if (!incomingColumns || incomingColumns.includes(column) || !SYNC_PACK_LEGACY_OPTIONAL_NODE_COLUMNS.has(column)) {
+    return `incoming.${column}`;
+  }
+  return `(SELECT existing.${column} FROM main.nodes existing WHERE existing.id = incoming.id)`;
 }
 
 export function buildSyncPackNodeOrderUpsertSql(options: SyncPackApplyableRowsOptions = {}) {

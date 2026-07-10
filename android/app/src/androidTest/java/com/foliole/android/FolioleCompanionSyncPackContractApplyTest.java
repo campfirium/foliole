@@ -60,6 +60,14 @@ public class FolioleCompanionSyncPackContractApplyTest {
         assertEquals(0, countRows("content_blob_data"));
         assertEquals(3, countRows("sync_object_state"));
         assertEquals(1, countRows("node_attachments"));
+        assertEquals("4", selectString("SELECT priority FROM nodes WHERE id = 'node-1'"));
+        assertEquals("0.92", selectString("SELECT desired_retention FROM nodes WHERE id = 'node-1'"));
+        assertEquals("0", selectString("SELECT enable_short_term FROM nodes WHERE id = 'node-1'"));
+        assertEquals("1", selectString("SELECT sequential_reading_enabled FROM nodes WHERE id = 'node-1'"));
+        assertEquals("[\"child-2\",\"child-1\"]", selectString("SELECT manual_child_order FROM nodes WHERE id = 'node-1'"));
+        assertEquals("{\"kind\":\"manual\"}", selectString("SELECT virtual_filter FROM nodes WHERE id = 'node-1'"));
+        assertEquals("{\"id\":\"anchor-1\",\"kind\":\"highlight\"}", selectString("SELECT anchor_link FROM nodes WHERE id = 'node-1'"));
+        assertEquals("[{\"source\":\"contract\"}]", selectString("SELECT image_regions FROM nodes WHERE id = 'node-1'"));
         assertEquals("{\"theme\":\"dark\"}", selectString(
             "SELECT value_json FROM setting_records WHERE key = 'app_settings'"
         ));
@@ -96,9 +104,12 @@ public class FolioleCompanionSyncPackContractApplyTest {
 
     private void createMainSchema() {
         mainDatabase.execSQL("CREATE TABLE nodes (" +
-            "id TEXT PRIMARY KEY, parent_id TEXT, kind TEXT NOT NULL DEFAULT 'topic', title TEXT NOT NULL, " +
+            "id TEXT PRIMARY KEY, parent_id TEXT, kind TEXT NOT NULL DEFAULT 'topic', " +
+            "priority INTEGER, desired_retention REAL, enable_short_term INTEGER, sequential_reading_enabled INTEGER, " +
+            "manual_child_order TEXT, title TEXT NOT NULL, " +
             "is_title_manual INTEGER NOT NULL DEFAULT 0, hide_title_heading INTEGER NOT NULL DEFAULT 0, " +
-            "content TEXT NOT NULL DEFAULT '', body_blob_hash TEXT, opening_text TEXT, current_version_id TEXT, " +
+            "content TEXT NOT NULL DEFAULT '', body_blob_hash TEXT, opening_text TEXT, virtual_filter TEXT, " +
+            "reveal TEXT, anchor_link TEXT, image_regions TEXT, current_version_id TEXT, " +
             "created_at TEXT NOT NULL, updated_at TEXT NOT NULL, deleted_at TEXT)");
         mainDatabase.execSQL("CREATE TABLE external_documents (" +
             "document_id TEXT PRIMARY KEY, folder_id TEXT NOT NULL, relative_path TEXT NOT NULL, " +

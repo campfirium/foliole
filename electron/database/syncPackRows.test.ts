@@ -193,3 +193,21 @@ it('does not pack live node state rows when the node payload is gone', () => {
     'node:missing-deleted-node'
   ]);
 });
+
+it('does not resend an unchanged node after the pack cursor has crossed its state row', () => {
+  insertNodeSyncState();
+  const driver = openDatabaseConnection().driver;
+  driver.execute(
+    `INSERT INTO setting_records (
+       key, scope, platform, form_factor, device_id, value_json, content_hash, updated_at
+     ) VALUES ('cursor-test', 'user_space', '*', '*', '*', '{}', 'setting-hash', '2026-04-27T00:02:00.000Z')`
+  );
+  driver.execute(
+    `INSERT INTO sync_object_state (
+       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+     ) VALUES ('setting', 'user_space:*:*:*:cursor-test', 2, 'setting-hash',
+       'desktop', '2026-04-27T00:02:00.000Z', 0)`
+  );
+
+  expect(loadPackRows(1, 2).nodes).toEqual([]);
+});

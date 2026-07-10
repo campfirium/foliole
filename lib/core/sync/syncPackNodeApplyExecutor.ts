@@ -66,17 +66,17 @@ async function resolveSyncPackNodeApplyOptions(
   port: DbPort,
   options: SyncPackNodeApplyOptions
 ): Promise<SyncPackNodeApplyOptions> {
-  if (options.incomingHasReveal !== undefined) return options;
+  if (options.incomingNodeColumns !== undefined) return options;
   return {
     ...options,
-    incomingHasReveal: await incomingNodesHasColumn(port, options.incomingAlias ?? 'inc', 'reveal')
+    incomingNodeColumns: await loadIncomingNodeColumns(port, options.incomingAlias ?? 'inc')
   };
 }
 
-async function incomingNodesHasColumn(port: DbPort, alias: string, columnName: string) {
+async function loadIncomingNodeColumns(port: DbPort, alias: string) {
   const schemaName = alias.replaceAll('"', '""');
   const rows = await port.query<{ name: unknown }>(`PRAGMA "${schemaName}".table_info(nodes)`);
-  return rows.some((row) => row.name === columnName);
+  return rows.map((row) => row.name).filter((name): name is string => typeof name === 'string');
 }
 
 const NODE_INDEX_NAMES = [
