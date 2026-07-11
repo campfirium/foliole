@@ -5,6 +5,7 @@ import {
 import { addColumnIfMissing } from './numberedMigrationHelpers.js';
 import { createIncomingUpdatesTable } from './numberedMigrationIncomingUpdates.js';
 import { migrateLocalFilesRegistry, resetOpenedLocalFileHistory } from './numberedMigrationLocalFiles.js';
+import { migrateNodeProvenance } from './numberedMigrationNodeProvenance.js';
 import { createNodeSyncTombstoneTable } from './numberedMigrationNodeSyncTombstones.js';
 import type { NumberedSchemaMigration } from './numberedMigrations.js';
 import { migrateSettingSingleTruth } from './numberedMigrationSettingSingleTruth.js';
@@ -74,5 +75,9 @@ export const RECENT_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   {
     version: 54,
     migrate: migrateSettingSingleTruth
+  },
+  {
+    version: 55,
+    migrate: migrateNodeProvenance
   }
 ];

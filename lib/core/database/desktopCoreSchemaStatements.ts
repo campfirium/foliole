@@ -22,6 +22,8 @@ export const DESKTOP_CORE_SCHEMA_STATEMENTS = [
     reveal TEXT,
     anchor_link TEXT,
     image_regions TEXT,
+    import_source_fingerprint TEXT,
+    import_content_fingerprint TEXT,
     position INTEGER,
     current_version_id TEXT,
     last_modified_by_device_id TEXT,

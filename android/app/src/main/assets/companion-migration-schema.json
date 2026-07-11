@@ -4,6 +4,8 @@
     "type": "type"
   },
   "actionTypes": {
+    "addNodesImportSourceFingerprintIfMissing": "addNodesImportSourceFingerprintIfMissing",
+    "addNodesImportContentFingerprintIfMissing": "addNodesImportContentFingerprintIfMissing",
     "addNodesEnableShortTermIfMissing": "addNodesEnableShortTermIfMissing",
     "addNodesSequentialReadingEnabledIfMissing": "addNodesSequentialReadingEnabledIfMissing",
     "addNodesShelvedAtIfMissing": "addNodesShelvedAtIfMissing",
@@ -177,6 +179,21 @@
         }
       ],
       "beforeVersion": 18
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to upgrade companion node provenance schema.",
+          "type": "installSchema"
+        },
+        {
+          "type": "addNodesImportSourceFingerprintIfMissing"
+        },
+        {
+          "type": "addNodesImportContentFingerprintIfMissing"
+        }
+      ],
+      "beforeVersion": 19
     }
   ],
   "planKeys": {
@@ -190,6 +207,18 @@
     "tableName": "tableName"
   },
   "repairRules": {
+    "nodesImportSourceFingerprint": {
+      "columnName": "import_source_fingerprint",
+      "errorMessage": "Failed to add node import source fingerprint column.",
+      "statementName": "nodesImportSourceFingerprintColumn",
+      "tableName": "nodes"
+    },
+    "nodesImportContentFingerprint": {
+      "columnName": "import_content_fingerprint",
+      "errorMessage": "Failed to add node import content fingerprint column.",
+      "statementName": "nodesImportContentFingerprintColumn",
+      "tableName": "nodes"
+    },
     "nodesEnableShortTerm": {
       "columnName": "enable_short_term",
       "errorMessage": "Failed to add node short-term scheduling column.",
@@ -259,6 +288,8 @@
     }
   },
   "statementsByName": {
+    "nodesImportSourceFingerprintColumn": "ALTER TABLE nodes ADD COLUMN import_source_fingerprint TEXT",
+    "nodesImportContentFingerprintColumn": "ALTER TABLE nodes ADD COLUMN import_content_fingerprint TEXT",
     "nodesEnableShortTermColumn": "ALTER TABLE nodes ADD COLUMN enable_short_term INTEGER",
     "nodesSequentialReadingEnabledColumn": "ALTER TABLE nodes ADD COLUMN sequential_reading_enabled INTEGER",
     "nodesShelvedAtColumn": "ALTER TABLE nodes ADD COLUMN shelved_at TEXT",

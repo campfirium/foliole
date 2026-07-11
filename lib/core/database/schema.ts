@@ -20,6 +20,8 @@ export const nodes = sqliteTable('nodes', {
   reveal: text('reveal'),
   anchorLink: text('anchor_link'),
   imageRegions: text('image_regions'),
+  importSourceFingerprint: text('import_source_fingerprint'),
+  importContentFingerprint: text('import_content_fingerprint'),
   position: integer('position'),
   currentVersionId: text('current_version_id'),
   lastModifiedByDeviceId: text('last_modified_by_device_id'),

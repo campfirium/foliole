@@ -11,7 +11,7 @@ import {
 } from './companionWorkspaceRuntimeRepository';
 
 const COMPANION_DATABASE_NAME = 'foliole-companion';
-const COMPANION_DATABASE_VERSION = 18;
+const COMPANION_DATABASE_VERSION = 19;
 
 export interface CompanionSqliteConnectionManager {
   checkConnectionsConsistency?(): Promise<{ result?: boolean }>;

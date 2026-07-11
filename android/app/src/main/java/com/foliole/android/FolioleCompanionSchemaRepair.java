@@ -15,6 +15,8 @@ final class FolioleCompanionSchemaRepair {
         addNodesSequentialReadingEnabledIfMissing(context, database);
         addNodesManualChildOrderIfMissing(context, database);
         addNodesShelvedAtIfMissing(context, database);
+        addNodesImportSourceFingerprintIfMissing(context, database);
+        addNodesImportContentFingerprintIfMissing(context, database);
     }
 
     static void addSyncBaseContentHashIfMissing(Context context, SQLiteDatabase database) {
@@ -39,6 +41,14 @@ final class FolioleCompanionSchemaRepair {
 
     static void addNodesShelvedAtIfMissing(Context context, SQLiteDatabase database) {
         addColumnIfMissing(context, database, "nodesShelvedAt");
+    }
+
+    static void addNodesImportSourceFingerprintIfMissing(Context context, SQLiteDatabase database) {
+        addColumnIfMissing(context, database, "nodesImportSourceFingerprint");
+    }
+
+    static void addNodesImportContentFingerprintIfMissing(Context context, SQLiteDatabase database) {
+        addColumnIfMissing(context, database, "nodesImportContentFingerprint");
     }
 
     private static void addColumnIfMissing(Context context, SQLiteDatabase database, String groupName) {

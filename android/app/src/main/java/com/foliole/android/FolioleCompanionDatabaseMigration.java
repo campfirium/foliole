@@ -82,6 +82,14 @@ final class FolioleCompanionDatabaseMigration {
             FolioleCompanionSchemaRepair.addNodesShelvedAtIfMissing(context, database);
             return;
         }
+        if (actionType(context, "addNodesImportSourceFingerprintIfMissing").equals(type)) {
+            FolioleCompanionSchemaRepair.addNodesImportSourceFingerprintIfMissing(context, database);
+            return;
+        }
+        if (actionType(context, "addNodesImportContentFingerprintIfMissing").equals(type)) {
+            FolioleCompanionSchemaRepair.addNodesImportContentFingerprintIfMissing(context, database);
+            return;
+        }
         throw new IllegalStateException("Companion migration plan has unknown action: " + type);
     }
 
