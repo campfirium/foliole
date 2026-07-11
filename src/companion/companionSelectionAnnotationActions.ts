@@ -17,6 +17,7 @@ import {
   createSelectionHighlightContent,
   type SelectionAnnotationPayload
 } from '../shared/selectionAnnotationActions';
+import { createNewItemReviewProfiles } from '../store/newItemReviewSlots';
 
 import {
   canonicalCompanionNodePayload,
@@ -40,20 +41,6 @@ interface AnnotationDraft {
   snapshot: WorkspaceSnapshot;
 }
 
-function createReviewProfile(timestamp: string): NativeWorkspaceReviewProfile {
-  return {
-    difficulty: 0,
-    due: timestamp,
-    elapsedDays: 0,
-    lapses: 0,
-    lastReviewAt: null,
-    reps: 0,
-    scheduledDays: 0,
-    stability: 0,
-    state: 0
-  };
-}
-
 function toNativeNodeVersion(node: WorkspaceNodeSnapshot, deviceId: string, contentHash: string): NativeSyncNodeRecord {
   return toCompanionNativeNodeVersion(node, deviceId, contentHash);
 }
@@ -63,6 +50,7 @@ function createNode(args: {
   kind: 'item' | 'topic';
   parentNodeId: string;
   payload: SelectionAnnotationPayload;
+  review: NativeWorkspaceReviewProfile | null;
   reveal: string | null;
   timestamp: string;
   title: string;
@@ -80,7 +68,7 @@ function createNode(args: {
     parentNodeId: args.parentNodeId,
     reading: null,
     reveal: args.reveal,
-    review: args.kind === 'item' ? createReviewProfile(args.timestamp) : null,
+    review: args.review,
     title: args.title,
     updatedAt: args.timestamp
   };
@@ -106,6 +94,9 @@ async function buildAnnotationDraft(args: PersistSelectionAnnotationArgs): Promi
     kind: args.kind === 'cloze' ? 'item' : 'topic',
     parentNodeId: parentNode.id,
     payload: args.payload,
+    review: args.kind === 'cloze'
+      ? createNewItemReviewProfiles({ batchSize: 1, nodesById: args.snapshot.nodesById, now: timestamp })[0]!
+      : null,
     reveal: args.kind === 'cloze' ? cloze.answer : null,
     timestamp,
     title: args.kind === 'cloze' ? deriveNodeTitleForCloze(content, cloze.answer) : deriveNodeTitleFromContent(content)

@@ -4,9 +4,7 @@ import { getCurrentReviewSchedulerSettings } from '../features/settings/model/re
 
 import { createDefaultReviewProfile } from './workspaceSeed';
 
-type ReviewSlotNode = Pick<Node, 'kind' | 'review' | 'reveal' | 'hasReveal'> & {
-  anchorLink?: Node['anchorLink'];
-};
+type ReviewSlotNode = Pick<Node, 'kind' | 'review'>;
 
 export const NEW_ITEM_REVIEW_SLOT_DAY_COUNT = 7;
 

@@ -1,7 +1,12 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { SelectionAnnotationPayload } from '../shared/selectionAnnotationActions';
+
+import {
+  createExpectedNewReview,
+  createSnapshotWithScheduledItem
+} from './companionSelectionAnnotationActions.test-support';
 
 const syncObjectsMock = vi.hoisted(() => ({
   applyCompanionSyncNodeVersions: vi.fn(async () => ['node-created']),
@@ -87,6 +92,10 @@ describe('companion new selection annotation actions', () => {
       .mockReturnValueOnce('00000000-0000-4000-8000-000000000002');
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('persists highlight annotations as Android node versions and updates the local snapshot', async () => {
     const { persistCompanionSelectionAnnotation } = await import('./companionSelectionAnnotationActions');
 
@@ -116,24 +125,29 @@ describe('companion new selection annotation actions', () => {
   });
 
   it('persists cloze annotations with a review profile', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-21T08:00:00.000Z'));
     const { persistCompanionSelectionAnnotation } = await import('./companionSelectionAnnotationActions');
 
     const result = await persistCompanionSelectionAnnotation({
       deviceId: 'android-device',
       kind: 'cloze',
       payload: createPayload(),
-      snapshot: createSnapshot()
+      snapshot: createSnapshotWithScheduledItem(createSnapshot())
     });
+
+    const expectedReview = createExpectedNewReview();
 
     expect(result?.snapshot.nodesById[result.nodeId]).toMatchObject({
       anchorLink: { id: 'anchor-1', kind: 'cloze' },
       content: 'Alpha [...] Gamma',
       kind: 'item',
-      reveal: 'Beta'
+      reveal: 'Beta',
+      review: expectedReview
     });
     expect(syncObjectsMock.saveCompanionSyncNodeReviewRecord).toHaveBeenCalledWith({
       nodeId: result?.nodeId,
-      review: expect.objectContaining({ reps: 0, state: 0 })
+      review: expectedReview
     });
   });
 });
