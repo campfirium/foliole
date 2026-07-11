@@ -29,8 +29,9 @@ it('maps button variants to the desktop action hierarchy', () => {
   expect(screen.getByRole('button', { name: 'Default' }).className).toContain('text-ui-md');
   expect(screen.getByRole('button', { name: 'Ghost' }).className).toContain('border-transparent');
   expect(screen.getByRole('button', { name: 'Subtle' }).className).toContain('text-foreground/70');
-  expect(screen.getByRole('button', { name: 'Emphasis' }).className).toContain('--workspace-region-main-rail-bg');
-  expect(screen.getByRole('button', { name: 'Emphasis' }).className).not.toContain('--app-accent-color-rgb');
+  expect(screen.getByRole('button', { name: 'Emphasis' }).className).toContain('border-border-strong');
+  expect(screen.getByRole('button', { name: 'Emphasis' }).className).toContain('bg-transparent');
+  expect(screen.getByRole('button', { name: 'Emphasis' }).className).not.toContain('color-mix');
   expect(screen.getByRole('button', { name: 'Danger' }).className).toContain('border-error/35');
   expect(screen.getByRole('button', { name: 'List' }).className).toContain('w-full');
   expect(screen.getByRole('button', { name: 'List' }).className).toContain('text-ui-base');

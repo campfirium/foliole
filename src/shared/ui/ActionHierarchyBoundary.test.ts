@@ -23,4 +23,11 @@ describe('action hierarchy boundary', () => {
     expect(startupButtonRule).toContain(".startup-surface__button[data-variant='emphasis']");
     expect(styles).not.toContain(".startup-surface__button[data-variant='primary']");
   });
+
+  it('keeps emphasis actions outlined instead of using a filled surface', () => {
+    const buttonSource = readWorkspaceFile('src/shared/ui/Button.tsx');
+
+    expect(buttonSource).toContain("return 'border border-border-strong bg-transparent font-medium");
+    expect(buttonSource).not.toContain('bg-[color-mix');
+  });
 });

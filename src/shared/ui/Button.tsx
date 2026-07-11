@@ -20,7 +20,7 @@ function resolveVariantClass(variant: ButtonVariant) {
     return 'border border-[var(--app-control-border-color)] bg-transparent text-foreground hover:border-[var(--app-control-border-hover-color)] hover:bg-[var(--app-control-bg-hover-color)]';
   }
   if (variant === 'emphasis') {
-    return 'border border-[color-mix(in_oklab,var(--workspace-region-main-rail-bg)_72%,rgb(var(--color-foreground))_28%)] bg-[color-mix(in_srgb,var(--workspace-region-main-rail-bg)_88%,rgb(var(--color-foreground))_12%)] text-foreground hover:border-[color-mix(in_oklab,var(--workspace-region-main-rail-bg)_60%,rgb(var(--color-foreground))_40%)] hover:bg-[color-mix(in_srgb,var(--workspace-region-main-rail-bg)_82%,rgb(var(--color-foreground))_18%)]';
+    return 'border border-border-strong bg-transparent font-medium text-foreground hover:border-foreground/55 hover:bg-foreground/[0.04]';
   }
   if (variant === 'danger') {
     return 'border border-error/35 bg-transparent text-error hover:border-error/55 hover:bg-error/8 hover:text-error-foreground';

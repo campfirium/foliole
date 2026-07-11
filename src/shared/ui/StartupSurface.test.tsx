@@ -51,7 +51,9 @@ it('renders startup diagnostics and action buttons', () => {
 it('keeps startup emphasis action aligned with the workspace shell button style', () => {
   const styles = readFileSync(join(process.cwd(), 'src/app/styles.css'), 'utf8');
   const emphasisRule = styles.slice(styles.indexOf(".startup-surface__button[data-variant='emphasis']"));
+  const emphasisDeclarations = emphasisRule.split('}')[0];
 
-  expect(emphasisRule).toContain('--workspace-region-main-rail-bg');
-  expect(emphasisRule.split('}')[0]).not.toContain('--app-accent-color-rgb');
+  expect(emphasisDeclarations).toContain('background: transparent');
+  expect(emphasisDeclarations).toContain('--color-border-strong');
+  expect(emphasisDeclarations).not.toContain('color-mix');
 });
