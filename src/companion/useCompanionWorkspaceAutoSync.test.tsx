@@ -19,6 +19,7 @@ async function renderAutoSyncHook(
   isPairingReady = true
 ) {
   vi.doMock('../shared/platform/companionWorkspaceRuntimeRepository', () => ({
+    isAvailableNativeAndroidCompanionRuntime: () => isNativeRuntime,
     isNativeAndroidCompanionRuntime: () => isNativeRuntime
   }));
   const foregroundHandlers: Array<() => void> = [];

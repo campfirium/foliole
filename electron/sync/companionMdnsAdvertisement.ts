@@ -1,5 +1,7 @@
 import { Bonjour } from 'bonjour-service';
 
+import { serializeSyncProtocolTxt } from '../../lib/platform/syncProtocolContract.js';
+
 const COMPANION_SYNC_MDNS_SERVICE_TYPE = 'foliole-sync';
 
 type PublishedBonjourService = ReturnType<InstanceType<typeof Bonjour>['publish']>;
@@ -25,7 +27,7 @@ export function startCompanionMdnsAdvertisement(input: CompanionMdnsAdvertisemen
     txt: {
       app_version: input.appVersion,
       peer_id: input.peerId,
-      protocol_version: '1'
+      ...serializeSyncProtocolTxt()
     },
     type: COMPANION_SYNC_MDNS_SERVICE_TYPE
   });

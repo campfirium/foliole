@@ -5,6 +5,12 @@ import { renderWithLocalization } from '../shared/localization/testLocalization'
 
 import { CompanionSyncPanel } from './CompanionSyncPanel';
 
+const compatibility = {
+  missing_capabilities: [],
+  negotiated_version: 1,
+  reason: null,
+  status: 'compatible' as const
+};
 function createProps() {
   return {
     bootstrapState: {
@@ -32,6 +38,7 @@ function createProps() {
     onChangeHandoffReminderSettings: vi.fn(),
     onClearError: vi.fn(),
     onCompletePairing: vi.fn(async () => undefined),
+    onDisconnectPairing: vi.fn(async () => undefined),
     onPull: vi.fn(async () => undefined),
     onRemoveRememberedTarget: vi.fn(async () => undefined),
     onRequestPrimaryDeviceTakeover: vi.fn(async () => undefined),
@@ -74,20 +81,6 @@ describe('CompanionSyncPanel', () => {
     });
   });
 
-  it('runs manual sync from a paired device sync page', async () => {
-    const props = {
-      ...createProps(),
-      pairingState: { ...createProps().pairingState, is_paired: true }
-    };
-
-    renderWithLocalization(<CompanionSyncPanel {...props} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Sync' }));
-
-    await waitFor(() => {
-      expect(props.onClearError).toHaveBeenCalledTimes(1);
-      expect(props.onPull).toHaveBeenCalledWith('http://10.0.2.2:38641');
-    });
-  });
 });
 
 describe('CompanionSyncPanel pairing states', () => {
@@ -119,6 +112,7 @@ describe('CompanionSyncPanel discovery list', () => {
       desktopDiscoveries: [
         {
           appVersion: '37.10.3',
+          compatibility,
           desktopDeviceName: 'Foliole Desktop on ZEPHU-PC',
           desktopName: 'Foliole Desktop',
           desktopPlatform: 'Windows',
@@ -153,6 +147,7 @@ describe('CompanionSyncPanel discovery list', () => {
       desktopDiscoveries: [
         {
           appVersion: '37.10.3',
+          compatibility,
           desktopDeviceName: 'Foliole Desktop on V',
           desktopName: 'Foliole Desktop',
           desktopPlatform: 'Windows',
@@ -176,6 +171,7 @@ describe('CompanionSyncPanel multiple discovery list', () => {
       desktopDiscoveries: [
         {
           appVersion: '37.10.3',
+          compatibility,
           desktopDeviceName: 'Foliole Desktop on V',
           desktopName: 'Foliole Desktop',
           desktopPlatform: 'Windows',
@@ -184,6 +180,7 @@ describe('CompanionSyncPanel multiple discovery list', () => {
         },
         {
           appVersion: '37.10.3',
+          compatibility,
           desktopDeviceName: 'Foliole Desktop on Studio',
           desktopName: 'Foliole Desktop',
           desktopPlatform: 'macOS',

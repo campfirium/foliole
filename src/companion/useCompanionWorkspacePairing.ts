@@ -20,8 +20,7 @@ export type CompanionPairingStatus =
   | 'idle'
   | 'checking-desktop'
   | 'requesting-pair'
-  | 'awaiting-approval'
-  | 'completing-pair';
+  | 'awaiting-approval';
 
 type PairingHookArgs = {
   bootstrapState: NativeCompanionBootstrapState;

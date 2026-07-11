@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
+import type { SyncProtocolCompatibilityResult, SyncProtocolDescriptor } from '../../lib/platform/syncProtocolContract.js';
+
 const PAIR_REQUEST_TTL_MS = 2 * 60 * 1000;
 const PAIR_REQUEST_RATE_LIMIT_MAX = 5;
 const PAIR_REQUEST_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
@@ -7,12 +9,14 @@ const PAIR_COMPLETION_RATE_LIMIT_MAX = 10;
 const PAIR_COMPLETION_RATE_LIMIT_WINDOW_MS = 60 * 1000;
 
 export interface PendingCompanionPairRequest {
+  compatibility: SyncProtocolCompatibilityResult;
   client_address: string | null;
   device_id: string;
   device_kind: string;
   device_name: string;
   expires_at: string;
   pairing_public_key: string;
+  protocol: SyncProtocolDescriptor;
   pair_request_id: string;
   requested_at: string;
   status: 'approved' | 'pending' | 'rejected';
@@ -63,11 +67,13 @@ function reserveRateLimitSlot(args: { clientAddress?: string | null; deviceId: s
 function toPublicRequest(request: StoredCompanionPairRequest): PendingCompanionPairRequest {
   return {
     client_address: request.client_address,
+    compatibility: request.compatibility,
     device_id: request.device_id,
     device_kind: request.device_kind,
     device_name: request.device_name,
     expires_at: request.expires_at,
     pairing_public_key: request.pairing_public_key,
+    protocol: request.protocol,
     pair_request_id: request.pair_request_id,
     requested_at: request.requested_at,
     status: request.status
@@ -76,11 +82,13 @@ function toPublicRequest(request: StoredCompanionPairRequest): PendingCompanionP
 
 export function createCompanionPairRequest(args: {
   clientAddress?: string | null;
+  compatibility: SyncProtocolCompatibilityResult;
   deviceId: string;
   deviceKind: string;
   deviceName: string;
   nowMs?: number;
   pairingPublicKey: string;
+  protocol: SyncProtocolDescriptor;
 }) {
   const nowMs = args.nowMs ?? Date.now();
   pruneExpiredRequests(nowMs);
@@ -89,6 +97,8 @@ export function createCompanionPairRequest(args: {
   });
   if (existingPendingRequest) {
     existingPendingRequest.pairing_public_key = args.pairingPublicKey.trim();
+    existingPendingRequest.compatibility = args.compatibility;
+    existingPendingRequest.protocol = args.protocol;
     return {
       created: false,
       rate_limited: false,
@@ -110,6 +120,7 @@ export function createCompanionPairRequest(args: {
   const expiresAtMs = nowMs + PAIR_REQUEST_TTL_MS;
   const request: StoredCompanionPairRequest = {
     client_address: args.clientAddress?.trim() || null,
+    compatibility: args.compatibility,
     device_id: args.deviceId.trim(),
     device_kind: args.deviceKind.trim(),
     device_name: args.deviceName.trim(),
@@ -117,6 +128,7 @@ export function createCompanionPairRequest(args: {
     expires_at_ms: expiresAtMs,
     completion: null,
     pairing_public_key: args.pairingPublicKey.trim(),
+    protocol: args.protocol,
     pair_request_id: randomUUID(),
     requested_at: new Date(nowMs).toISOString(),
     status: 'pending'

@@ -1,7 +1,5 @@
 import type {
-  NativeCompanionPairingState,
   NativeCompanionReadableArticlePayload,
-  NativeCompanionSignedRequestHeaders,
   NativeCompanionSyncEvent,
   NativeCompanionWorkspaceSyncState
 } from '../../../lib/platform/nativeCompanionSyncContract';
@@ -18,14 +16,19 @@ import type { SyncDiagnosticSnapshot } from '../../../lib/platform/syncDiagnosti
 
 import type { CompanionAttachmentResourceSyncPlugin } from './companionAttachmentResourceSyncPluginTypes';
 import type { CompanionContentBlobSyncPlugin } from './companionContentBlobSyncPluginTypes';
+import type { CompanionPairingSyncPlugin } from './companionPairingSyncPluginTypes';
 import type { SyncPushAck } from './companionSyncPushProtocol';
 
 interface CompanionDiscoveryCandidatesPayload {
-  endpoint_urls: string[];
+  candidates: Array<{
+    endpoint_url: string;
+    protocol_txt?: Record<string, string>;
+    source: 'direct' | 'nsd';
+  }>;
 }
 
 export interface CompanionWorkspaceSyncPlugin
-  extends CompanionAttachmentResourceSyncPlugin, CompanionContentBlobSyncPlugin {
+  extends CompanionAttachmentResourceSyncPlugin, CompanionContentBlobSyncPlugin, CompanionPairingSyncPlugin {
   desktopHttpRequest(args: {
     body?: string;
     headers?: Record<string, string>;
@@ -66,8 +69,6 @@ export interface CompanionWorkspaceSyncPlugin
   loadSyncReviewLogCursor(): Promise<{ cursor: NativeSyncChangeCursor | null }>;
   loadSyncReviewLogPushCursor(): Promise<{ cursor: NativeSyncChangeCursor | null }>;
   loadSyncReviewLog(args: { cursor: NativeSyncChangeCursor | null; limit?: number }): Promise<{ reviews: NativeSyncReviewLogRecord[] }>;
-  clearPairingCredentials(): Promise<NativeCompanionPairingState>;
-  loadPairingState(): Promise<NativeCompanionPairingState>;
   loadDiscoveryCandidates(): Promise<CompanionDiscoveryCandidatesPayload>;
   loadWorkspaceSyncState(): Promise<NativeCompanionWorkspaceSyncState>;
   loadReadableArticle(): Promise<NativeCompanionReadableArticlePayload>;
@@ -192,28 +193,10 @@ export interface CompanionWorkspaceSyncPlugin
     scroll_top: number;
     source?: 'user-scroll';
   }): Promise<{ content_hash: string; object_id: string }>;
-  savePairingCredentials(args: {
-    device_id: string;
-    device_kind: string;
-    device_name: string;
-    device_secret: string;
-    paired_at: string;
-    primary_device_id: string;
-  }): Promise<NativeCompanionPairingState>;
-  savePrimaryDeviceId(args: {
-    primary_device_id: string;
-  }): Promise<NativeCompanionPairingState>;
   resolveAttachmentResource(args: { attachment_id: string }): Promise<{
     mime_type?: string | null;
     resource_url: string | null;
     status: 'missing_file' | 'not_found' | 'ready';
   }>;
   saveWorkspaceSyncEndpoint(args: { endpoint_url: string | null }): Promise<NativeCompanionWorkspaceSyncState>;
-  signCompanionSyncRequest(args: {
-    body_hash: string;
-    method: string;
-    nonce: string;
-    path_with_query: string;
-    timestamp: string;
-  }): Promise<NativeCompanionSignedRequestHeaders>;
 }

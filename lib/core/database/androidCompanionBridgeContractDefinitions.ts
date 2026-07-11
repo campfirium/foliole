@@ -1,4 +1,63 @@
 export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
+  methodInventory: {
+    folioleCompanionSync: [
+      'clearPairingCredentials',
+      'commitAttachmentResourceBatch',
+      'commitContentBlobBatch',
+      'desktopHttpRequest',
+      'diagnoseSync',
+      'downloadAttachmentResourceBatch',
+      'downloadContentBlobBatch',
+      'loadDiscoveryCandidates',
+      'loadExternalDirectory',
+      'loadExternalDocument',
+      'loadMissingAttachmentResource',
+      'loadMissingAttachmentResources',
+      'loadMissingContentBlobHashes',
+      'loadPairingState',
+      'loadPdfPageText',
+      'loadReadableArticle',
+      'loadSyncIndex',
+      'loadSyncNodeConflicts',
+      'loadSyncNodeVersionCursor',
+      'loadSyncNodeVersionPushCursor',
+      'loadSyncNodeVersions',
+      'loadSyncObjects',
+      'loadSyncPackCursor',
+      'loadSyncReviewLog',
+      'loadSyncReviewLogCursor',
+      'loadSyncReviewLogPushCursor',
+      'loadSyncStateChanges',
+      'loadSyncStateCursor',
+      'loadSyncStatePushCursor',
+      'loadWorkspaceSyncState',
+      'recordWorkspaceSyncEvent',
+      'releaseDatabaseConnection',
+      'removeWorkspaceSyncRememberedTarget',
+      'resolveAttachmentResource',
+      'savePairingCredentials',
+      'savePrimaryDeviceId',
+      'saveSyncActiveViewState',
+      'saveSyncNodeReadingRecord',
+      'saveSyncNodeReviewRecord',
+      'saveSyncNodeVersionCursor',
+      'saveSyncNodeVersionPushCursor',
+      'saveSyncNodeViewState',
+      'saveSyncOnboardingStatus',
+      'saveSyncPackCursor',
+      'saveSyncPushAcks',
+      'saveSyncReviewLogCursor',
+      'saveSyncReviewLogPushCursor',
+      'saveSyncSettingRecord',
+      'saveSyncStateCursor',
+      'saveSyncStatePushCursor',
+      'saveWorkspaceSyncEndpoint',
+      'searchExternalDocuments',
+      'searchPdfPageText',
+      'searchTopics',
+      'signCompanionSyncRequest'
+    ]
+  },
   hostApi: {
     bootstrap: {
       deviceNameDefaults: {
@@ -32,7 +91,18 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
         timeoutMs: 1500
       },
       discoveryResponseKeys: {
-        endpointUrls: 'endpoint_urls'
+        candidates: 'candidates'
+      },
+      discoveryCandidateKeys: {
+        endpointUrl: 'endpoint_url',
+        protocolTxt: 'protocol_txt',
+        source: 'source'
+      },
+      protocolTxtKeys: {
+        capabilities: 'protocol_capabilities',
+        maxSupportedVersion: 'protocol_max_version',
+        minSupportedVersion: 'protocol_min_version',
+        version: 'protocol_version'
       },
       requestKeys: {
         body: 'body',
@@ -71,8 +141,10 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
       deviceKind: 'device_kind',
       deviceName: 'device_name',
       deviceSecret: 'device_secret',
+      negotiatedProtocolVersion: 'negotiated_protocol_version',
       pairedAt: 'paired_at',
-      primaryDeviceId: 'primary_device_id'
+      primaryDeviceId: 'primary_device_id',
+      remoteProtocol: 'remote_protocol'
     },
     preferenceKeys: {
       deviceId: 'device_id',
@@ -80,8 +152,10 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
       deviceName: 'device_name',
       deviceSecret: 'device_secret',
       deviceSecretIv: 'device_secret_iv',
+      negotiatedProtocolVersion: 'negotiated_protocol_version',
       pairedAt: 'paired_at',
-      primaryDeviceId: 'primary_device_id'
+      primaryDeviceId: 'primary_device_id',
+      remoteProtocol: 'remote_protocol'
     },
     storageKeys: {
       keyAlias: 'foliole_companion_pairing_secret',
@@ -110,8 +184,12 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
       deviceKind: 'device_kind',
       deviceName: 'device_name',
       isPaired: 'is_paired',
+      negotiatedProtocolVersion: 'negotiated_protocol_version',
       pairedAt: 'paired_at',
-      primaryDeviceId: 'primary_device_id'
+      primaryDeviceId: 'primary_device_id',
+      remoteProtocol: 'remote_protocol',
+      repairRequired: 'repair_required',
+      syncUsable: 'sync_usable'
     }
   },
   resourcePlugin: {

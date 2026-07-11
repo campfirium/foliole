@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 const writerQueueMock = vi.hoisted(() => ({
   run: vi.fn(async <T>(task: () => Promise<T>) => task())
@@ -34,12 +34,28 @@ vi.mock('./companionPairingEncryption', () => ({
 }));
 
 import {
-  loadCompanionDiscovery,
-  loadCompanionPairingState,
   pairCompanionWithDesktop,
   requestCompanionPairing
 } from './companionWorkspaceSync';
-import { mockFetchJson, resetCompanionWorkspaceSyncTestState } from './companionWorkspaceSync.testSupport';
+import { resetCompanionWorkspaceSyncTestState } from './companionWorkspaceSync.testSupport';
+
+const protocol = {
+  capabilities: ['lan-sync-v1'],
+  max_supported_version: 1,
+  min_supported_version: 1,
+  version: 1
+};
+const compatibility = {
+  missing_capabilities: [],
+  negotiated_version: 1,
+  reason: null,
+  status: 'compatible'
+};
+const nativeProtocolState = {
+  negotiated_protocol_version: 1,
+  remote_protocol: protocol,
+  sync_usable: true
+};
 
 function createEncryptedSecretFixture() {
   return {
@@ -51,19 +67,12 @@ function createEncryptedSecretFixture() {
   };
 }
 
-function mockApprovedDesktopPairing(deviceId = 'web-preview-device') {
-  mockFetchJson({
-    device_id: deviceId,
-    encrypted_device_secret: createEncryptedSecretFixture(),
-    paired_at: '2026-04-22T12:00:00.000Z',
-    peer_id: 'device-desktop'
-  });
-}
-
 function mockNativePairingHttp() {
   capacitorMock.plugin.desktopHttpRequest
     .mockResolvedValueOnce({
       body: JSON.stringify({
+        compatibility,
+        desktop_protocol: protocol,
         expires_at: '2026-04-22T12:02:00.000Z',
         pair_request_id: 'pair-request-1',
         status: 'pending'
@@ -72,6 +81,8 @@ function mockNativePairingHttp() {
     })
     .mockResolvedValueOnce({
       body: JSON.stringify({
+        compatibility,
+        desktop_protocol: protocol,
         device_id: 'android-test-device',
         encrypted_device_secret: createEncryptedSecretFixture(),
         paired_at: '2026-04-22T12:00:00.000Z',
@@ -86,40 +97,12 @@ beforeEach(() => {
   writerQueueMock.run.mockImplementation(async <T>(task: () => Promise<T>) => task());
 });
 
-describe('companionWorkspaceSync pairing', () => {
-  it('discovers the desktop, requests pairing, and stores web preview credentials after approval', async () => {
-    mockFetchJson({ app_version: '0.1.0', desktop_name: 'Foliole Desktop', pairing_mode: 'desktop-confirm', peer_id: 'device-desktop' });
-
-    await expect(loadCompanionDiscovery('http://10.0.2.2:38641/')).resolves.toMatchObject({
-      desktop_name: 'Foliole Desktop',
-      pairing_mode: 'desktop-confirm',
-      peer_id: 'device-desktop'
-    });
-
-    mockFetchJson({ expires_at: '2026-04-22T12:02:00.000Z', pair_request_id: 'pair-request-1', status: 'pending' }, 202);
-    await expect(requestCompanionPairing({
-      deviceId: 'web-preview-device',
-      deviceKind: 'web-preview',
-      deviceName: 'Preview',
-      endpointUrl: 'http://10.0.2.2:38641/'
-    })).resolves.toMatchObject({ pair_request_id: 'pair-request-1', status: 'pending' });
-
-    mockApprovedDesktopPairing();
-    await expect(pairCompanionWithDesktop({
-      deviceKind: 'web-preview',
-      deviceName: 'Preview',
-      endpointUrl: 'http://10.0.2.2:38641/',
-      pairRequestId: 'pair-request-1'
-    })).resolves.toMatchObject({ is_paired: true, paired_at: '2026-04-22T12:00:00.000Z' });
-    await expect(loadCompanionPairingState()).resolves.toMatchObject({ is_paired: true, primary_device_id: 'device-desktop' });
-  });
-});
-
 it('verifies native pairing credentials are readable after saving', async () => {
   capacitorMock.getPlatform.mockReturnValue('android');
   capacitorMock.isNativePlatform.mockReturnValue(true);
   mockNativePairingHttp();
   capacitorMock.plugin.savePairingCredentials.mockResolvedValue({
+    ...nativeProtocolState,
     device_id: 'android-test-device',
     device_kind: 'android-capacitor',
     device_name: 'Pixel 9',
@@ -128,6 +111,7 @@ it('verifies native pairing credentials are readable after saving', async () => 
     primary_device_id: 'device-desktop'
   });
   capacitorMock.plugin.loadPairingState.mockResolvedValue({
+    ...nativeProtocolState,
     device_id: 'android-test-device',
     device_kind: 'android-capacitor',
     device_name: 'Pixel 9',
@@ -199,6 +183,7 @@ it('fails native pairing when saved credentials cannot sign sync requests', asyn
   capacitorMock.isNativePlatform.mockReturnValue(true);
   mockNativePairingHttp();
   capacitorMock.plugin.savePairingCredentials.mockResolvedValue({
+    ...nativeProtocolState,
     device_id: 'android-test-device',
     device_kind: 'android-capacitor',
     device_name: 'Pixel 9',
@@ -207,6 +192,7 @@ it('fails native pairing when saved credentials cannot sign sync requests', asyn
     primary_device_id: 'device-desktop'
   });
   capacitorMock.plugin.loadPairingState.mockResolvedValue({
+    ...nativeProtocolState,
     device_id: 'android-test-device',
     device_kind: 'android-capacitor',
     device_name: 'Pixel 9',

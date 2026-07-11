@@ -4,6 +4,18 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CompanionSyncContent } from './CompanionSyncContent';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
+const protocol = {
+  capabilities: ['lan-sync-v1'],
+  max_supported_version: 1,
+  min_supported_version: 1,
+  version: 1
+};
+const usablePairingMetadata = {
+  negotiated_protocol_version: 1,
+  remote_protocol: protocol,
+  sync_usable: true
+};
+
 afterEach(() => {
   window.localStorage.clear();
   vi.useRealTimers();
@@ -74,6 +86,7 @@ describe('CompanionSyncContent', () => {
   it('shows and persists mobile handoff reminder settings after pairing', () => {
     const workspaceSync = createWorkspaceSync();
     workspaceSync.pairingState = {
+      ...usablePairingMetadata,
       device_id: 'android-test-device',
       device_kind: 'android-capacitor',
       device_name: 'Android Emulator',
@@ -115,6 +128,7 @@ describe('CompanionSyncContent', () => {
 function pairedWorkspaceSync() {
   const workspaceSync = createWorkspaceSync();
   workspaceSync.pairingState = {
+    ...usablePairingMetadata,
     device_id: 'android-test-device',
     device_kind: 'android-capacitor',
     device_name: 'Android Emulator',
@@ -171,6 +185,7 @@ async function testCompletesApprovedPairing() {
       device_kind: 'android-capacitor',
       device_name: 'Android companion',
       is_paired: true,
+      ...usablePairingMetadata,
       paired_at: '2026-04-24T10:03:00.000Z',
       primary_device_id: 'device-desktop'
   }));
@@ -191,8 +206,25 @@ async function testCompletesApprovedPairing() {
   expect(workspaceSync.pullFromDesktop).toHaveBeenCalledWith('http://192.168.1.8:38641');
 }
 
+async function testKeepsApprovalPollingBelowDesktopRateLimit() {
+  vi.useFakeTimers();
+  const workspaceSync = createWorkspaceSync();
+  workspaceSync.pendingPairRequest = {
+    endpointUrl: 'http://192.168.1.8:38641',
+    expiresAt: '2026-04-24T10:02:00.000Z',
+    pairRequestId: 'pair-request-1'
+  };
+  workspaceSync.pairingStatus = 'awaiting-approval';
+
+  render(<CompanionSyncContent workspaceSync={workspaceSync} />);
+  await act(async () => vi.advanceTimersByTimeAsync(60_000));
+
+  expect(workspaceSync.completePairing).toHaveBeenCalledTimes(9);
+}
+
 describe('CompanionSyncContent paired flow', () => {
   it('shows sync status details for a paired device', testShowsSyncStatusDetails);
   it('lets a synced secondary device request primary takeover', testRequestsPrimaryTakeover);
   it('automatically completes pairing after desktop approval', testCompletesApprovedPairing);
+  it('keeps approval polling below the desktop completion rate limit', testKeepsApprovalPollingBelowDesktopRateLimit);
 });

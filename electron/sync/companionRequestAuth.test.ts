@@ -3,6 +3,8 @@ import type http from 'node:http';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
+
 const pairingStoreMock = vi.hoisted(() => ({
   loadPairedCompanionDevice: vi.fn()
 }));
@@ -62,12 +64,16 @@ function signedHeaders(args: {
 }
 
 function mockPairedDevice() {
+  const protocolMetadata = {
+    negotiated_protocol_version: 1,
+    remote_protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
+  };
   pairingStoreMock.loadPairedCompanionDevice.mockImplementation((deviceId: string) => {
     if (deviceId === SECOND_DEVICE_ID) {
-      return { device_id: SECOND_DEVICE_ID, device_secret: SECOND_DEVICE_SECRET };
+      return { ...protocolMetadata, device_id: SECOND_DEVICE_ID, device_secret: SECOND_DEVICE_SECRET };
     }
     if (deviceId === DEVICE_ID) {
-      return { device_id: DEVICE_ID, device_secret: DEVICE_SECRET };
+      return { ...protocolMetadata, device_id: DEVICE_ID, device_secret: DEVICE_SECRET };
     }
     return null;
   });
@@ -157,6 +163,22 @@ function assertCrossDeviceNonceFloodDoesNotAllowReplay() {
 }
 
 describe('companion request auth', () => {
+  it('blocks old pairing records before signature or nonce processing', () => {
+    pairingStoreMock.loadPairedCompanionDevice.mockReturnValue({
+      device_id: DEVICE_ID,
+      device_secret: DEVICE_SECRET
+    });
+
+    expect(authenticateCompanionRequest({
+      nowMs: NOW_MS,
+      request: createRequest(signedHeaders({ nonce: 'repair-nonce' }))
+    })).toEqual({
+      error: 'protocol_pairing_repair_required',
+      ok: false,
+      status_code: 409
+    });
+  });
+
   it('does not consume nonce values before a request signature is valid', () => {
     assertInvalidSignatureDoesNotConsumeNonce();
   });

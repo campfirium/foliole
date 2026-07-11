@@ -2,6 +2,20 @@ import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
+import { CompanionPairingHttpError } from '../shared/platform/companionPairingHttpError';
+
+const protocol = {
+  capabilities: ['lan-sync-v1'],
+  max_supported_version: 1,
+  min_supported_version: 1,
+  version: 1
+};
+const compatible = {
+  missing_capabilities: [],
+  negotiated_version: 1,
+  reason: null,
+  status: 'compatible' as const
+};
 
 const syncMocks = vi.hoisted(() => ({
   discoverCompanionDesktop: vi.fn(),
@@ -49,12 +63,14 @@ function mockStoredPairingState() {
 
 function desktopDiscovery(hostName = 'V', endpointUrl = 'http://192.168.1.8:38641') {
   return {
+    compatibility: compatible,
     discovery: {
       app_version: '0.1.0',
       desktop_device_name: `Foliole Desktop on ${hostName}`,
       desktop_name: 'Foliole Desktop',
       desktop_platform: hostName === 'Studio' ? 'macOS' : 'Windows',
-      peer_id: `desktop-${hostName.toLowerCase()}`
+      peer_id: `desktop-${hostName.toLowerCase()}`,
+      protocol
     },
     endpointUrl
   };
@@ -74,7 +90,10 @@ function pairedState() {
     device_kind: 'android-capacitor',
     device_name: 'Pixel 9',
     is_paired: true,
-    paired_at: '2026-04-24T10:03:00.000Z'
+    negotiated_protocol_version: 1,
+    paired_at: '2026-04-24T10:03:00.000Z',
+    remote_protocol: protocol,
+    sync_usable: true
   };
 }
 
@@ -87,7 +106,9 @@ describe('useCompanionWorkspacePairing request flow', () => {
     mockStoredPairingState();
     syncMocks.discoverCompanionDesktop.mockResolvedValue(desktopDiscovery());
     mockPairRequest();
-    syncMocks.pairCompanionWithDesktop.mockRejectedValue(new Error('Desktop pairing failed with 404.'));
+    syncMocks.pairCompanionWithDesktop.mockRejectedValue(
+      new CompanionPairingHttpError(404, 'pair_request_not_found', null)
+    );
     const args = createArgs();
 
     const { result } = renderHook(() => useCompanionWorkspacePairing(args));
@@ -98,7 +119,7 @@ describe('useCompanionWorkspacePairing request flow', () => {
     expect(result.current.pendingPairRequest?.pairRequestId).toBe('pair-request-1');
 
     await act(async () => {
-      await expect(result.current.completePairing()).rejects.toThrow('Desktop pairing failed with 404.');
+      await expect(result.current.completePairing()).rejects.toThrow('pair_request_not_found');
     });
 
     expect(result.current.pendingPairRequest).toBeNull();
@@ -139,11 +160,13 @@ describe('useCompanionWorkspacePairing completion flow', () => {
     await act(async () => {
       await result.current.requestPairing('http://192.168.1.8:38641');
     });
+    expect(result.current.pairingStatus).toBe('awaiting-approval');
 
     await act(async () => {
       const first = result.current.completePairing();
       const second = result.current.completePairing();
       expect(first).toBe(second);
+      expect(result.current.pairingStatus).toBe('awaiting-approval');
       await first;
     });
 

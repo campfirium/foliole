@@ -1,5 +1,11 @@
 import type http from 'node:http';
 
+import {
+  CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
+  evaluateSyncProtocolCompatibility,
+  parseSyncProtocolDescriptor
+} from '../../lib/platform/syncProtocolContract.js';
+
 import { readCompanionRequestBody } from './companionLanRequestBody.js';
 import { encryptCompanionPairingSecret, isSupportedPairingPublicKey } from './companionPairingEncryption.js';
 import {
@@ -91,14 +97,8 @@ export async function handlePairRequest(
   writeJson: JsonResponder
 ) {
   if (writePairCompletionRateLimit(request, response, writeJson)) return;
-  let payload: Record<string, unknown>;
-  try {
-    payload = await readJsonPayload(request);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'invalid_json';
-    writeJson(request, response, message === 'request_too_large' ? 413 : 400, { error: message });
-    return;
-  }
+  const payload = await readPairCompletionPayload(request, response, writeJson);
+  if (!payload) return;
   const pairRequestId = typeof payload.pair_request_id === 'string' ? payload.pair_request_id.trim() : '';
   if (!pairRequestId) {
     writeJson(request, response, 400, { error: 'invalid_pair_request' });
@@ -109,11 +109,22 @@ export async function handlePairRequest(
     return;
   }
   const approvedRequest = completionState.request;
+  const compatibility = evaluateSyncProtocolCompatibility(approvedRequest.protocol);
+  if (compatibility.status === 'incompatible') {
+    writeJson(request, response, 409, {
+      compatibility,
+      desktop_protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
+      error: 'protocol_incompatible'
+    });
+    return;
+  }
   const paired = completionState.completion ?? registerPairedCompanionDevice({
     clientAddress: approvedRequest.client_address,
     deviceId: approvedRequest.device_id,
     deviceKind: approvedRequest.device_kind,
-    deviceName: approvedRequest.device_name
+    deviceName: approvedRequest.device_name,
+    negotiatedProtocolVersion: compatibility.negotiated_version ?? CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version,
+    remoteProtocol: approvedRequest.protocol
   });
   if (!completionState.completion) {
     completeCompanionPairRequest(pairRequestId, {
@@ -127,13 +138,38 @@ export async function handlePairRequest(
     deviceSecret: paired.device_secret
   });
   writePairingStatus(updatePairingStatus);
-  writeJson(request, response, 200, {
+  writePairCompletionResponse(request, response, writeJson, {
     app_version: appVersion,
+    compatibility,
+    desktop_protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
     device_id: paired.device_id,
     encrypted_device_secret: encryptedDeviceSecret,
     paired_at: paired.paired_at,
     peer_id: peerId
   });
+}
+
+async function readPairCompletionPayload(
+  request: http.IncomingMessage,
+  response: http.ServerResponse,
+  writeJson: JsonResponder
+) {
+  try {
+    return await readJsonPayload(request);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'invalid_json';
+    writeJson(request, response, message === 'request_too_large' ? 413 : 400, { error: message });
+    return null;
+  }
+}
+
+function writePairCompletionResponse(
+  request: http.IncomingMessage,
+  response: http.ServerResponse,
+  writeJson: JsonResponder,
+  payload: Record<string, unknown>
+) {
+  writeJson(request, response, 200, payload);
 }
 
 export async function handlePairRequestCreate(
@@ -155,16 +191,28 @@ export async function handlePairRequestCreate(
   const deviceKind = typeof payload.device_kind === 'string' ? payload.device_kind.trim() : '';
   const deviceName = typeof payload.device_name === 'string' ? payload.device_name.trim() : '';
   const pairingPublicKey = typeof payload.pairing_public_key === 'string' ? payload.pairing_public_key.trim() : '';
+  const protocol = parseSyncProtocolDescriptor(payload.protocol);
   if (!deviceId || !deviceKind || !deviceName || !isSupportedPairingPublicKey(pairingPublicKey)) {
     writeJson(request, response, 400, { error: 'invalid_pair_request' });
     return;
   }
+  const compatibility = evaluateSyncProtocolCompatibility(payload.protocol);
+  if (!protocol || compatibility.status === 'incompatible') {
+    writeJson(request, response, 409, {
+      compatibility,
+      desktop_protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
+      error: 'protocol_incompatible'
+    });
+    return;
+  }
   const created = createCompanionPairRequest({
     clientAddress: normalizeClientAddress(request.socket.remoteAddress),
+    compatibility,
     deviceId,
     deviceKind,
     deviceName,
-    pairingPublicKey
+    pairingPublicKey,
+    protocol
   });
   if (created.rate_limited) {
     writeJson(request, response, 429, {
@@ -176,6 +224,8 @@ export async function handlePairRequestCreate(
   writePairingStatus(updatePairingStatus);
   onPairRequestCreated?.();
   writeJson(request, response, created.created ? 202 : 409, {
+    compatibility,
+    desktop_protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
     expires_at: created.request.expires_at,
     pair_request_id: created.request.pair_request_id,
     status: 'pending'

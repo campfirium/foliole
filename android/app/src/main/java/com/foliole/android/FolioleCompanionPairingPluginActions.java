@@ -3,6 +3,7 @@ package com.foliole.android;
 import android.content.Context;
 
 import com.getcapacitor.PluginCall;
+import com.getcapacitor.JSObject;
 
 final class FolioleCompanionPairingPluginActions {
     private FolioleCompanionPairingPluginActions() {}
@@ -32,12 +33,16 @@ final class FolioleCompanionPairingPluginActions {
             String deviceSecretKey = FolioleCompanionBridgeContractDefinitions.pairingDeviceSecretCredentialRequestKey(context);
             String pairedAtKey = FolioleCompanionBridgeContractDefinitions.pairingPairedAtCredentialRequestKey(context);
             String primaryDeviceIdKey = FolioleCompanionBridgeContractDefinitions.pairingPrimaryDeviceIdCredentialRequestKey(context);
+            String negotiatedVersionKey = FolioleCompanionBridgeContractDefinitions.pairingNegotiatedProtocolVersionCredentialRequestKey(context);
+            String remoteProtocolKey = FolioleCompanionBridgeContractDefinitions.pairingRemoteProtocolCredentialRequestKey(context);
             String deviceId = call.getString(deviceIdKey);
             String deviceKind = call.getString(deviceKindKey);
             String deviceName = call.getString(deviceNameKey);
             String deviceSecret = call.getString(deviceSecretKey);
             String pairedAt = call.getString(pairedAtKey);
             String primaryDeviceId = call.getString(primaryDeviceIdKey);
+            Integer negotiatedVersion = call.getInt(negotiatedVersionKey);
+            JSObject remoteProtocol = call.getObject(remoteProtocolKey);
             if (
                 rejectIfBlank(call, deviceIdKey, deviceId) ||
                 rejectIfBlank(call, deviceKindKey, deviceKind) ||
@@ -48,14 +53,20 @@ final class FolioleCompanionPairingPluginActions {
             ) {
                 return;
             }
+            if (negotiatedVersion == null || remoteProtocol == null) {
+                call.reject("Pairing protocol metadata is required.");
+                return;
+            }
             call.resolve(FolioleCompanionPairingStore.savePairingCredentials(
                 context,
                 deviceId,
                 deviceKind,
                 deviceName,
                 deviceSecret,
+                negotiatedVersion,
                 pairedAt,
-                primaryDeviceId
+                primaryDeviceId,
+                remoteProtocol
             ));
         } catch (Exception exception) {
             call.reject("Failed to save companion pairing credentials.", exception);

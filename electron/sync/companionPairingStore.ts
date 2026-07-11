@@ -4,6 +4,8 @@ import path from 'node:path';
 
 import { app, safeStorage } from 'electron';
 
+import type { SyncProtocolDescriptor } from '../../lib/platform/syncProtocolContract.js';
+
 const PAIRED_DEVICE_STORE_FILE = 'companion-paired-devices.bin';
 const CORRUPT_STORE_SUFFIX = '.corrupt-';
 
@@ -13,7 +15,9 @@ export interface PairedCompanionDevice {
   device_kind: string;
   device_name: string;
   device_secret: string;
+  negotiated_protocol_version?: number;
   paired_at: string;
+  remote_protocol?: SyncProtocolDescriptor;
 }
 
 interface PairedDeviceStorePayload {
@@ -171,7 +175,9 @@ export function registerPairedCompanionDevice(args: {
   deviceId: string;
   deviceKind: string;
   deviceName: string;
+  negotiatedProtocolVersion: number;
   pairedAt?: string;
+  remoteProtocol: SyncProtocolDescriptor;
 }) {
   const now = args.pairedAt ?? new Date().toISOString();
   const next: PairedCompanionDevice = {
@@ -180,7 +186,9 @@ export function registerPairedCompanionDevice(args: {
     device_kind: args.deviceKind.trim(),
     device_name: args.deviceName.trim(),
     device_secret: randomBytes(32).toString('base64url'),
-    paired_at: now
+    negotiated_protocol_version: args.negotiatedProtocolVersion,
+    paired_at: now,
+    remote_protocol: args.remoteProtocol
   };
   const store = readStoreStrict();
   if (store.devices.some((device) => isSameLanLabel(device, next))) {

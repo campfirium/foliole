@@ -6,12 +6,10 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 final class FolioleCompanionBridgeContractDefinitions {
-    private static final String BRIDGE_CONTRACT_ASSET_PATH = "companion-bridge-contract-definitions.json";
-
     private FolioleCompanionBridgeContractDefinitions() {}
 
     static int resourceDefault(Context context, String key) throws Exception {
-        return intValue(context, "resourcePlugin", "defaults", key);
+        return FolioleCompanionBridgeContractAsset.intValue(context, "resourcePlugin", "defaults", key);
     }
 
     static int resourceExternalDocumentSearchLimitDefault(Context context) throws Exception {
@@ -31,7 +29,7 @@ final class FolioleCompanionBridgeContractDefinitions {
     }
 
     static String pairingCredentialRequestKey(Context context, String key) throws Exception {
-        return string(context, "pairingPlugin", "credentialRequestKeys", key);
+        return FolioleCompanionBridgeContractAsset.string(context, "pairingPlugin", "credentialRequestKeys", key);
     }
 
     static String pairingDeviceIdCredentialRequestKey(Context context) throws Exception {
@@ -58,8 +56,16 @@ final class FolioleCompanionBridgeContractDefinitions {
         return pairingCredentialRequestKey(context, "primaryDeviceId");
     }
 
+    static String pairingNegotiatedProtocolVersionCredentialRequestKey(Context context) throws Exception {
+        return pairingCredentialRequestKey(context, "negotiatedProtocolVersion");
+    }
+
+    static String pairingRemoteProtocolCredentialRequestKey(Context context) throws Exception {
+        return pairingCredentialRequestKey(context, "remoteProtocol");
+    }
+
     static String pairingPreferenceKey(Context context, String key) throws Exception {
-        return string(context, "pairingPlugin", "preferenceKeys", key);
+        return FolioleCompanionBridgeContractAsset.string(context, "pairingPlugin", "preferenceKeys", key);
     }
 
     static String pairingDeviceIdPreferenceKey(Context context) throws Exception {
@@ -90,8 +96,16 @@ final class FolioleCompanionBridgeContractDefinitions {
         return pairingPreferenceKey(context, "primaryDeviceId");
     }
 
+    static String pairingNegotiatedProtocolVersionPreferenceKey(Context context) throws Exception {
+        return pairingPreferenceKey(context, "negotiatedProtocolVersion");
+    }
+
+    static String pairingRemoteProtocolPreferenceKey(Context context) throws Exception {
+        return pairingPreferenceKey(context, "remoteProtocol");
+    }
+
     static String pairingStorageKey(Context context, String key) throws Exception {
-        return string(context, "pairingPlugin", "storageKeys", key);
+        return FolioleCompanionBridgeContractAsset.string(context, "pairingPlugin", "storageKeys", key);
     }
 
     static String pairingKeyAliasStorageKey(Context context) throws Exception {
@@ -103,7 +117,7 @@ final class FolioleCompanionBridgeContractDefinitions {
     }
 
     static String pairingSignatureHeaderKey(Context context, String key) throws Exception {
-        return pairingSignatureString(context, "headerKeys", key);
+        return FolioleCompanionBridgeContractAsset.pairingSignatureString(context, "headerKeys", key);
     }
 
     static String pairingDeviceIdSignatureHeaderKey(Context context) throws Exception {
@@ -123,7 +137,7 @@ final class FolioleCompanionBridgeContractDefinitions {
     }
 
     static String pairingSignatureRequestKey(Context context, String key) throws Exception {
-        return pairingSignatureString(context, "requestKeys", key);
+        return FolioleCompanionBridgeContractAsset.pairingSignatureString(context, "requestKeys", key);
     }
 
     static String pairingBodyHashSignatureRequestKey(Context context) throws Exception {
@@ -147,7 +161,7 @@ final class FolioleCompanionBridgeContractDefinitions {
     }
 
     static String pairingSignatureResponseKey(Context context, String key) throws Exception {
-        return pairingSignatureString(context, "responseKeys", key);
+        return FolioleCompanionBridgeContractAsset.pairingSignatureString(context, "responseKeys", key);
     }
 
     static String pairingHeadersSignatureResponseKey(Context context) throws Exception {
@@ -155,7 +169,7 @@ final class FolioleCompanionBridgeContractDefinitions {
     }
 
     static String pairingStateKey(Context context, String key) throws Exception {
-        return string(context, "pairingPlugin", "stateKeys", key);
+        return FolioleCompanionBridgeContractAsset.string(context, "pairingPlugin", "stateKeys", key);
     }
 
     static String pairingDeviceIdStateKey(Context context) throws Exception {
@@ -182,8 +196,24 @@ final class FolioleCompanionBridgeContractDefinitions {
         return pairingStateKey(context, "primaryDeviceId");
     }
 
+    static String pairingNegotiatedProtocolVersionStateKey(Context context) throws Exception {
+        return pairingStateKey(context, "negotiatedProtocolVersion");
+    }
+
+    static String pairingRemoteProtocolStateKey(Context context) throws Exception {
+        return pairingStateKey(context, "remoteProtocol");
+    }
+
+    static String pairingRepairRequiredStateKey(Context context) throws Exception {
+        return pairingStateKey(context, "repairRequired");
+    }
+
+    static String pairingSyncUsableStateKey(Context context) throws Exception {
+        return pairingStateKey(context, "syncUsable");
+    }
+
     static String resourceRequestKey(Context context, String key) throws Exception {
-        return string(context, "resourcePlugin", "requestKeys", key);
+        return FolioleCompanionBridgeContractAsset.string(context, "resourcePlugin", "requestKeys", key);
     }
 
     static String resourceAttachmentIdRequestKey(Context context) throws Exception {
@@ -231,76 +261,22 @@ final class FolioleCompanionBridgeContractDefinitions {
     }
 
     static String hostApiString(Context context, String groupName, String objectName, String key) throws Exception {
-        return hostApiObject(context, groupName, objectName).getString(key);
+        return FolioleCompanionBridgeContractAsset.hostApiObject(context, groupName, objectName).getString(key);
     }
 
     static String hostApiString(Context context, String groupName, String key) throws Exception {
-        return hostApiGroup(context, groupName).getString(key);
+        return FolioleCompanionBridgeContractAsset.hostApiGroup(context, groupName).getString(key);
     }
 
     static int hostApiInt(Context context, String groupName, String objectName, String key) throws Exception {
-        return hostApiObject(context, groupName, objectName).getInt(key);
+        return FolioleCompanionBridgeContractAsset.hostApiObject(context, groupName, objectName).getInt(key);
     }
 
     static JSONArray hostApiArray(Context context, String groupName, String objectName, String key) throws Exception {
-        return hostApiObject(context, groupName, objectName).getJSONArray(key);
+        return FolioleCompanionBridgeContractAsset.hostApiObject(context, groupName, objectName).getJSONArray(key);
     }
 
     static JSONObject hostApiGroup(Context context, String groupName) throws Exception {
-        return section(context, "hostApi").getJSONObject(groupName);
-    }
-
-    private static JSONObject hostApiObject(Context context, String groupName, String objectName) throws Exception {
-        JSONObject object = hostApiGroup(context, groupName).optJSONObject(objectName);
-        if (object == null) {
-            throw new IllegalStateException("Companion bridge contract asset is missing object: hostApi." + groupName + "." + objectName);
-        }
-        return object;
-    }
-
-    private static String pairingSignatureString(Context context, String objectName, String key) throws Exception {
-        return pairingSignatureObject(context, objectName).getString(key);
-    }
-
-    private static JSONObject pairingSignatureObject(Context context, String objectName) throws Exception {
-        JSONObject object = object(context, "pairingPlugin", "signature").optJSONObject(objectName);
-        if (object == null) {
-            throw new IllegalStateException("Companion bridge contract asset is missing object: pairingPlugin.signature." + objectName);
-        }
-        return object;
-    }
-
-    private static JSONObject section(Context context, String sectionName) throws Exception {
-        JSONObject section = definitions(context).optJSONObject(sectionName);
-        if (section == null) {
-            throw new IllegalStateException("Companion bridge contract asset is missing section: " + sectionName);
-        }
-        return section;
-    }
-
-    private static String string(Context context, String sectionName, String objectName, String key) throws Exception {
-        JSONObject object = object(context, sectionName, objectName);
-        if (!object.has(key)) {
-            throw new IllegalStateException(
-                "Companion bridge contract asset is missing key: " + sectionName + "." + objectName + "." + key
-            );
-        }
-        return object.getString(key);
-    }
-
-    private static JSONObject object(Context context, String sectionName, String objectName) throws Exception {
-        JSONObject object = section(context, sectionName).optJSONObject(objectName);
-        if (object == null) {
-            throw new IllegalStateException("Companion bridge contract asset is missing object: " + sectionName + "." + objectName);
-        }
-        return object;
-    }
-
-    private static int intValue(Context context, String sectionName, String objectName, String key) throws Exception {
-        return object(context, sectionName, objectName).getInt(key);
-    }
-
-    private static JSONObject definitions(Context context) throws Exception {
-        return new JSONObject(FolioleCompanionAssetReader.read(context, BRIDGE_CONTRACT_ASSET_PATH));
+        return FolioleCompanionBridgeContractAsset.hostApiGroup(context, groupName);
     }
 }

@@ -8,7 +8,7 @@ import { useCompanionHandoffReminderSettings } from './useCompanionHandoffRemind
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
-const PAIRING_APPROVAL_POLL_MS = 1_500;
+const PAIRING_APPROVAL_POLL_MS = 7_000;
 
 function buildSyncPanelProps(args: {
   handoffReminders: ReturnType<typeof useCompanionHandoffReminderSettings>;
@@ -67,7 +67,7 @@ export function CompanionSyncContent(props: {
     const completeApprovedPairing = () => {
       void workspaceSync.completePairing()
         .then((pairingState) => {
-          if (pairingState?.is_paired) {
+          if (pairingState?.sync_usable) {
             return workspaceSync.pullFromDesktop(pairingEndpoint);
           }
           return null;

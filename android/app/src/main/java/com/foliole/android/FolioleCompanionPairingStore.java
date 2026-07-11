@@ -25,6 +25,7 @@ final class FolioleCompanionPairingStore {
         SharedPreferences prefs = prefs(context);
         JSObject result = new JSObject();
         String deviceId = prefs.getString(FolioleCompanionBridgeContractDefinitions.pairingDeviceIdPreferenceKey(context), null);
+        boolean hasCredentials = canReadPairingSecret(context, deviceId);
         result.put(FolioleCompanionBridgeContractDefinitions.pairingDeviceIdStateKey(context), trimToNull(deviceId));
         result.put(
             FolioleCompanionBridgeContractDefinitions.pairingDeviceKindStateKey(context),
@@ -34,7 +35,7 @@ final class FolioleCompanionPairingStore {
             FolioleCompanionBridgeContractDefinitions.pairingDeviceNameStateKey(context),
             trimToNull(prefs.getString(FolioleCompanionBridgeContractDefinitions.pairingDeviceNamePreferenceKey(context), null))
         );
-        result.put(FolioleCompanionBridgeContractDefinitions.pairingIsPairedStateKey(context), canReadPairingSecret(context, deviceId));
+        result.put(FolioleCompanionBridgeContractDefinitions.pairingIsPairedStateKey(context), hasCredentials);
         result.put(
             FolioleCompanionBridgeContractDefinitions.pairingPairedAtStateKey(context),
             trimToNull(prefs.getString(FolioleCompanionBridgeContractDefinitions.pairingPairedAtPreferenceKey(context), null))
@@ -43,6 +44,7 @@ final class FolioleCompanionPairingStore {
             FolioleCompanionBridgeContractDefinitions.pairingPrimaryDeviceIdStateKey(context),
             trimToNull(prefs.getString(FolioleCompanionBridgeContractDefinitions.pairingPrimaryDeviceIdPreferenceKey(context), null))
         );
+        FolioleCompanionPairingProtocolStore.addState(context, prefs, result, hasCredentials);
         return result;
     }
 
@@ -56,8 +58,10 @@ final class FolioleCompanionPairingStore {
         String deviceKind,
         String deviceName,
         String deviceSecret,
+        int negotiatedProtocolVersion,
         String pairedAt,
-        String primaryDeviceId
+        String primaryDeviceId,
+        JSObject remoteProtocol
     ) throws Exception {
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
         cipher.init(Cipher.ENCRYPT_MODE, loadOrCreateSecretKey(context));
@@ -66,15 +70,16 @@ final class FolioleCompanionPairingStore {
             throw new IllegalStateException("Android Keystore did not provide an encryption IV.");
         }
         byte[] encrypted = cipher.doFinal(deviceSecret.getBytes(StandardCharsets.UTF_8));
-        boolean saved = prefs(context).edit()
+        SharedPreferences.Editor editor = prefs(context).edit()
             .putString(FolioleCompanionBridgeContractDefinitions.pairingDeviceIdPreferenceKey(context), deviceId.trim())
             .putString(FolioleCompanionBridgeContractDefinitions.pairingDeviceKindPreferenceKey(context), deviceKind.trim())
             .putString(FolioleCompanionBridgeContractDefinitions.pairingDeviceNamePreferenceKey(context), deviceName.trim())
             .putString(FolioleCompanionBridgeContractDefinitions.pairingDeviceSecretPreferenceKey(context), Base64.encodeToString(encrypted, Base64.NO_WRAP))
             .putString(FolioleCompanionBridgeContractDefinitions.pairingDeviceSecretIvPreferenceKey(context), Base64.encodeToString(iv, Base64.NO_WRAP))
             .putString(FolioleCompanionBridgeContractDefinitions.pairingPairedAtPreferenceKey(context), pairedAt.trim())
-            .putString(FolioleCompanionBridgeContractDefinitions.pairingPrimaryDeviceIdPreferenceKey(context), primaryDeviceId.trim())
-            .commit();
+            .putString(FolioleCompanionBridgeContractDefinitions.pairingPrimaryDeviceIdPreferenceKey(context), primaryDeviceId.trim());
+        FolioleCompanionPairingProtocolStore.save(context, editor, negotiatedProtocolVersion, remoteProtocol);
+        boolean saved = editor.commit();
         if (!saved) {
             throw new IllegalStateException("Failed to persist companion pairing credentials.");
         }
@@ -90,6 +95,7 @@ final class FolioleCompanionPairingStore {
         String bodyHash
     ) throws Exception {
         String deviceId = requireMeta(context, FolioleCompanionBridgeContractDefinitions.pairingDeviceIdPreferenceKey(context));
+        FolioleCompanionPairingProtocolStore.assertUsable(context, prefs(context));
         String secret = decryptSecret(context);
         String canonical = method.toUpperCase() + "\n" + pathWithQuery + "\n" + timestamp + "\n" + nonce + "\n" + bodyHash;
         JSObject headers = new JSObject();
@@ -139,15 +145,16 @@ final class FolioleCompanionPairingStore {
 
     static void clearPairingCredentials(Context context) {
         try {
-            prefs(context).edit()
+            SharedPreferences.Editor editor = prefs(context).edit()
                 .remove(FolioleCompanionBridgeContractDefinitions.pairingDeviceIdPreferenceKey(context))
                 .remove(FolioleCompanionBridgeContractDefinitions.pairingDeviceKindPreferenceKey(context))
                 .remove(FolioleCompanionBridgeContractDefinitions.pairingDeviceNamePreferenceKey(context))
                 .remove(FolioleCompanionBridgeContractDefinitions.pairingDeviceSecretPreferenceKey(context))
                 .remove(FolioleCompanionBridgeContractDefinitions.pairingDeviceSecretIvPreferenceKey(context))
                 .remove(FolioleCompanionBridgeContractDefinitions.pairingPairedAtPreferenceKey(context))
-                .remove(FolioleCompanionBridgeContractDefinitions.pairingPrimaryDeviceIdPreferenceKey(context))
-                .apply();
+                .remove(FolioleCompanionBridgeContractDefinitions.pairingPrimaryDeviceIdPreferenceKey(context));
+            FolioleCompanionPairingProtocolStore.clear(context, editor);
+            editor.apply();
         } catch (Exception exception) {
             throw new IllegalStateException("Companion bridge contract asset is missing pairing preference key.", exception);
         }

@@ -15,7 +15,13 @@ interface CompanionRequestAuthSuccess {
 }
 
 interface CompanionRequestAuthFailure {
-  error: 'expired_timestamp' | 'invalid_signature' | 'missing_headers' | 'replayed_nonce' | 'unknown_device';
+  error:
+    | 'expired_timestamp'
+    | 'invalid_signature'
+    | 'missing_headers'
+    | 'protocol_pairing_repair_required'
+    | 'replayed_nonce'
+    | 'unknown_device';
   ok: false;
   status_code: 401 | 409;
 }
@@ -107,13 +113,9 @@ export function authenticateCompanionRequest(args: {
     };
   }
   const pairedDevice = loadPairedCompanionDevice(deviceId);
-  if (!pairedDevice) {
-    return {
-      error: 'unknown_device',
-      ok: false,
-      status_code: 401
-    };
-  }
+  const pairedDeviceError = validatePairedDevice(pairedDevice);
+  if (pairedDeviceError) return pairedDeviceError;
+  const authenticatedDevice = pairedDevice!;
   const nowMs = args.nowMs ?? Date.now();
   const timestampMs = Date.parse(timestamp);
   if (!Number.isFinite(timestampMs) || Math.abs(nowMs - timestampMs) > AUTH_WINDOW_MS) {
@@ -130,7 +132,7 @@ export function authenticateCompanionRequest(args: {
     pathWithQuery: parsePathWithQuery(args.request),
     timestamp
   });
-  const expectedSignature = createHmac('sha256', pairedDevice.device_secret).update(canonicalPayload).digest('hex');
+  const expectedSignature = createHmac('sha256', authenticatedDevice.device_secret).update(canonicalPayload).digest('hex');
   if (!compareSignatures(signature, expectedSignature)) {
     return {
       error: 'invalid_signature',
@@ -149,4 +151,18 @@ export function authenticateCompanionRequest(args: {
     device_id: deviceId,
     ok: true
   };
+}
+
+function validatePairedDevice(pairedDevice: ReturnType<typeof loadPairedCompanionDevice>) {
+  if (!pairedDevice) {
+    return { error: 'unknown_device' as const, ok: false as const, status_code: 401 as const };
+  }
+  if (!pairedDevice.remote_protocol || pairedDevice.negotiated_protocol_version !== 1) {
+    return {
+      error: 'protocol_pairing_repair_required' as const,
+      ok: false as const,
+      status_code: 409 as const
+    };
+  }
+  return null;
 }

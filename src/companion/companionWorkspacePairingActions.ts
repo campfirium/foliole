@@ -1,5 +1,6 @@
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
 import type { NativeCompanionPairingState } from '../../lib/platform/nativeCompanionSyncContract';
+import { CompanionPairingHttpError } from '../shared/platform/companionPairingHttpError';
 import {
   discoverCompanionDesktop,
   discoverCompanionDesktops,
@@ -50,7 +51,9 @@ function createCheckDesktopAction(args: {
     args.onError(null);
     try {
       const discoveries = await discoverCompanionDesktops(endpointUrl);
-      args.setDesktopDiscoveries(discoveries.map((result) => normalizeDiscovery(result.endpointUrl, result.discovery)));
+      args.setDesktopDiscoveries(discoveries.map((result) => (
+        normalizeDiscovery(result.endpointUrl, result.discovery, result.compatibility)
+      )));
       args.setPairingStatus('idle');
       return discoveries;
     } catch (error) {
@@ -75,6 +78,9 @@ function createRequestPairingAction(
     try {
       const selectedDiscovery = args.desktopDiscoveries.find((discovery) => discovery.endpointUrl === endpointUrl.trim());
       const normalizedDiscovery = selectedDiscovery ?? await discoverAndNormalizeDesktop(endpointUrl);
+      if (normalizedDiscovery.compatibility.status === 'incompatible') {
+        throw new Error('Update Foliole on both devices, then try pairing again.');
+      }
       const nextRequest = await requestCompanionPairing({
         deviceId: args.bootstrapState.device_id,
         deviceKind: args.bootstrapState.runtime_kind,
@@ -99,8 +105,8 @@ function createRequestPairingAction(
 }
 
 async function discoverAndNormalizeDesktop(endpointUrl: string) {
-  const { discovery, endpointUrl: discoveredEndpointUrl } = await discoverCompanionDesktop(endpointUrl);
-  return normalizeDiscovery(discoveredEndpointUrl, discovery);
+  const result = await discoverCompanionDesktop(endpointUrl);
+  return normalizeDiscovery(result.endpointUrl, result.discovery, result.compatibility);
 }
 
 type CompletePairingActionArgs = PairingActionArgs & {
@@ -112,9 +118,11 @@ type CompletePairingActionArgs = PairingActionArgs & {
 
 async function handleCompletePairingError(args: CompletePairingActionArgs, error: unknown) {
   const message = error instanceof Error ? error.message : 'Failed to complete desktop pairing.';
-  const isStillAwaitingApproval = message.includes('409') || message.includes('pair_request_pending');
-  const isExpired = message.includes('404') || message.includes('pair_request_not_found');
-  const isRejected = message.includes('403') || message.includes('pair_request_rejected');
+  const code = error instanceof CompanionPairingHttpError ? error.code : null;
+  const isStillAwaitingApproval = code === 'pair_request_pending';
+  const isExpired = code === 'pair_request_not_found';
+  const isRejected = code === 'pair_request_rejected';
+  const isProtocolIncompatible = code === 'protocol_incompatible';
   const storedPairingState = isExpired ? await loadCompanionPairingState().catch(() => null) : null;
   if (storedPairingState?.is_paired) {
     args.setPairingState(storedPairingState);
@@ -123,10 +131,20 @@ async function handleCompletePairingError(args: CompletePairingActionArgs, error
     args.onError(null);
     return storedPairingState;
   }
-  const shouldKeepWaiting = isStillAwaitingApproval || (!isExpired && !isRejected);
+  const shouldKeepWaiting = isStillAwaitingApproval;
   args.setPairingStatus(shouldKeepWaiting ? 'awaiting-approval' : 'idle');
   if (!shouldKeepWaiting) args.setPendingPairRequest(null);
-  args.onError(isStillAwaitingApproval ? null : isExpired ? 'Pairing request expired. Tap Pair again.' : isRejected ? 'Pairing request was rejected.' : message);
+  args.onError(
+    isStillAwaitingApproval
+      ? null
+      : isExpired
+        ? 'Pairing request expired. Tap Pair again.'
+        : isRejected
+          ? 'Pairing request was rejected.'
+          : isProtocolIncompatible
+            ? 'Update Foliole on both devices, then pair again.'
+            : message
+  );
   throw error;
 }
 
@@ -140,7 +158,6 @@ function createCompletePairingAction(args: CompletePairingActionArgs) {
       args.onError(null);
       return currentPairingState;
     }
-    args.setPairingStatus('completing-pair');
     args.onError(null);
     try {
       const nextPairingState = await pairCompanionWithDesktop({

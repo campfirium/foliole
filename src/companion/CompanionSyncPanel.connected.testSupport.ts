@@ -40,8 +40,16 @@ export function createConnectedProps() {
       device_kind: 'android-capacitor',
       device_name: 'Android companion',
       is_paired: true,
+      negotiated_protocol_version: 1,
       paired_at: '2026-04-22T09:00:00.000Z',
-      primary_device_id: 'android-test-device'
+      primary_device_id: 'android-test-device',
+      remote_protocol: {
+        capabilities: ['lan-sync-v1'],
+        max_supported_version: 1,
+        min_supported_version: 1,
+        version: 1
+      },
+      sync_usable: true
     },
     pairingStatus: 'idle' as const,
     status: 'idle' as const

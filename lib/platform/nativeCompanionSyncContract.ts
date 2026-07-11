@@ -1,5 +1,10 @@
 import type { WorkspaceSnapshot } from '../core/database/workspaceSnapshot.js';
 
+import type {
+  SyncProtocolCompatibilityResult,
+  SyncProtocolDescriptor
+} from './syncProtocolContract.js';
+
 export interface NativeCompanionSyncEvent {
   endpoint_url: string | null;
   id: string;
@@ -35,8 +40,13 @@ export interface NativeCompanionPairingState {
   device_kind: string | null;
   device_name: string | null;
   is_paired: boolean;
+  negotiated_protocol_version?: number | null;
   paired_at: string | null;
   primary_device_id: string | null;
+  protocol_compatibility?: SyncProtocolCompatibilityResult;
+  remote_protocol?: SyncProtocolDescriptor | null;
+  repair_required?: boolean;
+  sync_usable?: boolean;
 }
 
 export interface NativeCompanionSignedRequestHeaders {
@@ -74,9 +84,12 @@ export interface CompanionWorkspaceDiscoveryPayload {
   desktop_platform: string;
   pairing_mode: 'desktop-confirm';
   peer_id: string;
+  protocol: SyncProtocolDescriptor;
 }
 
 export interface CompanionWorkspacePairRequestPayload {
+  compatibility: SyncProtocolCompatibilityResult;
+  desktop_protocol: SyncProtocolDescriptor;
   expires_at: string;
   pair_request_id: string;
   status: 'pending';
@@ -91,10 +104,12 @@ export interface CompanionPairingSecretPayload {
 }
 
 export interface CompanionWorkspacePairPayload {
+  compatibility: SyncProtocolCompatibilityResult;
   device_id: string;
   encrypted_device_secret: CompanionPairingSecretPayload;
   paired_at: string;
   peer_id: string;
+  desktop_protocol: SyncProtocolDescriptor;
 }
 
 export interface DesktopCompanionPairRequestPayload {

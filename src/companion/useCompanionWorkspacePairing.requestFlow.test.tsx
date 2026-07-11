@@ -3,6 +3,13 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
 
+const compatible = {
+  missing_capabilities: [],
+  negotiated_version: 1,
+  reason: null,
+  status: 'compatible' as const
+};
+
 const syncMocks = vi.hoisted(() => ({
   discoverCompanionDesktop: vi.fn(),
   discoverCompanionDesktops: vi.fn(),
@@ -39,12 +46,19 @@ function createArgs() {
 
 function desktopDiscovery(hostName = 'V', endpointUrl = 'http://192.168.1.8:38641') {
   return {
+    compatibility: compatible,
     discovery: {
       app_version: '0.1.0',
       desktop_device_name: `Foliole Desktop on ${hostName}`,
       desktop_name: 'Foliole Desktop',
       desktop_platform: hostName === 'Studio' ? 'macOS' : 'Windows',
-      peer_id: `desktop-${hostName.toLowerCase()}`
+      peer_id: `desktop-${hostName.toLowerCase()}`,
+      protocol: {
+        capabilities: ['lan-sync-v1'],
+        max_supported_version: 1,
+        min_supported_version: 1,
+        version: 1
+      }
     },
     endpointUrl
   };

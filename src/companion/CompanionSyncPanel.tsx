@@ -2,10 +2,12 @@ import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCom
 import type { NativeCompanionPairingState, NativeCompanionSyncEvent } from '../../lib/platform/nativeCompanionSyncContract';
 import { useTranslation, type Translate } from '../shared/localization/LocalizationProvider';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
+import { isCompanionPairingSyncUsable } from '../shared/platform/companionPairingState';
 
 import type { CompanionHandoffReminderSettings } from './companionHandoffReminderSettings';
 import { CompanionHandoffReminderSettingsPanel } from './CompanionHandoffReminderSettingsPanel';
 import { CompanionSyncDiscoveryDialog } from './CompanionSyncDiscoveryDialog';
+import { CompanionSyncRepairPairingState } from './CompanionSyncRepairPairingState';
 import { AwaitingApprovalState, EmptyDiscoveryState } from './CompanionSyncSetupStates';
 import { CompanionSyncStatusDetails } from './CompanionSyncStatusDetails';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
@@ -42,7 +44,7 @@ type CompanionSyncPanelProps = {
     pairRequestId: string;
   } | null;
   pairingState: NativeCompanionPairingState;
-  pairingStatus: 'idle' | 'checking-desktop' | 'requesting-pair' | 'awaiting-approval' | 'completing-pair';
+  pairingStatus: 'idle' | 'checking-desktop' | 'requesting-pair' | 'awaiting-approval';
   status: 'idle' | 'loading' | 'syncing';
 };
 
@@ -65,7 +67,15 @@ function formatSyncPanelError(message: string, t: Translate) {
   if (message.includes('pair_request_rejected') || message.includes('Pairing request was rejected') || (isPairingError && message.includes('403'))) {
     return t('companion.sync.discovery.error.pairingRejected');
   }
-  if (message.includes('Desktop discovery failed')) return t('companion.sync.discovery.error.discoveryFailed');
+  if (message.includes('protocol_incompatible') || message.includes('protocol_pairing_repair_required')) {
+    return t('companion.sync.discovery.error.incompatible');
+  }
+  if (message.includes('pair_completion_rate_limited')) {
+    return t('companion.sync.discovery.error.requestFailed');
+  }
+  if (message.includes('Desktop discovery failed') || message.includes('No desktop sync device found')) {
+    return t('companion.sync.discovery.error.discoveryFailed');
+  }
   if (message.includes('Failed to load pairing state')) return t('companion.sync.discovery.error.loadPairingFailed');
   if (message.includes('Failed to request desktop pairing')) return t('companion.sync.discovery.error.requestFailed');
   if (message.includes('Failed to set this device as primary')) return t('companion.sync.discovery.error.primaryFailed');
@@ -128,7 +138,10 @@ function MainSyncContent(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | '
   onSync(): void;
   onTryAgain(): void;
 }) {
-  if (props.pairingState.is_paired) {
+  if (props.pairingState.is_paired && !isCompanionPairingSyncUsable(props.pairingState)) {
+    return <CompanionSyncRepairPairingState onRepair={props.onDisconnectPairing} />;
+  }
+  if (isCompanionPairingSyncUsable(props.pairingState)) {
     return props.page === 'syncHandoff' ? null : (
       <ConnectedState
         endpointUrl={props.endpointUrl}
@@ -158,6 +171,7 @@ export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
   const isBusy = props.pairingStatus !== 'idle' && props.pairingStatus !== 'awaiting-approval';
   const desktopDiscoveries = resolveDesktopDiscoveries(props);
   const hasPairing = props.pairingState.is_paired;
+  const hasUsablePairing = isCompanionPairingSyncUsable(props.pairingState);
   const isDiscovering = props.pairingStatus === 'checking-desktop' || desktopDiscoveries.length > 0;
 
   async function handleTryAgain() {
@@ -193,7 +207,7 @@ export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
           onTryAgain={() => void handleTryAgain()}
         />
         {props.error ? <p className="text-sm text-error">{formatSyncPanelError(props.error, t)}</p> : null}
-        {hasPairing && (props.page === 'sync' || props.page === 'syncHandoff') ? (
+        {hasUsablePairing && (props.page === 'sync' || props.page === 'syncHandoff') ? (
           <CompanionHandoffReminderSettingsPanel
             page={props.page}
             settings={props.handoffReminderSettings}

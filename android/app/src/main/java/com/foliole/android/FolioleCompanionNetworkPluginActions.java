@@ -43,15 +43,15 @@ final class FolioleCompanionNetworkPluginActions {
     static void loadDiscoveryCandidates(Context context, PluginCall call) {
         new Thread(() -> {
             try {
-                JSArray endpointUrls = new JSArray();
+                JSArray candidates = new JSArray();
                 if (isEmulator(context)) {
-                    addEndpoint(context, endpointUrls, FolioleCompanionHostBridgeContractDefinitions.networkEmulatorHost(context));
+                    addDirectCandidate(context, candidates, FolioleCompanionHostBridgeContractDefinitions.networkEmulatorHost(context));
                 }
-                for (String endpointUrl : FolioleCompanionNsdDiscovery.discoverEndpointUrls(context)) {
-                    endpointUrls.put(endpointUrl);
+                for (JSObject candidate : FolioleCompanionNsdDiscovery.discoverCandidates(context)) {
+                    candidates.put(candidate);
                 }
                 JSObject result = new JSObject();
-                result.put(FolioleCompanionHostBridgeContractDefinitions.networkEndpointUrlsResponseKey(context), endpointUrls);
+                result.put(FolioleCompanionHostBridgeContractDefinitions.networkCandidatesResponseKey(context), candidates);
                 call.resolve(result);
             } catch (Exception exception) {
                 call.reject(FolioleCompanionPluginErrors.withCause("Failed to load companion discovery candidates.", exception), exception);
@@ -59,8 +59,14 @@ final class FolioleCompanionNetworkPluginActions {
         }).start();
     }
 
-    private static void addEndpoint(Context context, JSArray endpointUrls, String hostAddress) throws Exception {
-        endpointUrls.put(FolioleCompanionHostBridgeContractDefinitions.networkEndpointUrl(context, hostAddress));
+    private static void addDirectCandidate(Context context, JSArray candidates, String hostAddress) throws Exception {
+        JSObject candidate = new JSObject();
+        candidate.put(
+            FolioleCompanionHostBridgeContractDefinitions.networkEndpointUrlCandidateKey(context),
+            FolioleCompanionHostBridgeContractDefinitions.networkEndpointUrl(context, hostAddress)
+        );
+        candidate.put(FolioleCompanionHostBridgeContractDefinitions.networkSourceCandidateKey(context), "direct");
+        candidates.put(candidate);
     }
 
     private static boolean isEmulator(Context context) throws Exception {

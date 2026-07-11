@@ -1,4 +1,11 @@
 import {
+  evaluateSyncProtocolCompatibility,
+  parseSyncProtocolTxt,
+  syncProtocolDescriptorsMatch,
+  type SyncProtocolCompatibilityResult
+} from '../../../lib/platform/syncProtocolContract';
+
+import {
   DISCOVERY_ENDPOINT_PATH,
   FolioleCompanionSync,
   isNativeAndroidCompanionRuntime,
@@ -7,16 +14,34 @@ import {
 } from './companionWorkspaceRuntimeRepository';
 
 export type CompanionDiscoveryResult = {
+  compatibility: SyncProtocolCompatibilityResult;
   discovery: LoadCompanionDiscoveryResponse;
   endpointUrl: string;
+};
+
+type DiscoveryCandidate = {
+  endpointUrl: string;
+  protocolTxt: Record<string, string> | null;
+  source: 'direct' | 'nsd';
 };
 
 const DEV_REVERSE_ENDPOINT = 'http://127.0.0.1:38641';
 const DISCOVERY_TIMEOUT_MS = 1200;
 const DISCOVERY_BATCH_SIZE = 24;
 
-function uniqueEndpoints(endpointUrls: string[]) {
-  return [...new Set(endpointUrls.map((url) => normalizeEndpointUrl(url)).filter(Boolean))];
+function directCandidate(endpointUrl: string): DiscoveryCandidate {
+  return { endpointUrl: normalizeEndpointUrl(endpointUrl), protocolTxt: null, source: 'direct' };
+}
+
+function uniqueCandidates(candidates: DiscoveryCandidate[]) {
+  const byEndpoint = new Map<string, DiscoveryCandidate>();
+  candidates.forEach((candidate) => {
+    const endpointUrl = normalizeEndpointUrl(candidate.endpointUrl);
+    if (!endpointUrl) return;
+    const current = byEndpoint.get(endpointUrl);
+    if (!current || candidate.source === 'nsd') byEndpoint.set(endpointUrl, { ...candidate, endpointUrl });
+  });
+  return [...byEndpoint.values()];
 }
 
 function createDiscoveryTimeout() {
@@ -25,28 +50,51 @@ function createDiscoveryTimeout() {
   return { controller, timeoutId };
 }
 
-async function loadNativeDiscoveryCandidateUrls(preferredEndpointUrl: string) {
+async function loadNativeDiscoveryCandidates(preferredEndpointUrl: string) {
   if (!isNativeAndroidCompanionRuntime()) {
-    return uniqueEndpoints([preferredEndpointUrl]);
+    return uniqueCandidates([directCandidate(preferredEndpointUrl)]);
   }
+  const direct = [directCandidate(preferredEndpointUrl), directCandidate(DEV_REVERSE_ENDPOINT)];
   try {
     const payload = await FolioleCompanionSync.loadDiscoveryCandidates();
-    return uniqueEndpoints([preferredEndpointUrl, DEV_REVERSE_ENDPOINT, ...(payload.endpoint_urls ?? [])]);
+    const native = (payload.candidates ?? []).map((candidate) => ({
+      endpointUrl: candidate.endpoint_url,
+      protocolTxt: candidate.protocol_txt ?? null,
+      source: candidate.source
+    }));
+    return uniqueCandidates([...direct, ...native]);
   } catch {
-    return uniqueEndpoints([preferredEndpointUrl, DEV_REVERSE_ENDPOINT]);
+    return uniqueCandidates(direct);
   }
 }
 
-async function tryLoadCompanionDiscovery(endpointUrl: string): Promise<CompanionDiscoveryResult | null> {
-  const normalizedEndpointUrl = normalizeEndpointUrl(endpointUrl);
+function resolveCompatibility(candidate: DiscoveryCandidate, discovery: LoadCompanionDiscoveryResponse) {
+  const compatibility = evaluateSyncProtocolCompatibility(discovery.protocol);
+  if (compatibility.status === 'incompatible' || candidate.source !== 'nsd') return compatibility;
+  const advertised = parseSyncProtocolTxt(candidate.protocolTxt);
+  if (!advertised || !syncProtocolDescriptorsMatch(advertised, discovery.protocol)) {
+    return {
+      missing_capabilities: [],
+      negotiated_version: null,
+      reason: 'protocol_advertisement_mismatch',
+      status: 'incompatible'
+    } satisfies SyncProtocolCompatibilityResult;
+  }
+  return compatibility;
+}
+
+async function tryLoadCompanionDiscovery(candidate: DiscoveryCandidate): Promise<CompanionDiscoveryResult | null> {
+  const normalizedEndpointUrl = normalizeEndpointUrl(candidate.endpointUrl);
   const { controller, timeoutId } = createDiscoveryTimeout();
   try {
     const response = await requestDiscovery(`${normalizedEndpointUrl}${DISCOVERY_ENDPOINT_PATH}`, controller.signal);
     if (!response.ok) {
       return null;
     }
+    const discovery = (await response.json()) as LoadCompanionDiscoveryResponse;
     return {
-      discovery: (await response.json()) as LoadCompanionDiscoveryResponse,
+      compatibility: resolveCompatibility(candidate, discovery),
+      discovery,
       endpointUrl: normalizedEndpointUrl
     };
   } catch {
@@ -76,11 +124,11 @@ function appendUniqueDiscovery(results: CompanionDiscoveryResult[], result: Comp
 }
 
 export async function discoverCompanionDesktops(preferredEndpointUrl: string): Promise<CompanionDiscoveryResult[]> {
-  const candidates = await loadNativeDiscoveryCandidateUrls(preferredEndpointUrl);
+  const candidates = await loadNativeDiscoveryCandidates(preferredEndpointUrl);
   const discovered: CompanionDiscoveryResult[] = [];
   for (let index = 0; index < candidates.length; index += DISCOVERY_BATCH_SIZE) {
     const batch = candidates.slice(index, index + DISCOVERY_BATCH_SIZE);
-    const results = await Promise.all(batch.map((endpointUrl) => tryLoadCompanionDiscovery(endpointUrl)));
+    const results = await Promise.all(batch.map((candidate) => tryLoadCompanionDiscovery(candidate)));
     results.forEach((result) => {
       if (result) {
         appendUniqueDiscovery(discovered, result);

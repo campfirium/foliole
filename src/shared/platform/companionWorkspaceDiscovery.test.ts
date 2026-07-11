@@ -19,6 +19,23 @@ vi.mock('@capacitor/core', () => ({
 
 import { discoverCompanionDesktop, discoverCompanionDesktops } from './companionWorkspaceDiscovery';
 
+const protocol = {
+  capabilities: ['lan-sync-v1'],
+  max_supported_version: 1,
+  min_supported_version: 1,
+  version: 1
+};
+const protocolTxt = {
+  protocol_capabilities: 'lan-sync-v1',
+  protocol_max_version: '1',
+  protocol_min_version: '1',
+  protocol_version: '1'
+};
+
+function nsdCandidate(endpoint_url: string) {
+  return { endpoint_url, protocol_txt: protocolTxt, source: 'nsd' };
+}
+
 function discoveryBody(args: { hostName: string; peerId: string; platform: string }) {
   return JSON.stringify({
     app_version: '0.1.0',
@@ -26,7 +43,8 @@ function discoveryBody(args: { hostName: string; peerId: string; platform: strin
     desktop_name: 'Foliole Desktop',
     desktop_platform: args.platform,
     pairing_mode: 'desktop-confirm',
-    peer_id: args.peerId
+    peer_id: args.peerId,
+    protocol
   });
 }
 
@@ -34,17 +52,17 @@ function desktopResponse(args: { hostName: string; peerId: string; platform: str
   return { body: discoveryBody(args), status: 200 };
 }
 
-describe('companionWorkspaceDiscovery', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.unstubAllGlobals();
-    capacitorMock.getPlatform.mockReturnValue('android');
-    capacitorMock.isNativePlatform.mockReturnValue(true);
-  });
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.unstubAllGlobals();
+  capacitorMock.getPlatform.mockReturnValue('android');
+  capacitorMock.isNativePlatform.mockReturnValue(true);
+});
 
+describe('companionWorkspaceDiscovery endpoint selection', () => {
   it('discovers a native Android desktop candidate beyond the emulator default', async () => {
     capacitorMock.plugin.loadDiscoveryCandidates.mockResolvedValue({
-      endpoint_urls: ['http://192.168.1.44:38641']
+      candidates: [nsdCandidate('http://192.168.1.44:38641')]
     });
     capacitorMock.plugin.desktopHttpRequest.mockImplementation(async ({ url }: { url: string }) => {
       if (url.startsWith('http://192.168.1.44:38641')) {
@@ -57,10 +75,11 @@ describe('companionWorkspaceDiscovery', () => {
 
     expect(result.endpointUrl).toBe('http://192.168.1.44:38641');
     expect(result.discovery.desktop_name).toBe('Foliole Desktop');
+    expect(result.compatibility.status).toBe('compatible');
   });
 
   it('uses the adb reverse loopback endpoint in emulator development', async () => {
-    capacitorMock.plugin.loadDiscoveryCandidates.mockResolvedValue({ endpoint_urls: [] });
+    capacitorMock.plugin.loadDiscoveryCandidates.mockResolvedValue({ candidates: [] });
     capacitorMock.plugin.desktopHttpRequest.mockImplementation(async ({ url }: { url: string }) => {
       if (url.startsWith('http://127.0.0.1:38641')) {
         return desktopResponse({ hostName: 'ZEPHU-PC', peerId: 'desktop-local', platform: 'Windows' });
@@ -72,10 +91,15 @@ describe('companionWorkspaceDiscovery', () => {
 
     expect(result.endpointUrl).toBe('http://127.0.0.1:38641');
   });
+});
 
+describe('companionWorkspaceDiscovery compatibility', () => {
   it('returns multiple desktops and deduplicates emulator aliases by peer id', async () => {
     capacitorMock.plugin.loadDiscoveryCandidates.mockResolvedValue({
-      endpoint_urls: ['http://192.168.1.44:38641', 'http://192.168.1.45:38641']
+      candidates: [
+        nsdCandidate('http://192.168.1.44:38641'),
+        nsdCandidate('http://192.168.1.45:38641')
+      ]
     });
     capacitorMock.plugin.desktopHttpRequest.mockImplementation(async ({ url }: { url: string }) => {
       if (
@@ -97,4 +121,22 @@ describe('companionWorkspaceDiscovery', () => {
     expect(results.map((result) => result.discovery.peer_id)).toEqual(['desktop-dev', 'desktop-studio']);
   });
 
+  it('keeps an incompatible desktop with an explainable compatibility result', async () => {
+    capacitorMock.plugin.loadDiscoveryCandidates.mockResolvedValue({
+      candidates: [nsdCandidate('http://192.168.1.44:38641')]
+    });
+    capacitorMock.plugin.desktopHttpRequest.mockImplementation(async ({ url }: { url: string }) => {
+      if (!url.startsWith('http://192.168.1.44:38641')) throw new TypeError('Failed to fetch');
+      const body = JSON.parse(discoveryBody({ hostName: 'Old', peerId: 'desktop-old', platform: 'Windows' }));
+      body.protocol = { ...protocol, version: 2, min_supported_version: 2, max_supported_version: 2 };
+      return { body: JSON.stringify(body), status: 200 };
+    });
+
+    const result = await discoverCompanionDesktop('http://10.0.2.2:38641');
+
+    expect(result.compatibility).toMatchObject({
+      reason: 'protocol_version_unsupported',
+      status: 'incompatible'
+    });
+  });
 });

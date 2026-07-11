@@ -1,8 +1,11 @@
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../../lib/platform/syncProtocolContract';
+
 import {
   createCompanionPairingPublicKey,
   decryptCompanionPairingSecret,
   dropCompanionPairingPrivateKey
 } from './companionPairingEncryption';
+import { CompanionPairingHttpError, readCompanionPairingError } from './companionPairingHttpError';
 import {
   clearWebPairingState,
   normalizePairingState,
@@ -96,8 +99,8 @@ export async function createSignedRequestHeaders(args: { bodyText?: string; meth
   }
 
   const stored = readStoredWebPairingState();
-  if (!stored?.device_id || !stored.device_secret) {
-    throw new Error('Companion is not paired with this desktop sync source.');
+  if (!stored?.device_id || !stored.device_secret || normalizePairingState(stored).sync_usable !== true) {
+    throw new Error('Companion is not paired with a compatible desktop sync source.');
   }
   return {
     'X-Device-Id': stored.device_id,
@@ -146,16 +149,21 @@ export async function requestCompanionPairing(args: RequestCompanionPairingArgs)
       device_id: args.deviceId,
       device_kind: args.deviceKind,
       device_name: args.deviceName,
-      pairing_public_key: pairingPublicKey
+      pairing_public_key: pairingPublicKey,
+      protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
     }),
     headers: { 'Content-Type': 'application/json' },
     method: 'POST'
   });
   if (response.status !== 202 && response.status !== 409) {
     dropCompanionPairingPrivateKey(pairingKeyId);
-    throw new Error(`Desktop pairing request failed with ${response.status}.`);
+    throw await readCompanionPairingError(response);
   }
-  const payload = (await response.json()) as RequestCompanionPairingResponse;
+  const payload = (await response.json()) as RequestCompanionPairingResponse & { error?: string };
+  if (payload.error) {
+    dropCompanionPairingPrivateKey(pairingKeyId);
+    throw new CompanionPairingHttpError(response.status, payload.error, payload.compatibility ?? null);
+  }
   pairingKeyIdsByRequestId.set(payload.pair_request_id, pairingKeyId);
   return payload;
 }
@@ -170,14 +178,7 @@ export async function pairCompanionWithDesktop(args: PairCompanionWithDesktopArg
     method: 'POST'
   });
   if (!response.ok) {
-    let reason = 'unknown_error';
-    try {
-      const errorPayload = (await response.json()) as { error?: unknown };
-      reason = typeof errorPayload.error === 'string' && errorPayload.error.trim() ? errorPayload.error : reason;
-    } catch {
-      reason = 'invalid_error_payload';
-    }
-    throw new Error(`Desktop pairing failed with ${response.status}: ${reason}.`);
+    throw await readCompanionPairingError(response);
   }
   const payload = (await response.json()) as PairCompanionWithDesktopResponse;
   const pairingKeyId = pairingKeyIdsByRequestId.get(args.pairRequestId);
@@ -193,8 +194,10 @@ export async function pairCompanionWithDesktop(args: PairCompanionWithDesktopArg
       device_name: args.deviceName,
       device_secret: deviceSecret,
       is_paired: true,
+      negotiated_protocol_version: payload.compatibility.negotiated_version,
       paired_at: payload.paired_at,
-      primary_device_id: payload.peer_id
+      primary_device_id: payload.peer_id,
+      remote_protocol: payload.desktop_protocol
     });
   }
   await runCompanionSyncWriterTask(() => FolioleCompanionSync.savePairingCredentials({
@@ -202,8 +205,10 @@ export async function pairCompanionWithDesktop(args: PairCompanionWithDesktopArg
     device_kind: args.deviceKind,
     device_name: args.deviceName,
     device_secret: deviceSecret,
+    negotiated_protocol_version: payload.compatibility.negotiated_version ?? CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version,
     paired_at: payload.paired_at,
-    primary_device_id: payload.peer_id
+    primary_device_id: payload.peer_id,
+    remote_protocol: payload.desktop_protocol
   }));
   const storedPairingState = normalizePairingState(await FolioleCompanionSync.loadPairingState());
   if (!storedPairingState.is_paired) {

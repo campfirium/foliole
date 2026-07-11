@@ -54,8 +54,10 @@ public class FolioleCompanionPairingStoreTest {
             "android-capacitor",
             "Android Test",
             "secret-1",
+            1,
             "2026-04-27T06:00:00.000Z",
-            "primary-device-1"
+            "primary-device-1",
+            protocol()
         );
 
         JSObject state = FolioleCompanionPairingStore.loadPairingState(context);
@@ -70,9 +72,46 @@ public class FolioleCompanionPairingStoreTest {
         JSObject headers = signed.getJSObject("headers");
 
         assertTrue(state.getBoolean("is_paired"));
+        assertTrue(state.getBoolean("sync_usable"));
         assertNotNull(headers);
         assertEquals("android-test-device", headers.getString("X-Device-Id"));
         assertNotNull(headers.getString("X-Signature"));
+    }
+
+    @Test
+    public void oldPairingMetadataRequiresRepairBeforeSigning() throws Exception {
+        FolioleCompanionPairingStore.savePairingCredentials(
+            context,
+            "android-test-device",
+            "android-capacitor",
+            "Android Test",
+            "secret-1",
+            1,
+            "2026-04-27T06:00:00.000Z",
+            "primary-device-1",
+            protocol()
+        );
+        prefs().edit().remove("negotiated_protocol_version").remove("remote_protocol").commit();
+
+        JSObject state = FolioleCompanionPairingStore.loadPairingState(context);
+
+        assertTrue(state.getBoolean("is_paired"));
+        assertTrue(state.getBoolean("repair_required"));
+        assertFalse(state.getBoolean("sync_usable"));
+        try {
+            FolioleCompanionPairingStore.signRequest(
+                context,
+                "GET",
+                "/companion/sync-pack?after_state_seq=0",
+                "2026-04-27T06:00:01.000Z",
+                "nonce-repair",
+                "empty-body-hash"
+            );
+        } catch (IllegalStateException expected) {
+            assertTrue(expected.getMessage().contains("repaired"));
+            return;
+        }
+        throw new AssertionError("Expected old pairing metadata to block signing.");
     }
 
     @Test
@@ -94,6 +133,15 @@ public class FolioleCompanionPairingStoreTest {
 
     private SharedPreferences prefs() {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+    }
+
+    private JSObject protocol() throws Exception {
+        JSObject protocol = new JSObject();
+        protocol.put("version", 1);
+        protocol.put("min_supported_version", 1);
+        protocol.put("max_supported_version", 1);
+        protocol.put("capabilities", new org.json.JSONArray().put("lan-sync-v1"));
+        return protocol;
     }
 
     @SuppressWarnings("unchecked")

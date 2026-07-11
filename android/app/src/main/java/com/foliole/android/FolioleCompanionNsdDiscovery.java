@@ -4,7 +4,10 @@ import android.content.Context;
 import android.net.nsd.NsdManager;
 import android.net.nsd.NsdServiceInfo;
 
+import com.getcapacitor.JSObject;
+
 import java.net.InetAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -16,7 +19,7 @@ public final class FolioleCompanionNsdDiscovery {
     private FolioleCompanionNsdDiscovery() {
     }
 
-    public static List<String> discoverEndpointUrls(Context context) throws Exception {
+    public static List<JSObject> discoverCandidates(Context context) throws Exception {
         NsdManager nsdManager = (NsdManager) context.getSystemService(Context.NSD_SERVICE);
         if (nsdManager == null) {
             return new ArrayList<>();
@@ -29,7 +32,7 @@ public final class FolioleCompanionNsdDiscovery {
         collector.start();
         collector.await(FolioleCompanionHostBridgeContractDefinitions.networkDiscoveryTimeoutMs(context));
         collector.stop();
-        return collector.endpointUrls();
+        return collector.candidates();
     }
 
     private static final class NsdCollector {
@@ -39,6 +42,7 @@ public final class FolioleCompanionNsdDiscovery {
         private final CountDownLatch discoveryStarted = new CountDownLatch(1);
         private final Object lock = new Object();
         private final Set<String> endpointUrls = new LinkedHashSet<>();
+        private final List<JSObject> candidates = new ArrayList<>();
         private boolean stopped;
 
         private final NsdManager.DiscoveryListener discoveryListener = new NsdManager.DiscoveryListener() {
@@ -102,9 +106,9 @@ public final class FolioleCompanionNsdDiscovery {
             }
         }
 
-        List<String> endpointUrls() {
+        List<JSObject> candidates() {
             synchronized (lock) {
-                return new ArrayList<>(endpointUrls);
+                return new ArrayList<>(candidates);
             }
         }
 
@@ -137,9 +141,37 @@ public final class FolioleCompanionNsdDiscovery {
                     return;
                 }
                 synchronized (lock) {
-                    endpointUrls.add(FolioleCompanionHostBridgeContractDefinitions.networkEndpointUrl(context, hostAddress, port));
+                    String endpointUrl = FolioleCompanionHostBridgeContractDefinitions.networkEndpointUrl(context, hostAddress, port);
+                    if (!endpointUrls.add(endpointUrl)) {
+                        return;
+                    }
+                    JSObject candidate = new JSObject();
+                    candidate.put(FolioleCompanionHostBridgeContractDefinitions.networkEndpointUrlCandidateKey(context), endpointUrl);
+                    candidate.put(FolioleCompanionHostBridgeContractDefinitions.networkSourceCandidateKey(context), "nsd");
+                    candidate.put(
+                        FolioleCompanionHostBridgeContractDefinitions.networkProtocolTxtCandidateKey(context),
+                        readProtocolTxt(serviceInfo)
+                    );
+                    candidates.add(candidate);
                 }
             } catch (Exception ignored) {
+            }
+        }
+
+        private JSObject readProtocolTxt(NsdServiceInfo serviceInfo) throws Exception {
+            JSObject result = new JSObject();
+            copyTxtAttribute(serviceInfo, result, "capabilities");
+            copyTxtAttribute(serviceInfo, result, "maxSupportedVersion");
+            copyTxtAttribute(serviceInfo, result, "minSupportedVersion");
+            copyTxtAttribute(serviceInfo, result, "version");
+            return result;
+        }
+
+        private void copyTxtAttribute(NsdServiceInfo serviceInfo, JSObject result, String contractKey) throws Exception {
+            String txtKey = FolioleCompanionHostBridgeContractDefinitions.networkProtocolTxtKey(context, contractKey);
+            byte[] value = serviceInfo.getAttributes().get(txtKey);
+            if (value != null) {
+                result.put(txtKey, new String(value, StandardCharsets.UTF_8));
             }
         }
     }

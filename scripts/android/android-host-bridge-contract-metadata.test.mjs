@@ -59,6 +59,11 @@ describe('Android host bridge contract metadata', () => {
     expect(definitions.hostApi.contentBlobBatch.responseHeaderKeys).toMatchObject({
       blobHash: 'x-blob-hash'
     });
+    expect(definitions.hostApi.network.discoveryResponseKeys).toEqual({ candidates: 'candidates' });
+    expect(definitions.hostApi.network.protocolTxtKeys).toMatchObject({
+      capabilities: 'protocol_capabilities',
+      version: 'protocol_version'
+    });
     expect(definitions.hostApi.workspaceSync.requestKeys).toMatchObject({
       endpointUrl: 'endpoint_url',
       message: 'message',
@@ -82,6 +87,7 @@ describe('Android host bridge contract metadata', () => {
     expect(combinedSource).toContain('FolioleCompanionHostBridgeContractDefinitions.networkUrlRequestKey(context)');
     expect(combinedSource).toContain('FolioleCompanionHostBridgeContractDefinitions.networkEndpointUrl(context, hostAddress)');
     expect(combinedSource).toContain('FolioleCompanionHostBridgeContractDefinitions.networkServiceType(context)');
+    expect(combinedSource).toContain('FolioleCompanionHostBridgeContractDefinitions.networkProtocolTxtKey(context');
     expect(combinedSource).toContain('FolioleCompanionHostBridgeContractDefinitions.networkDiscoveryTimeoutMs(context)');
     expect(combinedSource).toContain('FolioleCompanionHostBridgeContractDefinitions.syncPackTransferUrlRequestKey(getContext())');
     expect(combinedSource).toContain('FolioleCompanionHostBridgeContractDefinitions.workspaceSyncEndpointUrlRequestKey');

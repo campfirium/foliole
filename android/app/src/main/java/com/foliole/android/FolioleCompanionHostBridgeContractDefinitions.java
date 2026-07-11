@@ -71,8 +71,28 @@ final class FolioleCompanionHostBridgeContractDefinitions {
         return networkResponseKey(context, "body");
     }
 
-    static String networkEndpointUrlsResponseKey(Context context) throws Exception {
-        return networkDiscoveryResponseKey(context, "endpointUrls");
+    static String networkCandidatesResponseKey(Context context) throws Exception {
+        return networkDiscoveryResponseKey(context, "candidates");
+    }
+
+    static String networkDiscoveryCandidateKey(Context context, String key) throws Exception {
+        return hostApiString(context, "network", "discoveryCandidateKeys", key);
+    }
+
+    static String networkEndpointUrlCandidateKey(Context context) throws Exception {
+        return networkDiscoveryCandidateKey(context, "endpointUrl");
+    }
+
+    static String networkProtocolTxtCandidateKey(Context context) throws Exception {
+        return networkDiscoveryCandidateKey(context, "protocolTxt");
+    }
+
+    static String networkSourceCandidateKey(Context context) throws Exception {
+        return networkDiscoveryCandidateKey(context, "source");
+    }
+
+    static String networkProtocolTxtKey(Context context, String key) throws Exception {
+        return hostApiString(context, "network", "protocolTxtKeys", key);
     }
 
     static String networkEmulatorHost(Context context) throws Exception {

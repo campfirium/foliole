@@ -1,4 +1,5 @@
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
+import type { SyncProtocolCompatibilityResult } from '../../lib/platform/syncProtocolContract';
 
 export const UNKNOWN_DESKTOP_PLATFORM = '';
 export const UNKNOWN_DESKTOP_VERSION = '';
@@ -8,6 +9,7 @@ export type CompanionDesktopDiscovery = {
   desktopDeviceName: string;
   desktopName: string;
   desktopPlatform: string;
+  compatibility: SyncProtocolCompatibilityResult;
   endpointUrl: string;
   peerId: string;
 };
@@ -30,12 +32,13 @@ export function normalizeDiscovery(endpointUrl: string, discovery: {
   desktop_name: string;
   desktop_platform?: string;
   peer_id: string;
-}) {
+}, compatibility: SyncProtocolCompatibilityResult) {
   return {
     appVersion: discovery.app_version?.trim() || UNKNOWN_DESKTOP_VERSION,
     desktopDeviceName: discovery.desktop_device_name?.trim() || discovery.desktop_name,
     desktopName: discovery.desktop_name,
     desktopPlatform: discovery.desktop_platform?.trim() || UNKNOWN_DESKTOP_PLATFORM,
+    compatibility,
     endpointUrl: endpointUrl.trim(),
     peerId: discovery.peer_id
   };

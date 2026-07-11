@@ -7,6 +7,8 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
+
 let mockedUserDataDir = '/tmp/foliole-companion-pairing-store-tests';
 const safeStorageMock = vi.hoisted(() => ({
   decryptString: vi.fn((value: Buffer) => value.toString('utf8'))
@@ -33,6 +35,10 @@ import {
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
 
 let tempRoot = '';
+const protocolArgs = {
+  negotiatedProtocolVersion: 1,
+  remoteProtocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
+};
 
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-companion-pairing-store-'));
@@ -48,6 +54,7 @@ afterEach(async () => {
 
 it('replaces an existing paired device with the same device id', () => {
   registerPairedCompanionDevice({
+    ...protocolArgs,
     clientAddress: '127.0.0.1',
     deviceId: 'device-1',
     deviceKind: 'android-capacitor',
@@ -56,6 +63,7 @@ it('replaces an existing paired device with the same device id', () => {
   });
 
   registerPairedCompanionDevice({
+    ...protocolArgs,
     clientAddress: '127.0.0.1',
     deviceId: 'device-1',
     deviceKind: 'android-capacitor',
@@ -75,6 +83,7 @@ it('replaces an existing paired device with the same device id', () => {
 it('keeps paired devices with different ids even when their LAN labels match', () => {
   const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
   const beforeReset = registerPairedCompanionDevice({
+    ...protocolArgs,
     clientAddress: '127.0.0.1',
     deviceId: 'device-before-reset',
     deviceKind: 'android-capacitor',
@@ -83,6 +92,7 @@ it('keeps paired devices with different ids even when their LAN labels match', (
   });
 
   registerPairedCompanionDevice({
+    ...protocolArgs,
     clientAddress: '127.0.0.1',
     deviceId: 'device-after-reset',
     deviceKind: 'android-capacitor',
@@ -153,6 +163,7 @@ it('recovers with a fresh encrypted store after quarantining stale paired-device
 
   expect(countPairedCompanionDevices()).toBe(0);
   const paired = registerPairedCompanionDevice({
+    ...protocolArgs,
     clientAddress: '127.0.0.1',
     deviceId: 'device-after-corrupt-cache',
     deviceKind: 'android-capacitor',

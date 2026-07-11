@@ -107,7 +107,15 @@ function mockWorkspaceSync(args: {
       device_kind: 'android-capacitor',
       device_name: 'Android companion',
       is_paired: args.isPaired ?? true,
-      paired_at: args.isPaired === false ? null : '2026-04-22T09:00:00.000Z'
+      negotiated_protocol_version: args.isPaired === false ? undefined : 1,
+      paired_at: args.isPaired === false ? null : '2026-04-22T09:00:00.000Z',
+      remote_protocol: args.isPaired === false ? undefined : {
+        capabilities: ['lan-sync-v1'],
+        max_supported_version: 1,
+        min_supported_version: 1,
+        version: 1
+      },
+      sync_usable: args.isPaired !== false
     },
     pairingStatus: 'idle',
     pullFromDesktop: vi.fn(),

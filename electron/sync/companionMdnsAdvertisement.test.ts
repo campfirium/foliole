@@ -48,6 +48,9 @@ describe('companion mDNS advertisement', () => {
       txt: {
         app_version: '0.1.0-test',
         peer_id: 'desktop-local',
+        protocol_capabilities: 'lan-sync-v1',
+        protocol_max_version: '1',
+        protocol_min_version: '1',
         protocol_version: '1'
       },
       type: 'foliole-sync'

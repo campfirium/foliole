@@ -1,4 +1,4 @@
-import { Capacitor, registerPlugin } from '@capacitor/core';
+import { registerPlugin } from '@capacitor/core';
 
 import type {
   CompanionWorkspaceDiscoveryPayload,
@@ -6,6 +6,7 @@ import type {
   CompanionWorkspacePairRequestPayload
 } from '../../../lib/platform/nativeCompanionSyncContract';
 
+import { getCompanionRuntimeCapability, requireAvailableCompanionRuntime } from './companionRuntimeCapabilities';
 import type { CompanionWorkspaceSyncPlugin } from './companionWorkspaceSyncPluginTypes';
 
 export const DISCOVERY_ENDPOINT_PATH = '/companion/discovery';
@@ -16,7 +17,11 @@ export const WORKSPACE_VERSION_PATH = '/companion/workspace-version';
 export const FolioleCompanionSync = registerPlugin<CompanionWorkspaceSyncPlugin>('FolioleCompanionSync');
 
 export function isNativeAndroidCompanionRuntime() {
-  return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
+  return requireAvailableCompanionRuntime('native-runtime').kind === 'android-native';
+}
+
+export function isAvailableNativeAndroidCompanionRuntime() {
+  return getCompanionRuntimeCapability().kind === 'android-native';
 }
 
 export function normalizeEndpointUrl(endpointUrl: string) {

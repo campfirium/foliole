@@ -26,6 +26,10 @@ const BRIDGE_CONTRACT_READER = path.join(
   REPO_ROOT,
   'android/app/src/main/java/com/foliole/android/FolioleCompanionBridgeContractDefinitions.java'
 );
+const BRIDGE_CONTRACT_ASSET_READER = path.join(
+  REPO_ROOT,
+  'android/app/src/main/java/com/foliole/android/FolioleCompanionBridgeContractAsset.java'
+);
 const PAIRING_PLUGIN_ACTIONS = path.join(
   REPO_ROOT,
   'android/app/src/main/java/com/foliole/android/FolioleCompanionPairingPluginActions.java'
@@ -33,6 +37,10 @@ const PAIRING_PLUGIN_ACTIONS = path.join(
 const PAIRING_STORE = path.join(
   REPO_ROOT,
   'android/app/src/main/java/com/foliole/android/FolioleCompanionPairingStore.java'
+);
+const PAIRING_PROTOCOL_STORE = path.join(
+  REPO_ROOT,
+  'android/app/src/main/java/com/foliole/android/FolioleCompanionPairingProtocolStore.java'
 );
 const RESOURCE_STORE_SOURCES = [
   'android/app/src/main/java/com/foliole/android/FolioleCompanionAttachmentResourceStore.java',
@@ -139,15 +147,18 @@ describe('Android bridge contract metadata', () => {
   it('keeps pairing Java wired to generated bridge contract keys', async () => {
     const combinedSource = [
       await readFile(PAIRING_PLUGIN_ACTIONS, 'utf8'),
-      await readFile(PAIRING_STORE, 'utf8')
+      await readFile(PAIRING_STORE, 'utf8'),
+      await readFile(PAIRING_PROTOCOL_STORE, 'utf8')
     ].join('\n');
     const bridgeSource = await readFile(BRIDGE_CONTRACT_READER, 'utf8');
+    const assetReaderSource = await readFile(BRIDGE_CONTRACT_ASSET_READER, 'utf8');
 
     expect(bridgeSource).toContain('pairingCredentialRequestKey(context, "deviceId")');
     expect(bridgeSource).toContain('pairingSignatureRequestKey(context, "method")');
-    expect(bridgeSource).toContain('pairingSignatureObject(context, objectName).getString(key)');
-    expect(bridgeSource).not.toContain('getJSONObject("signature")');
+    expect(assetReaderSource).toContain('object(context, "pairingPlugin", "signature").optJSONObject(objectName)');
+    expect(assetReaderSource).not.toContain('getJSONObject("signature")');
     expect(bridgeSource).toContain('pairingPreferenceKey(context, "deviceId")');
+    expect(bridgeSource).toContain('pairingPreferenceKey(context, "remoteProtocol")');
     expect(bridgeSource).toContain('pairingStorageKey(context, "keyAlias")');
     expect(bridgeSource).toContain('pairingStateKey(context, "deviceId")');
     expect(bridgeSource).toContain('pairingSignatureHeaderKey(context, "deviceId")');
@@ -158,6 +169,8 @@ describe('Android bridge contract metadata', () => {
     expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.pairingPreferencesNameStorageKey(context)');
     expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.pairingKeyAliasStorageKey(context)');
     expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.pairingDeviceIdStateKey(context)');
+    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.pairingRemoteProtocolStateKey(context)');
+    expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.pairingSyncUsableStateKey(context)');
     expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.pairingDeviceIdSignatureHeaderKey(context)');
     expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.pairingHeadersSignatureResponseKey(context)');
     expect(combinedSource).not.toContain('preferenceKey(context, "');

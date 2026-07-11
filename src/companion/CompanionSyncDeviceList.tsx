@@ -54,6 +54,7 @@ function DeviceRow(props: {
   const deviceTitle = resolveDeviceTitle(props.desktop, t('companion.sync.discovery.unknownHost'));
   const desktopPlatform = resolveDesktopPlatform(props.desktop, t('companion.sync.discovery.desktopFallback'));
   const endpointLabel = formatEndpoint(props.desktop.endpointUrl);
+  const isCompatible = props.desktop.compatibility.status === 'compatible';
   return (
     <div className="px-1 py-2">
       <div className="flex items-center justify-between gap-3">
@@ -62,9 +63,14 @@ function DeviceRow(props: {
             {deviceTitle} <span className="font-medium text-accent">({desktopPlatform})</span>
           </p>
           <p className="mt-1 truncate text-xs text-accent">{endpointLabel}</p>
+          {isCompatible ? null : (
+            <p className="mt-1 text-xs leading-5 text-accent">
+              {t('companion.sync.discovery.incompatible')}
+            </p>
+          )}
         </div>
         <PairAction
-          disabled={props.disabled}
+          disabled={props.disabled || !isCompatible}
           isConnecting={props.isConnecting}
           onClick={() => props.onPair(props.desktop.endpointUrl)}
         />

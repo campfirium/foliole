@@ -1,20 +1,30 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
+  evaluateSyncProtocolCompatibility
+} from '../../lib/platform/syncProtocolContract.js';
+
+import {
   clearCompanionPairRequests,
   createCompanionPairRequest,
   loadPendingCompanionPairRequests
 } from './companionPairingRequests.js';
 
 const TEST_PAIRING_PUBLIC_KEY = Buffer.concat([Buffer.from([4]), Buffer.alloc(64)]).toString('base64url');
+const protocolArgs = {
+  compatibility: evaluateSyncProtocolCompatibility(CURRENT_SYNC_PROTOCOL_DESCRIPTOR),
+  protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
+};
 
-describe('companion pairing requests', () => {
-  afterEach(() => {
-    clearCompanionPairRequests();
-  });
+afterEach(() => {
+  clearCompanionPairRequests();
+});
 
+describe('companion pairing request lifecycle', () => {
   it('keeps the client address for desktop pairing review', () => {
     createCompanionPairRequest({
+      ...protocolArgs,
       clientAddress: '192.168.1.22',
       deviceId: 'android-1',
       deviceKind: 'android-capacitor',
@@ -35,6 +45,7 @@ describe('companion pairing requests', () => {
   it('expires pending pair requests after the approval window', () => {
     const nowMs = Date.parse('2026-04-24T10:00:00.000Z');
     createCompanionPairRequest({
+      ...protocolArgs,
       clientAddress: '192.168.1.22',
       deviceId: 'android-1',
       deviceKind: 'android-capacitor',
@@ -46,11 +57,14 @@ describe('companion pairing requests', () => {
     expect(loadPendingCompanionPairRequests(nowMs + 119_000)).toHaveLength(1);
     expect(loadPendingCompanionPairRequests(nowMs + 120_001)).toHaveLength(0);
   });
+});
 
+describe('companion pairing request rate limiting', () => {
   it('rate limits new pairing requests by client address', () => {
     const nowMs = Date.parse('2026-04-24T10:00:00.000Z');
     for (let index = 0; index < 5; index += 1) {
       expect(createCompanionPairRequest({
+        ...protocolArgs,
         clientAddress: '192.168.1.22',
         deviceId: `android-${index}`,
         deviceKind: 'android-capacitor',
@@ -61,6 +75,7 @@ describe('companion pairing requests', () => {
     }
 
     expect(createCompanionPairRequest({
+      ...protocolArgs,
       clientAddress: '192.168.1.22',
       deviceId: 'android-6',
       deviceKind: 'android-capacitor',

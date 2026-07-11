@@ -1,5 +1,6 @@
 import os from 'node:os';
 
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
 import type { WorkspaceSnapshot, WorkspaceVersionMetadata } from '../database/workspaceSnapshot.js';
 
 export function buildWorkspaceSnapshotPayload(appVersion: string, peerId: string, snapshot: WorkspaceSnapshot | null) {
@@ -44,6 +45,7 @@ export function buildDiscoveryPayload(appVersion: string, peerId: string) {
     desktop_name: 'Foliole Desktop',
     desktop_platform: resolveDesktopPlatformLabel(),
     pairing_mode: 'desktop-confirm' as const,
-    peer_id: peerId
+    peer_id: peerId,
+    protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
   };
 }

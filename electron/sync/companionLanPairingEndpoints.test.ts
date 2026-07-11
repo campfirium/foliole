@@ -3,6 +3,11 @@ import { Readable } from 'node:stream';
 
 import { afterEach, expect, it, vi } from 'vitest';
 
+import {
+  CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
+  evaluateSyncProtocolCompatibility
+} from '../../lib/platform/syncProtocolContract.js';
+
 const pairingStoreMock = vi.hoisted(() => ({
   countPairedCompanionDevices: vi.fn(() => 1),
   registerPairedCompanionDevice: vi.fn(),
@@ -55,7 +60,8 @@ it('does not revoke an existing paired device before desktop approval', async ()
       device_id: 'android-1',
       device_kind: 'android-capacitor',
       device_name: 'Pixel 9',
-      pairing_public_key: TEST_PAIRING_PUBLIC_KEY
+      pairing_public_key: TEST_PAIRING_PUBLIC_KEY,
+      protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
     }),
     createResponse(),
     vi.fn(),
@@ -67,6 +73,48 @@ it('does not revoke an existing paired device before desktop approval', async ()
   expect(writeJson).toHaveBeenCalledWith(expect.anything(), expect.anything(), 202, expect.objectContaining({
     status: 'pending'
   }));
+});
+
+it('rejects a pair request without compatible protocol metadata before creating review state', async () => {
+  const writeJson = vi.fn();
+
+  await handlePairRequestCreate(
+    createRequest({
+      device_id: 'android-old',
+      device_kind: 'android-capacitor',
+      device_name: 'Old Android',
+      pairing_public_key: TEST_PAIRING_PUBLIC_KEY
+    }),
+    createResponse(),
+    vi.fn(),
+    null,
+    writeJson
+  );
+
+  expect(writeJson).toHaveBeenCalledWith(expect.anything(), expect.anything(), 409, expect.objectContaining({
+    error: 'protocol_incompatible'
+  }));
+  expect(pairingStoreMock.registerPairedCompanionDevice).not.toHaveBeenCalled();
+});
+
+it('rechecks protocol compatibility at pair completion', async () => {
+  const created = createApprovedPairRequest('android-drift');
+  created.protocol.version = 2;
+  const writeJson = vi.fn();
+
+  await handlePairRequest(
+    createRequest({ pair_request_id: created.pair_request_id }),
+    createResponse(),
+    '0.1.0-test',
+    'desktop-local',
+    vi.fn(),
+    writeJson
+  );
+
+  expect(writeJson).toHaveBeenCalledWith(expect.anything(), expect.anything(), 409, expect.objectContaining({
+    error: 'protocol_incompatible'
+  }));
+  expect(pairingStoreMock.registerPairedCompanionDevice).not.toHaveBeenCalled();
 });
 
 it('rate limits pair completion attempts by client address before consuming approved requests', async () => {
@@ -162,12 +210,18 @@ it('rotates the device secret for a new approved pair request with the same devi
 });
 
 function createApprovedPairRequest(deviceId: string) {
+  const protocol = {
+    ...CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
+    capabilities: [...CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities]
+  };
   const created = createCompanionPairRequest({
+    compatibility: evaluateSyncProtocolCompatibility(protocol),
     clientAddress: '192.168.1.22',
     deviceId,
     deviceKind: 'android-capacitor',
     deviceName: 'Pixel 9',
-    pairingPublicKey: TEST_PAIRING_PUBLIC_KEY
+    pairingPublicKey: TEST_PAIRING_PUBLIC_KEY,
+    protocol
   });
   if (created.rate_limited) {
     throw new Error('unexpected_pair_request_rate_limit');
