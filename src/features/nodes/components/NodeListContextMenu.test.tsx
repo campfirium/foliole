@@ -160,7 +160,9 @@ it('describes sequential reading without release or material terms', () => {
 
   const tooltip = screen.getByRole('tooltip');
   expect(tooltip).toHaveTextContent('Show contained topics one at a time, in order.');
-  expect(tooltip).toHaveTextContent('The next topic appears after the previous one is dismissed or shelved.');
+  expect(tooltip).toHaveTextContent(
+    'The next topic appears after you click Read at the end of the previous topic, or use Dismiss / Shelve.'
+  );
   expect(tooltip).not.toHaveTextContent(/release|material|current/i);
 });
 

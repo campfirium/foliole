@@ -53,7 +53,7 @@ it('backfills direct body, pdf, and the first nested child opening_text in node 
 
   expect(openingTextById.get('node-book')).toBe('The first real chapter body.');
   expect(openingTextById.get('node-title-page')).toBe('Book Title');
-  expect(openingTextById.get('node-part')).toBe('Part One');
+  expect(openingTextById.get('node-part')).toBeNull();
   expect(openingTextById.get('node-chapter')).toBe('The first real chapter body.');
   expect(openingTextById.get('node-pdf')).toBe('The actual PDF body starts here.');
 });

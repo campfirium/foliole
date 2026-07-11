@@ -65,12 +65,12 @@ it('keeps current body when derived title runtime result carries stale content',
     const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
 
-    await actions.updateNodeContent('node-1', '# Runtime Title\n\nFresh body', { publishLocal: false });
+    await actions.updateNodeContent('node-1', 'Fresh body', { publishLocal: false });
     const applied = await actions.updateNodeDerivedTitle('node-1', '# Runtime Title\n\nOlder title source');
 
     expect(applied).toBe(true);
     expect(harness.getState().nodesById['node-1']).toMatchObject({
-      content: '# Runtime Title\n\nFresh body',
+      content: 'Fresh body',
       title: 'Runtime Title'
     });
   } finally {
