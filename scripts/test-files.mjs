@@ -82,7 +82,7 @@ async function runTestFiles(env) {
     '--pool=threads',
     '--maxWorkers=2',
     '--no-file-parallelism',
-    ...files
+    ...files.map(normalizePath)
   ];
   const child = spawn(process.execPath, args, { env, stdio: 'inherit' });
   const exitCode = await new Promise((resolve) => {

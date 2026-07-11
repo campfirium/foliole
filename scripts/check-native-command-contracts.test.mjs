@@ -86,13 +86,13 @@ async function writeBaseFixture(repoRoot, overrides = {}) {
   );
   await writeFixtureFile(
     repoRoot,
-    'electron/ipc/commandSecurityCapabilities.ts',
-    overrides.securityCapabilities ??
+    'electron/ipc/nativeCommandRegistry.ts',
+    overrides.registry ??
       `
       import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
-      export const COMMAND_SECURITY_CAPABILITY_ENTRIES = [
-        { command: NATIVE_COMMANDS.loadThing, capability: 'read' },
-        { command: NATIVE_COMMANDS.applyThing, capability: 'dataMutation' }
+      export const NATIVE_COMMAND_REGISTRY = [
+        { command: NATIVE_COMMANDS.loadThing, route: 'storage', capability: 'read' },
+        { command: NATIVE_COMMANDS.applyThing, route: 'storage', capability: 'dataMutation' }
       ];
     `
   );
@@ -140,10 +140,10 @@ describe('check-native-command-contracts', () => {
           if (command === NATIVE_COMMANDS.loadThing) return 'thing';
         }
       `,
-      securityCapabilities: `
+      registry: `
         import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
-        export const COMMAND_SECURITY_CAPABILITY_ENTRIES = [
-          { command: NATIVE_COMMANDS.loadThing, capability: 'read' }
+        export const NATIVE_COMMAND_REGISTRY = [
+          { command: NATIVE_COMMANDS.loadThing, route: 'storage', capability: 'read' }
         ];
       `,
       inventory: `
@@ -155,7 +155,7 @@ describe('check-native-command-contracts', () => {
 
     expect(inspectNativeCommandContracts({ repoRoot }).violations).toEqual([
       'missing contract map entry: applyThing',
-      'missing security capability entry: applyThing',
+      'missing native command registry entry: applyThing',
       'missing inventory entry: apply_thing',
       'missing electron handler or explicit gap: applyThing (apply_thing)'
     ]);
@@ -195,4 +195,5 @@ describe('check-native-command-contracts', () => {
       ok: true
     });
   });
+
 });

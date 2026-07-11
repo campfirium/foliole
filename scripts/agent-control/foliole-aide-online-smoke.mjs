@@ -40,7 +40,7 @@ export async function runOnlineSmoke(options = {}) {
     return {
       apiRequests,
       assistantText: result.assistantText,
-      ok: isOnlineSmokeSuccessful(result.assistantText, apiRequests),
+      ok: isOnlineSmokeSuccessful(result.assistantText, apiRequests, result.providerThreadId),
       providerThreadId: result.providerThreadId
     };
   } finally {
@@ -89,7 +89,7 @@ export function createSmokeThreadStartParams(cwd) {
   return { cwd, ephemeral: true };
 }
 
-async function createSmokeApi(apiRequests) {
+export async function createSmokeApi(apiRequests) {
   const server = http.createServer((request, response) => {
     let body = '';
     request.on('data', (chunk) => {
@@ -115,8 +115,8 @@ async function createSmokeApi(apiRequests) {
         }));
         return;
       }
-      response.writeHead(200, { 'content-type': 'application/json' });
-      response.end(JSON.stringify({ ok: true }));
+      response.writeHead(404, { 'content-type': 'application/json' });
+      response.end(JSON.stringify({ error: 'not_found' }));
     });
   });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));

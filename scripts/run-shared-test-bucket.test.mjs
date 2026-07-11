@@ -33,6 +33,14 @@ function report(overrides = {}) {
 }
 
 describe('run-shared-test-bucket', () => {
+  it('keeps lib tests in their own shared bucket', () => {
+    expect(SHARED_TEST_BUCKETS).toContainEqual({
+      label: 'lib',
+      report: '.tmp/vitest/shared-lib.json',
+      targets: ['--exclude=src/**', '--exclude=electron/**', '--exclude=scripts/**']
+    });
+  });
+
   it('keeps split feature buckets covering every top-level feature directory', async () => {
     const featureTargets = SHARED_TEST_BUCKETS.flatMap((bucket) => bucket.targets)
       .filter((target) => target.startsWith('src/features/'))

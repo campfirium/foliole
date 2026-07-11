@@ -1,5 +1,7 @@
 // @vitest-environment node
 
+import { readFileSync } from 'node:fs';
+
 import { describe, expect, it } from 'vitest';
 
 import capacitorConfig from '../capacitor.config.ts';
@@ -14,8 +16,21 @@ import viteConfig from '../vite.config.ts';
 import { injectDefaultStartupSkeletonHtml } from '../vite.shared.ts';
 
 const normalizePath = (value) => String(value).replaceAll('\\', '/');
+const packageJson = JSON.parse(readFileSync('package.json', 'utf8'));
 
 describe('vite config', () => {
+  it('collects shared lib tests through the authoritative include', () => {
+    expect(viteConfig.test?.include).toEqual(expect.arrayContaining([
+      'lib/**/*.test.ts',
+      'lib/**/*.test.tsx'
+    ]));
+  });
+
+  it('keeps release shared tests on the exact shared bucket boundary', () => {
+    expect(packageJson.scripts['test:release:shared']).toContain('scripts/run-shared-test-bucket.mjs');
+    expect(packageJson.scripts['test:release:shared']).not.toMatch(/\slib(?:\s|$)/u);
+  });
+
   it('uses relative asset paths for desktop file loading', () => {
     expect(viteConfig.base).toBe('./');
   });

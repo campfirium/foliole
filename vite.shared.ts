@@ -179,7 +179,8 @@ export function createSharedViteConfig(projectRoot: string, options: SharedViteC
         'src/**/*.test.ts',
         'src/**/*.test.tsx',
         'electron/**/*.test.ts',
-        'lib/core/sync/**/*.test.ts',
+        'lib/**/*.test.ts',
+        'lib/**/*.test.tsx',
         'scripts/**/*.test.mjs'
       ],
       exclude: ['tests/**', 'node_modules/**', 'dist/**'],

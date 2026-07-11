@@ -66,3 +66,20 @@ it('bridges native sync cursors and pending summary', async () => {
   await expect(api.loadCompanionPendingSyncSummary()).resolves.toEqual({ pendingCount: 3 });
   expect(writerQueueMock.run).toHaveBeenCalledTimes(4);
 });
+
+it('rejects ios before reading web cursors or returning empty changes', async () => {
+  capacitorMock.platform.mockReturnValue('ios');
+  const getItem = vi.spyOn(Storage.prototype, 'getItem');
+  const api = await import('./companionSyncCursors');
+
+  await expect(api.loadCompanionSyncStateCursor()).rejects.toMatchObject({
+    code: 'NATIVE_COMPANION_CAPABILITY_UNAVAILABLE',
+    platform: 'ios'
+  });
+  await expect(api.loadCompanionSyncStateChanges(null)).rejects.toMatchObject({
+    code: 'NATIVE_COMPANION_CAPABILITY_UNAVAILABLE',
+    platform: 'ios'
+  });
+  expect(getItem).not.toHaveBeenCalled();
+  expect(capacitorMock.plugin.loadSyncStateChanges).not.toHaveBeenCalled();
+});

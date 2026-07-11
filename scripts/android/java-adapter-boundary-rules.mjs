@@ -13,6 +13,7 @@ export const CLASSIFICATIONS = {
   bridge_contract_metadata: {
     responsibility: 'Expose generated bridge metadata to tests and native callers without redefining contracts.',
     files: [
+      'FolioleCompanionBridgeContractAsset.java',
       'FolioleCompanionBridgeContractDefinitions.java',
       'FolioleCompanionHostBridgeContractDefinitions.java'
     ]
@@ -79,6 +80,7 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionDesktopHttpClient.java',
       'FolioleCompanionNetworkPluginActions.java',
       'FolioleCompanionNsdDiscovery.java',
+      'FolioleCompanionPairingProtocolStore.java',
       'FolioleCompanionPairingStore.java',
       'FolioleCompanionSyncPackEnvelopeValidator.java',
       'FolioleCompanionSyncPackTransfer.java',

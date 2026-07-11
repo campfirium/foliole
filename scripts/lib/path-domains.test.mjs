@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   inferPreviewTargetsFromFiles,
+  isAndroidContractPath,
   isAndroidSyncBoundaryPath,
   isSyncPackPath,
   pathMatchesLintScope,
@@ -38,6 +39,17 @@ describe('path-domains', () => {
       level: 'android',
       reason: 'android or companion path changed'
     });
+    expect(resolveStaticQualityRoute(['lib/core/database/androidCompanionDiagnosticReadRules.ts'])).toEqual({
+      level: 'android',
+      reason: 'Android contract changed'
+    });
+    expect(resolveStaticQualityRoute([
+      'lib/core/database/androidCompanionSyncPolicySql.ts',
+      'src/store/workspaceStore.ts'
+    ])).toEqual({
+      level: 'full',
+      reason: 'Android contract changed with another production domain'
+    });
   });
 
   it('matches lint scopes using the shared path rules', () => {
@@ -51,6 +63,8 @@ describe('path-domains', () => {
     expect(isSyncPackPath('electron/database/syncPackBuilder.ts')).toBe(true);
     expect(isSyncPackPath('electron/database/other.ts')).toBe(false);
     expect(isAndroidSyncBoundaryPath('android/app/src/main/assets/companion-schema.json')).toBe(true);
+    expect(isAndroidContractPath('lib/core/database/androidCompanionBridgeContractDefinitions.ts')).toBe(true);
+    expect(isAndroidSyncBoundaryPath('lib/core/database/androidCompanionDerivedReadSql.ts')).toBe(true);
     expect(isAndroidSyncBoundaryPath('android/app/src/main/java/com/foliole/android/Other.java')).toBe(false);
   });
 });

@@ -118,3 +118,22 @@ it('bounds desktop attachment resource resolution cache entries', async () => {
     attachment_id: 'att-desktop-0'
   });
 });
+
+it('rejects ios instead of entering the desktop attachment fallback', async () => {
+  capacitorMock.getPlatform.mockReturnValue('ios');
+  const invoke = vi.fn();
+  vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+
+  await expect(resolveRuntimeAttachmentResource('asset://att-ios.png')).rejects.toMatchObject({
+    code: 'NATIVE_COMPANION_CAPABILITY_UNAVAILABLE',
+    platform: 'ios'
+  });
+  expect(invoke).not.toHaveBeenCalled();
+});
+
+it('keeps the desktop no-bridge fallback returning null', async () => {
+  capacitorMock.isNativePlatform.mockReturnValue(false);
+  vi.mocked(getRuntimeInvoke).mockReturnValue(null);
+
+  await expect(resolveRuntimeAttachmentResource('asset://att-desktop-no-bridge.png')).resolves.toBeNull();
+});

@@ -53,6 +53,9 @@ describe('check-layer-dependency-boundary platform subdomains', () => {
     expect(resolvePlatformSubdomain('src/shared/platform/companionPrimaryDeviceIdentity.ts')).toBe(
       'companion-runtime-plugin'
     );
+    expect(resolvePlatformSubdomain('src/shared/platform/companionRuntimeCapabilities.ts')).toBe(
+      'companion-runtime-plugin'
+    );
     expect(resolvePlatformSubdomain('src/shared/platform/readwiseReaderImportRuntimeRepository.ts')).toBe(
       'import-runtime'
     );

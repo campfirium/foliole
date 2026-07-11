@@ -1,6 +1,8 @@
-import { Capacitor, registerPlugin } from '@capacitor/core';
+import { registerPlugin } from '@capacitor/core';
 
 import type { NativeCompanionBootstrapState } from '../../../lib/platform/nativeCompanionContract';
+
+import { getCompanionRuntimeCapability, requireAvailableCompanionRuntime } from './companionRuntimeCapabilities';
 
 const WEB_DEVICE_ID_KEY = 'foliole-companion-web-device-id';
 const WEB_PREVIEW_DATABASE_NAME = 'foliole-companion-preview.db';
@@ -85,11 +87,12 @@ function createWebPreviewBootstrapState(): NativeCompanionBootstrapState {
 }
 
 export function isNativeCompanionRuntime() {
-  return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
+  return getCompanionRuntimeCapability().kind === 'android-native';
 }
 
 export async function loadCompanionBootstrapState(): Promise<NativeCompanionBootstrapState> {
-  if (!isNativeCompanionRuntime()) {
+  const runtime = requireAvailableCompanionRuntime('bootstrap');
+  if (runtime.kind === 'web-preview') {
     return createWebPreviewBootstrapState();
   }
 

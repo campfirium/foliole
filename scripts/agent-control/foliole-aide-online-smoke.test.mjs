@@ -1,3 +1,5 @@
+/* global fetch */
+
 import path from 'node:path';
 import { readFile } from 'node:fs/promises';
 
@@ -6,6 +8,7 @@ import { expect, it } from 'vitest';
 import {
   buildCodexAppServerArgs,
   classifyOnlineSmokeError,
+  createSmokeApi,
   createSmokePrompt,
   createSmokeThreadStartParams,
   describeOnlineSmokeFailure
@@ -53,9 +56,26 @@ it('requires both the CLI-backed API read and expected assistant answer for succ
     url: '/agent-control/v1/materials/read'
   }];
 
-  expect(isOnlineSmokeSuccessful('TRACE_SMOKE_OK Aide CLI Smoke Topic', apiRequests)).toBe(true);
-  expect(isOnlineSmokeSuccessful('I read it.', apiRequests)).toBe(false);
-  expect(isOnlineSmokeSuccessful('TRACE_SMOKE_OK Aide CLI Smoke Topic', [])).toBe(false);
+  expect(isOnlineSmokeSuccessful('TRACE_SMOKE_OK Aide CLI Smoke Topic', apiRequests, 'thread-1')).toBe(true);
+  expect(isOnlineSmokeSuccessful('I read it.', apiRequests, 'thread-1')).toBe(false);
+  expect(isOnlineSmokeSuccessful('TRACE_SMOKE_OK Aide CLI Smoke Topic', [], 'thread-1')).toBe(false);
+  expect(isOnlineSmokeSuccessful('TRACE_SMOKE_OK Aide CLI Smoke Topic', apiRequests, '  ')).toBe(false);
+  expect(isOnlineSmokeSuccessful(
+    'TRACE_SMOKE_OK Aide CLI Smoke Topic FOLIOLE_AGENT_DESCRIPTOR',
+    apiRequests,
+    'thread-1'
+  )).toBe(false);
+});
+
+it('fails closed when the smoke model calls an unknown API route', async () => {
+  const server = await createSmokeApi([]);
+  try {
+    const address = server.address();
+    const response = await fetch(`http://127.0.0.1:${address.port}/agent-control/v1/unknown`);
+    expect(response.status).toBe(404);
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  }
 });
 
 it('exposes the online smoke as a package script', async () => {

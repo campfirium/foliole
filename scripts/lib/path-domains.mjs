@@ -11,8 +11,9 @@ const DEPENDENCY_ROOT_PATTERN = /^(package\.json|package-lock\.json|pnpm-lock\.y
 const TEST_FILE_PATTERN = /\.(test|spec)\.[^.]+$/u;
 const LINTABLE_FILE_PATTERN = /\.(js|jsx|ts|tsx|cjs|mjs)$/u;
 const SYNC_PACK_PATH_PATTERN = /^(lib\/core\/sync\/syncPack|electron\/database\/syncPack|electron\/sync\/syncPack|src\/shared\/platform\/companionSyncPack)/u;
+const ANDROID_CONTRACT_PATH_PATTERN = /^lib\/core\/database\/androidCompanion.*\.ts$/u;
 const ANDROID_SYNC_BOUNDARY_PATH_PATTERN =
-  /^(lib\/core\/database\/androidCompanion.*(?:Definitions|SchemaStatements)\.ts|android\/app\/src\/main\/assets\/companion-.*\.json|android\/app\/src\/main\/java\/com\/foliole\/android\/FolioleCompanionSync.*\.java)/u;
+  /^(lib\/core\/database\/androidCompanion.*\.ts|android\/app\/src\/main\/assets\/companion-.*\.json|android\/app\/src\/main\/java\/com\/foliole\/android\/FolioleCompanionSync.*\.java)/u;
 
 export { PREVIEW_TARGET_PATHS };
 
@@ -26,6 +27,10 @@ function splitInput(input) {
 
 export function isSyncPackPath(filePath) {
   return SYNC_PACK_PATH_PATTERN.test(normalizePath(filePath));
+}
+
+export function isAndroidContractPath(filePath) {
+  return ANDROID_CONTRACT_PATH_PATTERN.test(normalizePath(filePath));
 }
 
 export function isAndroidSyncBoundaryPath(filePath) {
@@ -42,6 +47,12 @@ export function resolveStaticQualityRoute(files) {
   }
   if (changed.some((filePath) => DEPENDENCY_ROOT_PATTERN.test(filePath))) {
     return { level: 'full', reason: 'dependency root changed' };
+  }
+  if (changed.some(isAndroidContractPath)) {
+    const hasOtherProductionPath = changed.some((filePath) => !isAndroidContractPath(filePath) && !TEST_FILE_PATTERN.test(filePath));
+    return hasOtherProductionPath
+      ? { level: 'full', reason: 'Android contract changed with another production domain' }
+      : { level: 'android', reason: 'Android contract changed' };
   }
   if (changed.some((filePath) => filePath.startsWith('electron/'))) {
     return { level: 'desktop', reason: 'desktop runtime changed' };

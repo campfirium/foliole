@@ -5,9 +5,8 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { spawn, spawnSync } from 'node:child_process';
 import path from 'node:path';
 
-const DEFAULT_TOTAL_TIMEOUT_SECONDS = 0;
-
 export const SHARED_TEST_BUCKETS = [
+  { label: 'lib', report: '.tmp/vitest/shared-lib.json', targets: ['--exclude=src/**', '--exclude=electron/**', '--exclude=scripts/**'] },
   { label: 'shared', report: '.tmp/vitest/shared-src-shared.json', targets: ['src/shared'] },
   { label: 'features-editor', report: '.tmp/vitest/shared-src-features-editor.json', targets: ['src/features/editor'] },
   { label: 'features-nodes', report: '.tmp/vitest/shared-src-features-nodes.json', targets: ['src/features/nodes'] },
@@ -54,7 +53,7 @@ function parseNonNegativeInt(value, fallback) {
 export function resolveTotalTimeoutMs(env = process.env) {
   const seconds = parseNonNegativeInt(
     env.SHARED_TEST_BUCKET_TOTAL_TIMEOUT_SECONDS,
-    DEFAULT_TOTAL_TIMEOUT_SECONDS
+    0
   );
   return seconds > 0 ? seconds * 1000 : null;
 }

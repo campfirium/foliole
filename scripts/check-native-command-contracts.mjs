@@ -34,11 +34,9 @@ const ELECTRON_HANDLER_FILES = [
   'electron/ipc/storageSyncCommands.ts',
   'electron/ipc/windowCommands.ts'
 ];
-const SECURITY_CAPABILITY_FILES = [
-  'electron/ipc/commandSecurityCapabilities.ts',
-  'electron/ipc/commandSecurityCapabilityGroups.ts'
-];
+const REGISTRY_FILE = 'electron/ipc/nativeCommandRegistry.ts';
 const INVENTORY_FILE = '.lab/specs/shared/platform/native-command-contract-map.md';
+const LEGACY_INVENTORY_COMMANDS = new Set(['assistant_delete_thread_index']);
 
 function resolveRepoRoot() {
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -59,6 +57,15 @@ function collectCommandDefinitions(repoRoot) {
 
 function collectNativeCommandKeys(source) {
   return new Set([...source.matchAll(/\bNATIVE_COMMANDS\.([A-Za-z0-9_]+)/g)].map((match) => match[1]));
+}
+
+function collectRegistry(repoRoot) {
+  const source = readFile(repoRoot, REGISTRY_FILE);
+  return [...source.matchAll(/\{\s*command:\s*NATIVE_COMMANDS\.([A-Za-z0-9_]+),([^}]*)\}/g)].map((match) => ({
+    key: match[1],
+    route: match[2].match(/route:\s*'([^']+)'/)?.[1] ?? null,
+    capability: match[2].match(/capability:\s*'([^']+)'/)?.[1] ?? null
+  }));
 }
 
 function collectReferencedCommandKeys(repoRoot, files) {
@@ -95,6 +102,11 @@ function missingEntries(expected, actual) {
   return expected.filter((item) => !actual.has(item));
 }
 
+function duplicateEntries(entries) {
+  const seen = new Set();
+  return entries.filter((entry) => seen.size === seen.add(entry).size);
+}
+
 function formatViolation(kind, entries) {
   return entries.map((entry) => `${kind}: ${entry}`);
 }
@@ -105,21 +117,38 @@ export function inspectNativeCommandContracts({ repoRoot = resolveRepoRoot() } =
   const commandValues = commands.map((command) => command.value);
   const contractKeys = collectReferencedCommandKeys(repoRoot, CONTRACT_FILES);
   const handlerKeys = collectReferencedCommandKeys(repoRoot, ELECTRON_HANDLER_FILES);
-  const securityCapabilityKeys = collectReferencedCommandKeys(repoRoot, SECURITY_CAPABILITY_FILES);
+  const registry = collectRegistry(repoRoot);
+  const registryKeys = new Set(registry.map((entry) => entry.key));
   const inventory = collectInventory(repoRoot);
 
   const missingContractKeys = missingEntries(commandKeys, contractKeys);
-  const missingSecurityCapabilityKeys = missingEntries(commandKeys, securityCapabilityKeys);
+  const missingRegistryKeys = missingEntries(commandKeys, registryKeys);
+  const duplicateRegistryKeys = duplicateEntries(registry.map((entry) => entry.key));
+  const missingRegistryRoutes = registry.filter((entry) => !entry.route).map((entry) => entry.key);
+  const missingRegistryCapabilities = registry.filter((entry) => !entry.capability).map((entry) => entry.key);
   const missingInventoryValues = inventory.commandValues ? missingEntries(commandValues, inventory.commandValues) : [];
+  const staleInventoryValues = inventory.commandValues
+    ? [...inventory.commandValues].filter(
+        (value) => !commandValues.includes(value) && !LEGACY_INVENTORY_COMMANDS.has(value)
+      )
+    : [];
   const missingHandlerKeys = commands
     .filter((command) => !handlerKeys.has(command.key) && !inventory.explicitMissingHandlers.has(command.value))
+    .map((command) => `${command.key} (${command.value})`);
+  const conflictingHandlerGaps = commands
+    .filter((command) => handlerKeys.has(command.key) && inventory.explicitMissingHandlers.has(command.value))
     .map((command) => `${command.key} (${command.value})`);
 
   const violations = [
     ...formatViolation('missing contract map entry', missingContractKeys),
-    ...formatViolation('missing security capability entry', missingSecurityCapabilityKeys),
+    ...formatViolation('missing native command registry entry', missingRegistryKeys),
+    ...formatViolation('duplicate native command registry entry', duplicateRegistryKeys),
+    ...formatViolation('missing native command registry route', missingRegistryRoutes),
+    ...formatViolation('missing native command registry capability', missingRegistryCapabilities),
     ...formatViolation('missing inventory entry', missingInventoryValues),
-    ...formatViolation('missing electron handler or explicit gap', missingHandlerKeys)
+    ...formatViolation('stale inventory entry', staleInventoryValues),
+    ...formatViolation('missing electron handler or explicit gap', missingHandlerKeys),
+    ...formatViolation('handler exists but inventory declares missing-handler', conflictingHandlerGaps)
   ];
 
   return {

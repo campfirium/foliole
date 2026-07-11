@@ -22,6 +22,7 @@ const EXPLICIT_FILE_SUBDOMAINS = new Map([
   ['src/shared/platform/browserReservedShortcuts.ts', 'runtime-core'],
   ['src/shared/platform/companionAttachmentResourceSyncPluginTypes.ts', 'companion-sync-writer'],
   ['src/shared/platform/companionContentBlobSyncPluginTypes.ts', 'companion-sync-writer'],
+  ['src/shared/platform/companionRuntimeCapabilities.ts', 'companion-runtime-plugin'],
   ['src/shared/platform/companionSyncActivityEvents.ts', 'companion-runtime-plugin'],
   ['src/shared/platform/companionSyncConvergence.testHelpers.ts', 'companion-sync-diagnostics'],
   ['src/shared/platform/companionSyncConvergenceFormatting.ts', 'companion-sync-diagnostics'],

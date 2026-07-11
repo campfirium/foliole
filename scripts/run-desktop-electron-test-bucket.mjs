@@ -53,6 +53,10 @@ function collectRootElectronTests() {
     .sort();
 }
 
+export function collectElectronTestFiles() {
+  return collectTestFiles('electron');
+}
+
 function collectElectronNamedScriptTests() {
   return collectTestFiles('scripts')
     .filter((file) => path.basename(file).includes('electron'));
@@ -93,9 +97,41 @@ export function buildDesktopElectronBuckets() {
     { label: 'sync', report: '.tmp/vitest/desktop-electron-sync.json', targets: collectTestFiles('electron/sync') },
     { label: 'mirror', report: '.tmp/vitest/desktop-electron-mirror.json', targets: collectTestFiles('electron/mirror') },
     { label: 'diagnostics', report: '.tmp/vitest/desktop-electron-diagnostics.json', targets: collectTestFiles('electron/diagnostics') },
+    { label: 'agentControl', report: '.tmp/vitest/desktop-electron-agent-control.json', targets: collectTestFiles('electron/agentControl') },
+    { label: 'assistant', report: '.tmp/vitest/desktop-electron-assistant.json', targets: collectTestFiles('electron/assistant') },
+    { label: 'discourse', report: '.tmp/vitest/desktop-electron-discourse.json', targets: collectTestFiles('electron/discourse') },
     { label: 'root', report: '.tmp/vitest/desktop-electron-root.json', targets: collectRootElectronTests() },
     { label: 'scripts', report: '.tmp/vitest/desktop-electron-scripts.json', targets: collectElectronNamedScriptTests() }
   ].filter((bucket) => bucket.targets.length > 0);
+}
+
+function formatCoverageFailure(missing, duplicates) {
+  const sections = [];
+  if (missing.length > 0) {
+    sections.push(`missing:\n${missing.map((file) => `- ${file}`).join('\n')}`);
+  }
+  if (duplicates.length > 0) {
+    sections.push(`duplicate:\n${duplicates.map((file) => `- ${file}`).join('\n')}`);
+  }
+  return `[desktop-electron-test-bucket] coverage failure\n${sections.join('\n')}`;
+}
+
+export function assertDesktopElectronBucketCoverage(allFiles, buckets) {
+  const allFileSet = new Set(allFiles);
+  const counts = new Map();
+  for (const file of buckets.flatMap((bucket) => bucket.targets)) {
+    if (allFileSet.has(file)) {
+      counts.set(file, (counts.get(file) ?? 0) + 1);
+    }
+  }
+  const missing = allFiles.filter((file) => !counts.has(file));
+  const duplicates = [...counts]
+    .filter(([, count]) => count > 1)
+    .map(([file]) => file)
+    .sort();
+  if (missing.length > 0 || duplicates.length > 0) {
+    throw new Error(formatCoverageFailure(missing, duplicates));
+  }
 }
 
 function runVitest(reportPath, targets, workers = 2) {
@@ -138,6 +174,7 @@ async function main() {
   }
   const buckets = buildDesktopElectronBuckets();
   removeOldReports(reportPath, buckets);
+  assertDesktopElectronBucketCoverage(collectElectronTestFiles(), buckets);
   combineReports(reportPath, buckets);
   let exitCode = 0;
   for (const bucket of buckets) {

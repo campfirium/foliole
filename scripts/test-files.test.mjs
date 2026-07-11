@@ -88,13 +88,14 @@ describe('test-files', () => {
     try {
       await mkdir(path.join(tempRoot, 'nested'), { recursive: true });
       const { argsPath, fakeVitestPath } = await createFakeVitest(tempRoot);
-      const result = await runTestFiles(['src/app/components/WorkspaceTopicTreeRows.test.tsx'], {
+      const result = await runTestFiles(['src\\app\\components\\WorkspaceTopicTreeRows.test.tsx'], {
         VITEST_BIN: fakeVitestPath
       });
 
       expect(result.code).toBe(0);
       const vitestArgs = JSON.parse(await readFile(argsPath, 'utf8'));
       expect(vitestArgs).toContain('src/app/components/WorkspaceTopicTreeRows.test.tsx');
+      expect(vitestArgs).not.toContain('src\\app\\components\\WorkspaceTopicTreeRows.test.tsx');
       expect(vitestArgs).toContain(`--maxWorkers=${process.env.VITEST_MAX_WORKERS?.trim() || '2'}`);
       if (process.env.VITEST_FILE_PARALLELISM?.trim() === '1' || process.env.VITEST_FILE_PARALLELISM?.trim() === 'true') {
         expect(vitestArgs).not.toContain('--no-file-parallelism');

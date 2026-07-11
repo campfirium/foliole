@@ -40,10 +40,10 @@ describe('Android Java adapter boundary', () => {
       fileCount: files.length
     }))).toEqual([
       { kind: 'asset_support', hasResponsibility: true, fileCount: 6 },
-      { kind: 'bridge_contract_metadata', hasResponsibility: true, fileCount: 2 },
+      { kind: 'bridge_contract_metadata', hasResponsibility: true, fileCount: 3 },
       { kind: 'bridge_plugin_adapter', hasResponsibility: true, fileCount: 11 },
       { kind: 'generated_definition_reader', hasResponsibility: true, fileCount: 29 },
-      { kind: 'host_platform_adapter', hasResponsibility: true, fileCount: 14 },
+      { kind: 'host_platform_adapter', hasResponsibility: true, fileCount: 15 },
       { kind: 'migration_adapter', hasResponsibility: true, fileCount: 5 },
       { kind: 'query_mutation_executor', hasResponsibility: true, fileCount: 4 },
       { kind: 'sync_diagnostic_adapter', hasResponsibility: true, fileCount: 6 },

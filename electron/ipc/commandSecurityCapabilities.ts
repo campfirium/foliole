@@ -1,6 +1,6 @@
 import { NATIVE_COMMANDS, type NativeCommandName } from '../../lib/platform/nativeCommands.js';
 
-import { COMMAND_SECURITY_CAPABILITY_GROUPS } from './commandSecurityCapabilityGroups.js';
+import { NATIVE_COMMAND_REGISTRY } from './nativeCommandRegistry.js';
 
 export type CommandSecurityCapability =
   | 'assistant'
@@ -36,9 +36,10 @@ const HIGH_IMPACT_SECURITY_CAPABILITIES = new Set<CommandSecurityCapability>([
   'syncMutation'
 ]);
 
-export const COMMAND_SECURITY_CAPABILITY_ENTRIES = COMMAND_SECURITY_CAPABILITY_GROUPS.flatMap((group) =>
-  group.commands.map((command) => ({ command, capability: group.capability }))
-) satisfies CommandSecurityCapabilityEntry[];
+export const COMMAND_SECURITY_CAPABILITY_ENTRIES = NATIVE_COMMAND_REGISTRY.map(({ command, capability }) => ({
+  command,
+  capability
+})) satisfies CommandSecurityCapabilityEntry[];
 
 export function buildCommandSecurityCapabilityMap(
   entries: readonly CommandSecurityCapabilityEntry[],
