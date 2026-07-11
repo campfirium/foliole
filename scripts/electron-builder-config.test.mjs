@@ -179,6 +179,7 @@ describe('electron-builder release packaging config', () => {
 
     expect(config.win.artifactName).toBe('${productName}-Setup-${version}-win-${arch}.${ext}');
     expect(config.nsis.oneClick).toBe(false);
+    expect(config.nsis.include).toBe('build/installer.nsh');
     expect(config.nsis.allowToChangeInstallationDirectory).toBe(true);
     expect(config.nsis.perMachine).toBe(false);
     expect(config.nsis.createStartMenuShortcut).toBe(true);

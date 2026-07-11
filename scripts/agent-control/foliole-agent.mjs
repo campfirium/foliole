@@ -7,11 +7,14 @@ import { fileURLToPath } from 'node:url';
 
 import { buildAgentCliBody } from './foliole-agent-arguments.mjs';
 import { AGENT_CLI_ROUTES as ROUTES, createAgentCliHelp } from './foliole-agent-routes.mjs';
+import { resolveAgentControlDescriptorPath } from './foliole-agent-runtime-paths.mjs';
+import { readAgentCliVersion } from './foliole-agent-version.mjs';
 import { writeAgentBackup } from './foliole-agent-write-backup.mjs';
 
 const JSON_HEADERS = { 'content-type': 'application/json' };
 
 export async function runAgentCli(argv, options = {}) {
+  if (argv.length === 1 && argv[0] === '--version') return runVersion(options);
   if (argv[0] === 'help') return runHelp(argv);
   const parsed = parseArgv(argv);
   if (!parsed.ok) return failure(parsed.error, parsed.statusCode);
@@ -31,6 +34,13 @@ export async function runAgentCli(argv, options = {}) {
   if (route.writeKind === 'material') return runMaterialWriteCommand(parsed.command, bodyResult.body, descriptor, parsed.flags, options);
   if (route.writeKind === 'virtual_folder') return runVirtualFolderWriteCommand(parsed.command, bodyResult.body, descriptor, parsed.flags, options);
   return callApi(route, descriptor, bodyResult.body, options);
+}
+
+async function runVersion(options) {
+  const version = await readAgentCliVersion(options);
+  return version
+    ? { output: version, status: 0 }
+    : failure('product_version_unavailable', 3);
 }
 
 function runHelp(argv) {
@@ -64,13 +74,13 @@ function parseFlags(tokens) {
 }
 
 async function readDescriptor(flagPath, options) {
-  const descriptorPath = flagPath ?? options.env?.FOLIOLE_AGENT_DESCRIPTOR ?? process.env.FOLIOLE_AGENT_DESCRIPTOR;
-  if (!descriptorPath) return { error: 'descriptor_not_found', ok: false, statusCode: 3 };
+  const env = options.env ?? process.env;
+  const descriptorPath = flagPath ?? resolveAgentControlDescriptorPath({ env, homeDir: options.homeDir, platform: options.platform });
   try {
     const descriptor = JSON.parse(await readFile(descriptorPath, 'utf8'));
     return isDescriptor(descriptor) ? { descriptor, ok: true } : { error: 'invalid_descriptor', ok: false, statusCode: 3 };
   } catch {
-    return { error: 'descriptor_not_found', ok: false, statusCode: 3 };
+    return { error: 'session_unavailable', ok: false, statusCode: 3 };
   }
 }
 

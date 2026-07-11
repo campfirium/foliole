@@ -25,9 +25,11 @@ describe('electron-builder runtime file coverage', () => {
     const config = await readBuilderConfig();
 
     expect(config.files).toContain('dist/scripts/agent-control/foliole-agent-routes.mjs');
+    expect(config.files).toContain('dist/scripts/agent-control/foliole-agent-runtime-paths.mjs');
     expect(config.extraResources).toContainEqual({
       from: 'scripts/agent-control',
       to: 'scripts/agent-control'
     });
+    expect(config.extraFiles).toContainEqual({ from: 'build/cli', to: 'bin' });
   });
 });

@@ -47,6 +47,10 @@ export function resolvePackageStatusLabel(install) {
   return install ? 'PACKAGED_AND_INSTALLED' : 'PACKAGED';
 }
 
+export function createCurrentUserInstallArgs() {
+  return ['/currentuser', '/S'];
+}
+
 function createCmdStep(label, command) {
   return {
     args: ['/d', '/s', '/c', command],
@@ -160,7 +164,7 @@ export async function installPackagedApp(rootDir = repoRoot, packageVersion = re
   const installerPath = resolvePackagedInstallerPath(rootDir, packageVersion, outputDir);
   console.log(`[windows-package] installer: ${installerPath}`);
   await runStep({
-    args: ['/S'],
+    args: createCurrentUserInstallArgs(),
     command: installerPath,
     cwd: resolve(rootDir, outputDir),
     label: 'silent install'

@@ -150,11 +150,13 @@ describe('foliole agent cli', () => {
   });
 
   it('returns structured descriptor and capability errors', async () => {
-    const missing = await runAgentCli(['materials/read', '--id', 'node-1'], { env: {} });
+    const missing = await runAgentCli(['materials/read', '--id', 'node-1'], {
+      env: { FOLIOLE_USER_DATA_PATH: path.join(tempRoot, 'missing-user-data') }
+    });
     const descriptor = await descriptorPath({ capabilities: ['materials.read'] });
     const disabled = await runAgentCli(['materials/update', '--descriptor', descriptor, '--id', 'node-1', '--expected-updated-at', 't', '--title', 'Next']);
 
-    expect(missing).toEqual({ output: { error: 'descriptor_not_found' }, status: 3 });
+    expect(missing).toEqual({ output: { error: 'session_unavailable' }, status: 3 });
     expect(disabled).toEqual({ output: { error: 'capability_disabled' }, status: 3 });
   });
 

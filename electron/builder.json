@@ -20,6 +20,12 @@
       "to": "scripts/agent-control"
     }
   ],
+  "extraFiles": [
+    {
+      "from": "build/cli",
+      "to": "bin"
+    }
+  ],
   "electronLanguages": ["en-US", "zh-CN"],
   "npmRebuild": true,
   "nativeRebuilder": "sequential",
@@ -32,6 +38,7 @@
     "dist/electron/**/*",
     "dist/lib/**/*",
     "dist/scripts/agent-control/foliole-agent-routes.mjs",
+    "dist/scripts/agent-control/foliole-agent-runtime-paths.mjs",
     "dist/src/shared/config/**/*",
     "package.json",
     "!dist/electron/**/*.test.js",
@@ -82,6 +89,7 @@
   },
   "nsis": {
     "oneClick": false,
+    "include": "build/installer.nsh",
     "allowToChangeInstallationDirectory": true,
     "perMachine": false,
     "createStartMenuShortcut": true,

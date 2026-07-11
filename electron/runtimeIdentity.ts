@@ -1,6 +1,15 @@
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+import {
+  FOLIOLE_APP_NAME,
+  FOLIOLE_INTERNAL_APP_NAME,
+  FOLIOLE_INTERNAL_PRODUCT_NAME,
+  resolveFolioleRuntimeAppName,
+  resolveFolioleUserDataPaths,
+  resolvePathOverride
+} from '../scripts/agent-control/foliole-agent-runtime-paths.mjs';
+
 import { resolvePreloadScriptPath, resolveRendererIndexPath } from './runtimePaths.js';
 
 type ExistsSync = (filePath: string) => boolean;
@@ -32,27 +41,13 @@ export interface ConfiguredAppIdentity {
   userDataPath: string;
 }
 
-export const FOLIOLE_APP_NAME = 'foliole';
-export const FOLIOLE_INTERNAL_APP_NAME = 'foliole-internal';
+export { FOLIOLE_APP_NAME, FOLIOLE_INTERNAL_APP_NAME, FOLIOLE_INTERNAL_PRODUCT_NAME };
 export const FOLIOLE_INTERNAL_DEFAULT_LIBRARY_HOME = 'D:\\X\\U\\Foliole';
-export const FOLIOLE_INTERNAL_PRODUCT_NAME = 'Foliole Internal';
 export const FOLIOLE_WINDOWS_APP_USER_MODEL_ID = 'com.foliole.desktop';
 export const FOLIOLE_WINDOWS_INTERNAL_APP_USER_MODEL_ID = 'com.foliole.desktop.internal';
 
-function resolveFolioleUserDataPath(appDataRoot: string) {
-  return path.join(appDataRoot, FOLIOLE_APP_NAME);
-}
-
 function resolveRuntimeAppName(initialAppName: string, env: NodeJS.ProcessEnv) {
-  if (env.FOLIOLE_BUILD_CHANNEL === 'internal' || initialAppName === FOLIOLE_INTERNAL_PRODUCT_NAME) {
-    return FOLIOLE_INTERNAL_APP_NAME;
-  }
-  return FOLIOLE_APP_NAME;
-}
-
-function resolveOverridePath(envValue: string | undefined) {
-  const trimmed = envValue?.trim();
-  return trimmed ? path.resolve(trimmed) : null;
+  return resolveFolioleRuntimeAppName(initialAppName, env);
 }
 
 function readFlagValue(argv: string[], name: string) {
@@ -80,7 +75,7 @@ function resolveRuntimeLibraryHome(args: {
   internalBuild: boolean;
   sandboxLibraryHome: string | null;
 }) {
-  return resolveOverridePath(args.env.FOLIOLE_LIBRARY_HOME)
+  return resolvePathOverride(args.env.FOLIOLE_LIBRARY_HOME)
     ?? resolveLibraryHomeArg(args.argv)
     ?? args.sandboxLibraryHome
     ?? (args.internalBuild ? FOLIOLE_INTERNAL_DEFAULT_LIBRARY_HOME : null);
@@ -92,14 +87,7 @@ function resolveRuntimeUserDataPath(args: {
   internalBuild: boolean;
   sandboxRoot: string | null;
 }) {
-  const defaultUserDataPath = args.internalBuild
-    ? path.join(args.appDataRoot, FOLIOLE_INTERNAL_APP_NAME)
-    : resolveFolioleUserDataPath(args.appDataRoot);
-  const sandboxUserDataPath = args.sandboxRoot ? path.join(args.sandboxRoot, 'user-data') : null;
-  return {
-    defaultUserDataPath,
-    userDataPath: resolveOverridePath(args.env.FOLIOLE_USER_DATA_PATH) ?? sandboxUserDataPath ?? defaultUserDataPath
-  };
+  return resolveFolioleUserDataPaths(args);
 }
 
 function hasFlag(argv: string[], name: string) {
@@ -117,7 +105,7 @@ function normalizeGuidedSampleLocale(value: string | null | undefined) {
 }
 
 function resolvePreviewSandboxRoot(app: AppIdentityApi, env: NodeJS.ProcessEnv, argv: string[]) {
-  const override = resolveOverridePath(env.FOLIOLE_PREVIEW_SANDBOX_ROOT) ?? resolveOverridePath(readFlagValue(argv, '--preview-sandbox-root') ?? undefined);
+  const override = resolvePathOverride(env.FOLIOLE_PREVIEW_SANDBOX_ROOT) ?? resolvePathOverride(readFlagValue(argv, '--preview-sandbox-root') ?? undefined);
   return override ?? path.join(app.getPath('temp'), FOLIOLE_APP_NAME, 'preview-sandbox');
 }
 
@@ -164,7 +152,7 @@ export function configureRuntimeAppIdentity(
   }
   const appDataRoot = app.getPath('appData');
   const { defaultUserDataPath, userDataPath } = resolveRuntimeUserDataPath({ appDataRoot, env, internalBuild, sandboxRoot });
-  const sessionDataPath = resolveOverridePath(env.FOLIOLE_SESSION_DATA_PATH) ?? userDataPath;
+  const sessionDataPath = resolvePathOverride(env.FOLIOLE_SESSION_DATA_PATH) ?? userDataPath;
   if (previewSandbox && env.FOLIOLE_PREVIEW_SANDBOX_RESET !== '0') {
     resetPreviewSandboxPaths(
       Array.from(new Set([libraryHome, userDataPath, sessionDataPath].filter((value): value is string => Boolean(value)))),

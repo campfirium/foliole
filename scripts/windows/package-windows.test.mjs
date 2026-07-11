@@ -17,6 +17,7 @@ import {
 } from './package-windows-internal-config.mjs';
 import {
   collectInstallerArtifactPaths,
+  createCurrentUserInstallArgs,
   createNativePackageSteps,
   createWslPackageSteps,
   formatBytes,
@@ -92,6 +93,10 @@ describe('windows package runner', () => {
     const steps = createNativePackageSteps(true);
 
     expect(steps.map((step) => step.label)).toEqual(['electron-builder nsis']);
+  });
+
+  it('installs explicitly in the current-user context', () => {
+    expect(createCurrentUserInstallArgs()).toEqual(['/currentuser', '/S']);
   });
 
   it('uses a generated electron-builder config for native internal packages', () => {

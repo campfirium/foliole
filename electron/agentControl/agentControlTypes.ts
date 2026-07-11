@@ -1,6 +1,9 @@
-import { AGENT_CONTROL_PRODUCT_CAPABILITIES } from '../../scripts/agent-control/foliole-agent-routes.mjs';
+import {
+  AGENT_CONTROL_PRODUCT_CAPABILITIES,
+  AGENT_CONTROL_PROTOCOL_VERSION
+} from '../../scripts/agent-control/foliole-agent-routes.mjs';
 
-export const AGENT_CONTROL_PROTOCOL_VERSION = 1;
+export { AGENT_CONTROL_PROTOCOL_VERSION };
 
 export const AGENT_CONTROL_CAPABILITIES = AGENT_CONTROL_PRODUCT_CAPABILITIES;
 

@@ -1,5 +1,8 @@
 const EMPTY_ARGS = { optional: [], required: [] };
 
+export const AGENT_CLI_CONTRACT_VERSION = 1;
+export const AGENT_CONTROL_PROTOCOL_VERSION = 1;
+
 export const AGENT_CONTROL_ROUTE_REGISTRY = /** @type {const} */ ([
   registryRoute('foundation', 'GET', 'capabilities', 'foundation.capabilities', {
     cli: cliRoute('capabilities', 'List the enabled Foliole capabilities.')
@@ -121,7 +124,7 @@ export function createAgentCliHelp() {
       name
     })),
     name: 'foliole',
-    version: 1
+    version: AGENT_CLI_CONTRACT_VERSION
   };
 }
 
