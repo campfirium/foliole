@@ -16,6 +16,7 @@ it('starts a plain app-server and sends product-level Foliole guidance', async (
   const workspaceContext = createAgentControlWorkspaceContext();
   const adapter = new CodexAppServerAdapter({
     appVersion: '0.6.5-test',
+    command: 'codex',
     launcherCwd: 'C:\\Foliole\\Widgets\\Foliole Aide',
     mkdirSync: testMkdirSync,
     probeCommand: async () => true,

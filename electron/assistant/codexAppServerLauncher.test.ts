@@ -26,6 +26,7 @@ it('uses the same sanitized launcher environment for status probes and app-serve
   const spawnCommand = vi.fn<(command: string, args: string[], options?: LauncherOptions) => FakeCodexProcess>(() => process);
   const adapter = new CodexAppServerAdapter({
     appVersion: '0.6.5-test',
+    command: 'codex',
     env: {
       CODEX_HOME: 'C:\\Users\\Tester\\.codex',
       CODEX_SANDBOX_NETWORK_DISABLED: '1',
@@ -64,6 +65,7 @@ it('maps launcher directory creation failures to launch_failed without probing o
   const spawnCommand = vi.fn();
   const adapter = new CodexAppServerAdapter({
     appVersion: '0.6.5-test',
+    command: 'codex',
     launcherCwd: TEST_LAUNCHER_CWD,
     mkdirSync: () => {
       throw new Error('no access');

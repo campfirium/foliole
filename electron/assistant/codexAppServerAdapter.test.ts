@@ -10,6 +10,7 @@ function createAdapter(process: FakeCodexProcess) {
   const spawnCommand = vi.fn(() => process);
   return new CodexAppServerAdapter({
     appVersion: '0.6.5-test',
+    command: 'codex',
     launcherCwd: TEST_LAUNCHER_CWD,
     mkdirSync: testMkdirSync,
     probeCommand: async () => true,
@@ -98,6 +99,7 @@ function createAdapter(process: FakeCodexProcess) {
     const spawnCommand = vi.fn(() => process);
     const adapter = new CodexAppServerAdapter({
       appVersion: '0.6.5-test',
+      command: 'codex',
       launcherCwd: TEST_LAUNCHER_CWD,
       mkdirSync: testMkdirSync,
       probeCommand: async () => true,
@@ -169,6 +171,7 @@ function createAdapter(process: FakeCodexProcess) {
   it('maps launch and protocol failures to sanitized categories', async () => {
     const unavailable = new CodexAppServerAdapter({
       appVersion: '0.6.5-test',
+      command: 'codex',
       launcherCwd: TEST_LAUNCHER_CWD,
       mkdirSync: testMkdirSync,
       spawnCommand: throwMissingCodex

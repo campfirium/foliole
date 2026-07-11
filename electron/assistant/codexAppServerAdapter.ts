@@ -1,4 +1,3 @@
-import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 
 import type {
@@ -9,6 +8,12 @@ import type {
   NativeAssistantStatusResult
 } from '../../lib/platform/nativeAssistantContract.js';
 
+import {
+  findCodexCommandCandidates,
+  probeCodexCommand,
+  spawnCodexCommand,
+  type CodexLauncherOptions
+} from './codexAppServerCommandDiscovery.js';
 import type { SpawnedCodexProcess } from './codexAppServerSessionTypes.js';
 import { CodexAppServerSession } from './codexAppServerTurn.js';
 
@@ -18,6 +23,7 @@ const DEFAULT_TIMEOUT_MS = 180_000;
 export interface CodexAppServerAdapterOptions {
   appVersion: string;
   command?: string;
+  findCommandCandidates?: (env: NodeJS.ProcessEnv) => Promise<string[]>;
   env?: NodeJS.ProcessEnv;
   launcherCwd: string;
   mkdirSync?: (path: string, options: { recursive: true }) => void;
@@ -30,22 +36,19 @@ export interface CodexAppServerAdapterOptions {
   timeoutMs?: number;
 }
 
-export interface CodexLauncherOptions {
-  cwd: string;
-  env: NodeJS.ProcessEnv;
-}
-
 export class CodexAppServerAdapter {
   private active = false;
   private readonly appVersion: string;
-  private readonly command: string;
+  private readonly configuredCommand: string | undefined;
   private readonly env: NodeJS.ProcessEnv;
+  private readonly findCommandCandidates: (env: NodeJS.ProcessEnv) => Promise<string[]>;
   private readonly launcherCwd: string;
   private readonly mkdirSync: (path: string, options: { recursive: true }) => void;
   private readonly probeCommand: (
     command: string,
     options: CodexLauncherOptions
   ) => Promise<boolean>;
+  private resolvedCommand: string | null = null;
   private session: CodexAppServerSession | null = null;
   private readonly spawnCommand: (
     command: string,
@@ -56,8 +59,9 @@ export class CodexAppServerAdapter {
 
   constructor(options: CodexAppServerAdapterOptions) {
     this.appVersion = options.appVersion;
-    this.command = options.command ?? 'codex';
+    this.configuredCommand = options.command;
     this.env = options.env ?? process.env;
+    this.findCommandCandidates = options.findCommandCandidates ?? findCodexCommandCandidates;
     this.launcherCwd = options.launcherCwd;
     this.mkdirSync = options.mkdirSync ?? fs.mkdirSync;
     this.probeCommand = options.probeCommand ?? probeCodexCommand;
@@ -69,8 +73,7 @@ export class CodexAppServerAdapter {
     if (this.active) return status('busy');
     try {
       const launcherOptions = this.createLauncherOptions();
-      if (!await this.probeCommand(this.command, launcherOptions))
-        return status('unavailable', 'not_configured');
+      if (!await this.resolveCommand(launcherOptions)) return status('unavailable', 'not_configured');
       return status('ready');
     } catch (error) {
       return status('unavailable', failureFromError(error));
@@ -90,10 +93,14 @@ export class CodexAppServerAdapter {
     if (!message) return sendFailure('failed', 'protocol_error');
     this.active = true;
     try {
+      const command = this.resolvedCommand
+        ?? this.configuredCommand
+        ?? await this.resolveCommand(this.createLauncherOptions());
+      if (!command) return sendFailure('failed', 'not_configured');
       this.session ??= new CodexAppServerSession({
         appVersion: this.appVersion,
         launcherCwd: this.launcherCwd,
-        spawn: () => this.spawnCommand(this.command, ['app-server'], this.createLauncherOptions())
+        spawn: () => this.spawnCommand(command, ['app-server'], this.createLauncherOptions())
       });
       return await this.session.sendMessage({
         clientTurnId: input.clientTurnId,
@@ -127,6 +134,19 @@ export class CodexAppServerAdapter {
       env: sanitizeCodexLauncherEnv(this.env)
     };
   }
+
+  private async resolveCommand(options: CodexLauncherOptions) {
+    if (this.resolvedCommand) return this.resolvedCommand;
+    const candidates = this.configuredCommand
+      ? [this.configuredCommand]
+      : await this.findCommandCandidates(this.env);
+    for (const command of candidates) {
+      if (!await this.probeCommand(command, options)) continue;
+      this.resolvedCommand = command;
+      return command;
+    }
+    return null;
+  }
 }
 
 function status(
@@ -154,38 +174,6 @@ function sendFailure(
     provider: PROVIDER,
     state
   } satisfies NativeAssistantSendMessageResult;
-}
-
-async function probeCodexCommand(command: string, options: CodexLauncherOptions) {
-  return probeCodexExitCode(command, ['--version'], options, 2_000);
-}
-
-async function probeCodexExitCode(command: string, args: string[], options: CodexLauncherOptions, timeoutMs: number) {
-  return new Promise<boolean>((resolve) => {
-    const child = spawnCodexCommand(command, args, options);
-    let settled = false;
-    const finish = (ok: boolean) => {
-      if (settled) return;
-      settled = true;
-      resolve(ok);
-    };
-    child.on('error', () => finish(false));
-    child.on('exit', (code) => finish(code === 0));
-    setTimeout(() => {
-      child.kill();
-      finish(false);
-    }, timeoutMs).unref?.();
-  });
-}
-
-function spawnCodexCommand(command: string, args: string[], options: CodexLauncherOptions) {
-  return spawn(command, args, {
-    cwd: options.cwd,
-    env: options.env,
-    shell: process.platform === 'win32',
-    stdio: ['pipe', 'pipe', 'pipe'],
-    windowsHide: true
-  });
 }
 
 function sanitizeCodexLauncherEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {

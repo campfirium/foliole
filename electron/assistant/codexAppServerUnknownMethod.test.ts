@@ -22,6 +22,7 @@ it('does not treat unknown app-server methods as successful turns', async () => 
   const process = new FakeCodexProcess();
   const adapter = new CodexAppServerAdapter({
     appVersion: '0.6.5-test',
+    command: 'codex',
     launcherCwd: 'C:\\Foliole\\Widgets\\Foliole Aide',
     mkdirSync: () => undefined,
     probeCommand: async () => true,
@@ -45,6 +46,7 @@ it('times out when app-server never acknowledges initialize', async () => {
   const process = new FakeCodexProcess();
   const adapter = new CodexAppServerAdapter({
     appVersion: '0.6.5-test',
+    command: 'codex',
     launcherCwd: 'C:\\Foliole\\Widgets\\Foliole Aide',
     mkdirSync: () => undefined,
     probeCommand: async () => true,
@@ -63,6 +65,7 @@ it('fails the active turn when app-server exits before completion', async () => 
   const process = new FakeCodexProcess();
   const adapter = new CodexAppServerAdapter({
     appVersion: '0.6.5-test',
+    command: 'codex',
     launcherCwd: 'C:\\Foliole\\Widgets\\Foliole Aide',
     mkdirSync: () => undefined,
     probeCommand: async () => true,

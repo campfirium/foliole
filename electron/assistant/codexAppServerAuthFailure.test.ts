@@ -21,6 +21,7 @@ it('maps app-server authentication events before waiting for timeout', async () 
   const process = new FakeCodexProcess();
   const adapter = new CodexAppServerAdapter({
     appVersion: '0.6.5-test',
+    command: 'codex',
     launcherCwd: 'C:\\Foliole\\Widgets\\Foliole Aide',
     mkdirSync: () => undefined,
     probeCommand: async () => true,
@@ -46,6 +47,7 @@ it('maps app-server JSON-RPC 401 response stream errors to auth_failed', async (
   const process = new FakeCodexProcess();
   const adapter = new CodexAppServerAdapter({
     appVersion: '0.6.5-test',
+    command: 'codex',
     launcherCwd: 'C:\\Foliole\\Widgets\\Foliole Aide',
     mkdirSync: () => undefined,
     probeCommand: async () => true,
