@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+node scripts/git/check-commit-sequence.mjs prepare-commit-msg "$@"

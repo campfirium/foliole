@@ -10,11 +10,13 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const HOOK_NAMES = ['commit-msg', 'pre-commit', 'pre-push'];
+const HOOK_NAMES = ['commit-msg', 'pre-commit', 'pre-push', 'prepare-commit-msg'];
 const FILE_BUDGET_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'check-file-budget.mjs');
 const AFFECTED_VALIDATION_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'pre-push-affected-validation.mjs');
 const CRITICAL_TEST_ROUTES_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'quality', 'quality-critical-test-routes.mjs');
 const SEQUENCE_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'git', 'check-commit-sequence.mjs');
+const PATH_DOMAINS_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'lib', 'path-domains.mjs');
+const PREVIEW_PATHS_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'lib', 'path-domain-preview-paths.mjs');
 const HOOK_INTEGRATION_TIMEOUT_MS = 30_000;
 const tempDirs = [];
 
@@ -48,11 +50,14 @@ async function createRepo() {
   await mkdir(path.join(repoDir, '.githooks'), { recursive: true });
   await mkdir(path.join(repoDir, 'scripts'), { recursive: true });
   await mkdir(path.join(repoDir, 'scripts', 'git'), { recursive: true });
+  await mkdir(path.join(repoDir, 'scripts', 'lib'), { recursive: true });
   await mkdir(path.join(repoDir, 'scripts', 'quality'), { recursive: true });
   await copyFile(SEQUENCE_SCRIPT_PATH, path.join(repoDir, 'scripts', 'git', 'check-commit-sequence.mjs'));
   await copyFile(FILE_BUDGET_SCRIPT_PATH, path.join(repoDir, 'scripts', 'check-file-budget.mjs'));
   await copyFile(AFFECTED_VALIDATION_SCRIPT_PATH, path.join(repoDir, 'scripts', 'pre-push-affected-validation.mjs'));
   await copyFile(CRITICAL_TEST_ROUTES_SCRIPT_PATH, path.join(repoDir, 'scripts', 'quality', 'quality-critical-test-routes.mjs'));
+  await copyFile(PATH_DOMAINS_SCRIPT_PATH, path.join(repoDir, 'scripts', 'lib', 'path-domains.mjs'));
+  await copyFile(PREVIEW_PATHS_SCRIPT_PATH, path.join(repoDir, 'scripts', 'lib', 'path-domain-preview-paths.mjs'));
   await chmod(path.join(repoDir, 'scripts', 'git', 'check-commit-sequence.mjs'), 0o755);
   await chmod(path.join(repoDir, 'scripts', 'pre-push-affected-validation.mjs'), 0o755);
   await writeFile(
@@ -117,6 +122,18 @@ describe('git hooks', () => {
 
     expect(result.code).not.toBe(0);
     expect(result.stderr).toContain('commit subject must start with next sequence 000002');
+  }, HOOK_INTEGRATION_TIMEOUT_MS);
+
+  it('keeps the existing sequence when amending a commit', async () => {
+    const repoDir = await createRepo();
+    await expect(commitFile(repoDir, 'a.txt', 'a\n', '000001 seed')).resolves.toMatchObject({ code: 0 });
+    await writeFile(path.join(repoDir, 'a.txt'), 'amended\n');
+    await runCommand('git', ['add', 'a.txt'], repoDir);
+
+    const result = await runCommand('git', ['commit', '--amend', '--no-edit'], repoDir);
+
+    expect(result.code, result.stderr).toBe(0);
+    expect((await runCommand('git', ['log', '-1', '--pretty=%s'], repoDir)).stdout.trim()).toBe('000001 seed');
   }, HOOK_INTEGRATION_TIMEOUT_MS);
 
   it('blocks branch pushes with non-continuous numbered history', async () => {

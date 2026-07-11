@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 /* global console, process */
 
-import { readFileSync } from 'node:fs';
+import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 
 const NUMBERED_SUBJECT = /^(\d{6})\s+\S/;
 const ZERO_SHA = /^0{40}$/;
+const COMMIT_CONTEXT_PREFIX = '# foliole-commit-context: ';
 
 function runGit(args) {
   const result = spawnSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
@@ -45,10 +46,34 @@ function formatSequence(value) {
   return String(value).padStart(6, '0');
 }
 
+function prepareCommitContext(messagePath, source, sourceCommit) {
+  appendFileSync(messagePath, `\n${COMMIT_CONTEXT_PREFIX}${source ?? ''} ${sourceCommit ?? ''}\n`, 'utf8');
+}
+
+function readAmendedSequence(messagePath) {
+  const message = readFileSync(messagePath, 'utf8');
+  const lines = message.split(/\r?\n/u);
+  const contextLine = lines.find((line) => line.startsWith(COMMIT_CONTEXT_PREFIX));
+  if (!contextLine) {
+    return null;
+  }
+  const [source, sourceCommit] = contextLine.slice(COMMIT_CONTEXT_PREFIX.length).trim().split(/\s+/u);
+  writeFileSync(messagePath, lines.filter((line) => line !== contextLine).join('\n'), 'utf8');
+  if (source !== 'commit' || !sourceCommit) {
+    return null;
+  }
+  const head = runGit(['rev-parse', 'HEAD']).trim();
+  const resolvedSource = runGit(['rev-parse', sourceCommit]).trim();
+  if (resolvedSource !== head) {
+    return null;
+  }
+  return parseNumberedSubject(runGit(['show', '-s', '--format=%s', resolvedSource]).trim());
+}
+
 function checkCommitMessage(messagePath) {
   const subject = readFileSync(messagePath, 'utf8').split(/\r?\n/u)[0] ?? '';
   const actual = parseNumberedSubject(subject);
-  const expected = getNextSequence();
+  const expected = readAmendedSequence(messagePath) ?? getNextSequence();
 
   if (actual === expected) {
     return;
@@ -113,7 +138,11 @@ function checkPrePush(input) {
 }
 
 function main() {
-  const [mode, messagePath] = process.argv.slice(2);
+  const [mode, messagePath, source, sourceCommit] = process.argv.slice(2);
+  if (mode === 'prepare-commit-msg' && messagePath) {
+    prepareCommitContext(messagePath, source, sourceCommit);
+    return;
+  }
   if (mode === 'commit-msg' && messagePath) {
     checkCommitMessage(messagePath);
     return;
