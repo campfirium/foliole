@@ -31,8 +31,8 @@ export interface NodeSyncHashInput {
   virtualFilter: string | null;
 }
 
-function normalizeIso(value: string | null) {
-  return value ?? null;
+function normalizeIso<T extends string | null>(value: T): T {
+  return value;
 }
 
 function normalizeNullableText(value: string | null) {

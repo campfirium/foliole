@@ -47,6 +47,7 @@ describe('Android workspace read query rules', () => {
     expect(definitions.workspaceRead.snapshot.nodePayload.fields).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ outputKey: 'parentNodeId', rowKey: 'parent_id' }),
+        expect.objectContaining({ outputKey: 'position', rowKey: 'position', type: 'long' }),
         expect.objectContaining({ outputKey: 'desiredRetention', rowKey: 'desired_retention' }),
         expect.objectContaining({ outputKey: 'bodyBlobHash', rowKey: 'body_blob_hash' })
       ])

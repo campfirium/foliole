@@ -20,8 +20,6 @@ import {
 import { createNewItemReviewProfiles } from '../store/newItemReviewSlots';
 
 import {
-  canonicalCompanionNodePayload,
-  sha256Hex,
   toCompanionNativeNodeVersion
 } from './companionAnnotationNodeVersion';
 import { appendCompanionExistingHighlightNote } from './companionExistingHighlightActions';
@@ -39,10 +37,6 @@ interface AnnotationDraft {
   nodeVersion: NativeSyncNodeRecord;
   review: NativeWorkspaceReviewProfile | null;
   snapshot: WorkspaceSnapshot;
-}
-
-function toNativeNodeVersion(node: WorkspaceNodeSnapshot, deviceId: string, contentHash: string): NativeSyncNodeRecord {
-  return toCompanionNativeNodeVersion(node, deviceId, contentHash);
 }
 
 function createNode(args: {
@@ -101,8 +95,7 @@ async function buildAnnotationDraft(args: PersistSelectionAnnotationArgs): Promi
     timestamp,
     title: args.kind === 'cloze' ? deriveNodeTitleForCloze(content, cloze.answer) : deriveNodeTitleFromContent(content)
   });
-  const contentHash = await sha256Hex(JSON.stringify(canonicalCompanionNodePayload(node)));
-  const nodeVersion = toNativeNodeVersion(node, args.deviceId, contentHash);
+  const nodeVersion = await toCompanionNativeNodeVersion(node, args.deviceId);
   const versionedNode = { ...node, currentVersionId: nodeVersion.version_id };
   return {
     node: versionedNode,
@@ -138,8 +131,7 @@ async function persistExistingHighlightNode(args: {
   update: (node: WorkspaceNodeSnapshot, timestamp: string) => WorkspaceNodeSnapshot;
 }) {
   const node = args.update(args.node, new Date().toISOString());
-  const contentHash = await sha256Hex(JSON.stringify(canonicalCompanionNodePayload(node)));
-  const nodeVersion = toNativeNodeVersion(node, args.deviceId, contentHash);
+  const nodeVersion = await toCompanionNativeNodeVersion(node, args.deviceId);
   const versionedNode = { ...node, currentVersionId: nodeVersion.version_id };
   await applyCompanionSyncNodeVersions([nodeVersion]);
   return {

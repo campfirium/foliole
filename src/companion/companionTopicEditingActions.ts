@@ -6,8 +6,6 @@ import { applyCompanionSyncNodeVersions } from '../shared/platform/companionSync
 import { isCanonicalVisibleNodeId } from '../shared/workspaceCanonicalSelectors';
 
 import {
-  canonicalCompanionNodePayload,
-  sha256Hex,
   toCompanionNativeNodeVersion
 } from './companionAnnotationNodeVersion';
 
@@ -34,8 +32,7 @@ async function toVersionedNode(args: {
   deviceId: string;
   node: WorkspaceNodeSnapshot;
 }) {
-  const contentHash = await sha256Hex(JSON.stringify(canonicalCompanionNodePayload(args.node)));
-  const nodeVersion = toCompanionNativeNodeVersion(args.node, args.deviceId, contentHash);
+  const nodeVersion = await toCompanionNativeNodeVersion(args.node, args.deviceId);
   return {
     node: { ...args.node, currentVersionId: nodeVersion.version_id },
     nodeVersion

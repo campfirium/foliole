@@ -157,6 +157,7 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
       'SELECT n.id, n.parent_id, n.kind, n.priority, n.desired_retention, n.enable_short_term, n.sequential_reading_enabled, n.shelved_at, n.manual_child_order, n.title, n.is_title_manual, ' +
       'n.hide_title_heading, __CONTENT_EXPRESSION__ AS content, n.opening_text, __BODY_STATUS_EXPRESSION__ AS body_status, ' +
       'n.virtual_filter, n.reveal, n.anchor_link, n.image_regions, n.created_at, n.updated_at, n.deleted_at, n.current_version_id, ' +
+      '(SELECT no.position FROM node_order no WHERE no.node_id = n.id) AS position, ' +
       'rd.interval_duration_ms, rd.interval_growth_factor, rd.last_handled_at, rd.next_at, rd.priority AS reading_priority, ' +
       'rds.reading_position, rd.repetition_count, rd.state AS reading_state, nr.due, nr.last_review_at, nr.state AS review_state, ' +
       'nr.stability, nr.difficulty, nr.elapsed_days, nr.scheduled_days, nr.reps, nr.lapses, n.body_blob_hash ' +
@@ -190,6 +191,7 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
       { key: 'updated_at', source: 'updated_at', type: 'string' },
       { key: 'deleted_at', source: 'deleted_at', type: 'nullableString' },
       { key: 'current_version_id', source: 'current_version_id', type: 'nullableString' },
+      { key: 'position', source: 'position', type: 'long' },
       { key: 'interval_duration_ms', source: 'interval_duration_ms', type: 'long' },
       { key: 'interval_growth_factor', source: 'interval_growth_factor', type: 'double' },
       { key: 'last_handled_at', source: 'last_handled_at', type: 'nullableString' },

@@ -10,8 +10,6 @@ import {
 } from '../shared/workspaceCanonicalSelectors';
 
 import {
-  canonicalCompanionNodePayload,
-  sha256Hex,
   toCompanionNativeNodeVersion
 } from './companionAnnotationNodeVersion';
 
@@ -44,10 +42,9 @@ async function buildRestoredNodeVersion(node: WorkspaceNodeSnapshot, deviceId: s
     deletedAt: null,
     updatedAt: restoredAt
   };
-  const contentHash = await sha256Hex(JSON.stringify(canonicalCompanionNodePayload(restoredNode)));
   return {
     node: { ...restoredNode },
-    version: toCompanionNativeNodeVersion(restoredNode, deviceId, contentHash)
+    version: await toCompanionNativeNodeVersion(restoredNode, deviceId)
   };
 }
 

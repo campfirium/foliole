@@ -35,6 +35,7 @@ export interface WorkspaceNodeSnapshot {
   bodyStatus?: 'empty' | 'failed' | 'fetching' | 'missing' | 'ready';
   id: string;
   parentNodeId: string | null;
+  position?: number | null;
   kind: NodeKind;
   priority?: number | null;
   desiredRetention?: number | null;
@@ -72,6 +73,7 @@ export interface WorkspaceNodeRowShape {
   body_status?: string | null;
   content: string;
   created_at: string;
+  current_version_id?: string | null;
   deleted_at: string | null;
   desired_retention: number | null;
   enable_short_term: number | null;
@@ -160,6 +162,7 @@ export function buildWorkspaceSnapshotNode(row: WorkspaceNodeRowShape): Workspac
     hideTitleHeading: row.hide_title_heading === 1,
     openingText: row.opening_text,
     content: row.content,
+    currentVersionId: row.current_version_id ?? null,
     bodyBlobHash: row.body_blob_hash ?? null,
     virtualFilter: parseVirtualNodeFilter(row.virtual_filter),
     reveal: row.reveal,

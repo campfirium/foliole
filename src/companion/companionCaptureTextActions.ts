@@ -6,8 +6,6 @@ import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { applyCompanionSyncNodeVersions } from '../shared/platform/companionSyncObjects';
 
 import {
-  canonicalCompanionNodePayload,
-  sha256Hex,
   toCompanionNativeNodeVersion
 } from './companionAnnotationNodeVersion';
 
@@ -59,8 +57,7 @@ async function buildCaptureTextDraft(args: PersistCompanionCapturedTextArgs): Pr
     throw new CompanionCaptureTextError('inbox-unavailable');
   }
   const node = createCaptureNode(content, new Date().toISOString());
-  const contentHash = await sha256Hex(JSON.stringify(canonicalCompanionNodePayload(node)));
-  const nodeVersion = toCompanionNativeNodeVersion(node, args.deviceId, contentHash);
+  const nodeVersion = await toCompanionNativeNodeVersion(node, args.deviceId);
   const versionedNode = { ...node, currentVersionId: nodeVersion.version_id };
   return {
     node: versionedNode,

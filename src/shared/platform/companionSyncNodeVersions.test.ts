@@ -3,6 +3,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 
 import { ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS } from '../../../lib/core/database/androidCompanionCoreSchemaStatements';
 import { ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS } from '../../../lib/core/database/androidCompanionSyncSchemaStatements';
+import { toWorkspaceNativeNodeVersion } from '../../../lib/core/database/workspaceNodeSyncVersion';
 import type { NativeSyncNodeRecord } from '../../../lib/platform/nativeSyncContract';
 
 import {
@@ -34,6 +35,49 @@ it('applies node versions through the Capacitor DbPort adapter and shared core',
     object_id: 'node-1',
     version_id: 'android#1'
   }]);
+});
+
+it('applies a complete workspace-produced version through the Capacitor DbPort', async () => {
+  db = new Database(':memory:');
+  installNodeApplySchema(db);
+  db.prepare(
+    `INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
+     VALUES ('attachment-1', 'Paper.pdf', 'application/pdf', 128, '2026-07-11T00:00:00.000Z')`
+  ).run();
+  const version = await toWorkspaceNativeNodeVersion({
+    anchorLink: null,
+    attachments: [{ attachmentId: 'attachment-1', mimeType: 'application/pdf', originalName: 'Paper.pdf', role: 'reference' }],
+    content: 'Folder body',
+    createdAt: '2026-07-11T00:00:00.000Z',
+    hideTitleHeading: false,
+    id: 'folder-1',
+    isTitleManual: true,
+    kind: 'folder',
+    manualChildOrder: ['child-b', 'child-a'],
+    openingText: null,
+    parentNodeId: null,
+    position: 37,
+    reading: null,
+    reveal: null,
+    review: null,
+    shelvedAt: '2026-07-10T00:00:00.000Z',
+    title: 'Folder',
+    updatedAt: '2026-07-11T01:00:00.000Z'
+  }, 'android-device');
+
+  await applyCompanionSyncNodeVersionsWithSharedCore(createFakeCapacitorConnection(db) as never, [version]);
+
+  expect(db.prepare(
+    `SELECT n.shelved_at, n.manual_child_order, o.position
+     FROM nodes n LEFT JOIN node_order o ON o.node_id = n.id WHERE n.id = 'folder-1'`
+  ).get()).toEqual({
+    manual_child_order: '["child-b","child-a"]',
+    position: 37,
+    shelved_at: '2026-07-10T00:00:00.000Z'
+  });
+  expect(db.prepare(
+    `SELECT attachment_id, role FROM node_attachments WHERE node_id = 'folder-1'`
+  ).all()).toEqual([{ attachment_id: 'attachment-1', role: 'reference' }]);
 });
 
 it('opens the Android companion database before running the shared core', async () => {

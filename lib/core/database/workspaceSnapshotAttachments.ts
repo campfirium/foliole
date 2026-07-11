@@ -27,6 +27,9 @@ export function attachWorkspaceNodeAttachments(
   driver: DatabaseDriver,
   nodesById: Record<string, WorkspaceNodeSnapshot>
 ) {
+  for (const node of Object.values(nodesById)) {
+    node.attachments = [];
+  }
   for (const row of queryNodeAttachmentRows(driver)) {
     const node = nodesById[row.node_id];
     if (!node) {

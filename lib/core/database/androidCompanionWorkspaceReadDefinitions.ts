@@ -91,7 +91,8 @@ export const ANDROID_COMPANION_WORKSPACE_READ_RULES = {
         { outputKey: 'imageRegions', rowKey: 'image_regions', type: 'json' },
         { outputKey: 'createdAt', rowKey: 'created_at', type: 'string' },
         { outputKey: 'updatedAt', rowKey: 'updated_at', type: 'string' },
-        { outputKey: 'currentVersionId', rowKey: 'current_version_id', type: 'nullableString' }
+        { outputKey: 'currentVersionId', rowKey: 'current_version_id', type: 'nullableString' },
+        { outputKey: 'position', rowKey: 'position', type: 'long', omitWhenNull: true }
       ],
       deletedAtField: { outputKey: 'deletedAt', rowKey: 'deleted_at', type: 'nullableString', omitWhenNull: true }
     },

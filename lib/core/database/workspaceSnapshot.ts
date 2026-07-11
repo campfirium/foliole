@@ -32,6 +32,7 @@ export interface WorkspaceSnapshotLoadOptions {
 
 interface WorkspaceNodeRow extends DatabaseRow {
   id: string;
+  current_version_id: string | null;
   parent_id: string | null;
   kind: string | null;
   priority: number | null;
@@ -74,6 +75,7 @@ interface WorkspaceNodeRow extends DatabaseRow {
 
 interface NodeOrderRow extends DatabaseRow {
   node_id: string;
+  position: number;
 }
 
 const ACTIVE_NODE_META_KEY = 'active_node_id';
@@ -111,6 +113,7 @@ function queryWorkspaceRows(driver: DatabaseDriver, options: WorkspaceSnapshotLo
     `${VISIBLE_NODES_CTE_SQL}
      SELECT
        n.id,
+       n.current_version_id,
        n.parent_id,
        n.kind,
        n.priority,
@@ -163,7 +166,7 @@ function queryWorkspaceRows(driver: DatabaseDriver, options: WorkspaceSnapshotLo
 
 function queryNodeOrderRows(driver: DatabaseDriver): NodeOrderRow[] {
   return driver.queryAll<NodeOrderRow>(
-    `SELECT node_order.node_id
+    `SELECT node_order.node_id, node_order.position
      FROM node_order
      JOIN nodes ON nodes.id = node_order.node_id
      ORDER BY node_order.position ASC`
@@ -176,11 +179,15 @@ function buildSnapshotRows(
   orderedRows: NodeOrderRow[]
 ): WorkspaceSnapshot {
   const nodesById: Record<string, WorkspaceNodeSnapshot> = {};
+  const positionByNodeId = new Map(orderedRows.map((row) => [row.node_id, row.position]));
   const trashedNodeDeletedAtById: Record<string, string> = {};
   const trashedNodeIds: string[] = [];
 
   for (const row of rows) {
-    nodesById[row.id] = buildWorkspaceSnapshotNode(row);
+    nodesById[row.id] = {
+      ...buildWorkspaceSnapshotNode(row),
+      position: positionByNodeId.get(row.id) ?? null
+    };
     if (row.deleted_at) {
       trashedNodeIds.push(row.id);
       trashedNodeDeletedAtById[row.id] = row.deleted_at;
