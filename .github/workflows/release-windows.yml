@@ -4,9 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       release_ref:
-        description: "Fixed release branch or tag to build, e.g. release/0.6.4 or v0.6.4"
+        description: "Fixed release branch/tag, or a 40-character commit SHA in artifact-only mode"
         required: true
         type: string
+      artifact_only:
+        description: "Build and upload the installer + validation kit without creating or replacing a draft release"
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -41,25 +46,33 @@ jobs:
           if ([string]::IsNullOrWhiteSpace($releaseRef)) {
             throw "release_ref is required."
           }
-          if (-not ($releaseRef.StartsWith("release/") -or $releaseRef.StartsWith("v"))) {
-            throw "release_ref must be a release branch or version tag."
-          }
+          $artifactOnly = "${{ inputs.artifact_only }}" -eq "true"
           $head = (git rev-parse HEAD).Trim()
           $checkedOutRef = (git rev-parse --verify HEAD).Trim()
           if ($head -ne $checkedOutRef) {
             throw "Unable to verify checked out release ref."
           }
-          $package = Get-Content package.json | ConvertFrom-Json
-          $expectedTag = "v$($package.version)"
-          if ($releaseRef.StartsWith("v") -and $releaseRef -ne $expectedTag) {
-            throw "release_ref $releaseRef does not match package version tag $expectedTag."
-          }
-          $expectedBranch = "release/$($package.version)"
-          if ($releaseRef.StartsWith("release/") -and $releaseRef -ne $expectedBranch) {
-            throw "release_ref $releaseRef does not match package version $($package.version)."
+          if ($artifactOnly) {
+            if ($releaseRef -notmatch "^[0-9a-f]{40}$" -or $head -ne $releaseRef) {
+              throw "artifact-only release_ref must be the exact checked-out 40-character commit SHA."
+            }
+          } else {
+            if (-not ($releaseRef.StartsWith("release/") -or $releaseRef.StartsWith("v"))) {
+              throw "release_ref must be a release branch or version tag."
+            }
+            $package = Get-Content package.json | ConvertFrom-Json
+            $expectedTag = "v$($package.version)"
+            if ($releaseRef.StartsWith("v") -and $releaseRef -ne $expectedTag) {
+              throw "release_ref $releaseRef does not match package version tag $expectedTag."
+            }
+            $expectedBranch = "release/$($package.version)"
+            if ($releaseRef.StartsWith("release/") -and $releaseRef -ne $expectedBranch) {
+              throw "release_ref $releaseRef does not match package version $($package.version)."
+            }
           }
           Write-Host "release_ref=$releaseRef"
           Write-Host "release_commit=$head"
+          Write-Host "artifact_only=$artifactOnly"
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -94,6 +107,7 @@ jobs:
         run: node scripts/windows/windows-validation-kit-build.mjs build
 
       - name: Copy reviewed release body
+        if: ${{ !inputs.artifact_only }}
         shell: pwsh
         run: |
           $package = Get-Content package.json | ConvertFrom-Json
@@ -111,6 +125,7 @@ jobs:
           subject-checksums: artifacts/windows/SHA256SUMS.txt
 
       - name: Publish installer draft release
+        if: ${{ !inputs.artifact_only }}
         shell: pwsh
         run: |
           $package = Get-Content package.json | ConvertFrom-Json
