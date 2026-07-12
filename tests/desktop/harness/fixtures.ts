@@ -43,22 +43,17 @@ type DesktopFixtures = {
 };
 
 async function focusVisibleWindow(session: DesktopSession) {
-  await session.electronApp.evaluate(async ({ BrowserWindow }) => {
-    const target = BrowserWindow.getAllWindows()[0];
-    if (!target) {
-      return;
-    }
-    target.setBounds({ width: 1600, height: 1000, x: 80, y: 80 });
-    target.show();
-    target.setAlwaysOnTop(true);
-    target.focus();
-    target.webContents.focus();
-    target.setAlwaysOnTop(false);
+  const target = await session.electronApp.browserWindow(session.firstWindow);
+  await target.evaluate(async (window) => {
+    window.setBounds({ width: 1600, height: 1000, x: 80, y: 80 });
+    window.show();
+    window.setAlwaysOnTop(true);
+    window.focus();
+    window.webContents.focus();
+    window.setAlwaysOnTop(false);
   });
   await expect.poll(
-    () => session.electronApp.evaluate(({ BrowserWindow }) =>
-      Boolean(BrowserWindow.getAllWindows()[0]?.isFocused())
-    ),
+    () => target.evaluate((window) => window.isFocused()),
     { timeout: 3000 }
   ).toBe(true);
 }

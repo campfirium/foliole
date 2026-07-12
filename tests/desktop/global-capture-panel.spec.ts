@@ -59,27 +59,20 @@ async function expectCaptureFocused(panelPage: Page) {
   await expect.poll(async () => panelPage.evaluate(() => document.activeElement?.id ?? null)).toBe('capture');
 }
 
-async function getCapturePanelBounds(electronApp: ElectronApplication) {
-  return electronApp.evaluate(({ BrowserWindow }) => {
-    const panel = BrowserWindow.getAllWindows().find((window) =>
-      !window.isDestroyed() && window.webContents.getURL().startsWith('data:text/html;charset=utf-8,')
-    );
-    if (!panel) throw new Error('capture panel window not found');
-    return panel.getBounds();
-  });
+async function getCapturePanelBounds(electronApp: ElectronApplication, panelPage: Page) {
+  const panel = await electronApp.browserWindow(panelPage);
+  return panel.evaluate((window) => window.getBounds());
 }
 
 async function sendCapturePanelMouseInput(
   electronApp: ElectronApplication,
+  panelPage: Page,
   input: { button?: 'left'; clickCount?: number; type: 'mouseDown' | 'mouseMove' | 'mouseUp'; x: number; y: number }
 ) {
-  await electronApp.evaluate(({ BrowserWindow }, event) => {
-    const panel = BrowserWindow.getAllWindows().find((window) =>
-      !window.isDestroyed() && window.webContents.getURL().startsWith('data:text/html;charset=utf-8,')
-    );
-    if (!panel) throw new Error('capture panel window not found');
-    panel.focus();
-    panel.webContents.sendInputEvent(event);
+  const panel = await electronApp.browserWindow(panelPage);
+  await panel.evaluate((window, event) => {
+    window.focus();
+    window.webContents.sendInputEvent(event);
   }, input);
 }
 
@@ -115,19 +108,19 @@ test('drags the global capture panel from its visible surface', async ({ desktop
   const panelPage = await getCapturePanelPage(desktopSession.electronApp);
   await expectCaptureFocused(panelPage);
 
-  const before = await getCapturePanelBounds(desktopSession.electronApp);
-  await sendCapturePanelMouseInput(desktopSession.electronApp, {
+  const before = await getCapturePanelBounds(desktopSession.electronApp, panelPage);
+  await sendCapturePanelMouseInput(desktopSession.electronApp, panelPage, {
     button: 'left', clickCount: 1, type: 'mouseDown', x: 72, y: 214
   });
-  await sendCapturePanelMouseInput(desktopSession.electronApp, {
+  await sendCapturePanelMouseInput(desktopSession.electronApp, panelPage, {
     button: 'left', type: 'mouseMove', x: 192, y: 274
   });
 
-  await expect.poll(async () => (await getCapturePanelBounds(desktopSession.electronApp)).x - before.x)
+  await expect.poll(async () => (await getCapturePanelBounds(desktopSession.electronApp, panelPage)).x - before.x)
     .toBeGreaterThan(80);
-  await expect.poll(async () => (await getCapturePanelBounds(desktopSession.electronApp)).y - before.y)
+  await expect.poll(async () => (await getCapturePanelBounds(desktopSession.electronApp, panelPage)).y - before.y)
     .toBeGreaterThan(40);
-  await sendCapturePanelMouseInput(desktopSession.electronApp, {
+  await sendCapturePanelMouseInput(desktopSession.electronApp, panelPage, {
     button: 'left', clickCount: 1, type: 'mouseUp', x: 192, y: 274
   });
 });
