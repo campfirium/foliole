@@ -27,7 +27,7 @@ vi.mock('./diagnostics/mainProcessDiagnostics.js', () => ({ appendMainProcessDia
 vi.mock('./database/databaseReadiness.js', () => ({ waitForDatabaseReady: vi.fn(async () => undefined) }));
 vi.mock('./ipc/importClipboard.js', () => ({ runClipboardImport: vi.fn(async () => null) }));
 
-import { installGlobalClipToInboxShortcut } from './globalClipToInbox.js';
+import { installGlobalClipToInboxShortcut, prepareGlobalClipToInboxWindows } from './globalClipToInbox.js';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -52,6 +52,9 @@ it('registers and unregisters the Windows global clip shortcut', () => {
   })).toBe(true);
 
   expect(globalShortcutRef.register).toHaveBeenCalledWith('Alt+Shift+C', expect.any(Function));
+  expect(prepareCapturePanel).not.toHaveBeenCalled();
+  expect(prepareDesktopToast).not.toHaveBeenCalled();
+  expect(prepareGlobalClipToInboxWindows({ prepareCapturePanel, prepareDesktopToast, platform: 'win32' })).toBe(true);
   expect(prepareCapturePanel).toHaveBeenCalledTimes(1);
   expect(prepareDesktopToast).toHaveBeenCalledTimes(1);
   const willQuit = appRef.on.mock.calls.find(([event]) => event === 'will-quit')?.[1] as (() => void) | undefined;
@@ -73,6 +76,7 @@ it('does not register outside Windows', () => {
   })).toBe(false);
 
   expect(globalShortcutRef.register).not.toHaveBeenCalled();
+  expect(prepareGlobalClipToInboxWindows({ prepareCapturePanel: vi.fn(), platform: 'linux' })).toBe(false);
 });
 
 it('logs shortcut registration failure without throwing', () => {

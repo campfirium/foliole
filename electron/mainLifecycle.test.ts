@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => ({
   ensureAgentControlApiServer: vi.fn().mockResolvedValue(undefined),
   ensureLanWorkspaceSyncServer: vi.fn().mockResolvedValue(undefined),
   isDesktopCompanionSyncEnabled: vi.fn(() => false),
+  prepareGlobalClipToInboxWindows: vi.fn(),
   presentInitialRendererWindow: vi.fn(),
   registerAttachmentProtocol: vi.fn(),
   registerExtDocImageProtocol: vi.fn(),
@@ -57,7 +58,7 @@ vi.mock('./externalSearchBackgroundRefreshRuntime.js', () => ({
   stopExternalSearchBackgroundRefresh: vi.fn()
 }));
 vi.mock('./globalClipToastNavigation.js', () => ({ installGlobalCaptureToastOpenHandler: vi.fn() }));
-vi.mock('./globalClipToInbox.js', () => ({ installGlobalClipToInboxShortcut: vi.fn() }));
+vi.mock('./globalClipToInbox.js', () => ({ installGlobalClipToInboxShortcut: vi.fn(), prepareGlobalClipToInboxWindows: mocks.prepareGlobalClipToInboxWindows }));
 vi.mock('./backgroundPresence.js', () => ({
   installBackgroundTray: vi.fn(),
   markAppQuittingForBackgroundPresence: vi.fn()
@@ -135,6 +136,7 @@ it('loads the static workspace shell before runtime services and activates React
   expect(firstInvocationOrder(loadMainWindow)).toBeLessThan(firstInvocationOrder(activateMainWindow));
   expect(mocks.presentInitialRendererWindow).toHaveBeenCalledWith(window);
   expect(activateMainWindow).toHaveBeenCalledWith(window);
+  expect(firstInvocationOrder(activateMainWindow)).toBeLessThan(firstInvocationOrder(mocks.prepareGlobalClipToInboxWindows));
 });
 
 it('keeps the startup window alive and loads the startup error surface when database startup fails', async () => {

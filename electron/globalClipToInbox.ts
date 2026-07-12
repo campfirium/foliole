@@ -203,8 +203,13 @@ export function installGlobalClipToInboxShortcut(deps: GlobalClipToInboxDeps = {
   appRef.on('will-quit', () => {
     globalShortcutRef.unregister(shortcut);
   });
+  log('global_clip_shortcut_registered', { shortcut });
+  return true;
+}
+
+export function prepareGlobalClipToInboxWindows(deps: GlobalClipToInboxDeps = {}) {
+  if ((deps.platform ?? process.platform) !== 'win32') return false;
   (deps.prepareCapturePanel ?? prepareGlobalCapturePanelWindow)();
   (deps.prepareDesktopToast ?? prepareGlobalClipDesktopToastWindow)();
-  log('global_clip_shortcut_registered', { shortcut });
   return true;
 }

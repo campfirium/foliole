@@ -16,7 +16,7 @@ import { appendMainProcessDiagnosticLog } from './diagnostics/mainProcessDiagnos
 import { installExternalDocumentFileOpenLifecycle } from './externalDocumentFileOpen.js';
 import { notifyExternalSearchSecondInstance, notifyExternalSearchUserActivity, stopExternalSearchBackgroundRefresh } from './externalSearchBackgroundRefreshRuntime.js';
 import { installGlobalCaptureToastOpenHandler } from './globalClipToastNavigation.js';
-import { installGlobalClipToInboxShortcut } from './globalClipToInbox.js';
+import { installGlobalClipToInboxShortcut, prepareGlobalClipToInboxWindows } from './globalClipToInbox.js';
 import { stopKeepImportMonitor } from './import/keepImportMonitor.js';
 import { stopManagedInboxMonitor } from './import/managedInboxMonitor.js';
 import { disposeAssistantCommandAdapter } from './ipc/assistantCommands.js';
@@ -140,6 +140,11 @@ function startAgentControlApiLifecycle() {
   });
 }
 
+async function prepareGlobalClipAfterStartup(startupMainWindow: Promise<BrowserWindow>) {
+  await startupMainWindow;
+  prepareGlobalClipToInboxWindows();
+}
+
 export function installMainLifecycle(args: MainLifecycleArgs) {
   const externalDocumentFileOpen = installExternalDocumentFileOpenLifecycle();
   let startupMainWindowPromise: Promise<BrowserWindow> | null = null;
@@ -190,7 +195,7 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
       return mainWindow;
     })();
     try {
-      await startupMainWindowPromise;
+      await prepareGlobalClipAfterStartup(startupMainWindowPromise);
     } finally {
       startupMainWindowPromise = null;
     }
