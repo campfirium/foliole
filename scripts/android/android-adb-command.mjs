@@ -10,15 +10,16 @@ const execFileAsync = promisify(execFile);
 
 function adbCandidates(adbPath) {
   if (adbPath !== 'adb') return [adbPath];
-  const candidates = ['adb', 'adb.exe'];
+  const candidates = [process.env.ADB_PATH, 'adb', 'adb.exe'];
   for (const sdkRoot of [process.env.ANDROID_SDK_ROOT, process.env.ANDROID_HOME]) {
     if (sdkRoot) candidates.push(path.join(sdkRoot, 'platform-tools', 'adb'));
   }
   if (process.env.USERPROFILE) {
     candidates.push(path.join(process.env.USERPROFILE, 'AppData/Local/Android/Sdk/platform-tools/adb.exe'));
   }
+  candidates.push(path.join(os.homedir(), 'Library/Android/sdk/platform-tools/adb'));
   candidates.push(path.posix.join('/mnt/c/Users', os.userInfo().username, 'AppData/Local/Android/Sdk/platform-tools/adb.exe'));
-  return [...new Set(candidates)];
+  return [...new Set(candidates.filter(Boolean))];
 }
 
 export { adbCandidates };
@@ -67,9 +68,23 @@ function spawnWithInput(command, args, input) {
 }
 
 export async function resolveSerial(options) {
-  if (options.serial) return options.serial;
   const { stdout } = await runAdb({ ...options, serial: '' }, ['devices'], { encoding: 'utf8' });
-  const line = stdout.split(/\r?\n/).find((entry) => /\bdevice$/.test(entry.trim()));
-  if (!line) throw new Error('No ready Android emulator/device found.');
-  return line.trim().split(/\s+/)[0];
+  return selectReadySerial(stdout, options.serial);
+}
+
+export function selectReadySerial(output, requestedSerial = '') {
+  const devices = output.split(/\r?\n/u)
+    .map((line) => line.trim().split(/\s+/u))
+    .filter(([serial, state]) => serial && state && serial !== 'List')
+    .map(([serial, state]) => ({ serial, state }));
+  if (requestedSerial) {
+    const selected = devices.find(({ serial }) => serial === requestedSerial);
+    if (!selected) throw new Error(`Android device ${requestedSerial} was not found.`);
+    if (selected.state !== 'device') throw new Error(`Android device ${requestedSerial} is ${selected.state}, not ready.`);
+    return requestedSerial;
+  }
+  const ready = devices.filter(({ state }) => state === 'device');
+  if (ready.length === 0) throw new Error('No ready Android emulator/device found. Connect and authorize exactly one device.');
+  if (ready.length > 1) throw new Error('Multiple ready Android devices found. Set FOLIOLE_ANDROID_SERIAL or ANDROID_SERIAL.');
+  return ready[0].serial;
 }

@@ -32,6 +32,12 @@ describe('verify-android-launch helpers', () => {
     expect(extractFocusedWindow(output)).toBe('com.foliole.android/.MainActivity');
   });
 
+  it('extracts the MIUI input target when legacy focus fields are absent', () => {
+    const output = 'imeInputTarget in display# 0 Window{46e3b32 u0 com.foliole.android/com.foliole.android.MainActivity}';
+
+    expect(extractFocusedWindow(output)).toBe('com.foliole.android/com.foliole.android.MainActivity');
+  });
+
   it('normalizes short activity names before matching', () => {
     expect(normalizeComponent('com.foliole.android/.MainActivity')).toBe(
       'com.foliole.android/com.foliole.android.MainActivity'

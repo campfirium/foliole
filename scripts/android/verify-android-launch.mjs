@@ -29,7 +29,9 @@ export function extractFocusedWindow(windowOutput) {
   const lines = windowOutput.split(/\r?\n/);
   const patterns = [
     /mCurrentFocus=.*? ([A-Za-z0-9._$]+\/[A-Za-z0-9._$]+)\}/,
-    /mFocusedApp=.*? ([A-Za-z0-9._$]+\/[A-Za-z0-9._$]+)\b/
+    /mFocusedApp=.*? ([A-Za-z0-9._$]+\/[A-Za-z0-9._$]+)\b/,
+    /imeInputTarget in display# \d+ Window\{.*? u\d+ ([A-Za-z0-9._$]+\/[A-Za-z0-9._$]+)\}/,
+    /mObscuringWindow=Window\{.*? u\d+ ([A-Za-z0-9._$]+\/[A-Za-z0-9._$]+)\}/
   ];
 
   for (const line of lines) {

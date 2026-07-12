@@ -5,7 +5,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { adbCandidates } from './android-adb-command.mjs';
+import { adbCandidates, selectReadySerial } from './android-adb-command.mjs';
 
 describe('android-adb-command', () => {
   it('prefers explicit adb path without adding defaults', () => {
@@ -26,5 +26,18 @@ describe('android-adb-command', () => {
     } finally {
       process.env.USERPROFILE = previousUserProfile;
     }
+  });
+
+  it('selects the only ready device and rejects ambiguous selection', () => {
+    expect(selectReadySerial('List of devices attached\nA5\tdevice\n')).toBe('A5');
+    expect(() => selectReadySerial('List of devices attached\nA5\tdevice\nemulator-5554\tdevice\n'))
+      .toThrow(/Multiple ready Android devices/u);
+  });
+
+  it('requires an explicitly selected device to be present and ready', () => {
+    const devices = 'List of devices attached\nA5\tunauthorized\nemulator-5554\tdevice\n';
+    expect(() => selectReadySerial(devices, 'A5')).toThrow(/unauthorized, not ready/u);
+    expect(() => selectReadySerial(devices, 'missing')).toThrow(/was not found/u);
+    expect(selectReadySerial(devices, 'emulator-5554')).toBe('emulator-5554');
   });
 });

@@ -27,6 +27,9 @@ describe('script domain registry', () => {
     expect(classifyScriptAsset('scripts/macos/electron-dev-preview.mjs')).toMatchObject({
       placements: ['macos-only']
     });
+    expect(classifyScriptAsset('scripts/macos/android/android-host.mjs')).toMatchObject({
+      placements: ['macos-only']
+    });
   });
 
   it('uses exact confirm records with reasons instead of prefix fallback', () => {
@@ -58,6 +61,12 @@ describe('script domain registry', () => {
       reason: 'unknown-capability'
     });
     expect(resolveCapabilityAdapter('electron:dev', 'darwin')).toMatchObject({
+      ok: true,
+      placements: ['shared-core']
+    });
+    expect(renderCapabilityCommand(resolveCapabilityContract('android:host:test')))
+      .toBe('node scripts/android/android-host.mjs gradle testDebugUnitTest');
+    expect(resolveCapabilityAdapter('android:control', 'darwin')).toMatchObject({
       ok: true,
       placements: ['shared-core']
     });

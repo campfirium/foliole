@@ -63,6 +63,32 @@ export const CAPABILITY_CONTRACTS = [
     placements: ['shared-core'],
     platforms: ['darwin', 'linux', 'win32']
   })),
+  ...[
+    ['android:open', ['open']],
+    ['android:control', ['control']],
+    ['android:sync', ['sync']],
+    ['android:host:lint', ['gradle', 'lint']],
+    ['android:host:test', ['gradle', 'testDebugUnitTest']],
+    ['android:host:device-test', ['gradle', 'connectedDebugAndroidTest']],
+    ['android:host:device-test:class', ['gradle', 'connectedDebugAndroidTest', '--class']],
+    ['android:emulator', ['emulator']],
+    ['android:logcat', ['logcat']],
+    ['android:preview:lite', ['preview-lite']],
+    ['android:screenshot', ['screenshot']]
+  ].map(([name, args]) => ({
+    adapter: { args: ['scripts/android/android-host.mjs', ...args], bin: 'node' },
+    adapterPath: 'scripts/android/android-host.mjs',
+    name,
+    placements: ['shared-core'],
+    platforms: ['darwin', 'linux', 'win32']
+  })),
+  {
+    adapter: { args: ['scripts/preview/preview-dedupe.mjs', 'android', '--', 'node', 'scripts/android/android-host.mjs', 'preview'], bin: 'node' },
+    adapterPath: 'scripts/android/android-host.mjs',
+    name: 'android:preview',
+    placements: ['shared-core'],
+    platforms: ['darwin', 'linux', 'win32']
+  },
   {
     adapter: { args: ['scripts/windows/windows-preview-native-entry.mjs'], bin: 'node' },
     adapterPath: 'scripts/windows/windows-preview-native-entry.mjs',
@@ -79,7 +105,7 @@ export const CAPABILITY_CONTRACTS = [
   }
 ];
 
-export const SCRIPT_ASSET_INVENTORY_SHA256 = '684e408e652f98cacee73c08ea3260018372451ea3c71e5113cb36d331bdd8da';
+export const SCRIPT_ASSET_INVENTORY_SHA256 = 'bf3689ade780e9e9f1bddcb193c9a1150df3ef044fba05acf6a77ddd01340900';
 
 function normalizeScriptPath(filePath) {
   return filePath.replaceAll('\\', '/').replace(/^\.\//u, '').trim();

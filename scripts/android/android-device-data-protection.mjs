@@ -94,6 +94,7 @@ async function collectPackageInfo(options) {
 
 async function pullDatabase(options, destination) {
   try {
+    await runAdb(options, ['shell', 'run-as', options.appId, 'test', '-f', 'databases/foliole-companion.db']);
     const { stdout } = await runAdb(
       options,
       ['exec-out', 'run-as', options.appId, 'cat', 'databases/foliole-companion.db'],

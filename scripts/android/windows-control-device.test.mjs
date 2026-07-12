@@ -104,11 +104,10 @@ describe('windows-control-device', () => {
     expect(script).not.toContain('Test-KeyguardLocked');
   });
 
-  it('exposes android:control as a direct hidden PowerShell entry', async () => {
+  it('exposes android:control through the shared host entry', async () => {
     const packageJson = JSON.parse(await readFile(PACKAGE_JSON, 'utf8'));
 
-    expect(packageJson.scripts['android:control']).toContain('powershell.exe');
-    expect(packageJson.scripts['android:control']).toContain('-WindowStyle Hidden');
-    expect(packageJson.scripts['android:control']).toContain('windows-control-device.ps1');
+    expect(packageJson.scripts['android:control']).toBe('node scripts/android/android-host.mjs control');
+    expect(packageJson.scripts['android:control']).not.toContain('windows-control-device.ps1');
   });
 });
