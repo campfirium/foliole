@@ -15,6 +15,10 @@ describe('script domain registry', () => {
       disposition: 'active',
       placements: ['windows-ci', 'windows-only']
     });
+    expect(classifyScriptAsset('scripts/windows/windows-ci-evidence.mjs')).toMatchObject({
+      disposition: 'active',
+      placements: ['windows-ci']
+    });
     expect(classifyScriptAsset('scripts/windows/windows-preview-native-entry.mjs')).toMatchObject({
       placements: ['windows-device', 'windows-only']
     });

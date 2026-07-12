@@ -1,0 +1,93 @@
+name: Windows x64 CI
+
+on:
+  push:
+    branches:
+      - dev
+  pull_request:
+    branches:
+      - dev
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-x64-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-x64-ci:
+    name: Windows x64 compile, contract, and Playwright
+    runs-on: windows-latest
+    timeout-minutes: 120
+    env:
+      CI: "true"
+      FOLIOLE_DESKTOP_NATIVE_SKIP_BUILD: "1"
+
+    steps:
+      - name: Check out triggering commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Verify fixed Windows x64 context
+        id: context
+        run: node scripts/windows/windows-ci-evidence.mjs verify
+
+      - name: Install dependencies
+        id: npm_ci
+        run: npm ci
+
+      - name: Rebuild and verify Electron native ABI
+        id: native_abi
+        run: |
+          npm run electron:rebuild:native
+          node scripts/electron-sqlite-runner.mjs --preflight
+
+      - name: Run Windows core contract
+        id: windows_contract
+        run: npm run test:windows:core
+
+      - name: Build desktop and compile Electron
+        id: desktop_build
+        run: |
+          npm run build
+          npm run electron:compile
+
+      - name: Run CI-capable Electron Playwright suite
+        id: playwright
+        run: node scripts/windows/windows-ci-playwright-profile.mjs
+
+      - name: Write SHA-bound CI evidence and summary
+        if: ${{ always() }}
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+          CONTEXT_OUTCOME: ${{ steps.context.outcome }}
+          NPM_CI_OUTCOME: ${{ steps.npm_ci.outcome }}
+          NATIVE_ABI_OUTCOME: ${{ steps.native_abi.outcome }}
+          WINDOWS_CONTRACT_OUTCOME: ${{ steps.windows_contract.outcome }}
+          DESKTOP_BUILD_OUTCOME: ${{ steps.desktop_build.outcome }}
+          PLAYWRIGHT_OUTCOME: ${{ steps.playwright.outcome }}
+        run: node scripts/windows/windows-ci-evidence.mjs write
+
+      - name: Upload SHA-bound Windows CI evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-x64-ci-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            .tmp/artifacts/windows-ci-evidence
+            .tmp/playwright-results/desktop
+            .tmp/playwright-report/desktop
+            .tmp/artifacts/desktop-acceptance
+          if-no-files-found: warn
+          retention-days: 14

@@ -18,7 +18,9 @@ const CONFIRM_ASSETS = new Map([
   ['scripts/oneoff/repair-imported-anchor-locators.ts', 'one-off repair source; invocation ownership requires confirmation']
 ]);
 
-const WINDOWS_CI_PATTERN = /^scripts\/windows\/(?:installed-app-smoke|package-built-artifacts|package-windows)\./u;
+const WINDOWS_CI_PATTERN =
+  /^scripts\/windows\/(?:installed-app-smoke|package-built-artifacts|package-windows|windows-ci-[^.]+)\./u;
+const WINDOWS_CI_ONLY_PATTERN = /^scripts\/windows\/windows-ci-/u;
 const WINDOWS_DEVICE_PATTERN =
   /^scripts\/windows\/(?:hidden-native|playwright-desktop-native|visible-native|windows-client-native|windows-preview-native)/u;
 const WINDOWS_ASSET_PATTERN = /^(?:scripts\/windows\/|scripts\/android\/windows-|scripts\/android\/open-foliole-android-)/u;
@@ -105,7 +107,7 @@ export const CAPABILITY_CONTRACTS = [
   }
 ];
 
-export const SCRIPT_ASSET_INVENTORY_SHA256 = 'bf3689ade780e9e9f1bddcb193c9a1150df3ef044fba05acf6a77ddd01340900';
+export const SCRIPT_ASSET_INVENTORY_SHA256 = '7b9b0ce4a97ddd789b324c4966cf76c0af7c190e96aa98494a84bbe5195a8cd7';
 
 function normalizeScriptPath(filePath) {
   return filePath.replaceAll('\\', '/').replace(/^\.\//u, '').trim();
@@ -116,7 +118,10 @@ function classifyExecutionPlacements(filePath) {
   if (MACOS_ASSET_PATTERN.test(filePath)) {
     placements.add('macos-only');
   }
-  if (WINDOWS_ASSET_PATTERN.test(filePath) || ['.cmd', '.ps1', '.vbs'].includes(path.extname(filePath))) {
+  if (
+    !WINDOWS_CI_ONLY_PATTERN.test(filePath) &&
+    (WINDOWS_ASSET_PATTERN.test(filePath) || ['.cmd', '.ps1', '.vbs'].includes(path.extname(filePath)))
+  ) {
     placements.add('windows-only');
   }
   if (WINDOWS_CI_PATTERN.test(filePath)) {
