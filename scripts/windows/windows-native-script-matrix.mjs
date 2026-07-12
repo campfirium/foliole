@@ -16,6 +16,7 @@ export const WINDOWS_NATIVE_MAIN_SCRIPTS = [
   'windows:client:native',
   'windows:dev-service',
   'windows:preview:native',
+  'quality:fast',
   'quality:fast:native',
   'test:e2e:desktop:native:hidden',
   'test:e2e:desktop:native:visible',
@@ -45,7 +46,6 @@ const NATIVE_ALTERNATIVES = new Map([
   ['dev:screenshot', 'test:e2e:desktop:native:visible with an explicit screenshot spec'],
   ['lint:desktop', 'lint:desktop:full or lint:files'],
   ['lint', 'lint:full or lint:files'],
-  ['quality:fast', 'quality:fast:native'],
   ['test:e2e:desktop:agent', 'test:e2e:desktop:native:hidden or test:e2e:desktop:native:visible'],
 ]);
 

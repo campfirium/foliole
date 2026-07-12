@@ -10,11 +10,11 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const LINT_CHANGED_SCRIPT = path.join(REPO_ROOT, 'scripts', 'lint-changed.sh');
+const LINT_CHANGED_SCRIPT = path.join(REPO_ROOT, 'scripts', 'lint-changed.mjs');
 
-function runBash(args, cwd, env = process.env) {
+function runNode(args, cwd, env = process.env) {
   return new Promise((resolve) => {
-    const child = spawn('bash', args, { cwd, env });
+    const child = spawn(process.execPath, args, { cwd, env });
     let stdout = '';
     let stderr = '';
     child.stdout.on('data', (chunk) => {
@@ -35,18 +35,20 @@ async function writeExecutable(rootDir, relativePath, content) {
   await writeFile(fullPath, content, { encoding: 'utf8', mode: 0o755 });
 }
 
-describe('lint-changed.sh', () => {
+const eslintFixture = (marker) => `import { writeFileSync } from 'node:fs';\nconst args = process.argv.slice(2).filter((arg) => !arg.endsWith('eslint.js'));\nwriteFileSync(${JSON.stringify(marker)}, args.join('\\n') + '\\n');\n`;
+
+describe('lint-changed.mjs', () => {
   it('runs eslint only for lintable changed files', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'lint-changed-'));
     const marker = path.join(tempRoot, 'eslint.args');
     try {
       spawnSync('git', ['init'], { cwd: tempRoot, stdio: 'ignore' });
-      await writeExecutable(tempRoot, 'node_modules/.bin/eslint', `#!/usr/bin/env bash\nprintf '%s\n' "$@" > "${marker}"\n`);
+      await writeExecutable(tempRoot, 'node_modules/eslint/bin/eslint.js', eslintFixture(marker));
       await mkdir(path.join(tempRoot, 'src'), { recursive: true });
       await writeFile(path.join(tempRoot, 'src/changed.ts'), 'export const value = 1;\n', 'utf8');
       await writeFile(path.join(tempRoot, 'README.md'), '# ignored\n', 'utf8');
 
-      const result = await runBash([LINT_CHANGED_SCRIPT], tempRoot);
+      const result = await runNode([LINT_CHANGED_SCRIPT], tempRoot);
 
       expect(result.code).toBe(0);
       expect(await readFile(marker, 'utf8')).toBe('--cache\n--cache-location\n.tmp/eslint-cache/changed/\nsrc/changed.ts\n');
@@ -59,9 +61,9 @@ describe('lint-changed.sh', () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'lint-changed-'));
     const marker = path.join(tempRoot, 'eslint.args');
     try {
-      await writeExecutable(tempRoot, 'node_modules/.bin/eslint', `#!/usr/bin/env bash\nprintf '%s\n' "$@" > "${marker}"\n`);
+      await writeExecutable(tempRoot, 'node_modules/eslint/bin/eslint.js', eslintFixture(marker));
 
-      const result = await runBash([LINT_CHANGED_SCRIPT, 'src/app/App.tsx', 'README.md'], tempRoot);
+      const result = await runNode([LINT_CHANGED_SCRIPT, 'src/app/App.tsx', 'README.md'], tempRoot);
 
       expect(result.code).toBe(0);
       expect(await readFile(marker, 'utf8')).toBe('--cache\n--cache-location\n.tmp/eslint-cache/changed/\nsrc/app/App.tsx\n');
@@ -75,14 +77,14 @@ describe('lint-changed.sh', () => {
     const marker = path.join(tempRoot, 'eslint.args');
     try {
       await writeExecutable(tempRoot, 'git', '#!/usr/bin/env bash\nexit 88\n');
-      await writeExecutable(tempRoot, 'node_modules/.bin/eslint', `#!/usr/bin/env bash\nprintf '%s\n' "$@" > "${marker}"\n`);
+      await writeExecutable(tempRoot, 'node_modules/eslint/bin/eslint.js', eslintFixture(marker));
 
       const env = {
         ...process.env,
         LINT_CHANGED_FILES: 'src/app/App.tsx\nREADME.md\nsrc/shared/platform/runtime.ts',
         PATH: `${tempRoot}${path.delimiter}${process.env.PATH ?? ''}`
       };
-      const result = await runBash([LINT_CHANGED_SCRIPT, '--scope', 'desktop'], tempRoot, env);
+      const result = await runNode([LINT_CHANGED_SCRIPT, '--scope', 'desktop'], tempRoot, env);
 
       expect(result.code).toBe(0);
       expect(await readFile(marker, 'utf8')).toBe(
@@ -99,14 +101,14 @@ describe('lint-changed.sh', () => {
       spawnSync('git', ['init'], { cwd: tempRoot, stdio: 'ignore' });
       spawnSync('git', ['config', 'user.email', 'test@example.com'], { cwd: tempRoot, stdio: 'ignore' });
       spawnSync('git', ['config', 'user.name', 'Test User'], { cwd: tempRoot, stdio: 'ignore' });
-      await writeExecutable(tempRoot, 'node_modules/.bin/eslint', '#!/usr/bin/env bash\nexit 99\n');
+      await writeExecutable(tempRoot, 'node_modules/eslint/bin/eslint.js', 'process.exit(99);\n');
       await mkdir(path.join(tempRoot, 'src'), { recursive: true });
       await writeFile(path.join(tempRoot, 'src/deleted.ts'), 'export const value = 1;\n', 'utf8');
       spawnSync('git', ['add', 'src/deleted.ts'], { cwd: tempRoot, stdio: 'ignore' });
       spawnSync('git', ['commit', '-m', 'add deleted fixture'], { cwd: tempRoot, stdio: 'ignore' });
       await rm(path.join(tempRoot, 'src/deleted.ts'));
 
-      const result = await runBash([LINT_CHANGED_SCRIPT], tempRoot);
+      const result = await runNode([LINT_CHANGED_SCRIPT], tempRoot);
 
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('[lint-changed] no lintable changed files detected');
@@ -119,9 +121,9 @@ describe('lint-changed.sh', () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'lint-changed-'));
     const marker = path.join(tempRoot, 'eslint.args');
     try {
-      await writeExecutable(tempRoot, 'node_modules/.bin/eslint', `#!/usr/bin/env bash\nprintf '%s\n' "$@" > "${marker}"\n`);
+      await writeExecutable(tempRoot, 'node_modules/eslint/bin/eslint.js', eslintFixture(marker));
 
-      const result = await runBash([
+      const result = await runNode([
         LINT_CHANGED_SCRIPT,
         '--scope',
         'android',
@@ -144,9 +146,9 @@ describe('lint-changed.sh', () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'lint-changed-'));
     const marker = path.join(tempRoot, 'eslint.args');
     try {
-      await writeExecutable(tempRoot, 'node_modules/.bin/eslint', `#!/usr/bin/env bash\nprintf '%s\n' "$@" > "${marker}"\n`);
+      await writeExecutable(tempRoot, 'node_modules/eslint/bin/eslint.js', eslintFixture(marker));
 
-      const desktopResult = await runBash([
+      const desktopResult = await runNode([
         LINT_CHANGED_SCRIPT,
         '--scope',
         'desktop',
@@ -160,7 +162,7 @@ describe('lint-changed.sh', () => {
         '--cache\n--cache-location\n.tmp/eslint-cache/changed/\nelectron/main.ts\nsrc/shared/platform/runtime.ts\n'
       );
 
-      const sharedResult = await runBash([
+      const sharedResult = await runNode([
         LINT_CHANGED_SCRIPT,
         '--scope',
         'shared',
@@ -182,7 +184,7 @@ describe('lint-changed.sh', () => {
   it('fails closed when the shared path domain module cannot load', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'lint-changed-'));
     try {
-      const result = await runBash(
+      const result = await runNode(
         [LINT_CHANGED_SCRIPT, '--scope', 'desktop', 'src/app/App.tsx'],
         tempRoot,
         { ...process.env, PATH_DOMAINS_SCRIPT: path.join(tempRoot, 'missing-path-domains.mjs') }

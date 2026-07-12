@@ -74,8 +74,13 @@ prune_quality_gate_logs() {
     return 0
   fi
 
-  mapfile -t run_ids < <(
-    find "${log_root}" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null | sort -r
+  run_ids=()
+  while IFS= read -r run_id; do
+    [[ -n "${run_id}" ]] && run_ids+=("${run_id}")
+  done < <(
+    for run_path in "${log_root}"/*; do
+      [[ -d "${run_path}" ]] && basename "${run_path}"
+    done | sort -r
   )
 
   local kept_runs=0

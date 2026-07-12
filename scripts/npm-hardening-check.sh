@@ -7,6 +7,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${REPO_ROOT}"
 
 NPM_HARDENING_NETWORK_TIMEOUT_SECONDS="${NPM_HARDENING_NETWORK_TIMEOUT_SECONDS:-45}"
+TIMEOUT_RUNNER="${SCRIPT_DIR}/run-with-timeout.mjs"
 
 echo "[npm-hardening] checking repository dependency guardrails"
 
@@ -27,7 +28,7 @@ audit_cache_dir=".tmp/npm-audit-cache"
 audit_json_file=".tmp/npm-audit-report.json"
 mkdir -p "${audit_cache_dir}"
 set +e
-timeout "${NPM_HARDENING_NETWORK_TIMEOUT_SECONDS}s" npm audit --omit=dev --json --cache "${audit_cache_dir}" > "${audit_json_file}"
+node "${TIMEOUT_RUNNER}" "${NPM_HARDENING_NETWORK_TIMEOUT_SECONDS}" npm audit --omit=dev --json --cache "${audit_cache_dir}" > "${audit_json_file}"
 audit_exit=$?
 set -e
 if [[ "${audit_exit}" -gt 1 ]]; then
@@ -70,9 +71,12 @@ echo "[npm-hardening] ok: .npmrc pins min-release-age=7"
 echo "[npm-hardening] note: advisory-driven security fixes may bypass min-release-age only for named vulnerable packages"
 
 versions_json_file=".tmp/npm-time.json"
-timeout "${NPM_HARDENING_NETWORK_TIMEOUT_SECONDS}s" npm view npm time --json > "${versions_json_file}"
+node "${TIMEOUT_RUNNER}" "${NPM_HARDENING_NETWORK_TIMEOUT_SECONDS}" npm view npm time --json > "${versions_json_file}"
 
-mapfile -t selected_versions < <(
+selected_versions=()
+while IFS= read -r selected_version; do
+  [[ -n "${selected_version}" ]] && selected_versions+=("${selected_version}")
+done < <(
   node -e "
     const fs = require('node:fs');
     const now = Date.now();
@@ -113,7 +117,7 @@ printf 'min-release-age=7\n' > "${probe_dir}/.npmrc"
 
 if [[ -n "${recent_version}" ]]; then
   set +e
-  (cd "${probe_dir}" && timeout "${NPM_HARDENING_NETWORK_TIMEOUT_SECONDS}s" npm install "npm@${recent_version}" --package-lock-only > recent.log 2>&1)
+  (cd "${probe_dir}" && node "${TIMEOUT_RUNNER}" "${NPM_HARDENING_NETWORK_TIMEOUT_SECONDS}" npm install "npm@${recent_version}" --package-lock-only > recent.log 2>&1)
   recent_exit=$?
   set -e
   if [[ "${recent_exit}" -eq 0 ]]; then
@@ -131,6 +135,6 @@ if [[ -z "${mature_version}" ]]; then
   exit 1
 fi
 
-(cd "${probe_dir}" && timeout "${NPM_HARDENING_NETWORK_TIMEOUT_SECONDS}s" npm install "npm@${mature_version}" --package-lock-only > mature.log 2>&1)
+(cd "${probe_dir}" && node "${TIMEOUT_RUNNER}" "${NPM_HARDENING_NETWORK_TIMEOUT_SECONDS}" npm install "npm@${mature_version}" --package-lock-only > mature.log 2>&1)
 echo "[npm-hardening] ok: min-release-age allowed mature npm@${mature_version}"
 echo "[npm-hardening] all dependency guardrails passed"

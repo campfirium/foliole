@@ -24,6 +24,25 @@ const WINDOWS_DEVICE_PATTERN =
 const WINDOWS_ASSET_PATTERN = /^(?:scripts\/windows\/|scripts\/android\/windows-|scripts\/android\/open-foliole-android-)/u;
 
 export const CAPABILITY_CONTRACTS = [
+  ...[
+    ['lint', []],
+    ['lint:desktop', ['--scope', 'desktop']],
+    ['lint:android', ['--scope', 'android']],
+    ['lint:shared', ['--scope', 'shared']]
+  ].map(([name, args]) => ({
+    adapter: { args: ['scripts/lint-changed.mjs', ...args], bin: 'node' },
+    adapterPath: 'scripts/lint-changed.mjs',
+    name,
+    placements: ['shared-core'],
+    platforms: ['darwin', 'linux', 'win32']
+  })),
+  {
+    adapter: { args: ['scripts/quality/run-quality-fast.mjs'], bin: 'node' },
+    adapterPath: 'scripts/quality/run-quality-fast.mjs',
+    name: 'quality:fast',
+    placements: ['shared-core'],
+    platforms: ['darwin', 'linux', 'win32']
+  },
   {
     adapter: { args: ['scripts/check-script-domain-contract.mjs'], bin: 'node' },
     adapterPath: 'scripts/check-script-domain-contract.mjs',
@@ -47,7 +66,7 @@ export const CAPABILITY_CONTRACTS = [
   }
 ];
 
-export const SCRIPT_ASSET_INVENTORY_SHA256 = 'f88dac2bea7b0084deb7197a95dfa38568b056827e08e83cb34a65660aa75ddf';
+export const SCRIPT_ASSET_INVENTORY_SHA256 = '3e0e97fb8654d97c466ef7ff026612268bd4e07020b6f78d26e749791ebe0145';
 
 function normalizeScriptPath(filePath) {
   return filePath.replaceAll('\\', '/').replace(/^\.\//u, '').trim();

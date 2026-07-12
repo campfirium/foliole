@@ -44,7 +44,10 @@ run_changed_lint() {
     return 0
   fi
 
-  mapfile -t lint_array <<< "${lint_targets}"
+  lint_array=()
+  while IFS= read -r lint_target; do
+    [[ -n "${lint_target}" ]] && lint_array+=("${lint_target}")
+  done <<< "${lint_targets}"
   if [[ -f "node_modules/eslint/bin/eslint.js" ]]; then
     run_quality_gate_command "quality-gate-fast" "lint" "lint (changed files)" node node_modules/eslint/bin/eslint.js --cache --cache-location .tmp/eslint-cache/changed/ "${lint_array[@]}"
     return 0
@@ -136,7 +139,10 @@ run_related_tests_if_needed() {
     echo "${test_files}" | sed 's/^/  /'
   fi
 
-  mapfile -t test_array <<< "${test_files}"
+  test_array=()
+  while IFS= read -r test_file; do
+    [[ -n "${test_file}" ]] && test_array+=("${test_file}")
+  done <<< "${test_files}"
   run_quality_gate_command \
     "quality-gate-fast" \
     "test" \

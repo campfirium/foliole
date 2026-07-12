@@ -61,7 +61,7 @@ async function createRepo() {
   await chmod(path.join(repoDir, 'scripts', 'git', 'check-commit-sequence.mjs'), 0o755);
   await chmod(path.join(repoDir, 'scripts', 'pre-push-affected-validation.mjs'), 0o755);
   await writeFile(
-    path.join(repoDir, 'scripts', 'lint-changed.sh'),
+    path.join(repoDir, 'scripts', 'lint-changed.mjs'),
     '#!/usr/bin/env bash\nexit 0\n',
     { encoding: 'utf8', mode: 0o755 }
   );

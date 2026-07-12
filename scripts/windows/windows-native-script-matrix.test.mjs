@@ -19,7 +19,8 @@ describe('windows native script matrix', () => {
 
   it('classifies legacy shell entries instead of treating them as native main scripts', () => {
     expect(classifyPackageScript('windows:preview', packageJson.scripts['windows:preview'])).toBe('wsl-mirror-legacy');
-    expect(classifyPackageScript('quality:fast', packageJson.scripts['quality:fast'])).toBe('git-bash-portable');
+    expect(classifyPackageScript('quality:fast', packageJson.scripts['quality:fast'])).toBe('windows-native-main');
+    expect(classifyPackageScript('quality:desktop', packageJson.scripts['quality:desktop'])).toBe('git-bash-portable');
     expect(classifyPackageScript('test:e2e:desktop:agent', packageJson.scripts['test:e2e:desktop:agent'])).toBe(
       'linux-headless-legacy',
     );
@@ -30,7 +31,7 @@ describe('windows native script matrix', () => {
     const byName = new Map(matrix.map((row) => [row.name, row]));
 
     expect(byName.get('windows:preview')?.nativeAlternative).toBe('windows:preview:native');
-    expect(byName.get('quality:fast')?.nativeAlternative).toBe('quality:fast:native');
+    expect(byName.get('quality:fast')?.nativeAlternative).toBe('');
     expect(byName.get('desktop:test:windows')?.nativeAlternative).toContain('test:e2e:desktop:native:hidden');
   });
 

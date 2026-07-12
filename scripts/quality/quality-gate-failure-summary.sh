@@ -131,7 +131,10 @@ resolve_quality_gate_rerun_command() {
     failed_tests="$(collect_failed_test_files "${output_file}" "${script_name}")"
     if [[ -n "${failed_tests}" ]]; then
       local -a failed_test_array
-      mapfile -t failed_test_array <<< "${failed_tests}"
+      failed_test_array=()
+      while IFS= read -r failed_test; do
+        [[ -n "${failed_test}" ]] && failed_test_array+=("${failed_test}")
+      done <<< "${failed_tests}"
       printf 'node scripts/run-vitest-with-summary.mjs .tmp/vitest/rerun.json -- --silent=passed-only --pool=threads --maxWorkers=2 --no-file-parallelism'
       printf ' %q' "${failed_test_array[@]}"
       return 0
