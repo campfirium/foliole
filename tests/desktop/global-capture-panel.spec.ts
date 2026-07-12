@@ -69,6 +69,20 @@ async function getCapturePanelBounds(electronApp: ElectronApplication) {
   });
 }
 
+async function sendCapturePanelMouseInput(
+  electronApp: ElectronApplication,
+  input: { button?: 'left'; clickCount?: number; type: 'mouseDown' | 'mouseMove' | 'mouseUp'; x: number; y: number }
+) {
+  await electronApp.evaluate(({ BrowserWindow }, event) => {
+    const panel = BrowserWindow.getAllWindows().find((window) =>
+      !window.isDestroyed() && window.webContents.getURL().startsWith('data:text/html;charset=utf-8,')
+    );
+    if (!panel) throw new Error('capture panel window not found');
+    panel.focus();
+    panel.webContents.sendInputEvent(event);
+  }, input);
+}
+
 async function setDarkMode(desktopWindow: Page, timeoutMs: number) {
   await desktopWindow.evaluate(() => {
     window.localStorage.setItem('foliole-base-color', 'dark');
@@ -102,15 +116,20 @@ test('drags the global capture panel from its visible surface', async ({ desktop
   await expectCaptureFocused(panelPage);
 
   const before = await getCapturePanelBounds(desktopSession.electronApp);
-  await panelPage.mouse.move(72, 214);
-  await panelPage.mouse.down();
-  await panelPage.mouse.move(192, 274, { steps: 8 });
-  await panelPage.mouse.up();
+  await sendCapturePanelMouseInput(desktopSession.electronApp, {
+    button: 'left', clickCount: 1, type: 'mouseDown', x: 72, y: 214
+  });
+  await sendCapturePanelMouseInput(desktopSession.electronApp, {
+    button: 'left', type: 'mouseMove', x: 192, y: 274
+  });
 
   await expect.poll(async () => (await getCapturePanelBounds(desktopSession.electronApp)).x - before.x)
     .toBeGreaterThan(80);
   await expect.poll(async () => (await getCapturePanelBounds(desktopSession.electronApp)).y - before.y)
     .toBeGreaterThan(40);
+  await sendCapturePanelMouseInput(desktopSession.electronApp, {
+    button: 'left', clickCount: 1, type: 'mouseUp', x: 192, y: 274
+  });
 });
 
 test('uses the dark floating surface when the workspace is in dark mode', async ({ desktopSession }) => {

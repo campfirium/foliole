@@ -55,15 +55,18 @@ function execute(command, args, options = {}) {
 }
 
 function runnerEnv(installerPath, evidenceDir) {
-  return {
+  const env = {
     ...process.env,
     FOLIOLE_DESKTOP_ACCEPTANCE_DIR: path.join(evidenceDir, 'screenshots'),
     FOLIOLE_DESKTOP_ACCEPTANCE_EVIDENCE: '1',
     FOLIOLE_ELECTRON_INSTALLED_EXE_PATH: process.env.FOLIOLE_ELECTRON_INSTALLED_EXE_PATH || '',
     FOLIOLE_ELECTRON_LAUNCH_MODE: 'installed',
+    FOLIOLE_ELECTRON_NATIVE_VISIBLE: '1',
     FOLIOLE_VALIDATION_RESULT_DIR: evidenceDir,
     FOLIOLE_VALIDATION_INSTALLER_PATH: installerPath
   };
+  delete env.FOLIOLE_ELECTRON_NATIVE_HIDDEN;
+  return env;
 }
 
 async function runPlaywright(kitRoot, env) {

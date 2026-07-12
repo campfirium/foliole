@@ -33,13 +33,15 @@ describe('Windows validation kit runner', () => {
   it('runs fixed install, readiness, and physical steps before promoting success', async () => {
     const cacheRoot = root();
     const verifyKit = vi.fn(verifier);
+    const runPhysicalPlaywright = vi.fn(async () => ({ code: 0, lines: ['passed'] }));
+    const smokeInstalledApp = vi.fn(async () => undefined);
     const outcome = await runWindowsValidationKit({
       cacheRoot,
       executeCommand: vi.fn(async () => ({ code: 0, lines: ['installed'] })),
       expected: { commitSha: 'a'.repeat(40), runAttempt: '2', runId: '1234' },
       platform: 'win32',
-      runPhysicalPlaywright: vi.fn(async () => ({ code: 0, lines: ['passed'] })),
-      smokeInstalledApp: vi.fn(async () => undefined),
+      runPhysicalPlaywright,
+      smokeInstalledApp,
       verifyKit
     });
     expect(verifyKit).toHaveBeenCalledWith(expect.objectContaining({ expected: expect.objectContaining({ runId: '1234' }) }));
@@ -49,6 +51,17 @@ describe('Windows validation kit runner', () => {
       { name: 'physical_playwright', status: 'success' }
     ]);
     expect(outcome.directory).toBe(path.join(cacheRoot, 'last-passed'));
+    const environments = [
+      smokeInstalledApp.mock.calls[0]?.[0]?.env,
+      runPhysicalPlaywright.mock.calls[0]?.[1]
+    ];
+    for (const env of environments) {
+      expect(env).toMatchObject({
+        FOLIOLE_ELECTRON_LAUNCH_MODE: 'installed',
+        FOLIOLE_ELECTRON_NATIVE_VISIBLE: '1'
+      });
+      expect(env.FOLIOLE_ELECTRON_NATIVE_HIDDEN).toBeUndefined();
+    }
   });
 
   it('archives a readiness failure with later steps explicitly skipped', async () => {
