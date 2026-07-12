@@ -16,7 +16,8 @@ describe('playwright desktop native hidden runner', () => {
       argv: ['tests/desktop/startup.spec.ts', '--project=chromium'],
       cwd: 'D:\\C\\foliole',
       env: {},
-      nodeBin: 'C:\\Node\\node.exe'
+      nodeBin: 'C:\\Node\\node.exe',
+      platform: 'win32'
     });
 
     expect(command).toMatchObject({
@@ -39,6 +40,7 @@ describe('playwright desktop native hidden runner', () => {
         FOLIOLE_DISABLE_HARDWARE_ACCELERATION: '1',
         FOLIOLE_ELECTRON_APP_ROOT: path.resolve('D:\\C\\foliole'),
         FOLIOLE_ELECTRON_NATIVE_HIDDEN: '1',
+        FOLIOLE_DESKTOP_ACCEPTANCE_EVIDENCE: '1',
         FOLIOLE_WINDOWS_WORKDIR: path.resolve('D:\\C\\foliole')
       }
     });
@@ -48,7 +50,8 @@ describe('playwright desktop native hidden runner', () => {
     const command = createNativeHiddenDesktopGateCommand({
       cwd: 'D:\\C\\foliole',
       env: {},
-      nodeBin: 'node'
+      nodeBin: 'node',
+      platform: 'win32'
     });
 
     expect(command.args.slice(-HIDDEN_MODE_HEALTH_SPECS.length)).toEqual(HIDDEN_MODE_HEALTH_SPECS);
@@ -61,7 +64,8 @@ describe('playwright desktop native hidden runner', () => {
         FOLIOLE_ELECTRON_APP_ROOT: 'D:\\Alt\\foliole',
         FOLIOLE_WINDOWS_WORKDIR: 'D:\\Alt\\foliole'
       },
-      nodeBin: 'node'
+      nodeBin: 'node',
+      platform: 'win32'
     });
 
     expect(command.cwd).toBe(path.resolve('D:\\Alt\\foliole'));
@@ -69,6 +73,7 @@ describe('playwright desktop native hidden runner', () => {
     expect(command.env.FOLIOLE_DISABLE_HARDWARE_ACCELERATION).toBe('1');
     expect(command.env.FOLIOLE_ELECTRON_APP_ROOT).toBe(path.resolve('D:\\Alt\\foliole'));
     expect(command.env.FOLIOLE_ELECTRON_NATIVE_HIDDEN).toBe('1');
+    expect(command.env.FOLIOLE_DESKTOP_ACCEPTANCE_EVIDENCE).toBe('1');
     expect(command.env.FOLIOLE_WINDOWS_WORKDIR).toBe(path.resolve('D:\\Alt\\foliole'));
   });
 

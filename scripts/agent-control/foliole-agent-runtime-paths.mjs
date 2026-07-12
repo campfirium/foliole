@@ -41,7 +41,7 @@ export function resolvePathOverride(value) {
   return trimmed ? path.resolve(trimmed) : null;
 }
 
-function resolveAppDataRoot(platform, env, homeDir) {
+export function resolveAppDataRoot(platform, env, homeDir) {
   if (platform === 'win32') return env.APPDATA?.trim() || path.join(homeDir, 'AppData', 'Roaming');
   if (platform === 'darwin') return path.join(homeDir, 'Library', 'Application Support');
   return env.XDG_CONFIG_HOME?.trim() || path.join(homeDir, '.config');

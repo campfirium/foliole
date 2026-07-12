@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 import { withResourceGate } from './lib/resource-gate.mjs';
 import { normalizeSpawnCommand } from './lib/spawn-command.mjs';
-import { killPid } from './windows/windows-client-native-process.mjs';
+import { killPid } from './lib/process-control.mjs';
 
 const DEFAULT_REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DEFAULT_COMMAND_TIMEOUT_MS = 15 * 60_000;

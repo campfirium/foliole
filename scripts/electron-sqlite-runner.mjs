@@ -5,8 +5,11 @@ import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
-export function resolveElectronBinary(repoRoot = process.cwd()) {
-  const executable = process.platform === 'win32' ? 'electron.exe' : 'electron';
+export function resolveElectronBinary(repoRoot = process.cwd(), platform = process.platform) {
+  if (platform === 'darwin') {
+    return path.join(repoRoot, 'node_modules', 'electron', 'dist', 'Electron.app', 'Contents', 'MacOS', 'Electron');
+  }
+  const executable = platform === 'win32' ? 'electron.exe' : 'electron';
   return path.join(repoRoot, 'node_modules', 'electron', 'dist', executable);
 }
 

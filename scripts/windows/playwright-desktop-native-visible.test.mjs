@@ -20,7 +20,7 @@ describe('playwright desktop native visible runner', () => {
     const packageJson = JSON.parse(await readFile(path.join(REPO_ROOT, 'package.json'), 'utf8'));
 
     expect(packageJson.scripts['test:e2e:desktop:native:visible']).toBe(
-      'node scripts/windows/playwright-desktop-native-visible.mjs'
+      'node scripts/desktop/playwright-desktop-native-visible.mjs'
     );
   });
 
@@ -38,7 +38,8 @@ describe('playwright desktop native visible runner', () => {
       argv: ['tests/desktop/visible-native-presentation.spec.ts', '--project=chromium'],
       cwd: WINDOWS_WORKDIR,
       env: { FOLIOLE_ELECTRON_NATIVE_HIDDEN: '1' },
-      nodeBin: WINDOWS_NODE
+      nodeBin: WINDOWS_NODE,
+      platform: 'win32'
     });
 
     expect(command).toMatchObject({
@@ -61,6 +62,7 @@ describe('playwright desktop native visible runner', () => {
         FOLIOLE_DISABLE_HARDWARE_ACCELERATION: '1',
         FOLIOLE_ELECTRON_APP_ROOT: path.resolve(WINDOWS_WORKDIR),
         FOLIOLE_ELECTRON_NATIVE_VISIBLE: '1',
+        FOLIOLE_DESKTOP_ACCEPTANCE_EVIDENCE: '1',
         FOLIOLE_WINDOWS_WORKDIR: path.resolve(WINDOWS_WORKDIR)
       }
     });

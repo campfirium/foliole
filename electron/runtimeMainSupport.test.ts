@@ -52,7 +52,8 @@ it('pins hidden native desktop test windows offscreen and out of the taskbar', (
   expect(
     applyHiddenNativeDesktopWindowOptions(
       { height: 900, show: true, width: 1400, x: 80, y: 80 },
-      { FOLIOLE_ELECTRON_NATIVE_HIDDEN: '1' }
+      { FOLIOLE_ELECTRON_NATIVE_HIDDEN: '1' },
+      'win32'
     )
   ).toMatchObject({
     focusable: false,
@@ -65,6 +66,21 @@ it('pins hidden native desktop test windows offscreen and out of the taskbar', (
   });
 
   expect(applyHiddenNativeDesktopWindowOptions({ x: 80 }, {})).toEqual({ x: 80 });
+});
+
+it('uses transparent hidden native windows on macOS where offscreen bounds are clamped', () => {
+  expect(applyHiddenNativeDesktopWindowOptions(
+    { height: 900, show: true, width: 1400 },
+    { FOLIOLE_ELECTRON_NATIVE_HIDDEN: '1' },
+    'darwin'
+  )).toMatchObject({
+    focusable: false,
+    height: 1000,
+    opacity: 0,
+    show: false,
+    skipTaskbar: true,
+    width: 1600
+  });
 });
 
 it('allows only http and https URLs for embedded link panel window opens', () => {

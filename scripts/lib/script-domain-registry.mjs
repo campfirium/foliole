@@ -22,6 +22,7 @@ const WINDOWS_CI_PATTERN = /^scripts\/windows\/(?:installed-app-smoke|package-bu
 const WINDOWS_DEVICE_PATTERN =
   /^scripts\/windows\/(?:hidden-native|playwright-desktop-native|visible-native|windows-client-native|windows-preview-native)/u;
 const WINDOWS_ASSET_PATTERN = /^(?:scripts\/windows\/|scripts\/android\/windows-|scripts\/android\/open-foliole-android-)/u;
+const MACOS_ASSET_PATTERN = /^scripts\/macos\//u;
 
 export const CAPABILITY_CONTRACTS = [
   ...[
@@ -50,6 +51,18 @@ export const CAPABILITY_CONTRACTS = [
     placements: ['shared-core'],
     platforms: ['darwin', 'linux', 'win32']
   },
+  ...[
+    ['electron:dev', 'scripts/run-electron-dev.mjs'],
+    ['electron:native:health', 'scripts/run-electron-native-health.mjs'],
+    ['test:e2e:desktop:native:hidden', 'scripts/desktop/playwright-desktop-native-hidden.mjs'],
+    ['test:e2e:desktop:native:visible', 'scripts/desktop/playwright-desktop-native-visible.mjs']
+  ].map(([name, adapterPath]) => ({
+    adapter: { args: [adapterPath], bin: 'node' },
+    adapterPath,
+    name,
+    placements: ['shared-core'],
+    platforms: ['darwin', 'linux', 'win32']
+  })),
   {
     adapter: { args: ['scripts/windows/windows-preview-native-entry.mjs'], bin: 'node' },
     adapterPath: 'scripts/windows/windows-preview-native-entry.mjs',
@@ -66,7 +79,7 @@ export const CAPABILITY_CONTRACTS = [
   }
 ];
 
-export const SCRIPT_ASSET_INVENTORY_SHA256 = '3e0e97fb8654d97c466ef7ff026612268bd4e07020b6f78d26e749791ebe0145';
+export const SCRIPT_ASSET_INVENTORY_SHA256 = '684e408e652f98cacee73c08ea3260018372451ea3c71e5113cb36d331bdd8da';
 
 function normalizeScriptPath(filePath) {
   return filePath.replaceAll('\\', '/').replace(/^\.\//u, '').trim();
@@ -74,6 +87,9 @@ function normalizeScriptPath(filePath) {
 
 function classifyExecutionPlacements(filePath) {
   const placements = new Set();
+  if (MACOS_ASSET_PATTERN.test(filePath)) {
+    placements.add('macos-only');
+  }
   if (WINDOWS_ASSET_PATTERN.test(filePath) || ['.cmd', '.ps1', '.vbs'].includes(path.extname(filePath))) {
     placements.add('windows-only');
   }

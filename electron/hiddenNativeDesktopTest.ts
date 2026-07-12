@@ -13,18 +13,26 @@ export function isHiddenNativeDesktopTest(env: NodeJS.ProcessEnv = process.env) 
 
 export function applyHiddenNativeDesktopWindowOptions(
   options: BrowserWindowConstructorOptions,
-  env: NodeJS.ProcessEnv = process.env
+  env: NodeJS.ProcessEnv = process.env,
+  platform = process.platform
 ): BrowserWindowConstructorOptions {
   if (!isHiddenNativeDesktopTest(env)) {
     return options;
   }
-  return {
+  const hiddenOptions = {
     ...options,
-    ...HIDDEN_NATIVE_DESKTOP_TEST_BOUNDS,
     focusable: false,
     skipTaskbar: true,
     // Initial creation stays hidden; windowRuntimeDiagnostics.presentInitialRendererWindow()
     // later calls showInactive() so the renderer is visible to Playwright without taking focus.
     show: false
   };
+  return platform === 'darwin'
+    ? {
+        ...hiddenOptions,
+        height: HIDDEN_NATIVE_DESKTOP_TEST_BOUNDS.height,
+        opacity: 0,
+        width: HIDDEN_NATIVE_DESKTOP_TEST_BOUNDS.width
+      }
+    : { ...hiddenOptions, ...HIDDEN_NATIVE_DESKTOP_TEST_BOUNDS };
 }

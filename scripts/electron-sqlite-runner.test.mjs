@@ -18,9 +18,11 @@ import {
 describe('electron sqlite runner', () => {
   it('resolves the bundled Electron binary for the current platform', () => {
     const binary = resolveElectronBinary('D:/C/foliole');
-    const expectedName = process.platform === 'win32' ? 'electron.exe' : 'electron';
+    const expectedTail = process.platform === 'darwin'
+      ? ['Electron.app', 'Contents', 'MacOS', 'Electron']
+      : [process.platform === 'win32' ? 'electron.exe' : 'electron'];
 
-    expect(binary).toBe(path.join('D:/C/foliole', 'node_modules', 'electron', 'dist', expectedName));
+    expect(binary).toBe(path.join('D:/C/foliole', 'node_modules', 'electron', 'dist', ...expectedTail));
   });
 
   it('runs TypeScript scripts through Electron-as-Node with strip-types enabled', () => {
@@ -46,7 +48,7 @@ describe('electron sqlite runner', () => {
     expect(buildRunnerInvocation('scripts/android/android-sync-audit.mjs', ['--desktop-db', 'a.db'], 'D:/C/foliole')).toEqual({
       args: ['scripts/android/android-sync-audit.mjs', '--desktop-db', 'a.db'],
       cwd: 'D:/C/foliole',
-      electronPath: path.join('D:/C/foliole', 'node_modules', 'electron', 'dist', process.platform === 'win32' ? 'electron.exe' : 'electron'),
+      electronPath: resolveElectronBinary('D:/C/foliole'),
       env: { ELECTRON_RUN_AS_NODE: '1' }
     });
   });

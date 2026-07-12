@@ -1,6 +1,6 @@
 import { expect, test } from './harness/fixtures';
 
-test('hidden native desktop presents a visible offscreen renderer without focus', async ({
+test('hidden native desktop presents a noninterfering renderer without focus', async ({
   desktopSession,
   desktopWindow
 }) => {
@@ -11,7 +11,9 @@ test('hidden native desktop presents a visible offscreen renderer without focus'
     return {
       bounds: window.getBounds(),
       isFocusable: window.isFocusable(),
-      isVisible: window.isVisible()
+      isVisible: window.isVisible(),
+      opacity: window.getOpacity(),
+      platform: process.platform
     };
   });
 
@@ -20,7 +22,11 @@ test('hidden native desktop presents a visible offscreen renderer without focus'
     isFocusable: false,
     isVisible: true
   });
-  expect(presentation?.bounds.x).toBeLessThanOrEqual(-10_000);
-  expect(presentation?.bounds.y).toBeLessThanOrEqual(-10_000);
+  if (presentation?.platform === 'darwin') {
+    expect(presentation.opacity).toBe(0);
+  } else {
+    expect(presentation?.bounds.x).toBeLessThanOrEqual(-10_000);
+    expect(presentation?.bounds.y).toBeLessThanOrEqual(-10_000);
+  }
   await expect(desktopWindow.evaluate(() => document.visibilityState)).resolves.toBe('visible');
 });

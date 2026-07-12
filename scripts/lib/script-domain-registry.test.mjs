@@ -24,6 +24,9 @@ describe('script domain registry', () => {
     expect(classifyScriptAsset('scripts/lib/path-domains.mjs')).toMatchObject({
       placements: ['shared-core']
     });
+    expect(classifyScriptAsset('scripts/macos/electron-dev-preview.mjs')).toMatchObject({
+      placements: ['macos-only']
+    });
   });
 
   it('uses exact confirm records with reasons instead of prefix fallback', () => {
@@ -53,6 +56,10 @@ describe('script domain registry', () => {
     expect(resolveCapabilityAdapter('missing', 'linux')).toEqual({
       ok: false,
       reason: 'unknown-capability'
+    });
+    expect(resolveCapabilityAdapter('electron:dev', 'darwin')).toMatchObject({
+      ok: true,
+      placements: ['shared-core']
     });
   });
 });
