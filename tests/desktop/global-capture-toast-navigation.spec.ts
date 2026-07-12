@@ -1,21 +1,12 @@
 import type { Page } from '@playwright/test';
 
 import { clickWindowsScreenPoint } from '../../scripts/windows/windows-native-mouse-click.mjs';
+
 import { expect, test, type DesktopSession } from './harness/fixtures';
 
 const PIVOT_NODE_ID = 'desktop-global-capture-pivot';
 const TARGET_NODE_ID = 'desktop-global-capture-target';
 const TOAST_TARGET_NODE_ID = 'desktop-global-capture-toast-target';
-
-interface ScreenPoint {
-  x: number;
-  y: number;
-}
-
-interface ToastClickInfo {
-  clickPoint: ScreenPoint;
-  hwndHex: string;
-}
 
 async function seedGlobalCaptureNodes(page: Page) {
   return page.evaluate(async ({ pivotNodeId, targetNodeId, toastTargetNodeId }) => {

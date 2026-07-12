@@ -3,6 +3,7 @@ import path from 'node:path';
 import type { ElectronApplication, Page } from '@playwright/test';
 
 import { waitForDesktopAppReady } from '../../scripts/windows/playwright-desktop-harness.mjs';
+
 import { expect, test } from './harness/fixtures';
 
 const DARK_PANEL_SCREENSHOT_PATH = path.join(
