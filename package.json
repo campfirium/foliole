@@ -18,6 +18,7 @@
     "deps:scan": "knip --dependencies --reporter compact",
     "deps:hardening:check": "bash scripts/npm-hardening-check.sh",
     "check:native-contracts": "node scripts/check-native-command-contracts.mjs",
+    "scripts:domains:check": "node scripts/check-script-domain-contract.mjs",
     "windows:console:guard": "node scripts/check-windows-console-policy.mjs",
     "check:layer-boundary": "node scripts/check-layer-dependency-boundary.mjs",
     "check:affected": "node scripts/pre-push-affected-validation.mjs",

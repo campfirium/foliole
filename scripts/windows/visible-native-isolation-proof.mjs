@@ -6,7 +6,7 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 import { readReadyState } from './windows-client-native-state.mjs';
-import { normalizeSpawnCommand } from '../lib/windows-spawn-command.mjs';
+import { normalizeSpawnCommand } from '../lib/spawn-command.mjs';
 import { resolveWindowsNativePaths } from './windows-native-paths.mjs';
 
 const MARKER_FILES = [

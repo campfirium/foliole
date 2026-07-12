@@ -38,11 +38,11 @@ function runQualityGate(cwd, env = {}, args = []) {
   });
 }
 
-function runRoutingHelper(expression) {
+function runRoutingHelper(expression, env = process.env) {
   return new Promise((resolve) => {
     const child = spawn('bash', ['-lc', `source "${QUALITY_GATE_ROUTING_SCRIPT}"; ${expression}`], {
       cwd: REPO_ROOT,
-      env: process.env
+      env
     });
     let stdout = '';
     let stderr = '';
@@ -91,6 +91,24 @@ describe('quality-gate-fast lib routing', () => {
       runRoutingHelper("quality_skip_lint_changed_files_match 'src/app/example.ts'")
     ).resolves.toMatchObject({ code: 1 });
   }, 60000);
+
+  it('continues dynamic routing after a valid empty static route', async () => {
+    await expect(runRoutingHelper("resolve_quality_gate_route 'src/features/cards/Card.tsx'")).resolves.toMatchObject({
+      code: 0,
+      stdout: 'light\tlocal source change'
+    });
+  });
+
+  it('fails closed when the path domain module cannot load', async () => {
+    const result = await runRoutingHelper(
+      "resolve_quality_gate_route 'src/store/workspaceStore.ts'",
+      { ...process.env, QUALITY_PATH_DOMAINS_SCRIPT: '/missing/path-domains.mjs' }
+    );
+
+    expect(result.code).not.toBe(0);
+    expect(result.stdout).not.toContain('light');
+    expect(result.stderr).toContain('path domain resolution failed');
+  });
 
   it('delegates lib changes to the shared gate', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-fast-lib-'));

@@ -6,7 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { withResourceGate } from './lib/resource-gate.mjs';
-import { normalizeSpawnCommand } from './lib/windows-spawn-command.mjs';
+import { normalizeSpawnCommand } from './lib/spawn-command.mjs';
 import { killPid } from './windows/windows-client-native-process.mjs';
 
 const DEFAULT_REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');

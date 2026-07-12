@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { normalizeSpawnCommand } from '../lib/windows-spawn-command.mjs';
+import { normalizeSpawnCommand } from '../lib/spawn-command.mjs';
 
 export const HIDDEN_MODE_HEALTH_SPECS = [
   'tests/desktop/hidden-native-presentation.spec.ts',

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 QUALITY_GATE_ROUTING_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+QUALITY_PATH_DOMAINS_SCRIPT="${QUALITY_PATH_DOMAINS_SCRIPT:-${QUALITY_GATE_ROUTING_DIR}/../lib/path-domains.mjs}"
 
 has_quality_gate_arg() {
   local expected="$1"
@@ -43,7 +44,10 @@ resolve_quality_gate_route() {
   local changed="$1"
   local static_route
 
-  static_route="$(printf '%s\n' "${changed}" | node "${QUALITY_GATE_ROUTING_DIR}/../lib/path-domains.mjs" quality-route 2>/dev/null || true)"
+  if ! static_route="$(printf '%s\n' "${changed}" | node "${QUALITY_PATH_DOMAINS_SCRIPT}" quality-route)"; then
+    echo "[quality-gate-route] path domain resolution failed" >&2
+    return 1
+  fi
   if [[ -n "${static_route}" ]]; then
     printf '%s' "${static_route}"
     return 0

@@ -16,7 +16,7 @@ const AFFECTED_VALIDATION_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'pre-pus
 const CRITICAL_TEST_ROUTES_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'quality', 'quality-critical-test-routes.mjs');
 const SEQUENCE_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'git', 'check-commit-sequence.mjs');
 const PATH_DOMAINS_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'lib', 'path-domains.mjs');
-const PREVIEW_PATHS_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'lib', 'path-domain-preview-paths.mjs');
+const PATH_DOMAIN_REGISTRY_PATH = path.join(REPO_ROOT, 'scripts', 'lib', 'path-domain-registry.mjs');
 const HOOK_INTEGRATION_TIMEOUT_MS = 30_000;
 const tempDirs = [];
 
@@ -57,7 +57,7 @@ async function createRepo() {
   await copyFile(AFFECTED_VALIDATION_SCRIPT_PATH, path.join(repoDir, 'scripts', 'pre-push-affected-validation.mjs'));
   await copyFile(CRITICAL_TEST_ROUTES_SCRIPT_PATH, path.join(repoDir, 'scripts', 'quality', 'quality-critical-test-routes.mjs'));
   await copyFile(PATH_DOMAINS_SCRIPT_PATH, path.join(repoDir, 'scripts', 'lib', 'path-domains.mjs'));
-  await copyFile(PREVIEW_PATHS_SCRIPT_PATH, path.join(repoDir, 'scripts', 'lib', 'path-domain-preview-paths.mjs'));
+  await copyFile(PATH_DOMAIN_REGISTRY_PATH, path.join(repoDir, 'scripts', 'lib', 'path-domain-registry.mjs'));
   await chmod(path.join(repoDir, 'scripts', 'git', 'check-commit-sequence.mjs'), 0o755);
   await chmod(path.join(repoDir, 'scripts', 'pre-push-affected-validation.mjs'), 0o755);
   await writeFile(

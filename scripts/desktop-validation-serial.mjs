@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { normalizeSpawnCommand } from './lib/windows-spawn-command.mjs';
+import { normalizeSpawnCommand } from './lib/spawn-command.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const LOG_PREFIX = '[desktop-validation-serial]';

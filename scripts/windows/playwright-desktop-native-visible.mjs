@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { normalizeSpawnCommand } from '../lib/windows-spawn-command.mjs';
+import { normalizeSpawnCommand } from '../lib/spawn-command.mjs';
 
 function resolveNpmBin() {
   return process.platform === 'win32' ? 'npm.cmd' : 'npm';

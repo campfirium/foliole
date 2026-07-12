@@ -5,7 +5,12 @@ import { spawnSync } from 'node:child_process';
 
 import { describe, expect, it } from 'vitest';
 
-import { changedFilesNeedScriptTests, isScriptTestRootPath } from './script-test-bucket-selection.mjs';
+import {
+  changedFilesNeedScriptTests,
+  collectScriptTestFiles,
+  isScriptTestRootPath,
+  selectScriptTestBucketFiles
+} from './script-test-bucket-selection.mjs';
 
 describe('script test bucket root matching', () => {
   it('matches changed files against the script test bucket roots', () => {
@@ -17,7 +22,14 @@ describe('script test bucket root matching', () => {
     expect(changedFilesNeedScriptTests(['scripts/windows/windows-preview.sh'])).toBe(false);
     expect(changedFilesNeedScriptTests(['src/app/App.tsx'])).toBe(false);
     expect(isScriptTestRootPath('scripts/check-ui-copy-guard.mjs')).toBe(true);
-    expect(isScriptTestRootPath('scripts/lib/path-domains.mjs')).toBe(false);
+    expect(isScriptTestRootPath('scripts/lib/path-domains.mjs')).toBe(true);
+  });
+
+  it('collects scripts/lib contract tests in the formal core bucket', () => {
+    const coreFiles = selectScriptTestBucketFiles('core', collectScriptTestFiles());
+
+    expect(coreFiles).toContain('scripts/lib/path-domains.test.mjs');
+    expect(coreFiles).toContain('scripts/lib/script-domain-registry.test.mjs');
   });
 
   it('exposes changed-file matching through the CLI command', () => {

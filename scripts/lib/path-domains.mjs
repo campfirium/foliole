@@ -5,15 +5,17 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { PREVIEW_TARGET_PATHS } from './path-domain-preview-paths.mjs';
-
-const DEPENDENCY_ROOT_PATTERN = /^(package\.json|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?)$/u;
-const TEST_FILE_PATTERN = /\.(test|spec)\.[^.]+$/u;
-const LINTABLE_FILE_PATTERN = /\.(js|jsx|ts|tsx|cjs|mjs)$/u;
-const SYNC_PACK_PATH_PATTERN = /^(lib\/core\/sync\/syncPack|electron\/database\/syncPack|electron\/sync\/syncPack|src\/shared\/platform\/companionSyncPack)/u;
-const ANDROID_CONTRACT_PATH_PATTERN = /^lib\/core\/database\/androidCompanion.*\.ts$/u;
-const ANDROID_SYNC_BOUNDARY_PATH_PATTERN =
-  /^(lib\/core\/database\/androidCompanion.*\.ts|android\/app\/src\/main\/assets\/companion-.*\.json|android\/app\/src\/main\/java\/com\/foliole\/android\/FolioleCompanionSync.*\.java)/u;
+import {
+  ANDROID_CONTRACT_PATH_PATTERN,
+  ANDROID_SYNC_BOUNDARY_PATH_PATTERN,
+  DEPENDENCY_ROOT_PATTERN,
+  LINTABLE_FILE_PATTERN,
+  LINT_SCOPE_PATHS,
+  PREVIEW_TARGET_PATHS,
+  SYNC_PACK_PATH_PATTERN,
+  TEST_FILE_PATTERN,
+  pathMatchesPrefix
+} from './path-domain-registry.mjs';
 
 export { PREVIEW_TARGET_PATHS };
 
@@ -102,29 +104,9 @@ export function pathMatchesLintScope(scope, filePath) {
     case '':
       return true;
     case 'desktop':
-      return matchesAny(normalized, [
-        'src/app/',
-        'src/features/',
-        'src/shared/ui/',
-        'src/shared/platform/',
-        'electron/',
-        'scripts/windows/',
-        'vite.config.ts',
-        'playwright.desktop.config.ts'
-      ]);
+      return pathMatchesPrefix(normalized, LINT_SCOPE_PATHS.desktop);
     case 'android':
-      return matchesAny(normalized, [
-        'src/companion/',
-        'src/shared/platform/',
-        'src/shared/ui/',
-        'src/shared/lib/',
-        'src/shared/commands/',
-        'src/shared/config/',
-        'scripts/android/',
-        'android/',
-        'capacitor.config.ts',
-        'vite.companion.config.ts'
-      ]);
+      return pathMatchesPrefix(normalized, LINT_SCOPE_PATHS.android);
     case 'shared':
       return matchesSharedLintScope(normalized);
     default:
@@ -133,21 +115,7 @@ export function pathMatchesLintScope(scope, filePath) {
 }
 
 function matchesSharedLintScope(filePath) {
-  return matchesAny(filePath, [
-    'src/shared/',
-    'src/features/',
-    'src/store/',
-    'scripts/check-',
-    'scripts/layer-',
-    'scripts/lint-changed',
-    'scripts/quality-',
-    'scripts/quality/',
-    'scripts/vite-config',
-    'vite.config.ts',
-    'vite.companion.config.ts',
-    'playwright.desktop.config.ts',
-    'capacitor.config.ts'
-  ]);
+  return pathMatchesPrefix(filePath, LINT_SCOPE_PATHS.shared);
 }
 
 function isAndroidSurfacePath(filePath) {
@@ -158,10 +126,6 @@ function isAndroidSurfacePath(filePath) {
     filePath === 'capacitor.config.ts' ||
     filePath === 'vite.companion.config.ts'
   );
-}
-
-function matchesAny(filePath, prefixes) {
-  return prefixes.some((prefix) => filePath === prefix || filePath.startsWith(prefix));
 }
 
 function printQualityRoute(files) {

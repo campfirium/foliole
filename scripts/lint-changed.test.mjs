@@ -178,4 +178,20 @@ describe('lint-changed.sh', () => {
       await rm(tempRoot, { recursive: true, force: true });
     }
   });
+
+  it('fails closed when the shared path domain module cannot load', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'lint-changed-'));
+    try {
+      const result = await runBash(
+        [LINT_CHANGED_SCRIPT, '--scope', 'desktop', 'src/app/App.tsx'],
+        tempRoot,
+        { ...process.env, PATH_DOMAINS_SCRIPT: path.join(tempRoot, 'missing-path-domains.mjs') }
+      );
+
+      expect(result.code).not.toBe(0);
+      expect(result.stdout).not.toContain('no lintable changed files');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
 });

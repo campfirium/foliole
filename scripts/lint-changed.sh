@@ -2,6 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PATH_DOMAINS_SCRIPT="${PATH_DOMAINS_SCRIPT:-${SCRIPT_DIR}/lib/path-domains.mjs}"
 
 collect_changed_files() {
   local staged unstaged untracked
@@ -33,7 +34,7 @@ filter_by_scope() {
       cat
       ;;
     desktop|android|shared)
-      node "${SCRIPT_DIR}/lib/path-domains.mjs" lint-scope "${scope}" || true
+      node "${PATH_DOMAINS_SCRIPT}" lint-scope "${scope}"
       ;;
     *)
       echo "[lint-changed] unknown scope: ${scope}" >&2
@@ -44,11 +45,11 @@ filter_by_scope() {
 
 collect_lint_targets() {
   if [[ "$#" -gt 0 ]]; then
-    printf '%s\n' "$@" | grep -E '\.(js|jsx|ts|tsx|cjs|mjs)$' | filter_by_scope | grep -v '^\s*$' || true
-    return 0
+    printf '%s\n' "$@" | awk '/\.(js|jsx|ts|tsx|cjs|mjs)$/' | filter_by_scope | awk 'NF'
+    return $?
   fi
 
-  collect_changed_files | grep -E '\.(js|jsx|ts|tsx|cjs|mjs)$' | filter_by_scope | grep -v '^\s*$' || true
+  collect_changed_files | awk '/\.(js|jsx|ts|tsx|cjs|mjs)$/' | filter_by_scope | awk 'NF'
 }
 
 lint_targets="$(collect_lint_targets "$@")"
@@ -61,5 +62,8 @@ if [[ -z "${lint_targets}" ]]; then
   exit 0
 fi
 
-mapfile -t lint_array <<< "${lint_targets}"
+lint_array=()
+while IFS= read -r lint_target; do
+  lint_array+=("${lint_target}")
+done <<< "${lint_targets}"
 ./node_modules/.bin/eslint --cache --cache-location .tmp/eslint-cache/changed/ "${lint_array[@]}"

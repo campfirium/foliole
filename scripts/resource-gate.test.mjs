@@ -11,7 +11,7 @@ import { describe, expect, it } from 'vitest';
 
 import { assertAgentCompletionMessage } from './codex/codex-task-completion.mjs';
 import { formatGateQueueMessage } from './lib/resource-gate.mjs';
-import { normalizeSpawnCommand } from './lib/windows-spawn-command.mjs';
+import { normalizeSpawnCommand } from './lib/spawn-command.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const GATE_SCRIPT = path.join(REPO_ROOT, 'scripts', 'with-resource-gate.mjs');
@@ -189,6 +189,14 @@ describe('resource gate', () => {
       bin: 'cmd.exe'
     });
     expect(normalizeSpawnCommand(['node', '--version'], 'win32')).toEqual({
+      args: ['--version'],
+      bin: 'node'
+    });
+    expect(normalizeSpawnCommand(['npm', 'run', 'quality:fast'], 'darwin')).toEqual({
+      args: ['run', 'quality:fast'],
+      bin: 'npm'
+    });
+    expect(normalizeSpawnCommand(['node', '--version'], 'linux')).toEqual({
       args: ['--version'],
       bin: 'node'
     });
