@@ -22,6 +22,9 @@ describe('script domain registry', () => {
     expect(classifyScriptAsset('scripts/windows/windows-preview-native-entry.mjs')).toMatchObject({
       placements: ['windows-device', 'windows-only']
     });
+    expect(classifyScriptAsset('scripts/windows/windows-validation-kit-runner.mjs')).toMatchObject({
+      placements: ['windows-ci', 'windows-device', 'windows-only']
+    });
     expect(classifyScriptAsset('scripts/android/windows-open.ps1')).toMatchObject({
       placements: ['windows-device', 'windows-only']
     });

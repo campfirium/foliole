@@ -21,6 +21,7 @@ const CONFIRM_ASSETS = new Map([
 const WINDOWS_CI_PATTERN =
   /^scripts\/windows\/(?:installed-app-smoke|package-built-artifacts|package-windows|windows-ci-[^.]+)\./u;
 const WINDOWS_CI_ONLY_PATTERN = /^scripts\/windows\/windows-ci-/u;
+const WINDOWS_VALIDATION_KIT_PATTERN = /^scripts\/windows\/windows-(?:native-mouse-click|validation-)/u;
 const WINDOWS_DEVICE_PATTERN =
   /^scripts\/windows\/(?:hidden-native|playwright-desktop-native|visible-native|windows-client-native|windows-preview-native)/u;
 const WINDOWS_ASSET_PATTERN = /^(?:scripts\/windows\/|scripts\/android\/windows-|scripts\/android\/open-foliole-android-)/u;
@@ -107,7 +108,7 @@ export const CAPABILITY_CONTRACTS = [
   }
 ];
 
-export const SCRIPT_ASSET_INVENTORY_SHA256 = '7b9b0ce4a97ddd789b324c4966cf76c0af7c190e96aa98494a84bbe5195a8cd7';
+export const SCRIPT_ASSET_INVENTORY_SHA256 = '29fe0b6cd4f4c3172a882b1cf8beae64283cdd0d06c2c3d4ec59d8302bbb293c';
 
 function normalizeScriptPath(filePath) {
   return filePath.replaceAll('\\', '/').replace(/^\.\//u, '').trim();
@@ -126,6 +127,10 @@ function classifyExecutionPlacements(filePath) {
   }
   if (WINDOWS_CI_PATTERN.test(filePath)) {
     placements.add('windows-ci');
+  }
+  if (WINDOWS_VALIDATION_KIT_PATTERN.test(filePath)) {
+    placements.add('windows-ci');
+    placements.add('windows-device');
   }
   if (WINDOWS_DEVICE_PATTERN.test(filePath) || /^scripts\/android\/(?:windows-|open-foliole-android-)/u.test(filePath)) {
     placements.add('windows-device');

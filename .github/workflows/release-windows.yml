@@ -87,6 +87,12 @@ jobs:
           $hash = (Get-FileHash -Algorithm SHA256 $installer.FullName).Hash.ToLowerInvariant()
           "$hash *$($installer.Name)" | Set-Content -Path artifacts/windows/SHA256SUMS.txt -Encoding ascii
 
+      - name: Build and verify Windows validation kit
+        env:
+          GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        run: node scripts/windows/windows-validation-kit-build.mjs build
+
       - name: Copy reviewed release body
         shell: pwsh
         run: |
@@ -144,5 +150,6 @@ jobs:
           path: |
             artifacts/windows/*.exe
             artifacts/windows/SHA256SUMS.txt
+            artifacts/windows/validation-kit
           if-no-files-found: error
           retention-days: 14

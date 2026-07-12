@@ -1,11 +1,14 @@
-import { test, expect, type ElectronApplication, type Page } from '@playwright/test';
+import path from 'node:path';
 
-import {
-  launchDesktopSession,
-  waitForDesktopAppReady
-} from '../../scripts/windows/playwright-desktop-harness.mjs';
+import type { ElectronApplication, Page } from '@playwright/test';
 
-const DARK_PANEL_SCREENSHOT_PATH = '.tmp/artifacts/global-capture-panel-dark.png';
+import { waitForDesktopAppReady } from '../../scripts/windows/playwright-desktop-harness.mjs';
+import { expect, test } from './harness/fixtures';
+
+const DARK_PANEL_SCREENSHOT_PATH = path.join(
+  process.env.FOLIOLE_DESKTOP_ACCEPTANCE_DIR?.trim() || '.tmp/artifacts',
+  'global-capture-panel-dark.png'
+);
 
 declare global {
   interface Window {
@@ -79,81 +82,56 @@ function readRgbLightness(value: string) {
   return (channels[0]! + channels[1]! + channels[2]!) / 3;
 }
 
-test('focuses the global capture panel and submits from Enter', async ({ browserName }) => {
-  void browserName;
-  const session = await launchDesktopSession();
-  try {
-    await showCapturePanel(session.electronApp);
-    const panelPage = await getCapturePanelPage(session.electronApp);
-    await expectCaptureFocused(panelPage);
+test('focuses the global capture panel and submits from Enter', async ({ desktopSession }) => {
+  await showCapturePanel(desktopSession.electronApp);
+  const panelPage = await getCapturePanelPage(desktopSession.electronApp);
+  await expectCaptureFocused(panelPage);
 
-    await panelPage.keyboard.type('Playwright capture panel text');
-    await panelPage.keyboard.press('Enter');
+  await panelPage.keyboard.type('Playwright capture panel text');
+  await panelPage.keyboard.press('Enter');
 
-    await expect.poll(async () => session.electronApp.evaluate(() =>
-      globalThis.__folioleGlobalCapturePanelResultForTests ?? null
-    )).toEqual({
-      text: 'Playwright capture panel text',
-      type: 'text'
-    });
-  } finally {
-    await session.close();
-  }
+  await expect.poll(async () => desktopSession.electronApp.evaluate(() =>
+    globalThis.__folioleGlobalCapturePanelResultForTests ?? null
+  )).toEqual({ text: 'Playwright capture panel text', type: 'text' });
 });
 
-test('drags the global capture panel from its visible surface', async ({ browserName }) => {
-  void browserName;
-  const session = await launchDesktopSession();
-  try {
-    await showCapturePanel(session.electronApp);
-    const panelPage = await getCapturePanelPage(session.electronApp);
-    await expectCaptureFocused(panelPage);
+test('drags the global capture panel from its visible surface', async ({ desktopSession }) => {
+  await showCapturePanel(desktopSession.electronApp);
+  const panelPage = await getCapturePanelPage(desktopSession.electronApp);
+  await expectCaptureFocused(panelPage);
 
-    const before = await getCapturePanelBounds(session.electronApp);
-    await panelPage.mouse.move(72, 214);
-    await panelPage.mouse.down();
-    await panelPage.mouse.move(192, 274, { steps: 8 });
-    await panelPage.mouse.up();
+  const before = await getCapturePanelBounds(desktopSession.electronApp);
+  await panelPage.mouse.move(72, 214);
+  await panelPage.mouse.down();
+  await panelPage.mouse.move(192, 274, { steps: 8 });
+  await panelPage.mouse.up();
 
-    await expect.poll(async () => {
-      const after = await getCapturePanelBounds(session.electronApp);
-      return after.x - before.x;
-    }).toBeGreaterThan(80);
-    await expect.poll(async () => {
-      const after = await getCapturePanelBounds(session.electronApp);
-      return after.y - before.y;
-    }).toBeGreaterThan(40);
-  } finally {
-    await session.close();
-  }
+  await expect.poll(async () => (await getCapturePanelBounds(desktopSession.electronApp)).x - before.x)
+    .toBeGreaterThan(80);
+  await expect.poll(async () => (await getCapturePanelBounds(desktopSession.electronApp)).y - before.y)
+    .toBeGreaterThan(40);
 });
 
-test('uses the dark floating surface when the workspace is in dark mode', async ({ browserName }) => {
-  void browserName;
-  const session = await launchDesktopSession();
-  try {
-    await setDarkMode(session.firstWindow, session.timeoutMs);
-    await showCapturePanel(session.electronApp);
-    const panelPage = await getCapturePanelPage(session.electronApp);
-    await expectCaptureFocused(panelPage);
+test('uses the dark floating surface when the workspace is in dark mode', async ({ desktopSession }) => {
+  await setDarkMode(desktopSession.firstWindow, desktopSession.timeoutMs);
+  await showCapturePanel(desktopSession.electronApp);
+  const panelPage = await getCapturePanelPage(desktopSession.electronApp);
+  await expectCaptureFocused(panelPage);
 
-    const colors = await panelPage.evaluate(() => {
-      const root = document.documentElement;
-      const surface = document.querySelector<HTMLElement>('.capture-surface');
-      if (!surface) throw new Error('capture surface not found');
-      const surfaceStyle = getComputedStyle(surface);
-      return {
-        background: surfaceStyle.backgroundColor,
-        foreground: surfaceStyle.color,
-        rootBackground: getComputedStyle(root).getPropertyValue('--capture-bg').trim()
-      };
-    });
-    await panelPage.screenshot({ path: DARK_PANEL_SCREENSHOT_PATH });
+  const colors = await panelPage.evaluate(() => {
+    const root = document.documentElement;
+    const surface = document.querySelector<HTMLElement>('.capture-surface');
+    if (!surface) throw new Error('capture surface not found');
+    const surfaceStyle = getComputedStyle(surface);
+    return {
+      background: surfaceStyle.backgroundColor,
+      foreground: surfaceStyle.color,
+      rootBackground: getComputedStyle(root).getPropertyValue('--capture-bg').trim()
+    };
+  });
+  await panelPage.screenshot({ path: DARK_PANEL_SCREENSHOT_PATH });
 
-    expect(colors.rootBackground).toBe(colors.background);
-    expect(readRgbLightness(colors.background)).toBeLessThan(100);
-    expect(readRgbLightness(colors.foreground)).toBeGreaterThan(140);
-  } finally {
-    await session.close();
-  }
+  expect(colors.rootBackground).toBe(colors.background);
+  expect(readRgbLightness(colors.background)).toBeLessThan(100);
+  expect(readRgbLightness(colors.foreground)).toBeGreaterThan(140);
 });

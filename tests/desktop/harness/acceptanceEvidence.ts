@@ -11,7 +11,9 @@ export async function attachDesktopAcceptanceEvidence(page: Page, testInfo: Test
   if (process.env.FOLIOLE_DESKTOP_ACCEPTANCE_EVIDENCE !== '1') return;
   if (testInfo.status !== 'passed' || testInfo.status !== testInfo.expectedStatus) return;
   const mode = process.env.FOLIOLE_ELECTRON_NATIVE_HIDDEN === '1' ? 'hidden' : 'visible';
-  const root = path.resolve('.tmp', 'artifacts', 'desktop-acceptance');
+  const root = path.resolve(
+    process.env.FOLIOLE_DESKTOP_ACCEPTANCE_DIR?.trim() || path.join('.tmp', 'artifacts', 'desktop-acceptance')
+  );
   const filename = `${mode}-${safeSegment(testInfo.title)}-${testInfo.workerIndex}.png`;
   const screenshotPath = path.join(root, filename);
   await mkdir(root, { recursive: true });

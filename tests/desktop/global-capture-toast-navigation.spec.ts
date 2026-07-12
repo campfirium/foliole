@@ -1,14 +1,11 @@
-import { spawnSync } from 'node:child_process';
+import type { Page } from '@playwright/test';
 
-import { test, expect, type Page } from '@playwright/test';
-
-import { launchDesktopSession } from '../../scripts/windows/playwright-desktop-harness.mjs';
+import { clickWindowsScreenPoint } from '../../scripts/windows/windows-native-mouse-click.mjs';
+import { expect, test, type DesktopSession } from './harness/fixtures';
 
 const PIVOT_NODE_ID = 'desktop-global-capture-pivot';
 const TARGET_NODE_ID = 'desktop-global-capture-target';
 const TOAST_TARGET_NODE_ID = 'desktop-global-capture-toast-target';
-
-type DesktopSession = Awaited<ReturnType<typeof launchDesktopSession>>;
 
 interface ScreenPoint {
   x: number;
@@ -64,42 +61,6 @@ async function sendGlobalCaptureNavigation(session: DesktopSession) {
   }, TARGET_NODE_ID);
 }
 
-function clickWindowsScreenPoint(toastInfo: ToastClickInfo) {
-  const script = `
-Add-Type @"
-using System;
-using System.Runtime.InteropServices;
-public static class FolioleNativeMouse {
-  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
-  [DllImport("user32.dll")] public static extern IntPtr SendMessage(IntPtr hWnd, int Msg, IntPtr wParam, IntPtr lParam);
-  [DllImport("user32.dll")] public static extern bool SetCursorPos(int X, int Y);
-  [DllImport("user32.dll")] public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint dwData, UIntPtr dwExtraInfo);
-}
-"@
-$hex = "${toastInfo.hwndHex}"
-$bytes = for ($index = 0; $index -lt $hex.Length; $index += 2) { [Convert]::ToByte($hex.Substring($index, 2), 16) }
-$hwnd = [IntPtr]([BitConverter]::ToInt64([byte[]]$bytes, 0))
-[FolioleNativeMouse]::SetForegroundWindow($hwnd) | Out-Null
-Start-Sleep -Milliseconds 120
-[FolioleNativeMouse]::SetCursorPos(${Math.round(toastInfo.clickPoint.x)}, ${Math.round(toastInfo.clickPoint.y)}) | Out-Null
-Start-Sleep -Milliseconds 80
-[FolioleNativeMouse]::mouse_event(0x0002, 0, 0, 0, [UIntPtr]::Zero)
-Start-Sleep -Milliseconds 80
-[FolioleNativeMouse]::mouse_event(0x0004, 0, 0, 0, [UIntPtr]::Zero)
-[FolioleNativeMouse]::SendMessage($hwnd, 0x0202, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
-`;
-  const result = spawnSync('powershell.exe', [
-    '-NoProfile',
-    '-ExecutionPolicy',
-    'Bypass',
-    '-Command',
-    script
-  ], { encoding: 'utf8' });
-  if (result.status !== 0) {
-    throw new Error(`native mouse click failed: ${result.stderr || result.stdout}`);
-  }
-}
-
 async function showAndClickGlobalCaptureToast(session: DesktopSession) {
   const toastInfo = await session.electronApp.evaluate(async (_, toastTargetNodeId) => {
     const hook = globalThis.__folioleShowGlobalClipDesktopToastForTests;
@@ -152,7 +113,11 @@ async function showAndClickGlobalCaptureToast(session: DesktopSession) {
   if (!hitDiagnostics?.hitTagName) {
     throw new Error(`toast click target is missing: ${JSON.stringify(hitDiagnostics)}`);
   }
-  clickWindowsScreenPoint(toastInfo);
+  clickWindowsScreenPoint({
+    hwndHex: toastInfo.hwndHex,
+    x: Math.round(toastInfo.clickPoint.x),
+    y: Math.round(toastInfo.clickPoint.y)
+  });
 }
 
 async function maximizeMainWindow(session: DesktopSession) {
@@ -195,37 +160,32 @@ async function expectCapturedTarget(page: Page, targetNodeId: string) {
   )).toBe(targetNodeId);
 }
 
-test('opens the clipped target from the global capture toast navigation route', async ({ browserName }) => {
-  void browserName;
-  const session = await launchDesktopSession();
-  try {
-    const page = session.firstWindow;
-    const seeded = await seedGlobalCaptureNodes(page);
-    expect(seeded).toMatchObject({ ok: true });
-    const bridgeReady = await installGlobalCaptureProbe(page);
-    expect(bridgeReady).toBe(true);
+test('opens the clipped target from the global capture toast navigation route', async ({ desktopSession }) => {
+  const session = desktopSession;
+  const page = session.firstWindow;
+  const seeded = await seedGlobalCaptureNodes(page);
+  expect(seeded).toMatchObject({ ok: true });
+  const bridgeReady = await installGlobalCaptureProbe(page);
+  expect(bridgeReady).toBe(true);
 
-    await sendGlobalCaptureNavigation(session);
-    await expectCapturedTarget(page, TARGET_NODE_ID);
-    await expect.poll(async () => page.evaluate((targetNodeId) =>
-      window.__folioleWorkspaceDebug?.getNode?.(targetNodeId)?.title ?? null,
-    TARGET_NODE_ID)).toBe('Global Capture Target');
+  await sendGlobalCaptureNavigation(session);
+  await expectCapturedTarget(page, TARGET_NODE_ID);
+  await expect.poll(async () => page.evaluate((targetNodeId) =>
+    window.__folioleWorkspaceDebug?.getNode?.(targetNodeId)?.title ?? null,
+  TARGET_NODE_ID)).toBe('Global Capture Target');
 
-    await maximizeMainWindow(session);
-    await showAndClickGlobalCaptureToast(session);
-    await expect.poll(async () => {
-      try {
-        return await session.electronApp.evaluate(() =>
-          globalThis.__folioleGlobalCaptureToastOpenForTests?.nodeId ?? null
-        );
-      } catch {
-        return null;
-      }
-    }).toBe(TOAST_TARGET_NODE_ID);
-    await expectCapturedTarget(page, TOAST_TARGET_NODE_ID);
-    await expectMainWindowMaximized(session);
-    await expectNoVisibleToastWindows(session);
-  } finally {
-    await session.close();
-  }
+  await maximizeMainWindow(session);
+  await showAndClickGlobalCaptureToast(session);
+  await expect.poll(async () => {
+    try {
+      return await session.electronApp.evaluate(() =>
+        globalThis.__folioleGlobalCaptureToastOpenForTests?.nodeId ?? null
+      );
+    } catch {
+      return null;
+    }
+  }).toBe(TOAST_TARGET_NODE_ID);
+  await expectCapturedTarget(page, TOAST_TARGET_NODE_ID);
+  await expectMainWindowMaximized(session);
+  await expectNoVisibleToastWindows(session);
 });
