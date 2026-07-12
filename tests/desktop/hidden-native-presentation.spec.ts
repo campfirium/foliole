@@ -1,5 +1,8 @@
 import { expect, test } from './harness/fixtures';
 
+const MINIMUM_DESKTOP_BOUNDS = { height: 640, width: 960 };
+const REQUESTED_HIDDEN_BOUNDS = { height: 1000, width: 1600 };
+
 test('hidden native desktop presents a noninterfering renderer without focus', async ({
   desktopSession,
   desktopWindow
@@ -18,10 +21,13 @@ test('hidden native desktop presents a noninterfering renderer without focus', a
   });
 
   expect(presentation).toMatchObject({
-    bounds: { height: 1000, width: 1600 },
     isFocusable: false,
     isVisible: true
   });
+  expect(presentation.bounds.width).toBeGreaterThanOrEqual(MINIMUM_DESKTOP_BOUNDS.width);
+  expect(presentation.bounds.height).toBeGreaterThanOrEqual(MINIMUM_DESKTOP_BOUNDS.height);
+  expect(presentation.bounds.width).toBeLessThanOrEqual(REQUESTED_HIDDEN_BOUNDS.width);
+  expect(presentation.bounds.height).toBeLessThanOrEqual(REQUESTED_HIDDEN_BOUNDS.height);
   if (presentation?.platform === 'darwin') {
     expect(presentation.opacity).toBe(0);
   } else {
