@@ -1,6 +1,7 @@
 // @vitest-environment node
 
 import { describe, expect, it, vi } from 'vitest';
+import path from 'node:path';
 
 import { verifyWindowsCiContext, writeWindowsCiEvidence } from './windows-ci-evidence.mjs';
 
@@ -52,7 +53,7 @@ describe('Windows CI evidence', () => {
       fsApi,
       readHead: () => SHA
     });
-    expect(result.evidencePath).toContain('.tmp/artifacts/windows-ci-evidence');
+    expect(result.evidencePath).toContain(path.normalize('.tmp/artifacts/windows-ci-evidence'));
     expect(result.evidence).toContain(`commit_sha=${SHA}`);
     expect(result.evidence).toContain('runner_os=Windows');
     expect(result.evidence).toContain('step_playwright=failure');
