@@ -125,6 +125,7 @@ function actualHead(repoRoot) {
 export function buildWindowsValidationKit({
   env = process.env,
   head = actualHead,
+  nodeVersion = process.versions.node,
   outputRoot,
   repoRoot = process.cwd()
 } = {}) {
@@ -145,7 +146,7 @@ export function buildWindowsValidationKit({
     commitSha,
     files,
     generatedAt: new Date().toISOString(),
-    generatedWithNodeVersion: process.versions.node,
+    generatedWithNodeVersion: nodeVersion,
     installer: { path: installer.fileName, sha256: installer.sha256 },
     physicalSpecs: WINDOWS_VALIDATION_PHYSICAL_SPECS,
     requiredNodeMajor: WINDOWS_VALIDATION_REQUIRED_NODE_MAJOR,
@@ -158,7 +159,8 @@ export function buildWindowsValidationKit({
   fs.writeFileSync(path.join(kitRoot, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
   verifyWindowsValidationKit({
     expected: { commitSha, runAttempt: manifest.runAttempt, runId: manifest.runId },
-    kitRoot
+    kitRoot,
+    nodeVersion
   });
   return { kitRoot, manifest };
 }
