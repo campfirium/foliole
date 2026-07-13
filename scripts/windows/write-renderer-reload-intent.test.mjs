@@ -40,7 +40,7 @@ describe('writeRendererReloadIntent', () => {
         target: 'electron-dev-renderer',
         nonce: 2,
         head: 'head-2',
-        requestedBy: 'wsl-windows-preview',
+        requestedBy: 'windows-native-preview',
         reason: 'Class A: renderer-only sync path'
       });
     } finally {

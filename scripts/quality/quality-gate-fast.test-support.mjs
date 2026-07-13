@@ -152,7 +152,7 @@ export async function writePackageJson(rootDir, scripts) {
     'check:android-boundary': 'node -e "console.log(\'android boundary ok\')"',
     ...scripts
   };
-  for (const bucket of ['test:desktop', 'test:desktop:src', 'test:desktop:electron', 'test:windows:core', 'test:windows:preview-recovery', 'test:android', 'test:shared', 'test:sync-pack', 'test:quality', 'test:quality:core', 'test:quality:gate', 'test:quality:gate-integration', 'test:quality:gate-integration:routing', 'test:quality:gate-integration:fast-delegation', 'test:quality:gate-integration:targets', 'test:quality:gate-integration:target-core', 'test:quality:gate-integration:target-failures', 'test:quality:gate-integration:target-collect', 'test:quality:gate-integration:target-telemetry', 'test:quality:gate-integration:release-targets', 'test:quality:gate-integration:release-tail', 'test:quality:node', 'test:quality:preview']) {
+  for (const bucket of ['test:desktop', 'test:desktop:src', 'test:desktop:electron', 'test:windows:core', 'test:windows:native-preview', 'test:android', 'test:shared', 'test:sync-pack', 'test:quality', 'test:quality:core', 'test:quality:gate', 'test:quality:gate-integration', 'test:quality:gate-integration:routing', 'test:quality:gate-integration:fast-delegation', 'test:quality:gate-integration:targets', 'test:quality:gate-integration:target-core', 'test:quality:gate-integration:target-failures', 'test:quality:gate-integration:target-collect', 'test:quality:gate-integration:target-telemetry', 'test:quality:gate-integration:release-targets', 'test:quality:gate-integration:release-tail', 'test:quality:node', 'test:quality:preview']) {
     fixtureScripts[bucket] ??= scripts['test:quality'] ?? scripts['test:full'];
   }
   const packageJson = {

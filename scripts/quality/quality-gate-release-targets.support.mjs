@@ -35,7 +35,7 @@ export function releaseScripts() {
     'test:release:desktop-src': ok('release desktop src test ok'),
     'test:desktop:electron': ok('release desktop electron test ok'),
     'test:windows:core': ok('release windows core test ok'),
-    'test:windows:preview-recovery': ok('release windows preview recovery test ok'),
+    'test:windows:native-preview': ok('release windows preview recovery test ok'),
     'test:release:android': ok('release android test ok'),
     'test:release:shared': ok('release shared test ok'),
     'test:quality:core': ok('release quality core test ok'),

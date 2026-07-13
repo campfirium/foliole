@@ -24,11 +24,8 @@ import {
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, '../..');
-const WINDOWS_REPO_ROOT = 'D:\\C\\foliole';
-const WINDOWS_NODE_DIR = 'D:\\R\\nodejs';
-
-export function resolvePackageMode(argv = process.argv, platform = process.platform) {
-  return argv.includes('--native') || platform === 'win32' ? 'native' : 'wsl';
+export function resolvePackageMode(platform = process.platform) {
+  return platform === 'win32' ? 'native' : 'unsupported';
 }
 
 export function resolveInstallMode(argv = process.argv) {
@@ -71,50 +68,6 @@ export function createNativePackageSteps(fromBuilt = resolveBuiltArtifactMode(),
   ];
 }
 
-export function createWslPackageSteps(rootDir = repoRoot, install = resolveInstallMode(), fromBuilt = resolveBuiltArtifactMode(), internal = resolveInternalMode()) {
-  const nativeArgs = [];
-  if (fromBuilt) {
-    nativeArgs.push('--from-built', '--skip-built-artifact-check');
-  }
-  if (install) {
-    nativeArgs.push('--install');
-  }
-  if (internal) {
-    nativeArgs.push('--internal');
-  }
-  const nativeArgText = nativeArgs.length > 0 ? ` -- ${nativeArgs.join(' ')}` : '';
-  const preflightSteps = fromBuilt ? [{
-    args: ['scripts/windows/package-built-artifacts.mjs'],
-    command: 'node',
-    cwd: rootDir,
-    label: 'verify built artifacts'
-  }] : [];
-  return [
-    ...preflightSteps,
-    {
-      args: ['scripts/windows/windows-sync.sh'],
-      command: 'bash',
-      cwd: rootDir,
-      env: {
-        WINDOWS_SYNC_FORCE_FULL: '1',
-        WINDOWS_SYNC_INCLUDE_DIST: fromBuilt ? '1' : ''
-      },
-      label: 'sync Windows checkout'
-    },
-    {
-      args: [
-        '/d',
-        '/s',
-        '/c',
-        `cd /d ${WINDOWS_REPO_ROOT} && set "PATH=${WINDOWS_NODE_DIR};%PATH%" && npm run windows:package:native${nativeArgText}`
-      ],
-      command: 'cmd.exe',
-      cwd: '/mnt/c/Windows/System32',
-      label: 'run Windows-native package'
-    }
-  ];
-}
-
 function mergeEnv(extraEnv) {
   return { ...process.env, ...(extraEnv ?? {}) };
 }
@@ -122,9 +75,8 @@ function mergeEnv(extraEnv) {
 function runStep(step) {
   console.log(`[windows-package] step: ${step.label}`);
   return new Promise((resolvePromise, reject) => {
-    const defaultCwd = resolvePackageMode() === 'native' ? repoRoot : process.cwd();
     const child = spawn(step.command, step.args, {
-      cwd: step.cwd ?? defaultCwd,
+      cwd: step.cwd ?? repoRoot,
       env: mergeEnv(step.env),
       stdio: 'inherit'
     });
@@ -173,43 +125,45 @@ export async function installPackagedApp(rootDir = repoRoot, packageVersion = re
 
 async function main() {
   const mode = resolvePackageMode();
+  if (mode !== 'native') {
+    throw new Error('Windows packaging requires a Windows checkout; WSL mirror packaging has been retired');
+  }
   const install = resolveInstallMode();
   const internal = resolveInternalMode();
   const fromBuilt = resolveBuiltArtifactMode();
   const packageVersion = readPackageVersion();
   const buildVersion = internal ? formatInternalBuildVersion(packageVersion) : packageVersion;
   const outputDir = internal ? INTERNAL_OUTPUT_DIR : 'artifacts/windows';
-  const steps = mode === 'native' ? createNativePackageSteps(fromBuilt, internal) : createWslPackageSteps();
+  const steps = createNativePackageSteps(fromBuilt, internal);
   console.log(`[windows-package] mode: ${mode}`);
   console.log(`[windows-package] channel: ${internal ? 'internal' : 'release'}`);
   console.log(`[windows-package] install: ${install ? 'yes' : 'no'}`);
   console.log(`[windows-package] from-built: ${fromBuilt ? 'yes' : 'no'}`);
   console.log(`[windows-package] build version: ${buildVersion}`);
-  if (mode === 'native') {
-    if (internal) {
-      writeInternalBuilderConfig(repoRoot, buildVersion);
-      rmSync(resolve(repoRoot, INTERNAL_OUTPUT_DIR), { force: true, recursive: true });
-      console.log('[windows-package] internal library: D:\\X\\U\\Foliole');
-    } else {
-      cleanReleaseArtifacts(repoRoot, packageVersion);
-    }
-    if (fromBuilt && !process.argv.includes('--skip-built-artifact-check')) {
-      assertBuiltArtifactsFresh();
-    }
+  if (internal) {
+    writeInternalBuilderConfig(repoRoot, buildVersion);
+    rmSync(resolve(repoRoot, INTERNAL_OUTPUT_DIR), { force: true, recursive: true });
+    console.log('[windows-package] internal library: D:\\X\\U\\Foliole');
+  } else {
+    cleanReleaseArtifacts(repoRoot, packageVersion);
+  }
+  if (fromBuilt && !process.argv.includes('--skip-built-artifact-check')) {
+    assertBuiltArtifactsFresh();
   }
   for (const step of steps) {
     await runStep(step);
   }
-  if (mode === 'native') {
-    const summary = collectArtifactSummary(repoRoot, buildVersion, outputDir);
-    console.log(`[windows-package] artifact installer=${summary.installer} unpacked=${summary.unpacked}`);
-    if (install) {
-      await installPackagedApp(repoRoot, buildVersion, outputDir);
-    }
-    console.log(`[windows-package] status: ${resolvePackageStatusLabel(install)}`);
+  const summary = collectArtifactSummary(repoRoot, buildVersion, outputDir);
+  console.log(`[windows-package] artifact installer=${summary.installer} unpacked=${summary.unpacked}`);
+  if (install) {
+    await installPackagedApp(repoRoot, buildVersion, outputDir);
   }
+  console.log(`[windows-package] status: ${resolvePackageStatusLabel(install)}`);
 }
 
 if (process.argv[1] && process.argv[1].endsWith('package-windows.mjs')) {
-  await main();
+  main().catch((error) => {
+    console.error(`[windows-package] status: FAILED reason=${error instanceof Error ? error.message : String(error)}`);
+    process.exitCode = 1;
+  });
 }

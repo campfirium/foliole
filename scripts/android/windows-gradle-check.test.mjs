@@ -52,7 +52,7 @@ describe('windows-gradle-check.sh', () => {
       const mockBinDir = path.join(tempRoot, 'bin');
       const powershellArgsLog = path.join(tempRoot, 'powershell-args.log');
       await mkdir(mockBinDir, { recursive: true });
-      await writeExecutable(tempRoot, 'windows-sync.sh', '#!/usr/bin/env bash\necho sync-target:${WINDOWS_MIRROR_DIR}\n');
+      await writeExecutable(tempRoot, 'windows-source-sync.sh', '#!/usr/bin/env bash\necho sync-target:${ANDROID_WINDOWS_WORKDIR}\n');
       await writeFile(
         path.join(mockBinDir, 'powershell.exe'),
         ['#!/usr/bin/env bash', 'set -euo pipefail', 'printf "%s\\n" "$@" > "${POWERSHELL_ARGS_LOG}"'].join('\n'),
@@ -70,7 +70,7 @@ describe('windows-gradle-check.sh', () => {
       const mirrorDirForBash = bashPath(mirrorDir);
       const result = await runGradleCheck(tempRoot, ['lint'], {
         PATH: `${bashPath(mockBinDir)}:/usr/bin:/bin:${process.env.PATH ?? ''}`,
-        WINDOWS_SYNC_SCRIPT: path.join(tempRoot, 'windows-sync.sh'),
+        ANDROID_SOURCE_SYNC_SCRIPT: path.join(tempRoot, 'windows-source-sync.sh'),
         WINDOWS_SCRIPT_PATH: path.join(tempRoot, 'windows-gradle-check.ps1'),
         ANDROID_WINDOWS_MIRROR_DIR: mirrorDirForBash,
         ANDROID_WINDOWS_WORKDIR: 'C:\\dev\\foliole-test',
@@ -78,7 +78,7 @@ describe('windows-gradle-check.sh', () => {
       });
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain(`sync-target:${mirrorDirForBash}`);
+      expect(result.stdout).toContain('sync-target:C:\\dev\\foliole-test');
       const args = (await readFile(powershellArgsLog, 'utf8')).split('\n').filter(Boolean);
       expect(args).toContain('-WindowStyle');
       expect(args).toContain('Hidden');

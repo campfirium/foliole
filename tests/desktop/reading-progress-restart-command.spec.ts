@@ -2,7 +2,7 @@ import fs from 'node:fs';
 
 import { expect, test } from '@playwright/test';
 
-import { launchDesktopSession } from '../../scripts/windows/playwright-desktop-harness.mjs';
+import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-harness.mjs';
 
 import { expectWorkspaceShell } from './harness/settings';
 

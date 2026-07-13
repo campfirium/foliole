@@ -6,7 +6,7 @@ import {
   APP_READY_FLAG,
   acquireStableDesktopWindow,
   waitForDesktopAppReady
-} from './playwright-desktop-harness.mjs';
+} from '../desktop/playwright-desktop-harness.mjs';
 
 describe('playwright desktop window readiness', () => {
   it('waits for a non-blank desktop window before returning it', async () => {

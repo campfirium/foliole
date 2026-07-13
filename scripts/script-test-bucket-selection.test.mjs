@@ -19,7 +19,7 @@ describe('script test bucket root matching', () => {
     expect(changedFilesNeedScriptTests(['scripts/demo/export-demo-pack.mjs'])).toBe(true);
     expect(changedFilesNeedScriptTests(['scripts/quality/quality-gate-target.sh'])).toBe(true);
     expect(changedFilesNeedScriptTests(['scripts/script-test-bucket-selection.mjs'])).toBe(true);
-    expect(changedFilesNeedScriptTests(['scripts/windows/windows-preview.sh'])).toBe(false);
+    expect(changedFilesNeedScriptTests(['scripts/windows/windows-preview-native.mjs'])).toBe(false);
     expect(changedFilesNeedScriptTests(['src/app/App.tsx'])).toBe(false);
     expect(isScriptTestRootPath('scripts/check-ui-copy-guard.mjs')).toBe(true);
     expect(isScriptTestRootPath('scripts/lib/path-domains.mjs')).toBe(true);

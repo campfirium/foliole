@@ -10,7 +10,7 @@ import {
   formatDesktopRegressionSuite,
   validateDesktopRegressionSuite
 } from './desktop-regression-suite.mjs';
-import { HIDDEN_MODE_HEALTH_SPECS } from '../windows/playwright-desktop-native-hidden.mjs';
+import { HIDDEN_MODE_HEALTH_SPECS } from '../desktop/playwright-desktop-native-hidden.mjs';
 
 const PACKAGE_JSON = JSON.parse(fs.readFileSync(path.resolve('package.json'), 'utf8'));
 const RELEASE_SPEC_PLACEHOLDER = '(release workflow / package verification)';

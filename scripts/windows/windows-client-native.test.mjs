@@ -97,38 +97,16 @@ it('starts the native dev runner through a Windows-owned process', async () => {
   expect(script).not.toContain('buildPowerShellArgs');
 });
 
-it('routes the clickable Windows launcher through WSL preview by default', async () => {
+it('routes the clickable Windows launcher through native preview', async () => {
   const launcher = await readFile(path.resolve(process.cwd(), 'scripts/windows/start-foliole.cmd'), 'utf8');
-  const previewLauncher = await readFile(path.resolve(process.cwd(), 'scripts/windows/start-windows-preview.cmd'), 'utf8');
 
   expect(launcher).toContain('set "FOLIOLE_REPO_ROOT=%~dp0..\\.."');
   expect(launcher).toContain('cd /d "%FOLIOLE_REPO_ROOT%"');
   expect(launcher).toContain('if "%FOLIOLE_ACTION%"=="" set "FOLIOLE_ACTION=start"');
   expect(launcher).toContain('if /i "%FOLIOLE_ACTION%"=="dev" set "FOLIOLE_ACTION=start"');
   expect(launcher).toContain('if /i "%FOLIOLE_ACTION%"=="dev-direct"');
-  expect(launcher).toContain('call "%~dp0start-windows-preview.cmd"');
+  expect(launcher).toContain('npm.cmd run windows:preview:native');
   expect(launcher).toContain('npm run windows:client:native -- %FOLIOLE_ACTION%');
-  expect(previewLauncher).toContain('set "SCRIPT_DIR=%~dp0"');
-  expect(previewLauncher).not.toContain('set "SCRIPT_DIR=%~dp0."');
-  expect(previewLauncher).toContain('if not defined WINDOWS_MIRROR_WSL set "WINDOWS_MIRROR_WSL=/mnt/d/C/foliole"');
-  expect(previewLauncher).toContain('npm.cmd run windows:client:native -- start');
-  expect(previewLauncher).toContain('set "FOLIOLE_ELECTRON_DEV_SKIP_COMPILE=1"');
-  expect(previewLauncher).toContain('set "FOLIOLE_ELECTRON_DEV_SKIP_VITE_PREWARM=1"');
-});
-
-it('routes WSL preview client actions through the native client controller', async () => {
-  const script = await readFile(path.resolve(process.cwd(), 'scripts/windows/windows-restart-client.sh'), 'utf8');
-
-  expect(script).toContain('WINDOWS_CLIENT_ACTION="${WINDOWS_CLIENT_ACTION:-status}"');
-  expect(script).toContain('run-node-in-windows-repo.ps1');
-  expect(script).toContain('RUNTIME_HEAD="${FOLIOLE_RUNTIME_HEAD:-$(git rev-parse HEAD 2>/dev/null || true)}"');
-  expect(script).toContain('-WindowStyle Hidden');
-  expect(script).toContain('-WindowsWorkDir "${WINDOWS_WORKDIR}"');
-  expect(script).toContain('-ScriptPath "scripts/windows/windows-client-native.mjs"');
-  expect(script).toContain('-RuntimeHead "${RUNTIME_HEAD}"');
-  expect(script).toContain('-NodeArgs "${WINDOWS_CLIENT_ACTION}"');
-  expect(script).not.toContain('restart-electron-dev.ps1');
-  expect(script).not.toContain('npm run electron:dev');
 });
 
 it('uses the WSL supplied runtime head before falling back to mirror git', async () => {

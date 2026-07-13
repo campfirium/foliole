@@ -42,7 +42,7 @@ describe('T5 nightly remote quality workflow contract', () => {
     }
     expect(workflow).not.toContain('npm run quality:release:base');
     expect(workflow).not.toContain('npm run test:windows:core');
-    expect(workflow).not.toContain('npm run test:windows:preview-recovery');
+    expect(workflow).not.toContain('npm run test:windows:native-preview');
     expect(workflow).not.toContain('gh release');
     expect(workflow).not.toContain('softprops/action-gh-release');
     expect(workflow).not.toContain('ncipollo/release-action');

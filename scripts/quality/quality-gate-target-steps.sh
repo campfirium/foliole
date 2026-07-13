@@ -102,7 +102,7 @@ run_release_tooling_gate_steps() {
 }
 
 run_release_preview_recovery_gate_steps() {
-  run_gate_steps test:windows:preview-recovery
+  run_gate_steps test:windows:native-preview
 }
 
 run_release_android_host_gate_steps() {

@@ -51,5 +51,6 @@
 - `npm run android:preview` 只在用户当次明确要求 Android 预览、用户当次要求阶段验收且本轮有 Android 可见面、或 Android 局部规则命中必须设备预览时执行；不再读取持久 preview flag 自动触发。
 - Android companion UI 的人工验收默认以真机为准；需要查看真实内容、列表密度、文章正文、学习卡片、状态栏 / 安全区、触摸手感、Android WebView、Capacitor bridge、SQLite、sync、安装部署或 scrcpy / 锁屏行为时，必须回到 `npm run android:preview` 或 `npm run quality:android:device` 做最终 L1 验收。
 - 高频 companion UI 迭代若需要真实内容、Android WebView、SQLite 与 Capacitor bridge，但本轮未改原生源码、权限、插件、Gradle、发布构建或离线 assets 语义，优先使用 `npm run android:preview:dev-server` 做快速真机预览；它是 Capacitor dev-server / adb reverse 路线，不替代发布前或原生变更后的 `npm run android:preview` / `npm run quality:android:device` 最终验收。
+- `npm run android:web:dev` 是跨宿主前台 companion Web 诊断入口；`android:preview:dev-server` 的 detached companion service 只由 Windows device adapter 管理，两者不得共用后台 service 或 PID/state 协议。
 - `npm run android:preview:lite` 仍属于真机预览链路的轻参数包装，不是浏览器 Web 轻量预览。
 - Android 宿主公开入口默认使用 `package.json` 中已有的 `npm run quality:android*` 与 `npm run android:*` 脚本，不直接口头推荐裸 Gradle、adb 或 Capacitor 命令。

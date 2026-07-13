@@ -53,7 +53,7 @@ export function createRestartIntent({ head, nonce, reason, requestedAt, requeste
 export async function writeRestartIntent({
   head,
   reason,
-  requestedBy = 'wsl-windows-preview',
+  requestedBy = 'windows-native-preview',
   rootDir,
   shellAction = 'restart-runtime'
 }) {
@@ -87,7 +87,7 @@ async function main(env = process.env) {
   const result = await writeRestartIntent({
     head: env.FOLIOLE_RESTART_INTENT_HEAD ?? '',
     reason: env.FOLIOLE_RESTART_INTENT_REASON ?? '',
-    requestedBy: env.FOLIOLE_RESTART_INTENT_REQUESTED_BY ?? 'wsl-windows-preview',
+    requestedBy: env.FOLIOLE_RESTART_INTENT_REQUESTED_BY ?? 'windows-native-preview',
     rootDir: env.FOLIOLE_RESTART_INTENT_ROOT ?? ''
   });
 

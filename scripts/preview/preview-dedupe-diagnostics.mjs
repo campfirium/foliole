@@ -10,7 +10,7 @@ import { STATE_STALE_MS } from './preview-dedupe-scheduler.mjs';
 const DEFAULT_RUNTIME_DIR = '.lab/internal/runtime';
 const DEFAULT_TARGET = 'windows';
 const PROCESS_PATTERN = /preview-dedupe|windows-preview|android-preview|windows-restart-client|codex-task|codex exec/u;
-const WINDOWS_STATUS_SOURCE = 'official-windows-mirror:D:\\C\\foliole';
+const WINDOWS_STATUS_SOURCE = 'windows-native-checkout';
 
 function parseArgs(argv) {
   const options = {
@@ -110,7 +110,7 @@ function readProcessSnapshot() {
 }
 
 function readWindowsStatus() {
-  const result = spawnSync('bash', ['scripts/windows/windows-restart-client.sh'], {
+  const result = spawnSync(process.execPath, ['scripts/windows/windows-client-native.mjs', 'status'], {
     encoding: 'utf8',
     env: { ...process.env, WINDOWS_CLIENT_ACTION: 'status' },
     stdio: ['ignore', 'pipe', 'pipe']
@@ -152,31 +152,31 @@ function classifyWindowsStatus(windowsStatus, windowsLine) {
   }
   if ((typeof windowsStatus.exitCode === 'number' && windowsStatus.exitCode !== 0) || !windowsLine) {
     return {
-      nextAction: 'Inspect preview diagnostics; the official Windows mirror status source is unavailable.',
-      verdict: 'Official Windows mirror status is unavailable, so startup state is not confirmed.'
+      nextAction: 'Inspect preview diagnostics; the Windows native status source is unavailable.',
+      verdict: 'Windows native status is unavailable, so startup state is not confirmed.'
     };
   }
   if (/\bRUNNING\b/u.test(windowsLine) && /\bresponding=False\b/u.test(windowsLine)) {
     return {
-      nextAction: 'Run npm run windows:preview to re-check the official Windows client.',
-      verdict: 'Official Windows mirror client is running but not responding.'
+      nextAction: 'Run npm run windows:preview:native to re-check the Windows client.',
+      verdict: 'The Windows native client is running but not responding.'
     };
   }
   if (/\bRUNNING\b/u.test(windowsLine) && /\btrust=OK\b/u.test(windowsLine)) {
     return {
-      nextAction: 'No startup repair is needed; run npm run windows:preview after changes that need preview.',
-      verdict: 'Official Windows mirror client is running and trusted.'
+      nextAction: 'No startup repair is needed; run npm run windows:preview:native after changes that need preview.',
+      verdict: 'The Windows native client is running and trusted.'
     };
   }
   if (/\bSTOPPED\b/u.test(windowsLine) && /\breason=no-runtime\b/u.test(windowsLine)) {
     return {
-      nextAction: 'Run npm run windows:preview; it will sync, verify prerequisites, and use fallback-start.',
-      verdict: 'No trusted official Windows mirror client is running; this is no-runtime, not a confirmed code startup crash.'
+      nextAction: 'Run npm run windows:preview:native; it will verify prerequisites and start the native client.',
+      verdict: 'No trusted Windows native client is running; this is no-runtime, not a confirmed code startup crash.'
     };
   }
   return {
-    nextAction: 'Run npm run windows:preview to re-check the official Windows client.',
-    verdict: 'Official Windows mirror client is not trusted; startup failure is not yet classified.'
+    nextAction: 'Run npm run windows:preview:native to re-check the Windows client.',
+    verdict: 'The Windows native client is not trusted; startup failure is not yet classified.'
   };
 }
 
@@ -185,7 +185,7 @@ function summarizeStaleRuns(staleRunningRuns) {
   const staleDeadCount = staleRunningRuns.filter((run) => run.driverPidAlive === false).length;
   const staleAgedCount = staleRunningRuns.filter((run) => run.driverPidAlive === true && run.ageSec >= staleAgeSec).length;
   const staleExplanation = staleDeadCount > 0
-    ? 'Dead stale preview records will not continue and do not block a new windows:preview.'
+    ? 'Dead stale preview records will not continue and do not block a new windows:preview:native.'
     : null;
   return { staleAgedCount, staleDeadCount, staleExplanation };
 }

@@ -3,7 +3,7 @@
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 
-import { launchDesktopSession } from './playwright-desktop-harness.mjs';
+import { launchDesktopSession } from '../desktop/playwright-desktop-harness.mjs';
 
 export const ACTIONS = {
   collapseExpandTree: 'collapse-expand-tree',

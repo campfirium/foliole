@@ -8,7 +8,7 @@ import {
   createNativeHiddenDesktopBuildCommands,
   createNativeHiddenDesktopGateCommand,
   HIDDEN_MODE_HEALTH_SPECS
-} from './playwright-desktop-native-hidden.mjs';
+} from '../desktop/playwright-desktop-native-hidden.mjs';
 
 describe('playwright desktop native hidden runner', () => {
   it('runs Playwright through the preview resource gate from the Windows checkout', () => {

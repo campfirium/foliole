@@ -25,13 +25,8 @@ async function waitForLogText(logFile, text, timeoutMs = 5000) {
 }
 
 describe('desktop-validation-serial.mjs', () => {
-  it('routes the default preview command by workspace host', () => {
-    expect(resolveDefaultPreviewCommand({ DESKTOP_VALIDATION_SERIAL_FORCE_WSL: '1' })).toEqual([
-      'npm',
-      'run',
-      'windows:preview'
-    ]);
-    expect(resolveDefaultPreviewCommand({ DESKTOP_VALIDATION_SERIAL_FORCE_WSL: '0' })).toEqual([
+  it('uses the Windows native preview entry without a WSL branch', () => {
+    expect(resolveDefaultPreviewCommand()).toEqual([
       'npm',
       'run',
       'windows:preview:native'

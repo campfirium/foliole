@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { createDesktopIsolationContext } from './playwright-desktop-isolation.mjs';
+import { createDesktopIsolationContext } from '../desktop/playwright-desktop-isolation.mjs';
 
 describe('playwright desktop isolation', () => {
   it('pins all desktop test state under the isolated state root', () => {

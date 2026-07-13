@@ -13,7 +13,7 @@ import {
   createMainProcessLogCollector,
   createRendererConsoleCollector,
   createRendererPageEventCollector
-} from './playwright-desktop-diagnostics.mjs';
+} from '../desktop/playwright-desktop-diagnostics.mjs';
 
 class MockPage extends EventEmitter {
   constructor(snapshot, runtimeState = {}) {

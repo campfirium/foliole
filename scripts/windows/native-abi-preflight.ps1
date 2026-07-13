@@ -60,7 +60,7 @@ function Assert-NativeModulesLoadInElectron {
 
   if ($exitCode -ne 0) {
     $detail = Format-PreflightDetail -Output $output
-    throw "native module preflight failed: better-sqlite3 load failed; restore better-sqlite3 for the Electron ABI in the Windows mirror before preview; do not run plain Node npm rebuild for this native module; detail=$detail"
+    throw "native module preflight failed: better-sqlite3 load failed; restore better-sqlite3 for the Electron ABI in the Windows checkout before preview; do not run plain Node npm rebuild for this native module; detail=$detail"
   }
 }
 

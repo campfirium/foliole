@@ -2,7 +2,7 @@
 
 import process from 'node:process';
 
-import { launchDesktopSession } from './playwright-desktop-harness.mjs';
+import { launchDesktopSession } from '../desktop/playwright-desktop-harness.mjs';
 
 const DEFAULT_SAMPLE_COUNT = 5;
 const DEFAULT_SETTLE_TIMEOUT_MS = 15000;

@@ -2,7 +2,7 @@ import path from 'node:path';
 
 import type { ElectronApplication, Page } from '@playwright/test';
 
-import { waitForDesktopAppReady } from '../../scripts/windows/playwright-desktop-harness.mjs';
+import { waitForDesktopAppReady } from '../../scripts/desktop/playwright-desktop-harness.mjs';
 
 import { expect, test } from './harness/fixtures';
 

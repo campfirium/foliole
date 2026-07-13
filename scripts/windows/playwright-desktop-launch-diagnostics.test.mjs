@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import {
   APP_READY_FLAG,
   launchDesktopSession
-} from './playwright-desktop-harness.mjs';
+} from '../desktop/playwright-desktop-harness.mjs';
 
 describe('playwright desktop launch diagnostics', () => {
   it('attaches desktop diagnostics when window acquisition stalls before domcontentloaded', async () => {

@@ -16,7 +16,7 @@ describe('codex task completion guard', () => {
   });
 
   it('rejects reports that stop a preview waiting process', () => {
-    const message = 'R：Windows 预览这次没有完成，windows:preview 一直停在 preview-dedupe waiting 队列里，我已停止该挂起进程；代码验证和 Electron 编译已通过。';
+    const message = 'R：Windows 预览这次没有完成，windows:preview:native 一直停在 preview-dedupe waiting 队列里，我已停止该挂起进程；代码验证和 Electron 编译已通过。';
 
     expect(() => assertAgentCompletionMessage(message)).toThrow('agent reported preview failure');
   });

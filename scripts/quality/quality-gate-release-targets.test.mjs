@@ -68,7 +68,7 @@ describe('quality-gate release split targets', () => {
       expect(result.stdout).toContain(
         '[quality-gate:release-core] running in parallel: test:release:desktop-src test:windows:core test:release:android test:release:shared test:quality:core test:quality:gate test:quality:node'
       );
-      expectNoStep(result.stdout, 'test:windows:preview-recovery');
+      expectNoStep(result.stdout, 'test:windows:native-preview');
       expectNoStep(result.stdout, 'android:sync');
       expect(result.stdout).toContain('[quality-gate:release-core] all checks passed.');
     } finally {
@@ -89,19 +89,19 @@ describe('quality-gate release split targets', () => {
         'test:quality:gate-integration:target-collect',
         'test:quality:gate-integration:target-telemetry', 'test:quality:gate-integration:release-targets', 'test:quality:gate-integration:release-tail'],
       name: 'non-preview test buckets',
-      rejected: ['test:quality:preview', 'test:windows:preview-recovery', 'build:vite-only'],
+      rejected: ['test:quality:preview', 'test:windows:native-preview', 'build:vite-only'],
       target: 'release-tests'
     },
     {
       expected: ['test:quality:preview', 'build:vite-only', 'electron:compile', 'android:web:build'],
       name: 'release build outputs',
-      rejected: ['test:release:desktop-src', 'test:windows:preview-recovery'],
+      rejected: ['test:release:desktop-src', 'test:windows:native-preview'],
       target: 'release-build'
     },
     {
       expected: ['test:quality:preview'],
       name: 'script preview tests',
-      rejected: ['test:release:desktop-src', 'test:windows:preview-recovery'],
+      rejected: ['test:release:desktop-src', 'test:windows:native-preview'],
       target: 'release-script-preview'
     }
   ])('keeps $target isolated to $name', async ({ expected, rejected, target }) => {
@@ -128,7 +128,7 @@ describe('quality-gate release split targets', () => {
       const result = await runTargetGate(tempRoot, 'release-preview-recovery', DRY_RUN_ENV);
 
       expect(result.code).toBe(0);
-      expectStep(result.stdout, 'test:windows:preview-recovery');
+      expectStep(result.stdout, 'test:windows:native-preview');
       expectNoStep(result.stdout, 'test:desktop');
       expectNoStep(result.stdout, 'test:windows:core');
       expectNoStep(result.stdout, 'android:sync');
@@ -153,7 +153,7 @@ describe('quality-gate release split targets', () => {
         'test:release:desktop-src',
         'test:desktop:electron',
         'test:windows:core',
-        'test:windows:preview-recovery',
+        'test:windows:native-preview',
         'test:release:android',
         'test:release:shared',
         'test:quality:core',
@@ -190,7 +190,7 @@ describe('quality-gate release split targets', () => {
 
       expect(result.code).toBe(0);
       expectStep(result.stdout, 'test:windows:core');
-      expectStep(result.stdout, 'test:windows:preview-recovery');
+      expectStep(result.stdout, 'test:windows:native-preview');
       expectStep(result.stdout, 'android:sync');
       expectStep(result.stdout, 'android:host:lint');
       expectStep(result.stdout, 'android:host:test');

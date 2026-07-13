@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 import {
   assertRendererDistFresh,
   getRendererDistFreshness
-} from './playwright-renderer-dist-freshness.mjs';
+} from '../desktop/playwright-renderer-dist-freshness.mjs';
 
 function createRendererFreshnessFixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-renderer-freshness-'));
@@ -35,7 +35,7 @@ describe('playwright renderer dist freshness', () => {
 
     expect(getRendererDistFreshness(target)).toMatchObject({ stale: true });
     expect(() => assertRendererDistFresh(target, {})).toThrow(
-      'Run `npm run desktop:test:windows -- <spec>` so Windows dist is rebuilt before Playwright.'
+      'Run `npm run test:e2e:desktop:native:hidden -- <spec>` so desktop dist is rebuilt before Playwright.'
     );
   });
 

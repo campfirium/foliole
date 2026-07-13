@@ -9,7 +9,7 @@ import { _electron as electronLauncher } from 'playwright';
 import {
   createDesktopLaunchOptions,
   resolveDesktopLaunchTarget
-} from './playwright-desktop-harness.mjs';
+} from '../desktop/playwright-desktop-harness.mjs';
 
 const FRAME_COUNT = Number.parseInt(process.env.FOLIOLE_STARTUP_FRAME_COUNT ?? '30', 10);
 const FRAME_INTERVAL_MS = Number.parseInt(process.env.FOLIOLE_STARTUP_FRAME_INTERVAL_MS ?? '100', 10);

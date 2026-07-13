@@ -82,7 +82,7 @@ export function assertRendererDistFresh(target, env = process.env) {
   throw new Error(
     [
       `stale renderer build output: ${relativePath(target.appRoot, target.rendererIndexPath)} is older than ${sourcePath}.`,
-      'Run `npm run desktop:test:windows -- <spec>` so Windows dist is rebuilt before Playwright.',
+      'Run `npm run test:e2e:desktop:native:hidden -- <spec>` so desktop dist is rebuilt before Playwright.',
       `For explicit diagnostics only, refresh dist manually or set ${RENDERER_STALE_ALLOW_ENV}=1.`
     ].join(' ')
   );

@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 
-import { createDesktopIsolationContext } from './playwright-desktop-isolation.mjs';
+import { createDesktopIsolationContext } from '../desktop/playwright-desktop-isolation.mjs';
 import {
   readMarker,
   readyMarkersMatch,

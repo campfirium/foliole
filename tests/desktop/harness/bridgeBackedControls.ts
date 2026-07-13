@@ -1,6 +1,6 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 
-import { explainBridgeBackedControlBlockedReason } from '../../../scripts/windows/playwright-desktop-control-blocked-reason.mjs';
+import { explainBridgeBackedControlBlockedReason } from '../../../scripts/desktop/playwright-desktop-control-blocked-reason.mjs';
 
 import type { DesktopSession } from './fixtures';
 

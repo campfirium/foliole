@@ -19,7 +19,6 @@ import {
   collectInstallerArtifactPaths,
   createCurrentUserInstallArgs,
   createNativePackageSteps,
-  createWslPackageSteps,
   formatBytes,
   readPackageVersion,
   resolveReleaseArtifactPaths,
@@ -32,10 +31,10 @@ import {
 } from './package-windows.mjs';
 
 describe('windows package runner', () => {
-  it('uses native mode on Windows or when explicitly requested', () => {
-    expect(resolvePackageMode(['node', 'script'], 'win32')).toBe('native');
-    expect(resolvePackageMode(['node', 'script', '--native'], 'linux')).toBe('native');
-    expect(resolvePackageMode(['node', 'script'], 'linux')).toBe('wsl');
+  it('only supports packaging from a Windows checkout', () => {
+    expect(resolvePackageMode('win32')).toBe('native');
+    expect(resolvePackageMode('darwin')).toBe('unsupported');
+    expect(resolvePackageMode('linux')).toBe('unsupported');
   });
 
   it('only installs when explicitly requested', () => {
@@ -105,64 +104,24 @@ describe('windows package runner', () => {
     expect(steps[0].args.join(' ')).toContain('--config .tmp/electron-builder-internal.json');
   });
 
-  it('syncs the Windows checkout before delegating to native packaging from WSL', () => {
-    const steps = createWslPackageSteps('/repo');
-
-    expect(steps[0]).toMatchObject({
-      args: ['scripts/windows/windows-sync.sh'],
-      command: 'bash',
-      cwd: '/repo',
-      env: {
-        WINDOWS_SYNC_FORCE_FULL: '1',
-        WINDOWS_SYNC_INCLUDE_DIST: ''
-      }
-    });
-    expect(steps[1].command).toBe('cmd.exe');
-    expect(steps[1].cwd).toBe('/mnt/c/Windows/System32');
-    expect(steps[1].args.join(' ')).toContain('npm run windows:package:native');
-    expect(steps[1].args.join(' ')).toContain('D:\\C\\foliole');
-  });
-
-  it('passes the install flag through to the Windows-native package runner', () => {
-    const steps = createWslPackageSteps('/repo', true);
-
-    expect(steps[1].args.join(' ')).toContain('npm run windows:package:native -- --install');
-  });
-
-  it('passes the internal flag through to the Windows-native package runner', () => {
-    const steps = createWslPackageSteps('/repo', true, false, true);
-
-    expect(steps[1].args.join(' ')).toContain('--install --internal');
-  });
-
-  it('checks built artifacts before delegating WSL from-built packaging', () => {
-    const steps = createWslPackageSteps('/repo', false, true);
-
-    expect(steps[0]).toMatchObject({
-      args: ['scripts/windows/package-built-artifacts.mjs'],
-      command: 'node',
-      cwd: '/repo'
-    });
-    expect(steps[1].env).toMatchObject({
-      WINDOWS_SYNC_INCLUDE_DIST: '1'
-    });
-    expect(steps[2].args.join(' ')).toContain('--from-built --skip-built-artifact-check');
-  });
-
   it('formats artifact sizes as whole megabytes', () => {
     expect(formatBytes(161578306)).toBe('154MB');
   });
 
   it('cleans only known release artifacts before native packaging', () => {
-    const root = 'D:\\repo';
-    expect(resolveReleaseArtifactPaths(root, '9.8.7')).toEqual([
-      join(root, 'artifacts/windows/win-unpacked'),
-      join(root, 'artifacts/windows/win-unpacked.tmp'),
-      join(root, 'artifacts/windows/Foliole Setup 9.8.7.exe'),
-      join(root, 'artifacts/windows/Foliole Setup 9.8.7.exe.blockmap'),
-      join(root, 'artifacts/windows/latest.yml'),
-      join(root, 'artifacts/windows/builder-debug.yml')
-    ]);
+    const root = mkdtempSync(join(tmpdir(), 'foliole-package-clean-test-'));
+    try {
+      expect(resolveReleaseArtifactPaths(root, '9.8.7')).toEqual([
+        join(root, 'artifacts/windows/win-unpacked'),
+        join(root, 'artifacts/windows/win-unpacked.tmp'),
+        join(root, 'artifacts/windows/Foliole Setup 9.8.7.exe'),
+        join(root, 'artifacts/windows/Foliole Setup 9.8.7.exe.blockmap'),
+        join(root, 'artifacts/windows/latest.yml'),
+        join(root, 'artifacts/windows/builder-debug.yml')
+      ]);
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
   });
 
   it('finds the current electron-builder Windows installer artifact', () => {

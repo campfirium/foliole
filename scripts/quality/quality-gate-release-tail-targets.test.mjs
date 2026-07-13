@@ -48,11 +48,11 @@ describe('quality-gate release base and tail targets', () => {
     {
       expected: ['test:release:desktop-src', 'test:release:android', 'test:quality:preview', 'android:web:build'],
       name: 'the canonical release base aggregate',
-      rejected: ['test:windows:preview-recovery', 'android:sync'],
+      rejected: ['test:windows:native-preview', 'android:sync'],
       target: 'release-base'
     },
     {
-      expected: ['test:windows:preview-recovery'],
+      expected: ['test:windows:native-preview'],
       name: 'Windows preview recovery',
       rejected: ['test:release:desktop-src', 'android:sync'],
       target: 'release-windows-tail'
@@ -66,7 +66,7 @@ describe('quality-gate release base and tail targets', () => {
     {
       expected: ['test:quality:core', 'test:quality:gate', 'test:quality:node', 'test:quality:preview'],
       name: 'quality tooling self-tests',
-      rejected: ['test:release:desktop-src', 'test:windows:preview-recovery'],
+      rejected: ['test:release:desktop-src', 'test:windows:native-preview'],
       target: 'release-tooling'
     }
   ])('keeps $target isolated to $name', async ({ expected, rejected, target }) => {

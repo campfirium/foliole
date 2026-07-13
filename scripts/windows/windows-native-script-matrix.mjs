@@ -14,7 +14,7 @@ export const WINDOWS_NATIVE_MAIN_SCRIPTS = [
   'test:files',
   'windows:native:check',
   'windows:client:native',
-  'windows:dev-service',
+  'windows:android:dev-server',
   'windows:preview:native',
   'quality:fast',
   'quality:fast:native',
@@ -23,27 +23,13 @@ export const WINDOWS_NATIVE_MAIN_SCRIPTS = [
   'release:windows:package',
   'windows:package',
   'windows:package:install',
-  'windows:package:native',
 ];
-
-const LEGACY_WSL_MIRROR_SCRIPTS = new Set([
-  'windows:preview',
-  'windows:preview:sandbox',
-  'desktop:inspect:renders',
-  'desktop:test:windows',
-  'dev:screenshot',
-]);
 
 const ANDROID_HOST_PATTERNS = [/^android:/, /^quality:android/, /^test:android$/, /^test:release:android$/, /^check:android/];
 const IOS_HOST_PATTERNS = [/^ios:/, /^quality:ios$/, /^check:ios/];
 const AGENT_LEGACY_PATTERNS = [/^agent:/];
 
 const NATIVE_ALTERNATIVES = new Map([
-  ['windows:preview', 'windows:preview:native'],
-  ['windows:preview:sandbox', 'windows:preview:native'],
-  ['desktop:test:windows', 'test:e2e:desktop:native:hidden or test:e2e:desktop:native:visible'],
-  ['desktop:inspect:renders', 'test:e2e:desktop:native:hidden with a render diagnostic spec'],
-  ['dev:screenshot', 'test:e2e:desktop:native:visible with an explicit screenshot spec'],
   ['lint:desktop', 'lint:desktop:full or lint:files'],
   ['lint', 'lint:full or lint:files'],
   ['test:e2e:desktop:agent', 'test:e2e:desktop:native:hidden or test:e2e:desktop:native:visible'],
@@ -64,9 +50,6 @@ function usesWsl(command) {
 export function classifyPackageScript(name, command) {
   if (WINDOWS_NATIVE_MAIN_SCRIPTS.includes(name)) {
     return 'windows-native-main';
-  }
-  if (LEGACY_WSL_MIRROR_SCRIPTS.has(name)) {
-    return 'wsl-mirror-legacy';
   }
   if (matchesAny(name, ANDROID_HOST_PATTERNS)) {
     return 'android-host';

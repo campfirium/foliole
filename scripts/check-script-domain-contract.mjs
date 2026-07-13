@@ -14,6 +14,7 @@ import {
   classifyScriptAsset,
   renderCapabilityCommand
 } from './lib/script-domain-registry.mjs';
+import { RETIRED_PACKAGE_SCRIPTS, RETIRED_SCRIPT_ASSETS } from './lib/script-domain-retirements.mjs';
 
 function normalizeRelativePath(repoRoot, filePath) {
   return path.relative(repoRoot, filePath).replaceAll(path.sep, '/');
@@ -92,10 +93,20 @@ export function inspectScriptDomainContract({
       violations.push(`${asset?.path ?? 'unknown'}: ${error}`);
     }
   }
+  for (const retiredPath of RETIRED_SCRIPT_ASSETS) {
+    if (assets.some((asset) => asset.path === retiredPath)) {
+      violations.push(`${retiredPath}: retired script asset must not exist`);
+    }
+  }
   if (inventoryHash !== expectedInventoryHash) {
     violations.push(`script asset inventory changed: expected=${expectedInventoryHash} actual=${inventoryHash}`);
   }
   const packageJson = JSON.parse(readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
+  for (const scriptName of RETIRED_PACKAGE_SCRIPTS) {
+    if (packageJson.scripts?.[scriptName]) {
+      violations.push(`${scriptName}: retired package script must not exist`);
+    }
+  }
   const assetsByPath = new Map(assets.map((asset) => [asset.path, asset]));
   violations.push(...validateCapabilities(repoRoot, packageJson.scripts ?? {}, assetsByPath));
   return {

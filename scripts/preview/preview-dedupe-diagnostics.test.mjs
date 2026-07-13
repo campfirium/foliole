@@ -50,15 +50,15 @@ describe('preview dedupe diagnostics', () => {
       processCount: 1,
       staleAgedCount: 1,
       staleDeadCount: 1,
-      staleExplanation: 'Dead stale preview records will not continue and do not block a new windows:preview.',
+      staleExplanation: 'Dead stale preview records will not continue and do not block a new windows:preview:native.',
       windowsStatus: 'status: STOPPED trust=FAILED reason=no-runtime',
-      windowsStatusNextAction: 'Run npm run windows:preview; it will sync, verify prerequisites, and use fallback-start.',
-      windowsStatusSource: 'official-windows-mirror:D:\\C\\foliole',
-      windowsStatusVerdict: 'No trusted official Windows mirror client is running; this is no-runtime, not a confirmed code startup crash.'
+      windowsStatusNextAction: 'Run npm run windows:preview:native; it will verify prerequisites and start the native client.',
+      windowsStatusSource: 'windows-native-checkout',
+      windowsStatusVerdict: 'No trusted Windows native client is running; this is no-runtime, not a confirmed code startup crash.'
     });
   });
 
-  it('reports a trusted running official Windows mirror client', () => {
+  it('reports a trusted running Windows native client', () => {
     const summary = formatDiagnosticsSummary({
       hash: 'abcdef1234567890',
       processSnapshot: [],
@@ -76,8 +76,8 @@ describe('preview dedupe diagnostics', () => {
       staleAgedCount: 0,
       staleDeadCount: 0,
       staleExplanation: null,
-      windowsStatusNextAction: 'No startup repair is needed; run npm run windows:preview after changes that need preview.',
-      windowsStatusVerdict: 'Official Windows mirror client is running and trusted.'
+      windowsStatusNextAction: 'No startup repair is needed; run npm run windows:preview:native after changes that need preview.',
+      windowsStatusVerdict: 'The Windows native client is running and trusted.'
     });
   });
 
@@ -97,8 +97,8 @@ describe('preview dedupe diagnostics', () => {
 
     expect(summary).toMatchObject({
       windowsStatus: null,
-      windowsStatusNextAction: 'Inspect preview diagnostics; the official Windows mirror status source is unavailable.',
-      windowsStatusVerdict: 'Official Windows mirror status is unavailable, so startup state is not confirmed.'
+      windowsStatusNextAction: 'Inspect preview diagnostics; the Windows native status source is unavailable.',
+      windowsStatusVerdict: 'Windows native status is unavailable, so startup state is not confirmed.'
     });
   });
 });

@@ -51,10 +51,19 @@ describe('script domain registry', () => {
     expect(classifyScriptAsset('src/app/App.tsx')).toBeNull();
   });
 
+  it('keeps deleted Windows main-development assets as obsolete tombstones', () => {
+    expect(classifyScriptAsset('scripts/windows/windows-preview.sh')).toMatchObject({
+      disposition: 'obsolete'
+    });
+    expect(classifyScriptAsset('scripts/windows/playwright-desktop-harness.mjs')).toMatchObject({
+      disposition: 'obsolete'
+    });
+  });
+
   it('resolves registered capability argv without executing adapters', () => {
     const contract = resolveCapabilityContract('release:windows:package');
 
-    expect(renderCapabilityCommand(contract)).toBe('node scripts/windows/package-windows.mjs --native');
+    expect(renderCapabilityCommand(contract)).toBe('node scripts/windows/package-windows.mjs');
     expect(resolveCapabilityAdapter('release:windows:package', 'win32')).toMatchObject({
       ok: true,
       placements: ['windows-ci', 'windows-only']
@@ -76,6 +85,14 @@ describe('script domain registry', () => {
     expect(resolveCapabilityAdapter('android:control', 'darwin')).toMatchObject({
       ok: true,
       placements: ['shared-core']
+    });
+    expect(resolveCapabilityAdapter('android:web:dev', 'darwin')).toMatchObject({
+      ok: true,
+      placements: ['shared-core']
+    });
+    expect(resolveCapabilityAdapter('windows:android:dev-server', 'win32')).toMatchObject({
+      ok: true,
+      placements: ['windows-device', 'windows-only']
     });
   });
 });

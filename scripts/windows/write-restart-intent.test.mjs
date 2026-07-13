@@ -40,7 +40,7 @@ describe('writeRestartIntent', () => {
         target: 'electron-dev',
         nonce: 2,
         head: 'head-2',
-        requestedBy: 'wsl-windows-preview',
+        requestedBy: 'windows-native-preview',
         reason: 'Class B: runtime behind committed electron changes',
         shellAction: 'restart-runtime'
       });

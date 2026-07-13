@@ -111,7 +111,7 @@ const FULL_GATE_SCRIPTS = {
   'test:quality:gate-integration:release-tail': 'node -e "console.log(\'full quality gate integration release tail test ok\')"',
   'test:quality:node': 'node -e "console.log(\'full quality node test ok\')"',
   'test:quality:preview': 'node -e "console.log(\'full quality preview test ok\')"',
-  'test:windows:preview-recovery': 'node -e "console.log(\'full preview recovery test ok\')"',
+  'test:windows:native-preview': 'node -e "console.log(\'full preview recovery test ok\')"',
   'build:vite-only': 'node -e "console.log(\'full vite build ok\')"',
   'electron:compile': 'node -e "console.log(\'full electron compile ok\')"',
   'android:web:build': 'node -e "console.log(\'full android build ok\')"'
@@ -141,7 +141,7 @@ const RELEASE_GATE_SCRIPTS = {
   'test:quality:gate-integration:release-tail': 'node -e "console.log(\'release quality gate integration release tail test ok\')"',
   'test:quality:node': 'node -e "console.log(\'release quality node test ok\')"',
   'test:quality:preview': 'node -e "console.log(\'release quality preview test ok\')"',
-  'test:windows:preview-recovery': 'node -e "console.log(\'release preview recovery test ok\')"',
+  'test:windows:native-preview': 'node -e "console.log(\'release preview recovery test ok\')"',
   'build:vite-only': 'node -e "console.log(\'release vite build ok\')"',
   'electron:compile': 'node -e "console.log(\'release electron compile ok\')"',
   'android:web:build': 'node -e "console.log(\'release android build ok\')"',

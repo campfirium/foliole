@@ -7,20 +7,19 @@ import path from 'node:path';
 
 const WINDOWS_TEST_ROOT = 'scripts/windows';
 const TEST_FILE_PATTERN = /\.test\.mjs$/;
-const PREVIEW_RECOVERY_EXACT_FILES = new Set([
-  'restart-electron-dev.test.mjs',
+const NATIVE_PREVIEW_EXACT_FILES = new Set([
   'windows-client-native-restart.test.mjs',
   'windows-client-native-force-restart.test.mjs',
   'windows-client-native-startup-failure.test.mjs'
 ]);
 
 function printUsage() {
-  console.error('Usage: node scripts/run-windows-test-bucket.mjs <all|core|preview-recovery> <report.json>');
+  console.error('Usage: node scripts/run-windows-test-bucket.mjs <all|core|native-preview> <report.json>');
 }
 
-export function isWindowsPreviewRecoveryTest(filePath) {
+export function isWindowsNativePreviewTest(filePath) {
   const fileName = path.basename(filePath);
-  return fileName.startsWith('windows-preview') || PREVIEW_RECOVERY_EXACT_FILES.has(fileName);
+  return fileName.startsWith('windows-preview-native') || NATIVE_PREVIEW_EXACT_FILES.has(fileName);
 }
 
 function collectTestFiles(dirPath) {
@@ -43,10 +42,10 @@ export function selectWindowsTestBucketFiles(bucket, files) {
     return files;
   }
   if (bucket === 'core') {
-    return files.filter((file) => !isWindowsPreviewRecoveryTest(file));
+    return files.filter((file) => !isWindowsNativePreviewTest(file));
   }
-  if (bucket === 'preview-recovery') {
-    return files.filter(isWindowsPreviewRecoveryTest);
+  if (bucket === 'native-preview') {
+    return files.filter(isWindowsNativePreviewTest);
   }
   return null;
 }

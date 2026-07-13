@@ -1,5 +1,7 @@
 import path from 'node:path';
 
+import { RETIRED_SCRIPT_ASSETS } from './script-domain-retirements.mjs';
+
 export const EXECUTION_PLACEMENTS = [
   'shared-core',
   'macos-only',
@@ -23,7 +25,7 @@ const WINDOWS_CI_PATTERN =
 const WINDOWS_CI_ONLY_PATTERN = /^scripts\/windows\/windows-ci-/u;
 const WINDOWS_VALIDATION_KIT_PATTERN = /^scripts\/windows\/windows-(?:native-mouse-click|validation-)/u;
 const WINDOWS_DEVICE_PATTERN =
-  /^scripts\/windows\/(?:hidden-native|playwright-desktop-native|visible-native|windows-client-native|windows-preview-native)/u;
+  /^scripts\/windows\/(?:hidden-native|visible-native|windows-android-dev-server|windows-client-native|windows-preview-native)/u;
 const WINDOWS_ASSET_PATTERN = /^(?:scripts\/windows\/|scripts\/android\/windows-|scripts\/android\/open-foliole-android-)/u;
 const MACOS_ASSET_PATTERN = /^scripts\/macos\//u;
 
@@ -44,6 +46,13 @@ export const CAPABILITY_CONTRACTS = [
     adapter: { args: ['scripts/quality/run-quality-fast.mjs'], bin: 'node' },
     adapterPath: 'scripts/quality/run-quality-fast.mjs',
     name: 'quality:fast',
+    placements: ['shared-core'],
+    platforms: ['darwin', 'linux', 'win32']
+  },
+  {
+    adapter: { args: ['scripts/android/android-web-dev.mjs'], bin: 'node' },
+    adapterPath: 'scripts/android/android-web-dev.mjs',
+    name: 'android:web:dev',
     placements: ['shared-core'],
     platforms: ['darwin', 'linux', 'win32']
   },
@@ -100,7 +109,14 @@ export const CAPABILITY_CONTRACTS = [
     platforms: ['win32']
   },
   {
-    adapter: { args: ['scripts/windows/package-windows.mjs', '--native'], bin: 'node' },
+    adapter: { args: ['scripts/windows/windows-android-dev-server.mjs'], bin: 'node' },
+    adapterPath: 'scripts/windows/windows-android-dev-server.mjs',
+    name: 'windows:android:dev-server',
+    placements: ['windows-device', 'windows-only'],
+    platforms: ['win32']
+  },
+  {
+    adapter: { args: ['scripts/windows/package-windows.mjs'], bin: 'node' },
     adapterPath: 'scripts/windows/package-windows.mjs',
     name: 'release:windows:package',
     placements: ['windows-ci', 'windows-only'],
@@ -108,7 +124,7 @@ export const CAPABILITY_CONTRACTS = [
   }
 ];
 
-export const SCRIPT_ASSET_INVENTORY_SHA256 = '29fe0b6cd4f4c3172a882b1cf8beae64283cdd0d06c2c3d4ec59d8302bbb293c';
+export const SCRIPT_ASSET_INVENTORY_SHA256 = '0cf3199d17abec9d61ff4923f3f6965da9030ad99ad53db7bb6883b141618cb8';
 
 function normalizeScriptPath(filePath) {
   return filePath.replaceAll('\\', '/').replace(/^\.\//u, '').trim();
@@ -149,7 +165,7 @@ export function classifyScriptAsset(filePath) {
   const confirmReason = CONFIRM_ASSETS.get(normalized) ?? null;
   return {
     confirmReason,
-    disposition: confirmReason ? 'confirm' : 'active',
+    disposition: RETIRED_SCRIPT_ASSETS.includes(normalized) ? 'obsolete' : confirmReason ? 'confirm' : 'active',
     path: normalized,
     placements: classifyExecutionPlacements(normalized)
   };

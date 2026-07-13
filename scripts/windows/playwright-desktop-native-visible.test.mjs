@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createNativeVisibleDesktopBuildCommands,
   createNativeVisibleDesktopGateCommand
-} from './playwright-desktop-native-visible.mjs';
+} from '../desktop/playwright-desktop-native-visible.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const WINDOWS_WORKDIR = String.raw`D:\C\foliole`;

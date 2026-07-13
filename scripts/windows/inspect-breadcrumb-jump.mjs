@@ -2,7 +2,7 @@
 
 import process from 'node:process';
 
-import { launchDesktopSession } from './playwright-desktop-harness.mjs';
+import { launchDesktopSession } from '../desktop/playwright-desktop-harness.mjs';
 
 function resolveArgs(argv) {
   const [childTitle, parentTitle] = argv.slice(2).map((value) => value.trim());

@@ -1,4 +1,4 @@
-import { launchDesktopSession } from '../../scripts/windows/playwright-desktop-harness.mjs';
+import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-harness.mjs';
 
 import { expect, test, type DesktopSession } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';

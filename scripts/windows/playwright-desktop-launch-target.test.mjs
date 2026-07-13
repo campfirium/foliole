@@ -10,7 +10,7 @@ import {
   resolveDesktopAppRoot,
   resolveDesktopLaunchTarget,
   resolveElectronExecutablePath
-} from './playwright-desktop-launch-target.mjs';
+} from '../desktop/playwright-desktop-launch-target.mjs';
 
 describe('playwright desktop launch target', () => {
   it('prefers configured app root over mirror detection', () => {

@@ -52,7 +52,7 @@ export function createRendererReloadIntent({ head, nonce, reason, requestedAt, r
 export async function writeRendererReloadIntent({
   head,
   reason,
-  requestedBy = 'wsl-windows-preview',
+  requestedBy = 'windows-native-preview',
   rootDir
 }) {
   if (!rootDir || rootDir.trim().length === 0) {
@@ -84,7 +84,7 @@ async function main(env = process.env) {
   const result = await writeRendererReloadIntent({
     head: env.FOLIOLE_RENDERER_RELOAD_INTENT_HEAD ?? '',
     reason: env.FOLIOLE_RENDERER_RELOAD_INTENT_REASON ?? '',
-    requestedBy: env.FOLIOLE_RENDERER_RELOAD_INTENT_REQUESTED_BY ?? 'wsl-windows-preview',
+    requestedBy: env.FOLIOLE_RENDERER_RELOAD_INTENT_REQUESTED_BY ?? 'windows-native-preview',
     rootDir: env.FOLIOLE_RENDERER_RELOAD_INTENT_ROOT ?? ''
   });
 

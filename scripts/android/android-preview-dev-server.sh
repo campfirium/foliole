@@ -6,7 +6,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 source "${SCRIPT_DIR}/android-windows-workdir.sh"
 
 ANDROID_SOURCE_SYNC_SCRIPT="${ANDROID_SOURCE_SYNC_SCRIPT:-scripts/android/windows-source-sync.sh}"
-ANDROID_DEV_SERVER_START_SCRIPT="${ANDROID_DEV_SERVER_START_SCRIPT:-scripts/windows/windows-dev-services.mjs}"
+ANDROID_DEV_SERVER_START_SCRIPT="${ANDROID_DEV_SERVER_START_SCRIPT:-scripts/windows/windows-android-dev-server.mjs}"
 ANDROID_DEV_SERVER_SYNC_SCRIPT="${ANDROID_DEV_SERVER_SYNC_SCRIPT:-scripts/android/windows-cap-sync-dev-server.ps1}"
 ANDROID_DEPLOY_SCRIPT="${ANDROID_DEPLOY_SCRIPT:-scripts/android/windows-deploy-app.sh}"
 ANDROID_DEV_SERVER_LAUNCH_SCRIPT="${ANDROID_DEV_SERVER_LAUNCH_SCRIPT:-scripts/android/windows-dev-server-launch.ps1}"

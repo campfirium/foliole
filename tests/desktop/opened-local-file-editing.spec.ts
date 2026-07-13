@@ -5,7 +5,7 @@ import process from 'node:process';
 
 import { expect, test } from '@playwright/test';
 
-import { launchDesktopSession } from '../../scripts/windows/playwright-desktop-harness.mjs';
+import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-harness.mjs';
 
 test('opens a Markdown file from launch args as an editable local file and saves to disk', async () => {
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-opened-local-file-'));

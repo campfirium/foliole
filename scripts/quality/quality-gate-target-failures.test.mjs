@@ -62,7 +62,7 @@ async function writePackageJson(rootDir, scripts) {
     'test:release:desktop-src',
     'test:desktop:electron',
     'test:windows:core',
-    'test:windows:preview-recovery',
+    'test:windows:native-preview',
     'test:release:android',
     'test:release:shared',
     'test:quality',

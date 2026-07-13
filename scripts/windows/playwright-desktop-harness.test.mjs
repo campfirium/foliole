@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import {
   APP_READY_FLAG,
   launchDesktopSession
-} from './playwright-desktop-harness.mjs';
+} from '../desktop/playwright-desktop-harness.mjs';
 
 describe('playwright desktop harness', () => {
   it('launches electron and returns a reusable session envelope', async () => {

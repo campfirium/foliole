@@ -8,8 +8,8 @@ import {
   createDesktopLaunchOptions,
   resolveDesktopAppRoot,
   resolveDesktopLaunchTarget
-} from '../../scripts/windows/playwright-desktop-harness.mjs';
-import { createDesktopIsolationContext } from '../../scripts/windows/playwright-desktop-isolation.mjs';
+} from '../../scripts/desktop/playwright-desktop-harness.mjs';
+import { createDesktopIsolationContext } from '../../scripts/desktop/playwright-desktop-isolation.mjs';
 
 const FRAME_COUNT = 40;
 const FRAME_INTERVAL_MS = 80;

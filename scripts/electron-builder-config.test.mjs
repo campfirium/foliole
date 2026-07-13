@@ -134,9 +134,9 @@ describe('electron-builder release packaging config', () => {
 
     expect(config.publish).toBeUndefined();
     expect(config.directories.output).toBe('artifacts/windows');
-    expect(packageJson.scripts['release:windows:package']).toBe('node scripts/windows/package-windows.mjs --native');
-    expect(packageJson.scripts['windows:package:internal']).toBe('node scripts/windows/package-windows.mjs --native --internal');
-    expect(packageJson.scripts['windows:package:internal:install']).toBe('node scripts/windows/package-windows.mjs --native --internal --install');
+    expect(packageJson.scripts['release:windows:package']).toBe('node scripts/windows/package-windows.mjs');
+    expect(packageJson.scripts['windows:package:internal']).toBe('node scripts/windows/package-windows.mjs --internal');
+    expect(packageJson.scripts['windows:package:internal:install']).toBe('node scripts/windows/package-windows.mjs --internal --install');
     expect(workflow).toContain('permissions:\n  contents: write');
     expect(workflow).toContain('id-token: write');
     expect(workflow).toContain('attestations: write');

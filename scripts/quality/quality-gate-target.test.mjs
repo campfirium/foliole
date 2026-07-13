@@ -42,7 +42,7 @@ async function writePackageJson(rootDir, scripts) {
   for (const bucket of [
     'test:desktop',
     'test:windows:core',
-    'test:windows:preview-recovery',
+    'test:windows:native-preview',
     'test:release:desktop-src',
     'test:release:android',
     'test:release:shared',

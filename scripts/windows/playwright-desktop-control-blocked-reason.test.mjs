@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { explainBridgeBackedControlBlockedReason } from './playwright-desktop-control-blocked-reason.mjs';
+import { explainBridgeBackedControlBlockedReason } from '../desktop/playwright-desktop-control-blocked-reason.mjs';
 
 describe('explainBridgeBackedControlBlockedReason', () => {
   it('explains single-instance old window lock as a blocked reason', () => {

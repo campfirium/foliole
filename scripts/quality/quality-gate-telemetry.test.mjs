@@ -149,7 +149,7 @@ describe('quality gate telemetry', () => {
             scripts: {
               'test:quality:preview': 'node -e "console.log(\'quality preview ok\')"',
               'android:web:build': 'node -e "console.log(\'android web build ok\')"',
-              'test:windows:preview-recovery': 'node -e "console.log(\'windows preview recovery ok\')"'
+              'test:windows:native-preview': 'node -e "console.log(\'windows preview recovery ok\')"'
             }
           },
           null,
