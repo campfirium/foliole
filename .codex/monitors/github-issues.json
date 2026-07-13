@@ -3,7 +3,6 @@
   "name": "github-issues",
   "enabled": true,
   "kind": "github-issue-handoff",
-  "workspace": "D:\\C\\foliole",
   "template": ".codex/monitors/templates/github-issues.md",
   "defaultPriority": "normal",
   "defaultTtlSeconds": 1800,

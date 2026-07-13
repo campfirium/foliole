@@ -4,6 +4,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { listGithubMonitorEvents } from './github-desktop-handoff-events.mjs';
 
 const REPO_ROOT = process.cwd();
@@ -40,11 +41,15 @@ function renderTemplate(templatePath, data) {
   return template.replace(/\{\{(\w+)\}\}/g, (_match, key) => String(data[key] ?? ''));
 }
 
-function loadConfigs() {
+export function bindMonitorWorkspace(config, workspace) {
+  return config ? { ...config, workspace } : config;
+}
+
+export function loadConfigs() {
   return {
-    actions: readJson(path.join(MONITOR_DIR, 'github-actions.json')),
-    issues: readJson(path.join(MONITOR_DIR, 'github-issues.json')),
-    prs: readJson(path.join(MONITOR_DIR, 'github-prs.json'))
+    actions: bindMonitorWorkspace(readJson(path.join(MONITOR_DIR, 'github-actions.json')), REPO_ROOT),
+    issues: bindMonitorWorkspace(readJson(path.join(MONITOR_DIR, 'github-issues.json')), REPO_ROOT),
+    prs: bindMonitorWorkspace(readJson(path.join(MONITOR_DIR, 'github-prs.json')), REPO_ROOT)
   };
 }
 
@@ -110,13 +115,15 @@ async function monitor() {
   }
 }
 
-const command = process.argv[2] ?? 'status';
-if (command === 'status') {
-  console.log(JSON.stringify({ configs: loadConfigs(), state: loadState() }, null, 2));
-} else if (command === 'scan') {
-  console.log(JSON.stringify(scan({ emit: process.argv.includes('--emit'), includeExisting: process.argv.includes('--include-existing') }), null, 2));
-} else if (command === 'monitor') {
-  await monitor();
-} else {
-  throw new Error(`Unknown command: ${command}`);
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+  const command = process.argv[2] ?? 'status';
+  if (command === 'status') {
+    console.log(JSON.stringify({ configs: loadConfigs(), state: loadState() }, null, 2));
+  } else if (command === 'scan') {
+    console.log(JSON.stringify(scan({ emit: process.argv.includes('--emit'), includeExisting: process.argv.includes('--include-existing') }), null, 2));
+  } else if (command === 'monitor') {
+    await monitor();
+  } else {
+    throw new Error(`Unknown command: ${command}`);
+  }
 }
