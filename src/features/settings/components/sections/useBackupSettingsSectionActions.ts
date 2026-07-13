@@ -1,5 +1,6 @@
 import { selectRuntimeFolder } from '../../../../shared/platform/folderSelectionRuntimeRepository';
 import type { RuntimeSourceDispositionSummary } from '../../../../shared/platform/settingsRuntimeRepository';
+import { refreshWorkspaceState } from '../../../../store/workspaceRefreshScheduler';
 import type { DatabaseBackupEntry } from '../../model/databaseBackups';
 import type { DatabaseBackupSettings } from '../../model/databaseBackupSettings';
 
@@ -24,6 +25,7 @@ interface BackupActionHandlerArgs {
   setIsSavingSettings: (value: boolean) => void;
   setExtraPathErrorMessage: (value: string) => void;
   setPathErrorMessage: (value: string) => void;
+  setRestoreSuccessFileName: (value: string) => void;
   setRestoringPath: (value: string) => void;
   setSettings: (value: DatabaseBackupSettings) => void;
   setSourceDispositionSummary: (value: RuntimeSourceDispositionSummary) => void;
@@ -128,7 +130,10 @@ export function useBackupActionHandlers(args: BackupActionHandlerArgs) {
 
   const handleCreateBackup = () => void runCreateBackup(args.refreshBackups, args.setIsCreatingBackup, args.setStatusMessage);
   const handleRestoreBackup = (entry: DatabaseBackupEntry) =>
-    void runRestoreBackup(entry, args.setRestoringPath, args.setStatusMessage);
+    void runRestoreBackup(entry, args.setRestoringPath, args.setStatusMessage, async (fileName) => {
+      await refreshWorkspaceState('backup-restore');
+      args.setRestoreSuccessFileName(fileName);
+    });
   const handleExportSourceDispositions = () => void runExportSourceDispositions(args);
   const handleImportSourceDispositions = () => void runImportSourceDispositions(args);
   const handleResetSourceDispositions = () => void runResetSourceDispositions(args);

@@ -23,6 +23,7 @@ function useBackupStateStore() {
   const [isImportingSourceStates, setIsImportingSourceStates] = useState(false);
   const [isResettingSourceStates, setIsResettingSourceStates] = useState(false);
   const [restoringPath, setRestoringPath] = useState('');
+  const [restoreSuccessFileName, setRestoreSuccessFileName] = useState('');
   const [sourceDispositionSummary, setSourceDispositionSummary] = useState<RuntimeSourceDispositionSummary>({ recordCount: 0, sizeBytes: 0 });
   const [sourceStateStatusMessage, setSourceStateStatusMessage] = useState('');
   const [statusMessage, setStatusMessage] = useState('');
@@ -45,6 +46,7 @@ function useBackupStateStore() {
     loadErrorMessage,
     pathErrorMessage,
     restoringPath,
+    restoreSuccessFileName,
     setBackups,
     setDefaultBackupPath,
     setDraft,
@@ -58,6 +60,7 @@ function useBackupStateStore() {
     setLoadErrorMessage,
     setPathErrorMessage,
     setRestoringPath,
+    setRestoreSuccessFileName,
     setSettings,
     setSourceDispositionSummary,
     setSourceStateStatusMessage,
@@ -99,6 +102,7 @@ export function useBackupSettingsSectionState() {
     setIsSavingSettings: state.setIsSavingSettings,
     setPathErrorMessage: state.setPathErrorMessage,
     setRestoringPath: state.setRestoringPath,
+    setRestoreSuccessFileName: state.setRestoreSuccessFileName,
     setSettings: state.setSettings,
     setSourceDispositionSummary: state.setSourceDispositionSummary,
     setIsResettingSourceStates: state.setIsResettingSourceStates,
@@ -123,6 +127,8 @@ export function useBackupSettingsSectionState() {
     pathErrorMessage: state.pathErrorMessage,
     retryInitialLoad: () => setReloadKey((value) => value + 1),
     restoringPath: state.restoringPath,
+    restoreSuccessFileName: state.restoreSuccessFileName,
+    clearRestoreSuccess: () => state.setRestoreSuccessFileName(''),
     sourceDispositionSummary: state.sourceDispositionSummary,
     sourceStateStatusMessage: state.sourceStateStatusMessage,
     statusMessage: state.statusMessage

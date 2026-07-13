@@ -208,7 +208,3 @@ export async function restoreDatabaseBackup(sourcePath: string): Promise<Databas
     return { ok: false, errorMessage: readErrorMessage(error) };
   }
 }
-
-export function reloadAfterDatabaseRestore() {
-  window.location.reload();
-}

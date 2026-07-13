@@ -6,6 +6,7 @@ import {
   SettingsStateAction
 } from '../../../../shared/ui';
 
+import { BackupRestoreSuccessDialog } from './BackupRestoreSuccessDialog';
 import {
   BackupListSection,
   BackupPathRow,
@@ -69,6 +70,10 @@ export function SettingsBackupsSection() {
 
   return (
     <>
+      <BackupRestoreSuccessDialog
+        fileName={state.restoreSuccessFileName}
+        onClose={state.clearRestoreSuccess}
+      />
       <BackupListSection backups={state.backups} createBackup={state.handleCreateBackup} isBackupActionsAvailable={state.isDesktopRuntime} isCreatingBackup={state.isCreatingBackup} isLoadingBackups={state.isLoadingBackups} restoringPath={state.restoringPath} restoreBackup={state.handleRestoreBackup} statusMessage={state.statusMessage} />
       <SettingsSection ariaLabel={t('settings.backups.sourceHandling.sectionAria')} title={t('settings.backups.sourceHandling.title')}>
         <SourceDispositionStateRow

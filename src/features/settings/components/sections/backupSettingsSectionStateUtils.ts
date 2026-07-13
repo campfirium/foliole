@@ -4,7 +4,6 @@ import {
   exportSourceDispositions,
   importSourceDispositions,
   loadSourceDispositionSummary,
-  reloadAfterDatabaseRestore,
   resetSourceDispositions,
   restoreDatabaseBackup,
   restoreSourceDispositions,
@@ -110,7 +109,8 @@ export async function runCreateBackup(
 export async function runRestoreBackup(
   entry: DatabaseBackupEntry,
   setRestoringPath: (value: string) => void,
-  setStatusMessage: (value: string) => void
+  setStatusMessage: (value: string) => void,
+  onRestored: (fileName: string) => Promise<void>
 ) {
   setStatusMessage('');
   setRestoringPath(entry.filePath);
@@ -125,8 +125,8 @@ export async function runRestoreBackup(
     setRestoringPath('');
     return;
   }
-  setStatusMessage(`Backup restored from ${entry.fileName}. Reloading workspace…`);
-  reloadAfterDatabaseRestore();
+  await onRestored(entry.fileName);
+  setRestoringPath('');
 }
 
 export async function runRestoreSourceDispositions(args: {

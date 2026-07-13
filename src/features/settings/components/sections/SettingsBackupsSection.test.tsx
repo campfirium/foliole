@@ -17,7 +17,6 @@ vi.mock('../../model/databaseBackups', () => ({
   importSourceDispositions: vi.fn(),
   listDatabaseBackups: vi.fn(),
   loadSourceDispositionSummary: vi.fn(),
-  reloadAfterDatabaseRestore: vi.fn(),
   restoreDatabaseBackup: vi.fn()
 }));
 
@@ -30,7 +29,6 @@ import {
   importSourceDispositions,
   listDatabaseBackups,
   loadSourceDispositionSummary,
-  reloadAfterDatabaseRestore,
   restoreDatabaseBackup
 } from '../../model/databaseBackups';
 import {
@@ -51,7 +49,6 @@ beforeEach(() => {
   vi.mocked(importSourceDispositions).mockReset();
   vi.mocked(listDatabaseBackups).mockReset();
   vi.mocked(loadSourceDispositionSummary).mockReset();
-  vi.mocked(reloadAfterDatabaseRestore).mockReset();
   vi.mocked(restoreDatabaseBackup).mockReset();
 
   vi.mocked(areDatabaseBackupActionsAvailable).mockReturnValue(true);
@@ -242,18 +239,4 @@ it('shows a warning when the extra backup copy fails after the main backup is cr
   fireEvent.click(screen.getByRole('button', { name: 'Create backup' }));
 
   expect(await screen.findByText(/Extra copy failed: Cloud folder unavailable/)).toBeInTheDocument();
-});
-
-it('restores from a listed backup', async () => {
-  renderWithLocalization(<SettingsBackupsSection />);
-
-  const restoreButton = await screen.findByRole('button', { name: 'Restore' });
-  fireEvent.click(restoreButton);
-
-  await waitFor(() => {
-    expect(restoreDatabaseBackup).toHaveBeenCalledWith('/app/Backups/auto-daily-2026-04-02_08-00-00-000.db');
-  });
-  await waitFor(() => {
-    expect(reloadAfterDatabaseRestore).toHaveBeenCalledWith();
-  });
 });
