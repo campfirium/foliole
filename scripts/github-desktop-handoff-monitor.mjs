@@ -7,7 +7,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { listGithubMonitorEvents } from './github-desktop-handoff-events.mjs';
 
-const REPO_ROOT = process.cwd();
+export function resolveRepositoryRoot(moduleUrl = import.meta.url) {
+  return path.resolve(path.dirname(fileURLToPath(moduleUrl)), '..');
+}
+
+const REPO_ROOT = resolveRepositoryRoot();
 const MONITOR_DIR = path.join(REPO_ROOT, '.codex', 'monitors');
 const STATE_FILE = path.join(REPO_ROOT, '.tmp', 'github-desktop-handoff-monitor', 'state.json');
 const SUBMIT_EVENT = path.join(
