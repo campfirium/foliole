@@ -21,3 +21,10 @@ it('terminates a desktop runtime that exceeds the graceful close deadline', asyn
   await closeDesktopApplication({ close, process: () => ({ pid: 42 }) }, { gracefulTimeoutMs: 1 });
   expect(killPid).toHaveBeenCalledWith(42, { timeoutMs: 3000 });
 });
+
+it('treats an already closed Playwright Electron application as closed', async () => {
+  const close = vi.fn();
+  await closeDesktopApplication({ close, process: () => { throw new TypeError('closed'); } });
+  expect(close).not.toHaveBeenCalled();
+  expect(killPid).not.toHaveBeenCalled();
+});

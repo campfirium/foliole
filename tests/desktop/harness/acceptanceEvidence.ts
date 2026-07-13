@@ -10,6 +10,7 @@ function safeSegment(value: string) {
 export async function attachDesktopAcceptanceEvidence(page: Page, testInfo: TestInfo) {
   if (process.env.FOLIOLE_DESKTOP_ACCEPTANCE_EVIDENCE !== '1') return;
   if (testInfo.status !== 'passed' || testInfo.status !== testInfo.expectedStatus) return;
+  if (page.isClosed()) return;
   const mode = process.env.FOLIOLE_ELECTRON_NATIVE_HIDDEN === '1' ? 'hidden' : 'visible';
   const root = path.resolve(
     process.env.FOLIOLE_DESKTOP_ACCEPTANCE_DIR?.trim() || path.join('.tmp', 'artifacts', 'desktop-acceptance')

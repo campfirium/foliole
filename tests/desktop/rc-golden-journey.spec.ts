@@ -1,5 +1,6 @@
 import process from 'node:process';
 
+import { closeDesktopApplication } from '../../scripts/desktop/playwright-desktop-close.mjs';
 import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-harness.mjs';
 
 import { expect, test, type DesktopSession } from './harness/fixtures';
@@ -92,7 +93,7 @@ async function attachWorkspaceScreenshot(windowPage: WindowPage, name: string, t
 
 async function relaunchDesktopSession(session: DesktopSession) {
   const stateRoot = session.target.runtimeStateRoot;
-  await session.electronApp.close();
+  await closeDesktopApplication(session.electronApp);
   return launchDesktopSession({
     env: {
       ...process.env,

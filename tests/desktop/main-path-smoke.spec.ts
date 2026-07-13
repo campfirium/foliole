@@ -12,6 +12,7 @@ const FIXTURE_PATH = path.resolve(
 );
 const IMPORTED_TITLE = 'Main Path Smoke Article';
 const READING_LINE = 'The reading smoke line should remain visible after the imported node opens.';
+const WORKSPACE_NAME = /^(Foliole workspace|Foliole 工作区)$/;
 
 async function installImportFixtureSelection(desktopApp: ElectronApplication) {
   await desktopApp.evaluate(({ dialog }, fixturePath) => {
@@ -60,20 +61,18 @@ async function reloadWorkspace(desktopWindow: Page) {
   await expectWorkspaceShell(desktopWindow);
 }
 
-async function openImportedNode(desktopWindow: Page, nodeId: string) {
-  const opened = await desktopWindow.evaluate(async (targetNodeId) => {
-    return globalThis.window?.__folioleWorkspaceDebug?.openNode?.(targetNodeId) ?? false;
-  }, nodeId);
-  expect(opened).toBe(true);
+async function openImportedNode(desktopWindow: Page) {
+  await desktopWindow.getByRole('treeitem', { name: IMPORTED_TITLE, exact: true }).click();
 }
 
 async function collectImportedNode(desktopWindow: Page, nodeId: string) {
   return desktopWindow.evaluate(async (targetNodeId) => {
     const snapshot = await globalThis.window?.electronAPI?.invoke('load_workspace_snapshot', {});
     const importedNode = snapshot?.nodesById?.[targetNodeId] ?? null;
+    const document = await globalThis.window?.electronAPI?.invoke('load_node_document', { nodeId: targetNodeId });
     return importedNode
       ? {
-          content: typeof importedNode.content === 'string' ? importedNode.content : '',
+          content: typeof document?.content === 'string' ? document.content : '',
           title: typeof importedNode.title === 'string' ? importedNode.title : ''
         }
       : null;
@@ -95,18 +94,18 @@ test('desktop main path smoke covers import, reading, review entry, and sync set
     title: IMPORTED_TITLE
   });
 
-  await openImportedNode(desktopWindow, importedNodeId);
+  await openImportedNode(desktopWindow);
   await expect(desktopWindow.getByRole('button', { name: IMPORTED_TITLE, exact: true })).toBeVisible();
-  await expect(desktopWindow.getByRole('main', { name: 'Foliole workspace' })).toContainText(READING_LINE);
+  await expect(desktopWindow.getByRole('main', { name: WORKSPACE_NAME })).toContainText(READING_LINE);
 
-  await desktopWindow.getByRole('button', { name: 'Enter Flow' }).click();
+  await desktopWindow.getByRole('button', { name: /^(Enter Flow|进入 Flow)$/ }).click();
   await expect(desktopWindow.getByRole('group', { name: 'Flow toolbar' })).toBeVisible();
   await desktopWindow.getByRole('button', { name: IMPORTED_TITLE, exact: true }).click();
-  await expect(desktopWindow.getByRole('main', { name: 'Foliole workspace' })).toContainText(IMPORTED_TITLE);
+  await expect(desktopWindow.getByRole('main', { name: WORKSPACE_NAME })).toContainText(IMPORTED_TITLE);
 
   const settingsDialog = await openSettingsCategory(desktopWindow, 'Sync');
-  await expect(settingsDialog.getByRole('heading', { name: 'Sync' })).toBeVisible();
-  await expect(settingsDialog.getByRole('switch', { name: 'Enable desktop sync' })).toBeVisible();
-  await expect(settingsDialog.getByText('Device role')).toBeVisible();
-  await expect(settingsDialog.getByText('Connected devices')).toBeVisible();
+  await expect(settingsDialog.getByRole('heading', { level: 3, name: /^(Sync|同步)$/ })).toBeVisible();
+  await expect(settingsDialog.getByRole('switch', { name: /^(Enable desktop sync|启用桌面同步)$/ })).toBeVisible();
+  await expect(settingsDialog.getByText(/^(Device role|设备角色)$/)).toBeVisible();
+  await expect(settingsDialog.getByText(/^(Connected devices|已连接设备)$/)).toBeVisible();
 });

@@ -3,7 +3,7 @@ import type { Locator, Page } from '@playwright/test';
 const BACKUPS_HEADING_NAME = /^(Backups|备份)$/;
 const CATEGORY_NAMES = {
   Backups: /^(Backups|备份)$/,
-  ExternalDocumentMirrors: /^(External document mirrors|外部文档镜像)$/,
+  ExternalFolder: /^(External Folder|外部文件夹)$/,
   General: /^(General|通用)$/,
   Sync: /^(Sync|同步)$/
 } as const;

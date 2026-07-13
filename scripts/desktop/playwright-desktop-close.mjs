@@ -5,7 +5,12 @@ function delay(ms) {
 }
 
 export async function closeDesktopApplication(electronApp, { gracefulTimeoutMs = 5000 } = {}) {
-  const pid = electronApp.process()?.pid;
+  let pid;
+  try {
+    pid = electronApp.process()?.pid;
+  } catch {
+    return;
+  }
   const closePromise = electronApp.close();
   const closedGracefully = await Promise.race([
     closePromise.then(() => true),
