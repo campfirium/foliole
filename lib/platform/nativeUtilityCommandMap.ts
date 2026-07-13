@@ -39,6 +39,13 @@ export type NativeUtilityCommandMap = {
     args: undefined;
     result: NativeSystemFontCatalog;
   };
+  [NATIVE_COMMANDS.loadDesktopHostCapabilities]: {
+    args: undefined;
+    result: {
+      globalCaptureSupported: boolean;
+      loginItemSupported: boolean;
+    };
+  };
   [NATIVE_COMMANDS.loadLoginItemSettings]: {
     args: undefined;
     result: {

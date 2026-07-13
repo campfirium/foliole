@@ -1,4 +1,7 @@
+import { useEffect, useState } from 'react';
+
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
+import { loadDesktopHostCapabilities } from '../../../shared/platform/desktopHostCapabilities';
 import {
   settingsHotkeyChipClassName,
   settingsHotkeyRowClassName
@@ -31,6 +34,14 @@ export function shouldShowGlobalClipShortcut(filterMode: HotkeyFilterMode, query
 
 export function GlobalClipShortcutRow() {
   const t = useTranslation();
+  const [supported, setSupported] = useState<boolean | null>(null);
+  useEffect(() => {
+    let active = true;
+    void loadDesktopHostCapabilities().then((value) => {
+      if (active) setSupported(value.globalCaptureSupported);
+    });
+    return () => { active = false; };
+  }, []);
   return (
     <div
       {...settingsSearchRowProps({
@@ -44,11 +55,15 @@ export function GlobalClipShortcutRow() {
     >
       <div className="min-w-0">
         <div className="truncate text-[0.95rem] text-foreground">{t('settings.globalClip.shortcut.title')}</div>
-        <div className="mt-0.5 truncate text-sm text-foreground/55">{t('settings.globalClip.shortcut.section')}</div>
+        <div className="mt-0.5 truncate text-sm text-foreground/55">
+          {supported === false ? t('settings.globalClip.shortcut.unsupported') : t('settings.globalClip.shortcut.section')}
+        </div>
       </div>
       <div className="flex min-w-0 items-center justify-end gap-1.5">
-        <span className={settingsHotkeyChipClassName('assigned')}>
-          <span className="min-w-0 truncate">{GLOBAL_CLIP_SHORTCUT_LABEL}</span>
+        <span className={settingsHotkeyChipClassName(supported === false ? 'empty' : 'assigned')}>
+          <span className="min-w-0 truncate">
+            {supported === false ? t('settings.globalClip.shortcut.unavailable') : GLOBAL_CLIP_SHORTCUT_LABEL}
+          </span>
         </span>
       </div>
     </div>

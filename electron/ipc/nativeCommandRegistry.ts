@@ -20,6 +20,7 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.assistantRemoveThreadFromHistory, route: 'assistant', capability: 'assistant' },
   { command: NATIVE_COMMANDS.bootReport, route: 'review', capability: 'diagnostic' },
   { command: NATIVE_COMMANDS.listSystemFonts, route: 'windowAndUtility', capability: 'diagnostic' },
+  { command: NATIVE_COMMANDS.loadDesktopHostCapabilities, route: 'windowAndUtility', capability: 'read' },
   { command: NATIVE_COMMANDS.loadLoginItemSettings, route: 'windowAndUtility', capability: 'read' },
   { command: NATIVE_COMMANDS.loadPerformanceMemorySnapshot, route: 'windowAndUtility', capability: 'diagnostic' },
   { command: NATIVE_COMMANDS.openExternalUrl, route: 'windowAndUtility', capability: 'externalOpen' },

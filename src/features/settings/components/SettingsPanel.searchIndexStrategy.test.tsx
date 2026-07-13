@@ -93,7 +93,7 @@ it('toggles launch at startup from the General System settings', async () => {
   });
 });
 
-it('hides launch at startup when the runtime cannot manage it', async () => {
+it('marks launch at startup unavailable when the runtime cannot manage it', async () => {
   loginItemSettingsState = { enabled: false, effective: false, supported: false };
   renderWithMouseGestureProvider(<SearchSettingsHarness />);
 
@@ -101,6 +101,9 @@ it('hides launch at startup when the runtime cannot manage it', async () => {
   expect(electronAPI).toBeDefined();
   await waitFor(() => expect(electronAPI!.invoke).toHaveBeenCalledWith('load_login_item_settings'));
 
-  expect(screen.queryByRole('switch', { name: 'Start Foliole automatically' })).not.toBeInTheDocument();
-  expect(screen.queryByRole('heading', { name: 'System' })).not.toBeInTheDocument();
+  const toggle = screen.getByRole('switch', { name: 'Start Foliole automatically' });
+  expect(toggle).toBeDisabled();
+  expect(toggle).toHaveAttribute('aria-checked', 'false');
+  expect(screen.getByRole('heading', { name: 'System' })).toBeInTheDocument();
+  expect(screen.getByText('This is not available on macOS.')).toBeInTheDocument();
 });

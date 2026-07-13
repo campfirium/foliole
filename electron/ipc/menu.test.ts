@@ -114,6 +114,21 @@ describe('native app menu command state', () => {
     expect(findMenuItem(items, 'app.redo')).toMatchObject({ enabled: true });
     expect(findMenuItem(items, 'app.redo')).not.toHaveProperty('role');
   });
+
+  it('adds standard application, edit, and window roles on macOS', () => {
+    installAppMenu('darwin');
+
+    const items = (menuMock.applicationMenu?.items ?? []) as MockMenuItem[];
+    expect(items.slice(0, 3).map((item) => item.role)).toEqual(['appMenu', 'editMenu', 'windowMenu']);
+    expect(findMenuItem(items, 'workspace.openSettings')).not.toBeNull();
+  });
+
+  it('does not add macOS standard roles to the Windows menu', () => {
+    installAppMenu('win32');
+
+    const items = (menuMock.applicationMenu?.items ?? []) as MockMenuItem[];
+    expect(items.some((item) => item.role === 'appMenu' || item.role === 'editMenu' || item.role === 'windowMenu')).toBe(false);
+  });
 });
 
 describe('native app menu rebuilding', () => {

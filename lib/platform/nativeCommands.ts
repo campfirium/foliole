@@ -9,6 +9,7 @@ export const NATIVE_COMMANDS = {
   assistantRemoveThreadFromHistory: 'assistant_remove_thread_from_history',
   bootReport: 'boot_report',
   listSystemFonts: 'list_system_fonts',
+  loadDesktopHostCapabilities: 'load_desktop_host_capabilities',
   loadLoginItemSettings: 'load_login_item_settings',
   loadPerformanceMemorySnapshot: 'load_performance_memory_snapshot',
   openExternalUrl: 'open_external_url',

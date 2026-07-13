@@ -97,7 +97,19 @@ function buildHelpMenu(state: MenuState): MenuItemConstructorOptions {
   };
 }
 
-function buildAppMenuTemplate(state: MenuState): MenuItemConstructorOptions[] {
+function buildMacosStandardMenus(platform: NodeJS.Platform): MenuItemConstructorOptions[] {
+  if (platform !== 'darwin') return [];
+  return [
+    { role: 'appMenu' },
+    { role: 'editMenu' },
+    { role: 'windowMenu' }
+  ];
+}
+
+function buildAppMenuTemplate(
+  state: MenuState,
+  platform: NodeJS.Platform = process.platform
+): MenuItemConstructorOptions[] {
   const developerMenu = app.isPackaged
     ? []
     : [
@@ -107,6 +119,7 @@ function buildAppMenuTemplate(state: MenuState): MenuItemConstructorOptions[] {
         }
       ];
   return [
+    ...buildMacosStandardMenus(platform),
     buildWorkspaceMenu(state),
     {
       label: 'Navigate',
@@ -154,14 +167,18 @@ function setAppMenu(template: MenuItemConstructorOptions[]) {
   walkMenuItems(menu.items);
 }
 
-export function installAppMenu() {
-  setAppMenu(buildAppMenuTemplate(defaultMenuState));
+export function installAppMenu(platform: NodeJS.Platform = process.platform) {
+  setAppMenu(buildAppMenuTemplate(defaultMenuState, platform));
 }
 
-export function syncAppMenuState(enabledCommandIds: string[], shortcutAccelerators: NativeMenuShortcutAccelerator[] = []) {
+export function syncAppMenuState(
+  enabledCommandIds: string[],
+  shortcutAccelerators: NativeMenuShortcutAccelerator[] = [],
+  platform: NodeJS.Platform = process.platform
+) {
   const enabledSet = new Set(enabledCommandIds);
   const acceleratorsById = new Map(shortcutAccelerators.map((item) => [item.commandId, item.accelerator]));
-  setAppMenu(buildAppMenuTemplate({ acceleratorsById, enabledSet }));
+  setAppMenu(buildAppMenuTemplate({ acceleratorsById, enabledSet }, platform));
 }
 
 export function bindMenuToWindow(window: ElectronBrowserWindow) {

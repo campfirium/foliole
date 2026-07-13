@@ -24,5 +24,7 @@ export const EN_SETTINGS_HOTKEYS_TRANSLATIONS = {
   'settings.globalClip.shortcut.title': 'Capture to Inbox (global)',
   'settings.globalClip.shortcut.section': 'Capture',
   'settings.globalClip.shortcut.description': 'Capture the current selection, type a quick thought, or press Enter to import the clipboard.',
+  'settings.globalClip.shortcut.unsupported': 'Not available on macOS',
+  'settings.globalClip.shortcut.unavailable': 'Unavailable',
   'settings.globalClip.shortcut.value': 'Alt+Shift+C'
 } as const;

@@ -114,6 +114,16 @@ async function handleWindowCommand(request: InvokeRequest, context?: InvokeConte
   return undefined;
 }
 
+export function getDesktopHostCapabilities(
+  platform = process.platform,
+  packaged = app.isPackaged
+) {
+  return {
+    globalCaptureSupported: platform === 'win32',
+    loginItemSupported: platform === 'win32' && packaged
+  };
+}
+
 function handleUtilityCommand(request: InvokeRequest) {
   const args = (request.args ?? {}) as Record<string, unknown>;
 
@@ -143,6 +153,9 @@ function handleUtilityCommand(request: InvokeRequest) {
   }
   if (request.command === NATIVE_COMMANDS.listSystemFonts) {
     return listSystemFonts();
+  }
+  if (request.command === NATIVE_COMMANDS.loadDesktopHostCapabilities) {
+    return getDesktopHostCapabilities();
   }
   if (request.command === NATIVE_COMMANDS.loadLoginItemSettings) {
     return loadLoginItemSettingsState();

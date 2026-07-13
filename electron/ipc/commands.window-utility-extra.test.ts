@@ -240,8 +240,13 @@ it('handles window commands through invoke channel', async () => {
   expect(mockApp.exit).toHaveBeenCalledWith(0);
   expect(mockWindow.webContents.toggleDevTools).toHaveBeenCalledTimes(1);
   expect(mockWindow.maximize).toHaveBeenCalledTimes(1);
-  expect(mockWindow.hide).toHaveBeenCalledTimes(1);
-  expect(mockWindow.close).not.toHaveBeenCalled();
+  if (process.platform === 'win32') {
+    expect(mockWindow.hide).toHaveBeenCalledTimes(1);
+    expect(mockWindow.close).not.toHaveBeenCalled();
+  } else {
+    expect(mockWindow.hide).not.toHaveBeenCalled();
+    expect(mockWindow.close).toHaveBeenCalledTimes(1);
+  }
 });
 
 it('does not open DevTools from packaged native window command', async () => {

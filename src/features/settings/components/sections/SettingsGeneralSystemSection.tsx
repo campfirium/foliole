@@ -20,6 +20,9 @@ import { useLocalizedSettingsSearchRow } from '../useLocalizedSettingsSearchRows
 type Translate = ReturnType<typeof useTranslation>;
 
 function getOpenAtLoginDescription(state: RuntimeLoginItemSettingsState | null, t: Translate) {
+  if (state && !state.supported) {
+    return t('settings.general.openAtLogin.unsupported');
+  }
   if (state?.enabled && !state.effective) {
     return t('settings.general.openAtLogin.ineffective');
   }
@@ -61,7 +64,7 @@ function OpenAtLoginRow(props: {
           aria-checked={enabled}
           aria-label={t('settings.general.openAtLogin.aria')}
           className={settingsSwitchClassName(enabled)}
-          disabled={isUpdating}
+          disabled={isUpdating || !props.state.supported}
           onClick={() => void updateEnabled(!enabled)}
           role="switch"
           type="button"
@@ -94,7 +97,7 @@ export function SettingsGeneralSystemSection({ previewDesktopSettings = false }:
     };
   }, [previewDesktopSettings]);
 
-  if (!state?.supported) {
+  if (!state) {
     return null;
   }
 

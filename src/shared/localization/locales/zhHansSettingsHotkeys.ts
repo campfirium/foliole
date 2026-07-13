@@ -26,5 +26,7 @@ export const ZH_HANS_SETTINGS_HOTKEYS_TRANSLATIONS: Partial<Record<TranslationKe
   'settings.globalClip.shortcut.title': '捕捉到 Inbox（全局）',
   'settings.globalClip.shortcut.section': '捕捉',
   'settings.globalClip.shortcut.description': '捕捉当前选区、快速输入想法，或直接回车导入剪贴板。',
+  'settings.globalClip.shortcut.unsupported': 'macOS 暂不支持',
+  'settings.globalClip.shortcut.unavailable': '不可用',
   'settings.globalClip.shortcut.value': 'Alt+Shift+C'
 };

@@ -1,6 +1,7 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
+import type { NativeInvoke } from '../../../../lib/platform/nativeContract';
 import type { RuntimeKeyboardInputPayload } from '../../../shared/platform/nativeHotkeyRecordingRuntime';
 import type { HotkeySettingItem } from '../model/hotkeySettings';
 
@@ -69,7 +70,9 @@ function installNativeHotkeyApi() {
   let nativeKeyboardHandler: ((payload: RuntimeKeyboardInputPayload) => void) | null = null;
   const setNativeHotkeyRecordingActive = vi.fn();
   window.electronAPI = {
-    invoke: vi.fn(),
+    invoke: vi.fn(async (command: string) => command === 'load_desktop_host_capabilities'
+      ? { globalCaptureSupported: true, loginItemSupported: true }
+      : null) as unknown as NativeInvoke,
     onManagedInboxUpdated: vi.fn(() => () => undefined),
     onNativeKeyboardInput: vi.fn((handler) => {
       nativeKeyboardHandler = handler;
@@ -197,6 +200,7 @@ it('filters hotkeys across shortcut separator characters', async () => {
 });
 
 it('shows the global clip shortcut as the first hotkey row', async () => {
+  installNativeHotkeyApi();
   await renderHotkeyPanel();
 
   const rows = within(screen.getByLabelText('Command shortcut list')).getAllByRole('listitem');
@@ -206,4 +210,13 @@ it('shows the global clip shortcut as the first hotkey row', async () => {
   expect(within(rows[0]!).queryByRole('button')).not.toBeInTheDocument();
   expect(rows[1]).toHaveTextContent('Create Folder');
   expect(screen.queryByRole('switch', { name: 'Use current clipboard when nothing is selected' })).not.toBeInTheDocument();
+});
+
+it('marks the global clip shortcut unavailable when the desktop host does not support it', async () => {
+  await renderHotkeyPanel();
+
+  const rows = within(screen.getByLabelText('Command shortcut list')).getAllByRole('listitem');
+  await waitFor(() => expect(rows[0]).toHaveTextContent('Not available on macOS'));
+  expect(rows[0]).toHaveTextContent('Unavailable');
+  expect(rows[0]).not.toHaveTextContent('Alt+Shift+C');
 });

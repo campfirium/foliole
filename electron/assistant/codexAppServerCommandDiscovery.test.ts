@@ -5,7 +5,11 @@ import path from 'node:path';
 
 import { afterEach, expect, it } from 'vitest';
 
-import { findWindowsDesktopCodexCommands } from './codexAppServerCommandDiscovery.js';
+import {
+  findCodexCommandCandidates,
+  findMacosCodexCommands,
+  findWindowsDesktopCodexCommands
+} from './codexAppServerCommandDiscovery.js';
 
 const temporaryRoots: string[] = [];
 
@@ -31,6 +35,30 @@ it('finds newest validated-shape Desktop runtimes without using mutable helper l
 it('returns no Desktop candidates when LOCALAPPDATA or the bin directory is missing', async () => {
   await expect(findWindowsDesktopCodexCommands({})).resolves.toEqual([]);
   await expect(findWindowsDesktopCodexCommands({ LOCALAPPDATA: 'Z:\\missing' })).resolves.toEqual([]);
+});
+
+it('uses explicit configuration before controlled macOS candidates without a login shell', async () => {
+  const env = {
+    FOLIOLE_CODEX_COMMAND: '/Applications/Custom Codex/codex',
+    HOME: '/Users/tester',
+    PATH: '/usr/bin:/bin'
+  };
+
+  await expect(findCodexCommandCandidates(env, 'darwin')).resolves.toEqual([
+    '/Applications/Custom Codex/codex',
+    '/Applications/ChatGPT.app/Contents/Resources/codex',
+    '/Users/tester/.local/bin/codex',
+    '/opt/homebrew/bin/codex',
+    '/usr/local/bin/codex'
+  ]);
+});
+
+it('keeps the macOS candidate set bounded when HOME is unavailable', () => {
+  expect(findMacosCodexCommands({})).toEqual([
+    '/Applications/ChatGPT.app/Contents/Resources/codex',
+    '/opt/homebrew/bin/codex',
+    '/usr/local/bin/codex'
+  ]);
 });
 
 async function createCandidate(binRoot: string, directory: string, modifiedAt: number) {

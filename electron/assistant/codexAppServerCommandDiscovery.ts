@@ -17,8 +17,25 @@ export async function findCodexCommandCandidates(
   env: NodeJS.ProcessEnv,
   platform = process.platform
 ) {
+  const configuredCommand = env.FOLIOLE_CODEX_COMMAND?.trim();
   const desktopCommands = platform === 'win32' ? await findWindowsDesktopCodexCommands(env) : [];
-  return [...desktopCommands, 'codex'];
+  const macosCommands = platform === 'darwin' ? findMacosCodexCommands(env) : [];
+  return [...new Set([
+    ...(configuredCommand ? [configuredCommand] : []),
+    ...desktopCommands,
+    ...macosCommands,
+    ...(platform === 'darwin' ? [] : ['codex'])
+  ])];
+}
+
+export function findMacosCodexCommands(env: NodeJS.ProcessEnv) {
+  const home = env.HOME?.trim();
+  return [
+    '/Applications/ChatGPT.app/Contents/Resources/codex',
+    ...(home ? [path.join(home, '.local', 'bin', 'codex')] : []),
+    '/opt/homebrew/bin/codex',
+    '/usr/local/bin/codex'
+  ];
 }
 
 export async function findWindowsDesktopCodexCommands(env: NodeJS.ProcessEnv) {
