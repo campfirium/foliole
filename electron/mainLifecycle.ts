@@ -29,6 +29,7 @@ import { flushMirrorSync } from './mirror/mirrorSyncScheduler.js';
 import type { StartupRendererView } from './rendererLoader.js';
 import { bindEmbeddedLinkPanelContents, installMainRuntimeDiagnostics } from './runtimeMainSupport.js';
 import type { RuntimeMode } from './runtimeMode.js';
+import { restoreSecurityScopedBookmarks, stopSecurityScopedBookmarks } from './securityScopedBookmarks.js';
 import { loadStartupErrorSurface } from './startupErrorSurface.js';
 import { isDesktopCompanionSyncEnabled } from './sync/desktopCompanionSyncPreference.js';
 import { stopLanWorkspaceSyncServer } from './sync/lanWorkspaceSyncServer.js';
@@ -65,6 +66,7 @@ function installBeforeQuitLifecycle() {
     stopSearchIndexInvalidationScheduler();
     stopManagedInboxMonitor();
     stopKeepImportMonitor();
+    stopSecurityScopedBookmarks();
     disposeAssistantCommandAdapter();
     void stopDevScreenshotServer().catch((error) => appendMainProcessDiagnosticLog('dev_screenshot_stop_failed', { error }));
     void stopAgentControlApiServer().catch((error) => appendMainProcessDiagnosticLog('agent_control_stop_failed', { error }));
@@ -83,6 +85,7 @@ function installBeforeQuitLifecycle() {
 
 async function initializeRuntimeServices() {
   try {
+    restoreSecurityScopedBookmarks();
     await appendBootEvent('database_init_start');
     await appendBootEvent('database_initialize_call_start');
     initializeDatabase((stage, payload = null) => {

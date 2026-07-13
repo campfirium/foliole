@@ -29,6 +29,11 @@ const { trashItem } = vi.hoisted(() => ({
 const { notifyManagedInboxUpdated } = vi.hoisted(() => ({
   notifyManagedInboxUpdated: vi.fn()
 }));
+const { persistSecurityScopedBookmark, shouldRequestSecurityScopedBookmarks, showOpenDialog } = vi.hoisted(() => ({
+  persistSecurityScopedBookmark: vi.fn(),
+  shouldRequestSecurityScopedBookmarks: vi.fn(() => true),
+  showOpenDialog: vi.fn()
+}));
 
 vi.mock('../database/importPipeline.js', () => ({
   recordPreparedImportFailure,
@@ -42,9 +47,13 @@ vi.mock('../import/importRunLogger.js', () => ({
 vi.mock('./paths.js', () => ({ resolveAppPaths }));
 vi.mock('./libraryPaths.js', () => ({ loadLibraryPathSettings, loadLibraryPathSettingsSync }));
 vi.mock('../import/managedInboxEvents.js', () => ({ notifyManagedInboxUpdated }));
+vi.mock('../securityScopedBookmarks.js', () => ({
+  persistSecurityScopedBookmark,
+  shouldRequestSecurityScopedBookmarks
+}));
 vi.mock('electron', () => ({
   BrowserWindow: {},
-  dialog: { showOpenDialog: vi.fn() },
+  dialog: { showOpenDialog },
   shell: { trashItem }
 }));
 
@@ -168,6 +177,19 @@ it('imports markdown and HTML directories through the shared normalization and p
     })
   );
   expect(notifyManagedInboxUpdated.mock.calls[0]?.[0]).toEqual(expect.any(String));
+});
+
+it('persists the MAS bookmark returned by the directory picker', async () => {
+  const root = await createGenericImportRoot();
+  showOpenDialog.mockResolvedValue({ bookmarks: ['bookmark-data'], canceled: false, filePaths: [root] });
+
+  await expect(runDirectoryImport()).resolves.toMatchObject({ root_path: root });
+
+  expect(showOpenDialog).toHaveBeenCalledWith({
+    properties: ['openDirectory'],
+    securityScopedBookmarks: true
+  });
+  expect(persistSecurityScopedBookmark).toHaveBeenCalledWith(root, 'bookmark-data');
 });
 
 it('rejects renderer-provided directory paths that were not selected by the main process', async () => {

@@ -21,9 +21,12 @@ function writeMessage(process: FakeCodexProcess, message: unknown) {
 }
 
 it('uses the same sanitized launcher environment for status probes and app-server children', async () => {
-  const process = new FakeCodexProcess();
   const probeCommand = vi.fn<(command: string, options?: LauncherOptions) => Promise<boolean>>(async () => true);
-  const spawnCommand = vi.fn<(command: string, args: string[], options?: LauncherOptions) => FakeCodexProcess>(() => process);
+  const spawnCommand = vi.fn<(command: string, args: string[], options?: LauncherOptions) => FakeCodexProcess>(() => {
+    const process = new FakeCodexProcess();
+    process.stdin.on('data', (chunk) => respondToTurnProtocol(process, chunk));
+    return process;
+  });
   const adapter = new CodexAppServerAdapter({
     appVersion: '0.6.5-test',
     command: 'codex',
@@ -41,8 +44,6 @@ it('uses the same sanitized launcher environment for status probes and app-serve
     spawnCommand,
     timeoutMs: 1000
   });
-  process.stdin.on('data', (chunk) => respondToTurnProtocol(process, chunk));
-
   await adapter.getStatus();
   await adapter.sendMessage({ clientTurnId: 'client-1', message: 'Hi' });
 
@@ -86,10 +87,53 @@ it('maps launcher directory creation failures to launch_failed without probing o
   expect(spawnCommand).not.toHaveBeenCalled();
 });
 
+it('uses a signed bundled command without running candidate discovery probes', async () => {
+  const process = new FakeCodexProcess();
+  const mkdirSync = vi.fn();
+  const probeCommand = vi.fn(async () => false);
+  const spawnCommand = vi.fn(() => process);
+  const adapter = new CodexAppServerAdapter({
+    appVersion: '0.6.5-test',
+    command: '/Applications/Foliole.app/Contents/MacOS/codex',
+    env: { CODEX_HOME: '/Users/Tester/Library/Containers/Foliole/Codex' },
+    launcherCwd: TEST_LAUNCHER_CWD,
+    mkdirSync,
+    probeCommand,
+    spawnCommand,
+    trustConfiguredCommand: true
+  });
+  process.stdin.on('data', (chunk) => {
+    const message = JSON.parse(String(chunk));
+    if (message.method === 'initialize') writeMessage(process, { id: message.id, result: {} });
+    if (message.method === 'account/read') {
+      writeMessage(process, { id: message.id, result: { requiresOpenaiAuth: true } });
+    }
+  });
+
+  await expect(adapter.getStatus()).resolves.toMatchObject({
+    failure: { category: 'auth_failed' },
+    state: 'unavailable'
+  });
+  expect(probeCommand).not.toHaveBeenCalled();
+  expect(mkdirSync).toHaveBeenCalledWith(TEST_LAUNCHER_CWD, { recursive: true });
+  expect(mkdirSync).toHaveBeenCalledWith(
+    '/Users/Tester/Library/Containers/Foliole/Codex',
+    { recursive: true }
+  );
+  expect(spawnCommand).toHaveBeenCalledWith(
+    '/Applications/Foliole.app/Contents/MacOS/codex',
+    ['app-server'],
+    expect.objectContaining({ cwd: TEST_LAUNCHER_CWD })
+  );
+});
+
 function respondToTurnProtocol(process: FakeCodexProcess, chunk: Buffer) {
   for (const line of chunk.toString().trim().split('\n').filter(Boolean)) {
     const message = JSON.parse(line);
     if (message.id === 0) writeMessage(process, { id: 0, result: {} });
+    if (message.method === 'account/read') {
+      writeMessage(process, { id: message.id, result: { requiresOpenaiAuth: false } });
+    }
     if (message.method === 'thread/start')
       writeMessage(process, { id: message.id, result: { thread: { id: 'thr_1' } } });
     if (message.method === 'turn/start') {

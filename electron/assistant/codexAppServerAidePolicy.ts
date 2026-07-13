@@ -2,8 +2,14 @@ export function createAideThreadStartParams(cwd: string) {
   return {
     approvalPolicy: 'never',
     cwd,
-    sandbox: 'workspaceWrite'
+    sandbox: 'workspace-write'
   };
+}
+
+export function createAideThreadRequest(id: number, cwd: string, providerThreadId?: string) {
+  return providerThreadId
+    ? { id, method: 'thread/resume', params: { threadId: providerThreadId } }
+    : { id, method: 'thread/start', params: createAideThreadStartParams(cwd) };
 }
 
 export function createAideTurnStartParams(cwd: string, threadId: string, userMessage: string) {

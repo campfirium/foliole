@@ -71,7 +71,7 @@ it('keeps the composer hidden when the Codex check is unavailable', async () => 
   fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
 
   expect(await screen.findByRole('button', { name: 'Retry' })).toBeInTheDocument();
-  expect(screen.getByText('Foliole Aide is not configured for the local Codex app yet.')).toBeInTheDocument();
+  expect(screen.getByText('Foliole Aide is not available in this build.')).toBeInTheDocument();
   expect(screen.queryByLabelText('Foliole Aide message')).not.toBeInTheDocument();
   expect(assistantRuntime.listAssistantThreadIndex).not.toHaveBeenCalled();
 });
@@ -83,7 +83,7 @@ it('shows Retry when the Codex check fails before returning a status', async () 
   fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
 
   expect(await screen.findByRole('button', { name: 'Retry' })).toBeEnabled();
-  expect(screen.getByText('Foliole Aide cannot connect to the local Codex app. Open Codex, then try again.')).toBeInTheDocument();
+  expect(screen.getByText('Foliole Aide is unavailable right now. Try again.')).toBeInTheDocument();
   expect(screen.queryByLabelText('Foliole Aide message')).not.toBeInTheDocument();
   expect(assistantRuntime.listAssistantThreadIndex).not.toHaveBeenCalled();
 });
@@ -100,7 +100,7 @@ it('requires the sendMessage capability before showing the composer', async () =
   fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
 
   expect(await screen.findByRole('button', { name: 'Retry' })).toBeInTheDocument();
-  expect(screen.getByText('The local Codex app is reachable, but message sending is not available.')).toBeInTheDocument();
+  expect(screen.getByText('Foliole Aide cannot send messages right now.')).toBeInTheDocument();
   expect(screen.queryByLabelText('Foliole Aide message')).not.toBeInTheDocument();
   expect(assistantRuntime.listAssistantThreadIndex).not.toHaveBeenCalled();
 });
@@ -117,7 +117,7 @@ it('keeps the composer hidden when Foliole tools are not ready', async () => {
   renderPanel();
   fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
 
-  expect(await screen.findByText('Foliole Aide is connected to Codex, but Foliole tools are not ready yet.')).toBeInTheDocument();
+  expect(await screen.findByText('Foliole Aide is connected, but Foliole tools are not ready yet.')).toBeInTheDocument();
   expect(screen.getByText('Check result: Codex is unavailable; Foliole tools failed.')).toBeInTheDocument();
   expect(screen.queryByLabelText('Foliole Aide message')).not.toBeInTheDocument();
   expect(assistantRuntime.listAssistantThreadIndex).not.toHaveBeenCalled();
@@ -144,7 +144,7 @@ it('reloads local history after Retry recovers Foliole Aide', async () => {
 
   renderPanel();
   fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
-  expect(await screen.findByText('Foliole Aide is connected to Codex, but Foliole tools are not ready yet.')).toBeInTheDocument();
+  expect(await screen.findByText('Foliole Aide is connected, but Foliole tools are not ready yet.')).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
 
@@ -165,7 +165,7 @@ it('requires running Foliole tools even when Codex reports message sending ready
   renderPanel();
   fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
 
-  expect(await screen.findByText('Foliole Aide is connected to Codex, but Foliole tools are not ready yet.')).toBeInTheDocument();
+  expect(await screen.findByText('Foliole Aide is connected, but Foliole tools are not ready yet.')).toBeInTheDocument();
   expect(screen.queryByLabelText('Foliole Aide message')).not.toBeInTheDocument();
   expect(assistantRuntime.listAssistantThreadIndex).not.toHaveBeenCalled();
 });
@@ -187,7 +187,8 @@ it('shows an auth-specific unavailable reason when Codex rejects the session', a
   renderPanel();
   fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
 
-  expect(await screen.findByText('Open Codex and sign in, then retry Foliole Aide.')).toBeInTheDocument();
+  expect(await screen.findByText('Sign in with OpenAI in your browser to use Foliole Aide.')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Sign in with OpenAI' })).toBeInTheDocument();
   expect(screen.getByText('Check result: Codex needs sign-in; Foliole tools running.')).toBeInTheDocument();
   expect(screen.queryByLabelText('Foliole Aide message')).not.toBeInTheDocument();
 });

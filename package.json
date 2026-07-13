@@ -91,6 +91,8 @@
     "electron:native:health": "node scripts/run-electron-native-health.mjs",
     "electron:rebuild:native": "electron-rebuild -f -w better-sqlite3",
     "electron:build": "npm run build && npm run electron:compile && electron-builder --config electron/builder.json",
+    "macos:mas:dev": "node scripts/macos/package-mas.mjs",
+    "macos:mas:distribution": "node scripts/macos/package-mas.mjs --distribution",
     "windows:package": "node scripts/windows/package-windows.mjs",
     "windows:package:install": "node scripts/windows/package-windows.mjs --install",
     "windows:package:internal": "node scripts/windows/package-windows.mjs --internal",

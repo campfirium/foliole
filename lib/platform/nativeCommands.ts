@@ -2,6 +2,7 @@ export const NATIVE_COMMANDS = {
   appGetVersion: 'app_get_version',
   appendReadingPositionTraceLog: 'append_reading_position_trace_log',
   assistantGetStatus: 'assistant_get_status',
+  assistantStartChatGptLogin: 'assistant_start_chatgpt_login',
   assistantSendMessage: 'assistant_send_message',
   assistantListThreadIndex: 'assistant_list_thread_index',
   assistantListThreadMessages: 'assistant_list_thread_messages',

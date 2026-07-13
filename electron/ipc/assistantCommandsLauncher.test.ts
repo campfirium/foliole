@@ -50,7 +50,8 @@ it('creates the adapter cwd from the runtime library home when available', async
   await handleAssistantCommand(NATIVE_COMMANDS.assistantGetStatus, {});
 
   expect(adapterOptions[0]).toMatchObject({
-    launcherCwd: path.join(libraryHome, 'Widgets', 'Foliole Aide')
+    launcherCwd: path.join(libraryHome, 'Widgets', 'Foliole Aide'),
+    trustConfiguredCommand: false
   });
 });
 

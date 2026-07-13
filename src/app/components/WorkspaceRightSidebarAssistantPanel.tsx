@@ -39,6 +39,7 @@ export function WorkspaceRightSidebarAssistantPanel(props: {
         <FolioleAideCapabilityGate
           onEnable={capability.enable}
           onRetry={capability.retry}
+          onSignIn={capability.signIn}
           diagnostic={capability.diagnostic}
           reason={capability.unavailableReason}
           state={capability.state}
@@ -59,13 +60,16 @@ function FolioleAideCapabilityGate(props: {
   diagnostic: FolioleAideCapabilityDiagnostic | null;
   onEnable: () => void;
   onRetry: () => void;
+  onSignIn: () => void;
   reason: FolioleAideCapabilityUnavailableReason | null;
   state: FolioleAideCapabilityState;
 }) {
   const t = useTranslation();
   const checking = props.state === 'checking';
   const enabled = props.state !== 'notEnabled';
-  const action = enabled ? props.onRetry : props.onEnable;
+  const action = props.reason === 'auth_failed'
+    ? props.onSignIn
+    : enabled ? props.onRetry : props.onEnable;
   const statusKey = getCapabilityStatusKey(props.state, props.reason);
   return (
     <section className={`${inspectorListInsetPaddingClassName} flex flex-1 items-center justify-center py-10`}>
@@ -101,7 +105,7 @@ function FolioleAideCapabilityGate(props: {
           size="md"
           type="button"
         >
-          {t(getCapabilityActionKey(props.state))}
+          {t(getCapabilityActionKey(props.state, props.reason))}
         </AppButton>
       </div>
     </section>
@@ -158,8 +162,12 @@ function getCapabilityStatusKey(
   return 'desktop.rightPanel.assistant.unavailable';
 }
 
-function getCapabilityActionKey(state: FolioleAideCapabilityState) {
+function getCapabilityActionKey(
+  state: FolioleAideCapabilityState,
+  reason: FolioleAideCapabilityUnavailableReason | null
+) {
   if (state === 'checking') return 'desktop.rightPanel.assistant.checkingAction';
+  if (reason === 'auth_failed') return 'desktop.rightPanel.assistant.signIn';
   if (state === 'unavailable') return 'desktop.rightPanel.assistant.retry';
   if (state === 'needsCheck') return 'desktop.rightPanel.assistant.check';
   return 'desktop.rightPanel.assistant.check';

@@ -4,7 +4,10 @@ import type {
   NativeAssistantFailureCategory,
   NativeAssistantStatusResult
 } from '../../../lib/platform/nativeAssistantContract';
-import { loadAssistantStatus } from '../../shared/platform/assistantRuntime';
+import {
+  loadAssistantStatus,
+  startAssistantChatGptLogin
+} from '../../shared/platform/assistantRuntime';
 import {
   getFolioleAideEnabled,
   setFolioleAideEnabled,
@@ -49,25 +52,7 @@ export function useFolioleAideCapability() {
     []
   );
 
-  const check = useCallback(async () => {
-    setState('checking');
-    setUnavailableReason(null);
-    setDiagnostic(null);
-    try {
-      const status = await loadAssistantStatus();
-      setDiagnostic(readDiagnostic(status));
-      if (isAssistantReady(status)) {
-        setState('ready');
-        return;
-      }
-      setUnavailableReason(readUnavailableReason(status));
-      setState('unavailable');
-    } catch {
-      setDiagnostic({ codex: 'unknown', tools: 'unknown' });
-      setUnavailableReason('statusFailed');
-      setState('unavailable');
-    }
-  }, []);
+  const check = useAssistantStatusCheck(setDiagnostic, setState, setUnavailableReason);
 
   useAutoCheckEnabledAide(enabled, state, check);
 
@@ -76,6 +61,8 @@ export function useFolioleAideCapability() {
     setEnabled(true);
     await check();
   }, [check]);
+
+  const signIn = useAssistantSignIn(check, setDiagnostic, setState, setUnavailableReason);
 
   const markUnavailableFromFailure = useCallback((category: NativeAssistantFailureCategory) => {
     if (!isCapabilityFailureCategory(category)) return;
@@ -93,10 +80,55 @@ export function useFolioleAideCapability() {
       ready: state === 'ready',
       unavailableReason,
       retry: check,
+      signIn,
       state
     }),
-    [check, diagnostic, enable, enabled, markUnavailableFromFailure, state, unavailableReason]
+    [check, diagnostic, enable, enabled, markUnavailableFromFailure, signIn, state, unavailableReason]
   );
+}
+
+function useAssistantStatusCheck(
+  setDiagnostic: (value: FolioleAideCapabilityDiagnostic | null) => void,
+  setState: (value: FolioleAideCapabilityState) => void,
+  setUnavailableReason: (value: FolioleAideCapabilityUnavailableReason | null) => void
+) {
+  return useCallback(async () => {
+    setState('checking');
+    setUnavailableReason(null);
+    setDiagnostic(null);
+    try {
+      const status = await loadAssistantStatus();
+      setDiagnostic(readDiagnostic(status));
+      if (isAssistantReady(status)) {
+        setState('ready');
+        return;
+      }
+      setUnavailableReason(readUnavailableReason(status));
+      setState('unavailable');
+    } catch {
+      setDiagnostic({ codex: 'unknown', tools: 'unknown' });
+      setUnavailableReason('statusFailed');
+      setState('unavailable');
+    }
+  }, [setDiagnostic, setState, setUnavailableReason]);
+}
+
+function useAssistantSignIn(
+  check: () => Promise<void>,
+  setDiagnostic: (value: FolioleAideCapabilityDiagnostic | null) => void,
+  setState: (value: FolioleAideCapabilityState) => void,
+  setUnavailableReason: (value: FolioleAideCapabilityUnavailableReason | null) => void
+) {
+  return useCallback(async () => {
+    setState('checking');
+    setUnavailableReason(null);
+    const result = await startAssistantChatGptLogin().catch(() => null);
+    if (result?.state === 'ready') return check();
+    const category = result?.failure?.category ?? 'auth_failed';
+    setDiagnostic(createFailureDiagnostic(category, null));
+    setUnavailableReason(category);
+    setState('unavailable');
+  }, [check, setDiagnostic, setState, setUnavailableReason]);
 }
 
 function readInitialState(enabled: boolean): FolioleAideCapabilityState {

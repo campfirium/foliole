@@ -7,7 +7,7 @@ import type {
   NativeAssistantWorkspaceContext
 } from '../../lib/platform/nativeAssistantContract.js';
 
-import { createAideThreadStartParams, createAideTurnStartParams } from './codexAppServerAidePolicy.js';
+import { createAideThreadRequest, createAideTurnStartParams } from './codexAppServerAidePolicy.js';
 import {
   CODEX_APP_SERVER_PROVIDER,
   composeAssistantTurnInput,
@@ -21,6 +21,7 @@ import {
   type JsonRpcMessage
 } from './codexAppServerProtocol.js';
 import type { SpawnedCodexProcess, TurnState } from './codexAppServerSessionTypes.js';
+import { CodexAppServerTurnDiagnostics } from './codexAppServerTurnDiagnostics.js';
 import { emitCodexAppServerTurnEvent } from './codexAppServerTurnEvents.js';
 
 export class CodexAppServerSession {
@@ -32,6 +33,7 @@ export class CodexAppServerSession {
   private initializedResolve: (() => void) | null = null;
   private nextId = 1;
   private rl: readline.Interface | null = null;
+  private readonly diagnostics = new CodexAppServerTurnDiagnostics();
   constructor(
     private readonly args: {
       appVersion: string;
@@ -68,15 +70,7 @@ export class CodexAppServerSession {
         timeout,
         userMessage: composeAssistantTurnInput(args.message, args.workspaceContext)
       };
-      this.write(
-        args.providerThreadId
-          ? { id: threadRequestId, method: 'thread/resume', params: { threadId: args.providerThreadId } }
-          : {
-              id: threadRequestId,
-              method: 'thread/start',
-              params: createAideThreadStartParams(this.args.launcherCwd)
-            }
-      );
+      this.write(createAideThreadRequest(threadRequestId, this.args.launcherCwd, args.providerThreadId));
     });
   }
 
@@ -96,12 +90,14 @@ export class CodexAppServerSession {
   private ensureInitialized() {
     if (this.initialized) return this.initialized;
     this.child = this.args.spawn();
-    this.rl = readline.createInterface({ input: this.child.stdout });
-    this.child.on('error', () => this.failActiveTurn('not_configured', true));
-    this.child.on('exit', (code) => {
-      this.failActiveTurn(code === 0 ? 'interrupted' : 'launch_failed', false);
-      this.resetSession(false);
+    this.diagnostics.attach(this.child, {
+      onError: () => this.failActiveTurn('not_configured', true),
+      onExit: (code) => {
+        this.failActiveTurn(code === 0 ? 'interrupted' : 'launch_failed', false);
+        this.resetSession(false);
+      }
     });
+    this.rl = readline.createInterface({ input: this.child.stdout });
     this.rl.on('line', (line) => this.handleLine(line));
     this.initialized = new Promise((resolve, reject) => {
       this.initializedResolve = resolve;
@@ -120,6 +116,7 @@ export class CodexAppServerSession {
   }
   private handleMessage(message: JsonRpcMessage) {
     if (message.error) {
+      this.diagnostics.logProtocolError(message.error);
       this.failActiveTurn(mapJsonRpcError(message.error), true);
       return;
     }

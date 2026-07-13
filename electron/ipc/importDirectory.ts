@@ -9,6 +9,10 @@ import { logDirectoryImportCompleted, logDirectoryImportFailed } from '../import
 import { notifyManagedInboxUpdated } from '../import/managedInboxEvents.js';
 import { assertMirrorSeparatedFromImportPath, assertNoUnsafePathOverlap } from '../libraryPathSafety.js';
 import { loadManagedPathCandidates } from '../managedPathSafety.js';
+import {
+  persistSecurityScopedBookmark,
+  shouldRequestSecurityScopedBookmarks
+} from '../securityScopedBookmarks.js';
 
 import {
   assertAuthorizedImportDirectoryPath,
@@ -60,14 +64,21 @@ async function selectImportDirectoryPath(window?: BrowserWindow | null, args?: N
   }
 
   const selection = window
-    ? await dialog.showOpenDialog(window, { properties: ['openDirectory'] })
-    : await dialog.showOpenDialog({ properties: ['openDirectory'] });
+    ? await dialog.showOpenDialog(window, {
+        properties: ['openDirectory'],
+        securityScopedBookmarks: shouldRequestSecurityScopedBookmarks()
+      })
+    : await dialog.showOpenDialog({
+        properties: ['openDirectory'],
+        securityScopedBookmarks: shouldRequestSecurityScopedBookmarks()
+      });
 
   if (selection.canceled || selection.filePaths.length === 0) {
     return null;
   }
   const selectedPath = selection.filePaths[0] ?? null;
   if (selectedPath) {
+    persistSecurityScopedBookmark(selectedPath, selection.bookmarks?.[0]);
     await authorizeSelectedImportDirectoryPath(selectedPath);
   }
   return selectedPath;

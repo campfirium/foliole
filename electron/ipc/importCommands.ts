@@ -13,6 +13,10 @@ import {
 } from '../import/readwiseImportCleanup.js';
 import { cancelReadwiseReaderImport, runReadwiseReaderImport } from '../import/readwiseReaderImportRun.js';
 import { previewReadwiseReaderImport } from '../import/readwiseSyncPreview.js';
+import {
+  persistSecurityScopedBookmark,
+  shouldRequestSecurityScopedBookmarks
+} from '../securityScopedBookmarks.js';
 
 import { asString } from './commandParsers.js';
 import type { InvokeContext } from './commands.js';
@@ -70,13 +74,20 @@ function notifyIfDirectoryImportChanged(result: Awaited<ReturnType<typeof runDir
 async function selectImportDirectory(context?: InvokeContext) {
   const window = resolveTargetWindow(context);
   const selection = window
-    ? await dialog.showOpenDialog(window, { properties: ['openDirectory'] })
-    : await dialog.showOpenDialog({ properties: ['openDirectory'] });
+    ? await dialog.showOpenDialog(window, {
+        properties: ['openDirectory'],
+        securityScopedBookmarks: shouldRequestSecurityScopedBookmarks()
+      })
+    : await dialog.showOpenDialog({
+        properties: ['openDirectory'],
+        securityScopedBookmarks: shouldRequestSecurityScopedBookmarks()
+      });
   if (selection.canceled || selection.filePaths.length === 0) {
     return null;
   }
   const selectedPath = selection.filePaths[0] ?? null;
   if (selectedPath) {
+    persistSecurityScopedBookmark(selectedPath, selection.bookmarks?.[0]);
     await authorizeSelectedImportDirectoryPath(selectedPath);
   }
   return selectedPath;

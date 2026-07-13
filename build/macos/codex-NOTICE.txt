@@ -1,0 +1,8 @@
+Foliole includes the Codex CLI app-server helper from OpenAI.
+
+Project: https://github.com/openai/codex
+Bundled version: 0.144.3
+License: Apache License 2.0 (see codex/LICENSE in the application resources)
+
+Codex and OpenAI are trademarks of their respective owners. Foliole is not
+affiliated with or endorsed by OpenAI.

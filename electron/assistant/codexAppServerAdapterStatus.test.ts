@@ -45,6 +45,7 @@ function createStatusAdapter(options: Partial<ConstructorParameters<typeof Codex
     appVersion: '0.6.5-test',
     launcherCwd: TEST_LAUNCHER_CWD,
     mkdirSync: testMkdirSync,
+    readAccountState: async () => 'authenticated',
     ...options
   });
 }

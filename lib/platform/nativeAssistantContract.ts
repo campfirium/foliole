@@ -178,6 +178,11 @@ export interface NativeAssistantSendMessageResult {
   threadIndex?: NativeAssistantThreadIndexRecord;
 }
 
+export type NativeAssistantLoginResult = Pick<
+  NativeAssistantSendMessageResult,
+  'failure' | 'provider' | 'state'
+>;
+
 export type NativeAssistantTurnEventKind = 'completed' | 'delta' | 'failed' | 'started';
 
 export interface NativeAssistantTurnEvent {
@@ -194,6 +199,10 @@ export type NativeAssistantCommandMap = {
   [NATIVE_COMMANDS.assistantGetStatus]: {
     args: undefined;
     result: NativeAssistantStatusResult;
+  };
+  [NATIVE_COMMANDS.assistantStartChatGptLogin]: {
+    args: undefined;
+    result: NativeAssistantLoginResult;
   };
   [NATIVE_COMMANDS.assistantSendMessage]: {
     args: NativeAssistantSendMessageArgs;

@@ -72,28 +72,28 @@ export const EN_DESKTOP_NAVIGATION_TRANSLATIONS = {
   'desktop.rightPanel.aria': '{label} panel',
   'desktop.rightPanel.assistant.description': 'Use Codex inside Foliole.',
   'desktop.rightPanel.assistant.codexDescription':
-    'Requires Codex installed and signed in.',
+    'Requires an OpenAI sign-in.',
   'desktop.rightPanel.assistant.quotaDescription':
-    'Uses your Codex quota. Conversations also appear in Codex.',
-  'desktop.rightPanel.assistant.checking': 'Connecting to your local Codex app...',
+    'Uses your Codex quota. Foliole Aide history stays in Foliole.',
+  'desktop.rightPanel.assistant.checking': 'Connecting Foliole Aide...',
   'desktop.rightPanel.assistant.unavailable':
-    'Foliole Aide cannot connect to the local Codex app. Open Codex, then try again.',
+    'Foliole Aide is unavailable right now. Try again.',
   'desktop.rightPanel.assistant.unavailable.agentControl':
-    'Foliole Aide is connected to Codex, but Foliole tools are not ready yet.',
+    'Foliole Aide is connected, but Foliole tools are not ready yet.',
   'desktop.rightPanel.assistant.unavailable.authFailed':
-    'Open Codex and sign in, then retry Foliole Aide.',
+    'Sign in with OpenAI in your browser to use Foliole Aide.',
   'desktop.rightPanel.assistant.unavailable.busy':
     'Codex is busy right now. Wait a moment, then try again.',
   'desktop.rightPanel.assistant.unavailable.interrupted':
     'Foliole Aide connection ended before the reply. Retry to reconnect.',
   'desktop.rightPanel.assistant.unavailable.launchFailed':
-    'Foliole Aide could not start the local Codex connection.',
+    'Foliole Aide could not start. Try again.',
   'desktop.rightPanel.assistant.unavailable.missingSendMessage':
-    'The local Codex app is reachable, but message sending is not available.',
+    'Foliole Aide cannot send messages right now.',
   'desktop.rightPanel.assistant.unavailable.missingThreadIndex':
     'Foliole Aide cannot load local history right now.',
   'desktop.rightPanel.assistant.unavailable.notConfigured':
-    'Foliole Aide is not configured for the local Codex app yet.',
+    'Foliole Aide is not available in this build.',
   'desktop.rightPanel.assistant.diagnostic':
     'Check result: Codex {codex}; Foliole tools {tools}.',
   'desktop.rightPanel.assistant.diagnostic.codex.authFailed': 'needs sign-in',
@@ -110,6 +110,7 @@ export const EN_DESKTOP_NAVIGATION_TRANSLATIONS = {
   'desktop.rightPanel.assistant.enable': 'Connect',
   'desktop.rightPanel.assistant.check': 'Connect',
   'desktop.rightPanel.assistant.retry': 'Retry',
+  'desktop.rightPanel.assistant.signIn': 'Sign in with OpenAI',
   'desktop.rightPanel.assistant.checkingAction': 'Connecting...',
   'desktop.rightPanel.assistant.threads': 'Local Foliole Aide history',
   'desktop.rightPanel.assistant.loading': 'Loading local Foliole Aide history...',

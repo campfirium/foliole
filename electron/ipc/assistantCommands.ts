@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import { app, type WebContents } from 'electron';
+import { app, shell, type WebContents } from 'electron';
 
 import type {
   NativeAssistantThreadOpeningLocation,
@@ -39,12 +39,30 @@ const LEGACY_ASSISTANT_DELETE_THREAD_INDEX_COMMAND = 'assistant_delete_thread_in
 
 function getAdapter() {
   const scriptRoot = resolveAssistantAgentControlScriptRoot();
+  const packagedCommand = resolvePackagedMacosCodexCommand();
   adapter ??= new CodexAppServerAdapter({
     appVersion: resolveFolioleAppVersion(app),
-    env: resolveAssistantLauncherEnv(process.env, scriptRoot),
-    launcherCwd: resolveAssistantLauncherCwd(app.getPath('userData'), process.env)
+    ...(packagedCommand ? { command: packagedCommand } : {}),
+    env: resolveAssistantEnvironment(scriptRoot),
+    openExternal: (url) => shell.openExternal(url),
+    launcherCwd: resolveAssistantLauncherCwd(app.getPath('userData'), process.env),
+    trustConfiguredCommand: packagedCommand !== undefined
   });
   return adapter;
+}
+
+function resolvePackagedMacosCodexCommand() {
+  return app.isPackaged && process.platform === 'darwin'
+    ? path.join(process.resourcesPath, '..', 'MacOS', 'codex')
+    : undefined;
+}
+
+function resolveAssistantEnvironment(scriptRoot: string) {
+  const env = resolveAssistantLauncherEnv(process.env, scriptRoot);
+  if (app.isPackaged && process.platform === 'darwin') {
+    env.CODEX_HOME = path.join(app.getPath('userData'), 'Codex');
+  }
+  return env;
 }
 
 function resolveAssistantAgentControlScriptRoot() {
@@ -63,6 +81,7 @@ export async function handleAssistantCommand(
   sender?: WebContents
 ) {
   if (command === NATIVE_COMMANDS.assistantGetStatus) return getAssistantStatus();
+  if (command === NATIVE_COMMANDS.assistantStartChatGptLogin) return getAdapter().startChatGptLogin();
   if (command === NATIVE_COMMANDS.assistantSendMessage) return sendMessage(args, sender);
   if (command === NATIVE_COMMANDS.assistantListThreadIndex) {
     const location = readOpeningLocation(args.location);
