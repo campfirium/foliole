@@ -106,9 +106,9 @@ it('copies automatic backups into the extra location without blocking primary re
   });
   await writeSidecarSentinels();
 
-  await reconcileAutomaticDatabaseBackups(new Date('2026-04-02T10:15:00.000Z'));
+  await reconcileAutomaticDatabaseBackups(new Date(2026, 3, 2, 10, 15, 0));
 
-  await expect(fs.stat(path.join(extraDir, 'auto-daily-2026-04-02_10-15-00-000.db'))).resolves.toBeDefined();
+  await expect(fs.stat(path.join(extraDir, 'foliole-auto-backup-260402-101500.db'))).resolves.toBeDefined();
   await expect(fs.access(path.join(extraDir, 'foliole-external.db'))).rejects.toMatchObject({ code: 'ENOENT' });
   await expect(fs.access(path.join(extraDir, path.basename(openDatabaseConnection().searchDbPath)))).rejects.toMatchObject({ code: 'ENOENT' });
   await expectBackupDirectoryExcludesSidecars(resolveManagedBackupDirectory(loadBackupSettings()));

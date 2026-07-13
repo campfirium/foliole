@@ -1,3 +1,4 @@
+import { existsSync, promises as fs } from 'node:fs';
 import path from 'node:path';
 
 import {
@@ -5,6 +6,8 @@ import {
   pruneManagedDatabaseBackups,
   type ApplicationDatabaseBackupEntry
 } from './backupCatalog.js';
+import { showBackupCleanupNotification } from './backupCleanupNotification.js';
+import { finestEnabledFrequency, frequencyBucketKey } from './backupRetentionPolicy.js';
 import {
   ensureManagedBackupDirectory,
   loadBackupSettings,
@@ -34,9 +37,6 @@ export interface RestoreApplicationDatabaseBackupOptions {
   sourcePath: string;
 }
 
-const AUTO_FREQUENCIES = ['hourly', 'daily', 'weekly', 'monthly'] as const;
-type AutoFrequency = (typeof AUTO_FREQUENCIES)[number];
-
 export type { ApplicationDatabaseBackupEntry } from './backupCatalog.js';
 
 function backupFileTimestamp(now: Date) {
@@ -47,64 +47,36 @@ function buildManagedBackupPath(prefix: string, now: Date, backupDirectory = res
   return path.join(backupDirectory, `${prefix}-${backupFileTimestamp(now)}.db`);
 }
 
-function startOfUtcHour(date: Date) {
-  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), date.getUTCHours());
+function pad(value: number) {
+  return String(value).padStart(2, '0');
 }
 
-function startOfUtcDay(date: Date) {
-  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
-}
-
-function startOfUtcWeek(date: Date) {
-  const day = date.getUTCDay();
-  const distance = (day + 6) % 7;
-  return startOfUtcDay(new Date(startOfUtcDay(date) - distance * 24 * 60 * 60 * 1000));
-}
-
-function startOfUtcMonth(date: Date) {
-  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1);
-}
-
-function resolveFrequencyBucket(now: Date, frequency: AutoFrequency) {
-  if (frequency === 'hourly') {
-    return new Date(startOfUtcHour(now)).toISOString();
-  }
-  if (frequency === 'daily') {
-    return new Date(startOfUtcDay(now)).toISOString();
-  }
-  if (frequency === 'weekly') {
-    return new Date(startOfUtcWeek(now)).toISOString();
-  }
-  return new Date(startOfUtcMonth(now)).toISOString();
-}
-
-function isAutoFrequencyEnabled(frequency: AutoFrequency, settings = loadBackupSettings()) {
-  if (frequency === 'hourly') {
-    return settings.auto_hourly_hours > 0;
-  }
-  if (frequency === 'daily') {
-    return settings.auto_daily_days > 0;
-  }
-  if (frequency === 'weekly') {
-    return settings.auto_weekly_weeks > 0;
-  }
-  return settings.auto_monthly_months > 0;
+function automaticBackupFileName(now: Date) {
+  const date = `${pad(now.getFullYear() % 100)}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
+  const time = `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+  return `foliole-auto-backup-${date}-${time}.db`;
 }
 
 async function pruneBackupsNow(now = new Date()) {
   const settings = loadBackupSettings();
-  await pruneManagedDatabaseBackups(resolveManagedBackupDirectory(settings), settings, now);
+  const result = await pruneManagedDatabaseBackups(resolveManagedBackupDirectory(settings), settings, now);
+  showBackupCleanupNotification(result);
 }
 
-async function createAutomaticBackupForFrequency(frequency: AutoFrequency, now: Date) {
+async function createAutomaticBackup(now: Date, backupDirectory: string) {
   const settings = loadBackupSettings();
-  const backupDirectory = resolveManagedBackupDirectory(settings);
+  const destinationPath = path.join(backupDirectory, automaticBackupFileName(now));
+  if (existsSync(destinationPath)) {
+    console.warn('[backup] automatic restore point already exists', destinationPath);
+    return;
+  }
   const connection = openDatabaseConnection();
   const result = await backupSqliteDatabase({
-    destinationPath: buildManagedBackupPath(`auto-${frequency}`, now, backupDirectory),
+    destinationPath,
     sourceDatabase: connection.sqlite,
     sourcePath: connection.dbPath
   });
+  await fs.utimes(result.destinationPath, now, now);
   await copyExtraBackup({
     extraBackupDir: settings.extra_backup_dir,
     maxCount: settings.extra_backup_max_count,
@@ -118,23 +90,19 @@ export async function reconcileAutomaticDatabaseBackups(now = new Date()) {
   const backupDirectory = ensureManagedBackupDirectory(settings);
   const existingEntries = await listManagedDatabaseBackups(backupDirectory);
 
-  for (const frequency of AUTO_FREQUENCIES) {
-    if (!isAutoFrequencyEnabled(frequency, settings)) {
-      continue;
-    }
-    const currentBucket = resolveFrequencyBucket(now, frequency);
-    const alreadyExists = existingEntries.some(
-      (entry) =>
+  const cadence = finestEnabledFrequency(settings);
+  const alreadyExists = cadence
+    ? existingEntries.some((entry) =>
         entry.kind === 'automatic' &&
-        entry.autoFrequency === frequency &&
-        resolveFrequencyBucket(new Date(entry.updatedAt), frequency) === currentBucket
-    );
-    if (!alreadyExists) {
-      await createAutomaticBackupForFrequency(frequency, now);
-    }
+        frequencyBucketKey(new Date(entry.updatedAt), cadence) === frequencyBucketKey(now, cadence)
+      )
+    : true;
+  if (!alreadyExists) {
+    await createAutomaticBackup(now, backupDirectory);
   }
 
-  await pruneManagedDatabaseBackups(backupDirectory, settings, now);
+  const pruneResult = await pruneManagedDatabaseBackups(backupDirectory, settings, now);
+  showBackupCleanupNotification(pruneResult);
 }
 
 export async function createApplicationDatabaseBackup(

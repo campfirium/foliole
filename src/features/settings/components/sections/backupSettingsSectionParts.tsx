@@ -32,11 +32,7 @@ type Translate = ReturnType<typeof useTranslation>;
 
 function describeBackupKind(entry: DatabaseBackupEntry, t: Translate) {
   if (entry.kind === 'manual') return t('settings.backups.kind.manual');
-  if (entry.kind === 'automatic') {
-    return entry.autoFrequency
-      ? t('settings.backups.kind.autoWithFrequency', { frequency: entry.autoFrequency })
-      : t('settings.backups.kind.auto');
-  }
+  if (entry.kind === 'automatic') return t('settings.backups.kind.auto');
   if (entry.snapshotReason === 'pre-restore') return t('settings.backups.kind.preRestore');
   if (entry.snapshotReason === 'pre-migration') return t('settings.backups.kind.preMigration');
   return t('settings.backups.kind.snapshot');

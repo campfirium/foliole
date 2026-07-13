@@ -8,7 +8,8 @@
 ## Desktop Host Rules
 
 - 本项目默认桌面优先，不按纯 Web 方案优先。
-- 默认客户端视角就是 Windows 客户端；未特别说明时，数据库核对、人工补数据、发布 / 安装包验收与 Windows 原生能力确认都以 Windows 客户端为准，不以其他本机副本为准。
+- 当前 Codex 所在的原生桌面宿主是日常开发与本轮桌面行为的主验收宿主；不得因默认产品视角或另一平台仍有专项风险，就跳过当前宿主验收或把它挂成未来任务。
+- Windows 客户端仍是 Windows 主数据库核对、人工补数据、Windows 发布 / 安装包验收与 Windows 原生能力确认的权威宿主；这些 Windows 专属结论不得由 macOS 或 Linux 验收替代。
 - 默认主数据库固定视为 `D:\X\U\Foliole\Data\foliole.db`。未获用户明确批准前，不得自行改查其他数据库路径。
 - 诊断主数据库时必须先使用 `query-foliole-db` skill 的固定只读流程；不得先用仓库 Node 依赖或直接打开正在运行的 Windows 活库，避免 WAL / SHM I/O 误判。若固定流程覆盖不了，再走 Windows 侧只读 runtime 或停进程后的快照查询，并说明原因。
 - 系统能力优先经 Electron main process 暴露，再由 renderer 通过 bridge 调用；业务层不得散落 `ipcRenderer` 调用。
@@ -52,6 +53,7 @@
 
 ## Validation
 
+- 桌面验收先按当前原生宿主路由：macOS 会话用 macOS Hidden / Visible Native 或 `npm run electron:dev` 人工预览完成本轮主验收；Windows 原生会话用对应 Windows Native 入口。只有用户明确要求、行为命中另一平台专属边界、发布 / 安装包验收或任务承诺跨宿主一致性时，才追加另一宿主验证，不得把普通桌面任务默认挂到未来 Windows 验收。
 - macOS 与 Windows 的日常 Electron 自动验收共用 `test:e2e:desktop:native:hidden` / `test:e2e:desktop:native:visible` 能力名、共享 harness、隔离 state root 和 resource gate；hidden 必须保持屏外可渲染且不抢焦点，visible 必须显式传入当前任务 spec。成功截图写入 `.tmp/artifacts/desktop-acceptance/`，失败继续保留 diagnostics 与 trace。
 - macOS 开发预览使用 `npm run electron:dev`，该入口必须默认进入仓库 `.tmp` 下的 preview sandbox；macOS native preflight 使用 `npm run electron:native:health`，只验证 compile 与 Electron ABI，不得复用 Windows GUI health、真实 userData、Windows marker 或 renderer reload 语义。
 - macOS hidden / visible 与人工 preview 只能证明 macOS Electron 宿主行为，不得声明 Windows 主数据库、Windows ABI、native shell、dialog、tray、notification、安装包或发布链路已验收。

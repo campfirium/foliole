@@ -90,7 +90,7 @@
 ## Quality Gates, Preview, And Final Report
 
 - 不允许通过降低检查标准过关；验证前必须从 `package.json` / `npm run` 确认真实入口，当前仓库以 `npm` 为准，不用不存在的 `npm test` 兜底。
-- 凡本轮改动会进入应用运行时或改变用户可见行为，必须完成一次受影响宿主的可见验收；文件预算、窄测试、lint、typecheck、copy guard、运行时快检等前置验证必须先按改动范围完成，不得用宿主可见验收替代前置红灯修复。
+- 凡本轮改动会进入应用运行时或改变用户可见行为，必须完成一次受影响宿主的可见验收；桌面任务默认以当前 Codex 所在的原生桌面宿主完成本轮主验收，只有用户明确指定其他宿主、行为属于其他平台专属边界、发布 / 安装包验收或跨宿主承诺时，才追加对应宿主验收。文件预算、窄测试、lint、typecheck、copy guard、运行时快检等前置验证必须先按改动范围完成，不得用宿主可见验收替代前置红灯修复。
 - 宿主可见验收的具体入口由受影响宿主规则决定：桌面按 `electron/AGENTS.md` 选择 Hidden Native 或可见原生自动验收；Android / iOS / companion 按对应局部规则选择等价宿主验收。只改文档、agent 规则、只读诊断、测试代码或脚本内部逻辑，且不改变应用运行时行为时，可跳过宿主可见验收，但最终汇报必须写明跳过原因。
 - 默认先执行覆盖本轮能力闭环的最小相关前置验证；只有能力闭环范围或技术风险超过相关验证覆盖面时，才升级到 `quality:desktop`、`quality:android`、`quality:android:device`、`quality:shared`、`quality:full`、`quality:release` 或 `quality:fast`。
 - 少量明确测试文件优先 `npm run test:files -- <file...>`，变更范围干净且需要按 diff 自动选测时用 `npm run test:changed`。

@@ -19,6 +19,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { listManagedDatabaseBackups } from './backupCatalog.js';
 import { listApplicationDatabaseBackups } from './backupRestore.js';
 import { closeDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
@@ -84,4 +85,16 @@ it('lists sqlite backups newest first from the managed backup directory', async 
 
 it('returns an empty list when the managed backup directory does not exist', async () => {
   await expect(listApplicationDatabaseBackups()).resolves.toEqual([]);
+});
+
+it('recognizes the compact automatic restore point filename', async () => {
+  const backupDirectoryPath = path.join(mockedDocumentsDir, 'Foliole', 'Backups');
+  const fileName = 'foliole-auto-backup-260713-081408.db';
+  const filePath = path.join(backupDirectoryPath, fileName);
+  await fs.mkdir(backupDirectoryPath, { recursive: true });
+  await fs.writeFile(filePath, 'automatic');
+
+  await expect(listManagedDatabaseBackups(backupDirectoryPath)).resolves.toEqual([
+    expect.objectContaining({ autoFrequency: null, fileName, filePath, kind: 'automatic' })
+  ]);
 });

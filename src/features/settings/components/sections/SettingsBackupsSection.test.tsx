@@ -98,7 +98,8 @@ it('shows backup settings and backup list in the backups section', async () => {
   expect(screen.getByRole('button', { name: 'Create backup' }).className).not.toContain('min-w-[');
   expect(screen.getByDisplayValue('24').parentElement?.className).toContain('flex-[0_0_160px]');
   expect(screen.getByText('auto-daily-2026-04-02_08-00-00-000.db')).toBeInTheDocument();
-  expect(screen.getByText(/Auto backup .* daily/)).toBeInTheDocument();
+  expect(screen.getByText(/Auto backup .* 6 MB/)).toBeInTheDocument();
+  expect(screen.queryByText(/Auto backup .* daily/)).not.toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Source topic handling' })).toBeInTheDocument();
   expect(screen.getByText('Saved source topic handling')).toBeInTheDocument();
   expect(screen.getByText('2 entries / 2 KB')).toBeInTheDocument();
