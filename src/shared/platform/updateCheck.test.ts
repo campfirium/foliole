@@ -40,6 +40,9 @@ function createManifest() {
   };
 }
 
+const WINDOWS_TARGET = { architecture: 'x64', platform: 'windows' } as const;
+const MACOS_TARGET = { architecture: 'arm64', platform: 'macos' } as const;
+
 beforeEach(() => {
   vi.restoreAllMocks();
   vi.useFakeTimers();
@@ -57,11 +60,25 @@ it('selects the newest Windows release above the installed version', () => {
   const manifest = normalizeUpdateManifest(createManifest());
 
   expect(manifest).not.toBeNull();
-  expect(selectLatestPlatformRelease(manifest!, '0.1.0')).toMatchObject({
+  expect(selectLatestPlatformRelease(manifest!, '0.1.0', WINDOWS_TARGET)).toMatchObject({
     url: 'https://github.com/campfirium/foliole/releases/tag/v0.1.3',
     version: '0.1.3'
   });
-  expect(selectLatestPlatformRelease(manifest!, '0.1.3')).toBeNull();
+  expect(selectLatestPlatformRelease(manifest!, '0.1.3', WINDOWS_TARGET)).toBeNull();
+});
+
+it('selects only the matching macOS architecture without changing Windows selection', () => {
+  const manifest = normalizeUpdateManifest({
+    schemaVersion: 1,
+    releases: [
+      { architectures: ['arm64'], platforms: ['macos'], url: 'https://github.com/campfirium/foliole/releases/tag/v0.2.0', version: '0.2.0' },
+      { architectures: ['x64'], platforms: ['macos'], url: 'https://github.com/campfirium/foliole/releases/tag/v0.3.0', version: '0.3.0' },
+      { platforms: ['windows'], url: 'https://github.com/campfirium/foliole/releases/tag/v0.4.0', version: '0.4.0' }
+    ]
+  });
+
+  expect(selectLatestPlatformRelease(manifest!, '0.1.0', MACOS_TARGET)?.version).toBe('0.2.0');
+  expect(selectLatestPlatformRelease(manifest!, '0.1.0', WINDOWS_TARGET)?.version).toBe('0.4.0');
 });
 
 it('filters release URLs outside the official GitHub releases path', () => {
@@ -89,7 +106,7 @@ it('filters release URLs outside the official GitHub releases path', () => {
 it('selects skipped Windows releases between the installed and latest versions', () => {
   const manifest = normalizeUpdateManifest(createManifest());
 
-  expect(selectSkippedPlatformReleases(manifest, '0.1.1', '0.1.3').map((release) => release.version)).toEqual([
+  expect(selectSkippedPlatformReleases(manifest, '0.1.1', '0.1.3', WINDOWS_TARGET).map((release) => release.version)).toEqual([
     '0.1.3',
     '0.1.2'
   ]);

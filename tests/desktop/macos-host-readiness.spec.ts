@@ -1,6 +1,7 @@
 import { expect, test } from './harness/fixtures';
 import { openSettingsCategory } from './harness/settings';
 
+// SKIP: macOS-only native host acceptance | 2026-07-14 | revive: run on a darwin host
 test.skip(process.platform !== 'darwin', 'macOS host acceptance');
 
 test('exposes standard macOS menus and honest unsupported settings', async ({

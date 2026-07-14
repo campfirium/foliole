@@ -1,4 +1,5 @@
-const WINDOWS_PLATFORM_ID = 'windows';
+import { releaseMatchesTarget, resolveRuntimeUpdateTarget } from './updateTarget';
+
 const CHECK_INTERVAL_MINUTES = 60;
 const STABLE_CHECK_INTERVAL_MINUTES = 24 * 60;
 const FAILURE_RETRY_MINUTES = 15;
@@ -18,6 +19,7 @@ interface UpdateCheckPolicy {
 }
 
 export interface UpdateRelease {
+  architectures?: string[];
   date?: string;
   platforms: string[];
   severity?: 'critical' | 'normal' | 'security';
@@ -100,8 +102,12 @@ function normalizeRelease(value: unknown): UpdateRelease | null {
   const releaseUrl = normalizeTrustedReleaseUrl(raw.url);
   if (!releaseUrl) return null;
   const platforms = raw.platforms.filter((platform): platform is string => typeof platform === 'string');
+  const architectures = Array.isArray(raw.architectures)
+    ? raw.architectures.filter((architecture): architecture is string => typeof architecture === 'string')
+    : [];
   if (!platforms.length) return null;
   return {
+    ...(architectures.length ? { architectures } : {}),
     ...(typeof raw.date === 'string' ? { date: raw.date } : {}),
     platforms,
     ...(raw.severity === 'critical' || raw.severity === 'normal' || raw.severity === 'security' ? { severity: raw.severity } : {}),
@@ -191,17 +197,23 @@ export function compareVersionStrings(left: string, right: string) {
   return 0;
 }
 
-export function selectLatestPlatformRelease(manifest: UpdateManifest, currentVersion: string) {
+export function selectLatestPlatformRelease(manifest: UpdateManifest, currentVersion: string,
+  target = resolveRuntimeUpdateTarget()) {
   return manifest.releases
-    .filter((release) => release.platforms.includes(WINDOWS_PLATFORM_ID) && compareVersionStrings(release.version, currentVersion) > 0)
+    .filter((release) => releaseMatchesTarget(release, target) && compareVersionStrings(release.version, currentVersion) > 0)
     .sort((left, right) => compareVersionStrings(right.version, left.version))[0] ?? null;
 }
 
-export function selectSkippedPlatformReleases(manifest: UpdateManifest | null, currentVersion: string | null, latestVersion: string | null) {
+export function selectSkippedPlatformReleases(
+  manifest: UpdateManifest | null,
+  currentVersion: string | null,
+  latestVersion: string | null,
+  target = resolveRuntimeUpdateTarget()
+) {
   if (!manifest || !currentVersion || !latestVersion) return [];
   return manifest.releases
     .filter((release) =>
-      release.platforms.includes(WINDOWS_PLATFORM_ID)
+      releaseMatchesTarget(release, target)
         && compareVersionStrings(release.version, currentVersion) > 0
         && compareVersionStrings(release.version, latestVersion) <= 0
     )

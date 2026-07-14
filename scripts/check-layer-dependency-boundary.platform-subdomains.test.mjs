@@ -43,9 +43,13 @@ describe('check-layer-dependency-boundary platform subdomains', () => {
       'desktop-runtime-repository'
     );
     expect(resolvePlatformSubdomain('src/shared/platform/assistantRuntime.ts')).toBe('desktop-runtime-repository');
+    expect(resolvePlatformSubdomain('src/shared/platform/desktopHostCapabilities.ts')).toBe(
+      'desktop-runtime-repository'
+    );
     expect(resolvePlatformSubdomain('src/shared/platform/folioleAideSettings.ts')).toBe(
       'desktop-runtime-repository'
     );
+    expect(resolvePlatformSubdomain('src/shared/platform/updateTarget.ts')).toBe('runtime-core');
     expect(resolvePlatformSubdomain('src/shared/platform/companionSyncCursors.ts')).toBe('companion-sync-reader');
     expect(resolvePlatformSubdomain('src/shared/platform/companionSyncNodeVersionsTestSupport.ts')).toBe(
       'companion-sync-reader'
