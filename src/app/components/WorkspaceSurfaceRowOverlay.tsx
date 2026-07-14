@@ -60,6 +60,7 @@ export function WorkspaceSurfaceRowOverlay({ row }: { row: WorkspaceSurfaceOverl
     >
       {WORKSPACE_SURFACE_COLUMNS.map((column) => (
         <div
+          data-workspace-surface-column={column}
           key={`${row}-${column}`}
           style={{ backgroundColor: getSurfaceColor(row, column) }}
         />
@@ -83,6 +84,7 @@ function WorkspaceSurfaceRowDivider({
     <div
       aria-hidden="true"
       className={`pointer-events-none absolute inset-y-0 z-local-overlay w-px -translate-x-1/2 ${className ?? ''}`}
+      data-workspace-surface-divider={column}
       style={{ backgroundColor: getWorkspaceSurfaceDividerColor(row, column), left, opacity: 'var(--workspace-divider-opacity)' }}
     />
   );

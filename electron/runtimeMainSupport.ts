@@ -6,6 +6,7 @@ import { app, type BrowserWindowConstructorOptions, type Session, type WebConten
 import { logMainProcessException } from './diagnostics/mainProcessDiagnostics.js';
 import { applyHiddenNativeDesktopWindowOptions } from './hiddenNativeDesktopTest.js';
 import { LINK_PANEL_WEBVIEW_PARTITION } from './linkPanelBrowsingData.js';
+import { createMainWindowChromeOptions } from './mainWindowChrome.js';
 import {
   loadRenderer,
   logActiveRuntimeDiagnostics,
@@ -31,7 +32,7 @@ export function createMainWindowOptions(preloadPath: string): BrowserWindowConst
     height: 900,
     minWidth: 960,
     minHeight: 640,
-    frame: false,
+    ...createMainWindowChromeOptions(),
     backgroundColor: '#ffffff',
     autoHideMenuBar: false,
     icon: resolveMainWindowIconPath(preloadPath),

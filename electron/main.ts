@@ -34,7 +34,10 @@ import { bindHotkeyRecorderInput } from './ipc/hotkeyRecorderInput.js';
 import { bindMenuToWindow } from './ipc/menu.js';
 import { loadWindowState } from './ipc/windowState.js';
 import { installMainLifecycle } from './mainLifecycle.js';
-import { bindWindowReadingProgressFlush } from './readingProgressWindowFlush.js';
+import {
+  bindWindowReadingProgressFlush,
+  createWindowReadingProgressFlushOptions
+} from './readingProgressWindowFlush.js';
 import type { StartupRendererView } from './rendererLoader.js';
 import {
   collectRuntimeDiagnosticsSnapshot,
@@ -203,16 +206,10 @@ async function createMainWindow(startupAppearance?: { backgroundColor: string } 
   });
   bindWindowIpc(window);
   bindHotkeyRecorderInput(window);
-  bindWindowReadingProgressFlush(window, process.platform === 'win32'
-    ? {
-        onCloseAfterFlush: (targetWindow) => {
-          if (!targetWindow.isDestroyed()) {
-            targetWindow.hide();
-          }
-        },
-        shouldAllowClose: isAppQuittingForBackgroundPresence
-      }
-    : {});
+  bindWindowReadingProgressFlush(
+    window,
+    createWindowReadingProgressFlushOptions(process.platform, isAppQuittingForBackgroundPresence)
+  );
   bindWindowStatePersistence(window);
   bindMenuToWindow(window);
   bindWindowRuntimeDiagnostics(window);

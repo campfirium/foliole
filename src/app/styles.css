@@ -5,6 +5,7 @@
 @import "./tokens/shellless-surfaces.css";
 @import "./tokens/focus.css";
 @import "./tokens/z-index.css";
+@import "./styles/window-titlebar-controls.css";
 
 * {
   box-sizing: border-box;
@@ -808,15 +809,6 @@ b {
   -webkit-app-region: drag;
 }
 
-.window-titlebar-controls {
-  display: inline-flex;
-  position: absolute;
-  right: 0;
-  top: 0;
-  z-index: var(--z-local-raised);
-  -webkit-app-region: no-drag;
-}
-
 .window-titlebar-right-zone {
   align-self: stretch;
   display: flex;
@@ -885,39 +877,8 @@ b {
   padding-left: 6px;
 }
 
-.window-titlebar-button {
-  align-items: center;
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  color: var(--window-titlebar-action-color);
-  cursor: pointer;
-  display: inline-flex;
-  height: var(--workspace-top-toolbar-height);
-  justify-content: center;
-  min-width: 46px;
-  transition: background-color 140ms, color 140ms;
-  -webkit-app-region: no-drag;
-}
-
-.window-titlebar-button > *,
 .window-titlebar-leading-button > * {
   pointer-events: none;
-}
-
-.window-titlebar-button:hover:not(:disabled) {
-  background: var(--window-titlebar-action-hover-bg);
-  color: var(--window-titlebar-action-hover-color);
-}
-
-.window-titlebar-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.4;
-}
-
-.window-titlebar-button-close:hover:not(:disabled) {
-  background: var(--window-titlebar-close-hover-bg);
-  color: var(--window-titlebar-close-hover-color);
 }
 
 .window-titlebar-icon {

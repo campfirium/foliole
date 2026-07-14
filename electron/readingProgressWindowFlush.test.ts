@@ -5,6 +5,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import {
   allowWindowCloseWithoutReadingProgressFlush,
   bindWindowReadingProgressFlush,
+  createWindowReadingProgressFlushOptions,
   flushWindowReadingProgress
 } from './readingProgressWindowFlush.js';
 
@@ -34,6 +35,23 @@ function createWindowMock() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+});
+
+it('only bypasses close flushing during app quit on supported desktop hosts', () => {
+  const shouldAllowClose = vi.fn(() => true);
+
+  expect(createWindowReadingProgressFlushOptions('darwin', shouldAllowClose)).toEqual({ shouldAllowClose });
+  expect(createWindowReadingProgressFlushOptions('linux', shouldAllowClose)).toEqual({});
+  expect(createWindowReadingProgressFlushOptions('win32', shouldAllowClose)).toMatchObject({ shouldAllowClose });
+});
+
+it('keeps the Windows background-close behavior in the shared options', () => {
+  const window = createWindowMock();
+  const options = createWindowReadingProgressFlushOptions('win32', () => false);
+
+  options.onCloseAfterFlush?.(window as never);
+
+  expect(window.hide).toHaveBeenCalledTimes(1);
 });
 
 it('executes the renderer close flush when available', async () => {

@@ -63,3 +63,17 @@ it('hides titlebar list dividers below the responsive list breakpoint', () => {
   expect(dividers[1]).toHaveClass('max-[1080px]:hidden');
   expect(dividers[2]).toHaveClass('max-[1080px]:hidden');
 });
+
+it('keeps the titlebar rail divider on the shared 40px rail boundary', () => {
+  const overlay = render(<WorkspaceSurfaceRowOverlay row="titlebar" />).container;
+  expect(overlay.querySelector('[data-workspace-titlebar-leading-surface]')).toBeNull();
+
+  const dividers = render(
+    <AppearanceSettingsContext.Provider value={createAppearanceContext()}>
+      <WorkspaceTitlebarDividers isListCollapsed={false} isRightSidebarCollapsed />
+    </AppearanceSettingsContext.Provider>
+  ).container;
+  expect(dividers.querySelector('[data-workspace-surface-divider="rail"]')).toHaveStyle({
+    left: 'var(--workspace-rail-width)'
+  });
+});

@@ -10,6 +10,21 @@ export interface WindowReadingProgressFlushOptions {
   shouldAllowClose?: () => boolean;
 }
 
+export function createWindowReadingProgressFlushOptions(
+  platform: NodeJS.Platform,
+  shouldAllowClose: () => boolean
+): WindowReadingProgressFlushOptions {
+  if (platform === 'win32') {
+    return {
+      onCloseAfterFlush: (window) => {
+        if (!window.isDestroyed()) window.hide();
+      },
+      shouldAllowClose
+    };
+  }
+  return platform === 'darwin' ? { shouldAllowClose } : {};
+}
+
 function canFlushWindow(window: FlushableWindow) {
   return !window.isDestroyed() && !window.webContents.isDestroyed();
 }
