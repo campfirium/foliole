@@ -19,6 +19,7 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 
+import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { searchExternalDocuments } from './externalSearchCache.js';
 import { closeExternalSearchCacheDatabase } from './externalSearchCacheDatabase.js';
@@ -48,6 +49,31 @@ it('reads recent local file metadata without storing a content mirror', async ()
   expect(listLocalFiles()[0]).toMatchObject({ absolutePath: filePath, title: 'note.md' });
   expect(openDatabaseConnection().sqlite.prepare('PRAGMA table_info(local_files)').all())
     .not.toEqual(expect.arrayContaining([expect.objectContaining({ name: 'content' })]));
+});
+
+it('waits for coordinated database work before storing opened file metadata', async () => {
+  const filePath = path.join(tempRoot, 'coordinated.md');
+  await fs.writeFile(filePath, '# Coordinated', 'utf8');
+  let releaseOwner!: () => void;
+  let reportOwnerReady!: () => void;
+  const ownerReady = new Promise<void>((resolve) => { reportOwnerReady = resolve; });
+  const release = new Promise<void>((resolve) => { releaseOwner = resolve; });
+  const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite, { name: 'local-files-test' });
+  const ownedTransaction = port.transaction(async () => {
+    reportOwnerReady();
+    await release;
+  });
+  await ownerReady;
+
+  const readPromise = readLocalFile(filePath);
+  let readSettled = false;
+  void readPromise.then(() => { readSettled = true; }, () => { readSettled = true; });
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  expect(readSettled).toBe(false);
+  releaseOwner();
+  await ownedTransaction;
+
+  await expect(readPromise).resolves.toMatchObject({ absolutePath: filePath, status: 'ready' });
 });
 
 it('removes opened local file records once the source file disappears', async () => {

@@ -149,6 +149,26 @@ describe('playwright desktop launch target', () => {
     });
   });
 
+  it('removes inherited library overrides for persisted library launches', () => {
+    const appRoot = path.resolve('/workspace/foliole');
+    const stateRoot = path.resolve('/tmp/foliole-playwright-state');
+    const selectedLibrary = path.join(stateRoot, 'selected-library');
+    const target = resolveDesktopLaunchTarget(appRoot, () => true);
+    const options = createDesktopLaunchOptions(target, 12_345, {
+      FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot,
+      FOLIOLE_LIBRARY_HOME: path.join(stateRoot, 'library')
+    }, {
+      env: {
+        FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot,
+        FOLIOLE_USER_DATA_PATH: path.join(stateRoot, 'user-data')
+      },
+      libraryHome: selectedLibrary,
+      usesPersistedLibraryHome: true
+    });
+
+    expect(options.env).not.toHaveProperty('FOLIOLE_LIBRARY_HOME');
+  });
+
   it('creates installed app launch options without injecting the source main entry', () => {
     const installedExe = 'C:\\Users\\me\\AppData\\Local\\Programs\\Foliole\\Foliole.exe';
     const target = resolveDesktopLaunchTarget('D:\\C\\foliole', () => true, {

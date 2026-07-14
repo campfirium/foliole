@@ -38,6 +38,34 @@ describe('playwright desktop isolation', () => {
     ).toThrow('overlaps protected path');
   });
 
+  it('allows persisted library selection only inside the isolated state root', () => {
+    const stateRoot = 'D:\\Temp\\foliole-playwright-state';
+    const selectedLibrary = path.win32.join(stateRoot, 'selected-library');
+    const context = createDesktopIsolationContext({
+      APPDATA: 'C:\\Users\\Tester\\AppData\\Roaming',
+      FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot
+    }, {
+      homeDir: 'C:\\Users\\Tester',
+      persistedLibraryHome: selectedLibrary,
+      platform: 'win32'
+    });
+
+    expect(context.libraryHome).toBe(selectedLibrary);
+    expect(context.usesPersistedLibraryHome).toBe(true);
+    expect(context.env).not.toHaveProperty('FOLIOLE_LIBRARY_HOME');
+  });
+
+  it('rejects persisted library selection outside the isolated state root', () => {
+    expect(() => createDesktopIsolationContext({
+      APPDATA: 'C:\\Users\\Tester\\AppData\\Roaming',
+      FOLIOLE_ELECTRON_TEST_STATE_ROOT: 'D:\\Temp\\foliole-playwright-state'
+    }, {
+      homeDir: 'C:\\Users\\Tester',
+      persistedLibraryHome: 'D:\\Other\\library',
+      platform: 'win32'
+    })).toThrow('outside state root');
+  });
+
   it('rejects state roots that overlap default Electron userData', () => {
     expect(() =>
       createDesktopIsolationContext({

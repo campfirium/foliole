@@ -14,6 +14,7 @@ import {
   markLocalDocumentSearchIndexMissing,
   upsertLocalDocumentSearchIndex
 } from './localDocumentSearchIndex.js';
+import { getSqliteConnectionCoordinator } from './sqliteConnectionCoordinator.js';
 
 interface LocalFileRow extends Record<string, unknown> {
   absolute_path: string;
@@ -131,6 +132,11 @@ function upsertLocalFileMetadata(args: {
   return readLocalFileRow(args.absolutePath);
 }
 
+function runWithLocalFileDatabaseAccess<T>(execute: () => T) {
+  const connection = openDatabaseConnection();
+  return getSqliteConnectionCoordinator(connection.sqlite).runExclusive(execute);
+}
+
 async function statLocalFile(absolutePath: string): Promise<FileStatSnapshot | null> {
   const stat = await fs.stat(absolutePath);
   if (!stat.isFile()) {
@@ -165,18 +171,23 @@ export async function readLocalFile(filePath: string): Promise<NativeLocalFileRe
       return { absolutePath, errorCode: 'not_a_file', message: 'Local file is not a file.', status: 'error' };
     }
     const content = await fs.readFile(absolutePath, 'utf8');
-    const row = upsertLocalFileMetadata({
-      absolutePath,
-      fileSize: stat.fileSize,
-      missingAt: null,
-      modifiedAt: stat.modifiedAt
+    const row = await runWithLocalFileDatabaseAccess(() => {
+      const nextRow = upsertLocalFileMetadata({
+        absolutePath,
+        fileSize: stat.fileSize,
+        missingAt: null,
+        modifiedAt: stat.modifiedAt
+      });
+      indexReadyLocalDocument(nextRow!, content, stat);
+      return nextRow;
     });
-    indexReadyLocalDocument(row!, content, stat);
     return { ...toEntry(row!), content, status: 'ready' };
   } catch {
     const missingAt = new Date().toISOString();
-    upsertLocalFileMetadata({ absolutePath, fileSize: null, missingAt, modifiedAt: null });
-    markLocalDocumentSearchIndexMissing(absolutePath, missingAt);
+    await runWithLocalFileDatabaseAccess(() => {
+      upsertLocalFileMetadata({ absolutePath, fileSize: null, missingAt, modifiedAt: null });
+      markLocalDocumentSearchIndexMissing(absolutePath, missingAt);
+    });
     return { absolutePath, missingAt, status: 'missing', title: toTitle(absolutePath) };
   }
 }

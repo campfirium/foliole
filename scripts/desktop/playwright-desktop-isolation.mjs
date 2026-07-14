@@ -48,6 +48,13 @@ function pathContainsOrEquals(candidatePath, protectedPath) {
   );
 }
 
+function pathIsInsideRoot(candidatePath, rootPath) {
+  const candidate = resolveComparablePath(candidatePath);
+  const root = resolveComparablePath(rootPath);
+  const separator = isWindowsHostPath(candidatePath) || isWindowsHostPath(rootPath) ? '\\' : path.sep;
+  return candidate === root || candidate.startsWith(`${root}${separator}`);
+}
+
 export function resolveProtectedDesktopPaths(env, {
   homeDir = os.homedir(),
   platform = process.platform
@@ -77,7 +84,13 @@ export function createDesktopIsolationContext(env = process.env, options = {}) {
     ? resolveHostPath(configuredStateRoot)
     : fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-playwright-'));
 
-  const libraryHome = joinHostPath(runtimeStateRoot, 'library');
+  const persistedLibraryHome = typeof options.persistedLibraryHome === 'string'
+    ? resolveHostPath(options.persistedLibraryHome)
+    : null;
+  if (persistedLibraryHome && !pathIsInsideRoot(persistedLibraryHome, runtimeStateRoot)) {
+    throw new Error(`refusing persisted desktop Playwright library home outside state root: ${persistedLibraryHome}`);
+  }
+  const libraryHome = persistedLibraryHome ?? joinHostPath(runtimeStateRoot, 'library');
   const userDataPath = joinHostPath(runtimeStateRoot, 'user-data');
   const sessionDataPath = joinHostPath(runtimeStateRoot, 'session-data');
   for (const [label, candidatePath] of [
@@ -98,7 +111,7 @@ export function createDesktopIsolationContext(env = process.env, options = {}) {
     env: {
       FOLIOLE_ALLOW_PARALLEL_INSTANCE: '1',
       FOLIOLE_ELECTRON_TEST_STATE_ROOT: runtimeStateRoot,
-      FOLIOLE_LIBRARY_HOME: libraryHome,
+      ...(persistedLibraryHome ? {} : { FOLIOLE_LIBRARY_HOME: libraryHome }),
       FOLIOLE_SESSION_DATA_PATH: sessionDataPath,
       FOLIOLE_USER_DATA_PATH: userDataPath,
       FOLIOLE_WORKDIR: runtimeStateRoot
@@ -106,6 +119,7 @@ export function createDesktopIsolationContext(env = process.env, options = {}) {
     libraryHome,
     runtimeStateRoot,
     sessionDataPath,
-    userDataPath
+    userDataPath,
+    usesPersistedLibraryHome: Boolean(persistedLibraryHome)
   };
 }

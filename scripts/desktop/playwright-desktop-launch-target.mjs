@@ -111,6 +111,9 @@ export function createDesktopLaunchOptions(
     FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE: env.FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE?.trim() || '1'
   };
   delete launchEnv.ELECTRON_RUN_AS_NODE;
+  if (isolation.usesPersistedLibraryHome) {
+    delete launchEnv.FOLIOLE_LIBRARY_HOME;
+  }
   return {
     args: createElectronLaunchArgs(target.mainEntry, env, extraArgs),
     cwd: target.appRoot,
