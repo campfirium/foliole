@@ -51,6 +51,11 @@
 - 根 `node_modules/better-sqlite3` 默认归 Electron ABI 所有；新增真实 sqlite 开发脚本不得用普通 Node 直接加载根 `better-sqlite3`，必须走受控 Electron ABI runner 或先在实施说明中登记例外。
 - `npm install` / `npm ci` 后默认重新校验 native ABI；若 Windows 预览入口报 ABI mismatch，预览前检查可以先运行 `npm run electron:rebuild:native` 修复 Electron ABI 并复验，复验失败才允许失败；Electron-as-Node runner 仍应直接提示运行该命令，不得使用普通 `npm rebuild better-sqlite3`。
 
+## macOS Desktop Interaction
+
+- macOS Codex 会话调试或操作桌面客户端时，默认不得抢占用户当前桌面；优先使用日志 / CLI、应用级后台状态读取或不激活窗口的 Computer Use 操作，能在后台完成时不得将 Foliole 拉到前台。
+- 只有验收目标依赖真实焦点、键盘输入、菜单栏、拖拽或窗口呈现，或用户当次明确要求可见预览时，才允许前台操作；执行前必须先在 commentary 说明会短暂打扰桌面，结束后只停止或隐藏本轮启动的窗口，不得关闭用户原有窗口。
+
 ## Validation
 
 - 桌面验收先按当前原生宿主路由：macOS 会话用 macOS Hidden / Visible Native 或 `npm run electron:dev` 人工预览完成本轮主验收；Windows 原生会话用对应 Windows Native 入口。只有用户明确要求、行为命中另一平台专属边界、发布 / 安装包验收或任务承诺跨宿主一致性时，才追加另一宿主验证，不得把普通桌面任务默认挂到未来 Windows 验收。
