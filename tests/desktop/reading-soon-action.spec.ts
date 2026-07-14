@@ -88,18 +88,20 @@ async function assertQueueClearStage(page: Page, testInfo: TestInfo) {
 async function readUntilAllClear(page: Page) {
   for (let attempt = 0; attempt < 12; attempt += 1) {
     const state = await collectReviewState(page);
-    if (!state.reviewSession?.currentNodeId) {
+    const currentNodeId = state.reviewSession?.currentNodeId;
+    if (!currentNodeId) {
       break;
     }
     await page.getByRole('button', { name: 'Read', exact: true }).click();
-    await page.waitForTimeout(100);
+    await expect.poll(async () => (await collectReviewState(page)).reviewSession?.currentNodeId).not.toBe(currentNodeId);
   }
 }
 
 async function assertAllClearNotice(page: Page, testInfo: TestInfo) {
-  const allClearNotice = page.getByTestId('app-runtime-notice');
-  await expect(allClearNotice).toHaveText('All clear for now.');
+  const allClearNotice = page.getByTestId('review-queue-empty-notice');
+  await expect(allClearNotice).toContainText('All clear for now.');
   await expect(reviewActionsToolbar(page)).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /^(Exit Flow|退出 Flow)$/ })).toBeVisible();
   await attachScreenshot(page, testInfo, 'reading-soon-all-clear-screenshot');
 }
 
@@ -109,7 +111,6 @@ test('clicking Soon advances the guided reading review action in the desktop run
   await expect(desktopWindow.getByRole('button', { name: 'Read', exact: true })).toBeVisible();
   await desktopWindow.getByRole('button', { name: 'Read', exact: true }).click();
   await expect(desktopWindow.getByRole('button', { name: 'Soon', exact: true })).toBeVisible();
-  await desktopWindow.waitForTimeout(500);
 
   await pushCurrentTopicSoon(desktopWindow, testInfo);
   await clickSoonUntilQueueClear(desktopWindow);
@@ -117,7 +118,12 @@ test('clicking Soon advances the guided reading review action in the desktop run
   await readUntilAllClear(desktopWindow);
   await assertAllClearNotice(desktopWindow, testInfo);
 
+  const allClearNotice = desktopWindow.getByTestId('review-queue-empty-notice');
+  await expect(allClearNotice).toBeHidden();
+  const exitFlow = desktopWindow.getByRole('button', { name: /^(Exit Flow|退出 Flow)$/ });
+  await exitFlow.click();
+  await expect(exitFlow).toBeHidden();
   await desktopWindow.getByRole('button', { name: /^(Review queue empty|复习队列为空|Enter Flow|进入 Flow)$/ }).click();
-  await expect(desktopWindow.getByTestId('app-runtime-notice')).toHaveText('All clear for now.');
+  await expect(allClearNotice).toContainText('All clear for now.');
   await expect(reviewActionsToolbar(desktopWindow)).toHaveCount(0);
 });
