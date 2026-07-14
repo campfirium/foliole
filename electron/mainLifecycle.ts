@@ -22,6 +22,7 @@ import { stopManagedInboxMonitor } from './import/managedInboxMonitor.js';
 import { disposeAssistantCommandAdapter } from './ipc/assistantCommands.js';
 import { appendBootEvent } from './ipc/boot.js';
 import { installAppMenu } from './ipc/menu.js';
+import { installMacosDailyDebugExitHandler } from './macosDailyDebugExit.js';
 import { startInitialMainWindow } from './mainStartup.js';
 import { installPairingFocusHandler, openOrCreateMainWindow, startCompanionSyncIfEnabled } from './mainWindowLifecycle.js';
 import { getMainWindow, setMainWindow } from './mainWindowRegistry.js';
@@ -54,6 +55,7 @@ function installSingleInstanceGate(runtimeMode: RuntimeMode) {
 }
 
 function installBeforeQuitLifecycle() {
+  installMacosDailyDebugExitHandler({ app, getWindows: () => BrowserWindow.getAllWindows() });
   const devRestartIntentWatcher = installDevRestartIntentWatcher({ app, getWindows: () => BrowserWindow.getAllWindows() });
   const devRendererReloadIntentWatcher = installDevRendererReloadIntentWatcher({ getWindows: () => BrowserWindow.getAllWindows() });
   let mirrorFlushed = false;

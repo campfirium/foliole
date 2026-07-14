@@ -11,7 +11,8 @@ import { resolveElectronNativeHealthInvocation } from '../run-electron-native-he
 
 describe('desktop platform adapters', () => {
   it('dispatches development and native health by host platform', () => {
-    expect(resolveElectronDevInvocation('darwin', 'node').args).toEqual(['scripts/macos/electron-dev-preview.mjs']);
+    expect(resolveElectronDevInvocation('darwin', 'node').args)
+      .toEqual(['scripts/macos/macos-electron-dev.mjs', 'start']);
     expect(resolveElectronDevInvocation('win32', 'node').args).toEqual(['scripts/electron-dev.mjs']);
     expect(resolveElectronDevInvocation('linux', 'node').args).toEqual(['scripts/electron-dev.mjs']);
     expect(resolveElectronNativeHealthInvocation('darwin', 'node').args).toEqual(['scripts/macos/macos-native-preflight.mjs']);
@@ -28,7 +29,7 @@ describe('desktop platform adapters', () => {
       nodeBin: 'node',
       platform: 'darwin'
     });
-    const root = path.join(cwd, '.tmp', 'macos-desktop-preview');
+    const root = path.join(cwd, '.tmp', 'macos-desktop-reset-preview');
 
     expect(command.args).toEqual([
       'scripts/with-resource-gate.mjs', 'preview', '--',
@@ -38,6 +39,7 @@ describe('desktop platform adapters', () => {
       FOLIOLE_ELECTRON_TEST_STATE_ROOT: root,
       FOLIOLE_LIBRARY_HOME: path.join(root, 'library'),
       FOLIOLE_PREVIEW_SANDBOX: '1',
+      FOLIOLE_PREVIEW_SANDBOX_RESET: '1',
       FOLIOLE_PREVIEW_SANDBOX_ROOT: root,
       FOLIOLE_SESSION_DATA_PATH: path.join(root, 'session-data'),
       FOLIOLE_USER_DATA_PATH: path.join(root, 'user-data'),

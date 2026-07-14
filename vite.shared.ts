@@ -25,6 +25,10 @@ export const DESKTOP_RENDERER_WARMUP_FILES = [
   './src/app/App.tsx'
 ];
 
+export function resolveViteHmrSetting(env: NodeJS.ProcessEnv = process.env) {
+  return env.FOLIOLE_VITE_HMR === '1';
+}
+
 function resolveDevPort() {
   const raw = process.env.FOLIOLE_VITE_PORT;
   const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
@@ -164,7 +168,7 @@ export function createSharedViteConfig(projectRoot: string, options: SharedViteC
     },
     server: {
       cors: true,
-      hmr: false,
+      hmr: resolveViteHmrSetting(),
       host: '127.0.0.1',
       port: resolveDevPort(),
       strictPort: true,

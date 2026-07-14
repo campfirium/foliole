@@ -80,6 +80,14 @@ describe('script domain registry', () => {
       ok: true,
       placements: ['shared-core']
     });
+    expect(resolveCapabilityAdapter('macos:dev:restart', 'darwin')).toMatchObject({
+      ok: true,
+      placements: ['macos-only']
+    });
+    expect(resolveCapabilityAdapter('macos:dev:restart', 'win32')).toEqual({
+      ok: false,
+      reason: 'unsupported-platform'
+    });
     expect(renderCapabilityCommand(resolveCapabilityContract('android:host:test')))
       .toBe('node scripts/android/android-host.mjs gradle testDebugUnitTest');
     expect(resolveCapabilityAdapter('android:control', 'darwin')).toMatchObject({

@@ -76,6 +76,21 @@ export const CAPABILITY_CONTRACTS = [
     platforms: ['darwin', 'linux', 'win32']
   })),
   ...[
+    ['macos:dev:full-restart', ['full-restart']],
+    ['macos:dev:logs', ['logs']],
+    ['macos:dev:reset', ['reset']],
+    ['macos:dev:restart', ['restart']],
+    ['macos:dev:status', ['status']],
+    ['macos:dev:stop', ['stop']],
+    ['macos:preview:reset', ['reset-preview']]
+  ].map(([name, args]) => ({
+    adapter: { args: ['scripts/macos/macos-electron-dev.mjs', ...args], bin: 'node' },
+    adapterPath: 'scripts/macos/macos-electron-dev.mjs',
+    name,
+    placements: ['macos-only'],
+    platforms: ['darwin']
+  })),
+  ...[
     ['android:open', ['open']],
     ['android:control', ['control']],
     ['android:sync', ['sync']],
@@ -124,7 +139,7 @@ export const CAPABILITY_CONTRACTS = [
   }
 ];
 
-export const SCRIPT_ASSET_INVENTORY_SHA256 = '0cf3199d17abec9d61ff4923f3f6965da9030ad99ad53db7bb6883b141618cb8';
+export const SCRIPT_ASSET_INVENTORY_SHA256 = '28e6ffee2f53e061ad52f8007f2b95bf3e0155ea06ff5b9d2fc757d1bab7e892';
 
 function normalizeScriptPath(filePath) {
   return filePath.replaceAll('\\', '/').replace(/^\.\//u, '').trim();

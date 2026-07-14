@@ -8,6 +8,10 @@ import { expect, it } from 'vitest';
 
 it('passes native GPU disable switches before the Electron app path', async () => {
   const runner = await readFile(path.resolve(process.cwd(), 'scripts/electron-dev.mjs'), 'utf8');
+  const lifecycle = await readFile(
+    path.resolve(process.cwd(), 'scripts/desktop/electron-dev-child-lifecycle.mjs'),
+    'utf8'
+  );
   const vitePort = await readFile(path.resolve(process.cwd(), 'scripts/electron-dev-vite-port.mjs'), 'utf8');
 
   expect(runner).toContain("args.push('--disable-gpu', '--disable-gpu-compositing', '--disable-gpu-sandbox');");
@@ -19,11 +23,12 @@ it('passes native GPU disable switches before the Electron app path', async () =
   expect(runner).toContain("process.env.FOLIOLE_DEV_SHELL_RESTART_REQUEST_FILE ??= DEV_SHELL_RESTART_REQUEST_FILE");
   expect(runner).toContain(".foliole-dev-shell-restart-request.json");
   expect(runner).toContain('foliole-dev-shell-restart');
-  expect(runner).toContain('dev shell restart requested');
+  expect(lifecycle).toContain('dev shell restart requested');
   expect(runner).toContain('parsed.runtimeHead');
   expect(runner).toContain('parsed.bootSession');
-  expect(runner).toContain("request.shellAction === 'exit-shell'");
+  expect(lifecycle).toContain("request.shellAction === 'exit-shell'");
   expect(runner).toContain("path.join('node_modules', 'electron', 'dist', 'electron.exe')");
+  expect(runner).toContain("path.join('node_modules', 'electron', 'dist', 'Electron.app', 'Contents', 'MacOS', 'Electron')");
   expect(runner).toContain('shell: false');
   expect(runner).toContain('windowsHide: true');
   expect(runner).toContain('windowsHide: false');
@@ -39,6 +44,7 @@ it('passes native GPU disable switches before the Electron app path', async () =
   expect(runner).toContain('FOLIOLE_ELECTRON_DEV_SKIP_COMPILE');
   expect(runner).toContain('FOLIOLE_ELECTRON_DEV_SKIP_APPEARANCE_GENERATION');
   expect(runner).toContain('FOLIOLE_ELECTRON_DEV_SKIP_VITE_PREWARM');
+  expect(runner).toContain("process.on('SIGHUP', () => lifecycle.restartRuntime())");
   expect(runner).toContain('const prewarmAbortController = new AbortController();');
   expect(runner).toContain('signal: prewarmAbortController.signal');
   expect(runner).toContain('abortController: prewarmAbortController');

@@ -5,6 +5,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { createDesktopIsolationContext } from '../desktop/playwright-desktop-isolation.mjs';
+import { MACOS_RESET_PREVIEW_ROOT } from './macos-electron-dev-paths.mjs';
 
 export function createMacosElectronDevCommand({
   cwd = process.cwd(),
@@ -15,7 +16,7 @@ export function createMacosElectronDevCommand({
 } = {}) {
   if (platform !== 'darwin') throw new Error('macOS Electron preview requires a darwin host.');
   const appRoot = path.resolve(cwd);
-  const sandboxRoot = path.join(appRoot, '.tmp', 'macos-desktop-preview');
+  const sandboxRoot = path.join(appRoot, MACOS_RESET_PREVIEW_ROOT);
   const isolation = createDesktopIsolationContext({
     ...env,
     FOLIOLE_ELECTRON_TEST_STATE_ROOT: sandboxRoot
@@ -25,6 +26,7 @@ export function createMacosElectronDevCommand({
     ...isolation.env,
     FOLIOLE_ELECTRON_APP_ROOT: appRoot,
     FOLIOLE_PREVIEW_SANDBOX: '1',
+    FOLIOLE_PREVIEW_SANDBOX_RESET: '1',
     FOLIOLE_PREVIEW_SANDBOX_ROOT: sandboxRoot
   };
   delete launchEnv.FOLIOLE_WINDOWS_WORKDIR;

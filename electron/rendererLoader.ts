@@ -23,6 +23,10 @@ function resolveRendererUrl() {
   return process.env.ELECTRON_RENDERER_URL ?? null;
 }
 
+function isViteHmrEnabled() {
+  return process.env.FOLIOLE_VITE_HMR === '1';
+}
+
 function escapeHtml(value: string) {
   return value
     .replace(/&/g, '&amp;')
@@ -127,6 +131,10 @@ async function loadPackagedRenderer(window: BrowserWindow, runtimeDir: string) {
 }
 
 async function loadDevRenderer(window: BrowserWindow, devUrl: string) {
+  if (isViteHmrEnabled()) {
+    await window.loadURL(devUrl);
+    return;
+  }
   const runtimeIndexPath = resolveExistingRuntimeRendererIndex(resolveSourceRendererIndexPath(app.getAppPath()));
   if (runtimeIndexPath) {
     await window.loadFile(runtimeIndexPath);

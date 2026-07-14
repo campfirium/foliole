@@ -6,7 +6,9 @@ import { pathToFileURL } from 'node:url';
 
 export function resolveElectronDevInvocation(platform = process.platform, nodeBin = process.execPath) {
   return {
-    args: [platform === 'darwin' ? 'scripts/macos/electron-dev-preview.mjs' : 'scripts/electron-dev.mjs'],
+    args: platform === 'darwin'
+      ? ['scripts/macos/macos-electron-dev.mjs', 'start']
+      : ['scripts/electron-dev.mjs'],
     bin: nodeBin
   };
 }

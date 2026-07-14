@@ -6,6 +6,7 @@ import path from 'node:path';
 import process from 'node:process';
 
 import { createElectronLaunchEnv } from './electron-dev-env.mjs';
+import { createElectronDevChildLifecycle } from './desktop/electron-dev-child-lifecycle.mjs';
 import {
   isViteServerReady,
   prewarmViteRendererEntries,
@@ -57,6 +58,9 @@ function createElectronArgs(entryPath) {
 function resolveElectronCommand() {
   if (process.platform === 'win32') {
     return path.join('node_modules', 'electron', 'dist', 'electron.exe');
+  }
+  if (process.platform === 'darwin') {
+    return path.join('node_modules', 'electron', 'dist', 'Electron.app', 'Contents', 'MacOS', 'Electron');
   }
   return path.join('node_modules', '.bin', 'electron');
 }
@@ -136,9 +140,8 @@ async function startViteWithPortFallback() {
   for (const port of candidateVitePorts(preferredPort)) {
     const viteUrl = resolveViteUrl(port);
     if (await isViteServerReady(viteUrl)) {
-      if (strictPort) {
-        throw new Error(`strict Vite port already has a ready server: ${viteUrl}`);
-      } else if (isEnabledEnv('FOLIOLE_ELECTRON_DEV_FORCE_OWN_VITE')) continue;
+      if (strictPort) throw new Error(`strict Vite port already has a ready server: ${viteUrl}`);
+      if (isEnabledEnv('FOLIOLE_ELECTRON_DEV_FORCE_OWN_VITE')) continue;
       return { viteUrl, viteProc: null };
     }
     if (isEnabledEnv('FOLIOLE_ELECTRON_DEV_SKIP_APPEARANCE_GENERATION')) {
@@ -203,46 +206,16 @@ console.info(
   `[electron-dev] startup timing electron_launch prewarmStatus=${prewarmStatus.status} prewarmElapsedMs=${prewarmStatus.elapsedMs}`
 );
 
-let electron = launchElectron(viteState.viteUrl);
+const electron = launchElectron(viteState.viteUrl);
 logChildLifecycle(electron, 'electron');
 
-const shutdown = () => {
-  if (vite && !vite.killed) {
-    vite.kill('SIGTERM');
-  }
-  if (!electron.killed) {
-    electron.kill('SIGTERM');
-  }
-};
-
-function attachElectronExitHandler(child) {
-  child.on('exit', (code) => {
-    const request = consumeDevShellRestartRequest();
-    if (request) {
-      console.info(`[electron-dev] dev shell restart requested reason=${request.reason ?? 'unknown'}`);
-      if (request.shellAction === 'exit-shell') {
-        shutdown();
-        process.exit(code ?? 0);
-      }
-      electron = launchElectron(viteState.viteUrl);
-      logChildLifecycle(electron, 'electron');
-      attachElectronExitHandler(electron);
-      return;
-    }
-    shutdown();
-    process.exit(code ?? 0);
-  });
-}
-
-attachElectronExitHandler(electron);
-
-if (vite) {
-  vite.on('exit', () => {
-    shutdown();
-  });
-}
-
-process.on('SIGINT', () => {
-  shutdown();
-  process.exit(0);
+const lifecycle = createElectronDevChildLifecycle({
+  consumeRestartRequest: consumeDevShellRestartRequest,
+  electron,
+  launchElectron: () => launchElectron(viteState.viteUrl),
+  logChildLifecycle,
+  stopSignal: process.platform === 'darwin' ? 'SIGHUP' : 'SIGTERM',
+  vite
 });
+if (process.platform !== 'win32') process.on('SIGHUP', () => lifecycle.restartRuntime());
+for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => lifecycle.shutdown());

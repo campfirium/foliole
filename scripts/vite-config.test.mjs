@@ -13,7 +13,7 @@ import demoViteConfig, {
   normalizeDemoCanonicalRouteHtml
 } from '../vite.demo.config.ts';
 import viteConfig from '../vite.config.ts';
-import { injectDefaultStartupSkeletonHtml } from '../vite.shared.ts';
+import { injectDefaultStartupSkeletonHtml, resolveViteHmrSetting } from '../vite.shared.ts';
 
 const normalizePath = (value) => String(value).replaceAll('\\', '/');
 const packageJson = JSON.parse(readFileSync('package.json', 'utf8'));
@@ -46,6 +46,7 @@ describe('vite config', () => {
 
   it('keeps Electron dev renderer updates behind explicit preview reload intents', () => {
     expect(viteConfig.server?.hmr).toBe(false);
+    expect(resolveViteHmrSetting({ FOLIOLE_VITE_HMR: '1' })).toBe(true);
   });
 
   it('warms the desktop renderer startup graph before Electron requests the first page', () => {
