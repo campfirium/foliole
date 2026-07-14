@@ -1,7 +1,17 @@
 // @vitest-environment node
+/* global Buffer, URL */
+import { readFileSync } from 'node:fs';
+
 import { expect, it } from 'vitest';
 
 import { createMasBuilderConfig, readProvisioningProfileMetadata } from './package-mas.mjs';
+
+it('allows the sandboxed MAS app to host the loopback Agent Control server', () => {
+  const entitlements = readFileSync(new URL('../../build/entitlements.mas.plist', import.meta.url), 'utf8');
+
+  expect(entitlements).toContain('<key>com.apple.security.network.client</key>');
+  expect(entitlements).toContain('<key>com.apple.security.network.server</key>');
+});
 
 it('creates an arm64 MAS config with the official bundle id and signed bundled Codex helper', () => {
   const config = createMasBuilderConfig({
