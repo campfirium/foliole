@@ -10,6 +10,7 @@ import {
   resolvePathOverride
 } from '../scripts/agent-control/foliole-agent-runtime-paths.mjs';
 
+import { applyMacosDevelopmentDockIcon } from './macosDevelopmentDockIcon.js';
 import { resolvePreloadScriptPath, resolveRendererIndexPath } from './runtimePaths.js';
 
 type ExistsSync = (filePath: string) => boolean;
@@ -18,8 +19,10 @@ type MkdirSync = (dirPath: string, options: { recursive: true }) => void;
 type RmSync = (dirPath: string, options: { force: true; recursive: true }) => void;
 
 interface AppIdentityApi {
+  dock?: { setIcon(image: string): void } | undefined;
   getName(): string;
   getPath(name: 'appData' | 'sessionData' | 'temp' | 'userData'): string;
+  isPackaged?: boolean;
   setAppUserModelId?(id: string): void;
   setName(name: string): void;
   setPath(name: 'sessionData' | 'userData', value: string): void;
@@ -135,6 +138,8 @@ export function configureRuntimeAppIdentity(
   const runtimeAppName = resolveRuntimeAppName(app.getName(), env);
   const internalBuild = runtimeAppName === FOLIOLE_INTERNAL_APP_NAME;
   app.setName(internalBuild ? FOLIOLE_INTERNAL_PRODUCT_NAME : 'Foliole');
+  const appRoot = resolvePathOverride(env.FOLIOLE_ELECTRON_APP_ROOT) ?? process.cwd();
+  applyMacosDevelopmentDockIcon(app, path.join(appRoot, 'build', 'icon.png'), platform);
   const sampleLaunch = hasFlagOrValue(argv, '--sample-locale');
   const previewSandbox = env.FOLIOLE_PREVIEW_SANDBOX === '1' || hasFlag(argv, '--preview-sandbox') || sampleLaunch;
   if (previewSandbox) {
