@@ -5,6 +5,8 @@ AGENTS.local.md
 skills-lock.json
 ref/
 node_modules/
+__pycache__/
+*.py[cod]
 dist/
 release/
 artifacts/
