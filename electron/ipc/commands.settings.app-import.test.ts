@@ -1,7 +1,11 @@
 // @vitest-environment node
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { handleInvokeRequest, resetCommandsSettingsTestDoubles } from './commands.settings.testSupport.js';
+import {
+  handleInvokeRequest,
+  refreshGlobalClipShortcutMock,
+  resetCommandsSettingsTestDoubles
+} from './commands.settings.testSupport.js';
 import { openImportRoot, updateLibraryPathSetting } from './libraryPaths.js';
 
 const RELEASE_GATE_TEST_TIMEOUT_MS = 30_000;
@@ -100,6 +104,7 @@ async function expectSyncAndAppSettingsCommands() {
       args: { settings: { 'foliole-ui-font-preset': 'source-sans' } }
     })
   ).resolves.toBeNull();
+  expect(refreshGlobalClipShortcutMock).toHaveBeenCalledOnce();
   await expectCompanionPairingCommands();
 }
 

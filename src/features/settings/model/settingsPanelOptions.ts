@@ -34,8 +34,8 @@ const SETTINGS_CATEGORY_DEFINITIONS: Array<{
   { id: 'appearance', labelKey: 'settings.category.appearance.label', descriptionKey: 'settings.category.appearance.description' },
   { id: 'editor', labelKey: 'settings.category.editor.label', descriptionKey: 'settings.category.editor.description' },
   { id: 'web-lookup', labelKey: 'settings.category.webLookup.label', descriptionKey: 'settings.category.webLookup.description' },
-  { id: 'publishing', labelKey: 'settings.category.publishing.label', descriptionKey: 'settings.category.publishing.description' },
   { id: 'review', labelKey: 'settings.category.review.label', descriptionKey: 'settings.category.review.description' },
+  { id: 'publishing', labelKey: 'settings.category.publishing.label', descriptionKey: 'settings.category.publishing.description' },
   { id: 'rail', labelKey: 'settings.category.rail.label', descriptionKey: 'settings.category.rail.description' },
   { id: 'hotkeys', labelKey: 'settings.category.hotkeys.label', descriptionKey: 'settings.category.hotkeys.description' },
   { id: 'mouse-gestures', labelKey: 'settings.category.mouseGestures.label', descriptionKey: 'settings.category.mouseGestures.description' },
@@ -60,7 +60,11 @@ export function getSettingsCategories(t: Translate): SettingsCategoryOption[] {
 const SETTINGS_CATEGORY_GROUP_DEFINITIONS: Array<{ categoryIds: SettingsCategoryId[]; labelKey: TranslationKey }> = [
   {
     labelKey: 'settings.group.workspace',
-    categoryIds: ['about', 'general', 'appearance', 'editor', 'web-lookup', 'publishing', 'review', 'hotkeys', 'mouse-gestures', 'rail']
+    categoryIds: ['about', 'general', 'appearance', 'editor', 'review', 'publishing']
+  },
+  {
+    labelKey: 'settings.group.controls',
+    categoryIds: ['hotkeys', 'rail', 'mouse-gestures', 'web-lookup']
   },
   {
     labelKey: 'settings.group.storage',

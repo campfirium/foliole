@@ -6,6 +6,7 @@ const CATEGORY_NAMES = {
   Backups: /^(Backups|备份)$/,
   ExternalFolder: /^(External Folder|外部文件夹)$/,
   General: /^(General|通用)$/,
+  Hotkeys: /^(Hotkeys|快捷键)$/,
   Sync: /^(Sync|同步)$/
 } as const;
 const SETTINGS_CATEGORIES_LABEL = /^(Settings categories|设置分类)$/;

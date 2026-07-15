@@ -19,6 +19,16 @@ beforeEach(() => {
   HTMLElement.prototype.scrollIntoView = vi.fn();
   const invoke = vi.fn(async (command: string) => {
     if (command === 'load_login_item_settings') return { enabled: false, effective: false, supported: true };
+    if (command === 'load_desktop_host_capabilities') {
+      return {
+        globalCapturePermission: 'granted',
+        globalCaptureShortcutLabel: 'Command+Shift+C',
+        globalCaptureShortcutRegistered: true,
+        globalCaptureSupported: true,
+        globalCaptureToastPositionSupported: true,
+        loginItemSupported: false
+      };
+    }
     if (command === 'load_search_index_rebuild_status') return null;
     if (command === 'load_library_path_settings') {
       return {

@@ -23,7 +23,8 @@ function resolvePlatform() {
 }
 
 function isMacPlatform(platform = resolvePlatform()) {
-  return platform.toLowerCase().includes('mac');
+  const normalized = platform.toLowerCase();
+  return normalized.includes('mac') || normalized === 'darwin';
 }
 
 function getShortcutCandidates(shortcuts: CommandShortcutSet) {
@@ -70,4 +71,13 @@ export function resolveNativeMenuAccelerator(shortcuts: CommandShortcutSet | und
   }
   const shortcut = selectPlatformShortcut(shortcuts, platform);
   return shortcut ? formatNativeMenuAccelerator(shortcut) : '';
+}
+
+export function resolveNativeAccelerators(shortcuts: CommandShortcutSet | undefined) {
+  if (!shortcuts) {
+    return [];
+  }
+  return getShortcutCandidates(shortcuts)
+    .filter(isNativeMenuSafe)
+    .map(formatNativeMenuAccelerator);
 }

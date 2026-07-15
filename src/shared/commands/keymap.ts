@@ -28,7 +28,7 @@ function sanitizeShortcutLabel(value: unknown) {
   return normalized;
 }
 
-function sanitizeOverrides(value: unknown): CommandShortcutOverrides {
+export function parseCommandShortcutOverrides(value: unknown): CommandShortcutOverrides {
   if (!value || typeof value !== 'object') {
     return {};
   }
@@ -67,7 +67,7 @@ export function getCommandShortcutOverrides(): CommandShortcutOverrides {
       return {};
     }
     const parsed = JSON.parse(raw) as unknown;
-    return sanitizeOverrides(parsed);
+    return parseCommandShortcutOverrides(parsed);
   } catch {
     return {};
   }

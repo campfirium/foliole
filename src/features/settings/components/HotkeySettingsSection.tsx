@@ -12,10 +12,6 @@ import {
 } from '../../../shared/ui';
 import type { HotkeySettingItem, HotkeyUpdateResult } from '../model/hotkeySettings';
 
-import {
-  GlobalClipShortcutRow,
-  shouldShowGlobalClipShortcut
-} from './HotkeyGlobalClipRow';
 import { HotkeySearchPanel } from './HotkeySettingsSearchPanel';
 import {
   joinShortcutLabels,
@@ -166,13 +162,11 @@ function HotkeyRow({ item, message, recordingSlot, onBeginRecording, onClearShor
 function HotkeyList(props: {
   items: HotkeySettingItem[];
   model: ReturnType<typeof useHotkeySectionModel>;
-  showGlobalClipShortcut: boolean;
 }) {
   const t = useTranslation();
 
   return (
     <div aria-label={t('settings.hotkeys.commandList')} role="list">
-      {props.showGlobalClipShortcut ? <GlobalClipShortcutRow /> : null}
       {props.items.map((item) => {
         const draft = props.model.draftById[item.commandId];
         const hasDraftChange = Boolean(draft && (draft.primary !== item.primaryShortcutLabel || draft.secondary !== item.secondaryShortcutLabel));
@@ -210,13 +204,11 @@ export function HotkeySettingsSection({ items, onUpdate, onResetAll }: HotkeySet
   void onResetAll;
   const t = useTranslation();
   const model = useHotkeySectionModel(items, onUpdate);
-  const showGlobalClipShortcut = shouldShowGlobalClipShortcut(model.filterMode, model.query, t);
-  const visibleCount = model.filteredItems.length + (showGlobalClipShortcut ? 1 : 0);
   return (
     <SettingsSection ariaLabel={t('settings.hotkeys.sectionAria')}>
       <div className="bg-settings-group">
         <HotkeySearchPanel
-          count={visibleCount}
+          count={model.filteredItems.length}
           filterMode={model.filterMode}
           onBeginSearchRecording={model.beginSearchRecording}
           onFilterModeChange={model.setFilterMode}
@@ -224,7 +216,7 @@ export function HotkeySettingsSection({ items, onUpdate, onResetAll }: HotkeySet
           query={model.query}
           searchRecording={Boolean(model.searchRecording)}
         />
-        <HotkeyList items={model.filteredItems} model={model} showGlobalClipShortcut={showGlobalClipShortcut} />
+        <HotkeyList items={model.filteredItems} model={model} />
       </div>
     </SettingsSection>
   );

@@ -22,19 +22,5 @@ export const ZH_HANS_SETTINGS_HOTKEYS_TRANSLATIONS: Partial<Record<TranslationKe
   'settings.hotkeys.commandList': '命令快捷键列表',
   'settings.hotkeys.empty': '没有匹配的快捷键。',
   'settings.hotkeys.sectionAria': '快捷键设置区域',
-  'settings.hotkeys.invalidShortcut': '快捷键无效。',
-  'settings.globalClip.shortcut.title': '捕捉到 Inbox（全局）',
-  'settings.globalClip.shortcut.section': '捕捉',
-  'settings.globalClip.shortcut.description': '捕捉当前选区、快速输入想法，或直接回车导入剪贴板。',
-  'settings.globalClip.shortcut.unsupported': '此平台暂不支持',
-  'settings.globalClip.shortcut.registrationFailed': '快捷键不可用，请改用菜单栏。',
-  'settings.globalClip.shortcut.unavailable': '不可用',
-  'settings.globalClip.shortcut.value': 'Alt+Shift+C',
-  'settings.globalClip.permission.granted': 'Foliole 可以发送一次复制快捷键。',
-  'settings.globalClip.permission.denied': '请在“系统设置 → 隐私与安全性 → 辅助功能”中允许 Foliole。',
-  'settings.globalClip.permission.unavailable': '全局剪辑权限状态不可用。',
-  'settings.globalClip.toastPosition.title': '剪辑提示位置',
-  'settings.globalClip.toastPosition.description': '选择剪辑提示在这台 Mac 上显示的位置。',
-  'settings.globalClip.toastPosition.topRight': '右上角',
-  'settings.globalClip.toastPosition.bottomRight': '右下角'
+  'settings.hotkeys.invalidShortcut': '快捷键无效。'
 };

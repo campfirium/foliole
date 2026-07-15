@@ -25,6 +25,15 @@ it('uses Cmd for Ctrl-only default shortcuts on macOS', () => {
   )).toBe(true);
 });
 
+it('uses the host-specific global capture default in the unified shortcut map', () => {
+  expect(getPlatformDefaultCommandShortcuts('MacIntel')[APP_COMMAND_IDS.globalCaptureToInbox]).toEqual({
+    primary: { key: 'c', metaKey: true, shiftKey: true }
+  });
+  expect(getPlatformDefaultCommandShortcuts('Win32')[APP_COMMAND_IDS.globalCaptureToInbox]).toEqual({
+    primary: { key: 'c', altKey: true, shiftKey: true }
+  });
+});
+
 it('deduplicates existing Ctrl and Cmd default pairs on macOS', () => {
   const macShortcuts = getPlatformDefaultCommandShortcuts('MacIntel');
 

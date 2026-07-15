@@ -4,6 +4,8 @@ import './commands.settings.companionMocks.testSupport.js';
 import './commands.settings.reviewSchedulerMocks.testSupport.js';
 import { resetDatabaseReadinessForTests } from '../database/databaseReadiness.js';
 
+const globalClipShortcutMocks = vi.hoisted(() => ({ refreshGlobalClipShortcutFromSettings: vi.fn() }));
+
 vi.mock('electron', () => ({
   BrowserWindow: {
     fromWebContents: vi.fn(() => null),
@@ -16,6 +18,7 @@ vi.mock('electron', () => ({
   }
 }));
 vi.mock('./menu.js', () => ({ syncAppMenuState: vi.fn() }));
+vi.mock('../globalClipShortcut.js', () => globalClipShortcutMocks);
 vi.mock('./paths.js', () => ({
   resolveAppPaths: vi.fn().mockReturnValue({
     app_data_dir: '/data',
@@ -153,6 +156,8 @@ export function resetCommandsSettingsTestDoubles() {
   vi.clearAllMocks();
   resetDatabaseReadinessForTests();
 }
+
+export const refreshGlobalClipShortcutMock = globalClipShortcutMocks.refreshGlobalClipShortcutFromSettings;
 
 const commandsModulePromise = import('./commands.js');
 

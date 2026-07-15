@@ -20,19 +20,5 @@ export const EN_SETTINGS_HOTKEYS_TRANSLATIONS = {
   'settings.hotkeys.commandList': 'Command shortcut list',
   'settings.hotkeys.empty': 'No matching hotkeys.',
   'settings.hotkeys.sectionAria': 'Hotkeys settings section',
-  'settings.hotkeys.invalidShortcut': 'Shortcut is invalid.',
-  'settings.globalClip.shortcut.title': 'Capture to Inbox (global)',
-  'settings.globalClip.shortcut.section': 'Capture',
-  'settings.globalClip.shortcut.description': 'Capture the current selection, type a quick thought, or press Enter to import the clipboard.',
-  'settings.globalClip.shortcut.unsupported': 'Not available on this platform',
-  'settings.globalClip.shortcut.registrationFailed': 'Shortcut unavailable. Use the menu bar instead.',
-  'settings.globalClip.shortcut.unavailable': 'Unavailable',
-  'settings.globalClip.shortcut.value': 'Alt+Shift+C',
-  'settings.globalClip.permission.granted': 'Foliole can send the copy shortcut.',
-  'settings.globalClip.permission.denied': 'Allow Foliole in System Settings → Privacy & Security → Accessibility.',
-  'settings.globalClip.permission.unavailable': 'Global capture permission is unavailable.',
-  'settings.globalClip.toastPosition.title': 'Capture confirmation position',
-  'settings.globalClip.toastPosition.description': 'Choose where capture confirmations appear on this Mac.',
-  'settings.globalClip.toastPosition.topRight': 'Top right',
-  'settings.globalClip.toastPosition.bottomRight': 'Bottom right'
+  'settings.hotkeys.invalidShortcut': 'Shortcut is invalid.'
 } as const;

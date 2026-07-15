@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import process from 'node:process';
+
+import packageJson from '../../package.json' with { type: 'json' };
+
 import { resolveQualityFastCommand } from './run-quality-fast.mjs';
 
 describe('quality fast platform adapter', () => {
+  it('owns both public fast quality entries', () => {
+    expect(packageJson.scripts['quality:fast']).toBe('node scripts/quality/run-quality-fast.mjs');
+    expect(packageJson.scripts['quality:fast:native']).toBe('node scripts/quality/run-quality-fast.mjs');
+  });
+
   it('routes Mac and Linux to the shared fast kernel with argv intact', () => {
     for (const platform of ['darwin', 'linux']) {
       const result = resolveQualityFastCommand(platform, ['--route-json']);

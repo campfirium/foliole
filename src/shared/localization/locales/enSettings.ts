@@ -12,6 +12,7 @@ export const EN_SETTINGS_TRANSLATIONS = {
   'settings.sidebar.aria': 'Settings categories',
   'settings.navigation.aria': 'Settings navigation',
   'settings.group.workspace': 'Workspace',
+  'settings.group.controls': 'Controls',
   'settings.group.storage': 'Data',
   'settings.group.sources': 'Sources',
   'settings.category.about.label': 'About',

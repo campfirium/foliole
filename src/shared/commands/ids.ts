@@ -1,4 +1,5 @@
 import { FOLDER_TOPIC_ITEM_APP_COMMAND_IDS } from '../../../lib/core/nodes/folderTopicItemCommands';
+import { GLOBAL_CAPTURE_COMMAND_ID } from '../../../lib/platform/globalCaptureShortcut';
 
 export const APP_COMMAND_IDS = {
   toggleCommandPaletteMac: 'commandPalette.toggle.mac',
@@ -48,6 +49,7 @@ export const APP_COMMAND_IDS = {
   importSingleFile: 'import.singleFileToInbox',
   importFolder: 'import.folderToInbox',
   clipboardImport: 'import.clipboard',
+  globalCaptureToInbox: GLOBAL_CAPTURE_COMMAND_ID,
   resetImportData: 'dev.resetImportData',
   reimportSelectedTopic: 'dev.reimportSelectedTopic',
   openPerformancePanel: 'dev.openPerformancePanel',

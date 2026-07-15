@@ -16,6 +16,8 @@ import {
   getGlobalClipShortcutConfig,
   getGlobalClipShortcutStatus,
   installGlobalClipShortcut,
+  refreshGlobalClipShortcut,
+  refreshGlobalClipShortcutFromSettings,
   resetGlobalClipShortcutForTests
 } from './globalClipShortcut.js';
 
@@ -95,4 +97,39 @@ it('does not register on unsupported hosts', () => {
     platform: 'linux'
   })).toBe(false);
   expect(globalShortcutRef.register).not.toHaveBeenCalled();
+});
+
+it('replaces the active global shortcut when the saved command shortcut changes', () => {
+  let accelerators = ['Command+Shift+C'];
+  const globalShortcutRef = { register: vi.fn(() => true), unregister: vi.fn() };
+  installGlobalClipShortcut({
+    captureToInbox: vi.fn(async () => null),
+    globalShortcutRef,
+    platform: 'darwin',
+    resolveAccelerators: () => accelerators
+  });
+
+  accelerators = ['Command+Shift+X'];
+  expect(refreshGlobalClipShortcut()).toBe(true);
+
+  expect(globalShortcutRef.unregister).toHaveBeenCalledWith('Command+Shift+C');
+  expect(globalShortcutRef.register).toHaveBeenLastCalledWith('Command+Shift+X', expect.any(Function));
+  expect(getGlobalClipShortcutStatus('darwin')).toEqual({
+    globalCaptureShortcutLabel: 'Command+Shift+X',
+    globalCaptureShortcutRegistered: true
+  });
+});
+
+it('uses the platform default until persisted settings are safe to read', () => {
+  const globalShortcutRef = { register: vi.fn(() => true), unregister: vi.fn() };
+  installGlobalClipShortcut({
+    captureToInbox: vi.fn(async () => null),
+    globalShortcutRef,
+    platform: 'darwin'
+  });
+
+  expect(globalShortcutRef.register).toHaveBeenLastCalledWith('Command+Shift+C', expect.any(Function));
+  expect(refreshGlobalClipShortcutFromSettings(() => ['Command+Shift+X'])).toBe(true);
+  expect(globalShortcutRef.unregister).toHaveBeenCalledWith('Command+Shift+C');
+  expect(globalShortcutRef.register).toHaveBeenLastCalledWith('Command+Shift+X', expect.any(Function));
 });

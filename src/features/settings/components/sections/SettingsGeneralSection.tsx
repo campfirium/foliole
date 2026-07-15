@@ -22,6 +22,7 @@ import {
 import { settingsSearchRowProps } from '../../model/settingsSearch';
 import { useLocalizedSettingsSearchRow } from '../useLocalizedSettingsSearchRows';
 
+import { SettingsCaptureSection } from './SettingsCaptureSection';
 import { SettingsGeneralSystemSection } from './SettingsGeneralSystemSection';
 
 type Translate = ReturnType<typeof useTranslation>;
@@ -131,6 +132,7 @@ export function SettingsGeneralSection({
       <SettingsSection ariaLabel={t('settings.general.search.aria')} title={t('settings.general.search.section')}>
         <SearchEnhancementRow />
       </SettingsSection>
+      <SettingsCaptureSection />
     </>
   );
 }

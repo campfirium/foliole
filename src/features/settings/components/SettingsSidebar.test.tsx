@@ -50,3 +50,34 @@ it('labels the demo settings brand separately from the version when supplied', (
   expect(screen.getByText('Demo')).toBeInTheDocument();
   expect(screen.getByText('v0.6.5')).toBeInTheDocument();
 });
+
+it('groups workspace and control settings in product order', () => {
+  render(
+    <LocalizationProvider>
+      <SettingsSidebar activeCategory="editor" setActiveCategory={vi.fn()} />
+    </LocalizationProvider>
+  );
+
+  const groupLabels = screen.getAllByText(/^(Workspace|Controls|Data|Sources)$/).map((node) => node.textContent);
+  expect(groupLabels).toEqual(['Workspace', 'Controls', 'Data', 'Sources']);
+
+  const controls = screen.getByText('Controls').closest('.relative');
+  expect(controls).not.toBeNull();
+  expect(controls?.querySelectorAll('button')).toHaveLength(4);
+  expect(Array.from(controls?.querySelectorAll('button') ?? []).map((button) => button.textContent)).toEqual([
+    'Hotkeys',
+    'Ribbon',
+    'Mouse gestures',
+    'Right-click menu'
+  ]);
+
+  const workspace = screen.getByText('Workspace').closest('.relative');
+  expect(Array.from(workspace?.querySelectorAll('button') ?? []).map((button) => button.textContent)).toEqual([
+    'About',
+    'General',
+    'Appearance',
+    'Editor',
+    'Review',
+    'Publishing'
+  ]);
+});

@@ -1,26 +1,15 @@
 // @vitest-environment node
 /* global console */
 
-import { readFile } from 'node:fs/promises';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
 import { describe, expect, it, vi } from 'vitest';
 
 import { isRejectedBashPath, parseRoutePlan, resolveGitBash, runQualityT0Native } from './quality-fast-native.mjs';
 
-const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const WIN_SEP = String.fromCharCode(92);
 const winPath = (...parts) => parts.join(WIN_SEP);
 const SYSTEM_BASH = winPath('C:', 'Windows', 'System32', 'bash.exe');
 const GIT_BASH = winPath('C:', 'Program Files', 'Git', 'bin', 'bash.exe');
 const SCOOP_BASH = winPath('C:', 'Users', 'zephu', 'scoop', 'apps', 'git', 'current', 'bin', 'bash.exe');
-
-it('exposes a Windows native fast quality npm entry', async () => {
-  const packageJson = JSON.parse(await readFile(path.join(REPO_ROOT, 'package.json'), 'utf8'));
-
-  expect(packageJson.scripts['quality:fast:native']).toBe('node scripts/windows/quality-fast-native.mjs');
-});
 
 describe('quality-fast-native route parsing', () => {
   it('parses heavy route details from the shared route plan output', () => {

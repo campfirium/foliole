@@ -50,6 +50,13 @@ export const CAPABILITY_CONTRACTS = [
     platforms: ['darwin', 'linux', 'win32']
   },
   {
+    adapter: { args: ['scripts/quality/run-quality-fast.mjs'], bin: 'node' },
+    adapterPath: 'scripts/quality/run-quality-fast.mjs',
+    name: 'quality:fast:native',
+    placements: ['shared-core'],
+    platforms: ['darwin', 'linux', 'win32']
+  },
+  {
     adapter: { args: ['scripts/android/android-web-dev.mjs'], bin: 'node' },
     adapterPath: 'scripts/android/android-web-dev.mjs',
     name: 'android:web:dev',

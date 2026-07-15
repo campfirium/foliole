@@ -36,7 +36,7 @@ const SETTINGS_SEARCH_ROW_DEFINITIONS: SearchRowDefinition[] = [
   row('mouse-gestures', 'mouse-gestures-line-color', 'settings.search.gestureLineColor.title', 'settings.search.gestureLineColor.description'),
   row('mouse-gestures', 'mouse-gestures-line-width', 'settings.search.gestureLineWidth.title', 'settings.search.gestureLineWidth.description'),
   row('mouse-gestures', 'mouse-gestures-direction-threshold', 'settings.search.gestureThreshold.title', 'settings.search.gestureThreshold.description'),
-  row('hotkeys', 'hotkeys-global-clip-shortcut', 'settings.globalClip.shortcut.title', 'settings.globalClip.shortcut.description'),
+  row('general', 'capture-confirmation-position', 'settings.capture.position.title', 'settings.capture.position.description'),
   row('library', 'library-home', 'settings.search.libraryHome.title', 'settings.search.libraryHome.description'),
   row('library', 'library-assets', 'settings.search.libraryAssets.title', 'settings.search.libraryAssets.description'),
   row('library', 'library-inbox', 'settings.search.libraryInbox.title', 'settings.search.libraryInbox.description'),

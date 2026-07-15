@@ -27,6 +27,7 @@ export const DEFAULT_APP_COMMAND_SHORTCUTS: DefaultCommandShortcuts = {
   [APP_COMMAND_IDS.createItem]: { primary: { key: 'n', ctrlKey: true, altKey: true } },
   [APP_COMMAND_IDS.importSingleFile]: { primary: { key: 'o', ctrlKey: true } },
   [APP_COMMAND_IDS.clipboardImport]: { primary: { key: 'v', ctrlKey: true, altKey: true } },
+  [APP_COMMAND_IDS.globalCaptureToInbox]: { primary: { key: 'c', altKey: true, shiftKey: true } },
   [APP_COMMAND_IDS.findInTopic]: { primary: { key: 'f', ctrlKey: true }, secondary: { key: 'f', metaKey: true } },
   [APP_COMMAND_IDS.createSelectionHighlight]: { primary: { key: 'z', altKey: true } },
   [APP_COMMAND_IDS.createSelectionCloze]: { primary: { key: 'x', altKey: true } },
@@ -107,6 +108,17 @@ function getPlatformShortcut(shortcut: CommandShortcut, platform?: string): Comm
   return platformShortcut;
 }
 
+function getCommandPlatformShortcut(
+  commandId: AppCommandId,
+  shortcut: CommandShortcut,
+  platform?: string
+) {
+  if (commandId === APP_COMMAND_IDS.globalCaptureToInbox && isMacPlatform(platform)) {
+    return { key: 'c', metaKey: true, shiftKey: true };
+  }
+  return getPlatformShortcut(shortcut, platform);
+}
+
 function getShortcutSignature(shortcut: CommandShortcut) {
   return [
     `m:${shortcut.metaKey ? 1 : 0}`,
@@ -133,7 +145,7 @@ export function getPlatformDefaultCommandShortcuts(
       if (!shortcut) {
         continue;
       }
-      const platformShortcut = getPlatformShortcut(shortcut, options.platform);
+      const platformShortcut = getCommandPlatformShortcut(commandId as AppCommandId, shortcut, options.platform);
       const signature = getShortcutSignature(platformShortcut);
       if (seen.has(signature)) {
         continue;

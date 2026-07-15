@@ -13,8 +13,19 @@ afterEach(() => {
   delete window.electronAPI;
 });
 
+const GLOBAL_CAPTURE_HOTKEY_ITEM: HotkeySettingItem = {
+  commandId: 'capture.globalToInbox',
+  title: 'Capture to Inbox (global)',
+  section: 'Capture',
+  primaryShortcutLabel: 'Alt+Shift+C',
+  secondaryShortcutLabel: '',
+  shortcutSummaryLabel: 'Alt+Shift+C',
+  isCustomized: false
+};
+
 function createHotkeyItems(): HotkeySettingItem[] {
   return [
+    GLOBAL_CAPTURE_HOTKEY_ITEM,
     {
       commandId: 'workspace.createFolder',
       title: 'Create Folder',
@@ -207,44 +218,26 @@ it('filters hotkeys across shortcut separator characters', async () => {
   expect(screen.getByText('Toggle Left Sidebar')).toBeInTheDocument();
 });
 
-it('shows the global clip shortcut as the first hotkey row', async () => {
-  installNativeHotkeyApi();
-  await renderHotkeyPanel();
+it('edits the global clip shortcut through the standard hotkey recorder', async () => {
+  const nativeHotkeys = installNativeHotkeyApi();
+  const onHotkeyUpdate = vi.fn((_commandId, _slot, nextLabel: string) => ({
+    status: 'applied' as const,
+    normalizedShortcutLabel: nextLabel
+  }));
+  await renderHotkeyPanel(onHotkeyUpdate);
 
   const rows = within(screen.getByLabelText('Command shortcut list')).getAllByRole('listitem');
   expect(rows[0]).toHaveTextContent('Capture to Inbox (global)');
   expect(rows[0]).toHaveTextContent('Capture');
   expect(rows[0]).toHaveTextContent('Alt+Shift+C');
-  expect(within(rows[0]!).queryByRole('button')).not.toBeInTheDocument();
-  expect(rows[1]).toHaveTextContent('Create Folder');
-  expect(screen.queryByRole('switch', { name: 'Use current clipboard when nothing is selected' })).not.toBeInTheDocument();
-});
-
-it('marks the global clip shortcut unavailable when the desktop host does not support it', async () => {
-  await renderHotkeyPanel();
-
-  const rows = within(screen.getByLabelText('Command shortcut list')).getAllByRole('listitem');
-  await waitFor(() => expect(rows[0]).toHaveTextContent('Not available on this platform'));
-  expect(rows[0]).toHaveTextContent('Unavailable');
-  expect(rows[0]).not.toHaveTextContent('Alt+Shift+C');
-});
-
-it('shows the macOS label and reports a registration conflict', async () => {
-  installNativeHotkeyApi({
-    globalCapturePermission: 'denied',
-    globalCaptureShortcutLabel: 'Command+Shift+C',
-    globalCaptureShortcutRegistered: false,
-    globalCaptureSupported: true,
-    globalCaptureToastPositionSupported: true,
-    loginItemSupported: false
+  fireEvent.click(within(rows[0]!).getByRole('button', { name: 'Shortcut for Capture to Inbox (global)' }));
+  act(() => {
+    nativeHotkeys.sendNativeKey({ altKey: true, code: 'KeyX', controlKey: false, key: 'x', metaKey: false, shiftKey: true, type: 'keyDown' });
   });
-  await renderHotkeyPanel();
-
-  const rows = within(screen.getByLabelText('Command shortcut list')).getAllByRole('listitem');
-  await waitFor(() => expect(rows[0]).toHaveTextContent('Shortcut unavailable. Use the menu bar instead.'));
-  expect(rows[0]).toHaveTextContent('Allow Foliole in System Settings → Privacy & Security → Accessibility.');
-  expect(rows[0]).toHaveTextContent('Unavailable');
-  expect(rows[0]).not.toHaveTextContent('Command+Shift+C');
-  expect(rows[1]).toHaveTextContent('Capture confirmation position');
-  expect(within(rows[1]!).getByRole('combobox')).toHaveValue('top-right');
+  await waitFor(() => expect(onHotkeyUpdate).toHaveBeenCalledWith(
+    'capture.globalToInbox',
+    'primary',
+    'Alt+Shift+X'
+  ));
+  expect(rows[1]).toHaveTextContent('Create Folder');
 });

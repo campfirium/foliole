@@ -15,6 +15,7 @@ import {
   publishTopicToDiscourse,
   saveDiscoursePublishSettings
 } from '../discourse/discoursePublish.js';
+import { refreshGlobalClipShortcutFromSettings } from '../globalClipShortcut.js';
 import { loadImportManagerSettings, saveImportManagerSettings } from '../import/importManagerSettings.js';
 import { refreshKeepImportMonitorFromSettings } from '../import/keepImportMonitor.js';
 import { refreshManagedInboxMonitorFromSettings } from '../import/managedInboxMonitor.js';
@@ -92,6 +93,7 @@ export async function handleSettingsStorageCommand(
   if (command === NATIVE_COMMANDS.loadAppSettingsState) return loadAppSettingsState();
   if (command === NATIVE_COMMANDS.saveAppSettingsState) {
     await saveAppSettingsState(readSettingsObject(args.settings));
+    refreshGlobalClipShortcutFromSettings();
     await refreshManagedInboxMonitorFromSettings();
     return null;
   }

@@ -15,7 +15,10 @@ import { stopDevScreenshotServer } from './devScreenshotServer.js';
 import { appendMainProcessDiagnosticLog } from './diagnostics/mainProcessDiagnostics.js';
 import { installExternalDocumentFileOpenLifecycle } from './externalDocumentFileOpen.js';
 import { notifyExternalSearchSecondInstance, notifyExternalSearchUserActivity, stopExternalSearchBackgroundRefresh } from './externalSearchBackgroundRefreshRuntime.js';
-import { installGlobalClipShortcut } from './globalClipShortcut.js';
+import {
+  installGlobalClipShortcut,
+  refreshGlobalClipShortcutFromSettings
+} from './globalClipShortcut.js';
 import { installGlobalCaptureToastOpenHandler } from './globalClipToastNavigation.js';
 import { prepareGlobalClipToInboxWindows, runGlobalClipToInbox } from './globalClipToInbox.js';
 import { stopKeepImportMonitor } from './import/keepImportMonitor.js';
@@ -99,6 +102,7 @@ async function initializeRuntimeServices() {
       }));
     });
     await appendBootEvent('database_initialize_call_complete');
+    refreshGlobalClipShortcutFromSettings();
     if (process.env.FOLIOLE_SKIP_STARTUP_NODE_SYNC_FLUSH === '1') {
       await appendBootEvent('node_sync_flush_skipped', {
         reason: 'startup-node-sync-flush-disabled'

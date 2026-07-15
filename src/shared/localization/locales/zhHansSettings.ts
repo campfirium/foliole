@@ -14,6 +14,7 @@ export const ZH_HANS_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, strin
   'settings.sidebar.aria': '设置分类',
   'settings.navigation.aria': '设置导航',
   'settings.group.workspace': '工作区',
+  'settings.group.controls': '操作',
   'settings.group.storage': '数据',
   'settings.group.sources': '来源',
   'settings.category.about.label': '关于',

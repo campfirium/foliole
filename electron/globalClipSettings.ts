@@ -1,3 +1,4 @@
+import { resolveGlobalCaptureAccelerators } from '../lib/platform/globalCaptureShortcut.js';
 import { APP_SETTINGS_STORAGE_KEYS } from '../src/shared/config/appSettings.js';
 
 import { loadJsonSetting, saveJsonSetting } from './database/settingsStore.js';
@@ -46,4 +47,18 @@ export function resolveGlobalClipToastPosition(
 export function getGlobalClipToastPosition(platform: NodeJS.Platform = process.platform) {
   const rawValue = loadAppSettingsRecord()[APP_SETTINGS_STORAGE_KEYS.globalClipToastPosition];
   return resolveGlobalClipToastPosition(rawValue, platform);
+}
+
+function loadCommandShortcutOverrides() {
+  const rawValue = loadAppSettingsRecord()[APP_SETTINGS_STORAGE_KEYS.commandShortcutOverrides];
+  if (!rawValue) return {};
+  try {
+    return JSON.parse(rawValue) as unknown;
+  } catch {
+    return {};
+  }
+}
+
+export function getGlobalClipShortcutAccelerators(platform: NodeJS.Platform = process.platform) {
+  return resolveGlobalCaptureAccelerators(loadCommandShortcutOverrides(), platform);
 }

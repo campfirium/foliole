@@ -148,7 +148,7 @@
     "hooks:install": "node scripts/install-git-hooks.mjs",
     "prepare": "npm run hooks:install",
     "quality:fast": "node scripts/quality/run-quality-fast.mjs",
-    "quality:fast:native": "node scripts/windows/quality-fast-native.mjs",
+    "quality:fast:native": "node scripts/quality/run-quality-fast.mjs",
     "quality:desktop": "bash scripts/quality/quality-gate-target.sh desktop",
     "quality:desktop:fail-fast": "bash scripts/quality/quality-gate-target.sh desktop --fail-fast",
     "quality:android": "bash scripts/quality/quality-gate-target.sh android",
