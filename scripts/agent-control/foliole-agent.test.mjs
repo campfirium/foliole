@@ -94,7 +94,7 @@ describe('foliole agent cli', () => {
     expect(calls[0].init.headers.authorization).toBe('Bearer secret-token');
   });
 
-  it('reorders a virtual folder by material ids through existing item ids', async () => {
+  it('reorders a virtual folder by material ids directly', async () => {
     const descriptor = await descriptorPath({
       capabilities: ['virtualFolders.read', 'virtualFolders.reorder']
     });
@@ -114,21 +114,21 @@ describe('foliole agent cli', () => {
               { id: 'item-b', material_id: 'node-b' }
             ]
           })
-          : response({ folder_id: 'folder-1', item_ids: ['item-b', 'item-a'] });
+          : response({ folder_id: 'folder-1', reordered_count: 2 });
       }
     });
 
-    expect(result).toMatchObject({ output: { folder_id: 'folder-1', item_ids: ['item-b', 'item-a'] }, status: 0 });
+    expect(result).toMatchObject({ output: { folder_id: 'folder-1', reordered_count: 2 }, status: 0 });
     expect(result.output.backup_path).toContain('agent-virtual_folder-virtual-folders-reorder-folder-1');
     expect(calls.map((call) => call.url)).toEqual([
       'http://127.0.0.1:3456/agent-control/v1/virtual-folders/read',
       'http://127.0.0.1:3456/agent-control/v1/virtual-folders/reorder'
     ]);
     expect(JSON.parse(calls[0].body)).toEqual({ id: 'folder-1' });
-    expect(JSON.parse(calls[1].body)).toEqual({ folder_id: 'folder-1', item_ids: ['item-b', 'item-a'] });
+    expect(JSON.parse(calls[1].body)).toEqual({ folder_id: 'folder-1', material_ids: ['node-b', 'node-a'] });
   });
 
-  it('does not reorder when a material id is not in the virtual folder', async () => {
+  it('lets the API validate whether reorder material ids belong to the folder', async () => {
     const descriptor = await descriptorPath({
       capabilities: ['virtualFolders.read', 'virtualFolders.reorder']
     });
@@ -145,8 +145,8 @@ describe('foliole agent cli', () => {
       }
     });
 
-    expect(result).toEqual({ output: { error: 'material_not_in_folder' }, status: 2 });
-    expect(calls).toHaveLength(1);
+    expect(result.status).toBe(0);
+    expect(calls).toHaveLength(2);
   });
 
   it('returns structured descriptor and capability errors', async () => {

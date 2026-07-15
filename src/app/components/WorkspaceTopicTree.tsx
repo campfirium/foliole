@@ -6,9 +6,9 @@ import type { WorkspaceListNodesById } from '../../features/nodes/model/workspac
 import { definedProps } from '../../shared/lib/definedProps';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { useWorkspaceStore } from '../../store/workspaceStore';
-import { useWorkspaceContentSort } from '../hooks/useWorkspaceContentSort';
 
 import { useDismissedTopicVisibility } from './useDismissedTopicVisibility';
+import { useWorkspaceTopicTreeContentSort } from './useWorkspaceTopicTreeContentSort';
 import { useWorkspaceTopicTreeActions } from './workspaceTopicTreeActions';
 import { useWorkspaceTopicTreeDrag } from './workspaceTopicTreeDrag';
 import {
@@ -116,7 +116,7 @@ export function useWorkspaceTopicTreeInteraction(args: WorkspaceTopicTreeInterac
 }
 
 function useWorkspaceTopicTreeData(props: WorkspaceTopicTreeProps) {
-  const contentSort = useWorkspaceContentSort();
+  const contentSort = useWorkspaceTopicTreeContentSort(props.activeFolderId, props.preserveItemOrder ?? false);
   const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
   const dismissedTopicVisibility = useDismissedTopicVisibility();
   const sort = contentSort.sort;

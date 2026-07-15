@@ -152,16 +152,7 @@ it('preserves manual virtual collection order from the API', () => {
     />
   );
 
-  expect(screen.getByRole('button', { name: 'Sort list by Date modified' })).toBeInTheDocument();
-  expect(screen.getAllByRole('treeitem').map((item) => item.textContent)).toEqual([
-    'First result',
-    'Second result',
-    'Third result'
-  ]);
-
-  fireEvent.keyDown(screen.getByRole('button', { name: 'Sort list by Date modified' }), { key: 'ArrowDown' });
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Manual' }));
-
+  expect(screen.getByRole('button', { name: 'Sort list by Manual' })).toBeInTheDocument();
   expect(screen.getAllByRole('treeitem').map((item) => item.textContent)).toEqual([
     'Third result',
     'First result',

@@ -72,15 +72,36 @@ export function updateAgentControlMaterial(input: {
   if (typeof input.content === 'string' && input.content.length > AGENT_CONTROL_MATERIAL_WRITE_CONTENT_LIMIT) {
     throw new AgentMaterialMutationError('invalid_request', 400);
   }
-  const updatedAt = new Date().toISOString();
-  upsertNodeSnapshot(toUpsertInput(row, {
+  rewriteAgentControlNodeSnapshot({
     content: input.content ?? readRowContent(row),
-    title: typeof input.title === 'string' ? input.title.trim() : row.title,
-    updatedAt
-  }));
+    id: input.id,
+    title: typeof input.title === 'string' ? input.title.trim() : row.title
+  });
   const material = readAgentControlMaterial(input.id);
   if (!material) throw new AgentMaterialMutationError('not_found', 404);
   return material;
+}
+
+export function rewriteAgentControlNodeSnapshot(input: {
+  content?: string;
+  id: string;
+  manualChildOrder?: string[] | null;
+  title?: string;
+  updatedAt?: string;
+  virtualFilter?: ReturnType<typeof parseVirtualNodeFilter>;
+}) {
+  const row = readMaterialSnapshotRow(input.id);
+  if (!row) throw new AgentMaterialMutationError('not_found', 404);
+  const updatedAt = input.updatedAt ?? new Date().toISOString();
+  const snapshot = toUpsertInput(row, {
+    content: input.content ?? readRowContent(row),
+    title: input.title ?? row.title,
+    updatedAt
+  });
+  if (input.manualChildOrder !== undefined) snapshot.manualChildOrder = input.manualChildOrder;
+  if (input.virtualFilter !== undefined) snapshot.virtualFilter = input.virtualFilter;
+  upsertNodeSnapshot(snapshot);
+  return updatedAt;
 }
 
 export function softDeleteAgentControlMaterial(input: {

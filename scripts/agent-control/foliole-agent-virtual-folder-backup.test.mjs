@@ -87,7 +87,7 @@ describe('foliole agent cli virtual folder backups', () => {
       '--descriptor', descriptor,
       '--backup-dir', blockedPath,
       '--folder-id', 'folder-1',
-      '--item-ids', 'item-b,item-a'
+      '--material-ids', 'node-b,node-a'
     ], {
       fetch: async () => {
         calls += 1;
@@ -106,8 +106,7 @@ describe('foliole agent cli virtual folder backups', () => {
       'virtual-folders/create',
       '--descriptor', descriptor,
       '--backup-dir', path.join(tempRoot, 'backups'),
-      '--title', 'Research Queue',
-      '--description', 'Draft set'
+      '--title', 'Research Queue'
     ], {
       fetch: async () => response({ folder_id: 'folder-new', title: 'Research Queue' }),
       randomId: () => 'create-run'
@@ -118,7 +117,7 @@ describe('foliole agent cli virtual folder backups', () => {
     expect(backup).toMatchObject({
       command: 'virtual-folders/create',
       previous_virtual_folder: null,
-      request_patch: { description: 'Draft set', title: 'Research Queue' },
+      request_patch: { title: 'Research Queue' },
       run_id: 'create-run',
       virtual_folder_id: 'new'
     });

@@ -37,6 +37,7 @@ const workspaceListRow = {
   is_title_manual: 1,
   hide_title_heading: 1,
   virtual_filter: null,
+  collection_source_content: '---\ncollections:\n  - "Guide"\n---\nBody',
   opening_text: 'The first body paragraph.',
   body_status: 'ready',
   has_content: 1,
@@ -79,10 +80,12 @@ const expectedWorkspaceListSnapshot = {
       hideTitleHeading: true,
       bodyBlobHash: null,
       bodyStatus: 'ready',
+      collections: ['Guide'],
       hasContent: true,
       hasReveal: true,
       openingText: 'The first body paragraph.',
       content: '',
+      currentVersionId: null,
       virtualFilter: null,
       reveal: null,
       anchorLink: null,
@@ -115,7 +118,7 @@ it('loads workspace list snapshot without long-lived node documents', () => {
   expect(queryAllSpy).toHaveBeenCalledTimes(4);
 });
 
-it('queries lightweight list fields and reads opening_text instead of long-lived content bodies', () => {
+it('projects collection names without retaining long-lived content bodies', () => {
   queryAllSpy.mockReturnValueOnce([workspaceListRow]).mockReturnValueOnce([]).mockReturnValueOnce([{ node_id: 'node-1' }]);
   queryOneSpy.mockReturnValueOnce({ value: '"desktop-test"' }).mockReturnValueOnce(undefined).mockReturnValueOnce(undefined);
 
@@ -129,6 +132,7 @@ it('queries lightweight list fields and reads opening_text instead of long-lived
   expect(workspaceListSql).toContain('LENGTH(TRIM(n.content)) > 0');
   expect(workspaceListSql).toContain('AS has_reveal');
   expect(workspaceListSql).toContain('n.opening_text,');
+  expect(workspaceListSql).toContain('n.content AS collection_source_content');
   expect(workspaceListSql).not.toContain('content_blob_data');
   expect(workspaceListSql).toContain('LEFT JOIN content_blobs cb');
   expect(workspaceListSql).toContain('node_reading_device_state');

@@ -16,12 +16,15 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
+import { readTopicCollections } from '../../lib/core/nodes/topicCollectionsFrontmatter.js';
+import { createCollectionVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter.js';
+import { closeDatabaseConnection } from '../database/connection.js';
 import { closeExternalSearchCacheDatabase } from '../database/externalSearchCacheDatabase.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { softDeleteNodes, upsertNodeSnapshot } from '../database/nodeMutations.js';
 
-import { closeAgentControlTestServer, startAgentControlTestServer } from './agentControlTestServer.js';
+import { readAgentControlMaterial } from './agentControlMaterials.js';
+import { closeAgentControlTestServer, readAgentControlTestResponseJson as responseJson, startAgentControlTestServer } from './agentControlTestServer.js';
 import type { AgentControlAuditEvent } from './agentControlTypes.js';
 
 let tempRoot = '';
@@ -57,13 +60,24 @@ function insertNode(id: string, title = id) {
 }
 
 function insertFolder() {
-  openDatabaseConnection().driver.execute(
-    `INSERT INTO virtual_folders (id, title, description, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    ['vf-1', 'Guide', '', '2026-07-05T00:00:00.000Z', '2026-07-05T00:00:00.000Z']
-  );
+  upsertNodeSnapshot({
+    anchorLink: null,
+    content: '',
+    createdAt: '2026-07-05T00:00:00.000Z',
+    hideTitleHeading: false,
+    imageRegions: null,
+    isTitleManual: true,
+    kind: 'folder',
+    manualChildOrder: [],
+    nodeId: 'vf-1',
+    parentNodeId: 'special-virtual-root',
+    position: null,
+    reveal: null,
+    title: 'Guide',
+    updatedAt: '2026-07-05T00:00:00.000Z',
+    virtualFilter: createCollectionVirtualNodeFilter('Guide')
+  });
 }
-
 
 async function post(endpoint: string, pathName: string, body: Record<string, unknown>, token = 'test-token') {
   return fetch(`${endpoint}/agent-control/v1/${pathName}`, {
@@ -77,18 +91,7 @@ async function post(endpoint: string, pathName: string, body: Record<string, unk
   });
 }
 
-async function responseJson(response: Response) {
-  return JSON.parse(await response.text()) as Record<string, unknown>;
-}
-
-function activeItemCount(materialId: string) {
-  return openDatabaseConnection().driver.queryOne<{ count: number }>(
-    `SELECT COUNT(*) AS count FROM virtual_folder_items
-     WHERE folder_id = 'vf-1' AND material_node_id = ? AND deleted_at IS NULL`,
-    [materialId]
-  )?.count ?? 0;
-}
-
+const collectionsFor = (materialId: string) => readTopicCollections(readAgentControlMaterial(materialId)?.content ?? '');
 
 it('notifies workspace refresh only after successful virtual folder writes', async () => {
   insertFolder();
@@ -126,10 +129,13 @@ it('creates a virtual folder and records bounded audit events', async () => {
     const invalid = await post(endpoint, 'virtual-folders/create', { title: '   ' });
     expect(invalid.status).toBe(400);
 
-    const created = await post(endpoint, 'virtual-folders/create', { description: 'Order', title: 'Guide' });
+    const rejectedDescription = await post(endpoint, 'virtual-folders/create', { description: 'Order', title: 'Guide' });
+    expect(rejectedDescription.status).toBe(400);
+
+    const created = await post(endpoint, 'virtual-folders/create', { title: 'Guide' });
     expect(created.status).toBe(200);
     const payload = await responseJson(created);
-    expect(payload).toMatchObject({ folder: { description: 'Order', title: 'Guide' } });
+    expect(payload).toMatchObject({ folder: { item_count: 0, title: 'Guide' } });
     expect(typeof payload.folder_id).toBe('string');
     expect(auditEvents).toEqual(expect.arrayContaining([
       expect.objectContaining({ capability: 'virtualFolders.create', errorCategory: 'unauthorized', result: 'auth_failed' }),
@@ -141,7 +147,7 @@ it('creates a virtual folder and records bounded audit events', async () => {
   }
 });
 
-it('adds, restores, and removes virtual folder items without moving materials', async () => {
+it('adds and removes virtual folder names in Topic YAML without moving materials', async () => {
   insertFolder();
   insertNode('material-a', 'Available');
   insertNode('material-b', 'Deleted');
@@ -156,7 +162,7 @@ it('adds, restores, and removes virtual folder items without moving materials', 
     expect(add.status).toBe(200);
     const addPayload = await responseJson(add);
     expect(addPayload).toMatchObject({
-      added: [expect.any(String)],
+      added: ['material-a'],
       skipped: expect.arrayContaining([
         { id: 'missing', reason: 'not_found' },
         { id: 'material-b', reason: 'deleted' }
@@ -165,18 +171,19 @@ it('adds, restores, and removes virtual folder items without moving materials', 
 
     const remove = await post(endpoint, 'virtual-folders/remove-items', {
       folder_id: 'vf-1',
-      item_ids: [String((addPayload.added as string[])[0]), 'missing-item']
+      material_ids: ['material-a', 'missing-item']
     });
     expect(remove.status).toBe(200);
     expect(await responseJson(remove)).toMatchObject({
-      removed: [String((addPayload.added as string[])[0])],
+      removed: ['material-a'],
       skipped: [{ id: 'missing-item', reason: 'not_found' }]
     });
+    expect(collectionsFor('material-a')).toEqual([]);
 
-    const restored = await post(endpoint, 'virtual-folders/add-items', { folder_id: 'vf-1', material_ids: ['material-a'] });
-    expect(restored.status).toBe(200);
-    expect(await responseJson(restored)).toMatchObject({ added: [], restored: [String((addPayload.added as string[])[0])] });
-    expect(activeItemCount('material-a')).toBe(1);
+    const readded = await post(endpoint, 'virtual-folders/add-items', { folder_id: 'vf-1', material_ids: ['material-a'] });
+    expect(readded.status).toBe(200);
+    expect(await responseJson(readded)).toMatchObject({ added: ['material-a'] });
+    expect(collectionsFor('material-a')).toEqual(['Guide']);
     expect(auditEvents).toEqual(expect.arrayContaining([
       expect.objectContaining({ capability: 'virtualFolders.addItems', result: 'success', targetId: 'vf-1' }),
       expect.objectContaining({ capability: 'virtualFolders.removeItems', result: 'success', targetId: 'vf-1' })
@@ -186,7 +193,7 @@ it('adds, restores, and removes virtual folder items without moving materials', 
   }
 });
 
-it('keeps concurrent add-items idempotent without a schema uniqueness constraint', async () => {
+it('keeps concurrent add-items idempotent in Topic YAML', async () => {
   insertFolder();
   insertNode('material-a');
   const { endpoint, server } = await startAgentControlTestServer();
@@ -197,7 +204,7 @@ it('keeps concurrent add-items idempotent without a schema uniqueness constraint
     ]);
     expect(first.status).toBe(200);
     expect(second.status).toBe(200);
-    expect(activeItemCount('material-a')).toBe(1);
+    expect(collectionsFor('material-a')).toEqual(['Guide']);
   } finally {
     await closeAgentControlTestServer(server);
   }
@@ -211,18 +218,22 @@ it('reorders only complete active item sets and reports conflicts', async () => 
   const { endpoint, server } = await startAgentControlTestServer(auditEvents);
   try {
     const add = await post(endpoint, 'virtual-folders/add-items', { folder_id: 'vf-1', material_ids: ['material-a', 'material-b'] });
-    const itemIds = (await responseJson(add)).added as string[];
-    const duplicate = await post(endpoint, 'virtual-folders/reorder', { folder_id: 'vf-1', item_ids: [itemIds[0], itemIds[0]] });
+    const materialIds = (await responseJson(add)).added as string[];
+    const duplicate = await post(endpoint, 'virtual-folders/reorder', {
+      folder_id: 'vf-1', material_ids: [materialIds[0], materialIds[0]]
+    });
     expect(duplicate.status).toBe(400);
 
-    const conflict = await post(endpoint, 'virtual-folders/reorder', { folder_id: 'vf-1', item_ids: [itemIds[0]] });
+    const conflict = await post(endpoint, 'virtual-folders/reorder', { folder_id: 'vf-1', material_ids: [materialIds[0]] });
     expect(conflict.status).toBe(409);
     expect(await responseJson(conflict)).toEqual({ error: 'conflict' });
 
-    const reordered = await post(endpoint, 'virtual-folders/reorder', { folder_id: 'vf-1', item_ids: [itemIds[1], itemIds[0]] });
+    const reordered = await post(endpoint, 'virtual-folders/reorder', {
+      folder_id: 'vf-1', material_ids: [materialIds[1], materialIds[0]]
+    });
     expect(reordered.status).toBe(200);
     const read = await post(endpoint, 'virtual-folders/read', { id: 'vf-1' });
-    expect((await responseJson(read)).items).toMatchObject([{ id: itemIds[1] }, { id: itemIds[0] }]);
+    expect((await responseJson(read)).items).toMatchObject([{ id: materialIds[1] }, { id: materialIds[0] }]);
     expect(auditEvents).toContainEqual(expect.objectContaining({
       capability: 'virtualFolders.reorder',
       errorCategory: 'conflict',

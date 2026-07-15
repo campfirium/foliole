@@ -17,10 +17,9 @@ import { AgentVirtualFolderMutationError } from './agentControlVirtualFolderMuta
 export async function handleVirtualFolderUpdate(request: http.IncomingMessage, response: http.ServerResponse, options: AgentControlRequestHandlerOptions) {
   await handleLifecycle(request, response, options, 'virtualFolders.update', (body) => {
     const base = readBase(body);
-    const title = body.title === undefined ? undefined : readString(body.title);
-    const description = body.description === undefined ? undefined : readString(body.description, false);
-    if (!base || (title === undefined && description === undefined) || title === null || description === null) return null;
-    return () => updateAgentControlVirtualFolder({ ...base, ...(title === undefined ? {} : { title }), ...(description === undefined ? {} : { description }) });
+    const title = readString(body.title);
+    if (!base || !title || body.description !== undefined) return null;
+    return () => updateAgentControlVirtualFolder({ ...base, title });
   });
 }
 

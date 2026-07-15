@@ -46,6 +46,7 @@ function queryWorkspaceRows(driver: DatabaseDriver) {
        n.is_title_manual,
        n.hide_title_heading,
        n.virtual_filter,
+       n.content AS collection_source_content,
        n.body_blob_hash,
        n.opening_text,
        ${WORKSPACE_BODY_STATUS_SQL} AS body_status,

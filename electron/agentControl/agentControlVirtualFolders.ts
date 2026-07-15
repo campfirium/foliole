@@ -1,4 +1,8 @@
+import { decodeTextBodyBlobData } from '../../lib/core/database/contentBodyBlobs.js';
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
+import { parseManualChildOrder } from '../../lib/core/nodes/manualChildOrder.js';
+import { readTopicCollections } from '../../lib/core/nodes/topicCollectionsFrontmatter.js';
+import { parseVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter.js';
 import { openDatabaseConnection } from '../database/connection.js';
 
 import { normalizeOptionalLimit } from './agentControlMaterials.js';
@@ -7,30 +11,29 @@ export const AGENT_CONTROL_VIRTUAL_FOLDER_LIST_LIMIT = 50;
 export const AGENT_CONTROL_VIRTUAL_FOLDER_LIST_MAX_LIMIT = 100;
 export const AGENT_CONTROL_VIRTUAL_FOLDER_ITEM_LIMIT = 100;
 export const AGENT_CONTROL_VIRTUAL_FOLDER_ITEM_MAX_LIMIT = 500;
+export const VIRTUAL_ROOT_NODE_ID = 'special-virtual-root';
 
-interface VirtualFolderRow extends DatabaseRow {
+interface FolderRow extends DatabaseRow {
   created_at: string;
-  description: string;
+  deleted_at: string | null;
   id: string;
-  item_count: number;
+  manual_child_order: string | null;
+  title: string;
+  updated_at: string;
+  virtual_filter: string | null;
+}
+
+export interface AgentVirtualFolderTopicRow extends DatabaseRow {
+  body_blob_data: Uint8Array | string | null;
+  content: string;
+  id: string;
+  kind: string;
   title: string;
   updated_at: string;
 }
 
-interface VirtualFolderItemRow extends DatabaseRow {
-  id: string;
-  material_deleted_at: string | null;
-  material_id: string | null;
-  material_kind: string | null;
-  material_title: string | null;
-  material_updated_at: string | null;
-  material_node_id: string;
-  position: number;
-}
-
 export interface AgentVirtualFolderSummary {
   created_at: string;
-  description: string;
   id: string;
   item_count: number;
   title: string;
@@ -39,17 +42,10 @@ export interface AgentVirtualFolderSummary {
 
 export interface AgentVirtualFolderItem {
   id: string;
-  material: AgentVirtualFolderItemMaterial | null;
+  material: { id: string; kind: string; title: string; updated_at: string };
   material_id: string;
   position: number;
-  status: 'available' | 'deleted' | 'missing';
-}
-
-interface AgentVirtualFolderItemMaterial {
-  id: string;
-  kind: string;
-  title: string;
-  updated_at: string;
+  status: 'available';
 }
 
 export interface AgentVirtualFolderListPayload {
@@ -66,95 +62,106 @@ export interface AgentVirtualFolderReadPayload {
   truncated: boolean;
 }
 
-export function normalizeVirtualFolderListLimit(value: unknown) {
-  return normalizeOptionalLimit(
-    value,
-    AGENT_CONTROL_VIRTUAL_FOLDER_LIST_LIMIT,
-    AGENT_CONTROL_VIRTUAL_FOLDER_LIST_MAX_LIMIT
-  );
-}
+export const normalizeVirtualFolderListLimit = (value: unknown) => normalizeOptionalLimit(
+  value, AGENT_CONTROL_VIRTUAL_FOLDER_LIST_LIMIT, AGENT_CONTROL_VIRTUAL_FOLDER_LIST_MAX_LIMIT
+);
 
-export function normalizeVirtualFolderItemLimit(value: unknown) {
-  return normalizeOptionalLimit(
-    value,
-    AGENT_CONTROL_VIRTUAL_FOLDER_ITEM_LIMIT,
-    AGENT_CONTROL_VIRTUAL_FOLDER_ITEM_MAX_LIMIT
-  );
-}
+export const normalizeVirtualFolderItemLimit = (value: unknown) => normalizeOptionalLimit(
+  value, AGENT_CONTROL_VIRTUAL_FOLDER_ITEM_LIMIT, AGENT_CONTROL_VIRTUAL_FOLDER_ITEM_MAX_LIMIT
+);
 
 export function listAgentControlVirtualFolders(limit: number): AgentVirtualFolderListPayload {
-  const folders = openDatabaseConnection().driver.queryAll<VirtualFolderRow>(
-    `SELECT vf.id, vf.title, vf.description, vf.created_at, vf.updated_at,
-            COUNT(vfi.id) AS item_count
-     FROM virtual_folders vf
-     LEFT JOIN virtual_folder_items vfi ON vfi.folder_id = vf.id AND vfi.deleted_at IS NULL
-     WHERE vf.deleted_at IS NULL
-     GROUP BY vf.id
-     ORDER BY vf.updated_at DESC, vf.id ASC
-     LIMIT ?`,
-    [limit]
-  ).map(toFolderSummary);
-  return { count: folders.length, limit, virtual_folders: folders };
+  const folders = readFolderRows(false).slice(0, limit);
+  const topics = readActiveTopics();
+  return {
+    count: folders.length,
+    limit,
+    virtual_folders: folders.map((folder) => toSummary(folder, matchingTopics(folder.title, topics).length))
+  };
 }
 
 export function readAgentControlVirtualFolder(folderId: string, limit: number): AgentVirtualFolderReadPayload | null {
-  const folder = openDatabaseConnection().driver.queryOne<VirtualFolderRow>(
-    `SELECT vf.id, vf.title, vf.description, vf.created_at, vf.updated_at,
-            COUNT(vfi.id) AS item_count
-     FROM virtual_folders vf
-     LEFT JOIN virtual_folder_items vfi ON vfi.folder_id = vf.id AND vfi.deleted_at IS NULL
-     WHERE vf.id = ? AND vf.deleted_at IS NULL
-     GROUP BY vf.id`,
-    [folderId]
-  );
+  const folder = readFolderRows(false).find((row) => row.id === folderId);
   if (!folder) return null;
-  const totalCount = folder.item_count;
-  const items = openDatabaseConnection().driver.queryAll<VirtualFolderItemRow>(
-    `SELECT vfi.id, vfi.material_node_id, vfi.position,
-            n.id AS material_id, n.kind AS material_kind, n.title AS material_title,
-            n.updated_at AS material_updated_at, n.deleted_at AS material_deleted_at
-     FROM virtual_folder_items vfi
-     LEFT JOIN nodes n ON n.id = vfi.material_node_id
-     WHERE vfi.folder_id = ? AND vfi.deleted_at IS NULL
-     ORDER BY vfi.position ASC, vfi.id ASC
-     LIMIT ?`,
-    [folderId, limit]
-  ).map(toFolderItem);
+  const matched = orderTopics(matchingTopics(folder.title, readActiveTopics()), parseManualChildOrder(folder.manual_child_order));
   return {
-    folder: toFolderSummary(folder),
-    items,
+    folder: toSummary(folder, matched.length),
+    items: matched.slice(0, limit).map(toItem),
     limit,
-    total_count: totalCount,
-    truncated: totalCount > items.length
+    total_count: matched.length,
+    truncated: matched.length > limit
   };
 }
 
-function toFolderSummary(row: VirtualFolderRow): AgentVirtualFolderSummary {
-  return {
-    created_at: row.created_at,
-    description: row.description,
-    id: row.id,
-    item_count: row.item_count,
-    title: row.title,
-    updated_at: row.updated_at
-  };
+export function readAgentVirtualFolderRow(id: string, includeDeleted = false) {
+  return readFolderRows(includeDeleted).find((row) => row.id === id) ?? null;
 }
 
-function toFolderItem(row: VirtualFolderItemRow): AgentVirtualFolderItem {
-  if (!row.material_id) {
-    return { id: row.id, material: null, material_id: row.material_node_id, position: row.position, status: 'missing' };
-  }
-  const status = row.material_deleted_at ? 'deleted' : 'available';
+export function readAgentVirtualFolderTopics(name: string) {
+  return matchingTopics(name, readActiveTopics());
+}
+
+export function readAgentVirtualFolderTopicRows(ids: string[]) {
+  const wanted = new Set(ids);
+  return readActiveTopics().filter((row) => wanted.has(row.id));
+}
+
+function readFolderRows(includeDeleted: boolean) {
+  const rows = openDatabaseConnection().driver.queryAll<FolderRow>(
+    `SELECT id, title, manual_child_order, virtual_filter, created_at, updated_at, deleted_at FROM nodes
+     WHERE parent_id = ? AND kind = 'folder' ${includeDeleted ? '' : 'AND deleted_at IS NULL'}
+     ORDER BY updated_at DESC, id ASC`,
+    [VIRTUAL_ROOT_NODE_ID]
+  );
+  return rows.filter(isCollectionFolderRow);
+}
+
+function isCollectionFolderRow(row: FolderRow) {
+  const filter = parseVirtualNodeFilter(row.virtual_filter);
+  return filter?.conditions.length === 1 && filter.conditions[0]?.field === 'collection' &&
+    filter.conditions[0].operator === 'equals' && filter.conditions[0].value === row.title;
+}
+
+function readActiveTopics() {
+  return openDatabaseConnection().driver.queryAll<AgentVirtualFolderTopicRow>(
+    `SELECT n.id, n.kind, n.title, n.content, n.updated_at, cbd.data AS body_blob_data
+     FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
+     WHERE n.kind = 'topic' AND n.deleted_at IS NULL
+     ORDER BY COALESCE(n.position, 999999), lower(n.title), n.id`,
+    []
+  );
+}
+
+function matchingTopics(name: string, rows: AgentVirtualFolderTopicRow[]) {
+  return rows.filter((row) => {
+    try {
+      return readTopicCollections(readTopicContent(row)).includes(name);
+    } catch {
+      return false;
+    }
+  });
+}
+
+export function readTopicContent(row: Pick<AgentVirtualFolderTopicRow, 'body_blob_data' | 'content'>) {
+  return decodeTextBodyBlobData(row.body_blob_data) ?? row.content;
+}
+
+function orderTopics(rows: AgentVirtualFolderTopicRow[], order: string[] | null) {
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  const ordered = (order ?? []).flatMap((id) => byId.delete(id) ? [rows.find((row) => row.id === id)!] : []);
+  return [...ordered, ...rows.filter((row) => byId.has(row.id))];
+}
+
+function toSummary(row: FolderRow, itemCount: number): AgentVirtualFolderSummary {
+  return { created_at: row.created_at, id: row.id, item_count: itemCount, title: row.title, updated_at: row.updated_at };
+}
+
+function toItem(row: AgentVirtualFolderTopicRow, index: number): AgentVirtualFolderItem {
   return {
     id: row.id,
-    material: {
-      id: row.material_id,
-      kind: row.material_kind ?? 'topic',
-      title: row.material_title ?? '',
-      updated_at: row.material_updated_at ?? ''
-    },
-    material_id: row.material_node_id,
-    position: row.position,
-    status
+    material: { id: row.id, kind: row.kind, title: row.title, updated_at: row.updated_at },
+    material_id: row.id,
+    position: (index + 1) * 10,
+    status: 'available'
   };
 }

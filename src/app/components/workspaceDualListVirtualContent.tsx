@@ -65,6 +65,10 @@ export function renderVirtualContentColumn(
     return <div aria-label={t('desktop.workspace.currentFolderContents')} className="flex min-h-0 min-w-0 flex-1" />;
   }
   const activeManualCollection = findManualVirtualCollection(props.manualVirtualCollections ?? [], activeVirtualNodeId);
+  const activeVirtualNode = props.nodesById[activeVirtualNodeId];
+  const preservesCollectionOrder = activeVirtualNode?.virtualFilter?.conditions.some(
+    (condition) => condition.field === 'collection' && condition.operator === 'equals'
+  ) ?? false;
   const isRemovedView = activeVirtualNodeId === VIRTUAL_REMOVED_NODE_ID;
   const isShelvedView = activeVirtualNodeId === VIRTUAL_SHELVED_NODE_ID;
   const itemIds = resolveVirtualContentItemIds(props, virtualResultIndex);
@@ -89,7 +93,7 @@ export function renderVirtualContentColumn(
       }}
       header={resolveVirtualHeader({
         activeManualCollection,
-        activeVirtualNode: props.nodesById[activeVirtualNodeId],
+        activeVirtualNode,
         activeVirtualNodeId,
         isRemovedView,
         isShelvedView,
@@ -99,7 +103,7 @@ export function renderVirtualContentColumn(
       nodes={items}
       nodesById={props.nodesById}
       onSelectNode={props.onSelectNodeInVirtualView}
-      preserveItemOrder={Boolean(activeManualCollection)}
+      preserveItemOrder={Boolean(activeManualCollection) || preservesCollectionOrder}
     />
   );
 }

@@ -125,6 +125,7 @@ export interface Node {
   isTitleManual?: boolean;
   hideTitleHeading?: boolean;
   manualChildOrder?: string[] | null;
+  collections?: string[];
   attachments?: NodeAttachment[];
   bodyBlobHash?: string | null;
   hasContent?: boolean;

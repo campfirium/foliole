@@ -30,6 +30,7 @@ export interface NativeWorkspaceNodeSnapshot {
   sequentialReadingEnabled?: boolean | null;
   shelvedAt?: string | null;
   manualChildOrder?: string[] | null;
+  collections?: string[];
   title: string;
   isTitleManual: boolean;
   hideTitleHeading?: boolean;

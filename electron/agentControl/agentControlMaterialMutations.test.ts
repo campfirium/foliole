@@ -204,7 +204,7 @@ it('rejects stale, empty-title, and oversized material updates without writing',
   }
 });
 
-it('soft-deletes materials idempotently and leaves virtual-folder items visible as deleted', async () => {
+it('soft-deletes materials idempotently and removes them from active collection projections', async () => {
   insertNode({ content: 'Queue body', id: 'material-4', title: 'Queue title' });
   const { endpoint, server } = await startAgentControlTestServer();
   try {
@@ -213,9 +213,10 @@ it('soft-deletes materials idempotently and leaves virtual-folder items visible 
       folder_id: folder.folder_id,
       material_ids: ['material-4']
     });
+    const materialAfterCollectionWrite = await responseJson(await post(endpoint, 'materials/read', { id: 'material-4' }));
 
     const deleted = await post(endpoint, 'materials/delete-soft', {
-      expected_updated_at: '2026-07-05T00:00:00.000Z',
+      expected_updated_at: materialAfterCollectionWrite.updated_at,
       id: 'material-4'
     });
     const repeated = await post(endpoint, 'materials/delete-soft', { id: 'material-4' });
@@ -225,7 +226,7 @@ it('soft-deletes materials idempotently and leaves virtual-folder items visible 
     expect(await responseJson(deleted)).toMatchObject({ already_deleted: false, deleted: true, material_id: 'material-4' });
     expect(await responseJson(repeated)).toMatchObject({ already_deleted: true, deleted: true, material_id: 'material-4' });
     expect(await responseJson(folderRead)).toMatchObject({
-      items: [expect.objectContaining({ material: expect.objectContaining({ id: 'material-4' }), status: 'deleted' })]
+      items: [], total_count: 0
     });
   } finally {
     await closeAgentControlTestServer(server);

@@ -33,6 +33,7 @@ export interface WorkspaceNodeSnapshot {
   attachments?: WorkspaceNodeAttachmentSnapshot[];
   bodyBlobHash?: string | null;
   bodyStatus?: 'empty' | 'failed' | 'fetching' | 'missing' | 'ready';
+  collections?: string[];
   id: string;
   parentNodeId: string | null;
   position?: number | null;

@@ -1,5 +1,7 @@
 import { expect, it } from 'vitest';
 
+import { createCollectionVirtualNodeFilter } from '../../../../lib/core/nodes/virtualNodeFilter';
+
 import type { Node } from './nodeTypes';
 import {
   createVirtualNodeFilterFromKeyword,
@@ -74,6 +76,38 @@ it('recomputes result references after source data changes', () => {
 
     expect(before).toEqual([{ sourceNodeId: 'article-1' }]);
     expect(after).toEqual([]);
+});
+
+it('matches collection filters exactly from Topic YAML and ignores malformed YAML', () => {
+  const nodes = {
+    exact: { ...baseNode, id: 'exact', content: '---\ncollections:\n  - "Guide"\n---\nBody' },
+    malformed: { ...baseNode, id: 'malformed', content: '---\ncollections: Guide\n---\nBody' },
+    partial: { ...baseNode, id: 'partial', content: '---\ncollections:\n  - "Guide extra"\n---\nBody' }
+  };
+
+  expect(getVirtualNodeResultReferences('virtual-1', nodes, createCollectionVirtualNodeFilter('Guide')))
+    .toEqual([{ sourceNodeId: 'exact' }]);
+  expect(getVirtualNodeResultReferences('virtual-1', {
+    projected: { ...baseNode, id: 'projected', collections: ['Guide'], content: '' }
+  }, createCollectionVirtualNodeFilter('Guide'))).toEqual([{ sourceNodeId: 'projected' }]);
+});
+
+it('uses a virtual Folder manual order before appending unmatched current members', () => {
+  const nodes = {
+    'virtual-1': {
+      ...baseNode,
+      id: 'virtual-1',
+      kind: 'folder' as const,
+      manualChildOrder: ['article-2'],
+      specialKind: 'virtual' as const
+    },
+    'article-1': { ...baseNode, id: 'article-1', title: 'Reader one' },
+    'article-2': { ...baseNode, id: 'article-2', title: 'Reader two' }
+  };
+
+  expect(getOrderedVirtualNodeResultNodes(
+    'virtual-1', ['article-1', 'article-2'], nodes, createVirtualNodeFilterFromKeyword('reader')
+  ).map((node) => node.id)).toEqual(['article-2', 'article-1']);
 });
 
 it('returns empty results for empty conditions and no matches', () => {

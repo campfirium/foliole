@@ -29,6 +29,13 @@ export const WORKSPACE_NODE_BOUNDARY_PRESERVED_FIELDS = [
   'updatedAt'
 ] as const satisfies readonly (keyof Node)[];
 
+function hasMatchingCollections(currentNode: Node, sourceNode: Node) {
+  const current = currentNode.collections ?? [];
+  const source = sourceNode.collections ?? [];
+  return current.length === source.length && current.every((value, index) => value === source[index]);
+}
+
 export function hasMatchingBoundaryPreservedFields(currentNode: Node, sourceNode: Node) {
-  return WORKSPACE_NODE_BOUNDARY_PRESERVED_FIELDS.every((field) => currentNode[field] === sourceNode[field]);
+  return WORKSPACE_NODE_BOUNDARY_PRESERVED_FIELDS.every((field) => currentNode[field] === sourceNode[field]) &&
+    hasMatchingCollections(currentNode, sourceNode);
 }

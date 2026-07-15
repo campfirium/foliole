@@ -11,13 +11,13 @@ export function buildAgentCliBody(command, flags) {
   if (command === 'materials/delete-soft') return requireFields(flags, ['id'], ['expected_updated_at']);
   if (command === 'virtual-folders/list') return requireFields(flags, [], ['limit']);
   if (command === 'virtual-folders/read') return requireFields(flags, ['id'], ['limit']);
-  if (command === 'virtual-folders/create') return requireFields(flags, ['title'], ['description']);
+  if (command === 'virtual-folders/create') return requireFields(flags, ['title']);
   if (command === 'virtual-folders/delete-soft' || command === 'virtual-folders/restore') {
     return requireFields(flags, ['id', 'expected_updated_at']);
   }
   if (command === 'virtual-folders/reorder') return buildVirtualFolderReorderBody(flags);
   if (command === 'virtual-folders/update') return buildVirtualFolderUpdateBody(flags);
-  return requireFields(flags, ['folder_id'], command.endsWith('add-items') ? ['material_ids'] : ['item_ids']);
+  return requireFields(flags, ['folder_id', 'material_ids']);
 }
 
 function buildMaterialCreateBody(flags) {
@@ -31,19 +31,14 @@ function buildMaterialReorderBody(flags) {
 }
 
 function buildVirtualFolderUpdateBody(flags) {
-  const result = requireFields(flags, ['id', 'expected_updated_at'], ['title', 'description']);
-  if (!result.ok) return result;
-  return flags.title || Object.hasOwn(flags, 'description')
-    ? result
-    : { error: 'missing_patch', ok: false, statusCode: 2 };
+  return requireFields(flags, ['id', 'expected_updated_at', 'title']);
 }
 
 function buildVirtualFolderReorderBody(flags) {
   const base = requireFields(flags, ['folder_id']);
   if (!base.ok) return base;
-  if (flags.item_ids) return { body: { ...base.body, item_ids: normalizeFieldValue('item_ids', flags.item_ids) }, ok: true };
   if (flags.material_ids) return { body: { ...base.body, material_ids: normalizeFieldValue('material_ids', flags.material_ids) }, ok: true };
-  return { error: 'missing_item_ids', ok: false, statusCode: 2 };
+  return { error: 'missing_material_ids', ok: false, statusCode: 2 };
 }
 
 function requireFields(flags, required, optional = []) {
@@ -67,7 +62,7 @@ function buildUpdateBody(flags) {
 
 function normalizeFieldValue(field, value) {
   if (field === 'limit') return Number(value);
-  if (field === 'item_ids' || field === 'material_ids') return value.split(',').map((item) => item.trim()).filter(Boolean);
+  if (field === 'material_ids') return value.split(',').map((item) => item.trim()).filter(Boolean);
   if (field === 'parent_id' && value === 'root') return null;
   return value;
 }

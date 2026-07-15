@@ -1,3 +1,5 @@
+import { readTopicCollections } from '../nodes/topicCollectionsFrontmatter.js';
+
 import type { DatabaseRow } from './driver.js';
 import { isWorkspaceBodyStatus } from './workspaceBodyStatus.js';
 import { buildWorkspaceSnapshotNode, type WorkspaceNodeSnapshot } from './workspaceSnapshotHelpers.js';
@@ -19,6 +21,7 @@ export interface WorkspaceNodeRow extends DatabaseRow {
   body_blob_hash: string | null;
   opening_text: string | null;
   body_status: string | null;
+  collection_source_content: string | null;
   has_content: number;
   has_reveal: number;
   anchor_link: string | null;
@@ -46,6 +49,7 @@ export interface WorkspaceNodeRow extends DatabaseRow {
 }
 
 export interface WorkspaceListNodeSnapshot extends WorkspaceNodeSnapshot {
+  collections: string[];
   hasContent: boolean;
   hasReveal: boolean;
 }
@@ -65,6 +69,7 @@ export function buildWorkspaceListNodesById(rows: WorkspaceNodeRow[]) {
     });
     nodesById[row.id] = {
       ...node,
+      collections: readCollections(row.collection_source_content),
       ...(isWorkspaceBodyStatus(row.body_status) ? { bodyStatus: row.body_status } : {}),
       hasContent: row.has_content === 1,
       hasReveal: row.has_reveal === 1,
@@ -78,4 +83,13 @@ export function buildWorkspaceListNodesById(rows: WorkspaceNodeRow[]) {
     }
   }
   return { directOpeningById, nodesById, trashedNodeDeletedAtById, trashedNodeIds };
+}
+
+function readCollections(content: string | null) {
+  if (typeof content !== 'string') return [];
+  try {
+    return readTopicCollections(content);
+  } catch {
+    return [];
+  }
 }

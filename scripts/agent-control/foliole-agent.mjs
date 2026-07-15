@@ -28,9 +28,6 @@ export async function runAgentCli(argv, options = {}) {
   }
   const bodyResult = buildAgentCliBody(parsed.command, parsed.flags);
   if (!bodyResult.ok) return failure(bodyResult.error, bodyResult.statusCode);
-  if (parsed.command === 'virtual-folders/reorder' && bodyResult.body.material_ids) {
-    return runVirtualFolderReorderByMaterialIds(bodyResult.body, descriptor, parsed.flags, options);
-  }
   if (route.writeKind === 'material') return runMaterialWriteCommand(parsed.command, bodyResult.body, descriptor, parsed.flags, options);
   if (route.writeKind === 'virtual_folder') return runVirtualFolderWriteCommand(parsed.command, bodyResult.body, descriptor, parsed.flags, options);
   return callApi(route, descriptor, bodyResult.body, options);
@@ -64,6 +61,14 @@ function parseFlags(tokens) {
   for (let index = 0; index < tokens.length; index += 1) {
     const token = tokens[index];
     if (!token?.startsWith('--')) throw new Error('invalid_argument');
+    const separatorIndex = token.indexOf('=');
+    if (separatorIndex > 2) {
+      const key = token.slice(2, separatorIndex).replaceAll('-', '_');
+      const value = token.slice(separatorIndex + 1);
+      if (!value) throw new Error(`missing_${key}`);
+      flags[key] = value;
+      continue;
+    }
     const key = token.slice(2).replaceAll('-', '_');
     const value = tokens[index + 1];
     if (!value || value.startsWith('--')) throw new Error(`missing_${key}`);
@@ -87,30 +92,6 @@ async function readDescriptor(flagPath, options) {
 function isDescriptor(value) {
   return Boolean(value && typeof value === 'object' && typeof value.endpoint === 'string' &&
     typeof value.token === 'string' && Array.isArray(value.capabilities));
-}
-
-async function runVirtualFolderReorderByMaterialIds(body, descriptor, flags, options) {
-  const read = await callApi(ROUTES['virtual-folders/read'], descriptor, { id: body.folder_id }, options);
-  if (read.status !== 0) return read;
-  const itemIds = resolveReorderItemIds(read.output.items, body.material_ids);
-  if (!itemIds.ok) return failure(itemIds.error, 2);
-  const patch = { folder_id: body.folder_id, item_ids: itemIds.itemIds, material_ids: body.material_ids };
-  const backup = await writeBackup('virtual-folders/reorder', 'virtual_folder', body.folder_id, read.output, patch, flags, options);
-  if (!backup.ok) return failure(backup.error, 4);
-  const result = await callApi(ROUTES['virtual-folders/reorder'], descriptor, { folder_id: body.folder_id, item_ids: itemIds.itemIds }, options);
-  return { ...result, output: { ...result.output, backup_path: backup.path } };
-}
-
-function resolveReorderItemIds(items, materialIds) {
-  if (!Array.isArray(items)) return { error: 'invalid_folder_items', ok: false };
-  const byMaterialId = new Map(items.map((item) => [item?.material_id, item?.id]));
-  const itemIds = [];
-  for (const materialId of materialIds) {
-    const itemId = byMaterialId.get(materialId);
-    if (typeof itemId !== 'string') return { error: 'material_not_in_folder', ok: false };
-    itemIds.push(itemId);
-  }
-  return { itemIds, ok: true };
 }
 
 async function runMaterialWriteCommand(command, body, descriptor, flags, options) {

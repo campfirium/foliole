@@ -134,12 +134,11 @@ export async function handleVirtualFolderCreate(
   const body = await readJsonBodyOrFail(request, response, options, capability);
   if (!body) return;
   const title = typeof body.title === 'string' ? body.title.trim() : '';
-  const description = typeof body.description === 'string' ? body.description.trim() : '';
-  if (!title) {
+  if (!title || body.description !== undefined) {
     sendInvalidRequest(request, response, options, capability);
     return;
   }
-  const payload = createAgentControlVirtualFolder({ description, title });
+  const payload = createAgentControlVirtualFolder({ title });
   recordRequest({ capability, options, request, result: 'success', targetId: payload.folder_id });
   sendJson(response, 200, payload as unknown as Record<string, unknown>);
 }
@@ -163,8 +162,8 @@ export async function handleVirtualFolderRemoveItems(
 ) {
   await handleMutationListRequest(request, response, options, {
     capability: 'virtualFolders.removeItems',
-    field: 'item_ids',
-    mutate: (folderId, ids) => removeAgentControlVirtualFolderItems({ folderId, itemIds: ids })
+    field: 'material_ids',
+    mutate: (folderId, ids) => removeAgentControlVirtualFolderItems({ folderId, materialIds: ids })
   });
 }
 
@@ -175,8 +174,8 @@ export async function handleVirtualFolderReorder(
 ) {
   await handleMutationListRequest(request, response, options, {
     capability: 'virtualFolders.reorder',
-    field: 'item_ids',
-    mutate: (folderId, ids) => reorderAgentControlVirtualFolderItems({ folderId, itemIds: ids }),
+    field: 'material_ids',
+    mutate: (folderId, ids) => reorderAgentControlVirtualFolderItems({ folderId, materialIds: ids }),
     rejectDuplicates: true
   });
 }
@@ -187,7 +186,7 @@ async function handleMutationListRequest(
   options: AgentControlRequestHandlerOptions,
   args: {
     capability: string;
-    field: 'item_ids' | 'material_ids';
+    field: 'material_ids';
     mutate: (folderId: string, ids: string[]) => AgentVirtualFolderMutationResult;
     rejectDuplicates?: boolean;
   }

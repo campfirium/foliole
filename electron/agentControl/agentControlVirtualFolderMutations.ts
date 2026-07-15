@@ -1,9 +1,21 @@
 import { randomUUID } from 'node:crypto';
 
-import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
+import type { DatabaseRow } from '../../lib/core/database/driver.js';
+import { parseManualChildOrder } from '../../lib/core/nodes/manualChildOrder.js';
+import { addTopicCollection, readTopicCollections, removeTopicCollection } from '../../lib/core/nodes/topicCollectionsFrontmatter.js';
+import { createCollectionVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter.js';
 import { openDatabaseConnection } from '../database/connection.js';
+import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 
+import { rewriteAgentControlNodeSnapshot } from './agentControlMaterialMutations.js';
 import type { AgentVirtualFolderSummary } from './agentControlVirtualFolders.js';
+import {
+  readAgentVirtualFolderRow,
+  readAgentVirtualFolderTopicRows,
+  readAgentVirtualFolderTopics,
+  readTopicContent,
+  VIRTUAL_ROOT_NODE_ID
+} from './agentControlVirtualFolders.js';
 
 export interface AgentVirtualFolderMutationResult {
   added?: string[];
@@ -11,202 +23,134 @@ export interface AgentVirtualFolderMutationResult {
   folder_id: string;
   removed?: string[];
   reordered_count?: number;
-  restored?: string[];
   skipped?: Array<{ id: string; reason: 'already_present' | 'deleted' | 'not_found' }>;
 }
 
-interface FolderRow extends DatabaseRow {
-  created_at: string;
-  description: string;
-  id: string;
-  item_count: number;
-  title: string;
-  updated_at: string;
-}
-
-interface ItemRow extends DatabaseRow {
-  id: string;
-  material_node_id: string;
-  position: number;
-}
-
-interface MaterialRow extends DatabaseRow {
-  deleted_at: string | null;
-  id: string;
-}
-
 export class AgentVirtualFolderMutationError extends Error {
-  constructor(
-    readonly category: 'conflict' | 'invalid_request' | 'not_found',
-    readonly statusCode: 400 | 404 | 409
-  ) {
+  constructor(readonly category: 'conflict' | 'invalid_request' | 'not_found', readonly statusCode: 400 | 404 | 409) {
     super(category);
   }
 }
 
-export function createAgentControlVirtualFolder(input: { description?: string; title: string }) {
-  return openDatabaseConnection().driver.transaction((driver) => {
+export function createAgentControlVirtualFolder(input: { title: string }) {
+  const title = normalizeTitle(input.title);
+  return openDatabaseConnection().driver.transaction(() => {
+    ensureUniqueTitle(title);
     const now = new Date().toISOString();
     const id = randomUUID();
-    driver.execute(
-      `INSERT INTO virtual_folders (id, title, description, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?)`,
-      [id, input.title, input.description ?? '', now, now]
+    const positionRow = openDatabaseConnection().driver.queryOne<{ position: number } & DatabaseRow>(
+      'SELECT COALESCE(MAX(position), -1) AS position FROM node_order'
     );
-    const folder = readFolderOrThrow(driver, id);
-    return { folder, folder_id: id } satisfies AgentVirtualFolderMutationResult;
+    upsertNodeSnapshot({
+      anchorLink: null, content: '', createdAt: now, hideTitleHeading: false, imageRegions: null,
+      isTitleManual: true, kind: 'folder', manualChildOrder: [], nodeId: id, parentNodeId: VIRTUAL_ROOT_NODE_ID,
+      position: (positionRow?.position ?? -1) + 1, reveal: null, title, updatedAt: now,
+      virtualFilter: createCollectionVirtualNodeFilter(title)
+    });
+    return { folder: { created_at: now, id, item_count: 0, title, updated_at: now }, folder_id: id };
   });
 }
 
 export function addAgentControlVirtualFolderItems(input: { folderId: string; materialIds: string[] }) {
-  return openDatabaseConnection().driver.transaction((driver) => {
-    readFolderOrThrow(driver, input.folderId);
-    const now = new Date().toISOString();
-    let nextPosition = readMaxPosition(driver, input.folderId) + 10;
-    const materials = readMaterials(driver, input.materialIds);
-    const result: AgentVirtualFolderMutationResult = { added: [], folder_id: input.folderId, restored: [], skipped: [] };
-    for (const materialId of input.materialIds) {
-      const material = materials.get(materialId);
-      if (!material) {
-        result.skipped?.push({ id: materialId, reason: 'not_found' });
-        continue;
-      }
-      if (material.deleted_at) {
-        result.skipped?.push({ id: materialId, reason: 'deleted' });
-        continue;
-      }
-      const existing = readItemByMaterial(driver, input.folderId, materialId, false);
-      if (existing) {
-        result.skipped?.push({ id: materialId, reason: 'already_present' });
-        continue;
-      }
-      const deleted = readItemByMaterial(driver, input.folderId, materialId, true);
-      if (deleted) {
-        restoreItem(driver, deleted.id, nextPosition, now);
-        result.restored?.push(deleted.id);
-      } else {
-        const itemId = randomUUID();
-        insertItem(driver, { folderId: input.folderId, itemId, materialId, now, position: nextPosition });
-        result.added?.push(itemId);
-      }
-      nextPosition += 10;
-    }
-    touchFolder(driver, input.folderId, now);
-    return result;
+  return mutateTopicCollections(input.folderId, input.materialIds, true);
+}
+
+export function removeAgentControlVirtualFolderItems(input: { folderId: string; materialIds: string[] }) {
+  return mutateTopicCollections(input.folderId, input.materialIds, false);
+}
+
+export function reorderAgentControlVirtualFolderItems(input: { folderId: string; materialIds: string[] }) {
+  return openDatabaseConnection().driver.transaction(() => {
+    const folder = requireFolder(input.folderId);
+    const currentIds = readAgentVirtualFolderTopics(folder.title).map((row) => row.id);
+    if (!hasSameItemSet(currentIds, input.materialIds)) throw new AgentVirtualFolderMutationError('conflict', 409);
+    rewriteAgentControlNodeSnapshot({ id: input.folderId, manualChildOrder: input.materialIds });
+    return { folder_id: input.folderId, reordered_count: input.materialIds.length };
   });
 }
 
-export function removeAgentControlVirtualFolderItems(input: { folderId: string; itemIds: string[] }) {
-  return openDatabaseConnection().driver.transaction((driver) => {
-    readFolderOrThrow(driver, input.folderId);
-    const now = new Date().toISOString();
-    const result: AgentVirtualFolderMutationResult = { folder_id: input.folderId, removed: [], skipped: [] };
-    for (const itemId of input.itemIds) {
-      const item = driver.queryOne<ItemRow>(
-        `SELECT id, material_node_id, position FROM virtual_folder_items
-         WHERE id = ? AND folder_id = ? AND deleted_at IS NULL`,
-        [itemId, input.folderId]
-      );
-      if (!item) {
-        result.skipped?.push({ id: itemId, reason: 'not_found' });
-        continue;
-      }
-      driver.execute('UPDATE virtual_folder_items SET deleted_at = ?, updated_at = ? WHERE id = ?', [now, now, itemId]);
-      result.removed?.push(itemId);
-    }
-    touchFolder(driver, input.folderId, now);
-    return result;
-  });
-}
-
-export function reorderAgentControlVirtualFolderItems(input: { folderId: string; itemIds: string[] }) {
-  return openDatabaseConnection().driver.transaction((driver) => {
-    readFolderOrThrow(driver, input.folderId);
-    const current = driver.queryAll<ItemRow>(
-      `SELECT id, material_node_id, position FROM virtual_folder_items
-       WHERE folder_id = ? AND deleted_at IS NULL
-       ORDER BY position ASC, id ASC`,
-      [input.folderId]
-    );
-    if (!hasSameItemSet(current.map((item) => item.id), input.itemIds)) {
-      throw new AgentVirtualFolderMutationError('conflict', 409);
-    }
-    const now = new Date().toISOString();
-    input.itemIds.forEach((itemId, index) => {
-      driver.execute('UPDATE virtual_folder_items SET position = ?, updated_at = ? WHERE id = ?', [(index + 1) * 10, now, itemId]);
-    });
-    touchFolder(driver, input.folderId, now);
-    return { folder_id: input.folderId, reordered_count: input.itemIds.length } satisfies AgentVirtualFolderMutationResult;
-  });
-}
-
-function readFolderOrThrow(driver: DatabaseDriver, folderId: string) {
-  const row = driver.queryOne<FolderRow>(
-    `SELECT vf.id, vf.title, vf.description, vf.created_at, vf.updated_at,
-            COUNT(vfi.id) AS item_count
-     FROM virtual_folders vf
-     LEFT JOIN virtual_folder_items vfi ON vfi.folder_id = vf.id AND vfi.deleted_at IS NULL
-     WHERE vf.id = ? AND vf.deleted_at IS NULL
-     GROUP BY vf.id`,
-    [folderId]
+export function ensureUniqueTitle(title: string, exceptId?: string) {
+  const row = openDatabaseConnection().driver.queryOne<{ id: string } & DatabaseRow>(
+    `SELECT id FROM nodes WHERE parent_id = ? AND kind = 'folder' AND deleted_at IS NULL AND title = ? ${exceptId ? 'AND id <> ?' : ''} LIMIT 1`,
+    exceptId ? [VIRTUAL_ROOT_NODE_ID, title, exceptId] : [VIRTUAL_ROOT_NODE_ID, title]
   );
+  if (row) throw new AgentVirtualFolderMutationError('conflict', 409);
+}
+
+export function normalizeTitle(value: string) {
+  const title = value.trim();
+  if (!title || /[\r\n]/.test(title)) throw new AgentVirtualFolderMutationError('invalid_request', 400);
+  return title;
+}
+
+function mutateTopicCollections(folderId: string, ids: string[], add: boolean): AgentVirtualFolderMutationResult {
+  return openDatabaseConnection().driver.transaction(() => {
+    const folder = requireFolder(folderId);
+    const currentMemberIds = readAgentVirtualFolderTopics(folder.title).map((row) => row.id);
+    const activeRows = readAgentVirtualFolderTopicRows(ids);
+    const activeById = new Map(activeRows.map((row) => [row.id, row]));
+    const knownRows = readKnownNodeStates(ids);
+    const result: AgentVirtualFolderMutationResult = { folder_id: folderId, ...(add ? { added: [] } : { removed: [] }), skipped: [] };
+    const now = new Date().toISOString();
+    for (const id of ids) {
+      const row = activeById.get(id);
+      if (!row) {
+        result.skipped!.push({ id, reason: knownRows.get(id) ? 'deleted' : 'not_found' });
+        continue;
+      }
+      const content = readTopicContent(row);
+      const present = readTopicCollections(content).includes(folder.title);
+      if (add && present) {
+        result.skipped!.push({ id, reason: 'already_present' });
+        continue;
+      }
+      if (!add && !present) {
+        result.skipped!.push({ id, reason: 'not_found' });
+        continue;
+      }
+      const next = add ? addTopicCollection(content, folder.title) : removeTopicCollection(content, folder.title);
+      rewriteAgentControlNodeSnapshot({ content: next, id, updatedAt: now });
+      (add ? result.added : result.removed)!.push(id);
+    }
+    updateManualOrderAfterMembershipChange(folder.id, folder.manual_child_order, currentMemberIds, result, add, now);
+    return result;
+  });
+}
+
+function updateManualOrderAfterMembershipChange(
+  folderId: string,
+  storedOrder: string | null,
+  currentMemberIds: string[],
+  result: AgentVirtualFolderMutationResult,
+  add: boolean,
+  updatedAt: string
+) {
+  const changedIds = (add ? result.added : result.removed) ?? [];
+  if (changedIds.length === 0) return;
+  const currentSet = new Set(currentMemberIds);
+  const baseOrder = (parseManualChildOrder(storedOrder) ?? []).filter((id) => currentSet.has(id));
+  const completeOrder = [...baseOrder, ...currentMemberIds.filter((id) => !baseOrder.includes(id))];
+  const nextOrder = add
+    ? [...completeOrder, ...changedIds.filter((id) => !completeOrder.includes(id))]
+    : completeOrder.filter((id) => !changedIds.includes(id));
+  rewriteAgentControlNodeSnapshot({ id: folderId, manualChildOrder: nextOrder, updatedAt });
+}
+
+function requireFolder(id: string) {
+  const row = readAgentVirtualFolderRow(id);
   if (!row) throw new AgentVirtualFolderMutationError('not_found', 404);
-  return {
-    created_at: row.created_at,
-    description: row.description,
-    id: row.id,
-    item_count: row.item_count,
-    title: row.title,
-    updated_at: row.updated_at
-  };
+  return row;
 }
 
-function readMaterials(driver: DatabaseDriver, ids: string[]) {
-  if (ids.length === 0) return new Map<string, MaterialRow>();
+function readKnownNodeStates(ids: string[]) {
+  if (ids.length === 0) return new Map<string, boolean>();
   const placeholders = ids.map(() => '?').join(', ');
-  const rows = driver.queryAll<MaterialRow>(`SELECT id, deleted_at FROM nodes WHERE id IN (${placeholders})`, ids);
-  return new Map(rows.map((row) => [row.id, row]));
-}
-
-function readItemByMaterial(driver: DatabaseDriver, folderId: string, materialId: string, deleted: boolean) {
-  return driver.queryOne<ItemRow>(
-    `SELECT id, material_node_id, position FROM virtual_folder_items
-     WHERE folder_id = ? AND material_node_id = ? AND deleted_at IS ${deleted ? 'NOT NULL' : 'NULL'}
-     ORDER BY updated_at DESC, id ASC
-     LIMIT 1`,
-    [folderId, materialId]
+  const rows = openDatabaseConnection().driver.queryAll<{ deleted_at: string | null; id: string } & DatabaseRow>(
+    `SELECT id, deleted_at FROM nodes WHERE id IN (${placeholders})`, ids
   );
-}
-
-function readMaxPosition(driver: DatabaseDriver, folderId: string) {
-  const row = driver.queryOne<{ position: number } & DatabaseRow>(
-    'SELECT COALESCE(MAX(position), 0) AS position FROM virtual_folder_items WHERE folder_id = ? AND deleted_at IS NULL',
-    [folderId]
-  );
-  return row?.position ?? 0;
-}
-
-function insertItem(driver: DatabaseDriver, input: { folderId: string; itemId: string; materialId: string; now: string; position: number }) {
-  driver.execute(
-    `INSERT INTO virtual_folder_items (id, folder_id, material_node_id, position, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    [input.itemId, input.folderId, input.materialId, input.position, input.now, input.now]
-  );
-}
-
-function restoreItem(driver: DatabaseDriver, itemId: string, position: number, now: string) {
-  driver.execute(
-    'UPDATE virtual_folder_items SET deleted_at = NULL, position = ?, updated_at = ? WHERE id = ?',
-    [position, now, itemId]
-  );
-}
-
-function touchFolder(driver: DatabaseDriver, folderId: string, now: string) {
-  driver.execute('UPDATE virtual_folders SET updated_at = ? WHERE id = ?', [now, folderId]);
+  return new Map(rows.map((row) => [row.id, Boolean(row.deleted_at)]));
 }
 
 function hasSameItemSet(current: string[], requested: string[]) {
-  if (current.length !== requested.length) return false;
-  const currentSet = new Set(current);
-  return requested.every((id) => currentSet.has(id));
+  return current.length === requested.length && new Set(current).size === requested.length && requested.every((id) => current.includes(id));
 }

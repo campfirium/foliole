@@ -73,7 +73,7 @@ async function verifyMaterialLifecycle(args: {
   await runCli([
     'materials/update', '--descriptor', args.descriptorPath, '--id', args.firstTopicId,
     '--expected-updated-at', String(firstMaterial.updated_at), '--title', UPDATED_FIRST_TOPIC_TITLE,
-    '--content', '# Agent Visible Memo A Updated\n\nUpdated body A',
+    `--content=---\ncollections:\n  - "${COLLECTION_TITLE}"\n---\n# Agent Visible Memo A Updated\n\nUpdated body A`,
     '--backup-dir', path.join('.tmp', 'artifacts', 'agent-control-visible-write-backups')
   ]);
   await expect(args.contentPanel.getByRole('treeitem', { name: UPDATED_FIRST_TOPIC_TITLE })).toBeVisible({ timeout: 10_000 });
@@ -133,8 +133,7 @@ test('Agent Control writes become visible in the desktop Virtual section', async
   const created = await runCli([
     'virtual-folders/create',
     '--descriptor', descriptorPath,
-    '--title', COLLECTION_TITLE,
-    '--description', 'Hidden native visible write'
+    '--title', COLLECTION_TITLE
   ]);
   const folderId = String(created.folder_id);
 

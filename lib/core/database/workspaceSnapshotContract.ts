@@ -13,6 +13,7 @@ export const WORKSPACE_SNAPSHOT_FIELD_MANIFEST: readonly WorkspaceSnapshotFieldM
   { field: 'nodesById.*.bodyStatus', kind: 'entity' },
   { field: 'nodesById.*.bodyBlobHash', kind: 'entity' },
   { field: 'nodesById.*.openingText', kind: 'entity' },
+  { field: 'nodesById.*.collections', kind: 'derived' },
   { field: 'nodesById.*.attachments', kind: 'entity' },
   { field: 'nodesById.*.position', kind: 'entity' },
   { field: 'nodesById.*.currentVersionId', kind: 'entity' },

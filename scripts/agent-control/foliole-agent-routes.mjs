@@ -60,7 +60,7 @@ export const AGENT_CONTROL_ROUTE_REGISTRY = /** @type {const} */ ([
   }),
   registryRoute('product', 'POST', 'virtual-folders/create', 'virtualFolders.create', {
     capabilityOrder: 9,
-    cli: cliRoute('virtual-folders/create', 'Create a virtual Folder.', optionalAndRequired(['description'], ['title'])),
+    cli: cliRoute('virtual-folders/create', 'Create a virtual Folder.', required('title')),
     writeKind: 'virtual_folder'
   }),
   registryRoute('product', 'POST', 'virtual-folders/delete-soft', 'virtualFolders.deleteSoft', {
@@ -78,7 +78,7 @@ export const AGENT_CONTROL_ROUTE_REGISTRY = /** @type {const} */ ([
   }),
   registryRoute('product', 'POST', 'virtual-folders/remove-items', 'virtualFolders.removeItems', {
     capabilityOrder: 11,
-    cli: cliRoute('virtual-folders/remove-items', 'Remove items from a virtual Folder.', required('folder-id', 'item-ids')),
+    cli: cliRoute('virtual-folders/remove-items', 'Remove Topics from a virtual Folder.', required('folder-id', 'material-ids')),
     writeKind: 'virtual_folder'
   }),
   registryRoute('product', 'POST', 'virtual-folders/restore', 'virtualFolders.restore', {
@@ -88,12 +88,12 @@ export const AGENT_CONTROL_ROUTE_REGISTRY = /** @type {const} */ ([
   }),
   registryRoute('product', 'POST', 'virtual-folders/update', 'virtualFolders.update', {
     capabilityOrder: 13,
-    cli: cliRoute('virtual-folders/update', 'Rename or describe a virtual Folder.', optionalAndRequired(['description', 'title'], ['id', 'expected-updated-at'])),
+    cli: cliRoute('virtual-folders/update', 'Rename a virtual Folder.', required('id', 'expected-updated-at', 'title')),
     writeKind: 'virtual_folder'
   }),
   registryRoute('product', 'POST', 'virtual-folders/reorder', 'virtualFolders.reorder', {
     capabilityOrder: 12,
-    cli: cliRoute('virtual-folders/reorder', 'Reorder items in a virtual Folder.', optionalAndRequired(['item-ids', 'material-ids'], ['folder-id'])),
+    cli: cliRoute('virtual-folders/reorder', 'Reorder Topics in a virtual Folder.', required('folder-id', 'material-ids')),
     writeKind: 'virtual_folder'
   })
 ]);

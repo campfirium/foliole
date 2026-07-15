@@ -13,10 +13,13 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { readTopicCollections } from '../../lib/core/nodes/topicCollectionsFrontmatter.js';
 import { closeDatabaseConnection } from '../database/connection.js';
 import { closeExternalSearchCacheDatabase } from '../database/externalSearchCacheDatabase.js';
 import { initializeDatabase } from '../database/migrate.js';
+import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 
+import { readAgentControlMaterial } from './agentControlMaterials.js';
 import { closeAgentControlTestServer, startAgentControlTestServer } from './agentControlTestServer.js';
 
 let tempRoot = '';
@@ -32,16 +35,22 @@ afterEach(async () => {
 });
 
 it('updates, soft deletes, and restores a virtual Folder with optimistic locks', async () => {
+  insertTopic('material-a', '---\ncollections:\n  - "List"\n---\nBody');
   const notify = vi.fn();
   const { endpoint, server } = await startAgentControlTestServer([], notify);
   try {
     const created = await postPayload(endpoint, 'virtual-folders/create', { title: 'List' });
     const folderId = String(created.folder_id);
     const createdAt = String((created.folder as Record<string, unknown>).updated_at);
-    const updated = await postPayload(endpoint, 'virtual-folders/update', {
+    const rejectedDescription = await post(endpoint, 'virtual-folders/update', {
       description: 'Notes', expected_updated_at: createdAt, id: folderId, title: 'Renamed'
     });
-    expect(updated).toMatchObject({ description: 'Notes', title: 'Renamed' });
+    expect(rejectedDescription.status).toBe(400);
+    const updated = await postPayload(endpoint, 'virtual-folders/update', {
+      expected_updated_at: createdAt, id: folderId, title: 'Renamed'
+    });
+    expect(updated).toMatchObject({ title: 'Renamed' });
+    expect(readTopicCollections(readAgentControlMaterial('material-a')?.content ?? '')).toEqual(['Renamed']);
     const deleted = await postPayload(endpoint, 'virtual-folders/delete-soft', {
       expected_updated_at: updated.updated_at, id: folderId
     });
@@ -60,6 +69,24 @@ it('updates, soft deletes, and restores a virtual Folder with optimistic locks',
     await closeAgentControlTestServer(server);
   }
 });
+
+function insertTopic(id: string, content: string) {
+  upsertNodeSnapshot({
+    anchorLink: null,
+    content,
+    createdAt: '2026-07-05T00:00:00.000Z',
+    hideTitleHeading: false,
+    imageRegions: null,
+    isTitleManual: true,
+    kind: 'topic',
+    nodeId: id,
+    parentNodeId: null,
+    position: null,
+    reveal: null,
+    title: id,
+    updatedAt: '2026-07-05T00:00:00.000Z'
+  });
+}
 
 async function postPayload(endpoint: string, route: string, body: Record<string, unknown>) {
   const response = await post(endpoint, route, body);

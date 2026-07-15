@@ -15,6 +15,7 @@ beforeEach(async () => {
   await writeFile(descriptor, JSON.stringify({
     capabilities: [
       'materials.create', 'materials.read', 'materials.listChildren', 'materials.move', 'materials.reorder',
+      'materials.update',
       'materials.restore', 'virtualFolders.read', 'virtualFolders.update', 'virtualFolders.deleteSoft',
       'virtualFolders.restore'
     ],
@@ -55,6 +56,18 @@ it('moves and reorders materials through read-before-write backup contracts', as
   ], { fetch: createFetch(reorderCalls, [{ children: [{ id: 'topic-1' }, { id: 'topic-2' }] }, { reordered_count: 2 }]) });
   expect(reorder.status).toBe(0);
   expect(JSON.parse(reorderCalls[1].body)).toEqual({ material_ids: ['topic-2', 'topic-1'], parent_id: null });
+});
+
+it('accepts YAML frontmatter through the --flag=value form', async () => {
+  const calls = [];
+  const content = '---\ncollections:\n  - "UK Company Registration"\n---\nBody';
+  const result = await runAgentCli([
+    'materials/update', '--descriptor', descriptor, '--backup-dir', path.join(tempRoot, 'backups'),
+    '--id', 'topic-1', '--expected-updated-at', 't1', `--content=${content}`
+  ], { fetch: createFetch(calls, [{ material: { id: 'topic-1' } }, { material: { id: 'topic-1' } }]) });
+
+  expect(result.status).toBe(0);
+  expect(JSON.parse(calls[1].body)).toEqual({ content, expected_updated_at: 't1', id: 'topic-1' });
 });
 
 it('updates and restores virtual Folders with backups', async () => {

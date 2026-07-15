@@ -25,6 +25,7 @@ export interface WorkspaceRuntimeNode {
   sequentialReadingEnabled?: boolean | null;
   shelvedAt?: string | null;
   manualChildOrder?: string[] | null;
+  collections?: string[];
   hideTitleHeading?: boolean;
   bodyStatus?: 'empty' | 'failed' | 'fetching' | 'missing' | 'ready';
   id: string;

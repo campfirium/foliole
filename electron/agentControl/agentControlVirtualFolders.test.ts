@@ -18,7 +18,8 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
+import { createCollectionVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter.js';
+import { closeDatabaseConnection } from '../database/connection.js';
 import { closeExternalSearchCacheDatabase } from '../database/externalSearchCacheDatabase.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { deleteNodesPermanently, softDeleteNodes, upsertNodeSnapshot } from '../database/nodeMutations.js';
@@ -58,28 +59,24 @@ function insertNode(input: { content?: string; id: string; title: string; update
   });
 }
 
-function insertVirtualFolder() {
-  const driver = openDatabaseConnection().driver;
-  driver.execute(
-    `INSERT INTO virtual_folders (id, title, description, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    ['vf-1', 'Guide', 'Reading order', '2026-07-05T00:00:00.000Z', '2026-07-05T00:01:00.000Z']
-  );
-  driver.execute(
-    `INSERT INTO virtual_folder_items (id, folder_id, material_node_id, position, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    ['item-1', 'vf-1', 'material-a', 10, '2026-07-05T00:00:00.000Z', '2026-07-05T00:01:00.000Z']
-  );
-  driver.execute(
-    `INSERT INTO virtual_folder_items (id, folder_id, material_node_id, position, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    ['item-2', 'vf-1', 'material-b', 20, '2026-07-05T00:00:00.000Z', '2026-07-05T00:01:00.000Z']
-  );
-  driver.execute(
-    `INSERT INTO virtual_folder_items (id, folder_id, material_node_id, position, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    ['item-3', 'vf-1', 'material-c', 30, '2026-07-05T00:00:00.000Z', '2026-07-05T00:01:00.000Z']
-  );
+function insertVirtualFolder(manualChildOrder = ['material-c', 'material-a', 'material-b']) {
+  upsertNodeSnapshot({
+    anchorLink: null,
+    content: '',
+    createdAt: '2026-07-05T00:00:00.000Z',
+    hideTitleHeading: false,
+    imageRegions: null,
+    isTitleManual: true,
+    kind: 'folder',
+    manualChildOrder,
+    nodeId: 'vf-1',
+    parentNodeId: 'special-virtual-root',
+    position: null,
+    reveal: null,
+    title: 'Guide',
+    updatedAt: '2026-07-05T00:01:00.000Z',
+    virtualFilter: createCollectionVirtualNodeFilter('Guide')
+  });
 }
 
 async function startServer(auditEvents: AgentControlAuditEvent[] = []) {
@@ -116,12 +113,11 @@ function authHeaders() {
 }
 
 it('lists and reads virtual folders with bounded ordered material projections', async () => {
-  insertNode({ id: 'material-a', title: 'Available', updatedAt: '2026-07-05T00:02:00.000Z' });
-  insertNode({ id: 'material-b', title: 'Deleted' });
-  insertNode({ id: 'material-c', title: 'Gone' });
+  const content = '---\ncollections:\n  - "Guide"\n---\nBody';
+  insertNode({ content, id: 'material-a', title: 'Available', updatedAt: '2026-07-05T00:02:00.000Z' });
+  insertNode({ content, id: 'material-b', title: 'Second' });
+  insertNode({ content, id: 'material-c', title: 'First' });
   insertVirtualFolder();
-  softDeleteNodes({ deletedAt: '2026-07-05T00:03:00.000Z', nodeIds: ['material-b'] });
-  deleteNodesPermanently({ nodeIds: ['material-c'], nodeOrder: [] });
   const auditEvents: AgentControlAuditEvent[] = [];
   const { endpoint, server } = await startServer(auditEvents);
   try {
@@ -146,13 +142,13 @@ it('lists and reads virtual folders with bounded ordered material projections', 
       folder: expect.objectContaining({ id: 'vf-1', item_count: 3 }),
       items: [
         {
-          id: 'item-1',
-          material: { id: 'material-a', kind: 'topic', title: 'Available', updated_at: '2026-07-05T00:02:00.000Z' },
-          material_id: 'material-a',
+          id: 'material-c',
+          material: { id: 'material-c', kind: 'topic', title: 'First', updated_at: '2026-07-05T00:00:00.000Z' },
+          material_id: 'material-c',
           position: 10,
           status: 'available'
         },
-        expect.objectContaining({ id: 'item-2', material_id: 'material-b', position: 20, status: 'deleted' })
+        expect.objectContaining({ id: 'material-a', material_id: 'material-a', position: 20, status: 'available' })
       ],
       total_count: 3,
       truncated: true
@@ -166,9 +162,12 @@ it('lists and reads virtual folders with bounded ordered material projections', 
   }
 });
 
-it('keeps missing item placeholders after material hard deletion', async () => {
-  insertNode({ id: 'material-c', title: 'Gone' });
-  insertVirtualFolder();
+it('derives membership only from active Topics with matching collection YAML', async () => {
+  insertNode({ content: '---\ncollections:\n  - "Guide"\n---', id: 'material-a', title: 'Deleted' });
+  insertNode({ content: '---\ncollections:\n  - "Other"\n---', id: 'material-b', title: 'Other' });
+  insertNode({ content: '---\ncollections:\n  - "Guide"\n---', id: 'material-c', title: 'Gone' });
+  insertVirtualFolder([]);
+  softDeleteNodes({ deletedAt: '2026-07-05T00:03:00.000Z', nodeIds: ['material-a'] });
   deleteNodesPermanently({ nodeIds: ['material-c'], nodeOrder: [] });
   const { endpoint, server } = await startServer();
   try {
@@ -179,11 +178,7 @@ it('keeps missing item placeholders after material hard deletion', async () => {
     });
 
     expect(response.status).toBe(200);
-    expect(await responseJson(response)).toMatchObject({
-      items: expect.arrayContaining([
-        { id: 'item-3', material: null, material_id: 'material-c', position: 30, status: 'missing' }
-      ])
-    });
+    expect(await responseJson(response)).toMatchObject({ items: [], total_count: 0, truncated: false });
   } finally {
     await closeServer(server);
   }

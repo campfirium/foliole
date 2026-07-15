@@ -23,3 +23,7 @@ export async function startAgentControlTestServer(
 export function closeAgentControlTestServer(server: http.Server) {
   return new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
 }
+
+export async function readAgentControlTestResponseJson(response: Response) {
+  return JSON.parse(await response.text()) as Record<string, unknown>;
+}

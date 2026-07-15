@@ -1,8 +1,8 @@
 export const VIRTUAL_NODE_FILTER_VERSION = 1;
 
 export type VirtualNodeFilterMatchMode = 'all';
-export type VirtualNodeFilterConditionField = 'text';
-export type VirtualNodeFilterConditionOperator = 'contains';
+export type VirtualNodeFilterConditionField = 'collection' | 'text';
+export type VirtualNodeFilterConditionOperator = 'contains' | 'equals';
 
 export interface VirtualNodeFilterCondition {
   field: VirtualNodeFilterConditionField;
@@ -22,8 +22,8 @@ function isVirtualNodeFilterCondition(value: unknown): value is VirtualNodeFilte
   }
   const condition = value as Record<string, unknown>;
   return (
-    condition.field === 'text' &&
-    condition.operator === 'contains' &&
+    ((condition.field === 'text' && condition.operator === 'contains') ||
+      (condition.field === 'collection' && condition.operator === 'equals')) &&
     typeof condition.value === 'string'
   );
 }
@@ -57,3 +57,10 @@ export function stringifyVirtualNodeFilter(value: VirtualNodeFilter | null | und
   return value ? JSON.stringify(value) : null;
 }
 
+export function createCollectionVirtualNodeFilter(name: string): VirtualNodeFilter {
+  return {
+    conditions: [{ field: 'collection', operator: 'equals', value: name }],
+    match: 'all',
+    version: VIRTUAL_NODE_FILTER_VERSION
+  };
+}
