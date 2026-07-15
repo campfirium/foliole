@@ -28,6 +28,8 @@ const driver: DatabaseDriver = {
 
 const workspaceSnapshotRow = {
   id: 'node-1',
+  import_content_fingerprint: 'content-1',
+  import_source_fingerprint: 'source-1',
   parent_id: null,
   title: 'Node 1',
   is_title_manual: 1,
@@ -57,6 +59,8 @@ const expectedWorkspaceSnapshot = {
   nodesById: {
     'node-1': {
       id: 'node-1',
+      importContentFingerprint: 'content-1',
+      importSourceFingerprint: 'source-1',
       parentNodeId: null,
       kind: 'topic',
       title: 'Node 1',

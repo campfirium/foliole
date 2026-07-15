@@ -56,6 +56,8 @@ function nodeRecord(): NativeSyncNodeRecord {
       hide_title_heading: false,
       id: 'node-source',
       image_regions: null,
+      import_content_fingerprint: 'content-source',
+      import_source_fingerprint: 'source-source',
       is_title_manual: true,
       kind: 'topic',
       opening_text: null,
@@ -84,10 +86,20 @@ it('preserves sequential reading settings on conflict copy projections', () => {
   });
 
   expect(openDatabaseConnection().sqlite
-    .prepare('SELECT sequential_reading_enabled FROM nodes WHERE id = ?')
-    .get('conflict-copy-node')).toEqual({ sequential_reading_enabled: 1 });
+    .prepare(`SELECT sequential_reading_enabled, import_source_fingerprint,
+                    import_content_fingerprint
+              FROM nodes WHERE id = ?`)
+    .get('conflict-copy-node')).toEqual({
+      import_content_fingerprint: null,
+      import_source_fingerprint: null,
+      sequential_reading_enabled: 1
+    });
   const version = openDatabaseConnection().sqlite
     .prepare('SELECT snapshot_json FROM node_sync_versions WHERE object_id = ?')
     .get('conflict-copy-node') as { snapshot_json: string };
-  expect(JSON.parse(version.snapshot_json)).toMatchObject({ sequential_reading_enabled: true });
+  expect(JSON.parse(version.snapshot_json)).toMatchObject({
+    import_content_fingerprint: null,
+    import_source_fingerprint: null,
+    sequential_reading_enabled: true
+  });
 });

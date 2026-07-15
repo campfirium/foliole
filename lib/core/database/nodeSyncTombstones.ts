@@ -30,6 +30,8 @@ function snapshotHashInput(snapshot: NativeSyncNodeRecord['snapshot']) {
     hideTitleHeading: snapshot.hide_title_heading,
     id: snapshot.id,
     imageRegions: snapshot.image_regions,
+    importContentFingerprint: snapshot.import_content_fingerprint ?? null,
+    importSourceFingerprint: snapshot.import_source_fingerprint ?? null,
     isTitleManual: snapshot.is_title_manual,
     kind: snapshot.kind,
     openingText: snapshot.opening_text,

@@ -15,6 +15,8 @@ interface PdfReferenceNodeRow extends DatabaseRow {
   hide_title_heading: number;
   id: string;
   image_regions: string | null;
+  import_content_fingerprint: string | null;
+  import_source_fingerprint: string | null;
   is_title_manual: number;
   kind: string;
   parent_id: string | null;
@@ -46,7 +48,8 @@ function listPdfReferenceNodes(attachmentId: string) {
     `SELECT
        n.id, n.parent_id, n.kind, n.priority, n.desired_retention, n.enable_short_term,
        n.sequential_reading_enabled, n.shelved_at, n.title, n.is_title_manual,
-       n.hide_title_heading, n.virtual_filter, n.reveal, n.anchor_link, n.image_regions, n.position,
+       n.hide_title_heading, n.virtual_filter, n.reveal, n.anchor_link, n.image_regions,
+       n.import_content_fingerprint, n.import_source_fingerprint, n.position,
        n.created_at, n.deleted_at
      FROM nodes n
      INNER JOIN node_attachments na ON na.node_id = n.id AND na.role = 'reference'
@@ -86,6 +89,8 @@ function upsertNodePackState(node: PdfReferenceNodeRow, bodyContent: string, ope
     hideTitleHeading: node.hide_title_heading === 1,
     id: node.id,
     imageRegions: node.image_regions,
+    importContentFingerprint: node.import_content_fingerprint,
+    importSourceFingerprint: node.import_source_fingerprint,
     isTitleManual: node.is_title_manual === 1,
     kind: node.kind,
     openingText,

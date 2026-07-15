@@ -43,6 +43,8 @@ export interface NativeWorkspaceNodeSnapshot {
   reveal: string | null;
   anchorLink: NativeWorkspaceAnchorLink | null;
   imageRegions?: NativeWorkspaceImageRegionGroup[] | null;
+  importContentFingerprint?: string | null;
+  importSourceFingerprint?: string | null;
   reading: NativeWorkspaceReadingProfile | null;
   review: NativeWorkspaceReviewProfile | null;
   createdAt: string;

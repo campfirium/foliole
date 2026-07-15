@@ -49,7 +49,9 @@ describe('Android workspace read query rules', () => {
         expect.objectContaining({ outputKey: 'parentNodeId', rowKey: 'parent_id' }),
         expect.objectContaining({ outputKey: 'position', rowKey: 'position', type: 'long' }),
         expect.objectContaining({ outputKey: 'desiredRetention', rowKey: 'desired_retention' }),
-        expect.objectContaining({ outputKey: 'bodyBlobHash', rowKey: 'body_blob_hash' })
+        expect.objectContaining({ outputKey: 'bodyBlobHash', rowKey: 'body_blob_hash' }),
+        expect.objectContaining({ outputKey: 'importSourceFingerprint', rowKey: 'import_source_fingerprint' }),
+        expect.objectContaining({ outputKey: 'importContentFingerprint', rowKey: 'import_content_fingerprint' })
       ])
     );
     expect(definitions.workspaceRead.snapshot.readingPayload.validStates).toEqual(['active', 'done', 'dismissed', 'locked']);

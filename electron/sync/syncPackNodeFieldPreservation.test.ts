@@ -54,10 +54,13 @@ it('preserves node fields that are not carried by the pack node table', async ()
   }
 
   expect(connection.sqlite.prepare(
-    `SELECT title, priority, reveal, image_regions, sequential_reading_enabled
+    `SELECT title, priority, reveal, image_regions, sequential_reading_enabled,
+       import_source_fingerprint, import_content_fingerprint
      FROM nodes WHERE id = ?`
   ).get('node-1')).toEqual({
     image_regions: '[{"source":"restored"}]',
+    import_content_fingerprint: 'content-restored',
+    import_source_fingerprint: 'source-restored',
     priority: 3,
     reveal: 'Restored answer',
     sequential_reading_enabled: 1,
@@ -78,13 +81,16 @@ it('uses nullable defaults when a legacy pack creates a new node', async () => {
 
   expect(connection.sqlite.prepare(
     `SELECT priority, desired_retention, enable_short_term, sequential_reading_enabled,
-            manual_child_order, virtual_filter, anchor_link, image_regions
+            manual_child_order, virtual_filter, anchor_link, image_regions,
+            import_source_fingerprint, import_content_fingerprint
      FROM nodes WHERE id = ?`
   ).get('node-1')).toEqual({
     anchor_link: null,
     desired_retention: null,
     enable_short_term: null,
     image_regions: null,
+    import_content_fingerprint: null,
+    import_source_fingerprint: null,
     manual_child_order: null,
     priority: null,
     sequential_reading_enabled: null,
@@ -117,6 +123,8 @@ function legacyPackSchema() {
     'desired_retention',
     'enable_short_term',
     'image_regions',
+    'import_content_fingerprint',
+    'import_source_fingerprint',
     'manual_child_order',
     'priority',
     'reveal',
@@ -133,10 +141,11 @@ function insertRestoredNode() {
   openDatabaseConnection().sqlite.exec(`
     INSERT INTO nodes (
       id, parent_id, kind, priority, title, is_title_manual, hide_title_heading, content,
-      reveal, image_regions, sequential_reading_enabled, created_at, updated_at
+      reveal, image_regions, sequential_reading_enabled,
+      import_source_fingerprint, import_content_fingerprint, created_at, updated_at
     ) VALUES (
       'node-1', NULL, 'topic', 3, 'Restored Node', 1, 1, 'Restored body',
-      'Restored answer', '[{"source":"restored"}]', 1,
+      'Restored answer', '[{"source":"restored"}]', 1, 'source-restored', 'content-restored',
       '2026-05-04T00:00:00.000Z', '2026-05-04T00:30:00.000Z'
     );
     INSERT INTO sync_object_state (

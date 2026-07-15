@@ -18,6 +18,8 @@ export interface NodeSyncVersionSourceRow extends DatabaseRow {
   hide_title_heading: number;
   id: string;
   image_regions: string | null;
+  import_content_fingerprint: string | null;
+  import_source_fingerprint: string | null;
   is_title_manual: number;
   kind: string;
   opening_text: string | null;
@@ -68,6 +70,8 @@ export function loadNodeSyncVersionSource(nodeId: string) {
        reveal,
        anchor_link,
        image_regions,
+       import_content_fingerprint,
+       import_source_fingerprint,
        node_order.position AS position,
        current_version_id,
        sync_dirty,
@@ -97,6 +101,8 @@ export function buildNodeSyncSnapshot(row: NodeSyncVersionSourceRow, nodeId: str
     hide_title_heading: row.hide_title_heading === 1,
     id: row.id,
     image_regions: row.image_regions,
+    import_content_fingerprint: row.import_content_fingerprint,
+    import_source_fingerprint: row.import_source_fingerprint,
     is_title_manual: row.is_title_manual === 1,
     kind: row.kind,
     opening_text: row.opening_text,
@@ -128,6 +134,8 @@ export function computeNodeSyncVersionHash(row: NodeSyncVersionSourceRow, nodeId
     hideTitleHeading: row.hide_title_heading === 1,
     id: row.id,
     imageRegions: row.image_regions,
+    importContentFingerprint: row.import_content_fingerprint,
+    importSourceFingerprint: row.import_source_fingerprint,
     isTitleManual: row.is_title_manual === 1,
     kind: row.kind,
     openingText: row.opening_text,

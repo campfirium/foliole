@@ -51,11 +51,13 @@ function insertNodeSyncState() {
     `INSERT INTO nodes (
        id, kind, priority, desired_retention, enable_short_term, sequential_reading_enabled,
        manual_child_order, title, is_title_manual, hide_title_heading, opening_text, content,
-       body_blob_hash, virtual_filter, reveal, anchor_link, image_regions, created_at, updated_at
-     ) VALUES (?, 'folder', 4, 0.92, 0, 1, ?, ?, 1, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       body_blob_hash, virtual_filter, reveal, anchor_link, image_regions,
+       import_source_fingerprint, import_content_fingerprint, created_at, updated_at
+     ) VALUES (?, 'folder', 4, 0.92, 0, 1, ?, ?, 1, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ['node-1', '["child-2","child-1"]', 'Node 1', 'Node opening preview',
       'node body must stay out of pack', bodyHash, '{"kind":"manual"}', 'Contract answer',
       '{"id":"anchor-1","kind":"highlight"}', '[{"source":"contract"}]',
+      'source-contract', 'content-contract',
       '2026-04-27T00:00:00.000Z', '2026-04-27T00:00:00.000Z']
   );
   driver.execute(
@@ -146,6 +148,7 @@ function readPackRows(packPath: string) {
       nodes: db.prepare(
         `SELECT id, priority, desired_retention, enable_short_term, sequential_reading_enabled,
                 manual_child_order, virtual_filter, anchor_link, image_regions,
+                import_source_fingerprint, import_content_fingerprint,
                 content, body_blob_hash, opening_text, reveal FROM nodes`
       ).all()
     };
@@ -207,6 +210,8 @@ it('keeps the Android sync pack contract fixture deterministic', async () => {
       enable_short_term: 0,
       id: 'node-1',
       image_regions: '[{"source":"contract"}]',
+      import_content_fingerprint: 'content-contract',
+      import_source_fingerprint: 'source-contract',
       manual_child_order: '["child-2","child-1"]',
       opening_text: 'Node opening preview',
       priority: 4,

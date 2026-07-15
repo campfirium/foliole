@@ -54,6 +54,8 @@ export interface WorkspaceNodeSnapshot {
   reveal: string | null;
   anchorLink: StoredAnchorLink | null;
   imageRegions?: StoredImageRegionGroup[] | null;
+  importContentFingerprint?: string | null;
+  importSourceFingerprint?: string | null;
   reading: WorkspaceReadingProfile | null;
   review: WorkspaceReviewProfile | null;
   createdAt: string;
@@ -84,6 +86,8 @@ export interface WorkspaceNodeRowShape {
   hide_title_heading: number;
   id: string;
   image_regions: string | null;
+  import_content_fingerprint?: string | null;
+  import_source_fingerprint?: string | null;
   is_title_manual: number;
   kind: string | null;
   opening_text: string | null;
@@ -164,6 +168,8 @@ export function buildWorkspaceSnapshotNode(row: WorkspaceNodeRowShape): Workspac
     openingText: row.opening_text,
     content: row.content,
     currentVersionId: row.current_version_id ?? null,
+    importContentFingerprint: row.import_content_fingerprint ?? null,
+    importSourceFingerprint: row.import_source_fingerprint ?? null,
     bodyBlobHash: row.body_blob_hash ?? null,
     virtualFilter: parseVirtualNodeFilter(row.virtual_filter),
     reveal: row.reveal,

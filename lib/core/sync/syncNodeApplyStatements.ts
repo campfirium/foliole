@@ -1,4 +1,5 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
+import { normalizeNodeImportProvenance } from '../database/nodeImportProvenance.js';
 
 import type { DbParams } from './dbPort.js';
 
@@ -9,9 +10,10 @@ export interface SyncNodeStatement {
 
 export const UPSERT_REMOTE_NODE_SQL = `INSERT INTO nodes (
   id, parent_id, kind, priority, desired_retention, enable_short_term, sequential_reading_enabled, shelved_at, manual_child_order, title, is_title_manual, hide_title_heading,
-  content, body_blob_hash, opening_text, virtual_filter, reveal, anchor_link, image_regions, position,
+  content, body_blob_hash, opening_text, virtual_filter, reveal, anchor_link, image_regions,
+  import_source_fingerprint, import_content_fingerprint, position,
   current_version_id, last_modified_by_device_id, sync_dirty, created_at, updated_at, deleted_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
   parent_id = excluded.parent_id,
   kind = excluded.kind,
@@ -31,6 +33,8 @@ ON CONFLICT(id) DO UPDATE SET
   reveal = excluded.reveal,
   anchor_link = excluded.anchor_link,
   image_regions = excluded.image_regions,
+  import_source_fingerprint = excluded.import_source_fingerprint,
+  import_content_fingerprint = excluded.import_content_fingerprint,
   position = excluded.position,
   current_version_id = excluded.current_version_id,
   last_modified_by_device_id = excluded.last_modified_by_device_id,
@@ -66,6 +70,10 @@ ON CONFLICT(node_id, attachment_id, role) DO NOTHING`;
 
 export function buildRemoteNodeUpsert(record: NativeSyncNodeRecord, bodyBlobHash: string): SyncNodeStatement {
   const { snapshot } = record;
+  const provenance = normalizeNodeImportProvenance({
+    importContentFingerprint: snapshot.import_content_fingerprint,
+    importSourceFingerprint: snapshot.import_source_fingerprint
+  });
   return {
     params: [
       snapshot.id,
@@ -87,6 +95,8 @@ export function buildRemoteNodeUpsert(record: NativeSyncNodeRecord, bodyBlobHash
       snapshot.reveal,
       snapshot.anchor_link,
       snapshot.image_regions,
+      provenance.importSourceFingerprint,
+      provenance.importContentFingerprint,
       snapshot.position ?? null,
       record.version_id,
       record.device_id,

@@ -1,5 +1,7 @@
 import { createHash } from 'node:crypto';
 
+import { normalizeNodeImportProvenance } from './nodeImportProvenance.js';
+
 export interface NodeSyncAttachmentRef {
   attachmentId: string;
   role: string;
@@ -19,6 +21,8 @@ export interface NodeSyncHashInput {
   hideTitleHeading: boolean;
   id: string;
   imageRegions: string | null;
+  importContentFingerprint: string | null;
+  importSourceFingerprint: string | null;
   isTitleManual: boolean;
   kind: string;
   openingText: string | null;
@@ -53,6 +57,7 @@ function normalizeAttachments(attachments: NodeSyncAttachmentRef[]) {
 }
 
 export function buildCanonicalNodeSyncPayload(input: NodeSyncHashInput) {
+  const provenance = normalizeNodeImportProvenance(input);
   return {
     anchor_link: normalizeNullableText(input.anchorLink),
     attachments: normalizeAttachments(input.attachments),
@@ -67,6 +72,8 @@ export function buildCanonicalNodeSyncPayload(input: NodeSyncHashInput) {
     hide_title_heading: input.hideTitleHeading,
     id: input.id,
     image_regions: normalizeNullableText(input.imageRegions),
+    import_content_fingerprint: provenance.importContentFingerprint,
+    import_source_fingerprint: provenance.importSourceFingerprint,
     is_title_manual: input.isTitleManual,
     kind: input.kind,
     opening_text: normalizeNullableText(input.openingText),

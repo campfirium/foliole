@@ -27,6 +27,8 @@ interface ExistingNodeRow {
   [column: string]: unknown;
   deleted_at: string | null;
   id: string;
+  import_content_fingerprint: string | null;
+  import_source_fingerprint: string | null;
 }
 
 export function buildImportRecord(
@@ -55,12 +57,22 @@ export function buildImportRecord(
 export function resolveDuplicateSemantic(
   existingSource: ImportSourceRow | null,
   existingNode: ExistingNodeRow | null,
-  contentFingerprint: string
+  sourceFingerprint: string,
+  contentFingerprint: string,
+  hasLandedEvidence: boolean
 ) {
   if (!existingSource || !existingNode || existingNode.deleted_at) {
     return 'new';
   }
-  return existingSource.last_content_fingerprint === contentFingerprint ? 'duplicate' : 'updated';
+  if (existingNode.import_source_fingerprint && existingNode.import_content_fingerprint) {
+    return existingNode.import_source_fingerprint === sourceFingerprint
+      && existingNode.import_content_fingerprint === contentFingerprint
+      ? 'duplicate'
+      : 'updated';
+  }
+  return hasLandedEvidence && existingSource.last_content_fingerprint === contentFingerprint
+    ? 'duplicate'
+    : 'updated';
 }
 
 export function writeImportSource(driver: DatabaseDriver, record: PersistedImportRecord) {

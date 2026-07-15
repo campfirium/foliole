@@ -19,6 +19,8 @@ export const SYNC_PACK_NODE_FIELD_DEFINITIONS = [
   { name: 'reveal', sql: 'TEXT', legacyOptional: true },
   { name: 'anchor_link', sql: 'TEXT', legacyOptional: true },
   { name: 'image_regions', sql: 'TEXT', legacyOptional: true },
+  { name: 'import_source_fingerprint', sql: 'TEXT', legacyOptional: true },
+  { name: 'import_content_fingerprint', sql: 'TEXT', legacyOptional: true },
   { name: 'content', sql: "TEXT NOT NULL DEFAULT ''" },
   { name: 'current_version_id', sql: 'TEXT', legacyOptional: true },
   { name: 'created_at', sql: 'TEXT NOT NULL' },
@@ -50,6 +52,8 @@ export interface SyncPackNodeRow extends DatabaseRow {
   hide_title_heading: number;
   id: string;
   image_regions: string | null;
+  import_content_fingerprint: string | null;
+  import_source_fingerprint: string | null;
   is_title_manual: number;
   kind: string;
   manual_child_order: string | null;

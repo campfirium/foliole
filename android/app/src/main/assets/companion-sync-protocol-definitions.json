@@ -60,6 +60,8 @@
       "reveal",
       "anchor_link",
       "image_regions",
+      "import_source_fingerprint",
+      "import_content_fingerprint",
       "current_version_id"
     ],
     "manifestTableNames": [

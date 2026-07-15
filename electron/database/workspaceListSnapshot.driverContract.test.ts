@@ -28,6 +28,8 @@ const driver: DatabaseDriver = {
 
 const workspaceListRow = {
   id: 'node-1',
+  import_content_fingerprint: 'content-1',
+  import_source_fingerprint: 'source-1',
   parent_id: null,
   priority: null,
   desired_retention: null,
@@ -72,6 +74,8 @@ const expectedWorkspaceListSnapshot = {
   nodesById: {
     'node-1': {
       id: 'node-1',
+      importContentFingerprint: 'content-1',
+      importSourceFingerprint: 'source-1',
       parentNodeId: null,
       kind: 'topic',
       title: 'Node 1',

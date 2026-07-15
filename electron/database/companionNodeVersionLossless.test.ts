@@ -104,6 +104,10 @@ function seedSourceFolder(content: string, updatedAt: string) {
     `INSERT OR IGNORE INTO node_attachments (node_id, attachment_id, role)
      VALUES ('folder-1', 'attachment-1', 'reference')`
   ).run();
+  sqlite.prepare(
+    `UPDATE nodes SET import_source_fingerprint = 'source-a', import_content_fingerprint = 'content-a'
+     WHERE id = 'folder-1'`
+  ).run();
 }
 
 async function produceSourceVersion(overrides: { content: string; updatedAt: string } | null = null) {
@@ -150,7 +154,8 @@ function createTargetDatabase() {
 
 function readTargetState(database: Database.Database) {
   const node = database.prepare(
-    `SELECT n.content, n.shelved_at, n.manual_child_order, o.position
+    `SELECT n.content, n.shelved_at, n.manual_child_order, n.import_source_fingerprint,
+       n.import_content_fingerprint, o.position
      FROM nodes n LEFT JOIN node_order o ON o.node_id = n.id WHERE n.id = 'folder-1'`
   ).get();
   const attachments = database.prepare(
@@ -163,6 +168,8 @@ function expectedTargetState(content: string) {
   return {
     attachments: [{ attachment_id: 'attachment-1', role: 'reference' }],
     content,
+    import_content_fingerprint: 'content-a',
+    import_source_fingerprint: 'source-a',
     manual_child_order: '["child-b","child-a"]',
     position: 37,
     shelved_at: '2026-07-10T00:00:00.000Z'

@@ -53,6 +53,8 @@ function queryWorkspaceRows(driver: DatabaseDriver) {
        CASE WHEN n.reveal IS NOT NULL THEN 1 ELSE 0 END AS has_reveal,
        n.anchor_link,
        n.image_regions,
+       n.import_content_fingerprint,
+       n.import_source_fingerprint,
        n.created_at,
        n.updated_at,
        n.deleted_at,

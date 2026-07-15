@@ -60,11 +60,20 @@ function seedImportRun(nodeId: string, importedAt: string) {
   );
 }
 
+function setProvenance(nodeId: string, sourceFingerprint: string | null, contentFingerprint: string | null) {
+  openDatabaseConnection().driver.execute(
+    `UPDATE nodes
+     SET import_source_fingerprint = ?, import_content_fingerprint = ?
+     WHERE id = ?`,
+    [sourceFingerprint, contentFingerprint, nodeId]
+  );
+}
+
 it('skips restoring an imported trash duplicate when a same-source live node exists', () => {
   seedNode('node-live', null, 0);
   seedNode('node-trash', null, 1);
-  seedImportRun('node-live', '2026-05-18T00:00:00.000Z');
-  seedImportRun('node-trash', '2026-05-18T00:01:00.000Z');
+  setProvenance('node-live', 'source-a', 'content-a');
+  setProvenance('node-trash', 'source-a', 'content-a');
   softDeleteNodes({
     deletedAt: '2026-05-18T00:02:00.000Z',
     nodeIds: ['node-trash']
@@ -78,4 +87,33 @@ it('skips restoring an imported trash duplicate when a same-source live node exi
   });
   expect(getNodeRow('node-live')?.deleted_at).toBeNull();
   expect(getNodeRow('node-trash')?.deleted_at).toBe('2026-05-18T00:02:00.000Z');
+});
+
+it('restores when matching import history no longer matches current live provenance', () => {
+  seedNode('node-live', null, 0);
+  seedNode('node-trash', null, 1);
+  seedImportRun('node-live', '2026-05-18T00:00:00.000Z');
+  seedImportRun('node-trash', '2026-05-18T00:01:00.000Z');
+  setProvenance('node-live', 'source-a', 'content-new');
+  setProvenance('node-trash', 'source-a', 'content-a');
+  softDeleteNodes({ deletedAt: '2026-05-18T00:02:00.000Z', nodeIds: ['node-trash'] });
+
+  expect(restoreNodes({ nodeIds: ['node-trash'] })).toEqual({
+    restoredNodeIds: ['node-trash'],
+    skippedConflicts: []
+  });
+  expect(getNodeRow('node-trash')?.deleted_at).toBeNull();
+});
+
+it('restores nodes with absent or incomplete provenance', () => {
+  seedNode('node-live', null, 0);
+  seedNode('node-trash', null, 1);
+  setProvenance('node-live', 'source-a', 'content-a');
+  setProvenance('node-trash', 'source-a', null);
+  softDeleteNodes({ deletedAt: '2026-05-18T00:02:00.000Z', nodeIds: ['node-trash'] });
+
+  expect(restoreNodes({ nodeIds: ['node-trash'] })).toEqual({
+    restoredNodeIds: ['node-trash'],
+    skippedConflicts: []
+  });
 });

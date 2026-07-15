@@ -4,9 +4,15 @@ import type { PreparedImportHighlightRecord } from '../import/contract.js';
 import type { DatabaseDriver } from './driver.js';
 import { insertImportedHighlightNodes } from './importDerivedHighlights.js';
 import { applyImportedHighlightAnchors } from './importHighlightAnchors.js';
-import { type ExistingNodeRow, type ImportSourceRow, resolveExistingImportTarget } from './importPipelineExistingTarget.js';
+import {
+  hasLandedImportEvidence,
+  type ExistingNodeRow,
+  type ImportSourceRow,
+  resolveExistingImportTarget
+} from './importPipelineExistingTarget.js';
 import { replaceImportedHighlightNodes } from './importPipelineHighlightNodes.js';
 import { updateExistingNode, writeNewNode } from './importPipelineNodes.js';
+import { establishImportedNodeIdentity } from './importPipelineProvenance.js';
 import {
   buildImportRecord,
   resolveDuplicateSemantic,
@@ -63,11 +69,17 @@ function buildBaseImportRecord(
   existingSource: ImportSourceRow | null,
   existingNode: ExistingNodeRow | null,
   prepared: PreparedImportRecord,
-  options: { forceUpdateExisting: boolean }
+  options: { forceUpdateExisting: boolean; hasLandedEvidence: boolean }
 ): { baseRecord: PersistedImportRecord; duplicateSemantic: PersistedImportRecord['duplicateSemantic'] } {
   const duplicateSemantic = options.forceUpdateExisting
     ? 'updated'
-    : resolveDuplicateSemantic(existingSource, existingNode, prepared.contentFingerprint);
+    : resolveDuplicateSemantic(
+        existingSource,
+        existingNode,
+        prepared.sourceFingerprint,
+        prepared.contentFingerprint,
+        options.hasLandedEvidence
+      );
   return {
     baseRecord: buildImportRecord(prepared, prepared.degradedReason ? 'degraded' : 'imported', duplicateSemantic, {
       degradedReason: prepared.degradedReason,
@@ -123,7 +135,10 @@ function performPreparedImport(driver: DatabaseDriver, prepared: PreparedImportR
     options.forceUpdateExistingNodeId
   );
   const { baseRecord, duplicateSemantic } = buildBaseImportRecord(existingSource, existingNode, prepared, {
-    forceUpdateExisting
+    forceUpdateExisting,
+    hasLandedEvidence: existingNode
+      ? hasLandedImportEvidence(driver, existingNode.id, prepared)
+      : false
   });
   if (duplicateSemantic === 'duplicate') {
     if (prepared.sourceProfile === 'body_with_highlight_sidecar' && existingNode && !existingNode.deleted_at) {
@@ -135,6 +150,10 @@ function performPreparedImport(driver: DatabaseDriver, prepared: PreparedImportR
         prepared
       });
     }
+    if (!baseRecord.nodeId) {
+      throw new Error('duplicate_import_node_missing');
+    }
+    establishImportedNodeIdentity(driver, baseRecord, baseRecord.nodeId);
     return finalizeImportRecord(driver, baseRecord);
   }
   if (prepared.content.trim().length === 0) {
@@ -166,6 +185,7 @@ function performPreparedImport(driver: DatabaseDriver, prepared: PreparedImportR
     prepared,
     resetImportedStructure: Boolean(options.resetImportedStructure)
   });
+  establishImportedNodeIdentity(driver, baseRecord, nodeId);
   return finalizeImportRecord(driver, { ...baseRecord, nodeId });
 }
 
@@ -184,7 +204,13 @@ export function recordPreparedImportFailure(
 ): PersistedImportRecord {
   return driver.transaction(() => {
     const { existingNode, existingSource } = resolveExistingImportTarget(driver, prepared);
-    const duplicateSemantic = resolveDuplicateSemantic(existingSource, existingNode, prepared.contentFingerprint);
+    const duplicateSemantic = resolveDuplicateSemantic(
+      existingSource,
+      existingNode,
+      prepared.sourceFingerprint,
+      prepared.contentFingerprint,
+      Boolean(existingNode && hasLandedImportEvidence(driver, existingNode.id, prepared))
+    );
     const failedRecord = buildImportRecord(prepared, 'failed', duplicateSemantic, {
       degradedReason: null,
       failureReason,

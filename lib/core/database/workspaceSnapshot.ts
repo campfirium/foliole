@@ -48,6 +48,8 @@ interface WorkspaceNodeRow extends DatabaseRow {
   reveal: string | null;
   anchor_link: string | null;
   image_regions: string | null;
+  import_content_fingerprint: string | null;
+  import_source_fingerprint: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -130,6 +132,8 @@ function queryWorkspaceRows(driver: DatabaseDriver, options: WorkspaceSnapshotLo
        n.reveal,
        n.anchor_link,
        n.image_regions,
+       n.import_content_fingerprint,
+       n.import_source_fingerprint,
        n.created_at,
        n.updated_at,
        n.deleted_at,

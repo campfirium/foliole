@@ -17,6 +17,8 @@ function input(overrides: { manualChildOrder?: string | null; sequentialReadingE
     hideTitleHeading: false,
     id: 'node-1',
     imageRegions: null,
+    importContentFingerprint: null,
+    importSourceFingerprint: null,
     isTitleManual: true,
     kind: 'topic',
     openingText: null,
@@ -50,6 +52,19 @@ it('includes manual child order in node sync hashes', () => {
   expect(computeNodeSyncHash(input({ manualChildOrder: '["node-a","node-b"]', sequentialReadingEnabled: null }))).not.toBe(
     computeNodeSyncHash(input({ manualChildOrder: '["node-b","node-a"]', sequentialReadingEnabled: null }))
   );
+});
+
+it('includes current import provenance in node sync hashes', () => {
+  const base = input({ sequentialReadingEnabled: null });
+  expect(computeNodeSyncHash({
+    ...base,
+    importContentFingerprint: 'content-a',
+    importSourceFingerprint: 'source-a'
+  })).not.toBe(computeNodeSyncHash(base));
+  expect(computeNodeSyncHash({
+    ...base,
+    importContentFingerprint: 'content-a'
+  })).toBe(computeNodeSyncHash(base));
 });
 
 it('uses content as node identity while body blob hash stays derived', () => {

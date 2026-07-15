@@ -26,6 +26,8 @@ export interface WorkspaceNodeRow extends DatabaseRow {
   has_reveal: number;
   anchor_link: string | null;
   image_regions: string | null;
+  import_content_fingerprint: string | null;
+  import_source_fingerprint: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;

@@ -58,6 +58,8 @@ it('applies all canonical pack fields to a new node', async () => {
     desired_retention: 0.91,
     enable_short_term: 0,
     image_regions: '[{"source":"pack"}]',
+    import_content_fingerprint: 'content-pack',
+    import_source_fingerprint: 'source-pack',
     manual_child_order: '["child-b","child-a"]',
     priority: 4,
     sequential_reading_enabled: 1,
@@ -72,7 +74,8 @@ it('treats explicit nulls from a current pack as authoritative for an existing n
     incoming.prepare(
       `UPDATE nodes SET priority = NULL, desired_retention = NULL, enable_short_term = NULL,
         sequential_reading_enabled = NULL, manual_child_order = NULL, virtual_filter = NULL,
-        anchor_link = NULL, image_regions = NULL WHERE id = 'node-1'`
+        anchor_link = NULL, image_regions = NULL, import_source_fingerprint = NULL,
+        import_content_fingerprint = 'partial-content' WHERE id = 'node-1'`
     ).run();
   } finally {
     incoming.close();
@@ -85,6 +88,8 @@ it('treats explicit nulls from a current pack as authoritative for an existing n
     desired_retention: null,
     enable_short_term: null,
     image_regions: null,
+    import_content_fingerprint: null,
+    import_source_fingerprint: null,
     manual_child_order: null,
     priority: null,
     sequential_reading_enabled: null,
@@ -106,7 +111,8 @@ async function applyIncomingPack() {
 function readCanonicalFields() {
   return openDatabaseConnection().sqlite.prepare(
     `SELECT priority, desired_retention, enable_short_term, sequential_reading_enabled,
-            manual_child_order, virtual_filter, anchor_link, image_regions
+            manual_child_order, virtual_filter, anchor_link, image_regions,
+            import_source_fingerprint, import_content_fingerprint
      FROM nodes WHERE id = 'node-1'`
   ).get();
 }
@@ -123,10 +129,12 @@ function createIncomingPack(filePath: string) {
       `INSERT INTO nodes (
          id, kind, priority, desired_retention, enable_short_term, sequential_reading_enabled,
          manual_child_order, title, is_title_manual, hide_title_heading, content,
-         virtual_filter, anchor_link, image_regions, created_at, updated_at
+         virtual_filter, anchor_link, image_regions, import_source_fingerprint,
+         import_content_fingerprint, created_at, updated_at
        ) VALUES ('node-1', 'folder', 4, 0.91, 0, 1, '["child-b","child-a"]',
          'Packed folder', 1, 0, '', '{"kind":"manual"}', '{"id":"anchor-new"}',
-         '[{"source":"pack"}]', '2026-07-10T00:00:00.000Z', '2026-07-10T01:00:00.000Z')`
+         '[{"source":"pack"}]', 'source-pack', 'content-pack',
+         '2026-07-10T00:00:00.000Z', '2026-07-10T01:00:00.000Z')`
     ).run();
   } finally {
     db.close();
@@ -137,10 +145,12 @@ function insertExistingNode() {
   openDatabaseConnection().sqlite.exec(`
     INSERT INTO nodes (
       id, kind, priority, desired_retention, enable_short_term, sequential_reading_enabled,
-      manual_child_order, title, content, virtual_filter, anchor_link, image_regions, created_at, updated_at
+      manual_child_order, title, content, virtual_filter, anchor_link, image_regions,
+      import_source_fingerprint, import_content_fingerprint, created_at, updated_at
     ) VALUES (
       'node-1', 'folder', 9, 0.5, 1, 0, '["old-child"]', 'Old folder', '',
       '{"kind":"old"}', '{"id":"anchor-old"}', '[{"source":"old"}]',
+      'source-old', 'content-old',
       '2026-07-09T00:00:00.000Z', '2026-07-09T01:00:00.000Z'
     )
   `);

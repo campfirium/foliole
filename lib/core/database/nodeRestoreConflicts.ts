@@ -10,10 +10,10 @@ export interface RestoreNodesResult {
   skippedConflicts: RestoreNodeConflict[];
 }
 
-interface ImportRunIdentityRow {
+interface NodeProvenanceRow {
   [column: string]: unknown;
-  content_fingerprint: string;
-  source_fingerprint: string;
+  import_content_fingerprint: string | null;
+  import_source_fingerprint: string | null;
 }
 
 interface LiveNodeRow {
@@ -21,33 +21,32 @@ interface LiveNodeRow {
   id: string;
 }
 
-function readLatestImportRunIdentity(driver: DatabaseDriver, nodeId: string) {
+function readNodeProvenance(driver: DatabaseDriver, nodeId: string) {
   return (
-    driver.queryOne<ImportRunIdentityRow>(
-      `SELECT source_fingerprint, content_fingerprint
-       FROM import_runs
-       WHERE node_id = ?
-       ORDER BY imported_at DESC, id DESC
-       LIMIT 1`,
+    driver.queryOne<NodeProvenanceRow>(
+      `SELECT import_source_fingerprint, import_content_fingerprint
+       FROM nodes
+       WHERE id = ?`,
       [nodeId]
     ) ?? null
   );
 }
 
-function readReusableLiveNodeId(driver: DatabaseDriver, nodeId: string, identity: ImportRunIdentityRow) {
+function readReusableLiveNodeId(driver: DatabaseDriver, nodeId: string, provenance: NodeProvenanceRow) {
+  if (!provenance.import_source_fingerprint || !provenance.import_content_fingerprint) {
+    return null;
+  }
   return (
     driver.queryOne<LiveNodeRow>(
       `SELECT n.id
-       FROM import_runs run
-       JOIN nodes n ON n.id = run.node_id
-       WHERE run.source_fingerprint = ?
-         AND run.content_fingerprint = ?
+       FROM nodes n
+       WHERE n.import_source_fingerprint = ?
+         AND n.import_content_fingerprint = ?
          AND n.deleted_at IS NULL
          AND n.id <> ?
-       GROUP BY n.id, n.created_at
-       ORDER BY MAX(run.imported_at) DESC, n.created_at ASC, n.id ASC
+       ORDER BY n.created_at ASC, n.id ASC
        LIMIT 1`,
-      [identity.source_fingerprint, identity.content_fingerprint, nodeId]
+      [provenance.import_source_fingerprint, provenance.import_content_fingerprint, nodeId]
     )?.id ?? null
   );
 }
@@ -57,8 +56,8 @@ export function resolveRestoreNodesResult(driver: DatabaseDriver, nodeIds: strin
   const skippedConflicts: RestoreNodeConflict[] = [];
 
   for (const nodeId of nodeIds) {
-    const identity = readLatestImportRunIdentity(driver, nodeId);
-    const liveNodeId = identity ? readReusableLiveNodeId(driver, nodeId, identity) : null;
+    const provenance = readNodeProvenance(driver, nodeId);
+    const liveNodeId = provenance ? readReusableLiveNodeId(driver, nodeId, provenance) : null;
     if (liveNodeId) {
       skippedConflicts.push({ liveNodeId, trashNodeId: nodeId });
       continue;

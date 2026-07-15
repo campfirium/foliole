@@ -621,7 +621,7 @@
     },
     "workspaceSnapshotNodes": {
       "resultKey": "nodes",
-      "sql": "WITH RECURSIVE visible_nodes(id) AS (\n  SELECT id\n  FROM nodes\n  WHERE parent_id IS NULL\n    AND deleted_at IS NULL\n  UNION ALL\n  SELECT child.id\n  FROM nodes child\n  INNER JOIN visible_nodes parent\n    ON parent.id = child.parent_id\n  WHERE child.deleted_at IS NULL\n) SELECT n.id, n.parent_id, n.kind, n.priority, n.desired_retention, n.enable_short_term, n.sequential_reading_enabled, n.shelved_at, n.manual_child_order, n.title, n.is_title_manual, n.hide_title_heading, __CONTENT_EXPRESSION__ AS content, n.opening_text, __BODY_STATUS_EXPRESSION__ AS body_status, n.virtual_filter, n.reveal, n.anchor_link, n.image_regions, n.created_at, n.updated_at, n.deleted_at, n.current_version_id, (SELECT no.position FROM node_order no WHERE no.node_id = n.id) AS position, rd.interval_duration_ms, rd.interval_growth_factor, rd.last_handled_at, rd.next_at, rd.priority AS reading_priority, rds.reading_position, rd.repetition_count, rd.state AS reading_state, nr.due, nr.last_review_at, nr.state AS review_state, nr.stability, nr.difficulty, nr.elapsed_days, nr.scheduled_days, nr.reps, nr.lapses, n.body_blob_hash FROM nodes n LEFT JOIN visible_nodes visible ON visible.id = n.id __CONTENT_BLOB_JOIN__ LEFT JOIN node_reading rd ON rd.node_id = n.id AND visible.id IS NOT NULL LEFT JOIN node_reading_device_state rds ON rds.node_id = n.id AND rds.device_id = ? AND visible.id IS NOT NULL LEFT JOIN node_review nr ON nr.node_id = n.id AND visible.id IS NOT NULL ORDER BY COALESCE((SELECT no.position FROM node_order no WHERE no.node_id = n.id), 2147483647), n.updated_at DESC, n.created_at DESC, n.id ASC",
+      "sql": "WITH RECURSIVE visible_nodes(id) AS (\n  SELECT id\n  FROM nodes\n  WHERE parent_id IS NULL\n    AND deleted_at IS NULL\n  UNION ALL\n  SELECT child.id\n  FROM nodes child\n  INNER JOIN visible_nodes parent\n    ON parent.id = child.parent_id\n  WHERE child.deleted_at IS NULL\n) SELECT n.id, n.parent_id, n.kind, n.priority, n.desired_retention, n.enable_short_term, n.sequential_reading_enabled, n.shelved_at, n.manual_child_order, n.title, n.is_title_manual, n.hide_title_heading, __CONTENT_EXPRESSION__ AS content, n.opening_text, __BODY_STATUS_EXPRESSION__ AS body_status, n.virtual_filter, n.reveal, n.anchor_link, n.image_regions, n.import_source_fingerprint, n.import_content_fingerprint, n.created_at, n.updated_at, n.deleted_at, n.current_version_id, (SELECT no.position FROM node_order no WHERE no.node_id = n.id) AS position, rd.interval_duration_ms, rd.interval_growth_factor, rd.last_handled_at, rd.next_at, rd.priority AS reading_priority, rds.reading_position, rd.repetition_count, rd.state AS reading_state, nr.due, nr.last_review_at, nr.state AS review_state, nr.stability, nr.difficulty, nr.elapsed_days, nr.scheduled_days, nr.reps, nr.lapses, n.body_blob_hash FROM nodes n LEFT JOIN visible_nodes visible ON visible.id = n.id __CONTENT_BLOB_JOIN__ LEFT JOIN node_reading rd ON rd.node_id = n.id AND visible.id IS NOT NULL LEFT JOIN node_reading_device_state rds ON rds.node_id = n.id AND rds.device_id = ? AND visible.id IS NOT NULL LEFT JOIN node_review nr ON nr.node_id = n.id AND visible.id IS NOT NULL ORDER BY COALESCE((SELECT no.position FROM node_order no WHERE no.node_id = n.id), 2147483647), n.updated_at DESC, n.created_at DESC, n.id ASC",
       "columns": [
         {
           "key": "id",
@@ -716,6 +716,16 @@
         {
           "key": "image_regions",
           "source": "image_regions",
+          "type": "nullableString"
+        },
+        {
+          "key": "import_source_fingerprint",
+          "source": "import_source_fingerprint",
+          "type": "nullableString"
+        },
+        {
+          "key": "import_content_fingerprint",
+          "source": "import_content_fingerprint",
           "type": "nullableString"
         },
         {
@@ -2864,6 +2874,16 @@
             "outputKey": "imageRegions",
             "rowKey": "image_regions",
             "type": "json"
+          },
+          {
+            "outputKey": "importSourceFingerprint",
+            "rowKey": "import_source_fingerprint",
+            "type": "nullableString"
+          },
+          {
+            "outputKey": "importContentFingerprint",
+            "rowKey": "import_content_fingerprint",
+            "type": "nullableString"
           },
           {
             "outputKey": "createdAt",

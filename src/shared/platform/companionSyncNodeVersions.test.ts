@@ -51,6 +51,8 @@ it('applies a complete workspace-produced version through the Capacitor DbPort',
     createdAt: '2026-07-11T00:00:00.000Z',
     hideTitleHeading: false,
     id: 'folder-1',
+    importContentFingerprint: 'content-a',
+    importSourceFingerprint: 'source-a',
     isTitleManual: true,
     kind: 'folder',
     manualChildOrder: ['child-b', 'child-a'],
@@ -68,10 +70,13 @@ it('applies a complete workspace-produced version through the Capacitor DbPort',
   await applyCompanionSyncNodeVersionsWithSharedCore(createFakeCapacitorConnection(db) as never, [version]);
 
   expect(db.prepare(
-    `SELECT n.shelved_at, n.manual_child_order, o.position
+    `SELECT n.shelved_at, n.manual_child_order, n.import_source_fingerprint,
+       n.import_content_fingerprint, o.position
      FROM nodes n LEFT JOIN node_order o ON o.node_id = n.id WHERE n.id = 'folder-1'`
   ).get()).toEqual({
     manual_child_order: '["child-b","child-a"]',
+    import_content_fingerprint: 'content-a',
+    import_source_fingerprint: 'source-a',
     position: 37,
     shelved_at: '2026-07-10T00:00:00.000Z'
   });
@@ -93,7 +98,7 @@ it('opens the Android companion database before running the shared core', async 
   await expect(applyCompanionSyncNodeVersionsWithSharedCoreOnDevice([nodeVersion()], manager as never))
     .resolves.toEqual(['node-1']);
 
-  expect(manager.createConnection).toHaveBeenCalledWith('foliole-companion', false, 'no-encryption', 18, false);
+  expect(manager.createConnection).toHaveBeenCalledWith('foliole-companion', false, 'no-encryption', 19, false);
   expect(connection.open).toHaveBeenCalled();
 });
 
@@ -133,7 +138,7 @@ it('recreates the Android companion database connection when the cached handle i
     .resolves.toEqual(['node-1']);
 
   expect(manager.checkConnectionsConsistency).toHaveBeenCalled();
-  expect(manager.createConnection).toHaveBeenCalledWith('foliole-companion', false, 'no-encryption', 18, false);
+  expect(manager.createConnection).toHaveBeenCalledWith('foliole-companion', false, 'no-encryption', 19, false);
   expect(connection.open).toHaveBeenCalled();
 });
 
@@ -155,6 +160,8 @@ function nodeVersion(): NativeSyncNodeRecord {
       hide_title_heading: false,
       id: 'node-1',
       image_regions: null,
+      import_content_fingerprint: null,
+      import_source_fingerprint: null,
       is_title_manual: false,
       kind: 'topic',
       opening_text: null,

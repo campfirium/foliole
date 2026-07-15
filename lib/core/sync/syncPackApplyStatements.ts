@@ -15,6 +15,10 @@ export interface SyncPackNodeApplyOptions {
 }
 
 const SYNC_PACK_NODE_UPDATE_COLUMNS = SYNC_PACK_NODE_COLUMNS.filter((column) => column !== 'id');
+const NODE_PROVENANCE_COLUMNS = [
+  'import_source_fingerprint',
+  'import_content_fingerprint'
+] as const satisfies readonly SyncPackNodeColumn[];
 
 function incomingAlias(options: { incomingAlias?: string }) {
   return options.incomingAlias ?? 'inc';
@@ -62,6 +66,15 @@ export function buildSyncPackNodeUpsertSql(options: SyncPackNodeApplyOptions = {
 
 function incomingNodeColumnExpression(column: SyncPackNodeColumn, options: SyncPackNodeApplyOptions) {
   const incomingColumns = options.incomingNodeColumns;
+  if (NODE_PROVENANCE_COLUMNS.includes(column as typeof NODE_PROVENANCE_COLUMNS[number])) {
+    const hasCompleteColumns = !incomingColumns
+      || NODE_PROVENANCE_COLUMNS.every((provenanceColumn) => incomingColumns.includes(provenanceColumn));
+    if (!hasCompleteColumns) {
+      return `(SELECT existing.${column} FROM main.nodes existing WHERE existing.id = incoming.id)`;
+    }
+    return `CASE WHEN incoming.import_source_fingerprint IS NULL ` +
+      `OR incoming.import_content_fingerprint IS NULL THEN NULL ELSE incoming.${column} END`;
+  }
   if (!incomingColumns || incomingColumns.includes(column) || !SYNC_PACK_LEGACY_OPTIONAL_NODE_COLUMNS.has(column)) {
     return `incoming.${column}`;
   }

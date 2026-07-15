@@ -76,6 +76,8 @@ describe('Android migration plan metadata', () => {
     const databaseVersion = Number(helperSource.match(/DATABASE_VERSION = (\d+)/)?.[1]);
 
     expect(schema.actionTypes).toMatchObject({
+      addNodesImportContentFingerprintIfMissing: 'addNodesImportContentFingerprintIfMissing',
+      addNodesImportSourceFingerprintIfMissing: 'addNodesImportSourceFingerprintIfMissing',
       addNodesManualChildOrderIfMissing: 'addNodesManualChildOrderIfMissing',
       addNodesSequentialReadingEnabledIfMissing: 'addNodesSequentialReadingEnabledIfMissing',
       addNodesShelvedAtIfMissing: 'addNodesShelvedAtIfMissing',
@@ -95,7 +97,7 @@ describe('Android migration plan metadata', () => {
       statementName: 'statementName',
       tableName: 'tableName'
     });
-    expect(schema.plan.map((step) => step.beforeVersion)).toEqual([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]);
+    expect(schema.plan.map((step) => step.beforeVersion)).toEqual([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]);
     expect(databaseVersion).toBe(Math.max(...schema.plan.map((step) => step.beforeVersion)));
     expect(schema.repairRules.nodesSequentialReadingEnabled).toMatchObject({
       columnName: 'sequential_reading_enabled',
@@ -110,6 +112,16 @@ describe('Android migration plan metadata', () => {
     expect(schema.repairRules.nodesManualChildOrder).toMatchObject({
       columnName: 'manual_child_order',
       statementName: 'nodesManualChildOrderColumn',
+      tableName: 'nodes'
+    });
+    expect(schema.repairRules.nodesImportSourceFingerprint).toMatchObject({
+      columnName: 'import_source_fingerprint',
+      statementName: 'nodesImportSourceFingerprintColumn',
+      tableName: 'nodes'
+    });
+    expect(schema.repairRules.nodesImportContentFingerprint).toMatchObject({
+      columnName: 'import_content_fingerprint',
+      statementName: 'nodesImportContentFingerprintColumn',
       tableName: 'nodes'
     });
     expect(schema.repairRules.syncObjectStateSequence).toMatchObject({
@@ -137,6 +149,13 @@ describe('Android migration plan metadata', () => {
             expect.objectContaining({ type: 'addSyncBaseContentHashIfMissing' })
           ]),
           beforeVersion: 13
+        }),
+        expect.objectContaining({
+          actions: expect.arrayContaining([
+            expect.objectContaining({ type: 'addNodesImportSourceFingerprintIfMissing' }),
+            expect.objectContaining({ type: 'addNodesImportContentFingerprintIfMissing' })
+          ]),
+          beforeVersion: 19
         })
       ])
     );
@@ -154,6 +173,8 @@ describe('Android migration plan metadata', () => {
     expect(migrationSource).toContain('static void repairCurrentSchema(Context context, SQLiteDatabase database)');
     expect(migrationSource).toContain('FolioleCompanionSchemaRepair.repairCurrentSchema(context, database)');
     expect(repairSource).toContain('addNodesSequentialReadingEnabledIfMissing(context, database)');
+    expect(repairSource).toContain('addNodesImportSourceFingerprintIfMissing(context, database)');
+    expect(repairSource).toContain('addNodesImportContentFingerprintIfMissing(context, database)');
     expect(repairSource).toContain('FolioleCompanionMigrationRules.repairColumnName(context, groupName)');
     expect(installerSource).toContain('static JSONArray migrationPlan(Context context)');
     expect(rulesSource).toContain('section(context, "actionTypes")');

@@ -56,6 +56,7 @@ it('builds node and attachment pack apply statements against an incoming alias',
   expect(nodeSql).toContain('reveal = excluded.reveal');
   expect(nodeSql).toContain('priority = excluded.priority');
   expect(nodeSql).toContain('manual_child_order = excluded.manual_child_order');
+  expect(nodeSql).toContain('CASE WHEN incoming.import_source_fingerprint IS NULL');
   expect(nodeSql).not.toContain('position = excluded.position');
   expect(buildSyncPackNodeUpsertSql({ incomingAlias: 'incoming' })).toContain(
     'FROM incoming.nodes incoming'
@@ -66,7 +67,8 @@ it('builds node and attachment pack apply statements against an incoming alias',
   const legacySql = buildSyncPackNodeUpsertSql({
     incomingAlias: 'incoming',
     incomingNodeColumns: SYNC_PACK_NODE_COLUMNS.filter((column) => ![
-      'current_version_id', 'manual_child_order', 'priority', 'reveal'
+      'current_version_id', 'import_content_fingerprint', 'import_source_fingerprint',
+      'manual_child_order', 'priority', 'reveal'
     ].includes(column))
   });
   expect(legacySql).toContain(
@@ -80,6 +82,12 @@ it('builds node and attachment pack apply statements against an incoming alias',
   );
   expect(legacySql).toContain(
     'SELECT existing.priority FROM main.nodes existing WHERE existing.id = incoming.id'
+  );
+  expect(legacySql).toContain(
+    'SELECT existing.import_source_fingerprint FROM main.nodes existing WHERE existing.id = incoming.id'
+  );
+  expect(legacySql).toContain(
+    'SELECT existing.import_content_fingerprint FROM main.nodes existing WHERE existing.id = incoming.id'
   );
   expect(buildSyncPackNodeAttachmentDeleteSql({ incomingAlias: 'incoming' })).toContain(
     'DELETE FROM main.node_attachments WHERE node_id IN'

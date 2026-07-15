@@ -31,6 +31,8 @@ function createNodeRecord(overrides: Partial<NativeSyncNodeRecord> = {}): Native
       hide_title_heading: true,
       id: 'node-1',
       image_regions: null,
+      import_content_fingerprint: 'content-a',
+      import_source_fingerprint: 'source-a',
       is_title_manual: true,
       kind: 'item',
       opening_text: 'remote opening',
@@ -73,6 +75,8 @@ it('builds the canonical remote node upsert params', () => {
     'answer',
     null,
     null,
+    'source-a',
+    'content-a',
     4,
     'phone#1',
     'phone',
@@ -80,6 +84,18 @@ it('builds the canonical remote node upsert params', () => {
     '2026-04-21T11:00:00.000Z',
     null
   ]);
+});
+
+it('normalizes incomplete remote provenance to a double null', () => {
+  const record = createNodeRecord({
+    snapshot: {
+      ...createNodeRecord().snapshot,
+      import_content_fingerprint: null,
+      import_source_fingerprint: 'source-a'
+    }
+  });
+
+  expect(buildRemoteNodeUpsert(record, 'body-hash').params.slice(19, 21)).toEqual([null, null]);
 });
 
 it('builds remote version upsert only for complete version metadata', () => {

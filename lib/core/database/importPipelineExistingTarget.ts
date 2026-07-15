@@ -14,6 +14,8 @@ export interface ExistingNodeRow {
   created_at: string;
   deleted_at: string | null;
   id: string;
+  import_content_fingerprint: string | null;
+  import_source_fingerprint: string | null;
   parent_id: string | null;
 }
 
@@ -21,6 +23,24 @@ export interface ExistingImportTarget {
   existingNode: ExistingNodeRow | null;
   existingSource: ImportSourceRow | null;
   forceUpdateExisting: boolean;
+}
+
+export function hasLandedImportEvidence(
+  driver: DatabaseDriver,
+  nodeId: string,
+  prepared: PreparedImportRecord
+) {
+  return Boolean(driver.queryOne<{ found: number }>(
+    `SELECT 1 AS found
+     FROM import_runs
+     WHERE node_id = ?
+       AND source_fingerprint = ?
+       AND content_fingerprint = ?
+       AND result_status <> 'failed'
+       AND NOT (result_status = 'degraded' AND degraded_reason = 'empty_content')
+     LIMIT 1`,
+    [nodeId, prepared.sourceFingerprint, prepared.contentFingerprint]
+  ));
 }
 
 function readExistingSource(driver: DatabaseDriver, sourceFingerprint: string) {
@@ -37,7 +57,8 @@ function readExistingSource(driver: DatabaseDriver, sourceFingerprint: string) {
 function readExistingNode(driver: DatabaseDriver, nodeId: string) {
   return (
     driver.queryOne<ExistingNodeRow>(
-      `SELECT n.id, n.parent_id, n.content, n.created_at, n.deleted_at
+      `SELECT n.id, n.parent_id, n.content, n.created_at, n.deleted_at,
+              n.import_source_fingerprint, n.import_content_fingerprint
        FROM nodes n
        WHERE n.id = ?`,
       [nodeId]
@@ -48,13 +69,15 @@ function readExistingNode(driver: DatabaseDriver, nodeId: string) {
 function readLiveSameContentImportNode(driver: DatabaseDriver, prepared: PreparedImportRecord) {
   return (
     driver.queryOne<ExistingNodeRow>(
-      `SELECT n.id, n.parent_id, n.content, n.created_at, n.deleted_at
+      `SELECT n.id, n.parent_id, n.content, n.created_at, n.deleted_at,
+              n.import_source_fingerprint, n.import_content_fingerprint
        FROM import_runs run
        JOIN nodes n ON n.id = run.node_id
        WHERE run.source_fingerprint = ?
          AND run.content_fingerprint = ?
          AND n.deleted_at IS NULL
-       GROUP BY n.id, n.parent_id, n.content, n.created_at, n.deleted_at
+       GROUP BY n.id, n.parent_id, n.content, n.created_at, n.deleted_at,
+                n.import_source_fingerprint, n.import_content_fingerprint
        ORDER BY MAX(run.imported_at) DESC, n.created_at ASC, n.id ASC
        LIMIT 1`,
       [prepared.sourceFingerprint, prepared.contentFingerprint]

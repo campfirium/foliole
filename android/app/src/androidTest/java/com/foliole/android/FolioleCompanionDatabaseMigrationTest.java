@@ -80,13 +80,20 @@ public class FolioleCompanionDatabaseMigrationTest {
                     ")"
             );
             database.execSQL("PRAGMA user_version = 18");
+            database.execSQL(
+                "INSERT INTO nodes (id, title, content, created_at, updated_at) " +
+                    "VALUES ('node-legacy', 'Legacy', 'Body', '2026-07-15T00:00:00.000Z', '2026-07-15T00:00:00.000Z')"
+            );
 
-            FolioleCompanionDatabaseMigration.repairCurrentSchema(context, database);
+            FolioleCompanionDatabaseMigration.upgrade(context, database, 18);
 
             assertTrue(columnExists(database, "nodes", "enable_short_term"));
             assertTrue(columnExists(database, "nodes", "sequential_reading_enabled"));
             assertTrue(columnExists(database, "nodes", "manual_child_order"));
             assertTrue(columnExists(database, "nodes", "shelved_at"));
+            assertTrue(columnExists(database, "nodes", "import_source_fingerprint"));
+            assertTrue(columnExists(database, "nodes", "import_content_fingerprint"));
+            assertEquals(1, countRows(database, "nodes"));
         } finally {
             database.close();
         }
