@@ -1,7 +1,7 @@
 /* global console, process */
 
 import { execFileSync, spawnSync } from 'node:child_process';
-import { readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { prepareCodexHelper } from './prepare-codex-helper.mjs';
@@ -10,6 +10,8 @@ import { prepareGlobalCaptureHelper } from './prepare-global-capture-helper.mjs'
 export { prepareCodexHelper } from './prepare-codex-helper.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
+const MAS_DEVELOPMENT_APP = path.join(ROOT, 'artifacts/macos/mas-dev-arm64/Foliole.app');
+const INSTALLED_APP = '/Applications/Foliole.app';
 const PROFILE_NAMES = {
   distribution: 'Foliole Mac App Store Connect 2026',
   development: 'Foliole macOS App Development 2026'
@@ -57,6 +59,50 @@ export function cleanMasElectronOutput(root = ROOT, remove = rm) {
   return remove(path.join(root, 'dist', 'electron'), { force: true, recursive: true });
 }
 
+export function resolveInstallMode(argv = process.argv) {
+  return argv.includes('--install');
+}
+
+function runStep(label, command, args, run = spawnSync) {
+  const result = run(command, args, { cwd: ROOT, env: process.env, stdio: 'inherit' });
+  if (result.status !== 0) throw new Error(`${label} failed with exit code ${result.status}`);
+}
+
+async function moveIfPresent(source, target, move) {
+  try {
+    await move(source, target);
+    return true;
+  } catch (error) {
+    if (error?.code === 'ENOENT') return false;
+    throw error;
+  }
+}
+
+export async function installMasDevelopmentApp(options = {}) {
+  const sourcePath = options.sourcePath ?? MAS_DEVELOPMENT_APP;
+  const targetPath = options.targetPath ?? INSTALLED_APP;
+  const run = options.run ?? spawnSync;
+  const remove = options.remove ?? rm;
+  const move = options.move ?? rename;
+  const makeTempDirectory = options.makeTempDirectory ?? mkdtemp;
+  const stagingRoot = await makeTempDirectory(path.join(path.dirname(targetPath), '.foliole-internal-install-'));
+  const stagedPath = path.join(stagingRoot, 'Foliole.app');
+  const backupPath = path.join(stagingRoot, 'previous.app');
+  try {
+    runStep('stage internal app', 'ditto', [sourcePath, stagedPath], run);
+    runStep('verify staged internal app', 'codesign', ['--verify', '--deep', '--strict', stagedPath], run);
+    const hadInstalledApp = await moveIfPresent(targetPath, backupPath, move);
+    try {
+      await move(stagedPath, targetPath);
+    } catch (error) {
+      if (hadInstalledApp) await move(backupPath, targetPath);
+      throw error;
+    }
+  } finally {
+    await remove(stagingRoot, { force: true, recursive: true });
+  }
+}
+
 export function findProvisioningProfile(name) {
   const profilesDirectory = path.join(process.env.HOME ?? '', 'Library/Developer/Xcode/UserData/Provisioning Profiles');
   const listing = execFileSync('find', [profilesDirectory, '-name', '*.provisionprofile', '-type', 'f'], { encoding: 'utf8' });
@@ -98,6 +144,8 @@ async function main() {
     throw new Error('Mac App Store packaging requires an arm64 Mac');
   }
   const mode = process.argv.includes('--distribution') ? 'distribution' : 'development';
+  const install = resolveInstallMode();
+  if (install && mode !== 'development') throw new Error('Only the MAS development package can be installed locally');
   const codexPath = await prepareCodexHelper();
   const globalCaptureHelperPath = await prepareGlobalCaptureHelper();
   const provisioningProfile = findProvisioningProfile(PROFILE_NAMES[mode]);
@@ -116,9 +164,10 @@ async function main() {
     ['electron compile', 'npm', ['run', 'electron:compile']],
     ['electron-builder', 'npm', ['exec', '--', 'electron-builder', '--config', configPath, '--mac', mode === 'development' ? 'mas-dev' : 'mas', '--arm64', '--publish', 'never']]
   ]) {
-    const result = spawnSync(command, args, { cwd: ROOT, env: process.env, stdio: 'inherit' });
-    if (result.status !== 0) throw new Error(`${label} failed with exit code ${result.status}`);
+    runStep(label, command, args);
   }
+  if (install) await installMasDevelopmentApp();
+  console.log(`[macos-package] status: ${install ? 'PACKAGED_AND_INSTALLED' : 'PACKAGED'}`);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.meta.filename)) {

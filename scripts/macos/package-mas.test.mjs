@@ -1,10 +1,18 @@
 // @vitest-environment node
 /* global Buffer, URL */
-import { readFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 
 import { expect, it, vi } from 'vitest';
 
-import { cleanMasElectronOutput, createMasBuilderConfig, readProvisioningProfileMetadata } from './package-mas.mjs';
+import {
+  cleanMasElectronOutput,
+  createMasBuilderConfig,
+  installMasDevelopmentApp,
+  readProvisioningProfileMetadata,
+  resolveInstallMode
+} from './package-mas.mjs';
 
 it('cleans stale Electron output before compiling a MAS package', async () => {
   const remove = vi.fn(async () => undefined);
@@ -12,6 +20,33 @@ it('cleans stale Electron output before compiling a MAS package', async () => {
   await cleanMasElectronOutput('/repo', remove);
 
   expect(remove).toHaveBeenCalledWith('/repo/dist/electron', { force: true, recursive: true });
+});
+
+it('routes the internal install script through the MAS development package', () => {
+  const packageJson = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
+
+  expect(packageJson.scripts['macos:mas:dev']).toBe('node scripts/macos/package-mas.mjs --install');
+  expect(resolveInstallMode(['node', 'script', '--install'])).toBe(true);
+});
+
+it('replaces an installed app without merging stale bundle files', async () => {
+  const root = mkdtempSync(path.join(tmpdir(), 'foliole-macos-install-'));
+  const sourcePath = path.join(root, 'source/Foliole.app');
+  const targetPath = path.join(root, 'Applications/Foliole.app');
+  mkdirSync(sourcePath, { recursive: true });
+  mkdirSync(targetPath, { recursive: true });
+  writeFileSync(path.join(sourcePath, 'current'), 'current');
+  writeFileSync(path.join(targetPath, 'stale'), 'stale');
+  const run = vi.fn((command, args) => {
+    if (command === 'ditto') cpSync(args[0], args[1], { recursive: true });
+    return { status: 0 };
+  });
+
+  await installMasDevelopmentApp({ sourcePath, targetPath, run });
+
+  expect(existsSync(path.join(targetPath, 'current'))).toBe(true);
+  expect(existsSync(path.join(targetPath, 'stale'))).toBe(false);
+  expect(run.mock.calls.map(([command]) => command)).toEqual(['ditto', 'codesign']);
 });
 
 it('allows the sandboxed MAS app to host the loopback Agent Control server', () => {

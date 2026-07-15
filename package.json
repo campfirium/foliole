@@ -98,7 +98,7 @@
     "macos:preview:reset": "node scripts/macos/macos-electron-dev.mjs reset-preview",
     "electron:rebuild:native": "electron-rebuild -f -w better-sqlite3",
     "electron:build": "npm run build && npm run electron:compile && electron-builder --config electron/builder.json",
-    "macos:mas:dev": "node scripts/macos/package-mas.mjs",
+    "macos:mas:dev": "node scripts/macos/package-mas.mjs --install",
     "macos:mas:distribution": "node scripts/macos/package-mas.mjs --distribution",
     "macos:github:package": "node scripts/macos/package-github.mjs",
     "macos:github:notarize": "node scripts/macos/package-github.mjs --notarize",
