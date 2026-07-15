@@ -5,6 +5,7 @@ export const EN_SETTINGS_APPEARANCE_TRANSLATIONS = {
   'settings.appearance.monospaceFont.title': 'Monospace font',
   'settings.appearance.monospaceFont.aria': 'Monospace font preset',
   'settings.appearance.monospaceFont.description': 'Code font in fenced blocks and inline code. Monospaced fonts are listed first.',
+  'settings.appearance.fontCatalog.loading': 'Loading system fonts…',
   'settings.appearance.fontPreset.default': 'Default',
   'settings.appearance.fontPreset.system': 'System UI',
   'settings.appearance.fontPreset.serif': 'Serif',

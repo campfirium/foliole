@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process';
+import { execFile } from 'node:child_process';
 
 export interface RuntimeSystemFontCatalog {
   fonts: string[];
@@ -6,9 +6,7 @@ export interface RuntimeSystemFontCatalog {
 }
 
 const MONOSPACE_NAME_HINT = /mono|code|console|consolas|courier|menlo|fira|cascadia/i;
-let cachedCatalog: RuntimeSystemFontCatalog | null = null;
-
-type ExecFileSyncFn = typeof execFileSync;
+type ExecFileFn = (file: string, args: string[]) => Promise<string>;
 
 function normalizeFontNames(values: string[]) {
   return [...new Set(values.map((value) => value.trim()).filter((value) => value.length > 0))].sort((left, right) =>
@@ -20,13 +18,9 @@ function detectMonospaceNames(values: string[]) {
   return values.filter((fontName) => MONOSPACE_NAME_HINT.test(fontName));
 }
 
-function runCommand(exec: ExecFileSyncFn, file: string, args: string[]) {
+async function runCommand(exec: ExecFileFn, file: string, args: string[]) {
   try {
-    return exec(file, args, {
-      encoding: 'utf8',
-      windowsHide: true,
-      maxBuffer: 16 * 1024 * 1024
-    }) as string;
+    return await exec(file, args);
   } catch {
     return '';
   }
@@ -68,10 +62,10 @@ function parseWindowsRegistryFonts(rawOutput: string) {
   return names;
 }
 
-function listWindowsFontsViaPowerShell(exec: ExecFileSyncFn) {
+async function listWindowsFontsViaPowerShell(exec: ExecFileFn) {
   const familiesScript =
     "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;Add-Type -AssemblyName System.Drawing; (New-Object System.Drawing.Text.InstalledFontCollection).Families | ForEach-Object { $_.Name }";
-  const output = runCommand(exec, 'powershell', [
+  const output = await runCommand(exec, 'powershell', [
     '-NoProfile',
     '-NonInteractive',
     '-ExecutionPolicy',
@@ -82,18 +76,20 @@ function listWindowsFontsViaPowerShell(exec: ExecFileSyncFn) {
   return parsePowerShellFontPropertyNames(output);
 }
 
-function listWindowsFonts(exec: ExecFileSyncFn) {
-  const powershellFonts = listWindowsFontsViaPowerShell(exec);
+async function listWindowsFonts(exec: ExecFileFn) {
+  const powershellFonts = await listWindowsFontsViaPowerShell(exec);
   if (powershellFonts.length > 0) {
     return powershellFonts;
   }
-  const hklmOutput = runCommand(exec, 'reg', ['query', 'HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts']);
-  const hkcuOutput = runCommand(exec, 'reg', ['query', 'HKCU\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts']);
+  const [hklmOutput, hkcuOutput] = await Promise.all([
+    runCommand(exec, 'reg', ['query', 'HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts']),
+    runCommand(exec, 'reg', ['query', 'HKCU\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts'])
+  ]);
   return [...parseWindowsRegistryFonts(hklmOutput), ...parseWindowsRegistryFonts(hkcuOutput)];
 }
 
-function listLinuxFonts(exec: ExecFileSyncFn) {
-  const output = runCommand(exec, 'fc-list', [':', 'family']);
+async function listLinuxFonts(exec: ExecFileFn) {
+  const output = await runCommand(exec, 'fc-list', [':', 'family']);
   if (!output) {
     return [];
   }
@@ -104,8 +100,8 @@ function listLinuxFonts(exec: ExecFileSyncFn) {
     .filter((fontName) => fontName.length > 0);
 }
 
-function listMacFonts(exec: ExecFileSyncFn) {
-  const output = runCommand(exec, 'system_profiler', ['SPFontsDataType']);
+async function listMacFonts(exec: ExecFileFn) {
+  const output = await runCommand(exec, 'system_profiler', ['SPFontsDataType']);
   if (!output) {
     return [];
   }
@@ -115,9 +111,9 @@ function listMacFonts(exec: ExecFileSyncFn) {
     .filter((fontName) => fontName.length > 0);
 }
 
-export function listSystemFontsForPlatform(platform: NodeJS.Platform, exec: ExecFileSyncFn): RuntimeSystemFontCatalog {
+export async function listSystemFontsForPlatform(platform: NodeJS.Platform, exec: ExecFileFn): Promise<RuntimeSystemFontCatalog> {
   const rawNames =
-    platform === 'win32' ? listWindowsFonts(exec) : platform === 'darwin' ? listMacFonts(exec) : listLinuxFonts(exec);
+    platform === 'win32' ? await listWindowsFonts(exec) : platform === 'darwin' ? await listMacFonts(exec) : await listLinuxFonts(exec);
   const fonts = normalizeFontNames(rawNames);
   return {
     fonts,
@@ -125,10 +121,20 @@ export function listSystemFontsForPlatform(platform: NodeJS.Platform, exec: Exec
   };
 }
 
-export function listSystemFonts(): RuntimeSystemFontCatalog {
-  if (cachedCatalog) {
-    return cachedCatalog;
-  }
-  cachedCatalog = listSystemFontsForPlatform(process.platform, execFileSync);
-  return cachedCatalog;
+export function createSystemFontCatalogLoader(platform: NodeJS.Platform, exec: ExecFileFn) {
+  let catalogPromise: Promise<RuntimeSystemFontCatalog> | null = null;
+  return () => {
+    catalogPromise ??= listSystemFontsForPlatform(platform, exec);
+    return catalogPromise;
+  };
 }
+
+const runExecFile: ExecFileFn = (file, args) => new Promise((resolve, reject) => {
+  execFile(file, args, {
+    encoding: 'utf8',
+    windowsHide: true,
+    maxBuffer: 16 * 1024 * 1024
+  }, (error, stdout) => error ? reject(error) : resolve(stdout));
+});
+
+export const listSystemFonts = createSystemFontCatalogLoader(process.platform, runExecFile);

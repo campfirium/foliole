@@ -1,15 +1,13 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { useState } from 'react';
-import { beforeAll, beforeEach, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, expect, it } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import { preloadTranslationCatalog } from '../../../shared/localization/translations';
-import { listAvailableSystemFonts } from '../model/systemFonts';
 
 import { SettingsPanel } from './SettingsPanel';
 import {
   changePushQueueValues,
-  createDeferred,
   createProps,
   expectPushQueueValues,
   openReviewSettings,
@@ -55,16 +53,9 @@ async function expectUpdatedPushQueueValues() {
   });
 }
 
-vi.mock('../model/systemFonts', () => ({
-  listAvailableSystemFonts: vi.fn()
-}));
-const mockedListAvailableSystemFonts = vi.mocked(listAvailableSystemFonts);
-
 beforeEach(() => {
   window.localStorage.clear();
   delete window.electronAPI;
-  mockedListAvailableSystemFonts.mockReset();
-  mockedListAvailableSystemFonts.mockResolvedValue({ fonts: [], monospaceFonts: [] });
 });
 
 it('groups settings sidebar entries by workspace, data, and sources', async () => {
@@ -106,27 +97,6 @@ it('groups settings sidebar entries by workspace, data, and sources', async () =
   expect(labels.indexOf('Readwise Reader')).toBeGreaterThan(labels.indexOf('External Folder'));
   expect(screen.getByRole('button', { name: 'Watched folders' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Readwise Reader' })).toBeInTheDocument();
-});
-
-it('keeps font selects disabled until system fonts are loaded', async () => {
-  const deferred = createDeferred<{ fonts: string[]; monospaceFonts: string[] }>();
-  mockedListAvailableSystemFonts.mockReturnValue(deferred.promise);
-
-  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
-
-  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
-
-  const textSelect = screen.getByLabelText('Text font');
-  const monoSelect = screen.getByLabelText('Monospace font preset');
-  expect(textSelect).toBeDisabled();
-  expect(monoSelect).toBeDisabled();
-
-  deferred.resolve({ fonts: ['XHei-Believe'], monospaceFonts: ['XHei-Believe-Mono'] });
-
-  await waitFor(() => {
-    expect(textSelect).toBeEnabled();
-    expect(monoSelect).toBeEnabled();
-  });
 });
 
 it('updates desired retention from review settings slider', async () => {

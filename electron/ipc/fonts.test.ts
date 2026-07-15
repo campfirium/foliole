@@ -2,10 +2,10 @@
 
 import { expect, it, vi } from 'vitest';
 
-import { listSystemFontsForPlatform } from './fonts.js';
+import { createSystemFontCatalogLoader, listSystemFontsForPlatform } from './fonts.js';
 
-it('lists Windows fonts from PowerShell output with Unicode names', () => {
-  const exec = vi.fn((file: string, args: string[]) => {
+it('lists Windows fonts from PowerShell output with Unicode names', async () => {
+  const exec = vi.fn(async (file: string, args: string[]) => {
     const command = `${file} ${args.join(' ')}`;
     if (command.startsWith('powershell ')) {
       return ['微软雅黑', '微软雅黑 Bold', 'Cascadia Mono', 'Wingdings 2 (TrueType)', '微软雅黑 Semibold', 'UD Digi Kyokasho N & UD Digi Kyokasho NP (TrueType)'].join('\n');
@@ -13,7 +13,7 @@ it('lists Windows fonts from PowerShell output with Unicode names', () => {
     throw new Error('unexpected command');
   });
 
-  const catalog = listSystemFontsForPlatform('win32', exec as never);
+  const catalog = await listSystemFontsForPlatform('win32', exec);
 
   expect([...catalog.fonts].sort()).toEqual([
     'Cascadia Mono',
@@ -27,8 +27,8 @@ it('lists Windows fonts from PowerShell output with Unicode names', () => {
   expect(catalog.monospace_fonts).toEqual(['Cascadia Mono']);
 });
 
-it('lists Windows fonts from registry query output instead of returning empty catalog', () => {
-  const exec = vi.fn((file: string, args: string[]) => {
+it('lists Windows fonts from registry query output instead of returning empty catalog', async () => {
+  const exec = vi.fn(async (file: string, args: string[]) => {
     const key = `${file} ${args.join(' ')}`;
     if (key.startsWith('powershell ')) {
       throw new Error('powershell not available');
@@ -47,8 +47,18 @@ it('lists Windows fonts from registry query output instead of returning empty ca
     throw new Error('unexpected command');
   });
 
-  const catalog = listSystemFontsForPlatform('win32', exec as never);
+  const catalog = await listSystemFontsForPlatform('win32', exec);
 
   expect(catalog.fonts).toEqual(['Arial', 'Cascadia Mono', 'SimSun']);
   expect(catalog.monospace_fonts).toEqual(['Cascadia Mono']);
+});
+
+it('shares one in-flight font catalog request for the application session', async () => {
+  const exec = vi.fn(async () => 'Menlo\nSF Pro Text');
+  const loadCatalog = createSystemFontCatalogLoader('darwin', exec);
+
+  const [first, second] = await Promise.all([loadCatalog(), loadCatalog()]);
+
+  expect(first).toBe(second);
+  expect(exec).toHaveBeenCalledTimes(1);
 });

@@ -7,6 +7,7 @@ export const ZH_HANS_SETTINGS_APPEARANCE_TRANSLATIONS: Partial<Record<Translatio
   'settings.appearance.monospaceFont.title': '等宽字体',
   'settings.appearance.monospaceFont.aria': '等宽字体预设',
   'settings.appearance.monospaceFont.description': '代码块和行内代码使用的字体。等宽字体会优先列出。',
+  'settings.appearance.fontCatalog.loading': '正在读取系统字体…',
   'settings.appearance.fontPreset.default': '默认',
   'settings.appearance.fontPreset.system': '系统界面',
   'settings.appearance.fontPreset.serif': '衬线',

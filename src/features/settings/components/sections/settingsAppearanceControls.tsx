@@ -1,4 +1,4 @@
-import { RotateCcw } from 'lucide-react';
+import { ChevronDown, RotateCcw } from 'lucide-react';
 
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
@@ -7,6 +7,11 @@ import {
   SETTINGS_RANGE_WIDTH_CLASS_NAME,
   SETTINGS_SELECT_WIDTH_CLASS_NAME,
   SETTINGS_VALUE_WIDTH_CLASS_NAME,
+  AppDropdownMenu,
+  AppDropdownMenuCheckItem,
+  AppDropdownMenuContent,
+  AppDropdownMenuItem,
+  AppDropdownMenuTrigger,
   SettingsControlSlot,
   SettingsRow,
   settingsControlValueClassName,
@@ -22,22 +27,34 @@ import {
 export function SettingsSelectRow(props: {
   ariaLabel?: string;
   description: string;
-  disabled?: boolean;
   label: string;
+  loading?: boolean;
+  loadingLabel?: string;
   onChange: (value: string) => void;
+  onOpen?: () => void;
   options: Array<{ label: string; value: string }>;
   value: string;
 }) {
+  const selectedLabel = props.options.find((option) => option.value === props.value)?.label ?? props.value;
   return (
     <SettingsRow description={props.description} title={props.label}>
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-        <select aria-label={props.ariaLabel ?? props.label} className={settingsFieldClassName(SETTINGS_SELECT_WIDTH_CLASS_NAME)} disabled={props.disabled} onChange={(event) => props.onChange(event.target.value)} value={props.value}>
-          {props.options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+        <AppDropdownMenu onOpenChange={(open) => open && props.onOpen?.()}>
+          <AppDropdownMenuTrigger asChild>
+            <button aria-label={props.ariaLabel ?? props.label} className={settingsFieldClassName(`${SETTINGS_SELECT_WIDTH_CLASS_NAME} inline-flex items-center justify-between gap-2`)} type="button">
+              <span className="truncate">{selectedLabel}</span>
+              <ChevronDown aria-hidden="true" className="shrink-0" size={15} strokeWidth={1.8} />
+            </button>
+          </AppDropdownMenuTrigger>
+          <AppDropdownMenuContent align="end" className="max-h-[min(420px,var(--radix-dropdown-menu-content-available-height))] w-[260px] overflow-y-auto">
+            {props.options.map((option) => (
+              <AppDropdownMenuCheckItem checked={option.value === props.value} key={option.value} onSelect={() => props.onChange(option.value)}>
+                {option.label}
+              </AppDropdownMenuCheckItem>
+            ))}
+            {props.loading && props.loadingLabel ? <AppDropdownMenuItem disabled>{props.loadingLabel}</AppDropdownMenuItem> : null}
+          </AppDropdownMenuContent>
+        </AppDropdownMenu>
       </SettingsControlSlot>
     </SettingsRow>
   );

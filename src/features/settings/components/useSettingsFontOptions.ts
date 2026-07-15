@@ -1,7 +1,37 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { InterfaceFontPreset, MonospaceFontPreset } from '../model/appearanceSettings';
 import { listAvailableSystemFonts } from '../model/systemFonts';
+
+function useLazySystemFontCatalog() {
+  const [fonts, setFonts] = useState<string[]>([]);
+  const [monospaceFonts, setMonospaceFonts] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const requestRef = useRef<Promise<void> | null>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => () => {
+    mountedRef.current = false;
+  }, []);
+
+  const request = useCallback(() => {
+    if (requestRef.current) {
+      return;
+    }
+    setLoading(true);
+    requestRef.current = listAvailableSystemFonts()
+      .then((catalog) => {
+        if (mountedRef.current) {
+          setFonts(catalog.fonts);
+          setMonospaceFonts(catalog.monospaceFonts);
+        }
+      })
+      .catch(() => undefined)
+      .finally(() => mountedRef.current && setLoading(false));
+  }, []);
+
+  return { fonts, loading, monospaceFonts, request };
+}
 
 export function useSettingsFontOptions(props: {
   customInterfaceFont: string;
@@ -11,46 +41,25 @@ export function useSettingsFontOptions(props: {
   monospaceFontPreset: MonospaceFontPreset;
   uiFontPreset: InterfaceFontPreset;
 }) {
-  const [availableSystemFonts, setAvailableSystemFonts] = useState<string[]>([]);
-  const [availableMonospaceFonts, setAvailableMonospaceFonts] = useState<string[]>([]);
-  const [areFontOptionsReady, setAreFontOptionsReady] = useState(false);
-
-  useEffect(() => {
-    let alive = true;
-    listAvailableSystemFonts()
-      .then((fonts) => {
-        if (!alive) {
-          return;
-        }
-        setAvailableSystemFonts(fonts.fonts);
-        setAvailableMonospaceFonts(fonts.monospaceFonts);
-      })
-      .finally(() => {
-        if (alive) {
-          setAreFontOptionsReady(true);
-        }
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
+  const catalog = useLazySystemFontCatalog();
 
   const allFontOptions = useMemo(
     () =>
-      [...new Set([...availableSystemFonts, ...availableMonospaceFonts, props.customUiFont, props.customInterfaceFont, props.customMonospaceFont].filter(Boolean))].sort((l, r) =>
+      [...new Set([...catalog.fonts, ...catalog.monospaceFonts, props.customUiFont, props.customInterfaceFont, props.customMonospaceFont].filter(Boolean))].sort((l, r) =>
         l.localeCompare(r)
       ),
-    [availableMonospaceFonts, availableSystemFonts, props.customInterfaceFont, props.customMonospaceFont, props.customUiFont]
+    [catalog.fonts, catalog.monospaceFonts, props.customInterfaceFont, props.customMonospaceFont, props.customUiFont]
   );
   const monospaceFontOptions = useMemo(() => {
-    const mono = new Set(availableMonospaceFonts);
+    const mono = new Set(catalog.monospaceFonts);
     return [...allFontOptions.filter((font) => mono.has(font)), ...allFontOptions.filter((font) => !mono.has(font))];
-  }, [allFontOptions, availableMonospaceFonts]);
+  }, [allFontOptions, catalog.monospaceFonts]);
 
   return {
-    areFontOptionsReady,
     interfaceFontOptions: allFontOptions,
+    isLoadingFontOptions: catalog.loading,
     monospaceFontOptions,
+    requestFontOptions: catalog.request,
     selectedInterfaceFontValue:
       props.interfaceFontPreset === 'custom'
         ? (props.customInterfaceFont ? `font:${props.customInterfaceFont}` : 'preset:default')
