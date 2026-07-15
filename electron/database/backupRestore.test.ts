@@ -69,18 +69,20 @@ it('restores the application sqlite state from an online backup snapshot', async
 
   expect(loadWorkspaceSnapshot({ includeBody: true })).toEqual({
     activeNodeId: 'node-1',
-    manualVirtualCollections: [],
     nodeOrder: ['node-1'],
     nodesById: {
       'node-1': {
+        attachments: [],
         id: 'node-1',
         parentNodeId: null,
+        position: null,
         kind: 'topic',
         title: 'node-1',
         isTitleManual: true,
         hideTitleHeading: false,
         bodyBlobHash: expect.stringMatching(/^[a-f0-9]{64}$/),
         content: '# original',
+        currentVersionId: null,
         openingText: null,
         virtualFilter: null,
         reveal: null,

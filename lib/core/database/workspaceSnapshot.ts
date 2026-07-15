@@ -1,8 +1,6 @@
 import type { PersistedNodeViewState } from '../../platform/persistedNodeViewState.js';
 
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
-import { loadWorkspaceManualVirtualCollections } from './manualVirtualCollections.js';
-import type { WorkspaceManualVirtualCollection } from './manualVirtualCollections.js';
 import { loadDatabaseDeviceId } from './syncDeviceIdentity.js';
 import { attachWorkspaceNodeAttachments } from './workspaceSnapshotAttachments.js';
 import { normalizeWorkspaceSnapshot, resolveWorkspaceSnapshotActiveNodeId } from './workspaceSnapshotContract.js';
@@ -17,7 +15,6 @@ import { VISIBLE_NODES_CTE_SQL } from './workspaceVisibleNodesSql.js';
 
 export interface WorkspaceSnapshot {
   activeNodeId: string | null;
-  manualVirtualCollections?: WorkspaceManualVirtualCollection[];
   nodeOrder: string[];
   nodesById: Record<string, WorkspaceNodeSnapshot>;
   persistedNodeViewById?: Record<string, PersistedNodeViewState | undefined>;
@@ -201,7 +198,6 @@ function buildSnapshotRows(
 
   return normalizeWorkspaceSnapshot({
     activeNodeId: resolveWorkspaceSnapshotActiveNodeId({ activeNodeId, nodeOrder, nodesById }),
-    manualVirtualCollections: loadWorkspaceManualVirtualCollections(driver),
     nodeOrder,
     nodesById,
     ...(Object.keys(persistedNodeViewById).length > 0 ? { persistedNodeViewById } : {}),

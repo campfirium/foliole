@@ -1,7 +1,8 @@
-import { Pencil, Trash2 } from 'lucide-react';
+import { FileCode2, Pencil, Trash2 } from 'lucide-react';
 
 import { NodeContextMenuItem, NodeContextMenuSeparator } from '../../features/nodes/components/nodeListContextMenuPresentation';
 import { requestNodeRename } from '../../features/nodes/components/NodeTreeRowRename';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppDropdownMenu, AppDropdownMenuContent, AppDropdownMenuTrigger } from '../../shared/ui';
 
 interface WorkspaceVirtualSavedSearchContextMenuProps {
@@ -9,7 +10,23 @@ interface WorkspaceVirtualSavedSearchContextMenuProps {
   nodeId: string;
   onClose: () => void;
   onDelete: (nodeId: string) => void;
+  onWriteTopicYaml?: (nodeId: string) => void;
   top: number;
+}
+
+function WriteTopicYamlMenuItem(props: { nodeId: string; onClose: () => void; onWrite: (nodeId: string) => void }) {
+  const t = useTranslation();
+  return (
+    <NodeContextMenuItem
+      icon={FileCode2}
+      onSelect={() => {
+        props.onWrite(props.nodeId);
+        props.onClose();
+      }}
+    >
+      {t('desktop.workspace.virtualFolderYaml.write')}
+    </NodeContextMenuItem>
+  );
 }
 
 export function WorkspaceVirtualSavedSearchContextMenu({
@@ -17,6 +34,7 @@ export function WorkspaceVirtualSavedSearchContextMenu({
   nodeId,
   onClose,
   onDelete,
+  onWriteTopicYaml,
   top
 }: WorkspaceVirtualSavedSearchContextMenuProps) {
   return (
@@ -45,6 +63,9 @@ export function WorkspaceVirtualSavedSearchContextMenu({
         >
           Rename
         </NodeContextMenuItem>
+        {onWriteTopicYaml ? (
+          <WriteTopicYamlMenuItem nodeId={nodeId} onClose={onClose} onWrite={onWriteTopicYaml} />
+        ) : null}
         <NodeContextMenuSeparator />
         <NodeContextMenuItem
           icon={Trash2}

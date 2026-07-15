@@ -40,7 +40,6 @@ export function mutateWorkspaceAfterBackup() {
 export function createRestoredWorkspaceSnapshot() {
   return {
     activeNodeId: 'node-root',
-    manualVirtualCollections: [],
     nodeOrder: ['node-root', 'node-qa'],
     nodesById: {
       'node-root': createRestoredNodeSnapshot('node-root', '# root'),
@@ -60,6 +59,7 @@ export function createRestoredWorkspaceSnapshot() {
       },
       'node-trash': {
         ...createRestoredNodeSnapshot('node-trash', '# trash'),
+        currentVersionId: expect.any(String),
         deletedAt: '2026-03-14T10:01:00.000Z',
         updatedAt: '2026-03-14T10:01:00.000Z'
       }
@@ -120,14 +120,17 @@ export function seedNode(nodeId: string, content: string, position = 0, reveal: 
 
 function createRestoredNodeSnapshot(nodeId: string, content: string, reveal: string | null = null) {
   return {
+    attachments: [],
     id: nodeId,
     parentNodeId: null,
+    position: null,
     kind: reveal === null ? 'topic' : 'item',
     title: nodeId,
     isTitleManual: true,
     hideTitleHeading: false,
     bodyBlobHash: expect.stringMatching(/^[a-f0-9]{64}$/),
     content,
+    currentVersionId: null,
     openingText: reveal === null ? null : content,
     virtualFilter: null,
     reveal,

@@ -51,7 +51,6 @@ function partializeWorkspaceState(state: WorkspaceState): WorkspacePersistedStat
     activeNodeId: state.activeNodeId,
     capturedWorkspaceVersion: state.capturedWorkspaceVersion,
     layout: state.layout,
-    manualVirtualCollections: state.manualVirtualCollections,
     nodeViewById: state.nodeViewById,
     nodeOrder: state.nodeOrder,
     nodesById,
@@ -82,7 +81,6 @@ export function createWorkspaceStorePersistConfig(
           ...current.layout,
           ...persisted.layout
         },
-        manualVirtualCollections: persisted.manualVirtualCollections ?? current.manualVirtualCollections,
         nodeViewById: persisted.nodeViewById ?? current.nodeViewById,
         rendererBoundaryKeepNodeIds: persisted.rendererBoundaryKeepNodeIds ?? current.rendererBoundaryKeepNodeIds,
         reviewSession: persisted.reviewSession ?? current.reviewSession,

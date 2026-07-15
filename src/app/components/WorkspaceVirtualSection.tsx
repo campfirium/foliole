@@ -10,19 +10,21 @@ import {
   isVirtualRootNode
 } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
-import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { useWorkspaceStore, type WorkspaceManualVirtualCollection } from '../../store/workspaceStore';
+import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 
-import { isManualVirtualCollectionNodeId } from './manualVirtualCollectionModel';
 import { compareVirtualNodeTitle } from './workspaceVirtualNodeSort';
 import { WorkspaceVirtualSavedSearchContextMenu } from './WorkspaceVirtualSavedSearchContextMenu';
 import { getVirtualKeyboardRows, renderVirtualRows, toggleCollapsed } from './WorkspaceVirtualSectionRows';
+import {
+  isCollectionVirtualFolder,
+  writeVirtualFolderInfoToTopicYaml
+} from './writeVirtualFolderInfoToTopicYaml';
 
 interface WorkspaceVirtualSectionProps {
   activeVirtualNodeId?: string | null;
   hideInDemo?: boolean;
   isVirtualViewOpen: boolean;
-  manualVirtualCollections?: readonly WorkspaceManualVirtualCollection[];
   nodeOrder: string[];
   nodesById: WorkspaceListNodesById;
   onOpenVirtualView?: (nodeId?: string) => void;
@@ -36,9 +38,7 @@ function selectVirtualKeyboardRow(nodeId: string, props: WorkspaceVirtualSection
     return;
   }
   props.onOpenVirtualView?.(nodeId);
-  if (!isManualVirtualCollectionNodeId(nodeId)) {
-    props.onSelectNodeInVirtualView(nodeId);
-  }
+  props.onSelectNodeInVirtualView(nodeId);
 }
 
 function getContextMenuPosition(event: ReactMouseEvent<HTMLElement>) {
@@ -51,6 +51,8 @@ function getContextMenuPosition(event: ReactMouseEvent<HTMLElement>) {
 function renderSavedSearchContextMenu(args: {
   contextMenu: { left: number; nodeId: string; top: number } | null;
   deleteNode: (nodeId: string) => void;
+  isWritingTopicYaml: boolean;
+  onWriteTopicYaml: (nodeId: string) => void;
   setContextMenu: (value: { left: number; nodeId: string; top: number } | null) => void;
 }) {
   if (!args.contextMenu) return null;
@@ -60,9 +62,39 @@ function renderSavedSearchContextMenu(args: {
       nodeId={args.contextMenu.nodeId}
       onClose={() => args.setContextMenu(null)}
       onDelete={args.deleteNode}
+      {...(!args.isWritingTopicYaml && isCollectionVirtualFolder(args.contextMenu.nodeId)
+        ? { onWriteTopicYaml: args.onWriteTopicYaml }
+        : {})}
       top={args.contextMenu.top}
     />
   );
+}
+
+function useVirtualFolderActions(
+  t: Translate,
+  updateNodeTitle: (nodeId: string, title: string) => Promise<boolean>
+) {
+  const [isWritingTopicYaml, setIsWritingTopicYaml] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
+  return {
+    isWritingTopicYaml,
+    onRename: (nodeId: string, title: string) => {
+      setStatus(null);
+      void updateNodeTitle(nodeId, title).then((updated) => {
+        if (!updated) setStatus(t('desktop.workspace.virtualFolderRename.failed'));
+      });
+    },
+    onWriteTopicYaml: (nodeId: string) => {
+      setIsWritingTopicYaml(true);
+      setStatus(null);
+      void writeVirtualFolderInfoToTopicYaml(nodeId).then((result) => {
+        setStatus(result.failed > 0
+          ? t('desktop.workspace.virtualFolderYaml.partial', { ...result })
+          : t('desktop.workspace.virtualFolderYaml.complete', { ...result }));
+      }).finally(() => setIsWritingTopicYaml(false));
+    },
+    status
+  };
 }
 
 export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
@@ -71,6 +103,7 @@ export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
   const [contextMenu, setContextMenu] = useState<{ left: number; nodeId: string; top: number } | null>(null);
   const deleteNode = useWorkspaceStore((state) => state.deleteNode);
   const updateNodeTitle = useWorkspaceStore((state) => state.updateNodeTitle);
+  const actions = useVirtualFolderActions(t, updateNodeTitle);
   const rowSpacing = getNodeListRowSpacing();
   const rows = useMemo(() => {
     const virtualNodeIds = props.nodeOrder.filter((nodeId) => {
@@ -79,7 +112,7 @@ export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
     }).sort((leftId, rightId) => compareVirtualNodeTitle(leftId, rightId, props.nodesById));
     return buildVisibleNodeTreeRows(buildNodeTree(virtualNodeIds, props.nodesById).rows, collapsedIds);
   }, [collapsedIds, props.nodeOrder, props.nodesById]);
-  const keyboardRows = useMemo(() => getVirtualKeyboardRows(rows, collapsedIds, props.manualVirtualCollections), [collapsedIds, props.manualVirtualCollections, rows]);
+  const keyboardRows = useMemo(() => getVirtualKeyboardRows(rows, collapsedIds), [collapsedIds, rows]);
   const onRowKeyDown = useMemo(
     () =>
       createNodeListRowKeydownHandler({
@@ -107,15 +140,20 @@ export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
               setContextMenu({ nodeId, ...getContextMenuPosition(event) });
             },
             onDeleteVirtualNode: deleteNode,
-            onRenameVirtualNode: (nodeId, title) => {
-              void updateNodeTitle(nodeId, title);
-            }
+            onRenameVirtualNode: actions.onRename
           },
           rowSpacing,
           rows,
           setCollapsedIds
         })}
-        {renderSavedSearchContextMenu({ contextMenu, deleteNode, setContextMenu })}
+        {renderSavedSearchContextMenu({
+          contextMenu,
+          deleteNode,
+          isWritingTopicYaml: actions.isWritingTopicYaml,
+          onWriteTopicYaml: actions.onWriteTopicYaml,
+          setContextMenu
+        })}
+        {actions.status ? <p aria-live="polite" className="px-4 py-1 text-xs text-foreground/65">{actions.status}</p> : null}
       </section>
     </div>
   );

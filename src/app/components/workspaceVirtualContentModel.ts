@@ -6,13 +6,9 @@ import {
   isVirtualNode
 } from '../../features/nodes/model/specialNodes';
 import type { buildVirtualNodeResultIndex } from '../../features/nodes/model/virtualNodeDetail';
-import type { WorkspaceManualVirtualCollection } from '../../store/workspaceStore';
-
-import { collectManualVirtualCollectionTopicIds, findManualVirtualCollection } from './manualVirtualCollectionModel';
 
 interface VirtualContentSnapshot {
   activeVirtualNodeId?: string | null;
-  manualVirtualCollections?: readonly WorkspaceManualVirtualCollection[];
   nodeOrder: string[];
   nodesById: Record<string, Node>;
   trashedNodeIds: string[];
@@ -73,13 +69,6 @@ export function resolveVirtualContentItemIds(
   }
   if (activeVirtualNodeId === VIRTUAL_REMOVED_NODE_ID) {
     return collectRemovedTopicIds(args);
-  }
-  const manualCollection = findManualVirtualCollection(args.manualVirtualCollections, activeVirtualNodeId);
-  if (manualCollection) {
-    const trashedNodeIds = new Set(args.trashedNodeIds);
-    return collectManualVirtualCollectionTopicIds(manualCollection, args.nodesById).filter(
-      (nodeId) => !trashedNodeIds.has(nodeId)
-    );
   }
   return collectSavedSearchTopicIds(args, virtualResultIndex);
 }

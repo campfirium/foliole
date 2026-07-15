@@ -108,18 +108,21 @@ function useResolvedFolderListState(props: FolderListViewProps) {
       props.trashedNodeIds
     ]
   );
+  const manualChildOrder = resolveFolderManualChildOrder(props);
   const state = useFolderListViewState({
     controlledSearchQuery: props.searchQuery,
     controlledSortDirection: props.sortDirection,
     controlledSortKey: props.sortKey,
-    defaultSortKey: props.sortOptions?.[0]?.key ?? DEFAULT_FOLDER_LIST_SORT_KEY,
+    defaultSortKey: manualChildOrder?.length
+      ? 'manual'
+      : props.sortOptions?.[0]?.key ?? DEFAULT_FOLDER_LIST_SORT_KEY,
     filterSearchResults: props.filterSearchResults,
     listedNodes,
     nodeViewById,
     listRebuildKey: buildFolderListRebuildKey(props, listedNodes),
     manualChildOrder: props.sortKey === 'manual'
       ? listedNodes.map((node) => node.id)
-      : resolveFolderManualChildOrder(props),
+      : manualChildOrder,
     onChangeSearchQuery: props.onChangeSearchQuery,
     onChangeSortDirection: props.onChangeSortDirection,
     onChangeSortKey: props.onChangeSortKey

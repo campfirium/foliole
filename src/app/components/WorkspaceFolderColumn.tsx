@@ -6,7 +6,6 @@ import type {
   ExternalLibraryBrowseEntry,
   ExternalLibraryFolder
 } from '../../shared/platform/externalLibraryBrowseRepository';
-import type { WorkspaceManualVirtualCollection } from '../../store/workspaceStore';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import { ExternalLibrarySection } from './ExternalLibrarySection';
@@ -22,7 +21,6 @@ interface WorkspaceFolderColumnProps {
   isExternalViewOpen: boolean;
   isTrashViewOpen: boolean;
   isVirtualViewOpen: boolean;
-  manualVirtualCollections?: readonly WorkspaceManualVirtualCollection[];
   forceExpandedFolderId?: string | null;
   highlightedFolderId?: string | null;
   folderNodeOrder: string[];
@@ -91,7 +89,6 @@ function renderRegularSection(props: WorkspaceFolderColumnProps) {
         <>
           <WorkspaceVirtualSection
             isVirtualViewOpen={props.isVirtualViewOpen}
-            manualVirtualCollections={props.manualVirtualCollections ?? []}
             nodeOrder={props.nodeOrder}
             nodesById={props.nodesById}
             onSelectNodeInVirtualView={props.onSelectNodeInVirtualView}

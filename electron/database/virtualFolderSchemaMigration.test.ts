@@ -34,7 +34,18 @@ afterEach(async () => {
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
-it('adds virtual folder tables to existing v49 desktop databases', () => {
+it('keeps legacy virtual folder tables out of fresh databases', () => {
+  const connection = openDatabaseConnection();
+  initializeDatabaseConnection(connection);
+
+  const tables = connection.sqlite.prepare(
+    `SELECT name FROM sqlite_master
+     WHERE type = 'table' AND name IN ('virtual_folders', 'virtual_folder_items')`
+  ).all();
+  expect(tables).toEqual([]);
+});
+
+it('advances existing v49 databases without creating legacy virtual folder tables', () => {
   const connection = openDatabaseConnection();
   connection.sqlite.pragma('user_version = 49');
 
@@ -47,15 +58,24 @@ it('adds virtual folder tables to existing v49 desktop databases', () => {
        ORDER BY name ASC`
     )
     .all() as Array<{ name: string }>;
-  expect(tables).toEqual([{ name: 'virtual_folder_items' }, { name: 'virtual_folders' }]);
-  const itemColumns = connection.sqlite.prepare('PRAGMA table_info(virtual_folder_items)').all() as Array<{ name: string }>;
-  expect(itemColumns.map((column) => column.name)).toEqual(expect.arrayContaining([
-    'deleted_at',
-    'folder_id',
-    'material_node_id',
-    'position'
-  ]));
+  expect(tables).toEqual([]);
   expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+});
+
+it('does not delete legacy development tables that already exist', () => {
+  const connection = openDatabaseConnection();
+  connection.sqlite.exec('CREATE TABLE virtual_folders (id TEXT PRIMARY KEY)');
+  connection.sqlite.exec('CREATE TABLE virtual_folder_items (id TEXT PRIMARY KEY)');
+  connection.sqlite.pragma('user_version = 49');
+
+  initializeDatabaseConnection(connection);
+
+  const tables = connection.sqlite.prepare(
+    `SELECT name FROM sqlite_master
+     WHERE type = 'table' AND name IN ('virtual_folders', 'virtual_folder_items')
+     ORDER BY name ASC`
+  ).all() as Array<{ name: string }>;
+  expect(tables).toEqual([{ name: 'virtual_folder_items' }, { name: 'virtual_folders' }]);
 });
 
 it('keeps virtual folder tables out of sync object policies', () => {

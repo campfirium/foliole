@@ -67,7 +67,6 @@ const workspaceListRow = {
 
 const expectedWorkspaceListSnapshot = {
   activeNodeId: 'node-1',
-  manualVirtualCollections: [],
   capturedWorkspaceVersion: '2026-03-14T00:00:00.000Z',
   nodeOrder: ['node-1'],
   nodesById: {
@@ -115,7 +114,7 @@ it('loads workspace list snapshot without long-lived node documents', () => {
 
   expect(loadWorkspaceListSnapshot(driver)).toEqual(expectedWorkspaceListSnapshot);
 
-  expect(queryAllSpy).toHaveBeenCalledTimes(4);
+  expect(queryAllSpy).toHaveBeenCalledTimes(3);
 });
 
 it('projects collection names without retaining long-lived content bodies', () => {
@@ -197,7 +196,7 @@ it('can skip pdf page opening backfill for lightweight startup snapshots', () =>
   queryOneSpy.mockReturnValueOnce({ value: '"desktop-test"' }).mockReturnValueOnce(undefined).mockReturnValueOnce(undefined);
 
   expect(loadWorkspaceListSnapshot(driver, { includePdfOpenings: false })?.nodesById['node-1']?.openingText).toBeNull();
-  expect(queryAllSpy).toHaveBeenCalledTimes(3);
+  expect(queryAllSpy).toHaveBeenCalledTimes(2);
 });
 
 it('falls back to the first nested child opening when the parent body is only a cover', () => {

@@ -1,6 +1,9 @@
 import type { BrowserWindow } from 'electron';
 
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
+import type { NativeNodeSnapshotArgs } from '../../lib/platform/nativeStorageContract.js';
+import { renameCollectionVirtualFolder } from '../agentControl/agentControlVirtualFolderLifecycle.js';
+import { readAgentVirtualFolderRow } from '../agentControl/agentControlVirtualFolders.js';
 import {
   deleteNodesPermanently,
   flushAllDirtyNodeSyncVersions,
@@ -49,8 +52,9 @@ function buildNodeMutationPatchResult(args: {
   activeNodeId?: string | null;
   anchorUpdates?: ReturnType<typeof parseNodeAnchorLocatorUpdateArray>;
   createdNodeIds?: string[];
+  collectionRenames?: Array<{ from: string; nodeIds: string[]; to: string }>;
   nodeOrder?: string[];
-  nodes: ReturnType<typeof parseNodeSnapshotArgs>[];
+  nodes: NativeNodeSnapshotArgs[];
   originWindow?: OriginWindow;
   updatedNodeIds?: string[];
 }) {
@@ -58,6 +62,7 @@ function buildNodeMutationPatchResult(args: {
     ...(args.activeNodeId !== undefined ? { activeNodeId: args.activeNodeId } : {}),
     ...(args.anchorUpdates ? { anchorUpdates: args.anchorUpdates } : {}),
     ...(args.createdNodeIds ? { createdNodeIds: args.createdNodeIds } : {}),
+    ...(args.collectionRenames ? { collectionRenames: args.collectionRenames } : {}),
     ...(args.nodeOrder ? { nodeOrder: args.nodeOrder } : {}),
     nodes: args.nodes,
     ...(args.updatedNodeIds ? { updatedNodeIds: args.updatedNodeIds } : {})
@@ -143,6 +148,30 @@ function omitNodeMutationDiagnostics(result: object) {
   return rest;
 }
 
+function handleUpdateNodeContentCommand(command: string, args: Record<string, unknown>, originWindow: OriginWindow) {
+  const parsed = parseNodeSnapshotArgs(args);
+  const collectionFolder = readAgentVirtualFolderRow(parsed.nodeId);
+  if (command === NATIVE_COMMANDS.updateNodeContent && collectionFolder && collectionFolder.title !== parsed.title) {
+    const renamed = renameCollectionVirtualFolder({
+      expectedUpdatedAt: collectionFolder.updated_at,
+      id: parsed.nodeId,
+      title: parsed.title,
+      updatedAt: parsed.updatedAt
+    });
+    enqueueCoalescedWorkspaceSearchInvalidation(renamed.updatedNodeIds);
+    return buildNodeMutationPatchResult({
+      collectionRenames: renamed.collectionRenames,
+      nodes: renamed.nodes,
+      originWindow,
+      updatedNodeIds: renamed.updatedNodeIds
+    });
+  }
+  upsertNodeSnapshot(parsed, { searchInvalidation: { workspaceInvalidation: 'defer' } });
+  enqueueCoalescedWorkspaceSearchInvalidation([parsed.nodeId]);
+  scheduleMirrorSync([parsed.nodeId]);
+  return buildNodeMutationPatchResult({ nodes: [parsed], originWindow, updatedNodeIds: [parsed.nodeId] });
+}
+
 export function handleNodeMutationCommand(command: string, args: Record<string, unknown>, originWindow: OriginWindow = null) {
   if (command === NATIVE_COMMANDS.createFolder) {
     return handleCreateNodeCommand(args, 'folder', originWindow);
@@ -154,15 +183,7 @@ export function handleNodeMutationCommand(command: string, args: Record<string, 
     return handleCreateNodeCommand(args, 'item', originWindow);
   }
   if (command === NATIVE_COMMANDS.updateNodeContent || command === NATIVE_COMMANDS.updateNodeReveal) {
-    const parsed = parseNodeSnapshotArgs(args);
-    upsertNodeSnapshot(parsed, { searchInvalidation: { workspaceInvalidation: 'defer' } });
-    enqueueCoalescedWorkspaceSearchInvalidation([parsed.nodeId]);
-    scheduleMirrorSync([parsed.nodeId]);
-    return buildNodeMutationPatchResult({
-      nodes: [parsed],
-      originWindow,
-      updatedNodeIds: [parsed.nodeId]
-    });
+    return handleUpdateNodeContentCommand(command, args, originWindow);
   }
   if (command === NATIVE_COMMANDS.updateNodeContentWithAnchors) {
     return handleNodeContentWithAnchorsCommand(args, originWindow);

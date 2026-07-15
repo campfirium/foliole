@@ -21,7 +21,6 @@ export function createEmptyWorkspaceSnapshot(now: Date, defaultLayoutState: Work
   return ensureInboxNodeInSnapshot({
     activeNodeId: null,
     layout: { ...defaultLayoutState },
-    manualVirtualCollections: [],
     nodeViewById: {},
     nodeOrder: [],
     nodesById: {},

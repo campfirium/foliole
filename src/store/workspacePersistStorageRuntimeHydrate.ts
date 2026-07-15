@@ -70,12 +70,10 @@ type RuntimeWorkspaceSnapshotLike = {
 
 type RuntimeWorkspaceSnapshotInput = Omit<RuntimeWorkspaceSnapshotLike, 'nodesById'> & {
   nodesById: Record<string, unknown>;
-  manualVirtualCollections?: unknown;
 };
 
 type RuntimeWorkspaceSnapshotForNormalization = RuntimeWorkspaceSnapshotLike & {
   trashedNodeDeletedAtById?: Record<string, string | undefined>;
-  manualVirtualCollections?: unknown;
   trashedNodeIds: string[];
 };
 

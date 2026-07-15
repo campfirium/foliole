@@ -40,7 +40,6 @@ export function WorkspaceDualListFolderColumn({
       isExternalViewOpen={props.isExternalViewOpen}
       isTrashViewOpen={props.isTrashViewOpen}
       isVirtualViewOpen={props.isVirtualViewOpen}
-      manualVirtualCollections={props.manualVirtualCollections ?? []}
       nodeOrder={props.nodeOrder}
       nodesById={props.listNodesById}
       onOpenMoveToNode={props.onOpenMoveToNode}

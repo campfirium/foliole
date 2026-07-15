@@ -12,6 +12,7 @@ vi.mock('../ipc/paths.js', () => ({
     app_data_dir: mockedAppDataDir, app_log_dir: path.join(mockedAppDataDir, 'logs')
   })
 }));
+vi.mock('../mirror/mirrorSyncScheduler.js', () => ({ scheduleMirrorSync: vi.fn() }));
 
 import { readTopicCollections } from '../../lib/core/nodes/topicCollectionsFrontmatter.js';
 import { closeDatabaseConnection } from '../database/connection.js';
@@ -20,7 +21,8 @@ import { initializeDatabase } from '../database/migrate.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 
 import { readAgentControlMaterial } from './agentControlMaterials.js';
-import { closeAgentControlTestServer, startAgentControlTestServer } from './agentControlTestServer.js';
+import { updateAgentControlVirtualFolder } from './agentControlVirtualFolderLifecycle.js';
+import { createAgentControlVirtualFolder } from './agentControlVirtualFolderMutations.js';
 
 let tempRoot = '';
 beforeEach(async () => {
@@ -34,40 +36,30 @@ afterEach(async () => {
   await fs.rm(tempRoot, { force: true, recursive: true });
 });
 
-it('updates, soft deletes, and restores a virtual Folder with optimistic locks', async () => {
+it('atomically renames a Collection virtual Folder and all member Topic YAML', () => {
   insertTopic('material-a', '---\ncollections:\n  - "List"\n---\nBody');
-  const notify = vi.fn();
-  const { endpoint, server } = await startAgentControlTestServer([], notify);
-  try {
-    const created = await postPayload(endpoint, 'virtual-folders/create', { title: 'List' });
-    const folderId = String(created.folder_id);
-    const createdAt = String((created.folder as Record<string, unknown>).updated_at);
-    const rejectedDescription = await post(endpoint, 'virtual-folders/update', {
-      description: 'Notes', expected_updated_at: createdAt, id: folderId, title: 'Renamed'
-    });
-    expect(rejectedDescription.status).toBe(400);
-    const updated = await postPayload(endpoint, 'virtual-folders/update', {
-      expected_updated_at: createdAt, id: folderId, title: 'Renamed'
-    });
-    expect(updated).toMatchObject({ title: 'Renamed' });
-    expect(readTopicCollections(readAgentControlMaterial('material-a')?.content ?? '')).toEqual(['Renamed']);
-    const deleted = await postPayload(endpoint, 'virtual-folders/delete-soft', {
-      expected_updated_at: updated.updated_at, id: folderId
-    });
-    expect(deleted.deleted).toBe(true);
-    const restored = await postPayload(endpoint, 'virtual-folders/restore', {
-      expected_updated_at: deleted.deleted_at, id: folderId
-    });
-    expect(restored.restored).toBe(true);
-    expect(notify).toHaveBeenCalledTimes(4);
+  insertTopic('material-b', '---\ncollections:\n  - "List"\n---\nBody B');
+  insertTopic('material-c', '---\ncollections:\n  - "List"\n---\nBody C');
+  const created = createAgentControlVirtualFolder({ title: 'List' });
+  const folderId = created.folder_id;
+  const createdAt = created.folder!.updated_at;
+  const updated = updateAgentControlVirtualFolder({
+    expectedUpdatedAt: createdAt,
+    id: folderId,
+    title: 'Renamed'
+  });
+  expect(updated).toMatchObject({ title: 'Renamed' });
+  expect(readTopicCollections(readAgentControlMaterial('material-a')?.content ?? '')).toEqual(['Renamed']);
+  expect(readTopicCollections(readAgentControlMaterial('material-b')?.content ?? '')).toEqual(['Renamed']);
+  expect(readTopicCollections(readAgentControlMaterial('material-c')?.content ?? '')).toEqual(['Renamed']);
 
-    const stale = await post(endpoint, 'virtual-folders/update', {
-      expected_updated_at: createdAt, id: folderId, title: 'Stale'
-    });
-    expect(stale.status).toBe(409);
-  } finally {
-    await closeAgentControlTestServer(server);
-  }
+  createAgentControlVirtualFolder({ title: 'Other' });
+  expect(() => updateAgentControlVirtualFolder({
+    expectedUpdatedAt: updated.updated_at,
+    id: folderId,
+    title: 'Other'
+  })).toThrow('conflict');
+  expect(readTopicCollections(readAgentControlMaterial('material-a')?.content ?? '')).toEqual(['Renamed']);
 });
 
 function insertTopic(id: string, content: string) {
@@ -85,19 +77,5 @@ function insertTopic(id: string, content: string) {
     reveal: null,
     title: id,
     updatedAt: '2026-07-05T00:00:00.000Z'
-  });
-}
-
-async function postPayload(endpoint: string, route: string, body: Record<string, unknown>) {
-  const response = await post(endpoint, route, body);
-  expect(response.status).toBe(200);
-  return JSON.parse(await response.text()) as Record<string, unknown>;
-}
-
-function post(endpoint: string, route: string, body: Record<string, unknown>) {
-  return fetch(`${endpoint}/agent-control/v1/${route}`, {
-    body: JSON.stringify(body),
-    headers: { authorization: 'Bearer test-token', 'content-type': 'application/json' },
-    method: 'POST'
   });
 }

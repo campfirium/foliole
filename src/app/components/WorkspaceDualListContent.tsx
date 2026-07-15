@@ -10,7 +10,6 @@ import type {
   ExternalLibraryBrowseEntry,
   ExternalLibraryFolder
 } from '../../shared/platform/externalLibraryBrowseRepository';
-import type { WorkspaceManualVirtualCollection } from '../../store/workspaceStore';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import { TrashResultListPanel } from './TrashResultListPanel';
@@ -35,7 +34,6 @@ export interface WorkspaceDualListContentProps {
   isTrashViewOpen: boolean;
   isVirtualViewOpen: boolean;
   listNodesById: WorkspaceListNodesById;
-  manualVirtualCollections?: readonly WorkspaceManualVirtualCollection[];
   nodesById: Record<string, Node>;
   nodeOrder: string[];
   onOpenMoveToNode: WorkspaceLayoutNodeListProps['onOpenMoveToNode'];

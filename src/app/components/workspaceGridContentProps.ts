@@ -1,6 +1,7 @@
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { definedProps } from '../../shared/lib/definedProps';
 
+import { resolveAssistantMainPanelWorkspaceContext } from './workspaceAssistantMainPanelContext';
 import type { WorkspaceDocumentSurfaceProps } from './workspaceDocumentSurfaceProps';
 import type { WorkspaceGridColumnProps } from './workspaceLayoutGridContentColumns';
 import type { WorkspaceListAreaProps } from './WorkspaceLayoutGridSections';
@@ -9,7 +10,6 @@ import type { WorkspaceListSplitterProps } from './WorkspaceListSplitter';
 import type { WorkspaceRightSidebarProps } from './WorkspaceRightSidebar';
 import type { WorkspaceRightSidebarSplitterProps } from './WorkspaceRightSidebarSplitter';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
-import { resolveAssistantMainPanelWorkspaceContext } from './workspaceAssistantMainPanelContext';
 
 export type WorkspaceGridContentProjectionSource = Pick<
   WorkspaceLayoutProps,
@@ -97,7 +97,6 @@ function selectWorkspaceListAreaProps({
     isTrashViewOpen: props.trash.isTrashViewOpen,
     isVirtualViewOpen: props.virtualView.isVirtualViewOpen,
     listNodesById,
-    manualVirtualCollections: props.virtualView.manualVirtualCollections,
     nodesById: props.nodeList.nodesById,
     nodeOrder: props.nodeList.nodeOrder,
     onCreateChildNode: props.nodeList.onCreateChildNode,

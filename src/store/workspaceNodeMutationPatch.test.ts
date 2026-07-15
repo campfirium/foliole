@@ -158,6 +158,31 @@ describe('createWorkspaceNodeMutationPatch body guard', () => {
 
 });
 
+describe('createWorkspaceNodeMutationPatch collection rename', () => {
+  it('merges a structural rename into dirty local content without replacing its body', () => {
+    const state = createInitialWorkspaceState(new Date('2026-03-06T00:00:00.000Z'));
+    const localNode = {
+      ...createLocalNode(state),
+      content: '---\ncollections:\n  - Old\n---\nUnsaved local body'
+    };
+    markNodeContentEdited('node-local');
+    const patch = createWorkspaceNodeMutationPatch({
+      ...state,
+      nodesById: { ...state.nodesById, 'node-local': localNode }
+    }, {
+      collectionRenames: [{ from: 'Old', nodeIds: ['node-local'], to: 'New' }],
+      nodes: [createRuntimeSnapshot({
+        content: '---\ncollections:\n  - New\n---\nPersisted body',
+        updatedAt: '2026-03-07T00:00:01.000Z'
+      })]
+    });
+
+    expect(patch.nodesById?.['node-local']?.content).toContain('- "New"');
+    expect(patch.nodesById?.['node-local']?.content).toContain('Unsaved local body');
+    expect(patch.nodesById?.['node-local']?.content).not.toContain('- "Old"');
+  });
+});
+
 describe('createWorkspaceNodeMutationPatch empty runtime body guard', () => {
   it('does not let a newer empty runtime snapshot clear a local non-empty body', () => {
     const state = createInitialWorkspaceState(new Date('2026-03-06T00:00:00.000Z'));

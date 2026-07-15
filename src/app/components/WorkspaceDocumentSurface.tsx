@@ -10,8 +10,7 @@ import { useAppearanceSettings } from '../../features/settings/context/Appearanc
 import { DocumentPanelSection } from './DocumentPanelSection';
 import { ExternalLibraryDocumentSurface } from './ExternalLibraryDocumentSurface';
 import type { ExternalDocumentPreviewLoadState } from './externalSearchPreviewState';
-import { isManualVirtualCollectionNodeId } from './manualVirtualCollectionModel';
-import { VirtualBuiltInDocumentSurface, VirtualManualCollectionDocumentSurface } from './VirtualDocumentSurface';
+import { VirtualBuiltInDocumentSurface } from './VirtualDocumentSurface';
 import { buildDocumentSectionProps } from './workspaceDocumentSectionProps';
 import type { WorkspaceDocumentSurfaceProps } from './workspaceDocumentSurfaceProps';
 import { resolveVirtualContentItemIds } from './workspaceVirtualContentModel';
@@ -36,8 +35,7 @@ function resolveDocumentNodeId(props: WorkspaceDocumentSurfaceProps) {
   }
   if (
     activeVirtualNodeId !== VIRTUAL_SHELVED_NODE_ID &&
-    activeVirtualNodeId !== VIRTUAL_REMOVED_NODE_ID &&
-    !isManualVirtualCollectionNodeId(activeVirtualNodeId)
+    activeVirtualNodeId !== VIRTUAL_REMOVED_NODE_ID
   ) {
     return props.documentNodeId;
   }
@@ -85,17 +83,6 @@ export function WorkspaceDocumentSurface(props: WorkspaceDocumentSurfaceProps) {
     return renderExternalDocumentSurface(props, editorAppearanceKey, readingContentWidth);
   }
 
-  if (props.isVirtualViewOpen && isManualVirtualCollectionNodeId(props.activeVirtualNodeId)) {
-    return (
-      <VirtualManualCollectionDocumentSurface
-        activeVirtualNodeId={props.activeVirtualNodeId ?? null}
-        manualVirtualCollections={props.manualVirtualCollections}
-        nodesById={props.nodesById}
-        onSelectNode={props.onSelectNode}
-        onSelectNodePath={props.onSelectNode}
-      />
-    );
-  }
   if (
     props.isVirtualViewOpen &&
     (props.activeVirtualNodeId === VIRTUAL_SHELVED_NODE_ID || props.activeVirtualNodeId === VIRTUAL_REMOVED_NODE_ID)

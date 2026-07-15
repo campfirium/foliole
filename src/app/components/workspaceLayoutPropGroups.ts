@@ -185,7 +185,6 @@ export type WorkspaceLayoutTrashProps = Pick<WorkspaceLayoutFieldTypes,
 >;
 
 export type WorkspaceLayoutVirtualViewProps = Pick<WorkspaceLayoutFieldTypes,
-  | 'manualVirtualCollections'
   | 'isVirtualViewOpen'
   | 'activeVirtualNodeId'
   | 'onOpenVirtualView'

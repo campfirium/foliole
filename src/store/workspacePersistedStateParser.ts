@@ -5,7 +5,6 @@ import type {
   NodeViewState,
   ReviewSessionState,
   WorkspaceLayoutState,
-  WorkspaceManualVirtualCollection,
   WorkspacePersistedState
 } from './workspaceStore';
 
@@ -97,23 +96,6 @@ function parseNodeViewById(value: unknown) {
   return Object.fromEntries(entries);
 }
 
-function isManualVirtualCollection(value: unknown): value is WorkspaceManualVirtualCollection {
-  return isPlainRecord(value) &&
-    typeof value.id === 'string' &&
-    typeof value.title === 'string' &&
-    typeof value.description === 'string' &&
-    typeof value.itemCount === 'number' &&
-    typeof value.updatedAt === 'string' &&
-    isStringArray(value.availableMaterialNodeIds);
-}
-
-function parseManualVirtualCollections(value: unknown) {
-  if (!Array.isArray(value)) {
-    return undefined;
-  }
-  return value.filter(isManualVirtualCollection);
-}
-
 function parseStringValueRecord(value: unknown) {
   if (!isPlainRecord(value)) {
     return undefined;
@@ -196,7 +178,6 @@ export function parsePersistedWorkspaceState(value: unknown): Partial<WorkspaceP
   const nodesById = parseNodesById(value.nodesById);
   const activeNodeId = parseActiveNodeId(value.activeNodeId, nodesById);
   const layout = parseLayout(value.layout);
-  const manualVirtualCollections = parseManualVirtualCollections(value.manualVirtualCollections);
   const nodeViewById = parseNodeViewById(value.nodeViewById ?? value.persistedNodeViewById);
   const reviewSession = parseReviewSession(value.reviewSession);
   const rendererBoundaryKeepNodeIds = isStringArray(value.rendererBoundaryKeepNodeIds)
@@ -213,7 +194,6 @@ export function parsePersistedWorkspaceState(value: unknown): Partial<WorkspaceP
     ...(capturedWorkspaceVersion !== undefined ? { capturedWorkspaceVersion } : {}),
     ...(activeNodeId !== undefined ? { activeNodeId } : {}),
     ...(layout ? { layout } : {}),
-    ...(manualVirtualCollections ? { manualVirtualCollections } : {}),
     ...(nodeViewById ? { nodeViewById } : {}),
     ...(isStringArray(value.nodeOrder) ? { nodeOrder: value.nodeOrder } : {}),
     ...(reviewSession ? { reviewSession } : {}),

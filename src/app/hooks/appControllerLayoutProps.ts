@@ -92,7 +92,6 @@ export interface BuildControllerLayoutPropsArgs {
     isListCollapsed: boolean;
     isRightSidebarCollapsed: boolean;
     listWidth: number;
-    manualVirtualCollections?: WorkspaceState['manualVirtualCollections'];
     nodeOrder: string[];
     nodesById: Record<string, Node>;
     nodeViewById: Record<string, NodeViewState | undefined>;

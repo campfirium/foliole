@@ -104,6 +104,16 @@ export function rewriteAgentControlNodeSnapshot(input: {
   return updatedAt;
 }
 
+export function readAgentControlNodeSnapshot(id: string) {
+  const row = readMaterialSnapshotRow(id);
+  if (!row) throw new AgentMaterialMutationError('not_found', 404);
+  return toUpsertInput(row, {
+    content: readRowContent(row),
+    title: row.title,
+    updatedAt: row.updated_at
+  });
+}
+
 export function softDeleteAgentControlMaterial(input: {
   expectedUpdatedAt?: string;
   id: string;

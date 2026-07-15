@@ -40,7 +40,7 @@ type WorkspaceDocumentSurfaceFlatSource =
   WorkspaceLayoutProps['readingPosition'] &
   Pick<WorkspaceLayoutProps['review'], 'reviewSchedulerSettings'> &
   Pick<WorkspaceLayoutProps['trash'], 'isTrashViewOpen' | 'trashedNodeIds'> &
-  Pick<WorkspaceLayoutProps['virtualView'], 'activeVirtualNodeId' | 'isVirtualViewOpen' | 'manualVirtualCollections'>;
+  Pick<WorkspaceLayoutProps['virtualView'], 'activeVirtualNodeId' | 'isVirtualViewOpen'>;
 
 export type WorkspaceDocumentSurfaceProps = WorkspaceDocumentSurfaceFlatSource & {
   documentNodeId: string | null;
@@ -107,7 +107,6 @@ function selectDocumentSurfaceData(props: WorkspaceDocumentSurfaceSource) {
     priorityQuickSetShortcutLabel: props.document.priorityQuickSetShortcutLabel,
     reviewSchedulerSettings: props.review.reviewSchedulerSettings,
     trashedNodeIds: props.trash.trashedNodeIds,
-    manualVirtualCollections: props.virtualView.manualVirtualCollections,
     ...definedProps({ editorNodeViewState: props.document.editorNodeViewState })
   };
 }

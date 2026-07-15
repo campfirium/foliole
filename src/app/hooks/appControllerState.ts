@@ -29,9 +29,7 @@ import { useWorkspaceNavigation } from './useWorkspaceNavigation';
 
 export { useWorkspaceSelectors };
 
-type WorkspaceControllerStateInput = Omit<ReturnType<typeof useWorkspaceSelectors>, 'manualVirtualCollections'> & {
-  manualVirtualCollections?: ReturnType<typeof useWorkspaceSelectors>['manualVirtualCollections'];
-};
+type WorkspaceControllerStateInput = ReturnType<typeof useWorkspaceSelectors>;
 
 export function useNowIso(tickMs = 15_000) {
   const [nowIso, setNowIso] = useState(() => getDemoRuntimeNowIso());

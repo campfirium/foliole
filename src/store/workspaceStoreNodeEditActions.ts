@@ -103,16 +103,22 @@ export function createUpdateNodeTitleAction(set: WorkspaceSet): WorkspaceState['
     const shouldUseLocalFallback = !hasWorkspaceNodeMutationRuntime();
     const result = await syncNodeContentMutationToRuntime(nextNodeForSync);
     let applied = false;
+    let nodesToCache: WorkspaceState['nodesById'][string][] = [];
     set((state) => {
       const acceptedPatch = result
         ? createWorkspaceNodeMutationPatch(state, result)
         : shouldUseLocalFallback ? localPatch : null;
       if (!acceptedPatch) return state;
       applied = true;
+      nodesToCache = result
+        ? result.nodes.flatMap((snapshot) => acceptedPatch.nodesById?.[snapshot.nodeId]
+            ? [acceptedPatch.nodesById[snapshot.nodeId]!]
+            : [])
+        : [nextNodeForSync!];
       return acceptedPatch;
     });
     if (applied) {
-      syncWorkspaceNodeDocumentCacheFromNode(nextNodeForSync);
+      nodesToCache.forEach(syncWorkspaceNodeDocumentCacheFromNode);
     }
     return applied;
   };

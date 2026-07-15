@@ -1,6 +1,7 @@
 import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { createCollectionVirtualNodeFilter } from '../../../lib/core/nodes/virtualNodeFilter';
 import {
   VIRTUAL_REMOVED_NODE_ID,
   VIRTUAL_ROOT_NODE_ID,
@@ -10,7 +11,6 @@ import type { WorkspaceListNode } from '../../features/nodes/model/workspaceList
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
-import { toManualVirtualCollectionNodeId } from './manualVirtualCollectionModel';
 import { WorkspaceVirtualSection } from './WorkspaceVirtualSection';
 
 function createVirtualNode(args: {
@@ -158,43 +158,58 @@ it('does not show a result count on the virtual root', () => {
   expect(screen.getByRole('treeitem', { name: 'Custom virtual' })).toHaveTextContent('2');
 });
 
-it('opens manual virtual collection rows without selecting a virtual node entity', () => {
-  const onOpenVirtualView = vi.fn();
-  const onSelectNodeInVirtualView = vi.fn();
-  const root = createVirtualNode({
-    id: VIRTUAL_ROOT_NODE_ID,
-    parentNodeId: null,
-    specialKind: 'virtual-root',
-    title: 'Virtual'
-  });
-  const manualNodeId = toManualVirtualCollectionNodeId('manual-a');
-
+it('shows Collection YAML action on a real virtual folder menu', () => {
+  const root = createVirtualNode({ id: VIRTUAL_ROOT_NODE_ID, parentNodeId: null, specialKind: 'virtual-root', title: 'Virtual' });
+  const custom = createVirtualNode({ id: 'virtual-custom', parentNodeId: VIRTUAL_ROOT_NODE_ID, specialKind: 'virtual', title: 'Reading queue' });
+  useWorkspaceStore.setState((state) => ({
+    nodesById: {
+      ...state.nodesById,
+      'virtual-custom': {
+        content: '', createdAt: custom.createdAt, id: custom.id, isTitleManual: true, kind: 'folder',
+        parentNodeId: VIRTUAL_ROOT_NODE_ID, reveal: null, review: null, specialKind: 'virtual',
+        title: custom.title, updatedAt: custom.updatedAt,
+        virtualFilter: createCollectionVirtualNodeFilter(custom.title)
+      }
+    }
+  }));
   renderWithLocalization(
     <WorkspaceVirtualSection
-      activeVirtualNodeId={VIRTUAL_ROOT_NODE_ID}
+      activeVirtualNodeId="virtual-custom"
       isVirtualViewOpen
-      manualVirtualCollections={[
-        {
-          availableMaterialNodeIds: ['topic-a', 'topic-b'],
-          description: 'Agent-created folder',
-          id: 'manual-a',
-          itemCount: 2,
-          title: 'Reading queue',
-          updatedAt: '2026-05-01T00:00:00.000Z'
-        }
-      ]}
-      nodeOrder={[VIRTUAL_ROOT_NODE_ID]}
-      nodesById={{ [VIRTUAL_ROOT_NODE_ID]: root }}
-      onOpenVirtualView={onOpenVirtualView}
-      onSelectNodeInVirtualView={onSelectNodeInVirtualView}
+      nodeOrder={[VIRTUAL_ROOT_NODE_ID, 'virtual-custom']}
+      nodesById={{ [VIRTUAL_ROOT_NODE_ID]: root, 'virtual-custom': custom }}
+      onOpenVirtualView={vi.fn()}
+      onSelectNodeInVirtualView={vi.fn()}
     />
   );
 
-  fireEvent.click(screen.getByRole('treeitem', { name: /Reading queue/ }));
-
-  expect(onOpenVirtualView).toHaveBeenCalledWith(manualNodeId);
-  expect(onSelectNodeInVirtualView).not.toHaveBeenCalled();
+  fireEvent.contextMenu(screen.getByRole('treeitem', { name: 'Reading queue' }));
+  expect(screen.getByText('Write virtual folder info to Topic YAML')).toBeInTheDocument();
 });
+
+it('shows a visible message when virtual folder rename fails', async () => {
+  useWorkspaceStore.setState({ updateNodeTitle: vi.fn(async () => false) });
+  const root = createVirtualNode({ id: VIRTUAL_ROOT_NODE_ID, parentNodeId: null, specialKind: 'virtual-root', title: 'Virtual' });
+  const custom = createVirtualNode({ id: 'virtual-custom', parentNodeId: VIRTUAL_ROOT_NODE_ID, specialKind: 'virtual', title: 'Reading queue' });
+  renderWithLocalization(
+    <WorkspaceVirtualSection
+      activeVirtualNodeId="virtual-custom"
+      isVirtualViewOpen
+      nodeOrder={[VIRTUAL_ROOT_NODE_ID, 'virtual-custom']}
+      nodesById={{ [VIRTUAL_ROOT_NODE_ID]: root, 'virtual-custom': custom }}
+      onOpenVirtualView={vi.fn()}
+      onSelectNodeInVirtualView={vi.fn()}
+    />
+  );
+
+  fireEvent.doubleClick(screen.getByRole('treeitem', { name: 'Reading queue' }));
+  const input = screen.getByRole('textbox', { name: 'Rename Reading queue' });
+  fireEvent.change(input, { target: { value: 'Duplicate' } });
+  fireEvent.keyDown(input, { key: 'Enter' });
+
+  expect(await screen.findByText(/Could not rename this virtual folder/)).toBeInTheDocument();
+});
+
 it('can be hidden by the Demo shell without changing non-demo virtual rows', () => {
   const root = createVirtualNode({
     id: VIRTUAL_ROOT_NODE_ID,

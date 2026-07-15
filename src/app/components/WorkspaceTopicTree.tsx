@@ -116,11 +116,15 @@ export function useWorkspaceTopicTreeInteraction(args: WorkspaceTopicTreeInterac
 }
 
 function useWorkspaceTopicTreeData(props: WorkspaceTopicTreeProps) {
-  const contentSort = useWorkspaceTopicTreeContentSort(props.activeFolderId, props.preserveItemOrder ?? false);
+  const storedManualChildOrder = props.nodesById[props.activeFolderId]?.manualChildOrder ?? null;
+  const manualChildOrder = props.preserveItemOrder ? props.itemIds : storedManualChildOrder;
+  const contentSort = useWorkspaceTopicTreeContentSort(
+    props.activeFolderId,
+    Boolean(props.preserveItemOrder || storedManualChildOrder?.length)
+  );
   const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
   const dismissedTopicVisibility = useDismissedTopicVisibility();
   const sort = contentSort.sort;
-  const manualChildOrder = props.preserveItemOrder ? props.itemIds : props.nodesById[props.activeFolderId]?.manualChildOrder ?? null;
   const childrenByParent = useMemo(
     () => props.childrenByParent ?? buildTopicChildrenByParent(props.itemIds, props.nodesById),
     [props.childrenByParent, props.itemIds, props.nodesById]

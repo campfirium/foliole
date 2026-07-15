@@ -9,7 +9,6 @@ import type {
   ExternalLibraryBrowseEntry,
   ExternalLibraryFolder
 } from '../../shared/platform/externalLibraryBrowseRepository';
-import type { WorkspaceManualVirtualCollection } from '../../store/workspaceStore';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import { StudySessionCompleteSummary } from './StudySessionCompleteSummary';
@@ -30,7 +29,6 @@ export interface WorkspaceListAreaProps {
   isExternalViewOpen: boolean;
   isWorkspaceHydrated?: boolean;
   listNodesById: WorkspaceListNodesById;
-  manualVirtualCollections?: readonly WorkspaceManualVirtualCollection[];
   nodesById: Record<string, Node>;
   nodeOrder: string[];
   onCreateChildNode?: WorkspaceDualListContentProps['onCreateChildNode'] | undefined;
@@ -116,7 +114,6 @@ function renderWorkspaceListBody(
     | 'isVirtualViewOpen'
     | 'isWorkspaceHydrated'
     | 'listNodesById'
-    | 'manualVirtualCollections'
     | 'nodesById'
     | 'nodeOrder'
     | 'onCreateChildNode'

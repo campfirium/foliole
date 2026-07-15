@@ -16,7 +16,7 @@ import type {
   ExternalLibraryFolder
 } from '../../shared/platform/externalLibraryBrowseRepository';
 import type { ReviewFlowWindow } from '../../store/workspaceReviewFlowWindow';
-import type { NodeViewState, ReadReviewTopicOptions, WorkspaceManualVirtualCollection } from '../../store/workspaceStore';
+import type { NodeViewState, ReadReviewTopicOptions } from '../../store/workspaceStore';
 import type { SelectionCommandPayload } from '../contextCommands';
 import type { CurrentViewTopicSnapshot } from '../currentViewTopicSnapshot';
 import type { LongClozeGuardOptions } from '../hooks/editorClozeGuardrail';
@@ -117,7 +117,6 @@ export interface WorkspaceLayoutFieldTypes {
   showAnswerSection: boolean;
   listWidth: number;
   rightSidebarWidth: number;
-  manualVirtualCollections: WorkspaceManualVirtualCollection[];
   nodeOrder: string[];
   trashedNodeIds: string[];
   nodesById: Record<string, Node>;

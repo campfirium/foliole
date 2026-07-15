@@ -125,7 +125,7 @@ beforeEach(() => {
   }));
 });
 
-it('uses folder manual topic order in the current folder tree', () => {
+it('defaults to folder manual topic order in the current folder tree', () => {
   renderWithLocalization(
     <WorkspaceTopicTree
       activeFolderId="folder-a"
@@ -142,9 +142,32 @@ it('uses folder manual topic order in the current folder tree', () => {
     />
   );
 
-  chooseManualSort();
-
+  expect(screen.getByRole('button', { name: 'Sort list by Manual' })).toBeInTheDocument();
   expect(rowTitles()).toEqual(['Beta', 'Alpha', 'Gamma']);
+});
+
+it('allows another sort without overwriting the saved manual order', () => {
+  const folder = createFolder(['topic-b', 'topic-a']);
+  renderWithLocalization(
+    <WorkspaceTopicTree
+      activeFolderId="folder-a"
+      activeNodeId="topic-a"
+      itemIds={['topic-a', 'topic-b']}
+      nodesById={toWorkspaceListNodesById({
+        'folder-a': folder,
+        'topic-a': createTopic('topic-a', 'Alpha'),
+        'topic-b': createTopic('topic-b', 'Beta')
+      })}
+      onOpenMoveToNode={() => undefined}
+      onSelectNode={() => undefined}
+    />
+  );
+
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Sort list by Manual' }), { key: 'ArrowDown' });
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Name' }));
+
+  expect(rowTitles()).toEqual(['Alpha', 'Beta']);
+  expect(folder.manualChildOrder).toEqual(['topic-b', 'topic-a']);
 });
 
 it('falls back to name order before the current folder has manual topic order', () => {
@@ -179,7 +202,6 @@ it('writes manual topic order when dragging within the current folder', async ()
     }
   }));
   renderWithLocalization(<ManualTopicTreeHarness />);
-  chooseManualSort();
   const transfer = createDragTransfer();
 
   expect(rowTitles()).toEqual(['Beta', 'Alpha']);
@@ -207,7 +229,6 @@ it('clears the drop marker when a dragged topic leaves the target row', async ()
     }
   }));
   renderWithLocalization(<ManualTopicTreeHarness />);
-  chooseManualSort();
   const transfer = createDragTransfer();
   const targetFrame = mockRowFrame(screen.getByRole('treeitem', { name: 'Beta' }));
 

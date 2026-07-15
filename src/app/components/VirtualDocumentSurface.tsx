@@ -15,16 +15,14 @@ import {
 } from '../../features/nodes/model/virtualNodeDetail';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppButton } from '../../shared/ui';
-import { useWorkspaceStore, type WorkspaceManualVirtualCollection } from '../../store/workspaceStore';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { FolderListView } from './FolderListView';
-import { collectManualVirtualCollectionTopicIds, findManualVirtualCollection } from './manualVirtualCollectionModel';
 import { collectRemovedTopicIds, collectShelvedTopicIds } from './workspaceVirtualContentModel';
 
 interface VirtualDocumentSurfaceProps {
   activeNode: Node;
   nodeOrder: string[];
-  manualVirtualCollections?: readonly WorkspaceManualVirtualCollection[];
   nodesById: Record<string, Node>;
   onSelectNode: (nodeId: string) => void;
   onSelectNodePath: (nodeId: string) => void;
@@ -125,34 +123,6 @@ function VirtualSavedSearchDocumentSurface(props: Pick<VirtualDocumentSurfacePro
 }
 
 
-export function VirtualManualCollectionDocumentSurface(props: Pick<VirtualDocumentSurfaceProps, 'manualVirtualCollections' | 'nodesById' | 'onSelectNode' | 'onSelectNodePath'> & {
-  activeVirtualNodeId?: string | null;
-}) {
-  const t = useTranslation();
-  const collection = findManualVirtualCollection(props.manualVirtualCollections, props.activeVirtualNodeId);
-  const nodeIds = collectManualVirtualCollectionTopicIds(collection, props.nodesById);
-  const nodes = nodeIds.map((nodeId) => props.nodesById[nodeId]).filter((node): node is Node => Boolean(node));
-
-  return (
-    <FolderListView
-      emptyState={{
-        description: t('desktop.virtualSearch.saved.empty.description'),
-        title: t('desktop.virtualSearch.empty.title')
-      }}
-      filterSearchResults={false}
-      folderTitle={collection?.title ?? t('desktop.virtualSearch.title')}
-      nodeOrder={nodeIds}
-      nodes={nodes}
-      nodesById={props.nodesById}
-      onSelectNode={props.onSelectNode}
-      onSelectNodePath={props.onSelectNodePath}
-      regionLabel={t('desktop.virtualSearch.region')}
-      searchDescription={collection?.description || undefined}
-      searchReadOnly
-      searchQuery={collection?.title ?? ''}
-    />
-  );
-}
 export function VirtualBuiltInDocumentSurface(props: Pick<VirtualDocumentSurfaceProps, 'nodeOrder' | 'nodesById' | 'onSelectNode' | 'onSelectNodePath' | 'trashedNodeIds'> & {
   activeVirtualNodeId: string;
 }) {

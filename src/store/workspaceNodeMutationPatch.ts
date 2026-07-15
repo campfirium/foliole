@@ -1,3 +1,4 @@
+import { replaceTopicCollection } from '../../lib/core/nodes/topicCollectionsFrontmatter';
 import type { Node, NodeAnchorLink } from '../features/nodes/model/nodeTypes';
 import type {
   WorkspaceNodeMutationPatchResult,
@@ -116,6 +117,23 @@ export function createWorkspaceNodeMutationPatch(
   for (const snapshot of result.nodes) {
     const nextNode = nodeFromSnapshot(snapshot, state.nodesById[snapshot.nodeId]);
     nextNodesById[nextNode.id] = mergeRuntimeNodePatch(nextNodesById[nextNode.id], nextNode);
+  }
+  for (const rename of result.collectionRenames ?? []) {
+    for (const nodeId of rename.nodeIds) {
+      const current = state.nodesById[nodeId];
+      const incoming = nextNodesById[nodeId];
+      if (!current || !incoming) continue;
+      try {
+        const content = replaceTopicCollection(current.content, rename.from, rename.to);
+        nextNodesById[nodeId] = {
+          ...incoming,
+          content,
+          hasContent: content.trim().length > 0
+        };
+      } catch {
+        // The database transaction already validated persisted YAML; keep its authoritative snapshot.
+      }
+    }
   }
   for (const update of result.anchorUpdates ?? []) {
     const current = nextNodesById[update.nodeId];

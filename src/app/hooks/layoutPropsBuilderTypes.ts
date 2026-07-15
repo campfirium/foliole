@@ -86,7 +86,6 @@ export interface BuildLayoutPropsArgs {
     | 'onSelectNodeInVirtualView'
     | 'shouldSuppressNavigationSelectionRestore'
   >;
-  manualVirtualCollections?: WorkspaceState['manualVirtualCollections'];
   nodeOrder: string[];
   nodesById: Record<string, Node>;
   externalFolders: WorkspaceLayoutExternalLibraryProps['externalFolders'];

@@ -50,7 +50,6 @@ function createLayoutViewState(args: BuildControllerLayoutPropsArgs) {
     isViewingTrashNode: args.runtime.isViewingTrashNode,
     isVirtualViewOpen: args.virtualView.isVirtualViewOpen,
     listWidth: args.ws.listWidth,
-    manualVirtualCollections: args.ws.manualVirtualCollections ?? [],
     nodeOrder: args.ws.nodeOrder,
     nodesById: args.ws.nodesById,
     externalFolders: args.externalView.folders,

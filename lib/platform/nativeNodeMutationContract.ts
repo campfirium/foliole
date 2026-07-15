@@ -12,6 +12,11 @@ export interface NativeNodeMutationPatchResult {
   activeNodeId?: string | null;
   anchorUpdates?: NativeNodeAnchorUpdateArgs[];
   createdNodeIds?: string[];
+  collectionRenames?: Array<{
+    from: string;
+    nodeIds: string[];
+    to: string;
+  }>;
   nodeOrder?: string[];
   nodes: NativeNodeSnapshotArgs[];
   skippedNodeIds?: string[];

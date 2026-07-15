@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import type { Locator } from '@playwright/test';
 
+import { readTopicCollections } from '../../lib/core/nodes/topicCollectionsFrontmatter';
 import { runAgentCli } from '../../scripts/agent-control/foliole-agent.mjs';
 
 import { expect, test } from './harness/fixtures';
@@ -92,25 +93,35 @@ async function verifyMaterialLifecycle(args: {
   await expect(args.contentPanel.getByRole('treeitem', { name: SECOND_TOPIC_TITLE })).toBeVisible({ timeout: 10_000 });
 }
 
-async function verifyVirtualFolderLifecycle(desktopWindow: DesktopWindow, descriptorPath: string, folderId: string) {
+async function verifyVirtualFolderLifecycle(args: {
+  descriptorPath: string;
+  desktopWindow: DesktopWindow;
+  folderId: string;
+  topicIds: string[];
+}) {
   const folder = (await runCli([
-    'virtual-folders/read', '--descriptor', descriptorPath, '--id', folderId
+    'virtual-folders/read', '--descriptor', args.descriptorPath, '--id', args.folderId
   ])).folder as Record<string, unknown>;
   const updatedFolder = await runCli([
-    'virtual-folders/update', '--descriptor', descriptorPath, '--id', folderId,
+    'virtual-folders/update', '--descriptor', args.descriptorPath, '--id', args.folderId,
     '--expected-updated-at', String(folder.updated_at), '--title', UPDATED_COLLECTION_TITLE,
     '--backup-dir', path.join('.tmp', 'artifacts', 'agent-control-visible-write-backups')
   ]);
-  const updatedRow = desktopWindow.getByRole('treeitem', { name: new RegExp(UPDATED_COLLECTION_TITLE) });
+  const updatedRow = args.desktopWindow.getByRole('treeitem', { name: new RegExp(UPDATED_COLLECTION_TITLE) });
   await expect(updatedRow).toBeVisible({ timeout: 10_000 });
+  for (const topicId of args.topicIds) {
+    const material = await readMaterial(args.descriptorPath, topicId);
+    expect(readTopicCollections(String(material.content))).toContain(UPDATED_COLLECTION_TITLE);
+    expect(readTopicCollections(String(material.content))).not.toContain(COLLECTION_TITLE);
+  }
   const deletedFolder = await runCli([
-    'virtual-folders/delete-soft', '--descriptor', descriptorPath, '--id', folderId,
+    'virtual-folders/delete-soft', '--descriptor', args.descriptorPath, '--id', args.folderId,
     '--expected-updated-at', String(updatedFolder.updated_at),
     '--backup-dir', path.join('.tmp', 'artifacts', 'agent-control-visible-write-backups')
   ]);
   await expect(updatedRow).toHaveCount(0, { timeout: 10_000 });
   await runCli([
-    'virtual-folders/restore', '--descriptor', descriptorPath, '--id', folderId,
+    'virtual-folders/restore', '--descriptor', args.descriptorPath, '--id', args.folderId,
     '--expected-updated-at', String(deletedFolder.deleted_at),
     '--backup-dir', path.join('.tmp', 'artifacts', 'agent-control-visible-write-backups')
   ]);
@@ -147,6 +158,9 @@ test('Agent Control writes become visible in the desktop Virtual section', async
   const collectionRow = desktopWindow.getByRole('treeitem', { name: new RegExp(COLLECTION_TITLE) });
   await expect(collectionRow).toBeVisible({ timeout: 10_000 });
   await collectionRow.click();
+  await collectionRow.click({ button: 'right' });
+  await expect(desktopWindow.getByText(/^(Write virtual folder info to Topic YAML|将虚拟文件夹信息写入 Topic YAML)$/)).toBeVisible();
+  await desktopWindow.keyboard.press('Escape');
 
   const contentPanel = desktopWindow.getByRole('complementary', { name: /^(Current folder contents|当前文件夹内容)$/ });
   await expect(contentPanel.getByRole('treeitem', { name: SECOND_TOPIC_TITLE })).toBeVisible({ timeout: 10_000 });
@@ -156,7 +170,12 @@ test('Agent Control writes become visible in the desktop Virtual section', async
   )).toEqual([secondTopicId, firstTopicId]);
 
   await verifyMaterialLifecycle({ contentPanel, descriptorPath, firstTopicId, secondTopicId });
-  await verifyVirtualFolderLifecycle(desktopWindow, descriptorPath, folderId);
+  await verifyVirtualFolderLifecycle({
+    descriptorPath,
+    desktopWindow,
+    folderId,
+    topicIds: [firstTopicId, secondTopicId]
+  });
 
   await fs.mkdir(path.join('.tmp', 'artifacts'), { recursive: true });
   const screenshotPath = path.resolve('.tmp', 'artifacts', 'agent-control-visible-write.png');

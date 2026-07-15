@@ -1,10 +1,9 @@
 import type { NativeAssistantWorkspaceContext } from '../../../lib/platform/nativeAssistantContract';
 import { buildVirtualNodeResultIndex } from '../../features/nodes/model/virtualNodeDetail';
-import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 
-import { findManualVirtualCollection } from './manualVirtualCollectionModel';
-import { resolveAssistantVisibleListWorkspaceContext } from './workspaceRightSidebarAssistantContext';
 import type { WorkspaceGridContentProjectionSource } from './workspaceGridContentProps';
+import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
+import { resolveAssistantVisibleListWorkspaceContext } from './workspaceRightSidebarAssistantContext';
 import { resolveVirtualContentItemIds } from './workspaceVirtualContentModel';
 
 export function resolveAssistantMainPanelWorkspaceContext(args: {
@@ -14,7 +13,6 @@ export function resolveAssistantMainPanelWorkspaceContext(args: {
   if (!args.props.virtualView.isVirtualViewOpen || !virtualNodeId) return undefined;
   const itemNodeIds = resolveVirtualContentItemIds({
     activeVirtualNodeId: virtualNodeId,
-    manualVirtualCollections: args.props.virtualView.manualVirtualCollections,
     nodeOrder: args.props.nodeList.nodeOrder,
     nodesById: args.props.nodeList.nodesById,
     trashedNodeIds: args.props.trash.trashedNodeIds
@@ -35,9 +33,5 @@ function resolveVirtualPanelTitle(
   virtualNodeId: string,
   props: Pick<WorkspaceLayoutProps, 'nodeList' | 'virtualView'>
 ) {
-  return (
-    findManualVirtualCollection(props.virtualView.manualVirtualCollections, virtualNodeId)?.title ||
-    props.nodeList.nodesById[virtualNodeId]?.title ||
-    'Virtual'
-  );
+  return props.nodeList.nodesById[virtualNodeId]?.title || 'Virtual';
 }

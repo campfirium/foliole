@@ -1,9 +1,5 @@
-import { useState } from 'react';
-
 import type { EditorSearchDecorations } from '../../features/editor/adapters/EditorAdapter';
 import {
-  DEFAULT_FOLDER_LIST_SORT_DIRECTION,
-  DEFAULT_FOLDER_LIST_SORT_KEY,
   type FolderListSortDirection,
   type FolderListSortKey
 } from '../../features/nodes/model/folderListOrdering';
@@ -19,6 +15,7 @@ import { DocumentPanelContent } from './DocumentPanelSectionParts';
 import { DocumentPriorityQuickSetHint } from './DocumentPriorityQuickSetHint';
 import { DocumentTopicSearchToolbar } from './DocumentTopicSearchToolbar';
 import type { LinkPanelRecord } from './linkPanelState';
+import { useDocumentPanelFolderListSort } from './useDocumentPanelFolderListSort';
 
 interface DocumentPanelShellProps {
   backlinks: BacklinkItem[];
@@ -191,10 +188,13 @@ export function DocumentPanelSectionShell({
   showSourceUpdateAction
 }: DocumentPanelShellProps) {
   const t = useTranslation();
-  const [folderListSortKey, setFolderListSortKey] = useState<FolderListSortKey>(DEFAULT_FOLDER_LIST_SORT_KEY);
-  const [folderListSortDirection, setFolderListSortDirection] = useState<FolderListSortDirection>(
-    DEFAULT_FOLDER_LIST_SORT_DIRECTION
+  const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : null;
+  const folderListSort = useDocumentPanelFolderListSort(
+    props.activeNodeId,
+    Boolean(isFolderListView && activeNode?.kind === 'folder' && activeNode.manualChildOrder?.length)
   );
+  const folderListSortKey = folderListSort.key;
+  const folderListSortDirection = folderListSort.direction;
 
   return (
     <section aria-label={t('desktop.document.panel')} className="workspace-region-main-document relative flex h-full min-h-0 flex-1 flex-col text-foreground">
@@ -209,8 +209,8 @@ export function DocumentPanelSectionShell({
         onPreviewTopicSearchDecorations,
         onToggleSourceUpdatePanel,
         props,
-        setFolderListSortDirection,
-        setFolderListSortKey,
+        setFolderListSortDirection: folderListSort.setDirection,
+        setFolderListSortKey: folderListSort.setKey,
         showSourceUpdateAction
       })}
       {renderDocumentPanelContent({
@@ -219,8 +219,8 @@ export function DocumentPanelSectionShell({
         folderListSortKey,
         isFolderListView,
         linkPanels,
-        onChangeFolderListSortDirection: setFolderListSortDirection,
-        onChangeFolderListSortKey: setFolderListSortKey,
+        onChangeFolderListSortDirection: folderListSort.setDirection,
+        onChangeFolderListSortKey: folderListSort.setKey,
         onCloseExternalLink,
         onLinkPanelStateChange,
         onOpenExternalLink,

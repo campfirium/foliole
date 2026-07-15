@@ -19,7 +19,6 @@ export const WORKSPACE_SNAPSHOT_FIELD_MANIFEST: readonly WorkspaceSnapshotFieldM
   { field: 'nodesById.*.currentVersionId', kind: 'entity' },
   { field: 'nodesById.*.deletedAt', kind: 'entity' },
   { field: 'nodeOrder', kind: 'derived' },
-  { field: 'manualVirtualCollections', kind: 'derived' },
   { field: 'trashedNodeIds', kind: 'derived' },
   { field: 'trashedNodeDeletedAtById', kind: 'derived' },
   { field: 'activeNodeId', kind: 'session' },

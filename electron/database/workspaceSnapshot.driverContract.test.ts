@@ -53,7 +53,6 @@ const workspaceSnapshotRow = {
 
 const expectedWorkspaceSnapshot = {
   activeNodeId: 'node-1',
-  manualVirtualCollections: [],
   nodeOrder: ['node-1'],
   nodesById: {
     'node-1': {
@@ -63,13 +62,16 @@ const expectedWorkspaceSnapshot = {
       title: 'Node 1',
       isTitleManual: true,
       hideTitleHeading: false,
+      attachments: [],
       bodyBlobHash: null,
       openingText: null,
       content: '',
       bodyStatus: 'empty',
+      currentVersionId: null,
       virtualFilter: null,
       reveal: null,
       anchorLink: null,
+      position: null,
       reading: null,
       review: null,
       shelvedAt: null,
@@ -99,7 +101,7 @@ it('loads workspace snapshot through query helpers only', () => {
 
   expect(loadWorkspaceSnapshot(driver)).toEqual(expectedWorkspaceSnapshot);
 
-  expect(queryAllSpy).toHaveBeenCalledTimes(4);
+  expect(queryAllSpy).toHaveBeenCalledTimes(3);
   expect(queryOneSpy).toHaveBeenCalledTimes(5);
   expect(queryAllSpy.mock.calls[0]?.[0]).not.toContain('content_blob_data');
 });
