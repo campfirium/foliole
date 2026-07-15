@@ -11,8 +11,8 @@ beforeEach(() => {
   delete window.electronAPI;
 });
 
-it('toggles action help on hover from appearance settings', () => {
-  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="appearance" />);
+it('toggles action help on hover from general settings', () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="general" />);
 
   const toggle = screen.getByRole('switch', { name: 'Action help on hover' });
   expect(toggle).toHaveAttribute('aria-checked', 'true');

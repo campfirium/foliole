@@ -16,6 +16,7 @@ export type SettingsCategoryId =
   | 'rail'
   | 'web-lookup'
   | 'appearance'
+  | 'typography'
   | 'library'
   | 'import'
   | 'readwise-reader'
@@ -32,6 +33,7 @@ const SETTINGS_CATEGORY_DEFINITIONS: Array<{
   { id: 'about', labelKey: 'settings.category.about.label', descriptionKey: 'settings.category.about.description' },
   { id: 'general', labelKey: 'settings.category.general.label', descriptionKey: 'settings.category.general.description' },
   { id: 'appearance', labelKey: 'settings.category.appearance.label', descriptionKey: 'settings.category.appearance.description' },
+  { id: 'typography', labelKey: 'settings.category.typography.label', descriptionKey: 'settings.category.typography.description' },
   { id: 'editor', labelKey: 'settings.category.editor.label', descriptionKey: 'settings.category.editor.description' },
   { id: 'web-lookup', labelKey: 'settings.category.webLookup.label', descriptionKey: 'settings.category.webLookup.description' },
   { id: 'review', labelKey: 'settings.category.review.label', descriptionKey: 'settings.category.review.description' },
@@ -60,7 +62,7 @@ export function getSettingsCategories(t: Translate): SettingsCategoryOption[] {
 const SETTINGS_CATEGORY_GROUP_DEFINITIONS: Array<{ categoryIds: SettingsCategoryId[]; labelKey: TranslationKey }> = [
   {
     labelKey: 'settings.group.workspace',
-    categoryIds: ['about', 'general', 'appearance', 'editor', 'review', 'publishing']
+    categoryIds: ['about', 'general', 'appearance', 'typography', 'editor', 'review', 'publishing']
   },
   {
     labelKey: 'settings.group.controls',

@@ -20,11 +20,38 @@ it('lists Windows fonts from PowerShell output with Unicode names', async () => 
     'UD Digi Kyokasho N',
     'UD Digi Kyokasho NP',
     'Wingdings 2',
-    '微软雅黑',
-    '微软雅黑 Bold',
-    '微软雅黑 Semibold'
+    '微软雅黑'
   ].sort());
   expect(catalog.monospace_fonts).toEqual(['Cascadia Mono']);
+});
+
+it('keeps a Windows style-named family when no unsuffixed base family exists', async () => {
+  const exec = vi.fn(async () => ['Acme Display Bold', 'Solo Light'].join('\n'));
+  const catalog = await listSystemFontsForPlatform('win32', exec);
+  expect(catalog.fonts).toEqual(['Acme Display Bold', 'Solo Light']);
+});
+
+it('lists enabled macOS font families once and filters private families', async () => {
+  const exec = vi.fn(async () => JSON.stringify({
+    SPFontsDataType: [
+      { enabled: 'yes', typefaces: [
+        { enabled: 'yes', family: 'PingFang SC' },
+        { enabled: 'yes', family: 'PingFang SC' },
+        { enabled: 'no', family: 'Disabled Face' },
+        { enabled: 'yes', family: '.AppleSystemUIFont' },
+        { enabled: 'yes', family: 'LastResort' }
+      ] },
+      { enabled: 'no', typefaces: [{ enabled: 'yes', family: 'Disabled Family' }] }
+    ]
+  }));
+  const catalog = await listSystemFontsForPlatform('darwin', exec);
+  expect(catalog.fonts).toEqual(['PingFang SC']);
+  expect(exec).toHaveBeenCalledWith('system_profiler', ['SPFontsDataType', '-json']);
+});
+
+it('returns an empty safe catalog for malformed macOS JSON', async () => {
+  const catalog = await listSystemFontsForPlatform('darwin', vi.fn(async () => 'not-json'));
+  expect(catalog).toEqual({ fonts: [], monospace_fonts: [] });
 });
 
 it('lists Windows fonts from registry query output instead of returning empty catalog', async () => {
@@ -54,7 +81,7 @@ it('lists Windows fonts from registry query output instead of returning empty ca
 });
 
 it('shares one in-flight font catalog request for the application session', async () => {
-  const exec = vi.fn(async () => 'Menlo\nSF Pro Text');
+  const exec = vi.fn(async () => JSON.stringify({ SPFontsDataType: [{ typefaces: [{ family: 'Menlo' }] }] }));
   const loadCatalog = createSystemFontCatalogLoader('darwin', exec);
 
   const [first, second] = await Promise.all([loadCatalog(), loadCatalog()]);

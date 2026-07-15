@@ -117,6 +117,8 @@ const RUNTIME_MIRRORED_APP_SETTING_NAMES = [
   'nodeIconDismissedTopicAppearance',
   'nodeIconDismissedItemAppearance',
   'nodeListRowSpacing',
+  'navigationTitleFontSize',
+  'navigationMetaFontSize',
   'nodeListManualCollapsed',
   'nodeListManualExpanded',
   'nodeTrashManualCollapsed',

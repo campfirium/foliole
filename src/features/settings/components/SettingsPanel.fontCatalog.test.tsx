@@ -28,7 +28,7 @@ it('loads and shares the system font catalog only after a font menu opens', asyn
   mockedListAvailableSystemFonts.mockReturnValue(deferred.promise);
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Typography' }));
   expect(mockedListAvailableSystemFonts).not.toHaveBeenCalled();
 
   const textFont = screen.getByLabelText('Text font');
@@ -41,7 +41,7 @@ it('loads and shares the system font catalog only after a font menu opens', asyn
   expect(screen.getByText('Loading system fonts…')).toBeInTheDocument();
 
   deferred.resolve({ fonts: ['XHei-Believe'], monospaceFonts: ['XHei-Believe-Mono'] });
-  const loadedFont = await screen.findByRole('menuitem', { name: 'XHei-Believe' });
+  const loadedFont = await screen.findByRole('option', { name: 'XHei-Believe' });
   fireEvent.click(loadedFont);
   await waitFor(() => expect(textFont).toHaveTextContent('XHei-Believe'));
 

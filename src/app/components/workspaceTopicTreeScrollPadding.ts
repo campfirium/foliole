@@ -1,11 +1,11 @@
 import { useLayoutEffect, useState, type RefObject } from 'react';
 
+import { getNavigationTitleFontSize } from '../../features/nodes/components/navigationTypographySettings';
 import { resolveNodeTreeRowVirtualSize } from '../../features/nodes/components/nodeListRowSpacingSettings';
-import {
-  getNodeListRowSpacing,
-  resolveNodeListRowGap
-} from '../../features/nodes/components/nodeListRowSpacingSettings';
+import { resolveNodeListRowGap } from '../../features/nodes/components/nodeListRowSpacingSettings';
+import { getNodeListRowSpacing } from '../../features/nodes/components/nodeListRowSpacingSettings';
 import type { NodeTreeRow } from '../../features/nodes/model/nodeTree';
+import { useOptionalAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 
 import type { WorkspaceTopicTreeScrollPlacement } from './WorkspaceTopicTreeRows';
 
@@ -23,6 +23,7 @@ function useSecondVisibleRowScrollPadding(args: {
   placement?: WorkspaceTopicTreeScrollPlacement | undefined;
   rowGap: number;
   rowSpacing: number;
+  titleFontSize: number;
   scrollContainerRef: RefObject<HTMLDivElement | null>;
 }) {
   const [scrollPadding, setScrollPadding] = useState(0);
@@ -37,14 +38,14 @@ function useSecondVisibleRowScrollPadding(args: {
       return;
     }
     const measurePadding = () => {
-      const rowSize = resolveNodeTreeRowVirtualSize(args.rowSpacing, args.rowGap);
+      const rowSize = resolveNodeTreeRowVirtualSize(args.rowSpacing, args.rowGap, args.titleFontSize);
       setScrollPadding(resolveSecondVisibleRowScrollPadding(container.clientHeight, rowSize, args.placement));
     };
     measurePadding();
     const resizeObserver = new ResizeObserver(measurePadding);
     resizeObserver.observe(container);
     return () => resizeObserver.disconnect();
-  }, [args.enabled, args.placement, args.rowGap, args.rowSpacing, args.scrollContainerRef]);
+  }, [args.enabled, args.placement, args.rowGap, args.rowSpacing, args.scrollContainerRef, args.titleFontSize]);
   return scrollPadding;
 }
 
@@ -55,7 +56,9 @@ export function useWorkspaceTopicTreeRowScrollLayout(args: {
   scrollPlacement: WorkspaceTopicTreeScrollPlacement | undefined;
   scrollTargetNodeId: string | null | undefined;
 }) {
-  const rowSpacing = getNodeListRowSpacing();
+  const appearance = useOptionalAppearanceSettings();
+  const navigationTitleFontSize = appearance?.navigationTitleFontSize ?? getNavigationTitleFontSize();
+  const rowSpacing = appearance?.nodeListRowSpacing ?? getNodeListRowSpacing();
   const rowGap = resolveNodeListRowGap(rowSpacing);
   const isReviewScrollPlacement = args.scrollPlacement === 'second-visible-row' || args.scrollPlacement === 'near-visible-row';
   const scrollPaddingTop = resolveReviewScrollPaddingTop({
@@ -63,6 +66,7 @@ export function useWorkspaceTopicTreeRowScrollLayout(args: {
     rowGap,
     rows: args.rows,
     rowSpacing,
+    titleFontSize: navigationTitleFontSize,
     scrollPlacement: args.scrollPlacement,
     scrollTargetNodeId: args.scrollTargetNodeId
   });
@@ -71,9 +75,10 @@ export function useWorkspaceTopicTreeRowScrollLayout(args: {
     placement: args.scrollPlacement,
     rowGap,
     rowSpacing,
+    titleFontSize: navigationTitleFontSize,
     scrollContainerRef: args.scrollContainerRef
   });
-  return { rowGap, rowSpacing, scrollPaddingBottom, scrollPaddingTop };
+  return { navigationTitleFontSize, rowGap, rowSpacing, scrollPaddingBottom, scrollPaddingTop };
 }
 
 function resolveReviewScrollPaddingTop(args: {
@@ -81,6 +86,7 @@ function resolveReviewScrollPaddingTop(args: {
   rowGap: number;
   rows: readonly NodeTreeRow[];
   rowSpacing: number;
+  titleFontSize: number;
   scrollPlacement: WorkspaceTopicTreeScrollPlacement | undefined;
   scrollTargetNodeId: string | null | undefined;
 }) {
@@ -89,5 +95,5 @@ function resolveReviewScrollPaddingTop(args: {
   }
   const targetNodeId = args.scrollTargetNodeId ?? args.activeNodeId;
   const targetRowIndex = targetNodeId ? args.rows.findIndex((row) => row.node.id === targetNodeId) : -1;
-  return targetRowIndex === 0 ? resolveNodeTreeRowVirtualSize(args.rowSpacing, args.rowGap) : 0;
+  return targetRowIndex === 0 ? resolveNodeTreeRowVirtualSize(args.rowSpacing, args.rowGap, args.titleFontSize) : 0;
 }

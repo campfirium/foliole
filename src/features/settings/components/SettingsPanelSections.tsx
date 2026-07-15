@@ -24,6 +24,7 @@ import { SettingsMouseGesturesSection } from './sections/SettingsMouseGesturesSe
 import { SettingsPublishingSection } from './sections/SettingsPublishingSection';
 import { SettingsRailSection } from './sections/SettingsRailSection';
 import { SettingsReviewSection } from './sections/SettingsReviewSection';
+import { SettingsTypographySection } from './sections/SettingsTypographySection';
 import { SettingsWebLookupSection } from './sections/SettingsWebLookupSection';
 
 import { definedProps } from '@/shared/lib/definedProps';
@@ -183,6 +184,8 @@ export function SettingsCategoryContent(props: SettingsCategoryContentProps) {
       return <SettingsPublishingSection />;
     case 'appearance':
       return <SettingsAppearanceSection onEnterPreview={props.onEnterPreview} onSettingsBackdropTransparentChange={props.onSettingsBackdropTransparentChange} />;
+    case 'typography':
+      return <SettingsTypographySection />;
     case 'rail':
       return <SettingsRailSection actionItems={props.hotkeyItems} />;
     case 'mouse-gestures':

@@ -100,6 +100,8 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   nodeIconDismissedTopicAppearance: 'foliole-node-icon-dismissed-topic-appearance',
   nodeIconDismissedItemAppearance: 'foliole-node-icon-dismissed-item-appearance',
   nodeListRowSpacing: 'foliole-node-list-row-spacing',
+  navigationTitleFontSize: 'foliole-navigation-title-font-size',
+  navigationMetaFontSize: 'foliole-navigation-meta-font-size',
   nodeListManualCollapsed: 'foliole-node-list-manual-collapsed',
   nodeListManualExpanded: 'foliole-node-list-manual-expanded',
   nodeTrashManualCollapsed: 'foliole-node-trash-manual-collapsed',

@@ -23,6 +23,8 @@ export const ZH_HANS_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, strin
   'settings.category.general.description': '调整通用工作区行为。',
   'settings.category.appearance.label': '外观',
   'settings.category.appearance.description': '调整工作区的外观和信息密度。',
+  'settings.category.typography.label': '字体与排版',
+  'settings.category.typography.description': '调整阅读与导航文字。',
   'settings.category.editor.label': '编辑器',
   'settings.category.editor.description': '配置编辑和写作行为。',
   'settings.category.webLookup.label': '右键菜单',

@@ -6,6 +6,7 @@ export interface RuntimeSystemFontCatalog {
 }
 
 const MONOSPACE_NAME_HINT = /mono|code|console|consolas|courier|menlo|fira|cascadia/i;
+const WINDOWS_STYLE_SUFFIX = /[\s-]+(?:thin|extra[\s-]?light|ultra[\s-]?light|light|book|regular|normal|medium|semi[\s-]?bold|demi[\s-]?bold|bold|extra[\s-]?bold|ultra[\s-]?bold|black|heavy|italic|oblique|condensed|compressed|expanded)(?:[\s-]+(?:italic|oblique))?$/i;
 type ExecFileFn = (file: string, args: string[]) => Promise<string>;
 
 function normalizeFontNames(values: string[]) {
@@ -16,6 +17,14 @@ function normalizeFontNames(values: string[]) {
 
 function detectMonospaceNames(values: string[]) {
   return values.filter((fontName) => MONOSPACE_NAME_HINT.test(fontName));
+}
+
+function collapseWindowsStyleFamilies(values: string[]) {
+  const families = new Set(values);
+  return values.filter((value) => {
+    const base = value.replace(WINDOWS_STYLE_SUFFIX, '').trim();
+    return base === value || !families.has(base);
+  });
 }
 
 async function runCommand(exec: ExecFileFn, file: string, args: string[]) {
@@ -79,13 +88,13 @@ async function listWindowsFontsViaPowerShell(exec: ExecFileFn) {
 async function listWindowsFonts(exec: ExecFileFn) {
   const powershellFonts = await listWindowsFontsViaPowerShell(exec);
   if (powershellFonts.length > 0) {
-    return powershellFonts;
+    return collapseWindowsStyleFamilies(powershellFonts);
   }
   const [hklmOutput, hkcuOutput] = await Promise.all([
     runCommand(exec, 'reg', ['query', 'HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts']),
     runCommand(exec, 'reg', ['query', 'HKCU\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts'])
   ]);
-  return [...parseWindowsRegistryFonts(hklmOutput), ...parseWindowsRegistryFonts(hkcuOutput)];
+  return collapseWindowsStyleFamilies([...parseWindowsRegistryFonts(hklmOutput), ...parseWindowsRegistryFonts(hkcuOutput)]);
 }
 
 async function listLinuxFonts(exec: ExecFileFn) {
@@ -101,14 +110,22 @@ async function listLinuxFonts(exec: ExecFileFn) {
 }
 
 async function listMacFonts(exec: ExecFileFn) {
-  const output = await runCommand(exec, 'system_profiler', ['SPFontsDataType']);
+  const output = await runCommand(exec, 'system_profiler', ['SPFontsDataType', '-json']);
   if (!output) {
     return [];
   }
-  return output
-    .split(/\r?\n/)
-    .map((line) => line.match(/^\s*Full Name:\s*(.+)$/)?.[1]?.trim() ?? '')
-    .filter((fontName) => fontName.length > 0);
+  try {
+    const payload = JSON.parse(output) as { SPFontsDataType?: Array<{ enabled?: string; typefaces?: Array<{ enabled?: string; family?: string }> }> };
+    return (payload.SPFontsDataType ?? []).flatMap((font) => {
+      if (font.enabled === 'no') return [];
+      return (font.typefaces ?? [])
+        .filter((face) => face.enabled !== 'no')
+        .map((face) => face.family?.trim() ?? '')
+        .filter((family) => family.length > 0 && !family.startsWith('.') && family !== 'LastResort');
+    });
+  } catch {
+    return [];
+  }
 }
 
 export async function listSystemFontsForPlatform(platform: NodeJS.Platform, exec: ExecFileFn): Promise<RuntimeSystemFontCatalog> {

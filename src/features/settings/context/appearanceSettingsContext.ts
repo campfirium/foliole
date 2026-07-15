@@ -46,6 +46,9 @@ export interface AppearanceSettingsContextValue {
   interfaceFontSize: number;
   markdownSyntaxVisibility: MarkdownSyntaxVisibility;
   monospaceFontPreset: MonospaceFontPreset;
+  navigationMetaFontSize: number;
+  navigationTitleFontSize: number;
+  nodeListRowSpacing: number;
   uiFontPreset: InterfaceFontPreset;
   workspaceDividerOpacityPercent: number;
   workspaceSurfaceAssignments: WorkspaceSurfaceAssignments;
@@ -56,6 +59,9 @@ export interface AppearanceSettingsContextValue {
   resetSelectionColorPreset: () => void;
   resetHighlightColorPreset: () => void;
   resetInterfaceFontSize: () => void;
+  resetNavigationMetaFontSize: () => void;
+  resetNavigationTitleFontSize: () => void;
+  resetNodeListRowSpacing: () => void;
   resetWorkspaceSurfaceSettings: () => void;
   setAccentColorPreset: (value: AccentColorPreset) => void;
   setAutoLocalizeRemoteImages: (value: boolean) => void;
@@ -77,6 +83,9 @@ export interface AppearanceSettingsContextValue {
   setSelectionToolbarEnabled: (value: boolean) => void;
   setSelectionToolbarOpacityPercent: (value: number) => void;
   setMonospaceFontPreset: (value: MonospaceFontPreset) => void;
+  setNavigationMetaFontSize: (value: number) => void;
+  setNavigationTitleFontSize: (value: number) => void;
+  setNodeListRowSpacing: (value: number) => void;
   setPdfReadingMode: (value: PdfReadingMode) => void;
   setReadingContentWidth: (value: number) => void;
   setReadingLineHeight: (value: ReadingLineHeight) => void;
@@ -97,4 +106,8 @@ export function useAppearanceSettings() {
     throw new Error('AppearanceSettingsProvider is missing.');
   }
   return context;
+}
+
+export function useOptionalAppearanceSettings() {
+  return useContext(AppearanceSettingsContext);
 }

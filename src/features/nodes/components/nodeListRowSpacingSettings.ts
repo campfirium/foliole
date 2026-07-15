@@ -5,10 +5,11 @@ import {
   setWhitelistedLocalStorageItem
 } from '../../../shared/platform/storage';
 
+import { DEFAULT_NAVIGATION_TITLE_FONT_SIZE, resolveNavigationMetaLineHeight, resolveNavigationTitleLineHeight } from './navigationTypographySettings';
+
 export const DEFAULT_NODE_LIST_ROW_SPACING = 6;
 const MIN_NODE_LIST_ROW_SPACING = 0;
 const MAX_NODE_LIST_ROW_SPACING = 24;
-const NODE_TREE_ROW_BASE_HEIGHT = 20;
 
 function normalizeNodeListRowSpacing(value: string | null): number {
   if (value === null || value.trim() === '') {
@@ -38,6 +39,10 @@ export function resolveNodeListRowGap(rowSpacing: number) {
   return Math.max(1, rowSpacing - 2);
 }
 
-export function resolveNodeTreeRowVirtualSize(rowSpacing: number, rowGap = 0) {
-  return NODE_TREE_ROW_BASE_HEIGHT + rowSpacing * 2 + rowGap;
+export function resolveNodeTreeRowVirtualSize(rowSpacing: number, rowGap = 0, titleFontSize = DEFAULT_NAVIGATION_TITLE_FONT_SIZE) {
+  return resolveNavigationTitleLineHeight(titleFontSize) + rowSpacing * 2 + rowGap;
+}
+
+export function resolveNodeTreeRowWithSecondaryVirtualSize(rowSpacing: number, titleFontSize: number, metaFontSize: number, rowGap = 0) {
+  return resolveNodeTreeRowVirtualSize(rowSpacing, rowGap, titleFontSize) + resolveNavigationMetaLineHeight(metaFontSize);
 }

@@ -1,10 +1,11 @@
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, RefObject } from 'react';
 
 import { VirtualListSurface, type VirtualListRenderMeta } from '../../../shared/ui';
+import { useAppearanceSettings } from '../../settings/context/AppearanceSettingsProvider';
 import type { NodeTreeRow } from '../model/nodeTree';
 import type { WorkspaceListNode, WorkspaceListNodesById } from '../model/workspaceListNode';
 
-import { resolveNodeTreeRowVirtualSize } from './nodeListRowSpacingSettings';
+import { resolveNodeTreeRowWithSecondaryVirtualSize } from './nodeListRowSpacingSettings';
 import type { NodeSelectModifiers } from './NodeListTreeState';
 import { NodeTreeRow as NodeTreeRowItem } from './NodeTreeRow';
 
@@ -18,12 +19,6 @@ interface TrashListRowsProps {
   rowSpacing: number;
   scrollContainerRef: RefObject<HTMLElement | null>;
   selectedNodeIds: string[];
-}
-
-const TRASH_ROW_SECONDARY_LABEL_HEIGHT = 18;
-
-function resolveTrashRowVirtualSize(rowSpacing: number) {
-  return resolveNodeTreeRowVirtualSize(rowSpacing) + TRASH_ROW_SECONDARY_LABEL_HEIGHT;
 }
 
 function buildFolderPath(nodeId: string, nodesById: WorkspaceListNodesById) {
@@ -79,9 +74,10 @@ function renderTrashRow(
 }
 
 export function TrashListRows(props: TrashListRowsProps) {
+  const { navigationMetaFontSize, navigationTitleFontSize } = useAppearanceSettings();
   return (
     <VirtualListSurface
-      estimateSize={() => resolveTrashRowVirtualSize(props.rowSpacing)}
+      estimateSize={() => resolveNodeTreeRowWithSecondaryVirtualSize(props.rowSpacing, navigationTitleFontSize, navigationMetaFontSize)}
       getItemKey={(row) => row.node.id}
       items={props.rows}
       renderItem={(row, meta) => renderTrashRow(row, props, meta)}

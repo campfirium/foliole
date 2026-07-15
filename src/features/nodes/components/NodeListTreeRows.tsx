@@ -2,6 +2,7 @@ import { useMemo, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as R
 
 import { VirtualListSurface, type VirtualListRenderMeta } from '../../../shared/ui';
 import type { ReviewSessionState } from '../../../store/workspaceStore';
+import { useAppearanceSettings } from '../../settings/context/AppearanceSettingsProvider';
 import type { NodeTreeRow } from '../model/nodeTree';
 import { isHomeNode, isInboxNode, isTrashNode, isVirtualRootNode } from '../model/specialNodes';
 import {
@@ -165,6 +166,7 @@ function resolveLeafIconKind(kind: NodeTreeRowIconKind) {
 }
 
 export function NodeListRows(props: NodeListRowsProps) {
+  const { navigationTitleFontSize } = useAppearanceSettings();
   const rowGap = resolveNodeListRowGap(props.rowSpacing);
   const onRowKeyDown = useMemo(
     () =>
@@ -216,7 +218,7 @@ export function NodeListRows(props: NodeListRowsProps) {
     <VirtualListSurface
       autoScroll={props.virtualizeRows}
       enabled={props.virtualizeRows}
-      estimateSize={(index) => resolveNodeTreeRowVirtualSize(props.rowSpacing, index === props.rows.length - 1 ? 0 : rowGap)}
+      estimateSize={(index) => resolveNodeTreeRowVirtualSize(props.rowSpacing, index === props.rows.length - 1 ? 0 : rowGap, navigationTitleFontSize)}
       getItemKey={(row) => row.node.id}
       items={props.rows}
       renderItem={(row, meta) => renderNodeListRow(props, row, onRowKeyDown, meta)}

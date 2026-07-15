@@ -23,7 +23,7 @@ beforeEach(() => {
 it('stores node list row spacing and removes the override when reset to default', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Typography' }));
   fireEvent.change(screen.getByLabelText('Topic list row spacing'), { target: { value: '8' } });
 
   await waitFor(() => {
@@ -40,7 +40,7 @@ it('stores node list row spacing and removes the override when reset to default'
 it('resets node list row spacing to the default value', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Typography' }));
   fireEvent.change(screen.getByLabelText('Topic list row spacing'), { target: { value: '2' } });
   fireEvent.click(screen.getByRole('button', { name: 'Reset topic list row spacing' }));
 
@@ -50,10 +50,10 @@ it('resets node list row spacing to the default value', async () => {
   });
 });
 
-it('stores the reading line height value from appearance settings', async () => {
+it('stores the reading line height value from typography settings', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Typography' }));
   fireEvent.change(screen.getByLabelText('Line height'), { target: { value: '1.85' } });
 
   await waitFor(() => {
@@ -61,10 +61,10 @@ it('stores the reading line height value from appearance settings', async () => 
   });
 });
 
-it('stores the paragraph spacing value from appearance settings', async () => {
+it('stores the paragraph spacing value from typography settings', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Typography' }));
   fireEvent.change(screen.getByLabelText('Paragraph spacing'), { target: { value: '1.25' } });
 
   await waitFor(() => {
@@ -72,13 +72,25 @@ it('stores the paragraph spacing value from appearance settings', async () => {
   });
 });
 
-it('stores the reading width from appearance settings', async () => {
+it('stores the reading width from typography settings', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Typography' }));
   fireEvent.change(screen.getByLabelText('Reading width'), { target: { value: '920' } });
 
   await waitFor(() => {
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.readingContentWidth)).toBe('920');
+  });
+});
+
+it('stores independent navigation title and secondary font sizes', async () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="typography" />);
+  fireEvent.change(screen.getByLabelText('Navigation title font size'), { target: { value: '17' } });
+  fireEvent.change(screen.getByLabelText('Navigation secondary text font size'), { target: { value: '15' } });
+  await waitFor(() => {
+    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.navigationTitleFontSize)).toBe('17');
+    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.navigationMetaFontSize)).toBe('15');
+    expect(document.documentElement.style.getPropertyValue('--navigation-title-font-size')).toBe('17px');
+    expect(document.documentElement.style.getPropertyValue('--navigation-meta-font-size')).toBe('15px');
   });
 });

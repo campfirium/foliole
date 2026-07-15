@@ -1,6 +1,7 @@
 import { memo } from 'react';
 
-import { getNodeListRowSpacing } from './nodeListRowSpacingSettings';
+import { useAppearanceSettings } from '../../settings/context/AppearanceSettingsProvider';
+
 import { NodeListTreeContent } from './NodeListTreeContent';
 import {
   type NodeListTreeProps,
@@ -15,7 +16,7 @@ function useNodeListTreeView(args: {
   isVirtualViewOpen: boolean;
   model: ReturnType<typeof useNodeListTreeModel>;
 }) {
-  const rowSpacing = getNodeListRowSpacing();
+  const rowSpacing = useAppearanceSettings().nodeListRowSpacing;
   const collapsedNodeIds = args.isTrashViewOpen
     ? args.model.collapsedState.collapsedTrashNodeIds
     : args.model.collapsedState.collapsedNoteNodeIds;

@@ -21,6 +21,8 @@ export const EN_SETTINGS_TRANSLATIONS = {
   'settings.category.general.description': 'Adjust general workspace behavior.',
   'settings.category.appearance.label': 'Appearance',
   'settings.category.appearance.description': 'Adjust the look and density of the workspace.',
+  'settings.category.typography.label': 'Typography',
+  'settings.category.typography.description': 'Adjust reading and navigation text.',
   'settings.category.editor.label': 'Editor',
   'settings.category.editor.description': 'Configure editing and writing behavior.',
   'settings.category.webLookup.label': 'Right-click menu',

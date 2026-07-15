@@ -67,11 +67,12 @@ function renderWorkspaceTopicTreeVirtualList(args: WorkspaceTopicTreeRowsProps &
   onRowKeyDown: ReturnType<typeof createNodeListRowKeydownHandler>;
   rowGap: number;
   rowSpacing: number;
+  titleFontSize: number;
 }) {
   return (
     <VirtualListSurface
       autoScroll={args.scrollPlacement === 'second-visible-row' || args.scrollPlacement === 'near-visible-row'}
-      estimateSize={(index) => resolveNodeTreeRowVirtualSize(args.rowSpacing, index === args.rows.length - 1 ? 0 : args.rowGap)}
+      estimateSize={(index) => resolveNodeTreeRowVirtualSize(args.rowSpacing, index === args.rows.length - 1 ? 0 : args.rowGap, args.titleFontSize)}
       getItemKey={(row) => row.node.id}
       items={args.rows}
       renderItem={(row, meta) =>
@@ -121,6 +122,18 @@ function renderWorkspaceTopicTreeRowsSection(args: {
   );
 }
 
+function useWorkspaceTopicTreeKeydown(props: WorkspaceTopicTreeRowsProps) {
+  return useMemo(
+    () => createNodeListRowKeydownHandler({
+      collapsedNodeIds: props.collapsedNodeIds,
+      onSelect: props.onSelectNode,
+      onToggleCollapse: props.onToggleCollapse,
+      rows: props.rows
+    }),
+    [props.collapsedNodeIds, props.onSelectNode, props.onToggleCollapse, props.rows]
+  );
+}
+
 export function WorkspaceTopicTreeRows({
   activeNodeId,
   collapsedNodeIds,
@@ -138,23 +151,14 @@ export function WorkspaceTopicTreeRows({
   selectedNodeIds
 }: WorkspaceTopicTreeRowsProps) {
   const t = useTranslation();
-  const { rowGap, rowSpacing, scrollPaddingBottom, scrollPaddingTop } = useWorkspaceTopicTreeRowScrollLayout({
+  const { navigationTitleFontSize, rowGap, rowSpacing, scrollPaddingBottom, scrollPaddingTop } = useWorkspaceTopicTreeRowScrollLayout({
     activeNodeId,
     rows,
     scrollContainerRef,
     scrollPlacement,
     scrollTargetNodeId
   });
-  const onRowKeyDown = useMemo(
-    () =>
-      createNodeListRowKeydownHandler({
-        collapsedNodeIds,
-        onSelect: onSelectNode,
-        onToggleCollapse,
-        rows
-      }),
-    [collapsedNodeIds, onSelectNode, onToggleCollapse, rows]
-  );
+  const onRowKeyDown = useWorkspaceTopicTreeKeydown({ activeNodeId, collapsedNodeIds, drag, isManualSort, nodesById, onContextMenu, onRenameNode, onSelectNode, onToggleCollapse, rows, scrollContainerRef, selectedNodeIds, ...definedProps({ scrollPlacement, scrollTargetNodeId }) });
 
   return renderWorkspaceTopicTreeRowsSection({
     ariaLabel: t('desktop.workspace.topicList'),
@@ -176,6 +180,7 @@ export function WorkspaceTopicTreeRows({
         rowGap,
         rows,
         rowSpacing,
+        titleFontSize: navigationTitleFontSize,
         scrollContainerRef,
         selectedNodeIds,
         ...definedProps({ scrollPlacement, scrollTargetNodeId })

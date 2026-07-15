@@ -83,7 +83,7 @@ export function NodeRenameInput({
     <input
       aria-label={`Rename ${label}`}
       autoFocus
-      className="box-border h-5 min-w-0 max-w-full flex-1 rounded-sm border border-border/35 bg-[var(--app-surface-control-bg)] px-1.5 py-0 text-[13px] leading-5 text-foreground focus:border-border/70 focus:bg-[var(--app-surface-control-hover-bg)] focus-visible:outline-none"
+      className="box-border min-w-0 max-w-full flex-1 rounded-sm border border-border/35 bg-[var(--app-surface-control-bg)] px-1.5 py-0 text-foreground [font-size:var(--navigation-title-font-size)] [height:var(--navigation-title-line-height)] [line-height:var(--navigation-title-line-height)] focus:border-border/70 focus:bg-[var(--app-surface-control-hover-bg)] focus-visible:outline-none"
       onBlur={() => {
         if (skipNextBlurSubmitRef.current) {
           skipNextBlurSubmitRef.current = false;

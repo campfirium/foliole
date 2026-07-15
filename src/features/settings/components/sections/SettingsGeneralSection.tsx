@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
+import { setActionHelpCardsEnabled, useActionHelpCardsEnabled } from '../../../../shared/platform/actionHelpCards';
 import {
   getFullTextSearchIndexStrategy,
   updateFullTextSearchIndexStrategy,
@@ -19,6 +20,7 @@ import {
   SettingsSection,
   settingsFieldClassName
 } from '../../../../shared/ui';
+import { settingsSwitchClassName, settingsSwitchKnobClassName } from '../../../../shared/ui';
 import { settingsSearchRowProps } from '../../model/settingsSearch';
 import { useLocalizedSettingsSearchRow } from '../useLocalizedSettingsSearchRows';
 
@@ -120,6 +122,22 @@ function SearchEnhancementRow() {
   );
 }
 
+function InterfaceBehaviorSection() {
+  const t = useTranslation();
+  const enabled = useActionHelpCardsEnabled();
+  return (
+    <SettingsSection ariaLabel={t('settings.appearance.interface.aria')} title={t('settings.appearance.interface.section')}>
+      <SettingsRow data-settings-search-row-id="general-action-help" description={t('settings.appearance.actionHelp.description')} title={t('settings.appearance.actionHelp.row')}>
+        <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
+          <button aria-checked={enabled} aria-label={t('settings.appearance.actionHelp.row')} className={settingsSwitchClassName(enabled)} onClick={() => setActionHelpCardsEnabled(!enabled)} role="switch" type="button">
+            <span aria-hidden="true" className={settingsSwitchKnobClassName(enabled)} />
+          </button>
+        </SettingsControlSlot>
+      </SettingsRow>
+    </SettingsSection>
+  );
+}
+
 export function SettingsGeneralSection({
   previewDesktopSettings = false
 }: {
@@ -129,6 +147,7 @@ export function SettingsGeneralSection({
   return (
     <>
       <SettingsGeneralSystemSection previewDesktopSettings={previewDesktopSettings} />
+      <InterfaceBehaviorSection />
       <SettingsSection ariaLabel={t('settings.general.search.aria')} title={t('settings.general.search.section')}>
         <SearchEnhancementRow />
       </SettingsSection>

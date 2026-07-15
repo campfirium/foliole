@@ -1,6 +1,5 @@
 import { useMemo, useRef, useState, type RefObject } from 'react';
 
-import { getNodeListRowSpacing } from '../../features/nodes/components/nodeListRowSpacingSettings';
 import { NodeListStateSurface } from '../../features/nodes/components/NodeListStateSurface';
 import { useNodeListContextMenu } from '../../features/nodes/components/NodeListTreeHooks';
 import { createNodeListRowKeydownHandler } from '../../features/nodes/components/NodeListTreeKeyboard';
@@ -10,6 +9,7 @@ import { TrashListRows } from '../../features/nodes/components/TrashListRows';
 import { buildFlatNodeRows } from '../../features/nodes/model/nodeTree';
 import { filterTrashRootIdsByTitle, selectTrashRootIds } from '../../features/nodes/model/trashRootModel';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { useWorkspaceContentSort } from '../hooks/useWorkspaceContentSort';
@@ -150,7 +150,7 @@ export function TrashResultListPanel(props: TrashResultListPanelProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-  const rowSpacing = getNodeListRowSpacing();
+  const rowSpacing = useAppearanceSettings().nodeListRowSpacing;
   const { contentSort, normalizedSort, rows } = useTrashRows(props, searchQuery);
   const listState = useNodeListState(null, true, props.nodeOrder, props.nodesById, props.selectedTrashNodeId, new Set());
   const { renderedListState, selectedNodeIds } = useRenderedTrashListState(listState, rows);

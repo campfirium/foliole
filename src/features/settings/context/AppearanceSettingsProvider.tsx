@@ -4,7 +4,6 @@ import { applySelectionToolbarOpacityPercent } from '../../editor/model/selectio
 import {
   applyAppearanceSettings,
   getAccentColorPreset,
-  getBaseColorMode,
   getClozeColorPreset,
   getCustomInterfaceFont,
   getCustomMonospaceFont,
@@ -25,17 +24,13 @@ import {
 import { resolveBaseColorMode } from '../model/baseColorMode';
 
 import { useEditorSettingsStateValues } from './appearanceEditorState';
+import { getInitialAppearanceModeState } from './appearanceModeState';
 import { useReadingAppearanceState } from './appearanceReadingState';
-import { AppearanceSettingsContext, useAppearanceSettings } from './appearanceSettingsContext';
+import { AppearanceSettingsContext, useAppearanceSettings, useOptionalAppearanceSettings } from './appearanceSettingsContext';
 import { useAppearanceSettingsValue } from './appearanceSettingsValue';
+import { useNavigationTypographyState } from './navigationTypographyState';
 
 const usePrePaintEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
-
-function getInitialAppearanceModeState() {
-  const baseColorMode = getBaseColorMode();
-  const resolvedBaseColorMode = resolveBaseColorMode(baseColorMode);
-  return { baseColorMode, resolvedBaseColorMode };
-}
 
 function useModeScopedAppearanceState(resolvedBaseColorMode: 'dark' | 'light') {
   const [accentColorPresetState, setAccentColorPresetState] = useState(() => getAccentColorPreset(resolvedBaseColorMode));
@@ -67,6 +62,7 @@ export function useAppearanceStateValues() {
   const initialModeState = getInitialAppearanceModeState();
   const editorSettings = useEditorSettingsStateValues();
   const readingSettings = useReadingAppearanceState();
+  const navigationTypography = useNavigationTypographyState();
   const modeScoped = useModeScopedAppearanceState(initialModeState.resolvedBaseColorMode);
   const [baseColorModeState, setBaseColorModeState] = useState(() => initialModeState.baseColorMode);
   const [dimImagesInDarkModeState, setDimImagesInDarkModeState] = useState(() => getDimImagesInDarkMode());
@@ -86,6 +82,7 @@ export function useAppearanceStateValues() {
     ...modeScoped,
     ...editorSettings,
     ...readingSettings,
+    ...navigationTypography,
     baseColorModeState,
     dimImagesInDarkModeState,
     customInterfaceFontState,
@@ -232,4 +229,4 @@ export function AppearanceSettingsProvider({ children }: { children: ReactNode }
   return <AppearanceSettingsContext.Provider value={value}>{children}</AppearanceSettingsContext.Provider>;
 }
 
-export { useAppearanceSettings };
+export { useAppearanceSettings, useOptionalAppearanceSettings };

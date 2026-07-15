@@ -1,8 +1,8 @@
 import { useMemo, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 
-import { getNodeListRowSpacing } from '../../features/nodes/components/nodeListRowSpacingSettings';
 import { createNodeListRowKeydownHandler } from '../../features/nodes/components/NodeListTreeKeyboard';
 import { NodeTreeRow } from '../../features/nodes/components/NodeTreeRow';
+import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type {
   ExternalLibraryBrowseEntry,
@@ -114,7 +114,7 @@ function ExternalDocumentListBody(props: {
   selection: ExternalLibrarySelection;
 }) {
   const t = useTranslation();
-  const rowSpacing = getNodeListRowSpacing();
+  const rowSpacing = useAppearanceSettings().nodeListRowSpacing;
   const onRowKeyDown = useExternalDocumentKeyboard(props.documents, props.onOpenExternalSelection);
 
   if (props.isLoading) {

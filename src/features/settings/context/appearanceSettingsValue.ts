@@ -29,9 +29,22 @@ function createWorkspaceSettingsValue(state: AppearanceStateValues) {
   };
 }
 
-export function useAppearanceSettingsValue(state: AppearanceStateValues): AppearanceSettingsContextValue {
-  return useMemo(
-    () => ({
+function createNavigationTypographyValue(state: AppearanceStateValues) {
+  return {
+    navigationMetaFontSize: state.navigationMetaFontSizeState,
+    navigationTitleFontSize: state.navigationTitleFontSizeState,
+    nodeListRowSpacing: state.nodeListRowSpacingState,
+    resetNavigationMetaFontSize: state.resetNavigationMetaFontSize,
+    resetNavigationTitleFontSize: state.resetNavigationTitleFontSize,
+    resetNodeListRowSpacing: state.resetNodeListRowSpacing,
+    setNavigationMetaFontSize: state.setNavigationMetaFontSize,
+    setNavigationTitleFontSize: state.setNavigationTitleFontSize,
+    setNodeListRowSpacing: state.setNodeListRowSpacing
+  };
+}
+
+function createAppearanceSettingsContextValue(state: AppearanceStateValues): AppearanceSettingsContextValue {
+  return {
       accentColorPreset: state.accentColorPresetState,
       autoLocalizeRemoteImages: state.autoLocalizeRemoteImagesState,
       baseColorMode: state.baseColorModeState,
@@ -53,12 +66,18 @@ export function useAppearanceSettingsValue(state: AppearanceStateValues): Appear
       interfaceFontSize: state.interfaceFontSizeState,
       markdownSyntaxVisibility: state.markdownSyntaxVisibilityState,
       monospaceFontPreset: state.monospaceFontPresetState,
+      ...createNavigationTypographyValue(state),
       pdfReadingMode: state.pdfReadingModeState,
       ...createReadingSettingsValue(state),
       uiFontPreset: state.uiFontPresetState,
       ...createWorkspaceSettingsValue(state),
       ...createAppearanceActions(state)
-    }),
+    };
+}
+
+export function useAppearanceSettingsValue(state: AppearanceStateValues): AppearanceSettingsContextValue {
+  return useMemo(
+    () => createAppearanceSettingsContextValue(state),
     [
       state.accentColorPresetState,
       state.autoLocalizeRemoteImagesState,
@@ -79,6 +98,9 @@ export function useAppearanceSettingsValue(state: AppearanceStateValues): Appear
       state.interfaceFontSizeState,
       state.markdownSyntaxVisibilityState,
       state.monospaceFontPresetState,
+      state.navigationMetaFontSizeState,
+      state.navigationTitleFontSizeState,
+      state.nodeListRowSpacingState,
       state.pdfReadingModeState,
       state.readingContentWidthState,
       state.readingLineHeightState,
