@@ -107,20 +107,30 @@ export function setStartupWindowPresentation(window: BrowserWindow, presentation
   startupPresentationByWindow.set(window, presentation);
 }
 
-export async function presentInitialRendererWindow(window: BrowserWindow) {
+export function applyStartupWindowPresentation(window: BrowserWindow) {
   const presentation = startupPresentationByWindow.get(window) ?? {
     isFullScreen: false,
     isMaximized: false
   };
-  appendRuntimeEventLog('initial-renderer-window-show', {
-    isFullScreen: presentation.isFullScreen,
-    isMaximized: presentation.isMaximized
-  });
+  startupPresentationByWindow.delete(window);
   if (presentation.isFullScreen && !window.isFullScreen()) {
     window.setFullScreen(true);
   } else if (presentation.isMaximized && !window.isMaximized()) {
     window.maximize();
   }
+  return presentation;
+}
+
+export async function presentInitialRendererWindow(window: BrowserWindow, options: { show?: boolean } = {}) {
+  if (options.show === false) {
+    appendRuntimeEventLog('initial-renderer-window-deferred');
+    return;
+  }
+  const presentation = applyStartupWindowPresentation(window);
+  appendRuntimeEventLog('initial-renderer-window-show', {
+    isFullScreen: presentation.isFullScreen,
+    isMaximized: presentation.isMaximized
+  });
   if (!window.isVisible()) {
     if (isHiddenNativeDesktopTest()) {
       window.setSkipTaskbar(true);

@@ -26,7 +26,7 @@ test('exposes standard macOS menus and the registered global capture shortcut', 
   await expect(general.getByRole('switch', {
     name: /^(Start Foliole automatically|开机时自动启动 Foliole)$/
   })).toBeDisabled();
-  await expect(general.getByText(/^(This is not available on macOS.|macOS 暂不支持此功能。)$/)).toBeVisible();
+  await expect(general.getByText(/^(Automatic startup is unavailable in this build.|当前版本无法设置自动启动。)$/)).toBeVisible();
 
   await general.getByRole('button', { name: /^(Hotkeys|快捷键)$/ }).click();
   const hotkeys = general;

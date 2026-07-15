@@ -30,6 +30,7 @@ interface InitialMainWindowStartupArgs {
   installPairingFocusHandler: () => void;
   loadStartupErrorSurface: (args: StartupErrorSurfaceArgs) => Promise<void>;
   mainWindow: BrowserWindow;
+  showInitialWindow?: boolean;
   startCompanionSyncIfEnabled: () => Promise<void>;
 }
 
@@ -57,12 +58,13 @@ async function waitForRendererShellReady(window: BrowserWindow, rendererLoadProm
 
 async function loadWorkspaceShell(args: {
   loadMainWindow: MainWindowStartupArgs['loadMainWindow'];
+  showInitialWindow: boolean;
   window: BrowserWindow;
 }) {
   const rendererLoadPromise = args.loadMainWindow(args.window);
   await waitForRendererShellReady(args.window, rendererLoadPromise);
   await appendBootEvent('main_window_shell_ready');
-  await presentInitialRendererWindow(args.window);
+  await presentInitialRendererWindow(args.window, { show: args.showInitialWindow });
   await rendererLoadPromise;
 }
 
@@ -83,7 +85,11 @@ export async function startInitialMainWindow(
     return;
   }
   const [rendererResult, runtimeResult] = await Promise.allSettled([
-    loadWorkspaceShell({ loadMainWindow: args.loadMainWindow, window: startup.mainWindow }),
+    loadWorkspaceShell({
+      loadMainWindow: args.loadMainWindow,
+      showInitialWindow: startup.showInitialWindow !== false,
+      window: startup.mainWindow
+    }),
     startup.initializeRuntimeServices()
   ]);
   if (rendererResult.status === 'rejected') {

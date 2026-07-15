@@ -8,7 +8,11 @@ import { requestDevShellRestart } from '../devShellRestartRequest.js';
 import { copyDiagnosticReport } from '../diagnostics/diagnosticBundle.js';
 import { getGlobalClipShortcutStatus } from '../globalClipShortcut.js';
 import { clearLinkPanelBrowsingData } from '../linkPanelBrowsingData.js';
-import { loadLoginItemSettingsState, saveLoginItemSettingsState } from '../loginItemSettings.js';
+import {
+  isLoginItemSettingsSupported,
+  loadLoginItemSettingsState,
+  saveLoginItemSettingsState
+} from '../loginItemSettings.js';
 import { preflightMacosGlobalClipPermission } from '../macosGlobalClipCopy.js';
 import { appendReadingPositionTraceRecord } from '../readingPositionTraceLog.js';
 import { allowWindowCloseWithoutReadingProgressFlush, flushWindowReadingProgress } from '../readingProgressWindowFlush.js';
@@ -128,7 +132,7 @@ export function getDesktopHostCapabilities(
     globalCapturePermission,
     globalCaptureSupported: platform === 'win32' || platform === 'darwin',
     globalCaptureToastPositionSupported: platform === 'darwin',
-    loginItemSupported: platform === 'win32' && packaged
+    loginItemSupported: isLoginItemSettingsSupported(platform, packaged)
   };
 }
 

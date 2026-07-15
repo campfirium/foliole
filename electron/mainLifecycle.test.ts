@@ -138,7 +138,7 @@ it('loads the static workspace shell before runtime services and activates React
   expect(mocks.registerAttachmentProtocol).toHaveBeenCalledTimes(1);
   expect(firstInvocationOrder(mocks.registerAttachmentProtocol)).toBeLessThan(firstInvocationOrder(loadMainWindow));
   expect(firstInvocationOrder(loadMainWindow)).toBeLessThan(firstInvocationOrder(activateMainWindow));
-  expect(mocks.presentInitialRendererWindow).toHaveBeenCalledWith(window);
+  expect(mocks.presentInitialRendererWindow).toHaveBeenCalledWith(window, { show: true });
   expect(activateMainWindow).toHaveBeenCalledWith(window);
   expect(firstInvocationOrder(activateMainWindow)).toBeLessThan(firstInvocationOrder(mocks.prepareGlobalClipToInboxWindows));
 });

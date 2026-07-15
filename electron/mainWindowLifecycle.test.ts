@@ -3,6 +3,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
+  applyStartupWindowPresentation: vi.fn(),
   focusWindow: vi.fn(),
   pairingHandler: null as (() => void) | null,
   presentInitialRendererWindow: vi.fn().mockResolvedValue(undefined),
@@ -13,6 +14,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('./runtimeMainSupport.js', () => ({ focusWindow: mocks.focusWindow }));
 vi.mock('./windowRuntimeDiagnostics.js', () => ({
+  applyStartupWindowPresentation: mocks.applyStartupWindowPresentation,
   presentInitialRendererWindow: mocks.presentInitialRendererWindow
 }));
 vi.mock('./sync/lanWorkspaceSyncServer.js', () => ({
@@ -54,6 +56,7 @@ it('restores a hidden main window without creating another one', async () => {
   }, onWindowReady)).resolves.toBe(window);
 
   expect(window.show).toHaveBeenCalledTimes(1);
+  expect(mocks.applyStartupWindowPresentation).toHaveBeenCalledWith(window);
   expect(mocks.focusWindow).toHaveBeenCalledWith(window);
   expect(createMainWindow).not.toHaveBeenCalled();
   expect(onWindowReady).toHaveBeenCalledWith(window);

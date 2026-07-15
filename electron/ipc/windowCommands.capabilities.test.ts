@@ -20,7 +20,7 @@ it('reports desktop capabilities by host and packaging state', () => {
     globalCaptureShortcutRegistered: true,
     globalCaptureSupported: true,
     globalCaptureToastPositionSupported: true,
-    loginItemSupported: false
+    loginItemSupported: true
   });
   expect(getDesktopHostCapabilities('win32', false, {
     globalCaptureShortcutLabel: 'Alt+Shift+C',

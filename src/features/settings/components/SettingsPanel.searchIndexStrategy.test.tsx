@@ -4,11 +4,17 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import { FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY } from '../../../../lib/core/database/fullTextSearchIndexStrategy';
 import type { NativeInvoke } from '../../../../lib/platform/nativeContract';
+import type { RuntimeLoginItemSettingsState } from '../../../shared/platform/loginItemSettings';
 
 import { SettingsPanel } from './SettingsPanel';
 import { createProps, renderWithMouseGestureProvider } from './SettingsPanel.testUtils';
 
-let loginItemSettingsState = { enabled: false, effective: false, supported: true };
+let loginItemSettingsState: RuntimeLoginItemSettingsState = {
+  enabled: false,
+  effective: false,
+  status: 'disabled',
+  supported: true
+};
 
 function SearchSettingsHarness() {
   const [isOpen, setIsOpen] = useState(true);
@@ -31,13 +37,13 @@ function SearchSettingsHarness() {
 
 beforeEach(() => {
   window.localStorage.clear();
-  loginItemSettingsState = { enabled: false, effective: false, supported: true };
+  loginItemSettingsState = { enabled: false, effective: false, status: 'disabled', supported: true };
   const invoke = vi.fn(async (command: string) => {
     if (command === 'load_login_item_settings') {
       return loginItemSettingsState;
     }
     if (command === 'save_login_item_settings') {
-      return { enabled: true, effective: true, supported: true };
+      return { enabled: true, effective: true, status: 'enabled', supported: true };
     }
     if (command === 'load_search_index_rebuild_status') return null;
     if (command === 'save_app_settings_state') return null;
@@ -94,7 +100,7 @@ it('toggles launch at startup from the General System settings', async () => {
 });
 
 it('marks launch at startup unavailable when the runtime cannot manage it', async () => {
-  loginItemSettingsState = { enabled: false, effective: false, supported: false };
+  loginItemSettingsState = { enabled: false, effective: false, status: 'unsupported', supported: false };
   renderWithMouseGestureProvider(<SearchSettingsHarness />);
 
   const electronAPI = window.electronAPI;
@@ -105,5 +111,20 @@ it('marks launch at startup unavailable when the runtime cannot manage it', asyn
   expect(toggle).toBeDisabled();
   expect(toggle).toHaveAttribute('aria-checked', 'false');
   expect(screen.getByRole('heading', { name: 'System' })).toBeInTheDocument();
-  expect(screen.getByText('This is not available on macOS.')).toBeInTheDocument();
+  expect(screen.getByText('Automatic startup is unavailable in this build.')).toBeInTheDocument();
+});
+
+it('explains when macOS requires login item approval', async () => {
+  loginItemSettingsState = { enabled: true, effective: false, status: 'requires-approval', supported: true };
+  renderWithMouseGestureProvider(<SearchSettingsHarness />);
+
+  expect(await screen.findByText('Allow Foliole in System Settings > General > Login Items.')).toBeInTheDocument();
+  expect(screen.getByRole('switch', { name: 'Start Foliole automatically' })).toHaveAttribute('aria-checked', 'true');
+});
+
+it('reports a missing macOS login item as an error instead of disabled', async () => {
+  loginItemSettingsState = { enabled: false, effective: false, status: 'error', supported: true };
+  renderWithMouseGestureProvider(<SearchSettingsHarness />);
+
+  expect(await screen.findByText('macOS could not find this login item. Try turning it on again.')).toBeInTheDocument();
 });

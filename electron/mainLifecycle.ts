@@ -23,6 +23,7 @@ import { stopManagedInboxMonitor } from './import/managedInboxMonitor.js';
 import { disposeAssistantCommandAdapter } from './ipc/assistantCommands.js';
 import { appendBootEvent } from './ipc/boot.js';
 import { installAppMenu } from './ipc/menu.js';
+import { wasOpenedAtLogin } from './loginItemSettings.js';
 import { installMacosDailyDebugExitHandler } from './macosDailyDebugExit.js';
 import { startInitialMainWindow } from './mainStartup.js';
 import { installPairingFocusHandler, openOrCreateMainWindow, startCompanionSyncIfEnabled } from './mainWindowLifecycle.js';
@@ -164,15 +165,14 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
   let startupMainWindowPromise: Promise<BrowserWindow> | null = null;
   const openMainWindow = () => {
     if (startupMainWindowPromise) {
-      return startupMainWindowPromise.then((window) => {
-        externalDocumentFileOpen.setReadyWindow(window);
-        return window;
-      });
+      const pendingWindow = startupMainWindowPromise;
+      return pendingWindow.then(() => openOrCreateMainWindow(args, externalDocumentFileOpen.setReadyWindow));
     }
     return openOrCreateMainWindow(args, externalDocumentFileOpen.setReadyWindow);
   };
   installSingleInstanceGate(args.runtimeMode);
   installBeforeQuitLifecycle();
+  installActivateLifecycle(openMainWindow);
   app.on('second-instance', (_event, argv) => {
     void openMainWindow();
     externalDocumentFileOpen.enqueueFromArgv(argv);
@@ -196,6 +196,7 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
         installPairingFocusHandler: () => installPairingFocusHandler(openMainWindow),
         loadStartupErrorSurface: (input) => loadStartupErrorSurface({ ...input, loadMainWindow: args.loadMainWindow }),
         mainWindow,
+        showInitialWindow: !wasOpenedAtLogin(),
         startCompanionSyncIfEnabled: () => startCompanionSyncIfEnabled({
           appVersion: resolveFolioleAppVersion(app),
           isEnabled: isDesktopCompanionSyncEnabled,
@@ -210,7 +211,6 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
     } finally {
       startupMainWindowPromise = null;
     }
-    installActivateLifecycle(openMainWindow);
   });
   app.on('window-all-closed', () => {
     if (process.platform !== 'darwin' && process.platform !== 'win32') app.quit();

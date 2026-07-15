@@ -125,6 +125,18 @@ describe('window runtime startup visibility', () => {
     );
   });
 
+  it('defers a login-launched window without applying its presentation or showing it', async () => {
+    const window = createWindowMock();
+    const { presentInitialRendererWindow, setStartupWindowPresentation } = await import('./windowRuntimeDiagnostics.js');
+    setStartupWindowPresentation(window as never, { isFullScreen: false, isMaximized: true });
+
+    await presentInitialRendererWindow(window as never, { show: false });
+
+    expect(window.maximize).not.toHaveBeenCalled();
+    expect(window.show).not.toHaveBeenCalled();
+    expect(mocks.appendBootEvent).toHaveBeenCalledWith('window_initial-renderer-window-deferred', {});
+  });
+
 });
 
 describe('window runtime hidden native desktop presentation', () => {

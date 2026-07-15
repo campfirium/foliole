@@ -5,7 +5,7 @@ import { getMainWindow, setMainWindow } from './mainWindowRegistry.js';
 import type { StartupRendererView } from './rendererLoader.js';
 import { focusWindow } from './runtimeMainSupport.js';
 import { ensureLanWorkspaceSyncServer, setLanWorkspaceSyncPairRequestHandler } from './sync/lanWorkspaceSyncServer.js';
-import { presentInitialRendererWindow } from './windowRuntimeDiagnostics.js';
+import { applyStartupWindowPresentation, presentInitialRendererWindow } from './windowRuntimeDiagnostics.js';
 
 export interface MainWindowLifecycleRuntime {
   activateMainWindow: (window: BrowserWindow) => Promise<void>;
@@ -19,7 +19,10 @@ export async function openOrCreateMainWindow(
 ) {
   const existingWindow = getMainWindow();
   if (existingWindow) {
-    if (!existingWindow.isVisible()) existingWindow.show();
+    if (!existingWindow.isVisible()) {
+      applyStartupWindowPresentation(existingWindow);
+      existingWindow.show();
+    }
     focusWindow(existingWindow);
     onWindowReady(existingWindow);
     return existingWindow;

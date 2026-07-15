@@ -92,7 +92,7 @@ it('presents the startup shell on ready-to-show before the full renderer load co
   await vi.waitFor(() => expect(mainWindowArgs.loadMainWindow).toHaveBeenCalledTimes(1));
   mainWindow.emit('ready-to-show');
 
-  await vi.waitFor(() => expect(mocks.presentInitialRendererWindow).toHaveBeenCalledWith(mainWindow));
+  await vi.waitFor(() => expect(mocks.presentInitialRendererWindow).toHaveBeenCalledWith(mainWindow, { show: true }));
   expect(mocks.appendBootEvent).toHaveBeenCalledWith('main_window_shell_ready');
   expect(mocks.startFollowupTasks).not.toHaveBeenCalled();
 
@@ -101,6 +101,17 @@ it('presents the startup shell on ready-to-show before the full renderer load co
 
   expect(mocks.waitForRendererAppReady).toHaveBeenCalledTimes(1);
   expect(mocks.startFollowupTasks).toHaveBeenCalledTimes(1);
+});
+
+it('keeps the startup pipeline running while deferring a login-launched window', async () => {
+  const initializeRuntimeServices = vi.fn().mockResolvedValue(undefined);
+  const startup = createStartupArgs({ initializeRuntimeServices, showInitialWindow: false });
+
+  await startInitialMainWindow(mainWindowArgs, startup);
+
+  expect(mainWindowArgs.loadMainWindow).toHaveBeenCalledWith(startup.mainWindow);
+  expect(initializeRuntimeServices).toHaveBeenCalledTimes(1);
+  expect(mocks.presentInitialRendererWindow).toHaveBeenCalledWith(startup.mainWindow, { show: false });
 });
 
 it('starts desktop followup tasks when app_ready was already latched', async () => {

@@ -16,7 +16,9 @@ const mocks = vi.hoisted(() => ({
   initializeDatabase: vi.fn(),
   installAppMenu: vi.fn(),
   isDesktopCompanionSyncEnabled: vi.fn(() => false),
+  focusWindow: vi.fn(),
   presentInitialRendererWindow: vi.fn(),
+  wasOpenedAtLogin: vi.fn(() => false),
   registerAttachmentProtocol: vi.fn(),
   registerExtDocImageProtocol: vi.fn(),
   registerRemoteImageProtocol: vi.fn(),
@@ -64,12 +66,13 @@ vi.mock('./ipc/boot.js', () => ({ appendBootEvent: mocks.appendBootEvent }));
 vi.mock('./ipc/legacyWebviewStorage.js', () => ({ migrateLegacyWebviewStorage: vi.fn() }));
 vi.mock('./ipc/menu.js', () => ({ installAppMenu: mocks.installAppMenu }));
 vi.mock('./ipc/paths.js', () => ({ resolveAppPaths: mocks.resolveAppPaths }));
+vi.mock('./loginItemSettings.js', () => ({ wasOpenedAtLogin: mocks.wasOpenedAtLogin }));
 vi.mock('./mirror/mirrorSyncScheduler.js', () => ({ flushMirrorSync: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('./mirror/rebuildMirrorOutput.js', () => ({ backfillMissingMirrorOutput: vi.fn() }));
 vi.mock('./runtimeMainSupport.js', () => ({
   bindEmbeddedLinkPanelContents: vi.fn(),
   bindMainWindowNavigationGuard: vi.fn(),
-  focusWindow: vi.fn(),
+  focusWindow: mocks.focusWindow,
   installMainRuntimeDiagnostics: vi.fn()
 }));
 vi.mock('./windowRuntimeDiagnostics.js', () => ({
@@ -107,6 +110,8 @@ afterEach(async () => {
   mocks.ensureLanWorkspaceSyncServer.mockResolvedValue(undefined);
   mocks.isDesktopCompanionSyncEnabled.mockReset();
   mocks.isDesktopCompanionSyncEnabled.mockReturnValue(false);
+  mocks.wasOpenedAtLogin.mockReset();
+  mocks.wasOpenedAtLogin.mockReturnValue(false);
   const { resetDatabaseReadinessForTests } = await import('./database/databaseReadiness.js');
   resetDatabaseReadinessForTests();
   vi.resetModules();
@@ -140,6 +145,7 @@ it('reuses the startup main window when a second instance arrives during initial
   const windowCreation = createDeferred<typeof window>();
   const activateMainWindow = vi.fn().mockResolvedValue(undefined);
   const createMainWindow = vi.fn(() => windowCreation.promise as never);
+  mocks.wasOpenedAtLogin.mockReturnValue(true);
   mocks.app.whenReady.mockResolvedValue(undefined);
 
   const { installMainLifecycle } = await import('./mainLifecycle.js');
@@ -160,6 +166,9 @@ it('reuses the startup main window when a second instance arrives during initial
   windowCreation.resolve(window);
   await vi.waitFor(() => expect(activateMainWindow).toHaveBeenCalledWith(window));
   expect(createMainWindow).toHaveBeenCalledTimes(1);
+  expect(mocks.presentInitialRendererWindow).toHaveBeenCalledWith(window, { show: false });
+  expect(window.show).toHaveBeenCalled();
+  expect(mocks.focusWindow).toHaveBeenCalledWith(window);
 });
 
 it('prioritizes the workspace shell error when renderer and database startup both fail', async () => {

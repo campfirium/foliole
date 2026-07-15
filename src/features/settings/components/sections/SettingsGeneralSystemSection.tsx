@@ -23,7 +23,13 @@ function getOpenAtLoginDescription(state: RuntimeLoginItemSettingsState | null, 
   if (state && !state.supported) {
     return t('settings.general.openAtLogin.unsupported');
   }
-  if (state?.enabled && !state.effective) {
+  if (state?.status === 'requires-approval') {
+    return t('settings.general.openAtLogin.requiresApproval');
+  }
+  if (state?.status === 'error') {
+    return t('settings.general.openAtLogin.error');
+  }
+  if (state?.status === 'system-disabled') {
     return t('settings.general.openAtLogin.ineffective');
   }
   return t('settings.general.openAtLogin.description');
@@ -40,7 +46,12 @@ function OpenAtLoginRow(props: {
 
   const updateEnabled = async (nextEnabled: boolean) => {
     if (props.isPreview) {
-      props.setState({ ...props.state, enabled: nextEnabled, effective: nextEnabled });
+      props.setState({
+        ...props.state,
+        enabled: nextEnabled,
+        effective: nextEnabled,
+        status: nextEnabled ? 'enabled' : 'disabled'
+      });
       return;
     }
     setIsUpdating(true);
@@ -81,7 +92,7 @@ export function SettingsGeneralSystemSection({ previewDesktopSettings = false }:
 }) {
   const t = useTranslation();
   const [state, setState] = useState<RuntimeLoginItemSettingsState | null>(
-    previewDesktopSettings ? { effective: false, enabled: false, supported: true } : null
+    previewDesktopSettings ? { effective: false, enabled: false, status: 'disabled', supported: true } : null
   );
 
   useEffect(() => {

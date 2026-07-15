@@ -139,6 +139,7 @@ it('loads unsupported login item settings outside the packaged Windows app', asy
   await expect(handleInvokeRequest({ command: 'load_login_item_settings' })).resolves.toEqual({
     enabled: false,
     effective: false,
+    status: 'unsupported',
     supported: false
   });
 
@@ -152,6 +153,7 @@ it('saves login item settings only when supported', async () => {
   })).resolves.toEqual({
     enabled: false,
     effective: false,
+    status: 'unsupported',
     supported: false
   });
 
