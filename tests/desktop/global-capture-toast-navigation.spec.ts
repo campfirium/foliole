@@ -52,6 +52,21 @@ async function sendGlobalCaptureNavigation(session: DesktopSession) {
   }, TARGET_NODE_ID);
 }
 
+async function clickToast(toastRendererPage: Page, toastInfo: {
+  clickPoint: { x: number; y: number };
+  hwndHex: string;
+}) {
+  if (process.platform !== 'win32') {
+    await toastRendererPage.locator('.toast').click();
+    return;
+  }
+  clickWindowsScreenPoint({
+    hwndHex: toastInfo.hwndHex,
+    x: Math.round(toastInfo.clickPoint.x),
+    y: Math.round(toastInfo.clickPoint.y)
+  });
+}
+
 async function showAndClickGlobalCaptureToast(session: DesktopSession) {
   const toastInfo = await session.electronApp.evaluate(async (_, toastTargetNodeId) => {
     const hook = globalThis.__folioleShowGlobalClipDesktopToastForTests;
@@ -104,11 +119,7 @@ async function showAndClickGlobalCaptureToast(session: DesktopSession) {
   if (!hitDiagnostics?.hitTagName) {
     throw new Error(`toast click target is missing: ${JSON.stringify(hitDiagnostics)}`);
   }
-  clickWindowsScreenPoint({
-    hwndHex: toastInfo.hwndHex,
-    x: Math.round(toastInfo.clickPoint.x),
-    y: Math.round(toastInfo.clickPoint.y)
-  });
+  await clickToast(toastRendererPage!, toastInfo);
 }
 
 async function maximizeMainWindow(session: DesktopSession) {

@@ -3,8 +3,10 @@ import { BrowserWindow, ipcMain } from 'electron';
 import { GLOBAL_CAPTURE_TOAST_OPEN_CHANNEL } from './globalCaptureChannels.js';
 import { waitForRendererAppReady } from './ipc/boot.js';
 import { IPC_GLOBAL_CAPTURE_NAVIGATE_CHANNEL } from './ipc/contracts.js';
+import { getMainWindow } from './mainWindowRegistry.js';
 
 let hasInstalledToastOpenHandler = false;
+let openMainWindowForToast: (() => Promise<BrowserWindow | null>) | undefined;
 const RENDERER_APP_READY_WAIT_MS = 300;
 
 declare global {
@@ -50,25 +52,24 @@ function activateWindowPreservingPresentation(window: BrowserWindow) {
   }, 0);
 }
 
-function isMainAppWindow(window: BrowserWindow) {
-  const url = window.webContents.getURL();
-  return url.startsWith('file:') || url.startsWith('http://localhost') || url.startsWith('http://127.0.0.1');
-}
-
-export function openGlobalCaptureTarget(nodeId: string, senderId: number) {
+export async function openGlobalCaptureTarget(
+  nodeId: string,
+  senderId: number,
+  openMainWindow = openMainWindowForToast
+) {
   if (process.env.FOLIOLE_ALLOW_PARALLEL_INSTANCE === '1') {
     globalThis.__folioleGlobalCaptureToastOpenForTests = { nodeId, senderId };
   }
-  for (const window of BrowserWindow.getAllWindows()) {
-    if (window.isDestroyed() || window.webContents.id === senderId || !isMainAppWindow(window)) {
-      continue;
-    }
-    activateWindowPreservingPresentation(window);
-    void sendGlobalCaptureNavigation(window, nodeId);
-  }
+  const window = getMainWindow() ?? await openMainWindow?.() ?? null;
+  if (!window || window.isDestroyed()) return;
+  activateWindowPreservingPresentation(window);
+  await sendGlobalCaptureNavigation(window, nodeId);
 }
 
-export function installGlobalCaptureToastOpenHandler() {
+export function installGlobalCaptureToastOpenHandler(args: {
+  openMainWindow?: () => Promise<BrowserWindow | null>;
+} = {}) {
+  if (args.openMainWindow) openMainWindowForToast = args.openMainWindow;
   if (hasInstalledToastOpenHandler) {
     return;
   }
@@ -76,7 +77,10 @@ export function installGlobalCaptureToastOpenHandler() {
   ipcMain.on(GLOBAL_CAPTURE_TOAST_OPEN_CHANNEL, (event, payload) => {
     const nodeId = typeof payload?.nodeId === 'string' ? payload.nodeId.trim() : '';
     if (nodeId) {
-      openGlobalCaptureTarget(nodeId, event.sender.id);
+      const senderId = event.sender.id;
+      const toastWindow = BrowserWindow.fromWebContents(event.sender);
+      if (toastWindow && !toastWindow.isDestroyed()) toastWindow.close();
+      void openGlobalCaptureTarget(nodeId, senderId);
     }
   });
 }

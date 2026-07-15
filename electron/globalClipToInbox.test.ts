@@ -153,88 +153,84 @@ it('imports selected text without opening the capture panel', async () => {
   expect(toast.update).toHaveBeenCalledWith('success', 'node-1', 'Clipboard preview');
 });
 
-it('shows an empty result when changed clipboard content is not importable', async () => {
-  const log = vi.fn();
-  const toast = createToastController();
-
-  await expect(runGlobalClipToInbox({
-    clipboardRef: createClipboardSnapshotSource('new selected text'),
-    log,
-    runImport: vi.fn(async () => null),
-    sendCopyShortcut: vi.fn(async () => true),
-    showCapturePanel: vi.fn(async () => ({ type: 'clipboard' as const })),
-    showDesktopToast: vi.fn(() => toast),
-    waitForClipboardChange: vi.fn(async () => true),
-    waitForReady: vi.fn(async () => undefined)
-  })).resolves.toBeNull();
-
-  expect(log).toHaveBeenCalledWith('global_clip_import_empty');
-  expect(toast.update).toHaveBeenCalledWith('empty');
-});
-
-it('opens the capture panel when copy cannot be sent', async () => {
-  const runImport = vi.fn();
-  const toast = createToastController();
-  const sendCopyShortcut = vi.fn(async () => false);
+it('opens the capture panel on macOS when the helper reports no clipboard write', async () => {
+  const sendCopyShortcut = vi.fn(async () => true);
   const showCapturePanel = vi.fn(async () => ({ type: 'cancelled' as const }));
+  const runMacosCopy = vi.fn(async () => ({ copyWritten: false, permission: 'granted' as const }));
 
-  await expect(runGlobalClipToInbox({
-    clipboardRef: createClipboardSnapshotSource('new selected text'),
-    log: vi.fn(),
-    runImport,
+  await runGlobalClipToInbox({
+    clipboardRef: createClipboardSnapshotSource('current clipboard'),
+    platform: 'darwin',
+    runMacosCopy,
     sendCopyShortcut,
     showCapturePanel,
-    showDesktopToast: vi.fn(() => toast),
-    waitForClipboardChange: vi.fn(async () => true),
+    showDesktopToast: vi.fn(() => createToastController()),
     waitForReady: vi.fn(async () => undefined)
-  })).resolves.toBeNull();
+  });
 
+  expect(sendCopyShortcut).not.toHaveBeenCalled();
+  expect(runMacosCopy).toHaveBeenCalledTimes(1);
   expect(showCapturePanel).toHaveBeenCalledTimes(1);
-  expect(sendCopyShortcut).toHaveBeenCalledTimes(1);
-  expect(runImport).not.toHaveBeenCalled();
-  expect(toast.update).not.toHaveBeenCalled();
 });
 
-it('shows a failure result when database readiness fails', async () => {
-  const log = vi.fn();
-  const runImport = vi.fn();
-  const toast = createToastController();
+it('imports on macOS when the helper observes a clipboard write with unchanged content', async () => {
+  const runImport = vi.fn(async () => ({
+    import_id: 'import-1', node_id: 'node-1', source_kind: 'text', source_name: 'Selection'
+  }));
+  const showCapturePanel = vi.fn();
 
-  await expect(runGlobalClipToInbox({
-    clipboardRef: createClipboardSnapshotSource('new selected text'),
-    log,
-    runImport,
-    sendCopyShortcut: vi.fn(async () => true),
-    showCapturePanel: vi.fn(async () => ({ type: 'clipboard' as const })),
-    showDesktopToast: vi.fn(() => toast),
-    waitForClipboardChange: vi.fn(async () => true),
-    waitForReady: vi.fn(async () => {
-      throw new Error('database unavailable');
-    })
-  })).resolves.toBeNull();
-
-  expect(log).toHaveBeenCalledWith('global_clip_database_not_ready', { error: expect.any(Error) });
-  expect(runImport).not.toHaveBeenCalled();
-  expect(toast.update).toHaveBeenCalledWith('importFailed');
-});
-
-it('logs import errors and shows a failure result', async () => {
-  const log = vi.fn();
-  const toast = createToastController();
-
-  await expect(runGlobalClipToInbox({
-    clipboardRef: createClipboardSnapshotSource('new selected text'),
-    log,
-    runImport: vi.fn(async () => {
-      throw new Error('unsupported clipboard content');
-    }),
-    sendCopyShortcut: vi.fn(async () => true),
-    showCapturePanel: vi.fn(async () => ({ type: 'clipboard' as const })),
-    showDesktopToast: vi.fn(() => toast),
-    waitForClipboardChange: vi.fn(async () => true),
+  await runGlobalClipToInbox({
+    clipboardRef: createClipboardSnapshotSource('same text'),
+    platform: 'darwin',
+    runImport: runImport as never,
+    runMacosCopy: vi.fn(async () => ({ copyWritten: true, permission: 'granted' as const })),
+    showCapturePanel,
+    showDesktopToast: vi.fn(() => createToastController()),
     waitForReady: vi.fn(async () => undefined)
-  })).resolves.toBeNull();
+  });
 
-  expect(log).toHaveBeenCalledWith('global_clip_import_failed', { error: expect.any(Error) });
-  expect(toast.update).toHaveBeenCalledWith('importFailed');
+  expect(runImport).toHaveBeenCalledTimes(1);
+  expect(showCapturePanel).not.toHaveBeenCalled();
+});
+
+it('imports on macOS when Electron observes a changed fingerprint after the helper returns', async () => {
+  const clipboardRef = createClipboardSnapshotSource('before');
+  const runImport = vi.fn(async () => ({
+    import_id: 'import-1', node_id: 'node-1', source_kind: 'text', source_name: 'Selection'
+  }));
+  const runMacosCopy = vi.fn(async () => {
+    clipboardRef.readText.mockReturnValue('after');
+    clipboardRef.readBuffer.mockImplementation((format: string) => (
+      format === 'text/plain' ? Buffer.from('after') : Buffer.alloc(0)
+    ));
+    return { copyWritten: false, permission: 'granted' as const };
+  });
+
+  await runGlobalClipToInbox({
+    clipboardRef,
+    platform: 'darwin',
+    runImport: runImport as never,
+    runMacosCopy,
+    showCapturePanel: vi.fn(),
+    showDesktopToast: vi.fn(() => createToastController()),
+    waitForReady: vi.fn(async () => undefined)
+  });
+
+  expect(runImport).toHaveBeenCalledTimes(1);
+});
+
+it('shows permission guidance on macOS when accessibility is denied', async () => {
+  const showCapturePanel = vi.fn();
+  const showDesktopToast = vi.fn(() => createToastController());
+
+  await runGlobalClipToInbox({
+    clipboardRef: createClipboardSnapshotSource('current clipboard'),
+    platform: 'darwin',
+    runMacosCopy: vi.fn(async () => ({ copyWritten: false, permission: 'denied' as const })),
+    showCapturePanel,
+    showDesktopToast
+  });
+
+  expect(showDesktopToast).toHaveBeenCalledWith('permissionRequired');
+  expect(showCapturePanel).not.toHaveBeenCalled();
 });

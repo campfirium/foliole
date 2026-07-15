@@ -143,6 +143,7 @@ const RUNTIME_MIRRORED_APP_SETTING_NAMES = [
   'importManagementActivePage',
   'globalClipExistingClipboardFallbackEnabled',
   'globalClipHintVisible',
+  'globalClipToastPosition',
   'managedInboxPath',
   'commandRecents',
   'nodePaletteRecents',

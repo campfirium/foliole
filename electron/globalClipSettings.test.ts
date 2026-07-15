@@ -8,7 +8,11 @@ vi.mock('./database/settingsStore.js', () => ({ loadJsonSetting }));
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../src/shared/config/appSettings.js';
 
-import { isExistingClipboardFallbackEnabled } from './globalClipSettings.js';
+import {
+  getGlobalClipToastPosition,
+  isExistingClipboardFallbackEnabled,
+  resolveGlobalClipToastPosition
+} from './globalClipSettings.js';
 
 beforeEach(() => {
   loadJsonSetting.mockReset();
@@ -33,4 +37,18 @@ it('keeps existing clipboard fallback enabled for malformed values', () => {
   });
 
   expect(isExistingClipboardFallbackEnabled()).toBe(true);
+});
+
+it('defaults capture confirmations to the top right only on macOS', () => {
+  expect(resolveGlobalClipToastPosition(undefined, 'darwin')).toBe('top-right');
+  expect(resolveGlobalClipToastPosition(undefined, 'win32')).toBe('bottom-right');
+  expect(resolveGlobalClipToastPosition('top-right', 'linux')).toBe('bottom-right');
+});
+
+it('loads an explicit macOS capture confirmation position', () => {
+  loadJsonSetting.mockReturnValue({
+    [APP_SETTINGS_STORAGE_KEYS.globalClipToastPosition]: 'bottom-right'
+  });
+
+  expect(getGlobalClipToastPosition('darwin')).toBe('bottom-right');
 });

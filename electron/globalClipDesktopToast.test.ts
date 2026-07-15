@@ -17,6 +17,10 @@ const { electronMocks } = vi.hoisted(() => {
         shouldUseDarkColors: false
       },
       screen: {
+        getCursorScreenPoint: vi.fn(() => ({ x: 500, y: 400 })),
+        getDisplayNearestPoint: vi.fn(() => ({
+          workArea: { height: 900, width: 1400, x: 0, y: 0 }
+        })),
         getPrimaryDisplay: vi.fn(() => ({
           workArea: { height: 900, width: 1400, x: 0, y: 0 }
         }))
@@ -28,6 +32,7 @@ const waitForRendererAppReady = vi.hoisted(() => vi.fn<() => Promise<void>>(asyn
 
 vi.mock('electron', () => electronMocks);
 vi.mock('./ipc/boot.js', () => ({ waitForRendererAppReady }));
+vi.mock('./globalClipSettings.js', () => ({ getGlobalClipToastPosition: () => 'top-right' }));
 
 import {
   prepareGlobalClipDesktopToastWindow,
@@ -46,6 +51,7 @@ function createToastWindow() {
     on: vi.fn(),
     setAlwaysOnTop: vi.fn(),
     setIgnoreMouseEvents: vi.fn(),
+    setPosition: vi.fn(),
     showInactive: vi.fn(),
     webContents: {
       id: 42,
@@ -101,6 +107,7 @@ it('shows an app-owned desktop toast and closes it automatically', async () => {
   await flushToastLoad(toastWindow);
 
   expect(electronMocks.BrowserWindow).toHaveBeenCalledWith(expect.objectContaining({
+    acceptFirstMouse: process.platform === 'darwin',
     alwaysOnTop: true,
     backgroundColor: '#00000000',
     focusable: true,
@@ -112,6 +119,8 @@ it('shows an app-owned desktop toast and closes it automatically', async () => {
     x: 1020,
     y: 788
   }));
+  expect(toastWindow.setPosition).toHaveBeenCalledWith(1020, -4, false);
+  expect(electronMocks.screen.getDisplayNearestPoint).toHaveBeenCalledWith({ x: 500, y: 400 });
   const windowCalls = JSON.stringify(electronMocks.BrowserWindow.mock.calls).replaceAll('\\\\', '/');
   expect(windowCalls).toContain('/app/electron/globalCaptureToastPreload.cjs');
   expect(toastWindow.setAlwaysOnTop).toHaveBeenCalledWith(true, 'screen-saver');
@@ -132,7 +141,7 @@ it('shows an app-owned desktop toast and closes it automatically', async () => {
   expect(html).toContain('height:18px');
   expect(html).not.toContain('class="badge"');
 
-  vi.advanceTimersByTime(3000);
+  vi.advanceTimersByTime(process.platform === 'darwin' ? 5000 : 3000);
 
   expect(toastWindow.close).toHaveBeenCalledTimes(1);
 });
@@ -199,7 +208,7 @@ it('updates the same pending toast before closing it', async () => {
     { nodeId: 'node-1' }
   );
 
-  vi.advanceTimersByTime(3000);
+  vi.advanceTimersByTime(process.platform === 'darwin' ? 5000 : 3000);
 
   expect(toastWindow.close).toHaveBeenCalledTimes(1);
 });

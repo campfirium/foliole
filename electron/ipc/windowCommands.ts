@@ -6,8 +6,10 @@ import { resolveFolioleAppVersion } from '../appVersion.js';
 import { isAppQuittingForBackgroundPresence } from '../backgroundPresence.js';
 import { requestDevShellRestart } from '../devShellRestartRequest.js';
 import { copyDiagnosticReport } from '../diagnostics/diagnosticBundle.js';
+import { getGlobalClipShortcutStatus } from '../globalClipShortcut.js';
 import { clearLinkPanelBrowsingData } from '../linkPanelBrowsingData.js';
 import { loadLoginItemSettingsState, saveLoginItemSettingsState } from '../loginItemSettings.js';
+import { preflightMacosGlobalClipPermission } from '../macosGlobalClipCopy.js';
 import { appendReadingPositionTraceRecord } from '../readingPositionTraceLog.js';
 import { allowWindowCloseWithoutReadingProgressFlush, flushWindowReadingProgress } from '../readingProgressWindowFlush.js';
 
@@ -116,12 +118,25 @@ async function handleWindowCommand(request: InvokeRequest, context?: InvokeConte
 
 export function getDesktopHostCapabilities(
   platform = process.platform,
-  packaged = app.isPackaged
+  packaged = app.isPackaged,
+  shortcutStatus = getGlobalClipShortcutStatus(platform),
+  globalCapturePermission = platform === 'win32' ? 'notRequired' : 'unavailable'
 ) {
   return {
-    globalCaptureSupported: platform === 'win32',
+    globalCaptureShortcutLabel: shortcutStatus.globalCaptureShortcutLabel,
+    globalCaptureShortcutRegistered: shortcutStatus.globalCaptureShortcutRegistered,
+    globalCapturePermission,
+    globalCaptureSupported: platform === 'win32' || platform === 'darwin',
+    globalCaptureToastPositionSupported: platform === 'darwin',
     loginItemSupported: platform === 'win32' && packaged
   };
+}
+
+async function loadDesktopHostCapabilities() {
+  const permission = process.platform === 'darwin'
+    ? await preflightMacosGlobalClipPermission()
+    : process.platform === 'win32' ? 'notRequired' : 'unavailable';
+  return getDesktopHostCapabilities(process.platform, app.isPackaged, getGlobalClipShortcutStatus(), permission);
 }
 
 function handleUtilityCommand(request: InvokeRequest) {
@@ -155,7 +170,7 @@ function handleUtilityCommand(request: InvokeRequest) {
     return listSystemFonts();
   }
   if (request.command === NATIVE_COMMANDS.loadDesktopHostCapabilities) {
-    return getDesktopHostCapabilities();
+    return loadDesktopHostCapabilities();
   }
   if (request.command === NATIVE_COMMANDS.loadLoginItemSettings) {
     return loadLoginItemSettingsState();

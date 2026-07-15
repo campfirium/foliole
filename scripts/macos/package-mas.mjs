@@ -1,10 +1,11 @@
 /* global console, process */
 
 import { execFileSync, spawnSync } from 'node:child_process';
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { prepareCodexHelper } from './prepare-codex-helper.mjs';
+import { prepareGlobalCaptureHelper } from './prepare-global-capture-helper.mjs';
 
 export { prepareCodexHelper } from './prepare-codex-helper.mjs';
 
@@ -20,7 +21,7 @@ export function createMasBuilderConfig(base, options) {
   const target = options.mode === 'development' ? 'mas-dev' : 'mas';
   const common = {
     appId: 'com.campfirium.foliole',
-    binaries: ['Contents/MacOS/codex'],
+    binaries: ['Contents/MacOS/codex', 'Contents/MacOS/Foliole Global Capture'],
     entitlements: 'build/entitlements.mas.plist',
     entitlementsInherit: 'build/entitlements.mas.inherit.plist',
     forceCodeSigning: true,
@@ -34,7 +35,8 @@ export function createMasBuilderConfig(base, options) {
     directories: { ...base.directories, output: 'artifacts/macos' },
     extraFiles: [
       ...(base.extraFiles ?? []),
-      { from: options.codexPath, to: 'MacOS/codex' }
+      { from: options.codexPath, to: 'MacOS/codex' },
+      { from: options.globalCaptureHelperPath, to: 'MacOS/Foliole Global Capture' }
     ],
     extraResources: [
       ...base.extraResources,
@@ -49,6 +51,10 @@ export function createMasBuilderConfig(base, options) {
     mas: { ...common },
     masDev: { ...common }
   };
+}
+
+export function cleanMasElectronOutput(root = ROOT, remove = rm) {
+  return remove(path.join(root, 'dist', 'electron'), { force: true, recursive: true });
 }
 
 export function findProvisioningProfile(name) {
@@ -93,11 +99,18 @@ async function main() {
   }
   const mode = process.argv.includes('--distribution') ? 'distribution' : 'development';
   const codexPath = await prepareCodexHelper();
+  const globalCaptureHelperPath = await prepareGlobalCaptureHelper();
   const provisioningProfile = findProvisioningProfile(PROFILE_NAMES[mode]);
   const base = JSON.parse(await readFile(path.join(ROOT, 'electron/builder.json'), 'utf8'));
-  const config = createMasBuilderConfig(base, { codexPath, mode, provisioningProfile });
+  const config = createMasBuilderConfig(base, {
+    codexPath,
+    mode,
+    globalCaptureHelperPath,
+    provisioningProfile
+  });
   const configPath = path.join(ROOT, `.tmp/electron-builder-${mode}.json`);
   await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`);
+  await cleanMasElectronOutput();
   for (const [label, command, args] of [
     ['build', 'npm', ['run', 'build']],
     ['electron compile', 'npm', ['run', 'electron:compile']],

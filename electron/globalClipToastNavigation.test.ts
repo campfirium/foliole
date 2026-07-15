@@ -5,6 +5,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 const { electronMocks } = vi.hoisted(() => ({
   electronMocks: {
     BrowserWindow: {
+      fromWebContents: vi.fn(),
       getAllWindows: vi.fn()
     },
     ipcMain: {
@@ -13,11 +14,13 @@ const { electronMocks } = vi.hoisted(() => ({
   }
 }));
 const waitForRendererAppReady = vi.hoisted(() => vi.fn<() => Promise<void>>(async () => undefined));
+const getMainWindow = vi.hoisted(() => vi.fn<() => unknown | null>(() => null));
 
 vi.mock('electron', () => electronMocks);
 vi.mock('./ipc/boot.js', () => ({
   waitForRendererAppReady
 }));
+vi.mock('./mainWindowRegistry.js', () => ({ getMainWindow }));
 
 function createWindow(id: number, overrides: Partial<{
   destroyed: boolean;
@@ -30,6 +33,7 @@ function createWindow(id: number, overrides: Partial<{
   let maximized = overrides.maximized ?? false;
   let minimized = overrides.minimized ?? false;
   return {
+    close: vi.fn(),
     focus: vi.fn(),
     isDestroyed: vi.fn(() => overrides.destroyed ?? false),
     isFullScreen: vi.fn(() => fullScreen),
@@ -64,6 +68,8 @@ beforeEach(() => {
   vi.useRealTimers();
   vi.resetModules();
   waitForRendererAppReady.mockResolvedValue(undefined);
+  electronMocks.BrowserWindow.fromWebContents.mockReturnValue(null);
+  getMainWindow.mockReturnValue(null);
 });
 
 it('routes a clicked global clip toast to visible main windows only', async () => {
@@ -79,6 +85,8 @@ it('routes a clicked global clip toast to visible main windows only', async () =
     prewarmedToastWindow,
     capturePanelWindow
   ]);
+  getMainWindow.mockReturnValue(targetWindow);
+  electronMocks.BrowserWindow.fromWebContents.mockReturnValue(senderToastWindow);
   const { installGlobalCaptureToastOpenHandler } = await import('./globalClipToastNavigation.js');
 
   installGlobalCaptureToastOpenHandler();
@@ -100,6 +108,7 @@ it('routes a clicked global clip toast to visible main windows only', async () =
     'foliole:global-capture-navigate',
     { nodeId: 'node-imported' }
   );
+  expect(senderToastWindow.close).toHaveBeenCalledTimes(1);
   expect(senderToastWindow.webContents.send).not.toHaveBeenCalled();
   expect(destroyedWindow.webContents.send).not.toHaveBeenCalled();
   expect(prewarmedToastWindow.show).not.toHaveBeenCalled();
@@ -108,9 +117,26 @@ it('routes a clicked global clip toast to visible main windows only', async () =
   expect(capturePanelWindow.webContents.send).not.toHaveBeenCalled();
 });
 
+it('creates a main window before navigating when the app has no main window', async () => {
+  const targetWindow = createWindow(1);
+  const openMainWindow = vi.fn(async () => targetWindow as never);
+  electronMocks.BrowserWindow.getAllWindows.mockReturnValue([]);
+  const { openGlobalCaptureTarget } = await import('./globalClipToastNavigation.js');
+
+  await openGlobalCaptureTarget('node-imported', 2, openMainWindow);
+
+  expect(openMainWindow).toHaveBeenCalledTimes(1);
+  expect(targetWindow.show).toHaveBeenCalledTimes(1);
+  expect(targetWindow.focus).toHaveBeenCalledTimes(1);
+  expect(targetWindow.webContents.send).toHaveBeenCalledWith(
+    'foliole:global-capture-navigate',
+    { nodeId: 'node-imported' }
+  );
+});
+
 it('keeps a maximized app window maximized when opening a clicked toast target', async () => {
   const targetWindow = createWindow(1, { maximized: true });
-  electronMocks.BrowserWindow.getAllWindows.mockReturnValue([targetWindow]);
+  getMainWindow.mockReturnValue(targetWindow);
   const { openGlobalCaptureTarget } = await import('./globalClipToastNavigation.js');
 
   openGlobalCaptureTarget('node-imported', 2);
@@ -123,7 +149,7 @@ it('keeps a maximized app window maximized when opening a clicked toast target',
 it('repairs a maximized app window if the native toast click minimizes it on the next task', async () => {
   vi.useFakeTimers();
   const targetWindow = createWindow(1, { maximized: true });
-  electronMocks.BrowserWindow.getAllWindows.mockReturnValue([targetWindow]);
+  getMainWindow.mockReturnValue(targetWindow);
   const { openGlobalCaptureTarget } = await import('./globalClipToastNavigation.js');
 
   openGlobalCaptureTarget('node-imported', 2);
@@ -137,7 +163,7 @@ it('repairs a maximized app window if the native toast click minimizes it on the
 
 it('keeps a fullscreen app window fullscreen when opening a clicked toast target', async () => {
   const targetWindow = createWindow(1, { fullScreen: true });
-  electronMocks.BrowserWindow.getAllWindows.mockReturnValue([targetWindow]);
+  getMainWindow.mockReturnValue(targetWindow);
   const { openGlobalCaptureTarget } = await import('./globalClipToastNavigation.js');
 
   openGlobalCaptureTarget('node-imported', 2);
@@ -154,7 +180,7 @@ it('waits for the renderer app-ready marker before sending the clicked toast tar
     releaseReady = resolve;
   }));
   const targetWindow = createWindow(1);
-  electronMocks.BrowserWindow.getAllWindows.mockReturnValue([targetWindow]);
+  getMainWindow.mockReturnValue(targetWindow);
   const { openGlobalCaptureTarget } = await import('./globalClipToastNavigation.js');
 
   openGlobalCaptureTarget('node-imported', 2);
@@ -174,7 +200,7 @@ it('sends the clicked toast target after a short timeout when app-ready is not o
   vi.useFakeTimers();
   waitForRendererAppReady.mockReturnValue(new Promise<void>(() => undefined));
   const targetWindow = createWindow(1);
-  electronMocks.BrowserWindow.getAllWindows.mockReturnValue([targetWindow]);
+  getMainWindow.mockReturnValue(targetWindow);
   const { openGlobalCaptureTarget } = await import('./globalClipToastNavigation.js');
 
   openGlobalCaptureTarget('node-imported', 2);

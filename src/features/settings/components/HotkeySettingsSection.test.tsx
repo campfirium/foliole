@@ -2,6 +2,7 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest';
 
 import type { NativeInvoke } from '../../../../lib/platform/nativeContract';
+import type { DesktopHostCapabilities } from '../../../shared/platform/desktopHostCapabilities';
 import type { RuntimeKeyboardInputPayload } from '../../../shared/platform/nativeHotkeyRecordingRuntime';
 import type { HotkeySettingItem } from '../model/hotkeySettings';
 
@@ -66,12 +67,19 @@ function createHotkeyItems(): HotkeySettingItem[] {
   ];
 }
 
-function installNativeHotkeyApi() {
+function installNativeHotkeyApi(capabilities: DesktopHostCapabilities = {
+  globalCapturePermission: 'notRequired',
+  globalCaptureShortcutLabel: 'Alt+Shift+C',
+  globalCaptureShortcutRegistered: true,
+  globalCaptureSupported: true,
+  globalCaptureToastPositionSupported: false,
+  loginItemSupported: true
+}) {
   let nativeKeyboardHandler: ((payload: RuntimeKeyboardInputPayload) => void) | null = null;
   const setNativeHotkeyRecordingActive = vi.fn();
   window.electronAPI = {
     invoke: vi.fn(async (command: string) => command === 'load_desktop_host_capabilities'
-      ? { globalCaptureSupported: true, loginItemSupported: true }
+      ? capabilities
       : null) as unknown as NativeInvoke,
     onManagedInboxUpdated: vi.fn(() => () => undefined),
     onNativeKeyboardInput: vi.fn((handler) => {
@@ -216,7 +224,27 @@ it('marks the global clip shortcut unavailable when the desktop host does not su
   await renderHotkeyPanel();
 
   const rows = within(screen.getByLabelText('Command shortcut list')).getAllByRole('listitem');
-  await waitFor(() => expect(rows[0]).toHaveTextContent('Not available on macOS'));
+  await waitFor(() => expect(rows[0]).toHaveTextContent('Not available on this platform'));
   expect(rows[0]).toHaveTextContent('Unavailable');
   expect(rows[0]).not.toHaveTextContent('Alt+Shift+C');
+});
+
+it('shows the macOS label and reports a registration conflict', async () => {
+  installNativeHotkeyApi({
+    globalCapturePermission: 'denied',
+    globalCaptureShortcutLabel: 'Command+Shift+C',
+    globalCaptureShortcutRegistered: false,
+    globalCaptureSupported: true,
+    globalCaptureToastPositionSupported: true,
+    loginItemSupported: false
+  });
+  await renderHotkeyPanel();
+
+  const rows = within(screen.getByLabelText('Command shortcut list')).getAllByRole('listitem');
+  await waitFor(() => expect(rows[0]).toHaveTextContent('Shortcut unavailable. Use the menu bar instead.'));
+  expect(rows[0]).toHaveTextContent('Allow Foliole in System Settings → Privacy & Security → Accessibility.');
+  expect(rows[0]).toHaveTextContent('Unavailable');
+  expect(rows[0]).not.toHaveTextContent('Command+Shift+C');
+  expect(rows[1]).toHaveTextContent('Capture confirmation position');
+  expect(within(rows[1]!).getByRole('combobox')).toHaveValue('top-right');
 });

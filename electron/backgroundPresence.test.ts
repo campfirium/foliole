@@ -9,9 +9,11 @@ const mocks = vi.hoisted(() => ({
   isPackaged: false as boolean,
   appQuit: vi.fn(),
   appendMainProcessDiagnosticLog: vi.fn(),
-  createFromPath: vi.fn((path: string): { isEmpty: () => boolean; path: string } => ({
+  setTemplateImage: vi.fn(),
+  createFromPath: vi.fn((path: string): { isEmpty: () => boolean; path: string; setTemplateImage: (value: boolean) => void } => ({
     isEmpty: (): boolean => false,
-    path
+    path,
+    setTemplateImage: mocks.setTemplateImage
   })),
   focusWindow: vi.fn(),
   trayInstances: [] as Array<{
@@ -127,6 +129,30 @@ it('single-click toggles the current main window before creating a new one', asy
   expect(openMainWindow).not.toHaveBeenCalled();
 });
 
+it('installs the macOS menu bar capture menu without the Windows click toggle', async () => {
+  const captureToInbox = vi.fn().mockResolvedValue(null);
+  const openMainWindow = vi.fn().mockResolvedValue(null);
+  const { installBackgroundTray } = await import('./backgroundPresence.js');
+
+  installBackgroundTray({ captureToInbox, getMainWindow: () => null, openMainWindow, platform: 'darwin' });
+
+  const tray = mocks.trayInstances[0]!;
+  expect(mocks.createFromPath).toHaveBeenCalledWith(path.join('/app', 'build', 'FolioleStatusTemplate.png'));
+  expect(mocks.setTemplateImage).toHaveBeenCalledWith(true);
+  const menu = tray.menu as Array<{ accelerator?: string; click?: () => void; label?: string }>;
+  expect(menu.map((item) => item.label).filter(Boolean)).toEqual([
+    'Capture to Inbox',
+    'Open Foliole',
+    'Quit Foliole'
+  ]);
+  expect(menu[0]!.accelerator).toBe('Command+Shift+C');
+  menu[0]!.click?.();
+  menu[1]!.click?.();
+  expect(captureToInbox).toHaveBeenCalledTimes(1);
+  expect(openMainWindow).toHaveBeenCalledTimes(1);
+  expect(tray.handlers.has('click')).toBe(false);
+});
+
 it('uses the installed Windows resource icon outside the app asar', async () => {
   const originalResourcesPath = process.resourcesPath;
   Object.defineProperty(process, 'resourcesPath', {
@@ -152,7 +178,11 @@ it('uses the installed Windows resource icon outside the app asar', async () => 
 });
 
 it('does not install a transparent tray when the icon cannot be decoded', async () => {
-  mocks.createFromPath.mockReturnValueOnce({ isEmpty: () => true, path: '/app/build/icon.ico' });
+  mocks.createFromPath.mockReturnValueOnce({
+    isEmpty: () => true,
+    path: '/app/build/icon.ico',
+    setTemplateImage: mocks.setTemplateImage
+  });
   const { installBackgroundTray } = await import('./backgroundPresence.js');
 
   installBackgroundTray({

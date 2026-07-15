@@ -17,6 +17,10 @@ const { electronMocks } = vi.hoisted(() => {
         shouldUseDarkColors: false
       },
       screen: {
+        getCursorScreenPoint: vi.fn(() => ({ x: 500, y: 400 })),
+        getDisplayNearestPoint: vi.fn(() => ({
+          workArea: { height: 900, width: 1400, x: 0, y: 0 }
+        })),
         getPrimaryDisplay: vi.fn(() => ({
           workArea: { height: 900, width: 1400, x: 0, y: 0 }
         }))
@@ -28,6 +32,7 @@ const waitForRendererAppReady = vi.hoisted(() => vi.fn<() => Promise<void>>(asyn
 
 vi.mock('electron', () => electronMocks);
 vi.mock('./ipc/boot.js', () => ({ waitForRendererAppReady }));
+vi.mock('./globalClipSettings.js', () => ({ getGlobalClipToastPosition: () => 'top-right' }));
 
 import {
   prepareGlobalClipDesktopToastWindow,
@@ -45,6 +50,7 @@ function createToastWindow() {
     on: vi.fn(),
     setAlwaysOnTop: vi.fn(),
     setIgnoreMouseEvents: vi.fn(),
+    setPosition: vi.fn(),
     showInactive: vi.fn(),
     webContents: {
       id: 42,

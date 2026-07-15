@@ -160,12 +160,12 @@ it('skips restore when the clipboard changed after synthetic copy', async () => 
   await runGlobalClipToInbox({
     clipboardRef: clipboard.source,
     log,
-    runImport: vi.fn(),
-    sendCopyShortcut: vi.fn(async () => true),
-    showCapturePanel: vi.fn(async () => {
+    runImport: vi.fn(async () => {
       clipboard.state.text = 'manual copy';
-      return { type: 'cancelled' as const };
+      return null;
     }),
+    sendCopyShortcut: vi.fn(async () => true),
+    showCapturePanel: vi.fn(async () => ({ type: 'cancelled' as const })),
     showDesktopToast: vi.fn(() => createToastController()),
     waitForClipboardChange: vi.fn(async () => {
       clipboard.state.formats = ['FileNameW', 'text/plain'];

@@ -6,6 +6,7 @@ import { createMasSignOptions } from './sign-mas-app.mjs';
 it('uses exactly the sandbox inheritance profile for the embedded Codex tool', () => {
   const options = createMasSignOptions({
     app: '/tmp/Foliole.app',
+    type: 'development',
     optionsForFile: () => ({
       additionalArguments: [],
       entitlements: '/project/build/entitlements.mas.inherit.plist',
@@ -16,7 +17,14 @@ it('uses exactly the sandbox inheritance profile for the embedded Codex tool', (
   expect(options.optionsForFile('/tmp/Foliole.app/Contents/MacOS/codex')).toMatchObject({
     additionalArguments: ['--identifier', 'com.campfirium.foliole.codex'],
     entitlements: expect.stringMatching(/entitlements\.mas\.tool\.plist$/),
-    hardenedRuntime: true
+    hardenedRuntime: true,
+    timestamp: 'none'
+  });
+  expect(options.optionsForFile('/tmp/Foliole.app/Contents/MacOS/Foliole Global Capture')).toMatchObject({
+    additionalArguments: ['--identifier', 'com.campfirium.foliole.global-capture'],
+    entitlements: expect.stringMatching(/entitlements\.mas\.tool\.plist$/),
+    hardenedRuntime: true,
+    timestamp: 'none'
   });
   expect(options.optionsForFile('/tmp/Foliole.app/Contents/Frameworks/Foliole Helper.app')).toMatchObject({
     entitlements: '/project/build/entitlements.mas.inherit.plist'

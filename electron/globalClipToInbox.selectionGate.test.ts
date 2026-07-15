@@ -126,31 +126,58 @@ it('opens the capture panel when copy leaves the clipboard unchanged', async () 
   expect(showCapturePanel).toHaveBeenCalledTimes(1);
 });
 
-it('opens the capture panel when copied selection is not strict text', async () => {
+it.each([
+  ['HTML / rich text', ['text/html', 'text/plain']],
+  ['files', ['FileNameW', 'text/plain']]
+])('imports copied %s through the complete clipboard importer', async (_label, formats) => {
   const log = vi.fn();
-  const runImport = vi.fn();
+  const runImport = vi.fn(async () => ({
+    import_id: 'import-1', node_id: 'node-1', source_kind: 'clipboard', source_name: 'Selection'
+  }));
   const showCapturePanel = vi.fn(async () => ({ type: 'cancelled' as const }));
-  const showDesktopToast = vi.fn();
+  const toast = { close: vi.fn(), update: vi.fn() };
+  const showDesktopToast = vi.fn(() => toast);
   const sendCopyShortcut = vi.fn(async () => true);
   const waitForClipboardChange = vi.fn(async () => true);
 
   await expect(runGlobalClipToInbox({
-    clipboardRef: createClipboardSnapshotSource('C:\\Users\\me\\Desktop\\image.png', ['FileNameW', 'text/plain']),
+    clipboardRef: createClipboardSnapshotSource('copied content', formats),
     log,
-    runImport,
+    runImport: runImport as never,
     sendCopyShortcut,
     showCapturePanel,
     showDesktopToast,
     waitForClipboardChange,
     waitForReady: vi.fn(async () => undefined)
-  })).resolves.toBeNull();
+  })).resolves.toMatchObject({ import_id: 'import-1' });
 
   expect(sendCopyShortcut).toHaveBeenCalledTimes(1);
   expect(waitForClipboardChange).toHaveBeenCalledTimes(1);
-  expect(runImport).not.toHaveBeenCalled();
-  expect(showDesktopToast).not.toHaveBeenCalled();
-  expect(showCapturePanel).toHaveBeenCalledTimes(1);
-  expect(log).toHaveBeenCalledWith('global_clip_opening_capture_panel');
+  expect(runImport).toHaveBeenCalledTimes(1);
+  expect(showDesktopToast).toHaveBeenCalledWith('pending');
+  expect(showCapturePanel).not.toHaveBeenCalled();
+  expect(log).not.toHaveBeenCalledWith('global_clip_opening_capture_panel');
+});
+
+it('imports copied images without opening the capture panel', async () => {
+  clipboardImage.isEmpty.mockReturnValue(false);
+  const runImport = vi.fn(async () => ({
+    import_id: 'import-1', node_id: 'node-1', source_kind: 'image', source_name: 'Image'
+  }));
+  const showCapturePanel = vi.fn(async () => ({ type: 'cancelled' as const }));
+
+  await runGlobalClipToInbox({
+    clipboardRef: createClipboardSnapshotSource('', ['image/png']),
+    runImport: runImport as never,
+    sendCopyShortcut: vi.fn(async () => true),
+    showCapturePanel,
+    showDesktopToast: vi.fn(() => ({ close: vi.fn(), update: vi.fn() })),
+    waitForClipboardChange: vi.fn(async () => true),
+    waitForReady: vi.fn(async () => undefined)
+  });
+
+  expect(runImport).toHaveBeenCalledTimes(1);
+  expect(showCapturePanel).not.toHaveBeenCalled();
 });
 
 it('uses native Windows key events instead of WinForms SendKeys for copy', () => {

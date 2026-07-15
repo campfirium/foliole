@@ -46,9 +46,10 @@ export function installGlobalClipDesktopToastTestHook(showToast: ShowToast) {
     toast.update('success', input.targetNodeId, input.previewTitle ?? null);
     const toastWindow = await waitForToastWindow();
     const bounds = toastWindow.getBounds();
+    const clickPoint = { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
     return {
       bounds,
-      clickPoint: screen.dipToScreenPoint({ x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 }),
+      clickPoint: process.platform === 'win32' ? screen.dipToScreenPoint(clickPoint) : clickPoint,
       hwndHex: toastWindow.getNativeWindowHandle().toString('hex'),
       webContentsId: toastWindow.webContents.id
     };

@@ -4,7 +4,7 @@ import { openSettingsCategory } from './harness/settings';
 // SKIP: macOS-only native host acceptance | 2026-07-14 | revive: run on a darwin host
 test.skip(process.platform !== 'darwin', 'macOS host acceptance');
 
-test('exposes standard macOS menus and honest unsupported settings', async ({
+test('exposes standard macOS menus and the registered global capture shortcut', async ({
   desktopApp,
   desktopWindow
 }, testInfo) => {
@@ -33,9 +33,8 @@ test('exposes standard macOS menus and honest unsupported settings', async ({
   const captureRow = hotkeys.getByRole('listitem').filter({
     hasText: /Capture to Inbox \(global\)|捕捉到 Inbox（全局）/
   });
-  await expect(captureRow).toContainText(/Not available on macOS|macOS 暂不支持/);
-  await expect(captureRow).toContainText(/Unavailable|不可用/);
-  await expect(captureRow).not.toContainText('Alt+Shift+C');
+  await expect(captureRow).toContainText('Command+Shift+C');
+  await expect(captureRow).not.toContainText(/Unavailable|不可用/);
   await hotkeys.screenshot({ path: testInfo.outputPath('macos-host-readiness.png') });
 });
 

@@ -11,16 +11,37 @@ vi.mock('electron', () => ({
 import { getDesktopHostCapabilities } from './windowCommands.js';
 
 it('reports desktop capabilities by host and packaging state', () => {
-  expect(getDesktopHostCapabilities('darwin', true)).toEqual({
-    globalCaptureSupported: false,
+  expect(getDesktopHostCapabilities('darwin', true, {
+    globalCaptureShortcutLabel: 'Command+Shift+C',
+    globalCaptureShortcutRegistered: true
+  }, 'granted')).toEqual({
+    globalCapturePermission: 'granted',
+    globalCaptureShortcutLabel: 'Command+Shift+C',
+    globalCaptureShortcutRegistered: true,
+    globalCaptureSupported: true,
+    globalCaptureToastPositionSupported: true,
     loginItemSupported: false
   });
-  expect(getDesktopHostCapabilities('win32', false)).toEqual({
+  expect(getDesktopHostCapabilities('win32', false, {
+    globalCaptureShortcutLabel: 'Alt+Shift+C',
+    globalCaptureShortcutRegistered: false
+  })).toEqual({
+    globalCapturePermission: 'notRequired',
+    globalCaptureShortcutLabel: 'Alt+Shift+C',
+    globalCaptureShortcutRegistered: false,
     globalCaptureSupported: true,
+    globalCaptureToastPositionSupported: false,
     loginItemSupported: false
   });
-  expect(getDesktopHostCapabilities('win32', true)).toEqual({
+  expect(getDesktopHostCapabilities('win32', true, {
+    globalCaptureShortcutLabel: 'Alt+Shift+C',
+    globalCaptureShortcutRegistered: true
+  })).toEqual({
+    globalCapturePermission: 'notRequired',
+    globalCaptureShortcutLabel: 'Alt+Shift+C',
+    globalCaptureShortcutRegistered: true,
     globalCaptureSupported: true,
+    globalCaptureToastPositionSupported: false,
     loginItemSupported: true
   });
 });

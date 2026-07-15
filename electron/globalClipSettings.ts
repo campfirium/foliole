@@ -32,3 +32,18 @@ export function setGlobalClipHintVisible(visible: boolean) {
   nextSettings[APP_SETTINGS_STORAGE_KEYS.globalClipHintVisible] = visible ? 'true' : 'false';
   saveJsonSetting(APP_SETTINGS_KEY, nextSettings);
 }
+
+export type GlobalClipToastPosition = 'bottom-right' | 'top-right';
+
+export function resolveGlobalClipToastPosition(
+  rawValue: unknown,
+  platform: NodeJS.Platform = process.platform
+): GlobalClipToastPosition {
+  if (platform !== 'darwin') return 'bottom-right';
+  return rawValue === 'bottom-right' ? 'bottom-right' : 'top-right';
+}
+
+export function getGlobalClipToastPosition(platform: NodeJS.Platform = process.platform) {
+  const rawValue = loadAppSettingsRecord()[APP_SETTINGS_STORAGE_KEYS.globalClipToastPosition];
+  return resolveGlobalClipToastPosition(rawValue, platform);
+}

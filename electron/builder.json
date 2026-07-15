@@ -16,6 +16,14 @@
       "to": "build/icon.ico"
     },
     {
+      "from": "build/FolioleStatusTemplate.png",
+      "to": "build/FolioleStatusTemplate.png"
+    },
+    {
+      "from": "build/FolioleStatusTemplate@2x.png",
+      "to": "build/FolioleStatusTemplate@2x.png"
+    },
+    {
       "from": "scripts/agent-control",
       "to": "scripts/agent-control"
     }

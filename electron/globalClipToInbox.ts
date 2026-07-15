@@ -2,12 +2,8 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
 import {
-  app,
   clipboard,
-  globalShortcut,
-  type App,
-  type Clipboard,
-  type GlobalShortcut
+  type Clipboard
 } from 'electron';
 
 import { waitForDatabaseReady } from './database/databaseReadiness.js';
@@ -21,7 +17,6 @@ import {
 import {
   createClipboardRestoreContext,
   hasClipboardChanged,
-  hasStrictTextSelectionClipboard,
   readClipboardSnapshot,
   readRestorableClipboardSnapshot,
   type ClipboardSnapshot
@@ -30,8 +25,8 @@ import { prepareGlobalClipDesktopToastWindow, showGlobalClipDesktopToast } from 
 import type { GlobalClipDesktopToast, GlobalClipToastStatus } from './globalClipDesktopToastState.js';
 import { handleGlobalCapturePanelResult, importWithGlobalClipToast } from './globalClipImportRunner.js';
 import { runClipboardImport } from './ipc/importClipboard.js';
+import { runMacosGlobalClipCopy } from './macosGlobalClipCopy.js';
 
-const DEFAULT_SHORTCUT = 'Alt+Shift+C';
 const COPY_WAIT_TIMEOUT_MS = 220;
 const COPY_POLL_INTERVAL_MS = 25;
 const POWERSHELL_COPY_COMMAND = [
@@ -54,22 +49,20 @@ export function resolveWindowsCopyCommandForTests() {
 }
 
 export interface GlobalClipToInboxDeps {
-  appRef?: Pick<App, 'on'>;
   clipboardRef?: Pick<
     Clipboard,
     'availableFormats' | 'clear' | 'readBookmark' | 'readBuffer' | 'readHTML' | 'readImage' | 'readRTF' | 'readText' | 'write'
   >;
-  globalShortcutRef?: Pick<GlobalShortcut, 'register' | 'unregister'>;
   log?: (event: string, payload?: Record<string, unknown>) => void;
   platform?: NodeJS.Platform;
   runImport?: typeof runClipboardImport;
+  runMacosCopy?: typeof runMacosGlobalClipCopy;
   sendCopyShortcut?: () => Promise<boolean>;
   prepareCapturePanel?: () => void;
   raiseCapturePanel?: () => boolean;
   prepareDesktopToast?: () => void;
   showCapturePanel?: () => Promise<GlobalCapturePanelResult>;
   showDesktopToast?: (status: GlobalClipToastStatus) => GlobalClipDesktopToast;
-  shortcut?: string;
   waitForClipboardChange?: (
     before: ClipboardSnapshot,
     clipboardRef: NonNullable<GlobalClipToInboxDeps['clipboardRef']>
@@ -113,10 +106,41 @@ async function sendWindowsCopyShortcut() {
   }
 }
 
+async function runCopyAttempt(args: {
+  before: ClipboardSnapshot;
+  clipboardRef: NonNullable<GlobalClipToInboxDeps['clipboardRef']>;
+  platform: NodeJS.Platform;
+  runMacosCopy: typeof runMacosGlobalClipCopy;
+  sendCopyShortcut: NonNullable<GlobalClipToInboxDeps['sendCopyShortcut']>;
+  waitForChange: NonNullable<GlobalClipToInboxDeps['waitForClipboardChange']>;
+}) {
+  if (args.platform === 'darwin') return args.runMacosCopy();
+  if (args.platform !== 'win32' || !await args.sendCopyShortcut()) {
+    return { copyWritten: false, permission: 'granted' as const };
+  }
+  return {
+    copyWritten: await args.waitForChange(args.before, args.clipboardRef),
+    permission: 'granted' as const
+  };
+}
+
+function reportUnavailableCopy(
+  permission: 'denied' | 'granted' | 'unavailable',
+  log: NonNullable<GlobalClipToInboxDeps['log']>,
+  showDesktopToast: NonNullable<GlobalClipToInboxDeps['showDesktopToast']>
+) {
+  if (permission === 'granted') return false;
+  const denied = permission === 'denied';
+  log(denied ? 'global_clip_permission_required' : 'global_clip_copy_adapter_unavailable');
+  showDesktopToast(denied ? 'permissionRequired' : 'copyFailed');
+  return true;
+}
+
 export async function runGlobalClipToInbox(deps: GlobalClipToInboxDeps = {}) {
   const clipboardRef = deps.clipboardRef ?? clipboard;
   const log = deps.log ?? appendMainProcessDiagnosticLog;
   const runImport = deps.runImport ?? runClipboardImport;
+  const platform = deps.platform ?? (deps.sendCopyShortcut ? 'win32' : process.platform);
   const sendCopyShortcut = deps.sendCopyShortcut ?? sendWindowsCopyShortcut;
   const showCapturePanel = deps.showCapturePanel ?? showGlobalCapturePanel;
   const waitForChange = deps.waitForClipboardChange ?? waitForClipboardChange;
@@ -133,6 +157,8 @@ export async function runGlobalClipToInbox(deps: GlobalClipToInboxDeps = {}) {
       clipboardRef,
       log,
       runImport,
+      runMacosCopy: deps.runMacosCopy ?? runMacosGlobalClipCopy,
+      platform,
       sendCopyShortcut,
       showCapturePanel,
       showDesktopToast,
@@ -148,6 +174,8 @@ async function runGlobalClipToInboxOnce(args: {
   clipboardRef: NonNullable<GlobalClipToInboxDeps['clipboardRef']>;
   log: NonNullable<GlobalClipToInboxDeps['log']>;
   runImport: typeof runClipboardImport;
+  runMacosCopy: typeof runMacosGlobalClipCopy;
+  platform: NodeJS.Platform;
   sendCopyShortcut: NonNullable<GlobalClipToInboxDeps['sendCopyShortcut']>;
   showCapturePanel: NonNullable<GlobalClipToInboxDeps['showCapturePanel']>;
   showDesktopToast: NonNullable<GlobalClipToInboxDeps['showDesktopToast']>;
@@ -155,56 +183,44 @@ async function runGlobalClipToInboxOnce(args: {
   waitForReady: typeof waitForDatabaseReady;
 }) {
   const before = readRestorableClipboardSnapshot(args.clipboardRef);
-  let clipboardRestore: Parameters<typeof importWithGlobalClipToast>[0]['clipboardRestore'];
-  if (await args.sendCopyShortcut() && await args.waitForChange(before.snapshot, args.clipboardRef)) {
-    const after = readClipboardSnapshot(args.clipboardRef);
-    clipboardRestore = {
+  let copyResult;
+  try {
+    copyResult = await runCopyAttempt({
+      before: before.snapshot,
       clipboardRef: args.clipboardRef,
-      context: createClipboardRestoreContext(before, after)
-    };
-    if (hasStrictTextSelectionClipboard(after)) {
-      const toast = args.showDesktopToast('pending');
-      return importWithGlobalClipToast({
-        clipboardRestore,
-        log: args.log,
-        run: args.runImport,
-        toast,
-        waitForReady: args.waitForReady
-      });
-    }
+      platform: args.platform,
+      runMacosCopy: args.runMacosCopy,
+      sendCopyShortcut: args.sendCopyShortcut,
+      waitForChange: args.waitForChange
+    });
+  } catch (error) {
+    args.log('global_clip_copy_adapter_failed', { error });
+    args.showDesktopToast('copyFailed');
+    return null;
+  }
+  if (reportUnavailableCopy(copyResult.permission, args.log, args.showDesktopToast)) return null;
+  const after = readClipboardSnapshot(args.clipboardRef);
+  if (copyResult.copyWritten || hasClipboardChanged(before.snapshot, after)) {
+    const toast = args.showDesktopToast('pending');
+    return importWithGlobalClipToast({
+      clipboardRestore: {
+        clipboardRef: args.clipboardRef,
+        context: createClipboardRestoreContext(before, after)
+      },
+      log: args.log,
+      run: args.runImport,
+      toast,
+      waitForReady: args.waitForReady
+    });
   }
   args.log('global_clip_opening_capture_panel');
   return handleGlobalCapturePanelResult({
-    ...(clipboardRestore ? { clipboardRestore } : {}),
     log: args.log,
     panelResult: await args.showCapturePanel(),
     runImport: args.runImport,
     showDesktopToast: args.showDesktopToast,
     waitForReady: args.waitForReady
   });
-}
-
-export function installGlobalClipToInboxShortcut(deps: GlobalClipToInboxDeps = {}) {
-  const platform = deps.platform ?? process.platform;
-  if (platform !== 'win32') {
-    return false;
-  }
-  const appRef = deps.appRef ?? app;
-  const globalShortcutRef = deps.globalShortcutRef ?? globalShortcut;
-  const log = deps.log ?? appendMainProcessDiagnosticLog;
-  const shortcut = deps.shortcut ?? DEFAULT_SHORTCUT;
-  const registered = globalShortcutRef.register(shortcut, () => {
-    void runGlobalClipToInbox(deps).catch((error) => log('global_clip_to_inbox_failed', { error }));
-  });
-  if (!registered) {
-    log('global_clip_shortcut_registration_failed', { shortcut });
-    return false;
-  }
-  appRef.on('will-quit', () => {
-    globalShortcutRef.unregister(shortcut);
-  });
-  log('global_clip_shortcut_registered', { shortcut });
-  return true;
 }
 
 export function prepareGlobalClipToInboxWindows(deps: GlobalClipToInboxDeps = {}) {

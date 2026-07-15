@@ -5,93 +5,94 @@ import { beforeEach, expect, it, vi } from 'vitest';
 const { electronMocks } = vi.hoisted(() => ({
   electronMocks: {
     app: { on: vi.fn() },
-    clipboard: {},
-    globalShortcut: {
-      register: vi.fn(() => true),
-      unregister: vi.fn()
-    },
-    BrowserWindow: Object.assign(vi.fn(function BrowserWindow() {
-      return {};
-    }), { getAllWindows: vi.fn(() => []) }),
-    nativeTheme: { shouldUseDarkColors: false },
-    screen: {
-      getPrimaryDisplay: vi.fn(() => ({
-        workArea: { height: 900, width: 1400, x: 0, y: 0 }
-      }))
-    }
+    globalShortcut: { register: vi.fn(() => true), unregister: vi.fn() }
   }
 }));
 
 vi.mock('electron', () => electronMocks);
 vi.mock('./diagnostics/mainProcessDiagnostics.js', () => ({ appendMainProcessDiagnosticLog: vi.fn() }));
-vi.mock('./database/databaseReadiness.js', () => ({ waitForDatabaseReady: vi.fn(async () => undefined) }));
-vi.mock('./ipc/importClipboard.js', () => ({ runClipboardImport: vi.fn(async () => null) }));
 
-import { installGlobalClipToInboxShortcut, prepareGlobalClipToInboxWindows } from './globalClipToInbox.js';
+import {
+  getGlobalClipShortcutConfig,
+  getGlobalClipShortcutStatus,
+  installGlobalClipShortcut,
+  resetGlobalClipShortcutForTests
+} from './globalClipShortcut.js';
 
 beforeEach(() => {
   vi.clearAllMocks();
-  electronMocks.globalShortcut.register.mockReturnValue(true);
+  resetGlobalClipShortcutForTests();
 });
 
-it('registers and unregisters the Windows global clip shortcut', () => {
+it('provides one platform shortcut truth for Windows and macOS', () => {
+  expect(getGlobalClipShortcutConfig('win32')).toEqual({ accelerator: 'Alt+Shift+C', label: 'Alt+Shift+C' });
+  expect(getGlobalClipShortcutConfig('darwin')).toEqual({ accelerator: 'Command+Shift+C', label: 'Command+Shift+C' });
+  expect(getGlobalClipShortcutConfig('linux')).toBeNull();
+});
+
+it.each(['win32', 'darwin'] as const)('registers and unregisters on %s', (platform) => {
   const appRef = { on: vi.fn() };
-  const prepareCapturePanel = vi.fn();
-  const prepareDesktopToast = vi.fn();
+  const captureToInbox = vi.fn(async () => null);
   const globalShortcutRef = {
-    register: vi.fn(() => true),
-    unregister: vi.fn()
+    register: vi.fn<(accelerator: string, callback: () => void) => boolean>(() => true),
+    unregister: vi.fn<(accelerator: string) => void>()
   };
 
-  expect(installGlobalClipToInboxShortcut({
-    appRef,
-    globalShortcutRef,
-    prepareCapturePanel,
-    prepareDesktopToast,
-    platform: 'win32'
-  })).toBe(true);
+  expect(installGlobalClipShortcut({ appRef, captureToInbox, globalShortcutRef, platform })).toBe(true);
+  const accelerator = platform === 'darwin' ? 'Command+Shift+C' : 'Alt+Shift+C';
+  expect(globalShortcutRef.register).toHaveBeenCalledWith(accelerator, expect.any(Function));
+  expect(getGlobalClipShortcutStatus(platform).globalCaptureShortcutRegistered).toBe(true);
 
-  expect(globalShortcutRef.register).toHaveBeenCalledWith('Alt+Shift+C', expect.any(Function));
-  expect(prepareCapturePanel).not.toHaveBeenCalled();
-  expect(prepareDesktopToast).not.toHaveBeenCalled();
-  expect(prepareGlobalClipToInboxWindows({ prepareCapturePanel, prepareDesktopToast, platform: 'win32' })).toBe(true);
-  expect(prepareCapturePanel).toHaveBeenCalledTimes(1);
-  expect(prepareDesktopToast).toHaveBeenCalledTimes(1);
+  const callback = globalShortcutRef.register.mock.calls[0]?.[1];
+  callback?.();
+  expect(captureToInbox).toHaveBeenCalledTimes(1);
   const willQuit = appRef.on.mock.calls.find(([event]) => event === 'will-quit')?.[1] as (() => void) | undefined;
-  expect(willQuit).toBeTypeOf('function');
   willQuit?.();
-  expect(globalShortcutRef.unregister).toHaveBeenCalledWith('Alt+Shift+C');
+  expect(globalShortcutRef.unregister).toHaveBeenCalledWith(accelerator);
+  expect(getGlobalClipShortcutStatus(platform).globalCaptureShortcutRegistered).toBe(false);
 });
 
-it('does not register outside Windows', () => {
-  const globalShortcutRef = {
-    register: vi.fn(() => true),
-    unregister: vi.fn()
-  };
-
-  expect(installGlobalClipToInboxShortcut({
-    globalShortcutRef,
-    prepareCapturePanel: vi.fn(),
-    platform: 'linux'
-  })).toBe(false);
-
-  expect(globalShortcutRef.register).not.toHaveBeenCalled();
-  expect(prepareGlobalClipToInboxWindows({ prepareCapturePanel: vi.fn(), platform: 'linux' })).toBe(false);
-});
-
-it('logs shortcut registration failure without throwing', () => {
+it('reports registration failure without a fallback shortcut', () => {
   const log = vi.fn();
-  const globalShortcutRef = {
-    register: vi.fn(() => false),
-    unregister: vi.fn()
-  };
+  const globalShortcutRef = { register: vi.fn(() => false), unregister: vi.fn() };
 
-  expect(installGlobalClipToInboxShortcut({
+  expect(installGlobalClipShortcut({
+    captureToInbox: vi.fn(async () => null),
     globalShortcutRef,
     log,
-    prepareCapturePanel: vi.fn(),
-    platform: 'win32'
+    platform: 'darwin'
   })).toBe(false);
 
-  expect(log).toHaveBeenCalledWith('global_clip_shortcut_registration_failed', { shortcut: 'Alt+Shift+C' });
+  expect(log).toHaveBeenCalledWith('global_clip_shortcut_registration_failed', { shortcut: 'Command+Shift+C' });
+  expect(getGlobalClipShortcutStatus('darwin')).toEqual({
+    globalCaptureShortcutLabel: 'Command+Shift+C',
+    globalCaptureShortcutRegistered: false
+  });
+});
+
+it('reports registration exceptions without a fallback shortcut', () => {
+  const error = new Error('registration unavailable');
+  const log = vi.fn();
+  const globalShortcutRef = { register: vi.fn(() => { throw error; }), unregister: vi.fn() };
+
+  expect(installGlobalClipShortcut({
+    captureToInbox: vi.fn(async () => null),
+    globalShortcutRef,
+    log,
+    platform: 'darwin'
+  })).toBe(false);
+  expect(log).toHaveBeenCalledWith('global_clip_shortcut_registration_failed', {
+    error,
+    shortcut: 'Command+Shift+C'
+  });
+});
+
+it('does not register on unsupported hosts', () => {
+  const globalShortcutRef = { register: vi.fn(() => true), unregister: vi.fn() };
+  expect(installGlobalClipShortcut({
+    captureToInbox: vi.fn(async () => null),
+    globalShortcutRef,
+    platform: 'linux'
+  })).toBe(false);
+  expect(globalShortcutRef.register).not.toHaveBeenCalled();
 });

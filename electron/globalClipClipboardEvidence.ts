@@ -131,18 +131,3 @@ export function restoreClipboardIfUnchanged(args: {
     return false;
   }
 }
-
-export function hasStrictTextSelectionClipboard(snapshot: ClipboardSnapshot) {
-  return snapshot.text.trim().length > 0
-    && !snapshot.hasImage
-    && !snapshot.formats.some(isFileLikeClipboardFormat);
-}
-
-function isFileLikeClipboardFormat(format: string) {
-  const normalized = format.toLowerCase();
-  return normalized.includes('filename')
-    || normalized.includes('file name')
-    || normalized.includes('cf_hdrop')
-    || normalized.includes('text/uri-list')
-    || normalized.includes('filegroupdescriptor');
-}

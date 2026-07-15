@@ -58,7 +58,11 @@ vi.mock('./externalSearchBackgroundRefreshRuntime.js', () => ({
   stopExternalSearchBackgroundRefresh: vi.fn()
 }));
 vi.mock('./globalClipToastNavigation.js', () => ({ installGlobalCaptureToastOpenHandler: vi.fn() }));
-vi.mock('./globalClipToInbox.js', () => ({ installGlobalClipToInboxShortcut: vi.fn(), prepareGlobalClipToInboxWindows: mocks.prepareGlobalClipToInboxWindows }));
+vi.mock('./globalClipShortcut.js', () => ({ installGlobalClipShortcut: vi.fn() }));
+vi.mock('./globalClipToInbox.js', () => ({
+  prepareGlobalClipToInboxWindows: mocks.prepareGlobalClipToInboxWindows,
+  runGlobalClipToInbox: vi.fn()
+}));
 vi.mock('./backgroundPresence.js', () => ({
   installBackgroundTray: vi.fn(),
   markAppQuittingForBackgroundPresence: vi.fn()

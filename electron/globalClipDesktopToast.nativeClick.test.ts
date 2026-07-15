@@ -17,6 +17,10 @@ const { electronMocks } = vi.hoisted(() => {
         shouldUseDarkColors: false
       },
       screen: {
+        getCursorScreenPoint: vi.fn(() => ({ x: 500, y: 400 })),
+        getDisplayNearestPoint: vi.fn(() => ({
+          workArea: { height: 900, width: 1400, x: 0, y: 0 }
+        })),
         getPrimaryDisplay: vi.fn(() => ({
           workArea: { height: 900, width: 1400, x: 0, y: 0 }
         }))
@@ -28,8 +32,10 @@ const waitForRendererAppReady = vi.hoisted(() => vi.fn<() => Promise<void>>(asyn
 
 vi.mock('electron', () => electronMocks);
 vi.mock('./ipc/boot.js', () => ({ waitForRendererAppReady }));
+vi.mock('./globalClipSettings.js', () => ({ getGlobalClipToastPosition: () => 'top-right' }));
 
 import { resetGlobalClipDesktopToastWindowForTests, showGlobalClipDesktopToast } from './globalClipDesktopToast.js';
+import { clearMainWindowForTests, setMainWindow } from './mainWindowRegistry.js';
 
 function createToastWindow() {
   const closedHandlers: Array<() => void> = [];
@@ -47,6 +53,7 @@ function createToastWindow() {
     }),
     setAlwaysOnTop: vi.fn(),
     setIgnoreMouseEvents: vi.fn(),
+    setPosition: vi.fn(),
     showInactive: vi.fn(),
     webContents: {
       id: 42,
@@ -63,6 +70,7 @@ async function flushToastLoad(toastWindow: ReturnType<typeof createToastWindow>)
 }
 
 beforeEach(() => {
+  clearMainWindowForTests();
   resetGlobalClipDesktopToastWindowForTests();
   vi.clearAllMocks();
   vi.useRealTimers();
@@ -93,6 +101,7 @@ it('opens the success target from the native Windows mouse release message', asy
     return toastWindow;
   });
   electronMocks.BrowserWindow.getAllWindows.mockReturnValue([toastWindow, mainWindow]);
+  setMainWindow(mainWindow as never);
 
   const toast = showGlobalClipDesktopToast('pending');
   await flushToastLoad(toastWindow);

@@ -42,7 +42,11 @@ export type NativeUtilityCommandMap = {
   [NATIVE_COMMANDS.loadDesktopHostCapabilities]: {
     args: undefined;
     result: {
+      globalCapturePermission: 'denied' | 'granted' | 'notRequired' | 'unavailable';
+      globalCaptureShortcutLabel: string | null;
+      globalCaptureShortcutRegistered: boolean;
       globalCaptureSupported: boolean;
+      globalCaptureToastPositionSupported: boolean;
       loginItemSupported: boolean;
     };
   };
