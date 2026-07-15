@@ -139,7 +139,7 @@ export function configureRuntimeAppIdentity(
   const internalBuild = runtimeAppName === FOLIOLE_INTERNAL_APP_NAME;
   app.setName(internalBuild ? FOLIOLE_INTERNAL_PRODUCT_NAME : 'Foliole');
   const appRoot = resolvePathOverride(env.FOLIOLE_ELECTRON_APP_ROOT) ?? process.cwd();
-  applyMacosDevelopmentDockIcon(app, path.join(appRoot, 'build', 'icon.png'), platform);
+  applyMacosDevelopmentDockIcon(app, path.join(appRoot, 'build', 'icon-macos.png'), platform);
   const sampleLaunch = hasFlagOrValue(argv, '--sample-locale');
   const previewSandbox = env.FOLIOLE_PREVIEW_SANDBOX === '1' || hasFlag(argv, '--preview-sandbox') || sampleLaunch;
   if (previewSandbox) {

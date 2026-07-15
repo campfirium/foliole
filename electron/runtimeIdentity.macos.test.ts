@@ -21,5 +21,5 @@ it('brands an unpackaged macOS development runtime in the Dock', () => {
     FOLIOLE_ELECTRON_APP_ROOT: '/repo/foliole'
   });
 
-  expect(setIcon).toHaveBeenCalledWith(path.join('/repo/foliole', 'build', 'icon.png'));
+  expect(setIcon).toHaveBeenCalledWith(path.join('/repo/foliole', 'build', 'icon-macos.png'));
 });

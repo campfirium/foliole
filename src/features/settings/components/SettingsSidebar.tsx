@@ -18,7 +18,7 @@ import {
   type LucideIcon
 } from 'lucide-react';
 
-import folioleAppIconUrl from '../../../../assets/brand/foliole-app-icon.png?url';
+import folioleLeafUrl from '../../../../assets/brand/foliole-leaf-tight.svg?url';
 import { definedProps } from '../../../shared/lib/definedProps';
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import {
@@ -96,7 +96,7 @@ function SettingsSidebarBrand(props: { badge?: string }) {
         alt=""
         aria-hidden="true"
         className="size-8 shrink-0 object-contain"
-        src={folioleAppIconUrl}
+        src={folioleLeafUrl}
       />
       <div className="flex min-w-0 flex-1 items-baseline gap-2">
         <div className="truncate text-[1.05rem] font-semibold leading-5 text-foreground">Foliole</div>

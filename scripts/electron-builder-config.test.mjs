@@ -10,6 +10,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const builderConfigPath = resolve(__dirname, '../electron/builder.json');
 const installerNshPath = resolve(__dirname, '../build/installer.nsh');
 const packageJsonPath = resolve(__dirname, '../package.json');
+const appIconGeneratorPath = resolve(__dirname, 'brand/generate_app_icons.py');
 const releaseWorkflowPath = resolve(__dirname, '../.github/workflows/release-windows.yml');
 
 async function readBuilderConfig() {
@@ -162,6 +163,7 @@ describe('electron-builder release packaging config', () => {
     const config = await readBuilderConfig();
 
     expect(config.files).toContain('build/icon.png');
+    expect(config.files).toContain('build/icon-macos.png');
     expect(config.extraResources).toContainEqual({
       from: 'build/icon.ico',
       to: 'build/icon.ico'
@@ -172,6 +174,15 @@ describe('electron-builder release packaging config', () => {
     });
     expect(config.win.icon).toBe('build/icon.ico');
     expect(config.linux.icon).toBe('build/icon.png');
+    expect(config.mac.icon).toBe('build/icon.icns');
+  });
+
+  it('keeps macOS artwork inside the Dock optical-size canvas', async () => {
+    const generator = await readFile(appIconGeneratorPath, 'utf8');
+
+    expect(generator).toContain('MACOS_ARTWORK_SCALE = 0.825');
+    expect(generator).toContain('output = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))');
+    expect(generator).toContain('output.alpha_composite(artwork, (centered, centered))');
   });
 
   it('uses a per-user assisted Windows installer with directory choice, default shortcuts, and launch', async () => {

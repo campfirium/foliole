@@ -39,6 +39,7 @@
   "nativeRebuilder": "sequential",
   "files": [
     "build/icon.png",
+    "build/icon-macos.png",
     "dist/desktop/**/*",
     "electron/preload.cjs",
     "electron/globalCapturePanelPreload.cjs",
@@ -111,6 +112,7 @@
     "category": "Education"
   },
   "mac": {
+    "icon": "build/icon.icns",
     "target": ["dmg"],
     "category": "public.app-category.education"
   }

@@ -4,10 +4,10 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SOURCE_ICON = REPO_ROOT / "build" / "icon.png"
+SOURCE_LEAF = REPO_ROOT / "assets" / "brand" / "foliole-leaf-tight.png"
 RES_ROOT = REPO_ROOT / "android" / "app" / "src" / "main" / "res"
-LIGHT_BACKGROUND = "#FFFFFFFF"
-DARK_BACKGROUND = "#FF111411"
+LAUNCHER_BACKGROUND = "#FF8DA56D"
+BRAND_GREEN = (141, 165, 109, 255)
 SPLASH_BACKGROUND = (24, 29, 27, 255)
 
 LAUNCHER_SIZES = {
@@ -44,7 +44,7 @@ def color_resource(color: str) -> str:
 def alpha_crop(image: Image.Image) -> Image.Image:
     bbox = image.getbbox()
     if bbox is None:
-        raise ValueError(f"source icon has no visible pixels: {SOURCE_ICON}")
+        raise ValueError(f"source icon has no visible pixels: {SOURCE_LEAF}")
     return image.crop(bbox)
 
 
@@ -62,27 +62,45 @@ def centered(canvas: Image.Image, image: Image.Image) -> Image.Image:
     return canvas
 
 
-def generate_legacy_icons(source: Image.Image, leaf: Image.Image) -> None:
+def tinted_leaf(leaf: Image.Image) -> Image.Image:
+    tinted = Image.new("RGBA", leaf.size, BRAND_GREEN)
+    tinted.putalpha(leaf.getchannel("A"))
+    return tinted
+
+
+def add_brand_mark(canvas: Image.Image, leaf: Image.Image, disc_ratio: float) -> None:
+    disc_size = round(canvas.width * disc_ratio)
+    disc = Image.new("RGBA", (disc_size, disc_size), (255, 255, 255, 255))
+    disc_mask = Image.new("L", disc.size, 0)
+    ImageDraw.Draw(disc_mask).ellipse((0, 0, disc_size - 1, disc_size - 1), fill=255)
+    disc.putalpha(disc_mask)
+    centered(canvas, disc)
+    logo = fit(tinted_leaf(leaf), round(canvas.width * disc_ratio * 0.64), round(canvas.height * disc_ratio * 0.64))
+    x = round((canvas.width - logo.width) / 2 + canvas.width * 0.013)
+    y = round((canvas.height - logo.height) / 2 + canvas.height * 0.022)
+    canvas.alpha_composite(logo, (x, y))
+
+
+def generate_legacy_icons(leaf: Image.Image) -> None:
     for folder, size in LAUNCHER_SIZES.items():
-        square = Image.new("RGBA", (size, size), (255, 255, 255, 255))
-        centered(square, fit(leaf, round(size * 0.72), round(size * 0.72)))
+        square = Image.new("RGBA", (size, size), BRAND_GREEN)
+        add_brand_mark(square, leaf, 0.72)
         square.save(RES_ROOT / folder / "ic_launcher.png")
 
         circle = Image.new("RGBA", (size, size), (0, 0, 0, 0))
         mask = Image.new("L", (size, size), 0)
         ImageDraw.Draw(mask).ellipse((0, 0, size - 1, size - 1), fill=255)
-        bg = Image.new("RGBA", (size, size), (255, 255, 255, 255))
+        bg = Image.new("RGBA", (size, size), BRAND_GREEN)
         bg.putalpha(mask)
         circle.alpha_composite(bg)
-        centered(circle, fit(leaf, round(size * 0.62), round(size * 0.62)))
+        add_brand_mark(circle, leaf, 0.72)
         circle.save(RES_ROOT / folder / "ic_launcher_round.png")
 
 
 def generate_adaptive_foregrounds(leaf: Image.Image) -> None:
     for folder, size in FOREGROUND_SIZES.items():
         canvas = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-        icon = fit(leaf, round(size * 0.58), round(size * 0.58))
-        centered(canvas, icon)
+        add_brand_mark(canvas, leaf, 0.61)
         canvas.save(RES_ROOT / folder / "ic_launcher_foreground.png")
 
 
@@ -96,15 +114,14 @@ def generate_splashes(leaf: Image.Image) -> None:
 
 
 def main() -> None:
-    source = Image.open(SOURCE_ICON).convert("RGBA")
-    leaf = alpha_crop(source)
-    generate_legacy_icons(source, leaf)
+    leaf = alpha_crop(Image.open(SOURCE_LEAF).convert("RGBA"))
+    generate_legacy_icons(leaf)
     generate_adaptive_foregrounds(leaf)
     generate_splashes(leaf)
-    write_text(RES_ROOT / "values" / "ic_launcher_background.xml", color_resource(LIGHT_BACKGROUND))
+    write_text(RES_ROOT / "values" / "ic_launcher_background.xml", color_resource(LAUNCHER_BACKGROUND))
     write_text(
         RES_ROOT / "values-night" / "ic_launcher_background.xml",
-        color_resource(DARK_BACKGROUND),
+        color_resource(LAUNCHER_BACKGROUND),
     )
 
 

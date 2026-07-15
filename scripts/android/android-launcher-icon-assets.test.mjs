@@ -59,8 +59,8 @@ describe('Android launcher icon assets', () => {
     );
     const foregroundPng = await readFile(FOREGROUND_XXXHDPI);
 
-    expect(backgroundXml).toContain('#FFFFFFFF');
-    expect(nightBackgroundXml).toContain('#FF111411');
+    expect(backgroundXml).toContain('#FF8DA56D');
+    expect(nightBackgroundXml).toContain('#FF8DA56D');
     expect(foregroundPng.subarray(0, 4)).toEqual(PNG_SIGNATURE);
     expect(foregroundPng.readUInt32BE(16)).toBe(432);
     expect(foregroundPng.readUInt32BE(20)).toBe(432);
@@ -74,9 +74,8 @@ describe('Android launcher icon assets', () => {
     );
 
     expect(packageJson).toContain('"android:icons:generate"');
-    expect(generator).toContain('SOURCE_ICON = REPO_ROOT / "build" / "icon.png"');
-    expect(generator).toContain('LIGHT_BACKGROUND = "#FFFFFFFF"');
-    expect(generator).toContain('DARK_BACKGROUND = "#FF111411"');
-    expect(generator).toContain('round(size * 0.58)');
+    expect(generator).toContain('SOURCE_LEAF = REPO_ROOT / "assets" / "brand" / "foliole-leaf-tight.png"');
+    expect(generator).toContain('LAUNCHER_BACKGROUND = "#FF8DA56D"');
+    expect(generator).toContain('add_brand_mark(canvas, leaf, 0.61)');
   });
 });

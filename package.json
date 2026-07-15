@@ -122,6 +122,7 @@
     "demo:site:preview": "node scripts/windows/demo-site-preview.mjs",
     "android:schema:generate": "node --experimental-loader ./scripts/android/ts-js-extension-loader.mjs scripts/android/generate-companion-schema.mjs",
     "android:web:build": "npm run android:schema:generate && vite build --config vite.companion.config.ts",
+    "icons:generate": "python3 scripts/brand/generate_app_icons.py && python3 scripts/android/generate-launcher-icons.py",
     "android:icons:generate": "python3 scripts/android/generate-launcher-icons.py",
     "android:open": "node scripts/android/android-host.mjs open",
     "android:control": "node scripts/android/android-host.mjs control",

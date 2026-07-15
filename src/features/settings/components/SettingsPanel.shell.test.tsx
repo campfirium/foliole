@@ -30,7 +30,7 @@ it('uses the unified settings shell surfaces for sidebar and content area', () =
   expect(dialog.className).toContain('rounded-lg');
   expect(within(sidebar).getByText('Foliole')).toBeVisible();
   expect(within(sidebar).getByText(CURRENT_VERSION_LABEL)).toBeVisible();
-  expect(sidebar.querySelector('img[src*="foliole-app-icon"]')).not.toBeNull();
+  expect(sidebar.querySelector('img[src*="foliole-leaf-tight"]')).not.toBeNull();
   expect(within(sidebar).queryByRole('textbox', { name: 'Search settings' })).not.toBeInTheDocument();
   expect(screen.getByRole('textbox', { name: 'Search settings' })).toBeVisible();
   expect(screen.getByRole('heading', { level: 2, name: 'Appearance' })).toBeVisible();
