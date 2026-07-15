@@ -1,5 +1,7 @@
 import { app, globalShortcut, type App, type GlobalShortcut } from 'electron';
 
+import { getDefaultGlobalCaptureAccelerator } from '../lib/platform/globalCaptureShortcut.js';
+
 import { appendMainProcessDiagnosticLog } from './diagnostics/mainProcessDiagnostics.js';
 import { getGlobalClipShortcutAccelerators } from './globalClipSettings.js';
 
@@ -33,9 +35,8 @@ let willQuitBound = false;
 export function getGlobalClipShortcutConfig(
   platform: NodeJS.Platform = process.platform
 ): GlobalClipShortcutConfig | null {
-  if (platform === 'win32') return { accelerator: 'Alt+Shift+C', label: 'Alt+Shift+C' };
-  if (platform === 'darwin') return { accelerator: 'Command+Shift+C', label: 'Command+Shift+C' };
-  return null;
+  const accelerator = getDefaultGlobalCaptureAccelerator(platform);
+  return accelerator ? { accelerator, label: accelerator } : null;
 }
 
 export function getGlobalClipShortcutStatus(platform: NodeJS.Platform = process.platform) {

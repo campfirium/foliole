@@ -1,6 +1,11 @@
 import { expect, it } from 'vitest';
 
-import { formatShortcutSetDisplayEntries, formatShortcutSetDisplayLabel } from './shortcutDisplay';
+import {
+  formatSerializedShortcutDisplayLabel,
+  formatShortcutSetDisplayEntries,
+  formatShortcutSetDisplayLabel,
+  formatShortcutSetSearchLabel
+} from './shortcutDisplay';
 
 it('shows the current platform modifier for Ctrl and Cmd equivalent shortcuts', () => {
   const shortcuts = {
@@ -9,7 +14,7 @@ it('shows the current platform modifier for Ctrl and Cmd equivalent shortcuts', 
   };
 
   expect(formatShortcutSetDisplayLabel(shortcuts, 'Windows')).toBe('Ctrl+F');
-  expect(formatShortcutSetDisplayLabel(shortcuts, 'MacIntel')).toBe('Cmd+F');
+  expect(formatShortcutSetDisplayLabel(shortcuts, 'MacIntel')).toBe('⌘ F');
 });
 
 it('keeps real alternate shortcuts while folding platform equivalents', () => {
@@ -25,7 +30,7 @@ it('keeps real alternate shortcuts while folding platform equivalents', () => {
   ]);
   expect(formatShortcutSetDisplayEntries(shortcuts, 'MacIntel')).toEqual([
     { label: '[', slot: 'primary' },
-    { label: 'Cmd+Shift+L', slot: 'tertiary' }
+    { label: '⇧ ⌘ L', slot: 'tertiary' }
   ]);
 });
 
@@ -39,6 +44,18 @@ it('hides non-current platform shortcuts even when their keys differ', () => {
     { label: 'Ctrl+Alt+I', slot: 'primary' }
   ]);
   expect(formatShortcutSetDisplayEntries(shortcuts, 'MacIntel')).toEqual([
-    { label: 'Cmd+Alt+E', slot: 'secondary' }
+    { label: '⌥ ⌘ E', slot: 'secondary' }
   ]);
+});
+
+it('uses Apple modifier order and symbols only on macOS', () => {
+  expect(formatSerializedShortcutDisplayLabel('Cmd+Ctrl+Alt+Shift+ArrowLeft', 'MacIntel')).toBe('⌃ ⌥ ⇧ ⌘ ←');
+  expect(formatSerializedShortcutDisplayLabel('Cmd+Ctrl+Alt+Shift+ArrowLeft', 'Win32')).toBe('Cmd+Ctrl+Alt+Shift+ArrowLeft');
+});
+
+it('builds word aliases independently from the visible symbols', () => {
+  expect(formatShortcutSetSearchLabel({ primary: { key: 'c', metaKey: true, altKey: true } }))
+    .toContain('Command Cmd Meta');
+  expect(formatShortcutSetSearchLabel({ primary: { key: 'c', metaKey: true, altKey: true } }))
+    .toContain('Option Alt');
 });

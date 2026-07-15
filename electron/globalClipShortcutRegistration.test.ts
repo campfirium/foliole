@@ -28,7 +28,7 @@ beforeEach(() => {
 
 it('provides one platform shortcut truth for Windows and macOS', () => {
   expect(getGlobalClipShortcutConfig('win32')).toEqual({ accelerator: 'Alt+Shift+C', label: 'Alt+Shift+C' });
-  expect(getGlobalClipShortcutConfig('darwin')).toEqual({ accelerator: 'Command+Shift+C', label: 'Command+Shift+C' });
+  expect(getGlobalClipShortcutConfig('darwin')).toEqual({ accelerator: 'Command+Alt+Shift+C', label: 'Command+Alt+Shift+C' });
   expect(getGlobalClipShortcutConfig('linux')).toBeNull();
 });
 
@@ -41,7 +41,7 @@ it.each(['win32', 'darwin'] as const)('registers and unregisters on %s', (platfo
   };
 
   expect(installGlobalClipShortcut({ appRef, captureToInbox, globalShortcutRef, platform })).toBe(true);
-  const accelerator = platform === 'darwin' ? 'Command+Shift+C' : 'Alt+Shift+C';
+  const accelerator = platform === 'darwin' ? 'Command+Alt+Shift+C' : 'Alt+Shift+C';
   expect(globalShortcutRef.register).toHaveBeenCalledWith(accelerator, expect.any(Function));
   expect(getGlobalClipShortcutStatus(platform).globalCaptureShortcutRegistered).toBe(true);
 
@@ -65,9 +65,9 @@ it('reports registration failure without a fallback shortcut', () => {
     platform: 'darwin'
   })).toBe(false);
 
-  expect(log).toHaveBeenCalledWith('global_clip_shortcut_registration_failed', { shortcut: 'Command+Shift+C' });
+  expect(log).toHaveBeenCalledWith('global_clip_shortcut_registration_failed', { shortcut: 'Command+Alt+Shift+C' });
   expect(getGlobalClipShortcutStatus('darwin')).toEqual({
-    globalCaptureShortcutLabel: 'Command+Shift+C',
+    globalCaptureShortcutLabel: 'Command+Alt+Shift+C',
     globalCaptureShortcutRegistered: false
   });
 });
@@ -85,7 +85,7 @@ it('reports registration exceptions without a fallback shortcut', () => {
   })).toBe(false);
   expect(log).toHaveBeenCalledWith('global_clip_shortcut_registration_failed', {
     error,
-    shortcut: 'Command+Shift+C'
+    shortcut: 'Command+Alt+Shift+C'
   });
 });
 
@@ -128,8 +128,8 @@ it('uses the platform default until persisted settings are safe to read', () => 
     platform: 'darwin'
   });
 
-  expect(globalShortcutRef.register).toHaveBeenLastCalledWith('Command+Shift+C', expect.any(Function));
+  expect(globalShortcutRef.register).toHaveBeenLastCalledWith('Command+Alt+Shift+C', expect.any(Function));
   expect(refreshGlobalClipShortcutFromSettings(() => ['Command+Shift+X'])).toBe(true);
-  expect(globalShortcutRef.unregister).toHaveBeenCalledWith('Command+Shift+C');
+  expect(globalShortcutRef.unregister).toHaveBeenCalledWith('Command+Alt+Shift+C');
   expect(globalShortcutRef.register).toHaveBeenLastCalledWith('Command+Shift+X', expect.any(Function));
 });

@@ -44,7 +44,13 @@ function hotkeyMatchesFilter(item: HotkeySettingItem, filterMode: HotkeyFilterMo
 }
 
 function hotkeyMatchesQuery(item: HotkeySettingItem, query: string) {
-  const normalizedQuery = query.trim().toLowerCase();
+  const normalizedQuery = query
+    .replaceAll('⌘', ' command cmd ')
+    .replaceAll('⌥', ' option alt ')
+    .replaceAll('⇧', ' shift ')
+    .replaceAll('⌃', ' control ctrl ')
+    .trim()
+    .toLowerCase();
   if (!normalizedQuery) return true;
   const haystack = [item.title, item.commandId, item.section, item.shortcutSummaryLabel]
     .join(' ')

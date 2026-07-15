@@ -8,7 +8,7 @@ function keyEvent(init: KeyboardEventInit) {
   return new KeyboardEvent('keydown', init);
 }
 
-it('uses Cmd for Ctrl-only default shortcuts on macOS', () => {
+it('uses an explicit Apple-native default table on macOS', () => {
   const macShortcuts = getPlatformDefaultCommandShortcuts('MacIntel');
 
   expect(matchesShortcutSet(
@@ -23,25 +23,47 @@ it('uses Cmd for Ctrl-only default shortcuts on macOS', () => {
     keyEvent({ key: 'o', metaKey: true }),
     macShortcuts[APP_COMMAND_IDS.importSingleFile]
   )).toBe(true);
+  expect(macShortcuts[APP_COMMAND_IDS.openCommandPalette]).toEqual({
+    primary: { key: 'p', metaKey: true, shiftKey: true }
+  });
+  expect(macShortcuts[APP_COMMAND_IDS.openWorkspaceSearch]).toEqual({
+    primary: { key: 'f', metaKey: true, shiftKey: true }
+  });
+  expect(macShortcuts[APP_COMMAND_IDS.createFolder]).toEqual({
+    primary: { key: 'n', metaKey: true, shiftKey: true }
+  });
+  expect(macShortcuts[APP_COMMAND_IDS.renameNode]).toBeUndefined();
+  expect(macShortcuts[APP_COMMAND_IDS.enterPriorityMode]).toBeUndefined();
+  expect(macShortcuts[APP_COMMAND_IDS.toggleImmersiveMode]).toBeUndefined();
 });
 
 it('uses the host-specific global capture default in the unified shortcut map', () => {
   expect(getPlatformDefaultCommandShortcuts('MacIntel')[APP_COMMAND_IDS.globalCaptureToInbox]).toEqual({
-    primary: { key: 'c', metaKey: true, shiftKey: true }
+    primary: { key: 'c', altKey: true, metaKey: true, shiftKey: true }
   });
   expect(getPlatformDefaultCommandShortcuts('Win32')[APP_COMMAND_IDS.globalCaptureToInbox]).toEqual({
     primary: { key: 'c', altKey: true, shiftKey: true }
   });
 });
 
-it('deduplicates existing Ctrl and Cmd default pairs on macOS', () => {
+it('keeps only standard undo and redo defaults on macOS', () => {
   const macShortcuts = getPlatformDefaultCommandShortcuts('MacIntel');
 
   expect(macShortcuts[APP_COMMAND_IDS.undo]).toEqual({ primary: { key: 'z', metaKey: true } });
   expect(macShortcuts[APP_COMMAND_IDS.redo]).toEqual({
-    primary: { key: 'z', metaKey: true, shiftKey: true },
-    tertiary: { key: 'y', metaKey: true }
+    primary: { key: 'z', metaKey: true, shiftKey: true }
   });
+});
+
+it('leaves the Windows and Linux default table unchanged', () => {
+  expect(getPlatformDefaultCommandShortcuts({
+    includeBrowserReservedShortcuts: true,
+    platform: 'Win32'
+  })).toEqual(DEFAULT_APP_COMMAND_SHORTCUTS);
+  expect(getPlatformDefaultCommandShortcuts({
+    includeBrowserReservedShortcuts: true,
+    platform: 'Linux x86_64'
+  })).toEqual(DEFAULT_APP_COMMAND_SHORTCUTS);
 });
 
 describe('default command shortcuts', () => {

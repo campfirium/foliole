@@ -1,6 +1,7 @@
 import { CirclePlus, X } from 'lucide-react';
 import { Fragment, useEffect, useRef } from 'react';
 
+import { formatSerializedShortcutDisplayLabel } from '../../../shared/commands/shortcutDisplay';
 import { cn } from '../../../shared/lib/utils';
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import {
@@ -20,6 +21,19 @@ import {
 } from './HotkeySettingsSectionModel';
 
 const HOTKEY_ICON_BUTTON_CLASS_NAME = settingsResetButtonClassName('size-8');
+const MAC_SHORTCUT_SYMBOL_PATTERN = /[⌃⌥⇧⌘⌫↩⎋←↑→↓]/;
+
+function macShortcutTextClassName(label: string) {
+  return MAC_SHORTCUT_SYMBOL_PATTERN.test(label)
+    ? 'bg-transparent font-sans text-ui-lg font-normal text-foreground/70'
+    : undefined;
+}
+
+function macShortcutClearClassName(label: string) {
+  return MAC_SHORTCUT_SYMBOL_PATTERN.test(label)
+    ? 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'
+    : undefined;
+}
 
 interface HotkeySettingsSectionProps {
   items: HotkeySettingItem[];
@@ -62,7 +76,7 @@ function HotkeyChip(props: {
 
   return (
     <span
-      className={settingsHotkeyChipClassName(chipState)}
+      className={settingsHotkeyChipClassName(chipState, macShortcutTextClassName(displayLabel))}
       data-hotkey-recording={props.isRecording ? 'true' : undefined}
     >
       <button
@@ -77,7 +91,7 @@ function HotkeyChip(props: {
       {props.label && !props.isRecording ? (
         <button
           aria-label={t('settings.hotkeys.clearShortcut', { label: props.ariaLabel })}
-          className={settingsHotkeyChipClearClassName()}
+          className={settingsHotkeyChipClearClassName(macShortcutClearClassName(displayLabel))}
           onClick={() => props.onClearShortcut(props.commandId, props.slot)}
           type="button"
         >
@@ -90,7 +104,7 @@ function HotkeyChip(props: {
 
 function HotkeyDisplayChip(props: { label: string }) {
   return (
-    <span className={settingsHotkeyChipClassName('assigned')}>
+    <span className={settingsHotkeyChipClassName('assigned', macShortcutTextClassName(props.label))}>
       <span className="min-w-0 truncate">{props.label}</span>
     </span>
   );
@@ -101,8 +115,8 @@ function getDisplayEntries(item: HotkeySettingItem) {
     return item.shortcutDisplayEntries;
   }
   return [
-    item.primaryShortcutLabel ? { label: item.primaryShortcutLabel, slot: 'primary' as const } : null,
-    item.secondaryShortcutLabel ? { label: item.secondaryShortcutLabel, slot: 'secondary' as const } : null
+    item.primaryShortcutLabel ? { label: formatSerializedShortcutDisplayLabel(item.primaryShortcutLabel), slot: 'primary' as const } : null,
+    item.secondaryShortcutLabel ? { label: formatSerializedShortcutDisplayLabel(item.secondaryShortcutLabel), slot: 'secondary' as const } : null
   ].filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
 }
 
@@ -177,8 +191,8 @@ function HotkeyList(props: {
             secondaryShortcutLabel: draft!.secondary,
             shortcutSummaryLabel: joinShortcutLabels(draft!.primary, draft!.secondary),
             shortcutDisplayEntries: [
-              draft!.primary ? { label: draft!.primary, slot: 'primary' as const } : null,
-              draft!.secondary ? { label: draft!.secondary, slot: 'secondary' as const } : null
+              draft!.primary ? { label: formatSerializedShortcutDisplayLabel(draft!.primary), slot: 'primary' as const } : null,
+              draft!.secondary ? { label: formatSerializedShortcutDisplayLabel(draft!.secondary), slot: 'secondary' as const } : null
             ].filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
           }
           : item;

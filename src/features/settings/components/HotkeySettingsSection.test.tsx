@@ -11,6 +11,7 @@ import { createProps, renderWithMouseGestureProvider } from './SettingsPanel.tes
 
 afterEach(() => {
   delete window.electronAPI;
+  vi.restoreAllMocks();
 });
 
 const GLOBAL_CAPTURE_HOTKEY_ITEM: HotkeySettingItem = {
@@ -147,6 +148,39 @@ it('records, clears, and restores hotkeys from the settings section', async () =
   expect(onHotkeyUpdate).toHaveBeenCalledWith('review.good', 'primary', '');
 
   expect(screen.queryByRole('button', { name: 'Restore defaults' })).not.toBeInTheDocument();
+});
+
+it('shows a newly recorded macOS shortcut with Apple symbols immediately', async () => {
+  vi.spyOn(window.navigator, 'platform', 'get').mockReturnValue('MacIntel');
+  const nativeHotkeys = installNativeHotkeyApi();
+  const onHotkeyUpdate = vi.fn((_commandId, _slot, nextLabel: string) => ({
+    status: 'applied' as const,
+    normalizedShortcutLabel: nextLabel
+  }));
+  await renderHotkeyPanel(onHotkeyUpdate);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Shortcut for Create Folder' }));
+  act(() => {
+    nativeHotkeys.sendNativeKey({
+      altKey: false,
+      code: 'KeyG',
+      controlKey: false,
+      key: 'g',
+      metaKey: true,
+      shiftKey: true,
+      type: 'keyDown'
+    });
+  });
+
+  await waitFor(() => {
+    expect(onHotkeyUpdate).toHaveBeenCalledWith('workspace.createFolder', 'primary', 'Cmd+Shift+G');
+    const shortcutButton = screen.getByRole('button', { name: 'Shortcut for Create Folder' });
+    expect(shortcutButton.textContent).toBe('⇧ ⌘ G');
+    expect(shortcutButton.parentElement).toHaveClass('bg-transparent', 'font-sans', 'text-ui-lg', 'font-normal', 'text-foreground/70');
+    expect(shortcutButton.parentElement).not.toHaveClass('tracking-wide');
+    expect(shortcutButton.parentElement).not.toHaveClass('font-mono', 'text-ui-md', 'font-medium');
+    expect(screen.getByRole('button', { name: 'Clear Shortcut for Create Folder' })).toHaveClass('opacity-0', 'group-hover:opacity-100');
+  });
 });
 
 it('filters hotkeys by text, assignment state, and recorded search shortcut', async () => {

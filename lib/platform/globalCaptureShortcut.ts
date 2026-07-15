@@ -1,7 +1,7 @@
 export const GLOBAL_CAPTURE_COMMAND_ID = 'capture.globalToInbox';
 
-function defaultAccelerator(platform: NodeJS.Platform) {
-  if (platform === 'darwin') return 'Command+Shift+C';
+export function getDefaultGlobalCaptureAccelerator(platform: NodeJS.Platform) {
+  if (platform === 'darwin') return 'Command+Alt+Shift+C';
   if (platform === 'win32') return 'Alt+Shift+C';
   return null;
 }
@@ -24,7 +24,7 @@ function normalizeAccelerator(label: unknown) {
 }
 
 export function resolveGlobalCaptureAccelerators(rawOverrides: unknown, platform: NodeJS.Platform) {
-  const fallback = defaultAccelerator(platform);
+  const fallback = getDefaultGlobalCaptureAccelerator(platform);
   if (!fallback) return [];
   if (!rawOverrides || typeof rawOverrides !== 'object' || Array.isArray(rawOverrides)) return [fallback];
   const entry = (rawOverrides as Record<string, unknown>)[GLOBAL_CAPTURE_COMMAND_ID];

@@ -27,7 +27,7 @@ test('organizes controls and keeps capture behavior in General', async ({ deskto
   const globalCaptureShortcut = hotkeys.getByRole('button', {
     name: /^(Shortcut for Capture to Inbox \(global\)|Capture to Inbox \(global\) 的快捷键)$/
   });
-  await expect(globalCaptureShortcut).toHaveText(/Cmd\+Shift\+C|Alt\+Shift\+C/u);
+  await expect(globalCaptureShortcut).toHaveText(/⌥ ⇧ ⌘ C|Alt\+Shift\+C/u);
   await globalCaptureShortcut.click();
   await expect(globalCaptureShortcut).toHaveText(/^(Press hotkey\.\.\.|按下快捷键\.\.\.)$/);
   await desktopSession.electronApp.evaluate(({ BrowserWindow }) => {
@@ -44,7 +44,7 @@ test('organizes controls and keeps capture behavior in General', async ({ deskto
       }
     );
   });
-  await expect(globalCaptureShortcut).toHaveText('Cmd+Shift+X');
+  await expect(globalCaptureShortcut).toHaveText('⇧ ⌘ X');
 
   await expect.poll(() => desktopWindow.evaluate(async () => {
     const result = await globalThis.window?.electronAPI?.invoke('load_desktop_host_capabilities', {});

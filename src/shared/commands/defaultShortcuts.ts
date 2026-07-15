@@ -1,6 +1,7 @@
 import { canUseBrowserReservedAppShortcuts } from '../platform/browserReservedShortcuts';
 
 import { APP_COMMAND_IDS, type AppCommandId } from './ids';
+import { MACOS_DEFAULT_APP_COMMAND_SHORTCUTS } from './macosDefaultShortcuts';
 import type { CommandShortcut, CommandShortcutSet } from './types';
 
 export type DefaultCommandShortcuts = Partial<Record<AppCommandId, CommandShortcutSet>>;
@@ -99,26 +100,6 @@ function shouldKeepDefaultShortcut(commandId: AppCommandId, options: PlatformDef
   return commandId !== APP_COMMAND_IDS.toggleImmersiveMode || includeBrowserReservedShortcuts;
 }
 
-function getPlatformShortcut(shortcut: CommandShortcut, platform?: string): CommandShortcut {
-  if (!isMacPlatform(platform) || !shortcut.ctrlKey || shortcut.metaKey) {
-    return shortcut;
-  }
-  const platformShortcut = { ...shortcut, metaKey: true };
-  delete platformShortcut.ctrlKey;
-  return platformShortcut;
-}
-
-function getCommandPlatformShortcut(
-  commandId: AppCommandId,
-  shortcut: CommandShortcut,
-  platform?: string
-) {
-  if (commandId === APP_COMMAND_IDS.globalCaptureToInbox && isMacPlatform(platform)) {
-    return { key: 'c', metaKey: true, shiftKey: true };
-  }
-  return getPlatformShortcut(shortcut, platform);
-}
-
 function getShortcutSignature(shortcut: CommandShortcut) {
   return [
     `m:${shortcut.metaKey ? 1 : 0}`,
@@ -134,7 +115,10 @@ export function getPlatformDefaultCommandShortcuts(
 ): DefaultCommandShortcuts {
   const options = resolveDefaultShortcutOptions(platformOrOptions);
   const resolved: DefaultCommandShortcuts = {};
-  for (const [commandId, shortcuts] of Object.entries(DEFAULT_APP_COMMAND_SHORTCUTS)) {
+  const platformDefaults = isMacPlatform(options.platform)
+    ? MACOS_DEFAULT_APP_COMMAND_SHORTCUTS
+    : DEFAULT_APP_COMMAND_SHORTCUTS;
+  for (const [commandId, shortcuts] of Object.entries(platformDefaults)) {
     if (!shouldKeepDefaultShortcut(commandId as AppCommandId, options)) {
       continue;
     }
@@ -145,13 +129,12 @@ export function getPlatformDefaultCommandShortcuts(
       if (!shortcut) {
         continue;
       }
-      const platformShortcut = getCommandPlatformShortcut(commandId as AppCommandId, shortcut, options.platform);
-      const signature = getShortcutSignature(platformShortcut);
+      const signature = getShortcutSignature(shortcut);
       if (seen.has(signature)) {
         continue;
       }
       seen.add(signature);
-      nextSet[slot] = platformShortcut;
+      nextSet[slot] = shortcut;
     }
     resolved[commandId as AppCommandId] = nextSet;
   }

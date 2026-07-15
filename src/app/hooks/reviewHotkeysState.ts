@@ -10,7 +10,7 @@ import {
   setCommandShortcutOverrides,
   type CommandShortcutOverrides
 } from '../../shared/commands/keymap';
-import { formatShortcutSetDisplayEntries, formatShortcutSetDisplayLabel } from '../../shared/commands/shortcutDisplay';
+import { formatShortcutSetDisplayEntries, formatShortcutSetSearchLabel } from '../../shared/commands/shortcutDisplay';
 import { parseShortcutLabel } from '../../shared/commands/shortcuts';
 import type { CommandPaletteItem } from '../../shared/commands/types';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
@@ -50,7 +50,7 @@ export function mapPaletteItemsToHotkeyItems(items: CommandPaletteItem[], overri
       title: item.title,
       primaryShortcutLabel: item.shortcuts?.primary ? buildShortcutOverrideLabel(item.shortcuts.primary) : '',
       secondaryShortcutLabel: item.shortcuts?.secondary ? buildShortcutOverrideLabel(item.shortcuts.secondary) : '',
-      shortcutSummaryLabel: formatShortcutSetDisplayLabel(item.shortcuts),
+      shortcutSummaryLabel: formatShortcutSetSearchLabel(item.shortcuts),
       shortcutDisplayEntries,
       isCustomized: Boolean(overrides[item.id]?.primary || overrides[item.id]?.secondary),
       ...definedProps({ section: item.section })
