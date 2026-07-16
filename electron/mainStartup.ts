@@ -28,6 +28,7 @@ interface InitialMainWindowStartupArgs {
   failDatabaseStartup: (error: unknown) => void;
   initializeRuntimeServices: () => Promise<void>;
   installPairingFocusHandler: () => void;
+  initialStartupView?: StartupRendererView | null;
   loadStartupErrorSurface: (args: StartupErrorSurfaceArgs) => Promise<void>;
   mainWindow: BrowserWindow;
   showInitialWindow?: boolean;
@@ -59,9 +60,12 @@ async function waitForRendererShellReady(window: BrowserWindow, rendererLoadProm
 async function loadWorkspaceShell(args: {
   loadMainWindow: MainWindowStartupArgs['loadMainWindow'];
   showInitialWindow: boolean;
+  startupView?: StartupRendererView | null;
   window: BrowserWindow;
 }) {
-  const rendererLoadPromise = args.loadMainWindow(args.window);
+  const rendererLoadPromise = args.startupView === undefined
+    ? args.loadMainWindow(args.window)
+    : args.loadMainWindow(args.window, args.startupView);
   await waitForRendererShellReady(args.window, rendererLoadPromise);
   await appendBootEvent('main_window_shell_ready');
   await presentInitialRendererWindow(args.window, { show: args.showInitialWindow });
@@ -88,6 +92,7 @@ export async function startInitialMainWindow(
     loadWorkspaceShell({
       loadMainWindow: args.loadMainWindow,
       showInitialWindow: startup.showInitialWindow !== false,
+      ...(startup.initialStartupView === undefined ? {} : { startupView: startup.initialStartupView }),
       window: startup.mainWindow
     }),
     startup.initializeRuntimeServices()
@@ -101,6 +106,9 @@ export async function startInitialMainWindow(
     return;
   }
   try {
+    if (startup.initialStartupView?.kind === 'library-setup') {
+      await args.loadMainWindow(startup.mainWindow, null);
+    }
     await startup.startCompanionSyncIfEnabled();
     await args.activateMainWindow(startup.mainWindow);
     await appendBootEvent('main_window_ready');

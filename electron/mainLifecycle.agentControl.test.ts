@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   ensureAgentControlApiServer: vi.fn(),
   initializeDatabase: vi.fn(),
   presentInitialRendererWindow: vi.fn(),
+  restoreSecurityScopedBookmarks: vi.fn(),
   resolveAppPaths: vi.fn(() => ({ app_cache_dir: '/cache', app_log_dir: '/logs' }))
 }));
 
@@ -49,15 +50,30 @@ vi.mock('./globalClipShortcut.js', () => ({
   refreshGlobalClipShortcutFromSettings: vi.fn()
 }));
 vi.mock('./globalClipToInbox.js', () => ({ prepareGlobalClipToInboxWindows: vi.fn(), runGlobalClipToInbox: vi.fn() }));
+vi.mock('./initialLibrarySetup.js', () => ({
+  initializeRuntimeServicesAfterLibrarySetup: vi.fn(async (_preparation: unknown, initialize: () => Promise<void>, after?: () => void) => {
+    await initialize();
+    after?.();
+  }),
+  prepareInitialLibrarySetup: vi.fn(() => null),
+  quitIfInitialLibrarySetupIsAbandoned: vi.fn()
+}));
 vi.mock('./import/keepImportMonitor.js', () => ({ stopKeepImportMonitor: vi.fn() }));
 vi.mock('./import/managedInboxMonitor.js', () => ({ stopManagedInboxMonitor: vi.fn() }));
 vi.mock('./ipc/boot.js', () => ({ appendBootEvent: mocks.appendBootEvent }));
 vi.mock('./ipc/menu.js', () => ({ installAppMenu: vi.fn() }));
-vi.mock('./mainStartup.js', () => ({ startInitialMainWindow: vi.fn().mockResolvedValue(undefined) }));
+vi.mock('./mainStartup.js', () => ({
+  startInitialMainWindow: vi.fn((_args, startup: { initializeRuntimeServices: () => Promise<void> }) =>
+    startup.initializeRuntimeServices())
+}));
 vi.mock('./mainWindowLifecycle.js', () => ({ installPairingFocusHandler: vi.fn(), openOrCreateMainWindow: vi.fn(), startCompanionSyncIfEnabled: vi.fn() }));
 vi.mock('./mainWindowRegistry.js', () => ({ getMainWindow: vi.fn(), setMainWindow: vi.fn() }));
 vi.mock('./mirror/mirrorSyncScheduler.js', () => ({ flushMirrorSync: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('./runtimeMainSupport.js', () => ({ bindEmbeddedLinkPanelContents: vi.fn(), installMainRuntimeDiagnostics: vi.fn() }));
+vi.mock('./securityScopedBookmarks.js', () => ({
+  restoreSecurityScopedBookmarks: mocks.restoreSecurityScopedBookmarks,
+  stopSecurityScopedBookmarks: vi.fn()
+}));
 vi.mock('./startupErrorSurface.js', () => ({ loadStartupErrorSurface: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('./sync/desktopCompanionSyncPreference.js', () => ({ isDesktopCompanionSyncEnabled: vi.fn(() => false) }));
 vi.mock('./sync/lanWorkspaceSyncServer.js', () => ({ stopLanWorkspaceSyncServer: vi.fn().mockResolvedValue(undefined) }));
@@ -69,6 +85,26 @@ function mainWindow() {
 afterEach(() => {
   vi.clearAllMocks();
   vi.resetModules();
+});
+
+it('restores sandbox bookmarks before reading database-backed startup appearance', async () => {
+  mocks.app.whenReady.mockResolvedValue(undefined);
+  const prepareStartupAppearance = vi.fn(() => {
+    expect(mocks.restoreSecurityScopedBookmarks).toHaveBeenCalledTimes(1);
+    return null;
+  });
+
+  const { installMainLifecycle } = await import('./mainLifecycle.js');
+  installMainLifecycle({
+    activateMainWindow: vi.fn().mockResolvedValue(undefined),
+    createMainWindow: vi.fn().mockResolvedValue(mainWindow()),
+    installInvokeHandler: vi.fn(),
+    loadMainWindow: vi.fn().mockResolvedValue(undefined),
+    prepareStartupAppearance,
+    runtimeMode: { allowParallelInstance: true } as never
+  });
+
+  await vi.waitFor(() => expect(prepareStartupAppearance).toHaveBeenCalledTimes(1));
 });
 
 it('logs non-sensitive Agent Control failed status during startup', async () => {

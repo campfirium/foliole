@@ -59,6 +59,14 @@ vi.mock('./globalClipToInbox.js', () => ({
   prepareGlobalClipToInboxWindows: vi.fn(),
   runGlobalClipToInbox: vi.fn()
 }));
+vi.mock('./initialLibrarySetup.js', () => ({
+  initializeRuntimeServicesAfterLibrarySetup: vi.fn(async (_preparation: unknown, initialize: () => Promise<void>, after?: () => void) => {
+    await initialize();
+    after?.();
+  }),
+  prepareInitialLibrarySetup: vi.fn(() => null),
+  quitIfInitialLibrarySetupIsAbandoned: vi.fn()
+}));
 vi.mock('./backgroundPresence.js', () => ({
   installBackgroundTray: vi.fn(),
   markAppQuittingForBackgroundPresence: vi.fn()

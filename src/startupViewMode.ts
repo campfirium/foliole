@@ -10,7 +10,8 @@ export type StartupViewMode =
       kind: 'startup-error';
       logPath: string | null;
       moduleLabel: string;
-    };
+    }
+  | { kind: 'library-setup' };
 
 export function resolveStartupView(search: string): StartupViewMode | null {
   const params = new URLSearchParams(search);
@@ -22,6 +23,9 @@ export function resolveStartupView(search: string): StartupViewMode | null {
       logPath: params.get('startupLogPath'),
       moduleLabel: params.get('startupModule') ?? 'Startup services'
     };
+  }
+  if (view === 'library-setup') {
+    return { kind: 'library-setup' };
   }
   return null;
 }

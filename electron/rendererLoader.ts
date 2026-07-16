@@ -12,12 +12,15 @@ export {
   writePrebuiltRendererHtmlForSettings
 } from './runtimeRendererHtml.js';
 
-export interface StartupRendererView {
-  errorSummary: string;
-  kind: 'startup-error';
-  logPath: string | null;
-  moduleLabel: string;
-}
+export type StartupRendererView =
+  | {
+      errorSummary: string;
+      kind: 'startup-error';
+      logPath: string | null;
+      moduleLabel: string;
+    }
+  | { kind: 'library-setup' };
+type StartupErrorRendererView = Extract<StartupRendererView, { kind: 'startup-error' }>;
 
 function resolveRendererUrl() {
   return process.env.ELECTRON_RENDERER_URL ?? null;
@@ -85,7 +88,7 @@ function createLocalStartupErrorLogPathMarkup(logPath: string | null) {
   return logPath ? `<p class="startup-error__path">${escapeHtml(logPath)}</p>` : '';
 }
 
-function createLocalStartupErrorHtml(startupView: StartupRendererView) {
+function createLocalStartupErrorHtml(startupView: StartupErrorRendererView) {
   return `<!doctype html>
 <html>
   <head>
@@ -108,7 +111,7 @@ function createLocalStartupErrorHtml(startupView: StartupRendererView) {
 </html>`;
 }
 
-async function loadLocalStartupError(window: BrowserWindow, startupView: StartupRendererView) {
+async function loadLocalStartupError(window: BrowserWindow, startupView: StartupErrorRendererView) {
   await window.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(createLocalStartupErrorHtml(startupView))}`);
 }
 
@@ -116,18 +119,27 @@ function appendRendererParamsToUrl(url: string, startupView?: StartupRendererVie
   const parsedUrl = new URL(url);
   if (startupView) {
     parsedUrl.searchParams.set('startupView', startupView.kind);
-    parsedUrl.searchParams.set('startupModule', startupView.moduleLabel);
-    parsedUrl.searchParams.set('startupError', startupView.errorSummary);
-    if (startupView.logPath) {
-      parsedUrl.searchParams.set('startupLogPath', startupView.logPath);
+    if (startupView.kind === 'startup-error') {
+      parsedUrl.searchParams.set('startupModule', startupView.moduleLabel);
+      parsedUrl.searchParams.set('startupError', startupView.errorSummary);
+      if (startupView.logPath) {
+        parsedUrl.searchParams.set('startupLogPath', startupView.logPath);
+      }
     }
   }
   return parsedUrl.toString();
 }
 
-async function loadPackagedRenderer(window: BrowserWindow, runtimeDir: string) {
+async function loadPackagedRenderer(
+  window: BrowserWindow,
+  runtimeDir: string,
+  startupView?: StartupRendererView | null
+) {
   const indexPath = resolveRendererFilePath(runtimeDir);
-  await window.loadFile(resolveExistingRuntimeRendererIndex(indexPath) ?? indexPath);
+  const target = resolveExistingRuntimeRendererIndex(indexPath) ?? indexPath;
+  await (startupView
+    ? window.loadFile(target, { query: { startupView: startupView.kind } })
+    : window.loadFile(target));
 }
 
 async function loadDevRenderer(window: BrowserWindow, devUrl: string) {
@@ -152,16 +164,16 @@ export async function loadRenderer(
   runtimeDir: string,
   startupView?: StartupRendererView | null
 ) {
-  if (startupView) {
+  if (startupView?.kind === 'startup-error') {
     await loadLocalStartupError(window, startupView);
     return;
   }
   const devUrl = resolveRendererUrl();
   if (devUrl) {
-    await loadDevRenderer(window, appendRendererParamsToUrl(devUrl));
+    await loadDevRenderer(window, appendRendererParamsToUrl(devUrl, startupView));
     return;
   }
-  await loadPackagedRenderer(window, runtimeDir);
+  await loadPackagedRenderer(window, runtimeDir, startupView);
 }
 
 function resolveActiveRendererUrl(window: BrowserWindow, runtimeDir: string) {

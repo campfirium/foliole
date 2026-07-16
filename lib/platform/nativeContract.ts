@@ -5,6 +5,7 @@ import type { NativeDisplayScaleCommandMap } from './nativeDisplayScaleContract.
 import type { NativeExternalSearchCommandMap } from './nativeExternalSearchCommandMap.js';
 import type { NativeFoliolePublishCommandMap } from './nativeFoliolePublishContract.js';
 import type { NativeImportCommandMap } from './nativeImportCommandMap.js';
+import type { NativeInitialLibrarySetupCommandMap } from './nativeInitialLibrarySetupContract.js';
 import type { NativeInvokeTuple } from './nativeInvokeTypes.js';
 import type { NativeLocalFileCommandMap } from './nativeLocalFileCommandMap.js';
 import type { NativeMoveCommandMap } from './nativeMoveCommandMap.js';
@@ -33,8 +34,9 @@ export type * from './nativeStorageContract.js'; export type * from './nativeDis
 export type * from './nativeFoliolePublishContract.js';
 export type * from './nativeReadwiseContract.js'; export type * from './nativeUtilityContract.js'; export type * from './nativeWordPressPublishContract.js';
 export type * from './nativeSourceDispositionContract.js';
+export type * from './nativeInitialLibrarySetupContract.js';
 
-export type NativeCommandMap = NativeAssistantCommandMap & NativeDisplayScaleCommandMap & NativeUtilityCommandMap & NativeReadwiseCommandMap & NativeExternalSearchCommandMap & NativeFoliolePublishCommandMap & NativeDiscoursePublishCommandMap & NativeWordPressPublishCommandMap & NativeLocalFileCommandMap & NativeSearchIndexCommandMap & NativeSyncCommandMap & NativeImportCommandMap & NativeRemoteImageCommandMap & NativeMoveCommandMap & NativeTrashCommandMap & {
+export type NativeCommandMap = NativeAssistantCommandMap & NativeDisplayScaleCommandMap & NativeUtilityCommandMap & NativeReadwiseCommandMap & NativeExternalSearchCommandMap & NativeFoliolePublishCommandMap & NativeDiscoursePublishCommandMap & NativeWordPressPublishCommandMap & NativeLocalFileCommandMap & NativeSearchIndexCommandMap & NativeSyncCommandMap & NativeImportCommandMap & NativeInitialLibrarySetupCommandMap & NativeRemoteImageCommandMap & NativeMoveCommandMap & NativeTrashCommandMap & {
   [NATIVE_COMMANDS.bootReport]: {
     args: {
       stage: string;

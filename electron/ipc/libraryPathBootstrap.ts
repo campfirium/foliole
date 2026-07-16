@@ -97,6 +97,16 @@ export function resolveBootstrapLibraryHome(env: NodeJS.ProcessEnv = process.env
   return readLegacyLibraryPathOverrides()?.library_home ?? null;
 }
 
+export function hasBootstrapLibrarySelection(env: NodeJS.ProcessEnv = process.env) {
+  if (resolveExplicitLibraryHome(env)) {
+    return true;
+  }
+  if (readCurrentLibraryHome() !== undefined) {
+    return true;
+  }
+  return Boolean(readLegacyLibraryPathOverrides()?.library_home);
+}
+
 export function resolveDefaultBootstrapLibraryPaths() {
   const documentsPath = resolveDocumentsPathFallback();
   return resolveLibraryPaths(documentsPath, { library_home: resolveExplicitLibraryHome() });

@@ -31,8 +31,9 @@
 ## Document Read Order
 
 - 启动时只读 `AGENTS.md`。
-- 任务涉及 renderer UI 改动（`src/app/**`、`src/companion/**`、`src/features/**`、`src/shared/ui/**`）时，实施前必须先读取 `DESIGN.md`，再读取 `.lab/specs/shared/ui/llm-ui-rules.md`。
-- 任务涉及 UI 文案、产品对象命名、空状态、按钮、菜单、队列与阅读单元称呼时，实施前必须读取 `.lab/specs/_product/terminology-and-copy.md`。
+- 任务涉及用户可见界面表达（布局、信息层级、控件组合或 UI 文案）时，实施前必须先读取 `DESIGN.md`。
+- 其中，任务涉及 renderer UI 改动（`src/app/**`、`src/companion/**`、`src/features/**`、`src/shared/ui/**`）时，再读取 `.lab/specs/shared/ui/llm-ui-rules.md`。
+- 任务涉及 UI 文案、产品对象命名、空状态、按钮、菜单、队列与阅读单元称呼时，再读取 `.lab/specs/_product/terminology-and-copy.md`。
 - 任务涉及 `docs/i18n/guides/**` 的 Demo Guides 内容时，实施前必须读取 `docs/i18n/guides/README.md`；英文 `en` 文件是每个 slug 的必需源，其他语言可按需补齐并回退英文。
 - 编写 Foliole Demo / Guides 文案时必须保留 Demo 边界：它可以是浏览器里的预置内容体验，但不得暗示为 Foliole Web 版、正式数据环境、桌面版替代品、完整本地文件 / 导入能力、完整桌面功能集或可长期生产使用的在线工作区。
 - 新增或修改用户可见 UI 文案时，必须按 `.lab/specs/_product/terminology-and-copy.md` 的文案分层先区分用户效果、轻原理说明与内部语言；最终文案不得直接从变量名、数据库字段、IPC / action 名、队列流程动词或对话里的临时术语生成。

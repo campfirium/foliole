@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 
 import './app/styles.css';
+import { renderInitialLibrarySetup } from './initialLibrarySetup/renderInitialLibrarySetup';
 import { syncAppSettingsWithRuntime } from './shared/platform/appSettingsSync';
 import {
   reportRuntimeAppReady,
@@ -76,6 +77,10 @@ function renderStartupViewIfRequested() {
   registerBootDiagnostics();
   reportRuntimeBootStage('startup_surface_render', { kind: startupView.kind });
   hideBootSkeleton();
+  if (startupView.kind === 'library-setup') {
+    renderInitialLibrarySetup(rootElement);
+    return true;
+  }
   renderStartupErrorView(
     rootElement,
     {

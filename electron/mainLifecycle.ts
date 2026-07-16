@@ -1,8 +1,8 @@
 import { app, BrowserWindow } from 'electron';
 
-import { ensureAgentControlApiServer, stopAgentControlApiServer } from './agentControl/agentControlServer.js';
+import { stopAgentControlApiServer } from './agentControl/agentControlServer.js';
 import { resolveFolioleAppVersion } from './appVersion.js';
-import { installBackgroundTray, markAppQuittingForBackgroundPresence } from './backgroundPresence.js';
+import { markAppQuittingForBackgroundPresence } from './backgroundPresence.js';
 import { beginDatabaseStartup, markDatabaseReady, markDatabaseStartupFailed } from './database/databaseReadiness.js';
 import { loadOrCreateDesktopDeviceId } from './database/deviceIdentity.js';
 import { initializeDatabase } from './database/migrate.js';
@@ -16,36 +16,45 @@ import { appendMainProcessDiagnosticLog } from './diagnostics/mainProcessDiagnos
 import { installExternalDocumentFileOpenLifecycle } from './externalDocumentFileOpen.js';
 import { notifyExternalSearchSecondInstance, notifyExternalSearchUserActivity, stopExternalSearchBackgroundRefresh } from './externalSearchBackgroundRefreshRuntime.js';
 import {
-  installGlobalClipShortcut,
   refreshGlobalClipShortcutFromSettings
 } from './globalClipShortcut.js';
-import { installGlobalCaptureToastOpenHandler } from './globalClipToastNavigation.js';
-import { prepareGlobalClipToInboxWindows, runGlobalClipToInbox } from './globalClipToInbox.js';
+import { prepareGlobalClipToInboxWindows } from './globalClipToInbox.js';
 import { stopKeepImportMonitor } from './import/keepImportMonitor.js';
 import { stopManagedInboxMonitor } from './import/managedInboxMonitor.js';
+import {
+  initializeRuntimeServicesAfterLibrarySetup,
+  prepareInitialLibrarySetup,
+  quitIfInitialLibrarySetupIsAbandoned,
+  type InitialLibrarySetupPreparation
+} from './initialLibrarySetup.js';
 import { disposeAssistantCommandAdapter } from './ipc/assistantCommands.js';
 import { appendBootEvent } from './ipc/boot.js';
 import { installAppMenu } from './ipc/menu.js';
 import { wasOpenedAtLogin } from './loginItemSettings.js';
 import { installMacosDailyDebugExitHandler } from './macosDailyDebugExit.js';
+import { installDatabaseBackedEntryPoints } from './mainDatabaseBackedEntryPoints.js';
 import { startInitialMainWindow } from './mainStartup.js';
 import { installPairingFocusHandler, openOrCreateMainWindow, startCompanionSyncIfEnabled } from './mainWindowLifecycle.js';
-import { getMainWindow, setMainWindow } from './mainWindowRegistry.js';
+import { setMainWindow } from './mainWindowRegistry.js';
 import { flushMirrorSync } from './mirror/mirrorSyncScheduler.js';
 import type { StartupRendererView } from './rendererLoader.js';
 import { bindEmbeddedLinkPanelContents, installMainRuntimeDiagnostics } from './runtimeMainSupport.js';
 import type { RuntimeMode } from './runtimeMode.js';
 import { restoreSecurityScopedBookmarks, stopSecurityScopedBookmarks } from './securityScopedBookmarks.js';
 import { loadStartupErrorSurface } from './startupErrorSurface.js';
+import type { StartupRendererAppearance } from './startupRendererPreparation.js';
 import { isDesktopCompanionSyncEnabled } from './sync/desktopCompanionSyncPreference.js';
 import { stopLanWorkspaceSyncServer } from './sync/lanWorkspaceSyncServer.js';
 
 export interface MainLifecycleArgs {
   activateMainWindow: (window: BrowserWindow) => Promise<void>;
-  createMainWindow: (startupAppearance?: { backgroundColor: string; displayScalePercent?: number } | null) => Promise<BrowserWindow>;
+  createMainWindow: (
+    startupAppearance?: StartupRendererAppearance | null,
+    options?: { deferDatabaseBackedBindings?: boolean }
+  ) => Promise<BrowserWindow>;
   installInvokeHandler: () => void;
   loadMainWindow: (window: BrowserWindow, startupView?: StartupRendererView | null) => Promise<void>;
-  prepareStartupAppearance?: () => { backgroundColor: string; displayScalePercent?: number } | null;
+  prepareStartupAppearance?: () => StartupRendererAppearance | null;
   runtimeMode: RuntimeMode;
 }
 
@@ -92,7 +101,6 @@ function installBeforeQuitLifecycle() {
 
 async function initializeRuntimeServices() {
   try {
-    restoreSecurityScopedBookmarks();
     await appendBootEvent('database_init_start');
     await appendBootEvent('database_initialize_call_start');
     initializeDatabase((stage, payload = null) => {
@@ -138,16 +146,9 @@ function installActivateLifecycle(openMainWindow: () => Promise<BrowserWindow | 
   });
 }
 
-function startAgentControlApiLifecycle() {
-  void (async () => {
-    const status = await ensureAgentControlApiServer({ appVersion: resolveFolioleAppVersion(app) });
-    if (status.state !== 'failed') return;
-    appendMainProcessDiagnosticLog('agent_control_start_failed', {
-      message: status.last_error ?? 'Agent Control API failed to start',
-      state: status.state
-    });
-  })().catch((error) => {
-    appendMainProcessDiagnosticLog('agent_control_start_failed', { error });
+function installWindowAllClosedLifecycle() {
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin' && process.platform !== 'win32') app.quit();
   });
 }
 
@@ -156,12 +157,14 @@ async function prepareGlobalClipAfterStartup(startupMainWindow: Promise<BrowserW
   prepareGlobalClipToInboxWindows();
 }
 
-function installBackgroundPresence(openMainWindow: () => Promise<BrowserWindow | null>) {
-  installBackgroundTray({
-    captureToInbox: runGlobalClipToInbox,
-    getMainWindow,
-    openMainWindow
-  });
+function createStartupMainWindow(
+  args: MainLifecycleArgs,
+  appearance: { backgroundColor: string } | null,
+  setup: InitialLibrarySetupPreparation | null
+) {
+  return setup
+    ? args.createMainWindow(appearance, { deferDatabaseBackedBindings: true })
+    : args.createMainWindow(appearance);
 }
 
 export function installMainLifecycle(args: MainLifecycleArgs) {
@@ -183,20 +186,25 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
     notifyExternalSearchSecondInstance();
   });
   app.whenReady().then(async () => {
+    restoreSecurityScopedBookmarks();
     installAppProcessDiagnostics();
     args.installInvokeHandler();
-    installGlobalClipShortcut({ captureToInbox: runGlobalClipToInbox });
-    installGlobalCaptureToastOpenHandler({ openMainWindow });
-    installBackgroundPresence(openMainWindow);
     await appendBootEvent('app_when_ready');
-    startAgentControlApiLifecycle();
+    const initialLibrarySetup = prepareInitialLibrarySetup();
     beginDatabaseStartup();
     startupMainWindowPromise = (async () => {
-      const mainWindow = await args.createMainWindow(args.prepareStartupAppearance?.() ?? null);
+      const startupAppearance = args.prepareStartupAppearance?.() ?? null;
+      const mainWindow = await createStartupMainWindow(args, startupAppearance, initialLibrarySetup);
+      quitIfInitialLibrarySetupIsAbandoned(initialLibrarySetup, mainWindow);
       setMainWindow(mainWindow);
       await startInitialMainWindow(args, {
         failDatabaseStartup: markDatabaseStartupFailed,
-        initializeRuntimeServices,
+        initializeRuntimeServices: () => initializeRuntimeServicesAfterLibrarySetup(
+          initialLibrarySetup,
+          initializeRuntimeServices,
+          () => installDatabaseBackedEntryPoints(openMainWindow)
+        ),
+        ...(initialLibrarySetup ? { initialStartupView: initialLibrarySetup.startupView } : {}),
         installPairingFocusHandler: () => installPairingFocusHandler(openMainWindow),
         loadStartupErrorSurface: (input) => loadStartupErrorSurface({ ...input, loadMainWindow: args.loadMainWindow }),
         mainWindow,
@@ -216,7 +224,5 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
       startupMainWindowPromise = null;
     }
   });
-  app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin' && process.platform !== 'win32') app.quit();
-  });
+  installWindowAllClosedLifecycle();
 }

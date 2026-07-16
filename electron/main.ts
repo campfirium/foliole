@@ -7,7 +7,6 @@ import {
   BrowserWindow,
   crashReporter,
   ipcMain,
-  screen,
   type BrowserWindow as ElectronBrowserWindow
 } from 'electron';
 
@@ -32,8 +31,8 @@ import {
 } from './ipc/contracts.js';
 import { bindHotkeyRecorderInput } from './ipc/hotkeyRecorderInput.js';
 import { bindMenuToWindow } from './ipc/menu.js';
-import { loadWindowState } from './ipc/windowState.js';
 import { installMainLifecycle } from './mainLifecycle.js';
+import { prepareMainWindowStartupOptions } from './mainWindowStartupOptions.js';
 import {
   bindWindowReadingProgressFlush,
   createWindowReadingProgressFlushOptions
@@ -46,19 +45,16 @@ import {
 } from './runtimeIdentity.js';
 import {
   activateMainWindowRenderer,
-  applyHiddenNativeDesktopWindowOptions,
   bindMainWindowNavigationGuard,
   bindMainWindowWebviewAttachGuard,
   createMainWindowOptions,
   loadMainWindowRenderer,
-  logWindowStateLifecycleEvent,
-  logWindowStateRestoreDecision
+  logWindowStateLifecycleEvent
 } from './runtimeMainSupport.js';
 import { resolveRuntimeMode } from './runtimeMode.js';
 import { prepareStartupRendererAppearance } from './startupRendererPreparation.js';
-import { loadStartupWindowState } from './startupWindowState.js';
 import { bindWindowRuntimeDiagnostics, setStartupWindowPresentation } from './windowRuntimeDiagnostics.js';
-import { applyWindowStateToOptions, bindWindowStatePersistence } from './windowStateLifecycle.js';
+import { bindWindowStatePersistence } from './windowStateLifecycle.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -161,30 +157,15 @@ async function activateRendererInWindow(window: ElectronBrowserWindow) {
   await appendBootEvent('renderer_activation_complete');
 }
 
-async function createMainWindow(startupAppearance?: { backgroundColor: string; displayScalePercent?: number } | null) {
-  await appendBootEvent('main_window_create_start');
-  const restoredWindowState = await loadStartupWindowState({ appendBootEvent, loadWindowState });
-  await appendBootEvent('window_state_loaded', restoredWindowState);
-  logWindowStateRestoreDecision('window-state-loaded', restoredWindowState);
-  let options = applyWindowStateToOptions(
+async function createMainWindow(
+  startupAppearance?: { backgroundColor: string; displayScalePercent?: number } | null,
+  startupOptions: { deferDatabaseBackedBindings?: boolean } = {}
+) {
+  const { options, restoredWindowState } = await prepareMainWindowStartupOptions(
     createMainWindowOptions(runtimeDiagnostics.preloadPath),
-    restoredWindowState,
-    screen.getAllDisplays().map((display) => display.workArea)
+    startupAppearance,
+    startupOptions.deferDatabaseBackedBindings === true
   );
-  options = applyHiddenNativeDesktopWindowOptions(options);
-  if (startupAppearance?.backgroundColor) {
-    options.backgroundColor = startupAppearance.backgroundColor;
-  }
-  logWindowStateRestoreDecision('window-options-applied', restoredWindowState, {
-    options: {
-      fullscreen: options.fullscreen ?? false,
-      height: options.height,
-      hiddenNativeDesktopTest: process.env.FOLIOLE_ELECTRON_NATIVE_HIDDEN === '1',
-      width: options.width,
-      x: options.x,
-      y: options.y
-    }
-  });
   const window = new BrowserWindow(options);
   installMainWindowContentSecurityPolicy(window.webContents.session, { isPackaged: app.isPackaged });
   bindMainWindowNavigationGuard(window, startupAppearance?.displayScalePercent ?? 100);
@@ -206,11 +187,13 @@ async function createMainWindow(startupAppearance?: { backgroundColor: string; d
   });
   bindWindowIpc(window);
   bindHotkeyRecorderInput(window);
-  bindWindowReadingProgressFlush(
-    window,
-    createWindowReadingProgressFlushOptions(process.platform, isAppQuittingForBackgroundPresence)
-  );
-  bindWindowStatePersistence(window);
+  if (!startupOptions.deferDatabaseBackedBindings) {
+    bindWindowReadingProgressFlush(
+      window,
+      createWindowReadingProgressFlushOptions(process.platform, isAppQuittingForBackgroundPresence)
+    );
+    bindWindowStatePersistence(window);
+  }
   bindMenuToWindow(window);
   bindWindowRuntimeDiagnostics(window);
   return window;
