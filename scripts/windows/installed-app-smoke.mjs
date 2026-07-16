@@ -1,6 +1,7 @@
 /* global console, process, setTimeout */
 
-import { spawn } from 'node:child_process';
+import { Buffer } from 'node:buffer';
+import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
@@ -16,6 +17,31 @@ const OUTPUT_TAIL_LIMIT = 120;
 const PROCESS_EXIT_WAIT_MS = 5_000;
 const BOOT_EVENT_TAIL_LIMIT = 80;
 const ELECTRON_LOG_FILE = 'electron-debug.log';
+
+function encodePowerShell(command) {
+  return Buffer.from(command, 'utf16le').toString('base64');
+}
+
+export function readInstalledProcessTree(pid, run = spawnSync) {
+  const command = [
+    '$all = @(Get-CimInstance Win32_Process)',
+    `$ids = [System.Collections.Generic.HashSet[int]]::new(); [void]$ids.Add(${pid})`,
+    'do { $added = $false; foreach ($item in $all) {',
+    'if ($ids.Contains([int]$item.ParentProcessId) -and $ids.Add([int]$item.ProcessId)) { $added = $true }',
+    '} } while ($added)',
+    '$all | Where-Object { $ids.Contains([int]$_.ProcessId) } |',
+    'Select-Object ProcessId, ParentProcessId, Name, ExecutablePath, CommandLine |',
+    'ConvertTo-Json -Depth 3 -Compress'
+  ].join('; ');
+  const result = run('pwsh.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', encodePowerShell(command)], {
+    encoding: 'utf8',
+    windowsHide: true
+  });
+  const output = result.stdout?.trim();
+  if (result.status === 0 && output) return `[installed-app-smoke] process tree\n${output}`;
+  return `[installed-app-smoke] process tree unavailable status=${result.status ?? 'unknown'} ` +
+    `error=${result.error?.message ?? result.stderr?.trim() ?? 'empty output'}`;
+}
 
 function readDiagnosticTail(filePath, label) {
   if (!existsSync(filePath)) return `[installed-app-smoke] ${label} missing path=${filePath}`;
@@ -150,6 +176,7 @@ export async function runInstalledAppSmoke({
   launchApp = launchInstalledApp,
   now = Date.now,
   readDiagnostics = readInstalledSmokeDiagnostics,
+  readProcessTree = readInstalledProcessTree,
   resetMarkers = resetReadyMarkers,
   stopRuntime = stopProcess,
   waitForMarkers = waitForInstalledReadyMarkers
@@ -193,7 +220,8 @@ export async function runInstalledAppSmoke({
       const output = outputTail.length > 0
         ? `\n[installed-app-smoke] output tail:\n${outputTail.join('\n')}`
         : '';
-      error.message = `${error.message}${output}\n${readDiagnostics(isolation.runtimeStateRoot)}`;
+      error.message = `${error.message}${output}\n${readProcessTree(child.pid)}\n` +
+        readDiagnostics(isolation.runtimeStateRoot);
     }
     throw error;
   } finally {
