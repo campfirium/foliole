@@ -67,7 +67,6 @@
     "!node_modules/@codemirror/**",
     "!node_modules/@capacitor/**",
     "!node_modules/@capacitor-community/**",
-    "!node_modules/@lezer/**",
     "!node_modules/@mermaid-js/**",
     "!node_modules/@radix-ui/**",
     "!node_modules/@rollup/**",

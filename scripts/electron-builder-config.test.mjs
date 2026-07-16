@@ -44,11 +44,16 @@ describe('electron-builder release packaging config', () => {
   });
 
   it('trims bundled desktop app content to runtime dependencies and selected Electron locales', async () => {
-    const config = await readBuilderConfig();
+    const [config, packageJson] = await Promise.all([
+      readBuilderConfig(),
+      readPackageJson()
+    ]);
 
     expect(config.electronLanguages).toEqual(['en-US', 'zh-CN']);
     expect(config.files).toContain('dist/desktop/**/*');
     expect(config.files).not.toContain('dist/**/*');
+    expect(packageJson.dependencies['@lezer/markdown']).toBe('1.6.4');
+    expect(config.files).not.toContain('!node_modules/@lezer/**');
     expect(config.files).toEqual(expect.arrayContaining([
       '!node_modules/@capacitor/**',
       '!node_modules/@capacitor-community/**',
@@ -62,7 +67,6 @@ describe('electron-builder release packaging config', () => {
       '!node_modules/better-sqlite3/deps/**',
       '!node_modules/better-sqlite3/src/**',
       '!node_modules/@codemirror/**',
-      '!node_modules/@lezer/**',
       '!node_modules/@radix-ui/**',
       '!node_modules/@tanstack/**',
       '!node_modules/clsx/**',
