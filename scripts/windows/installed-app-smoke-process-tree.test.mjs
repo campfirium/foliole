@@ -19,7 +19,9 @@ describe('installed app smoke process diagnostics', () => {
       { encoding: 'utf8', windowsHide: true }
     );
     const encoded = run.mock.calls[0][1][3];
-    expect(Buffer.from(encoded, 'base64').toString('utf16le')).toContain('[void]$ids.Add(42)');
+    const command = Buffer.from(encoded, 'base64').toString('utf16le');
+    expect(command).toContain('[void]$ids.Add(42)');
+    expect(command).not.toContain('|;');
   });
 
   it('reports a failed process query without hiding the smoke failure', () => {

@@ -32,7 +32,7 @@ export function readInstalledProcessTree(pid, run = spawnSync) {
     '$all | Where-Object { $ids.Contains([int]$_.ProcessId) } |',
     'Select-Object ProcessId, ParentProcessId, Name, ExecutablePath, CommandLine |',
     'ConvertTo-Json -Depth 3 -Compress'
-  ].join('; ');
+  ].join('\n');
   const result = run('pwsh.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', encodePowerShell(command)], {
     encoding: 'utf8',
     windowsHide: true
