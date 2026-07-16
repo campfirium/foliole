@@ -36,9 +36,14 @@ describe('release Windows workflow contract', () => {
     expect(workflow).toContain('--target $targetCommit');
   });
 
-  it('runs the installed app smoke before publishing the draft release', () => {
-    expect(workflow).toContain('Build and install Windows installer');
-    expect(workflow).toContain('npm run windows:package:install');
+  it('signs the application and installer before installed-app smoke and publication', () => {
+    expect(workflow).toContain('uses: azure/login@v3');
+    expect(workflow).toContain('write-artifact-signing-builder-config.mjs');
+    expect(workflow).toContain('npm run windows:package');
+    expect(workflow).toContain('node scripts/windows/package-windows.mjs --install-existing');
+    expect(workflow).toContain('verify-artifact-signatures.mjs --root artifacts/windows/win-unpacked');
+    expect(workflow).toContain('verify-artifact-signatures.mjs --root artifacts/windows --extensions exe');
+    expect(workflow).not.toContain('azure/artifact-signing-action');
     expect(workflow).toContain('Smoke installed Windows app');
     expect(workflow).toContain('node scripts/windows/installed-app-smoke.mjs');
     expect(workflow).not.toContain('run: npm run release:windows:package');

@@ -37,6 +37,14 @@
   "electronLanguages": ["en-US", "zh-CN"],
   "npmRebuild": true,
   "nativeRebuilder": "sequential",
+  "publish": [
+    {
+      "provider": "github",
+      "owner": "campfirium",
+      "repo": "foliole",
+      "releaseType": "release"
+    }
+  ],
   "files": [
     "build/icon.png",
     "build/icon-macos.png",
@@ -113,7 +121,7 @@
   },
   "mac": {
     "icon": "build/icon.icns",
-    "target": ["dmg"],
+    "target": ["dmg", "zip"],
     "category": "public.app-category.education"
   }
 }

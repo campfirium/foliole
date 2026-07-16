@@ -29,7 +29,15 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 60
     env:
+      ARTIFACT_SIGNING_ACCOUNT_NAME: ${{ vars.ARTIFACT_SIGNING_ACCOUNT_NAME }}
+      ARTIFACT_SIGNING_CERTIFICATE_PROFILE_NAME: ${{ vars.ARTIFACT_SIGNING_CERTIFICATE_PROFILE_NAME }}
+      ARTIFACT_SIGNING_ENDPOINT: ${{ vars.ARTIFACT_SIGNING_ENDPOINT }}
+      ARTIFACT_SIGNING_PUBLISHER_NAME: ${{ vars.ARTIFACT_SIGNING_PUBLISHER_NAME }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      FOLIOLE_WINDOWS_BUILDER_CONFIG: .tmp/electron-builder-artifact-signing.json
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
@@ -83,8 +91,29 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build and install Windows installer
-        run: npm run windows:package:install
+      - name: Verify Artifact Signing configuration
+        run: node scripts/windows/check-artifact-signing-config.mjs
+
+      - name: Authenticate to Azure with OIDC
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Prepare Artifact Signing builder config
+        run: node scripts/windows/write-artifact-signing-builder-config.mjs
+
+      - name: Build and sign Windows installer
+        run: npm run windows:package
+
+      - name: Verify application and installer signatures
+        run: |
+          node scripts/windows/verify-artifact-signatures.mjs --root artifacts/windows/win-unpacked --extensions exe --recursive
+          node scripts/windows/verify-artifact-signatures.mjs --root artifacts/windows --extensions exe
+
+      - name: Install signed Windows installer
+        run: node scripts/windows/package-windows.mjs --install-existing
 
       - name: Smoke installed Windows app
         run: node scripts/windows/installed-app-smoke.mjs
@@ -132,13 +161,18 @@ jobs:
           $tagName = "v$($package.version)"
           $releaseTitle = $package.version
           $installer = Get-ChildItem -Path artifacts/windows -Filter "*.exe" | Select-Object -First 1
-          $checksums = Get-Item -Path artifacts/windows/SHA256SUMS.txt
-          $notesFile = Get-Item -Path "artifacts/windows/release-v$($package.version)-github-body.md"
           if (-not $installer) {
             throw "Windows installer was not generated."
           }
+          $blockmap = Get-Item -Path "$($installer.FullName).blockmap"
+          $updateMetadata = Get-Item -Path artifacts/windows/latest.yml
+          $checksums = Get-Item -Path artifacts/windows/SHA256SUMS.txt
+          $notesFile = Get-Item -Path "artifacts/windows/release-v$($package.version)-github-body.md"
           if (-not $checksums) {
             throw "Installer checksums were not generated."
+          }
+          if (-not $blockmap -or -not $updateMetadata) {
+            throw "Windows update metadata was not generated."
           }
           if (-not $notesFile) {
             throw "GitHub release body was not copied."
@@ -156,7 +190,7 @@ jobs:
           }
 
           $targetCommit = (git rev-parse HEAD).Trim()
-          gh release create $tagName $installer.FullName $checksums.FullName --draft --title $releaseTitle --target $targetCommit --notes-file $notesFile.FullName
+          gh release create $tagName $installer.FullName $blockmap.FullName $updateMetadata.FullName $checksums.FullName --draft --title $releaseTitle --target $targetCommit --notes-file $notesFile.FullName
 
       - name: Upload installer artifacts
         uses: actions/upload-artifact@v4
@@ -164,6 +198,8 @@ jobs:
           name: foliole-windows-release
           path: |
             artifacts/windows/*.exe
+            artifacts/windows/*.blockmap
+            artifacts/windows/latest.yml
             artifacts/windows/SHA256SUMS.txt
             artifacts/windows/validation-kit
           if-no-files-found: error

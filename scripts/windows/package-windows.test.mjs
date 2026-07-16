@@ -24,7 +24,9 @@ import {
   resolveReleaseArtifactPaths,
   resolveInstallMode,
   resolveInternalMode,
+  resolveInstallExistingMode,
   resolveBuiltArtifactMode,
+  resolveBuilderConfig,
   resolvePackageStatusLabel,
   resolvePackagedInstallerPath,
   resolvePackageMode
@@ -62,6 +64,19 @@ describe('windows package runner', () => {
   it('only reuses built artifacts when explicitly requested', () => {
     expect(resolveBuiltArtifactMode(['node', 'script'])).toBe(false);
     expect(resolveBuiltArtifactMode(['node', 'script', '--from-built'])).toBe(true);
+  });
+
+  it('installs an existing signed installer only when explicitly requested', () => {
+    expect(resolveInstallExistingMode(['node', 'script'])).toBe(false);
+    expect(resolveInstallExistingMode(['node', 'script', '--install-existing'])).toBe(true);
+  });
+
+  it('allows the release workflow to select a generated signing config', () => {
+    expect(resolveBuilderConfig(false, {})).toBe('electron/builder.json');
+    expect(resolveBuilderConfig(false, {
+      FOLIOLE_WINDOWS_BUILDER_CONFIG: '.tmp/electron-builder-artifact-signing.json'
+    })).toBe('.tmp/electron-builder-artifact-signing.json');
+    expect(resolveBuilderConfig(true, {})).toBe('.tmp/electron-builder-internal.json');
   });
 
   it('reports installed status only after the install path is requested', () => {

@@ -15,7 +15,10 @@ function expectOrdered(values) {
 describe('Windows release validation kit contract', () => {
   it('builds and verifies the kit before attestation and draft publication', () => {
     expectOrdered([
-      'npm run windows:package:install',
+      'write-artifact-signing-builder-config.mjs',
+      'npm run windows:package',
+      'Verify application and installer signatures',
+      'Install signed Windows installer',
       'node scripts/windows/installed-app-smoke.mjs',
       'Generate installer checksum',
       'node scripts/windows/windows-validation-kit-build.mjs build',
@@ -26,13 +29,13 @@ describe('Windows release validation kit contract', () => {
     expect(workflow).toContain('GITHUB_RUN_ID: ${{ github.run_id }}');
   });
 
-  it('uploads the kit with the installer without expanding release assets or permissions', () => {
+  it('uploads the kit with the installer and required updater metadata', () => {
     expect(workflow).toContain('artifacts/windows/validation-kit');
     expect(workflow).toContain('retention-days: 14');
-    expect(workflow).toContain('gh release create $tagName $installer.FullName $checksums.FullName --draft');
+    expect(workflow).toContain('gh release create $tagName $installer.FullName $blockmap.FullName $updateMetadata.FullName $checksums.FullName --draft');
     expect(workflow).not.toMatch(/gh release create[^\n]+validation-kit/u);
     expect(workflow.match(/permissions:/gu)).toHaveLength(1);
-    expect(workflow.match(/secrets\./gu)).toHaveLength(1);
+    expect(workflow.match(/secrets\./gu)).toHaveLength(7);
   });
 
   it('supports a fixed-SHA artifact-only run without touching a draft release', () => {

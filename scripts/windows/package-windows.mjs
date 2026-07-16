@@ -40,6 +40,15 @@ export function resolveBuiltArtifactMode(argv = process.argv) {
   return argv.includes('--from-built');
 }
 
+export function resolveInstallExistingMode(argv = process.argv) {
+  return argv.includes('--install-existing');
+}
+
+export function resolveBuilderConfig(internal, env = process.env) {
+  if (internal) return '.tmp/electron-builder-internal.json';
+  return env.FOLIOLE_WINDOWS_BUILDER_CONFIG?.trim() || 'electron/builder.json';
+}
+
 export function resolvePackageStatusLabel(install) {
   return install ? 'PACKAGED_AND_INSTALLED' : 'PACKAGED';
 }
@@ -56,12 +65,15 @@ function createCmdStep(label, command) {
   };
 }
 
-export function createNativePackageSteps(fromBuilt = resolveBuiltArtifactMode(), internal = resolveInternalMode()) {
+export function createNativePackageSteps(
+  fromBuilt = resolveBuiltArtifactMode(),
+  internal = resolveInternalMode(),
+  builderConfig = resolveBuilderConfig(internal)
+) {
   const buildSteps = fromBuilt ? [] : [
     createCmdStep('renderer build', 'npm run build'),
     createCmdStep('electron compile', 'npm run electron:compile')
   ];
-  const builderConfig = internal ? '.tmp/electron-builder-internal.json' : 'electron/builder.json';
   return [
     ...buildSteps,
     createCmdStep('electron-builder nsis', `npm exec -- electron-builder --config ${builderConfig} --win nsis --publish never`)
@@ -131,9 +143,16 @@ async function main() {
   const install = resolveInstallMode();
   const internal = resolveInternalMode();
   const fromBuilt = resolveBuiltArtifactMode();
+  const installExisting = resolveInstallExistingMode();
   const packageVersion = readPackageVersion();
   const buildVersion = internal ? formatInternalBuildVersion(packageVersion) : packageVersion;
   const outputDir = internal ? INTERNAL_OUTPUT_DIR : 'artifacts/windows';
+  if (installExisting) {
+    if (internal || fromBuilt) throw new Error('--install-existing cannot be combined with package modes');
+    await installPackagedApp(repoRoot, packageVersion, outputDir);
+    console.log('[windows-package] status: PACKAGED_AND_INSTALLED');
+    return;
+  }
   const steps = createNativePackageSteps(fromBuilt, internal);
   console.log(`[windows-package] mode: ${mode}`);
   console.log(`[windows-package] channel: ${internal ? 'internal' : 'release'}`);
