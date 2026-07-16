@@ -84,6 +84,8 @@ describe('installed app smoke', () => {
       {
         exePath: executablePath,
         launchEnv: expect.objectContaining({
+          ELECTRON_ENABLE_LOGGING: 'true',
+          ELECTRON_LOG_FILE: winPath('T:', 'smoke', 'electron-debug.log'),
           FOLIOLE_BOOT_SESSION: 'installed-app-smoke-42',
           FOLIOLE_DISABLE_HARDWARE_ACCELERATION: '1',
           FOLIOLE_ELECTRON_INSTALLED_EXE_PATH: executablePath,
@@ -158,6 +160,7 @@ describe('installed app smoke', () => {
 
   it('marks installed smoke as packaged-app launch mode', () => {
     expect(resolveInstalledAppSmokeEnv({})).toMatchObject({
+      ELECTRON_ENABLE_LOGGING: 'true',
       FOLIOLE_DISABLE_HARDWARE_ACCELERATION: '1',
       FOLIOLE_ELECTRON_LAUNCH_MODE: 'installed',
       FOLIOLE_ELECTRON_PLAYWRIGHT_ALLOW_STALE_RENDERER: '1'
@@ -195,6 +198,7 @@ describe('installed app smoke', () => {
   it('reports missing boot diagnostics instead of silently deleting the only evidence', () => {
     const stateRoot = winPath('T:', 'smoke');
     expect(readInstalledSmokeDiagnostics(stateRoot)).toContain('boot event log missing');
+    expect(readInstalledSmokeDiagnostics(stateRoot)).toContain('Electron log missing');
   });
 
   it('adds boot diagnostics before cleaning up a failed smoke', async () => {

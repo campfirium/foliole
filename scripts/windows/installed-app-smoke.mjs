@@ -15,14 +15,21 @@ const DEFAULT_TIMEOUT_MS = 300_000;
 const OUTPUT_TAIL_LIMIT = 120;
 const PROCESS_EXIT_WAIT_MS = 5_000;
 const BOOT_EVENT_TAIL_LIMIT = 80;
+const ELECTRON_LOG_FILE = 'electron-debug.log';
+
+function readDiagnosticTail(filePath, label) {
+  if (!existsSync(filePath)) return `[installed-app-smoke] ${label} missing path=${filePath}`;
+  const lines = readFileSync(filePath, 'utf8').split(/\r?\n/u).filter(Boolean);
+  return `[installed-app-smoke] ${label} tail path=${filePath}\n${lines.slice(-BOOT_EVENT_TAIL_LIMIT).join('\n')}`;
+}
 
 export function readInstalledSmokeDiagnostics(stateRoot) {
   const eventLogPath = path.join(stateRoot, 'logs', 'windows', 'native-boot-events.ndjson');
-  if (!existsSync(eventLogPath)) {
-    return `[installed-app-smoke] boot event log missing path=${eventLogPath}`;
-  }
-  const lines = readFileSync(eventLogPath, 'utf8').split(/\r?\n/u).filter(Boolean);
-  return `[installed-app-smoke] boot event tail path=${eventLogPath}\n${lines.slice(-BOOT_EVENT_TAIL_LIMIT).join('\n')}`;
+  const electronLogPath = path.join(stateRoot, ELECTRON_LOG_FILE);
+  return [
+    readDiagnosticTail(eventLogPath, 'boot event log'),
+    readDiagnosticTail(electronLogPath, 'Electron log')
+  ].join('\n');
 }
 
 function resolveTimeoutMs(env = process.env) {
@@ -36,8 +43,11 @@ function resolveTimeoutMs(env = process.env) {
 }
 
 export function resolveInstalledAppSmokeEnv(env = process.env) {
+  const stateRoot = env.FOLIOLE_WORKDIR?.trim();
   return {
     ...env,
+    ELECTRON_ENABLE_LOGGING: 'true',
+    ...(stateRoot ? { ELECTRON_LOG_FILE: path.win32.join(stateRoot, ELECTRON_LOG_FILE) } : {}),
     FOLIOLE_ELECTRON_LAUNCH_MODE: 'installed',
     FOLIOLE_ELECTRON_PLAYWRIGHT_ALLOW_STALE_RENDERER: '1',
     FOLIOLE_DISABLE_HARDWARE_ACCELERATION: env.FOLIOLE_DISABLE_HARDWARE_ACCELERATION?.trim() || '1',
