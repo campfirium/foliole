@@ -24,7 +24,7 @@ it('targets the last activated region and keeps the physical region boundary fix
   });
   const scaledContent = container.querySelector('[data-content-scale-region] > div');
   await waitFor(() => {
-    expect(scaledContent).toHaveStyle({ height: '90.9090909090909%', width: '90.9090909090909%' });
+    expect(scaledContent).toHaveStyle({ height: '100%', width: '100%' });
     expect(screen.getByText('Folder navigation · 110%')).toBeInTheDocument();
   });
 });

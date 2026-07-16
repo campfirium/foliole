@@ -34,7 +34,7 @@ export function ScalableContentRegion(props: {
     >
       <div
         className="flex min-h-0 min-w-0 origin-top-left"
-        style={{ height: `${100 / scale}%`, width: `${100 / scale}%`, zoom: scale }}
+        style={{ height: '100%', width: '100%', zoom: scale }}
       >
         {props.children}
       </div>

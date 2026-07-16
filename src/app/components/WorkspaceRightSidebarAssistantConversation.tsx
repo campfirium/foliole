@@ -31,7 +31,7 @@ export function WorkspaceRightSidebarAssistantConversation(props: {
     inputRef.current?.focus();
   };
   return (
-    <section className="flex min-h-0 flex-1 flex-col gap-3 pt-3">
+    <section className="flex min-h-0 min-w-0 w-full flex-1 flex-col gap-3 pt-3">
       {props.threadStatusLabel ? (
         <p className={`${inspectorListMetaClassName} m-0 px-3`}>{props.threadStatusLabel}</p>
       ) : null}

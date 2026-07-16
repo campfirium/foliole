@@ -15,14 +15,14 @@ export function WorkspaceRightSidebarAssistantMessageViewport(props: {
   const t = useTranslation();
   const scroll = useWorkspaceRightSidebarAssistantScroll(createScrollContentKey(props.messages));
   return (
-    <div className="relative min-h-24 flex-1">
+    <div className="relative min-h-24 min-w-0 w-full flex-1">
       <div
         className="app-scrollbar absolute inset-0 overflow-y-auto"
         data-testid="assistant-message-scroll"
         onScroll={scroll.onScroll}
         ref={scroll.scrollRef}
       >
-        <div className="space-y-5 px-3 pb-1">
+        <div className="min-w-0 space-y-5 px-3 pb-1">
           {props.messages.map((message) => (
             <WorkspaceRightSidebarAssistantMessageRow
               key={message.id}

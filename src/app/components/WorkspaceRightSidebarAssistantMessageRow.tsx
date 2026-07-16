@@ -13,8 +13,8 @@ export function WorkspaceRightSidebarAssistantMessageRow(props: {
   if (props.message.activity === 'thinking') return <AssistantThinking label={props.pendingLabel} />;
   if (props.message.role === 'user') {
     return (
-      <div className="flex flex-col items-end gap-1" data-message-role="user">
-        <p className="m-0 max-w-[88%] whitespace-pre-wrap rounded-lg bg-foreground/[0.07] px-3 py-2 text-left text-ui-md leading-6 text-foreground/84">
+      <div className="flex min-w-0 w-full flex-col items-end gap-1" data-message-role="user">
+        <p className="m-0 max-w-[88%] whitespace-pre-wrap [overflow-wrap:anywhere] rounded-lg bg-foreground/[0.07] px-3 py-2 text-left text-ui-md leading-6 text-foreground/84">
           {props.message.text}
         </p>
         <WorkspaceRightSidebarAssistantMessageActions
@@ -29,7 +29,7 @@ export function WorkspaceRightSidebarAssistantMessageRow(props: {
   }
   return (
     <div
-      className={props.message.state === 'failed' ? 'min-w-0 px-1 text-danger' : 'min-w-0 px-1'}
+      className={props.message.state === 'failed' ? 'min-w-0 w-full px-1 text-danger' : 'min-w-0 w-full px-1'}
       data-message-role="assistant"
     >
       <WorkspaceRightSidebarAssistantMarkdown source={props.message.text} />

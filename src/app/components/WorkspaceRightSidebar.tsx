@@ -84,7 +84,7 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
       bodyClassName={props.activePanelId === 'assistant'
         ? 'min-h-0 overflow-hidden'
         : 'app-scrollbar overflow-y-auto px-3 py-3'}
-      className="flex min-h-0 h-full flex-col overflow-hidden text-foreground [--app-inspector-section-bg:transparent] [--app-inspector-section-border-color:transparent] [--app-inspector-section-border-width:0] [--app-inspector-section-padding:0] [--app-inspector-section-radius:0] [--app-inspector-section-shadow-color:transparent]"
+      className="flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden text-foreground [--app-inspector-section-bg:transparent] [--app-inspector-section-border-color:transparent] [--app-inspector-section-border-width:0] [--app-inspector-section-padding:0] [--app-inspector-section-radius:0] [--app-inspector-section-shadow-color:transparent]"
       headerClassName="hidden"
       title={null}
     >

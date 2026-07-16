@@ -18,6 +18,8 @@ test('Aide renders a titled Markdown conversation with live progress', async ({
 }, testInfo) => {
   await desktopWindow.evaluate(() => {
     localStorage.setItem('foliole-workspace-right-sidebar-active-panel', 'assistant');
+    localStorage.setItem('foliole-workspace-right-sidebar-width', '340');
+    localStorage.setItem('foliole-content-region-scales', JSON.stringify({ 'right-sidebar:assistant': 130 }));
     localStorage.setItem('foliole-aide-enabled', 'true');
   });
   await desktopWindow.reload();
@@ -38,12 +40,17 @@ test('Aide renders a titled Markdown conversation with live progress', async ({
   await expect(desktopWindow.getByText('const ready = true;')).toBeVisible();
   await expect(desktopWindow.locator('[data-message-role="user"] p')).toHaveClass(/rounded-lg/);
   await expect(desktopWindow.locator('[data-message-role="assistant"]')).not.toHaveClass(/rounded|bg-/);
-  expect(await desktopWindow.getByTestId('assistant-message-scroll').evaluate((element) =>
+  const messageScroll = desktopWindow.getByTestId('assistant-message-scroll');
+  const rightInset = await messageScroll.evaluate((element) =>
     window.innerWidth - element.getBoundingClientRect().right
-  )).toBeLessThanOrEqual(2);
+  );
+  expect(rightInset).toBeGreaterThanOrEqual(-2);
+  expect(rightInset).toBeLessThanOrEqual(2);
+  expect(await messageScroll.evaluate((element) => element.scrollWidth - element.clientWidth))
+    .toBeLessThanOrEqual(1);
 
   await mkdir(path.dirname(screenshotPath), { recursive: true });
-  await desktopWindow.screenshot({ path: screenshotPath });
+  await desktopWindow.locator('[data-content-scale-region="right-sidebar:assistant"]').screenshot({ path: screenshotPath });
   await testInfo.attach('assistant-panel-message-layout', {
     contentType: 'image/png',
     path: screenshotPath
@@ -125,11 +132,13 @@ test('Aide omits current material after the follow switch is turned off', async 
 
 async function openAssistantPanel(page: Page) {
   const directButton = page.getByRole('button', { name: /Foliole Aide.*panel|Foliole Aide面板/ });
+  const moreButton = page.getByRole('button', { name: /^(More right sidebar panels|更多右侧栏面板)$/ });
+  await expect(directButton.first().or(moreButton)).toBeVisible();
   if (await directButton.count()) {
     await directButton.first().click();
     return;
   }
-  await page.getByRole('button', { name: /^(More right sidebar panels|更多右侧栏面板)$/ }).click();
+  await moreButton.click();
   await page.getByRole('menuitem', { name: /Foliole Aide/ }).click();
 }
 

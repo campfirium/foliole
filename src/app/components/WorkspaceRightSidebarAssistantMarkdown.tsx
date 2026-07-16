@@ -21,7 +21,7 @@ const MARKER_NODES = new Set([
 export function WorkspaceRightSidebarAssistantMarkdown(props: { source: string }) {
   const tree = markdownParser.parse(props.source);
   return (
-    <div className="min-w-0 space-y-3 break-words text-ui-md leading-6 text-foreground/86">
+    <div className="min-w-0 w-full space-y-3 [overflow-wrap:anywhere] text-ui-md leading-6 text-foreground/86">
       {renderChildren(tree.topNode, props.source)}
     </div>
   );
@@ -52,7 +52,7 @@ function renderTable(node: MarkdownNode, source: string, key: string) {
   const header = findChildren(node, 'TableHeader');
   const rows = findChildren(node, 'TableRow');
   return (
-    <div className="app-scrollbar overflow-x-auto" key={key}>
+    <div className="app-scrollbar max-w-full overflow-x-auto" key={key}>
       <table className="w-max min-w-full border-collapse text-left text-ui-sm leading-5">
         <thead className="bg-foreground/[0.045]">
           {header.map((row) => renderTableRow(row, source, true))}
@@ -127,7 +127,7 @@ function renderHeading(node: MarkdownNode, source: string, key: string) {
 function renderCodeBlock(node: MarkdownNode, source: string, key: string) {
   const code = findChild(node, 'CodeText');
   const value = code ? source.slice(code.from, code.to) : source.slice(node.from, node.to).trim();
-  return <pre className="m-0 overflow-x-auto rounded-md bg-foreground/[0.055] p-3 text-left" key={key}><code className="font-mono text-ui-sm leading-5">{value}</code></pre>;
+  return <pre className="m-0 max-w-full overflow-x-auto rounded-md bg-foreground/[0.055] p-3 text-left" key={key}><code className="font-mono text-ui-sm leading-5">{value}</code></pre>;
 }
 
 function renderLink(node: MarkdownNode, source: string, key: string) {

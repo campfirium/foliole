@@ -21,7 +21,7 @@ export function WorkspaceRightSidebarAssistantComposer(props: {
 }) {
   return (
     <form
-      className="rounded-lg border border-border bg-bg-subtle px-3 py-2 focus-within:border-border-strong"
+      className="min-w-0 w-full rounded-lg border border-border bg-bg-subtle px-3 py-2 focus-within:border-border-strong"
       onSubmit={props.onSubmit}
     >
       <textarea
