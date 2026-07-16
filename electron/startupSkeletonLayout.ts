@@ -184,7 +184,15 @@ export function createStartupSkeletonCss(layout: StartupSkeletonLayout, settings
   const surfaces = layout.mode === 'dark' ? DEFAULT_DARK_SURFACES : DEFAULT_LIGHT_SURFACES;
   const rgb = layout.mode === 'dark' ? DEFAULT_DARK_RGB : DEFAULT_LIGHT_RGB;
   const workspaceSurfaces = readWorkspaceSurfaces(settings, layout.mode);
+  const rawDisplayScalePercent = readNumberSetting(
+    settings,
+    APP_SETTINGS_STORAGE_KEYS.appDisplayScalePercent,
+    80,
+    200
+  ) ?? 100;
+  const displayScalePercent = Math.round(rawDisplayScalePercent / 10) * 10;
   return [
+    `--startup-app-display-scale-percent: ${displayScalePercent};`,
     cssVar('color-canvas', rgb.canvas),
     cssVar('color-background', rgb.background),
     cssVar('color-bg-panel', rgb.panel),

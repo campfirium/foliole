@@ -10,6 +10,7 @@ import type {
   ExternalLibraryBrowseEntry,
   ExternalLibraryFolder
 } from '../../shared/platform/externalLibraryBrowseRepository';
+import { ScalableContentRegion } from '../../shared/ui';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import { TrashResultListPanel } from './TrashResultListPanel';
@@ -57,6 +58,7 @@ export interface WorkspaceDualListContentProps {
 
 function renderSingleListFallback(props: WorkspaceDualListContentProps) {
   return (
+    <ScalableContentRegion className="flex flex-1" label="Topic navigation" regionId="topic-navigation">
     <NodeListTree
       activeNodeId={props.activeNodeId}
       isTrashViewOpen={props.isTrashViewOpen}
@@ -69,6 +71,7 @@ function renderSingleListFallback(props: WorkspaceDualListContentProps) {
       onSelectTrashNode={props.onSelectTrashNode}
       selectedTrashNodeId={props.selectedTrashNodeId}
     />
+    </ScalableContentRegion>
   );
 }
 

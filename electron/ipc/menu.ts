@@ -97,6 +97,17 @@ function buildHelpMenu(state: MenuState): MenuItemConstructorOptions {
   };
 }
 
+function buildViewMenu(state: MenuState): MenuItemConstructorOptions {
+  return {
+    label: 'View',
+    submenu: [
+      commandItem('Increase Panel Content Size', 'view.increaseContentRegionScale', state),
+      commandItem('Decrease Panel Content Size', 'view.decreaseContentRegionScale', state),
+      commandItem('Reset Panel Content Size', 'view.resetContentRegionScale', state)
+    ]
+  };
+}
+
 function buildMacosStandardMenus(platform: NodeJS.Platform): MenuItemConstructorOptions[] {
   if (platform !== 'darwin') return [];
   return [
@@ -120,6 +131,7 @@ function buildAppMenuTemplate(
       ];
   return [
     ...buildMacosStandardMenus(platform),
+    buildViewMenu(state),
     buildWorkspaceMenu(state),
     {
       label: 'Navigate',

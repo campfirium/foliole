@@ -17,6 +17,7 @@ import {
   AppearanceDarkModeContentSection,
   AppearanceReadingColorSection
 } from './SettingsAppearanceColorSections';
+import { SettingsDisplayScaleSection } from './SettingsDisplayScaleSection';
 import { WorkspaceDividerSettingsSection } from './WorkspaceDividerSettingsSection';
 import { WorkspaceSurfaceColorSection } from './WorkspaceSurfaceColorSection';
 
@@ -82,6 +83,7 @@ export function SettingsAppearanceSection(props: {
   return (
     <>
       <AppearanceColorModeSection {...state} />
+      <SettingsDisplayScaleSection />
       <WorkspaceSurfaceColorSection onEnterPreview={props.onEnterPreview} />
       <WorkspaceDividerSettingsSection />
       <AppearanceReadingColorSection

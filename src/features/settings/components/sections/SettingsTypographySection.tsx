@@ -9,10 +9,8 @@ export function SettingsTypographySection() {
   const fontOptions = useSettingsFontOptions({
     customInterfaceFont: appearance.customInterfaceFont,
     customMonospaceFont: appearance.customMonospaceFont,
-    customUiFont: appearance.customUiFont,
     interfaceFontPreset: appearance.interfaceFontPreset,
-    monospaceFontPreset: appearance.monospaceFontPreset,
-    uiFontPreset: appearance.uiFontPreset
+    monospaceFontPreset: appearance.monospaceFontPreset
   });
   return (
     <>

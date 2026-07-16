@@ -7,6 +7,7 @@ const CONTRACT_FILES = [
   'lib/platform/nativeAssistantContract.ts',
   'lib/platform/nativeContract.ts',
   'lib/platform/nativeDiscoursePublishContract.ts',
+  'lib/platform/nativeDisplayScaleContract.ts',
   'lib/platform/nativeExternalSearchCommandMap.ts',
   'lib/platform/nativeFoliolePublishContract.ts',
   'lib/platform/nativeImportCommandMap.ts',
@@ -23,6 +24,7 @@ const CONTRACT_FILES = [
 const ELECTRON_HANDLER_FILES = [
   'electron/ipc/assistantCommands.ts',
   'electron/ipc/companionPairingCommands.ts',
+  'electron/ipc/displayScaleCommands.ts',
   'electron/ipc/importCommands.ts',
   'electron/ipc/reviewCommands.ts',
   'electron/ipc/storageAttachmentCommands.ts',

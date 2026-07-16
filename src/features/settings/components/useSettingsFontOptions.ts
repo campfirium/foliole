@@ -36,19 +36,17 @@ function useLazySystemFontCatalog() {
 export function useSettingsFontOptions(props: {
   customInterfaceFont: string;
   customMonospaceFont: string;
-  customUiFont: string;
   interfaceFontPreset: InterfaceFontPreset;
   monospaceFontPreset: MonospaceFontPreset;
-  uiFontPreset: InterfaceFontPreset;
 }) {
   const catalog = useLazySystemFontCatalog();
 
   const allFontOptions = useMemo(
     () =>
-      [...new Set([...catalog.fonts, ...catalog.monospaceFonts, props.customUiFont, props.customInterfaceFont, props.customMonospaceFont].filter(Boolean))].sort((l, r) =>
+      [...new Set([...catalog.fonts, ...catalog.monospaceFonts, props.customInterfaceFont, props.customMonospaceFont].filter(Boolean))].sort((l, r) =>
         l.localeCompare(r)
       ),
-    [catalog.fonts, catalog.monospaceFonts, props.customInterfaceFont, props.customMonospaceFont, props.customUiFont]
+    [catalog.fonts, catalog.monospaceFonts, props.customInterfaceFont, props.customMonospaceFont]
   );
   const monospaceFontOptions = useMemo(() => {
     const mono = new Set(catalog.monospaceFonts);
@@ -68,10 +66,5 @@ export function useSettingsFontOptions(props: {
       props.monospaceFontPreset === 'custom'
         ? (props.customMonospaceFont ? `mono-font:${props.customMonospaceFont}` : 'mono-preset:default')
         : `mono-preset:${props.monospaceFontPreset}`,
-    selectedUiFontValue:
-      props.uiFontPreset === 'custom'
-        ? (props.customUiFont ? `ui-font:${props.customUiFont}` : 'ui-preset:default')
-        : `ui-preset:${props.uiFontPreset}`,
-    uiFontOptions: allFontOptions
   };
 }

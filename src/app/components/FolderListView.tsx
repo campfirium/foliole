@@ -8,6 +8,7 @@ import {
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { definedProps } from '../../shared/lib/definedProps';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
+import { ScalableContentRegion } from '../../shared/ui';
 import { useWorkspaceStore, type NodeViewState } from '../../store/workspaceStore';
 import type { CurrentViewTopicSnapshot } from '../currentViewTopicSnapshot';
 
@@ -172,7 +173,6 @@ export function FolderListView(props: FolderListViewProps) {
   const setFolderManualChildOrder = useWorkspaceStore((storeState) => storeState.setFolderManualChildOrder);
   const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
   const scrollElementRef = useRef<HTMLDivElement | null>(null);
-  const headerMode = props.showEmbeddedHeader === false ? 'hidden' : 'full';
   const canManualDrag = Boolean(props.folderNodeId && state.sortKey === 'manual' && !state.searchQuery.trim());
   const currentViewActions = buildFolderListCurrentViewActions(props, deleteNodes, state.filteredNodes);
   const selection = useFolderListSelection({
@@ -180,16 +180,16 @@ export function FolderListView(props: FolderListViewProps) {
     filteredNodes: state.filteredNodes,
     onSelectNode: props.onSelectNode
   });
-
   return (
-    <div ref={scrollElementRef} className="app-scrollbar flex min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-4 max-[1080px]:px-2">
+    <ScalableContentRegion className="flex flex-1" label="Folder content" regionId="folder-content-list">
+      <div ref={scrollElementRef} className="app-scrollbar flex min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-4 max-[1080px]:px-2">
       <section aria-label={props.regionLabel ?? t('desktop.folderList.view')} className="mx-auto flex w-full flex-1 flex-col">
         <FolderListViewLayout
           currentViewActions={props.currentViewActions ?? currentViewActions}
           {...definedProps({ emptyState: props.emptyState })}
           filteredNodes={state.filteredNodes}
           folderTitle={resolvedFolderTitle}
-          headerMode={headerMode}
+          headerMode={props.showEmbeddedHeader === false ? 'hidden' : 'full'}
           itemCountLabel={state.itemCountLabel}
           navigationOverlay={props.navigationOverlay ? <FolderListNavigationOverlay {...props.navigationOverlay} /> : null}
           onChangeSearchQuery={state.setSearchQuery}
@@ -222,6 +222,7 @@ export function FolderListView(props: FolderListViewProps) {
           t={t}
         />
       </section>
-    </div>
+      </div>
+    </ScalableContentRegion>
   );
 }

@@ -13,8 +13,6 @@ import {
 } from './appearanceSettingsOptions';
 
 const FONT_STORAGE_KEYS = {
-  uiFont: APP_SETTINGS_STORAGE_KEYS.uiFont,
-  customUiFont: APP_SETTINGS_STORAGE_KEYS.customUiFont,
   interfaceFont: APP_SETTINGS_STORAGE_KEYS.interfaceFont,
   monospaceFont: APP_SETTINGS_STORAGE_KEYS.monospaceFont,
   interfaceFontSize: APP_SETTINGS_STORAGE_KEYS.interfaceFontSize,
@@ -45,26 +43,8 @@ export function getInterfaceFontPreset(): InterfaceFontPreset {
   return raw && isInterfaceFontPreset(raw) ? raw : 'default';
 }
 
-export function getUiFontPreset(): InterfaceFontPreset {
-  const raw = getWhitelistedLocalStorageItem(FONT_STORAGE_KEYS.uiFont);
-  return raw && isInterfaceFontPreset(raw) ? raw : 'default';
-}
-
-export function setUiFontPreset(value: InterfaceFontPreset) {
-  setWhitelistedLocalStorageItem(FONT_STORAGE_KEYS.uiFont, value);
-}
-
 export function setInterfaceFontPreset(value: InterfaceFontPreset) {
   setWhitelistedLocalStorageItem(FONT_STORAGE_KEYS.interfaceFont, value);
-}
-
-export function getCustomUiFont() {
-  const raw = getWhitelistedLocalStorageItem(FONT_STORAGE_KEYS.customUiFont);
-  return raw ? sanitizeFontFamily(raw) : '';
-}
-
-export function setCustomUiFont(value: string) {
-  setWhitelistedLocalStorageItem(FONT_STORAGE_KEYS.customUiFont, sanitizeFontFamily(value));
 }
 
 export function getCustomInterfaceFont() {

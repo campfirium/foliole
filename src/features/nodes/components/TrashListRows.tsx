@@ -1,10 +1,10 @@
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, RefObject } from 'react';
 
 import { VirtualListSurface, type VirtualListRenderMeta } from '../../../shared/ui';
-import { useAppearanceSettings } from '../../settings/context/AppearanceSettingsProvider';
 import type { NodeTreeRow } from '../model/nodeTree';
 import type { WorkspaceListNode, WorkspaceListNodesById } from '../model/workspaceListNode';
 
+import { getNavigationMetaFontSize, getNavigationTitleFontSize } from './navigationTypographySettings';
 import { resolveNodeTreeRowWithSecondaryVirtualSize } from './nodeListRowSpacingSettings';
 import type { NodeSelectModifiers } from './NodeListTreeState';
 import { NodeTreeRow as NodeTreeRowItem } from './NodeTreeRow';
@@ -74,7 +74,8 @@ function renderTrashRow(
 }
 
 export function TrashListRows(props: TrashListRowsProps) {
-  const { navigationMetaFontSize, navigationTitleFontSize } = useAppearanceSettings();
+  const navigationMetaFontSize = getNavigationMetaFontSize();
+  const navigationTitleFontSize = getNavigationTitleFontSize();
   return (
     <VirtualListSurface
       estimateSize={() => resolveNodeTreeRowWithSecondaryVirtualSize(props.rowSpacing, navigationTitleFontSize, navigationMetaFontSize)}

@@ -14,7 +14,6 @@ import {
   setBaseColorMode,
   setCustomInterfaceFont,
   setCustomMonospaceFont,
-  setCustomUiFont,
   setDimImagesInDarkMode,
   setInterfaceFontPreset,
   setInterfaceFontSize,
@@ -23,7 +22,6 @@ import {
   setReadingContentWidth,
   setReadingLineHeight,
   setReadingParagraphSpacing,
-  setUiFontPreset
 } from '../model/appearanceSettings';
 import type { BaseColorMode } from '../model/baseColorMode';
 import { resolveBaseColorMode } from '../model/baseColorMode';
@@ -39,7 +37,6 @@ export type GeneralAppearanceActions = Pick<
   | 'setBaseColorMode'
   | 'setCustomInterfaceFont'
   | 'setCustomMonospaceFont'
-  | 'setCustomUiFont'
   | 'setDimImagesInDarkMode'
   | 'setFrontmatterDisplayMode'
   | 'setFrontmatterMetaFields'
@@ -53,7 +50,6 @@ export type GeneralAppearanceActions = Pick<
   | 'setReadingContentWidth'
   | 'setReadingLineHeight'
   | 'setReadingParagraphSpacing'
-  | 'setUiFontPreset'
   | 'toggleBaseColorMode'
   | 'toggleEditorDisplayMode'
 >;
@@ -72,7 +68,6 @@ export function createGeneralAppearanceActions(state: AppearanceState): GeneralA
     setBaseColorMode: applyBaseColorMode,
     setCustomInterfaceFont: (value: string) => (setCustomInterfaceFont(value), state.setCustomInterfaceFontState(value)),
     setCustomMonospaceFont: (value: string) => (setCustomMonospaceFont(value), state.setCustomMonospaceFontState(value)),
-    setCustomUiFont: (value: string) => (setCustomUiFont(value), state.setCustomUiFontState(value)),
     setDimImagesInDarkMode: (value: boolean) => (setDimImagesInDarkMode(value), state.setDimImagesInDarkModeState(value)),
     setFrontmatterDisplayMode: (value: FrontmatterDisplayMode) => (setFrontmatterDisplayMode(value), state.setFrontmatterDisplayModeState(value)),
     setFrontmatterMetaFields: (value: string) => state.setFrontmatterMetaFieldsState(setFrontmatterMetaFields(value)),
@@ -86,7 +81,6 @@ export function createGeneralAppearanceActions(state: AppearanceState): GeneralA
     setReadingContentWidth: (value: number) => (setReadingContentWidth(value), state.setReadingContentWidthState(value)),
     setReadingLineHeight: (value: ReadingLineHeight) => state.setReadingLineHeightState(setReadingLineHeight(value)),
     setReadingParagraphSpacing: (value: ReadingParagraphSpacing) => state.setReadingParagraphSpacingState(setReadingParagraphSpacing(value)),
-    setUiFontPreset: (value: InterfaceFontPreset) => (setUiFontPreset(value), state.setUiFontPresetState(value)),
     toggleBaseColorMode: () => {
       const next = state.resolvedBaseColorModeState === 'dark' ? 'light' : 'dark';
       applyBaseColorMode(next);

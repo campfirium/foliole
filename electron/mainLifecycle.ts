@@ -42,10 +42,10 @@ import { stopLanWorkspaceSyncServer } from './sync/lanWorkspaceSyncServer.js';
 
 export interface MainLifecycleArgs {
   activateMainWindow: (window: BrowserWindow) => Promise<void>;
-  createMainWindow: (startupAppearance?: { backgroundColor: string } | null) => Promise<BrowserWindow>;
+  createMainWindow: (startupAppearance?: { backgroundColor: string; displayScalePercent?: number } | null) => Promise<BrowserWindow>;
   installInvokeHandler: () => void;
   loadMainWindow: (window: BrowserWindow, startupView?: StartupRendererView | null) => Promise<void>;
-  prepareStartupAppearance?: () => { backgroundColor: string } | null;
+  prepareStartupAppearance?: () => { backgroundColor: string; displayScalePercent?: number } | null;
   runtimeMode: RuntimeMode;
 }
 

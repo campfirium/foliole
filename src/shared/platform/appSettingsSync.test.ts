@@ -24,7 +24,7 @@ it('hydrates local settings from the runtime startup snapshot without rewriting 
   const invoke = vi
     .fn()
     .mockResolvedValueOnce({
-      [APP_SETTINGS_STORAGE_KEYS.uiFont]: 'inter',
+      [APP_SETTINGS_STORAGE_KEYS.appDisplayScalePercent]: '120',
       [APP_SETTINGS_STORAGE_KEYS.interfaceFontSize]: '19'
     })
     .mockResolvedValueOnce(null);
@@ -32,7 +32,7 @@ it('hydrates local settings from the runtime startup snapshot without rewriting 
 
   await syncAppSettingsWithRuntime();
 
-  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.uiFont)).toBe('inter');
+  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.appDisplayScalePercent)).toBe('120');
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.interfaceFontSize)).toBe('19');
   expect(invoke).toHaveBeenCalledWith('load_app_settings_state');
   expect(invoke).toHaveBeenCalledTimes(1);
@@ -53,13 +53,13 @@ it('does not rewrite the runtime startup snapshot when a single runtime setting 
 });
 
 it('keeps existing local values without writing runtime when the runtime startup snapshot is empty', async () => {
-  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.uiFont, 'source-sans');
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.appDisplayScalePercent, '110');
   const invoke = vi.fn().mockResolvedValueOnce({});
   window.electronAPI = createMockElectronApi(invoke);
 
   await syncAppSettingsWithRuntime();
 
-  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.uiFont)).toBe('source-sans');
+  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.appDisplayScalePercent)).toBe('110');
   expect(invoke).toHaveBeenCalledWith('load_app_settings_state');
   expect(invoke).toHaveBeenCalledTimes(1);
 });

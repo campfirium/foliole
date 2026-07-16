@@ -57,7 +57,7 @@ export function useWorkspaceTopicTreeRowScrollLayout(args: {
   scrollTargetNodeId: string | null | undefined;
 }) {
   const appearance = useOptionalAppearanceSettings();
-  const navigationTitleFontSize = appearance?.navigationTitleFontSize ?? getNavigationTitleFontSize();
+  const navigationTitleFontSize = getNavigationTitleFontSize();
   const rowSpacing = appearance?.nodeListRowSpacing ?? getNodeListRowSpacing();
   const rowGap = resolveNodeListRowGap(rowSpacing);
   const isReviewScrollPlacement = args.scrollPlacement === 'second-visible-row' || args.scrollPlacement === 'near-visible-row';

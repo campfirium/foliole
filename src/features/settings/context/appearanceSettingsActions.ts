@@ -50,7 +50,6 @@ export type AppearanceState = {
   clozeColorPresetState: ClozeColorPreset;
   customInterfaceFontState: string;
   customMonospaceFontState: string;
-  customUiFontState: string;
   dimImagesInDarkModeState: boolean;
   editorDisplayModeState: EditorDisplayMode;
   fontColorPresetState: FontColorPreset;
@@ -68,7 +67,6 @@ export type AppearanceState = {
   selectionColorPresetState: SelectionColorPreset;
   selectionToolbarEnabledState: boolean;
   selectionToolbarOpacityPercentState: number;
-  uiFontPresetState: InterfaceFontPreset;
   workspaceDividerOpacityPercentState: number;
   workspaceSurfaceAssignmentsState: AppearanceSettingsContextValue['workspaceSurfaceAssignments'];
   workspaceSurfacePaletteState: AppearanceSettingsContextValue['workspaceSurfacePalette'];
@@ -78,7 +76,6 @@ export type AppearanceState = {
   setClozeColorPresetState: Setter<ClozeColorPreset>;
   setCustomInterfaceFontState: Setter<string>;
   setCustomMonospaceFontState: Setter<string>;
-  setCustomUiFontState: Setter<string>;
   setDimImagesInDarkModeState: Setter<boolean>;
   setEditorDisplayModeState: Setter<EditorDisplayMode>;
   setFontColorPresetState: Setter<FontColorPreset>;
@@ -97,7 +94,6 @@ export type AppearanceState = {
   setSelectionToolbarEnabledState: Setter<boolean>;
   setSelectionToolbarOpacityPercentState: Setter<number>;
   setResolvedBaseColorModeState: Setter<ResolvedBaseColorMode>;
-  setUiFontPresetState: Setter<InterfaceFontPreset>;
   setWorkspaceDividerOpacityPercentState: Setter<number>;
   setWorkspaceSurfaceAssignmentsState: Setter<AppearanceSettingsContextValue['workspaceSurfaceAssignments']>;
   setWorkspaceSurfacePaletteState: Setter<AppearanceSettingsContextValue['workspaceSurfacePalette']>;

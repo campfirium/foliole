@@ -1,3 +1,4 @@
+import { isContentRegionScaleCommandEnabled, isContentRegionScaleCommandId } from '../../shared/commands/contentRegionScaleCommands';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import type { Translate } from '../../shared/localization/LocalizationProvider';
 
@@ -70,6 +71,7 @@ function resolvePaletteTitle(id: string, options: BuildAppPaletteItemsOptions, t
 }
 
 function isWorkspaceCommandEnabled(id: string, options: BuildAppPaletteItemsOptions) {
+  if (isContentRegionScaleCommandId(id)) return isContentRegionScaleCommandEnabled(id);
   if (id === APP_COMMAND_IDS.undo) {
     return options.canUndoWorkspaceAction;
   }

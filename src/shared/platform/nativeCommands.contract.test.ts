@@ -10,6 +10,7 @@ const CONTRACT_FILES = [
   'nativeAssistantContract.ts',
   'nativeContract.ts',
   'nativeDiscoursePublishContract.ts',
+  'nativeDisplayScaleContract.ts',
   'nativeExternalSearchCommandMap.ts',
   'nativeFoliolePublishContract.ts',
   'nativeImportCommandMap.ts',

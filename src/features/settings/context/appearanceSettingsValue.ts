@@ -31,14 +31,8 @@ function createWorkspaceSettingsValue(state: AppearanceStateValues) {
 
 function createNavigationTypographyValue(state: AppearanceStateValues) {
   return {
-    navigationMetaFontSize: state.navigationMetaFontSizeState,
-    navigationTitleFontSize: state.navigationTitleFontSizeState,
     nodeListRowSpacing: state.nodeListRowSpacingState,
-    resetNavigationMetaFontSize: state.resetNavigationMetaFontSize,
-    resetNavigationTitleFontSize: state.resetNavigationTitleFontSize,
     resetNodeListRowSpacing: state.resetNodeListRowSpacing,
-    setNavigationMetaFontSize: state.setNavigationMetaFontSize,
-    setNavigationTitleFontSize: state.setNavigationTitleFontSize,
     setNodeListRowSpacing: state.setNodeListRowSpacing
   };
 }
@@ -53,7 +47,6 @@ function createAppearanceSettingsContextValue(state: AppearanceStateValues): App
       clozeColorPreset: state.clozeColorPresetState,
       customInterfaceFont: state.customInterfaceFontState,
       customMonospaceFont: state.customMonospaceFontState,
-      customUiFont: state.customUiFontState,
       editorAppearanceKey: `${state.markdownSyntaxVisibilityState}-${state.frontmatterMetaFieldsState}-${state.editorDisplayModeState}`,
       editorDisplayMode: state.editorDisplayModeState,
       fontColorPreset: state.fontColorPresetState,
@@ -69,7 +62,6 @@ function createAppearanceSettingsContextValue(state: AppearanceStateValues): App
       ...createNavigationTypographyValue(state),
       pdfReadingMode: state.pdfReadingModeState,
       ...createReadingSettingsValue(state),
-      uiFontPreset: state.uiFontPresetState,
       ...createWorkspaceSettingsValue(state),
       ...createAppearanceActions(state)
     };
@@ -86,7 +78,6 @@ export function useAppearanceSettingsValue(state: AppearanceStateValues): Appear
       state.clozeColorPresetState,
       state.customInterfaceFontState,
       state.customMonospaceFontState,
-      state.customUiFontState,
       state.editorDisplayModeState,
       state.fontColorPresetState,
       state.frontmatterDisplayModeState,
@@ -98,14 +89,11 @@ export function useAppearanceSettingsValue(state: AppearanceStateValues): Appear
       state.interfaceFontSizeState,
       state.markdownSyntaxVisibilityState,
       state.monospaceFontPresetState,
-      state.navigationMetaFontSizeState,
-      state.navigationTitleFontSizeState,
       state.nodeListRowSpacingState,
       state.pdfReadingModeState,
       state.readingContentWidthState,
       state.readingLineHeightState,
       state.readingParagraphSpacingState,
-      state.uiFontPresetState,
       state.workspaceDividerOpacityPercentState,
       state.workspaceSurfaceAssignmentsState,
       state.workspaceSurfacePaletteState

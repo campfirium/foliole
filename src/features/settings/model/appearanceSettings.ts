@@ -91,18 +91,14 @@ export {
 export {
   getCustomInterfaceFont,
   getCustomMonospaceFont,
-  getCustomUiFont,
   getInterfaceFontPreset,
   getInterfaceFontSize,
   getMonospaceFontPreset,
-  getUiFontPreset,
   setCustomInterfaceFont,
   setCustomMonospaceFont,
-  setCustomUiFont,
   setInterfaceFontPreset,
   setInterfaceFontSize,
   setMonospaceFontPreset,
-  setUiFontPreset
 } from './appearanceFontSettings';
 export {
   getBaseColorMode,

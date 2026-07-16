@@ -1,4 +1,5 @@
 import type { PdfReadingMode } from '../../features/settings/model/appearanceSettings';
+import { isContentRegionScaleCommandId, runContentRegionScaleCommand } from '../../shared/commands/contentRegionScaleCommands';
 import { getPlatformDefaultCommandShortcuts } from '../../shared/commands/defaultShortcuts';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import type { CommandPaletteItem } from '../../shared/commands/types';
@@ -214,6 +215,7 @@ export function runAppCommand(id: string, actions: RunAppCommandActions) {
 
   const handler = handlers[id];
   if (!handler) {
+    if (isContentRegionScaleCommandId(id)) return runContentRegionScaleCommand(id);
     return false;
   }
   const result = handler();

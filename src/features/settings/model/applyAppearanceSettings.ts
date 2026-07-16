@@ -35,7 +35,6 @@ interface ApplyAppearanceSettingsInput {
   accentColor: AccentColorPreset;
   baseColor: BaseColorMode;
   clozeColor: ClozeColorPreset;
-  customUiFont: string;
   customInterfaceFont: string;
   customMonospaceFont: string;
   dimImagesInDarkMode: boolean;
@@ -50,7 +49,6 @@ interface ApplyAppearanceSettingsInput {
   readingParagraphSpacing: ReadingParagraphSpacing;
   resolvedBaseColor: ResolvedBaseColorMode;
   selectionColor: SelectionColorPreset;
-  uiFont: InterfaceFontPreset;
   workspaceDividerOpacityPercent: number;
   workspaceSurfaceAssignments: WorkspaceSurfaceAssignments;
   workspaceSurfacePalette: WorkspaceSurfacePalette;

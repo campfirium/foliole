@@ -131,6 +131,23 @@ describe('native app menu command state', () => {
   });
 });
 
+describe('native View menu', () => {
+  beforeEach(resetMenuMock);
+
+  it('exposes focused panel content sizing with synchronized state', () => {
+    syncAppMenuState(
+      ['view.increaseContentRegionScale'],
+      [{ accelerator: 'CommandOrControl+=', commandId: 'view.increaseContentRegionScale' }]
+    );
+    const items = (menuMock.applicationMenu?.items ?? []) as MockMenuItem[];
+    expect(findMenuItem(items, 'view.increaseContentRegionScale')).toMatchObject({
+      accelerator: 'CommandOrControl+=', enabled: true
+    });
+    expect(findMenuItem(items, 'view.decreaseContentRegionScale')).toMatchObject({ enabled: false });
+    expect(findMenuItem(items, 'view.resetContentRegionScale')).toMatchObject({ enabled: false });
+  });
+});
+
 describe('native app menu rebuilding', () => {
   beforeEach(resetMenuMock);
 

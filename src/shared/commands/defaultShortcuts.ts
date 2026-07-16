@@ -14,6 +14,9 @@ export const DEFAULT_APP_COMMAND_SHORTCUTS: DefaultCommandShortcuts = {
   [APP_COMMAND_IDS.closeCommandPalette]: { primary: { key: 'Escape' } },
   [APP_COMMAND_IDS.closeSettings]: { primary: { key: 'Escape' } },
   [APP_COMMAND_IDS.closeContextMenu]: { primary: { key: 'Escape' } },
+  [APP_COMMAND_IDS.increaseContentRegionScale]: { primary: { key: '=', ctrlKey: true }, secondary: { key: '+', ctrlKey: true, shiftKey: true } },
+  [APP_COMMAND_IDS.decreaseContentRegionScale]: { primary: { key: '-', ctrlKey: true } },
+  [APP_COMMAND_IDS.resetContentRegionScale]: { primary: { key: '0', ctrlKey: true } },
   [APP_COMMAND_IDS.undo]: { primary: { key: 'z', ctrlKey: true }, secondary: { key: 'z', metaKey: true } },
   [APP_COMMAND_IDS.redo]: {
     primary: { key: 'z', ctrlKey: true, shiftKey: true },

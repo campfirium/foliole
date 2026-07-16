@@ -161,7 +161,7 @@ async function activateRendererInWindow(window: ElectronBrowserWindow) {
   await appendBootEvent('renderer_activation_complete');
 }
 
-async function createMainWindow(startupAppearance?: { backgroundColor: string } | null) {
+async function createMainWindow(startupAppearance?: { backgroundColor: string; displayScalePercent?: number } | null) {
   await appendBootEvent('main_window_create_start');
   const restoredWindowState = await loadStartupWindowState({ appendBootEvent, loadWindowState });
   await appendBootEvent('window_state_loaded', restoredWindowState);
@@ -187,7 +187,7 @@ async function createMainWindow(startupAppearance?: { backgroundColor: string } 
   });
   const window = new BrowserWindow(options);
   installMainWindowContentSecurityPolicy(window.webContents.session, { isPackaged: app.isPackaged });
-  bindMainWindowNavigationGuard(window);
+  bindMainWindowNavigationGuard(window, startupAppearance?.displayScalePercent ?? 100);
   bindMainWindowWebviewAttachGuard(window);
   await appendBootEvent('browser_window_created', {
     bounds: window.getBounds(),

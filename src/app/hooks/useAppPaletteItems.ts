@@ -12,6 +12,7 @@ import {
   resolveReviewSiblingNodeId,
   resolveReviewSourceTopicNodeId
 } from '../../features/review/model/reviewGameNavigation';
+import { useContentRegionScaleCommandRevision } from '../../shared/commands/contentRegionScaleCommands';
 import { definedProps } from '../../shared/lib/definedProps';
 import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
 import { getWorkspaceRedoTitle, getWorkspaceUndoTitle } from '../../store/workspaceActionHistory';
@@ -146,6 +147,7 @@ export function useAppPaletteItems(args: {
   study: ReturnType<typeof useWorkspaceControllerState>['study'];
   ws: Pick<ReturnType<typeof useWorkspaceSelectors>, 'appActionHistory' | 'editorOperationHistory' | 'nodeOrder' | 'nodesById' | 'trashedNodeIds'>;
 }) {
+  const contentScaleRevision = useContentRegionScaleCommandRevision();
   const t = useTranslation();
   const hasNavigableNodes = useMemo(
     () => args.ws.nodeOrder.some((nodeId) => !args.ws.trashedNodeIds.includes(nodeId) && Boolean(args.ws.nodesById[nodeId])),
@@ -169,6 +171,6 @@ export function useAppPaletteItems(args: {
         ...item,
         ...definedProps({ shortcuts: args.hotkeys.shortcutMap[item.id] ?? item.shortcuts })
       })),
-    [args, canMoveToNode, hasNavigableNodes, t]
+    [args, canMoveToNode, contentScaleRevision, hasNavigableNodes, t]
   );
 }

@@ -3,6 +3,7 @@ import '@testing-library/jest-dom/vitest';
 import { createElement, type ComponentType, type ReactNode } from 'react';
 import { beforeAll, vi } from 'vitest';
 
+import { DisplayScaleProvider } from '../features/settings/context/DisplayScaleProvider';
 import { LocalizationProvider } from '../shared/localization/LocalizationProvider';
 import { preloadTranslationCatalog } from '../shared/localization/translations';
 
@@ -24,7 +25,11 @@ vi.mock('@testing-library/react', async (importOriginal) => {
         createElement(
           LocalizationProvider,
           null,
-          OriginalWrapper ? createElement(OriginalWrapper, null, children) : children
+          createElement(
+            DisplayScaleProvider,
+            null,
+            OriginalWrapper ? createElement(OriginalWrapper, null, children) : children
+          )
         );
 
       return actual.render(ui, { ...options, wrapper });

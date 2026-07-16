@@ -52,6 +52,7 @@ it('prevents renderer title updates from overriding the preview label', () => {
       if (eventName === 'page-title-updated') webContentsHandlers.push(handler as (event: { preventDefault: () => void }) => void);
       if (eventName === 'dom-ready' || eventName === 'did-finish-load') webContentsRestoreHandlers.push(handler as () => void);
     }),
+    setZoomFactor: vi.fn(),
     setWindowOpenHandler: vi.fn()
   };
   const window = {
@@ -94,6 +95,7 @@ it('prevents renderer title updates from overriding the app title', () => {
     on: vi.fn((eventName: string, handler: ((event: { preventDefault: () => void }) => void) | (() => void)) => {
       if (eventName === 'page-title-updated') webContentsHandlers.push(handler as (event: { preventDefault: () => void }) => void);
     }),
+    setZoomFactor: vi.fn(),
     setWindowOpenHandler: vi.fn()
   };
   const window = {

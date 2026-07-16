@@ -35,6 +35,10 @@
   --color-text-secondary: rgb(var(--color-muted-foreground));
   --color-bg-muted: rgb(var(--color-muted));
   --content-panel-text-color: var(--color-text-primary);
+  --navigation-title-font-size: 14px;
+  --navigation-title-line-height: 20px;
+  --navigation-meta-font-size: 12px;
+  --navigation-meta-line-height: 18px;
   --workspace-divider-mix-target: black;
   --workspace-divider-opacity: 0;
   --workspace-divider-subtle-surface-weight: 92%;

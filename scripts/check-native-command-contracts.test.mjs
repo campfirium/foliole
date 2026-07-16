@@ -62,6 +62,7 @@ async function writeBaseFixture(repoRoot, overrides = {}) {
   }
   for (const file of [
     'companionPairingCommands.ts',
+    'displayScaleCommands.ts',
     'importCommands.ts',
     'reviewCommands.ts',
     'storageAttachmentCommands.ts',

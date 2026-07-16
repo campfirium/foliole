@@ -104,7 +104,14 @@ export function bindEmbeddedLinkPanelContents(contents: WebContents) {
   });
 }
 
-export function bindMainWindowNavigationGuard(window: import('electron').BrowserWindow) {
+export function bindMainWindowNavigationGuard(
+  window: import('electron').BrowserWindow,
+  displayScalePercent = 100
+) {
+  const applyDisplayScale = () => {
+    if (!window.isDestroyed()) window.webContents.setZoomFactor(displayScalePercent / 100);
+  };
+  applyDisplayScale();
   window.webContents.on('will-navigate', (event, url) => {
     if (isInitialMainWindowRendererNavigation(window.webContents.getURL(), url)) {
       return;
@@ -131,6 +138,7 @@ export function bindMainWindowNavigationGuard(window: import('electron').Browser
       if (!window.isDestroyed()) restorePreviewTitle();
     }, 1000);
   }
+  window.webContents.on('did-finish-load', applyDisplayScale);
 }
 
 function isInitialMainWindowRendererNavigation(currentUrl: string, targetUrl: string) {

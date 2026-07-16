@@ -55,6 +55,15 @@ it('keeps only standard undo and redo defaults on macOS', () => {
   });
 });
 
+it('uses standard focused-content sizing shortcuts on macOS and Windows', () => {
+  const mac = getPlatformDefaultCommandShortcuts('MacIntel');
+  const windows = getPlatformDefaultCommandShortcuts('Win32');
+  expect(matchesShortcutSet(keyEvent({ key: '=', metaKey: true }), mac[APP_COMMAND_IDS.increaseContentRegionScale])).toBe(true);
+  expect(matchesShortcutSet(keyEvent({ key: '+', metaKey: true, shiftKey: true }), mac[APP_COMMAND_IDS.increaseContentRegionScale])).toBe(true);
+  expect(matchesShortcutSet(keyEvent({ key: '-', ctrlKey: true }), windows[APP_COMMAND_IDS.decreaseContentRegionScale])).toBe(true);
+  expect(matchesShortcutSet(keyEvent({ key: '0', ctrlKey: true }), windows[APP_COMMAND_IDS.resetContentRegionScale])).toBe(true);
+});
+
 it('leaves the Windows and Linux default table unchanged', () => {
   expect(getPlatformDefaultCommandShortcuts({
     includeBrowserReservedShortcuts: true,

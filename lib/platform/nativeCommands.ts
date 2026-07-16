@@ -91,6 +91,7 @@ export const NATIVE_COMMANDS = {
   reviewGrade: 'review_grade',
   reviewPreview: 'review_preview',
   syncAppMenuState: 'sync_app_menu_state',
+  setAppDisplayScale: 'set_app_display_scale',
   windowClose: 'window_close',
   windowIsMaximized: 'window_is_maximized',
   windowMinimize: 'window_minimize',

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { AppearanceSettingsProvider } from '../features/settings/context/AppearanceSettingsProvider';
+import { DisplayScaleProvider } from '../features/settings/context/DisplayScaleProvider';
 import { ExternalFoldersSettingsProvider } from '../features/settings/context/ExternalFoldersSettingsProvider';
 import { MouseGestureSettingsProvider } from '../features/settings/context/MouseGestureSettingsProvider';
 import { ReviewSchedulerSettingsProvider } from '../features/settings/context/ReviewSchedulerSettingsProvider';
@@ -18,6 +19,7 @@ export function AppProviders({ children, initialLanguagePreference }: AppProvide
   return (
     <LocalizationProvider initialLanguagePreference={initialLanguagePreference}>
       <AppearanceSettingsProvider>
+        <DisplayScaleProvider>
         <ExternalFoldersSettingsProvider>
           <MouseGestureSettingsProvider>
             <ReviewSchedulerSettingsProvider>
@@ -27,6 +29,7 @@ export function AppProviders({ children, initialLanguagePreference }: AppProvide
             </ReviewSchedulerSettingsProvider>
           </MouseGestureSettingsProvider>
         </ExternalFoldersSettingsProvider>
+        </DisplayScaleProvider>
       </AppearanceSettingsProvider>
     </LocalizationProvider>
   );

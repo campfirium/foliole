@@ -7,7 +7,6 @@ import {
   getClozeColorPreset,
   getCustomInterfaceFont,
   getCustomMonospaceFont,
-  getCustomUiFont,
   getDimImagesInDarkMode,
   getInterfaceFontPreset,
   getInterfaceFontSize,
@@ -16,7 +15,6 @@ import {
   getPdfReadingMode,
   getSelectionColorPreset,
   getMonospaceFontPreset,
-  getUiFontPreset,
   getWorkspaceDividerOpacityPercent,
   getWorkspaceSurfaceAssignments,
   getWorkspaceSurfacePalette
@@ -68,8 +66,6 @@ export function useAppearanceStateValues() {
   const [dimImagesInDarkModeState, setDimImagesInDarkModeState] = useState(() => getDimImagesInDarkMode());
   const [resolvedBaseColorModeState, setResolvedBaseColorModeState] = useState(() => initialModeState.resolvedBaseColorMode);
   const [pdfReadingModeState, setPdfReadingModeState] = useState(() => getPdfReadingMode());
-  const [uiFontPresetState, setUiFontPresetState] = useState(() => getUiFontPreset());
-  const [customUiFontState, setCustomUiFontState] = useState(() => getCustomUiFont());
   const [interfaceFontPresetState, setInterfaceFontPresetState] = useState(() => getInterfaceFontPreset());
   const [customInterfaceFontState, setCustomInterfaceFontState] = useState(() => getCustomInterfaceFont());
   const [monospaceFontPresetState, setMonospaceFontPresetState] = useState(() => getMonospaceFontPreset());
@@ -87,7 +83,6 @@ export function useAppearanceStateValues() {
     dimImagesInDarkModeState,
     customInterfaceFontState,
     customMonospaceFontState,
-    customUiFontState,
     interfaceFontPresetState,
     interfaceFontSizeState,
     monospaceFontPresetState,
@@ -97,15 +92,12 @@ export function useAppearanceStateValues() {
     setDimImagesInDarkModeState,
     setCustomInterfaceFontState,
     setCustomMonospaceFontState,
-    setCustomUiFontState,
     setInterfaceFontPresetState,
     setInterfaceFontSizeState,
     setMonospaceFontPresetState,
     setPdfReadingModeState,
     setResolvedBaseColorModeState,
-    setUiFontPresetState,
     setWorkspaceDividerOpacityPercentState,
-    uiFontPresetState,
     workspaceDividerOpacityPercentState
   };
 }
@@ -172,14 +164,12 @@ function useApplyAppearanceEffect(state: ReturnType<typeof useAppearanceStateVal
       clozeColor: modeScopedState.clozeColorPreset,
       customInterfaceFont: state.customInterfaceFontState,
       customMonospaceFont: state.customMonospaceFontState,
-      customUiFont: state.customUiFontState,
       fontColor: modeScopedState.fontColorPreset,
       highlightColor: modeScopedState.highlightColorPreset,
       selectionColor: modeScopedState.selectionColorPreset,
       interfaceFont: state.interfaceFontPresetState,
       interfaceFontSize: state.interfaceFontSizeState,
       monospaceFont: state.monospaceFontPresetState,
-      uiFont: state.uiFontPresetState,
       workspaceDividerOpacityPercent: state.workspaceDividerOpacityPercentState,
       workspaceSurfaceAssignments: modeScopedState.workspaceSurfaceAssignments,
       workspaceSurfacePalette: modeScopedState.workspaceSurfacePalette
@@ -191,7 +181,6 @@ function useApplyAppearanceEffect(state: ReturnType<typeof useAppearanceStateVal
     state.clozeColorPresetState,
     state.customInterfaceFontState,
     state.customMonospaceFontState,
-    state.customUiFontState,
     state.dimImagesInDarkModeState,
     state.fontColorPresetState,
     state.highlightColorPresetState,
@@ -205,7 +194,6 @@ function useApplyAppearanceEffect(state: ReturnType<typeof useAppearanceStateVal
     state.selectionColorPresetState,
     state.selectionToolbarOpacityPercentState,
     state.resolvedBaseColorModeState,
-    state.uiFontPresetState,
     state.workspaceDividerOpacityPercentState,
     state.workspaceSurfaceAssignmentsState,
     state.workspaceSurfacePaletteState

@@ -18,6 +18,7 @@ it('blocks main window renderer navigation and renderer-created windows', () => 
         willNavigateHandlers.push(handler);
       }
     }),
+    setZoomFactor: vi.fn(),
     setWindowOpenHandler: vi.fn((handler: WindowOpenHandler) => {
       windowOpenHandlers.push(handler);
     })
@@ -30,11 +31,12 @@ it('blocks main window renderer navigation and renderer-created windows', () => 
     webContents
   };
 
-  bindMainWindowNavigationGuard(window as never);
+  bindMainWindowNavigationGuard(window as never, 130);
   const navigationEvent = { preventDefault: vi.fn() };
   willNavigateHandlers[0]?.(navigationEvent, 'https://example.com');
 
   expect(webContents.on).toHaveBeenCalledWith('will-navigate', expect.any(Function));
+  expect(webContents.setZoomFactor).toHaveBeenCalledWith(1.3);
   expect(navigationEvent.preventDefault).toHaveBeenCalledTimes(1);
   expect(windowOpenHandlers[0]?.({ url: 'https://example.com' })).toEqual({ action: 'deny' });
 });
@@ -50,6 +52,7 @@ it('allows the main process to load the initial local renderer before blocking l
         willNavigateHandlers.push(handler);
       }
     }),
+    setZoomFactor: vi.fn(),
     setWindowOpenHandler: vi.fn()
   };
   const window = {

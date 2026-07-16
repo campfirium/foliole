@@ -19,7 +19,7 @@ beforeEach(() => {
 });
 
 it('derives localStorage whitelist from settings classification', () => {
-  expect(getLocalStorageWhitelist()).toContain(APP_SETTINGS_STORAGE_KEYS.uiFont);
+  expect(getLocalStorageWhitelist()).toContain(APP_SETTINGS_STORAGE_KEYS.appDisplayScalePercent);
   expect(getLocalStorageWhitelist()).toContain(APP_SETTINGS_STORAGE_KEYS.searchEnhancementPromptDismissed);
   expect(getLocalStorageWhitelist()).toContain(APP_SETTINGS_STORAGE_KEYS.actionHelpCardsEnabled);
   expect(getLocalStorageWhitelist()).toContain(APP_SETTINGS_STORAGE_KEYS.folioleAideEnabled);
@@ -45,9 +45,9 @@ it('rejects settings that are not classified for localStorage', () => {
 });
 
 it('does not persist the runtime snapshot again when the local value is unchanged', () => {
-  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.uiFont, 'inter');
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.appDisplayScalePercent, '120');
 
-  setWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.uiFont, 'inter');
+  setWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.appDisplayScalePercent, '120');
 
   expect(saveRuntimeAppSettingsState).not.toHaveBeenCalled();
 });

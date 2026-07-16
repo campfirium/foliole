@@ -1,6 +1,12 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_SETTINGS_APPEARANCE_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'settings.appearance.displayScale.section': '显示',
+  'settings.appearance.displayScale.aria': '应用显示大小设置区',
+  'settings.appearance.displayScale.title': '应用显示大小',
+  'settings.appearance.displayScale.description': '缩放应用内容，不影响系统窗口与菜单。',
+  'settings.appearance.displayScale.reset': '重置应用显示大小',
+  'settings.appearance.displayScale.sliderAria': '应用显示大小百分比',
   'settings.appearance.section.readingTypography': '阅读',
   'settings.appearance.textFont.title': '正文字体',
   'settings.appearance.textFont.description': '主内容文字使用的字体。',
@@ -74,14 +80,6 @@ export const ZH_HANS_SETTINGS_APPEARANCE_TRANSLATIONS: Partial<Record<Translatio
   'settings.appearance.topicList.rowSpacing.description': '设置主题列表行间距，单位为像素。默认值是 {defaultValue}px。',
   'settings.appearance.topicList.rowSpacing.reset': '重置主题列表行间距',
   'settings.appearance.topicList.rowSpacing.aria': '主题列表行间距',
-  'settings.typography.navigation.titleSize.title': '导航标题字号',
-  'settings.typography.navigation.titleSize.description': '调整目录与条目列表中的名称字号。',
-  'settings.typography.navigation.titleSize.aria': '导航标题字号',
-  'settings.typography.navigation.titleSize.reset': '重置导航标题字号',
-  'settings.typography.navigation.metaSize.title': '次要信息字号',
-  'settings.typography.navigation.metaSize.description': '调整数量、路径与状态文字的字号。',
-  'settings.typography.navigation.metaSize.aria': '导航次要信息字号',
-  'settings.typography.navigation.metaSize.reset': '重置导航次要信息字号',
   'settings.appearance.surface.section.title': '工作区表面颜色',
   'settings.appearance.surface.section.aria': '工作区表面颜色设置区',
   'settings.appearance.surface.section.description': '按桌面客户端的大致比例给真实工作区外壳上色。',

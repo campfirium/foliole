@@ -4,6 +4,7 @@ import { vi } from 'vitest';
 
 import { LocalizationProvider } from '../../../shared/localization/LocalizationProvider';
 import { AppearanceSettingsProvider } from '../context/AppearanceSettingsProvider';
+import { DisplayScaleProvider } from '../context/DisplayScaleProvider';
 import { ExternalFoldersSettingsProvider } from '../context/ExternalFoldersSettingsProvider';
 import type { HotkeySettingsContextValue } from '../context/hotkeySettingsContext';
 import { HotkeySettingsProvider } from '../context/HotkeySettingsProvider';
@@ -48,6 +49,7 @@ export function renderWithMouseGestureProvider(
     wrapper: ({ children }) => (
       <LocalizationProvider>
         <AppearanceSettingsProvider>
+          <DisplayScaleProvider>
           <ExternalFoldersSettingsProvider>
             <MouseGestureSettingsProvider>
               <ReviewSchedulerSettingsProvider>
@@ -55,6 +57,7 @@ export function renderWithMouseGestureProvider(
               </ReviewSchedulerSettingsProvider>
             </MouseGestureSettingsProvider>
           </ExternalFoldersSettingsProvider>
+          </DisplayScaleProvider>
         </AppearanceSettingsProvider>
       </LocalizationProvider>
     ),

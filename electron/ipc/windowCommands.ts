@@ -20,7 +20,9 @@ import { allowWindowCloseWithoutReadingProgressFlush, flushWindowReadingProgress
 import { asString, asStringArray } from './commandParsers.js';
 import type { InvokeContext } from './commands.js';
 import type { InvokeRequest } from './contracts.js';
+import { handleDisplayScaleCommand } from './displayScaleCommands.js';
 import { listSystemFonts } from './fonts.js';
+import { handleInitialLibrarySetupCommand } from './initialLibrarySetupCommands.js';
 import { resolveAllowedLocalOpenPath } from './localOpenPathGuard.js';
 import { syncAppMenuState } from './menu.js';
 import { resolveAppPaths } from './paths.js';
@@ -204,6 +206,10 @@ function handleUtilityCommand(request: InvokeRequest) {
 }
 
 export async function handleWindowAndUtilityCommand(request: InvokeRequest, context?: InvokeContext): Promise<unknown> {
+  const displayScaleResult = handleDisplayScaleCommand(request, context);
+  if (displayScaleResult !== undefined) return displayScaleResult;
+  const setupResult = handleInitialLibrarySetupCommand(request, resolveTargetWindow(context));
+  if (setupResult !== undefined) return setupResult;
   const utilityResult = handleUtilityCommand(request);
   if (utilityResult !== undefined) {
     return utilityResult;

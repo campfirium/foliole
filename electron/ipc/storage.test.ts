@@ -58,12 +58,12 @@ async function writeLegacyWorkspaceFile(layout: Record<string, unknown>) {
 
 it('persists app settings state into sqlite settings table', async () => {
   await saveAppSettingsState({
-    'foliole-ui-font-preset': 'inter',
+    'foliole-app-display-scale-percent': '120',
     'foliole-interface-font-size': '18'
   });
 
   await expect(loadAppSettingsState()).resolves.toEqual({
-    'foliole-ui-font-preset': 'inter',
+    'foliole-app-display-scale-percent': '120',
     'foliole-interface-font-size': '18'
   });
 
@@ -117,7 +117,7 @@ it('filters malformed app settings payload values', async () => {
     .run(
       'app_settings',
       JSON.stringify({
-        'foliole-ui-font-preset': 'inter',
+        'foliole-app-display-scale-percent': '120',
         'bad key with spaces': 'x',
         'foliole-interface-font-size': 18
       }),
@@ -125,18 +125,18 @@ it('filters malformed app settings payload values', async () => {
     );
 
   await expect(loadAppSettingsState()).resolves.toEqual({
-    'foliole-ui-font-preset': 'inter'
+    'foliole-app-display-scale-percent': '120'
   });
 });
 
 it('filters app settings keys that have no persistence classification', async () => {
   await saveAppSettingsState({
-    'foliole-ui-font-preset': 'inter',
+    'foliole-app-display-scale-percent': '120',
     'foliole-unclassified-setting': 'x'
   });
 
   await expect(loadAppSettingsState()).resolves.toEqual({
-    'foliole-ui-font-preset': 'inter'
+    'foliole-app-display-scale-percent': '120'
   });
 });
 
@@ -191,5 +191,12 @@ it('treats startup layout settings as startup renderer changes', () => {
   expect(hasStartupRendererSettingChange(
     { 'foliole-workspace-dual-list-width': '190' },
     { 'foliole-workspace-dual-list-width': '224' }
+  )).toBe(true);
+});
+
+it('treats app display scale as a startup renderer change', () => {
+  expect(hasStartupRendererSettingChange(
+    { 'foliole-app-display-scale-percent': '100' },
+    { 'foliole-app-display-scale-percent': '130' }
   )).toBe(true);
 });

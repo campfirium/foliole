@@ -83,14 +83,8 @@ it('stores the reading width from typography settings', async () => {
   });
 });
 
-it('stores independent navigation title and secondary font sizes', async () => {
+it('does not expose separate navigation font-size controls', () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="typography" />);
-  fireEvent.change(screen.getByLabelText('Navigation title font size'), { target: { value: '17' } });
-  fireEvent.change(screen.getByLabelText('Navigation secondary text font size'), { target: { value: '15' } });
-  await waitFor(() => {
-    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.navigationTitleFontSize)).toBe('17');
-    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.navigationMetaFontSize)).toBe('15');
-    expect(document.documentElement.style.getPropertyValue('--navigation-title-font-size')).toBe('17px');
-    expect(document.documentElement.style.getPropertyValue('--navigation-meta-font-size')).toBe('15px');
-  });
+  expect(screen.queryByLabelText('Navigation title font size')).toBeNull();
+  expect(screen.queryByLabelText('Navigation secondary text font size')).toBeNull();
 });

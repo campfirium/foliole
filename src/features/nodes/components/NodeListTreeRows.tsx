@@ -2,7 +2,6 @@ import { useMemo, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as R
 
 import { VirtualListSurface, type VirtualListRenderMeta } from '../../../shared/ui';
 import type { ReviewSessionState } from '../../../store/workspaceStore';
-import { useAppearanceSettings } from '../../settings/context/AppearanceSettingsProvider';
 import type { NodeTreeRow } from '../model/nodeTree';
 import { isHomeNode, isInboxNode, isTrashNode, isVirtualRootNode } from '../model/specialNodes';
 import {
@@ -11,6 +10,7 @@ import {
   type WorkspaceListNodesById
 } from '../model/workspaceListNode';
 
+import { getNavigationTitleFontSize } from './navigationTypographySettings';
 import { getDismissedFadeTextOpacity, shouldFadeDismissedRowText } from './nodeIconAppearanceSettings';
 import { resolveNodeListRowGap, resolveNodeTreeRowVirtualSize } from './nodeListRowSpacingSettings';
 import { NodeListStateSurface } from './NodeListStateSurface';
@@ -166,7 +166,7 @@ function resolveLeafIconKind(kind: NodeTreeRowIconKind) {
 }
 
 export function NodeListRows(props: NodeListRowsProps) {
-  const { navigationTitleFontSize } = useAppearanceSettings();
+  const navigationTitleFontSize = getNavigationTitleFontSize();
   const rowGap = resolveNodeListRowGap(props.rowSpacing);
   const onRowKeyDown = useMemo(
     () =>

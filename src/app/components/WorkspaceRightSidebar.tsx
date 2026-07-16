@@ -2,7 +2,7 @@ import { memo } from 'react';
 
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { recordComponentRender } from '../../shared/platform/performanceDiagnosticsProbe';
-import { AppPanel } from '../../shared/ui';
+import { AppPanel, ScalableContentRegion } from '../../shared/ui';
 import {
   isEditorInputDiagnosticEnabled,
   logEditorInputDiagnostic
@@ -73,17 +73,23 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
     outlineActivePosition: props.outlineActivePosition ?? 0
   };
   return (
+    <ScalableContentRegion
+      className="workspace-region-main-sidebar hidden min-h-0 h-full flex-col xl:flex"
+      label={t('desktop.workspace.inspector')}
+      regionId={`right-sidebar:${props.activePanelId}`}
+    >
     <AppPanel
       aria-label={t('desktop.workspace.inspector')}
       as="aside"
       bodyClassName={props.activePanelId === 'assistant'
         ? 'min-h-0 overflow-hidden'
         : 'app-scrollbar overflow-y-auto px-3 py-3'}
-      className="workspace-region-main-sidebar hidden min-h-0 h-full flex-col overflow-hidden text-foreground [--app-inspector-section-bg:transparent] [--app-inspector-section-border-color:transparent] [--app-inspector-section-border-width:0] [--app-inspector-section-padding:0] [--app-inspector-section-radius:0] [--app-inspector-section-shadow-color:transparent] xl:flex"
+      className="flex min-h-0 h-full flex-col overflow-hidden text-foreground [--app-inspector-section-bg:transparent] [--app-inspector-section-border-color:transparent] [--app-inspector-section-border-width:0] [--app-inspector-section-padding:0] [--app-inspector-section-radius:0] [--app-inspector-section-shadow-color:transparent]"
       headerClassName="hidden"
       title={null}
     >
       {renderWorkspaceRightSidebarPanel(panelProps)}
     </AppPanel>
+    </ScalableContentRegion>
   );
 }, areWorkspaceRightSidebarPropsEqual);

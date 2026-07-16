@@ -42,10 +42,13 @@ async function createRuntimeHtmlDir(html: string) {
 it('uses the persisted startup document background during app startup without rebuilding html', async () => {
   const { prepareStartupRendererAppearance } = await import('./startupRendererPreparation.js');
   const runtimeHtmlDir = await createRuntimeHtmlDir(
-    '<html style="--startup-region-main-document-bg: #ffffff;--startup-region-main-document-bg: #1b1d1d;"></html>'
+    '<html style="--startup-region-main-document-bg: #ffffff;--startup-region-main-document-bg: #1b1d1d;--startup-app-display-scale-percent: 130;"></html>'
   );
 
-  expect(prepareStartupRendererAppearance('/runtime', runtimeHtmlDir)).toEqual({ backgroundColor: '#1b1d1d' });
+  expect(prepareStartupRendererAppearance('/runtime', runtimeHtmlDir)).toEqual({
+    backgroundColor: '#1b1d1d',
+    displayScalePercent: 130
+  });
   expect(mocks.writePrebuiltRendererHtmlForSettings).not.toHaveBeenCalled();
 });
 
@@ -53,7 +56,10 @@ it('falls back to the Windows system dark background when startup html is unavai
   mocks.shouldUseDarkColors = true;
   const { prepareStartupRendererAppearance } = await import('./startupRendererPreparation.js');
 
-  expect(prepareStartupRendererAppearance('/runtime', '/missing')).toEqual({ backgroundColor: '#161918' });
+  expect(prepareStartupRendererAppearance('/runtime', '/missing')).toEqual({
+    backgroundColor: '#161918',
+    displayScalePercent: 100
+  });
 });
 
 it('prebuilds the startup renderer html only when settings are saved', async () => {

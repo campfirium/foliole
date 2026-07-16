@@ -28,6 +28,9 @@ const COMMAND_TITLE_KEYS: Partial<Record<AppCommandId, TranslationKey>> = {
   [APP_COMMAND_IDS.toggleList]: 'desktop.command.toggleLeftSidebar',
   [APP_COMMAND_IDS.toggleRightSidebar]: 'desktop.command.toggleRightSidebar',
   [APP_COMMAND_IDS.toggleBothSidebars]: 'desktop.command.toggleBothSidebars',
+  [APP_COMMAND_IDS.increaseContentRegionScale]: 'desktop.command.increasePanelContentSize',
+  [APP_COMMAND_IDS.decreaseContentRegionScale]: 'desktop.command.decreasePanelContentSize',
+  [APP_COMMAND_IDS.resetContentRegionScale]: 'desktop.command.resetPanelContentSize',
   [APP_COMMAND_IDS.toggleDevTools]: 'desktop.command.toggleDevTools',
   [APP_COMMAND_IDS.openHelpSearch]: 'desktop.command.openHelpSearch',
   [APP_COMMAND_IDS.openWorkspaceSearch]: 'desktop.command.openWorkspaceSearch',
@@ -91,7 +94,8 @@ const SECTION_KEYS: Record<string, TranslationKey> = {
   Help: 'desktop.command.section.help',
   Navigation: 'desktop.command.section.navigation',
   Review: 'desktop.command.section.review',
-  Flow: 'desktop.command.section.flow'
+  Flow: 'desktop.command.section.flow',
+  View: 'desktop.command.section.view'
 };
 
 export function localizePaletteCommandTitle(id: string, fallback: string, t: Translate) {
