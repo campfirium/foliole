@@ -113,7 +113,7 @@ test('uses native window controls and keeps the app alive after the last window 
   await expectWorkspaceShell(desktopWindow);
   await expect(desktopWindow.locator('.window-titlebar-controls')).toHaveCount(0);
   const nativeWindow = await desktopSession.electronApp.browserWindow(desktopWindow);
-  expect(await nativeWindow.evaluate((target) => target.getWindowButtonPosition())).toEqual({ x: 52, y: 12 });
+  expect(await nativeWindow.evaluate((target) => target.getWindowButtonPosition())).toEqual({ x: 60, y: 12 });
   const geometry = await readNativeTitlebarGeometry(desktopWindow);
   expect(geometry).toMatchObject({
     folderSurfaceLeft: 40,

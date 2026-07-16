@@ -1,6 +1,6 @@
 import type { BrowserWindowConstructorOptions } from 'electron';
 
-export const MACOS_TRAFFIC_LIGHT_POSITION = { x: 52, y: 12 } as const;
+export const MACOS_TRAFFIC_LIGHT_POSITION = { x: 60, y: 12 } as const;
 
 type MainWindowChromeOptions = Pick<
   BrowserWindowConstructorOptions,

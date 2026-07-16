@@ -8,7 +8,7 @@ import {
 } from './mainWindowChrome.js';
 
 it('uses native traffic lights for the macOS main window', () => {
-  expect(MACOS_TRAFFIC_LIGHT_POSITION).toEqual({ x: 52, y: 12 });
+  expect(MACOS_TRAFFIC_LIGHT_POSITION).toEqual({ x: 60, y: 12 });
   expect(createMainWindowChromeOptions('darwin')).toEqual({
     titleBarStyle: 'hidden',
     trafficLightPosition: MACOS_TRAFFIC_LIGHT_POSITION
