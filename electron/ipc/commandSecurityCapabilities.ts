@@ -3,6 +3,7 @@ import { NATIVE_COMMANDS, type NativeCommandName } from '../../lib/platform/nati
 import { NATIVE_COMMAND_REGISTRY } from './nativeCommandRegistry.js';
 
 export type CommandSecurityCapability =
+  | 'appUpdate'
   | 'assistant'
   | 'clipboardWrite'
   | 'dataMutation'
@@ -24,6 +25,7 @@ export interface CommandSecurityCapabilityEntry {
 }
 
 const HIGH_IMPACT_SECURITY_CAPABILITIES = new Set<CommandSecurityCapability>([
+  'appUpdate',
   'clipboardWrite',
   'dataMutation',
   'destructiveMutation',

@@ -108,6 +108,7 @@ const sanitizedCompletedReadwiseProgressPayload = {
       expect.objectContaining({
         invoke: expect.any(Function),
         logDiagnosticEvent: expect.any(Function),
+        onDesktopUpdateState: expect.any(Function),
         onGlobalCaptureNavigate: expect.any(Function),
         onManagedInboxUpdated: expect.any(Function),
         onNativeKeyboardInput: expect.any(Function),

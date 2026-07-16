@@ -2,6 +2,7 @@ import { APP_SETTINGS_STORAGE_KEYS } from '../config/appSettings';
 import { showAppRuntimeNotice } from '../ui/AppRuntimeNotice';
 
 import { loadAppVersion } from './appVersion';
+import { checkDesktopUpdate, readDesktopUpdateState } from './desktopUpdate';
 import { openFolioleReleaseLink } from './releaseLinks';
 import { openExternalUrl } from './runtimeExternalNavigation';
 import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from './storage';
@@ -89,7 +90,7 @@ export function getNextUpdateCheckDelayMs(now = Date.now()) {
 
 function showUpdateCheckNotice(result: UpdateCheckResult, manual: boolean) {
   if (result.status === 'available' && result.latestRelease) {
-    showAppRuntimeNotice(`Foliole ${result.latestRelease.version} is available. Open Releases to download.`, 'success');
+    showAppRuntimeNotice(`Foliole ${result.latestRelease.version} is available.`, 'success');
     return;
   }
   if (!manual) return;
@@ -106,6 +107,9 @@ export async function checkForFolioleUpdates(options: { force?: boolean; notify?
   const state = readUpdateCheckState();
   const now = Date.now();
   if (!shouldRunUpdateCheck(state, now, Boolean(options.force))) {
+    if (state.lastCheckStatus === 'available' && state.latestVersion && readDesktopUpdateState().phase === 'idle') {
+      await checkDesktopUpdate(state.latestVersion);
+    }
     return { latestRelease: null, state, status: 'skipped' };
   }
 
@@ -131,6 +135,9 @@ export async function checkForFolioleUpdates(options: { force?: boolean; notify?
       latestVersion: latestRelease?.version ?? null
     };
     writeUpdateCheckState(nextState);
+    if (latestRelease) {
+      await checkDesktopUpdate(latestRelease.version);
+    }
     const result: UpdateCheckResult = {
       latestRelease,
       state: nextState,

@@ -101,6 +101,7 @@ export function buildDesktopElectronBuckets() {
     { label: 'assistant', report: '.tmp/vitest/desktop-electron-assistant.json', targets: collectTestFiles('electron/assistant') },
     { label: 'discourse', report: '.tmp/vitest/desktop-electron-discourse.json', targets: collectTestFiles('electron/discourse') },
     { label: 'security', report: '.tmp/vitest/desktop-electron-security.json', targets: collectTestFiles('electron/security') },
+    { label: 'update', report: '.tmp/vitest/desktop-electron-update.json', targets: collectTestFiles('electron/update') },
     { label: 'wordpress', report: '.tmp/vitest/desktop-electron-wordpress.json', targets: collectTestFiles('electron/wordpress') },
     { label: 'root', report: '.tmp/vitest/desktop-electron-root.json', targets: collectRootElectronTests() },
     { label: 'scripts', report: '.tmp/vitest/desktop-electron-scripts.json', targets: collectElectronNamedScriptTests() }

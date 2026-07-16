@@ -39,7 +39,7 @@ export function createGithubBuilderConfig(base, options) {
       notarize: options.notarize,
       preAutoEntitlements: false,
       sign: 'scripts/macos/sign-mas-app.mjs',
-      target: ['dmg']
+      target: ['dmg', 'zip']
     }
   };
 }
@@ -88,7 +88,7 @@ async function main() {
   await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`);
   run('build', 'npm', ['run', 'build']);
   run('electron compile', 'npm', ['run', 'electron:compile']);
-  run('electron-builder', 'npm', ['exec', '--', 'electron-builder', '--config', configPath, '--mac', 'dmg', '--arm64', '--publish', 'never']);
+  run('electron-builder', 'npm', ['exec', '--', 'electron-builder', '--config', configPath, '--mac', '--arm64', '--publish', 'never']);
   const checksum = await writeDmgChecksum(outputDirectory);
   console.log(`DMG_READY ${checksum.name} ${checksum.digest}`);
   sendMacosNotification(

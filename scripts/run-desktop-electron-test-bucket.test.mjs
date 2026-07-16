@@ -26,6 +26,7 @@ it('splits desktop Electron tests into bounded buckets', () => {
   expect(labels).toContain('assistant');
   expect(labels).toContain('discourse');
   expect(labels).toContain('security');
+  expect(labels).toContain('update');
   expect(labels).toContain('wordpress');
   expect(labels).toContain('root');
   expect(labels).toContain('scripts');
@@ -45,6 +46,7 @@ it('splits desktop Electron tests into bounded buckets', () => {
   expect(buckets.find((bucket) => bucket.label === 'assistant')?.targets).toHaveLength(9);
   expect(buckets.find((bucket) => bucket.label === 'discourse')?.targets).toHaveLength(3);
   expect(buckets.find((bucket) => bucket.label === 'security')?.targets).toHaveLength(1);
+  expect(buckets.find((bucket) => bucket.label === 'update')?.targets).toHaveLength(2);
   expect(buckets.find((bucket) => bucket.label === 'wordpress')?.targets).toHaveLength(4);
 });
 

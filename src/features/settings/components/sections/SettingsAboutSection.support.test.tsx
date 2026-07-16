@@ -4,9 +4,21 @@ import { beforeEach, expect, it, vi } from 'vitest';
 const updateCheckMock = vi.hoisted(() => ({
   resultStatus: 'current'
 }));
+const desktopUpdateMock = vi.hoisted(() => ({
+  download: vi.fn(),
+  install: vi.fn(),
+  state: { phase: 'not-applicable' as string, version: undefined as string | undefined }
+}));
 
 vi.mock('../../../../shared/platform/diagnosticBundle', () => ({
   copyDiagnosticReport: vi.fn()
+}));
+
+vi.mock('../../../../shared/platform/desktopUpdate', () => ({
+  downloadDesktopUpdate: desktopUpdateMock.download,
+  installDesktopUpdate: desktopUpdateMock.install,
+  readDesktopUpdateState: () => desktopUpdateMock.state,
+  subscribeDesktopUpdateState: () => () => undefined
 }));
 
 vi.mock('../../../../shared/platform/updateCheck', async (importOriginal) => {
@@ -32,6 +44,8 @@ import { SettingsAboutSection } from './SettingsAboutSection';
 
 beforeEach(() => {
   updateCheckMock.resultStatus = 'current';
+  desktopUpdateMock.state = { phase: 'not-applicable', version: undefined };
+  desktopUpdateMock.download.mockReset();
   window.localStorage.clear();
   window.localStorage.setItem(APP_LANGUAGE_STORAGE_KEY, 'en');
   window.electronAPI = {
@@ -96,4 +110,23 @@ it('opens update details when a manual update check finds an available release',
   expect(await screen.findByRole('dialog', { name: 'Update details' })).toBeInTheDocument();
   expect(screen.getByText('v0.6.6')).toBeInTheDocument();
   expect(screen.getByText('Fixed')).toBeInTheDocument();
+});
+
+it('offers an explicit download action when the desktop updater confirms the gated release', async () => {
+  desktopUpdateMock.state = { phase: 'available', version: '0.6.6' };
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.updateCheckState, JSON.stringify({
+    cachedManifest: { releases: [], schemaVersion: 1 },
+    cachedReleaseNotes: null,
+    dismissedVersion: null,
+    lastCheckedAt: '2026-06-14T00:00:00.000Z',
+    lastCheckStatus: 'available',
+    lastSeenVersion: '0.6.6',
+    latestReleaseUrl: 'https://github.com/campfirium/foliole/releases/tag/v0.6.6',
+    latestVersion: '0.6.6'
+  }));
+  renderWithLocalization(<SettingsAboutSection />);
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Download update' }));
+
+  expect(desktopUpdateMock.download).toHaveBeenCalledTimes(1);
 });

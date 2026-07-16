@@ -21,6 +21,7 @@ const CONTRACT_FILES = [
   'nativeSearchIndexCommandMap.ts',
   'nativeSyncCommandMap.ts',
   'nativeTrashCommandMap.ts',
+  'nativeUpdateContract.ts',
   'nativeUtilityCommandMap.ts'
 ];
 

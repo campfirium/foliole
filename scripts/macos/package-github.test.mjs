@@ -11,7 +11,7 @@ import {
 } from './package-github.mjs';
 
 describe('GitHub macOS packaging', () => {
-  it('builds one arm64 DMG with the audited sandbox signing shape', () => {
+  it('builds signed arm64 DMG and ZIP artifacts with the audited sandbox signing shape', () => {
     const config = createGithubBuilderConfig({
       directories: { output: 'artifacts/windows' },
       electronDist: 'node_modules/electron/dist',
@@ -31,7 +31,7 @@ describe('GitHub macOS packaging', () => {
       identity: 'CAMPFIRIUM LTD (V589TQH334)',
       notarize: false,
       preAutoEntitlements: false,
-      target: ['dmg']
+      target: ['dmg', 'zip']
     });
   });
 

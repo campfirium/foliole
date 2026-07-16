@@ -2,7 +2,7 @@ import { NATIVE_COMMANDS, type NativeCommandName } from '../../lib/platform/nati
 
 import { NATIVE_COMMAND_REGISTRY } from './nativeCommandRegistry.js';
 
-export type CommandRouteFamily = 'assistant' | 'import' | 'review' | 'storage' | 'windowAndUtility';
+export type CommandRouteFamily = 'assistant' | 'import' | 'review' | 'storage' | 'update' | 'windowAndUtility';
 
 export interface CommandRouteEntry {
   command: NativeCommandName;

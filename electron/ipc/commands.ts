@@ -14,6 +14,7 @@ import {
 } from './ipcPayloadBudget.js';
 import { handleReviewCommand } from './reviewCommands.js';
 import { handleStorageCommand } from './storageCommands.js';
+import { handleDesktopUpdateCommand } from './updateCommands.js';
 import { handleWindowAndUtilityCommand } from './windowCommands.js';
 
 export interface InvokeContext {
@@ -61,7 +62,7 @@ export async function handleInvokeRequest(request: InvokeRequest, context?: Invo
 }
 
 function shouldWaitForDatabaseReady(command: string, route: CommandRouteFamily) {
-  return command !== NATIVE_COMMANDS.bootReport && route !== 'assistant' && route !== 'windowAndUtility';
+  return command !== NATIVE_COMMANDS.bootReport && route !== 'assistant' && route !== 'update' && route !== 'windowAndUtility';
 }
 
 function throwUnsupportedCommand(command: string): never {
@@ -85,6 +86,9 @@ function dispatchRoutedCommand(
   }
   if (route === 'windowAndUtility') {
     return handleWindowAndUtilityCommand(request, context);
+  }
+  if (route === 'update') {
+    return handleDesktopUpdateCommand(request, context);
   }
   return handleReviewCommand(request);
 }

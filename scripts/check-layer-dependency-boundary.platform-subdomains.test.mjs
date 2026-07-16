@@ -52,6 +52,7 @@ describe('check-layer-dependency-boundary platform subdomains', () => {
     expect(resolvePlatformSubdomain('src/shared/platform/desktopHostCapabilities.ts')).toBe(
       'desktop-runtime-repository'
     );
+    expect(resolvePlatformSubdomain('src/shared/platform/desktopUpdate.ts')).toBe('runtime-core');
     expect(resolvePlatformSubdomain('src/shared/platform/folioleAideSettings.ts')).toBe(
       'desktop-runtime-repository'
     );

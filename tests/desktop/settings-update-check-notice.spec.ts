@@ -1,3 +1,6 @@
+import { mkdir } from 'node:fs/promises';
+import path from 'node:path';
+
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell, openSettingsDialog } from './harness/settings';
 
@@ -6,7 +9,7 @@ const CHECK_UPDATES = /^(Check for Updates|检查更新)$/;
 const CURRENT_STATUS = /^(Up to date|已是最新)$/;
 const RUNTIME_NOTICE = /^(Foliole is up to date\.|Foliole 已是最新。)$/;
 
-test('settings update check uses the settings row instead of the runtime notice', async ({ desktopWindow }) => {
+test('settings update check uses the settings row instead of the runtime notice', async ({ desktopWindow }, testInfo) => {
   await desktopWindow.evaluate(() => {
     const originalFetch = window.fetch.bind(window);
     window.fetch = async (input, init) => {
@@ -37,4 +40,8 @@ test('settings update check uses the settings row instead of the runtime notice'
   await expect(settingsDialog.getByText(CURRENT_STATUS)).toBeVisible();
   await expect(desktopWindow.getByTestId('app-runtime-notice')).toHaveCount(0);
   await expect(desktopWindow.getByText(RUNTIME_NOTICE)).toHaveCount(0);
+  const screenshotPath = path.join(process.cwd(), '.tmp/artifacts/desktop-acceptance/settings-update-check.png');
+  await mkdir(path.dirname(screenshotPath), { recursive: true });
+  await settingsDialog.screenshot({ path: screenshotPath });
+  await testInfo.attach('settings-update-check', { path: screenshotPath });
 });

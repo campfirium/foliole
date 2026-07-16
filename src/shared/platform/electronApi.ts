@@ -1,5 +1,6 @@
 import type { NativeAssistantTurnEvent } from '../../../lib/platform/nativeAssistantContract';
 import type { NativeInvoke } from '../../../lib/platform/nativeContract';
+import type { NativeDesktopUpdateState } from '../../../lib/platform/nativeUpdateContract';
 
 import type { DiagnosticLogPayload } from './runtimeLogging';
 import type { WorkspaceNodeMutationPatchResult } from './workspaceRuntimeTypes';
@@ -94,6 +95,7 @@ export interface ElectronAPI {
   onCompanionPairingRequestsChanged?: (handler: () => void) => () => void;
   onExternalDocumentFileOpened?: (handler: (payload: ExternalDocumentFileOpenedPayload) => void) => () => void;
   onAssistantTurnEvent?: (handler: (payload: NativeAssistantTurnEvent) => void) => () => void;
+  onDesktopUpdateState?: (handler: (payload: NativeDesktopUpdateState) => void) => () => void;
   onWindowResized: (handler: () => void) => () => void;
   runtimeConfig?: ElectronRuntimeConfig;
   setNativeHotkeyRecordingActive?: (active: boolean) => void;

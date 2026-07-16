@@ -36,6 +36,7 @@ const EXPLICIT_FILE_SUBDOMAINS = new Map([
   ['src/shared/platform/companionWorkspaceSync.testSupport.ts', 'companion-runtime-plugin'],
   ['src/shared/platform/databaseMaintenanceStatusRuntimeRepository.ts', 'desktop-runtime-repository'],
   ['src/shared/platform/desktopHostCapabilities.ts', 'desktop-runtime-repository'],
+  ['src/shared/platform/desktopUpdate.ts', 'runtime-core'],
   ['src/shared/platform/discoursePublishRepository.ts', 'desktop-runtime-repository'],
   ['src/shared/platform/foliolePublishRepository.ts', 'desktop-runtime-repository'],
   ['src/shared/platform/wordpressPublishRepository.ts', 'desktop-runtime-repository'],

@@ -6,6 +6,7 @@ const preloadPath = typeof __filename === 'string' ? __filename : null;
 
 const IPC_INVOKE_CHANNEL = 'foliole:invoke';
 const IPC_DIAGNOSTIC_LOG_CHANNEL = 'foliole:diagnostics:log-event';
+const IPC_DESKTOP_UPDATE_STATE_EVENT_CHANNEL = 'foliole:desktop-update-state';
 const IPC_GLOBAL_CAPTURE_NAVIGATE_CHANNEL = 'foliole:global-capture-navigate';
 const IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL = 'foliole:managed-inbox-updated';
 const IPC_MENU_EVENT_CHANNEL = 'foliole:native-menu-command';
@@ -24,49 +25,41 @@ const IPC_ASSISTANT_TURN_EVENT_CHANNEL = 'foliole:assistant-turn-event';
 const SUBSCRIBABLE_CHANNELS = new Set([
   IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL, IPC_GLOBAL_CAPTURE_NAVIGATE_CHANNEL, IPC_MENU_EVENT_CHANNEL, IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL, IPC_READWISE_READER_IMPORT_PROGRESS_EVENT_CHANNEL,
   IPC_SEARCH_INDEX_REBUILD_STATUS_EVENT_CHANNEL, IPC_WORKSPACE_CONTENT_CHANGED_EVENT_CHANNEL, IPC_WORKSPACE_SYNC_APPLIED_EVENT_CHANNEL, IPC_WINDOW_RESIZED_EVENT_CHANNEL, IPC_NATIVE_KEYBOARD_INPUT_EVENT_CHANNEL,
-  IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL, IPC_EXTERNAL_DOCUMENT_FILE_OPENED_CHANNEL, IPC_ASSISTANT_TURN_EVENT_CHANNEL
+  IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL, IPC_EXTERNAL_DOCUMENT_FILE_OPENED_CHANNEL, IPC_ASSISTANT_TURN_EVENT_CHANNEL,
+  IPC_DESKTOP_UPDATE_STATE_EVENT_CHANNEL
 ]);
 
-function isDesktopDebugProbeEnabled() {
-  return process.env.FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE === '1' || Boolean(process.env.ELECTRON_RENDERER_URL);
-}
-
-function isWorkspaceDebugBridgeEnabled() {
-  if (process.env.FOLIOLE_ENABLE_WORKSPACE_DEBUG_BRIDGE === '1' && process.env.FOLIOLE_ALLOW_PARALLEL_INSTANCE === '1') {
-    return true;
-  }
-  const workdir = process.env.FOLIOLE_WORKDIR;
-  return process.env.FOLIOLE_ALLOW_PARALLEL_INSTANCE === '1' && Boolean(workdir) && workdir !== process.cwd?.();
-}
-function isWorkspaceDebugSeedPersistenceEnabled() {
-  const stateRoot = process.env.FOLIOLE_ELECTRON_TEST_STATE_ROOT;
-  return isWorkspaceDebugBridgeEnabled() && Boolean(stateRoot?.trim() && process.env.FOLIOLE_WORKDIR === stateRoot);
-}
-
-function resolveGuidedSampleLocaleOverride() {
-  const value = process.env.FOLIOLE_GUIDED_SAMPLE_LOCALE?.trim();
-  return value === 'en-US' || value === 'zh-CN' ? value : null;
-}
+const desktopDebugProbeEnabled = process.env.FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE === '1'
+  || Boolean(process.env.ELECTRON_RENDERER_URL);
+const allowParallelInstance = process.env.FOLIOLE_ALLOW_PARALLEL_INSTANCE === '1';
+const workdir = process.env.FOLIOLE_WORKDIR;
+const workspaceDebugBridgeEnabled = allowParallelInstance && (
+  process.env.FOLIOLE_ENABLE_WORKSPACE_DEBUG_BRIDGE === '1'
+  || Boolean(workdir && workdir !== process.cwd?.())
+);
+const stateRoot = process.env.FOLIOLE_ELECTRON_TEST_STATE_ROOT;
+const workspaceDebugSeedPersistenceEnabled = workspaceDebugBridgeEnabled
+  && Boolean(stateRoot?.trim() && workdir === stateRoot);
+const guidedSampleLocale = process.env.FOLIOLE_GUIDED_SAMPLE_LOCALE?.trim();
+const guidedSampleLocaleOverride = guidedSampleLocale === 'en-US' || guidedSampleLocale === 'zh-CN'
+  ? guidedSampleLocale
+  : null;
 
 function normalizeReadwiseBookEpubProgressPayload(payload) {
-  const detail = payload?.detail;
-  const nodeId = payload?.nodeId;
-  const phase = payload?.phase;
-  const progress = payload?.progress;
   if (
-    typeof detail !== 'string' ||
-    typeof nodeId !== 'string' ||
-    typeof phase !== 'string' ||
-    typeof progress !== 'number' ||
-    !Number.isFinite(progress)
+    typeof payload?.detail !== 'string' ||
+    typeof payload?.nodeId !== 'string' ||
+    typeof payload?.phase !== 'string' ||
+    typeof payload?.progress !== 'number' ||
+    !Number.isFinite(payload.progress)
   ) {
     return null;
   }
   return {
-    detail,
-    nodeId,
-    phase,
-    progress: Math.min(1, Math.max(0, progress))
+    detail: payload.detail,
+    nodeId: payload.nodeId,
+    phase: payload.phase,
+    progress: Math.min(1, Math.max(0, payload.progress))
   };
 }
 
@@ -187,6 +180,10 @@ function subscribe(channel, handler) {
       });
       return;
     }
+    if (channel === IPC_DESKTOP_UPDATE_STATE_EVENT_CHANNEL) {
+      handler(payload);
+      return;
+    }
     if (channel === IPC_WORKSPACE_CONTENT_CHANGED_EVENT_CHANNEL) {
       handler({
         scope: payload?.scope === 'workspace' ? 'workspace' : ''
@@ -217,17 +214,18 @@ const electronApi = {
   onCompanionPairingRequestsChanged: (handler) => subscribe(IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL, handler),
   onExternalDocumentFileOpened: (handler) => subscribe(IPC_EXTERNAL_DOCUMENT_FILE_OPENED_CHANNEL, handler),
   onAssistantTurnEvent: (handler) => subscribe(IPC_ASSISTANT_TURN_EVENT_CHANNEL, handler),
+  onDesktopUpdateState: (handler) => subscribe(IPC_DESKTOP_UPDATE_STATE_EVENT_CHANNEL, handler),
   onWindowResized: (handler) => subscribe(IPC_WINDOW_RESIZED_EVENT_CHANNEL, handler),
-  runtimeConfig: { guidedSampleLocale: resolveGuidedSampleLocaleOverride() },
+  runtimeConfig: { guidedSampleLocale: guidedSampleLocaleOverride },
   setNativeHotkeyRecordingActive: (active) => ipcRenderer.send(IPC_HOTKEY_RECORDER_ACTIVE_CHANNEL, active === true)
 };
 
-if (isDesktopDebugProbeEnabled()) {
+if (desktopDebugProbeEnabled) {
   electronApi.debug = {
     preloadPath,
     runtimeHead: process.env.FOLIOLE_RUNTIME_HEAD ?? null,
-    workspaceDebugBridge: isWorkspaceDebugBridgeEnabled(),
-    ...(isWorkspaceDebugSeedPersistenceEnabled() ? { workspaceDebugSeedPersistence: true } : {})
+    workspaceDebugBridge: workspaceDebugBridgeEnabled,
+    ...(workspaceDebugSeedPersistenceEnabled ? { workspaceDebugSeedPersistence: true } : {})
   };
 }
 

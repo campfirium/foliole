@@ -29,6 +29,7 @@ const { handleAssistantCommand, handleImportCommand, handleReviewCommand, handle
 );
 
 vi.mock('electron', () => ({
+  app: { isPackaged: false },
   BrowserWindow: {
     fromWebContents: vi.fn(() => null),
     getFocusedWindow: vi.fn(() => null)
