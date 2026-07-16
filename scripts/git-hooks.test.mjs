@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const HOOK_NAMES = ['commit-msg', 'pre-commit', 'pre-push', 'prepare-commit-msg'];
+const HOOK_NAMES = ['commit-msg', 'pre-commit', 'pre-push', 'prepare-commit-msg', 'reference-transaction'];
 const FILE_BUDGET_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'check-file-budget.mjs');
 const AFFECTED_VALIDATION_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'pre-push-affected-validation.mjs');
 const CRITICAL_TEST_ROUTES_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'quality', 'quality-critical-test-routes.mjs');
@@ -124,16 +124,26 @@ describe('git hooks', () => {
     expect(result.stderr).toContain('commit subject must start with next sequence 000002');
   }, HOOK_INTEGRATION_TIMEOUT_MS);
 
-  it('keeps the existing sequence when amending a commit', async () => {
+  it('keeps the existing sequence across amend message modes', async () => {
     const repoDir = await createRepo();
     await expect(commitFile(repoDir, 'a.txt', 'a\n', '000001 seed')).resolves.toMatchObject({ code: 0 });
     await writeFile(path.join(repoDir, 'a.txt'), 'amended\n');
     await runCommand('git', ['add', 'a.txt'], repoDir);
+    await expect(runCommand('git', ['commit', '--amend', '--no-edit'], repoDir)).resolves.toMatchObject({ code: 0 });
+    const explicit = await runCommand('git', ['commit', '--amend', '-m', '000001 revised'], repoDir);
+    expect(explicit.code, explicit.stderr).toBe(0);
+    expect((await runCommand('git', ['log', '-1', '--pretty=%s'], repoDir)).stdout.trim()).toBe('000001 revised');
+  }, HOOK_INTEGRATION_TIMEOUT_MS);
 
-    const result = await runCommand('git', ['commit', '--amend', '--no-edit'], repoDir);
-
-    expect(result.code, result.stderr).toBe(0);
-    expect((await runCommand('git', ['log', '-1', '--pretty=%s'], repoDir)).stdout.trim()).toBe('000001 seed');
+  it('blocks amend and new commits from consuming or reusing the wrong sequence', async () => {
+    const repoDir = await createRepo();
+    await expect(commitFile(repoDir, 'a.txt', 'a\n', '000001 seed')).resolves.toMatchObject({ code: 0 });
+    const amend = await runCommand('git', ['commit', '--amend', '-m', '000002 wrong amend'], repoDir);
+    expect(amend.code).not.toBe(0);
+    expect(amend.stderr).toContain('amended commit must keep sequence 000001');
+    const duplicate = await commitFile(repoDir, 'b.txt', 'b\n', '000001 duplicate');
+    expect(duplicate.code).not.toBe(0);
+    expect(duplicate.stderr).toContain('new commit sequence must be 000002');
   }, HOOK_INTEGRATION_TIMEOUT_MS);
 
   it('blocks branch pushes with non-continuous numbered history', async () => {
@@ -141,7 +151,7 @@ describe('git hooks', () => {
     await expect(commitFile(repoDir, 'a.txt', 'a\n', '000001 seed')).resolves.toMatchObject({ code: 0 });
     await writeFile(path.join(repoDir, 'b.txt'), 'b\n');
     await runCommand('git', ['add', 'b.txt'], repoDir);
-    await runCommand('git', ['commit', '--no-verify', '-m', '000003 skip'], repoDir);
+    await runCommand('git', ['-c', 'core.hooksPath=/dev/null', 'commit', '-m', '000003 skip'], repoDir);
 
     const head = (await runCommand('git', ['rev-parse', 'HEAD'], repoDir)).stdout.trim();
     const hook = path.join(repoDir, '.githooks', 'pre-push');
@@ -158,7 +168,7 @@ describe('git hooks', () => {
     await expect(commitFile(repoDir, 'a.txt', 'a\n', '000001 seed')).resolves.toMatchObject({ code: 0 });
     await writeFile(path.join(repoDir, 'b.txt'), 'b\n');
     await runCommand('git', ['add', 'b.txt'], repoDir);
-    await runCommand('git', ['commit', '--no-verify', '-m', 'missing number'], repoDir);
+    await runCommand('git', ['-c', 'core.hooksPath=/dev/null', 'commit', '-m', 'missing number'], repoDir);
 
     const head = (await runCommand('git', ['rev-parse', 'HEAD'], repoDir)).stdout.trim();
     const hook = path.join(repoDir, '.githooks', 'pre-push');
@@ -175,7 +185,7 @@ describe('git hooks', () => {
     await expect(commitFile(repoDir, 'a.txt', 'a\n', '000001 seed')).resolves.toMatchObject({ code: 0 });
     await writeFile(path.join(repoDir, 'remote.txt'), 'remote\n');
     await runCommand('git', ['add', 'remote.txt'], repoDir);
-    await runCommand('git', ['commit', '--no-verify', '-m', 'remote merge without local sequence'], repoDir);
+    await runCommand('git', ['-c', 'core.hooksPath=/dev/null', 'commit', '-m', 'remote merge without local sequence'], repoDir);
     const remoteSha = (await runCommand('git', ['rev-parse', 'HEAD'], repoDir)).stdout.trim();
     await expect(commitFile(repoDir, 'b.txt', 'b\n', '000002 local change')).resolves.toMatchObject({ code: 0 });
 

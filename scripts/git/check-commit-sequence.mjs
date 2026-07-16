@@ -42,6 +42,10 @@ function getNextSequence() {
   return max + 1;
 }
 
+function getHeadSequence() {
+  return hasHead() ? parseNumberedSubject(runGit(['show', '-s', '--format=%s', 'HEAD']).trim()) : null;
+}
+
 function formatSequence(value) {
   return String(value).padStart(6, '0');
 }
@@ -73,9 +77,11 @@ function readAmendedSequence(messagePath) {
 function checkCommitMessage(messagePath) {
   const subject = readFileSync(messagePath, 'utf8').split(/\r?\n/u)[0] ?? '';
   const actual = parseNumberedSubject(subject);
-  const expected = readAmendedSequence(messagePath) ?? getNextSequence();
+  const amended = readAmendedSequence(messagePath);
+  const expected = amended ?? getNextSequence();
+  const headSequence = getHeadSequence();
 
-  if (actual === expected) {
+  if (actual === expected || (amended === null && actual === headSequence)) {
     return;
   }
 
@@ -83,6 +89,38 @@ function checkCommitMessage(messagePath) {
   const actualText = actual === null ? 'missing' : formatSequence(actual);
   console.error(`error: commit subject must start with next sequence ${expectedText}; got ${actualText}.`);
   process.exit(1);
+}
+
+function readCommitIdentity(revision) {
+  const [parents, subject] = runGit(['show', '-s', '--format=%P%x00%s', revision]).trim().split('\0');
+  return {
+    parents: parents ? parents.split(/\s+/u) : [],
+    sequence: parseNumberedSubject(subject ?? '')
+  };
+}
+
+function checkReferenceUpdate({ oldSha, newSha, refName }) {
+  if (!refName.startsWith('refs/heads/') || ZERO_SHA.test(oldSha) || ZERO_SHA.test(newSha)) return;
+  const oldCommit = readCommitIdentity(oldSha);
+  const newCommit = readCommitIdentity(newSha);
+  if (newCommit.parents[0] === oldSha) {
+    const expected = getMaxSequence(readSubjects(oldSha)) + 1;
+    if (newCommit.sequence !== expected) {
+      throw new Error(`${refName} new commit sequence must be ${formatSequence(expected)}.`);
+    }
+    return;
+  }
+  if (oldCommit.parents.join(' ') === newCommit.parents.join(' ') && newCommit.sequence !== oldCommit.sequence) {
+    throw new Error(`${refName} amended commit must keep sequence ${formatSequence(oldCommit.sequence)}.`);
+  }
+}
+
+function checkReferenceTransaction(input, state) {
+  if (state !== 'prepared') return;
+  input.split(/\r?\n/u).filter(Boolean).forEach((line) => {
+    const [oldSha, newSha, refName] = line.trim().split(/\s+/u);
+    if (oldSha && newSha && refName) checkReferenceUpdate({ oldSha, newSha, refName });
+  });
 }
 
 function readSubjects(revision) {
@@ -151,7 +189,11 @@ function main() {
     checkPrePush(readFileSync(0, 'utf8'));
     return;
   }
-  console.error('usage: check-commit-sequence.mjs commit-msg <message-file> | pre-push');
+  if (mode === 'reference-transaction') {
+    checkReferenceTransaction(readFileSync(0, 'utf8'), messagePath);
+    return;
+  }
+  console.error('usage: check-commit-sequence.mjs commit-msg <message-file> | pre-push | reference-transaction <state>');
   process.exit(2);
 }
 
