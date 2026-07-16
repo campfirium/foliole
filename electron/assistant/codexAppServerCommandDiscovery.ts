@@ -4,6 +4,8 @@ import path from 'node:path';
 
 import type { SpawnedCodexProcess } from './codexAppServerSessionTypes.js';
 
+export const CODEX_APP_SERVER_ARGS = ['app-server', '--disable', 'code_mode'];
+
 const HASH_DIRECTORY_PATTERN = /^[a-f0-9]{16}$/i;
 const PROBE_TIMEOUT_MS = 2_000;
 const APP_SERVER_PROBE_TIMEOUT_MS = 5_000;
@@ -115,7 +117,7 @@ async function probeCodexExitCode(
 
 async function probeAppServerInitialize(command: string, options: CodexLauncherOptions) {
   return new Promise<boolean>((resolve) => {
-    const child = spawnCodexCommand(command, ['app-server'], options);
+    const child = spawnCodexCommand(command, CODEX_APP_SERVER_ARGS, options);
     let settled = false;
     let stdout = '';
     const finish = (ok: boolean) => {

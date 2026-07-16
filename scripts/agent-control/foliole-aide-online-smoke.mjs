@@ -82,7 +82,7 @@ export function describeOnlineSmokeFailure(category) {
 }
 
 export function buildCodexAppServerArgs() {
-  return ['app-server'];
+  return ['app-server', '--disable', 'code_mode'];
 }
 
 export function createSmokeThreadStartParams(cwd) {

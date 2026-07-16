@@ -21,6 +21,7 @@ import {
   sanitizeCodexLauncherEnv
 } from './codexAppServerAdapterSupport.js';
 import {
+  CODEX_APP_SERVER_ARGS,
   findCodexCommandCandidates,
   probeCodexCommand,
   spawnCodexCommand,
@@ -109,7 +110,7 @@ export class CodexAppServerAdapter {
       if (!command) return createAssistantStatus('unavailable', 'not_configured');
       const accountState = await this.readAccountState({
         appVersion: this.appVersion,
-        spawn: () => this.spawnCommand(command, ['app-server'], launcherOptions)
+        spawn: () => this.spawnCommand(command, CODEX_APP_SERVER_ARGS, launcherOptions)
       });
       if (accountState === 'unauthenticated') return createAssistantStatus('unavailable', 'auth_failed');
       return createAssistantStatus('ready');
@@ -130,7 +131,7 @@ export class CodexAppServerAdapter {
       await this.loginWithChatGpt({
         appVersion: this.appVersion,
         openExternal: this.openExternal,
-        spawn: () => this.spawnCommand(command, ['app-server'], launcherOptions)
+        spawn: () => this.spawnCommand(command, CODEX_APP_SERVER_ARGS, launcherOptions)
       });
       return { provider: 'codex-app-server' as const, state: 'ready' as const };
     } catch (error) {
@@ -160,7 +161,7 @@ export class CodexAppServerAdapter {
       this.session ??= new CodexAppServerSession({
         appVersion: this.appVersion,
         launcherCwd: this.launcherCwd,
-        spawn: () => this.spawnCommand(command, ['app-server'], this.createLauncherOptions())
+        spawn: () => this.spawnCommand(command, CODEX_APP_SERVER_ARGS, this.createLauncherOptions())
       });
       return await this.session.sendMessage({
         clientTurnId: input.clientTurnId,

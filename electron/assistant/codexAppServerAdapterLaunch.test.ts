@@ -37,7 +37,7 @@ it('starts a plain app-server and sends product-level Foliole guidance', async (
 
   expect(spawnCommand).toHaveBeenCalledWith(
     'codex',
-    ['app-server'],
+    ['app-server', '--disable', 'code_mode'],
     expect.objectContaining({ cwd: 'C:\\Foliole\\Widgets\\Foliole Aide' })
   );
   expect(result).toMatchObject({ message: { text: 'Ready', threadId: 'thread-1' }, state: 'ready' });

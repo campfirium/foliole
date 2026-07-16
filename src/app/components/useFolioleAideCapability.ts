@@ -206,12 +206,7 @@ function readToolsDiagnostic(
 function isCapabilityFailureCategory(category: NativeAssistantFailureCategory) {
   return category === 'agent_control_unavailable' ||
     category === 'auth_failed' ||
-    category === 'busy' ||
-    category === 'interrupted' ||
-    category === 'launch_failed' ||
-    category === 'not_configured' ||
-    category === 'overloaded' ||
-    category === 'timeout';
+    category === 'not_configured';
 }
 
 function createFailureDiagnostic(

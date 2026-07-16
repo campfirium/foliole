@@ -167,23 +167,27 @@ it('returns to the capability gate when a send result reports an auth failure', 
   expect(screen.queryByLabelText('Foliole Aide message')).not.toBeInTheDocument();
 });
 
-it('returns to the capability gate when the Codex connection is interrupted', async () => {
-  assistantRuntime.subscribeAssistantTurnEvents.mockReturnValue(() => undefined);
-  assistantRuntime.sendAssistantMessage.mockResolvedValueOnce({
-    failure: { category: 'interrupted' },
-    provider: 'codex-app-server',
-    state: 'failed'
-  });
+it.each(['interrupted', 'launch_failed'] as const)(
+  'keeps the conversation available after a transient %s failure',
+  async (category) => {
+    assistantRuntime.subscribeAssistantTurnEvents.mockReturnValue(() => undefined);
+    assistantRuntime.sendAssistantMessage.mockResolvedValueOnce({
+      failure: { category },
+      provider: 'codex-app-server',
+      state: 'failed'
+    });
 
-  renderPanel();
-  fireEvent.change(await screen.findByLabelText('Foliole Aide message'), {
-    target: { value: 'Retry me' }
-  });
-  fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+    renderPanel();
+    fireEvent.change(await screen.findByLabelText('Foliole Aide message'), {
+      target: { value: 'Retry me' }
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
 
-  expect(await screen.findByText('Foliole Aide connection ended before the reply. Retry to reconnect.')).toBeInTheDocument();
-  expect(screen.queryByLabelText('Foliole Aide message')).not.toBeInTheDocument();
-});
+    expect(await screen.findByText('Foliole Aide could not reply. Check the message and send again.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Foliole Aide message')).toHaveValue('Retry me');
+    expect(screen.getByRole('button', { name: 'Send' })).toBeEnabled();
+  }
+);
 
 it('returns to the capability gate when a turn event reports missing Foliole tools', async () => {
   let turnEventHandler:

@@ -16,7 +16,7 @@ import {
 import { isOnlineSmokeSuccessful } from './foliole-aide-online-smoke-success.mjs';
 
 it('starts Codex app-server without Foliole MCP registration', () => {
-  expect(buildCodexAppServerArgs()).toEqual(['app-server']);
+  expect(buildCodexAppServerArgs()).toEqual(['app-server', '--disable', 'code_mode']);
 });
 
 it('asks the online smoke turn to discover the stable CLI without internal tool names', () => {
