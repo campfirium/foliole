@@ -5,6 +5,7 @@ import { EventEmitter } from 'node:events';
 import { describe, expect, it } from 'vitest';
 
 import {
+  readInstalledSmokeDiagnostics,
   resolveInstalledAppExePath,
   resolveInstalledAppSmokeEnv,
   runInstalledAppSmoke,
@@ -189,5 +190,42 @@ describe('installed app smoke', () => {
       appReady: { pid: 4321 },
       bridgeReady: { pid: 4321 }
     });
+  });
+
+  it('reports missing boot diagnostics instead of silently deleting the only evidence', () => {
+    const stateRoot = winPath('T:', 'smoke');
+    expect(readInstalledSmokeDiagnostics(stateRoot)).toContain('boot event log missing');
+  });
+
+  it('adds boot diagnostics before cleaning up a failed smoke', async () => {
+    const executablePath = winPath('D:', 'Apps', 'Foliole', 'Foliole.exe');
+    const child = {
+      exitCode: null,
+      once: (_event, resolve) => resolve(),
+      pid: 1234,
+      stderr: new EventEmitter(),
+      stdout: new EventEmitter()
+    };
+    const calls = [];
+    await expect(runInstalledAppSmoke({
+      createIsolation: () => ({
+        cleanup: () => calls.push('cleanup'),
+        env: { FOLIOLE_WORKDIR: winPath('T:', 'smoke') },
+        runtimeStateRoot: winPath('T:', 'smoke')
+      }),
+      env: { FOLIOLE_ELECTRON_INSTALLED_EXE_PATH: executablePath },
+      exists: () => true,
+      launchApp: () => ({ child, outputTail: [] }),
+      readDiagnostics: () => {
+        calls.push('diagnostics');
+        return '[installed-app-smoke] boot event tail';
+      },
+      resetMarkers: () => {},
+      stopRuntime: () => {},
+      waitForMarkers: async () => {
+        throw new Error('timed out');
+      }
+    })).rejects.toThrow('boot event tail');
+    expect(calls).toEqual(['diagnostics', 'cleanup']);
   });
 });

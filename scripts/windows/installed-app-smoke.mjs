@@ -1,7 +1,7 @@
 /* global console, process, setTimeout */
 
 import { spawn } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { createDesktopIsolationContext } from '../desktop/playwright-desktop-isolation.mjs';
@@ -14,6 +14,16 @@ import {
 const DEFAULT_TIMEOUT_MS = 300_000;
 const OUTPUT_TAIL_LIMIT = 120;
 const PROCESS_EXIT_WAIT_MS = 5_000;
+const BOOT_EVENT_TAIL_LIMIT = 80;
+
+export function readInstalledSmokeDiagnostics(stateRoot) {
+  const eventLogPath = path.join(stateRoot, 'logs', 'windows', 'native-boot-events.ndjson');
+  if (!existsSync(eventLogPath)) {
+    return `[installed-app-smoke] boot event log missing path=${eventLogPath}`;
+  }
+  const lines = readFileSync(eventLogPath, 'utf8').split(/\r?\n/u).filter(Boolean);
+  return `[installed-app-smoke] boot event tail path=${eventLogPath}\n${lines.slice(-BOOT_EVENT_TAIL_LIMIT).join('\n')}`;
+}
 
 function resolveTimeoutMs(env = process.env) {
   const parsed = Number.parseInt(
@@ -129,6 +139,7 @@ export async function runInstalledAppSmoke({
   exists = existsSync,
   launchApp = launchInstalledApp,
   now = Date.now,
+  readDiagnostics = readInstalledSmokeDiagnostics,
   resetMarkers = resetReadyMarkers,
   stopRuntime = stopProcess,
   waitForMarkers = waitForInstalledReadyMarkers
@@ -168,8 +179,11 @@ export async function runInstalledAppSmoke({
       session
     };
   } catch (error) {
-    if (outputTail.length > 0 && error instanceof Error) {
-      error.message = `${error.message}\n[installed-app-smoke] output tail:\n${outputTail.join('\n')}`;
+    if (error instanceof Error) {
+      const output = outputTail.length > 0
+        ? `\n[installed-app-smoke] output tail:\n${outputTail.join('\n')}`
+        : '';
+      error.message = `${error.message}${output}\n${readDiagnostics(isolation.runtimeStateRoot)}`;
     }
     throw error;
   } finally {
