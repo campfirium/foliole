@@ -1,0 +1,10 @@
+import { NATIVE_COMMANDS } from './nativeCommands.js';
+
+const SENSITIVE_NATIVE_COMMAND_ARGS = new Set<string>([
+  NATIVE_COMMANDS.saveDiscoursePublishSettings,
+  NATIVE_COMMANDS.connectWordPressPublishSettings
+]);
+
+export function canRecordNativeCommandArgs(command: string) {
+  return !SENSITIVE_NATIVE_COMMAND_ARGS.has(command);
+}

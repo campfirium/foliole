@@ -18,7 +18,7 @@ const LOCAL_ONLY_KEYS = new Set([
   'readwise_books_inventory_state',
   'watch_import_cursor_state'
 ]);
-const DEVICE_KEYS = new Set(['discourse_publish_settings']);
+const DEVICE_KEYS = new Set(['discourse_publish_settings', 'wordpress_publish_settings']);
 
 export const DESKTOP_DECLARED_SETTING_KEYS = [
   ...USER_SPACE_KEYS,

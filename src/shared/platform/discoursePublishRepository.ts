@@ -23,6 +23,12 @@ export async function saveDiscoursePublishSettingsToRuntime(
   return runtimeInvoke(NATIVE_COMMANDS.saveDiscoursePublishSettings, { settings });
 }
 
+export async function disconnectDiscoursePublishSettingsFromRuntime(): Promise<NativeDiscoursePublishSettings | null> {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) return null;
+  return runtimeInvoke(NATIVE_COMMANDS.disconnectDiscoursePublishSettings);
+}
+
 export async function loadDiscoursePublishCatalogFromRuntime(input?: { refresh?: boolean }): Promise<NativeDiscoursePublishCatalog | null> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) return null;

@@ -12,6 +12,7 @@ import {
   loadDiscourseCatalogCache,
   loadDiscourseApiKey,
   loadDiscoursePublishSettings,
+  disconnectDiscoursePublishSettings,
   recordDiscoursePublishUsage,
   saveDiscourseCatalogCache,
   saveDiscoursePublishSettings
@@ -54,7 +55,7 @@ function buildBinding(args: {
   };
 }
 
-export { loadDiscoursePublishSettings, saveDiscoursePublishSettings };
+export { disconnectDiscoursePublishSettings, loadDiscoursePublishSettings, saveDiscoursePublishSettings };
 
 export async function loadDiscoursePublishCatalog(args?: { refresh?: boolean }) {
   const { apiKey, settings } = requireConfiguredSettings();

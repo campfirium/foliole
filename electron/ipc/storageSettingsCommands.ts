@@ -9,12 +9,6 @@ import {
   summarizeSourceDispositions
 } from '../database/sourceDispositionStates.js';
 import { loadSyncPeers, saveSyncPeers } from '../database/syncPeers.js';
-import {
-  loadDiscoursePublishCatalog,
-  loadDiscoursePublishSettings,
-  publishTopicToDiscourse,
-  saveDiscoursePublishSettings
-} from '../discourse/discoursePublish.js';
 import { refreshGlobalClipShortcutFromSettings } from '../globalClipShortcut.js';
 import { loadImportManagerSettings, saveImportManagerSettings } from '../import/importManagerSettings.js';
 import { refreshKeepImportMonitorFromSettings } from '../import/keepImportMonitor.js';
@@ -40,6 +34,7 @@ import { exportSourceDispositions, importSourceDispositions } from './sourceDisp
 import { loadAppSettingsState, saveAppSettingsState } from './storage.js';
 import { readSettingsObject } from './storageCommandSupport.js';
 import { handleExternalSearchStorageCommand } from './storageExternalSearchCommands.js';
+import { handlePublishingStorageCommand } from './storagePublishingCommands.js';
 
 function handleSourceDispositionCommand(command: string, window: BrowserWindow | null) {
   if (command === NATIVE_COMMANDS.loadSourceDispositionSummary) return summarizeSourceDispositions();
@@ -89,6 +84,8 @@ export async function handleSettingsStorageCommand(
   if (externalSearchResult !== undefined) return externalSearchResult;
   const companionPairingResult = handleCompanionPairingCommand(command, args);
   if (companionPairingResult !== undefined) return companionPairingResult;
+  const publishingResult = await handlePublishingStorageCommand(command, args);
+  if (publishingResult !== undefined) return publishingResult;
   if (command === NATIVE_COMMANDS.loadImportManagerSettings) return loadImportManagerSettings();
   if (command === NATIVE_COMMANDS.loadAppSettingsState) return loadAppSettingsState();
   if (command === NATIVE_COMMANDS.saveAppSettingsState) {
@@ -114,16 +111,6 @@ export async function handleSettingsStorageCommand(
   if (command === NATIVE_COMMANDS.rebuildMirrorOutput) return rebuildMirrorOutput();
   if (command === NATIVE_COMMANDS.rebuildMirrorAttachmentLinks) return rebuildMirrorAttachmentLinks();
   if (command === NATIVE_COMMANDS.exportCurrentArticleMirror) return exportCurrentArticleMirror(asString(args.node_id, 'node_id'), window);
-  if (command === NATIVE_COMMANDS.loadDiscoursePublishSettings) return loadDiscoursePublishSettings();
-  if (command === NATIVE_COMMANDS.loadDiscoursePublishCatalog) {
-    return loadDiscoursePublishCatalog(readSettingsObject(args) as Parameters<typeof loadDiscoursePublishCatalog>[0]);
-  }
-  if (command === NATIVE_COMMANDS.saveDiscoursePublishSettings) {
-    return saveDiscoursePublishSettings(readSettingsObject(args.settings) as unknown as Parameters<typeof saveDiscoursePublishSettings>[0]);
-  }
-  if (command === NATIVE_COMMANDS.publishTopicToDiscourse) {
-    return publishTopicToDiscourse(readSettingsObject(args) as unknown as Parameters<typeof publishTopicToDiscourse>[0]);
-  }
   if (command === NATIVE_COMMANDS.updateLibraryPathSetting) {
     return handleLibraryPathUpdateCommand(args);
   }

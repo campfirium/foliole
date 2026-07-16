@@ -3,27 +3,22 @@ import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import type { CommandPaletteItem } from '../../shared/commands/types';
 
 import { runAppCommand, runReviewModeToggle } from './appCommands';
+import {
+  createPaletteEditorCommandActions,
+  type PaletteEditorCommandRunnerArgs
+} from './appPaletteEditorCommandActions';
 import { createPaletteHelpCommandActions, type PaletteHelpCommandRunnerArgs } from './appPaletteHelpCommandRunner';
 import { runResetImportDataCommand } from './appPaletteResetImportCommand';
 import { enterReviewModeSession, type StartStudyModeOptions } from './reviewModeSessionActions';
 
 const FRESH_STATE_COMMAND_IDS: ReadonlySet<string> = new Set([APP_COMMAND_IDS.undo, APP_COMMAND_IDS.redo]);
 
-interface PaletteCommandRunnerArgs extends PaletteHelpCommandRunnerArgs {
+interface PaletteCommandRunnerArgs extends PaletteHelpCommandRunnerArgs, PaletteEditorCommandRunnerArgs {
   clearSettingsRequest: () => void;
   closeTrashView: () => void;
   createFolder: () => void;
   createItem: () => void;
-  createSelectionCloze: () => void;
-  createSelectionHighlight: () => void;
   createTopic: () => void;
-  addSelectionNote: () => void;
-  repairTable: () => boolean;
-  enterPriorityMode: () => void;
-  exportCurrentArticle: () => Promise<boolean>;
-  publishToDiscourse: () => Promise<boolean>;
-  findInTopic: () => void;
-  mergeHighlightsIntoTopic: () => Promise<boolean>;
   exitReviewSession: () => void;
   exitStudyMode: () => void;
   goBack: () => void;
@@ -125,24 +120,6 @@ function createPaletteReviewCommandActions(args: PaletteCommandRunnerArgs, toggl
     reviewScrollReadingDown: args.reviewScrollReadingDown,
     reviewScrollReadingUp: args.reviewScrollReadingUp,
     toggleReviewMode
-  };
-}
-
-function createPaletteEditorCommandActions(args: PaletteCommandRunnerArgs) {
-  return {
-    addSelectionNote: args.addSelectionNote,
-    enterPriorityMode: args.enterPriorityMode,
-    exportCurrentArticle: () => {
-      void args.exportCurrentArticle();
-    },
-    findInTopic: args.findInTopic,
-    mergeHighlightsIntoTopic: () => {
-      void args.mergeHighlightsIntoTopic();
-    },
-    publishToDiscourse: () => {
-      void args.publishToDiscourse();
-    },
-    repairTable: args.repairTable
   };
 }
 

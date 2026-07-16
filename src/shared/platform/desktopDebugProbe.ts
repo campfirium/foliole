@@ -133,7 +133,7 @@ export function recordDesktopDebugInvoke(entry: {
     command: entry.command,
     durationMs: entry.durationMs,
     ...(entry.error !== undefined ? { error: toErrorDetails(entry.error) } : {}),
-    ...(entry.status === 'rejected' ? { args: cloneFailureArgs(entry.args) } : {}),
+    ...(entry.status === 'rejected' && entry.args !== undefined ? { args: cloneFailureArgs(entry.args) } : {}),
     status: entry.status,
     timestamp: new Date().toISOString()
   };
@@ -145,9 +145,9 @@ export function recordDesktopDebugInvokeFailure(entry: { args?: unknown; command
     return;
   }
   const nextEntry: DesktopDebugInvokeFailure = {
-    args: cloneFailureArgs(entry.args),
     command: entry.command,
     error: toErrorDetails(entry.error),
+    ...(entry.args !== undefined ? { args: cloneFailureArgs(entry.args) } : {}),
     timestamp: new Date().toISOString()
   };
   recentInvokeFailures = [nextEntry, ...recentInvokeFailures].slice(0, MAX_RECENT_INVOKE_FAILURES);

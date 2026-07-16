@@ -54,6 +54,10 @@ export type NativeDiscoursePublishCommandMap = {
     args: { settings: NativeDiscoursePublishSettingsInput };
     result: NativeDiscoursePublishSettings;
   };
+  [NATIVE_COMMANDS.disconnectDiscoursePublishSettings]: {
+    args: undefined;
+    result: NativeDiscoursePublishSettings;
+  };
   [NATIVE_COMMANDS.loadDiscoursePublishCatalog]: {
     args: { refresh?: boolean } | undefined;
     result: NativeDiscoursePublishCatalog;

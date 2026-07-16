@@ -5,7 +5,6 @@ import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { definedProps } from '../../shared/lib/definedProps';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 
-import { DiscoursePublishDialogHost } from './DiscoursePublishDialogHost';
 import { selectImmersiveReadingModeSource } from './immersiveReadingModeSource';
 import { ImmersiveShortcutsOverlay } from './ImmersiveShortcutsOverlay';
 import { CLIPBOARD_IMPORT_REQUEST_EVENT, FILE_IMPORT_REQUEST_EVENT } from './importActivityRequests';
@@ -17,6 +16,7 @@ import { WorkspaceActivityNotice } from './WorkspaceActivityNotice';
 import { WorkspaceLayoutGrid, type WorkspaceLayoutGridSource } from './WorkspaceLayoutGrid';
 import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 import { WorkspaceMainTitleBar, type WorkspaceTitleBarSource } from './WorkspaceMainTitleBar';
+import { WorkspacePublishDialogHosts } from './WorkspacePublishDialogHosts';
 import {
   loadWorkspaceRightPanelPreference,
   saveWorkspaceRightPanelPreference
@@ -159,7 +159,7 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
       {props.overlay}
       {renderWorkspaceActivityNotice(clipboardImportNotice)}
       <WorkspaceRuntimeNotice />
-      <DiscoursePublishDialogHost />
+      <WorkspacePublishDialogHosts />
       <ImmersiveShortcutsOverlay visible={layoutChrome.isImmersiveMode && !immersive.isImmersiveEditing && immersive.isShortcutsOverlayOpen} />
       <ImportSourceWorkspace
         onOpenChange={(open) => (open ? imports.onOpenImportManagement() : imports.onCloseImportManagement())}

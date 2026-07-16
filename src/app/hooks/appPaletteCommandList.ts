@@ -33,6 +33,7 @@ export const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   { id: APP_COMMAND_IDS.renameNode, title: 'Rename', section: 'Workspace', keywords: ['rename', 'topic', 'folder'] },
   { id: APP_COMMAND_IDS.exportCurrentArticle, title: 'Export Current Topic', section: 'Editor', keywords: ['export', 'topic', 'article', 'mirror', 'markdown', 'save'] },
   { id: APP_COMMAND_IDS.publishToDiscourse, title: 'Publish to Discourse', section: 'Editor', keywords: ['publish', 'discourse', 'topic', 'forum'] },
+  { id: APP_COMMAND_IDS.publishToWordPress, title: 'Publish to WordPress', section: 'Editor', keywords: ['publish', 'wordpress', 'post', 'blog'] },
   { id: APP_COMMAND_IDS.mergeHighlightsIntoTopic, title: 'Merge highlights', section: 'Editor', keywords: ['merge', 'highlights', 'topic', 'append', 'file'] },
   { id: APP_COMMAND_IDS.createSelectionHighlight, title: 'Highlight Selection', section: 'Editor', keywords: ['highlight', 'selection', 'excerpt'] },
   { id: APP_COMMAND_IDS.createSelectionCloze, title: 'Cloze Selection', section: 'Editor', keywords: ['cloze', 'selection', 'item'] },

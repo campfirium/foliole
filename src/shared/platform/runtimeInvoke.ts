@@ -1,3 +1,4 @@
+import { canRecordNativeCommandArgs } from '../../../lib/platform/nativeCommandPrivacy';
 import type { NativeInvoke } from '../../../lib/platform/nativeContract';
 
 import { recordDesktopDebugInvoke, recordDesktopDebugInvokeFailure } from './desktopDebugProbe';
@@ -30,14 +31,15 @@ export function getRuntimeInvoke(): RuntimeInvoke | null {
         return result;
       })
       .catch((error) => {
+        const debugArgs = canRecordNativeCommandArgs(command) ? args : undefined;
         recordDesktopDebugInvoke({
           command,
-          args,
+          args: debugArgs,
           durationMs: Date.now() - startedAt,
           error,
           status: 'rejected'
         });
-        recordDesktopDebugInvokeFailure({ command, args, error });
+        recordDesktopDebugInvokeFailure({ command, args: debugArgs, error });
         throw error;
       });
   }) as RuntimeInvoke;

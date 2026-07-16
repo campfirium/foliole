@@ -17,13 +17,13 @@ import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 
 import { createPaletteReviewActions } from './appControllerPaletteReviewActions';
 import { createPaletteRuntimeActions } from './appControllerPaletteRuntimeActions';
+import { createPublishingPaletteActions } from './appControllerPublishingActions';
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
 import { createPaletteHistoryActions } from './appPaletteHistoryActions';
 import { createPaletteImportActions } from './appPaletteImportActions';
 import { createSelectionAnnotationPaletteActions } from './appPaletteSelectionActions';
 import { createPaletteSurfaceActions } from './appPaletteSurfaceActions';
 import { restartAppWithReadingProgress } from './appRestartPersistence';
-import { createPublishToDiscourseCommand } from './discoursePublishCommand';
 import { repairEditorTable } from './editorRepairTableCommand';
 import { clearSettingsRequest } from './settingsOverlayRequest';
 import type { useFormalImport } from './useFormalImport';
@@ -195,7 +195,7 @@ export function createPaletteRunnerArgs(args: {
     ...createPaletteStudyActions(args),
     enterPriorityMode: args.layoutProps.document.onEnterPriorityQuickSet,
     exportCurrentArticle: createExportCurrentArticleCommand(args),
-    publishToDiscourse: createPublishToDiscourseCommand(args),
+    ...createPublishingPaletteActions(args),
     findInTopic: requestDocumentTopicSearchOpen,
     mergeHighlightsIntoTopic: createMergeHighlightsIntoTopicCommand({ ws: args.ws }),
     ...createPaletteNavigationActions(args),

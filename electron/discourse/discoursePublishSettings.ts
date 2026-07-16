@@ -1,14 +1,15 @@
-import fs from 'node:fs';
-import path from 'node:path';
-
-import { app, safeStorage } from 'electron';
-
 import type {
   NativeDiscoursePublishCatalog,
   NativeDiscoursePublishSettings,
   NativeDiscoursePublishSettingsInput
 } from '../../lib/platform/nativeDiscoursePublishContract.js';
 import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
+import {
+  deletePublishDeviceSecret,
+  hasPublishDeviceSecret,
+  readPublishDeviceSecret,
+  writePublishDeviceSecret
+} from '../security/publishDeviceSecretStore.js';
 
 const SETTINGS_KEY = 'discourse_publish_settings';
 const SECRET_FILE = 'discourse-publish-secret.bin';
@@ -65,27 +66,12 @@ function saveStoredSettings(settings: StoredDiscoursePublishSettings) {
   saveJsonSetting(SETTINGS_KEY, settings, settings.updated_at);
 }
 
-function resolveSecretPath() {
-  return path.join(app.getPath('userData'), SECRET_FILE);
-}
-
-function ensureEncryptionAvailable() {
-  if (!safeStorage.isEncryptionAvailable()) {
-    throw new Error('Electron safeStorage is unavailable for Discourse API keys.');
-  }
-}
-
 export function loadDiscourseApiKey() {
-  const secretPath = resolveSecretPath();
-  if (!fs.existsSync(secretPath)) return '';
-  ensureEncryptionAvailable();
-  return safeStorage.decryptString(fs.readFileSync(secretPath));
+  return readPublishDeviceSecret(SECRET_FILE, 'Discourse API keys');
 }
 
 function saveDiscourseApiKey(apiKey: string) {
-  ensureEncryptionAvailable();
-  fs.mkdirSync(path.dirname(resolveSecretPath()), { recursive: true });
-  fs.writeFileSync(resolveSecretPath(), safeStorage.encryptString(apiKey));
+  writePublishDeviceSecret(SECRET_FILE, 'Discourse API keys', apiKey);
 }
 
 export function loadDiscoursePublishSettings(): NativeDiscoursePublishSettings {
@@ -93,24 +79,32 @@ export function loadDiscoursePublishSettings(): NativeDiscoursePublishSettings {
   if (!settings) return emptySettings();
   return {
     ...settings,
-    has_api_key: fs.existsSync(resolveSecretPath())
+    has_api_key: hasPublishDeviceSecret(SECRET_FILE)
   };
 }
 
 export function saveDiscoursePublishSettings(input: NativeDiscoursePublishSettingsInput) {
   const updatedAt = new Date().toISOString();
   const current = loadStoredSettings();
+  const siteUrl = normalizeSiteUrl(input.site_url);
+  const siteChanged = Boolean(current && current.site_url !== siteUrl);
+  if (siteChanged || !siteUrl) deletePublishDeviceSecret(SECRET_FILE);
   const settings: StoredDiscoursePublishSettings = {
-    site_url: normalizeSiteUrl(input.site_url),
+    site_url: siteUrl,
     updated_at: updatedAt
   };
-  if (current?.catalog_cache) settings.catalog_cache = current.catalog_cache;
-  if (current?.recent_by_site) settings.recent_by_site = current.recent_by_site;
+  if (!siteChanged && current?.catalog_cache) settings.catalog_cache = current.catalog_cache;
+  if (!siteChanged && current?.recent_by_site) settings.recent_by_site = current.recent_by_site;
   saveStoredSettings(settings);
   if (typeof input.api_key === 'string' && input.api_key.length > 0) {
     saveDiscourseApiKey(input.api_key);
   }
   return loadDiscoursePublishSettings();
+}
+
+export function disconnectDiscoursePublishSettings() {
+  deletePublishDeviceSecret(SECRET_FILE);
+  return saveDiscoursePublishSettings({ site_url: '' });
 }
 
 export function loadDiscourseCatalogCache(siteUrl: string): NativeDiscoursePublishCatalog | null {

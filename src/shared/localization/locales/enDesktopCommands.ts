@@ -28,6 +28,7 @@ export const EN_DESKTOP_COMMAND_TRANSLATIONS = {
   'desktop.command.rename': 'Rename',
   'desktop.command.exportCurrentTopic': 'Export Current Topic',
   'desktop.command.publishToDiscourse': 'Publish to Discourse',
+  'desktop.command.publishToWordPress': 'Publish to WordPress',
   'desktop.command.mergeHighlights': 'Merge highlights',
   'desktop.command.highlightSelection': 'Highlight Selection',
   'desktop.command.clozeSelection': 'Cloze Selection',

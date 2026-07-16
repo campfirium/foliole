@@ -20,6 +20,7 @@ import { isNodeInSubtree } from '../../store/workspaceNodeTreeOrder';
 import { buildAppPaletteItems } from './appCommands';
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
 import { resolveDevPaletteOptions } from './appPaletteDevOptions';
+import { buildEditorPaletteOptions } from './appPaletteEditorOptions';
 import { canDelayReviewTopic } from './appPaletteNodeActionGuards';
 import { useCommandShortcutState } from './reviewHotkeysState';
 
@@ -43,46 +44,6 @@ function canNodeBeMoveTarget(args: {
   );
 }
 
-function canExportCurrentArticle(args: {
-  activeNodeId: string | null;
-  ws: Pick<ReturnType<typeof useWorkspaceSelectors>, 'nodesById' | 'trashedNodeIds'>;
-}) {
-  if (!args.activeNodeId || args.ws.trashedNodeIds.includes(args.activeNodeId)) {
-    return false;
-  }
-  const activeNode = args.ws.nodesById[args.activeNodeId];
-  if (!activeNode || activeNode.kind === 'folder') {
-    return false;
-  }
-  if (activeNode.kind === 'topic' && !activeNode.anchorLink) {
-    return true;
-  }
-  return Boolean(activeNode.parentNodeId);
-}
-
-function canMergeHighlightsIntoTopic(args: {
-  activeNodeId: string | null;
-  ws: Pick<ReturnType<typeof useWorkspaceSelectors>, 'nodesById' | 'trashedNodeIds'>;
-}) {
-  if (!args.activeNodeId || args.ws.trashedNodeIds.includes(args.activeNodeId)) {
-    return false;
-  }
-  const activeNode = args.ws.nodesById[args.activeNodeId];
-  return Boolean(activeNode && activeNode.kind === 'topic' && !activeNode.anchorLink);
-}
-
-function canPublishToDiscourse(args: {
-  activeNodeId: string | null;
-  isViewingTrashNode: boolean;
-  ws: Pick<ReturnType<typeof useWorkspaceSelectors>, 'nodesById' | 'trashedNodeIds'>;
-}) {
-  if (!args.activeNodeId || args.isViewingTrashNode || args.ws.trashedNodeIds.includes(args.activeNodeId)) {
-    return false;
-  }
-  const activeNode = args.ws.nodesById[args.activeNodeId];
-  return Boolean(activeNode && activeNode.kind === 'topic' && !activeNode.anchorLink);
-}
-
 function canReimportSelectedTopic(args: {
   activeNodeId: string | null;
   formalImportAvailable: boolean;
@@ -94,41 +55,6 @@ function canReimportSelectedTopic(args: {
   }
   const activeNode = args.ws.nodesById[args.activeNodeId];
   return Boolean(activeNode && activeNode.kind !== 'folder' && !args.ws.trashedNodeIds.includes(args.activeNodeId));
-}
-
-function canToggleImmersiveMode(args: {
-  activeNodeId: string | null;
-  ws: Pick<ReturnType<typeof useWorkspaceSelectors>, 'nodesById' | 'trashedNodeIds'>;
-}) {
-  if (!args.activeNodeId || args.ws.trashedNodeIds.includes(args.activeNodeId)) {
-    return false;
-  }
-  const activeNode = args.ws.nodesById[args.activeNodeId];
-  return Boolean(activeNode && activeNode.kind !== 'folder');
-}
-
-function canAnnotateSelection(args: {
-  activeNodeId: string | null;
-  isViewingTrashNode: boolean;
-  ws: Pick<ReturnType<typeof useWorkspaceSelectors>, 'nodesById' | 'trashedNodeIds'>;
-}) {
-  if (!args.activeNodeId || args.isViewingTrashNode || args.ws.trashedNodeIds.includes(args.activeNodeId)) {
-    return false;
-  }
-  return args.ws.nodesById[args.activeNodeId]?.kind !== 'folder';
-}
-
-function buildEditorPaletteOptions(args: Parameters<typeof useAppPaletteItems>[0], canUseCurrentTopic: boolean) {
-  return {
-    canAnnotateSelection: canAnnotateSelection(args),
-    canExportCurrentArticle: canExportCurrentArticle(args),
-    canFindInCurrentTopic: canUseCurrentTopic,
-    canMergeHighlightsIntoTopic: canUseCurrentTopic,
-    canPublishToDiscourse: canPublishToDiscourse(args),
-    canRepairTable: canAnnotateSelection(args),
-    canSetNodePriority: Boolean(args.activeNodeId) && !args.isViewingTrashNode,
-    canToggleImmersiveMode: canToggleImmersiveMode(args)
-  };
 }
 
 export function resolveEditorAwarePaletteHistoryOptions(args: {
@@ -157,7 +83,7 @@ function buildPaletteOptions(
   hasNavigableNodes: boolean,
   t: Translate
 ) {
-  const canUseCurrentTopic = canMergeHighlightsIntoTopic(args), activeNodeId = args.activeNodeId;
+  const activeNodeId = args.activeNodeId;
   const reviewNavigationSource = {
     nodeOrder: args.ws.nodeOrder,
     nodesById: args.ws.nodesById,
@@ -171,7 +97,7 @@ function buildPaletteOptions(
   });
   return {
     ...historyOptions,
-    ...buildEditorPaletteOptions(args, canUseCurrentTopic),
+    ...buildEditorPaletteOptions(args),
     canImportFile: args.formalImportAvailable,
     canImportFolder: args.formalImportAvailable,
     canRenameNode: Boolean(args.activeNodeId) && !args.isViewingTrashNode,

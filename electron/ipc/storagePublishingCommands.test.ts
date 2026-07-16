@@ -1,0 +1,57 @@
+import { beforeEach, expect, it, vi } from 'vitest';
+
+import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
+
+const discourseMocks = vi.hoisted(() => ({
+  disconnectDiscoursePublishSettings: vi.fn(),
+  loadDiscoursePublishCatalog: vi.fn(),
+  loadDiscoursePublishSettings: vi.fn(),
+  publishTopicToDiscourse: vi.fn(),
+  saveDiscoursePublishSettings: vi.fn()
+}));
+const wordpressMocks = vi.hoisted(() => ({
+  connectWordPressPublishSettings: vi.fn(),
+  disconnectWordPressPublishSettings: vi.fn(),
+  loadWordPressPublishSettings: vi.fn(),
+  publishTopicToWordPress: vi.fn()
+}));
+
+vi.mock('../discourse/discoursePublish.js', () => discourseMocks);
+vi.mock('../wordpress/wordpressPublish.js', () => wordpressMocks);
+
+import { handlePublishingStorageCommand } from './storagePublishingCommands.js';
+
+beforeEach(() => {
+  Object.values(discourseMocks).forEach((mock) => mock.mockReset());
+  Object.values(wordpressMocks).forEach((mock) => mock.mockReset());
+});
+
+it('forwards nested WordPress connection settings only to the main-process connector', async () => {
+  const settings = {
+    application_password: 'SENTINEL-WORDPRESS-SECRET',
+    site_url: 'https://free-site.wordpress.com',
+    username: 'writer'
+  };
+  wordpressMocks.connectWordPressPublishSettings.mockResolvedValue({
+    adapter: 'wordpress_com_xmlrpc', has_credentials: true,
+    site_url: settings.site_url, updated_at: '2026-07-16T00:00:00.000Z'
+  });
+
+  const result = await handlePublishingStorageCommand(
+    NATIVE_COMMANDS.connectWordPressPublishSettings,
+    { settings }
+  );
+  expect(wordpressMocks.connectWordPressPublishSettings).toHaveBeenCalledWith(settings);
+  expect(JSON.stringify(result)).not.toContain('SENTINEL-WORDPRESS-SECRET');
+});
+
+it('forwards WordPress publish content without adding credentials to the payload', async () => {
+  const args = { content: '# Title\n\nBody', status: 'draft', title: 'Title' };
+  await handlePublishingStorageCommand(NATIVE_COMMANDS.publishTopicToWordPress, args);
+  expect(wordpressMocks.publishTopicToWordPress).toHaveBeenCalledWith(args);
+});
+
+it('routes explicit Discourse disconnect through the credential owner', async () => {
+  await handlePublishingStorageCommand(NATIVE_COMMANDS.disconnectDiscoursePublishSettings, {});
+  expect(discourseMocks.disconnectDiscoursePublishSettings).toHaveBeenCalledOnce();
+});

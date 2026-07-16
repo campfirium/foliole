@@ -42,6 +42,9 @@ describe('check-layer-dependency-boundary platform subdomains', () => {
     expect(resolvePlatformSubdomain('src/shared/platform/discoursePublishRepository.ts')).toBe(
       'desktop-runtime-repository'
     );
+    expect(resolvePlatformSubdomain('src/shared/platform/wordpressPublishRepository.ts')).toBe(
+      'desktop-runtime-repository'
+    );
     expect(resolvePlatformSubdomain('src/shared/platform/assistantRuntime.ts')).toBe('desktop-runtime-repository');
     expect(resolvePlatformSubdomain('src/shared/platform/desktopHostCapabilities.ts')).toBe(
       'desktop-runtime-repository'

@@ -16,7 +16,8 @@ const CONTRACT_FILES = [
   'lib/platform/nativeSearchIndexCommandMap.ts',
   'lib/platform/nativeSyncCommandMap.ts',
   'lib/platform/nativeTrashCommandMap.ts',
-  'lib/platform/nativeUtilityCommandMap.ts'
+  'lib/platform/nativeUtilityCommandMap.ts',
+  'lib/platform/nativeWordPressPublishContract.ts'
 ];
 const ELECTRON_HANDLER_FILES = [
   'electron/ipc/assistantCommands.ts',
@@ -29,6 +30,7 @@ const ELECTRON_HANDLER_FILES = [
   'electron/ipc/storageExternalSearchCommands.ts',
   'electron/ipc/storageLocalFileCommands.ts',
   'electron/ipc/storageNodeMutationCommands.ts',
+  'electron/ipc/storagePublishingCommands.ts',
   'electron/ipc/storageReadCommands.ts',
   'electron/ipc/storageSettingsCommands.ts',
   'electron/ipc/storageSyncCommands.ts',
