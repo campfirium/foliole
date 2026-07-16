@@ -111,8 +111,8 @@ async function verifyVirtualFolderLifecycle(args: {
   await expect(updatedRow).toBeVisible({ timeout: 10_000 });
   for (const topicId of args.topicIds) {
     const material = await readMaterial(args.descriptorPath, topicId);
-    expect(readTopicCollections(String(material.content))).toContain(UPDATED_COLLECTION_TITLE);
-    expect(readTopicCollections(String(material.content))).not.toContain(COLLECTION_TITLE);
+    expect(readTopicCollections(String(material.content))).toContain(COLLECTION_TITLE);
+    expect(readTopicCollections(String(material.content))).not.toContain(UPDATED_COLLECTION_TITLE);
   }
   const deletedFolder = await runCli([
     'virtual-folders/delete-soft', '--descriptor', args.descriptorPath, '--id', args.folderId,
@@ -154,13 +154,24 @@ test('Agent Control writes become visible in the desktop Virtual section', async
     '--folder-id', folderId,
     '--material-ids', `${secondTopicId},${firstTopicId}`
   ]);
+  expect(readTopicCollections(String((await readMaterial(descriptorPath, firstTopicId)).content))).toEqual([]);
+  expect(readTopicCollections(String((await readMaterial(descriptorPath, secondTopicId)).content))).toEqual([]);
 
   const collectionRow = desktopWindow.getByRole('treeitem', { name: new RegExp(COLLECTION_TITLE) });
   await expect(collectionRow).toBeVisible({ timeout: 10_000 });
   await collectionRow.click();
   await collectionRow.click({ button: 'right' });
-  await expect(desktopWindow.getByText(/^(Write virtual folder info to Topic YAML|将虚拟文件夹信息写入 Topic YAML)$/)).toBeVisible();
-  await desktopWindow.keyboard.press('Escape');
+  const writeYamlAction = desktopWindow.getByText(
+    /^(Write virtual folder info to Topic YAML|将虚拟文件夹信息写入 Topic YAML)$/
+  );
+  await expect(writeYamlAction).toBeVisible();
+  await writeYamlAction.click();
+  await expect.poll(async () =>
+    readTopicCollections(String((await readMaterial(descriptorPath, firstTopicId)).content))
+  ).toContain(COLLECTION_TITLE);
+  await expect.poll(async () =>
+    readTopicCollections(String((await readMaterial(descriptorPath, secondTopicId)).content))
+  ).toContain(COLLECTION_TITLE);
 
   const contentPanel = desktopWindow.getByRole('complementary', { name: /^(Current folder contents|当前文件夹内容)$/ });
   await expect(contentPanel.getByRole('treeitem', { name: SECOND_TOPIC_TITLE })).toBeVisible({ timeout: 10_000 });

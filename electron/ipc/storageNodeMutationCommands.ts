@@ -3,7 +3,7 @@ import type { BrowserWindow } from 'electron';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import type { NativeNodeSnapshotArgs } from '../../lib/platform/nativeStorageContract.js';
 import { renameCollectionVirtualFolder } from '../agentControl/agentControlVirtualFolderLifecycle.js';
-import { readAgentVirtualFolderRow } from '../agentControl/agentControlVirtualFolders.js';
+import { readCollectionVirtualFolderRow } from '../agentControl/agentControlVirtualFolders.js';
 import {
   deleteNodesPermanently,
   flushAllDirtyNodeSyncVersions,
@@ -150,7 +150,7 @@ function omitNodeMutationDiagnostics(result: object) {
 
 function handleUpdateNodeContentCommand(command: string, args: Record<string, unknown>, originWindow: OriginWindow) {
   const parsed = parseNodeSnapshotArgs(args);
-  const collectionFolder = readAgentVirtualFolderRow(parsed.nodeId);
+  const collectionFolder = readCollectionVirtualFolderRow(parsed.nodeId);
   if (command === NATIVE_COMMANDS.updateNodeContent && collectionFolder && collectionFolder.title !== parsed.title) {
     const renamed = renameCollectionVirtualFolder({
       expectedUpdatedAt: collectionFolder.updated_at,

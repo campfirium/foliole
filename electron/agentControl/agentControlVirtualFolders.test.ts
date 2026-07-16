@@ -18,7 +18,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { createCollectionVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter.js';
+import { createManualVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter.js';
 import { closeDatabaseConnection } from '../database/connection.js';
 import { closeExternalSearchCacheDatabase } from '../database/externalSearchCacheDatabase.js';
 import { initializeDatabase } from '../database/migrate.js';
@@ -75,7 +75,7 @@ function insertVirtualFolder(manualChildOrder = ['material-c', 'material-a', 'ma
     reveal: null,
     title: 'Guide',
     updatedAt: '2026-07-05T00:01:00.000Z',
-    virtualFilter: createCollectionVirtualNodeFilter('Guide')
+    virtualFilter: createManualVirtualNodeFilter()
   });
 }
 
@@ -113,10 +113,9 @@ function authHeaders() {
 }
 
 it('lists and reads virtual folders with bounded ordered material projections', async () => {
-  const content = '---\ncollections:\n  - "Guide"\n---\nBody';
-  insertNode({ content, id: 'material-a', title: 'Available', updatedAt: '2026-07-05T00:02:00.000Z' });
-  insertNode({ content, id: 'material-b', title: 'Second' });
-  insertNode({ content, id: 'material-c', title: 'First' });
+  insertNode({ id: 'material-a', title: 'Available', updatedAt: '2026-07-05T00:02:00.000Z' });
+  insertNode({ id: 'material-b', title: 'Second' });
+  insertNode({ id: 'material-c', title: 'First' });
   insertVirtualFolder();
   const auditEvents: AgentControlAuditEvent[] = [];
   const { endpoint, server } = await startServer(auditEvents);
@@ -162,11 +161,11 @@ it('lists and reads virtual folders with bounded ordered material projections', 
   }
 });
 
-it('derives membership only from active Topics with matching collection YAML', async () => {
-  insertNode({ content: '---\ncollections:\n  - "Guide"\n---', id: 'material-a', title: 'Deleted' });
-  insertNode({ content: '---\ncollections:\n  - "Other"\n---', id: 'material-b', title: 'Other' });
-  insertNode({ content: '---\ncollections:\n  - "Guide"\n---', id: 'material-c', title: 'Gone' });
-  insertVirtualFolder([]);
+it('derives membership only from active Topics in the stored manual order', async () => {
+  insertNode({ id: 'material-a', title: 'Deleted' });
+  insertNode({ id: 'material-b', title: 'Other' });
+  insertNode({ id: 'material-c', title: 'Gone' });
+  insertVirtualFolder(['material-a', 'material-c']);
   softDeleteNodes({ deletedAt: '2026-07-05T00:03:00.000Z', nodeIds: ['material-a'] });
   deleteNodesPermanently({ nodeIds: ['material-c'], nodeOrder: [] });
   const { endpoint, server } = await startServer();

@@ -17,7 +17,7 @@ import { compareVirtualNodeTitle } from './workspaceVirtualNodeSort';
 import { WorkspaceVirtualSavedSearchContextMenu } from './WorkspaceVirtualSavedSearchContextMenu';
 import { getVirtualKeyboardRows, renderVirtualRows, toggleCollapsed } from './WorkspaceVirtualSectionRows';
 import {
-  isCollectionVirtualFolder,
+  canWriteVirtualFolderInfoToTopicYaml,
   writeVirtualFolderInfoToTopicYaml
 } from './writeVirtualFolderInfoToTopicYaml';
 
@@ -62,7 +62,7 @@ function renderSavedSearchContextMenu(args: {
       nodeId={args.contextMenu.nodeId}
       onClose={() => args.setContextMenu(null)}
       onDelete={args.deleteNode}
-      {...(!args.isWritingTopicYaml && isCollectionVirtualFolder(args.contextMenu.nodeId)
+      {...(!args.isWritingTopicYaml && canWriteVirtualFolderInfoToTopicYaml(args.contextMenu.nodeId)
         ? { onWriteTopicYaml: args.onWriteTopicYaml }
         : {})}
       top={args.contextMenu.top}

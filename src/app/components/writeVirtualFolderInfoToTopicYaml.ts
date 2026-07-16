@@ -1,4 +1,5 @@
 import { addTopicCollection } from '../../../lib/core/nodes/topicCollectionsFrontmatter';
+import { isManualVirtualNodeFilter } from '../../../lib/core/nodes/virtualNodeFilter';
 import { isVirtualNode } from '../../features/nodes/model/specialNodes';
 import { buildVirtualNodeResultIndex } from '../../features/nodes/model/virtualNodeDetail';
 import { ensureWorkspaceNodeDocumentReady } from '../../store/workspaceNodePreparation';
@@ -22,10 +23,15 @@ export function isCollectionVirtualFolder(nodeId: string) {
   );
 }
 
+export function canWriteVirtualFolderInfoToTopicYaml(nodeId: string) {
+  const node = useWorkspaceStore.getState().nodesById[nodeId];
+  return isCollectionVirtualFolder(nodeId) || Boolean(isVirtualNode(node) && isManualVirtualNodeFilter(node.virtualFilter));
+}
+
 export async function writeVirtualFolderInfoToTopicYaml(nodeId: string): Promise<VirtualFolderYamlWriteResult> {
   const initial = useWorkspaceStore.getState();
   const folder = initial.nodesById[nodeId];
-  if (!folder || !isCollectionVirtualFolder(nodeId)) {
+  if (!folder || !canWriteVirtualFolderInfoToTopicYaml(nodeId)) {
     return { failed: 1, unchanged: 0, updated: 0 };
   }
   const topicIds = buildVirtualNodeResultIndex(initial).resultIdsByVirtualId.get(nodeId) ?? [];

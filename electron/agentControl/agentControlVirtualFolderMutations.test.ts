@@ -17,7 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { readTopicCollections } from '../../lib/core/nodes/topicCollectionsFrontmatter.js';
-import { createCollectionVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter.js';
+import { createManualVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter.js';
 import { closeDatabaseConnection } from '../database/connection.js';
 import { closeExternalSearchCacheDatabase } from '../database/externalSearchCacheDatabase.js';
 import { initializeDatabase } from '../database/migrate.js';
@@ -75,7 +75,7 @@ function insertFolder() {
     reveal: null,
     title: 'Guide',
     updatedAt: '2026-07-05T00:00:00.000Z',
-    virtualFilter: createCollectionVirtualNodeFilter('Guide')
+    virtualFilter: createManualVirtualNodeFilter()
   });
 }
 
@@ -147,7 +147,7 @@ it('creates a virtual folder and records bounded audit events', async () => {
   }
 });
 
-it('adds and removes virtual folder names in Topic YAML without moving materials', async () => {
+it('adds and removes manual virtual folder members without changing Topic YAML', async () => {
   insertFolder();
   insertNode('material-a', 'Available');
   insertNode('material-b', 'Deleted');
@@ -183,7 +183,7 @@ it('adds and removes virtual folder names in Topic YAML without moving materials
     const readded = await post(endpoint, 'virtual-folders/add-items', { folder_id: 'vf-1', material_ids: ['material-a'] });
     expect(readded.status).toBe(200);
     expect(await responseJson(readded)).toMatchObject({ added: ['material-a'] });
-    expect(collectionsFor('material-a')).toEqual(['Guide']);
+    expect(collectionsFor('material-a')).toEqual([]);
     expect(auditEvents).toEqual(expect.arrayContaining([
       expect.objectContaining({ capability: 'virtualFolders.addItems', result: 'success', targetId: 'vf-1' }),
       expect.objectContaining({ capability: 'virtualFolders.removeItems', result: 'success', targetId: 'vf-1' })
@@ -193,7 +193,7 @@ it('adds and removes virtual folder names in Topic YAML without moving materials
   }
 });
 
-it('keeps concurrent add-items idempotent in Topic YAML', async () => {
+it('keeps concurrent add-items idempotent without Topic YAML', async () => {
   insertFolder();
   insertNode('material-a');
   const { endpoint, server } = await startAgentControlTestServer();
@@ -204,7 +204,9 @@ it('keeps concurrent add-items idempotent in Topic YAML', async () => {
     ]);
     expect(first.status).toBe(200);
     expect(second.status).toBe(200);
-    expect(collectionsFor('material-a')).toEqual(['Guide']);
+    expect(collectionsFor('material-a')).toEqual([]);
+    const read = await post(endpoint, 'virtual-folders/read', { id: 'vf-1' });
+    expect((await responseJson(read)).items).toHaveLength(1);
   } finally {
     await closeAgentControlTestServer(server);
   }

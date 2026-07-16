@@ -1,3 +1,4 @@
+import { isManualVirtualNodeFilter } from '../../../lib/core/nodes/virtualNodeFilter';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import {
   VIRTUAL_REMOVED_NODE_ID,
@@ -56,9 +57,12 @@ export function renderVirtualContentColumn(
     return <div aria-label={t('desktop.workspace.currentFolderContents')} className="flex min-h-0 min-w-0 flex-1" />;
   }
   const activeVirtualNode = props.nodesById[activeVirtualNodeId];
-  const preservesCollectionOrder = activeVirtualNode?.virtualFilter?.conditions.some(
-    (condition) => condition.field === 'collection' && condition.operator === 'equals'
-  ) ?? false;
+  const preservesCollectionOrder = Boolean(
+    isManualVirtualNodeFilter(activeVirtualNode?.virtualFilter) ||
+    activeVirtualNode?.virtualFilter?.conditions.some(
+      (condition) => condition.field === 'collection' && condition.operator === 'equals'
+    )
+  );
   const isRemovedView = activeVirtualNodeId === VIRTUAL_REMOVED_NODE_ID;
   const isShelvedView = activeVirtualNodeId === VIRTUAL_SHELVED_NODE_ID;
   const itemIds = resolveVirtualContentItemIds(props, virtualResultIndex);

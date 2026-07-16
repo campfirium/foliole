@@ -1,6 +1,8 @@
 import { expect, it } from 'vitest';
 
-import { createCollectionVirtualNodeFilter } from '../../../../lib/core/nodes/virtualNodeFilter';
+import {
+  createCollectionVirtualNodeFilter
+} from '../../../../lib/core/nodes/virtualNodeFilter';
 
 import type { Node } from './nodeTypes';
 import {

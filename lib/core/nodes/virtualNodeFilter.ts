@@ -1,8 +1,9 @@
 export const VIRTUAL_NODE_FILTER_VERSION = 1;
 
 export type VirtualNodeFilterMatchMode = 'all';
-export type VirtualNodeFilterConditionField = 'collection' | 'text';
+export type VirtualNodeFilterConditionField = 'collection' | 'manual' | 'text';
 export type VirtualNodeFilterConditionOperator = 'contains' | 'equals';
+const MANUAL_CHILD_ORDER_FILTER_VALUE = 'manual-child-order';
 
 export interface VirtualNodeFilterCondition {
   field: VirtualNodeFilterConditionField;
@@ -23,7 +24,8 @@ function isVirtualNodeFilterCondition(value: unknown): value is VirtualNodeFilte
   const condition = value as Record<string, unknown>;
   return (
     ((condition.field === 'text' && condition.operator === 'contains') ||
-      (condition.field === 'collection' && condition.operator === 'equals')) &&
+      (condition.field === 'collection' && condition.operator === 'equals') ||
+      (condition.field === 'manual' && condition.operator === 'equals')) &&
     typeof condition.value === 'string'
   );
 }
@@ -63,4 +65,19 @@ export function createCollectionVirtualNodeFilter(name: string): VirtualNodeFilt
     match: 'all',
     version: VIRTUAL_NODE_FILTER_VERSION
   };
+}
+
+export function createManualVirtualNodeFilter(): VirtualNodeFilter {
+  return {
+    conditions: [{ field: 'manual', operator: 'equals', value: MANUAL_CHILD_ORDER_FILTER_VALUE }],
+    match: 'all',
+    version: VIRTUAL_NODE_FILTER_VERSION
+  };
+}
+
+export function isManualVirtualNodeFilter(value: VirtualNodeFilter | null | undefined) {
+  return value?.conditions.length === 1 &&
+    value.conditions[0]?.field === 'manual' &&
+    value.conditions[0].operator === 'equals' &&
+    value.conditions[0].value === MANUAL_CHILD_ORDER_FILTER_VALUE;
 }

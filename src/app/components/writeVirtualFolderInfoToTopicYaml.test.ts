@@ -1,6 +1,9 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { createCollectionVirtualNodeFilter } from '../../../lib/core/nodes/virtualNodeFilter';
+import {
+  createCollectionVirtualNodeFilter,
+  createManualVirtualNodeFilter
+} from '../../../lib/core/nodes/virtualNodeFilter';
 import { ensureWorkspaceNodeDocumentReady } from '../../store/workspaceNodePreparation';
 import { createInitialWorkspaceState, useWorkspaceStore } from '../../store/workspaceStore';
 
@@ -52,6 +55,46 @@ it('force-loads matching Topics and idempotently merges the virtual folder colle
   expect(useWorkspaceStore.getState().updateNodeContent).toHaveBeenCalledWith(
     'topic-a',
     expect.stringContaining('collections:\n  - "Flow"')
+  );
+});
+
+it('writes manual virtual Folder membership to Topic YAML only when explicitly requested', async () => {
+  const current = useWorkspaceStore.getState();
+  useWorkspaceStore.setState({
+    ...current,
+    nodeOrder: ['virtual-manual', 'topic-a'],
+    nodesById: {
+      ...current.nodesById,
+      'topic-a': { ...createTopic('topic-a'), collections: [] },
+      'virtual-manual': {
+        ...createTopic('virtual-manual'),
+        kind: 'folder',
+        manualChildOrder: ['topic-a'],
+        parentNodeId: 'special-virtual-root',
+        specialKind: 'virtual',
+        title: 'Manual flow',
+        virtualFilter: createManualVirtualNodeFilter()
+      }
+    },
+    updateNodeContent: vi.fn(async () => true)
+  });
+  vi.mocked(ensureWorkspaceNodeDocumentReady).mockResolvedValue({
+    content: 'Body A',
+    hideTitleHeading: false,
+    imageRegions: null,
+    kind: 'topic',
+    reveal: null,
+    virtualFilter: null
+  });
+
+  await expect(writeVirtualFolderInfoToTopicYaml('virtual-manual')).resolves.toEqual({
+    failed: 0,
+    unchanged: 0,
+    updated: 1
+  });
+  expect(useWorkspaceStore.getState().updateNodeContent).toHaveBeenCalledWith(
+    'topic-a',
+    expect.stringContaining('collections:\n  - "Manual flow"')
   );
 });
 

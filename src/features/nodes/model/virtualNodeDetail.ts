@@ -1,5 +1,9 @@
 import { readTopicCollections } from '../../../../lib/core/nodes/topicCollectionsFrontmatter';
-import { VIRTUAL_NODE_FILTER_VERSION, type VirtualNodeFilter } from '../../../../lib/core/nodes/virtualNodeFilter';
+import {
+  VIRTUAL_NODE_FILTER_VERSION,
+  isManualVirtualNodeFilter,
+  type VirtualNodeFilter
+} from '../../../../lib/core/nodes/virtualNodeFilter';
 
 import type { Node } from './nodeTypes';
 import { VIRTUAL_ROOT_NODE_ID, isVirtualNode } from './specialNodes';
@@ -61,9 +65,11 @@ function matchesVirtualNodeFilter(node: Node, filter: VirtualNodeFilter | null |
     return false;
   }
   const searchableText = `${node.title}\n${node.content}`.toLocaleLowerCase();
-  return runnableConditions.every((condition) => condition.field === 'collection'
-    ? hasTopicCollection(node, condition.value)
-    : searchableText.includes(normalizeSearchText(condition.value)));
+  return runnableConditions.every((condition) => {
+    if (condition.field === 'collection') return hasTopicCollection(node, condition.value);
+    if (condition.field === 'manual') return false;
+    return searchableText.includes(normalizeSearchText(condition.value));
+  });
 }
 
 function isVirtualResultCandidate(node: Node | undefined) {
@@ -73,11 +79,13 @@ function isVirtualResultCandidate(node: Node | undefined) {
 function matchesPreparedVirtualNodeFilter(
   searchableText: string,
   node: Node,
-  conditions: Array<{ field: 'collection' | 'text'; value: string }>
+  conditions: Array<{ field: 'collection' | 'manual' | 'text'; value: string }>
 ) {
-  return conditions.every((condition) => condition.field === 'collection'
-    ? hasTopicCollection(node, condition.value)
-    : searchableText.includes(normalizeSearchText(condition.value)));
+  return conditions.every((condition) => {
+    if (condition.field === 'collection') return hasTopicCollection(node, condition.value);
+    if (condition.field === 'manual') return false;
+    return searchableText.includes(normalizeSearchText(condition.value));
+  });
 }
 
 function applyVirtualNodeManualOrder(resultIds: string[], manualChildOrder: readonly string[] | null | undefined) {
@@ -114,9 +122,11 @@ export function buildVirtualNodeResultIndex(args: {
     const node = args.nodesById[nodeId];
     if (!isVirtualNode(node)) continue;
     const conditions = getRunnableConditions(node.virtualFilter);
-    const matchedIds = conditions.length === 0
-      ? []
-      : candidateIds.filter((candidateId) => {
+    const matchedIds = isManualVirtualNodeFilter(node.virtualFilter)
+      ? (node.manualChildOrder ?? []).filter((candidateId) => candidateIds.includes(candidateId))
+      : conditions.length === 0
+        ? []
+        : candidateIds.filter((candidateId) => {
           const searchableText = searchableTextById.get(candidateId);
           return Boolean(searchableText && matchesPreparedVirtualNodeFilter(searchableText, args.nodesById[candidateId]!, conditions));
         });
@@ -138,6 +148,14 @@ export function getVirtualNodeResultReferences(
   nodesById: Record<string, Node>,
   filter: VirtualNodeFilter | null | undefined
 ) {
+  if (isManualVirtualNodeFilter(filter)) {
+    return (nodesById[activeNodeId]?.manualChildOrder ?? [])
+      .filter((nodeId) => {
+        const node = nodesById[nodeId]
+        return Boolean(node && isVirtualNodeResultCandidate(node, activeNodeId))
+      })
+      .map((sourceNodeId) => ({ sourceNodeId }));
+  }
   const runnableConditions = getRunnableConditions(filter);
   if (runnableConditions.length === 0) {
     return [];

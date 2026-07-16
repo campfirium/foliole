@@ -15,14 +15,24 @@ vi.mock('../ipc/paths.js', () => ({
 vi.mock('../mirror/mirrorSyncScheduler.js', () => ({ scheduleMirrorSync: vi.fn() }));
 
 import { readTopicCollections } from '../../lib/core/nodes/topicCollectionsFrontmatter.js';
+import { createCollectionVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter.js';
 import { closeDatabaseConnection } from '../database/connection.js';
 import { closeExternalSearchCacheDatabase } from '../database/externalSearchCacheDatabase.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 
 import { readAgentControlMaterial } from './agentControlMaterials.js';
-import { updateAgentControlVirtualFolder } from './agentControlVirtualFolderLifecycle.js';
-import { createAgentControlVirtualFolder } from './agentControlVirtualFolderMutations.js';
+import {
+  renameCollectionVirtualFolder,
+  updateAgentControlVirtualFolder
+} from './agentControlVirtualFolderLifecycle.js';
+import {
+  addAgentControlVirtualFolderItems,
+  createAgentControlVirtualFolder,
+  removeAgentControlVirtualFolderItems,
+  reorderAgentControlVirtualFolderItems
+} from './agentControlVirtualFolderMutations.js';
+import { readAgentControlVirtualFolder, readAgentVirtualFolderRow } from './agentControlVirtualFolders.js';
 
 let tempRoot = '';
 beforeEach(async () => {
@@ -36,22 +46,23 @@ afterEach(async () => {
   await fs.rm(tempRoot, { force: true, recursive: true });
 });
 
-it('atomically renames a Collection virtual Folder and all member Topic YAML', () => {
+it('renames a manual virtual Folder without changing member Topic YAML', () => {
   insertTopic('material-a', '---\ncollections:\n  - "List"\n---\nBody');
   insertTopic('material-b', '---\ncollections:\n  - "List"\n---\nBody B');
   insertTopic('material-c', '---\ncollections:\n  - "List"\n---\nBody C');
   const created = createAgentControlVirtualFolder({ title: 'List' });
   const folderId = created.folder_id;
-  const createdAt = created.folder!.updated_at;
+  addAgentControlVirtualFolderItems({ folderId, materialIds: ['material-a', 'material-b', 'material-c'] });
+  const currentUpdatedAt = readAgentVirtualFolderRow(folderId)!.updated_at;
   const updated = updateAgentControlVirtualFolder({
-    expectedUpdatedAt: createdAt,
+    expectedUpdatedAt: currentUpdatedAt,
     id: folderId,
     title: 'Renamed'
   });
   expect(updated).toMatchObject({ title: 'Renamed' });
-  expect(readTopicCollections(readAgentControlMaterial('material-a')?.content ?? '')).toEqual(['Renamed']);
-  expect(readTopicCollections(readAgentControlMaterial('material-b')?.content ?? '')).toEqual(['Renamed']);
-  expect(readTopicCollections(readAgentControlMaterial('material-c')?.content ?? '')).toEqual(['Renamed']);
+  expect(readTopicCollections(readAgentControlMaterial('material-a')?.content ?? '')).toEqual(['List']);
+  expect(readTopicCollections(readAgentControlMaterial('material-b')?.content ?? '')).toEqual(['List']);
+  expect(readTopicCollections(readAgentControlMaterial('material-c')?.content ?? '')).toEqual(['List']);
 
   createAgentControlVirtualFolder({ title: 'Other' });
   expect(() => updateAgentControlVirtualFolder({
@@ -59,6 +70,59 @@ it('atomically renames a Collection virtual Folder and all member Topic YAML', (
     id: folderId,
     title: 'Other'
   })).toThrow('conflict');
+  expect(readTopicCollections(readAgentControlMaterial('material-a')?.content ?? '')).toEqual(['List']);
+});
+
+it('stores add, remove, and reorder operations in manual membership only', () => {
+  insertTopic('material-a', 'Body A');
+  insertTopic('material-b', 'Body B');
+  const folderId = createAgentControlVirtualFolder({ title: 'Manual' }).folder_id;
+
+  expect(addAgentControlVirtualFolderItems({
+    folderId,
+    materialIds: ['material-a', 'material-b', 'material-a']
+  })).toMatchObject({
+    added: ['material-a', 'material-b'],
+    skipped: [{ id: 'material-a', reason: 'already_present' }]
+  });
+  expect(reorderAgentControlVirtualFolderItems({
+    folderId,
+    materialIds: ['material-b', 'material-a']
+  })).toMatchObject({ reordered_count: 2 });
+  expect(readAgentControlVirtualFolder(folderId, 10)?.items.map((item) => item.id))
+    .toEqual(['material-b', 'material-a']);
+
+  expect(removeAgentControlVirtualFolderItems({ folderId, materialIds: ['material-b'] }))
+    .toMatchObject({ removed: ['material-b'] });
+  expect(readAgentControlVirtualFolder(folderId, 10)?.items.map((item) => item.id))
+    .toEqual(['material-a']);
+  expect(readTopicCollections(readAgentControlMaterial('material-a')?.content ?? '')).toEqual([]);
+});
+
+it('keeps Collection filter renames transactional with Topic YAML', () => {
+  insertTopic('material-a', '---\ncollections:\n  - "List"\n---\nBody');
+  upsertNodeSnapshot({
+    anchorLink: null,
+    content: '',
+    createdAt: '2026-07-05T00:00:00.000Z',
+    hideTitleHeading: false,
+    imageRegions: null,
+    isTitleManual: true,
+    kind: 'folder',
+    nodeId: 'collection-folder',
+    parentNodeId: 'special-virtual-root',
+    position: null,
+    reveal: null,
+    title: 'List',
+    updatedAt: '2026-07-05T00:00:00.000Z',
+    virtualFilter: createCollectionVirtualNodeFilter('List')
+  });
+
+  expect(renameCollectionVirtualFolder({
+    expectedUpdatedAt: '2026-07-05T00:00:00.000Z',
+    id: 'collection-folder',
+    title: 'Renamed'
+  })).toMatchObject({ collectionRenames: [{ from: 'List', nodeIds: ['material-a'], to: 'Renamed' }] });
   expect(readTopicCollections(readAgentControlMaterial('material-a')?.content ?? '')).toEqual(['Renamed']);
 });
 

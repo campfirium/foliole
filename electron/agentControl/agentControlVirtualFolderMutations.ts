@@ -2,8 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { parseManualChildOrder } from '../../lib/core/nodes/manualChildOrder.js';
-import { addTopicCollection, readTopicCollections, removeTopicCollection } from '../../lib/core/nodes/topicCollectionsFrontmatter.js';
-import { createCollectionVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter.js';
+import { createManualVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 
@@ -13,7 +12,6 @@ import {
   readAgentVirtualFolderRow,
   readAgentVirtualFolderTopicRows,
   readAgentVirtualFolderTopics,
-  readTopicContent,
   VIRTUAL_ROOT_NODE_ID
 } from './agentControlVirtualFolders.js';
 
@@ -45,26 +43,29 @@ export function createAgentControlVirtualFolder(input: { title: string }) {
       anchorLink: null, content: '', createdAt: now, hideTitleHeading: false, imageRegions: null,
       isTitleManual: true, kind: 'folder', manualChildOrder: [], nodeId: id, parentNodeId: VIRTUAL_ROOT_NODE_ID,
       position: (positionRow?.position ?? -1) + 1, reveal: null, title, updatedAt: now,
-      virtualFilter: createCollectionVirtualNodeFilter(title)
+      virtualFilter: createManualVirtualNodeFilter()
     });
     return { folder: { created_at: now, id, item_count: 0, title, updated_at: now }, folder_id: id };
   });
 }
 
 export function addAgentControlVirtualFolderItems(input: { folderId: string; materialIds: string[] }) {
-  return mutateTopicCollections(input.folderId, input.materialIds, true);
+  return mutateManualMembership(input.folderId, input.materialIds, true);
 }
 
 export function removeAgentControlVirtualFolderItems(input: { folderId: string; materialIds: string[] }) {
-  return mutateTopicCollections(input.folderId, input.materialIds, false);
+  return mutateManualMembership(input.folderId, input.materialIds, false);
 }
 
 export function reorderAgentControlVirtualFolderItems(input: { folderId: string; materialIds: string[] }) {
   return openDatabaseConnection().driver.transaction(() => {
     const folder = requireFolder(input.folderId);
-    const currentIds = readAgentVirtualFolderTopics(folder.title).map((row) => row.id);
+    const currentIds = readAgentVirtualFolderTopics(folder.id).map((row) => row.id);
     if (!hasSameItemSet(currentIds, input.materialIds)) throw new AgentVirtualFolderMutationError('conflict', 409);
-    rewriteAgentControlNodeSnapshot({ id: input.folderId, manualChildOrder: input.materialIds });
+    const storedIds = parseManualChildOrder(folder.manual_child_order) ?? [];
+    const visibleIds = new Set(currentIds);
+    const hiddenIds = storedIds.filter((id) => !visibleIds.has(id));
+    rewriteAgentControlNodeSnapshot({ id: input.folderId, manualChildOrder: [...input.materialIds, ...hiddenIds] });
     return { folder_id: input.folderId, reordered_count: input.materialIds.length };
   });
 }
@@ -83,23 +84,17 @@ export function normalizeTitle(value: string) {
   return title;
 }
 
-function mutateTopicCollections(folderId: string, ids: string[], add: boolean): AgentVirtualFolderMutationResult {
+function mutateManualMembership(folderId: string, ids: string[], add: boolean): AgentVirtualFolderMutationResult {
   return openDatabaseConnection().driver.transaction(() => {
     const folder = requireFolder(folderId);
-    const currentMemberIds = readAgentVirtualFolderTopics(folder.title).map((row) => row.id);
+    const currentMemberIds = parseManualChildOrder(folder.manual_child_order) ?? [];
     const activeRows = readAgentVirtualFolderTopicRows(ids);
     const activeById = new Map(activeRows.map((row) => [row.id, row]));
     const knownRows = readKnownNodeStates(ids);
     const result: AgentVirtualFolderMutationResult = { folder_id: folderId, ...(add ? { added: [] } : { removed: [] }), skipped: [] };
     const now = new Date().toISOString();
     for (const id of ids) {
-      const row = activeById.get(id);
-      if (!row) {
-        result.skipped!.push({ id, reason: knownRows.get(id) ? 'deleted' : 'not_found' });
-        continue;
-      }
-      const content = readTopicContent(row);
-      const present = readTopicCollections(content).includes(folder.title);
+      const present = currentMemberIds.includes(id) || result.added?.includes(id);
       if (add && present) {
         result.skipped!.push({ id, reason: 'already_present' });
         continue;
@@ -108,18 +103,19 @@ function mutateTopicCollections(folderId: string, ids: string[], add: boolean): 
         result.skipped!.push({ id, reason: 'not_found' });
         continue;
       }
-      const next = add ? addTopicCollection(content, folder.title) : removeTopicCollection(content, folder.title);
-      rewriteAgentControlNodeSnapshot({ content: next, id, updatedAt: now });
+      if (add && !activeById.has(id)) {
+        result.skipped!.push({ id, reason: knownRows.get(id) ? 'deleted' : 'not_found' });
+        continue;
+      }
       (add ? result.added : result.removed)!.push(id);
     }
-    updateManualOrderAfterMembershipChange(folder.id, folder.manual_child_order, currentMemberIds, result, add, now);
+    updateManualOrderAfterMembershipChange(folder.id, currentMemberIds, result, add, now);
     return result;
   });
 }
 
 function updateManualOrderAfterMembershipChange(
   folderId: string,
-  storedOrder: string | null,
   currentMemberIds: string[],
   result: AgentVirtualFolderMutationResult,
   add: boolean,
@@ -127,12 +123,9 @@ function updateManualOrderAfterMembershipChange(
 ) {
   const changedIds = (add ? result.added : result.removed) ?? [];
   if (changedIds.length === 0) return;
-  const currentSet = new Set(currentMemberIds);
-  const baseOrder = (parseManualChildOrder(storedOrder) ?? []).filter((id) => currentSet.has(id));
-  const completeOrder = [...baseOrder, ...currentMemberIds.filter((id) => !baseOrder.includes(id))];
   const nextOrder = add
-    ? [...completeOrder, ...changedIds.filter((id) => !completeOrder.includes(id))]
-    : completeOrder.filter((id) => !changedIds.includes(id));
+    ? [...currentMemberIds, ...changedIds.filter((id) => !currentMemberIds.includes(id))]
+    : currentMemberIds.filter((id) => !changedIds.includes(id));
   rewriteAgentControlNodeSnapshot({ id: folderId, manualChildOrder: nextOrder, updatedAt });
 }
 

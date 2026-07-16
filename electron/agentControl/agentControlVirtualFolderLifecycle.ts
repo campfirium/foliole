@@ -15,13 +15,32 @@ import {
 } from './agentControlVirtualFolderMutations.js';
 import {
   readAgentVirtualFolderRow,
-  readAgentVirtualFolderTopics,
+  readCollectionVirtualFolderRow,
+  readCollectionVirtualFolderTopics,
   readTopicContent
 } from './agentControlVirtualFolders.js';
 
 export function updateAgentControlVirtualFolder(input: { expectedUpdatedAt: string; id: string; title: string }) {
-  const result = renameCollectionVirtualFolder(input);
+  const result = renameManualVirtualFolder(input);
   return { folder_id: result.folder_id, title: result.title, updated_at: result.updated_at };
+}
+
+function renameManualVirtualFolder(input: {
+  expectedUpdatedAt: string;
+  id: string;
+  title: string;
+  updatedAt?: string;
+}) {
+  const row = requireManualState(input.id, false, input.expectedUpdatedAt);
+  const title = normalizeTitle(input.title);
+  if (title === row.title) {
+    return { folder_id: input.id, title, updated_at: row.updated_at };
+  }
+  ensureUniqueTitle(title, input.id);
+  const updatedAt = input.updatedAt ?? new Date().toISOString();
+  rewriteAgentControlNodeSnapshot({ id: input.id, title, updatedAt });
+  scheduleMirrorSync([input.id]);
+  return { folder_id: input.id, title, updated_at: updatedAt };
 }
 
 export function renameCollectionVirtualFolder(input: {
@@ -31,7 +50,7 @@ export function renameCollectionVirtualFolder(input: {
   updatedAt?: string;
 }) {
   const result = openDatabaseConnection().driver.transaction(() => {
-    const row = requireState(input.id, false, input.expectedUpdatedAt);
+    const row = requireCollectionState(input.id, input.expectedUpdatedAt);
     const title = normalizeTitle(input.title);
     if (title === row.title) {
       return {
@@ -45,7 +64,7 @@ export function renameCollectionVirtualFolder(input: {
     }
     ensureUniqueTitle(title, input.id);
     const updatedAt = input.updatedAt ?? new Date().toISOString();
-    const topics = readAgentVirtualFolderTopics(row.title);
+    const topics = readCollectionVirtualFolderTopics(row.title);
     for (const topic of topics) {
       rewriteAgentControlNodeSnapshot({
         content: replaceTopicCollection(readTopicContent(topic), row.title, title),
@@ -74,24 +93,33 @@ export function renameCollectionVirtualFolder(input: {
 }
 
 export function softDeleteAgentControlVirtualFolder(input: { expectedUpdatedAt: string; id: string }) {
-  requireState(input.id, false, input.expectedUpdatedAt);
+  requireManualState(input.id, false, input.expectedUpdatedAt);
   const deletedAt = new Date().toISOString();
   softDeleteNodes({ deletedAt, nodeIds: [input.id] });
   return { deleted: true, deleted_at: deletedAt, folder_id: input.id };
 }
 
 export function restoreAgentControlVirtualFolder(input: { expectedUpdatedAt: string; id: string }) {
-  const row = requireState(input.id, true, input.expectedUpdatedAt);
+  const row = requireManualState(input.id, true, input.expectedUpdatedAt);
   ensureUniqueTitle(row.title, input.id);
   restoreNodes({ nodeIds: [input.id] });
   const restored = readAgentVirtualFolderRow(input.id, true);
   return { folder_id: input.id, restored: true, updated_at: restored?.updated_at ?? row.updated_at };
 }
 
-function requireState(id: string, deleted: boolean, expectedUpdatedAt: string) {
+function requireManualState(id: string, deleted: boolean, expectedUpdatedAt: string) {
   const row = readAgentVirtualFolderRow(id, true);
   if (!row) throw new AgentVirtualFolderMutationError('not_found', 404);
   if (Boolean(row.deleted_at) !== deleted || row.updated_at !== expectedUpdatedAt) {
+    throw new AgentVirtualFolderMutationError('conflict', 409);
+  }
+  return row;
+}
+
+function requireCollectionState(id: string, expectedUpdatedAt: string) {
+  const row = readCollectionVirtualFolderRow(id);
+  if (!row) throw new AgentVirtualFolderMutationError('not_found', 404);
+  if (row.updated_at !== expectedUpdatedAt) {
     throw new AgentVirtualFolderMutationError('conflict', 409);
   }
   return row;

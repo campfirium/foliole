@@ -3,7 +3,7 @@ import { DESKTOP_FRESH_SCHEMA_STATEMENTS } from './desktopFreshSchemaStatements.
 import type { DatabaseConnectionLike, DatabaseMigrationTarget } from './migrationTypes.js';
 import { applyNumberedSchemaMigrations } from './numberedMigrations.js';
 
-export const DATABASE_SCHEMA_VERSION = 55;
+export const DATABASE_SCHEMA_VERSION = 56;
 
 const LEGACY_REBUILD_REQUIRED_MESSAGE =
   'existing database schema is no longer supported; reset foliole.db and initialize fresh schema';

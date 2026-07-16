@@ -2,7 +2,7 @@ import { decodeTextBodyBlobData } from '../../lib/core/database/contentBodyBlobs
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { parseManualChildOrder } from '../../lib/core/nodes/manualChildOrder.js';
 import { readTopicCollections } from '../../lib/core/nodes/topicCollectionsFrontmatter.js';
-import { parseVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter.js';
+import { isManualVirtualNodeFilter, parseVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter.js';
 import { openDatabaseConnection } from '../database/connection.js';
 
 import { normalizeOptionalLimit } from './agentControlMaterials.js';
@@ -76,14 +76,14 @@ export function listAgentControlVirtualFolders(limit: number): AgentVirtualFolde
   return {
     count: folders.length,
     limit,
-    virtual_folders: folders.map((folder) => toSummary(folder, matchingTopics(folder.title, topics).length))
+    virtual_folders: folders.map((folder) => toSummary(folder, orderedMemberTopics(folder, topics).length))
   };
 }
 
 export function readAgentControlVirtualFolder(folderId: string, limit: number): AgentVirtualFolderReadPayload | null {
   const folder = readFolderRows(false).find((row) => row.id === folderId);
   if (!folder) return null;
-  const matched = orderTopics(matchingTopics(folder.title, readActiveTopics()), parseManualChildOrder(folder.manual_child_order));
+  const matched = orderedMemberTopics(folder, readActiveTopics());
   return {
     folder: toSummary(folder, matched.length),
     items: matched.slice(0, limit).map(toItem),
@@ -97,8 +97,9 @@ export function readAgentVirtualFolderRow(id: string, includeDeleted = false) {
   return readFolderRows(includeDeleted).find((row) => row.id === id) ?? null;
 }
 
-export function readAgentVirtualFolderTopics(name: string) {
-  return matchingTopics(name, readActiveTopics());
+export function readAgentVirtualFolderTopics(folderId: string) {
+  const folder = readAgentVirtualFolderRow(folderId, true);
+  return folder ? orderedMemberTopics(folder, readActiveTopics()) : [];
 }
 
 export function readAgentVirtualFolderTopicRows(ids: string[]) {
@@ -113,13 +114,21 @@ function readFolderRows(includeDeleted: boolean) {
      ORDER BY updated_at DESC, id ASC`,
     [VIRTUAL_ROOT_NODE_ID]
   );
-  return rows.filter(isCollectionFolderRow);
+  return rows.filter((row) => isManualVirtualNodeFilter(parseVirtualNodeFilter(row.virtual_filter)));
 }
 
-function isCollectionFolderRow(row: FolderRow) {
+export function readCollectionVirtualFolderRow(id: string) {
+  const row = openDatabaseConnection().driver.queryOne<FolderRow>(
+    `SELECT id, title, manual_child_order, virtual_filter, created_at, updated_at, deleted_at
+     FROM nodes WHERE id = ? AND parent_id = ? AND kind = 'folder' AND deleted_at IS NULL`,
+    [id, VIRTUAL_ROOT_NODE_ID]
+  );
+  if (!row) return null;
   const filter = parseVirtualNodeFilter(row.virtual_filter);
   return filter?.conditions.length === 1 && filter.conditions[0]?.field === 'collection' &&
-    filter.conditions[0].operator === 'equals' && filter.conditions[0].value === row.title;
+    filter.conditions[0].operator === 'equals' && filter.conditions[0].value === row.title
+    ? row
+    : null;
 }
 
 function readActiveTopics() {
@@ -142,14 +151,21 @@ function matchingTopics(name: string, rows: AgentVirtualFolderTopicRow[]) {
   });
 }
 
+export function readCollectionVirtualFolderTopics(name: string) {
+  return matchingTopics(name, readActiveTopics());
+}
+
 export function readTopicContent(row: Pick<AgentVirtualFolderTopicRow, 'body_blob_data' | 'content'>) {
   return decodeTextBodyBlobData(row.body_blob_data) ?? row.content;
 }
 
-function orderTopics(rows: AgentVirtualFolderTopicRow[], order: string[] | null) {
+function orderedMemberTopics(folder: FolderRow, rows: AgentVirtualFolderTopicRow[]) {
+  const order = parseManualChildOrder(folder.manual_child_order);
   const byId = new Map(rows.map((row) => [row.id, row]));
-  const ordered = (order ?? []).flatMap((id) => byId.delete(id) ? [rows.find((row) => row.id === id)!] : []);
-  return [...ordered, ...rows.filter((row) => byId.has(row.id))];
+  return (order ?? []).flatMap((id) => {
+    const row = byId.get(id);
+    return row ? [row] : [];
+  });
 }
 
 function toSummary(row: FolderRow, itemCount: number): AgentVirtualFolderSummary {
