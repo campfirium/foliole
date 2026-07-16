@@ -6,7 +6,11 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { buildSignatureVerificationScript, collectSignatureTargets } from './verify-artifact-signatures.mjs';
+import {
+  AUTHENTICODE_POWERSHELL_EXECUTABLE,
+  buildSignatureVerificationScript,
+  collectSignatureTargets
+} from './verify-artifact-signatures.mjs';
 
 describe('Artifact Signing verification', () => {
   it('collects only requested PE files at the configured depth', () => {
@@ -31,5 +35,9 @@ describe('Artifact Signing verification', () => {
     expect(script).toContain('Get-AuthenticodeSignature -LiteralPath $file');
     expect(script).toContain('SignatureStatus]::Valid');
     expect(script).toContain('exit 1');
+  });
+
+  it('uses PowerShell 7 so the Windows runner loads its matching security module', () => {
+    expect(AUTHENTICODE_POWERSHELL_EXECUTABLE).toBe('pwsh.exe');
   });
 });

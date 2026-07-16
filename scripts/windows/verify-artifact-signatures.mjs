@@ -6,6 +6,8 @@ import { Buffer } from 'node:buffer';
 import { readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 
+export const AUTHENTICODE_POWERSHELL_EXECUTABLE = 'pwsh.exe';
+
 export function collectSignatureTargets(rootPath, extensions, recursive) {
   const normalizedExtensions = new Set(extensions.map((extension) => `.${extension.replace(/^\./u, '').toLowerCase()}`));
   const targets = [];
@@ -64,7 +66,9 @@ function main() {
   const files = collectSignatureTargets(root, extensions, process.argv.includes('--recursive'));
   if (!files.length) throw new Error(`No signature targets found under ${root}`);
   const encoded = Buffer.from(buildSignatureVerificationScript(files), 'utf16le').toString('base64');
-  const result = spawnSync('powershell.exe', ['-NoProfile', '-EncodedCommand', encoded], { stdio: 'inherit' });
+  const result = spawnSync(AUTHENTICODE_POWERSHELL_EXECUTABLE, ['-NoProfile', '-EncodedCommand', encoded], {
+    stdio: 'inherit'
+  });
   if (result.error) throw result.error;
   if (result.status !== 0) throw new Error(`Authenticode verification failed with exit code ${result.status}`);
 }
