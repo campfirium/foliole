@@ -67,6 +67,7 @@ function buildWorkspaceMenu(state: MenuState): MenuItemConstructorOptions {
     submenu: [
       ...FOLDER_TOPIC_ITEM_COMMANDS.map((command) => commandItem(command.menuLabel, command.appCommandId, state)),
       { type: 'separator' },
+      commandItem('Open File…', 'localFile.open', state),
       commandItem('Import Files…', 'import.singleFileToInbox', state),
       commandItem('Import Folder…', 'import.folderToInbox', state),
       commandItem('Import Clipboard', 'import.clipboard', state),

@@ -6,6 +6,8 @@ import { describe, expect, it } from 'vitest';
 import {
   createGithubBuilderConfig,
   hasNotarizationCredentials,
+  prepareMasElectronDist,
+  resolveDeveloperIdProvisioningProfile,
   sendMacosNotification,
   writeDmgChecksum
 } from './package-github.mjs';
@@ -18,21 +20,58 @@ describe('GitHub macOS packaging', () => {
       extraFiles: [],
       extraResources: [],
       mac: { target: ['dmg'] }
-    }, { codexPath: '.tmp/codex', notarize: false });
+    }, {
+      codexPath: '.tmp/codex',
+      electronDist: '.tmp/electron-mas-arm64',
+      notarize: false,
+      provisioningProfile: '/profiles/foliole-developer-id.provisionprofile'
+    });
 
-    expect(config.electronDist).toBeUndefined();
+    expect(config.electronDist).toBe('.tmp/electron-mas-arm64');
     expect(config.directories.output).toBe('artifacts/macos/github-arm64');
     expect(config.mac).toMatchObject({
       binaries: ['Contents/MacOS/codex'],
       entitlements: 'build/entitlements.mas.plist',
       entitlementsInherit: 'build/entitlements.mas.inherit.plist',
+      extendInfo: { ElectronTeamID: 'V589TQH334' },
       forceCodeSigning: true,
       hardenedRuntime: true,
       identity: 'CAMPFIRIUM LTD (V589TQH334)',
       notarize: false,
-      preAutoEntitlements: false,
+      preAutoEntitlements: true,
+      provisioningProfile: '/profiles/foliole-developer-id.provisionprofile',
       target: ['dmg', 'zip']
     });
+  });
+
+  it('prepares the MAS Electron runtime required by Apple App Sandbox', async () => {
+    const directory = await mkdtemp(path.join(tmpdir(), 'foliole-mas-electron-'));
+    const calls = [];
+
+    const result = await prepareMasElectronDist({
+      access: async () => { throw Object.assign(new Error('missing'), { code: 'ENOENT' }); },
+      destination: directory,
+      download: async (details) => {
+        calls.push(['download', details]);
+        return '/cache/electron-mas.zip';
+      },
+      extract: async (source, target) => calls.push(['extract', source, target])
+    });
+
+    expect(result).toBe(directory);
+    expect(calls).toEqual([
+      ['download', expect.objectContaining({ arch: 'arm64', artifactName: 'electron', platform: 'mas' })],
+      ['extract', '/cache/electron-mas.zip', directory]
+    ]);
+  });
+
+  it('requires an explicit Developer ID sandbox provisioning profile', () => {
+    expect(() => resolveDeveloperIdProvisioningProfile({})).toThrow(
+      'FOLIOLE_MACOS_DEVELOPER_ID_PROVISIONING_PROFILE'
+    );
+    expect(resolveDeveloperIdProvisioningProfile({
+      FOLIOLE_MACOS_DEVELOPER_ID_PROVISIONING_PROFILE: './profile.provisionprofile'
+    })).toBe(path.resolve('./profile.provisionprofile'));
   });
 
   it('requires a complete supported notarization credential set', () => {

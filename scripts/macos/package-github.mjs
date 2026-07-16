@@ -2,22 +2,25 @@
 
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { access, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
+import { assertGithubDistributionContract } from './distribution-contract.mjs';
 import { prepareCodexHelper } from './prepare-codex-helper.mjs';
+import { verifyPackagedMacosApp } from './verify-packaged-app.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
 const OUTPUT_DIRECTORY = 'artifacts/macos/github-arm64';
 const DEVELOPER_IDENTITY = 'CAMPFIRIUM LTD (V589TQH334)';
+const MAS_ELECTRON_DIRECTORY = '.tmp/electron-mas-arm64';
 
 export function createGithubBuilderConfig(base, options) {
   const portableBase = { ...base };
-  delete portableBase.electronDist;
-  return {
+  const config = {
     ...portableBase,
     appId: 'com.campfirium.foliole',
     directories: { ...base.directories, output: OUTPUT_DIRECTORY },
+    electronDist: options.electronDist,
     extraFiles: [
       ...(base.extraFiles ?? []),
       { from: options.codexPath, to: 'MacOS/codex' }
@@ -33,15 +36,53 @@ export function createGithubBuilderConfig(base, options) {
       binaries: ['Contents/MacOS/codex'],
       entitlements: 'build/entitlements.mas.plist',
       entitlementsInherit: 'build/entitlements.mas.inherit.plist',
+      extendInfo: {
+        ...(base.mac?.extendInfo ?? {}),
+        ElectronTeamID: 'V589TQH334'
+      },
       forceCodeSigning: true,
       hardenedRuntime: true,
       identity: DEVELOPER_IDENTITY,
       notarize: options.notarize,
-      preAutoEntitlements: false,
+      preAutoEntitlements: true,
+      provisioningProfile: options.provisioningProfile,
       sign: 'scripts/macos/sign-mas-app.mjs',
       target: ['dmg', 'zip']
     }
   };
+  assertGithubDistributionContract(config);
+  return config;
+}
+
+export async function prepareMasElectronDist(options = {}) {
+  const destination = options.destination ?? path.join(ROOT, MAS_ELECTRON_DIRECTORY);
+  const electronApp = path.join(destination, 'Electron.app');
+  const contractPath = path.join(destination, '.foliole-electron-runtime.json');
+  const electronPackage = JSON.parse(await readFile(path.join(ROOT, 'node_modules/electron/package.json'), 'utf8'));
+  const runtimeContract = { arch: 'arm64', platform: 'mas', version: electronPackage.version };
+  try {
+    const cachedContract = JSON.parse(await readFile(contractPath, 'utf8'));
+    await (options.access ?? access)(electronApp);
+    if (JSON.stringify(cachedContract) === JSON.stringify(runtimeContract)) return destination;
+  } catch {
+    // A missing or malformed marker invalidates the cache.
+  }
+  await rm(destination, { force: true, recursive: true });
+  await mkdir(destination, { recursive: true });
+  const download = options.download ?? (await import('@electron/get')).downloadArtifact;
+  const archive = await download({ ...runtimeContract, artifactName: 'electron' });
+  const extract = options.extract ?? ((source, target) => run('MAS Electron extraction', 'ditto', ['-x', '-k', source, target]));
+  await extract(archive, destination);
+  await writeFile(contractPath, `${JSON.stringify(runtimeContract, null, 2)}\n`);
+  return destination;
+}
+
+export function resolveDeveloperIdProvisioningProfile(env = process.env) {
+  const configured = env.FOLIOLE_MACOS_DEVELOPER_ID_PROVISIONING_PROFILE?.trim();
+  if (configured) return path.resolve(configured);
+  throw new Error(
+    'Developer ID sandbox packaging requires FOLIOLE_MACOS_DEVELOPER_ID_PROVISIONING_PROFILE.'
+  );
 }
 
 export function hasNotarizationCredentials(env) {
@@ -79,16 +120,20 @@ async function main() {
     throw new Error('Notarization credentials are unavailable; configure an approved notarytool authentication method');
   }
   const outputDirectory = path.join(ROOT, OUTPUT_DIRECTORY);
+  const provisioningProfile = resolveDeveloperIdProvisioningProfile();
   const codexPath = await prepareCodexHelper();
+  const electronDist = await prepareMasElectronDist();
   const base = JSON.parse(await readFile(path.join(ROOT, 'electron/builder.json'), 'utf8'));
-  const config = createGithubBuilderConfig(base, { codexPath, notarize });
+  const config = createGithubBuilderConfig(base, { codexPath, electronDist, notarize, provisioningProfile });
   const configPath = path.join(ROOT, '.tmp/electron-builder-github-macos.json');
   await rm(outputDirectory, { force: true, recursive: true });
   await mkdir(outputDirectory, { recursive: true });
   await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`);
   run('build', 'npm', ['run', 'build']);
+  run('security bookmark addon', 'npm', ['run', 'macos:security-bookmarks:build']);
   run('electron compile', 'npm', ['run', 'electron:compile']);
   run('electron-builder', 'npm', ['exec', '--', 'electron-builder', '--config', configPath, '--mac', '--arm64', '--publish', 'never']);
+  await verifyPackagedMacosApp({ appPath: path.join(outputDirectory, 'mac-arm64/Foliole.app'), notarized: notarize });
   const checksum = await writeDmgChecksum(outputDirectory);
   console.log(`DMG_READY ${checksum.name} ${checksum.digest}`);
   sendMacosNotification(

@@ -30,6 +30,7 @@ interface PaletteCommandRunnerArgs extends PaletteHelpCommandRunnerArgs, Palette
   gradeReviewCard: (grade: 1 | 2 | 3 | 4) => void;
   importDirectory: () => Promise<boolean>;
   importSingleFile: () => void;
+  openLocalFile?: () => void | Promise<void>;
   reimportSelectedTopic: () => Promise<boolean>;
   resetImportData: () => Promise<boolean>;
   toggleDevReviewStatusBarPersistence: () => void;
@@ -146,6 +147,9 @@ function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleRevie
     },
     importSingleFile: () => {
       void args.importSingleFile();
+    },
+    openLocalFile: () => {
+      void args.openLocalFile?.();
     },
     reimportSelectedTopic: () => {
       void args.reimportSelectedTopic();

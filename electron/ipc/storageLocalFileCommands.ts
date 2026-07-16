@@ -1,10 +1,14 @@
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { listLocalFiles, readLocalFile, saveLocalFile } from '../database/localFiles.js';
+import { selectLocalFileToOpen } from '../externalDocumentFileOpen.js';
 
 import { asNullableFiniteNumber } from './commandParserPrimitives.js';
 import { asBoolean, asNullableString, asString } from './commandParsers.js';
 
 export async function handleLocalFileStorageCommand(command: string, args: Record<string, unknown>) {
+  if (command === NATIVE_COMMANDS.selectLocalFileToOpen) {
+    return selectLocalFileToOpen();
+  }
   if (command === NATIVE_COMMANDS.listLocalFiles) {
     return listLocalFiles();
   }

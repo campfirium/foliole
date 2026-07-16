@@ -187,6 +187,15 @@ describe('electron-builder release packaging config', () => {
     expect(config.win.icon).toBe('build/icon.ico');
     expect(config.linux.icon).toBe('build/icon.png');
     expect(config.mac.icon).toBe('build/icon.icns');
+    expect(config.mac.fileAssociations).toEqual([
+      {
+        ext: ['md', 'markdown'],
+        name: 'Markdown Document',
+        rank: 'Alternate',
+        role: 'Editor'
+      }
+    ]);
+    expect(config.asarUnpack).toContain('**/node_modules/@foliole/macos-security-bookmarks/build/Release/*.node');
   });
 
   it('keeps macOS artwork inside the Dock optical-size canvas', async () => {
@@ -210,6 +219,8 @@ describe('electron-builder release packaging config', () => {
     expect(config.nsis.runAfterFinish).toBe(true);
     expect(config.nsis.shortcutName).toBe('Foliole');
     expect(config.fileAssociations).toBeUndefined();
+    expect(config.mac.fileAssociations[0].rank).toBe('Alternate');
+    expect(config.mac.fileAssociations[0].ext).not.toContain('txt');
   });
 
   it('registers Markdown as a per-user open-with capability without taking over defaults', async () => {

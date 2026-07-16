@@ -1,16 +1,23 @@
 import path from 'node:path';
 
-import { expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
+  ensureAccess: vi.fn((): { status: 'not_required' } | {
+    errorCode: string;
+    message: string;
+    status: 'error';
+  } => ({ status: 'not_required' })),
   readLocalFile: vi.fn(async (filePath: string) => ({ absolutePath: filePath, status: 'ready' })),
-  recordOpenedExternalDocument: vi.fn()
+  recordOpenedExternalDocument: vi.fn(),
+  showOpenDialog: vi.fn()
 }));
 
 vi.mock('electron', () => ({
   app: {
     on: vi.fn()
-  }
+  },
+  dialog: { showOpenDialog: mocks.showOpenDialog }
 }));
 
 vi.mock('./database/externalOpenedDocuments.js', () => ({
@@ -25,7 +32,24 @@ vi.mock('./diagnostics/mainProcessDiagnostics.js', () => ({
   appendMainProcessDiagnosticLog: vi.fn()
 }));
 
-import { installExternalDocumentFileOpenLifecycle, resolveExternalDocumentFileArgs } from './externalDocumentFileOpen.js';
+vi.mock('./macosFileSecurityBookmarks.js', () => ({
+  ensureMacosFileSecurityScopedAccess: mocks.ensureAccess
+}));
+
+import {
+  installExternalDocumentFileOpenLifecycle,
+  resolveExternalDocumentFileArgs,
+  selectLocalFileToOpen
+} from './externalDocumentFileOpen.js';
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  mocks.ensureAccess.mockReturnValue({ status: 'not_required' });
+  mocks.readLocalFile.mockImplementation(async (filePath: string) => ({
+    absolutePath: filePath,
+    status: 'ready'
+  }));
+});
 
 it('extracts supported Markdown file paths from launch arguments', () => {
   expect(resolveExternalDocumentFileArgs([
@@ -57,6 +81,52 @@ it('sends OS-opened files outside external search folders through the opened fil
     });
   });
   expect(mocks.recordOpenedExternalDocument).not.toHaveBeenCalled();
+});
+
+it('authorizes a path immediately before a ready window can flush it', () => {
+  const lifecycle = installExternalDocumentFileOpenLifecycle();
+  lifecycle.enqueueFromArgv(['/app/foliole', '/outside/early.md']);
+
+  expect(mocks.ensureAccess).toHaveBeenCalledWith(path.resolve('/outside/early.md'));
+  expect(mocks.readLocalFile).not.toHaveBeenCalledWith(path.resolve('/outside/early.md'));
+});
+
+it('does not queue a file when sandbox authorization fails', async () => {
+  mocks.ensureAccess.mockReturnValueOnce({
+    errorCode: 'access_failed',
+    message: 'denied',
+    status: 'error'
+  });
+  const lifecycle = installExternalDocumentFileOpenLifecycle();
+  const window = {
+    isDestroyed: () => false,
+    webContents: { send: vi.fn() }
+  };
+
+  lifecycle.setReadyWindow(window as never);
+  lifecycle.enqueueFromArgv(['/app/foliole', '/outside/denied.md']);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  expect(mocks.readLocalFile).not.toHaveBeenCalledWith(path.resolve('/outside/denied.md'));
+});
+
+it('selects a local file and sends it through the installed open lifecycle', async () => {
+  mocks.showOpenDialog.mockResolvedValue({
+    canceled: false,
+    filePaths: ['/outside/selected.md']
+  });
+  const lifecycle = installExternalDocumentFileOpenLifecycle();
+  const window = {
+    isDestroyed: () => false,
+    webContents: { send: vi.fn() }
+  };
+  lifecycle.setReadyWindow(window as never);
+
+  await expect(selectLocalFileToOpen()).resolves.toEqual({
+    absolutePath: path.resolve('/outside/selected.md'),
+    status: 'selected'
+  });
+  await vi.waitFor(() => expect(mocks.readLocalFile).toHaveBeenCalledWith(path.resolve('/outside/selected.md')));
 });
 
 it('sends OS-opened files inside external search folders through the editable local file path', async () => {

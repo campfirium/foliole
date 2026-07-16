@@ -50,6 +50,7 @@ export const APP_COMMAND_IDS = {
   reviewNavigateNextSibling: 'review.navigateNextSibling',
   deleteReviewSourceTopic: 'review.deleteSourceTopic',
   importSingleFile: 'import.singleFileToInbox',
+  openLocalFile: 'localFile.open',
   importFolder: 'import.folderToInbox',
   clipboardImport: 'import.clipboard',
   globalCaptureToInbox: GLOBAL_CAPTURE_COMMAND_ID,

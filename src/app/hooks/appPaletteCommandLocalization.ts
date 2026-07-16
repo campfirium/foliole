@@ -9,6 +9,7 @@ const COMMAND_TITLE_KEYS: Partial<Record<AppCommandId, TranslationKey>> = {
   [APP_COMMAND_IDS.createItem]: 'desktop.command.createItem',
   [APP_COMMAND_IDS.undo]: 'desktop.command.undo',
   [APP_COMMAND_IDS.redo]: 'desktop.command.redo',
+  [APP_COMMAND_IDS.openLocalFile]: 'desktop.command.openFile',
   [APP_COMMAND_IDS.importSingleFile]: 'desktop.command.importFiles',
   [APP_COMMAND_IDS.importFolder]: 'desktop.command.importFolder',
   [APP_COMMAND_IDS.clipboardImport]: 'desktop.command.importClipboard',

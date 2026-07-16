@@ -34,6 +34,7 @@ interface RunAppCommandActions {
   goParent: () => void;
   toggleImmersiveMode: () => void;
   toggleDismissedTopicsVisibility: () => void;
+  openLocalFile?: () => void | Promise<void>;
   importSingleFile: () => void | Promise<void>;
   reimportSelectedTopic: () => void | Promise<void>;
   openPerformancePanel: () => void;
@@ -119,6 +120,7 @@ function createWorkspaceCommandHandlers(actions: RunAppCommandActions): Record<s
     [APP_COMMAND_IDS.createFolder]: actions.createFolder,
     [APP_COMMAND_IDS.createTopic]: actions.createTopic,
     [APP_COMMAND_IDS.createItem]: actions.createItem,
+    [APP_COMMAND_IDS.openLocalFile]: actions.openLocalFile ?? (() => false),
     [APP_COMMAND_IDS.importSingleFile]: actions.importSingleFile,
     [APP_COMMAND_IDS.importFolder]: actions.importDirectory,
     [APP_COMMAND_IDS.clipboardImport]: actions.startClipboardImport,

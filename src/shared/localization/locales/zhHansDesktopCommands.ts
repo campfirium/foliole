@@ -23,6 +23,7 @@ export const ZH_HANS_DESKTOP_COMMAND_TRANSLATIONS: Partial<Record<TranslationKey
   'desktop.command.editorOperation.editText': '编辑文本',
   'desktop.command.editorOperation.createAnnotation': '创建批注',
   'desktop.command.editorOperation.deleteAnnotation': '删除批注',
+  'desktop.command.openFile': '打开文件',
   'desktop.command.importFiles': '导入文件',
   'desktop.command.importFolder': '导入文件夹',
   'desktop.command.importClipboard': '导入剪贴板',

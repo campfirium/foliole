@@ -9,6 +9,7 @@ import { initializeDatabase } from './database/migrate.js';
 import { flushAllDirtyNodeSyncVersions } from './database/nodeMutations.js';
 import { flushCoalescedWorkspaceSearchInvalidations } from './database/searchIndexInvalidationCoalescer.js';
 import { stopSearchIndexInvalidationScheduler } from './database/searchIndexInvalidationScheduler.js';
+import { restoreDesktopSecurityScopedAccess, stopDesktopSecurityScopedAccess } from './desktopSecurityScopedAccess.js';
 import { installDevRendererReloadIntentWatcher } from './devRendererReloadIntent.js';
 import { installDevRestartIntentWatcher } from './devRestartIntent.js';
 import { stopDevScreenshotServer } from './devScreenshotServer.js';
@@ -40,7 +41,6 @@ import { flushMirrorSync } from './mirror/mirrorSyncScheduler.js';
 import type { StartupRendererView } from './rendererLoader.js';
 import { bindEmbeddedLinkPanelContents, installMainRuntimeDiagnostics } from './runtimeMainSupport.js';
 import type { RuntimeMode } from './runtimeMode.js';
-import { restoreSecurityScopedBookmarks, stopSecurityScopedBookmarks } from './securityScopedBookmarks.js';
 import { loadStartupErrorSurface } from './startupErrorSurface.js';
 import type { StartupRendererAppearance } from './startupRendererPreparation.js';
 import { isDesktopCompanionSyncEnabled } from './sync/desktopCompanionSyncPreference.js';
@@ -82,7 +82,7 @@ function installBeforeQuitLifecycle() {
     stopSearchIndexInvalidationScheduler();
     stopManagedInboxMonitor();
     stopKeepImportMonitor();
-    stopSecurityScopedBookmarks();
+    stopDesktopSecurityScopedAccess();
     disposeAssistantCommandAdapter();
     void stopDevScreenshotServer().catch((error) => appendMainProcessDiagnosticLog('dev_screenshot_stop_failed', { error }));
     void stopAgentControlApiServer().catch((error) => appendMainProcessDiagnosticLog('agent_control_stop_failed', { error }));
@@ -186,7 +186,7 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
     notifyExternalSearchSecondInstance();
   });
   app.whenReady().then(async () => {
-    restoreSecurityScopedBookmarks();
+    restoreDesktopSecurityScopedAccess();
     installAppProcessDiagnostics();
     args.installInvokeHandler();
     await appendBootEvent('app_when_ready');

@@ -53,6 +53,7 @@ describe('desktop platform adapters', () => {
       cwd: '/repo/foliole', homeDir: '/Users/tester', nodeBin: 'node', platform: 'darwin'
     });
     expect(commands.map(({ args, bin }) => ({ args, bin }))).toEqual([
+      { args: ['run', 'macos:security-bookmarks:build'], bin: 'npm' },
       { args: ['run', 'electron:compile'], bin: 'npm' },
       { args: ['scripts/electron-sqlite-runner.mjs', '--preflight'], bin: 'node' }
     ]);

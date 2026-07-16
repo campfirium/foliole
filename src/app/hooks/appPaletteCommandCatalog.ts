@@ -83,6 +83,7 @@ function isWorkspaceCommandEnabled(id: string, options: BuildAppPaletteItemsOpti
     id === APP_COMMAND_IDS.openGuidedSample ||
     id === APP_COMMAND_IDS.openWorkspaceSearch ||
     id === APP_COMMAND_IDS.openCommandPalette ||
+    id === APP_COMMAND_IDS.openLocalFile ||
     isHelpPaletteCommand(id) ||
     id === APP_COMMAND_IDS.openTrash ||
     id === APP_COMMAND_IDS.restartApp ||

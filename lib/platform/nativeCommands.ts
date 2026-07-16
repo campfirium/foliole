@@ -36,6 +36,7 @@ export const NATIVE_COMMANDS = {
   loadExternalSearchBrowseEntries: 'load_external_search_browse_entries',
   loadExternalSearchPreview: 'load_external_search_preview',
   openExternalDocumentFile: 'open_external_document_file',
+  selectLocalFileToOpen: 'select_local_file_to_open',
   listLocalFiles: 'list_local_files',
   readLocalFile: 'read_local_file',
   saveLocalFile: 'save_local_file',

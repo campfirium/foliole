@@ -21,8 +21,9 @@ it('uses an explicit Apple-native default table on macOS', () => {
   )).toBe(false);
   expect(matchesShortcutSet(
     keyEvent({ key: 'o', metaKey: true }),
-    macShortcuts[APP_COMMAND_IDS.importSingleFile]
+    macShortcuts[APP_COMMAND_IDS.openLocalFile]
   )).toBe(true);
+  expect(macShortcuts[APP_COMMAND_IDS.importSingleFile]).toBeUndefined();
   expect(macShortcuts[APP_COMMAND_IDS.openCommandPalette]).toEqual({
     primary: { key: 'p', metaKey: true, shiftKey: true }
   });

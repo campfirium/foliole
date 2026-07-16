@@ -4,8 +4,10 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
+import { assertMasDistributionContract } from './distribution-contract.mjs';
 import { prepareCodexHelper } from './prepare-codex-helper.mjs';
 import { prepareGlobalCaptureHelper } from './prepare-global-capture-helper.mjs';
+import { verifyPackagedMacosApp } from './verify-packaged-app.mjs';
 
 export { prepareCodexHelper } from './prepare-codex-helper.mjs';
 
@@ -31,7 +33,7 @@ export function createMasBuilderConfig(base, options) {
     provisioningProfile: options.provisioningProfile,
     sign: 'scripts/macos/sign-mas-app.mjs'
   };
-  return {
+  const config = {
     ...portableBase,
     appId: 'com.campfirium.foliole',
     directories: { ...base.directories, output: 'artifacts/macos' },
@@ -53,6 +55,8 @@ export function createMasBuilderConfig(base, options) {
     mas: { ...common },
     masDev: { ...common }
   };
+  assertMasDistributionContract(config, options.mode);
+  return config;
 }
 
 export function cleanMasElectronOutput(root = ROOT, remove = rm) {
@@ -161,11 +165,14 @@ async function main() {
   await cleanMasElectronOutput();
   for (const [label, command, args] of [
     ['build', 'npm', ['run', 'build']],
+    ['security bookmark addon', 'npm', ['run', 'macos:security-bookmarks:build']],
     ['electron compile', 'npm', ['run', 'electron:compile']],
     ['electron-builder', 'npm', ['exec', '--', 'electron-builder', '--config', configPath, '--mac', mode === 'development' ? 'mas-dev' : 'mas', '--arm64', '--publish', 'never']]
   ]) {
     runStep(label, command, args);
   }
+  const appPath = mode === 'development' ? MAS_DEVELOPMENT_APP : path.join(ROOT, 'artifacts/macos/mas-arm64/Foliole.app');
+  await verifyPackagedMacosApp({ appPath });
   if (install) await installMasDevelopmentApp();
   console.log(`[macos-package] status: ${install ? 'PACKAGED_AND_INSTALLED' : 'PACKAGED'}`);
 }

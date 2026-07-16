@@ -25,6 +25,7 @@ export function createMacosNativePreflightCommands({
     FOLIOLE_ELECTRON_TEST_STATE_ROOT: sandboxRoot
   }, { homeDir, platform });
   return [
+    { args: ['run', 'macos:security-bookmarks:build'], bin: npmBin(platform), cwd: appRoot, env },
     { args: ['run', 'electron:compile'], bin: npmBin(platform), cwd: appRoot, env },
     { args: ['scripts/electron-sqlite-runner.mjs', '--preflight'], bin: nodeBin, cwd: appRoot, env }
   ];

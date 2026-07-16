@@ -21,6 +21,7 @@ export const EN_DESKTOP_COMMAND_TRANSLATIONS = {
   'desktop.command.editorOperation.editText': 'Edit Text',
   'desktop.command.editorOperation.createAnnotation': 'Create Annotation',
   'desktop.command.editorOperation.deleteAnnotation': 'Delete Annotation',
+  'desktop.command.openFile': 'Open File',
   'desktop.command.importFiles': 'Import Files',
   'desktop.command.importFolder': 'Import Folder',
   'desktop.command.importClipboard': 'Import Clipboard',

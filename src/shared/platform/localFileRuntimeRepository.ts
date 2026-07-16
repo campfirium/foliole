@@ -1,7 +1,8 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type {
   NativeLocalFileReadResult,
-  NativeLocalFileSaveResult
+  NativeLocalFileSaveResult,
+  NativeLocalFileSelectionResult
 } from '../../../lib/platform/nativeLocalFileCommandMap';
 
 import { getRuntimeInvoke } from './runtimeInvoke';
@@ -16,6 +17,10 @@ function requireRuntimeInvoke() {
 
 export async function readLocalFile(path: string): Promise<NativeLocalFileReadResult> {
   return requireRuntimeInvoke()(NATIVE_COMMANDS.readLocalFile, { path });
+}
+
+export async function selectLocalFileToOpen(): Promise<NativeLocalFileSelectionResult> {
+  return requireRuntimeInvoke()(NATIVE_COMMANDS.selectLocalFileToOpen);
 }
 
 export async function saveLocalFile(args: {

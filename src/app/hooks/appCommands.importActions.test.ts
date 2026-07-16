@@ -9,6 +9,16 @@ function expectCommandRuns(commandId: string, overrides: Partial<Parameters<type
 }
 
 describe('runAppCommand import and document actions', () => {
+  it('runs Open File through the shared command handler without invoking import', () => {
+    const importSingleFile = vi.fn();
+    const openLocalFile = vi.fn();
+
+    expectCommandRuns(APP_COMMAND_IDS.openLocalFile, { importSingleFile, openLocalFile });
+
+    expect(openLocalFile).toHaveBeenCalledTimes(1);
+    expect(importSingleFile).not.toHaveBeenCalled();
+  });
+
   it('runs formal import through the shared command handler', () => {
     const importSingleFile = vi.fn();
     const importDirectory = vi.fn();

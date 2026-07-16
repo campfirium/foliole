@@ -49,7 +49,16 @@ export type NativeLocalFileSaveResult =
       status: 'error';
     };
 
+export type NativeLocalFileSelectionResult =
+  | { absolutePath: string; status: 'selected' }
+  | { status: 'cancelled' }
+  | { message: string; status: 'error' };
+
 export type NativeLocalFileCommandMap = {
+  [NATIVE_COMMANDS.selectLocalFileToOpen]: {
+    args: undefined;
+    result: NativeLocalFileSelectionResult;
+  };
   [NATIVE_COMMANDS.listLocalFiles]: {
     args: undefined;
     result: NativeLocalFileEntry[];

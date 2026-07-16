@@ -3,6 +3,7 @@ import type { useAppearanceSettings } from '../../features/settings/context/Appe
 import type { CommandPaletteItem } from '../../shared/commands/types';
 import { exportCurrentArticleMirror } from '../../shared/platform/articleMirrorExport';
 import { devReimportSelectedTopic } from '../../shared/platform/devReimportSelectedTopic';
+import { selectLocalFileToOpen } from '../../shared/platform/localFileRuntimeRepository';
 import { mergeRuntimeReadwiseTopicHighlights } from '../../shared/platform/readwiseTopicMerge';
 import { openFolioleReleaseLink } from '../../shared/platform/releaseLinks';
 import { checkForFolioleUpdates, openFolioleLatestRelease } from '../../shared/platform/updateCheck';
@@ -165,6 +166,11 @@ function createPaletteAppearanceActions(args: {
   };
 }
 
+async function openLocalFile() {
+  const result = await selectLocalFileToOpen();
+  if (result.status === 'error') showAppRuntimeNotice(result.message);
+}
+
 export function createPaletteRunnerArgs(args: {
   appearance: ReturnType<typeof useAppearanceSettings>;
   formalImport: ReturnType<typeof useFormalImport>;
@@ -200,6 +206,7 @@ export function createPaletteRunnerArgs(args: {
     mergeHighlightsIntoTopic: createMergeHighlightsIntoTopicCommand({ ws: args.ws }),
     ...createPaletteNavigationActions(args),
     ...createPaletteImportActions(args.formalImport),
+    openLocalFile,
     onRestartApp: createRestartAppCommand(args),
     onOpenHelpSearch: args.onOpenHelpSearch,
     onSendFeedback: args.onSendFeedback,

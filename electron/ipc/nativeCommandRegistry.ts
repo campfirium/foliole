@@ -47,6 +47,7 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.loadExternalSearchBrowseEntries, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.loadExternalSearchPreview, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.openExternalDocumentFile, route: 'storage', capability: 'filesystemOpen' },
+  { command: NATIVE_COMMANDS.selectLocalFileToOpen, route: 'storage', capability: 'filesystemOpen' },
   { command: NATIVE_COMMANDS.listLocalFiles, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.readLocalFile, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.saveLocalFile, route: 'storage', capability: 'filesystemWrite' },

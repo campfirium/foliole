@@ -25,7 +25,7 @@ export const MACOS_DEFAULT_APP_COMMAND_SHORTCUTS: DefaultCommandShortcuts = {
   [APP_COMMAND_IDS.createFolder]: { primary: { key: 'n', metaKey: true, shiftKey: true } },
   [APP_COMMAND_IDS.createTopic]: { primary: { key: 'n', metaKey: true } },
   [APP_COMMAND_IDS.createItem]: { primary: { key: 'n', metaKey: true, altKey: true } },
-  [APP_COMMAND_IDS.importSingleFile]: { primary: { key: 'o', metaKey: true } },
+  [APP_COMMAND_IDS.openLocalFile]: { primary: { key: 'o', metaKey: true } },
   [APP_COMMAND_IDS.globalCaptureToInbox]: { primary: globalCaptureShortcut },
   [APP_COMMAND_IDS.findInTopic]: { primary: { key: 'f', metaKey: true } },
   [APP_COMMAND_IDS.toggleEditorDisplayMode]: { primary: { key: '\\', metaKey: true } },

@@ -22,6 +22,7 @@ export const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   })),
   { id: APP_COMMAND_IDS.undo, title: 'Undo', section: 'Workspace', keywords: ['undo', 'history'] },
   { id: APP_COMMAND_IDS.redo, title: 'Redo', section: 'Workspace', keywords: ['redo', 'history'] },
+  { id: APP_COMMAND_IDS.openLocalFile, title: 'Open File', section: 'Workspace', keywords: ['open', 'markdown', 'file', 'local'] },
   { id: APP_COMMAND_IDS.importSingleFile, title: 'Import Files', section: 'Import', keywords: ['import', 'inbox', 'file', 'files'] },
   { id: APP_COMMAND_IDS.importFolder, title: 'Import Folder', section: 'Import', keywords: ['import', 'folder', 'directory', 'inbox'] },
   { id: APP_COMMAND_IDS.clipboardImport, title: 'Import Clipboard', section: 'Import', keywords: ['import', 'clipboard', 'paste'] },

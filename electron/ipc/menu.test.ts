@@ -121,6 +121,7 @@ describe('native app menu command state', () => {
     const items = (menuMock.applicationMenu?.items ?? []) as MockMenuItem[];
     expect(items.slice(0, 3).map((item) => item.role)).toEqual(['appMenu', 'editMenu', 'windowMenu']);
     expect(findMenuItem(items, 'workspace.openSettings')).not.toBeNull();
+    expect(findMenuItem(items, 'localFile.open')).not.toBeNull();
   });
 
   it('does not add macOS standard roles to the Windows menu', () => {

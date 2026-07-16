@@ -8,7 +8,8 @@
   "electronDist": "node_modules/electron/dist",
   "asar": true,
   "asarUnpack": [
-    "**/node_modules/better-sqlite3/build/Release/*.node"
+    "**/node_modules/better-sqlite3/build/Release/*.node",
+    "**/node_modules/@foliole/macos-security-bookmarks/build/Release/*.node"
   ],
   "extraResources": [
     {
@@ -121,6 +122,14 @@
   "mac": {
     "icon": "build/icon.icns",
     "target": ["dmg", "zip"],
-    "category": "public.app-category.education"
+    "category": "public.app-category.education",
+    "fileAssociations": [
+      {
+        "ext": ["md", "markdown"],
+        "name": "Markdown Document",
+        "role": "Editor",
+        "rank": "Alternate"
+      }
+    ]
   }
 }
