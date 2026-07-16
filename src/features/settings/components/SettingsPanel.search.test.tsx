@@ -72,11 +72,11 @@ it('searches settings rows and jumps to the matching category row', async () => 
   expect(screen.getByRole('button', { name: 'Review' })).toHaveAttribute('aria-current', 'page');
 });
 
-it('shows the External Folder category without a visibility switch', () => {
+it('shows the External folders category without a visibility switch', () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="external-search" />);
 
-  expect(screen.getByRole('heading', { level: 2, name: 'External Folder' })).toBeInTheDocument();
-  expect(screen.queryByRole('switch', { name: 'Enable External Folder' })).toBeNull();
+  expect(screen.getByRole('heading', { level: 2, name: 'External folders' })).toBeInTheDocument();
+  expect(screen.queryByRole('switch', { name: 'Enable external folders' })).toBeNull();
 });
 
 it('finds advanced review scheduler rows from settings search', async () => {

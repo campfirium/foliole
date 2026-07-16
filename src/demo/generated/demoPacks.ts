@@ -794,7 +794,7 @@ export const GENERATED_DEMO_PACKS: Record<string, DemoPack> = {
           },
           {
             "kind": "paragraph",
-            "text": "在线体验版会随着桌面端继续更新，也可能出现与桌面端不同的问题。可以通过左侧功能区入口直接提交反馈，也欢迎在 GitHub 关注项目进展、提交问题或参与交流。",
+            "text": "在线体验版会随着桌面端继续更新，也可能出现与桌面端不同的问题。可以通过左侧工具栏入口直接提交反馈，也欢迎在 GitHub 关注项目进展、提交问题或参与交流。",
             "id": "what-the-foliole-demo-is-for-block-8"
           }
         ],

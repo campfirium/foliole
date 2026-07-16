@@ -4,7 +4,7 @@ import { expectWorkspaceShell } from './harness/settings';
 test('external folder setup dialog opens without an initial button focus ring', async ({ desktopWindow }, testInfo) => {
   await expectWorkspaceShell(desktopWindow);
 
-  await desktopWindow.getByRole('treeitem', { name: /^External Folder$/ }).click();
+  await desktopWindow.getByRole('treeitem', { name: /^External folders$/ }).click();
 
   const dialog = desktopWindow.getByRole('dialog', { name: /^(Connect an external folder|连接外部文件夹)$/ });
   await expect(dialog).toBeVisible();

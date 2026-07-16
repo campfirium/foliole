@@ -64,6 +64,7 @@ export function SettingsSidebar(props: {
     ...group,
     categoryIds: group.categoryIds.filter((categoryId) => !hidden.has(categoryId))
   }));
+  const about = hidden.has('about') ? undefined : getSettingsCategoryOption('about', t);
   return (
     <AppPanel
       as="aside"
@@ -76,6 +77,13 @@ export function SettingsSidebar(props: {
       title={<SettingsSidebarBrand {...definedProps({ badge: props.brandBadge })} />}
     >
       <nav aria-label={t('settings.navigation.aria')} className="flex w-full flex-col items-stretch gap-4">
+        {about ? (
+          <SettingsSidebarItem
+            active={about.id === props.activeCategory}
+            category={about}
+            onSelect={props.setActiveCategory}
+          />
+        ) : null}
         {groups.map((group) => (
           <SettingsSidebarGroup
             activeCategory={props.activeCategory}

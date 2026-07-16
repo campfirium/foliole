@@ -42,7 +42,7 @@ it('shows a progress row while external sources load', () => {
   expect(status).toHaveTextContent('');
 });
 
-it('describes External Folder without mirror terminology', () => {
+it('describes External folders without mirror terminology', () => {
   renderWithLocalization(<SettingsExternalSearchSection {...baseProps} folders={[{
     attachmentMode: 'document_relative_first_then_fixed_root',
     attachmentRootPath: null,
@@ -71,10 +71,10 @@ it('does not show global search enhancement controls in external sources', () =>
 });
 
 it('shows a retryable alert when external sources fail to load', () => {
-  renderWithLocalization(<SettingsExternalSearchSection {...baseProps} error="Could not load External Folder settings." />);
+  renderWithLocalization(<SettingsExternalSearchSection {...baseProps} error="Could not load external folder settings." />);
 
-  expect(screen.getByRole('alert')).toHaveTextContent('Could not load External Folder settings.');
-  expect(screen.getByRole('alert')).toHaveTextContent('External Folder unavailable');
+  expect(screen.getByRole('alert')).toHaveTextContent('Could not load external folder settings.');
+  expect(screen.getByRole('alert')).toHaveTextContent('External folders unavailable');
 
   fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
 

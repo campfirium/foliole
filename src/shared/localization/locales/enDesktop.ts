@@ -93,7 +93,7 @@ export const EN_DESKTOP_TRANSLATIONS = {
   'desktop.readwise.original.missingCaption': 'Original file not imported · {kind}',
   'desktop.readwise.original.help': 'Original file help',
   'desktop.readwise.original.helpDetail': 'Download opens Readwise in your default browser. After saving the file, use Load here.',
-  'desktop.rail.customizeActionBar': 'Customize Ribbon',
+  'desktop.rail.customizeActionBar': 'Customize left toolbar',
   'desktop.palette.command.dialog': 'Command palette',
   'desktop.palette.command.search': 'Search commands',
   'desktop.palette.command.placeholder': 'Type a command...',

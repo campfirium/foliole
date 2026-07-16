@@ -23,7 +23,7 @@ it('opens a simplified external folder setup dialog before connecting a folder',
     onOpenExternalSelection
   });
 
-  const setupRow = screen.getByRole('treeitem', { name: 'External Folder' });
+  const setupRow = screen.getByRole('treeitem', { name: 'External folders' });
   expect(setupRow).toHaveAttribute('aria-selected', 'true');
   expect(screen.queryByRole('dialog', { name: 'Connect an external folder' })).toBeNull();
 
@@ -31,7 +31,7 @@ it('opens a simplified external folder setup dialog before connecting a folder',
   expect(onOpenExternalSelection).toHaveBeenCalledWith({ kind: 'root' });
   expect(onOpenExternalLibrarySettings).not.toHaveBeenCalled();
   expect(screen.getByRole('dialog', { name: 'Connect an external folder' })).toBeInTheDocument();
-  expect(screen.getByText('External Folder is simplified in this demo. The desktop app includes the full experience: it keeps connected folders as an external document library for search, preview, and import, while original files stay outside Foliole.')).toBeInTheDocument();
+  expect(screen.getByText('External folder access is simplified in this demo. The desktop app includes the full experience: it keeps connected folders as an external document library for search, preview, and import, while original files stay outside Foliole.')).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: 'Connect folder' }));
 
@@ -45,6 +45,6 @@ it('keeps the simplified external folder setup row in English for the Chinese de
     isExternalViewOpen: true
   });
 
-  expect(screen.getByRole('treeitem', { name: 'External Folder' })).toBeInTheDocument();
+  expect(screen.getByRole('treeitem', { name: 'External folders' })).toBeInTheDocument();
   expect(screen.queryByRole('treeitem', { name: '外部文件夹' })).toBeNull();
 });

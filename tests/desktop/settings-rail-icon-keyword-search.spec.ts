@@ -1,13 +1,13 @@
 import { test, expect } from './harness/fixtures';
 
-test('filters Ribbon action icons by Lucide keyword terms', async ({ desktopWindow }, testInfo) => {
+test('filters left toolbar action icons by Lucide keyword terms', async ({ desktopWindow }, testInfo) => {
   await desktopWindow.getByRole('button', { name: /^(Settings|设置)$/ }).click();
 
   const settingsDialog = desktopWindow.getByRole('dialog').filter({
-    has: desktopWindow.getByRole('button', { name: /^(Ribbon|功能区)$/ })
+    has: desktopWindow.getByRole('button', { name: /^(Left toolbar|左侧工具栏)$/ })
   });
   await expect(settingsDialog).toBeVisible();
-  await settingsDialog.getByRole('button', { name: /^(Ribbon|功能区)$/ }).click();
+  await settingsDialog.getByRole('button', { name: /^(Left toolbar|左侧工具栏)$/ }).click();
   await settingsDialog.getByRole('button', { name: /^(Add action|添加操作)$/ }).click();
 
   const addActionDialog = desktopWindow.getByRole('dialog', { name: /^(Add action|添加操作)$/ });

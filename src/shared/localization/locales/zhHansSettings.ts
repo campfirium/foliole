@@ -1,5 +1,6 @@
 import type { TranslationKey } from '../translations';
 
+import { ZH_HANS_SETTINGS_PUBLISHING_TRANSLATIONS } from './zhHansSettingsPublishing';
 import { ZH_HANS_SETTINGS_STORAGE_TRANSLATIONS } from './zhHansSettingsStorage';
 
 export const ZH_HANS_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
@@ -29,12 +30,10 @@ export const ZH_HANS_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, strin
   'settings.category.editor.description': '配置编辑和写作行为。',
   'settings.category.webLookup.label': '右键菜单',
   'settings.category.webLookup.description': '配置主题文本的外部菜单项。',
-  'settings.category.publishing.label': '发布',
-  'settings.category.publishing.description': '配置主题发布到 Discourse。',
   'settings.category.review.label': '复习',
   'settings.category.review.description': '调整调度器和复习队列。',
-  'settings.category.rail.label': '功能区',
-  'settings.category.rail.description': '选择工作区功能区显示哪些操作。',
+  'settings.category.rail.label': '左侧工具栏',
+  'settings.category.rail.description': '选择左侧工具栏显示哪些操作。',
   'settings.category.hotkeys.label': '快捷键',
   'settings.category.hotkeys.description': '自定义键盘快捷键。',
   'settings.category.mouseGestures.label': '鼠标手势',
@@ -177,6 +176,7 @@ export const ZH_HANS_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, strin
   'settings.search.gestureThreshold.title': '方向阈值（px）',
   'settings.search.gestureThreshold.description': '接受方向前所需的最小移动距离。',
   ...ZH_HANS_SETTINGS_STORAGE_TRANSLATIONS,
+  ...ZH_HANS_SETTINGS_PUBLISHING_TRANSLATIONS,
   'settings.webLookup.sectionAria': '右键菜单项设置区',
   'settings.webLookup.title': '右键菜单项',
   'settings.webLookup.description': '配置每个菜单项的名称和链接。用 {selection} 表示当前文本，用 {title} 表示当前主题标题。',
@@ -193,18 +193,6 @@ export const ZH_HANS_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, strin
   'settings.webLookup.remove': '移除 {label}',
   'settings.webLookup.removeTitle': '移除菜单项',
   'settings.webLookup.add': '添加菜单项',
-  'settings.publishing.sectionAria': '发布设置区',
-  'settings.publishing.title': 'Discourse 论坛',
-  'settings.publishing.site.title': '论坛地址',
-  'settings.publishing.site.description': '用于发布主题的 Discourse 站点。',
-  'settings.publishing.site.aria': 'Discourse 论坛地址',
-  'settings.publishing.apiKey.title': 'User API Key',
-  'settings.publishing.apiKey.description': '在此桌面端加密保存。Foliole 会按 Discourse User API Key 使用它。',
-  'settings.publishing.apiKey.saved': '已保存加密 User API Key。仅在需要替换时输入新 Key。',
-  'settings.publishing.apiKey.aria': 'Discourse User API Key',
-  'settings.publishing.error.title': '发布设置不可用',
-  'settings.publishing.error.load': '无法加载发布设置。',
-  'settings.publishing.error.save': '无法保存发布设置。',
   'settings.rail.addAction': '添加操作',
   'settings.rail.addDialog.title': '添加操作',
   'settings.rail.chooseAction': '选择要添加的操作',
@@ -221,8 +209,8 @@ export const ZH_HANS_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, strin
   'settings.rail.item.settings': '设置',
   'settings.rail.item.study': '学习',
   'settings.rail.remove': '移除 {label}',
-  'settings.rail.reset': '恢复默认功能区',
-  'settings.rail.section.aria': '功能区设置区',
+  'settings.rail.reset': '恢复默认左侧工具栏',
+  'settings.rail.section.aria': '左侧工具栏设置区',
   'settings.rail.show': '显示 {label}',
-  'settings.rail.title': '功能区',
+  'settings.rail.title': '左侧工具栏',
 };

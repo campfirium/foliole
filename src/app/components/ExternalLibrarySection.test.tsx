@@ -89,7 +89,7 @@ it('opens the external root from the setup row keyboard path', () => {
     />
   );
 
-  fireEvent.keyDown(screen.getByRole('treeitem', { name: 'External Folder' }), { key: 'Home' });
+  fireEvent.keyDown(screen.getByRole('treeitem', { name: 'External folders' }), { key: 'Home' });
 
   expect(onOpenExternalSelection).toHaveBeenCalledWith({ kind: 'root' });
   expect(screen.getByRole('dialog', { name: 'Connect an external folder' })).toBeInTheDocument();
@@ -148,7 +148,7 @@ it('keeps the external folder section visible when the legacy enabled flag is fa
     />
   );
 
-  expect(screen.queryByRole('treeitem', { name: 'External Folder' })).toBeNull();
+  expect(screen.queryByRole('treeitem', { name: 'External folders' })).toBeNull();
   expect(screen.getByRole('treeitem', { name: /1act/i })).toBeInTheDocument();
 });
 
@@ -166,7 +166,7 @@ it('opens setup context menu with Connect folder', () => {
     />
   );
 
-  fireEvent.contextMenu(screen.getByRole('treeitem', { name: 'External Folder' }), { clientX: 24, clientY: 32 });
+  fireEvent.contextMenu(screen.getByRole('treeitem', { name: 'External folders' }), { clientX: 24, clientY: 32 });
   fireEvent.click(screen.getByRole('menuitem', { name: 'Connect folder' }));
 
   expect(onOpenExternalLibrarySettings).toHaveBeenCalledTimes(1);

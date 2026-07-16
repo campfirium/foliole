@@ -95,7 +95,7 @@ export const ZH_HANS_DESKTOP_TRANSLATIONS: Partial<Record<TranslationKey, string
   'desktop.readwise.original.missingCaption': '原文件未导入 · {kind}',
   'desktop.readwise.original.help': '原文件帮助',
   'desktop.readwise.original.helpDetail': '下载会在默认浏览器中打开 Readwise。保存文件后，在这里使用加载。',
-  'desktop.rail.customizeActionBar': '自定义功能区',
+  'desktop.rail.customizeActionBar': '自定义左侧工具栏',
   'desktop.palette.command.dialog': '命令面板',
   'desktop.palette.command.search': '搜索命令',
   'desktop.palette.command.placeholder': '输入命令...',

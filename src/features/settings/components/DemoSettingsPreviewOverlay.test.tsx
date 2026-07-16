@@ -67,8 +67,8 @@ it('keeps external folders in the Live Demo settings preview', async () => {
     <DemoSettingsPreviewOverlay onClose={vi.fn()} requestedCategory="external-search" />
   );
 
-  expect((await screen.findAllByRole('heading', { name: 'External Folder' })).length).toBeGreaterThan(0);
-  expect(screen.getByRole('button', { name: 'External Folder' })).toBeInTheDocument();
+  expect((await screen.findAllByRole('heading', { name: 'External folders' })).length).toBeGreaterThan(0);
+  expect(screen.getByRole('button', { name: 'External folders' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Add folder' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Choose folder' })).toBeInTheDocument();
 });

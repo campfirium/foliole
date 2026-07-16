@@ -57,7 +57,7 @@ async function expectRailButtonsSuppressAccentFocusRing(ribbon: Locator) {
 
 test('workspace rail opens search and command palette panels', async ({ desktopWindow }, testInfo) => {
   await expectWorkspaceShell(desktopWindow);
-  const ribbon = desktopWindow.getByRole('region', { name: /Workspace Ribbon|工作区功能区/ });
+  const ribbon = desktopWindow.getByRole('region', { name: /Left toolbar|左侧工具栏/ });
   await expectRailButtonsSuppressAccentFocusRing(ribbon);
 
   await testInfo.attach('workspace-rail-palette-actions', {

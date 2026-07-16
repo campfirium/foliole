@@ -18,7 +18,7 @@ test('workspace rail command palette tooltip uses localized copy', async ({ desk
     window.location.reload();
   });
   await expectWorkspaceShell(desktopWindow);
-  const ribbon = desktopWindow.getByRole('region', { name: /Workspace Ribbon|工作区功能区/ });
+  const ribbon = desktopWindow.getByRole('region', { name: /Left toolbar|左侧工具栏/ });
   const commandPaletteButton = ribbon.getByRole('button', { name: '命令面板' });
 
   await commandPaletteButton.hover();

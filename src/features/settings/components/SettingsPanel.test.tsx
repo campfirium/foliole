@@ -69,32 +69,33 @@ it('groups settings sidebar entries by workspace, data, and sources', async () =
   expect(screen.getByText('Data')).toBeInTheDocument();
   expect(screen.getByText('Sources')).toBeInTheDocument();
   expect(screen.queryByRole('heading', { level: 3, name: 'Settings' })).not.toBeInTheDocument();
-  expect(labels.slice(0, 11)).toEqual([
+  expect(labels.slice(0, 12)).toEqual([
     'About',
     'General',
     'Appearance',
+    'Typography',
     'Editor',
-    'Right-click menu',
-    'Publishing',
     'Review',
+    'Publish',
     'Hotkeys',
+    'Left toolbar',
     'Mouse gestures',
-    'Ribbon',
+    'Right-click menu',
     'Storage'
   ]);
   expect(labels).toContain('Storage');
   expect(labels).toContain('Watched folders');
   expect(labels).toContain('Readwise Reader');
-  expect(labels).toContain('External Folder');
+  expect(labels).toContain('External folders');
   expect(labels.indexOf('Appearance')).toBeGreaterThan(labels.indexOf('General'));
   expect(labels.indexOf('Hotkeys')).toBeGreaterThan(labels.indexOf('Review'));
   expect(labels.indexOf('General')).toBeGreaterThan(labels.indexOf('About'));
-  expect(labels.indexOf('Storage')).toBeGreaterThan(labels.indexOf('Ribbon'));
+  expect(labels.indexOf('Storage')).toBeGreaterThan(labels.indexOf('Left toolbar'));
   expect(labels.indexOf('Sync')).toBeGreaterThan(labels.indexOf('Storage'));
   expect(labels.indexOf('Backups')).toBeGreaterThan(labels.indexOf('Sync'));
   expect(labels.indexOf('Watched folders')).toBeGreaterThan(labels.indexOf('Backups'));
-  expect(labels.indexOf('External Folder')).toBeGreaterThan(labels.indexOf('Watched folders'));
-  expect(labels.indexOf('Readwise Reader')).toBeGreaterThan(labels.indexOf('External Folder'));
+  expect(labels.indexOf('External folders')).toBeGreaterThan(labels.indexOf('Watched folders'));
+  expect(labels.indexOf('Readwise Reader')).toBeGreaterThan(labels.indexOf('External folders'));
   expect(screen.getByRole('button', { name: 'Watched folders' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Readwise Reader' })).toBeInTheDocument();
 });
@@ -172,10 +173,11 @@ it('updates appearance settings from the dedicated sections and persists them', 
   fireEvent.change(screen.getByLabelText('Accent color picker'), {
     target: { value: '#ff5500' }
   });
+  fireEvent.click(screen.getByLabelText('Reset accent color'));
+  fireEvent.click(screen.getByRole('button', { name: 'Typography' }));
   fireEvent.change(screen.getByLabelText('Interface font size'), {
     target: { value: '22' }
   });
-  fireEvent.click(screen.getByLabelText('Reset accent color'));
 
   await waitFor(() => {
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.autoLocalizeRemoteImages)).toBe('false');

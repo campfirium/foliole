@@ -17,6 +17,7 @@ export function DemoSettingsPreviewSidebar(props: {
 }) {
   const t = useTranslation();
   const groups = getSettingsCategoryGroups(t);
+  const about = getSettingsCategoryOption('about', t);
   return (
     <AppPanel
       as="aside"
@@ -28,6 +29,16 @@ export function DemoSettingsPreviewSidebar(props: {
       title={<div className="text-[1.05rem] font-semibold leading-5 text-foreground">Foliole</div>}
     >
       <nav aria-label={t('settings.navigation.aria')} className="flex flex-col gap-4">
+        {about ? (
+          <AppButton
+            active={props.activeCategory === about.id}
+            className={settingsSidebarItemClassName(props.activeCategory === about.id)}
+            onClick={() => props.setActiveCategory(about.id)}
+            variant="list"
+          >
+            <span className="min-w-0 truncate">{about.label}</span>
+          </AppButton>
+        ) : null}
         {groups.map((group) => (
           <DemoSettingsPreviewSidebarGroup
             activeCategory={props.activeCategory}
@@ -48,7 +59,7 @@ function DemoSettingsPreviewSidebarGroup(props: {
 }) {
   const t = useTranslation();
   return (
-    <div className="relative pt-4 first:pt-0">
+    <div className="relative pt-4 before:absolute before:left-3 before:right-3 before:top-0 before:border-t before:border-settings-divider/65 first:pt-0 first:before:hidden">
       <div className="mb-1 px-3 text-[0.72rem] font-semibold uppercase leading-5 tracking-[0.12em] text-foreground/58">
         {props.group.label}
       </div>

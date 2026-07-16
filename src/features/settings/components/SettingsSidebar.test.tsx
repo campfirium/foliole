@@ -60,24 +60,25 @@ it('groups workspace and control settings in product order', () => {
 
   const groupLabels = screen.getAllByText(/^(Workspace|Controls|Data|Sources)$/).map((node) => node.textContent);
   expect(groupLabels).toEqual(['Workspace', 'Controls', 'Data', 'Sources']);
+  expect(screen.getByLabelText('Settings navigation').firstElementChild).toHaveTextContent('About');
 
   const controls = screen.getByText('Controls').closest('.relative');
   expect(controls).not.toBeNull();
   expect(controls?.querySelectorAll('button')).toHaveLength(4);
   expect(Array.from(controls?.querySelectorAll('button') ?? []).map((button) => button.textContent)).toEqual([
     'Hotkeys',
-    'Ribbon',
+    'Left toolbar',
     'Mouse gestures',
     'Right-click menu'
   ]);
 
   const workspace = screen.getByText('Workspace').closest('.relative');
   expect(Array.from(workspace?.querySelectorAll('button') ?? []).map((button) => button.textContent)).toEqual([
-    'About',
     'General',
     'Appearance',
+    'Typography',
     'Editor',
     'Review',
-    'Publishing'
+    'Publish'
   ]);
 });

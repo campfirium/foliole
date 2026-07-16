@@ -12,7 +12,7 @@ type RowLayout = {
 
 async function collectPublishingRowLayouts(dialog: import('@playwright/test').Locator): Promise<RowLayout[]> {
   return dialog.getByRole('region', {
-    name: /^(Publishing settings section|发布设置区)$/
+    name: /^(Discourse publish settings|Discourse 发布设置)$/
   }).locator('[data-settings-row]').evaluateAll((rows) =>
     rows.map((row) => {
       const title = row.querySelector('h4')?.textContent?.trim() ?? '';
@@ -27,13 +27,26 @@ async function collectPublishingRowLayouts(dialog: import('@playwright/test').Lo
   );
 }
 
-test('keeps Discourse publishing settings compact and per-topic publish fields out of global settings', async ({ desktopWindow }, testInfo) => {
+test('keeps WordPress above Discourse with device-only publishing credentials', async ({ desktopWindow }, testInfo) => {
   const dialog = await openSettingsDialog(desktopWindow);
-  await dialog.getByRole('button', { name: /^(Publishing|发布)$/ }).click();
+  await dialog.getByRole('button', { name: /^(Publish|发布)$/ }).click();
 
-  await expect(dialog.getByRole('heading', { name: /^(Discourse forum|Discourse 论坛)$/ })).toBeVisible();
-  await expect(dialog.getByRole('textbox', { name: /^(Discourse forum address|Discourse 论坛地址)$/ })).toBeVisible();
+  await expect(dialog.getByRole('heading', { level: 2, name: /^(Publish|发布)$/ })).toBeVisible();
+  const wordpressRegion = dialog.getByRole('region', { name: /^(WordPress publish settings|WordPress 发布设置)$/ });
+  const discourseRegion = dialog.getByRole('region', { name: /^(Discourse publish settings|Discourse 发布设置)$/ });
+  await expect(wordpressRegion.getByRole('heading', { level: 3, name: 'WordPress' })).toBeVisible();
+  await expect(discourseRegion.getByRole('heading', { level: 3, name: 'Discourse' })).toBeVisible();
+  const [wordpressBox, discourseBox] = await Promise.all([wordpressRegion.boundingBox(), discourseRegion.boundingBox()]);
+  expect(wordpressBox?.y ?? 0).toBeLessThan(discourseBox?.y ?? 0);
+  await expect(wordpressRegion.getByLabel(/^(WordPress site address|WordPress 站点地址)$/)).toBeVisible();
+  await expect(wordpressRegion.getByLabel(/^(WordPress username|WordPress 用户名)$/)).toBeVisible();
+  await expect(wordpressRegion.getByLabel(/^WordPress Application Password$/)).toBeVisible();
+  await wordpressRegion.getByLabel(/^(WordPress site address|WordPress 站点地址)$/).fill('https://free-site.wordpress.com');
+  await expect(wordpressRegion.getByText(/(account-level device credential|账户级设备凭据)/)).toBeVisible();
+  await expect(wordpressRegion.getByLabel(/login password|登录密码/i)).toHaveCount(0);
+  await expect(dialog.getByRole('textbox', { name: /^(Discourse forum URL|Discourse 论坛 URL)$/ })).toBeVisible();
   await expect(dialog.getByLabel(/^(Discourse User API key|Discourse User API Key)$/)).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /^(Test connection|测试连接)$/ })).toBeVisible();
   await expect(dialog.getByRole('button', { name: /^(Save|保存)$/ })).toHaveCount(0);
   await expect(dialog.getByText(/^(API username|API 用户名)$/)).toHaveCount(0);
   await expect(dialog.getByText(/^(Default category ID|默认分类 ID)$/)).toHaveCount(0);
@@ -46,10 +59,11 @@ test('keeps Discourse publishing settings compact and per-topic publish fields o
   await expect(apiKeyInput).toHaveAttribute('placeholder', '****************');
 
   const layouts = await collectPublishingRowLayouts(dialog);
-  expect(layouts).toHaveLength(2);
-  for (const layout of layouts) {
+  expect(layouts).toHaveLength(3);
+  for (const layout of layouts.filter((row) => row.inputWidth > 0)) {
     expect(layout.paragraphWidth, `${layout.title} description should not collapse into a narrow column`).toBeGreaterThan(280);
     expect(layout.inputWidth, `${layout.title} input should keep a normal settings width`).toBeGreaterThan(320);
+    expect(layout.inputWidth, `${layout.title} input should follow the 360px settings standard`).toBeLessThanOrEqual(360);
   }
 
   const screenshot = await desktopWindow.screenshot({ fullPage: true });

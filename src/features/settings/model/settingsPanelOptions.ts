@@ -62,7 +62,7 @@ export function getSettingsCategories(t: Translate): SettingsCategoryOption[] {
 const SETTINGS_CATEGORY_GROUP_DEFINITIONS: Array<{ categoryIds: SettingsCategoryId[]; labelKey: TranslationKey }> = [
   {
     labelKey: 'settings.group.workspace',
-    categoryIds: ['about', 'general', 'appearance', 'typography', 'editor', 'review', 'publishing']
+    categoryIds: ['general', 'appearance', 'typography', 'editor', 'review', 'publishing']
   },
   {
     labelKey: 'settings.group.controls',
