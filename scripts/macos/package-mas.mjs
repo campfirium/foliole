@@ -5,6 +5,9 @@ import { mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { assertMasDistributionContract } from './distribution-contract.mjs';
+import {
+  assertExternalPackageOutput, publishArtifactBatch, withTemporaryPackageOutput
+} from './package-artifact-lifecycle.mjs';
 import { prepareCodexHelper } from './prepare-codex-helper.mjs';
 import { prepareGlobalCaptureHelper } from './prepare-global-capture-helper.mjs';
 import { verifyPackagedMacosApp } from './verify-packaged-app.mjs';
@@ -12,8 +15,8 @@ import { verifyPackagedMacosApp } from './verify-packaged-app.mjs';
 export { prepareCodexHelper } from './prepare-codex-helper.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
-const MAS_DEVELOPMENT_APP = path.join(ROOT, 'artifacts/macos/mas-dev-arm64/Foliole.app');
 const INSTALLED_APP = '/Applications/Foliole.app';
+const MAS_PUBLISHED_DIRECTORY = path.join(ROOT, 'artifacts/macos/mas-arm64');
 const PROFILE_NAMES = {
   distribution: 'Foliole Mac App Store Connect 2026',
   development: 'Foliole macOS App Development 2026'
@@ -22,6 +25,7 @@ const PROFILE_NAMES = {
 export function createMasBuilderConfig(base, options) {
   const portableBase = { ...base };
   delete portableBase.electronDist;
+  const outputDirectory = assertExternalPackageOutput(ROOT, options.outputDirectory);
   const target = options.mode === 'development' ? 'mas-dev' : 'mas';
   const common = {
     appId: 'com.campfirium.foliole',
@@ -36,7 +40,7 @@ export function createMasBuilderConfig(base, options) {
   const config = {
     ...portableBase,
     appId: 'com.campfirium.foliole',
-    directories: { ...base.directories, output: 'artifacts/macos' },
+    directories: { ...base.directories, output: outputDirectory },
     extraFiles: [
       ...(base.extraFiles ?? []),
       { from: options.codexPath, to: 'MacOS/codex' },
@@ -67,6 +71,10 @@ export function resolveInstallMode(argv = process.argv) {
   return argv.includes('--install');
 }
 
+export function createMasArtifactName(productName, version, arch = 'arm64') {
+  return `${productName}-${version}-mac-${arch}.pkg`;
+}
+
 function runStep(label, command, args, run = spawnSync) {
   const result = run(command, args, { cwd: ROOT, env: process.env, stdio: 'inherit' });
   if (result.status !== 0) throw new Error(`${label} failed with exit code ${result.status}`);
@@ -83,7 +91,8 @@ async function moveIfPresent(source, target, move) {
 }
 
 export async function installMasDevelopmentApp(options = {}) {
-  const sourcePath = options.sourcePath ?? MAS_DEVELOPMENT_APP;
+  const sourcePath = options.sourcePath;
+  if (!sourcePath) throw new Error('MAS development installation requires an explicit temporary app path');
   const targetPath = options.targetPath ?? INSTALLED_APP;
   const run = options.run ?? spawnSync;
   const remove = options.remove ?? rm;
@@ -154,26 +163,33 @@ async function main() {
   const globalCaptureHelperPath = await prepareGlobalCaptureHelper();
   const provisioningProfile = findProvisioningProfile(PROFILE_NAMES[mode]);
   const base = JSON.parse(await readFile(path.join(ROOT, 'electron/builder.json'), 'utf8'));
-  const config = createMasBuilderConfig(base, {
-    codexPath,
-    mode,
-    globalCaptureHelperPath,
-    provisioningProfile
-  });
-  const configPath = path.join(ROOT, `.tmp/electron-builder-${mode}.json`);
-  await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`);
+  const packageMetadata = JSON.parse(await readFile(path.join(ROOT, 'package.json'), 'utf8'));
+  const pkgName = createMasArtifactName(base.productName, packageMetadata.version);
   await cleanMasElectronOutput();
-  for (const [label, command, args] of [
-    ['build', 'npm', ['run', 'build']],
-    ['security bookmark addon', 'npm', ['run', 'macos:security-bookmarks:build']],
-    ['electron compile', 'npm', ['run', 'electron:compile']],
-    ['electron-builder', 'npm', ['exec', '--', 'electron-builder', '--config', configPath, '--mac', mode === 'development' ? 'mas-dev' : 'mas', '--arm64', '--publish', 'never']]
-  ]) {
-    runStep(label, command, args);
-  }
-  const appPath = mode === 'development' ? MAS_DEVELOPMENT_APP : path.join(ROOT, 'artifacts/macos/mas-arm64/Foliole.app');
-  await verifyPackagedMacosApp({ appPath });
-  if (install) await installMasDevelopmentApp();
+  await withTemporaryPackageOutput(async (outputDirectory) => {
+    const config = createMasBuilderConfig(base, {
+      codexPath, globalCaptureHelperPath, mode, outputDirectory, provisioningProfile
+    });
+    const configPath = path.join(outputDirectory, `electron-builder-${mode}.json`);
+    await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`);
+    for (const [label, command, args] of [
+      ['build', 'npm', ['run', 'build']],
+      ['security bookmark addon', 'npm', ['run', 'macos:security-bookmarks:build']],
+      ['electron compile', 'npm', ['run', 'electron:compile']],
+      ['electron-builder', 'npm', ['exec', '--', 'electron-builder', '--config', configPath, '--mac', mode === 'development' ? 'mas-dev' : 'mas', '--arm64', '--publish', 'never']]
+    ]) {
+      runStep(label, command, args);
+    }
+    const channelDirectory = path.join(outputDirectory, `${mode === 'development' ? 'mas-dev' : 'mas'}-arm64`);
+    const appPath = path.join(channelDirectory, 'Foliole.app');
+    await verifyPackagedMacosApp({ appPath });
+    if (install) await installMasDevelopmentApp({ sourcePath: appPath });
+    if (mode === 'distribution') {
+      await publishArtifactBatch({
+        names: [pkgName], sourceDirectory: channelDirectory, targetDirectory: MAS_PUBLISHED_DIRECTORY
+      });
+    }
+  });
   console.log(`[macos-package] status: ${install ? 'PACKAGED_AND_INSTALLED' : 'PACKAGED'}`);
 }
 

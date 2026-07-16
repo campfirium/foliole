@@ -8,6 +8,7 @@ import { expect, it, vi } from 'vitest';
 
 import {
   cleanMasElectronOutput,
+  createMasArtifactName,
   createMasBuilderConfig,
   installMasDevelopmentApp,
   readProvisioningProfileMetadata,
@@ -80,12 +81,13 @@ it('creates an arm64 MAS config with the official bundle id and signed bundled C
     codexPath: '.tmp/macos/codex/0.144.3/codex',
     mode: 'development',
     globalCaptureHelperPath: '.tmp/macos/global-capture-helper/Foliole Global Capture',
+    outputDirectory: '/private/tmp/foliole-mas-development-output',
     provisioningProfile: '/profiles/development.provisionprofile'
   });
 
   expect(config.appId).toBe('com.campfirium.foliole');
   expect(config).not.toHaveProperty('electronDist');
-  expect(config.directories.output).toBe('artifacts/macos');
+  expect(config.directories.output).toBe('/private/tmp/foliole-mas-development-output');
   expect(config.mac.target).toEqual(['mas-dev']);
   expect(config.masDev).toMatchObject({
     binaries: ['Contents/MacOS/codex', 'Contents/MacOS/Foliole Global Capture'],
@@ -112,6 +114,7 @@ it('preserves both macOS status Template images in the dynamic MAS config', () =
     codexPath: '.tmp/codex',
     mode: 'development',
     globalCaptureHelperPath: '.tmp/Foliole Global Capture',
+    outputDirectory: '/private/tmp/foliole-mas-development-output',
     provisioningProfile: '/profiles/development.provisionprofile'
   });
 
@@ -126,11 +129,13 @@ it('switches only the target and profile for the distribution package', () => {
     codexPath: '.tmp/codex',
     mode: 'distribution',
     globalCaptureHelperPath: '.tmp/Foliole Global Capture',
+    outputDirectory: '/private/tmp/foliole-mas-distribution-output',
     provisioningProfile: '/profiles/distribution.provisionprofile'
   });
 
   expect(config.mac.target).toEqual(['mas']);
   expect(config.mas.provisioningProfile).toBe('/profiles/distribution.provisionprofile');
+  expect(createMasArtifactName('Foliole', '0.6.5')).toBe('Foliole-0.6.5-mac-arm64.pkg');
 });
 
 it('skips provisioning files that Xcode cannot decode', () => {

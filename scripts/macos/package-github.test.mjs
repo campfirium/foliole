@@ -1,9 +1,10 @@
-import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  createGithubArtifactNames,
   createGithubBuilderConfig,
   hasNotarizationCredentials,
   prepareMasElectronDist,
@@ -11,6 +12,20 @@ import {
   sendMacosNotification,
   writeDmgChecksum
 } from './package-github.mjs';
+
+const temporaryDirectories = [];
+
+async function makeTemporaryDirectory(prefix) {
+  const directory = await mkdtemp(path.join(tmpdir(), prefix));
+  temporaryDirectories.push(directory);
+  return directory;
+}
+
+afterEach(async () => {
+  await Promise.all(temporaryDirectories.splice(0).map((directory) => (
+    rm(directory, { force: true, recursive: true })
+  )));
+});
 
 describe('GitHub macOS packaging', () => {
   it('builds signed arm64 DMG and ZIP artifacts with the audited sandbox signing shape', () => {
@@ -24,11 +39,12 @@ describe('GitHub macOS packaging', () => {
       codexPath: '.tmp/codex',
       electronDist: '.tmp/electron-mas-arm64',
       notarize: false,
+      outputDirectory: '/private/tmp/foliole-github-output',
       provisioningProfile: '/profiles/foliole-developer-id.provisionprofile'
     });
 
     expect(config.electronDist).toBe('.tmp/electron-mas-arm64');
-    expect(config.directories.output).toBe('artifacts/macos/github-arm64');
+    expect(config.directories.output).toBe('/private/tmp/foliole-github-output');
     expect(config.mac).toMatchObject({
       binaries: ['Contents/MacOS/codex'],
       entitlements: 'build/entitlements.mas.plist',
@@ -45,7 +61,7 @@ describe('GitHub macOS packaging', () => {
   });
 
   it('prepares the MAS Electron runtime required by Apple App Sandbox', async () => {
-    const directory = await mkdtemp(path.join(tmpdir(), 'foliole-mas-electron-'));
+    const directory = await makeTemporaryDirectory('foliole-mas-electron-');
     const calls = [];
 
     const result = await prepareMasElectronDist({
@@ -86,14 +102,26 @@ describe('GitHub macOS packaging', () => {
   });
 
   it('writes a checksum for the only DMG artifact', async () => {
-    const directory = await mkdtemp(path.join(tmpdir(), 'foliole-macos-package-'));
+    const directory = await makeTemporaryDirectory('foliole-macos-package-');
     await writeFile(path.join(directory, 'Foliole.dmg'), 'signed image');
 
-    const result = await writeDmgChecksum(directory);
+    const result = await writeDmgChecksum(directory, 'Foliole.dmg');
 
     expect(result.name).toBe('Foliole.dmg');
     expect(await readFile(path.join(directory, 'SHA256SUMS.txt'), 'utf8'))
       .toBe(`${result.digest}  Foliole.dmg\n`);
+  });
+
+  it('derives exact formal artifact names and rejects a non-DMG checksum target', async () => {
+    expect(createGithubArtifactNames('Foliole', '0.6.5')).toEqual([
+      'Foliole-0.6.5-mac-arm64.dmg',
+      'Foliole-0.6.5-mac-arm64.dmg.blockmap',
+      'Foliole-0.6.5-mac-arm64.zip',
+      'Foliole-0.6.5-mac-arm64.zip.blockmap',
+      'latest-mac.yml',
+      'SHA256SUMS.txt'
+    ]);
+    await expect(writeDmgChecksum('/unused', 'Foliole.zip')).rejects.toThrow('exact DMG artifact name');
   });
 
   it('sends a local macOS notification without exposing release credentials', () => {

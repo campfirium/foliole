@@ -15,17 +15,20 @@ export async function runDistributionContractCheck() {
   createGithubBuilderConfig(base, {
     ...common,
     electronDist: path.join(ROOT, '.tmp/electron-mas-arm64'),
-    notarize: false
+    notarize: false,
+    outputDirectory: '/private/tmp/foliole-github-contract'
   });
   createMasBuilderConfig(base, {
     ...common,
     globalCaptureHelperPath: '.tmp/contract/Foliole Global Capture',
-    mode: 'development'
+    mode: 'development',
+    outputDirectory: '/private/tmp/foliole-mas-development-contract'
   });
   createMasBuilderConfig(base, {
     ...common,
     globalCaptureHelperPath: '.tmp/contract/Foliole Global Capture',
-    mode: 'distribution'
+    mode: 'distribution',
+    outputDirectory: '/private/tmp/foliole-mas-distribution-contract'
   });
   const entitlements = await readFile(path.join(ROOT, 'build/entitlements.mas.plist'), 'utf8');
   assertSandboxEntitlements(entitlements);

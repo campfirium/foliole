@@ -2,24 +2,28 @@
 
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { access, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { access, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { assertGithubDistributionContract } from './distribution-contract.mjs';
+import {
+  assertExternalPackageOutput, publishArtifactBatch, withTemporaryPackageOutput
+} from './package-artifact-lifecycle.mjs';
 import { prepareCodexHelper } from './prepare-codex-helper.mjs';
 import { verifyPackagedMacosApp } from './verify-packaged-app.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
-const OUTPUT_DIRECTORY = 'artifacts/macos/github-arm64';
+const PUBLISHED_DIRECTORY = path.join(ROOT, 'artifacts/macos/github-arm64');
 const DEVELOPER_IDENTITY = 'CAMPFIRIUM LTD (V589TQH334)';
 const MAS_ELECTRON_DIRECTORY = '.tmp/electron-mas-arm64';
 
 export function createGithubBuilderConfig(base, options) {
   const portableBase = { ...base };
+  const outputDirectory = assertExternalPackageOutput(ROOT, options.outputDirectory);
   const config = {
     ...portableBase,
     appId: 'com.campfirium.foliole',
-    directories: { ...base.directories, output: OUTPUT_DIRECTORY },
+    directories: { ...base.directories, output: outputDirectory },
     electronDist: options.electronDist,
     extraFiles: [
       ...(base.extraFiles ?? []),
@@ -98,12 +102,23 @@ export function sendMacosNotification(title, message, run = spawnSync) {
   return result.status === 0;
 }
 
-export async function writeDmgChecksum(outputDirectory) {
-  const names = (await readdir(outputDirectory)).filter((name) => name.endsWith('.dmg'));
-  if (names.length !== 1) throw new Error(`Expected one DMG in ${outputDirectory}; found ${names.length}`);
-  const digest = createHash('sha256').update(await readFile(path.join(outputDirectory, names[0]))).digest('hex');
-  await writeFile(path.join(outputDirectory, 'SHA256SUMS.txt'), `${digest}  ${names[0]}\n`);
-  return { digest, name: names[0] };
+export function createGithubArtifactNames(productName, version, arch = 'arm64') {
+  const baseName = `${productName}-${version}-mac-${arch}`;
+  return [
+    `${baseName}.dmg`,
+    `${baseName}.dmg.blockmap`,
+    `${baseName}.zip`,
+    `${baseName}.zip.blockmap`,
+    'latest-mac.yml',
+    'SHA256SUMS.txt'
+  ];
+}
+
+export async function writeDmgChecksum(outputDirectory, dmgName) {
+  if (!dmgName.endsWith('.dmg')) throw new Error(`Expected an exact DMG artifact name; received ${dmgName}`);
+  const digest = createHash('sha256').update(await readFile(path.join(outputDirectory, dmgName))).digest('hex');
+  await writeFile(path.join(outputDirectory, 'SHA256SUMS.txt'), `${digest}  ${dmgName}\n`);
+  return { digest, name: dmgName };
 }
 
 function run(label, command, args) {
@@ -119,22 +134,29 @@ async function main() {
   if (notarize && !hasNotarizationCredentials(process.env)) {
     throw new Error('Notarization credentials are unavailable; configure an approved notarytool authentication method');
   }
-  const outputDirectory = path.join(ROOT, OUTPUT_DIRECTORY);
   const provisioningProfile = resolveDeveloperIdProvisioningProfile();
   const codexPath = await prepareCodexHelper();
   const electronDist = await prepareMasElectronDist();
   const base = JSON.parse(await readFile(path.join(ROOT, 'electron/builder.json'), 'utf8'));
-  const config = createGithubBuilderConfig(base, { codexPath, electronDist, notarize, provisioningProfile });
-  const configPath = path.join(ROOT, '.tmp/electron-builder-github-macos.json');
-  await rm(outputDirectory, { force: true, recursive: true });
-  await mkdir(outputDirectory, { recursive: true });
-  await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`);
-  run('build', 'npm', ['run', 'build']);
-  run('security bookmark addon', 'npm', ['run', 'macos:security-bookmarks:build']);
-  run('electron compile', 'npm', ['run', 'electron:compile']);
-  run('electron-builder', 'npm', ['exec', '--', 'electron-builder', '--config', configPath, '--mac', '--arm64', '--publish', 'never']);
-  await verifyPackagedMacosApp({ appPath: path.join(outputDirectory, 'mac-arm64/Foliole.app'), notarized: notarize });
-  const checksum = await writeDmgChecksum(outputDirectory);
+  const packageMetadata = JSON.parse(await readFile(path.join(ROOT, 'package.json'), 'utf8'));
+  const artifactNames = createGithubArtifactNames(base.productName, packageMetadata.version);
+  const checksum = await withTemporaryPackageOutput(async (outputDirectory) => {
+    const config = createGithubBuilderConfig(base, {
+      codexPath, electronDist, notarize, outputDirectory, provisioningProfile
+    });
+    const configPath = path.join(outputDirectory, 'electron-builder.json');
+    await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`);
+    run('build', 'npm', ['run', 'build']);
+    run('security bookmark addon', 'npm', ['run', 'macos:security-bookmarks:build']);
+    run('electron compile', 'npm', ['run', 'electron:compile']);
+    run('electron-builder', 'npm', ['exec', '--', 'electron-builder', '--config', configPath, '--mac', '--arm64', '--publish', 'never']);
+    await verifyPackagedMacosApp({
+      appPath: path.join(outputDirectory, 'mac-arm64/Foliole.app'), notarized: notarize
+    });
+    const result = await writeDmgChecksum(outputDirectory, artifactNames[0]);
+    await publishArtifactBatch({ names: artifactNames, sourceDirectory: outputDirectory, targetDirectory: PUBLISHED_DIRECTORY });
+    return result;
+  });
   console.log(`DMG_READY ${checksum.name} ${checksum.digest}`);
   sendMacosNotification(
     'Foliole macOS release',
