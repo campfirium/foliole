@@ -1,7 +1,7 @@
 export const GLOBAL_CAPTURE_COMMAND_ID = 'capture.globalToInbox';
 
 export function getDefaultGlobalCaptureAccelerator(platform: NodeJS.Platform) {
-  if (platform === 'darwin') return 'Command+Alt+Shift+C';
+  if (platform === 'darwin') return 'Alt+Shift+C';
   if (platform === 'win32') return 'Alt+Shift+C';
   return null;
 }

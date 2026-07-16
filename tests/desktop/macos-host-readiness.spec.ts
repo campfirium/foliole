@@ -33,7 +33,7 @@ test('exposes standard macOS menus and the registered global capture shortcut', 
   const captureRow = hotkeys.getByRole('listitem').filter({
     hasText: /Capture to Inbox \(global\)|捕捉到 Inbox（全局）/
   });
-  await expect(captureRow).toContainText('⌥ ⇧ ⌘ C');
+  await expect(captureRow).toContainText('⌥ ⇧ C');
   await expect(captureRow).not.toContainText(/Unavailable|不可用/);
   await hotkeys.screenshot({ path: testInfo.outputPath('macos-host-readiness.png') });
 });
