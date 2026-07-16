@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
 
-import { ScalableContentRegion } from '../../shared/ui';
+import { ScalablePanel } from '../../shared/ui';
 import { DUAL_LIST_WIDTH_DEFAULT, useDualListResizer } from '../hooks/useDualListResizer';
 
 import { WorkspaceDualListSplitter } from './WorkspaceDualListSplitter';
@@ -25,9 +25,9 @@ export function WorkspaceCollectionSurface({
         className="workspace-region-main-folder flex min-h-0 min-w-0 overflow-hidden"
         style={{ flex: `0 0 ${folderListResize.width}px` }}
       >
-        <ScalableContentRegion className="flex flex-1" label="Folder navigation" regionId="folder-navigation">
+        <ScalablePanel className="flex flex-1" label="Folder navigation" panelId="folder-navigation">
           {folderColumn}
-        </ScalableContentRegion>
+        </ScalablePanel>
       </div>
       <WorkspaceDualListSplitter
         isResizing={folderListResize.isResizing}
@@ -36,9 +36,9 @@ export function WorkspaceCollectionSurface({
         width={folderListResize.width}
       />
       <div className="workspace-region-main-topic flex min-h-0 min-w-0 flex-1 overflow-hidden">
-        <ScalableContentRegion className="flex flex-1" label="Topic navigation" regionId="topic-navigation">
+        <ScalablePanel className="flex flex-1" label="Topic navigation" panelId="topic-navigation">
           {contentColumn}
-        </ScalableContentRegion>
+        </ScalablePanel>
       </div>
     </div>
   );

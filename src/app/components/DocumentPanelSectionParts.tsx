@@ -1,4 +1,4 @@
-import type { ComponentProps, RefObject } from 'react';
+import type { ComponentProps, ReactNode, RefObject } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { FolderListSortDirection, FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
@@ -45,6 +45,7 @@ interface DocumentPanelContentProps {
     panelId: string,
     state: Partial<Pick<LinkPanelRecord, 'canGoBack' | 'canGoForward' | 'currentUrl' | 'title'>>
   ) => void;
+  children: (state: { content: ReactNode; isPdfSurface: boolean }) => ReactNode;
 }
 
 function getDocumentPanelFlags(args: {
@@ -219,5 +220,5 @@ export function DocumentPanelContent(props: DocumentPanelContentProps) {
     })
   );
   finishDiagnostic({ hasPdfSurface: Boolean(pdfDocumentSurface), shouldRenderEditorBody });
-  return content;
+  return props.children({ content, isPdfSurface: Boolean(pdfDocumentSurface) });
 }

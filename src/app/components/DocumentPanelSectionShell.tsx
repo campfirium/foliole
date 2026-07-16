@@ -5,9 +5,9 @@ import {
 } from '../../features/nodes/model/folderListOrdering';
 import type { BacklinkItem } from '../../features/nodes/model/internalLinks';
 import { isVirtualNode, isVirtualRootNode } from '../../features/nodes/model/specialNodes';
-import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 
+import { DocumentPanelContentAssembly } from './DocumentPanelContentAssembly';
 import { renderDocumentPanelHeader } from './DocumentPanelHeaderChrome';
 import { FolderListHeaderNavigation } from './DocumentPanelHeaderNavigation';
 import type { DocumentPanelSectionProps } from './DocumentPanelSection';
@@ -128,50 +128,6 @@ function renderFolderNavigationOverlay(props: DocumentPanelSectionProps, visible
   );
 }
 
-function renderDocumentPanelContent(args: {
-  bodyProps: Parameters<typeof DocumentPanelContent>[0]['bodyProps'];
-  folderListSortDirection: FolderListSortDirection;
-  folderListSortKey: FolderListSortKey;
-  isFolderListView: boolean;
-  linkPanels: LinkPanelRecord[];
-  onChangeFolderListSortDirection: (value: FolderListSortDirection) => void;
-  onChangeFolderListSortKey: (value: FolderListSortKey) => void;
-  onCloseExternalLink: (panelId: string) => void;
-  onLinkPanelStateChange: (
-    panelId: string,
-    state: Partial<Pick<LinkPanelRecord, 'canGoBack' | 'canGoForward' | 'currentUrl' | 'title'>>
-  ) => void;
-  onOpenExternalLink: (request: ExternalLinkOpenRequest) => void;
-  props: DocumentPanelSectionProps;
-}) {
-  return (
-    <DocumentPanelContent
-      activeNodeId={args.props.activeNodeId}
-      bodyProps={args.bodyProps}
-      folderListSortDirection={args.folderListSortDirection}
-      folderListSortKey={args.folderListSortKey}
-      onChangeFolderListSortDirection={args.onChangeFolderListSortDirection}
-      onChangeFolderListSortKey={args.onChangeFolderListSortKey}
-      isFolderListView={args.isFolderListView}
-      isTrashViewOpen={Boolean(args.props.isTrashViewOpen)}
-      nodeOrder={args.props.nodeOrder}
-      trashedNodeIds={args.props.trashedNodeIds}
-      nodesById={args.props.nodesById}
-      onCreatePdfHighlight={args.props.onCreatePdfHighlight}
-      onNodeContentChange={args.props.onNodeContentChange}
-      onOpenExternalLink={args.onOpenExternalLink}
-      {...(args.props.onOpenMoveToNode ? { onOpenMoveToNode: args.props.onOpenMoveToNode } : {})}
-      onPersistPdfViewState={args.props.onPersistPdfViewState}
-      onSelectNode={args.props.onSelectNode}
-      onSelectNodeInVirtualView={args.props.onSelectNodeInVirtualView ?? args.props.onSelectNode}
-      onSelectTrashNode={args.props.onSelectTrashNode}
-      linkPanels={args.linkPanels}
-      onCloseExternalLink={args.onCloseExternalLink}
-      onLinkPanelStateChange={args.onLinkPanelStateChange}
-    />
-  );
-}
-
 export function DocumentPanelSectionShell({
   backlinks,
   bodyProps,
@@ -187,7 +143,6 @@ export function DocumentPanelSectionShell({
   props,
   showSourceUpdateAction
 }: DocumentPanelShellProps) {
-  const t = useTranslation();
   const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : null;
   const folderListSort = useDocumentPanelFolderListSort(
     props.activeNodeId,
@@ -196,36 +151,36 @@ export function DocumentPanelSectionShell({
   const folderListSortKey = folderListSort.key;
   const folderListSortDirection = folderListSort.direction;
 
+  const overlay = renderFolderNavigationOverlay(props, isFolderListView);
+  const chrome = renderDocumentPanelChrome({
+    backlinks,
+    folderListSortDirection,
+    folderListSortKey,
+    isFolderListView,
+    isSourceUpdatePanelOpen,
+    onPreviewDocumentSelection,
+    onPreviewTopicSearchDecorations,
+    onToggleSourceUpdatePanel,
+    props,
+    setFolderListSortDirection: folderListSort.setDirection,
+    setFolderListSortKey: folderListSort.setKey,
+    showSourceUpdateAction
+  });
   return (
-    <section aria-label={t('desktop.document.panel')} className="workspace-region-main-document relative flex h-full min-h-0 flex-1 flex-col text-foreground">
-      {renderFolderNavigationOverlay(props, isFolderListView)}
-      {renderDocumentPanelChrome({
-        backlinks,
-        folderListSortDirection,
-        folderListSortKey,
-        isFolderListView,
-        isSourceUpdatePanelOpen,
-        onPreviewDocumentSelection,
-        onPreviewTopicSearchDecorations,
-        onToggleSourceUpdatePanel,
-        props,
-        setFolderListSortDirection: folderListSort.setDirection,
-        setFolderListSortKey: folderListSort.setKey,
-        showSourceUpdateAction
-      })}
-      {renderDocumentPanelContent({
-        bodyProps,
-        folderListSortDirection,
-        folderListSortKey,
-        isFolderListView,
-        linkPanels,
-        onChangeFolderListSortDirection: folderListSort.setDirection,
-        onChangeFolderListSortKey: folderListSort.setKey,
-        onCloseExternalLink,
-        onLinkPanelStateChange,
-        onOpenExternalLink,
-        props
-      })}
-    </section>
+    <DocumentPanelContentAssembly
+      bodyProps={bodyProps}
+      chrome={chrome}
+      folderListSortDirection={folderListSortDirection}
+      folderListSortKey={folderListSortKey}
+      isFolderListView={isFolderListView}
+      linkPanels={linkPanels}
+      onChangeFolderListSortDirection={folderListSort.setDirection}
+      onChangeFolderListSortKey={folderListSort.setKey}
+      onCloseExternalLink={onCloseExternalLink}
+      onLinkPanelStateChange={onLinkPanelStateChange}
+      onOpenExternalLink={onOpenExternalLink}
+      overlay={overlay}
+      props={props}
+    />
   );
 }

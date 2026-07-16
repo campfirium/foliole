@@ -1,7 +1,8 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
-import React from 'react';
+import React, { type ReactElement } from 'react';
 import { expect, it, vi } from 'vitest';
 
+import { DisplayScaleProvider } from '../../features/settings/context/DisplayScaleProvider';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 const mocks = vi.hoisted(() => ({
@@ -41,6 +42,10 @@ vi.mock('./LinkPanelStack', () => ({
 
 const { ExternalLibraryPreviewSurface } = await import('./ExternalLibraryPreviewSurface');
 
+function renderPreview(ui: ReactElement) {
+  return renderWithLocalization(<DisplayScaleProvider>{ui}</DisplayScaleProvider>);
+}
+
 function createLocalFileEditingProps() {
   return {
     content: '',
@@ -53,7 +58,7 @@ function createLocalFileEditingProps() {
 }
 
 it('opens the link panel when an external document preview link is clicked', async () => {
-  renderWithLocalization(
+  renderPreview(
     <ExternalLibraryPreviewSurface
       canGoBack={false}
       canGoForward={false}
@@ -97,7 +102,7 @@ it('opens the link panel when an external document preview link is clicked', asy
 });
 
 it('keeps routine local-file save state out of the preview toolbar', () => {
-  renderWithLocalization(
+  renderPreview(
     <ExternalLibraryPreviewSurface
       canGoBack={false}
       canGoForward={false}
@@ -132,7 +137,7 @@ it('keeps routine local-file save state out of the preview toolbar', () => {
 });
 
 it('shows the Opened label for opened-file breadcrumbs even when cached rows still carry Local', () => {
-  renderWithLocalization(
+  renderPreview(
     <ExternalLibraryPreviewSurface
       canGoBack={false}
       canGoForward={false}
@@ -189,11 +194,15 @@ it('remounts the external library preview editor when editor appearance changes'
     localFileEditing: createLocalFileEditingProps(),
     preview
   };
-  const { rerender } = renderWithLocalization(<ExternalLibraryPreviewSurface {...props} editorAppearanceKey="preview" />);
+  const { rerender } = renderPreview(<ExternalLibraryPreviewSurface {...props} editorAppearanceKey="preview" />);
 
   await waitFor(() => expect(mocks.markdownEditorMounted).toHaveBeenCalledTimes(1));
 
-  rerender(<ExternalLibraryPreviewSurface {...props} editorAppearanceKey="source" />);
+  rerender(
+    <DisplayScaleProvider>
+      <ExternalLibraryPreviewSurface {...props} editorAppearanceKey="source" />
+    </DisplayScaleProvider>
+  );
 
   await waitFor(() => expect(mocks.markdownEditorMounted).toHaveBeenCalledTimes(2));
 });

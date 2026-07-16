@@ -8,7 +8,6 @@ import {
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { definedProps } from '../../shared/lib/definedProps';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { ScalableContentRegion } from '../../shared/ui';
 import { useWorkspaceStore, type NodeViewState } from '../../store/workspaceStore';
 import type { CurrentViewTopicSnapshot } from '../currentViewTopicSnapshot';
 
@@ -181,8 +180,7 @@ export function FolderListView(props: FolderListViewProps) {
     onSelectNode: props.onSelectNode
   });
   return (
-    <ScalableContentRegion className="flex flex-1" label="Folder content" regionId="folder-content-list">
-      <div ref={scrollElementRef} className="app-scrollbar flex min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-4 max-[1080px]:px-2">
+    <div ref={scrollElementRef} className="app-scrollbar flex min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-4 max-[1080px]:px-2">
       <section aria-label={props.regionLabel ?? t('desktop.folderList.view')} className="mx-auto flex w-full flex-1 flex-col">
         <FolderListViewLayout
           currentViewActions={props.currentViewActions ?? currentViewActions}
@@ -222,7 +220,6 @@ export function FolderListView(props: FolderListViewProps) {
           t={t}
         />
       </section>
-      </div>
-    </ScalableContentRegion>
+    </div>
   );
 }

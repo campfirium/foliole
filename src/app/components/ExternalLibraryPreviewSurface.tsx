@@ -6,6 +6,7 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../features/settings/model/reviewSchedulerSettings';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type { ExternalDocumentPreview } from '../../shared/platform/externalDocumentPreviewRepository';
+import { ScalablePanel } from '../../shared/ui';
 
 import { DocumentPanelHeader } from './DocumentPanelHeader';
 import {
@@ -45,7 +46,8 @@ export function ExternalLibraryPreviewSurface(args: {
   const { handleCloseExternalLink, handleLinkPanelStateChange, handleOpenExternalLink, linkPanels } = useExternalLinkPanels();
 
   return (
-    <section aria-label={t('desktop.externalLibrary.documentArea')} className="workspace-region-main-document flex min-h-0 flex-1 flex-col" style={toDocumentWidthStyle(args.documentMaxWidth)}>
+    <ScalablePanel className="flex flex-1" label="Document panel" panelId="document-panel">
+      <section aria-label={t('desktop.externalLibrary.documentArea')} className="workspace-region-main-document flex min-h-0 flex-1 flex-col" style={toDocumentWidthStyle(args.documentMaxWidth)}>
       <ExternalPreviewHeader
         canGoBack={args.canGoBack}
         canGoForward={args.canGoForward}
@@ -74,7 +76,8 @@ export function ExternalLibraryPreviewSurface(args: {
           preview={args.preview}
         />
       </div>
-    </section>
+      </section>
+    </ScalablePanel>
   );
 }
 

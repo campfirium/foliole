@@ -10,7 +10,7 @@ import type {
   ExternalLibraryBrowseEntry,
   ExternalLibraryFolder
 } from '../../shared/platform/externalLibraryBrowseRepository';
-import { ScalableContentRegion } from '../../shared/ui';
+import { ScalablePanel } from '../../shared/ui';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import { TrashResultListPanel } from './TrashResultListPanel';
@@ -58,20 +58,20 @@ export interface WorkspaceDualListContentProps {
 
 function renderSingleListFallback(props: WorkspaceDualListContentProps) {
   return (
-    <ScalableContentRegion className="flex flex-1" label="Topic navigation" regionId="topic-navigation">
-    <NodeListTree
-      activeNodeId={props.activeNodeId}
-      isTrashViewOpen={props.isTrashViewOpen}
-      isVirtualViewOpen={props.isVirtualViewOpen}
-      nodeOrder={props.nodeOrder}
-      nodesById={props.listNodesById}
-      onOpenMoveToNode={props.onOpenMoveToNode}
-      onOpenNotesView={props.onOpenNotesView}
-      onSelectNode={props.onSelectNode}
-      onSelectTrashNode={props.onSelectTrashNode}
-      selectedTrashNodeId={props.selectedTrashNodeId}
-    />
-    </ScalableContentRegion>
+    <ScalablePanel className="flex flex-1" label="Topic navigation" panelId="topic-navigation">
+      <NodeListTree
+        activeNodeId={props.activeNodeId}
+        isTrashViewOpen={props.isTrashViewOpen}
+        isVirtualViewOpen={props.isVirtualViewOpen}
+        nodeOrder={props.nodeOrder}
+        nodesById={props.listNodesById}
+        onOpenMoveToNode={props.onOpenMoveToNode}
+        onOpenNotesView={props.onOpenNotesView}
+        onSelectNode={props.onSelectNode}
+        onSelectTrashNode={props.onSelectTrashNode}
+        selectedTrashNodeId={props.selectedTrashNodeId}
+      />
+    </ScalablePanel>
   );
 }
 

@@ -1,40 +1,54 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { useDisplayScale } from '../../features/settings/context/DisplayScaleProvider';
-import type { ContentRegionScaleId } from '../../features/settings/model/displayScaleSettings';
+import type { PanelScaleId } from '../../features/settings/model/displayScaleSettings';
 import { cn } from '../lib/utils';
 
-export function ScalableContentRegion(props: {
+export function ScalablePanel(props: {
   children: ReactNode;
   className?: string;
+  enabled?: boolean;
   label: string;
-  regionId: ContentRegionScaleId;
+  panelId: PanelScaleId;
 }) {
   const displayScale = useDisplayScale();
-  const percent = displayScale.getContentRegionScale(props.regionId);
+  const enabled = props.enabled !== false;
+  const percent = enabled ? displayScale.getPanelScale(props.panelId) : 100;
   const [showFeedback, setShowFeedback] = useState(false);
   const previousPercent = useRef(percent);
 
   useEffect(() => {
+    if (!enabled) return undefined;
+    return displayScale.registerPanel(props.panelId);
+  }, [displayScale.registerPanel, enabled, props.panelId]);
+  useEffect(() => {
+    if (!enabled) {
+      previousPercent.current = percent;
+      setShowFeedback(false);
+      return undefined;
+    }
     if (previousPercent.current === percent) return;
     previousPercent.current = percent;
     setShowFeedback(true);
     const timer = window.setTimeout(() => setShowFeedback(false), 900);
     return () => window.clearTimeout(timer);
-  }, [percent]);
+  }, [enabled, percent]);
 
-  const focusRegion = () => displayScale.focusContentRegion(props.regionId);
+  const focusPanel = () => {
+    if (enabled) displayScale.focusPanel(props.panelId);
+  };
   const scale = percent / 100;
+  const compensatedSize = `${(100 / scale).toFixed(4).replace(/0+$/, '').replace(/\.$/, '')}%`;
   return (
     <div
       className={cn('relative min-h-0 min-w-0 overflow-hidden', props.className)}
-      data-content-scale-region={props.regionId}
-      onFocusCapture={focusRegion}
-      onPointerDownCapture={focusRegion}
+      {...(enabled ? { 'data-panel-scale-id': props.panelId } : {})}
+      onFocusCapture={focusPanel}
+      onPointerDownCapture={focusPanel}
     >
       <div
         className="flex min-h-0 min-w-0 origin-top-left"
-        style={{ height: '100%', width: '100%', zoom: scale }}
+        style={{ height: compensatedSize, width: compensatedSize, zoom: scale }}
       >
         {props.children}
       </div>

@@ -19,7 +19,7 @@ test('Aide renders a titled Markdown conversation with live progress', async ({
   await desktopWindow.evaluate(() => {
     localStorage.setItem('foliole-workspace-right-sidebar-active-panel', 'assistant');
     localStorage.setItem('foliole-workspace-right-sidebar-width', '340');
-    localStorage.setItem('foliole-content-region-scales', JSON.stringify({ 'right-sidebar:assistant': 130 }));
+    localStorage.setItem('foliole-content-region-scales', JSON.stringify({ 'right-panel:assistant': 130 }));
     localStorage.setItem('foliole-aide-enabled', 'true');
   });
   await desktopWindow.reload();
@@ -50,7 +50,7 @@ test('Aide renders a titled Markdown conversation with live progress', async ({
     .toBeLessThanOrEqual(1);
 
   await mkdir(path.dirname(screenshotPath), { recursive: true });
-  await desktopWindow.locator('[data-content-scale-region="right-sidebar:assistant"]').screenshot({ path: screenshotPath });
+  await desktopWindow.locator('[data-panel-scale-id="right-panel:assistant"]').screenshot({ path: screenshotPath });
   await testInfo.attach('assistant-panel-message-layout', {
     contentType: 'image/png',
     path: screenshotPath

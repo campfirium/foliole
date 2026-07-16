@@ -4,6 +4,7 @@ import type {
   ExternalLibraryBrowseEntry,
   ExternalLibraryFolder
 } from '../../shared/platform/externalLibraryBrowseRepository';
+import { ScalablePanel } from '../../shared/ui';
 
 import {
   buildExternalLibraryFolderBrowseState,
@@ -77,27 +78,29 @@ export function ExternalFolderListSurface(args: {
   }
 
   return (
-    <section aria-label={t('desktop.externalLibrary.documentArea')} className="workspace-region-main-document flex min-h-0 flex-1 flex-col">
-      <FolderListView
-        emptyState={{
-          description:
-            args.selection.kind === 'folder'
-              ? t('desktop.externalLibrary.folderEmpty.description')
-              : t('desktop.externalLibrary.directoryEmpty.description'),
-          title: t('desktop.externalLibrary.empty.title')
-        }}
-        folderTitle={resolveExternalSurfaceTitle(args.selection, args.selectedFolder, t)}
-        navigationOverlay={{
-          canGoBack: args.canGoBack,
-          canGoForward: args.canGoForward,
-          onGoBack: args.onGoBack,
-          onGoForward: args.onGoForward
-        }}
-        nodes={args.documentNodes}
-        nodesById={args.documentNodesById}
-        onSelectNode={handleSelectDocument}
-        regionLabel={t('desktop.externalLibrary.folderListView')}
-      />
-    </section>
+    <ScalablePanel className="flex flex-1" label="List panel" panelId="list-panel">
+      <section aria-label={t('desktop.externalLibrary.documentArea')} className="workspace-region-main-document flex min-h-0 flex-1 flex-col">
+        <FolderListView
+          emptyState={{
+            description:
+              args.selection.kind === 'folder'
+                ? t('desktop.externalLibrary.folderEmpty.description')
+                : t('desktop.externalLibrary.directoryEmpty.description'),
+            title: t('desktop.externalLibrary.empty.title')
+          }}
+          folderTitle={resolveExternalSurfaceTitle(args.selection, args.selectedFolder, t)}
+          navigationOverlay={{
+            canGoBack: args.canGoBack,
+            canGoForward: args.canGoForward,
+            onGoBack: args.onGoBack,
+            onGoForward: args.onGoForward
+          }}
+          nodes={args.documentNodes}
+          nodesById={args.documentNodesById}
+          onSelectNode={handleSelectDocument}
+          regionLabel={t('desktop.externalLibrary.folderListView')}
+        />
+      </section>
+    </ScalablePanel>
   );
 }

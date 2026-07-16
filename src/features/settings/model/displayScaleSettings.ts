@@ -8,31 +8,51 @@ import {
 export const DEFAULT_APP_DISPLAY_SCALE_PERCENT = 100;
 export const MIN_APP_DISPLAY_SCALE_PERCENT = 80;
 export const MAX_APP_DISPLAY_SCALE_PERCENT = 200;
-export const DEFAULT_CONTENT_REGION_SCALE_PERCENT = 100;
-export const MIN_CONTENT_REGION_SCALE_PERCENT = 80;
-export const MAX_CONTENT_REGION_SCALE_PERCENT = 160;
-export const DISPLAY_SCALE_STEP = 10;
+export const DEFAULT_PANEL_SCALE_PERCENT = 100;
+export const MIN_PANEL_SCALE_PERCENT = 80;
+export const MAX_PANEL_SCALE_PERCENT = 160;
+export const APP_DISPLAY_SCALE_STEP = 10;
+export const PANEL_SCALE_STEP = 5;
 
-export type ContentRegionScaleId =
-  | 'folder-navigation'
-  | 'topic-navigation'
-  | 'folder-content-list'
-  | `right-sidebar:${string}`;
+const PANEL_SCALE_IDS = [
+  'folder-navigation',
+  'topic-navigation',
+  'document-panel',
+  'list-panel',
+  'right-panel:review-queue',
+  'right-panel:outline',
+  'right-panel:highlights',
+  'right-panel:backlinks',
+  'right-panel:assistant',
+  'right-panel:performance',
+  'right-panel:dev'
+] as const;
 
-export type ContentRegionScales = Partial<Record<ContentRegionScaleId, number>>;
+export type PanelScaleId = typeof PANEL_SCALE_IDS[number];
+export type PanelScales = Partial<Record<PanelScaleId, number>>;
 
-function clampSteppedPercent(value: number, min: number, max: number) {
+function isPanelScaleId(value: string): value is PanelScaleId {
+  return (PANEL_SCALE_IDS as readonly string[]).includes(value);
+}
+
+export function toRightPanelScaleId(panelId:
+  | 'review-queue' | 'outline' | 'highlights' | 'backlinks' | 'assistant' | 'performance' | 'dev'
+): PanelScaleId {
+  return `right-panel:${panelId}`;
+}
+
+function clampSteppedPercent(value: number, min: number, max: number, step: number) {
   if (!Number.isFinite(value)) return min;
-  const stepped = Math.round(value / DISPLAY_SCALE_STEP) * DISPLAY_SCALE_STEP;
+  const stepped = Math.round(value / step) * step;
   return Math.min(max, Math.max(min, stepped));
 }
 
 export function normalizeAppDisplayScalePercent(value: number) {
-  return clampSteppedPercent(value, MIN_APP_DISPLAY_SCALE_PERCENT, MAX_APP_DISPLAY_SCALE_PERCENT);
+  return clampSteppedPercent(value, MIN_APP_DISPLAY_SCALE_PERCENT, MAX_APP_DISPLAY_SCALE_PERCENT, APP_DISPLAY_SCALE_STEP);
 }
 
-export function normalizeContentRegionScalePercent(value: number) {
-  return clampSteppedPercent(value, MIN_CONTENT_REGION_SCALE_PERCENT, MAX_CONTENT_REGION_SCALE_PERCENT);
+export function normalizePanelScalePercent(value: number) {
+  return clampSteppedPercent(value, MIN_PANEL_SCALE_PERCENT, MAX_PANEL_SCALE_PERCENT, PANEL_SCALE_STEP);
 }
 
 export function getAppDisplayScalePercent() {
@@ -50,17 +70,17 @@ export function setAppDisplayScalePercent(value: number) {
   return normalized;
 }
 
-export function getContentRegionScales(): ContentRegionScales {
+export function getPanelScales(): PanelScales {
   const raw = getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.contentRegionScales);
   if (!raw) return {};
   try {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
-    const normalized: ContentRegionScales = {};
+    const normalized: PanelScales = {};
     for (const [regionId, value] of Object.entries(parsed)) {
-      if (typeof value !== 'number') continue;
-      const percent = normalizeContentRegionScalePercent(value);
-      if (percent !== DEFAULT_CONTENT_REGION_SCALE_PERCENT) {
-        normalized[regionId as ContentRegionScaleId] = percent;
+      if (!isPanelScaleId(regionId) || typeof value !== 'number') continue;
+      const percent = normalizePanelScalePercent(value);
+      if (percent !== DEFAULT_PANEL_SCALE_PERCENT) {
+        normalized[regionId] = percent;
       }
     }
     return normalized;
@@ -69,7 +89,7 @@ export function getContentRegionScales(): ContentRegionScales {
   }
 }
 
-export function setContentRegionScales(value: ContentRegionScales) {
+export function setPanelScales(value: PanelScales) {
   if (Object.keys(value).length === 0) {
     removeWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.contentRegionScales);
     return;

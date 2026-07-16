@@ -18,7 +18,7 @@ test('app display size and focused panel content size remain independent', async
   await expect.poll(() => browserWindow.evaluate((window) => window.webContents.getZoomFactor())).toBeCloseTo(1.3, 4);
   await desktopWindow.keyboard.press('Escape');
 
-  const folderRegion = desktopWindow.locator('[data-content-scale-region="folder-navigation"]');
+  const folderRegion = desktopWindow.locator('[data-panel-scale-id="folder-navigation"]');
   await expect(folderRegion).toBeVisible();
   await folderRegion.click({ position: { x: 40, y: 120 } });
   await desktopWindow.keyboard.press(process.platform === 'darwin' ? 'Meta+=' : 'Control+=');
@@ -28,11 +28,11 @@ test('app display size and focused panel content size remain independent', async
     width: (element as HTMLElement).style.width,
     zoom: (element as HTMLElement).style.zoom
   }))).toEqual({
-    height: '90.9091%',
-    width: '90.9091%',
-    zoom: '1.1'
+    height: '95.2381%',
+    width: '95.2381%',
+    zoom: '1.05'
   });
-  await expect(desktopWindow.getByText(/Folder navigation · 110%/)).toBeVisible();
+  await expect(desktopWindow.getByText(/Folder navigation · 105%/)).toBeVisible();
 
   const screenshotPath = path.join(process.cwd(), '.tmp/artifacts/desktop-acceptance/display-and-panel-scaling.png');
   await mkdir(path.dirname(screenshotPath), { recursive: true });

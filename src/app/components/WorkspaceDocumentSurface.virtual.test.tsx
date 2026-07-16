@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { expect, it, vi } from 'vitest';
 
 import {
@@ -26,6 +27,10 @@ vi.mock('./VirtualDocumentSurface', () => ({
 
 vi.mock('./workspaceDocumentSectionProps', () => ({
   buildDocumentSectionProps: (activeNodeId: string | null) => ({ activeNodeId })
+}));
+
+vi.mock('../../shared/ui', () => ({
+  ScalablePanel: ({ children }: { children: ReactNode }) => <>{children}</>
 }));
 
 import { WorkspaceDocumentSurface } from './WorkspaceDocumentSurface';

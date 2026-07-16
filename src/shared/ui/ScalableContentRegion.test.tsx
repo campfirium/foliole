@@ -5,16 +5,16 @@ import { DisplayScaleProvider } from '../../features/settings/context/DisplaySca
 import { runContentRegionScaleCommand } from '../commands/contentRegionScaleCommands';
 import { APP_COMMAND_IDS } from '../commands/ids';
 
-import { ScalableContentRegion } from './ScalableContentRegion';
+import { ScalablePanel } from './ScalablePanel';
 
 beforeEach(() => window.localStorage.clear());
 
-it('targets the last activated region and keeps the physical region boundary fixed', async () => {
-  const { container } = render(
+it('targets the active panel and compensates its scaled coordinate plane', async () => {
+  const { container, rerender } = render(
     <DisplayScaleProvider>
-      <ScalableContentRegion className="h-80 w-80" label="Folder navigation" regionId="folder-navigation">
+      <ScalablePanel className="h-80 w-80" label="Folder navigation" panelId="folder-navigation">
         <button type="button">Folder</button>
-      </ScalableContentRegion>
+      </ScalablePanel>
     </DisplayScaleProvider>
   );
 
@@ -22,9 +22,22 @@ it('targets the last activated region and keeps the physical region boundary fix
   act(() => {
     expect(runContentRegionScaleCommand(APP_COMMAND_IDS.increaseContentRegionScale)).toBe(true);
   });
-  const scaledContent = container.querySelector('[data-content-scale-region] > div');
+  const scaledContent = container.querySelector('[data-panel-scale-id] > div');
   await waitFor(() => {
-    expect(scaledContent).toHaveStyle({ height: '100%', width: '100%' });
-    expect(screen.getByText('Folder navigation · 110%')).toBeInTheDocument();
+    expect(scaledContent).toHaveStyle({ height: '95.2381%', width: '95.2381%' });
+    expect((scaledContent as HTMLElement).style.zoom).toBe('1.05');
+    expect(screen.getByText('Folder navigation · 105%')).toBeInTheDocument();
+  });
+
+  rerender(
+    <DisplayScaleProvider>
+      <ScalablePanel enabled={false} label="Folder navigation" panelId="folder-navigation">
+        <div>PDF surface</div>
+      </ScalablePanel>
+    </DisplayScaleProvider>
+  );
+  await waitFor(() => {
+    expect(container.querySelector('[data-panel-scale-id]')).toBeNull();
+    expect(runContentRegionScaleCommand(APP_COMMAND_IDS.increaseContentRegionScale)).toBe(false);
   });
 });
