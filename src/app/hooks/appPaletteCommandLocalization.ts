@@ -16,6 +16,7 @@ const COMMAND_TITLE_KEYS: Partial<Record<AppCommandId, TranslationKey>> = {
   [APP_COMMAND_IDS.openGuidedSample]: 'desktop.command.openGuidedSample',
   [APP_COMMAND_IDS.renameNode]: 'desktop.command.rename',
   [APP_COMMAND_IDS.exportCurrentArticle]: 'desktop.command.exportCurrentTopic',
+  [APP_COMMAND_IDS.publishToFoliole]: 'desktop.command.publishToFoliole',
   [APP_COMMAND_IDS.publishToDiscourse]: 'desktop.command.publishToDiscourse',
   [APP_COMMAND_IDS.publishToWordPress]: 'desktop.command.publishToWordPress',
   [APP_COMMAND_IDS.mergeHighlightsIntoTopic]: 'desktop.command.mergeHighlights',

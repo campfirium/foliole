@@ -11,6 +11,7 @@ const CONTRACT_FILES = [
   'nativeContract.ts',
   'nativeDiscoursePublishContract.ts',
   'nativeExternalSearchCommandMap.ts',
+  'nativeFoliolePublishContract.ts',
   'nativeImportCommandMap.ts',
   'nativeLocalFileCommandMap.ts',
   'nativeMoveCommandMap.ts',

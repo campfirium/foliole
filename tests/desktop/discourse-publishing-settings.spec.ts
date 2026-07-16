@@ -27,17 +27,27 @@ async function collectPublishingRowLayouts(dialog: import('@playwright/test').Lo
   );
 }
 
-test('keeps WordPress above Discourse with device-only publishing credentials', async ({ desktopWindow }, testInfo) => {
+test('keeps Foliole Publish above WordPress and Discourse with device-only credentials', async ({ desktopWindow }, testInfo) => {
   const dialog = await openSettingsDialog(desktopWindow);
   await dialog.getByRole('button', { name: /^(Publish|发布)$/ }).click();
 
   await expect(dialog.getByRole('heading', { level: 2, name: /^(Publish|发布)$/ })).toBeVisible();
+  const folioleRegion = dialog.getByRole('region', { name: /^(Foliole Publish settings|Foliole Publish 设置)$/ });
   const wordpressRegion = dialog.getByRole('region', { name: /^(WordPress publish settings|WordPress 发布设置)$/ });
   const discourseRegion = dialog.getByRole('region', { name: /^(Discourse publish settings|Discourse 发布设置)$/ });
+  await expect(folioleRegion.getByRole('heading', { level: 3, name: 'Foliole Publish' })).toBeVisible();
   await expect(wordpressRegion.getByRole('heading', { level: 3, name: 'WordPress' })).toBeVisible();
   await expect(discourseRegion.getByRole('heading', { level: 3, name: 'Discourse' })).toBeVisible();
-  const [wordpressBox, discourseBox] = await Promise.all([wordpressRegion.boundingBox(), discourseRegion.boundingBox()]);
+  const [folioleBox, wordpressBox, discourseBox] = await Promise.all([
+    folioleRegion.boundingBox(), wordpressRegion.boundingBox(), discourseRegion.boundingBox()
+  ]);
+  expect(folioleBox?.y ?? 0).toBeLessThan(wordpressBox?.y ?? 0);
   expect(wordpressBox?.y ?? 0).toBeLessThan(discourseBox?.y ?? 0);
+  await expect(folioleRegion.getByLabel(/^Cloudflare Account ID$/)).toBeVisible();
+  await expect(folioleRegion.getByLabel(/^(Cloudflare Pages project name|Cloudflare Pages 项目名称)$/)).toBeVisible();
+  await expect(folioleRegion.getByLabel(/^Cloudflare API Token$/)).toBeVisible();
+  await expect(folioleRegion.getByRole('button', { name: /^(Preview|预览)$/ })).toBeVisible();
+  await expect(folioleRegion.getByRole('button', { name: /^(Deploy to Cloudflare|部署到 Cloudflare)$/ })).toBeDisabled();
   await expect(wordpressRegion.getByLabel(/^(WordPress site address|WordPress 站点地址)$/)).toBeVisible();
   await expect(wordpressRegion.getByLabel(/^(WordPress username|WordPress 用户名)$/)).toBeVisible();
   await expect(wordpressRegion.getByLabel(/^WordPress Application Password$/)).toBeVisible();
@@ -66,6 +76,7 @@ test('keeps WordPress above Discourse with device-only publishing credentials', 
     expect(layout.inputWidth, `${layout.title} input should follow the 360px settings standard`).toBeLessThanOrEqual(360);
   }
 
+  await folioleRegion.scrollIntoViewIfNeeded();
   const screenshot = await desktopWindow.screenshot({ fullPage: true });
   const screenshotDir = path.join(process.cwd(), '.tmp', 'artifacts');
   const screenshotPath = path.join(screenshotDir, 'discourse-publishing-settings-hidden-native.png');

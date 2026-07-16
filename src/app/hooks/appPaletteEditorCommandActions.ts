@@ -6,6 +6,7 @@ export interface PaletteEditorCommandRunnerArgs {
   exportCurrentArticle: () => Promise<boolean>;
   findInTopic: () => void;
   mergeHighlightsIntoTopic: () => Promise<boolean>;
+  publishToFoliole: () => Promise<boolean>;
   publishToDiscourse: () => Promise<boolean>;
   publishToWordPress: () => Promise<boolean>;
   repairTable: () => boolean;
@@ -20,6 +21,7 @@ export function createPaletteEditorCommandActions(args: PaletteEditorCommandRunn
     exportCurrentArticle: () => void args.exportCurrentArticle(),
     findInTopic: args.findInTopic,
     mergeHighlightsIntoTopic: () => void args.mergeHighlightsIntoTopic(),
+    publishToFoliole: () => void args.publishToFoliole(),
     publishToDiscourse: () => void args.publishToDiscourse(),
     publishToWordPress: () => void args.publishToWordPress(),
     repairTable: args.repairTable

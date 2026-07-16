@@ -17,8 +17,15 @@ const wordpressRepositoryMocks = vi.hoisted(() => ({
   disconnectWordPressPublishSettingsFromRuntime: vi.fn(),
   loadWordPressPublishSettingsFromRuntime: vi.fn()
 }));
+const folioleRepositoryMocks = vi.hoisted(() => ({
+  connectFoliolePublishSettingsToRuntime: vi.fn(),
+  disconnectFoliolePublishSettingsFromRuntime: vi.fn(),
+  loadFoliolePublishSettingsFromRuntime: vi.fn(),
+  previewFoliolePublishFromRuntime: vi.fn()
+}));
 
 vi.mock('../../../../shared/platform/discoursePublishRepository', () => repositoryMocks);
+vi.mock('../../../../shared/platform/foliolePublishRepository', () => folioleRepositoryMocks);
 vi.mock('../../../../shared/platform/wordpressPublishRepository', () => wordpressRepositoryMocks);
 
 const SAVED_SETTINGS = {
@@ -58,6 +65,15 @@ beforeEach(() => {
     adapter: 'wordpress_com_xmlrpc', has_credentials: true,
     site_url: 'https://free-site.wordpress.com', updated_at: '2026-07-16T00:00:00.000Z'
   });
+  Object.values(folioleRepositoryMocks).forEach((mock) => mock.mockReset());
+  folioleRepositoryMocks.loadFoliolePublishSettingsFromRuntime.mockResolvedValue({
+    account_id: '', has_credentials: false, pages_url: '', project_name: '', site_address: '', updated_at: null
+  });
+  folioleRepositoryMocks.previewFoliolePublishFromRuntime.mockResolvedValue({ local_path: '/Publish/Site/index.html', url: null });
+  folioleRepositoryMocks.connectFoliolePublishSettingsToRuntime.mockResolvedValue({
+    account_id: 'account', has_credentials: true, pages_url: 'https://my-notes.pages.dev',
+    project_name: 'my-notes', site_address: 'https://my-notes.pages.dev', updated_at: '2026-07-16T00:00:00.000Z'
+  });
 });
 
 it('uses concise Publish copy and the standard settings input width', async () => {
@@ -65,11 +81,27 @@ it('uses concise Publish copy and the standard settings input width', async () =
 
   const forumUrl = await screen.findByLabelText('Discourse forum URL');
   const headings = screen.getAllByRole('heading', { level: 3 });
-  expect(headings.map((heading) => heading.textContent)).toEqual(['WordPress', 'Discourse']);
+  expect(headings.map((heading) => heading.textContent)).toEqual(['Foliole Publish', 'WordPress', 'Discourse']);
   expect(screen.queryByRole('heading', { name: 'Discourse forum' })).toBeNull();
   expect(screen.getByText('Forum URL')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Test connection' })).toBeEnabled();
   expect(forumUrl.parentElement).toHaveClass('w-[min(360px,100%)]');
+});
+
+it('previews locally and deploys Foliole Publish with Cloudflare credentials', async () => {
+  renderWithLocalization(<SettingsPublishingSection />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Preview' }));
+  await waitFor(() => expect(folioleRepositoryMocks.previewFoliolePublishFromRuntime).toHaveBeenCalledOnce());
+
+  fireEvent.change(screen.getByLabelText('Cloudflare Account ID'), { target: { value: 'account' } });
+  fireEvent.change(screen.getByLabelText('Cloudflare Pages project name'), { target: { value: 'my-notes' } });
+  fireEvent.change(screen.getByLabelText('Cloudflare API Token'), { target: { value: 'SENTINEL-CLOUDFLARE-TOKEN' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Deploy to Cloudflare' }));
+
+  await waitFor(() => expect(folioleRepositoryMocks.connectFoliolePublishSettingsToRuntime).toHaveBeenCalledWith({
+    account_id: 'account', api_token: 'SENTINEL-CLOUDFLARE-TOKEN', project_name: 'my-notes', site_address: ''
+  }));
+  expect(await screen.findByText('Ready to publish.')).toBeInTheDocument();
 });
 
 it('connects WordPress with an Application Password and shows the WordPress.com scope warning', async () => {

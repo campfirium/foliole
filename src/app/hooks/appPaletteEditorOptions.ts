@@ -39,6 +39,7 @@ export function buildEditorPaletteOptions(args: EditorPaletteSource) {
     canExportCurrentArticle: canExportCurrentArticle(args),
     canFindInCurrentTopic: canUseCurrentTopic,
     canMergeHighlightsIntoTopic: canUseCurrentTopic,
+    canPublishToFoliole: canUseCurrentTopic,
     canPublishToDiscourse: canUseCurrentTopic,
     canPublishToWordPress: canUseCurrentTopic,
     canRepairTable: canAnnotateSelection(args),

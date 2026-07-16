@@ -16,6 +16,7 @@ interface RunAppCommandActions {
   createTopic: () => void;
   enterPriorityMode: () => void;
   exportCurrentArticle: () => void | Promise<void>;
+  publishToFoliole?: () => void | Promise<void>;
   publishToDiscourse?: () => void | Promise<void>;
   publishToWordPress?: () => void | Promise<void>;
   findInTopic: () => void;
@@ -139,6 +140,7 @@ function createWorkspaceCommandHandlers(actions: RunAppCommandActions): Record<s
     [APP_COMMAND_IDS.openYouTubePlaylist]: actions.openYouTubePlaylist,
     [APP_COMMAND_IDS.openTrash]: actions.openTrash,
     [APP_COMMAND_IDS.exportCurrentArticle]: actions.exportCurrentArticle,
+    [APP_COMMAND_IDS.publishToFoliole]: actions.publishToFoliole ?? (() => false),
     [APP_COMMAND_IDS.publishToDiscourse]: actions.publishToDiscourse ?? (() => false),
     [APP_COMMAND_IDS.publishToWordPress]: actions.publishToWordPress ?? (() => false),
     [APP_COMMAND_IDS.enterPriorityMode]: actions.enterPriorityMode,

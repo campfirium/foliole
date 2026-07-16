@@ -2,6 +2,7 @@ import type { NativeAssistantCommandMap } from './nativeAssistantContract.js';
 import { NATIVE_COMMANDS } from './nativeCommands.js';
 import type { NativeDiscoursePublishCommandMap } from './nativeDiscoursePublishContract.js';
 import type { NativeExternalSearchCommandMap } from './nativeExternalSearchCommandMap.js';
+import type { NativeFoliolePublishCommandMap } from './nativeFoliolePublishContract.js';
 import type { NativeImportCommandMap } from './nativeImportCommandMap.js';
 import type { NativeInvokeTuple } from './nativeInvokeTypes.js';
 import type { NativeLocalFileCommandMap } from './nativeLocalFileCommandMap.js';
@@ -28,10 +29,11 @@ import type { NativeUtilityCommandMap } from './nativeUtilityCommandMap.js';
 import type { NativeAttachmentResourceResolution, NativeReviewGradeArgs, NativeReviewGradeResult, NativeReviewPreviewArgs, NativeReviewPreviewResult } from './nativeUtilityContract.js';
 import type { NativeWordPressPublishCommandMap } from './nativeWordPressPublishContract.js';
 export type * from './nativeStorageContract.js'; export type * from './nativeDiscoursePublishContract.js'; export type * from './nativeImportContract.js'; export type * from './nativeLocalFileCommandMap.js'; export type * from './nativeNodeMutationContract.js';
+export type * from './nativeFoliolePublishContract.js';
 export type * from './nativeReadwiseContract.js'; export type * from './nativeUtilityContract.js'; export type * from './nativeWordPressPublishContract.js';
 export type * from './nativeSourceDispositionContract.js';
 
-export type NativeCommandMap = NativeAssistantCommandMap & NativeUtilityCommandMap & NativeReadwiseCommandMap & NativeExternalSearchCommandMap & NativeDiscoursePublishCommandMap & NativeWordPressPublishCommandMap & NativeLocalFileCommandMap & NativeSearchIndexCommandMap & NativeSyncCommandMap & NativeImportCommandMap & NativeRemoteImageCommandMap & NativeMoveCommandMap & NativeTrashCommandMap & {
+export type NativeCommandMap = NativeAssistantCommandMap & NativeUtilityCommandMap & NativeReadwiseCommandMap & NativeExternalSearchCommandMap & NativeFoliolePublishCommandMap & NativeDiscoursePublishCommandMap & NativeWordPressPublishCommandMap & NativeLocalFileCommandMap & NativeSearchIndexCommandMap & NativeSyncCommandMap & NativeImportCommandMap & NativeRemoteImageCommandMap & NativeMoveCommandMap & NativeTrashCommandMap & {
   [NATIVE_COMMANDS.bootReport]: {
     args: {
       stage: string;

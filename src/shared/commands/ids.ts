@@ -78,6 +78,7 @@ export const APP_COMMAND_IDS = {
   setPdfDarkAppearanceInverted: 'settings.setPdfDarkAppearance.inverted',
   setPdfDarkAppearanceWarm: 'settings.setPdfDarkAppearance.warm',
   exportCurrentArticle: 'workspace.exportCurrentArticle',
+  publishToFoliole: 'workspace.publishToFoliole',
   publishToDiscourse: 'workspace.publishToDiscourse',
   publishToWordPress: 'workspace.publishToWordPress',
   restartApp: 'workspace.restartApp',

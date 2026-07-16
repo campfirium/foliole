@@ -15,15 +15,37 @@ const wordpressMocks = vi.hoisted(() => ({
   loadWordPressPublishSettings: vi.fn(),
   publishTopicToWordPress: vi.fn()
 }));
+const folioleMocks = vi.hoisted(() => ({
+  connectFoliolePublishSettings: vi.fn(),
+  disconnectFoliolePublishSettings: vi.fn(),
+  loadFoliolePublishSettings: vi.fn(),
+  previewFoliolePublish: vi.fn(),
+  publishTopicToFoliole: vi.fn()
+}));
 
 vi.mock('../discourse/discoursePublish.js', () => discourseMocks);
+vi.mock('../foliolePublish/foliolePublish.js', () => folioleMocks);
 vi.mock('../wordpress/wordpressPublish.js', () => wordpressMocks);
 
 import { handlePublishingStorageCommand } from './storagePublishingCommands.js';
 
 beforeEach(() => {
   Object.values(discourseMocks).forEach((mock) => mock.mockReset());
+  Object.values(folioleMocks).forEach((mock) => mock.mockReset());
   Object.values(wordpressMocks).forEach((mock) => mock.mockReset());
+});
+
+it('keeps the Cloudflare API token inside the main-process connection boundary', async () => {
+  const settings = { account_id: 'account', api_token: 'SENTINEL-CLOUDFLARE-SECRET', project_name: 'foliole', site_address: '' };
+  folioleMocks.connectFoliolePublishSettings.mockResolvedValue({
+    account_id: 'account', has_credentials: true, pages_url: 'https://foliole.pages.dev',
+    project_name: 'foliole', site_address: 'https://foliole.pages.dev', updated_at: '2026-07-16T00:00:00.000Z'
+  });
+
+  const result = await handlePublishingStorageCommand(NATIVE_COMMANDS.connectFoliolePublishSettings, { settings });
+
+  expect(folioleMocks.connectFoliolePublishSettings).toHaveBeenCalledWith(settings);
+  expect(JSON.stringify(result)).not.toContain('SENTINEL-CLOUDFLARE-SECRET');
 });
 
 it('forwards nested WordPress connection settings only to the main-process connector', async () => {
