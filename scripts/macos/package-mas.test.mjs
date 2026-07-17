@@ -42,12 +42,14 @@ it('replaces an installed app without merging stale bundle files', async () => {
     if (command === 'ditto') cpSync(args[0], args[1], { recursive: true });
     return { status: 0 };
   });
+  const lifecycle = { isRunning: vi.fn(() => false), open: vi.fn(), quitAndWait: vi.fn() };
 
-  await installMasDevelopmentApp({ sourcePath, targetPath, run });
+  await installMasDevelopmentApp({ lifecycle, log: vi.fn(), sourcePath, targetPath, run });
 
   expect(existsSync(path.join(targetPath, 'current'))).toBe(true);
   expect(existsSync(path.join(targetPath, 'stale'))).toBe(false);
   expect(run.mock.calls.map(([command]) => command)).toEqual(['ditto', 'codesign']);
+  expect(lifecycle.open).toHaveBeenCalledOnce();
 });
 
 it('allows the sandboxed MAS app to host the loopback Agent Control server', () => {

@@ -1,10 +1,11 @@
 /* global console, process */
 
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { assertMasDistributionContract } from './distribution-contract.mjs';
+import { installMasDevelopmentApp } from './dogfood-daily-install.mjs';
 import {
   assertExternalPackageOutput, publishArtifactBatch, withTemporaryPackageOutput
 } from './package-artifact-lifecycle.mjs';
@@ -13,9 +14,9 @@ import { prepareGlobalCaptureHelper } from './prepare-global-capture-helper.mjs'
 import { verifyPackagedMacosApp } from './verify-packaged-app.mjs';
 
 export { prepareCodexHelper } from './prepare-codex-helper.mjs';
+export { installMasDevelopmentApp } from './dogfood-daily-install.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
-const INSTALLED_APP = '/Applications/Foliole.app';
 const MAS_PUBLISHED_DIRECTORY = path.join(ROOT, 'artifacts/macos/mas-arm64');
 const PROFILE_NAMES = {
   distribution: 'Foliole Mac App Store Connect 2026',
@@ -80,42 +81,6 @@ function runStep(label, command, args, run = spawnSync) {
   if (result.status !== 0) throw new Error(`${label} failed with exit code ${result.status}`);
 }
 
-async function moveIfPresent(source, target, move) {
-  try {
-    await move(source, target);
-    return true;
-  } catch (error) {
-    if (error?.code === 'ENOENT') return false;
-    throw error;
-  }
-}
-
-export async function installMasDevelopmentApp(options = {}) {
-  const sourcePath = options.sourcePath;
-  if (!sourcePath) throw new Error('MAS development installation requires an explicit temporary app path');
-  const targetPath = options.targetPath ?? INSTALLED_APP;
-  const run = options.run ?? spawnSync;
-  const remove = options.remove ?? rm;
-  const move = options.move ?? rename;
-  const makeTempDirectory = options.makeTempDirectory ?? mkdtemp;
-  const stagingRoot = await makeTempDirectory(path.join(path.dirname(targetPath), '.foliole-internal-install-'));
-  const stagedPath = path.join(stagingRoot, 'Foliole.app');
-  const backupPath = path.join(stagingRoot, 'previous.app');
-  try {
-    runStep('stage internal app', 'ditto', [sourcePath, stagedPath], run);
-    runStep('verify staged internal app', 'codesign', ['--verify', '--deep', '--strict', stagedPath], run);
-    const hadInstalledApp = await moveIfPresent(targetPath, backupPath, move);
-    try {
-      await move(stagedPath, targetPath);
-    } catch (error) {
-      if (hadInstalledApp) await move(backupPath, targetPath);
-      throw error;
-    }
-  } finally {
-    await remove(stagingRoot, { force: true, recursive: true });
-  }
-}
-
 export function findProvisioningProfile(name) {
   const profilesDirectory = path.join(process.env.HOME ?? '', 'Library/Developer/Xcode/UserData/Provisioning Profiles');
   const listing = execFileSync('find', [profilesDirectory, '-name', '*.provisionprofile', '-type', 'f'], { encoding: 'utf8' });
@@ -166,6 +131,7 @@ async function main() {
   const packageMetadata = JSON.parse(await readFile(path.join(ROOT, 'package.json'), 'utf8'));
   const pkgName = createMasArtifactName(base.productName, packageMetadata.version);
   await cleanMasElectronOutput();
+  console.log('[macos-package] stage: BUILDING');
   await withTemporaryPackageOutput(async (outputDirectory) => {
     const config = createMasBuilderConfig(base, {
       codexPath, globalCaptureHelperPath, mode, outputDirectory, provisioningProfile
