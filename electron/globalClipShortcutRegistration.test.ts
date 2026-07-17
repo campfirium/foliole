@@ -5,7 +5,8 @@ import { beforeEach, expect, it, vi } from 'vitest';
 const { electronMocks } = vi.hoisted(() => ({
   electronMocks: {
     app: { on: vi.fn() },
-    globalShortcut: { register: vi.fn(() => true), unregister: vi.fn() }
+    globalShortcut: { register: vi.fn(() => true), unregister: vi.fn() },
+    powerMonitor: { on: vi.fn() }
   }
 }));
 
@@ -132,4 +133,28 @@ it('uses the platform default until persisted settings are safe to read', () => 
   expect(refreshGlobalClipShortcutFromSettings(() => ['Command+Shift+X'])).toBe(true);
   expect(globalShortcutRef.unregister).toHaveBeenCalledWith('Alt+Shift+C');
   expect(globalShortcutRef.register).toHaveBeenLastCalledWith('Command+Shift+X', expect.any(Function));
+});
+
+it.each(['activate', 'resume'] as const)('retries an unavailable shortcut on %s without polling', (eventName) => {
+  let available = false;
+  const appRef = { on: vi.fn() };
+  const powerMonitorRef = { on: vi.fn() };
+  const globalShortcutRef = { register: vi.fn(() => available), unregister: vi.fn() };
+  installGlobalClipShortcut({
+    appRef,
+    captureToInbox: vi.fn(async () => null),
+    globalShortcutRef,
+    platform: 'darwin',
+    powerMonitorRef
+  });
+  available = true;
+
+  const eventSource = eventName === 'activate' ? appRef : powerMonitorRef;
+  const retry = eventSource.on.mock.calls.find(([event]) => event === eventName)?.[1] as (() => void) | undefined;
+  retry?.();
+
+  expect(getGlobalClipShortcutStatus('darwin').globalCaptureShortcutRegistered).toBe(true);
+  expect(globalShortcutRef.register).toHaveBeenCalledTimes(2);
+  retry?.();
+  expect(globalShortcutRef.register).toHaveBeenCalledTimes(2);
 });

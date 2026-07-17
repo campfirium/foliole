@@ -19,6 +19,7 @@ import {
   useHotkeySectionModel,
   type HotkeySlot
 } from './HotkeySettingsSectionModel';
+import { useGlobalCaptureHotkeyItems } from './useGlobalCaptureHotkeyItems';
 
 const HOTKEY_ICON_BUTTON_CLASS_NAME = settingsResetButtonClassName('size-8');
 const MAC_SHORTCUT_SYMBOL_PATTERN = /[⌃⌥⇧⌘⌫↩⎋←↑→↓]/;
@@ -214,10 +215,9 @@ function HotkeyList(props: {
   );
 }
 
-export function HotkeySettingsSection({ items, onUpdate, onResetAll }: HotkeySettingsSectionProps) {
-  void onResetAll;
+export function HotkeySettingsSection({ items, onUpdate }: HotkeySettingsSectionProps) {
   const t = useTranslation();
-  const model = useHotkeySectionModel(items, onUpdate);
+  const model = useHotkeySectionModel(useGlobalCaptureHotkeyItems(items), onUpdate);
   return (
     <SettingsSection ariaLabel={t('settings.hotkeys.sectionAria')}>
       <div className="bg-settings-group">

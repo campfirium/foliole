@@ -22,5 +22,6 @@ export const ZH_HANS_SETTINGS_HOTKEYS_TRANSLATIONS: Partial<Record<TranslationKe
   'settings.hotkeys.commandList': '命令快捷键列表',
   'settings.hotkeys.empty': '没有匹配的快捷键。',
   'settings.hotkeys.sectionAria': '快捷键设置区域',
+  'settings.hotkeys.unavailable': '快捷键被占用，暂未生效。',
   'settings.hotkeys.invalidShortcut': '快捷键无效。'
 };

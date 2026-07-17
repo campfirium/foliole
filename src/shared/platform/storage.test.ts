@@ -1,21 +1,29 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import type { NativeInvoke } from '../../../lib/platform/nativeContract';
 import { APP_SETTINGS_STORAGE_KEYS } from '../config/appSettings';
 import {
   APP_SETTINGS_CLASSIFICATIONS,
   APP_SETTINGS_PERSISTENCE_KINDS
 } from '../config/appSettingsClassification';
 
-import { saveRuntimeAppSettingsState } from './appSettingsState';
-import { getLocalStorageWhitelist, setWhitelistedLocalStorageItem } from './storage';
+import {
+  getLocalStorageWhitelist,
+  RUNTIME_APP_SETTINGS_SAVED_EVENT,
+  setWhitelistedLocalStorageItem
+} from './storage';
 
-vi.mock('./appSettingsState', () => ({
-  saveRuntimeAppSettingsState: vi.fn().mockResolvedValue(true)
-}));
+const invoke = vi.fn().mockResolvedValue(null);
 
 beforeEach(() => {
   vi.clearAllMocks();
   window.localStorage.clear();
+  window.electronAPI = {
+    invoke: invoke as NativeInvoke,
+    onManagedInboxUpdated: () => () => undefined,
+    onNativeMenuCommand: () => () => undefined,
+    onWindowResized: () => () => undefined
+  };
 });
 
 it('derives localStorage whitelist from settings classification', () => {
@@ -49,5 +57,20 @@ it('does not persist the runtime snapshot again when the local value is unchange
 
   setWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.appDisplayScalePercent, '120');
 
-  expect(saveRuntimeAppSettingsState).not.toHaveBeenCalled();
+  expect(invoke).not.toHaveBeenCalled();
+});
+
+it('notifies the current renderer after runtime settings finish saving', async () => {
+  const listener = vi.fn();
+  window.addEventListener(RUNTIME_APP_SETTINGS_SAVED_EVENT, listener, { once: true });
+  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.commandShortcutOverrides)).toBeNull();
+
+  setWhitelistedLocalStorageItem(
+    APP_SETTINGS_STORAGE_KEYS.commandShortcutOverrides,
+    '{"capture.globalToInbox":{"primary":"Alt+C"}}'
+  );
+  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.commandShortcutOverrides)).not.toBeNull();
+
+  await vi.waitFor(() => expect(invoke).toHaveBeenCalledOnce());
+  await vi.waitFor(() => expect(listener).toHaveBeenCalledOnce());
 });

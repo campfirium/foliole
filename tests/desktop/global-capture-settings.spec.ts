@@ -15,7 +15,7 @@ test('organizes controls and keeps capture behavior in General', async ({ deskto
   const controls = general.getByText(/^(Controls|操作)$/).locator('..').locator('..');
   await expect(controls.getByRole('button')).toHaveText([
     /^(Hotkeys|快捷键)$/,
-    /^(Ribbon|功能区)$/,
+    /^(Left toolbar|左侧工具栏)$/,
     /^(Mouse gestures|鼠标手势)$/,
     /^(Right-click menu|右键菜单)$/
   ]);
@@ -34,20 +34,27 @@ test('organizes controls and keeps capture behavior in General', async ({ deskto
     BrowserWindow.getAllWindows().find((window) => !window.isDestroyed())?.webContents.send(
       'foliole:native-keyboard-input',
       {
-        altKey: false,
-        code: 'KeyX',
+        altKey: true,
+        code: 'KeyC',
         controlKey: false,
-        key: 'x',
-        metaKey: true,
-        shiftKey: true,
+        key: 'ç',
+        metaKey: false,
+        shiftKey: false,
         type: 'keyDown'
       }
     );
   });
-  await expect(globalCaptureShortcut).toHaveText('⇧ ⌘ X');
+  await expect(globalCaptureShortcut).toHaveText('⌥ C');
 
   await expect.poll(() => desktopWindow.evaluate(async () => {
     const result = await globalThis.window?.electronAPI?.invoke('load_desktop_host_capabilities', {});
-    return result?.globalCaptureShortcutLabel;
-  })).toBe('Command+Shift+X');
+    return {
+      label: result?.globalCaptureShortcutLabel,
+      registered: result?.globalCaptureShortcutRegistered
+    };
+  })).toEqual({ label: 'Alt+C', registered: true });
+  await expect(hotkeys.getByText(/^(Shortcut is already in use and isn't active yet\.|快捷键被占用，暂未生效。)$/)).toHaveCount(0);
+  const hotkeyScreenshotPath = path.join(process.cwd(), '.tmp/artifacts/global-capture-hotkey-active-hidden-native.png');
+  await hotkeys.screenshot({ path: hotkeyScreenshotPath });
+  await testInfo.attach('global-capture-hotkey-active', { path: hotkeyScreenshotPath });
 });

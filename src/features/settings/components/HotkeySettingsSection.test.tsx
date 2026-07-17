@@ -266,12 +266,12 @@ it('edits the global clip shortcut through the standard hotkey recorder', async 
   expect(rows[0]).toHaveTextContent('Alt+Shift+C');
   fireEvent.click(within(rows[0]!).getByRole('button', { name: 'Shortcut for Capture to Inbox (global)' }));
   act(() => {
-    nativeHotkeys.sendNativeKey({ altKey: true, code: 'KeyX', controlKey: false, key: 'x', metaKey: false, shiftKey: true, type: 'keyDown' });
+    nativeHotkeys.sendNativeKey({ altKey: true, code: 'KeyC', controlKey: false, key: 'ç', metaKey: false, shiftKey: false, type: 'keyDown' });
   });
   await waitFor(() => expect(onHotkeyUpdate).toHaveBeenCalledWith(
     'capture.globalToInbox',
     'primary',
-    'Alt+Shift+X'
+    'Alt+C'
   ));
   expect(rows[1]).toHaveTextContent('Create Folder');
 });

@@ -20,5 +20,6 @@ export const EN_SETTINGS_HOTKEYS_TRANSLATIONS = {
   'settings.hotkeys.commandList': 'Command shortcut list',
   'settings.hotkeys.empty': 'No matching hotkeys.',
   'settings.hotkeys.sectionAria': 'Hotkeys settings section',
+  'settings.hotkeys.unavailable': "Shortcut is already in use and isn't active yet.",
   'settings.hotkeys.invalidShortcut': 'Shortcut is invalid.'
 } as const;

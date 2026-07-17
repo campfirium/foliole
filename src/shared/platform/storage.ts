@@ -3,6 +3,7 @@ import { getLocalStorageAppSettingsKeys } from '../config/appSettingsClassificat
 import { saveRuntimeAppSettingsState } from './appSettingsState';
 
 const LOCAL_STORAGE_WHITELIST = new Set<string>(getLocalStorageAppSettingsKeys());
+export const RUNTIME_APP_SETTINGS_SAVED_EVENT = 'foliole:runtime-app-settings-saved';
 
 function assertLocalStorageWhitelist(key: string) {
   if (!LOCAL_STORAGE_WHITELIST.has(key)) {
@@ -28,9 +29,12 @@ function readWhitelistedLocalStorageSnapshot() {
   return snapshot;
 }
 
-function persistSnapshotToRuntimeStorage() {
+async function persistSnapshotToRuntimeStorage() {
   const settings = readWhitelistedLocalStorageSnapshot();
-  void saveRuntimeAppSettingsState(settings);
+  const saved = await saveRuntimeAppSettingsState(settings);
+  if (saved && canUseLocalStorage()) {
+    window.dispatchEvent(new window.Event(RUNTIME_APP_SETTINGS_SAVED_EVENT));
+  }
 }
 
 export function getWhitelistedLocalStorageItem(key: string): string | null {
@@ -50,7 +54,7 @@ export function setWhitelistedLocalStorageItem(key: string, value: string) {
     return;
   }
   window.localStorage.setItem(key, value);
-  persistSnapshotToRuntimeStorage();
+  void persistSnapshotToRuntimeStorage();
 }
 
 export function removeWhitelistedLocalStorageItem(key: string) {
@@ -59,7 +63,7 @@ export function removeWhitelistedLocalStorageItem(key: string) {
   }
   assertLocalStorageWhitelist(key);
   window.localStorage.removeItem(key);
-  persistSnapshotToRuntimeStorage();
+  void persistSnapshotToRuntimeStorage();
 }
 
 export function getLocalStorageWhitelist() {

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
 
+import { APP_COMMAND_IDS } from '../../../shared/commands/ids';
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import { startRuntimeHotkeyRecording } from '../../../shared/platform/nativeHotkeyRecordingRuntime';
 import type { HotkeySettingItem, HotkeyUpdateResult } from '../model/hotkeySettings';
@@ -102,7 +103,10 @@ function useNativeHotkeyRecordingCapture(args: NativeCaptureArgs) {
         args.cancelRecordingRef.current();
         return;
       }
-      const nextLabel = nativeInputToShortcutLabel(input);
+      const nextLabel = nativeInputToShortcutLabel(
+        input,
+        args.recording?.commandId === APP_COMMAND_IDS.globalCaptureToInbox
+      );
       if (!nextLabel) return;
       if (args.recording) {
         args.recordShortcutRef.current(args.recording.commandId, args.recording.slot, nextLabel);

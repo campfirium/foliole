@@ -1,4 +1,4 @@
-import { app, globalShortcut, type App, type GlobalShortcut } from 'electron';
+import { app, globalShortcut, powerMonitor, type App, type GlobalShortcut, type PowerMonitor } from 'electron';
 
 import { getDefaultGlobalCaptureAccelerator } from '../lib/platform/globalCaptureShortcut.js';
 
@@ -16,6 +16,7 @@ interface InstallGlobalClipShortcutDeps {
   globalShortcutRef?: Pick<GlobalShortcut, 'register' | 'unregister'>;
   log?: (event: string, payload?: Record<string, unknown>) => void;
   platform?: NodeJS.Platform;
+  powerMonitorRef?: Pick<PowerMonitor, 'on'>;
   resolveAccelerators?: () => string[];
 }
 
@@ -24,13 +25,14 @@ type InstalledGlobalClipShortcutDeps = Required<Pick<InstallGlobalClipShortcutDe
   globalShortcutRef: Pick<GlobalShortcut, 'register' | 'unregister'>;
   log: NonNullable<InstallGlobalClipShortcutDeps['log']>;
   platform: NodeJS.Platform;
+  powerMonitorRef: Pick<PowerMonitor, 'on'>;
   resolveAccelerators: () => string[];
 };
 
 let activeAccelerators: string[] = [];
 let configuredAccelerators: string[] = [];
 let installedDeps: InstalledGlobalClipShortcutDeps | null = null;
-let willQuitBound = false;
+let lifecycleEventsBound = false;
 
 export function getGlobalClipShortcutConfig(
   platform: NodeJS.Platform = process.platform
@@ -43,7 +45,8 @@ export function getGlobalClipShortcutStatus(platform: NodeJS.Platform = process.
   const config = getGlobalClipShortcutConfig(platform);
   return {
     globalCaptureShortcutLabel: configuredAccelerators[0] ?? config?.label ?? null,
-    globalCaptureShortcutRegistered: activeAccelerators.length > 0
+    globalCaptureShortcutRegistered:
+      configuredAccelerators.length > 0 && activeAccelerators.length === configuredAccelerators.length
   };
 }
 
@@ -86,6 +89,21 @@ export function refreshGlobalClipShortcutFromSettings(
   return refreshGlobalClipShortcut();
 }
 
+function retryUnavailableGlobalClipShortcut() {
+  if (!configuredAccelerators.length || activeAccelerators.length === configuredAccelerators.length) return;
+  refreshGlobalClipShortcut();
+}
+
+function bindGlobalClipShortcutLifecycle(deps: InstalledGlobalClipShortcutDeps) {
+  if (lifecycleEventsBound) return;
+  lifecycleEventsBound = true;
+  deps.appRef.on('activate', retryUnavailableGlobalClipShortcut);
+  deps.powerMonitorRef.on('resume', retryUnavailableGlobalClipShortcut);
+  deps.appRef.on('will-quit', () => {
+    if (installedDeps) unregisterActiveShortcuts(installedDeps);
+  });
+}
+
 export function installGlobalClipShortcut(deps: InstallGlobalClipShortcutDeps) {
   const platform = deps.platform ?? process.platform;
   const defaultConfig = getGlobalClipShortcutConfig(platform);
@@ -95,14 +113,10 @@ export function installGlobalClipShortcut(deps: InstallGlobalClipShortcutDeps) {
     globalShortcutRef: deps.globalShortcutRef ?? globalShortcut,
     log: deps.log ?? appendMainProcessDiagnosticLog,
     platform,
+    powerMonitorRef: deps.powerMonitorRef ?? powerMonitor,
     resolveAccelerators: deps.resolveAccelerators ?? (() => defaultConfig ? [defaultConfig.accelerator] : [])
   };
-  if (!willQuitBound) {
-    willQuitBound = true;
-    installedDeps.appRef.on('will-quit', () => {
-      if (installedDeps) unregisterActiveShortcuts(installedDeps);
-    });
-  }
+  bindGlobalClipShortcutLifecycle(installedDeps);
   return refreshGlobalClipShortcut();
 }
 
@@ -110,5 +124,5 @@ export function resetGlobalClipShortcutForTests() {
   activeAccelerators = [];
   configuredAccelerators = [];
   installedDeps = null;
-  willQuitBound = false;
+  lifecycleEventsBound = false;
 }
