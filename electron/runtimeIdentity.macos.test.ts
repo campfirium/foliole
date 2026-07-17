@@ -6,9 +6,10 @@ import { FOLIOLE_APP_NAME, configureRuntimeAppIdentity } from './runtimeIdentity
 
 it('brands an unpackaged macOS development runtime in the Dock', () => {
   const appDataRoot = '/Users/roamer/Library/Application Support';
+  const hide = vi.fn();
   const setIcon = vi.fn();
   const app = {
-    dock: { setIcon },
+    dock: { hide, setIcon },
     getName: () => FOLIOLE_APP_NAME,
     getPath: (name: 'appData' | 'sessionData' | 'temp' | 'userData') =>
       name === 'appData' ? appDataRoot : path.join(appDataRoot, 'Electron'),
@@ -21,5 +22,6 @@ it('brands an unpackaged macOS development runtime in the Dock', () => {
     FOLIOLE_ELECTRON_APP_ROOT: '/repo/foliole'
   });
 
+  expect(hide).not.toHaveBeenCalled();
   expect(setIcon).toHaveBeenCalledWith(path.join('/repo/foliole', 'build', 'icon-macos.png'));
 });
