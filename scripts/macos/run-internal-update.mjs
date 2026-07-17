@@ -6,6 +6,8 @@ import { access, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promise
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
+import { submitInternalUpdateFailureHandoff } from './internal-update-handoff.mjs';
+
 function assertRevision(revision) {
   if (!/^[0-9a-f]{40}$/u.test(revision ?? '')) {
     throw new Error('Internal build requires a full Git revision');
@@ -166,13 +168,30 @@ export async function runInternalUpdate(options) {
   }
 }
 
+export async function runInternalUpdateWithHandoff(options, dependencies = {}) {
+  const update = dependencies.update ?? runInternalUpdate;
+  const submitFailure = dependencies.submitFailure ?? submitInternalUpdateFailureHandoff;
+  try {
+    return await update(options);
+  } catch (error) {
+    try {
+      submitFailure({ ...options, error });
+    } catch (handoffError) {
+      (dependencies.logError ?? console.error)(
+        `Foliole Internal failure handoff failed: ${handoffError.message}`
+      );
+    }
+    throw error;
+  }
+}
+
 function parseArgs(argv) {
   const read = (flag) => argv[argv.indexOf(flag) + 1];
   return { repositoryRoot: read('--repository'), revision: read('--revision'), stateRoot: read('--state-root') };
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.meta.filename)) {
-  runInternalUpdate(parseArgs(process.argv.slice(2))).catch((error) => {
+  runInternalUpdateWithHandoff(parseArgs(process.argv.slice(2))).catch((error) => {
     console.error(error instanceof Error ? error.message : error);
     process.exitCode = 1;
   });

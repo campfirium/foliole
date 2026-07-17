@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
-  createInternalBuildSteps, resolveInternalPackagingDecision, runInternalUpdate
+  createInternalBuildSteps, resolveInternalPackagingDecision, runInternalUpdate,
+  runInternalUpdateWithHandoff
 } from './run-internal-update.mjs';
 
 const REVISION = 'b'.repeat(40);
@@ -81,5 +82,29 @@ describe('Internal update fixed-input worker', () => {
       revision: REVISION, run: vi.fn(() => ({ status: 0 })), stateRoot: '/state', writeBaseline
     })).resolves.toEqual({ revision: REVISION, status: 'installed' });
     expect(writeBaseline).toHaveBeenCalledWith('/state', REVISION);
+  });
+
+  it('hands a background failure to Codex Desktop and preserves the original error', async () => {
+    const failure = new Error('package failed');
+    const submitFailure = vi.fn();
+    await expect(runInternalUpdateWithHandoff({
+      repositoryRoot: '/repo', revision: REVISION, stateRoot: '/state'
+    }, {
+      submitFailure, update: vi.fn(async () => { throw failure; })
+    })).rejects.toBe(failure);
+    expect(submitFailure).toHaveBeenCalledWith(expect.objectContaining({
+      error: failure, repositoryRoot: '/repo', revision: REVISION, stateRoot: '/state'
+    }));
+  });
+
+  it('does not replace the package error when handoff submission also fails', async () => {
+    const failure = new Error('package failed');
+    const logError = vi.fn();
+    await expect(runInternalUpdateWithHandoff({ repositoryRoot: '/repo' }, {
+      logError,
+      submitFailure: vi.fn(() => { throw new Error('handoff failed'); }),
+      update: vi.fn(async () => { throw failure; })
+    })).rejects.toBe(failure);
+    expect(logError).toHaveBeenCalledWith('Foliole Internal failure handoff failed: handoff failed');
   });
 });
