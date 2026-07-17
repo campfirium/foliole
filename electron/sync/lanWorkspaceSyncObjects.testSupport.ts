@@ -1,4 +1,7 @@
 import crypto from 'node:crypto';
+import type http from 'node:http';
+
+import { requestWorkspaceSyncServer } from './lanWorkspaceSyncServer.testSupport.js';
 
 export function signRequest(args: {
   bodyText?: string;
@@ -20,17 +23,18 @@ export function signRequest(args: {
 }
 
 export async function postSigned(
-  endpoint: string,
+  server: http.Server,
   pathWithQuery: string,
   bodyText: string,
   paired: { device_id: string; device_secret: string }
 ) {
-  return await fetch(`${endpoint}${pathWithQuery}`, {
-    body: bodyText,
+  return await requestWorkspaceSyncServer(server, {
+    bodyText,
     headers: {
       'Content-Type': 'application/json',
       ...signRequest({ bodyText, deviceId: paired.device_id, method: 'POST', pathWithQuery, secret: paired.device_secret })
     },
-    method: 'POST'
+    method: 'POST',
+    path: pathWithQuery
   });
 }

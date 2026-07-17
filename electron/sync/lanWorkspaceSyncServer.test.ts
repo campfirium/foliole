@@ -1,12 +1,13 @@
-import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
-
-import { createTestPairingKeyPair, decryptTestPairingSecret } from './companionPairingProtocolTestSupport.js';
+import {
+  pairTestDevice,
+  requestWorkspaceSyncServer,
+  signWorkspaceSyncRequest
+} from './lanWorkspaceSyncServer.testSupport.js';
 
 const electronMock = vi.hoisted(() => ({
   userDataPath: `${process.cwd()}/.tmp/foliole-companion-pairing-${Math.random().toString(16).slice(2)}`
@@ -48,111 +49,45 @@ vi.mock('../database/workspaceSnapshot.js', () => ({
   }))
 }));
 
-function signRequest(args: { deviceId: string; method: string; pathWithQuery: string; secret: string }) {
-  const timestamp = new Date().toISOString();
-  const nonce = crypto.randomUUID();
-  const bodyHash = crypto.createHash('sha256').update('').digest('hex');
-  const canonical = [args.method, args.pathWithQuery, timestamp, nonce, bodyHash].join('\n');
-  return {
-    'X-Device-Id': args.deviceId,
-    'X-Nonce': nonce,
-    'X-Signature': crypto.createHmac('sha256', args.secret).update(canonical).digest('hex'),
-    'X-Timestamp': timestamp
-  };
-}
-
-async function pairDevice(endpoint: string) {
-  const clientKeyPair = await createTestPairingKeyPair();
-  const createResponse = await fetch(`${endpoint}/companion/pair-requests`, {
-    body: JSON.stringify({
-      device_id: 'android-test-device',
-      device_kind: 'android',
-      device_name: 'Pixel Test',
-      pairing_public_key: clientKeyPair.publicKey,
-      protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
-    }),
-    headers: { 'Content-Type': 'application/json' },
-    method: 'POST'
-  });
-  expect(createResponse.status).toBe(202);
-  const pairRequest = (await createResponse.json()) as { pair_request_id: string };
-  const { approveCompanionPairRequest } = await import('./companionPairingRequests.js');
-  expect(approveCompanionPairRequest(pairRequest.pair_request_id)).toMatchObject({
-    pair_request_id: pairRequest.pair_request_id,
-    status: 'approved'
-  });
-
-  const finalizeResponse = await fetch(`${endpoint}/companion/pair`, {
-    body: JSON.stringify({
-      pair_request_id: pairRequest.pair_request_id
-    }),
-    headers: { 'Content-Type': 'application/json' },
-    method: 'POST'
-  });
-  expect(finalizeResponse.status).toBe(200);
-  const payload = await finalizeResponse.json() as {
-    device_id: string;
-    encrypted_device_secret: Parameters<typeof decryptTestPairingSecret>[0]['encrypted'];
-  };
-  return {
-    device_id: payload.device_id,
-    device_secret: await decryptTestPairingSecret({
-      encrypted: payload.encrypted_device_secret,
-      privateKey: clientKeyPair.privateKey
-    })
-  };
-}
-
 async function resetLanWorkspaceSyncServerTestState() {
-  const { stopLanWorkspaceSyncServer } = await import('./lanWorkspaceSyncServer.js');
-  await stopLanWorkspaceSyncServer();
   const { clearCompanionPairRequests } = await import('./companionPairingRequests.js');
   const { clearCompanionRequestNonceCache } = await import('./companionRequestAuth.js');
   clearCompanionPairRequests();
   clearCompanionRequestNonceCache();
-  delete process.env.FOLIOLE_COMPANION_SYNC_PORT;
   fs.rmSync(electronMock.userDataPath, { force: true, recursive: true });
   electronMock.userDataPath = fs.mkdtempSync(path.join(process.cwd(), '.tmp', 'foliole-companion-pairing-'));
 }
 
 function registerSnapshotProtectionTest() {
   it('requires pairing and signed headers before serving the workspace snapshot', async () => {
-    process.env.FOLIOLE_COMPANION_SYNC_PORT = '38679';
-    const { ensureLanWorkspaceSyncServer, getLanWorkspaceSyncServerStatus } = await import('./lanWorkspaceSyncServer.js');
-
-    const status = await ensureLanWorkspaceSyncServer({
+    const { createWorkspaceSyncHttpServer, getLanWorkspaceSyncServerStatus } = await import('./lanWorkspaceSyncServer.js');
+    const server = createWorkspaceSyncHttpServer({
       appVersion: '0.1.0-test',
       peerId: 'desktop-local'
     });
-
-    expect(status.state).toBe('running');
-
-    const discoveryResponse = await fetch('http://127.0.0.1:38679/companion/discovery');
+    const discoveryResponse = await requestWorkspaceSyncServer(server, { path: '/companion/discovery' });
     expect(discoveryResponse.status).toBe(200);
-    await expect(discoveryResponse.json()).resolves.toMatchObject({
+    expect(discoveryResponse.json()).toMatchObject({
       desktop_name: 'Foliole Desktop',
       pairing_mode: 'desktop-confirm',
       peer_id: 'desktop-local'
     });
-
-    const unauthorizedResponse = await fetch('http://127.0.0.1:38679/companion/workspace-snapshot');
+    const unauthorizedResponse = await requestWorkspaceSyncServer(server, { path: '/companion/workspace-snapshot' });
     expect(unauthorizedResponse.status).toBe(401);
-
-    const paired = await pairDevice('http://127.0.0.1:38679');
+    const paired = await pairTestDevice(server);
     expect(getLanWorkspaceSyncServerStatus().paired_device_count).toBe(1);
     expect(getLanWorkspaceSyncServerStatus().pending_pair_request_count).toBe(0);
-    const response = await fetch('http://127.0.0.1:38679/companion/workspace-snapshot', {
-      headers: signRequest({
+    const response = await requestWorkspaceSyncServer(server, {
+      headers: signWorkspaceSyncRequest({
         deviceId: paired.device_id,
         method: 'GET',
         pathWithQuery: '/companion/workspace-snapshot',
         secret: paired.device_secret
-      })
+      }),
+      path: '/companion/workspace-snapshot'
     });
-    const payload = await response.json();
-
     expect(response.status).toBe(200);
-    expect(payload).toMatchObject({
+    expect(response.json()).toMatchObject({
       app_version: '0.1.0-test',
       peer_id: 'desktop-local',
       workspace_snapshot: {
@@ -164,28 +99,23 @@ function registerSnapshotProtectionTest() {
 
 function registerWorkspaceVersionProtectionTest() {
   it('serves lightweight workspace version metadata for paired devices', async () => {
-    process.env.FOLIOLE_COMPANION_SYNC_PORT = '38680';
-    const { ensureLanWorkspaceSyncServer } = await import('./lanWorkspaceSyncServer.js');
-
-    const status = await ensureLanWorkspaceSyncServer({
+    const { createWorkspaceSyncHttpServer } = await import('./lanWorkspaceSyncServer.js');
+    const server = createWorkspaceSyncHttpServer({
       appVersion: '0.1.0-test',
       peerId: 'desktop-local'
     });
-
-    expect(status.pending_pair_request_count).toBe(0);
-    const paired = await pairDevice('http://127.0.0.1:38680');
-    const response = await fetch('http://127.0.0.1:38680/companion/workspace-version', {
-      headers: signRequest({
+    const paired = await pairTestDevice(server);
+    const response = await requestWorkspaceSyncServer(server, {
+      headers: signWorkspaceSyncRequest({
         deviceId: paired.device_id,
         method: 'GET',
         pathWithQuery: '/companion/workspace-version',
         secret: paired.device_secret
-      })
+      }),
+      path: '/companion/workspace-version'
     });
-    const payload = await response.json();
-
     expect(response.status).toBe(200);
-    expect(payload).toMatchObject({
+    expect(response.json()).toMatchObject({
       app_version: '0.1.0-test',
       has_snapshot: true,
       peer_id: 'desktop-local'
@@ -195,15 +125,13 @@ function registerWorkspaceVersionProtectionTest() {
 
 function registerReplayProtectionTest() {
   it('rejects replayed signed requests', async () => {
-    process.env.FOLIOLE_COMPANION_SYNC_PORT = '38681';
-    const { ensureLanWorkspaceSyncServer } = await import('./lanWorkspaceSyncServer.js');
-    const status = await ensureLanWorkspaceSyncServer({
+    const { createWorkspaceSyncHttpServer } = await import('./lanWorkspaceSyncServer.js');
+    const server = createWorkspaceSyncHttpServer({
       appVersion: '0.1.0-test',
       peerId: 'desktop-local'
     });
-    expect(status.pending_pair_request_count).toBe(0);
-    const paired = await pairDevice('http://127.0.0.1:38681');
-    const headers = signRequest({
+    const paired = await pairTestDevice(server);
+    const headers = signWorkspaceSyncRequest({
       deviceId: paired.device_id,
       method: 'GET',
       pathWithQuery: '/companion/workspace-version',
@@ -211,10 +139,10 @@ function registerReplayProtectionTest() {
     });
 
     expect(
-      (await fetch('http://127.0.0.1:38681/companion/workspace-version', { headers })).status
+      (await requestWorkspaceSyncServer(server, { headers, path: '/companion/workspace-version' })).status
     ).toBe(200);
     expect(
-      (await fetch('http://127.0.0.1:38681/companion/workspace-version', { headers })).status
+      (await requestWorkspaceSyncServer(server, { headers, path: '/companion/workspace-version' })).status
     ).toBe(409);
   });
 }
@@ -222,20 +150,18 @@ function registerReplayProtectionTest() {
 
 function registerCapacitorCorsOriginTest() {
   it('allows Capacitor localhost origins used by Android WebView discovery', async () => {
-    process.env.FOLIOLE_COMPANION_SYNC_PORT = '38682';
-    const { ensureLanWorkspaceSyncServer } = await import('./lanWorkspaceSyncServer.js');
-
-    await ensureLanWorkspaceSyncServer({
+    const { createWorkspaceSyncHttpServer } = await import('./lanWorkspaceSyncServer.js');
+    const server = createWorkspaceSyncHttpServer({
       appVersion: '0.1.0-test',
       peerId: 'desktop-local'
     });
-
     for (const origin of ['capacitor://localhost', 'http://localhost', 'https://localhost']) {
-      const response = await fetch('http://127.0.0.1:38682/companion/discovery', {
-        headers: { Origin: origin }
+      const response = await requestWorkspaceSyncServer(server, {
+        headers: { Origin: origin },
+        path: '/companion/discovery'
       });
       expect(response.status).toBe(200);
-      expect(response.headers.get('Access-Control-Allow-Origin')).toBe(origin);
+      expect(response.headers['Access-Control-Allow-Origin']).toBe(origin);
     }
   });
 }

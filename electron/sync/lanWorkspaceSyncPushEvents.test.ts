@@ -1,12 +1,11 @@
 import fs from 'node:fs';
+import type http from 'node:http';
 import path from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
-
-import { createTestPairingKeyPair, decryptTestPairingSecret } from './companionPairingProtocolTestSupport.js';
 import { postSigned } from './lanWorkspaceSyncObjects.testSupport.js';
+import { pairTestDevice } from './lanWorkspaceSyncServer.testSupport.js';
 
 const electronMock = vi.hoisted(() => ({
   userDataPath: `${process.cwd()}/.tmp/foliole-sync-push-events-${Math.random().toString(16).slice(2)}`
@@ -25,83 +24,45 @@ vi.mock('./workspaceSyncAppliedEvents.js', () => ({
   notifyWorkspaceSyncApplied: syncAppliedEventsMock.notifyWorkspaceSyncApplied
 }));
 
-async function pairDevice(endpoint: string) {
-  const clientKeyPair = await createTestPairingKeyPair();
-  const createResponse = await fetch(`${endpoint}/companion/pair-requests`, {
-    body: JSON.stringify({
-      device_id: 'android-test-device',
-      device_kind: 'android',
-      device_name: 'Pixel Test',
-      pairing_public_key: clientKeyPair.publicKey,
-      protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
-    }),
-    headers: { 'Content-Type': 'application/json' },
-    method: 'POST'
-  });
-  const pairRequest = (await createResponse.json()) as { pair_request_id: string };
-  const { approveCompanionPairRequest } = await import('./companionPairingRequests.js');
-  approveCompanionPairRequest(pairRequest.pair_request_id);
-  const finalizeResponse = await fetch(`${endpoint}/companion/pair`, {
-    body: JSON.stringify({ pair_request_id: pairRequest.pair_request_id }),
-    headers: { 'Content-Type': 'application/json' },
-    method: 'POST'
-  });
-  const payload = await finalizeResponse.json() as {
-    device_id: string;
-    encrypted_device_secret: Parameters<typeof decryptTestPairingSecret>[0]['encrypted'];
-  };
-  return {
-    device_id: payload.device_id,
-    device_secret: await decryptTestPairingSecret({
-      encrypted: payload.encrypted_device_secret,
-      privateKey: clientKeyPair.privateKey
-    })
-  };
-}
-
 async function resetTestState() {
-  const { stopLanWorkspaceSyncServer } = await import('./lanWorkspaceSyncServer.js');
-  await stopLanWorkspaceSyncServer();
   const { clearCompanionPairRequests } = await import('./companionPairingRequests.js');
   const { clearCompanionRequestNonceCache } = await import('./companionRequestAuth.js');
   clearCompanionPairRequests();
   clearCompanionRequestNonceCache();
   syncAppliedEventsMock.notifyWorkspaceSyncApplied.mockClear();
-  delete process.env.FOLIOLE_COMPANION_SYNC_PORT;
   fs.rmSync(electronMock.userDataPath, { force: true, recursive: true });
   electronMock.userDataPath = fs.mkdtempSync(path.join(process.cwd(), '.tmp', 'foliole-sync-push-events-'));
 }
 
-async function expectRetiredNodeAndReviewPushes(endpoint: string, paired: { device_id: string; device_secret: string }) {
+async function expectRetiredNodeAndReviewPushes(server: http.Server, paired: { device_id: string; device_secret: string }) {
   const nodeResponse = await postSigned(
-    endpoint,
+    server,
     '/companion/sync-node-versions',
     JSON.stringify({ nodes: [{ object_id: 'node-mobile', object_type: 'node' }] }),
     paired
   );
   expect(nodeResponse.status).toBe(410);
-  await expect(nodeResponse.json()).resolves.toEqual({ error: 'sync_json_endpoint_retired' });
+  expect(nodeResponse.json()).toEqual({ error: 'sync_json_endpoint_retired' });
 
   const reviewResponse = await postSigned(
-    endpoint,
+    server,
     '/companion/sync-review-log',
     JSON.stringify({ reviews: [{ op_id: 'op-mobile' }] }),
     paired
   );
   expect(reviewResponse.status).toBe(410);
-  await expect(reviewResponse.json()).resolves.toEqual({ error: 'sync_json_endpoint_retired' });
+  expect(reviewResponse.json()).toEqual({ error: 'sync_json_endpoint_retired' });
 }
 
 describe('lan workspace sync push events', () => {
   afterEach(resetTestState);
 
   it('does not notify renderer windows for retired pushed node and review streams', async () => {
-    process.env.FOLIOLE_COMPANION_SYNC_PORT = '38685';
-    const { ensureLanWorkspaceSyncServer } = await import('./lanWorkspaceSyncServer.js');
-    await ensureLanWorkspaceSyncServer({ appVersion: '0.1.0-test', peerId: 'desktop-local' });
-    const paired = await pairDevice('http://127.0.0.1:38685');
+    const { createWorkspaceSyncHttpServer } = await import('./lanWorkspaceSyncServer.js');
+    const server = createWorkspaceSyncHttpServer({ appVersion: '0.1.0-test', peerId: 'desktop-local' });
+    const paired = await pairTestDevice(server);
 
-    await expectRetiredNodeAndReviewPushes('http://127.0.0.1:38685', paired);
+    await expectRetiredNodeAndReviewPushes(server, paired);
 
     expect(syncAppliedEventsMock.notifyWorkspaceSyncApplied).not.toHaveBeenCalled();
   });

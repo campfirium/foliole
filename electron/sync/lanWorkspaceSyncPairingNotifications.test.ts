@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
 
 import { createTestPairingKeyPair } from './companionPairingProtocolTestSupport.js';
+import { requestWorkspaceSyncServer } from './lanWorkspaceSyncServer.testSupport.js';
 
 const electronMock = vi.hoisted(() => ({
   userDataPath: `${process.cwd()}/.tmp/foliole-companion-pairing-${Math.random().toString(16).slice(2)}`
@@ -33,11 +34,10 @@ vi.mock('../database/workspaceSnapshot.js', () => ({
 }));
 
 async function resetTestState() {
-  const { stopLanWorkspaceSyncServer } = await import('./lanWorkspaceSyncServer.js');
-  await stopLanWorkspaceSyncServer();
+  const { setLanWorkspaceSyncPairRequestHandler } = await import('./lanWorkspaceSyncServer.js');
+  setLanWorkspaceSyncPairRequestHandler(null);
   const { clearCompanionPairRequests } = await import('./companionPairingRequests.js');
   clearCompanionPairRequests();
-  delete process.env.FOLIOLE_COMPANION_SYNC_PORT;
   fs.rmSync(electronMock.userDataPath, { force: true, recursive: true });
   electronMock.userDataPath = fs.mkdtempSync(path.join(process.cwd(), '.tmp', 'foliole-companion-pairing-'));
 }
@@ -46,41 +46,41 @@ describe('lan workspace sync pairing notifications', () => {
   afterEach(resetTestState);
 
   it('notifies the desktop shell when a new pair request is created', async () => {
-    process.env.FOLIOLE_COMPANION_SYNC_PORT = '38689';
-    const { ensureLanWorkspaceSyncServer, setLanWorkspaceSyncPairRequestHandler } = await import(
+    const { createWorkspaceSyncHttpServer, setLanWorkspaceSyncPairRequestHandler } = await import(
       './lanWorkspaceSyncServer.js'
     );
     const onPairRequestCreated = vi.fn();
     setLanWorkspaceSyncPairRequestHandler(onPairRequestCreated);
-    const status = await ensureLanWorkspaceSyncServer({
+    const server = createWorkspaceSyncHttpServer({
       appVersion: '0.1.0',
       peerId: 'desktop-local'
     });
     const firstPairingKey = await createTestPairingKeyPair();
     const secondPairingKey = await createTestPairingKeyPair();
-    const endpoint = `http://127.0.0.1:${status.port}`;
 
-    const response = await fetch(`${endpoint}/companion/pair-requests`, {
-      body: JSON.stringify({
+    const response = await requestWorkspaceSyncServer(server, {
+      body: {
         device_id: 'android-test-device',
         device_kind: 'android-capacitor',
         device_name: 'Android companion android-test-device',
         pairing_public_key: firstPairingKey.publicKey,
         protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
-      }),
+      },
       headers: { 'Content-Type': 'application/json' },
-      method: 'POST'
+      method: 'POST',
+      path: '/companion/pair-requests'
     });
-    const duplicateResponse = await fetch(`${endpoint}/companion/pair-requests`, {
-      body: JSON.stringify({
+    const duplicateResponse = await requestWorkspaceSyncServer(server, {
+      body: {
         device_id: 'android-test-device',
         device_kind: 'android-capacitor',
         device_name: 'Android companion android-test-device',
         pairing_public_key: secondPairingKey.publicKey,
         protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
-      }),
+      },
       headers: { 'Content-Type': 'application/json' },
-      method: 'POST'
+      method: 'POST',
+      path: '/companion/pair-requests'
     });
 
     expect(response.status).toBe(202);

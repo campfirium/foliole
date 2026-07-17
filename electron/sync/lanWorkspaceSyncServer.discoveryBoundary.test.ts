@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { requestWorkspaceSyncServer } from './lanWorkspaceSyncServer.testSupport.js';
+
 const electronMock = vi.hoisted(() => ({
   userDataPath: `${process.cwd()}/.tmp/foliole-companion-pairing-${Math.random().toString(16).slice(2)}`
 }));
@@ -29,30 +31,24 @@ vi.mock('../database/workspaceSnapshot.js', () => ({
 }));
 
 async function resetLanWorkspaceSyncServerTestState() {
-  const { stopLanWorkspaceSyncServer } = await import('./lanWorkspaceSyncServer.js');
-  await stopLanWorkspaceSyncServer();
   const { clearCompanionPairRequests } = await import('./companionPairingRequests.js');
   const { clearCompanionRequestNonceCache } = await import('./companionRequestAuth.js');
   clearCompanionPairRequests();
   clearCompanionRequestNonceCache();
-  delete process.env.FOLIOLE_COMPANION_SYNC_PORT;
 }
 
 describe('lan workspace sync server discovery boundary', () => {
   afterEach(resetLanWorkspaceSyncServerTestState);
 
   it('keeps unauthenticated discovery and health payloads minimal', async () => {
-    process.env.FOLIOLE_COMPANION_SYNC_PORT = '38688';
-    const { ensureLanWorkspaceSyncServer } = await import('./lanWorkspaceSyncServer.js');
-
-    await ensureLanWorkspaceSyncServer({
+    const { createWorkspaceSyncHttpServer } = await import('./lanWorkspaceSyncServer.js');
+    const server = createWorkspaceSyncHttpServer({
       appVersion: '0.1.0-test',
       peerId: 'desktop-local'
     });
-
-    const discoveryResponse = await fetch('http://127.0.0.1:38688/companion/discovery');
+    const discoveryResponse = await requestWorkspaceSyncServer(server, { path: '/companion/discovery' });
     expect(discoveryResponse.status).toBe(200);
-    const discoveryPayload = await discoveryResponse.json() as Record<string, unknown>;
+    const discoveryPayload = discoveryResponse.json<Record<string, unknown>>();
     expect(discoveryPayload).toMatchObject({
       desktop_name: 'Foliole Desktop',
       pairing_mode: 'desktop-confirm',
@@ -60,9 +56,9 @@ describe('lan workspace sync server discovery boundary', () => {
     });
     expect(discoveryPayload).not.toHaveProperty('host_name');
 
-    const healthResponse = await fetch('http://127.0.0.1:38688/health');
+    const healthResponse = await requestWorkspaceSyncServer(server, { path: '/health' });
     expect(healthResponse.status).toBe(200);
-    await expect(healthResponse.json()).resolves.toEqual({ ok: true });
+    expect(healthResponse.json()).toEqual({ ok: true });
   });
 
   it('uses bounded local-network HTTP server timeouts', async () => {

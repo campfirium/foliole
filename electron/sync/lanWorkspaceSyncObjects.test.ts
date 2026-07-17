@@ -1,12 +1,11 @@
 import fs from 'node:fs';
+import type http from 'node:http';
 import path from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
-
-import { createTestPairingKeyPair, decryptTestPairingSecret } from './companionPairingProtocolTestSupport.js';
 import { postSigned, signRequest } from './lanWorkspaceSyncObjects.testSupport.js';
+import { pairTestDevice, requestWorkspaceSyncServer } from './lanWorkspaceSyncServer.testSupport.js';
 
 const electronMock = vi.hoisted(() => ({
   userDataPath: `${process.cwd()}/.tmp/foliole-sync-objects-${Math.random().toString(16).slice(2)}`
@@ -84,83 +83,43 @@ vi.mock('./workspaceSyncAppliedEvents.js', () => ({
 vi.mock('../database/nodeSyncVersions.js', () => ({
   flushDirtyNodeSyncVersions: syncDatabaseMock.flushDirtyNodeSyncVersions
 }));
-async function pairDevice(endpoint: string) {
-  const clientKeyPair = await createTestPairingKeyPair();
-  const createResponse = await fetch(`${endpoint}/companion/pair-requests`, {
-    body: JSON.stringify({
-      device_id: 'android-test-device',
-      device_kind: 'android',
-      device_name: 'Pixel Test',
-      pairing_public_key: clientKeyPair.publicKey,
-      protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
-    }),
-    headers: { 'Content-Type': 'application/json' },
-    method: 'POST'
-  });
-  const pairRequest = (await createResponse.json()) as { pair_request_id: string };
-  const { approveCompanionPairRequest } = await import('./companionPairingRequests.js');
-  approveCompanionPairRequest(pairRequest.pair_request_id);
-  const finalizeResponse = await fetch(`${endpoint}/companion/pair`, {
-    body: JSON.stringify({ pair_request_id: pairRequest.pair_request_id }),
-    headers: { 'Content-Type': 'application/json' },
-    method: 'POST'
-  });
-  const payload = await finalizeResponse.json() as {
-    device_id: string;
-    encrypted_device_secret: Parameters<typeof decryptTestPairingSecret>[0]['encrypted'];
-  };
-  return {
-    device_id: payload.device_id,
-    device_secret: await decryptTestPairingSecret({
-      encrypted: payload.encrypted_device_secret,
-      privateKey: clientKeyPair.privateKey
-    })
-  };
-}
-
 async function resetTestState() {
-  const { stopLanWorkspaceSyncServer } = await import('./lanWorkspaceSyncServer.js');
-  await stopLanWorkspaceSyncServer();
   const { clearCompanionPairRequests } = await import('./companionPairingRequests.js');
   const { clearCompanionRequestNonceCache } = await import('./companionRequestAuth.js');
   clearCompanionPairRequests();
   clearCompanionRequestNonceCache();
-  delete process.env.FOLIOLE_COMPANION_SYNC_PORT;
   fs.rmSync(electronMock.userDataPath, { force: true, recursive: true });
   electronMock.userDataPath = fs.mkdtempSync(path.join(process.cwd(), '.tmp', 'foliole-sync-objects-'));
 }
 
-async function fetchSignedGet(endpoint: string, pathWithQuery: string, paired: { device_id: string; device_secret: string }) {
-  return await fetch(`${endpoint}${pathWithQuery}`, {
-    headers: signRequest({ deviceId: paired.device_id, method: 'GET', pathWithQuery, secret: paired.device_secret })
+async function fetchSignedGet(server: http.Server, pathWithQuery: string, paired: { device_id: string; device_secret: string }) {
+  return await requestWorkspaceSyncServer(server, {
+    headers: signRequest({ deviceId: paired.device_id, method: 'GET', pathWithQuery, secret: paired.device_secret }),
+    path: pathWithQuery
   });
 }
 
-async function expectRetiredGet(endpoint: string, pathWithQuery: string, paired: { device_id: string; device_secret: string }) {
-  const response = await fetchSignedGet(endpoint, pathWithQuery, paired);
+async function expectRetiredGet(server: http.Server, pathWithQuery: string, paired: { device_id: string; device_secret: string }) {
+  const response = await fetchSignedGet(server, pathWithQuery, paired);
   expect(response.status).toBe(410);
-  await expect(response.json()).resolves.toEqual({ error: 'sync_json_endpoint_retired' });
+  expect(response.json()).toEqual({ error: 'sync_json_endpoint_retired' });
 }
 
 async function testRetiresSyncStreamsForPairedDevices() {
-  process.env.FOLIOLE_COMPANION_SYNC_PORT = '38683';
-  const { ensureLanWorkspaceSyncServer } = await import('./lanWorkspaceSyncServer.js');
-  await ensureLanWorkspaceSyncServer({ appVersion: '0.1.0-test', peerId: 'desktop-local' });
-
-  expect((await fetch('http://127.0.0.1:38683/companion/sync-index')).status).toBe(401);
-
-  const endpoint = 'http://127.0.0.1:38683';
-  const paired = await pairDevice('http://127.0.0.1:38683');
-  await expectRetiredGet(endpoint, '/companion/sync-state?after_state_seq=0&limit=500', paired);
-  await expectRetiredGet(endpoint, '/companion/sync-index', paired);
-  await expectRetiredGet(endpoint, '/companion/sync-objects?object_type=setting&object_id=setting%3Atheme', paired);
+  const { createWorkspaceSyncHttpServer } = await import('./lanWorkspaceSyncServer.js');
+  const server = createWorkspaceSyncHttpServer({ appVersion: '0.1.0-test', peerId: 'desktop-local' });
+  expect((await requestWorkspaceSyncServer(server, { path: '/companion/sync-index' })).status).toBe(401);
+  const paired = await pairTestDevice(server);
+  await expectRetiredGet(server, '/companion/sync-state?after_state_seq=0&limit=500', paired);
+  await expectRetiredGet(server, '/companion/sync-index', paired);
+  await expectRetiredGet(server, '/companion/sync-objects?object_type=setting&object_id=setting%3Atheme', paired);
   await expectRetiredGet(
-    endpoint,
+    server,
     '/companion/sync-node-versions?after_created_at=2026-04-25T00%3A00%3A00.000Z&after_change_id=desktop%230&limit=500',
     paired
   );
   await expectRetiredGet(
-    endpoint,
+    server,
     '/companion/sync-review-log?after_created_at=2026-04-25T00%3A00%3A00.000Z&after_change_id=op-0&limit=500',
     paired
   );
@@ -208,20 +167,19 @@ function buildMobileStateObjectsBody() {
 }
 
 async function testRetiresPushedMobileStateObjects() {
-  process.env.FOLIOLE_COMPANION_SYNC_PORT = '38684';
-  const { ensureLanWorkspaceSyncServer } = await import('./lanWorkspaceSyncServer.js');
-  await ensureLanWorkspaceSyncServer({ appVersion: '0.1.0-test', peerId: 'desktop-local' });
-  const paired = await pairDevice('http://127.0.0.1:38684');
+  const { createWorkspaceSyncHttpServer } = await import('./lanWorkspaceSyncServer.js');
+  const server = createWorkspaceSyncHttpServer({ appVersion: '0.1.0-test', peerId: 'desktop-local' });
+  const paired = await pairTestDevice(server);
 
   const response = await postSigned(
-    'http://127.0.0.1:38684',
+    server,
     '/companion/sync-objects',
     buildMobileStateObjectsBody(),
     paired
   );
 
   expect(response.status).toBe(410);
-  await expect(response.json()).resolves.toEqual({ error: 'sync_json_endpoint_retired' });
+  expect(response.json()).toEqual({ error: 'sync_json_endpoint_retired' });
 }
 
 describe('lan workspace sync objects', () => {
