@@ -33,12 +33,20 @@ const savedThreadMessages = [
 ];
 
 export async function openAssistantPanel(desktopWindow: Page) {
+  const activeSurface = desktopWindow.locator('[data-panel-scale-id="right-panel:assistant"]');
   const directButton = desktopWindow.getByRole('button', { name: /Foliole Aide.*panel|Foliole Aide面板/ });
-  if (await directButton.count()) {
+  const moreButton = desktopWindow.getByRole('button', { name: /^(More right sidebar panels|更多右侧栏面板)$/ });
+  await expect.poll(async () =>
+    await activeSurface.isVisible()
+      || await directButton.first().isVisible()
+      || await moreButton.isVisible()
+  ).toBe(true);
+  if (await activeSurface.isVisible()) return;
+  if (await directButton.first().isVisible()) {
     await directButton.first().click();
     return;
   }
-  await desktopWindow.getByRole('button', { name: /^(More right sidebar panels|更多右侧栏面板)$/ }).click();
+  await moreButton.click();
   await desktopWindow.getByRole('menuitem', { name: /Foliole Aide/ }).click();
 }
 

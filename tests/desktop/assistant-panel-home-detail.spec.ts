@@ -16,6 +16,36 @@ const screenshotPath = path.join(
   'assistant-panel-home-detail.png'
 );
 const selectedThreadNotice = /(this panel shows new messages from this app session|这个面板会显示本次应用会话的新消息)/;
+
+test('Aide keeps the home composer at the bottom of the panel', async ({ desktopApp, desktopWindow }, testInfo) => {
+  await desktopWindow.evaluate(() => {
+    localStorage.setItem('foliole-workspace-right-sidebar-active-panel', 'assistant');
+    localStorage.setItem('foliole-workspace-right-sidebar-width', '340');
+    localStorage.setItem('foliole-content-region-scales', JSON.stringify({ 'right-panel:assistant': 130 }));
+    localStorage.setItem('foliole-aide-enabled', 'true');
+  });
+  await desktopWindow.reload();
+  await installAssistantIpcMock(desktopApp);
+  await openAssistantPanel(desktopWindow);
+
+  const surface = desktopWindow.locator('[data-panel-scale-id="right-panel:assistant"]');
+  const composer = desktopWindow.getByLabel(/^(Foliole Aide message|Foliole Aide 消息)$/).locator('xpath=ancestor::form');
+  await expect(desktopWindow.getByRole('heading', { name: 'Aide' })).toBeVisible();
+  await expect(desktopWindow.getByText(/Use Codex inside Foliole|\u5728 Foliole \u5de5\u4f5c\u533a\u4e2d\u4f7f\u7528 Codex/)).toHaveCount(0);
+  const [surfaceBounds, composerBounds] = await Promise.all([surface.boundingBox(), composer.boundingBox()]);
+  expect(surfaceBounds).not.toBeNull();
+  expect(composerBounds).not.toBeNull();
+  const bottomGap = (surfaceBounds?.y ?? 0) + (surfaceBounds?.height ?? 0)
+    - (composerBounds?.y ?? 0) - (composerBounds?.height ?? 0);
+  expect(bottomGap).toBeGreaterThanOrEqual(0);
+  expect(bottomGap).toBeLessThanOrEqual(24);
+
+  const homeScreenshot = path.join(process.cwd(), '.tmp', 'artifacts', 'assistant-panel-home-layout.png');
+  await mkdir(path.dirname(homeScreenshot), { recursive: true });
+  await surface.screenshot({ path: homeScreenshot });
+  await testInfo.attach('assistant-panel-home-layout', { path: homeScreenshot, contentType: 'image/png' });
+});
+
 test('Aide panel keeps home and conversation detail separate', async ({ desktopApp, desktopWindow }, testInfo) => {
   await desktopWindow.evaluate(() => {
     localStorage.setItem('foliole-workspace-right-sidebar-active-panel', 'assistant');

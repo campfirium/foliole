@@ -58,7 +58,7 @@ export function PanelScaleSurface(props: {
         onPointerDownCapture={focusPanel}
       >
         <div
-          className="flex min-h-0 min-w-0 origin-top-left"
+          className="flex h-full min-h-0 min-w-0 w-full flex-col origin-top-left"
           style={{ height: '100%', width: '100%', zoom: scale }}
         >
           {props.children}

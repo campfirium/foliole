@@ -72,10 +72,10 @@ export const ZH_HANS_DESKTOP_NAVIGATION_TRANSLATIONS: Partial<Record<Translation
   'desktop.rightPanel.highlights': '高亮',
   'desktop.rightPanel.backlinks': '反向链接',
   'desktop.rightPanel.assistant': 'Foliole Aide',
+  'desktop.rightPanel.assistant.title': 'Aide',
   'desktop.rightPanel.performance': '性能',
   'desktop.rightPanel.scheduling': '调度',
   'desktop.rightPanel.aria': '{label}面板',
-  'desktop.rightPanel.assistant.description': '在 Foliole 工作区中使用 Codex。',
   'desktop.rightPanel.assistant.codexDescription':
     '需要登录 OpenAI。',
   'desktop.rightPanel.assistant.quotaDescription':

@@ -76,11 +76,8 @@ function FolioleAideCapabilityGate(props: {
       <div className="mx-auto flex w-full max-w-[13.5rem] -translate-y-[6vh] flex-col items-center text-center">
         <div className="flex flex-col items-center gap-3">
           <h2 className="m-0 text-[26px] font-semibold leading-8 text-foreground/62">
-            {t('desktop.rightPanel.assistant')}
+            {t('desktop.rightPanel.assistant.title')}
           </h2>
-          <p className="m-0 text-ui-md leading-6 text-foreground/54">
-            {t('desktop.rightPanel.assistant.description')}
-          </p>
         </div>
         <div className="mt-6 flex flex-col items-center gap-2">
           <p className="m-0 text-ui-md leading-6 text-foreground/50">

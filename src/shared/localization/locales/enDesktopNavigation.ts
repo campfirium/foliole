@@ -71,10 +71,10 @@ export const EN_DESKTOP_NAVIGATION_TRANSLATIONS = {
   'desktop.rightPanel.highlights': 'Highlights',
   'desktop.rightPanel.backlinks': 'Backlinks',
   'desktop.rightPanel.assistant': 'Foliole Aide',
+  'desktop.rightPanel.assistant.title': 'Aide',
   'desktop.rightPanel.performance': 'Performance',
   'desktop.rightPanel.scheduling': 'Scheduling',
   'desktop.rightPanel.aria': '{label} panel',
-  'desktop.rightPanel.assistant.description': 'Use Codex inside Foliole.',
   'desktop.rightPanel.assistant.codexDescription':
     'Requires an OpenAI sign-in.',
   'desktop.rightPanel.assistant.quotaDescription':

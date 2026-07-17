@@ -3,9 +3,7 @@ import { ArrowLeft, History, PenLine } from 'lucide-react';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   AppIconButton,
-  inspectorListHeadingClassName,
-  inspectorListInsetPaddingClassName,
-  inspectorListMetaClassName
+  inspectorListInsetPaddingClassName
 } from '../../shared/ui';
 
 export function AssistantPanelToolbar(props: {
@@ -28,10 +26,10 @@ export function AssistantPanelToolbar(props: {
             />
           ) : null}
           <h2
-            className={`m-0 min-w-0 truncate ${props.conversationTitle ? 'text-ui-md font-medium leading-6 text-foreground/86' : inspectorListHeadingClassName}`}
+            className="m-0 min-w-0 truncate text-ui-md font-medium leading-6 text-foreground/86"
             title={props.conversationTitle ?? undefined}
           >
-            {props.conversationTitle ?? t('desktop.rightPanel.assistant')}
+            {props.conversationTitle ?? t('desktop.rightPanel.assistant.title')}
           </h2>
         </div>
         <div className="flex items-center gap-1">
@@ -50,14 +48,5 @@ export function AssistantPanelToolbar(props: {
         </div>
       </div>
     </header>
-  );
-}
-
-export function AssistantHomeIntro() {
-  const t = useTranslation();
-  return (
-    <p className={`${inspectorListInsetPaddingClassName} ${inspectorListMetaClassName} py-2`}>
-      {t('desktop.rightPanel.assistant.description')}
-    </p>
   );
 }

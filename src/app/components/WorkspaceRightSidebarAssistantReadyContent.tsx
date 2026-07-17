@@ -11,10 +11,7 @@ import {
 import { useWorkspaceRightSidebarAssistantPanelController } from './useWorkspaceRightSidebarAssistantPanelController';
 import { WorkspaceRightSidebarAssistantComposer } from './WorkspaceRightSidebarAssistantComposer';
 import { WorkspaceRightSidebarAssistantConversation } from './WorkspaceRightSidebarAssistantConversation';
-import {
-  AssistantHomeIntro,
-  AssistantPanelToolbar
-} from './WorkspaceRightSidebarAssistantHeaders';
+import { AssistantPanelToolbar } from './WorkspaceRightSidebarAssistantHeaders';
 import { WorkspaceRightSidebarAssistantThreadList } from './WorkspaceRightSidebarAssistantThreadList';
 
 export function FolioleAideReadyContent(props: {
@@ -94,10 +91,11 @@ function AssistantHomeView(props: {
 }) {
   const t = useTranslation();
   return (
-    <div className="app-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto py-3">
-      <AssistantHomeIntro />
-      {props.historyVisible ? <AssistantHistoryList {...props} /> : null}
-      <div className={`${inspectorListInsetPaddingClassName} mt-auto py-3`}>
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="app-scrollbar min-h-0 flex-1 overflow-y-auto py-3">
+        {props.historyVisible ? <AssistantHistoryList {...props} /> : null}
+      </div>
+      <div className={`${inspectorListInsetPaddingClassName} shrink-0 pb-3 pt-2`}>
         <WorkspaceRightSidebarAssistantComposer
           contextFollowDescription={t('desktop.rightPanel.assistant.followCurrentMaterialDescription')}
           contextFollowEnabled={props.controller.followCurrentMaterial}
