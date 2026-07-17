@@ -22,11 +22,7 @@ import { handleInvokeRequest } from './ipc/commands.js';
 import {
   IPC_DIAGNOSTIC_LOG_CHANNEL,
   IPC_INVOKE_CHANNEL,
-  IPC_WINDOW_CLOSE_CHANNEL,
-  IPC_WINDOW_IS_MAXIMIZED_CHANNEL,
-  IPC_WINDOW_MINIMIZE_CHANNEL,
   IPC_WINDOW_RESIZED_EVENT_CHANNEL,
-  IPC_WINDOW_TOGGLE_MAXIMIZE_CHANNEL,
   type InvokeRequest
 } from './ipc/contracts.js';
 import { bindHotkeyRecorderInput } from './ipc/hotkeyRecorderInput.js';
@@ -103,24 +99,7 @@ void appendBootEvent('main_process_start', {
   });
 });
 
-function bindWindowIpc(window: ElectronBrowserWindow) {
-  ipcMain.handle(IPC_WINDOW_MINIMIZE_CHANNEL, () => {
-    window.minimize();
-  });
-
-  ipcMain.handle(IPC_WINDOW_TOGGLE_MAXIMIZE_CHANNEL, () => {
-    if (window.isMaximized()) {
-      window.unmaximize();
-    } else {
-      window.maximize();
-    }
-  });
-
-  ipcMain.handle(IPC_WINDOW_IS_MAXIMIZED_CHANNEL, () => window.isMaximized());
-  ipcMain.handle(IPC_WINDOW_CLOSE_CHANNEL, () => {
-    window.close();
-  });
-
+function bindWindowResizeEvents(window: ElectronBrowserWindow) {
   const publishResize = () => {
     window.webContents.send(IPC_WINDOW_RESIZED_EVENT_CHANNEL);
   };
@@ -185,7 +164,7 @@ async function createMainWindow(
     isMaximized: window.isMaximized(),
     show: window.isVisible()
   });
-  bindWindowIpc(window);
+  bindWindowResizeEvents(window);
   bindHotkeyRecorderInput(window);
   if (!startupOptions.deferDatabaseBackedBindings) {
     bindWindowReadingProgressFlush(
