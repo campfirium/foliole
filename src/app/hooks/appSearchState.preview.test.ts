@@ -16,7 +16,7 @@ function createArgs() {
       closeTrashView: vi.fn()
     },
     virtualView: {
-      closeVirtualView: vi.fn()
+      restoreBrowseView: vi.fn()
     },
     ws: {
       nodeOrder: [],

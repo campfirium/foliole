@@ -46,12 +46,13 @@ function createSessionActions(args: BuildLayoutPropsArgs) {
   const exitReviewMode = () => {
     args.exitReviewSession();
     args.exitStudyMode();
+    args.onOpenNotesView();
   };
   const enterReviewMode = () =>
     args.reviewSettings.isReviewSchedulerSettingsReady &&
     enterReviewModeSession({
       onReviewQueueEmpty: args.onReviewQueueEmpty,
-      onReviewSessionStarted: args.onOpenNotesView,
+      onReviewSessionStarted: args.onOpenReviewView,
       startReviewSession: () => args.startReviewSession(args.nowIso),
       startStudyMode: args.startStudyMode
     });
@@ -190,7 +191,7 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
   };
 
   const flatProps: WorkspaceLayoutFlatProps = {
-    activeNodeId: args.activeNodeId, isWorkspaceHydrated: args.isWorkspaceHydrated, canGoBack: args.canGoBack, canGoForward: args.canGoForward, canGoParent: args.canGoParent, contextMenu: args.contextMenu,
+    activeNodeId: args.activeNodeId, browseRootNodeId: args.browseRootNodeId, isWorkspaceHydrated: args.isWorkspaceHydrated, canGoBack: args.canGoBack, canGoForward: args.canGoForward, canGoParent: args.canGoParent, contextMenu: args.contextMenu,
     editorAdapterRef: args.editorAdapterRef, editorContent, isImmersiveMode: args.isImmersiveMode, isEditorReadOnly: args.isViewingTrashNode ? true : previewNodeId ? !previewNode || !isNodeDocumentLoaded(previewNode) : false, isPriorityQuickSetActive: args.isPriorityQuickSetActive, editorNodeId: args.editorNodeId, ...definedProps({ editorNodeViewState: args.editorNodeViewState }),
     onNodePriorityChange: args.onNodePriorityChange, onNodeDesiredRetentionChange: args.onNodeDesiredRetentionChange, onNodeShortTermChange: args.onNodeShortTermChange, onEnterPriorityQuickSet: args.onEnterPriorityQuickSet, priorityQuickSetShortcutLabel: args.priorityQuickSetShortcutLabel,
     canStartStudyMode: isReviewReady && args.canStartStudyMode, reviewPreview: args.reviewPreview, isStudyMode: args.isStudyMode, isImportManagementOpen: args.isImportManagementOpen, isSettingsOpen: args.isSettingsOpen, requestedSettingsCategory: args.requestedSettingsCategory, requestedSettingsDialog: args.requestedSettingsDialog, isReviewEditing: args.isReviewEditing,

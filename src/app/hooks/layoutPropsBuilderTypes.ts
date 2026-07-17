@@ -21,6 +21,7 @@ import type { StartStudyModeOptions } from './reviewModeSessionActions';
 
 export interface BuildLayoutPropsArgs {
   activeNodeId: string | null;
+  browseRootNodeId: string;
   isWorkspaceHydrated: boolean;
   reviewSettings: {
     isReviewSchedulerSettingsReady: boolean;
@@ -108,6 +109,7 @@ export interface BuildLayoutPropsArgs {
   setNodeViewState: WorkspaceLayoutDocumentProps['setNodeViewState'];
   onEditorReady: WorkspaceLayoutDocumentProps['onEditorReady'];
   onOpenNotesView: () => void;
+  onOpenReviewView: () => void;
   onReviewQueueEmpty: () => void;
   onCreateChildNode: WorkspaceLayoutNodeListProps['onCreateChildNode'];
   onOpenMoveToNode: () => void;

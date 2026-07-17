@@ -25,7 +25,7 @@ it('opens imported external search results as internal Topics', () => {
       closeTrashView: () => undefined
     },
     virtualView: {
-      closeVirtualView: () => undefined
+      restoreBrowseView: () => undefined
     },
     ws: {
       nodeOrder: [],

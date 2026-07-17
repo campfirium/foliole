@@ -16,6 +16,7 @@ import {
 
 const readingPayload = {
   activeNodeId: 'topic-1',
+  browseRootNodeId: 'special-home',
   nodeViewStates: [{ nodeId: 'topic-1', scrollTop: 42, selectionFrom: null, selectionTo: null }],
   source: 'user-scroll' as const,
   updatedAt: '2026-07-10T10:00:00.000Z'
@@ -68,6 +69,7 @@ describe('pending durable reading mutations', () => {
     expect(resolvePendingReadingProgress(first)).toBe(false);
     expect(mergePendingReadingProgress(null)).toEqual({
       activeNodeId: 'topic-1',
+      browseRootNodeId: 'special-home',
       nodeViewStateById: {
         'topic-1': { scrollTop: 84, selectionFrom: 4, selectionTo: 8, updatedAt: latestPayload.updatedAt }
       }
@@ -85,6 +87,20 @@ describe('pending durable reading mutations', () => {
         'topic-1': { scrollTop: 99, selectionFrom: null, selectionTo: null, updatedAt: '2026-07-10T11:00:00.000Z' }
       }
     })?.nodeViewStateById['topic-1']?.scrollTop).toBe(99);
+  });
+
+  it('keeps the runtime browse root when replaying a legacy pending payload', () => {
+    stagePendingReadingProgress({
+      activeNodeId: 'topic-1',
+      nodeViewStates: [],
+      updatedAt: '2026-07-10T10:00:00.000Z'
+    });
+
+    expect(mergePendingReadingProgress({
+      activeNodeId: 'topic-2',
+      browseRootNodeId: 'folder-a',
+      nodeViewStateById: {}
+    })?.browseRootNodeId).toBe('folder-a');
   });
 
   it('ignores malformed fixed-field payloads during hydrate', () => {

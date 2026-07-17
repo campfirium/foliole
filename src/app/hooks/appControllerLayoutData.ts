@@ -13,6 +13,7 @@ export function createLayoutDataArgs(
   const nav = createLayoutNav(args, onSelectNode);
   return {
     activeNodeId: args.ws.activeNodeId,
+    browseRootNodeId: args.ws.browseRootNodeId,
     isWorkspaceHydrated: args.isWorkspaceHydrated,
     reviewSettings: args.reviewSettings,
     canGoBack: resolveLayoutCanGoBack(args),

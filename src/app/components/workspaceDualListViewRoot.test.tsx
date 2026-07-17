@@ -23,12 +23,14 @@ function createNode(id: string, kind: NonNullable<WorkspaceListNode['kind']>): W
 
 function PreferredFolderProbe(props: {
   activeNodeId: string | null;
+  browseRootNodeId: string;
   listNodesById: WorkspaceListNodesById;
   onCommit: (preferredFolderColumnId: string | null) => void;
 }) {
-  const { activeNodeId, listNodesById, onCommit } = props;
+  const { activeNodeId, browseRootNodeId, listNodesById, onCommit } = props;
   const viewRoot = useWorkspaceDualListViewRoot({
     activeNodeId,
+    browseRootNodeId,
     isExternalViewOpen: false,
     isTrashViewOpen: false,
     isVirtualViewOpen: false,
@@ -43,15 +45,17 @@ function PreferredFolderProbe(props: {
   return null;
 }
 
-it('resolves the active folder root in the first committed frame', () => {
+it('resolves the persisted browse root independently from the active topic', () => {
   const onCommit = vi.fn();
   const listNodesById = {
-    'folder-a': createNode('folder-a', 'folder')
+    'folder-a': createNode('folder-a', 'folder'),
+    'topic-a': createNode('topic-a', 'topic')
   };
 
   render(
     <PreferredFolderProbe
-      activeNodeId="folder-a"
+      activeNodeId="topic-a"
+      browseRootNodeId="folder-a"
       listNodesById={listNodesById}
       onCommit={onCommit}
     />

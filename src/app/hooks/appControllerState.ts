@@ -84,6 +84,7 @@ function useWorkspaceStudyModeState(args: {
 
 function useWorkspaceReadingProgressPersistence(args: {
   activeNodeId: string | null;
+  browseRootNodeId: string;
   editorRef: ReturnType<typeof useAppRuntime>['editorRef'];
   isImmersiveMode: boolean;
   isViewingTrashNode: boolean;
@@ -95,6 +96,7 @@ function useWorkspaceReadingProgressPersistence(args: {
 }) {
   useReadingProgressSync({
     activeNodeId: args.activeNodeId,
+    browseRootNodeId: args.browseRootNodeId,
     editorRef: args.editorRef,
     getReadingPositionSelection: () =>
       args.readingPositionRef.current.nodeId === args.activeNodeId ? args.readingPositionRef.current.selection : null,
@@ -187,7 +189,12 @@ export function useWorkspaceControllerState(
   useWorkspaceActiveNodeDocument(ws.activeNodeId);
   useWorkspaceActiveNodeDocument(trash.selectedTrashNodeId, { includeTrashed: true, keepWarm: true });
   const activeNode = ws.activeNodeId ? ws.nodesById[ws.activeNodeId] : undefined;
-  const virtualView = useVirtualNodeView();
+  const browseRootNode = ws.nodesById[ws.browseRootNodeId];
+  const virtualView = useVirtualNodeView({
+    browseRootNodeId: ws.browseRootNodeId,
+    browseRootSpecialKind: browseRootNode?.specialKind,
+    setBrowseRootNode: ws.setBrowseRootNode
+  });
   const externalView = useExternalLibraryView();
   useRemovedSourcesWarmup(isWorkspaceHydrated);
   const selectedTrashNode = trash.selectedTrashNodeId ? ws.nodesById[trash.selectedTrashNodeId] : undefined;
@@ -208,6 +215,7 @@ export function useWorkspaceControllerState(
   useEditorDraftCloseFlushRegistration(isWorkspaceHydrated, runtime.flushPendingEditorDraftImmediately);
   useWorkspaceReadingProgressPersistence({
     activeNodeId: ws.activeNodeId,
+    browseRootNodeId: ws.browseRootNodeId,
     editorRef: runtime.editorRef,
     isImmersiveMode: runtime.isImmersiveMode,
     isViewingTrashNode: runtime.isViewingTrashNode,

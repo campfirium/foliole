@@ -92,6 +92,7 @@ function createWorkspaceActionStubs() {
     setRightSidebarWidth: () => undefined,
     setRightSidebarCollapsed: () => undefined,
     setActiveNode: () => undefined,
+    setBrowseRootNode: () => undefined,
     ...createWorkspaceEditActionStubs()
   };
 }

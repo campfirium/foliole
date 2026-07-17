@@ -73,6 +73,7 @@ function buildDualTreeSwitchState() {
 it('shows folders in the left tree and topics in the adjacent topic tree', () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'folder-projects',
+    browseRootNodeId: 'folder-projects',
     nodeOrder: ['folder-projects', 'folder-research', 'topic-overview', 'topic-child', 'item-card'],
     nodesById: {
       ...state.nodesById,

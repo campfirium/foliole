@@ -57,6 +57,7 @@ function isReadingProgressEntry(value: unknown): value is PendingEntry<Workspace
   if (!isEntry<WorkspaceReadingProgressSavePayload>(value) || !isRecord(value.payload)) return false;
   const payload = value.payload;
   if (payload.activeNodeId !== null && typeof payload.activeNodeId !== 'string') return false;
+  if (payload.browseRootNodeId !== undefined && typeof payload.browseRootNodeId !== 'string') return false;
   if (typeof payload.updatedAt !== 'string' || !Array.isArray(payload.nodeViewStates)) return false;
   return value.signature === signature(payload) && payload.nodeViewStates.every((state) => (
     isRecord(state) && typeof state.nodeId === 'string' && typeof state.scrollTop === 'number' &&
@@ -197,7 +198,15 @@ export function mergePendingReadingProgress(
       updatedAt
     };
   }
-  return { activeNodeId: pending.activeNodeId, nodeViewStateById };
+  return {
+    activeNodeId: pending.activeNodeId,
+    ...(pending.browseRootNodeId !== undefined
+      ? { browseRootNodeId: pending.browseRootNodeId }
+      : current?.browseRootNodeId !== undefined
+        ? { browseRootNodeId: current.browseRootNodeId }
+        : {}),
+    nodeViewStateById
+  };
 }
 
 export function resetPendingDurableMutationsForTests() {

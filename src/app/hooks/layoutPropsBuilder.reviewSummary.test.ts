@@ -122,12 +122,14 @@ it('does not derive review queue state from default scheduler settings before se
 it('does not enter review mode from the explicit exit action', () => {
   const exitReviewSession = vi.fn();
   const exitStudyMode = vi.fn();
+  const onOpenNotesView = vi.fn();
   const startReviewSession = vi.fn(() => false);
   const props = buildLayoutProps({
     ...reviewGateLayoutArgs,
     exitReviewSession,
     exitStudyMode,
     isStudyMode: false,
+    onOpenNotesView,
     reviewSettings: {
       isReviewSchedulerSettingsReady: true,
       reviewSchedulerSettings: DEFAULT_REVIEW_SCHEDULER_SETTINGS
@@ -139,6 +141,7 @@ it('does not enter review mode from the explicit exit action', () => {
 
   expect(exitReviewSession).toHaveBeenCalledTimes(1);
   expect(exitStudyMode).toHaveBeenCalledTimes(1);
+  expect(onOpenNotesView).toHaveBeenCalledTimes(1);
   expect(startReviewSession).not.toHaveBeenCalled();
 });
 

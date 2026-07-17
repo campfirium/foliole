@@ -5,6 +5,7 @@ import { createEmptyEditorOperationHistory } from '../features/editor/model/edit
 import { DEFAULT_REVIEW_SESSION_MODE } from '../features/review/model/reviewSessionMode';
 
 import { createEmptyWorkspaceActionHistory, createWorkspaceActionHistoryActions } from './workspaceActionHistory';
+import { resolveWorkspaceBrowseRootNodeId } from './workspaceBrowseRoot';
 import { isCanonicalVisibleNodeId } from './workspaceCanonicalSelectors';
 import { createWorkspaceEditorOperationHistoryActions } from './workspaceEditorOperationHistory';
 import { loadWorkspaceLayoutPreferenceSnapshot } from './workspaceLayoutPrefs';
@@ -48,6 +49,7 @@ const defaultLayoutState: WorkspaceLayoutState = {
 export function createInitialWorkspaceState(now = new Date()): Pick<
   WorkspaceState,
   | 'activeNodeId'
+  | 'browseRootNodeId'
   | 'appActionHistory'
   | 'capturedWorkspaceVersion'
   | 'editorOperationHistory'
@@ -126,6 +128,15 @@ const workspaceStore = create<WorkspaceState>()(
             reviewSession: reconcileReviewSession(state, nodeId)
           };
         });
+      },
+      setBrowseRootNode: (nodeId) => {
+        boundaryAwareSet((state) => ({
+          browseRootNodeId: resolveWorkspaceBrowseRootNodeId({
+            browseRootNodeId: nodeId,
+            nodesById: state.nodesById,
+            trashedNodeIds: state.trashedNodeIds
+          })
+        }));
       },
       ...createWorkspaceNavigationActions(boundaryAwareSet),
       ...createWorkspaceActionHistoryActions(boundaryAwareSet, get),

@@ -4,6 +4,7 @@ import { resolveWorkspaceSnapshotActiveNodeId } from '../../lib/core/database/wo
 import { ensureInboxNodeInSnapshot } from '../features/nodes/model/specialNodes';
 import { hasWorkspaceRuntimeRepository } from '../shared/platform/workspaceRuntimeRepository';
 
+import { resolveWorkspaceBrowseRootNodeId } from './workspaceBrowseRoot';
 import { mergeHydratedWorkspaceMembership } from './workspaceHydrateObjectMerge';
 import { parsePersistedWorkspaceState } from './workspacePersistedStateParser';
 import { workspacePersistStorage } from './workspacePersistStorage';
@@ -49,6 +50,7 @@ function partializeWorkspaceState(state: WorkspaceState): WorkspacePersistedStat
 
   return {
     activeNodeId: state.activeNodeId,
+    browseRootNodeId: state.browseRootNodeId,
     capturedWorkspaceVersion: state.capturedWorkspaceVersion,
     layout: state.layout,
     nodeViewById: state.nodeViewById,
@@ -89,6 +91,11 @@ export function createWorkspaceStorePersistConfig(
       };
       const nextWorkspaceState: WorkspaceState = {
         ...nextState,
+        browseRootNodeId: resolveWorkspaceBrowseRootNodeId({
+          browseRootNodeId: persisted.browseRootNodeId ?? current.browseRootNodeId,
+          nodesById: nextState.nodesById,
+          trashedNodeIds: nextState.trashedNodeIds
+        }),
         ...ensureInboxNodeInSnapshot({
           activeNodeId: resolveMergedActiveNodeId(current, nextState),
           nodeOrder: nextState.nodeOrder,

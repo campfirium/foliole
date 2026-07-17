@@ -22,6 +22,7 @@ import { WorkspaceListEmptyState, WorkspaceListLoadingState } from './WorkspaceL
 
 export interface WorkspaceListAreaProps {
   activeNodeId: string | null;
+  browseRootNodeId?: string;
   activeVirtualNodeId: string | null;
   isStudyMode: boolean;
   isTrashViewOpen: boolean;

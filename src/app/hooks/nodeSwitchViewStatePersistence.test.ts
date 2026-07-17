@@ -68,6 +68,9 @@ function createArgs() {
     trash: {
       closeTrashView: vi.fn()
     },
+    virtualView: {
+      restoreBrowseView: vi.fn()
+    },
     ws: {
       activeNodeId: 'node-1',
       nodeViewById: {},
@@ -136,6 +139,7 @@ describe('node search view-state persistence', () => {
     openNodeSearchResult(args);
 
     expect(args.trash.closeTrashView).toHaveBeenCalledTimes(1);
+    expect(args.virtualView.restoreBrowseView).toHaveBeenCalledTimes(1);
     expect(args.nav.handleSelectNode).toHaveBeenCalledWith('node-2');
     expect(args.ws.openNode).not.toHaveBeenCalled();
     expect(args.ws.setNodeViewState).not.toHaveBeenCalled();
@@ -211,6 +215,7 @@ describe('node switch entrypoints', () => {
 
     expect(args.runtime.recordRecentNode).toHaveBeenCalledWith('node-2');
     expect(args.trash.closeTrashView).toHaveBeenCalledTimes(1);
+    expect(args.virtualView.restoreBrowseView).toHaveBeenCalledTimes(1);
     expect(args.nav.handleSelectNode).toHaveBeenCalledWith('node-2');
     expect(args.ws.openNode).not.toHaveBeenCalled();
     expect(args.runtime.setIsGoToNodePaletteOpen).toHaveBeenCalledWith(false);

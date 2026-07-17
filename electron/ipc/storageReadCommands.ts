@@ -60,6 +60,9 @@ export function handleReadingAndReviewCommand(command: string, args: Record<stri
   if (command === NATIVE_COMMANDS.saveReadingProgress) {
     saveReadingProgress({
       activeNodeId: asNullableString(args.activeNodeId, 'activeNodeId'),
+      ...(args.browseRootNodeId === undefined
+        ? {}
+        : { browseRootNodeId: asString(args.browseRootNodeId, 'browseRootNodeId') }),
       nodeViewStates: parseNodeViewStatePayloadArray(args.nodeViewStates, 'nodeViewStates'),
       source: normalizeNodeViewStateWriteSource(args.source),
       updatedAt: asTimestamp(args.updatedAt, 'updatedAt')

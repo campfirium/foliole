@@ -61,9 +61,17 @@ function createWorkspaceCreationActions() {
   };
 }
 
-export function createWorkspaceState() {
+function createWorkspaceBrowseState() {
   return {
     activeNodeId: 'node-1',
+    browseRootNodeId: 'special-home',
+    setBrowseRootNode: vi.fn()
+  };
+}
+
+export function createWorkspaceState() {
+  return {
+    ...createWorkspaceBrowseState(),
     appActionHistory: { redoStack: [], undoStack: [] },
     ...createWorkspaceEditorOperationState(),
     ...createWorkspaceLayoutState(),

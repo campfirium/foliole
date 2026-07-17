@@ -1,6 +1,7 @@
 import { normalizeWorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshotContract';
 import type { Node } from '../features/nodes/model/nodeTypes';
 
+import { resolveWorkspaceBrowseRootNodeId } from './workspaceBrowseRoot';
 import type {
   NodeViewState,
   ReviewSessionState,
@@ -193,6 +194,7 @@ export function parsePersistedWorkspaceState(value: unknown): Partial<WorkspaceP
     ...(nodesById ? { nodesById } : {}),
     ...(capturedWorkspaceVersion !== undefined ? { capturedWorkspaceVersion } : {}),
     ...(activeNodeId !== undefined ? { activeNodeId } : {}),
+    ...(typeof value.browseRootNodeId === 'string' ? { browseRootNodeId: value.browseRootNodeId } : {}),
     ...(layout ? { layout } : {}),
     ...(nodeViewById ? { nodeViewById } : {}),
     ...(isStringArray(value.nodeOrder) ? { nodeOrder: value.nodeOrder } : {}),
@@ -207,6 +209,11 @@ export function parsePersistedWorkspaceState(value: unknown): Partial<WorkspaceP
   }
   return {
     ...parsedState,
+    browseRootNodeId: resolveWorkspaceBrowseRootNodeId({
+      browseRootNodeId: parsedState.browseRootNodeId,
+      nodesById: parsedState.nodesById,
+      trashedNodeIds: parsedState.trashedNodeIds ?? []
+    }),
     ...normalizeParsedWorkspaceSnapshot({
       ...parsedState,
       nodesById: parsedState.nodesById

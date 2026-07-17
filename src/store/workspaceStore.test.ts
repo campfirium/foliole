@@ -55,6 +55,7 @@ it('creates an empty initial state with only special roots', async () => {
   const initial = createInitialWorkspaceState(new Date('2026-02-25T00:00:00.000Z'));
 
   expect(initial.activeNodeId).toBeNull();
+  expect(initial.browseRootNodeId).toBe(HOME_NODE_ID);
   expect(initial.nodeOrder).toEqual([HOME_NODE_ID, INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID]);
   expect(isHomeNode(initial.nodesById[HOME_NODE_ID])).toBe(true);
   expect(isInboxNode(initial.nodesById[INBOX_NODE_ID])).toBe(true);

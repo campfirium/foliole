@@ -2,9 +2,44 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   createOpenExternalSelection,
+  createOpenNotesView,
+  createOpenReviewView,
   createToggleTrashView,
   createToggleVirtualView
 } from './appControllerTrashViewHandlers';
+
+function createNotesViewHarness() {
+  const closeVirtualView = vi.fn();
+  const restoreBrowseView = vi.fn();
+  const handlerArgs = {
+    runtime: { flushPendingEditorDraft: vi.fn(), setIsViewingTrashNode: vi.fn() },
+    externalView: { closeExternalView: vi.fn() },
+    trash: { closeTrashView: vi.fn() },
+    virtualView: { closeVirtualView, restoreBrowseView },
+    ws: {}
+  } as never;
+  return { closeVirtualView, handlerArgs, restoreBrowseView };
+}
+
+describe('notes and review view transitions', () => {
+  it('restores the persisted browse root when returning to Notes', () => {
+    const { closeVirtualView, handlerArgs, restoreBrowseView } = createNotesViewHarness();
+
+    createOpenNotesView(handlerArgs)();
+
+    expect(restoreBrowseView).toHaveBeenCalledTimes(1);
+    expect(closeVirtualView).not.toHaveBeenCalled();
+  });
+
+  it('temporarily hides the browse root when entering review', () => {
+    const { closeVirtualView, handlerArgs, restoreBrowseView } = createNotesViewHarness();
+
+    createOpenReviewView(handlerArgs)();
+
+    expect(closeVirtualView).toHaveBeenCalledTimes(1);
+    expect(restoreBrowseView).not.toHaveBeenCalled();
+  });
+});
 
 describe('createToggleTrashView', () => {
   beforeEach(() => {

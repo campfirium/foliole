@@ -83,7 +83,7 @@ it('opens external search results in the external library by default', () => {
       closeTrashView: () => undefined
     },
     virtualView: {
-      closeVirtualView: () => undefined
+      restoreBrowseView: () => undefined
     },
     ws: {
       nodeOrder: [],
@@ -127,7 +127,7 @@ it('opens the search preview panel for modified external search results', () => 
       closeTrashView: () => undefined
     },
     virtualView: {
-      closeVirtualView: () => undefined
+      restoreBrowseView: () => undefined
     },
     ws: {
       nodeOrder: [],
@@ -174,7 +174,7 @@ it('opens the Removed virtual view for removed search results', () => {
       closeTrashView: () => undefined
     },
     virtualView: {
-      closeVirtualView: () => undefined,
+      restoreBrowseView: () => undefined,
       openVirtualView
     },
     ws: {

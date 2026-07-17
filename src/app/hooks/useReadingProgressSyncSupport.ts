@@ -51,13 +51,15 @@ function isSameNodeViewState(left: NodeViewState | undefined, right: NodeViewSta
 export function createReadingProgressSignature(
   activeNodeId: string | null,
   nodeViewById: Record<string, NodeViewState | undefined>,
-  nodeViewIdsToPersist: string[] = Object.keys(nodeViewById)
+  nodeViewIdsToPersist: string[] = Object.keys(nodeViewById),
+  browseRootNodeId?: string
 ): string {
   const selectedNodeViewById = Object.fromEntries(
     nodeViewIdsToPersist.map((nodeId) => [nodeId, nodeViewById[nodeId]])
   );
   return JSON.stringify({
     activeNodeId,
+    ...(browseRootNodeId ? { browseRootNodeId } : {}),
     nodeViewStates: toRuntimeNodeViewStates(selectedNodeViewById)
   });
 }
@@ -94,13 +96,15 @@ export function createReadingProgressPayload(
   activeNodeId: string | null,
   nodeViewById: Record<string, NodeViewState | undefined>,
   nodeViewIdsToPersist: string[],
-  source: NodeViewStateWriteSource = 'user-scroll'
+  source: NodeViewStateWriteSource = 'user-scroll',
+  browseRootNodeId?: string
 ) {
   const selectedNodeViewById = Object.fromEntries(
     nodeViewIdsToPersist.map((nodeId) => [nodeId, nodeViewById[nodeId]])
   );
   return {
     activeNodeId,
+    ...(browseRootNodeId ? { browseRootNodeId } : {}),
     nodeViewStates: toRuntimeNodeViewStates(selectedNodeViewById),
     source,
     updatedAt: new Date().toISOString()

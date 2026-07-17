@@ -34,6 +34,7 @@ export interface WorkspaceTopicTreeProps {
   activeFolderId: string;
   activeNodeId: string | null;
   childrenByParent?: TopicChildrenByParent;
+  creationParentNodeId?: string;
   forceVisibleNodeId?: string | null;
   headerDescription?: string;
   itemIds: string[];
@@ -179,7 +180,7 @@ export const WorkspaceTopicTree = memo(function WorkspaceTopicTree(props: Worksp
   const hasCollapsedNodes = collapsibleNodeIds.length > 0 && collapsibleNodeIds.some((nodeId) => collapsedNodeIds.has(nodeId));
   const { focusedRowIndex, reviewScroll } = resolveWorkspaceTopicTreeScrollState(props, focusedNodeId, visibleRows);
   const interaction = useWorkspaceTopicTreeInteraction({
-    activeFolderId: props.activeFolderId,
+    activeFolderId: props.creationParentNodeId ?? props.activeFolderId,
     activeNodeId: props.activeNodeId,
     isManualSort: contentSort.sort.key === 'manual',
     nodesById: props.nodesById,
@@ -201,7 +202,7 @@ export const WorkspaceTopicTree = memo(function WorkspaceTopicTree(props: Worksp
   });
 
   return renderWorkspaceTopicTreeShell({
-    activeFolderId: props.activeFolderId,
+    activeFolderId: props.creationParentNodeId ?? props.activeFolderId,
     collapsibleNodeIds,
     collapsedNodeIds,
     contentSort,

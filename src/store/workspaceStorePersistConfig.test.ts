@@ -27,6 +27,7 @@ it('roundtrips a partialized persisted workspace payload through merge', () => {
   const persisted = {
     ...current,
     activeNodeId: INBOX_NODE_ID,
+    browseRootNodeId: HOME_NODE_ID,
     reviewSession: {
       currentNodeId: INBOX_NODE_ID,
       isAnswerRevealed: true,
@@ -55,6 +56,7 @@ it('roundtrips a partialized persisted workspace payload through merge', () => {
   );
 
   expect(merged?.activeNodeId).toBe(INBOX_NODE_ID);
+  expect(merged?.browseRootNodeId).toBe(HOME_NODE_ID);
   expect(merged?.layout).toMatchObject({ documentMaxWidth: 920, listWidth: 360 });
   expect(merged?.nodeViewById['node-1']).toMatchObject({
     scrollTop: 42,

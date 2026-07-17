@@ -168,6 +168,7 @@ export type WorkspaceLayoutSettingsProps = Pick<WorkspaceLayoutFieldTypes,
 >;
 
 export type WorkspaceLayoutNodeListProps = Pick<WorkspaceLayoutFieldTypes,
+  | 'browseRootNodeId'
   | 'onCreateChildNode'
   | 'nodeOrder'
   | 'nodesById'

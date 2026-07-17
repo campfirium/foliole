@@ -2,6 +2,7 @@ import { resolveWorkspaceSnapshotActiveNodeId } from '../../lib/core/database/wo
 
 interface WorkspaceSnapshotLike {
   activeNodeId: string | null;
+  browseRootNodeId?: string;
   nodeViewById?: Record<string, NodeViewState>;
   nodeOrder: string[];
   nodesById: Record<string, unknown>;
@@ -17,6 +18,7 @@ interface RuntimeNodeViewState {
 
 interface RuntimeReadingProgressSnapshot {
   activeNodeId: string | null;
+  browseRootNodeId?: string | null;
   nodeViewStateById: Record<string, RuntimeNodeViewState>;
 }
 
@@ -52,8 +54,12 @@ function toRuntimeReadingProgressSnapshot(value: unknown): RuntimeReadingProgres
     return null;
   }
   const activeNodeId = value.activeNodeId;
+  const browseRootNodeId = value.browseRootNodeId;
   const nodeViewStateById = value.nodeViewStateById;
   if (activeNodeId !== null && typeof activeNodeId !== 'string') {
+    return null;
+  }
+  if (browseRootNodeId !== undefined && browseRootNodeId !== null && typeof browseRootNodeId !== 'string') {
     return null;
   }
   if (!isObject(nodeViewStateById)) {
@@ -88,6 +94,7 @@ function toRuntimeReadingProgressSnapshot(value: unknown): RuntimeReadingProgres
 
   return {
     activeNodeId,
+    ...(typeof browseRootNodeId === 'string' ? { browseRootNodeId } : {}),
     nodeViewStateById: normalizedNodeViewStateById
   };
 }
@@ -136,6 +143,9 @@ export function mergeWorkspaceSnapshotWithReadingProgress(
   return {
     ...snapshot,
     activeNodeId,
+    ...(readingProgressSnapshot.browseRootNodeId
+      ? { browseRootNodeId: readingProgressSnapshot.browseRootNodeId }
+      : {}),
     nodeViewById
   };
 }

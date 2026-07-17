@@ -22,6 +22,7 @@ interface NodeViewStateInput {
 
 export interface SaveReadingProgressInput {
   activeNodeId: string | null;
+  browseRootNodeId?: string;
   nodeViewStates: NodeViewStateInput[];
   source?: NodeViewStateWriteSource;
   updatedAt: string;
@@ -37,6 +38,7 @@ interface NodeViewStateSnapshot {
 
 export interface ReadingProgressSnapshot {
   activeNodeId: string | null;
+  browseRootNodeId?: string | null;
   nodeViewStateById: Record<string, NodeViewStateSnapshot>;
 }
 
@@ -54,6 +56,7 @@ interface NodeViewStateRow extends DatabaseRow {
 }
 
 const ACTIVE_NODE_META_KEY = 'active_node_id';
+const BROWSE_ROOT_NODE_META_KEY = 'browse_root_node_id';
 
 export function saveReadingProgress(input: SaveReadingProgressInput): void {
   const deviceId = loadOrCreateDesktopDeviceId(input.updatedAt);
@@ -86,25 +89,31 @@ export function saveReadingProgress(input: SaveReadingProgressInput): void {
   );
 
   withTransaction(connection.driver, () => {
-    if (shouldWriteActiveNodeMeta(connection, input.updatedAt)) {
+    if (shouldWriteWorkspaceMeta(connection, ACTIVE_NODE_META_KEY, input.updatedAt)) {
       upsertMetaStatement.run([ACTIVE_NODE_META_KEY, input.activeNodeId ?? '', input.updatedAt]);
       writeActiveNodeViewStateSync(connection, {
         activeNodeId: input.activeNodeId,
         updatedAt: input.updatedAt
       });
     }
+    if (
+      input.browseRootNodeId !== undefined &&
+      shouldWriteWorkspaceMeta(connection, BROWSE_ROOT_NODE_META_KEY, input.updatedAt)
+    ) {
+      upsertMetaStatement.run([BROWSE_ROOT_NODE_META_KEY, input.browseRootNodeId, input.updatedAt]);
+    }
     saveNodeViewStates(connection, upsertNodeViewStateStatement, input, deviceId, source);
   });
 }
 
-function shouldWriteActiveNodeMeta(connection: DatabaseConnection, incomingUpdatedAt: string) {
+function shouldWriteWorkspaceMeta(connection: DatabaseConnection, key: string, incomingUpdatedAt: string) {
   const incomingTime = Date.parse(incomingUpdatedAt);
   if (!Number.isFinite(incomingTime)) {
     return false;
   }
   const existing = connection.driver.queryOne<MetaRow>(
     'SELECT updated_at AS value FROM workspace_meta WHERE key = ?',
-    [ACTIVE_NODE_META_KEY]
+    [key]
   );
   if (!existing) {
     return true;
@@ -118,6 +127,7 @@ function traceReadingProgressSave(input: SaveReadingProgressInput) {
     event: 'reading-progress.db-save',
     payload: {
       activeNodeId: input.activeNodeId,
+      browseRootNodeId: input.browseRootNodeId ?? null,
       nodeIds: input.nodeViewStates.map((state) => state.nodeId),
       scrollTops: input.nodeViewStates.map((state) => state.scrollTop),
       updatedAt: input.updatedAt
@@ -163,6 +173,10 @@ export function loadReadingProgress(): ReadingProgressSnapshot {
     'SELECT value FROM workspace_meta WHERE key = ?',
     [ACTIVE_NODE_META_KEY]
   );
+  const browseRootNodeRow = connection.driver.queryOne<MetaRow>(
+    'SELECT value FROM workspace_meta WHERE key = ?',
+    [BROWSE_ROOT_NODE_META_KEY]
+  );
   const nodeRows = deviceId ? connection.driver.queryAll<NodeViewStateRow>(
     `SELECT
        node_id,
@@ -189,12 +203,14 @@ export function loadReadingProgress(): ReadingProgressSnapshot {
 
   const snapshot = {
     activeNodeId: activeNodeRow && activeNodeRow.value !== '' ? activeNodeRow.value : null,
+    browseRootNodeId: browseRootNodeRow && browseRootNodeRow.value !== '' ? browseRootNodeRow.value : null,
     nodeViewStateById
   };
   appendReadingPositionTraceRecord({
     event: 'reading-progress.db-load',
     payload: {
       activeNodeId: snapshot.activeNodeId,
+      browseRootNodeId: snapshot.browseRootNodeId,
       nodeViewStateCount: Object.keys(snapshot.nodeViewStateById).length
     },
     timestamp: Date.now()

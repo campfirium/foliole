@@ -41,6 +41,25 @@ function registerHydrationLifecycleTests() {
       updatedAt: expect.any(String)
     });
   });
+
+  it('syncs a changed browse root even when the active topic stays the same', () => {
+    const view = render(
+      <HookHarness activeNodeId="node-2" browseRootNodeId="special-home" isWorkspaceHydrated />
+    );
+    vi.clearAllMocks();
+
+    view.rerender(
+      <HookHarness activeNodeId="node-2" browseRootNodeId="folder-a" isWorkspaceHydrated />
+    );
+
+    expect(syncReadingProgressToRuntime).toHaveBeenCalledWith({
+      activeNodeId: 'node-2',
+      browseRootNodeId: 'folder-a',
+      nodeViewStates: [],
+      source: 'user-scroll',
+      updatedAt: expect.any(String)
+    });
+  });
 }
 
 function registerNodeSwitchTests() {

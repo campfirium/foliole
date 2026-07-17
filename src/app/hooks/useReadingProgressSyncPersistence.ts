@@ -19,6 +19,7 @@ import {
 } from './useReadingProgressSyncSupport';
 
 export interface ReadingProgressPersistenceArgs {
+  browseRootNodeIdRef?: MutableRefObject<string | undefined>;
   getReadingPositionSyncState?: () => ReadingPositionSyncState | null;
   isWorkspaceHydrated?: boolean;
   nodeViewById: Record<string, NodeViewState | undefined>;
@@ -70,7 +71,8 @@ export function flushReadingProgressToRuntime(args: {
   const signature = createReadingProgressSignature(
     resolved.resolvedActiveNodeId,
     resolved.mergedNodeViewById,
-    resolved.nodeViewIdsToPersist
+    resolved.nodeViewIdsToPersist,
+    args.persistence.browseRootNodeIdRef?.current
   );
   if (args.lastSyncedSignatureRef.current === signature) {
     return;
@@ -80,7 +82,9 @@ export function flushReadingProgressToRuntime(args: {
     createReadingProgressPayload(
       resolved.resolvedActiveNodeId,
       resolved.mergedNodeViewById,
-      resolved.nodeViewIdsToPersist
+      resolved.nodeViewIdsToPersist,
+      'user-scroll',
+      args.persistence.browseRootNodeIdRef?.current
     )
   );
 }
@@ -117,13 +121,15 @@ export async function flushReadingProgressBeforeClose(args: {
       resolved.resolvedActiveNodeId,
       resolved.mergedNodeViewById,
       resolved.nodeViewIdsToPersist,
-      'close-flush'
+      'close-flush',
+      args.persistence.browseRootNodeIdRef?.current
     )
   );
   args.lastSyncedSignatureRef.current = createReadingProgressSignature(
     resolved.resolvedActiveNodeId,
     resolved.mergedNodeViewById,
-    resolved.nodeViewIdsToPersist
+    resolved.nodeViewIdsToPersist,
+    args.persistence.browseRootNodeIdRef?.current
   );
   return true;
 }

@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef } from 'react';
 
 import { NodeListTree } from '../../features/nodes/components/NodeListTree';
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { HOME_NODE_ID, INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
 import { buildVirtualNodeResultIndex } from '../../features/nodes/model/virtualNodeDetail';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { definedProps } from '../../shared/lib/definedProps';
@@ -26,6 +27,7 @@ import { WorkspaceTopicTree } from './WorkspaceTopicTree';
 
 export interface WorkspaceDualListContentProps {
   activeNodeId: string | null;
+  browseRootNodeId?: string;
   activeVirtualNodeId?: string | null;
   externalEntriesByFolderId: Record<string, ExternalLibraryBrowseEntry[] | undefined>;
   externalFolders: ExternalLibraryFolder[];
@@ -99,6 +101,7 @@ function renderStandardContentColumn(
       activeFolderId={topicRootId}
       activeNodeId={props.activeNodeId}
       childrenByParent={dualListState.topicChildrenByParent}
+      creationParentNodeId={topicRootId === HOME_NODE_ID ? INBOX_NODE_ID : topicRootId}
       forceVisibleNodeId={props.isStudyMode ? props.reviewCurrentNodeId : null}
       itemIds={dualListState.topicNodeOrder}
       nodesById={dualListState.topicNodesById}

@@ -14,6 +14,7 @@ import type { NodeNavigationResult, WorkspaceNavigationState } from './workspace
 
 export interface WorkspaceState {
   activeNodeId: string | null;
+  browseRootNodeId: string;
   appActionHistory: WorkspaceActionHistoryState;
   capturedWorkspaceVersion: string | null;
   editorOperationHistory: EditorOperationHistoryState;
@@ -43,6 +44,7 @@ export interface WorkspaceState {
   setRightSidebarWidth: (width: number) => void;
   setRightSidebarCollapsed: (collapsed: boolean) => void;
   setActiveNode: (nodeId: string) => void;
+  setBrowseRootNode: (nodeId: string) => void;
   updateNodeTitle: (nodeId: string, title: string) => Promise<boolean>;
   updateNodeDerivedTitle: (nodeId: string, content?: string) => Promise<boolean>;
   updateNodeContent: (nodeId: string, content: string, options?: { publishLocal?: boolean }) => Promise<boolean>;
@@ -137,6 +139,7 @@ export interface WorkspaceNodeCreationOptions {
 
 export interface WorkspacePersistedState {
   activeNodeId: string | null;
+  browseRootNodeId?: string;
   capturedWorkspaceVersion?: string | null;
   layout: WorkspaceLayoutState;
   nodeViewById: Record<string, NodeViewState | undefined>;

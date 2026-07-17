@@ -34,6 +34,7 @@ function createWorkspaceActionStubs() {
     setRightSidebarWidth: () => undefined,
     setRightSidebarCollapsed: () => undefined,
     setActiveNode: () => undefined,
+    setBrowseRootNode: () => undefined,
     updateNodeTitle: async () => false,
     updateNodeDerivedTitle: async () => false,
     updateNodeContent: async () => false,

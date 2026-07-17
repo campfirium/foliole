@@ -40,7 +40,8 @@ function selectWorkspaceNavigationActions(state: WorkspaceState) {
     goForward: state.goForward,
     goToParent: state.goToParent,
     jumpToAncestorNode: state.jumpToAncestorNode,
-    openNode: state.openNode
+    openNode: state.openNode,
+    setBrowseRootNode: state.setBrowseRootNode
   };
 }
 
@@ -72,6 +73,7 @@ function selectWorkspaceMutationActions(state: WorkspaceState) {
 function selectWorkspaceHookState(state: WorkspaceState) {
   return {
     activeNodeId: state.activeNodeId,
+    browseRootNodeId: state.browseRootNodeId,
     appActionHistory: state.appActionHistory,
     editorOperationHistory: state.editorOperationHistory,
     isHydrated: state.isHydrated,

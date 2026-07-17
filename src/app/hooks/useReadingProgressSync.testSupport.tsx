@@ -8,6 +8,7 @@ import { useReadingProgressSync } from './useReadingProgressSync';
 
 export interface HarnessProps {
   activeNodeId: string | null;
+  browseRootNodeId?: string;
   isImmersiveMode?: boolean;
   readingSelection?: { from: number; to: number } | null;
   readingPositionSyncState?: { reason: string; startedAt: number; targetSelection: { from: number; to: number } } | null;
@@ -45,6 +46,7 @@ function createEditorRef(
 
 export function HookHarness({
   activeNodeId,
+  browseRootNodeId,
   readingSelection = null,
   readingPositionSyncState = null,
   isImmersiveMode = false,
@@ -60,6 +62,7 @@ export function HookHarness({
   editorRef.current = createMockEditorAdapter(createEditorRef(scrollTop, selection).current ?? {});
   useReadingProgressSync({
     activeNodeId,
+    ...(browseRootNodeId ? { browseRootNodeId } : {}),
     editorRef,
     getReadingPositionSelection: () => readingSelection,
     getReadingPositionSyncState: () => readingPositionSyncState,

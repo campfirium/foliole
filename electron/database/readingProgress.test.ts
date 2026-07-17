@@ -42,6 +42,7 @@ afterEach(async () => {
 it('returns empty reading progress shape when sqlite has no rows', () => {
   expect(loadReadingProgress()).toEqual({
     activeNodeId: null,
+    browseRootNodeId: null,
     nodeViewStateById: {}
   });
 });
@@ -49,6 +50,7 @@ it('returns empty reading progress shape when sqlite has no rows', () => {
 it('persists and loads active node and per-node view state from sqlite', () => {
   saveReadingProgress({
     activeNodeId: 'node-2',
+    browseRootNodeId: 'special-home',
     nodeViewStates: [
       {
         nodeId: 'node-1',
@@ -68,6 +70,7 @@ it('persists and loads active node and per-node view state from sqlite', () => {
 
   expect(loadReadingProgress()).toEqual({
     activeNodeId: 'node-2',
+    browseRootNodeId: 'special-home',
     nodeViewStateById: {
       'node-1': {
         scrollTop: 124,
@@ -126,17 +129,20 @@ it('persists close flush source and keeps newer user scroll rows', () => {
 it('does not let an older reading progress save restore an earlier active node', () => {
   saveReadingProgress({
     activeNodeId: 'node-2',
+    browseRootNodeId: 'folder-new',
     nodeViewStates: [],
     updatedAt: '2026-03-06T10:01:00.000Z'
   });
   saveReadingProgress({
     activeNodeId: 'node-1',
+    browseRootNodeId: 'folder-old',
     nodeViewStates: [],
     updatedAt: '2026-03-06T10:00:00.000Z'
   });
 
   expect(loadReadingProgress()).toEqual({
     activeNodeId: 'node-2',
+    browseRootNodeId: 'folder-new',
     nodeViewStateById: {}
   });
 });
@@ -178,6 +184,7 @@ it('does not let restore overwrite saved user reading positions', () => {
 it('writes sync object state for active node and node view states', () => {
   saveReadingProgress({
     activeNodeId: 'node-2',
+    browseRootNodeId: 'special-home',
     nodeViewStates: [
       {
         nodeId: 'node-1',

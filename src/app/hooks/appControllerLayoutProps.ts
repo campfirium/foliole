@@ -20,6 +20,7 @@ import { createPersistPdfViewState, createRevealAnchorInDocument, createRevealDo
 import {
   createOpenExternalSelection,
   createOpenNotesView,
+  createOpenReviewView,
   createSelectNode,
   createToggleTrashView,
   createToggleVirtualView
@@ -71,6 +72,7 @@ export interface BuildControllerLayoutPropsArgs {
   virtualView: ReturnType<typeof useVirtualNodeView>;
   ws: {
     activeNodeId: string | null;
+    browseRootNodeId: string;
     createChildNode: (parentNodeId: string, content?: string, kind?: NodeKind) => Promise<string | null>;
     createHighlightNodeFromSelection: (
       parentNodeId: string,
@@ -106,6 +108,7 @@ export interface BuildControllerLayoutPropsArgs {
     setListCollapsed: (collapsed: boolean) => void;
     setListWidth: (width: number) => void;
     setNodeViewState: (nodeId: string, viewState: NodeViewState) => void;
+    setBrowseRootNode: (nodeId: string) => void;
     setRightSidebarCollapsed: (collapsed: boolean) => void;
     setRightSidebarWidth: (width: number) => void;
     startReviewSession: WorkspaceState['startReviewSession'];
@@ -213,6 +216,7 @@ function createLayoutDocumentHandlers(args: BuildControllerLayoutPropsArgs) {
   return {
     onCreateChildNode: createFlushBeforeCreateChildNode(args),
     onOpenNotesView: createOpenNotesView(args),
+    onOpenReviewView: createOpenReviewView(args),
     onReviewQueueEmpty: args.onReviewQueueEmpty,
     onPastedTextAnchors: createPastedTextAnchorsHandler(args),
     onPersistPdfViewState: createPersistPdfViewState(args),

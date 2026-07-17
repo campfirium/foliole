@@ -111,6 +111,7 @@ export interface WorkspaceLayoutFieldTypes {
   isVirtualViewOpen: boolean;
   isExternalViewOpen: boolean;
   activeVirtualNodeId?: string | null;
+  browseRootNodeId: string;
   isViewingTrashNode: boolean;
   isListCollapsed: boolean;
   isRightSidebarCollapsed: boolean;

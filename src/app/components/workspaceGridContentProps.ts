@@ -88,6 +88,7 @@ function selectWorkspaceListAreaProps({
 }): WorkspaceListAreaProps {
   return {
     activeNodeId: props.navigation.activeNodeId,
+    browseRootNodeId: props.nodeList.browseRootNodeId,
     activeVirtualNodeId: props.virtualView.activeVirtualNodeId ?? null,
     externalEntriesByFolderId: props.externalLibrary.externalEntriesByFolderId,
     externalFolders: props.externalLibrary.externalFolders,

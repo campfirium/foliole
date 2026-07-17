@@ -1,6 +1,7 @@
 import { ensureInboxNodeInSnapshot } from '../features/nodes/model/specialNodes';
 import { hasWorkspaceRuntimeRepository } from '../shared/platform/workspaceRuntimeRepository';
 
+import { resolveWorkspaceBrowseRootNodeId } from './workspaceBrowseRoot';
 import { isCanonicalVisibleNodeId } from './workspaceCanonicalSelectors';
 import { enforceWorkspaceRendererBoundary } from './workspaceRendererBoundary';
 import {
@@ -38,16 +39,24 @@ function withWorkspaceSpecialRoots<T extends WorkspaceState | Partial<WorkspaceS
   state: T,
   currentState: WorkspaceState
 ): T {
-  if (!('activeNodeId' in state) && !('nodeOrder' in state) && !('nodesById' in state) && !('trashedNodeIds' in state)) {
+  if (!('activeNodeId' in state) && !('browseRootNodeId' in state) && !('nodeOrder' in state) && !('nodesById' in state) && !('trashedNodeIds' in state)) {
     return state;
   }
+  const normalized = ensureInboxNodeInSnapshot({
+    activeNodeId: resolveVisibleActiveNodeId(state, currentState),
+    nodeOrder: 'nodeOrder' in state ? state.nodeOrder ?? [] : currentState.nodeOrder,
+    nodesById: 'nodesById' in state ? state.nodesById ?? {} : currentState.nodesById,
+    trashedNodeIds: 'trashedNodeIds' in state ? state.trashedNodeIds ?? [] : currentState.trashedNodeIds
+  });
   return {
     ...state,
-    ...ensureInboxNodeInSnapshot({
-      activeNodeId: resolveVisibleActiveNodeId(state, currentState),
-      nodeOrder: 'nodeOrder' in state ? state.nodeOrder ?? [] : currentState.nodeOrder,
-      nodesById: 'nodesById' in state ? state.nodesById ?? {} : currentState.nodesById,
-      trashedNodeIds: 'trashedNodeIds' in state ? state.trashedNodeIds ?? [] : currentState.trashedNodeIds
+    ...normalized,
+    browseRootNodeId: resolveWorkspaceBrowseRootNodeId({
+      browseRootNodeId: 'browseRootNodeId' in state
+        ? state.browseRootNodeId
+        : currentState.browseRootNodeId,
+      nodesById: normalized.nodesById,
+      trashedNodeIds: normalized.trashedNodeIds
     })
   };
 }

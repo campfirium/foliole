@@ -55,65 +55,54 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-it('handles reading progress storage commands', async () => {
-  vi.mocked(loadReadingProgress).mockReturnValue({
+function createReadingProgressSnapshot() {
+  return {
     activeNodeId: 'node-2',
+    browseRootNodeId: 'special-home',
     nodeViewStateById: {
       'node-2': {
         scrollTop: 24,
         selectionFrom: 2,
         selectionTo: 6,
-        source: 'user-scroll',
+        source: 'user-scroll' as const,
         updatedAt: '2026-03-06T10:00:00.000Z'
       }
     }
-  });
+  };
+}
 
-  await expect(handleInvokeRequest({ command: 'load_reading_progress' })).resolves.toEqual({
+function createReadingProgressSaveArgs() {
+  return {
     activeNodeId: 'node-2',
-    nodeViewStateById: {
-      'node-2': {
-        scrollTop: 24,
-        selectionFrom: 2,
-        selectionTo: 6,
-        source: 'user-scroll',
-        updatedAt: '2026-03-06T10:00:00.000Z'
-      }
-    }
-  });
+    browseRootNodeId: 'special-home',
+    nodeViewStates: [{
+      nodeId: 'node-2',
+      scrollTop: 24,
+      selectionFrom: 2,
+      selectionTo: 6,
+      updatedAt: '2026-03-06T09:30:00.000Z'
+    }],
+    updatedAt: '2026-03-06T10:00:00.000Z'
+  };
+}
+
+it('handles reading progress storage commands', async () => {
+  const snapshot = createReadingProgressSnapshot();
+  const saveArgs = createReadingProgressSaveArgs();
+  vi.mocked(loadReadingProgress).mockReturnValue(snapshot);
+
+  await expect(handleInvokeRequest({ command: 'load_reading_progress' })).resolves.toEqual(snapshot);
 
   await expect(
     handleInvokeRequest({
       command: 'save_reading_progress',
-      args: {
-        activeNodeId: 'node-2',
-        nodeViewStates: [
-          {
-            nodeId: 'node-2',
-            scrollTop: 24,
-            selectionFrom: 2,
-            selectionTo: 6,
-            updatedAt: '2026-03-06T09:30:00.000Z'
-          }
-        ],
-        updatedAt: '2026-03-06T10:00:00.000Z'
-      }
+      args: saveArgs
     })
   ).resolves.toBeNull();
 
   expect(saveReadingProgress).toHaveBeenCalledWith({
-    activeNodeId: 'node-2',
-    nodeViewStates: [
-      {
-        nodeId: 'node-2',
-        scrollTop: 24,
-        selectionFrom: 2,
-        selectionTo: 6,
-        updatedAt: '2026-03-06T09:30:00.000Z'
-      }
-    ],
+    ...saveArgs,
     source: 'user-scroll',
-    updatedAt: '2026-03-06T10:00:00.000Z'
   });
 });
 

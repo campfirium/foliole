@@ -13,6 +13,7 @@ it('keeps scroll-only reading progress selection null during hydrate', () => {
   expect(
     mergeWorkspaceSnapshotWithReadingProgress(snapshot, {
       activeNodeId: 'node-1',
+      browseRootNodeId: 'folder-a',
       nodeViewStateById: {
         'node-1': {
           scrollTop: 1800,
@@ -23,6 +24,7 @@ it('keeps scroll-only reading progress selection null during hydrate', () => {
     })
   ).toMatchObject({
     activeNodeId: 'node-1',
+    browseRootNodeId: 'folder-a',
     nodeViewById: {
       'node-1': {
         scrollTop: 1800,

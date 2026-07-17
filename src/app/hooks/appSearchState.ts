@@ -57,8 +57,8 @@ interface SearchStateArgs {
     closeTrashView: () => void;
   };
   virtualView?: {
-    closeVirtualView: () => void;
     openVirtualView?: (nodeId?: string) => void;
+    restoreBrowseView: () => void;
   };
   ws: {
     activeNodeId?: string | null;
@@ -126,6 +126,30 @@ function revealActiveNodeMatch(args: {
   editor.revealSelection(selection);
 }
 
+function openInternalSearchResult(args: SearchStateArgs, result: WorkspaceSearchResult) {
+  if (result.kind === 'node' && result.nodeMatch) {
+    const existingViewState = args.ws.nodeViewById[result.id];
+    args.ws.setNodeViewState(result.id, {
+      scrollTop: existingViewState?.scrollTop ?? 0,
+      selection: {
+        from: result.nodeMatch.from,
+        to: result.nodeMatch.to
+      }
+    });
+  }
+  args.virtualView?.restoreBrowseView();
+  args.nav.handleSelectNode(result.id);
+  requestNodeMatchJump({ result, runtime: args.runtime });
+  revealActiveNodeMatch({ result, runtime: args.runtime, ws: args.ws });
+  if (result.kind === 'pdf' && result.pdfMatch) {
+    requestPdfSearch(result.id, {
+      matchStart: result.pdfMatch.matchStart,
+      page: result.pdfMatch.page,
+      query: result.pdfMatch.query
+    });
+  }
+}
+
 export interface AppSearchState {
   isOpen: boolean;
   nodeOrder: string[];
@@ -145,8 +169,8 @@ export function buildControllerSearchState(args: SearchStateArgs): AppSearchStat
     () => args.runtime.setIsSearchPaletteOpen(false),
     (result, options) => {
       args.trash.closeTrashView();
-      args.virtualView?.closeVirtualView();
       if (result.kind === 'external' && result.externalMatch?.importedNodeId) {
+        args.virtualView?.restoreBrowseView();
         args.nav.handleSelectNode(result.externalMatch.importedNodeId);
         args.runtime.setIsSearchPaletteOpen(false);
         return;
@@ -171,26 +195,7 @@ export function buildControllerSearchState(args: SearchStateArgs): AppSearchStat
         args.runtime.setIsSearchPaletteOpen(false);
         return;
       }
-      if (result.kind === 'node' && result.nodeMatch) {
-        const existingViewState = args.ws.nodeViewById[result.id];
-        args.ws.setNodeViewState(result.id, {
-          scrollTop: existingViewState?.scrollTop ?? 0,
-          selection: {
-            from: result.nodeMatch.from,
-            to: result.nodeMatch.to
-          }
-        });
-      }
-      args.nav.handleSelectNode(result.id);
-      requestNodeMatchJump({ result, runtime: args.runtime });
-      revealActiveNodeMatch({ result, runtime: args.runtime, ws: args.ws });
-      if (result.kind === 'pdf' && result.pdfMatch) {
-        requestPdfSearch(result.id, {
-          matchStart: result.pdfMatch.matchStart,
-          page: result.pdfMatch.page,
-          query: result.pdfMatch.query
-        });
-      }
+      openInternalSearchResult(args, result);
       args.runtime.setIsSearchPaletteOpen(false);
     }
   );

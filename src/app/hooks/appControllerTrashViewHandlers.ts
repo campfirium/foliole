@@ -9,6 +9,16 @@ export function createOpenNotesView(args: BuildControllerLayoutPropsArgs) {
     args.runtime.setIsViewingTrashNode(false);
     args.trash.closeTrashView();
     args.externalView.closeExternalView();
+    args.virtualView.restoreBrowseView();
+  };
+}
+
+export function createOpenReviewView(args: BuildControllerLayoutPropsArgs) {
+  return () => {
+    args.runtime.flushPendingEditorDraft();
+    args.runtime.setIsViewingTrashNode(false);
+    args.trash.closeTrashView();
+    args.externalView.closeExternalView();
     args.virtualView.closeVirtualView();
   };
 }
@@ -39,9 +49,16 @@ export function createSelectNode(args: BuildControllerLayoutPropsArgs) {
       focusAnchor,
       nodeId
     });
-    const specialKind = args.ws.nodesById[nodeId]?.specialKind;
-    if (specialKind !== 'virtual' && specialKind !== 'virtual-root') {
+    const selectedNode = args.ws.nodesById[nodeId];
+    if (selectedNode?.kind === 'folder') {
+      args.ws.setBrowseRootNode(nodeId);
+    }
+    if (selectedNode?.specialKind === 'virtual' || selectedNode?.specialKind === 'virtual-root') {
+      args.virtualView.openVirtualView(nodeId);
+    } else if (selectedNode?.kind === 'folder') {
       args.virtualView.closeVirtualView();
+    } else {
+      args.virtualView.restoreBrowseView();
     }
     args.externalView.closeExternalView();
     args.nav.handleSelectNode(nodeId, effectiveFocusAnchor);

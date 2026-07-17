@@ -21,6 +21,7 @@ declare global {
 
 interface ReadingProgressEffectsOptions {
   activeNodeId: string | null;
+  browseRootNodeId?: string;
   getReadingPositionSyncState?: () => { reason: string; startedAt: number; targetSelection: { from: number; to: number } | null } | null;
   isWorkspaceHydrated: boolean;
   lifecycleFlush: () => void;
@@ -49,6 +50,7 @@ function isReadingPositionRestoreActive(
 
 function useReadingProgressEffects({
   activeNodeId,
+  browseRootNodeId,
   isWorkspaceHydrated,
   lifecycleFlush,
   syncActiveNodeReadingProgress
@@ -58,7 +60,7 @@ function useReadingProgressEffects({
       return;
     }
     syncActiveNodeReadingProgress(activeNodeId);
-  }, [activeNodeId, isWorkspaceHydrated, syncActiveNodeReadingProgress]);
+  }, [activeNodeId, browseRootNodeId, isWorkspaceHydrated, syncActiveNodeReadingProgress]);
 
   useEffect(() => {
     if (!isWorkspaceHydrated) {
@@ -92,6 +94,7 @@ export function useReadingProgressCloseFlushRegistration(
 
 export function useReadingProgressLifecycle(args: {
   activeNodeId: string | null;
+  browseRootNodeId?: string;
   flushReadingProgress: (activeNodeIdOverride?: string | null, captureNodeIdOverride?: string | null) => void;
   flushReadingProgressImmediately: () => Promise<boolean>;
   getReadingPositionSyncState?: () => { reason: string; startedAt: number; targetSelection: { from: number; to: number } | null } | null;
@@ -106,6 +109,7 @@ export function useReadingProgressLifecycle(args: {
 
   useReadingProgressEffects({
     activeNodeId: args.activeNodeId,
+    ...definedProps({ browseRootNodeId: args.browseRootNodeId }),
     isWorkspaceHydrated: args.isWorkspaceHydrated,
     lifecycleFlush,
     syncActiveNodeReadingProgress: (activeNodeIdOverride) =>
