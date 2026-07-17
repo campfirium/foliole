@@ -11,7 +11,7 @@ import type {
   ExternalLibraryBrowseEntry,
   ExternalLibraryFolder
 } from '../../shared/platform/externalLibraryBrowseRepository';
-import { ScalablePanel } from '../../shared/ui';
+import { PanelScaleSurface } from '../../shared/ui';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import { TrashResultListPanel } from './TrashResultListPanel';
@@ -60,7 +60,7 @@ export interface WorkspaceDualListContentProps {
 
 function renderSingleListFallback(props: WorkspaceDualListContentProps) {
   return (
-    <ScalablePanel className="flex flex-1" label="Topic navigation" panelId="topic-navigation">
+    <PanelScaleSurface label="Topic navigation" panelId="topic-navigation">
       <NodeListTree
         activeNodeId={props.activeNodeId}
         isTrashViewOpen={props.isTrashViewOpen}
@@ -73,7 +73,7 @@ function renderSingleListFallback(props: WorkspaceDualListContentProps) {
         onSelectTrashNode={props.onSelectTrashNode}
         selectedTrashNodeId={props.selectedTrashNodeId}
       />
-    </ScalablePanel>
+    </PanelScaleSurface>
   );
 }
 

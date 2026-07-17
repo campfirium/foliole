@@ -6,7 +6,7 @@ import {
 } from '../../features/nodes/model/specialNodes';
 import { buildVirtualNodeResultIndex } from '../../features/nodes/model/virtualNodeDetail';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
-import { ScalablePanel } from '../../shared/ui';
+import { PanelScaleSurface } from '../../shared/ui';
 
 import { DocumentPanelSection } from './DocumentPanelSection';
 import { ExternalLibraryDocumentSurface } from './ExternalLibraryDocumentSurface';
@@ -89,7 +89,7 @@ export function WorkspaceDocumentSurface(props: WorkspaceDocumentSurfaceProps) {
     (props.activeVirtualNodeId === VIRTUAL_SHELVED_NODE_ID || props.activeVirtualNodeId === VIRTUAL_REMOVED_NODE_ID)
   ) {
     return (
-      <ScalablePanel className="flex flex-1" label="List panel" panelId="list-panel">
+      <PanelScaleSurface label="List panel" panelId="list-panel">
         <VirtualBuiltInDocumentSurface
           activeVirtualNodeId={props.activeVirtualNodeId ?? null}
           nodeOrder={props.nodeOrder}
@@ -98,7 +98,7 @@ export function WorkspaceDocumentSurface(props: WorkspaceDocumentSurfaceProps) {
           onSelectNodePath={props.onSelectNode}
           trashedNodeIds={props.trashedNodeIds}
         />
-      </ScalablePanel>
+      </PanelScaleSurface>
     );
   }
 

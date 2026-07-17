@@ -3,7 +3,7 @@ import { memo } from 'react';
 import { toRightPanelScaleId } from '../../features/settings/model/displayScaleSettings';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { recordComponentRender } from '../../shared/platform/performanceDiagnosticsProbe';
-import { AppPanel, ScalablePanel } from '../../shared/ui';
+import { AppPanel, PanelScaleSurface } from '../../shared/ui';
 import {
   isEditorInputDiagnosticEnabled,
   logEditorInputDiagnostic
@@ -60,6 +60,25 @@ function areWorkspaceRightSidebarPropsEqual(previous: WorkspaceRightSidebarProps
   return false;
 }
 
+function renderActivePanelSurface(
+  props: WorkspaceRightSidebarProps,
+  panelProps: WorkspaceRightSidebarPanelProps
+) {
+  const contentClassName = props.activePanelId === 'assistant'
+    ? 'flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden'
+    : 'app-scrollbar min-h-0 min-w-0 w-full flex-1 overflow-y-auto px-3 py-3';
+  return (
+    <PanelScaleSurface
+      label={getWorkspaceRightPanelDefinition(props.activePanelId).menuLabel}
+      panelId={toRightPanelScaleId(props.activePanelId)}
+    >
+      <div className={contentClassName} data-panel-content-root={props.activePanelId}>
+        {renderWorkspaceRightSidebarPanel(panelProps)}
+      </div>
+    </PanelScaleSurface>
+  );
+}
+
 export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: WorkspaceRightSidebarProps) {
   const t = useTranslation();
   recordComponentRender('rightSidebar');
@@ -75,23 +94,15 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
     outlineActivePosition: props.outlineActivePosition ?? 0
   };
   return (
-    <ScalablePanel
-      className="workspace-region-main-sidebar hidden min-h-0 h-full flex-col xl:flex"
-      label={getWorkspaceRightPanelDefinition(props.activePanelId).menuLabel}
-      panelId={toRightPanelScaleId(props.activePanelId)}
+    <AppPanel
+      aria-label={t('desktop.workspace.inspector')}
+      as="aside"
+      bodyClassName="min-h-0 overflow-hidden"
+      className="workspace-region-main-sidebar flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden text-foreground [--app-inspector-section-bg:transparent] [--app-inspector-section-border-color:transparent] [--app-inspector-section-border-width:0] [--app-inspector-section-padding:0] [--app-inspector-section-radius:0] [--app-inspector-section-shadow-color:transparent]"
+      headerClassName="hidden"
+      title={null}
     >
-      <AppPanel
-        aria-label={t('desktop.workspace.inspector')}
-        as="aside"
-        bodyClassName={props.activePanelId === 'assistant'
-          ? 'min-h-0 overflow-hidden'
-          : 'app-scrollbar overflow-y-auto px-3 py-3'}
-        className="flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden text-foreground [--app-inspector-section-bg:transparent] [--app-inspector-section-border-color:transparent] [--app-inspector-section-border-width:0] [--app-inspector-section-padding:0] [--app-inspector-section-radius:0] [--app-inspector-section-shadow-color:transparent]"
-        headerClassName="hidden"
-        title={null}
-      >
-        {renderWorkspaceRightSidebarPanel(panelProps)}
-      </AppPanel>
-    </ScalablePanel>
+      {renderActivePanelSurface(props, panelProps)}
+    </AppPanel>
   );
 }, areWorkspaceRightSidebarPropsEqual);

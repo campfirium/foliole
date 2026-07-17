@@ -4,7 +4,7 @@ import type {
   ExternalLibraryBrowseEntry,
   ExternalLibraryFolder
 } from '../../shared/platform/externalLibraryBrowseRepository';
-import { ScalablePanel } from '../../shared/ui';
+import { PanelScaleSurface } from '../../shared/ui';
 
 import {
   buildExternalLibraryFolderBrowseState,
@@ -78,7 +78,7 @@ export function ExternalFolderListSurface(args: {
   }
 
   return (
-    <ScalablePanel className="flex flex-1" label="List panel" panelId="list-panel">
+    <PanelScaleSurface label="List panel" panelId="list-panel">
       <section aria-label={t('desktop.externalLibrary.documentArea')} className="workspace-region-main-document flex min-h-0 flex-1 flex-col">
         <FolderListView
           emptyState={{
@@ -101,6 +101,6 @@ export function ExternalFolderListSurface(args: {
           regionLabel={t('desktop.externalLibrary.folderListView')}
         />
       </section>
-    </ScalablePanel>
+    </PanelScaleSurface>
   );
 }

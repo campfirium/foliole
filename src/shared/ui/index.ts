@@ -51,7 +51,7 @@ export { NodeBrowseList, type NodeBrowseListItem } from './NodeBrowseList';
 export { appSurfaceControlClassName } from './SurfaceControl';
 export { ObjectConfigPathButton, ObjectConfigPathControl } from './ObjectConfigTable';
 export { VirtualListSurface, type VirtualListRenderMeta } from './VirtualListSurface';
-export { ScalablePanel } from './ScalablePanel';
+export { PanelScaleSurface } from './PanelScaleSurface';
 
 // Review patterns: action hierarchy consumers for desktop review and companion review shell.
 export { ContinueReadingAction, FsrsRevealAction, ReadingReviewActions, ReviewCompleteAction, ResumeReviewAction, ReviewGradeActions } from './ReviewActionControls';

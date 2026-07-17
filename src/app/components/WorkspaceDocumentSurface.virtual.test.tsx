@@ -30,7 +30,7 @@ vi.mock('./workspaceDocumentSectionProps', () => ({
 }));
 
 vi.mock('../../shared/ui', () => ({
-  ScalablePanel: ({ children }: { children: ReactNode }) => <>{children}</>
+  PanelScaleSurface: ({ children }: { children: ReactNode }) => <>{children}</>
 }));
 
 import { WorkspaceDocumentSurface } from './WorkspaceDocumentSurface';

@@ -28,8 +28,8 @@ test('app display size and focused panel content size remain independent', async
     width: (element as HTMLElement).style.width,
     zoom: (element as HTMLElement).style.zoom
   }))).toEqual({
-    height: '95.2381%',
-    width: '95.2381%',
+    height: '100%',
+    width: '100%',
     zoom: '1.05'
   });
   await expect(desktopWindow.getByText(/Folder navigation · 105%/)).toBeVisible();
