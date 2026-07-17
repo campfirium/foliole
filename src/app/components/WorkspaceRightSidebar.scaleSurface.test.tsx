@@ -44,6 +44,8 @@ it('keeps the sidebar slot outside the active feature scale surface', () => {
 
   expect(slot).not.toHaveAttribute('data-panel-scale-id');
   expect(assistantSurface).not.toBe(slot);
+  expect(assistantSurface?.parentElement).toHaveClass('flex', 'min-h-0', 'overflow-hidden');
+  expect(assistantSurface).toHaveClass('flex-1', 'min-h-0', 'overflow-hidden');
   expect(assistantSurface).toContainElement(screen.getByTestId('feature-header'));
   expect(assistantSurface).toContainElement(screen.getByTestId('feature-body'));
   expect(container.querySelectorAll('[data-panel-scale-surface]')).toHaveLength(1);

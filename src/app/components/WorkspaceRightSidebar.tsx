@@ -97,7 +97,7 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
     <AppPanel
       aria-label={t('desktop.workspace.inspector')}
       as="aside"
-      bodyClassName="min-h-0 overflow-hidden"
+      bodyClassName="flex min-h-0 overflow-hidden"
       className="workspace-region-main-sidebar flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden text-foreground [--app-inspector-section-bg:transparent] [--app-inspector-section-border-color:transparent] [--app-inspector-section-border-width:0] [--app-inspector-section-padding:0] [--app-inspector-section-radius:0] [--app-inspector-section-shadow-color:transparent]"
       headerClassName="hidden"
       title={null}

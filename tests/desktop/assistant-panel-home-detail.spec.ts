@@ -28,14 +28,24 @@ test('Aide keeps the home composer at the bottom of the panel', async ({ desktop
   await installAssistantIpcMock(desktopApp);
   await openAssistantPanel(desktopWindow);
 
+  const sidebar = desktopWindow.locator('.workspace-region-main-sidebar');
   const surface = desktopWindow.locator('[data-panel-scale-id="right-panel:assistant"]');
   const composer = desktopWindow.getByLabel(/^(Foliole Aide message|Foliole Aide 消息)$/).locator('xpath=ancestor::form');
   await expect(desktopWindow.getByRole('heading', { name: 'Aide' })).toBeVisible();
   await expect(desktopWindow.getByText(/Use Codex inside Foliole|\u5728 Foliole \u5de5\u4f5c\u533a\u4e2d\u4f7f\u7528 Codex/)).toHaveCount(0);
-  const [surfaceBounds, composerBounds] = await Promise.all([surface.boundingBox(), composer.boundingBox()]);
+  const [sidebarBounds, surfaceBounds, composerBounds] = await Promise.all([
+    sidebar.boundingBox(),
+    surface.boundingBox(),
+    composer.boundingBox()
+  ]);
+  expect(sidebarBounds).not.toBeNull();
   expect(surfaceBounds).not.toBeNull();
   expect(composerBounds).not.toBeNull();
-  const bottomGap = (surfaceBounds?.y ?? 0) + (surfaceBounds?.height ?? 0)
+  const surfaceBottomGap = (sidebarBounds?.y ?? 0) + (sidebarBounds?.height ?? 0)
+    - (surfaceBounds?.y ?? 0) - (surfaceBounds?.height ?? 0);
+  expect(surfaceBottomGap).toBeGreaterThanOrEqual(0);
+  expect(surfaceBottomGap).toBeLessThanOrEqual(2);
+  const bottomGap = (sidebarBounds?.y ?? 0) + (sidebarBounds?.height ?? 0)
     - (composerBounds?.y ?? 0) - (composerBounds?.height ?? 0);
   expect(bottomGap).toBeGreaterThanOrEqual(0);
   expect(bottomGap).toBeLessThanOrEqual(24);
