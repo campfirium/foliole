@@ -50,7 +50,11 @@ static bool trigger_modifiers_are_down(void) {
     || CGEventSourceKeyState(state, (CGKeyCode)kVK_RightCommand);
   const bool shift_down = CGEventSourceKeyState(state, (CGKeyCode)kVK_Shift)
     || CGEventSourceKeyState(state, (CGKeyCode)kVK_RightShift);
-  return command_down || shift_down;
+  const bool control_down = CGEventSourceKeyState(state, (CGKeyCode)kVK_Control)
+    || CGEventSourceKeyState(state, (CGKeyCode)kVK_RightControl);
+  const bool option_down = CGEventSourceKeyState(state, (CGKeyCode)kVK_Option)
+    || CGEventSourceKeyState(state, (CGKeyCode)kVK_RightOption);
+  return command_down || shift_down || control_down || option_down;
 }
 
 static bool wait_for_trigger_modifiers_release(void) {

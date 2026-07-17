@@ -27,7 +27,7 @@ test('organizes controls and keeps capture behavior in General', async ({ deskto
   const globalCaptureShortcut = hotkeys.getByRole('button', {
     name: /^(Shortcut for Capture to Inbox \(global\)|Capture to Inbox \(global\) 的快捷键)$/
   });
-  await expect(globalCaptureShortcut).toHaveText(/⌥ ⇧ C|Alt\+Shift\+C/u);
+  await expect(globalCaptureShortcut).toHaveText(/⌥ A|Alt\+A/u);
   await globalCaptureShortcut.click();
   await expect(globalCaptureShortcut).toHaveText(/^(Press hotkey\.\.\.|按下快捷键\.\.\.)$/);
   await desktopSession.electronApp.evaluate(({ BrowserWindow }) => {

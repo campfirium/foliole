@@ -40,7 +40,7 @@ it('uses an explicit Apple-native default table on macOS', () => {
 
 it('uses the host-specific global capture default in the unified shortcut map', () => {
   expect(getPlatformDefaultCommandShortcuts('MacIntel')[APP_COMMAND_IDS.globalCaptureToInbox]).toEqual({
-    primary: { key: 'c', altKey: true, shiftKey: true }
+    primary: { key: 'a', altKey: true }
   });
   expect(getPlatformDefaultCommandShortcuts('Win32')[APP_COMMAND_IDS.globalCaptureToInbox]).toEqual({
     primary: { key: 'c', altKey: true, shiftKey: true }

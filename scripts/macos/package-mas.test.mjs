@@ -67,6 +67,11 @@ it('waits for the physical trigger modifiers to be released before posting Comma
   expect(source).toContain('kVK_RightCommand');
   expect(source).toContain('kVK_Shift');
   expect(source).toContain('kVK_RightShift');
+  expect(source).toContain('kVK_Control');
+  expect(source).toContain('kVK_RightControl');
+  expect(source).toContain('kVK_Option');
+  expect(source).toContain('kVK_RightOption');
+  expect(source).toContain('return command_down || shift_down || control_down || option_down;');
   expect(source).toContain('MODIFIER_RELEASE_ATTEMPTS = 20');
   expect(source).toContain('POLL_INTERVAL_US = 25000');
   expect(source).toContain('usleep(POLL_INTERVAL_US)');

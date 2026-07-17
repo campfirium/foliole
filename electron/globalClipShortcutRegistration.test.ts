@@ -29,7 +29,7 @@ beforeEach(() => {
 
 it('provides one platform shortcut truth for Windows and macOS', () => {
   expect(getGlobalClipShortcutConfig('win32')).toEqual({ accelerator: 'Alt+Shift+C', label: 'Alt+Shift+C' });
-  expect(getGlobalClipShortcutConfig('darwin')).toEqual({ accelerator: 'Alt+Shift+C', label: 'Alt+Shift+C' });
+  expect(getGlobalClipShortcutConfig('darwin')).toEqual({ accelerator: 'Alt+A', label: 'Alt+A' });
   expect(getGlobalClipShortcutConfig('linux')).toBeNull();
 });
 
@@ -42,7 +42,7 @@ it.each(['win32', 'darwin'] as const)('registers and unregisters on %s', (platfo
   };
 
   expect(installGlobalClipShortcut({ appRef, captureToInbox, globalShortcutRef, platform })).toBe(true);
-  const accelerator = 'Alt+Shift+C';
+  const accelerator = platform === 'darwin' ? 'Alt+A' : 'Alt+Shift+C';
   expect(globalShortcutRef.register).toHaveBeenCalledWith(accelerator, expect.any(Function));
   expect(getGlobalClipShortcutStatus(platform).globalCaptureShortcutRegistered).toBe(true);
 
@@ -66,9 +66,9 @@ it('reports registration failure without a fallback shortcut', () => {
     platform: 'darwin'
   })).toBe(false);
 
-  expect(log).toHaveBeenCalledWith('global_clip_shortcut_registration_failed', { shortcut: 'Alt+Shift+C' });
+  expect(log).toHaveBeenCalledWith('global_clip_shortcut_registration_failed', { shortcut: 'Alt+A' });
   expect(getGlobalClipShortcutStatus('darwin')).toEqual({
-    globalCaptureShortcutLabel: 'Alt+Shift+C',
+    globalCaptureShortcutLabel: 'Alt+A',
     globalCaptureShortcutRegistered: false
   });
 });
@@ -86,7 +86,7 @@ it('reports registration exceptions without a fallback shortcut', () => {
   })).toBe(false);
   expect(log).toHaveBeenCalledWith('global_clip_shortcut_registration_failed', {
     error,
-    shortcut: 'Alt+Shift+C'
+    shortcut: 'Alt+A'
   });
 });
 
@@ -129,9 +129,9 @@ it('uses the platform default until persisted settings are safe to read', () => 
     platform: 'darwin'
   });
 
-  expect(globalShortcutRef.register).toHaveBeenLastCalledWith('Alt+Shift+C', expect.any(Function));
+  expect(globalShortcutRef.register).toHaveBeenLastCalledWith('Alt+A', expect.any(Function));
   expect(refreshGlobalClipShortcutFromSettings(() => ['Command+Shift+X'])).toBe(true);
-  expect(globalShortcutRef.unregister).toHaveBeenCalledWith('Alt+Shift+C');
+  expect(globalShortcutRef.unregister).toHaveBeenCalledWith('Alt+A');
   expect(globalShortcutRef.register).toHaveBeenLastCalledWith('Command+Shift+X', expect.any(Function));
 });
 
