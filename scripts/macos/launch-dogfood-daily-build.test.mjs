@@ -22,11 +22,23 @@ describe('Dogfood Daily build launcher', () => {
 
   it('uses the macOS ordered file lock for serialized background builds', () => {
     expect(createDogfoodLaunchCommand({
-      lockPath: '/state/build.lock', repositoryRoot: '/repo', revision: REVISION, workerPath: '/worker.mjs'
+      lockPath: '/state/build.lock', repositoryRoot: '/repo', revision: REVISION,
+      stateRoot: '/state', workerPath: '/worker.mjs'
     })).toEqual({
-      args: ['-k', '/state/build.lock', process.execPath, '/worker.mjs', '--revision', REVISION, '--repository', '/repo'],
+      args: [
+        '-k', '/state/build.lock', process.execPath, '/worker.mjs', '--revision', REVISION,
+        '--repository', '/repo', '--state-root', '/state'
+      ],
       bin: '/usr/bin/lockf'
     });
+  });
+
+  it('skips safely outside macOS without spawning a worker', async () => {
+    const start = vi.fn();
+    await expect(launchDogfoodDailyBuild({
+      platform: 'win32', repositoryRoot: '/repo', revision: REVISION, start
+    })).resolves.toEqual({ reason: 'unsupported-platform', revision: REVISION, status: 'skipped' });
+    expect(start).not.toHaveBeenCalled();
   });
 
   it('dispatches detached work and returns after spawn', async () => {

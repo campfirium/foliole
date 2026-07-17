@@ -29,7 +29,8 @@ export function createDogfoodLaunchCommand(options) {
   return {
     args: [
       '-k', options.lockPath, process.execPath, options.workerPath,
-      '--revision', options.revision, '--repository', options.repositoryRoot
+      '--revision', options.revision, '--repository', options.repositoryRoot,
+      '--state-root', options.stateRoot
     ],
     bin: '/usr/bin/lockf'
   };
@@ -44,11 +45,14 @@ export async function launchDogfoodDailyBuild(options = {}) {
   const openFile = options.openFile ?? openSync;
   const closeFile = options.closeFile ?? closeSync;
   const revision = options.revision ?? resolveDogfoodRevision(repositoryRoot, options.run);
+  if ((options.platform ?? process.platform) !== 'darwin') {
+    return { reason: 'unsupported-platform', revision, status: 'skipped' };
+  }
   makeDirectory(stateRoot, { recursive: true });
   const logPath = path.join(stateRoot, 'build.log');
   const descriptor = openFile(logPath, 'a');
   const command = createDogfoodLaunchCommand({
-    lockPath: path.join(stateRoot, 'build.lock'), repositoryRoot, revision, workerPath
+    lockPath: path.join(stateRoot, 'build.lock'), repositoryRoot, revision, stateRoot, workerPath
   });
   let child;
   try {
@@ -67,7 +71,8 @@ export async function launchDogfoodDailyBuild(options = {}) {
 
 async function main() {
   const result = await launchDogfoodDailyBuild();
-  console.log(`[dogfood-daily] dispatched revision=${result.revision} pid=${result.pid}`);
+  const detail = result.status === 'skipped' ? `reason=${result.reason}` : `pid=${result.pid}`;
+  console.log(`[dogfood-daily] ${result.status ?? 'dispatched'} revision=${result.revision} ${detail}`);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.meta.filename)) {

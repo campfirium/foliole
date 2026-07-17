@@ -2,7 +2,7 @@
 /* global console, process */
 
 import { spawnSync } from 'node:child_process';
-import { mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { access, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -18,9 +18,40 @@ function runStep(label, command, args, options, run) {
   if (result.status !== 0) throw new Error(`${label} failed with exit code ${result.status}`);
 }
 
+const IRRELEVANT_PREFIXES = [
+  '.github/', '.lab/', 'android/', 'docs/', 'ios/', 'scripts/android/',
+  'scripts/codex/', 'scripts/quality/', 'scripts/windows/', 'src/companion/', 'tests/'
+];
+const IRRELEVANT_FILES = new Set([
+  'AGENTS.md', 'DESIGN.md', 'capacitor.config.ts', 'playwright.config.ts',
+  'playwright.desktop.config.ts', 'vite.companion.config.ts'
+]);
+
+export function isDogfoodPackagingIrrelevantPath(filePath) {
+  return IRRELEVANT_FILES.has(filePath) ||
+    IRRELEVANT_PREFIXES.some((prefix) => filePath.startsWith(prefix)) ||
+    /(^|\/)AGENTS\.md$/u.test(filePath) ||
+    /\.(test|spec)\.[^.]+$/u.test(filePath) ||
+    /^scripts\/(check-|lint-)/u.test(filePath);
+}
+
+export function resolveDogfoodPackagingDecision(changedFiles) {
+  return changedFiles.every(isDogfoodPackagingIrrelevantPath) ? 'skip' : 'build';
+}
+
 export function createDogfoodBuildSteps(options) {
   const archivePath = path.join(options.temporaryRoot, 'source.tar');
   const sourceRoot = path.join(options.temporaryRoot, 'source');
+  const cacheSteps = options.includeCodexCache ? [
+    {
+      args: ['-p', path.join(sourceRoot, '.tmp/macos')], command: '/bin/mkdir',
+      cwd: options.repositoryRoot, label: 'prepare fixed Dogfood cache root'
+    },
+    {
+      args: ['-cR', path.join(options.repositoryRoot, '.tmp/macos/codex'), path.join(sourceRoot, '.tmp/macos/codex')],
+      command: '/bin/cp', cwd: options.repositoryRoot, label: 'clone verified Codex helper cache'
+    }
+  ] : [];
   return {
     archivePath,
     sourceRoot,
@@ -43,6 +74,7 @@ export function createDogfoodBuildSteps(options) {
         cwd: options.repositoryRoot,
         label: 'clone Dogfood dependencies'
       },
+      ...cacheSteps,
       {
         args: ['run', 'macos:mas:dev'],
         command: 'npm',
@@ -53,6 +85,33 @@ export function createDogfoodBuildSteps(options) {
   };
 }
 
+function splitFiles(output) {
+  return output.split(/\r?\n/u).map((file) => file.trim()).filter(Boolean);
+}
+
+function inspectChanges(repositoryRoot, baseline, revision, run) {
+  if (!baseline || !/^[0-9a-f]{40}$/u.test(baseline)) return { changedFiles: null, stale: false };
+  const stale = run('git', ['merge-base', '--is-ancestor', revision, baseline], { cwd: repositoryRoot }).status === 0;
+  if (stale) return { changedFiles: [], stale: true };
+  const result = run('git', ['diff', '--name-only', `${baseline}..${revision}`, '--', '.'], {
+    cwd: repositoryRoot, encoding: 'utf8'
+  });
+  return result.status === 0 ? { changedFiles: splitFiles(result.stdout ?? ''), stale: false } : { changedFiles: null, stale: false };
+}
+
+async function readAccountedRevision(stateRoot) {
+  try {
+    return (await readFile(path.join(stateRoot, 'accounted-revision'), 'utf8')).trim();
+  } catch (error) {
+    if (error?.code === 'ENOENT') return null;
+    throw error;
+  }
+}
+
+async function writeAccountedRevision(stateRoot, revision) {
+  await writeFile(path.join(stateRoot, 'accounted-revision'), `${revision}\n`);
+}
+
 export async function runDogfoodDailyBuild(options) {
   const revision = assertRevision(options.revision);
   const repositoryRoot = path.resolve(options.repositoryRoot);
@@ -60,8 +119,25 @@ export async function runDogfoodDailyBuild(options) {
   const makeTempDirectory = options.makeTempDirectory ?? mkdtemp;
   const makeDirectory = options.makeDirectory ?? mkdir;
   const remove = options.remove ?? rm;
+  const stateRoot = options.stateRoot ?? path.join(repositoryRoot, '.tmp/macos/dogfood-daily');
+  await makeDirectory(stateRoot, { recursive: true });
+  const baseline = options.baseline === undefined ? await readAccountedRevision(stateRoot) : options.baseline;
+  const inspection = options.inspection ?? inspectChanges(repositoryRoot, baseline, revision, run);
+  if (inspection.stale) {
+    console.log(`[dogfood-daily] skipped stale revision=${revision}`);
+    return { revision, status: 'skipped' };
+  }
+  if (inspection.changedFiles && resolveDogfoodPackagingDecision(inspection.changedFiles) === 'skip') {
+    await (options.writeBaseline ?? writeAccountedRevision)(stateRoot, revision);
+    console.log(`[dogfood-daily] skipped irrelevant revision=${revision}`);
+    return { revision, status: 'skipped' };
+  }
   const temporaryRoot = await makeTempDirectory(path.join(tmpdir(), 'foliole-dogfood-source-'));
-  const build = createDogfoodBuildSteps({ repositoryRoot, revision, temporaryRoot });
+  const cacheRoot = path.join(repositoryRoot, '.tmp/macos/codex');
+  const pathExists = options.pathExists ?? (async (candidate) => access(candidate).then(() => true, () => false));
+  const build = createDogfoodBuildSteps({
+    includeCodexCache: await pathExists(cacheRoot), repositoryRoot, revision, temporaryRoot
+  });
   try {
     await makeDirectory(build.sourceRoot);
     console.log(`[dogfood-daily] building revision=${revision}`);
@@ -71,7 +147,9 @@ export async function runDogfoodDailyBuild(options) {
         env: { ...process.env, FOLIOLE_DOGFOOD_BUILD_REVISION: revision }
       }, run);
     }
+    await (options.writeBaseline ?? writeAccountedRevision)(stateRoot, revision);
     console.log(`[dogfood-daily] completed revision=${revision}`);
+    return { revision, status: 'installed' };
   } finally {
     await remove(temporaryRoot, { force: true, recursive: true });
   }
@@ -79,7 +157,7 @@ export async function runDogfoodDailyBuild(options) {
 
 function parseArgs(argv) {
   const read = (flag) => argv[argv.indexOf(flag) + 1];
-  return { repositoryRoot: read('--repository'), revision: read('--revision') };
+  return { repositoryRoot: read('--repository'), revision: read('--revision'), stateRoot: read('--state-root') };
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.meta.filename)) {
