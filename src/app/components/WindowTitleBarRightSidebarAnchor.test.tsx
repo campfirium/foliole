@@ -82,7 +82,7 @@ it('removes the more menu when every visible panel button fits', () => {
       isRightSidebarCollapsed={false}
       onSelectRightPanel={() => undefined}
       onToggleRightSidebarVisibility={() => undefined}
-      rightSidebarWidth={345}
+      rightSidebarWidth={377}
     />
   );
 
@@ -91,6 +91,7 @@ it('removes the more menu when every visible panel button fits', () => {
     'Outline panel',
     'Highlights panel',
     'Backlinks panel',
+    'Foliole Aide panel',
     'Scheduling panel'
   ]);
   expect(screen.queryByRole('button', { name: 'More right sidebar panels' })).not.toBeInTheDocument();
@@ -113,6 +114,7 @@ it('uses the freed window control space to show more panels', () => {
     'Outline panel',
     'Highlights panel',
     'Backlinks panel',
+    'Foliole Aide panel',
     'Scheduling panel'
   ]);
   expect(screen.queryByRole('button', { name: 'More right sidebar panels' })).not.toBeInTheDocument();

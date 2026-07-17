@@ -45,6 +45,9 @@ describe('check-layer-dependency-boundary platform subdomains', () => {
     expect(resolvePlatformSubdomain('src/shared/platform/foliolePublishRepository.ts')).toBe(
       'desktop-runtime-repository'
     );
+    expect(resolvePlatformSubdomain('src/shared/platform/appDisplayScale.ts')).toBe(
+      'desktop-runtime-repository'
+    );
     expect(resolvePlatformSubdomain('src/shared/platform/wordpressPublishRepository.ts')).toBe(
       'desktop-runtime-repository'
     );

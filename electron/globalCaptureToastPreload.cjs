@@ -1,3 +1,5 @@
+/* global window */
+
 const { contextBridge, ipcRenderer } = require('electron');
 
 const OPEN_CHANNEL = 'foliole:global-capture-toast:open';

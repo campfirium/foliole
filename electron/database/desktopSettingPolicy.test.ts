@@ -18,8 +18,8 @@ describe('desktop setting policy', () => {
     ['readwise_book_epub_picker_state', 'session_resume', true],
     ['discourse_publish_settings', 'device', true],
     ['wordpress_publish_settings', 'device', true],
-    ['device_id', 'local_only', false],
     ['foliole_publish_settings', 'device', true],
+    ['device_id', 'local_only', false],
     ['watch_import_cursor_state', 'local_only', false]
   ])('classifies %s as %s', (key, scope, canonical) => {
     expect(resolveDesktopSettingPolicy(key)).toMatchObject({ canonical, declared: true, scope });

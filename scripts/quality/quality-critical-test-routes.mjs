@@ -5,7 +5,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-const RUN_VITEST_WITH_SUMMARY_SCRIPT = fileURLToPath(new URL('./run-vitest-with-summary.mjs', import.meta.url));
+export const RUN_VITEST_WITH_SUMMARY_SCRIPT = fileURLToPath(new URL('../run-vitest-with-summary.mjs', import.meta.url));
 
 const BACKLINKS_CONTRACT_TESTS = [
   'src/app/components/DocumentPanelSection.runtimeBacklinks.test.tsx',

@@ -64,13 +64,14 @@ it('keeps right titlebar width anchored to the right sidebar width when the titl
 });
 
 it('shows all common right sidebar panels when the right sidebar titlebar itself has room', () => {
-  renderTitleBar({ isRightSidebarCollapsed: false, rightSidebarWidth: 345 });
+  renderTitleBar({ isRightSidebarCollapsed: false, rightSidebarWidth: 377 });
 
   expect(getVisibleRightSidebarButtonLabels()).toEqual([
     'Flow panel',
     'Outline panel',
     'Highlights panel',
     'Backlinks panel',
+    'Foliole Aide panel',
     'Scheduling panel'
   ]);
   expect(screen.queryByRole('button', { name: 'More right sidebar panels' })).not.toBeInTheDocument();

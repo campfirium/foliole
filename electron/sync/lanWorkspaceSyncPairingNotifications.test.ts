@@ -3,6 +3,8 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
+
 import { createTestPairingKeyPair } from './companionPairingProtocolTestSupport.js';
 
 const electronMock = vi.hoisted(() => ({
@@ -63,7 +65,8 @@ describe('lan workspace sync pairing notifications', () => {
         device_id: 'android-test-device',
         device_kind: 'android-capacitor',
         device_name: 'Android companion android-test-device',
-        pairing_public_key: firstPairingKey.publicKey
+        pairing_public_key: firstPairingKey.publicKey,
+        protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
       }),
       headers: { 'Content-Type': 'application/json' },
       method: 'POST'
@@ -73,7 +76,8 @@ describe('lan workspace sync pairing notifications', () => {
         device_id: 'android-test-device',
         device_kind: 'android-capacitor',
         device_name: 'Android companion android-test-device',
-        pairing_public_key: secondPairingKey.publicKey
+        pairing_public_key: secondPairingKey.publicKey,
+        protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
       }),
       headers: { 'Content-Type': 'application/json' },
       method: 'POST'

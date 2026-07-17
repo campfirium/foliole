@@ -3,6 +3,8 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
+
 import { createTestPairingKeyPair, decryptTestPairingSecret } from './companionPairingProtocolTestSupport.js';
 import { postSigned } from './lanWorkspaceSyncObjects.testSupport.js';
 
@@ -46,7 +48,8 @@ async function pairDevice(endpoint: string) {
       device_id: 'android-test-device',
       device_kind: 'android',
       device_name: 'Pixel Test',
-      pairing_public_key: clientKeyPair.publicKey
+      pairing_public_key: clientKeyPair.publicKey,
+      protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
     }),
     headers: { 'Content-Type': 'application/json' },
     method: 'POST'

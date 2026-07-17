@@ -1,11 +1,16 @@
 // @vitest-environment node
+import { existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-import { resolveCriticalTestFiles } from './quality-critical-test-routes.mjs';
+import { resolveCriticalTestFiles, RUN_VITEST_WITH_SUMMARY_SCRIPT } from './quality-critical-test-routes.mjs';
 
 const existing = () => true;
 
 describe('quality critical test routes', () => {
+  it('resolves the shared Vitest runner after the quality scripts directory split', () => {
+    expect(existsSync(RUN_VITEST_WITH_SUMMARY_SCRIPT)).toBe(true);
+  });
+
   it('routes backlinks hook contract changes to all renderer consumers', () => {
     expect(resolveCriticalTestFiles(['src/app/components/useNodeBacklinks.ts'], existing)).toEqual([
       'src/app/components/DocumentPanelSection.runtimeBacklinks.test.tsx',

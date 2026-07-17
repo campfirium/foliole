@@ -100,6 +100,7 @@ export function buildDesktopElectronBuckets() {
     { label: 'agentControl', report: '.tmp/vitest/desktop-electron-agent-control.json', targets: collectTestFiles('electron/agentControl') },
     { label: 'assistant', report: '.tmp/vitest/desktop-electron-assistant.json', targets: collectTestFiles('electron/assistant') },
     { label: 'discourse', report: '.tmp/vitest/desktop-electron-discourse.json', targets: collectTestFiles('electron/discourse') },
+    { label: 'foliole-publish', report: '.tmp/vitest/desktop-electron-foliole-publish.json', targets: collectTestFiles('electron/foliolePublish') },
     { label: 'security', report: '.tmp/vitest/desktop-electron-security.json', targets: collectTestFiles('electron/security') },
     { label: 'update', report: '.tmp/vitest/desktop-electron-update.json', targets: collectTestFiles('electron/update') },
     { label: 'wordpress', report: '.tmp/vitest/desktop-electron-wordpress.json', targets: collectTestFiles('electron/wordpress') },

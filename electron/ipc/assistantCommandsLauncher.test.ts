@@ -4,7 +4,8 @@ import path from 'node:path';
 
 import { beforeEach, expect, it, vi } from 'vitest';
 
-let mockedUserDataPath = 'C:\\Users\\Tester\\AppData\\Roaming\\foliole';
+const TEST_USER_DATA_PATH = path.join(process.cwd(), '.tmp', 'assistant-commands-launcher-user-data');
+let mockedUserDataPath = TEST_USER_DATA_PATH;
 const adapterGetStatus = vi.hoisted(() => vi.fn());
 const adapterOptions = vi.hoisted(() => [] as unknown[]);
 
@@ -39,7 +40,7 @@ beforeEach(() => {
   delete process.env.FOLIOLE_LIBRARY_HOME;
   delete process.env.CODEX_HOME;
   process.env.USERPROFILE = 'C:\\Users\\Tester';
-  mockedUserDataPath = 'C:\\Users\\Tester\\AppData\\Roaming\\foliole';
+  mockedUserDataPath = TEST_USER_DATA_PATH;
   resetAssistantCommandAdapterForTests();
 });
 

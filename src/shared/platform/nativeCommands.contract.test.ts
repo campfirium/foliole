@@ -14,6 +14,7 @@ const CONTRACT_FILES = [
   'nativeExternalSearchCommandMap.ts',
   'nativeFoliolePublishContract.ts',
   'nativeImportCommandMap.ts',
+  'nativeInitialLibrarySetupContract.ts',
   'nativeLocalFileCommandMap.ts',
   'nativeMoveCommandMap.ts',
   'nativeReadwiseCommandMap.ts',
@@ -22,6 +23,7 @@ const CONTRACT_FILES = [
   'nativeSyncCommandMap.ts',
   'nativeTrashCommandMap.ts',
   'nativeUpdateContract.ts',
+  'nativeWordPressPublishContract.ts',
   'nativeUtilityCommandMap.ts'
 ];
 

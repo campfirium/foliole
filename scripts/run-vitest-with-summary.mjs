@@ -2,7 +2,7 @@
 /* global console, process */
 
 import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
 
 const DEFAULT_SLOW_LIMIT = 10;
@@ -192,6 +192,7 @@ function printSummary(reportPath) {
 async function main() {
   const { reportPath, vitestArgs } = parseArgs(process.argv.slice(2));
   mkdirSync(path.dirname(reportPath), { recursive: true });
+  rmSync(reportPath, { force: true });
   const args = [
     'run',
     '--reporter=dot',

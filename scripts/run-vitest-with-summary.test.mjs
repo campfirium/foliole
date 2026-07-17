@@ -67,7 +67,7 @@ async function createFakeVitestPackage(tempRoot) {
 }
 
 describe('run-vitest-with-summary', () => {
-  it('prints failed tests and slow duration rankings from the json report', async () => {
+  it('does not report stale failures when Vitest exits without writing a report', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'vitest-summary-'));
     const reportPath = path.join(tempRoot, '.tmp', 'vitest', 'summary.json');
     try {
@@ -102,12 +102,8 @@ describe('run-vitest-with-summary', () => {
       const result = await runSummary(tempRoot, reportPath, 1);
 
       expect(result.code).toBe(1);
-      expect(result.stdout).toContain('[vitest-summary] failed tests: 1');
-      expect(result.stdout).toContain('src/Slow.test.ts :: slow fail');
-      expect(result.stdout).toContain('[vitest-summary] slowest files: top 2');
-      expect(result.stdout).toContain('600ms src/Slow.test.ts');
-      expect(result.stdout).toContain('[vitest-summary] slowest tests: top 2');
-      expect(result.stdout).toContain('500ms src/Slow.test.ts :: slow pass');
+      expect(result.stdout).toContain(`[vitest-summary] report unavailable: ${reportPath}`);
+      await expect(readFile(reportPath, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }

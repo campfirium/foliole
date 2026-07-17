@@ -1,18 +1,18 @@
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import {
-  connectFoliolePublishSettings,
-  disconnectFoliolePublishSettings,
-  loadFoliolePublishSettings,
-  previewFoliolePublish,
-  publishTopicToFoliole
-} from '../foliolePublish/foliolePublish.js';
-import {
   disconnectDiscoursePublishSettings,
   loadDiscoursePublishCatalog,
   loadDiscoursePublishSettings,
   publishTopicToDiscourse,
   saveDiscoursePublishSettings
 } from '../discourse/discoursePublish.js';
+import {
+  connectFoliolePublishSettings,
+  disconnectFoliolePublishSettings,
+  loadFoliolePublishSettings,
+  previewFoliolePublish,
+  publishTopicToFoliole
+} from '../foliolePublish/foliolePublish.js';
 import {
   connectWordPressPublishSettings,
   disconnectWordPressPublishSettings,

@@ -1,7 +1,7 @@
-import type { SyntaxNode } from '@lezer/common';
 import { GFM, parser } from '@lezer/markdown';
 
 const markdownParser = parser.configure(GFM);
+type SyntaxNode = ReturnType<typeof markdownParser.parse>['topNode'];
 const MARKERS = new Set(['CodeMark', 'EmphasisMark', 'HeaderMark', 'LinkMark', 'ListMark', 'QuoteMark', 'TaskMarker']);
 
 function escapeHtml(value: string) {
