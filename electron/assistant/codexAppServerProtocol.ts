@@ -28,6 +28,7 @@ export function createInitializeMessage(appVersion: string): JsonRpcMessage {
     id: 0,
     method: 'initialize',
     params: {
+      capabilities: { experimentalApi: true },
       clientInfo: { name: 'foliole_desktop', title: 'Foliole Desktop', version: appVersion }
     }
   };

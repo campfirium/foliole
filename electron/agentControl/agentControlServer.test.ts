@@ -9,6 +9,7 @@ import { afterEach, expect, it } from 'vitest';
 import { getEnabledAgentControlCapabilities } from './agentControlCapabilities.js';
 import {
   ensureAgentControlApiServer,
+  getAgentControlApiSessionDescriptor,
   stopAgentControlApiServer
 } from './agentControlServer.js';
 import { AGENT_CONTROL_CAPABILITIES, AGENT_CONTROL_PROTOCOL_VERSION } from './agentControlTypes.js';
@@ -90,6 +91,7 @@ it('starts a loopback-only service and writes a local session descriptor', async
   expect(descriptor.capabilities).not.toContain('virtualFolders.write');
   expect(typeof descriptor.token).toBe('string');
   expect(String(descriptor.token).length).toBeGreaterThan(20);
+  expect(getAgentControlApiSessionDescriptor()).toEqual(descriptor);
 });
 
 it('exposes health without auth and protects token-scoped discovery routes', async () => {
@@ -216,6 +218,7 @@ it('cleans up descriptor state when stopped', async () => {
   const stopped = await stopAgentControlApiServer();
 
   expect(stopped).toEqual({ endpoint: null, last_error: null, port: null, state: 'stopped' });
+  expect(getAgentControlApiSessionDescriptor()).toBeNull();
   expect(await fileExists(descriptorPath)).toBe(false);
 });
 

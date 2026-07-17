@@ -10,6 +10,7 @@ import {
   type JsonRpcRecord
 } from './codexAppServerProtocol.js';
 import type { TurnState } from './codexAppServerSessionTypes.js';
+import { emitCodexAppServerTurnEvent } from './codexAppServerTurnEvents.js';
 
 export function refreshTurnIdleTimeout(turn: TurnState, onTimeout: () => void) {
   clearTimeout(turn.timeout);
@@ -42,6 +43,22 @@ export function resolveTurnCompletion(
     provider: CODEX_APP_SERVER_PROVIDER,
     state: 'ready'
   };
+}
+
+export function completeTurn(
+  params: JsonRpcRecord | undefined,
+  turn: TurnState,
+  fail: (category: NativeAssistantFailureCategory, dispose: boolean) => void,
+  finish: (result: NativeAssistantSendMessageResult) => void
+) {
+  const result = resolveTurnCompletion(params, turn);
+  if (result.state !== 'ready') {
+    const category = result.failure?.category ?? 'protocol_error';
+    fail(category, category !== 'interrupted');
+    return;
+  }
+  emitCodexAppServerTurnEvent(turn, { kind: 'completed', text: turn.text });
+  finish(result);
 }
 
 function asRecord(value: unknown): JsonRpcRecord | undefined {

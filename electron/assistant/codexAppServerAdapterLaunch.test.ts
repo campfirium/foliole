@@ -37,22 +37,21 @@ it('starts a plain app-server and sends product-level Foliole guidance', async (
 
   expect(spawnCommand).toHaveBeenCalledWith(
     'codex',
-    ['app-server', '--disable', 'code_mode'],
+    ['app-server', '--disable', 'code_mode', '--disable', 'shell_tool', '--disable', 'unified_exec'],
     expect.objectContaining({ cwd: 'C:\\Foliole\\Widgets\\Foliole Aide' })
   );
   expect(result).toMatchObject({ message: { text: 'Ready', threadId: 'thread-1' }, state: 'ready' });
   expect(capturedTurnInputs).toHaveLength(1);
   expect(capturedTurnInputs[0]).toContain('read a Topic or Folder');
-  expect(capturedTurnInputs[0]).toContain('update a Topic');
+  expect(capturedTurnInputs[0]).not.toContain('update a Topic');
   expect(capturedTurnInputs[0]).not.toContain('MCP');
   expect(capturedTurnInputs[0]).not.toContain('FOLIOLE_AGENT_DESCRIPTOR');
   expect(capturedTurnRequests[0]?.params).toMatchObject({
     approvalPolicy: 'never',
     cwd: 'C:\\Foliole\\Widgets\\Foliole Aide',
     sandboxPolicy: {
-      networkAccess: true,
-      type: 'workspaceWrite',
-      writableRoots: ['C:\\Foliole\\Widgets\\Foliole Aide']
+      networkAccess: 'restricted',
+      type: 'externalSandbox'
     }
   });
 });

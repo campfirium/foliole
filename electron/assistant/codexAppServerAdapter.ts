@@ -27,6 +27,10 @@ import {
   spawnCodexCommand,
   type CodexLauncherOptions
 } from './codexAppServerCommandDiscovery.js';
+import {
+  executeFolioleDynamicTool,
+  type FolioleDynamicToolRequest
+} from './codexAppServerDynamicTools.js';
 import type { SpawnedCodexProcess } from './codexAppServerSessionTypes.js';
 import { CodexAppServerSession } from './codexAppServerTurn.js';
 
@@ -37,6 +41,7 @@ export interface CodexAppServerAdapterOptions {
   command?: string;
   findCommandCandidates?: (env: NodeJS.ProcessEnv) => Promise<string[]>;
   env?: NodeJS.ProcessEnv;
+  executeDynamicTool?: (request: FolioleDynamicToolRequest) => ReturnType<typeof executeFolioleDynamicTool>;
   launcherCwd: string;
   loginWithChatGpt?: (options: {
     appVersion: string;
@@ -64,6 +69,7 @@ export class CodexAppServerAdapter {
   private readonly appVersion: string;
   private readonly configuredCommand: string | undefined;
   private readonly env: NodeJS.ProcessEnv;
+  private readonly executeDynamicTool: NonNullable<CodexAppServerAdapterOptions['executeDynamicTool']>;
   private readonly findCommandCandidates: (env: NodeJS.ProcessEnv) => Promise<string[]>;
   private readonly launcherCwd: string;
   private readonly loginWithChatGpt: NonNullable<CodexAppServerAdapterOptions['loginWithChatGpt']>;
@@ -88,6 +94,7 @@ export class CodexAppServerAdapter {
     this.appVersion = options.appVersion;
     this.configuredCommand = options.command;
     this.env = options.env ?? process.env;
+    this.executeDynamicTool = options.executeDynamicTool ?? executeFolioleDynamicTool;
     this.findCommandCandidates = options.findCommandCandidates ?? findCodexCommandCandidates;
     this.launcherCwd = options.launcherCwd;
     this.loginWithChatGpt = options.loginWithChatGpt ?? loginCodexWithChatGpt;
@@ -160,6 +167,7 @@ export class CodexAppServerAdapter {
       if (!command) return createAssistantFailure('failed', 'not_configured');
       this.session ??= new CodexAppServerSession({
         appVersion: this.appVersion,
+        executeDynamicTool: this.executeDynamicTool,
         launcherCwd: this.launcherCwd,
         spawn: () => this.spawnCommand(command, CODEX_APP_SERVER_ARGS, this.createLauncherOptions())
       });

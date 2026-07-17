@@ -17,14 +17,16 @@ test('Aide Connect discovers the signed-in Codex Desktop runtime', async ({ desk
   });
   await desktopWindow.reload();
 
-  const directButton = desktopWindow.getByRole('button', { name: /Foliole Aide.*panel|Foliole Aide面板/ });
-  if (await directButton.count()) await directButton.first().click();
-  else {
-    await desktopWindow.getByRole('button', { name: /More right sidebar panels|更多右侧栏面板/ }).click();
-    await desktopWindow.getByRole('menuitem', { name: /Foliole Aide/ }).click();
+  const connectButton = desktopWindow.getByRole('button', { name: /^(Connect|连接)$/ });
+  if (!await connectButton.isVisible().catch(() => false)) {
+    const directButton = desktopWindow.getByRole('button', {
+      name: /Foliole Aide.*(?:panel|面板)/
+    });
+    await directButton.first().waitFor({ state: 'visible' });
+    await directButton.first().click();
   }
 
-  await desktopWindow.getByRole('button', { name: /^(Connect|连接)$/ }).click();
+  await connectButton.click();
   await expect(desktopWindow.getByLabel(/^(Foliole Aide message|Foliole Aide 消息)$/))
     .toBeVisible({ timeout: 15_000 });
   await expect(desktopWindow.getByText(

@@ -4,7 +4,12 @@ import path from 'node:path';
 
 import type { SpawnedCodexProcess } from './codexAppServerSessionTypes.js';
 
-export const CODEX_APP_SERVER_ARGS = ['app-server', '--disable', 'code_mode'];
+export const CODEX_APP_SERVER_ARGS = [
+  'app-server',
+  '--disable', 'code_mode',
+  '--disable', 'shell_tool',
+  '--disable', 'unified_exec'
+];
 
 const HASH_DIRECTORY_PATTERN = /^[a-f0-9]{16}$/i;
 const PROBE_TIMEOUT_MS = 2_000;

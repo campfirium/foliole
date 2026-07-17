@@ -1,15 +1,23 @@
-export function createAideThreadStartParams(cwd: string) {
+import { createFolioleDynamicTools } from './codexAppServerDynamicTools.js';
+
+export function createAideThreadStartParams(cwd: string, capabilities: readonly string[] = []) {
   return {
     approvalPolicy: 'never',
     cwd,
-    sandbox: 'workspace-write'
+    dynamicTools: createFolioleDynamicTools(capabilities),
+    sandbox: 'read-only'
   };
 }
 
-export function createAideThreadRequest(id: number, cwd: string, providerThreadId?: string) {
+export function createAideThreadRequest(
+  id: number,
+  cwd: string,
+  providerThreadId?: string,
+  capabilities: readonly string[] = []
+) {
   return providerThreadId
     ? { id, method: 'thread/resume', params: { threadId: providerThreadId } }
-    : { id, method: 'thread/start', params: createAideThreadStartParams(cwd) };
+    : { id, method: 'thread/start', params: createAideThreadStartParams(cwd, capabilities) };
 }
 
 export function createAideTurnStartParams(cwd: string, threadId: string, userMessage: string) {
@@ -18,11 +26,8 @@ export function createAideTurnStartParams(cwd: string, threadId: string, userMes
     cwd,
     input: [{ text: userMessage, type: 'text' }],
     sandboxPolicy: {
-      excludeSlashTmp: true,
-      excludeTmpdirEnvVar: true,
-      networkAccess: true,
-      type: 'workspaceWrite',
-      writableRoots: [cwd]
+      networkAccess: 'restricted',
+      type: 'externalSandbox'
     },
     threadId
   };

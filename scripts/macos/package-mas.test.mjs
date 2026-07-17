@@ -11,6 +11,7 @@ import {
   createMasArtifactName,
   createMasBuilderConfig,
   installMasDevelopmentApp,
+  prepareMacosPublicLauncher,
   readProvisioningProfileMetadata,
   resolveInstallMode
 } from './package-mas.mjs';
@@ -21,6 +22,14 @@ it('cleans stale Electron output before compiling a MAS package', async () => {
   await cleanMasElectronOutput('/repo', remove);
 
   expect(remove).toHaveBeenCalledWith('/repo/dist/electron', { force: true, recursive: true });
+});
+
+it('makes the macOS public launcher executable before packaging', async () => {
+  const setMode = vi.fn(async () => undefined);
+
+  await prepareMacosPublicLauncher('/repo', setMode);
+
+  expect(setMode).toHaveBeenCalledWith('/repo/build/cli/foliole', 0o755);
 });
 
 it('routes the Internal update script through the MAS development package', () => {

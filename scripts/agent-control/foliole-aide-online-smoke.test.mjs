@@ -15,14 +15,17 @@ import {
 } from './foliole-aide-online-smoke.mjs';
 import { isOnlineSmokeSuccessful } from './foliole-aide-online-smoke-success.mjs';
 
-it('starts Codex app-server without Foliole MCP registration', () => {
-  expect(buildCodexAppServerArgs()).toEqual(['app-server', '--disable', 'code_mode']);
+it('starts Codex app-server without shell execution tools', () => {
+  expect(buildCodexAppServerArgs()).toEqual([
+    'app-server', '--disable', 'code_mode',
+    '--disable', 'shell_tool',
+    '--disable', 'unified_exec'
+  ]);
 });
 
-it('asks the online smoke turn to discover the stable CLI without internal tool names', () => {
-  expect(createSmokePrompt()).not.toContain('foliole_materials_read');
+it('asks the online smoke turn to use the structured Foliole read tool', () => {
   expect(createSmokePrompt()).not.toContain('MCP');
-  expect(createSmokePrompt()).toContain('foliole help --json');
+  expect(createSmokePrompt()).toContain('Foliole read tool');
   expect(createSmokePrompt()).toContain('smoke-topic');
   expect(createSmokePrompt()).toContain('TRACE_SMOKE_OK Aide CLI Smoke Topic');
 });
@@ -30,7 +33,12 @@ it('asks the online smoke turn to discover the stable CLI without internal tool 
 it('keeps online smoke threads ephemeral and outside the repository', () => {
   const cwd = 'C:\\Users\\Tester\\AppData\\Local\\Temp\\foliole-aide-smoke';
 
-  expect(createSmokeThreadStartParams(cwd)).toEqual({ cwd, ephemeral: true });
+  expect(createSmokeThreadStartParams(cwd)).toMatchObject({
+    cwd,
+    dynamicTools: [expect.objectContaining({ name: 'foliole' })],
+    ephemeral: true,
+    sandbox: 'read-only'
+  });
   expect(createSmokeThreadStartParams(cwd).cwd).not.toBe(path.resolve('.'));
 });
 
@@ -48,7 +56,7 @@ it('describes App Server account failures without requiring CLI login', () => {
   expect(describeOnlineSmokeFailure('auth_failed')).not.toContain('sign in');
 });
 
-it('requires both the CLI-backed API read and expected assistant answer for success', () => {
+it('requires both the dynamic-tool API read and expected assistant answer for success', () => {
   const apiRequests = [{
     authorization: 'Bearer smoke-token',
     body: { id: 'smoke-topic' },

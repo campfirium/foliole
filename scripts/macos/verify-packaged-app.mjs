@@ -1,6 +1,7 @@
 /* global console, process */
 
 import { spawnSync } from 'node:child_process';
+import { constants } from 'node:fs';
 import { access } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -25,7 +26,9 @@ export async function verifyPackagedMacosApp(options) {
   const appPath = path.resolve(options.appPath);
   const codexPath = path.join(appPath, 'Contents/MacOS/codex');
   const helperPath = path.join(appPath, 'Contents/Frameworks/Foliole Helper.app');
+  const publicLauncherPath = path.join(appPath, 'Contents/bin/foliole');
   await checkAccess(path.join(appPath, 'Contents/embedded.provisionprofile'));
+  await checkAccess(publicLauncherPath, constants.X_OK);
   runChecked('app signature verification', 'codesign', ['--verify', '--deep', '--strict', appPath], run);
   const appEntitlements = runChecked(
     'app entitlement inspection',

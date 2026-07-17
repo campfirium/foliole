@@ -122,7 +122,7 @@ it('uses a signed bundled command without running candidate discovery probes', a
   );
   expect(spawnCommand).toHaveBeenCalledWith(
     '/Applications/Foliole.app/Contents/MacOS/codex',
-    ['app-server', '--disable', 'code_mode'],
+    ['app-server', '--disable', 'code_mode', '--disable', 'shell_tool', '--disable', 'unified_exec'],
     expect.objectContaining({ cwd: TEST_LAUNCHER_CWD })
   );
 });

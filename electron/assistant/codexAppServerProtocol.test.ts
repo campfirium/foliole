@@ -2,7 +2,13 @@
 
 import { expect, it } from 'vitest';
 
-import { composeAssistantTurnInput } from './codexAppServerProtocol.js';
+import { composeAssistantTurnInput, createInitializeMessage } from './codexAppServerProtocol.js';
+
+it('opts into the pinned experimental dynamic tool protocol', () => {
+  expect(createInitializeMessage('0.6.5-test')).toMatchObject({
+    params: { capabilities: { experimentalApi: true } }
+  });
+});
 
 it('formats complete Foliole actions without exposing implementation details', () => {
   const input = composeAssistantTurnInput('Find notes about embeddings', {
@@ -28,12 +34,10 @@ it('formats complete Foliole actions without exposing implementation details', (
     scope: 'workspace'
   });
 
-  expect(input).toContain('Foliole tools are available through the self-describing `foliole` command');
+  expect(input).toContain('Read-only Foliole tools are available for this turn');
   expect(input).toContain('Active Foliole parent material id: workspace-parent');
-  expect(input).toContain('create a Topic or Folder');
-  expect(input).toContain('move a Topic or Folder');
-  expect(input).toContain('move materials to trash or restore them');
-  expect(input).toContain('Change Foliole data only when the user explicitly requests');
+  expect(input).not.toContain('create a Topic or Folder');
+  expect(input).not.toContain('Change Foliole data');
   for (const leak of ['Agent Control', 'MCP', 'FOLIOLE_AGENT_DESCRIPTOR', 'foliole-agent', '127.0.0.1']) {
     expect(input).not.toContain(leak);
   }
@@ -69,7 +73,7 @@ it('formats missing Agent Control read/search capabilities as unavailable', () =
     scope: 'workspace'
   });
 
-  expect(input).toContain('Foliole tools are available through the self-describing `foliole` command');
+  expect(input).toContain('Read-only Foliole tools are available for this turn');
   expect(input).not.toContain('Available Foliole actions');
 });
 

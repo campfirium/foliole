@@ -19,6 +19,65 @@ function createAdapter(process: FakeCodexProcess) {
   });
 }
 
+  it('handles an id-zero dynamic tool request without confusing it with initialize', async () => {
+    const process = new FakeCodexProcess();
+    const executeDynamicTool = vi.fn(async () => ({
+      contentItems: [{ text: '{"material":{"id":"topic-1"}}', type: 'inputText' as const }],
+      success: true
+    }));
+    const adapter = new CodexAppServerAdapter({
+      appVersion: '0.6.5-test',
+      command: 'codex',
+      executeDynamicTool,
+      launcherCwd: TEST_LAUNCHER_CWD,
+      mkdirSync: testMkdirSync,
+      probeCommand: async () => true,
+      spawnCommand: () => process,
+      timeoutMs: 1000
+    });
+    const responses: unknown[] = [];
+    process.stdin.on('data', (chunk) => {
+      for (const line of String(chunk).trim().split('\n').filter(Boolean)) {
+        const message = JSON.parse(line);
+        if (message.method === 'initialize') writeMessage(process, { id: 0, result: {} });
+        else if (message.method === 'thread/start') {
+          expect(message.params.dynamicTools).toHaveLength(1);
+          writeMessage(process, { id: message.id, result: { thread: { id: 'thr_1' } } });
+        } else if (message.method === 'turn/start') {
+          writeMessage(process, { method: 'turn/started', params: { turn: { id: 'turn_1' } } });
+          writeMessage(process, {
+            id: 0,
+            method: 'item/tool/call',
+            params: {
+              arguments: { id: 'topic-1' },
+              callId: 'call-1',
+              namespace: 'foliole',
+              threadId: 'thr_1',
+              tool: 'read_material',
+              turnId: 'turn_1'
+            }
+          });
+        } else if (message.id === 0 && message.result?.contentItems) {
+          responses.push(message.result);
+          writeMessage(process, { method: 'item/agentMessage/delta', params: { delta: 'Done' } });
+          writeMessage(process, { method: 'turn/completed', params: { turn: { id: 'turn_1', status: 'completed' } } });
+        }
+      }
+    });
+
+    await expect(adapter.sendMessage({
+      clientTurnId: 'client-1',
+      message: 'Read it',
+      workspaceContext: {
+        agentControl: { capabilities: ['materials.read'], state: 'running' },
+        schemaVersion: 1,
+        scope: 'workspace'
+      }
+    })).resolves.toMatchObject({ message: { text: 'Done' }, state: 'ready' });
+    expect(executeDynamicTool).toHaveBeenCalledWith({ arguments: { id: 'topic-1' }, tool: 'read_material' });
+    expect(responses).toHaveLength(1);
+  });
+
   it('aggregates assistant deltas from a reusable app-server session', async () => {
     const process = new FakeCodexProcess();
     const adapter = createAdapter(process);

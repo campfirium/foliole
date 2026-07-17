@@ -32,6 +32,7 @@ const DYNAMIC_PORT_RANGE = 16_384;
 const LISTEN_ATTEMPTS = 8;
 
 let activeServer: http.Server | null = null;
+let activeDescriptor: AgentControlSessionDescriptor | null = null;
 let activeDescriptorPath: string | null = null;
 let activeStatus: AgentControlServerStatus = {
   endpoint: null,
@@ -151,8 +152,10 @@ export async function ensureAgentControlApiServer(args: {
     const port = await listen(server, args.port ?? 0);
     const endpoint = `http://${LOOPBACK_HOST}:${port}`;
     const descriptorPath = args.descriptorPath ?? getAgentControlSessionDescriptorPath();
-    await writeDescriptor(descriptorPath, buildDescriptor(endpoint, token, runtimeIdentity));
+    const descriptor = buildDescriptor(endpoint, token, runtimeIdentity);
+    await writeDescriptor(descriptorPath, descriptor);
     activeServer = server;
+    activeDescriptor = descriptor;
     activeDescriptorPath = descriptorPath;
     activeStatus = { endpoint, last_error: null, port, state: 'running' };
     return activeStatus;
@@ -168,12 +171,14 @@ export async function ensureAgentControlApiServer(args: {
       port: null,
       state: 'failed'
     };
+    activeDescriptor = null;
     return activeStatus;
   }
 }
 
 export async function stopAgentControlApiServer() {
   if (!activeServer) {
+    activeDescriptor = null;
     activeStatus = { endpoint: null, last_error: null, port: null, state: 'stopped' };
     return activeStatus;
   }
@@ -181,6 +186,7 @@ export async function stopAgentControlApiServer() {
   const server = activeServer;
   const descriptorPath = activeDescriptorPath;
   activeServer = null;
+  activeDescriptor = null;
   activeDescriptorPath = null;
   await new Promise<void>((resolve, reject) => {
     server.close((error) => {
@@ -197,4 +203,8 @@ export async function stopAgentControlApiServer() {
 
 export function getAgentControlApiServerStatus() {
   return activeStatus;
+}
+
+export function getAgentControlApiSessionDescriptor() {
+  return activeDescriptor;
 }

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-/* global console, process, setTimeout */
+/* global console, fetch, process, setTimeout */
 
 import { spawn } from 'node:child_process';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm } from 'node:fs/promises';
 import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
@@ -11,7 +11,6 @@ import { fileURLToPath } from 'node:url';
 import { createOnlineSmokeJsonRpcSession } from './foliole-aide-online-smoke-session.mjs';
 import { EXPECTED_SMOKE_ANSWER, isOnlineSmokeSuccessful } from './foliole-aide-online-smoke-success.mjs';
 
-const AGENT_CONTROL_PROTOCOL_VERSION = 1;
 const CODEX_TIMEOUT_MS = 180_000;
 const SMOKE_MATERIAL_ID = 'smoke-topic';
 const SMOKE_TITLE = 'Aide CLI Smoke Topic';
@@ -19,22 +18,14 @@ const SMOKE_TOKEN = 'smoke-token';
 
 export async function runOnlineSmoke(options = {}) {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'foliole-aide-online-smoke-'));
-  const descriptorPath = path.join(tempRoot, 'agent-control-session.json');
   const apiRequests = [];
   const apiServer = await createSmokeApi(apiRequests);
   const endpoint = `http://127.0.0.1:${apiServer.address().port}`;
-  await writeFile(descriptorPath, JSON.stringify({
-    capabilities: ['materials.read'],
-    endpoint,
-    protocol_version: AGENT_CONTROL_PROTOCOL_VERSION,
-    token: 'smoke-token'
-  }));
-
   try {
     const result = await runCodexTurn({
       codexCommand: options.codexCommand ?? 'codex',
       cwd: tempRoot,
-      descriptorPath,
+      endpoint,
       prompt: createSmokePrompt()
     });
     return {
@@ -51,8 +42,7 @@ export async function runOnlineSmoke(options = {}) {
 
 export function createSmokePrompt() {
   return [
-    'Use the self-describing foliole command to read the Foliole Topic with id smoke-topic.',
-    'Discover its syntax with foliole help --json if needed.',
+    'Use the Foliole read tool to read the Foliole Topic with id smoke-topic.',
     `Then answer exactly: ${EXPECTED_SMOKE_ANSWER}.`
   ].join(' ');
 }
@@ -82,11 +72,29 @@ export function describeOnlineSmokeFailure(category) {
 }
 
 export function buildCodexAppServerArgs() {
-  return ['app-server', '--disable', 'code_mode'];
+  return ['app-server', '--disable', 'code_mode', '--disable', 'shell_tool', '--disable', 'unified_exec'];
 }
 
 export function createSmokeThreadStartParams(cwd) {
-  return { cwd, ephemeral: true };
+  return {
+    cwd,
+    dynamicTools: [{
+      type: 'namespace',
+      name: 'foliole',
+      description: 'Read Foliole Topics.',
+      tools: [{
+        type: 'function',
+        name: 'read_material',
+        description: 'Read one Foliole Topic or Folder by id.',
+        inputSchema: {
+          type: 'object', additionalProperties: false,
+          properties: { id: { type: 'string' } }, required: ['id']
+        }
+      }]
+    }],
+    ephemeral: true,
+    sandbox: 'read-only'
+  };
 }
 
 export async function createSmokeApi(apiRequests) {
@@ -124,22 +132,25 @@ export async function createSmokeApi(apiRequests) {
 }
 
 async function runCodexTurn(input) {
-  const commandDir = path.resolve('scripts', 'agent-control');
-  const pathKey = Object.keys(process.env).find((key) => key.toUpperCase() === 'PATH') ?? 'PATH';
   const child = spawn(input.codexCommand, buildCodexAppServerArgs(), {
     cwd: input.cwd,
-    env: {
-      ...process.env,
-      FOLIOLE_AGENT_DESCRIPTOR: input.descriptorPath,
-      [pathKey]: `${commandDir}${path.delimiter}${process.env[pathKey] ?? ''}`
-    },
+    env: process.env,
     shell: process.platform === 'win32',
     stdio: ['pipe', 'pipe', 'pipe'],
     windowsHide: true
   });
-  const session = createOnlineSmokeJsonRpcSession(child, CODEX_TIMEOUT_MS);
+  const session = createOnlineSmokeJsonRpcSession(child, CODEX_TIMEOUT_MS, (message) => {
+    return executeSmokeTool(message, input.endpoint);
+  });
   try {
-    await session.request({ id: 0, method: 'initialize', params: { clientInfo: { name: 'foliole_aide_smoke', version: '0.1.0' } } });
+    await session.request({
+      id: 0,
+      method: 'initialize',
+      params: {
+        capabilities: { experimentalApi: true },
+        clientInfo: { name: 'foliole_aide_smoke', version: '0.1.0' }
+      }
+    });
     session.notify({ method: 'initialized', params: {} });
     const thread = await session.request({
       id: 1,
@@ -155,10 +166,7 @@ async function runCodexTurn(input) {
       params: {
         approvalPolicy: 'never', cwd: input.cwd,
         input: [{ text: input.prompt, type: 'text' }],
-        sandboxPolicy: {
-          excludeSlashTmp: true, excludeTmpdirEnvVar: true, networkAccess: true,
-          type: 'workspaceWrite', writableRoots: [input.cwd]
-        },
+        sandboxPolicy: { networkAccess: 'restricted', type: 'externalSandbox' },
         threadId
       }
     });
@@ -167,6 +175,23 @@ async function runCodexTurn(input) {
   } finally {
     await stopCodexAppServer(child);
   }
+}
+
+async function executeSmokeTool(message, endpoint) {
+  const params = message.params ?? {};
+  if (params.namespace !== 'foliole' || params.tool !== 'read_material') {
+    return { contentItems: [{ type: 'inputText', text: '{"error":"unknown_tool"}' }], success: false };
+  }
+  const response = await fetch(`${endpoint}/agent-control/v1/materials/read`, {
+    body: JSON.stringify(params.arguments ?? {}),
+    headers: { authorization: `Bearer ${SMOKE_TOKEN}`, 'content-type': 'application/json' },
+    method: 'POST'
+  });
+  const payload = await response.json();
+  return {
+    contentItems: [{ type: 'inputText', text: JSON.stringify(payload) }],
+    success: response.ok
+  };
 }
 
 async function stopCodexAppServer(child) {

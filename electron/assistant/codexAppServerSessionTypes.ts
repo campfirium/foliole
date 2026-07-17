@@ -14,6 +14,7 @@ export interface SpawnedCodexProcess {
 
 export interface TurnState {
   clientTurnId: string;
+  dynamicToolCapabilities: string[];
   finish: (result: NativeAssistantSendMessageResult) => void;
   onEvent?: (event: NativeAssistantTurnEvent) => void;
   providerThreadId?: string;

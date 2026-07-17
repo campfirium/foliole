@@ -1,4 +1,5 @@
 import { expect, it, vi } from 'vitest';
+import { constants } from 'node:fs';
 
 import { verifyPackagedMacosApp } from './verify-packaged-app.mjs';
 
@@ -34,6 +35,7 @@ it('verifies signatures, final sandbox entitlements, profile, and notarization t
   });
 
   expect(checkAccess).toHaveBeenCalledWith('/artifacts/Foliole.app/Contents/embedded.provisionprofile');
+  expect(checkAccess).toHaveBeenCalledWith('/artifacts/Foliole.app/Contents/bin/foliole', constants.X_OK);
   expect(run).toHaveBeenCalledWith('codesign', [
     '--verify', '--deep', '--strict', '/artifacts/Foliole.app'
   ], { encoding: 'utf8' });
@@ -43,6 +45,20 @@ it('verifies signatures, final sandbox entitlements, profile, and notarization t
   expect(run).toHaveBeenCalledWith('codesign', [
     '-d', '--entitlements', '-', '/artifacts/Foliole.app/Contents/MacOS/codex'
   ], { encoding: 'utf8' });
+});
+
+it('rejects a package whose public launcher is not executable', async () => {
+  const checkAccess = vi.fn(async (file, mode) => {
+    if (file.endsWith('/Contents/bin/foliole') && mode === constants.X_OK) {
+      throw new Error('permission denied');
+    }
+  });
+
+  await expect(verifyPackagedMacosApp({
+    access: checkAccess,
+    appPath: '/artifacts/Foliole.app',
+    run: vi.fn()
+  })).rejects.toThrow('permission denied');
 });
 
 it('rejects a package whose final app signature lost App Sandbox', async () => {

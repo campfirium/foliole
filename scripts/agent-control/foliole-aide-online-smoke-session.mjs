@@ -2,7 +2,7 @@
 
 import readline from 'node:readline';
 
-export function createOnlineSmokeJsonRpcSession(child, timeoutMs) {
+export function createOnlineSmokeJsonRpcSession(child, timeoutMs, onRequest) {
   const pending = new Map();
   let assistantText = '';
   let turnComplete;
@@ -24,6 +24,13 @@ export function createOnlineSmokeJsonRpcSession(child, timeoutMs) {
   });
 
   function handleMessage(message) {
+    if (message.id !== undefined && message.method === 'item/tool/call') {
+      void Promise.resolve(onRequest?.(message)).then(
+        (result) => write({ id: message.id, result }),
+        () => write({ id: message.id, result: toolFailure('tool_execution_failed') })
+      );
+      return;
+    }
     if (message.id !== undefined && pending.has(message.id)) {
       const item = pending.get(message.id);
       pending.delete(message.id);
@@ -54,4 +61,12 @@ export function createOnlineSmokeJsonRpcSession(child, timeoutMs) {
       }).finally(() => clearTimeout(timeout));
     }
   };
+
+  function write(message) {
+    child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', ...message })}\n`);
+  }
+}
+
+function toolFailure(error) {
+  return { contentItems: [{ type: 'inputText', text: JSON.stringify({ error }) }], success: false };
 }

@@ -2,27 +2,30 @@ import readline from 'node:readline';
 
 import type {
   NativeAssistantFailureCategory,
-  NativeAssistantSendMessageResult,
-  NativeAssistantTurnEvent,
-  NativeAssistantWorkspaceContext
+  NativeAssistantSendMessageResult
 } from '../../lib/platform/nativeAssistantContract.js';
 
 import { createAideThreadRequest, createAideTurnStartParams } from './codexAppServerAidePolicy.js';
+import { handleDynamicToolCall } from './codexAppServerDynamicToolCalls.js';
+import type { DynamicToolCallResult, FolioleDynamicToolRequest } from './codexAppServerDynamicTools.js';
 import {
-  composeAssistantTurnInput,
   createInitializeMessage,
   mapAppServerEventError,
   mapJsonRpcError,
   parseMessage,
-  readDeltaText,
   readNestedString,
   sendFailure,
   type JsonRpcMessage
 } from './codexAppServerProtocol.js';
 import type { SpawnedCodexProcess, TurnState } from './codexAppServerSessionTypes.js';
 import { CodexAppServerTurnDiagnostics } from './codexAppServerTurnDiagnostics.js';
-import { emitCodexAppServerTurnEvent } from './codexAppServerTurnEvents.js';
-import { refreshTurnIdleTimeout, resolveTurnCompletion } from './codexAppServerTurnLifecycle.js';
+import {
+  emitCodexAppServerTurnEvent,
+  handleTurnDelta,
+  handleTurnStarted
+} from './codexAppServerTurnEvents.js';
+import { completeTurn, refreshTurnIdleTimeout } from './codexAppServerTurnLifecycle.js';
+import { createTurnState, type SendMessageArgs } from './codexAppServerTurnState.js';
 
 export class CodexAppServerSession {
   private activeTurn: TurnState | null = null;
@@ -37,18 +40,12 @@ export class CodexAppServerSession {
   constructor(
     private readonly args: {
       appVersion: string;
+      executeDynamicTool: (request: FolioleDynamicToolRequest) => Promise<DynamicToolCallResult>;
       launcherCwd: string;
       spawn: () => SpawnedCodexProcess;
     }
   ) {}
-  async sendMessage(args: {
-    clientTurnId: string;
-    message: string;
-    workspaceContext?: NativeAssistantWorkspaceContext;
-    providerThreadId?: string;
-    timeoutMs: number;
-    onEvent?: (event: NativeAssistantTurnEvent) => void;
-  }): Promise<NativeAssistantSendMessageResult> {
+  async sendMessage(args: SendMessageArgs): Promise<NativeAssistantSendMessageResult> {
     if (this.activeTurn) return sendFailure('busy', 'busy');
     const initializeTimeout = setTimeout(() => this.failActiveTurn('timeout', true), args.timeoutMs);
     try {
@@ -57,21 +54,19 @@ export class CodexAppServerSession {
       clearTimeout(initializeTimeout);
     }
     return new Promise((resolve) => {
-      const timeout = setTimeout(() => this.failActiveTurn('timeout', true), args.timeoutMs);
       const threadRequestId = this.nextId++;
-      this.activeTurn = {
-        clientTurnId: args.clientTurnId,
-        finish: resolve,
-        ...(args.onEvent ? { onEvent: args.onEvent } : {}),
-        ...(args.providerThreadId ? { providerThreadId: args.providerThreadId } : {}),
-        text: '',
-        threadId: null,
+      this.activeTurn = createTurnState(
+        args,
         threadRequestId,
-        timeout,
-        timeoutMs: args.timeoutMs,
-        userMessage: composeAssistantTurnInput(args.message, args.workspaceContext)
-      };
-      this.write(createAideThreadRequest(threadRequestId, this.args.launcherCwd, args.providerThreadId));
+        resolve,
+        () => this.failActiveTurn('timeout', true)
+      );
+      this.write(createAideThreadRequest(
+        threadRequestId,
+        this.args.launcherCwd,
+        args.providerThreadId,
+        this.activeTurn.dynamicToolCapabilities
+      ));
     });
   }
 
@@ -121,7 +116,7 @@ export class CodexAppServerSession {
       this.failActiveTurn(mapJsonRpcError(message.error), true);
       return;
     }
-    if (message.id === this.initializeId) {
+    if (message.id === this.initializeId && !message.method && this.initializedResolve) {
       this.write({ method: 'initialized', params: {} });
       this.initializedResolve?.();
       this.initializedResolve = null;
@@ -131,13 +126,30 @@ export class CodexAppServerSession {
     const turn = this.activeTurn;
     if (!turn) return;
     refreshTurnIdleTimeout(turn, () => this.failActiveTurn('timeout', true));
-    if (message.id === turn.threadRequestId) this.handleThreadReady(message, turn);
-    else if (message.method === 'turn/started') this.handleTurnStarted(message, turn);
+    if (message.method === 'item/tool/call') {
+      const child = this.child;
+      void handleDynamicToolCall({
+        execute: this.args.executeDynamicTool,
+        isCurrent: () => this.activeTurn === turn && this.child === child,
+        message,
+        onProtocolError: () => this.failActiveTurn('protocol_error', true),
+        refreshTimeout: () => refreshTurnIdleTimeout(turn, () => this.failActiveTurn('timeout', true)),
+        turn,
+        write: (response) => this.write(response)
+      });
+    }
+    else if (message.id === turn.threadRequestId) this.handleThreadReady(message, turn);
+    else if (message.method === 'turn/started') handleTurnStarted(message, turn);
     else if (message.method === 'error') {
       const category = mapAppServerEventError(message.params);
       if (category) this.failActiveTurn(category, true);
-    } else if (message.method === 'item/agentMessage/delta') this.handleDelta(message, turn);
-    else if (message.method === 'turn/completed') this.finishTurn(message, turn);
+    } else if (message.method === 'item/agentMessage/delta') handleTurnDelta(message, turn);
+    else if (message.method === 'turn/completed') completeTurn(
+      message.params,
+      turn,
+      (category, dispose) => this.failActiveTurn(category, dispose),
+      (result) => this.finishActiveTurn(result)
+    );
   }
   private handleThreadReady(message: JsonRpcMessage, turn: TurnState) {
     const threadId = readNestedString(message.result, ['thread', 'id']);
@@ -153,26 +165,6 @@ export class CodexAppServerSession {
       params: createAideTurnStartParams(this.args.launcherCwd, threadId, turn.userMessage)
     });
   }
-  private handleTurnStarted(message: JsonRpcMessage, turn: TurnState) {
-    const turnId = readNestedString(message.params, ['turn', 'id']);
-    if (turnId) turn.turnId = turnId;
-    emitCodexAppServerTurnEvent(turn, { kind: 'started' });
-  }
-  private handleDelta(message: JsonRpcMessage, turn: TurnState) {
-    turn.text += readDeltaText(message.params);
-    emitCodexAppServerTurnEvent(turn, { kind: 'delta', text: turn.text });
-  }
-  private finishTurn(message: JsonRpcMessage, turn: TurnState) {
-    const result = resolveTurnCompletion(message.params, turn);
-    if (result.state !== 'ready') {
-      const category = result.failure?.category ?? 'protocol_error';
-      this.failActiveTurn(category, category !== 'interrupted');
-      return;
-    }
-    emitCodexAppServerTurnEvent(turn, { kind: 'completed', text: turn.text });
-    this.finishActiveTurn(result);
-  }
-
   private failActiveTurn(category: NativeAssistantFailureCategory, dispose: boolean) {
     if (!this.activeTurn && this.initializedReject) {
       const error = new Error(category) as Error & { category?: NativeAssistantFailureCategory };

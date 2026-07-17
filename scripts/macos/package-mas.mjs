@@ -1,7 +1,7 @@
 /* global console, process */
 
 import { execFileSync, spawnSync } from 'node:child_process';
-import { readFile, rm, writeFile } from 'node:fs/promises';
+import { chmod, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { assertMasDistributionContract } from './distribution-contract.mjs';
@@ -71,6 +71,10 @@ export function cleanMasElectronOutput(root = ROOT, remove = rm) {
   return remove(path.join(root, 'dist', 'electron'), { force: true, recursive: true });
 }
 
+export function prepareMacosPublicLauncher(root = ROOT, setMode = chmod) {
+  return setMode(path.join(root, 'build/cli/foliole'), 0o755);
+}
+
 export function resolveInstallMode(argv = process.argv) {
   return argv.includes('--install');
 }
@@ -135,6 +139,7 @@ async function main() {
   const base = JSON.parse(await readFile(path.join(ROOT, 'electron/builder.json'), 'utf8'));
   const packageMetadata = JSON.parse(await readFile(path.join(ROOT, 'package.json'), 'utf8'));
   const pkgName = createMasArtifactName(base.productName, packageMetadata.version);
+  await prepareMacosPublicLauncher();
   await cleanMasElectronOutput();
   console.log('[macos-package] stage: BUILDING');
   await withTemporaryPackageOutput(async (outputDirectory) => {
