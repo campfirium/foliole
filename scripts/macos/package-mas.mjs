@@ -56,6 +56,7 @@ export function createMasBuilderConfig(base, options) {
     mac: {
       ...base.mac,
       artifactName: '${productName}-${version}-mac-${arch}.${ext}',
+      forceCodeSigning: true,
       target: [target]
     },
     mas: { ...common },

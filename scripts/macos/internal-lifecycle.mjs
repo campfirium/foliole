@@ -1,7 +1,10 @@
 import { spawnSync } from 'node:child_process';
+import { fileURLToPath, URL } from 'node:url';
 
 const INTERNAL_BUNDLE_ID = 'com.campfirium.foliole';
 const EXIT_TIMEOUT_MS = 30_000;
+const HELPER_STARTUP_GRACE_MS = 10_000;
+const WAIT_FOR_EXIT_HELPER = fileURLToPath(new URL('./wait-for-app-exit.swift', import.meta.url));
 
 function assertSucceeded(label, result) {
   if (result.status !== 0) {
@@ -11,10 +14,10 @@ function assertSucceeded(label, result) {
 }
 
 function assertQuitSucceeded(result) {
-  if (result.error?.code === 'ETIMEDOUT') {
+  if (result.error?.code === 'ETIMEDOUT' || result.status === 2) {
     throw new Error('Timed out waiting for Foliole to exit');
   }
-  return assertSucceeded('request Foliole Internal quit', result);
+  return assertSucceeded('request and wait for Foliole Internal quit', result);
 }
 
 export function createInternalLifecycle(options = {}) {
@@ -31,9 +34,9 @@ export function createInternalLifecycle(options = {}) {
       return result.stdout.trim() === 'true';
     },
     async quitAndWait() {
-      assertQuitSucceeded(run('osascript', [
-        '-e', `tell application id "${INTERNAL_BUNDLE_ID}" to quit`
-      ], { stdio: 'ignore', timeout: timeoutMs }));
+      assertQuitSucceeded(run('xcrun', [
+        'swift', WAIT_FOR_EXIT_HELPER, INTERNAL_BUNDLE_ID, String(timeoutMs)
+      ], { stdio: 'inherit', timeout: timeoutMs + HELPER_STARTUP_GRACE_MS }));
     },
     open() {
       assertSucceeded('open installed Foliole Internal', run('open', ['-g', '-a', targetPath], {

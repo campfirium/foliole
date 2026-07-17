@@ -15,6 +15,18 @@ function assertSuccess(label, result) {
   return result;
 }
 
+export function assertInternalSigningAvailable(run = spawnSync) {
+  const result = run('/usr/bin/security', ['find-identity', '-v', '-p', 'codesigning'], {
+    encoding: 'utf8'
+  });
+  const output = `${result.stdout ?? ''}\n${result.stderr ?? ''}`;
+  if (result.status !== 0 || !output.includes('Apple Development:')) {
+    throw new Error(
+      'Foliole Internal update requires the host macOS context with an Apple Development identity'
+    );
+  }
+}
+
 export function resolveInternalRevision(repositoryRoot = REPOSITORY_ROOT, run = spawnSync) {
   const result = assertSuccess('resolve Internal revision', run('git', ['rev-parse', 'HEAD'], {
     cwd: repositoryRoot,
@@ -48,6 +60,7 @@ export async function launchInternalUpdate(options = {}) {
   if ((options.platform ?? process.platform) !== 'darwin') {
     return { reason: 'unsupported-platform', revision, status: 'skipped' };
   }
+  (options.verifySigning ?? assertInternalSigningAvailable)(options.run);
   makeDirectory(stateRoot, { recursive: true });
   const logPath = path.join(stateRoot, 'build.log');
   const descriptor = openFile(logPath, 'a');
@@ -55,24 +68,30 @@ export async function launchInternalUpdate(options = {}) {
     lockPath: path.join(stateRoot, 'build.lock'), repositoryRoot, revision, stateRoot, workerPath
   });
   let child;
+  let exit;
   try {
     child = start(command.bin, command.args, {
       cwd: repositoryRoot,
       detached: true,
       stdio: ['ignore', descriptor, descriptor]
     });
+    exit = once(child, 'exit');
     await once(child, 'spawn');
-    child.unref();
   } finally {
     closeFile(descriptor);
   }
-  return { logPath, pid: child.pid, revision };
+  const [code, signal] = await exit;
+  if (code !== 0) {
+    const outcome = signal ? `signal ${signal}` : `exit code ${code}`;
+    throw new Error(`Foliole Internal update failed with ${outcome}; see ${logPath}`);
+  }
+  return { logPath, revision, status: 'completed' };
 }
 
 async function main() {
   const result = await launchInternalUpdate();
-  const detail = result.status === 'skipped' ? `reason=${result.reason}` : `pid=${result.pid}`;
-  console.log(`[internal-update] ${result.status ?? 'dispatched'} revision=${result.revision} ${detail}`);
+  const detail = result.status === 'skipped' ? `reason=${result.reason}` : `log=${result.logPath}`;
+  console.log(`[internal-update] ${result.status} revision=${result.revision} ${detail}`);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.meta.filename)) {

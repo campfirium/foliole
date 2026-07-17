@@ -72,6 +72,8 @@ it('prepares the Internal runtime during dependency installation, not during dis
     'npm run hooks:install && npm run macos:internal:prepare-runtime'
   );
   expect(packageJson.scripts['macos:internal:dispatch'])
+    .toBe('npm run macos:internal:promote');
+  expect(packageJson.scripts['macos:internal:promote'])
     .toBe('node scripts/macos/launch-internal-update.mjs');
   expect(packageJson.scripts['macos:internal:update'])
     .toBe('node scripts/macos/package-mas.mjs --install');
