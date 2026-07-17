@@ -1,5 +1,6 @@
 // @vitest-environment node
 
+import path from 'node:path';
 import { expect, it } from 'vitest';
 
 import { parseDeviceCommand, safeEvidencePath, taskIdentity } from './windows-device-state.mjs';
@@ -16,6 +17,6 @@ it('parses only the fixed device action grammar', () => {
 it('keeps task identity stable and evidence inside its root', () => {
   const request = { commitSha: 'a'.repeat(40), runId: '10' };
   expect(taskIdentity(request)).toBe(`${'a'.repeat(40)}:10`);
-  expect(safeEvidencePath('/tmp/evidence', 'screenshots/a.png')).toBe('/tmp/evidence/screenshots/a.png');
+  expect(safeEvidencePath('/tmp/evidence', 'screenshots/a.png')).toBe(path.resolve('/tmp/evidence', 'screenshots/a.png'));
   expect(() => safeEvidencePath('/tmp/evidence', '../secret')).toThrow('escapes');
 });

@@ -65,6 +65,34 @@ function getDebugReviewSession(): ReturnType<WorkspaceDebugApi['getReviewSession
   };
 }
 
+const upsertTopicForDebug: WorkspaceDebugApi['upsertTopicForDebug'] = ({ content, id, title }) => {
+  const state = useWorkspaceStore.getState();
+  const baseNode = Object.values(state.nodesById).find((node) => !node.specialKind) ??
+    Object.values(state.nodesById)[0];
+  if (!baseNode) return false;
+  const node = {
+    ...baseNode,
+    anchorLink: null,
+    bodyStatus: content.trim() ? 'ready' as const : 'empty' as const,
+    content,
+    hasContent: content.trim().length > 0,
+    id,
+    kind: 'topic' as const,
+    parentNodeId: null,
+    shelvedAt: null,
+    title,
+    updatedAt: new Date().toISOString()
+  };
+  delete node.specialKind;
+  delete node.virtualFilter;
+  useWorkspaceStore.setState({
+    nodeOrder: state.nodeOrder.includes(id) ? state.nodeOrder : [...state.nodeOrder, id],
+    nodesById: { ...state.nodesById, [id]: node },
+    rendererBoundaryKeepNodeIds: Array.from(new Set([...state.rendererBoundaryKeepNodeIds, id]))
+  });
+  return true;
+};
+
 function createNodeMutationDebugApi(): Pick<
   WorkspaceDebugApi,
   | 'createTextClozeChild'
@@ -113,33 +141,7 @@ function createNodeMutationDebugApi(): Pick<
       forceUpdateDebugNodeContent(nodeId, content);
       return true;
     },
-    upsertTopicForDebug: ({ content, id, title }) => {
-      const state = useWorkspaceStore.getState();
-      const baseNode = Object.values(state.nodesById).find((node) => !node.specialKind) ??
-        Object.values(state.nodesById)[0];
-      if (!baseNode) return false;
-      const node = {
-        ...baseNode,
-        anchorLink: null,
-        bodyStatus: content.trim() ? 'ready' as const : 'empty' as const,
-        content,
-        hasContent: content.trim().length > 0,
-        id,
-        kind: 'topic' as const,
-        parentNodeId: null,
-        shelvedAt: null,
-        title,
-        updatedAt: new Date().toISOString()
-      };
-      delete node.specialKind;
-      delete node.virtualFilter;
-      useWorkspaceStore.setState({
-        nodeOrder: state.nodeOrder.includes(id) ? state.nodeOrder : [...state.nodeOrder, id],
-        nodesById: { ...state.nodesById, [id]: node },
-        rendererBoundaryKeepNodeIds: Array.from(new Set([...state.rendererBoundaryKeepNodeIds, id]))
-      });
-      return true;
-    }
+    upsertTopicForDebug
   };
 }
 
