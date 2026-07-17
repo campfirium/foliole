@@ -1,7 +1,4 @@
-/* global setTimeout, clearTimeout */
-
-import { spawn, spawnSync } from 'node:child_process';
-import { once } from 'node:events';
+import { spawnSync } from 'node:child_process';
 
 const INTERNAL_BUNDLE_ID = 'com.campfirium.foliole';
 const EXIT_TIMEOUT_MS = 30_000;
@@ -13,27 +10,15 @@ function assertSucceeded(label, result) {
   return result;
 }
 
-function waitForExit(child, timeoutMs) {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      child.kill();
-      reject(new Error('Timed out waiting for Foliole to exit'));
-    }, timeoutMs);
-    child.once('error', (error) => {
-      clearTimeout(timer);
-      reject(error);
-    });
-    child.once('exit', (code) => {
-      clearTimeout(timer);
-      if (code === 0) resolve();
-      else reject(new Error(`macOS app exit waiter failed with exit code ${code}`));
-    });
-  });
+function assertQuitSucceeded(result) {
+  if (result.error?.code === 'ETIMEDOUT') {
+    throw new Error('Timed out waiting for Foliole to exit');
+  }
+  return assertSucceeded('request Foliole Internal quit', result);
 }
 
 export function createInternalLifecycle(options = {}) {
   const run = options.run ?? spawnSync;
-  const start = options.start ?? spawn;
   const targetPath = options.targetPath;
   const timeoutMs = options.timeoutMs ?? EXIT_TIMEOUT_MS;
   if (!targetPath) throw new Error('Foliole Internal lifecycle requires an explicit app path');
@@ -46,23 +31,9 @@ export function createInternalLifecycle(options = {}) {
       return result.stdout.trim() === 'true';
     },
     async quitAndWait() {
-      const waiter = start('open', ['-W', '-g', '-a', targetPath], { stdio: 'ignore' });
-      const completion = waitForExit(waiter, timeoutMs);
-      try {
-        await once(waiter, 'spawn');
-        assertSucceeded('request Foliole Internal quit', run('osascript', [
-          '-e', `tell application id "${INTERNAL_BUNDLE_ID}" to quit`
-        ], { stdio: 'ignore' }));
-        await completion;
-      } catch (error) {
-        if (waiter.exitCode === null) waiter.kill();
-        try {
-          await completion;
-        } catch {
-          // Preserve the original lifecycle failure after settling the waiter.
-        }
-        throw error;
-      }
+      assertQuitSucceeded(run('osascript', [
+        '-e', `tell application id "${INTERNAL_BUNDLE_ID}" to quit`
+      ], { stdio: 'ignore', timeout: timeoutMs }));
     },
     open() {
       assertSucceeded('open installed Foliole Internal', run('open', ['-g', '-a', targetPath], {
