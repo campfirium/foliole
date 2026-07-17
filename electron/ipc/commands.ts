@@ -62,7 +62,11 @@ export async function handleInvokeRequest(request: InvokeRequest, context?: Invo
 }
 
 function shouldWaitForDatabaseReady(command: string, route: CommandRouteFamily) {
-  return command !== NATIVE_COMMANDS.bootReport && route !== 'assistant' && route !== 'update' && route !== 'windowAndUtility';
+  return command !== NATIVE_COMMANDS.bootReport &&
+    command !== NATIVE_COMMANDS.assistantGetStatus &&
+    command !== NATIVE_COMMANDS.assistantStartChatGptLogin &&
+    route !== 'update' &&
+    route !== 'windowAndUtility';
 }
 
 function throwUnsupportedCommand(command: string): never {

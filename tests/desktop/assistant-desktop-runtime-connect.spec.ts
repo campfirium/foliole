@@ -27,6 +27,9 @@ test('Aide Connect discovers the signed-in Codex Desktop runtime', async ({ desk
   await desktopWindow.getByRole('button', { name: /^(Connect|连接)$/ }).click();
   await expect(desktopWindow.getByLabel(/^(Foliole Aide message|Foliole Aide 消息)$/))
     .toBeVisible({ timeout: 15_000 });
+  await expect(desktopWindow.getByText(
+    /Foliole Aide (?:could not load local history|未能加载本地历史)/
+  )).toHaveCount(0);
 
   await mkdir(path.dirname(screenshotPath), { recursive: true });
   await desktopWindow.screenshot({ path: screenshotPath });

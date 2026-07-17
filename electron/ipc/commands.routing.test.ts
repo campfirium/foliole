@@ -131,7 +131,6 @@ describe('native command route registry', () => {
   });
 
   it('routes legacy assistant history removal aliases to the assistant handler only', async () => {
-    beginDatabaseStartup();
     handleAssistantCommand.mockResolvedValue('removed');
 
     await expect(handleInvokeRequest({ command: 'assistant_delete_thread_index' })).resolves.toBe('removed');
@@ -197,19 +196,35 @@ describe('database readiness routing', () => {
     expect(handleStorageCommand).toHaveBeenCalledTimes(1);
   });
 
-  it('lets window, assistant, and boot diagnostic commands bypass database readiness', async () => {
+  it('lets window, database-independent assistant, and boot commands bypass database readiness', async () => {
     beginDatabaseStartup();
     handleWindowAndUtilityCommand.mockResolvedValueOnce('version');
-    handleAssistantCommand.mockResolvedValueOnce('assistant-status');
+    handleAssistantCommand
+      .mockResolvedValueOnce('assistant-status')
+      .mockResolvedValueOnce('assistant-login');
     handleReviewCommand.mockResolvedValueOnce('reported');
 
     await expect(handleInvokeRequest({ command: NATIVE_COMMANDS.appGetVersion })).resolves.toBe('version');
     await expect(handleInvokeRequest({ command: NATIVE_COMMANDS.assistantGetStatus })).resolves.toBe('assistant-status');
+    await expect(handleInvokeRequest({ command: NATIVE_COMMANDS.assistantStartChatGptLogin })).resolves.toBe('assistant-login');
     await expect(handleInvokeRequest({ command: NATIVE_COMMANDS.bootReport })).resolves.toBe('reported');
 
     expect(handleWindowAndUtilityCommand).toHaveBeenCalledTimes(1);
-    expect(handleAssistantCommand).toHaveBeenCalledTimes(1);
+    expect(handleAssistantCommand).toHaveBeenCalledTimes(2);
     expect(handleReviewCommand).toHaveBeenCalledTimes(1);
+  });
+
+  it('waits for database readiness before loading assistant history', async () => {
+    beginDatabaseStartup();
+    handleAssistantCommand.mockResolvedValue('history');
+
+    const result = handleInvokeRequest({ command: NATIVE_COMMANDS.assistantListThreadIndex });
+    await Promise.resolve();
+
+    expect(handleAssistantCommand).not.toHaveBeenCalled();
+    markDatabaseReady();
+    await expect(result).resolves.toBe('history');
+    expect(handleAssistantCommand).toHaveBeenCalledTimes(1);
   });
 
   it('rejects database-backed routes after database startup failure', async () => {
