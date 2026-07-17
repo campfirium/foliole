@@ -146,6 +146,7 @@ function listActionEvents(config, state, includeExisting, errors, renderTemplate
 
 function listPrEvents(config, state, includeExisting, errors, renderTemplate) {
   if (!config?.enabled) return [];
+  const initialized = Boolean(state.prsInitialized);
   let prs;
   try {
     prs = runGh([
@@ -177,14 +178,16 @@ function listPrEvents(config, state, includeExisting, errors, renderTemplate) {
     const event = prEvent(config, pr, checks, renderTemplate);
     if (!event.failingChecks) continue;
     if (!includeExisting && (state.prs[String(pr.number)] === event.eventId || (state.prs[String(pr.number)] === String(pr.number) && event.checkSignalSuffix === 'no-checks'))) continue;
-    events.push(event);
+    if (includeExisting || initialized) events.push(event);
     state.prs[String(pr.number)] = event.eventId;
   }
+  state.prsInitialized = true;
   return events;
 }
 
 function listIssueEvents(config, state, includeExisting, errors, renderTemplate) {
   if (!config?.enabled) return [];
+  const initialized = Boolean(state.issuesInitialized);
   let issues;
   try {
     issues = runGh([
@@ -207,9 +210,10 @@ function listIssueEvents(config, state, includeExisting, errors, renderTemplate)
   for (const issue of issues) {
     const event = issueEvent(config, issue, renderTemplate);
     if (!includeExisting && state.issues[String(issue.number)]) continue;
-    events.push(event);
+    if (includeExisting || initialized) events.push(event);
     state.issues[String(issue.number)] = event.eventId;
   }
+  state.issuesInitialized = true;
   return events;
 }
 

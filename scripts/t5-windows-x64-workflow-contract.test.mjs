@@ -4,20 +4,16 @@ import fs from 'node:fs';
 
 import { describe, expect, it } from 'vitest';
 
-const workflow = fs.readFileSync('.github/workflows/windows-x64-ci.yml', 'utf8');
+const workflow = fs.readFileSync('.github/workflows/t5-nightly-remote-quality.yml', 'utf8');
 
-function expectOrdered(values) {
-  for (let index = 1; index < values.length; index += 1) {
-    expect(workflow.indexOf(values[index - 1])).toBeLessThan(workflow.indexOf(values[index]));
-  }
-}
-
-describe('Windows x64 CI workflow contract', () => {
-  it('runs an independent read-only Windows x64 layer on the intended triggers', () => {
-    expect(workflow).toContain('name: Windows x64 CI');
-    expect(workflow).toContain('push:\n    branches:\n      - dev');
-    expect(workflow).toContain('pull_request:\n    branches:\n      - dev');
+describe('T5 Windows x64 workflow contract', () => {
+  it('runs the read-only Windows x64 layer only through T5 triggers', () => {
+    expect(workflow).toContain('name: T5 Nightly Remote Quality');
+    expect(workflow).toContain("cron: '0 4 * * *'");
+    expect(workflow).toContain("cron: '0 16 * * *'");
     expect(workflow).toContain('workflow_dispatch:');
+    expect(workflow).not.toContain('\n  push:');
+    expect(workflow).not.toContain('\n  pull_request:');
     expect(workflow).toContain('permissions:\n  contents: read');
     expect(workflow).toContain('runs-on: windows-latest');
     expect(workflow).toContain('FOLIOLE_DESKTOP_NATIVE_SKIP_BUILD: "1"');
@@ -36,20 +32,23 @@ describe('Windows x64 CI workflow contract', () => {
   });
 
   it('keeps native ABI, Windows contract, build, and Playwright in fixed order', () => {
-    expectOrdered([
-      'run: npm ci',
-      'npm run electron:rebuild:native',
-      'node scripts/electron-sqlite-runner.mjs --preflight',
-      'run: npm run test:windows:core',
-      'npm run build',
-      'npm run electron:compile',
-      'run: node scripts/windows/windows-ci-playwright-profile.mjs'
-    ]);
-    expect(workflow.match(/npm run build/gu)).toHaveLength(1);
+    const windowsJob = workflow.slice(workflow.indexOf('  windows-x64-ci:'));
+    for (const [before, after] of [
+      ['run: npm ci', 'npm run electron:rebuild:native'],
+      ['npm run electron:rebuild:native', 'node scripts/electron-sqlite-runner.mjs --preflight'],
+      ['node scripts/electron-sqlite-runner.mjs --preflight', 'run: npm run test:windows:core'],
+      ['run: npm run test:windows:core', 'npm run build'],
+      ['npm run build', 'npm run electron:compile'],
+      ['npm run electron:compile', 'run: node scripts/windows/windows-ci-playwright-profile.mjs']
+    ]) {
+      expect(windowsJob.indexOf(before)).toBeLessThan(windowsJob.indexOf(after));
+    }
+    expect(windowsJob.match(/npm run build/gu)).toHaveLength(1);
   });
 
   it('always preserves explicit evidence paths without weakening failures', () => {
-    expect(workflow.match(/if: \$\{\{ always\(\) \}\}/gu)).toHaveLength(2);
+    const windowsJob = workflow.slice(workflow.indexOf('  windows-x64-ci:'));
+    expect(windowsJob.match(/if: \$\{\{ always\(\) \}\}/gu)).toHaveLength(2);
     expect(workflow).toContain('CONTEXT_OUTCOME: ${{ steps.context.outcome }}');
     expect(workflow).toContain('NPM_CI_OUTCOME: ${{ steps.npm_ci.outcome }}');
     expect(workflow).toContain('PLAYWRIGHT_OUTCOME: ${{ steps.playwright.outcome }}');

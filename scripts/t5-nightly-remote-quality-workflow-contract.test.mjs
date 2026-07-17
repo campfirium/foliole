@@ -41,7 +41,6 @@ describe('T5 nightly remote quality workflow contract', () => {
       expect(workflow).toContain(command);
     }
     expect(workflow).not.toContain('npm run quality:release:base');
-    expect(workflow).not.toContain('npm run test:windows:core');
     expect(workflow).not.toContain('npm run test:windows:native-preview');
     expect(workflow).not.toContain('gh release');
     expect(workflow).not.toContain('softprops/action-gh-release');
@@ -52,5 +51,19 @@ describe('T5 nightly remote quality workflow contract', () => {
     expect(workflow).toContain('group: t5-nightly-remote-quality-${{ github.ref }}');
     expect(workflow).toContain('cancel-in-progress: false');
     expect(workflow).toContain('timeout-minutes: 120');
+  });
+
+  it('owns Windows x64 validation without restoring per-push or PR T4 checks', () => {
+    expect(workflow).toContain('windows-x64-ci:');
+    expect(workflow).toContain('runs-on: windows-latest');
+    expect(workflow).toContain('npm run test:windows:core');
+    expect(workflow).toContain('node scripts/windows/windows-ci-playwright-profile.mjs');
+    expect(workflow).not.toContain('\n  push:');
+    expect(workflow).not.toContain('\n  pull_request:');
+  });
+
+  it('keeps retired remote T4 workflows absent', () => {
+    expect(fs.existsSync('.github/workflows/dev-push-health.yml')).toBe(false);
+    expect(fs.existsSync('.github/workflows/windows-x64-ci.yml')).toBe(false);
   });
 });
