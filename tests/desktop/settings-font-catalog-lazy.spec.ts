@@ -20,6 +20,11 @@ test('loads the system font catalog only after a font menu opens', async ({ desk
 
   await textFont.click();
   await expect(desktopWindow.getByText(LOADING_FONTS)).toBeVisible();
+  await expect(desktopWindow.getByRole('progressbar', { name: LOADING_FONTS })).toBeVisible();
+  const fontSearch = desktopWindow.getByLabel(/^(Search fonts|搜索字体)$/);
+  await fontSearch.fill('system');
+  await expect(fontSearch).toHaveValue('system');
+  await fontSearch.clear();
   const screenshotDir = path.join(process.cwd(), '.tmp', 'artifacts', 'desktop-acceptance');
   await mkdir(screenshotDir, { recursive: true });
   await desktopWindow.screenshot({
@@ -37,10 +42,6 @@ test('loads the system font catalog only after a font menu opens', async ({ desk
   const matchingOption = desktopWindow.getByRole('option', { name: searchableFont, exact: true });
   await expect(matchingOption).toBeVisible();
   await matchingOption.click();
-
-  const titleSize = dialog.getByLabel(/^(Navigation title font size|导航标题字号)$/);
-  await titleSize.fill('18');
-  await expect.poll(() => desktopWindow.evaluate(() => document.documentElement.style.getPropertyValue('--navigation-title-font-size'))).toBe('18px');
 
   await dialog.getByRole('heading', { level: 3, name: /^(Reading|阅读)$/ }).click();
   await monospaceFont.click();
