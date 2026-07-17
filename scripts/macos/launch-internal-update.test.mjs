@@ -49,11 +49,10 @@ describe('Internal update launcher', () => {
     );
   });
 
-  it('waits for the detached worker to finish successfully', async () => {
-    const child = new EventEmitter();
+  it('detaches the worker and returns after spawn', async () => {
+    const child = Object.assign(new EventEmitter(), { pid: 42, unref: vi.fn() });
     const start = vi.fn(() => {
       queueMicrotask(() => child.emit('spawn'));
-      queueMicrotask(() => child.emit('exit', 0, null));
       return child;
     });
     const closeFile = vi.fn();
@@ -69,23 +68,11 @@ describe('Internal update launcher', () => {
       workerPath: '/worker.mjs'
     });
     expect(result).toEqual({
-      logPath: path.join('/state', 'build.log'), revision: REVISION, status: 'completed'
+      logPath: path.join('/state', 'build.log'), pid: 42,
+      revision: REVISION, status: 'dispatched'
     });
     expect(start.mock.calls[0][2]).toMatchObject({ cwd: '/repo', detached: true, stdio: ['ignore', 9, 9] });
+    expect(child.unref).toHaveBeenCalledOnce();
     expect(closeFile).toHaveBeenCalledWith(9);
-  });
-
-  it('fails when the worker exits unsuccessfully', async () => {
-    const child = new EventEmitter();
-    const start = vi.fn(() => {
-      queueMicrotask(() => child.emit('spawn'));
-      queueMicrotask(() => child.emit('exit', 7, null));
-      return child;
-    });
-    await expect(launchInternalUpdate({
-      closeFile: vi.fn(), makeDirectory: vi.fn(), openFile: vi.fn(() => 9),
-      repositoryRoot: '/repo', revision: REVISION, start, stateRoot: '/state',
-      verifySigning: vi.fn(), workerPath: '/worker.mjs'
-    })).rejects.toThrow('failed with exit code 7; see');
   });
 });

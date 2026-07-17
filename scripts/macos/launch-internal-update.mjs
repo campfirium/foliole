@@ -68,29 +68,25 @@ export async function launchInternalUpdate(options = {}) {
     lockPath: path.join(stateRoot, 'build.lock'), repositoryRoot, revision, stateRoot, workerPath
   });
   let child;
-  let exit;
   try {
     child = start(command.bin, command.args, {
       cwd: repositoryRoot,
       detached: true,
       stdio: ['ignore', descriptor, descriptor]
     });
-    exit = once(child, 'exit');
     await once(child, 'spawn');
+    child.unref();
   } finally {
     closeFile(descriptor);
   }
-  const [code, signal] = await exit;
-  if (code !== 0) {
-    const outcome = signal ? `signal ${signal}` : `exit code ${code}`;
-    throw new Error(`Foliole Internal update failed with ${outcome}; see ${logPath}`);
-  }
-  return { logPath, revision, status: 'completed' };
+  return { logPath, pid: child.pid, revision, status: 'dispatched' };
 }
 
 async function main() {
   const result = await launchInternalUpdate();
-  const detail = result.status === 'skipped' ? `reason=${result.reason}` : `log=${result.logPath}`;
+  const detail = result.status === 'skipped'
+    ? `reason=${result.reason}`
+    : `pid=${result.pid} log=${result.logPath}`;
   console.log(`[internal-update] ${result.status} revision=${result.revision} ${detail}`);
 }
 
