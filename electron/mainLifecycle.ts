@@ -3,6 +3,7 @@ import { app, BrowserWindow } from 'electron';
 import { stopAgentControlApiServer } from './agentControl/agentControlServer.js';
 import { resolveFolioleAppVersion } from './appVersion.js';
 import { markAppQuittingForBackgroundPresence } from './backgroundPresence.js';
+import { createBeforeQuitCoordinator } from './beforeQuitCoordinator.js';
 import { beginDatabaseStartup, markDatabaseReady, markDatabaseStartupFailed } from './database/databaseReadiness.js';
 import { loadOrCreateDesktopDeviceId } from './database/deviceIdentity.js';
 import { initializeDatabase } from './database/migrate.js';
@@ -72,7 +73,13 @@ function installBeforeQuitLifecycle() {
   installMacosDailyDebugExitHandler({ app, getWindows: () => BrowserWindow.getAllWindows() });
   const devRestartIntentWatcher = installDevRestartIntentWatcher({ app, getWindows: () => BrowserWindow.getAllWindows() });
   const devRendererReloadIntentWatcher = installDevRendererReloadIntentWatcher({ getWindows: () => BrowserWindow.getAllWindows() });
-  let mirrorFlushed = false;
+  const coordinateBeforeQuit = createBeforeQuitCoordinator({
+    flush: flushMirrorSync,
+    onPrepareError: (error) => appendMainProcessDiagnosticLog('node_sync_flush_on_quit_failed', { error }),
+    onFlushError: (error) => appendMainProcessDiagnosticLog('mirror_flush_on_quit_failed', { error }),
+    prepare: flushAllDirtyNodeSyncVersions,
+    quit: () => app.quit()
+  });
   app.on('before-quit', (event) => {
     markAppQuittingForBackgroundPresence();
     devRestartIntentWatcher?.close();
@@ -87,15 +94,7 @@ function installBeforeQuitLifecycle() {
     void stopDevScreenshotServer().catch((error) => appendMainProcessDiagnosticLog('dev_screenshot_stop_failed', { error }));
     void stopAgentControlApiServer().catch((error) => appendMainProcessDiagnosticLog('agent_control_stop_failed', { error }));
     void stopLanWorkspaceSyncServer().catch((error) => appendMainProcessDiagnosticLog('lan_sync_stop_failed', { error }));
-    if (mirrorFlushed) return;
-    mirrorFlushed = true;
-    event.preventDefault();
-    try {
-      flushAllDirtyNodeSyncVersions();
-    } catch (error) {
-      appendMainProcessDiagnosticLog('node_sync_flush_on_quit_failed', { error });
-    }
-    flushMirrorSync().catch((error) => appendMainProcessDiagnosticLog('mirror_flush_on_quit_failed', { error })).finally(() => app.quit());
+    coordinateBeforeQuit(event);
   });
 }
 
