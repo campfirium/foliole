@@ -7,7 +7,6 @@ import {
   createGithubArtifactNames,
   createGithubBuilderConfig,
   hasNotarizationCredentials,
-  prepareMasElectronDist,
   resolveDeveloperIdProvisioningProfile,
   sendMacosNotification,
   writeDmgChecksum
@@ -58,27 +57,6 @@ describe('GitHub macOS packaging', () => {
       provisioningProfile: '/profiles/foliole-developer-id.provisionprofile',
       target: ['dmg', 'zip']
     });
-  });
-
-  it('prepares the MAS Electron runtime required by Apple App Sandbox', async () => {
-    const directory = await makeTemporaryDirectory('foliole-mas-electron-');
-    const calls = [];
-
-    const result = await prepareMasElectronDist({
-      access: async () => { throw Object.assign(new Error('missing'), { code: 'ENOENT' }); },
-      destination: directory,
-      download: async (details) => {
-        calls.push(['download', details]);
-        return '/cache/electron-mas.zip';
-      },
-      extract: async (source, target) => calls.push(['extract', source, target])
-    });
-
-    expect(result).toBe(directory);
-    expect(calls).toEqual([
-      ['download', expect.objectContaining({ arch: 'arm64', artifactName: 'electron', platform: 'mas' })],
-      ['extract', '/cache/electron-mas.zip', directory]
-    ]);
   });
 
   it('requires an explicit Developer ID sandbox provisioning profile', () => {

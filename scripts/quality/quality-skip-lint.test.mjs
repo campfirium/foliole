@@ -4,7 +4,7 @@
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
@@ -32,14 +32,32 @@ function runSkipLint(cwd, env = {}) {
   });
 }
 
-async function writeTestFile(rootDir, source) {
-  const filePath = path.join(rootDir, 'src', 'feature.test.ts');
+async function writeTestFile(rootDir, source, name = 'feature.test.ts') {
+  const filePath = path.join(rootDir, 'src', name);
   await mkdir(path.dirname(filePath), { recursive: true });
   await writeFile(filePath, source, 'utf8');
   return filePath;
 }
 
 describe('quality-skip-lint.mjs', () => {
+  it('ignores tracked test files removed by a pending rename', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-skip-lint-'));
+    try {
+      spawnSync('git', ['init'], { cwd: tempRoot });
+      const removed = await writeTestFile(tempRoot, "it('old name', () => {});\n", 'old-name.test.ts');
+      spawnSync('git', ['add', '.'], { cwd: tempRoot });
+      await rm(removed);
+      await writeTestFile(tempRoot, "it('new name', () => {});\n");
+
+      const result = await runSkipLint(tempRoot);
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('checked 1 test file(s)');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
   it('accepts an adjacent SKIP comment for it.skip', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-skip-lint-'));
     try {

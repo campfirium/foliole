@@ -7,25 +7,25 @@ import { once } from 'node:events';
 import path from 'node:path';
 
 const REPOSITORY_ROOT = path.resolve(import.meta.dirname, '../..');
-const STATE_ROOT = path.join(REPOSITORY_ROOT, '.tmp/macos/dogfood-daily');
-const WORKER_PATH = path.join(import.meta.dirname, 'run-dogfood-daily-build.mjs');
+const STATE_ROOT = path.join(REPOSITORY_ROOT, '.tmp/macos/internal-update');
+const WORKER_PATH = path.join(import.meta.dirname, 'run-internal-update.mjs');
 
 function assertSuccess(label, result) {
   if (result.status !== 0) throw new Error(`${label} failed with exit code ${result.status}`);
   return result;
 }
 
-export function resolveDogfoodRevision(repositoryRoot = REPOSITORY_ROOT, run = spawnSync) {
-  const result = assertSuccess('resolve Dogfood revision', run('git', ['rev-parse', 'HEAD'], {
+export function resolveInternalRevision(repositoryRoot = REPOSITORY_ROOT, run = spawnSync) {
+  const result = assertSuccess('resolve Internal revision', run('git', ['rev-parse', 'HEAD'], {
     cwd: repositoryRoot,
     encoding: 'utf8'
   }));
   const revision = result.stdout.trim();
-  if (!/^[0-9a-f]{40}$/u.test(revision)) throw new Error('Dogfood revision must be a full Git commit');
+  if (!/^[0-9a-f]{40}$/u.test(revision)) throw new Error('Internal revision must be a full Git commit');
   return revision;
 }
 
-export function createDogfoodLaunchCommand(options) {
+export function createInternalLaunchCommand(options) {
   return {
     args: [
       '-k', options.lockPath, process.execPath, options.workerPath,
@@ -36,7 +36,7 @@ export function createDogfoodLaunchCommand(options) {
   };
 }
 
-export async function launchDogfoodDailyBuild(options = {}) {
+export async function launchInternalUpdate(options = {}) {
   const repositoryRoot = options.repositoryRoot ?? REPOSITORY_ROOT;
   const stateRoot = options.stateRoot ?? STATE_ROOT;
   const workerPath = options.workerPath ?? WORKER_PATH;
@@ -44,14 +44,14 @@ export async function launchDogfoodDailyBuild(options = {}) {
   const makeDirectory = options.makeDirectory ?? mkdirSync;
   const openFile = options.openFile ?? openSync;
   const closeFile = options.closeFile ?? closeSync;
-  const revision = options.revision ?? resolveDogfoodRevision(repositoryRoot, options.run);
+  const revision = options.revision ?? resolveInternalRevision(repositoryRoot, options.run);
   if ((options.platform ?? process.platform) !== 'darwin') {
     return { reason: 'unsupported-platform', revision, status: 'skipped' };
   }
   makeDirectory(stateRoot, { recursive: true });
   const logPath = path.join(stateRoot, 'build.log');
   const descriptor = openFile(logPath, 'a');
-  const command = createDogfoodLaunchCommand({
+  const command = createInternalLaunchCommand({
     lockPath: path.join(stateRoot, 'build.lock'), repositoryRoot, revision, stateRoot, workerPath
   });
   let child;
@@ -70,9 +70,9 @@ export async function launchDogfoodDailyBuild(options = {}) {
 }
 
 async function main() {
-  const result = await launchDogfoodDailyBuild();
+  const result = await launchInternalUpdate();
   const detail = result.status === 'skipped' ? `reason=${result.reason}` : `pid=${result.pid}`;
-  console.log(`[dogfood-daily] ${result.status ?? 'dispatched'} revision=${result.revision} ${detail}`);
+  console.log(`[internal-update] ${result.status ?? 'dispatched'} revision=${result.revision} ${detail}`);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.meta.filename)) {

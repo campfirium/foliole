@@ -6,22 +6,22 @@ import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
-  createDogfoodLaunchCommand, launchDogfoodDailyBuild, resolveDogfoodRevision
-} from './launch-dogfood-daily-build.mjs';
+  createInternalLaunchCommand, launchInternalUpdate, resolveInternalRevision
+} from './launch-internal-update.mjs';
 
 const REVISION = 'a'.repeat(40);
 
-describe('Dogfood Daily build launcher', () => {
+describe('Internal update launcher', () => {
   it('pins the current full Git revision', () => {
     const run = vi.fn(() => ({ status: 0, stdout: `${REVISION}\n` }));
-    expect(resolveDogfoodRevision('/repo', run)).toBe(REVISION);
+    expect(resolveInternalRevision('/repo', run)).toBe(REVISION);
     expect(run).toHaveBeenCalledWith('git', ['rev-parse', 'HEAD'], {
       cwd: '/repo', encoding: 'utf8'
     });
   });
 
   it('uses the macOS ordered file lock for serialized background builds', () => {
-    expect(createDogfoodLaunchCommand({
+    expect(createInternalLaunchCommand({
       lockPath: '/state/build.lock', repositoryRoot: '/repo', revision: REVISION,
       stateRoot: '/state', workerPath: '/worker.mjs'
     })).toEqual({
@@ -35,7 +35,7 @@ describe('Dogfood Daily build launcher', () => {
 
   it('skips safely outside macOS without spawning a worker', async () => {
     const start = vi.fn();
-    await expect(launchDogfoodDailyBuild({
+    await expect(launchInternalUpdate({
       platform: 'win32', repositoryRoot: '/repo', revision: REVISION, start
     })).resolves.toEqual({ reason: 'unsupported-platform', revision: REVISION, status: 'skipped' });
     expect(start).not.toHaveBeenCalled();
@@ -48,7 +48,7 @@ describe('Dogfood Daily build launcher', () => {
       return child;
     });
     const closeFile = vi.fn();
-    const result = await launchDogfoodDailyBuild({
+    const result = await launchInternalUpdate({
       closeFile,
       makeDirectory: vi.fn(),
       openFile: vi.fn(() => 9),

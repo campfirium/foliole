@@ -4,7 +4,7 @@ import { EventEmitter } from 'node:events';
 
 import { expect, it, vi } from 'vitest';
 
-import { createDogfoodDailyLifecycle } from './dogfood-daily-lifecycle.mjs';
+import { createInternalLifecycle } from './internal-lifecycle.mjs';
 
 function createChild() {
   const child = new EventEmitter();
@@ -13,9 +13,9 @@ function createChild() {
   return child;
 }
 
-it('checks the exact Dogfood Daily bundle id', () => {
+it('checks the exact Foliole Internal bundle id', () => {
   const run = vi.fn(() => ({ status: 0, stdout: 'true\n' }));
-  const lifecycle = createDogfoodDailyLifecycle({ run, targetPath: '/Applications/Foliole.app' });
+  const lifecycle = createInternalLifecycle({ run, targetPath: '/Applications/Foliole.app' });
 
   expect(lifecycle.isRunning()).toBe(true);
   expect(run).toHaveBeenCalledWith('osascript', [
@@ -37,7 +37,7 @@ it('starts the system exit waiter before requesting quit', async () => {
     child.emit('exit', 0);
     return { status: 0 };
   });
-  const lifecycle = createDogfoodDailyLifecycle({ run, start, targetPath: '/Applications/Foliole.app' });
+  const lifecycle = createInternalLifecycle({ run, start, targetPath: '/Applications/Foliole.app' });
 
   await lifecycle.quitAndWait();
 
@@ -54,7 +54,7 @@ it('fails closed when the system exit waiter times out', async () => {
     return child;
   });
   const run = vi.fn(() => ({ status: 0 }));
-  const lifecycle = createDogfoodDailyLifecycle({
+  const lifecycle = createInternalLifecycle({
     run, start, targetPath: '/Applications/Foliole.app', timeoutMs: 1
   });
 
@@ -73,10 +73,10 @@ it('stops the waiter and preserves a cooperative quit failure', async () => {
     return child;
   });
   const run = vi.fn(() => ({ status: 1 }));
-  const lifecycle = createDogfoodDailyLifecycle({ run, start, targetPath: '/Applications/Foliole.app' });
+  const lifecycle = createInternalLifecycle({ run, start, targetPath: '/Applications/Foliole.app' });
 
   await expect(lifecycle.quitAndWait()).rejects.toThrow(
-    'request Dogfood Daily quit failed with exit code 1'
+    'request Foliole Internal quit failed with exit code 1'
   );
   expect(child.kill).toHaveBeenCalledOnce();
 });

@@ -5,16 +5,17 @@ import { readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { assertMasDistributionContract } from './distribution-contract.mjs';
-import { installMasDevelopmentApp } from './dogfood-daily-install.mjs';
+import { installMasDevelopmentApp } from './internal-install.mjs';
 import {
   assertExternalPackageOutput, publishArtifactBatch, withTemporaryPackageOutput
 } from './package-artifact-lifecycle.mjs';
+import { assertMasElectronRuntime } from './mas-electron-runtime.mjs';
 import { prepareCodexHelper } from './prepare-codex-helper.mjs';
 import { prepareGlobalCaptureHelper } from './prepare-global-capture-helper.mjs';
 import { verifyPackagedMacosApp } from './verify-packaged-app.mjs';
 
 export { prepareCodexHelper } from './prepare-codex-helper.mjs';
-export { installMasDevelopmentApp } from './dogfood-daily-install.mjs';
+export { installMasDevelopmentApp } from './internal-install.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
 const MAS_PUBLISHED_DIRECTORY = path.join(ROOT, 'artifacts/macos/mas-arm64');
@@ -25,7 +26,6 @@ const PROFILE_NAMES = {
 
 export function createMasBuilderConfig(base, options) {
   const portableBase = { ...base };
-  delete portableBase.electronDist;
   const outputDirectory = assertExternalPackageOutput(ROOT, options.outputDirectory);
   const target = options.mode === 'development' ? 'mas-dev' : 'mas';
   const common = {
@@ -42,6 +42,7 @@ export function createMasBuilderConfig(base, options) {
     ...portableBase,
     appId: 'com.campfirium.foliole',
     directories: { ...base.directories, output: outputDirectory },
+    electronDist: options.electronDist,
     extraFiles: [
       ...(base.extraFiles ?? []),
       { from: options.codexPath, to: 'MacOS/codex' },
@@ -126,6 +127,7 @@ async function main() {
   if (install && mode !== 'development') throw new Error('Only the MAS development package can be installed locally');
   const codexPath = await prepareCodexHelper();
   const globalCaptureHelperPath = await prepareGlobalCaptureHelper();
+  const electronDist = await assertMasElectronRuntime();
   const provisioningProfile = findProvisioningProfile(PROFILE_NAMES[mode]);
   const base = JSON.parse(await readFile(path.join(ROOT, 'electron/builder.json'), 'utf8'));
   const packageMetadata = JSON.parse(await readFile(path.join(ROOT, 'package.json'), 'utf8'));
@@ -134,7 +136,7 @@ async function main() {
   console.log('[macos-package] stage: BUILDING');
   await withTemporaryPackageOutput(async (outputDirectory) => {
     const config = createMasBuilderConfig(base, {
-      codexPath, globalCaptureHelperPath, mode, outputDirectory, provisioningProfile
+      codexPath, electronDist, globalCaptureHelperPath, mode, outputDirectory, provisioningProfile
     });
     const configPath = path.join(outputDirectory, `electron-builder-${mode}.json`);
     await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`);

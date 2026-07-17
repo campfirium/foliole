@@ -8,7 +8,7 @@ import path from 'node:path';
 
 function assertRevision(revision) {
   if (!/^[0-9a-f]{40}$/u.test(revision ?? '')) {
-    throw new Error('Dogfood build requires a full Git revision');
+    throw new Error('Internal build requires a full Git revision');
   }
   return revision;
 }
@@ -27,7 +27,7 @@ const IRRELEVANT_FILES = new Set([
   'playwright.desktop.config.ts', 'vite.companion.config.ts'
 ]);
 
-export function isDogfoodPackagingIrrelevantPath(filePath) {
+export function isInternalPackagingIrrelevantPath(filePath) {
   return IRRELEVANT_FILES.has(filePath) ||
     IRRELEVANT_PREFIXES.some((prefix) => filePath.startsWith(prefix)) ||
     /(^|\/)AGENTS\.md$/u.test(filePath) ||
@@ -35,17 +35,17 @@ export function isDogfoodPackagingIrrelevantPath(filePath) {
     /^scripts\/(check-|lint-)/u.test(filePath);
 }
 
-export function resolveDogfoodPackagingDecision(changedFiles) {
-  return changedFiles.every(isDogfoodPackagingIrrelevantPath) ? 'skip' : 'build';
+export function resolveInternalPackagingDecision(changedFiles) {
+  return changedFiles.every(isInternalPackagingIrrelevantPath) ? 'skip' : 'build';
 }
 
-export function createDogfoodBuildSteps(options) {
+export function createInternalBuildSteps(options) {
   const archivePath = path.join(options.temporaryRoot, 'source.tar');
   const sourceRoot = path.join(options.temporaryRoot, 'source');
   const cacheSteps = options.includeCodexCache ? [
     {
       args: ['-p', path.join(sourceRoot, '.tmp/macos')], command: '/bin/mkdir',
-      cwd: options.repositoryRoot, label: 'prepare fixed Dogfood cache root'
+      cwd: options.repositoryRoot, label: 'prepare fixed Internal helper root'
     },
     {
       args: ['-cR', path.join(options.repositoryRoot, '.tmp/macos/codex'), path.join(sourceRoot, '.tmp/macos/codex')],
@@ -60,26 +60,37 @@ export function createDogfoodBuildSteps(options) {
         args: ['archive', '--format=tar', `--output=${archivePath}`, options.revision],
         command: 'git',
         cwd: options.repositoryRoot,
-        label: 'archive fixed Dogfood input'
+        label: 'archive fixed Internal input'
       },
       {
         args: ['-xf', archivePath, '-C', sourceRoot],
         command: 'tar',
         cwd: options.repositoryRoot,
-        label: 'expand fixed Dogfood input'
+        label: 'expand fixed Internal input'
       },
       {
         args: ['-cR', path.join(options.repositoryRoot, 'node_modules'), path.join(sourceRoot, 'node_modules')],
         command: '/bin/cp',
         cwd: options.repositoryRoot,
-        label: 'clone Dogfood dependencies'
+        label: 'clone Internal dependencies'
+      },
+      {
+        args: ['-p', path.join(sourceRoot, '.tmp')], command: '/bin/mkdir',
+        cwd: options.repositoryRoot, label: 'prepare fixed Internal runtime root'
+      },
+      {
+        args: [
+          '-cR', path.join(options.repositoryRoot, '.tmp/electron-mas-arm64'),
+          path.join(sourceRoot, '.tmp/electron-mas-arm64')
+        ],
+        command: '/bin/cp', cwd: options.repositoryRoot, label: 'clone prepared Internal MAS Electron runtime'
       },
       ...cacheSteps,
       {
-        args: ['run', 'macos:mas:dev'],
+        args: ['run', 'macos:internal:update'],
         command: 'npm',
         cwd: sourceRoot,
-        label: 'build and restart Dogfood Daily'
+        label: 'build and restart Foliole Internal'
       }
     ]
   };
@@ -112,43 +123,43 @@ async function writeAccountedRevision(stateRoot, revision) {
   await writeFile(path.join(stateRoot, 'accounted-revision'), `${revision}\n`);
 }
 
-export async function runDogfoodDailyBuild(options) {
+export async function runInternalUpdate(options) {
   const revision = assertRevision(options.revision);
   const repositoryRoot = path.resolve(options.repositoryRoot);
   const run = options.run ?? spawnSync;
   const makeTempDirectory = options.makeTempDirectory ?? mkdtemp;
   const makeDirectory = options.makeDirectory ?? mkdir;
   const remove = options.remove ?? rm;
-  const stateRoot = options.stateRoot ?? path.join(repositoryRoot, '.tmp/macos/dogfood-daily');
+  const stateRoot = options.stateRoot ?? path.join(repositoryRoot, '.tmp/macos/internal-update');
   await makeDirectory(stateRoot, { recursive: true });
   const baseline = options.baseline === undefined ? await readAccountedRevision(stateRoot) : options.baseline;
   const inspection = options.inspection ?? inspectChanges(repositoryRoot, baseline, revision, run);
   if (inspection.stale) {
-    console.log(`[dogfood-daily] skipped stale revision=${revision}`);
+    console.log(`[internal-update] skipped stale revision=${revision}`);
     return { revision, status: 'skipped' };
   }
-  if (inspection.changedFiles && resolveDogfoodPackagingDecision(inspection.changedFiles) === 'skip') {
+  if (inspection.changedFiles && resolveInternalPackagingDecision(inspection.changedFiles) === 'skip') {
     await (options.writeBaseline ?? writeAccountedRevision)(stateRoot, revision);
-    console.log(`[dogfood-daily] skipped irrelevant revision=${revision}`);
+    console.log(`[internal-update] skipped irrelevant revision=${revision}`);
     return { revision, status: 'skipped' };
   }
-  const temporaryRoot = await makeTempDirectory(path.join(tmpdir(), 'foliole-dogfood-source-'));
+  const temporaryRoot = await makeTempDirectory(path.join(tmpdir(), 'foliole-internal-source-'));
   const cacheRoot = path.join(repositoryRoot, '.tmp/macos/codex');
   const pathExists = options.pathExists ?? (async (candidate) => access(candidate).then(() => true, () => false));
-  const build = createDogfoodBuildSteps({
+  const build = createInternalBuildSteps({
     includeCodexCache: await pathExists(cacheRoot), repositoryRoot, revision, temporaryRoot
   });
   try {
     await makeDirectory(build.sourceRoot);
-    console.log(`[dogfood-daily] building revision=${revision}`);
+    console.log(`[internal-update] building revision=${revision}`);
     for (const step of build.steps) {
       runStep(step.label, step.command, step.args, {
         cwd: step.cwd,
-        env: { ...process.env, FOLIOLE_DOGFOOD_BUILD_REVISION: revision }
+        env: { ...process.env, FOLIOLE_INTERNAL_BUILD_REVISION: revision }
       }, run);
     }
     await (options.writeBaseline ?? writeAccountedRevision)(stateRoot, revision);
-    console.log(`[dogfood-daily] completed revision=${revision}`);
+    console.log(`[internal-update] completed revision=${revision}`);
     return { revision, status: 'installed' };
   } finally {
     await remove(temporaryRoot, { force: true, recursive: true });
@@ -161,7 +172,7 @@ function parseArgs(argv) {
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.meta.filename)) {
-  runDogfoodDailyBuild(parseArgs(process.argv.slice(2))).catch((error) => {
+  runInternalUpdate(parseArgs(process.argv.slice(2))).catch((error) => {
     console.error(error instanceof Error ? error.message : error);
     process.exitCode = 1;
   });

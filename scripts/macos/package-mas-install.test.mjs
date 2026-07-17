@@ -8,7 +8,7 @@ import { expect, it, vi } from 'vitest';
 import { installMasDevelopmentApp } from './package-mas.mjs';
 
 function createFixture() {
-  const root = mkdtempSync(path.join(tmpdir(), 'foliole-dogfood-install-'));
+  const root = mkdtempSync(path.join(tmpdir(), 'foliole-internal-install-'));
   const sourcePath = path.join(root, 'source/Foliole.app');
   const targetPath = path.join(root, 'Applications/Foliole.app');
   mkdirSync(sourcePath, { recursive: true });
@@ -26,7 +26,7 @@ function readVersion(targetPath) {
   return readFileSync(path.join(targetPath, 'version'), 'utf8');
 }
 
-it('waits for a running Daily before swapping and reopening it', async () => {
+it('waits for a running Internal app before swapping and reopening it', async () => {
   const fixture = createFixture();
   const events = [];
   const running = [true, false, false];
@@ -58,7 +58,7 @@ it('preserves the installed app when cooperative quit fails', async () => {
   expect(lifecycle.open).not.toHaveBeenCalled();
 });
 
-it('does not disturb Daily when staged signature verification fails', async () => {
+it('does not disturb Internal when staged signature verification fails', async () => {
   const fixture = createFixture();
   fixture.run.mockImplementation((command, args) => {
     if (command === 'ditto') cpSync(args[0], args[1], { recursive: true });
@@ -97,7 +97,7 @@ it('restores the old app when the new app cannot reopen', async () => {
   expect(lifecycle.open).toHaveBeenCalledTimes(2);
 });
 
-it('restores the old app when Daily reopens in the final swap window', async () => {
+it('restores the old app when Internal reopens in the final swap window', async () => {
   const fixture = createFixture();
   const running = [false, false, true];
   const lifecycle = {

@@ -23,10 +23,10 @@ it('cleans stale Electron output before compiling a MAS package', async () => {
   expect(remove).toHaveBeenCalledWith('/repo/dist/electron', { force: true, recursive: true });
 });
 
-it('routes the internal install script through the MAS development package', () => {
+it('routes the Internal update script through the MAS development package', () => {
   const packageJson = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
 
-  expect(packageJson.scripts['macos:mas:dev']).toBe('node scripts/macos/package-mas.mjs --install');
+  expect(packageJson.scripts['macos:internal:update']).toBe('node scripts/macos/package-mas.mjs --install');
   expect(resolveInstallMode(['node', 'script', '--install'])).toBe(true);
 });
 
@@ -86,6 +86,7 @@ it('creates an arm64 MAS config with the official bundle id and signed bundled C
     mac: { category: 'public.app-category.education', target: ['dmg'] }
   }, {
     codexPath: '.tmp/macos/codex/0.144.3/codex',
+    electronDist: '.tmp/electron-mas-arm64',
     mode: 'development',
     globalCaptureHelperPath: '.tmp/macos/global-capture-helper/Foliole Global Capture',
     outputDirectory: '/private/tmp/foliole-mas-development-output',
@@ -93,7 +94,7 @@ it('creates an arm64 MAS config with the official bundle id and signed bundled C
   });
 
   expect(config.appId).toBe('com.campfirium.foliole');
-  expect(config).not.toHaveProperty('electronDist');
+  expect(config.electronDist).toBe('.tmp/electron-mas-arm64');
   expect(config.directories.output).toBe('/private/tmp/foliole-mas-development-output');
   expect(config.mac.target).toEqual(['mas-dev']);
   expect(config.masDev).toMatchObject({
@@ -119,6 +120,7 @@ it('preserves both macOS status Template images in the dynamic MAS config', () =
   const base = JSON.parse(readFileSync(new URL('../../electron/builder.json', import.meta.url), 'utf8'));
   const config = createMasBuilderConfig(base, {
     codexPath: '.tmp/codex',
+    electronDist: '.tmp/electron-mas-arm64',
     mode: 'development',
     globalCaptureHelperPath: '.tmp/Foliole Global Capture',
     outputDirectory: '/private/tmp/foliole-mas-development-output',
@@ -134,6 +136,7 @@ it('preserves both macOS status Template images in the dynamic MAS config', () =
 it('switches only the target and profile for the distribution package', () => {
   const config = createMasBuilderConfig({ extraResources: [], mac: {} }, {
     codexPath: '.tmp/codex',
+    electronDist: '.tmp/electron-mas-arm64',
     mode: 'distribution',
     globalCaptureHelperPath: '.tmp/Foliole Global Capture',
     outputDirectory: '/private/tmp/foliole-mas-distribution-output',

@@ -11,10 +11,13 @@ const ROOT = path.resolve(import.meta.dirname, '../..');
 
 export async function runDistributionContractCheck() {
   const base = JSON.parse(await readFile(path.join(ROOT, 'electron/builder.json'), 'utf8'));
-  const common = { codexPath: '.tmp/contract/codex', provisioningProfile: '/profiles/contract.provisionprofile' };
+  const common = {
+    codexPath: '.tmp/contract/codex',
+    electronDist: path.join(ROOT, '.tmp/electron-mas-arm64'),
+    provisioningProfile: '/profiles/contract.provisionprofile'
+  };
   createGithubBuilderConfig(base, {
     ...common,
-    electronDist: path.join(ROOT, '.tmp/electron-mas-arm64'),
     notarize: false,
     outputDirectory: '/private/tmp/foliole-github-contract'
   });

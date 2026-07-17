@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* global console, process */
 
-import { readdir, readFile } from 'node:fs/promises';
+import { access, readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
@@ -68,10 +68,14 @@ async function collectTestFiles(rootDir) {
   });
 
   if (result.status === 0) {
-    return result.stdout
+    const candidates = result.stdout
       .split('\n')
       .filter((filePath) => TEST_FILE_PATTERN.test(filePath))
       .sort();
+    const existing = await Promise.all(candidates.map(async (filePath) => (
+      access(path.join(rootDir, filePath)).then(() => filePath, () => null)
+    )));
+    return existing.filter(Boolean);
   }
 
   return collectByWalking(rootDir);

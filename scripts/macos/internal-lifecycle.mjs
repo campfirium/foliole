@@ -3,7 +3,7 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { once } from 'node:events';
 
-const DAILY_BUNDLE_ID = 'com.campfirium.foliole';
+const INTERNAL_BUNDLE_ID = 'com.campfirium.foliole';
 const EXIT_TIMEOUT_MS = 30_000;
 
 function assertSucceeded(label, result) {
@@ -31,17 +31,17 @@ function waitForExit(child, timeoutMs) {
   });
 }
 
-export function createDogfoodDailyLifecycle(options = {}) {
+export function createInternalLifecycle(options = {}) {
   const run = options.run ?? spawnSync;
   const start = options.start ?? spawn;
   const targetPath = options.targetPath;
   const timeoutMs = options.timeoutMs ?? EXIT_TIMEOUT_MS;
-  if (!targetPath) throw new Error('Dogfood Daily lifecycle requires an explicit app path');
+  if (!targetPath) throw new Error('Foliole Internal lifecycle requires an explicit app path');
 
   return {
     isRunning() {
-      const result = assertSucceeded('check Dogfood Daily state', run('osascript', [
-        '-e', `application id "${DAILY_BUNDLE_ID}" is running`
+      const result = assertSucceeded('check Foliole Internal state', run('osascript', [
+        '-e', `application id "${INTERNAL_BUNDLE_ID}" is running`
       ], { encoding: 'utf8' }));
       return result.stdout.trim() === 'true';
     },
@@ -50,8 +50,8 @@ export function createDogfoodDailyLifecycle(options = {}) {
       const completion = waitForExit(waiter, timeoutMs);
       try {
         await once(waiter, 'spawn');
-        assertSucceeded('request Dogfood Daily quit', run('osascript', [
-          '-e', `tell application id "${DAILY_BUNDLE_ID}" to quit`
+        assertSucceeded('request Foliole Internal quit', run('osascript', [
+          '-e', `tell application id "${INTERNAL_BUNDLE_ID}" to quit`
         ], { stdio: 'ignore' }));
         await completion;
       } catch (error) {
@@ -65,7 +65,7 @@ export function createDogfoodDailyLifecycle(options = {}) {
       }
     },
     open() {
-      assertSucceeded('open installed Dogfood Daily', run('open', ['-g', '-a', targetPath], {
+      assertSucceeded('open installed Foliole Internal', run('open', ['-g', '-a', targetPath], {
         stdio: 'ignore'
       }));
     }

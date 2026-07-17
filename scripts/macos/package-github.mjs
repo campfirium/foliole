@@ -2,20 +2,20 @@
 
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { access, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { assertGithubDistributionContract } from './distribution-contract.mjs';
 import {
   assertExternalPackageOutput, publishArtifactBatch, withTemporaryPackageOutput
 } from './package-artifact-lifecycle.mjs';
+import { prepareMasElectronRuntime } from './mas-electron-runtime.mjs';
 import { prepareCodexHelper } from './prepare-codex-helper.mjs';
 import { verifyPackagedMacosApp } from './verify-packaged-app.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
 const PUBLISHED_DIRECTORY = path.join(ROOT, 'artifacts/macos/github-arm64');
 const DEVELOPER_IDENTITY = 'CAMPFIRIUM LTD (V589TQH334)';
-const MAS_ELECTRON_DIRECTORY = '.tmp/electron-mas-arm64';
 
 export function createGithubBuilderConfig(base, options) {
   const portableBase = { ...base };
@@ -56,29 +56,6 @@ export function createGithubBuilderConfig(base, options) {
   };
   assertGithubDistributionContract(config);
   return config;
-}
-
-export async function prepareMasElectronDist(options = {}) {
-  const destination = options.destination ?? path.join(ROOT, MAS_ELECTRON_DIRECTORY);
-  const electronApp = path.join(destination, 'Electron.app');
-  const contractPath = path.join(destination, '.foliole-electron-runtime.json');
-  const electronPackage = JSON.parse(await readFile(path.join(ROOT, 'node_modules/electron/package.json'), 'utf8'));
-  const runtimeContract = { arch: 'arm64', platform: 'mas', version: electronPackage.version };
-  try {
-    const cachedContract = JSON.parse(await readFile(contractPath, 'utf8'));
-    await (options.access ?? access)(electronApp);
-    if (JSON.stringify(cachedContract) === JSON.stringify(runtimeContract)) return destination;
-  } catch {
-    // A missing or malformed marker invalidates the cache.
-  }
-  await rm(destination, { force: true, recursive: true });
-  await mkdir(destination, { recursive: true });
-  const download = options.download ?? (await import('@electron/get')).downloadArtifact;
-  const archive = await download({ ...runtimeContract, artifactName: 'electron' });
-  const extract = options.extract ?? ((source, target) => run('MAS Electron extraction', 'ditto', ['-x', '-k', source, target]));
-  await extract(archive, destination);
-  await writeFile(contractPath, `${JSON.stringify(runtimeContract, null, 2)}\n`);
-  return destination;
 }
 
 export function resolveDeveloperIdProvisioningProfile(env = process.env) {
@@ -136,7 +113,7 @@ async function main() {
   }
   const provisioningProfile = resolveDeveloperIdProvisioningProfile();
   const codexPath = await prepareCodexHelper();
-  const electronDist = await prepareMasElectronDist();
+  const electronDist = await prepareMasElectronRuntime();
   const base = JSON.parse(await readFile(path.join(ROOT, 'electron/builder.json'), 'utf8'));
   const packageMetadata = JSON.parse(await readFile(path.join(ROOT, 'package.json'), 'utf8'));
   const artifactNames = createGithubArtifactNames(base.productName, packageMetadata.version);

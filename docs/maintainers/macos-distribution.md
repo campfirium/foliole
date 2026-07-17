@@ -19,7 +19,7 @@ The GitHub channel may differ only where the delivery channel requires it: certi
 
 ## Why this shape is fixed
 
-Apple requires Mac App Store apps to run in App Sandbox. Electron only supports App Sandbox with its MAS build, while a Developer ID Application certificate may sign either the normal or MAS build. Keeping the GitHub test package on the MAS build exposes store-only file and capability restrictions during daily testing instead of at submission time.
+Apple requires Mac App Store apps to run in App Sandbox. Electron only supports App Sandbox with its MAS build, while a Developer ID Application certificate may sign either the normal or MAS build. Keeping the GitHub test package on the MAS build exposes store-only file and capability restrictions during internal testing instead of at submission time.
 
 Security-scoped bookmarks are part of this contract. Finder/Open With/Open Panel authorization must survive restart without broad filesystem access or a second confirmation prompt.
 
@@ -45,7 +45,7 @@ The downloaded GitHub Electron runtime is obtained through `@electron/get` with 
 
 ## Maintained commands
 
-- `npm run macos:mas:dev`: build and install the locally testable MAS development package.
+- `npm run macos:internal:update`: build and install the locally testable Internal package.
 - `npm run macos:mas:distribution`: build the App Store distribution package.
 - `npm run macos:github:package`: build a Developer ID-signed local GitHub test DMG/ZIP. It is not ready for external distribution without notarization.
 - `npm run macos:github:notarize`: build through the notarization path after approved credentials are configured.

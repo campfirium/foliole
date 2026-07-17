@@ -42,7 +42,10 @@ export function assertGithubDistributionContract(config) {
 export function assertMasDistributionContract(config, mode) {
   const channel = mode === 'development' ? config.masDev : config.mas;
   assertCommon(config, channel ?? {});
-  requireContract(config.electronDist == null, 'MAS target must let electron-builder select the MAS runtime');
+  requireContract(
+    typeof config.electronDist === 'string' && path.basename(config.electronDist).startsWith('electron-mas-'),
+    'MAS target must use the prepared local MAS Electron runtime'
+  );
   requireContract(
     config.mac?.target?.includes(mode === 'development' ? 'mas-dev' : 'mas'),
     'MAS target changed'

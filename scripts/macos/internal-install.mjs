@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdtemp, rename, rm } from 'node:fs/promises';
 import path from 'node:path';
 
-import { createDogfoodDailyLifecycle } from './dogfood-daily-lifecycle.mjs';
+import { createInternalLifecycle } from './internal-lifecycle.mjs';
 
 const INSTALLED_APP = '/Applications/Foliole.app';
 
@@ -45,7 +45,7 @@ export async function installMasDevelopmentApp(options = {}) {
   const remove = options.remove ?? rm;
   const move = options.move ?? rename;
   const makeTempDirectory = options.makeTempDirectory ?? mkdtemp;
-  const lifecycle = options.lifecycle ?? createDogfoodDailyLifecycle({ targetPath });
+  const lifecycle = options.lifecycle ?? createInternalLifecycle({ targetPath });
   const log = options.log ?? console.log;
   const stagingRoot = await makeTempDirectory(path.join(path.dirname(targetPath), '.foliole-internal-install-'));
   const stagedPath = path.join(stagingRoot, 'Foliole.app');
@@ -59,7 +59,7 @@ export async function installMasDevelopmentApp(options = {}) {
       log('[macos-package] stage: QUIT_REQUESTED');
       await lifecycle.quitAndWait();
     }
-    if (lifecycle.isRunning()) throw new Error('Dogfood Daily is still running after the exit wait');
+    if (lifecycle.isRunning()) throw new Error('Foliole Internal is still running after the exit wait');
     log('[macos-package] stage: EXIT_CONFIRMED');
     let hadInstalledApp;
     try {
@@ -69,7 +69,7 @@ export async function installMasDevelopmentApp(options = {}) {
       throw error;
     }
     try {
-      if (lifecycle.isRunning()) throw new Error('Dogfood Daily reopened before the app swap');
+      if (lifecycle.isRunning()) throw new Error('Foliole Internal reopened before the app swap');
       await move(stagedPath, targetPath);
       log('[macos-package] stage: INSTALLED');
       lifecycle.open();
@@ -85,7 +85,7 @@ export async function installMasDevelopmentApp(options = {}) {
         preserveStaging = true;
         throw new AggregateError(
           [error, recoveryError],
-          `Dogfood Daily recovery failed; previous app preserved at ${backupPath}`
+          `Foliole Internal recovery failed; previous app preserved at ${backupPath}`
         );
       }
       throw error;
