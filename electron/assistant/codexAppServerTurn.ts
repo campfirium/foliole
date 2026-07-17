@@ -9,7 +9,6 @@ import type {
 
 import { createAideThreadRequest, createAideTurnStartParams } from './codexAppServerAidePolicy.js';
 import {
-  CODEX_APP_SERVER_PROVIDER,
   composeAssistantTurnInput,
   createInitializeMessage,
   mapAppServerEventError,
@@ -23,6 +22,7 @@ import {
 import type { SpawnedCodexProcess, TurnState } from './codexAppServerSessionTypes.js';
 import { CodexAppServerTurnDiagnostics } from './codexAppServerTurnDiagnostics.js';
 import { emitCodexAppServerTurnEvent } from './codexAppServerTurnEvents.js';
+import { refreshTurnIdleTimeout, resolveTurnCompletion } from './codexAppServerTurnLifecycle.js';
 
 export class CodexAppServerSession {
   private activeTurn: TurnState | null = null;
@@ -68,6 +68,7 @@ export class CodexAppServerSession {
         threadId: null,
         threadRequestId,
         timeout,
+        timeoutMs: args.timeoutMs,
         userMessage: composeAssistantTurnInput(args.message, args.workspaceContext)
       };
       this.write(createAideThreadRequest(threadRequestId, this.args.launcherCwd, args.providerThreadId));
@@ -129,13 +130,14 @@ export class CodexAppServerSession {
     }
     const turn = this.activeTurn;
     if (!turn) return;
+    refreshTurnIdleTimeout(turn, () => this.failActiveTurn('timeout', true));
     if (message.id === turn.threadRequestId) this.handleThreadReady(message, turn);
     else if (message.method === 'turn/started') this.handleTurnStarted(message, turn);
     else if (message.method === 'error') {
       const category = mapAppServerEventError(message.params);
       if (category) this.failActiveTurn(category, true);
     } else if (message.method === 'item/agentMessage/delta') this.handleDelta(message, turn);
-    else if (message.method === 'turn/completed') this.finishTurn(turn);
+    else if (message.method === 'turn/completed') this.finishTurn(message, turn);
   }
   private handleThreadReady(message: JsonRpcMessage, turn: TurnState) {
     const threadId = readNestedString(message.result, ['thread', 'id']);
@@ -160,20 +162,13 @@ export class CodexAppServerSession {
     turn.text += readDeltaText(message.params);
     emitCodexAppServerTurnEvent(turn, { kind: 'delta', text: turn.text });
   }
-  private finishTurn(turn: TurnState) {
-    if (!turn.text.trim()) {
-      this.failActiveTurn('protocol_error', true);
+  private finishTurn(message: JsonRpcMessage, turn: TurnState) {
+    const result = resolveTurnCompletion(message.params, turn);
+    if (result.state !== 'ready') {
+      const category = result.failure?.category ?? 'protocol_error';
+      this.failActiveTurn(category, category !== 'interrupted');
       return;
     }
-    const result = {
-      message: {
-        text: turn.text,
-        ...(turn.threadId ? { threadId: turn.threadId } : {}),
-        ...(turn.turnId ? { turnId: turn.turnId } : {})
-      },
-      provider: CODEX_APP_SERVER_PROVIDER,
-      state: 'ready'
-    } satisfies NativeAssistantSendMessageResult;
     emitCodexAppServerTurnEvent(turn, { kind: 'completed', text: turn.text });
     this.finishActiveTurn(result);
   }
@@ -188,7 +183,11 @@ export class CodexAppServerSession {
       return;
     }
     const result = sendFailure('failed', category);
-    if (this.activeTurn) emitCodexAppServerTurnEvent(this.activeTurn, { failure: result.failure, kind: 'failed' });
+    if (this.activeTurn) emitCodexAppServerTurnEvent(this.activeTurn, {
+      failure: result.failure,
+      kind: 'failed',
+      ...(this.activeTurn.text ? { text: this.activeTurn.text } : {})
+    });
     this.finishActiveTurn(result);
     if (dispose) this.dispose();
   }

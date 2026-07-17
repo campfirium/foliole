@@ -63,7 +63,7 @@ function createHandleSubmit(args: SubmitHandlerArgs) {
     args.setSending(true);
     const threadKey = args.threads.selectedThreadId ?? PENDING_THREAD_KEY;
     const pendingId = `assistant-${Date.now()}`;
-    args.activeTurnRef.current = { clientTurnId: pendingId, prompt, threadKey };
+    args.activeTurnRef.current = { clientTurnId: pendingId, prompt, responseText: '', threadKey };
     args.dispatchCache(createUserMessageAction(threadKey, pendingId, prompt));
     args.dispatchCache(createPendingMessageAction(threadKey, pendingId));
     try {

@@ -14,6 +14,7 @@ export { resolveAssistantWorkspaceContext };
 
 export interface AssistantMessage {
   activity?: 'thinking';
+  failureText?: string;
   id: string;
   role: 'assistant' | 'user';
   state?: 'failed' | 'pending' | 'ready';
@@ -202,10 +203,17 @@ export function createReadyMessageAction(
   };
 }
 
-export function createFailedMessageAction(key: string, pendingId: string, text: string) {
+export function createFailedMessageAction(key: string, pendingId: string, text: string, partialText = '') {
+  const partial = partialText.trim();
   return {
     key,
-    message: { id: pendingId, role: 'assistant' as const, state: 'failed' as const, text },
+    message: {
+      ...(partial ? { failureText: text } : {}),
+      id: pendingId,
+      role: 'assistant' as const,
+      state: 'failed' as const,
+      text: partial || text
+    },
     messageId: pendingId,
     type: 'replace' as const
   };

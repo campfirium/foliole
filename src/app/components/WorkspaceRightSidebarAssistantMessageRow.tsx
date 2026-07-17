@@ -29,10 +29,15 @@ export function WorkspaceRightSidebarAssistantMessageRow(props: {
   }
   return (
     <div
-      className={props.message.state === 'failed' ? 'min-w-0 w-full px-1 text-danger' : 'min-w-0 w-full px-1'}
+      className={props.message.state === 'failed' && !props.message.failureText
+        ? 'min-w-0 w-full px-1 text-danger'
+        : 'min-w-0 w-full px-1'}
       data-message-role="assistant"
     >
       <WorkspaceRightSidebarAssistantMarkdown source={props.message.text} />
+      {props.message.failureText ? (
+        <p className="mb-0 mt-2 text-ui-sm text-danger">{props.message.failureText}</p>
+      ) : null}
       {props.message.state !== 'pending' ? (
         <WorkspaceRightSidebarAssistantMessageActions align="left" text={props.message.text} />
       ) : null}

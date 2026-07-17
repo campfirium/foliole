@@ -6,6 +6,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { assertGithubDistributionContract } from './distribution-contract.mjs';
+import { assertPinnedCodexHelperIsCurrent } from './codex-helper-release.mjs';
 import {
   assertExternalPackageOutput, publishArtifactBatch, withTemporaryPackageOutput
 } from './package-artifact-lifecycle.mjs';
@@ -111,6 +112,7 @@ async function main() {
   if (notarize && !hasNotarizationCredentials(process.env)) {
     throw new Error('Notarization credentials are unavailable; configure an approved notarytool authentication method');
   }
+  await assertPinnedCodexHelperIsCurrent();
   const provisioningProfile = resolveDeveloperIdProvisioningProfile();
   const codexPath = await prepareCodexHelper();
   const electronDist = await prepareMasElectronRuntime();

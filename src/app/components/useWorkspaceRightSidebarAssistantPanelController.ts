@@ -52,6 +52,7 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: Assistant
     dispatchCache,
     failedText: args.failedText,
     onCapabilityFailure: args.onCapabilityFailure,
+    onProviderThreadStarted: threads.selectThreadId,
     setMessageText,
     setSending
   });

@@ -79,13 +79,15 @@ it('waits for the physical trigger modifiers to be released before posting Comma
 });
 
 it('creates an arm64 MAS config with the official bundle id and signed bundled Codex helper', () => {
+  const codexRelease = JSON.parse(readFileSync(new URL('../../build/macos/codex-helper-release.json', import.meta.url), 'utf8'));
+  const codexPath = `.tmp/macos/codex/${codexRelease.version}/codex`;
   const config = createMasBuilderConfig({
     directories: { output: 'artifacts/windows' },
     electronDist: 'node_modules/electron/dist',
     extraResources: [{ from: 'base', to: 'base' }],
     mac: { category: 'public.app-category.education', target: ['dmg'] }
   }, {
-    codexPath: '.tmp/macos/codex/0.144.3/codex',
+    codexPath,
     electronDist: '.tmp/electron-mas-arm64',
     mode: 'development',
     globalCaptureHelperPath: '.tmp/macos/global-capture-helper/Foliole Global Capture',
@@ -107,7 +109,7 @@ it('creates an arm64 MAS config with the official bundle id and signed bundled C
     sign: 'scripts/macos/sign-mas-app.mjs'
   });
   expect(config.extraFiles).toContainEqual({
-    from: '.tmp/macos/codex/0.144.3/codex',
+    from: codexPath,
     to: 'MacOS/codex'
   });
   expect(config.extraFiles).toContainEqual({

@@ -94,7 +94,7 @@ function handleAppServerRequest(
     capturedTurnInputs.push(readTurnInput(message));
     writeMessage(process, { method: 'turn/started', params: { turn: { id: 'turn-1' } } });
     writeMessage(process, { method: 'item/agentMessage/delta', params: { delta: 'Ready' } });
-    writeMessage(process, { method: 'turn/completed', params: { turn: { id: 'turn-1' } } });
+    writeMessage(process, { method: 'turn/completed', params: { turn: { id: 'turn-1', status: 'completed' } } });
   }
 }
 

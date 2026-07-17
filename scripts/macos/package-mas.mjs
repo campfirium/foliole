@@ -5,6 +5,7 @@ import { readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { assertMasDistributionContract } from './distribution-contract.mjs';
+import { assertPinnedCodexHelperIsCurrent } from './codex-helper-release.mjs';
 import { installMasDevelopmentApp } from './internal-install.mjs';
 import {
   assertExternalPackageOutput, publishArtifactBatch, withTemporaryPackageOutput
@@ -126,6 +127,7 @@ async function main() {
   const mode = process.argv.includes('--distribution') ? 'distribution' : 'development';
   const install = resolveInstallMode();
   if (install && mode !== 'development') throw new Error('Only the MAS development package can be installed locally');
+  if (mode === 'distribution') await assertPinnedCodexHelperIsCurrent();
   const codexPath = await prepareCodexHelper();
   const globalCaptureHelperPath = await prepareGlobalCaptureHelper();
   const electronDist = await assertMasElectronRuntime();

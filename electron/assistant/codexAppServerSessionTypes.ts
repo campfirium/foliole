@@ -21,6 +21,7 @@ export interface TurnState {
   threadId: string | null;
   threadRequestId: number;
   timeout: NodeJS.Timeout;
+  timeoutMs: number;
   turnId?: string;
   userMessage: string;
 }

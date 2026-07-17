@@ -138,7 +138,7 @@ function respondToTurnProtocol(process: FakeCodexProcess, chunk: Buffer) {
       writeMessage(process, { id: message.id, result: { thread: { id: 'thr_1' } } });
     if (message.method === 'turn/start') {
       writeMessage(process, { method: 'turn/started', params: { turn: { id: 'turn_1' } } });
-      writeMessage(process, { method: 'turn/completed', params: { turn: { id: 'turn_1' } } });
+      writeMessage(process, { method: 'turn/completed', params: { turn: { id: 'turn_1', status: 'completed' } } });
     }
   }
 }

@@ -98,3 +98,21 @@ it('shows a live animated thinking state before response text arrives', () => {
   expect(container.querySelector('.animate-spin')).toBeInTheDocument();
   expect(container.querySelectorAll('.animate-pulse')).toHaveLength(3);
 });
+
+it('shows streamed text and an interruption note together after a partial failure', () => {
+  renderWithLocalization(
+    <WorkspaceRightSidebarAssistantMessageRow
+      message={{
+        failureText: 'Foliole Aide could not reply.',
+        id: 'assistant-partial',
+        role: 'assistant',
+        state: 'failed',
+        text: 'A useful partial reply'
+      }}
+      pendingLabel="Thinking"
+    />
+  );
+
+  expect(screen.getByText('A useful partial reply')).toBeInTheDocument();
+  expect(screen.getByText('Foliole Aide could not reply.')).toHaveClass('text-danger');
+});

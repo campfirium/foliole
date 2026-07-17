@@ -146,7 +146,7 @@ export const CAPABILITY_CONTRACTS = [
   }
 ];
 
-export const SCRIPT_ASSET_INVENTORY_SHA256 = '28e6ffee2f53e061ad52f8007f2b95bf3e0155ea06ff5b9d2fc757d1bab7e892';
+export const SCRIPT_ASSET_INVENTORY_SHA256 = '4182c5381693a0aa15f4f9af43ec040de716f5c9eb35c3a4241feaed092ac2dd';
 
 function normalizeScriptPath(filePath) {
   return filePath.replaceAll('\\', '/').replace(/^\.\//u, '').trim();

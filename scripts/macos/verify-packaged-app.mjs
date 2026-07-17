@@ -23,6 +23,7 @@ export async function verifyPackagedMacosApp(options) {
   const run = options.run ?? spawnSync;
   const checkAccess = options.access ?? access;
   const appPath = path.resolve(options.appPath);
+  const codexPath = path.join(appPath, 'Contents/MacOS/codex');
   const helperPath = path.join(appPath, 'Contents/Frameworks/Foliole Helper.app');
   await checkAccess(path.join(appPath, 'Contents/embedded.provisionprofile'));
   runChecked('app signature verification', 'codesign', ['--verify', '--deep', '--strict', appPath], run);
@@ -37,6 +38,17 @@ export async function verifyPackagedMacosApp(options) {
     'com.apple.security.files.bookmarks.app-scope',
     'com.apple.security.files.user-selected.read-write'
   ], 'packaged app');
+  const codexEntitlements = runChecked(
+    'Codex entitlement inspection',
+    'codesign',
+    ['-d', '--entitlements', '-', codexPath],
+    run
+  );
+  requireEntitlements(codexEntitlements, [
+    'com.apple.security.app-sandbox',
+    'com.apple.security.cs.allow-jit',
+    'com.apple.security.inherit'
+  ], 'packaged Codex');
   const helperEntitlements = runChecked(
     'helper entitlement inspection',
     'codesign',

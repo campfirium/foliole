@@ -147,7 +147,7 @@ function createAdapter(process: FakeCodexProcess) {
     await Promise.resolve();
     writeMessage(process, { id: 1, result: { thread: { id: 'thr_1' } } });
     writeMessage(process, { method: 'item/agentMessage/delta', params: { delta: 'Done' } });
-    writeMessage(process, { method: 'turn/completed', params: {} });
+    writeMessage(process, { method: 'turn/completed', params: { turn: { status: 'completed' } } });
     await first;
     expect(process.kill).not.toHaveBeenCalled();
   });
@@ -160,7 +160,7 @@ function createAdapter(process: FakeCodexProcess) {
     writeMessage(process, { id: 0, result: {} });
     await Promise.resolve();
     writeMessage(process, { id: 1, result: { thread: { id: 'thr_1' } } });
-    writeMessage(process, { method: 'turn/completed', params: {} });
+    writeMessage(process, { method: 'turn/completed', params: { turn: { status: 'completed' } } });
 
     await expect(result).resolves.toMatchObject({
       failure: { category: 'protocol_error' },
@@ -213,7 +213,7 @@ function completeTurn(process: FakeCodexProcess) {
   writeMessage(process, { method: 'turn/started', params: { turn: { id: 'turn_1' } } });
   writeMessage(process, { method: 'item/agentMessage/delta', params: { delta: 'Hello' } });
   writeMessage(process, { method: 'item/agentMessage/delta', params: { text: ' world' } });
-  writeMessage(process, { method: 'turn/completed', params: { turn: { id: 'turn_1' } } });
+  writeMessage(process, { method: 'turn/completed', params: { turn: { id: 'turn_1', status: 'completed' } } });
 }
 
 function throwMissingCodex(): never {

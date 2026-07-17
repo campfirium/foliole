@@ -4,6 +4,9 @@ import path from 'node:path';
 const CODEX_IDENTIFIER = 'com.campfirium.foliole.codex';
 const POST_EVENT_PROBE_IDENTIFIER = 'com.campfirium.foliole.global-capture';
 const CODEX_ENTITLEMENTS = fileURLToPath(
+  new URL('../../build/entitlements.mas.codex.plist', import.meta.url)
+);
+const TOOL_ENTITLEMENTS = fileURLToPath(
   new URL('../../build/entitlements.mas.tool.plist', import.meta.url)
 );
 
@@ -27,7 +30,7 @@ export function createMasSignOptions(options) {
             '--identifier',
             POST_EVENT_PROBE_IDENTIFIER
           ],
-          entitlements: CODEX_ENTITLEMENTS
+          entitlements: TOOL_ENTITLEMENTS
         };
       }
       if (resolvedFilePath !== path.resolve(codexPath)) return fileOptions;
