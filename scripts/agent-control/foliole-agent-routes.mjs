@@ -18,12 +18,12 @@ export const AGENT_CONTROL_ROUTE_REGISTRY = /** @type {const} */ ([
   }),
   registryRoute('product', 'POST', 'materials/delete-soft', 'materials.deleteSoft', {
     capabilityOrder: 17,
-    cli: cliRoute('materials/delete-soft', 'Move a Topic to trash.', required('id', 'expected-updated-at')),
+    cli: cliRoute('materials/delete-soft', 'Move a Topic or Folder to trash.', optionalAndRequired(['expected-updated-at'], ['id'])),
     writeKind: 'material'
   }),
   registryRoute('product', 'POST', 'materials/list-children', 'materials.listChildren', {
     capabilityOrder: 2,
-    cli: cliRoute('materials/list-children', 'List the direct children of a Folder.', optional('parent-id', 'limit'))
+    cli: cliRoute('materials/list-children', 'List Topics and Folders directly inside a Folder.', optional('parent-id', 'limit'))
   }),
   registryRoute('product', 'POST', 'materials/move', 'materials.move', {
     capabilityOrder: 4,
@@ -40,7 +40,7 @@ export const AGENT_CONTROL_ROUTE_REGISTRY = /** @type {const} */ ([
   }),
   registryRoute('product', 'POST', 'materials/reorder', 'materials.reorder', {
     capabilityOrder: 5,
-    cli: cliRoute('materials/reorder', 'Reorder all direct children of a Folder.', optionalAndRequired(['parent-id'], ['material-ids'])),
+    cli: cliRoute('materials/reorder', 'Set the order inside a Folder.', optionalAndRequired(['parent-id'], ['material-ids'])),
     writeKind: 'material'
   }),
   registryRoute('product', 'POST', 'materials/restore', 'materials.restore', {

@@ -6,7 +6,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { buildAgentCliBody } from './foliole-agent-arguments.mjs';
-import { AGENT_CLI_ROUTES as ROUTES, createAgentCliHelp } from './foliole-agent-routes.mjs';
+import { normalizeAgentCliCommand, resolveAgentCliHelp } from './foliole-agent-help.mjs';
+import { AGENT_CLI_ROUTES as ROUTES } from './foliole-agent-routes.mjs';
 import { resolveAgentControlDescriptorPath } from './foliole-agent-runtime-paths.mjs';
 import { readAgentCliVersion } from './foliole-agent-version.mjs';
 import { writeAgentBackup } from './foliole-agent-write-backup.mjs';
@@ -15,8 +16,9 @@ const JSON_HEADERS = { 'content-type': 'application/json' };
 
 export async function runAgentCli(argv, options = {}) {
   if (argv.length === 1 && argv[0] === '--version') return runVersion(options);
-  if (argv[0] === 'help') return runHelp(argv);
-  const parsed = parseArgv(argv);
+  const help = resolveAgentCliHelp(argv);
+  if (help) return help;
+  const parsed = parseArgv(normalizeAgentCliCommand(argv));
   if (!parsed.ok) return failure(parsed.error, parsed.statusCode);
   const route = ROUTES[parsed.command];
   if (!route) return failure('unknown_command', 2);
@@ -38,12 +40,6 @@ async function runVersion(options) {
   return version
     ? { output: version, status: 0 }
     : failure('product_version_unavailable', 3);
-}
-
-function runHelp(argv) {
-  return argv.length === 2 && argv[1] === '--json'
-    ? { output: createAgentCliHelp(), status: 0 }
-    : failure('invalid_help_arguments', 2);
 }
 
 function parseArgv(argv) {
@@ -183,6 +179,6 @@ function failure(error, status) {
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const result = await runAgentCli(process.argv.slice(2));
-  console.log(JSON.stringify(result.output));
+  console.log(typeof result.output === 'string' ? result.output : JSON.stringify(result.output));
   process.exitCode = result.status;
 }
