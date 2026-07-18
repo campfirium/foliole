@@ -93,8 +93,8 @@ function createHandleSubmit(args: SubmitHandlerArgs) {
 function applySendResult(result: SendResultArgs) {
   const threadId = result.result?.message?.threadId;
   if (result.result?.state === 'ready' && threadId) {
-    if (result.threads.selectedThreadId === null)
-      result.dispatchCache({ fromKey: PENDING_THREAD_KEY, toKey: threadId, type: 'move' });
+    if (threadId !== result.threadKey)
+      result.dispatchCache({ fromKey: result.threadKey, toKey: threadId, type: 'move' });
     result.dispatchCache(createReadyMessageAction(threadId, result.pendingId, result.result));
     if (result.result.threadIndex) result.threads.upsertRecord(result.result.threadIndex);
     result.threads.selectThreadId(threadId);

@@ -34,10 +34,10 @@ it('formats complete Foliole actions without exposing implementation details', (
     scope: 'workspace'
   });
 
-  expect(input).toContain('Read-only Foliole tools are available for this turn');
+  expect(input).toContain('Foliole tools can read and update the workspace for this turn');
   expect(input).toContain('Active Foliole parent material id: workspace-parent');
-  expect(input).not.toContain('create a Topic or Folder');
-  expect(input).not.toContain('Change Foliole data');
+  expect(input).toContain('create a Topic or Folder');
+  expect(input).toContain('update a Topic');
   for (const leak of ['Agent Control', 'MCP', 'FOLIOLE_AGENT_DESCRIPTOR', 'foliole-agent', '127.0.0.1']) {
     expect(input).not.toContain(leak);
   }

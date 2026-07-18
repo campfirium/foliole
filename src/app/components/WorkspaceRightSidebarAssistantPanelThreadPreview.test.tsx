@@ -69,6 +69,7 @@ it('keeps a continued thread title stable while updating the history preview', a
 });
 
 it('explains inside the new conversation when Agent tools required a continuation', async () => {
+  window.localStorage.setItem('foliole-app-language', 'zh-Hans');
   assistantRuntime.listAssistantThreadIndex.mockResolvedValueOnce([
     createThread({
       continuedFromThreadId: 'thread-old',
@@ -86,7 +87,89 @@ it('explains inside the new conversation when Agent tools required a continuatio
   );
   fireEvent.click(await screen.findByRole('button', { name: /continued task/i }));
 
-  expect(await screen.findByText(
-    'This task needs newly added Agent tools, so a new conversation was opened to continue.'
-  )).toBeInTheDocument();
+  expect(await screen.findByText('为完成任务，已新建此对话并启用新增的 Agent 工具。')).toBeInTheDocument();
+});
+
+it('leaves a localized continuation record in the old conversation and opens its destination', async () => {
+  window.localStorage.setItem('foliole-app-language', 'zh-Hans');
+  assistantRuntime.listAssistantThreadIndex.mockResolvedValueOnce([
+    createThread({ providerThreadId: 'thread-old', title: '旧对话' }),
+    createThread({
+      continuedFromThreadId: 'thread-old',
+      providerThreadId: 'thread-new',
+      title: '新对话'
+    })
+  ]);
+
+  renderWithLocalization(
+    <WorkspaceRightSidebarAssistantPanel
+      activeNodeId="node-1"
+      nodesById={{ 'node-1': createNode({ id: 'node-1' }) }}
+      onSelectNode={vi.fn()}
+    />
+  );
+  fireEvent.click(await screen.findByRole('button', { name: /旧对话/ }));
+
+  expect(await screen.findByText('完成任务需要使用新增的 Agent 工具，已开启新对话继续。')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: '前往新对话' }));
+
+  expect(await screen.findByRole('heading', { name: '新对话' })).toBeInTheDocument();
+});
+
+it('moves the triggering user prompt into the continued conversation before the reply', async () => {
+  assistantRuntime.listAssistantThreadMessages.mockResolvedValueOnce([
+    {
+      createdAt: '2026-07-07T00:00:01.000Z',
+      id: 'turn-old:user',
+      provider: 'codex-app-server',
+      providerThreadId: 'thread-old',
+      role: 'user',
+      text: 'Earlier question'
+    },
+    {
+      createdAt: '2026-07-07T00:00:02.000Z',
+      id: 'turn-old:assistant',
+      provider: 'codex-app-server',
+      providerThreadId: 'thread-old',
+      role: 'assistant',
+      text: 'Earlier answer'
+    }
+  ]);
+  assistantRuntime.listAssistantThreadIndex.mockResolvedValueOnce([
+    createThread({ agentToolVersion: 0, providerThreadId: 'thread-old', title: 'Earlier task' })
+  ]);
+  assistantRuntime.sendAssistantMessage.mockResolvedValueOnce({
+    message: { text: 'The memo is updated.', threadId: 'thread-new', turnId: 'turn-new' },
+    provider: 'codex-app-server',
+    state: 'ready',
+    threadIndex: createThread({
+      continuedFromThreadId: 'thread-old',
+      providerThreadId: 'thread-new',
+      title: 'Can you write this back?'
+    })
+  });
+
+  renderWithLocalization(
+    <WorkspaceRightSidebarAssistantPanel
+      activeNodeId="node-1"
+      nodesById={{ 'node-1': createNode({ id: 'node-1' }) }}
+      onSelectNode={vi.fn()}
+    />
+  );
+  fireEvent.click(await screen.findByRole('button', { name: /earlier task/i }));
+  const earlierAnswer = await screen.findByText('Earlier answer');
+  fireEvent.change(screen.getByLabelText('Foliole Aide message'), {
+    target: { value: 'Can you write this back?' }
+  });
+  fireEvent.submit(screen.getByRole('button', { name: 'Send' }).closest('form')!);
+
+  const prompt = await screen.findByText('Can you write this back?');
+  const event = screen.getByText(
+    'This conversation was created with newly added Agent tools to complete the task.'
+  );
+  const reply = screen.getByText('The memo is updated.');
+  expect(earlierAnswer).toBeInTheDocument();
+  expect(earlierAnswer.compareDocumentPosition(prompt) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(prompt.compareDocumentPosition(event) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(event.compareDocumentPosition(reply) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });

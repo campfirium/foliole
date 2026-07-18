@@ -64,6 +64,7 @@ test('Aide explains an Agent tool continuation inside the new conversation', asy
   desktopWindow
 }, testInfo) => {
   await desktopWindow.evaluate(() => {
+    localStorage.setItem('foliole-app-language', 'zh-Hans');
     localStorage.setItem('foliole-workspace-right-sidebar-active-panel', 'assistant');
     localStorage.setItem('foliole-aide-enabled', 'true');
   });
@@ -72,9 +73,11 @@ test('Aide explains an Agent tool continuation inside the new conversation', asy
   await openAssistantPanel(desktopWindow);
   await desktopWindow.getByRole('button', { name: /Original prompt/i }).click();
 
+  await expect(desktopWindow.getByText('Earlier answer')).toBeVisible();
   await expect(desktopWindow.getByText(
-    /This task needs newly added Agent tools|完成任务需要使用新增的 Agent 工具/
+    '为完成任务，已新建此对话并启用新增的 Agent 工具。'
   )).toBeVisible();
+  await expect(desktopWindow.getByText('Continued answer')).toBeVisible();
   await mkdir(path.dirname(continuationScreenshotPath), { recursive: true });
   await desktopWindow.screenshot({ path: continuationScreenshotPath });
   await testInfo.attach('assistant-agent-tool-continuation', {
@@ -94,7 +97,9 @@ async function installAssistantIpcMock(
     ipcMain.handle('foliole:invoke', async (_event, request: { args?: unknown; command?: string }) => {
       if (request?.command === 'assistant_get_status') return status;
       if (request?.command === 'assistant_list_thread_index') return [record];
-      if (request?.command === 'assistant_list_thread_messages') return [];
+      if (request?.command === 'assistant_list_thread_messages') {
+        return continuedFromThreadId ? createContinuedMessages() : [];
+      }
       if (request?.command === 'assistant_send_message') {
         record = createThread('Original prompt', 'Follow-up prompt');
         return {
@@ -124,6 +129,17 @@ async function installAssistantIpcMock(
         title,
         updatedAt: '2026-07-07T00:00:00.000Z'
       };
+    }
+    function createContinuedMessages() {
+      return [
+        createMessage('turn-old:user', 'user', 'Earlier question', '2026-07-07T00:00:01.000Z'),
+        createMessage('turn-old:assistant', 'assistant', 'Earlier answer', '2026-07-07T00:00:02.000Z'),
+        createMessage('turn-new:user', 'user', 'Continue now', '2026-07-07T00:00:03.000Z'),
+        createMessage('turn-new:assistant', 'assistant', 'Continued answer', '2026-07-07T00:00:04.000Z')
+      ];
+    }
+    function createMessage(id: string, role: 'assistant' | 'user', text: string, createdAt: string) {
+      return { createdAt, id, provider: 'codex-app-server', providerThreadId: 'thread-1', role, text };
     }
   }, { continuedFromThreadId, status: assistantReadyStatus });
 }

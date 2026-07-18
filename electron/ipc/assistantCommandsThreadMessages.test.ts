@@ -179,7 +179,19 @@ it('continues a legacy thread in a new tool-enabled thread with its saved histor
       providerThreadId: 'thread-new'
     }
   });
+  await expectThreadTranscript('thread-new', [
+    'Old question', 'Old answer', 'Continue now', 'New answer'
+  ]);
+  await expectThreadTranscript('thread-old', ['Old question', 'Old answer', 'Continue now']);
 });
+
+async function expectThreadTranscript(providerThreadId: string, expected: string[]) {
+  const messages = await handleAssistantCommand(NATIVE_COMMANDS.assistantListThreadMessages, {
+    providerThreadId
+  });
+  expect(messages).toEqual(expect.any(Array));
+  expect((messages as Array<{ text: string }>).map((message) => message.text)).toEqual(expected);
+}
 
 it('rolls back the thread index when transcript persistence fails', async () => {
   adapterSendMessage.mockResolvedValueOnce({

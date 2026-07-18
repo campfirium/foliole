@@ -23,8 +23,9 @@ it('returns a selected user prompt to the focused composer for resending', () =>
       placeholder="Ask"
       sendLabel="Send"
       sending={false}
+      statusLabel={null}
+      transitionEvent={null}
       threadPreviewLabel={null}
-      threadStatusLabel={null}
     />
   );
 

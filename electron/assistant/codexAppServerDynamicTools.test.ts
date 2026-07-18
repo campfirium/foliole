@@ -2,6 +2,7 @@
 
 import { expect, it, vi } from 'vitest';
 
+import { AGENT_CONTROL_CAPABILITIES } from '../agentControl/agentControlTypes.js';
 import type { AgentControlSessionDescriptor } from '../agentControl/agentControlTypes.js';
 
 import {
@@ -10,7 +11,7 @@ import {
 } from './codexAppServerDynamicTools.js';
 
 const descriptor: AgentControlSessionDescriptor = {
-  capabilities: ['materials.read', 'materials.search'],
+  capabilities: ['materials.read', 'materials.search', 'materials.update'],
   endpoint: 'http://127.0.0.1:5000',
   pid: 1,
   protocol_version: 1,
@@ -24,7 +25,7 @@ const descriptor: AgentControlSessionDescriptor = {
   token: 'secret-token'
 };
 
-it('registers only enabled read tools', () => {
+it('registers every enabled read and write tool', () => {
   const [namespace] = createFolioleDynamicTools([
     'materials.read',
     'materials.search',
@@ -32,7 +33,45 @@ it('registers only enabled read tools', () => {
   ]);
 
   expect(namespace).toMatchObject({ name: 'foliole', type: 'namespace' });
-  expect(namespace?.tools.map((tool) => tool.name)).toEqual(['read_material', 'search_materials']);
+  expect(namespace?.tools.map((tool) => tool.name)).toEqual([
+    'read_material',
+    'search_materials',
+    'update_material'
+  ]);
+});
+
+it('keeps one dynamic tool for every product capability', () => {
+  const [namespace] = createFolioleDynamicTools(AGENT_CONTROL_CAPABILITIES);
+
+  expect(namespace?.tools).toHaveLength(AGENT_CONTROL_CAPABILITIES.length);
+});
+
+it('calls the protected write route with optimistic concurrency fields', async () => {
+  const fetcher = vi.fn(async () => new Response(JSON.stringify({ material: { id: 'topic-1' } }), {
+    headers: { 'content-type': 'application/json' },
+    status: 200
+  }));
+
+  const result = await executeFolioleDynamicTool({
+    arguments: {
+      content: 'Updated memo',
+      expected_updated_at: '2026-07-17T00:00:00.000Z',
+      id: 'topic-1'
+    },
+    tool: 'update_material'
+  }, { descriptor, fetcher });
+
+  expect(fetcher).toHaveBeenCalledWith(
+    'http://127.0.0.1:5000/agent-control/v1/materials/update',
+    expect.objectContaining({
+      body: JSON.stringify({
+        content: 'Updated memo',
+        expected_updated_at: '2026-07-17T00:00:00.000Z',
+        id: 'topic-1'
+      })
+    })
+  );
+  expect(result.success).toBe(true);
 });
 
 it('calls the existing protected Agent Control route without exposing its token', async () => {
@@ -74,8 +113,13 @@ it('fails closed for invalid arguments and disabled capabilities', async () => {
     arguments: {},
     tool: 'list_virtual_folders'
   }, { descriptor, fetcher });
+  const missingPatch = await executeFolioleDynamicTool({
+    arguments: { expected_updated_at: 'now', id: 'topic-1' },
+    tool: 'update_material'
+  }, { descriptor, fetcher });
 
   expect(invalid).toMatchObject({ success: false });
   expect(disabled).toMatchObject({ success: false });
+  expect(missingPatch).toMatchObject({ success: false });
   expect(fetcher).not.toHaveBeenCalled();
 });

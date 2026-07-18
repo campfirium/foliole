@@ -7,22 +7,37 @@ export function formatAgentControlContext(context: NativeAssistantWorkspaceConte
     return ['- Foliole tools are unavailable for this turn; say when the requested information or change cannot be completed.'];
   }
   const capabilities = new Set(control.capabilities);
-  const actions = READ_ACTIONS
+  const actions = ACTIONS
     .filter((action) => action.capabilities.some((capability) => capabilities.has(capability)))
     .map((action) => action.description);
-  const lines = [
-    '- Read-only Foliole tools are available for this turn; use them when the included context is insufficient.'
-  ];
+  const canWrite = WRITE_CAPABILITIES.some((capability) => capabilities.has(capability));
+  const lines = [canWrite
+    ? '- Foliole tools can read and update the workspace for this turn; use them to complete requested changes.'
+    : '- Read-only Foliole tools are available for this turn; use them when the included context is insufficient.'];
   if (actions.length > 0) lines.push(`- Available Foliole actions: ${actions.join('; ')}.`);
   lines.push(...formatActiveContextGuidance(context, capabilities));
   return lines;
 }
 
-const READ_ACTIONS = [
+const ACTIONS = [
   { capabilities: ['materials.search'], description: 'search Topics and Folders' },
   { capabilities: ['materials.read'], description: 'read a Topic or Folder' },
   { capabilities: ['materials.listChildren'], description: 'list Folder contents' },
   { capabilities: ['virtualFolders.list', 'virtualFolders.read'], description: 'list or read virtual Folders' },
+  { capabilities: ['materials.create'], description: 'create a Topic or Folder' },
+  { capabilities: ['materials.update'], description: 'update a Topic' },
+  { capabilities: ['materials.move', 'materials.reorder'], description: 'move or reorder Topics and Folders' },
+  { capabilities: ['materials.deleteSoft', 'materials.restore'], description: 'move materials to trash or restore them' },
+  { capabilities: ['virtualFolders.create', 'virtualFolders.update'], description: 'create or rename virtual Folders' },
+  { capabilities: ['virtualFolders.addItems', 'virtualFolders.removeItems', 'virtualFolders.reorder'], description: 'change virtual Folder contents' },
+  { capabilities: ['virtualFolders.deleteSoft', 'virtualFolders.restore'], description: 'move virtual Folders to trash or restore them' },
+];
+
+const WRITE_CAPABILITIES = [
+  'materials.create', 'materials.update', 'materials.move', 'materials.reorder',
+  'materials.deleteSoft', 'materials.restore', 'virtualFolders.create', 'virtualFolders.update',
+  'virtualFolders.addItems', 'virtualFolders.removeItems', 'virtualFolders.reorder',
+  'virtualFolders.deleteSoft', 'virtualFolders.restore'
 ];
 
 function formatActiveContextGuidance(context: NativeAssistantWorkspaceContext, capabilities: Set<string>) {

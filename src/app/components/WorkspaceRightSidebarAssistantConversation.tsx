@@ -7,7 +7,7 @@ import { WorkspaceRightSidebarAssistantComposer } from './WorkspaceRightSidebarA
 import { WorkspaceRightSidebarAssistantMessageViewport } from './WorkspaceRightSidebarAssistantMessageViewport';
 import type { AssistantMessage } from './workspaceRightSidebarAssistantPanelModel';
 
-export function WorkspaceRightSidebarAssistantConversation(props: {
+interface AssistantConversationProps {
   activeMessages: AssistantMessage[];
   contextFollowDescription: string;
   contextFollowEnabled: boolean;
@@ -22,9 +22,17 @@ export function WorkspaceRightSidebarAssistantConversation(props: {
   pendingLabel: string;
   sendLabel: string;
   sending: boolean;
+  statusLabel: string | null;
+  transitionEvent: {
+    actionLabel?: string;
+    onAction?: () => void;
+    placement: 'after-messages' | 'after-user';
+    text: string;
+  } | null;
   threadPreviewLabel: string | null;
-  threadStatusLabel: string | null;
-}) {
+}
+
+export function WorkspaceRightSidebarAssistantConversation(props: AssistantConversationProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const editMessage = (text: string) => {
     props.onEditMessage(text);
@@ -32,8 +40,8 @@ export function WorkspaceRightSidebarAssistantConversation(props: {
   };
   return (
     <section className="flex min-h-0 min-w-0 w-full flex-1 flex-col gap-3 pt-3">
-      {props.threadStatusLabel ? (
-        <p className={`${inspectorListMetaClassName} m-0 px-3`}>{props.threadStatusLabel}</p>
+      {props.statusLabel ? (
+        <p className={`${inspectorListMetaClassName} m-0 px-3`}>{props.statusLabel}</p>
       ) : null}
       {props.threadPreviewLabel ? (
         <div className="px-3">
@@ -46,6 +54,7 @@ export function WorkspaceRightSidebarAssistantConversation(props: {
         messages={props.activeMessages}
         onEditMessage={editMessage}
         pendingLabel={props.pendingLabel}
+        transitionEvent={props.transitionEvent}
       />
       <div className="px-3 pb-3">
         <WorkspaceRightSidebarAssistantComposer

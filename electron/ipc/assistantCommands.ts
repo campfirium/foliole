@@ -164,9 +164,7 @@ async function sendMessage(args: Record<string, unknown>, sender?: WebContents) 
     const threadIndex = recordAssistantThreadSuccess({
       agentToolVersion: continuation.agentToolVersion,
       clientTurnId,
-      ...(continuation.continuedFromThreadId
-        ? { continuedFromThreadId: continuation.continuedFromThreadId }
-        : {}),
+      ...createContinuationPersistenceInput(continuation),
       location: openingLocation,
       message,
       result: result.message
@@ -182,6 +180,19 @@ async function sendMessage(args: Record<string, unknown>, sender?: WebContents) 
       state: 'failed' as const
     };
   }
+}
+
+function createContinuationPersistenceInput(
+  continuation: ReturnType<typeof prepareAssistantThreadContinuation>
+) {
+  return {
+    ...(continuation.continuationMessages
+      ? { continuationMessages: continuation.continuationMessages }
+      : {}),
+    ...(continuation.continuedFromThreadId
+      ? { continuedFromThreadId: continuation.continuedFromThreadId }
+      : {})
+  };
 }
 
 function assistantProtocolFailure() {

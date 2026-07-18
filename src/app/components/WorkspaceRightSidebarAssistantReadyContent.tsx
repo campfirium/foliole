@@ -10,6 +10,7 @@ import {
 
 import { useWorkspaceRightSidebarAssistantPanelController } from './useWorkspaceRightSidebarAssistantPanelController';
 import { WorkspaceRightSidebarAssistantComposer } from './WorkspaceRightSidebarAssistantComposer';
+import { createAssistantContinuationEvent } from './workspaceRightSidebarAssistantContinuation';
 import { WorkspaceRightSidebarAssistantConversation } from './WorkspaceRightSidebarAssistantConversation';
 import { AssistantPanelToolbar } from './WorkspaceRightSidebarAssistantHeaders';
 import { WorkspaceRightSidebarAssistantThreadList } from './WorkspaceRightSidebarAssistantThreadList';
@@ -54,6 +55,12 @@ function AssistantConversationView(props: {
   nodesById: Record<string, Node>;
 }) {
   const t = useTranslation();
+  const continuation = createAssistantContinuationEvent({
+    onSelectRecord: props.controller.handleSelectRecord,
+    records: props.controller.records,
+    selectedRecord: props.controller.selectedRecord,
+    t
+  });
   return (
     <>
       {props.controller.selectedThreadNotice ? (
@@ -76,8 +83,9 @@ function AssistantConversationView(props: {
         pendingLabel={t('desktop.rightPanel.assistant.pending')}
         sendLabel={t('desktop.rightPanel.assistant.send')}
         sending={props.controller.sending}
+        statusLabel={resolveThreadLoadStatusLabel(props.controller, t)}
+        transitionEvent={continuation}
         threadPreviewLabel={resolveThreadPreviewLabel(props.controller, t)}
-        threadStatusLabel={resolveThreadStatusLabel(props.controller, t)}
       />
     </>
   );
@@ -201,13 +209,10 @@ function resolveThreadPreviewLabel(
     : null;
 }
 
-function resolveThreadStatusLabel(
+function resolveThreadLoadStatusLabel(
   controller: ReturnType<typeof useWorkspaceRightSidebarAssistantPanelController>,
   t: ReturnType<typeof useTranslation>
 ) {
-  if (controller.selectedRecord?.continuedFromThreadId) {
-    return t('desktop.rightPanel.assistant.threadContinuedForAgentTools');
-  }
   return controller.selectedRecord && controller.threadMessageStatus === 'failed'
     ? t('desktop.rightPanel.assistant.threadMessagesLoadFailed')
     : null;

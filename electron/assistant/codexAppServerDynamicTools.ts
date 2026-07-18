@@ -1,8 +1,8 @@
 import type { NativeAssistantWorkspaceContext } from '../../lib/platform/nativeAssistantContract.js';
 import { getAgentControlApiSessionDescriptor } from '../agentControl/agentControlServer.js';
-import type { AgentControlCapability } from '../agentControl/agentControlTypes.js';
 import type { AgentControlSessionDescriptor } from '../agentControl/agentControlTypes.js';
 
+import { FOLIOLE_DYNAMIC_TOOLS } from './codexAppServerDynamicToolDefinitions.js';
 import { readNestedString, type JsonRpcMessage } from './codexAppServerProtocol.js';
 import type { TurnState } from './codexAppServerSessionTypes.js';
 
@@ -36,64 +36,9 @@ export function dynamicToolFailure(error: string): DynamicToolCallResult {
   return result({ error }, false);
 }
 
-interface ReadToolDefinition {
-  capability: AgentControlCapability;
-  description: string;
-  inputSchema: Record<string, unknown>;
-  path: string;
-}
-
-const OBJECT_SCHEMA = { additionalProperties: false, type: 'object' } as const;
-const STRING = { type: 'string' } as const;
-const LIMIT = { minimum: 1, type: 'integer' } as const;
-
-const READ_TOOLS: Record<string, ReadToolDefinition> = {
-  list_folder: {
-    capability: 'materials.listChildren',
-    description: 'List the direct Topics and Folders in a Foliole Folder or at the workspace root.',
-    inputSchema: {
-      ...OBJECT_SCHEMA,
-      properties: { limit: LIMIT, parent_id: { type: ['string', 'null'] } }
-    },
-    path: 'materials/list-children'
-  },
-  list_virtual_folders: {
-    capability: 'virtualFolders.list',
-    description: 'List Foliole virtual Folders.',
-    inputSchema: { ...OBJECT_SCHEMA, properties: { limit: LIMIT } },
-    path: 'virtual-folders/list'
-  },
-  read_material: {
-    capability: 'materials.read',
-    description: 'Read one Foliole Topic or Folder by id.',
-    inputSchema: { ...OBJECT_SCHEMA, properties: { id: STRING }, required: ['id'] },
-    path: 'materials/read'
-  },
-  read_virtual_folder: {
-    capability: 'virtualFolders.read',
-    description: 'Read one Foliole virtual Folder and its ordered Topics.',
-    inputSchema: {
-      ...OBJECT_SCHEMA,
-      properties: { id: STRING, limit: LIMIT },
-      required: ['id']
-    },
-    path: 'virtual-folders/read'
-  },
-  search_materials: {
-    capability: 'materials.search',
-    description: 'Search readable Foliole Topics and Folders.',
-    inputSchema: {
-      ...OBJECT_SCHEMA,
-      properties: { limit: LIMIT, query: STRING },
-      required: ['query']
-    },
-    path: 'materials/search'
-  }
-};
-
 export function createFolioleDynamicTools(capabilities: readonly string[] = []) {
   const enabled = new Set(capabilities);
-  const tools = Object.entries(READ_TOOLS)
+  const tools = Object.entries(FOLIOLE_DYNAMIC_TOOLS)
     .filter(([, definition]) => enabled.has(definition.capability))
     .map(([name, definition]) => ({
       description: definition.description,
@@ -102,7 +47,7 @@ export function createFolioleDynamicTools(capabilities: readonly string[] = []) 
       type: 'function' as const
     }));
   return tools.length === 0 ? [] : [{
-    description: 'Read Topics and Folders from the current Foliole workspace.',
+    description: 'Read and update Topics and Folders in the current Foliole workspace.',
     name: 'foliole',
     tools,
     type: 'namespace' as const
@@ -116,7 +61,7 @@ export async function executeFolioleDynamicTool(
     fetcher?: typeof fetch;
   } = {}
 ): Promise<DynamicToolCallResult> {
-  const definition = READ_TOOLS[request.tool];
+  const definition = FOLIOLE_DYNAMIC_TOOLS[request.tool];
   const descriptor = options.descriptor === undefined
     ? getAgentControlApiSessionDescriptor()
     : options.descriptor;
@@ -145,26 +90,53 @@ export async function executeFolioleDynamicTool(
 
 function validateArguments(value: unknown, schema: Record<string, unknown>) {
   if (!isRecord(value)) return null;
-  const properties = schema.properties as Record<string, { minimum?: number; type: string | string[] }>;
+  const properties = schema.properties as Record<string, JsonSchemaProperty>;
   const required = new Set((schema.required as string[] | undefined) ?? []);
   if ([...required].some((key) => !(key in value))) return null;
+  const anyOf = schema.anyOf as Array<{ required: string[] }> | undefined;
+  if (anyOf && !anyOf.some((option) => option.required.every((key) => key in value))) return null;
   if (Object.keys(value).some((key) => !properties[key])) return null;
   for (const [key, fieldValue] of Object.entries(value)) {
     const property = properties[key];
     if (!property) return null;
     const types = Array.isArray(property.type) ? property.type : [property.type];
-    if (!types.some((type) => matchesType(fieldValue, type, property.minimum))) return null;
+    if (!types.some((type) => matchesType(fieldValue, type, property))) return null;
   }
   return value;
 }
 
-function matchesType(value: unknown, type: string, minimum?: number) {
+interface JsonSchemaProperty {
+  enum?: unknown[];
+  items?: JsonSchemaProperty;
+  minimum?: number;
+  minItems?: number;
+  minLength?: number;
+  type: string | string[];
+  uniqueItems?: boolean;
+}
+
+function matchesType(value: unknown, type: string, property: JsonSchemaProperty): boolean {
   if (type === 'null') return value === null;
-  if (type === 'string') return typeof value === 'string' && value.trim().length > 0;
-  if (type === 'integer') {
-    return Number.isInteger(value) && (minimum === undefined || Number(value) >= minimum);
+  if (type === 'string') {
+    if (typeof value !== 'string') return false;
+    const normalized = property.minLength ? value.trim() : value;
+    return normalized.length >= (property.minLength ?? 0)
+      && (!property.enum || property.enum.includes(value));
   }
+  if (type === 'integer') {
+    return Number.isInteger(value) && (property.minimum === undefined || Number(value) >= property.minimum);
+  }
+  if (type === 'array') return matchesArray(value, property);
   return false;
+}
+
+function matchesArray(value: unknown, property: JsonSchemaProperty): boolean {
+  if (!Array.isArray(value) || value.length < (property.minItems ?? 0)) return false;
+  if (property.uniqueItems && new Set(value).size !== value.length) return false;
+  return !property.items || value.every((item) => {
+    const types = Array.isArray(property.items?.type) ? property.items.type : [property.items?.type];
+    return types.some((type) => type && matchesType(item, type, property.items as JsonSchemaProperty));
+  });
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
