@@ -133,7 +133,7 @@ it('shows manual sorting in the current folder topic menu', () => {
 
   fireEvent.keyDown(screen.getByRole('button', { name: 'Sort list by Date modified' }), { key: 'ArrowDown' });
 
-  expect(screen.getByRole('menuitem', { name: 'Custom order' })).toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: 'Manual' })).toBeInTheDocument();
 });
 
 it('keeps manual order fixed to manual order', () => {
@@ -152,9 +152,9 @@ it('keeps manual order fixed to manual order', () => {
     />
   );
 
-  fireEvent.keyDown(screen.getByRole('button', { name: 'Sort list by Custom order' }), { key: 'ArrowDown' });
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Sort list by Manual' }), { key: 'ArrowDown' });
 
-  expect(screen.getByRole('menuitem', { name: 'Custom order' })).toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: 'Manual order' })).toBeInTheDocument();
   expect(screen.queryByRole('menuitem', { name: 'Newest first' })).toBeNull();
 });
 

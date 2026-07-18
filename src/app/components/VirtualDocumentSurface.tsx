@@ -107,6 +107,7 @@ function VirtualSavedSearchDocumentSurface(props: Pick<VirtualDocumentSurfacePro
     <FolderListView
       emptyState={{ description: t('desktop.virtualSearch.saved.empty.description'), title: t('desktop.virtualSearch.empty.title') }}
       filterSearchResults={false}
+      folderNodeId={props.activeNode.id}
       folderTitle={props.activeNode.title || t('desktop.virtualSearch.title')}
       nodeOrder={resultNodes.map((node) => node.id)}
       nodes={resultNodes}
