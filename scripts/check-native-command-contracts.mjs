@@ -25,6 +25,7 @@ const CONTRACT_FILES = [
 ];
 const ELECTRON_HANDLER_FILES = [
   'electron/ipc/assistantCommands.ts',
+  'electron/ipc/assistantLocalHistoryCommands.ts',
   'electron/ipc/companionPairingCommands.ts',
   'electron/ipc/displayScaleCommands.ts',
   'electron/ipc/importCommands.ts',

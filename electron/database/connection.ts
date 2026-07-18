@@ -10,6 +10,7 @@ import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { migrateDatabaseFileNames, type DatabaseFileNameMigrationResult } from './databaseFileNameMigration.js';
 import { resolveSearchDatabasePath as resolveSearchDatabasePathFromDatabasePath } from './databaseFilePaths.js';
 import { guardBetterSqliteDatabase } from './guardedBetterSqliteDatabase.js';
+import { getSqliteConnectionCoordinator } from './sqliteConnectionCoordinator.js';
 
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
@@ -82,6 +83,11 @@ export function openDatabaseConnection(options: OpenDatabaseConnectionOptions = 
     searchDbPath
   };
   return cachedConnection;
+}
+
+export function runWithDatabaseConnectionOwner<T>(execute: () => Promise<T> | T) {
+  const connection = openDatabaseConnection();
+  return getSqliteConnectionCoordinator(connection.sqlite).runExclusive(() => execute());
 }
 
 export function enableDatabaseWriteAheadLog(connection: DatabaseConnection) {

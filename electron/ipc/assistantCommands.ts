@@ -11,23 +11,18 @@ import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { resolveFolioleAppVersion } from '../appVersion.js';
 import { CodexAppServerAdapter } from '../assistant/codexAppServerAdapter.js';
 import {
-  archiveAssistantThreadIndex,
-  deleteAssistantThreadIndex,
-  getAssistantThreadIndex,
-  listAssistantThreadIndex
+  getAssistantThreadIndex
 } from '../database/assistantThreadIndex.js';
-import {
-  listAssistantThreadMessages
-} from '../database/assistantThreadMessages.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 
 import { loadAssistantAgentControlContext, mergeAssistantStatusWithAgentControl } from './assistantAgentControlStatus.js';
 import {
   readOpeningLocation,
   readOptionalClientTurnId,
-  readOptionalProviderThreadId,
-  readProviderThreadId
+  readOptionalProviderThreadId
 } from './assistantCommandInputs.js';
 import { resolveAssistantLauncherEnv } from './assistantLauncherEnvironment.js';
+import { handleAssistantLocalHistoryCommand } from './assistantLocalHistoryCommands.js';
 import { sendAssistantTurn } from './assistantSendTurn.js';
 import { prepareAssistantThreadContinuation } from './assistantThreadContinuation.js';
 import { recordAssistantThreadSuccess } from './assistantThreadPersistence.js';
@@ -37,7 +32,6 @@ let adapter: CodexAppServerAdapter | null = null;
 const IPC_ASSISTANT_TURN_EVENT_CHANNEL = 'foliole:assistant-turn-event';
 const ASSISTANT_WIDGETS_DIRNAME = 'Widgets';
 const ASSISTANT_WORKDIR_DIRNAME = 'Foliole Aide';
-const LEGACY_ASSISTANT_DELETE_THREAD_INDEX_COMMAND = 'assistant_delete_thread_index';
 
 function getAdapter() {
   const scriptRoot = resolveAssistantAgentControlScriptRoot();
@@ -85,28 +79,7 @@ export async function handleAssistantCommand(
   if (command === NATIVE_COMMANDS.assistantGetStatus) return getAssistantStatus();
   if (command === NATIVE_COMMANDS.assistantStartChatGptLogin) return getAdapter().startChatGptLogin();
   if (command === NATIVE_COMMANDS.assistantSendMessage) return sendMessage(args, sender);
-  if (command === NATIVE_COMMANDS.assistantListThreadIndex) {
-    const location = readOpeningLocation(args.location);
-    return listAssistantThreadIndex({
-      ...(args.includeArchived === true ? { includeArchived: true } : {}),
-      ...(args.includeDeleted === true ? { includeDeleted: true } : {}),
-      ...(typeof args.limit === 'number' ? { limit: args.limit } : {}),
-      ...(location ? { location } : {})
-    });
-  }
-  if (command === NATIVE_COMMANDS.assistantListThreadMessages) {
-    return listAssistantThreadMessages(readProviderThreadId(args));
-  }
-  if (command === NATIVE_COMMANDS.assistantArchiveThreadIndex) {
-    return archiveAssistantThreadIndex(readProviderThreadId(args));
-  }
-  if (command === NATIVE_COMMANDS.assistantRemoveThreadFromHistory) {
-    return deleteAssistantThreadIndex(readProviderThreadId(args));
-  }
-  if (command === LEGACY_ASSISTANT_DELETE_THREAD_INDEX_COMMAND) {
-    return deleteAssistantThreadIndex(readProviderThreadId(args));
-  }
-  return undefined;
+  return handleAssistantLocalHistoryCommand(command, args);
 }
 
 async function getAssistantStatus() {
@@ -138,13 +111,15 @@ async function sendMessage(args: Record<string, unknown>, sender?: WebContents) 
   } catch {
     return assistantProtocolFailure();
   }
-  if (!isThreadLocationAllowed(providerThreadId, openingLocation)) {
+  if (!await isThreadLocationAllowed(providerThreadId, openingLocation)) {
     return assistantProtocolFailure();
   }
   const agentControl = await loadAssistantAgentControlContext(resolveFolioleAppVersion(app));
   let continuation: ReturnType<typeof prepareAssistantThreadContinuation>;
   try {
-    continuation = prepareAssistantThreadContinuation(providerThreadId, agentControl);
+    continuation = await runWithDatabaseConnectionOwner(
+      () => prepareAssistantThreadContinuation(providerThreadId, agentControl)
+    );
   } catch {
     return assistantProtocolFailure();
   }
@@ -158,17 +133,18 @@ async function sendMessage(args: Record<string, unknown>, sender?: WebContents) 
     ...(workspaceContext ? { workspaceContext } : {})
   });
   if (!result) return assistantProtocolFailure();
-  if (result.state !== 'ready' || !openingLocation || !result.message?.threadId) return result;
-  if (typeof result.message.text === 'string' && !result.message.text.trim()) return assistantProtocolFailure();
+  const readyMessage = result.message;
+  if (result.state !== 'ready' || !openingLocation || !readyMessage?.threadId) return result;
+  if (typeof readyMessage.text === 'string' && !readyMessage.text.trim()) return assistantProtocolFailure();
   try {
-    const threadIndex = recordAssistantThreadSuccess({
+    const threadIndex = await runWithDatabaseConnectionOwner(() => recordAssistantThreadSuccess({
       agentToolVersion: continuation.agentToolVersion,
       clientTurnId,
       ...createContinuationPersistenceInput(continuation),
       location: openingLocation,
       message,
-      result: result.message
-    });
+      result: readyMessage
+    }));
     return {
       ...result,
       threadIndex
@@ -214,14 +190,14 @@ function createClientTurnId() {
   return `assistant-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function isThreadLocationAllowed(
+async function isThreadLocationAllowed(
   providerThreadId: string | undefined,
   openingLocation: NativeAssistantThreadOpeningLocation | undefined
 ) {
   if (!providerThreadId) return true;
   if (!openingLocation) return false;
   try {
-    const existing = getAssistantThreadIndex(providerThreadId);
+    const existing = await runWithDatabaseConnectionOwner(() => getAssistantThreadIndex(providerThreadId));
     return areOpeningLocationsEqual(existing.location, openingLocation);
   } catch {
     return false;

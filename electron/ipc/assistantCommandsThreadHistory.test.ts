@@ -34,6 +34,7 @@ vi.mock('../assistant/codexAppServerAdapter.js', () => ({
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
+import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 
 import { handleAssistantCommand, resetAssistantCommandAdapterForTests } from './assistantCommands.js';
@@ -101,3 +102,34 @@ it('keeps the legacy delete-thread command as a local history removal alias', as
     .resolves.toEqual([]);
   expect(adapterSendMessage).not.toHaveBeenCalled();
 });
+
+it('queues local history reads behind an active asynchronous database transaction', async () => {
+  const gate = createGate();
+  const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite, { name: 'history-owner-test' });
+  const transaction = port.transaction(async () => {
+    gate.enter();
+    await gate.wait;
+  });
+  await gate.entered;
+
+  let settled = false;
+  const history = handleAssistantCommand(NATIVE_COMMANDS.assistantListThreadIndex, {})
+    .finally(() => { settled = true; });
+  await Promise.resolve();
+  expect(settled).toBe(false);
+
+  gate.release();
+  await transaction;
+  await expect(history).resolves.toEqual([]);
+});
+
+function createGate() {
+  let enter!: () => void;
+  let release!: () => void;
+  return {
+    enter: () => enter(),
+    entered: new Promise<void>((resolve) => { enter = resolve; }),
+    release: () => release(),
+    wait: new Promise<void>((resolve) => { release = resolve; })
+  };
+}

@@ -53,7 +53,7 @@ async function createFixture(overrides = {}) {
     void NATIVE_COMMANDS.applyThing;
   `);
   for (const file of [
-    'assistantCommands.ts', 'companionPairingCommands.ts', 'importCommands.ts', 'reviewCommands.ts',
+    'assistantCommands.ts', 'assistantLocalHistoryCommands.ts', 'companionPairingCommands.ts', 'importCommands.ts', 'reviewCommands.ts',
     'storageAttachmentCommands.ts', 'storageCommandSupport.ts', 'storageExternalSearchCommands.ts',
     'storageLocalFileCommands.ts', 'storageNodeMutationCommands.ts', 'storageReadCommands.ts',
     'storageSettingsCommands.ts', 'storageSyncCommands.ts', 'windowCommands.ts'

@@ -126,6 +126,22 @@ describe('check-native-command-contracts', () => {
     });
   });
 
+  it('discovers commands handled in split Electron route modules', async () => {
+    const repoRoot = await createFixtureRoot();
+    await writeBaseFixture(repoRoot, {
+      handlers: `
+        import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
+        void NATIVE_COMMANDS.loadThing;
+      `
+    });
+    await writeFixtureFile(repoRoot, 'electron/ipc/assistantLocalHistoryCommands.ts', `
+      import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
+      void NATIVE_COMMANDS.applyThing;
+    `);
+
+    expect(inspectNativeCommandContracts({ repoRoot })).toMatchObject({ ok: true, violations: [] });
+  });
+
   it('reports missing contract map, inventory and handler coverage', async () => {
     const repoRoot = await createFixtureRoot();
     await writeBaseFixture(repoRoot, {
