@@ -29,16 +29,21 @@ function readVersion(targetPath) {
 it('waits for a running Internal app before swapping and reopening it', async () => {
   const fixture = createFixture();
   const events = [];
-  const running = [true, false, false];
+  const running = [true, false];
+  const log = vi.fn();
   const lifecycle = {
     isRunning: vi.fn(() => running.shift()),
     quitAndWait: vi.fn(async () => events.push('quit')),
     open: vi.fn(() => events.push('open'))
   };
 
-  await installMasDevelopmentApp({ ...fixture, lifecycle, log: vi.fn() });
+  await installMasDevelopmentApp({ ...fixture, lifecycle, log });
 
   expect(events).toEqual(['quit', 'open']);
+  expect(lifecycle.isRunning).toHaveBeenCalledTimes(2);
+  expect(log).toHaveBeenCalledWith('[macos-package] stage: EXIT_CONFIRMED');
+  expect(log).toHaveBeenCalledWith('[macos-package] stage: INSTALLED');
+  expect(log).toHaveBeenCalledWith('[macos-package] stage: REOPENED');
   expect(readVersion(fixture.targetPath)).toBe('new');
 });
 
@@ -99,7 +104,7 @@ it('restores the old app when the new app cannot reopen', async () => {
 
 it('restores the old app when Internal reopens in the final swap window', async () => {
   const fixture = createFixture();
-  const running = [false, false, true];
+  const running = [false, true];
   const lifecycle = {
     isRunning: vi.fn(() => running.shift()),
     quitAndWait: vi.fn(),

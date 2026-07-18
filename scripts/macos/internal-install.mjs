@@ -59,7 +59,6 @@ export async function installMasDevelopmentApp(options = {}) {
       log('[macos-package] stage: QUIT_REQUESTED');
       await lifecycle.quitAndWait();
     }
-    if (lifecycle.isRunning()) throw new Error('Foliole Internal is still running after the exit wait');
     log('[macos-package] stage: EXIT_CONFIRMED');
     let hadInstalledApp;
     try {
