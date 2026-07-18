@@ -28,6 +28,8 @@ import {
   readProviderThreadId
 } from './assistantCommandInputs.js';
 import { resolveAssistantLauncherEnv } from './assistantLauncherEnvironment.js';
+import { sendAssistantTurn } from './assistantSendTurn.js';
+import { prepareAssistantThreadContinuation } from './assistantThreadContinuation.js';
 import { recordAssistantThreadSuccess } from './assistantThreadPersistence.js';
 import { readOptionalWorkspaceContext } from './assistantWorkspaceContextReader.js';
 
@@ -140,23 +142,31 @@ async function sendMessage(args: Record<string, unknown>, sender?: WebContents) 
     return assistantProtocolFailure();
   }
   const agentControl = await loadAssistantAgentControlContext(resolveFolioleAppVersion(app));
-  let result: Awaited<ReturnType<CodexAppServerAdapter['sendMessage']>>;
+  let continuation: ReturnType<typeof prepareAssistantThreadContinuation>;
   try {
-    result = await getAdapter().sendMessage({
-      clientTurnId,
-      message,
-      ...(sender ? { onEvent: createAssistantTurnEventSender(sender, clientTurnId) } : {}),
-      ...(providerThreadId ? { providerThreadId } : {}),
-      ...(workspaceContext ? { workspaceContext: { ...workspaceContext, agentControl } } : {})
-    });
+    continuation = prepareAssistantThreadContinuation(providerThreadId, agentControl);
   } catch {
     return assistantProtocolFailure();
   }
+  const result = await sendAssistantTurn({
+    agentControl,
+    adapter: getAdapter(),
+    clientTurnId,
+    continuation,
+    message,
+    ...(sender ? { onEvent: createAssistantTurnEventSender(sender, clientTurnId) } : {}),
+    ...(workspaceContext ? { workspaceContext } : {})
+  });
+  if (!result) return assistantProtocolFailure();
   if (result.state !== 'ready' || !openingLocation || !result.message?.threadId) return result;
   if (typeof result.message.text === 'string' && !result.message.text.trim()) return assistantProtocolFailure();
   try {
     const threadIndex = recordAssistantThreadSuccess({
+      agentToolVersion: continuation.agentToolVersion,
       clientTurnId,
+      ...(continuation.continuedFromThreadId
+        ? { continuedFromThreadId: continuation.continuedFromThreadId }
+        : {}),
       location: openingLocation,
       message,
       result: result.message

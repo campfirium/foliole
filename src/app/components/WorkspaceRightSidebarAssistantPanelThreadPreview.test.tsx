@@ -67,3 +67,26 @@ it('keeps a continued thread title stable while updating the history preview', a
   expect(screen.getByText('This topic: Topic · Follow-up prompt')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /original prompt/i })).toBeInTheDocument();
 });
+
+it('explains inside the new conversation when Agent tools required a continuation', async () => {
+  assistantRuntime.listAssistantThreadIndex.mockResolvedValueOnce([
+    createThread({
+      continuedFromThreadId: 'thread-old',
+      providerThreadId: 'thread-new',
+      title: 'Continued task'
+    })
+  ]);
+
+  renderWithLocalization(
+    <WorkspaceRightSidebarAssistantPanel
+      activeNodeId="node-1"
+      nodesById={{ 'node-1': createNode({ id: 'node-1' }) }}
+      onSelectNode={vi.fn()}
+    />
+  );
+  fireEvent.click(await screen.findByRole('button', { name: /continued task/i }));
+
+  expect(await screen.findByText(
+    'This task needs newly added Agent tools, so a new conversation was opened to continue.'
+  )).toBeInTheDocument();
+});

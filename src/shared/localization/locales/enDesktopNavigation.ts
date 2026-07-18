@@ -131,6 +131,8 @@ export const EN_DESKTOP_NAVIGATION_TRANSLATIONS = {
   'desktop.rightPanel.assistant.selectedThread': 'Selected thread. Saved local messages appear here; if they are unavailable, Foliole Aide shows the local preview.',
   'desktop.rightPanel.assistant.threadMessagesLoadFailed':
     'Foliole Aide could not load saved local messages. Showing the local preview.',
+  'desktop.rightPanel.assistant.threadContinuedForAgentTools':
+    'This task needs newly added Agent tools, so a new conversation was opened to continue.',
   'desktop.rightPanel.assistant.threadPreview': 'Local history preview: {preview}',
   'desktop.rightPanel.assistant.currentSession': 'Current session messages',
   'desktop.rightPanel.assistant.input': 'Foliole Aide message',

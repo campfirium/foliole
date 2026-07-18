@@ -5,7 +5,7 @@ import type {
   NativeAssistantSendMessageResult
 } from '../../lib/platform/nativeAssistantContract.js';
 
-import { createAideThreadRequest, createAideTurnStartParams } from './codexAppServerAidePolicy.js';
+import { createAideThreadRequest } from './codexAppServerAidePolicy.js';
 import { handleDynamicToolCall } from './codexAppServerDynamicToolCalls.js';
 import type { DynamicToolCallResult, FolioleDynamicToolRequest } from './codexAppServerDynamicTools.js';
 import {
@@ -13,11 +13,14 @@ import {
   mapAppServerEventError,
   mapJsonRpcError,
   parseMessage,
-  readNestedString,
   sendFailure,
   type JsonRpcMessage
 } from './codexAppServerProtocol.js';
 import type { SpawnedCodexProcess, TurnState } from './codexAppServerSessionTypes.js';
+import {
+  handleThreadContinuationSequence,
+  startContinuedTurn
+} from './codexAppServerThreadContinuation.js';
 import { CodexAppServerTurnDiagnostics } from './codexAppServerTurnDiagnostics.js';
 import {
   emitCodexAppServerTurnEvent,
@@ -138,7 +141,22 @@ export class CodexAppServerSession {
         write: (response) => this.write(response)
       });
     }
-    else if (message.id === turn.threadRequestId) this.handleThreadReady(message, turn);
+    else if (message.id === turn.threadRequestId) handleThreadContinuationSequence({
+      allocateId: () => this.nextId++,
+      launcherCwd: this.args.launcherCwd,
+      message,
+      onProtocolError: () => this.failActiveTurn('protocol_error', true),
+      turn,
+      write: (response) => this.write(response)
+    });
+    else if (turn.historyInjectRequestId !== undefined
+      && message.id === turn.historyInjectRequestId) startContinuedTurn({
+        allocateId: () => this.nextId++,
+        launcherCwd: this.args.launcherCwd,
+        onProtocolError: () => this.failActiveTurn('protocol_error', true),
+        turn,
+        write: (response) => this.write(response)
+      });
     else if (message.method === 'turn/started') handleTurnStarted(message, turn);
     else if (message.method === 'error') {
       const category = mapAppServerEventError(message.params);
@@ -150,20 +168,6 @@ export class CodexAppServerSession {
       (category, dispose) => this.failActiveTurn(category, dispose),
       (result) => this.finishActiveTurn(result)
     );
-  }
-  private handleThreadReady(message: JsonRpcMessage, turn: TurnState) {
-    const threadId = readNestedString(message.result, ['thread', 'id']);
-    if (!threadId || (turn.providerThreadId && threadId !== turn.providerThreadId)) {
-      this.failActiveTurn('protocol_error', true);
-      return;
-    }
-    turn.threadId = threadId;
-    emitCodexAppServerTurnEvent(turn, { kind: 'started', providerThreadId: threadId });
-    this.write({
-      id: this.nextId++,
-      method: 'turn/start',
-      params: createAideTurnStartParams(this.args.launcherCwd, threadId, turn.userMessage)
-    });
   }
   private failActiveTurn(category: NativeAssistantFailureCategory, dispose: boolean) {
     if (!this.activeTurn && this.initializedReject) {

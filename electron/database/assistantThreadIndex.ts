@@ -6,6 +6,7 @@ import type {
   NativeAssistantThreadOpeningLocation,
   NativeAssistantThreadReadState
 } from '../../lib/platform/nativeAssistantContract.js';
+import { CURRENT_ASSISTANT_AGENT_TOOL_VERSION } from '../../lib/platform/nativeAssistantContract.js';
 
 import { deleteAssistantThreadMessages } from './assistantThreadMessages.js';
 import { openDatabaseConnection } from './connection.js';
@@ -15,7 +16,9 @@ const TITLE_LIMIT = 80;
 const PREVIEW_LIMIT = 160;
 
 interface AssistantThreadIndexRow extends DatabaseRow {
+  agent_tool_version: number;
   archived_at: string | null;
+  continued_from_thread_id: string | null;
   created_at: string;
   deleted_at: string | null;
   last_opened_at: string;
@@ -32,6 +35,8 @@ interface AssistantThreadIndexRow extends DatabaseRow {
 }
 
 export interface AssistantThreadIndexUpsertInput {
+  agentToolVersion?: number;
+  continuedFromThreadId?: string;
   location: NativeAssistantThreadOpeningLocation;
   message: string;
   provider?: NativeAssistantProviderId;
@@ -59,20 +64,26 @@ export function upsertAssistantThreadIndex(
 
   openDatabaseConnection().driver.execute(
     `INSERT INTO assistant_thread_index (
-       provider, provider_thread_id, location_type, location_node_id, title, preview,
+       provider, provider_thread_id, agent_tool_version, continued_from_thread_id,
+       location_type, location_node_id, title, preview,
        status, read_state, read_error, created_at, updated_at, last_opened_at,
        archived_at, deleted_at
-     ) VALUES (?, ?, ?, ?, ?, ?, 'active', 'not_requested', NULL, ?, ?, ?, NULL, NULL)
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', 'not_requested', NULL, ?, ?, ?, NULL, NULL)
      ON CONFLICT(provider, provider_thread_id) DO UPDATE SET
        location_type = excluded.location_type,
        location_node_id = excluded.location_node_id,
+       agent_tool_version = excluded.agent_tool_version,
        preview = excluded.preview,
        status = 'active',
        updated_at = excluded.updated_at,
        last_opened_at = excluded.last_opened_at,
        archived_at = NULL,
        deleted_at = NULL`,
-    [provider, providerThreadId, row.type, row.nodeId, title, preview, now, now, now]
+    [
+      provider, providerThreadId, input.agentToolVersion ?? CURRENT_ASSISTANT_AGENT_TOOL_VERSION,
+      input.continuedFromThreadId ?? null,
+      row.type, row.nodeId, title, preview, now, now, now
+    ]
   );
 
   return readAssistantThreadIndexRecord(provider, providerThreadId);
@@ -178,7 +189,9 @@ function locationToColumns(location: NativeAssistantThreadOpeningLocation) {
 
 function rowToRecord(row: AssistantThreadIndexRow): NativeAssistantThreadIndexRecord {
   return {
+    agentToolVersion: row.agent_tool_version,
     archivedAt: row.archived_at,
+    continuedFromThreadId: row.continued_from_thread_id,
     createdAt: row.created_at,
     deletedAt: row.deleted_at,
     lastOpenedAt: row.last_opened_at,

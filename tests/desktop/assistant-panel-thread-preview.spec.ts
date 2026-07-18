@@ -1,8 +1,9 @@
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 
-import type { ElectronApplication, Page } from '@playwright/test';
+import type { ElectronApplication } from '@playwright/test';
 
+import { openAssistantPanel } from './assistant-panel-home-detail.support';
 import { expect, test } from './harness/fixtures';
 
 const screenshotPath = path.join(
@@ -10,6 +11,12 @@ const screenshotPath = path.join(
   '.tmp',
   'artifacts',
   'assistant-panel-thread-preview.png'
+);
+const continuationScreenshotPath = path.join(
+  process.cwd(),
+  '.tmp',
+  'artifacts',
+  'assistant-agent-tool-continuation.png'
 );
 
 const assistantReadyStatus = {
@@ -52,18 +59,36 @@ test('Aide history keeps a continued thread title stable and updates the preview
   });
 });
 
-async function openAssistantPanel(desktopWindow: Page) {
-  const directButton = desktopWindow.getByRole('button', { name: /Foliole Aide.*panel|Foliole Aide面板/ });
-  if (await directButton.count()) {
-    await directButton.first().click();
-    return;
-  }
-  await desktopWindow.getByRole('button', { name: /^(More right sidebar panels|更多右侧栏面板)$/ }).click();
-  await desktopWindow.getByRole('menuitem', { name: /Foliole Aide/ }).click();
-}
+test('Aide explains an Agent tool continuation inside the new conversation', async ({
+  desktopApp,
+  desktopWindow
+}, testInfo) => {
+  await desktopWindow.evaluate(() => {
+    localStorage.setItem('foliole-workspace-right-sidebar-active-panel', 'assistant');
+    localStorage.setItem('foliole-aide-enabled', 'true');
+  });
+  await desktopWindow.reload();
+  await installAssistantIpcMock(desktopApp, 'thread-old');
+  await openAssistantPanel(desktopWindow);
+  await desktopWindow.getByRole('button', { name: /Original prompt/i }).click();
 
-async function installAssistantIpcMock(electronApp: ElectronApplication) {
-  await electronApp.evaluate(({ ipcMain }, status) => {
+  await expect(desktopWindow.getByText(
+    /This task needs newly added Agent tools|完成任务需要使用新增的 Agent 工具/
+  )).toBeVisible();
+  await mkdir(path.dirname(continuationScreenshotPath), { recursive: true });
+  await desktopWindow.screenshot({ path: continuationScreenshotPath });
+  await testInfo.attach('assistant-agent-tool-continuation', {
+    path: continuationScreenshotPath,
+    contentType: 'image/png'
+  });
+});
+
+async function installAssistantIpcMock(
+  electronApp: ElectronApplication,
+  continuedFromThreadId: string | null = null
+) {
+  await electronApp.evaluate(({ ipcMain }, payload) => {
+    const { continuedFromThreadId, status } = payload;
     let record = createThread('Original prompt', 'Original preview');
     ipcMain.removeHandler('foliole:invoke');
     ipcMain.handle('foliole:invoke', async (_event, request: { args?: unknown; command?: string }) => {
@@ -83,7 +108,9 @@ async function installAssistantIpcMock(electronApp: ElectronApplication) {
     });
     function createThread(title: string, preview: string) {
       return {
+        agentToolVersion: 1,
         archivedAt: null,
+        continuedFromThreadId,
         createdAt: '2026-07-07T00:00:00.000Z',
         deletedAt: null,
         lastOpenedAt: '2026-07-07T00:00:00.000Z',
@@ -98,5 +125,5 @@ async function installAssistantIpcMock(electronApp: ElectronApplication) {
         updatedAt: '2026-07-07T00:00:00.000Z'
       };
     }
-  }, assistantReadyStatus);
+  }, { continuedFromThreadId, status: assistantReadyStatus });
 }

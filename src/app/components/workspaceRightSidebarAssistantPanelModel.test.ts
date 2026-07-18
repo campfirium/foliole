@@ -63,7 +63,9 @@ it('uses the current main panel context when continuing a saved thread', () => {
     location: { type: 'workspace' },
     nodesById: {},
     selectedRecord: {
+      agentToolVersion: 1,
       archivedAt: null,
+      continuedFromThreadId: null,
       createdAt: '2026-07-07T00:00:00.000Z',
       deletedAt: null,
       lastOpenedAt: '2026-07-07T00:00:00.000Z',

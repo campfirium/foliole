@@ -84,5 +84,12 @@ export const RECENT_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   {
     version: 56,
     migrate: migrateLegacyVirtualFoldersToManualNodes
+  },
+  {
+    version: 57,
+    migrate: (sqlite) => {
+      addColumnIfMissing(sqlite, 'assistant_thread_index', 'agent_tool_version', 'INTEGER NOT NULL DEFAULT 0');
+      addColumnIfMissing(sqlite, 'assistant_thread_index', 'continued_from_thread_id', 'TEXT');
+    }
   }
 ];

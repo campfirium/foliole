@@ -2,6 +2,8 @@ export const ASSISTANT_THREAD_INDEX_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS assistant_thread_index (
     provider TEXT NOT NULL,
     provider_thread_id TEXT NOT NULL,
+    agent_tool_version INTEGER NOT NULL DEFAULT 0,
+    continued_from_thread_id TEXT,
     location_type TEXT NOT NULL,
     location_node_id TEXT,
     title TEXT NOT NULL,
@@ -18,6 +20,7 @@ export const ASSISTANT_THREAD_INDEX_SCHEMA_STATEMENTS = [
     CHECK (location_type IN ('node', 'workspace')),
     CHECK (status IN ('active', 'archived', 'deleted')),
     CHECK (read_state IN ('not_requested', 'available', 'failed')),
+    CHECK (agent_tool_version >= 0),
     CHECK (location_type != 'node' OR location_node_id IS NOT NULL),
     CHECK (location_type != 'workspace' OR location_node_id IS NULL)
   )`,

@@ -11,13 +11,17 @@ import {
 import { openDatabaseConnection } from '../database/connection.js';
 
 export function recordAssistantThreadSuccess(input: {
+  agentToolVersion: number;
   clientTurnId: string;
+  continuedFromThreadId?: string;
   location: NativeAssistantThreadOpeningLocation;
   message: string;
   result: NativeAssistantMessageResult;
 }) {
   return openDatabaseConnection().driver.transaction(() => {
     const threadIndex = upsertAssistantThreadIndex({
+      agentToolVersion: input.agentToolVersion,
+      ...(input.continuedFromThreadId ? { continuedFromThreadId: input.continuedFromThreadId } : {}),
       location: input.location,
       message: input.message,
       providerThreadId: input.result.threadId ?? ''

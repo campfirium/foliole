@@ -8,6 +8,9 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let mockedAppDataDir = '/tmp/foliole-assistant-thread-messages-tests';
 const adapterSendMessage = vi.hoisted(() => vi.fn());
+const agentControlContext = vi.hoisted((): {
+  value: { capabilities: string[]; state: 'running' | 'stopped' };
+} => ({ value: { capabilities: ['materials.read'], state: 'running' } }));
 
 vi.mock('electron', () => ({
   app: { getPath: () => mockedAppDataDir, getVersion: () => '0.6.5-test' }
@@ -32,6 +35,11 @@ vi.mock('../assistant/codexAppServerAdapter.js', () => ({
   })
 }));
 
+vi.mock('./assistantAgentControlStatus.js', () => ({
+  loadAssistantAgentControlContext: vi.fn(async () => agentControlContext.value),
+  mergeAssistantStatusWithAgentControl: vi.fn((status) => status)
+}));
+
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
@@ -44,6 +52,7 @@ beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-assistant-thread-messages-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   adapterSendMessage.mockReset();
+  agentControlContext.value = { capabilities: ['materials.read'], state: 'running' };
   resetAssistantCommandAdapterForTests();
   initializeDatabaseConnection(openDatabaseConnection());
 });
@@ -75,6 +84,22 @@ it('stores and reads local messages for successful assistant turns', async () =>
   ]);
 });
 
+it('does not mark a new thread as tool-enabled when Agent tools were unavailable', async () => {
+  agentControlContext.value = { capabilities: [], state: 'stopped' };
+  adapterSendMessage.mockResolvedValue({
+    message: { text: 'Answer', threadId: 'thread-without-tools', turnId: 'turn-1' },
+    provider: 'codex-app-server',
+    state: 'ready'
+  });
+
+  const result = await handleAssistantCommand(NATIVE_COMMANDS.assistantSendMessage, {
+    message: 'Prompt body',
+    openingLocation: { type: 'workspace' }
+  });
+
+  expect(result).toMatchObject({ threadIndex: { agentToolVersion: 0 } });
+});
+
 it('appends local messages when continuing an existing assistant thread', async () => {
   adapterSendMessage
     .mockResolvedValueOnce({
@@ -92,6 +117,7 @@ it('appends local messages when continuing an existing assistant thread', async 
     message: 'First prompt',
     openingLocation: { type: 'workspace' }
   });
+  await new Promise((resolve) => setTimeout(resolve, 2));
   await handleAssistantCommand(NATIVE_COMMANDS.assistantSendMessage, {
     message: 'Follow-up prompt',
     openingLocation: { type: 'workspace' },
@@ -108,6 +134,51 @@ it('appends local messages when continuing an existing assistant thread', async 
     expect.objectContaining({ id: 'turn-2:user', role: 'user', text: 'Follow-up prompt' }),
     expect.objectContaining({ id: 'turn-2:assistant', role: 'assistant', text: 'Follow-up answer' })
   ]);
+});
+
+it('continues a legacy thread in a new tool-enabled thread with its saved history', async () => {
+  adapterSendMessage
+    .mockResolvedValueOnce({
+      message: { text: 'Old answer', threadId: 'thread-old', turnId: 'turn-old' },
+      provider: 'codex-app-server',
+      state: 'ready'
+    })
+    .mockResolvedValueOnce({
+      message: { text: 'New answer', threadId: 'thread-new', turnId: 'turn-new' },
+      provider: 'codex-app-server',
+      state: 'ready'
+    });
+
+  await handleAssistantCommand(NATIVE_COMMANDS.assistantSendMessage, {
+    message: 'Old question',
+    openingLocation: { type: 'workspace' }
+  });
+  openDatabaseConnection().driver.execute(
+    'UPDATE assistant_thread_index SET agent_tool_version = 0 WHERE provider_thread_id = ?',
+    ['thread-old']
+  );
+  const result = await handleAssistantCommand(NATIVE_COMMANDS.assistantSendMessage, {
+    message: 'Continue now',
+    openingLocation: { type: 'workspace' },
+    providerThreadId: 'thread-old'
+  });
+
+  const sendInput = adapterSendMessage.mock.lastCall?.[0];
+  expect(sendInput).toEqual(expect.objectContaining({
+    continuationMessages: [
+      expect.objectContaining({ role: 'user', text: 'Old question' }),
+      expect.objectContaining({ role: 'assistant', text: 'Old answer' })
+    ]
+  }));
+  expect(sendInput).not.toHaveProperty('providerThreadId');
+  expect(result).toMatchObject({
+    message: { threadId: 'thread-new' },
+    threadIndex: {
+      agentToolVersion: 1,
+      continuedFromThreadId: 'thread-old',
+      providerThreadId: 'thread-new'
+    }
+  });
 });
 
 it('rolls back the thread index when transcript persistence fails', async () => {

@@ -32,6 +32,7 @@ import {
   type FolioleDynamicToolRequest
 } from './codexAppServerDynamicTools.js';
 import type { SpawnedCodexProcess } from './codexAppServerSessionTypes.js';
+import type { AssistantContinuationMessage } from './codexAppServerThreadHistory.js';
 import { CodexAppServerSession } from './codexAppServerTurn.js';
 
 const DEFAULT_TIMEOUT_MS = 180_000;
@@ -150,6 +151,7 @@ export class CodexAppServerAdapter {
 
   async sendMessage(input: {
     clientTurnId: string;
+    continuationMessages?: AssistantContinuationMessage[];
     message: string;
     onEvent?: (event: NativeAssistantTurnEvent) => void;
     providerThreadId?: string;
@@ -173,6 +175,7 @@ export class CodexAppServerAdapter {
       });
       return await this.session.sendMessage({
         clientTurnId: input.clientTurnId,
+        ...(input.continuationMessages ? { continuationMessages: input.continuationMessages } : {}),
         message,
         ...(input.onEvent ? { onEvent: input.onEvent } : {}),
         ...(providerThreadId ? { providerThreadId } : {}),

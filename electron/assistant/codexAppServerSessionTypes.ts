@@ -3,6 +3,8 @@ import type {
   NativeAssistantTurnEvent
 } from '../../lib/platform/nativeAssistantContract.js';
 
+import type { AssistantContinuationMessage } from './codexAppServerThreadHistory.js';
+
 export interface SpawnedCodexProcess {
   kill: () => void;
   on: (event: 'error' | 'exit', listener: (...args: unknown[]) => void) => unknown;
@@ -14,8 +16,10 @@ export interface SpawnedCodexProcess {
 
 export interface TurnState {
   clientTurnId: string;
+  continuationMessages?: AssistantContinuationMessage[];
   dynamicToolCapabilities: string[];
   finish: (result: NativeAssistantSendMessageResult) => void;
+  historyInjectRequestId?: number;
   onEvent?: (event: NativeAssistantTurnEvent) => void;
   providerThreadId?: string;
   text: string;

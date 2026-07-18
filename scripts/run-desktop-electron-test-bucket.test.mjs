@@ -44,7 +44,7 @@ it('splits desktop Electron tests into bounded buckets', () => {
   expect(buckets.find((bucket) => bucket.label === 'import-importNodeMutationPatch')?.workers).toBe(1);
   expect(buckets.find((bucket) => bucket.label === 'ipc-epub-01')?.targets.length).toBeLessThanOrEqual(3);
   expect(buckets.find((bucket) => bucket.label === 'agentControl')?.targets).toHaveLength(15);
-  expect(buckets.find((bucket) => bucket.label === 'assistant')?.targets).toHaveLength(13);
+  expect(buckets.find((bucket) => bucket.label === 'assistant')?.targets).toHaveLength(16);
   expect(buckets.find((bucket) => bucket.label === 'discourse')?.targets).toHaveLength(3);
   expect(buckets.find((bucket) => bucket.label === 'foliole-publish')?.targets).toHaveLength(4);
   expect(buckets.find((bucket) => bucket.label === 'security')?.targets).toHaveLength(1);

@@ -205,6 +205,9 @@ function resolveThreadStatusLabel(
   controller: ReturnType<typeof useWorkspaceRightSidebarAssistantPanelController>,
   t: ReturnType<typeof useTranslation>
 ) {
+  if (controller.selectedRecord?.continuedFromThreadId) {
+    return t('desktop.rightPanel.assistant.threadContinuedForAgentTools');
+  }
   return controller.selectedRecord && controller.threadMessageStatus === 'failed'
     ? t('desktop.rightPanel.assistant.threadMessagesLoadFailed')
     : null;

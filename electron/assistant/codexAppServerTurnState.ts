@@ -7,9 +7,11 @@ import type {
 import { resolveDynamicToolCapabilities } from './codexAppServerDynamicTools.js';
 import { composeAssistantTurnInput } from './codexAppServerProtocol.js';
 import type { TurnState } from './codexAppServerSessionTypes.js';
+import type { AssistantContinuationMessage } from './codexAppServerThreadHistory.js';
 
 export interface SendMessageArgs {
   clientTurnId: string;
+  continuationMessages?: AssistantContinuationMessage[];
   message: string;
   onEvent?: (event: NativeAssistantTurnEvent) => void;
   providerThreadId?: string;
@@ -25,6 +27,7 @@ export function createTurnState(
 ): TurnState {
   return {
     clientTurnId: args.clientTurnId,
+    ...(args.continuationMessages ? { continuationMessages: args.continuationMessages } : {}),
     dynamicToolCapabilities: resolveDynamicToolCapabilities(args.workspaceContext),
     finish,
     ...(args.onEvent ? { onEvent: args.onEvent } : {}),
