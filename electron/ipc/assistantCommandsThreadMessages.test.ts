@@ -136,7 +136,7 @@ it('appends local messages when continuing an existing assistant thread', async 
   ]);
 });
 
-it('continues a legacy thread in a new tool-enabled thread with its saved history', async () => {
+it('continues a version-one tool thread with the current tools and saved history', async () => {
   adapterSendMessage
     .mockResolvedValueOnce({
       message: { text: 'Old answer', threadId: 'thread-old', turnId: 'turn-old' },
@@ -154,9 +154,13 @@ it('continues a legacy thread in a new tool-enabled thread with its saved histor
     openingLocation: { type: 'workspace' }
   });
   openDatabaseConnection().driver.execute(
-    'UPDATE assistant_thread_index SET agent_tool_version = 0 WHERE provider_thread_id = ?',
+    'UPDATE assistant_thread_index SET agent_tool_version = 1 WHERE provider_thread_id = ?',
     ['thread-old']
   );
+  agentControlContext.value = {
+    capabilities: ['materials.read', 'materials.create', 'virtualFolders.addItems'],
+    state: 'running'
+  };
   const result = await handleAssistantCommand(NATIVE_COMMANDS.assistantSendMessage, {
     message: 'Continue now',
     openingLocation: { type: 'workspace' },
@@ -168,13 +172,18 @@ it('continues a legacy thread in a new tool-enabled thread with its saved histor
     continuationMessages: [
       expect.objectContaining({ role: 'user', text: 'Old question' }),
       expect.objectContaining({ role: 'assistant', text: 'Old answer' })
-    ]
+    ],
+    workspaceContext: expect.objectContaining({
+      agentControl: expect.objectContaining({
+        capabilities: expect.arrayContaining(['materials.create', 'virtualFolders.addItems'])
+      })
+    })
   }));
   expect(sendInput).not.toHaveProperty('providerThreadId');
   expect(result).toMatchObject({
     message: { threadId: 'thread-new' },
     threadIndex: {
-      agentToolVersion: 1,
+      agentToolVersion: 2,
       continuedFromThreadId: 'thread-old',
       providerThreadId: 'thread-new'
     }
