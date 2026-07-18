@@ -6,32 +6,55 @@ export async function installAssistantContinuationIpcMock(
 ) {
   const messages = createMessages();
   const records = [
-    createThread('thread-old', 'Original prompt', 'Original preview', null),
-    createThread('thread-new', 'Continued task', 'Continue now', 'thread-old')
+    createThread('thread-old', 'Original prompt', 'Original preview', null, '2026-07-07T00:00:00.000Z'),
+    createThread('thread-new', 'Continued task', 'Continue now', 'thread-old', '2026-07-07T00:00:02.500Z')
+  ];
+  const followUpMessages = [
+    message('turn-latest:user', 'user', 'Now?', '2026-07-07T00:00:05.000Z'),
+    message('turn-latest:assistant', 'assistant', 'Latest answer', '2026-07-07T00:00:06.000Z')
   ];
   await electronApp.evaluate(({ ipcMain }, payload) => {
+    let currentMessages = payload.messages;
     ipcMain.removeHandler('foliole:invoke');
     ipcMain.handle('foliole:invoke', async (_event, request: { args?: unknown; command?: string }) => {
       if (request?.command === 'assistant_get_status') return payload.status;
       if (request?.command === 'assistant_list_thread_index') return payload.records;
-      if (request?.command !== 'assistant_list_thread_messages') return null;
-      const threadId = (request.args as { providerThreadId?: string } | undefined)?.providerThreadId;
-      return threadId === 'thread-new' ? payload.messages : payload.messages.slice(0, 2);
+      if (request?.command === 'assistant_list_thread_messages') {
+        const threadId = (request.args as { providerThreadId?: string } | undefined)?.providerThreadId;
+        return threadId === 'thread-new' ? currentMessages : currentMessages.slice(0, 2);
+      }
+      if (request?.command === 'assistant_send_message') {
+        currentMessages = [...currentMessages, ...payload.followUpMessages];
+        return payload.sendResult;
+      }
+      return null;
     });
-  }, { messages, records, status });
+  }, {
+    followUpMessages,
+    messages,
+    records,
+    sendResult: {
+      message: { text: 'Latest answer', threadId: 'thread-new', turnId: 'turn-latest' },
+      provider: 'codex-app-server',
+      state: 'ready',
+      threadIndex: records[1]
+    },
+    status
+  });
 }
 
 function createThread(
   providerThreadId: string,
   title: string,
   preview: string,
-  continuedFromThreadId: string | null
+  continuedFromThreadId: string | null,
+  createdAt: string
 ) {
   return {
     agentToolVersion: 1,
     archivedAt: null,
     continuedFromThreadId,
-    createdAt: '2026-07-07T00:00:00.000Z',
+    createdAt,
     deletedAt: null,
     lastOpenedAt: '2026-07-07T00:00:00.000Z',
     location: { type: 'workspace' },

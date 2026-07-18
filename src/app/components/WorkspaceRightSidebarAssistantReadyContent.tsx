@@ -13,6 +13,11 @@ import { WorkspaceRightSidebarAssistantComposer } from './WorkspaceRightSidebarA
 import { createAssistantContinuationEvent } from './workspaceRightSidebarAssistantContinuation';
 import { WorkspaceRightSidebarAssistantConversation } from './WorkspaceRightSidebarAssistantConversation';
 import { AssistantPanelToolbar } from './WorkspaceRightSidebarAssistantHeaders';
+import {
+  resolveAssistantConversationTitle,
+  resolveAssistantThreadLoadStatusLabel,
+  resolveAssistantThreadPreviewLabel
+} from './workspaceRightSidebarAssistantLabels';
 import { WorkspaceRightSidebarAssistantThreadList } from './WorkspaceRightSidebarAssistantThreadList';
 
 export function FolioleAideReadyContent(props: {
@@ -26,7 +31,7 @@ export function FolioleAideReadyContent(props: {
   return (
     <>
       <AssistantPanelToolbar
-        conversationTitle={conversationOpen ? resolveConversationTitle(props.controller, t) : null}
+        conversationTitle={conversationOpen ? resolveAssistantConversationTitle(props.controller, t) : null}
         historyVisible={!conversationOpen && showHistory}
         onBack={props.controller.handleNewThread}
         onNewThread={props.controller.handleNewThread}
@@ -56,6 +61,7 @@ function AssistantConversationView(props: {
 }) {
   const t = useTranslation();
   const continuation = createAssistantContinuationEvent({
+    messages: props.controller.activeMessages,
     onSelectRecord: props.controller.handleSelectRecord,
     records: props.controller.records,
     selectedRecord: props.controller.selectedRecord,
@@ -83,9 +89,9 @@ function AssistantConversationView(props: {
         pendingLabel={t('desktop.rightPanel.assistant.pending')}
         sendLabel={t('desktop.rightPanel.assistant.send')}
         sending={props.controller.sending}
-        statusLabel={resolveThreadLoadStatusLabel(props.controller, t)}
+        statusLabel={resolveAssistantThreadLoadStatusLabel(props.controller, t)}
         transitionEvent={continuation}
-        threadPreviewLabel={resolveThreadPreviewLabel(props.controller, t)}
+        threadPreviewLabel={resolveAssistantThreadPreviewLabel(props.controller, t)}
       />
     </>
   );
@@ -186,36 +192,6 @@ function isConversationOpen(
   controller: ReturnType<typeof useWorkspaceRightSidebarAssistantPanelController>
 ) {
   return controller.selectedThreadId !== null || controller.activeMessages.length > 0 || controller.sending;
-}
-
-function resolveConversationTitle(
-  controller: ReturnType<typeof useWorkspaceRightSidebarAssistantPanelController>,
-  t: ReturnType<typeof useTranslation>
-) {
-  const title = controller.selectedRecord?.title.trim();
-  if (title) return title;
-  const firstPrompt = controller.activeMessages.find((message) => message.role === 'user')?.text.trim();
-  return firstPrompt ? firstPrompt.slice(0, 80) : t('desktop.rightPanel.assistant.newConversation');
-}
-
-function resolveThreadPreviewLabel(
-  controller: ReturnType<typeof useWorkspaceRightSidebarAssistantPanelController>,
-  t: ReturnType<typeof useTranslation>
-) {
-  if (controller.activeMessages.length > 0) return null;
-  const preview = controller.selectedRecord?.preview.trim();
-  return preview
-    ? t('desktop.rightPanel.assistant.threadPreview', { preview })
-    : null;
-}
-
-function resolveThreadLoadStatusLabel(
-  controller: ReturnType<typeof useWorkspaceRightSidebarAssistantPanelController>,
-  t: ReturnType<typeof useTranslation>
-) {
-  return controller.selectedRecord && controller.threadMessageStatus === 'failed'
-    ? t('desktop.rightPanel.assistant.threadMessagesLoadFailed')
-    : null;
 }
 
 function resolveContextFollowLabel(

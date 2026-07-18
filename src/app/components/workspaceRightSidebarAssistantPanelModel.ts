@@ -14,6 +14,7 @@ export { resolveAssistantWorkspaceContext };
 
 export interface AssistantMessage {
   activity?: 'thinking';
+  createdAt?: string;
   failureText?: string;
   id: string;
   role: 'assistant' | 'user';
@@ -110,6 +111,7 @@ export function threadMessagesToAssistantMessages(
   records: NativeAssistantThreadMessageRecord[]
 ): AssistantMessage[] {
   return records.map((record) => ({
+    createdAt: record.createdAt,
     id: record.id,
     role: record.role,
     state: 'ready',
@@ -130,7 +132,13 @@ export function upsertRecord(
 export function createUserMessageAction(key: string, pendingId: string, text: string) {
   return {
     key,
-    message: { id: `user-${pendingId}`, role: 'user' as const, state: 'ready' as const, text },
+    message: {
+      createdAt: new Date().toISOString(),
+      id: `user-${pendingId}`,
+      role: 'user' as const,
+      state: 'ready' as const,
+      text
+    },
     type: 'append' as const
   };
 }

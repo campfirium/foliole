@@ -19,6 +19,12 @@ const continuationScreenshotPath = path.join(
   'artifacts',
   'assistant-agent-tool-continuation.png'
 );
+const continuationDestinationScreenshotPath = path.join(
+  process.cwd(),
+  '.tmp',
+  'artifacts',
+  'assistant-agent-tool-continuation-destination.png'
+);
 
 const assistantReadyStatus = {
   agentControl: { capabilities: ['materials.read'], state: 'running' },
@@ -88,8 +94,22 @@ test('Aide links an old conversation inline and preserves its history in the new
     '为完成任务，已新建此对话并启用新增的 Agent 工具。'
   )).toBeVisible();
   await expect(desktopWindow.getByText('Continued answer')).toBeVisible();
+  expect(await desktopWindow.locator('[data-message-role]').evaluateAll((items) => (
+    items.map((item) => item.getAttribute('data-message-role'))
+  ))).toEqual(['user', 'assistant', 'user', 'system', 'assistant']);
+  await desktopWindow.getByLabel(/^(Foliole Aide message|Foliole Aide 消息)$/).fill('Now?');
+  await desktopWindow.getByRole('button', { name: /^(Send|发送)$/ }).click();
+  await expect(desktopWindow.getByText('Latest answer')).toBeVisible();
+  expect(await desktopWindow.locator('[data-message-role]').evaluateAll((items) => (
+    items.map((item) => item.getAttribute('data-message-role'))
+  ))).toEqual(['user', 'assistant', 'user', 'system', 'assistant', 'user', 'assistant']);
+  await desktopWindow.screenshot({ path: continuationDestinationScreenshotPath });
   await testInfo.attach('assistant-agent-tool-continuation', {
     path: continuationScreenshotPath,
+    contentType: 'image/png'
+  });
+  await testInfo.attach('assistant-agent-tool-continuation-destination', {
+    path: continuationDestinationScreenshotPath,
     contentType: 'image/png'
   });
 });

@@ -68,28 +68,6 @@ it('keeps a continued thread title stable while updating the history preview', a
   expect(screen.getByRole('button', { name: /original prompt/i })).toBeInTheDocument();
 });
 
-it('explains inside the new conversation when Agent tools required a continuation', async () => {
-  window.localStorage.setItem('foliole-app-language', 'zh-Hans');
-  assistantRuntime.listAssistantThreadIndex.mockResolvedValueOnce([
-    createThread({
-      continuedFromThreadId: 'thread-old',
-      providerThreadId: 'thread-new',
-      title: 'Continued task'
-    })
-  ]);
-
-  renderWithLocalization(
-    <WorkspaceRightSidebarAssistantPanel
-      activeNodeId="node-1"
-      nodesById={{ 'node-1': createNode({ id: 'node-1' }) }}
-      onSelectNode={vi.fn()}
-    />
-  );
-  fireEvent.click(await screen.findByRole('button', { name: /continued task/i }));
-
-  expect(await screen.findByText('为完成任务，已新建此对话并启用新增的 Agent 工具。')).toBeInTheDocument();
-});
-
 it('leaves a localized continuation record in the old conversation and opens its destination', async () => {
   window.localStorage.setItem('foliole-app-language', 'zh-Hans');
   assistantRuntime.listAssistantThreadIndex.mockResolvedValueOnce([
@@ -119,7 +97,42 @@ it('leaves a localized continuation record in the old conversation and opens its
   expect(await screen.findByRole('heading', { name: '新对话' })).toBeInTheDocument();
 });
 
-it('moves the triggering user prompt into the continued conversation before the reply', async () => {
+it('keeps the migration notice at its original boundary after later turns', async () => {
+  mockContinuedThreadTurns();
+
+  renderWithLocalization(
+    <WorkspaceRightSidebarAssistantPanel
+      activeNodeId="node-1"
+      nodesById={{ 'node-1': createNode({ id: 'node-1' }) }}
+      onSelectNode={vi.fn()}
+    />
+  );
+  fireEvent.click(await screen.findByRole('button', { name: /earlier task/i }));
+  const earlierAnswer = await screen.findByText('Earlier answer');
+  fireEvent.change(screen.getByLabelText('Foliole Aide message'), {
+    target: { value: 'Can you write this back?' }
+  });
+  fireEvent.submit(screen.getByRole('button', { name: 'Send' }).closest('form')!);
+
+  const prompt = await screen.findByText('Can you write this back?');
+  const event = screen.getByText(
+    'This conversation was created with newly added Agent tools to complete the task.'
+  );
+  const reply = screen.getByText('The memo is updated.');
+  fireEvent.change(screen.getByLabelText('Foliole Aide message'), {
+    target: { value: 'Now?' }
+  });
+  fireEvent.submit(screen.getByRole('button', { name: 'Send' }).closest('form')!);
+  const laterPrompt = await screen.findByText('Now?');
+  const laterReply = screen.getByText('Latest answer');
+  expect(earlierAnswer.compareDocumentPosition(prompt) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(prompt.compareDocumentPosition(event) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(event.compareDocumentPosition(reply) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(reply.compareDocumentPosition(laterPrompt) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(laterPrompt.compareDocumentPosition(laterReply) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+});
+
+function mockContinuedThreadTurns() {
   assistantRuntime.listAssistantThreadMessages.mockResolvedValueOnce([
     {
       createdAt: '2026-07-07T00:00:01.000Z',
@@ -146,33 +159,20 @@ it('moves the triggering user prompt into the continued conversation before the 
     provider: 'codex-app-server',
     state: 'ready',
     threadIndex: createThread({
+      createdAt: '2026-07-07T00:00:03.000Z',
+      continuedFromThreadId: 'thread-old',
+      providerThreadId: 'thread-new',
+      title: 'Can you write this back?'
+    })
+  }).mockResolvedValueOnce({
+    message: { text: 'Latest answer', threadId: 'thread-new', turnId: 'turn-latest' },
+    provider: 'codex-app-server',
+    state: 'ready',
+    threadIndex: createThread({
+      createdAt: '2026-07-07T00:00:03.000Z',
       continuedFromThreadId: 'thread-old',
       providerThreadId: 'thread-new',
       title: 'Can you write this back?'
     })
   });
-
-  renderWithLocalization(
-    <WorkspaceRightSidebarAssistantPanel
-      activeNodeId="node-1"
-      nodesById={{ 'node-1': createNode({ id: 'node-1' }) }}
-      onSelectNode={vi.fn()}
-    />
-  );
-  fireEvent.click(await screen.findByRole('button', { name: /earlier task/i }));
-  const earlierAnswer = await screen.findByText('Earlier answer');
-  fireEvent.change(screen.getByLabelText('Foliole Aide message'), {
-    target: { value: 'Can you write this back?' }
-  });
-  fireEvent.submit(screen.getByRole('button', { name: 'Send' }).closest('form')!);
-
-  const prompt = await screen.findByText('Can you write this back?');
-  const event = screen.getByText(
-    'This conversation was created with newly added Agent tools to complete the task.'
-  );
-  const reply = screen.getByText('The memo is updated.');
-  expect(earlierAnswer).toBeInTheDocument();
-  expect(earlierAnswer.compareDocumentPosition(prompt) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  expect(prompt.compareDocumentPosition(event) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  expect(event.compareDocumentPosition(reply) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-});
+}

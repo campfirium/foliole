@@ -13,8 +13,8 @@ export function WorkspaceRightSidebarAssistantMessageViewport(props: {
   pendingLabel: string;
   transitionEvent: {
     actionLabel?: string;
+    afterMessageId?: string;
     onAction?: () => void;
-    placement: 'after-messages' | 'after-user';
     suffix?: string;
     text: string;
   } | null;
@@ -49,9 +49,10 @@ export function WorkspaceRightSidebarAssistantMessageViewport(props: {
 }
 
 function renderConversationItems(props: Parameters<typeof WorkspaceRightSidebarAssistantMessageViewport>[0]) {
-  const eventIndex = props.transitionEvent?.placement === 'after-user'
-    ? findLastUserIndex(props.messages) + 1
-    : props.messages.length;
+  const boundaryIndex = props.transitionEvent?.afterMessageId
+    ? props.messages.findIndex((message) => message.id === props.transitionEvent?.afterMessageId)
+    : -1;
+  const eventIndex = boundaryIndex >= 0 ? boundaryIndex + 1 : props.messages.length;
   const rows = props.messages.map((message) => (
     <WorkspaceRightSidebarAssistantMessageRow
       key={message.id}
@@ -65,13 +66,6 @@ function renderConversationItems(props: Parameters<typeof WorkspaceRightSidebarA
     key="assistant-transition-event"
   />);
   return rows;
-}
-
-function findLastUserIndex(messages: AssistantMessage[]) {
-  for (let index = messages.length - 1; index >= 0; index -= 1) {
-    if (messages[index]?.role === 'user') return index;
-  }
-  return -1;
 }
 
 function AssistantTransitionEvent(props: {

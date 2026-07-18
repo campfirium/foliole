@@ -25,8 +25,8 @@ interface AssistantConversationProps {
   statusLabel: string | null;
   transitionEvent: {
     actionLabel?: string;
+    afterMessageId?: string;
     onAction?: () => void;
-    placement: 'after-messages' | 'after-user';
     suffix?: string;
     text: string;
   } | null;

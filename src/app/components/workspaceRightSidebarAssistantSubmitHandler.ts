@@ -95,6 +95,7 @@ function applySendResult(result: SendResultArgs) {
   if (result.result?.state === 'ready' && threadId) {
     if (threadId !== result.threadKey)
       result.dispatchCache({ fromKey: result.threadKey, toKey: threadId, type: 'move' });
+    markContinuationPrompt(result, threadId);
     result.dispatchCache(createReadyMessageAction(threadId, result.pendingId, result.result));
     if (result.result.threadIndex) result.threads.upsertRecord(result.result.threadIndex);
     result.threads.selectThreadId(threadId);
@@ -104,6 +105,23 @@ function applySendResult(result: SendResultArgs) {
   if (failureCategory) result.onCapabilityFailure(failureCategory);
   result.dispatchCache(createFailedMessageAction(result.threadKey, result.pendingId, result.failedText));
   result.setMessageText(result.prompt);
+}
+
+function markContinuationPrompt(result: SendResultArgs, threadId: string) {
+  const record = result.result?.threadIndex;
+  if (!record?.continuedFromThreadId || threadId === result.threadKey) return;
+  result.dispatchCache({
+    key: threadId,
+    message: {
+      createdAt: record.createdAt,
+      id: `user-${result.pendingId}`,
+      role: 'user',
+      state: 'ready',
+      text: result.prompt
+    },
+    messageId: `user-${result.pendingId}`,
+    type: 'replace'
+  });
 }
 
 type SendResultArgs = SubmitHandlerArgs & {
