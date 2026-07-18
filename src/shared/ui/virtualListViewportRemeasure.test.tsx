@@ -30,15 +30,17 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-it('remeasures virtual rows after viewport resize events', async () => {
+it('remeasures virtual rows on mount and after viewport resize events', async () => {
   const measure = vi.fn();
   const addEventListener = vi.spyOn(window, 'addEventListener');
   render(<RemeasureHarness isVirtual measure={measure} />);
   await waitFor(() => expect(addEventListener).toHaveBeenCalledWith('resize', expect.any(Function)));
 
+  expect(measure).toHaveBeenCalledTimes(2);
+
   window.dispatchEvent(new Event('resize'));
 
-  expect(measure).toHaveBeenCalledTimes(2);
+  expect(measure).toHaveBeenCalledTimes(4);
 });
 
 it('does not bind viewport remeasure listeners for static rows', () => {

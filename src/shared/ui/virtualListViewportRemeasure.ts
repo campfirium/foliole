@@ -23,6 +23,7 @@ export function useVirtualListViewportRemeasure(args: {
     if (!args.isVirtual) {
       return;
     }
+    scheduleMeasure();
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         scheduleMeasure();
