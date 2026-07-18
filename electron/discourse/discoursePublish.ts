@@ -61,20 +61,15 @@ export async function loadDiscoursePublishCatalog(args?: { refresh?: boolean }) 
   const { apiKey, settings } = requireConfiguredSettings();
   const cached = loadDiscourseCatalogCache(settings.site_url);
   if (cached && !args?.refresh) return cached;
-  try {
-    const catalog = await loadCatalog({ apiKey, siteUrl: settings.site_url });
-    saveDiscourseCatalogCache(settings.site_url, catalog);
-    return {
-      ...catalog,
-      fetched_at: new Date().toISOString(),
-      from_cache: false,
-      recent_category_ids: cached?.recent_category_ids ?? [],
-      recent_tags: cached?.recent_tags ?? []
-    };
-  } catch (error) {
-    if (cached) return cached;
-    throw error;
-  }
+  const catalog = await loadCatalog({ apiKey, siteUrl: settings.site_url });
+  saveDiscourseCatalogCache(settings.site_url, catalog);
+  return {
+    ...catalog,
+    fetched_at: new Date().toISOString(),
+    from_cache: false,
+    recent_category_ids: cached?.recent_category_ids ?? [],
+    recent_tags: cached?.recent_tags ?? []
+  };
 }
 
 async function publishExistingTopic(args: {

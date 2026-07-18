@@ -211,3 +211,18 @@ it('shows a user-facing error when the connection test fails', async () => {
   expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't connect to Discourse.");
   expect(screen.getByRole('alert')).not.toHaveTextContent('private runtime detail');
 });
+
+it('does not report a cached catalog as a successful connection test', async () => {
+  repositoryMocks.loadDiscoursePublishCatalogFromRuntime.mockResolvedValue({
+    categories: [], fetched_at: '2026-07-02T00:00:00.000Z', from_cache: true,
+    recent_category_ids: [], recent_tags: [], tags: []
+  });
+  renderWithLocalization(<SettingsPublishingSection />);
+  const testConnection = await screen.findByRole('button', { name: 'Test connection' });
+  await waitFor(() => expect(testConnection).toBeEnabled());
+
+  fireEvent.click(testConnection);
+
+  expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't connect to Discourse.");
+  expect(screen.queryByText('Connection successful.')).toBeNull();
+});

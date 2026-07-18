@@ -1,6 +1,11 @@
 import { afterEach, expect, it, vi } from 'vitest';
 
+const appendDiagnosticLog = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+
+vi.mock('../diagnostics/diagnosticLog.js', () => ({ appendDiagnosticLog }));
+
 afterEach(() => {
+  appendDiagnosticLog.mockClear();
   vi.unstubAllGlobals();
 });
 
@@ -29,7 +34,11 @@ it('formats Discourse validation errors without exposing raw JSON', async () => 
 });
 
 it('uses a user-facing message when the forum does not respond during publishing', async () => {
-  const fetchMock = vi.fn().mockRejectedValue(new TypeError('fetch failed'));
+  const cause = Object.assign(new Error('connect failed for https://private.example.com'), {
+    code: 'CERT_HAS_EXPIRED'
+  });
+  const fetchError = Object.assign(new TypeError('fetch failed'), { cause });
+  const fetchMock = vi.fn().mockRejectedValue(fetchError);
   vi.stubGlobal('fetch', fetchMock);
 
   const { createDiscourseTopic } = await import('./discourseClient.js');
@@ -44,6 +53,17 @@ it('uses a user-facing message when the forum does not respond during publishing
   });
   await expect(publish).rejects.toThrow("The forum isn't responding right now. Try Publish again in a moment.");
   await expect(publish).rejects.not.toThrow('fetch failed');
+  expect(appendDiagnosticLog).toHaveBeenCalledWith(expect.objectContaining({
+    event: 'discourse_publish_network_failed',
+    payload: expect.objectContaining({
+      cause_code: 'CERT_HAS_EXPIRED',
+      operation: 'create_topic'
+    }),
+    source: 'electron.discourse'
+  }));
+  expect(JSON.stringify(appendDiagnosticLog.mock.calls)).not.toContain('user-key');
+  expect(JSON.stringify(appendDiagnosticLog.mock.calls)).not.toContain('Long enough body');
+  expect(JSON.stringify(appendDiagnosticLog.mock.calls)).not.toContain('private.example.com');
 });
 
 it('loads Discourse categories and tags for publish choices', async () => {

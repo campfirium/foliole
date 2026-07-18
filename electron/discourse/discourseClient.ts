@@ -1,3 +1,5 @@
+import { appendDiagnosticLog } from '../diagnostics/diagnosticLog.js';
+
 interface DiscourseClientOptions {
   apiKey: string;
   siteUrl: string;
@@ -49,6 +51,29 @@ interface DiscourseTagResponse {
 
 const DISCOURSE_PUBLISH_CONNECTION_ERROR = "The forum isn't responding right now. Try Publish again in a moment.";
 
+type DiscoursePublishOperation = 'create_topic' | 'update_post' | 'update_topic';
+
+function readErrorCause(error: unknown) {
+  if (!(error instanceof Error) || !error.cause || typeof error.cause !== 'object') return null;
+  return error.cause as { code?: unknown; name?: unknown };
+}
+
+function recordPublishNetworkFailure(operation: DiscoursePublishOperation, error: unknown) {
+  const cause = readErrorCause(error);
+  void appendDiagnosticLog({
+    event: 'discourse_publish_network_failed',
+    level: 'error',
+    occurred_at: new Date().toISOString(),
+    payload: {
+      cause_code: typeof cause?.code === 'string' ? cause.code : null,
+      cause_name: typeof cause?.name === 'string' ? cause.name : null,
+      error_name: error instanceof Error ? error.name : typeof error,
+      operation
+    },
+    source: 'electron.discourse'
+  }).catch(() => undefined);
+}
+
 function readDiscourseErrorMessage(text: string) {
   try {
     const payload = JSON.parse(text) as { error?: unknown; errors?: unknown; message?: unknown };
@@ -75,10 +100,11 @@ function buildUrl(siteUrl: string, path: string) {
   return `${siteUrl.replace(/\/+$/g, '')}${path}`;
 }
 
-async function fetchPublishResponse(input: string, init: RequestInit) {
+async function fetchPublishResponse(input: string, init: RequestInit, operation: DiscoursePublishOperation) {
   try {
     return await fetch(input, init);
-  } catch {
+  } catch (error) {
+    recordPublishNetworkFailure(operation, error);
     throw new Error(DISCOURSE_PUBLISH_CONNECTION_ERROR);
   }
 }
@@ -169,7 +195,7 @@ export async function createDiscourseTopic(options: DiscourseClientOptions, inpu
     }),
     headers: buildHeaders(options),
     method: 'POST'
-  });
+  }, 'create_topic');
   const json = await readJsonResponse(response);
   if (!json.topic_id || !json.id) {
     throw new Error('Discourse create response did not include topic and post ids.');
@@ -186,7 +212,7 @@ export async function updateDiscourseTopic(options: DiscourseClientOptions, inpu
     body: JSON.stringify({ raw: input.raw }),
     headers: buildHeaders(options),
     method: 'PUT'
-  }));
+  }, 'update_post'));
   await readJsonResponse(await fetchPublishResponse(buildUrl(options.siteUrl, `/t/${input.topicId}.json`), {
     body: JSON.stringify({
       category_id: input.categoryId ?? undefined,
@@ -195,5 +221,5 @@ export async function updateDiscourseTopic(options: DiscourseClientOptions, inpu
     }),
     headers: buildHeaders(options),
     method: 'PUT'
-  }));
+  }, 'update_topic'));
 }

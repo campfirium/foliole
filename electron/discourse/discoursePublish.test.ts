@@ -131,3 +131,14 @@ it('refreshes and stores the Discourse publish catalog on demand', async () => {
     tags: [{ id: 'desktop', name: 'desktop' }]
   });
 });
+
+it('rejects a failed live catalog refresh instead of reporting the cached catalog as connected', async () => {
+  loadDiscourseCatalogCache.mockReturnValue({
+    categories: [], fetched_at: '2026-07-02T00:00:00.000Z', from_cache: true,
+    recent_category_ids: [], recent_tags: [], tags: []
+  });
+  loadDiscoursePublishCatalog.mockRejectedValue(new Error('forum unavailable'));
+  const { loadDiscoursePublishCatalog: loadCatalog } = await import('./discoursePublish.js');
+
+  await expect(loadCatalog({ refresh: true })).rejects.toThrow('forum unavailable');
+});

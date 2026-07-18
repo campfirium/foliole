@@ -83,7 +83,7 @@ async function testPublishingConnection(state: PublishingState, t: ReturnType<ty
   try {
     await persistPublishingSettings(state, state.form, Boolean(state.form.apiKey.trim()));
     const catalog = await loadDiscoursePublishCatalogFromRuntime({ refresh: true });
-    if (!catalog) throw new Error('Discourse catalog unavailable');
+    if (!catalog || catalog.from_cache) throw new Error('Discourse catalog unavailable');
     state.setFeedback('connected');
   } catch {
     state.setError(t('settings.publishing.error.test'));
