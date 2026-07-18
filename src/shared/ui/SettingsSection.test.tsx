@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { useState } from 'react';
 import { beforeAll, expect, it } from 'vitest';
 
 import { preloadTranslationCatalog } from '../localization/translations';
@@ -55,4 +56,23 @@ it('renders a description-only header without a title heading', () => {
 
   expect(screen.queryByRole('heading', { level: 3 })).not.toBeInTheDocument();
   expect(screen.getByText('Only description.')).toBeInTheDocument();
+});
+
+it('exposes an independent disclosure without unmounting its content', () => {
+  function DisclosureSection() {
+    const [expanded, setExpanded] = useState(false);
+    return (
+      <SettingsSection description="Section copy." expanded={expanded} onExpandedChange={setExpanded} title="Publishing">
+        <input aria-label="Account ID" />
+      </SettingsSection>
+    );
+  }
+
+  render(<DisclosureSection />);
+  const toggle = screen.getByRole('button', { name: 'Publishing' });
+  expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  expect(screen.getByLabelText('Account ID')).not.toBeVisible();
+  fireEvent.click(toggle);
+  expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  expect(screen.getByLabelText('Account ID')).toBeVisible();
 });

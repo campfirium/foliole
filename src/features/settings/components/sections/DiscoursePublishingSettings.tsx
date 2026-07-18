@@ -55,11 +55,11 @@ function PublishingRows(props: {
   );
 }
 
-export function DiscoursePublishingSettings() {
+export function DiscoursePublishingSettings(props: { expanded: boolean; onExpandedChange: (expanded: boolean) => void }) {
   const t = useTranslation();
   const state = usePublishingSettings();
   return (
-    <SettingsSection ariaLabel={t('settings.publishing.sectionAria')} description={t('settings.publishing.discourse.description')} title="Discourse">
+    <SettingsSection ariaLabel={t('settings.publishing.sectionAria')} description={t('settings.publishing.discourse.description')} expanded={props.expanded} onExpandedChange={props.onExpandedChange} title="Discourse">
       {state.error ? <AppErrorState description={t('settings.publishing.error.tryAgain')} surface="panel" title={state.error} /> : null}
       <PublishingRows disabled={state.disabled} form={state.form} hasApiKey={state.hasApiKey} saveApiKey={state.saveApiKey} saveForumUrl={state.saveForumUrl} updateForm={state.updateForm} />
       <ConnectionRow canTest={state.canTest} feedback={state.feedback} hasApiKey={state.hasApiKey} onDisconnect={state.disconnect} onTest={state.testConnection} status={state.status} />

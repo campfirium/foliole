@@ -10,6 +10,12 @@ type RowLayout = {
   title: string;
 };
 
+type PublishingRegions = {
+  discourse: import('@playwright/test').Locator;
+  foliole: import('@playwright/test').Locator;
+  wordpress: import('@playwright/test').Locator;
+};
+
 async function collectPublishingRowLayouts(dialog: import('@playwright/test').Locator): Promise<RowLayout[]> {
   return dialog.getByRole('region', {
     name: /^(Discourse publish settings|Discourse 发布设置)$/
@@ -27,7 +33,39 @@ async function collectPublishingRowLayouts(dialog: import('@playwright/test').Lo
   );
 }
 
-test('keeps Foliole Publish above WordPress and Discourse with device-only credentials', async ({ desktopWindow }, testInfo) => {
+async function verifyCollapsedOverview(
+  regions: PublishingRegions,
+  desktopWindow: import('@playwright/test').Page,
+  testInfo: import('@playwright/test').TestInfo
+) {
+  await expect(regions.foliole.getByRole('button', { name: 'Foliole Publish' })).toHaveAttribute('aria-expanded', 'false');
+  await expect(regions.wordpress.getByRole('button', { name: 'WordPress' })).toHaveAttribute('aria-expanded', 'false');
+  await expect(regions.discourse.getByRole('button', { name: 'Discourse' })).toHaveAttribute('aria-expanded', 'false');
+  await expect(regions.foliole.getByLabel(/^Cloudflare Account ID$/)).not.toBeVisible();
+  await expect(regions.wordpress.getByLabel(/^(WordPress site address|WordPress 站点地址)$/)).not.toBeVisible();
+  await expect(regions.discourse.getByLabel(/^(Discourse forum URL|Discourse 论坛 URL)$/)).not.toBeVisible();
+
+  const screenshot = await desktopWindow.screenshot({ fullPage: true });
+  const screenshotDir = path.join(process.cwd(), '.tmp', 'artifacts');
+  await mkdir(screenshotDir, { recursive: true });
+  await writeFile(path.join(screenshotDir, 'publishing-settings-collapsed-hidden-native.png'), screenshot);
+  await testInfo.attach('publishing-settings-collapsed', { body: screenshot, contentType: 'image/png' });
+  return screenshotDir;
+}
+
+async function expandPublishingSections(regions: PublishingRegions) {
+  const foliole = regions.foliole.getByRole('button', { name: 'Foliole Publish' });
+  const wordpress = regions.wordpress.getByRole('button', { name: 'WordPress' });
+  const discourse = regions.discourse.getByRole('button', { name: 'Discourse' });
+  await foliole.click();
+  await wordpress.click();
+  await expect(foliole).toHaveAttribute('aria-expanded', 'true');
+  await expect(wordpress).toHaveAttribute('aria-expanded', 'true');
+  await expect(discourse).toHaveAttribute('aria-expanded', 'false');
+  await discourse.click();
+}
+
+test('keeps independent Publish sections collapsed until opened and preserves their settings', async ({ desktopWindow }, testInfo) => {
   const dialog = await openSettingsDialog(desktopWindow);
   await dialog.getByRole('button', { name: /^(Publish|发布)$/ }).click();
 
@@ -38,6 +76,9 @@ test('keeps Foliole Publish above WordPress and Discourse with device-only crede
   await expect(folioleRegion.getByRole('heading', { level: 3, name: 'Foliole Publish' })).toBeVisible();
   await expect(wordpressRegion.getByRole('heading', { level: 3, name: 'WordPress' })).toBeVisible();
   await expect(discourseRegion.getByRole('heading', { level: 3, name: 'Discourse' })).toBeVisible();
+  const regions = { discourse: discourseRegion, foliole: folioleRegion, wordpress: wordpressRegion };
+  const screenshotDir = await verifyCollapsedOverview(regions, desktopWindow, testInfo);
+  await expandPublishingSections(regions);
   const [folioleBox, wordpressBox, discourseBox] = await Promise.all([
     folioleRegion.boundingBox(), wordpressRegion.boundingBox(), discourseRegion.boundingBox()
   ]);
@@ -78,9 +119,7 @@ test('keeps Foliole Publish above WordPress and Discourse with device-only crede
 
   await folioleRegion.scrollIntoViewIfNeeded();
   const screenshot = await desktopWindow.screenshot({ fullPage: true });
-  const screenshotDir = path.join(process.cwd(), '.tmp', 'artifacts');
   const screenshotPath = path.join(screenshotDir, 'discourse-publishing-settings-hidden-native.png');
-  await mkdir(screenshotDir, { recursive: true });
   await writeFile(screenshotPath, screenshot);
   await testInfo.attach('discourse-publishing-settings', {
     body: screenshot,

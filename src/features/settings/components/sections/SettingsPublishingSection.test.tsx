@@ -35,6 +35,7 @@ const SAVED_SETTINGS = {
 };
 
 beforeEach(() => {
+  window.localStorage.clear();
   repositoryMocks.loadDiscoursePublishSettingsFromRuntime.mockReset();
   repositoryMocks.disconnectDiscoursePublishSettingsFromRuntime.mockReset();
   repositoryMocks.loadDiscoursePublishCatalogFromRuntime.mockReset();
@@ -76,12 +77,33 @@ beforeEach(() => {
   });
 });
 
+it('starts collapsed and restores independent disclosure state after remounting', () => {
+  const first = renderWithLocalization(<SettingsPublishingSection />);
+  const foliole = screen.getByRole('button', { name: 'Foliole Publish' });
+  const wordpress = screen.getByRole('button', { name: 'WordPress' });
+  const discourse = screen.getByRole('button', { name: 'Discourse' });
+  expect([foliole, wordpress, discourse].map((button) => button.getAttribute('aria-expanded'))).toEqual(['false', 'false', 'false']);
+
+  fireEvent.click(wordpress);
+  expect(wordpress).toHaveAttribute('aria-expanded', 'true');
+  expect(foliole).toHaveAttribute('aria-expanded', 'false');
+  expect(discourse).toHaveAttribute('aria-expanded', 'false');
+
+  first.unmount();
+  renderWithLocalization(<SettingsPublishingSection />);
+  expect(screen.getByRole('button', { name: 'WordPress' })).toHaveAttribute('aria-expanded', 'true');
+});
+
 it('uses concise Publish copy and the standard settings input width', async () => {
   renderWithLocalization(<SettingsPublishingSection />);
+  fireEvent.click(screen.getByRole('button', { name: 'Discourse' }));
 
   const forumUrl = await screen.findByLabelText('Discourse forum URL');
   const headings = screen.getAllByRole('heading', { level: 3 });
-  expect(headings.map((heading) => heading.textContent)).toEqual(['Foliole Publish', 'WordPress', 'Discourse']);
+  expect(headings).toHaveLength(3);
+  expect(screen.getByRole('heading', { level: 3, name: 'Foliole Publish' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { level: 3, name: 'WordPress' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { level: 3, name: 'Discourse' })).toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: 'Discourse forum' })).toBeNull();
   expect(screen.getByText('Forum URL')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Test connection' })).toBeEnabled();
@@ -90,6 +112,7 @@ it('uses concise Publish copy and the standard settings input width', async () =
 
 it('previews locally and deploys Foliole Publish with Cloudflare credentials', async () => {
   renderWithLocalization(<SettingsPublishingSection />);
+  fireEvent.click(screen.getByRole('button', { name: 'Foliole Publish' }));
   fireEvent.click(await screen.findByRole('button', { name: 'Preview' }));
   await waitFor(() => expect(folioleRepositoryMocks.previewFoliolePublishFromRuntime).toHaveBeenCalledOnce());
 
@@ -106,6 +129,7 @@ it('previews locally and deploys Foliole Publish with Cloudflare credentials', a
 
 it('connects WordPress with an Application Password and shows the WordPress.com scope warning', async () => {
   renderWithLocalization(<SettingsPublishingSection />);
+  fireEvent.click(screen.getByRole('button', { name: 'WordPress' }));
   fireEvent.change(await screen.findByLabelText('WordPress site address'), {
     target: { value: 'https://free-site.wordpress.com' }
   });
@@ -128,6 +152,7 @@ it('connects WordPress with an Application Password and shows the WordPress.com 
 
 it('disconnects Discourse and removes the saved credential state', async () => {
   renderWithLocalization(<SettingsPublishingSection />);
+  fireEvent.click(screen.getByRole('button', { name: 'Discourse' }));
   const disconnect = await screen.findByRole('button', { name: 'Disconnect' });
   fireEvent.click(disconnect);
 
@@ -188,6 +213,7 @@ it('does not replace newer input when an earlier save finishes', async () => {
 
 it('saves current settings and refreshes the Discourse catalog when testing the connection', async () => {
   renderWithLocalization(<SettingsPublishingSection />);
+  fireEvent.click(screen.getByRole('button', { name: 'Discourse' }));
   const testConnection = await screen.findByRole('button', { name: 'Test connection' });
   await waitFor(() => expect(testConnection).toBeEnabled());
 
@@ -203,6 +229,7 @@ it('saves current settings and refreshes the Discourse catalog when testing the 
 it('shows a user-facing error when the connection test fails', async () => {
   repositoryMocks.loadDiscoursePublishCatalogFromRuntime.mockRejectedValue(new Error('private runtime detail'));
   renderWithLocalization(<SettingsPublishingSection />);
+  fireEvent.click(screen.getByRole('button', { name: 'Discourse' }));
   const testConnection = await screen.findByRole('button', { name: 'Test connection' });
   await waitFor(() => expect(testConnection).toBeEnabled());
 
@@ -218,6 +245,7 @@ it('does not report a cached catalog as a successful connection test', async () 
     recent_category_ids: [], recent_tags: [], tags: []
   });
   renderWithLocalization(<SettingsPublishingSection />);
+  fireEvent.click(screen.getByRole('button', { name: 'Discourse' }));
   const testConnection = await screen.findByRole('button', { name: 'Test connection' });
   await waitFor(() => expect(testConnection).toBeEnabled());
 

@@ -11,7 +11,7 @@ import {
 import { PublishingTextRow } from './PublishingTextRow';
 import { useWordPressPublishingSettings } from './useWordPressPublishingSettings';
 
-export function WordPressPublishingSettings() {
+export function WordPressPublishingSettings(props: { expanded: boolean; onExpandedChange: (expanded: boolean) => void }) {
   const t = useTranslation();
   const state = useWordPressPublishingSettings();
   const credentialDescription = state.isWordPressCom
@@ -21,6 +21,8 @@ export function WordPressPublishingSettings() {
     <SettingsSection
       ariaLabel={t('settings.publishing.wordpress.sectionAria')}
       description={t('settings.publishing.wordpress.description')}
+      expanded={props.expanded}
+      onExpandedChange={props.onExpandedChange}
       title="WordPress"
     >
       {state.error ? <AppErrorState description={t('settings.publishing.wordpress.error.tryAgain')} surface="panel" title={state.error} /> : null}

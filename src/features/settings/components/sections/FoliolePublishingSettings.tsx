@@ -4,11 +4,11 @@ import { AppButton, AppErrorState, AppStatusBadge, SettingsControlSlot, Settings
 import { PublishingTextRow } from './PublishingTextRow';
 import { useFoliolePublishingSettings } from './useFoliolePublishingSettings';
 
-export function FoliolePublishingSettings() {
+export function FoliolePublishingSettings(props: { expanded: boolean; onExpandedChange: (expanded: boolean) => void }) {
   const t = useTranslation();
   const state = useFoliolePublishingSettings();
   return (
-    <SettingsSection ariaLabel={t('settings.publishing.foliole.sectionAria')} description={t('settings.publishing.foliole.description')} title="Foliole Publish">
+    <SettingsSection ariaLabel={t('settings.publishing.foliole.sectionAria')} description={t('settings.publishing.foliole.description')} expanded={props.expanded} onExpandedChange={props.onExpandedChange} title="Foliole Publish">
       {state.error ? <AppErrorState description={t('settings.publishing.foliole.error.tryAgain')} surface="panel" title={state.error} /> : null}
       <PublishingTextRow description={t('settings.publishing.foliole.account.description')} disabled={state.disabled} label={t('settings.publishing.foliole.account.aria')} onChange={(accountId) => state.updateForm({ accountId })} title={t('settings.publishing.foliole.account.title')} value={state.form.accountId} />
       <PublishingTextRow description={t('settings.publishing.foliole.project.description')} disabled={state.disabled} label={t('settings.publishing.foliole.project.aria')} onChange={(projectName) => state.updateForm({ projectName })} title={t('settings.publishing.foliole.project.title')} value={state.form.projectName} />

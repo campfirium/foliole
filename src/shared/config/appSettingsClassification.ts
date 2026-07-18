@@ -34,6 +34,7 @@ const RUNTIME_MIRRORED_APP_SETTING_NAMES = [
   'selectionToolbarOpacityPercent',
   'editorDisplayMode',
   'settingsActiveCategory',
+  'publishingExpandedSections',
   'workspaceRailItems',
   'appLanguage',
   'appDisplayScalePercent',
