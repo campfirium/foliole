@@ -17,6 +17,12 @@ export interface WorkspaceNodeDocumentLoadOptions {
 
 const pendingNodeDocumentLoadById = new Map<string, Promise<WorkspaceNodeDocument | null>>();
 
+function isCachedDocumentCurrent(nodeId: string, document: WorkspaceNodeDocument) {
+  const nodeUpdatedAt = useWorkspaceStore.getState().nodesById[nodeId]?.updatedAt?.trim();
+  const cachedUpdatedAt = document.updatedAt?.trim();
+  return !nodeUpdatedAt || !cachedUpdatedAt || cachedUpdatedAt >= nodeUpdatedAt;
+}
+
 export function shouldSkipNodeDocumentPreparation(nodeId: string) {
   const targetNode = useWorkspaceStore.getState().nodesById[nodeId];
   return !targetNode || isNodeDocumentLoaded(targetNode) || getNodeDocumentStatus(targetNode) === 'failed';
@@ -37,7 +43,7 @@ export async function loadWorkspaceNodeDocument(
   let document = options.preloadedDocument ?? null;
   if (!document) {
     const cachedDocument = options.forceLoad ? null : readCachedWorkspaceNodeDocument(nodeId);
-    if (cachedDocument) {
+    if (cachedDocument && isCachedDocumentCurrent(nodeId, cachedDocument)) {
       options.onLoadResolved?.(cachedDocument);
       return cachedDocument;
     }

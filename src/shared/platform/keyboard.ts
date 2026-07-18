@@ -14,7 +14,7 @@ let isWindowEscapeListening = false;
 let isDocumentEscapeListening = false;
 let isWindowKeydownCaptureListening = false;
 let isWindowKeydownListening = false;
-let lastConsumedDomEscapeAt = 0;
+let consumedDomEscapeSequence = 0;
 let nativeEscapeFallbackId = 0;
 let unlistenNativeKeyboardInput: KeydownUnlisten | null = null;
 const keydownEntries: KeydownEntry[] = [];
@@ -83,9 +83,9 @@ function dispatchNativeEscapeFallback(payload: NativeKeyboardInputPayload) {
   }
   const fallbackId = nativeEscapeFallbackId + 1;
   nativeEscapeFallbackId = fallbackId;
-  const scheduledAt = Date.now();
+  const scheduledDomEscapeSequence = consumedDomEscapeSequence;
   window.setTimeout(() => {
-    if (nativeEscapeFallbackId !== fallbackId || lastConsumedDomEscapeAt >= scheduledAt) {
+    if (nativeEscapeFallbackId !== fallbackId || consumedDomEscapeSequence !== scheduledDomEscapeSequence) {
       return;
     }
     consumeEscape(createNativeEscapeEvent());
@@ -109,7 +109,7 @@ function dispatchWindowEscapeCapture(event: KeyboardEvent) {
     return;
   }
   if (consumeEscape(event)) {
-    lastConsumedDomEscapeAt = Date.now();
+    consumedDomEscapeSequence += 1;
   }
 }
 

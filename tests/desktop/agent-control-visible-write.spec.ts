@@ -67,6 +67,7 @@ async function readMaterial(descriptorPath: string, id: string) {
 async function verifyMaterialLifecycle(args: {
   contentPanel: Locator;
   descriptorPath: string;
+  desktopWindow: DesktopWindow;
   firstTopicId: string;
   secondTopicId: string;
 }) {
@@ -78,6 +79,8 @@ async function verifyMaterialLifecycle(args: {
     '--backup-dir', path.join('.tmp', 'artifacts', 'agent-control-visible-write-backups')
   ]);
   await expect(args.contentPanel.getByRole('treeitem', { name: UPDATED_FIRST_TOPIC_TITLE })).toBeVisible({ timeout: 10_000 });
+  await expect(args.desktopWindow.locator('.prompt-editor-host')).toContainText('Updated body A', { timeout: 10_000 });
+  await expect(args.desktopWindow.locator('.prompt-editor-host')).not.toContainText('Original body A');
   const secondMaterial = await readMaterial(args.descriptorPath, args.secondTopicId);
   const deletedMaterial = await runCli([
     'materials/delete-soft', '--descriptor', args.descriptorPath, '--id', args.secondTopicId,
@@ -180,7 +183,10 @@ test('Agent Control writes become visible in the desktop Virtual section', async
     rows.map((row) => row.getAttribute('data-node-id'))
   )).toEqual([secondTopicId, firstTopicId]);
 
-  await verifyMaterialLifecycle({ contentPanel, descriptorPath, firstTopicId, secondTopicId });
+  await contentPanel.getByRole('treeitem', { name: FIRST_TOPIC_TITLE }).click();
+  await expect(desktopWindow.locator('.prompt-editor-host')).toContainText('Original body A');
+
+  await verifyMaterialLifecycle({ contentPanel, descriptorPath, desktopWindow, firstTopicId, secondTopicId });
   await verifyVirtualFolderLifecycle({
     descriptorPath,
     desktopWindow,

@@ -169,6 +169,9 @@ it('keeps default-prevented keydowns visible to ordinary handlers', () => {
 
 it('uses native escape as a fallback when no DOM escape arrives', () => {
   vi.useFakeTimers();
+  const unlistenEarlierEscape = onWindowEscape(vi.fn());
+  dispatchKeydown('Escape');
+  unlistenEarlierEscape();
   const native = installNativeKeyboardBridge();
   const escape = vi.fn();
   const unlistenEscape = onWindowEscape(escape);
