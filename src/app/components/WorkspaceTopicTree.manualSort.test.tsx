@@ -45,7 +45,7 @@ function createFolder(manualChildOrder: string[] | null) {
 function chooseManualSort() {
   const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
   fireEvent.keyDown(within(itemColumn).getByRole('button', { name: 'Sort list by Date modified' }), { key: 'ArrowDown' });
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Manual' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Custom order' }));
 }
 
 function rowTitles() {
@@ -142,7 +142,7 @@ it('defaults to folder manual topic order in the current folder tree', () => {
     />
   );
 
-  expect(screen.getByRole('button', { name: 'Sort list by Manual' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Sort list by Custom order' })).toBeInTheDocument();
   expect(rowTitles()).toEqual(['Beta', 'Alpha', 'Gamma']);
 });
 
@@ -163,7 +163,7 @@ it('allows another sort without overwriting the saved manual order', () => {
     />
   );
 
-  fireEvent.keyDown(screen.getByRole('button', { name: 'Sort list by Manual' }), { key: 'ArrowDown' });
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Sort list by Custom order' }), { key: 'ArrowDown' });
   fireEvent.click(screen.getByRole('menuitem', { name: 'Name' }));
 
   expect(rowTitles()).toEqual(['Alpha', 'Beta']);

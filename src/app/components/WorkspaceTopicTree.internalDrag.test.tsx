@@ -64,8 +64,8 @@ function transfer() {
 
 function chooseManualSort() {
   const itemColumn = screen.getByRole('complementary', { name: 'Current folder contents' });
-  fireEvent.keyDown(within(itemColumn).getByRole('button', { name: 'Sort list by Date modified' }), { key: 'ArrowDown' });
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Manual' }));
+  fireEvent.keyDown(within(itemColumn).getByRole('button', { name: /^Sort list by / }), { key: 'ArrowDown' });
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Custom order' }));
 }
 
 function rowFrame(name: string) {

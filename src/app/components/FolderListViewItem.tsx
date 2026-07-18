@@ -1,4 +1,4 @@
-import type { DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent } from 'react';
+import type { MouseEvent as ReactMouseEvent } from 'react';
 
 import type { NodeSelectModifiers } from '../../features/nodes/components/NodeListTreeState';
 import type { FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
@@ -29,11 +29,6 @@ type FolderListItemProps = {
   onSelectNodePath?: (nodeId: string) => void;
   nodesById: Record<string, Node>;
   sortKey: FolderListSortKey;
-  draggable?: boolean;
-  onDragEnd?: () => void;
-  onDragOver?: () => void;
-  onDragStart?: () => void;
-  onDrop?: () => void;
 };
 
 function toNodeSelectModifiers(event: ReactMouseEvent) {
@@ -41,29 +36,6 @@ function toNodeSelectModifiers(event: ReactMouseEvent) {
     ctrlKey: event.ctrlKey,
     metaKey: event.metaKey,
     shiftKey: event.shiftKey
-  };
-}
-
-function resolveVirtualResultItemDragProps(props: FolderListItemProps) {
-  return {
-    draggable: props.draggable,
-    onDragEnd: props.onDragEnd,
-    onDragOver: (event: ReactDragEvent<HTMLElement>) => {
-      if (!props.draggable) return;
-      event.preventDefault();
-      props.onDragOver?.();
-    },
-    onDragStart: (event: ReactDragEvent<HTMLElement>) => {
-      if (!props.draggable) return;
-      event.dataTransfer.effectAllowed = 'move';
-      event.dataTransfer.setData('text/plain', props.node.id);
-      props.onDragStart?.();
-    },
-    onDrop: (event: ReactDragEvent<HTMLElement>) => {
-      if (!props.draggable) return;
-      event.preventDefault();
-      props.onDrop?.();
-    }
   };
 }
 
@@ -83,7 +55,6 @@ function renderVirtualResultItem(props: FolderListItemProps & { dateLabel: strin
         props.isBulkSelectionActive ? 'bg-[var(--app-surface-control-bg)]' : ''
       }`}
       data-node-bulk-selected={props.isBulkSelectionActive ? 'true' : undefined}
-      {...resolveVirtualResultItemDragProps(props)}
     >
       <div className="flex flex-col gap-2 py-5">
         <div className="flex items-start justify-between gap-4">
@@ -147,11 +118,6 @@ export function FolderListViewItem(props: FolderListItemProps) {
       onClick={(event) => props.onSelectNode(props.node.id, toNodeSelectModifiers(event))}
       summary={summary}
       title={displayTitle}
-      draggable={props.draggable}
-      onDragEnd={props.onDragEnd}
-      onDragOver={props.onDragOver}
-      onDragStart={props.onDragStart}
-      onDrop={props.onDrop}
     />
   );
 }

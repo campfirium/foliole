@@ -154,7 +154,7 @@ describe('FolderListView manual sorting', () => {
       />
     );
 
-    expect(screen.getByRole('button', { name: 'Sort list by Manual' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sort list by Custom order' })).toBeInTheDocument();
     expect(getRenderedEntryTitles()).toEqual(['Beta', 'Alpha', 'Chapter 2']);
   });
 });

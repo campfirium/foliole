@@ -33,7 +33,7 @@ function getOrderOptions(sortKey: WorkspaceContentSortKey, t: Translate): { labe
     return [{ label: t('desktop.sort.order.newest'), value: 'desc' }];
   }
   if (sortKey === 'manual') {
-    return [{ label: t('desktop.sort.order.manual'), value: 'asc' }];
+    return [];
   }
   return [
     { label: t('desktop.sort.order.newest'), value: 'desc' },
@@ -73,17 +73,21 @@ export function WorkspaceContentSortControls(props: {
               {option.label}
             </AppDropdownMenuCheckItem>
           ))}
-          <AppDropdownMenuSeparator />
-          <AppDropdownMenuLabel>{t('desktop.sort.order')}</AppDropdownMenuLabel>
-          {orderOptions.map((option) => (
-            <AppDropdownMenuCheckItem
-              checked={props.sortDirection === option.value}
-              key={option.value}
-              onSelect={() => props.onChangeSortDirection(option.value)}
-            >
-              {option.label}
-            </AppDropdownMenuCheckItem>
-          ))}
+          {orderOptions.length > 0 ? (
+            <>
+              <AppDropdownMenuSeparator />
+              <AppDropdownMenuLabel>{t('desktop.sort.order')}</AppDropdownMenuLabel>
+              {orderOptions.map((option) => (
+                <AppDropdownMenuCheckItem
+                  checked={props.sortDirection === option.value}
+                  key={option.value}
+                  onSelect={() => props.onChangeSortDirection(option.value)}
+                >
+                  {option.label}
+                </AppDropdownMenuCheckItem>
+              ))}
+            </>
+          ) : null}
         </AppDropdownMenuContent>
       </AppDropdownMenu>
     </AppTooltip>

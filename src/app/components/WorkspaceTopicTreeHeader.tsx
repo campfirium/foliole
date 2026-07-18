@@ -119,11 +119,11 @@ function WorkspaceTopicTreeHeaderActions(props: Omit<WorkspaceTopicTreeHeaderPro
         onChangeSortDirection={props.onChangeSortDirection}
         onChangeSortKey={props.onChangeSortKey}
         options={[
-          { key: 'modifiedAt', label: 'Date modified' },
-          { key: 'lastOpenedAt', label: 'Last opened' },
-          { key: 'importedAt', label: 'Date imported' },
-          { key: 'name', label: 'Name' },
-          { key: 'manual', label: 'Manual' }
+          { key: 'modifiedAt', label: t('desktop.sort.key.dateModified') },
+          { key: 'lastOpenedAt', label: t('desktop.sort.key.lastOpened') },
+          { key: 'importedAt', label: t('desktop.sort.fallback.dateImported') },
+          { key: 'name', label: t('desktop.sort.key.name') },
+          { key: 'manual', label: t('desktop.sort.key.manual') }
         ]}
         sortDirection={props.sortDirection}
         sortKey={props.sortKey}

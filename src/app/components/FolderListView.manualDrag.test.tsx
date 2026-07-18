@@ -1,4 +1,4 @@
-import { fireEvent, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { expect, it, vi, beforeEach } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
@@ -21,16 +21,6 @@ function createNode(overrides: Partial<Node> & Pick<Node, 'id' | 'title'>): Node
     title,
     updatedAt: '2026-04-02T10:30:00.000Z',
     ...rest
-  };
-}
-
-function createDragTransfer() {
-  const data = new Map<string, string>();
-  return {
-    dropEffect: 'move',
-    effectAllowed: 'move',
-    getData: (format: string) => data.get(format) ?? '',
-    setData: (format: string, value: string) => data.set(format, value)
   };
 }
 
@@ -81,16 +71,11 @@ beforeEach(() => {
   }));
 });
 
-it('reorders manual folder contents when the visible row button is dragged', () => {
+it('shows the shared custom order without exposing content cards as reorder controls', () => {
   renderWithLocalization(<ManualFolderListHarness />);
-  const transfer = createDragTransfer();
 
   expect(getRenderedEntryTitles()).toEqual(['Beta', 'Alpha']);
-
-  fireEvent.dragStart(screen.getByRole('button', { name: 'Open Alpha' }), { dataTransfer: transfer });
-  fireEvent.dragOver(screen.getByRole('button', { name: 'Open Beta' }), { dataTransfer: transfer });
-  fireEvent.drop(screen.getByRole('button', { name: 'Open Beta' }), { dataTransfer: transfer });
-
-  expect(getRenderedEntryTitles()).toEqual(['Alpha', 'Beta']);
-  expect(useWorkspaceStore.getState().nodesById['folder-1']?.manualChildOrder).toEqual(['node-a', 'node-b']);
+  expect(screen.getByRole('button', { name: 'Open Alpha' })).not.toHaveAttribute('draggable');
+  expect(screen.getByRole('button', { name: 'Open Beta' })).not.toHaveAttribute('draggable');
+  expect(useWorkspaceStore.getState().nodesById['folder-1']?.manualChildOrder).toEqual(['node-b', 'node-a']);
 });

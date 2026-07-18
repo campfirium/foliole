@@ -1,4 +1,4 @@
-import type { DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent } from 'react';
+import type { MouseEvent as ReactMouseEvent } from 'react';
 
 import { TruncatedTextTooltip } from '../../shared/ui';
 
@@ -12,46 +12,11 @@ interface FolderListTextItemProps {
   onClick: (event: ReactMouseEvent<HTMLButtonElement>) => void;
   summary?: string;
   title: string;
-  draggable?: boolean | undefined;
-  onDragEnd?: (() => void) | undefined;
-  onDragOver?: (() => void) | undefined;
-  onDragStart?: (() => void) | undefined;
-  onDrop?: (() => void) | undefined;
-}
-
-function resolveFolderListDragHandlers(props: FolderListTextItemProps) {
-  return {
-    draggable: props.draggable,
-    onDragEnd: props.onDragEnd,
-    onDragOver: (event: ReactDragEvent<HTMLElement>) => {
-      if (!props.draggable) return;
-      event.preventDefault();
-      event.stopPropagation();
-      props.onDragOver?.();
-    },
-    onDragStart: (event: ReactDragEvent<HTMLElement>) => {
-      if (!props.draggable) return;
-      event.stopPropagation();
-      event.dataTransfer.effectAllowed = 'move';
-      event.dataTransfer.setData('text/plain', props.nodeId);
-      props.onDragStart?.();
-    },
-    onDrop: (event: ReactDragEvent<HTMLElement>) => {
-      if (!props.draggable) return;
-      event.preventDefault();
-      event.stopPropagation();
-      props.onDrop?.();
-    }
-  };
 }
 
 export function FolderListTextItem(props: FolderListTextItemProps) {
-  const dragHandlers = resolveFolderListDragHandlers(props);
   return (
-    <li
-      className="list-none border-b border-[var(--workspace-region-main-document-content-divider)]"
-      {...dragHandlers}
-    >
+    <li className="list-none border-b border-[var(--workspace-region-main-document-content-divider)]">
       <button
         aria-label={props.ariaLabel}
         data-node-bulk-selected={props.isBulkSelectionActive ? 'true' : undefined}
@@ -60,7 +25,6 @@ export function FolderListTextItem(props: FolderListTextItemProps) {
             ? 'bg-[var(--app-surface-control-bg)]'
             : 'hover:bg-[var(--app-surface-control-hover-bg)] focus-visible:bg-[var(--app-surface-control-bg)]'
         }`}
-        {...dragHandlers}
         onClick={props.onClick}
         type="button"
       >

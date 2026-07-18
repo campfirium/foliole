@@ -35,7 +35,7 @@ it('defaults an uncontrolled folder list to its saved manual order', () => {
     />
   );
 
-  expect(screen.getByRole('button', { name: 'Sort list by Manual' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Sort list by Custom order' })).toBeInTheDocument();
   expect(
     within(screen.getByRole('list', { name: 'Folder contents' }))
       .getAllByRole('button')

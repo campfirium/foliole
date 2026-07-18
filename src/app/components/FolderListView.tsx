@@ -1,4 +1,4 @@
-import { type ReactNode, useMemo, useRef, useState } from 'react';
+import { type ReactNode, useMemo, useRef } from 'react';
 
 import {
   DEFAULT_FOLDER_LIST_SORT_KEY,
@@ -136,21 +136,14 @@ function useResolvedFolderListState(props: FolderListViewProps) {
 }
 
 function renderFolderListViewItem(args: {
-  canManualDrag: boolean;
-  draggedNodeId: string | null;
   node: Node;
   nodeViewById: Record<string, NodeViewState | undefined>;
   props: FolderListViewProps;
   selection: ReturnType<typeof useFolderListSelection>;
-  setDraggedNodeId: (nodeId: string | null) => void;
-  setFolderManualChildOrder?: (folderNodeId: string, childNodeIds: string[]) => void;
   state: ReturnType<typeof useResolvedFolderListState>['state'];
 }) {
   return renderFolderListItem({
     activeNodeId: args.props.activeNodeId,
-    canManualDrag: args.canManualDrag,
-    childNodes: args.state.childNodes,
-    draggedNodeId: args.draggedNodeId,
     isBulkSelectionActive: args.selection.selectedNodeIds.length > 1 && args.selection.selectedNodeIds.includes(args.node.id),
     itemLayout: args.props.itemLayout ?? 'default',
     node: args.node,
@@ -159,8 +152,6 @@ function renderFolderListViewItem(args: {
     onSelectNode: args.selection.handleSelectNode,
     ...(args.props.folderNodeId ? { folderNodeId: args.props.folderNodeId } : {}),
     ...(args.props.onSelectNodePath ? { onSelectNodePath: args.props.onSelectNodePath } : {}),
-    setDraggedNodeId: args.setDraggedNodeId,
-    ...(args.setFolderManualChildOrder ? { setFolderManualChildOrder: args.setFolderManualChildOrder } : {}),
     sortKey: args.state.sortKey
   });
 }
@@ -169,10 +160,7 @@ export function FolderListView(props: FolderListViewProps) {
   const t = useTranslation();
   const { nodeViewById, resolvedFolderTitle, state } = useResolvedFolderListState(props);
   const deleteNodes = useWorkspaceStore((storeState) => storeState.deleteNodes);
-  const setFolderManualChildOrder = useWorkspaceStore((storeState) => storeState.setFolderManualChildOrder);
-  const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
   const scrollElementRef = useRef<HTMLDivElement | null>(null);
-  const canManualDrag = Boolean(props.folderNodeId && state.sortKey === 'manual' && !state.searchQuery.trim());
   const currentViewActions = buildFolderListCurrentViewActions(props, deleteNodes, state.filteredNodes);
   const selection = useFolderListSelection({
     activeNodeId: props.activeNodeId,
@@ -194,14 +182,10 @@ export function FolderListView(props: FolderListViewProps) {
           onChangeSortDirection={state.updateSortDirection}
           onChangeSortKey={state.updateSortKey}
           onRenderItem={(node) => renderFolderListViewItem({
-            canManualDrag,
-            draggedNodeId,
             node,
             nodeViewById,
             props,
             selection,
-            setDraggedNodeId,
-            ...(setFolderManualChildOrder ? { setFolderManualChildOrder } : {}),
             state
           })}
           searchQuery={state.searchQuery}

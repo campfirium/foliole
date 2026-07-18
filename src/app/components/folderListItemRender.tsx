@@ -3,15 +3,10 @@ import type { FolderListSortKey } from '../../features/nodes/model/folderListOrd
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { NodeViewState } from '../../store/workspaceStore';
 
-import { moveNodeIdBefore } from './folderListManualOrdering';
 import { FolderListViewItem, type FolderListItemLayout } from './FolderListViewItem';
 
 export interface RenderFolderListItemArgs {
   activeNodeId?: string | null | undefined;
-  canManualDrag: boolean;
-  childNodes: Node[];
-  draggedNodeId: string | null;
-  folderNodeId?: string;
   isBulkSelectionActive?: boolean;
   itemLayout: FolderListItemLayout;
   node: Node;
@@ -19,8 +14,6 @@ export interface RenderFolderListItemArgs {
   nodesById: Record<string, Node>;
   onSelectNode: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   onSelectNodePath?: (nodeId: string) => void;
-  setDraggedNodeId: (nodeId: string | null) => void;
-  setFolderManualChildOrder?: (folderNodeId: string, childNodeIds: string[]) => void;
   sortKey: FolderListSortKey;
 }
 
@@ -29,7 +22,6 @@ export function renderFolderListItem(args: RenderFolderListItemArgs) {
   return (
     <FolderListViewItem
       active={args.activeNodeId === args.node.id}
-      draggable={args.canManualDrag}
       {...(args.isBulkSelectionActive === undefined ? {} : { isBulkSelectionActive: args.isBulkSelectionActive })}
       itemLayout={args.itemLayout}
       key={args.node.id}
@@ -38,17 +30,6 @@ export function renderFolderListItem(args: RenderFolderListItemArgs) {
       onSelectNode={args.onSelectNode}
       {...(args.onSelectNodePath ? { onSelectNodePath: args.onSelectNodePath } : {})}
       nodesById={args.nodesById}
-      onDragEnd={() => args.setDraggedNodeId(null)}
-      onDragStart={() => args.setDraggedNodeId(args.node.id)}
-      onDrop={() => {
-        if (!args.folderNodeId || !args.draggedNodeId) return;
-        const currentOrder = args.childNodes.map((childNode) => childNode.id);
-        args.setFolderManualChildOrder?.(
-          args.folderNodeId,
-          moveNodeIdBefore(currentOrder, args.draggedNodeId, args.node.id)
-        );
-        args.setDraggedNodeId(null);
-      }}
       sortKey={args.sortKey}
     />
   );

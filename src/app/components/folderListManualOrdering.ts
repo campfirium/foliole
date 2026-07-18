@@ -80,14 +80,3 @@ export function resolveListedFolderNodes(props: FolderListOrderingProps) {
     ? sortFolderListNodes(childNodes, 'manual', 'asc', {}, resolveFolderManualChildOrder(props))
     : childNodes;
 }
-
-export function moveNodeIdBefore(ids: string[], draggedNodeId: string, targetNodeId: string) {
-  if (draggedNodeId === targetNodeId) {
-    return ids;
-  }
-  const withoutDragged = ids.filter((nodeId) => nodeId !== draggedNodeId);
-  const targetIndex = withoutDragged.indexOf(targetNodeId);
-  return targetIndex < 0
-    ? ids
-    : [...withoutDragged.slice(0, targetIndex), draggedNodeId, ...withoutDragged.slice(targetIndex)];
-}

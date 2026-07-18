@@ -51,17 +51,21 @@ export function FolderListSortControls(props: {
             {translateSortLabel(option.label, t)}
           </AppDropdownMenuCheckItem>
         ))}
-        <AppDropdownMenuSeparator />
-        <AppDropdownMenuLabel>{t('desktop.sort.order')}</AppDropdownMenuLabel>
-        {orderOptions.map((option) => (
-          <AppDropdownMenuCheckItem
-            checked={props.sortDirection === option.value}
-            key={option.value}
-            onSelect={() => props.onChangeSortDirection(option.value)}
-          >
-            {translateSortOrderLabel(option.label, t)}
-          </AppDropdownMenuCheckItem>
-        ))}
+        {orderOptions.length > 0 ? (
+          <>
+            <AppDropdownMenuSeparator />
+            <AppDropdownMenuLabel>{t('desktop.sort.order')}</AppDropdownMenuLabel>
+            {orderOptions.map((option) => (
+              <AppDropdownMenuCheckItem
+                checked={props.sortDirection === option.value}
+                key={option.value}
+                onSelect={() => props.onChangeSortDirection(option.value)}
+              >
+                {translateSortOrderLabel(option.label, t)}
+              </AppDropdownMenuCheckItem>
+            ))}
+          </>
+        ) : null}
       </AppDropdownMenuContent>
     </AppDropdownMenu>
   );
@@ -79,7 +83,6 @@ function translateSortLabel(label: string, t: ReturnType<typeof useTranslation>)
 function translateSortOrderLabel(label: string, t: ReturnType<typeof useTranslation>) {
   if (label === 'A -> Z') return t('desktop.sort.order.az');
   if (label === 'Z -> A') return t('desktop.sort.order.za');
-  if (label === 'Manual order') return t('desktop.sort.order.manual');
   if (label === 'Older -> Recent') return t('desktop.sort.order.oldest');
   return t('desktop.sort.order.newest');
 }

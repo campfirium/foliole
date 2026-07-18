@@ -18,7 +18,7 @@ export function getFolderListSortOrderOptions(sortKey?: FolderListSortKey): { la
     return [{ label: 'Recent -> Older', value: 'desc' }];
   }
   if (sortKey === 'manual') {
-    return [{ label: 'Manual order', value: 'asc' }];
+    return [];
   }
   if (sortKey === 'name') {
     return [
