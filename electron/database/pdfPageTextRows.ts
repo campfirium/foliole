@@ -1,5 +1,8 @@
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
-import { enqueuePdfSearchInvalidationForAttachmentIds } from '../../lib/core/database/searchIndexInvalidations.js';
+import {
+  enqueuePdfSearchInvalidationForAttachmentIds,
+  enqueueWorkspaceSearchInvalidationForNodeIds
+} from '../../lib/core/database/searchIndexInvalidations.js';
 import {
   computeSyncContentHash,
   upsertSyncObjectState,
@@ -103,8 +106,9 @@ export function savePdfPageTextRows(
       }
       recordPdfPageTextDeleted(attachmentId, row.page, deviceId, now);
     }
-    syncPdfBodyBlobsForReferenceNodes(attachmentId, pages, deviceId, now);
+    const updatedBodyNodeIds = syncPdfBodyBlobsForReferenceNodes(attachmentId, pages, deviceId, now);
     enqueuePdfSearchInvalidationForAttachmentIds(connection.driver, [attachmentId]);
+    enqueueWorkspaceSearchInvalidationForNodeIds(connection.driver, updatedBodyNodeIds);
   });
 
   runInTransaction();

@@ -99,17 +99,22 @@ async function collectPromptEditorSearchJump(desktopWindow: Page) {
 }
 
 async function openWorkspaceSearch(desktopWindow: Page) {
-  await desktopWindow.evaluate(() => {
-    window.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ctrlKey: true, key: 'k' }));
-  });
+  const toolbar = desktopWindow.getByRole('region', { name: /Left toolbar|左侧工具栏/ });
+  const searchButton = toolbar.getByRole('button', { name: /Search|搜索/ });
+  const searchDialog = desktopWindow.getByRole('dialog', { name: /(Workspace search|工作区搜索)/ });
+  await searchButton.click();
   const searchEnhancementPrompt = desktopWindow.getByRole('dialog', {
-    name: /(Turn on search enhancement for languages without spaces|要为无空格语言开启搜索增强)/
+    name: /(Turn on search enhancement for languages without spaces|要为无空格语言开启搜索增强|使用中文、日文或韩文搜索)/
   });
+  await expect.poll(async () => {
+    if (await searchEnhancementPrompt.isVisible()) return 'prompt';
+    if (await searchDialog.isVisible()) return 'search';
+    return 'pending';
+  }).not.toBe('pending');
   if (await searchEnhancementPrompt.isVisible().catch(() => false)) {
     await searchEnhancementPrompt.getByRole('button', { name: /(Not now|暂不)/ }).click();
-    await desktopWindow.evaluate(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ctrlKey: true, key: 'k' }));
-    });
+    await expect(searchEnhancementPrompt).toBeHidden();
+    if (!await searchDialog.isVisible().catch(() => false)) await searchButton.click();
   }
 }
 
@@ -150,5 +155,9 @@ test('clicking a workspace search body hit jumps to the matched text', async ({ 
   await testInfo.attach('workspace-search-body-jump', {
     body: JSON.stringify(finalState, null, 2),
     contentType: 'application/json'
+  });
+  await testInfo.attach('workspace-search-body-jump-visible-result', {
+    body: await desktopWindow.screenshot(),
+    contentType: 'image/png'
   });
 });

@@ -1,6 +1,11 @@
 import type { DatabaseDriver } from './driver.js';
 import { rewriteExistingNodeOrder } from './nodeOrderMutations.js';
 import { writeNodeSyncTombstonesForPermanentDelete } from './nodeSyncTombstones.js';
+import {
+  advanceWorkspaceSearchSourceRevision,
+  markWorkspaceSearchSourceIndexedIfSettled,
+  markWorkspaceSearchSourceRevisionQueued
+} from './workspaceSearchSourceState.js';
 import { deleteWorkspaceSearchIndexForExistingSubtreeRootIds } from './workspaceSearchSubtreeIndex.js';
 
 export interface DeleteNodesPermanentlyInput {
@@ -17,6 +22,7 @@ export function deleteNodesPermanently(driver: DatabaseDriver, input: DeleteNode
   const deleteNodeOrderStatement = driver.prepare('DELETE FROM node_order WHERE node_id = ?');
   const deleteNodeStatement = driver.prepare('DELETE FROM nodes WHERE id = ?');
   driver.transaction(() => {
+    advanceWorkspaceSearchSourceRevision(driver);
     writeNodeSyncTombstonesForPermanentDelete(driver, input.nodeIds, input.deletedAt);
     deleteWorkspaceSearchIndexForExistingSubtreeRootIds(driver, input.nodeIds);
     for (const nodeId of input.nodeIds) {
@@ -30,6 +36,8 @@ export function deleteNodesPermanently(driver: DatabaseDriver, input: DeleteNode
       deleteNodeStatement.run([nodeId]);
     }
     rewriteExistingNodeOrder(driver, input.nodeOrder);
+    markWorkspaceSearchSourceRevisionQueued(driver);
+    markWorkspaceSearchSourceIndexedIfSettled(driver);
   });
 
   return [];

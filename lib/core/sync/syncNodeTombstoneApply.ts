@@ -1,6 +1,7 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 
 import type { DbPort, DbRow } from './dbPort.js';
+import { enqueueAppliedNodeDeleteSearchInvalidation } from './syncNodeSearchInvalidations.js';
 import { upsertAppliedNodeSyncState } from './syncNodeStateApplyExecutor.js';
 
 interface NodeTombstoneRow extends DbRow {
@@ -66,5 +67,6 @@ export async function applyRemoteNodeTombstone(port: DbPort, record: NativeSyncN
   );
   await deleteLocalNodeRows(port, record.object_id);
   await upsertAppliedNodeSyncState(port, record);
+  await enqueueAppliedNodeDeleteSearchInvalidation(port, record.object_id, createdAt);
   return true;
 }

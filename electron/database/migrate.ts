@@ -83,11 +83,16 @@ function initializeOpenedDatabase(connection: ReturnType<typeof openDatabaseConn
   }
   reportStage?.('database_schema_init_start');
   createPreMigrationSnapshotIfNeeded(connection);
-  const initializedConnection = initializeWorkspaceSearchSidecar(initializeDatabaseConnection(connection));
+  const initializedConnection = initializeSchemaWorkspaceAndSearch(connection);
   clearOpenedExternalSearchCache();
   reportStage?.('database_schema_init_complete');
-  seedInitialWorkspace(initializedConnection);
   return initializedConnection;
+}
+
+function initializeSchemaWorkspaceAndSearch(connection: ReturnType<typeof openDatabaseConnection>) {
+  const initializedConnection = initializeDatabaseConnection(connection);
+  seedInitialWorkspace(initializedConnection);
+  return initializeWorkspaceSearchSidecar(initializedConnection);
 }
 
 export function initializeDatabase(reportStage?: DatabaseInitStageReporter) {
@@ -142,10 +147,9 @@ export function initializeDatabase(reportStage?: DatabaseInitStageReporter) {
     reportStage?.('database_recovery_integrity_check_complete');
     enableDatabaseWriteAheadLog(connection);
     reportStage?.('database_recovery_schema_init_start');
-    const initializedConnection = initializeWorkspaceSearchSidecar(initializeDatabaseConnection(connection));
+    const initializedConnection = initializeSchemaWorkspaceAndSearch(connection);
     clearOpenedExternalSearchCache();
     reportStage?.('database_recovery_schema_init_complete');
-    seedInitialWorkspace(initializedConnection);
     return initializedConnection;
   }
 }
@@ -171,9 +175,8 @@ function rebuildLegacyDevelopmentDatabase(databasePath: string, reportStage?: Da
     reportFileNameMigration: (result) => reportDatabaseFileNameMigration(reportStage, result)
   });
   reportStage?.('database_legacy_rebuild_open_connection_complete', { dbPath: connection.dbPath });
-  const initializedConnection = initializeWorkspaceSearchSidecar(initializeDatabaseConnection(connection));
+  const initializedConnection = initializeSchemaWorkspaceAndSearch(connection);
   clearOpenedExternalSearchCache();
   reportStage?.('database_legacy_rebuild_schema_init_complete');
-  seedInitialWorkspace(initializedConnection);
   return initializedConnection;
 }

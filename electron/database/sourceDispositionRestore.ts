@@ -1,5 +1,6 @@
 import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
 import { writeNodeReadingSnapshotWithSync } from '../../lib/core/database/nodeReadingSyncState.js';
+import { enqueueWorkspaceSearchDeleteInvalidationForSubtreeRootIds } from '../../lib/core/database/searchIndexInvalidations.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
@@ -134,6 +135,7 @@ export function restoreSourceDispositions(): SourceDispositionRestoreResult {
     }
     applyDismissedState(connection.driver, dismissedNodeIds, updatedAt, deviceId);
     applyTrashState(connection.driver, trashNodeIds, updatedAt, deviceId);
+    enqueueWorkspaceSearchDeleteInvalidationForSubtreeRootIds(connection.driver, trashNodeIds);
     return {
       dismissedCount: dismissedNodeIds.length,
       trashedCount: trashNodeIds.length

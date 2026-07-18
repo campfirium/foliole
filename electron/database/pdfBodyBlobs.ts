@@ -127,6 +127,7 @@ export function syncPdfBodyBlobsForReferenceNodes(
   now: string
 ) {
   const nodes = listPdfReferenceNodes(attachmentId);
+  const updatedNodeIds: string[] = [];
   for (const node of nodes) {
     const bodyContent = buildPdfBodyContent(node.title, pages);
     if (!bodyContent) {
@@ -142,5 +143,7 @@ export function syncPdfBodyBlobsForReferenceNodes(
       [bodyBlobHash, openingText, now, deviceId, node.id]
     );
     upsertNodePackState(node, bodyContent, openingText, deviceId, now);
+    updatedNodeIds.push(node.id);
   }
+  return updatedNodeIds;
 }

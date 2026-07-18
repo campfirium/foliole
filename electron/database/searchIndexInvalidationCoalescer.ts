@@ -50,7 +50,11 @@ export function flushCoalescedWorkspaceSearchInvalidations() {
   const nodeIds = [...pendingWorkspaceNodeIds];
   pendingWorkspaceNodeIds.clear();
   clearFlushTimers();
-  enqueueWorkspaceSearchInvalidationForNodeIds(openDatabaseConnection().driver, nodeIds);
+  enqueueWorkspaceSearchInvalidationForNodeIds(
+    openDatabaseConnection().driver,
+    nodeIds,
+    { advanceSourceRevision: false }
+  );
 }
 
 export function resetSearchInvalidationCoalescerForTests() {

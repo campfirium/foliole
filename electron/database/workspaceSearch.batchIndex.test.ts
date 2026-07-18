@@ -90,7 +90,13 @@ it('indexes high-fanout child nodes with constant path CTE executions', () => {
   syncWorkspaceSearchIndexForNodeIds(connection.driver, childIds);
 
   expect(countPathCteExecutions(executeSpy)).toBe(2);
-  expect(connection.sqlite.prepare('SELECT COUNT(*) AS count FROM search.node_search').get()).toEqual({ count: 200 });
+  expect(
+    connection.sqlite.prepare(
+      `SELECT COUNT(*) AS count
+       FROM search.node_search
+       WHERE node_id LIKE 'child-%'`
+    ).get()
+  ).toEqual({ count: 200 });
 });
 
 it('keeps batch node indexing equivalent for blobs, inline fallback, and deleted nodes', () => {

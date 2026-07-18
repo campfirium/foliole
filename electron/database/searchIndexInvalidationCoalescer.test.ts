@@ -38,7 +38,8 @@ it('deduplicates workspace invalidations and flushes after idle', async () => {
 
   expect(mocks.enqueueWorkspaceSearchInvalidationForNodeIds).toHaveBeenCalledWith(
     mocks.driver,
-    ['node-1', 'node-2']
+    ['node-1', 'node-2'],
+    { advanceSourceRevision: false }
   );
 });
 
@@ -56,7 +57,8 @@ it('keeps the max flush timer while idle is rescheduled', async () => {
 
   expect(mocks.enqueueWorkspaceSearchInvalidationForNodeIds).toHaveBeenCalledWith(
     mocks.driver,
-    ['node-1', 'node-2']
+    ['node-1', 'node-2'],
+    { advanceSourceRevision: false }
   );
 });
 
@@ -69,7 +71,11 @@ it('flushes pending invalidations on demand', async () => {
   enqueueCoalescedWorkspaceSearchInvalidation(['node-1']);
   flushCoalescedWorkspaceSearchInvalidations();
 
-  expect(mocks.enqueueWorkspaceSearchInvalidationForNodeIds).toHaveBeenCalledWith(mocks.driver, ['node-1']);
+  expect(mocks.enqueueWorkspaceSearchInvalidationForNodeIds).toHaveBeenCalledWith(
+    mocks.driver,
+    ['node-1'],
+    { advanceSourceRevision: false }
+  );
   await vi.runAllTimersAsync();
   expect(mocks.enqueueWorkspaceSearchInvalidationForNodeIds).toHaveBeenCalledTimes(1);
 });

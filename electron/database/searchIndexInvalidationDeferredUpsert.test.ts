@@ -16,7 +16,14 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { enqueueWorkspaceSearchInvalidationForNodeIds } from '../../lib/core/database/searchIndexInvalidations.js';
+import {
+  enqueueWorkspaceSearchInvalidationForNodeIds,
+  processSearchIndexInvalidations
+} from '../../lib/core/database/searchIndexInvalidations.js';
+import {
+  readWorkspaceSearchSourceState,
+  workspaceSearchSourceStateMatches
+} from '../../lib/core/database/workspaceSearchSourceState.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
@@ -28,6 +35,7 @@ beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-search-index-deferred-upsert-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabase();
+  processSearchIndexInvalidations(openDatabaseConnection().driver);
 });
 
 afterEach(async () => {
@@ -47,6 +55,10 @@ function pendingInvalidations() {
 }
 
 it('defers ordinary node edit workspace invalidation until the caller flushes it', () => {
+  const driver = openDatabaseConnection().driver;
+  const before = readWorkspaceSearchSourceState(driver)!;
+  expect(workspaceSearchSourceStateMatches(driver)).toBe(true);
+
   upsertNodeSnapshot({
     anchorLink: null,
     content: 'Deferred atlas content',
@@ -62,8 +74,26 @@ it('defers ordinary node edit workspace invalidation until the caller flushes it
   }, { searchInvalidation: { workspaceInvalidation: 'defer' } });
 
   expect(pendingInvalidations()).toEqual([]);
-  enqueueWorkspaceSearchInvalidationForNodeIds(openDatabaseConnection().driver, ['node-deferred']);
+  expect(readWorkspaceSearchSourceState(driver)).toMatchObject({
+    queuedRevision: before.revision,
+    revision: before.revision + 1
+  });
+  expect(workspaceSearchSourceStateMatches(driver)).toBe(false);
+
+  enqueueWorkspaceSearchInvalidationForNodeIds(
+    driver,
+    ['node-deferred'],
+    { advanceSourceRevision: false }
+  );
   expect(pendingInvalidations()).toEqual([
     { invalidation_type: 'node_workspace', status: 'pending', target_id: 'node-deferred' }
   ]);
+  expect(readWorkspaceSearchSourceState(driver)).toMatchObject({
+    queuedRevision: before.revision + 1,
+    revision: before.revision + 1
+  });
+  expect(workspaceSearchSourceStateMatches(driver)).toBe(false);
+
+  processSearchIndexInvalidations(driver);
+  expect(workspaceSearchSourceStateMatches(driver)).toBe(true);
 });

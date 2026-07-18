@@ -7,6 +7,11 @@ import {
   syncWorkspaceSearchIndexForNodeIds
 } from './workspaceSearchIndex.js';
 import {
+  advanceWorkspaceSearchSourceRevision,
+  markWorkspaceSearchSourceIndexedIfSettled,
+  markWorkspaceSearchSourceRevisionQueued
+} from './workspaceSearchSourceState.js';
+import {
   deleteWorkspaceSearchIndexForSubtreeRootIds,
   syncWorkspaceSearchPathForSubtreeRootIds
 } from './workspaceSearchSubtreeIndex.js';
@@ -31,6 +36,11 @@ interface SearchIndexInvalidationInput {
   type: SearchIndexInvalidationType;
 }
 
+interface EnqueueSearchIndexInvalidationOptions {
+  advanceSourceRevision?: boolean;
+  markSourceRevisionQueued?: boolean;
+}
+
 const ACTIVE_STATUSES = "'pending', 'failed'";
 
 function nowIso() {
@@ -50,7 +60,11 @@ function toUniqueInputs(inputs: SearchIndexInvalidationInput[]) {
   });
 }
 
-export function enqueueSearchIndexInvalidations(driver: DatabaseDriver, inputs: SearchIndexInvalidationInput[]) {
+export function enqueueSearchIndexInvalidations(
+  driver: DatabaseDriver,
+  inputs: SearchIndexInvalidationInput[],
+  options: EnqueueSearchIndexInvalidationOptions = {}
+) {
   const uniqueInputs = toUniqueInputs(inputs);
   if (uniqueInputs.length === 0) return;
   const timestamp = nowIso();
@@ -72,15 +86,37 @@ export function enqueueSearchIndexInvalidations(driver: DatabaseDriver, inputs: 
       insert.run([input.type, input.targetId, timestamp, timestamp]);
     }
   }
+  if (options.advanceSourceRevision !== false) {
+    advanceWorkspaceSearchSourceRevision(driver);
+  }
+  if (options.markSourceRevisionQueued !== false) {
+    markWorkspaceSearchSourceRevisionQueued(driver);
+  }
   requestSearchIndexInvalidationProcessing();
 }
 
-export function enqueueWorkspaceSearchInvalidationForNodeIds(driver: DatabaseDriver, nodeIds: string[]) {
-  enqueueSearchIndexInvalidations(driver, nodeIds.map((targetId) => ({ targetId, type: 'node_workspace' })));
+export function enqueueWorkspaceSearchInvalidationForNodeIds(
+  driver: DatabaseDriver,
+  nodeIds: string[],
+  options: EnqueueSearchIndexInvalidationOptions = {}
+) {
+  enqueueSearchIndexInvalidations(
+    driver,
+    nodeIds.map((targetId) => ({ targetId, type: 'node_workspace' })),
+    options
+  );
 }
 
-export function enqueueWorkspaceSearchPathInvalidationForSubtreeRootIds(driver: DatabaseDriver, nodeIds: string[]) {
-  enqueueSearchIndexInvalidations(driver, nodeIds.map((targetId) => ({ targetId, type: 'node_subtree_path' })));
+export function enqueueWorkspaceSearchPathInvalidationForSubtreeRootIds(
+  driver: DatabaseDriver,
+  nodeIds: string[],
+  options: EnqueueSearchIndexInvalidationOptions = {}
+) {
+  enqueueSearchIndexInvalidations(
+    driver,
+    nodeIds.map((targetId) => ({ targetId, type: 'node_subtree_path' })),
+    options
+  );
 }
 
 export function enqueueWorkspaceSearchDeleteInvalidationForSubtreeRootIds(driver: DatabaseDriver, nodeIds: string[]) {
@@ -167,6 +203,7 @@ function completeInvalidations(driver: DatabaseDriver, ids: number[], completedA
   );
   driver.transaction(() => {
     ids.forEach((id) => complete.run([completedAt, completedAt, id]));
+    markWorkspaceSearchSourceIndexedIfSettled(driver);
   });
 }
 

@@ -4,6 +4,7 @@ import {
   enqueueWorkspaceSearchInvalidationForNodeIds,
   enqueueWorkspaceSearchPathInvalidationForSubtreeRootIds
 } from './searchIndexInvalidations.js';
+import { advanceWorkspaceSearchSourceRevision } from './workspaceSearchSourceState.js';
 
 interface ExistingNodePathRow {
   [column: string]: unknown;
@@ -24,11 +25,19 @@ export function prepareNodeSearchInvalidationForUpsert(
     input.nodeId
   ]);
   return () => {
-    if (options.workspaceInvalidation !== 'defer') {
+    if (options.workspaceInvalidation === 'defer') {
+      advanceWorkspaceSearchSourceRevision(driver);
+    } else {
       enqueueWorkspaceSearchInvalidationForNodeIds(driver, [input.nodeId]);
     }
     if (existingPathRow && (existingPathRow.parent_id !== input.parentNodeId || existingPathRow.title !== input.title)) {
-      enqueueWorkspaceSearchPathInvalidationForSubtreeRootIds(driver, [input.nodeId]);
+      enqueueWorkspaceSearchPathInvalidationForSubtreeRootIds(
+        driver,
+        [input.nodeId],
+        options.workspaceInvalidation === 'defer'
+          ? { advanceSourceRevision: false, markSourceRevisionQueued: false }
+          : {}
+      );
     }
   };
 }

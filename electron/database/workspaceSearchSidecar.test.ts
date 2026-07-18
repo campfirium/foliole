@@ -8,6 +8,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY } from '../../lib/core/database/fullTextSearchIndexStrategy.js';
+import { processSearchIndexInvalidations } from '../../lib/core/database/searchIndexInvalidations.js';
 import { initializeWorkspaceSearchSidecar } from '../../lib/core/database/workspaceSearchSidecar.js';
 
 let mockedAppDataDir = '/tmp/foliole-workspace-search-sidecar-tests';
@@ -167,18 +168,24 @@ it('keeps the internal search sidecar out of main database backups', async () =>
   }
 });
 
-it('rebuilds the internal search sidecar from restored main data when the sidecar file is missing', async () => {
+it('keeps a matching search sidecar when restoring an unchanged search source revision', async () => {
+  seedSearchNode('unchanged-search-node', '# Stable\nunchanged restored needle');
+  processSearchIndexInvalidations(openDatabaseConnection().driver);
+  const before = readSearchMetadataUpdatedAt(openDatabaseConnection().sqlite, 'last_rebuild_status');
+  const backup = await createApplicationDatabaseBackup();
+
+  await restoreApplicationDatabaseBackup({ sourcePath: backup.destinationPath });
+
+  expect(readSearchMetadataUpdatedAt(openDatabaseConnection().sqlite, 'last_rebuild_status')).toBe(before);
+  expect(searchWorkspace('unchanged').map((result) => result.id)).toContain('unchanged-search-node');
+});
+
+it('rebuilds the existing search sidecar when restored main data has an older source revision', async () => {
   seedSearchNode('restore-search-node', '# Restored\nunique restored needle');
   const backup = await createApplicationDatabaseBackup();
 
   seedSearchNode('restore-search-node', '# Mutated\nunique mutated needle');
   await restoreApplicationDatabaseBackup({ sourcePath: backup.destinationPath });
-
-  const searchDbPath = openDatabaseConnection().searchDbPath;
-  closeDatabaseConnection();
-  await fs.rm(searchDbPath, { force: true });
-
-  initializeDatabase();
 
   expect(searchWorkspace('restored').find((result) => result.id === 'restore-search-node')).toMatchObject({
     id: 'restore-search-node',
@@ -197,6 +204,11 @@ function readLastRebuildStatus(sqlite: import('better-sqlite3').Database) {
     .prepare("SELECT value_json FROM search.search_metadata WHERE key = 'last_rebuild_status'")
     .get() as { value_json: string };
   return JSON.parse(row.value_json) as Record<string, unknown>;
+}
+
+function readSearchMetadataUpdatedAt(sqlite: import('better-sqlite3').Database, key: string) {
+  return (sqlite.prepare('SELECT updated_at FROM search.search_metadata WHERE key = ?').get(key) as { updated_at: string })
+    .updated_at;
 }
 
 function seedSearchNode(nodeId: string, content: string) {
