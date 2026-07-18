@@ -81,6 +81,10 @@ async function verifyMaterialLifecycle(args: {
   await expect(args.contentPanel.getByRole('treeitem', { name: UPDATED_FIRST_TOPIC_TITLE })).toBeVisible({ timeout: 10_000 });
   await expect(args.desktopWindow.locator('.prompt-editor-host')).toContainText('Updated body A', { timeout: 10_000 });
   await expect(args.desktopWindow.locator('.prompt-editor-host')).not.toContainText('Original body A');
+  await args.desktopWindow.evaluate(() => globalThis.window?.__folioleFlushPendingEditorDraftBeforeClose?.());
+  await expect.poll(async () => String((await readMaterial(args.descriptorPath, args.firstTopicId)).content))
+    .toContain('Updated body A');
+  expect(String((await readMaterial(args.descriptorPath, args.firstTopicId)).content)).not.toContain('Original body A');
   const secondMaterial = await readMaterial(args.descriptorPath, args.secondTopicId);
   const deletedMaterial = await runCli([
     'materials/delete-soft', '--descriptor', args.descriptorPath, '--id', args.secondTopicId,

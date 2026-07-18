@@ -89,7 +89,7 @@ function useDraftChangeHandler(args: DraftChangeHandlerArgs) {
     if (content === '' && sourceNodeId !== args.nodeId) {
       return;
     }
-    if (content === '' && !args.hasPendingUserInputEvidence(sourceNodeId, content)) {
+    if (!args.hasPendingUserInputEvidence(sourceNodeId, content)) {
       return;
     }
     const committedContent = sourceNodeId === args.nodeId ? args.latestCommittedContentRef.current : null;

@@ -36,7 +36,9 @@ function registerPendingDraftBoundaryTest() {
     const { getFreshFlush, result } = renderDraftSyncBoundary(onCommit);
 
     act(() => {
+      result.current.handleEditorInput({ contentLength: 'Alpha stale pending'.length, nodeId: 'node-1' });
       result.current.handleEditorChange('Alpha stale pending');
+      result.current.handleEditorInput({ contentLength: 'Alpha fresh boundary'.length, nodeId: 'node-1' });
     });
 
     act(() => {
@@ -65,6 +67,7 @@ function registerPendingDraftBoundaryTest() {
     );
 
     act(() => {
+      result.current.handleEditorInput({ contentLength: 'Alpha undo candidate'.length, nodeId: 'node-1' });
       result.current.handleEditorChange('Alpha undo candidate');
       expect(result.current.flushDraftSynchronously()).toBe(true);
     });
@@ -84,6 +87,34 @@ function registerNoEvidenceBoundaryTest() {
     });
 
     expect(onCommit).not.toHaveBeenCalled();
+  });
+
+  it('does not turn stale programmatic content into a close-flush draft after an external update', () => {
+    const onCommit = vi.fn();
+    let closeFlush: (() => Promise<boolean>) | null = null;
+    const { result, rerender } = renderHook(
+      ({ committedContent }) => useEditorDraftSync({
+        committedContent,
+        nodeId: 'node-1',
+        onCommit,
+        onRegisterFlush: (_flush, nextCloseFlush) => {
+          closeFlush = nextCloseFlush ?? null;
+        }
+      }),
+      { initialProps: { committedContent: 'Old body' } }
+    );
+
+    rerender({ committedContent: 'Agent CLI body' });
+    act(() => {
+      result.current.handleEditorChange('Old body', { nodeId: 'node-1' });
+    });
+
+    expect(result.current.editorContent).toBe('Agent CLI body');
+    expect(closeFlush).not.toBeNull();
+    return act(async () => {
+      await closeFlush?.();
+      expect(onCommit).not.toHaveBeenCalled();
+    });
   });
 }
 

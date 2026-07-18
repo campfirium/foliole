@@ -55,7 +55,7 @@ interface DocumentPanelBodyProps {
   onAnswerImageMetricsChange?: (metrics: BlockImageMetrics | null) => void;
   onAnswerImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
   onEditorChange: (content: string) => void;
-  onEditorInput?: (meta: { nodeId: string | null }) => void;
+  onEditorInput?: (meta: { contentLength?: number; nodeId: string | null }) => void;
   onEditorContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onOpenExternalLink?: (request: ExternalLinkOpenRequest) => void;
   onPastedTextAnchors?: (payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void;

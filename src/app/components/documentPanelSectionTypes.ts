@@ -48,6 +48,7 @@ export interface DocumentPanelSectionProps {
   showDocumentOutline?: boolean;
   onAnswerChange: (answer: string) => void;
   onEditorChange: (content: string) => void;
+  onEditorInput?: (meta: { contentLength?: number; nodeId: string | null }) => void;
   onEditorUndo?: () => boolean;
   onEditorRedo?: () => boolean;
   onFinalizeNodeTitle?: (nodeId: string, content: string) => void;

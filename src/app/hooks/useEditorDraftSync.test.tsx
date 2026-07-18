@@ -15,6 +15,7 @@ function registerDebouncePersistenceTest() {
     );
 
     act(() => {
+      result.current.handleEditorInput({ contentLength: 'Alpha body updated'.length, nodeId: 'node-1' });
       result.current.handleEditorChange('Alpha body updated');
     });
 
@@ -45,6 +46,7 @@ function registerDebouncePersistenceTest() {
     );
 
     act(() => {
+      result.current.handleEditorInput({ contentLength: 'Alpha body updated'.length, nodeId: 'node-1' });
       result.current.handleEditorChange('Alpha body updated');
     });
 
@@ -82,6 +84,7 @@ function registerCloseFlushTest() {
     );
 
     act(() => {
+      result.current.handleEditorInput({ contentLength: 'Alpha body updated'.length, nodeId: 'node-1' });
       result.current.handleEditorChange('Alpha body updated');
     });
 
@@ -103,6 +106,7 @@ function registerCloseFlushTest() {
     );
 
     act(() => {
+      result.current.handleEditorInput({ contentLength: 'Alpha unmount draft'.length, nodeId: 'node-1' });
       result.current.handleEditorChange('Alpha unmount draft');
     });
 
@@ -132,6 +136,7 @@ function registerNodeSwitchDisplayTest() {
     );
 
     act(() => {
+      result.current.handleEditorInput({ contentLength: 'Alpha draft'.length, nodeId: 'node-1' });
       result.current.handleEditorChange('Alpha draft');
     });
 
@@ -167,6 +172,7 @@ function registerNodeSwitchCommitIsolationTest() {
     );
 
     act(() => {
+      result.current.handleEditorInput({ contentLength: 'Alpha draft'.length, nodeId: 'node-1' });
       result.current.handleEditorChange('Alpha draft');
     });
 
@@ -177,6 +183,7 @@ function registerNodeSwitchCommitIsolationTest() {
     });
 
     act(() => {
+      result.current.handleEditorInput({ contentLength: 'Beta draft'.length, nodeId: 'node-2' });
       result.current.handleEditorChange('Beta draft');
     });
 
@@ -199,6 +206,9 @@ function registerStaleNodeChangeTest() {
       { initialProps: { committedContent: 'Alpha body', nodeId: 'node-1' } }
     );
 
+    act(() => {
+      result.current.handleEditorInput({ contentLength: 'Alpha late draft'.length, nodeId: 'node-1' });
+    });
     rerender({ committedContent: 'Beta body', nodeId: 'node-2' });
 
     act(() => {
@@ -226,6 +236,7 @@ function registerCommittedContentRefreshTest() {
     );
 
     act(() => {
+      result.current.handleEditorInput({ contentLength: 'Alpha local draft'.length, nodeId: 'node-1' });
       result.current.handleEditorChange('Alpha local draft');
     });
 

@@ -55,7 +55,7 @@ export interface DocumentPanelBodyLayoutProps {
   onAnswerChange: (answer: string) => void;
   onAnswerImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
   onEditorChange: (content: string) => void;
-  onEditorInput?: (meta: { nodeId: string | null }) => void;
+  onEditorInput?: (meta: { contentLength?: number; nodeId: string | null }) => void;
   onEditorUndo?: () => boolean;
   onEditorRedo?: () => boolean;
   onEditorContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;

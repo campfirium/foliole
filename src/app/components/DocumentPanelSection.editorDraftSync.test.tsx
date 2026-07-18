@@ -27,11 +27,13 @@ it('commits body editor input through node-aware draft flush only', () => {
   const bodyProps = documentPanelBodyMock.mock.calls.at(-1)?.[0] as {
     editorNodeId: string | null;
     onEditorChange: (content: string, meta?: { nodeId: string | null }) => void;
+    onEditorInput: (meta: { contentLength: number; nodeId: string | null }) => void;
   };
 
   expect(bodyProps.editorNodeId).toBe('node-1');
 
   act(() => {
+    bodyProps.onEditorInput({ contentLength: 'Alpha body draft'.length, nodeId: 'node-1' });
     bodyProps.onEditorChange('Alpha body draft', { nodeId: 'node-1' });
   });
 
@@ -59,9 +61,11 @@ it('commits early body input to the active real node before editorNodeId is read
 
   const bodyProps = documentPanelBodyMock.mock.calls.at(-1)?.[0] as {
     onEditorChange: (content: string, meta?: { nodeId: string | null }) => void;
+    onEditorInput: (meta: { contentLength: number; nodeId: string | null }) => void;
   };
 
   act(() => {
+    bodyProps.onEditorInput({ contentLength: '# New topic\n\nBody'.length, nodeId: null });
     bodyProps.onEditorChange('# New topic\n\nBody', { nodeId: null });
     vi.advanceTimersByTime(1200);
   });

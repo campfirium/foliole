@@ -17,6 +17,7 @@ function registerDebounceTitleFinalizationTest() {
     );
 
     act(() => {
+      result.current.handleEditorInput({ contentLength: 'Alpha body updated'.length, nodeId: 'node-1' });
       result.current.handleEditorChange('Alpha body updated');
       vi.advanceTimersByTime(1200);
     });
@@ -45,6 +46,7 @@ function registerBoundaryTitleFinalizationTests() {
     );
 
     act(() => {
+      result.current.handleEditorInput({ contentLength: 'Alpha body updated'.length, nodeId: 'node-1' });
       result.current.handleEditorChange('Alpha body updated');
     });
 
@@ -76,6 +78,7 @@ function registerBoundaryTitleFinalizationTests() {
     );
 
     act(() => {
+      result.current.handleEditorInput({ contentLength: 'Alpha draft'.length, nodeId: 'node-1' });
       result.current.handleEditorChange('Alpha draft');
     });
 
@@ -110,6 +113,7 @@ function registerTitleFinalizationFailureTests() {
     );
 
     act(() => {
+      result.current.handleEditorInput({ contentLength: 'Alpha body updated'.length, nodeId: 'node-1' });
       result.current.handleEditorChange('Alpha body updated');
     });
 
@@ -141,6 +145,7 @@ function registerTitleFinalizationFailureTests() {
     );
 
     act(() => {
+      result.current.handleEditorInput({ contentLength: 'Alpha body updated'.length, nodeId: 'node-1' });
       result.current.handleEditorChange('Alpha body updated');
     });
 

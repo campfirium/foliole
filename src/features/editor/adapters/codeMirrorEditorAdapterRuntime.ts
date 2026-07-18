@@ -38,6 +38,11 @@ function createEditorControllers(args: CodeMirrorEditorAdapterRuntimeArgs) {
   const controllers = createCodeMirrorEditorControllers({
     applyLocalizedContent: (localized) => {
       args.onSetContent(localized);
+      args.options.onDocumentInput?.({
+        contentLength: localized.length,
+        isComposing: false,
+        nodeId: args.getNodeId()
+      });
       args.getOnChange()?.(localized, { nodeId: args.getNodeId() });
     },
     getContent: args.getContent,
