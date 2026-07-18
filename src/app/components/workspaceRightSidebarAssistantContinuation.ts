@@ -33,6 +33,7 @@ export function createAssistantContinuationEvent(args: {
     actionLabel: args.t('desktop.rightPanel.assistant.openContinuedConversation'),
     onAction: () => args.onSelectRecord(relation.destination),
     placement: 'after-messages' as const,
+    suffix: args.t('desktop.rightPanel.assistant.continuationSourceSuffix'),
     text: args.t('desktop.rightPanel.assistant.continuationSource')
   };
 }

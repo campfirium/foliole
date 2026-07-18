@@ -110,8 +110,11 @@ it('leaves a localized continuation record in the old conversation and opens its
   );
   fireEvent.click(await screen.findByRole('button', { name: /旧对话/ }));
 
-  expect(await screen.findByText('完成任务需要使用新增的 Agent 工具，已开启新对话继续。')).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: '前往新对话' }));
+  const destinationLink = await screen.findByRole('link', { name: '新对话' });
+  expect(destinationLink.closest('[data-message-role="system"]')).toHaveTextContent(
+    '完成任务需要使用新增的 Agent 工具，已转到新对话继续。'
+  );
+  fireEvent.click(destinationLink);
 
   expect(await screen.findByRole('heading', { name: '新对话' })).toBeInTheDocument();
 });

@@ -1,7 +1,7 @@
 import { ArrowDown } from 'lucide-react';
 
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { AppButton, AppIconButton, appFloatingSurfaceClassName, inspectorListMetaClassName } from '../../shared/ui';
+import { AppIconButton, appFloatingSurfaceClassName, inspectorListMetaClassName } from '../../shared/ui';
 
 import { useWorkspaceRightSidebarAssistantScroll } from './useWorkspaceRightSidebarAssistantScroll';
 import { WorkspaceRightSidebarAssistantMessageRow } from './WorkspaceRightSidebarAssistantMessageRow';
@@ -15,6 +15,7 @@ export function WorkspaceRightSidebarAssistantMessageViewport(props: {
     actionLabel?: string;
     onAction?: () => void;
     placement: 'after-messages' | 'after-user';
+    suffix?: string;
     text: string;
   } | null;
 }) {
@@ -77,13 +78,25 @@ function AssistantTransitionEvent(props: {
   event: NonNullable<Parameters<typeof WorkspaceRightSidebarAssistantMessageViewport>[0]['transitionEvent']>;
 }) {
   return (
-    <div className="flex items-center gap-2 px-1" data-message-role="system">
-      <p className={`${inspectorListMetaClassName} m-0 min-w-0 flex-1`}>{props.event.text}</p>
-      {props.event.onAction && props.event.actionLabel ? (
-        <AppButton onClick={props.event.onAction} size="sm" type="button">
-          {props.event.actionLabel}
-        </AppButton>
-      ) : null}
+    <div className="px-1" data-message-role="system">
+      <p className={`${inspectorListMetaClassName} m-0 min-w-0`}>
+        {props.event.text}
+        {props.event.onAction && props.event.actionLabel ? (
+          <>
+            <a
+              className="text-inherit underline decoration-current/55 underline-offset-2 hover:decoration-current focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              href="#"
+              onClick={(event) => {
+                event.preventDefault();
+                props.event.onAction?.();
+              }}
+            >
+              {props.event.actionLabel}
+            </a>
+            {props.event.suffix}
+          </>
+        ) : null}
+      </p>
     </div>
   );
 }

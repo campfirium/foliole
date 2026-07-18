@@ -27,6 +27,7 @@ interface AssistantConversationProps {
     actionLabel?: string;
     onAction?: () => void;
     placement: 'after-messages' | 'after-user';
+    suffix?: string;
     text: string;
   } | null;
   threadPreviewLabel: string | null;

@@ -132,10 +132,11 @@ export const EN_DESKTOP_NAVIGATION_TRANSLATIONS = {
   'desktop.rightPanel.assistant.threadMessagesLoadFailed':
     'Foliole Aide could not load saved local messages. Showing the local preview.',
   'desktop.rightPanel.assistant.continuationSource':
-    'This task needs newly added Agent tools, so it continues in a new conversation.',
+    'This task needs newly added Agent tools, so it continues in a ',
+  'desktop.rightPanel.assistant.continuationSourceSuffix': '.',
   'desktop.rightPanel.assistant.continuationDestination':
     'This conversation was created with newly added Agent tools to complete the task.',
-  'desktop.rightPanel.assistant.openContinuedConversation': 'Open new conversation',
+  'desktop.rightPanel.assistant.openContinuedConversation': 'new conversation',
   'desktop.rightPanel.assistant.threadPreview': 'Local history preview: {preview}',
   'desktop.rightPanel.assistant.currentSession': 'Current session messages',
   'desktop.rightPanel.assistant.input': 'Foliole Aide message',
