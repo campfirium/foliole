@@ -33,12 +33,20 @@ beforeEach(() => {
 it('keeps credentials local while moving between the two setup steps', async () => {
   renderWithLocalization(<FoliolePublishingSettings expanded onExpandedChange={vi.fn()} />);
   fireEvent.change(await screen.findByLabelText('Cloudflare Account ID'), { target: { value: 'account' } });
-  fireEvent.change(screen.getByLabelText('Cloudflare API Token'), { target: { value: 'SENTINEL-TOKEN' } });
+  fireEvent.change(screen.getByLabelText('Cloudflare authorization result'), { target: { value: 'SENTINEL-TOKEN' } });
   fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
   expect(mocks.connectFoliolePublishSettingsToRuntime).not.toHaveBeenCalled();
   expect(screen.getByLabelText('Free pages.dev site name')).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: 'Back' }));
-  expect(screen.getByLabelText('Cloudflare API Token')).toHaveValue('SENTINEL-TOKEN');
+  expect(screen.getByLabelText('Cloudflare authorization result')).toHaveValue('SENTINEL-TOKEN');
+});
+
+it('opens the Cloudflare page with Pages Edit permission preselected', async () => {
+  renderWithLocalization(<FoliolePublishingSettings expanded onExpandedChange={vi.fn()} />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Create access in Cloudflare' }));
+  expect(openExternalUrl).toHaveBeenCalledWith(
+    'https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22page%22%2C%22type%22%3A%22edit%22%7D%5D&accountId=%2A&zoneId=all&name=Foliole%20Publish'
+  );
 });
 
 it('requires explicit confirmation before using an existing Pages project', async () => {
@@ -47,7 +55,7 @@ it('requires explicit confirmation before using an existing Pages project', asyn
     .mockResolvedValueOnce({ settings: CONNECTED, status: 'connected' });
   renderWithLocalization(<FoliolePublishingSettings expanded onExpandedChange={vi.fn()} />);
   fireEvent.change(await screen.findByLabelText('Cloudflare Account ID'), { target: { value: 'account' } });
-  fireEvent.change(screen.getByLabelText('Cloudflare API Token'), { target: { value: 'SENTINEL-TOKEN' } });
+  fireEvent.change(screen.getByLabelText('Cloudflare authorization result'), { target: { value: 'SENTINEL-TOKEN' } });
   fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
   fireEvent.change(screen.getByLabelText('Free pages.dev site name'), { target: { value: 'my-site' } });
   fireEvent.click(screen.getByRole('button', { name: 'Create and publish' }));
@@ -61,7 +69,7 @@ it('requires explicit confirmation before using an existing Pages project', asyn
     use_existing_project: true
   })));
   expect(await screen.findByText('Ready to publish.')).toBeVisible();
-  expect(screen.queryByLabelText('Cloudflare API Token')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Cloudflare authorization result')).not.toBeInTheDocument();
 });
 
 it('updates a manually configured custom domain through the dedicated command', async () => {

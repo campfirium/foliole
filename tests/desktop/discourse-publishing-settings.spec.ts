@@ -103,10 +103,10 @@ async function verifyFolioleSetupSteps(
   testInfo: import('@playwright/test').TestInfo
 ) {
   const accountId = foliole.getByLabel(/^Cloudflare Account ID$/);
-  const token = foliole.getByLabel(/^Cloudflare API Token$/);
+  const token = foliole.getByLabel(/^(Cloudflare authorization result|Cloudflare 授权结果)$/);
   await expect(accountId).toBeVisible();
   await expect(token).toBeVisible();
-  await expect(foliole.getByRole('button', { name: /^(Open Cloudflare|打开 Cloudflare)$/ })).toBeVisible();
+  await expect(foliole.getByRole('button', { name: /^(Create access in Cloudflare|在 Cloudflare 创建授权)$/ })).toBeVisible();
   await expect(foliole.getByRole('button', { name: /^(Continue|继续)$/ })).toBeDisabled();
   await expect(foliole.getByLabel(/^(Free pages.dev site name|免费 pages.dev 站点名称)$/)).not.toBeVisible();
   await accountId.evaluate((element) => element.scrollIntoView({ block: 'center' }));

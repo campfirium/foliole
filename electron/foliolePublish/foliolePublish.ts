@@ -52,7 +52,7 @@ export async function connectFoliolePublishSettings(input: NativeFoliolePublishC
   const projectName = normalizeCloudflareProjectName(input.project_name);
   const accountId = input.account_id.trim();
   const token = input.api_token.trim();
-  if (!accountId || !token) throw new Error('Enter a Cloudflare Account ID and API Token.');
+  if (!accountId || !token) throw new Error('Enter a Cloudflare Account ID and authorization result.');
   const resolution = await resolveCloudflarePagesProject({
     accountId, projectName, token, useExistingProject: input.use_existing_project
   });

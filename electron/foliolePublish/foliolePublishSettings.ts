@@ -43,7 +43,7 @@ export function saveFoliolePublishConnection(input: NativeFoliolePublishConnectI
     project_name: normalizeCloudflareProjectName(input.project_name),
     site_address: normalizeSiteAddress(input.site_address) || normalizeSiteAddress(pagesUrl), updated_at: updatedAt
   };
-  if (!value.account_id || !input.api_token.trim()) throw new Error('Enter a Cloudflare Account ID and API Token.');
+  if (!value.account_id || !input.api_token.trim()) throw new Error('Enter a Cloudflare Account ID and authorization result.');
   const previousSecret = loadFoliolePublishToken() || null;
   try {
     writePublishDeviceSecret(SECRET_FILE, 'Cloudflare Pages API token', input.api_token.trim());

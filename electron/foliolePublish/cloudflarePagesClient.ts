@@ -36,7 +36,7 @@ async function readEnvelope<T>(response: Response, fallback: string) {
   try { payload = await response.json() as CloudflareEnvelope<T>; } catch { throw new Error(fallback); }
   if (!response.ok || payload.success === false || payload.result === undefined) {
     if (response.status === 401 || response.status === 403) {
-      throw new CloudflareClientError('Cloudflare rejected the Account ID, API Token, or required permissions.');
+      throw new CloudflareClientError('Cloudflare rejected the Account ID, authorization result, or required permissions.');
     }
     if (response.status >= 500) throw new CloudflareClientError('Cloudflare is temporarily unavailable.');
     throw new CloudflareClientError(`${fallback} (${response.status})`);

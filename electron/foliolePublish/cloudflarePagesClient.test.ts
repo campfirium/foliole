@@ -87,7 +87,7 @@ it('never exposes provider error text that echoes the API token', async () => {
   const request = () => resolveCloudflarePagesProject({
     accountId: 'account', projectName: 'site', token, useExistingProject: false
   });
-  await expect(request()).rejects.toThrow('Cloudflare rejected the Account ID, API Token, or required permissions.');
+  await expect(request()).rejects.toThrow('Cloudflare rejected the Account ID, authorization result, or required permissions.');
   await expect(request()).rejects.not.toThrow(token);
 });
 
@@ -98,6 +98,6 @@ it('never exposes a token echoed by the deployment upload endpoint', async () =>
     errors: [{ message: `Rejected ${token}` }], success: false
   }), { status: 403 })));
   const request = () => deployCloudflarePages({ accountId: 'account', projectName: 'site', siteRoot, token });
-  await expect(request()).rejects.toThrow('Cloudflare rejected the Account ID, API Token, or required permissions.');
+  await expect(request()).rejects.toThrow('Cloudflare rejected the Account ID, authorization result, or required permissions.');
   await expect(request()).rejects.not.toThrow(token);
 });

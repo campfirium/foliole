@@ -14,7 +14,7 @@ import {
 import { PublishingTextRow } from './PublishingTextRow';
 import type { FoliolePublishingSettingsState } from './useFoliolePublishingSettings';
 
-const CLOUDFLARE_DASHBOARD_URL = 'https://dash.cloudflare.com/';
+const CLOUDFLARE_AUTHORIZATION_URL = 'https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22page%22%2C%22type%22%3A%22edit%22%7D%5D&accountId=%2A&zoneId=all&name=Foliole%20Publish';
 const CUSTOM_DOMAIN_GUIDE_URL = 'https://developers.cloudflare.com/pages/configuration/custom-domains/';
 
 function ActionRow(props: { children: ReactNode; description: string; title: string }) {
@@ -28,10 +28,12 @@ function ActionRow(props: { children: ReactNode; description: string; title: str
 export function FoliolePublishingCredentialsRows({ state }: { state: FoliolePublishingSettingsState }) {
   const t = useTranslation();
   return <>
+    <ActionRow description={t('settings.publishing.foliole.credentials.description')} title={t('settings.publishing.foliole.credentials.title')}>
+      <AppButton onClick={() => void openExternalUrl(CLOUDFLARE_AUTHORIZATION_URL)} variant="subtle">{t('settings.publishing.foliole.openCloudflare')}</AppButton>
+    </ActionRow>
     <PublishingTextRow description={t('settings.publishing.foliole.account.description')} disabled={state.disabled} label={t('settings.publishing.foliole.account.aria')} onChange={(accountId) => state.updateForm({ accountId })} title={t('settings.publishing.foliole.account.title')} value={state.form.accountId} />
     <PublishingTextRow description={t('settings.publishing.foliole.token.description')} disabled={state.disabled} label={t('settings.publishing.foliole.token.aria')} onChange={(apiToken) => state.updateForm({ apiToken })} {...(state.canContinue ? { onEnter: state.continue } : {})} title={t('settings.publishing.foliole.token.title')} type="password" value={state.form.apiToken} />
-    <ActionRow description={t('settings.publishing.foliole.credentials.description')} title={t('settings.publishing.foliole.credentials.title')}>
-      <AppButton onClick={() => void openExternalUrl(CLOUDFLARE_DASHBOARD_URL)} variant="subtle">{t('settings.publishing.foliole.openCloudflare')}</AppButton>
+    <ActionRow description={t('settings.publishing.foliole.continue.description')} title={t('settings.publishing.foliole.continue.title')}>
       <AppButton disabled={!state.canContinue} onClick={state.continue}>{t('settings.publishing.foliole.continue')}</AppButton>
     </ActionRow>
   </>;
