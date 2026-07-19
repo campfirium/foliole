@@ -3,6 +3,9 @@ name: Sync SQLite Capability Gates
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   sync-sql-surface-scan:
     name: Sync SQL surface scan
@@ -25,8 +28,8 @@ jobs:
       - name: Scan sync SQL surface
         run: npm run sync:sql-surface:scan
 
-  ios-sqlite-capability-gate:
-    name: iOS SQLite capability gate
+  ios-bootstrap-quality:
+    name: iOS bootstrap quality
     runs-on: macos-15
     timeout-minutes: 30
 
@@ -43,5 +46,5 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run iOS sync preflight
-        run: npm run ios:sync:preflight
+      - name: Run iOS bootstrap quality
+        run: npm run quality:ios
