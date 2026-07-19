@@ -37,7 +37,7 @@ export function WorkspaceRightSidebarAssistantMessageViewport(props: {
         <AppIconButton
           className={appFloatingSurfaceClassName(
             'popover',
-            'absolute bottom-2 left-1/2 z-10 -translate-x-1/2 rounded-full'
+            'absolute bottom-2 left-1/2 z-local-control -translate-x-1/2 rounded-full'
           )}
           icon={<ArrowDown aria-hidden className="size-4" strokeWidth={1.8} />}
           label={t('desktop.rightPanel.assistant.scrollToLatest')}

@@ -15,7 +15,7 @@ export function AssistantPanelToolbar(props: {
 }) {
   const t = useTranslation();
   return (
-    <header className={`${inspectorListInsetPaddingClassName} sticky top-0 z-10 border-b border-border/70 bg-bg/95 py-1 backdrop-blur-sm`}>
+    <header className={`${inspectorListInsetPaddingClassName} sticky top-0 z-local-control border-b border-border/70 bg-bg/95 py-1 backdrop-blur-sm`}>
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           {props.conversationTitle ? (

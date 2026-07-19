@@ -1,6 +1,6 @@
 [data-companion-readable-document='true'] :is(.cm-md-highlight, .cm-md-highlight-overlap, .cm-md-anchor-overlap) {
   background-color: var(--app-highlight-surface-color);
-  border-radius: var(--editor-radius-md);
+  border-radius: var(--radius-sm);
   cursor: pointer;
 }
 
@@ -10,5 +10,5 @@
 
 [data-companion-readable-document='true'] .cm-md-cloze {
   background-color: var(--app-cloze-surface-color);
-  border-radius: var(--editor-radius-md);
+  border-radius: var(--radius-sm);
 }

@@ -22,7 +22,7 @@ export function SettingsFontComboboxRow(props: SettingsFontComboboxProps) {
             <ChevronDown aria-hidden="true" className="shrink-0" size={15} />
           </button>
           {state.open ? (
-            <div className="absolute right-0 z-50 mt-1 w-[300px] rounded-lg border border-settings-divider bg-popover p-1 shadow-lg">
+            <div className="absolute right-0 z-panel-popover mt-1 w-[300px] rounded-lg border border-settings-divider bg-popover p-1 shadow-popover">
               <label className="flex items-center gap-2 border-b border-settings-divider px-2 py-1.5">
                 <Search aria-hidden="true" size={14} />
                 <input aria-controls={listId} aria-label={t('settings.appearance.fontCatalog.search')} className="min-w-0 flex-1 bg-transparent text-sm outline-none" onChange={(event) => { state.setQuery(event.target.value); state.setActiveIndex(0); }} onKeyDown={state.onInputKeyDown} placeholder={t('settings.appearance.fontCatalog.search')} ref={state.inputRef} value={state.query} />

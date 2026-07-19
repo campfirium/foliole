@@ -60,7 +60,8 @@ it('does not offer the CJK search language in the Demo runtime', () => {
 
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.searchEnhancementPromptDismissed)).toBeNull();
-  expect(window.electronAPI?.invoke).not.toHaveBeenCalled();
+  expect(window.electronAPI?.invoke).not.toHaveBeenCalledWith('save_app_settings_state', expect.anything());
+  expect(window.electronAPI?.invoke).not.toHaveBeenCalledWith('rebuild_search_index', expect.anything());
 });
 
 it('offers the Chinese, Japanese, or Korean search language once and turns it on', async () => {
