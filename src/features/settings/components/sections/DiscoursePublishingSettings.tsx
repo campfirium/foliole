@@ -2,7 +2,6 @@ import { useTranslation } from '../../../../shared/localization/LocalizationProv
 import {
   AppButton,
   AppErrorState,
-  AppStatusBadge,
   SettingsControlSlot,
   SettingsRow,
   SettingsSection
@@ -15,27 +14,21 @@ import { usePublishingSettings, type PublishingFeedback, type PublishingFormStat
 function ConnectionRow(props: {
   canTest: boolean;
   feedback: PublishingFeedback;
-  hasApiKey: boolean;
   onDisconnect: () => void;
   onTest: () => void;
   status: PublishingStatus;
 }) {
   const t = useTranslation();
-  const statusLabel = props.status === 'saving'
-    ? t('settings.publishing.feedback.saving')
-    : props.feedback === 'authorizationOpened'
-      ? t('settings.publishing.feedback.authorizationOpened')
-    : props.feedback === 'connected'
-      ? t('settings.publishing.feedback.connected')
-      : props.feedback === 'saved' ? t('settings.publishing.feedback.saved') : null;
   return (
-    <SettingsRow description={t('settings.publishing.connection.description')} title={t('settings.publishing.connection.title')}>
+    <SettingsRow
+      description={props.feedback === 'connected' ? t('settings.publishing.connection.verified') : t('settings.publishing.connection.description')}
+      title={t('settings.publishing.connection.title')}
+    >
       <SettingsControlSlot className="w-[min(360px,100%)]">
-        {statusLabel ? <AppStatusBadge label={statusLabel} tone={props.feedback === 'connected' ? 'success' : 'neutral'} /> : null}
         <AppButton disabled={!props.canTest} onClick={props.onTest}>
           {props.status === 'testing' ? t('settings.publishing.connection.testing') : t('settings.publishing.connection.test')}
         </AppButton>
-        {props.hasApiKey ? <AppButton disabled={props.status !== 'idle'} onClick={props.onDisconnect} variant="subtle">{t('settings.publishing.disconnect')}</AppButton> : null}
+        <AppButton disabled={props.status !== 'idle'} onClick={props.onDisconnect} variant="subtle">{t('settings.publishing.disconnect')}</AppButton>
       </SettingsControlSlot>
     </SettingsRow>
   );
@@ -71,7 +64,7 @@ export function DiscoursePublishingSettings(props: { expanded: boolean; onExpand
         onResultChange={(authorizationResult) => state.updateForm({ authorizationResult })}
         status={state.status}
       />
-      <ConnectionRow canTest={state.canTest} feedback={state.feedback} hasApiKey={state.hasApiKey} onDisconnect={state.disconnect} onTest={state.testConnection} status={state.status} />
+      {state.hasApiKey ? <ConnectionRow canTest={state.canTest} feedback={state.feedback} onDisconnect={state.disconnect} onTest={state.testConnection} status={state.status} /> : null}
     </SettingsSection>
   );
 }

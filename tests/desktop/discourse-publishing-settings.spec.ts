@@ -16,6 +16,12 @@ type PublishingRegions = {
   wordpress: import('@playwright/test').Locator;
 };
 
+async function seedDiscourseAuthorization(desktopWindow: import('@playwright/test').Page) {
+  await desktopWindow.evaluate(() => globalThis.window?.electronAPI?.invoke('save_discourse_publish_settings', {
+    settings: { api_key: 'PLAYWRIGHT-DISCOURSE-USER-API-KEY', site_url: 'https://forum.example.com' }
+  }));
+}
+
 async function collectPublishingRowLayouts(dialog: import('@playwright/test').Locator): Promise<RowLayout[]> {
   return dialog.getByRole('region', {
     name: /^(Discourse publish settings|Discourse 发布设置)$/
@@ -76,6 +82,7 @@ async function captureExpandedSettings(
 }
 
 test('keeps independent Publish sections collapsed until opened and preserves their settings', async ({ desktopWindow }, testInfo) => {
+  await seedDiscourseAuthorization(desktopWindow);
   const dialog = await openSettingsDialog(desktopWindow);
   await dialog.getByRole('button', { name: /^(Publish|发布)$/ }).click();
 
@@ -111,18 +118,15 @@ test('keeps independent Publish sections collapsed until opened and preserves th
   await expect(dialog.getByRole('button', { name: /^(Generate authorization link|生成授权链接)$/ })).toBeVisible();
   const authorizationResult = dialog.getByLabel(/^(Discourse authorization result|Discourse 授权结果)$/);
   await expect(authorizationResult).toBeVisible();
-  const saveAuthorization = dialog.getByRole('button', { name: /^(Save authorization|保存授权)$/ });
-  await expect(saveAuthorization).toBeDisabled();
-  await expect(dialog.getByRole('button', { name: /^(Test connection|测试连接)$/ })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /^(Save authorization|保存授权)$/ })).toHaveCount(0);
+  await expect(dialog.getByRole('button', { name: /^(Test access|测试访问)$/ })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /^(Remove authorization|移除授权)$/ })).toBeVisible();
   await expect(dialog.getByRole('button', { name: /^(Save|保存)$/ })).toHaveCount(0);
   await expect(dialog.getByText(/^(API username|API 用户名)$/)).toHaveCount(0);
   await expect(dialog.getByText(/^(Default category ID|默认分类 ID)$/)).toHaveCount(0);
   await expect(dialog.getByText(/^(Default tags|默认标签)$/)).toHaveCount(0);
 
   await forumUrl.fill('https://forum.example.com');
-  await authorizationResult.fill('playwright-encrypted-authorization-result');
-  await expect(saveAuthorization).toBeEnabled();
-  await authorizationResult.fill('');
 
   const layouts = await collectPublishingRowLayouts(dialog);
   expect(layouts).toHaveLength(4);

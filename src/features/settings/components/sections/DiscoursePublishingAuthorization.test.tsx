@@ -49,28 +49,29 @@ it('explains the forum requirement and opens the generated authorization link', 
   await waitFor(() => expect(repositoryMocks.beginDiscourseUserApiAuthorizationFromRuntime)
     .toHaveBeenCalledWith('https://forum.example.com'));
   expect(openExternalUrl).toHaveBeenCalledWith(expect.stringContaining('/user-api-key/new'));
-  expect(await screen.findByText('Authorization page opened.')).toBeInTheDocument();
 });
 
-it('saves and validates the encrypted authorization result without exposing the key', async () => {
+it('saves and validates the encrypted authorization result after the pasted value loses focus', async () => {
   renderSettings();
   const input = await screen.findByLabelText('Discourse authorization result');
+  expect(screen.queryByRole('button', { name: 'Save authorization' })).toBeNull();
   fireEvent.change(input, { target: { value: 'ENCRYPTED-AUTHORIZATION-RESULT' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Save authorization' }));
+  fireEvent.blur(input);
   await waitFor(() => expect(repositoryMocks.completeDiscourseUserApiAuthorizationFromRuntime).toHaveBeenCalledWith(
     'https://forum.example.com',
     'ENCRYPTED-AUTHORIZATION-RESULT'
   ));
   expect(repositoryMocks.loadDiscoursePublishCatalogFromRuntime).toHaveBeenCalledWith({ refresh: true });
   expect(input).toHaveValue('');
-  expect(await screen.findByText('Connection successful.')).toBeInTheDocument();
+  expect(await screen.findByText('Publishing access verified.')).toBeInTheDocument();
 });
 
 it('points users to the forum permission when authorization fails', async () => {
   repositoryMocks.completeDiscourseUserApiAuthorizationFromRuntime.mockRejectedValue(new Error('private detail'));
   renderSettings();
-  fireEvent.change(await screen.findByLabelText('Discourse authorization result'), { target: { value: 'bad-result' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Save authorization' }));
+  const input = await screen.findByLabelText('Discourse authorization result');
+  fireEvent.change(input, { target: { value: 'bad-result' } });
+  fireEvent.blur(input);
   expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't authorize Foliole with Discourse.");
   expect(screen.getByRole('alert')).toHaveTextContent('forum allows your account to generate User API Keys');
   expect(screen.getByRole('alert')).not.toHaveTextContent('private detail');
