@@ -47,6 +47,7 @@ const EXPLICIT_FILE_SUBDOMAINS = new Map([
   ['src/shared/platform/libraryPathSettingsCache.ts', 'desktop-runtime-repository'],
   ['src/shared/platform/localFileRuntimeRepository.ts', 'desktop-runtime-repository'],
   ['src/shared/platform/loginItemSettings.ts', 'desktop-runtime-repository'],
+  ['src/shared/platform/macOsFontSmoothing.ts', 'runtime-core'],
   ['src/shared/platform/readwiseOriginalFileWidgetEvents.ts', 'import-runtime'],
   ['src/shared/platform/releaseLinks.ts', 'runtime-core'],
   ['src/shared/platform/remoteImageSourceRecovery.ts', 'external-runtime'],

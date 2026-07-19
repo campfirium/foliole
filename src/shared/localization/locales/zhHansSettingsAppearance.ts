@@ -7,6 +7,8 @@ export const ZH_HANS_SETTINGS_APPEARANCE_TRANSLATIONS: Partial<Record<Translatio
   'settings.appearance.displayScale.description': '缩放应用内容，不影响系统窗口与菜单。',
   'settings.appearance.displayScale.reset': '重置应用显示大小',
   'settings.appearance.displayScale.sliderAria': '应用显示大小百分比',
+  'settings.appearance.fontSmoothing.title': '字体平滑',
+  'settings.appearance.fontSmoothing.description': '使用 macOS 原生字体抗锯齿',
   'settings.appearance.section.readingTypography': '阅读',
   'settings.appearance.textFont.title': '正文字体',
   'settings.appearance.textFont.description': '主内容文字使用的字体。',

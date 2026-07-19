@@ -21,13 +21,14 @@ import {
   MIN_APP_DISPLAY_SCALE_PERCENT
 } from '../../model/displayScaleSettings';
 
+import { SettingsMacOsFontSmoothingRow } from './SettingsMacOsFontSmoothingRow';
+
 export function SettingsDisplayScaleSection() {
   const t = useTranslation();
   const displayScale = useDisplayScale();
   const [draftPercent, setDraftPercent] = useState(displayScale.appDisplayScalePercent);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const isDragging = useRef(false);
-
   useEffect(() => {
     if (!isDragging.current) setDraftPercent(displayScale.appDisplayScalePercent);
   }, [displayScale.appDisplayScalePercent]);
@@ -41,7 +42,6 @@ export function SettingsDisplayScaleSection() {
     input.addEventListener('change', commit);
     return () => input.removeEventListener('change', commit);
   }, [displayScale.setAppDisplayScalePercent]);
-
   const reset = () => {
     setDraftPercent(DEFAULT_APP_DISPLAY_SCALE_PERCENT);
     displayScale.setAppDisplayScalePercent(DEFAULT_APP_DISPLAY_SCALE_PERCENT);
@@ -75,11 +75,10 @@ export function SettingsDisplayScaleSection() {
             type="range"
             value={draftPercent}
           />
-          <span className={settingsControlValueClassName(SETTINGS_VALUE_WIDTH_CLASS_NAME)}>
-            {draftPercent}%
-          </span>
+          <span className={settingsControlValueClassName(SETTINGS_VALUE_WIDTH_CLASS_NAME)}>{draftPercent}%</span>
         </SettingsControlSlot>
       </SettingsRow>
+      <SettingsMacOsFontSmoothingRow />
     </SettingsSection>
   );
 }

@@ -31,7 +31,14 @@ it('derives localStorage whitelist from settings classification', () => {
   expect(getLocalStorageWhitelist()).toContain(APP_SETTINGS_STORAGE_KEYS.searchEnhancementPromptDismissed);
   expect(getLocalStorageWhitelist()).toContain(APP_SETTINGS_STORAGE_KEYS.actionHelpCardsEnabled);
   expect(getLocalStorageWhitelist()).toContain(APP_SETTINGS_STORAGE_KEYS.folioleAideEnabled);
+  expect(getLocalStorageWhitelist()).toContain(APP_SETTINGS_STORAGE_KEYS.macOsFontSmoothing);
   expect(getLocalStorageWhitelist()).not.toContain(APP_SETTINGS_STORAGE_KEYS.desktopDeviceSyncEnabled);
+});
+
+it('classifies macOS font smoothing as a runtime-mirrored renderer setting', () => {
+  expect(APP_SETTINGS_CLASSIFICATIONS.macOsFontSmoothing.kind).toBe(
+    APP_SETTINGS_PERSISTENCE_KINDS.runtimeMirroredRendererSnapshot
+  );
 });
 
 it('classifies the search enhancement prompt as runtime-mirrored, not cross-host sync', () => {

@@ -5,6 +5,8 @@ export const EN_SETTINGS_APPEARANCE_TRANSLATIONS = {
   'settings.appearance.displayScale.description': 'Scale the app content without changing system windows or menus.',
   'settings.appearance.displayScale.reset': 'Reset app display size',
   'settings.appearance.displayScale.sliderAria': 'App display size percentage',
+  'settings.appearance.fontSmoothing.title': 'Font smoothing',
+  'settings.appearance.fontSmoothing.description': 'Use native macOS font anti-aliasing',
   'settings.appearance.section.readingTypography': 'Reading',
   'settings.appearance.textFont.title': 'Text font',
   'settings.appearance.textFont.description': 'Font used in main content text.',

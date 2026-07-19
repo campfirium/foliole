@@ -8,10 +8,10 @@ function readWorkspaceFile(path: string) {
 }
 
 describe('reading typography guards', () => {
-  it('keeps the shared renderer font smoothing guards in styles.css', () => {
+  it('keeps shared renderer typography guards without forcing WebKit font smoothing', () => {
     const styles = readWorkspaceFile('src/app/styles.css');
 
-    expect(styles).toContain('-webkit-font-smoothing: antialiased;');
+    expect(styles).not.toContain('-webkit-font-smoothing:');
     expect(styles).toContain('font-synthesis-weight: none;');
     expect(styles).toContain('text-rendering: optimizeLegibility;');
     expect(styles).toContain('strong,\nb {\n  font-weight: 600;');

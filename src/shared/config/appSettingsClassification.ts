@@ -38,6 +38,7 @@ const RUNTIME_MIRRORED_APP_SETTING_NAMES = [
   'workspaceRailItems',
   'appLanguage',
   'appDisplayScalePercent',
+  'macOsFontSmoothing',
   'contentRegionScales',
   'interfaceFont',
   'monospaceFont',

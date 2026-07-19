@@ -1,4 +1,4 @@
-import { beforeEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import type { NativeInvoke } from '../../../lib/platform/nativeContract';
 import { APP_SETTINGS_STORAGE_KEYS } from '../config/appSettings';
@@ -17,7 +17,10 @@ function createMockElectronApi(invoke: NativeInvoke) {
 beforeEach(() => {
   window.localStorage.clear();
   delete window.electronAPI;
+  document.documentElement.style.removeProperty('-webkit-font-smoothing');
 });
+
+afterEach(() => vi.restoreAllMocks());
 
 it('hydrates local settings from the runtime startup snapshot without rewriting it', async () => {
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.interfaceFontSize, '17');
@@ -89,4 +92,29 @@ it('applies runtime startup skeleton colors before the app mounts', async () => 
   expect(document.documentElement.dataset.resolvedBaseColor).toBe('dark');
   expect(document.documentElement.style.getPropertyValue('--startup-region-main-document-bg')).toBe('#444444');
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.baseColor)).toBe('dark');
+});
+
+it('applies default macOS font smoothing before the theme settings are available', async () => {
+  vi.spyOn(window.navigator, 'platform', 'get').mockReturnValue('MacIntel');
+  const invoke = vi.fn(() => new Promise(() => undefined));
+  window.electronAPI = createMockElectronApi(invoke);
+
+  void syncAppSettingsWithRuntime();
+  await Promise.resolve();
+
+  expect(document.documentElement.style.getPropertyValue('-webkit-font-smoothing')).toBe('antialiased');
+});
+
+it('lets the runtime snapshot disable a local macOS font smoothing override', async () => {
+  vi.spyOn(window.navigator, 'platform', 'get').mockReturnValue('MacIntel');
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.macOsFontSmoothing, 'true');
+  const invoke = vi.fn().mockResolvedValueOnce({
+    [APP_SETTINGS_STORAGE_KEYS.macOsFontSmoothing]: 'false'
+  });
+  window.electronAPI = createMockElectronApi(invoke);
+
+  await syncAppSettingsWithRuntime();
+
+  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.macOsFontSmoothing)).toBe('false');
+  expect(document.documentElement.style.getPropertyValue('-webkit-font-smoothing')).toBe('');
 });

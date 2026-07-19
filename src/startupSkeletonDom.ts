@@ -1,4 +1,5 @@
 import { APP_SETTINGS_STORAGE_KEYS } from './shared/config/appSettings';
+import { applyMacOsFontSmoothingFromSettings } from './shared/platform/macOsFontSmoothing';
 
 const REGION_IDS = [
   'titlebar-rail',
@@ -72,6 +73,7 @@ function deriveDividerMixTarget(color: string) {
 
 export function applyStartupSkeletonSettings(settings: Record<string, string>) {
   if (typeof document === 'undefined') return;
+  applyMacOsFontSmoothingFromSettings(settings);
   const baseColor = settings[APP_SETTINGS_STORAGE_KEYS.baseColor];
   if (baseColor !== 'dark' && baseColor !== 'light' && baseColor !== 'system') return;
   const mode = resolveMode(settings);
@@ -105,6 +107,7 @@ export function applyStartupSkeletonSettings(settings: Record<string, string>) {
 export function applyStartupSkeletonLocalStorageSettings() {
   if (typeof window === 'undefined') return;
   const keys = [
+    APP_SETTINGS_STORAGE_KEYS.macOsFontSmoothing,
     APP_SETTINGS_STORAGE_KEYS.baseColor,
     APP_SETTINGS_STORAGE_KEYS.workspaceSurfacePalette,
     APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceAssignments,

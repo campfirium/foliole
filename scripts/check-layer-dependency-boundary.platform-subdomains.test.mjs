@@ -56,6 +56,7 @@ describe('check-layer-dependency-boundary platform subdomains', () => {
       'desktop-runtime-repository'
     );
     expect(resolvePlatformSubdomain('src/shared/platform/desktopUpdate.ts')).toBe('runtime-core');
+    expect(resolvePlatformSubdomain('src/shared/platform/macOsFontSmoothing.ts')).toBe('runtime-core');
     expect(resolvePlatformSubdomain('src/shared/platform/folioleAideSettings.ts')).toBe(
       'desktop-runtime-repository'
     );

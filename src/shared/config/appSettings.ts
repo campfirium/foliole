@@ -21,6 +21,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   workspaceRailItems: 'foliole-workspace-rail-items',
   appLanguage: 'foliole-app-language',
   appDisplayScalePercent: 'foliole-app-display-scale-percent',
+  macOsFontSmoothing: 'foliole-macos-font-smoothing-enabled',
   contentRegionScales: 'foliole-content-region-scales',
   interfaceFont: 'foliole-interface-font-preset',
   monospaceFont: 'foliole-monospace-font-preset',
