@@ -18,6 +18,7 @@ interface WorkspaceTopicTreeDragArgs {
   activeFolderId: string;
   itemIds: string[];
   isManualSort: boolean;
+  isVirtualFolderManualOrder: boolean;
   moveNodes: (nodeIds: string[], targetNodeId: string | null, intent: WorkspaceTopicTreeManualMoveIntent) => Promise<boolean>;
   nodesById: WorkspaceListNodesById;
   selectedNodeIds: string[];
@@ -62,6 +63,7 @@ function useWorkspaceTopicTreeMoveNodes(
     currentOrder: args.itemIds,
     derivedNodeIds: collectDerivedNodeIds(args.nodesById),
     isManualSort: args.isManualSort,
+    isVirtualFolderManualOrder: args.isVirtualFolderManualOrder,
     moveNodes: args.moveNodes,
     parentNodeIdById: buildParentNodeIdById(args.nodesById),
     shouldAllowStructuralMove: () => structuralDragRef.current,

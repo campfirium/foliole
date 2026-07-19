@@ -1,4 +1,4 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { createEvent, fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { createManualVirtualNodeFilter } from '../../../lib/core/nodes/virtualNodeFilter';
@@ -25,6 +25,25 @@ function createNode(id: string, title: string): Node {
     title,
     updatedAt: '2026-05-01T00:00:00.000Z'
   };
+}
+
+function transfer() {
+  const data = new Map<string, string>();
+  return {
+    dropEffect: 'move', effectAllowed: 'move',
+    getData: (format: string) => data.get(format) ?? '',
+    setData: (format: string, value: string) => data.set(format, value)
+  };
+}
+
+function rowFrame(name: string) {
+  const frame = screen.getByRole('treeitem', { name }).parentElement;
+  if (!frame) throw new Error('Expected virtual Topic row frame.');
+  frame.getBoundingClientRect = () => ({
+    bottom: 100, height: 100, left: 0, right: 240, top: 0, width: 240, x: 0, y: 0,
+    toJSON: () => undefined
+  });
+  return frame;
 }
 
 beforeEach(() => {
@@ -89,4 +108,39 @@ it('does not offer manual removal in a filtered virtual folder', () => {
   fireEvent.contextMenu(screen.getByRole('treeitem', { name: 'First result' }));
   expect(screen.queryByRole('menuitem', { name: 'Remove from This Virtual Folder' })).toBeNull();
   expect(screen.queryByRole('menuitem', { name: 'Move to…' })).toBeNull();
+});
+
+it('reorders manual virtual folder members without moving their physical parents', async () => {
+  const first = { ...createNode('first', 'First result'), parentNodeId: 'physical-a' };
+  const second = { ...createNode('second', 'Second result'), parentNodeId: 'physical-b' };
+  const folder: Node = {
+    ...createNode('virtual-manual', 'Manual'), content: '', kind: 'folder',
+    manualChildOrder: ['first', 'second'], parentNodeId: 'special-virtual-root',
+    specialKind: 'virtual', virtualFilter: createManualVirtualNodeFilter()
+  };
+  const nodesById = { first, second, 'virtual-manual': folder };
+  useWorkspaceStore.setState({ nodeOrder: ['virtual-manual', 'first', 'second'], nodesById });
+  renderWithLocalization(
+    <VirtualResultListPanel
+      activeNodeId={null} emptyState={{ description: 'No results', title: 'Empty' }}
+      header={{ kind: 'user-search', nodeId: 'virtual-manual', query: '', title: 'Manual' }}
+      nodeOrder={['first', 'second']} nodes={[first, second]} nodesById={nodesById}
+      onSelectNode={vi.fn()} preserveItemOrder
+    />
+  );
+  const dataTransfer = transfer();
+  const firstFrame = rowFrame('First result');
+  const secondFrame = rowFrame('Second result');
+  fireEvent.dragStart(firstFrame, { dataTransfer });
+  const dragOver = createEvent.dragOver(secondFrame, { dataTransfer, clientY: 90 });
+  Object.defineProperty(dragOver, 'clientY', { value: 90 });
+  fireEvent(secondFrame, dragOver);
+  const drop = createEvent.drop(secondFrame, { dataTransfer, clientY: 90 });
+  Object.defineProperty(drop, 'clientY', { value: 90 });
+  fireEvent(secondFrame, drop);
+
+  await waitFor(() => expect(useWorkspaceStore.getState().nodesById['virtual-manual']?.manualChildOrder)
+    .toEqual(['second', 'first']));
+  expect(useWorkspaceStore.getState().nodesById.first?.parentNodeId).toBe('physical-a');
+  expect(useWorkspaceStore.getState().nodesById.second?.parentNodeId).toBe('physical-b');
 });

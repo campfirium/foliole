@@ -10,11 +10,13 @@ const FOLDER_TITLE = 'Topic Membership Folder';
 const MENU_TOPIC_TITLE = 'Menu Membership Topic';
 const DRAG_TOPIC_TITLE = 'Drag Membership Topic';
 const SCREENSHOT_PATH = path.resolve('.tmp/artifacts/desktop-acceptance/virtual-folder-topic-membership.png');
+const PALETTE_SCREENSHOT_PATH = path.resolve('.tmp/artifacts/desktop-acceptance/add-to-virtual-folder-palette.png');
 
-async function dragTopicToVirtualFolder(
+async function dragBetweenRows(
   page: Parameters<typeof expectWorkspaceShell>[0],
   source: ReturnType<typeof page.getByRole>,
-  target: ReturnType<typeof page.getByRole>
+  target: ReturnType<typeof page.getByRole>,
+  targetYRatio = 0.5
 ) {
   const sourceBox = await source.boundingBox();
   const targetBox = await target.boundingBox();
@@ -22,8 +24,8 @@ async function dragTopicToVirtualFolder(
   await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
   await page.mouse.down();
   await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y - 8, { steps: 4 });
-  await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 8 });
-  await expect(target).toHaveClass(/border-border-strong/);
+  await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height * targetYRatio, { steps: 8 });
+  await expect(target).toHaveClass(targetYRatio > 0.75 ? /border-b-2/ : /border-border-strong/);
   await page.mouse.up();
 }
 
@@ -49,15 +51,34 @@ test('adds Topics to a manual virtual folder from the menu and by drag without m
   await expect(menuTopic).toBeVisible();
   await menuTopic.click({ button: 'right' });
   await desktopWindow.getByRole('menuitem', { name: /^(Add to Virtual Folder…|添加到虚拟文件夹\.\.\.)$/ }).click();
-  await desktopWindow.getByRole('dialog').getByRole('button', { name: FOLDER_TITLE }).click();
+  const membershipDialog = desktopWindow.getByRole('dialog', { name: /^(Add to Virtual Folder|添加到虚拟文件夹)$/ });
+  const membershipSearch = membershipDialog.getByRole('textbox', { name: /^(Add to virtual folder|添加到虚拟文件夹)$/ });
+  await expect(membershipSearch).toBeFocused();
+  await membershipSearch.fill('Topic Membership');
+  await expect(membershipDialog.getByRole('button', { name: FOLDER_TITLE })).toBeVisible();
+  await mkdir(path.dirname(PALETTE_SCREENSHOT_PATH), { recursive: true });
+  await desktopWindow.screenshot({ path: PALETTE_SCREENSHOT_PATH });
+  await testInfo.attach('add-to-virtual-folder-palette', { contentType: 'image/png', path: PALETTE_SCREENSHOT_PATH });
+  await membershipSearch.press('Enter');
   await expect(menuTopic).toBeVisible();
 
   await expect(dragTopic.locator('..')).toHaveAttribute('draggable', 'true');
-  await dragTopicToVirtualFolder(desktopWindow, dragTopic.locator('..'), virtualFolderRow.locator('..'));
+  await dragBetweenRows(desktopWindow, dragTopic.locator('..'), virtualFolderRow.locator('..'));
   await expect(dragTopic).toBeVisible();
   await virtualFolderRow.click();
-  await expect(topicPanel.getByRole('treeitem', { name: MENU_TOPIC_TITLE })).toBeVisible();
-  await expect(topicPanel.getByRole('treeitem', { name: DRAG_TOPIC_TITLE })).toBeVisible();
+  const virtualMenuTopic = topicPanel.getByRole('treeitem', { name: MENU_TOPIC_TITLE });
+  const virtualDragTopic = topicPanel.getByRole('treeitem', { name: DRAG_TOPIC_TITLE });
+  await expect(virtualMenuTopic).toBeVisible();
+  await expect(virtualDragTopic).toBeVisible();
+  await dragBetweenRows(desktopWindow, virtualMenuTopic.locator('..'), virtualDragTopic.locator('..'), 0.8);
+  await expect.poll(() => topicPanel.getByRole('treeitem').allTextContents()).toEqual([
+    DRAG_TOPIC_TITLE, MENU_TOPIC_TITLE
+  ]);
+  await desktopWindow.getByRole('treeitem', { name: 'Home', exact: true }).click();
+  await virtualFolderRow.click();
+  await expect.poll(() => topicPanel.getByRole('treeitem').allTextContents()).toEqual([
+    DRAG_TOPIC_TITLE, MENU_TOPIC_TITLE
+  ]);
 
   await mkdir(path.dirname(SCREENSHOT_PATH), { recursive: true });
   await desktopWindow.screenshot({ path: SCREENSHOT_PATH });

@@ -41,12 +41,17 @@ beforeEach(() => {
   });
 });
 
-it('adds selected Topics to a manual virtual folder without offering filtered views', () => {
+it('searches eligible manual virtual folders in the shared floating palette style', () => {
   const onClose = vi.fn();
   renderWithLocalization(<AddToVirtualFolderDialog onClose={onClose} topicIds={['topic']} />);
 
+  expect(screen.getByRole('dialog', { name: 'Add to Virtual Folder' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Filtered' })).toBeNull();
-  fireEvent.click(screen.getByRole('button', { name: 'Manual' }));
+  const input = screen.getByRole('textbox', { name: 'Add to virtual folder' });
+  fireEvent.change(input, { target: { value: 'missing' } });
+  expect(screen.getByText('No matching virtual folders')).toBeInTheDocument();
+  fireEvent.change(input, { target: { value: 'man' } });
+  fireEvent.keyDown(input, { key: 'Enter' });
 
   expect(useWorkspaceStore.getState().setFolderManualChildOrder)
     .toHaveBeenCalledWith('manual', ['existing', 'topic']);

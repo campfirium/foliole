@@ -48,6 +48,7 @@ export interface NodeListDragController {
 
 function createNodeDropHandler(
   isTrashViewOpen: boolean,
+  nodesById: WorkspaceListNodesById,
   state: NodeListDragState,
   moveNodes: (nodeIds: string[], targetNodeId: string | null, intent: MoveIntent) => Promise<boolean>,
   setState: (next: NodeListDragState) => void
@@ -55,17 +56,17 @@ function createNodeDropHandler(
   return (targetNodeId: string, event: ReactDragEvent<HTMLElement>) => {
     event.preventDefault();
     const sourceNodeIds = readNodeListDragSource(event, state.sourceNodeIds);
+    const dropIntent = sourceNodeIds.some((nodeId) => !nodesById[nodeId]) ? 'child' : resolveNodeListDropIntent(event);
     if (
       isTrashViewOpen ||
       sourceNodeIds.length === 0 ||
-      !state.dropIntent ||
       sourceNodeIds.includes(targetNodeId)
     ) {
       setState(createInitialNodeListDragState());
       return;
     }
 
-    void moveNodes(sourceNodeIds, targetNodeId, state.dropIntent);
+    void moveNodes(sourceNodeIds, targetNodeId, dropIntent);
     clearNodeListDragSource();
     setState(createInitialNodeListDragState());
   };
@@ -198,8 +199,8 @@ export function useNodeListDragController({
     []
   );
   const onDropOnNode = useMemo(
-    () => createNodeDropHandler(isTrashViewOpen, state, moveNodes, setState),
-    [isTrashViewOpen, moveNodes, state]
+    () => createNodeDropHandler(isTrashViewOpen, nodesById, state, moveNodes, setState),
+    [isTrashViewOpen, moveNodes, nodesById, state]
   );
   const onDragOverRoot = useMemo(
     () => createDragOverRootHandler(disableRootDrop, nodesById, state.sourceNodeIds, setState),

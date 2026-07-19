@@ -6,9 +6,15 @@ function canApplyWorkspaceTopicTreeManualDrag(args: {
   targetNodeId: string | null;
   intent: WorkspaceTopicTreeManualMoveIntent;
   parentNodeIdById: Record<string, string | null | undefined>;
+  currentOrder: readonly string[];
+  isVirtualFolderManualOrder: boolean;
 }) {
   if ((args.intent !== 'before' && args.intent !== 'after') || !args.targetNodeId) {
     return false;
+  }
+  if (args.isVirtualFolderManualOrder) {
+    const memberIds = new Set(args.currentOrder);
+    return memberIds.has(args.targetNodeId) && args.sourceNodeIds.every((nodeId) => memberIds.has(nodeId));
   }
   if (args.parentNodeIdById[args.targetNodeId] !== args.activeFolderId) {
     return false;
@@ -56,6 +62,7 @@ export function createWorkspaceTopicTreeManualMove(args: {
   activeFolderId: string;
   currentOrder: readonly string[];
   isManualSort: boolean;
+  isVirtualFolderManualOrder?: boolean;
   moveNodes: (nodeIds: string[], targetNodeId: string | null, intent: WorkspaceTopicTreeManualMoveIntent) => Promise<boolean>;
   parentNodeIdById: Record<string, string | null | undefined>;
   setFolderManualChildOrder?: (folderNodeId: string, manualChildOrder: string[]) => boolean;
@@ -63,7 +70,7 @@ export function createWorkspaceTopicTreeManualMove(args: {
   derivedNodeIds?: ReadonlySet<string>;
 }) {
   return async (nodeIds: string[], targetNodeId: string | null, intent: WorkspaceTopicTreeManualMoveIntent) => {
-    if (args.shouldAllowStructuralMove?.() && canApplyWorkspaceTopicTreeStructuralDrag({
+    if (!args.isVirtualFolderManualOrder && args.shouldAllowStructuralMove?.() && canApplyWorkspaceTopicTreeStructuralDrag({
       derivedNodeIds: args.derivedNodeIds ?? new Set<string>(),
       intent,
       sourceNodeIds: nodeIds,
@@ -76,6 +83,8 @@ export function createWorkspaceTopicTreeManualMove(args: {
     }
     if (!canApplyWorkspaceTopicTreeManualDrag({
       activeFolderId: args.activeFolderId,
+      currentOrder: args.currentOrder,
+      isVirtualFolderManualOrder: Boolean(args.isVirtualFolderManualOrder),
       sourceNodeIds: nodeIds,
       targetNodeId,
       intent,

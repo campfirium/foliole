@@ -91,6 +91,7 @@ export function useWorkspaceTopicTreeInteraction(args: WorkspaceTopicTreeInterac
     activeFolderId: args.activeFolderId,
     itemIds: args.rowIds,
     isManualSort: args.isManualSort,
+    isVirtualFolderManualOrder: args.virtualFolderView === 'manual',
     moveNodes: actions.moveNodes,
     nodesById: args.nodesById,
     selectedNodeIds: selection.selectedNodeIds,
