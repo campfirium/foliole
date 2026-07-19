@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { hasWorkspaceRuntimeRepository } from '../../shared/platform/workspaceRuntimeRepository';
+import type { WorkspaceBrowseRootIntent } from '../../store/workspaceBrowseRoot';
 import type { NodeNavigationResult } from '../../store/workspaceNavigation';
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -48,7 +49,7 @@ export function useNavigationAction(
 
 export function useSelectNodeAction(
   activeNodeId: string | null,
-  action: (nodeId: string) => NodeNavigationResult | null,
+  action: (nodeId: string, browseRootIntent?: WorkspaceBrowseRootIntent) => NodeNavigationResult | null,
   prepareForNavigation: (nodeIdOverride?: string | null) => void,
   flushActiveEditorTransaction: (sourceNodeId?: string | null) => boolean,
   flushPendingEditorDraft: () => void,
@@ -56,10 +57,18 @@ export function useSelectNodeAction(
   finalize: (result: NodeNavigationResult | null) => void,
   markRequested: (nodeId: string) => void,
   ensureNodeReady: (nodeId: string) => Promise<void>,
-  openPreparedNode: (nodeId: string, focusAnchor?: NodeNavigationResult['focusAnchor']) => Promise<void>
+  openPreparedNode: (
+    nodeId: string,
+    focusAnchor?: NodeNavigationResult['focusAnchor'],
+    browseRootIntent?: WorkspaceBrowseRootIntent
+  ) => Promise<void>
 ) {
   return useCallback(
-    async (nodeId: string, focusAnchor: NodeAnchorLink | null = null) => {
+    async (
+      nodeId: string,
+      focusAnchor: NodeAnchorLink | null = null,
+      browseRootIntent: WorkspaceBrowseRootIntent = 'current-context'
+    ) => {
       if (focusAnchor && activeNodeId === nodeId) {
         markRequested(nodeId);
         if (!flushActiveEditorTransaction(activeNodeId)) {
@@ -70,7 +79,7 @@ export function useSelectNodeAction(
       }
       const targetNode = useWorkspaceStore.getState().nodesById[nodeId];
       if (targetNode && !isNodeDocumentLoaded(targetNode) && hasWorkspaceRuntimeRepository()) {
-        await openPreparedNode(nodeId, focusAnchor);
+        await openPreparedNode(nodeId, focusAnchor, browseRootIntent);
         return;
       }
 
@@ -79,7 +88,7 @@ export function useSelectNodeAction(
         flushPendingEditorDraft();
       }
       prepareForNavigation();
-      const result = action(nodeId);
+      const result = action(nodeId, browseRootIntent);
       finalize(result ? { ...result, focusAnchor } : result);
       void flushPendingEditorDraftImmediately();
       void ensureNodeReady(nodeId);

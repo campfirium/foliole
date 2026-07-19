@@ -1,6 +1,7 @@
 import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
 import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
 
+import { buildReviewActiveNodeContext } from './workspaceReviewBrowseRoot';
 import {
   buildLiveReviewQueue,
   buildReviewSessionReadingContinuationQueue,
@@ -33,7 +34,7 @@ export function createStartReviewSessionAction(
       if (queueNodeIds.length === 0) return state;
       started = true;
       return {
-        activeNodeId: queueNodeIds[0] ?? state.activeNodeId,
+        ...buildReviewActiveNodeContext(state, queueNodeIds[0] ?? null),
         reviewSession: createStartedReviewSession({
           continueNodeId: state.activeNodeId,
           currentNodeId: queueNodeIds[0] ?? null,
@@ -59,7 +60,7 @@ export function createContinueReviewSessionReadingAction(set: WorkspaceSet): Wor
       if (!queueNodeIds.includes(continueNodeId)) return state;
       continued = true;
       return {
-        activeNodeId: continueNodeId,
+        ...buildReviewActiveNodeContext(state, continueNodeId),
         reviewSession: advanceReviewSession(state.reviewSession, {
           nextNodeId: continueNodeId,
           queueNodeIds,
@@ -80,7 +81,7 @@ export function createResumeReviewSessionAction(set: WorkspaceSet): WorkspaceSta
       if (!currentNodeId) return state;
       resumed = true;
       return {
-        activeNodeId: currentNodeId,
+        ...buildReviewActiveNodeContext(state, currentNodeId),
         reviewSession: createStartedReviewSession({
           continueNodeId: state.reviewSession.continueNodeId ?? state.activeNodeId,
           currentNodeId,
@@ -104,7 +105,7 @@ export function createSetReviewSessionModeAction(set: WorkspaceSet): WorkspaceSt
       const queueNodeIds = buildReviewQueue(state, now, mode);
       const completedCount = resolveReviewSessionProgress(state.reviewSession).reviewCompletedCount;
       return {
-        activeNodeId: queueNodeIds[0] ?? state.activeNodeId,
+        ...buildReviewActiveNodeContext(state, queueNodeIds[0] ?? null),
         reviewSession: queueNodeIds.length
           ? advanceReviewSession(state.reviewSession, {
               nextNodeId: queueNodeIds[0]!,

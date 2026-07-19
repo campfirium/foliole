@@ -3,6 +3,7 @@ import type { ReadingPositionRestoreCommand } from '../../features/editor/model/
 import { VIRTUAL_REMOVED_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { requestPdfSearch } from '../../features/pdf/model/pdfSystemRegistry';
+import type { WorkspaceBrowseRootIntent } from '../../store/workspaceBrowseRoot';
 import { setSelectedRemovedSource } from '../components/removedSourceSelectionStore';
 import type { WorkspaceSearchResult } from '../components/workspaceSearch';
 
@@ -44,7 +45,7 @@ interface SearchStateArgs {
     openSearchPreview: (result: WorkspaceSearchResult) => void;
   };
   nav: {
-    handleSelectNode: (nodeId: string) => void;
+    handleSelectNode: (nodeId: string, focusAnchor?: null, browseRootIntent?: WorkspaceBrowseRootIntent) => void;
   };
   runtime: {
     editorRef?: {
@@ -138,7 +139,7 @@ function openInternalSearchResult(args: SearchStateArgs, result: WorkspaceSearch
     });
   }
   args.virtualView?.restoreBrowseView();
-  args.nav.handleSelectNode(result.id);
+  args.nav.handleSelectNode(result.id, null, 'target-context');
   requestNodeMatchJump({ result, runtime: args.runtime });
   revealActiveNodeMatch({ result, runtime: args.runtime, ws: args.ws });
   if (result.kind === 'pdf' && result.pdfMatch) {
@@ -171,7 +172,7 @@ export function buildControllerSearchState(args: SearchStateArgs): AppSearchStat
       args.trash.closeTrashView();
       if (result.kind === 'external' && result.externalMatch?.importedNodeId) {
         args.virtualView?.restoreBrowseView();
-        args.nav.handleSelectNode(result.externalMatch.importedNodeId);
+        args.nav.handleSelectNode(result.externalMatch.importedNodeId, null, 'target-context');
         args.runtime.setIsSearchPaletteOpen(false);
         return;
       }

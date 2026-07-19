@@ -39,7 +39,7 @@ function createSelectReviewNodeCommand(args: {
     if (!args.nodeId) {
       return false;
     }
-    args.nav.handleSelectNode(args.nodeId);
+    args.nav.handleSelectNode(args.nodeId, null, 'target-context');
     return true;
   };
 }

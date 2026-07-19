@@ -1,5 +1,6 @@
 import { markNodeSelectionApplied } from '../shared/platform/performanceDiagnosticsProbe';
 
+import { resolveWorkspaceBrowseRootForTarget, type WorkspaceBrowseRootIntent } from './workspaceBrowseRoot';
 import { isCanonicalVisibleNodeId } from './workspaceCanonicalSelectors';
 import { pushNavigationHistory, resolveAncestorAnchorLink, type NodeNavigationResult } from './workspaceNavigation';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
@@ -18,7 +19,7 @@ interface WorkspaceNavigationActions {
   goForward: () => NodeNavigationResult | null;
   goToParent: () => NodeNavigationResult | null;
   jumpToAncestorNode: (ancestorNodeId: string) => NodeNavigationResult | null;
-  openNode: (nodeId: string) => NodeNavigationResult | null;
+  openNode: (nodeId: string, browseRootIntent?: WorkspaceBrowseRootIntent) => NodeNavigationResult | null;
 }
 
 function isAvailableNode(state: WorkspaceState, nodeId: string) {
@@ -34,10 +35,18 @@ function buildNavigationNodeState(
   state: WorkspaceState,
   nodeId: string,
   navigation: WorkspaceState['navigation'],
-  nodeViewById: WorkspaceState['nodeViewById'] = state.nodeViewById
+  nodeViewById: WorkspaceState['nodeViewById'] = state.nodeViewById,
+  browseRootIntent: WorkspaceBrowseRootIntent = 'current-context'
 ) {
   return {
     activeNodeId: nodeId,
+    browseRootNodeId: resolveWorkspaceBrowseRootForTarget({
+      browseRootNodeId: state.browseRootNodeId,
+      intent: browseRootIntent,
+      nodesById: state.nodesById,
+      targetNodeId: nodeId,
+      trashedNodeIds: state.trashedNodeIds
+    }),
     navigation,
     nodeViewById,
     reviewSession: reconcileReviewSession(state, nodeId)
@@ -45,7 +54,7 @@ function buildNavigationNodeState(
 }
 
 function createOpenNodeAction(set: WorkspaceSet) {
-  return (nodeId: string) => {
+  return (nodeId: string, browseRootIntent: WorkspaceBrowseRootIntent = 'current-context') => {
     let nextResult: NodeNavigationResult | null = null;
     set((state) => {
       if (!isAvailableNode(state, nodeId)) {
@@ -66,7 +75,8 @@ function createOpenNodeAction(set: WorkspaceSet) {
               forwardStack: []
             }
           : { ...state.navigation, forwardStack: [] },
-        nodeViewById
+        nodeViewById,
+        browseRootIntent
       );
     });
     return nextResult;
@@ -91,7 +101,8 @@ function createGoBackAction(set: WorkspaceSet) {
           backStack: state.navigation.backStack.slice(0, -1),
           forwardStack: [currentNodeId, ...state.navigation.forwardStack]
         },
-        markNodeOpenedViewState(state, targetNodeId)
+        markNodeOpenedViewState(state, targetNodeId),
+        'target-context'
       );
     });
     return nextResult;
@@ -116,7 +127,8 @@ function createGoForwardAction(set: WorkspaceSet) {
           backStack: pushNavigationHistory(state.navigation.backStack, currentNodeId),
           forwardStack: state.navigation.forwardStack.slice(1)
         },
-        markNodeOpenedViewState(state, targetNodeId)
+        markNodeOpenedViewState(state, targetNodeId),
+        'target-context'
       );
     });
     return nextResult;

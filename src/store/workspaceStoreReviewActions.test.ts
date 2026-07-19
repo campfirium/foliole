@@ -53,6 +53,28 @@ it('advances to next review node after show-answer and grade', async () => {
   expectReviewQueueAdvanced(harness.getState());
 });
 
+it('keeps the browse root aligned when review advances across folders', async () => {
+  const due = '2026-03-03T00:00:00.000Z';
+  const qa1 = { ...createQaNode('qa-1', due), parentNodeId: 'folder-a' };
+  const qa2 = { ...createQaNode('qa-2', due), parentNodeId: 'folder-b' };
+  const folderA = { ...qa1, content: '', id: 'folder-a', kind: 'folder' as const, parentNodeId: null, review: null };
+  const folderB = { ...qa2, content: '', id: 'folder-b', kind: 'folder' as const, parentNodeId: null, review: null };
+  const harness = createSetStateHarness(createWorkspaceFixture([folderA, qa1, folderB, qa2]));
+  harness.setState({ browseRootNodeId: 'folder-a' });
+  const actions = createWorkspaceReviewActions(
+    harness.setState,
+    harness.getState,
+    { grade: createSchedulerGradeMock(), preview: previewStub }
+  );
+
+  expect(actions.startReviewSession(due)).toBe(true);
+  expect(harness.getState()).toMatchObject({ activeNodeId: 'qa-1', browseRootNodeId: 'folder-a' });
+  actions.revealReviewAnswer();
+  await expect(actions.gradeReviewCard(3, due)).resolves.toBe(true);
+
+  expect(harness.getState()).toMatchObject({ activeNodeId: 'qa-2', browseRootNodeId: 'folder-b' });
+});
+
 it('ends session when grading the last review node', async () => {
   const due = '2026-03-03T00:00:00.000Z';
   const harness = createSetStateHarness(createWorkspaceFixture([createQaNode('qa-1', due)]));

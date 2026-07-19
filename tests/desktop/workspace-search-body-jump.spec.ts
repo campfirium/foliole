@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import type { Page } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
@@ -5,35 +7,69 @@ import { expect, test } from './harness/fixtures';
 const SOURCE_NODE_ID = 'playwright-search-jump-source';
 const TARGET_NODE_ID = 'playwright-search-jump-target';
 const TARGET_TITLE = 'Playwright Search Jump Target';
+const TARGET_SIBLING_TITLE = 'Playwright Target Folder Sibling';
 const NEEDLE = 'SearchJumpNeedleTarget';
+const SCREENSHOT_PATH = path.resolve('.tmp/artifacts/desktop-acceptance/workspace-context-search-hidden-native.png');
 
-async function seedSearchJumpWorkspace(desktopWindow: Page) {
+function createSearchJumpContent() {
+  const lines = Array.from(
+    { length: 220 },
+    (_, index) => `Line ${index + 1} keeps the search jump target long enough to require scrolling.`
+  );
+  lines.splice(175, 0, `Deep paragraph contains ${NEEDLE} for workspace search jump verification.`);
+  return lines.join('\n');
+}
+
+async function seedSearchFolderNodes(desktopWindow: Page, content: string) {
   await desktopWindow.evaluate(
-    async ({ needle, sourceNodeId, targetNodeId, targetTitle }) => {
+    async ({ content, sourceNodeId, targetNodeId, targetTitle }) => {
       const api = globalThis.window?.__folioleWorkspaceDebug;
       if (!api) {
         throw new Error('missing workspace debug bridge');
       }
-      const lines = Array.from(
-        { length: 220 },
-        (_, index) => `Line ${index + 1} keeps the search jump target long enough to require scrolling.`
-      );
-      lines.splice(175, 0, `Deep paragraph contains ${needle} for workspace search jump verification.`);
-      const content = lines.join('\n');
       await api.seedNodes([
+        {
+          content: '',
+          id: 'playwright-search-source-folder',
+          kind: 'folder',
+          title: 'Playwright Search Source Folder'
+        },
         {
           content: 'Source document starts away from the search hit.',
           id: sourceNodeId,
           kind: 'topic',
+          parentNodeId: 'playwright-search-source-folder',
           title: 'Playwright Search Jump Source'
+        },
+        {
+          content: '',
+          id: 'playwright-search-target-folder',
+          kind: 'folder',
+          title: 'Playwright Search Target Folder'
         },
         {
           content,
           id: targetNodeId,
           kind: 'topic',
+          parentNodeId: 'playwright-search-target-folder',
           title: targetTitle
+        },
+        {
+          content: 'A sibling proves the item pane follows the destination folder.',
+          id: 'playwright-search-target-sibling',
+          kind: 'topic',
+          parentNodeId: 'playwright-search-target-folder',
+          title: 'Playwright Target Folder Sibling'
         }
       ], { persist: true });
+    },
+    { content, sourceNodeId: SOURCE_NODE_ID, targetNodeId: TARGET_NODE_ID, targetTitle: TARGET_TITLE }
+  );
+}
+
+async function persistSearchTargetAndOpenSource(desktopWindow: Page, content: string) {
+  await desktopWindow.evaluate(
+    async ({ content, sourceNodeId, targetNodeId, targetTitle }) => {
       await globalThis.window?.electronAPI?.invoke('update_node_content', {
         anchorLink: null,
         content,
@@ -44,8 +80,8 @@ async function seedSearchJumpWorkspace(desktopWindow: Page) {
         isTitleManual: true,
         kind: 'topic',
         nodeId: targetNodeId,
-        parentNodeId: null,
-        position: 1,
+        parentNodeId: 'playwright-search-target-folder',
+        position: 3,
         priority: null,
         reading: null,
         reveal: null,
@@ -54,10 +90,16 @@ async function seedSearchJumpWorkspace(desktopWindow: Page) {
         updatedAt: '2026-04-08T00:00:10.000Z',
         virtualFilter: null
       });
-      await api.openNode(sourceNodeId);
+      await globalThis.window?.__folioleWorkspaceDebug?.openNode(sourceNodeId);
     },
-    { needle: NEEDLE, sourceNodeId: SOURCE_NODE_ID, targetNodeId: TARGET_NODE_ID, targetTitle: TARGET_TITLE }
+    { content, sourceNodeId: SOURCE_NODE_ID, targetNodeId: TARGET_NODE_ID, targetTitle: TARGET_TITLE }
   );
+}
+
+async function seedSearchJumpWorkspace(desktopWindow: Page) {
+  const content = createSearchJumpContent();
+  await seedSearchFolderNodes(desktopWindow, content);
+  await persistSearchTargetAndOpenSource(desktopWindow, content);
 }
 
 async function waitForWorkspaceSearchHit(desktopWindow: Page) {
@@ -151,6 +193,13 @@ test('clicking a workspace search body hit jumps to the matched text', async ({ 
   expect(finalState.scrollTop).toBeGreaterThan(0);
   expect(finalState.viewportRatio).toBeGreaterThan(0.2);
   expect(finalState.viewportRatio).toBeLessThan(0.8);
+
+  const itemPanel = desktopWindow.getByRole('complementary', {
+    name: /^(Current folder contents|当前文件夹内容)$/
+  });
+  await expect(itemPanel.getByRole('treeitem', { name: TARGET_TITLE, exact: true })).toBeVisible();
+  await expect(itemPanel.getByRole('treeitem', { name: TARGET_SIBLING_TITLE, exact: true })).toBeVisible();
+  await desktopWindow.screenshot({ path: SCREENSHOT_PATH });
 
   await testInfo.attach('workspace-search-body-jump', {
     body: JSON.stringify(finalState, null, 2),

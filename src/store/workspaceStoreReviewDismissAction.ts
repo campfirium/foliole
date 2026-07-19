@@ -6,6 +6,7 @@ import {
   pushWorkspaceUndoEntry
 } from './workspaceActionHistory';
 import { buildReadingReviewDomainPatch } from './workspaceReadingReviewDomain';
+import { buildReviewActiveNodeContext } from './workspaceReviewBrowseRoot';
 import { buildCurrentReviewSessionQueueOutput } from './workspaceReviewLiveQueue';
 import {
   runtimeWorkspaceReviewPersistence,
@@ -97,7 +98,7 @@ function buildDismissReviewPatch(args: {
   return {
     nextNodesForSync: result.nextNodesForSync,
     patch: {
-      activeNodeId: nextNodeId ?? nextReviewSession.continueNodeId ?? args.state.activeNodeId,
+      ...buildReviewActiveNodeContext(args.state, nextNodeId ?? nextReviewSession.continueNodeId ?? null),
       appActionHistory: pushWorkspaceUndoEntry(
         args.state.appActionHistory,
         createTopicDismissHistoryEntry({

@@ -6,6 +6,7 @@ import {
   pushWorkspaceUndoEntry,
   type WorkspaceTopicReadingActionTitle
 } from './workspaceActionHistory';
+import { buildReviewActiveNodeContext } from './workspaceReviewBrowseRoot';
 import { createReviewGradeHistoryEntry } from './workspaceReviewGradeActionHistory';
 import { buildCurrentReviewSessionQueueOutput } from './workspaceReviewLiveQueue';
 import {
@@ -99,7 +100,7 @@ export function applyGradedReviewState(args: {
       reviewedItemDelta
     });
     return {
-      activeNodeId: nextNodeId ?? continueNodeId ?? state.activeNodeId,
+      ...buildReviewActiveNodeContext(state, nextNodeId ?? continueNodeId),
       appActionHistory: pushWorkspaceUndoEntry(
         state.appActionHistory,
         createReviewGradeHistoryEntry({

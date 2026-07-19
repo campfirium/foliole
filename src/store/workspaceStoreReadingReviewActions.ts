@@ -2,6 +2,7 @@ import type { Node } from '../features/nodes/model/nodeTypes';
 import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
 
 import { buildReadingReviewDomainPatch } from './workspaceReadingReviewDomain';
+import { buildReviewActiveNodeContext } from './workspaceReviewBrowseRoot';
 import {
   runtimeWorkspaceReviewPersistence,
   type WorkspaceReviewPersistenceAdapter
@@ -111,7 +112,7 @@ export function createRevisitReviewTopicSoonAction(set: WorkspaceSet, get: Works
         state
       });
       return {
-        activeNodeId: reviewSession.currentNodeId ?? reviewSession.continueNodeId ?? state.activeNodeId,
+        ...buildReviewActiveNodeContext(state, reviewSession.currentNodeId ?? reviewSession.continueNodeId ?? null),
         ...createReadingReviewHistoryPatch({
           afterReading: node.reading,
           afterReviewSession: reviewSession,
@@ -151,7 +152,7 @@ function buildReadOrPostponeReadingReviewPatch(args: {
   return {
     nextNodesForSync: result.nextNodesForSync,
     patch: {
-      activeNodeId: reviewSession.currentNodeId ?? reviewSession.continueNodeId ?? args.state.activeNodeId,
+      ...buildReviewActiveNodeContext(args.state, reviewSession.currentNodeId ?? reviewSession.continueNodeId ?? null),
       ...createReadingReviewHistoryPatch({
         afterReading: result.afterReading,
         afterReviewSession: reviewSession,

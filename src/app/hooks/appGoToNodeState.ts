@@ -1,11 +1,12 @@
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import type { WorkspaceBrowseRootIntent } from '../../store/workspaceBrowseRoot';
 
 import { buildGoToNodeState } from './appControllerHelpers';
 import type { useWorkspaceSelectors } from './appControllerState';
 
 interface GoToNodeStateArgs {
   nav: {
-    handleSelectNode: (nodeId: string) => void;
+    handleSelectNode: (nodeId: string, focusAnchor?: null, browseRootIntent?: WorkspaceBrowseRootIntent) => void;
   };
   runtime: {
     isGoToNodePaletteOpen: boolean;
@@ -49,7 +50,7 @@ export function buildControllerGoToNodeState(args: GoToNodeStateArgs): AppGoToNo
       args.runtime.recordRecentNode(nodeId);
       args.trash.closeTrashView();
       args.virtualView?.restoreBrowseView();
-      args.nav.handleSelectNode(nodeId);
+      args.nav.handleSelectNode(nodeId, null, 'target-context');
       args.runtime.setIsGoToNodePaletteOpen(false);
     }
   );

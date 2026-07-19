@@ -10,6 +10,7 @@ import type { ReviewSessionMode } from '../features/review/model/reviewSessionMo
 import type { ReviewGrade } from '../features/review/model/reviewTypes';
 
 import type { WorkspaceActionHistoryState } from './workspaceActionHistory';
+import type { WorkspaceBrowseRootIntent } from './workspaceBrowseRoot';
 import type { NodeNavigationResult, WorkspaceNavigationState } from './workspaceNavigation';
 
 export interface WorkspaceState {
@@ -35,7 +36,7 @@ export interface WorkspaceState {
   goForward: () => NodeNavigationResult | null;
   goToParent: () => NodeNavigationResult | null;
   jumpToAncestorNode: (ancestorNodeId: string) => NodeNavigationResult | null;
-  openNode: (nodeId: string) => NodeNavigationResult | null;
+  openNode: (nodeId: string, browseRootIntent?: WorkspaceBrowseRootIntent) => NodeNavigationResult | null;
   resetLayout: () => void;
   setNodeViewState: (nodeId: string, viewState: NodeViewState) => void;
   setDocumentMaxWidth: (width: number) => void;

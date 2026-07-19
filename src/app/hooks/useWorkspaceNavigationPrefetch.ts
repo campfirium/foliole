@@ -4,6 +4,7 @@ import type { MutableRefObject } from 'react';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { markNodeSelectionRequested } from '../../shared/platform/performanceDiagnosticsProbe';
+import type { WorkspaceBrowseRootIntent } from '../../store/workspaceBrowseRoot';
 import type { NodeNavigationResult } from '../../store/workspaceNavigation';
 
 import { useBreadcrumbSelectionAction, usePreparedOpenNodeAction } from './usePreparedNodeSelectionActions';
@@ -23,7 +24,7 @@ export interface PreparedNavigationDependencies {
   goToParent: () => NodeNavigationResult | null;
   jumpToAncestorNode: (nodeId: string) => NodeNavigationResult | null;
   nodesById: Record<string, Node>;
-  openNode: (nodeId: string) => NodeNavigationResult | null;
+  openNode: (nodeId: string, browseRootIntent?: WorkspaceBrowseRootIntent) => NodeNavigationResult | null;
   saveActiveNodeView: (nodeIdOverride?: string | null) => void;
   applyNavigationResult: (result: NodeNavigationResult | null) => void;
 }

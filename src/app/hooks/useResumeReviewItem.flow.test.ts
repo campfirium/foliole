@@ -116,7 +116,7 @@ it('resumes the active Flow topic instead of falling back to the queue head', ()
     includeScheduledFallback: false,
     preferredNodeId: 'topic-2'
   });
-  expect(handleSelectNode).toHaveBeenCalledWith('topic-2');
+  expect(handleSelectNode).toHaveBeenCalledWith('topic-2', null, 'target-context');
 });
 
 it('lets Demo resume the active scheduled Flow topic', () => {
@@ -137,5 +137,5 @@ it('lets Demo resume the active scheduled Flow topic', () => {
     includeScheduledFallback: true,
     preferredNodeId: 'topic-future'
   });
-  expect(handleSelectNode).toHaveBeenCalledWith('topic-future');
+  expect(handleSelectNode).toHaveBeenCalledWith('topic-future', null, 'target-context');
 });

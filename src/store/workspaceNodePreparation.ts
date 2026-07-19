@@ -1,5 +1,9 @@
 import { markNodeSelectionApplied } from '../shared/platform/performanceDiagnosticsProbe';
 
+import {
+  resolveWorkspaceBrowseRootForTarget,
+  type WorkspaceBrowseRootIntent
+} from './workspaceBrowseRoot';
 import { isCanonicalTrashedNodeId, isCanonicalVisibleNodeId } from './workspaceCanonicalSelectors';
 import { pushNavigationHistory } from './workspaceNavigation';
 import { writeCachedWorkspaceNodeDocument } from './workspaceNodeDocumentCache';
@@ -12,6 +16,7 @@ import type { WorkspaceState } from './workspaceStore';
 import { useWorkspaceStore } from './workspaceStore';
 
 interface EnsureWorkspaceNodeDocumentReadyOptions {
+  browseRootIntent?: WorkspaceBrowseRootIntent;
   forceLoad?: boolean;
   includeTrashed?: boolean;
   keepWarm?: boolean;
@@ -74,12 +79,20 @@ function buildPreparedOpenState(
           ...state.nodesById,
           [nodeId]: mergedTargetNode
         };
+  const nextBrowseRootNodeId = resolveWorkspaceBrowseRootForTarget({
+    browseRootNodeId: state.browseRootNodeId,
+    intent: options.browseRootIntent ?? 'target-context',
+    nodesById: nextNodesById,
+    targetNodeId: nodeId,
+    trashedNodeIds: state.trashedNodeIds
+  });
 
   if (state.activeNodeId === nodeId) {
-    return nextNodesById === state.nodesById
+    return nextNodesById === state.nodesById && nextBrowseRootNodeId === state.browseRootNodeId
       ? state
       : {
           ...state,
+          browseRootNodeId: nextBrowseRootNodeId,
           nodesById: nextNodesById
         };
   }
@@ -89,6 +102,7 @@ function buildPreparedOpenState(
   return {
     ...state,
     activeNodeId: nodeId,
+    browseRootNodeId: nextBrowseRootNodeId,
     navigation: state.activeNodeId
       ? {
           backStack: pushNavigationHistory(state.navigation.backStack, state.activeNodeId),

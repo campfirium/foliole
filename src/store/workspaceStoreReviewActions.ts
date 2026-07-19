@@ -9,6 +9,7 @@ import {
 
 import { resolveReviewQueueReadingAvailableAt } from './reviewQueuePlannerReadingPaths';
 import { isReviewProfileDue } from './reviewQueuePlannerTime';
+import { buildReviewActiveNodeContext } from './workspaceReviewBrowseRoot';
 import { buildCurrentReviewSessionQueueOutput } from './workspaceReviewLiveQueue';
 import {
   runtimeWorkspaceReviewPersistence,
@@ -76,7 +77,7 @@ function skipStaleReviewCard(args: {
   const nextQueue = buildCurrentReviewSessionQueueOutput(args.snapshot, args.now, { releaseCurrentPin: true });
   const nextNodeId = nextQueue.currentNodeId;
   args.set({
-    activeNodeId: nextNodeId ?? args.snapshot.activeNodeId,
+    ...buildReviewActiveNodeContext(args.snapshot, nextNodeId),
     reviewSession: nextNodeId
       ? advanceReviewSession(args.snapshot.reviewSession, { handledAt: args.now, nextNodeId, queueNodeIds: nextQueue.taskNodeIds })
       : completeReviewSession(args.snapshot.reviewSession, { completedAt: args.now, continueNodeId: nextQueue.extensionNodeIds[0] ?? null })

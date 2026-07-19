@@ -7,13 +7,14 @@ import {
   markNodeDocumentMerged
 } from '../../shared/platform/performanceDiagnosticsProbe';
 import { hasWorkspaceRuntimeRepository } from '../../shared/platform/workspaceRuntimeRepository';
+import type { WorkspaceBrowseRootIntent } from '../../store/workspaceBrowseRoot';
 import { resolveAncestorAnchorLink, type NodeNavigationResult } from '../../store/workspaceNavigation';
 import { ensureWorkspaceNodeDocumentReady } from '../../store/workspaceNodePreparation';
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 export function usePreparedOpenNodeAction(
-  action: (nodeId: string) => NodeNavigationResult | null,
+  action: (nodeId: string, browseRootIntent?: WorkspaceBrowseRootIntent) => NodeNavigationResult | null,
   flushActiveEditorTransaction: (sourceNodeId?: string | null) => boolean,
   flushPendingEditorDraft: () => void,
   flushPendingEditorDraftImmediately: () => Promise<boolean>,
@@ -24,13 +25,17 @@ export function usePreparedOpenNodeAction(
   const requestTokenRef = useRef(0);
 
   return useCallback(
-    async (nodeId: string, focusAnchor: NodeNavigationResult['focusAnchor'] = null) => {
+    async (
+      nodeId: string,
+      focusAnchor: NodeNavigationResult['focusAnchor'] = null,
+      browseRootIntent: WorkspaceBrowseRootIntent = 'current-context'
+    ) => {
       markRequested(nodeId);
       if (!flushActiveEditorTransaction(useWorkspaceStore.getState().activeNodeId)) {
         flushPendingEditorDraft();
       }
       prepareForNavigation();
-      const result = action(nodeId);
+      const result = action(nodeId, browseRootIntent);
       finalize(result ? { ...result, focusAnchor } : result);
       void flushPendingEditorDraftImmediately();
 
@@ -68,7 +73,7 @@ export function useBreadcrumbSelectionAction(
   activeNodeId: string | null,
   nodesById: Record<string, Node>,
   jumpToAncestorNode: (nodeId: string) => NodeNavigationResult | null,
-  openNode: (nodeId: string) => NodeNavigationResult | null,
+  openNode: (nodeId: string, browseRootIntent?: WorkspaceBrowseRootIntent) => NodeNavigationResult | null,
   flushActiveEditorTransaction: (sourceNodeId?: string | null) => boolean,
   flushPendingEditorDraft: () => void,
   flushPendingEditorDraftImmediately: () => Promise<boolean>,
@@ -76,7 +81,11 @@ export function useBreadcrumbSelectionAction(
   finalizeNavigation: (result: NodeNavigationResult | null) => void,
   markSelectionRequested: (nodeId: string) => void,
   ensureNodeReady: (nodeId: string) => Promise<void>,
-  openPreparedNode: (nodeId: string, focusAnchor?: NodeNavigationResult['focusAnchor']) => Promise<void>
+  openPreparedNode: (
+    nodeId: string,
+    focusAnchor?: NodeNavigationResult['focusAnchor'],
+    browseRootIntent?: WorkspaceBrowseRootIntent
+  ) => Promise<void>
 ) {
   return useCallback(
     async (nodeId: string) => {

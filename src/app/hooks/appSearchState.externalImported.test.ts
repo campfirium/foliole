@@ -54,7 +54,7 @@ it('opens imported external search results as internal Topics', () => {
     updatedAt: '2026-04-21T00:00:00.000Z'
   });
 
-  expect(handleSelectNode).toHaveBeenCalledWith('node-imported');
+  expect(handleSelectNode).toHaveBeenCalledWith('node-imported', null, 'target-context');
   expect(openExternalSelection).not.toHaveBeenCalled();
   expect(openSearchPreview).not.toHaveBeenCalled();
   expect(setIsSearchPaletteOpen).toHaveBeenCalledWith(false);

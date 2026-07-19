@@ -189,7 +189,7 @@ describe('useWorkspaceNavigation text locator basics', () => {
       rerender({ activeNodeContent: 'Alpha Beta Gamma', activeNodeId: 'node-1' });
     });
 
-    expect(openNode).toHaveBeenCalledWith('node-1');
+    expect(openNode).toHaveBeenCalledWith('node-1', 'current-context');
     expect(beginAnchorNavigationRestore).toHaveBeenLastCalledWith('node-1', { from: 6, to: 6 });
     expect(requestPdfAnchorJump).not.toHaveBeenCalled();
   });

@@ -3,6 +3,7 @@ import type { MutableRefObject } from 'react';
 import type { EditorAdapter, EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import { getTextAnchorLocators, isPdfAnchorLocator, type Node, type NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { definedProps } from '../../shared/lib/definedProps';
+import type { WorkspaceBrowseRootIntent } from '../../store/workspaceBrowseRoot';
 import type { NodeNavigationResult } from '../../store/workspaceNavigation';
 import type { NodeViewState } from '../../store/workspaceStore';
 
@@ -29,7 +30,7 @@ interface WorkspaceNavigationDependencies {
   jumpToAncestorNode: (nodeId: string) => NodeNavigationResult | null;
   nodesById: Record<string, Node>;
   nodeViewById?: Record<string, NodeViewState | undefined>;
-  openNode: (nodeId: string) => NodeNavigationResult | null;
+  openNode: (nodeId: string, browseRootIntent?: WorkspaceBrowseRootIntent) => NodeNavigationResult | null;
   saveActiveNodeView: (nodeIdOverride?: string | null) => void;
 }
 
@@ -41,7 +42,11 @@ interface WorkspaceNavigationHandlers {
   handleGoForward: () => void;
   handleGoParent: () => void;
   handleSelectBreadcrumbNode: (nodeId: string) => void;
-  handleSelectNode: (nodeId: string, focusAnchor?: NodeAnchorLink | null) => void;
+  handleSelectNode: (
+    nodeId: string,
+    focusAnchor?: NodeAnchorLink | null,
+    browseRootIntent?: WorkspaceBrowseRootIntent
+  ) => void;
   shouldSuppressSelectionRestore: () => boolean;
 }
 

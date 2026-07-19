@@ -61,6 +61,6 @@ export function useResumeReviewItem(args: {
     args.controller.trash.closeTrashView();
     args.controller.externalView.closeExternalView();
     args.controller.virtualView.closeVirtualView();
-    args.controller.nav.handleSelectNode(nodeId);
+    args.controller.nav.handleSelectNode(nodeId, null, 'target-context');
   }, [args.controller, args.nowIso, args.reviewSettings.isReviewSchedulerSettingsReady, args.reviewSettings.reviewSchedulerSettings.pushQueue, args.ws.activeNodeId, args.ws.nodeOrder, args.ws.nodesById, args.ws.reviewSession, args.ws.reviewSessionMode, args.ws.trashedNodeIds, demoRuntime.isDemo]);
 }
