@@ -84,6 +84,7 @@ export function SettingsSection({
         id={isDisclosure ? contentId : undefined}
         className={cn(
           'overflow-hidden',
+          isDisclosure && 'pl-7',
           '[&>[data-settings-row]+[data-settings-row]]:before:block'
         )}
       >

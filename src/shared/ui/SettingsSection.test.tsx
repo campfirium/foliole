@@ -73,6 +73,7 @@ it('exposes an independent disclosure without unmounting its content', () => {
   expect(toggle).toHaveAttribute('aria-expanded', 'false');
   expect(toggle).toHaveClass('w-full');
   expect(screen.getByText('Section copy.').closest('button')).toBe(toggle);
+  expect(screen.getByLabelText('Account ID').parentElement).toHaveClass('pl-7');
   expect(screen.getByLabelText('Account ID')).not.toBeVisible();
   fireEvent.click(screen.getByText('Section copy.'));
   expect(toggle).toHaveAttribute('aria-expanded', 'true');
