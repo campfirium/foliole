@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /* global console, fetch, process */
 
-import { readFile, writeFile } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
+import { readFile, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
@@ -35,8 +36,42 @@ export async function updateCodexHelperRelease(options = {}) {
   if (result.status === 'ahead') throw new Error('Pinned Codex version is newer than the latest official stable release');
   if (result.status === 'current') return result;
   const next = { assetName: result.latest.assetName, sha256: result.latest.sha256, version: result.latest.version };
-  await (options.writeFileImpl ?? writeFile)(options.lockPath ?? LOCK_PATH, `${JSON.stringify(next, null, 2)}\n`, 'utf8');
+  await writePinnedReleaseAtomically(next, options);
   return { ...result, pinned: next, status: 'updated' };
+}
+
+export async function rollForwardCodexHelperRelease(releaseSnapshot, options = {}) {
+  const latest = await fetchLatestStableCodexRelease(options.fetchImpl);
+  const versionStatus = compareVersions(releaseSnapshot.version, latest.version);
+  if (versionStatus === 'ahead') return { latest, status: 'ahead' };
+  if (versionStatus === 'current') {
+    const matches = releasesEqual(releaseSnapshot, latest);
+    return { latest, status: matches ? 'current' : 'mismatch' };
+  }
+  await options.prepareRelease(latest);
+  const current = await loadPinnedCodexHelperRelease(options.lockPath);
+  if (!releasesEqual(current, releaseSnapshot)) return { latest, status: 'concurrent' };
+  await writePinnedReleaseAtomically(latest, options);
+  return { latest, status: 'updated' };
+}
+
+export async function bestEffortRollForwardCodexHelperRelease(releaseSnapshot, options = {}) {
+  try {
+    const result = await rollForwardCodexHelperRelease(releaseSnapshot, options);
+    reportRollForwardResult(releaseSnapshot, result, options.logger ?? console);
+    return result;
+  } catch (error) {
+    (options.logger ?? console).warn(
+      `[codex-helper] next-build preparation skipped: ${error instanceof Error ? error.message : error}`
+    );
+    return { status: 'failed' };
+  }
+}
+
+export async function runWithCodexHelperRollForward(releaseSnapshot, packageWork, options = {}) {
+  const result = await packageWork();
+  await bestEffortRollForwardCodexHelperRelease(releaseSnapshot, options);
+  return result;
 }
 
 export async function assertPinnedCodexHelperIsCurrent(options = {}) {
@@ -78,6 +113,37 @@ function compareVersions(pinned, latest) {
     if (left[index] > right[index]) return 'ahead';
   }
   return 'current';
+}
+
+function releasesEqual(left, right) {
+  return left.assetName === right.assetName && left.sha256 === right.sha256 && left.version === right.version;
+}
+
+async function writePinnedReleaseAtomically(release, options) {
+  const lockPath = options.lockPath ?? LOCK_PATH;
+  if (options.writeFileImpl) {
+    await options.writeFileImpl(lockPath, `${JSON.stringify(release, null, 2)}\n`, 'utf8');
+    return;
+  }
+  const temporaryPath = `${lockPath}.${process.pid}.${randomUUID()}.tmp`;
+  try {
+    await writeFile(temporaryPath, `${JSON.stringify(release, null, 2)}\n`, 'utf8');
+    await (options.renameImpl ?? rename)(temporaryPath, lockPath);
+  } finally {
+    await rm(temporaryPath, { force: true });
+  }
+}
+
+function reportRollForwardResult(snapshot, result, logger) {
+  if (result.status === 'updated') {
+    logger.log(`[codex-helper] build=${snapshot.version} prepared=${result.latest.version} for-next-build`);
+  } else if (result.status === 'mismatch') {
+    logger.warn(`[codex-helper] same-version digest mismatch for ${snapshot.version}; lock unchanged`);
+  } else if (result.status === 'ahead') {
+    logger.warn(`[codex-helper] pinned=${snapshot.version} is ahead of latest=${result.latest.version}; lock unchanged`);
+  } else if (result.status === 'concurrent') {
+    logger.log('[codex-helper] lock changed during packaging; concurrent update preserved');
+  }
 }
 
 async function main() {

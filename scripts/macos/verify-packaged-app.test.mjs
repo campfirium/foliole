@@ -5,6 +5,8 @@ import { verifyPackagedMacosApp } from './verify-packaged-app.mjs';
 
 const APP_ENTITLEMENTS = [
   'com.apple.security.app-sandbox',
+  'com.apple.security.application-groups',
+  'V589TQH334.group.com.campfirium.foliole.agent-control',
   'com.apple.security.files.bookmarks.app-scope',
   'com.apple.security.files.user-selected.read-write'
 ].join('\n');
@@ -13,19 +15,56 @@ const HELPER_ENTITLEMENTS = [
   'com.apple.security.inherit'
 ].join('\n');
 const CODEX_ENTITLEMENTS = `${HELPER_ENTITLEMENTS}\ncom.apple.security.cs.allow-jit`;
+const CLI_ENTITLEMENTS = `${APP_ENTITLEMENTS}\ncom.apple.security.application-groups\nV589TQH334.group.com.campfirium.foliole.agent-control`;
+const TEAM_ID = 'V589TQH334';
+
+function profileFor(path, mode = 'development') {
+  const bundleId = path.includes('Foliole CLI.app') ? 'com.campfirium.foliole.cli' : 'com.campfirium.foliole';
+  const development = mode === 'development'
+    ? '<key>get-task-allow</key><true/><key>ProvisionedDevices</key><array><string>device</string></array>'
+    : '';
+  return `<?xml version="1.0"?><plist><dict>
+    <key>TeamIdentifier</key><array><string>${TEAM_ID}</string></array>
+    <key>Entitlements</key><dict>
+      <key>com.apple.application-identifier</key><string>${TEAM_ID}.${bundleId}</string>
+      <key>com.apple.developer.team-identifier</key><string>${TEAM_ID}</string>
+      <key>com.apple.security.application-groups</key><array>
+        <string>group.com.campfirium.foliole.agent-control</string>
+      </array>${development}
+    </dict>
+  </dict></plist>`;
+}
 
 function resolveEntitlements(subject) {
   if (subject.endsWith('/Contents/MacOS/codex')) return CODEX_ENTITLEMENTS;
   if (subject.endsWith('Foliole Helper.app')) return HELPER_ENTITLEMENTS;
+  if (subject.endsWith('Foliole CLI.app')) return CLI_ENTITLEMENTS;
   return APP_ENTITLEMENTS;
+}
+
+function createRun(options = {}) {
+  const mode = options.mode ?? 'development';
+  return vi.fn((command, args) => {
+    if (command === 'security') return { status: 0, stdout: profileFor(args.at(-1), mode) };
+    if (command === 'codesign' && args.includes('--entitlements')) {
+      return { status: 0, stderr: resolveEntitlements(args.at(-1)) };
+    }
+    if (command === 'codesign' && args.includes('-dv')) {
+      const bundleId = args.at(-1).endsWith('Foliole CLI.app')
+        ? 'com.campfirium.foliole.cli'
+        : 'com.campfirium.foliole';
+      const authority = options.signatureMode === 'distribution'
+        ? '3rd Party Mac Developer Application: CAMPFIRIUM LTD (V589TQH334)'
+        : 'Apple Development: Chenyao Peng (VN9YGGWJSV)';
+      return { status: 0, stderr: `Identifier=${bundleId}\nTeamIdentifier=${TEAM_ID}\nAuthority=${authority}` };
+    }
+    return { status: 0, stdout: '' };
+  });
 }
 
 it('verifies signatures, final sandbox entitlements, profile, and notarization ticket', async () => {
   const checkAccess = vi.fn(async () => undefined);
-  const run = vi.fn((command, args) => ({
-    status: 0,
-    stderr: args.includes('--entitlements') ? resolveEntitlements(args.at(-1)) : ''
-  }));
+  const run = createRun();
 
   await verifyPackagedMacosApp({
     access: checkAccess,
@@ -35,7 +74,9 @@ it('verifies signatures, final sandbox entitlements, profile, and notarization t
   });
 
   expect(checkAccess).toHaveBeenCalledWith('/artifacts/Foliole.app/Contents/embedded.provisionprofile');
-  expect(checkAccess).toHaveBeenCalledWith('/artifacts/Foliole.app/Contents/bin/foliole', constants.X_OK);
+  expect(checkAccess).toHaveBeenCalledWith(
+    '/artifacts/Foliole.app/Contents/Helpers/Foliole CLI.app/Contents/MacOS/foliole', constants.X_OK
+  );
   expect(run).toHaveBeenCalledWith('codesign', [
     '--verify', '--deep', '--strict', '/artifacts/Foliole.app'
   ], { encoding: 'utf8' });
@@ -49,7 +90,7 @@ it('verifies signatures, final sandbox entitlements, profile, and notarization t
 
 it('rejects a package whose public launcher is not executable', async () => {
   const checkAccess = vi.fn(async (file, mode) => {
-    if (file.endsWith('/Contents/bin/foliole') && mode === constants.X_OK) {
+    if (file.endsWith('/Foliole CLI.app/Contents/MacOS/foliole') && mode === constants.X_OK) {
       throw new Error('permission denied');
     }
   });
@@ -57,29 +98,38 @@ it('rejects a package whose public launcher is not executable', async () => {
   await expect(verifyPackagedMacosApp({
     access: checkAccess,
     appPath: '/artifacts/Foliole.app',
-    run: vi.fn()
+    run: createRun()
   })).rejects.toThrow('permission denied');
 });
 
 it('rejects a package whose final app signature lost App Sandbox', async () => {
-  const run = (command, args) => ({
-    status: 0,
-    stderr: args.includes('--entitlements') ? HELPER_ENTITLEMENTS : ''
+  const run = createRun();
+  run.mockImplementation((command, args) => {
+    if (command === 'security') return { status: 0, stdout: profileFor(args.at(-1)) };
+    if (command === 'codesign' && args.includes('-dv')) {
+      const bundleId = args.at(-1).endsWith('Foliole CLI.app')
+        ? 'com.campfirium.foliole.cli'
+        : 'com.campfirium.foliole';
+      return { status: 0, stderr: `Identifier=${bundleId}\nTeamIdentifier=${TEAM_ID}\nAuthority=Apple Development:` };
+    }
+    return { status: 0, stderr: args.includes('--entitlements') ? HELPER_ENTITLEMENTS : '' };
   });
 
   await expect(verifyPackagedMacosApp({
     access: async () => undefined,
     appPath: '/artifacts/Foliole.app',
     run
-  })).rejects.toThrow('packaged app is missing com.apple.security.files.bookmarks.app-scope');
+  })).rejects.toThrow('packaged app is missing com.apple.security.application-groups');
 });
 
 it('rejects a package whose embedded Codex signature cannot execute JIT code', async () => {
-  const run = (command, args) => ({
-    status: 0,
-    stderr: args.includes('--entitlements')
-      ? (args.at(-1).endsWith('/Contents/MacOS/codex') ? HELPER_ENTITLEMENTS : resolveEntitlements(args.at(-1)))
-      : ''
+  const run = createRun();
+  const baseImplementation = run.getMockImplementation();
+  run.mockImplementation((command, args, runOptions) => {
+    if (command === 'codesign' && args.includes('--entitlements') && args.at(-1).endsWith('/Contents/MacOS/codex')) {
+      return { status: 0, stderr: HELPER_ENTITLEMENTS };
+    }
+    return baseImplementation(command, args, runOptions);
   });
 
   await expect(verifyPackagedMacosApp({
@@ -87,4 +137,22 @@ it('rejects a package whose embedded Codex signature cannot execute JIT code', a
     appPath: '/artifacts/Foliole.app',
     run
   })).rejects.toThrow('packaged Codex is missing com.apple.security.cs.allow-jit');
+});
+
+it('rejects a development profile in a distribution package', async () => {
+  await expect(verifyPackagedMacosApp({
+    access: async () => undefined,
+    appPath: '/artifacts/Foliole.app',
+    mode: 'distribution',
+    run: createRun({ mode: 'development', signatureMode: 'distribution' })
+  })).rejects.toThrow('app profile is a development profile');
+});
+
+it('rejects a development signing identity in a distribution package', async () => {
+  await expect(verifyPackagedMacosApp({
+    access: async () => undefined,
+    appPath: '/artifacts/Foliole.app',
+    mode: 'distribution',
+    run: createRun({ mode: 'distribution', signatureMode: 'development' })
+  })).rejects.toThrow('packaged app signature is missing Authority=3rd Party Mac Developer Application');
 });

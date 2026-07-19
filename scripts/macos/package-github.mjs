@@ -6,7 +6,9 @@ import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { assertGithubDistributionContract } from './distribution-contract.mjs';
-import { assertPinnedCodexHelperIsCurrent } from './codex-helper-release.mjs';
+import {
+  loadPinnedCodexHelperRelease, runWithCodexHelperRollForward
+} from './codex-helper-release.mjs';
 import {
   assertExternalPackageOutput, publishArtifactBatch, withTemporaryPackageOutput
 } from './package-artifact-lifecycle.mjs';
@@ -112,14 +114,15 @@ async function main() {
   if (notarize && !hasNotarizationCredentials(process.env)) {
     throw new Error('Notarization credentials are unavailable; configure an approved notarytool authentication method');
   }
-  await assertPinnedCodexHelperIsCurrent();
+  const codexRelease = await loadPinnedCodexHelperRelease();
   const provisioningProfile = resolveDeveloperIdProvisioningProfile();
-  const codexPath = await prepareCodexHelper();
+  const codexPath = await prepareCodexHelper({ release: codexRelease });
+  console.log(`[codex-helper] build=${codexRelease.version}`);
   const electronDist = await prepareMasElectronRuntime();
   const base = JSON.parse(await readFile(path.join(ROOT, 'electron/builder.json'), 'utf8'));
   const packageMetadata = JSON.parse(await readFile(path.join(ROOT, 'package.json'), 'utf8'));
   const artifactNames = createGithubArtifactNames(base.productName, packageMetadata.version);
-  const checksum = await withTemporaryPackageOutput(async (outputDirectory) => {
+  const checksum = await runWithCodexHelperRollForward(codexRelease, () => withTemporaryPackageOutput(async (outputDirectory) => {
     const config = createGithubBuilderConfig(base, {
       codexPath, electronDist, notarize, outputDirectory, provisioningProfile
     });
@@ -130,12 +133,13 @@ async function main() {
     run('electron compile', 'npm', ['run', 'electron:compile']);
     run('electron-builder', 'npm', ['exec', '--', 'electron-builder', '--config', configPath, '--mac', '--arm64', '--publish', 'never']);
     await verifyPackagedMacosApp({
-      appPath: path.join(outputDirectory, 'mac-arm64/Foliole.app'), notarized: notarize
+      appPath: path.join(outputDirectory, 'mac-arm64/Foliole.app'),
+      notarized: notarize
     });
     const result = await writeDmgChecksum(outputDirectory, artifactNames[0]);
     await publishArtifactBatch({ names: artifactNames, sourceDirectory: outputDirectory, targetDirectory: PUBLISHED_DIRECTORY });
     return result;
-  });
+  }), { prepareRelease: (release) => prepareCodexHelper({ release }) });
   console.log(`DMG_READY ${checksum.name} ${checksum.digest}`);
   sendMacosNotification(
     'Foliole macOS release',

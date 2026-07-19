@@ -15,8 +15,12 @@ export interface NativeBookmarkFailure {
 }
 
 export type NativeBookmarkResult = NativeBookmarkSuccess | NativeBookmarkFailure;
+export type NativeAppGroupContainerResult =
+  | { ok: true; path: string }
+  | NativeBookmarkFailure;
 
 export interface MacosSecurityScopedBookmarkAdapter {
+  appGroupContainerPath: (identifier: string) => NativeAppGroupContainerResult;
   createAndStart: (filePath: string) => NativeBookmarkResult;
   resolveAndStart: (bookmark: string) => NativeBookmarkResult;
   stop: (handle: number) => boolean;

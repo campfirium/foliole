@@ -140,14 +140,32 @@ static napi_value StopHandle(napi_env env, napi_callback_info info) {
   return BoolValue(env, true);
 }
 
+static napi_value AppGroupContainerPath(napi_env env, napi_callback_info info) {
+  @autoreleasepool {
+    NSString *identifier;
+    if (!ReadSingleStringArgument(env, info, &identifier)) {
+      return Failure(env, @"invalid_argument", @"An App Group identifier is required.");
+    }
+    NSURL *url = [NSFileManager.defaultManager
+      containerURLForSecurityApplicationGroupIdentifier:identifier];
+    if (!url) return Failure(env, @"container_unavailable", @"The App Group container is unavailable.");
+    napi_value result;
+    napi_create_object(env, &result);
+    Set(env, result, "ok", BoolValue(env, true));
+    Set(env, result, "path", String(env, url.path));
+    return result;
+  }
+}
+
 static napi_value Initialize(napi_env env, napi_value exports) {
   activeUrls = [NSMutableDictionary dictionary];
   napi_property_descriptor properties[] = {
     { "createAndStart", nullptr, CreateAndStart, nullptr, nullptr, nullptr, napi_default, nullptr },
+    { "appGroupContainerPath", nullptr, AppGroupContainerPath, nullptr, nullptr, nullptr, napi_default, nullptr },
     { "resolveAndStart", nullptr, ResolveAndStart, nullptr, nullptr, nullptr, napi_default, nullptr },
     { "stop", nullptr, StopHandle, nullptr, nullptr, nullptr, napi_default, nullptr }
   };
-  napi_define_properties(env, exports, 3, properties);
+  napi_define_properties(env, exports, 4, properties);
   return exports;
 }
 

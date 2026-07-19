@@ -11,7 +11,6 @@ import {
   createMasArtifactName,
   createMasBuilderConfig,
   installMasDevelopmentApp,
-  prepareMacosPublicLauncher,
   readProvisioningProfileMetadata,
   resolveInstallMode
 } from './package-mas.mjs';
@@ -22,14 +21,6 @@ it('cleans stale Electron output before compiling a MAS package', async () => {
   await cleanMasElectronOutput('/repo', remove);
 
   expect(remove).toHaveBeenCalledWith('/repo/dist/electron', { force: true, recursive: true });
-});
-
-it('makes the macOS public launcher executable before packaging', async () => {
-  const setMode = vi.fn(async () => undefined);
-
-  await prepareMacosPublicLauncher('/repo', setMode);
-
-  expect(setMode).toHaveBeenCalledWith('/repo/build/cli/foliole', 0o755);
 });
 
 it('routes the Internal update script through the MAS development package', () => {
@@ -66,6 +57,8 @@ it('allows the sandboxed MAS app to host the loopback Agent Control server', () 
 
   expect(entitlements).toContain('<key>com.apple.security.network.client</key>');
   expect(entitlements).toContain('<key>com.apple.security.network.server</key>');
+  expect(entitlements).toContain('<key>com.apple.security.application-groups</key>');
+  expect(entitlements).toContain('V589TQH334.group.com.campfirium.foliole.agent-control');
 });
 
 it('waits for the physical trigger modifiers to be released before posting Command-C', () => {
@@ -98,6 +91,7 @@ it('creates an arm64 MAS config with the official bundle id and signed bundled C
   }, {
     codexPath,
     electronDist: '.tmp/electron-mas-arm64',
+    folioleCliPath: '.tmp/macos/foliole-cli/Foliole CLI.app',
     mode: 'development',
     globalCaptureHelperPath: '.tmp/macos/global-capture-helper/Foliole Global Capture',
     outputDirectory: '/private/tmp/foliole-mas-development-output',
@@ -115,11 +109,16 @@ it('creates an arm64 MAS config with the official bundle id and signed bundled C
     entitlementsInherit: 'build/entitlements.mas.inherit.plist',
     hardenedRuntime: true,
     provisioningProfile: '/profiles/development.provisionprofile',
+    signIgnore: ['Contents/Helpers/Foliole CLI\\.app(?:/|$)'],
     sign: 'scripts/macos/sign-mas-app.mjs'
   });
   expect(config.extraFiles).toContainEqual({
     from: codexPath,
     to: 'MacOS/codex'
+  });
+  expect(config.extraFiles).toContainEqual({
+    from: '.tmp/macos/foliole-cli/Foliole CLI.app',
+    to: 'Helpers/Foliole CLI.app'
   });
   expect(config.extraFiles).toContainEqual({
     from: '.tmp/macos/global-capture-helper/Foliole Global Capture',
@@ -133,6 +132,7 @@ it('preserves both macOS status Template images in the dynamic MAS config', () =
   const config = createMasBuilderConfig(base, {
     codexPath: '.tmp/codex',
     electronDist: '.tmp/electron-mas-arm64',
+    folioleCliPath: '.tmp/Foliole CLI.app',
     mode: 'development',
     globalCaptureHelperPath: '.tmp/Foliole Global Capture',
     outputDirectory: '/private/tmp/foliole-mas-development-output',
@@ -149,6 +149,7 @@ it('switches only the target and profile for the distribution package', () => {
   const config = createMasBuilderConfig({ extraResources: [], mac: {} }, {
     codexPath: '.tmp/codex',
     electronDist: '.tmp/electron-mas-arm64',
+    folioleCliPath: '.tmp/Foliole CLI.app',
     mode: 'distribution',
     globalCaptureHelperPath: '.tmp/Foliole Global Capture',
     outputDirectory: '/private/tmp/foliole-mas-distribution-output',

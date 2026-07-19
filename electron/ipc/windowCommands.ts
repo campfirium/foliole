@@ -6,6 +6,7 @@ import { resolveFolioleAppVersion } from '../appVersion.js';
 import { isAppQuittingForBackgroundPresence } from '../backgroundPresence.js';
 import { requestDevShellRestart } from '../devShellRestartRequest.js';
 import { copyDiagnosticReport } from '../diagnostics/diagnosticBundle.js';
+import { runFolioleCliInstallAction } from '../folioleCliInstallation.js';
 import { getGlobalClipShortcutStatus } from '../globalClipShortcut.js';
 import { clearLinkPanelBrowsingData } from '../linkPanelBrowsingData.js';
 import {
@@ -145,6 +146,16 @@ async function loadDesktopHostCapabilities() {
   return getDesktopHostCapabilities(process.platform, app.isPackaged, getGlobalClipShortcutStatus(), permission);
 }
 
+function handleCliInstallCommand(request: InvokeRequest, context?: InvokeContext) {
+  if (request.command !== NATIVE_COMMANDS.folioleCliInstall) return undefined;
+  const args = (request.args ?? {}) as Record<string, unknown>;
+  const action = asString(args.action, 'action');
+  if (!['install', 'remove', 'repair', 'status'].includes(action)) throw new Error('invalid CLI install action');
+  return runFolioleCliInstallAction(
+    action as 'install' | 'remove' | 'repair' | 'status', resolveTargetWindow(context)
+  );
+}
+
 function handleUtilityCommand(request: InvokeRequest) {
   const args = (request.args ?? {}) as Record<string, unknown>;
 
@@ -210,6 +221,8 @@ export async function handleWindowAndUtilityCommand(request: InvokeRequest, cont
   if (displayScaleResult !== undefined) return displayScaleResult;
   const setupResult = handleInitialLibrarySetupCommand(request, resolveTargetWindow(context));
   if (setupResult !== undefined) return setupResult;
+  const cliInstallResult = handleCliInstallCommand(request, context);
+  if (cliInstallResult !== undefined) return cliInstallResult;
   const utilityResult = handleUtilityCommand(request);
   if (utilityResult !== undefined) {
     return utilityResult;

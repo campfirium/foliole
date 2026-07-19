@@ -7,7 +7,10 @@ import { afterEach, expect, it, vi } from 'vitest';
 
 import {
   assertPinnedCodexHelperIsCurrent,
+  bestEffortRollForwardCodexHelperRelease,
   checkCodexHelperRelease,
+  rollForwardCodexHelperRelease,
+  runWithCodexHelperRollForward,
   updateCodexHelperRelease
 } from './codex-helper-release.mjs';
 
@@ -78,6 +81,90 @@ it('rejects a stable asset without an official SHA-256 digest', async () => {
   }));
 
   await expect(checkCodexHelperRelease({ fetchImpl, lockPath })).rejects.toThrow('trusted SHA-256');
+});
+
+it('prepares a newer release before atomically advancing the lock for the next build', async () => {
+  const lockPath = await createLock('0.144.5', 'a'.repeat(64));
+  const snapshot = JSON.parse(await readFile(lockPath, 'utf8'));
+  const prepareRelease = vi.fn(async () => undefined);
+
+  const result = await rollForwardCodexHelperRelease(snapshot, {
+    fetchImpl: releaseFetch('0.144.6', 'b'.repeat(64)), lockPath, prepareRelease
+  });
+
+  expect(result.status).toBe('updated');
+  expect(prepareRelease).toHaveBeenCalledWith({
+    assetName: ASSET_NAME, sha256: 'b'.repeat(64), version: '0.144.6'
+  });
+  expect(JSON.parse(await readFile(lockPath, 'utf8'))).toMatchObject({ version: '0.144.6' });
+});
+
+it('preserves a concurrent lock advance instead of overwriting it', async () => {
+  const lockPath = await createLock('0.144.5', 'a'.repeat(64));
+  const snapshot = JSON.parse(await readFile(lockPath, 'utf8'));
+  const prepareRelease = vi.fn(async () => {
+    await writeFile(lockPath, `${JSON.stringify({
+      assetName: ASSET_NAME, sha256: 'c'.repeat(64), version: '0.144.7'
+    })}\n`);
+  });
+
+  const result = await rollForwardCodexHelperRelease(snapshot, {
+    fetchImpl: releaseFetch('0.144.6', 'b'.repeat(64)), lockPath, prepareRelease
+  });
+
+  expect(result.status).toBe('concurrent');
+  expect(JSON.parse(await readFile(lockPath, 'utf8'))).toMatchObject({ version: '0.144.7' });
+});
+
+it('does not silently accept a same-version digest change', async () => {
+  const lockPath = await createLock('0.144.6', 'a'.repeat(64));
+  const snapshot = JSON.parse(await readFile(lockPath, 'utf8'));
+  const prepareRelease = vi.fn();
+
+  const result = await rollForwardCodexHelperRelease(snapshot, {
+    fetchImpl: releaseFetch('0.144.6', 'b'.repeat(64)), lockPath, prepareRelease
+  });
+
+  expect(result.status).toBe('mismatch');
+  expect(prepareRelease).not.toHaveBeenCalled();
+  expect(JSON.parse(await readFile(lockPath, 'utf8'))).toEqual(snapshot);
+});
+
+it('keeps successful packaging successful when next-build preparation fails', async () => {
+  const lockPath = await createLock('0.144.5', 'a'.repeat(64));
+  const snapshot = JSON.parse(await readFile(lockPath, 'utf8'));
+  const logger = { log: vi.fn(), warn: vi.fn() };
+
+  await expect(runWithCodexHelperRollForward(snapshot, async () => 'package-ok', {
+    fetchImpl: releaseFetch('0.144.6', 'b'.repeat(64)),
+    lockPath,
+    logger,
+    prepareRelease: async () => { throw new Error('download unavailable'); }
+  })).resolves.toBe('package-ok');
+  expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('download unavailable'));
+  expect(JSON.parse(await readFile(lockPath, 'utf8'))).toEqual(snapshot);
+});
+
+it('never attempts roll-forward after package work fails', async () => {
+  const prepareRelease = vi.fn();
+  const snapshot = { assetName: ASSET_NAME, sha256: 'a'.repeat(64), version: '0.144.5' };
+
+  await expect(runWithCodexHelperRollForward(snapshot, async () => {
+    throw new Error('verification failed');
+  }, { fetchImpl: releaseFetch('0.144.6', 'b'.repeat(64)), prepareRelease }))
+    .rejects.toThrow('verification failed');
+  expect(prepareRelease).not.toHaveBeenCalled();
+});
+
+it('reports API failures without throwing from the best-effort boundary', async () => {
+  const snapshot = { assetName: ASSET_NAME, sha256: 'a'.repeat(64), version: '0.144.5' };
+  const logger = { log: vi.fn(), warn: vi.fn() };
+  const result = await bestEffortRollForwardCodexHelperRelease(snapshot, {
+    fetchImpl: vi.fn(async () => ({ ok: false, status: 503 })), logger, prepareRelease: vi.fn()
+  });
+
+  expect(result.status).toBe('failed');
+  expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('HTTP 503'));
 });
 
 async function createLock(version, sha256) {

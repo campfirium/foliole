@@ -40,6 +40,7 @@ const EXPLICIT_FILE_SUBDOMAINS = new Map([
   ['src/shared/platform/desktopUpdate.ts', 'runtime-core'],
   ['src/shared/platform/discoursePublishRepository.ts', 'desktop-runtime-repository'],
   ['src/shared/platform/foliolePublishRepository.ts', 'desktop-runtime-repository'],
+  ['src/shared/platform/folioleCliInstallation.ts', 'desktop-runtime-repository'],
   ['src/shared/platform/wordpressPublishRepository.ts', 'desktop-runtime-repository'],
   ['src/shared/platform/folioleAideSettings.ts', 'desktop-runtime-repository'],
   ['src/shared/platform/initialLibrarySetupRuntime.ts', 'desktop-runtime-repository'],

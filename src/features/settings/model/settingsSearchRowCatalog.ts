@@ -15,6 +15,7 @@ interface SearchRowDefinition {
 
 const SETTINGS_SEARCH_ROW_DEFINITIONS: SearchRowDefinition[] = [
   row('about', 'about-foliole-desktop', 'settings.search.aboutVersion.title', 'settings.search.aboutVersion.description', 'settings.search.aboutVersion.terms'),
+  row('about', 'about-cli', 'settings.search.aboutCli.title', 'settings.search.aboutCli.description', 'settings.search.aboutCli.terms'),
   row('about', 'about-feedback', 'settings.search.aboutFeedback.title', 'settings.search.aboutFeedback.description', 'settings.search.aboutFeedback.terms'),
   row('about', 'about-diagnostic-report', 'settings.search.aboutDiagnostic.title', 'settings.search.aboutDiagnostic.description'),
   row('about', 'about-community', 'settings.search.aboutCommunity.title', 'settings.search.aboutCommunity.description', 'settings.search.aboutCommunity.terms'),

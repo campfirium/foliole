@@ -62,6 +62,24 @@ it('shows application info and copies the diagnostic report in the about section
   expect(screen.queryByRole('button', { name: 'Create backup' })).not.toBeInTheDocument();
 });
 
+it('installs the packaged Foliole CLI from About settings', async () => {
+  window.electronAPI!.invoke = vi.fn(async (command: string, args?: Record<string, unknown>) => {
+    if (command !== NATIVE_COMMANDS.folioleCliInstall) return null;
+    return args?.action === 'status'
+      ? { commandPath: null, error: null, status: 'not_installed' }
+      : { commandPath: '/opt/homebrew/bin/foliole', error: null, status: 'installed' };
+  }) as unknown as NativeInvoke;
+
+  renderWithLocalization(<SettingsAboutSection />);
+
+  expect(await screen.findByText('Foliole CLI')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Install command' }));
+  await waitFor(() => expect(screen.getByText('The foliole command is ready in Terminal.')).toBeInTheDocument());
+  expect(window.electronAPI!.invoke).toHaveBeenCalledWith(
+    NATIVE_COMMANDS.folioleCliInstall, { action: 'install' }
+  );
+});
+
 it('shows the latest available release in About settings', async () => {
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.updateCheckState, JSON.stringify({
     cachedManifest: null,

@@ -27,6 +27,10 @@ import type {
 } from './nativeUtilityContract.js';
 
 export type NativeUtilityCommandMap = {
+  [NATIVE_COMMANDS.folioleCliInstall]: {
+    args: { action: 'install' | 'remove' | 'repair' | 'status' };
+    result: NativeFolioleCliInstallState;
+  };
   [NATIVE_COMMANDS.appGetVersion]: {
     args: undefined;
     result: string;
@@ -200,3 +204,9 @@ export type NativeUtilityCommandMap = {
     result: NativeBackupSettings;
   };
 };
+
+export interface NativeFolioleCliInstallState {
+  commandPath: string | null;
+  error: 'conflict' | 'failed' | null;
+  status: 'cancelled' | 'conflict' | 'installed' | 'not_installed' | 'repair_required' | 'unavailable';
+}

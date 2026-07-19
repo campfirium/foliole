@@ -1,11 +1,13 @@
 /* global console, process */
 
 import { execFileSync, spawnSync } from 'node:child_process';
-import { chmod, readFile, rm, writeFile } from 'node:fs/promises';
+import { readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { assertMasDistributionContract } from './distribution-contract.mjs';
-import { assertPinnedCodexHelperIsCurrent } from './codex-helper-release.mjs';
+import {
+  loadPinnedCodexHelperRelease, runWithCodexHelperRollForward
+} from './codex-helper-release.mjs';
 import { installMasDevelopmentApp } from './internal-install.mjs';
 import {
   assertExternalPackageOutput, publishArtifactBatch, withTemporaryPackageOutput
@@ -13,6 +15,7 @@ import {
 import { assertMasElectronRuntime } from './mas-electron-runtime.mjs';
 import { prepareCodexHelper } from './prepare-codex-helper.mjs';
 import { prepareGlobalCaptureHelper } from './prepare-global-capture-helper.mjs';
+import { prepareFolioleCli } from './prepare-foliole-cli.mjs';
 import { verifyPackagedMacosApp } from './verify-packaged-app.mjs';
 
 export { prepareCodexHelper } from './prepare-codex-helper.mjs';
@@ -21,6 +24,7 @@ export { installMasDevelopmentApp } from './internal-install.mjs';
 const ROOT = path.resolve(import.meta.dirname, '../..');
 const MAS_PUBLISHED_DIRECTORY = path.join(ROOT, 'artifacts/macos/mas-arm64');
 const PROFILE_NAMES = {
+  cliDistribution: 'Foliole CLI Mac App Store Connect 2026',
   distribution: 'Foliole Mac App Store Connect 2026',
   development: 'Foliole macOS App Development 2026'
 };
@@ -37,6 +41,7 @@ export function createMasBuilderConfig(base, options) {
     forceCodeSigning: true,
     hardenedRuntime: true,
     provisioningProfile: options.provisioningProfile,
+    signIgnore: ['Contents/Helpers/Foliole CLI\\.app(?:/|$)'],
     sign: 'scripts/macos/sign-mas-app.mjs'
   };
   const config = {
@@ -45,9 +50,10 @@ export function createMasBuilderConfig(base, options) {
     directories: { ...base.directories, output: outputDirectory },
     electronDist: options.electronDist,
     extraFiles: [
-      ...(base.extraFiles ?? []),
+      ...(base.extraFiles ?? []).filter((entry) => entry.from !== 'build/cli'),
       { from: options.codexPath, to: 'MacOS/codex' },
-      { from: options.globalCaptureHelperPath, to: 'MacOS/Foliole Global Capture' }
+      { from: options.globalCaptureHelperPath, to: 'MacOS/Foliole Global Capture' },
+      { from: options.folioleCliPath, to: 'Helpers/Foliole CLI.app' }
     ],
     extraResources: [
       ...base.extraResources,
@@ -69,10 +75,6 @@ export function createMasBuilderConfig(base, options) {
 
 export function cleanMasElectronOutput(root = ROOT, remove = rm) {
   return remove(path.join(root, 'dist', 'electron'), { force: true, recursive: true });
-}
-
-export function prepareMacosPublicLauncher(root = ROOT, setMode = chmod) {
-  return setMode(path.join(root, 'build/cli/foliole'), 0o755);
 }
 
 export function resolveInstallMode(argv = process.argv) {
@@ -131,20 +133,22 @@ async function main() {
   const mode = process.argv.includes('--distribution') ? 'distribution' : 'development';
   const install = resolveInstallMode();
   if (install && mode !== 'development') throw new Error('Only the MAS development package can be installed locally');
-  if (mode === 'distribution') await assertPinnedCodexHelperIsCurrent();
-  const codexPath = await prepareCodexHelper();
+  const codexRelease = await loadPinnedCodexHelperRelease();
+  const codexPath = await prepareCodexHelper({ release: codexRelease });
+  console.log(`[codex-helper] build=${codexRelease.version}`);
+  if (mode === 'distribution') findProvisioningProfile(PROFILE_NAMES.cliDistribution);
+  const folioleCliPath = await prepareFolioleCli({ mode });
   const globalCaptureHelperPath = await prepareGlobalCaptureHelper();
   const electronDist = await assertMasElectronRuntime();
   const provisioningProfile = findProvisioningProfile(PROFILE_NAMES[mode]);
   const base = JSON.parse(await readFile(path.join(ROOT, 'electron/builder.json'), 'utf8'));
   const packageMetadata = JSON.parse(await readFile(path.join(ROOT, 'package.json'), 'utf8'));
   const pkgName = createMasArtifactName(base.productName, packageMetadata.version);
-  await prepareMacosPublicLauncher();
   await cleanMasElectronOutput();
   console.log('[macos-package] stage: BUILDING');
-  await withTemporaryPackageOutput(async (outputDirectory) => {
+  await runWithCodexHelperRollForward(codexRelease, () => withTemporaryPackageOutput(async (outputDirectory) => {
     const config = createMasBuilderConfig(base, {
-      codexPath, electronDist, globalCaptureHelperPath, mode, outputDirectory, provisioningProfile
+      codexPath, electronDist, folioleCliPath, globalCaptureHelperPath, mode, outputDirectory, provisioningProfile
     });
     const configPath = path.join(outputDirectory, `electron-builder-${mode}.json`);
     await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`);
@@ -158,14 +162,14 @@ async function main() {
     }
     const channelDirectory = path.join(outputDirectory, `${mode === 'development' ? 'mas-dev' : 'mas'}-arm64`);
     const appPath = path.join(channelDirectory, 'Foliole.app');
-    await verifyPackagedMacosApp({ appPath });
+    await verifyPackagedMacosApp({ appPath, mode });
     if (install) await installMasDevelopmentApp({ sourcePath: appPath });
     if (mode === 'distribution') {
       await publishArtifactBatch({
         names: [pkgName], sourceDirectory: channelDirectory, targetDirectory: MAS_PUBLISHED_DIRECTORY
       });
     }
-  });
+  }), { prepareRelease: (release) => prepareCodexHelper({ release }) });
   console.log(`[macos-package] status: ${install ? 'PACKAGED_AND_INSTALLED' : 'PACKAGED'}`);
 }
 

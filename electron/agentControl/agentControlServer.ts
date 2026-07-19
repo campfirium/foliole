@@ -11,6 +11,7 @@ import { notifyWorkspaceContentChanged } from '../ipc/workspaceContentChangedEve
 import { createDiagnosticAgentControlAuditSink, type AgentControlAuditSink } from './agentControlAudit.js';
 import { getEnabledAgentControlCapabilities } from './agentControlCapabilities.js';
 import { createAgentControlRequestHandler } from './agentControlRequestHandler.js';
+import { resolveMasAgentControlSessionPath } from './agentControlSessionPath.js';
 import { createAgentControlToken } from './agentControlToken.js';
 import {
   AGENT_CONTROL_PROTOCOL_VERSION,
@@ -129,7 +130,7 @@ async function writeDescriptor(filePath: string, descriptor: AgentControlSession
 }
 
 export function getAgentControlSessionDescriptorPath() {
-  return path.join(resolveAppPaths().app_cache_dir, SESSION_FILE);
+  return resolveMasAgentControlSessionPath() ?? path.join(resolveAppPaths().app_cache_dir, SESSION_FILE);
 }
 
 export async function ensureAgentControlApiServer(args: {
