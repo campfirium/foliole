@@ -12,23 +12,36 @@ import type { WorkspaceTopicTreeProps } from './WorkspaceTopicTree';
 import type { useWorkspaceTopicTreeInteraction } from './WorkspaceTopicTree';
 import type { useWorkspaceTopicTreeActions } from './workspaceTopicTreeActions';
 
-export function WorkspaceTopicTreeMenu(props: {
+interface WorkspaceTopicTreeMenuProps {
   actions: ReturnType<typeof useWorkspaceTopicTreeActions>;
   activeFolderId: string;
   contextMenu: NodeListContextMenuController;
   handleSelectNode: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
+  virtualFolderView?: 'manual' | 'readonly';
   nodesById: WorkspaceListNodesById;
   onCreateChildNode: ReturnType<typeof useWorkspaceTopicTreeActions>['createChildNode'];
   onOpenMoveToNode: WorkspaceTopicTreeProps['onOpenMoveToNode'];
   onOpenPostponeTopicPanel?: WorkspaceTopicTreeProps['onOpenPostponeTopicPanel'];
   topicTreeState: ReturnType<typeof useWorkspaceTopicTreeInteraction>['topicTreeState'];
-}) {
+}
+
+export function WorkspaceTopicTreeMenu(props: WorkspaceTopicTreeMenuProps) {
   const [reviewSchedulingNodeId, setReviewSchedulingNodeId] = useState<string | null>(null);
+  const activeFolder = props.nodesById[props.activeFolderId];
+  const onRemoveFromCurrentVirtualFolder = props.virtualFolderView === 'manual'
+    ? (nodeIds: string[]) => {
+        const removedIds = new Set(nodeIds);
+        props.actions.setFolderManualChildOrder?.(
+          props.activeFolderId,
+          (activeFolder?.manualChildOrder ?? []).filter((nodeId) => !removedIds.has(nodeId))
+        );
+      }
+    : undefined;
   return (
     <>
       <NodeListTreeMenu
         contextMenu={props.contextMenu}
-        createMenuSurface="topics"
+        createMenuSurface={props.virtualFolderView ? 'virtual-topics' : 'topics'}
         createChildNode={props.onCreateChildNode}
         createGlobalNode={(content = '', kind = 'topic') => props.onCreateChildNode(props.activeFolderId, content, kind)}
         createVirtualNode={props.actions.createVirtualNode}
@@ -41,6 +54,7 @@ export function WorkspaceTopicTreeMenu(props: {
           requestClipboardImport({ targetParentNodeId: parentNodeId ?? props.activeFolderId })
         }
         onOpenMoveToNode={props.onOpenMoveToNode}
+        {...(onRemoveFromCurrentVirtualFolder ? { onRemoveFromCurrentVirtualFolder } : {})}
         {...(props.onOpenPostponeTopicPanel ? { onOpenPostponeTopic: props.onOpenPostponeTopicPanel } : {})}
         onOpenReviewScheduling={setReviewSchedulingNodeId}
         onSelect={props.handleSelectNode}

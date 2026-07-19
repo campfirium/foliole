@@ -38,6 +38,7 @@ export interface WorkspaceTopicTreeProps {
   forceVisibleNodeId?: string | null;
   headerDescription?: string;
   itemIds: string[];
+  virtualFolderView?: 'manual' | 'readonly';
   preserveItemOrder?: boolean;
   nodesById: WorkspaceListNodesById;
   onCreateChildNode?: CreateTopicTreeNode;
@@ -51,6 +52,7 @@ interface WorkspaceTopicTreeInteractionArgs {
   activeFolderId: string;
   activeNodeId: string | null;
   isManualSort: boolean;
+  virtualFolderView?: 'manual' | 'readonly';
   nodesById: WorkspaceListNodesById;
   onCreateChildNode?: CreateTopicTreeNode;
   onOpenMoveToNode: () => void;
@@ -108,6 +110,7 @@ export function useWorkspaceTopicTreeInteraction(args: WorkspaceTopicTreeInterac
       contextMenu,
       handleSelectNode: selection.handleSelectNode,
       nodesById: args.nodesById,
+      ...definedProps({ virtualFolderView: args.virtualFolderView }),
       onCreateChildNode: createChildNode,
       onOpenMoveToNode: args.onOpenMoveToNode,
       ...definedProps({ onOpenPostponeTopicPanel: args.onOpenPostponeTopicPanel }),
@@ -183,6 +186,7 @@ export const WorkspaceTopicTree = memo(function WorkspaceTopicTree(props: Worksp
     activeFolderId: props.creationParentNodeId ?? props.activeFolderId,
     activeNodeId: props.activeNodeId,
     isManualSort: contentSort.sort.key === 'manual',
+    ...definedProps({ virtualFolderView: props.virtualFolderView }),
     nodesById: props.nodesById,
     onOpenMoveToNode: props.onOpenMoveToNode,
     ...definedProps({ onCreateChildNode: props.onCreateChildNode }),

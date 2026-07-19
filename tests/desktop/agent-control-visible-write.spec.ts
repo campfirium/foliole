@@ -1,13 +1,14 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-import type { Locator } from '@playwright/test';
+import type { Locator, TestInfo } from '@playwright/test';
 
 import { readTopicCollections } from '../../lib/core/nodes/topicCollectionsFrontmatter';
 import { runAgentCli } from '../../scripts/agent-control/foliole-agent.mjs';
 
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
+import { createAgentVirtualFolder, verifyVirtualFolderEntryMenu } from './harness/virtualFolderEntryMenu';
 
 const COLLECTION_TITLE = 'Agent Visible Queue';
 const UPDATED_COLLECTION_TITLE = 'Agent Visible Queue Updated';
@@ -62,6 +63,19 @@ async function runCli(command: string[]) {
 async function readMaterial(descriptorPath: string, id: string) {
   const output = await runCli(['materials/read', '--descriptor', descriptorPath, '--id', id]);
   return output.material as Record<string, unknown>;
+}
+
+async function attachScreenshot(
+  desktopWindow: DesktopWindow,
+  testInfo: TestInfo,
+  name: string,
+  relativePath: string,
+  fullPage = false
+) {
+  const screenshotPath = path.resolve(relativePath);
+  await fs.mkdir(path.dirname(screenshotPath), { recursive: true });
+  await desktopWindow.screenshot({ fullPage, path: screenshotPath });
+  await testInfo.attach(name, { contentType: 'image/png', path: screenshotPath });
 }
 
 async function verifyMaterialLifecycle(args: {
@@ -148,19 +162,9 @@ test('Agent Control writes become visible in the desktop Virtual section', async
   await expect.poll(async () => (await readMaterial(descriptorPath, firstTopicId)).title).toBe(FIRST_TOPIC_TITLE);
   await expect.poll(async () => (await readMaterial(descriptorPath, secondTopicId)).title).toBe(SECOND_TOPIC_TITLE);
 
-  const created = await runCli([
-    'virtual-folders/create',
-    '--descriptor', descriptorPath,
-    '--title', COLLECTION_TITLE
-  ]);
-  const folderId = String(created.folder_id);
-
-  await runCli([
-    'virtual-folders/add-items',
-    '--descriptor', descriptorPath,
-    '--folder-id', folderId,
-    '--material-ids', `${secondTopicId},${firstTopicId}`
-  ]);
+  const folderId = await createAgentVirtualFolder({
+    descriptorPath, title: COLLECTION_TITLE, topicIds: [secondTopicId, firstTopicId]
+  });
   expect(readTopicCollections(String((await readMaterial(descriptorPath, firstTopicId)).content))).toEqual([]);
   expect(readTopicCollections(String((await readMaterial(descriptorPath, secondTopicId)).content))).toEqual([]);
 
@@ -187,6 +191,11 @@ test('Agent Control writes become visible in the desktop Virtual section', async
     rows.map((row) => row.getAttribute('data-node-id'))
   )).toEqual([secondTopicId, firstTopicId]);
 
+  await verifyVirtualFolderEntryMenu({
+    contentPanel, descriptorPath, desktopWindow, folderId, testInfo,
+    topicId: firstTopicId, topicTitle: FIRST_TOPIC_TITLE
+  });
+
   await contentPanel.getByRole('treeitem', { name: FIRST_TOPIC_TITLE }).click();
   await expect(desktopWindow.locator('.prompt-editor-host')).toContainText('Original body A');
 
@@ -198,8 +207,7 @@ test('Agent Control writes become visible in the desktop Virtual section', async
     topicIds: [firstTopicId, secondTopicId]
   });
 
-  await fs.mkdir(path.join('.tmp', 'artifacts'), { recursive: true });
-  const screenshotPath = path.resolve('.tmp', 'artifacts', 'agent-control-visible-write.png');
-  await desktopWindow.screenshot({ fullPage: true, path: screenshotPath });
-  await testInfo.attach('agent-control-visible-write', { path: screenshotPath, contentType: 'image/png' });
+  await attachScreenshot(
+    desktopWindow, testInfo, 'agent-control-visible-write', '.tmp/artifacts/agent-control-visible-write.png', true
+  );
 });

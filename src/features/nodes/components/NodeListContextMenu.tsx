@@ -20,6 +20,7 @@ export interface NodeListContextMenuProps {
   onOpenReviewScheduling?: () => void;
   onOpenPostponeTopic?: () => void;
   onPasteIntoNode?: () => void;
+  onRemoveFromCurrentVirtualFolder?: () => void;
   onRenameNode?: () => void;
   onReturnNode?: () => void;
   onRestoreNode: () => void;
@@ -35,6 +36,7 @@ export interface NodeListContextMenuProps {
   showReviewSchedulingAction?: boolean;
   showPostponeTopicAction?: boolean;
   showPasteIntoNodeAction?: boolean;
+  showRemoveFromCurrentVirtualFolderAction?: boolean;
   showRenameAction?: boolean;
   showRootCreateOnly?: boolean;
   showReturnAction?: boolean;

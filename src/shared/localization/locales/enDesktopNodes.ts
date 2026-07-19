@@ -49,6 +49,7 @@ export const EN_DESKTOP_NODES_TRANSLATIONS = {
   'desktop.nodeList.menu.rename': 'Rename',
   'desktop.nodeList.menu.mergeHighlights': 'Merge highlights',
   'desktop.nodeList.menu.moveTo': 'Move to…',
+  'desktop.nodeList.menu.removeFromCurrentVirtualFolder': 'Remove from current virtual folder',
   'desktop.nodeList.menu.relearn': 'Relearn',
   'desktop.nodeList.menu.reviewOptions': 'Review options…',
   'desktop.nodeList.menu.postponeTopic': 'Postpone topic...',

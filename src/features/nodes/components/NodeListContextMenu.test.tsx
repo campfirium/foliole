@@ -80,6 +80,25 @@ it('renders compact icon menu items and keeps delete visually destructive', () =
   expect(screen.getByRole('menuitem', { name: 'Delete' }).className).toContain('text-error/90');
 });
 
+it('separates virtual folder removal from deleting the Topic', () => {
+  const onRemove = vi.fn();
+  renderWithLocalization(
+    <NodeListContextMenu
+      {...noopProps()}
+      onRemoveFromCurrentVirtualFolder={onRemove}
+      showRemoveFromCurrentVirtualFolderAction
+    />
+  );
+
+  const menu = screen.getByRole('menu');
+  const labels = within(menu).getAllByRole('menuitem').map((item) => item.textContent);
+  expect(labels.slice(-2)).toEqual(['Remove from current virtual folder', 'Delete']);
+  expect(screen.getByRole('menuitem', { name: 'Remove from current virtual folder' }).className)
+    .not.toContain('text-error/90');
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Remove from current virtual folder' }));
+  expect(onRemove).toHaveBeenCalledOnce();
+});
+
 it('does not render a leading separator when create actions are hidden', () => {
   renderWithLocalization(
     <NodeListContextMenu

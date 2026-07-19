@@ -6,6 +6,7 @@ import {
   CircleOff,
   Clipboard,
   GitMerge,
+  ListMinus,
   MoveRight,
   Pencil,
   SlidersHorizontal,
@@ -136,12 +137,17 @@ function renderReviewItems(t: Translate, props: NoteMenuItemsProps, helpEnabled:
   );
 }
 
-function renderDeleteItem(t: Translate, props: NoteMenuItemsProps, hasPreviousGroup: boolean) {
-  if (props.showRootCreateOnly || !props.showDeleteAction) return null;
+function renderRemovalItems(t: Translate, props: NoteMenuItemsProps, hasPreviousGroup: boolean) {
+  const removeFromCurrentVirtualFolder = props.showRemoveFromCurrentVirtualFolderAction
+    ? props.onRemoveFromCurrentVirtualFolder
+    : undefined;
+  if (props.showRootCreateOnly || (!removeFromCurrentVirtualFolder && !props.showDeleteAction)) return null;
   return (
     <>
       {hasPreviousGroup ? <NodeContextMenuSeparator /> : null}
-      <NodeContextMenuItem icon={Trash2} onSelect={props.onDeleteNode} tone="destructive">{t('desktop.nodeList.menu.delete')}</NodeContextMenuItem>
+      {removeFromCurrentVirtualFolder ? <NodeContextMenuItem icon={ListMinus} onSelect={removeFromCurrentVirtualFolder}>{t('desktop.nodeList.menu.removeFromCurrentVirtualFolder')}</NodeContextMenuItem> : null}
+      {removeFromCurrentVirtualFolder && props.showDeleteAction ? <NodeContextMenuSeparator /> : null}
+      {props.showDeleteAction ? <NodeContextMenuItem icon={Trash2} onSelect={props.onDeleteNode} tone="destructive">{t('desktop.nodeList.menu.delete')}</NodeContextMenuItem> : null}
     </>
   );
 }
@@ -161,7 +167,7 @@ function NoteMenuItems(props: NoteMenuItemsProps) {
       {hasEditGroup ? renderEditItems(t, props, helpEnabled) : null}
       {(hasCreateGroup || hasEditGroup) && hasReviewGroup ? <NodeContextMenuSeparator /> : null}
       {hasReviewGroup ? renderReviewItems(t, props, helpEnabled) : null}
-      {renderDeleteItem(t, props, hasAnyPrimaryGroup)}
+      {renderRemovalItems(t, props, hasAnyPrimaryGroup)}
     </>
   );
 }
@@ -183,6 +189,7 @@ export function NodeListContextMenuItems(props: NodeListContextMenuProps) {
       {...(props.onOpenReviewScheduling ? { onOpenReviewScheduling: props.onOpenReviewScheduling } : {})}
       {...(props.onOpenPostponeTopic ? { onOpenPostponeTopic: props.onOpenPostponeTopic } : {})}
       {...(props.onPasteIntoNode ? { onPasteIntoNode: props.onPasteIntoNode } : {})}
+      {...(props.onRemoveFromCurrentVirtualFolder ? { onRemoveFromCurrentVirtualFolder: props.onRemoveFromCurrentVirtualFolder } : {})}
       {...(props.onRenameNode ? { onRenameNode: props.onRenameNode } : {})}
       {...(props.onReturnNode ? { onReturnNode: props.onReturnNode } : {})}
       {...(props.onShelveTopic ? { onShelveTopic: props.onShelveTopic } : {})}
@@ -195,6 +202,7 @@ export function NodeListContextMenuItems(props: NodeListContextMenuProps) {
       {...(props.showReviewSchedulingAction !== undefined ? { showReviewSchedulingAction: props.showReviewSchedulingAction } : {})}
       {...(props.showPostponeTopicAction !== undefined ? { showPostponeTopicAction: props.showPostponeTopicAction } : {})}
       {...(props.showPasteIntoNodeAction !== undefined ? { showPasteIntoNodeAction: props.showPasteIntoNodeAction } : {})}
+      {...(props.showRemoveFromCurrentVirtualFolderAction !== undefined ? { showRemoveFromCurrentVirtualFolderAction: props.showRemoveFromCurrentVirtualFolderAction } : {})}
       {...(props.showRenameAction !== undefined ? { showRenameAction: props.showRenameAction } : {})}
       {...(props.showRootCreateOnly !== undefined ? { showRootCreateOnly: props.showRootCreateOnly } : {})}
       {...(props.showReturnAction !== undefined ? { showReturnAction: props.showReturnAction } : {})}

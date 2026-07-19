@@ -1,3 +1,4 @@
+import { isManualVirtualNodeFilter } from '../../../lib/core/nodes/virtualNodeFilter';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { toWorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 
@@ -36,10 +37,14 @@ function resolveVirtualFolderId(props: VirtualResultListPanelProps) {
 
 export function VirtualResultListPanel(props: VirtualResultListPanelProps) {
   const nodeIds = props.nodes.map((node) => node.id);
+  const virtualFolderId = resolveVirtualFolderId(props);
+  const virtualFolderView = isManualVirtualNodeFilter(props.nodesById[virtualFolderId]?.virtualFilter)
+    ? 'manual' as const
+    : 'readonly' as const;
 
   return (
     <WorkspaceTopicTree
-      activeFolderId={resolveVirtualFolderId(props)}
+      activeFolderId={virtualFolderId}
       activeNodeId={props.activeNodeId}
       itemIds={nodeIds}
       nodesById={toWorkspaceListNodesById(props.nodesById)}
@@ -47,6 +52,7 @@ export function VirtualResultListPanel(props: VirtualResultListPanelProps) {
       onSelectNode={props.onSelectNode}
       preserveItemOrder={props.preserveItemOrder ?? false}
       showCreateTopic={false}
+      virtualFolderView={virtualFolderView}
     />
   );
 }

@@ -12,6 +12,7 @@ export function renderWorkspaceTopicTreeMenu(args: {
   activeFolderId: string;
   contextMenu: ReturnType<typeof useNodeListContextMenu>;
   handleSelectNode: ReturnType<typeof useWorkspaceTopicTreeSelection>['handleSelectNode'];
+  virtualFolderView?: 'manual' | 'readonly';
   nodesById: WorkspaceListNodesById;
   onCreateChildNode: ReturnType<typeof useWorkspaceTopicTreeActions>['createChildNode'];
   onOpenMoveToNode: () => void;
@@ -24,6 +25,7 @@ export function renderWorkspaceTopicTreeMenu(args: {
       activeFolderId={args.activeFolderId}
       contextMenu={args.contextMenu}
       handleSelectNode={args.handleSelectNode}
+      {...definedProps({ virtualFolderView: args.virtualFolderView })}
       nodesById={args.nodesById}
       onCreateChildNode={args.onCreateChildNode}
       onOpenMoveToNode={args.onOpenMoveToNode}

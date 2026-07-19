@@ -8,7 +8,7 @@ import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 import type { NodeListContextMenuController } from './NodeListTreeHooks';
 
-export type NodeListCreateMenuSurface = 'folders' | 'topics';
+export type NodeListCreateMenuSurface = 'folders' | 'topics' | 'virtual-topics';
 
 interface NodeListCreateMenuProps {
   contextMenu: Pick<NodeListContextMenuController, 'closeContextMenu'>;
@@ -29,6 +29,9 @@ interface NodeListCreateMenuState {
 
 function canCreateCommandInSurface(command: ReturnType<typeof findFolderTopicItemCommandByAppCommandId>, surface: NodeListCreateMenuSurface) {
   if (!command) {
+    return false;
+  }
+  if (surface === 'virtual-topics') {
     return false;
   }
   return surface === 'folders' ? command.kind === 'folder' : command.kind !== 'folder';

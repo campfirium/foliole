@@ -7,6 +7,7 @@ import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 import { NodeListContextMenu } from './NodeListContextMenu';
 import { canPostponeTopic, canToggleSequentialReading, hasDismissEntireTopicTargets, hasDismissTargets, hasReturnTargets, hasShelveTopicTarget, hasUnshelveTopicTarget } from './nodeListContextMenuReview';
 import { createDismissEntireTopicAction, createDismissNodeAction, createReturnNodeAction, createShelveTopicAction, createToggleSequentialReadingAction, createUnshelveTopicAction } from './nodeListMenuActions';
+import { sortNodeIdsByVisibleOrder } from './nodeListMenuTargetOrder';
 import { createCreateNodeHandler, resolveCreateCommands, type NodeListCreateMenuSurface } from './NodeListTreeCreateMenu';
 import type { NodeListContextMenuController } from './NodeListTreeHooks';
 import type { NodeListState, NodeSelectModifiers } from './NodeListTreeState';
@@ -25,6 +26,7 @@ interface NodeListTreeMenuProps {
   nodesById: WorkspaceListNodesById;
   onOpenMoveToNode: () => void;
   onOpenPostponeTopic?: (nodeId: string) => void;
+  onRemoveFromCurrentVirtualFolder?: (nodeIds: string[]) => void;
   onCreateTopicFromClipboard?: (parentNodeId: string | null) => void;
   onOpenReviewScheduling?: (nodeId: string) => void;
   onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
@@ -34,10 +36,6 @@ interface NodeListTreeMenuProps {
   shelveNode: (nodeId: string, now?: string) => boolean;
   state: NodeListState;
   unshelveNode: (nodeId: string, now?: string) => boolean;
-}
-
-function sortNodeIdsByVisibleOrder(nodeIds: string[], noteRowIds: string[]) {
-  return [...nodeIds].sort((a, b) => noteRowIds.indexOf(a) - noteRowIds.indexOf(b));
 }
 
 function buildMenuState(props: NodeListTreeMenuProps) {
@@ -65,7 +63,7 @@ function buildMenuState(props: NodeListTreeMenuProps) {
     primaryTargetId,
     showDeleteAction: isSingleNodeTarget ? !isProtectedRootNode(primaryTarget) : contextTargets.length > 0,
     showMergeHighlightsIntoTopicAction: showNodeImportActions,
-    showMoveToNodeAction: isSingleNodeTarget && canNodeBeMoved(primaryTarget),
+    showMoveToNodeAction: props.createMenuSurface !== 'virtual-topics' && isSingleNodeTarget && canNodeBeMoved(primaryTarget),
     showReviewSchedulingAction: isSingleNodeTarget && !isProtectedRootNode(primaryTarget) && !isVirtualRootNode(primaryTarget) && !isVirtualNode(primaryTarget),
     showPostponeTopicAction: isSingleNodeTarget && canPostponeTopic(primaryTarget),
     showSequentialReadingAction: isSingleNodeTarget && canToggleSequentialReading(primaryTarget, props.nodesById),
@@ -181,6 +179,7 @@ function buildNodeListMenuVisibility(
     showShelveTopicAction: menuState.isNotesMenu && hasShelveTopicTarget(menuState.contextTargets, props.nodesById),
     showReviewSchedulingAction: menuState.showReviewSchedulingAction && Boolean(props.onOpenReviewScheduling),
     showPostponeTopicAction: menuState.showPostponeTopicAction && Boolean(props.onOpenPostponeTopic),
+    showRemoveFromCurrentVirtualFolderAction: props.createMenuSurface === 'virtual-topics' && Boolean(props.onRemoveFromCurrentVirtualFolder),
     showRootCreateOnly: menuState.isRootMenu || menuState.isHomeTarget || menuState.showVirtualCreateOnly,
     showSequentialReadingAction: menuState.isNotesMenu && menuState.showSequentialReadingAction,
     showUnshelveTopicAction: menuState.isNotesMenu && hasUnshelveTopicTarget(menuState.contextTargets, props.nodesById)
@@ -210,6 +209,7 @@ function buildNodeListContextMenuProps(
       props.contextMenu.closeContextMenu()
     ),
     onDeleteNodePermanently: () => (props.deleteNodesPermanently(menuState.contextTargets), props.contextMenu.closeContextMenu()),
+    onRemoveFromCurrentVirtualFolder: () => (props.onRemoveFromCurrentVirtualFolder?.(menuState.contextTargets), props.contextMenu.closeContextMenu()),
     ...buildNodeListActionHandlers(props, menuState),
     onRenameNode: () => (requestNodeRename(menuState.primaryTargetId), props.contextMenu.closeContextMenu()),
     onRestoreNode: () => (
