@@ -9,6 +9,10 @@ export interface NativeDiscoursePublishSettingsInput {
   site_url: string;
 }
 
+export interface NativeDiscourseUserApiAuthorization {
+  authorization_url: string;
+}
+
 export interface NativeDiscoursePublishArgs {
   category_id: number | null;
   content: string;
@@ -46,6 +50,14 @@ export interface NativeDiscoursePublishResult {
 }
 
 export type NativeDiscoursePublishCommandMap = {
+  [NATIVE_COMMANDS.beginDiscourseUserApiAuthorization]: {
+    args: { site_url: string };
+    result: NativeDiscourseUserApiAuthorization;
+  };
+  [NATIVE_COMMANDS.completeDiscourseUserApiAuthorization]: {
+    args: { payload: string; site_url: string };
+    result: NativeDiscoursePublishSettings;
+  };
   [NATIVE_COMMANDS.loadDiscoursePublishSettings]: {
     args: undefined;
     result: NativeDiscoursePublishSettings;

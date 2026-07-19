@@ -1,5 +1,7 @@
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import {
+  beginDiscourseUserApiAuthorization,
+  completeDiscourseUserApiAuthorization,
   disconnectDiscoursePublishSettings,
   loadDiscoursePublishCatalog,
   loadDiscoursePublishSettings,
@@ -40,6 +42,12 @@ export async function handlePublishingStorageCommand(command: string, args: Reco
   }
   if (command === NATIVE_COMMANDS.saveDiscoursePublishSettings) {
     return saveDiscoursePublishSettings(readSettingsObject(args.settings) as unknown as Parameters<typeof saveDiscoursePublishSettings>[0]);
+  }
+  if (command === NATIVE_COMMANDS.beginDiscourseUserApiAuthorization) {
+    return beginDiscourseUserApiAuthorization(readSettingsObject(args) as Parameters<typeof beginDiscourseUserApiAuthorization>[0]);
+  }
+  if (command === NATIVE_COMMANDS.completeDiscourseUserApiAuthorization) {
+    return completeDiscourseUserApiAuthorization(readSettingsObject(args) as Parameters<typeof completeDiscourseUserApiAuthorization>[0]);
   }
   if (command === NATIVE_COMMANDS.disconnectDiscoursePublishSettings) return disconnectDiscoursePublishSettings();
   if (command === NATIVE_COMMANDS.publishTopicToDiscourse) {

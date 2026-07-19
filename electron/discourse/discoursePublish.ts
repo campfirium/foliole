@@ -17,6 +17,10 @@ import {
   saveDiscourseCatalogCache,
   saveDiscoursePublishSettings
 } from './discoursePublishSettings.js';
+import {
+  beginDiscourseUserApiAuthorization as beginAuthorization,
+  completeDiscourseUserApiAuthorization as completeAuthorization
+} from './discourseUserApiAuthorization.js';
 
 type DiscourseClientConfig = { apiKey: string; siteUrl: string };
 
@@ -56,6 +60,15 @@ function buildBinding(args: {
 }
 
 export { disconnectDiscoursePublishSettings, loadDiscoursePublishSettings, saveDiscoursePublishSettings };
+
+export async function beginDiscourseUserApiAuthorization(args: { site_url: string }) {
+  return beginAuthorization(args.site_url);
+}
+
+export function completeDiscourseUserApiAuthorization(args: { payload: string; site_url: string }) {
+  const apiKey = completeAuthorization(args.site_url, args.payload);
+  return saveDiscoursePublishSettings({ api_key: apiKey, site_url: args.site_url });
+}
 
 export async function loadDiscoursePublishCatalog(args?: { refresh?: boolean }) {
   const { apiKey, settings } = requireConfiguredSettings();

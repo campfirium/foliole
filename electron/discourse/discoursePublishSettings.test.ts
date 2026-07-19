@@ -39,7 +39,7 @@ beforeEach(() => {
 
 it('keeps the API key outside the persisted setting payload', () => {
   saveDiscoursePublishSettings({
-    api_key: 'SENTINEL-DISCOURSE-SECRET',
+    api_key: '  SENTINEL-DISCOURSE-SECRET  ',
     site_url: 'https://forum.example.com/'
   });
 

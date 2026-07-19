@@ -96,6 +96,8 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.publishTopicToFoliole, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.loadDiscoursePublishSettings, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.saveDiscoursePublishSettings, route: 'storage', capability: 'settingsMutation' },
+  { command: NATIVE_COMMANDS.beginDiscourseUserApiAuthorization, route: 'storage', capability: 'settingsMutation' },
+  { command: NATIVE_COMMANDS.completeDiscourseUserApiAuthorization, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.disconnectDiscoursePublishSettings, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.loadDiscoursePublishCatalog, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.publishTopicToDiscourse, route: 'storage', capability: 'dataMutation' },

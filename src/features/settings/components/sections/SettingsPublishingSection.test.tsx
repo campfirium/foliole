@@ -6,6 +6,8 @@ import { renderWithLocalization } from '../../../../shared/localization/testLoca
 import { SettingsPublishingSection } from './SettingsPublishingSection';
 
 const repositoryMocks = vi.hoisted(() => ({
+  beginDiscourseUserApiAuthorizationFromRuntime: vi.fn(),
+  completeDiscourseUserApiAuthorizationFromRuntime: vi.fn(),
   disconnectDiscoursePublishSettingsFromRuntime: vi.fn(),
   loadDiscoursePublishCatalogFromRuntime: vi.fn(),
   loadDiscoursePublishSettingsFromRuntime: vi.fn(),
@@ -178,20 +180,6 @@ it('saves the forum URL only after blur or Enter', async () => {
   fireEvent.keyDown(forumUrl, { key: 'Enter' });
   await waitFor(() => expect(repositoryMocks.saveDiscoursePublishSettingsToRuntime).toHaveBeenLastCalledWith({
     site_url: 'https://talk.example.com'
-  }));
-});
-
-it('saves a replacement User API key only after blur', async () => {
-  renderWithLocalization(<SettingsPublishingSection />);
-  const apiKey = await screen.findByLabelText('Discourse User API key');
-
-  fireEvent.change(apiKey, { target: { value: 'replacement-key' } });
-  expect(repositoryMocks.saveDiscoursePublishSettingsToRuntime).not.toHaveBeenCalled();
-  fireEvent.blur(apiKey);
-
-  await waitFor(() => expect(repositoryMocks.saveDiscoursePublishSettingsToRuntime).toHaveBeenCalledWith({
-    api_key: 'replacement-key',
-    site_url: 'https://forum.example.com'
   }));
 });
 

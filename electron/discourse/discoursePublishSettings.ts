@@ -97,7 +97,7 @@ export function saveDiscoursePublishSettings(input: NativeDiscoursePublishSettin
   if (!siteChanged && current?.recent_by_site) settings.recent_by_site = current.recent_by_site;
   saveStoredSettings(settings);
   if (typeof input.api_key === 'string' && input.api_key.length > 0) {
-    saveDiscourseApiKey(input.api_key);
+    saveDiscourseApiKey(input.api_key.trim());
   }
   return loadDiscoursePublishSettings();
 }

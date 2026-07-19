@@ -85,6 +85,8 @@ export const NATIVE_COMMANDS = {
   publishTopicToFoliole: 'publish_topic_to_foliole',
   loadDiscoursePublishSettings: 'load_discourse_publish_settings',
   saveDiscoursePublishSettings: 'save_discourse_publish_settings',
+  beginDiscourseUserApiAuthorization: 'begin_discourse_user_api_authorization',
+  completeDiscourseUserApiAuthorization: 'complete_discourse_user_api_authorization',
   disconnectDiscoursePublishSettings: 'disconnect_discourse_publish_settings',
   loadDiscoursePublishCatalog: 'load_discourse_publish_catalog',
   publishTopicToDiscourse: 'publish_topic_to_discourse',

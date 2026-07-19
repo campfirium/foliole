@@ -65,6 +65,16 @@ async function expandPublishingSections(regions: PublishingRegions) {
   await discourse.click();
 }
 
+async function captureExpandedSettings(
+  desktopWindow: import('@playwright/test').Page,
+  screenshotDir: string,
+  testInfo: import('@playwright/test').TestInfo
+) {
+  const screenshot = await desktopWindow.screenshot({ fullPage: true });
+  await writeFile(path.join(screenshotDir, 'discourse-publishing-settings-hidden-native.png'), screenshot);
+  await testInfo.attach('discourse-publishing-settings', { body: screenshot, contentType: 'image/png' });
+}
+
 test('keeps independent Publish sections collapsed until opened and preserves their settings', async ({ desktopWindow }, testInfo) => {
   const dialog = await openSettingsDialog(desktopWindow);
   await dialog.getByRole('button', { name: /^(Publish|发布)$/ }).click();
@@ -95,34 +105,33 @@ test('keeps independent Publish sections collapsed until opened and preserves th
   await wordpressRegion.getByLabel(/^(WordPress site address|WordPress 站点地址)$/).fill('https://free-site.wordpress.com');
   await expect(wordpressRegion.getByText(/(account-level device credential|账户级设备凭据)/)).toBeVisible();
   await expect(wordpressRegion.getByLabel(/login password|登录密码/i)).toHaveCount(0);
-  await expect(dialog.getByRole('textbox', { name: /^(Discourse forum URL|Discourse 论坛 URL)$/ })).toBeVisible();
-  await expect(dialog.getByLabel(/^(Discourse User API key|Discourse User API Key)$/)).toBeVisible();
+  const forumUrl = dialog.getByRole('textbox', { name: /^(Discourse forum URL|Discourse 论坛 URL)$/ });
+  await expect(forumUrl).toBeVisible();
+  await expect(dialog.getByText(/forum must allow your account to generate User API Keys|论坛需允许当前账号生成 User API Key/)).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /^(Generate authorization link|生成授权链接)$/ })).toBeVisible();
+  const authorizationResult = dialog.getByLabel(/^(Discourse authorization result|Discourse 授权结果)$/);
+  await expect(authorizationResult).toBeVisible();
+  const saveAuthorization = dialog.getByRole('button', { name: /^(Save authorization|保存授权)$/ });
+  await expect(saveAuthorization).toBeDisabled();
   await expect(dialog.getByRole('button', { name: /^(Test connection|测试连接)$/ })).toBeVisible();
   await expect(dialog.getByRole('button', { name: /^(Save|保存)$/ })).toHaveCount(0);
   await expect(dialog.getByText(/^(API username|API 用户名)$/)).toHaveCount(0);
   await expect(dialog.getByText(/^(Default category ID|默认分类 ID)$/)).toHaveCount(0);
   await expect(dialog.getByText(/^(Default tags|默认标签)$/)).toHaveCount(0);
 
-  const apiKeyInput = dialog.getByLabel(/^(Discourse User API key|Discourse User API Key)$/);
-  await apiKeyInput.fill('playwright-discourse-user-api-key');
-  await apiKeyInput.blur();
-  await expect(apiKeyInput).toHaveValue('');
-  await expect(apiKeyInput).toHaveAttribute('placeholder', '****************');
+  await forumUrl.fill('https://forum.example.com');
+  await authorizationResult.fill('playwright-encrypted-authorization-result');
+  await expect(saveAuthorization).toBeEnabled();
+  await authorizationResult.fill('');
 
   const layouts = await collectPublishingRowLayouts(dialog);
-  expect(layouts).toHaveLength(3);
+  expect(layouts).toHaveLength(4);
   for (const layout of layouts.filter((row) => row.inputWidth > 0)) {
     expect(layout.paragraphWidth, `${layout.title} description should not collapse into a narrow column`).toBeGreaterThan(280);
     expect(layout.inputWidth, `${layout.title} input should keep a normal settings width`).toBeGreaterThan(320);
     expect(layout.inputWidth, `${layout.title} input should follow the 360px settings standard`).toBeLessThanOrEqual(360);
   }
 
-  await folioleRegion.scrollIntoViewIfNeeded();
-  const screenshot = await desktopWindow.screenshot({ fullPage: true });
-  const screenshotPath = path.join(screenshotDir, 'discourse-publishing-settings-hidden-native.png');
-  await writeFile(screenshotPath, screenshot);
-  await testInfo.attach('discourse-publishing-settings', {
-    body: screenshot,
-    contentType: 'image/png'
-  });
+  await discourseRegion.scrollIntoViewIfNeeded();
+  await captureExpandedSettings(desktopWindow, screenshotDir, testInfo);
 });

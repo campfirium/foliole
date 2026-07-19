@@ -9,6 +9,18 @@ import type {
 
 import { getRuntimeInvoke } from './runtimeInvoke';
 
+export async function beginDiscourseUserApiAuthorizationFromRuntime(siteUrl: string) {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) return null;
+  return runtimeInvoke(NATIVE_COMMANDS.beginDiscourseUserApiAuthorization, { site_url: siteUrl });
+}
+
+export async function completeDiscourseUserApiAuthorizationFromRuntime(siteUrl: string, payload: string) {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) return null;
+  return runtimeInvoke(NATIVE_COMMANDS.completeDiscourseUserApiAuthorization, { payload, site_url: siteUrl });
+}
+
 export async function loadDiscoursePublishSettingsFromRuntime(): Promise<NativeDiscoursePublishSettings | null> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) return null;

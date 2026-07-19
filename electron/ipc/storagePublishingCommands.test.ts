@@ -3,6 +3,8 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 
 const discourseMocks = vi.hoisted(() => ({
+  beginDiscourseUserApiAuthorization: vi.fn(),
+  completeDiscourseUserApiAuthorization: vi.fn(),
   disconnectDiscoursePublishSettings: vi.fn(),
   loadDiscoursePublishCatalog: vi.fn(),
   loadDiscoursePublishSettings: vi.fn(),
@@ -76,4 +78,16 @@ it('forwards WordPress publish content without adding credentials to the payload
 it('routes explicit Discourse disconnect through the credential owner', async () => {
   await handlePublishingStorageCommand(NATIVE_COMMANDS.disconnectDiscoursePublishSettings, {});
   expect(discourseMocks.disconnectDiscoursePublishSettings).toHaveBeenCalledOnce();
+});
+
+it('keeps the decrypted User API key inside the main-process authorization boundary', async () => {
+  discourseMocks.completeDiscourseUserApiAuthorization.mockReturnValue({
+    has_api_key: true,
+    site_url: 'https://forum.example.com',
+    updated_at: '2026-07-19T00:00:00.000Z'
+  });
+  const args = { payload: 'ENCRYPTED-AUTHORIZATION-RESULT', site_url: 'https://forum.example.com' };
+  const result = await handlePublishingStorageCommand(NATIVE_COMMANDS.completeDiscourseUserApiAuthorization, args);
+  expect(discourseMocks.completeDiscourseUserApiAuthorization).toHaveBeenCalledWith(args);
+  expect(JSON.stringify(result)).not.toContain(args.payload);
 });

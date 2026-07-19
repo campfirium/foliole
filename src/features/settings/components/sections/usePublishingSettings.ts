@@ -1,23 +1,25 @@
 import { useEffect, useState } from 'react';
 
-import { definedProps } from '../../../../shared/lib/definedProps';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
+  beginDiscourseUserApiAuthorizationFromRuntime,
+  completeDiscourseUserApiAuthorizationFromRuntime,
   disconnectDiscoursePublishSettingsFromRuntime,
   loadDiscoursePublishCatalogFromRuntime,
   loadDiscoursePublishSettingsFromRuntime,
   saveDiscoursePublishSettingsToRuntime
 } from '../../../../shared/platform/discoursePublishRepository';
+import { openExternalUrl } from '../../../../shared/platform/runtimeExternalNavigation';
 
 export interface PublishingFormState {
-  apiKey: string;
+  authorizationResult: string;
   siteUrl: string;
 }
 
-export type PublishingFeedback = 'connected' | 'saved' | null;
-export type PublishingStatus = 'idle' | 'loading' | 'saving' | 'testing';
+export type PublishingFeedback = 'authorizationOpened' | 'connected' | 'saved' | null;
+export type PublishingStatus = 'authorizing' | 'idle' | 'loading' | 'saving' | 'testing';
 
-const EMPTY_FORM: PublishingFormState = { apiKey: '', siteUrl: '' };
+const EMPTY_FORM: PublishingFormState = { authorizationResult: '', siteUrl: '' };
 
 function usePublishingFormState() {
   const t = useTranslation();
@@ -31,7 +33,7 @@ function usePublishingFormState() {
     void loadDiscoursePublishSettingsFromRuntime()
       .then((settings) => {
         if (settings) {
-          setForm({ apiKey: '', siteUrl: settings.site_url });
+          setForm({ authorizationResult: '', siteUrl: settings.site_url });
           setHasApiKey(settings.has_api_key);
           setSavedSiteUrl(settings.site_url);
         }
@@ -47,9 +49,8 @@ function usePublishingFormState() {
 
 type PublishingState = ReturnType<typeof usePublishingFormState>;
 
-async function persistPublishingSettings(state: PublishingState, form: PublishingFormState, includeApiKey: boolean) {
+async function persistPublishingSettings(state: PublishingState, form: PublishingFormState) {
   const saved = await saveDiscoursePublishSettingsToRuntime({
-    ...definedProps({ api_key: includeApiKey ? form.apiKey || undefined : undefined }),
     site_url: form.siteUrl
   });
   if (!saved) return;
@@ -57,17 +58,17 @@ async function persistPublishingSettings(state: PublishingState, form: Publishin
   state.setSavedSiteUrl(saved.site_url);
   state.setForm((current) => ({
     ...current,
-    apiKey: includeApiKey && current.apiKey === form.apiKey ? '' : current.apiKey,
     siteUrl: current.siteUrl === form.siteUrl ? saved.site_url : current.siteUrl
   }));
+  return saved;
 }
 
-async function savePublishingSettings(state: PublishingState, t: ReturnType<typeof useTranslation>, form: PublishingFormState, includeApiKey: boolean) {
+async function savePublishingSettings(state: PublishingState, t: ReturnType<typeof useTranslation>, form: PublishingFormState) {
   state.setStatus('saving');
   state.setError(null);
   state.setFeedback(null);
   try {
-    await persistPublishingSettings(state, form, includeApiKey);
+    await persistPublishingSettings(state, form);
     state.setFeedback('saved');
   } catch {
     state.setError(t('settings.publishing.error.save'));
@@ -81,12 +82,52 @@ async function testPublishingConnection(state: PublishingState, t: ReturnType<ty
   state.setError(null);
   state.setFeedback(null);
   try {
-    await persistPublishingSettings(state, state.form, Boolean(state.form.apiKey.trim()));
+    await persistPublishingSettings(state, state.form);
     const catalog = await loadDiscoursePublishCatalogFromRuntime({ refresh: true });
     if (!catalog || catalog.from_cache) throw new Error('Discourse catalog unavailable');
     state.setFeedback('connected');
   } catch {
     state.setError(t('settings.publishing.error.test'));
+  } finally {
+    state.setStatus('idle');
+  }
+}
+
+async function beginAuthorization(state: PublishingState, t: ReturnType<typeof useTranslation>) {
+  state.setStatus('authorizing');
+  state.setError(null);
+  state.setFeedback(null);
+  try {
+    await persistPublishingSettings(state, state.form);
+    const result = await beginDiscourseUserApiAuthorizationFromRuntime(state.form.siteUrl);
+    if (!result) throw new Error('Discourse authorization unavailable');
+    await openExternalUrl(result.authorization_url);
+    state.setFeedback('authorizationOpened');
+  } catch {
+    state.setError(t('settings.publishing.error.authorization'));
+  } finally {
+    state.setStatus('idle');
+  }
+}
+
+async function completeAuthorization(state: PublishingState, t: ReturnType<typeof useTranslation>) {
+  state.setStatus('saving');
+  state.setError(null);
+  state.setFeedback(null);
+  try {
+    const saved = await completeDiscourseUserApiAuthorizationFromRuntime(
+      state.form.siteUrl,
+      state.form.authorizationResult.trim()
+    );
+    if (!saved) throw new Error('Discourse authorization unavailable');
+    state.setHasApiKey(saved.has_api_key);
+    state.setSavedSiteUrl(saved.site_url);
+    state.setForm((current) => ({ ...current, authorizationResult: '' }));
+    const catalog = await loadDiscoursePublishCatalogFromRuntime({ refresh: true });
+    if (!catalog || catalog.from_cache) throw new Error('Discourse catalog unavailable');
+    state.setFeedback('connected');
+  } catch {
+    state.setError(t('settings.publishing.error.authorization'));
   } finally {
     state.setStatus('idle');
   }
@@ -119,19 +160,19 @@ export function usePublishingSettings() {
     state.setForm((current) => ({ ...current, ...patch }));
   };
   const saveForumUrl = () => {
-    if (state.form.siteUrl.trim() !== state.savedSiteUrl) void savePublishingSettings(state, t, state.form, false);
+    if (state.form.siteUrl.trim() !== state.savedSiteUrl) void savePublishingSettings(state, t, state.form);
   };
-  const saveApiKey = () => {
-    if (state.form.apiKey.trim()) void savePublishingSettings(state, t, state.form, true);
-  };
-  const disabled = state.status === 'loading' || state.status === 'testing';
-  const canTest = !disabled && Boolean(state.form.siteUrl.trim()) && (state.hasApiKey || Boolean(state.form.apiKey.trim()));
+  const disabled = state.status !== 'idle';
+  const hasSiteUrl = Boolean(state.form.siteUrl.trim());
   return {
     ...state,
-    canTest,
+    beginAuthorization: () => void beginAuthorization(state, t),
+    canAuthorize: !disabled && hasSiteUrl,
+    canCompleteAuthorization: !disabled && hasSiteUrl && Boolean(state.form.authorizationResult.trim()),
+    canTest: !disabled && hasSiteUrl && state.hasApiKey,
+    completeAuthorization: () => void completeAuthorization(state, t),
     disconnect: () => void disconnectPublishingSettings(state, t),
     disabled,
-    saveApiKey,
     saveForumUrl,
     testConnection: () => void testPublishingConnection(state, t),
     updateForm
