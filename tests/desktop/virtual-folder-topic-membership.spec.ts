@@ -79,6 +79,10 @@ test('adds Topics to a manual virtual folder from the menu and by drag without m
   await expect.poll(() => topicPanel.getByRole('treeitem').allTextContents()).toEqual([
     DRAG_TOPIC_TITLE, MENU_TOPIC_TITLE
   ]);
+  await topicPanel.getByRole('treeitem', { name: DRAG_TOPIC_TITLE }).click();
+  await expect(virtualFolderRow).toHaveAttribute('aria-selected', 'true');
+  await expect(topicPanel.getByRole('treeitem', { name: MENU_TOPIC_TITLE })).toBeVisible();
+  await expect(desktopWindow.getByText('Drag membership body', { exact: true })).toBeVisible();
 
   await mkdir(path.dirname(SCREENSHOT_PATH), { recursive: true });
   await desktopWindow.screenshot({ path: SCREENSHOT_PATH });

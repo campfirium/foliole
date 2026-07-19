@@ -5,7 +5,7 @@ import { HOME_NODE_ID, VIRTUAL_REMOVED_NODE_ID } from '../features/nodes/model/s
 
 import { resolveWorkspaceBrowseRootForTarget, resolveWorkspaceBrowseRootNodeId } from './workspaceBrowseRoot';
 
-function createFolder(id: string): Node {
+function createFolder(id: string, specialKind?: Node['specialKind']): Node {
   return {
     content: '',
     createdAt: '2026-07-17T00:00:00.000Z',
@@ -16,10 +16,26 @@ function createFolder(id: string): Node {
     reading: null,
     reveal: null,
     review: null,
+    ...(specialKind ? { specialKind } : {}),
     title: id,
     updatedAt: '2026-07-17T00:00:00.000Z'
   };
 }
+
+it('keeps a custom virtual folder while opening one of its physical Topics', () => {
+  const nodesById = {
+    'folder-a': createFolder('folder-a'),
+    'virtual-a': createFolder('virtual-a', 'virtual'),
+    'topic-a': createTopic('topic-a', 'folder-a')
+  };
+
+  expect(resolveWorkspaceBrowseRootForTarget({
+    browseRootNodeId: 'virtual-a', intent: 'current-context', nodesById, targetNodeId: 'topic-a', trashedNodeIds: []
+  })).toBe('virtual-a');
+  expect(resolveWorkspaceBrowseRootForTarget({
+    browseRootNodeId: 'virtual-a', intent: 'target-context', nodesById, targetNodeId: 'topic-a', trashedNodeIds: []
+  })).toBe('folder-a');
+});
 
 function createTopic(id: string, parentNodeId: string | null): Node {
   return {

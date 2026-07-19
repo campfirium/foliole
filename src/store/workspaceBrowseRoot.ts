@@ -68,6 +68,7 @@ function isTargetInCurrentBrowseRoot(args: {
   const browseRoot = args.nodesById[args.browseRootNodeId];
   if (args.browseRootNodeId === HOME_NODE_ID || isHomeNode(browseRoot)) return true;
   if (BUILT_IN_VIRTUAL_BROWSE_ROOT_IDS.has(args.browseRootNodeId)) return true;
+  if (browseRoot?.specialKind === 'virtual' || browseRoot?.specialKind === 'virtual-root') return true;
   const visited = new Set<string>();
   let cursorId: string | null = args.targetNodeId;
   while (cursorId && !visited.has(cursorId)) {
