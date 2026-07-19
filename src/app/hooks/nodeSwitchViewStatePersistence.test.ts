@@ -140,7 +140,7 @@ describe('node search view-state persistence', () => {
 
     expect(args.trash.closeTrashView).toHaveBeenCalledTimes(1);
     expect(args.virtualView.restoreBrowseView).toHaveBeenCalledTimes(1);
-    expect(args.nav.handleSelectNode).toHaveBeenCalledWith('node-2');
+    expect(args.nav.handleSelectNode).toHaveBeenCalledWith('node-2', null, 'target-context');
     expect(args.ws.openNode).not.toHaveBeenCalled();
     expect(args.ws.setNodeViewState).not.toHaveBeenCalled();
     expect(args.runtime.setIsSearchPaletteOpen).toHaveBeenCalledWith(false);
@@ -154,7 +154,7 @@ describe('node search view-state persistence', () => {
       scrollTop: 0,
       selection: { from: 4, to: 8 }
     });
-    expect(args.nav.handleSelectNode).toHaveBeenCalledWith('node-2');
+    expect(args.nav.handleSelectNode).toHaveBeenCalledWith('node-2', null, 'target-context');
   });
 });
 
@@ -182,7 +182,7 @@ describe('node search body match jumps', () => {
       }
     });
     expect(args.runtime.bumpReadingPositionRequest).toHaveBeenCalledTimes(1);
-    expect(args.nav.handleSelectNode).toHaveBeenCalledWith('node-2');
+    expect(args.nav.handleSelectNode).toHaveBeenCalledWith('node-2', null, 'target-context');
     expectCallBefore(
       args.nav.handleSelectNode.mock.invocationCallOrder[0],
       args.runtime.bumpReadingPositionRequest.mock.invocationCallOrder[0]
@@ -203,7 +203,7 @@ describe('node search body match jumps', () => {
     expect(setSelection).toHaveBeenCalledWith({ from: 4, to: 8 });
     expect(revealSelectionCentered).toHaveBeenCalledWith({ from: 4, to: 8 });
     expect(args.runtime.bumpReadingPositionRequest).toHaveBeenCalledTimes(1);
-    expect(args.nav.handleSelectNode).toHaveBeenCalledWith('node-2');
+    expect(args.nav.handleSelectNode).toHaveBeenCalledWith('node-2', null, 'target-context');
     expectCallBefore(args.nav.handleSelectNode.mock.invocationCallOrder[0], revealSelectionCentered.mock.invocationCallOrder[0]);
   });
 });
@@ -216,7 +216,7 @@ describe('node switch entrypoints', () => {
     expect(args.runtime.recordRecentNode).toHaveBeenCalledWith('node-2');
     expect(args.trash.closeTrashView).toHaveBeenCalledTimes(1);
     expect(args.virtualView.restoreBrowseView).toHaveBeenCalledTimes(1);
-    expect(args.nav.handleSelectNode).toHaveBeenCalledWith('node-2');
+    expect(args.nav.handleSelectNode).toHaveBeenCalledWith('node-2', null, 'target-context');
     expect(args.ws.openNode).not.toHaveBeenCalled();
     expect(args.runtime.setIsGoToNodePaletteOpen).toHaveBeenCalledWith(false);
   });
@@ -226,7 +226,7 @@ describe('node switch entrypoints', () => {
     openPdfResult(args);
 
     expect(args.trash.closeTrashView).toHaveBeenCalledTimes(1);
-    expect(args.nav.handleSelectNode).toHaveBeenCalledWith('node-2');
+    expect(args.nav.handleSelectNode).toHaveBeenCalledWith('node-2', null, 'target-context');
     expect(requestPdfSearch).toHaveBeenCalledWith('node-2', { matchStart: 12, page: 3, query: 'keyword' });
     expect(args.ws.openNode).not.toHaveBeenCalled();
     expect(args.runtime.setIsSearchPaletteOpen).toHaveBeenCalledWith(false);
