@@ -2,6 +2,8 @@ import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 
+import type { TestInfo } from '@playwright/test';
+
 import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-harness.mjs';
 
 import { expect, test, type DesktopSession } from './harness/fixtures';
@@ -21,7 +23,10 @@ function virtualFolderTree(page: DesktopSession['firstWindow']) {
   return page.getByRole('tree', { name: /^(Virtual folder tree|虚拟文件夹树)$/ });
 }
 
-async function createAndOpenSavedSearch(page: DesktopSession['firstWindow']) {
+async function createAndOpenSavedSearch(
+  page: DesktopSession['firstWindow'],
+  testInfo: TestInfo
+) {
   await page.evaluate(async ({ id, query, title }) => {
     await globalThis.window?.__folioleWorkspaceDebug?.seedNodes?.([
       { content: `Body contains ${query}.`, id, kind: 'topic', title }
@@ -32,10 +37,38 @@ async function createAndOpenSavedSearch(page: DesktopSession['firstWindow']) {
   const search = page.getByRole('searchbox', { name: /^(Search topics to save as list|搜索主题并保存为列表)$/ });
   await search.fill(QUERY);
   await page.getByRole('button', { name: /^(Save search|保存搜索)$/ }).click();
-  await virtualFolderTree(page).getByRole('treeitem', { name: QUERY, exact: true }).click();
+  const savedSearch = virtualFolderTree(page).getByRole('treeitem', { name: QUERY, exact: true });
+  await savedSearch.click();
+  const listPanel = page.locator('[data-panel-scale-id="list-panel"]');
+  await expect(listPanel).toBeVisible();
+  await expect(page.getByRole('region', { name: /^(List panel|列表面板)$/ })).toBeVisible();
+  await listPanel.click({ position: { x: 40, y: 120 } });
+  await page.keyboard.press(process.platform === 'darwin' ? 'Meta+=' : 'Control+=');
+  await expect(page.getByText(/^(List panel|列表面板) · 105%$/)).toBeVisible();
+  const listPanelScreenshotPath = path.resolve(
+    '.tmp/artifacts/desktop-acceptance/virtual-list-panel-scale.png'
+  );
+  await mkdir(path.dirname(listPanelScreenshotPath), { recursive: true });
+  await page.screenshot({ path: listPanelScreenshotPath });
+  await testInfo.attach('virtual-list-panel-scale', {
+    contentType: 'image/png',
+    path: listPanelScreenshotPath
+  });
+
   const topicRow = currentFolderContents(page).getByRole('treeitem', { name: TOPIC_TITLE });
   await expect(topicRow).toBeVisible();
   await topicRow.click();
+  const documentPanel = page.locator('[data-panel-scale-id="document-panel"]');
+  await expect(documentPanel).toBeVisible();
+  await expect(page.getByRole('region', { name: /^(Document panel|文档面板)$/ })).toBeVisible();
+  await documentPanel.click({ position: { x: 80, y: 160 } });
+  await page.keyboard.press(process.platform === 'darwin' ? 'Meta+-' : 'Control+-');
+  await expect(page.getByText(/^(Document panel|文档面板) · 95%$/)).toBeVisible();
+
+  await savedSearch.click();
+  await expect(listPanel.locator(':scope > div').first()).toHaveCSS('zoom', '1.05');
+  await topicRow.click();
+  await expect(documentPanel.locator(':scope > div').first()).toHaveCSS('zoom', '0.95');
 }
 
 test('restores saved virtual results in the topic column after relaunch', async ({
@@ -45,7 +78,7 @@ test('restores saved virtual results in the topic column after relaunch', async 
   let secondSession: Awaited<ReturnType<typeof launchDesktopSession>> | null = null;
   try {
     await expectWorkspaceShell(desktopWindow);
-    await createAndOpenSavedSearch(desktopWindow);
+    await createAndOpenSavedSearch(desktopWindow, testInfo);
     await desktopWindow.waitForTimeout(1200);
 
     const stateRoot = desktopSession.target.runtimeStateRoot;

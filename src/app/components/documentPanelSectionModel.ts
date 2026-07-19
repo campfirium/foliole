@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import { isHomeNode, isInboxNode, isVirtualNode } from '../../features/nodes/model/specialNodes';
+import { isHomeNode, isInboxNode, isVirtualNode, isVirtualRootNode } from '../../features/nodes/model/specialNodes';
 import { NODE_TITLE_SLOT_PADDING_TOP, shouldReserveNodeTitleSlot } from '../../shared/lib/nodeTitleSlot';
 import type { Translate } from '../../shared/localization/LocalizationProvider';
 import { translate, type TranslationKey } from '../../shared/localization/translations';
@@ -26,6 +26,8 @@ interface DocumentStartupState {
   emptyState?: DocumentEmptyStateKeys;
   loadingLabel?: string;
 }
+
+export type CentralPanelKind = 'document' | 'list';
 
 function resolveDocumentStartupState(props: DocumentPanelSectionProps, activeNode: Node | undefined): DocumentStartupState {
   if (props.isWorkspaceHydrated === false) {
@@ -211,6 +213,13 @@ export function getDocumentPanelView(
 ) {
   const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
   const panelState = getDocumentPanelState(props, activeNode, editorDisplayMode, props.showAnswerSection);
+  const isFolderListView = Boolean(
+    props.isTrashViewOpen && (!activeNode || activeNode.kind === 'folder') ||
+      activeNode &&
+        activeNode.kind === 'folder' &&
+        !isVirtualNode(activeNode) &&
+        (props.editorNodeId === props.activeNodeId || isHomeNode(activeNode) || isInboxNode(activeNode))
+  );
 
   return {
     activeNode,
@@ -218,12 +227,9 @@ export function getDocumentPanelView(
     documentStatus: panelState.documentStatus,
     documentLayoutStyle: { '--document-max-width': `${documentMaxWidth}px` } as CSSProperties,
     loadingLabel: panelState.loadingLabel ? t('desktop.document.progress') : undefined,
-    isFolderListView: Boolean(
-      props.isTrashViewOpen && (!activeNode || activeNode.kind === 'folder') ||
-        activeNode &&
-          activeNode.kind === 'folder' &&
-          !isVirtualNode(activeNode) &&
-          (props.editorNodeId === props.activeNodeId || isHomeNode(activeNode) || isInboxNode(activeNode))
-    )
+    isFolderListView,
+    panelKind: isFolderListView || isVirtualNode(activeNode) || isVirtualRootNode(activeNode)
+      ? 'list' as const
+      : 'document' as const
   };
 }

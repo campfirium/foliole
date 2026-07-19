@@ -121,3 +121,20 @@ describe('documentPanelSectionModel', () => {
     expect(bodyProps.onEditorRedo).toBe(onEditorRedo);
   });
 });
+
+it('classifies virtual roots and saved searches as list panels', () => {
+  for (const [specialKind, isFolderListView] of [
+    ['virtual-root', true],
+    ['virtual', false]
+  ] as const) {
+    const virtualNode: Node = { ...baseNode, kind: 'folder', specialKind };
+    const view = getDocumentPanelView(
+      buildProps({ nodesById: { 'node-1': virtualNode } }),
+      'preview',
+      860
+    );
+
+    expect(view.isFolderListView).toBe(isFolderListView);
+    expect(view.panelKind).toBe('list');
+  }
+});

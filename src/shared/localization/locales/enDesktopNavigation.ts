@@ -52,6 +52,7 @@ export const EN_DESKTOP_NAVIGATION_TRANSLATIONS = {
     'The Demo shows Foliole as a desktop workspace. Open it on a wider screen to use the folders, editor, and Flow panel together.',
   'desktop.demo.narrow.openWindow': 'Open in a new window',
   'desktop.document.panel': 'Document panel',
+  'desktop.list.panel': 'List panel',
   'desktop.document.content': 'Content',
   'desktop.document.answerSection': 'Answer section',
   'desktop.document.answerEditor': 'Answer editor',

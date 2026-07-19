@@ -106,6 +106,7 @@ describe('DocumentPanelSection primary views', () => {
     renderSection();
 
     expect(screen.getByText('Document body')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Document panel' }).querySelector('[data-panel-scale-id="document-panel"]')).not.toBeNull();
   });
 
   it('keeps topic documents renderable when backlinks exist', async () => {
@@ -177,6 +178,7 @@ describe('DocumentPanelSection secondary views', () => {
     expect(screen.getByRole('region', { name: 'Folder list view' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: 'Node 1' })).toBeInTheDocument();
     expect(screen.getByTestId('folder-list-count')).toHaveTextContent('1');
+    expect(screen.getByRole('region', { name: 'List panel' }).querySelector('[data-panel-scale-id="list-panel"]')).not.toBeNull();
     expect(screen.queryByRole('separator', { name: /Resize document width/ })).not.toBeInTheDocument();
     expect(screen.queryByTestId('document-panel-body')).not.toBeInTheDocument();
   });
@@ -200,6 +202,7 @@ it('shows saved virtual searches as read-only lists without document controls', 
   });
 
   expect(screen.getByRole('region', { name: 'Virtual search' })).toBeInTheDocument();
+  expect(screen.getByRole('region', { name: 'List panel' }).querySelector('[data-panel-scale-id="list-panel"]')).not.toBeNull();
   expect(screen.queryByText('Search titles and topic text. Matching topics appear in the topic list.')).not.toBeInTheDocument();
   expect(screen.getByRole('searchbox', { name: 'Search topics to save as list' })).toHaveAttribute('readonly');
   expect(screen.getByRole('searchbox', { name: 'Search topics to save as list' })).toHaveClass('text-foreground/50');

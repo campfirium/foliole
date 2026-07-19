@@ -83,7 +83,7 @@ function useDocumentPanelSectionModel(props: DocumentPanelSectionProps) {
   const { editorDisplayMode, readingContentWidth } = useAppearanceSettings();
   const { isRetryingDocument, retryDocumentLoad } = useDocumentPanelDocumentRetry(props.editorNodeId);
   const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
-  const { bodyProps, documentLayoutStyle, documentStatus, isFolderListView, loadingLabel } = getDocumentPanelView(
+  const { bodyProps, documentLayoutStyle, documentStatus, isFolderListView, loadingLabel, panelKind } = getDocumentPanelView(
     props,
     editorDisplayMode,
     readingContentWidth,
@@ -125,6 +125,7 @@ function useDocumentPanelSectionModel(props: DocumentPanelSectionProps) {
     emptyContent,
     textAnchorState,
     isFolderListView,
+    panelKind,
     isSourceUpdatePanelOpen,
     currentSourceUpdateContent,
     backlinks,
@@ -191,6 +192,7 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
         })}
         backlinks={topicBacklinks}
         isFolderListView={model.isFolderListView}
+        panelKind={model.panelKind}
         isSourceUpdatePanelOpen={model.isSourceUpdatePanelOpen}
         linkPanels={linkPanels}
         onCloseExternalLink={handleCloseExternalLink}

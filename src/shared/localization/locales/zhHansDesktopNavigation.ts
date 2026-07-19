@@ -53,6 +53,7 @@ export const ZH_HANS_DESKTOP_NAVIGATION_TRANSLATIONS: Partial<Record<Translation
     'Demo 展示的是 Foliole 的桌面工作区。请在更宽的屏幕中打开，以同时使用文件夹、编辑器和 Flow 面板。',
   'desktop.demo.narrow.openWindow': '在新窗口打开',
   'desktop.document.panel': '文档面板',
+  'desktop.list.panel': '列表面板',
   'desktop.document.content': '内容',
   'desktop.document.answerSection': '答案区域',
   'desktop.document.answerEditor': '答案编辑器',

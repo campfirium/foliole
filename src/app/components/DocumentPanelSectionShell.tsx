@@ -11,6 +11,7 @@ import { DocumentPanelContentAssembly } from './DocumentPanelContentAssembly';
 import { renderDocumentPanelHeader } from './DocumentPanelHeaderChrome';
 import { FolderListHeaderNavigation } from './DocumentPanelHeaderNavigation';
 import type { DocumentPanelSectionProps } from './DocumentPanelSection';
+import type { CentralPanelKind } from './documentPanelSectionModel';
 import { DocumentPanelContent } from './DocumentPanelSectionParts';
 import { DocumentPriorityQuickSetHint } from './DocumentPriorityQuickSetHint';
 import { DocumentTopicSearchToolbar } from './DocumentTopicSearchToolbar';
@@ -21,6 +22,7 @@ interface DocumentPanelShellProps {
   backlinks: BacklinkItem[];
   bodyProps: Parameters<typeof DocumentPanelContent>[0]['bodyProps'];
   isFolderListView: boolean;
+  panelKind: CentralPanelKind;
   isSourceUpdatePanelOpen: boolean;
   linkPanels: LinkPanelRecord[];
   onCloseExternalLink: (panelId: string) => void;
@@ -132,6 +134,7 @@ export function DocumentPanelSectionShell({
   backlinks,
   bodyProps,
   isFolderListView,
+  panelKind,
   isSourceUpdatePanelOpen,
   linkPanels,
   onCloseExternalLink,
@@ -173,6 +176,7 @@ export function DocumentPanelSectionShell({
       folderListSortDirection={folderListSortDirection}
       folderListSortKey={folderListSortKey}
       isFolderListView={isFolderListView}
+      panelKind={panelKind}
       linkPanels={linkPanels}
       onChangeFolderListSortDirection={folderListSort.setDirection}
       onChangeFolderListSortKey={folderListSort.setKey}

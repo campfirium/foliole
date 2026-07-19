@@ -5,6 +5,7 @@ import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLink
 
 import { DocumentPanelScaleSurface } from './DocumentPanelScaleSurface';
 import type { DocumentPanelSectionProps } from './DocumentPanelSection';
+import type { CentralPanelKind } from './documentPanelSectionModel';
 import { DocumentPanelContent } from './DocumentPanelSectionParts';
 import type { LinkPanelRecord } from './linkPanelState';
 
@@ -14,6 +15,7 @@ export function DocumentPanelContentAssembly(args: {
   folderListSortDirection: FolderListSortDirection;
   folderListSortKey: FolderListSortKey;
   isFolderListView: boolean;
+  panelKind: CentralPanelKind;
   linkPanels: LinkPanelRecord[];
   onChangeFolderListSortDirection: (value: FolderListSortDirection) => void;
   onChangeFolderListSortKey: (value: FolderListSortKey) => void;
@@ -54,9 +56,9 @@ export function DocumentPanelContentAssembly(args: {
       {({ content, isPdfSurface }) => (
         <DocumentPanelScaleSurface
           chrome={args.chrome}
-          isFolderListView={args.isFolderListView}
           isPdfSurface={isPdfSurface}
           overlay={args.overlay}
+          panelKind={args.panelKind}
         >
           {content}
         </DocumentPanelScaleSurface>
