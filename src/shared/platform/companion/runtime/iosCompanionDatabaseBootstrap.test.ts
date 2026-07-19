@@ -18,7 +18,7 @@ function createNativeState(): NativeCompanionBootstrapState {
 function createHarness(storedDeviceId?: string) {
   const connection = {
     execute: vi.fn(async () => ({ changes: { changes: 0 } })),
-    getUrl: vi.fn(async () => ({
+    getUrl: vi.fn(async (): Promise<{ url?: string }> => ({
       url: 'file:///Library/CapacitorDatabase/foliole-companionSQLite.db'
     })),
     isDBOpen: vi.fn(async () => ({ result: false })),
