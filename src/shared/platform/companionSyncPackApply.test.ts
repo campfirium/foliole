@@ -24,6 +24,22 @@ const syncPackNodesMock = vi.hoisted(() => ({
     to_state_seq: 11
   }))
 }));
+const iosSyncPackApplyMock = vi.hoisted(() => ({
+  apply: vi.fn(async () => ({
+    applied_blob_count: 5,
+    applied_object_count: 6,
+    to_state_seq: 12
+  }))
+}));
+const bootstrapMock = vi.hoisted(() => ({
+  load: vi.fn(async () => ({
+    booted_at: '2026-05-04T00:00:00.000Z',
+    database_path: '/tmp/foliole.db',
+    database_ready: true,
+    device_id: 'android-test-device',
+    runtime_kind: 'android-capacitor' as 'android-capacitor' | 'ios-capacitor'
+  }))
+}));
 
 vi.mock('@capacitor/core', () => ({
   Capacitor: {
@@ -33,11 +49,22 @@ vi.mock('@capacitor/core', () => ({
   registerPlugin: vi.fn(() => capacitorMock.plugin)
 }));
 vi.mock('./companionSyncPackNodes', () => syncPackNodesMock);
+vi.mock('./companionBootstrap', () => ({ loadCompanionBootstrapState: bootstrapMock.load }));
+vi.mock('./companion/sync/pack-apply/iosCompanionSyncPackApply', () => ({
+  applyIosCompanionSyncPackPath: iosSyncPackApplyMock.apply
+}));
 
 beforeEach(() => {
   vi.clearAllMocks();
   capacitorMock.isNative.mockReturnValue(true);
   capacitorMock.platform.mockReturnValue('android');
+  bootstrapMock.load.mockResolvedValue({
+    booted_at: '2026-05-04T00:00:00.000Z',
+    database_path: '/tmp/foliole.db',
+    database_ready: true,
+    device_id: 'android-test-device',
+    runtime_kind: 'android-capacitor'
+  });
 });
 
 it('downloads desktop packs before applying them through the shared TS core', async () => {
@@ -63,7 +90,7 @@ it('downloads desktop packs before applying them through the shared TS core', as
   expect(capacitorMock.plugin.deleteDownloadedSyncPack).toHaveBeenCalledWith({ pack_path: '/tmp/downloaded-pack.db' });
 });
 
-it('keeps pack apply inert outside native Android', async () => {
+it('keeps pack apply inert outside native companion hosts', async () => {
   capacitorMock.isNative.mockReturnValue(false);
   capacitorMock.platform.mockReturnValue('web');
   const api = await import('./companionSyncPackApply');
@@ -72,6 +99,31 @@ it('keeps pack apply inert outside native Android', async () => {
     applied_blob_count: 0,
     applied_object_count: 0,
     to_state_seq: 0
+  });
+});
+
+it('downloads validated packs before routing iOS through its shared-core adapter', async () => {
+  capacitorMock.platform.mockReturnValue('ios');
+  bootstrapMock.load.mockResolvedValueOnce({
+    booted_at: '2026-07-19T00:00:00.000Z',
+    database_path: '/tmp/foliole.db',
+    database_ready: true,
+    device_id: 'ios-test-device',
+    runtime_kind: 'ios-capacitor'
+  });
+  const api = await import('./companionSyncPackApply');
+
+  await expect(api.applyCompanionDesktopSyncPack({
+    headers: { 'X-Device-Id': 'ios-test-device' },
+    url: 'http://desktop/companion/sync-pack'
+  })).resolves.toEqual({ applied_blob_count: 5, applied_object_count: 6, to_state_seq: 12 });
+
+  expect(iosSyncPackApplyMock.apply).toHaveBeenCalledWith({
+    deviceId: 'ios-test-device',
+    packPath: '/tmp/downloaded-pack.db'
+  });
+  expect(capacitorMock.plugin.deleteDownloadedSyncPack).toHaveBeenCalledWith({
+    pack_path: '/tmp/downloaded-pack.db'
   });
 });
 

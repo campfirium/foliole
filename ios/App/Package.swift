@@ -1,0 +1,42 @@
+// swift-tools-version: 5.9
+import PackageDescription
+
+let package = Package(
+    name: "FolioleIOSHostTests",
+    platforms: [.macOS(.v13)],
+    dependencies: [
+        .package(url: "https://github.com/weichsel/ZIPFoundation.git", exact: "0.9.20")
+    ],
+    targets: [
+        .target(
+            name: "FolioleSyncPackValidator",
+            dependencies: [.product(name: "ZIPFoundation", package: "ZIPFoundation")],
+            path: "App",
+            exclude: [
+                "AppDelegate.swift", "Assets.xcassets", "Base.lproj", "FolioleBridgeViewController.swift",
+                "FolioleCompanionBootstrapPlugin.swift", "FolioleCompanionSyncPackTransfer.swift",
+                "FolioleCompanionSyncPackTransferPlugin.swift", "Info.plist", "capacitor.config.json",
+                "config.xml", "public"
+            ],
+            sources: [
+                "FolioleCompanionContractStore.swift",
+                "FolioleCompanionZlib.swift",
+                "FolioleCompanionSyncPackEnvelopeValidator.swift",
+                "FolioleReadOnlySQLite.swift",
+                "FolioleCompanionSyncPackDatabaseValidator.swift"
+            ],
+            resources: [
+                .copy("companion-bridge-contract-definitions.json"),
+                .copy("companion-sync-protocol-definitions.json")
+            ]
+        ),
+        .testTarget(
+            name: "FolioleSyncPackValidatorTests",
+            dependencies: [
+                "FolioleSyncPackValidator",
+                .product(name: "ZIPFoundation", package: "ZIPFoundation")
+            ],
+            path: "SyncPackValidatorTests"
+        )
+    ]
+)

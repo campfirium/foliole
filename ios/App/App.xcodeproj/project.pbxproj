@@ -9,9 +9,19 @@
 /* Begin PBXBuildFile section */
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
 		4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */ = {isa = PBXBuildFile; productRef = 4D22ABE82AF431CB00220026 /* CapApp-SPM */; };
+		50F020011FED79650016851F /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 50F020021FED79650016851F /* ZIPFoundation */; };
 		50379B232058CBB4000EE86E /* capacitor.config.json in Resources */ = {isa = PBXBuildFile; fileRef = 50379B222058CBB4000EE86E /* capacitor.config.json */; };
 		50F010011FED79650016851F /* FolioleBridgeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F010031FED79650016851F /* FolioleBridgeViewController.swift */; };
 		50F010021FED79650016851F /* FolioleCompanionBootstrapPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F010041FED79650016851F /* FolioleCompanionBootstrapPlugin.swift */; };
+		50F020041FED79650016851F /* companion-bridge-contract-definitions.json in Resources */ = {isa = PBXBuildFile; fileRef = 50F020061FED79650016851F /* companion-bridge-contract-definitions.json */; };
+		50F020051FED79650016851F /* companion-sync-protocol-definitions.json in Resources */ = {isa = PBXBuildFile; fileRef = 50F020071FED79650016851F /* companion-sync-protocol-definitions.json */; };
+		50F021111FED79650016851F /* FolioleCompanionContractStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F021011FED79650016851F /* FolioleCompanionContractStore.swift */; };
+		50F021121FED79650016851F /* FolioleCompanionZlib.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F021021FED79650016851F /* FolioleCompanionZlib.swift */; };
+		50F021131FED79650016851F /* FolioleCompanionSyncPackEnvelopeValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F021031FED79650016851F /* FolioleCompanionSyncPackEnvelopeValidator.swift */; };
+		50F021141FED79650016851F /* FolioleReadOnlySQLite.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F021041FED79650016851F /* FolioleReadOnlySQLite.swift */; };
+		50F021151FED79650016851F /* FolioleCompanionSyncPackDatabaseValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F021051FED79650016851F /* FolioleCompanionSyncPackDatabaseValidator.swift */; };
+		50F021161FED79650016851F /* FolioleCompanionSyncPackTransfer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F021061FED79650016851F /* FolioleCompanionSyncPackTransfer.swift */; };
+		50F021171FED79650016851F /* FolioleCompanionSyncPackTransferPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F021071FED79650016851F /* FolioleCompanionSyncPackTransferPlugin.swift */; };
 		504EC3081FED79650016851F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 504EC3071FED79650016851F /* AppDelegate.swift */; };
 		504EC30D1FED79650016851F /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30B1FED79650016851F /* Main.storyboard */; };
 		504EC30F1FED79650016851F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
@@ -26,6 +36,15 @@
 		504EC3071FED79650016851F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		50F010031FED79650016851F /* FolioleBridgeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleBridgeViewController.swift; sourceTree = "<group>"; };
 		50F010041FED79650016851F /* FolioleCompanionBootstrapPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionBootstrapPlugin.swift; sourceTree = "<group>"; };
+		50F020061FED79650016851F /* companion-bridge-contract-definitions.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "companion-bridge-contract-definitions.json"; sourceTree = "<group>"; };
+		50F020071FED79650016851F /* companion-sync-protocol-definitions.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "companion-sync-protocol-definitions.json"; sourceTree = "<group>"; };
+		50F021011FED79650016851F /* FolioleCompanionContractStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionContractStore.swift; sourceTree = "<group>"; };
+		50F021021FED79650016851F /* FolioleCompanionZlib.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionZlib.swift; sourceTree = "<group>"; };
+		50F021031FED79650016851F /* FolioleCompanionSyncPackEnvelopeValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncPackEnvelopeValidator.swift; sourceTree = "<group>"; };
+		50F021041FED79650016851F /* FolioleReadOnlySQLite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleReadOnlySQLite.swift; sourceTree = "<group>"; };
+		50F021051FED79650016851F /* FolioleCompanionSyncPackDatabaseValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncPackDatabaseValidator.swift; sourceTree = "<group>"; };
+		50F021061FED79650016851F /* FolioleCompanionSyncPackTransfer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncPackTransfer.swift; sourceTree = "<group>"; };
+		50F021071FED79650016851F /* FolioleCompanionSyncPackTransferPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncPackTransferPlugin.swift; sourceTree = "<group>"; };
 		504EC30C1FED79650016851F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		504EC30E1FED79650016851F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		504EC3111FED79650016851F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
@@ -40,6 +59,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */,
+				50F020011FED79650016851F /* ZIPFoundation in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -70,6 +90,15 @@
 				504EC3071FED79650016851F /* AppDelegate.swift */,
 				50F010031FED79650016851F /* FolioleBridgeViewController.swift */,
 				50F010041FED79650016851F /* FolioleCompanionBootstrapPlugin.swift */,
+				50F020061FED79650016851F /* companion-bridge-contract-definitions.json */,
+				50F020071FED79650016851F /* companion-sync-protocol-definitions.json */,
+				50F021011FED79650016851F /* FolioleCompanionContractStore.swift */,
+				50F021021FED79650016851F /* FolioleCompanionZlib.swift */,
+				50F021031FED79650016851F /* FolioleCompanionSyncPackEnvelopeValidator.swift */,
+				50F021041FED79650016851F /* FolioleReadOnlySQLite.swift */,
+				50F021051FED79650016851F /* FolioleCompanionSyncPackDatabaseValidator.swift */,
+				50F021061FED79650016851F /* FolioleCompanionSyncPackTransfer.swift */,
+				50F021071FED79650016851F /* FolioleCompanionSyncPackTransferPlugin.swift */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
 				504EC30E1FED79650016851F /* Assets.xcassets */,
 				504EC3101FED79650016851F /* LaunchScreen.storyboard */,
@@ -98,6 +127,7 @@
 			name = App;
 			packageProductDependencies = (
 				4D22ABE82AF431CB00220026 /* CapApp-SPM */,
+				50F020021FED79650016851F /* ZIPFoundation */,
 			);
 			productName = App;
 			productReference = 504EC3041FED79650016851F /* App.app */;
@@ -130,6 +160,7 @@
 			mainGroup = 504EC2FB1FED79650016851F;
 			packageReferences = (
 				D4C12C0A2AAA248700AAC8A2 /* XCLocalSwiftPackageReference "CapApp-SPM" */,
+				50F020031FED79650016851F /* XCRemoteSwiftPackageReference "ZIPFoundation" */,
 			);
 			productRefGroup = 504EC3051FED79650016851F /* Products */;
 			projectDirPath = "";
@@ -151,6 +182,8 @@
 				50379B232058CBB4000EE86E /* capacitor.config.json in Resources */,
 				504EC30D1FED79650016851F /* Main.storyboard in Resources */,
 				2FAD9763203C412B000D30F8 /* config.xml in Resources */,
+				50F020041FED79650016851F /* companion-bridge-contract-definitions.json in Resources */,
+				50F020051FED79650016851F /* companion-sync-protocol-definitions.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -164,6 +197,13 @@
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				50F010011FED79650016851F /* FolioleBridgeViewController.swift in Sources */,
 				50F010021FED79650016851F /* FolioleCompanionBootstrapPlugin.swift in Sources */,
+				50F021111FED79650016851F /* FolioleCompanionContractStore.swift in Sources */,
+				50F021121FED79650016851F /* FolioleCompanionZlib.swift in Sources */,
+				50F021131FED79650016851F /* FolioleCompanionSyncPackEnvelopeValidator.swift in Sources */,
+				50F021141FED79650016851F /* FolioleReadOnlySQLite.swift in Sources */,
+				50F021151FED79650016851F /* FolioleCompanionSyncPackDatabaseValidator.swift in Sources */,
+				50F021161FED79650016851F /* FolioleCompanionSyncPackTransfer.swift in Sources */,
+				50F021171FED79650016851F /* FolioleCompanionSyncPackTransferPlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -365,6 +405,17 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		50F020031FED79650016851F /* XCRemoteSwiftPackageReference "ZIPFoundation" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/weichsel/ZIPFoundation.git";
+			requirement = {
+				kind = exactVersion;
+				version = 0.9.20;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCLocalSwiftPackageReference section */
 		D4C12C0A2AAA248700AAC8A2 /* XCLocalSwiftPackageReference "CapApp-SPM" */ = {
 			isa = XCLocalSwiftPackageReference;
@@ -377,6 +428,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = D4C12C0A2AAA248700AAC8A2 /* XCLocalSwiftPackageReference "CapApp-SPM" */;
 			productName = "CapApp-SPM";
+		};
+		50F020021FED79650016851F /* ZIPFoundation */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 50F020031FED79650016851F /* XCRemoteSwiftPackageReference "ZIPFoundation" */;
+			productName = ZIPFoundation;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

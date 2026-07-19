@@ -1,0 +1,625 @@
+{
+  "pushAck": {
+    "clientOpIdKeys": [
+      "client_op_id",
+      "clientOpId"
+    ],
+    "confirmingStatuses": [
+      "accepted",
+      "already_applied"
+    ],
+    "identityKey": "identity",
+    "identityObjectIdKey": "objectId",
+    "identityObjectTypeKey": "objectType",
+    "resultSavedClientOpIdsKey": "saved_client_op_ids",
+    "stateSeqKey": "state_seq",
+    "stateSeqOptionalObjectTypes": [
+      "node"
+    ],
+    "stateSeqRejectedObjectTypes": [
+      "review_log"
+    ],
+    "statusKey": "status",
+    "statuses": [
+      "accepted",
+      "already_applied",
+      "conflict",
+      "rejected"
+    ]
+  },
+  "resourceStatuses": {
+    "cached": "cached",
+    "empty": "empty",
+    "failed": "failed",
+    "fetching": "fetching",
+    "missing": "missing",
+    "passthroughAvailabilityStatuses": [
+      "fetching",
+      "failed"
+    ],
+    "ready": "ready",
+    "visibleBodyStatuses": [
+      "missing",
+      "empty",
+      "fetching",
+      "failed"
+    ]
+  },
+  "syncPackEnvelope": {
+    "compression": "zlib",
+    "databaseEntry": "incoming.db.deflate",
+    "format": "foliole.sync-pack",
+    "formatVersion": 1,
+    "legacyOptionalNodeColumns": [
+      "priority",
+      "desired_retention",
+      "enable_short_term",
+      "sequential_reading_enabled",
+      "manual_child_order",
+      "virtual_filter",
+      "reveal",
+      "anchor_link",
+      "image_regions",
+      "import_source_fingerprint",
+      "import_content_fingerprint",
+      "current_version_id"
+    ],
+    "manifestTableNames": [
+      "sync_object_state",
+      "sync_objects",
+      "nodes",
+      "node_order",
+      "node_attachments",
+      "external_documents",
+      "content_blobs",
+      "review_log"
+    ],
+    "maximumSchemaVersion": 57,
+    "minimumSchemaVersion": 46,
+    "sqliteTableRequirements": {
+      "pack_manifest": [
+        "key",
+        "value"
+      ],
+      "sync_object_state": [
+        "object_type",
+        "object_id",
+        "state_seq",
+        "content_hash",
+        "updated_at",
+        "deleted_at"
+      ],
+      "sync_objects": [
+        "object_type",
+        "object_id",
+        "content_hash",
+        "payload_json",
+        "updated_at",
+        "deleted_at"
+      ],
+      "nodes": [
+        "id",
+        "parent_id",
+        "kind",
+        "shelved_at",
+        "title",
+        "is_title_manual",
+        "hide_title_heading",
+        "body_blob_hash",
+        "opening_text",
+        "content",
+        "created_at",
+        "updated_at",
+        "deleted_at"
+      ],
+      "node_order": [
+        "node_id",
+        "position"
+      ],
+      "node_attachments": [
+        "node_id",
+        "attachment_id",
+        "role"
+      ],
+      "external_documents": [
+        "document_id",
+        "folder_id",
+        "relative_path",
+        "file_name",
+        "extension",
+        "source_size_bytes",
+        "source_modified_at",
+        "source_modified_ms",
+        "content_hash",
+        "title",
+        "opening_text",
+        "body_blob_hash",
+        "content",
+        "indexed_at",
+        "is_present",
+        "missing_at",
+        "created_at",
+        "updated_at"
+      ],
+      "content_blobs": [
+        "hash",
+        "storage_key",
+        "kind",
+        "mime_type",
+        "compression",
+        "original_size_bytes",
+        "stored_size_bytes",
+        "original_sha256",
+        "stored_sha256",
+        "availability",
+        "source_device_id",
+        "created_at",
+        "cached_at",
+        "last_verified_at"
+      ],
+      "review_log": [
+        "id",
+        "op_id",
+        "device_id",
+        "node_id",
+        "grade",
+        "scheduler_version",
+        "reviewed_at",
+        "due_before",
+        "stability_before",
+        "difficulty_before",
+        "due_after",
+        "stability_after",
+        "difficulty_after"
+      ]
+    }
+  },
+  "syncEvents": {
+    "completedStatus": "completed",
+    "fullSyncCompletedMessage": "Sync fully completed.",
+    "fallbackStatus": "failed",
+    "skippedStatus": "skipped",
+    "statuses": [
+      "started",
+      "completed",
+      "failed",
+      "skipped"
+    ]
+  },
+  "syncDiagnostics": {
+    "host": "android",
+    "connectionKeys": {
+      "endpointUrl": "endpoint_url",
+      "lastError": "last_error",
+      "state": "state"
+    },
+    "identityKeys": {
+      "appVersion": "app_version",
+      "databasePath": "database_path",
+      "deviceId": "device_id",
+      "deviceName": "device_name"
+    },
+    "outputKeys": {
+      "collectedAt": "collected_at",
+      "connection": "connection",
+      "content": "content",
+      "events": "events",
+      "host": "host",
+      "identity": "identity",
+      "storage": "storage",
+      "syncState": "sync_state",
+      "verdicts": "verdicts"
+    },
+    "stateKeys": {
+      "dirtyObjects": "dirty_objects",
+      "maxStateSeq": "max_state_seq",
+      "packCursor": "pack_cursor",
+      "pendingAcks": "pending_acks",
+      "pushIssues": "push_issues",
+      "stateCounts": "state_counts"
+    },
+    "verdictEvidenceKeys": {
+      "message": "message",
+      "occurredAt": "occurred_at"
+    },
+    "verdictKeys": {
+      "code": "code",
+      "evidence": "evidence",
+      "message": "message",
+      "severity": "severity"
+    },
+    "verdicts": {
+      "endpointMissing": {
+        "code": "android_endpoint_missing",
+        "message": "This device has no desktop sync address.",
+        "severity": "warning"
+      },
+      "hasLocalDirtyState": {
+        "code": "android_has_local_dirty_state",
+        "message": "This device has changes waiting to send.",
+        "severity": "info"
+      },
+      "hasPendingPushAck": {
+        "code": "android_has_pending_push_ack",
+        "message": "Desktop accepted changes that are waiting for pull confirmation.",
+        "severity": "info"
+      },
+      "hasPushIssues": {
+        "code": "android_has_push_issues",
+        "message": "Some device changes were not sent.",
+        "severity": "warning"
+      },
+      "missingAttachmentResources": {
+        "code": "android_missing_attachment_resources",
+        "message": "Some attachment files are still downloading.",
+        "severity": "info"
+      },
+      "missingContentBlobs": {
+        "code": "android_missing_content_blobs",
+        "message": "Some topic bodies are still downloading.",
+        "severity": "info"
+      },
+      "noNodesAfterCompletedSync": {
+        "code": "android_no_nodes_after_completed_sync",
+        "message": "Completed sync left no topics on this device.",
+        "severity": "error"
+      },
+      "packCursorMissing": {
+        "code": "android_pack_cursor_missing",
+        "message": "This device has not applied a sync pack yet.",
+        "severity": "info"
+      },
+      "ready": {
+        "code": "android_ready",
+        "message": "Android sync state is readable.",
+        "severity": "ok"
+      },
+      "recentSyncFailed": {
+        "code": "android_recent_sync_failed",
+        "message": "Recent sync activity failed.",
+        "severity": "error"
+      }
+    }
+  },
+  "syncMetaKeys": {
+    "endpointUrl": "workspace_sync_endpoint_url",
+    "events": "workspace_sync_events",
+    "lastSyncedAt": "workspace_sync_last_synced_at",
+    "onboardingStatus": "workspace_sync_onboarding_status",
+    "rememberedTargets": "workspace_sync_remembered_targets"
+  },
+  "syncMetaOutputKeys": {
+    "endpointUrl": "endpoint_url",
+    "lastSyncedAt": "last_synced_at",
+    "rememberedTargets": "remembered_targets",
+    "syncEvents": "sync_events",
+    "syncOnboardingStatus": "sync_onboarding_status",
+    "workspaceSnapshot": "workspace_snapshot"
+  },
+  "syncEventRecordKeys": {
+    "endpointUrl": "endpoint_url",
+    "id": "id",
+    "message": "message",
+    "occurredAt": "occurred_at",
+    "status": "status"
+  },
+  "syncPluginRequestKeys": {
+    "acks": "acks",
+    "cursor": "cursor",
+    "limit": "limit",
+    "objectIds": "object_ids",
+    "objectTypes": "object_types"
+  },
+  "syncCursorPayloadKeys": {
+    "changeId": "change_id",
+    "createdAt": "created_at",
+    "cursor": "cursor"
+  },
+  "syncMetaCursors": {
+    "nodeVersion": "sync_node_version_cursor",
+    "nodeVersionPush": "sync_node_version_push_cursor",
+    "pack": "sync_pack_cursor",
+    "reviewLog": "sync_review_log_cursor",
+    "reviewLogPush": "sync_review_log_push_cursor",
+    "state": "sync_state_cursor",
+    "statePush": "sync_state_push_cursor"
+  },
+  "syncOnboarding": {
+    "completedStatus": "completed",
+    "fallbackStatus": "pending",
+    "statuses": [
+      "accepted",
+      "completed",
+      "dismissed",
+      "pending"
+    ]
+  },
+  "syncWrite": {
+    "recordKeys": {
+      "contentHash": "content_hash",
+      "objectId": "object_id",
+      "objectType": "object_type",
+      "payloadJson": "payload_json",
+      "updatedAt": "updated_at"
+    },
+    "resultKeys": {
+      "contentHash": "content_hash",
+      "objectId": "object_id",
+      "opId": "op_id"
+    },
+    "viewCanonicalKeys": {
+      "deviceId": "device_id",
+      "formFactor": "form_factor",
+      "key": "key",
+      "platform": "platform",
+      "scope": "scope"
+    }
+  },
+  "syncStateObjectIdentity": {
+    "defaultScope": "workspace",
+    "scopedObjectIdDelimiter": ":",
+    "scopedObjectIdPartLimit": 5,
+    "scopedObjectTypes": [
+      "setting",
+      "view_state"
+    ],
+    "scopePartIndex": 0
+  },
+  "syncObjectTypes": {
+    "nodeReading": "node_reading",
+    "nodeReview": "node_review",
+    "settingRecord": "setting",
+    "viewState": "view_state"
+  },
+  "syncObjectPolicy": {
+    "devicePrivateObjectTypes": [
+      "node_reading",
+      "setting",
+      "view_state"
+    ],
+    "policies": [
+      {
+        "category": "structure",
+        "conflict": "lww",
+        "deviceScope": "workspace",
+        "key": "node",
+        "objectType": "node",
+        "pushIssue": "review_required",
+        "storage": [
+          "nodes",
+          "node_order"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "structure",
+        "conflict": "lww",
+        "deviceScope": "workspace",
+        "key": "node_order",
+        "objectType": "node",
+        "pushIssue": "review_required",
+        "storage": [
+          "node_order"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "structure",
+        "conflict": "lww",
+        "deviceScope": "workspace",
+        "key": "external_document",
+        "objectType": "external_document",
+        "pushIssue": "review_required",
+        "storage": [
+          "external_documents"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "structure",
+        "conflict": "lww",
+        "deviceScope": "workspace",
+        "key": "external_folder",
+        "objectType": "external_folder",
+        "pushIssue": "review_required",
+        "storage": [
+          "external_search_folders"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "structure",
+        "conflict": "lww",
+        "deviceScope": "workspace",
+        "key": "import_source",
+        "objectType": "import_source",
+        "pushIssue": "review_required",
+        "storage": [
+          "import_sources"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "resource",
+        "conflict": "lww",
+        "deviceScope": "workspace",
+        "key": "attachment",
+        "objectType": "attachment",
+        "pushIssue": "review_required",
+        "storage": [
+          "attachments",
+          "attachment_blobs"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "content",
+        "conflict": "lww",
+        "deviceScope": "workspace",
+        "key": "pdf_page_text",
+        "objectType": "pdf_page_text",
+        "pushIssue": "review_required",
+        "storage": [
+          "pdf_page_text"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "resource",
+        "conflict": "cache_refresh",
+        "deviceScope": "cache",
+        "key": "content_blobs",
+        "objectType": null,
+        "pushIssue": "diagnostic",
+        "storage": [
+          "content_blobs",
+          "content_blob_data"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "reading",
+        "conflict": "lww",
+        "deviceScope": "workspace",
+        "key": "node_reading",
+        "objectType": "node_reading",
+        "pushIssue": "review_required",
+        "storage": [
+          "node_reading"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "reading",
+        "conflict": "device_private",
+        "deviceScope": "device",
+        "key": "node_reading.reading_position",
+        "objectType": "node_reading",
+        "pushIssue": "diagnostic",
+        "storage": [
+          "node_reading_device_state"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "reading",
+        "conflict": "device_private",
+        "deviceScope": "device",
+        "key": "node_reading_device_state",
+        "objectType": null,
+        "pushIssue": "diagnostic",
+        "storage": [
+          "node_reading_device_state"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "review",
+        "conflict": "review_merge",
+        "deviceScope": "workspace",
+        "key": "node_review",
+        "objectType": "node_review",
+        "pushIssue": "review_required",
+        "storage": [
+          "node_review"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "review",
+        "conflict": "append_only_idempotent",
+        "deviceScope": "event",
+        "key": "review_log",
+        "objectType": null,
+        "pushIssue": "review_required",
+        "storage": [
+          "review_log"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "settings",
+        "conflict": "lww",
+        "deviceScope": "workspace",
+        "key": "setting.workspace",
+        "objectType": "setting",
+        "pushIssue": "review_required",
+        "storage": [
+          "setting_records"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "settings",
+        "conflict": "device_private",
+        "deviceScope": "device",
+        "key": "setting.device",
+        "objectType": "setting",
+        "pushIssue": "diagnostic",
+        "storage": [
+          "setting_records"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "ui_session",
+        "conflict": "device_private",
+        "deviceScope": "device",
+        "key": "view_state.active_node",
+        "objectType": "view_state",
+        "pushIssue": "diagnostic",
+        "storage": [
+          "workspace_meta"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "ui_session",
+        "conflict": "device_private",
+        "deviceScope": "device",
+        "key": "view_state.node",
+        "objectType": "view_state",
+        "pushIssue": "diagnostic",
+        "storage": [
+          "node_view_state"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "ui_session",
+        "conflict": "device_private",
+        "deviceScope": "device",
+        "key": "node_view_state",
+        "objectType": null,
+        "pushIssue": "diagnostic",
+        "storage": [
+          "node_view_state"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "diagnostic",
+        "conflict": "device_private",
+        "deviceScope": "device",
+        "key": "sync_push_ack",
+        "objectType": null,
+        "pushIssue": "diagnostic",
+        "storage": [
+          "sync_push_ack"
+        ],
+        "userVisible": false
+      }
+    ],
+    "reviewRequiredPushIssueObjectTypes": [
+      "attachment",
+      "external_document",
+      "external_folder",
+      "import_source",
+      "node",
+      "node_reading",
+      "node_review",
+      "pdf_page_text",
+      "setting"
+    ]
+  }
+}

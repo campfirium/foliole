@@ -1,6 +1,6 @@
 import { registerPlugin } from '@capacitor/core';
 
-import { isNativeAndroidCompanionRuntime } from './companionWorkspaceRuntimeRepository';
+import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
 
 interface CompanionSyncPackTransferPlugin {
   deleteDownloadedSyncPack(args: { pack_path: string }): Promise<{ deleted: boolean }>;
@@ -18,7 +18,7 @@ export async function downloadCompanionDesktopSyncPack(args: {
   headers: Record<string, string>;
   url: string;
 }) {
-  if (!isNativeAndroidCompanionRuntime()) {
+  if (!isNativeSyncPackRuntime()) {
     return null;
   }
   const result = await FolioleCompanionSyncPackTransfer.downloadDesktopSyncPack(args);
@@ -26,8 +26,13 @@ export async function downloadCompanionDesktopSyncPack(args: {
 }
 
 export async function deleteCompanionDownloadedSyncPack(packPath: string) {
-  if (!isNativeAndroidCompanionRuntime()) {
+  if (!isNativeSyncPackRuntime()) {
     return false;
   }
   return (await FolioleCompanionSyncPackTransfer.deleteDownloadedSyncPack({ pack_path: packPath })).deleted;
+}
+
+function isNativeSyncPackRuntime() {
+  const runtime = getCompanionRuntimeCapability();
+  return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
 }
