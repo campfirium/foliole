@@ -3,6 +3,7 @@ import { Capacitor } from '@capacitor/core';
 export type CompanionRuntimeCapability =
   | { kind: 'web-preview'; platform: 'web' }
   | { kind: 'android-native'; platform: 'android' }
+  | { kind: 'ios-native'; platform: 'ios' }
   | { kind: 'native-unavailable'; platform: string };
 
 export class NativeCompanionCapabilityUnavailableError extends Error {
@@ -23,14 +24,15 @@ export function getCompanionRuntimeCapability(): CompanionRuntimeCapability {
   }
 
   const platform = Capacitor.getPlatform();
-  return platform === 'android'
-    ? { kind: 'android-native', platform }
-    : { kind: 'native-unavailable', platform };
+  if (platform === 'android') return { kind: 'android-native', platform };
+  if (platform === 'ios') return { kind: 'ios-native', platform };
+  return { kind: 'native-unavailable', platform };
 }
 
 export function requireAvailableCompanionRuntime(capability: string) {
   const runtime = getCompanionRuntimeCapability();
-  if (runtime.kind === 'native-unavailable') {
+  const iosCapabilityUnavailable = runtime.kind === 'ios-native' && capability !== 'bootstrap';
+  if (runtime.kind === 'native-unavailable' || iosCapabilityUnavailable) {
     throw new NativeCompanionCapabilityUnavailableError(capability, runtime.platform);
   }
   return runtime;

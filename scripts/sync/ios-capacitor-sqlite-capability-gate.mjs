@@ -21,16 +21,19 @@ const testDir = join(pluginDir, 'ios/PluginTests');
 mkdirSync(testDir, { recursive: true });
 writeFileSync(join(testDir, 'FolioleSqliteCapabilityTests.swift'), swiftTestSource());
 
-const scheme = resolveScheme(pluginDir);
+const workspace = prepareSwiftPackageWorkspace(pluginDir);
+const scheme = resolveScheme(workspace);
 const destination = resolveSimulatorDestination();
 const result = spawnSync('xcodebuild', [
   'test',
+  '-workspace',
+  workspace,
   '-scheme',
   scheme,
   '-destination',
-  destination
+  destination,
+  '-only-testing:CapacitorSQLitePluginTests/FolioleSqliteCapabilityTests/testAttachTransactionBlobAndSqlSurface'
 ], {
-  cwd: pluginDir,
   encoding: 'utf8',
   stdio: 'inherit'
 });
@@ -39,9 +42,15 @@ if (result.status !== 0) {
   exit(result.status ?? 1);
 }
 
-function resolveScheme(workingDirectory) {
-  const result = spawnSync('xcodebuild', ['-list', '-json'], {
-    cwd: workingDirectory,
+function prepareSwiftPackageWorkspace(workingDirectory) {
+  const workspace = join(workingDirectory, '.swiftpm/xcode/package.xcworkspace');
+  mkdirSync(workspace, { recursive: true });
+  writeFileSync(join(workspace, 'contents.xcworkspacedata'), swiftPackageWorkspaceSource());
+  return workspace;
+}
+
+function resolveScheme(workspace) {
+  const result = spawnSync('xcodebuild', ['-list', '-json', '-workspace', workspace], {
     encoding: 'utf8'
   });
   if (result.status !== 0) {
@@ -56,6 +65,13 @@ function resolveScheme(workingDirectory) {
     exit(1);
   }
   return scheme;
+}
+
+function swiftPackageWorkspaceSource() {
+  return '<?xml version="1.0" encoding="UTF-8"?>\n' +
+    '<Workspace version="1.0">\n' +
+    '   <FileRef location="self:"></FileRef>\n' +
+    '</Workspace>\n';
 }
 
 function resolveSimulatorDestination() {

@@ -1,6 +1,7 @@
 import { CapacitorSQLite, SQLiteConnection, type SQLiteDBConnection } from '@capacitor-community/sqlite';
 
 import { applySyncNodesWithDbPort } from '../../../lib/core/sync/syncNodeApplyExecutor';
+import { COMPANION_DATABASE_NAME, COMPANION_DATABASE_VERSION } from '../../../lib/platform/nativeCompanionContract';
 import type { NativeSyncNodeRecord } from '../../../lib/platform/nativeSyncContract';
 
 import { createCapacitorSqliteDbPort } from './capacitorSqliteDbPort';
@@ -9,9 +10,6 @@ import {
   FolioleCompanionSync,
   isNativeAndroidCompanionRuntime
 } from './companionWorkspaceRuntimeRepository';
-
-const COMPANION_DATABASE_NAME = 'foliole-companion';
-const COMPANION_DATABASE_VERSION = 19;
 
 export interface CompanionSqliteConnectionManager {
   checkConnectionsConsistency?(): Promise<{ result?: boolean }>;

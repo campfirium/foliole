@@ -8,7 +8,9 @@ const config: CapacitorConfig = {
   },
   plugins: {
     CapacitorSQLite: {
-      androidIsEncryption: false
+      androidIsEncryption: false,
+      iosDatabaseLocation: 'Library/CapacitorDatabase',
+      iosIsEncryption: false
     }
   },
   webDir: 'dist/companion'

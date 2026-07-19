@@ -26,14 +26,15 @@ describe('companionRuntimeCapabilities', () => {
     expect(getCompanionRuntimeCapability()).toEqual({ kind: 'android-native', platform: 'android' });
   });
 
-  it('rejects an unimplemented ios native capability with a stable error', async () => {
+  it('exposes only the implemented ios bootstrap capability', async () => {
     capacitorState.isNativePlatform.mockReturnValue(true);
     capacitorState.getPlatform.mockReturnValue('ios');
     const { requireAvailableCompanionRuntime } = await import('./companionRuntimeCapabilities');
 
-    expect(() => requireAvailableCompanionRuntime('bootstrap')).toThrowError(
+    expect(requireAvailableCompanionRuntime('bootstrap')).toEqual({ kind: 'ios-native', platform: 'ios' });
+    expect(() => requireAvailableCompanionRuntime('native-runtime')).toThrowError(
       expect.objectContaining({
-        capability: 'bootstrap',
+        capability: 'native-runtime',
         code: 'NATIVE_COMPANION_CAPABILITY_UNAVAILABLE',
         platform: 'ios'
       })

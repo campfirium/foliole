@@ -3,6 +3,7 @@ import { registerPlugin } from '@capacitor/core';
 import type { NativeCompanionBootstrapState } from '../../../lib/platform/nativeCompanionContract';
 
 import { getCompanionRuntimeCapability, requireAvailableCompanionRuntime } from './companionRuntimeCapabilities';
+import { initializeIosCompanionDatabase } from './iosCompanionDatabaseBootstrap';
 
 const WEB_DEVICE_ID_KEY = 'foliole-companion-web-device-id';
 const WEB_PREVIEW_DATABASE_NAME = 'foliole-companion-preview.db';
@@ -32,7 +33,7 @@ function normalizeCompanionBootstrapState(value: unknown): NativeCompanionBootst
   if (typeof device_id !== 'string' || !device_id.trim()) {
     return null;
   }
-  if (runtime_kind !== 'android-capacitor' && runtime_kind !== 'web-preview') {
+  if (runtime_kind !== 'android-capacitor' && runtime_kind !== 'ios-capacitor' && runtime_kind !== 'web-preview') {
     return null;
   }
 
@@ -87,7 +88,8 @@ function createWebPreviewBootstrapState(): NativeCompanionBootstrapState {
 }
 
 export function isNativeCompanionRuntime() {
-  return getCompanionRuntimeCapability().kind === 'android-native';
+  const runtime = getCompanionRuntimeCapability();
+  return runtime.kind !== 'web-preview' && runtime.kind !== 'native-unavailable';
 }
 
 export async function loadCompanionBootstrapState(): Promise<NativeCompanionBootstrapState> {
@@ -100,7 +102,7 @@ export async function loadCompanionBootstrapState(): Promise<NativeCompanionBoot
   if (!result) {
     throw new Error('Native companion bootstrap returned an invalid payload.');
   }
-  return result;
+  return runtime.kind === 'ios-native' ? initializeIosCompanionDatabase(result) : result;
 }
 
 export { normalizeCompanionBootstrapState };

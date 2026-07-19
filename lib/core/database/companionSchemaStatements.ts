@@ -1,0 +1,11 @@
+import { ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS } from './androidCompanionCoreSchemaStatements.js';
+import { ANDROID_COMPANION_HOST_SCHEMA_STATEMENTS } from './androidCompanionHostSchemaStatements.js';
+import { ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS } from './androidCompanionResourceSchemaStatements.js';
+import { ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS } from './androidCompanionSyncSchemaStatements.js';
+
+export const COMPANION_SCHEMA_STATEMENTS = [
+  ...ANDROID_COMPANION_HOST_SCHEMA_STATEMENTS,
+  ...ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS,
+  ...ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS,
+  ...ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS
+];

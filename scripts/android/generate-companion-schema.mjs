@@ -4,9 +4,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionCoreSchemaStatements.ts';
 import { ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS } from '../../lib/core/database/androidCompanionBridgeContractDefinitions.ts';
-import { ANDROID_COMPANION_HOST_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionHostSchemaStatements.ts';
+import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements.ts';
 import {
   ANDROID_COMPANION_MIGRATION_ACTION_TYPES,
   ANDROID_COMPANION_MIGRATION_ACTION_KEYS,
@@ -44,8 +43,6 @@ import {
   ANDROID_COMPANION_RESOURCE_READ_RULES,
   ANDROID_COMPANION_WORKSPACE_READ_RULES
 } from '../../lib/core/database/androidCompanionResourceQueryDefinitions.ts';
-import { ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionResourceSchemaStatements.ts';
-import { ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionSyncSchemaStatements.ts';
 import {
   ANDROID_COMPANION_RUNTIME_QUERY_RULES,
   ANDROID_COMPANION_SYNC_CONFLICT_READ_RULES,
@@ -70,15 +67,8 @@ const resourceQueryStringJavaOutputPath = path.join(
 );
 const syncProtocolOutputPath = path.join(repoRoot, 'android/app/src/main/assets/companion-sync-protocol-definitions.json');
 const bridgeContractOutputPath = path.join(repoRoot, 'android/app/src/main/assets/companion-bridge-contract-definitions.json');
-const statements = [
-  ...ANDROID_COMPANION_HOST_SCHEMA_STATEMENTS,
-  ...ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS,
-  ...ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS,
-  ...ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS
-];
-
 await fs.mkdir(path.dirname(outputPath), { recursive: true });
-await fs.writeFile(outputPath, `${JSON.stringify({ statements }, null, 2)}\n`, 'utf8');
+await fs.writeFile(outputPath, `${JSON.stringify({ statements: COMPANION_SCHEMA_STATEMENTS }, null, 2)}\n`, 'utf8');
 await fs.writeFile(
   migrationOutputPath,
   `${JSON.stringify({

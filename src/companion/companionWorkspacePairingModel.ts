@@ -23,7 +23,8 @@ export type PendingPairRequest = {
 export function createCompanionDeviceName(bootstrapState: NativeCompanionBootstrapState) {
   const normalizedName = bootstrapState.device_name?.trim();
   if (normalizedName) return normalizedName;
-  return bootstrapState.runtime_kind === 'android-capacitor' ? 'Android device' : 'Web preview';
+  if (bootstrapState.runtime_kind === 'android-capacitor') return 'Android device';
+  return bootstrapState.runtime_kind === 'ios-capacitor' ? 'iPhone' : 'Web preview';
 }
 
 export function normalizeDiscovery(endpointUrl: string, discovery: {

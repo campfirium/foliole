@@ -191,7 +191,7 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",
     "check:ios-boundary": "npm run sync:sql-surface:scan && npm run ios:sqlite-capability:gate",
-    "quality:ios": "npm run check:ios-boundary",
+    "quality:ios": "npm run check:ios-boundary && node scripts/ios/ios-bootstrap-acceptance.mjs",
     "ios:sync:preflight": "npm run check:ios-boundary",
     "ios:sqlite-capability:gate": "node scripts/sync/ios-capacitor-sqlite-capability-gate.mjs",
     "sync:sql-surface:scan": "node scripts/sync/sql-surface-scan.mjs"
@@ -236,6 +236,7 @@
   "devDependencies": {
     "@capacitor/android": "8.4.1",
     "@capacitor/cli": "8.4.1",
+    "@capacitor/ios": "8.4.1",
     "@electron/osx-sign": "1.3.3",
     "@electron/rebuild": "4.2.0",
     "@eslint/js": "^9.39.4",
