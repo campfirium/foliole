@@ -31,7 +31,7 @@ it('schedules one midday run and three nightly attempts without a persistent pro
     repositoryRoot: '/repo', stderrPath: '/logs/err', stdoutPath: '/logs/out'
   });
 
-  expect(xml).toContain('<integer>11</integer><key>Minute</key><integer>50</integer>');
+  expect(xml).toContain('<integer>11</integer><key>Minute</key><integer>30</integer>');
   expect(xml).toContain('<integer>21</integer><key>Minute</key><integer>30</integer>');
   expect(xml).toContain('<integer>22</integer><key>Minute</key><integer>0</integer>');
   expect(xml.match(/<integer>22<\/integer>/gu)).toHaveLength(2);

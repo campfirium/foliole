@@ -62,7 +62,7 @@ export function launchAgentXml(options) {
     <key>PATH</key><string>${executablePath}</string>
   </dict>
   <key>StartCalendarInterval</key><array>
-    <dict><key>Hour</key><integer>11</integer><key>Minute</key><integer>50</integer></dict>
+    <dict><key>Hour</key><integer>11</integer><key>Minute</key><integer>30</integer></dict>
     <dict><key>Hour</key><integer>21</integer><key>Minute</key><integer>30</integer></dict>
     <dict><key>Hour</key><integer>22</integer><key>Minute</key><integer>0</integer></dict>
     <dict><key>Hour</key><integer>22</integer><key>Minute</key><integer>30</integer></dict>
