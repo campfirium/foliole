@@ -1,9 +1,9 @@
+import { loadLocalSyncDiagnostics } from './companion/sync/diagnostics/companionSyncDiagnostics';
 import { postDesktopJson } from './companionDesktopSyncHttp';
 import type {
   CompanionContentBlobNativeTiming,
   CompanionDesktopSyncProgress
 } from './companionDesktopSyncTypes';
-import { loadLocalSyncDiagnostics } from './companionSyncDiagnostics';
 import {
   loadCompanionMissingContentBlobBatch,
   loadCompanionMissingContentBlobs,

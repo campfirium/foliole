@@ -8,12 +8,12 @@ const convergenceMock = vi.hoisted(() => ({
   runSyncConvergenceCheck: vi.fn()
 }));
 
-vi.mock('../shared/platform/companionSyncDiagnostics', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../shared/platform/companionSyncDiagnostics')>()),
+vi.mock('../shared/platform/companion/sync/diagnostics/companionSyncDiagnostics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../shared/platform/companion/sync/diagnostics/companionSyncDiagnostics')>()),
   runCombinedSyncDiagnostics: diagnosticsMock.runCombinedSyncDiagnostics
 }));
-vi.mock('../shared/platform/companionSyncConvergence', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../shared/platform/companionSyncConvergence')>()),
+vi.mock('../shared/platform/companion/sync/diagnostics/companionSyncConvergence', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../shared/platform/companion/sync/diagnostics/companionSyncConvergence')>()),
   runSyncConvergenceCheck: convergenceMock.runSyncConvergenceCheck
 }));
 

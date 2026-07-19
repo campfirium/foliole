@@ -56,7 +56,7 @@ const diagnosticsMock = vi.hoisted(() => ({
 }));
 
 vi.mock('./companionSyncObjects', () => syncBridgeMock);
-vi.mock('./companionSyncDiagnostics', () => diagnosticsMock);
+vi.mock('./companion/sync/diagnostics/companionSyncDiagnostics', () => diagnosticsMock);
 vi.mock('./companionDesktopAttachmentResources', () => ({
   syncCompanionAttachmentResourceRequestsFromDesktop: vi.fn(async () => [] as string[]),
   syncCompanionAttachmentResourcesFromDesktop: vi.fn(async () => [] as string[])

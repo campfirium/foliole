@@ -1,6 +1,6 @@
 import type { SyncDiagnosticEvent } from '../../lib/platform/syncDiagnosticsContract';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
-import type { CombinedSyncDiagnosticResult } from '../shared/platform/companionSyncDiagnostics';
+import type { CombinedSyncDiagnosticResult } from '../shared/platform/companion/sync/diagnostics/companionSyncDiagnostics';
 import { FULL_SYNC_COMPLETED_MESSAGE } from '../shared/platform/companionSyncEventSemantics';
 
 type Translate = ReturnType<typeof useTranslation>;

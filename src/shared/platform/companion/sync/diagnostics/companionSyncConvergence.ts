@@ -1,4 +1,4 @@
-import type { SyncDiagnosticEvent, SyncDiagnosticSeverity } from '../../../lib/platform/syncDiagnosticsContract';
+import type { SyncDiagnosticEvent, SyncDiagnosticSeverity } from '../../../../../../lib/platform/syncDiagnosticsContract';
 
 import {
   formatRemainingSyncSegments,

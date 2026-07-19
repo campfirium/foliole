@@ -1,4 +1,4 @@
-import type { CombinedSyncDiagnosticResult } from '../shared/platform/companionSyncDiagnostics';
+import type { CombinedSyncDiagnosticResult } from '../shared/platform/companion/sync/diagnostics/companionSyncDiagnostics';
 
 export function buildSyncDiagnosticSummary(result: CombinedSyncDiagnosticResult) {
   return JSON.stringify({

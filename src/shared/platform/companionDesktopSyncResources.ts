@@ -1,7 +1,7 @@
 import { invalidateAttachmentResourceResolution } from './attachmentResources';
+import { loadLocalSyncDiagnostics } from './companion/sync/diagnostics/companionSyncDiagnostics';
 import { syncCompanionAttachmentResourceRequestsFromDesktop } from './companionDesktopAttachmentResources';
 import type { CompanionDesktopSyncProgress } from './companionDesktopSyncTypes';
-import { loadLocalSyncDiagnostics } from './companionSyncDiagnostics';
 import {
   loadCompanionMissingAttachmentResources
 } from './companionSyncObjects';

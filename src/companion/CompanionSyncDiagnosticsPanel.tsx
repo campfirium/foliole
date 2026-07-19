@@ -10,11 +10,11 @@ import {
   buildSyncConvergenceReport,
   runSyncConvergenceCheck,
   type SyncConvergenceReport
-} from '../shared/platform/companionSyncConvergence';
+} from '../shared/platform/companion/sync/diagnostics/companionSyncConvergence';
 import {
   runCombinedSyncDiagnostics,
   type CombinedSyncDiagnosticResult
-} from '../shared/platform/companionSyncDiagnostics';
+} from '../shared/platform/companion/sync/diagnostics/companionSyncDiagnostics';
 import { AppEmptyState } from '../shared/ui';
 
 import { CompanionSyncConvergenceReport } from './CompanionSyncConvergenceReport';

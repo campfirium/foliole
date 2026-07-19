@@ -3,11 +3,11 @@ import type {
   NativePrimaryDeviceTakeoverResponse
 } from '../../../lib/platform/nativeCompanionSyncContract';
 
+import { runSyncConvergenceCheck } from './companion/sync/diagnostics/companionSyncConvergence';
 import { postDesktopJson } from './companionDesktopSyncHttp';
 import {
   saveLocalPrimaryDeviceId
 } from './companionPrimaryDeviceIdentity';
-import { runSyncConvergenceCheck } from './companionSyncConvergence';
 import { loadCompanionPairingState } from './companionWorkspacePairing';
 
 const PRIMARY_DEVICE_TAKEOVER_PATH = '/companion/primary-device/takeover';

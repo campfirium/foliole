@@ -1,14 +1,13 @@
 import type {
   SyncDiagnosticSnapshot,
   SyncDiagnosticVerdict
-} from '../../../lib/platform/syncDiagnosticsContract';
-
-import { fetchDesktopJson } from './companionDesktopSyncHttp';
-import { classifyCompanionSyncTimeoutMessage } from './companionSyncTimeoutOwnership';
+} from '../../../../../../lib/platform/syncDiagnosticsContract';
+import { fetchDesktopJson } from '../../../companionDesktopSyncHttp';
+import { classifyCompanionSyncTimeoutMessage } from '../../../companionSyncTimeoutOwnership';
 import {
   FolioleCompanionSync,
   isNativeAndroidCompanionRuntime
-} from './companionWorkspaceRuntimeRepository';
+} from '../../../companionWorkspaceRuntimeRepository';
 
 const SYNC_DIAGNOSTICS_PATH = '/companion/diagnostics/sync';
 

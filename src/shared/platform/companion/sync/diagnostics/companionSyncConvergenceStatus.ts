@@ -1,4 +1,4 @@
-import type { SyncDiagnosticSeverity } from '../../../lib/platform/syncDiagnosticsContract';
+import type { SyncDiagnosticSeverity } from '../../../../../../lib/platform/syncDiagnosticsContract';
 
 export type SyncConvergenceStatus = 'converged' | 'pending' | 'system_fault' | 'unknown';
 

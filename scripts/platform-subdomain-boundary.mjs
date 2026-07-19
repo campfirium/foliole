@@ -1,13 +1,17 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { LEGACY_FLAT_PLATFORM_BASENAMES } from './platform-flat-root-allowlist.mjs';
+
 const MODULE_REFERENCE_STATEMENT_PATTERN =
   /\b(?:import(?:\s+type)?|export(?:\s+type)?)([\s\S]*?)\s+from\s+['"]([^'"]+)['"]/g;
 const MODULE_EXTENSION_PATTERN = /\.[cm]?[jt]sx?$/;
+const PLATFORM_ROOT = 'src/shared/platform';
 
 const PATH_SUBDOMAINS = [
   ['src/shared/platform/runtime/', 'runtime-core'],
   ['src/shared/platform/desktop/', 'desktop-runtime-repository'],
+  ['src/shared/platform/companion/sync/diagnostics/', 'companion-sync-diagnostics'],
   ['src/shared/platform/companion/', 'companion-runtime-plugin'],
   ['src/shared/platform/import/', 'import-runtime'],
   ['src/shared/platform/external/', 'external-runtime'],
@@ -25,9 +29,6 @@ const EXPLICIT_FILE_SUBDOMAINS = new Map([
   ['src/shared/platform/companionContentBlobSyncPluginTypes.ts', 'companion-sync-writer'],
   ['src/shared/platform/companionRuntimeCapabilities.ts', 'companion-runtime-plugin'],
   ['src/shared/platform/companionSyncActivityEvents.ts', 'companion-runtime-plugin'],
-  ['src/shared/platform/companionSyncConvergence.testHelpers.ts', 'companion-sync-diagnostics'],
-  ['src/shared/platform/companionSyncConvergenceFormatting.ts', 'companion-sync-diagnostics'],
-  ['src/shared/platform/companionSyncConvergenceStatus.ts', 'companion-sync-diagnostics'],
   ['src/shared/platform/companionSyncInstrumentationProbe.ts', 'companion-sync-pack-apply'],
   ['src/shared/platform/companionSyncNodeVersionsTestSupport.ts', 'companion-sync-reader'],
   ['src/shared/platform/companionSyncObjects.ts', 'companion-runtime-plugin'],
@@ -70,7 +71,6 @@ const EXPLICIT_FILE_SUBDOMAINS = new Map([
 const FILE_SUBDOMAIN_RULES = [
   ['compatibility-facade', /(?:^bridge(?:Payloads)?|Bridge(?:Payloads)?|BridgePayloads)\.tsx?$/],
   ['runtime-core', /^(?:electronApi|runtime|runtimeInvoke|runtimeLogging|runtimeAvailability|runtimeDebugAvailability|runtimeBootTelemetry|runtimeEnvironmentPayloads|runtimeAppPaths|runtimeExternalNavigation|runtimeShellEvents|runtimeSystemFonts|appLifecycle|appSettingsState|appSettingsSync|storage|keyboard|pathService|capacitorSqliteDbPort)\.tsx?$/],
-  ['companion-sync-diagnostics', /^companionSync(?:Diagnostics|Convergence)\.tsx?$/],
   ['companion-sync-transfer', /^companionDesktopSync|^companionDesktopAttachmentResources\.tsx?$/],
   ['companion-sync-pack-apply', /^companionSync(?:PackApply|PackNodes|PackTransfer)\.tsx?$/],
   ['companion-sync-writer', /^companion(?:ContentBlobSync|AttachmentResourceSync)\.tsx?$|^companionSync(?:WriterQueue|StateWriters|ReviewLogApply)\.tsx?$/],
@@ -143,6 +143,12 @@ export function resolvePlatformSubdomain(relativeFile) {
   return FILE_SUBDOMAIN_RULES.find(([, pattern]) => pattern.test(basename))?.[0] ?? null;
 }
 
+function isUnregisteredFlatPlatformFile(relativeFile) {
+  const normalized = relativeFile.replace(/\\/g, '/');
+  return path.posix.dirname(normalized) === PLATFORM_ROOT
+    && !LEGACY_FLAT_PLATFORM_BASENAMES.has(path.posix.basename(normalized));
+}
+
 function resolveRelativePlatformImport(sourceFile, source, platformFiles) {
   if (!source.startsWith('.')) return null;
   const sourceDir = path.posix.dirname(sourceFile);
@@ -161,6 +167,10 @@ export function inspectPlatformSubdomainBoundary({ repoRoot, platformFiles, toLi
   const platformFileSet = new Set(platformFiles);
   const violations = [];
   for (const relativeFile of platformFiles) {
+    if (isUnregisteredFlatPlatformFile(relativeFile)) {
+      violations.push({ file: relativeFile, line: 1, kind: 'platform-flat-root-file' });
+      continue;
+    }
     const sourceSubdomain = resolvePlatformSubdomain(relativeFile);
     if (!sourceSubdomain) {
       violations.push({ file: relativeFile, line: 1, kind: 'platform-subdomain-unclassified' });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { SyncDiagnosticSnapshot } from '../../../lib/platform/syncDiagnosticsContract';
+import type { SyncDiagnosticSnapshot } from '../../../../../../lib/platform/syncDiagnosticsContract';
 
 import {
   findLaggingDesktopObjectTypes,

@@ -1,12 +1,14 @@
 // @vitest-environment node
 
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { afterAll, describe, expect, it } from 'vitest';
 
 import { inspectLayerDependencyBoundary } from './check-layer-dependency-boundary.mjs';
+import { SOURCE_EXTENSIONS, TEST_FILE_PATTERN } from './layer-topology-rules.mjs';
+import { LEGACY_FLAT_PLATFORM_BASENAMES } from './platform-flat-root-allowlist.mjs';
 import { resolvePlatformSubdomain } from './platform-subdomain-boundary.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -22,6 +24,7 @@ async function createFixtureRoot() {
 }
 
 async function writeFixtureFile(repoRoot, relativePath, contents) {
+  await mkdir(path.dirname(path.join(repoRoot, relativePath)), { recursive: true });
   await writeFile(path.join(repoRoot, relativePath), contents.trimStart(), 'utf8');
 }
 
@@ -32,6 +35,12 @@ afterAll(async () => {
 describe('check-layer-dependency-boundary platform subdomains', () => {
   it('resolves platform subdomains by path, explicit manifest, then filename rules', () => {
     expect(resolvePlatformSubdomain('src/shared/platform/runtime/customAdapter.ts')).toBe('runtime-core');
+    expect(resolvePlatformSubdomain('src/shared/platform/companion/sync/diagnostics/customDiagnostic.ts')).toBe(
+      'companion-sync-diagnostics'
+    );
+    expect(resolvePlatformSubdomain('src/shared/platform/companion/customAdapter.ts')).toBe(
+      'companion-runtime-plugin'
+    );
     expect(resolvePlatformSubdomain('src/shared/platform/companionSyncInstrumentationProbe.ts')).toBe(
       'companion-sync-pack-apply'
     );
@@ -88,15 +97,48 @@ describe('check-layer-dependency-boundary platform subdomains', () => {
 
   it('blocks unclassified platform production files', async () => {
     const repoRoot = await createFixtureRoot();
-    await writeFixtureFile(repoRoot, 'src/shared/platform/unownedRuntimeThing.ts', `
+    await writeFixtureFile(repoRoot, 'src/shared/platform/unknown/unownedRuntimeThing.ts', `
       export const value = 1;
     `);
 
     const result = inspectLayerDependencyBoundary({ repoRoot });
 
     expect(result.violations).toEqual([
-      { file: 'src/shared/platform/unownedRuntimeThing.ts', line: 1, kind: 'platform-subdomain-unclassified' }
+      { file: 'src/shared/platform/unknown/unownedRuntimeThing.ts', line: 1, kind: 'platform-subdomain-unclassified' }
     ]);
+  });
+
+  it('blocks new production files in the legacy flat platform root', async () => {
+    const repoRoot = await createFixtureRoot();
+    await writeFixtureFile(repoRoot, 'src/shared/platform/companionSyncDiagnostics.ts', `
+      export const value = 1;
+    `);
+
+    const result = inspectLayerDependencyBoundary({ repoRoot });
+
+    expect(result.violations).toEqual([
+      { file: 'src/shared/platform/companionSyncDiagnostics.ts', line: 1, kind: 'platform-flat-root-file' }
+    ]);
+  });
+
+  it('allows new production files inside a classified physical subdomain', async () => {
+    const repoRoot = await createFixtureRoot();
+    await writeFixtureFile(repoRoot, 'src/shared/platform/companion/sync/diagnostics/customDiagnostic.ts', `
+      export const value = 1;
+    `);
+
+    expect(inspectLayerDependencyBoundary({ repoRoot }).ok).toBe(true);
+  });
+
+  it('keeps the legacy flat platform allowlist equal to the production inventory', async () => {
+    const platformEntries = await readdir(path.join(REPO_ROOT, 'src', 'shared', 'platform'), { withFileTypes: true });
+    const actual = platformEntries
+      .filter((entry) => entry.isFile())
+      .map((entry) => entry.name)
+      .filter((basename) => SOURCE_EXTENSIONS.has(path.extname(basename)) && !TEST_FILE_PATTERN.test(basename))
+      .sort();
+
+    expect(actual).toEqual([...LEGACY_FLAT_PLATFORM_BASENAMES].sort());
   });
 
   it('blocks forbidden companion sync dependency directions', async () => {
@@ -118,11 +160,11 @@ describe('check-layer-dependency-boundary platform subdomains', () => {
 
   it('allows facade and writer queue dependency directions', async () => {
     const repoRoot = await createFixtureRoot();
-    await writeFixtureFile(repoRoot, 'src/shared/platform/importBridge.ts', `
-      export { loadRuntimeImportOverview } from './importOverviewRuntimeRepository';
+    await writeFixtureFile(repoRoot, 'src/shared/platform/nodeBacklinksBridge.ts', `
+      export { loadRuntimeNodeBacklinks } from './nodeBacklinksRuntimeRepository';
     `);
-    await writeFixtureFile(repoRoot, 'src/shared/platform/importOverviewRuntimeRepository.ts', `
-      export function loadRuntimeImportOverview() {}
+    await writeFixtureFile(repoRoot, 'src/shared/platform/nodeBacklinksRuntimeRepository.ts', `
+      export function loadRuntimeNodeBacklinks() {}
     `);
     await writeFixtureFile(repoRoot, 'src/shared/platform/companionSyncCursors.ts', `
       import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';

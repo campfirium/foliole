@@ -2,7 +2,7 @@ import { useTranslation } from '../shared/localization/LocalizationProvider';
 import type {
   SyncConvergenceCheck,
   SyncConvergenceReport
-} from '../shared/platform/companionSyncConvergence';
+} from '../shared/platform/companion/sync/diagnostics/companionSyncConvergence';
 
 function statusLabel(status: SyncConvergenceReport['status'], t: ReturnType<typeof useTranslation>) {
   if (status === 'converged') return t('companion.sync.check.upToDate');

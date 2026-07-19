@@ -50,7 +50,7 @@ const takeoverMocks = vi.hoisted(() => ({
 vi.mock('./companionDesktopSyncHttp', () => ({
   postDesktopJson: takeoverMocks.postDesktopJson
 }));
-vi.mock('./companionSyncConvergence', () => ({
+vi.mock('./companion/sync/diagnostics/companionSyncConvergence', () => ({
   runSyncConvergenceCheck: takeoverMocks.runSyncConvergenceCheck
 }));
 vi.mock('./companionWorkspacePairing', () => ({
