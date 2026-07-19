@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { NativeCompanionBootstrapState } from '../../../lib/platform/nativeCompanionContract';
+import type { NativeCompanionBootstrapState } from '../../../../../lib/platform/nativeCompanionContract';
 
 import { initializeIosCompanionDatabase, type IosCompanionDatabaseManager } from './iosCompanionDatabaseBootstrap';
 

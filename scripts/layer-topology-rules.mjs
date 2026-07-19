@@ -32,11 +32,11 @@ export const TOPOLOGY_UNITS = [
     role: 'Desktop renderer shell and desktop-only renderer composition.'
   },
   {
-    id: 'mobile-renderer',
+    id: 'companion-renderer',
     tier: 'renderer-shell',
-    host: 'mobile',
+    host: 'companion',
     paths: ['src/companion/'],
-    role: 'Mobile renderer shell, routing, touch interaction, and mobile density.'
+    role: 'Shared Android and iOS companion renderer shell, routing, touch interaction, and mobile density.'
   },
   {
     id: 'demo-renderer',
@@ -71,7 +71,7 @@ export const TOPOLOGY_UNITS = [
     tier: 'host-adapter',
     host: 'ios',
     paths: ['ios/'],
-    role: 'Future iOS native host project and platform resources.'
+    role: 'iOS native host project and platform resources.'
   }
 ];
 
@@ -92,7 +92,7 @@ export const HOST_ISOLATION_RULES = [
   {
     from: [
       'desktop-renderer',
-      'mobile-renderer',
+      'companion-renderer',
       'demo-renderer',
       'renderer-business',
       'runtime-adapter',

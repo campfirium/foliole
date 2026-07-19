@@ -10,7 +10,10 @@ const SQLITE_TOUCH_ALLOWED = new Set([
   'src/shared/platform/companionSyncReviewLogApply.ts',
   'src/shared/platform/companionSyncStateObjects.ts',
   'src/shared/platform/companionSyncNodeVersions.ts',
-  'src/shared/platform/companionSyncPackNodes.ts'
+  'src/shared/platform/companionSyncPackNodes.ts',
+  'src/shared/platform/companion/runtime/iosCompanionDatabaseBootstrap.ts',
+  'src/shared/platform/companion/sync/cursor/iosCompanionSyncPackCursorStore.ts',
+  'src/shared/platform/companion/sync/pack-apply/iosCompanionSyncPackApply.ts'
 ]);
 const SQL_METHOD_PATTERN = /\b(?:executeSql|querySql|runSql|sqlExecute|sqlQuery)\b/i;
 
@@ -29,7 +32,7 @@ function readSource(path: string) {
   return readFileSync(join(ROOT, path), 'utf8');
 }
 
-it('keeps mobile SQLite access behind trusted sync DbPort adapters', () => {
+it('keeps companion SQLite access behind trusted native adapters', () => {
   const violations = SCANNED_DIRS.flatMap(listSourceFiles).filter((path) => {
     if (SQLITE_TOUCH_ALLOWED.has(path)) return false;
     const source = readSource(path);

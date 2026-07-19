@@ -12,7 +12,7 @@ vi.mock('@capacitor/core', () => ({
   registerPlugin: () => ({ loadBootstrap })
 }));
 
-vi.mock('./iosCompanionDatabaseBootstrap', () => ({ initializeIosCompanionDatabase }));
+vi.mock('./companion/runtime/iosCompanionDatabaseBootstrap', () => ({ initializeIosCompanionDatabase }));
 
 describe('companionBootstrap ios boundary', () => {
   beforeEach(() => {

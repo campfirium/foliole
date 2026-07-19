@@ -38,6 +38,15 @@ describe('check-layer-dependency-boundary platform subdomains', () => {
     expect(resolvePlatformSubdomain('src/shared/platform/companion/sync/diagnostics/customDiagnostic.ts')).toBe(
       'companion-sync-diagnostics'
     );
+    expect(resolvePlatformSubdomain('src/shared/platform/companion/sync/pack-apply/iosPackApply.ts')).toBe(
+      'companion-sync-pack-apply'
+    );
+    expect(resolvePlatformSubdomain('src/shared/platform/companion/sync/cursor/iosCursorStore.ts')).toBe(
+      'companion-sync-reader'
+    );
+    expect(resolvePlatformSubdomain('src/shared/platform/companion/runtime/iosBootstrap.ts')).toBe(
+      'companion-runtime-plugin'
+    );
     expect(resolvePlatformSubdomain('src/shared/platform/companion/customAdapter.ts')).toBe(
       'companion-runtime-plugin'
     );

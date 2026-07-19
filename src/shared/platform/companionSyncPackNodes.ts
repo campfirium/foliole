@@ -4,6 +4,7 @@ import { applySyncPackNodeSurfaceWithDbPort } from '../../../lib/core/sync/syncP
 import type { NativeSyncPackApplyResult } from '../../../lib/platform/nativeSyncContract';
 
 import { createCapacitorSqliteDbPort } from './capacitorSqliteDbPort';
+import type { CompanionSyncPackCursorStore } from './companion/sync/cursor/companionSyncPackCursorStore';
 import {
   closeCompanionDatabaseConnection,
   type CompanionSqliteConnectionManager,
@@ -11,11 +12,6 @@ import {
 } from './companionSyncNodeVersions';
 
 const INCOMING_PACK_ALIAS = 'inc';
-
-export interface CompanionSyncPackCursorStore {
-  loadCursor(): Promise<number | null>;
-  saveCursor(cursor: number | null): Promise<number | null>;
-}
 
 export async function applyCompanionSyncPackPathWithSharedCore(
   args: { deviceId: string; packPath: string },

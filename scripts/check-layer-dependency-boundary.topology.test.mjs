@@ -35,9 +35,12 @@ afterAll(async () => {
 });
 
 describe('layer topology rules', () => {
-  it('classifies desktop renderer, mobile renderer, shared renderer, runtime, and host units', () => {
+  it('classifies desktop renderer, companion renderer, shared renderer, runtime, and host units', () => {
     expect(resolveTopologyUnit('src/app/App.tsx')).toMatchObject({ id: 'desktop-renderer', host: 'desktop' });
-    expect(resolveTopologyUnit('src/companion/CompanionApp.tsx')).toMatchObject({ id: 'mobile-renderer', host: 'mobile' });
+    expect(resolveTopologyUnit('src/companion/CompanionApp.tsx')).toMatchObject({
+      host: 'companion',
+      id: 'companion-renderer'
+    });
     expect(resolveTopologyUnit('src/demo/main.tsx')).toMatchObject({
       id: 'demo-renderer',
       host: 'demo'

@@ -2,8 +2,8 @@ import { registerPlugin } from '@capacitor/core';
 
 import type { NativeCompanionBootstrapState } from '../../../lib/platform/nativeCompanionContract';
 
+import { initializeIosCompanionDatabase } from './companion/runtime/iosCompanionDatabaseBootstrap';
 import { getCompanionRuntimeCapability, requireAvailableCompanionRuntime } from './companionRuntimeCapabilities';
-import { initializeIosCompanionDatabase } from './iosCompanionDatabaseBootstrap';
 
 const WEB_DEVICE_ID_KEY = 'foliole-companion-web-device-id';
 const WEB_PREVIEW_DATABASE_NAME = 'foliole-companion-preview.db';

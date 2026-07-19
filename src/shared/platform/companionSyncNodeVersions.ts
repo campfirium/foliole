@@ -8,6 +8,7 @@ import { createCapacitorSqliteDbPort } from './capacitorSqliteDbPort';
 import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import {
   FolioleCompanionSync,
+  isAvailableNativeAndroidCompanionRuntime,
   isNativeAndroidCompanionRuntime
 } from './companionWorkspaceRuntimeRepository';
 
@@ -73,12 +74,12 @@ export async function openCompanionDatabaseConnection(manager: CompanionSqliteCo
   const connection = existing.result
     ? await retrieveOrCreateCompanionConnection(manager)
     : await createOrRetrieveCompanionConnection(manager);
-  await connection.open();
+  if (!(await connection.isDBOpen()).result) await connection.open();
   return connection;
 }
 
 async function releaseNativeDatabaseHelperConnection() {
-  if (!isNativeAndroidCompanionRuntime()) return;
+  if (!isAvailableNativeAndroidCompanionRuntime()) return;
   await FolioleCompanionSync.releaseDatabaseConnection();
 }
 

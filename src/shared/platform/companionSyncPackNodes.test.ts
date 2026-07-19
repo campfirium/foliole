@@ -49,6 +49,26 @@ it('attaches a sync pack before applying pack nodes through the shared core', as
   expect(connection.execute).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO main.nodes'), false);
 });
 
+it('reuses an already open companion database connection', async () => {
+  const connection = createFakeConnection();
+  connection.isDBOpen.mockResolvedValue({ result: true });
+  connection.query.mockResolvedValueOnce({ values: [{ value: JSON.stringify({ from_state_seq: 0, to_state_seq: 1 }) }] });
+  const manager = {
+    closeConnection: vi.fn(async () => undefined),
+    createConnection: vi.fn(),
+    isConnection: vi.fn(async () => ({ result: true })),
+    retrieveConnection: vi.fn(async () => connection)
+  };
+
+  await applyCompanionSyncPackNodesWithSharedCore({
+    currentCursor: 0,
+    deviceId: 'ios-device',
+    packPath: '/tmp/pack.db'
+  }, manager as never);
+
+  expect(connection.open).not.toHaveBeenCalled();
+});
+
 it('loads and advances the pack cursor around the shared core apply', async () => {
   const connection = createFakeConnection();
   const manager = {
@@ -162,6 +182,7 @@ function createFakeConnection() {
     close: vi.fn(async () => undefined),
     commitTransaction: vi.fn(),
     execute: vi.fn(async () => ({ changes: { changes: 0 } })),
+    isDBOpen: vi.fn(async () => ({ result: false })),
     open: vi.fn(async () => undefined),
     query: vi.fn(async (sql: string): Promise<{ values: Array<Record<string, unknown>> }> => {
       void sql;

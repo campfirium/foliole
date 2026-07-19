@@ -14,6 +14,7 @@ export function createFakeCapacitorConnection(database: Database.Database) {
       const row = database.prepare('SELECT changes() AS count').get() as { count: number };
       return { changes: { changes: row.count } };
     },
+    isDBOpen: async () => ({ result: false }),
     open: async () => undefined,
     query: async (sql: string, params: unknown[] = []) => ({
       values: database.prepare(sql).all(...decodeParams(params))

@@ -18,6 +18,8 @@ export class NativeCompanionCapabilityUnavailableError extends Error {
   }
 }
 
+const IOS_NATIVE_CAPABILITIES = new Set(['bootstrap', 'sync-pack-apply']);
+
 export function getCompanionRuntimeCapability(): CompanionRuntimeCapability {
   if (!Capacitor.isNativePlatform()) {
     return { kind: 'web-preview', platform: 'web' };
@@ -31,7 +33,7 @@ export function getCompanionRuntimeCapability(): CompanionRuntimeCapability {
 
 export function requireAvailableCompanionRuntime(capability: string) {
   const runtime = getCompanionRuntimeCapability();
-  const iosCapabilityUnavailable = runtime.kind === 'ios-native' && capability !== 'bootstrap';
+  const iosCapabilityUnavailable = runtime.kind === 'ios-native' && !IOS_NATIVE_CAPABILITIES.has(capability);
   if (runtime.kind === 'native-unavailable' || iosCapabilityUnavailable) {
     throw new NativeCompanionCapabilityUnavailableError(capability, runtime.platform);
   }

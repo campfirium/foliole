@@ -1,11 +1,11 @@
 import { CapacitorSQLite, SQLiteConnection, type SQLiteDBConnection } from '@capacitor-community/sqlite';
 
-import { COMPANION_SCHEMA_STATEMENTS } from '../../../lib/core/database/companionSchemaStatements';
+import { COMPANION_SCHEMA_STATEMENTS } from '../../../../../lib/core/database/companionSchemaStatements';
 import {
   COMPANION_DATABASE_NAME,
   COMPANION_DATABASE_VERSION,
   type NativeCompanionBootstrapState
-} from '../../../lib/platform/nativeCompanionContract';
+} from '../../../../../lib/platform/nativeCompanionContract';
 
 const DEVICE_ID_KEY = 'device_id';
 
