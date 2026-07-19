@@ -7,12 +7,18 @@ import { DiscoursePublishDialogHost } from './DiscoursePublishDialogHost';
 
 const discourseRepositoryMocks = vi.hoisted(() => ({
   loadDiscoursePublishCatalogFromRuntime: vi.fn(),
+  loadDiscoursePublishDraftFromRuntime: vi.fn(),
   loadDiscoursePublishSettingsFromRuntime: vi.fn(),
-  publishTopicToDiscourse: vi.fn()
+  publishTopicToDiscourse: vi.fn(),
+  saveDiscoursePublishDraftToRuntime: vi.fn()
 }));
 const workspaceStoreMocks = vi.hoisted(() => ({ updateNodeContent: vi.fn() }));
+const runtimeNoticeMocks = vi.hoisted(() => ({ showAppRuntimeNotice: vi.fn() }));
+const externalNavigationMocks = vi.hoisted(() => ({ openExternalUrl: vi.fn() }));
 
 vi.mock('../../shared/platform/discoursePublishRepository', () => discourseRepositoryMocks);
+vi.mock('../../shared/platform/runtimeExternalNavigation', () => externalNavigationMocks);
+vi.mock('../../shared/ui/AppRuntimeNotice', () => runtimeNoticeMocks);
 vi.mock('../../store/workspaceStore', () => ({ useWorkspaceStore: { getState: () => workspaceStoreMocks } }));
 
 function deferred<T>() {
@@ -51,14 +57,20 @@ function requestPublishDialog() {
 
 beforeEach(() => {
   discourseRepositoryMocks.loadDiscoursePublishCatalogFromRuntime.mockReset();
+  discourseRepositoryMocks.loadDiscoursePublishDraftFromRuntime.mockReset();
   discourseRepositoryMocks.loadDiscoursePublishSettingsFromRuntime.mockReset();
   discourseRepositoryMocks.publishTopicToDiscourse.mockReset();
+  discourseRepositoryMocks.saveDiscoursePublishDraftToRuntime.mockReset();
+  runtimeNoticeMocks.showAppRuntimeNotice.mockReset();
+  externalNavigationMocks.openExternalUrl.mockReset();
   workspaceStoreMocks.updateNodeContent.mockReset();
   discourseRepositoryMocks.loadDiscoursePublishSettingsFromRuntime.mockResolvedValue({
     has_api_key: true,
     site_url: 'https://forum.example.com',
     updated_at: '2026-07-02T00:00:00.000Z'
   });
+  discourseRepositoryMocks.loadDiscoursePublishDraftFromRuntime.mockResolvedValue(null);
+  discourseRepositoryMocks.saveDiscoursePublishDraftToRuntime.mockResolvedValue(null);
   workspaceStoreMocks.updateNodeContent.mockResolvedValue(true);
 });
 
@@ -116,6 +128,42 @@ it('uses catalog defaults and publishes only through the publish shortcut', asyn
     }))
   );
   expect(workspaceStoreMocks.updateNodeContent).toHaveBeenCalledWith('test-topic', '# Cached-first topic\n\nLong enough body for preview.');
+  expect(discourseRepositoryMocks.saveDiscoursePublishDraftToRuntime).toHaveBeenLastCalledWith('test-topic', null);
+  const noticeAction = runtimeNoticeMocks.showAppRuntimeNotice.mock.calls.at(-1)?.[2];
+  expect(noticeAction).toMatchObject({ label: 'Open topic' });
+  noticeAction.onSelect();
+  expect(externalNavigationMocks.openExternalUrl).toHaveBeenCalledWith('https://forum.example.com/t/2');
+});
+
+it('keeps publishing choices but clears a failed attempt when the dialog is reopened', async () => {
+  discourseRepositoryMocks.loadDiscoursePublishCatalogFromRuntime.mockResolvedValue(
+    catalog({ categoryId: 17, categoryName: 'Cached Category', fromCache: false, tag: 'cached-tag' })
+  );
+  discourseRepositoryMocks.publishTopicToDiscourse.mockRejectedValue(
+    new Error('Discourse request failed (422): Body is too short')
+  );
+
+  render(<DiscoursePublishDialogHost />);
+  requestPublishDialog();
+  const category = await screen.findByRole('button', { name: 'Category' });
+  await waitFor(() => expect(category).toHaveTextContent('Cached Category'));
+  fireEvent.keyDown(category, { ctrlKey: true, key: 'Enter' });
+  expect(await screen.findByRole('alert')).toHaveTextContent('Body is too short');
+
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  expect(discourseRepositoryMocks.saveDiscoursePublishDraftToRuntime).toHaveBeenLastCalledWith('test-topic', {
+    category_id: 17,
+    tags: ['cached-tag']
+  });
+
+  discourseRepositoryMocks.loadDiscoursePublishDraftFromRuntime.mockResolvedValue({
+    category_id: 17,
+    tags: ['cached-tag', 'saved-choice']
+  });
+  requestPublishDialog();
+  expect(await screen.findByText('saved-choice')).toBeInTheDocument();
+  expect(screen.queryByText('Body is too short')).not.toBeInTheDocument();
 });
 
 it('keeps plain Enter scoped to the focused category control', async () => {

@@ -245,3 +245,14 @@ it('shows app runtime notices inside the workspace surface', async () => {
     clearAppRuntimeNotice(noticeId);
   }
 });
+
+it('runs an app runtime notice action once and clears the notice', async () => {
+  const onSelect = vi.fn();
+  renderWithLocalization(<WorkspaceLayoutMain {...createProps({})} />);
+
+  showAppRuntimeNotice('Published to Discourse.', 'success', { label: 'Open topic', onSelect });
+  fireEvent.click(await screen.findByRole('button', { name: 'Open topic' }));
+
+  expect(onSelect).toHaveBeenCalledOnce();
+  expect(screen.queryByTestId('app-runtime-notice')).not.toBeInTheDocument();
+});

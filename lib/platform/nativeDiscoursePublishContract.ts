@@ -20,6 +20,11 @@ export interface NativeDiscoursePublishArgs {
   title: string;
 }
 
+export interface NativeDiscoursePublishDraft {
+  category_id: number | null;
+  tags: string[];
+}
+
 export interface NativeDiscoursePublishCategory {
   id: number;
   name: string;
@@ -74,9 +79,17 @@ export type NativeDiscoursePublishCommandMap = {
     args: { refresh?: boolean } | undefined;
     result: NativeDiscoursePublishCatalog;
   };
+  [NATIVE_COMMANDS.loadDiscoursePublishDraft]: {
+    args: { node_id: string };
+    result: NativeDiscoursePublishDraft | null;
+  };
   [NATIVE_COMMANDS.publishTopicToDiscourse]: {
     args: NativeDiscoursePublishArgs;
     result: NativeDiscoursePublishResult;
+  };
+  [NATIVE_COMMANDS.saveDiscoursePublishDraft]: {
+    args: { draft: NativeDiscoursePublishDraft | null; node_id: string };
+    result: NativeDiscoursePublishDraft | null;
   };
 };
 import { NATIVE_COMMANDS } from './nativeCommands.js';

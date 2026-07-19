@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-import { appShelllessSurfaceClassName } from '../../shared/ui';
+import { AppButton, appShelllessSurfaceClassName } from '../../shared/ui';
 import { clearAppRuntimeNotice, useAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 
 function useAutoClearAppRuntimeNotice(notice: ReturnType<typeof useAppRuntimeNotice>) {
@@ -8,7 +8,7 @@ function useAutoClearAppRuntimeNotice(notice: ReturnType<typeof useAppRuntimeNot
     if (!notice) {
       return undefined;
     }
-    const timeout = window.setTimeout(() => clearAppRuntimeNotice(notice.id), 4200);
+    const timeout = window.setTimeout(() => clearAppRuntimeNotice(notice.id), notice.action ? 8000 : 4200);
     return () => window.clearTimeout(timeout);
   }, [notice]);
 }
@@ -29,8 +29,19 @@ export function WorkspaceRuntimeNotice() {
       key={notice.id}
       role="status"
     >
-      <div className={appShelllessSurfaceClassName('flex min-h-[52px] w-[min(300px,100%)] items-center justify-center px-[18px] py-[14px] text-center text-ui-md font-medium leading-5 text-shellless-title')}>
-        {notice.message}
+      <div className={appShelllessSurfaceClassName(`flex min-h-[52px] items-center justify-center gap-3 px-[18px] py-[14px] text-center text-ui-md font-medium leading-5 text-shellless-title ${notice.action ? 'pointer-events-auto w-[min(360px,100%)]' : 'w-[min(300px,100%)]'}`)}>
+        <span>{notice.message}</span>
+        {notice.action ? (
+          <AppButton
+            onClick={() => {
+              clearAppRuntimeNotice(notice.id);
+              notice.action?.onSelect();
+            }}
+            variant="subtle"
+          >
+            {notice.action.label}
+          </AppButton>
+        ) : null}
       </div>
     </div>
   );

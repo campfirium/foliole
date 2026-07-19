@@ -7,8 +7,10 @@ const discourseMocks = vi.hoisted(() => ({
   completeDiscourseUserApiAuthorization: vi.fn(),
   disconnectDiscoursePublishSettings: vi.fn(),
   loadDiscoursePublishCatalog: vi.fn(),
+  loadDiscoursePublishDraft: vi.fn(),
   loadDiscoursePublishSettings: vi.fn(),
   publishTopicToDiscourse: vi.fn(),
+  saveDiscoursePublishDraft: vi.fn(),
   saveDiscoursePublishSettings: vi.fn()
 }));
 const wordpressMocks = vi.hoisted(() => ({
@@ -78,6 +80,15 @@ it('forwards WordPress publish content without adding credentials to the payload
 it('routes explicit Discourse disconnect through the credential owner', async () => {
   await handlePublishingStorageCommand(NATIVE_COMMANDS.disconnectDiscoursePublishSettings, {});
   expect(discourseMocks.disconnectDiscoursePublishSettings).toHaveBeenCalledOnce();
+});
+
+it('routes Discourse Topic drafts through the device publishing setting owner', async () => {
+  const draft = { category_id: 7, tags: ['foliole'] };
+  await handlePublishingStorageCommand(NATIVE_COMMANDS.loadDiscoursePublishDraft, { node_id: 'topic-1' });
+  await handlePublishingStorageCommand(NATIVE_COMMANDS.saveDiscoursePublishDraft, { draft, node_id: 'topic-1' });
+
+  expect(discourseMocks.loadDiscoursePublishDraft).toHaveBeenCalledWith('topic-1');
+  expect(discourseMocks.saveDiscoursePublishDraft).toHaveBeenCalledWith({ draft, node_id: 'topic-1' });
 });
 
 it('keeps the decrypted User API key inside the main-process authorization boundary', async () => {

@@ -4,8 +4,10 @@ import {
   completeDiscourseUserApiAuthorization,
   disconnectDiscoursePublishSettings,
   loadDiscoursePublishCatalog,
+  loadDiscoursePublishDraft,
   loadDiscoursePublishSettings,
   publishTopicToDiscourse,
+  saveDiscoursePublishDraft,
   saveDiscoursePublishSettings
 } from '../discourse/discoursePublish.js';
 import {
@@ -40,6 +42,9 @@ export async function handlePublishingStorageCommand(command: string, args: Reco
   if (command === NATIVE_COMMANDS.loadDiscoursePublishCatalog) {
     return loadDiscoursePublishCatalog(readSettingsObject(args) as Parameters<typeof loadDiscoursePublishCatalog>[0]);
   }
+  if (command === NATIVE_COMMANDS.loadDiscoursePublishDraft) {
+    return loadDiscoursePublishDraft(String(args.node_id ?? ''));
+  }
   if (command === NATIVE_COMMANDS.saveDiscoursePublishSettings) {
     return saveDiscoursePublishSettings(readSettingsObject(args.settings) as unknown as Parameters<typeof saveDiscoursePublishSettings>[0]);
   }
@@ -52,6 +57,9 @@ export async function handlePublishingStorageCommand(command: string, args: Reco
   if (command === NATIVE_COMMANDS.disconnectDiscoursePublishSettings) return disconnectDiscoursePublishSettings();
   if (command === NATIVE_COMMANDS.publishTopicToDiscourse) {
     return publishTopicToDiscourse(readSettingsObject(args) as unknown as Parameters<typeof publishTopicToDiscourse>[0]);
+  }
+  if (command === NATIVE_COMMANDS.saveDiscoursePublishDraft) {
+    return saveDiscoursePublishDraft(readSettingsObject(args) as unknown as Parameters<typeof saveDiscoursePublishDraft>[0]);
   }
   if (command === NATIVE_COMMANDS.loadWordPressPublishSettings) return loadWordPressPublishSettings();
   if (command === NATIVE_COMMANDS.connectWordPressPublishSettings) {

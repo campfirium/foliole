@@ -2,6 +2,7 @@ import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type {
   NativeDiscoursePublishArgs,
   NativeDiscoursePublishCatalog,
+  NativeDiscoursePublishDraft,
   NativeDiscoursePublishResult,
   NativeDiscoursePublishSettings,
   NativeDiscoursePublishSettingsInput
@@ -47,6 +48,21 @@ export async function loadDiscoursePublishCatalogFromRuntime(input?: { refresh?:
   return (input
     ? await runtimeInvoke(NATIVE_COMMANDS.loadDiscoursePublishCatalog, input)
     : await runtimeInvoke(NATIVE_COMMANDS.loadDiscoursePublishCatalog)) as NativeDiscoursePublishCatalog;
+}
+
+export async function loadDiscoursePublishDraftFromRuntime(nodeId: string): Promise<NativeDiscoursePublishDraft | null> {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) return null;
+  return runtimeInvoke(NATIVE_COMMANDS.loadDiscoursePublishDraft, { node_id: nodeId });
+}
+
+export async function saveDiscoursePublishDraftToRuntime(
+  nodeId: string,
+  draft: NativeDiscoursePublishDraft | null
+): Promise<NativeDiscoursePublishDraft | null> {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) return null;
+  return runtimeInvoke(NATIVE_COMMANDS.saveDiscoursePublishDraft, { draft, node_id: nodeId });
 }
 
 export async function publishTopicToDiscourse(args: NativeDiscoursePublishArgs): Promise<NativeDiscoursePublishResult> {

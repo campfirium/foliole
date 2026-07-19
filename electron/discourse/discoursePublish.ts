@@ -11,10 +11,12 @@ import { createDiscourseTopic, loadDiscoursePublishCatalog as loadCatalog, updat
 import {
   loadDiscourseCatalogCache,
   loadDiscourseApiKey,
+  loadDiscoursePublishDraft,
   loadDiscoursePublishSettings,
   disconnectDiscoursePublishSettings,
   recordDiscoursePublishUsage,
   saveDiscourseCatalogCache,
+  saveDiscoursePublishDraft,
   saveDiscoursePublishSettings
 } from './discoursePublishSettings.js';
 import {
@@ -59,7 +61,13 @@ function buildBinding(args: {
   };
 }
 
-export { disconnectDiscoursePublishSettings, loadDiscoursePublishSettings, saveDiscoursePublishSettings };
+export {
+  disconnectDiscoursePublishSettings,
+  loadDiscoursePublishDraft,
+  loadDiscoursePublishSettings,
+  saveDiscoursePublishDraft,
+  saveDiscoursePublishSettings
+};
 
 export async function beginDiscourseUserApiAuthorization(args: { site_url: string }) {
   return beginAuthorization(args.site_url);

@@ -1,10 +1,8 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useState, type KeyboardEvent } from 'react';
 
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import {
-  loadDiscoursePublishCatalogFromRuntime,
-  publishTopicToDiscourse
-} from '../../shared/platform/discoursePublishRepository';
+import { publishTopicToDiscourse, saveDiscoursePublishDraftToRuntime } from '../../shared/platform/discoursePublishRepository';
+import { openExternalUrl } from '../../shared/platform/runtimeExternalNavigation';
 import {
   AppButton,
   AppDialog,
@@ -24,105 +22,11 @@ import {
   type PublishDetails,
   type PublishFormState
 } from './discoursePublishDialogModel';
-import {
-  DISCOURSE_PUBLISH_DIALOG_REQUEST_EVENT,
-  readDiscoursePublishDialogRequest,
-  type DiscoursePublishDialogRequest
-} from './discoursePublishDialogRequest';
 import { DiscoursePublishFields, type CatalogState } from './DiscoursePublishFields';
-import { withCatalogDefaults } from './discoursePublishFieldUtils';
 import { useDiscoursePublishDialogEscape } from './useDiscoursePublishDialogEscape';
+import { useDiscoursePublishDialogRequest } from './useDiscoursePublishDialogRequest';
 
 type PublishState = 'idle' | 'publishing';
-type SetCatalogState = (state: CatalogState | ((current: CatalogState) => CatalogState)) => void;
-
-async function loadDialogCatalog(args: {
-  currentRequestSeq: () => number;
-  requestSeq: number;
-  setCatalog: SetCatalogState;
-  t: ReturnType<typeof useTranslation>;
-}) {
-  const isCurrentRequest = () => args.requestSeq === args.currentRequestSeq();
-  try {
-    const cachedCatalog = await loadDiscoursePublishCatalogFromRuntime();
-    if (!isCurrentRequest()) return;
-    if (!cachedCatalog) {
-      args.setCatalog({ catalog: null, error: null, loading: false });
-      return;
-    }
-    if (!cachedCatalog.from_cache) {
-      args.setCatalog({ catalog: cachedCatalog, error: null, loading: false });
-      return;
-    }
-    args.setCatalog({ catalog: cachedCatalog, error: null, loading: true });
-  } catch {
-    if (!isCurrentRequest()) return;
-    args.setCatalog({ catalog: null, error: args.t('desktop.discoursePublish.catalog.error'), loading: false });
-    return;
-  }
-  try {
-    const nextCatalog = await loadDiscoursePublishCatalogFromRuntime({ refresh: true });
-    if (!isCurrentRequest()) return;
-    args.setCatalog({
-      catalog: nextCatalog,
-      error: nextCatalog?.from_cache ? args.t('desktop.discoursePublish.catalog.error') : null,
-      loading: false
-    });
-  } catch {
-    if (!isCurrentRequest()) return;
-    args.setCatalog((current) => ({
-      catalog: current.catalog,
-      error: args.t('desktop.discoursePublish.catalog.error'),
-      loading: false
-    }));
-  }
-}
-
-function useDiscoursePublishDialogRequest() {
-  const t = useTranslation();
-  const [request, setRequest] = useState<DiscoursePublishDialogRequest | null>(null);
-  const [form, setForm] = useState<PublishFormState>({ categoryId: '', tags: '' });
-  const [catalog, setCatalog] = useState<CatalogState>({ catalog: null, error: null, loading: false });
-  const [showAllCategories, setShowAllCategories] = useState(false);
-  const [showAllTags, setShowAllTags] = useState(false);
-  const requestSeqRef = useRef(0);
-  useEffect(() => {
-    const handleRequest = (event: Event) => {
-      const nextRequest = readDiscoursePublishDialogRequest(event);
-      if (!nextRequest) return;
-      const requestSeq = requestSeqRef.current + 1;
-      requestSeqRef.current = requestSeq;
-      setRequest(nextRequest);
-      const details = readPublishDetails(nextRequest.content);
-      setForm({
-        categoryId: details.categoryId ? String(details.categoryId) : '',
-        tags: details.tags.join(', ')
-      });
-      setShowAllCategories(false);
-      setShowAllTags(false);
-      if (nextRequest.catalog) {
-        setCatalog({ catalog: nextRequest.catalog, error: null, loading: false });
-        return;
-      }
-      setCatalog({ catalog: null, error: null, loading: true });
-      void loadDialogCatalog({
-        currentRequestSeq: () => requestSeqRef.current,
-        requestSeq,
-        setCatalog,
-        t
-      });
-    };
-    window.addEventListener(DISCOURSE_PUBLISH_DIALOG_REQUEST_EVENT, handleRequest);
-    return () => window.removeEventListener(DISCOURSE_PUBLISH_DIALOG_REQUEST_EVENT, handleRequest);
-  }, [t]);
-  useEffect(() => {
-    const currentCatalog = catalog.catalog;
-    if (!request || !currentCatalog) return;
-    setForm((current) => withCatalogDefaults(current, currentCatalog));
-  }, [catalog.catalog, request]);
-  return { catalog, form, request, setForm, setRequest, setShowAllCategories, setShowAllTags, showAllCategories, showAllTags };
-}
-
 function DiscoursePublishDialog(props: {
   details: PublishDetails;
   error: string | null;
@@ -188,12 +92,25 @@ export function DiscoursePublishDialogHost() {
   const { catalog, form, request, setForm, setRequest, setShowAllCategories, setShowAllTags, showAllCategories, showAllTags } = useDiscoursePublishDialogRequest();
   const [state, setState] = useState<PublishState>('idle');
   const [error, setError] = useState<string | null>(null);
+  useEffect(() => setError(null), [request]);
   if (!request) return null;
   const details = readPublishDetails(request.content);
-  const close = () => setRequest(null);
   const closePanels = () => {
     setShowAllCategories(false);
     setShowAllTags(false);
+  };
+  const currentDraft = () => ({
+    category_id: Number.isInteger(Number(form.categoryId)) && Number(form.categoryId) > 0
+      ? Number(form.categoryId)
+      : null,
+    tags: toTags(form.tags)
+  });
+  const close = () => {
+    setError(null);
+    closePanels();
+    void saveDiscoursePublishDraftToRuntime(request.nodeId, currentDraft())
+      .catch(() => showAppRuntimeNotice(t('desktop.discoursePublish.error.draftSave')))
+      .finally(() => setRequest(null));
   };
   const publish = async () => {
     if (details.parseError) {
@@ -203,6 +120,7 @@ export function DiscoursePublishDialogHost() {
     setState('publishing');
     setError(null);
     try {
+      await saveDiscoursePublishDraftToRuntime(request.nodeId, currentDraft()).catch(() => null);
       const result = await publishTopicToDiscourse({
         category_id: toCategoryId(form.categoryId, t('desktop.discoursePublish.error.category')),
         content: request.content,
@@ -211,8 +129,13 @@ export function DiscoursePublishDialogHost() {
       });
       const saved = await useWorkspaceStore.getState().updateNodeContent(request.nodeId, result.updated_content);
       if (!saved) throw new Error(t('desktop.discoursePublish.error.localSave'));
-      close();
-      showAppRuntimeNotice(t(result.mode === 'created' ? 'desktop.discoursePublish.created' : 'desktop.discoursePublish.updated'), 'success');
+      await saveDiscoursePublishDraftToRuntime(request.nodeId, null).catch(() => null);
+      setRequest(null);
+      showAppRuntimeNotice(
+        t(result.mode === 'created' ? 'desktop.discoursePublish.created' : 'desktop.discoursePublish.updated'),
+        'success',
+        { label: t('desktop.discoursePublish.openTopic'), onSelect: () => void openExternalUrl(result.url) }
+      );
     } catch (publishError) {
       setError(publishError instanceof Error ? publishError.message : t('desktop.discoursePublish.error.publish'));
     } finally {

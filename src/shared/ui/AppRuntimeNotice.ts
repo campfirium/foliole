@@ -2,7 +2,13 @@ import { useSyncExternalStore } from 'react';
 
 export type AppRuntimeNoticeTone = 'success' | 'error';
 
+export interface AppRuntimeNoticeAction {
+  label: string;
+  onSelect: () => void;
+}
+
 interface AppRuntimeNoticeState {
+  action?: AppRuntimeNoticeAction;
   id: number;
   message: string;
   tone: AppRuntimeNoticeTone;
@@ -25,7 +31,11 @@ function getAppRuntimeNoticeSnapshot() {
   return currentNotice;
 }
 
-export function showAppRuntimeNotice(message: string, tone: AppRuntimeNoticeTone = 'error') {
+export function showAppRuntimeNotice(
+  message: string,
+  tone: AppRuntimeNoticeTone = 'error',
+  action?: AppRuntimeNoticeAction
+) {
   const trimmedMessage = message.trim();
   if (!trimmedMessage) {
     return null;
@@ -33,6 +43,7 @@ export function showAppRuntimeNotice(message: string, tone: AppRuntimeNoticeTone
   const id = nextNoticeId;
   currentNotice = {
     id,
+    ...(action ? { action } : {}),
     message: trimmedMessage,
     tone
   };

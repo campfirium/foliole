@@ -72,6 +72,54 @@ test('closes the Discourse publish dialog on Escape', async ({ desktopWindow }) 
   await expect(dialog).toHaveCount(0);
 });
 
+test('restores failed publishing choices without restoring the old error', async ({ desktopWindow }) => {
+  await desktopWindow.evaluate(async (catalog) => {
+    await window.electronAPI?.invoke('disconnect_discourse_publish_settings');
+    await window.electronAPI?.invoke('save_discourse_publish_settings', {
+      settings: { site_url: 'https://forum.example.com' }
+    });
+    window.dispatchEvent(new CustomEvent('foliole:discourse-publish-dialog-request', {
+      detail: {
+        catalog,
+        content: '# Draft recovery topic\n\nLong enough body for preview.',
+        nodeId: 'playwright-draft-recovery-topic',
+        title: 'Folder title'
+      }
+    }));
+  }, discourseCatalog);
+
+  const dialog = desktopWindow.getByRole('dialog', { name: /^(Publish to Discourse|发布到 Discourse)$/ });
+  const category = dialog.getByLabel(/^(Category|分类)$/).first();
+  await expect(category).toBeFocused();
+  await desktopWindow.keyboard.press('3');
+  await expect(category).toContainText('工具 · 玩具');
+  const tags = dialog.getByLabel(/^(Tags|标签)$/).first();
+  await tags.fill('saved-choice');
+  await desktopWindow.keyboard.press('Enter');
+  await dialog.getByRole('button', { name: /^(Publish|发布)$/ }).click();
+  await expect(dialog.getByRole('alert')).toContainText('not configured');
+  await dialog.getByRole('button', { name: /^(Cancel|取消)$/ }).click();
+  await expect(dialog).toHaveCount(0);
+
+  await desktopWindow.evaluate((catalog) => {
+    window.dispatchEvent(new CustomEvent('foliole:discourse-publish-dialog-request', {
+      detail: {
+        catalog,
+        content: '# Draft recovery topic\n\nLong enough body for preview.',
+        nodeId: 'playwright-draft-recovery-topic',
+        title: 'Folder title'
+      }
+    }));
+  }, discourseCatalog);
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByLabel(/^(Category|分类)$/).first()).toContainText('工具 · 玩具');
+  await expect(dialog.getByText('saved-choice').first()).toBeVisible();
+  await expect(dialog.getByRole('alert')).toHaveCount(0);
+  await desktopWindow.screenshot({
+    path: '.tmp/artifacts/discourse-publish-draft-recovery-hidden-native.png'
+  });
+});
+
 test('supports keyboard-first Discourse category selection', async ({ desktopWindow }) => {
   await desktopWindow.evaluate((catalog) => {
     window.dispatchEvent(new CustomEvent('foliole:discourse-publish-dialog-request', {
