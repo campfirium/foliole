@@ -71,8 +71,10 @@ it('exposes an independent disclosure without unmounting its content', () => {
   render(<DisclosureSection />);
   const toggle = screen.getByRole('button', { name: 'Publishing' });
   expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  expect(toggle).toHaveClass('w-full');
+  expect(screen.getByText('Section copy.').closest('button')).toBe(toggle);
   expect(screen.getByLabelText('Account ID')).not.toBeVisible();
-  fireEvent.click(toggle);
+  fireEvent.click(screen.getByText('Section copy.'));
   expect(toggle).toHaveAttribute('aria-expanded', 'true');
   expect(screen.getByLabelText('Account ID')).toBeVisible();
 });

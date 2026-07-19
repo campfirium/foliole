@@ -37,15 +37,15 @@ function SettingsSectionHeader(props: {
   }
   return (
     <div className="flex items-start justify-between gap-4">
-      <div className="min-w-0 flex-1">
-        <h3>
-          <button aria-controls={props.contentId} aria-describedby={props.description ? props.descriptionId : undefined} aria-expanded={props.expanded} className="group -mx-1 flex items-center gap-2 rounded-sm px-1 text-left text-ui-lg font-semibold text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" onClick={() => props.onExpandedChange?.(!props.expanded)} type="button">
-            <ChevronRight aria-hidden="true" className={cn('size-4 shrink-0 text-muted-foreground transition-transform group-hover:text-foreground', props.expanded && 'rotate-90')} strokeWidth={1.8} />
-            {props.title}
-          </button>
-        </h3>
-        {props.description ? <p className="ml-6 mt-1 max-w-[760px] text-ui-md font-normal leading-6 text-muted-foreground" id={props.descriptionId}>{props.description}</p> : null}
-      </div>
+      <h3 aria-label={props.title} className="min-w-0 flex-1">
+        <button aria-controls={props.contentId} aria-describedby={props.description ? props.descriptionId : undefined} aria-expanded={props.expanded} aria-label={props.title} className="group flex w-full items-start gap-2 rounded-sm px-1 text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" onClick={() => props.onExpandedChange?.(!props.expanded)} type="button">
+          <ChevronRight aria-hidden="true" className={cn('mt-1 size-4 shrink-0 text-muted-foreground transition-transform group-hover:text-foreground', props.expanded && 'rotate-90')} strokeWidth={1.8} />
+          <span className="min-w-0">
+            <span className="block text-ui-lg font-semibold text-foreground">{props.title}</span>
+            {props.description ? <span className="mt-1 block max-w-[760px] text-ui-md font-normal leading-6 text-muted-foreground" id={props.descriptionId}>{props.description}</span> : null}
+          </span>
+        </button>
+      </h3>
       {props.actions ? <div className="shrink-0">{props.actions}</div> : null}
     </div>
   );
