@@ -11,6 +11,7 @@ export interface NodeListContextMenuProps {
   onClose: () => void;
   onCreateCommand: (commandId: string) => void;
   onCreateTopicFromClipboard?: () => void;
+  onAddToVirtualFolder?: () => void;
   onDeleteNode: () => void;
   onDeleteNodePermanently: () => void;
   onDismissEntireTopic?: () => void;
@@ -28,6 +29,7 @@ export interface NodeListContextMenuProps {
   onToggleSequentialReading?: () => void;
   onUnshelveTopic?: () => void;
   showDeleteAction?: boolean;
+  showAddToVirtualFolderAction?: boolean;
   showCreateTopicFromClipboardAction?: boolean;
   showDismissEntireTopicAction?: boolean;
   showDismissAction?: boolean;

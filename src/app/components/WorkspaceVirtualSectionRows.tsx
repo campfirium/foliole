@@ -1,5 +1,5 @@
 import { Layers2 } from 'lucide-react';
-import type { Dispatch, MouseEvent as ReactMouseEvent, SetStateAction } from 'react';
+import type { Dispatch, DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent, SetStateAction } from 'react';
 
 import { createNodeListRowKeydownHandler } from '../../features/nodes/components/NodeListTreeKeyboard';
 import { NodeTreeRow } from '../../features/nodes/components/NodeTreeRow';
@@ -18,6 +18,9 @@ interface WorkspaceVirtualRowsProps {
   nodesById: WorkspaceListNodesById;
   onContextMenuSavedSearch: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
   onDeleteVirtualNode: (nodeId: string) => void;
+  onDragLeaveVirtualFolder: (nodeId: string, event: ReactDragEvent<HTMLElement>) => void;
+  onDragOverVirtualFolder: (nodeId: string, event: ReactDragEvent<HTMLElement>) => void;
+  onDropOnVirtualFolder: (nodeId: string, event: ReactDragEvent<HTMLElement>) => void;
   onOpenVirtualView?: (nodeId?: string) => void;
   onRenameVirtualNode: (nodeId: string, title: string) => void;
   onSelectNodeInVirtualView: (nodeId: string) => void;
@@ -66,6 +69,7 @@ function renderBuiltinVirtualRow(
 
 export function renderVirtualRows(args: {
   collapsedIds: Set<string>;
+  dropTargetNodeId: string | null;
   onRowKeyDown: ReturnType<typeof createNodeListRowKeydownHandler>;
   props: WorkspaceVirtualRowsProps;
   rowSpacing: number;
@@ -99,6 +103,8 @@ function renderMainVirtualRow(args: Parameters<typeof renderVirtualRow>[0] & {
       hasChildren={args.isVirtualRoot ? true : args.row.hasChildren}
       isActive={args.isSelected}
       isCollapsed={args.collapsedIds.has(args.row.node.id)}
+      isDragDisabled
+      isDropTarget={args.dropTargetNodeId === args.row.node.id}
       isSelected={args.isSelected}
       key={args.row.node.id}
       label={args.row.node.title}
@@ -110,6 +116,12 @@ function renderMainVirtualRow(args: Parameters<typeof renderVirtualRow>[0] & {
       {...(args.isVirtualRoot ? { trailingLabelContent: <VirtualRootMarker /> } : {})}
       {...(args.isSavedSearch ? { onRename: args.props.onRenameVirtualNode } : {})}
       {...(args.isSavedSearch ? { onContextMenu: args.props.onContextMenuSavedSearch } : {})}
+      {...(args.isSavedSearch ? {
+        dropIntent: 'child' as const,
+        onDragLeave: args.props.onDragLeaveVirtualFolder,
+        onDragOver: args.props.onDragOverVirtualFolder,
+        onDrop: args.props.onDropOnVirtualFolder
+      } : {})}
       onKeyDown={args.onRowKeyDown}
       onSelect={(nodeId) => {
         args.props.onOpenVirtualView?.(nodeId);

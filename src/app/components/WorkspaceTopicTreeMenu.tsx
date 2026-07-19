@@ -6,11 +6,14 @@ import type { NodeSelectModifiers } from '../../features/nodes/components/NodeLi
 import { NodeReviewSchedulingDialog } from '../../features/nodes/components/NodeReviewSchedulingDialog';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { getCurrentReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 
+import { AddToVirtualFolderDialog } from './AddToVirtualFolderDialog';
 import { requestClipboardImport } from './importActivityRequests';
 import type { WorkspaceTopicTreeProps } from './WorkspaceTopicTree';
 import type { useWorkspaceTopicTreeInteraction } from './WorkspaceTopicTree';
 import type { useWorkspaceTopicTreeActions } from './workspaceTopicTreeActions';
+import { listAvailableManualVirtualFolders } from './workspaceVirtualFolderMembership';
 
 interface WorkspaceTopicTreeMenuProps {
   actions: ReturnType<typeof useWorkspaceTopicTreeActions>;
@@ -25,9 +28,20 @@ interface WorkspaceTopicTreeMenuProps {
   topicTreeState: ReturnType<typeof useWorkspaceTopicTreeInteraction>['topicTreeState'];
 }
 
+function hasAvailableVirtualFolder(topicIds: string[]) {
+  const workspace = useWorkspaceStore.getState();
+  return listAvailableManualVirtualFolders({
+    nodeOrder: workspace.nodeOrder,
+    nodesById: workspace.nodesById,
+    topicIds
+  }).length > 0;
+}
+
 export function WorkspaceTopicTreeMenu(props: WorkspaceTopicTreeMenuProps) {
   const [reviewSchedulingNodeId, setReviewSchedulingNodeId] = useState<string | null>(null);
+  const [addToVirtualFolderTopicIds, setAddToVirtualFolderTopicIds] = useState<string[] | null>(null);
   const activeFolder = props.nodesById[props.activeFolderId];
+  const canAddToVirtualFolder = hasAvailableVirtualFolder(props.contextMenu.getContextTargets());
   const onRemoveFromCurrentVirtualFolder = props.virtualFolderView === 'manual'
     ? (nodeIds: string[]) => {
         const removedIds = new Set(nodeIds);
@@ -54,6 +68,7 @@ export function WorkspaceTopicTreeMenu(props: WorkspaceTopicTreeMenuProps) {
           requestClipboardImport({ targetParentNodeId: parentNodeId ?? props.activeFolderId })
         }
         onOpenMoveToNode={props.onOpenMoveToNode}
+        {...(canAddToVirtualFolder ? { onAddToVirtualFolder: setAddToVirtualFolderTopicIds } : {})}
         {...(onRemoveFromCurrentVirtualFolder ? { onRemoveFromCurrentVirtualFolder } : {})}
         {...(props.onOpenPostponeTopicPanel ? { onOpenPostponeTopic: props.onOpenPostponeTopicPanel } : {})}
         onOpenReviewScheduling={setReviewSchedulingNodeId}
@@ -73,6 +88,12 @@ export function WorkspaceTopicTreeMenu(props: WorkspaceTopicTreeMenuProps) {
         onPriorityChange={props.actions.updateNodePriority}
         onShortTermChange={props.actions.updateNodeShortTerm}
       />
+      {addToVirtualFolderTopicIds ? (
+        <AddToVirtualFolderDialog
+          onClose={() => setAddToVirtualFolderTopicIds(null)}
+          topicIds={addToVirtualFolderTopicIds}
+        />
+      ) : null}
     </>
   );
 }

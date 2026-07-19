@@ -7,6 +7,7 @@ import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 import { NodeListContextMenu } from './NodeListContextMenu';
 import { canPostponeTopic, canToggleSequentialReading, hasDismissEntireTopicTargets, hasDismissTargets, hasReturnTargets, hasShelveTopicTarget, hasUnshelveTopicTarget } from './nodeListContextMenuReview';
 import { createDismissEntireTopicAction, createDismissNodeAction, createReturnNodeAction, createShelveTopicAction, createToggleSequentialReadingAction, createUnshelveTopicAction } from './nodeListMenuActions';
+import { createOptionalNodeMenuHandler } from './nodeListMenuOpenHandlers';
 import { sortNodeIdsByVisibleOrder } from './nodeListMenuTargetOrder';
 import { createCreateNodeHandler, resolveCreateCommands, type NodeListCreateMenuSurface } from './NodeListTreeCreateMenu';
 import type { NodeListContextMenuController } from './NodeListTreeHooks';
@@ -24,6 +25,7 @@ interface NodeListTreeMenuProps {
   dismissNode: (nodeId: string, now?: string) => boolean;
   isVirtualViewOpen: boolean;
   nodesById: WorkspaceListNodesById;
+  onAddToVirtualFolder?: (nodeIds: string[]) => void;
   onOpenMoveToNode: () => void;
   onOpenPostponeTopic?: (nodeId: string) => void;
   onRemoveFromCurrentVirtualFolder?: (nodeIds: string[]) => void;
@@ -63,6 +65,7 @@ function buildMenuState(props: NodeListTreeMenuProps) {
     primaryTargetId,
     showDeleteAction: isSingleNodeTarget ? !isProtectedRootNode(primaryTarget) : contextTargets.length > 0,
     showMergeHighlightsIntoTopicAction: showNodeImportActions,
+    showAddToVirtualFolderAction: contextTargets.length > 0 && contextTargets.every((nodeId) => props.nodesById[nodeId]?.kind === 'topic'),
     showMoveToNodeAction: props.createMenuSurface !== 'virtual-topics' && isSingleNodeTarget && canNodeBeMoved(primaryTarget),
     showReviewSchedulingAction: isSingleNodeTarget && !isProtectedRootNode(primaryTarget) && !isVirtualRootNode(primaryTarget) && !isVirtualNode(primaryTarget),
     showPostponeTopicAction: isSingleNodeTarget && canPostponeTopic(primaryTarget),
@@ -85,30 +88,6 @@ function createMoveToNodeHandler(props: NodeListTreeMenuProps, primaryTargetId: 
     }
     props.onSelect(primaryTargetId);
     props.onOpenMoveToNode();
-    props.contextMenu.closeContextMenu();
-  };
-}
-
-function createOpenReviewSchedulingHandler(
-  props: NodeListTreeMenuProps,
-  primaryTargetId: string | null
-) {
-  return () => {
-    if (primaryTargetId && props.onOpenReviewScheduling) {
-      props.onOpenReviewScheduling(primaryTargetId);
-    }
-    props.contextMenu.closeContextMenu();
-  };
-}
-
-function createOpenPostponeTopicHandler(
-  props: NodeListTreeMenuProps,
-  primaryTargetId: string | null
-) {
-  return () => {
-    if (primaryTargetId && props.onOpenPostponeTopic) {
-      props.onOpenPostponeTopic(primaryTargetId);
-    }
     props.contextMenu.closeContextMenu();
   };
 }
@@ -148,8 +127,8 @@ function buildNodeListActionHandlers(
       primaryTargetId: menuState.primaryTargetId
     }),
     onMoveToNode: createMoveToNodeHandler(props, menuState.primaryTargetId),
-    onOpenReviewScheduling: createOpenReviewSchedulingHandler(props, menuState.primaryTargetId),
-    onOpenPostponeTopic: createOpenPostponeTopicHandler(props, menuState.primaryTargetId),
+    onOpenReviewScheduling: createOptionalNodeMenuHandler(menuState.primaryTargetId, props.onOpenReviewScheduling, props.contextMenu.closeContextMenu),
+    onOpenPostponeTopic: createOptionalNodeMenuHandler(menuState.primaryTargetId, props.onOpenPostponeTopic, props.contextMenu.closeContextMenu),
     onReturnNode: createReturnNodeAction(menuState.contextTargets, props.returnNode, props.contextMenu.closeContextMenu),
     onShelveTopic: createShelveTopicAction(menuState.primaryTargetId, props.shelveNode, props.contextMenu.closeContextMenu),
     onToggleSequentialReading: createToggleSequentialReadingAction({
@@ -169,6 +148,7 @@ function buildNodeListMenuVisibility(
   const showDismissEntireTopicAction = menuState.isNotesMenu && hasDismissEntireTopicTargets(menuState.contextTargets, props.nodesById);
   return {
     showDeleteAction: menuState.showDeleteAction,
+    showAddToVirtualFolderAction: menuState.showAddToVirtualFolderAction && Boolean(props.onAddToVirtualFolder),
     showDismissAction: menuState.isNotesMenu && !showDismissEntireTopicAction && hasDismissTargets(menuState.primaryTargetId ? [menuState.primaryTargetId] : [], props.nodesById),
     showDismissEntireTopicAction,
     showMergeHighlightsIntoTopicAction: menuState.showMergeHighlightsIntoTopicAction,
@@ -209,6 +189,7 @@ function buildNodeListContextMenuProps(
       props.contextMenu.closeContextMenu()
     ),
     onDeleteNodePermanently: () => (props.deleteNodesPermanently(menuState.contextTargets), props.contextMenu.closeContextMenu()),
+    onAddToVirtualFolder: () => (props.onAddToVirtualFolder?.(menuState.contextTargets), props.contextMenu.closeContextMenu()),
     onRemoveFromCurrentVirtualFolder: () => (props.onRemoveFromCurrentVirtualFolder?.(menuState.contextTargets), props.contextMenu.closeContextMenu()),
     ...buildNodeListActionHandlers(props, menuState),
     onRenameNode: () => (requestNodeRename(menuState.primaryTargetId), props.contextMenu.closeContextMenu()),

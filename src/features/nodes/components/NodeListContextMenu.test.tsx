@@ -21,6 +21,7 @@ function noopProps() {
     isTrashMenu: false,
     left: 24,
     onClose: vi.fn(),
+    onAddToVirtualFolder: vi.fn(),
     onCreateCommand: vi.fn(),
     onDeleteNode: vi.fn(),
     onDeleteNodePermanently: vi.fn(),
@@ -37,6 +38,7 @@ function noopProps() {
     onToggleSequentialReading: vi.fn(),
     onUnshelveTopic: vi.fn(),
     showDeleteAction: true,
+    showAddToVirtualFolderAction: true,
     showDismissAction: true,
     showDismissEntireTopicAction: true,
     showMergeHighlightsIntoTopicAction: true,
@@ -62,6 +64,7 @@ it('groups node context actions into create, edit, review, and destructive order
     'Merge highlights',
     'Paste as Topic',
     'Move to…',
+    'Add to Virtual Folder…',
     'Relearn',
     'Review options…',
     'Dismiss',
@@ -69,6 +72,15 @@ it('groups node context actions into create, edit, review, and destructive order
     'Dismiss topic',
     'Delete'
   ]);
+});
+
+it('opens virtual folder membership selection from a Topic action', () => {
+  const props = noopProps();
+  renderWithLocalization(<NodeListContextMenu {...props} />);
+
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Add to Virtual Folder…' }));
+
+  expect(props.onAddToVirtualFolder).toHaveBeenCalledOnce();
 });
 
 it('renders compact icon menu items and keeps delete visually destructive', () => {
@@ -106,6 +118,7 @@ it('does not render a leading separator when create actions are hidden', () => {
       createCommands={[]}
       showDismissAction={false}
       showDismissEntireTopicAction={false}
+      showAddToVirtualFolderAction={false}
       showMergeHighlightsIntoTopicAction={false}
       showMoveToNodeAction={false}
       showPasteIntoNodeAction={false}

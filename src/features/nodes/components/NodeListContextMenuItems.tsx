@@ -6,6 +6,7 @@ import {
   CircleOff,
   Clipboard,
   GitMerge,
+  ListPlus,
   ListMinus,
   MoveRight,
   Pencil,
@@ -55,6 +56,7 @@ function shouldShowEditGroup(props: NoteMenuItemsProps) {
     (props.showRenameAction && props.onRenameNode) ||
     (props.showMergeHighlightsIntoTopicAction && props.onMergeHighlightsIntoTopic) ||
     (props.showPasteIntoNodeAction && props.onPasteIntoNode) ||
+    (props.showAddToVirtualFolderAction && props.onAddToVirtualFolder) ||
     (props.showMoveToNodeAction && props.onMoveToNode)
   );
 }
@@ -105,6 +107,7 @@ function renderEditItems(t: Translate, props: NoteMenuItemsProps, helpEnabled: b
       {props.showMergeHighlightsIntoTopicAction && props.onMergeHighlightsIntoTopic ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.mergeHighlights)} icon={GitMerge} onSelect={props.onMergeHighlightsIntoTopic}>{t('desktop.nodeList.menu.mergeHighlights')}</NodeContextMenuItem> : null}
       {props.showPasteIntoNodeAction && props.onPasteIntoNode ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.pasteClipboardTopic)} icon={Clipboard} onSelect={props.onPasteIntoNode}>{t('desktop.nodeList.menu.pasteAsTopic')}</NodeContextMenuItem> : null}
       {props.showMoveToNodeAction && props.onMoveToNode ? <NodeContextMenuItem icon={MoveRight} onSelect={props.onMoveToNode}>{t('desktop.nodeList.menu.moveTo')}</NodeContextMenuItem> : null}
+      {props.showAddToVirtualFolderAction && props.onAddToVirtualFolder ? <NodeContextMenuItem icon={ListPlus} onSelect={props.onAddToVirtualFolder}>{t('desktop.nodeList.menu.addToVirtualFolder')}</NodeContextMenuItem> : null}
     </>
   );
 }
@@ -179,6 +182,7 @@ export function NodeListContextMenuItems(props: NodeListContextMenuProps) {
   return (
     <NoteMenuItems
       createCommands={props.createCommands}
+      {...(props.onAddToVirtualFolder ? { onAddToVirtualFolder: props.onAddToVirtualFolder } : {})}
       {...(props.onCreateTopicFromClipboard ? { onCreateTopicFromClipboard: props.onCreateTopicFromClipboard } : {})}
       onCreateCommand={props.onCreateCommand}
       onDeleteNode={props.onDeleteNode}
@@ -194,6 +198,7 @@ export function NodeListContextMenuItems(props: NodeListContextMenuProps) {
       {...(props.onReturnNode ? { onReturnNode: props.onReturnNode } : {})}
       {...(props.onShelveTopic ? { onShelveTopic: props.onShelveTopic } : {})}
       {...(props.showDeleteAction !== undefined ? { showDeleteAction: props.showDeleteAction } : {})}
+      {...(props.showAddToVirtualFolderAction !== undefined ? { showAddToVirtualFolderAction: props.showAddToVirtualFolderAction } : {})}
       {...(props.showCreateTopicFromClipboardAction !== undefined ? { showCreateTopicFromClipboardAction: props.showCreateTopicFromClipboardAction } : {})}
       {...(props.showDismissEntireTopicAction !== undefined ? { showDismissEntireTopicAction: props.showDismissEntireTopicAction } : {})}
       {...(props.showDismissAction !== undefined ? { showDismissAction: props.showDismissAction } : {})}

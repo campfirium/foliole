@@ -13,6 +13,7 @@ import type { WorkspaceListNodesById } from '../../features/nodes/model/workspac
 import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
+import { useWorkspaceVirtualFolderDrop } from './workspaceVirtualFolderDrop';
 import { compareVirtualNodeTitle } from './workspaceVirtualNodeSort';
 import { WorkspaceVirtualSavedSearchContextMenu } from './WorkspaceVirtualSavedSearchContextMenu';
 import { getVirtualKeyboardRows, renderVirtualRows, toggleCollapsed } from './WorkspaceVirtualSectionRows';
@@ -46,6 +47,17 @@ function getContextMenuPosition(event: ReactMouseEvent<HTMLElement>) {
     left: Math.max(8, Math.min(event.clientX, window.innerWidth - 220)),
     top: Math.max(8, Math.min(event.clientY, window.innerHeight - 72))
   };
+}
+
+function buildWorkspaceVirtualRows(
+  props: WorkspaceVirtualSectionProps,
+  collapsedIds: Set<string>
+) {
+  const virtualNodeIds = props.nodeOrder.filter((nodeId) => {
+    const node = props.nodesById[nodeId];
+    return isVirtualRootNode(node) || isVirtualNode(node);
+  }).sort((leftId, rightId) => compareVirtualNodeTitle(leftId, rightId, props.nodesById));
+  return buildVisibleNodeTreeRows(buildNodeTree(virtualNodeIds, props.nodesById).rows, collapsedIds);
 }
 
 function renderSavedSearchContextMenu(args: {
@@ -104,14 +116,11 @@ export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
   const deleteNode = useWorkspaceStore((state) => state.deleteNode);
   const updateNodeTitle = useWorkspaceStore((state) => state.updateNodeTitle);
   const actions = useVirtualFolderActions(t, updateNodeTitle);
-  const rowSpacing = getNodeListRowSpacing();
-  const rows = useMemo(() => {
-    const virtualNodeIds = props.nodeOrder.filter((nodeId) => {
-      const node = props.nodesById[nodeId];
-      return isVirtualRootNode(node) || isVirtualNode(node);
-    }).sort((leftId, rightId) => compareVirtualNodeTitle(leftId, rightId, props.nodesById));
-    return buildVisibleNodeTreeRows(buildNodeTree(virtualNodeIds, props.nodesById).rows, collapsedIds);
-  }, [collapsedIds, props.nodeOrder, props.nodesById]);
+  const drop = useWorkspaceVirtualFolderDrop();
+  const rows = useMemo(
+    () => buildWorkspaceVirtualRows(props, collapsedIds),
+    [collapsedIds, props.nodeOrder, props.nodesById]
+  );
   const keyboardRows = useMemo(() => getVirtualKeyboardRows(rows, collapsedIds), [collapsedIds, rows]);
   const onRowKeyDown = useMemo(
     () =>
@@ -140,9 +149,13 @@ export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
               setContextMenu({ nodeId, ...getContextMenuPosition(event) });
             },
             onDeleteVirtualNode: deleteNode,
+            onDragLeaveVirtualFolder: drop.onDragLeave,
+            onDragOverVirtualFolder: drop.onDragOver,
+            onDropOnVirtualFolder: drop.onDrop,
             onRenameVirtualNode: actions.onRename
           },
-          rowSpacing,
+          dropTargetNodeId: drop.targetId,
+          rowSpacing: getNodeListRowSpacing(),
           rows,
           setCollapsedIds
         })}

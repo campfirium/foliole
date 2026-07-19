@@ -21,7 +21,7 @@ export function resolveDragSourceNodeIds(
 
 export function writeNodeListDragSource(event: ReactDragEvent<HTMLElement>, nodeIds: string[]) {
   activeNodeListDragSource = nodeIds;
-  event.dataTransfer.effectAllowed = 'move';
+  event.dataTransfer.effectAllowed = 'copyMove';
   event.dataTransfer.setData(NODE_LIST_DRAG_MIME, JSON.stringify(nodeIds));
   event.dataTransfer.setData('text/plain', nodeIds[0] ?? '');
 }
