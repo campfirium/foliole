@@ -1,19 +1,15 @@
 import type { TranslationKey } from '../translations';
 
+import { ZH_HANS_COMPANION_APP_TRANSLATIONS } from './zhHansCompanionApp';
 import { ZH_HANS_COMPANION_CAPTURE_TRANSLATIONS } from './zhHansCompanionCapture';
 import { ZH_HANS_COMPANION_READING_TYPOGRAPHY_TRANSLATIONS } from './zhHansCompanionReadingTypography';
 import { ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS } from './zhHansCompanionSettings';
 
 export const ZH_HANS_COMPANION_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  ...ZH_HANS_COMPANION_APP_TRANSLATIONS,
   ...ZH_HANS_COMPANION_CAPTURE_TRANSLATIONS,
   ...ZH_HANS_COMPANION_READING_TYPOGRAPHY_TRANSLATIONS,
   ...ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS,
-  'companion.app.retry': '重试',
-  'companion.app.starting.eyebrow': '移动端运行环境',
-  'companion.app.starting.message': '正在准备稳定的设备身份和本地移动端存储，然后加载主题界面。',
-  'companion.app.starting.title': '正在启动移动端运行环境',
-  'companion.app.bootstrap.module': '移动端启动',
-  'companion.app.bootstrapFailed': '移动端启动失败',
   'companion.back': '返回',
   'companion.browse.directory': '目录',
   'companion.browse.menu': '浏览菜单',
@@ -219,4 +215,3 @@ export const ZH_HANS_COMPANION_TRANSLATIONS: Partial<Record<TranslationKey, stri
   'companion.onlyReview.noDueTitle': '现在没有到期检测项',
   'companion.onlyReview.noDueDescription': '下一个检测项：{date}'
 };
-

@@ -1,18 +1,13 @@
+import { EN_COMPANION_APP_TRANSLATIONS } from './enCompanionApp';
 import { EN_COMPANION_CAPTURE_TRANSLATIONS } from './enCompanionCapture';
 import { EN_COMPANION_READING_TYPOGRAPHY_TRANSLATIONS } from './enCompanionReadingTypography';
 import { EN_COMPANION_SETTINGS_TRANSLATIONS } from './enCompanionSettings';
 
 export const EN_COMPANION_TRANSLATIONS = {
+  ...EN_COMPANION_APP_TRANSLATIONS,
   ...EN_COMPANION_CAPTURE_TRANSLATIONS,
   ...EN_COMPANION_READING_TYPOGRAPHY_TRANSLATIONS,
   ...EN_COMPANION_SETTINGS_TRANSLATIONS,
-  'companion.app.retry': 'Retry',
-  'companion.app.starting.eyebrow': 'Companion runtime',
-  'companion.app.starting.message':
-    'Preparing a stable device identity and local companion storage before the topic surface loads.',
-  'companion.app.starting.title': 'Starting companion runtime',
-  'companion.app.bootstrap.module': 'Companion bootstrap',
-  'companion.app.bootstrapFailed': 'Companion bootstrap failed',
   'companion.back': 'Back',
   'companion.browse.directory': 'Directory',
   'companion.browse.menu': 'Browse menu',
@@ -223,4 +218,3 @@ export const EN_COMPANION_TRANSLATIONS = {
   'companion.onlyReview.noDueTitle': 'No review items are due right now',
   'companion.onlyReview.noDueDescription': 'Next review item: {date}'
 } as const;
-

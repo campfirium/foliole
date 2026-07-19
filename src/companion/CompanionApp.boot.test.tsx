@@ -64,18 +64,18 @@ function mockCompanionWorkspaceSync() {
   });
 }
 
-describe('CompanionApp bootstrap states', () => {
-  afterEach(() => {
-    cleanup();
-  });
+afterEach(() => {
+  cleanup();
+});
 
-  beforeEach(() => {
-    cleanup();
-    useCompanionBootstrap.mockReset();
-    useCompanionWorkspaceSync.mockReset();
-    mockCompanionWorkspaceSync();
-  });
+beforeEach(() => {
+  cleanup();
+  useCompanionBootstrap.mockReset();
+  useCompanionWorkspaceSync.mockReset();
+  mockCompanionWorkspaceSync();
+});
 
+describe('CompanionApp bootstrap progress', () => {
   it('shows a booting state before the native bootstrap resolves', async () => {
     useCompanionBootstrap.mockReturnValue({ status: 'booting' });
     const { CompanionApp } = await import('./CompanionApp');
@@ -85,7 +85,24 @@ describe('CompanionApp bootstrap states', () => {
     expect(screen.getByText('Starting companion runtime')).toBeInTheDocument();
   }, 30_000);
 
-  it('renders the article shell after bootstrap succeeds', async () => {
+  it('shows a failure state when bootstrap rejects', async () => {
+    useCompanionBootstrap.mockReturnValue({
+      status: 'failed',
+      message: 'Native companion bootstrap returned an invalid payload.'
+    });
+    const { CompanionApp } = await import('./CompanionApp');
+
+    render(<CompanionApp />);
+
+    expect(screen.getByText('Companion bootstrap failed')).toBeInTheDocument();
+    expect(screen.getByText('Failed module: Companion bootstrap')).toBeInTheDocument();
+    expect(screen.getByText('Native companion bootstrap returned an invalid payload.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+  });
+});
+
+describe('CompanionApp ready hosts', () => {
+  it('renders the article shell after Android bootstrap succeeds', async () => {
     useCompanionBootstrap.mockReturnValue({
       status: 'ready',
       state: {
@@ -109,18 +126,24 @@ describe('CompanionApp bootstrap states', () => {
     expect(screen.getByRole('button', { name: /Connect or refresh this device/ })).toBeInTheDocument();
   });
 
-  it('shows a failure state when bootstrap rejects', async () => {
+  it('keeps the prepared iOS host outside Android-only product surfaces', async () => {
     useCompanionBootstrap.mockReturnValue({
-      status: 'failed',
-      message: 'Native companion bootstrap returned an invalid payload.'
+      status: 'ready',
+      state: {
+        booted_at: '2026-07-19T08:00:00.000Z',
+        database_path: '/Library/CapacitorDatabase/foliole-companionSQLite.db',
+        database_ready: true,
+        device_id: 'ios-test-device',
+        runtime_kind: 'ios-capacitor'
+      }
     });
     const { CompanionApp } = await import('./CompanionApp');
 
     render(<CompanionApp />);
 
-    expect(screen.getByText('Companion bootstrap failed')).toBeInTheDocument();
-    expect(screen.getByText('Failed module: Companion bootstrap')).toBeInTheDocument();
-    expect(screen.getByText('Native companion bootstrap returned an invalid payload.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    expect(screen.getByText('This iPhone is ready')).toBeInTheDocument();
+    expect(screen.getByText(/Topic browsing, review, and sync are not available/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Sync/ })).not.toBeInTheDocument();
   });
+
 });

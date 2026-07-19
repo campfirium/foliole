@@ -41,6 +41,16 @@ function CompanionAppContent() {
       );
     }
 
+    if (bootstrap.state.runtime_kind === 'ios-capacitor') {
+      return (
+        <StartupSurface model={{
+          eyebrow: t('companion.app.iosPrepared.eyebrow'),
+          message: t('companion.app.iosPrepared.message'),
+          title: t('companion.app.iosPrepared.title')
+        }} />
+      );
+    }
+
     return <CompanionShell bootstrapState={bootstrap.state} />;
   })();
 
