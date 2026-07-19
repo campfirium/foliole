@@ -42,8 +42,11 @@ async function createAndOpenSavedSearch(
   const listPanel = page.locator('[data-panel-scale-id="list-panel"]');
   await expect(listPanel).toBeVisible();
   await expect(page.getByRole('region', { name: /^(List panel|列表面板)$/ })).toBeVisible();
-  await listPanel.click({ position: { x: 40, y: 120 } });
+  await listPanel.click({ position: { x: 200, y: 300 } });
   await page.keyboard.press(process.platform === 'darwin' ? 'Meta+=' : 'Control+=');
+  await expect.poll(() => listPanel.locator(':scope > div').first().evaluate(
+    (element) => (element as HTMLElement).style.zoom
+  )).toBe('1.05');
   await expect(page.getByText(/^(List panel|列表面板) · 105%$/)).toBeVisible();
   const listPanelScreenshotPath = path.resolve(
     '.tmp/artifacts/desktop-acceptance/virtual-list-panel-scale.png'
