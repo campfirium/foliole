@@ -22,10 +22,10 @@ const discourseBinding = {
   url: 'https://forum.example.com/t/topic/3'
 };
 
-it('writes the fixed wordpressPublish top-level key', () => {
+it('writes WordPress below the shared Foliole publish namespace', () => {
   const content = writeWordPressPostBinding('# Title\n\nBody', wordpressBinding);
-  expect(content).toContain('\nwordpressPublish:\n');
-  expect(content).not.toContain('\npublish:\n  wordpress:');
+  expect(content).toContain('\nfoliole:\n  publish:\n    schemaVersion: 1\n    wordpress:\n');
+  expect(content).toContain('postId: "42"');
   expect(readWordPressPostBinding(content)).toEqual(wordpressBinding);
 });
 
@@ -51,5 +51,5 @@ it('replaces only the existing WordPress binding', () => {
   const content = writeWordPressPostBinding('# Title', wordpressBinding);
   const updated = writeWordPressPostBinding(content, { ...wordpressBinding, postId: '84' });
   expect(readWordPressPostBinding(updated)?.postId).toBe('84');
-  expect(updated.match(/foliole:wordpress-publish/g)).toHaveLength(2);
+  expect(updated.match(/wordpress:/g)).toHaveLength(1);
 });

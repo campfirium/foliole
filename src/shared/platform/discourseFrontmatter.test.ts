@@ -21,8 +21,9 @@ const binding = {
 describe('Discourse publish frontmatter', () => {
   it('creates a managed publish binding without changing the body', () => {
     const updated = writeDiscourseTopicBinding('# Title\n\nBody', binding);
-    expect(updated).toContain('publish:\n  discourse:');
+    expect(updated).toContain('foliole:\n  publish:\n    schemaVersion: 1\n    discourse:');
     expect(updated).toContain('topicId: 123');
+    expect(updated).toContain('lastPublishedAt: "2026-07-02T00:00:00.000Z"');
     expect(updated.endsWith('# Title\n\nBody')).toBe(true);
     expect(readDiscourseTopicBinding(updated)).toEqual(binding);
     expect(resolveDiscoursePublishMode(updated)).toBe('update');
@@ -43,11 +44,16 @@ describe('Discourse publish frontmatter', () => {
   it('updates the managed binding in place', () => {
     const first = writeDiscourseTopicBinding('# Title', binding);
     const second = writeDiscourseTopicBinding(first, { ...binding, topicId: 999, postId: 1000 });
-    expect(second.match(/foliole:discourse-publish/g)).toHaveLength(2);
+    expect(second.match(/discourse:/g)).toHaveLength(1);
     expect(readDiscourseTopicBinding(second)?.topicId).toBe(999);
   });
 
-  it('fails closed when an unmanaged publish block exists', () => {
-    expect(() => readDiscourseTopicBinding('---\npublish:\n  other: true\n---\nBody')).toThrow(DiscourseFrontmatterError);
+  it('keeps user-owned publish frontmatter independent', () => {
+    expect(readDiscourseTopicBinding('---\npublish:\n  other: true\n---\nBody')).toBeNull();
+  });
+
+  it('fails closed for unknown Foliole publish schema versions', () => {
+    const content = '---\nfoliole:\n  publish:\n    schemaVersion: 2\n    discourse: {}\n---\nBody';
+    expect(() => readDiscourseTopicBinding(content)).toThrow(DiscourseFrontmatterError);
   });
 });
