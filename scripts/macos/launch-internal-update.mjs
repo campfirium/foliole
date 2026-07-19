@@ -6,9 +6,11 @@ import { closeSync, mkdirSync, openSync } from 'node:fs';
 import { once } from 'node:events';
 import path from 'node:path';
 
+import { enqueueInternalRevision } from './internal-update-queue.mjs';
+
 const REPOSITORY_ROOT = path.resolve(import.meta.dirname, '../..');
 const STATE_ROOT = path.join(REPOSITORY_ROOT, '.tmp/macos/internal-update');
-const WORKER_PATH = path.join(import.meta.dirname, 'run-internal-update.mjs');
+const WORKER_PATH = path.join(import.meta.dirname, 'run-internal-update-coordinator.mjs');
 
 function assertSuccess(label, result) {
   if (result.status !== 0) throw new Error(`${label} failed with exit code ${result.status}`);
@@ -62,6 +64,7 @@ export async function launchInternalUpdate(options = {}) {
   }
   (options.verifySigning ?? assertInternalSigningAvailable)(options.run);
   makeDirectory(stateRoot, { recursive: true });
+  (options.enqueue ?? enqueueInternalRevision)(stateRoot, revision, options.requestedAt);
   const logPath = path.join(stateRoot, 'build.log');
   const descriptor = openFile(logPath, 'a');
   const command = createInternalLaunchCommand({

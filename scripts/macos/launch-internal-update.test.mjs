@@ -56,8 +56,10 @@ describe('Internal update launcher', () => {
       return child;
     });
     const closeFile = vi.fn();
+    const enqueue = vi.fn();
     const result = await launchInternalUpdate({
       closeFile,
+      enqueue,
       makeDirectory: vi.fn(),
       openFile: vi.fn(() => 9),
       repositoryRoot: '/repo',
@@ -73,6 +75,7 @@ describe('Internal update launcher', () => {
     });
     expect(start.mock.calls[0][2]).toMatchObject({ cwd: '/repo', detached: true, stdio: ['ignore', 9, 9] });
     expect(child.unref).toHaveBeenCalledOnce();
+    expect(enqueue).toHaveBeenCalledWith('/state', REVISION, undefined);
     expect(closeFile).toHaveBeenCalledWith(9);
   });
 });
