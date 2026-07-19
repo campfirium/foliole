@@ -11,6 +11,7 @@ export interface NativeCommandRegistryEntry {
 
 export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.appGetVersion, route: 'windowAndUtility', capability: 'diagnostic' },
+  { command: NATIVE_COMMANDS.folioleCliInstall, route: 'windowAndUtility', capability: 'filesystemWrite' },
   { command: NATIVE_COMMANDS.appendReadingPositionTraceLog, route: 'windowAndUtility', capability: 'diagnostic' },
   { command: NATIVE_COMMANDS.assistantGetStatus, route: 'assistant', capability: 'assistant' },
   { command: NATIVE_COMMANDS.assistantStartChatGptLogin, route: 'assistant', capability: 'assistant' },
@@ -91,6 +92,7 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.exportCurrentArticleMirror, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.loadFoliolePublishSettings, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.connectFoliolePublishSettings, route: 'storage', capability: 'settingsMutation' },
+  { command: NATIVE_COMMANDS.updateFoliolePublishSiteAddress, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.disconnectFoliolePublishSettings, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.previewFoliolePublish, route: 'storage', capability: 'filesystemOpen' },
   { command: NATIVE_COMMANDS.publishTopicToFoliole, route: 'storage', capability: 'dataMutation' },

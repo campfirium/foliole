@@ -6,10 +6,10 @@ import { shell } from 'electron';
 import type { NativeFoliolePublishConnectInput, NativeFoliolePublishTopicArgs } from '../../lib/platform/nativeFoliolePublishContract.js';
 import { loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
 
-import { deployCloudflarePages, ensureCloudflarePagesProject, normalizeCloudflareProjectName } from './cloudflarePagesClient.js';
+import { deployCloudflarePages, normalizeCloudflareProjectName, normalizeSiteAddress, resolveCloudflarePagesProject } from './cloudflarePagesClient.js';
 import { readPublishIndex, upsertPublishedCard, writeFileAtomic, writePublishIndex } from './foliolePublishModel.js';
-import { disconnectFoliolePublishSettings, loadFoliolePublishSettings, loadFoliolePublishToken, loadStoredFoliolePublishSettings, saveFoliolePublishConnection } from './foliolePublishSettings.js';
-import { generateFoliolePublishSite } from './foliolePublishSite.js';
+import { disconnectFoliolePublishSettings, loadFoliolePublishSettings, loadFoliolePublishToken, loadStoredFoliolePublishSettings, saveFoliolePublishConnection, saveFoliolePublishSiteAddress } from './foliolePublishSettings.js';
+import { activateFoliolePublishSite, discardStagedFoliolePublishSite, generateFoliolePublishSite, stageFoliolePublishSite } from './foliolePublishSite.js';
 
 function root() { return path.join(loadLibraryPathSettingsSync().library_home, 'Publish'); }
 
@@ -23,16 +23,59 @@ async function deploySite(settings: { account_id: string; project_name: string }
   return deployCloudflarePages({ accountId: settings.account_id, projectName: settings.project_name, siteRoot: path.join(root(), 'Site'), token });
 }
 
+async function deployStagedSite(input: {
+  accountId: string; projectName: string; siteAddress: string; token: string;
+}) {
+  const staged = stageFoliolePublishSite(root(), readPublishIndex(root()), input.siteAddress);
+  try {
+    await deployCloudflarePages({ accountId: input.accountId, projectName: input.projectName, siteRoot: staged, token: input.token });
+    return staged;
+  } catch (error) {
+    discardStagedFoliolePublishSite(staged);
+    throw error;
+  }
+}
+
+function commitStagedSite<T>(staged: string, save: () => T) {
+  const activation = activateFoliolePublishSite(root(), staged);
+  try {
+    const saved = save();
+    activation.commit();
+    return saved;
+  } catch (error) {
+    activation.rollback();
+    throw error;
+  } finally { discardStagedFoliolePublishSite(staged); }
+}
+
 export async function connectFoliolePublishSettings(input: NativeFoliolePublishConnectInput) {
   const projectName = normalizeCloudflareProjectName(input.project_name);
-  const token = input.api_token.trim() || loadFoliolePublishToken();
-  if (!token) throw new Error('Enter a Cloudflare API Token.');
-  const project = await ensureCloudflarePagesProject({ accountId: input.account_id.trim(), projectName, token });
+  const accountId = input.account_id.trim();
+  const token = input.api_token.trim();
+  if (!accountId || !token) throw new Error('Enter a Cloudflare Account ID and API Token.');
+  const resolution = await resolveCloudflarePagesProject({
+    accountId, projectName, token, useExistingProject: input.use_existing_project
+  });
+  if (resolution.status === 'exists') return { project_name: projectName, status: 'project_exists' } as const;
+  const project = resolution.project;
   const pagesUrl = project.subdomain ? `https://${project.subdomain}` : `https://${projectName}.pages.dev`;
   fs.mkdirSync(root(), { recursive: true });
-  generateFoliolePublishSite(root(), readPublishIndex(root()), input.site_address || pagesUrl);
-  await deployCloudflarePages({ accountId: input.account_id.trim(), projectName, siteRoot: path.join(root(), 'Site'), token });
-  return saveFoliolePublishConnection({ ...input, api_token: token, project_name: projectName }, pagesUrl);
+  const staged = await deployStagedSite({ accountId, projectName, siteAddress: pagesUrl, token });
+  const settings = commitStagedSite(staged, () => saveFoliolePublishConnection({
+    ...input, account_id: accountId, api_token: token, project_name: projectName, site_address: ''
+  }, pagesUrl));
+  return { settings, status: 'connected' } as const;
+}
+
+export async function updateFoliolePublishSiteAddress(siteAddress: string) {
+  const settings = loadStoredFoliolePublishSettings();
+  const token = loadFoliolePublishToken();
+  if (!settings || !token) throw new Error('Connect Foliole Publish before changing its public address.');
+  const nextAddress = normalizeSiteAddress(siteAddress) || settings.pages_url;
+  const staged = await deployStagedSite({
+    accountId: settings.account_id, projectName: settings.project_name, siteAddress: nextAddress, token
+  });
+  return commitStagedSite(staged, () => saveFoliolePublishSiteAddress(nextAddress));
 }
 
 export async function previewFoliolePublish() {

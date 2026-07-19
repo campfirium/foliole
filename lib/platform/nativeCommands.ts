@@ -1,5 +1,6 @@
 export const NATIVE_COMMANDS = {
   appGetVersion: 'app_get_version',
+  folioleCliInstall: 'foliole_cli_install',
   appendReadingPositionTraceLog: 'append_reading_position_trace_log',
   assistantGetStatus: 'assistant_get_status',
   assistantStartChatGptLogin: 'assistant_start_chatgpt_login',
@@ -80,6 +81,7 @@ export const NATIVE_COMMANDS = {
   exportCurrentArticleMirror: 'export_current_article_mirror',
   loadFoliolePublishSettings: 'load_foliole_publish_settings',
   connectFoliolePublishSettings: 'connect_foliole_publish_settings',
+  updateFoliolePublishSiteAddress: 'update_foliole_publish_site_address',
   disconnectFoliolePublishSettings: 'disconnect_foliole_publish_settings',
   previewFoliolePublish: 'preview_foliole_publish',
   publishTopicToFoliole: 'publish_topic_to_foliole',

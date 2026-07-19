@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { afterEach, expect, it, vi } from 'vitest';
 
-import { cloudflarePagesAssetHash, deployCloudflarePages } from './cloudflarePagesClient.js';
+import { cloudflarePagesAssetHash, deployCloudflarePages, resolveCloudflarePagesProject } from './cloudflarePagesClient.js';
 
 const roots: string[] = [];
 function temporarySite() {
@@ -18,8 +18,10 @@ afterEach(() => {
   roots.splice(0).forEach((root) => fs.rmSync(root, { force: true, recursive: true }));
 });
 
-function response(result: unknown) {
-  return new Response(JSON.stringify({ result, success: true }), { headers: { 'Content-Type': 'application/json' } });
+function response(result: unknown, status = 200) {
+  return new Response(JSON.stringify({ result, success: status < 400 }), {
+    headers: { 'Content-Type': 'application/json' }, status
+  });
 }
 
 it('matches the Cloudflare SDK BLAKE3 asset-key format', () => {
@@ -52,4 +54,50 @@ it('uploads missing assets before creating a manifest deployment', async () => {
   ]);
   const deployment = calls.at(-1)?.body as FormData;
   expect(JSON.parse(String(deployment.get('manifest')))).toEqual({ '/index.html': expect.any(String) });
+});
+
+it('refuses an existing Pages project until reuse is explicit', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockImplementation(async () => response({ subdomain: 'foliole.pages.dev' })));
+  await expect(resolveCloudflarePagesProject({
+    accountId: 'account', projectName: 'foliole', token: 'api-token', useExistingProject: false
+  })).resolves.toEqual({ status: 'exists' });
+  await expect(resolveCloudflarePagesProject({
+    accountId: 'account', projectName: 'foliole', token: 'api-token', useExistingProject: true
+  })).resolves.toEqual({ project: { subdomain: 'foliole.pages.dev' }, status: 'ready' });
+});
+
+it('creates a missing Pages project with the fixed Direct Upload branch', async () => {
+  const fetchMock = vi.fn()
+    .mockResolvedValueOnce(response(null, 404))
+    .mockResolvedValueOnce(response({ subdomain: 'new-site.pages.dev' }));
+  vi.stubGlobal('fetch', fetchMock);
+  await expect(resolveCloudflarePagesProject({
+    accountId: 'account', projectName: 'new-site', token: 'api-token', useExistingProject: false
+  })).resolves.toEqual({ project: { subdomain: 'new-site.pages.dev' }, status: 'ready' });
+  expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
+    body: JSON.stringify({ name: 'new-site', production_branch: 'main' }), method: 'POST'
+  });
+});
+
+it('never exposes provider error text that echoes the API token', async () => {
+  const token = 'SENTINEL-CLOUDFLARE-TOKEN';
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+    errors: [{ message: `Rejected ${token}` }], success: false
+  }), { status: 403 })));
+  const request = () => resolveCloudflarePagesProject({
+    accountId: 'account', projectName: 'site', token, useExistingProject: false
+  });
+  await expect(request()).rejects.toThrow('Cloudflare rejected the Account ID, API Token, or required permissions.');
+  await expect(request()).rejects.not.toThrow(token);
+});
+
+it('never exposes a token echoed by the deployment upload endpoint', async () => {
+  const siteRoot = temporarySite();
+  const token = 'SENTINEL-DEPLOYMENT-TOKEN';
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+    errors: [{ message: `Rejected ${token}` }], success: false
+  }), { status: 403 })));
+  const request = () => deployCloudflarePages({ accountId: 'account', projectName: 'site', siteRoot, token });
+  await expect(request()).rejects.toThrow('Cloudflare rejected the Account ID, API Token, or required permissions.');
+  await expect(request()).rejects.not.toThrow(token);
 });

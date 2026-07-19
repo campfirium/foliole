@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -46,12 +47,10 @@ function rss(index: FoliolePublishIndex, contents: Map<string, string>, siteAddr
   return `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>${escapeHtml(index.site.title)}</title><link>${siteAddress}/</link>${items}</channel></rss>`;
 }
 
-export function generateFoliolePublishSite(root: string, index: FoliolePublishIndex, siteAddress: string) {
+export function stageFoliolePublishSite(root: string, index: FoliolePublishIndex, siteAddress: string) {
   const tutorial = index.cards.length === 0;
   const source = tutorial ? tutorialIndex() : index;
-  const temporary = path.join(root, `.Site-${Date.now()}`);
-  const destination = path.join(root, 'Site');
-  const backup = path.join(root, `.Site-backup-${Date.now()}`);
+  const temporary = path.join(root, `.Site-${randomUUID()}`);
   fs.mkdirSync(path.join(temporary, 'cards'), { recursive: true });
   const contents = new Map(source.cards.map((card) => [card.id, readCardMarkdown(root, card, tutorial)]));
   source.cards.forEach((card, i) => {
@@ -66,15 +65,45 @@ export function generateFoliolePublishSite(root: string, index: FoliolePublishIn
   fs.writeFileSync(path.join(temporary, 'style.css'), STYLE);
   fs.writeFileSync(path.join(temporary, 'site.js'), SCRIPT);
   fs.writeFileSync(path.join(temporary, 'rss.xml'), rss(source, contents, siteAddress || 'https://example.pages.dev'));
+  return temporary;
+}
+
+export function activateFoliolePublishSite(root: string, staged: string) {
+  const destination = path.join(root, 'Site');
+  const backup = path.join(root, `.Site-backup-${randomUUID()}`);
   try {
     if (fs.existsSync(destination)) fs.renameSync(destination, backup);
-    fs.renameSync(temporary, destination);
-    fs.rmSync(backup, { force: true, recursive: true });
+    fs.renameSync(staged, destination);
   } catch (error) {
     if (!fs.existsSync(destination) && fs.existsSync(backup)) fs.renameSync(backup, destination);
     throw error;
-  } finally {
-    fs.rmSync(temporary, { force: true, recursive: true });
   }
-  return path.join(destination, 'index.html');
+  let settled = false;
+  return {
+    activePath: path.join(destination, 'index.html'),
+    commit() {
+      if (settled) return;
+      settled = true;
+      try { fs.rmSync(backup, { force: true, recursive: true }); } catch { return; }
+    },
+    rollback() {
+      if (settled) return;
+      fs.rmSync(destination, { force: true, recursive: true });
+      if (fs.existsSync(backup)) fs.renameSync(backup, destination);
+      settled = true;
+    }
+  };
+}
+
+export function discardStagedFoliolePublishSite(staged: string) {
+  fs.rmSync(staged, { force: true, recursive: true });
+}
+
+export function generateFoliolePublishSite(root: string, index: FoliolePublishIndex, siteAddress: string) {
+  const staged = stageFoliolePublishSite(root, index, siteAddress);
+  try {
+    const activation = activateFoliolePublishSite(root, staged);
+    activation.commit();
+    return activation.activePath;
+  } finally { discardStagedFoliolePublishSite(staged); }
 }

@@ -15,7 +15,8 @@ import {
   disconnectFoliolePublishSettings,
   loadFoliolePublishSettings,
   previewFoliolePublish,
-  publishTopicToFoliole
+  publishTopicToFoliole,
+  updateFoliolePublishSiteAddress
 } from '../foliolePublish/foliolePublish.js';
 import {
   connectWordPressPublishSettings,
@@ -32,6 +33,9 @@ export async function handlePublishingStorageCommand(command: string, args: Reco
     return connectFoliolePublishSettings(
       readSettingsObject(args.settings) as unknown as Parameters<typeof connectFoliolePublishSettings>[0]
     );
+  }
+  if (command === NATIVE_COMMANDS.updateFoliolePublishSiteAddress) {
+    return updateFoliolePublishSiteAddress(String(args.site_address ?? ''));
   }
   if (command === NATIVE_COMMANDS.disconnectFoliolePublishSettings) return disconnectFoliolePublishSettings();
   if (command === NATIVE_COMMANDS.previewFoliolePublish) return previewFoliolePublish();

@@ -9,10 +9,16 @@ const MAX_FILE_SIZE = 25 * 1024 * 1024;
 const MAX_UPLOAD_BATCH_SIZE = 50 * 1024 * 1024;
 
 interface CloudflareEnvelope<T> {
-  errors?: Array<{ message?: string }>;
   result?: T;
   success?: boolean;
 }
+
+interface CloudflarePagesProject { subdomain?: string }
+export type CloudflareProjectResolution =
+  | { status: 'exists' }
+  | { project: CloudflarePagesProject; status: 'ready' };
+
+class CloudflareClientError extends Error {}
 
 interface UploadFile {
   body: Buffer;
@@ -29,9 +35,19 @@ async function readEnvelope<T>(response: Response, fallback: string) {
   let payload: CloudflareEnvelope<T>;
   try { payload = await response.json() as CloudflareEnvelope<T>; } catch { throw new Error(fallback); }
   if (!response.ok || payload.success === false || payload.result === undefined) {
-    throw new Error(payload.errors?.[0]?.message || `${fallback} (${response.status})`);
+    if (response.status === 401 || response.status === 403) {
+      throw new CloudflareClientError('Cloudflare rejected the Account ID, API Token, or required permissions.');
+    }
+    if (response.status >= 500) throw new CloudflareClientError('Cloudflare is temporarily unavailable.');
+    throw new CloudflareClientError(`${fallback} (${response.status})`);
   }
   return payload.result;
+}
+
+function safeCloudflareError(error: unknown) {
+  return error instanceof CloudflareClientError
+    ? error
+    : new CloudflareClientError("Couldn't reach Cloudflare. Check your connection and try again.");
 }
 
 export function normalizeCloudflareProjectName(value: string) {
@@ -52,16 +68,26 @@ export function normalizeSiteAddress(value: string) {
   return url.origin;
 }
 
-export async function ensureCloudflarePagesProject(input: { accountId: string; projectName: string; token: string }) {
-  const endpoint = `${API}/accounts/${encodeURIComponent(input.accountId)}/pages/projects/${encodeURIComponent(input.projectName)}`;
-  const current = await fetch(endpoint, { headers: headers(input.token) });
-  if (current.ok) return readEnvelope<{ subdomain?: string }>(current, 'Cloudflare Pages project lookup failed.');
-  if (current.status !== 404) return readEnvelope<{ subdomain?: string }>(current, 'Cloudflare Pages project lookup failed.');
-  const created = await fetch(`${API}/accounts/${encodeURIComponent(input.accountId)}/pages/projects`, {
-    body: JSON.stringify({ name: input.projectName, production_branch: 'main' }),
-    headers: headers(input.token, true), method: 'POST'
-  });
-  return readEnvelope<{ subdomain?: string }>(created, 'Cloudflare Pages project creation failed.');
+export async function resolveCloudflarePagesProject(input: {
+  accountId: string; projectName: string; token: string; useExistingProject: boolean;
+}): Promise<CloudflareProjectResolution> {
+  try {
+    const endpoint = `${API}/accounts/${encodeURIComponent(input.accountId)}/pages/projects/${encodeURIComponent(input.projectName)}`;
+    const current = await fetch(endpoint, { headers: headers(input.token) });
+    if (current.ok) {
+      const project = await readEnvelope<CloudflarePagesProject>(current, 'Cloudflare Pages project lookup failed.');
+      return input.useExistingProject ? { project, status: 'ready' } : { status: 'exists' };
+    }
+    if (current.status !== 404) await readEnvelope<CloudflarePagesProject>(current, 'Cloudflare Pages project lookup failed.');
+    if (input.useExistingProject) throw new CloudflareClientError('The Cloudflare Pages project no longer exists.');
+    const created = await fetch(`${API}/accounts/${encodeURIComponent(input.accountId)}/pages/projects`, {
+      body: JSON.stringify({ name: input.projectName, production_branch: 'main' }),
+      headers: headers(input.token, true), method: 'POST'
+    });
+    if (created.status === 409) return { status: 'exists' };
+    const project = await readEnvelope<CloudflarePagesProject>(created, 'Cloudflare Pages project creation failed.');
+    return { project, status: 'ready' };
+  } catch (error) { throw safeCloudflareError(error); }
 }
 
 function contentType(file: string) {
@@ -144,9 +170,11 @@ async function createDeployment(input: { accountId: string; files: UploadFile[];
 }
 
 export async function deployCloudflarePages(input: { accountId: string; projectName: string; siteRoot: string; token: string }) {
-  const files = prepareFiles(input.siteRoot);
-  const jwt = await getUploadToken(input);
-  const missing = new Set(await getMissingHashes(files, jwt));
-  await uploadAssets(files.filter((file) => missing.has(file.hash)), jwt);
-  return createDeployment({ ...input, files });
+  try {
+    const files = prepareFiles(input.siteRoot);
+    const jwt = await getUploadToken(input);
+    const missing = new Set(await getMissingHashes(files, jwt));
+    await uploadAssets(files.filter((file) => missing.has(file.hash)), jwt);
+    return await createDeployment({ ...input, files });
+  } catch (error) { throw safeCloudflareError(error); }
 }

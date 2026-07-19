@@ -60,6 +60,19 @@ export function saveFoliolePublishConnection(input: NativeFoliolePublishConnectI
   return loadFoliolePublishSettings();
 }
 
+export function saveFoliolePublishSiteAddress(siteAddress: string) {
+  const current = stored();
+  if (!current) throw new Error('Connect Foliole Publish before changing its public address.');
+  const updatedAt = new Date().toISOString();
+  const value = {
+    ...current,
+    site_address: normalizeSiteAddress(siteAddress) || current.pages_url,
+    updated_at: updatedAt
+  };
+  saveJsonSetting(SETTINGS_KEY, value, updatedAt);
+  return loadFoliolePublishSettings();
+}
+
 export function disconnectFoliolePublishSettings() {
   deletePublishDeviceSecret(SECRET_FILE);
   const updatedAt = new Date().toISOString();

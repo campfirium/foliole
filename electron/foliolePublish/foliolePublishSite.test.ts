@@ -2,10 +2,10 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 
 import { emptyPublishIndex, upsertPublishedCard, writeFileAtomic } from './foliolePublishModel.js';
-import { generateFoliolePublishSite } from './foliolePublishSite.js';
+import { activateFoliolePublishSite, generateFoliolePublishSite, stageFoliolePublishSite } from './foliolePublishSite.js';
 
 const roots: string[] = [];
 function temporaryRoot() {
@@ -36,4 +36,27 @@ it('uses the built-in walkthrough when no Topic has been published', () => {
 
   expect(fs.readFileSync(entry, 'utf8')).toContain('This is Foliole Publish');
   expect(fs.readFileSync(path.join(root, 'Site', 'cards', 'tutorial-1.html'), 'utf8')).toContain('Only the Topic');
+});
+
+it('restores the exact active site when a staged activation rolls back', () => {
+  const root = temporaryRoot();
+  const current = generateFoliolePublishSite(root, emptyPublishIndex(), 'https://old.pages.dev');
+  const oldRss = fs.readFileSync(path.join(root, 'Site', 'rss.xml'), 'utf8');
+  const staged = stageFoliolePublishSite(root, emptyPublishIndex(), 'https://new.example.com');
+  const activation = activateFoliolePublishSite(root, staged);
+  expect(fs.readFileSync(path.join(root, 'Site', 'rss.xml'), 'utf8')).toContain('https://new.example.com');
+  activation.rollback();
+  expect(fs.readFileSync(path.join(root, 'Site', 'rss.xml'), 'utf8')).toBe(oldRss);
+  expect(fs.existsSync(current)).toBe(true);
+});
+
+it('keeps the new active site when old backup cleanup fails after commit', () => {
+  const root = temporaryRoot();
+  generateFoliolePublishSite(root, emptyPublishIndex(), 'https://old.pages.dev');
+  const staged = stageFoliolePublishSite(root, emptyPublishIndex(), 'https://new.example.com');
+  const activation = activateFoliolePublishSite(root, staged);
+  const remove = vi.spyOn(fs, 'rmSync').mockImplementationOnce(() => { throw new Error('cleanup failed'); });
+  expect(() => activation.commit()).not.toThrow();
+  remove.mockRestore();
+  expect(fs.readFileSync(path.join(root, 'Site', 'rss.xml'), 'utf8')).toContain('https://new.example.com');
 });

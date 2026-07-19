@@ -18,6 +18,10 @@ export function connectFoliolePublishSettingsToRuntime(settings: NativeFoliolePu
   return requireRuntime()(NATIVE_COMMANDS.connectFoliolePublishSettings, { settings });
 }
 
+export function updateFoliolePublishSiteAddressInRuntime(siteAddress: string) {
+  return requireRuntime()(NATIVE_COMMANDS.updateFoliolePublishSiteAddress, { site_address: siteAddress });
+}
+
 export function disconnectFoliolePublishSettingsFromRuntime() {
   return requireRuntime()(NATIVE_COMMANDS.disconnectFoliolePublishSettings);
 }

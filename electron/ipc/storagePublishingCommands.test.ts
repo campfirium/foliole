@@ -24,7 +24,8 @@ const folioleMocks = vi.hoisted(() => ({
   disconnectFoliolePublishSettings: vi.fn(),
   loadFoliolePublishSettings: vi.fn(),
   previewFoliolePublish: vi.fn(),
-  publishTopicToFoliole: vi.fn()
+  publishTopicToFoliole: vi.fn(),
+  updateFoliolePublishSiteAddress: vi.fn()
 }));
 
 vi.mock('../discourse/discoursePublish.js', () => discourseMocks);
@@ -40,16 +41,31 @@ beforeEach(() => {
 });
 
 it('keeps the Cloudflare API token inside the main-process connection boundary', async () => {
-  const settings = { account_id: 'account', api_token: 'SENTINEL-CLOUDFLARE-SECRET', project_name: 'foliole', site_address: '' };
+  const settings = { account_id: 'account', api_token: 'SENTINEL-CLOUDFLARE-SECRET', project_name: 'foliole', site_address: '', use_existing_project: false };
   folioleMocks.connectFoliolePublishSettings.mockResolvedValue({
-    account_id: 'account', has_credentials: true, pages_url: 'https://foliole.pages.dev',
-    project_name: 'foliole', site_address: 'https://foliole.pages.dev', updated_at: '2026-07-16T00:00:00.000Z'
+    settings: {
+      account_id: 'account', has_credentials: true, pages_url: 'https://foliole.pages.dev',
+      project_name: 'foliole', site_address: 'https://foliole.pages.dev', updated_at: '2026-07-16T00:00:00.000Z'
+    },
+    status: 'connected'
   });
 
   const result = await handlePublishingStorageCommand(NATIVE_COMMANDS.connectFoliolePublishSettings, { settings });
 
   expect(folioleMocks.connectFoliolePublishSettings).toHaveBeenCalledWith(settings);
   expect(JSON.stringify(result)).not.toContain('SENTINEL-CLOUDFLARE-SECRET');
+});
+
+it('updates the public address without accepting a renderer credential', async () => {
+  folioleMocks.updateFoliolePublishSiteAddress.mockResolvedValue({
+    account_id: 'account', has_credentials: true, pages_url: 'https://foliole.pages.dev',
+    project_name: 'foliole', site_address: 'https://notes.example.com', updated_at: '2026-07-19T00:00:00.000Z'
+  });
+  const result = await handlePublishingStorageCommand(NATIVE_COMMANDS.updateFoliolePublishSiteAddress, {
+    api_token: 'SENTINEL-MUST-BE-IGNORED', site_address: 'https://notes.example.com'
+  });
+  expect(folioleMocks.updateFoliolePublishSiteAddress).toHaveBeenCalledWith('https://notes.example.com');
+  expect(JSON.stringify(result)).not.toContain('SENTINEL-MUST-BE-IGNORED');
 });
 
 it('forwards nested WordPress connection settings only to the main-process connector', async () => {

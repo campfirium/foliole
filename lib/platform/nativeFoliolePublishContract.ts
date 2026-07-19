@@ -14,7 +14,12 @@ export interface NativeFoliolePublishConnectInput {
   api_token: string;
   project_name: string;
   site_address: string;
+  use_existing_project: boolean;
 }
+
+export type NativeFoliolePublishConnectResult =
+  | { project_name: string; status: 'project_exists' }
+  | { settings: NativeFoliolePublishSettings; status: 'connected' };
 
 export interface NativeFoliolePublishTopicArgs {
   content: string;
@@ -31,6 +36,10 @@ export type NativeFoliolePublishCommandMap = {
   [NATIVE_COMMANDS.loadFoliolePublishSettings]: { args: undefined; result: NativeFoliolePublishSettings };
   [NATIVE_COMMANDS.connectFoliolePublishSettings]: {
     args: { settings: NativeFoliolePublishConnectInput };
+    result: NativeFoliolePublishConnectResult;
+  };
+  [NATIVE_COMMANDS.updateFoliolePublishSiteAddress]: {
+    args: { site_address: string };
     result: NativeFoliolePublishSettings;
   };
   [NATIVE_COMMANDS.disconnectFoliolePublishSettings]: { args: undefined; result: NativeFoliolePublishSettings };
