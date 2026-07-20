@@ -103,6 +103,11 @@ export function isAvailableNativeAndroidCompanionRuntime() {
   return getCompanionRuntimeCapability().kind === 'android-native';
 }
 
+export function isAvailableNativeCompanionRuntime() {
+  const runtime = getCompanionRuntimeCapability();
+  return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
+}
+
 export function normalizeEndpointUrl(endpointUrl: string) {
   return endpointUrl.trim().replace(/\/+$/, '');
 }

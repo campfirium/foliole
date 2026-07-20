@@ -19,7 +19,7 @@ describe('appLifecycle', () => {
     companionBootstrapState.isNativeCompanionRuntime.mockReturnValue(false);
   });
 
-  it('subscribes native foreground listeners on android companion runtime', async () => {
+  it('subscribes foreground listeners on native companion runtimes', async () => {
     const removeAppState = vi.fn(async () => undefined);
     const removeResume = vi.fn(async () => undefined);
     const appStateHandler = vi.fn();

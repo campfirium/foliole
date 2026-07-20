@@ -13,6 +13,7 @@ vi.mock('@capacitor/core', () => ({
 
 import {
   isAvailableNativeAndroidCompanionRuntime,
+  isAvailableNativeCompanionRuntime,
   isNativeAndroidCompanionRuntime,
   isNativeCompanionAttachmentResourceRuntime,
   isNativeCompanionContentBlobRuntime,
@@ -26,6 +27,30 @@ import {
   isNativeCompanionTopicSearchRuntime,
   isNativeCompanionViewStateWriteRuntime
 } from './companionWorkspaceRuntimeRepository';
+
+function expectIosRuntimeBoundary() {
+  capacitorState.getPlatform.mockReturnValue('ios');
+  capacitorState.isNativePlatform.mockReturnValue(true);
+
+  expect(isAvailableNativeAndroidCompanionRuntime()).toBe(false);
+  expect(isAvailableNativeCompanionRuntime()).toBe(true);
+  expect(isNativeCompanionAttachmentResourceRuntime()).toBe(true);
+  expect(isNativeCompanionContentBlobRuntime()).toBe(true);
+  expect(isNativeCompanionExternalDirectoryRuntime()).toBe(true);
+  expect(isNativeCompanionExternalDocumentReadRuntime()).toBe(true);
+  expect(isNativeCompanionExternalDocumentSearchRuntime()).toBe(true);
+  expect(isNativeCompanionPairingRuntime()).toBe(true);
+  expect(isNativeCompanionPdfPageTextRuntime()).toBe(true);
+  expect(isNativeCompanionSyncDiagnosticsRuntime()).toBe(true);
+  expect(isNativeCompanionSyncObjectReadRuntime()).toBe(true);
+  expect(isNativeCompanionTopicSearchRuntime()).toBe(true);
+  expect(isNativeCompanionViewStateWriteRuntime()).toBe(true);
+  expect(() => isNativeAndroidCompanionRuntime()).toThrowError(expect.objectContaining({
+    capability: 'native-runtime',
+    code: 'NATIVE_COMPANION_CAPABILITY_UNAVAILABLE',
+    platform: 'ios'
+  }));
+}
 
 describe('companion workspace runtime boundary', () => {
   beforeEach(() => {
@@ -48,6 +73,7 @@ describe('companion workspace runtime boundary', () => {
     expect(isNativeCompanionTopicSearchRuntime()).toBe(false);
     expect(isNativeCompanionViewStateWriteRuntime()).toBe(false);
     expect(isAvailableNativeAndroidCompanionRuntime()).toBe(false);
+    expect(isAvailableNativeCompanionRuntime()).toBe(false);
   });
 
   it('exposes the implemented Android runtime', () => {
@@ -67,28 +93,8 @@ describe('companion workspace runtime boundary', () => {
     expect(isNativeCompanionTopicSearchRuntime()).toBe(true);
     expect(isNativeCompanionViewStateWriteRuntime()).toBe(true);
     expect(isAvailableNativeAndroidCompanionRuntime()).toBe(true);
+    expect(isAvailableNativeCompanionRuntime()).toBe(true);
   });
 
-  it('rejects Android-only operations on iOS without a Web fallback', () => {
-    capacitorState.getPlatform.mockReturnValue('ios');
-    capacitorState.isNativePlatform.mockReturnValue(true);
-
-    expect(isAvailableNativeAndroidCompanionRuntime()).toBe(false);
-    expect(isNativeCompanionAttachmentResourceRuntime()).toBe(true);
-    expect(isNativeCompanionContentBlobRuntime()).toBe(true);
-    expect(isNativeCompanionExternalDirectoryRuntime()).toBe(true);
-    expect(isNativeCompanionExternalDocumentReadRuntime()).toBe(true);
-    expect(isNativeCompanionExternalDocumentSearchRuntime()).toBe(true);
-    expect(isNativeCompanionPairingRuntime()).toBe(true);
-    expect(isNativeCompanionPdfPageTextRuntime()).toBe(true);
-    expect(isNativeCompanionSyncDiagnosticsRuntime()).toBe(true);
-    expect(isNativeCompanionSyncObjectReadRuntime()).toBe(true);
-    expect(isNativeCompanionTopicSearchRuntime()).toBe(true);
-    expect(isNativeCompanionViewStateWriteRuntime()).toBe(true);
-    expect(() => isNativeAndroidCompanionRuntime()).toThrowError(expect.objectContaining({
-      capability: 'native-runtime',
-      code: 'NATIVE_COMPANION_CAPABILITY_UNAVAILABLE',
-      platform: 'ios'
-    }));
-  });
+  it('rejects Android-only operations on iOS without a Web fallback', expectIosRuntimeBoundary);
 });

@@ -3,7 +3,7 @@ import type { MutableRefObject } from 'react';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
-import { isAvailableNativeAndroidCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
+import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
 import { shouldRunForegroundAutoSyncCheck } from './companionAutoSync';
 import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
@@ -96,7 +96,7 @@ function shouldStartForegroundSync(args: ForegroundSyncRunnerArgs, reason: Foreg
   }
   return shouldRunForegroundAutoSyncCheck({
     force: reason === 'foreground' || reason === 'retry',
-    isNativeRuntime: isAvailableNativeAndroidCompanionRuntime(),
+    isNativeRuntime: isAvailableNativeCompanionRuntime(),
     lastCheckedAt: args.lastCheckedAtRef.current,
     now
   });
