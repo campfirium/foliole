@@ -7,7 +7,7 @@ import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 import { definedProps } from '@/shared/lib/definedProps';
-import { supportsCompanionNodeMutation } from '@/shared/platform/companionWorkspaceRuntimeRepository';
+import { supportsCompanionNodeMutationSurface } from '@/shared/platform/companionWorkspaceRuntimeRepository';
 
 type Surface = ReturnType<typeof useCompanionArticleSurface>;
 type WorkspaceSync = ReturnType<typeof useCompanionWorkspaceSync>;
@@ -20,7 +20,7 @@ export function ReadableArticleOrFallback(props: {
   workspaceSync: WorkspaceSync;
 }) {
   if (props.surface.readableArticle) {
-    const onSaveContent = supportsCompanionNodeMutation()
+    const onSaveContent = supportsCompanionNodeMutationSurface('topic-content-edit')
       ? createCompanionTopicContentSaveHandler(props.workspaceSync)
       : undefined;
     return (

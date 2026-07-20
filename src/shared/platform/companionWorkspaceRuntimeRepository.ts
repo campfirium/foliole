@@ -113,9 +113,19 @@ export function isAvailableNativeCompanionRuntime() {
   return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
 }
 
-export function supportsCompanionNodeMutation() {
+export type CompanionNodeMutationSurface =
+  | 'existing-highlight-edit'
+  | 'quick-capture'
+  | 'selection-annotation'
+  | 'topic-content-edit'
+  | 'trash-restore';
+
+// Admit iOS interaction surfaces one by one only after separate acceptance.
+const IOS_NODE_MUTATION_SURFACES = new Set<CompanionNodeMutationSurface>();
+
+export function supportsCompanionNodeMutationSurface(surface: CompanionNodeMutationSurface) {
   const runtime = getCompanionRuntimeCapability();
-  // Keep iOS UI gated until its mutation interactions are separately verified.
+  if (runtime.kind === 'ios-native') return IOS_NODE_MUTATION_SURFACES.has(surface);
   return runtime.kind === 'android-native' || runtime.kind === 'web-preview';
 }
 

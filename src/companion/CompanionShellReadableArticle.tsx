@@ -10,7 +10,7 @@ import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncE
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
-import { supportsCompanionNodeMutation } from '@/shared/platform/companionWorkspaceRuntimeRepository';
+import { supportsCompanionNodeMutationSurface } from '@/shared/platform/companionWorkspaceRuntimeRepository';
 
 type Surface = ReturnType<typeof useCompanionArticleSurface>;
 type WorkspaceSync = ReturnType<typeof useCompanionWorkspaceSync>;
@@ -29,15 +29,21 @@ export function continueCompanionAttachmentResourceSync(workspaceSync: Workspace
 
 export function CompanionShellReadableArticle(props: { onExit: () => void; surface: Surface; workspaceSync: WorkspaceSync }) {
   if (!props.surface.readableArticle) return null;
-  const nodeMutationProps = supportsCompanionNodeMutation()
-    ? {
-        onAddExistingHighlightNote: createCompanionExistingHighlightNoteHandler(props.workspaceSync),
-        onCreateSelectionAnnotation: createCompanionSelectionAnnotationHandler(props.workspaceSync),
-        onDeleteExistingHighlight: createCompanionExistingHighlightDeleteHandler(props.workspaceSync),
-        onRestoreFromTrash: createCompanionTrashRestoreHandler(props.workspaceSync),
-        onSaveArticleContent: createCompanionTopicContentSaveHandler(props.workspaceSync)
-      }
-    : {};
+  const nodeMutationProps = {
+    ...(supportsCompanionNodeMutationSurface('existing-highlight-edit') ? {
+      onAddExistingHighlightNote: createCompanionExistingHighlightNoteHandler(props.workspaceSync),
+      onDeleteExistingHighlight: createCompanionExistingHighlightDeleteHandler(props.workspaceSync)
+    } : {}),
+    ...(supportsCompanionNodeMutationSurface('selection-annotation') ? {
+      onCreateSelectionAnnotation: createCompanionSelectionAnnotationHandler(props.workspaceSync)
+    } : {}),
+    ...(supportsCompanionNodeMutationSurface('trash-restore') ? {
+      onRestoreFromTrash: createCompanionTrashRestoreHandler(props.workspaceSync)
+    } : {}),
+    ...(supportsCompanionNodeMutationSurface('topic-content-edit') ? {
+      onSaveArticleContent: createCompanionTopicContentSaveHandler(props.workspaceSync)
+    } : {})
+  };
   return (
     <ImmersiveReadableArticle
       onAttachmentResourceSynced={() => continueCompanionAttachmentResourceSync(props.workspaceSync)}

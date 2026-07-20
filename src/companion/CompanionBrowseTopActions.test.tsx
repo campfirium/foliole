@@ -4,7 +4,9 @@ import { beforeEach, expect, it, vi } from 'vitest';
 const runtimeState = vi.hoisted(() => ({ supportsNodeWrite: true }));
 
 vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', () => ({
-  supportsCompanionNodeMutation: () => runtimeState.supportsNodeWrite
+  supportsCompanionNodeMutationSurface: (surface: string) => (
+    surface === 'quick-capture' && runtimeState.supportsNodeWrite
+  )
 }));
 
 import { CompanionBrowseTopActions } from './CompanionBrowseTopActions';
@@ -59,7 +61,7 @@ it('runs sync from the browse menu', () => {
   expect(onSync).toHaveBeenCalledTimes(1);
 });
 
-it('hides capture when the host cannot persist node versions', () => {
+it('hides capture when that interaction surface is not accepted', () => {
   runtimeState.supportsNodeWrite = false;
   render(
     <CompanionBrowseTopActions

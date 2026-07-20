@@ -11,7 +11,7 @@ import {
 } from '../features/nodes/model/folderListSortOptions';
 import { definedProps } from '../shared/lib/definedProps';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
-import { supportsCompanionNodeMutation } from '../shared/platform/companionWorkspaceRuntimeRepository';
+import { supportsCompanionNodeMutationSurface } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
 import { CompanionBottomSheet } from './CompanionBottomSheet';
 import {
@@ -205,7 +205,7 @@ export function CompanionBrowseTopActions(props: {
 
   return (
     <div className="flex items-center gap-1">
-      {supportsCompanionNodeMutation() ? (
+      {supportsCompanionNodeMutationSurface('quick-capture') ? (
         <TopActionButton icon={ClipboardPlus} label={t('companion.capture.title')} onClick={props.onOpenCapture} />
       ) : null}
       <TopActionButton icon={MoreHorizontal} label={t('companion.browse.more')} onClick={() => setIsMenuOpen(true)} />

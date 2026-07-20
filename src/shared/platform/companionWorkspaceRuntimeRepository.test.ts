@@ -27,8 +27,23 @@ import {
   isNativeCompanionSyncObjectReadRuntime,
   isNativeCompanionTopicSearchRuntime,
   isNativeCompanionViewStateWriteRuntime,
-  supportsCompanionNodeMutation
+  supportsCompanionNodeMutationSurface,
+  type CompanionNodeMutationSurface
 } from './companionWorkspaceRuntimeRepository';
+
+const NODE_MUTATION_SURFACES: CompanionNodeMutationSurface[] = [
+  'existing-highlight-edit',
+  'quick-capture',
+  'selection-annotation',
+  'topic-content-edit',
+  'trash-restore'
+];
+
+function expectNodeMutationSurfaces(expected: boolean) {
+  for (const surface of NODE_MUTATION_SURFACES) {
+    expect(supportsCompanionNodeMutationSurface(surface)).toBe(expected);
+  }
+}
 
 function expectIosRuntimeBoundary() {
   capacitorState.getPlatform.mockReturnValue('ios');
@@ -36,7 +51,7 @@ function expectIosRuntimeBoundary() {
 
   expect(isAvailableNativeAndroidCompanionRuntime()).toBe(false);
   expect(isAvailableNativeCompanionRuntime()).toBe(true);
-  expect(supportsCompanionNodeMutation()).toBe(false);
+  expectNodeMutationSurfaces(false);
   expect(isNativeCompanionAttachmentResourceRuntime()).toBe(true);
   expect(isNativeCompanionContentBlobRuntime()).toBe(true);
   expect(isNativeCompanionExternalDirectoryRuntime()).toBe(true);
@@ -79,7 +94,7 @@ describe('companion workspace runtime boundary', () => {
     expect(isNativeCompanionViewStateWriteRuntime()).toBe(false);
     expect(isAvailableNativeAndroidCompanionRuntime()).toBe(false);
     expect(isAvailableNativeCompanionRuntime()).toBe(false);
-    expect(supportsCompanionNodeMutation()).toBe(true);
+    expectNodeMutationSurfaces(true);
   });
 
   it('exposes the implemented Android runtime', () => {
@@ -101,7 +116,7 @@ describe('companion workspace runtime boundary', () => {
     expect(isNativeCompanionViewStateWriteRuntime()).toBe(true);
     expect(isAvailableNativeAndroidCompanionRuntime()).toBe(true);
     expect(isAvailableNativeCompanionRuntime()).toBe(true);
-    expect(supportsCompanionNodeMutation()).toBe(true);
+    expectNodeMutationSurfaces(true);
   });
 
   it('exposes iOS storage capabilities while keeping Android-only operations unavailable', expectIosRuntimeBoundary);

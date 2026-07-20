@@ -4,11 +4,11 @@ import { beforeEach, expect, it, vi } from 'vitest';
 const testState = vi.hoisted(() => ({
   articleDocumentProps: vi.fn(),
   immersiveArticleProps: vi.fn(),
-  supportsNodeWrite: true
+  supportedSurfaces: new Set<string>()
 }));
 
 vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', () => ({
-  supportsCompanionNodeMutation: () => testState.supportsNodeWrite
+  supportsCompanionNodeMutationSurface: (surface: string) => testState.supportedSurfaces.has(surface)
 }));
 vi.mock('./CompanionReadableArticleDocument', () => ({
   ReadableArticleDocument: (props: Record<string, unknown>) => {
@@ -38,14 +38,32 @@ const workspaceSync = {
   state: { workspace_snapshot: null },
   status: 'idle'
 } as never;
+const IMMERSIVE_HANDLER_KEYS = [
+  'onAddExistingHighlightNote',
+  'onCreateSelectionAnnotation',
+  'onDeleteExistingHighlight',
+  'onRestoreFromTrash',
+  'onSaveArticleContent'
+] as const;
+const IMMERSIVE_SURFACE_CASES = [
+  ['existing-highlight-edit', ['onAddExistingHighlightNote', 'onDeleteExistingHighlight']],
+  ['selection-annotation', ['onCreateSelectionAnnotation']],
+  ['trash-restore', ['onRestoreFromTrash']],
+  ['topic-content-edit', ['onSaveArticleContent']]
+] as const;
 
 beforeEach(() => {
   vi.clearAllMocks();
-  testState.supportsNodeWrite = true;
+  testState.supportedSurfaces = new Set([
+    'existing-highlight-edit',
+    'selection-annotation',
+    'topic-content-edit',
+    'trash-restore'
+  ]);
 });
 
-it('omits all immersive node mutation handlers when the host cannot persist node versions', () => {
-  testState.supportsNodeWrite = false;
+it('omits all immersive mutation handlers when no interaction surface is accepted', () => {
+  testState.supportedSurfaces.clear();
 
   render(<CompanionShellReadableArticle onExit={vi.fn()} surface={surface} workspaceSync={workspaceSync} />);
 
@@ -57,8 +75,8 @@ it('omits all immersive node mutation handlers when the host cannot persist node
   expect(props.onSaveArticleContent).toBeUndefined();
 });
 
-it('keeps the non-immersive article read-only when the host cannot persist node versions', () => {
-  testState.supportsNodeWrite = false;
+it('keeps the non-immersive article read-only when topic editing is not accepted', () => {
+  testState.supportedSurfaces.clear();
 
   render(
     <ReadableArticleOrFallback
@@ -72,4 +90,16 @@ it('keeps the non-immersive article read-only when the host cannot persist node 
 
   const props = testState.articleDocumentProps.mock.calls[0]?.[0] as Record<string, unknown>;
   expect(props.onSaveContent).toBeUndefined();
+});
+
+it.each(IMMERSIVE_SURFACE_CASES)('exposes only the independently accepted %s surface', (surfaceName, acceptedKeys) => {
+  testState.supportedSurfaces = new Set([surfaceName]);
+  const acceptedKeySet = new Set<string>(acceptedKeys);
+
+  render(<CompanionShellReadableArticle onExit={vi.fn()} surface={surface} workspaceSync={workspaceSync} />);
+
+  const props = testState.immersiveArticleProps.mock.calls[0]?.[0] as Record<string, unknown>;
+  for (const key of IMMERSIVE_HANDLER_KEYS) {
+    expect(props[key]).toEqual(acceptedKeySet.has(key) ? expect.any(Function) : undefined);
+  }
 });

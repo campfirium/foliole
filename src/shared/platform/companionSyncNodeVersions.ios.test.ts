@@ -9,7 +9,7 @@ import {
   createFakeCapacitorConnection,
   installCompanionNodeSchema
 } from './companionSyncNodeVersionsTestSupport';
-import { supportsCompanionNodeMutation } from './companionWorkspaceRuntimeRepository';
+import { supportsCompanionNodeMutationSurface } from './companionWorkspaceRuntimeRepository';
 
 const capacitorState = vi.hoisted(() => ({
   getPlatform: vi.fn(() => 'ios'),
@@ -41,7 +41,7 @@ it('persists an iOS node version through the shared core while keeping mutation 
   await expect(applyCompanionSyncNodeVersions([iosNodeVersion()], manager as never))
     .resolves.toEqual(['ios-node-1']);
 
-  expect(supportsCompanionNodeMutation()).toBe(false);
+  expect(supportsCompanionNodeMutationSurface('quick-capture')).toBe(false);
   expect(manager.createConnection).toHaveBeenCalledWith(
     'foliole-companion',
     false,
