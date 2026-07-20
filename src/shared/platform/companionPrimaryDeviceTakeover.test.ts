@@ -115,3 +115,16 @@ it('blocks takeover when convergence is still pending', async () => {
   );
   expect(takeoverMocks.postDesktopJson).not.toHaveBeenCalled();
 });
+
+it('uses cross-platform device copy when local diagnostics are missing', async () => {
+  (takeoverMocks.runSyncConvergenceCheck as Mock).mockResolvedValueOnce({
+    diagnostics: { android: null, desktop: { sync_state: { max_state_seq: 42 } } },
+    report: { status: 'converged' }
+  });
+  const { requestPrimaryDeviceTakeover } = await import('./companionPrimaryDeviceTakeover');
+
+  await expect(requestPrimaryDeviceTakeover('http://127.0.0.1:38641')).rejects.toThrow(
+    'Both device and desktop diagnostics are required before primary device takeover.'
+  );
+  expect(takeoverMocks.postDesktopJson).not.toHaveBeenCalled();
+});

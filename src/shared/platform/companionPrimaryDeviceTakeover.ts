@@ -29,7 +29,7 @@ function buildTakeoverPayload(
   const android = result.diagnostics.android;
   const desktop = result.diagnostics.desktop;
   if (!android || !desktop) {
-    throw new Error('Both Android and desktop diagnostics are required before primary device takeover.');
+    throw new Error('Both device and desktop diagnostics are required before primary device takeover.');
   }
   return {
     android_pack_cursor: requireNumber(android.sync_state.pack_cursor, 'android_pack_cursor'),
