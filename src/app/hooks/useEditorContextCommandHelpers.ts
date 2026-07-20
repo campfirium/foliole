@@ -14,12 +14,10 @@ import { resolveImageContextMenuState, type ImageContextMenuState } from '../edi
 
 import { resolveEditorRepairTableEdit, selectionFromRepairPayload } from './editorRepairTableCommand';
 import { refreshSelectionHighlight } from './selectionHighlightRefresh';
-import type { LocatorHighlightMatch } from './selectionHighlightToggleSupport';
 import { resolveWebLookupTitle } from './webLookupTitle';
 import { blurActiveKeyboardTarget } from './workspaceKeyboardTarget';
 
 export interface SelectionContextMenuState extends WorkspaceEditorContextMenu {
-  existingHighlight?: LocatorHighlightMatch;
   kind: 'selection';
   payload: SelectionCommandPayload | null;
 }

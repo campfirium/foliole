@@ -1,6 +1,8 @@
 import type { PdfAnchorLocator } from '../../features/nodes/model/nodeTypes';
 import { definedProps } from '../../shared/lib/definedProps';
 
+import { resolvePdfRangeText } from './pdfSelectionRangeText';
+
 function isSelectionNodeInside(container: HTMLElement, node: Node | null) {
   if (!node) {
     return false;
@@ -21,7 +23,7 @@ export function resolvePdfSelectionText(container: HTMLElement | null, selection
     return '';
   }
 
-  return selection.toString().trim();
+  return resolvePdfRangeText(selection.getRangeAt(0));
 }
 
 function resolveSelectionPageShell(selection: Selection): HTMLElement | null {

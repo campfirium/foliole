@@ -45,6 +45,8 @@ describe('collectPdfHighlightLocators', () => {
     expect(locators).toEqual([
       {
         id: 'pdf-hl-1',
+        label: 'highlightA',
+        nodeId: 'highlightA',
         page: 2,
         x: 0.25,
         y: 0.4,

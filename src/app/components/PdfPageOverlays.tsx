@@ -3,6 +3,8 @@ import { renderPdfOverlayMarker, renderPdfOverlayRects } from './pdfOverlayRende
 
 export interface PdfPageOverlayLocator {
   id: string;
+  label?: string;
+  nodeId?: string;
   page: number;
   rects?: Array<{ height: number; width: number; x: number; y: number }>;
   x: number | null;

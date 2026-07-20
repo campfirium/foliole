@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { createTestDomRectList } from '../../test/domGeometryTestSupport';
 
@@ -14,7 +14,7 @@ function createSelectionForNode(node: Text) {
   return selection;
 }
 
-describe('resolvePdfSelectionText', () => {
+describe('resolvePdfSelectionText range source', () => {
   it('returns selected text when the selection is inside the pdf surface', () => {
     const container = document.createElement('div');
     const textNode = document.createTextNode('Alpha beta');
@@ -23,6 +23,62 @@ describe('resolvePdfSelectionText', () => {
 
     const selection = createSelectionForNode(textNode);
     expect(resolvePdfSelectionText(container, selection)).toBe('Alpha beta');
+
+    selection?.removeAllRanges();
+    container.remove();
+  });
+
+  it('uses Range contents when Selection serialization is empty', () => {
+    const container = document.createElement('div');
+    const first = document.createElement('span');
+    const second = document.createElement('span');
+    first.textContent = 'Alpha ';
+    second.textContent = 'beta';
+    container.append(first, second);
+    document.body.appendChild(container);
+    const range = document.createRange();
+    range.setStart(first.firstChild as Text, 2);
+    range.setEnd(second.firstChild as Text, 2);
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    const toStringSpy = vi.spyOn(selection as Selection, 'toString').mockReturnValue('');
+
+    expect(resolvePdfSelectionText(container, selection)).toBe('pha be');
+    expect(toStringSpy).not.toHaveBeenCalled();
+
+    selection?.removeAllRanges();
+    container.remove();
+  });
+});
+
+describe('resolvePdfSelectionText normalization and boundary', () => {
+  it('removes invisible pdf formatting characters and rejects invisible-only selections', () => {
+    const container = document.createElement('div');
+    const textNode = document.createTextNode('\ufeff\u200b\u00adVisible\u2060');
+    container.appendChild(textNode);
+    document.body.appendChild(container);
+    const selection = createSelectionForNode(textNode);
+    expect(resolvePdfSelectionText(container, selection)).toBe('Visible');
+
+    textNode.textContent = '\ufeff\u200b\u00ad\u2060';
+    const invisibleSelection = createSelectionForNode(textNode);
+    expect(resolvePdfSelectionText(container, invisibleSelection)).toBe('');
+
+    invisibleSelection?.removeAllRanges();
+    container.remove();
+  });
+
+  it('normalizes a reverse selection with line breaks in DOM order', () => {
+    const container = document.createElement('div');
+    const textNode = document.createTextNode('Alpha\r\nBeta');
+    container.appendChild(textNode);
+    document.body.appendChild(container);
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.setBaseAndExtent(textNode, textNode.length, textNode, 0);
+
+    expect(resolvePdfSelectionText(container, selection)).toBe('Alpha\nBeta');
 
     selection?.removeAllRanges();
     container.remove();

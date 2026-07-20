@@ -4,6 +4,8 @@ import { toWorkspaceListNodesById } from '../../features/nodes/model/workspaceLi
 
 export interface PdfHighlightLocator {
   id: string;
+  label: string;
+  nodeId: string;
   page: number;
   x: number | null;
   y: number | null;
@@ -67,6 +69,8 @@ export function collectPdfHighlightLocators(
     seenLocatorIds.add(anchor.id);
     locators.push({
       id: anchor.id,
+      label: node.title,
+      nodeId: node.id,
       page: anchor.locator.page,
       rects: Array.isArray(anchor.locator.rects)
         ? anchor.locator.rects.filter(

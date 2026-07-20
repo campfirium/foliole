@@ -1,8 +1,22 @@
 interface PdfOverlayLocator {
   id: string;
+  label?: string;
+  nodeId?: string;
   rects?: Array<{ height: number; width: number; x: number; y: number }>;
   x: number | null;
   y: number | null;
+}
+
+function getHighlightTargetProps(locator: PdfOverlayLocator, isKeyboardTarget: boolean) {
+  if (!locator.nodeId) {
+    return { 'aria-hidden': true } as const;
+  }
+  return {
+    'aria-label': locator.label ? `Highlight: ${locator.label}` : 'Highlight',
+    'data-pdf-highlight-node-id': locator.nodeId,
+    role: 'button',
+    tabIndex: isKeyboardTarget ? 0 : -1
+  };
 }
 
 export function resolvePdfOverlayMarkerSize(zoom: number) {
@@ -22,7 +36,7 @@ export function renderPdfOverlayMarker(
   const markerLeft = `${Math.max(0, Math.min(100, locator.x * 100))}%`;
   return (
     <span
-      aria-hidden="true"
+      {...getHighlightTargetProps(locator, true)}
       className={className}
       data-testid={testId}
       key={locator.id}
@@ -42,7 +56,7 @@ export function renderPdfOverlayRects(
   }
   return rects.map((rect, index) => (
     <span
-      aria-hidden="true"
+      {...getHighlightTargetProps(locator, index === 0)}
       className={className}
       data-testid={testId}
       key={`${locator.id}:${index}`}

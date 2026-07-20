@@ -1,5 +1,21 @@
 export const DEFAULT_HIGHLIGHT_ANNOTATION_PREFIX = '※ ';
 
+export function parseHighlightCardContent(input: {
+  content: string;
+  notePrefix?: string;
+}) {
+  const content = input.content.replace(/\r\n?/g, '\n').trim();
+  const marker = `\n${input.notePrefix ?? DEFAULT_HIGHLIGHT_ANNOTATION_PREFIX}`;
+  const markerIndex = content.indexOf(marker);
+  if (markerIndex < 0) {
+    return { note: null, text: content };
+  }
+  return {
+    note: content.slice(markerIndex + marker.length).trim() || null,
+    text: content.slice(0, markerIndex).trim()
+  };
+}
+
 export function formatHighlightCardContent(input: {
   note?: string | null;
   notePrefix?: string;

@@ -35,7 +35,7 @@ export interface WorkspaceEditorContextMenu {
   existingHighlight?: {
     canAdjustRange?: boolean;
     kind: 'cloze' | 'highlight';
-    locator: { from: number; originalText: string; to: number };
+    locator?: { from: number; originalText: string; to: number };
     originalText: string;
     nodeId: string;
   };

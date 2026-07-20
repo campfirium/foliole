@@ -21,6 +21,7 @@ const PDF_SEARCH_INPUT_NAME = /PDF search|PDF 搜索/;
 const ZOOM_IN_NAME = /Zoom in|放大/;
 const ZOOM_VALUE_NAME = /Set zoom level|设置缩放级别/;
 const PDF_HIGHLIGHT_TEXT = 'gamma keyword';
+const PDF_HIGHLIGHT_ACTIONS_SCREENSHOT = path.resolve('.tmp/artifacts/pdf-highlight-actions-hidden-native.png');
 
 async function installPdfFixtureSelection(desktopApp: ElectronApplication, fixturePath = FIXTURE_PATH) {
   await desktopApp.evaluate(({ dialog }, selectedFixturePath) => {
@@ -198,7 +199,7 @@ test('PDF inverted dark mode @pdf crops rendered page side gutters', async ({
   });
 });
 
-test('PDF highlight journey @pdf shows a saved highlight marker and child highlight row', async ({
+test('PDF highlight journey @pdf opens shared actions and deletes a saved highlight', async ({
   desktopApp,
   desktopWindow
 }) => {
@@ -209,8 +210,19 @@ test('PDF highlight journey @pdf shows a saved highlight marker and child highli
   await createPdfHighlightChild(desktopWindow, importedNodeId);
   await jumpToPdfPage(desktopWindow, 3);
 
-  await expect(getPdfReaderRegion(desktopWindow).getByTestId('pdf-highlight-rect').first()).toBeVisible();
+  const highlightRect = getPdfReaderRegion(desktopWindow).getByTestId('pdf-highlight-rect').first();
+  await expect(highlightRect).toBeVisible();
   await expect(desktopWindow.getByRole('treeitem', { name: PDF_HIGHLIGHT_TEXT })).toBeVisible();
+
+  const bounds = await highlightRect.boundingBox();
+  expect(bounds).not.toBeNull();
+  await desktopWindow.mouse.click((bounds?.x ?? 0) + (bounds?.width ?? 0) / 2, (bounds?.y ?? 0) + (bounds?.height ?? 0) / 2);
+  await expect(desktopWindow.getByRole('toolbar')).toBeVisible();
+  await desktopWindow.screenshot({ path: PDF_HIGHLIGHT_ACTIONS_SCREENSHOT });
+
+  await desktopWindow.getByRole('button', { name: /Close Highlight|关闭高亮/ }).click();
+  await expect(desktopWindow.getByRole('treeitem', { name: PDF_HIGHLIGHT_TEXT })).toHaveCount(0);
+  await expect(highlightRect).toHaveCount(0);
 });
 
 test('PDF error journey @pdf shows an unavailable state for an invalid PDF', async ({

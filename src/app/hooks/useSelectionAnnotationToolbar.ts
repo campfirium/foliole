@@ -5,6 +5,11 @@ import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { getSelectionCommandPayload } from '../contextCommands';
 
+import {
+  findPdfHighlightTargetAtPoint,
+  getPdfHighlightTarget,
+  resolvePdfExistingHighlight
+} from './pdfExistingHighlightTarget';
 import { findTextAnchorAtPosition } from './selectionHighlightToggleSupport';
 import type { EditorContextMenuState } from './useEditorContextCommandHelpers';
 
@@ -23,8 +28,8 @@ function clearActiveHighlightElements() {
   });
 }
 
-function resolveSelectionToolbarPosition(event: MouseEvent) {
-  const highlightElement = getHighlightElement(event.target);
+function resolveSelectionToolbarPosition(event: MouseEvent, targetElement?: Element | null) {
+  const highlightElement = targetElement ?? getHighlightElement(event.target);
   const highlightRect = highlightElement?.getBoundingClientRect();
   const selection = window.getSelection();
   const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
@@ -113,12 +118,57 @@ function openExistingHighlightToolbar(args: SelectionAnnotationToolbarArgs, even
   return true;
 }
 
+function openPdfHighlightToolbar(
+  args: SelectionAnnotationToolbarArgs,
+  event: MouseEvent,
+  target: HTMLElement
+) {
+  const highlightMatch = resolvePdfExistingHighlight({
+    activeNodeId: args.activeNodeId ?? '',
+    nodesById: args.nodesById,
+    target,
+    trashedNodeIds: args.trashedNodeIds
+  });
+  if (!highlightMatch) {
+    return false;
+  }
+  const toolbarPosition = resolveSelectionToolbarPosition(event, target);
+  target.classList.add(ACTIVE_HIGHLIGHT_CLASS);
+  args.setContextMenu({
+    canRunCommands: true,
+    existingHighlight: highlightMatch,
+    kind: 'selection',
+    left: toolbarPosition.left,
+    mode: 'existing-highlight-toolbar',
+    notePanelLeft: toolbarPosition.notePanelLeft,
+    notePanelTop: toolbarPosition.notePanelTop,
+    payload: null,
+    top: toolbarPosition.top
+  });
+  return true;
+}
+
+function hasPdfTextSelection(target: EventTarget | null) {
+  const selection = window.getSelection();
+  return target instanceof Element &&
+    target.closest('[data-testid="pdf-document-surface"]') !== null &&
+    Boolean(selection && !selection.isCollapsed && selection.rangeCount > 0);
+}
+
 function createAnnotationToolbarMouseUpHandler(args: SelectionAnnotationToolbarArgs) {
   return (event: MouseEvent) => {
     if (!args.selectionToolbarEnabled || event.button !== 0 || args.isTrashViewOpen || !args.activeNodeId) {
       return;
     }
     if (isAnnotationToolbarTarget(event.target) || !isEditorTarget(event.target)) {
+      if (hasPdfTextSelection(event.target)) {
+        return;
+      }
+      const pdfTarget = getPdfHighlightTarget(event.target) ??
+        findPdfHighlightTargetAtPoint(event.clientX, event.clientY);
+      if (pdfTarget) {
+        openPdfHighlightToolbar(args, event, pdfTarget);
+      }
       return;
     }
     if (isHighlightTarget(event.target) && openExistingHighlightToolbar(args, event)) {
@@ -143,6 +193,26 @@ function createAnnotationToolbarMouseUpHandler(args: SelectionAnnotationToolbarA
   };
 }
 
+function createPdfHighlightKeyDownHandler(args: SelectionAnnotationToolbarArgs) {
+  return (event: KeyboardEvent) => {
+    if (!args.selectionToolbarEnabled || args.isTrashViewOpen || (event.key !== 'Enter' && event.key !== ' ')) {
+      return;
+    }
+    const target = getPdfHighlightTarget(event.target);
+    if (!target) {
+      return;
+    }
+    const rect = target.getBoundingClientRect();
+    const mouseEvent = new MouseEvent('mouseup', {
+      clientX: rect.left + rect.width / 2,
+      clientY: rect.top + rect.height / 2
+    });
+    if (openPdfHighlightToolbar(args, mouseEvent, target)) {
+      event.preventDefault();
+    }
+  };
+}
+
 export function useSelectionAnnotationToolbar(args: SelectionAnnotationToolbarArgs) {
   useEffect(() => {
     if (args.selectionToolbarEnabled === false) {
@@ -153,11 +223,14 @@ export function useSelectionAnnotationToolbar(args: SelectionAnnotationToolbarAr
   useEffect(() => {
     const handleMouseDown = createAnnotationToolbarMouseDownHandler(args);
     const handleMouseUp = createAnnotationToolbarMouseUpHandler(args);
+    const handleKeyDown = createPdfHighlightKeyDownHandler(args);
+    document.addEventListener('keydown', handleKeyDown, true);
     document.addEventListener('mousedown', handleMouseDown, true);
     document.addEventListener('mouseup', handleMouseUp, true);
     return () => {
       document.removeEventListener('mousedown', handleMouseDown, true);
       document.removeEventListener('mouseup', handleMouseUp, true);
+      document.removeEventListener('keydown', handleKeyDown, true);
     };
   }, [args]);
 }
