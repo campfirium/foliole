@@ -36,6 +36,7 @@ export function CompanionShellReadableArticle(props: { onExit: () => void; surfa
       onExit={props.onExit}
       onRestoreFromTrash={createCompanionTrashRestoreHandler(props.workspaceSync)}
       onSaveArticleContent={createCompanionTopicContentSaveHandler(props.workspaceSync)}
+      onScrollTopChange={props.surface.handleViewScroll}
       readableArticle={props.surface.readableArticle}
       snapshot={props.workspaceSync.state.workspace_snapshot}
       syncEndpointUrl={resolveShellSyncEndpoint(props.workspaceSync)}

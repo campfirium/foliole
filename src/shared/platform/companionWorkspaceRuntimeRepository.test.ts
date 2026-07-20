@@ -23,7 +23,8 @@ import {
   isNativeCompanionPdfPageTextRuntime,
   isNativeCompanionSyncDiagnosticsRuntime,
   isNativeCompanionSyncObjectReadRuntime,
-  isNativeCompanionTopicSearchRuntime
+  isNativeCompanionTopicSearchRuntime,
+  isNativeCompanionViewStateWriteRuntime
 } from './companionWorkspaceRuntimeRepository';
 
 describe('companion workspace runtime boundary', () => {
@@ -45,6 +46,7 @@ describe('companion workspace runtime boundary', () => {
     expect(isNativeCompanionSyncDiagnosticsRuntime()).toBe(false);
     expect(isNativeCompanionSyncObjectReadRuntime()).toBe(false);
     expect(isNativeCompanionTopicSearchRuntime()).toBe(false);
+    expect(isNativeCompanionViewStateWriteRuntime()).toBe(false);
     expect(isAvailableNativeAndroidCompanionRuntime()).toBe(false);
   });
 
@@ -63,6 +65,7 @@ describe('companion workspace runtime boundary', () => {
     expect(isNativeCompanionSyncDiagnosticsRuntime()).toBe(true);
     expect(isNativeCompanionSyncObjectReadRuntime()).toBe(true);
     expect(isNativeCompanionTopicSearchRuntime()).toBe(true);
+    expect(isNativeCompanionViewStateWriteRuntime()).toBe(true);
     expect(isAvailableNativeAndroidCompanionRuntime()).toBe(true);
   });
 
@@ -81,6 +84,7 @@ describe('companion workspace runtime boundary', () => {
     expect(isNativeCompanionSyncDiagnosticsRuntime()).toBe(true);
     expect(isNativeCompanionSyncObjectReadRuntime()).toBe(true);
     expect(isNativeCompanionTopicSearchRuntime()).toBe(true);
+    expect(isNativeCompanionViewStateWriteRuntime()).toBe(true);
     expect(() => isNativeAndroidCompanionRuntime()).toThrowError(expect.objectContaining({
       capability: 'native-runtime',
       code: 'NATIVE_COMPANION_CAPABILITY_UNAVAILABLE',

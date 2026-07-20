@@ -11,6 +11,7 @@ import type { CompanionReadingTypographySettings } from './companionReadingTypog
 import { type CompanionSelectionAnnotationKind } from './CompanionSelectionAnnotationToolbar';
 import { isCompanionSelectionToolbarTarget } from './companionSelectionToolbarDom';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
+import { useCompanionImmersiveScrollPosition } from './useCompanionImmersiveScrollPosition';
 import { useCompanionPendingReadableArticle } from './useCompanionPendingReadableArticle';
 import { useCompanionReadingTypographySettings } from './useCompanionReadingTypographySettings';
 import { useCompanionSelectionAnnotationToolbar } from './useCompanionSelectionAnnotationToolbar';
@@ -40,6 +41,7 @@ interface ImmersiveReadableArticleProps {
   onExit(): void;
   onRestoreFromTrash?: (nodeId: string) => Promise<void> | void;
   onSaveArticleContent?: (nodeId: string, content: string) => Promise<void>;
+  onScrollTopChange?: (scrollTop: number) => void;
   readableArticle: ReadableArticle;
   snapshot: WorkspaceSnapshot | null;
   syncEndpointUrl?: string | null;
@@ -160,6 +162,9 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
   const model = useImmersiveReadableArticleModel(props);
   const readingTypography = useCompanionReadingTypographySettings();
   const pendingReadableArticle = useCompanionPendingReadableArticle(props.readableArticle);
+  const scrollPosition = useCompanionImmersiveScrollPosition(
+    props.readableArticle.nodeId, props.readableArticle.persistedNodeViewState?.scrollTop ?? 0, props.onScrollTopChange
+  );
   function createSelectionAnnotation(
     kind: CompanionSelectionAnnotationKind,
     payload: SelectionCommandPayload,
@@ -183,7 +188,9 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
       onPointerDown={model.closeToolbarFromArticlePointer}
       onPointerMove={model.closeToolbarFromArticlePointer}
       onPointerUp={model.openToolbarFromArticlePointer}
+      onScroll={scrollPosition.handleScroll}
       onTouchMove={model.closeToolbarFromArticleTouch}
+      ref={scrollPosition.surfaceRef}
     >
       <ImmersiveArticleChrome articleProps={props} model={model} readingTypography={readingTypography} />
       <ImmersiveArticleContent

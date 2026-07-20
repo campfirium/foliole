@@ -7,7 +7,8 @@ import type { NativeSyncReviewLogDraft } from '../../../lib/platform/nativeSyncC
 import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import {
   FolioleCompanionSync,
-  isNativeAndroidCompanionRuntime
+  isNativeAndroidCompanionRuntime,
+  isNativeCompanionViewStateWriteRuntime
 } from './companionWorkspaceRuntimeRepository';
 
 export async function saveCompanionSyncSettingRecord(args: {
@@ -85,7 +86,7 @@ export async function saveCompanionSyncNodeReviewRecord(args: {
 }
 
 export async function saveCompanionSyncActiveViewState(nodeId: string | null) {
-  if (!isNativeAndroidCompanionRuntime()) {
+  if (!isNativeCompanionViewStateWriteRuntime()) {
     return null;
   }
   return runCompanionSyncWriterTask(() => (
@@ -97,7 +98,7 @@ export async function saveCompanionSyncNodeViewState(args: {
   nodeId: string;
   scrollTop: number;
 }) {
-  if (!isNativeAndroidCompanionRuntime()) {
+  if (!isNativeCompanionViewStateWriteRuntime()) {
     return null;
   }
   return runCompanionSyncWriterTask(() => (

@@ -70,6 +70,11 @@ export function isNativeCompanionSyncDiagnosticsRuntime() {
   return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
 }
 
+export function isNativeCompanionViewStateWriteRuntime() {
+  const runtime = requireAvailableCompanionRuntime('view-state-write');
+  return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
+}
+
 export function isAvailableNativeAndroidCompanionRuntime() {
   return getCompanionRuntimeCapability().kind === 'android-native';
 }

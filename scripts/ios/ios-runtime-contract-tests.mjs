@@ -16,7 +16,9 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..
 
 export const IOS_RUNTIME_CONTRACT_TESTS = [
   'src/shared/platform/companionRuntimeCapabilities.test.ts',
+  'src/shared/platform/companionSyncStateWriters.ios.test.ts',
   'src/shared/platform/companionWorkspaceRuntimeRepository.test.ts',
+  'src/companion/useCompanionImmersiveScrollPosition.test.tsx',
   'src/shared/platform/companion/sync/diagnostics/companionSyncDiagnostics.ios.test.ts',
   'src/shared/platform/companionPrimaryDeviceIdentity.test.ts',
   'src/shared/platform/companionFullTextSearch.test.ts',
