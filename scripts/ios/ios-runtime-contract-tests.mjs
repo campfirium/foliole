@@ -44,6 +44,7 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'src/companion/companionWorkspaceSyncFlow.test.ts',
   'src/companion/companionReviewSchedulerSettingsHydration.ios.test.ts',
   'src/companion/useCompanionImmersiveScrollPosition.test.tsx',
+  'src/companion/useCompanionWorkspacePairing.ios.test.tsx',
   'src/companion/useCompanionWorkspaceSync.disconnect.test.tsx',
   'src/companion/useCompanionHandoffReminderSettings.test.tsx',
   'src/companion/useCompanionHandoffReminderScheduler.test.tsx',
