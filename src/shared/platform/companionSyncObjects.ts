@@ -3,9 +3,11 @@ import type {
   NativeSyncObjectRecord
 } from '../../../lib/platform/nativeSyncContract';
 
+import { getIosCompanionReviewSyncbackStore } from './companion/sync/review-syncback/iosCompanionReviewSyncbackStore';
 import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import {
   FolioleCompanionSync,
+  getNativeCompanionReviewSyncbackPlatform,
   isNativeAndroidCompanionRuntime,
   isNativeCompanionPdfPageTextRuntime,
   isNativeCompanionSyncObjectReadRuntime
@@ -114,6 +116,9 @@ export async function searchCompanionPdfPageText(query: string, limit?: number) 
 }
 
 export async function saveCompanionSyncPushAcks(acks: SyncPushAck[]) {
+  if (getNativeCompanionReviewSyncbackPlatform() === 'ios') {
+    return runCompanionSyncWriterTask(() => getIosCompanionReviewSyncbackStore().savePushAcks(acks));
+  }
   if (!isNativeAndroidCompanionRuntime()) {
     return [] as string[];
   }

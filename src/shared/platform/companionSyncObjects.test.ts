@@ -3,9 +3,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const writerQueueMock = vi.hoisted(() => ({
   run: vi.fn(async <T>(task: () => Promise<T>) => task())
 }));
+const iosReviewSyncbackStoreMock = vi.hoisted(() => ({
+  savePushAcks: vi.fn(async () => ['ios-review-op'])
+}));
 
 vi.mock('./companionSyncWriterQueue', () => ({
   runCompanionSyncWriterTask: writerQueueMock.run
+}));
+vi.mock('./companion/sync/review-syncback/iosCompanionReviewSyncbackStore', () => ({
+  getIosCompanionReviewSyncbackStore: vi.fn(() => iosReviewSyncbackStoreMock)
 }));
 
 function createApplyPluginMocks() {
@@ -220,5 +226,21 @@ describe('companion sync objects bridge', () => {
     await expect(api.loadCompanionSyncIndex()).resolves.toEqual([{ object_id: 'one', object_type: 'setting' }]);
     await expect(api.loadCompanionSyncObjects(['one'], ['setting']))
       .resolves.toEqual([{ object_id: 'one', object_type: 'setting' }]);
+  });
+
+  it('saves iOS review push acknowledgements through the SQLite store', async () => {
+    capacitorMock.platform.mockReturnValue('ios');
+    capacitorMock.plugin.saveSyncPushAcks.mockClear();
+    const api = await import('./companionSyncObjects');
+    const ack = {
+      clientOpId: 'ios-review-op',
+      identity: { objectId: 'node-1', objectType: 'node_review' as const, scope: 'workspace' },
+      stateSeq: 7,
+      status: 'accepted' as const
+    };
+
+    await expect(api.saveCompanionSyncPushAcks([ack])).resolves.toEqual(['ios-review-op']);
+    expect(iosReviewSyncbackStoreMock.savePushAcks).toHaveBeenCalledWith([ack]);
+    expect(capacitorMock.plugin.saveSyncPushAcks).not.toHaveBeenCalled();
   });
 });

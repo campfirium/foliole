@@ -7,12 +7,23 @@ const iosCursorStoreMock = vi.hoisted(() => ({
   loadCursor: vi.fn(async () => 9),
   saveCursor: vi.fn(async (cursor: number | null) => cursor)
 }));
+const iosReviewSyncbackStoreMock = vi.hoisted(() => ({
+  loadReviewLog: vi.fn(async () => [{ op_id: 'ios-op-1' }]),
+  loadReviewLogPushCursor: vi.fn(async () => null),
+  loadStateChanges: vi.fn(async () => [{ object_id: 'ios-node-1', object_type: 'node_review', state_seq: 7 }]),
+  loadStatePushCursor: vi.fn(async () => 6),
+  saveReviewLogPushCursor: vi.fn(async (cursor) => cursor),
+  saveStatePushCursor: vi.fn(async (cursor) => cursor)
+}));
 
 vi.mock('./companionSyncWriterQueue', () => ({
   runCompanionSyncWriterTask: writerQueueMock.run
 }));
 vi.mock('./companion/sync/cursor/iosCompanionSyncPackCursorStore', () => ({
   createIosCompanionSyncPackCursorStore: vi.fn(() => iosCursorStoreMock)
+}));
+vi.mock('./companion/sync/review-syncback/iosCompanionReviewSyncbackStore', () => ({
+  getIosCompanionReviewSyncbackStore: vi.fn(() => iosReviewSyncbackStoreMock)
 }));
 
 const capacitorMock = vi.hoisted(() => ({
@@ -74,7 +85,7 @@ it('bridges native sync cursors and pending summary', async () => {
   expect(writerQueueMock.run).toHaveBeenCalledTimes(4);
 });
 
-it('rejects ios before reading web cursors or returning empty changes', async () => {
+it('routes iOS review syncback cursors and rows through the SQLite store', async () => {
   capacitorMock.platform.mockReturnValue('ios');
   const getItem = vi.spyOn(Storage.prototype, 'getItem');
   const api = await import('./companionSyncCursors');
@@ -83,10 +94,13 @@ it('rejects ios before reading web cursors or returning empty changes', async ()
     code: 'NATIVE_COMPANION_CAPABILITY_UNAVAILABLE',
     platform: 'ios'
   });
-  await expect(api.loadCompanionSyncStateChanges(null)).rejects.toMatchObject({
-    code: 'NATIVE_COMPANION_CAPABILITY_UNAVAILABLE',
-    platform: 'ios'
-  });
+  await expect(api.loadCompanionSyncStatePushCursor()).resolves.toBe(6);
+  await expect(api.loadCompanionSyncStateChanges(null)).resolves.toEqual([
+    { object_id: 'ios-node-1', object_type: 'node_review', state_seq: 7 }
+  ]);
+  await expect(api.loadCompanionSyncReviewLog(null)).resolves.toEqual([{ op_id: 'ios-op-1' }]);
+  await expect(api.saveCompanionSyncStatePushCursor(7)).resolves.toBe(7);
+  await expect(api.loadCompanionPendingSyncSummary()).resolves.toEqual({ pendingCount: 2 });
   expect(getItem).not.toHaveBeenCalled();
   expect(capacitorMock.plugin.loadSyncStateChanges).not.toHaveBeenCalled();
 });

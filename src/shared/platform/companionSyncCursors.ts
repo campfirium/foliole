@@ -7,6 +7,7 @@ import type {
 
 import type { CompanionSyncPackCursorStore } from './companion/sync/cursor/companionSyncPackCursorStore';
 import { createIosCompanionSyncPackCursorStore } from './companion/sync/cursor/iosCompanionSyncPackCursorStore';
+import { getIosCompanionReviewSyncbackStore } from './companion/sync/review-syncback/iosCompanionReviewSyncbackStore';
 import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
 import {
   readWebCursor,
@@ -17,6 +18,7 @@ import {
 import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import {
   FolioleCompanionSync,
+  getNativeCompanionReviewSyncbackPlatform,
   isNativeAndroidCompanionRuntime
 } from './companionWorkspaceRuntimeRepository';
 
@@ -65,11 +67,17 @@ export async function saveCompanionSyncPackCursor(cursor: number | null) {
 }
 
 export async function loadCompanionSyncStatePushCursor() {
+  if (getNativeCompanionReviewSyncbackPlatform() === 'ios') {
+    return getIosCompanionReviewSyncbackStore().loadStatePushCursor();
+  }
   if (!isNativeAndroidCompanionRuntime()) return readWebNumberCursor(WEB_SYNC_STATE_PUSH_CURSOR_KEY);
   return (await FolioleCompanionSync.loadSyncStatePushCursor()).cursor;
 }
 
 export async function saveCompanionSyncStatePushCursor(cursor: number | null) {
+  if (getNativeCompanionReviewSyncbackPlatform() === 'ios') {
+    return runCompanionSyncWriterTask(() => getIosCompanionReviewSyncbackStore().saveStatePushCursor(cursor));
+  }
   if (!isNativeAndroidCompanionRuntime()) return writeWebNumberCursor(WEB_SYNC_STATE_PUSH_CURSOR_KEY, cursor);
   return runCompanionSyncWriterTask(async () => (
     await FolioleCompanionSync.saveSyncStatePushCursor({ cursor })
@@ -89,6 +97,7 @@ export async function saveCompanionSyncNodeVersionCursor(cursor: NativeSyncChang
 }
 
 export async function loadCompanionSyncNodeVersionPushCursor() {
+  if (getCompanionRuntimeCapability().kind === 'ios-native') return null;
   if (!isNativeAndroidCompanionRuntime()) return readWebCursor(WEB_SYNC_NODE_VERSION_PUSH_CURSOR_KEY);
   return (await FolioleCompanionSync.loadSyncNodeVersionPushCursor()).cursor;
 }
@@ -113,11 +122,17 @@ export async function saveCompanionSyncReviewLogCursor(cursor: NativeSyncChangeC
 }
 
 export async function loadCompanionSyncReviewLogPushCursor() {
+  if (getNativeCompanionReviewSyncbackPlatform() === 'ios') {
+    return getIosCompanionReviewSyncbackStore().loadReviewLogPushCursor();
+  }
   if (!isNativeAndroidCompanionRuntime()) return readWebCursor(WEB_SYNC_REVIEW_LOG_PUSH_CURSOR_KEY);
   return (await FolioleCompanionSync.loadSyncReviewLogPushCursor()).cursor;
 }
 
 export async function saveCompanionSyncReviewLogPushCursor(cursor: NativeSyncChangeCursor | null) {
+  if (getNativeCompanionReviewSyncbackPlatform() === 'ios') {
+    return runCompanionSyncWriterTask(() => getIosCompanionReviewSyncbackStore().saveReviewLogPushCursor(cursor));
+  }
   if (!isNativeAndroidCompanionRuntime()) return writeWebCursor(WEB_SYNC_REVIEW_LOG_PUSH_CURSOR_KEY, cursor);
   return runCompanionSyncWriterTask(async () => (
     await FolioleCompanionSync.saveSyncReviewLogPushCursor({ cursor })
@@ -125,16 +140,23 @@ export async function saveCompanionSyncReviewLogPushCursor(cursor: NativeSyncCha
 }
 
 export async function loadCompanionSyncNodeVersions(cursor: NativeSyncChangeCursor | null, limit = 500) {
+  if (getCompanionRuntimeCapability().kind === 'ios-native') return [] as NativeSyncNodeRecord[];
   if (!isNativeAndroidCompanionRuntime()) return [] as NativeSyncNodeRecord[];
   return (await FolioleCompanionSync.loadSyncNodeVersions({ cursor, limit })).nodes;
 }
 
 export async function loadCompanionSyncReviewLog(cursor: NativeSyncChangeCursor | null, limit = 500) {
+  if (getNativeCompanionReviewSyncbackPlatform() === 'ios') {
+    return getIosCompanionReviewSyncbackStore().loadReviewLog(cursor, limit);
+  }
   if (!isNativeAndroidCompanionRuntime()) return [] as NativeSyncReviewLogRecord[];
   return (await FolioleCompanionSync.loadSyncReviewLog({ cursor, limit })).reviews;
 }
 
 export async function loadCompanionSyncStateChanges(cursor: number | null, limit = 500) {
+  if (getNativeCompanionReviewSyncbackPlatform() === 'ios') {
+    return getIosCompanionReviewSyncbackStore().loadStateChanges(cursor, limit);
+  }
   if (!isNativeAndroidCompanionRuntime()) return [] as NativeSyncStateObjectRecord[];
   return (await FolioleCompanionSync.loadSyncStateChanges({ cursor, limit })).objects;
 }

@@ -28,6 +28,7 @@ const IOS_NATIVE_CAPABILITIES = new Set([
   'pairing-runtime',
   'pdf-page-text',
   'reading-write',
+  'review-syncback',
   'review-write',
   'sync-pack-apply',
   'sync-diagnostics',

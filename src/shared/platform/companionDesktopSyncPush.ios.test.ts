@@ -1,0 +1,82 @@
+import { beforeEach, expect, it, vi } from 'vitest';
+
+const httpMock = vi.hoisted(() => ({ post: vi.fn() }));
+const storeMock = vi.hoisted(() => ({
+  loadReviewLog: vi.fn(async () => [{
+    device_id: 'ios-device', difficulty_after: 3.2, difficulty_before: 3.1,
+    due_after: '2026-07-22T00:00:00.000Z', due_before: '2026-07-20T00:00:00.000Z',
+    grade: 3, id: 'log-1', node_id: 'node-1', op_id: 'op-1',
+    reviewed_at: '2026-07-20T00:00:00.000Z', scheduler_version: 'ts-fsrs@4',
+    stability_after: 4.1, stability_before: 2.1
+  }]),
+  loadReviewLogPushCursor: vi.fn(async () => null),
+  loadStateChanges: vi.fn(async () => [{
+    base_content_hash: 'base-hash', content_hash: 'review-hash', deleted_at: null,
+    object_id: 'node-1', object_type: 'node_review', payload_json: '{"state":2}',
+    state_seq: 4, updated_at: '2026-07-20T00:00:00.000Z'
+  }]),
+  loadStatePushCursor: vi.fn(async () => null),
+  savePushAcks: vi.fn(async () => ['node_review:node-1:4'])
+}));
+const capacitorMock = vi.hoisted(() => ({
+  getPlatform: vi.fn(() => 'ios'),
+  isNativePlatform: vi.fn(() => true)
+}));
+
+vi.mock('@capacitor/core', () => ({
+  Capacitor: capacitorMock,
+  registerPlugin: vi.fn(() => ({}))
+}));
+vi.mock('./companion/sync/review-syncback/iosCompanionReviewSyncbackStore', () => ({
+  getIosCompanionReviewSyncbackStore: vi.fn(() => storeMock)
+}));
+vi.mock('./companionDesktopSyncHttp', () => ({ postDesktopJson: httpMock.post }));
+vi.mock('./companionSyncWriterQueue', () => ({
+  runCompanionSyncWriterTask: vi.fn((task: () => Promise<unknown>) => task())
+}));
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  httpMock.post.mockResolvedValue({
+    acks: [
+      {
+        client_op_id: 'node_review:node-1:4',
+        identity: { objectId: 'node-1', objectType: 'node_review', scope: 'workspace' },
+        state_seq: 4,
+        status: 'accepted'
+      },
+      {
+        client_op_id: 'review_log:op-1',
+        identity: { objectId: 'op-1', objectType: 'review_log', scope: 'workspace' },
+        status: 'accepted'
+      }
+    ]
+  });
+});
+
+it('pushes iOS review state through the macOS shared protocol while keeping node stream empty', async () => {
+  const { pushLocalDirtyObjects } = await import('./companionDesktopSyncPush');
+
+  await expect(pushLocalDirtyObjects('http://desktop.local')).resolves.toEqual({
+    pushConflictCount: 0,
+    pushedObjectIds: ['node_review:node-1'],
+    pushedReviewOpIds: ['op-1'],
+    pushError: null,
+    pushRejectedCount: 0
+  });
+  expect(httpMock.post).toHaveBeenCalledWith(
+    'http://desktop.local',
+    '/companion/sync-push',
+    { items: [
+      expect.objectContaining({
+        clientOpId: 'node_review:node-1:4',
+        identity: { objectId: 'node-1', objectType: 'node_review', scope: 'workspace' }
+      }),
+      expect.objectContaining({
+        clientOpId: 'review_log:op-1',
+        identity: { objectId: 'op-1', objectType: 'review_log', scope: 'workspace' }
+      })
+    ] }
+  );
+  expect(storeMock.savePushAcks).toHaveBeenCalledTimes(1);
+});
