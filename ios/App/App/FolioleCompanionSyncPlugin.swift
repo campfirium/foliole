@@ -37,7 +37,7 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "signCompanionSyncRequest", returnType: CAPPluginReturnPromise)
     ]
 
-    private var discovery: FolioleCompanionBonjourDiscovery?
+    private let discoveries = FolioleCompanionBonjourDiscoveryPool()
     let attachmentResourceSessions = FolioleCompanionAttachmentResourceSessions()
     private let contentBlobSessions = FolioleCompanionContentBlobSessions()
 
@@ -169,11 +169,9 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func loadDiscoveryCandidates(_ call: CAPPluginCall) {
         do {
             let contract = try contract()
-            discovery = FolioleCompanionBonjourDiscovery(contract: contract) { [weak self] candidates in
+            discoveries.start(contract: contract) { candidates in
                 call.resolve([contract.discoveryResponseKeys["candidates"] ?? "invalid.candidates": candidates])
-                self?.discovery = nil
             }
-            discovery?.start()
         } catch { call.reject("Failed to load companion discovery candidates: \(error.localizedDescription)") }
     }
 

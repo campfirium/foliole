@@ -1,5 +1,21 @@
 import Foundation
 
+final class FolioleCompanionBonjourDiscoveryPool {
+    private var active: [UUID: FolioleCompanionBonjourDiscovery] = [:]
+
+    func start(contract: FolioleCompanionPairingContract, completion: @escaping ([[String: Any]]) -> Void) {
+        DispatchQueue.main.async {
+            let id = UUID()
+            let discovery = FolioleCompanionBonjourDiscovery(contract: contract) { [weak self] candidates in
+                self?.active[id] = nil
+                completion(candidates)
+            }
+            self.active[id] = discovery
+            discovery.start()
+        }
+    }
+}
+
 final class FolioleCompanionBonjourDiscovery: NSObject, NetServiceBrowserDelegate, NetServiceDelegate {
     private var browser: NetServiceBrowser?
     private let completion: ([[String: Any]]) -> Void
