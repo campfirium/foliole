@@ -57,12 +57,15 @@ function renderCompanionMainContent(model: CompanionShellModel) {
         isOnlyReviewOpen: model.isOnlyReviewOpen,
         isSearchArticleOpen: model.isSearchArticleOpen,
         onExitSearchArticle: model.handleExitSearchArticle,
+        onExitSearchExternalDocument: model.handleExitSearchExternalDocument,
         onOpenSyncSettingsPage: model.setSettingsPage,
         onOpenSyncSettings: () => model.setSettingsPage('sync'),
+        onOpenSearchExternalDocument: model.handleOpenSearchExternalDocument,
         onOpenSearchTopic: model.handleOpenSearchTopic,
         onResetDirectorySelection: () => model.setDirectorySelection({ kind: 'root' }),
         onSelectReviewBreadcrumbItem: model.surface.handleSelectBrowseNode,
         reviewBreadcrumbItems: model.reviewBreadcrumbItems,
+        searchExternalDocument: model.searchExternalDocument,
         settingsPage: model.settingsPage,
         surface: model.surface,
         workspaceError: model.workspaceSync.error,
@@ -73,10 +76,10 @@ function renderCompanionMainContent(model: CompanionShellModel) {
 }
 
 function isReadableArticleImmersive(model: CompanionShellModel) {
-  return model.surface.activeAction === 'recent'
+  return Boolean(model.searchExternalDocument) || (model.surface.activeAction === 'recent'
     && Boolean(model.surface.readableArticle)
     && Boolean(model.surface.selectedBrowseNodeId)
-    && !model.surface.browsedFolder;
+    && !model.surface.browsedFolder);
 }
 
 export function CompanionShellView(props: { model: CompanionShellModel }) {

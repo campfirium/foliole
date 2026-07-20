@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type UIEvent as ReactUIEvent } from 'react';
 
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
+import type { CompanionExternalDocumentSearchResult } from '../shared/platform/companionExternalDocuments';
 
 import { createCompanionCaptureTextSaveHandler } from './companionCaptureTextController';
 import type { CompanionTabAction } from './CompanionFloatingBars';
@@ -71,20 +72,36 @@ function useCompanionReviewChrome(args: {
 
 function useCompanionSearchArticleReturn(surface: ReturnType<typeof useCompanionArticleSurface>) {
   const [searchArticleNodeId, setSearchArticleNodeId] = useState<string | null>(null);
+  const [searchExternalDocument, setSearchExternalDocument] = useState<CompanionExternalDocumentSearchResult | null>(null);
   const handleOpenSearchTopic = useCallback((nodeId: string) => {
+    setSearchExternalDocument(null);
     setSearchArticleNodeId(nodeId);
     surface.handleSelectBrowseNode(nodeId);
   }, [surface]);
+  const handleOpenSearchExternalDocument = useCallback((document: CompanionExternalDocumentSearchResult) => {
+    setSearchArticleNodeId(null);
+    setSearchExternalDocument(document);
+  }, []);
   const handleExitSearchArticle = useCallback(() => {
     setSearchArticleNodeId(null);
     surface.handleExitSearchArticle();
   }, [surface]);
+  const handleExitSearchExternalDocument = useCallback(() => {
+    setSearchExternalDocument(null);
+  }, []);
   const isSearchArticleOpen = Boolean(
     searchArticleNodeId &&
     surface.selectedBrowseNodeId === searchArticleNodeId &&
     surface.readableArticle?.nodeId === searchArticleNodeId
   );
-  return { handleExitSearchArticle, handleOpenSearchTopic, isSearchArticleOpen };
+  return {
+    handleExitSearchArticle,
+    handleExitSearchExternalDocument,
+    handleOpenSearchExternalDocument,
+    handleOpenSearchTopic,
+    isSearchArticleOpen,
+    searchExternalDocument
+  };
 }
 
 function buildCompanionShellModel(args: {
@@ -116,7 +133,9 @@ function buildCompanionShellModel(args: {
     handleContainerScroll: args.handleContainerScroll,
     handleContentTap: args.reviewChrome.handleContentTap,
     handleExitSearchArticle: args.searchArticle.handleExitSearchArticle,
+    handleExitSearchExternalDocument: args.searchArticle.handleExitSearchExternalDocument,
     handleNavigationAction: args.actions.handleNavigationAction,
+    handleOpenSearchExternalDocument: args.searchArticle.handleOpenSearchExternalDocument,
     handleOpenSearchTopic: args.searchArticle.handleOpenSearchTopic,
     handleSaveCaptureText: args.handleSaveCaptureText,
     handleSecondaryDestination: args.actions.secondaryDestinations.handleSecondaryDestination,
@@ -128,6 +147,7 @@ function buildCompanionShellModel(args: {
     isNavigationVisible: args.workspaceSync.isWorkspaceSyncStateReady && args.reviewChrome.isNavigationVisible,
     isReviewTaskActive: args.reviewChrome.isReviewTaskActive,
     reviewBreadcrumbItems: args.reviewChrome.reviewBreadcrumbItems,
+    searchExternalDocument: args.searchArticle.searchExternalDocument,
     setIsCaptureSheetOpen: args.setIsCaptureSheetOpen,
     setBrowseSortDirection: args.browseSort.setBrowseSortDirection,
     setBrowseSortKey: args.browseSort.setBrowseSortKey,
@@ -209,4 +229,3 @@ export function CompanionShell(props: { bootstrapState: NativeCompanionBootstrap
 
   return <CompanionShellView model={model} />;
 }
-

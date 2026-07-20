@@ -1,6 +1,8 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
+import { createCompanionSearchResultsFixture } from './companionSearchTestFixtures';
+
 const useCompanionWorkspaceSync = vi.fn();
 const useCompanionArticleSurface = vi.fn();
 const useFloatingBarVisibility = vi.fn();
@@ -10,7 +12,8 @@ vi.mock('./useCompanionWorkspaceSync', () => ({ useCompanionWorkspaceSync }));
 vi.mock('./useCompanionArticleSurface', () => ({ useCompanionArticleSurface }));
 vi.mock('./useFloatingBarVisibility', () => ({ useFloatingBarVisibility }));
 vi.mock('../shared/platform/companionFullTextSearch', () => ({
-  searchCompanionFullText: (...args: unknown[]) => searchCompanionFullText(...args)
+  searchCompanionFullText: (...args: unknown[]) => searchCompanionFullText(...args),
+  supportsCompanionExtendedSearch: () => true
 }));
 
 vi.mock('./CompanionReviewCard', () => ({
@@ -99,23 +102,6 @@ function createSurface(activeAction: 'recent' | 'review' | 'search') {
     onlyReviewSession,
     reviewSession,
     selectedBrowseNodeId: null as string | null
-  };
-}
-
-function localSearchResults() {
-  return {
-    external: [],
-    pdf: [],
-    strategy: 'word-based',
-    topics: [{
-      bodyStatus: 'ready',
-      excerpt: 'Topic alpha excerpt',
-      matchStart: 1,
-      nodeId: 'topic-1',
-      openingText: 'Topic opening',
-      title: 'Topic Alpha',
-      updatedAt: '2026-06-15T08:00:00.000Z'
-    }]
   };
 }
 
@@ -222,7 +208,7 @@ describe('CompanionShell secondary surfaces', () => {
 
 describe('CompanionShell search topic routing', () => {
   it('opens a search topic through the readable article path and exits back to Search', async () => {
-    searchCompanionFullText.mockResolvedValue(localSearchResults());
+    searchCompanionFullText.mockResolvedValue(createCompanionSearchResultsFixture());
     const surface = createSurface('search');
     makeSearchSurfaceOpenReadable(surface);
 
@@ -236,6 +222,22 @@ describe('CompanionShell search topic routing', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Exit' }));
 
     expect(surface.handleExitSearchArticle).toHaveBeenCalled();
-    expect(screen.getByRole('searchbox', { name: 'Search topics' })).toBeInTheDocument();
+    expect(screen.getByRole('searchbox', { name: 'Search topics' })).toHaveValue('alpha');
+  }, 15000);
+
+  it('opens an external search result in the shared reader and exits back to Search', async () => {
+    searchCompanionFullText.mockResolvedValue(createCompanionSearchResultsFixture());
+    const surface = createSurface('search');
+
+    await renderShellWithSurface(surface);
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search topics' }), { target: { value: 'alpha' } });
+    fireEvent.click(await screen.findByRole('button', { name: /External Alpha/u }));
+
+    expect(await screen.findByText(/External search-opened body/u)).toBeInTheDocument();
+    expect(screen.queryByTestId('companion-bottom-tab-bar')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText(/External search-opened body/u));
+    fireEvent.click(screen.getByRole('button', { name: 'Exit' }));
+
+    expect(screen.getByRole('searchbox', { name: 'Search topics' })).toHaveValue('alpha');
   }, 15000);
 });

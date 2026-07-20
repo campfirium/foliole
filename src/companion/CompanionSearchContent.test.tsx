@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithLocalization } from '../shared/localization/testLocalization';
 
 import { CompanionSearchContent } from './CompanionSearchContent';
+import { createCompanionSearchResultsFixture } from './companionSearchTestFixtures';
 
 const searchCompanionFullText = vi.fn();
 const supportsCompanionExtendedSearch = vi.fn(() => true);
@@ -12,44 +13,6 @@ vi.mock('../shared/platform/companionFullTextSearch', () => ({
   searchCompanionFullText: (...args: unknown[]) => searchCompanionFullText(...args),
   supportsCompanionExtendedSearch: () => supportsCompanionExtendedSearch()
 }));
-
-function localSearchResults() {
-  return {
-    external: [{
-      bodyStatus: 'ready',
-      content: 'External alpha body',
-      document_id: 'doc-1',
-      excerpt: 'External alpha excerpt',
-      extension: '.md',
-      file_name: 'external.md',
-      folder_id: 'folder-1',
-      match_start: 9,
-      opening_text: 'External opening',
-      relative_path: 'notes/external.md',
-      title: 'External Alpha',
-      updated_at: '2026-06-15T08:00:00.000Z'
-    }],
-    pdf: [{
-      attachment_id: 'attachment-1',
-      excerpt: 'PDF alpha excerpt',
-      match_start: 4,
-      page: 2,
-      page_height: null,
-      page_width: null,
-      text: 'PDF alpha text'
-    }],
-    strategy: 'word-based',
-    topics: [{
-      bodyStatus: 'ready',
-      excerpt: 'Topic alpha excerpt',
-      matchStart: 1,
-      nodeId: 'topic-1',
-      openingText: 'Topic opening',
-      title: 'Topic Alpha',
-      updatedAt: '2026-06-15T08:00:00.000Z'
-    }]
-  };
-}
 
 function emptySearchResults() {
   return {
@@ -60,12 +23,12 @@ function emptySearchResults() {
   };
 }
 
-describe('CompanionSearchContent', () => {
-  beforeEach(() => {
-    searchCompanionFullText.mockReset();
-    supportsCompanionExtendedSearch.mockReturnValue(true);
-  });
+beforeEach(() => {
+  searchCompanionFullText.mockReset();
+  supportsCompanionExtendedSearch.mockReturnValue(true);
+});
 
+describe('CompanionSearchContent presentation', () => {
   it('describes the narrower synced-topic scope on iOS', () => {
     supportsCompanionExtendedSearch.mockReturnValue(false);
     renderWithLocalization(<CompanionSearchContent />);
@@ -83,7 +46,7 @@ describe('CompanionSearchContent', () => {
   });
 
   it('searches local companion content and renders result sections', async () => {
-    searchCompanionFullText.mockResolvedValue(localSearchResults());
+    searchCompanionFullText.mockResolvedValue(createCompanionSearchResultsFixture());
 
     renderWithLocalization(<CompanionSearchContent />);
     fireEvent.change(screen.getByRole('searchbox', { name: 'Search topics' }), { target: { value: 'alpha' } });
@@ -96,18 +59,27 @@ describe('CompanionSearchContent', () => {
     expect(screen.getByText('External documents')).toBeInTheDocument();
     expect(screen.getByText('External Alpha')).toBeInTheDocument();
   });
+});
 
-  it('opens topic results without making PDF or external results clickable', async () => {
+describe('CompanionSearchContent states and actions', () => {
+  it('opens topic and external results while leaving PDF results informational', async () => {
+    const onOpenExternalDocument = vi.fn();
     const onOpenTopic = vi.fn();
-    searchCompanionFullText.mockResolvedValue(localSearchResults());
+    searchCompanionFullText.mockResolvedValue(createCompanionSearchResultsFixture());
 
-    renderWithLocalization(<CompanionSearchContent onOpenTopic={onOpenTopic} />);
+    renderWithLocalization(
+      <CompanionSearchContent
+        onOpenExternalDocument={onOpenExternalDocument}
+        onOpenTopic={onOpenTopic}
+      />
+    );
     fireEvent.change(screen.getByRole('searchbox', { name: 'Search topics' }), { target: { value: 'alpha' } });
 
     fireEvent.click(await screen.findByRole('button', { name: /Topic Alpha/u }));
     expect(onOpenTopic).toHaveBeenCalledWith('topic-1');
+    fireEvent.click(screen.getByRole('button', { name: /External Alpha/u }));
+    expect(onOpenExternalDocument).toHaveBeenCalledWith(expect.objectContaining({ document_id: 'doc-1' }));
     expect(screen.queryByRole('button', { name: /PDF page 2/u })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /External Alpha/u })).not.toBeInTheDocument();
   });
 
   it('shows an empty local result state', async () => {

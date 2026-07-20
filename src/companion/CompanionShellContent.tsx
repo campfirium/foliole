@@ -5,6 +5,7 @@ import {
   type FolderListSortKey
 } from '../features/nodes/model/folderListOrdering';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
+import type { CompanionExternalDocumentSearchResult } from '../shared/platform/companionExternalDocuments';
 
 import { CompanionDirectoryContent, type CompanionDirectorySelection } from './CompanionDirectoryContent';
 import * as DirectoryArticle from './CompanionDirectoryReadableArticleModel';
@@ -14,12 +15,12 @@ import { RecentArticleList } from './CompanionRecentArticleList';
 import { CompanionReviewAnswer, CompanionReviewCard } from './CompanionReviewCard';
 import { CompanionReviewFallback } from './CompanionReviewFallback';
 import { CompanionScreenHeader } from './CompanionScreenHeader';
-import { CompanionSearchContent } from './CompanionSearchContent';
 import { renderCompanionSettingsContent } from './CompanionSettingsShellContent';
 import {
   CompanionShellReadableArticle,
   continueCompanionAttachmentResourceSync
 } from './CompanionShellReadableArticle';
+import { renderCompanionShellSearchSurface } from './CompanionShellSearchSurface';
 import { CompanionWorkspaceSyncLoading } from './CompanionWorkspaceSyncLoading';
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
@@ -44,12 +45,15 @@ type CompanionShellContentProps = {
   onChangeBrowseSortKey?: (sortKey: FolderListSortKey) => void;
   onChangeDirectorySelection: (selection: CompanionDirectorySelection) => void;
   onExitSearchArticle: () => void;
+  onExitSearchExternalDocument: () => void;
   onOpenSyncSettingsPage: (page: CompanionSettingsPage) => void;
   onOpenSyncSettings: () => void;
+  onOpenSearchExternalDocument: (document: CompanionExternalDocumentSearchResult) => void;
   onOpenSearchTopic: (nodeId: string) => void;
   onResetDirectorySelection: () => void;
   onSelectReviewBreadcrumbItem: (id: string) => void;
   reviewBreadcrumbItems: ReviewBreadcrumbItem[];
+  searchExternalDocument: CompanionExternalDocumentSearchResult | null;
   settingsPage: CompanionSettingsPage;
   surface: Surface;
   workspaceError: string | null;
@@ -171,15 +175,17 @@ export function renderCompanionShellContent(props: CompanionShellContentProps) {
   if (!props.workspaceSync.isWorkspaceSyncStateReady) {
     return <CompanionWorkspaceSyncLoading />;
   }
-  if (props.isSearchArticleOpen) {
-    return (
-      <CompanionShellReadableArticle
-        onExit={props.onExitSearchArticle}
-        surface={props.surface}
-        workspaceSync={props.workspaceSync}
-      />
-    );
-  }
+  const searchSurface = renderCompanionShellSearchSurface({
+    externalDocument: props.searchExternalDocument,
+    isTopicOpen: props.isSearchArticleOpen,
+    onExitExternalDocument: props.onExitSearchExternalDocument,
+    onExitTopic: props.onExitSearchArticle,
+    onOpenExternalDocument: props.onOpenSearchExternalDocument,
+    onOpenTopic: props.onOpenSearchTopic,
+    surface: props.surface,
+    workspaceSync: props.workspaceSync
+  });
+  if (searchSurface) return searchSurface;
   if (props.surface.activeAction === 'more') {
     return renderCompanionSettingsContent(props);
   }
@@ -205,9 +211,6 @@ export function renderCompanionShellContent(props: CompanionShellContentProps) {
         surface={props.surface}
       />
     );
-  }
-  if (props.surface.activeAction === 'search') {
-    return <CompanionSearchContent onOpenTopic={props.onOpenSearchTopic} />;
   }
   return (
     <ReadableArticleOrFallback
