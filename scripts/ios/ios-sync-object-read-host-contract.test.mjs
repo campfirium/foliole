@@ -19,6 +19,9 @@ describe('iOS sync object read host contract', () => {
     expect(plugin).toContain('CAPPluginMethod(name: "loadSyncObjects"');
     expect(action).toContain('@objc func loadSyncIndex(_ call: CAPPluginCall)');
     expect(action).toContain('@objc func loadSyncObjects(_ call: CAPPluginCall)');
+    expect(action).toContain('try requiredStringArray(call, "object_ids")');
+    expect(action).toContain('try optionalStringArray(call, "object_types")');
+    expect(action).not.toContain('compactMap { $0 as? String }');
     expect(store).toContain('contract.syncObjectsQuery.replacing');
     expect(store).toContain('FolioleCompanionGeneratedReadQueryRunner');
   });
