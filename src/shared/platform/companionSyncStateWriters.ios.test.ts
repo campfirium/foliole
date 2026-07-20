@@ -32,6 +32,8 @@ beforeEach(() => {
 
   it('dispatches active and node view writes through the shared native writer queue', async () => {
     const api = await import('./companionSyncStateWriters');
+    const mutation = await import('./companionSyncMutationRevision');
+    const initialRevision = mutation.getCompanionSyncMutationRevision();
 
     await expect(api.saveCompanionSyncActiveViewState('node-1'))
       .resolves.toEqual({ content_hash: 'hash-active', object_id: 'active' });
@@ -44,6 +46,7 @@ beforeEach(() => {
       source: 'user-scroll'
     });
     expect(runtimeMock.writer).toHaveBeenCalledTimes(2);
+    expect(mutation.getCompanionSyncMutationRevision()).toBe(initialRevision + 2);
   });
 
   it('dispatches reading writes through the shared native writer queue', async () => {

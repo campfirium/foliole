@@ -1,6 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 
 import { scheduleCompanionHandoffReminders } from '../shared/platform/companionHandoffNotifications';
+import {
+  getCompanionSyncMutationRevision,
+  subscribeCompanionSyncMutationRevision
+} from '../shared/platform/companionSyncMutationRevision';
 import { loadCompanionPendingSyncSummary } from '../shared/platform/companionSyncObjects';
 
 import type { CompanionHandoffReminderSettings } from './companionHandoffReminderSettings';
@@ -10,6 +14,12 @@ export function useCompanionHandoffReminderScheduler(args: {
   settings: CompanionHandoffReminderSettings;
   workspaceSync: ReturnType<typeof useCompanionWorkspaceSync>;
 }) {
+  const mutationRevision = useSyncExternalStore(
+    subscribeCompanionSyncMutationRevision,
+    getCompanionSyncMutationRevision,
+    getCompanionSyncMutationRevision
+  );
+
   useEffect(() => {
     let cancelled = false;
 
@@ -32,5 +42,5 @@ export function useCompanionHandoffReminderScheduler(args: {
     return () => {
       cancelled = true;
     };
-  }, [args.settings, args.workspaceSync.state, args.workspaceSync.status]);
+  }, [args.settings, args.workspaceSync.status, mutationRevision]);
 }

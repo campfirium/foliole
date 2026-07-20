@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
@@ -73,5 +73,23 @@ describe('useCompanionHandoffReminderScheduler', () => {
 
     expect(platform.loadCompanionPendingSyncSummary).not.toHaveBeenCalled();
     expect(platform.scheduleCompanionHandoffReminders).not.toHaveBeenCalled();
+  });
+
+  it('reschedules after a local permanent mutation commits', async () => {
+    const { runCompanionSyncMutationTask } = await import('../shared/platform/companionSyncMutationRevision');
+    const { useCompanionHandoffReminderScheduler } = await import('./useCompanionHandoffReminderScheduler');
+    renderHook(() => useCompanionHandoffReminderScheduler({
+      settings: { fixedTime: '18:00', shortDelay: '5' },
+      workspaceSync: asWorkspaceSync(createWorkspaceSync())
+    }));
+    await waitFor(() => expect(platform.scheduleCompanionHandoffReminders).toHaveBeenCalledTimes(1));
+    platform.loadCompanionPendingSyncSummary.mockResolvedValue({ pendingCount: 1 });
+
+    await act(() => runCompanionSyncMutationTask(async () => undefined));
+
+    await waitFor(() => expect(platform.scheduleCompanionHandoffReminders).toHaveBeenLastCalledWith({
+      dirtyCount: 1,
+      settings: { fixedTime: '18:00', shortDelay: '5' }
+    }));
   });
 });

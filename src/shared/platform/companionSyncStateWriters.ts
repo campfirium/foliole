@@ -4,7 +4,7 @@ import type {
 } from '../../../lib/platform/nativeStorageContract';
 import type { NativeSyncReviewLogDraft } from '../../../lib/platform/nativeSyncContract';
 
-import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
+import { runCompanionSyncMutationTask } from './companionSyncMutationRevision';
 import {
   FolioleCompanionSync,
   getNativeCompanionSettingWritePlatform,
@@ -47,7 +47,7 @@ export async function saveCompanionSyncSettingRecord(args: CompanionSyncSettingR
   if (!record) {
     return null;
   }
-  return runCompanionSyncWriterTask(() => (
+  return runCompanionSyncMutationTask(() => (
     FolioleCompanionSync.saveSyncSettingRecord({
       device_id: record.deviceId,
       form_factor: record.formFactor,
@@ -66,7 +66,7 @@ export async function saveCompanionSyncNodeReadingRecord(args: {
   if (!isNativeCompanionReadingWriteRuntime()) {
     return null;
   }
-  return runCompanionSyncWriterTask(() => (
+  return runCompanionSyncMutationTask(() => (
     FolioleCompanionSync.saveSyncNodeReadingRecord({
       node_id: args.nodeId,
       reading_json: JSON.stringify({
@@ -91,7 +91,7 @@ export async function saveCompanionSyncNodeReviewRecord(args: {
   if (!isNativeCompanionReviewWriteRuntime()) {
     return null;
   }
-  return runCompanionSyncWriterTask(() => (
+  return runCompanionSyncMutationTask(() => (
     FolioleCompanionSync.saveSyncNodeReviewRecord({
       node_id: args.nodeId,
       review_json: JSON.stringify({
@@ -114,7 +114,7 @@ export async function saveCompanionSyncActiveViewState(nodeId: string | null) {
   if (!isNativeCompanionViewStateWriteRuntime()) {
     return null;
   }
-  return runCompanionSyncWriterTask(() => (
+  return runCompanionSyncMutationTask(() => (
     FolioleCompanionSync.saveSyncActiveViewState({ node_id: nodeId })
   ));
 }
@@ -126,7 +126,7 @@ export async function saveCompanionSyncNodeViewState(args: {
   if (!isNativeCompanionViewStateWriteRuntime()) {
     return null;
   }
-  return runCompanionSyncWriterTask(() => (
+  return runCompanionSyncMutationTask(() => (
     FolioleCompanionSync.saveSyncNodeViewState({
       node_id: args.nodeId,
       scroll_top: Math.max(0, Math.trunc(args.scrollTop)),
