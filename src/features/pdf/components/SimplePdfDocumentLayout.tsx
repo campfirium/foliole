@@ -69,7 +69,7 @@ export function SimplePdfPages(props: {
 
 export function SimplePdfPageStack(props: {
   cropBoxes: Record<number, PdfCropBox | null>;
-  initialPage?: number;
+  initialPage: number | undefined;
   pageWidth: number | undefined;
   setCropBoxes: Dispatch<SetStateAction<Record<number, PdfCropBox | null>>>;
   totalPages: number | null;

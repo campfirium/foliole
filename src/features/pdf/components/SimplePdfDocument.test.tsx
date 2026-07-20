@@ -49,20 +49,20 @@ vi.mock('react-pdf', async () => {
 
 import { SimplePdfDocument } from './SimplePdfDocument';
 
-describe('SimplePdfDocument', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    globalThis.ResizeObserver = class {
-      disconnect() {}
-      observe() {}
-      unobserve() {}
-    };
-    HTMLElement.prototype.scrollTo = vi.fn();
-    HTMLElement.prototype.getBoundingClientRect = vi.fn(function (this: HTMLElement) {
-      return { top: this.dataset.pdfPage === '2' ? 100 : 0 } as DOMRect;
-    });
+beforeEach(() => {
+  vi.clearAllMocks();
+  globalThis.ResizeObserver = class {
+    disconnect() {}
+    observe() {}
+    unobserve() {}
+  };
+  HTMLElement.prototype.scrollTo = vi.fn();
+  HTMLElement.prototype.getBoundingClientRect = vi.fn(function (this: HTMLElement) {
+    return { top: this.dataset.pdfPage === '2' ? 100 : 0 } as DOMRect;
   });
+});
 
+describe('SimplePdfDocument', () => {
   it('resolves the attachment resource before rendering the continuous PDF pages', async () => {
     resourceMock.resolveRuntimeAttachmentResource.mockResolvedValue({
       resource_url: 'capacitor://pdf-file',
@@ -116,5 +116,19 @@ describe('SimplePdfDocument', () => {
     expect(syncMissing).toHaveBeenCalledWith('pdf-attachment-1');
     expect(resourceMock.invalidateAttachmentResourceResolution).toHaveBeenCalledWith('pdf-attachment-1');
     expect(resourceMock.resolveRuntimeAttachmentResource).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('SimplePdfDocument unavailable state', () => {
+  it('keeps the return action available when the PDF file is unavailable', async () => {
+    const onBack = vi.fn();
+    resourceMock.resolveRuntimeAttachmentResource.mockResolvedValue({ resource_url: null, status: 'missing_file' });
+
+    renderWithLocalization(<SimplePdfDocument attachmentId="missing-pdf" onBackToText={onBack} title="Missing" />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Text' }));
+
+    expect(onBack).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('PDF file unavailable')).toBeInTheDocument();
   });
 });

@@ -8,7 +8,7 @@ import {
   invalidateAttachmentResourceResolution,
   resolveRuntimeAttachmentResource
 } from '../../../shared/platform/attachmentResources';
-import { AppEmptyState } from '../../../shared/ui';
+import { AppButton, AppEmptyState } from '../../../shared/ui';
 import type { PdfCropBox } from '../model/pdfAutoCrop';
 import { configurePdfWorker } from '../model/pdfWorker';
 
@@ -70,11 +70,21 @@ function clampPdfZoom(value: number) {
   return Math.max(PDF_ZOOM_MIN, Math.min(PDF_ZOOM_MAX, value));
 }
 
-function PdfDocumentFallback(props: { isLoading: boolean }) {
+function PdfDocumentFallback(props: {
+  backLabel: string | undefined;
+  isLoading: boolean;
+  onBack: (() => void) | undefined;
+}) {
   const t = useTranslation();
   return (
-    <section className="flex min-h-[calc(100dvh-9rem)] items-center justify-center py-6">
+    <section className="flex min-h-[calc(100dvh-9rem)] flex-col">
+      {props.onBack ? (
+        <div className="border-b border-companion-divider bg-companion-surface px-1 py-2">
+          <AppButton onClick={props.onBack} variant="ghost">{props.backLabel ?? t('desktop.pdf.simple.backToText')}</AppButton>
+        </div>
+      ) : null}
       <AppEmptyState
+        className="flex-1"
         description={props.isLoading ? t('desktop.pdf.simple.preparing.syncedFile') : t('desktop.pdf.simple.unavailable.description')}
         title={props.isLoading ? t('desktop.pdf.simple.preparing.title') : t('desktop.pdf.simple.unavailable.title')}
       />
@@ -103,7 +113,8 @@ function useInitialPdfPageJump(args: {
     let attempts = 0;
     const jumpWhenPositioned = () => {
       const scrollContainer = args.scrollContainerRef.current;
-      const target = scrollContainer?.querySelector<HTMLElement>(`[data-pdf-page="${page}"]`);
+      if (!scrollContainer) return;
+      const target = scrollContainer.querySelector<HTMLElement>(`[data-pdf-page="${page}"]`);
       if (!target) return;
       const top = target.getBoundingClientRect().top - scrollContainer.getBoundingClientRect().top + scrollContainer.scrollTop;
       if (top > 0) {
@@ -146,7 +157,7 @@ export function SimplePdfDocument(props: {
   useInitialPdfPageJump({ cropBoxes, initialPage: props.initialPage, scrollContainerRef, source, totalPages });
 
   if (state !== 'ready' || !source || loadFailed) {
-    return <PdfDocumentFallback isLoading={state === 'loading' && !loadFailed} />;
+    return <PdfDocumentFallback backLabel={props.backLabel} isLoading={state === 'loading' && !loadFailed} onBack={props.onBackToText} />;
   }
 
   return (
