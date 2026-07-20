@@ -7,13 +7,21 @@ on:
     # 00:00 Asia/Shanghai, covering the rest of the day.
     - cron: '0 16 * * *'
   workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Exact dev commit to validate
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: t5-nightly-remote-quality-${{ github.ref }}
+  group: t5-nightly-remote-quality-${{ github.event.inputs.target_sha || github.sha }}
   cancel-in-progress: false
+
+env:
+  T5_TARGET_SHA: ${{ github.event.inputs.target_sha || github.sha }}
 
 jobs:
   release-base-quality:
@@ -22,10 +30,14 @@ jobs:
     timeout-minutes: 120
 
     steps:
-      - name: Check out dev
+      - name: Check out target dev snapshot
         uses: actions/checkout@v4
         with:
-          ref: dev
+          ref: ${{ env.T5_TARGET_SHA }}
+
+      - name: Verify target SHA
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "${T5_TARGET_SHA}"
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -35,6 +47,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Run dependency hardening checks
+        run: npm run deps:hardening:check
 
       - name: Rebuild Electron native modules
         run: |
@@ -50,6 +65,7 @@ jobs:
             echo
             echo "- scope: remote release-base subset"
             echo "- branch: dev"
+            echo "- target SHA: ${T5_TARGET_SHA}"
             echo "- schedule: 12:00 and 00:00 Asia/Shanghai"
           } >> "${GITHUB_STEP_SUMMARY}"
           npm run lint:full
@@ -78,9 +94,15 @@ jobs:
       - name: Check out dev snapshot
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ env.T5_TARGET_SHA }}
           fetch-depth: 1
           persist-credentials: false
+
+      - name: Verify target SHA
+        run: |
+          if ((git rev-parse HEAD) -ne "${env:T5_TARGET_SHA}") {
+            throw "Checked out SHA does not match T5_TARGET_SHA"
+          }
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -119,7 +141,7 @@ jobs:
       - name: Write SHA-bound CI evidence and summary
         if: ${{ always() }}
         env:
-          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_SHA: ${{ env.T5_TARGET_SHA }}
           CONTEXT_OUTCOME: ${{ steps.context.outcome }}
           NPM_CI_OUTCOME: ${{ steps.npm_ci.outcome }}
           NATIVE_ABI_OUTCOME: ${{ steps.native_abi.outcome }}
@@ -132,7 +154,7 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: windows-x64-ci-${{ github.sha }}-${{ github.run_attempt }}
+          name: windows-x64-ci-${{ env.T5_TARGET_SHA }}-${{ github.run_attempt }}
           path: |
             .tmp/artifacts/windows-ci-evidence
             .tmp/playwright-results/desktop

@@ -23,12 +23,14 @@ describe('T5 Windows x64 workflow contract', () => {
     expect(workflow).not.toContain('pull_request_target');
   });
 
-  it('binds checkout, context verification, evidence, and artifact name to github.sha', () => {
-    expect(workflow).toContain('ref: ${{ github.sha }}');
+  it('binds checkout, context verification, evidence, and artifact name to the effective target SHA', () => {
+    expect(workflow).toContain('T5_TARGET_SHA: ${{ github.event.inputs.target_sha || github.sha }}');
+    expect(workflow).toContain('ref: ${{ env.T5_TARGET_SHA }}');
+    expect(workflow).toContain('Checked out SHA does not match T5_TARGET_SHA');
     expect(workflow).toContain('node scripts/windows/windows-ci-evidence.mjs verify');
-    expect(workflow).toContain('GITHUB_SHA: ${{ github.sha }}');
+    expect(workflow).toContain('GITHUB_SHA: ${{ env.T5_TARGET_SHA }}');
     expect(workflow).toContain('node scripts/windows/windows-ci-evidence.mjs write');
-    expect(workflow).toContain('name: windows-x64-ci-${{ github.sha }}-${{ github.run_attempt }}');
+    expect(workflow).toContain('name: windows-x64-ci-${{ env.T5_TARGET_SHA }}-${{ github.run_attempt }}');
   });
 
   it('keeps native ABI, Windows contract, build, and Playwright in fixed order', () => {

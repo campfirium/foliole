@@ -157,7 +157,7 @@ function listPrEvents(config, state, includeExisting, errors, renderTemplate) {
       '--state',
       'open',
       '--json',
-      'number,title,headRefName,baseRefName,isDraft,author,url,updatedAt',
+      'number,title,headRefName,headRefOid,baseRefName,isDraft,author,url,updatedAt',
       '--limit',
       '50'
     ]);

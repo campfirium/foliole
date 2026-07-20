@@ -3,12 +3,17 @@ version: 2
 updates:
   - package-ecosystem: npm
     directory: /
+    target-branch: dev
     schedule:
       interval: weekly
       day: monday
       time: "09:00"
       timezone: Asia/Shanghai
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 1
+    cooldown:
+      default-days: 7
+    allow:
+      - dependency-name: electron
     labels:
       - dependencies
     commit-message:
@@ -16,66 +21,18 @@ updates:
       prefix-development: deps-dev
       include: scope
     ignore:
-      - dependency-name: "*"
+      - dependency-name: electron
         update-types:
           - version-update:semver-major
-      - dependency-name: pdfjs-dist
-        update-types:
-          - version-update:semver-patch
-          - version-update:semver-minor
-      - dependency-name: "@tailwindcss/vite"
-        update-types:
-          - version-update:semver-patch
-          - version-update:semver-minor
-      - dependency-name: tailwindcss
-        update-types:
-          - version-update:semver-patch
-          - version-update:semver-minor
-    groups:
-      electron-native:
-        patterns:
-          - electron
-          - electron-builder
-          - better-sqlite3
-        update-types:
-          - minor
-          - patch
-      production-minor-patch:
-        dependency-type: production
-        exclude-patterns:
-          - electron
-          - electron-builder
-          - better-sqlite3
-        update-types:
-          - minor
-          - patch
-      development-minor-patch:
-        dependency-type: development
-        exclude-patterns:
-          - electron
-          - electron-builder
-          - better-sqlite3
-        update-types:
-          - minor
-          - patch
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: monthly
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 0
     labels:
       - dependencies
       - github-actions
     commit-message:
       prefix: ci
       include: scope
-    ignore:
-      - dependency-name: "*"
-        update-types:
-          - version-update:semver-major
-    groups:
-      actions-minor-patch:
-        update-types:
-          - minor
-          - patch
