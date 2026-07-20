@@ -23,7 +23,8 @@ let package = Package(
                 "FolioleCompanionTopicSearchPlugin.swift",
                 "FolioleCompanionSyncPackTransfer.swift", "FolioleCompanionSyncPackTransferPlugin.swift",
                 "Info.plist", "capacitor.config.json",
-                "FolioleCompanionSyncPlugin.swift", "config.xml", "public"
+                "FolioleCompanionSyncPlugin.swift", "FolioleCompanionSyncPlugin+ViewStateWrite.swift",
+                "config.xml", "public"
             ],
             sources: [
                 "FolioleCompanionAttachmentResourceDownload.swift",
@@ -36,6 +37,8 @@ let package = Package(
                 "FolioleCompanionSyncObjectReadContract.swift",
                 "FolioleCompanionSyncObjectReadStore.swift",
                 "FolioleCompanionTopicSearchStore.swift",
+                "FolioleCompanionViewStateWriteContract.swift",
+                "FolioleCompanionViewStateWriteStore.swift",
                 "FolioleCompanionSyncDiagnosticQueryStore.swift",
                 "FolioleCompanionSyncDiagnosticsStore.swift",
                 "FolioleCompanionContractStore.swift",
@@ -49,6 +52,7 @@ let package = Package(
             ],
             resources: [
                 .copy("companion-bridge-contract-definitions.json"),
+                .copy("companion-mutation-definitions.json"),
                 .copy("companion-query-definitions.json"),
                 .copy("companion-sync-protocol-definitions.json")
             ]

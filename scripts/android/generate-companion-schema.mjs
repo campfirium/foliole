@@ -62,10 +62,10 @@ const migrationOutputPath = path.join(
   repoRoot,
   'android/app/src/main/assets/companion-migration-schema.json'
 );
-const mutationOutputPath = path.join(
-  repoRoot,
-  'android/app/src/main/assets/companion-mutation-definitions.json'
-);
+const mutationOutputPaths = [
+  path.join(repoRoot, 'android/app/src/main/assets/companion-mutation-definitions.json'),
+  path.join(repoRoot, 'ios/App/App/companion-mutation-definitions.json')
+];
 const queryOutputPaths = {
   android: path.join(repoRoot, 'android/app/src/main/assets/companion-query-definitions.json'),
   ios: path.join(repoRoot, 'ios/App/App/companion-query-definitions.json')
@@ -103,9 +103,7 @@ await fs.writeFile(
   )}\n`,
   'utf8'
 );
-await fs.writeFile(
-  mutationOutputPath,
-  `${JSON.stringify(
+const mutationDefinitions = `${JSON.stringify(
     {
       appDataClearMutations: ANDROID_COMPANION_APP_DATA_CLEAR_MUTATIONS,
       assetKeys: ANDROID_COMPANION_MUTATION_ASSET_KEYS,
@@ -118,9 +116,8 @@ await fs.writeFile(
     },
     null,
     2
-  )}\n`,
-  'utf8'
-);
+  )}\n`;
+await Promise.all(mutationOutputPaths.map((filePath) => fs.writeFile(filePath, mutationDefinitions, 'utf8')));
 const buildQueryDefinitions = (platform) =>
   `${JSON.stringify(
     {
@@ -178,7 +175,7 @@ await fs.writeFile(
 );
 console.info('[android-schema] wrote companion schema artifact', outputPath);
 console.info('[android-schema] wrote companion migration schema artifact', migrationOutputPath);
-console.info('[android-schema] wrote companion mutation definitions artifact', mutationOutputPath);
+console.info('[android-schema] wrote companion mutation definitions artifacts', mutationOutputPaths);
 console.info('[android-schema] wrote companion query definitions artifacts', queryOutputPaths);
 console.info('[android-schema] wrote cross-host companion contract artifacts');
 console.info(

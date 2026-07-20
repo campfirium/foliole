@@ -51,6 +51,10 @@
 		50F028111FED79650016851F /* FolioleCompanionSyncObjectReadContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F028011FED79650016851F /* FolioleCompanionSyncObjectReadContract.swift */; };
 		50F028121FED79650016851F /* FolioleCompanionSyncObjectReadStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F028021FED79650016851F /* FolioleCompanionSyncObjectReadStore.swift */; };
 		50F028131FED79650016851F /* FolioleCompanionSyncObjectReadPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F028031FED79650016851F /* FolioleCompanionSyncObjectReadPlugin.swift */; };
+		50F029111FED79650016851F /* FolioleCompanionViewStateWriteContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F029011FED79650016851F /* FolioleCompanionViewStateWriteContract.swift */; };
+		50F029121FED79650016851F /* FolioleCompanionViewStateWriteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F029021FED79650016851F /* FolioleCompanionViewStateWriteStore.swift */; };
+		50F029131FED79650016851F /* companion-mutation-definitions.json in Resources */ = {isa = PBXBuildFile; fileRef = 50F029031FED79650016851F /* companion-mutation-definitions.json */; };
+		50F029141FED79650016851F /* FolioleCompanionSyncPlugin+ViewStateWrite.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F029041FED79650016851F /* FolioleCompanionSyncPlugin+ViewStateWrite.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -98,6 +102,10 @@
 		50F028011FED79650016851F /* FolioleCompanionSyncObjectReadContract.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncObjectReadContract.swift; sourceTree = "<group>"; };
 		50F028021FED79650016851F /* FolioleCompanionSyncObjectReadStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncObjectReadStore.swift; sourceTree = "<group>"; };
 		50F028031FED79650016851F /* FolioleCompanionSyncObjectReadPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncObjectReadPlugin.swift; sourceTree = "<group>"; };
+		50F029011FED79650016851F /* FolioleCompanionViewStateWriteContract.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionViewStateWriteContract.swift; sourceTree = "<group>"; };
+		50F029021FED79650016851F /* FolioleCompanionViewStateWriteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionViewStateWriteStore.swift; sourceTree = "<group>"; };
+		50F029031FED79650016851F /* companion-mutation-definitions.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "companion-mutation-definitions.json"; sourceTree = "<group>"; };
+		50F029041FED79650016851F /* FolioleCompanionSyncPlugin+ViewStateWrite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FolioleCompanionSyncPlugin+ViewStateWrite.swift"; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
@@ -171,6 +179,10 @@
 				50F028011FED79650016851F /* FolioleCompanionSyncObjectReadContract.swift */,
 				50F028021FED79650016851F /* FolioleCompanionSyncObjectReadStore.swift */,
 				50F028031FED79650016851F /* FolioleCompanionSyncObjectReadPlugin.swift */,
+				50F029011FED79650016851F /* FolioleCompanionViewStateWriteContract.swift */,
+				50F029021FED79650016851F /* FolioleCompanionViewStateWriteStore.swift */,
+				50F029031FED79650016851F /* companion-mutation-definitions.json */,
+				50F029041FED79650016851F /* FolioleCompanionSyncPlugin+ViewStateWrite.swift */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
 				504EC30E1FED79650016851F /* Assets.xcassets */,
 				504EC3101FED79650016851F /* LaunchScreen.storyboard */,
@@ -257,6 +269,7 @@
 				50F020041FED79650016851F /* companion-bridge-contract-definitions.json in Resources */,
 				50F020051FED79650016851F /* companion-sync-protocol-definitions.json in Resources */,
 				50F025141FED79650016851F /* companion-query-definitions.json in Resources */,
+				50F029131FED79650016851F /* companion-mutation-definitions.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -300,6 +313,9 @@
 				50F028111FED79650016851F /* FolioleCompanionSyncObjectReadContract.swift in Sources */,
 				50F028121FED79650016851F /* FolioleCompanionSyncObjectReadStore.swift in Sources */,
 				50F028131FED79650016851F /* FolioleCompanionSyncObjectReadPlugin.swift in Sources */,
+				50F029111FED79650016851F /* FolioleCompanionViewStateWriteContract.swift in Sources */,
+				50F029121FED79650016851F /* FolioleCompanionViewStateWriteStore.swift in Sources */,
+				50F029141FED79650016851F /* FolioleCompanionSyncPlugin+ViewStateWrite.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
