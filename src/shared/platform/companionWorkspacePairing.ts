@@ -200,22 +200,22 @@ export async function pairCompanionWithDesktop(args: PairCompanionWithDesktopArg
       remote_protocol: payload.desktop_protocol
     });
   }
-  await runCompanionSyncWriterTask(() => FolioleCompanionSync.savePairingCredentials({
-    device_id: payload.device_id,
-    device_kind: args.deviceKind,
-    device_name: args.deviceName,
-    device_secret: deviceSecret,
-    negotiated_protocol_version: payload.compatibility.negotiated_version ?? CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version,
-    paired_at: payload.paired_at,
-    primary_device_id: payload.peer_id,
-    remote_protocol: payload.desktop_protocol
-  }));
-  const storedPairingState = normalizePairingState(await FolioleCompanionSync.loadPairingState());
-  if (!storedPairingState.is_paired) {
-    throw new Error('Native pairing credentials were not saved.');
-  }
-  await verifyNativePairingCanSignRequest();
-  return storedPairingState;
+  return runCompanionSyncWriterTask(async () => {
+    await FolioleCompanionSync.savePairingCredentials({
+      device_id: payload.device_id,
+      device_kind: args.deviceKind,
+      device_name: args.deviceName,
+      device_secret: deviceSecret,
+      negotiated_protocol_version: payload.compatibility.negotiated_version ?? CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version,
+      paired_at: payload.paired_at,
+      primary_device_id: payload.peer_id,
+      remote_protocol: payload.desktop_protocol
+    });
+    const storedPairingState = normalizePairingState(await FolioleCompanionSync.loadPairingState());
+    if (!storedPairingState.is_paired) throw new Error('Native pairing credentials were not saved.');
+    await verifyNativePairingCanSignRequest();
+    return storedPairingState;
+  });
 }
 
 async function requestDesktop(

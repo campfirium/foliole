@@ -92,6 +92,40 @@ function mockNativePairingHttp(deviceId = 'android-test-device') {
     });
 }
 
+function mockVerifiedNativePairing(args: { deviceId: string; deviceKind: string; deviceName: string; platform: string }) {
+  const queueEvents: string[] = [];
+  capacitorMock.getPlatform.mockReturnValue(args.platform);
+  capacitorMock.isNativePlatform.mockReturnValue(true);
+  writerQueueMock.run.mockImplementation(async <T>(task: () => Promise<T>) => {
+    queueEvents.push('start');
+    const result = await task();
+    queueEvents.push('end');
+    return result;
+  });
+  mockNativePairingHttp(args.deviceId);
+  const pairing = {
+    ...nativeProtocolState,
+    device_id: args.deviceId,
+    device_kind: args.deviceKind,
+    device_name: args.deviceName,
+    is_paired: true,
+    paired_at: '2026-04-22T12:00:00.000Z',
+    primary_device_id: 'device-desktop'
+  };
+  capacitorMock.plugin.savePairingCredentials.mockResolvedValue(pairing);
+  capacitorMock.plugin.loadPairingState.mockResolvedValue(pairing);
+  capacitorMock.plugin.signCompanionSyncRequest.mockImplementation(async () => {
+    queueEvents.push('sign');
+    return { headers: {
+      'X-Device-Id': args.deviceId,
+      'X-Nonce': 'nonce',
+      'X-Signature': 'signed',
+      'X-Timestamp': '2026-04-22T12:00:00.000Z'
+    } };
+  });
+  return queueEvents;
+}
+
 beforeEach(() => {
   resetCompanionWorkspaceSyncTestState(capacitorMock);
   writerQueueMock.run.mockImplementation(async <T>(task: () => Promise<T>) => task());
@@ -101,35 +135,7 @@ it.each([
   { deviceId: 'android-test-device', deviceKind: 'android-capacitor', deviceName: 'Pixel 9', platform: 'android' },
   { deviceId: 'ios-test-device', deviceKind: 'ios-capacitor', deviceName: 'iPhone', platform: 'ios' }
 ])('verifies $platform native pairing credentials after saving', async ({ deviceId, deviceKind, deviceName, platform }) => {
-  capacitorMock.getPlatform.mockReturnValue(platform);
-  capacitorMock.isNativePlatform.mockReturnValue(true);
-  mockNativePairingHttp(deviceId);
-  capacitorMock.plugin.savePairingCredentials.mockResolvedValue({
-    ...nativeProtocolState,
-    device_id: deviceId,
-    device_kind: deviceKind,
-    device_name: deviceName,
-    is_paired: true,
-    paired_at: '2026-04-22T12:00:00.000Z',
-    primary_device_id: 'device-desktop'
-  });
-  capacitorMock.plugin.loadPairingState.mockResolvedValue({
-    ...nativeProtocolState,
-    device_id: deviceId,
-    device_kind: deviceKind,
-    device_name: deviceName,
-    is_paired: true,
-    paired_at: '2026-04-22T12:00:00.000Z',
-    primary_device_id: 'device-desktop'
-  });
-  capacitorMock.plugin.signCompanionSyncRequest.mockResolvedValue({
-    headers: {
-      'X-Device-Id': deviceId,
-      'X-Nonce': 'nonce',
-      'X-Signature': 'signed',
-      'X-Timestamp': '2026-04-22T12:00:00.000Z'
-    }
-  });
+  const queueEvents = mockVerifiedNativePairing({ deviceId, deviceKind, deviceName, platform });
 
   await requestCompanionPairing({
     deviceId,
@@ -154,6 +160,7 @@ it.each([
   }));
   expect(capacitorMock.plugin.loadPairingState).toHaveBeenCalledTimes(1);
   expect(writerQueueMock.run).toHaveBeenCalledTimes(1);
+  expect(queueEvents).toEqual(['start', 'sign', 'end']);
   expect(capacitorMock.plugin.signCompanionSyncRequest).toHaveBeenCalledWith(expect.objectContaining({
     method: 'GET',
     path_with_query: '/companion/sync-pack?after_state_seq=0'
