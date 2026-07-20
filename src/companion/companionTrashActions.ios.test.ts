@@ -79,6 +79,12 @@ it('persists and pushes an iOS trash restore while keeping its interaction hidde
     identity: { objectId: 'topic-trash', objectType: 'node', scope: 'workspace' }
   });
   expect(JSON.parse(pushedItem.payloadJson).snapshot.deleted_at).toBeNull();
+  expectNodePushCursor(database);
+  await expect(pushLocalDirtyObjects('http://desktop.local')).resolves.toMatchObject({
+    pushError: null,
+    pushedObjectIds: []
+  });
+  expect(runtimeState.postDesktopJson).toHaveBeenCalledTimes(1);
 });
 
 it('rejects an iOS restore when its persisted base has advanced', async () => {
@@ -123,6 +129,16 @@ function configureAcceptedNodeAck() {
       status: 'accepted',
       version_id: 'ios-device#00000000-0000-4000-8000-000000000031'
     }]
+  });
+}
+
+function expectNodePushCursor(db: Database.Database) {
+  const row = db.prepare(`
+    SELECT value FROM companion_meta WHERE key = 'sync_node_version_push_cursor'
+  `).get() as { value: string };
+  expect(JSON.parse(row.value)).toEqual({
+    change_id: 'ios-device#00000000-0000-4000-8000-000000000031',
+    created_at: expect.any(String)
   });
 }
 
