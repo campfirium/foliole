@@ -71,7 +71,7 @@ describe('CompanionSearchContent', () => {
     renderWithLocalization(<CompanionSearchContent />);
 
     expect(screen.getByText('Topics synced to this device.')).toBeInTheDocument();
-    expect(screen.queryByText('Topics, PDF text, and external documents on this device.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Topics and synced reading materials on this device.')).not.toBeInTheDocument();
   });
 
   it('renders a compact idle search surface', () => {
@@ -79,7 +79,7 @@ describe('CompanionSearchContent', () => {
 
     expect(screen.getByRole('heading', { name: 'Search' })).toBeInTheDocument();
     expect(screen.getByText('Local search')).toBeInTheDocument();
-    expect(screen.getByText('Topics, PDF text, and external documents on this device.')).toBeInTheDocument();
+    expect(screen.getByText('Topics and synced reading materials on this device.')).toBeInTheDocument();
   });
 
   it('searches local companion content and renders result sections', async () => {

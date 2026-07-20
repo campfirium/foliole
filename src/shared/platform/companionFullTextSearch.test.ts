@@ -69,18 +69,18 @@ beforeEach(() => {
   capacitorMock.plugin.loadSyncObjects.mockResolvedValue({ objects: [] });
 });
 
-async function expectIosTopicOnlySearch() {
+async function expectIosTopicAndPdfSearch() {
   capacitorMock.platform.mockReturnValue('ios');
   const api = await import('./companionFullTextSearch');
 
   await expect(api.searchCompanionFullText('alpha', 5)).resolves.toEqual({
     external: [],
-    pdf: [],
+    pdf: [expect.objectContaining({ attachment_id: 'pdf-1', page: 3 })],
     strategy: 'word-based',
     topics: [expect.objectContaining({ nodeId: 'topic-1', title: 'Topic One' })]
   });
   expect(capacitorMock.plugin.searchTopics).toHaveBeenCalledWith({ limit: 5, query: 'alpha' });
-  expect(capacitorMock.plugin.searchPdfPageText).not.toHaveBeenCalled();
+  expect(capacitorMock.plugin.searchPdfPageText).toHaveBeenCalledWith({ limit: 5, query: 'alpha' });
   expect(capacitorMock.plugin.searchExternalDocuments).not.toHaveBeenCalled();
 }
 
@@ -131,7 +131,7 @@ describe('companion full text search', () => {
     });
   });
 
-  it('searches only synced topics through the same bridge on iOS', expectIosTopicOnlySearch);
+  it('searches topics and synced PDF text on iOS without external documents', expectIosTopicAndPdfSearch);
 
   it('returns empty results outside native hosts or for an empty query', async () => {
     const api = await import('./companionFullTextSearch');

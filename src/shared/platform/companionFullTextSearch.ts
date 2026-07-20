@@ -10,6 +10,7 @@ import {
   FolioleCompanionSync,
   isAvailableNativeAndroidCompanionRuntime,
   isNativeAndroidCompanionRuntime,
+  isNativeCompanionPdfPageTextRuntime,
   isNativeCompanionTopicSearchRuntime
 } from './companionWorkspaceRuntimeRepository';
 
@@ -55,11 +56,15 @@ export async function searchCompanionFullText(query: string, limit?: number): Pr
   }
 
   if (!isAvailableNativeAndroidCompanionRuntime()) {
+    const [topics, pdf] = await Promise.all([
+      searchCompanionTopics(normalizedQuery, limit),
+      searchCompanionPdfPageText(normalizedQuery, limit)
+    ]);
     return {
       external: [],
-      pdf: [],
+      pdf,
       strategy,
-      topics: await searchCompanionTopics(normalizedQuery, limit)
+      topics
     };
   }
 
@@ -72,7 +77,7 @@ export async function searchCompanionFullText(query: string, limit?: number): Pr
 }
 
 export function supportsCompanionExtendedSearch() {
-  return isAvailableNativeAndroidCompanionRuntime();
+  return isNativeCompanionPdfPageTextRuntime();
 }
 
 async function loadCompanionFullTextSearchStrategyOrDefault() {

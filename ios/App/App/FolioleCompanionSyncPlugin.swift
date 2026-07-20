@@ -14,6 +14,7 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "downloadAttachmentResourceBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "downloadContentBlobBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadDiscoveryCandidates", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "loadPdfPageText", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadMissingAttachmentResource", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadMissingAttachmentResources", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadMissingContentBlobHashes", returnType: CAPPluginReturnPromise),
@@ -22,6 +23,7 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "savePairingCredentials", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "savePrimaryDeviceId", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "searchTopics", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "searchPdfPageText", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "signCompanionSyncRequest", returnType: CAPPluginReturnPromise)
     ]
 

@@ -23,6 +23,7 @@ const IOS_NATIVE_CAPABILITIES = new Set([
   'bootstrap',
   'content-blob-sync',
   'pairing-runtime',
+  'pdf-page-text',
   'sync-pack-apply',
   'sync-diagnostics',
   'topic-search'

@@ -6,7 +6,8 @@ import type {
 import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import {
   FolioleCompanionSync,
-  isNativeAndroidCompanionRuntime
+  isNativeAndroidCompanionRuntime,
+  isNativeCompanionPdfPageTextRuntime
 } from './companionWorkspaceRuntimeRepository';
 
 type SyncPushAck = import('./companionSyncPushProtocol').SyncPushAck;
@@ -98,14 +99,14 @@ export {
 export { applyCompanionSyncNodeVersions } from './companionSyncNodeVersions';
 
 export async function loadCompanionPdfPageText(attachmentId: string) {
-  if (!isNativeAndroidCompanionRuntime()) {
+  if (!isNativeCompanionPdfPageTextRuntime()) {
     return [] as CompanionPdfPageTextEntry[];
   }
   return (await FolioleCompanionSync.loadPdfPageText({ attachment_id: attachmentId })).pages;
 }
 
 export async function searchCompanionPdfPageText(query: string, limit?: number) {
-  if (!isNativeAndroidCompanionRuntime()) {
+  if (!isNativeCompanionPdfPageTextRuntime()) {
     return [] as CompanionPdfPageTextSearchResult[];
   }
   return (await FolioleCompanionSync.searchPdfPageText({ ...(limit !== undefined ? { limit } : {}), query })).results;

@@ -35,6 +35,7 @@ describe('companionRuntimeCapabilities', () => {
     expect(requireAvailableCompanionRuntime('bootstrap')).toEqual({ kind: 'ios-native', platform: 'ios' });
     expect(requireAvailableCompanionRuntime('content-blob-sync')).toEqual({ kind: 'ios-native', platform: 'ios' });
     expect(requireAvailableCompanionRuntime('pairing-runtime')).toEqual({ kind: 'ios-native', platform: 'ios' });
+    expect(requireAvailableCompanionRuntime('pdf-page-text')).toEqual({ kind: 'ios-native', platform: 'ios' });
     expect(requireAvailableCompanionRuntime('sync-pack-apply')).toEqual({ kind: 'ios-native', platform: 'ios' });
     expect(requireAvailableCompanionRuntime('sync-diagnostics')).toEqual({ kind: 'ios-native', platform: 'ios' });
     expect(requireAvailableCompanionRuntime('topic-search')).toEqual({ kind: 'ios-native', platform: 'ios' });
