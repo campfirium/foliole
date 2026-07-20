@@ -2134,12 +2134,24 @@
       "defaultSearchLimit": 20,
       "excerptRadius": 80,
       "maxSearchLimit": 100,
-      "resultKey": "results",
-      "searchQueryName": "topicSearch",
-      "outputKeys": {
+      "requestKeys": {
+        "limit": "limit",
+        "query": "query"
+      },
+      "responseKeys": {
         "query": "query",
         "results": "results"
       },
+      "resultKeys": {
+        "contentStatus": "content_status",
+        "excerpt": "excerpt",
+        "matchStart": "match_start",
+        "nodeId": "node_id",
+        "openingText": "opening_text",
+        "title": "title",
+        "updatedAt": "updated_at"
+      },
+      "searchQueryName": "topicSearch",
       "searchResultFields": [
         {
           "outputKey": "node_id",
@@ -2176,7 +2188,12 @@
           "rowKey": "excerpt",
           "type": "string"
         }
-      ]
+      ],
+      "resultKey": "results",
+      "outputKeys": {
+        "query": "query",
+        "results": "results"
+      }
     }
   },
   "diagnosticRead": {

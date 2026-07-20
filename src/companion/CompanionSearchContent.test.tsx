@@ -6,9 +6,11 @@ import { renderWithLocalization } from '../shared/localization/testLocalization'
 import { CompanionSearchContent } from './CompanionSearchContent';
 
 const searchCompanionFullText = vi.fn();
+const supportsCompanionExtendedSearch = vi.fn(() => true);
 
 vi.mock('../shared/platform/companionFullTextSearch', () => ({
-  searchCompanionFullText: (...args: unknown[]) => searchCompanionFullText(...args)
+  searchCompanionFullText: (...args: unknown[]) => searchCompanionFullText(...args),
+  supportsCompanionExtendedSearch: () => supportsCompanionExtendedSearch()
 }));
 
 function localSearchResults() {
@@ -61,6 +63,15 @@ function emptySearchResults() {
 describe('CompanionSearchContent', () => {
   beforeEach(() => {
     searchCompanionFullText.mockReset();
+    supportsCompanionExtendedSearch.mockReturnValue(true);
+  });
+
+  it('describes the narrower synced-topic scope on iOS', () => {
+    supportsCompanionExtendedSearch.mockReturnValue(false);
+    renderWithLocalization(<CompanionSearchContent />);
+
+    expect(screen.getByText('Topics synced to this device.')).toBeInTheDocument();
+    expect(screen.queryByText('Topics, PDF text, and external documents on this device.')).not.toBeInTheDocument();
   });
 
   it('renders a compact idle search surface', () => {

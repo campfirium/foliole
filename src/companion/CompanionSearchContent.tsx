@@ -5,6 +5,7 @@ import { useTranslation } from '../shared/localization/LocalizationProvider';
 import type { CompanionExternalDocumentSearchResult } from '../shared/platform/companionExternalDocuments';
 import {
   searchCompanionFullText,
+  supportsCompanionExtendedSearch,
   type CompanionFullTextSearchResults,
   type CompanionTopicSearchResult
 } from '../shared/platform/companionFullTextSearch';
@@ -114,10 +115,13 @@ function SearchMessage(props: { title: string }) {
 
 function SearchIntro() {
   const t = useTranslation();
+  const description = supportsCompanionExtendedSearch()
+    ? t('companion.search.description')
+    : t('companion.search.descriptionTopics');
   return (
     <div className="py-2 text-left">
       <h2 className="text-sm font-semibold leading-6 text-foreground/75">{t('companion.search.title')}</h2>
-      <p className="mt-1 text-sm leading-6 text-companion-text-secondary">{t('companion.search.description')}</p>
+      <p className="mt-1 text-sm leading-6 text-companion-text-secondary">{description}</p>
     </div>
   );
 }

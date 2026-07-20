@@ -27,8 +27,8 @@ final class FolioleCompanionResourceQueryStringKeys {
             case "contentRead.readableArticle.pdfPlaceholderText": return "Linked PDF source ready for the reader surface.";
             case "contentRead.readableArticle.referencePdfAttachmentQueryName": return "readableArticleReferencePdfAttachment";
             case "contentRead.readableArticle.untitledTitle": return "Untitled";
-            case "contentRead.topicSearch.resultKey": return "results";
             case "contentRead.topicSearch.searchQueryName": return "topicSearch";
+            case "contentRead.topicSearch.resultKey": return "results";
             case "missingResourceRead.groupKeys.attachmentResources": return "attachmentResources";
             case "missingResourceRead.groupKeys.contentBlobs": return "contentBlobs";
             case "missingResourceRead.attachmentResources.byIdQueryName": return "attachmentResourceMissingById";
@@ -134,6 +134,17 @@ final class FolioleCompanionResourceQueryStringKeys {
             case "contentRead.readableArticle.outputKeys.nodeId": return "node_id";
             case "contentRead.readableArticle.outputKeys.pdfAttachmentId": return "pdf_attachment_id";
             case "contentRead.readableArticle.outputKeys.title": return "title";
+            case "contentRead.topicSearch.requestKeys.limit": return "limit";
+            case "contentRead.topicSearch.requestKeys.query": return "query";
+            case "contentRead.topicSearch.responseKeys.query": return "query";
+            case "contentRead.topicSearch.responseKeys.results": return "results";
+            case "contentRead.topicSearch.resultKeys.contentStatus": return "content_status";
+            case "contentRead.topicSearch.resultKeys.excerpt": return "excerpt";
+            case "contentRead.topicSearch.resultKeys.matchStart": return "match_start";
+            case "contentRead.topicSearch.resultKeys.nodeId": return "node_id";
+            case "contentRead.topicSearch.resultKeys.openingText": return "opening_text";
+            case "contentRead.topicSearch.resultKeys.title": return "title";
+            case "contentRead.topicSearch.resultKeys.updatedAt": return "updated_at";
             case "contentRead.topicSearch.outputKeys.query": return "query";
             case "contentRead.topicSearch.outputKeys.results": return "results";
             case "missingResourceRead.attachmentResources.rowKeys.activeTopic": return "active_topic";

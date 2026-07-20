@@ -23,7 +23,8 @@ const IOS_NATIVE_CAPABILITIES = new Set([
   'bootstrap',
   'content-blob-sync',
   'pairing-runtime',
-  'sync-pack-apply'
+  'sync-pack-apply',
+  'topic-search'
 ]);
 
 export function getCompanionRuntimeCapability(): CompanionRuntimeCapability {

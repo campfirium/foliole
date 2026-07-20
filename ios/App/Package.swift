@@ -16,6 +16,7 @@ let package = Package(
                 "AppDelegate.swift", "Assets.xcassets", "Base.lproj", "FolioleBridgeViewController.swift",
                 "FolioleCompanionBonjourDiscovery.swift", "FolioleCompanionBootstrapPlugin.swift",
                 "FolioleCompanionAttachmentSyncPlugin.swift",
+                "FolioleCompanionTopicSearchPlugin.swift",
                 "FolioleCompanionSyncPackTransfer.swift", "FolioleCompanionSyncPackTransferPlugin.swift",
                 "Info.plist", "capacitor.config.json",
                 "FolioleCompanionSyncPlugin.swift", "config.xml", "public"
@@ -23,6 +24,7 @@ let package = Package(
             sources: [
                 "FolioleCompanionAttachmentResourceDownload.swift",
                 "FolioleCompanionAttachmentResourceStore.swift",
+                "FolioleCompanionTopicSearchStore.swift",
                 "FolioleCompanionContractStore.swift",
                 "FolioleCompanionDesktopHttpClient.swift",
                 "FolioleCompanionZlib.swift",

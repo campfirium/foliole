@@ -8,7 +8,9 @@ import { searchCompanionExternalDocuments } from './companionExternalDocuments';
 import { searchCompanionPdfPageText } from './companionSyncObjects';
 import {
   FolioleCompanionSync,
-  isNativeAndroidCompanionRuntime
+  isAvailableNativeAndroidCompanionRuntime,
+  isNativeAndroidCompanionRuntime,
+  isNativeCompanionTopicSearchRuntime
 } from './companionWorkspaceRuntimeRepository';
 
 const APP_SETTINGS_KEY = 'app_settings';
@@ -48,8 +50,17 @@ interface NativeTopicSearchResult {
 export async function searchCompanionFullText(query: string, limit?: number): Promise<CompanionFullTextSearchResults> {
   const normalizedQuery = query.trim();
   const strategy = await loadCompanionFullTextSearchStrategyOrDefault();
-  if (!normalizedQuery || !isNativeAndroidCompanionRuntime()) {
+  if (!normalizedQuery || !isNativeCompanionTopicSearchRuntime()) {
     return { external: [], pdf: [], strategy, topics: [] };
+  }
+
+  if (!isAvailableNativeAndroidCompanionRuntime()) {
+    return {
+      external: [],
+      pdf: [],
+      strategy,
+      topics: await searchCompanionTopics(normalizedQuery, limit)
+    };
   }
 
   const [topics, pdf, external] = await Promise.all([
@@ -58,6 +69,10 @@ export async function searchCompanionFullText(query: string, limit?: number): Pr
     searchCompanionExternalDocuments(normalizedQuery, limit)
   ]);
   return { external, pdf, strategy, topics };
+}
+
+export function supportsCompanionExtendedSearch() {
+  return isAvailableNativeAndroidCompanionRuntime();
 }
 
 async function loadCompanionFullTextSearchStrategyOrDefault() {

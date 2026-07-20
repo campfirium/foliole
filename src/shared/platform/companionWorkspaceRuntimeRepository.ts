@@ -35,6 +35,11 @@ export function isNativeCompanionAttachmentResourceRuntime() {
   return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
 }
 
+export function isNativeCompanionTopicSearchRuntime() {
+  const runtime = requireAvailableCompanionRuntime('topic-search');
+  return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
+}
+
 export function isAvailableNativeAndroidCompanionRuntime() {
   return getCompanionRuntimeCapability().kind === 'android-native';
 }

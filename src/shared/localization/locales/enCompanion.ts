@@ -98,6 +98,7 @@ export const EN_COMPANION_TRANSLATIONS = {
   'companion.search.placeholder': 'Search synced topics',
   'companion.search.title': 'Local search',
   'companion.search.description': 'Topics, PDF text, and external documents on this device.',
+  'companion.search.descriptionTopics': 'Topics synced to this device.',
   'companion.search.loading': 'Searching...',
   'companion.search.empty': 'No local results found.',
   'companion.search.error': 'Search failed on this device.',

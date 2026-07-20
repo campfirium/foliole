@@ -8,6 +8,7 @@ import {
   COMPANION_RESOURCE_PLUGIN_DEFAULTS,
   COMPANION_RESOURCE_PLUGIN_REQUEST_KEYS
 } from './companionResourcePluginContractDefinitions.js';
+import { COMPANION_TOPIC_SEARCH_HOST_CONTRACT } from './companionTopicSearchDefinitions.js';
 
 export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
   methodInventory: {
@@ -93,6 +94,7 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
       }
     },
     contentBlobSync: COMPANION_CONTENT_BLOB_HOST_CONTRACT_DEFINITIONS,
+    topicSearch: COMPANION_TOPIC_SEARCH_HOST_CONTRACT,
     network: {
       discoveryDefaults: {
         emulatorHost: '10.0.2.2',

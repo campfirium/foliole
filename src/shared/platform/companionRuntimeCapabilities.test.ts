@@ -36,6 +36,7 @@ describe('companionRuntimeCapabilities', () => {
     expect(requireAvailableCompanionRuntime('content-blob-sync')).toEqual({ kind: 'ios-native', platform: 'ios' });
     expect(requireAvailableCompanionRuntime('pairing-runtime')).toEqual({ kind: 'ios-native', platform: 'ios' });
     expect(requireAvailableCompanionRuntime('sync-pack-apply')).toEqual({ kind: 'ios-native', platform: 'ios' });
+    expect(requireAvailableCompanionRuntime('topic-search')).toEqual({ kind: 'ios-native', platform: 'ios' });
     expect(() => requireAvailableCompanionRuntime('native-runtime')).toThrowError(
       expect.objectContaining({
         capability: 'native-runtime',

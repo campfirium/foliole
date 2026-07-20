@@ -98,6 +98,7 @@ export const ZH_HANS_COMPANION_TRANSLATIONS: Partial<Record<TranslationKey, stri
   'companion.search.placeholder': '搜索已同步主题',
   'companion.search.title': '本机搜索',
   'companion.search.description': '这台设备上的主题、PDF 文本和外部文档。',
+  'companion.search.descriptionTopics': '已同步到这台设备的主题。',
   'companion.search.loading': '正在搜索...',
   'companion.search.empty': '没有找到本机结果。',
   'companion.search.error': '这台设备搜索失败。',

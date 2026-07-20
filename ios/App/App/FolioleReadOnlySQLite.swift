@@ -6,7 +6,7 @@ final class FolioleReadOnlySQLite {
     private var database: OpaquePointer?
 
     init(url: URL) throws {
-        let status = sqlite3_open_v2(url.path, &database, SQLITE_OPEN_READONLY, nil)
+        let status = sqlite3_open_v2(url.path, &database, SQLITE_OPEN_READONLY | SQLITE_OPEN_FULLMUTEX, nil)
         guard status == SQLITE_OK else {
             let message = database.map { String(cString: sqlite3_errmsg($0)) } ?? "open failed"
             if let database { sqlite3_close(database) }

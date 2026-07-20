@@ -16,7 +16,8 @@ import {
   isNativeAndroidCompanionRuntime,
   isNativeCompanionAttachmentResourceRuntime,
   isNativeCompanionContentBlobRuntime,
-  isNativeCompanionPairingRuntime
+  isNativeCompanionPairingRuntime,
+  isNativeCompanionTopicSearchRuntime
 } from './companionWorkspaceRuntimeRepository';
 
 describe('companion workspace runtime boundary', () => {
@@ -31,6 +32,7 @@ describe('companion workspace runtime boundary', () => {
     expect(isNativeCompanionAttachmentResourceRuntime()).toBe(false);
     expect(isNativeCompanionContentBlobRuntime()).toBe(false);
     expect(isNativeCompanionPairingRuntime()).toBe(false);
+    expect(isNativeCompanionTopicSearchRuntime()).toBe(false);
     expect(isAvailableNativeAndroidCompanionRuntime()).toBe(false);
   });
 
@@ -42,6 +44,7 @@ describe('companion workspace runtime boundary', () => {
     expect(isNativeCompanionAttachmentResourceRuntime()).toBe(true);
     expect(isNativeCompanionContentBlobRuntime()).toBe(true);
     expect(isNativeCompanionPairingRuntime()).toBe(true);
+    expect(isNativeCompanionTopicSearchRuntime()).toBe(true);
     expect(isAvailableNativeAndroidCompanionRuntime()).toBe(true);
   });
 
@@ -53,6 +56,7 @@ describe('companion workspace runtime boundary', () => {
     expect(isNativeCompanionAttachmentResourceRuntime()).toBe(true);
     expect(isNativeCompanionContentBlobRuntime()).toBe(true);
     expect(isNativeCompanionPairingRuntime()).toBe(true);
+    expect(isNativeCompanionTopicSearchRuntime()).toBe(true);
     expect(() => isNativeAndroidCompanionRuntime()).toThrowError(expect.objectContaining({
       capability: 'native-runtime',
       code: 'NATIVE_COMPANION_CAPABILITY_UNAVAILABLE',
