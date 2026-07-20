@@ -14,6 +14,7 @@ vi.mock('@capacitor/core', () => ({
 import {
   isAvailableNativeAndroidCompanionRuntime,
   isNativeAndroidCompanionRuntime,
+  isNativeCompanionAttachmentResourceRuntime,
   isNativeCompanionContentBlobRuntime,
   isNativeCompanionPairingRuntime
 } from './companionWorkspaceRuntimeRepository';
@@ -27,6 +28,7 @@ describe('companion workspace runtime boundary', () => {
 
   it('keeps browser preview on the explicit non-native path', () => {
     expect(isNativeAndroidCompanionRuntime()).toBe(false);
+    expect(isNativeCompanionAttachmentResourceRuntime()).toBe(false);
     expect(isNativeCompanionContentBlobRuntime()).toBe(false);
     expect(isNativeCompanionPairingRuntime()).toBe(false);
     expect(isAvailableNativeAndroidCompanionRuntime()).toBe(false);
@@ -37,6 +39,7 @@ describe('companion workspace runtime boundary', () => {
     capacitorState.isNativePlatform.mockReturnValue(true);
 
     expect(isNativeAndroidCompanionRuntime()).toBe(true);
+    expect(isNativeCompanionAttachmentResourceRuntime()).toBe(true);
     expect(isNativeCompanionContentBlobRuntime()).toBe(true);
     expect(isNativeCompanionPairingRuntime()).toBe(true);
     expect(isAvailableNativeAndroidCompanionRuntime()).toBe(true);
@@ -47,6 +50,7 @@ describe('companion workspace runtime boundary', () => {
     capacitorState.isNativePlatform.mockReturnValue(true);
 
     expect(isAvailableNativeAndroidCompanionRuntime()).toBe(false);
+    expect(isNativeCompanionAttachmentResourceRuntime()).toBe(true);
     expect(isNativeCompanionContentBlobRuntime()).toBe(true);
     expect(isNativeCompanionPairingRuntime()).toBe(true);
     expect(() => isNativeAndroidCompanionRuntime()).toThrowError(expect.objectContaining({

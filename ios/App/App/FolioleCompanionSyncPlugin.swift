@@ -7,18 +7,24 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
     public let jsName = "FolioleCompanionSync"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "clearPairingCredentials", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "commitAttachmentResourceBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "commitContentBlobBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "desktopHttpRequest", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "downloadAttachmentResourceBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "downloadContentBlobBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadDiscoveryCandidates", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "loadMissingAttachmentResource", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "loadMissingAttachmentResources", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadMissingContentBlobHashes", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadPairingState", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "resolveAttachmentResource", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "savePairingCredentials", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "savePrimaryDeviceId", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "signCompanionSyncRequest", returnType: CAPPluginReturnPromise)
     ]
 
     private var discovery: FolioleCompanionBonjourDiscovery?
+    let attachmentResourceSessions = FolioleCompanionAttachmentResourceSessions()
     private let contentBlobSessions = FolioleCompanionContentBlobSessions()
 
     @objc func loadPairingState(_ call: CAPPluginCall) {

@@ -31,6 +31,7 @@ describe('companionRuntimeCapabilities', () => {
     capacitorState.getPlatform.mockReturnValue('ios');
     const { requireAvailableCompanionRuntime } = await import('./companionRuntimeCapabilities');
 
+    expect(requireAvailableCompanionRuntime('attachment-resource-sync')).toEqual({ kind: 'ios-native', platform: 'ios' });
     expect(requireAvailableCompanionRuntime('bootstrap')).toEqual({ kind: 'ios-native', platform: 'ios' });
     expect(requireAvailableCompanionRuntime('content-blob-sync')).toEqual({ kind: 'ios-native', platform: 'ios' });
     expect(requireAvailableCompanionRuntime('pairing-runtime')).toEqual({ kind: 'ios-native', platform: 'ios' });

@@ -38,6 +38,20 @@ struct FolioleCompanionContentBlobContract {
     let supportedCompression: String
 }
 
+struct FolioleCompanionAttachmentResourceContract {
+    let batchResponseKeys: [String: String]
+    let defaultLimit: Int
+    let directoryName: String
+    let hashPattern: String
+    let idFilterReplacement: String
+    let missingResultKeys: [String: String]
+    let requestKeys: [String: String]
+    let resolveResponseKeys: [String: String]
+    let resolveStatuses: [String: String]
+    let sql: [String: String]
+    let statuses: [String: String]
+}
+
 final class FolioleCompanionContractStore {
     private let bridge: [String: Any]
     private let sync: [String: Any]
@@ -102,6 +116,23 @@ final class FolioleCompanionContractStore {
             sql: try stringMap(path: ["sql"], root: root),
             statuses: try stringMap(path: ["statuses"], root: root),
             supportedCompression: try string(path: ["cas", "supportedCompression"], root: root)
+        )
+    }
+
+    func attachmentResourceContract() throws -> FolioleCompanionAttachmentResourceContract {
+        let root = try object(path: ["hostApi", "attachmentResourceSync"], root: bridge)
+        return FolioleCompanionAttachmentResourceContract(
+            batchResponseKeys: try stringMap(path: ["batchResponseKeys"], root: root),
+            defaultLimit: try integer(path: ["defaultLimit"], root: root),
+            directoryName: try string(path: ["directoryName"], root: root),
+            hashPattern: try string(path: ["hashPattern"], root: root),
+            idFilterReplacement: try string(path: ["idFilterReplacement"], root: root),
+            missingResultKeys: try stringMap(path: ["missingResultKeys"], root: root),
+            requestKeys: try stringMap(path: ["requestKeys"], root: root),
+            resolveResponseKeys: try stringMap(path: ["resolveResponseKeys"], root: root),
+            resolveStatuses: try stringMap(path: ["resolveStatuses"], root: root),
+            sql: try stringMap(path: ["sql"], root: root),
+            statuses: try stringMap(path: ["statuses"], root: root)
         )
     }
 

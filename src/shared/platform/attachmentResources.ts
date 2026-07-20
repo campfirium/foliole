@@ -7,7 +7,7 @@ import { createBoundedCache } from '../lib/boundedCache';
 
 import {
   FolioleCompanionSync,
-  isNativeAndroidCompanionRuntime
+  isNativeCompanionAttachmentResourceRuntime
 } from './companionWorkspaceRuntimeRepository';
 import { updateImageCacheStats } from './performanceDiagnosticsProbe';
 import { getRuntimeInvoke } from './runtimeInvoke';
@@ -38,8 +38,8 @@ export async function resolveRuntimeAttachmentResource(resourceUrl: string) {
     return null;
   }
 
-  if (isNativeAndroidCompanionRuntime()) {
-    return resolveAndroidAttachmentResource(attachmentId);
+  if (isNativeCompanionAttachmentResourceRuntime()) {
+    return resolveNativeAttachmentResource(attachmentId);
   }
 
   const runtimeInvoke = getRuntimeInvoke();
@@ -86,7 +86,7 @@ export async function resolveRuntimeAttachmentResource(resourceUrl: string) {
   return resolutionPromise;
 }
 
-async function resolveAndroidAttachmentResource(attachmentId: string) {
+async function resolveNativeAttachmentResource(attachmentId: string) {
   const cached = attachmentResourceResolutionCache.get(attachmentId);
   if (cached) {
     updateImageCacheStats({ entries: attachmentResourceResolutionCache.size, hit: true });
@@ -94,9 +94,9 @@ async function resolveAndroidAttachmentResource(attachmentId: string) {
   }
 
   const resolutionPromise = FolioleCompanionSync.resolveAttachmentResource({ attachment_id: attachmentId })
-    .then((result) => normalizeAndroidAttachmentResolution(result, attachmentId))
+    .then((result) => normalizeNativeAttachmentResolution(result, attachmentId))
     .catch((error) => {
-      logRuntimeWarning('native Android attachment resource resolve failed', {
+      logRuntimeWarning('native companion attachment resource resolve failed', {
         area: 'bridge',
         action: 'resolve_attachment_resource',
         attachment_id: attachmentId,
@@ -112,12 +112,12 @@ async function resolveAndroidAttachmentResource(attachmentId: string) {
   return resolutionPromise;
 }
 
-function normalizeAndroidAttachmentResolution(
+function normalizeNativeAttachmentResolution(
   result: unknown,
   attachmentId: string
 ): NativeAttachmentResourceResolution | null {
   if (!isAttachmentResourceResolution(result)) {
-    logRuntimeWarning('native Android attachment resource payload invalid', {
+    logRuntimeWarning('native companion attachment resource payload invalid', {
       area: 'bridge',
       action: 'resolve_attachment_resource',
       attachment_id: attachmentId,

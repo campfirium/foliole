@@ -119,15 +119,22 @@ it('bounds desktop attachment resource resolution cache entries', async () => {
   });
 });
 
-it('rejects ios instead of entering the desktop attachment fallback', async () => {
+it('resolves native iOS attachment file URLs through Capacitor', async () => {
   capacitorMock.getPlatform.mockReturnValue('ios');
+  capacitorMock.plugin.resolveAttachmentResource.mockResolvedValue({
+    mime_type: 'application/pdf',
+    resource_url: 'file:///var/mobile/Containers/Data/Application/app/Library/Application Support/attachments/hash-ios',
+    status: 'ready'
+  });
   const invoke = vi.fn();
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
-  await expect(resolveRuntimeAttachmentResource('asset://att-ios.png')).rejects.toMatchObject({
-    code: 'NATIVE_COMPANION_CAPABILITY_UNAVAILABLE',
-    platform: 'ios'
+  await expect(resolveRuntimeAttachmentResource('asset://att-ios.png')).resolves.toEqual({
+    mime_type: 'application/pdf',
+    resource_url: 'capacitor://file:///var/mobile/Containers/Data/Application/app/Library/Application Support/attachments/hash-ios',
+    status: 'ready'
   });
+  expect(capacitorMock.plugin.resolveAttachmentResource).toHaveBeenCalledWith({ attachment_id: 'att-ios' });
   expect(invoke).not.toHaveBeenCalled();
 });
 

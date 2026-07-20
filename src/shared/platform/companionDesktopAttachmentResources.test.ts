@@ -150,6 +150,19 @@ describe('companion desktop attachment resource manifests', () => {
       batch_token: 'attachment-batch-token'
     });
   });
+
+  it('routes iOS attachment downloads through the same native bridge contract', async () => {
+    capacitorMock.getPlatform.mockReturnValue('ios');
+
+    await expect(syncCompanionAttachmentResourceRequestsFromDesktop('http://192.168.1.2:38641/', [
+      { attachmentId: 'att-ios', contentHash: 'hash-ios' }
+    ])).resolves.toEqual(['att-ios']);
+
+    expect(capacitorMock.plugin.downloadAttachmentResourceBatch).toHaveBeenCalledTimes(1);
+    expect(capacitorMock.plugin.commitAttachmentResourceBatch).toHaveBeenCalledWith({
+      batch_token: 'attachment-batch-token'
+    });
+  });
 });
 
 describe('companion desktop attachment resource queue', () => {

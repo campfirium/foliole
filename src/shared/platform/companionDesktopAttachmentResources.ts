@@ -6,7 +6,7 @@ import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import { createSignedRequestHeaders } from './companionWorkspacePairing';
 import {
   FolioleCompanionSync,
-  isNativeAndroidCompanionRuntime,
+  isNativeCompanionAttachmentResourceRuntime,
   normalizeEndpointUrl
 } from './companionWorkspaceRuntimeRepository';
 
@@ -85,7 +85,7 @@ export async function syncCompanionAttachmentResourceRequestsFromDesktop(
   requests: AttachmentResourceRequest[],
   onSyncedChunk?: (attachmentIds: string[]) => void
 ) {
-  if (!isNativeAndroidCompanionRuntime()) {
+  if (!isNativeCompanionAttachmentResourceRuntime()) {
     return [];
   }
   const endpoint = normalizeEndpointUrl(endpointUrl);

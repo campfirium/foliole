@@ -1,34 +1,17 @@
+import { ANDROID_COMPANION_CONTENT_RESOURCE_QUERY_DEFINITIONS } from './androidCompanionContentResourceQueryDefinitions.js';
 import {
   ANDROID_COMPANION_MUTATION_DEFINITIONS,
   ANDROID_COMPANION_RESOURCE_MUTATION_RULES
 } from './androidCompanionMutationDefinitions.js';
-import { ANDROID_COMPANION_CONTENT_RESOURCE_QUERY_DEFINITIONS } from './androidCompanionContentResourceQueryDefinitions.js';
 import {
   ANDROID_COMPANION_MISSING_RESOURCE_READ_RULES,
   ANDROID_COMPANION_RESOURCE_READ_RULES
 } from './androidCompanionResourceQueryDefinitions.js';
 import { ANDROID_COMPANION_RESOURCE_STATUSES } from './androidCompanionSyncProtocolDefinitions.js';
-
-export const COMPANION_RESOURCE_PLUGIN_DEFAULTS = {
-  externalDocumentSearchLimit: 20,
-  missingResourceLimit: 50,
-  pdfPageTextSearchLimit: 20,
-  topicSearchLimit: 20
-} as const;
-
-export const COMPANION_RESOURCE_PLUGIN_REQUEST_KEYS = {
-  attachmentId: 'attachment_id',
-  batchToken: 'batch_token',
-  body: 'body',
-  contentHash: 'content_hash',
-  documentId: 'document_id',
-  hash: 'hash',
-  headers: 'headers',
-  limit: 'limit',
-  query: 'query',
-  resources: 'resources',
-  url: 'url'
-} as const;
+import {
+  COMPANION_RESOURCE_PLUGIN_DEFAULTS,
+  COMPANION_RESOURCE_PLUGIN_REQUEST_KEYS
+} from './companionResourcePluginContractDefinitions.js';
 
 const contentQueries = ANDROID_COMPANION_CONTENT_RESOURCE_QUERY_DEFINITIONS;
 const contentRead = ANDROID_COMPANION_RESOURCE_READ_RULES.contentBlobs;
