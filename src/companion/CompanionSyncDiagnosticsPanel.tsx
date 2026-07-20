@@ -60,6 +60,7 @@ function SnapshotSection(props: {
   const dirtyObjects = props.snapshot?.sync_state.dirty_objects ?? [];
   const pendingAcks = props.snapshot?.sync_state.pending_acks ?? [];
   const pushIssues = props.snapshot?.sync_state.push_issues ?? [];
+  const isDevice = props.snapshot?.host === 'android' || props.snapshot?.host === 'ios';
   return (
     <section>
       <h3 className="text-sm font-semibold text-foreground">{props.title}</h3>
@@ -70,7 +71,7 @@ function SnapshotSection(props: {
             <h4 className="text-xs font-semibold text-companion-text-secondary">{t('companion.sync.diagnostics.objectTypes')}</h4>
             <ObjectTypeRows rows={props.snapshot.sync_state.state_counts} />
           </section>
-          {props.snapshot.host === 'android' ? (
+          {isDevice ? (
             <>
               <section>
                 <h4 className="text-xs font-semibold text-companion-text-secondary">{t('companion.sync.diagnostics.deviceChangesWaiting')}</h4>
