@@ -64,12 +64,12 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
                 let body = try requiredString(call, contract.requestKeys, "body")
                 let requested = try FolioleCompanionContentBlobBridgePayload.requestedHashes(body, contract: contract)
                 let started = Date()
-                let parts = (try? await FolioleCompanionDesktopHttpClient.requestContentBlobBatch(
+                let parts = try await FolioleCompanionDesktopHttpClient.requestContentBlobBatch(
                     url: try requiredString(call, contract.requestKeys, "url"),
                     headers: try stringHeaders(call.getObject(try key("headers", contract.requestKeys)) ?? [:]),
                     body: body,
                     contract: contract
-                )) ?? []
+                )
                 let failed = requested.filter { hash in !parts.contains(where: { $0.hash == hash }) }
                 let token = await contentBlobSessions.create(parts: parts, failedHashes: failed)
                 call.resolve(try FolioleCompanionContentBlobBridgePayload.downloadResponse(

@@ -132,4 +132,18 @@ describe('iOS companion content blob sync bridge', () => {
       batch_token: 'content-batch-token'
     });
   });
+
+  it('propagates an iOS native download failure without committing an empty batch', async () => {
+    capacitorMock.plugin.downloadContentBlobBatch.mockRejectedValueOnce(new Error('Desktop request failed.'));
+    const api = await import('./companionContentBlobSync');
+
+    await expect(api.syncCompanionContentBlobs({
+      body: JSON.stringify({ hashes: ['a'.repeat(64)] }),
+      headers: { 'X-Device-Id': 'ios-test-device' },
+      url: 'http://desktop/companion/content-blobs'
+    })).rejects.toThrow('Desktop request failed.');
+
+    expect(capacitorMock.plugin.commitContentBlobBatch).not.toHaveBeenCalled();
+    expect(writerQueueMock.run).not.toHaveBeenCalled();
+  });
 });

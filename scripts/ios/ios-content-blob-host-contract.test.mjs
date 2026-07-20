@@ -36,4 +36,16 @@ describe('iOS content blob host contract', () => {
     expect(project).toContain(`${fileName} in Sources`);
     expect(packageSource).toContain(`"${fileName}"`);
   });
+
+  it('rejects a failed native batch request so shared sync can run its fallback', () => {
+    const plugin = read('ios/App/App/FolioleCompanionSyncPlugin.swift');
+    const method = plugin.slice(
+      plugin.indexOf('@objc func downloadContentBlobBatch'),
+      plugin.indexOf('@objc func commitContentBlobBatch')
+    );
+
+    expect(method).toContain('let parts = try await FolioleCompanionDesktopHttpClient.requestContentBlobBatch(');
+    expect(method).not.toContain('try? await FolioleCompanionDesktopHttpClient.requestContentBlobBatch(');
+    expect(method).toContain('call.reject("Failed to download companion content blobs:');
+  });
 });
