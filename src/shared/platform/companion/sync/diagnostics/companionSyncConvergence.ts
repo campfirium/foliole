@@ -53,7 +53,7 @@ function structureLag(result: CombinedSyncDiagnosticResult) {
 export function buildSyncConvergenceReport(result: CombinedSyncDiagnosticResult): SyncConvergenceReport {
   const checks: SyncConvergenceCheck[] = [];
   if (!result.android) {
-    checks.push(check('android_diagnostics_missing', 'error', 'Android diagnostics unavailable', 'Run this check inside the Android companion app.'));
+    checks.push(check('android_diagnostics_missing', 'error', 'Device diagnostics unavailable', 'Run this check inside the companion app.'));
   }
   if (!result.desktop) {
     checks.push(check('desktop_diagnostics_missing', 'error', 'Desktop diagnostics unavailable', 'A paired desktop endpoint is required for convergence.'));
@@ -146,7 +146,7 @@ function buildPendingAckCheck(result: CombinedSyncDiagnosticResult) {
 function buildStructureChecks(result: CombinedSyncDiagnosticResult) {
   const lag = structureLag(result);
   if (lag == null) {
-    return [check('structure_lag_unknown', 'warning', 'Topic list sync is unknown', 'Android or desktop sync position is missing.')];
+    return [check('structure_lag_unknown', 'warning', 'Topic list sync is unknown', 'Device or desktop sync position is missing.')];
   }
   return lag > 0
     ? [check(

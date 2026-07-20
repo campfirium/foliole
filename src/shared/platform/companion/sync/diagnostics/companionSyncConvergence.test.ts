@@ -10,6 +10,26 @@ function testReportsConverged() {
   });
 }
 
+function testUsesCrossPlatformDeviceCopy() {
+  const missingDevice = buildSyncConvergenceReport(syncConvergenceResult({ android: null }));
+  const missingPosition = buildSyncConvergenceReport(syncConvergenceResult({
+    android: {
+      ...syncConvergenceResult().android!,
+      sync_state: { ...syncConvergenceResult().android!.sync_state, pack_cursor: null }
+    }
+  }));
+
+  expect(missingDevice.checks).toContainEqual(expect.objectContaining({
+    code: 'android_diagnostics_missing',
+    detail: 'Run this check inside the companion app.',
+    title: 'Device diagnostics unavailable'
+  }));
+  expect(missingPosition.checks).toContainEqual(expect.objectContaining({
+    code: 'structure_lag_unknown',
+    detail: 'Device or desktop sync position is missing.'
+  }));
+}
+
 function testBlocksFinishedPassWithDirtyWork() {
   const report = buildSyncConvergenceReport(syncConvergenceResult({
     android: {
@@ -173,6 +193,7 @@ function testBlocksFinishedPassWithResourceBacklog() {
 
 describe('buildSyncConvergenceReport', () => {
   it('reports converged when local and desktop state are aligned', testReportsConverged);
+  it('uses cross-platform device copy for missing local diagnostics', testUsesCrossPlatformDeviceCopy);
   it('blocks finished sync passes that still have dirty or pending local work', testBlocksFinishedPassWithDirtyWork);
   it('blocks error diagnostic verdicts', testBlocksErrorDiagnosticVerdicts);
   it('deduplicates merged error diagnostic verdicts', testDeduplicatesMergedErrorVerdicts);
