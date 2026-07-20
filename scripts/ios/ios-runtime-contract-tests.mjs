@@ -29,6 +29,7 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'src/shared/platform/companionDesktopAttachmentResources.test.ts',
   'src/shared/platform/companionContentBlobSync.test.ts',
   'src/shared/platform/attachmentResources.test.ts',
+  'src/features/editor/adapters/liveMarkdownImages.nativeAttachment.test.ts',
   'src/shared/platform/companionBootstrap.ios.test.ts',
   'src/shared/platform/companion/runtime/iosCompanionDatabaseBootstrap.test.ts',
   'src/shared/platform/companion/sync/cursor/iosCompanionSyncPackCursorStore.test.ts',

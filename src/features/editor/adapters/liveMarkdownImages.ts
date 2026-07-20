@@ -3,7 +3,7 @@ import {
   invalidateAttachmentResourceResolution,
   resolveRuntimeAttachmentResource
 } from '../../../shared/platform/attachmentResources';
-import { isNativeAndroidCompanionRuntime } from '../../../shared/platform/companionWorkspaceRuntimeRepository';
+import { isNativeCompanionAttachmentResourceRuntime } from '../../../shared/platform/companionWorkspaceRuntimeRepository';
 import { getImageClozeEditorPresentation } from '../../image-cloze/model/imageClozePresentation';
 import type { MarkdownImageMatch } from '../model/markdownImageMatches';
 import { buildMarkdownImageRenderPlan } from '../model/markdownImagePresentation';
@@ -122,7 +122,7 @@ function buildRemoteRenderSource(sourceUrl: string, editorNodeId: string | null,
   });
 }
 
-function appendResolvedAndroidAttachmentImage(
+function appendResolvedNativeAttachmentImage(
   wrapper: HTMLElement,
   imageMatch: MarkdownImageMatch,
   renderPlan: ReturnType<typeof buildMarkdownImageRenderPlan>,
@@ -211,8 +211,8 @@ export function createMarkdownImageWidgetDom(
     return wrapper;
   }
 
-  if (isNativeAndroidCompanionRuntime()) {
-    appendResolvedAndroidAttachmentImage(wrapper, imageMatch, renderPlan, editorNodeId, onMissingAttachmentResource, requestMeasure, onRemoveImage);
+  if (isNativeCompanionAttachmentResourceRuntime()) {
+    appendResolvedNativeAttachmentImage(wrapper, imageMatch, renderPlan, editorNodeId, onMissingAttachmentResource, requestMeasure, onRemoveImage);
     return wrapper;
   }
 
