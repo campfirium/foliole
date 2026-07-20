@@ -1,5 +1,5 @@
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
-import { AppButton, AppErrorState, SettingsControlSlot, SettingsRow, SettingsSection } from '../../../../shared/ui';
+import { AppErrorState, SettingsSection } from '../../../../shared/ui';
 
 import { FoliolePublishingSetupRows } from './FoliolePublishingSetupRows';
 import { useFoliolePublishingSettings } from './useFoliolePublishingSettings';
@@ -32,11 +32,6 @@ export function FoliolePublishingSettings(props: { expanded: boolean; onExpanded
       title={t('settings.publishing.foliole.title')}
     >
       {state.error ? <AppErrorState description={t('settings.publishing.foliole.error.tryAgain')} surface="panel" title={state.error} /> : null}
-      <SettingsRow title={t('settings.publishing.foliole.preview.title')}>
-        <SettingsControlSlot>
-          <AppButton disabled={state.status === 'previewing'} onClick={state.preview}>{state.status === 'previewing' ? t('settings.publishing.foliole.previewing') : t('settings.publishing.foliole.preview')}</AppButton>
-        </SettingsControlSlot>
-      </SettingsRow>
       <HostingOverview />
       <FoliolePublishingSetupRows state={state} />
     </SettingsSection>

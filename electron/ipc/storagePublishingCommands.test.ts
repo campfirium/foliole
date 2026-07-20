@@ -22,9 +22,13 @@ const wordpressMocks = vi.hoisted(() => ({
 const folioleMocks = vi.hoisted(() => ({
   connectFoliolePublishSettings: vi.fn(),
   disconnectFoliolePublishSettings: vi.fn(),
+  forgetFoliolePublishField: vi.fn(),
   loadFoliolePublishSettings: vi.fn(),
+  openFoliolePublishTheme: vi.fn(),
   previewFoliolePublish: vi.fn(),
   publishTopicToFoliole: vi.fn(),
+  resetFoliolePublishFieldHistory: vi.fn(),
+  resetFoliolePublishTheme: vi.fn(),
   updateFoliolePublishSiteAddress: vi.fn()
 }));
 
@@ -66,6 +70,17 @@ it('updates the public address without accepting a renderer credential', async (
   });
   expect(folioleMocks.updateFoliolePublishSiteAddress).toHaveBeenCalledWith('https://notes.example.com');
   expect(JSON.stringify(result)).not.toContain('SENTINEL-MUST-BE-IGNORED');
+});
+
+it('routes Web Publish field history and theme actions through narrow commands', async () => {
+  await handlePublishingStorageCommand(NATIVE_COMMANDS.forgetFoliolePublishField, { key: 'category' });
+  await handlePublishingStorageCommand(NATIVE_COMMANDS.resetFoliolePublishFieldHistory, {});
+  await handlePublishingStorageCommand(NATIVE_COMMANDS.openFoliolePublishTheme, {});
+  await handlePublishingStorageCommand(NATIVE_COMMANDS.resetFoliolePublishTheme, {});
+  expect(folioleMocks.forgetFoliolePublishField).toHaveBeenCalledWith('category');
+  expect(folioleMocks.resetFoliolePublishFieldHistory).toHaveBeenCalledOnce();
+  expect(folioleMocks.openFoliolePublishTheme).toHaveBeenCalledOnce();
+  expect(folioleMocks.resetFoliolePublishTheme).toHaveBeenCalledOnce();
 });
 
 it('forwards nested WordPress connection settings only to the main-process connector', async () => {

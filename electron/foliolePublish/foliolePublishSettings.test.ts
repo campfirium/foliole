@@ -17,7 +17,7 @@ vi.mock('../security/publishDeviceSecretStore.js', () => ({
   writePublishDeviceSecret: (_file: string, _label: string, value: string) => { state.secret = value; }
 }));
 
-import { loadFoliolePublishSettings, saveFoliolePublishConnection } from './foliolePublishSettings.js';
+import { loadFoliolePublishSettings, recordFoliolePublishFields, saveFoliolePublishConnection } from './foliolePublishSettings.js';
 
 beforeEach(() => { state.secret = ''; state.setting = null; state.shouldFailSave = false; });
 
@@ -40,4 +40,14 @@ it('restores the previous token when saving non-secret settings fails', () => {
   }, 'https://site.pages.dev')).toThrow('save failed');
   expect(state.secret).toBe('previous-token');
   expect(loadFoliolePublishSettings().has_credentials).toBe(false);
+});
+
+it('keeps field history for the same site and clears it when the site changes', () => {
+  const connect = (project_name: string) => saveFoliolePublishConnection({
+    account_id: 'account', api_token: 'token', project_name, site_address: ''
+  }, `https://${project_name}.pages.dev`);
+  connect('site');
+  recordFoliolePublishFields([{ key: 'category', value: 'notes' }]);
+  expect(connect('site').field_catalog).toHaveLength(1);
+  expect(connect('other').field_catalog).toEqual([]);
 });

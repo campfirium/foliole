@@ -1,4 +1,4 @@
-import type { NativeFoliolePublishConnectInput, NativeFoliolePublishSettings } from '../../lib/platform/nativeFoliolePublishContract.js';
+import type { NativeFoliolePublishConnectInput, NativeFoliolePublishField, NativeFoliolePublishFieldCatalogEntry, NativeFoliolePublishSettings } from '../../lib/platform/nativeFoliolePublishContract.js';
 import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
 import { deletePublishDeviceSecret, hasPublishDeviceSecret, readPublishDeviceSecret, writePublishDeviceSecret } from '../security/publishDeviceSecretStore.js';
 
@@ -13,10 +13,11 @@ interface StoredSettings {
   project_name: string;
   site_address: string;
   updated_at: string;
+  field_catalog?: NativeFoliolePublishFieldCatalogEntry[];
 }
 
 function empty(): NativeFoliolePublishSettings {
-  return { account_id: '', has_credentials: false, pages_url: '', project_name: '', site_address: '', updated_at: null };
+  return { account_id: '', field_catalog: [], has_credentials: false, pages_url: '', project_name: '', site_address: '', updated_at: null };
 }
 
 function stored(): StoredSettings | null {
@@ -33,15 +34,57 @@ export function loadFoliolePublishToken() {
 
 export function loadFoliolePublishSettings(): NativeFoliolePublishSettings {
   const value = stored();
-  return value ? { ...value, has_credentials: Boolean(loadFoliolePublishToken()) } : empty();
+  return value ? { ...value, field_catalog: normalizeCatalog(value.field_catalog), has_credentials: Boolean(loadFoliolePublishToken()) } : empty();
 }
+
+function normalizeCatalog(value: unknown): NativeFoliolePublishFieldCatalogEntry[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    if (!item || typeof item !== 'object') return [];
+    const entry = item as Partial<NativeFoliolePublishFieldCatalogEntry>;
+    if (typeof entry.key !== 'string' || typeof entry.multiple !== 'boolean' || !Array.isArray(entry.recent_values)) return [];
+    return [{ key: entry.key, multiple: entry.multiple, recent_values: entry.recent_values.slice(0, 9) as NativeFoliolePublishFieldCatalogEntry['recent_values'] }];
+  }).slice(0, 80);
+}
+
+function saveCatalog(catalog: NativeFoliolePublishFieldCatalogEntry[]) {
+  const current = stored();
+  if (!current) return empty();
+  const updatedAt = new Date().toISOString();
+  saveJsonSetting(SETTINGS_KEY, { ...current, field_catalog: catalog, updated_at: updatedAt }, updatedAt);
+  return loadFoliolePublishSettings();
+}
+
+export function recordFoliolePublishFields(fields: NativeFoliolePublishField[]) {
+  const catalog = normalizeCatalog(stored()?.field_catalog);
+  for (const field of fields) {
+    const multiple = Array.isArray(field.value);
+    const previous = catalog.find((entry) => entry.key === field.key);
+    const recent = field.value.length === 0 ? [] : [field.value];
+    const entry = { key: field.key, multiple, recent_values: [...recent, ...(previous?.recent_values ?? [])].slice(0, 9) };
+    const index = catalog.findIndex((item) => item.key === field.key);
+    if (index >= 0) catalog.splice(index, 1);
+    catalog.unshift(entry);
+  }
+  return saveCatalog(catalog.slice(0, 80));
+}
+
+export function forgetFoliolePublishField(key: string) {
+  return saveCatalog(normalizeCatalog(stored()?.field_catalog).filter((entry) => entry.key !== key));
+}
+
+export function resetFoliolePublishFieldHistory() { return saveCatalog([]); }
 
 export function saveFoliolePublishConnection(input: NativeFoliolePublishConnectInput, pagesUrl: string) {
   const updatedAt = new Date().toISOString();
+  const previous = stored();
+  const normalizedProject = normalizeCloudflareProjectName(input.project_name);
+  const sameSite = previous?.account_id === input.account_id.trim() && previous.project_name === normalizedProject;
   const value: StoredSettings = {
     account_id: input.account_id.trim(), pages_url: normalizeSiteAddress(pagesUrl),
-    project_name: normalizeCloudflareProjectName(input.project_name),
-    site_address: normalizeSiteAddress(input.site_address) || normalizeSiteAddress(pagesUrl), updated_at: updatedAt
+    project_name: normalizedProject,
+    site_address: normalizeSiteAddress(input.site_address) || normalizeSiteAddress(pagesUrl), updated_at: updatedAt,
+    field_catalog: sameSite ? normalizeCatalog(previous?.field_catalog) : []
   };
   if (!value.account_id || !input.api_token.trim()) throw new Error('Enter a Cloudflare Account ID and authorization result.');
   const previousSecret = loadFoliolePublishToken() || null;

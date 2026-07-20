@@ -7,6 +7,15 @@ export interface NativeFoliolePublishSettings {
   project_name: string;
   site_address: string;
   updated_at: string | null;
+  field_catalog: NativeFoliolePublishFieldCatalogEntry[];
+}
+
+export type NativeFoliolePublishFieldValue = string | string[];
+export interface NativeFoliolePublishField { key: string; value: NativeFoliolePublishFieldValue }
+export interface NativeFoliolePublishFieldCatalogEntry {
+  key: string;
+  multiple: boolean;
+  recent_values: NativeFoliolePublishFieldValue[];
 }
 
 export interface NativeFoliolePublishConnectInput {
@@ -24,6 +33,7 @@ export type NativeFoliolePublishConnectResult =
 
 export interface NativeFoliolePublishTopicArgs {
   content: string;
+  fields: NativeFoliolePublishField[];
   node_id: string;
   title: string;
 }
@@ -31,6 +41,9 @@ export interface NativeFoliolePublishTopicArgs {
 export interface NativeFoliolePublishResult {
   local_path: string;
   url: string | null;
+  status: 'previewed' | 'deployed_and_committed' | 'deployed_history_failed' | 'deployed_local_publish_state_failed';
+  updated_content: string | null;
+  warning?: string;
 }
 
 export type NativeFoliolePublishCommandMap = {
@@ -44,7 +57,11 @@ export type NativeFoliolePublishCommandMap = {
     result: NativeFoliolePublishSettings;
   };
   [NATIVE_COMMANDS.disconnectFoliolePublishSettings]: { args: undefined; result: NativeFoliolePublishSettings };
-  [NATIVE_COMMANDS.previewFoliolePublish]: { args: undefined; result: NativeFoliolePublishResult };
+  [NATIVE_COMMANDS.forgetFoliolePublishField]: { args: { key: string }; result: NativeFoliolePublishSettings };
+  [NATIVE_COMMANDS.resetFoliolePublishFieldHistory]: { args: undefined; result: NativeFoliolePublishSettings };
+  [NATIVE_COMMANDS.openFoliolePublishTheme]: { args: undefined; result: { local_path: string } };
+  [NATIVE_COMMANDS.resetFoliolePublishTheme]: { args: undefined; result: { local_path: string } };
+  [NATIVE_COMMANDS.previewFoliolePublish]: { args: NativeFoliolePublishTopicArgs; result: NativeFoliolePublishResult };
   [NATIVE_COMMANDS.publishTopicToFoliole]: {
     args: NativeFoliolePublishTopicArgs;
     result: NativeFoliolePublishResult;

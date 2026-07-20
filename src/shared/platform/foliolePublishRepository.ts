@@ -26,12 +26,28 @@ export function disconnectFoliolePublishSettingsFromRuntime() {
   return requireRuntime()(NATIVE_COMMANDS.disconnectFoliolePublishSettings);
 }
 
-export function previewFoliolePublishFromRuntime() {
-  return requireRuntime()(NATIVE_COMMANDS.previewFoliolePublish);
+export function previewFoliolePublishFromRuntime(args: NativeFoliolePublishTopicArgs) {
+  return requireRuntime()(NATIVE_COMMANDS.previewFoliolePublish, args);
 }
 
 export function publishTopicToFoliole(args: NativeFoliolePublishTopicArgs) {
   return requireRuntime()(NATIVE_COMMANDS.publishTopicToFoliole, args);
+}
+
+export function forgetFoliolePublishFieldFromRuntime(key: string) {
+  return requireRuntime()(NATIVE_COMMANDS.forgetFoliolePublishField, { key });
+}
+
+export function resetFoliolePublishFieldHistoryFromRuntime() {
+  return requireRuntime()(NATIVE_COMMANDS.resetFoliolePublishFieldHistory);
+}
+
+export function openFoliolePublishThemeFromRuntime() {
+  return requireRuntime()(NATIVE_COMMANDS.openFoliolePublishTheme);
+}
+
+export function resetFoliolePublishThemeFromRuntime() {
+  return requireRuntime()(NATIVE_COMMANDS.resetFoliolePublishTheme);
 }
 
 export function isFoliolePublishConfigured(settings: NativeFoliolePublishSettings | null) {

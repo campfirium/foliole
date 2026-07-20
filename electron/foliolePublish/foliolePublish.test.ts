@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-import { connectFoliolePublishSettings, disconnectFoliolePublishSettings, updateFoliolePublishSiteAddress } from './foliolePublish.js';
+import { connectFoliolePublishSettings, disconnectFoliolePublishSettings, previewFoliolePublish, publishTopicToFoliole, updateFoliolePublishSiteAddress } from './foliolePublish.js';
 import { emptyPublishIndex } from './foliolePublishModel.js';
 import { generateFoliolePublishSite } from './foliolePublishSite.js';
 
@@ -15,9 +15,14 @@ const mocks = vi.hoisted(() => ({
   deployCloudflarePages: vi.fn(),
   detectCloudflarePagesSubdomain: vi.fn(),
   resolveCloudflarePagesProject: vi.fn(),
+  recordFoliolePublishFields: vi.fn(),
+  shellOpenPath: vi.fn(),
+  shellOpenExternal: vi.fn(),
   saveFoliolePublishConnection: vi.fn(),
   saveFoliolePublishSiteAddress: vi.fn()
 }));
+
+vi.mock('electron', () => ({ shell: { openExternal: mocks.shellOpenExternal, openPath: mocks.shellOpenPath } }));
 
 vi.mock('../ipc/libraryPaths.js', () => ({
   loadLibraryPathSettingsSync: () => ({ library_home: state.libraryHome })
@@ -31,12 +36,17 @@ vi.mock('./cloudflarePagesClient.js', async (importOriginal) => ({
 }));
 vi.mock('./foliolePublishSettings.js', () => ({
   clearFoliolePublishSettings: mocks.clearFoliolePublishSettings,
-  loadFoliolePublishSettings: vi.fn(),
+  forgetFoliolePublishField: vi.fn(),
+  loadFoliolePublishSettings: vi.fn(() => ({
+    account_id: '', field_catalog: [], has_credentials: false, pages_url: '', project_name: '', site_address: '', updated_at: null
+  })),
   loadFoliolePublishToken: vi.fn(() => 'stored-token'),
   loadStoredFoliolePublishSettings: vi.fn(() => ({
     account_id: 'account', pages_url: 'https://site.pages.dev', project_name: 'site',
     site_address: 'https://site.pages.dev', updated_at: '2026-07-19T00:00:00.000Z'
   })),
+  recordFoliolePublishFields: mocks.recordFoliolePublishFields,
+  resetFoliolePublishFieldHistory: vi.fn(),
   saveFoliolePublishConnection: mocks.saveFoliolePublishConnection,
   saveFoliolePublishSiteAddress: mocks.saveFoliolePublishSiteAddress
 }));
@@ -55,6 +65,8 @@ beforeEach(() => {
   mocks.detectCloudflarePagesSubdomain.mockResolvedValue(false);
   mocks.resolveCloudflarePagesProject.mockResolvedValue({ created: false, project: { subdomain: 'site.pages.dev' }, status: 'ready' });
   mocks.deployCloudflarePages.mockResolvedValue({ url: 'https://deployment.pages.dev' });
+  mocks.shellOpenPath.mockResolvedValue('');
+  mocks.shellOpenExternal.mockResolvedValue(undefined);
 });
 afterEach(() => fs.rmSync(state.libraryHome, { force: true, recursive: true }));
 
@@ -130,4 +142,49 @@ it('updates a custom address with the stored token and rolls back on save failur
   await expect(updateFoliolePublishSiteAddress('https://notes.example.com')).rejects.toThrow('save failed');
   expect(activeRss()).toBe(before);
   expect(mocks.deployCloudflarePages).toHaveBeenCalledWith(expect.objectContaining({ token: 'stored-token' }));
+});
+
+it('opens only the managed Publish Preview entry without changing the active Site', async () => {
+  const before = activeRss();
+  const result = await previewFoliolePublish({
+    content: '---\ncategory: essays\n---\nPreview body',
+    fields: [{ key: 'category', value: 'essays' }], node_id: 'topic-1', title: 'Preview card'
+  });
+  expect(result.local_path).toBe(path.join(state.libraryHome, 'Publish', 'Preview', 'index.html'));
+  expect(mocks.shellOpenPath).toHaveBeenCalledWith(result.local_path);
+  expect(activeRss()).toBe(before);
+  expect(fs.readFileSync(result.local_path, 'utf8')).toContain('essays');
+});
+
+it('returns the binding after remote success when the local publish transaction rolls back', async () => {
+  const before = activeRss();
+  const renameSync = fs.renameSync;
+  const rename = vi.spyOn(fs, 'renameSync');
+  rename.mockImplementation((from, to) => {
+    if (String(to).includes(`${path.sep}Content${path.sep}`)) throw new Error('disk full');
+    return renameSync(from, to);
+  });
+  const result = await publishTopicToFoliole({ content: 'Body', fields: [], node_id: 'topic-1', title: 'Card' });
+  rename.mockRestore();
+  expect(result.status).toBe('deployed_local_publish_state_failed');
+  expect(result.updated_content).toContain('pageId:');
+  expect(activeRss()).toBe(before);
+  expect(mocks.shellOpenExternal).toHaveBeenCalledWith(result.url);
+});
+
+it('keeps all formal local publish state unchanged when deployment fails', async () => {
+  const before = activeRss();
+  mocks.deployCloudflarePages.mockRejectedValue(new Error('deploy failed'));
+  await expect(publishTopicToFoliole({ content: 'Body', fields: [], node_id: 'topic-1', title: 'Card' })).rejects.toThrow('deploy failed');
+  expect(activeRss()).toBe(before);
+  expect(fs.existsSync(path.join(state.libraryHome, 'Publish', 'Content'))).toBe(false);
+  expect(mocks.recordFoliolePublishFields).not.toHaveBeenCalled();
+});
+
+it('reports history persistence as an independent partial success', async () => {
+  mocks.recordFoliolePublishFields.mockImplementation(() => { throw new Error('settings failed'); });
+  const result = await publishTopicToFoliole({ content: 'Body', fields: [{ key: 'category', value: '' }], node_id: 'topic-1', title: 'Card' });
+  expect(result.status).toBe('deployed_history_failed');
+  expect(result.updated_content).toContain('category: ""');
+  expect(fs.existsSync(path.join(state.libraryHome, 'Publish', 'Content'))).toBe(true);
 });

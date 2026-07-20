@@ -13,9 +13,13 @@ import {
 import {
   connectFoliolePublishSettings,
   disconnectFoliolePublishSettings,
+  forgetFoliolePublishField,
   loadFoliolePublishSettings,
+  openFoliolePublishTheme,
   previewFoliolePublish,
   publishTopicToFoliole,
+  resetFoliolePublishFieldHistory,
+  resetFoliolePublishTheme,
   updateFoliolePublishSiteAddress
 } from '../foliolePublish/foliolePublish.js';
 import {
@@ -38,7 +42,13 @@ export async function handlePublishingStorageCommand(command: string, args: Reco
     return updateFoliolePublishSiteAddress(String(args.site_address ?? ''));
   }
   if (command === NATIVE_COMMANDS.disconnectFoliolePublishSettings) return disconnectFoliolePublishSettings();
-  if (command === NATIVE_COMMANDS.previewFoliolePublish) return previewFoliolePublish();
+  if (command === NATIVE_COMMANDS.forgetFoliolePublishField) return forgetFoliolePublishField(String(args.key ?? ''));
+  if (command === NATIVE_COMMANDS.resetFoliolePublishFieldHistory) return resetFoliolePublishFieldHistory();
+  if (command === NATIVE_COMMANDS.openFoliolePublishTheme) return openFoliolePublishTheme();
+  if (command === NATIVE_COMMANDS.resetFoliolePublishTheme) return resetFoliolePublishTheme();
+  if (command === NATIVE_COMMANDS.previewFoliolePublish) {
+    return previewFoliolePublish(readSettingsObject(args) as unknown as Parameters<typeof previewFoliolePublish>[0]);
+  }
   if (command === NATIVE_COMMANDS.publishTopicToFoliole) {
     return publishTopicToFoliole(readSettingsObject(args) as unknown as Parameters<typeof publishTopicToFoliole>[0]);
   }
