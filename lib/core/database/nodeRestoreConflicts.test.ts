@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   resolveRestoreNodeCandidates,
   type RestoreNodeCandidate
-} from './nodeRestoreConflicts';
+} from './nodeRestoreConflicts.js';
 
 function candidate(overrides: Partial<RestoreNodeCandidate> = {}): RestoreNodeCandidate {
   return {
