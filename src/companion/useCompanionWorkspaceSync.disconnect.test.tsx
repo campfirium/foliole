@@ -37,9 +37,9 @@ vi.mock('./useCompanionWorkspacePairing', () => ({
     desktopDiscoveries: [],
     desktopDiscovery: null,
     pairingState: {
-      device_id: 'android-test-device',
-      device_kind: 'android-capacitor',
-      device_name: 'Android companion',
+      device_id: 'ios-test-device',
+      device_kind: 'ios-capacitor',
+      device_name: 'iPhone',
       is_paired: true,
       paired_at: '2026-04-25T09:00:00.000Z',
       primary_device_id: 'device-desktop'
@@ -83,8 +83,8 @@ describe('useCompanionWorkspaceSync disconnect', () => {
       booted_at: '2026-04-25T09:00:00.000Z',
       database_path: 'foliole-companionSQLite.db',
       database_ready: true,
-      device_id: 'android-test-device',
-      runtime_kind: 'android-capacitor'
+      device_id: 'ios-test-device',
+      runtime_kind: 'ios-capacitor'
     }));
 
     await waitFor(() => expect(result.current.status).toBe('idle'));
