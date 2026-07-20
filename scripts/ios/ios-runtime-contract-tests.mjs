@@ -26,6 +26,7 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'src/companion/CompanionReadingSheets.test.tsx',
   'src/companion/CompanionSyncStatusDetails.ios.test.tsx',
   'src/companion/companionSyncFailureMessage.test.ts',
+  'src/companion/companionReviewSchedulerSettingsHydration.ios.test.ts',
   'src/companion/useCompanionImmersiveScrollPosition.test.tsx',
   'src/companion/useCompanionHandoffReminderSettings.test.tsx',
   'src/companion/useCompanionWorkspaceAutoSync.test.tsx',
