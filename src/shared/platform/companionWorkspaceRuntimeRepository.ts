@@ -75,6 +75,13 @@ export function isNativeCompanionViewStateWriteRuntime() {
   return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
 }
 
+export function getNativeCompanionSettingWritePlatform() {
+  const runtime = requireAvailableCompanionRuntime('setting-write');
+  return runtime.kind === 'android-native' || runtime.kind === 'ios-native'
+    ? runtime.platform
+    : null;
+}
+
 export function isAvailableNativeAndroidCompanionRuntime() {
   return getCompanionRuntimeCapability().kind === 'android-native';
 }

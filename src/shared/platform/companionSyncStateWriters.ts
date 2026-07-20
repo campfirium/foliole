@@ -7,6 +7,7 @@ import type { NativeSyncReviewLogDraft } from '../../../lib/platform/nativeSyncC
 import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import {
   FolioleCompanionSync,
+  getNativeCompanionSettingWritePlatform,
   isNativeAndroidCompanionRuntime,
   isNativeCompanionViewStateWriteRuntime
 } from './companionWorkspaceRuntimeRepository';
@@ -19,7 +20,8 @@ export async function saveCompanionSyncSettingRecord(args: {
   formFactor?: string;
   deviceId?: string;
 }) {
-  if (!isNativeAndroidCompanionRuntime()) {
+  const nativePlatform = getNativeCompanionSettingWritePlatform();
+  if (!nativePlatform) {
     return null;
   }
   return runCompanionSyncWriterTask(() => (
@@ -27,7 +29,7 @@ export async function saveCompanionSyncSettingRecord(args: {
       device_id: args.deviceId ?? '*',
       form_factor: args.formFactor ?? 'phone',
       key: args.key,
-      platform: args.platform ?? 'android',
+      platform: args.platform ?? nativePlatform,
       scope: args.scope ?? 'device',
       value_json: args.valueJson
     })

@@ -4,7 +4,8 @@ const runtimeMock = vi.hoisted(() => ({
   platform: vi.fn(() => 'ios'),
   plugin: {
     saveSyncActiveViewState: vi.fn(async () => ({ content_hash: 'hash-active', object_id: 'active' })),
-    saveSyncNodeViewState: vi.fn(async () => ({ content_hash: 'hash-view', object_id: 'view' }))
+    saveSyncNodeViewState: vi.fn(async () => ({ content_hash: 'hash-view', object_id: 'view' })),
+    saveSyncSettingRecord: vi.fn(async () => ({ content_hash: 'hash-setting', object_id: 'setting' }))
   },
   writer: vi.fn(async <T>(task: () => Promise<T>) => task())
 }));
@@ -21,14 +22,14 @@ vi.mock('./companionSyncWriterQueue', () => ({
   runCompanionSyncWriterTask: runtimeMock.writer
 }));
 
-describe('iOS companion view-state writers', () => {
+describe('iOS companion native writers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     runtimeMock.platform.mockReturnValue('ios');
     runtimeMock.writer.mockImplementation(async <T>(task: () => Promise<T>) => task());
   });
 
-  it('dispatches only view-state writes through the shared native writer queue', async () => {
+  it('dispatches setting and view-state writes through the shared native writer queue', async () => {
     const api = await import('./companionSyncStateWriters');
 
     await expect(api.saveCompanionSyncActiveViewState('node-1'))
@@ -42,7 +43,15 @@ describe('iOS companion view-state writers', () => {
       source: 'user-scroll'
     });
     await expect(api.saveCompanionSyncSettingRecord({ key: 'one', valueJson: '{}' }))
-      .rejects.toMatchObject({ capability: 'native-runtime', platform: 'ios' });
-    expect(runtimeMock.writer).toHaveBeenCalledTimes(2);
+      .resolves.toEqual({ content_hash: 'hash-setting', object_id: 'setting' });
+    expect(runtimeMock.plugin.saveSyncSettingRecord).toHaveBeenCalledWith({
+      device_id: '*',
+      form_factor: 'phone',
+      key: 'one',
+      platform: 'ios',
+      scope: 'device',
+      value_json: '{}'
+    });
+    expect(runtimeMock.writer).toHaveBeenCalledTimes(3);
   });
 });

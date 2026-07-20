@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { COMPANION_CURRENT_SCHEMA_REPAIRS } from '../../../../../lib/core/database/companionCurrentSchemaRepairs';
 import type { NativeCompanionBootstrapState } from '../../../../../lib/platform/nativeCompanionContract';
 
 import { initializeIosCompanionDatabase, type IosCompanionDatabaseManager } from './iosCompanionDatabaseBootstrap';
@@ -15,15 +16,25 @@ function createNativeState(): NativeCompanionBootstrapState {
   };
 }
 
-function createHarness(storedDeviceId?: string) {
+function createHarness(args: { missingColumns?: string[]; storedDeviceId?: string } = {}) {
+  const missingColumns = new Set(args.missingColumns ?? []);
   const connection = {
+    beginTransaction: vi.fn(async () => ({ changes: { changes: 0 } })),
+    commitTransaction: vi.fn(async () => ({ changes: { changes: 0 } })),
     execute: vi.fn(async () => ({ changes: { changes: 0 } })),
     getUrl: vi.fn(async (): Promise<{ url?: string }> => ({
       url: 'file:///Library/CapacitorDatabase/foliole-companionSQLite.db'
     })),
     isDBOpen: vi.fn(async () => ({ result: false })),
     open: vi.fn(async () => undefined),
-    query: vi.fn(async () => ({ values: storedDeviceId ? [{ value: storedDeviceId }] : [] })),
+    query: vi.fn(async (statement: string, values?: unknown[]) => {
+      if (statement.includes('pragma_table_info')) {
+        const columnName = String(values?.[1] ?? '');
+        return { values: missingColumns.has(columnName) ? [] : [{ name: columnName }] };
+      }
+      return { values: args.storedDeviceId ? [{ value: args.storedDeviceId }] : [] };
+    }),
+    rollbackTransaction: vi.fn(async () => ({ changes: { changes: 0 } })),
     run: vi.fn(async () => ({ changes: { changes: 1 } }))
   };
   const manager = {
@@ -45,8 +56,10 @@ describe('iosCompanionDatabaseBootstrap', () => {
     });
     expect(manager.createConnection).toHaveBeenCalledWith('foliole-companion', false, 'no-encryption', 19, false);
     expect(connection.open).toHaveBeenCalledTimes(1);
-    expect(connection.execute).toHaveBeenCalledWith(expect.stringContaining('CREATE TABLE IF NOT EXISTS nodes'));
-    expect(connection.execute).toHaveBeenCalledWith(expect.stringContaining('PRAGMA user_version = 19'));
+    expect(connection.execute).toHaveBeenNthCalledWith(1, expect.stringContaining('CREATE TABLE IF NOT EXISTS nodes'));
+    expect(connection.execute).toHaveBeenNthCalledWith(2, 'PRAGMA user_version = 19', false);
+    expect(connection.beginTransaction).toHaveBeenCalledTimes(1);
+    expect(connection.commitTransaction).toHaveBeenCalledTimes(1);
     expect(connection.run).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO companion_meta'),
       ['device_id', 'ios-proposed-device', '2026-07-19T08:00:00Z']
@@ -54,7 +67,7 @@ describe('iosCompanionDatabaseBootstrap', () => {
   });
 
   it('hydrates the permanent device identity from an existing database', async () => {
-    const { connection, manager } = createHarness('ios-persisted-device');
+    const { connection, manager } = createHarness({ storedDeviceId: 'ios-persisted-device' });
     vi.mocked(manager.isConnection).mockResolvedValue({ result: true });
     connection.isDBOpen.mockResolvedValue({ result: true });
 
@@ -71,5 +84,29 @@ describe('iosCompanionDatabaseBootstrap', () => {
     connection.getUrl.mockResolvedValue({});
 
     await expect(initializeIosCompanionDatabase(createNativeState(), manager)).rejects.toThrow(/did not return a path/i);
+  });
+
+  it('repairs missing companion columns before declaring version 19', async () => {
+    const { connection, manager } = createHarness({ missingColumns: ['base_content_hash'] });
+    const repair = COMPANION_CURRENT_SCHEMA_REPAIRS.find((entry) => entry.columnName === 'base_content_hash');
+
+    await initializeIosCompanionDatabase(createNativeState(), manager);
+
+    expect(connection.execute).toHaveBeenNthCalledWith(2, repair?.statement, false);
+    expect(connection.execute).toHaveBeenNthCalledWith(3, 'PRAGMA user_version = 19', false);
+  });
+
+  it('rolls back and does not declare version 19 when repair fails', async () => {
+    const { connection, manager } = createHarness({ missingColumns: ['base_content_hash'] });
+    connection.execute.mockImplementation(async (statement: string) => {
+      if (statement.includes('ADD COLUMN base_content_hash')) throw new Error('repair failed');
+      return { changes: { changes: 0 } };
+    });
+
+    await expect(initializeIosCompanionDatabase(createNativeState(), manager)).rejects.toThrow('repair failed');
+
+    expect(connection.rollbackTransaction).toHaveBeenCalledTimes(1);
+    expect(connection.commitTransaction).not.toHaveBeenCalled();
+    expect(connection.execute).not.toHaveBeenCalledWith('PRAGMA user_version = 19', false);
   });
 });

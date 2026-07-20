@@ -30,6 +30,7 @@ const IOS_NATIVE_CAPABILITIES = new Set([
   'sync-pack-apply',
   'sync-diagnostics',
   'sync-object-read',
+  'setting-write',
   'topic-search',
   'view-state-write'
 ]);

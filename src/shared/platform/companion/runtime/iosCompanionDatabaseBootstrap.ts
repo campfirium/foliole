@@ -1,5 +1,6 @@
 import { CapacitorSQLite, SQLiteConnection, type SQLiteDBConnection } from '@capacitor-community/sqlite';
 
+import { COMPANION_CURRENT_SCHEMA_REPAIRS } from '../../../../../lib/core/database/companionCurrentSchemaRepairs';
 import { COMPANION_SCHEMA_STATEMENTS } from '../../../../../lib/core/database/companionSchemaStatements';
 import {
   COMPANION_DATABASE_NAME,
@@ -8,6 +9,7 @@ import {
 } from '../../../../../lib/platform/nativeCompanionContract';
 
 const DEVICE_ID_KEY = 'device_id';
+const COLUMN_EXISTS_SQL = 'SELECT name FROM pragma_table_info(?) WHERE name = ? LIMIT 1';
 
 export interface IosCompanionDatabaseManager {
   createConnection(
@@ -50,6 +52,28 @@ async function loadOrCreateDeviceId(connection: SQLiteDBConnection, proposedId: 
   return proposedId;
 }
 
+async function loadMissingRepairStatements(connection: SQLiteDBConnection) {
+  const statements: string[] = [];
+  for (const repair of COMPANION_CURRENT_SCHEMA_REPAIRS) {
+    const result = await connection.query(COLUMN_EXISTS_SQL, [repair.tableName, repair.columnName]);
+    if (!result.values?.length) statements.push(repair.statement);
+  }
+  return statements;
+}
+
+async function repairAndVersionDatabase(connection: SQLiteDBConnection) {
+  await connection.beginTransaction();
+  try {
+    const repairs = await loadMissingRepairStatements(connection);
+    if (repairs.length) await connection.execute(repairs.join(';\n'), false);
+    await connection.execute(`PRAGMA user_version = ${COMPANION_DATABASE_VERSION}`, false);
+    await connection.commitTransaction();
+  } catch (error) {
+    await connection.rollbackTransaction();
+    throw error;
+  }
+}
+
 function normalizeDatabasePath(value: string) {
   if (!value.startsWith('file:')) return value;
   try {
@@ -64,8 +88,8 @@ export async function initializeIosCompanionDatabase(
   manager: IosCompanionDatabaseManager = new SQLiteConnection(CapacitorSQLite)
 ): Promise<NativeCompanionBootstrapState> {
   const connection = await openDatabase(manager);
-  const schemaSql = `${COMPANION_SCHEMA_STATEMENTS.join(';\n')};\nPRAGMA user_version = ${COMPANION_DATABASE_VERSION}`;
-  await connection.execute(schemaSql);
+  await connection.execute(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
+  await repairAndVersionDatabase(connection);
   const deviceId = await loadOrCreateDeviceId(connection, nativeState.device_id, nativeState.booted_at);
   const databaseUrl = (await connection.getUrl()).url;
   if (!databaseUrl) throw new Error('iOS companion database did not return a path.');
