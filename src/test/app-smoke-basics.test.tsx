@@ -11,6 +11,8 @@ vi.mock('../shared/platform/bridge', async (importOriginal) => {
   };
 });
 vi.mock('../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: vi.fn() }));
+// Keep review smoke tests independent from the live release manifest.
+vi.mock('../app/hooks/useReleaseUpdateCheck', () => ({ useReleaseUpdateCheck: vi.fn() }));
 
 import { EDITOR_DISPLAY_MODE_KEY } from '../features/editor/model/editorDisplayMode';
 import { preloadTranslationCatalog } from '../shared/localization/translations';
