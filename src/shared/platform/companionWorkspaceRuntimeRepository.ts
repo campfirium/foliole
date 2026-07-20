@@ -85,6 +85,11 @@ export function isNativeCompanionReviewWriteRuntime() {
   return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
 }
 
+export function isNativeCompanionNodeVersionWriteRuntime() {
+  const runtime = requireAvailableCompanionRuntime('node-version-write');
+  return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
+}
+
 export function getNativeCompanionSyncbackPlatform() {
   const runtime = requireAvailableCompanionRuntime('syncback');
   return runtime.kind === 'android-native' || runtime.kind === 'ios-native'
@@ -110,7 +115,7 @@ export function isAvailableNativeCompanionRuntime() {
 
 export function supportsCompanionNodeMutation() {
   const runtime = getCompanionRuntimeCapability();
-  // Web preview keeps its existing in-memory interaction path; only Android persists native node versions today.
+  // Keep iOS UI gated until its mutation interactions are separately verified.
   return runtime.kind === 'android-native' || runtime.kind === 'web-preview';
 }
 

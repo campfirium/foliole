@@ -25,6 +25,7 @@ const IOS_NATIVE_CAPABILITIES = new Set([
   'external-document-directory',
   'external-document-read',
   'external-document-search',
+  'node-version-write',
   'pairing-runtime',
   'pdf-page-text',
   'reading-write',

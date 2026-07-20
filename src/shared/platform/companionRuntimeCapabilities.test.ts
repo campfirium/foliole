@@ -37,6 +37,7 @@ describe('companionRuntimeCapabilities', () => {
     expect(requireAvailableCompanionRuntime('external-document-directory')).toEqual({ kind: 'ios-native', platform: 'ios' });
     expect(requireAvailableCompanionRuntime('external-document-read')).toEqual({ kind: 'ios-native', platform: 'ios' });
     expect(requireAvailableCompanionRuntime('external-document-search')).toEqual({ kind: 'ios-native', platform: 'ios' });
+    expect(requireAvailableCompanionRuntime('node-version-write')).toEqual({ kind: 'ios-native', platform: 'ios' });
     expect(requireAvailableCompanionRuntime('pairing-runtime')).toEqual({ kind: 'ios-native', platform: 'ios' });
     expect(requireAvailableCompanionRuntime('pdf-page-text')).toEqual({ kind: 'ios-native', platform: 'ios' });
     expect(requireAvailableCompanionRuntime('reading-write')).toEqual({ kind: 'ios-native', platform: 'ios' });

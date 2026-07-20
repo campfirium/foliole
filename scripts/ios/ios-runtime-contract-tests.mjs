@@ -95,6 +95,10 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'scripts/ios/ios-view-state-write-host-contract.test.mjs'
 ];
 
+export const IOS_RUNTIME_SQLITE_CONTRACT_TESTS = [
+  'src/shared/platform/companionSyncNodeVersions.ios.test.ts'
+];
+
 const resourceMode = resolveIosResourceMode();
 const vitestTask = iosResourceCommand(process.execPath, [
   'scripts/run-vitest-with-summary.mjs',
@@ -111,6 +115,15 @@ if (vitest.error) throw vitest.error;
 if (vitest.status !== 0) {
   process.exitCode = vitest.status ?? 1;
 } else {
+  const sqliteTask = iosResourceCommand(process.execPath, [
+    'scripts/electron-sqlite-runner.mjs',
+    'scripts/test-files.mjs',
+    ...IOS_RUNTIME_SQLITE_CONTRACT_TESTS
+  ], resourceMode);
+  const sqlite = spawnSync(sqliteTask.command, sqliteTask.args, { cwd: REPO_ROOT, stdio: 'inherit' });
+  if (sqlite.error) throw sqlite.error;
+  if (sqlite.status !== 0) process.exit(sqlite.status ?? 1);
+
   const swiftCacheRoot = path.join(REPO_ROOT, '.tmp/artifacts/ios-swift-cache');
   const nativeTask = iosResourceCommand('swift', [
     'test',

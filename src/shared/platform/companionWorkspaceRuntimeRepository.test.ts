@@ -20,6 +20,7 @@ import {
   isNativeCompanionExternalDirectoryRuntime,
   isNativeCompanionExternalDocumentReadRuntime,
   isNativeCompanionExternalDocumentSearchRuntime,
+  isNativeCompanionNodeVersionWriteRuntime,
   isNativeCompanionPairingRuntime,
   isNativeCompanionPdfPageTextRuntime,
   isNativeCompanionSyncDiagnosticsRuntime,
@@ -41,6 +42,7 @@ function expectIosRuntimeBoundary() {
   expect(isNativeCompanionExternalDirectoryRuntime()).toBe(true);
   expect(isNativeCompanionExternalDocumentReadRuntime()).toBe(true);
   expect(isNativeCompanionExternalDocumentSearchRuntime()).toBe(true);
+  expect(isNativeCompanionNodeVersionWriteRuntime()).toBe(true);
   expect(isNativeCompanionPairingRuntime()).toBe(true);
   expect(isNativeCompanionPdfPageTextRuntime()).toBe(true);
   expect(isNativeCompanionSyncDiagnosticsRuntime()).toBe(true);
@@ -68,6 +70,7 @@ describe('companion workspace runtime boundary', () => {
     expect(isNativeCompanionExternalDirectoryRuntime()).toBe(false);
     expect(isNativeCompanionExternalDocumentReadRuntime()).toBe(false);
     expect(isNativeCompanionExternalDocumentSearchRuntime()).toBe(false);
+    expect(isNativeCompanionNodeVersionWriteRuntime()).toBe(false);
     expect(isNativeCompanionPairingRuntime()).toBe(false);
     expect(isNativeCompanionPdfPageTextRuntime()).toBe(false);
     expect(isNativeCompanionSyncDiagnosticsRuntime()).toBe(false);
@@ -89,6 +92,7 @@ describe('companion workspace runtime boundary', () => {
     expect(isNativeCompanionExternalDirectoryRuntime()).toBe(true);
     expect(isNativeCompanionExternalDocumentReadRuntime()).toBe(true);
     expect(isNativeCompanionExternalDocumentSearchRuntime()).toBe(true);
+    expect(isNativeCompanionNodeVersionWriteRuntime()).toBe(true);
     expect(isNativeCompanionPairingRuntime()).toBe(true);
     expect(isNativeCompanionPdfPageTextRuntime()).toBe(true);
     expect(isNativeCompanionSyncDiagnosticsRuntime()).toBe(true);
@@ -100,5 +104,5 @@ describe('companion workspace runtime boundary', () => {
     expect(supportsCompanionNodeMutation()).toBe(true);
   });
 
-  it('rejects Android-only operations on iOS without a Web fallback', expectIosRuntimeBoundary);
+  it('exposes iOS storage capabilities while keeping Android-only operations unavailable', expectIosRuntimeBoundary);
 });

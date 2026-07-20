@@ -9,7 +9,7 @@ import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import {
   FolioleCompanionSync,
   isAvailableNativeAndroidCompanionRuntime,
-  isNativeAndroidCompanionRuntime
+  isNativeCompanionNodeVersionWriteRuntime
 } from './companionWorkspaceRuntimeRepository';
 
 export interface CompanionSqliteConnectionManager {
@@ -34,11 +34,14 @@ export async function closeCompanionDatabaseConnection(
   await manager.closeConnection?.(COMPANION_DATABASE_NAME, false).catch(() => undefined);
 }
 
-export async function applyCompanionSyncNodeVersions(nodes: NativeSyncNodeRecord[]) {
-  if (!isNativeAndroidCompanionRuntime() || nodes.length === 0) {
+export async function applyCompanionSyncNodeVersions(
+  nodes: NativeSyncNodeRecord[],
+  manager?: CompanionSqliteConnectionManager
+) {
+  if (!isNativeCompanionNodeVersionWriteRuntime() || nodes.length === 0) {
     return [];
   }
-  return runCompanionSyncWriterTask(() => applyCompanionSyncNodeVersionsWithSharedCoreOnDevice(nodes));
+  return runCompanionSyncWriterTask(() => applyCompanionSyncNodeVersionsWithSharedCoreOnDevice(nodes, manager));
 }
 
 export async function applyCompanionSyncNodeVersionsWithSharedCore(
