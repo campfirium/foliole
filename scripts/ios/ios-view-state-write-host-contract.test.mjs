@@ -19,6 +19,8 @@ describe('iOS view-state write host contract', () => {
     }
     expect(adapter).toContain('FolioleCompanionDatabaseLocation.mainDatabase()');
     expect(adapter).toContain('FolioleCompanionViewStateWriteStore');
+    expect(adapter).toContain('guard let scrollTop = call.getInt(contract.scrollTopPayloadKey)');
+    expect(adapter).not.toContain('call.getInt(contract.scrollTopPayloadKey) ?? 0');
   });
 
   it('keeps the iOS mutation asset generated from the Android shared truth', async () => {

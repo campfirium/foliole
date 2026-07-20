@@ -5,7 +5,8 @@ extension FolioleCompanionSyncPlugin {
     @objc func saveSyncSettingRecord(_ call: CAPPluginCall) {
         do {
             let contract = try FolioleCompanionSettingWriteContract()
-            let key = call.getString(try contract.key("key", in: contract.payloadKeys)) ?? ""
+            let key = try requiredSettingWriteValue(call, "key", contract)
+            let valueJson = try requiredSettingWriteValue(call, "valueJson", contract)
             let store = try FolioleCompanionSettingWriteStore(
                 databaseURL: FolioleCompanionDatabaseLocation.mainDatabase(),
                 contract: contract
@@ -16,7 +17,7 @@ extension FolioleCompanionSyncPlugin {
                 platform: try value(call, "platform", contract),
                 formFactor: try value(call, "formFactor", contract),
                 deviceId: try value(call, "deviceId", contract),
-                valueJson: try value(call, "valueJson", contract)
+                valueJson: valueJson
             ))
         } catch { call.reject("Failed to save companion setting: \(error.localizedDescription)") }
     }
@@ -29,5 +30,20 @@ extension FolioleCompanionSyncPlugin {
         let key = try contract.key(name, in: contract.payloadKeys)
         let fallback = try contract.key(name, in: contract.defaults)
         return call.getString(key) ?? fallback
+    }
+
+    private func requiredSettingWriteValue(
+        _ call: CAPPluginCall,
+        _ name: String,
+        _ contract: FolioleCompanionSettingWriteContract
+    ) throws -> String {
+        let payloadKey = try contract.key(name, in: contract.payloadKeys)
+        guard let value = call.getString(payloadKey) else {
+            throw NSError(
+                domain: "FolioleCompanionSettingWritePlugin", code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "\(payloadKey) is required"]
+            )
+        }
+        return value
     }
 }

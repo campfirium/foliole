@@ -17,6 +17,9 @@ describe('iOS review write host contract', () => {
     expect(adapter).toContain('@objc func saveSyncNodeReviewRecord');
     expect(adapter).toContain('FolioleCompanionReviewWriteStore');
     expect(adapter).toContain('FolioleCompanionDatabaseLocation.mainDatabase()');
+    expect(adapter).toContain('guard let nodeId = call.getString(nodeIdKey)');
+    expect(adapter).toContain('guard let reviewJson = call.getString(inputKey)');
+    expect(adapter).not.toContain('?? "{}"');
   });
 
   it('keeps SQL and review-log keys in generated contracts', async () => {

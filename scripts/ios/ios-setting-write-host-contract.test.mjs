@@ -17,6 +17,9 @@ describe('iOS setting write host contract', () => {
     expect(adapter).toContain('@objc func saveSyncSettingRecord');
     expect(adapter).toContain('FolioleCompanionSettingWriteStore');
     expect(adapter).toContain('FolioleCompanionDatabaseLocation.mainDatabase()');
+    expect(adapter).toContain('requiredSettingWriteValue(call, "key", contract)');
+    expect(adapter).toContain('requiredSettingWriteValue(call, "valueJson", contract)');
+    expect(adapter).not.toContain('let key = call.getString');
   });
 
   it('keeps SQL and identity in generated contracts instead of the plugin adapter', async () => {

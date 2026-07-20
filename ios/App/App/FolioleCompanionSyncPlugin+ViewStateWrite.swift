@@ -19,9 +19,16 @@ extension FolioleCompanionSyncPlugin {
                     userInfo: [NSLocalizedDescriptionKey: "node_id is required"]
                 )
             }
+            guard let scrollTop = call.getInt(contract.scrollTopPayloadKey) else {
+                throw NSError(
+                    domain: "FolioleCompanionViewStateWritePlugin",
+                    code: 1,
+                    userInfo: [NSLocalizedDescriptionKey: "\(contract.scrollTopPayloadKey) is required"]
+                )
+            }
             return try store.saveNodeViewState(
                 nodeId: nodeId,
-                scrollTop: call.getInt(contract.scrollTopPayloadKey) ?? 0
+                scrollTop: scrollTop
             )
         }
     }

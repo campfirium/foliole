@@ -17,6 +17,9 @@ describe('iOS reading write host contract', () => {
     expect(adapter).toContain('@objc func saveSyncNodeReadingRecord');
     expect(adapter).toContain('FolioleCompanionReadingWriteStore');
     expect(adapter).toContain('FolioleCompanionDatabaseLocation.mainDatabase()');
+    expect(adapter).toContain('guard let nodeId = call.getString(nodeIdKey)');
+    expect(adapter).toContain('guard let readingJson = call.getString(inputKey)');
+    expect(adapter).not.toContain('?? "{}"');
   });
 
   it('keeps SQL and learning keys in generated contracts', async () => {
