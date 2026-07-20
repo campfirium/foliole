@@ -143,7 +143,7 @@ export function stabilizePdfTextSelectionToClosestRow(
   return true;
 }
 
-function resolvePdfSelectionSnapshot(surface: HTMLElement | null): PdfSelectionSnapshot | null {
+export function resolvePdfSelectionSnapshot(surface: HTMLElement | null): PdfSelectionSnapshot | null {
   const selection = window.getSelection();
   if (!selection) {
     return null;

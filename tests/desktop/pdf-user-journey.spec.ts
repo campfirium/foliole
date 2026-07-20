@@ -21,7 +21,7 @@ const PDF_SEARCH_INPUT_NAME = /PDF search|PDF 搜索/;
 const ZOOM_IN_NAME = /Zoom in|放大/;
 const ZOOM_VALUE_NAME = /Set zoom level|设置缩放级别/;
 const PDF_HIGHLIGHT_TEXT = 'gamma keyword';
-const PDF_HIGHLIGHT_ACTIONS_SCREENSHOT = path.resolve('.tmp/artifacts/pdf-highlight-actions-hidden-native.png');
+const PDF_HIGHLIGHT_ACTIONS_SCREENSHOT = path.resolve('.tmp/artifacts/pdf-selection-highlight-toolbar-hidden-native.png');
 
 async function installPdfFixtureSelection(desktopApp: ElectronApplication, fixturePath = FIXTURE_PATH) {
   await desktopApp.evaluate(({ dialog }, selectedFixturePath) => {
@@ -78,9 +78,13 @@ async function openImportedPdf(desktopWindow: Page, nodeId: string) {
     return globalThis.window?.__folioleWorkspaceDebug?.openNode?.(targetNodeId) ?? false;
   }, nodeId);
   expect(opened).toBe(true);
+  const importedNode = desktopWindow.locator(`[role="treeitem"][data-node-id="${nodeId}"]`);
+  await expect(importedNode).toBeVisible();
+  await importedNode.click();
   await expect.poll(() => desktopWindow.evaluate(() => {
     return globalThis.window?.__folioleWorkspaceDebug?.getActiveNodeId?.() ?? null;
   })).toBe(nodeId);
+  await expect(getPdfReaderRegion(desktopWindow)).toBeVisible();
 }
 
 async function expectPdfPageReady(desktopWindow: Page, pageNumber: number) {
@@ -102,27 +106,28 @@ async function collectPdfViewState(desktopWindow: Page, nodeId: string) {
   }, nodeId);
 }
 
-async function createPdfHighlightChild(desktopWindow: Page, parentNodeId: string) {
-  const highlightNodeId = await desktopWindow.evaluate(async ({ parentNodeId: targetParentNodeId, text }) => {
-    const api = globalThis.window?.__folioleWorkspaceDebug;
-    return api?.createTextHighlightChild?.({
-      anchorId: 'playwright-pdf-highlight',
-      anchorLink: {
-        id: 'playwright-pdf-highlight',
-        kind: 'highlight',
-        locator: {
-          page: 3,
-          rects: [{ height: 0.045, width: 0.28, x: 0.12, y: 0.18 }],
-          x: 0.26,
-          y: 0.2
-        }
-      },
-      parentNodeId: targetParentNodeId,
-      text
-    }) ?? null;
-  }, { parentNodeId, text: PDF_HIGHLIGHT_TEXT });
-  expect(typeof highlightNodeId).toBe('string');
-  return highlightNodeId;
+async function selectPdfHighlightText(desktopWindow: Page) {
+  const selected = await desktopWindow.evaluate((text) => {
+    const surface = document.querySelector<HTMLElement>('[data-testid="pdf-document-surface"]');
+    const walker = surface ? document.createTreeWalker(surface, NodeFilter.SHOW_TEXT) : null;
+    let textNode = walker?.nextNode() ?? null;
+    while (textNode && !textNode.textContent?.includes(text)) textNode = walker?.nextNode() ?? null;
+    const start = textNode?.textContent?.indexOf(text) ?? -1;
+    if (!textNode || start < 0) return false;
+    const range = document.createRange();
+    range.setStart(textNode, start);
+    range.setEnd(textNode, start + text.length);
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    document.dispatchEvent(new Event('selectionchange'));
+    const rect = range.getBoundingClientRect();
+    textNode.parentElement?.dispatchEvent(new MouseEvent('mouseup', {
+      bubbles: true, button: 0, clientX: rect.right, clientY: rect.bottom
+    }));
+    return true;
+  }, PDF_HIGHLIGHT_TEXT);
+  expect(selected).toBe(true);
 }
 
 test('PDF user journey @pdf imports, reads, searches, zooms, and restores page state', async ({
@@ -207,8 +212,15 @@ test('PDF highlight journey @pdf opens shared actions and deletes a saved highli
 
   const importedNodeId = await importPdfThroughRuntime(desktopApp, desktopWindow);
   await openImportedPdf(desktopWindow, importedNodeId);
-  await createPdfHighlightChild(desktopWindow, importedNodeId);
+  const exitFlow = desktopWindow.getByRole('button', { name: /^(Exit Flow|退出 Flow)$/ });
+  if (await exitFlow.isVisible().catch(() => false)) await exitFlow.click();
   await jumpToPdfPage(desktopWindow, 3);
+
+  await selectPdfHighlightText(desktopWindow);
+  const createHighlightButton = desktopWindow.getByRole('button', { name: /^(Highlight|高亮)$/ });
+  await expect(createHighlightButton).toBeVisible();
+  await desktopWindow.screenshot({ path: PDF_HIGHLIGHT_ACTIONS_SCREENSHOT });
+  await createHighlightButton.click();
 
   const highlightRect = getPdfReaderRegion(desktopWindow).getByTestId('pdf-highlight-rect').first();
   await expect(highlightRect).toBeVisible();
@@ -217,10 +229,10 @@ test('PDF highlight journey @pdf opens shared actions and deletes a saved highli
   const bounds = await highlightRect.boundingBox();
   expect(bounds).not.toBeNull();
   await desktopWindow.mouse.click((bounds?.x ?? 0) + (bounds?.width ?? 0) / 2, (bounds?.y ?? 0) + (bounds?.height ?? 0) / 2);
-  await expect(desktopWindow.getByRole('toolbar')).toBeVisible();
-  await desktopWindow.screenshot({ path: PDF_HIGHLIGHT_ACTIONS_SCREENSHOT });
+  const existingHighlightToolbar = desktopWindow.locator('[data-annotation-toolbar="true"] [role="toolbar"]');
+  await expect(existingHighlightToolbar).toBeVisible();
 
-  await desktopWindow.getByRole('button', { name: /Close Highlight|关闭高亮/ }).click();
+  await existingHighlightToolbar.getByRole('button', { name: /Close Highlight|关闭高亮/ }).click();
   await expect(desktopWindow.getByRole('treeitem', { name: PDF_HIGHLIGHT_TEXT })).toHaveCount(0);
   await expect(highlightRect).toHaveCount(0);
 });

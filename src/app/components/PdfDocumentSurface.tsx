@@ -87,7 +87,6 @@ function buildPdfSurfaceLayoutProps(
 function renderPdfSelectionMenu(selectionState: ReturnType<typeof usePdfSelectionContextMenu>) {
   return (
     <PdfSelectionContextMenu
-      onClose={selectionState.closeSelectionMenu}
       onCreateHighlight={selectionState.handleCreateHighlight}
       state={selectionState.selectionMenuState}
     />

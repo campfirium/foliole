@@ -113,8 +113,8 @@ beforeEach(() => {
   } as never);
 });
 
-it('keeps selected pdf text available when right-click clears selection before context menu', async () => {
-  const onCreatePdfHighlight = vi.fn();
+it('shows the PDF highlight toolbar on selection completion and preserves the right-click fallback', async () => {
+  const onCreatePdfHighlight = vi.fn(() => true);
 
   render(<DocumentPanelSection {...defaultProps} onCreatePdfHighlight={onCreatePdfHighlight} />);
 
@@ -122,6 +122,16 @@ it('keeps selected pdf text available when right-click clears selection before c
   const range = document.createRange();
   range.selectNodeContents(textNode);
   const selection = window.getSelection();
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+  act(() => {
+    fireEvent.mouseUp(textNode, { button: 0, clientX: 220, clientY: 180 });
+  });
+
+  await waitFor(() => expect(screen.getByRole('toolbar')).toBeInTheDocument(), RELEASE_GATE_WAIT_OPTIONS);
+  fireEvent.click(screen.getByRole('button', { name: 'Highlight' }));
+  expect(onCreatePdfHighlight).toHaveBeenCalledWith('keyword match on page 1', expect.anything());
+  expect(selection?.rangeCount).toBe(0);
   selection?.removeAllRanges();
   selection?.addRange(range);
   act(() => {
@@ -134,6 +144,7 @@ it('keeps selected pdf text available when right-click clears selection before c
   });
 
   await waitFor(() => expect(screen.getByTestId('pdf-selection-marker')).toBeInTheDocument(), RELEASE_GATE_WAIT_OPTIONS);
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Highlight' }));
-  expect(onCreatePdfHighlight).toHaveBeenCalledWith('keyword match on page 1', expect.anything());
+  fireEvent.click(screen.getByRole('button', { name: 'Highlight' }));
+  expect(onCreatePdfHighlight).toHaveBeenCalledTimes(2);
+  selection?.removeAllRanges();
 }, RELEASE_GATE_TEST_TIMEOUT_MS);
