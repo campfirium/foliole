@@ -8,6 +8,7 @@ import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import {
   FolioleCompanionSync,
   getNativeCompanionSyncbackPlatform,
+  isAvailableNativeAndroidCompanionRuntime,
   isNativeAndroidCompanionRuntime,
   isNativeCompanionPdfPageTextRuntime,
   isNativeCompanionSyncObjectReadRuntime
@@ -45,7 +46,7 @@ export async function loadCompanionSyncIndex() {
 }
 
 export async function loadCompanionSyncNodeConflicts() {
-  if (!isNativeAndroidCompanionRuntime()) {
+  if (!isAvailableNativeAndroidCompanionRuntime()) {
     return [] as NativeSyncNodeConflictRecord[];
   }
   return (await FolioleCompanionSync.loadSyncNodeConflicts()).conflicts;

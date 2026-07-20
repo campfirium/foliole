@@ -18,6 +18,7 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'src/shared/platform/companionRuntimeCapabilities.test.ts',
   'src/shared/platform/appLifecycle.test.ts',
   'src/shared/platform/companionSyncStateWriters.ios.test.ts',
+  'src/shared/platform/companionSyncObjects.ios.test.ts',
   'src/shared/platform/companionWorkspaceRuntimeRepository.test.ts',
   'src/companion/CompanionBrowseTopActions.test.tsx',
   'src/companion/CompanionNodeMutationAvailability.test.tsx',
