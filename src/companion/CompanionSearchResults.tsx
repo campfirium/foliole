@@ -14,6 +14,7 @@ type ResourceStatus = CompanionTopicSearchResult['bodyStatus'] | CompanionExtern
 
 export function CompanionSearchResults(props: {
   onOpenExternalDocument?: ((document: CompanionExternalDocumentSearchResult) => void) | undefined;
+  onOpenPdf?: ((result: CompanionPdfPageTextSearchResult) => void) | undefined;
   onOpenTopic?: ((nodeId: string) => void) | undefined;
   state: { results: CompanionFullTextSearchResults | null; status: SearchStatus };
 }) {
@@ -29,7 +30,7 @@ export function CompanionSearchResults(props: {
   return (
     <div className="space-y-5">
       <TopicResults onOpenTopic={props.onOpenTopic} results={results.topics} />
-      <PdfResults results={results.pdf} />
+      <PdfResults onOpen={props.onOpenPdf} results={results.pdf} />
       <ExternalResults onOpen={props.onOpenExternalDocument} results={results.external} />
     </div>
   );
@@ -73,7 +74,10 @@ function TopicResults(props: {
   );
 }
 
-function PdfResults(props: { results: CompanionPdfPageTextSearchResult[] }) {
+function PdfResults(props: {
+  onOpen?: ((result: CompanionPdfPageTextSearchResult) => void) | undefined;
+  results: CompanionPdfPageTextSearchResult[];
+}) {
   const t = useTranslation();
   if (props.results.length === 0) return null;
   return (
@@ -82,6 +86,7 @@ function PdfResults(props: { results: CompanionPdfPageTextSearchResult[] }) {
         <SearchResultItem
           excerpt={result.excerpt || result.text}
           key={`${result.attachment_id}:${result.page}:${result.match_start}`}
+          onOpen={props.onOpen ? () => props.onOpen?.(result) : undefined}
           title={t('companion.search.pdfPage', { page: result.page })}
         />
       ))}

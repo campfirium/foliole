@@ -58,14 +58,17 @@ function renderCompanionMainContent(model: CompanionShellModel) {
         isSearchArticleOpen: model.isSearchArticleOpen,
         onExitSearchArticle: model.handleExitSearchArticle,
         onExitSearchExternalDocument: model.handleExitSearchExternalDocument,
+        onExitSearchPdf: model.handleExitSearchPdf,
         onOpenSyncSettingsPage: model.setSettingsPage,
         onOpenSyncSettings: () => model.setSettingsPage('sync'),
         onOpenSearchExternalDocument: model.handleOpenSearchExternalDocument,
+        onOpenSearchPdf: model.handleOpenSearchPdf,
         onOpenSearchTopic: model.handleOpenSearchTopic,
         onResetDirectorySelection: () => model.setDirectorySelection({ kind: 'root' }),
         onSelectReviewBreadcrumbItem: model.surface.handleSelectBrowseNode,
         reviewBreadcrumbItems: model.reviewBreadcrumbItems,
         searchExternalDocument: model.searchExternalDocument,
+        searchPdfResult: model.searchPdfResult,
         settingsPage: model.settingsPage,
         surface: model.surface,
         workspaceError: model.workspaceSync.error,
@@ -76,7 +79,7 @@ function renderCompanionMainContent(model: CompanionShellModel) {
 }
 
 function isReadableArticleImmersive(model: CompanionShellModel) {
-  return Boolean(model.searchExternalDocument) || (model.surface.activeAction === 'recent'
+  return Boolean(model.searchExternalDocument || model.searchPdfResult) || (model.surface.activeAction === 'recent'
     && Boolean(model.surface.readableArticle)
     && Boolean(model.surface.selectedBrowseNodeId)
     && !model.surface.browsedFolder);

@@ -7,6 +7,7 @@ import {
   searchCompanionFullText,
   type CompanionFullTextSearchResults
 } from '../shared/platform/companionFullTextSearch';
+import type { CompanionPdfPageTextSearchResult } from '../shared/platform/companionSyncObjects';
 import { appInputBorderFocusVisibleClassName } from '../shared/ui';
 
 import { CompanionScreenHeader } from './CompanionScreenHeader';
@@ -17,6 +18,7 @@ const SEARCH_LIMIT = 20;
 type SearchStatus = 'idle' | 'loading' | 'ready' | 'error';
 export function CompanionSearchContent(props: {
   onOpenExternalDocument?: ((document: CompanionExternalDocumentSearchResult) => void) | undefined;
+  onOpenPdf?: ((result: CompanionPdfPageTextSearchResult) => void) | undefined;
   onOpenTopic?: ((nodeId: string) => void) | undefined;
 }) {
   const t = useTranslation();
@@ -42,6 +44,7 @@ export function CompanionSearchContent(props: {
       <div className="mt-4 border-t border-companion-divider pt-4">
         <CompanionSearchResults
           onOpenExternalDocument={props.onOpenExternalDocument}
+          onOpenPdf={props.onOpenPdf}
           onOpenTopic={props.onOpenTopic}
           state={searchState}
         />

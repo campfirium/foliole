@@ -62,14 +62,16 @@ describe('CompanionSearchContent presentation', () => {
 });
 
 describe('CompanionSearchContent states and actions', () => {
-  it('opens topic and external results while leaving PDF results informational', async () => {
+  it('opens topic, PDF, and external results through their shared readers', async () => {
     const onOpenExternalDocument = vi.fn();
+    const onOpenPdf = vi.fn();
     const onOpenTopic = vi.fn();
     searchCompanionFullText.mockResolvedValue(createCompanionSearchResultsFixture());
 
     renderWithLocalization(
       <CompanionSearchContent
         onOpenExternalDocument={onOpenExternalDocument}
+        onOpenPdf={onOpenPdf}
         onOpenTopic={onOpenTopic}
       />
     );
@@ -79,7 +81,8 @@ describe('CompanionSearchContent states and actions', () => {
     expect(onOpenTopic).toHaveBeenCalledWith('topic-1');
     fireEvent.click(screen.getByRole('button', { name: /External Alpha/u }));
     expect(onOpenExternalDocument).toHaveBeenCalledWith(expect.objectContaining({ document_id: 'doc-1' }));
-    expect(screen.queryByRole('button', { name: /PDF page 2/u })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /PDF page 2/u }));
+    expect(onOpenPdf).toHaveBeenCalledWith(expect.objectContaining({ attachment_id: 'attachment-1', page: 2 }));
   });
 
   it('shows an empty local result state', async () => {

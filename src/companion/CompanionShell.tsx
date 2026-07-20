@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type UIEvent as ReactUIEvent } from 'react';
 
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
-import type { CompanionExternalDocumentSearchResult } from '../shared/platform/companionExternalDocuments';
 
 import { createCompanionCaptureTextSaveHandler } from './companionCaptureTextController';
 import type { CompanionTabAction } from './CompanionFloatingBars';
@@ -11,6 +10,7 @@ import { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { useCompanionBrowseSortState } from './useCompanionBrowseSortState';
 import { useCompanionDirectorySelectionState } from './useCompanionDirectorySelectionState';
 import { useCompanionExternalDirectory } from './useCompanionExternalDirectory';
+import { useCompanionSearchNavigation } from './useCompanionSearchNavigation';
 import { useCompanionShellActions } from './useCompanionShellActions';
 import { useCompanionSyncSettingsPage } from './useCompanionSyncSettingsPage';
 import { useCompanionTabsConfig } from './useCompanionTabsConfig';
@@ -70,40 +70,6 @@ function useCompanionReviewChrome(args: {
   return { isBottomBarDisabled, isReviewTaskActive, reviewBreadcrumbItems, ...navigation };
 }
 
-function useCompanionSearchArticleReturn(surface: ReturnType<typeof useCompanionArticleSurface>) {
-  const [searchArticleNodeId, setSearchArticleNodeId] = useState<string | null>(null);
-  const [searchExternalDocument, setSearchExternalDocument] = useState<CompanionExternalDocumentSearchResult | null>(null);
-  const handleOpenSearchTopic = useCallback((nodeId: string) => {
-    setSearchExternalDocument(null);
-    setSearchArticleNodeId(nodeId);
-    surface.handleSelectBrowseNode(nodeId);
-  }, [surface]);
-  const handleOpenSearchExternalDocument = useCallback((document: CompanionExternalDocumentSearchResult) => {
-    setSearchArticleNodeId(null);
-    setSearchExternalDocument(document);
-  }, []);
-  const handleExitSearchArticle = useCallback(() => {
-    setSearchArticleNodeId(null);
-    surface.handleExitSearchArticle();
-  }, [surface]);
-  const handleExitSearchExternalDocument = useCallback(() => {
-    setSearchExternalDocument(null);
-  }, []);
-  const isSearchArticleOpen = Boolean(
-    searchArticleNodeId &&
-    surface.selectedBrowseNodeId === searchArticleNodeId &&
-    surface.readableArticle?.nodeId === searchArticleNodeId
-  );
-  return {
-    handleExitSearchArticle,
-    handleExitSearchExternalDocument,
-    handleOpenSearchExternalDocument,
-    handleOpenSearchTopic,
-    isSearchArticleOpen,
-    searchExternalDocument
-  };
-}
-
 function buildCompanionShellModel(args: {
   actions: ReturnType<typeof useCompanionShellActions>;
   browseSort: ReturnType<typeof useCompanionBrowseSortState>;
@@ -116,7 +82,7 @@ function buildCompanionShellModel(args: {
   isCaptureSheetOpen: boolean;
   isOnlyReviewOpen: boolean;
   reviewChrome: ReturnType<typeof useCompanionReviewChrome>;
-  searchArticle: ReturnType<typeof useCompanionSearchArticleReturn>;
+  searchArticle: ReturnType<typeof useCompanionSearchNavigation>;
   setIsCaptureSheetOpen(open: boolean): void;
   setSettingsPage: ReturnType<typeof useCompanionSyncSettingsPage>['setSettingsPage'];
   settingsPage: ReturnType<typeof useCompanionSyncSettingsPage>['settingsPage'];
@@ -132,22 +98,25 @@ function buildCompanionShellModel(args: {
     floatingBar: args.floatingBar,
     handleContainerScroll: args.handleContainerScroll,
     handleContentTap: args.reviewChrome.handleContentTap,
-    handleExitSearchArticle: args.searchArticle.handleExitSearchArticle,
-    handleExitSearchExternalDocument: args.searchArticle.handleExitSearchExternalDocument,
+    handleExitSearchArticle: args.searchArticle.exitTopic,
+    handleExitSearchExternalDocument: args.searchArticle.exitExternalDocument,
+    handleExitSearchPdf: args.searchArticle.exitPdf,
     handleNavigationAction: args.actions.handleNavigationAction,
-    handleOpenSearchExternalDocument: args.searchArticle.handleOpenSearchExternalDocument,
-    handleOpenSearchTopic: args.searchArticle.handleOpenSearchTopic,
+    handleOpenSearchExternalDocument: args.searchArticle.openExternalDocument,
+    handleOpenSearchPdf: args.searchArticle.openPdf,
+    handleOpenSearchTopic: args.searchArticle.openTopic,
     handleSaveCaptureText: args.handleSaveCaptureText,
     handleSecondaryDestination: args.actions.secondaryDestinations.handleSecondaryDestination,
     isBottomBarDisabled: args.reviewChrome.isBottomBarDisabled,
     isBrowseDirectoryOpen: args.isBrowseDirectoryOpen,
     isCaptureSheetOpen: args.isCaptureSheetOpen,
     isOnlyReviewOpen: args.isOnlyReviewOpen,
-    isSearchArticleOpen: args.searchArticle.isSearchArticleOpen,
+    isSearchArticleOpen: args.searchArticle.isTopicOpen,
     isNavigationVisible: args.workspaceSync.isWorkspaceSyncStateReady && args.reviewChrome.isNavigationVisible,
     isReviewTaskActive: args.reviewChrome.isReviewTaskActive,
     reviewBreadcrumbItems: args.reviewChrome.reviewBreadcrumbItems,
-    searchExternalDocument: args.searchArticle.searchExternalDocument,
+    searchExternalDocument: args.searchArticle.externalDocument,
+    searchPdfResult: args.searchArticle.pdfResult,
     setIsCaptureSheetOpen: args.setIsCaptureSheetOpen,
     setBrowseSortDirection: args.browseSort.setBrowseSortDirection,
     setBrowseSortKey: args.browseSort.setBrowseSortKey,
@@ -177,7 +146,7 @@ function useCompanionShellModel(bootstrapState: NativeCompanionBootstrapState) {
     syncOnboardingStatus: workspaceSync.state.sync_onboarding_status
   });
   const reviewChrome = useCompanionReviewChrome({ floatingBar, surface, workspaceSync });
-  const searchArticle = useCompanionSearchArticleReturn(surface);
+  const searchArticle = useCompanionSearchNavigation(surface);
   const directoryState = useCompanionDirectorySelectionState(isBrowseDirectoryOpen);
   const externalDirectory = useCompanionExternalDirectory();
   const handleContainerScroll = useCompanionShellScrollHandler(floatingBar, surface);

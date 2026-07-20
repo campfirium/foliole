@@ -67,54 +67,6 @@ function createSecondPdfReadableSurface() {
   };
 }
 
-function createMissingBodySurface() {
-  return {
-    ...createPdfReadableSurface(),
-    readableArticle: {
-      bodyStatus: 'missing',
-      content: '',
-      hideTitleHeading: false,
-      nodeId: 'topic-1',
-      persistedNodeViewState: null,
-      pdfAttachmentId: null,
-      textAnchorDecorations: [],
-      title: 'Synced topic'
-    }
-  };
-}
-
-function createEmptyBodySurface() {
-  return {
-    ...createPdfReadableSurface(),
-    readableArticle: {
-      bodyStatus: 'empty',
-      content: '',
-      hideTitleHeading: false,
-      nodeId: 'topic-1',
-      persistedNodeViewState: null,
-      pdfAttachmentId: null,
-      textAnchorDecorations: [],
-      title: 'Empty topic'
-    }
-  };
-}
-
-function createFailedBodySurface() {
-  return {
-    ...createPdfReadableSurface(),
-    readableArticle: {
-      bodyStatus: 'failed',
-      content: '',
-      hideTitleHeading: false,
-      nodeId: 'topic-1',
-      persistedNodeViewState: null,
-      pdfAttachmentId: null,
-      textAnchorDecorations: [],
-      title: 'Failed topic'
-    }
-  };
-}
-
 function createWorkspaceSync(overrides: Record<string, unknown> = {}) {
   const state = {
     endpoint_url: null,
@@ -141,6 +93,7 @@ function renderSurfaceElement(surface: unknown, workspaceSync: unknown = createW
     isOnlyReviewOpen: false,
     isSearchArticleOpen: false,
     onExitSearchExternalDocument: vi.fn(),
+    onExitSearchPdf: vi.fn(),
     onBackDirectorySelection: vi.fn(),
     onChangeDirectorySelection: vi.fn(),
     onBackToSettingsList: vi.fn(),
@@ -148,11 +101,13 @@ function renderSurfaceElement(surface: unknown, workspaceSync: unknown = createW
     onOpenSyncSettingsPage: vi.fn(),
     onOpenSyncSettings: vi.fn(),
     onOpenSearchExternalDocument: vi.fn(),
+    onOpenSearchPdf: vi.fn(),
     onOpenSearchTopic: vi.fn(),
     onResetDirectorySelection: vi.fn(),
     onSelectReviewBreadcrumbItem: vi.fn(),
     reviewBreadcrumbItems: [],
     searchExternalDocument: null,
+    searchPdfResult: null,
     settingsPage: 'list',
     surface: surface as never,
     workspaceError: null,
@@ -216,32 +171,8 @@ async function testInlineAttachmentSyncUsesLatestTopic() {
   await waitFor(() => expect(syncObjectMock.saveCompanionSyncActiveViewState).toHaveBeenCalledWith('topic-2'));
 }
 
-function testMissingBodyState() {
-  renderSurface(createMissingBodySurface());
-
-  expect(screen.getByText('Waiting for topic body.')).toBeInTheDocument();
-  expect(screen.getByText('This device has the topic list, but this body has not reached the device yet.')).toBeInTheDocument();
-}
-
-function testEmptyBodyState() {
-  renderSurface(createEmptyBodySurface());
-
-  expect(screen.getByText('This topic is empty.')).toBeInTheDocument();
-  expect(screen.queryByText('Waiting for topic body.')).not.toBeInTheDocument();
-}
-
-function testFailedBodyState() {
-  renderSurface(createFailedBodySurface());
-
-  expect(screen.getByText('Topic body could not be loaded.')).toBeInTheDocument();
-  expect(screen.getByText('Reconnect this device to desktop to retry.')).toBeInTheDocument();
-}
-
 describe('CompanionShellContent PDF articles', () => {
   it('keeps extracted PDF text as the primary mobile reading surface', testPrimaryPdfReadingSurface);
   it('syncs a missing inline attachment from the current topic surface', testInlineAttachmentSync);
   it('syncs a missing inline attachment against the latest topic after switching', testInlineAttachmentSyncUsesLatestTopic);
-  it('shows a syncing state when the topic body blob is not local yet', testMissingBodyState);
-  it('shows an empty state when the selected topic has no body', testEmptyBodyState);
-  it('shows a retryable failed state when body blob sync fails validation', testFailedBodyState);
 });

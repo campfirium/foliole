@@ -5,7 +5,6 @@ import {
   type FolderListSortKey
 } from '../features/nodes/model/folderListOrdering';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
-import type { CompanionExternalDocumentSearchResult } from '../shared/platform/companionExternalDocuments';
 
 import { CompanionDirectoryContent, type CompanionDirectorySelection } from './CompanionDirectoryContent';
 import * as DirectoryArticle from './CompanionDirectoryReadableArticleModel';
@@ -20,7 +19,7 @@ import {
   CompanionShellReadableArticle,
   continueCompanionAttachmentResourceSync
 } from './CompanionShellReadableArticle';
-import { renderCompanionShellSearchSurface } from './CompanionShellSearchSurface';
+import { renderCompanionShellSearchSurface, type CompanionShellSearchRouteProps } from './CompanionShellSearchSurface';
 import { CompanionWorkspaceSyncLoading } from './CompanionWorkspaceSyncLoading';
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
@@ -31,29 +30,23 @@ import { NodeBrowseList } from '@/shared/ui';
 type Surface = ReturnType<typeof useCompanionArticleSurface>;
 type WorkspaceSync = ReturnType<typeof useCompanionWorkspaceSync>;
 type ReviewBreadcrumbItem = { id: string; isCurrent?: boolean; label: string; targetNodeId: string };
-type CompanionShellContentProps = {
+type CompanionShellContentProps = CompanionShellSearchRouteProps & {
   directorySelection: CompanionDirectorySelection;
   browseSortDirection?: FolderListSortDirection;
   browseSortKey?: FolderListSortKey;
   hasSnapshot: boolean;
   isBrowseDirectoryOpen: boolean;
   isOnlyReviewOpen: boolean;
-  isSearchArticleOpen: boolean;
   onBackToSettingsList: () => void;
   onBackDirectorySelection: () => void;
   onChangeBrowseSortDirection?: (sortDirection: FolderListSortDirection) => void;
   onChangeBrowseSortKey?: (sortKey: FolderListSortKey) => void;
   onChangeDirectorySelection: (selection: CompanionDirectorySelection) => void;
-  onExitSearchArticle: () => void;
-  onExitSearchExternalDocument: () => void;
   onOpenSyncSettingsPage: (page: CompanionSettingsPage) => void;
   onOpenSyncSettings: () => void;
-  onOpenSearchExternalDocument: (document: CompanionExternalDocumentSearchResult) => void;
-  onOpenSearchTopic: (nodeId: string) => void;
   onResetDirectorySelection: () => void;
   onSelectReviewBreadcrumbItem: (id: string) => void;
   reviewBreadcrumbItems: ReviewBreadcrumbItem[];
-  searchExternalDocument: CompanionExternalDocumentSearchResult | null;
   settingsPage: CompanionSettingsPage;
   surface: Surface;
   workspaceError: string | null;
@@ -177,10 +170,13 @@ export function renderCompanionShellContent(props: CompanionShellContentProps) {
   }
   const searchSurface = renderCompanionShellSearchSurface({
     externalDocument: props.searchExternalDocument,
+    pdfResult: props.searchPdfResult,
     isTopicOpen: props.isSearchArticleOpen,
     onExitExternalDocument: props.onExitSearchExternalDocument,
+    onExitPdf: props.onExitSearchPdf,
     onExitTopic: props.onExitSearchArticle,
     onOpenExternalDocument: props.onOpenSearchExternalDocument,
+    onOpenPdf: props.onOpenSearchPdf,
     onOpenTopic: props.onOpenSearchTopic,
     surface: props.surface,
     workspaceSync: props.workspaceSync
