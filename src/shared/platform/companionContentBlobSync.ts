@@ -1,11 +1,11 @@
 import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import {
   FolioleCompanionSync,
-  isNativeAndroidCompanionRuntime
+  isNativeCompanionContentBlobRuntime
 } from './companionWorkspaceRuntimeRepository';
 
 export async function loadCompanionMissingContentBlobHashes(limit = 50) {
-  if (!isNativeAndroidCompanionRuntime()) {
+  if (!isNativeCompanionContentBlobRuntime()) {
     return [] as string[];
   }
   return (await FolioleCompanionSync.loadMissingContentBlobHashes({ limit })).hashes;
@@ -25,7 +25,7 @@ function normalizeNumber(value: unknown) {
 }
 
 export async function loadCompanionMissingContentBlobBatch(limit = 50): Promise<CompanionMissingContentBlobBatch> {
-  if (!isNativeAndroidCompanionRuntime()) {
+  if (!isNativeCompanionContentBlobRuntime()) {
     return { blobs: [], failedBytes: null, failedCount: null, hashes: [], total: null, totalBytes: null };
   }
   const result = await FolioleCompanionSync.loadMissingContentBlobHashes({ limit });
@@ -51,7 +51,7 @@ export async function syncCompanionContentBlob(args: {
   headers: Record<string, string>;
   url: string;
 }) {
-  if (!isNativeAndroidCompanionRuntime()) {
+  if (!isNativeCompanionContentBlobRuntime()) {
     return { availability: 'missing', hash: args.hash };
   }
   const result = await syncCompanionContentBlobs({
@@ -70,7 +70,7 @@ export async function syncCompanionContentBlobs(args: {
   headers: Record<string, string>;
   url: string;
 }) {
-  if (!isNativeAndroidCompanionRuntime()) {
+  if (!isNativeCompanionContentBlobRuntime()) {
     throw new Error('Native content body batch sync is unavailable.');
   }
   const download = await FolioleCompanionSync.downloadContentBlobBatch(args);

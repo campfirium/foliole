@@ -19,6 +19,8 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'src/shared/platform/companionWorkspaceRuntimeRepository.test.ts',
   'src/shared/platform/companionWorkspaceDiscovery.test.ts',
   'src/shared/platform/companionWorkspaceSync.pairing.test.ts',
+  'src/shared/platform/companionDesktopSyncHttp.test.ts',
+  'src/shared/platform/companionContentBlobSync.test.ts',
   'src/shared/platform/companionBootstrap.ios.test.ts',
   'src/shared/platform/companion/runtime/iosCompanionDatabaseBootstrap.test.ts',
   'src/shared/platform/companion/sync/cursor/iosCompanionSyncPackCursorStore.test.ts',

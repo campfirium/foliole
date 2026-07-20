@@ -1,3 +1,9 @@
+import {
+  COMPANION_CONTENT_BLOB_HOST_CONTRACT_DEFINITIONS,
+  COMPANION_RESOURCE_PLUGIN_DEFAULTS,
+  COMPANION_RESOURCE_PLUGIN_REQUEST_KEYS
+} from './companionContentBlobHostContractDefinitions.js';
+
 export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
   methodInventory: {
     folioleCompanionSync: [
@@ -77,9 +83,10 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
     },
     contentBlobBatch: {
       responseHeaderKeys: {
-        blobHash: 'x-blob-hash'
+        blobHash: COMPANION_CONTENT_BLOB_HOST_CONTRACT_DEFINITIONS.responseHeaderKey
       }
     },
+    contentBlobSync: COMPANION_CONTENT_BLOB_HOST_CONTRACT_DEFINITIONS,
     network: {
       discoveryDefaults: {
         emulatorHost: '10.0.2.2',
@@ -193,24 +200,7 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
     }
   },
   resourcePlugin: {
-    defaults: {
-      externalDocumentSearchLimit: 20,
-      missingResourceLimit: 50,
-      pdfPageTextSearchLimit: 20,
-      topicSearchLimit: 20
-    },
-    requestKeys: {
-      attachmentId: 'attachment_id',
-      batchToken: 'batch_token',
-      body: 'body',
-      contentHash: 'content_hash',
-      documentId: 'document_id',
-      hash: 'hash',
-      headers: 'headers',
-      limit: 'limit',
-      query: 'query',
-      resources: 'resources',
-      url: 'url'
-    }
+    defaults: COMPANION_RESOURCE_PLUGIN_DEFAULTS,
+    requestKeys: COMPANION_RESOURCE_PLUGIN_REQUEST_KEYS
   }
 } as const;

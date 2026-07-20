@@ -27,6 +27,7 @@ const capacitorMock = vi.hoisted(() => ({
       parse_elapsed_ms: 1,
       synced_hashes: ['a'.repeat(64)]
     })),
+    loadMissingContentBlobHashes: vi.fn(async () => ({ hashes: ['a'.repeat(64)] })),
     syncContentBlob: vi.fn()
   }
 }));
@@ -88,5 +89,13 @@ describe('companion content blob sync split bridge', () => {
     expect(capacitorMock.plugin.commitContentBlobBatch).toHaveBeenCalledWith({
       batch_token: 'failed-content-batch-token'
     });
+  });
+
+  it('routes iOS missing-body queries through the same native contract', async () => {
+    capacitorMock.platform.mockReturnValue('ios');
+    const api = await import('./companionContentBlobSync');
+
+    await expect(api.loadCompanionMissingContentBlobHashes(3)).resolves.toEqual(['a'.repeat(64)]);
+    expect(capacitorMock.plugin.loadMissingContentBlobHashes).toHaveBeenCalledWith({ limit: 3 });
   });
 });

@@ -53,8 +53,8 @@ it('throws post errors with path, status, and response body', async () => {
   });
 });
 
-it('routes desktop HTTP through the native Android bridge', async () => {
-  capacitorMock.getPlatform.mockReturnValue('android');
+it.each(['android', 'ios'])('routes desktop HTTP through the native %s bridge', async (platform) => {
+  capacitorMock.getPlatform.mockReturnValue(platform);
   capacitorMock.isNativePlatform.mockReturnValue(true);
   capacitorMock.plugin.desktopHttpRequest.mockResolvedValue({
     body: JSON.stringify({ ok: true }),

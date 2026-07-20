@@ -25,6 +25,19 @@ struct FolioleCompanionPairingContract {
     let storageKeys: [String: String]
 }
 
+struct FolioleCompanionContentBlobContract {
+    let batchResponseKeys: [String: String]
+    let defaultLimit: Int
+    let hashPattern: String
+    let hashesReplacement: String
+    let missingResultKeys: [String: String]
+    let requestKeys: [String: String]
+    let responseHeaderKey: String
+    let sql: [String: String]
+    let statuses: [String: String]
+    let supportedCompression: String
+}
+
 final class FolioleCompanionContractStore {
     private let bridge: [String: Any]
     private let sync: [String: Any]
@@ -73,6 +86,22 @@ final class FolioleCompanionContractStore {
             signatureResponseKeys: try stringMap(path: ["pairingPlugin", "signature", "responseKeys"], root: bridge),
             stateKeys: try stringMap(path: ["pairingPlugin", "stateKeys"], root: bridge),
             storageKeys: try stringMap(path: ["pairingPlugin", "storageKeys"], root: bridge)
+        )
+    }
+
+    func contentBlobContract() throws -> FolioleCompanionContentBlobContract {
+        let root = try object(path: ["hostApi", "contentBlobSync"], root: bridge)
+        return FolioleCompanionContentBlobContract(
+            batchResponseKeys: try stringMap(path: ["batchResponseKeys"], root: root),
+            defaultLimit: try integer(path: ["defaultLimit"], root: root),
+            hashPattern: try string(path: ["cas", "hashPattern"], root: root),
+            hashesReplacement: try string(path: ["hashesReplacement"], root: root),
+            missingResultKeys: try stringMap(path: ["missingResultKeys"], root: root),
+            requestKeys: try stringMap(path: ["requestKeys"], root: root),
+            responseHeaderKey: try string(path: ["responseHeaderKey"], root: root),
+            sql: try stringMap(path: ["sql"], root: root),
+            statuses: try stringMap(path: ["statuses"], root: root),
+            supportedCompression: try string(path: ["cas", "supportedCompression"], root: root)
         )
     }
 

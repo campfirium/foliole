@@ -3,9 +3,16 @@ import { beforeEach, expect, it, vi } from 'vitest';
 const writerQueueMock = vi.hoisted(() => ({
   run: vi.fn(async <T>(task: () => Promise<T>) => task())
 }));
+const iosCursorStoreMock = vi.hoisted(() => ({
+  loadCursor: vi.fn(async () => 9),
+  saveCursor: vi.fn(async (cursor: number | null) => cursor)
+}));
 
 vi.mock('./companionSyncWriterQueue', () => ({
   runCompanionSyncWriterTask: writerQueueMock.run
+}));
+vi.mock('./companion/sync/cursor/iosCompanionSyncPackCursorStore', () => ({
+  createIosCompanionSyncPackCursorStore: vi.fn(() => iosCursorStoreMock)
 }));
 
 const capacitorMock = vi.hoisted(() => ({
@@ -82,4 +89,19 @@ it('rejects ios before reading web cursors or returning empty changes', async ()
   });
   expect(getItem).not.toHaveBeenCalled();
   expect(capacitorMock.plugin.loadSyncStateChanges).not.toHaveBeenCalled();
+});
+
+it('persists the iOS sync-pack cursor through the SQLite store', async () => {
+  capacitorMock.platform.mockReturnValue('ios');
+  const getItem = vi.spyOn(Storage.prototype, 'getItem');
+  const api = await import('./companionSyncCursors');
+
+  await expect(api.loadCompanionSyncPackCursor()).resolves.toBe(9);
+  await expect(api.saveCompanionSyncPackCursor(12)).resolves.toBe(12);
+
+  expect(iosCursorStoreMock.loadCursor).toHaveBeenCalledTimes(1);
+  expect(iosCursorStoreMock.saveCursor).toHaveBeenCalledWith(12);
+  expect(writerQueueMock.run).toHaveBeenCalledTimes(1);
+  expect(getItem).not.toHaveBeenCalled();
+  expect(capacitorMock.plugin.loadSyncPackCursor).not.toHaveBeenCalled();
 });

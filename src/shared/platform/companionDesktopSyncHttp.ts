@@ -1,7 +1,7 @@
 import { createSignedRequestHeaders } from './companionWorkspacePairing';
 import {
   FolioleCompanionSync,
-  isNativeAndroidCompanionRuntime,
+  isNativeCompanionPairingRuntime,
   normalizeEndpointUrl
 } from './companionWorkspaceRuntimeRepository';
 
@@ -46,7 +46,7 @@ async function requestDesktop(
   url: string,
   init: { body?: string; headers?: Record<string, string>; method: string }
 ): Promise<Response> {
-  if (!isNativeAndroidCompanionRuntime()) {
+  if (!isNativeCompanionPairingRuntime()) {
     return await fetch(url, init);
   }
   const payload = await FolioleCompanionSync.desktopHttpRequest({

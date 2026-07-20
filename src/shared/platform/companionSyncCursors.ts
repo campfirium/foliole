@@ -5,6 +5,9 @@ import type {
   NativeSyncStateObjectRecord
 } from '../../../lib/platform/nativeSyncContract';
 
+import type { CompanionSyncPackCursorStore } from './companion/sync/cursor/companionSyncPackCursorStore';
+import { createIosCompanionSyncPackCursorStore } from './companion/sync/cursor/iosCompanionSyncPackCursorStore';
+import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
 import {
   readWebCursor,
   readWebNumberCursor,
@@ -24,6 +27,12 @@ const WEB_SYNC_NODE_VERSION_CURSOR_KEY = 'foliole-companion-sync-node-version-cu
 const WEB_SYNC_NODE_VERSION_PUSH_CURSOR_KEY = 'foliole-companion-sync-node-version-push-cursor';
 const WEB_SYNC_REVIEW_LOG_CURSOR_KEY = 'foliole-companion-sync-review-log-cursor';
 const WEB_SYNC_REVIEW_LOG_PUSH_CURSOR_KEY = 'foliole-companion-sync-review-log-push-cursor';
+let iosSyncPackCursorStore: CompanionSyncPackCursorStore | null = null;
+
+function getIosSyncPackCursorStore() {
+  iosSyncPackCursorStore ??= createIosCompanionSyncPackCursorStore();
+  return iosSyncPackCursorStore;
+}
 
 export async function loadCompanionSyncStateCursor() {
   if (!isNativeAndroidCompanionRuntime()) return readWebNumberCursor(WEB_SYNC_STATE_CURSOR_KEY);
@@ -38,11 +47,17 @@ export async function saveCompanionSyncStateCursor(cursor: number | null) {
 }
 
 export async function loadCompanionSyncPackCursor() {
+  if (getCompanionRuntimeCapability().kind === 'ios-native') {
+    return getIosSyncPackCursorStore().loadCursor();
+  }
   if (!isNativeAndroidCompanionRuntime()) return readWebNumberCursor(WEB_SYNC_PACK_CURSOR_KEY);
   return (await FolioleCompanionSync.loadSyncPackCursor()).cursor;
 }
 
 export async function saveCompanionSyncPackCursor(cursor: number | null) {
+  if (getCompanionRuntimeCapability().kind === 'ios-native') {
+    return runCompanionSyncWriterTask(() => getIosSyncPackCursorStore().saveCursor(cursor));
+  }
   if (!isNativeAndroidCompanionRuntime()) return writeWebNumberCursor(WEB_SYNC_PACK_CURSOR_KEY, cursor);
   return runCompanionSyncWriterTask(async () => (
     await FolioleCompanionSync.saveSyncPackCursor({ cursor })

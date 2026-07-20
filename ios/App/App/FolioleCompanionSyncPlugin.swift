@@ -7,8 +7,11 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
     public let jsName = "FolioleCompanionSync"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "clearPairingCredentials", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "commitContentBlobBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "desktopHttpRequest", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "downloadContentBlobBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadDiscoveryCandidates", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "loadMissingContentBlobHashes", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadPairingState", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "savePairingCredentials", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "savePrimaryDeviceId", returnType: CAPPluginReturnPromise),
@@ -16,9 +19,72 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
     ]
 
     private var discovery: FolioleCompanionBonjourDiscovery?
+    private let contentBlobSessions = FolioleCompanionContentBlobSessions()
 
     @objc func loadPairingState(_ call: CAPPluginCall) {
         resolvePairing(call) { try $0.loadState() }
+    }
+
+    @objc func loadMissingContentBlobHashes(_ call: CAPPluginCall) {
+        do {
+            let contract = try contentBlobContract()
+            let limit = call.getInt(try key("limit", contract.requestKeys)) ?? contract.defaultLimit
+            let database = try FolioleCompanionContentBlobDatabase(
+                url: FolioleCompanionDatabaseLocation.mainDatabase(),
+                contract: contract
+            )
+            call.resolve(try database.loadMissing(limit: limit))
+        } catch { call.reject("Failed to load missing companion content blobs: \(error.localizedDescription)") }
+    }
+
+    @objc func downloadContentBlobBatch(_ call: CAPPluginCall) {
+        Task {
+            do {
+                let contract = try contentBlobContract()
+                let body = try requiredString(call, contract.requestKeys, "body")
+                let requested = try FolioleCompanionContentBlobBridgePayload.requestedHashes(body, contract: contract)
+                let started = Date()
+                let parts = (try? await FolioleCompanionDesktopHttpClient.requestContentBlobBatch(
+                    url: try requiredString(call, contract.requestKeys, "url"),
+                    headers: try stringHeaders(call.getObject(try key("headers", contract.requestKeys)) ?? [:]),
+                    body: body,
+                    contract: contract
+                )) ?? []
+                let failed = requested.filter { hash in !parts.contains(where: { $0.hash == hash }) }
+                let token = await contentBlobSessions.create(parts: parts, failedHashes: failed)
+                call.resolve(try FolioleCompanionContentBlobBridgePayload.downloadResponse(
+                    token, parts: parts, failed: failed, started: started, contract: contract
+                ))
+            } catch { call.reject("Failed to download companion content blobs: \(error.localizedDescription)") }
+        }
+    }
+
+    @objc func commitContentBlobBatch(_ call: CAPPluginCall) {
+        Task {
+            do {
+                let contract = try contentBlobContract()
+                let token = try requiredString(call, contract.requestKeys, "batchToken")
+                if let committed = await contentBlobSessions.committed(token) {
+                    call.resolve(try FolioleCompanionContentBlobBridgePayload.commitResponse(
+                        committed, elapsedMs: 0, contract: contract
+                    ))
+                    return
+                }
+                guard let batch = await contentBlobSessions.load(token) else { throw invalid("Content blob batch token is unknown or expired.") }
+                let started = Date()
+                let database = try FolioleCompanionContentBlobDatabase(
+                    url: FolioleCompanionDatabaseLocation.mainDatabase(),
+                    contract: contract
+                )
+                let synced = try database.commit(parts: batch.parts, failedHashes: batch.failedHashes)
+                await contentBlobSessions.markCommitted(token, hashes: synced)
+                call.resolve(try FolioleCompanionContentBlobBridgePayload.commitResponse(
+                    synced,
+                    elapsedMs: FolioleCompanionContentBlobBridgePayload.elapsedMs(since: started),
+                    contract: contract
+                ))
+            } catch { call.reject("Failed to commit companion content blobs: \(error.localizedDescription)") }
+        }
     }
 
     @objc func clearPairingCredentials(_ call: CAPPluginCall) {
@@ -104,6 +170,11 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
     private func contract() throws -> FolioleCompanionPairingContract {
         try FolioleCompanionContractStore().pairingContract()
     }
+
+    private func contentBlobContract() throws -> FolioleCompanionContentBlobContract {
+        try FolioleCompanionContractStore().contentBlobContract()
+    }
+
 
     private func requiredString(_ call: CAPPluginCall, _ keys: [String: String], _ name: String) throws -> String {
         let value = call.getString(try key(name, keys))?.trimmingCharacters(in: .whitespacesAndNewlines)

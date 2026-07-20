@@ -15,12 +15,13 @@ let package = Package(
             exclude: [
                 "AppDelegate.swift", "Assets.xcassets", "Base.lproj", "FolioleBridgeViewController.swift",
                 "FolioleCompanionBonjourDiscovery.swift", "FolioleCompanionBootstrapPlugin.swift",
-                "FolioleCompanionDesktopHttpClient.swift", "FolioleCompanionSyncPackTransfer.swift",
-                "FolioleCompanionSyncPackTransferPlugin.swift", "Info.plist", "capacitor.config.json",
+                "FolioleCompanionSyncPackTransfer.swift", "FolioleCompanionSyncPackTransferPlugin.swift",
+                "Info.plist", "capacitor.config.json",
                 "FolioleCompanionSyncPlugin.swift", "config.xml", "public"
             ],
             sources: [
                 "FolioleCompanionContractStore.swift",
+                "FolioleCompanionDesktopHttpClient.swift",
                 "FolioleCompanionZlib.swift",
                 "FolioleCompanionSyncPackEnvelopeValidator.swift",
                 "FolioleReadOnlySQLite.swift",
