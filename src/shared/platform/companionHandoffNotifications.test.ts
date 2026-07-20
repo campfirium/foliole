@@ -53,7 +53,7 @@ describe('companion handoff notification timing', () => {
   });
 });
 
-describe('companion handoff notification scheduling', () => {
+describe('companion handoff notification cancellation', () => {
   beforeEach(resetNotificationMocks);
 
   it('cancels existing handoff reminders when there is no dirty work', async () => {
@@ -66,8 +66,27 @@ describe('companion handoff notification scheduling', () => {
       })
     ).resolves.toEqual({ scheduled: 0, status: 'cancelled' });
     expect(localNotifications.cancel).toHaveBeenCalledTimes(1);
+    expect(localNotifications.checkPermissions).not.toHaveBeenCalled();
     expect(localNotifications.schedule).not.toHaveBeenCalled();
   });
+
+  it('cancels reminders without requesting permission when reminders are disabled', async () => {
+    const { scheduleCompanionHandoffReminders } = await import('./companionHandoffNotifications');
+
+    await expect(
+      scheduleCompanionHandoffReminders({
+        dirtyCount: 1,
+        settings: { fixedTime: null, shortDelay: 'off' }
+      })
+    ).resolves.toEqual({ scheduled: 0, status: 'cancelled' });
+    expect(localNotifications.cancel).toHaveBeenCalledTimes(1);
+    expect(localNotifications.checkPermissions).not.toHaveBeenCalled();
+    expect(localNotifications.requestPermissions).not.toHaveBeenCalled();
+  });
+});
+
+describe('companion handoff notification permission', () => {
+  beforeEach(resetNotificationMocks);
 
   it('requests permission and schedules reminders only on native companion runtime', async () => {
     localNotifications.checkPermissions.mockResolvedValue({ display: 'prompt' });
@@ -86,6 +105,25 @@ describe('companion handoff notification scheduling', () => {
       notifications: [expect.objectContaining({ id: 420101 })]
     });
   });
+
+  it('respects denied notification permission without requesting it again', async () => {
+    localNotifications.checkPermissions.mockResolvedValue({ display: 'denied' });
+    const { scheduleCompanionHandoffReminders } = await import('./companionHandoffNotifications');
+
+    await expect(
+      scheduleCompanionHandoffReminders({
+        dirtyCount: 1,
+        settings: { fixedTime: null, shortDelay: '2' }
+      })
+    ).resolves.toEqual({ scheduled: 0, status: 'permission-denied' });
+    expect(localNotifications.cancel).toHaveBeenCalledTimes(1);
+    expect(localNotifications.requestPermissions).not.toHaveBeenCalled();
+    expect(localNotifications.schedule).not.toHaveBeenCalled();
+  });
+});
+
+describe('companion handoff notification runtime boundary', () => {
+  beforeEach(resetNotificationMocks);
 
   it('does nothing outside native companion runtime', async () => {
     companionBootstrap.isNativeCompanionRuntime.mockReturnValue(false);

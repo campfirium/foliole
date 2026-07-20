@@ -88,6 +88,9 @@ async function ensureNotificationPermission() {
   if (permission.display === 'granted') {
     return true;
   }
+  if (permission.display !== 'prompt' && permission.display !== 'prompt-with-rationale') {
+    return false;
+  }
   const requested = await LocalNotifications.requestPermissions();
   return requested.display === 'granted';
 }
