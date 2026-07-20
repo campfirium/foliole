@@ -1,22 +1,14 @@
 import Database from 'better-sqlite3';
 
-import { ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS } from '../../../lib/core/database/androidCompanionCoreSchemaStatements';
-import { ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS } from '../../../lib/core/database/androidCompanionSyncSchemaStatements';
+import { COMPANION_CURRENT_SCHEMA_REPAIRS } from '../../../lib/core/database/companionCurrentSchemaRepairs';
+import { COMPANION_SCHEMA_STATEMENTS } from '../../../lib/core/database/companionSchemaStatements';
 
 export function installCompanionNodeSchema(database: Database.Database) {
-  database.exec(ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS.join(';\n'));
-  database.exec(ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS.join(';\n'));
-  database.exec(`
-    CREATE TABLE content_blobs (
-      hash TEXT PRIMARY KEY, storage_key TEXT NOT NULL, kind TEXT NOT NULL,
-      mime_type TEXT NOT NULL, compression TEXT NOT NULL,
-      original_size_bytes INTEGER NOT NULL, stored_size_bytes INTEGER NOT NULL,
-      original_sha256 TEXT NOT NULL, stored_sha256 TEXT NOT NULL,
-      availability TEXT NOT NULL, created_at TEXT NOT NULL,
-      cached_at TEXT, last_verified_at TEXT
-    );
-    CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB NOT NULL);
-  `);
+  database.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
+  const columnExists = database.prepare('SELECT name FROM pragma_table_info(?) WHERE name = ? LIMIT 1');
+  for (const repair of COMPANION_CURRENT_SCHEMA_REPAIRS) {
+    if (!columnExists.get(repair.tableName, repair.columnName)) database.exec(repair.statement);
+  }
 }
 
 export function createFakeCapacitorConnection(database: Database.Database) {
@@ -35,16 +27,30 @@ export function createFakeCapacitorConnection(database: Database.Database) {
     },
     isDBOpen: async () => ({ result: false }),
     open: async () => undefined,
-    query: async (sql: string, params: unknown[] = []) => ({
-      values: database.prepare(sql).all(...decodeParams(params))
-    }),
+    query: async (sql: string, params: unknown[] = []) => {
+      const prepared = prepareStatement(database, sql, params);
+      return { values: prepared.statement.all(...prepared.params) };
+    },
     rollbackTransaction: async () => {
       database.exec('ROLLBACK');
     },
     run: async (sql: string, params: unknown[] = []) => {
-      const info = database.prepare(sql).run(...decodeParams(params));
+      const prepared = prepareStatement(database, sql, params);
+      const info = prepared.statement.run(...prepared.params);
       return { changes: { changes: info.changes, lastId: Number(info.lastInsertRowid) } };
     }
+  };
+}
+
+function prepareStatement(database: Database.Database, sql: string, params: unknown[]) {
+  const expandedParams: unknown[] = [];
+  const expandedSql = sql.replace(/\?(\d+)/g, (_placeholder, rawIndex: string) => {
+    expandedParams.push(params[Number(rawIndex) - 1]);
+    return '?';
+  });
+  return {
+    params: decodeParams(expandedParams.length > 0 ? expandedParams : params),
+    statement: database.prepare(expandedSql)
   };
 }
 

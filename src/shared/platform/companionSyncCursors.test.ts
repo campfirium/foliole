@@ -8,10 +8,13 @@ const iosCursorStoreMock = vi.hoisted(() => ({
   saveCursor: vi.fn(async (cursor: number | null) => cursor)
 }));
 const iosSyncbackStoreMock = vi.hoisted(() => ({
+  loadNodeVersions: vi.fn(async () => [{ object_id: 'ios-created-node', version_id: 'ios-device#1' }]),
+  loadNodeVersionPushCursor: vi.fn(async () => null),
   loadReviewLog: vi.fn(async () => [{ op_id: 'ios-op-1' }]),
   loadReviewLogPushCursor: vi.fn(async () => null),
   loadStateChanges: vi.fn(async () => [{ object_id: 'ios-node-1', object_type: 'node_review', state_seq: 7 }]),
   loadStatePushCursor: vi.fn(async () => 6),
+  saveNodeVersionPushCursor: vi.fn(async (cursor) => cursor),
   saveReviewLogPushCursor: vi.fn(async (cursor) => cursor),
   saveStatePushCursor: vi.fn(async (cursor) => cursor)
 }));
@@ -99,8 +102,14 @@ it('routes iOS syncback cursors and rows through the SQLite store', async () => 
     { object_id: 'ios-node-1', object_type: 'node_review', state_seq: 7 }
   ]);
   await expect(api.loadCompanionSyncReviewLog(null)).resolves.toEqual([{ op_id: 'ios-op-1' }]);
+  await expect(api.loadCompanionSyncNodeVersions(null)).resolves.toEqual([
+    { object_id: 'ios-created-node', version_id: 'ios-device#1' }
+  ]);
   await expect(api.saveCompanionSyncStatePushCursor(7)).resolves.toBe(7);
-  await expect(api.loadCompanionPendingSyncSummary()).resolves.toEqual({ pendingCount: 2 });
+  await expect(api.saveCompanionSyncNodeVersionPushCursor({
+    change_id: 'ios-device#1', created_at: '2026-07-21T00:00:00.000Z'
+  })).resolves.toEqual({ change_id: 'ios-device#1', created_at: '2026-07-21T00:00:00.000Z' });
+  await expect(api.loadCompanionPendingSyncSummary()).resolves.toEqual({ pendingCount: 3 });
   expect(getItem).not.toHaveBeenCalled();
   expect(capacitorMock.plugin.loadSyncStateChanges).not.toHaveBeenCalled();
 });

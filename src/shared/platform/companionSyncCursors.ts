@@ -97,12 +97,17 @@ export async function saveCompanionSyncNodeVersionCursor(cursor: NativeSyncChang
 }
 
 export async function loadCompanionSyncNodeVersionPushCursor() {
-  if (getCompanionRuntimeCapability().kind === 'ios-native') return null;
+  if (getNativeCompanionSyncbackPlatform() === 'ios') {
+    return getIosCompanionSyncbackStore().loadNodeVersionPushCursor();
+  }
   if (!isNativeAndroidCompanionRuntime()) return readWebCursor(WEB_SYNC_NODE_VERSION_PUSH_CURSOR_KEY);
   return (await FolioleCompanionSync.loadSyncNodeVersionPushCursor()).cursor;
 }
 
 export async function saveCompanionSyncNodeVersionPushCursor(cursor: NativeSyncChangeCursor | null) {
+  if (getNativeCompanionSyncbackPlatform() === 'ios') {
+    return runCompanionSyncWriterTask(() => getIosCompanionSyncbackStore().saveNodeVersionPushCursor(cursor));
+  }
   if (!isNativeAndroidCompanionRuntime()) return writeWebCursor(WEB_SYNC_NODE_VERSION_PUSH_CURSOR_KEY, cursor);
   return runCompanionSyncWriterTask(async () => (
     await FolioleCompanionSync.saveSyncNodeVersionPushCursor({ cursor })
@@ -140,7 +145,9 @@ export async function saveCompanionSyncReviewLogPushCursor(cursor: NativeSyncCha
 }
 
 export async function loadCompanionSyncNodeVersions(cursor: NativeSyncChangeCursor | null, limit = 500) {
-  if (getCompanionRuntimeCapability().kind === 'ios-native') return [] as NativeSyncNodeRecord[];
+  if (getNativeCompanionSyncbackPlatform() === 'ios') {
+    return getIosCompanionSyncbackStore().loadNodeVersions(cursor, limit);
+  }
   if (!isNativeAndroidCompanionRuntime()) return [] as NativeSyncNodeRecord[];
   return (await FolioleCompanionSync.loadSyncNodeVersions({ cursor, limit })).nodes;
 }

@@ -2,6 +2,8 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 const httpMock = vi.hoisted(() => ({ post: vi.fn() }));
 const storeMock = vi.hoisted(() => ({
+  loadNodeVersions: vi.fn(async () => []),
+  loadNodeVersionPushCursor: vi.fn(async () => null),
   loadReviewLog: vi.fn(async () => [{
     device_id: 'ios-device', difficulty_after: 3.2, difficulty_before: 3.1,
     due_after: '2026-07-22T00:00:00.000Z', due_before: '2026-07-20T00:00:00.000Z',
@@ -28,7 +30,8 @@ const storeMock = vi.hoisted(() => ({
   savePushAcks: vi.fn(async () => [
     'node_reading:node-1:4', 'node_review:node-1:5',
     'setting:device:ios:phone:*:handoff_reminder_settings:6'
-  ])
+  ]),
+  saveNodeVersionPushCursor: vi.fn(async () => null)
 }));
 const capacitorMock = vi.hoisted(() => ({
   getPlatform: vi.fn(() => 'ios'),
@@ -82,7 +85,7 @@ beforeEach(() => {
   });
 });
 
-it('pushes iOS state through the macOS shared protocol while keeping node stream empty', async () => {
+it('pushes iOS state through the macOS shared protocol', async () => {
   const { pushLocalDirtyObjects } = await import('./companionDesktopSyncPush');
 
   await expect(pushLocalDirtyObjects('http://desktop.local')).resolves.toEqual({

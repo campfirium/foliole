@@ -50,13 +50,51 @@ it('selects only supported local state through the shared macOS payload contract
   ]);
 });
 
+it('loads local node versions with shared ordering and ancestor semantics', async () => {
+  fake.meta.set('device_id', 'ios-device');
+  fake.nodeRows = [{
+    content_hash: 'node-hash', device_id: 'ios-device', is_tombstone: 0,
+    object_id: 'node-1', object_type: 'node', parent_version_id: 'desktop#1',
+    snapshot: JSON.stringify({ id: 'node-1', title: 'iPhone note' }),
+    updated_at: '2026-07-21T00:00:00.000Z', version_created_at: '2026-07-21T00:00:00.000Z',
+    version_id: 'ios-device#1'
+  }];
+  fake.nodeParents.set('ios-device#1', 'desktop#1');
+  const store = createCompanionSyncbackDbStore(fake);
+
+  await expect(store.loadNodeVersions(null, 20)).resolves.toEqual([expect.objectContaining({
+    ancestor_version_ids: ['desktop#1'],
+    is_tombstone: false,
+    snapshot: { id: 'node-1', title: 'iPhone note' },
+    version_id: 'ios-device#1'
+  })]);
+  expect(fake.queries).toContainEqual([
+    CONTRACT.sql.nodeVersions,
+    ['ios-device', '', '', '', '', '', 20]
+  ]);
+});
+
+it('rejects malformed local node snapshots before they reach the Mac push protocol', async () => {
+  fake.meta.set('device_id', 'ios-device');
+  fake.nodeRows = [{
+    is_tombstone: 0,
+    snapshot: 'not-json',
+    version_id: 'ios-device#broken'
+  }];
+
+  await expect(createCompanionSyncbackDbStore(fake).loadNodeVersions(null, 20))
+    .rejects.toThrow('invalid_companion_node_version_snapshot');
+});
+
 it('persists cursors and saves valid acknowledgements atomically', async () => {
   const store = createCompanionSyncbackDbStore(fake);
   const cursor = { change_id: 'op-1', created_at: '2026-07-20T00:00:00.000Z' };
 
   await store.saveStatePushCursor(5);
+  await store.saveNodeVersionPushCursor(cursor);
   await store.saveReviewLogPushCursor(cursor);
   await expect(store.loadStatePushCursor()).resolves.toBe(5);
+  await expect(store.loadNodeVersionPushCursor()).resolves.toEqual(cursor);
   await expect(store.loadReviewLogPushCursor()).resolves.toEqual(cursor);
   await expect(store.savePushAcks([
     ack('reading-state', 'node_reading', 'node-1', 'accepted', 4),
@@ -116,6 +154,8 @@ class FakeDbPort implements DbPort {
   readonly queries: Array<[string, DbParams]> = [];
   acks: Array<{ clientOpId: string; objectId: string; objectType: string }> = [];
   failClientOpId: string | null = null;
+  nodeParents = new Map<string, string>();
+  nodeRows: DbRow[] = [];
   readingPayloadRows: DbRow[] = [];
   reviewPayloadRows: DbRow[] = [];
   reviewRows: DbRow[] = [];
@@ -127,6 +167,11 @@ class FakeDbPort implements DbPort {
     if (sql === CONTRACT.sql.metaQuery) {
       const value = this.meta.get(String(params[0]));
       return (value === undefined ? [] : [{ value }]) as unknown as T[];
+    }
+    if (sql === CONTRACT.sql.nodeVersions) return this.nodeRows as T[];
+    if (sql === CONTRACT.sql.nodeVersionParent) {
+      const parentVersionId = this.nodeParents.get(String(params[0]));
+      return (parentVersionId ? [{ parent_version_id: parentVersionId }] : []) as unknown as T[];
     }
     if (sql === CONTRACT.sql.state) return this.stateRows as T[];
     if (sql === CONTRACT.sql.readingPayload) return this.readingPayloadRows as T[];

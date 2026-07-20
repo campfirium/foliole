@@ -15,6 +15,7 @@ const mutations = ANDROID_COMPANION_MUTATION_DEFINITIONS;
 const metaRules = ANDROID_COMPANION_HOST_SUPPORT_MUTATION_RULES.companionMeta;
 const ackRules = ANDROID_COMPANION_SYNC_APPLY_MUTATION_RULES.pushAck;
 const protocol = ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS;
+const nodeVersionRules = ANDROID_COMPANION_SYNC_STREAM_READ_RULES.nodeVersions;
 const sharedStateQuery = ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS.syncStateChanges.sql;
 const syncbackStateQuery = sharedStateQuery.replace(
   "object_type NOT IN ('node', 'view_state')",
@@ -27,6 +28,7 @@ if (syncbackStateQuery === sharedStateQuery) {
 
 export const COMPANION_SYNCBACK_HOST_CONTRACT = {
   cursors: {
+    nodeVersionPush: protocol.syncMetaCursors.nodeVersionPush,
     reviewLogPush: protocol.syncMetaCursors.reviewLogPush,
     statePush: protocol.syncMetaCursors.statePush
   },
@@ -36,6 +38,12 @@ export const COMPANION_SYNCBACK_HOST_CONTRACT = {
     max: ANDROID_COMPANION_SYNC_STREAM_READ_RULES.reviewLog.maxLimit,
     min: ANDROID_COMPANION_SYNC_STREAM_READ_RULES.reviewLog.minLimit
   },
+  nodeVersions: {
+    ancestorDepthLimit: nodeVersionRules.ancestorDepthLimit,
+    defaultLimit: nodeVersionRules.defaultLimit,
+    maxLimit: nodeVersionRules.maxLimit,
+    minLimit: nodeVersionRules.minLimit
+  },
   pushAck: protocol.pushAck,
   sql: {
     ackDeleteIssues: mutations[ackRules.deleteIssuesMutationName],
@@ -44,6 +52,8 @@ export const COMPANION_SYNCBACK_HOST_CONTRACT = {
     metaDelete: mutations[metaRules.deleteByKeyMutationName],
     metaQuery: ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS.companionMetaValue.sql,
     metaUpsert: mutations[metaRules.upsertMutationName],
+    nodeVersionParent: ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS.syncNodeVersionParent.sql,
+    nodeVersions: ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS.syncNodeVersions.sql,
     readingPayload: ANDROID_COMPANION_LEARNING_PAYLOAD_QUERY_DEFINITIONS.syncPayloadNodeReading.sql,
     reviewLog: ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS.syncReviewLog.sql,
     reviewPayload: ANDROID_COMPANION_LEARNING_PAYLOAD_QUERY_DEFINITIONS.syncPayloadNodeReview.sql,

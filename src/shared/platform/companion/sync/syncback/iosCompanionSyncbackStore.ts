@@ -23,11 +23,14 @@ export function createIosCompanionSyncbackStore(
   manager: CompanionSqliteConnectionManager = new SQLiteConnection(CapacitorSQLite)
 ): CompanionSyncbackDbStore {
   return {
+    loadNodeVersions: (cursor, limit) => withStore(manager, (store) => store.loadNodeVersions(cursor, limit)),
+    loadNodeVersionPushCursor: () => withStore(manager, (store) => store.loadNodeVersionPushCursor()),
     loadReviewLog: (cursor, limit) => withStore(manager, (store) => store.loadReviewLog(cursor, limit)),
     loadReviewLogPushCursor: () => withStore(manager, (store) => store.loadReviewLogPushCursor()),
     loadStateChanges: (cursor, limit) => withStore(manager, (store) => store.loadStateChanges(cursor, limit)),
     loadStatePushCursor: () => withStore(manager, (store) => store.loadStatePushCursor()),
     savePushAcks: (acks) => withStore(manager, (store) => store.savePushAcks(acks)),
+    saveNodeVersionPushCursor: (cursor) => withStore(manager, (store) => store.saveNodeVersionPushCursor(cursor)),
     saveReviewLogPushCursor: (cursor) => withStore(manager, (store) => store.saveReviewLogPushCursor(cursor)),
     saveStatePushCursor: (cursor) => withStore(manager, (store) => store.saveStatePushCursor(cursor))
   };
