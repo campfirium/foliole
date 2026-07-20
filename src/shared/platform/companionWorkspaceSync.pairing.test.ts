@@ -67,7 +67,7 @@ function createEncryptedSecretFixture() {
   };
 }
 
-function mockNativePairingHttp() {
+function mockNativePairingHttp(deviceId = 'android-test-device') {
   capacitorMock.plugin.desktopHttpRequest
     .mockResolvedValueOnce({
       body: JSON.stringify({
@@ -83,7 +83,7 @@ function mockNativePairingHttp() {
       body: JSON.stringify({
         compatibility,
         desktop_protocol: protocol,
-        device_id: 'android-test-device',
+        device_id: deviceId,
         encrypted_device_secret: createEncryptedSecretFixture(),
         paired_at: '2026-04-22T12:00:00.000Z',
         peer_id: 'device-desktop'
@@ -97,31 +97,34 @@ beforeEach(() => {
   writerQueueMock.run.mockImplementation(async <T>(task: () => Promise<T>) => task());
 });
 
-it.each(['android', 'ios'])('verifies %s native pairing credentials after saving', async (platform) => {
+it.each([
+  { deviceId: 'android-test-device', deviceKind: 'android-capacitor', deviceName: 'Pixel 9', platform: 'android' },
+  { deviceId: 'ios-test-device', deviceKind: 'ios-capacitor', deviceName: 'iPhone', platform: 'ios' }
+])('verifies $platform native pairing credentials after saving', async ({ deviceId, deviceKind, deviceName, platform }) => {
   capacitorMock.getPlatform.mockReturnValue(platform);
   capacitorMock.isNativePlatform.mockReturnValue(true);
-  mockNativePairingHttp();
+  mockNativePairingHttp(deviceId);
   capacitorMock.plugin.savePairingCredentials.mockResolvedValue({
     ...nativeProtocolState,
-    device_id: 'android-test-device',
-    device_kind: 'android-capacitor',
-    device_name: 'Pixel 9',
+    device_id: deviceId,
+    device_kind: deviceKind,
+    device_name: deviceName,
     is_paired: true,
     paired_at: '2026-04-22T12:00:00.000Z',
     primary_device_id: 'device-desktop'
   });
   capacitorMock.plugin.loadPairingState.mockResolvedValue({
     ...nativeProtocolState,
-    device_id: 'android-test-device',
-    device_kind: 'android-capacitor',
-    device_name: 'Pixel 9',
+    device_id: deviceId,
+    device_kind: deviceKind,
+    device_name: deviceName,
     is_paired: true,
     paired_at: '2026-04-22T12:00:00.000Z',
     primary_device_id: 'device-desktop'
   });
   capacitorMock.plugin.signCompanionSyncRequest.mockResolvedValue({
     headers: {
-      'X-Device-Id': 'android-test-device',
+      'X-Device-Id': deviceId,
       'X-Nonce': 'nonce',
       'X-Signature': 'signed',
       'X-Timestamp': '2026-04-22T12:00:00.000Z'
@@ -129,17 +132,17 @@ it.each(['android', 'ios'])('verifies %s native pairing credentials after saving
   });
 
   await requestCompanionPairing({
-    deviceId: 'android-test-device',
-    deviceKind: 'android-capacitor',
-    deviceName: 'Pixel 9',
+    deviceId,
+    deviceKind,
+    deviceName,
     endpointUrl: 'http://10.0.2.2:38641'
   });
   await expect(pairCompanionWithDesktop({
-    deviceKind: 'android-capacitor',
-    deviceName: 'Pixel 9',
+    deviceKind,
+    deviceName,
     endpointUrl: 'http://10.0.2.2:38641',
     pairRequestId: 'pair-request-1'
-  })).resolves.toMatchObject({ is_paired: true, device_name: 'Pixel 9' });
+  })).resolves.toMatchObject({ device_id: deviceId, device_name: deviceName, is_paired: true });
   expect(capacitorMock.plugin.desktopHttpRequest).toHaveBeenLastCalledWith({
     body: JSON.stringify({ pair_request_id: 'pair-request-1' }),
     headers: { 'Content-Type': 'application/json' },
