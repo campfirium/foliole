@@ -60,6 +60,7 @@ describe('companion mobile text wrapping', () => {
         onOpenDevice={vi.fn()}
         onOpenStorage={vi.fn()}
         onOpenSync={vi.fn()}
+        showStorage
       />
     );
 

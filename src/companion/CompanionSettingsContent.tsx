@@ -30,18 +30,46 @@ function SettingsListSection(props: { children: ReactNode; title: string }) {
   return <CompanionListSection title={props.title}>{props.children}</CompanionListSection>;
 }
 
+function DataAppearanceSettingsSection(props: {
+  onOpenAppearance(): void;
+  onOpenStorage(): void;
+  showStorage: boolean;
+}) {
+  const t = useTranslation();
+  return (
+    <SettingsListSection title={t('companion.settings.section.dataAppearance')}>
+      {props.showStorage ? (
+        <SettingsListItem
+          Icon={Database}
+          detail={t('companion.settings.storage.detail')}
+          onClick={props.onOpenStorage}
+          title={t('companion.settings.storage.title')}
+        />
+      ) : null}
+      <SettingsListItem
+        Icon={Palette}
+        detail={t('companion.settings.appearance.detail')}
+        onClick={props.onOpenAppearance}
+        title={t('companion.settings.appearance.title')}
+      />
+    </SettingsListSection>
+  );
+}
+
 export function CompanionSettingsList(props: {
   onOpenAppearance(): void;
   onOpenDebug(): void;
   onOpenDevice(): void;
   onOpenStorage(): void;
   onOpenSync(): void;
+  showStorage: boolean;
 }) {
   const t = useTranslation();
+  const sectionCount = props.showStorage ? 5 : 4;
   return (
     <section className="px-1 pb-4 pt-3">
       <CompanionScreenHeader
-        metric={t('companion.settings.header.count', { count: 5 })}
+        metric={t('companion.settings.header.count', { count: sectionCount })}
         subtitle={t('companion.settings.header.subtitle')}
         title={t('companion.settings.title')}
       />
@@ -61,20 +89,11 @@ export function CompanionSettingsList(props: {
             title={t('companion.settings.device.title')}
           />
         </SettingsListSection>
-        <SettingsListSection title={t('companion.settings.section.dataAppearance')}>
-          <SettingsListItem
-            Icon={Database}
-            detail={t('companion.settings.storage.detail')}
-            onClick={props.onOpenStorage}
-            title={t('companion.settings.storage.title')}
-          />
-          <SettingsListItem
-            Icon={Palette}
-            detail={t('companion.settings.appearance.detail')}
-            onClick={props.onOpenAppearance}
-            title={t('companion.settings.appearance.title')}
-          />
-        </SettingsListSection>
+        <DataAppearanceSettingsSection
+          onOpenAppearance={props.onOpenAppearance}
+          onOpenStorage={props.onOpenStorage}
+          showStorage={props.showStorage}
+        />
         <SettingsListSection title={t('companion.settings.section.development')}>
           <SettingsListItem
             Icon={Bug}
