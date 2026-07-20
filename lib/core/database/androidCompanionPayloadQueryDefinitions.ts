@@ -1,5 +1,7 @@
 import { ANDROID_COMPANION_LEARNING_PAYLOAD_QUERY_DEFINITIONS } from './androidCompanionLearningPayloadQueryDefinitions.js';
 
+export type CompanionNativePlatform = 'android' | 'ios';
+
 export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
   syncPayloadAttachment: {
     syncPayload: { argMode: 'object_id', objectType: 'attachment' },
@@ -135,5 +137,17 @@ export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
       'WHERE node_id = ? AND device_id = ? LIMIT 1'
   }
 };
+
+export function buildCompanionPayloadQueryDefinitions(platform: CompanionNativePlatform) {
+  if (platform === 'android') return ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS;
+  const activeNode = ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS.syncPayloadViewActiveNode;
+  return {
+    ...ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS,
+    syncPayloadViewActiveNode: {
+      ...activeNode,
+      syncPayload: { ...activeNode.syncPayload, platform }
+    }
+  };
+}
 
 export { ANDROID_COMPANION_SYNC_PAYLOAD_ROUTING } from './androidCompanionSyncPayloadRoutingDefinitions.js';

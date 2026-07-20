@@ -1537,7 +1537,7 @@
         "formFactor": "phone",
         "objectIdKey": "active_node",
         "objectType": "view_state",
-        "platform": "android",
+        "platform": "ios",
         "recordDeletedAtKey": "deleted_at",
         "recordUpdatedAtKey": "updated_at",
         "scope": "session_resume",

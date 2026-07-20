@@ -23,11 +23,15 @@ describe('iOS companion contract assets', () => {
     expect(ios).toEqual(android);
   });
 
-  it('keeps the generated query definitions identical across native hosts', async () => {
+  it('keeps query definitions identical except for the native view-state platform identity', async () => {
     const fileName = 'companion-query-definitions.json';
-    expect(await readJson(path.join(REPO_ROOT, 'ios/App/App', fileName))).toEqual(
-      await readJson(path.join(REPO_ROOT, 'android/app/src/main/assets', fileName))
-    );
+    const ios = await readJson(path.join(REPO_ROOT, 'ios/App/App', fileName));
+    const android = await readJson(path.join(REPO_ROOT, 'android/app/src/main/assets', fileName));
+
+    expect(ios.queries.syncPayloadViewActiveNode.syncPayload.platform).toBe('ios');
+    expect(android.queries.syncPayloadViewActiveNode.syncPayload.platform).toBe('android');
+    ios.queries.syncPayloadViewActiveNode.syncPayload.platform = 'android';
+    expect(ios).toEqual(android);
   });
 });
 
