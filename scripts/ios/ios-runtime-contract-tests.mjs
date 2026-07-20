@@ -76,6 +76,7 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'src/shared/platform/companionSyncPackNodes.test.ts',
   'src/shared/platform/companionSyncPackApply.test.ts',
   'scripts/ios/ios-contract-assets.test.mjs',
+  'scripts/ios/ios-attachment-resource-host-contract.test.mjs',
   'scripts/ios/ios-bootstrap-quality-workflow-contract.test.mjs',
   'scripts/ios/ios-external-document-search-host-contract.test.mjs',
   'scripts/ios/ios-sync-object-read-host-contract.test.mjs',
