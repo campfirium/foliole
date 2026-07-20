@@ -4,9 +4,7 @@ import {
   ANDROID_COMPANION_HOST_SUPPORT_MUTATION_RULES,
   ANDROID_COMPANION_SYNC_APPLY_MUTATION_RULES
 } from './androidCompanionMutationDefinitions.js';
-import {
-  ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS
-} from './androidCompanionSyncProtocolDefinitions.js';
+import { ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS } from './androidCompanionSyncProtocolDefinitions.js';
 import {
   ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS,
   ANDROID_COMPANION_SYNC_STREAM_READ_RULES
@@ -17,16 +15,16 @@ const metaRules = ANDROID_COMPANION_HOST_SUPPORT_MUTATION_RULES.companionMeta;
 const ackRules = ANDROID_COMPANION_SYNC_APPLY_MUTATION_RULES.pushAck;
 const protocol = ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS;
 const sharedStateQuery = ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS.syncStateChanges.sql;
-const reviewStateQuery = sharedStateQuery.replace(
+const learningStateQuery = sharedStateQuery.replace(
   "object_type NOT IN ('node', 'view_state')",
-  "object_type = 'node_review'"
+  "object_type IN ('node_reading', 'node_review')"
 );
 
-if (reviewStateQuery === sharedStateQuery) {
-  throw new Error('companion_review_syncback_state_query_contract_drift');
+if (learningStateQuery === sharedStateQuery) {
+  throw new Error('companion_learning_syncback_state_query_contract_drift');
 }
 
-export const COMPANION_REVIEW_SYNCBACK_HOST_CONTRACT = {
+export const COMPANION_LEARNING_SYNCBACK_HOST_CONTRACT = {
   cursors: {
     reviewLogPush: protocol.syncMetaCursors.reviewLogPush,
     statePush: protocol.syncMetaCursors.statePush
@@ -41,11 +39,12 @@ export const COMPANION_REVIEW_SYNCBACK_HOST_CONTRACT = {
   sql: {
     ackDeleteIssues: mutations[ackRules.deleteIssuesMutationName],
     ackUpsert: mutations[ackRules.upsertMutationName],
+    learningState: learningStateQuery,
     metaDelete: mutations[metaRules.deleteByKeyMutationName],
     metaQuery: ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS.companionMetaValue.sql,
     metaUpsert: mutations[metaRules.upsertMutationName],
+    readingPayload: ANDROID_COMPANION_LEARNING_PAYLOAD_QUERY_DEFINITIONS.syncPayloadNodeReading.sql,
     reviewLog: ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS.syncReviewLog.sql,
-    reviewPayload: ANDROID_COMPANION_LEARNING_PAYLOAD_QUERY_DEFINITIONS.syncPayloadNodeReview.sql,
-    reviewState: reviewStateQuery
+    reviewPayload: ANDROID_COMPANION_LEARNING_PAYLOAD_QUERY_DEFINITIONS.syncPayloadNodeReview.sql
   }
 } as const;

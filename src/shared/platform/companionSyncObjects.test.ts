@@ -3,15 +3,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const writerQueueMock = vi.hoisted(() => ({
   run: vi.fn(async <T>(task: () => Promise<T>) => task())
 }));
-const iosReviewSyncbackStoreMock = vi.hoisted(() => ({
+const iosLearningSyncbackStoreMock = vi.hoisted(() => ({
   savePushAcks: vi.fn(async () => ['ios-review-op'])
 }));
 
 vi.mock('./companionSyncWriterQueue', () => ({
   runCompanionSyncWriterTask: writerQueueMock.run
 }));
-vi.mock('./companion/sync/review-syncback/iosCompanionReviewSyncbackStore', () => ({
-  getIosCompanionReviewSyncbackStore: vi.fn(() => iosReviewSyncbackStoreMock)
+vi.mock('./companion/sync/learning-syncback/iosCompanionLearningSyncbackStore', () => ({
+  getIosCompanionLearningSyncbackStore: vi.fn(() => iosLearningSyncbackStoreMock)
 }));
 
 function createApplyPluginMocks() {
@@ -228,7 +228,7 @@ describe('companion sync objects bridge', () => {
       .resolves.toEqual([{ object_id: 'one', object_type: 'setting' }]);
   });
 
-  it('saves iOS review push acknowledgements through the SQLite store', async () => {
+  it('saves iOS learning push acknowledgements through the SQLite store', async () => {
     capacitorMock.platform.mockReturnValue('ios');
     capacitorMock.plugin.saveSyncPushAcks.mockClear();
     const api = await import('./companionSyncObjects');
@@ -240,7 +240,7 @@ describe('companion sync objects bridge', () => {
     };
 
     await expect(api.saveCompanionSyncPushAcks([ack])).resolves.toEqual(['ios-review-op']);
-    expect(iosReviewSyncbackStoreMock.savePushAcks).toHaveBeenCalledWith([ack]);
+    expect(iosLearningSyncbackStoreMock.savePushAcks).toHaveBeenCalledWith([ack]);
     expect(capacitorMock.plugin.saveSyncPushAcks).not.toHaveBeenCalled();
   });
 });

@@ -11,12 +11,16 @@ const storeMock = vi.hoisted(() => ({
   }]),
   loadReviewLogPushCursor: vi.fn(async () => null),
   loadStateChanges: vi.fn(async () => [{
-    base_content_hash: 'base-hash', content_hash: 'review-hash', deleted_at: null,
-    object_id: 'node-1', object_type: 'node_review', payload_json: '{"state":2}',
+    base_content_hash: 'reading-base', content_hash: 'reading-hash', deleted_at: null,
+    object_id: 'node-1', object_type: 'node_reading', payload_json: '{"state":"active"}',
     state_seq: 4, updated_at: '2026-07-20T00:00:00.000Z'
+  }, {
+    base_content_hash: 'review-base', content_hash: 'review-hash', deleted_at: null,
+    object_id: 'node-1', object_type: 'node_review', payload_json: '{"state":2}',
+    state_seq: 5, updated_at: '2026-07-20T00:00:00.000Z'
   }]),
   loadStatePushCursor: vi.fn(async () => null),
-  savePushAcks: vi.fn(async () => ['node_review:node-1:4'])
+  savePushAcks: vi.fn(async () => ['node_reading:node-1:4', 'node_review:node-1:5'])
 }));
 const capacitorMock = vi.hoisted(() => ({
   getPlatform: vi.fn(() => 'ios'),
@@ -27,8 +31,8 @@ vi.mock('@capacitor/core', () => ({
   Capacitor: capacitorMock,
   registerPlugin: vi.fn(() => ({}))
 }));
-vi.mock('./companion/sync/review-syncback/iosCompanionReviewSyncbackStore', () => ({
-  getIosCompanionReviewSyncbackStore: vi.fn(() => storeMock)
+vi.mock('./companion/sync/learning-syncback/iosCompanionLearningSyncbackStore', () => ({
+  getIosCompanionLearningSyncbackStore: vi.fn(() => storeMock)
 }));
 vi.mock('./companionDesktopSyncHttp', () => ({ postDesktopJson: httpMock.post }));
 vi.mock('./companionSyncWriterQueue', () => ({
@@ -40,9 +44,15 @@ beforeEach(() => {
   httpMock.post.mockResolvedValue({
     acks: [
       {
-        client_op_id: 'node_review:node-1:4',
-        identity: { objectId: 'node-1', objectType: 'node_review', scope: 'workspace' },
+        client_op_id: 'node_reading:node-1:4',
+        identity: { objectId: 'node-1', objectType: 'node_reading', scope: 'workspace' },
         state_seq: 4,
+        status: 'accepted'
+      },
+      {
+        client_op_id: 'node_review:node-1:5',
+        identity: { objectId: 'node-1', objectType: 'node_review', scope: 'workspace' },
+        state_seq: 5,
         status: 'accepted'
       },
       {
@@ -54,12 +64,12 @@ beforeEach(() => {
   });
 });
 
-it('pushes iOS review state through the macOS shared protocol while keeping node stream empty', async () => {
+it('pushes iOS reading and review state through the macOS shared protocol while keeping node stream empty', async () => {
   const { pushLocalDirtyObjects } = await import('./companionDesktopSyncPush');
 
   await expect(pushLocalDirtyObjects('http://desktop.local')).resolves.toEqual({
     pushConflictCount: 0,
-    pushedObjectIds: ['node_review:node-1'],
+    pushedObjectIds: ['node_reading:node-1', 'node_review:node-1'],
     pushedReviewOpIds: ['op-1'],
     pushError: null,
     pushRejectedCount: 0
@@ -69,7 +79,11 @@ it('pushes iOS review state through the macOS shared protocol while keeping node
     '/companion/sync-push',
     { items: [
       expect.objectContaining({
-        clientOpId: 'node_review:node-1:4',
+        clientOpId: 'node_reading:node-1:4',
+        identity: { objectId: 'node-1', objectType: 'node_reading', scope: 'workspace' }
+      }),
+      expect.objectContaining({
+        clientOpId: 'node_review:node-1:5',
         identity: { objectId: 'node-1', objectType: 'node_review', scope: 'workspace' }
       }),
       expect.objectContaining({

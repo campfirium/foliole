@@ -1,9 +1,9 @@
 import { beforeEach, expect, it } from 'vitest';
 
-import { COMPANION_REVIEW_SYNCBACK_HOST_CONTRACT as CONTRACT } from '../../../../../../lib/core/database/companionReviewSyncbackHostContractDefinitions';
+import { COMPANION_LEARNING_SYNCBACK_HOST_CONTRACT as CONTRACT } from '../../../../../../lib/core/database/companionLearningSyncbackHostContractDefinitions';
 import type { DbParams, DbPort, DbRow } from '../../../../../../lib/core/sync/dbPort';
 
-import { createCompanionReviewSyncbackDbStore } from './companionReviewSyncbackDbStore';
+import { createCompanionLearningSyncbackDbStore } from './companionLearningSyncbackDbStore';
 
 let fake: FakeDbPort;
 
@@ -11,61 +11,65 @@ beforeEach(() => {
   fake = new FakeDbPort();
 });
 
-it('selects only local review state and review log through the shared contract', async () => {
+it('selects only local reading and review state through the shared macOS payload contract', async () => {
   fake.meta.set('device_id', 'ios-device');
-  fake.stateRows = [{
-    base_content_hash: 'base-hash',
-    content_hash: 'review-hash',
-    deleted_at: null,
-    object_id: 'node-1',
-    object_type: 'node_review',
-    state_seq: 4,
-    updated_at: '2026-07-20T00:00:00.000Z'
+  fake.stateRows = [
+    stateRow('node_reading', 'reading-hash', 4),
+    stateRow('node_review', 'review-hash', 5)
+  ];
+  fake.readingPayloadRows = [{
+    interval_duration_ms: 120000, interval_growth_factor: 1.5,
+    last_handled_at: '2026-07-20T00:00:00.000Z', next_at: '2026-07-21T00:00:00.000Z',
+    node_id: 'node-1', priority: 3, repetition_count: 2, state: 'active'
   }];
-  fake.payloadRows = [{
+  fake.reviewPayloadRows = [{
     difficulty: 3.2, due: '2026-07-22T00:00:00.000Z', elapsed_days: 1, lapses: 0,
     last_review_at: '2026-07-20T00:00:00.000Z', node_id: 'node-1', reps: 2,
     scheduled_days: 2, stability: 4.1, state: 2
   }];
   fake.reviewRows = [reviewRow('ios-device', 'op-1'), reviewRow('other-device', 'op-2')];
-  const store = createCompanionReviewSyncbackDbStore(fake);
+  const store = createCompanionLearningSyncbackDbStore(fake);
 
   await expect(store.loadStateChanges(null, 20)).resolves.toEqual([
-    expect.objectContaining({
-      object_id: 'node-1',
-      payload_json: JSON.stringify(fake.payloadRows[0]),
-      state_seq: 4
-    })
+    expect.objectContaining({ object_type: 'node_reading', payload_json: JSON.stringify(fake.readingPayloadRows[0]) }),
+    expect.objectContaining({ object_type: 'node_review', payload_json: JSON.stringify(fake.reviewPayloadRows[0]) })
   ]);
   await expect(store.loadReviewLog(null, 20)).resolves.toEqual([reviewRow('ios-device', 'op-1')]);
-  expect(fake.queries).toContainEqual([CONTRACT.sql.reviewState, [0, 20]]);
-  expect(fake.queries).toContainEqual([
-    CONTRACT.sql.reviewLog,
-    ['ios-device', '', '', '', '', '', 20]
-  ]);
+  expect(fake.queries).toContainEqual([CONTRACT.sql.learningState, [0, 20]]);
+  expect(fake.queries).toContainEqual([CONTRACT.sql.readingPayload, ['node-1']]);
+  expect(fake.queries).toContainEqual([CONTRACT.sql.reviewPayload, ['node-1']]);
 });
 
 it('persists cursors and saves valid acknowledgements atomically', async () => {
-  const store = createCompanionReviewSyncbackDbStore(fake);
+  const store = createCompanionLearningSyncbackDbStore(fake);
   const cursor = { change_id: 'op-1', created_at: '2026-07-20T00:00:00.000Z' };
 
-  await store.saveStatePushCursor(4);
+  await store.saveStatePushCursor(5);
   await store.saveReviewLogPushCursor(cursor);
-  await expect(store.loadStatePushCursor()).resolves.toBe(4);
+  await expect(store.loadStatePushCursor()).resolves.toBe(5);
   await expect(store.loadReviewLogPushCursor()).resolves.toEqual(cursor);
   await expect(store.savePushAcks([
-    ack('review-state', 'node_review', 'node-1', 'accepted', 4),
+    ack('reading-state', 'node_reading', 'node-1', 'accepted', 4),
+    ack('review-state', 'node_review', 'node-1', 'accepted', 5),
     ack('review-log', 'review_log', 'op-1', 'accepted')
-  ])).resolves.toEqual(['review-state']);
-  expect(fake.acks.map((row) => row.clientOpId)).toEqual(['review-state']);
+  ])).resolves.toEqual(['reading-state', 'review-state']);
+  expect(fake.acks.map((row) => row.clientOpId)).toEqual(['reading-state', 'review-state']);
 
   fake.failClientOpId = 'second';
   await expect(store.savePushAcks([
-    ack('first', 'node_review', 'node-2', 'conflict'),
+    ack('first', 'node_reading', 'node-2', 'conflict'),
     ack('second', 'node_review', 'node-3', 'rejected')
   ])).rejects.toThrow('forced_ack_failure');
-  expect(fake.acks.map((row) => row.clientOpId)).toEqual(['review-state']);
+  expect(fake.acks.map((row) => row.clientOpId)).toEqual(['reading-state', 'review-state']);
 });
+
+function stateRow(objectType: 'node_reading' | 'node_review', contentHash: string, stateSeq: number) {
+  return {
+    base_content_hash: 'base-hash', content_hash: contentHash, deleted_at: null,
+    object_id: 'node-1', object_type: objectType, state_seq: stateSeq,
+    updated_at: '2026-07-20T00:00:00.000Z'
+  };
+}
 
 function reviewRow(deviceId: string, opId: string) {
   return {
@@ -79,7 +83,7 @@ function reviewRow(deviceId: string, opId: string) {
 
 function ack(
   clientOpId: string,
-  objectType: 'node_review' | 'review_log',
+  objectType: 'node_reading' | 'node_review' | 'review_log',
   objectId: string,
   status: 'accepted' | 'conflict' | 'rejected',
   stateSeq?: number
@@ -95,9 +99,10 @@ function ack(
 class FakeDbPort implements DbPort {
   readonly meta = new Map<string, string>();
   readonly queries: Array<[string, DbParams]> = [];
-  acks: Array<{ clientOpId: string; objectId: string }> = [];
+  acks: Array<{ clientOpId: string; objectId: string; objectType: string }> = [];
   failClientOpId: string | null = null;
-  payloadRows: DbRow[] = [];
+  readingPayloadRows: DbRow[] = [];
+  reviewPayloadRows: DbRow[] = [];
   reviewRows: DbRow[] = [];
   stateRows: DbRow[] = [];
 
@@ -107,8 +112,9 @@ class FakeDbPort implements DbPort {
       const value = this.meta.get(String(params[0]));
       return (value === undefined ? [] : [{ value }]) as unknown as T[];
     }
-    if (sql === CONTRACT.sql.reviewState) return this.stateRows as T[];
-    if (sql === CONTRACT.sql.reviewPayload) return this.payloadRows as T[];
+    if (sql === CONTRACT.sql.learningState) return this.stateRows as T[];
+    if (sql === CONTRACT.sql.readingPayload) return this.readingPayloadRows as T[];
+    if (sql === CONTRACT.sql.reviewPayload) return this.reviewPayloadRows as T[];
     if (sql === CONTRACT.sql.reviewLog) {
       return this.reviewRows.filter((row) => row.device_id === params[0]) as T[];
     }
@@ -119,11 +125,15 @@ class FakeDbPort implements DbPort {
     if (sql === CONTRACT.sql.metaDelete) this.meta.delete(String(params[0]));
     if (sql === CONTRACT.sql.metaUpsert) this.meta.set(String(params[0]), String(params[1]));
     if (sql === CONTRACT.sql.ackDeleteIssues) {
-      this.acks = this.acks.filter((row) => row.objectId !== params[1]);
+      this.acks = this.acks.filter((row) => row.objectType !== params[0] || row.objectId !== params[1]);
     }
     if (sql === CONTRACT.sql.ackUpsert) {
       if (params[0] === this.failClientOpId) throw new Error('forced_ack_failure');
-      this.acks.push({ clientOpId: String(params[0]), objectId: String(params[2]) });
+      this.acks.push({
+        clientOpId: String(params[0]),
+        objectId: String(params[2]),
+        objectType: String(params[1])
+      });
     }
     return { changes: 1, lastInsertRowId: null };
   }
