@@ -1516,7 +1516,7 @@
         "argMode": "object_id",
         "defaultDeviceId": "*",
         "defaultFormFactor": "phone",
-        "defaultPlatform": "android",
+        "defaultPlatform": "ios",
         "defaultScope": "device",
         "defaultValueJson": "null",
         "deviceIdPayloadKey": "device_id",

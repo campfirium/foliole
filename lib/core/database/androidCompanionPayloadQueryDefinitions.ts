@@ -141,8 +141,13 @@ export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
 export function buildCompanionPayloadQueryDefinitions(platform: CompanionNativePlatform) {
   if (platform === 'android') return ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS;
   const activeNode = ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS.syncPayloadViewActiveNode;
+  const setting = ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS.syncPayloadSetting;
   return {
     ...ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS,
+    syncPayloadSetting: {
+      ...setting,
+      syncPayload: { ...setting.syncPayload, defaultPlatform: platform }
+    },
     syncPayloadViewActiveNode: {
       ...activeNode,
       syncPayload: { ...activeNode.syncPayload, platform }
