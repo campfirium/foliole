@@ -16,6 +16,7 @@ import {
   isNativeAndroidCompanionRuntime,
   isNativeCompanionAttachmentResourceRuntime,
   isNativeCompanionContentBlobRuntime,
+  isNativeCompanionExternalDocumentSearchRuntime,
   isNativeCompanionPairingRuntime,
   isNativeCompanionPdfPageTextRuntime,
   isNativeCompanionSyncDiagnosticsRuntime,
@@ -33,6 +34,7 @@ describe('companion workspace runtime boundary', () => {
     expect(isNativeAndroidCompanionRuntime()).toBe(false);
     expect(isNativeCompanionAttachmentResourceRuntime()).toBe(false);
     expect(isNativeCompanionContentBlobRuntime()).toBe(false);
+    expect(isNativeCompanionExternalDocumentSearchRuntime()).toBe(false);
     expect(isNativeCompanionPairingRuntime()).toBe(false);
     expect(isNativeCompanionPdfPageTextRuntime()).toBe(false);
     expect(isNativeCompanionSyncDiagnosticsRuntime()).toBe(false);
@@ -47,6 +49,7 @@ describe('companion workspace runtime boundary', () => {
     expect(isNativeAndroidCompanionRuntime()).toBe(true);
     expect(isNativeCompanionAttachmentResourceRuntime()).toBe(true);
     expect(isNativeCompanionContentBlobRuntime()).toBe(true);
+    expect(isNativeCompanionExternalDocumentSearchRuntime()).toBe(true);
     expect(isNativeCompanionPairingRuntime()).toBe(true);
     expect(isNativeCompanionPdfPageTextRuntime()).toBe(true);
     expect(isNativeCompanionSyncDiagnosticsRuntime()).toBe(true);
@@ -61,6 +64,7 @@ describe('companion workspace runtime boundary', () => {
     expect(isAvailableNativeAndroidCompanionRuntime()).toBe(false);
     expect(isNativeCompanionAttachmentResourceRuntime()).toBe(true);
     expect(isNativeCompanionContentBlobRuntime()).toBe(true);
+    expect(isNativeCompanionExternalDocumentSearchRuntime()).toBe(true);
     expect(isNativeCompanionPairingRuntime()).toBe(true);
     expect(isNativeCompanionPdfPageTextRuntime()).toBe(true);
     expect(isNativeCompanionSyncDiagnosticsRuntime()).toBe(true);

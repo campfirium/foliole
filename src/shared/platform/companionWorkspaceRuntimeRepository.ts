@@ -45,6 +45,11 @@ export function isNativeCompanionPdfPageTextRuntime() {
   return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
 }
 
+export function isNativeCompanionExternalDocumentSearchRuntime() {
+  const runtime = requireAvailableCompanionRuntime('external-document-search');
+  return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
+}
+
 export function isNativeCompanionSyncDiagnosticsRuntime() {
   const runtime = requireAvailableCompanionRuntime('sync-diagnostics');
   return runtime.kind === 'android-native' || runtime.kind === 'ios-native';

@@ -44,6 +44,10 @@
 		50F026111FED79650016851F /* FolioleCompanionPdfPageTextContractStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F026011FED79650016851F /* FolioleCompanionPdfPageTextContractStore.swift */; };
 		50F026121FED79650016851F /* FolioleCompanionPdfPageTextStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F026021FED79650016851F /* FolioleCompanionPdfPageTextStore.swift */; };
 		50F026131FED79650016851F /* FolioleCompanionPdfPageTextPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F026031FED79650016851F /* FolioleCompanionPdfPageTextPlugin.swift */; };
+		50F027111FED79650016851F /* FolioleCompanionQueryDefinitions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F027011FED79650016851F /* FolioleCompanionQueryDefinitions.swift */; };
+		50F027121FED79650016851F /* FolioleCompanionGeneratedReadQueryRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F027021FED79650016851F /* FolioleCompanionGeneratedReadQueryRunner.swift */; };
+		50F027131FED79650016851F /* FolioleCompanionExternalDocumentSearchStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F027031FED79650016851F /* FolioleCompanionExternalDocumentSearchStore.swift */; };
+		50F027141FED79650016851F /* FolioleCompanionExternalDocumentSearchPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F027041FED79650016851F /* FolioleCompanionExternalDocumentSearchPlugin.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -84,6 +88,10 @@
 		50F026011FED79650016851F /* FolioleCompanionPdfPageTextContractStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionPdfPageTextContractStore.swift; sourceTree = "<group>"; };
 		50F026021FED79650016851F /* FolioleCompanionPdfPageTextStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionPdfPageTextStore.swift; sourceTree = "<group>"; };
 		50F026031FED79650016851F /* FolioleCompanionPdfPageTextPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionPdfPageTextPlugin.swift; sourceTree = "<group>"; };
+		50F027011FED79650016851F /* FolioleCompanionQueryDefinitions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionQueryDefinitions.swift; sourceTree = "<group>"; };
+		50F027021FED79650016851F /* FolioleCompanionGeneratedReadQueryRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionGeneratedReadQueryRunner.swift; sourceTree = "<group>"; };
+		50F027031FED79650016851F /* FolioleCompanionExternalDocumentSearchStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionExternalDocumentSearchStore.swift; sourceTree = "<group>"; };
+		50F027041FED79650016851F /* FolioleCompanionExternalDocumentSearchPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionExternalDocumentSearchPlugin.swift; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
@@ -150,6 +158,10 @@
 				50F026011FED79650016851F /* FolioleCompanionPdfPageTextContractStore.swift */,
 				50F026021FED79650016851F /* FolioleCompanionPdfPageTextStore.swift */,
 				50F026031FED79650016851F /* FolioleCompanionPdfPageTextPlugin.swift */,
+				50F027011FED79650016851F /* FolioleCompanionQueryDefinitions.swift */,
+				50F027021FED79650016851F /* FolioleCompanionGeneratedReadQueryRunner.swift */,
+				50F027031FED79650016851F /* FolioleCompanionExternalDocumentSearchStore.swift */,
+				50F027041FED79650016851F /* FolioleCompanionExternalDocumentSearchPlugin.swift */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
 				504EC30E1FED79650016851F /* Assets.xcassets */,
 				504EC3101FED79650016851F /* LaunchScreen.storyboard */,
@@ -272,6 +284,10 @@
 				50F026111FED79650016851F /* FolioleCompanionPdfPageTextContractStore.swift in Sources */,
 				50F026121FED79650016851F /* FolioleCompanionPdfPageTextStore.swift in Sources */,
 				50F026131FED79650016851F /* FolioleCompanionPdfPageTextPlugin.swift in Sources */,
+				50F027111FED79650016851F /* FolioleCompanionQueryDefinitions.swift in Sources */,
+				50F027121FED79650016851F /* FolioleCompanionGeneratedReadQueryRunner.swift in Sources */,
+				50F027131FED79650016851F /* FolioleCompanionExternalDocumentSearchStore.swift in Sources */,
+				50F027141FED79650016851F /* FolioleCompanionExternalDocumentSearchPlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

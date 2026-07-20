@@ -22,6 +22,7 @@ const IOS_NATIVE_CAPABILITIES = new Set([
   'attachment-resource-sync',
   'bootstrap',
   'content-blob-sync',
+  'external-document-search',
   'pairing-runtime',
   'pdf-page-text',
   'sync-pack-apply',

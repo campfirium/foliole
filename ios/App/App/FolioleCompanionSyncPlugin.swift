@@ -22,6 +22,7 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "resolveAttachmentResource", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "savePairingCredentials", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "savePrimaryDeviceId", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "searchExternalDocuments", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "searchTopics", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "searchPdfPageText", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "signCompanionSyncRequest", returnType: CAPPluginReturnPromise)

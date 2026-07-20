@@ -20,8 +20,8 @@ describe('iOS PDF page text host contract', () => {
     expect(plugin).toContain('CAPPluginMethod(name: "searchPdfPageText"');
     expect(action).toContain('@objc func loadPdfPageText(_ call: CAPPluginCall)');
     expect(action).toContain('@objc func searchPdfPageText(_ call: CAPPluginCall)');
-    expect(store).toMatch(/database\.rows\(\s*contract\.pagesSQL/u);
-    expect(store).toContain('database.rows(contract.searchSQL');
-    expect(contract).toContain('companion-query-definitions');
+    expect(store).toMatch(/queries\.rows\(\s*contract\.pagesQuery/u);
+    expect(store).toContain('queries.rows(contract.searchQuery');
+    expect(contract).toContain('FolioleCompanionQueryDefinitions');
   });
 });

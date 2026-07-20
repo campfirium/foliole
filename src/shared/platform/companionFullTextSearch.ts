@@ -8,9 +8,8 @@ import { searchCompanionExternalDocuments } from './companionExternalDocuments';
 import { searchCompanionPdfPageText } from './companionSyncObjects';
 import {
   FolioleCompanionSync,
-  isAvailableNativeAndroidCompanionRuntime,
   isNativeAndroidCompanionRuntime,
-  isNativeCompanionPdfPageTextRuntime,
+  isNativeCompanionExternalDocumentSearchRuntime,
   isNativeCompanionTopicSearchRuntime
 } from './companionWorkspaceRuntimeRepository';
 
@@ -55,19 +54,6 @@ export async function searchCompanionFullText(query: string, limit?: number): Pr
     return { external: [], pdf: [], strategy, topics: [] };
   }
 
-  if (!isAvailableNativeAndroidCompanionRuntime()) {
-    const [topics, pdf] = await Promise.all([
-      searchCompanionTopics(normalizedQuery, limit),
-      searchCompanionPdfPageText(normalizedQuery, limit)
-    ]);
-    return {
-      external: [],
-      pdf,
-      strategy,
-      topics
-    };
-  }
-
   const [topics, pdf, external] = await Promise.all([
     searchCompanionTopics(normalizedQuery, limit),
     searchCompanionPdfPageText(normalizedQuery, limit),
@@ -77,7 +63,7 @@ export async function searchCompanionFullText(query: string, limit?: number): Pr
 }
 
 export function supportsCompanionExtendedSearch() {
-  return isNativeCompanionPdfPageTextRuntime();
+  return isNativeCompanionExternalDocumentSearchRuntime();
 }
 
 async function loadCompanionFullTextSearchStrategyOrDefault() {

@@ -59,6 +59,7 @@ vi.mock('@capacitor/core', () => ({
 
 beforeEach(() => {
   vi.resetModules();
+  vi.clearAllMocks();
   capacitorMock.isNative.mockReturnValue(true);
   capacitorMock.platform.mockReturnValue('android');
 });
@@ -80,6 +81,27 @@ describe('companion external documents bridge', () => {
       excerpt: 'cached external content'
     })]);
     expect(capacitorMock.plugin.searchExternalDocuments).toHaveBeenCalledWith({ limit: 5, query: 'external' });
+  });
+
+  it('searches synced external documents on iOS without exposing Android-only browsing', async () => {
+    capacitorMock.platform.mockReturnValue('ios');
+    const api = await import('./companionExternalDocuments');
+
+    await expect(api.searchCompanionExternalDocuments('external', 5)).resolves.toEqual([expect.objectContaining({
+      bodyStatus: 'ready',
+      document_id: 'folder-1:doc.md'
+    })]);
+    await expect(api.loadCompanionExternalDocument('folder-1:doc.md')).rejects.toMatchObject({
+      code: 'NATIVE_COMPANION_CAPABILITY_UNAVAILABLE',
+      platform: 'ios'
+    });
+    await expect(api.loadCompanionExternalDirectory()).rejects.toMatchObject({
+      code: 'NATIVE_COMPANION_CAPABILITY_UNAVAILABLE',
+      platform: 'ios'
+    });
+    expect(capacitorMock.plugin.searchExternalDocuments).toHaveBeenCalledWith({ limit: 5, query: 'external' });
+    expect(capacitorMock.plugin.loadExternalDocument).not.toHaveBeenCalled();
+    expect(capacitorMock.plugin.loadExternalDirectory).not.toHaveBeenCalled();
   });
 
   it('loads cached external directory folders and documents through the native plugin', async () => {

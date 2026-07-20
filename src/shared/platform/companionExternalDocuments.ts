@@ -2,7 +2,8 @@ import { APP_SETTINGS_STORAGE_KEYS } from '../config/appSettings';
 
 import {
   FolioleCompanionSync,
-  isNativeAndroidCompanionRuntime
+  isNativeAndroidCompanionRuntime,
+  isNativeCompanionExternalDocumentSearchRuntime
 } from './companionWorkspaceRuntimeRepository';
 import type {
   ExternalLibraryBrowseEntry,
@@ -125,7 +126,7 @@ function parseAppSettingValue(valueJson: string | undefined) {
 }
 
 export async function searchCompanionExternalDocuments(query: string, limit?: number) {
-  if (!isNativeAndroidCompanionRuntime()) {
+  if (!isNativeCompanionExternalDocumentSearchRuntime()) {
     return [] as CompanionExternalDocumentSearchResult[];
   }
   const results = (await FolioleCompanionSync.searchExternalDocuments({ ...(limit !== undefined ? { limit } : {}), query })).results as NativeExternalDocumentSearchResult[];
