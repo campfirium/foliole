@@ -20,6 +20,11 @@ export function isNativeAndroidCompanionRuntime() {
   return requireAvailableCompanionRuntime('native-runtime').kind === 'android-native';
 }
 
+export function isNativeCompanionPairingRuntime() {
+  const runtime = requireAvailableCompanionRuntime('pairing-runtime');
+  return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
+}
+
 export function isAvailableNativeAndroidCompanionRuntime() {
   return getCompanionRuntimeCapability().kind === 'android-native';
 }

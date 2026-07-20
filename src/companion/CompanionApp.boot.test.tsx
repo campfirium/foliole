@@ -126,7 +126,7 @@ describe('CompanionApp ready hosts', () => {
     expect(screen.getByRole('button', { name: /Connect or refresh this device/ })).toBeInTheDocument();
   });
 
-  it('keeps the prepared iOS host outside Android-only product surfaces', async () => {
+  it('renders the shared pairing surface after iOS bootstrap succeeds', async () => {
     useCompanionBootstrap.mockReturnValue({
       status: 'ready',
       state: {
@@ -141,9 +141,14 @@ describe('CompanionApp ready hosts', () => {
 
     render(<CompanionApp />);
 
-    expect(screen.getByText('This iPhone is ready')).toBeInTheDocument();
-    expect(screen.getByText(/Topic browsing, review, and sync are not available/)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Sync/ })).not.toBeInTheDocument();
+    const bottomBar = screen.getAllByTestId('companion-bottom-tab-bar').at(-1);
+    if (!bottomBar) {
+      throw new Error('Expected companion bottom tab bar to render');
+    }
+    expect(within(bottomBar).getByRole('button', { name: 'Settings' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: /Sync/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Connect or refresh this device/ })).toBeInTheDocument();
+    expect(useCompanionWorkspaceSync).toHaveBeenCalledWith(expect.objectContaining({ runtime_kind: 'ios-capacitor' }));
   });
 
 });

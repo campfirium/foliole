@@ -6,12 +6,19 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+import {
+  iosResourceCommand,
+  iosXcodebuildResourceArgs,
+  resolveIosResourceMode
+} from './ios-resource-profile.mjs';
+
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const ARTIFACT_DIR = path.join(REPO_ROOT, '.tmp/artifacts/ios-bootstrap-acceptance');
 const DERIVED_DATA = path.join(ARTIFACT_DIR, 'DerivedData');
 const ACCEPTANCE_BUNDLE_ID = 'com.foliole.ios.bootstrap-acceptance';
 const DATABASE_RELATIVE_PATH = 'Library/CapacitorDatabase/foliole-companionSQLite.db';
 const REQUIRED_TABLES = ['companion_meta', 'nodes', 'sync_object_state'];
+const RESOURCE_MODE = resolveIosResourceMode();
 
 export function selectSimulator(devicePayload) {
   const candidates = Object.entries(devicePayload.devices ?? {})
@@ -21,6 +28,10 @@ export function selectSimulator(devicePayload) {
   candidates.sort((left, right) => Number(right.state === 'Booted') - Number(left.state === 'Booted'));
   if (!candidates[0]) throw new Error('Could not find an available iPhone simulator.');
   return candidates[0];
+}
+
+export function shouldShutdownSimulator(simulator) {
+  return simulator.state !== 'Booted';
 }
 
 export function parseBootstrapSnapshot(output) {
@@ -59,20 +70,25 @@ async function main() {
   if (process.platform !== 'darwin') throw new Error('iOS bootstrap acceptance requires macOS with Xcode.');
   mkdirSync(ARTIFACT_DIR, { recursive: true });
   const simulator = selectSimulator(runJson('xcrun', ['simctl', 'list', 'devices', 'available', '--json']));
-  bootSimulator(simulator);
-  prepareApp(simulator.udid);
-  installFreshAcceptanceApp(simulator.udid);
-  const databasePath = resolveDatabasePath(simulator.udid);
-  await waitForFileCreated(databasePath, () => launchApp(simulator.udid));
-  const first = readBootstrapSnapshot(databasePath);
-  run('xcrun', ['simctl', 'terminate', simulator.udid, ACCEPTANCE_BUNDLE_ID]);
-  launchApp(simulator.udid);
-  const second = readBootstrapSnapshot(databasePath);
-  const result = verifyBootstrapSnapshots(first, second);
-  run('xcrun', ['simctl', 'terminate', simulator.udid, ACCEPTANCE_BUNDLE_ID]);
-  const report = { ...result, databasePath, simulator: simulator.name };
-  writeFileSync(path.join(ARTIFACT_DIR, 'result.json'), `${JSON.stringify(report, null, 2)}\n`);
-  console.log(JSON.stringify(report, null, 2));
+  const ownsBootedSimulator = shouldShutdownSimulator(simulator);
+  try {
+    bootSimulator(simulator);
+    prepareApp(simulator.udid);
+    installFreshAcceptanceApp(simulator.udid);
+    const databasePath = resolveDatabasePath(simulator.udid);
+    await waitForFileCreated(databasePath, () => launchApp(simulator.udid));
+    const first = readBootstrapSnapshot(databasePath);
+    run('xcrun', ['simctl', 'terminate', simulator.udid, ACCEPTANCE_BUNDLE_ID]);
+    launchApp(simulator.udid);
+    const second = readBootstrapSnapshot(databasePath);
+    const result = verifyBootstrapSnapshots(first, second);
+    run('xcrun', ['simctl', 'terminate', simulator.udid, ACCEPTANCE_BUNDLE_ID]);
+    const report = { ...result, databasePath, simulator: simulator.name };
+    writeFileSync(path.join(ARTIFACT_DIR, 'result.json'), `${JSON.stringify(report, null, 2)}\n`);
+    console.log(JSON.stringify(report, null, 2));
+  } finally {
+    if (ownsBootedSimulator) runAllowFailure('xcrun', ['simctl', 'shutdown', simulator.udid]);
+  }
 }
 
 function bootSimulator(simulator) {
@@ -82,13 +98,14 @@ function bootSimulator(simulator) {
 }
 
 function prepareApp(udid) {
-  run('npm', ['run', 'android:web:build'], { cwd: REPO_ROOT });
+  runHeavy('npm', ['run', 'android:web:build'], { cwd: REPO_ROOT });
   run('npx', ['--no-install', 'cap', 'copy', 'ios'], { cwd: REPO_ROOT });
-  run('xcodebuild', [
+  runHeavy('xcodebuild', [
     '-project', path.join(REPO_ROOT, 'ios/App/App.xcodeproj'),
     '-scheme', 'App', '-configuration', 'Debug',
     '-destination', `platform=iOS Simulator,id=${udid}`,
     '-derivedDataPath', DERIVED_DATA,
+    ...iosXcodebuildResourceArgs(RESOURCE_MODE),
     `PRODUCT_BUNDLE_IDENTIFIER=${ACCEPTANCE_BUNDLE_ID}`,
     'CODE_SIGNING_ALLOWED=NO', 'build'
   ]);
@@ -128,6 +145,11 @@ function capture(command, args) {
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, { cwd: REPO_ROOT, stdio: 'inherit', ...options });
   if (result.status !== 0) throw new Error(`${command} failed with ${result.status}`);
+}
+
+function runHeavy(command, args, options = {}) {
+  const task = iosResourceCommand(command, args, RESOURCE_MODE);
+  run(task.command, task.args, options);
 }
 
 function runAllowFailure(command, args) {

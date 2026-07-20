@@ -192,6 +192,7 @@
     "test:e2e:ui": "playwright test --ui",
     "check:ios-boundary": "npm run sync:sql-surface:scan && npm run ios:sqlite-capability:gate",
     "quality:ios": "npm run check:ios-boundary && node scripts/ios/ios-runtime-contract-tests.mjs && node scripts/ios/ios-bootstrap-acceptance.mjs",
+    "quality:ios:full": "FOLIOLE_IOS_RESOURCE_MODE=full npm run quality:ios",
     "ios:sync:preflight": "npm run check:ios-boundary",
     "ios:sqlite-capability:gate": "node scripts/sync/ios-capacitor-sqlite-capability-gate.mjs",
     "sync:sql-surface:scan": "node scripts/sync/sql-surface-scan.mjs"

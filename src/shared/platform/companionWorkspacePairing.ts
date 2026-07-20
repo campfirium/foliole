@@ -19,7 +19,7 @@ import { discoverCompanionDesktop, discoverCompanionDesktops } from './companion
 import {
   DISCOVERY_ENDPOINT_PATH,
   FolioleCompanionSync,
-  isNativeAndroidCompanionRuntime,
+  isNativeCompanionPairingRuntime,
   type LoadCompanionDiscoveryResponse,
   normalizeEndpointUrl,
   PAIR_ENDPOINT_PATH,
@@ -70,14 +70,14 @@ function buildCanonicalRequestPayload(args: {
 }
 
 export async function loadCompanionPairingState() {
-  if (!isNativeAndroidCompanionRuntime()) {
+  if (!isNativeCompanionPairingRuntime()) {
     return readWebPairingState();
   }
   return normalizePairingState(await FolioleCompanionSync.loadPairingState());
 }
 
 export async function clearCompanionPairingCredentials() {
-  if (!isNativeAndroidCompanionRuntime()) {
+  if (!isNativeCompanionPairingRuntime()) {
     return clearWebPairingState();
   }
   return normalizePairingState(await runCompanionSyncWriterTask(() => FolioleCompanionSync.clearPairingCredentials()));
@@ -87,7 +87,7 @@ export async function createSignedRequestHeaders(args: { bodyText?: string; meth
   const timestamp = new Date().toISOString();
   const nonce = createNonce();
   const bodyHash = await sha256Hex(args.bodyText ?? '');
-  if (isNativeAndroidCompanionRuntime()) {
+  if (isNativeCompanionPairingRuntime()) {
     const result = await FolioleCompanionSync.signCompanionSyncRequest({
       body_hash: bodyHash,
       method: args.method,
@@ -123,11 +123,11 @@ async function verifyNativePairingCanSignRequest() {
   try {
     const headers = await createSignedRequestHeaders({ method: 'GET', pathWithQuery: PAIRING_SIGNATURE_CHECK_PATH });
     if (!headers['X-Device-Id'] || !headers['X-Signature']) {
-      throw new Error('Android pairing credentials did not produce signed request headers.');
+      throw new Error('Native pairing credentials did not produce signed request headers.');
     }
   } catch (error) {
     const reason = error instanceof Error ? error.message : 'unknown error';
-    throw new Error(`Android pairing credentials cannot sign sync requests: ${reason}`);
+    throw new Error(`Native pairing credentials cannot sign sync requests: ${reason}`);
   }
 }
 
@@ -187,7 +187,7 @@ export async function pairCompanionWithDesktop(args: PairCompanionWithDesktopArg
   }
   const deviceSecret = await decryptCompanionPairingSecret(pairingKeyId, payload.encrypted_device_secret);
   pairingKeyIdsByRequestId.delete(args.pairRequestId);
-  if (!isNativeAndroidCompanionRuntime()) {
+  if (!isNativeCompanionPairingRuntime()) {
     return writeWebPairingState({
       device_id: payload.device_id,
       device_kind: args.deviceKind,
@@ -212,7 +212,7 @@ export async function pairCompanionWithDesktop(args: PairCompanionWithDesktopArg
   }));
   const storedPairingState = normalizePairingState(await FolioleCompanionSync.loadPairingState());
   if (!storedPairingState.is_paired) {
-    throw new Error('Android pairing credentials were not saved.');
+    throw new Error('Native pairing credentials were not saved.');
   }
   await verifyNativePairingCanSignRequest();
   return storedPairingState;
@@ -222,7 +222,7 @@ async function requestDesktop(
   url: string,
   init: { body?: string; headers?: Record<string, string>; method: string }
 ) {
-  if (!isNativeAndroidCompanionRuntime()) {
+  if (!isNativeCompanionPairingRuntime()) {
     return await fetch(url, init);
   }
   const payload = await FolioleCompanionSync.desktopHttpRequest({

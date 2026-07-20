@@ -11,6 +11,20 @@ struct FolioleCompanionSyncPackContract {
     let sqliteTableRequirements: [String: Set<String>]
 }
 
+struct FolioleCompanionPairingContract {
+    let credentialRequestKeys: [String: String]
+    let discoveryCandidateKeys: [String: String]
+    let discoveryResponseKeys: [String: String]
+    let networkRequestKeys: [String: String]
+    let networkResponseKeys: [String: String]
+    let preferenceKeys: [String: String]
+    let signatureHeaderKeys: [String: String]
+    let signatureRequestKeys: [String: String]
+    let signatureResponseKeys: [String: String]
+    let stateKeys: [String: String]
+    let storageKeys: [String: String]
+}
+
 final class FolioleCompanionContractStore {
     private let bridge: [String: Any]
     private let sync: [String: Any]
@@ -46,6 +60,22 @@ final class FolioleCompanionContractStore {
         )
     }
 
+    func pairingContract() throws -> FolioleCompanionPairingContract {
+        FolioleCompanionPairingContract(
+            credentialRequestKeys: try stringMap(path: ["pairingPlugin", "credentialRequestKeys"], root: bridge),
+            discoveryCandidateKeys: try stringMap(path: ["hostApi", "network", "discoveryCandidateKeys"], root: bridge),
+            discoveryResponseKeys: try stringMap(path: ["hostApi", "network", "discoveryResponseKeys"], root: bridge),
+            networkRequestKeys: try stringMap(path: ["hostApi", "network", "requestKeys"], root: bridge),
+            networkResponseKeys: try stringMap(path: ["hostApi", "network", "responseKeys"], root: bridge),
+            preferenceKeys: try stringMap(path: ["pairingPlugin", "preferenceKeys"], root: bridge),
+            signatureHeaderKeys: try stringMap(path: ["pairingPlugin", "signature", "headerKeys"], root: bridge),
+            signatureRequestKeys: try stringMap(path: ["pairingPlugin", "signature", "requestKeys"], root: bridge),
+            signatureResponseKeys: try stringMap(path: ["pairingPlugin", "signature", "responseKeys"], root: bridge),
+            stateKeys: try stringMap(path: ["pairingPlugin", "stateKeys"], root: bridge),
+            storageKeys: try stringMap(path: ["pairingPlugin", "storageKeys"], root: bridge)
+        )
+    }
+
     private static func load(_ name: String, bundle: Bundle) throws -> [String: Any] {
         guard let url = bundle.url(forResource: name, withExtension: "json") else {
             throw contractError("missing resource \(name)")
@@ -74,6 +104,16 @@ final class FolioleCompanionContractStore {
             throw Self.contractError(path.joined(separator: "."))
         }
         return result
+    }
+
+    private func stringMap(path: [String], root: [String: Any]) throws -> [String: String] {
+        let value = try object(path: path, root: root)
+        return try value.reduce(into: [:]) { result, entry in
+            guard let string = entry.value as? String, !string.isEmpty else {
+                throw Self.contractError(path.joined(separator: "."))
+            }
+            result[entry.key] = string
+        }
     }
 
     private func integer(path: [String], root: [String: Any]) throws -> Int {

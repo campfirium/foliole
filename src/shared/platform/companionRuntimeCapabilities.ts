@@ -18,7 +18,7 @@ export class NativeCompanionCapabilityUnavailableError extends Error {
   }
 }
 
-const IOS_NATIVE_CAPABILITIES = new Set(['bootstrap', 'sync-pack-apply']);
+const IOS_NATIVE_CAPABILITIES = new Set(['bootstrap', 'pairing-runtime', 'sync-pack-apply']);
 
 export function getCompanionRuntimeCapability(): CompanionRuntimeCapability {
   if (!Capacitor.isNativePlatform()) {

@@ -14,16 +14,19 @@ let package = Package(
             path: "App",
             exclude: [
                 "AppDelegate.swift", "Assets.xcassets", "Base.lproj", "FolioleBridgeViewController.swift",
-                "FolioleCompanionBootstrapPlugin.swift", "FolioleCompanionSyncPackTransfer.swift",
+                "FolioleCompanionBonjourDiscovery.swift", "FolioleCompanionBootstrapPlugin.swift",
+                "FolioleCompanionDesktopHttpClient.swift", "FolioleCompanionSyncPackTransfer.swift",
                 "FolioleCompanionSyncPackTransferPlugin.swift", "Info.plist", "capacitor.config.json",
-                "config.xml", "public"
+                "FolioleCompanionSyncPlugin.swift", "config.xml", "public"
             ],
             sources: [
                 "FolioleCompanionContractStore.swift",
                 "FolioleCompanionZlib.swift",
                 "FolioleCompanionSyncPackEnvelopeValidator.swift",
                 "FolioleReadOnlySQLite.swift",
-                "FolioleCompanionSyncPackDatabaseValidator.swift"
+                "FolioleCompanionSyncPackDatabaseValidator.swift",
+                "FolioleCompanionPairingSecretStore.swift",
+                "FolioleCompanionPairingStore.swift"
             ],
             resources: [
                 .copy("companion-bridge-contract-definitions.json"),

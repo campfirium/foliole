@@ -60,6 +60,35 @@ beforeEach(() => {
 });
 
 describe('companionWorkspaceDiscovery endpoint selection', () => {
+  it('uses iOS native Bonjour candidates and native HTTP', async () => {
+    capacitorMock.getPlatform.mockReturnValue('ios');
+    capacitorMock.plugin.loadDiscoveryCandidates.mockResolvedValue({
+      candidates: [nsdCandidate('http://foliole-desktop.local:38641')]
+    });
+    capacitorMock.plugin.desktopHttpRequest.mockImplementation(async ({ url }: { url: string }) => {
+      if (url.startsWith('http://foliole-desktop.local:38641')) {
+        return desktopResponse({ hostName: 'Mac', peerId: 'desktop-ios', platform: 'macOS' });
+      }
+      throw new TypeError('Failed to fetch');
+    });
+
+    const result = await discoverCompanionDesktop('http://10.0.2.2:38641');
+
+    expect(result.endpointUrl).toBe('http://foliole-desktop.local:38641');
+    expect(capacitorMock.plugin.loadDiscoveryCandidates).toHaveBeenCalledOnce();
+  });
+
+  it('does not probe Android emulator fallbacks when iOS Bonjour finds no desktop', async () => {
+    capacitorMock.getPlatform.mockReturnValue('ios');
+    capacitorMock.plugin.loadDiscoveryCandidates.mockResolvedValue({ candidates: [] });
+
+    await expect(discoverCompanionDesktops('http://10.0.2.2:38641')).rejects.toThrow(
+      'No desktop sync device found'
+    );
+
+    expect(capacitorMock.plugin.desktopHttpRequest).not.toHaveBeenCalled();
+  });
+
   it('discovers a native Android desktop candidate beyond the emulator default', async () => {
     capacitorMock.plugin.loadDiscoveryCandidates.mockResolvedValue({
       candidates: [nsdCandidate('http://192.168.1.44:38641')]

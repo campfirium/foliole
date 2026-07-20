@@ -97,8 +97,8 @@ beforeEach(() => {
   writerQueueMock.run.mockImplementation(async <T>(task: () => Promise<T>) => task());
 });
 
-it('verifies native pairing credentials are readable after saving', async () => {
-  capacitorMock.getPlatform.mockReturnValue('android');
+it.each(['android', 'ios'])('verifies %s native pairing credentials after saving', async (platform) => {
+  capacitorMock.getPlatform.mockReturnValue(platform);
   capacitorMock.isNativePlatform.mockReturnValue(true);
   mockNativePairingHttp();
   capacitorMock.plugin.savePairingCredentials.mockResolvedValue({
@@ -175,7 +175,7 @@ it('fails native pairing when credentials cannot be read back locally', async ()
     deviceName: 'Pixel 9',
     endpointUrl: 'http://10.0.2.2:38641',
     pairRequestId: 'pair-request-1'
-  })).rejects.toThrow('Android pairing credentials were not saved.');
+  })).rejects.toThrow('Native pairing credentials were not saved.');
 });
 
 it('fails native pairing when saved credentials cannot sign sync requests', async () => {
@@ -213,5 +213,5 @@ it('fails native pairing when saved credentials cannot sign sync requests', asyn
     deviceName: 'Pixel 9',
     endpointUrl: 'http://10.0.2.2:38641',
     pairRequestId: 'pair-request-1'
-  })).rejects.toThrow('Android pairing credentials cannot sign sync requests');
+  })).rejects.toThrow('Native pairing credentials cannot sign sync requests');
 });

@@ -8,10 +8,11 @@ import {
 import {
   DISCOVERY_ENDPOINT_PATH,
   FolioleCompanionSync,
-  isNativeAndroidCompanionRuntime,
+  isNativeCompanionPairingRuntime,
   type LoadCompanionDiscoveryResponse,
   normalizeEndpointUrl
 } from './companionWorkspaceRuntimeRepository';
+import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
 
 export type CompanionDiscoveryResult = {
   compatibility: SyncProtocolCompatibilityResult;
@@ -51,10 +52,13 @@ function createDiscoveryTimeout() {
 }
 
 async function loadNativeDiscoveryCandidates(preferredEndpointUrl: string) {
-  if (!isNativeAndroidCompanionRuntime()) {
+  if (!isNativeCompanionPairingRuntime()) {
     return uniqueCandidates([directCandidate(preferredEndpointUrl)]);
   }
-  const direct = [directCandidate(preferredEndpointUrl), directCandidate(DEV_REVERSE_ENDPOINT)];
+  const runtime = getCompanionRuntimeCapability();
+  const direct = runtime.kind === 'android-native'
+    ? [directCandidate(preferredEndpointUrl), directCandidate(DEV_REVERSE_ENDPOINT)]
+    : [];
   try {
     const payload = await FolioleCompanionSync.loadDiscoveryCandidates();
     const native = (payload.candidates ?? []).map((candidate) => ({
@@ -105,7 +109,7 @@ async function tryLoadCompanionDiscovery(candidate: DiscoveryCandidate): Promise
 }
 
 async function requestDiscovery(url: string, signal: AbortSignal) {
-  if (!isNativeAndroidCompanionRuntime()) {
+  if (!isNativeCompanionPairingRuntime()) {
     return await fetch(url, { signal });
   }
   const payload = await FolioleCompanionSync.desktopHttpRequest({ method: 'GET', url });

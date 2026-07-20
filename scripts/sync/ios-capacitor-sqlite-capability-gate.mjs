@@ -5,6 +5,12 @@ import { join } from 'node:path';
 import { cwd, exit } from 'node:process';
 import { spawnSync } from 'node:child_process';
 
+import {
+  iosResourceCommand,
+  iosXcodebuildResourceArgs,
+  resolveIosResourceMode
+} from '../ios/ios-resource-profile.mjs';
+
 // iOS sync work must reuse the shared TS sync core, native command contracts,
 // DbPort semantics, and sync pack capability model.
 // Do not copy Android private store, runner, generated Java, or SQL business
@@ -24,7 +30,8 @@ writeFileSync(join(testDir, 'FolioleSqliteCapabilityTests.swift'), swiftTestSour
 const workspace = prepareSwiftPackageWorkspace(pluginDir);
 const scheme = resolveScheme(workspace);
 const destination = resolveSimulatorDestination();
-const result = spawnSync('xcodebuild', [
+const resourceMode = resolveIosResourceMode();
+const task = iosResourceCommand('xcodebuild', [
   'test',
   '-workspace',
   workspace,
@@ -32,8 +39,10 @@ const result = spawnSync('xcodebuild', [
   scheme,
   '-destination',
   destination,
+  ...iosXcodebuildResourceArgs(resourceMode, { testing: true }),
   '-only-testing:CapacitorSQLitePluginTests/FolioleSqliteCapabilityTests/testAttachTransactionBlobAndSqlSurface'
-], {
+], resourceMode);
+const result = spawnSync(task.command, task.args, {
   encoding: 'utf8',
   stdio: 'inherit'
 });

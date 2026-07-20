@@ -10,6 +10,7 @@ import { describe, expect, it } from 'vitest';
 import {
   parseBootstrapSnapshot,
   selectSimulator,
+  shouldShutdownSimulator,
   verifyBootstrapSnapshots,
   waitForFileCreated
 } from './ios-bootstrap-acceptance.mjs';
@@ -24,6 +25,11 @@ describe('iOS bootstrap acceptance contract', () => {
         ]
       }
     }).udid).toBe('SIM-2');
+  });
+
+  it('shuts down only a simulator started by the acceptance run', () => {
+    expect(shouldShutdownSimulator({ state: 'Shutdown' })).toBe(true);
+    expect(shouldShutdownSimulator({ state: 'Booted' })).toBe(false);
   });
 
   it('accepts a stable database identity and required schema after restart', () => {

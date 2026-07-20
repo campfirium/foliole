@@ -32,6 +32,7 @@ describe('companionRuntimeCapabilities', () => {
     const { requireAvailableCompanionRuntime } = await import('./companionRuntimeCapabilities');
 
     expect(requireAvailableCompanionRuntime('bootstrap')).toEqual({ kind: 'ios-native', platform: 'ios' });
+    expect(requireAvailableCompanionRuntime('pairing-runtime')).toEqual({ kind: 'ios-native', platform: 'ios' });
     expect(requireAvailableCompanionRuntime('sync-pack-apply')).toEqual({ kind: 'ios-native', platform: 'ios' });
     expect(() => requireAvailableCompanionRuntime('native-runtime')).toThrowError(
       expect.objectContaining({
