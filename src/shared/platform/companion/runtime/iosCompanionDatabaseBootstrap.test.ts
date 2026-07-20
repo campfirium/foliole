@@ -1,9 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { ANDROID_COMPANION_MIGRATION_PLAN } from '../../../../../lib/core/database/androidCompanionMigrationSchemaStatements';
 import { COMPANION_CURRENT_SCHEMA_REPAIRS } from '../../../../../lib/core/database/companionCurrentSchemaRepairs';
-import type { NativeCompanionBootstrapState } from '../../../../../lib/platform/nativeCompanionContract';
+import {
+  COMPANION_DATABASE_VERSION,
+  type NativeCompanionBootstrapState
+} from '../../../../../lib/platform/nativeCompanionContract';
 
 import { initializeIosCompanionDatabase, type IosCompanionDatabaseManager } from './iosCompanionDatabaseBootstrap';
+
+const USER_VERSION_SQL = `PRAGMA user_version = ${COMPANION_DATABASE_VERSION}`;
 
 function createNativeState(): NativeCompanionBootstrapState {
   return {
@@ -49,6 +55,14 @@ function createHarness(args: { missingColumns?: string[]; storedDeviceId?: strin
   return { connection, manager };
 }
 
+describe('iosCompanionDatabaseBootstrap version contract', () => {
+  it('tracks the latest shared companion migration independently of the desktop schema', () => {
+    expect(COMPANION_DATABASE_VERSION).toBe(
+      Math.max(...ANDROID_COMPANION_MIGRATION_PLAN.map((migration) => migration.beforeVersion))
+    );
+  });
+});
+
 describe('iosCompanionDatabaseBootstrap', () => {
   it('creates, opens, and installs the shared schema for a fresh ios database', async () => {
     const { connection, manager } = createHarness();
@@ -58,10 +72,16 @@ describe('iosCompanionDatabaseBootstrap', () => {
       database_ready: true,
       device_id: 'ios-proposed-device'
     });
-    expect(manager.createConnection).toHaveBeenCalledWith('foliole-companion', false, 'no-encryption', 19, false);
+    expect(manager.createConnection).toHaveBeenCalledWith(
+      'foliole-companion',
+      false,
+      'no-encryption',
+      COMPANION_DATABASE_VERSION,
+      false
+    );
     expect(connection.open).toHaveBeenCalledTimes(1);
     expect(connection.execute).toHaveBeenNthCalledWith(1, expect.stringContaining('CREATE TABLE IF NOT EXISTS nodes'));
-    expect(connection.execute).toHaveBeenNthCalledWith(2, 'PRAGMA user_version = 19', false);
+    expect(connection.execute).toHaveBeenNthCalledWith(2, USER_VERSION_SQL, false);
     expect(connection.beginTransaction).toHaveBeenCalledTimes(1);
     expect(connection.commitTransaction).toHaveBeenCalledTimes(1);
     expect(connection.run).toHaveBeenCalledWith(
@@ -90,17 +110,17 @@ describe('iosCompanionDatabaseBootstrap', () => {
     await expect(initializeIosCompanionDatabase(createNativeState(), manager)).rejects.toThrow(/did not return a path/i);
   });
 
-  it('repairs missing companion columns before declaring version 19', async () => {
+  it('repairs missing companion columns before declaring the current companion version', async () => {
     const { connection, manager } = createHarness({ missingColumns: ['base_content_hash'] });
     const repair = COMPANION_CURRENT_SCHEMA_REPAIRS.find((entry) => entry.columnName === 'base_content_hash');
 
     await initializeIosCompanionDatabase(createNativeState(), manager);
 
     expect(connection.execute).toHaveBeenNthCalledWith(2, repair?.statement, false);
-    expect(connection.execute).toHaveBeenNthCalledWith(3, 'PRAGMA user_version = 19', false);
+    expect(connection.execute).toHaveBeenNthCalledWith(3, USER_VERSION_SQL, false);
   });
 
-  it('rolls back and does not declare version 19 when repair fails', async () => {
+  it('rolls back without declaring the current companion version when repair fails', async () => {
     const { connection, manager } = createHarness({ missingColumns: ['base_content_hash'] });
     connection.execute.mockImplementation(async (statement: string) => {
       if (statement.includes('ADD COLUMN base_content_hash')) throw new Error('repair failed');
@@ -111,6 +131,6 @@ describe('iosCompanionDatabaseBootstrap', () => {
 
     expect(connection.rollbackTransaction).toHaveBeenCalledTimes(1);
     expect(connection.commitTransaction).not.toHaveBeenCalled();
-    expect(connection.execute).not.toHaveBeenCalledWith('PRAGMA user_version = 19', false);
+    expect(connection.execute).not.toHaveBeenCalledWith(USER_VERSION_SQL, false);
   });
 });
