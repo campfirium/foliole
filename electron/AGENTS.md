@@ -9,9 +9,9 @@
 
 - 本项目默认桌面优先，不按纯 Web 方案优先。
 - 当前 Codex 所在的原生桌面宿主是日常开发与本轮桌面行为的主验收宿主；不得因默认产品视角或另一平台仍有专项风险，就跳过当前宿主验收或把它挂成未来任务。
-- Windows 客户端仍是 Windows 主数据库核对、人工补数据、Windows 发布 / 安装包验收与 Windows 原生能力确认的权威宿主；这些 Windows 专属结论不得由 macOS 或 Linux 验收替代。
-- 默认主数据库固定视为 `D:\X\U\Foliole\Data\foliole.db`。未获用户明确批准前，不得自行改查其他数据库路径。
-- 诊断主数据库时必须先使用 `query-foliole-db` skill 的固定只读流程；不得先用仓库 Node 依赖或直接打开正在运行的 Windows 活库，避免 WAL / SHM I/O 误判。若固定流程覆盖不了，再走 Windows 侧只读 runtime 或停进程后的快照查询，并说明原因。
+- 当前活跃 Foliole library 及其原生宿主是用户数据与主数据库的事实来源；必须从当前运行时、library selection 或用户明确路径解析数据库，不得用历史平台默认路径替代当前主库。
+- macOS 与 Windows 分别负责各自当前原生宿主和活跃 library 的数据库核对；Windows 只对 Windows ABI、原生 shell、dialog、tray、notification、安装包与 Windows 路径语义等 Windows 专属结论具有权威性。
+- 诊断主数据库时必须先使用 `query-foliole-db` skill 的当前宿主只读流程；显式路径优先，自动解析只允许在候选唯一时采用，多候选必须停下确认。读取活库必须使用能观察 WAL 的只读连接，`immutable` 只用于已停止写入的快照。
 - 系统能力优先经 Electron main process 暴露，再由 renderer 通过 bridge 调用；业务层不得散落 `ipcRenderer` 调用。
 - 文件路径、数据库路径、日志路径等统一由 Electron main process 解析；前端禁止拼平台绝对路径。
 - 持久化主路径统一走 Electron main process 与 sqlite；`localStorage` 仅允许用于可丢失 UI 偏好且必须可审计。

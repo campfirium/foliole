@@ -22,18 +22,8 @@ export class WordPressFrontmatterError extends Error {
   }
 }
 
-const MANAGED_BLOCK_START = '# foliole:wordpress-publish';
-const MANAGED_BLOCK_END = '# /foliole:wordpress-publish';
-
 function createError(message: string) {
   return new WordPressFrontmatterError(message);
-}
-
-function assertNoLegacyBinding(content: string) {
-  const frontmatter = splitMarkdownFrontmatter(content, createError).frontmatter;
-  if (frontmatter?.includes(MANAGED_BLOCK_START) || frontmatter?.includes(MANAGED_BLOCK_END)) {
-    throw createError('Legacy WordPress publish frontmatter must be migrated before use.');
-  }
 }
 
 function isNonEmptyString(value: unknown): value is string {
@@ -53,7 +43,6 @@ function parseBinding(record: Record<string, unknown>): WordPressPostBinding {
 }
 
 export function readWordPressPostBinding(content: string): WordPressPostBinding | null {
-  assertNoLegacyBinding(content);
   const record = readPublishProviderRecord(content, 'wordpress', createError);
   return record ? parseBinding(record) : null;
 }
@@ -70,7 +59,6 @@ function serializeBinding(binding: WordPressPostBinding) {
 }
 
 export function writeWordPressPostBinding(content: string, binding: WordPressPostBinding) {
-  assertNoLegacyBinding(content);
   const validated = parseBinding(binding as unknown as Record<string, unknown>);
   return writePublishProviderRecord(content, 'wordpress', serializeBinding(validated), createError);
 }

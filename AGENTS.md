@@ -17,7 +17,7 @@
 - 启动时先读根 `AGENTS.md`。
 - 根 `AGENTS.md` 负责全仓硬规则与路由；平台与局部细则下沉到对应目录的 `AGENTS.md`。
 - 只要任务触及下列路径，实施前必须按路由补读对应规则来源，并在该规则基础上执行：
-- `electron/**`、`scripts/windows/**`、`playwright.desktop.config.ts`、`D:\X\U\Foliole\Data\foliole.db` 相关诊断或桌面运行链路：读取 `electron/AGENTS.md`
+- `electron/**`、`scripts/windows/**`、`playwright.desktop.config.ts`、Foliole 桌面主数据库 / 当前 library 数据库相关诊断或桌面运行链路：读取 `electron/AGENTS.md`
 - `android/**`、`scripts/android/**`、`capacitor.config.ts`：读取 `android/AGENTS.md`
 - `src/companion/**`：读取 `src/companion/AGENTS.md`
 - `ios/**`：读取 `ios/AGENTS.md`

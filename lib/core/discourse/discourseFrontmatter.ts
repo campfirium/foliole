@@ -29,18 +29,8 @@ export class DiscourseFrontmatterError extends Error {
   }
 }
 
-const MANAGED_BLOCK_START = '# foliole:discourse-publish';
-const MANAGED_BLOCK_END = '# /foliole:discourse-publish';
-
 function createError(message: string) {
   return new DiscourseFrontmatterError(message);
-}
-
-function assertNoLegacyBinding(content: string) {
-  const frontmatter = splitMarkdownFrontmatter(content, createError).frontmatter;
-  if (frontmatter?.includes(MANAGED_BLOCK_START) || frontmatter?.includes(MANAGED_BLOCK_END)) {
-    throw createError('Legacy Discourse publish frontmatter must be migrated before use.');
-  }
 }
 
 function isPositiveInteger(value: unknown): value is number {
@@ -69,7 +59,6 @@ function parseBinding(record: Record<string, unknown>): DiscourseTopicBinding {
 }
 
 export function readDiscourseTopicBinding(content: string): DiscourseTopicBinding | null {
-  assertNoLegacyBinding(content);
   const record = readPublishProviderRecord(content, 'discourse', createError);
   return record ? parseBinding(record) : null;
 }
@@ -109,7 +98,6 @@ function serializeBinding(binding: DiscourseTopicBinding) {
 }
 
 export function writeDiscourseTopicBinding(content: string, binding: DiscourseTopicBinding) {
-  assertNoLegacyBinding(content);
   const validated = parseBinding(binding as unknown as Record<string, unknown>);
   return writePublishProviderRecord(content, 'discourse', serializeBinding(validated), createError);
 }
