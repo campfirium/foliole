@@ -34,6 +34,13 @@ describe('formatSyncResultMessage', () => {
     )).toBe('本次同步已下载1 个主题正文和2 个附件文件，耗时 2s。');
   });
 
+  it('localizes current and legacy device-change waiting messages', () => {
+    expect(formatSyncResultMessage('Device changes are still waiting to sync.', zhHans))
+      .toBe('设备变更仍在等待同步。');
+    expect(formatSyncResultMessage('Android changes are still waiting to settle.', zhHans))
+      .toBe('设备变更仍在等待同步。');
+  });
+
   it('does not report check-only completed events as visible activity', () => {
     expect(isReportableSyncEvent({
       message: 'Sync fully completed; timing: topic list 1s',

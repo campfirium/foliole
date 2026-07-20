@@ -16,10 +16,10 @@ type Translate = ReturnType<typeof useTranslation>;
 function formatActivityMessage(event: NativeCompanionSyncEvent, laterEvents: NativeCompanionSyncEvent[], t: Translate) {
   const message = formatSyncRunActivityMessage(event, laterEvents, t);
   if (message.length > 180 || /\b(SQLITE_|while compiling|SELECT\s|json_extract)\b/i.test(message)) {
-    if (message.startsWith('Sync retrying; Android changes were not sent')) {
+    if (/^Sync retrying; (?:Device|Android) changes were not sent/.test(message)) {
       return t('companion.sync.attention.retryingPending');
     }
-    if (message.startsWith('Sync needs attention; Android changes were not sent')) {
+    if (/^Sync needs attention; (?:Device|Android) changes were not sent/.test(message)) {
       return t('companion.sync.attention.needsPending');
     }
     return t('companion.sync.attention.desktopDiagnostics');

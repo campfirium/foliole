@@ -30,7 +30,7 @@ describe('describeCompanionSyncPassResult local changes', () => {
       localDirtyCount: 1,
       pendingAckCount: 1
     }))).toEqual({
-      message: 'Android changes are still waiting to settle.',
+      message: 'Device changes are still waiting to sync.',
       outcome: 'skipped',
       result: 'waiting',
       status: 'skipped'
@@ -42,7 +42,7 @@ describe('describeCompanionSyncPassResult local changes', () => {
       pushError: 'Desktop sync target returned 500 for /companion/sync-push.',
       remainingContentBlobCount: 3
     }))).toEqual({
-      message: 'Android changes were not sent: Desktop sync target returned 500 for /companion/sync-push. Resource downloads are still pending.',
+      message: 'Device changes were not sent: Desktop sync target returned 500 for /companion/sync-push. Resource downloads are still pending.',
       outcome: 'skipped',
       result: 'retrying',
       status: 'skipped'
@@ -55,7 +55,7 @@ describe('describeCompanionSyncPassResult local changes', () => {
       remainingAttachmentResourceCount: 0,
       remainingContentBlobCount: 3
     }))).toEqual({
-      message: '1 Android change was not sent after desktop rejected or conflicted it. Resource downloads are still pending.',
+      message: '1 device change was not sent after desktop rejected or conflicted it. Resource downloads are still pending.',
       outcome: 'skipped',
       result: 'waiting',
       status: 'skipped'
@@ -66,7 +66,7 @@ describe('describeCompanionSyncPassResult local changes', () => {
     expect(describeCompanionSyncPassResult(passInput({
       pushIssueCount: 1
     }))).toEqual({
-      message: '1 Android change was not sent after desktop rejected or conflicted it.',
+      message: '1 device change was not sent after desktop rejected or conflicted it.',
       outcome: 'skipped',
       result: 'waiting',
       status: 'skipped'

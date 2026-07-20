@@ -110,25 +110,25 @@ describe('describeCompanionSyncPassResult backlog', () => {
 });
 
 describe('describeCompanionSyncPassResult push blocks', () => {
-  it('keeps resource backlog visible when Android changes need review', () => {
+  it('keeps resource backlog visible when device changes need review', () => {
     expect(describeCompanionSyncPassResult(passInput({
       pushIssueCount: 2,
       remainingAttachmentResourceCount: 1,
       remainingContentBlobCount: 3
     }))).toEqual({
-      message: '2 Android changes were not sent after desktop rejected or conflicted them. Resource downloads are still pending.',
+      message: '2 device changes were not sent after desktop rejected or conflicted them. Resource downloads are still pending.',
       outcome: 'skipped',
       result: 'waiting',
       status: 'skipped'
     });
   });
 
-  it('keeps structure confirmation visible when Android push fails', () => {
+  it('keeps structure confirmation visible when device push fails', () => {
     expect(describeCompanionSyncPassResult(passInput({
       pushError: 'Desktop sync target returned 500 for /companion/sync-push.',
       remainingStructureChangeCount: 2
     }))).toEqual({
-      message: 'Android changes were not sent: Desktop sync target returned 500 for /companion/sync-push. Topic list confirmation is still pending.',
+      message: 'Device changes were not sent: Desktop sync target returned 500 for /companion/sync-push. Topic list confirmation is still pending.',
       outcome: 'skipped',
       result: 'retrying',
       status: 'skipped'

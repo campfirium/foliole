@@ -109,12 +109,12 @@ describe('CompanionSyncStatusDetails activity', () => {
 
   it('shows new waiting and retrying facts without a blocked label', () => {
     renderActivity([
-      { ...runFinishedEvent(), id: 'waiting', message: 'Android changes are still waiting to settle.', result: 'waiting' },
-      { ...runFinishedEvent(), id: 'retrying', message: 'Android changes were not sent: Desktop sync target returned 500.', result: 'retrying' }
+      { ...runFinishedEvent(), id: 'waiting', message: 'Device changes are still waiting to sync.', result: 'waiting' },
+      { ...runFinishedEvent(), id: 'retrying', message: 'Device changes were not sent: Desktop sync target returned 500.', result: 'retrying' }
     ]);
 
-    expect(screen.getByText('Sync waiting; Android changes are still waiting to settle.')).toBeInTheDocument();
-    expect(screen.getByText('Sync retrying; Android changes were not sent: Desktop sync target returned 500.')).toBeInTheDocument();
+    expect(screen.getByText('Sync waiting; Device changes are still waiting to sync.')).toBeInTheDocument();
+    expect(screen.getByText('Sync retrying; Device changes were not sent: Desktop sync target returned 500.')).toBeInTheDocument();
     expect(screen.queryByText(/Sync blocked/)).not.toBeInTheDocument();
   });
 
@@ -122,11 +122,11 @@ describe('CompanionSyncStatusDetails activity', () => {
     renderActivity([{
       ...runFinishedEvent(),
       id: 'diagnostic-retrying',
-      message: 'Android changes were not sent: Failed to load companion sync node versions. no such function: json_extract (code 1 SQLITE_ERROR); while compiling: SELECT v.version_id FROM node_sync_versions.',
+      message: 'Device changes were not sent: Failed to load companion sync node versions. no such function: json_extract (code 1 SQLITE_ERROR); while compiling: SELECT v.version_id FROM node_sync_versions.',
       result: 'retrying'
     }]);
 
-    expect(screen.getByText('Sync retrying; Android changes were not sent. Topic list confirmation is still pending.')).toBeInTheDocument();
+    expect(screen.getByText('Sync retrying; device changes were not sent. Topic list confirmation is still pending.')).toBeInTheDocument();
     expect(screen.queryByText(/json_extract/)).not.toBeInTheDocument();
   });
 

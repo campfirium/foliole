@@ -162,13 +162,13 @@ async function testDoesNotCompleteWhileLocalWorkIsWaiting() {
   expect(outcome).toBe('backlog');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     kind: 'stage_finished',
-    message: 'Android changes are waiting for desktop confirmation; 1 change pending.',
+    message: 'Device changes are waiting for desktop confirmation; 1 change pending.',
     result: 'partial',
     status: 'completed'
   }));
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     kind: 'run_finished',
-    message: 'Android changes are still waiting to settle.',
+    message: 'Device changes are still waiting to sync.',
     result: 'waiting',
     status: 'skipped'
   }));

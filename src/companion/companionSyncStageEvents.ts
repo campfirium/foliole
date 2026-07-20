@@ -76,18 +76,18 @@ function attachmentStage(result: CompanionDesktopSyncResult) {
 
 function pushStage(result: CompanionDesktopSyncResult) {
   const issueCount = Math.max(result.pushIssueCount ?? 0, result.pushConflictCount + result.pushRejectedCount);
-  if (result.pushError) return stageEvent(`Android changes were not sent; ${stripSentenceEnd(result.pushError)}.`, 'partial');
+  if (result.pushError) return stageEvent(`Device changes were not sent; ${stripSentenceEnd(result.pushError)}.`, 'partial');
   if (issueCount > 0) {
     return stageEvent(
-      `Android changes were not sent; ${formatCount(issueCount, 'change was', 'changes were')} rejected or conflicted by desktop.`,
+      `Device changes were not sent; ${formatCount(issueCount, 'change was', 'changes were')} rejected or conflicted by desktop.`,
       'partial'
     );
   }
   if ((result.pendingAckCount ?? 0) > 0) {
-    return stageEvent(`Android changes are waiting for desktop confirmation; ${formatCount(result.pendingAckCount ?? 0, 'change', 'changes')} pending.`, 'partial');
+    return stageEvent(`Device changes are waiting for desktop confirmation; ${formatCount(result.pendingAckCount ?? 0, 'change', 'changes')} pending.`, 'partial');
   }
   if ((result.localDirtyCount ?? 0) > 0) {
-    return stageEvent(`Android changes are waiting to be sent; ${formatCount(result.localDirtyCount ?? 0, 'change', 'changes')} pending.`, 'partial');
+    return stageEvent(`Device changes are waiting to be sent; ${formatCount(result.localDirtyCount ?? 0, 'change', 'changes')} pending.`, 'partial');
   }
   return null;
 }

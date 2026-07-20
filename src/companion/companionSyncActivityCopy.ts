@@ -12,6 +12,9 @@ export function formatSyncResultMessage(message: string, t: Translate) {
   if (isSyncCheckOnlyMessage(displayMessage)) {
     return t('companion.sync.activity.noChanges');
   }
+  if (isDeviceChangesWaitingMessage(displayMessage)) {
+    return t('companion.sync.activity.deviceChangesWaiting');
+  }
   if (displayMessage.startsWith('Sync fully completed; ')) {
     return formatSyncDetail(displayMessage.replace('Sync fully completed; ', ''), t);
   }
@@ -170,9 +173,16 @@ function formatSyncDetail(detail: string, t: Translate) {
   if (normalized === 'Resource downloads are still pending.') return t('companion.sync.activity.resourceDownloadsPending');
   if (normalized === 'Resource downloads made progress and will continue.') return t('companion.sync.activity.resourceDownloadsContinue');
   if (normalized === 'Topic list confirmation is still pending.') return t('companion.sync.activity.topicListPending');
-  if (normalized === 'Android changes are still waiting to settle.') return t('companion.sync.activity.androidChangesWaiting');
+  if (isDeviceChangesWaitingMessage(normalized)) {
+    return t('companion.sync.activity.deviceChangesWaiting');
+  }
   if (normalized === 'All stages completed.') return t('companion.sync.activity.allStagesCompleted');
   return normalized;
+}
+
+function isDeviceChangesWaitingMessage(message: string) {
+  return message === 'Device changes are still waiting to sync.' ||
+    message === 'Android changes are still waiting to settle.';
 }
 
 function localizeResourcePhrase(phrase: string, t: Translate) {
