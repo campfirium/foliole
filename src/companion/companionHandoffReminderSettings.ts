@@ -38,6 +38,17 @@ export function loadHandoffReminderSettings(storage: Storage = window.localStora
   }
 }
 
+export function parseHandoffReminderSettings(valueJson: string) {
+  try {
+    const value = JSON.parse(valueJson) as unknown;
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+    if (!Object.hasOwn(value, 'fixedTime') && !Object.hasOwn(value, 'shortDelay')) return null;
+    return normalizeHandoffReminderSettings(value);
+  } catch {
+    return null;
+  }
+}
+
 export function saveHandoffReminderSettings(
   settings: CompanionHandoffReminderSettings,
   storage: Storage = window.localStorage

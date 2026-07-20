@@ -13,25 +13,47 @@ import {
   isNativeCompanionViewStateWriteRuntime
 } from './companionWorkspaceRuntimeRepository';
 
-export async function saveCompanionSyncSettingRecord(args: {
+export interface CompanionSyncSettingRecordArgs {
   key: string;
   valueJson: string;
   scope?: string;
   platform?: string;
   formFactor?: string;
   deviceId?: string;
-}) {
+}
+
+export function resolveCompanionSyncSettingRecord(
+  args: Omit<CompanionSyncSettingRecordArgs, 'valueJson'>
+) {
   const nativePlatform = getNativeCompanionSettingWritePlatform();
   if (!nativePlatform) {
     return null;
   }
+  const deviceId = args.deviceId ?? '*';
+  const formFactor = args.formFactor ?? 'phone';
+  const platform = args.platform ?? nativePlatform;
+  const scope = args.scope ?? 'device';
+  return {
+    deviceId,
+    formFactor,
+    objectId: [scope, platform, formFactor, deviceId, args.key].join(':'),
+    platform,
+    scope
+  };
+}
+
+export async function saveCompanionSyncSettingRecord(args: CompanionSyncSettingRecordArgs) {
+  const record = resolveCompanionSyncSettingRecord(args);
+  if (!record) {
+    return null;
+  }
   return runCompanionSyncWriterTask(() => (
     FolioleCompanionSync.saveSyncSettingRecord({
-      device_id: args.deviceId ?? '*',
-      form_factor: args.formFactor ?? 'phone',
+      device_id: record.deviceId,
+      form_factor: record.formFactor,
       key: args.key,
-      platform: args.platform ?? nativePlatform,
-      scope: args.scope ?? 'device',
+      platform: record.platform,
+      scope: record.scope,
       value_json: args.valueJson
     })
   ));

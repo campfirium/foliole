@@ -4,6 +4,7 @@ import type {
 } from '../../../lib/platform/nativeSyncContract';
 
 import { getIosCompanionSyncbackStore } from './companion/sync/syncback/iosCompanionSyncbackStore';
+import { resolveCompanionSyncSettingRecord } from './companionSyncStateWriters';
 import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import {
   FolioleCompanionSync,
@@ -63,6 +64,21 @@ export async function loadCompanionSyncObjects(
     object_ids: objectIds,
     ...(objectTypes ? { object_types: objectTypes } : {})
   })).objects;
+}
+
+export async function loadCompanionSyncSettingValueJson(key: string) {
+  const record = resolveCompanionSyncSettingRecord({ key });
+  if (!record) return null;
+  const [object] = await loadCompanionSyncObjects([record.objectId], ['setting']);
+  if (!object?.payload_json) return null;
+  try {
+    const payload = JSON.parse(object.payload_json) as { key?: string; value_json?: unknown };
+    return payload.key === key && typeof payload.value_json === 'string'
+      ? payload.value_json
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 export {
