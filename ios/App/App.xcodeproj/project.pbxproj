@@ -65,6 +65,7 @@
 		50F050121FED79650016851F /* FolioleCompanionReviewWriteContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F050021FED79650016851F /* FolioleCompanionReviewWriteContract.swift */; };
 		50F050131FED79650016851F /* FolioleCompanionReviewWriteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F050031FED79650016851F /* FolioleCompanionReviewWriteStore.swift */; };
 		50F050141FED79650016851F /* FolioleCompanionSyncPlugin+ReviewWrite.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F050041FED79650016851F /* FolioleCompanionSyncPlugin+ReviewWrite.swift */; };
+		50F060111FED79650016851F /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 50F060011FED79650016851F /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -126,6 +127,7 @@
 		50F050021FED79650016851F /* FolioleCompanionReviewWriteContract.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionReviewWriteContract.swift; sourceTree = "<group>"; };
 		50F050031FED79650016851F /* FolioleCompanionReviewWriteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionReviewWriteStore.swift; sourceTree = "<group>"; };
 		50F050041FED79650016851F /* FolioleCompanionSyncPlugin+ReviewWrite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FolioleCompanionSyncPlugin+ReviewWrite.swift"; sourceTree = "<group>"; };
+		50F060011FED79650016851F /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
@@ -217,6 +219,7 @@
 				504EC30E1FED79650016851F /* Assets.xcassets */,
 				504EC3101FED79650016851F /* LaunchScreen.storyboard */,
 				504EC3131FED79650016851F /* Info.plist */,
+				50F060011FED79650016851F /* PrivacyInfo.xcprivacy */,
 				2FAD9762203C412B000D30F8 /* config.xml */,
 				50B271D01FEDC1A000F3C39B /* public */,
 			);
@@ -300,6 +303,7 @@
 				50F020051FED79650016851F /* companion-sync-protocol-definitions.json in Resources */,
 				50F025141FED79650016851F /* companion-query-definitions.json in Resources */,
 				50F029131FED79650016851F /* companion-mutation-definitions.json in Resources */,
+				50F060111FED79650016851F /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -22,7 +22,7 @@ let package = Package(
                 "FolioleCompanionSyncDiagnosticsPlugin.swift",
                 "FolioleCompanionTopicSearchPlugin.swift",
                 "FolioleCompanionSyncPackTransfer.swift", "FolioleCompanionSyncPackTransferPlugin.swift",
-                "Info.plist", "capacitor.config.json",
+                "Info.plist", "PrivacyInfo.xcprivacy", "capacitor.config.json",
                 "FolioleCompanionSyncPlugin.swift", "FolioleCompanionSyncPlugin+ReadingWrite.swift",
                 "FolioleCompanionSyncPlugin+ReviewWrite.swift",
                 "FolioleCompanionSyncPlugin+SettingWrite.swift",

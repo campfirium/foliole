@@ -88,6 +88,7 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'scripts/ios/ios-sync-object-read-host-contract.test.mjs',
   'scripts/ios/ios-pairing-host-contract.test.mjs',
   'scripts/ios/ios-pdf-page-text-host-contract.test.mjs',
+  'scripts/ios/ios-privacy-manifest-host-contract.test.mjs',
   'scripts/ios/ios-reading-write-host-contract.test.mjs',
   'scripts/ios/ios-review-write-host-contract.test.mjs',
   'scripts/ios/ios-resource-profile.test.mjs',
