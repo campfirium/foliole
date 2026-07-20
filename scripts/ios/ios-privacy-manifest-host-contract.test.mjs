@@ -8,6 +8,21 @@ import { describe, expect, it } from 'vitest';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
+const nativeSourceExtensions = new Set(['.c', '.h', '.m', '.mm', '.swift']);
+const undeclaredRequiredReasonMarkers = [
+  ['ActiveKeyboards', /\bactiveInputModes\b/],
+  ['DiskSpace', /\b(?:volumeAvailableCapacity(?:ForImportantUsage|ForOpportunisticUsage)?Key|volumeTotalCapacityKey|systemFreeSize|systemSize|statfs|statvfs|fstatfs|fstatvfs)\b/],
+  ['FileTimestampOrDiskSpace', /\b(?:creationDate|modificationDate|fileModificationDate|contentModificationDateKey|creationDateKey|getattrlist|getattrlistbulk|fgetattrlist|fstatat|lstat|stat|fstat)\b/],
+  ['SystemBootTime', /\b(?:systemUptime|mach_absolute_time)\b/]
+];
+
+function readNativeSources(directory) {
+  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const absolutePath = path.join(directory, entry.name);
+    if (entry.isDirectory()) return readNativeSources(absolutePath);
+    return nativeSourceExtensions.has(path.extname(entry.name)) ? [fs.readFileSync(absolutePath, 'utf8')] : [];
+  }).join('\n');
+}
 
 describe('iOS privacy manifest host contract', () => {
   it('declares only the app-local UserDefaults required reason', () => {
@@ -33,5 +48,14 @@ describe('iOS privacy manifest host contract', () => {
   it('anchors the declaration to direct app-owned UserDefaults usage', () => {
     expect(read('ios/App/App/FolioleCompanionBootstrapPlugin.swift')).toContain('UserDefaults.standard');
     expect(read('ios/App/App/FolioleCompanionPairingStore.swift')).toContain('UserDefaults(suiteName: suite)');
+  });
+
+  it('fails when app-owned native code adds an undeclared required-reason API category', () => {
+    const source = readNativeSources(path.join(root, 'ios/App/App'));
+    const undeclared = undeclaredRequiredReasonMarkers
+      .filter(([, marker]) => marker.test(source))
+      .map(([category]) => category);
+
+    expect(undeclared).toEqual([]);
   });
 });
