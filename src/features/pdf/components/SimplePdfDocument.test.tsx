@@ -72,7 +72,7 @@ describe('SimplePdfDocument', () => {
     renderWithLocalization(<SimplePdfDocument attachmentId="pdf-attachment-1" title="Paper" />);
 
     await waitFor(() => expect(screen.getByText('PDF page 1')).toBeInTheDocument());
-    expect(screen.getByText('PDF page 2')).toBeInTheDocument();
+    expect(document.querySelector('[data-pdf-page="2"]')).toBeInTheDocument();
     expect(resourceMock.resolveRuntimeAttachmentResource).toHaveBeenCalledWith('asset://pdf-attachment-1');
   });
 
@@ -102,6 +102,9 @@ describe('SimplePdfDocument', () => {
     renderWithLocalization(<SimplePdfDocument attachmentId="pdf-attachment-1" initialPage={2} title="Paper" />);
 
     await waitFor(() => expect(HTMLElement.prototype.scrollTo).toHaveBeenCalledWith({ top: 100 }));
+    expect(document.querySelector('[data-pdf-page="2"]')).toHaveAttribute('aria-current', 'page');
+    expect(document.querySelector('[data-pdf-page="1"]')).not.toHaveAttribute('aria-current');
+    expect(document.querySelector('[data-pdf-page="2"] > span')).toHaveTextContent('PDF page 2');
   });
 
   it('retries resolving after the caller syncs a missing PDF resource', async () => {
