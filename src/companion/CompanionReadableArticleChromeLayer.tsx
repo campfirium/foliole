@@ -50,6 +50,7 @@ function ReadingActionsLayer(props: {
   onRestoreFromTrash?: (nodeId: string) => Promise<void> | void;
   readableArticle: ReadableArticle;
 }) {
+  const restoreFromTrash = props.onRestoreFromTrash;
   return (
     <ReadingActionsSheet
       onFindInDocument={props.onFindInDocument}
@@ -57,8 +58,8 @@ function ReadingActionsLayer(props: {
       onOpenReadingSheet={props.onOpenReadingSheet}
       open={props.actionsOpen}
       {...definedProps({
-        onRestoreFromTrash: props.readableArticle.isTrashed
-          ? () => props.onRestoreFromTrash?.(props.readableArticle.nodeId)
+        onRestoreFromTrash: props.readableArticle.isTrashed && restoreFromTrash
+          ? () => restoreFromTrash(props.readableArticle.nodeId)
           : undefined
       })}
     />

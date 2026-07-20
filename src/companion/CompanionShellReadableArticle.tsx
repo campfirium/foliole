@@ -10,6 +10,8 @@ import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncE
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
+import { supportsCompanionNodeMutation } from '@/shared/platform/companionWorkspaceRuntimeRepository';
+
 type Surface = ReturnType<typeof useCompanionArticleSurface>;
 type WorkspaceSync = ReturnType<typeof useCompanionWorkspaceSync>;
 
@@ -27,19 +29,24 @@ export function continueCompanionAttachmentResourceSync(workspaceSync: Workspace
 
 export function CompanionShellReadableArticle(props: { onExit: () => void; surface: Surface; workspaceSync: WorkspaceSync }) {
   if (!props.surface.readableArticle) return null;
+  const nodeMutationProps = supportsCompanionNodeMutation()
+    ? {
+        onAddExistingHighlightNote: createCompanionExistingHighlightNoteHandler(props.workspaceSync),
+        onCreateSelectionAnnotation: createCompanionSelectionAnnotationHandler(props.workspaceSync),
+        onDeleteExistingHighlight: createCompanionExistingHighlightDeleteHandler(props.workspaceSync),
+        onRestoreFromTrash: createCompanionTrashRestoreHandler(props.workspaceSync),
+        onSaveArticleContent: createCompanionTopicContentSaveHandler(props.workspaceSync)
+      }
+    : {};
   return (
     <ImmersiveReadableArticle
       onAttachmentResourceSynced={() => continueCompanionAttachmentResourceSync(props.workspaceSync)}
-      onAddExistingHighlightNote={createCompanionExistingHighlightNoteHandler(props.workspaceSync)}
-      onCreateSelectionAnnotation={createCompanionSelectionAnnotationHandler(props.workspaceSync)}
-      onDeleteExistingHighlight={createCompanionExistingHighlightDeleteHandler(props.workspaceSync)}
       onExit={props.onExit}
-      onRestoreFromTrash={createCompanionTrashRestoreHandler(props.workspaceSync)}
-      onSaveArticleContent={createCompanionTopicContentSaveHandler(props.workspaceSync)}
       onScrollTopChange={props.surface.handleViewScroll}
       readableArticle={props.surface.readableArticle}
       snapshot={props.workspaceSync.state.workspace_snapshot}
       syncEndpointUrl={resolveShellSyncEndpoint(props.workspaceSync)}
+      {...nodeMutationProps}
     />
   );
 }

@@ -20,6 +20,7 @@ describe('ReadingActionsSheet', () => {
     expect(screen.getByRole('button', { name: 'Font' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Highlight' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Info' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Restore from trash' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Highlight' }));
 

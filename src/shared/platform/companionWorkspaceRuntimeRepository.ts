@@ -108,6 +108,12 @@ export function isAvailableNativeCompanionRuntime() {
   return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
 }
 
+export function supportsCompanionNodeMutation() {
+  const runtime = getCompanionRuntimeCapability();
+  // Web preview keeps its existing in-memory interaction path; only Android persists native node versions today.
+  return runtime.kind === 'android-native' || runtime.kind === 'web-preview';
+}
+
 export function normalizeEndpointUrl(endpointUrl: string) {
   return endpointUrl.trim().replace(/\/+$/, '');
 }

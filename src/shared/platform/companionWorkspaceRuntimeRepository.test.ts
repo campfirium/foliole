@@ -25,7 +25,8 @@ import {
   isNativeCompanionSyncDiagnosticsRuntime,
   isNativeCompanionSyncObjectReadRuntime,
   isNativeCompanionTopicSearchRuntime,
-  isNativeCompanionViewStateWriteRuntime
+  isNativeCompanionViewStateWriteRuntime,
+  supportsCompanionNodeMutation
 } from './companionWorkspaceRuntimeRepository';
 
 function expectIosRuntimeBoundary() {
@@ -34,6 +35,7 @@ function expectIosRuntimeBoundary() {
 
   expect(isAvailableNativeAndroidCompanionRuntime()).toBe(false);
   expect(isAvailableNativeCompanionRuntime()).toBe(true);
+  expect(supportsCompanionNodeMutation()).toBe(false);
   expect(isNativeCompanionAttachmentResourceRuntime()).toBe(true);
   expect(isNativeCompanionContentBlobRuntime()).toBe(true);
   expect(isNativeCompanionExternalDirectoryRuntime()).toBe(true);
@@ -74,6 +76,7 @@ describe('companion workspace runtime boundary', () => {
     expect(isNativeCompanionViewStateWriteRuntime()).toBe(false);
     expect(isAvailableNativeAndroidCompanionRuntime()).toBe(false);
     expect(isAvailableNativeCompanionRuntime()).toBe(false);
+    expect(supportsCompanionNodeMutation()).toBe(true);
   });
 
   it('exposes the implemented Android runtime', () => {
@@ -94,6 +97,7 @@ describe('companion workspace runtime boundary', () => {
     expect(isNativeCompanionViewStateWriteRuntime()).toBe(true);
     expect(isAvailableNativeAndroidCompanionRuntime()).toBe(true);
     expect(isAvailableNativeCompanionRuntime()).toBe(true);
+    expect(supportsCompanionNodeMutation()).toBe(true);
   });
 
   it('rejects Android-only operations on iOS without a Web fallback', expectIosRuntimeBoundary);

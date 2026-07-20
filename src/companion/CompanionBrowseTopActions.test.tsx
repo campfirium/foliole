@@ -1,7 +1,17 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
+
+const runtimeState = vi.hoisted(() => ({ supportsNodeWrite: true }));
+
+vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', () => ({
+  supportsCompanionNodeMutation: () => runtimeState.supportsNodeWrite
+}));
 
 import { CompanionBrowseTopActions } from './CompanionBrowseTopActions';
+
+beforeEach(() => {
+  runtimeState.supportsNodeWrite = true;
+});
 
 it('opens sort choices from the browse menu sort row', () => {
   render(
@@ -47,4 +57,20 @@ it('runs sync from the browse menu', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Sync' }));
 
   expect(onSync).toHaveBeenCalledTimes(1);
+});
+
+it('hides capture when the host cannot persist node versions', () => {
+  runtimeState.supportsNodeWrite = false;
+  render(
+    <CompanionBrowseTopActions
+      onChangeSortDirection={vi.fn()}
+      onChangeSortKey={vi.fn()}
+      onOpenCapture={vi.fn()}
+      sortDirection="desc"
+      sortKey="dateLastOpened"
+    />
+  );
+
+  expect(screen.queryByRole('button', { name: 'Capture' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'More' })).toBeInTheDocument();
 });
