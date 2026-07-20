@@ -1,10 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 const runtimeMock = vi.hoisted(() => ({
   platform: vi.fn(() => 'ios'),
   plugin: {
     saveSyncActiveViewState: vi.fn(async () => ({ content_hash: 'hash-active', object_id: 'active' })),
     saveSyncNodeReadingRecord: vi.fn(async () => ({ content_hash: 'hash-reading', object_id: 'node-1' })),
+    saveSyncNodeReviewRecord: vi.fn(async () => ({ content_hash: 'hash-review', object_id: 'node-1', op_id: 'op-1' })),
     saveSyncNodeViewState: vi.fn(async () => ({ content_hash: 'hash-view', object_id: 'view' })),
     saveSyncSettingRecord: vi.fn(async () => ({ content_hash: 'hash-setting', object_id: 'setting' }))
   },
@@ -23,14 +24,13 @@ vi.mock('./companionSyncWriterQueue', () => ({
   runCompanionSyncWriterTask: runtimeMock.writer
 }));
 
-describe('iOS companion native writers', () => {
-  beforeEach(() => {
+beforeEach(() => {
     vi.clearAllMocks();
     runtimeMock.platform.mockReturnValue('ios');
     runtimeMock.writer.mockImplementation(async <T>(task: () => Promise<T>) => task());
-  });
+});
 
-  it('dispatches reading, setting, and view-state writes through the shared native writer queue', async () => {
+  it('dispatches active and node view writes through the shared native writer queue', async () => {
     const api = await import('./companionSyncStateWriters');
 
     await expect(api.saveCompanionSyncActiveViewState('node-1'))
@@ -43,6 +43,12 @@ describe('iOS companion native writers', () => {
       scroll_top: 42,
       source: 'user-scroll'
     });
+    expect(runtimeMock.writer).toHaveBeenCalledTimes(2);
+  });
+
+  it('dispatches reading writes through the shared native writer queue', async () => {
+    const api = await import('./companionSyncStateWriters');
+
     await expect(api.saveCompanionSyncNodeReadingRecord({
       nodeId: 'node-1',
       reading: {
@@ -69,6 +75,44 @@ describe('iOS companion native writers', () => {
         state: 'active'
       })
     });
+    expect(runtimeMock.writer).toHaveBeenCalledOnce();
+  });
+
+  it('dispatches review writes through the shared native writer queue', async () => {
+    const api = await import('./companionSyncStateWriters');
+
+    await expect(api.saveCompanionSyncNodeReviewRecord({
+      nodeId: 'node-1',
+      review: {
+        difficulty: 5.2,
+        due: '2026-07-27T12:00:00Z',
+        elapsedDays: 3,
+        lapses: 1,
+        lastReviewAt: '2026-07-20T12:00:00Z',
+        reps: 4,
+        scheduledDays: 7,
+        stability: 8.5,
+        state: 2
+      },
+      reviewLog: {
+        cardAfter: { difficulty: 5.2, due: '2026-07-27T12:00:00Z', stability: 8.5 },
+        cardBefore: { difficulty: 6.1, due: '2026-07-20T12:00:00Z', stability: 4.2 },
+        grade: 3,
+        reviewedAt: '2026-07-20T12:00:00Z',
+        schedulerVersion: 'fsrs-6'
+      }
+    })).resolves.toEqual({ content_hash: 'hash-review', object_id: 'node-1', op_id: 'op-1' });
+    expect(runtimeMock.plugin.saveSyncNodeReviewRecord).toHaveBeenCalledWith(expect.objectContaining({
+      node_id: 'node-1',
+      review_json: expect.stringContaining('"stability":8.5'),
+      review_log_json: expect.stringContaining('"schedulerVersion":"fsrs-6"')
+    }));
+    expect(runtimeMock.writer).toHaveBeenCalledOnce();
+  });
+
+  it('dispatches setting writes through the shared native writer queue', async () => {
+    const api = await import('./companionSyncStateWriters');
+
     await expect(api.saveCompanionSyncSettingRecord({ key: 'one', valueJson: '{}' }))
       .resolves.toEqual({ content_hash: 'hash-setting', object_id: 'setting' });
     expect(runtimeMock.plugin.saveSyncSettingRecord).toHaveBeenCalledWith({
@@ -79,6 +123,5 @@ describe('iOS companion native writers', () => {
       scope: 'device',
       value_json: '{}'
     });
-    expect(runtimeMock.writer).toHaveBeenCalledTimes(4);
+    expect(runtimeMock.writer).toHaveBeenCalledOnce();
   });
-});

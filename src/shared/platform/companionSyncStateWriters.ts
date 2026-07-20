@@ -8,8 +8,8 @@ import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import {
   FolioleCompanionSync,
   getNativeCompanionSettingWritePlatform,
-  isNativeAndroidCompanionRuntime,
   isNativeCompanionReadingWriteRuntime,
+  isNativeCompanionReviewWriteRuntime,
   isNativeCompanionViewStateWriteRuntime
 } from './companionWorkspaceRuntimeRepository';
 
@@ -66,7 +66,7 @@ export async function saveCompanionSyncNodeReviewRecord(args: {
   review: NativeWorkspaceReviewProfile;
   reviewLog?: NativeSyncReviewLogDraft;
 }) {
-  if (!isNativeAndroidCompanionRuntime()) {
+  if (!isNativeCompanionReviewWriteRuntime()) {
     return null;
   }
   return runCompanionSyncWriterTask(() => (

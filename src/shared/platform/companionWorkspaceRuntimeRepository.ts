@@ -80,6 +80,11 @@ export function isNativeCompanionReadingWriteRuntime() {
   return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
 }
 
+export function isNativeCompanionReviewWriteRuntime() {
+  const runtime = requireAvailableCompanionRuntime('review-write');
+  return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
+}
+
 export function getNativeCompanionSettingWritePlatform() {
   const runtime = requireAvailableCompanionRuntime('setting-write');
   return runtime.kind === 'android-native' || runtime.kind === 'ios-native'
