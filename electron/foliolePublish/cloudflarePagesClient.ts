@@ -16,7 +16,7 @@ interface CloudflareEnvelope<T> {
 interface CloudflarePagesProject { subdomain?: string }
 export type CloudflareProjectResolution =
   | { status: 'exists' }
-  | { project: CloudflarePagesProject; status: 'ready' };
+  | { created: boolean; project: CloudflarePagesProject; status: 'ready' };
 
 class CloudflareClientError extends Error {}
 
@@ -68,25 +68,45 @@ export function normalizeSiteAddress(value: string) {
   return url.origin;
 }
 
+export async function detectCloudflarePagesSubdomain(projectName: string) {
+  const name = normalizeCloudflareProjectName(projectName);
+  try {
+    await fetch(`https://${name}.pages.dev`, {
+      method: 'HEAD', redirect: 'manual', signal: AbortSignal.timeout(5_000)
+    });
+    return true;
+  } catch { return false; }
+}
+
+export async function deleteCloudflarePagesProject(input: {
+  accountId: string; projectName: string; token: string;
+}) {
+  try {
+    const endpoint = `${API}/accounts/${encodeURIComponent(input.accountId)}/pages/projects/${encodeURIComponent(input.projectName)}`;
+    const response = await fetch(endpoint, { headers: headers(input.token), method: 'DELETE' });
+    if (response.status === 404) return;
+    await readEnvelope<unknown>(response, 'Cloudflare Pages project deletion failed.');
+  } catch (error) { throw safeCloudflareError(error); }
+}
+
 export async function resolveCloudflarePagesProject(input: {
-  accountId: string; projectName: string; token: string; useExistingProject: boolean;
+  accountId: string; projectName: string; token: string;
 }): Promise<CloudflareProjectResolution> {
   try {
     const endpoint = `${API}/accounts/${encodeURIComponent(input.accountId)}/pages/projects/${encodeURIComponent(input.projectName)}`;
     const current = await fetch(endpoint, { headers: headers(input.token) });
     if (current.ok) {
-      const project = await readEnvelope<CloudflarePagesProject>(current, 'Cloudflare Pages project lookup failed.');
-      return input.useExistingProject ? { project, status: 'ready' } : { status: 'exists' };
+      await readEnvelope<CloudflarePagesProject>(current, 'Cloudflare Pages project lookup failed.');
+      return { status: 'exists' };
     }
     if (current.status !== 404) await readEnvelope<CloudflarePagesProject>(current, 'Cloudflare Pages project lookup failed.');
-    if (input.useExistingProject) throw new CloudflareClientError('The Cloudflare Pages project no longer exists.');
     const created = await fetch(`${API}/accounts/${encodeURIComponent(input.accountId)}/pages/projects`, {
       body: JSON.stringify({ name: input.projectName, production_branch: 'main' }),
       headers: headers(input.token, true), method: 'POST'
     });
     if (created.status === 409) return { status: 'exists' };
     const project = await readEnvelope<CloudflarePagesProject>(created, 'Cloudflare Pages project creation failed.');
-    return { project, status: 'ready' };
+    return { created: true, project, status: 'ready' };
   } catch (error) { throw safeCloudflareError(error); }
 }
 

@@ -32,7 +32,7 @@ async function seedConnectedFoliolePublish(desktopApp: import('@playwright/test'
     ));
     saveFoliolePublishConnection({
       account_id: 'playwright-account', api_token: 'PLAYWRIGHT-CLOUDFLARE-TOKEN',
-      project_name: 'playwright-site', site_address: 'https://notes.example.com', use_existing_project: false
+      project_name: 'playwright-site', site_address: 'https://notes.example.com'
     }, 'https://playwright-site.pages.dev');
   });
 }
@@ -114,6 +114,7 @@ async function verifyFolioleSetupSteps(
   await expect(foliole.getByRole('button', { name: /^(Deploy|部署)$/ })).toBeDisabled();
   await expect(foliole.getByRole('button', { name: /^(Preview|预览)$/ })).toBeVisible();
   await expect(foliole.getByText(/^(Custom domain \(optional\)|使用自定义域名（可选）)$/)).toBeVisible();
+  await expect(foliole.getByText(/^(Security notice: Foliole does not operate or authorize foliole\.pages\.dev\.|安全提示：Foliole 未运营或授权 foliole\.pages\.dev。)$/)).toBeVisible();
   await accountId.evaluate((element) => element.scrollIntoView({ block: 'center' }));
   const credentialsScreenshot = await desktopWindow.screenshot({ fullPage: true });
   await writeFile(path.join(screenshotDir, 'foliole-publish-credentials-hidden-native.png'), credentialsScreenshot);
@@ -191,10 +192,12 @@ test('shows the connected public address and optional custom domain', async ({ d
   await dialog.getByRole('button', { name: /^(Publish|发布)$/ }).click();
   const foliole = dialog.getByRole('region', { name: /^(Publish to the web settings|发布到 Web 设置)$/ });
   await foliole.getByRole('button', { name: /^(Publish to the web|发布到 Web)$/ }).click();
-  await expect(foliole.getByText('https://notes.example.com')).toBeVisible();
+  const pagesAddress = foliole.getByText('https://playwright-site.pages.dev');
+  await expect(pagesAddress).toBeVisible();
   await expect(foliole.getByLabel(/^(Foliole Publish custom domain|Foliole Publish 自定义域名)$/))
     .toHaveValue('https://notes.example.com');
   await expect(foliole.getByRole('button', { name: /^(Bind a domain in Cloudflare ↗|在 Cloudflare 中绑定域名 ↗)$/ })).toBeVisible();
+  await pagesAddress.scrollIntoViewIfNeeded();
 
   const screenshot = await desktopWindow.screenshot({ fullPage: true });
   const screenshotDir = path.join(process.cwd(), '.tmp', 'artifacts');

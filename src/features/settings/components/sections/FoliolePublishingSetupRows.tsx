@@ -4,7 +4,6 @@ import { useTranslation } from '../../../../shared/localization/LocalizationProv
 import { openExternalUrl } from '../../../../shared/platform/runtimeExternalNavigation';
 import {
   AppButton,
-  AppErrorState,
   SettingsControlSlot,
   SettingsRow,
   settingsFieldClassName,
@@ -79,50 +78,33 @@ export function FoliolePublishingSetupRows({ state }: { state: FoliolePublishing
       step={1}
       title={t('settings.publishing.foliole.token.title')}
     >
-      <SetupInput ariaLabel={t('settings.publishing.foliole.token.aria')} disabled={state.disabled} onChange={(apiToken) => state.updateForm({ apiToken })} placeholder={t('settings.publishing.foliole.token.placeholder')} type="password" value={state.form.apiToken} />
+      <SetupInput ariaLabel={t('settings.publishing.foliole.token.aria')} disabled={state.connected || state.disabled} onChange={(apiToken) => state.updateForm({ apiToken })} placeholder={t('settings.publishing.foliole.token.placeholder')} type="password" value={state.connected ? 'stored-token' : state.form.apiToken} />
     </SetupStep>
     <SetupStep
       description={<>{t('settings.publishing.foliole.account.descriptionPrefix')}<InlineExternalLink onClick={() => void openExternalUrl(CLOUDFLARE_HOME_URL)}>{t('settings.publishing.foliole.account.home')}</InlineExternalLink>{t('settings.publishing.foliole.account.descriptionSuffix')}</>}
       step={2}
       title={t('settings.publishing.foliole.account.title')}
     >
-      <SetupInput ariaLabel={t('settings.publishing.foliole.account.aria')} disabled={state.disabled} onChange={(accountId) => state.updateForm({ accountId })} placeholder={t('settings.publishing.foliole.account.placeholder')} value={state.form.accountId} />
+      <SetupInput ariaLabel={t('settings.publishing.foliole.account.aria')} disabled={state.connected || state.disabled} onChange={(accountId) => state.updateForm({ accountId })} placeholder={t('settings.publishing.foliole.account.placeholder')} value={state.form.accountId} />
     </SetupStep>
-    {state.projectConflict ? <AppErrorState description={t('settings.publishing.foliole.conflict.description')} surface="panel" title={t('settings.publishing.foliole.conflict.title')} /> : null}
-    <SetupStep description={t('settings.publishing.foliole.project.description')} step={3} title={t('settings.publishing.foliole.project.title')}>
-      <div className="flex min-w-0 flex-1">
-        <SetupInput ariaLabel={t('settings.publishing.foliole.project.aria')} className="rounded-r-none" disabled={state.disabled} onChange={(projectName) => state.updateForm({ projectName })} placeholder={t('settings.publishing.foliole.project.placeholder')} value={state.form.projectName} />
-        <span className="flex h-9 items-center rounded-r-md border border-l-0 border-settings-control-border bg-settings-control px-3 text-ui-md text-foreground/60">.pages.dev</span>
-      </div>
-      {state.projectConflict ? <AppButton disabled={state.disabled} onClick={state.useExistingProject} variant="subtle">{t('settings.publishing.foliole.useExisting')}</AppButton> : null}
-      <AppButton disabled={!state.canDeploy} onClick={state.deploy}>{state.status === 'connecting' ? t('settings.publishing.foliole.deploying') : t('settings.publishing.foliole.deploy')}</AppButton>
+    <SetupStep description={t(state.connected ? 'settings.publishing.foliole.project.connectedDescription' : 'settings.publishing.foliole.project.description')} step={3} title={t('settings.publishing.foliole.project.title')}>
+      {state.connected ? <>
+        <span className={settingsValueBoxClassName('min-w-0 flex-1 truncate')}>{state.pagesUrl}</span>
+        <AppButton onClick={() => void openExternalUrl(state.pagesUrl)}>{t('settings.publishing.foliole.pages.visit')}</AppButton>
+      </> : <>
+        <div className="flex min-w-0 flex-1">
+          <SetupInput ariaLabel={t('settings.publishing.foliole.project.aria')} className="rounded-r-none" disabled={state.disabled} onChange={(projectName) => state.updateForm({ projectName })} placeholder={t('settings.publishing.foliole.project.placeholder')} value={state.form.projectName} />
+          <span className="flex h-9 items-center rounded-r-md border border-l-0 border-settings-control-border bg-settings-control px-3 text-ui-md text-foreground/60">.pages.dev</span>
+        </div>
+        <AppButton disabled={!state.canDeploy} onClick={state.deploy}>{state.status === 'connecting' ? t('settings.publishing.foliole.deploying') : t('settings.publishing.foliole.deploy')}</AppButton>
+      </>}
     </SetupStep>
     <PublishInstructionStep />
     <CustomDomainStep state={state} />
-  </>;
-}
-
-export function FoliolePublishingConnectedRows({ state }: { state: FoliolePublishingSettingsState }) {
-  const t = useTranslation();
-  return <>
-    <SettingsRow title={t('settings.publishing.foliole.pages.title')}>
-      <SettingsControlSlot className="w-[min(420px,100%)]">
-        <span className={settingsValueBoxClassName('min-w-0 flex-1 truncate')}>{state.siteAddress}</span>
-        <AppButton onClick={() => void openExternalUrl(state.siteAddress)}>{t('settings.publishing.foliole.pages.visit')}</AppButton>
-      </SettingsControlSlot>
-    </SettingsRow>
-    <SettingsRow description={t('settings.publishing.foliole.publish.description')} title={t('settings.publishing.foliole.publish.title')} />
-    <SettingsRow
-      description={<><InlineExternalLink onClick={() => void openExternalUrl(CUSTOM_DOMAIN_GUIDE_URL)}>{t('settings.publishing.foliole.address.guide')}</InlineExternalLink>{t('settings.publishing.foliole.address.description')}</>}
-      title={t('settings.publishing.foliole.address.title')}
-    >
-      <SettingsControlSlot className="w-[min(420px,100%)]">
-        <SetupInput ariaLabel={t('settings.publishing.foliole.address.aria')} disabled={state.disabled} onChange={(customDomain) => state.updateForm({ customDomain })} placeholder={t('settings.publishing.foliole.address.placeholder')} value={state.form.customDomain} />
-        <AppButton disabled={!state.canUpdateAddress} onClick={state.updateSiteAddress}>{state.status === 'updating' ? t('settings.publishing.foliole.address.updating') : t('settings.publishing.foliole.address.save')}</AppButton>
-      </SettingsControlSlot>
-    </SettingsRow>
-    <SettingsRow description={t('settings.publishing.foliole.connection.description')} title={t('settings.publishing.foliole.connection.title')}>
-      <SettingsControlSlot><AppButton disabled={state.disabled} onClick={state.disconnect} variant="danger">{t('settings.publishing.foliole.connection.disconnect')}</AppButton></SettingsControlSlot>
-    </SettingsRow>
+    {state.connected ? (
+      <SettingsRow description={t('settings.publishing.foliole.connection.description')} title={t('settings.publishing.foliole.connection.title')}>
+        <SettingsControlSlot><AppButton disabled={state.disabled} onClick={state.disconnect} variant="danger">{t('settings.publishing.foliole.connection.disconnect')}</AppButton></SettingsControlSlot>
+      </SettingsRow>
+    ) : null}
   </>;
 }

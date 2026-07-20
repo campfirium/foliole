@@ -1,7 +1,7 @@
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import { AppButton, AppErrorState, SettingsControlSlot, SettingsRow, SettingsSection } from '../../../../shared/ui';
 
-import { FoliolePublishingConnectedRows, FoliolePublishingSetupRows } from './FoliolePublishingSetupRows';
+import { FoliolePublishingSetupRows } from './FoliolePublishingSetupRows';
 import { useFoliolePublishingSettings } from './useFoliolePublishingSettings';
 
 function HostingOverview() {
@@ -12,6 +12,9 @@ function HostingOverview() {
       <div className="ml-6 mt-5 border-t border-settings-divider/70 py-6">
         <h5 className="text-ui-lg font-semibold text-foreground">Cloudflare Pages</h5>
         <p className="mt-1 max-w-[840px] text-ui-md leading-6 text-foreground/64">{t('settings.publishing.foliole.cloudflare.description')}</p>
+        <p className="mt-1 max-w-[840px] text-ui-md font-medium leading-6 text-destructive">
+          {t('settings.publishing.foliole.cloudflare.securityNotice')}
+        </p>
       </div>
     </div>
   );
@@ -35,8 +38,7 @@ export function FoliolePublishingSettings(props: { expanded: boolean; onExpanded
         </SettingsControlSlot>
       </SettingsRow>
       <HostingOverview />
-      {state.connected ? <FoliolePublishingConnectedRows state={state} /> : null}
-      {!state.connected ? <FoliolePublishingSetupRows state={state} /> : null}
+      <FoliolePublishingSetupRows state={state} />
     </SettingsSection>
   );
 }

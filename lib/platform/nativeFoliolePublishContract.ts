@@ -12,13 +12,14 @@ export interface NativeFoliolePublishSettings {
 export interface NativeFoliolePublishConnectInput {
   account_id: string;
   api_token: string;
+  confirm_subdomain_risk?: boolean;
   project_name: string;
   site_address: string;
-  use_existing_project: boolean;
 }
 
 export type NativeFoliolePublishConnectResult =
-  | { project_name: string; status: 'project_exists' }
+  | { project_name: string; status: 'subdomain_unavailable' }
+  | { project_name: string; status: 'subdomain_detected' | 'subdomain_not_detected' }
   | { settings: NativeFoliolePublishSettings; status: 'connected' };
 
 export interface NativeFoliolePublishTopicArgs {

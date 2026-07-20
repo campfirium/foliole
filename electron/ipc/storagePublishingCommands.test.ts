@@ -41,7 +41,7 @@ beforeEach(() => {
 });
 
 it('keeps the Cloudflare API token inside the main-process connection boundary', async () => {
-  const settings = { account_id: 'account', api_token: 'SENTINEL-CLOUDFLARE-SECRET', project_name: 'foliole', site_address: '', use_existing_project: false };
+  const settings = { account_id: 'account', api_token: 'SENTINEL-CLOUDFLARE-SECRET', project_name: 'foliole', site_address: '' };
   folioleMocks.connectFoliolePublishSettings.mockResolvedValue({
     settings: {
       account_id: 'account', has_credentials: true, pages_url: 'https://foliole.pages.dev',

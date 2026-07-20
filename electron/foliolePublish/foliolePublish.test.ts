@@ -4,13 +4,16 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-import { connectFoliolePublishSettings, updateFoliolePublishSiteAddress } from './foliolePublish.js';
+import { connectFoliolePublishSettings, disconnectFoliolePublishSettings, updateFoliolePublishSiteAddress } from './foliolePublish.js';
 import { emptyPublishIndex } from './foliolePublishModel.js';
 import { generateFoliolePublishSite } from './foliolePublishSite.js';
 
 const state = vi.hoisted(() => ({ libraryHome: '' }));
 const mocks = vi.hoisted(() => ({
+  clearFoliolePublishSettings: vi.fn(),
+  deleteCloudflarePagesProject: vi.fn(),
   deployCloudflarePages: vi.fn(),
+  detectCloudflarePagesSubdomain: vi.fn(),
   resolveCloudflarePagesProject: vi.fn(),
   saveFoliolePublishConnection: vi.fn(),
   saveFoliolePublishSiteAddress: vi.fn()
@@ -22,10 +25,12 @@ vi.mock('../ipc/libraryPaths.js', () => ({
 vi.mock('./cloudflarePagesClient.js', async (importOriginal) => ({
   ...await importOriginal<typeof import('./cloudflarePagesClient.js')>(),
   deployCloudflarePages: mocks.deployCloudflarePages,
+  deleteCloudflarePagesProject: mocks.deleteCloudflarePagesProject,
+  detectCloudflarePagesSubdomain: mocks.detectCloudflarePagesSubdomain,
   resolveCloudflarePagesProject: mocks.resolveCloudflarePagesProject
 }));
 vi.mock('./foliolePublishSettings.js', () => ({
-  disconnectFoliolePublishSettings: vi.fn(),
+  clearFoliolePublishSettings: mocks.clearFoliolePublishSettings,
   loadFoliolePublishSettings: vi.fn(),
   loadFoliolePublishToken: vi.fn(() => 'stored-token'),
   loadStoredFoliolePublishSettings: vi.fn(() => ({
@@ -45,7 +50,10 @@ beforeEach(() => {
   fs.mkdirSync(path.join(state.libraryHome, 'Publish'), { recursive: true });
   generateFoliolePublishSite(path.join(state.libraryHome, 'Publish'), emptyPublishIndex(), 'https://old.pages.dev');
   Object.values(mocks).forEach((mock) => mock.mockReset());
-  mocks.resolveCloudflarePagesProject.mockResolvedValue({ project: { subdomain: 'site.pages.dev' }, status: 'ready' });
+  mocks.clearFoliolePublishSettings.mockReturnValue({ account_id: '', has_credentials: false, pages_url: '', project_name: '', site_address: '', updated_at: null });
+  mocks.deleteCloudflarePagesProject.mockResolvedValue(undefined);
+  mocks.detectCloudflarePagesSubdomain.mockResolvedValue(false);
+  mocks.resolveCloudflarePagesProject.mockResolvedValue({ created: false, project: { subdomain: 'site.pages.dev' }, status: 'ready' });
   mocks.deployCloudflarePages.mockResolvedValue({ url: 'https://deployment.pages.dev' });
 });
 afterEach(() => fs.rmSync(state.libraryHome, { force: true, recursive: true }));
@@ -53,8 +61,8 @@ afterEach(() => fs.rmSync(state.libraryHome, { force: true, recursive: true }));
 it('returns an explicit conflict without deploying or saving', async () => {
   mocks.resolveCloudflarePagesProject.mockResolvedValue({ status: 'exists' });
   await expect(connectFoliolePublishSettings({
-    account_id: 'account', api_token: 'secret', project_name: 'site', site_address: '', use_existing_project: false
-  })).resolves.toEqual({ project_name: 'site', status: 'project_exists' });
+    account_id: 'account', api_token: 'secret', confirm_subdomain_risk: true, project_name: 'site', site_address: ''
+  })).resolves.toEqual({ project_name: 'site', status: 'subdomain_unavailable' });
   expect(mocks.deployCloudflarePages).not.toHaveBeenCalled();
   expect(mocks.saveFoliolePublishConnection).not.toHaveBeenCalled();
 });
@@ -63,21 +71,57 @@ it('keeps the exact active site and settings when staged deployment fails', asyn
   const before = activeRss();
   mocks.deployCloudflarePages.mockRejectedValue(new Error('deploy failed'));
   const request = connectFoliolePublishSettings({
-    account_id: 'account', api_token: 'secret', project_name: 'site', site_address: '', use_existing_project: false
+    account_id: 'account', api_token: 'secret', confirm_subdomain_risk: true, project_name: 'site', site_address: ''
   });
   await expect(request).rejects.toThrow('deploy failed');
   expect(activeRss()).toBe(before);
   expect(mocks.saveFoliolePublishConnection).not.toHaveBeenCalled();
 });
 
+it('removes a newly created project when its first deployment fails', async () => {
+  mocks.resolveCloudflarePagesProject.mockResolvedValue({
+    created: true, project: { subdomain: 'site-random.pages.dev' }, status: 'ready'
+  });
+  mocks.deployCloudflarePages.mockRejectedValue(new Error('deploy failed'));
+  await expect(connectFoliolePublishSettings({
+    account_id: 'account', api_token: 'secret', confirm_subdomain_risk: true,
+    project_name: 'site', site_address: ''
+  })).rejects.toThrow('deploy failed');
+  expect(mocks.deleteCloudflarePagesProject).toHaveBeenCalledWith({
+    accountId: 'account', projectName: 'site', token: 'secret'
+  });
+});
+
 it('rolls back the exact active site when connection settings fail to save', async () => {
   const before = activeRss();
   mocks.saveFoliolePublishConnection.mockImplementation(() => { throw new Error('save failed'); });
   const request = connectFoliolePublishSettings({
-    account_id: 'account', api_token: 'secret', project_name: 'site', site_address: '', use_existing_project: true
+    account_id: 'account', api_token: 'secret', confirm_subdomain_risk: true, project_name: 'site', site_address: ''
   });
   await expect(request).rejects.toThrow('save failed');
   expect(activeRss()).toBe(before);
+});
+
+it('returns the subdomain detection state before creating a project', async () => {
+  mocks.detectCloudflarePagesSubdomain.mockResolvedValue(true);
+  await expect(connectFoliolePublishSettings({
+    account_id: 'account', api_token: 'secret', project_name: 'site', site_address: ''
+  })).resolves.toEqual({ project_name: 'site', status: 'subdomain_detected' });
+  expect(mocks.resolveCloudflarePagesProject).not.toHaveBeenCalled();
+});
+
+it('deletes the Cloudflare project before clearing the local connection', async () => {
+  await expect(disconnectFoliolePublishSettings()).resolves.toMatchObject({ has_credentials: false });
+  expect(mocks.deleteCloudflarePagesProject).toHaveBeenCalledWith({
+    accountId: 'account', projectName: 'site', token: 'stored-token'
+  });
+  expect(mocks.clearFoliolePublishSettings).toHaveBeenCalledOnce();
+});
+
+it('keeps the local connection when Cloudflare project deletion fails', async () => {
+  mocks.deleteCloudflarePagesProject.mockRejectedValue(new Error('delete failed'));
+  await expect(disconnectFoliolePublishSettings()).rejects.toThrow('delete failed');
+  expect(mocks.clearFoliolePublishSettings).not.toHaveBeenCalled();
 });
 
 it('updates a custom address with the stored token and rolls back on save failure', async () => {

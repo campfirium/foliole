@@ -73,7 +73,7 @@ export function saveFoliolePublishSiteAddress(siteAddress: string) {
   return loadFoliolePublishSettings();
 }
 
-export function disconnectFoliolePublishSettings() {
+export function clearFoliolePublishSettings() {
   deletePublishDeviceSecret(SECRET_FILE);
   const updatedAt = new Date().toISOString();
   saveJsonSetting(SETTINGS_KEY, null, updatedAt);

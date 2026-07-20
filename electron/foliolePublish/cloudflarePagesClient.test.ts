@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { afterEach, expect, it, vi } from 'vitest';
 
-import { cloudflarePagesAssetHash, deployCloudflarePages, resolveCloudflarePagesProject } from './cloudflarePagesClient.js';
+import { cloudflarePagesAssetHash, deleteCloudflarePagesProject, deployCloudflarePages, detectCloudflarePagesSubdomain, resolveCloudflarePagesProject } from './cloudflarePagesClient.js';
 
 const roots: string[] = [];
 function temporarySite() {
@@ -56,14 +56,11 @@ it('uploads missing assets before creating a manifest deployment', async () => {
   expect(JSON.parse(String(deployment.get('manifest')))).toEqual({ '/index.html': expect.any(String) });
 });
 
-it('refuses an existing Pages project until reuse is explicit', async () => {
+it('reports an existing project without exposing a reuse path', async () => {
   vi.stubGlobal('fetch', vi.fn().mockImplementation(async () => response({ subdomain: 'foliole.pages.dev' })));
   await expect(resolveCloudflarePagesProject({
-    accountId: 'account', projectName: 'foliole', token: 'api-token', useExistingProject: false
+    accountId: 'account', projectName: 'foliole', token: 'api-token'
   })).resolves.toEqual({ status: 'exists' });
-  await expect(resolveCloudflarePagesProject({
-    accountId: 'account', projectName: 'foliole', token: 'api-token', useExistingProject: true
-  })).resolves.toEqual({ project: { subdomain: 'foliole.pages.dev' }, status: 'ready' });
 });
 
 it('creates a missing Pages project with the fixed Direct Upload branch', async () => {
@@ -72,11 +69,33 @@ it('creates a missing Pages project with the fixed Direct Upload branch', async 
     .mockResolvedValueOnce(response({ subdomain: 'new-site.pages.dev' }));
   vi.stubGlobal('fetch', fetchMock);
   await expect(resolveCloudflarePagesProject({
-    accountId: 'account', projectName: 'new-site', token: 'api-token', useExistingProject: false
-  })).resolves.toEqual({ project: { subdomain: 'new-site.pages.dev' }, status: 'ready' });
+    accountId: 'account', projectName: 'new-site', token: 'api-token'
+  })).resolves.toEqual({ created: true, project: { subdomain: 'new-site.pages.dev' }, status: 'ready' });
   expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
     body: JSON.stringify({ name: 'new-site', production_branch: 'main' }), method: 'POST'
   });
+});
+
+it('treats any reachable pages.dev response as detected without claiming an unavailable name is free', async () => {
+  vi.stubGlobal('fetch', vi.fn()
+    .mockResolvedValueOnce(new Response(null, { status: 403 }))
+    .mockRejectedValueOnce(new Error('not reachable')));
+  await expect(detectCloudflarePagesSubdomain('known-site')).resolves.toBe(true);
+  await expect(detectCloudflarePagesSubdomain('unknown-site')).resolves.toBe(false);
+});
+
+it('deletes the managed Pages project and accepts an already missing project', async () => {
+  const fetchMock = vi.fn()
+    .mockResolvedValueOnce(response({}))
+    .mockResolvedValueOnce(response(null, 404));
+  vi.stubGlobal('fetch', fetchMock);
+  await expect(deleteCloudflarePagesProject({
+    accountId: 'account', projectName: 'site', token: 'api-token'
+  })).resolves.toBeUndefined();
+  await expect(deleteCloudflarePagesProject({
+    accountId: 'account', projectName: 'missing', token: 'api-token'
+  })).resolves.toBeUndefined();
+  expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ method: 'DELETE' });
 });
 
 it('never exposes provider error text that echoes the API token', async () => {
@@ -85,7 +104,7 @@ it('never exposes provider error text that echoes the API token', async () => {
     errors: [{ message: `Rejected ${token}` }], success: false
   }), { status: 403 })));
   const request = () => resolveCloudflarePagesProject({
-    accountId: 'account', projectName: 'site', token, useExistingProject: false
+    accountId: 'account', projectName: 'site', token
   });
   await expect(request()).rejects.toThrow('Cloudflare rejected the Account ID, authorization result, or required permissions.');
   await expect(request()).rejects.not.toThrow(token);

@@ -6,9 +6,9 @@ import { shell } from 'electron';
 import type { NativeFoliolePublishConnectInput, NativeFoliolePublishTopicArgs } from '../../lib/platform/nativeFoliolePublishContract.js';
 import { loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
 
-import { deployCloudflarePages, normalizeCloudflareProjectName, normalizeSiteAddress, resolveCloudflarePagesProject } from './cloudflarePagesClient.js';
+import { deleteCloudflarePagesProject, deployCloudflarePages, detectCloudflarePagesSubdomain, normalizeCloudflareProjectName, normalizeSiteAddress, resolveCloudflarePagesProject } from './cloudflarePagesClient.js';
 import { readPublishIndex, upsertPublishedCard, writeFileAtomic, writePublishIndex } from './foliolePublishModel.js';
-import { disconnectFoliolePublishSettings, loadFoliolePublishSettings, loadFoliolePublishToken, loadStoredFoliolePublishSettings, saveFoliolePublishConnection, saveFoliolePublishSiteAddress } from './foliolePublishSettings.js';
+import { clearFoliolePublishSettings, loadFoliolePublishSettings, loadFoliolePublishToken, loadStoredFoliolePublishSettings, saveFoliolePublishConnection, saveFoliolePublishSiteAddress } from './foliolePublishSettings.js';
 import { activateFoliolePublishSite, discardStagedFoliolePublishSite, generateFoliolePublishSite, stageFoliolePublishSite } from './foliolePublishSite.js';
 
 function root() { return path.join(loadLibraryPathSettingsSync().library_home, 'Publish'); }
@@ -53,18 +53,41 @@ export async function connectFoliolePublishSettings(input: NativeFoliolePublishC
   const accountId = input.account_id.trim();
   const token = input.api_token.trim();
   if (!accountId || !token) throw new Error('Enter a Cloudflare Account ID and authorization result.');
+  if (!input.confirm_subdomain_risk) {
+    const detected = await detectCloudflarePagesSubdomain(projectName);
+    return { project_name: projectName, status: detected ? 'subdomain_detected' : 'subdomain_not_detected' } as const;
+  }
   const resolution = await resolveCloudflarePagesProject({
-    accountId, projectName, token, useExistingProject: input.use_existing_project
+    accountId, projectName, token
   });
-  if (resolution.status === 'exists') return { project_name: projectName, status: 'project_exists' } as const;
+  if (resolution.status === 'exists') return { project_name: projectName, status: 'subdomain_unavailable' } as const;
   const project = resolution.project;
   const pagesUrl = project.subdomain ? `https://${project.subdomain}` : `https://${projectName}.pages.dev`;
   fs.mkdirSync(root(), { recursive: true });
-  const staged = await deployStagedSite({ accountId, projectName, siteAddress: pagesUrl, token });
-  const settings = commitStagedSite(staged, () => saveFoliolePublishConnection({
-    ...input, account_id: accountId, api_token: token, project_name: projectName, site_address: ''
-  }, pagesUrl));
-  return { settings, status: 'connected' } as const;
+  try {
+    const staged = await deployStagedSite({ accountId, projectName, siteAddress: pagesUrl, token });
+    const settings = commitStagedSite(staged, () => saveFoliolePublishConnection({
+      ...input, account_id: accountId, api_token: token, project_name: projectName, site_address: ''
+    }, pagesUrl));
+    return { settings, status: 'connected' } as const;
+  } catch (error) {
+    if (resolution.created) {
+      try { await deleteCloudflarePagesProject({ accountId, projectName, token }); }
+      catch { throw new Error("Deployment failed, and Foliole couldn't remove the new Cloudflare project."); }
+    }
+    throw error;
+  }
+}
+
+export async function disconnectFoliolePublishSettings() {
+  const settings = loadStoredFoliolePublishSettings();
+  if (!settings) return clearFoliolePublishSettings();
+  const token = loadFoliolePublishToken();
+  if (!token) throw new Error('Reconnect Cloudflare before deleting the published site.');
+  await deleteCloudflarePagesProject({
+    accountId: settings.account_id, projectName: settings.project_name, token
+  });
+  return clearFoliolePublishSettings();
 }
 
 export async function updateFoliolePublishSiteAddress(siteAddress: string) {
@@ -103,4 +126,4 @@ export async function publishTopicToFoliole(args: NativeFoliolePublishTopicArgs)
   return { local_path: localPath, url };
 }
 
-export { disconnectFoliolePublishSettings, loadFoliolePublishSettings };
+export { loadFoliolePublishSettings };

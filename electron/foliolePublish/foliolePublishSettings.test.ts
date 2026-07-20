@@ -23,7 +23,7 @@ beforeEach(() => { state.secret = ''; state.setting = null; state.shouldFailSave
 
 it('stores the Cloudflare token outside the settings payload', () => {
   const saved = saveFoliolePublishConnection({
-    account_id: 'account', api_token: 'SENTINEL-TOKEN', project_name: 'My-Site', site_address: '', use_existing_project: false
+    account_id: 'account', api_token: 'SENTINEL-TOKEN', project_name: 'My-Site', site_address: ''
   }, 'https://my-site.pages.dev');
 
   expect(saved).toMatchObject({ has_credentials: true, project_name: 'my-site', site_address: 'https://my-site.pages.dev' });
@@ -36,7 +36,7 @@ it('restores the previous token when saving non-secret settings fails', () => {
   state.shouldFailSave = true;
 
   expect(() => saveFoliolePublishConnection({
-    account_id: 'account', api_token: 'new-token', project_name: 'site', site_address: '', use_existing_project: false
+    account_id: 'account', api_token: 'new-token', project_name: 'site', site_address: ''
   }, 'https://site.pages.dev')).toThrow('save failed');
   expect(state.secret).toBe('previous-token');
   expect(loadFoliolePublishSettings().has_credentials).toBe(false);
