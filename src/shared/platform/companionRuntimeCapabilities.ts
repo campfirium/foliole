@@ -24,6 +24,7 @@ const IOS_NATIVE_CAPABILITIES = new Set([
   'content-blob-sync',
   'pairing-runtime',
   'sync-pack-apply',
+  'sync-diagnostics',
   'topic-search'
 ]);
 

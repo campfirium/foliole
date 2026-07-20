@@ -2,7 +2,7 @@ import { screen } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 
 export function expectAndroidDiagnosticRows() {
-  expect(screen.getByText('Android')).toBeInTheDocument();
+  expect(screen.getByText('This device')).toBeInTheDocument();
   expect(screen.getAllByText('Object types')).toHaveLength(2);
   expect(screen.getAllByText('node_review')).toHaveLength(4);
   expect(screen.getByText('1 ready to send · 1 confirming · 1 not sent')).toBeInTheDocument();

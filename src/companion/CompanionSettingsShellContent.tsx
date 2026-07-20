@@ -1,4 +1,5 @@
 import { useTranslation } from '../shared/localization/LocalizationProvider';
+import { supportsCompanionAppDataClear } from '../shared/platform/companionAppDataRuntimeRepository';
 
 import {
   CompanionPlaceholderSettingsContent,
@@ -45,7 +46,8 @@ type CompanionSettingsContentProps = {
 
 function CompanionSettingsContentSurface(props: CompanionSettingsContentProps) {
   const t = useTranslation();
-  if (props.settingsPage === 'list') {
+  const showStorage = supportsCompanionAppDataClear();
+  if (props.settingsPage === 'list' || (props.settingsPage === 'storage' && !showStorage)) {
     return (
       <CompanionSettingsList
         onOpenAppearance={() => props.onOpenSyncSettingsPage('appearance')}
@@ -53,6 +55,7 @@ function CompanionSettingsContentSurface(props: CompanionSettingsContentProps) {
         onOpenDevice={() => props.onOpenSyncSettingsPage('device')}
         onOpenStorage={() => props.onOpenSyncSettingsPage('storage')}
         onOpenSync={props.onOpenSyncSettings}
+        showStorage={showStorage}
       />
     );
   }

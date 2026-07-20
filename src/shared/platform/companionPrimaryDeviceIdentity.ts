@@ -4,11 +4,11 @@ import {
 } from './companionPairingState';
 import {
   FolioleCompanionSync,
-  isNativeAndroidCompanionRuntime
+  isNativeCompanionPairingRuntime
 } from './companionWorkspaceRuntimeRepository';
 
 export async function saveLocalPrimaryDeviceId(primaryDeviceId: string) {
-  if (isNativeAndroidCompanionRuntime()) {
+  if (isNativeCompanionPairingRuntime()) {
     return await FolioleCompanionSync.savePrimaryDeviceId({ primary_device_id: primaryDeviceId });
   }
   const current = readStoredWebPairingState();

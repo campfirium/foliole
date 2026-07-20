@@ -151,7 +151,7 @@ function DiagnosticResultSections(props: {
         <h3 className="text-sm font-semibold text-foreground">{t('companion.sync.diagnostics.meaning')}</h3>
         <VerdictList verdicts={props.result.verdicts} />
       </section>
-      <SnapshotSection empty={t('companion.sync.diagnostics.androidUnavailable')} snapshot={props.result.android} title={t('companion.sync.diagnostics.androidTitle')} />
+      <SnapshotSection empty={t('companion.sync.diagnostics.deviceUnavailable')} snapshot={props.result.android} title={t('companion.sync.diagnostics.deviceTitle')} />
       <SnapshotSection empty={t('companion.sync.diagnostics.desktopUnavailable')} snapshot={props.result.desktop} title={t('companion.sync.diagnostics.desktopTitle')} />
     </>
   );

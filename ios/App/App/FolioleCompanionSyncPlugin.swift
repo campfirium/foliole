@@ -10,6 +10,7 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "commitAttachmentResourceBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "commitContentBlobBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "desktopHttpRequest", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "diagnoseSync", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "downloadAttachmentResourceBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "downloadContentBlobBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadDiscoveryCandidates", returnType: CAPPluginReturnPromise),

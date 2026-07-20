@@ -1,6 +1,16 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const appDataRuntime = vi.hoisted(() => ({
+  supportsClear: vi.fn(() => true)
+}));
+
+vi.mock('../shared/platform/companionAppDataRuntimeRepository', () => ({
+  FolioleCompanionAppData: { clearAppData: vi.fn() },
+  isNativeAndroidCompanionRuntime: vi.fn(() => false),
+  supportsCompanionAppDataClear: appDataRuntime.supportsClear
+}));
 
 import { renderCompanionSettingsContent } from './CompanionSettingsShellContent';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
@@ -17,6 +27,10 @@ function SettingsHarness() {
 }
 
 describe('CompanionSettingsShellContent', () => {
+  beforeEach(() => {
+    appDataRuntime.supportsClear.mockReturnValue(true);
+  });
+
   it('opens placeholder settings detail rows instead of leaving dead controls', () => {
     render(<SettingsHarness />);
 
@@ -41,5 +55,15 @@ describe('CompanionSettingsShellContent', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Diagnostics/ }));
     expect(screen.getByText('Diagnostics')).toBeInTheDocument();
+  });
+
+  it('hides storage on iOS until native app-data clear is complete', () => {
+    appDataRuntime.supportsClear.mockReturnValue(false);
+
+    render(<SettingsHarness />);
+
+    expect(screen.getByText('4 sections')).toBeInTheDocument();
+    expect(screen.queryByText('Storage')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Clear local app data/ })).not.toBeInTheDocument();
   });
 });

@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, type Mock, vi } from 'vitest';
 
 const takeoverMocks = vi.hoisted(() => ({
-  isNativeAndroidCompanionRuntime: vi.fn(() => true),
+  isNativeCompanionPairingRuntime: vi.fn(() => true),
   loadCompanionPairingState: vi.fn(async () => ({
     device_id: 'device-android',
     device_kind: 'android',
@@ -58,12 +58,12 @@ vi.mock('./companionWorkspacePairing', () => ({
 }));
 vi.mock('./companionWorkspaceRuntimeRepository', () => ({
   FolioleCompanionSync: takeoverMocks.plugin,
-  isNativeAndroidCompanionRuntime: takeoverMocks.isNativeAndroidCompanionRuntime
+  isNativeCompanionPairingRuntime: takeoverMocks.isNativeCompanionPairingRuntime
 }));
 
 beforeEach(() => {
   vi.clearAllMocks();
-  takeoverMocks.isNativeAndroidCompanionRuntime.mockReturnValue(true);
+  takeoverMocks.isNativeCompanionPairingRuntime.mockReturnValue(true);
 });
 
 it('requests takeover only after convergence and stores the released primary id locally', async () => {

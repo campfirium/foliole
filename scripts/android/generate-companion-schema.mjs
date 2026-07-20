@@ -57,7 +57,10 @@ const repoRoot = path.resolve(__dirname, '../..');
 const outputPath = path.join(repoRoot, 'android/app/src/main/assets/companion-core-schema.json');
 const migrationOutputPath = path.join(repoRoot, 'android/app/src/main/assets/companion-migration-schema.json');
 const mutationOutputPath = path.join(repoRoot, 'android/app/src/main/assets/companion-mutation-definitions.json');
-const queryOutputPath = path.join(repoRoot, 'android/app/src/main/assets/companion-query-definitions.json');
+const queryOutputPaths = [
+  path.join(repoRoot, 'android/app/src/main/assets/companion-query-definitions.json'),
+  path.join(repoRoot, 'ios/App/App/companion-query-definitions.json')
+];
 const queryShapeJavaOutputPath = path.join(
   repoRoot,
   'android/app/src/main/java/com/foliole/android/FolioleCompanionQueryDefinitionShapeKeys.java'
@@ -97,9 +100,7 @@ await fs.writeFile(
   }, null, 2)}\n`,
   'utf8'
 );
-await fs.writeFile(
-  queryOutputPath,
-  `${JSON.stringify({
+const queryDefinitions = `${JSON.stringify({
     queries: ANDROID_COMPANION_QUERY_DEFINITIONS,
     assetKeys: ANDROID_COMPANION_QUERY_ASSET_KEYS,
     contentRead: ANDROID_COMPANION_CONTENT_READ_RULES,
@@ -117,9 +118,8 @@ await fs.writeFile(
       routes: syncPayloadRoutes(ANDROID_COMPANION_QUERY_DEFINITIONS)
     },
     workspaceRead: ANDROID_COMPANION_WORKSPACE_READ_RULES
-  }, null, 2)}\n`,
-  'utf8'
-);
+  }, null, 2)}\n`;
+await Promise.all(queryOutputPaths.map((queryOutputPath) => fs.writeFile(queryOutputPath, queryDefinitions, 'utf8')));
 await writeCompanionContractAssets({
   bridgeDefinitions: ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS,
   repoRoot,
@@ -143,7 +143,7 @@ await fs.writeFile(
 console.info('[android-schema] wrote companion schema artifact', outputPath);
 console.info('[android-schema] wrote companion migration schema artifact', migrationOutputPath);
 console.info('[android-schema] wrote companion mutation definitions artifact', mutationOutputPath);
-console.info('[android-schema] wrote companion query definitions artifact', queryOutputPath);
+console.info('[android-schema] wrote companion query definitions artifacts', queryOutputPaths);
 console.info('[android-schema] wrote cross-host companion contract artifacts');
 console.info('[android-schema] wrote companion query descriptor artifact', queryShapeJavaOutputPath);
 console.info('[android-schema] wrote companion resource query descriptor artifact', resourceQueryStringJavaOutputPath);

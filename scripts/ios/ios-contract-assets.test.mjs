@@ -22,6 +22,13 @@ describe('iOS companion contract assets', () => {
     expect(ios).toEqual(definitions);
     expect(ios).toEqual(android);
   });
+
+  it('keeps the generated query definitions identical across native hosts', async () => {
+    const fileName = 'companion-query-definitions.json';
+    expect(await readJson(path.join(REPO_ROOT, 'ios/App/App', fileName))).toEqual(
+      await readJson(path.join(REPO_ROOT, 'android/app/src/main/assets', fileName))
+    );
+  });
 });
 
 async function readJson(filePath) {

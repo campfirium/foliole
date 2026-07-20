@@ -1,4 +1,4 @@
-export type SyncDiagnosticHost = 'android' | 'desktop';
+export type SyncDiagnosticHost = 'android' | 'desktop' | 'ios';
 
 export type SyncDiagnosticSeverity = 'error' | 'info' | 'ok' | 'warning';
 

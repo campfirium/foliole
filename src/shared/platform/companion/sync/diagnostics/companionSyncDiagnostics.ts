@@ -6,7 +6,7 @@ import { fetchDesktopJson } from '../../../companionDesktopSyncHttp';
 import { classifyCompanionSyncTimeoutMessage } from '../../../companionSyncTimeoutOwnership';
 import {
   FolioleCompanionSync,
-  isNativeAndroidCompanionRuntime
+  isNativeCompanionSyncDiagnosticsRuntime
 } from '../../../companionWorkspaceRuntimeRepository';
 
 const SYNC_DIAGNOSTICS_PATH = '/companion/diagnostics/sync';
@@ -36,7 +36,7 @@ function infoVerdict(code: string, message: string, evidence: Record<string, unk
 }
 
 export async function loadLocalSyncDiagnostics(): Promise<SyncDiagnosticSnapshot | null> {
-  if (!isNativeAndroidCompanionRuntime()) {
+  if (!isNativeCompanionSyncDiagnosticsRuntime()) {
     return null;
   }
   return await FolioleCompanionSync.diagnoseSync();
