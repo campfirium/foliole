@@ -7,7 +7,7 @@ import {
   mergeSyncDiagnosticVerdicts
 } from './companionSyncDiagnostics';
 
-function snapshot(host: 'android' | 'desktop', overrides: Partial<SyncDiagnosticSnapshot>): SyncDiagnosticSnapshot {
+function snapshot(host: 'android' | 'desktop' | 'ios', overrides: Partial<SyncDiagnosticSnapshot>): SyncDiagnosticSnapshot {
   return {
     collected_at: '2026-04-29T00:00:00.000Z',
     connection: { endpoint_url: null, last_error: null, state: 'ready' },
@@ -32,6 +32,22 @@ function snapshot(host: 'android' | 'desktop', overrides: Partial<SyncDiagnostic
     verdicts: [],
     ...overrides
   };
+}
+
+function expectIosVerdictsUseDeviceCopy() {
+  const verdicts = mergeSyncDiagnosticVerdicts({
+    android: snapshot('ios', {
+      events: [{ endpoint_url: null, message: 'Sync failed.', occurred_at: '2026-04-29T01:26:00.000Z', status: 'failed' }],
+      storage: { ...snapshot('ios', {}).storage, active_node_count: 0 },
+      sync_state: { local_dirty_count: 0, max_state_seq: null, pack_cursor: 2, state_counts: [] }
+    }),
+    desktop: snapshot('desktop', {})
+  });
+
+  expect(verdicts).toEqual(expect.arrayContaining([
+    expect.objectContaining({ code: 'sync_recent_android_failure', message: 'Recent device sync failed.' }),
+    expect.objectContaining({ code: 'sync_pack_download_or_apply_breakpoint', message: 'Desktop has topics but this device has none.' })
+  ]));
 }
 
 function expectAndroidCursorLagVerdict() {
@@ -188,6 +204,7 @@ function expectAttachmentBacklogSeparateFromStructure() {
 }
 
 describe('mergeSyncDiagnosticVerdicts', () => {
+  it('uses device copy for iOS diagnostic verdicts', expectIosVerdictsUseDeviceCopy);
   it('reports when Android has not caught up to the desktop state sequence', expectAndroidCursorLagVerdict);
   it('keeps cursor lag visible even when the latest Android sync failed', expectCursorLagWithRecentFailure);
   it('adds timeout ownership to recent Android failure diagnostics', expectRecentFailureIncludesTimeoutOwner);

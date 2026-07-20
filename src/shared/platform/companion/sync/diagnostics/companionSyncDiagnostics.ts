@@ -109,7 +109,7 @@ function pushSyncLagVerdicts(args: {
     }));
   }
   if (args.desktop.storage.active_node_count > 0 && args.android.storage.active_node_count === 0) {
-    args.verdicts.push(warningVerdict('sync_pack_download_or_apply_breakpoint', 'Desktop has topics but Android has none.', {
+    args.verdicts.push(warningVerdict('sync_pack_download_or_apply_breakpoint', 'Desktop has topics but this device has none.', {
       android_node_count: args.android.storage.active_node_count,
       desktop_node_count: args.desktop.storage.active_node_count
     }));
@@ -167,7 +167,7 @@ export function mergeSyncDiagnosticVerdicts(args: {
   const cursorLag = Math.max(0, desktopMaxSeq - androidCursor);
   const latestFailed = findLatestFailedTerminalEvent(args.android);
   if (latestFailed) {
-    verdicts.push(warningVerdict('sync_recent_android_failure', 'Recent Android sync failed.', {
+    verdicts.push(warningVerdict('sync_recent_android_failure', 'Recent device sync failed.', {
       ...recentFailureEvidence(latestFailed)
     }));
   }

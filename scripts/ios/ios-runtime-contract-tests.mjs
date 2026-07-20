@@ -27,6 +27,7 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'src/companion/useCompanionImmersiveScrollPosition.test.tsx',
   'src/companion/useCompanionWorkspaceAutoSync.test.tsx',
   'src/shared/platform/companion/sync/diagnostics/companionSyncDiagnostics.ios.test.ts',
+  'src/shared/platform/companion/sync/diagnostics/companionSyncDiagnostics.test.ts',
   'src/shared/platform/companion/sync/diagnostics/companionSyncConvergence.test.ts',
   'src/shared/platform/companionPrimaryDeviceIdentity.test.ts',
   'src/shared/platform/companionPrimaryDeviceTakeover.test.ts',
