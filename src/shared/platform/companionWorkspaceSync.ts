@@ -33,6 +33,15 @@ import {
   writeWebSyncState
 } from './companionWorkspaceSyncState';
 
+function updateIosWorkspaceSyncState(
+  update: (current: NativeCompanionWorkspaceSyncState) => NativeCompanionWorkspaceSyncState
+) {
+  return runCompanionSyncWriterTask(async () => {
+    const current = await loadIosCompanionWorkspaceSyncState();
+    return saveIosCompanionWorkspaceSyncState(update(current));
+  });
+}
+
 export async function loadCompanionWorkspaceSyncState() {
   if (getCompanionRuntimeCapability().kind === 'ios-native') {
     return loadIosCompanionWorkspaceSyncState();
@@ -60,12 +69,11 @@ export {
 export async function saveCompanionWorkspaceSyncEndpoint(endpointUrl: string) {
   const normalizedEndpointUrl = endpointUrl.trim() ? normalizeEndpointUrl(endpointUrl) : null;
   if (getCompanionRuntimeCapability().kind === 'ios-native') {
-    const current = await loadIosCompanionWorkspaceSyncState();
-    return saveIosCompanionWorkspaceSyncState({
+    return updateIosWorkspaceSyncState((current) => ({
       ...current,
       endpoint_url: normalizedEndpointUrl,
       remembered_targets: appendRememberedTarget(current.remembered_targets, normalizedEndpointUrl)
-    });
+    }));
   }
   if (!isNativeAndroidCompanionRuntime()) {
     const current = readWebSyncState();
@@ -85,12 +93,13 @@ export async function saveCompanionWorkspaceSyncEndpoint(endpointUrl: string) {
 export async function removeCompanionWorkspaceSyncRememberedTarget(endpointUrl: string) {
   const normalizedEndpointUrl = normalizeEndpointUrl(endpointUrl);
   if (getCompanionRuntimeCapability().kind === 'ios-native') {
-    const current = await loadIosCompanionWorkspaceSyncState();
-    const remembered = removeRememberedTarget(current.remembered_targets, normalizedEndpointUrl);
-    return saveIosCompanionWorkspaceSyncState({
-      ...current,
-      endpoint_url: current.endpoint_url === normalizedEndpointUrl ? remembered[0] ?? null : current.endpoint_url,
-      remembered_targets: remembered
+    return updateIosWorkspaceSyncState((current) => {
+      const remembered = removeRememberedTarget(current.remembered_targets, normalizedEndpointUrl);
+      return {
+        ...current,
+        endpoint_url: current.endpoint_url === normalizedEndpointUrl ? remembered[0] ?? null : current.endpoint_url,
+        remembered_targets: remembered
+      };
     });
   }
   if (!isNativeAndroidCompanionRuntime()) {
@@ -111,8 +120,7 @@ export async function removeCompanionWorkspaceSyncRememberedTarget(endpointUrl: 
 
 export async function saveCompanionSyncOnboardingStatus(status: CompanionSyncOnboardingStatus) {
   if (getCompanionRuntimeCapability().kind === 'ios-native') {
-    const current = await loadIosCompanionWorkspaceSyncState();
-    return saveIosCompanionWorkspaceSyncState({ ...current, sync_onboarding_status: status });
+    return updateIosWorkspaceSyncState((current) => ({ ...current, sync_onboarding_status: status }));
   }
   if (!isNativeAndroidCompanionRuntime()) {
     const current = readWebSyncState();
@@ -150,8 +158,7 @@ export async function recordCompanionWorkspaceSyncEvent(args: {
     ...(args.summary !== undefined ? { summary: args.summary } : {})
   };
   if (getCompanionRuntimeCapability().kind === 'ios-native') {
-    const current = await loadIosCompanionWorkspaceSyncState();
-    return saveIosCompanionWorkspaceSyncState(prependSyncEvent(current, event));
+    return updateIosWorkspaceSyncState((current) => prependSyncEvent(current, event));
   }
   if (!isNativeAndroidCompanionRuntime()) {
     const current = readWebSyncState();
@@ -183,8 +190,7 @@ export async function persistCompanionWorkspaceSnapshot(args: {
   workspaceSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot'];
 }) {
   if (getCompanionRuntimeCapability().kind === 'ios-native') {
-    const current = await loadIosCompanionWorkspaceSyncState();
-    return saveIosCompanionWorkspaceSyncState(normalizePersistedSyncState({
+    return updateIosWorkspaceSyncState((current) => normalizePersistedSyncState({
       ...args,
       syncEvents: current.sync_events,
       syncOnboardingStatus: current.sync_onboarding_status

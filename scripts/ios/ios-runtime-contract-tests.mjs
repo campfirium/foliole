@@ -61,6 +61,7 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'src/shared/platform/companionPrimaryDeviceTakeover.test.ts',
   'src/shared/platform/companionFullTextSearch.test.ts',
   'src/shared/platform/companionWorkspaceDiscovery.test.ts',
+  'src/shared/platform/companionWorkspaceSync.concurrent.ios.test.ts',
   'src/shared/platform/companionWorkspaceSync.endpoint.ios.test.ts',
   'src/shared/platform/companionWorkspaceSync.disconnect.ios.test.ts',
   'src/shared/platform/companionWorkspaceSync.pairing.test.ts',
