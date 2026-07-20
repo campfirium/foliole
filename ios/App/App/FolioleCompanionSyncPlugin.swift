@@ -66,7 +66,7 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
                 let started = Date()
                 let parts = try await FolioleCompanionDesktopHttpClient.requestContentBlobBatch(
                     url: try requiredString(call, contract.requestKeys, "url"),
-                    headers: try stringHeaders(call.getObject(try key("headers", contract.requestKeys)) ?? [:]),
+                    headers: try stringHeaders(try requiredObject(call, contract.requestKeys, "headers")),
                     body: body,
                     contract: contract
                 )

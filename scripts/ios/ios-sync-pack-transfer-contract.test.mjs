@@ -30,6 +30,8 @@ describe('iOS sync-pack transfer contract', () => {
     expect(plugin).toContain('jsName = "FolioleCompanionSyncPackTransfer"');
     expect(plugin).toContain('CAPPluginMethod(name: "downloadDesktopSyncPack"');
     expect(plugin).toContain('CAPPluginMethod(name: "deleteDownloadedSyncPack"');
+    expect(plugin).toContain('guard let headersObject = call.getObject(headersKey)');
+    expect(plugin).not.toContain('call.getObject(headersKey) ?? [:]');
     expect(project).toContain('companion-sync-protocol-definitions.json in Resources');
     expect(project).toContain('companion-bridge-contract-definitions.json in Resources');
   });

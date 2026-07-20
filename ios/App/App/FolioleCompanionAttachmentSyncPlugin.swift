@@ -101,7 +101,9 @@ private func attachmentHeaders(
     _ object: JSObject,
     _ contract: FolioleCompanionAttachmentResourceContract
 ) throws -> [String: String] {
-    guard let headers = object[try attachmentKey("headers", contract)] as? JSObject else { return [:] }
+    guard let headers = object[try attachmentKey("headers", contract)] as? JSObject else {
+        throw attachmentError("headers must be an object")
+    }
     return try headers.reduce(into: [:]) { result, entry in
         guard let value = entry.value as? String else { throw attachmentError("HTTP headers must be strings") }
         result[entry.key] = value

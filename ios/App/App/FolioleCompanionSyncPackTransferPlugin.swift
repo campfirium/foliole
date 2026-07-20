@@ -19,7 +19,11 @@ public class FolioleCompanionSyncPackTransferPlugin: CAPPlugin, CAPBridgedPlugin
                 call.reject("\(urlKey) is required.")
                 return
             }
-            let headers = try stringHeaders(call.getObject(headersKey) ?? [:])
+            guard let headersObject = call.getObject(headersKey) else {
+                call.reject("\(headersKey) is required.")
+                return
+            }
+            let headers = try stringHeaders(headersObject)
             Task {
                 do {
                     let packURL = try await FolioleCompanionSyncPackTransfer.downloadDesktopSyncPack(

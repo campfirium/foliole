@@ -45,7 +45,9 @@ describe('iOS content blob host contract', () => {
     );
 
     expect(method).toContain('let parts = try await FolioleCompanionDesktopHttpClient.requestContentBlobBatch(');
+    expect(method).toContain('stringHeaders(try requiredObject(call, contract.requestKeys, "headers"))');
     expect(method).not.toContain('try? await FolioleCompanionDesktopHttpClient.requestContentBlobBatch(');
+    expect(method).not.toContain('getObject(try key("headers", contract.requestKeys)) ?? [:]');
     expect(method).toContain('call.reject("Failed to download companion content blobs:');
   });
 });

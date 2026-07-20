@@ -29,6 +29,8 @@ describe('iOS attachment resource host contract', () => {
     }
     expect(implementation).toContain('FolioleCompanionContractStore().attachmentResourceContract()');
     expect(implementation).toContain('FolioleCompanionDatabaseLocation.mainDatabase()');
+    expect(implementation).toContain('throw attachmentError("headers must be an object")');
+    expect(implementation).not.toContain('else { return [:] }');
   });
 
   it('keeps the attachment bridge implementation in both iOS build graphs', () => {
