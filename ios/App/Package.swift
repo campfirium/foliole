@@ -23,7 +23,8 @@ let package = Package(
                 "FolioleCompanionTopicSearchPlugin.swift",
                 "FolioleCompanionSyncPackTransfer.swift", "FolioleCompanionSyncPackTransferPlugin.swift",
                 "Info.plist", "capacitor.config.json",
-                "FolioleCompanionSyncPlugin.swift", "FolioleCompanionSyncPlugin+SettingWrite.swift",
+                "FolioleCompanionSyncPlugin.swift", "FolioleCompanionSyncPlugin+ReadingWrite.swift",
+                "FolioleCompanionSyncPlugin+SettingWrite.swift",
                 "FolioleCompanionSyncPlugin+ViewStateWrite.swift",
                 "config.xml", "public"
             ],
@@ -35,6 +36,8 @@ let package = Package(
                 "FolioleCompanionPdfPageTextContractStore.swift",
                 "FolioleCompanionPdfPageTextStore.swift",
                 "FolioleCompanionQueryDefinitions.swift",
+                "FolioleCompanionReadingWriteContract.swift",
+                "FolioleCompanionReadingWriteStore.swift",
                 "FolioleCompanionSyncObjectReadContract.swift",
                 "FolioleCompanionSyncObjectReadStore.swift",
                 "FolioleCompanionSettingWriteContract.swift",

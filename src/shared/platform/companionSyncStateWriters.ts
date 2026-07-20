@@ -9,6 +9,7 @@ import {
   FolioleCompanionSync,
   getNativeCompanionSettingWritePlatform,
   isNativeAndroidCompanionRuntime,
+  isNativeCompanionReadingWriteRuntime,
   isNativeCompanionViewStateWriteRuntime
 } from './companionWorkspaceRuntimeRepository';
 
@@ -40,7 +41,7 @@ export async function saveCompanionSyncNodeReadingRecord(args: {
   nodeId: string;
   reading: NativeWorkspaceReadingProfile;
 }) {
-  if (!isNativeAndroidCompanionRuntime()) {
+  if (!isNativeCompanionReadingWriteRuntime()) {
     return null;
   }
   return runCompanionSyncWriterTask(() => (

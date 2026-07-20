@@ -58,6 +58,9 @@
 		50F030111FED79650016851F /* FolioleCompanionSettingWriteContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F030011FED79650016851F /* FolioleCompanionSettingWriteContract.swift */; };
 		50F030121FED79650016851F /* FolioleCompanionSettingWriteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F030021FED79650016851F /* FolioleCompanionSettingWriteStore.swift */; };
 		50F030131FED79650016851F /* FolioleCompanionSyncPlugin+SettingWrite.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F030031FED79650016851F /* FolioleCompanionSyncPlugin+SettingWrite.swift */; };
+		50F040111FED79650016851F /* FolioleCompanionReadingWriteContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F040011FED79650016851F /* FolioleCompanionReadingWriteContract.swift */; };
+		50F040121FED79650016851F /* FolioleCompanionReadingWriteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F040021FED79650016851F /* FolioleCompanionReadingWriteStore.swift */; };
+		50F040131FED79650016851F /* FolioleCompanionSyncPlugin+ReadingWrite.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F040031FED79650016851F /* FolioleCompanionSyncPlugin+ReadingWrite.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -112,6 +115,9 @@
 		50F030011FED79650016851F /* FolioleCompanionSettingWriteContract.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSettingWriteContract.swift; sourceTree = "<group>"; };
 		50F030021FED79650016851F /* FolioleCompanionSettingWriteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSettingWriteStore.swift; sourceTree = "<group>"; };
 		50F030031FED79650016851F /* FolioleCompanionSyncPlugin+SettingWrite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FolioleCompanionSyncPlugin+SettingWrite.swift"; sourceTree = "<group>"; };
+		50F040011FED79650016851F /* FolioleCompanionReadingWriteContract.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionReadingWriteContract.swift; sourceTree = "<group>"; };
+		50F040021FED79650016851F /* FolioleCompanionReadingWriteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionReadingWriteStore.swift; sourceTree = "<group>"; };
+		50F040031FED79650016851F /* FolioleCompanionSyncPlugin+ReadingWrite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FolioleCompanionSyncPlugin+ReadingWrite.swift"; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
@@ -192,6 +198,9 @@
 				50F030011FED79650016851F /* FolioleCompanionSettingWriteContract.swift */,
 				50F030021FED79650016851F /* FolioleCompanionSettingWriteStore.swift */,
 				50F030031FED79650016851F /* FolioleCompanionSyncPlugin+SettingWrite.swift */,
+				50F040011FED79650016851F /* FolioleCompanionReadingWriteContract.swift */,
+				50F040021FED79650016851F /* FolioleCompanionReadingWriteStore.swift */,
+				50F040031FED79650016851F /* FolioleCompanionSyncPlugin+ReadingWrite.swift */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
 				504EC30E1FED79650016851F /* Assets.xcassets */,
 				504EC3101FED79650016851F /* LaunchScreen.storyboard */,
@@ -328,6 +337,9 @@
 				50F030111FED79650016851F /* FolioleCompanionSettingWriteContract.swift in Sources */,
 				50F030121FED79650016851F /* FolioleCompanionSettingWriteStore.swift in Sources */,
 				50F030131FED79650016851F /* FolioleCompanionSyncPlugin+SettingWrite.swift in Sources */,
+				50F040111FED79650016851F /* FolioleCompanionReadingWriteContract.swift in Sources */,
+				50F040121FED79650016851F /* FolioleCompanionReadingWriteStore.swift in Sources */,
+				50F040131FED79650016851F /* FolioleCompanionSyncPlugin+ReadingWrite.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
