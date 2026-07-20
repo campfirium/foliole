@@ -2,11 +2,11 @@ export function formatCompanionSyncFailureMessage(error: unknown) {
   const message = normalizeCompanionSyncErrorMessage(error);
   if (/connection foliole-companion .*does not exist/i.test(message) ||
     /connection foliole-companion .*already exists/i.test(message)) {
-    return 'Android sync database connection was reset. Sync will retry.';
+    return 'The device sync database connection was reset. Sync will retry.';
   }
   if (message.includes('Failed to apply companion desktop sync pack.')) {
     const cause = message.replace('Failed to apply companion desktop sync pack.', '').trim();
-    return `Topic list sync failed: ${cause || 'Android could not apply the desktop sync pack.'}`;
+    return `Topic list sync failed: ${cause || 'This device could not apply the desktop sync pack.'}`;
   }
   if (message.includes('applying the structure pack')) {
     return `Topic list sync failed: ${message}`;
