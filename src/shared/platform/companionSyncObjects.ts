@@ -3,11 +3,11 @@ import type {
   NativeSyncObjectRecord
 } from '../../../lib/platform/nativeSyncContract';
 
-import { getIosCompanionLearningSyncbackStore } from './companion/sync/learning-syncback/iosCompanionLearningSyncbackStore';
+import { getIosCompanionSyncbackStore } from './companion/sync/syncback/iosCompanionSyncbackStore';
 import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import {
   FolioleCompanionSync,
-  getNativeCompanionLearningSyncbackPlatform,
+  getNativeCompanionSyncbackPlatform,
   isNativeAndroidCompanionRuntime,
   isNativeCompanionPdfPageTextRuntime,
   isNativeCompanionSyncObjectReadRuntime
@@ -116,8 +116,8 @@ export async function searchCompanionPdfPageText(query: string, limit?: number) 
 }
 
 export async function saveCompanionSyncPushAcks(acks: SyncPushAck[]) {
-  if (getNativeCompanionLearningSyncbackPlatform() === 'ios') {
-    return runCompanionSyncWriterTask(() => getIosCompanionLearningSyncbackStore().savePushAcks(acks));
+  if (getNativeCompanionSyncbackPlatform() === 'ios') {
+    return runCompanionSyncWriterTask(() => getIosCompanionSyncbackStore().savePushAcks(acks));
   }
   if (!isNativeAndroidCompanionRuntime()) {
     return [] as string[];

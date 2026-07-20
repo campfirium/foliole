@@ -1,9 +1,9 @@
 import { beforeEach, expect, it } from 'vitest';
 
-import { COMPANION_LEARNING_SYNCBACK_HOST_CONTRACT as CONTRACT } from '../../../../../../lib/core/database/companionLearningSyncbackHostContractDefinitions';
+import { COMPANION_SYNCBACK_HOST_CONTRACT as CONTRACT } from '../../../../../../lib/core/database/companionSyncbackHostContractDefinitions';
 import type { DbParams, DbPort, DbRow } from '../../../../../../lib/core/sync/dbPort';
 
-import { createCompanionLearningSyncbackDbStore } from './companionLearningSyncbackDbStore';
+import { createCompanionSyncbackDbStore } from './companionSyncbackDbStore';
 
 let fake: FakeDbPort;
 
@@ -11,11 +11,16 @@ beforeEach(() => {
   fake = new FakeDbPort();
 });
 
-it('selects only local reading and review state through the shared macOS payload contract', async () => {
+it('selects only supported local state through the shared macOS payload contract', async () => {
+  const settingPayloadJson = JSON.stringify({
+    device_id: '*', form_factor: 'phone', key: 'handoff_reminder_settings',
+    platform: 'ios', scope: 'device', value_json: '{"enabled":true}'
+  });
   fake.meta.set('device_id', 'ios-device');
   fake.stateRows = [
     stateRow('node_reading', 'reading-hash', 4),
-    stateRow('node_review', 'review-hash', 5)
+    stateRow('node_review', 'review-hash', 5),
+    stateRow('setting', 'setting-hash', 6, 'device:ios:phone:*:handoff_reminder_settings')
   ];
   fake.readingPayloadRows = [{
     interval_duration_ms: 120000, interval_growth_factor: 1.5,
@@ -27,21 +32,26 @@ it('selects only local reading and review state through the shared macOS payload
     last_review_at: '2026-07-20T00:00:00.000Z', node_id: 'node-1', reps: 2,
     scheduled_days: 2, stability: 4.1, state: 2
   }];
+  fake.settingPayloadRows = [{ payload_json: settingPayloadJson }];
   fake.reviewRows = [reviewRow('ios-device', 'op-1'), reviewRow('other-device', 'op-2')];
-  const store = createCompanionLearningSyncbackDbStore(fake);
+  const store = createCompanionSyncbackDbStore(fake);
 
   await expect(store.loadStateChanges(null, 20)).resolves.toEqual([
     expect.objectContaining({ object_type: 'node_reading', payload_json: JSON.stringify(fake.readingPayloadRows[0]) }),
-    expect.objectContaining({ object_type: 'node_review', payload_json: JSON.stringify(fake.reviewPayloadRows[0]) })
+    expect.objectContaining({ object_type: 'node_review', payload_json: JSON.stringify(fake.reviewPayloadRows[0]) }),
+    expect.objectContaining({ object_type: 'setting', payload_json: settingPayloadJson })
   ]);
   await expect(store.loadReviewLog(null, 20)).resolves.toEqual([reviewRow('ios-device', 'op-1')]);
-  expect(fake.queries).toContainEqual([CONTRACT.sql.learningState, [0, 20]]);
+  expect(fake.queries).toContainEqual([CONTRACT.sql.state, [0, 20]]);
   expect(fake.queries).toContainEqual([CONTRACT.sql.readingPayload, ['node-1']]);
   expect(fake.queries).toContainEqual([CONTRACT.sql.reviewPayload, ['node-1']]);
+  expect(fake.queries).toContainEqual([
+    CONTRACT.sql.settingPayload, ['device:ios:phone:*:handoff_reminder_settings']
+  ]);
 });
 
 it('persists cursors and saves valid acknowledgements atomically', async () => {
-  const store = createCompanionLearningSyncbackDbStore(fake);
+  const store = createCompanionSyncbackDbStore(fake);
   const cursor = { change_id: 'op-1', created_at: '2026-07-20T00:00:00.000Z' };
 
   await store.saveStatePushCursor(5);
@@ -63,10 +73,15 @@ it('persists cursors and saves valid acknowledgements atomically', async () => {
   expect(fake.acks.map((row) => row.clientOpId)).toEqual(['reading-state', 'review-state']);
 });
 
-function stateRow(objectType: 'node_reading' | 'node_review', contentHash: string, stateSeq: number) {
+function stateRow(
+  objectType: 'node_reading' | 'node_review' | 'setting',
+  contentHash: string,
+  stateSeq: number,
+  objectId = 'node-1'
+) {
   return {
     base_content_hash: 'base-hash', content_hash: contentHash, deleted_at: null,
-    object_id: 'node-1', object_type: objectType, state_seq: stateSeq,
+    object_id: objectId, object_type: objectType, state_seq: stateSeq,
     updated_at: '2026-07-20T00:00:00.000Z'
   };
 }
@@ -104,6 +119,7 @@ class FakeDbPort implements DbPort {
   readingPayloadRows: DbRow[] = [];
   reviewPayloadRows: DbRow[] = [];
   reviewRows: DbRow[] = [];
+  settingPayloadRows: DbRow[] = [];
   stateRows: DbRow[] = [];
 
   async query<T extends DbRow = DbRow>(sql: string, params: DbParams = []) {
@@ -112,9 +128,10 @@ class FakeDbPort implements DbPort {
       const value = this.meta.get(String(params[0]));
       return (value === undefined ? [] : [{ value }]) as unknown as T[];
     }
-    if (sql === CONTRACT.sql.learningState) return this.stateRows as T[];
+    if (sql === CONTRACT.sql.state) return this.stateRows as T[];
     if (sql === CONTRACT.sql.readingPayload) return this.readingPayloadRows as T[];
     if (sql === CONTRACT.sql.reviewPayload) return this.reviewPayloadRows as T[];
+    if (sql === CONTRACT.sql.settingPayload) return this.settingPayloadRows as T[];
     if (sql === CONTRACT.sql.reviewLog) {
       return this.reviewRows.filter((row) => row.device_id === params[0]) as T[];
     }

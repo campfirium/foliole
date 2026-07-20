@@ -1,4 +1,4 @@
-import { COMPANION_LEARNING_SYNCBACK_HOST_CONTRACT as CONTRACT } from '../../../../../../lib/core/database/companionLearningSyncbackHostContractDefinitions';
+import { COMPANION_SYNCBACK_HOST_CONTRACT as CONTRACT } from '../../../../../../lib/core/database/companionSyncbackHostContractDefinitions';
 import type { DbPort, DbRow } from '../../../../../../lib/core/sync/dbPort';
 import type {
   NativeSyncChangeCursor,
@@ -7,7 +7,7 @@ import type {
 } from '../../../../../../lib/platform/nativeSyncContract';
 import type { SyncPushAck } from '../../../companionSyncPushProtocol';
 
-export interface CompanionLearningSyncbackDbStore {
+export interface CompanionSyncbackDbStore {
   loadReviewLog(cursor: NativeSyncChangeCursor | null, limit?: number): Promise<NativeSyncReviewLogRecord[]>;
   loadReviewLogPushCursor(): Promise<NativeSyncChangeCursor | null>;
   loadStateChanges(cursor: number | null, limit?: number): Promise<NativeSyncStateObjectRecord[]>;
@@ -17,7 +17,7 @@ export interface CompanionLearningSyncbackDbStore {
   saveStatePushCursor(cursor: number | null): Promise<number | null>;
 }
 
-export function createCompanionLearningSyncbackDbStore(port: DbPort): CompanionLearningSyncbackDbStore {
+export function createCompanionSyncbackDbStore(port: DbPort): CompanionSyncbackDbStore {
   return {
     loadReviewLog: (cursor, limit) => loadReviewLog(port, cursor, limit),
     loadReviewLogPushCursor: () => loadChangeCursor(port, CONTRACT.cursors.reviewLogPush),
@@ -31,21 +31,26 @@ export function createCompanionLearningSyncbackDbStore(port: DbPort): CompanionL
 
 async function loadStateChanges(port: DbPort, cursor: number | null, limit = CONTRACT.limits.default) {
   const rows = await port.query(
-    CONTRACT.sql.learningState,
+    CONTRACT.sql.state,
     [normalizeNumberCursor(cursor), normalizeLimit(limit)]
   ) as unknown as NativeSyncStateObjectRecord[];
   return Promise.all(rows.map(async (row) => ({
     ...row,
-    payload_json: row.deleted_at ? null : JSON.stringify(
-      (await port.query(payloadSql(row.object_type), [row.object_id]))[0] ?? {}
-    )
+    payload_json: row.deleted_at ? null : await loadPayloadJson(port, row)
   })));
+}
+
+async function loadPayloadJson(port: DbPort, row: NativeSyncStateObjectRecord) {
+  const payload = (await port.query(payloadSql(row.object_type), [row.object_id]))[0] ?? {};
+  if (row.object_type !== 'setting') return JSON.stringify(payload);
+  return typeof payload.payload_json === 'string' ? payload.payload_json : '{}';
 }
 
 function payloadSql(objectType: NativeSyncStateObjectRecord['object_type']) {
   if (objectType === 'node_reading') return CONTRACT.sql.readingPayload;
   if (objectType === 'node_review') return CONTRACT.sql.reviewPayload;
-  throw new Error(`unsupported_companion_learning_syncback_object:${objectType}`);
+  if (objectType === 'setting') return CONTRACT.sql.settingPayload;
+  throw new Error(`unsupported_companion_syncback_object:${objectType}`);
 }
 
 async function loadReviewLog(port: DbPort, cursor: NativeSyncChangeCursor | null, limit = CONTRACT.limits.default) {

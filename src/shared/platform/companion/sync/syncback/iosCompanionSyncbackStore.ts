@@ -8,20 +8,20 @@ import {
 } from '../../../companionSyncNodeVersions';
 
 import {
-  createCompanionLearningSyncbackDbStore,
-  type CompanionLearningSyncbackDbStore
-} from './companionLearningSyncbackDbStore';
+  createCompanionSyncbackDbStore,
+  type CompanionSyncbackDbStore
+} from './companionSyncbackDbStore';
 
-let sharedStore: CompanionLearningSyncbackDbStore | null = null;
+let sharedStore: CompanionSyncbackDbStore | null = null;
 
-export function getIosCompanionLearningSyncbackStore() {
-  sharedStore ??= createIosCompanionLearningSyncbackStore();
+export function getIosCompanionSyncbackStore() {
+  sharedStore ??= createIosCompanionSyncbackStore();
   return sharedStore;
 }
 
-export function createIosCompanionLearningSyncbackStore(
+export function createIosCompanionSyncbackStore(
   manager: CompanionSqliteConnectionManager = new SQLiteConnection(CapacitorSQLite)
-): CompanionLearningSyncbackDbStore {
+): CompanionSyncbackDbStore {
   return {
     loadReviewLog: (cursor, limit) => withStore(manager, (store) => store.loadReviewLog(cursor, limit)),
     loadReviewLogPushCursor: () => withStore(manager, (store) => store.loadReviewLogPushCursor()),
@@ -35,11 +35,11 @@ export function createIosCompanionLearningSyncbackStore(
 
 async function withStore<T>(
   manager: CompanionSqliteConnectionManager,
-  operation: (store: CompanionLearningSyncbackDbStore) => Promise<T>
+  operation: (store: CompanionSyncbackDbStore) => Promise<T>
 ) {
   const connection = await openCompanionDatabaseConnection(manager);
   try {
-    return await operation(createCompanionLearningSyncbackDbStore(createCapacitorSqliteDbPort(connection)));
+    return await operation(createCompanionSyncbackDbStore(createCapacitorSqliteDbPort(connection)));
   } finally {
     await closeCompanionDatabaseConnection(manager, connection);
   }

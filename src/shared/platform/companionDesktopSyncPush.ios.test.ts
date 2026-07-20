@@ -18,9 +18,17 @@ const storeMock = vi.hoisted(() => ({
     base_content_hash: 'review-base', content_hash: 'review-hash', deleted_at: null,
     object_id: 'node-1', object_type: 'node_review', payload_json: '{"state":2}',
     state_seq: 5, updated_at: '2026-07-20T00:00:00.000Z'
+  }, {
+    base_content_hash: null, content_hash: 'setting-hash', deleted_at: null,
+    object_id: 'device:ios:phone:*:handoff_reminder_settings', object_type: 'setting',
+    payload_json: '{"scope":"device","platform":"ios","form_factor":"phone","device_id":"*","key":"handoff_reminder_settings","value_json":"{\\"enabled\\":true}"}',
+    state_seq: 6, updated_at: '2026-07-20T00:00:00.000Z'
   }]),
   loadStatePushCursor: vi.fn(async () => null),
-  savePushAcks: vi.fn(async () => ['node_reading:node-1:4', 'node_review:node-1:5'])
+  savePushAcks: vi.fn(async () => [
+    'node_reading:node-1:4', 'node_review:node-1:5',
+    'setting:device:ios:phone:*:handoff_reminder_settings:6'
+  ])
 }));
 const capacitorMock = vi.hoisted(() => ({
   getPlatform: vi.fn(() => 'ios'),
@@ -31,8 +39,8 @@ vi.mock('@capacitor/core', () => ({
   Capacitor: capacitorMock,
   registerPlugin: vi.fn(() => ({}))
 }));
-vi.mock('./companion/sync/learning-syncback/iosCompanionLearningSyncbackStore', () => ({
-  getIosCompanionLearningSyncbackStore: vi.fn(() => storeMock)
+vi.mock('./companion/sync/syncback/iosCompanionSyncbackStore', () => ({
+  getIosCompanionSyncbackStore: vi.fn(() => storeMock)
 }));
 vi.mock('./companionDesktopSyncHttp', () => ({ postDesktopJson: httpMock.post }));
 vi.mock('./companionSyncWriterQueue', () => ({
@@ -56,6 +64,16 @@ beforeEach(() => {
         status: 'accepted'
       },
       {
+        client_op_id: 'setting:device:ios:phone:*:handoff_reminder_settings:6',
+        identity: {
+          objectId: 'device:ios:phone:*:handoff_reminder_settings',
+          objectType: 'setting',
+          scope: 'device'
+        },
+        state_seq: 6,
+        status: 'accepted'
+      },
+      {
         client_op_id: 'review_log:op-1',
         identity: { objectId: 'op-1', objectType: 'review_log', scope: 'workspace' },
         status: 'accepted'
@@ -64,12 +82,16 @@ beforeEach(() => {
   });
 });
 
-it('pushes iOS reading and review state through the macOS shared protocol while keeping node stream empty', async () => {
+it('pushes iOS state through the macOS shared protocol while keeping node stream empty', async () => {
   const { pushLocalDirtyObjects } = await import('./companionDesktopSyncPush');
 
   await expect(pushLocalDirtyObjects('http://desktop.local')).resolves.toEqual({
     pushConflictCount: 0,
-    pushedObjectIds: ['node_reading:node-1', 'node_review:node-1'],
+    pushedObjectIds: [
+      'node_reading:node-1',
+      'node_review:node-1',
+      'setting:device:ios:phone:*:handoff_reminder_settings'
+    ],
     pushedReviewOpIds: ['op-1'],
     pushError: null,
     pushRejectedCount: 0
@@ -85,6 +107,14 @@ it('pushes iOS reading and review state through the macOS shared protocol while 
       expect.objectContaining({
         clientOpId: 'node_review:node-1:5',
         identity: { objectId: 'node-1', objectType: 'node_review', scope: 'workspace' }
+      }),
+      expect.objectContaining({
+        clientOpId: 'setting:device:ios:phone:*:handoff_reminder_settings:6',
+        identity: {
+          objectId: 'device:ios:phone:*:handoff_reminder_settings',
+          objectType: 'setting',
+          scope: 'device'
+        }
       }),
       expect.objectContaining({
         clientOpId: 'review_log:op-1',

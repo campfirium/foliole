@@ -7,7 +7,7 @@ const iosCursorStoreMock = vi.hoisted(() => ({
   loadCursor: vi.fn(async () => 9),
   saveCursor: vi.fn(async (cursor: number | null) => cursor)
 }));
-const iosLearningSyncbackStoreMock = vi.hoisted(() => ({
+const iosSyncbackStoreMock = vi.hoisted(() => ({
   loadReviewLog: vi.fn(async () => [{ op_id: 'ios-op-1' }]),
   loadReviewLogPushCursor: vi.fn(async () => null),
   loadStateChanges: vi.fn(async () => [{ object_id: 'ios-node-1', object_type: 'node_review', state_seq: 7 }]),
@@ -22,8 +22,8 @@ vi.mock('./companionSyncWriterQueue', () => ({
 vi.mock('./companion/sync/cursor/iosCompanionSyncPackCursorStore', () => ({
   createIosCompanionSyncPackCursorStore: vi.fn(() => iosCursorStoreMock)
 }));
-vi.mock('./companion/sync/learning-syncback/iosCompanionLearningSyncbackStore', () => ({
-  getIosCompanionLearningSyncbackStore: vi.fn(() => iosLearningSyncbackStoreMock)
+vi.mock('./companion/sync/syncback/iosCompanionSyncbackStore', () => ({
+  getIosCompanionSyncbackStore: vi.fn(() => iosSyncbackStoreMock)
 }));
 
 const capacitorMock = vi.hoisted(() => ({
@@ -85,7 +85,7 @@ it('bridges native sync cursors and pending summary', async () => {
   expect(writerQueueMock.run).toHaveBeenCalledTimes(4);
 });
 
-it('routes iOS learning syncback cursors and rows through the SQLite store', async () => {
+it('routes iOS syncback cursors and rows through the SQLite store', async () => {
   capacitorMock.platform.mockReturnValue('ios');
   const getItem = vi.spyOn(Storage.prototype, 'getItem');
   const api = await import('./companionSyncCursors');

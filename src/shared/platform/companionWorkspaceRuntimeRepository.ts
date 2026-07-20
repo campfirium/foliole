@@ -85,8 +85,8 @@ export function isNativeCompanionReviewWriteRuntime() {
   return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
 }
 
-export function getNativeCompanionLearningSyncbackPlatform() {
-  const runtime = requireAvailableCompanionRuntime('learning-syncback');
+export function getNativeCompanionSyncbackPlatform() {
+  const runtime = requireAvailableCompanionRuntime('syncback');
   return runtime.kind === 'android-native' || runtime.kind === 'ios-native'
     ? runtime.platform
     : null;
