@@ -55,7 +55,7 @@ export function CompanionSyncContent(props: {
   onOpenSettingsPage?: (page: CompanionSettingsPage) => void;
 }) {
   const { workspaceSync } = props;
-  const handoffReminders = useCompanionHandoffReminderSettings();
+  const handoffReminders = useCompanionHandoffReminderSettings(workspaceSync.state.last_synced_at);
   useCompanionHandoffReminderScheduler({ settings: handoffReminders.settings, workspaceSync });
 
   useEffect(() => {

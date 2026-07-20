@@ -12,23 +12,24 @@ import {
   type CompanionHandoffReminderSettings
 } from './companionHandoffReminderSettings';
 
-export function useCompanionHandoffReminderSettings() {
+export function useCompanionHandoffReminderSettings(refreshKey?: string | null) {
   const [settings, setSettings] = useState(loadHandoffReminderSettings);
-  const didUpdate = useRef(false);
+  const updateRevision = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
+    const hydrationRevision = updateRevision.current;
     void loadCompanionSyncSettingValueJson('handoff_reminder_settings').then((valueJson) => {
       const hydrated = valueJson ? parseHandoffReminderSettings(valueJson) : null;
-      if (cancelled || didUpdate.current || !hydrated) return;
+      if (cancelled || updateRevision.current !== hydrationRevision || !hydrated) return;
       saveHandoffReminderSettings(hydrated);
       setSettings(hydrated);
     }).catch(() => null);
     return () => { cancelled = true; };
-  }, []);
+  }, [refreshKey]);
 
   const updateSettings = useCallback((nextSettings: CompanionHandoffReminderSettings) => {
-    didUpdate.current = true;
+    updateRevision.current += 1;
     setSettings(nextSettings);
     saveHandoffReminderSettings(nextSettings);
     void saveCompanionSyncSettingRecord({

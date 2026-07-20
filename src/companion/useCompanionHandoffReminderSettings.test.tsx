@@ -60,4 +60,22 @@ describe('useCompanionHandoffReminderSettings', () => {
 
     expect(result.current.settings).toEqual({ fixedTime: '21:00', shortDelay: '5' });
   });
+
+  it('rehydrates after a completed sync brings in the setting record', async () => {
+    syncObjectsMock.loadCompanionSyncSettingValueJson
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(JSON.stringify({ fixedTime: '19:30', shortDelay: '30' }));
+    const { useCompanionHandoffReminderSettings } = await import('./useCompanionHandoffReminderSettings');
+    const { result, rerender } = renderHook(
+      ({ lastSyncedAt }) => useCompanionHandoffReminderSettings(lastSyncedAt),
+      { initialProps: { lastSyncedAt: null as string | null } }
+    );
+    await act(async () => {});
+
+    rerender({ lastSyncedAt: '2026-07-21T00:20:00.000Z' });
+    await act(async () => {});
+
+    expect(result.current.settings).toEqual({ fixedTime: '19:30', shortDelay: '30' });
+    expect(syncObjectsMock.loadCompanionSyncSettingValueJson).toHaveBeenCalledTimes(2);
+  });
 });
