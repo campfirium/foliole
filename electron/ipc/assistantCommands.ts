@@ -1,75 +1,41 @@
-import path from 'node:path';
-
-import { app, shell, type WebContents } from 'electron';
+import { app, type WebContents } from 'electron';
 
 import type {
   NativeAssistantThreadOpeningLocation,
+  NativeAssistantStatusResult,
   NativeAssistantTurnEvent,
   NativeAssistantWorkspaceContext
 } from '../../lib/platform/nativeAssistantContract.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { resolveFolioleAppVersion } from '../appVersion.js';
-import { CodexAppServerAdapter } from '../assistant/codexAppServerAdapter.js';
+import {
+  createAssistantFailure,
+  createAssistantStatus
+} from '../assistant/codexAppServerAdapterSupport.js';
 import {
   getAssistantThreadIndex
 } from '../database/assistantThreadIndex.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 
+import {
+  disposeAssistantCommandAdapter,
+  getAssistantAdapter,
+  resetAssistantCommandAdapterForTests
+} from './assistantAdapterRuntime.js';
 import { loadAssistantAgentControlContext, mergeAssistantStatusWithAgentControl } from './assistantAgentControlStatus.js';
 import {
   readOpeningLocation,
   readOptionalClientTurnId,
   readOptionalProviderThreadId
 } from './assistantCommandInputs.js';
-import { resolveAssistantLauncherEnv } from './assistantLauncherEnvironment.js';
 import { handleAssistantLocalHistoryCommand } from './assistantLocalHistoryCommands.js';
 import { sendAssistantTurn } from './assistantSendTurn.js';
 import { prepareAssistantThreadContinuation } from './assistantThreadContinuation.js';
 import { recordAssistantThreadSuccess } from './assistantThreadPersistence.js';
 import { readOptionalWorkspaceContext } from './assistantWorkspaceContextReader.js';
 
-let adapter: CodexAppServerAdapter | null = null;
 const IPC_ASSISTANT_TURN_EVENT_CHANNEL = 'foliole:assistant-turn-event';
-const ASSISTANT_WIDGETS_DIRNAME = 'Widgets';
-const ASSISTANT_WORKDIR_DIRNAME = 'Foliole Aide';
-
-function getAdapter() {
-  const scriptRoot = resolveAssistantAgentControlScriptRoot();
-  const packagedCommand = resolvePackagedMacosCodexCommand();
-  adapter ??= new CodexAppServerAdapter({
-    appVersion: resolveFolioleAppVersion(app),
-    ...(packagedCommand ? { command: packagedCommand } : {}),
-    env: resolveAssistantEnvironment(scriptRoot),
-    openExternal: (url) => shell.openExternal(url),
-    launcherCwd: resolveAssistantLauncherCwd(app.getPath('userData'), process.env),
-    trustConfiguredCommand: packagedCommand !== undefined
-  });
-  return adapter;
-}
-
-function resolvePackagedMacosCodexCommand() {
-  return app.isPackaged && process.platform === 'darwin'
-    ? path.join(process.resourcesPath, '..', 'MacOS', 'codex')
-    : undefined;
-}
-
-function resolveAssistantEnvironment(scriptRoot: string) {
-  const env = resolveAssistantLauncherEnv(process.env, scriptRoot);
-  if (app.isPackaged && process.platform === 'darwin') {
-    env.CODEX_HOME = path.join(app.getPath('userData'), 'Codex');
-  }
-  return env;
-}
-
-function resolveAssistantAgentControlScriptRoot() {
-  if (app.isPackaged) return process.resourcesPath;
-  return typeof app.getAppPath === 'function' ? app.getAppPath() : process.cwd();
-}
-
-export function resolveAssistantLauncherCwd(userDataPath: string, env: NodeJS.ProcessEnv) {
-  const libraryHome = env.FOLIOLE_LIBRARY_HOME?.trim();
-  return path.join(libraryHome || userDataPath, ASSISTANT_WIDGETS_DIRNAME, ASSISTANT_WORKDIR_DIRNAME);
-}
+export { disposeAssistantCommandAdapter, resetAssistantCommandAdapterForTests };
 
 export async function handleAssistantCommand(
   command: string,
@@ -77,24 +43,28 @@ export async function handleAssistantCommand(
   sender?: WebContents
 ) {
   if (command === NATIVE_COMMANDS.assistantGetStatus) return getAssistantStatus();
-  if (command === NATIVE_COMMANDS.assistantStartChatGptLogin) return getAdapter().startChatGptLogin();
+  if (command === NATIVE_COMMANDS.assistantStartChatGptLogin) return startChatGptLogin();
   if (command === NATIVE_COMMANDS.assistantSendMessage) return sendMessage(args, sender);
   return handleAssistantLocalHistoryCommand(command, args);
 }
 
 async function getAssistantStatus() {
-  const status = await getAdapter().getStatus();
+  let status: NativeAssistantStatusResult;
+  try {
+    status = await getAssistantAdapter().getStatus();
+  } catch {
+    status = createAssistantStatus('unavailable', 'launch_failed');
+  }
   const agentControl = await loadAssistantAgentControlContext(resolveFolioleAppVersion(app));
   return mergeAssistantStatusWithAgentControl(status, agentControl);
 }
 
-export function resetAssistantCommandAdapterForTests() {
-  disposeAssistantCommandAdapter();
-}
-
-export function disposeAssistantCommandAdapter() {
-  adapter?.dispose();
-  adapter = null;
+async function startChatGptLogin() {
+  try {
+    return await getAssistantAdapter().startChatGptLogin();
+  } catch {
+    return createAssistantFailure('failed', 'launch_failed');
+  }
 }
 
 async function sendMessage(args: Record<string, unknown>, sender?: WebContents) {
@@ -125,7 +95,7 @@ async function sendMessage(args: Record<string, unknown>, sender?: WebContents) 
   }
   const result = await sendAssistantTurn({
     agentControl,
-    adapter: getAdapter(),
+    adapter: getAssistantAdapter(),
     clientTurnId,
     continuation,
     message,

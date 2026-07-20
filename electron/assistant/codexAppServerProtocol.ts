@@ -23,9 +23,9 @@ export interface JsonRpcError extends JsonRpcRecord {
 
 export const CODEX_APP_SERVER_PROVIDER = 'codex-app-server' as const;
 
-export function createInitializeMessage(appVersion: string): JsonRpcMessage {
+export function createInitializeMessage(appVersion: string, id = 0): JsonRpcMessage {
   return {
-    id: 0,
+    id,
     method: 'initialize',
     params: {
       capabilities: { experimentalApi: true },

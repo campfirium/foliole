@@ -17,6 +17,7 @@ import {
   type JsonRpcMessage
 } from './codexAppServerProtocol.js';
 import type { SpawnedCodexProcess, TurnState } from './codexAppServerSessionTypes.js';
+import { CodexAppServerSkillsInitialization } from './codexAppServerSkills.js';
 import {
   handleThreadContinuationSequence,
   startContinuedTurn
@@ -35,19 +36,23 @@ export class CodexAppServerSession {
   private child: SpawnedCodexProcess | null = null;
   private initialized: Promise<void> | null = null;
   private initializedReject: ((error: Error & { category?: NativeAssistantFailureCategory }) => void) | null = null;
-  private initializeId = 0;
   private initializedResolve: (() => void) | null = null;
   private nextId = 1;
   private rl: readline.Interface | null = null;
   private readonly diagnostics = new CodexAppServerTurnDiagnostics();
+  private readonly skillsInitialization: CodexAppServerSkillsInitialization;
   constructor(
     private readonly args: {
       appVersion: string;
+      developerInstructions: string;
       executeDynamicTool: (request: FolioleDynamicToolRequest) => Promise<DynamicToolCallResult>;
       launcherCwd: string;
+      skillRoots: readonly string[];
       spawn: () => SpawnedCodexProcess;
     }
-  ) {}
+  ) {
+    this.skillsInitialization = new CodexAppServerSkillsInitialization(args.skillRoots);
+  }
   async sendMessage(args: SendMessageArgs): Promise<NativeAssistantSendMessageResult> {
     if (this.activeTurn) return sendFailure('busy', 'busy');
     const initializeTimeout = setTimeout(() => this.failActiveTurn('timeout', true), args.timeoutMs);
@@ -67,6 +72,7 @@ export class CodexAppServerSession {
       this.write(createAideThreadRequest(
         threadRequestId,
         this.args.launcherCwd,
+        this.args.developerInstructions,
         args.providerThreadId,
         this.activeTurn.dynamicToolCapabilities
       ));
@@ -101,17 +107,14 @@ export class CodexAppServerSession {
     this.initialized = new Promise((resolve, reject) => {
       this.initializedResolve = resolve;
       this.initializedReject = reject;
-      this.write(createInitializeMessage(this.args.appVersion));
+      this.write(createInitializeMessage(this.args.appVersion, this.skillsInitialization.initializeId));
     });
     return this.initialized;
   }
   private handleLine(line: string) {
     const parsed = parseMessage(line);
-    if (!parsed.ok) {
-      this.failActiveTurn('protocol_error', true);
-      return;
-    }
-    this.handleMessage(parsed.message);
+    if (parsed.ok) this.handleMessage(parsed.message);
+    else this.failActiveTurn('protocol_error', true);
   }
   private handleMessage(message: JsonRpcMessage) {
     if (message.error) {
@@ -119,13 +122,12 @@ export class CodexAppServerSession {
       this.failActiveTurn(mapJsonRpcError(message.error), true);
       return;
     }
-    if (message.id === this.initializeId && !message.method && this.initializedResolve) {
-      this.write({ method: 'initialized', params: {} });
-      this.initializedResolve?.();
-      this.initializedResolve = null;
-      this.initializedReject = null;
-      return;
-    }
+    if (this.initializedResolve && this.skillsInitialization.handle({
+      allocateRequestId: () => this.nextId++,
+      message,
+      resolve: () => this.resolveInitialization(),
+      write: (response) => this.write(response)
+    })) return;
     const turn = this.activeTurn;
     if (!turn) return;
     refreshTurnIdleTimeout(turn, () => this.failActiveTurn('timeout', true));
@@ -205,6 +207,11 @@ export class CodexAppServerSession {
     child?.removeAllListeners?.();
     if (kill) child?.kill();
   }
+  private resolveInitialization() {
+    this.initializedResolve?.();
+    this.initializedResolve = null;
+    this.initializedReject = null;
+  }
   private write(message: JsonRpcMessage) {
     try {
       this.child?.stdin.write(`${JSON.stringify(message)}\n`);
@@ -212,5 +219,4 @@ export class CodexAppServerSession {
       this.failActiveTurn('protocol_error', true);
     }
   }
-
 }

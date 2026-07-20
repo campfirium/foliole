@@ -9,9 +9,9 @@ import type {
 
 import {
   loginCodexWithChatGpt,
-  readCodexAccountState,
-  type CodexAccountState
+  readCodexAccountState
 } from './codexAppServerAccount.js';
+import type { CodexAppServerAdapterOptions } from './codexAppServerAdapterOptions.js';
 import {
   categorizedError,
   createAssistantFailure,
@@ -27,48 +27,19 @@ import {
   spawnCodexCommand,
   type CodexLauncherOptions
 } from './codexAppServerCommandDiscovery.js';
-import {
-  executeFolioleDynamicTool,
-  type FolioleDynamicToolRequest
-} from './codexAppServerDynamicTools.js';
+import { executeFolioleDynamicTool } from './codexAppServerDynamicTools.js';
 import type { SpawnedCodexProcess } from './codexAppServerSessionTypes.js';
 import type { AssistantContinuationMessage } from './codexAppServerThreadHistory.js';
 import { CodexAppServerSession } from './codexAppServerTurn.js';
 
 const DEFAULT_TIMEOUT_MS = 180_000;
 
-export interface CodexAppServerAdapterOptions {
-  appVersion: string;
-  command?: string;
-  findCommandCandidates?: (env: NodeJS.ProcessEnv) => Promise<string[]>;
-  env?: NodeJS.ProcessEnv;
-  executeDynamicTool?: (request: FolioleDynamicToolRequest) => ReturnType<typeof executeFolioleDynamicTool>;
-  launcherCwd: string;
-  loginWithChatGpt?: (options: {
-    appVersion: string;
-    openExternal: (url: string) => Promise<unknown>;
-    spawn: () => SpawnedCodexProcess;
-  }) => Promise<void>;
-  mkdirSync?: (path: string, options: { recursive: true }) => void;
-  probeCommand?: (command: string, options: CodexLauncherOptions) => Promise<boolean>;
-  openExternal?: (url: string) => Promise<unknown>;
-  readAccountState?: (options: {
-    appVersion: string;
-    spawn: () => SpawnedCodexProcess;
-  }) => Promise<CodexAccountState>;
-  spawnCommand?: (
-    command: string,
-    args: string[],
-    options: CodexLauncherOptions
-  ) => SpawnedCodexProcess;
-  timeoutMs?: number;
-  trustConfiguredCommand?: boolean;
-}
-
 export class CodexAppServerAdapter {
   private active = false;
   private readonly appVersion: string;
   private readonly configuredCommand: string | undefined;
+  private readonly commandDiscoveryEnv: NodeJS.ProcessEnv;
+  private readonly developerInstructions: string;
   private readonly env: NodeJS.ProcessEnv;
   private readonly executeDynamicTool: NonNullable<CodexAppServerAdapterOptions['executeDynamicTool']>;
   private readonly findCommandCandidates: (env: NodeJS.ProcessEnv) => Promise<string[]>;
@@ -88,12 +59,15 @@ export class CodexAppServerAdapter {
     args: string[],
     options: CodexLauncherOptions
   ) => SpawnedCodexProcess;
+  private readonly skillRoots: readonly string[];
   private readonly timeoutMs: number;
   private readonly trustConfiguredCommand: boolean;
 
   constructor(options: CodexAppServerAdapterOptions) {
     this.appVersion = options.appVersion;
     this.configuredCommand = options.command;
+    this.commandDiscoveryEnv = options.commandDiscoveryEnv ?? options.env ?? process.env;
+    this.developerInstructions = options.developerInstructions ?? '';
     this.env = options.env ?? process.env;
     this.executeDynamicTool = options.executeDynamicTool ?? executeFolioleDynamicTool;
     this.findCommandCandidates = options.findCommandCandidates ?? findCodexCommandCandidates;
@@ -106,6 +80,7 @@ export class CodexAppServerAdapter {
     });
     this.readAccountState = options.readAccountState ?? readCodexAccountState;
     this.spawnCommand = options.spawnCommand ?? spawnCodexCommand;
+    this.skillRoots = options.skillRoots ?? [];
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     this.trustConfiguredCommand = options.trustConfiguredCommand === true;
   }
@@ -169,8 +144,10 @@ export class CodexAppServerAdapter {
       if (!command) return createAssistantFailure('failed', 'not_configured');
       this.session ??= new CodexAppServerSession({
         appVersion: this.appVersion,
+        developerInstructions: this.developerInstructions,
         executeDynamicTool: this.executeDynamicTool,
         launcherCwd: this.launcherCwd,
+        skillRoots: this.skillRoots,
         spawn: () => this.spawnCommand(command, CODEX_APP_SERVER_ARGS, this.createLauncherOptions())
       });
       return await this.session.sendMessage({
@@ -219,7 +196,7 @@ export class CodexAppServerAdapter {
     }
     const candidates = this.configuredCommand
       ? [this.configuredCommand]
-      : await this.findCommandCandidates(this.env);
+      : await this.findCommandCandidates(this.commandDiscoveryEnv);
     for (const command of candidates) {
       if (!await this.probeCommand(command, options)) continue;
       this.resolvedCommand = command;

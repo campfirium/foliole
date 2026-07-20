@@ -10,6 +10,8 @@ import type { JsonRpcMessage } from './codexAppServerProtocol.js';
 
 it('starts a plain app-server and sends product-level Foliole guidance', async () => {
   const process = new FakeCodexProcess();
+  const capturedThreadRequests: JsonRpcMessage[] = [];
+  const capturedSkillRootRequests: JsonRpcMessage[] = [];
   const capturedTurnInputs: string[] = [];
   const capturedTurnRequests: JsonRpcMessage[] = [];
   const spawnCommand = vi.fn(() => process);
@@ -17,15 +19,24 @@ it('starts a plain app-server and sends product-level Foliole guidance', async (
   const adapter = new CodexAppServerAdapter({
     appVersion: '0.6.5-test',
     command: 'codex',
-    launcherCwd: 'C:\\Foliole\\Widgets\\Foliole Aide',
+    developerInstructions: '# Foliole Aide\n\nUse Foliole tools.',
+    launcherCwd: 'C:\\Users\\Tester\\AppData\\Roaming\\Foliole\\Aide\\Workspace',
     mkdirSync: testMkdirSync,
     probeCommand: async () => true,
     spawnCommand,
+    skillRoots: ['D:\\Library\\Widgets\\Foliole Aide\\Skills'],
     timeoutMs: 1_000
   });
   process.stdin.on('data', (chunk) => {
     for (const line of String(chunk).trim().split('\n')) {
-      if (line) handleAppServerRequest(process, JSON.parse(line), capturedTurnInputs, capturedTurnRequests);
+      if (line) handleAppServerRequest(
+        process,
+        JSON.parse(line),
+        capturedThreadRequests,
+        capturedSkillRootRequests,
+        capturedTurnInputs,
+        capturedTurnRequests
+      );
     }
   });
 
@@ -35,26 +46,42 @@ it('starts a plain app-server and sends product-level Foliole guidance', async (
     workspaceContext
   });
 
-  expect(spawnCommand).toHaveBeenCalledWith(
-    'codex',
-    ['app-server', '--disable', 'code_mode', '--disable', 'shell_tool', '--disable', 'unified_exec'],
-    expect.objectContaining({ cwd: 'C:\\Foliole\\Widgets\\Foliole Aide' })
-  );
+  expectConfiguredLaunch(spawnCommand);
   expect(result).toMatchObject({ message: { text: 'Ready', threadId: 'thread-1' }, state: 'ready' });
+  expectManagedSkillRoot(capturedSkillRootRequests[0]);
   expect(capturedTurnInputs).toHaveLength(1);
   expect(capturedTurnInputs[0]).toContain('read a Topic or Folder');
   expect(capturedTurnInputs[0]).not.toContain('update a Topic');
   expect(capturedTurnInputs[0]).not.toContain('MCP');
   expect(capturedTurnInputs[0]).not.toContain('FOLIOLE_AGENT_DESCRIPTOR');
+  expect(capturedThreadRequests[0]?.params).toMatchObject({
+    cwd: 'C:\\Users\\Tester\\AppData\\Roaming\\Foliole\\Aide\\Workspace',
+    developerInstructions: '# Foliole Aide\n\nUse Foliole tools.'
+  });
   expect(capturedTurnRequests[0]?.params).toMatchObject({
     approvalPolicy: 'never',
-    cwd: 'C:\\Foliole\\Widgets\\Foliole Aide',
+    cwd: 'C:\\Users\\Tester\\AppData\\Roaming\\Foliole\\Aide\\Workspace',
     sandboxPolicy: {
       networkAccess: 'restricted',
       type: 'externalSandbox'
     }
   });
 });
+
+function expectConfiguredLaunch(spawnCommand: ReturnType<typeof vi.fn>) {
+  expect(spawnCommand).toHaveBeenCalledWith(
+    'codex',
+    ['app-server', '--disable', 'code_mode', '--disable', 'shell_tool', '--disable', 'unified_exec'],
+    expect.objectContaining({ cwd: 'C:\\Users\\Tester\\AppData\\Roaming\\Foliole\\Aide\\Workspace' })
+  );
+}
+
+function expectManagedSkillRoot(request: JsonRpcMessage | undefined) {
+  expect(request).toMatchObject({
+    method: 'skills/extraRoots/set',
+    params: { extraRoots: ['D:\\Library\\Widgets\\Foliole Aide\\Skills'] }
+  });
+}
 
 function createAgentControlWorkspaceContext(): NativeAssistantWorkspaceContext {
   return {
@@ -63,7 +90,6 @@ function createAgentControlWorkspaceContext(): NativeAssistantWorkspaceContext {
         'materials.read',
         'materials.search',
         'materials.listChildren',
-        'materials.update',
         'virtualFolders.list',
         'virtualFolders.read'
       ],
@@ -77,6 +103,8 @@ function createAgentControlWorkspaceContext(): NativeAssistantWorkspaceContext {
 function handleAppServerRequest(
   process: FakeCodexProcess,
   message: JsonRpcMessage,
+  capturedThreadRequests: JsonRpcMessage[],
+  capturedSkillRootRequests: JsonRpcMessage[],
   capturedTurnInputs: string[],
   capturedTurnRequests: JsonRpcMessage[]
 ) {
@@ -84,7 +112,13 @@ function handleAppServerRequest(
     writeMessage(process, { id: 0, result: {} });
     return;
   }
+  if (message.method === 'skills/extraRoots/set') {
+    capturedSkillRootRequests.push(message);
+    writeMessage(process, { id: message.id, result: {} });
+    return;
+  }
   if (message.method === 'thread/start') {
+    capturedThreadRequests.push(message);
     writeMessage(process, { id: message.id, result: { thread: { id: 'thread-1' } } });
     return;
   }
