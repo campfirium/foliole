@@ -90,12 +90,46 @@ describe('companion content blob sync split bridge', () => {
       batch_token: 'failed-content-batch-token'
     });
   });
+});
+
+describe('iOS companion content blob sync bridge', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capacitorMock.isNative.mockReturnValue(true);
+    capacitorMock.platform.mockReturnValue('ios');
+  });
 
   it('routes iOS missing-body queries through the same native contract', async () => {
-    capacitorMock.platform.mockReturnValue('ios');
     const api = await import('./companionContentBlobSync');
 
     await expect(api.loadCompanionMissingContentBlobHashes(3)).resolves.toEqual(['a'.repeat(64)]);
     expect(capacitorMock.plugin.loadMissingContentBlobHashes).toHaveBeenCalledWith({ limit: 3 });
+  });
+
+  it('downloads and commits content bodies through the iOS native contract', async () => {
+    const api = await import('./companionContentBlobSync');
+    const body = JSON.stringify({ hashes: ['a'.repeat(64)] });
+
+    await expect(api.syncCompanionContentBlobs({
+      body,
+      headers: { 'X-Device-Id': 'ios-test-device' },
+      url: 'http://desktop/companion/content-blobs'
+    })).resolves.toEqual({
+      db_elapsed_ms: 2,
+      http_elapsed_ms: 3,
+      parse_elapsed_ms: 1,
+      synced_hashes: ['a'.repeat(64)],
+      total_elapsed_ms: undefined
+    });
+
+    expect(capacitorMock.plugin.downloadContentBlobBatch).toHaveBeenCalledWith({
+      body,
+      headers: { 'X-Device-Id': 'ios-test-device' },
+      url: 'http://desktop/companion/content-blobs'
+    });
+    expect(writerQueueMock.run).toHaveBeenCalledTimes(1);
+    expect(capacitorMock.plugin.commitContentBlobBatch).toHaveBeenCalledWith({
+      batch_token: 'content-batch-token'
+    });
   });
 });
