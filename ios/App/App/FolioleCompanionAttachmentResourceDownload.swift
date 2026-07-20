@@ -49,9 +49,7 @@ enum FolioleCompanionAttachmentResourceDownloader {
         urlRequest.httpMethod = "GET"
         urlRequest.timeoutInterval = 60
         request.headers.forEach { urlRequest.setValue($0.value, forHTTPHeaderField: $0.key) }
-        let configuration = URLSessionConfiguration.ephemeral
-        configuration.waitsForConnectivity = true
-        let (sourceURL, response) = try await URLSession(configuration: configuration).download(for: urlRequest)
+        let (sourceURL, response) = try await FolioleCompanionDesktopHttpTransport.download(for: urlRequest)
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
             throw invalid("Desktop attachment response failed.")
         }

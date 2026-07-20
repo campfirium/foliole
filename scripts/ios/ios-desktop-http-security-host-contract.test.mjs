@@ -9,14 +9,24 @@ import { describe, expect, it } from 'vitest';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 describe('iOS desktop HTTP security host contract', () => {
-  it('routes every signed native data request through the redirect blocker', () => {
-    const source = fs.readFileSync(
-      path.join(root, 'ios/App/App/FolioleCompanionDesktopHttpClient.swift'),
-      'utf8'
-    );
+  const readAppSource = (name) => fs.readFileSync(path.join(root, 'ios/App/App', name), 'utf8');
 
-    expect(source.match(/dataWithoutRedirects\(for: request\)/g)).toHaveLength(2);
-    expect(source).toContain('session.data(for: request, delegate: FolioleCompanionRedirectBlocker())');
-    expect(source).toMatch(/willPerformHTTPRedirection[\s\S]*completionHandler\(nil\)/);
+  it('routes every native desktop request through the redirect blocker', () => {
+    const client = readAppSource('FolioleCompanionDesktopHttpClient.swift');
+    const attachments = readAppSource('FolioleCompanionAttachmentResourceDownload.swift');
+    const syncPack = readAppSource('FolioleCompanionSyncPackTransfer.swift');
+
+    expect(client.match(/FolioleCompanionDesktopHttpTransport\.data\(for: request\)/g)).toHaveLength(2);
+    expect(attachments).toContain('FolioleCompanionDesktopHttpTransport.download(for: urlRequest)');
+    expect(syncPack).toContain('FolioleCompanionDesktopHttpTransport.download(for: request)');
+    expect(client).toContain('session.data(for: request, delegate: FolioleCompanionRedirectBlocker())');
+    expect(client).toContain('session.download(for: request, delegate: FolioleCompanionRedirectBlocker())');
+    expect(client).toMatch(/willPerformHTTPRedirection[\s\S]*completionHandler\(nil\)/);
+    expect(client).not.toContain('finishTasksAndInvalidate()');
+  });
+
+  it('keeps sync-pack transfer on HTTP or HTTPS', () => {
+    const syncPack = readAppSource('FolioleCompanionSyncPackTransfer.swift');
+    expect(syncPack).toContain('["http", "https"].contains(endpoint.scheme?.lowercased() ?? "")');
   });
 });

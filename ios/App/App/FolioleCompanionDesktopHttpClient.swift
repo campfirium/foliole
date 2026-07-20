@@ -12,6 +12,22 @@ final class FolioleCompanionRedirectBlocker: NSObject, URLSessionTaskDelegate {
     }
 }
 
+enum FolioleCompanionDesktopHttpTransport {
+    private static let session: URLSession = {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.waitsForConnectivity = true
+        return URLSession(configuration: configuration)
+    }()
+
+    static func data(for request: URLRequest) async throws -> (Data, URLResponse) {
+        return try await session.data(for: request, delegate: FolioleCompanionRedirectBlocker())
+    }
+
+    static func download(for request: URLRequest) async throws -> (URL, URLResponse) {
+        return try await session.download(for: request, delegate: FolioleCompanionRedirectBlocker())
+    }
+}
+
 struct FolioleCompanionContentBlobPart {
     let data: Data
     let hash: String
@@ -33,7 +49,7 @@ enum FolioleCompanionDesktopHttpClient {
         request.timeoutInterval = 30
         headers.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
         if let body { request.httpBody = Data(body.utf8) }
-        let (data, response) = try await dataWithoutRedirects(for: request)
+        let (data, response) = try await FolioleCompanionDesktopHttpTransport.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw invalid("Desktop response was not HTTP.") }
         return [
             try key("body", in: contract.networkResponseKeys): String(decoding: data, as: UTF8.self),
@@ -55,7 +71,7 @@ enum FolioleCompanionDesktopHttpClient {
         request.timeoutInterval = 30
         request.httpBody = Data(body.utf8)
         headers.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
-        let (data, response) = try await dataWithoutRedirects(for: request)
+        let (data, response) = try await FolioleCompanionDesktopHttpTransport.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw invalid("Desktop response was not HTTP.") }
         guard (200..<300).contains(http.statusCode) else { throw invalid("Desktop returned \(http.statusCode).") }
         guard let contentType = http.value(forHTTPHeaderField: "Content-Type") else {
@@ -121,14 +137,6 @@ enum FolioleCompanionDesktopHttpClient {
 
     private static func requirePrefix(_ prefix: Data, in data: Data, at offset: Int) throws {
         guard data.hasPrefix(prefix, at: offset) else { throw invalid("Desktop content body batch response is invalid.") }
-    }
-
-    private static func dataWithoutRedirects(for request: URLRequest) async throws -> (Data, URLResponse) {
-        let configuration = URLSessionConfiguration.ephemeral
-        configuration.waitsForConnectivity = true
-        let session = URLSession(configuration: configuration)
-        defer { session.finishTasksAndInvalidate() }
-        return try await session.data(for: request, delegate: FolioleCompanionRedirectBlocker())
     }
 
     private static func key(_ name: String, in values: [String: String]) throws -> String {

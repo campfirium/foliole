@@ -2,12 +2,15 @@ import Foundation
 
 enum FolioleCompanionSyncPackTransfer {
     static func downloadDesktopSyncPack(url: String, headers: [String: String]) async throws -> URL {
-        guard let endpoint = URL(string: url) else { throw error("Invalid sync pack URL.") }
+        guard let endpoint = URL(string: url),
+              ["http", "https"].contains(endpoint.scheme?.lowercased() ?? "") else {
+            throw error("Invalid sync pack URL.")
+        }
         var request = URLRequest(url: endpoint)
         request.httpMethod = "GET"
         headers.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
 
-        let (temporaryURL, response) = try await URLSession.shared.download(for: request)
+        let (temporaryURL, response) = try await FolioleCompanionDesktopHttpTransport.download(for: request)
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             throw error("Sync pack download returned an invalid HTTP status.")
         }
