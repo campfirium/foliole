@@ -6,6 +6,7 @@ import {
   connectFoliolePublishSettingsToRuntime,
   disconnectFoliolePublishSettingsFromRuntime,
   loadFoliolePublishSettingsFromRuntime,
+  previewFoliolePublishSiteFromRuntime,
   updateFoliolePublishSiteAddressInRuntime
 } from '../../../../shared/platform/foliolePublishRepository';
 import { requestAppConfirmation } from '../../../../shared/ui';
@@ -16,7 +17,7 @@ export interface FoliolePublishingForm {
   customDomain: string;
   projectName: string;
 }
-type Status = 'connecting' | 'disconnecting' | 'idle' | 'loading' | 'updating';
+type Status = 'connecting' | 'disconnecting' | 'idle' | 'loading' | 'previewing' | 'updating';
 const EMPTY: FoliolePublishingForm = { accountId: '', apiToken: '', customDomain: '', projectName: '' };
 
 function customDomain(settings: NativeFoliolePublishSettings) {
@@ -111,6 +112,12 @@ function useConnectionActions(state: LoadedState) {
 }
 
 function siteActions(state: LoadedState) {
+  const preview = async () => {
+    state.setStatus('previewing'); state.setError(null);
+    try { await previewFoliolePublishSiteFromRuntime(); }
+    catch { state.setError("Couldn't open the local preview."); }
+    finally { state.setStatus('idle'); }
+  };
   const updateSiteAddress = async () => {
     state.setStatus('updating'); state.setError(null);
     try { applySettings(state, await updateFoliolePublishSiteAddressInRuntime(state.form.customDomain.trim())); }
@@ -120,7 +127,7 @@ function siteActions(state: LoadedState) {
     }
     finally { state.setStatus('idle'); }
   };
-  return { updateSiteAddress: () => void updateSiteAddress() };
+  return { preview: () => void preview(), updateSiteAddress: () => void updateSiteAddress() };
 }
 
 export function useFoliolePublishingSettings() {

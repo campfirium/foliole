@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-import { connectFoliolePublishSettings, disconnectFoliolePublishSettings, previewFoliolePublish, publishTopicToFoliole, updateFoliolePublishSiteAddress } from './foliolePublish.js';
+import { connectFoliolePublishSettings, disconnectFoliolePublishSettings, previewFoliolePublish, previewFoliolePublishSite, publishTopicToFoliole, updateFoliolePublishSiteAddress } from './foliolePublish.js';
 import { emptyPublishIndex } from './foliolePublishModel.js';
 import { generateFoliolePublishSite } from './foliolePublishSite.js';
 
@@ -154,6 +154,15 @@ it('opens only the managed Publish Preview entry without changing the active Sit
   expect(mocks.shellOpenPath).toHaveBeenCalledWith(result.local_path);
   expect(activeRss()).toBe(before);
   expect(fs.readFileSync(result.local_path, 'utf8')).toContain('essays');
+});
+
+it('opens the complete stored site preview without requiring a selected Topic', async () => {
+  const before = activeRss();
+  const result = await previewFoliolePublishSite();
+  expect(result.local_path).toBe(path.join(state.libraryHome, 'Publish', 'Preview', 'index.html'));
+  expect(mocks.shellOpenPath).toHaveBeenCalledWith(result.local_path);
+  expect(activeRss()).toBe(before);
+  expect(fs.readFileSync(result.local_path, 'utf8')).toContain('This is Foliole Publish');
 });
 
 it('returns the binding after remote success when the local publish transaction rolls back', async () => {

@@ -113,6 +113,18 @@ export async function previewFoliolePublish(args: NativeFoliolePublishTopicArgs)
   return { local_path: localPath, status: 'previewed', updated_content: null, url: null } as const;
 }
 
+export async function previewFoliolePublishSite() {
+  fs.mkdirSync(root(), { recursive: true });
+  const settings = loadFoliolePublishSettings();
+  const staged = stageFoliolePublishSite(root(), readPublishIndex(root()), settings.site_address);
+  const activation = activateFoliolePublishSite(root(), staged, 'Preview');
+  activation.commit();
+  const localPath = activation.activePath;
+  const error = await shell.openPath(localPath);
+  if (error) throw new Error(error);
+  return { local_path: localPath, status: 'previewed', updated_content: null, url: null } as const;
+}
+
 export async function publishTopicToFoliole(args: NativeFoliolePublishTopicArgs) {
   assertPublishableContent(args.content);
   const settings = loadStoredFoliolePublishSettings();

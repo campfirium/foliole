@@ -113,6 +113,10 @@ async function verifyFolioleSetupSteps(
   await expect(foliole.getByRole('button', { name: /^(API Token request page ↗|API Token 申请页面 ↗)$/ })).toBeVisible();
   await expect(foliole.getByRole('button', { name: /^(Deploy|部署)$/ })).toBeDisabled();
   await expect(foliole.getByRole('button', { name: /^(Preview|预览)$/ })).toBeVisible();
+  await foliole.getByText(/^(Local preview|本地预览)$/).scrollIntoViewIfNeeded();
+  const previewScreenshot = await desktopWindow.screenshot();
+  await writeFile(path.join(screenshotDir, 'foliole-publish-local-preview-hidden-native.png'), previewScreenshot);
+  await testInfo.attach('foliole-publish-local-preview', { body: previewScreenshot, contentType: 'image/png' });
   await expect(foliole.getByText(/^(Custom domain \(optional\)|使用自定义域名（可选）)$/)).toBeVisible();
   await expect(foliole.getByText(/^(Security notice: Foliole does not operate or authorize foliole\.pages\.dev\.|安全提示：Foliole 未运营或授权 foliole\.pages\.dev。)$/)).toBeVisible();
   await accountId.evaluate((element) => element.scrollIntoView({ block: 'center' }));

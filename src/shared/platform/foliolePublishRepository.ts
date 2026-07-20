@@ -30,6 +30,10 @@ export function previewFoliolePublishFromRuntime(args: NativeFoliolePublishTopic
   return requireRuntime()(NATIVE_COMMANDS.previewFoliolePublish, args);
 }
 
+export function previewFoliolePublishSiteFromRuntime() {
+  return requireRuntime()(NATIVE_COMMANDS.previewFoliolePublishSite);
+}
+
 export function publishTopicToFoliole(args: NativeFoliolePublishTopicArgs) {
   return requireRuntime()(NATIVE_COMMANDS.publishTopicToFoliole, args);
 }

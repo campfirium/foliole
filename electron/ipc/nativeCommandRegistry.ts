@@ -98,6 +98,7 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.resetFoliolePublishFieldHistory, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.openFoliolePublishTheme, route: 'storage', capability: 'filesystemOpen' },
   { command: NATIVE_COMMANDS.resetFoliolePublishTheme, route: 'storage', capability: 'filesystemWrite' },
+  { command: NATIVE_COMMANDS.previewFoliolePublishSite, route: 'storage', capability: 'filesystemOpen' },
   { command: NATIVE_COMMANDS.previewFoliolePublish, route: 'storage', capability: 'filesystemOpen' },
   { command: NATIVE_COMMANDS.publishTopicToFoliole, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.loadDiscoursePublishSettings, route: 'storage', capability: 'read' },

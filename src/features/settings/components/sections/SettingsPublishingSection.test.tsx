@@ -23,7 +23,7 @@ const folioleRepositoryMocks = vi.hoisted(() => ({
   connectFoliolePublishSettingsToRuntime: vi.fn(),
   disconnectFoliolePublishSettingsFromRuntime: vi.fn(),
   loadFoliolePublishSettingsFromRuntime: vi.fn(),
-  previewFoliolePublishFromRuntime: vi.fn(),
+  previewFoliolePublishSiteFromRuntime: vi.fn(),
   updateFoliolePublishSiteAddressInRuntime: vi.fn()
 }));
 
@@ -73,7 +73,7 @@ beforeEach(() => {
   folioleRepositoryMocks.loadFoliolePublishSettingsFromRuntime.mockResolvedValue({
     account_id: '', has_credentials: false, pages_url: '', project_name: '', site_address: '', updated_at: null
   });
-  folioleRepositoryMocks.previewFoliolePublishFromRuntime.mockResolvedValue({ local_path: '/Publish/Site/index.html', url: null });
+  folioleRepositoryMocks.previewFoliolePublishSiteFromRuntime.mockResolvedValue({ local_path: '/Publish/Preview/index.html', url: null });
   folioleRepositoryMocks.connectFoliolePublishSettingsToRuntime.mockResolvedValue({
     settings: {
       account_id: 'account', has_credentials: true, pages_url: 'https://my-notes.pages.dev',
@@ -98,6 +98,14 @@ it('starts collapsed and restores independent disclosure state after remounting'
   first.unmount();
   renderWithLocalization(<SettingsPublishingSection />);
   expect(screen.getByRole('button', { name: 'WordPress' })).toHaveAttribute('aria-expanded', 'true');
+});
+
+it('opens the complete local site preview from the visible Publish settings row', async () => {
+  renderWithLocalization(<SettingsPublishingSection />);
+  fireEvent.click(screen.getByRole('button', { name: 'Publish to the web' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Preview' }));
+
+  await waitFor(() => expect(folioleRepositoryMocks.previewFoliolePublishSiteFromRuntime).toHaveBeenCalledOnce());
 });
 
 it('uses concise Publish copy and the standard settings input width', async () => {

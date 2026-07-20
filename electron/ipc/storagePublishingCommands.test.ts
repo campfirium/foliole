@@ -26,6 +26,7 @@ const folioleMocks = vi.hoisted(() => ({
   loadFoliolePublishSettings: vi.fn(),
   openFoliolePublishTheme: vi.fn(),
   previewFoliolePublish: vi.fn(),
+  previewFoliolePublishSite: vi.fn(),
   publishTopicToFoliole: vi.fn(),
   resetFoliolePublishFieldHistory: vi.fn(),
   resetFoliolePublishTheme: vi.fn(),
@@ -81,6 +82,12 @@ it('routes Web Publish field history and theme actions through narrow commands',
   expect(folioleMocks.resetFoliolePublishFieldHistory).toHaveBeenCalledOnce();
   expect(folioleMocks.openFoliolePublishTheme).toHaveBeenCalledOnce();
   expect(folioleMocks.resetFoliolePublishTheme).toHaveBeenCalledOnce();
+});
+
+it('routes the site preview without Topic payload data', async () => {
+  await handlePublishingStorageCommand(NATIVE_COMMANDS.previewFoliolePublishSite, {});
+  expect(folioleMocks.previewFoliolePublishSite).toHaveBeenCalledOnce();
+  expect(folioleMocks.previewFoliolePublish).not.toHaveBeenCalled();
 });
 
 it('forwards nested WordPress connection settings only to the main-process connector', async () => {

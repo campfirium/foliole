@@ -87,6 +87,7 @@ export const NATIVE_COMMANDS = {
   resetFoliolePublishFieldHistory: 'reset_foliole_publish_field_history',
   openFoliolePublishTheme: 'open_foliole_publish_theme',
   resetFoliolePublishTheme: 'reset_foliole_publish_theme',
+  previewFoliolePublishSite: 'preview_foliole_publish_site',
   previewFoliolePublish: 'preview_foliole_publish',
   publishTopicToFoliole: 'publish_topic_to_foliole',
   loadDiscoursePublishSettings: 'load_discourse_publish_settings',
