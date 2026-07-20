@@ -16,7 +16,6 @@ export interface FoliolePublishingForm {
   projectName: string;
 }
 type Status = 'connecting' | 'disconnecting' | 'idle' | 'loading' | 'previewing' | 'updating';
-type SetupStep = 'credentials' | 'site';
 const EMPTY: FoliolePublishingForm = { accountId: '', apiToken: '', customDomain: '', projectName: '' };
 
 function customDomain(settings: NativeFoliolePublishSettings) {
@@ -48,7 +47,6 @@ function useLoadedSettings() {
 
 export function useFoliolePublishingSettings() {
   const { error, form, setError, setForm, setSettings, setStatus, settings, status } = useLoadedSettings();
-  const [step, setStep] = useState<SetupStep>('credentials');
   const [projectConflict, setProjectConflict] = useState(false);
   const disabled = status !== 'idle';
   const connected = Boolean(settings?.has_credentials && settings.account_id && settings.project_name);
@@ -56,7 +54,7 @@ export function useFoliolePublishingSettings() {
     setError(null); setProjectConflict(false); setForm((value) => ({ ...value, ...patch }));
   };
   const applySettings = (value: NativeFoliolePublishSettings) => {
-    setSettings(value); setForm(formFromSettings(value)); setStep('credentials'); setProjectConflict(false);
+    setSettings(value); setForm(formFromSettings(value)); setProjectConflict(false);
   };
   const deploy = async (useExistingProject: boolean) => {
     setStatus('connecting'); setError(null);
@@ -71,7 +69,7 @@ export function useFoliolePublishingSettings() {
   };
   const disconnect = async () => {
     setStatus('disconnecting'); setError(null);
-    try { const value = await disconnectFoliolePublishSettingsFromRuntime(); setSettings(value); setForm(EMPTY); setStep('credentials'); }
+    try { const value = await disconnectFoliolePublishSettingsFromRuntime(); setSettings(value); setForm(EMPTY); }
     catch { setError("Couldn't disconnect Foliole Publish."); } finally { setStatus('idle'); }
   };
   const preview = async () => {
@@ -90,11 +88,11 @@ export function useFoliolePublishingSettings() {
   };
   const savedCustomDomain = settings ? customDomain(settings) : '';
   return {
-    canContinue: !disabled && Boolean(form.accountId.trim() && form.apiToken.trim()),
-    canDeploy: !disabled && Boolean(form.projectName.trim()),
+    canDeploy: !disabled && Boolean(form.accountId.trim() && form.apiToken.trim() && form.projectName.trim()),
     canUpdateAddress: connected && !disabled && form.customDomain.trim() !== savedCustomDomain,
-    connected, disabled, error, form, pagesUrl: settings?.pages_url ?? '', projectConflict, status, step,
-    back: () => setStep('credentials'), continue: () => setStep('site'), deploy: () => void deploy(false),
+    connected, disabled, error, form, pagesUrl: settings?.pages_url ?? '', projectConflict,
+    siteAddress: settings?.site_address ?? '', status,
+    deploy: () => void deploy(false),
     disconnect: () => void disconnect(), preview: () => void preview(), updateForm,
     updateSiteAddress: () => void updateSiteAddress(), useExistingProject: () => void deploy(true)
   };

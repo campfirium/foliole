@@ -30,20 +30,25 @@ beforeEach(() => {
   mocks.disconnectFoliolePublishSettingsFromRuntime.mockResolvedValue(EMPTY);
 });
 
-it('keeps credentials local while moving between the two setup steps', async () => {
+it('keeps every required Cloudflare value in one setup flow and deploys only on request', async () => {
   renderWithLocalization(<FoliolePublishingSettings expanded onExpandedChange={vi.fn()} />);
-  fireEvent.change(await screen.findByLabelText('Cloudflare Account ID'), { target: { value: 'account' } });
-  fireEvent.change(screen.getByLabelText('Cloudflare authorization result'), { target: { value: 'SENTINEL-TOKEN' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+  const deploy = await screen.findByRole('button', { name: 'Deploy' });
+  expect(screen.getByLabelText('Cloudflare API Token')).toBeVisible();
+  expect(screen.getByLabelText('Cloudflare Account ID')).toBeVisible();
+  expect(screen.getByLabelText('pages.dev subdomain')).toBeVisible();
+  expect(screen.getByText('Custom domain (optional)')).toBeVisible();
+  expect(deploy).toBeDisabled();
+
+  fireEvent.change(screen.getByLabelText('Cloudflare API Token'), { target: { value: 'SENTINEL-TOKEN' } });
+  fireEvent.change(screen.getByLabelText('Cloudflare Account ID'), { target: { value: 'account' } });
+  fireEvent.change(screen.getByLabelText('pages.dev subdomain'), { target: { value: 'my-site' } });
+  expect(deploy).toBeEnabled();
   expect(mocks.connectFoliolePublishSettingsToRuntime).not.toHaveBeenCalled();
-  expect(screen.getByLabelText('Free pages.dev site name')).toBeVisible();
-  fireEvent.click(screen.getByRole('button', { name: 'Back' }));
-  expect(screen.getByLabelText('Cloudflare authorization result')).toHaveValue('SENTINEL-TOKEN');
 });
 
 it('opens the Cloudflare page with Pages Edit permission preselected', async () => {
   renderWithLocalization(<FoliolePublishingSettings expanded onExpandedChange={vi.fn()} />);
-  fireEvent.click(await screen.findByRole('button', { name: 'Create access in Cloudflare' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'API Token request page ↗' }));
   expect(openExternalUrl).toHaveBeenCalledWith(
     'https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22page%22%2C%22type%22%3A%22edit%22%7D%5D&accountId=%2A&zoneId=all&name=Foliole%20Publish'
   );
@@ -54,11 +59,10 @@ it('requires explicit confirmation before using an existing Pages project', asyn
     .mockResolvedValueOnce({ project_name: 'my-site', status: 'project_exists' })
     .mockResolvedValueOnce({ settings: CONNECTED, status: 'connected' });
   renderWithLocalization(<FoliolePublishingSettings expanded onExpandedChange={vi.fn()} />);
+  fireEvent.change(await screen.findByLabelText('Cloudflare API Token'), { target: { value: 'SENTINEL-TOKEN' } });
   fireEvent.change(await screen.findByLabelText('Cloudflare Account ID'), { target: { value: 'account' } });
-  fireEvent.change(screen.getByLabelText('Cloudflare authorization result'), { target: { value: 'SENTINEL-TOKEN' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
-  fireEvent.change(screen.getByLabelText('Free pages.dev site name'), { target: { value: 'my-site' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Create and publish' }));
+  fireEvent.change(screen.getByLabelText('pages.dev subdomain'), { target: { value: 'my-site' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
   expect(await screen.findByText('That site address already exists.')).toBeVisible();
   expect(mocks.connectFoliolePublishSettingsToRuntime).toHaveBeenLastCalledWith({
     account_id: 'account', api_token: 'SENTINEL-TOKEN', project_name: 'my-site',
@@ -68,8 +72,8 @@ it('requires explicit confirmation before using an existing Pages project', asyn
   await waitFor(() => expect(mocks.connectFoliolePublishSettingsToRuntime).toHaveBeenLastCalledWith(expect.objectContaining({
     use_existing_project: true
   })));
-  expect(await screen.findByText('Ready to publish.')).toBeVisible();
-  expect(screen.queryByLabelText('Cloudflare authorization result')).not.toBeInTheDocument();
+  expect(await screen.findByText('https://my-site.pages.dev')).toBeVisible();
+  expect(screen.queryByLabelText('Cloudflare API Token')).not.toBeInTheDocument();
 });
 
 it('updates a manually configured custom domain through the dedicated command', async () => {
@@ -78,10 +82,11 @@ it('updates a manually configured custom domain through the dedicated command', 
     ...CONNECTED, site_address: 'https://notes.example.com'
   });
   renderWithLocalization(<FoliolePublishingSettings expanded onExpandedChange={vi.fn()} />);
-  fireEvent.change(await screen.findByLabelText('Foliole Publish custom domain'), {
+  expect(await screen.findByText('https://my-site.pages.dev')).toBeVisible();
+  fireEvent.change(screen.getByLabelText('Foliole Publish custom domain'), {
     target: { value: 'https://notes.example.com' }
   });
-  fireEvent.click(screen.getByRole('button', { name: 'Use this address' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
   await waitFor(() => expect(mocks.updateFoliolePublishSiteAddressInRuntime).toHaveBeenCalledWith('https://notes.example.com'));
   expect(screen.getByLabelText('Foliole Publish custom domain')).toHaveValue('https://notes.example.com');
 });
@@ -90,9 +95,10 @@ it('restores the saved address when a custom-domain update fails', async () => {
   mocks.loadFoliolePublishSettingsFromRuntime.mockResolvedValue(CONNECTED);
   mocks.updateFoliolePublishSiteAddressInRuntime.mockRejectedValue(new Error('Update failed.'));
   renderWithLocalization(<FoliolePublishingSettings expanded onExpandedChange={vi.fn()} />);
-  const domain = await screen.findByLabelText('Foliole Publish custom domain');
+  expect(await screen.findByText('https://my-site.pages.dev')).toBeVisible();
+  const domain = screen.getByLabelText('Foliole Publish custom domain');
   fireEvent.change(domain, { target: { value: 'https://notes.example.com' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Use this address' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
   expect(await screen.findByText('Update failed.')).toBeVisible();
   expect(domain).toHaveValue('');
   expect(screen.getByText('https://my-site.pages.dev')).toBeVisible();
@@ -103,10 +109,11 @@ it('can restore pages.dev and opens the Cloudflare custom-domain guide', async (
   mocks.loadFoliolePublishSettingsFromRuntime.mockResolvedValue(custom);
   mocks.updateFoliolePublishSiteAddressInRuntime.mockResolvedValue(CONNECTED);
   renderWithLocalization(<FoliolePublishingSettings expanded onExpandedChange={vi.fn()} />);
-  const domain = await screen.findByLabelText('Foliole Publish custom domain');
+  expect(await screen.findByText('https://notes.example.com')).toBeVisible();
+  const domain = screen.getByLabelText('Foliole Publish custom domain');
   fireEvent.change(domain, { target: { value: '' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Use pages.dev' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
   await waitFor(() => expect(mocks.updateFoliolePublishSiteAddressInRuntime).toHaveBeenCalledWith(''));
-  fireEvent.click(screen.getByRole('button', { name: 'Open setup guide' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Bind a domain in Cloudflare ↗' }));
   expect(openExternalUrl).toHaveBeenCalledWith('https://developers.cloudflare.com/pages/configuration/custom-domains/');
 });

@@ -59,7 +59,7 @@ async function verifyCollapsedOverview(
   desktopWindow: import('@playwright/test').Page,
   testInfo: import('@playwright/test').TestInfo
 ) {
-  await expect(regions.foliole.getByRole('button', { name: 'Foliole Publish' })).toHaveAttribute('aria-expanded', 'false');
+  await expect(regions.foliole.getByRole('button', { name: /^(Publish to the web|发布到 Web)$/ })).toHaveAttribute('aria-expanded', 'false');
   await expect(regions.wordpress.getByRole('button', { name: 'WordPress' })).toHaveAttribute('aria-expanded', 'false');
   await expect(regions.discourse.getByRole('button', { name: 'Discourse' })).toHaveAttribute('aria-expanded', 'false');
   await expect(regions.foliole.getByLabel(/^Cloudflare Account ID$/)).not.toBeVisible();
@@ -75,10 +75,12 @@ async function verifyCollapsedOverview(
 }
 
 async function expandPublishingSections(regions: PublishingRegions) {
-  const foliole = regions.foliole.getByRole('button', { name: 'Foliole Publish' });
+  const foliole = regions.foliole.getByRole('button', { name: /^(Publish to the web|发布到 Web)$/ });
   const wordpress = regions.wordpress.getByRole('button', { name: 'WordPress' });
   const discourse = regions.discourse.getByRole('button', { name: 'Discourse' });
-  await foliole.click();
+  const folioleBox = await foliole.boundingBox();
+  expect(folioleBox?.width ?? 0).toBeGreaterThan(600);
+  await foliole.click({ position: { x: (folioleBox?.width ?? 20) - 10, y: (folioleBox?.height ?? 20) / 2 } });
   await wordpress.click();
   await expect(foliole).toHaveAttribute('aria-expanded', 'true');
   await expect(wordpress).toHaveAttribute('aria-expanded', 'true');
@@ -103,12 +105,15 @@ async function verifyFolioleSetupSteps(
   testInfo: import('@playwright/test').TestInfo
 ) {
   const accountId = foliole.getByLabel(/^Cloudflare Account ID$/);
-  const token = foliole.getByLabel(/^(Cloudflare authorization result|Cloudflare 授权结果)$/);
+  const token = foliole.getByLabel(/^Cloudflare API Token$/);
+  const subdomain = foliole.getByLabel(/^(pages.dev subdomain|pages.dev 子域名)$/);
   await expect(accountId).toBeVisible();
   await expect(token).toBeVisible();
-  await expect(foliole.getByRole('button', { name: /^(Create access in Cloudflare|在 Cloudflare 创建授权)$/ })).toBeVisible();
-  await expect(foliole.getByRole('button', { name: /^(Continue|继续)$/ })).toBeDisabled();
-  await expect(foliole.getByLabel(/^(Free pages.dev site name|免费 pages.dev 站点名称)$/)).not.toBeVisible();
+  await expect(subdomain).toBeVisible();
+  await expect(foliole.getByRole('button', { name: /^(API Token request page ↗|API Token 申请页面 ↗)$/ })).toBeVisible();
+  await expect(foliole.getByRole('button', { name: /^(Deploy|部署)$/ })).toBeDisabled();
+  await expect(foliole.getByRole('button', { name: /^(Preview|预览)$/ })).toBeVisible();
+  await expect(foliole.getByText(/^(Custom domain \(optional\)|使用自定义域名（可选）)$/)).toBeVisible();
   await accountId.evaluate((element) => element.scrollIntoView({ block: 'center' }));
   const credentialsScreenshot = await desktopWindow.screenshot({ fullPage: true });
   await writeFile(path.join(screenshotDir, 'foliole-publish-credentials-hidden-native.png'), credentialsScreenshot);
@@ -116,14 +121,10 @@ async function verifyFolioleSetupSteps(
 
   await accountId.fill('playwright-account');
   await token.fill('PLAYWRIGHT-CLOUDFLARE-TOKEN');
-  await foliole.getByRole('button', { name: /^(Continue|继续)$/ }).click();
-  const siteName = foliole.getByLabel(/^(Free pages.dev site name|免费 pages.dev 站点名称)$/);
-  await expect(siteName).toBeVisible();
-  await expect(accountId).not.toBeVisible();
-  await expect(foliole.getByRole('button', { name: /^(Back|返回)$/ })).toBeVisible();
-  await expect(foliole.getByRole('button', { name: /^(Preview|预览)$/ })).toBeVisible();
-  await expect(foliole.getByRole('button', { name: /^(Create and publish|创建并发布)$/ })).toBeDisabled();
-  await siteName.evaluate((element) => element.scrollIntoView({ block: 'center' }));
+  await expect(foliole.getByRole('button', { name: /^(Deploy|部署)$/ })).toBeDisabled();
+  await subdomain.fill('playwright-site');
+  await expect(foliole.getByRole('button', { name: /^(Deploy|部署)$/ })).toBeEnabled();
+  await subdomain.evaluate((element) => element.scrollIntoView({ block: 'center' }));
   const siteScreenshot = await desktopWindow.screenshot({ fullPage: true });
   await writeFile(path.join(screenshotDir, 'foliole-publish-site-name-hidden-native.png'), siteScreenshot);
   await testInfo.attach('foliole-publish-site-name', { body: siteScreenshot, contentType: 'image/png' });
@@ -135,10 +136,10 @@ test('keeps independent Publish sections collapsed until opened and preserves th
   await dialog.getByRole('button', { name: /^(Publish|发布)$/ }).click();
 
   await expect(dialog.getByRole('heading', { level: 2, name: /^(Publish|发布)$/ })).toBeVisible();
-  const folioleRegion = dialog.getByRole('region', { name: /^(Foliole Publish settings|Foliole Publish 设置)$/ });
+  const folioleRegion = dialog.getByRole('region', { name: /^(Publish to the web settings|发布到 Web 设置)$/ });
   const wordpressRegion = dialog.getByRole('region', { name: /^(WordPress publish settings|WordPress 发布设置)$/ });
   const discourseRegion = dialog.getByRole('region', { name: /^(Discourse publish settings|Discourse 发布设置)$/ });
-  await expect(folioleRegion.getByRole('heading', { level: 3, name: 'Foliole Publish' })).toBeVisible();
+  await expect(folioleRegion.getByRole('heading', { level: 3, name: /^(Publish to the web|发布到 Web)$/ })).toBeVisible();
   await expect(wordpressRegion.getByRole('heading', { level: 3, name: 'WordPress' })).toBeVisible();
   await expect(discourseRegion.getByRole('heading', { level: 3, name: 'Discourse' })).toBeVisible();
   const regions = { discourse: discourseRegion, foliole: folioleRegion, wordpress: wordpressRegion };
@@ -165,7 +166,7 @@ test('keeps independent Publish sections collapsed until opened and preserves th
   await expect(dialog.getByRole('button', { name: /^(Save authorization|保存授权)$/ })).toHaveCount(0);
   await expect(dialog.getByRole('button', { name: /^(Test access|测试访问)$/ })).toBeVisible();
   await expect(dialog.getByRole('button', { name: /^(Remove authorization|移除授权)$/ })).toBeVisible();
-  await expect(dialog.getByRole('button', { name: /^(Save|保存)$/ })).toHaveCount(0);
+  await expect(discourseRegion.getByRole('button', { name: /^(Save|保存)$/ })).toHaveCount(0);
   await expect(dialog.getByText(/^(API username|API 用户名)$/)).toHaveCount(0);
   await expect(dialog.getByText(/^(Default category ID|默认分类 ID)$/)).toHaveCount(0);
   await expect(dialog.getByText(/^(Default tags|默认标签)$/)).toHaveCount(0);
@@ -184,16 +185,16 @@ test('keeps independent Publish sections collapsed until opened and preserves th
   await captureExpandedSettings(desktopWindow, screenshotDir, testInfo);
 });
 
-test('shows the connected pages.dev address and optional custom domain', async ({ desktopApp, desktopWindow }, testInfo) => {
+test('shows the connected public address and optional custom domain', async ({ desktopApp, desktopWindow }, testInfo) => {
   await seedConnectedFoliolePublish(desktopApp);
   const dialog = await openSettingsDialog(desktopWindow);
   await dialog.getByRole('button', { name: /^(Publish|发布)$/ }).click();
-  const foliole = dialog.getByRole('region', { name: /^(Foliole Publish settings|Foliole Publish 设置)$/ });
-  await foliole.getByRole('button', { name: 'Foliole Publish' }).click();
-  await expect(foliole.getByText('https://playwright-site.pages.dev')).toBeVisible();
+  const foliole = dialog.getByRole('region', { name: /^(Publish to the web settings|发布到 Web 设置)$/ });
+  await foliole.getByRole('button', { name: /^(Publish to the web|发布到 Web)$/ }).click();
+  await expect(foliole.getByText('https://notes.example.com')).toBeVisible();
   await expect(foliole.getByLabel(/^(Foliole Publish custom domain|Foliole Publish 自定义域名)$/))
     .toHaveValue('https://notes.example.com');
-  await expect(foliole.getByRole('button', { name: /^(Open setup guide|打开设置指引)$/ })).toBeVisible();
+  await expect(foliole.getByRole('button', { name: /^(Bind a domain in Cloudflare ↗|在 Cloudflare 中绑定域名 ↗)$/ })).toBeVisible();
 
   const screenshot = await desktopWindow.screenshot({ fullPage: true });
   const screenshotDir = path.join(process.cwd(), '.tmp', 'artifacts');

@@ -1,8 +1,21 @@
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
-import { AppErrorState, SettingsSection } from '../../../../shared/ui';
+import { AppButton, AppErrorState, SettingsControlSlot, SettingsRow, SettingsSection } from '../../../../shared/ui';
 
-import { FoliolePublishingConnectedRows, FoliolePublishingCredentialsRows, FoliolePublishingSiteRows } from './FoliolePublishingSetupRows';
+import { FoliolePublishingConnectedRows, FoliolePublishingSetupRows } from './FoliolePublishingSetupRows';
 import { useFoliolePublishingSettings } from './useFoliolePublishingSettings';
+
+function HostingOverview() {
+  const t = useTranslation();
+  return (
+    <div className="border-t border-settings-divider/70 px-settings-panel-x pt-7">
+      <h4 className="text-ui-lg font-semibold text-foreground">{t('settings.publishing.foliole.hosting.title')}</h4>
+      <div className="ml-6 mt-5 border-t border-settings-divider/70 py-6">
+        <h5 className="text-ui-lg font-semibold text-foreground">Cloudflare Pages</h5>
+        <p className="mt-1 max-w-[840px] text-ui-md leading-6 text-foreground/64">{t('settings.publishing.foliole.cloudflare.description')}</p>
+      </div>
+    </div>
+  );
+}
 
 export function FoliolePublishingSettings(props: { expanded: boolean; onExpandedChange: (expanded: boolean) => void }) {
   const t = useTranslation();
@@ -13,12 +26,17 @@ export function FoliolePublishingSettings(props: { expanded: boolean; onExpanded
       description={t('settings.publishing.foliole.description')}
       expanded={props.expanded}
       onExpandedChange={props.onExpandedChange}
-      title="Foliole Publish"
+      title={t('settings.publishing.foliole.title')}
     >
       {state.error ? <AppErrorState description={t('settings.publishing.foliole.error.tryAgain')} surface="panel" title={state.error} /> : null}
+      <SettingsRow title={t('settings.publishing.foliole.preview.title')}>
+        <SettingsControlSlot>
+          <AppButton disabled={state.status === 'previewing'} onClick={state.preview}>{state.status === 'previewing' ? t('settings.publishing.foliole.previewing') : t('settings.publishing.foliole.preview')}</AppButton>
+        </SettingsControlSlot>
+      </SettingsRow>
+      <HostingOverview />
       {state.connected ? <FoliolePublishingConnectedRows state={state} /> : null}
-      {!state.connected && state.step === 'credentials' ? <FoliolePublishingCredentialsRows state={state} /> : null}
-      {!state.connected && state.step === 'site' ? <FoliolePublishingSiteRows state={state} /> : null}
+      {!state.connected ? <FoliolePublishingSetupRows state={state} /> : null}
     </SettingsSection>
   );
 }

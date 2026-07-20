@@ -85,7 +85,7 @@ beforeEach(() => {
 
 it('starts collapsed and restores independent disclosure state after remounting', () => {
   const first = renderWithLocalization(<SettingsPublishingSection />);
-  const foliole = screen.getByRole('button', { name: 'Foliole Publish' });
+  const foliole = screen.getByRole('button', { name: 'Publish to the web' });
   const wordpress = screen.getByRole('button', { name: 'WordPress' });
   const discourse = screen.getByRole('button', { name: 'Discourse' });
   expect([foliole, wordpress, discourse].map((button) => button.getAttribute('aria-expanded'))).toEqual(['false', 'false', 'false']);
@@ -107,7 +107,7 @@ it('uses concise Publish copy and the standard settings input width', async () =
   const forumUrl = await screen.findByLabelText('Discourse forum URL');
   const headings = screen.getAllByRole('heading', { level: 3 });
   expect(headings).toHaveLength(3);
-  expect(screen.getByRole('heading', { level: 3, name: 'Foliole Publish' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { level: 3, name: 'Publish to the web' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { level: 3, name: 'WordPress' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { level: 3, name: 'Discourse' })).toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: 'Discourse forum' })).toBeNull();
