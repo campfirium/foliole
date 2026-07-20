@@ -28,6 +28,7 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "savePrimaryDeviceId", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "saveSyncActiveViewState", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "saveSyncNodeViewState", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "saveSyncSettingRecord", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "searchExternalDocuments", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "searchTopics", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "searchPdfPageText", returnType: CAPPluginReturnPromise),
