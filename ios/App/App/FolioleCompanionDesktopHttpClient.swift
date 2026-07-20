@@ -13,11 +13,18 @@ final class FolioleCompanionRedirectBlocker: NSObject, URLSessionTaskDelegate {
 }
 
 enum FolioleCompanionDesktopHttpTransport {
-    private static let session: URLSession = {
+    private static let session = URLSession(configuration: makeConfiguration())
+
+    static func makeConfiguration() -> URLSessionConfiguration {
         let configuration = URLSessionConfiguration.ephemeral
+        configuration.httpCookieStorage = nil
+        configuration.httpShouldSetCookies = false
+        configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
+        configuration.urlCache = nil
+        configuration.urlCredentialStorage = nil
         configuration.waitsForConnectivity = true
-        return URLSession(configuration: configuration)
-    }()
+        return configuration
+    }
 
     static func data(for request: URLRequest) async throws -> (Data, URLResponse) {
         return try await session.data(for: request, delegate: FolioleCompanionRedirectBlocker())

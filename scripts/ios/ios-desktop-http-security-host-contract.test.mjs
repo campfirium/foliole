@@ -23,6 +23,9 @@ describe('iOS desktop HTTP security host contract', () => {
     expect(client).toContain('session.download(for: request, delegate: FolioleCompanionRedirectBlocker())');
     expect(client).toMatch(/willPerformHTTPRedirection[\s\S]*completionHandler\(nil\)/);
     expect(client).not.toContain('finishTasksAndInvalidate()');
+    expect(client).toContain('configuration.requestCachePolicy = .reloadIgnoringLocalCacheData');
+    expect(client).toContain('configuration.httpShouldSetCookies = false');
+    expect(client).toContain('configuration.urlCredentialStorage = nil');
   });
 
   it('keeps sync-pack transfer on HTTP or HTTPS', () => {

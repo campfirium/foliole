@@ -3,6 +3,16 @@ import XCTest
 @testable import FolioleSyncPackValidator
 
 final class FolioleCompanionDesktopHttpClientTests: XCTestCase {
+    func testDesktopTransportKeepsSharedSessionStateless() {
+        let configuration = FolioleCompanionDesktopHttpTransport.makeConfiguration()
+
+        XCTAssertNil(configuration.httpCookieStorage)
+        XCTAssertFalse(configuration.httpShouldSetCookies)
+        XCTAssertEqual(configuration.requestCachePolicy, .reloadIgnoringLocalCacheData)
+        XCTAssertNil(configuration.urlCache)
+        XCTAssertNil(configuration.urlCredentialStorage)
+    }
+
     func testRefusesSignedRequestRedirects() throws {
         let session = URLSession(configuration: .ephemeral)
         defer { session.invalidateAndCancel() }
