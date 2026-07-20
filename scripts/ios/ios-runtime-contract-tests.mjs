@@ -48,6 +48,7 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'src/companion/useCompanionHandoffReminderSettings.test.tsx',
   'src/companion/useCompanionHandoffReminderScheduler.test.tsx',
   'src/companion/useCompanionWorkspaceAutoSync.test.tsx',
+  'src/features/settings/components/sections/SettingsCompanionSyncSection.test.tsx',
   'src/shared/platform/companion/sync/diagnostics/companionSyncDiagnostics.ios.test.ts',
   'src/shared/platform/companion/sync/diagnostics/companionSyncDiagnostics.test.ts',
   'src/shared/platform/companion/sync/diagnostics/companionSyncConvergence.test.ts',

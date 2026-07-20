@@ -97,6 +97,26 @@ it('announces connected devices progress through the settings state surface', ()
   expect(status).toHaveTextContent('');
 });
 
+it('shows the product iOS label for a paired iPhone', () => {
+  companionPairingMock.useDesktopCompanionPairingRequests.mockReturnValue(createState({
+    overview: {
+      ...createState().overview,
+      paired_devices: [{
+        client_address: '192.168.1.3',
+        device_id: 'ios-device',
+        device_kind: 'ios-capacitor',
+        device_name: 'iPhone 13 mini',
+        paired_at: '2026-07-21T00:00:00.000Z'
+      }]
+    }
+  }));
+
+  renderWithLocalization(<SettingsCompanionSyncSection />);
+
+  expect(screen.getByRole('listitem')).toHaveTextContent('iPhone 13 mini (iOS)');
+  expect(screen.queryByText(/ios-capacitor/)).not.toBeInTheDocument();
+});
+
 it('shows sync server errors through the settings state surface', () => {
   companionPairingMock.useDesktopCompanionPairingRequests.mockReturnValue(createState({
     overview: {
