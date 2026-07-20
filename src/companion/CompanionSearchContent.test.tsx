@@ -29,7 +29,7 @@ beforeEach(() => {
 });
 
 describe('CompanionSearchContent presentation', () => {
-  it('describes the narrower synced-topic scope on iOS', () => {
+  it('describes the narrower synced-topic scope when extended search is unavailable', () => {
     supportsCompanionExtendedSearch.mockReturnValue(false);
     renderWithLocalization(<CompanionSearchContent />);
 
