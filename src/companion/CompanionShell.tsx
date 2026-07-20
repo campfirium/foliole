@@ -4,6 +4,7 @@ import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCom
 
 import { createCompanionCaptureTextSaveHandler } from './companionCaptureTextController';
 import type { CompanionTabAction } from './CompanionFloatingBars';
+import { CompanionHandoffReminderRuntime } from './CompanionHandoffReminderRuntime';
 import { useReviewBreadcrumbItems } from './companionReviewBreadcrumbs';
 import { CompanionShellView } from './CompanionShellView';
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
@@ -196,5 +197,9 @@ export type CompanionShellModel = ReturnType<typeof useCompanionShellModel>;
 export function CompanionShell(props: { bootstrapState: NativeCompanionBootstrapState }) {
   const model = useCompanionShellModel(props.bootstrapState);
 
-  return <CompanionShellView model={model} />;
+  return (
+    <CompanionHandoffReminderRuntime workspaceSync={model.workspaceSync}>
+      <CompanionShellView model={model} />
+    </CompanionHandoffReminderRuntime>
+  );
 }

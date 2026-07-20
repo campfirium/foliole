@@ -2,16 +2,15 @@ import { useEffect } from 'react';
 
 import { definedProps } from '../shared/lib/definedProps';
 
+import { useCompanionHandoffReminderRuntime } from './CompanionHandoffReminderRuntime';
 import { CompanionSyncPanel } from './CompanionSyncPanel';
-import { useCompanionHandoffReminderScheduler } from './useCompanionHandoffReminderScheduler';
-import { useCompanionHandoffReminderSettings } from './useCompanionHandoffReminderSettings';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 const PAIRING_APPROVAL_POLL_MS = 7_000;
 
 function buildSyncPanelProps(args: {
-  handoffReminders: ReturnType<typeof useCompanionHandoffReminderSettings>;
+  handoffReminders: ReturnType<typeof useCompanionHandoffReminderRuntime>;
   onOpenSettingsPage?: (page: CompanionSettingsPage) => void;
   page: CompanionSettingsPage;
   workspaceSync: ReturnType<typeof useCompanionWorkspaceSync>;
@@ -55,8 +54,7 @@ export function CompanionSyncContent(props: {
   onOpenSettingsPage?: (page: CompanionSettingsPage) => void;
 }) {
   const { workspaceSync } = props;
-  const handoffReminders = useCompanionHandoffReminderSettings(workspaceSync.state.last_synced_at);
-  useCompanionHandoffReminderScheduler({ settings: handoffReminders.settings, workspaceSync });
+  const handoffReminders = useCompanionHandoffReminderRuntime();
 
   useEffect(() => {
     if (!workspaceSync.pendingPairRequest || workspaceSync.pairingStatus !== 'awaiting-approval') {

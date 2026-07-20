@@ -1,6 +1,8 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import type { ComponentProps } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { CompanionHandoffReminderRuntime } from './CompanionHandoffReminderRuntime';
 import { CompanionSyncContent } from './CompanionSyncContent';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
@@ -64,11 +66,19 @@ function createWorkspaceSync() {
   } as unknown as ReturnType<typeof useCompanionWorkspaceSync>;
 }
 
+function TestSyncContent(props: ComponentProps<typeof CompanionSyncContent>) {
+  return (
+    <CompanionHandoffReminderRuntime workspaceSync={props.workspaceSync}>
+      <CompanionSyncContent {...props} />
+    </CompanionHandoffReminderRuntime>
+  );
+}
+
 describe('CompanionSyncContent', () => {
   it('does not start discovery before the user asks to connect', () => {
     const workspaceSync = createWorkspaceSync();
 
-    render(<CompanionSyncContent workspaceSync={workspaceSync} />);
+    render(<TestSyncContent workspaceSync={workspaceSync} />);
 
     expect(screen.getByRole('button', { name: 'Connect another device' })).toBeInTheDocument();
     expect(workspaceSync.checkDesktop).not.toHaveBeenCalled();
@@ -78,7 +88,7 @@ describe('CompanionSyncContent', () => {
   it('hides handoff reminder settings before pairing', () => {
     const workspaceSync = createWorkspaceSync();
 
-    render(<CompanionSyncContent workspaceSync={workspaceSync} />);
+    render(<TestSyncContent workspaceSync={workspaceSync} />);
 
     expect(screen.queryByText('Handoff reminders')).not.toBeInTheDocument();
   });
@@ -95,7 +105,7 @@ describe('CompanionSyncContent', () => {
       primary_device_id: 'device-desktop'
     };
 
-    render(<CompanionSyncContent page="syncHandoff" workspaceSync={workspaceSync} />);
+    render(<TestSyncContent page="syncHandoff" workspaceSync={workspaceSync} />);
 
     expect(screen.getByText('Enable reminders')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Short reminder'), { target: { value: '5' } });
@@ -114,9 +124,9 @@ describe('CompanionSyncContent', () => {
       throw new Error('not ready');
     });
 
-    const { rerender } = render(<CompanionSyncContent workspaceSync={workspaceSync} />);
+    const { rerender } = render(<TestSyncContent workspaceSync={workspaceSync} />);
 
-    rerender(<CompanionSyncContent workspaceSync={{ ...workspaceSync, error: 'No desktop sync device found.' }} />);
+    rerender(<TestSyncContent workspaceSync={{ ...workspaceSync, error: 'No desktop sync device found.' }} />);
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(2_500);
@@ -154,7 +164,7 @@ function testShowsSyncStatusDetails() {
     }]
   };
 
-  render(<CompanionSyncContent workspaceSync={workspaceSync} />);
+  render(<TestSyncContent workspaceSync={workspaceSync} />);
 
   expect(screen.getByText('Last sync')).toBeInTheDocument();
   expect(screen.getByText('Android Emulator')).toBeInTheDocument();
@@ -171,7 +181,7 @@ function testRequestsPrimaryTakeover() {
     endpoint_url: 'http://10.0.2.2:38641'
   };
 
-  render(<CompanionSyncContent workspaceSync={workspaceSync} />);
+  render(<TestSyncContent workspaceSync={workspaceSync} />);
   fireEvent.click(screen.getByRole('button', { name: 'Set as primary device' }));
 
   expect(workspaceSync.requestPrimaryDeviceTakeover).toHaveBeenCalledWith('http://10.0.2.2:38641');
@@ -196,7 +206,7 @@ async function testCompletesApprovedPairing() {
   };
   workspaceSync.pairingStatus = 'awaiting-approval';
 
-  render(<CompanionSyncContent workspaceSync={workspaceSync} />);
+  render(<TestSyncContent workspaceSync={workspaceSync} />);
 
   await act(async () => {
     await Promise.resolve();
@@ -216,7 +226,7 @@ async function testKeepsApprovalPollingBelowDesktopRateLimit() {
   };
   workspaceSync.pairingStatus = 'awaiting-approval';
 
-  render(<CompanionSyncContent workspaceSync={workspaceSync} />);
+  render(<TestSyncContent workspaceSync={workspaceSync} />);
   await act(async () => vi.advanceTimersByTimeAsync(60_000));
 
   expect(workspaceSync.completePairing).toHaveBeenCalledTimes(9);

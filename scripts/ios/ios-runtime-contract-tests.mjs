@@ -21,6 +21,7 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'src/shared/platform/companionSyncObjects.ios.test.ts',
   'src/shared/platform/companionWorkspaceRuntimeRepository.test.ts',
   'src/companion/CompanionBrowseTopActions.test.tsx',
+  'src/companion/CompanionHandoffReminderRuntime.test.tsx',
   'src/companion/CompanionNodeMutationAvailability.test.tsx',
   'src/companion/CompanionReadableArticleChromeLayer.test.tsx',
   'src/companion/CompanionReadingSheets.test.tsx',
