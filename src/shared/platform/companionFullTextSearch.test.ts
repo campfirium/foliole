@@ -71,12 +71,23 @@ beforeEach(() => {
 
 async function expectIosCompleteSearch() {
   capacitorMock.platform.mockReturnValue('ios');
+  capacitorMock.plugin.loadSyncIndex.mockResolvedValueOnce({
+    entries: [{ object_id: 'user_space:windows:desktop:*:app_settings', object_type: 'setting' }]
+  });
+  capacitorMock.plugin.loadSyncObjects.mockResolvedValueOnce({
+    objects: [{
+      payload_json: JSON.stringify({
+        key: 'app_settings',
+        value_json: JSON.stringify({ [FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY]: 'cjk-trigram' })
+      })
+    }]
+  });
   const api = await import('./companionFullTextSearch');
 
   await expect(api.searchCompanionFullText('alpha', 5)).resolves.toEqual({
     external: [expect.objectContaining({ bodyStatus: 'failed', document_id: 'folder-1:doc.md' })],
     pdf: [expect.objectContaining({ attachment_id: 'pdf-1', page: 3 })],
-    strategy: 'word-based',
+    strategy: 'cjk-trigram',
     topics: [expect.objectContaining({ nodeId: 'topic-1', title: 'Topic One' })]
   });
   expect(capacitorMock.plugin.searchTopics).toHaveBeenCalledWith({ limit: 5, query: 'alpha' });

@@ -8,7 +8,33 @@ final class FolioleCompanionGeneratedReadQueryRunner {
     }
 
     func rows(_ query: FolioleCompanionGeneratedQuery, arguments: [String] = []) throws -> [[String: Any]] {
-        try database.rows(query.sql, arguments: arguments).map { row in
+        try mapRows(database.rows(query.sql, arguments: arguments), query: query)
+    }
+
+    func rows(
+        _ query: FolioleCompanionGeneratedQuery,
+        fields: [FolioleCompanionGeneratedField],
+        arguments: [String] = []
+    ) throws -> [[String: Any]] {
+        try rows(query, arguments: arguments).map { row in
+            Dictionary(uniqueKeysWithValues: fields.map { field in
+                (field.outputKey, row[field.rowKey] ?? NSNull())
+            })
+        }
+    }
+
+    func typedRows(
+        _ query: FolioleCompanionGeneratedQuery,
+        bindings: [FolioleReadOnlySQLite.Binding]
+    ) throws -> [[String: Any]] {
+        try mapRows(database.rows(query.sql, bindings: bindings), query: query)
+    }
+
+    private func mapRows(
+        _ rows: [[String?]],
+        query: FolioleCompanionGeneratedQuery
+    ) throws -> [[String: Any]] {
+        try rows.map { row in
             guard row.count == query.columns.count else { throw Self.error("Query returned an invalid row.") }
             return Dictionary(uniqueKeysWithValues: zip(query.columns, row).map { column, value in
                 (column.key, Self.value(value, type: column.type))

@@ -7,7 +7,8 @@ import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import {
   FolioleCompanionSync,
   isNativeAndroidCompanionRuntime,
-  isNativeCompanionPdfPageTextRuntime
+  isNativeCompanionPdfPageTextRuntime,
+  isNativeCompanionSyncObjectReadRuntime
 } from './companionWorkspaceRuntimeRepository';
 
 type SyncPushAck = import('./companionSyncPushProtocol').SyncPushAck;
@@ -35,7 +36,7 @@ export { applyCompanionSyncObjects } from './companionSyncStateObjects';
 export { applyCompanionSyncReviewLog } from './companionSyncReviewLogApply';
 
 export async function loadCompanionSyncIndex() {
-  if (!isNativeAndroidCompanionRuntime()) {
+  if (!isNativeCompanionSyncObjectReadRuntime()) {
     return [];
   }
   return (await FolioleCompanionSync.loadSyncIndex()).entries;
@@ -52,7 +53,7 @@ export async function loadCompanionSyncObjects(
   objectIds: string[],
   objectTypes?: Array<NativeSyncObjectRecord['object_type']>
 ) {
-  if (!isNativeAndroidCompanionRuntime()) {
+  if (!isNativeCompanionSyncObjectReadRuntime()) {
     return [];
   }
   return (await FolioleCompanionSync.loadSyncObjects({

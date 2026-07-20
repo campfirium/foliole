@@ -2,8 +2,10 @@ import { APP_SETTINGS_STORAGE_KEYS } from '../config/appSettings';
 
 import {
   FolioleCompanionSync,
-  isNativeAndroidCompanionRuntime,
-  isNativeCompanionExternalDocumentSearchRuntime
+  isNativeCompanionExternalDirectoryRuntime,
+  isNativeCompanionExternalDocumentReadRuntime,
+  isNativeCompanionExternalDocumentSearchRuntime,
+  isNativeCompanionSyncObjectReadRuntime
 } from './companionWorkspaceRuntimeRepository';
 import type {
   ExternalLibraryBrowseEntry,
@@ -55,7 +57,7 @@ interface SyncSettingPayload {
 }
 
 export async function loadCompanionExternalDocument(documentId: string) {
-  if (!isNativeAndroidCompanionRuntime()) {
+  if (!isNativeCompanionExternalDocumentReadRuntime()) {
     return null as CompanionExternalDocument | null;
   }
   const document = (await FolioleCompanionSync.loadExternalDocument({ document_id: documentId })).document as NativeExternalDocument | null;
@@ -63,7 +65,7 @@ export async function loadCompanionExternalDocument(documentId: string) {
 }
 
 export async function loadCompanionExternalDirectory() {
-  if (!isNativeAndroidCompanionRuntime()) {
+  if (!isNativeCompanionExternalDirectoryRuntime()) {
     return { entries: [], folders: [] } satisfies CompanionExternalDirectory;
   }
   const directory = await FolioleCompanionSync.loadExternalDirectory();
@@ -89,6 +91,7 @@ export async function loadCompanionExternalDirectory() {
 }
 
 async function loadCompanionExternalFolderOrder() {
+  if (!isNativeCompanionSyncObjectReadRuntime()) return [];
   const index = await FolioleCompanionSync.loadSyncIndex();
   const settingObjectIds = index.entries
     .filter((entry) => entry.object_type === 'setting' && entry.object_id.endsWith(':app_settings'))

@@ -50,6 +50,21 @@ export function isNativeCompanionExternalDocumentSearchRuntime() {
   return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
 }
 
+export function isNativeCompanionExternalDocumentReadRuntime() {
+  const runtime = requireAvailableCompanionRuntime('external-document-read');
+  return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
+}
+
+export function isNativeCompanionExternalDirectoryRuntime() {
+  const runtime = requireAvailableCompanionRuntime('external-document-directory');
+  return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
+}
+
+export function isNativeCompanionSyncObjectReadRuntime() {
+  const runtime = requireAvailableCompanionRuntime('sync-object-read');
+  return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
+}
+
 export function isNativeCompanionSyncDiagnosticsRuntime() {
   const runtime = requireAvailableCompanionRuntime('sync-diagnostics');
   return runtime.kind === 'android-native' || runtime.kind === 'ios-native';

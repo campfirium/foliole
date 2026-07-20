@@ -8,8 +8,8 @@ import { searchCompanionExternalDocuments } from './companionExternalDocuments';
 import { searchCompanionPdfPageText } from './companionSyncObjects';
 import {
   FolioleCompanionSync,
-  isNativeAndroidCompanionRuntime,
   isNativeCompanionExternalDocumentSearchRuntime,
+  isNativeCompanionSyncObjectReadRuntime,
   isNativeCompanionTopicSearchRuntime
 } from './companionWorkspaceRuntimeRepository';
 
@@ -75,7 +75,7 @@ async function loadCompanionFullTextSearchStrategyOrDefault() {
 }
 
 export async function loadCompanionFullTextSearchStrategy() {
-  if (!isNativeAndroidCompanionRuntime()) {
+  if (!isNativeCompanionSyncObjectReadRuntime()) {
     return normalizeFullTextSearchIndexStrategy(null);
   }
   const index = await FolioleCompanionSync.loadSyncIndex();

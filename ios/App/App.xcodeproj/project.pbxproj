@@ -48,6 +48,9 @@
 		50F027121FED79650016851F /* FolioleCompanionGeneratedReadQueryRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F027021FED79650016851F /* FolioleCompanionGeneratedReadQueryRunner.swift */; };
 		50F027131FED79650016851F /* FolioleCompanionExternalDocumentSearchStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F027031FED79650016851F /* FolioleCompanionExternalDocumentSearchStore.swift */; };
 		50F027141FED79650016851F /* FolioleCompanionExternalDocumentSearchPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F027041FED79650016851F /* FolioleCompanionExternalDocumentSearchPlugin.swift */; };
+		50F028111FED79650016851F /* FolioleCompanionSyncObjectReadContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F028011FED79650016851F /* FolioleCompanionSyncObjectReadContract.swift */; };
+		50F028121FED79650016851F /* FolioleCompanionSyncObjectReadStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F028021FED79650016851F /* FolioleCompanionSyncObjectReadStore.swift */; };
+		50F028131FED79650016851F /* FolioleCompanionSyncObjectReadPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F028031FED79650016851F /* FolioleCompanionSyncObjectReadPlugin.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -92,6 +95,9 @@
 		50F027021FED79650016851F /* FolioleCompanionGeneratedReadQueryRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionGeneratedReadQueryRunner.swift; sourceTree = "<group>"; };
 		50F027031FED79650016851F /* FolioleCompanionExternalDocumentSearchStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionExternalDocumentSearchStore.swift; sourceTree = "<group>"; };
 		50F027041FED79650016851F /* FolioleCompanionExternalDocumentSearchPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionExternalDocumentSearchPlugin.swift; sourceTree = "<group>"; };
+		50F028011FED79650016851F /* FolioleCompanionSyncObjectReadContract.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncObjectReadContract.swift; sourceTree = "<group>"; };
+		50F028021FED79650016851F /* FolioleCompanionSyncObjectReadStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncObjectReadStore.swift; sourceTree = "<group>"; };
+		50F028031FED79650016851F /* FolioleCompanionSyncObjectReadPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncObjectReadPlugin.swift; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
@@ -162,6 +168,9 @@
 				50F027021FED79650016851F /* FolioleCompanionGeneratedReadQueryRunner.swift */,
 				50F027031FED79650016851F /* FolioleCompanionExternalDocumentSearchStore.swift */,
 				50F027041FED79650016851F /* FolioleCompanionExternalDocumentSearchPlugin.swift */,
+				50F028011FED79650016851F /* FolioleCompanionSyncObjectReadContract.swift */,
+				50F028021FED79650016851F /* FolioleCompanionSyncObjectReadStore.swift */,
+				50F028031FED79650016851F /* FolioleCompanionSyncObjectReadPlugin.swift */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
 				504EC30E1FED79650016851F /* Assets.xcassets */,
 				504EC3101FED79650016851F /* LaunchScreen.storyboard */,
@@ -288,6 +297,9 @@
 				50F027121FED79650016851F /* FolioleCompanionGeneratedReadQueryRunner.swift in Sources */,
 				50F027131FED79650016851F /* FolioleCompanionExternalDocumentSearchStore.swift in Sources */,
 				50F027141FED79650016851F /* FolioleCompanionExternalDocumentSearchPlugin.swift in Sources */,
+				50F028111FED79650016851F /* FolioleCompanionSyncObjectReadContract.swift in Sources */,
+				50F028121FED79650016851F /* FolioleCompanionSyncObjectReadStore.swift in Sources */,
+				50F028131FED79650016851F /* FolioleCompanionSyncObjectReadPlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -4,6 +4,43 @@ import XCTest
 @testable import FolioleSyncPackValidator
 
 final class FolioleExternalDocumentSearchTests: XCTestCase {
+    func testLoadsDirectoryEntriesAndFoldersFromSyncedDatabase() throws {
+        let fixture = try makeFixture()
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+        try seed(fixture.database)
+
+        let response = try store(fixture.database).loadDirectory()
+        let entries = try XCTUnwrap(response["entries"] as? [[String: Any]])
+        let folders = try XCTUnwrap(response["folders"] as? [[String: Any]])
+        XCTAssertEqual(entries.first?["absolute_path"] as? String, "blob")
+        XCTAssertEqual(entries.compactMap { $0["document_id"] as? String }, ["blob", "inline", "missing"])
+        XCTAssertEqual(folders.first?["id"] as? String, "folder")
+        XCTAssertEqual(folders.first?["document_count"] as? Int, 3)
+    }
+
+    func testLoadsVisibleDocumentBodyWithoutLeakingStorageMetadata() throws {
+        let fixture = try makeFixture()
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+        try seed(fixture.database)
+
+        let response = try store(fixture.database).load(documentId: " blob ")
+        let document = try XCTUnwrap(response["document"] as? [String: Any])
+        XCTAssertEqual(document["document_id"] as? String, "blob")
+        XCTAssertEqual(document["content"] as? String, "blob alpha body")
+        XCTAssertEqual(document["content_status"] as? String, "ready")
+        XCTAssertNil(document["body_blob_hash"])
+    }
+
+    func testReturnsNullForBlankOrAbsentDocument() throws {
+        let fixture = try makeFixture()
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+        try seed(fixture.database)
+        let store = try store(fixture.database)
+
+        XCTAssertTrue(try store.load(documentId: "   ")["document"] is NSNull)
+        XCTAssertTrue(try store.load(documentId: "absent")["document"] is NSNull)
+    }
+
     func testSearchesVisibleInlineAndBlobDocumentsWithBodyStatus() throws {
         let fixture = try makeFixture()
         defer { try? FileManager.default.removeItem(at: fixture.root) }
@@ -16,6 +53,7 @@ final class FolioleExternalDocumentSearchTests: XCTestCase {
         XCTAssertEqual(results.first?["content"] as? String, "blob alpha body")
         XCTAssertEqual(results.first?["content_status"] as? String, "ready")
         XCTAssertEqual(results.last?["content_status"] as? String, "failed")
+        XCTAssertNil(results.first?["body_blob_hash"])
         XCTAssertFalse(results.contains { ($0["document_id"] as? String) == "absent" })
     }
 
@@ -37,6 +75,7 @@ final class FolioleExternalDocumentSearchTests: XCTestCase {
     }
 
     private func seed(_ url: URL) throws {
+        try execute(url, "INSERT INTO external_search_folders (id, folder_path, document_count) VALUES ('folder', '/library', 3)")
         try execute(url, "INSERT INTO content_blobs VALUES ('blob-hash', 'cached'), ('missing-hash', 'failed')")
         try execute(url, "INSERT INTO content_blob_data VALUES ('blob-hash', 'blob alpha body')")
         try insert(url, id: "missing", title: "alpha missing", bodyHash: "missing-hash", updated: 1)
@@ -70,6 +109,7 @@ final class FolioleExternalDocumentSearchTests: XCTestCase {
         );
         CREATE TABLE content_blobs (hash TEXT PRIMARY KEY, availability TEXT);
         CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB);
+        CREATE TABLE external_search_folders (id TEXT PRIMARY KEY, folder_path TEXT, document_count INTEGER);
         """)
         return (root, database)
     }

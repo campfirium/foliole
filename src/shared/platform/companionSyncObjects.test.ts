@@ -212,4 +212,13 @@ describe('companion sync objects bridge', () => {
   });
 
   it('loads and applies generic sync objects through the native plugin', testNativePluginBridge);
+
+  it('loads generic sync object metadata and payloads on iOS', async () => {
+    capacitorMock.platform.mockReturnValue('ios');
+    const api = await import('./companionSyncObjects');
+
+    await expect(api.loadCompanionSyncIndex()).resolves.toEqual([{ object_id: 'one', object_type: 'setting' }]);
+    await expect(api.loadCompanionSyncObjects(['one'], ['setting']))
+      .resolves.toEqual([{ object_id: 'one', object_type: 'setting' }]);
+  });
 });

@@ -22,11 +22,14 @@ const IOS_NATIVE_CAPABILITIES = new Set([
   'attachment-resource-sync',
   'bootstrap',
   'content-blob-sync',
+  'external-document-directory',
+  'external-document-read',
   'external-document-search',
   'pairing-runtime',
   'pdf-page-text',
   'sync-pack-apply',
   'sync-diagnostics',
+  'sync-object-read',
   'topic-search'
 ]);
 

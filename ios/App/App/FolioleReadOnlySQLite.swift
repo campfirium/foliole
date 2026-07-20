@@ -3,6 +3,11 @@ import CryptoKit
 import SQLite3
 
 final class FolioleReadOnlySQLite {
+    enum Binding {
+        case integer(Int)
+        case string(String)
+    }
+
     private var database: OpaquePointer?
 
     init(url: URL) throws {
@@ -19,13 +24,17 @@ final class FolioleReadOnlySQLite {
     }
 
     func rows(_ sql: String, arguments: [String] = []) throws -> [[String?]] {
+        try rows(sql, bindings: arguments.map(Binding.string))
+    }
+
+    func rows(_ sql: String, bindings: [Binding]) throws -> [[String?]] {
         guard let database else { throw Self.error("database closed") }
         var statement: OpaquePointer?
         guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK, let statement else {
             throw Self.error(String(cString: sqlite3_errmsg(database)))
         }
         defer { sqlite3_finalize(statement) }
-        try bind(arguments, statement: statement)
+        try bind(bindings, statement: statement)
         var result: [[String?]] = []
         while true {
             let status = sqlite3_step(statement)
@@ -37,9 +46,14 @@ final class FolioleReadOnlySQLite {
         }
     }
 
-    private func bind(_ arguments: [String], statement: OpaquePointer) throws {
-        for (offset, value) in arguments.enumerated() {
-            let status = sqlite3_bind_text(statement, Int32(offset + 1), value, -1, Self.transient)
+    private func bind(_ bindings: [Binding], statement: OpaquePointer) throws {
+        for (offset, binding) in bindings.enumerated() {
+            let index = Int32(offset + 1)
+            let status: Int32
+            switch binding {
+            case .integer(let value): status = sqlite3_bind_int64(statement, index, sqlite3_int64(value))
+            case .string(let value): status = sqlite3_bind_text(statement, index, value, -1, Self.transient)
+            }
             guard status == SQLITE_OK else { throw Self.error("bind failed") }
         }
     }
