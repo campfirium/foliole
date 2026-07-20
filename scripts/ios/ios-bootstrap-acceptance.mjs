@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* global console, process, setTimeout */
 
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -39,6 +39,18 @@ export function parseBootstrapSnapshot(output) {
   return { deviceId: deviceId?.trim() ?? '', tableCount: Number(tableCount) };
 }
 
+export function createAcceptanceBuildArgs(udid) {
+  return [
+    '-project', path.join(REPO_ROOT, 'ios/App/App.xcodeproj'),
+    '-scheme', 'App', '-configuration', 'Debug',
+    '-destination', `platform=iOS Simulator,id=${udid}`,
+    '-derivedDataPath', DERIVED_DATA,
+    ...iosXcodebuildResourceArgs(RESOURCE_MODE),
+    `PRODUCT_BUNDLE_IDENTIFIER=${ACCEPTANCE_BUNDLE_ID}`,
+    'build'
+  ];
+}
+
 export function verifyBootstrapSnapshots(first, second) {
   if (!first.deviceId) throw new Error('The first launch did not persist a device identity.');
   if (first.tableCount !== REQUIRED_TABLES.length) throw new Error('The first launch did not install the required schema.');
@@ -47,23 +59,22 @@ export function verifyBootstrapSnapshots(first, second) {
   return { databaseReady: true, deviceId: first.deviceId, requiredTableCount: first.tableCount };
 }
 
-export function waitForFileCreated(target, action, timeoutMs = 15000, intervalMs = 100) {
+export async function waitForBootstrapSnapshot(readSnapshot, action, timeoutMs = 15000, intervalMs = 100) {
   action();
   const deadline = Date.now() + timeoutMs;
-  return new Promise((resolve, reject) => {
-    const check = () => {
-      if (existsSync(target)) {
-        resolve();
-        return;
-      }
-      if (Date.now() >= deadline) {
-        reject(new Error(`Timed out waiting for ${target}`));
-        return;
-      }
-      setTimeout(check, intervalMs);
-    };
-    check();
-  });
+  let lastObservation = 'bootstrap database was not readable';
+  while (Date.now() <= deadline) {
+    try {
+      const snapshot = readSnapshot();
+      if (snapshot.deviceId && snapshot.tableCount === REQUIRED_TABLES.length) return snapshot;
+      lastObservation = `device identity present=${Boolean(snapshot.deviceId)}, required tables=${snapshot.tableCount}`;
+    } catch (error) {
+      lastObservation = error instanceof Error ? error.message : String(error);
+    }
+    if (Date.now() >= deadline) break;
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+  throw new Error(`Timed out waiting for iOS bootstrap readiness: ${lastObservation}`);
 }
 
 async function main() {
@@ -76,11 +87,15 @@ async function main() {
     prepareApp(simulator.udid);
     installFreshAcceptanceApp(simulator.udid);
     const databasePath = resolveDatabasePath(simulator.udid);
-    await waitForFileCreated(databasePath, () => launchApp(simulator.udid));
-    const first = readBootstrapSnapshot(databasePath);
+    const first = await waitForBootstrapSnapshot(
+      () => readBootstrapSnapshot(databasePath),
+      () => launchApp(simulator.udid)
+    );
     run('xcrun', ['simctl', 'terminate', simulator.udid, ACCEPTANCE_BUNDLE_ID]);
-    launchApp(simulator.udid);
-    const second = readBootstrapSnapshot(databasePath);
+    const second = await waitForBootstrapSnapshot(
+      () => readBootstrapSnapshot(databasePath),
+      () => launchApp(simulator.udid)
+    );
     const result = verifyBootstrapSnapshots(first, second);
     run('xcrun', ['simctl', 'terminate', simulator.udid, ACCEPTANCE_BUNDLE_ID]);
     const report = { ...result, databasePath, simulator: simulator.name };
@@ -100,20 +115,13 @@ function bootSimulator(simulator) {
 function prepareApp(udid) {
   runHeavy('npm', ['run', 'android:web:build'], { cwd: REPO_ROOT });
   run('npx', ['--no-install', 'cap', 'copy', 'ios'], { cwd: REPO_ROOT });
-  runHeavy('xcodebuild', [
-    '-project', path.join(REPO_ROOT, 'ios/App/App.xcodeproj'),
-    '-scheme', 'App', '-configuration', 'Debug',
-    '-destination', `platform=iOS Simulator,id=${udid}`,
-    '-derivedDataPath', DERIVED_DATA,
-    ...iosXcodebuildResourceArgs(RESOURCE_MODE),
-    `PRODUCT_BUNDLE_IDENTIFIER=${ACCEPTANCE_BUNDLE_ID}`,
-    'CODE_SIGNING_ALLOWED=NO', 'build'
-  ]);
+  runHeavy('xcodebuild', createAcceptanceBuildArgs(udid));
 }
 
 function installFreshAcceptanceApp(udid) {
   runAllowFailure('xcrun', ['simctl', 'uninstall', udid, ACCEPTANCE_BUNDLE_ID]);
   const app = path.join(DERIVED_DATA, 'Build/Products/Debug-iphonesimulator/App.app');
+  run('codesign', ['--verify', '--deep', '--strict', app]);
   run('xcrun', ['simctl', 'install', udid, app]);
 }
 
@@ -129,7 +137,7 @@ function resolveDatabasePath(udid) {
 function readBootstrapSnapshot(databasePath) {
   const names = REQUIRED_TABLES.map((name) => `'${name}'`).join(', ');
   const sql = `SELECT value FROM companion_meta WHERE key = 'device_id'; SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name IN (${names});`;
-  return parseBootstrapSnapshot(capture('sqlite3', [databasePath, sql]));
+  return parseBootstrapSnapshot(capture('sqlite3', ['-cmd', '.timeout 1000', databasePath, sql]));
 }
 
 function runJson(command, args) {

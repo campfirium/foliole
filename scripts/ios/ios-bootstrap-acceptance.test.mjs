@@ -1,21 +1,24 @@
 // @vitest-environment node
-/* global setTimeout */
-
-import { mkdtempSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
-
 import { describe, expect, it } from 'vitest';
 
 import {
+  createAcceptanceBuildArgs,
   parseBootstrapSnapshot,
   selectSimulator,
   shouldShutdownSimulator,
   verifyBootstrapSnapshots,
-  waitForFileCreated
+  waitForBootstrapSnapshot
 } from './ios-bootstrap-acceptance.mjs';
 
 describe('iOS bootstrap acceptance contract', () => {
+  it('keeps Simulator acceptance locally signed so Keychain remains available', () => {
+    const args = createAcceptanceBuildArgs('SIM-1');
+
+    expect(args).toContain('PRODUCT_BUNDLE_IDENTIFIER=com.foliole.ios.bootstrap-acceptance');
+    expect(args).toContain('platform=iOS Simulator,id=SIM-1');
+    expect(args).not.toContain('CODE_SIGNING_ALLOWED=NO');
+  });
+
   it('prefers an already booted iPhone simulator', () => {
     expect(selectSimulator({
       devices: {
@@ -50,12 +53,31 @@ describe('iOS bootstrap acceptance contract', () => {
     )).toThrow('device identity changed');
   });
 
-  it('waits only until the asynchronously created database becomes available', async () => {
-    const root = mkdtempSync(path.join(tmpdir(), 'foliole-ios-bootstrap-'));
-    const database = path.join(root, 'foliole-companionSQLite.db');
+  it('waits through transient database states until bootstrap is semantically ready', async () => {
+    const states = [
+      new Error('database is locked'),
+      { deviceId: '', tableCount: 1 },
+      { deviceId: 'ios-device-1', tableCount: 3 }
+    ];
+    let launched = false;
 
-    await expect(waitForFileCreated(database, () => {
-      setTimeout(() => writeFileSync(database, 'ready'), 10);
-    }, 500, 5)).resolves.toBeUndefined();
+    await expect(waitForBootstrapSnapshot(() => {
+      const state = states.shift();
+      if (state instanceof Error) throw state;
+      return state;
+    }, () => { launched = true; }, 500, 1)).resolves.toEqual({
+      deviceId: 'ios-device-1',
+      tableCount: 3
+    });
+    expect(launched).toBe(true);
+  });
+
+  it('fails after the bounded wait when bootstrap never becomes ready', async () => {
+    await expect(waitForBootstrapSnapshot(
+      () => ({ deviceId: '', tableCount: 1 }),
+      () => {},
+      5,
+      1
+    )).rejects.toThrow('device identity present=false, required tables=1');
   });
 });
