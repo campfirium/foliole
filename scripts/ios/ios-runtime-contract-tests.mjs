@@ -80,6 +80,7 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'src/shared/platform/companionSyncPackApply.test.ts',
   'scripts/ios/ios-contract-assets.test.mjs',
   'scripts/ios/ios-attachment-resource-host-contract.test.mjs',
+  'scripts/ios/ios-app-icon-host-contract.test.mjs',
   'scripts/ios/ios-bootstrap-acceptance.test.mjs',
   'scripts/ios/ios-bootstrap-quality-workflow-contract.test.mjs',
   'scripts/ios/ios-capacitor-runtime-plugins-contract.test.mjs',
