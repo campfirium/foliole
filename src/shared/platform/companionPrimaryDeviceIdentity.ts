@@ -2,6 +2,7 @@ import {
   readStoredWebPairingState,
   writeWebPairingState
 } from './companionPairingState';
+import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import {
   FolioleCompanionSync,
   isNativeCompanionPairingRuntime
@@ -9,7 +10,9 @@ import {
 
 export async function saveLocalPrimaryDeviceId(primaryDeviceId: string) {
   if (isNativeCompanionPairingRuntime()) {
-    return await FolioleCompanionSync.savePrimaryDeviceId({ primary_device_id: primaryDeviceId });
+    return await runCompanionSyncWriterTask(() => (
+      FolioleCompanionSync.savePrimaryDeviceId({ primary_device_id: primaryDeviceId })
+    ));
   }
   const current = readStoredWebPairingState();
   if (!current) {
