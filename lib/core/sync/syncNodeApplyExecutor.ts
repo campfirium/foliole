@@ -14,7 +14,8 @@ import {
   isConflictCopyNodeId,
   latestBranchHeadRecords,
   orderNodesForApply,
-  type LocalSyncNodeState
+  type LocalSyncNodeState,
+  type SyncNodeApplyOperation
 } from './syncNodeApplyRules.js';
 import {
   buildAttachmentExistsQuery,
@@ -52,6 +53,17 @@ export interface ApplySyncNodesWithDbPortOptions {
   enqueueSearchInvalidations?: boolean;
   hashTextBody?: (content: string) => Promise<string> | string;
   includeAlreadyApplied?: boolean;
+  operation?: SyncNodeApplyOperation;
+}
+
+function assertLocalRestoreApplied(
+  operation: SyncNodeApplyOperation | undefined,
+  appliedCount: number,
+  expectedCount: number
+) {
+  if (operation === 'local_restore' && appliedCount !== expectedCount) {
+    throw new Error('local_restore_not_applied');
+  }
 }
 
 async function queryOne<T extends DbRow>(port: DbPort, sql: string, params: readonly (string | number | bigint | Uint8Array | null)[] = []) {
@@ -194,7 +206,7 @@ export async function applySyncNodesWithDbPort(
         continue;
       }
       const localNode = await loadLocalNodeSyncState(tx, record.object_id);
-      const decision = decideIncomingNodeApply(localNode, record);
+      const decision = decideIncomingNodeApply(localNode, record, options.operation);
       if (decision === 'apply_missing_local' || decision === 'apply_fast_forward') {
         await applyAcceptedRemoteNode({ invalidatedAt, localNode, options, preparedTextBodyHashes, record, result, tx });
         continue;
@@ -214,6 +226,7 @@ export async function applySyncNodesWithDbPort(
       result.conflictRecords.push(toSyncNodeConflictRecord(record));
       result.conflictNodes.push(record);
     }
+    assertLocalRestoreApplied(options.operation, result.appliedIds.length, ordered.length);
     if (result.appliedIds.length > 0) {
       await pruneLearningRowsWithoutVisibleNodes(tx);
     }

@@ -116,7 +116,10 @@ export {
   saveCompanionSyncStateCursor,
   saveCompanionSyncStatePushCursor
 } from './companionSyncCursors';
-export { applyCompanionSyncNodeVersions } from './companionSyncNodeVersions';
+export {
+  applyCompanionSyncNodeVersions,
+  applyCompanionTrashRestoreNodeVersions
+} from './companionSyncNodeVersions';
 
 export async function loadCompanionPdfPageText(attachmentId: string) {
   if (!isNativeCompanionPdfPageTextRuntime()) {

@@ -1,7 +1,11 @@
+import {
+  resolveRestoreNodeCandidates,
+  type RestoreNodeCandidate
+} from '../../lib/core/database/nodeRestoreConflicts';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { normalizeWorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshotContract';
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
-import { applyCompanionSyncNodeVersions } from '../shared/platform/companionSyncObjects';
+import { applyCompanionTrashRestoreNodeVersions } from '../shared/platform/companionSyncObjects';
 import {
   isCanonicalTrashedNodeId,
   selectCanonicalTrashedNodeDeletedAtById,
@@ -48,6 +52,16 @@ async function buildRestoredNodeVersion(node: WorkspaceNodeSnapshot, deviceId: s
   };
 }
 
+function toRestoreCandidate(node: WorkspaceNodeSnapshot): RestoreNodeCandidate {
+  return {
+    createdAt: node.createdAt,
+    deletedAt: node.deletedAt ?? null,
+    id: node.id,
+    importContentFingerprint: node.importContentFingerprint ?? null,
+    importSourceFingerprint: node.importSourceFingerprint ?? null
+  };
+}
+
 export async function restoreCompanionTrashNode(args: RestoreCompanionTrashNodeArgs) {
   const snapshot = args.snapshot ? normalizeWorkspaceSnapshot(args.snapshot) : null;
   const node = snapshot?.nodesById[args.nodeId];
@@ -57,29 +71,37 @@ export async function restoreCompanionTrashNode(args: RestoreCompanionTrashNodeA
   const restoredAt = new Date().toISOString();
   const subtreeIds = collectNodeSubtreeIds(args.nodeId, snapshot.nodesById)
     .filter((nodeId) => isCanonicalTrashedNodeId(snapshot, nodeId));
-  const restorableNodes = subtreeIds
+  const restoreResult = resolveRestoreNodeCandidates(
+    subtreeIds,
+    Object.values(snapshot.nodesById).map(toRestoreCandidate)
+  );
+  const restorableNodes = restoreResult.restoredNodeIds
     .map((nodeId) => snapshot.nodesById[nodeId])
     .filter((node): node is NonNullable<typeof node> => Boolean(node));
   const restored = await Promise.all(
     restorableNodes.map((node) => buildRestoredNodeVersion(node, args.deviceId, restoredAt))
   );
-  await applyCompanionSyncNodeVersions(restored.map((entry) => entry.version));
-  const restoredIds = new Set(subtreeIds);
+  await applyCompanionTrashRestoreNodeVersions(restored.map((entry) => entry.version));
+  const restoredIds = new Set(restoreResult.restoredNodeIds);
   const nextNodesById = {
     ...snapshot.nodesById,
     ...Object.fromEntries(restored.map((entry) => [entry.node.id, entry.node]))
   };
-  const nextNodeOrder = [...snapshot.nodeOrder, ...subtreeIds.filter((nodeId) => !snapshot.nodeOrder.includes(nodeId))];
+  const nextNodeOrder = [
+    ...snapshot.nodeOrder,
+    ...restoreResult.restoredNodeIds.filter((nodeId) => !snapshot.nodeOrder.includes(nodeId))
+  ];
+  const targetNodeId = restoreResult.skippedConflicts[0]?.liveNodeId ?? args.nodeId;
   const nextSource = {
     ...snapshot,
     nodeOrder: nextNodeOrder,
     nodesById: nextNodesById
   };
   return {
-    nodeId: args.nodeId,
+    nodeId: targetNodeId,
     snapshot: {
       ...snapshot,
-      activeNodeId: snapshot.activeNodeId ?? args.nodeId,
+      activeNodeId: targetNodeId,
       nodeOrder: selectCanonicalVisibleNodeIds(nextSource),
       nodesById: nextNodesById,
       trashedNodeDeletedAtById: selectCanonicalTrashedNodeDeletedAtById(nextSource),

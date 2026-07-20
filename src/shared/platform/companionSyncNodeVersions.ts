@@ -1,6 +1,7 @@
 import { CapacitorSQLite, SQLiteConnection, type SQLiteDBConnection } from '@capacitor-community/sqlite';
 
 import { applySyncNodesWithDbPort } from '../../../lib/core/sync/syncNodeApplyExecutor';
+import type { SyncNodeApplyOperation } from '../../../lib/core/sync/syncNodeApplyRules';
 import { COMPANION_DATABASE_NAME, COMPANION_DATABASE_VERSION } from '../../../lib/platform/nativeCompanionContract';
 import type { NativeSyncNodeRecord } from '../../../lib/platform/nativeSyncContract';
 
@@ -44,14 +45,28 @@ export async function applyCompanionSyncNodeVersions(
   return runCompanionSyncWriterTask(() => applyCompanionSyncNodeVersionsWithSharedCoreOnDevice(nodes, manager));
 }
 
+export async function applyCompanionTrashRestoreNodeVersions(
+  nodes: NativeSyncNodeRecord[],
+  manager?: CompanionSqliteConnectionManager
+) {
+  if (!isNativeCompanionNodeVersionWriteRuntime() || nodes.length === 0) {
+    return [];
+  }
+  return runCompanionSyncWriterTask(() => (
+    applyCompanionSyncNodeVersionsWithSharedCoreOnDevice(nodes, manager, 'local_restore')
+  ));
+}
+
 export async function applyCompanionSyncNodeVersionsWithSharedCore(
   connection: SQLiteDBConnection,
-  nodes: NativeSyncNodeRecord[]
+  nodes: NativeSyncNodeRecord[],
+  operation: SyncNodeApplyOperation = 'remote_sync'
 ) {
   const port = createCapacitorSqliteDbPort(connection);
   const result = await applySyncNodesWithDbPort(port, nodes, {
     enqueueSearchInvalidations: false,
-    includeAlreadyApplied: true
+    includeAlreadyApplied: true,
+    operation
   });
   if (result.conflictNodes.length > 0) {
     throw new Error('shared_node_conflict_copy_not_migrated');
@@ -61,11 +76,12 @@ export async function applyCompanionSyncNodeVersionsWithSharedCore(
 
 export async function applyCompanionSyncNodeVersionsWithSharedCoreOnDevice(
   nodes: NativeSyncNodeRecord[],
-  manager: CompanionSqliteConnectionManager = new SQLiteConnection(CapacitorSQLite)
+  manager: CompanionSqliteConnectionManager = new SQLiteConnection(CapacitorSQLite),
+  operation: SyncNodeApplyOperation = 'remote_sync'
 ) {
   const connection = await openCompanionDatabaseConnection(manager);
   try {
-    return await applyCompanionSyncNodeVersionsWithSharedCore(connection, nodes);
+    return await applyCompanionSyncNodeVersionsWithSharedCore(connection, nodes, operation);
   } finally {
     await closeCompanionDatabaseConnection(manager, connection);
   }

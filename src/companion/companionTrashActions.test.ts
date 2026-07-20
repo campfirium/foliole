@@ -1,9 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 
 const syncObjectsMock = vi.hoisted(() => ({
-  applyCompanionSyncNodeVersions: vi.fn(async () => ['folder-1', 'topic-1'])
+  applyCompanionTrashRestoreNodeVersions: vi.fn(async () => ['folder-1', 'topic-1'])
 }));
 
 vi.mock('../shared/platform/companionSyncObjects', () => syncObjectsMock);
@@ -53,12 +53,11 @@ beforeEach(() => {
     .mockReturnValueOnce('00000000-0000-4000-8000-000000000002');
 });
 
-describe('companion trash actions', () => {
-  it('restores a trashed subtree through node versions', async () => {
+it('restores a trashed subtree through node versions', async () => {
     const { restoreCompanionTrashNode } = await import('./companionTrashActions');
 
     const result = await restoreCompanionTrashNode({
-      deviceId: 'android-device',
+      deviceId: 'companion-device',
       nodeId: 'folder-1',
       snapshot: createSnapshot()
     });
@@ -68,7 +67,7 @@ describe('companion trash actions', () => {
     expect(result?.snapshot.trashedNodeDeletedAtById).toEqual({});
     expect(result?.snapshot.nodesById['folder-1']).toMatchObject({ deletedAt: null });
     expect(result?.snapshot.nodesById['topic-1']).toMatchObject({ deletedAt: null });
-    expect(syncObjectsMock.applyCompanionSyncNodeVersions).toHaveBeenCalledWith([
+    expect(syncObjectsMock.applyCompanionTrashRestoreNodeVersions).toHaveBeenCalledWith([
       expect.objectContaining({
         object_id: 'folder-1',
         snapshot: expect.objectContaining({ deleted_at: null })
@@ -78,9 +77,9 @@ describe('companion trash actions', () => {
         snapshot: expect.objectContaining({ deleted_at: null })
       })
     ]);
-  });
+});
 
-  it('does not restore nodes whose lifecycle fact is already visible', async () => {
+it('does not restore nodes whose lifecycle fact is already visible', async () => {
     const { restoreCompanionTrashNode } = await import('./companionTrashActions');
     const snapshot = createSnapshot();
 
@@ -96,5 +95,38 @@ describe('companion trash actions', () => {
         trashedNodeIds: ['topic-1']
       }
     })).resolves.toBeNull();
-  });
+});
+
+it('skips an imported duplicate and targets the canonical live node', async () => {
+    const { restoreCompanionTrashNode } = await import('./companionTrashActions');
+    const snapshot = createSnapshot();
+    const liveNode = createNode({
+      createdAt: '2026-05-02T00:00:00.000Z',
+      deletedAt: null,
+      id: 'topic-live',
+      importContentFingerprint: 'content-a',
+      importSourceFingerprint: 'source-a'
+    });
+    const trashNode = createNode({
+      importContentFingerprint: 'content-a',
+      importSourceFingerprint: 'source-a',
+      parentNodeId: null
+    });
+
+    const result = await restoreCompanionTrashNode({
+      deviceId: 'companion-device',
+      nodeId: 'topic-1',
+      snapshot: {
+        ...snapshot,
+        nodeOrder: ['topic-live'],
+        nodesById: { 'topic-1': trashNode, 'topic-live': liveNode },
+        trashedNodeDeletedAtById: { 'topic-1': trashNode.deletedAt! },
+        trashedNodeIds: ['topic-1']
+      }
+    });
+
+    expect(result?.nodeId).toBe('topic-live');
+    expect(result?.snapshot.activeNodeId).toBe('topic-live');
+    expect(result?.snapshot.trashedNodeIds).toEqual(['topic-1']);
+    expect(syncObjectsMock.applyCompanionTrashRestoreNodeVersions).toHaveBeenCalledWith([]);
 });
