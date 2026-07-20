@@ -2,10 +2,10 @@ name: T5 Nightly Remote Quality
 
 on:
   schedule:
-    # 12:00 Asia/Shanghai, covering the 06:00-12:00 work block.
-    - cron: '0 4 * * *'
-    # 00:00 Asia/Shanghai, covering the rest of the day.
-    - cron: '0 16 * * *'
+    # 12:10 Asia/Shanghai, covering the 06:00-12:00 work block.
+    - cron: '10 4 * * *'
+    # 00:10 Asia/Shanghai, covering the rest of the day.
+    - cron: '10 16 * * *'
   workflow_dispatch:
     inputs:
       target_sha:
@@ -66,7 +66,7 @@ jobs:
             echo "- scope: remote release-base subset"
             echo "- branch: dev"
             echo "- target SHA: ${T5_TARGET_SHA}"
-            echo "- schedule: 12:00 and 00:00 Asia/Shanghai"
+            echo "- schedule: 12:10 and 00:10 Asia/Shanghai"
           } >> "${GITHUB_STEP_SUMMARY}"
           npm run lint:full
           npm run typecheck:desktop

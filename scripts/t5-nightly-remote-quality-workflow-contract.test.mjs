@@ -8,10 +8,10 @@ const workflow = fs.readFileSync('.github/workflows/t5-nightly-remote-quality.ym
 describe('T5 nightly remote quality workflow contract', () => {
   it('runs twice per day at the agreed Beijing windows and can be dispatched manually', () => {
     expect(workflow).toContain('name: T5 Nightly Remote Quality');
-    expect(workflow).toContain("cron: '0 4 * * *'");
-    expect(workflow).toContain("cron: '0 16 * * *'");
-    expect(workflow).toContain('12:00 Asia/Shanghai');
-    expect(workflow).toContain('00:00 Asia/Shanghai');
+    expect(workflow).toContain("cron: '10 4 * * *'");
+    expect(workflow).toContain("cron: '10 16 * * *'");
+    expect(workflow).toContain('12:10 Asia/Shanghai');
+    expect(workflow).toContain('00:10 Asia/Shanghai');
     expect(workflow).toContain('workflow_dispatch:');
     expect(workflow).toContain('target_sha:');
     expect(workflow).toContain('required: true');

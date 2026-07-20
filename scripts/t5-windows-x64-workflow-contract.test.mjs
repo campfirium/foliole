@@ -9,8 +9,8 @@ const workflow = fs.readFileSync('.github/workflows/t5-nightly-remote-quality.ym
 describe('T5 Windows x64 workflow contract', () => {
   it('runs the read-only Windows x64 layer only through T5 triggers', () => {
     expect(workflow).toContain('name: T5 Nightly Remote Quality');
-    expect(workflow).toContain("cron: '0 4 * * *'");
-    expect(workflow).toContain("cron: '0 16 * * *'");
+    expect(workflow).toContain("cron: '10 4 * * *'");
+    expect(workflow).toContain("cron: '10 16 * * *'");
     expect(workflow).toContain('workflow_dispatch:');
     expect(workflow).not.toContain('\n  push:');
     expect(workflow).not.toContain('\n  pull_request:');
