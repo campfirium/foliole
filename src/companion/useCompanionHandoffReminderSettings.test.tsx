@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const syncObjectsMock = vi.hoisted(() => ({
-  loadCompanionSyncSettingValueJson: vi.fn(async () => null),
+  loadCompanionSyncSettingValueJson: vi.fn<(key: string) => Promise<string | null>>(async () => null),
   saveCompanionSyncSettingRecord: vi.fn(async () => ({ content_hash: 'hash-setting', object_id: 'setting-1' }))
 }));
 
