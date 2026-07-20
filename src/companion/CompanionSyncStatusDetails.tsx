@@ -26,6 +26,9 @@ function formatDeviceKind(deviceKind: string | null, t: Translate) {
   if (deviceKind === 'android-capacitor' || deviceKind === 'android') {
     return 'Android';
   }
+  if (deviceKind === 'ios-capacitor' || deviceKind === 'ios') {
+    return 'iOS';
+  }
   return deviceKind ?? t('companion.sync.deviceFallback');
 }
 
