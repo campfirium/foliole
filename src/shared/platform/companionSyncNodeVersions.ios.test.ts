@@ -1,13 +1,14 @@
 import Database from 'better-sqlite3';
 import { afterEach, expect, it, vi } from 'vitest';
 
-import { ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS } from '../../../lib/core/database/androidCompanionCoreSchemaStatements';
-import { ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS } from '../../../lib/core/database/androidCompanionSyncSchemaStatements';
 import { COMPANION_DATABASE_VERSION } from '../../../lib/platform/nativeCompanionContract';
 import type { NativeSyncNodeRecord } from '../../../lib/platform/nativeSyncContract';
 
 import { applyCompanionSyncNodeVersions } from './companionSyncNodeVersions';
-import { createFakeCapacitorConnection } from './companionSyncNodeVersionsTestSupport';
+import {
+  createFakeCapacitorConnection,
+  installCompanionNodeSchema
+} from './companionSyncNodeVersionsTestSupport';
 import { supportsCompanionNodeMutation } from './companionWorkspaceRuntimeRepository';
 
 const capacitorState = vi.hoisted(() => ({
@@ -100,20 +101,4 @@ function createConnection(db: Database.Database) {
     close: vi.fn(connection.close),
     open: vi.fn(connection.open)
   };
-}
-
-function installCompanionNodeSchema(db: Database.Database) {
-  db.exec(ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS.join(';\n'));
-  db.exec(ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS.join(';\n'));
-  db.exec(`
-    CREATE TABLE content_blobs (
-      hash TEXT PRIMARY KEY, storage_key TEXT NOT NULL, kind TEXT NOT NULL,
-      mime_type TEXT NOT NULL, compression TEXT NOT NULL,
-      original_size_bytes INTEGER NOT NULL, stored_size_bytes INTEGER NOT NULL,
-      original_sha256 TEXT NOT NULL, stored_sha256 TEXT NOT NULL,
-      availability TEXT NOT NULL, created_at TEXT NOT NULL,
-      cached_at TEXT, last_verified_at TEXT
-    );
-    CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB NOT NULL);
-  `);
 }

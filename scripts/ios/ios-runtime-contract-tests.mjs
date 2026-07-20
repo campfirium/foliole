@@ -96,6 +96,7 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
 ];
 
 export const IOS_RUNTIME_SQLITE_CONTRACT_TESTS = [
+  'src/companion/companionCaptureTextActions.ios.test.ts',
   'src/shared/platform/companionSyncNodeVersions.ios.test.ts'
 ];
 
