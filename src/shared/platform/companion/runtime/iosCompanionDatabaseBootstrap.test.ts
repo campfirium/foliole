@@ -21,7 +21,11 @@ function createHarness(args: { missingColumns?: string[]; storedDeviceId?: strin
   const connection = {
     beginTransaction: vi.fn(async () => ({ changes: { changes: 0 } })),
     commitTransaction: vi.fn(async () => ({ changes: { changes: 0 } })),
-    execute: vi.fn(async () => ({ changes: { changes: 0 } })),
+    execute: vi.fn(async (statement: string, transaction?: boolean) => {
+      void statement;
+      void transaction;
+      return { changes: { changes: 0 } };
+    }),
     getUrl: vi.fn(async (): Promise<{ url?: string }> => ({
       url: 'file:///Library/CapacitorDatabase/foliole-companionSQLite.db'
     })),
