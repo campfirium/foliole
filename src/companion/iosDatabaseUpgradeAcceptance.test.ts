@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { shouldInjectIosDatabaseUpgradeFault } from './iosDatabaseUpgradeAcceptance';
+import {
+  createIosDatabaseUpgradeBootstrapOptions,
+  shouldInjectIosDatabaseUpgradeFault
+} from './iosDatabaseUpgradeAcceptance';
 
 describe('iOS database upgrade acceptance isolation', () => {
   afterEach(() => vi.unstubAllEnvs());
@@ -12,5 +15,12 @@ describe('iOS database upgrade acceptance isolation', () => {
     expect(shouldInjectIosDatabaseUpgradeFault()).toBe(true);
     vi.stubEnv('VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_SCENARIO', 'pairing-signed-transport');
     expect(shouldInjectIosDatabaseUpgradeFault()).toBe(false);
+  });
+
+  it('omits the optional repair hook unless fault injection is enabled', () => {
+    expect(createIosDatabaseUpgradeBootstrapOptions(false)).toEqual({});
+    const options = createIosDatabaseUpgradeBootstrapOptions(true);
+    expect(options).toHaveProperty('afterRepair');
+    expect(() => options.afterRepair?.(0)).toThrow('Injected iOS database upgrade acceptance fault.');
   });
 });
