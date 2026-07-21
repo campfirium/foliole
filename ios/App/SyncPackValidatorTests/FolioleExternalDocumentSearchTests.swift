@@ -67,6 +67,17 @@ final class FolioleExternalDocumentSearchTests: XCTestCase {
         XCTAssertTrue(try results(store.search(query: "   ", limit: nil)).isEmpty)
     }
 
+    func testRejectsMalformedGeneratedNumericValues() throws {
+        let fixture = try makeFixture()
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+        try execute(
+            fixture.database,
+            "INSERT INTO external_search_folders (id, folder_path, document_count) VALUES ('broken', '/broken', 'not-a-number')"
+        )
+
+        XCTAssertThrowsError(try store(fixture.database).loadDirectory())
+    }
+
     private func store(_ database: URL) throws -> FolioleCompanionExternalDocumentSearchStore {
         try FolioleCompanionExternalDocumentSearchStore(
             databaseURL: database,

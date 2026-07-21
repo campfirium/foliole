@@ -27,5 +27,9 @@ describe('iOS external document read host contract', () => {
     expect(store).toMatch(/queries\.rows\(\s*contract\.searchQuery/);
     expect(runner).toContain('fields: [FolioleCompanionGeneratedField]');
     expect(runner).toContain('FolioleReadOnlySQLite(url: databaseURL)');
+    expect(runner).toContain('guard let result = Int(value)');
+    expect(runner).toContain('guard let result = Double(value), result.isFinite');
+    expect(runner).not.toContain('Int(value) ?? 0');
+    expect(runner).not.toContain('Double(value) ?? 0');
   });
 });

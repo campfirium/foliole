@@ -36,16 +36,24 @@ final class FolioleCompanionGeneratedReadQueryRunner {
     ) throws -> [[String: Any]] {
         try rows.map { row in
             guard row.count == query.columns.count else { throw Self.error("Query returned an invalid row.") }
-            return Dictionary(uniqueKeysWithValues: zip(query.columns, row).map { column, value in
-                (column.key, Self.value(value, type: column.type))
+            return Dictionary(uniqueKeysWithValues: try zip(query.columns, row).map { column, value in
+                (column.key, try Self.value(value, column: column))
             })
         }
     }
 
-    private static func value(_ value: String?, type: String) -> Any {
+    private static func value(_ value: String?, column: FolioleCompanionGeneratedQuery.Column) throws -> Any {
         guard let value else { return NSNull() }
-        if type == "long" { return Int(value) ?? 0 }
-        if type == "double" { return Double(value) ?? 0 }
+        if column.type == "long" {
+            guard let result = Int(value) else { throw error("Invalid long value for \(column.key).") }
+            return result
+        }
+        if column.type == "double" {
+            guard let result = Double(value), result.isFinite else {
+                throw error("Invalid double value for \(column.key).")
+            }
+            return result
+        }
         return value
     }
 
