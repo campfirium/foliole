@@ -14,7 +14,7 @@ export function resolveIosResourceMode(env = process.env) {
 
 export function iosXcodebuildResourceArgs(mode, { testing = false } = {}) {
   if (mode === FULL_MODE) return [];
-  const args = ['-jobs', '2'];
+  const args = ['-jobs', '1'];
   if (testing) {
     args.push(
       '-maximum-concurrent-test-simulator-destinations', '1',
@@ -26,14 +26,14 @@ export function iosXcodebuildResourceArgs(mode, { testing = false } = {}) {
 }
 
 export function iosSwiftResourceArgs(mode) {
-  return mode === FULL_MODE ? [] : ['--jobs', '2'];
+  return mode === FULL_MODE ? [] : ['--jobs', '1'];
 }
 
 export function iosVitestResourceArgs(mode) {
-  return mode === FULL_MODE ? [] : ['--maxWorkers=2', '--no-file-parallelism'];
+  return mode === FULL_MODE ? [] : ['--maxWorkers=1', '--no-file-parallelism'];
 }
 
-export function iosResourceCommand(command, args, mode) {
-  if (mode === FULL_MODE || process.platform !== 'darwin') return { args, command };
-  return { args: ['-n', '10', command, ...args], command: '/usr/bin/nice' };
+export function iosResourceCommand(command, args, mode, platform = process.platform) {
+  if (mode === FULL_MODE || platform !== 'darwin') return { args, command };
+  return { args: ['-b', command, ...args], command: '/usr/sbin/taskpolicy' };
 }

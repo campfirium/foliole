@@ -15,9 +15,15 @@ import {
 describe('iOS resource profile', () => {
   it('defaults command-line iOS work to the background profile', () => {
     expect(resolveIosResourceMode({})).toBe('background');
-    expect(iosXcodebuildResourceArgs('background')).toEqual(['-jobs', '2']);
-    expect(iosSwiftResourceArgs('background')).toEqual(['--jobs', '2']);
-    expect(iosVitestResourceArgs('background')).toEqual(['--maxWorkers=2', '--no-file-parallelism']);
+    expect(iosXcodebuildResourceArgs('background')).toEqual(['-jobs', '1']);
+    expect(iosSwiftResourceArgs('background')).toEqual(['--jobs', '1']);
+    expect(iosVitestResourceArgs('background')).toEqual(['--maxWorkers=1', '--no-file-parallelism']);
+    expect(iosResourceCommand('vite', ['build'], 'background', 'darwin')).toEqual({
+      args: ['-b', 'vite', 'build'], command: '/usr/sbin/taskpolicy'
+    });
+    expect(iosResourceCommand('vite', ['build'], 'background', 'linux')).toEqual({
+      args: ['build'], command: 'vite'
+    });
   });
 
   it('removes scheduling limits in the explicit full profile', () => {
@@ -32,6 +38,8 @@ describe('iOS resource profile', () => {
 
   it('keeps both public quality commands on the same verification chain', () => {
     const scripts = JSON.parse(fs.readFileSync('package.json', 'utf8')).scripts;
+    expect(scripts['quality:ios:contract']).toBe('node scripts/ios/ios-runtime-contract-tests.mjs');
+    expect(scripts['quality:ios']).toContain('npm run quality:ios:contract');
     expect(scripts['quality:ios']).toContain('ios-bootstrap-acceptance.mjs');
     expect(scripts['quality:ios:full']).toBe('FOLIOLE_IOS_RESOURCE_MODE=full npm run quality:ios');
   });

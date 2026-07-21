@@ -87,8 +87,8 @@ async function main() {
     });
     simulator = selectSimulator(runJson('xcrun', ['simctl', 'list', 'devices', 'available', '--json']));
     ownsBootedSimulator = shouldShutdownSimulator(simulator);
-    bootSimulator(simulator);
     prepareApp(simulator.udid, serviceInfo.endpoint, scenario);
+    bootSimulator(simulator);
     const signatureIdentifier = installFreshAcceptanceApp(simulator.udid);
     const containerPath = resolveContainerPath(simulator.udid);
     const databasePath = path.join(containerPath, DATABASE_RELATIVE_PATH);

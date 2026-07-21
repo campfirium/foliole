@@ -62,6 +62,13 @@ describe('iOS bridge acceptance host contract', () => {
     expect(databaseRunner).toContain('assertSameContainer(options, simulator.udid, containerPath)');
   });
 
+  it('finishes the first heavy build before booting a cold Simulator', () => {
+    const runner = fs.readFileSync('scripts/ios/ios-bootstrap-acceptance.mjs', 'utf8');
+    const databaseRunner = fs.readFileSync('scripts/ios/ios-database-upgrade-acceptance-runner.mjs', 'utf8');
+    expect(runner).toMatch(/prepareApp\(simulator\.udid[\s\S]*bootSimulator\(simulator\)/);
+    expect(databaseRunner).toMatch(/prepareBuild\(options, simulator\.udid, false\)[\s\S]*bootSimulator\(options\.repoRoot, simulator\)/);
+  });
+
   it('reuses authoritative crypto/auth helpers without loading the Electron pairing store', () => {
     const service = fs.readFileSync('scripts/ios/ios-pairing-acceptance-service.ts', 'utf8');
     const auth = fs.readFileSync('electron/sync/companionRequestAuth.ts', 'utf8');

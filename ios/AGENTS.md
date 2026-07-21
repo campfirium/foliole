@@ -19,7 +19,7 @@
 ## Validation
 
 - iOS 公开最小流程：`npm run android:web:build`、`npx cap sync ios`、`xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build`。
-- iOS 日常自动验收使用轻载的 `npm run quality:ios`；它限制命令行构建并发与 CPU 调度优先级，并只关闭自己启动的 Simulator。进入集中 iOS 开发时可显式使用 `npm run quality:ios:full` 解除资源限制；两档覆盖相同的 runtime capability、bootstrap、配对 / Keychain、同步状态、sync-pack apply、永久游标、首次建库与进程重启持久化，不接触正式模拟器应用或真机数据。
+- 不需要真实 iOS runtime 的改动先用 `npm run quality:ios:contract`，该入口不得启动 Simulator。iOS 日常完整自动验收使用轻载的 `npm run quality:ios`；它以后台调度、单 worker 构建并先构建后启动 Simulator，只关闭自己启动的设备。集中 iOS 开发可显式使用 `npm run quality:ios:full` 解除资源限制；完整两档覆盖相同的 runtime capability、bootstrap、配对 / Keychain、同步状态、sync-pack apply、永久游标、首次建库与进程重启持久化，不接触正式模拟器应用或真机数据。
 - 隔离 Simulator 验收必须保留 Xcode 的本地签名并在安装前验证签名；`CODE_SIGNING_ALLOWED=NO` 只用于不运行 App 的通用编译检查，不得复用其产物验收 Keychain 或可见运行态，否则会产生缺少 entitlement 的假红灯。
 - 需要人工打开工程时使用 `npx cap open ios`；需要模拟器或真机可见验收时使用 `npx cap run ios --target <device-id>`。
 - 宿主或插件变更先完成 companion build 与 `npx cap sync ios`，再执行无签名原生构建；用户可见行为进入 iOS runtime 后必须追加模拟器或真机验收。

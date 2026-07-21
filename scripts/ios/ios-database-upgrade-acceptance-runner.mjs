@@ -44,8 +44,8 @@ export async function runIosDatabaseUpgradeAcceptance(repoRoot) {
   try {
     simulator = selectSimulator(runJson(options.repoRoot, 'xcrun', ['simctl', 'list', 'devices', 'available', '--json']));
     ownsSimulator = shouldShutdownSimulator(simulator);
-    bootSimulator(options.repoRoot, simulator);
     prepareBuild(options, simulator.udid, false);
+    bootSimulator(options.repoRoot, simulator);
     installApp(options, simulator.udid, true);
     const containerPath = resolveContainer(options, simulator.udid);
     const databasePath = path.join(containerPath, DATABASE_RELATIVE_PATH);
