@@ -80,9 +80,13 @@ describe('iOS bridge acceptance host contract', () => {
 
   it('keeps acceptance sync-pack fixtures independent from the Electron app runtime', () => {
     const builder = fs.readFileSync('electron/database/syncPackBuilderFromDriver.ts', 'utf8');
+    const stateApply = fs.readFileSync('electron/database/companionSyncPushWithDbPort.ts', 'utf8');
+    const stateObjectApply = fs.readFileSync('electron/database/companionSyncPushStateObjectWithDbPort.ts', 'utf8');
+    const reviewLogApply = fs.readFileSync('electron/database/companionSyncPushReviewLogWithDbPort.ts', 'utf8');
     const nodeStateRows = fs.readFileSync('electron/database/nodeSyncStateRows.ts', 'utf8');
     const packRows = fs.readFileSync('electron/database/syncPackRows.ts', 'utf8');
     const syncObjects = fs.readFileSync('electron/database/syncObjectsFromDriver.ts', 'utf8');
+    const syncPushHandler = fs.readFileSync('electron/sync/companionLanSyncPushWithApply.ts', 'utf8');
     const fixtures = [
       'scripts/ios/ios-content-resource-acceptance-fixture.ts',
       'scripts/ios/ios-state-writeback-acceptance-fixture.ts',
@@ -93,6 +97,13 @@ describe('iOS bridge acceptance host contract', () => {
     expect(nodeStateRows).not.toContain("from './connection.js'");
     expect(packRows).not.toContain("from './connection.js'");
     expect(syncObjects).not.toContain("from './connection.js'");
+    for (const pureApply of [stateApply, stateObjectApply, reviewLogApply]) {
+      expect(pureApply).not.toContain("from './connection.js'");
+      expect(pureApply).not.toContain("from 'electron'");
+    }
+    expect(syncPushHandler).not.toContain('workspaceSyncAppliedEvents');
+    expect(syncPushHandler).not.toContain("from 'electron'");
+    expect(fixtures[1]).toContain("from '../../electron/database/companionSyncPushWithDbPort.ts'");
     for (const fixture of fixtures) {
       expect(fixture).toContain("from '../../electron/database/syncPackBuilderFromDriver.ts'");
       expect(fixture).not.toContain("from '../../electron/database/syncPackBuilder.ts'");

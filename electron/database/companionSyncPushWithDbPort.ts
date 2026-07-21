@@ -1,15 +1,15 @@
-import { applyNodeVersionPushAsync } from './companionSyncPushNodeVersionApply.js';
-import { applyReviewLogPushAsync } from './companionSyncPushReviewLogApply.js';
+import type { DbPort } from '../../lib/core/sync/dbPort.js';
+
+import { applyReviewLogPushWithDbPort } from './companionSyncPushReviewLogWithDbPort.js';
 import {
-  applyStateObjectPushAsync,
-  isStateObjectPush
-} from './companionSyncPushStateObjectAsyncApply.js';
+  applyStateObjectPushWithDbPort,
+  isStateObjectPush,
+  type StatePushObjectType
+} from './companionSyncPushStateObjectWithDbPort.js';
 import type {
   CompanionSyncPushPayload,
   CompanionSyncPushResult
 } from './companionSyncPushTypes.js';
-
-export type { CompanionSyncPushPayload } from './companionSyncPushTypes.js';
 
 function emptyPushResult(): CompanionSyncPushResult {
   return { acks: [], appliedNodeIds: [], appliedObjectIds: [], appliedReviewOpIds: [] };
@@ -22,22 +22,20 @@ function appendPushResult(target: CompanionSyncPushResult, item: CompanionSyncPu
   target.appliedReviewOpIds.push(...item.appliedReviewOpIds);
 }
 
-export async function applyCompanionSyncPushAsync(
+export async function applyCompanionStateSyncPushWithDbPort(
+  port: DbPort,
   items: CompanionSyncPushPayload[]
 ): Promise<CompanionSyncPushResult> {
   const result = emptyPushResult();
   for (const item of items) {
-    const itemResult = await applySinglePushItemAsync(item);
+    const itemResult = isStateObjectPush(item)
+      ? await applyStateObjectPushWithDbPort(port, item, item.identity.objectType as StatePushObjectType)
+      : item.identity.objectType === 'review_log'
+        ? await applyReviewLogPushWithDbPort(port, item)
+        : unsupportedPushResult(item);
     appendPushResult(result, itemResult);
   }
   return result;
-}
-
-async function applySinglePushItemAsync(item: CompanionSyncPushPayload) {
-  if (item.identity.objectType === 'node') return await applyNodeVersionPushAsync(item);
-  if (isStateObjectPush(item)) return await applyStateObjectPushAsync(item);
-  if (item.identity.objectType === 'review_log') return await applyReviewLogPushAsync(item);
-  return unsupportedPushResult(item);
 }
 
 function unsupportedPushResult(item: CompanionSyncPushPayload): CompanionSyncPushResult {
@@ -53,5 +51,3 @@ function unsupportedPushResult(item: CompanionSyncPushPayload): CompanionSyncPus
     appliedReviewOpIds: []
   };
 }
-
-export { applyCompanionStateSyncPushWithDbPort } from './companionSyncPushWithDbPort.js';

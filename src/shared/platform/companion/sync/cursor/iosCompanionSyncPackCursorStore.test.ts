@@ -25,7 +25,8 @@ describe('iosCompanionSyncPackCursorStore', () => {
 
     await expect(createIosCompanionSyncPackCursorStore(manager as never).loadCursor()).resolves.toBe(12);
     expect(connection.query).toHaveBeenCalledWith(expect.stringContaining('companion_meta'), ['sync_pack_cursor']);
-    expect(connection.close).toHaveBeenCalledTimes(1);
+    expect(connection.close).not.toHaveBeenCalled();
+    expect(manager.closeConnection).toHaveBeenCalledWith('foliole-companion', false);
   });
 
   it('upserts and clears the permanent cursor', async () => {

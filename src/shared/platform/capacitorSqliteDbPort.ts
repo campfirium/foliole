@@ -57,9 +57,6 @@ export function createCapacitorSqliteDbPort(connection: SQLiteDBConnection): DbP
 }
 
 async function runStatement(connection: SQLiteDBConnection, sql: string, params: DbParams) {
-  if (params.length === 0) {
-    return connection.execute(sql, false);
-  }
   return connection.run(sql, normalizeParams(params), false);
 }
 

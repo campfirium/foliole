@@ -69,6 +69,9 @@ describe('iOS state writeback acceptance fixture', () => {
       const second = await fixture.apply(acceptanceItems());
       const packPath = await fixture.buildConfirmationPack();
 
+      expect(fixture.driver.queryOne(
+        "SELECT state_seq FROM sync_object_state WHERE object_type = 'node' AND object_id = 'ios-state-node'"
+      )).toMatchObject({ state_seq: 1 });
       expect(first.acks.map((ack) => ack.status)).toEqual(['accepted', 'accepted', 'accepted', 'accepted']);
       expect(first.appliedObjectIds).toEqual([
         'node_reading:ios-state-node', 'node_review:ios-state-node',

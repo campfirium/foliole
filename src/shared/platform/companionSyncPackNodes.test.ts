@@ -36,17 +36,18 @@ it('attaches a sync pack before applying pack nodes through the shared core', as
   });
 
   expect(connection.open).toHaveBeenCalled();
-  expect(connection.execute).toHaveBeenNthCalledWith(
+  expect(connection.run).toHaveBeenNthCalledWith(
     1,
     "ATTACH DATABASE '/tmp/incoming pack.db' AS inc",
+    [],
     false
   );
   expect(connection.beginTransaction).toHaveBeenCalledTimes(1);
   expect(connection.commitTransaction).toHaveBeenCalledTimes(1);
-  expect(connection.execute).toHaveBeenLastCalledWith('DETACH DATABASE inc', false);
-  expect(connection.close).toHaveBeenCalledTimes(1);
+  expect(connection.run).toHaveBeenLastCalledWith('DETACH DATABASE inc', [], false);
+  expect(connection.close).not.toHaveBeenCalled();
   expect(manager.closeConnection).toHaveBeenCalledWith('foliole-companion', false);
-  expect(connection.execute).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO main.nodes'), false);
+  expect(connection.run).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO main.nodes'), [], false);
 });
 
 it('reuses an already open companion database connection', async () => {
@@ -142,9 +143,10 @@ it('retrieves an existing Android companion database connection before attaching
   });
 
   expect(manager.retrieveConnection).toHaveBeenCalledWith('foliole-companion', false);
-  expect(connection.execute).toHaveBeenNthCalledWith(
+  expect(connection.run).toHaveBeenNthCalledWith(
     1,
     "ATTACH DATABASE '/tmp/downloaded-pack.db' AS inc",
+    [],
     false
   );
 });
@@ -166,13 +168,14 @@ it('detaches the incoming pack when shared core apply fails', async () => {
     packPath: '/tmp/bad-pack.db'
   }, manager as never)).rejects.toThrow('bad pack manifest');
 
-  expect(connection.execute).toHaveBeenNthCalledWith(
+  expect(connection.run).toHaveBeenNthCalledWith(
     1,
     "ATTACH DATABASE '/tmp/bad-pack.db' AS inc",
+    [],
     false
   );
-  expect(connection.execute).toHaveBeenLastCalledWith('DETACH DATABASE inc', false);
-  expect(connection.close).toHaveBeenCalledTimes(1);
+  expect(connection.run).toHaveBeenLastCalledWith('DETACH DATABASE inc', [], false);
+  expect(connection.close).not.toHaveBeenCalled();
   expect(manager.closeConnection).toHaveBeenCalledWith('foliole-companion', false);
 });
 

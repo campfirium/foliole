@@ -11,17 +11,34 @@ interface FakeConnection {
   run: ReturnType<typeof vi.fn>;
 }
 
-it('maps parameterless DbPort writes to Capacitor execute without implicit transactions', async () => {
+it('maps parameterless DbPort writes to the prepared Capacitor runner', async () => {
   const connection = createFakeConnection();
   const db = createCapacitorSqliteDbPort(connection as never);
 
   await expect(db.run('INSERT INTO target SELECT * FROM incoming.rows')).resolves.toEqual({
-    changes: 7,
-    lastInsertRowId: 9
+    changes: 1,
+    lastInsertRowId: 2
   });
 
-  expect(connection.execute).toHaveBeenCalledWith('INSERT INTO target SELECT * FROM incoming.rows', false);
-  expect(connection.run).not.toHaveBeenCalled();
+  expect(connection.run).toHaveBeenCalledWith('INSERT INTO target SELECT * FROM incoming.rows', [], false);
+  expect(connection.execute).not.toHaveBeenCalled();
+});
+
+it('keeps parameterless deletes away from the native execute text parser', async () => {
+  const connection = createFakeConnection();
+  const db = createCapacitorSqliteDbPort(connection as never);
+
+  await db.run('DELETE FROM sync_push_ack WHERE status = \'accepted\'');
+  await db.run('DELETE FROM sync_push_ack;');
+
+  expect(connection.run).toHaveBeenNthCalledWith(
+    1,
+    'DELETE FROM sync_push_ack WHERE status = \'accepted\'',
+    [],
+    false
+  );
+  expect(connection.run).toHaveBeenNthCalledWith(2, 'DELETE FROM sync_push_ack;', [], false);
+  expect(connection.execute).not.toHaveBeenCalled();
 });
 
 it('encodes and decodes blob values at the adapter boundary', async () => {

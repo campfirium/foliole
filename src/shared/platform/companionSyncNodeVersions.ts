@@ -31,8 +31,11 @@ export async function closeCompanionDatabaseConnection(
   manager: CompanionSqliteConnectionManager,
   connection: SQLiteDBConnection
 ) {
+  if (manager.closeConnection) {
+    await manager.closeConnection(COMPANION_DATABASE_NAME, false);
+    return;
+  }
   await connection.close();
-  await manager.closeConnection?.(COMPANION_DATABASE_NAME, false).catch(() => undefined);
 }
 
 export async function applyCompanionSyncNodeVersions(

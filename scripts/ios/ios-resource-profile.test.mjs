@@ -41,6 +41,7 @@ describe('iOS resource profile', () => {
     expect(scripts['quality:ios:contract']).toBe('node scripts/ios/ios-runtime-contract-tests.mjs');
     expect(scripts['quality:ios']).toContain('npm run quality:ios:contract');
     expect(scripts['quality:ios']).toContain('ios-bootstrap-acceptance.mjs');
+    expect(scripts['quality:ios']).toContain('FOLIOLE_IOS_ACCEPTANCE_SCENARIO=state-writeback-runtime');
     expect(scripts['quality:ios:full']).toBe('FOLIOLE_IOS_RESOURCE_MODE=full npm run quality:ios');
   });
 });

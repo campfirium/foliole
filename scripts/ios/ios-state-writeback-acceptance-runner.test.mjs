@@ -25,6 +25,7 @@ function observations() {
   return {
     state_writeback: {
       ack_statuses: ['accepted', 'accepted', 'accepted', 'accepted'],
+      last_push_items: [],
       pack_requests: 3,
       push_requests: 1,
       pushed_object_types: ['node_reading', 'node_review', 'setting', 'review_log']

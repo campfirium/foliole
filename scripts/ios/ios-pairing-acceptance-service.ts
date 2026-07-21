@@ -18,10 +18,10 @@ import {
   createIosContentResourceObservations,
   routeIosContentResourceRequest
 } from './ios-content-resource-acceptance-service.ts';
+import { createIosStateWritebackObservations } from './ios-state-writeback-acceptance-observations.ts';
 import {
   type createIosStateWritebackAcceptanceService
 } from './ios-state-writeback-acceptance-service.ts';
-import { createIosStateWritebackObservations } from './ios-state-writeback-acceptance-observations.ts';
 
 const artifactDir = process.argv[2];
 if (!artifactDir) throw new Error('Acceptance artifact directory is required.');
@@ -30,6 +30,7 @@ mkdirSync(artifactDir, { recursive: true });
 
 const observations = {
   content_resource: createIosContentResourceObservations(),
+  last_error: null as string | null,
   pair_completed: false,
   pair_requested: false,
   redirect_target_hits: 0,
@@ -213,7 +214,10 @@ const server = createServer(async (request, response) => {
       await handleSignedRequest(request, response);
     }
   } catch (error) {
-    send(response, 500, { error: error instanceof Error ? error.message : String(error) });
+    const message = error instanceof Error ? error.message : String(error);
+    observations.last_error = message;
+    writeObservations();
+    send(response, 500, { error: message });
   }
 });
 

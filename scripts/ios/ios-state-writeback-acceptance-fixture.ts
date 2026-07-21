@@ -4,8 +4,8 @@ import path from 'node:path';
 
 import { createBetterSqlite3Driver } from '../../electron/database/betterSqlite3Driver.ts';
 import { createBetterSqliteDbPort } from '../../electron/database/betterSqliteDbPort.ts';
-import { applyCompanionStateSyncPushWithDbPort } from '../../electron/database/companionSyncPushAsyncApply.ts';
 import type { CompanionSyncPushPayload } from '../../electron/database/companionSyncPushTypes.ts';
+import { applyCompanionStateSyncPushWithDbPort } from '../../electron/database/companionSyncPushWithDbPort.ts';
 import { buildDesktopSyncPackFromDriver } from '../../electron/database/syncPackBuilderFromDriver.ts';
 import { initializeDatabaseConnection } from '../../lib/core/database/migrations.ts';
 
@@ -28,6 +28,12 @@ export async function createIosStateWritebackAcceptanceFixture(args: {
     `INSERT INTO nodes (id, kind, title, content, created_at, updated_at)
      VALUES ('ios-state-node', 'topic', 'State acceptance', '', ?, ?)`,
     ['2026-07-21T00:00:00.000Z', '2026-07-21T00:00:00.000Z']
+  );
+  driver.execute(
+    `INSERT INTO sync_object_state (
+       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+     ) VALUES ('node', 'ios-state-node', 1, 'ios-state-node-hash',
+       'acceptance-desktop', '2026-07-21T00:00:00.000Z', 1)`
   );
   const port = createBetterSqliteDbPort(sqlite, { name: 'ios-state-writeback-acceptance' });
   return {

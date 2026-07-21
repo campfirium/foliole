@@ -50,6 +50,7 @@ it('routes push and confirmation pack through one isolated desktop fixture', asy
     expect(Buffer.isBuffer(pack?.body)).toBe(true);
     expect(observations).toEqual({
       ack_statuses: ['accepted'],
+      last_push_items: [{ object_type: 'node_reading', payload_json: item.payloadJson }],
       pack_requests: 1,
       push_requests: 1,
       pushed_object_types: ['node_reading']
