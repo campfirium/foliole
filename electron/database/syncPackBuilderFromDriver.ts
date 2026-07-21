@@ -18,7 +18,9 @@ import { writeStoredZip } from '../diagnostics/zipStore.js';
 
 import { backfillMissingNodeSyncState } from './nodeSyncStateRows.js';
 import { writePackManifest, writePackRows } from './syncPackBuilderRows.js';
-import { loadMaxStateSeq, loadPackRows, type LoadedSyncPackRows } from './syncPackRows.js';
+import type { LoadedDesktopSyncPackRows } from './syncPackLoadedRows.js';
+import { loadSyncPackNodeVersionRows } from './syncPackNodeVersionRows.js';
+import { loadMaxStateSeq, loadPackRows } from './syncPackRows.js';
 
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
@@ -47,7 +49,7 @@ function buildContainerManifest(args: {
   fromDeviceId: string;
   fromStateSeq: number;
   input: BuildDesktopSyncPackInput;
-  rows: LoadedSyncPackRows;
+  rows: LoadedDesktopSyncPackRows;
   toStateSeq: number;
   uncompressedBytes: Buffer;
 }) {
@@ -59,6 +61,7 @@ function buildContainerManifest(args: {
       external_documents: args.rows.externalDocuments,
       node_attachments: args.rows.nodeAttachments,
       node_order: args.rows.nodeOrder,
+      node_sync_versions: args.rows.nodeVersions,
       nodes: args.rows.nodes,
       review_log: args.rows.reviewLog,
       sync_object_state: args.rows.stateRows,
@@ -99,7 +102,11 @@ export async function buildDesktopSyncPackFromDriver(
   const packDb = new BetterSqlite3(incomingPath);
   try {
     for (const statement of PACK_SCHEMA) packDb.exec(statement);
-    const rows = loadPackRows(fromStateSeq, toStateSeq, sourceDriver);
+    const baseRows = loadPackRows(fromStateSeq, toStateSeq, sourceDriver);
+    const rows: LoadedDesktopSyncPackRows = {
+      ...baseRows,
+      nodeVersions: loadSyncPackNodeVersionRows(sourceDriver, baseRows.nodes)
+    };
     const packToStateSeq = rows.stateRows.at(-1)?.state_seq ?? fromStateSeq;
     const writePack = packDb.transaction(() => {
       writePackManifest(packDb, input, fromStateSeq, packToStateSeq, rows);

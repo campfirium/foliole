@@ -18,6 +18,7 @@ import {
 } from './syncPackCursor.js';
 import { applySyncPackExternalDocumentsWithDbPort } from './syncPackExternalDocumentsExecutor.js';
 import { applySyncPackLearningObjectsWithDbPort } from './syncPackLearningObjectsExecutor.js';
+import { applySyncPackNodeVersionsWithDbPort } from './syncPackNodeVersionApplyExecutor.js';
 import { clearConfirmedSyncPushAcksWithDbPort } from './syncPackPushAcksExecutor.js';
 import { applySyncPackReviewLogWithDbPort } from './syncPackReviewLogExecutor.js';
 import { applySyncPackStateRowsWithDbPort } from './syncPackStateRowsExecutor.js';
@@ -37,6 +38,7 @@ export async function applySyncPackNodesWithDbPort(
   options: SyncPackNodeApplyOptions = {}
 ) {
   await applySyncPackNodeRowsWithDbPort(port, options);
+  await applySyncPackNodeVersionsWithDbPort(port, options);
   await applySyncPackNodeOrderRowsWithDbPort(port, options);
   await applySyncPackNodeAttachmentsWithDbPort(port, options);
 }
@@ -139,6 +141,7 @@ async function applySyncPackSurfaceInTransaction(
   }
   const appliedBlobCount = await applySyncPackContentBlobsWithDbPort(port, options);
   await applySyncPackNodeRowsWithDbPort(port, options);
+  await applySyncPackNodeVersionsWithDbPort(port, options);
   await applySyncPackNodeOrderRowsWithDbPort(port, options);
   await pruneLearningRowsWithoutVisibleNodes(port);
   await applySyncPackExternalDocumentsWithDbPort(port, options);

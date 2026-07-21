@@ -23,6 +23,7 @@ import { applyCompanionSyncPushAsync } from './companionSyncPushAsyncApply.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 
 type SyncPushPayload = import('./companionSyncPushTypes.js').CompanionSyncPushPayload;
+type SyncNodeRecord = import('../../lib/platform/nativeSyncContract.js').NativeSyncNodeRecord;
 
 let tempRoot = '';
 
@@ -84,6 +85,58 @@ function createNodeVersionPush(): SyncPushPayload {
   };
 }
 
+function createRestoreNodeVersionPush(parentVersionId = 'desktop#deleted'): SyncPushPayload {
+  const payload = createNodeVersionPush();
+  const record = JSON.parse(payload.payloadJson!) as SyncNodeRecord;
+  const restoredAt = '2026-05-03T02:00:00.000Z';
+  Object.assign(record, {
+    ancestor_version_ids: [parentVersionId],
+    object_id: 'node-restored',
+    parent_version_id: parentVersionId,
+    updated_at: restoredAt,
+    version_created_at: restoredAt,
+    version_id: 'ios#restore'
+  });
+  Object.assign(record.snapshot, {
+    deleted_at: null,
+    id: 'node-restored',
+    parent_id: null,
+    updated_at: restoredAt
+  });
+  return {
+    ...payload,
+    base: { ancestorVersionIds: [parentVersionId], kind: 'node_version', parentVersionId },
+    clientOpId: 'node:ios#restore',
+    identity: { objectId: 'node-restored', objectType: 'node', scope: 'workspace' },
+    payloadJson: JSON.stringify(record),
+    updatedAt: restoredAt
+  };
+}
+
+function seedDeletedNode() {
+  const driver = openDatabaseConnection().driver;
+  driver.execute(
+    `INSERT INTO nodes (id, kind, title, content, deleted_at, created_at, updated_at)
+     VALUES ('node-restored', 'topic', 'Deleted', '', '2026-05-03T01:00:00.000Z',
+       '2026-05-03T00:00:00.000Z', '2026-05-03T01:00:00.000Z')`
+  );
+  driver.execute(
+    `INSERT INTO node_sync_versions (
+       version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
+     ) VALUES ('desktop#stale', 'node-restored', NULL, 'desktop',
+       '2026-05-03T00:30:00.000Z', 'desktop-stale-hash', '{}')`
+  );
+  driver.execute(
+    `INSERT INTO node_sync_versions (
+       version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
+     ) VALUES ('desktop#deleted', 'node-restored', 'desktop#stale', 'desktop',
+       '2026-05-03T01:00:00.000Z', 'desktop-deleted-hash', '{}')`
+  );
+  driver.execute(
+    `UPDATE nodes SET current_version_id = 'desktop#deleted' WHERE id = 'node-restored'`
+  );
+}
+
 describe('companion sync node version push apply', () => {
   it('accepts Android-created node versions into desktop nodes and version history', async () => {
     const result = await applyCompanionSyncPushAsync([createNodeVersionPush()]);
@@ -117,5 +170,27 @@ describe('companion sync node version push apply', () => {
     expect(openDatabaseConnection().driver.queryOne<{ current_version_id: string }>(
       `SELECT current_version_id FROM nodes WHERE id = 'node-highlight'`
     )).toEqual({ current_version_id: 'android#1' });
+  });
+
+  it('accepts only a direct child version as an intentional companion restore', async () => {
+    seedDeletedNode();
+
+    const result = await applyCompanionSyncPushAsync([createRestoreNodeVersionPush()]);
+
+    expect(result.acks).toMatchObject([{ status: 'accepted', versionId: 'ios#restore' }]);
+    expect(openDatabaseConnection().driver.queryOne<{ current_version_id: string; deleted_at: null }>(
+      `SELECT current_version_id, deleted_at FROM nodes WHERE id = 'node-restored'`
+    )).toEqual({ current_version_id: 'ios#restore', deleted_at: null });
+  });
+
+  it('keeps stale companion restore ancestry on the conflict path', async () => {
+    seedDeletedNode();
+
+    const result = await applyCompanionSyncPushAsync([createRestoreNodeVersionPush('desktop#stale')]);
+
+    expect(result.acks).toMatchObject([{ status: 'conflict' }]);
+    expect(openDatabaseConnection().driver.queryOne<{ current_version_id: string; deleted_at: string }>(
+      `SELECT current_version_id, deleted_at FROM nodes WHERE id = 'node-restored'`
+    )).toEqual({ current_version_id: 'desktop#deleted', deleted_at: '2026-05-03T01:00:00.000Z' });
   });
 });

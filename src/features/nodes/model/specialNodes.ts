@@ -1,12 +1,23 @@
+import {
+  HOME_NODE_ID,
+  INBOX_NODE_ID,
+  TRASH_NODE_ID,
+  VIRTUAL_REMOVED_NODE_ID,
+  VIRTUAL_ROOT_NODE_ID,
+  VIRTUAL_SHELVED_NODE_ID
+} from '../../../../lib/core/database/specialNodeIds';
+
 import type { Node } from './nodeTypes';
 import { normalizeInjectedRootNodeOrder } from './specialNodeOrder';
 
-export const INBOX_NODE_ID = 'special-inbox';
-export const HOME_NODE_ID = 'special-home';
-export const TRASH_NODE_ID = 'special-trash';
-export const VIRTUAL_ROOT_NODE_ID = 'special-virtual-root';
-export const VIRTUAL_SHELVED_NODE_ID = 'special-virtual-shelved';
-export const VIRTUAL_REMOVED_NODE_ID = 'special-virtual-removed';
+export {
+  HOME_NODE_ID,
+  INBOX_NODE_ID,
+  TRASH_NODE_ID,
+  VIRTUAL_REMOVED_NODE_ID,
+  VIRTUAL_ROOT_NODE_ID,
+  VIRTUAL_SHELVED_NODE_ID
+};
 
 interface WorkspaceNodeSnapshot {
   activeNodeId: string | null;

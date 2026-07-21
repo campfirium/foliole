@@ -1,7 +1,8 @@
 import { buildSyncPackManifest } from '../../lib/core/sync/syncPackManifest.js';
 import { SYNC_PACK_NODE_COLUMNS } from '../../lib/core/sync/syncPackNodeFields.js';
+import { SYNC_PACK_NODE_VERSION_COLUMNS } from '../../lib/core/sync/syncPackNodeVersions.js';
 
-import type { LoadedSyncPackRows } from './syncPackRows.js';
+import type { LoadedDesktopSyncPackRows } from './syncPackLoadedRows.js';
 
 interface BuildDesktopSyncPackRowsInput {
   fromStateSeq: number;
@@ -35,7 +36,7 @@ export function writePackManifest(
   input: BuildDesktopSyncPackRowsInput,
   fromStateSeq: number,
   toStateSeq: number,
-  rows: LoadedSyncPackRows
+  rows: LoadedDesktopSyncPackRows
 ) {
   db.prepare('INSERT INTO pack_manifest (key, value) VALUES (?, ?)').run('manifest_json', JSON.stringify(
     buildSyncPackManifest({
@@ -46,6 +47,7 @@ export function writePackManifest(
         external_documents: rows.externalDocuments,
         node_attachments: rows.nodeAttachments,
         node_order: rows.nodeOrder,
+        node_sync_versions: rows.nodeVersions,
         nodes: rows.nodes,
         review_log: rows.reviewLog,
         sync_object_state: rows.stateRows,
@@ -56,14 +58,14 @@ export function writePackManifest(
   ));
 }
 
-export function writePackRows(db: import('better-sqlite3').Database, rows: LoadedSyncPackRows) {
+export function writePackRows(db: import('better-sqlite3').Database, rows: LoadedDesktopSyncPackRows) {
   writeCorePackRows(db, rows);
   writeNodePackRows(db, rows);
   writeDocumentPackRows(db, rows);
   writeReviewPackRows(db, rows);
 }
 
-function writeCorePackRows(db: import('better-sqlite3').Database, rows: LoadedSyncPackRows) {
+function writeCorePackRows(db: import('better-sqlite3').Database, rows: LoadedDesktopSyncPackRows) {
   copyRows({
     db,
     table: 'sync_object_state',
@@ -78,7 +80,13 @@ function writeCorePackRows(db: import('better-sqlite3').Database, rows: LoadedSy
   });
 }
 
-function writeNodePackRows(db: import('better-sqlite3').Database, rows: LoadedSyncPackRows) {
+function writeNodePackRows(db: import('better-sqlite3').Database, rows: LoadedDesktopSyncPackRows) {
+  copyRows({
+    db,
+    table: 'node_sync_versions',
+    columns: [...SYNC_PACK_NODE_VERSION_COLUMNS],
+    rows: rows.nodeVersions
+  });
   copyRows({
     db,
     table: 'nodes',
@@ -100,7 +108,7 @@ function writeNodePackRows(db: import('better-sqlite3').Database, rows: LoadedSy
   });
 }
 
-function writeDocumentPackRows(db: import('better-sqlite3').Database, rows: LoadedSyncPackRows) {
+function writeDocumentPackRows(db: import('better-sqlite3').Database, rows: LoadedDesktopSyncPackRows) {
   copyRows({
     db,
     table: 'external_documents',
@@ -123,7 +131,7 @@ function writeDocumentPackRows(db: import('better-sqlite3').Database, rows: Load
   });
 }
 
-function writeReviewPackRows(db: import('better-sqlite3').Database, rows: LoadedSyncPackRows) {
+function writeReviewPackRows(db: import('better-sqlite3').Database, rows: LoadedDesktopSyncPackRows) {
   copyRows({
     db,
     table: 'review_log',

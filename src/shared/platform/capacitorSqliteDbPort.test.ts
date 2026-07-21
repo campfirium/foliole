@@ -49,7 +49,7 @@ it('encodes and decodes blob values at the adapter boundary', async () => {
   const rows = await db.query<{ id: string; body: Uint8Array }>('SELECT id, body FROM items');
 
   expect(connection.run).toHaveBeenCalledWith('INSERT INTO items (body) VALUES (?)', [
-    { type: 'Buffer', data: [4, 5, 6] }
+    { 0: 4, 1: 5, 2: 6 }
   ], false);
   expect(rows[0]!.body).toBeInstanceOf(Uint8Array);
   expect(Array.from(rows[0]!.body)).toEqual([1, 2, 3]);

@@ -138,6 +138,7 @@ it('does not apply live node state rows when the pack has no node payload', asyn
   const db = new Database(incomingPath);
   try {
     db.prepare('DELETE FROM nodes WHERE id = ?').run('node-1');
+    db.prepare('DELETE FROM node_sync_versions WHERE object_id = ?').run('node-1');
   } finally {
     db.close();
   }
@@ -159,6 +160,83 @@ it('does not apply live node state rows when the pack has no node payload', asyn
     sync_dirty: 0
   });
   expect(connection.sqlite.prepare('SELECT id FROM nodes WHERE id = ?').get('node-1')).toBeUndefined();
+});
+
+it.each([
+  ['missing parent', "UPDATE node_sync_versions SET parent_version_id = 'missing#1'"],
+  ['cycle', "UPDATE node_sync_versions SET parent_version_id = version_id"],
+  ['invalid snapshot', "UPDATE node_sync_versions SET snapshot_json = 'not-json'"],
+  ['dangling current pointer', "UPDATE nodes SET current_version_id = 'missing#head'"]
+])('rejects %s without polluting nodes, versions, cursor state, or acks', async (_label, mutation) => {
+  const connection = openDatabaseConnection();
+  const incoming = new Database(incomingPath);
+  try {
+    incoming.exec(mutation);
+  } finally {
+    incoming.close();
+  }
+  const port = createBetterSqliteDbPort(connection.sqlite, { name: 'sync-pack-node-version-rejection-test' });
+  await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
+  try {
+    await expect(applySyncPackNodeSurfaceWithDbPort(port, {
+      currentCursor: 0,
+      deviceId: 'android-device'
+    })).rejects.toThrow(/sync_pack_node_/);
+  } finally {
+    await port.run('DETACH DATABASE inc');
+  }
+  expect(connection.sqlite.prepare('SELECT id FROM nodes WHERE id = ?').get('node-1')).toBeUndefined();
+  expect(connection.sqlite.prepare('SELECT version_id FROM node_sync_versions WHERE version_id = ?').get('desktop#1')).toBeUndefined();
+  expect(connection.sqlite.prepare('SELECT COUNT(*) AS count FROM sync_push_ack').get()).toEqual({ count: 1 });
+});
+
+it('rejects cross-object ancestry and immutable duplicate mismatches', async () => {
+  const connection = openDatabaseConnection();
+  const incoming = new Database(incomingPath);
+  try {
+    incoming.exec(`
+      INSERT INTO node_sync_versions (
+        version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
+      ) VALUES ('desktop#other', 'other-node', NULL, 'desktop',
+        '2026-05-04T00:00:00.000Z', 'other-hash', '{"id":"other-node"}');
+      UPDATE node_sync_versions SET parent_version_id = 'desktop#other' WHERE version_id = 'desktop#1';
+    `);
+  } finally {
+    incoming.close();
+  }
+  const port = createBetterSqliteDbPort(connection.sqlite, { name: 'sync-pack-node-version-cross-object-test' });
+  await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
+  try {
+    await expect(applySyncPackNodeSurfaceWithDbPort(port, {
+      currentCursor: 0,
+      deviceId: 'android-device'
+    })).rejects.toThrow('sync_pack_node_version_cross_object');
+  } finally {
+    await port.run('DETACH DATABASE inc');
+  }
+
+  connection.sqlite.prepare(
+    `INSERT INTO nodes (id, kind, title, content, created_at, updated_at)
+     VALUES ('node-1', 'topic', 'Local Node', '',
+       '2026-05-04T00:00:00.000Z', '2026-05-04T00:00:00.000Z')`
+  ).run();
+  connection.sqlite.prepare(
+    `INSERT INTO node_sync_versions (
+       version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
+     ) VALUES ('desktop#1', 'node-1', NULL, 'desktop',
+       '2026-05-04T01:00:00.000Z', 'different-hash', '{"id":"node-1"}')`
+  ).run();
+  incomingPath = path.join(tempRoot, 'immutable-incoming.db');
+  createIncomingPack(incomingPath);
+  await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
+  try {
+    await expect(applySyncPackNodeSurfaceWithDbPort(port, {
+      currentCursor: 0,
+      deviceId: 'android-device'
+    })).rejects.toThrow('sync_pack_node_version_immutable_mismatch');
+  } finally {
+    await port.run('DETACH DATABASE inc');
+  }
 });
 
 function createIncomingPack(filePath: string) {
@@ -193,6 +271,12 @@ function createIncomingPack(filePath: string) {
          opening_text, reveal, content, current_version_id, created_at, updated_at, deleted_at
        ) VALUES (?, NULL, 'topic', 'Packed Node', 0, 0, NULL, NULL, ?, '', ?, ?, ?, NULL)`
     ).run('node-1', 'Packed answer', 'desktop#1', '2026-05-04T01:00:00.000Z', '2026-05-04T01:00:00.000Z');
+    db.prepare(
+      `INSERT INTO node_sync_versions (
+         version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
+       ) VALUES ('desktop#1', 'node-1', NULL, 'desktop',
+         '2026-05-04T01:00:00.000Z', 'hash-node-1', '{"id":"node-1","title":"Packed Node"}')`
+    ).run();
     db.prepare(
       `INSERT INTO node_order (node_id, position)
        VALUES ('node-1', 5)`

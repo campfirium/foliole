@@ -49,7 +49,7 @@
     "compression": "zlib",
     "databaseEntry": "incoming.db.deflate",
     "format": "foliole.sync-pack",
-    "formatVersion": 1,
+    "formatVersion": 2,
     "legacyOptionalNodeColumns": [
       "priority",
       "desired_retention",
@@ -68,6 +68,7 @@
       "sync_object_state",
       "sync_objects",
       "nodes",
+      "node_sync_versions",
       "node_order",
       "node_attachments",
       "external_documents",
@@ -111,6 +112,15 @@
         "created_at",
         "updated_at",
         "deleted_at"
+      ],
+      "node_sync_versions": [
+        "version_id",
+        "object_id",
+        "parent_version_id",
+        "device_id",
+        "created_at",
+        "content_hash",
+        "snapshot_json"
       ],
       "node_order": [
         "node_id",

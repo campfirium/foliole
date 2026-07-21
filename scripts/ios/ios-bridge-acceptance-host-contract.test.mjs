@@ -29,7 +29,9 @@ describe('iOS bridge acceptance host contract', () => {
     expect(scenario).toContain('pairCompanionWithDesktop({');
     expect(scenario).toContain("saveCompanionWorkspaceSyncEndpoint('')");
     expect(syncPackScenario).toContain('applyCompanionDesktopSyncPack({');
-    expect(syncPackScenario).toContain("['apply', 'reapply', 'corrupt-envelope', 'wrong-target', 'cursor-gap']");
+    expect(syncPackScenario).toContain(
+      "'apply', 'reapply', 'corrupt-envelope', 'wrong-target', 'cursor-gap', 'legacy-format', 'illegal-dag'"
+    );
     expect(syncPackScenario).toContain('pathWithQuery: path');
     expect(contentResourceScenario).toContain('pullMissingContentBlobs(endpoint)');
     expect(databaseUpgradeScenario).toContain("VITE_FOLIOLE_IOS_DATABASE_UPGRADE_FAULT === '1'");
@@ -109,5 +111,14 @@ describe('iOS bridge acceptance host contract', () => {
       expect(fixture).toContain("from '../../electron/database/syncPackBuilderFromDriver.ts'");
       expect(fixture).not.toContain("from '../../electron/database/syncPackBuilder.ts'");
     }
+  });
+
+  it('uses the canonical Inbox identity for node-version roundtrip acceptance', () => {
+    const companion = fs.readFileSync('src/companion/iosNodeVersionRoundtripAcceptance.ts', 'utf8');
+    const fixture = fs.readFileSync('scripts/ios/ios-sync-pack-acceptance-fixture.ts', 'utf8');
+    expect(companion).toContain("import { INBOX_NODE_ID } from '../../lib/core/database/specialNodeIds';");
+    expect(fixture).toContain("import { INBOX_NODE_ID } from '../../lib/core/database/specialNodeIds.ts';");
+    expect(companion).not.toContain("const INBOX_NODE_ID = 'inbox'");
+    expect(fixture).not.toContain("const INBOX_NODE_ID = 'inbox'");
   });
 });

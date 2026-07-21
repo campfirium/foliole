@@ -11,10 +11,7 @@ interface CapacitorChanges {
 
 type CapacitorRow = Record<string, unknown>;
 
-interface BufferJson {
-  type: 'Buffer';
-  data: number[];
-}
+type IosBlobValue = Record<string, number>;
 
 export function createCapacitorSqliteDbPort(connection: SQLiteDBConnection): DbPort {
   let transactionDepth = 0;
@@ -64,12 +61,9 @@ function normalizeParams(params: DbParams) {
   return params.map(normalizeValue);
 }
 
-function normalizeValue(value: DbValue): DbValue | BufferJson {
+function normalizeValue(value: DbValue): DbValue | IosBlobValue {
   if (value instanceof Uint8Array) {
-    return {
-      type: 'Buffer',
-      data: Array.from(value)
-    };
+    return Object.fromEntries(Array.from(value, (byte, index) => [String(index), byte]));
   }
   return value;
 }

@@ -36,6 +36,7 @@ const EXTERNAL_DOCUMENT_PACK_TABLES = [
   { name: 'sync_object_state', row_count: 1 },
   { name: 'sync_objects', row_count: 0 },
   { name: 'nodes', row_count: 0 },
+  { name: 'node_sync_versions', row_count: 0 },
   { name: 'node_order', row_count: 0 },
   { name: 'node_attachments', row_count: 0 },
   { name: 'external_documents', row_count: 1 },
@@ -71,8 +72,18 @@ it('builds from an explicit isolated driver without reading the desktop connecti
   const driver = createBetterSqlite3Driver(sqlite);
   initializeDatabaseConnection({ driver, sqlite });
   driver.execute(
-    `INSERT INTO nodes (id, kind, title, content, created_at, updated_at)
-     VALUES ('isolated-node', 'topic', 'Isolated', '', '2026-07-21T00:00:00.000Z', '2026-07-21T00:00:00.000Z')`
+    `INSERT INTO nodes (id, kind, title, content, current_version_id, created_at, updated_at)
+     VALUES ('isolated-node', 'topic', 'Isolated', '', 'desktop#isolated-v2',
+       '2026-07-21T00:00:00.000Z', '2026-07-21T00:00:00.000Z')`
+  );
+  driver.execute(
+    `INSERT INTO node_sync_versions (
+       version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
+     ) VALUES
+       ('desktop#isolated-v1', 'isolated-node', NULL, 'desktop',
+        '2026-07-20T00:00:00.000Z', 'isolated-v1-hash', '{"id":"isolated-node","title":"First"}'),
+       ('desktop#isolated-v2', 'isolated-node', 'desktop#isolated-v1', 'desktop',
+        '2026-07-21T00:00:00.000Z', 'isolated-v2-hash', '{"id":"isolated-node","title":"Isolated"}')`
   );
   driver.execute(
     `INSERT INTO sync_object_state (
@@ -88,6 +99,10 @@ it('builds from an explicit isolated driver without reading the desktop connecti
     }, driver);
     expect(readPackRows(packPath)).toMatchObject({
       manifest: expect.objectContaining({ to_peer_id: 'ios-runtime-device' }),
+      nodeVersions: [
+        expect.objectContaining({ parent_version_id: null, version_id: 'desktop#isolated-v1' }),
+        expect.objectContaining({ parent_version_id: 'desktop#isolated-v1', version_id: 'desktop#isolated-v2' })
+      ],
       nodes: [expect.objectContaining({ id: 'isolated-node' })],
       stateRows: [{ object_id: 'isolated-node', object_type: 'node', state_seq: 1 }]
     });
@@ -106,7 +121,7 @@ function expectNodePackRows(packPath: string) {
       database_compressed_sha256: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
       database_uncompressed_sha256: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
       format: 'foliole.sync-pack',
-      format_version: 1,
+      format_version: 2,
       created_at: '2026-04-27T02:00:00.000Z',
       from_device_id: 'desktop-fixture',
       pack_id: 'pack-1',
@@ -116,6 +131,7 @@ function expectNodePackRows(packPath: string) {
         { name: 'sync_object_state', row_count: 2 },
         { name: 'sync_objects', row_count: 1 },
         { name: 'nodes', row_count: 1 },
+        { name: 'node_sync_versions', row_count: 1 },
         { name: 'node_order', row_count: 0 },
         { name: 'node_attachments', row_count: 1 },
         { name: 'external_documents', row_count: 0 },
@@ -124,6 +140,11 @@ function expectNodePackRows(packPath: string) {
       ]
     }),
     nodeAttachments: [{ attachment_id: 'att-1', node_id: 'node-1', role: 'image' }],
+    nodeVersions: [expect.objectContaining({
+      object_id: 'node-1',
+      parent_version_id: null,
+      version_id: 'desktop#node-1-v1'
+    })],
     nodes: [expect.objectContaining({
       body_blob_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
       content: '',

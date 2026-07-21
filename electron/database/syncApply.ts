@@ -1,6 +1,7 @@
 import { requestSearchIndexInvalidationProcessing } from '../../lib/core/database/searchIndexInvalidationRuntime.js';
 import { enqueueWorkspaceSearchInvalidationForNodeIds } from '../../lib/core/database/searchIndexInvalidations.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
+import type { SyncNodeApplyOperation } from '../../lib/core/sync/syncNodeApplyRules.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
@@ -9,6 +10,7 @@ import { recordNodeConflictAndCreateCopy } from './syncConflictCopies.js';
 
 interface ApplySyncNodesOptions {
   includeAlreadyApplied?: boolean;
+  operation?: SyncNodeApplyOperation;
 }
 
 function warnUnmappedAnchor(record: {
@@ -34,7 +36,12 @@ export async function applySyncNodesAsync(records: NativeSyncNodeRecord[], optio
   const result = await applySyncNodesWithDbPort(
     port,
     records,
-    options.includeAlreadyApplied === undefined ? {} : { includeAlreadyApplied: options.includeAlreadyApplied }
+    {
+      ...(options.includeAlreadyApplied === undefined
+        ? {}
+        : { includeAlreadyApplied: options.includeAlreadyApplied }),
+      ...(options.operation ? { operation: options.operation } : {})
+    }
   );
   result.unmappedAnchorRecords.forEach(warnUnmappedAnchor);
   const conflictCopyIds: string[] = [];

@@ -107,18 +107,36 @@ describe('iOS bootstrap acceptance contract', () => {
   });
 
   it('accepts stable node, state, cursor, cleanup, and repeated apply evidence', () => {
-    const snapshot = parseSyncPackSnapshot('[{"node_count":1,"state_count":1,"state_seq":1,"cursor":"2"}]');
-    const first = { apply: { to_state_seq: 2 }, phase: 'applied' };
-    const second = { apply: { to_state_seq: 2 }, phase: 'reapplied' };
-    const rejections = ['corrupt-envelope', 'wrong-target', 'cursor-gap'].map((rejection) => ({
+    const snapshot = parseSyncPackSnapshot(JSON.stringify([{
+      capture_current: 'acceptance-desktop#2', capture_versions: 2, cursor: '4', dirty_count: 0,
+      push_ack_count: 0, push_cursor_present: 1, restore_current: 'ios-device#restore',
+      restore_deleted_at: null, restore_versions: 2, tombstone_count: 0
+    }]));
+    const gates = Object.fromEntries([
+      'existing-highlight-edit', 'quick-capture', 'selection-annotation', 'topic-content-edit', 'trash-restore'
+    ].map((key) => [key, false]));
+    const first = {
+      apply: { to_state_seq: 2 }, phase: 'applied',
+      roundtrip: { gates, push: { pushedObjectIds: ['node:capture', 'node:restore'] } }
+    };
+    const second = { phase: 'reapplied', roundtrip: { gates, push: { pushedObjectIds: [] } } };
+    const rejections = [
+      'corrupt-envelope', 'wrong-target', 'cursor-gap', 'legacy-format', 'illegal-dag'
+    ].map((rejection) => ({
       after: snapshot, before: snapshot, bridge: { phase: 'rejected', rejection }
     }));
+    const observations = { sync_pack: { desktop: {
+      capture_current: 'acceptance-desktop#2', capture_versions: 2,
+      restore_current: 'ios-device#restore', restore_versions: 2
+    } } };
 
-    expect(verifySyncPackAcceptance(first, second, snapshot, snapshot, rejections)).toMatchObject({
-      first_snapshot: { cache_entries: [], cursor: 2, node_count: 1, state_count: 1, state_seq: 1 },
-      second_snapshot: { cache_entries: [], cursor: 2, node_count: 1, state_count: 1, state_seq: 1 }
+    expect(verifySyncPackAcceptance(first, second, snapshot, snapshot, rejections, observations)).toMatchObject({
+      first_snapshot: { cache_entries: [], capture_versions: 2, cursor: 4, restore_versions: 2 },
+      second_snapshot: { cache_entries: [], capture_versions: 2, cursor: 4, restore_versions: 2 }
     });
-    expect(() => verifySyncPackAcceptance(first, second, snapshot, { ...snapshot, node_count: 2 }, rejections))
+    expect(() => verifySyncPackAcceptance(
+      first, second, snapshot, { ...snapshot, capture_versions: 3 }, rejections, observations
+    ))
       .toThrow('evidence is incomplete');
   });
 

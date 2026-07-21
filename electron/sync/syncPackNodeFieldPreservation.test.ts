@@ -112,6 +112,12 @@ function createIncomingPack(filePath: string) {
          opening_text, content, current_version_id, created_at, updated_at, deleted_at
        ) VALUES (?, NULL, 'topic', 'Packed Node', 0, 0, NULL, NULL, '', ?, ?, ?, NULL)`
     ).run('node-1', 'desktop#1', '2026-05-04T01:00:00.000Z', '2026-05-04T01:00:00.000Z');
+    db.prepare(
+      `INSERT INTO node_sync_versions (
+         version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
+       ) VALUES ('desktop#1', 'node-1', NULL, 'desktop',
+         '2026-05-04T01:00:00.000Z', 'hash-node-1', '{"id":"node-1","title":"Packed Node"}')`
+    ).run();
   } finally {
     db.close();
   }

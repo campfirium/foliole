@@ -29,12 +29,22 @@ it('generates isolated producer packs for the paired iOS identity and failure ca
 
   expect(legal).toMatchObject({
     manifest: expect.objectContaining({ from_state_seq: 0, to_peer_id: 'ios-runtime-device' }),
-    nodes: [expect.objectContaining({ id: 'ios-acceptance-node' })],
-    stateRows: [{ object_id: 'ios-acceptance-node', object_type: 'node', state_seq: 2 }]
+    nodes: expect.arrayContaining([
+      expect.objectContaining({ id: 'special-inbox' }),
+      expect.objectContaining({ id: 'ios-acceptance-restore' })
+    ]),
+    nodeVersions: expect.arrayContaining([
+      expect.objectContaining({ object_id: 'special-inbox', version_id: 'acceptance-desktop#0' }),
+      expect.objectContaining({ object_id: 'ios-acceptance-restore', version_id: 'acceptance-desktop#1' })
+    ]),
+    stateRows: [
+      { object_id: 'special-inbox', object_type: 'node', state_seq: 1 },
+      { object_id: 'ios-acceptance-restore', object_type: 'node', state_seq: 2 }
+    ]
   });
   expect(wrongTarget.manifest).toMatchObject({ to_peer_id: 'ios-runtime-device-wrong' });
   expect(cursorGap).toMatchObject({
-    manifest: expect.objectContaining({ from_state_seq: 3, to_state_seq: 4, to_peer_id: 'ios-runtime-device' }),
+    manifest: expect.objectContaining({ from_state_seq: 6, to_state_seq: 7, to_peer_id: 'ios-runtime-device' }),
     nodes: [expect.objectContaining({ id: 'ios-acceptance-gap-node' })]
   });
   expect(corruptBytes.subarray(1)).toEqual(legalBytes.subarray(1));

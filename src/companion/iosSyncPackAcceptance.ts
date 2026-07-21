@@ -10,14 +10,22 @@ import {
 import { saveCompanionWorkspaceSyncEndpoint } from '../shared/platform/companionWorkspaceSync';
 
 import { acceptanceEndpoint, postResult } from './iosBridgeAcceptance';
+import {
+  rerunIosNodeVersionRoundtripAcceptance,
+  runIosNodeVersionRoundtripAcceptance
+} from './iosNodeVersionRoundtripAcceptance';
 
 const PHASE_KEY = 'foliole-ios-sync-pack-acceptance-phase';
-const PHASES = ['apply', 'reapply', 'corrupt-envelope', 'wrong-target', 'cursor-gap'] as const;
+const PHASES = [
+  'apply', 'reapply', 'corrupt-envelope', 'wrong-target', 'cursor-gap', 'legacy-format', 'illegal-dag'
+] as const;
 type AcceptancePhase = typeof PHASES[number];
 
 const REJECTION_ERRORS: Partial<Record<AcceptancePhase, string>> = {
   'corrupt-envelope': 'missing_sync_pack_entry',
   'cursor-gap': 'sync_pack_cursor_not_contiguous',
+  'illegal-dag': 'sync_pack_node_version_missing_parent',
+  'legacy-format': 'unsupported_sync_pack_format_version',
   'wrong-target': 'sync_pack_target_mismatch'
 };
 
@@ -60,8 +68,20 @@ async function applyPack(endpoint: string, phase: AcceptancePhase) {
 }
 
 async function runPhase(endpoint: string, phase: AcceptancePhase) {
+  if (phase === 'apply') {
+    const initial = await applyPack(endpoint, phase);
+    const bootstrap = await loadCompanionBootstrapState();
+    return {
+      apply: initial,
+      error: null,
+      roundtrip: await runIosNodeVersionRoundtripAcceptance(endpoint, bootstrap.device_id)
+    };
+  }
+  if (phase === 'reapply') {
+    return { apply: null, error: null, roundtrip: await rerunIosNodeVersionRoundtripAcceptance(endpoint) };
+  }
   const expectedError = REJECTION_ERRORS[phase];
-  if (!expectedError) return { apply: await applyPack(endpoint, phase), error: null };
+  if (!expectedError) throw new Error(`Unexpected iOS Sync Pack phase: ${phase}`);
   try {
     await applyPack(endpoint, phase);
   } catch (error) {

@@ -1,56 +1,23 @@
-import type {
-  NativeSyncNodeRecord
-} from '../../lib/platform/nativeSyncContract.js';
-
+import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
+import {
+  parseNodeVersionPush,
+  rejectNodeVersionPush,
+  resolveNodeVersionPushOperation
+} from './companionSyncPushNodeVersionWithDbPort.js';
 import type { CompanionSyncPushPayload, CompanionSyncPushResult } from './companionSyncPushTypes.js';
+import { openDatabaseConnection } from './connection.js';
 import { applySyncNodesAsync } from './syncApply.js';
 
-function rejectNodeVersionPush(item: CompanionSyncPushPayload, reason: string): CompanionSyncPushResult {
-  return {
-    acks: [{
-      clientOpId: item.clientOpId,
-      conflictReason: reason,
-      identity: item.identity,
-      status: 'rejected'
-    }],
-    appliedNodeIds: [],
-    appliedObjectIds: [],
-    appliedReviewOpIds: []
-  };
-}
-
-function parseNodeRecord(item: CompanionSyncPushPayload): NativeSyncNodeRecord | null {
-  if (item.identity.objectType !== 'node' || item.identity.scope !== 'workspace' || item.base.kind !== 'node_version') {
-    return null;
-  }
-  if (!item.payloadJson) {
-    return null;
-  }
-  const record = JSON.parse(item.payloadJson) as NativeSyncNodeRecord;
-  if (
-    record.object_type !== 'node'
-    || record.object_id !== item.identity.objectId
-    || !record.version_id
-    || !record.device_id
-    || !record.version_created_at
-    || record.parent_version_id !== item.base.parentVersionId
-  ) {
-    return null;
-  }
-  return {
-    ...record,
-    ancestor_version_ids: item.base.ancestorVersionIds,
-    content_hash: item.contentHash ?? record.content_hash,
-    updated_at: item.updatedAt ?? record.updated_at
-  };
-}
-
 export async function applyNodeVersionPushAsync(item: CompanionSyncPushPayload): Promise<CompanionSyncPushResult> {
-  const record = parseNodeRecord(item);
-  if (!record) {
-    return rejectNodeVersionPush(item, 'invalid_node_push');
-  }
-  const appliedNodeIds = await applySyncNodesAsync([record], { includeAlreadyApplied: true });
+  const record = parseNodeVersionPush(item);
+  if (!record) return rejectNodeVersionPush(item, 'invalid_node_push');
+  const connection = openDatabaseConnection();
+  const port = createBetterSqliteDbPort(connection.sqlite, { name: 'desktop-sync-node-push-classify' });
+  const operation = await resolveNodeVersionPushOperation(port, record);
+  const appliedNodeIds = await applySyncNodesAsync([record], {
+    includeAlreadyApplied: true,
+    ...(operation ? { operation } : {})
+  });
   const accepted = appliedNodeIds.includes(record.object_id);
   return {
     acks: [{

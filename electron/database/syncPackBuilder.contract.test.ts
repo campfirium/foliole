@@ -52,8 +52,8 @@ function insertNodeSyncState() {
        id, kind, priority, desired_retention, enable_short_term, sequential_reading_enabled,
        manual_child_order, title, is_title_manual, hide_title_heading, opening_text, content,
        body_blob_hash, virtual_filter, reveal, anchor_link, image_regions,
-       import_source_fingerprint, import_content_fingerprint, created_at, updated_at
-     ) VALUES (?, 'folder', 4, 0.92, 0, 1, ?, ?, 1, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       import_source_fingerprint, import_content_fingerprint, current_version_id, created_at, updated_at
+     ) VALUES (?, 'folder', 4, 0.92, 0, 1, ?, ?, 1, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'desktop#contract-v1', ?, ?)`,
     ['node-1', '["child-2","child-1"]', 'Node 1', 'Node opening preview',
       'node body must stay out of pack', bodyHash, '{"kind":"manual"}', 'Contract answer',
       '{"id":"anchor-1","kind":"highlight"}', '[{"source":"contract"}]',
@@ -63,7 +63,13 @@ function insertNodeSyncState() {
   driver.execute(
     `INSERT INTO sync_object_state (
        object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
-     ) VALUES ('node', 'node-1', 1, 'node-hash', 'desktop', '2026-04-27T00:00:00.000Z', 1)`
+    ) VALUES ('node', 'node-1', 1, 'node-hash', 'desktop', '2026-04-27T00:00:00.000Z', 1)`
+  );
+  driver.execute(
+    `INSERT INTO node_sync_versions (
+       version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
+     ) VALUES ('desktop#contract-v1', 'node-1', NULL, 'desktop',
+       '2026-04-27T00:00:00.000Z', 'node-hash', '{"id":"node-1","title":"Node 1"}')`
   );
   driver.execute('INSERT INTO node_order (node_id, position) VALUES (?, ?)', ['node-1', 3]);
   driver.execute(
@@ -144,6 +150,9 @@ function readPackRows(packPath: string) {
       externalDocuments: db.prepare('SELECT document_id, content, body_blob_hash FROM external_documents').all(),
       manifest,
       nodeAttachments: db.prepare('SELECT node_id, attachment_id, role FROM node_attachments').all(),
+      nodeVersions: db.prepare(
+        'SELECT version_id, object_id, parent_version_id, device_id, content_hash, snapshot_json FROM node_sync_versions'
+      ).all(),
       nodeOrder: db.prepare('SELECT node_id, position FROM node_order').all(),
       nodes: db.prepare(
         `SELECT id, priority, desired_retention, enable_short_term, sequential_reading_enabled,
@@ -186,6 +195,7 @@ it('keeps the Android sync pack contract fixture deterministic', async () => {
         { name: 'sync_object_state', row_count: 3 },
         { name: 'sync_objects', row_count: 1 },
         { name: 'nodes', row_count: 1 },
+        { name: 'node_sync_versions', row_count: 1 },
         { name: 'node_order', row_count: 1 },
         { name: 'node_attachments', row_count: 1 },
         { name: 'external_documents', row_count: 1 },
@@ -194,6 +204,11 @@ it('keeps the Android sync pack contract fixture deterministic', async () => {
       ]
     }),
     nodeAttachments: [{ attachment_id: 'att-1', node_id: 'node-1', role: 'image' }],
+    nodeVersions: [expect.objectContaining({
+      object_id: 'node-1',
+      parent_version_id: null,
+      version_id: 'desktop#contract-v1'
+    })],
     nodeOrder: [{ node_id: 'node-1', position: 3 }],
     nodes: [expect.objectContaining({
       anchor_link: '{"id":"anchor-1","kind":"highlight"}',

@@ -24,6 +24,15 @@ export const PACK_SCHEMA = [
     PRIMARY KEY (object_type, object_id)
   )`,
   buildSyncPackNodesTableSql(),
+  `CREATE TABLE node_sync_versions (
+    version_id TEXT PRIMARY KEY,
+    object_id TEXT NOT NULL,
+    parent_version_id TEXT,
+    device_id TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    content_hash TEXT NOT NULL,
+    snapshot_json TEXT NOT NULL
+  )`,
   `CREATE TABLE node_attachments (
     node_id TEXT NOT NULL,
     attachment_id TEXT NOT NULL,

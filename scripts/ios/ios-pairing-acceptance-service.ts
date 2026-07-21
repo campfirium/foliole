@@ -1,5 +1,5 @@
 import { randomBytes, randomUUID } from 'node:crypto';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import path from 'node:path';
 
@@ -15,36 +15,29 @@ import {
 
 import type { IosContentResourceAcceptanceFixture } from './ios-content-resource-acceptance-fixture.ts';
 import {
-  createIosContentResourceObservations,
   routeIosContentResourceRequest
 } from './ios-content-resource-acceptance-service.ts';
-import { createIosStateWritebackObservations } from './ios-state-writeback-acceptance-observations.ts';
+import { createIosPairingAcceptanceObservations } from './ios-pairing-acceptance-observations.ts';
 import {
   type createIosStateWritebackAcceptanceService
 } from './ios-state-writeback-acceptance-service.ts';
+import {
+  type IosSyncPackAcceptanceRoutes
+} from './ios-sync-pack-acceptance-routes.ts';
 
 const artifactDir = process.argv[2];
 if (!artifactDir) throw new Error('Acceptance artifact directory is required.');
 const scenario = process.argv[3] ?? 'pairing-signed-transport';
 mkdirSync(artifactDir, { recursive: true });
 
-const observations = {
-  content_resource: createIosContentResourceObservations(),
-  last_error: null as string | null,
-  pair_completed: false,
-  pair_requested: false,
-  redirect_target_hits: 0,
-  signed_request_count: 0,
-  signature_headers_valid: false,
-  state_writeback: createIosStateWritebackObservations()
-};
+const observations = createIosPairingAcceptanceObservations();
 let clientPublicKey = '';
 let deviceId = '';
 let requestId = '';
 const deviceSecret = randomBytes(32).toString('base64url');
-let syncPackPaths: Record<string, string> = {};
 let contentResourceFixture: IosContentResourceAcceptanceFixture | null = null;
 let stateWritebackService: Awaited<ReturnType<typeof createIosStateWritebackAcceptanceService>> | null = null;
+let syncPackService: IosSyncPackAcceptanceRoutes | null = null;
 
 function writeObservations() {
   writeFileSync(path.join(artifactDir, 'service-observations.json'), `${JSON.stringify(observations, null, 2)}\n`);
@@ -93,17 +86,12 @@ async function handlePairRequestCreate(request: IncomingMessage, response: Serve
   }
   requestId = randomUUID();
   if (scenario === 'sync-pack-runtime') {
-    const { createIosSyncPackAcceptanceFixture } = await import('./ios-sync-pack-acceptance-fixture.ts');
-    const fixture = await createIosSyncPackAcceptanceFixture({
+    const { createIosSyncPackAcceptanceRoutes } = await import('./ios-sync-pack-acceptance-routes.ts');
+    syncPackService = await createIosSyncPackAcceptanceRoutes({
+      observations: observations.sync_pack,
       outputDirectory: path.join(artifactDir, 'sync-packs'),
       toPeerId: deviceId
     });
-    syncPackPaths = {
-      '/acceptance/sync-pack/corrupt-envelope': fixture.corruptEnvelopePath,
-      '/acceptance/sync-pack/cursor-gap': fixture.cursorGapPath,
-      '/acceptance/sync-pack/legal': fixture.legalPath,
-      '/acceptance/sync-pack/wrong-target': fixture.wrongTargetPath
-    };
   } else if (scenario === 'content-resource-read') {
     const { createIosContentResourceAcceptanceFixture } = await import('./ios-content-resource-acceptance-fixture.ts');
     contentResourceFixture = await createIosContentResourceAcceptanceFixture({
@@ -147,6 +135,19 @@ async function handlePairCompletion(request: IncomingMessage, response: ServerRe
   });
 }
 
+async function routeSyncPackRequest(
+  request: IncomingMessage,
+  response: ServerResponse,
+  bodyText: string
+) {
+  if (!syncPackService) return false;
+  return syncPackService.handle({
+    bodyText,
+    method: request.method ?? 'GET',
+    url: request.url ?? '/'
+  }, response);
+}
+
 async function handleSignedRequest(request: IncomingMessage, response: ServerResponse) {
     if (request.url === '/acceptance/redirect-target') {
       observations.redirect_target_hits += 1;
@@ -172,6 +173,10 @@ async function handleSignedRequest(request: IncomingMessage, response: ServerRes
         return;
       }
     }
+    if (await routeSyncPackRequest(request, response, bodyText)) {
+      writeObservations();
+      return;
+    }
     if (contentResourceFixture) {
       const routed = routeIosContentResourceRequest({
         bodyText,
@@ -186,12 +191,6 @@ async function handleSignedRequest(request: IncomingMessage, response: ServerRes
         response.end(routed.body);
         return;
       }
-    }
-    const syncPackPath = syncPackPaths[request.url ?? ''];
-    if (syncPackPath) {
-      response.writeHead(200, { 'Content-Type': 'application/vnd.foliole.sync-pack' });
-      response.end(readFileSync(syncPackPath));
-      return;
     }
     if (request.url === '/acceptance/redirect') {
       send(response, 302, { redirected: true }, { Location: '/acceptance/redirect-target' });
@@ -230,5 +229,6 @@ server.listen(0, '127.0.0.1', () => {
 
 process.on('SIGTERM', () => server.close(() => {
   stateWritebackService?.close();
+  syncPackService?.close();
   process.exit(0);
 }));

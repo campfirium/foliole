@@ -1,5 +1,6 @@
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 
+import { applyNodeVersionPushWithDbPort } from './companionSyncPushNodeVersionWithDbPort.js';
 import { applyReviewLogPushWithDbPort } from './companionSyncPushReviewLogWithDbPort.js';
 import {
   applyStateObjectPushWithDbPort,
@@ -28,7 +29,9 @@ export async function applyCompanionStateSyncPushWithDbPort(
 ): Promise<CompanionSyncPushResult> {
   const result = emptyPushResult();
   for (const item of items) {
-    const itemResult = isStateObjectPush(item)
+    const itemResult = item.identity.objectType === 'node'
+      ? await applyNodeVersionPushWithDbPort(port, item)
+      : isStateObjectPush(item)
       ? await applyStateObjectPushWithDbPort(port, item, item.identity.objectType as StatePushObjectType)
       : item.identity.objectType === 'review_log'
         ? await applyReviewLogPushWithDbPort(port, item)
