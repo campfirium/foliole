@@ -10,11 +10,15 @@ describe('Internal update coordinator', () => {
     const update = vi.fn(async () => ({ status: 'installed' }));
     await expect(coordinateInternalUpdate({ repositoryRoot: '/repo', stateRoot: '/state' }, {
       clearRequests,
-      resolveRequest: () => ({ requestedAt: 42, revision: REVISION }),
+      resolveRequest: () => ({
+        originThreadId: '019f8432-790a-7b00-8708-7500d74a56b8',
+        requestedAt: 42, revision: REVISION
+      }),
       update,
       waitForRequests: async () => [{ requestedAt: 42, revision: REVISION }]
     })).resolves.toEqual({ status: 'installed' });
     expect(update).toHaveBeenCalledWith({
+      originThreadId: '019f8432-790a-7b00-8708-7500d74a56b8',
       repositoryRoot: '/repo', revision: REVISION, stateRoot: '/state'
     });
     expect(clearRequests).toHaveBeenCalledWith('/state', 42);

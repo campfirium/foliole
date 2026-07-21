@@ -20,6 +20,7 @@ export async function coordinateInternalUpdate(options, dependencies = {}) {
   }
   const request = resolveRequest(requests, options.repositoryRoot, dependencies.run);
   const result = await update({
+    originThreadId: request.originThreadId,
     repositoryRoot: options.repositoryRoot,
     revision: request.revision,
     stateRoot: options.stateRoot

@@ -71,4 +71,16 @@ describe('Internal update queue', () => {
       { requestedAt: 20, revision: REVISION_B }
     ]);
   });
+
+  it('persists and validates the originating Codex thread', () => {
+    const stateRoot = mkdtempSync(path.join(tmpdir(), 'foliole-internal-queue-'));
+    temporaryRoots.push(stateRoot);
+    enqueueInternalRevision(
+      stateRoot, REVISION_A, 10, '019f8432-790a-7b00-8708-7500d74a56b8'
+    );
+    expect(readInternalRequests(stateRoot)).toMatchObject([{
+      originThreadId: '019f8432-790a-7b00-8708-7500d74a56b8',
+      requestedAt: 10, revision: REVISION_A
+    }]);
+  });
 });

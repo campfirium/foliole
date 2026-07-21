@@ -59,12 +59,16 @@ export async function launchInternalUpdate(options = {}) {
   const openFile = options.openFile ?? openSync;
   const closeFile = options.closeFile ?? closeSync;
   const revision = options.revision ?? resolveInternalRevision(repositoryRoot, options.run);
+  const environment = options.environment ?? process.env;
+  const originThreadId = options.originThreadId ?? environment.CODEX_THREAD_ID;
   if ((options.platform ?? process.platform) !== 'darwin') {
     return { reason: 'unsupported-platform', revision, status: 'skipped' };
   }
   (options.verifySigning ?? assertInternalSigningAvailable)(options.run);
   makeDirectory(stateRoot, { recursive: true });
-  (options.enqueue ?? enqueueInternalRevision)(stateRoot, revision, options.requestedAt);
+  (options.enqueue ?? enqueueInternalRevision)(
+    stateRoot, revision, options.requestedAt, originThreadId
+  );
   const logPath = path.join(stateRoot, 'build.log');
   const descriptor = openFile(logPath, 'a');
   const command = createInternalLaunchCommand({
@@ -82,14 +86,17 @@ export async function launchInternalUpdate(options = {}) {
   } finally {
     closeFile(descriptor);
   }
-  return { logPath, pid: child.pid, revision, status: 'dispatched' };
+  return { logPath, originThreadId, pid: child.pid, revision, status: 'dispatched' };
 }
 
 async function main() {
   const result = await launchInternalUpdate();
   const detail = result.status === 'skipped'
     ? `reason=${result.reason}`
-    : `pid=${result.pid} log=${result.logPath}`;
+    : [
+      `pid=${result.pid}`, `log=${result.logPath}`,
+      result.originThreadId ? `origin-thread=${result.originThreadId}` : null
+    ].filter(Boolean).join(' ');
   console.log(`[internal-update] ${result.status} revision=${result.revision} ${detail}`);
 }
 

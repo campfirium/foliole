@@ -10,6 +10,7 @@ export const INTERNAL_QUEUE_QUIET_MS = 60_000;
 export const INTERNAL_QUEUE_MAX_MS = 120_000;
 const INTERNAL_QUEUE_POLL_MS = 1_000;
 const REVISION_PATTERN = /^[0-9a-f]{40}$/u;
+const THREAD_ID_PATTERN = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/u;
 
 function assertRevision(revision) {
   if (!REVISION_PATTERN.test(revision ?? '')) {
@@ -18,17 +19,30 @@ function assertRevision(revision) {
   return revision;
 }
 
+function assertOriginThreadId(originThreadId) {
+  if (originThreadId === undefined) return undefined;
+  if (!THREAD_ID_PATTERN.test(originThreadId)) {
+    throw new Error('Internal queue origin thread id is invalid');
+  }
+  return originThreadId;
+}
+
 function requestDirectory(stateRoot) {
   return path.join(stateRoot, 'requests');
 }
 
-export function enqueueInternalRevision(stateRoot, revision, requestedAt = Date.now()) {
+export function enqueueInternalRevision(
+  stateRoot, revision, requestedAt = Date.now(), originThreadId
+) {
   const validatedRevision = assertRevision(revision);
+  const validatedOriginThreadId = assertOriginThreadId(originThreadId);
   const directory = requestDirectory(stateRoot);
   mkdirSync(directory, { recursive: true });
   const targetPath = path.join(directory, `${validatedRevision}.json`);
   const temporaryPath = `${targetPath}.${process.pid}.${requestedAt}.tmp`;
-  writeFileSync(temporaryPath, `${JSON.stringify({ requestedAt, revision: validatedRevision })}\n`);
+  const request = { requestedAt, revision: validatedRevision };
+  if (validatedOriginThreadId) request.originThreadId = validatedOriginThreadId;
+  writeFileSync(temporaryPath, `${JSON.stringify(request)}\n`);
   renameSync(temporaryPath, targetPath);
   return targetPath;
 }
@@ -46,6 +60,7 @@ export function readInternalRequests(stateRoot) {
     const requestPath = path.join(directory, entry.name);
     const request = JSON.parse(readFileSync(requestPath, 'utf8'));
     assertRevision(request.revision);
+    assertOriginThreadId(request.originThreadId);
     if (!Number.isFinite(request.requestedAt)) throw new Error('Internal queue request time is invalid');
     return { ...request, requestPath };
   });

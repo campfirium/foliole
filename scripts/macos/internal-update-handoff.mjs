@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 const LOG_EXCERPT_CHARS = 1800;
+const THREAD_ID_PATTERN = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/u;
 
 function cleanMessage(error) {
   return Array.from(String(error instanceof Error ? error.message : error), (character) => {
@@ -63,7 +64,38 @@ export function createInternalUpdateFailureHandoff(options) {
   };
 }
 
+function assertCommandSuccess(label, result) {
+  if (result.status !== 0) {
+    const detail = (result.stderr || result.stdout || `${label} failed`).trim();
+    throw new Error(`${label}: ${detail}`);
+  }
+}
+
+export function returnInternalUpdateFailureToOrigin(options, dependencies = {}) {
+  if (!THREAD_ID_PATTERN.test(options.originThreadId ?? '')) {
+    throw new Error('Internal failure origin thread id is invalid');
+  }
+  const run = dependencies.run ?? spawnSync;
+  const codexCommand = dependencies.codexCommand ?? 'codex';
+  const event = createInternalUpdateFailureHandoff(options);
+  run(codexCommand, ['unarchive', options.originThreadId], {
+    cwd: options.repositoryRoot, encoding: 'utf8'
+  });
+  const resumed = run(codexCommand, [
+    'exec', 'resume', '--json', options.originThreadId, event.prompt
+  ], { cwd: options.repositoryRoot, encoding: 'utf8' });
+  assertCommandSuccess('resume Internal origin thread', resumed);
+  const opened = run('/usr/bin/open', [`codex://threads/${options.originThreadId}`], {
+    cwd: options.repositoryRoot, encoding: 'utf8'
+  });
+  assertCommandSuccess('open Internal origin thread', opened);
+  return { ...event, originThreadId: options.originThreadId, route: 'origin-thread' };
+}
+
 export function submitInternalUpdateFailureHandoff(options, dependencies = {}) {
+  if (options.originThreadId) {
+    return returnInternalUpdateFailureToOrigin(options, dependencies);
+  }
   const run = dependencies.run ?? spawnSync;
   const codexHome = dependencies.codexHome ?? process.env.CODEX_HOME ?? path.join(os.homedir(), '.codex');
   const submitEvent = path.join(

@@ -59,6 +59,7 @@ describe('Internal update launcher', () => {
     const enqueue = vi.fn();
     const result = await launchInternalUpdate({
       closeFile,
+      environment: {},
       enqueue,
       makeDirectory: vi.fn(),
       openFile: vi.fn(() => 9),
@@ -71,11 +72,30 @@ describe('Internal update launcher', () => {
     });
     expect(result).toEqual({
       logPath: path.join('/state', 'build.log'), pid: 42,
-      revision: REVISION, status: 'dispatched'
+      originThreadId: undefined, revision: REVISION, status: 'dispatched'
     });
     expect(start.mock.calls[0][2]).toMatchObject({ cwd: '/repo', detached: true, stdio: ['ignore', 9, 9] });
     expect(child.unref).toHaveBeenCalledOnce();
-    expect(enqueue).toHaveBeenCalledWith('/state', REVISION, undefined);
+    expect(enqueue).toHaveBeenCalledWith('/state', REVISION, undefined, undefined);
     expect(closeFile).toHaveBeenCalledWith(9);
+  });
+
+  it('records the originating Codex thread without waiting for the worker', async () => {
+    const child = Object.assign(new EventEmitter(), { pid: 42, unref: vi.fn() });
+    const enqueue = vi.fn();
+    const start = vi.fn(() => {
+      queueMicrotask(() => child.emit('spawn'));
+      return child;
+    });
+    await expect(launchInternalUpdate({
+      closeFile: vi.fn(), enqueue, environment: { CODEX_THREAD_ID: '019f8432-790a-7b00-8708-7500d74a56b8' },
+      makeDirectory: vi.fn(), openFile: vi.fn(() => 9), repositoryRoot: '/repo',
+      revision: REVISION, start, stateRoot: '/state', verifySigning: vi.fn(), workerPath: '/worker.mjs'
+    })).resolves.toMatchObject({
+      originThreadId: '019f8432-790a-7b00-8708-7500d74a56b8', status: 'dispatched'
+    });
+    expect(enqueue).toHaveBeenCalledWith(
+      '/state', REVISION, undefined, '019f8432-790a-7b00-8708-7500d74a56b8'
+    );
   });
 });

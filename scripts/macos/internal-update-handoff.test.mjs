@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   createInternalUpdateFailureHandoff,
   resolveFolioleRuntimeLogPath,
+  returnInternalUpdateFailureToOrigin,
   submitInternalUpdateFailureHandoff
 } from './internal-update-handoff.mjs';
 
@@ -67,6 +68,40 @@ describe('Internal update failure handoff', () => {
       '--dedupe-key', `foliole:internal-update:${REVISION}`,
       '--title', 'Foliole update failed (aaaaaaaa)'
     ]), { cwd: '/repo', encoding: 'utf8' });
+  });
+
+  it('restores, resumes, and opens the originating thread when one was recorded', () => {
+    const run = vi.fn()
+      .mockReturnValueOnce({ status: 1, stderr: 'already active' })
+      .mockReturnValueOnce({ status: 0, stdout: '{"type":"turn.completed"}' })
+      .mockReturnValueOnce({ status: 0 });
+    const originThreadId = '019f8432-790a-7b00-8708-7500d74a56b8';
+    const result = returnInternalUpdateFailureToOrigin({
+      error: new Error('build failed'), originThreadId, repositoryRoot: '/repo',
+      revision: REVISION, stateRoot: '/repo/.tmp/update'
+    }, { codexCommand: '/codex/bin/codex', run });
+    expect(run.mock.calls[0][1]).toEqual(['unarchive', originThreadId]);
+    expect(run.mock.calls[1][1]).toEqual(expect.arrayContaining([
+      'exec', 'resume', '--json', originThreadId
+    ]));
+    expect(run.mock.calls[2][0]).toBe('/usr/bin/open');
+    expect(run.mock.calls[2][1]).toEqual([`codex://threads/${originThreadId}`]);
+    expect(result).toMatchObject({ originThreadId, route: 'origin-thread' });
+  });
+
+  it('routes recorded origins without creating a new desktop handoff event', () => {
+    const run = vi.fn()
+      .mockReturnValueOnce({ status: 0 })
+      .mockReturnValueOnce({ status: 0 })
+      .mockReturnValueOnce({ status: 0 });
+    submitInternalUpdateFailureHandoff({
+      error: new Error('build failed'),
+      originThreadId: '019f8432-790a-7b00-8708-7500d74a56b8',
+      repositoryRoot: '/repo', revision: REVISION, stateRoot: '/repo/.tmp/update'
+    }, { run });
+    expect(run).not.toHaveBeenCalledWith(process.execPath, expect.arrayContaining([
+      '/codex/skills/codex-desktop-handoff/scripts/submit-event.mjs'
+    ]), expect.anything());
   });
 
   it('fails visibly when the desktop handoff event cannot be submitted', () => {
