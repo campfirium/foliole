@@ -13,7 +13,12 @@ import {
   verifyBootstrapSnapshots,
   waitForBootstrapSnapshot
 } from './ios-bootstrap-acceptance.mjs';
-import { parseBootstrapSnapshot, verifyBridgeResult, writeAcceptanceFailure } from './ios-simulator-acceptance-runner.mjs';
+import {
+  parseBootstrapSnapshot,
+  verifyAcceptanceAppSignature,
+  verifyBridgeResult,
+  writeAcceptanceFailure
+} from './ios-simulator-acceptance-runner.mjs';
 import { verifyContentResourceAcceptance } from './ios-content-resource-acceptance-runner.mjs';
 import {
   createUpgradeBuildEnv,
@@ -38,6 +43,16 @@ describe('iOS bootstrap acceptance contract', () => {
     expect(args).toContain('platform=iOS Simulator,id=SIM-1');
     expect(args).toContain('SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) FOLIOLE_IOS_BRIDGE_ACCEPTANCE');
     expect(args).not.toContain('CODE_SIGNING_ALLOWED=NO');
+  });
+
+  it('requires the acceptance signature to use the isolated Bundle identifier', () => {
+    expect(verifyAcceptanceAppSignature(
+      'Identifier=com.foliole.ios.bootstrap-acceptance\nTeamIdentifier=not set\n',
+      'com.foliole.ios.bootstrap-acceptance'
+    )).toBe('com.foliole.ios.bootstrap-acceptance');
+    expect(() => verifyAcceptanceAppSignature(
+      'Identifier=com.foliole.ios\n', 'com.foliole.ios.bootstrap-acceptance'
+    )).toThrow('Unexpected acceptance signature identifier');
   });
 
   it('uses Electron SQLite only for acceptance scenarios with producer fixtures', () => {

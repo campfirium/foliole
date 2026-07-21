@@ -59,6 +59,17 @@ async function expectHttpStatus(path: string, status: number) {
   }
 }
 
+async function bestEffortClearAcceptanceState() {
+  const [pairing, endpoint] = await Promise.allSettled([
+    clearCompanionPairingCredentials(),
+    saveCompanionWorkspaceSyncEndpoint('')
+  ]);
+  return {
+    endpoint_cleanup_succeeded: endpoint.status === 'fulfilled',
+    pairing_cleanup_succeeded: pairing.status === 'fulfilled'
+  };
+}
+
 async function runInitialPairing(deviceId: string, deviceName: string) {
   const endpoint = acceptanceEndpoint()!;
   await clearCompanionPairingCredentials();
@@ -125,7 +136,9 @@ export async function runIosBridgeAcceptance() {
     if (pairing.is_paired) await runRestartAndDisconnect(pairing.device_id ?? '');
     else await runInitialPairing(bootstrap.device_id, bootstrap.device_name ?? 'Acceptance iPhone');
   } catch (error) {
+    const cleanup = await bestEffortClearAcceptanceState();
     postResult({
+      ...cleanup,
       error: error instanceof Error ? error.message : String(error),
       phase: 'failed',
       scenario: 'pairing-signed-transport',

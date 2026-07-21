@@ -70,4 +70,25 @@ describe('iOS bridge acceptance host contract', () => {
     expect(service).not.toContain('companionPairingStore');
     expect(auth).toContain("from './companionRequestSignature.js'");
   });
+
+  it('keeps acceptance sync-pack fixtures independent from the Electron app runtime', () => {
+    const builder = fs.readFileSync('electron/database/syncPackBuilderFromDriver.ts', 'utf8');
+    const nodeStateRows = fs.readFileSync('electron/database/nodeSyncStateRows.ts', 'utf8');
+    const packRows = fs.readFileSync('electron/database/syncPackRows.ts', 'utf8');
+    const syncObjects = fs.readFileSync('electron/database/syncObjectsFromDriver.ts', 'utf8');
+    const fixtures = [
+      'scripts/ios/ios-content-resource-acceptance-fixture.ts',
+      'scripts/ios/ios-state-writeback-acceptance-fixture.ts',
+      'scripts/ios/ios-sync-pack-acceptance-fixture.ts'
+    ].map((file) => fs.readFileSync(file, 'utf8'));
+    expect(builder).not.toContain("from './connection.js'");
+    expect(builder).not.toContain("from 'electron'");
+    expect(nodeStateRows).not.toContain("from './connection.js'");
+    expect(packRows).not.toContain("from './connection.js'");
+    expect(syncObjects).not.toContain("from './connection.js'");
+    for (const fixture of fixtures) {
+      expect(fixture).toContain("from '../../electron/database/syncPackBuilderFromDriver.ts'");
+      expect(fixture).not.toContain("from '../../electron/database/syncPackBuilder.ts'");
+    }
+  });
 });

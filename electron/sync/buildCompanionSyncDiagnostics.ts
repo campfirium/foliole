@@ -137,7 +137,7 @@ export function buildCompanionSyncDiagnostics(args: {
 }): SyncDiagnosticSnapshot {
   const collectedAt = new Date().toISOString();
   const storage = loadStorage();
-  const maxStateSeq = loadMaxStateSeq();
+  const maxStateSeq = loadMaxStateSeq(openDatabaseConnection().driver);
   const connection = buildConnection(args.serverStatus);
   const primaryDeviceState = loadDesktopPrimaryDeviceState(collectedAt);
   return {

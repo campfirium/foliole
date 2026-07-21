@@ -120,7 +120,7 @@ export function flushNodeSyncVersion(nodeId: string, now = new Date().toISOStrin
       deviceId,
       nodeId: row.id,
       updatedAt: row.updated_at
-    });
+    }, connection.driver);
     createdVersionId = versionId;
   });
 
@@ -137,5 +137,5 @@ export function flushDirtyNodeSyncVersions(now = new Date().toISOString()) {
   for (const nodeId of nodeIds) {
     flushNodeSyncVersion(nodeId, now);
   }
-  return [...new Set([...nodeIds, ...backfillMissingNodeSyncState()])];
+  return [...new Set([...nodeIds, ...backfillMissingNodeSyncState(openDatabaseConnection().driver)])];
 }

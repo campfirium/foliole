@@ -6,7 +6,7 @@ import { createBetterSqlite3Driver } from '../../electron/database/betterSqlite3
 import { createBetterSqliteDbPort } from '../../electron/database/betterSqliteDbPort.ts';
 import { applyCompanionStateSyncPushWithDbPort } from '../../electron/database/companionSyncPushAsyncApply.ts';
 import type { CompanionSyncPushPayload } from '../../electron/database/companionSyncPushTypes.ts';
-import { buildDesktopSyncPackFromDriver } from '../../electron/database/syncPackBuilder.ts';
+import { buildDesktopSyncPackFromDriver } from '../../electron/database/syncPackBuilderFromDriver.ts';
 import { initializeDatabaseConnection } from '../../lib/core/database/migrations.ts';
 
 const require = createRequire(import.meta.url);

@@ -93,3 +93,21 @@ it('posts a structured bridge rejection', async () => {
     error: 'native bootstrap rejected', phase: 'failed', status: 'failed'
   }));
 });
+
+it('best-effort clears pairing and endpoint after an initial pairing failure', async () => {
+  mocks.loadPairing.mockResolvedValue({ is_paired: false });
+  mocks.sign.mockRejectedValue(new Error('not paired'));
+  mocks.requestPairing.mockResolvedValue({ pair_request_id: 'pair-1' });
+  mocks.pair.mockRejectedValue(new Error('pair completion failed'));
+
+  await runIosBridgeAcceptance();
+
+  expect(mocks.clearPairing).toHaveBeenCalledTimes(2);
+  expect(mocks.saveEndpoint).toHaveBeenCalledTimes(2);
+  expect(mocks.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+    endpoint_cleanup_succeeded: true,
+    pairing_cleanup_succeeded: true,
+    phase: 'failed',
+    status: 'failed'
+  }));
+});

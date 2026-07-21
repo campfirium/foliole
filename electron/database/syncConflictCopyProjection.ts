@@ -190,5 +190,12 @@ export function upsertConflictCopyProjection(args: {
   ensureInboxNode(args.driver, args.timestamp);
   upsertConflictCopyNode({ bodyBlobHash, content, copyNodeId: args.copyNodeId, deviceId, driver: args.driver, openingText, record: args.record, timestamp: args.timestamp, title, versionId });
   upsertConflictCopyVersion({ contentHash, copyNodeId: args.copyNodeId, deviceId, driver: args.driver, snapshot, timestamp: args.timestamp, versionId });
-  upsertNodeSyncState({ contentHash, currentVersionId: versionId, deletedAt: null, deviceId, nodeId: args.copyNodeId, updatedAt: args.timestamp });
+  upsertNodeSyncState({
+    contentHash,
+    currentVersionId: versionId,
+    deletedAt: null,
+    deviceId,
+    nodeId: args.copyNodeId,
+    updatedAt: args.timestamp
+  }, args.driver);
 }

@@ -35,6 +35,14 @@ export function createSimulatorAcceptanceBuildArgs(options) {
   ];
 }
 
+export function verifyAcceptanceAppSignature(output, expectedIdentifier) {
+  const identifier = /^Identifier=(.+)$/mu.exec(output)?.[1]?.trim();
+  if (identifier !== expectedIdentifier) {
+    throw new Error(`Unexpected acceptance signature identifier: ${identifier ?? 'missing'}.`);
+  }
+  return identifier;
+}
+
 export async function waitForAcceptanceObservation(options) {
   options.action?.();
   const deadline = Date.now() + (options.timeoutMs ?? 15000);

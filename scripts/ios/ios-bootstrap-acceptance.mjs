@@ -17,6 +17,7 @@ import {
   selectSimulator,
   shouldShutdownSimulator,
   verifyBridgeResult,
+  verifyAcceptanceAppSignature,
   waitForAcceptanceObservation,
   waitForBootstrapSnapshot,
   writeAcceptanceFailure
@@ -88,7 +89,7 @@ async function main() {
     ownsBootedSimulator = shouldShutdownSimulator(simulator);
     bootSimulator(simulator);
     prepareApp(simulator.udid, serviceInfo.endpoint, scenario);
-    installFreshAcceptanceApp(simulator.udid);
+    const signatureIdentifier = installFreshAcceptanceApp(simulator.udid);
     const containerPath = resolveContainerPath(simulator.udid);
     const databasePath = path.join(containerPath, DATABASE_RELATIVE_PATH);
     const bridgeResultPath = path.join(containerPath, BRIDGE_RESULT_RELATIVE_PATH);
@@ -132,7 +133,7 @@ async function main() {
       secondContentObservations: readServiceObservations(ARTIFACT_DIR),
       secondScenarioSnapshot: readAcceptanceSnapshot(scenario, containerPath)
     });
-    const report = { ...result, ...scenarioResult, simulator: simulator.name };
+    const report = { ...result, ...scenarioResult, signatureIdentifier, simulator: simulator.name };
     writeFileSync(path.join(ARTIFACT_DIR, 'result.json'), `${JSON.stringify(report, null, 2)}\n`);
     console.log(JSON.stringify(report, null, 2));
   } catch (error) {
@@ -183,6 +184,7 @@ function installFreshAcceptanceApp(udid) {
   const app = path.join(DERIVED_DATA, 'Build/Products/Debug-iphonesimulator/App.app');
   run('codesign', ['--verify', '--deep', '--strict', app]);
   run('xcrun', ['simctl', 'install', udid, app]);
+  return verifyAcceptanceAppSignature(captureAllowFailure('codesign', ['-d', '--verbose=4', app]), ACCEPTANCE_BUNDLE_ID);
 }
 
 function launchApp(udid) {

@@ -70,7 +70,7 @@ it('loads reading and review state as state-only sync pack metadata', () => {
        'desktop-test', '2026-04-27T00:06:00.000Z', 0)`
   );
 
-  expect(loadPackRows(0, 6)).toMatchObject({
+  expect(loadPackRows(0, 6, openDatabaseConnection().driver)).toMatchObject({
     contentBlobs: [],
     externalDocuments: [],
     nodes: [{ id: 'node-1' }],
@@ -106,7 +106,7 @@ it('includes node ancestors when packing a changed child node', () => {
        ('node', 'child-1', 2, 'child-hash', 'desktop', '2026-04-27T00:01:00.000Z', 0)`
   );
 
-  expect(loadPackRows(1, 2)).toMatchObject({
+  expect(loadPackRows(1, 2, openDatabaseConnection().driver)).toMatchObject({
     nodes: expect.arrayContaining([
       expect.objectContaining({ id: 'parent-1' }),
       expect.objectContaining({ id: 'child-1', parent_id: 'parent-1' })
@@ -155,7 +155,7 @@ it('loads only payload objects that match changed state row pairs', () => {
        ('import_source', 'att-1', 99, 'stale-source-hash', 'desktop', '2026-04-27T00:03:00.000Z', 0)`
   );
 
-  expect(loadPackRows(0, 2).syncObjects.map((row) => `${row.object_type}:${row.object_id}`)).toEqual([
+  expect(loadPackRows(0, 2, openDatabaseConnection().driver).syncObjects.map((row) => `${row.object_type}:${row.object_id}`)).toEqual([
     'attachment:att-1',
     'import_source:source-1'
   ]);
@@ -171,7 +171,7 @@ it('does not pack learning state rows when the node entity is gone', () => {
        ('node_review', 'deleted-node', 8, 'review-hash', 'desktop', '2026-04-27T00:08:00.000Z', 0)`
   );
 
-  expect(loadPackRows(0, 8)).toMatchObject({
+  expect(loadPackRows(0, 8, openDatabaseConnection().driver)).toMatchObject({
     nodes: [],
     stateRows: [],
     syncObjects: []
@@ -189,7 +189,7 @@ it('does not pack live node state rows when the node payload is gone', () => {
         '2026-04-27T00:10:00.000Z', 0)`
   );
 
-  expect(loadPackRows(0, 10).stateRows.map((row) => `${row.object_type}:${row.object_id}`)).toEqual([
+  expect(loadPackRows(0, 10, openDatabaseConnection().driver).stateRows.map((row) => `${row.object_type}:${row.object_id}`)).toEqual([
     'node:missing-deleted-node'
   ]);
 });
@@ -209,5 +209,5 @@ it('does not resend an unchanged node after the pack cursor has crossed its stat
        'desktop', '2026-04-27T00:02:00.000Z', 0)`
   );
 
-  expect(loadPackRows(1, 2).nodes).toEqual([]);
+  expect(loadPackRows(1, 2, openDatabaseConnection().driver).nodes).toEqual([]);
 });

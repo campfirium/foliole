@@ -1,8 +1,6 @@
 import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
 import { upsertSyncObjectState } from '../../lib/core/database/syncState.js';
 
-import { openDatabaseConnection } from './connection.js';
-
 interface MissingNodeSyncStateRow extends DatabaseRow {
   content_hash: string;
   current_version_id: string;
@@ -20,7 +18,7 @@ export function upsertNodeSyncState(args: {
   deviceId: string;
   nodeId: string;
   updatedAt: string;
-}, driver: DatabaseDriver = openDatabaseConnection().driver) {
+}, driver: DatabaseDriver) {
   upsertSyncObjectState(driver, {
     objectType: 'node',
     objectId: args.nodeId,
@@ -34,7 +32,7 @@ export function upsertNodeSyncState(args: {
 }
 
 export function backfillMissingNodeSyncState(
-  driver: DatabaseDriver = openDatabaseConnection().driver
+  driver: DatabaseDriver
 ) {
   const rows = driver.queryAll<MissingNodeSyncStateRow>(
     `SELECT

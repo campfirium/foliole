@@ -75,6 +75,7 @@ async function loadReadEvidence() {
     resolveRuntimeAttachmentResource(`asset://${IDS.failed}.png`),
     resolveRuntimeAttachmentResource(`asset://${IDS.missing}.png`)
   ]);
+  if (valid?.status !== 'ready') throw new Error('The valid acceptance attachment was not readable.');
   return {
     body_failures: { corrupt: corruptBody?.bodyStatus, missing: missingBody?.bodyStatus },
     external: { body_status: external?.bodyStatus, content: external?.content, document_id: external?.document_id },

@@ -7,9 +7,13 @@ const takeoverMocks = vi.hoisted(() => ({
     primaryDeviceId: 'device-android',
     updatedByDeviceId: 'device-android'
   })),
+  driver: {},
   loadMaxStateSeq: vi.fn(() => 42)
 }));
 
+vi.mock('../database/connection.js', () => ({
+  openDatabaseConnection: () => ({ driver: takeoverMocks.driver })
+}));
 vi.mock('../database/primaryDeviceCommit.js', () => ({
   commitPrimaryDeviceToPeer: takeoverMocks.commitPrimaryDeviceToPeer
 }));
@@ -38,6 +42,7 @@ it('commits a primary device takeover after signed convergence evidence', async 
     primaryDeviceId: 'device-android',
     updatedByDeviceId: 'device-android'
   });
+  expect(takeoverMocks.loadMaxStateSeq).toHaveBeenCalledWith(takeoverMocks.driver);
   expect(result).toEqual({
     ok: true,
     statusCode: 200,

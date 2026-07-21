@@ -1,3 +1,4 @@
+import { openDatabaseConnection } from '../database/connection.js';
 import { commitPrimaryDeviceToPeer } from '../database/primaryDeviceCommit.js';
 import { loadMaxStateSeq } from '../database/syncPackRows.js';
 
@@ -48,7 +49,7 @@ export function handlePrimaryDeviceTakeover(bodyText: string, authenticatedDevic
   if (payload.local_dirty_count > 0 || payload.pending_ack_count > 0 || payload.push_issue_count > 0) {
     return reject('candidate_not_converged');
   }
-  const currentMaxStateSeq = loadMaxStateSeq();
+  const currentMaxStateSeq = loadMaxStateSeq(openDatabaseConnection().driver);
   if (
     payload.desktop_max_state_seq !== currentMaxStateSeq
     || payload.android_pack_cursor < currentMaxStateSeq

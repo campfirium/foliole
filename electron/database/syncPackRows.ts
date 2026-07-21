@@ -12,8 +12,7 @@ import {
 } from '../../lib/core/sync/syncPackNodeFields.js';
 import type { NativeSyncObjectRecord, NativeSyncReviewLogRecord } from '../../lib/platform/nativeSyncContract.js';
 
-import { openDatabaseConnection } from './connection.js';
-import { loadSyncObjects } from './syncObjects.js';
+import { loadSyncObjectsFromDriver } from './syncObjectsFromDriver.js';
 import { learningNodeIds, loadNodePreludeStateRows, mergeStateRows } from './syncPackLearningRows.js';
 
 interface RawSyncStatePackRow extends DatabaseRow {
@@ -150,8 +149,8 @@ function loadPayloadObjects(driver: DatabaseDriver, rows: SyncStatePackRow[]): S
   for (const row of payloadRows) {
     rowsByType.set(row.object_type, [...(rowsByType.get(row.object_type) ?? []), row.object_id]);
   }
-  return [...rowsByType.entries()].flatMap(([objectType, objectIds]) => loadSyncObjects(
-    objectIds, [objectType], driver
+  return [...rowsByType.entries()].flatMap(([objectType, objectIds]) => loadSyncObjectsFromDriver(
+    driver, objectIds, [objectType]
   ));
 }
 
@@ -173,7 +172,7 @@ function isSyncStatePackRow(row: RawSyncStatePackRow): row is SyncStatePackRow {
   return isSyncPackStateObjectType(row.object_type);
 }
 
-export function loadMaxStateSeq(driver: DatabaseDriver = openDatabaseConnection().driver) {
+export function loadMaxStateSeq(driver: DatabaseDriver) {
   return driver.queryOne<{ value: number }>(
     'SELECT COALESCE(MAX(state_seq), 0) AS value FROM sync_object_state'
   )?.value ?? 0;
@@ -182,7 +181,7 @@ export function loadMaxStateSeq(driver: DatabaseDriver = openDatabaseConnection(
 export function loadPackRows(
   fromStateSeq: number,
   toStateSeq: number,
-  driver: DatabaseDriver = openDatabaseConnection().driver
+  driver: DatabaseDriver
 ) {
   const changedStateRows = listChangedStateRows(driver, fromStateSeq, toStateSeq).filter(isSyncStatePackRow);
   const changedNodeIds = idsForObjectTable(changedStateRows, 'nodes');
