@@ -134,3 +134,28 @@ describe('iosCompanionDatabaseBootstrap', () => {
     expect(connection.execute).not.toHaveBeenCalledWith(USER_VERSION_SQL, false);
   });
 });
+
+describe('iosCompanionDatabaseBootstrap acceptance instrumentation', () => {
+  it('rolls back a completed first repair when acceptance instrumentation fails', async () => {
+    const { connection, manager } = createHarness({
+      missingColumns: ['import_source_fingerprint', 'import_content_fingerprint']
+    });
+
+    await expect(initializeIosCompanionDatabase(createNativeState(), manager, {
+      afterRepair: (index) => {
+        if (index === 0) throw new Error('acceptance upgrade fault');
+      }
+    })).rejects.toThrow('acceptance upgrade fault');
+
+    expect(connection.execute).toHaveBeenCalledWith(
+      expect.stringContaining('ADD COLUMN import_source_fingerprint'),
+      false
+    );
+    expect(connection.execute).not.toHaveBeenCalledWith(
+      expect.stringContaining('ADD COLUMN import_content_fingerprint'),
+      false
+    );
+    expect(connection.execute).not.toHaveBeenCalledWith(USER_VERSION_SQL, false);
+    expect(connection.rollbackTransaction).toHaveBeenCalledTimes(1);
+  });
+});

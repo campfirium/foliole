@@ -178,15 +178,7 @@ it('keeps the Android sync pack contract fixture deterministic', async () => {
   const generatedPath = path.join(tempRoot, 'sync-pack-contract.syncpack');
   await buildContractFixturePack(generatedPath);
   const generatedBytes = await fs.readFile(generatedPath);
-
-  if (process.env.UPDATE_SYNC_PACK_CONTRACT_FIXTURE === '1') {
-    await fs.mkdir(path.dirname(CONTRACT_FIXTURE_PATH), { recursive: true });
-    await fs.writeFile(CONTRACT_FIXTURE_PATH, generatedBytes);
-  }
-
-  const fixtureBytes = await fs.readFile(CONTRACT_FIXTURE_PATH);
-  expect(generatedBytes.equals(fixtureBytes)).toBe(true);
-  expect(readPackRows(CONTRACT_FIXTURE_PATH)).toMatchObject({
+  const expectedRows = {
     externalDocuments: [expect.objectContaining({ content: '', document_id: 'folder-1:doc.md' })],
     manifest: expect.objectContaining({
       pack_id: 'sync-pack-contract-v1',
@@ -219,5 +211,15 @@ it('keeps the Android sync pack contract fixture deterministic', async () => {
       sequential_reading_enabled: 1,
       virtual_filter: '{"kind":"manual"}'
     })]
-  });
+  };
+  expect(readPackRows(generatedPath)).toMatchObject(expectedRows);
+
+  if (process.env.UPDATE_SYNC_PACK_CONTRACT_FIXTURE === '1') {
+    await fs.mkdir(path.dirname(CONTRACT_FIXTURE_PATH), { recursive: true });
+    await fs.writeFile(CONTRACT_FIXTURE_PATH, generatedBytes);
+  }
+
+  const fixtureBytes = await fs.readFile(CONTRACT_FIXTURE_PATH);
+  expect(generatedBytes.equals(fixtureBytes)).toBe(true);
+  expect(readPackRows(CONTRACT_FIXTURE_PATH)).toMatchObject(expectedRows);
 });

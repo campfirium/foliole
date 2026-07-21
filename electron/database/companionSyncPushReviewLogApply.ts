@@ -87,8 +87,10 @@ function insertReviewLogWithDbPort(port: DbPort, record: NativeSyncReviewLogReco
   );
 }
 
-export async function applyReviewLogPushAsync(item: CompanionSyncPushPayload): Promise<CompanionSyncPushResult> {
-  const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite, { name: 'desktop-sync-review-log-push' });
+export async function applyReviewLogPushWithDbPort(
+  port: DbPort,
+  item: CompanionSyncPushPayload
+): Promise<CompanionSyncPushResult> {
   return await port.transaction(async (tx) => {
     const record = parseReviewLog(item);
     if (!record) return { acks: [rejectAck(item, 'invalid_review_log_push')], appliedNodeIds: [], appliedObjectIds: [], appliedReviewOpIds: [] };
@@ -115,4 +117,9 @@ export async function applyReviewLogPushAsync(item: CompanionSyncPushPayload): P
       appliedReviewOpIds: [record.op_id]
     };
   });
+}
+
+export async function applyReviewLogPushAsync(item: CompanionSyncPushPayload): Promise<CompanionSyncPushResult> {
+  const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite, { name: 'desktop-sync-review-log-push' });
+  return await applyReviewLogPushWithDbPort(port, item);
 }

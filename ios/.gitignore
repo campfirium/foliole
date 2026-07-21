@@ -1,4 +1,6 @@
 App/build
+App/.build
+App/.swiftpm
 App/CapApp-SPM/build
 App/CapApp-SPM/.swiftpm
 App/Pods

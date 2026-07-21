@@ -155,9 +155,9 @@ describe('GitHub desktop handoff action events', () => {
       title: 'Foliole T5 failed: T5 Nightly Remote Quality'
     });
   });
-  it('coalesces recurring T5 failures until the workflow recovers', () => {
+  it('emits each recurring T5 failure once by run id', () => {
     const state = {
-      actions: { 'T5 Nightly Remote Quality': { initialized: true, runs: {}, incidents: {} } },
+      actions: { 'T5 Nightly Remote Quality': { initialized: true, runs: {} } },
       issues: {},
       prs: {},
       submitted: {}
@@ -169,7 +169,9 @@ describe('GitHub desktop handoff action events', () => {
       databaseId: 201,
       workflowName: 'T5 Nightly Remote Quality'
     })];
-    expect(listGithubMonitorEvents(t5Config, state, false, [], renderTemplate)).toHaveLength(1);
+    const firstEvents = listGithubMonitorEvents(t5Config, state, false, [], renderTemplate);
+    expect(firstEvents).toHaveLength(1);
+    state.submitted[firstEvents[0].dedupeKey] = { emittedAt: '2026-07-05T07:55:22Z' };
 
     gh.runs = [run({
       createdAt: '2026-07-05T17:20:05Z',
@@ -177,67 +179,13 @@ describe('GitHub desktop handoff action events', () => {
       headSha: 'def456',
       workflowName: 'T5 Nightly Remote Quality'
     })];
-    expect(listGithubMonitorEvents(t5Config, state, false, [], renderTemplate)).toEqual([]);
-    expect(state.actions['T5 Nightly Remote Quality'].incidents.dev).toMatchObject({
-      active: true,
-      firstFailureRunId: '201',
-      lastFailureRunId: '202'
-    });
-  });
-
-  it('emits a recurring T5 failure again after a completed non-failure recovery', () => {
-    const state = {
-      actions: {
-        'T5 Nightly Remote Quality': {
-          initialized: true,
-          runs: {},
-          incidents: {
-            dev: {
-              active: true,
-              firstFailureRunId: '201',
-              notifiedDedupeKey: 'foliole:github-actions:201',
-              notifiedRunId: '201'
-            }
-          }
-        }
-      },
-      issues: {},
-      prs: {},
-      submitted: { 'foliole:github-actions:201': { emittedAt: '2026-07-05T07:55:22Z' } }
-    };
-    const t5Config = config({ workflows: ['T5 Nightly Remote Quality'] });
-
-    gh.runs = [
-      run({
-        conclusion: 'success',
-        createdAt: '2026-07-05T18:00:00Z',
-        databaseId: 203,
-        workflowName: 'T5 Nightly Remote Quality'
-      }),
-      run({
-        createdAt: '2026-07-05T17:20:05Z',
-        databaseId: 202,
-        workflowName: 'T5 Nightly Remote Quality'
-      })
-    ];
-    expect(listGithubMonitorEvents(t5Config, state, false, [], renderTemplate)).toEqual([]);
-    expect(state.actions['T5 Nightly Remote Quality'].incidents.dev).toMatchObject({
-      active: false,
-      recoveredRunId: '203'
-    });
-
-    gh.runs = [run({
-      createdAt: '2026-07-05T19:00:00Z',
-      databaseId: 204,
-      headSha: 'ghi789',
-      workflowName: 'T5 Nightly Remote Quality'
-    })];
-    const events = listGithubMonitorEvents(t5Config, state, false, [], renderTemplate);
-
-    expect(events).toHaveLength(1);
-    expect(events[0]).toMatchObject({
-      dedupeKey: 'foliole:github-actions:204',
+    const secondEvents = listGithubMonitorEvents(t5Config, state, false, [], renderTemplate);
+    expect(secondEvents).toHaveLength(1);
+    expect(secondEvents[0]).toMatchObject({
+      dedupeKey: 'foliole:github-actions:202',
       tier: 'T5'
     });
+    state.submitted[secondEvents[0].dedupeKey] = { emittedAt: '2026-07-05T17:45:22Z' };
+    expect(listGithubMonitorEvents(t5Config, state, false, [], renderTemplate)).toEqual([]);
   });
 });

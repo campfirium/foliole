@@ -13,7 +13,7 @@ import { materializeDesktopSettingRecord } from './desktopSettingMaterializer.js
 
 const REMOTE_DEVICE_ID = 'companion-push';
 
-type StatePushObjectType = Extract<NativeSyncObjectType, 'node_reading' | 'node_review' | 'setting' | 'view_state'>;
+export type StatePushObjectType = Extract<NativeSyncObjectType, 'node_reading' | 'node_review' | 'setting' | 'view_state'>;
 
 interface SyncObjectStateRow extends DbRow {
   content_hash: string;
@@ -39,7 +39,7 @@ export function isStateObjectPush(item: CompanionSyncPushPayload) {
     || item.identity.objectType === 'view_state';
 }
 
-async function applyStateObjectPushWithDbPort(
+export async function applyStateObjectPushWithDbPort(
   port: DbPort,
   item: CompanionSyncPushPayload,
   objectType: StatePushObjectType

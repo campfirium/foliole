@@ -11,16 +11,31 @@ import { installCompanionWebViewCompatibilityPolyfills } from './companionWebVie
 installCompanionWebViewCompatibilityPolyfills();
 installCompanionSyncInstrumentationProbe();
 
+const isIosBridgeAcceptance = import.meta.env.VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE === '1';
+const iosAcceptanceScenario = import.meta.env.VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_SCENARIO;
 const rootElement = document.getElementById('root');
 
 if (!rootElement) {
   throw new Error('Missing #root element in companion entry.');
 }
 
-ReactDOM.createRoot(rootElement).render(
-  <React.StrictMode>
-    <StartupErrorBoundary moduleLabel="Companion renderer">
-      <CompanionApp />
-    </StartupErrorBoundary>
-  </React.StrictMode>
-);
+if (isIosBridgeAcceptance) {
+  const module = iosAcceptanceScenario === 'content-resource-read'
+    ? import('./iosContentResourceAcceptance').then(({ runIosContentResourceAcceptance }) => runIosContentResourceAcceptance())
+    : iosAcceptanceScenario === 'state-writeback-runtime'
+      ? import('./iosStateWritebackAcceptance').then(({ runIosStateWritebackAcceptance }) => runIosStateWritebackAcceptance())
+    : iosAcceptanceScenario === 'database-upgrade-runtime'
+      ? import('./iosDatabaseUpgradeAcceptance').then(({ runIosDatabaseUpgradeAcceptance }) => runIosDatabaseUpgradeAcceptance())
+    : iosAcceptanceScenario === 'sync-pack-runtime'
+      ? import('./iosSyncPackAcceptance').then(({ runIosSyncPackAcceptance }) => runIosSyncPackAcceptance())
+      : import('./iosBridgeAcceptance').then(({ runIosBridgeAcceptance }) => runIosBridgeAcceptance());
+  void module;
+} else {
+  ReactDOM.createRoot(rootElement).render(
+    <React.StrictMode>
+      <StartupErrorBoundary moduleLabel="Companion renderer">
+        <CompanionApp />
+      </StartupErrorBoundary>
+    </React.StrictMode>
+  );
+}

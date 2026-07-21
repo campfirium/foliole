@@ -3,7 +3,7 @@ import Capacitor
 extension FolioleCompanionSyncPlugin {
     @objc func searchTopics(_ call: CAPPluginCall) {
         do {
-            let contract = try FolioleCompanionContractStore().topicSearchContract()
+            let contract = try FolioleCompanionTopicSearchContractStore().contract()
             let queryKey = contract.requestKeys["query"] ?? "invalid.query"
             guard let query = call.getString(queryKey) else {
                 call.reject("Failed to search companion topics: query is required.")

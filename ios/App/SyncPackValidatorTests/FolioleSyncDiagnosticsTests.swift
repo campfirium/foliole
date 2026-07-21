@@ -29,6 +29,34 @@ final class FolioleSyncDiagnosticsTests: XCTestCase {
         XCTAssertThrowsError(try execute(fixture.database, "INSERT INTO companion_meta VALUES ('after', 'write')", readOnly: true))
     }
 
+    func testDistinguishesMissingEmptyAndZeroCursor() throws {
+        XCTAssertTrue(try cursorValue(nil) is NSNull)
+        XCTAssertTrue(try cursorValue("") is NSNull)
+        XCTAssertEqual(try cursorValue("0") as? Int, 0)
+    }
+
+    func testRejectsCorruptStoredCursorState() throws {
+        for cursor in ["-1", "not-a-number", "9007199254740992", "9223372036854775808"] {
+            XCTAssertThrowsError(try cursorValue(cursor), "cursor: \(cursor)") { error in
+                XCTAssertEqual(error.localizedDescription, "invalid_ios_sync_pack_cursor")
+            }
+        }
+    }
+
+    private func cursorValue(_ cursor: String?) throws -> Any? {
+        let fixture = try makeFixture()
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+        if let cursor {
+            try execute(fixture.database, "INSERT INTO companion_meta VALUES ('sync_pack_cursor', '\(cursor)')")
+        }
+        let store = try FolioleCompanionSyncDiagnosticsStore(
+            databaseURL: fixture.database,
+            bundle: .module,
+            pairingState: { ["is_paired": false] }
+        )
+        return value(try store.diagnose(), "sync_state", "pack_cursor")
+    }
+
     private func seed(_ url: URL) throws {
         try execute(url, "INSERT INTO nodes VALUES ('topic', NULL, NULL, 'hash', 'Topic', '2026-01-01', NULL, NULL)")
         try execute(url, "INSERT INTO content_blobs VALUES ('hash', 'text_body', 'failed', 12)")

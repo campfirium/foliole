@@ -52,15 +52,6 @@ struct FolioleCompanionAttachmentResourceContract {
     let statuses: [String: String]
 }
 
-struct FolioleCompanionTopicSearchContract {
-    let defaultLimit: Int
-    let maxLimit: Int
-    let requestKeys: [String: String]
-    let responseKeys: [String: String]
-    let resultKeys: [String: String]
-    let sql: String
-}
-
 final class FolioleCompanionContractStore {
     private let bridge: [String: Any]
     private let sync: [String: Any]
@@ -142,18 +133,6 @@ final class FolioleCompanionContractStore {
             resolveStatuses: try stringMap(path: ["resolveStatuses"], root: root),
             sql: try stringMap(path: ["sql"], root: root),
             statuses: try stringMap(path: ["statuses"], root: root)
-        )
-    }
-
-    func topicSearchContract() throws -> FolioleCompanionTopicSearchContract {
-        let root = try object(path: ["hostApi", "topicSearch"], root: bridge)
-        return FolioleCompanionTopicSearchContract(
-            defaultLimit: try integer(path: ["defaultSearchLimit"], root: root),
-            maxLimit: try integer(path: ["maxSearchLimit"], root: root),
-            requestKeys: try stringMap(path: ["requestKeys"], root: root),
-            responseKeys: try stringMap(path: ["responseKeys"], root: root),
-            resultKeys: try stringMap(path: ["resultKeys"], root: root),
-            sql: try string(path: ["sql"], root: root)
         )
     }
 

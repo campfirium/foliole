@@ -1,12 +1,15 @@
+import { createRequire } from 'node:module';
 import path from 'node:path';
 
 import { expect, it, vi } from 'vitest';
 
+import { initializeDatabaseConnection } from '../../lib/core/database/migrations.js';
 import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorageContract.js';
 
+import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { openDatabaseConnection } from './connection.js';
 import { upsertExternalDocuments } from './externalDocuments.js';
-import { buildDesktopSyncPack } from './syncPackBuilder.js';
+import { buildDesktopSyncPack, buildDesktopSyncPackFromDriver } from './syncPackBuilder.js';
 import {
   insertNodeAttachmentRows,
   insertNodeSyncState,
@@ -26,6 +29,8 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 setupSyncPackBuilderTestLifecycle();
+const require = createRequire(import.meta.url);
+const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
 
 const EXTERNAL_DOCUMENT_PACK_TABLES = [
   { name: 'sync_object_state', row_count: 1 },
@@ -59,6 +64,36 @@ it('builds a sqlite pack with structure and blob manifests but no body bytes', a
     toStateSeq: 2
   });
   expectNodePackRows(packPath);
+});
+
+it('builds from an explicit isolated driver without reading the desktop connection', async () => {
+  const sqlite = new BetterSqlite3(':memory:');
+  const driver = createBetterSqlite3Driver(sqlite);
+  initializeDatabaseConnection({ driver, sqlite });
+  driver.execute(
+    `INSERT INTO nodes (id, kind, title, content, created_at, updated_at)
+     VALUES ('isolated-node', 'topic', 'Isolated', '', '2026-07-21T00:00:00.000Z', '2026-07-21T00:00:00.000Z')`
+  );
+  driver.execute(
+    `INSERT INTO sync_object_state (
+       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+     ) VALUES ('node', 'isolated-node', 1, 'isolated-hash', 'acceptance-desktop',
+       '2026-07-21T00:00:00.000Z', 1)`
+  );
+  const packPath = resolveSyncPackPath('isolated.syncpack');
+  try {
+    await buildDesktopSyncPackFromDriver({
+      fromDeviceId: 'acceptance-desktop', fromStateSeq: 0, outputPath: packPath,
+      packId: 'isolated-pack', toPeerId: 'ios-runtime-device'
+    }, driver);
+    expect(readPackRows(packPath)).toMatchObject({
+      manifest: expect.objectContaining({ to_peer_id: 'ios-runtime-device' }),
+      nodes: [expect.objectContaining({ id: 'isolated-node' })],
+      stateRows: [{ object_id: 'isolated-node', object_type: 'node', state_seq: 1 }]
+    });
+  } finally {
+    sqlite.close();
+  }
 });
 
 function expectNodePackRows(packPath: string) {

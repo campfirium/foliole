@@ -20,6 +20,9 @@ describe('iOS pairing host contract', () => {
     ]) {
       expect(plugin).toContain(`CAPPluginMethod(name: "${method}"`);
     }
+    expect(plugin).toMatch(
+      /@objc func savePrimaryDeviceId[\s\S]*store\.savePrimaryDeviceId\([\s\S]*requiredString\([\s\S]*"primaryDeviceId"\)/
+    );
     expect(store).not.toMatch(/stateKey\("deviceSecret"\)/);
   });
 

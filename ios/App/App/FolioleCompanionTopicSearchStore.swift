@@ -1,12 +1,48 @@
 import Foundation
 
+struct FolioleCompanionTopicSearchContract {
+    let defaultLimit: Int
+    let maxLimit: Int
+    let requestKeys: [String: String]
+    let responseKeys: [String: String]
+    let searchQuery: FolioleCompanionGeneratedQuery
+    let searchResultFields: [FolioleCompanionGeneratedField]
+}
+
+final class FolioleCompanionTopicSearchContractStore {
+    private let definitions: FolioleCompanionQueryDefinitions
+
+    init(bundle: Bundle = .main) throws {
+        definitions = try FolioleCompanionQueryDefinitions(bundle: bundle)
+    }
+
+    func contract() throws -> FolioleCompanionTopicSearchContract {
+        let rules = try definitions.object(["contentRead", "topicSearch"])
+        return FolioleCompanionTopicSearchContract(
+            defaultLimit: try definitions.integer("defaultSearchLimit", in: rules),
+            maxLimit: try definitions.integer("maxSearchLimit", in: rules),
+            requestKeys: try stringMap("requestKeys", in: rules),
+            responseKeys: try stringMap("responseKeys", in: rules),
+            searchQuery: try definitions.query(named: definitions.string("searchQueryName", in: rules)),
+            searchResultFields: try definitions.fields("searchResultFields", in: rules)
+        )
+    }
+
+    private func stringMap(_ key: String, in root: [String: Any]) throws -> [String: String] {
+        let values = try definitions.object([key], root: root)
+        return try values.reduce(into: [:]) { result, entry in
+            result[entry.key] = try definitions.string(entry.key, in: values)
+        }
+    }
+}
+
 final class FolioleCompanionTopicSearchStore {
     private let contract: FolioleCompanionTopicSearchContract
-    private let database: FolioleReadOnlySQLite
+    private let queries: FolioleCompanionGeneratedReadQueryRunner
 
     init(databaseURL: URL, contract: FolioleCompanionTopicSearchContract) throws {
         self.contract = contract
-        database = try FolioleReadOnlySQLite(url: databaseURL)
+        queries = try FolioleCompanionGeneratedReadQueryRunner(databaseURL: databaseURL)
     }
 
     func search(query: String, limit: Int?) throws -> [String: Any] {
@@ -18,29 +54,18 @@ final class FolioleCompanionTopicSearchStore {
         }
         let resolvedLimit = max(1, min(limit ?? contract.defaultLimit, contract.maxLimit))
         let arguments = Array(repeating: normalizedQuery, count: 5) + [String(resolvedLimit)]
-        let results = try database.rows(contract.sql, arguments: arguments).map(result)
+        let results = try queries.rows(
+            contract.searchQuery,
+            fields: contract.searchResultFields,
+            arguments: arguments
+        )
         return [responseQueryKey: query, responseResultsKey: results]
-    }
-
-    private func result(_ row: [String?]) throws -> [String: Any] {
-        guard row.count == 7 else { throw error("Topic search returned an invalid row.") }
-        return [
-            try value("nodeId", in: contract.resultKeys): row[0] ?? "",
-            try value("title", in: contract.resultKeys): row[1] ?? "",
-            try value("openingText", in: contract.resultKeys): nullable(row[2]),
-            try value("contentStatus", in: contract.resultKeys): row[3] ?? "missing",
-            try value("updatedAt", in: contract.resultKeys): row[4] ?? "",
-            try value("matchStart", in: contract.resultKeys): Int(row[5] ?? "") ?? 0,
-            try value("excerpt", in: contract.resultKeys): row[6] ?? ""
-        ]
     }
 
     private func value(_ key: String, in values: [String: String]) throws -> String {
         guard let value = values[key] else { throw error("Missing topic search contract key \(key).") }
         return value
     }
-
-    private func nullable(_ value: String?) -> Any { value ?? NSNull() }
 
     private func error(_ message: String) -> NSError {
         NSError(domain: "FolioleCompanionTopicSearch", code: 1, userInfo: [NSLocalizedDescriptionKey: message])

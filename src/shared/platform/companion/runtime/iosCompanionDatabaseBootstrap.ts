@@ -23,6 +23,10 @@ export interface IosCompanionDatabaseManager {
   retrieveConnection(database: string, readonly: boolean): Promise<SQLiteDBConnection>;
 }
 
+export interface IosCompanionDatabaseBootstrapOptions {
+  afterRepair?: (index: number) => void | Promise<void>;
+}
+
 async function openDatabase(manager: IosCompanionDatabaseManager) {
   const existing = await manager.isConnection(COMPANION_DATABASE_NAME, false);
   const connection = existing.result
@@ -61,11 +65,17 @@ async function loadMissingRepairStatements(connection: SQLiteDBConnection) {
   return statements;
 }
 
-async function repairAndVersionDatabase(connection: SQLiteDBConnection) {
+async function repairAndVersionDatabase(
+  connection: SQLiteDBConnection,
+  options: IosCompanionDatabaseBootstrapOptions
+) {
   await connection.beginTransaction();
   try {
     const repairs = await loadMissingRepairStatements(connection);
-    if (repairs.length) await connection.execute(repairs.join(';\n'), false);
+    for (const [index, repair] of repairs.entries()) {
+      await connection.execute(repair, false);
+      await options.afterRepair?.(index);
+    }
     await connection.execute(`PRAGMA user_version = ${COMPANION_DATABASE_VERSION}`, false);
     await connection.commitTransaction();
   } catch (error) {
@@ -85,11 +95,12 @@ function normalizeDatabasePath(value: string) {
 
 export async function initializeIosCompanionDatabase(
   nativeState: NativeCompanionBootstrapState,
-  manager: IosCompanionDatabaseManager = new SQLiteConnection(CapacitorSQLite)
+  manager: IosCompanionDatabaseManager = new SQLiteConnection(CapacitorSQLite),
+  options: IosCompanionDatabaseBootstrapOptions = {}
 ): Promise<NativeCompanionBootstrapState> {
   const connection = await openDatabase(manager);
   await connection.execute(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
-  await repairAndVersionDatabase(connection);
+  await repairAndVersionDatabase(connection, options);
   const deviceId = await loadOrCreateDeviceId(connection, nativeState.device_id, nativeState.booted_at);
   const databaseUrl = (await connection.getUrl()).url;
   if (!databaseUrl) throw new Error('iOS companion database did not return a path.');

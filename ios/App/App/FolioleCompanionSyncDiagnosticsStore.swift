@@ -50,14 +50,30 @@ final class FolioleCompanionSyncDiagnosticsStore {
             $0[$1.key] = $1.value
         }
         let maximum = state["max_state_seq"] as? Int ?? 0
-        let cursor = Int(try queries.meta("sync_pack_cursor") ?? "") ?? 0
+        let cursor = try loadSyncPackCursor()
         state["max_state_seq"] = maximum > 0 ? maximum : NSNull() as Any
-        state["pack_cursor"] = cursor > 0 ? cursor : NSNull() as Any
+        if let cursor {
+            state["pack_cursor"] = cursor
+        } else {
+            state["pack_cursor"] = NSNull()
+        }
         state["dirty_objects"] = try queries.rows("diagnosticDirtyObjects")
         state["pending_acks"] = try queries.rows("diagnosticPendingAcks")
         state["push_issues"] = try queries.rows("diagnosticPushIssues")
         state["state_counts"] = try queries.rows("diagnosticSyncStateCounts")
         return state
+    }
+
+    private func loadSyncPackCursor() throws -> Int? {
+        guard let value = try queries.meta("sync_pack_cursor"), !value.isEmpty else { return nil }
+        guard let cursor = Int(value), cursor >= 0, cursor <= 9_007_199_254_740_991 else {
+            throw NSError(
+                domain: "FolioleCompanionSyncDiagnostics",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "invalid_ios_sync_pack_cursor"]
+            )
+        }
+        return cursor
     }
 
     private func contentMetrics() throws -> [String: Any] {

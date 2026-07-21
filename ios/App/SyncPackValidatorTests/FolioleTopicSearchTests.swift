@@ -10,13 +10,16 @@ final class FolioleTopicSearchTests: XCTestCase {
         try seed(fixture.database)
         let store = try FolioleCompanionTopicSearchStore(
             databaseURL: fixture.database,
-            contract: try FolioleCompanionContractStore(bundle: .module).topicSearchContract()
+            contract: try FolioleCompanionTopicSearchContractStore(bundle: .module).contract()
         )
 
         let response = try store.search(query: " ALPHA ", limit: 100)
         let results = try XCTUnwrap(response["results"] as? [[String: Any]])
+        XCTAssertEqual(response["query"] as? String, " ALPHA ")
         XCTAssertEqual(results.compactMap { $0["node_id"] as? String }, ["blob", "opening", "title", "failed"])
         XCTAssertEqual(results.first?["excerpt"] as? String, "blob alpha body")
+        XCTAssertEqual(results.first?["match_start"] as? Int, 5)
+        XCTAssertEqual(results[2]["match_start"] as? Int, 0)
         XCTAssertEqual(results.last?["content_status"] as? String, "failed")
         XCTAssertFalse(results.contains { ($0["node_id"] as? String) == "hidden" })
     }
@@ -31,19 +34,52 @@ final class FolioleTopicSearchTests: XCTestCase {
         }
         let store = try FolioleCompanionTopicSearchStore(
             databaseURL: fixture.database,
-            contract: try FolioleCompanionContractStore(bundle: .module).topicSearchContract()
+            contract: try FolioleCompanionTopicSearchContractStore(bundle: .module).contract()
         )
 
         XCTAssertEqual(try results(store.search(query: "alpha", limit: nil)).count, 20)
         XCTAssertEqual(try results(store.search(query: "alpha", limit: 1_000)).count, 100)
+        XCTAssertEqual(try results(store.search(query: "alpha", limit: 0)).count, 1)
+        XCTAssertEqual(try results(store.search(query: "alpha", limit: -1)).count, 1)
         XCTAssertTrue(try results(store.search(query: "   ", limit: 10)).isEmpty)
+    }
+
+    func testRejectsMalformedGeneratedMatchStart() throws {
+        let fixture = try makeFixture()
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+        try insert(fixture.database, id: "broken", title: "alpha", updated: 1)
+        let base = try FolioleCompanionTopicSearchContractStore(bundle: .module).contract()
+        let query = FolioleCompanionGeneratedQuery(
+            columns: base.searchQuery.columns,
+            resultKey: base.searchQuery.resultKey,
+            sql: """
+            SELECT id, title, opening_text, 'ready', updated_at, 'not-a-number', '' FROM nodes
+            WHERE (? IS NOT NULL OR ? IS NULL) AND (? IS NOT NULL OR ? IS NULL)
+              AND (? IS NOT NULL OR ? IS NULL) LIMIT 1
+            """
+        )
+        let contract = FolioleCompanionTopicSearchContract(
+            defaultLimit: base.defaultLimit,
+            maxLimit: base.maxLimit,
+            requestKeys: base.requestKeys,
+            responseKeys: base.responseKeys,
+            searchQuery: query,
+            searchResultFields: base.searchResultFields
+        )
+
+        XCTAssertThrowsError(try FolioleCompanionTopicSearchStore(
+            databaseURL: fixture.database,
+            contract: contract
+        ).search(query: "alpha", limit: 1)) { error in
+            XCTAssertEqual(error.localizedDescription, "Invalid long value for match_start.")
+        }
     }
 
     private func seed(_ url: URL) throws {
         try execute(url, "INSERT INTO content_blobs VALUES ('blob-hash', 'cached'), ('failed-hash', 'failed')")
         try execute(url, "INSERT INTO content_blob_data VALUES ('blob-hash', 'blob alpha body')")
         try insert(url, id: "failed", title: "alpha failed", bodyHash: "failed-hash", updated: 1)
-        try insert(url, id: "title", title: "alpha title", updated: 2)
+        try insert(url, id: "title", title: "alpha title", content: "alpha body", updated: 2)
         try insert(url, id: "opening", title: "opening", opening: "alpha opening", updated: 3)
         try insert(url, id: "blob", title: "blob", bodyHash: "blob-hash", updated: 4)
         try execute(url, "INSERT INTO nodes VALUES ('deleted', NULL, 'folder', 'deleted', NULL, NULL, NULL, ?, ?, '2026-01-01')", [timestamp(5), timestamp(5)])
@@ -56,10 +92,11 @@ final class FolioleTopicSearchTests: XCTestCase {
         title: String,
         opening: String? = nil,
         bodyHash: String? = nil,
+        content: String? = nil,
         updated: Int
     ) throws {
-        try execute(url, "INSERT INTO nodes VALUES (?, NULL, 'topic', ?, ?, ?, NULL, ?, ?, NULL)", [
-            id, title, opening, bodyHash, timestamp(updated), timestamp(updated)
+        try execute(url, "INSERT INTO nodes VALUES (?, NULL, 'topic', ?, ?, ?, ?, ?, ?, NULL)", [
+            id, title, opening, bodyHash, content, timestamp(updated), timestamp(updated)
         ])
     }
 

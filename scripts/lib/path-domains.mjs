@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 /* global console, process */
 
-import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -149,9 +148,17 @@ function printPreviewTargetPaths(target) {
   }
 }
 
-function main() {
+async function readStandardInput() {
+  if (process.stdin.isTTY) return '';
+  process.stdin.setEncoding('utf8');
+  const chunks = [];
+  for await (const chunk of process.stdin) chunks.push(chunk);
+  return chunks.join('');
+}
+
+async function main() {
   const [command, arg] = process.argv.slice(2);
-  const input = process.stdin.isTTY ? '' : readFileSync(0, 'utf8');
+  const input = await readStandardInput();
   const files = splitInput(input);
   if (command === 'quality-route') {
     printQualityRoute(files);
@@ -175,5 +182,5 @@ function main() {
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
-  process.exitCode = main();
+  process.exitCode = await main();
 }

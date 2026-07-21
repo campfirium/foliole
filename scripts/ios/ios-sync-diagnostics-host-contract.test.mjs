@@ -22,5 +22,8 @@ describe('iOS sync diagnostics host contract', () => {
     expect(queryStore).toContain('PRAGMA query_only = ON');
     expect(store).toContain('"host": "ios"');
     expect(store).toContain('queries.metrics("diagnosticStorageMetrics")');
+    expect(store).toContain('loadSyncPackCursor()');
+    expect(store).toContain('invalid_ios_sync_pack_cursor');
+    expect(store).not.toContain('Int(try queries.meta("sync_pack_cursor") ?? "") ?? 0');
   });
 });

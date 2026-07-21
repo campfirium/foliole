@@ -1,4 +1,4 @@
-import type { DatabaseRow } from '../../lib/core/database/driver.js';
+import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
 import {
   isSyncPackObjectType,
   isSyncPackPayloadObjectType,
@@ -88,8 +88,8 @@ function placeholders(values: unknown[]) {
   return values.map(() => '?').join(', ');
 }
 
-function listChangedStateRows(fromStateSeq: number, toStateSeq: number) {
-  return openDatabaseConnection().driver.queryAll<RawSyncStatePackRow>(
+function listChangedStateRows(driver: DatabaseDriver, fromStateSeq: number, toStateSeq: number) {
+  return driver.queryAll<RawSyncStatePackRow>(
     `SELECT object_type, object_id, state_seq, content_hash, updated_at, deleted_at
      FROM sync_object_state
      WHERE state_seq > ? AND state_seq <= ?
@@ -104,9 +104,9 @@ function listChangedStateRows(fromStateSeq: number, toStateSeq: number) {
   );
 }
 
-function queryRowsByIds<T extends DatabaseRow>(sql: string, ids: string[]) {
+function queryRowsByIds<T extends DatabaseRow>(driver: DatabaseDriver, sql: string, ids: string[]) {
   if (ids.length === 0) return [];
-  return openDatabaseConnection().driver.queryAll<T>(sql.replace('__IDS__', placeholders(ids)), ids);
+  return driver.queryAll<T>(sql.replace('__IDS__', placeholders(ids)), ids);
 }
 
 function collectBodyBlobHashes(nodes: NodePackRow[], documents: ExternalDocumentPackRow[]) {
@@ -116,8 +116,8 @@ function collectBodyBlobHashes(nodes: NodePackRow[], documents: ExternalDocument
   ].filter((hash): hash is string => Boolean(hash)))];
 }
 
-function loadNodeAttachmentRows(nodeIds: string[]) {
-  return queryRowsByIds<NodeAttachmentPackRow>(
+function loadNodeAttachmentRows(driver: DatabaseDriver, nodeIds: string[]) {
+  return queryRowsByIds<NodeAttachmentPackRow>(driver,
     `SELECT node_id, attachment_id, role
      FROM node_attachments WHERE node_id IN (__IDS__)
      ORDER BY node_id ASC, role ASC, attachment_id ASC`,
@@ -125,8 +125,8 @@ function loadNodeAttachmentRows(nodeIds: string[]) {
   );
 }
 
-function loadNodeOrderRows(nodeIds: string[]) {
-  return queryRowsByIds<NodeOrderPackRow>(
+function loadNodeOrderRows(driver: DatabaseDriver, nodeIds: string[]) {
+  return queryRowsByIds<NodeOrderPackRow>(driver,
     `SELECT node_order.node_id, node_order.position
      FROM node_order
      JOIN nodes ON nodes.id = node_order.node_id
@@ -143,7 +143,7 @@ function idsForObjectTable(rows: SyncStatePackRow[], table: 'external_documents'
     .map((row) => row.object_id);
 }
 
-function loadPayloadObjects(rows: SyncStatePackRow[]): SyncObjectPackRow[] {
+function loadPayloadObjects(driver: DatabaseDriver, rows: SyncStatePackRow[]): SyncObjectPackRow[] {
   const payloadRows = rows.filter((row) => isSyncPackPayloadObjectType(row.object_type));
   if (payloadRows.length === 0) return [];
   const rowsByType = new Map<string, string[]>();
@@ -151,16 +151,15 @@ function loadPayloadObjects(rows: SyncStatePackRow[]): SyncObjectPackRow[] {
     rowsByType.set(row.object_type, [...(rowsByType.get(row.object_type) ?? []), row.object_id]);
   }
   return [...rowsByType.entries()].flatMap(([objectType, objectIds]) => loadSyncObjects(
-    objectIds,
-    [objectType]
+    objectIds, [objectType], driver
   ));
 }
 
-function loadReviewLogRows(rows: SyncStatePackRow[]): ReviewLogPackRow[] {
+function loadReviewLogRows(driver: DatabaseDriver, rows: SyncStatePackRow[]): ReviewLogPackRow[] {
   const nodeIds = rows
     .filter((row) => row.object_type === 'node_review')
     .map((row) => row.object_id);
-  return queryRowsByIds<ReviewLogPackRow>(
+  return queryRowsByIds<ReviewLogPackRow>(driver,
     `SELECT
        id, op_id, device_id, node_id, grade, scheduler_version, reviewed_at,
        due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after
@@ -174,20 +173,24 @@ function isSyncStatePackRow(row: RawSyncStatePackRow): row is SyncStatePackRow {
   return isSyncPackStateObjectType(row.object_type);
 }
 
-export function loadMaxStateSeq() {
-  return openDatabaseConnection().driver.queryOne<{ value: number }>(
+export function loadMaxStateSeq(driver: DatabaseDriver = openDatabaseConnection().driver) {
+  return driver.queryOne<{ value: number }>(
     'SELECT COALESCE(MAX(state_seq), 0) AS value FROM sync_object_state'
   )?.value ?? 0;
 }
 
-export function loadPackRows(fromStateSeq: number, toStateSeq: number) {
-  const changedStateRows = listChangedStateRows(fromStateSeq, toStateSeq).filter(isSyncStatePackRow);
+export function loadPackRows(
+  fromStateSeq: number,
+  toStateSeq: number,
+  driver: DatabaseDriver = openDatabaseConnection().driver
+) {
+  const changedStateRows = listChangedStateRows(driver, fromStateSeq, toStateSeq).filter(isSyncStatePackRow);
   const changedNodeIds = idsForObjectTable(changedStateRows, 'nodes');
   const stateRows = mergeStateRows(changedStateRows, loadNodePreludeStateRows({
     isSyncStatePackRow,
     nodeIds: [...changedNodeIds, ...learningNodeIds(changedStateRows)],
     placeholders,
-    query: (sql, params) => openDatabaseConnection().driver.queryAll<RawSyncStatePackRow>(sql, params),
+    query: (sql, params) => driver.queryAll<RawSyncStatePackRow>(sql, params),
     toStateSeq
   }));
   const nodeIds = [...new Set([
@@ -195,13 +198,13 @@ export function loadPackRows(fromStateSeq: number, toStateSeq: number) {
     ...learningNodeIds(stateRows)
   ])];
   const externalDocumentIds = idsForObjectTable(stateRows, 'external_documents');
-  const nodes = queryRowsByIds<NodePackRow>(
+  const nodes = queryRowsByIds<NodePackRow>(driver,
     `SELECT ${SYNC_PACK_NODE_COLUMNS.join(', ')}
      FROM nodes WHERE id IN (__IDS__)`,
     nodeIds
   );
-  const nodeAttachments = loadNodeAttachmentRows(nodeIds);
-  const externalDocuments = queryRowsByIds<ExternalDocumentPackRow>(
+  const nodeAttachments = loadNodeAttachmentRows(driver, nodeIds);
+  const externalDocuments = queryRowsByIds<ExternalDocumentPackRow>(driver,
     `SELECT document_id, folder_id, relative_path, file_name, extension, source_size_bytes,
        source_modified_at, source_modified_ms, content_hash, title, opening_text, body_blob_hash,
        content, indexed_at, is_present, missing_at, created_at, updated_at
@@ -209,7 +212,7 @@ export function loadPackRows(fromStateSeq: number, toStateSeq: number) {
     externalDocumentIds
   );
   return {
-    contentBlobs: queryRowsByIds<ContentBlobPackRow>(
+    contentBlobs: queryRowsByIds<ContentBlobPackRow>(driver,
       `SELECT hash, storage_key, kind, mime_type, compression, original_size_bytes, stored_size_bytes,
          original_sha256, stored_sha256, availability, source_device_id, created_at, cached_at, last_verified_at
        FROM content_blobs WHERE hash IN (__IDS__)`,
@@ -217,11 +220,11 @@ export function loadPackRows(fromStateSeq: number, toStateSeq: number) {
     ),
     externalDocuments,
     nodeAttachments,
-    nodeOrder: loadNodeOrderRows(nodeIds),
+    nodeOrder: loadNodeOrderRows(driver, nodeIds),
     nodes,
-    reviewLog: loadReviewLogRows(stateRows),
+    reviewLog: loadReviewLogRows(driver, stateRows),
     stateRows,
-    syncObjects: loadPayloadObjects(stateRows)
+    syncObjects: loadPayloadObjects(driver, stateRows)
   };
 }
 

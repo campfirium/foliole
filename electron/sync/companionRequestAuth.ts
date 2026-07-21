@@ -1,7 +1,7 @@
-import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import type http from 'node:http';
 
 import { loadPairedCompanionDevice } from './companionPairingStore.js';
+import { verifyCompanionRequestSignature } from './companionRequestSignature.js';
 
 const AUTH_WINDOW_MS = 60 * 1000;
 const NONCE_TTL_MS = 2 * 60 * 1000;
@@ -27,20 +27,6 @@ interface CompanionRequestAuthFailure {
 }
 
 export type CompanionRequestAuthResult = CompanionRequestAuthFailure | CompanionRequestAuthSuccess;
-
-function sha256Hex(bodyText: string) {
-  return createHash('sha256').update(bodyText).digest('hex');
-}
-
-function buildCanonicalRequestPayload(args: {
-  bodyHash: string;
-  method: string;
-  nonce: string;
-  pathWithQuery: string;
-  timestamp: string;
-}) {
-  return [args.method.toUpperCase(), args.pathWithQuery, args.timestamp, args.nonce, args.bodyHash].join('\n');
-}
 
 function parsePathWithQuery(request: http.IncomingMessage) {
   const parsed = new URL(request.url ?? '/', 'http://127.0.0.1');
@@ -83,15 +69,6 @@ function readHeader(headers: http.IncomingHttpHeaders, key: string) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
-function compareSignatures(actual: string, expected: string) {
-  const actualBuffer = Buffer.from(actual, 'hex');
-  const expectedBuffer = Buffer.from(expected, 'hex');
-  if (actualBuffer.length !== expectedBuffer.length) {
-    return false;
-  }
-  return timingSafeEqual(actualBuffer, expectedBuffer);
-}
-
 export function clearCompanionRequestNonceCache() {
   usedNonceExpiryByDeviceId.clear();
 }
@@ -125,15 +102,16 @@ export function authenticateCompanionRequest(args: {
       status_code: 401
     };
   }
-  const canonicalPayload = buildCanonicalRequestPayload({
-    bodyHash: sha256Hex(args.bodyText ?? ''),
+  const validSignature = verifyCompanionRequestSignature({
+    bodyText: args.bodyText,
     method: args.request.method ?? 'GET',
     nonce,
     pathWithQuery: parsePathWithQuery(args.request),
+    secret: authenticatedDevice.device_secret,
+    signature,
     timestamp
   });
-  const expectedSignature = createHmac('sha256', authenticatedDevice.device_secret).update(canonicalPayload).digest('hex');
-  if (!compareSignatures(signature, expectedSignature)) {
+  if (!validSignature) {
     return {
       error: 'invalid_signature',
       ok: false,

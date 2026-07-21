@@ -1,8 +1,15 @@
+import type { DbPort } from '../../lib/core/sync/dbPort.js';
+
 import { applyNodeVersionPushAsync } from './companionSyncPushNodeVersionApply.js';
-import { applyReviewLogPushAsync } from './companionSyncPushReviewLogApply.js';
+import {
+  applyReviewLogPushAsync,
+  applyReviewLogPushWithDbPort
+} from './companionSyncPushReviewLogApply.js';
 import {
   applyStateObjectPushAsync,
-  isStateObjectPush
+  applyStateObjectPushWithDbPort,
+  isStateObjectPush,
+  type StatePushObjectType
 } from './companionSyncPushStateObjectAsyncApply.js';
 import type {
   CompanionSyncPushPayload,
@@ -33,10 +40,30 @@ export async function applyCompanionSyncPushAsync(
   return result;
 }
 
+export async function applyCompanionStateSyncPushWithDbPort(
+  port: DbPort,
+  items: CompanionSyncPushPayload[]
+): Promise<CompanionSyncPushResult> {
+  const result = emptyPushResult();
+  for (const item of items) {
+    const itemResult = isStateObjectPush(item)
+      ? await applyStateObjectPushWithDbPort(port, item, item.identity.objectType as StatePushObjectType)
+      : item.identity.objectType === 'review_log'
+        ? await applyReviewLogPushWithDbPort(port, item)
+        : unsupportedPushResult(item);
+    appendPushResult(result, itemResult);
+  }
+  return result;
+}
+
 async function applySinglePushItemAsync(item: CompanionSyncPushPayload) {
   if (item.identity.objectType === 'node') return await applyNodeVersionPushAsync(item);
   if (isStateObjectPush(item)) return await applyStateObjectPushAsync(item);
   if (item.identity.objectType === 'review_log') return await applyReviewLogPushAsync(item);
+  return unsupportedPushResult(item);
+}
+
+function unsupportedPushResult(item: CompanionSyncPushPayload): CompanionSyncPushResult {
   return {
     acks: [{
       clientOpId: item.clientOpId,
@@ -47,5 +74,5 @@ async function applySinglePushItemAsync(item: CompanionSyncPushPayload) {
     appliedNodeIds: [],
     appliedObjectIds: [],
     appliedReviewOpIds: []
-  } satisfies CompanionSyncPushResult;
+  };
 }

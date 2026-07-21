@@ -1,6 +1,5 @@
 import { buildIssueHandoffData, buildPrHandoffData } from './github-desktop-handoff-title.mjs';
 import { listPrChecks, recordMonitorError, runGh } from './github-monitor-gh.mjs';
-import { isCompletedNonFailureRun, markRecoveredIncident, recordIncidentFailure, shouldSuppressIncidentFailure } from './github-desktop-handoff-action-incidents.mjs';
 
 const ACTION_WORKFLOW_TIERS = new Map([
   ['T5 Nightly Remote Quality', 'T5']
@@ -34,7 +33,6 @@ function normalizeWorkflowState(state, workflow) {
   const existing = state.actions[workflow];
   if (existing && typeof existing === 'object') {
     existing.runs ??= {};
-    existing.incidents ??= {};
     existing.initialized ??= true;
     return existing;
   }
@@ -42,7 +40,6 @@ function normalizeWorkflowState(state, workflow) {
     baselineRunId: existing ? String(existing) : '',
     initialized: Boolean(existing),
     runs: existing ? { [String(existing)]: { status: 'unknown' } } : {},
-    incidents: {}
   };
   state.actions[workflow] = normalized;
   return normalized;
@@ -124,15 +121,9 @@ function listActionEvents(config, state, includeExisting, errors, renderTemplate
       }
       if (!reachedBaseline) continue;
       const event = actionRunEvent(config, run, renderTemplate);
-      if (isCompletedNonFailureRun(config, run)) markRecoveredIncident(workflowState, run);
-      const incidentSuppressed = shouldSuppressIncidentFailure(workflowState, run);
       const shouldEmit = (includeExisting || workflowState.initialized)
         && isFailureRun(config, run)
-        && !incidentSuppressed
         && !state.submitted[event.dedupeKey];
-      if ((includeExisting || workflowState.initialized) && isFailureRun(config, run)) {
-        recordIncidentFailure(workflowState, run, event, shouldEmit || Boolean(state.submitted[event.dedupeKey]));
-      }
       if (shouldEmit) {
         events.push(event);
       }

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-/* global console, process, setTimeout */
+/* global console, process */
 
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -11,44 +11,43 @@ import {
   iosXcodebuildResourceArgs,
   resolveIosResourceMode
 } from './ios-resource-profile.mjs';
+import {
+  createSimulatorAcceptanceBuildArgs,
+  parseBootstrapSnapshot,
+  selectSimulator,
+  shouldShutdownSimulator,
+  verifyBridgeResult,
+  waitForAcceptanceObservation,
+  waitForBootstrapSnapshot,
+  writeAcceptanceFailure
+} from './ios-simulator-acceptance-runner.mjs';
+import {
+  startPairingAcceptanceService
+} from './ios-pairing-acceptance-runner.mjs';
+import { readServiceObservations, verifyAcceptanceScenario } from './ios-acceptance-scenario-result.mjs';
+import { readAcceptanceScenarioSnapshot } from './ios-acceptance-snapshot.mjs';
+import { resolveAcceptanceScenario } from './ios-sync-pack-acceptance-runner.mjs';
+import { runIosDatabaseUpgradeAcceptance } from './ios-database-upgrade-acceptance-runner.mjs';
+
+export { selectSimulator, shouldShutdownSimulator, waitForBootstrapSnapshot };
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const ARTIFACT_DIR = path.join(REPO_ROOT, '.tmp/artifacts/ios-bootstrap-acceptance');
+const ARTIFACT_DIR = path.join(REPO_ROOT, '.tmp/artifacts/ios-bridge-acceptance');
 const DERIVED_DATA = path.join(ARTIFACT_DIR, 'DerivedData');
 const ACCEPTANCE_BUNDLE_ID = 'com.foliole.ios.bootstrap-acceptance';
 const DATABASE_RELATIVE_PATH = 'Library/CapacitorDatabase/foliole-companionSQLite.db';
+const BRIDGE_RESULT_RELATIVE_PATH = 'Library/FolioleBridgeAcceptance/result.json';
 const REQUIRED_TABLES = ['companion_meta', 'nodes', 'sync_object_state'];
 const RESOURCE_MODE = resolveIosResourceMode();
 
-export function selectSimulator(devicePayload) {
-  const candidates = Object.entries(devicePayload.devices ?? {})
-    .filter(([runtime]) => runtime.includes('iOS'))
-    .flatMap(([, devices]) => devices)
-    .filter((device) => device.isAvailable && /^iPhone /.test(device.name));
-  candidates.sort((left, right) => Number(right.state === 'Booted') - Number(left.state === 'Booted'));
-  if (!candidates[0]) throw new Error('Could not find an available iPhone simulator.');
-  return candidates[0];
-}
-
-export function shouldShutdownSimulator(simulator) {
-  return simulator.state !== 'Booted';
-}
-
-export function parseBootstrapSnapshot(output) {
-  const [deviceId, tableCount] = output.trim().split('\n');
-  return { deviceId: deviceId?.trim() ?? '', tableCount: Number(tableCount) };
-}
-
 export function createAcceptanceBuildArgs(udid) {
-  return [
-    '-project', path.join(REPO_ROOT, 'ios/App/App.xcodeproj'),
-    '-scheme', 'App', '-configuration', 'Debug',
-    '-destination', `platform=iOS Simulator,id=${udid}`,
-    '-derivedDataPath', DERIVED_DATA,
-    ...iosXcodebuildResourceArgs(RESOURCE_MODE),
-    `PRODUCT_BUNDLE_IDENTIFIER=${ACCEPTANCE_BUNDLE_ID}`,
-    'build'
-  ];
+  return createSimulatorAcceptanceBuildArgs({
+    bundleId: ACCEPTANCE_BUNDLE_ID,
+    derivedData: DERIVED_DATA,
+    repoRoot: REPO_ROOT,
+    resourceArgs: iosXcodebuildResourceArgs(RESOURCE_MODE),
+    udid
+  });
 }
 
 export function verifyBootstrapSnapshots(first, second) {
@@ -59,50 +58,98 @@ export function verifyBootstrapSnapshots(first, second) {
   return { databaseReady: true, deviceId: first.deviceId, requiredTableCount: first.tableCount };
 }
 
-export async function waitForBootstrapSnapshot(readSnapshot, action, timeoutMs = 15000, intervalMs = 100) {
-  action();
-  const deadline = Date.now() + timeoutMs;
-  let lastObservation = 'bootstrap database was not readable';
-  while (Date.now() <= deadline) {
-    try {
-      const snapshot = readSnapshot();
-      if (snapshot.deviceId && snapshot.tableCount === REQUIRED_TABLES.length) return snapshot;
-      lastObservation = `device identity present=${Boolean(snapshot.deviceId)}, required tables=${snapshot.tableCount}`;
-    } catch (error) {
-      lastObservation = error instanceof Error ? error.message : String(error);
-    }
-    if (Date.now() >= deadline) break;
-    await new Promise((resolve) => setTimeout(resolve, intervalMs));
-  }
-  throw new Error(`Timed out waiting for iOS bootstrap readiness: ${lastObservation}`);
-}
-
 async function main() {
   if (process.platform !== 'darwin') throw new Error('iOS bootstrap acceptance requires macOS with Xcode.');
   mkdirSync(ARTIFACT_DIR, { recursive: true });
-  const simulator = selectSimulator(runJson('xcrun', ['simctl', 'list', 'devices', 'available', '--json']));
-  const ownsBootedSimulator = shouldShutdownSimulator(simulator);
+  let simulator = null;
+  let service = null;
+  let ownsBootedSimulator = false;
+  const scenario = resolveAcceptanceScenario(process.env.FOLIOLE_IOS_ACCEPTANCE_SCENARIO);
+  if (scenario === 'database-upgrade-runtime') {
+    await runIosDatabaseUpgradeAcceptance({
+      artifactDir: ARTIFACT_DIR,
+      bundleId: ACCEPTANCE_BUNDLE_ID,
+      derivedData: DERIVED_DATA,
+      repoRoot: REPO_ROOT,
+      resourceArgs: iosXcodebuildResourceArgs(RESOURCE_MODE),
+      resourceMode: RESOURCE_MODE
+    });
+    return;
+  }
   try {
+    service = startPairingAcceptanceService(REPO_ROOT, ARTIFACT_DIR, scenario);
+    const serviceInfo = await waitForAcceptanceObservation({
+      accept: (value) => typeof value?.endpoint === 'string',
+      initialObservation: 'pairing service endpoint was not readable',
+      label: 'iOS pairing acceptance service',
+      read: () => JSON.parse(readFileSync(path.join(ARTIFACT_DIR, 'service.json'), 'utf8'))
+    });
+    simulator = selectSimulator(runJson('xcrun', ['simctl', 'list', 'devices', 'available', '--json']));
+    ownsBootedSimulator = shouldShutdownSimulator(simulator);
     bootSimulator(simulator);
-    prepareApp(simulator.udid);
+    prepareApp(simulator.udid, serviceInfo.endpoint, scenario);
     installFreshAcceptanceApp(simulator.udid);
-    const databasePath = resolveDatabasePath(simulator.udid);
+    const containerPath = resolveContainerPath(simulator.udid);
+    const databasePath = path.join(containerPath, DATABASE_RELATIVE_PATH);
+    const bridgeResultPath = path.join(containerPath, BRIDGE_RESULT_RELATIVE_PATH);
     const first = await waitForBootstrapSnapshot(
       () => readBootstrapSnapshot(databasePath),
       () => launchApp(simulator.udid)
     );
+    const firstBridge = verifyBridgeResult(await waitForAcceptanceObservation({
+      accept: (result) => result?.status === 'passed' || result?.status === 'failed',
+      describe: (result) => `scenario status=${result?.status ?? 'missing'}`,
+      initialObservation: 'bridge result was not readable',
+      label: 'iOS WebView bridge result',
+      read: () => JSON.parse(readFileSync(bridgeResultPath, 'utf8'))
+    }), scenario);
     run('xcrun', ['simctl', 'terminate', simulator.udid, ACCEPTANCE_BUNDLE_ID]);
+    const firstContentObservations = scenario === 'content-resource-read'
+      ? readServiceObservations(ARTIFACT_DIR)
+      : null;
+    const firstScenarioSnapshot = readAcceptanceSnapshot(scenario, containerPath);
+    rmSync(bridgeResultPath, { force: true });
     const second = await waitForBootstrapSnapshot(
       () => readBootstrapSnapshot(databasePath),
       () => launchApp(simulator.udid)
     );
+    const secondBridge = verifyBridgeResult(await waitForAcceptanceObservation({
+      accept: (result) => result?.status === 'passed' || result?.status === 'failed',
+      describe: (result) => `scenario status=${result?.status ?? 'missing'}`,
+      initialObservation: 'second bridge result was not readable',
+      label: 'iOS pairing restart result',
+      read: () => JSON.parse(readFileSync(bridgeResultPath, 'utf8'))
+    }), scenario);
     const result = verifyBootstrapSnapshots(first, second);
     run('xcrun', ['simctl', 'terminate', simulator.udid, ACCEPTANCE_BUNDLE_ID]);
-    const report = { ...result, databasePath, simulator: simulator.name };
+    const scenarioResult = verifyAcceptanceScenario({
+      firstBridge,
+      firstContentObservations,
+      firstScenarioSnapshot,
+      pairingObservations: readServiceObservations(ARTIFACT_DIR),
+      scenario,
+      secondBridge,
+      secondContentObservations: readServiceObservations(ARTIFACT_DIR),
+      secondScenarioSnapshot: readAcceptanceSnapshot(scenario, containerPath)
+    });
+    const report = { ...result, ...scenarioResult, simulator: simulator.name };
     writeFileSync(path.join(ARTIFACT_DIR, 'result.json'), `${JSON.stringify(report, null, 2)}\n`);
     console.log(JSON.stringify(report, null, 2));
+  } catch (error) {
+    writeAcceptanceFailure(ARTIFACT_DIR, error);
+    if (simulator) {
+      writeFileSync(path.join(ARTIFACT_DIR, 'simulator.log'), captureAllowFailure('xcrun', [
+        'simctl', 'spawn', simulator.udid, 'log', 'show', '--last', '5m', '--style', 'compact',
+        '--predicate', 'process == "App"'
+      ]));
+    }
+    throw error;
   } finally {
-    if (ownsBootedSimulator) runAllowFailure('xcrun', ['simctl', 'shutdown', simulator.udid]);
+    if (simulator) {
+      runAllowFailure('xcrun', ['simctl', 'terminate', simulator.udid, ACCEPTANCE_BUNDLE_ID]);
+      if (ownsBootedSimulator) runAllowFailure('xcrun', ['simctl', 'shutdown', simulator.udid]);
+    }
+    service?.kill('SIGTERM');
   }
 }
 
@@ -112,10 +159,23 @@ function bootSimulator(simulator) {
   run('xcrun', ['simctl', 'bootstatus', simulator.udid, '-b']);
 }
 
-function prepareApp(udid) {
-  runHeavy('npm', ['run', 'android:web:build'], { cwd: REPO_ROOT });
+function prepareApp(udid, endpoint, scenario) {
+  runHeavy('npm', ['run', 'android:web:build'], {
+    cwd: REPO_ROOT,
+    env: {
+      ...process.env,
+      VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE: '1',
+      VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_ENDPOINT: endpoint,
+      VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_SCENARIO: scenario
+    }
+  });
   run('npx', ['--no-install', 'cap', 'copy', 'ios'], { cwd: REPO_ROOT });
-  runHeavy('xcodebuild', createAcceptanceBuildArgs(udid));
+  try {
+    runHeavy('xcodebuild', createAcceptanceBuildArgs(udid));
+  } finally {
+    runHeavy('npm', ['run', 'android:web:build'], { cwd: REPO_ROOT });
+    run('npx', ['--no-install', 'cap', 'copy', 'ios'], { cwd: REPO_ROOT });
+  }
 }
 
 function installFreshAcceptanceApp(udid) {
@@ -129,15 +189,18 @@ function launchApp(udid) {
   run('xcrun', ['simctl', 'launch', '--terminate-running-process', udid, ACCEPTANCE_BUNDLE_ID]);
 }
 
-function resolveDatabasePath(udid) {
-  const container = capture('xcrun', ['simctl', 'get_app_container', udid, ACCEPTANCE_BUNDLE_ID, 'data']).trim();
-  return path.join(container, DATABASE_RELATIVE_PATH);
+function resolveContainerPath(udid) {
+  return capture('xcrun', ['simctl', 'get_app_container', udid, ACCEPTANCE_BUNDLE_ID, 'data']).trim();
 }
 
 function readBootstrapSnapshot(databasePath) {
   const names = REQUIRED_TABLES.map((name) => `'${name}'`).join(', ');
   const sql = `SELECT value FROM companion_meta WHERE key = 'device_id'; SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name IN (${names});`;
   return parseBootstrapSnapshot(capture('sqlite3', ['-cmd', '.timeout 1000', databasePath, sql]));
+}
+
+function readAcceptanceSnapshot(scenario, containerPath) {
+  return readAcceptanceScenarioSnapshot(scenario, { capture, containerPath, databaseRelativePath: DATABASE_RELATIVE_PATH });
 }
 
 function runJson(command, args) {
@@ -162,6 +225,11 @@ function runHeavy(command, args, options = {}) {
 
 function runAllowFailure(command, args) {
   spawnSync(command, args, { cwd: REPO_ROOT, stdio: 'ignore' });
+}
+
+function captureAllowFailure(command, args) {
+  const result = spawnSync(command, args, { cwd: REPO_ROOT, encoding: 'utf8' });
+  return `${result.stdout ?? ''}${result.stderr ?? ''}`;
 }
 
 const isMain = process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url;

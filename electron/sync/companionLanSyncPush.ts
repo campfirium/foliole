@@ -40,9 +40,17 @@ function readPushItems(bodyText: string): CompanionSyncPushPayload[] {
 }
 
 export async function handleCompanionSyncPush(bodyText: string) {
+  return await handleCompanionSyncPushWithApply(bodyText, applyCompanionSyncPushAsync);
+}
+
+export async function handleCompanionSyncPushWithApply(
+  bodyText: string,
+  apply: typeof applyCompanionSyncPushAsync,
+  notify: typeof notifyWorkspaceSyncApplied = notifyWorkspaceSyncApplied
+) {
   const items = readPushItems(bodyText);
-  const result = await applyCompanionSyncPushAsync(items);
-  notifyWorkspaceSyncApplied({
+  const result = await apply(items);
+  notify({
     appliedNodeIds: result.appliedNodeIds,
     appliedObjectIds: result.appliedObjectIds,
     appliedReviewOpIds: result.appliedReviewOpIds

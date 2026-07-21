@@ -63,4 +63,8 @@ describe('native sqlite test policy', () => {
   it('keeps schema inventory coverage on the Electron ABI test entry', () => {
     expect(controlledElectronSqliteTests).toContain('scripts/android/schema-inventory.test.mjs');
   });
+
+  it('keeps the iOS Sync Pack fixture on the Electron ABI test entry', () => {
+    expect(controlledElectronSqliteTests).toContain('scripts/ios/ios-sync-pack-acceptance-fixture.test.mjs');
+  });
 });

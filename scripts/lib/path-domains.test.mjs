@@ -1,5 +1,9 @@
 // @vitest-environment node
 
+import { spawn } from 'node:child_process';
+import process from 'node:process';
+import { fileURLToPath, URL } from 'node:url';
+
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -11,7 +15,32 @@ import {
   resolveStaticQualityRoute
 } from './path-domains.mjs';
 
+function runPathDomains(input) {
+  return new Promise((resolve, reject) => {
+    const scriptPath = fileURLToPath(new URL('./path-domains.mjs', import.meta.url));
+    const child = spawn(process.execPath, [scriptPath, 'quality-route'], { stdio: ['pipe', 'pipe', 'pipe'] });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.setEncoding('utf8').on('data', (chunk) => { stdout += chunk; });
+    child.stderr.setEncoding('utf8').on('data', (chunk) => { stderr += chunk; });
+    child.once('error', reject);
+    child.stdin.once('error', reject);
+    child.once('close', (code) => resolve({ code, stderr, stdout }));
+    child.stdin.end(input);
+  });
+}
+
 describe('path-domains', () => {
+  it('reads route input larger than the pipe buffer without EAGAIN', async () => {
+    const input = Array.from({ length: 5_000 }, (_, index) => `scripts/generated-${index}.mjs`).join('\n');
+
+    await expect(runPathDomains(input)).resolves.toEqual({
+      code: 0,
+      stderr: '',
+      stdout: 'mid\tnon-Android script changed\n'
+    });
+  });
+
   it('maps shared store paths differently per consumer without duplicating path facts', () => {
     expect(resolveStaticQualityRoute(['src/store/workspaceStore.ts'])).toEqual({
       level: 'shared',

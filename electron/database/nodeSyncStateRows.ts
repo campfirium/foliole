@@ -1,4 +1,4 @@
-import type { DatabaseRow } from '../../lib/core/database/driver.js';
+import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
 import { upsertSyncObjectState } from '../../lib/core/database/syncState.js';
 
 import { openDatabaseConnection } from './connection.js';
@@ -20,8 +20,8 @@ export function upsertNodeSyncState(args: {
   deviceId: string;
   nodeId: string;
   updatedAt: string;
-}) {
-  upsertSyncObjectState(openDatabaseConnection().driver, {
+}, driver: DatabaseDriver = openDatabaseConnection().driver) {
+  upsertSyncObjectState(driver, {
     objectType: 'node',
     objectId: args.nodeId,
     currentVersionId: args.currentVersionId,
@@ -33,8 +33,10 @@ export function upsertNodeSyncState(args: {
   });
 }
 
-export function backfillMissingNodeSyncState() {
-  const rows = openDatabaseConnection().driver.queryAll<MissingNodeSyncStateRow>(
+export function backfillMissingNodeSyncState(
+  driver: DatabaseDriver = openDatabaseConnection().driver
+) {
+  const rows = driver.queryAll<MissingNodeSyncStateRow>(
     `SELECT
        n.id,
        n.current_version_id,
@@ -57,7 +59,7 @@ export function backfillMissingNodeSyncState() {
       deviceId: row.last_modified_by_device_id ?? row.device_id,
       nodeId: row.id,
       updatedAt: row.updated_at
-    });
+    }, driver);
   }
   return rows.map((row) => row.id);
 }

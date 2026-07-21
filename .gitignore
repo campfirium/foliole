@@ -1,6 +1,7 @@
 .lab/
 .claude/
 .codex
+.DS_Store
 AGENTS.local.md
 skills-lock.json
 ref/

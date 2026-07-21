@@ -1,0 +1,64 @@
+import path from 'node:path';
+
+const SHARED_TYPES = "'node_reading', 'node_review', 'setting'";
+
+export function parseStateWritebackSnapshot(output) {
+  const [row] = JSON.parse(output || '[]');
+  const cursor = JSON.parse(row?.review_cursor ?? 'null');
+  return {
+    active_node_id: row?.active_node_id ?? null,
+    local_reading_position: Number(row?.local_reading_position ?? -1),
+    local_scroll_top: Number(row?.local_scroll_top ?? -1),
+    pending_ack_count: Number(row?.pending_ack_count ?? -1),
+    review_cursor_change_id: cursor?.change_id ?? null,
+    review_log_count: Number(row?.review_log_count ?? 0),
+    review_op_id: row?.review_op_id ?? null,
+    shared_dirty_count: Number(row?.shared_dirty_count ?? -1),
+    shared_state_count: Number(row?.shared_state_count ?? 0),
+    view_state_sync_count: Number(row?.view_state_sync_count ?? -1)
+  };
+}
+
+export function readStateWritebackSnapshot(options) {
+  const databasePath = path.join(options.containerPath, options.databaseRelativePath);
+  const sql = `SELECT
+    (SELECT value FROM workspace_meta WHERE key = 'active_node_id') AS active_node_id,
+    (SELECT reading_position FROM node_reading_device_state WHERE node_id = 'ios-state-node') AS local_reading_position,
+    (SELECT scroll_top FROM node_view_state WHERE node_id = 'ios-state-node') AS local_scroll_top,
+    (SELECT count(*) FROM sync_push_ack) AS pending_ack_count,
+    (SELECT value FROM companion_meta WHERE key = 'sync_review_log_push_cursor') AS review_cursor,
+    (SELECT count(*) FROM review_log WHERE node_id = 'ios-state-node') AS review_log_count,
+    (SELECT op_id FROM review_log WHERE node_id = 'ios-state-node' LIMIT 1) AS review_op_id,
+    (SELECT count(*) FROM sync_object_state WHERE object_type IN (${SHARED_TYPES}) AND sync_dirty = 1) AS shared_dirty_count,
+    (SELECT count(*) FROM sync_object_state WHERE object_type IN (${SHARED_TYPES})) AS shared_state_count,
+    (SELECT count(*) FROM sync_object_state WHERE object_type = 'view_state') AS view_state_sync_count;`;
+  return parseStateWritebackSnapshot(options.capture('sqlite3', ['-json', databasePath, sql]));
+}
+
+function bridgeEvidencePassed(first, second) {
+  return first.phase === 'applied' && first.sync?.pushRejectedCount === 0 &&
+    first.sync?.pushedObjectIds?.length === 3 && first.sync?.pushedReviewOpIds?.length === 1 &&
+    second.phase === 'reapplied' && second.sync?.pushedObjectIds?.length === 0 &&
+    second.sync?.pushedReviewOpIds?.length === 0;
+}
+
+function snapshotPassed(snapshot) {
+  return snapshot.active_node_id === 'ios-state-node' && snapshot.local_reading_position === 42 &&
+    snapshot.local_scroll_top === 42 && snapshot.pending_ack_count === 0 &&
+    snapshot.review_log_count === 1 && snapshot.review_cursor_change_id === snapshot.review_op_id &&
+    snapshot.shared_dirty_count === 0 && snapshot.shared_state_count === 3 &&
+    snapshot.view_state_sync_count === 0;
+}
+
+export function verifyStateWritebackAcceptance(first, second, firstSnapshot, secondSnapshot, observations) {
+  const state = observations.state_writeback ?? {};
+  const pushedTypes = [...(state.pushed_object_types ?? [])].sort();
+  const servicePassed = state.push_requests === 1 && state.pack_requests === 3 &&
+    JSON.stringify(pushedTypes) === JSON.stringify(['node_reading', 'node_review', 'review_log', 'setting']) &&
+    state.ack_statuses?.length === 4 && state.ack_statuses.every((status) => status === 'accepted');
+  if (!bridgeEvidencePassed(first, second) || !snapshotPassed(firstSnapshot) ||
+      JSON.stringify(secondSnapshot) !== JSON.stringify(firstSnapshot) || !servicePassed) {
+    throw new Error('iOS state writeback acceptance evidence is incomplete.');
+  }
+  return { first, first_snapshot: firstSnapshot, observations: state, second, second_snapshot: secondSnapshot };
+}

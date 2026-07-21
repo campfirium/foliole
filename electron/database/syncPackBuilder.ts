@@ -4,6 +4,7 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { deflateSync } from 'node:zlib';
 
+import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { DATABASE_SCHEMA_VERSION } from '../../lib/core/database/migrations.js';
 import {
   SYNC_PACK_COMPRESSION,
@@ -15,6 +16,7 @@ import { buildSyncPackManifest } from '../../lib/core/sync/syncPackManifest.js';
 import { PACK_SCHEMA } from '../../lib/core/sync/syncPackSchema.js';
 import { writeStoredZip } from '../diagnostics/zipStore.js';
 
+import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
 import { backfillMissingNodeSyncState } from './nodeSyncStateRows.js';
 import { writePackManifest, writePackRows } from './syncPackBuilderRows.js';
@@ -23,7 +25,7 @@ import { loadMaxStateSeq, loadPackRows, type LoadedSyncPackRows } from './syncPa
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
 
-interface BuildDesktopSyncPackInput {
+export interface BuildDesktopSyncPackInput {
   createdAt?: string;
   fromDeviceId?: string;
   outputPath: string;
@@ -85,11 +87,23 @@ function buildContainerManifest(args: {
 }
 
 export async function buildDesktopSyncPack(input: BuildDesktopSyncPackInput) {
+  const createdAt = input.createdAt ?? new Date().toISOString();
+  return buildDesktopSyncPackFromDriver({
+    ...input,
+    createdAt,
+    fromDeviceId: input.fromDeviceId ?? loadOrCreateDesktopDeviceId(createdAt)
+  }, openDatabaseConnection().driver);
+}
+
+export async function buildDesktopSyncPackFromDriver(
+  input: BuildDesktopSyncPackInput & { fromDeviceId: string },
+  sourceDriver: DatabaseDriver
+) {
   const fromStateSeq = normalizeSeq(input.fromStateSeq);
   const createdAt = input.createdAt ?? new Date().toISOString();
-  backfillMissingNodeSyncState();
-  const toStateSeq = normalizeSeq(input.toStateSeq ?? loadMaxStateSeq());
-  const fromDeviceId = input.fromDeviceId ?? loadOrCreateDesktopDeviceId(createdAt);
+  backfillMissingNodeSyncState(sourceDriver);
+  const toStateSeq = normalizeSeq(input.toStateSeq ?? loadMaxStateSeq(sourceDriver));
+  const fromDeviceId = input.fromDeviceId;
   await fs.mkdir(path.dirname(input.outputPath), { recursive: true });
   await fs.rm(input.outputPath, { force: true });
 
@@ -100,7 +114,7 @@ export async function buildDesktopSyncPack(input: BuildDesktopSyncPackInput) {
     for (const statement of PACK_SCHEMA) {
       packDb.exec(statement);
     }
-    const rows = loadPackRows(fromStateSeq, toStateSeq);
+    const rows = loadPackRows(fromStateSeq, toStateSeq, sourceDriver);
     const packToStateSeq = rows.stateRows.at(-1)?.state_seq ?? fromStateSeq;
 
     const writePack = packDb.transaction(() => {

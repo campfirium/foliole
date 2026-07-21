@@ -29,8 +29,12 @@ describe('iOS topic search host contract', () => {
 
     expect(plugin).toContain('CAPPluginMethod(name: "searchTopics"');
     expect(action).toContain('@objc func searchTopics(_ call: CAPPluginCall)');
+    expect(action).toContain('FolioleCompanionTopicSearchContractStore().contract()');
     expect(action).toContain('store.search(query: query, limit: call.getInt(limitKey))');
-    expect(store).toContain('database.rows(contract.sql, arguments: arguments)');
+    expect(store).toContain('FolioleCompanionGeneratedReadQueryRunner');
+    expect(store).toContain('definitions.query(named: definitions.string("searchQueryName", in: rules))');
+    expect(store).toContain('fields: contract.searchResultFields');
+    expect(store).not.toContain('Int(row[5] ?? "") ?? 0');
     expect(database).toContain('SQLITE_OPEN_READONLY | SQLITE_OPEN_FULLMUTEX');
   });
 });

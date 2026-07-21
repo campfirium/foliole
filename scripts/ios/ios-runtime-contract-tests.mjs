@@ -27,6 +27,10 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'src/shared/platform/companionSyncCursors.test.ts',
   'src/shared/platform/companionWorkspaceRuntimeRepository.test.ts',
   'src/companion/CompanionApp.boot.test.tsx',
+  'src/companion/iosBridgeAcceptance.test.ts',
+  'src/companion/iosContentResourceAcceptance.test.ts',
+  'src/companion/iosDatabaseUpgradeAcceptance.test.ts',
+  'src/companion/iosSyncPackAcceptance.test.ts',
   'src/companion/CompanionBrowseTopActions.test.tsx',
   'src/companion/CompanionHandoffReminderRuntime.test.tsx',
   'src/companion/CompanionNodeMutationAvailability.test.tsx',
@@ -84,6 +88,8 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'scripts/ios/ios-app-identity-host-contract.test.mjs',
   'scripts/ios/ios-app-icon-host-contract.test.mjs',
   'scripts/ios/ios-bootstrap-acceptance.test.mjs',
+  'scripts/ios/ios-database-upgrade-acceptance-runner.test.mjs',
+  'scripts/ios/ios-bridge-acceptance-host-contract.test.mjs',
   'scripts/ios/ios-bootstrap-quality-workflow-contract.test.mjs',
   'scripts/ios/ios-bonjour-discovery-lifecycle-host-contract.test.mjs',
   'scripts/ios/ios-bridge-controller-host-contract.test.mjs',
@@ -108,6 +114,11 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
 ];
 
 export const IOS_RUNTIME_SQLITE_CONTRACT_TESTS = [
+  'scripts/ios/ios-database-upgrade-acceptance-fixture.test.mjs',
+  'scripts/ios/ios-content-resource-acceptance-fixture.test.mjs',
+  'scripts/ios/ios-content-resource-acceptance-service.test.mjs',
+  'scripts/ios/ios-content-resource-acceptance-runner.test.mjs',
+  'scripts/ios/ios-sync-pack-acceptance-fixture.test.mjs',
   'src/companion/companionCaptureTextActions.ios.test.ts',
   'src/companion/companionTrashActions.ios.test.ts',
   'src/shared/platform/companionSyncNodeVersions.ios.test.ts'
