@@ -23,12 +23,12 @@ export interface BackupPruneResult {
 }
 
 const LEGACY_AUTO_FILE_PATTERN =
-  /^auto-(hourly|daily|weekly|monthly)-(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}-\d{3})\.db$/;
-const AUTO_RESTORE_POINT_PATTERN = /^foliole-auto-backup-(\d{6})-(\d{6})\.db$/;
+  /^auto-(hourly|daily|weekly|monthly)-(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}-\d{3})\.db(?:\.gz)?$/;
+const AUTO_RESTORE_POINT_PATTERN = /^foliole-auto-backup-(\d{6})-(\d{6})\.db(?:\.gz)?$/;
 const SNAPSHOT_FILE_PATTERN =
   /^(pre-migration|pre-restore)-(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}-\d{3})\.db$/;
 const MANUAL_FILE_PATTERN =
-  /^(?:manual|foliole)-(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}-\d{3})\.db$/;
+  /^(?:manual|foliole)-(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}-\d{3})\.db(?:\.gz)?$/;
 
 function parseEntryFromFileName(fileName: string): Pick<
   ApplicationDatabaseBackupEntry,
@@ -76,7 +76,7 @@ async function readBackupDirectory(directoryPath: string) {
 
   const entries = await Promise.all(
     fileNames
-      .filter((fileName) => fileName.endsWith('.db'))
+      .filter((fileName) => fileName.endsWith('.db') || fileName.endsWith('.db.gz'))
       .map(async (fileName) => {
         const parsed = parseEntryFromFileName(fileName);
         if (!parsed) {

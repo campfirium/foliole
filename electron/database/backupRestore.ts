@@ -13,6 +13,11 @@ import {
   loadBackupSettings,
   resolveManagedBackupDirectory
 } from './backupSettings.js';
+import {
+  backupCompressedSqliteDatabase,
+  COMPRESSED_SQLITE_BACKUP_SUFFIX,
+  materializeCompressedSqliteBackup
+} from './compressedSqliteBackup.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { copyExtraBackup, disabledExtraBackupResult, type ExtraBackupCopyResult } from './extraBackupCopies.js';
 import { createInternalDatabaseSnapshotWithBackup } from './internalSnapshots.js';
@@ -44,7 +49,7 @@ function backupFileTimestamp(now: Date) {
 }
 
 function buildManagedBackupPath(prefix: string, now: Date, backupDirectory = resolveManagedBackupDirectory()) {
-  return path.join(backupDirectory, `${prefix}-${backupFileTimestamp(now)}.db`);
+  return path.join(backupDirectory, `${prefix}-${backupFileTimestamp(now)}${COMPRESSED_SQLITE_BACKUP_SUFFIX}`);
 }
 
 function pad(value: number) {
@@ -54,7 +59,7 @@ function pad(value: number) {
 function automaticBackupFileName(now: Date) {
   const date = `${pad(now.getFullYear() % 100)}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
   const time = `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-  return `foliole-auto-backup-${date}-${time}.db`;
+  return `foliole-auto-backup-${date}-${time}${COMPRESSED_SQLITE_BACKUP_SUFFIX}`;
 }
 
 async function pruneBackupsNow(now = new Date()) {
@@ -71,7 +76,7 @@ async function createAutomaticBackup(now: Date, backupDirectory: string) {
     return;
   }
   const connection = openDatabaseConnection();
-  const result = await backupSqliteDatabase({
+  const result = await backupCompressedSqliteDatabase({
     destinationPath,
     sourceDatabase: connection.sqlite,
     sourcePath: connection.dbPath
@@ -114,11 +119,14 @@ export async function createApplicationDatabaseBackup(
   const backupDirectory = ensureManagedBackupDirectory(settings);
   const destinationPath =
     options.destinationPath ?? buildManagedBackupPath('manual', now, backupDirectory);
-  const result = await backupSqliteDatabase({
+  const backupOptions = {
     sourcePath: connection.dbPath,
     destinationPath,
     sourceDatabase: connection.sqlite
-  });
+  };
+  const result = options.destinationPath
+    ? await backupSqliteDatabase(backupOptions)
+    : await backupCompressedSqliteDatabase(backupOptions);
   const extraBackup = options.destinationPath
     ? disabledExtraBackupResult()
     : await copyExtraBackup({
@@ -141,12 +149,17 @@ export async function restoreApplicationDatabaseBackup(
     sourceDatabase: connection.sqlite,
     sourcePath: targetPath
   });
-  closeDatabaseConnection();
-  const result = await restoreSqliteDatabase({ sourcePath: options.sourcePath, targetPath });
-  initializeDatabase();
-  markNodeSyncRestoreIncarnation();
-  await pruneBackupsNow();
-  return result;
+  const materialized = await materializeCompressedSqliteBackup(options.sourcePath, path.dirname(targetPath));
+  try {
+    closeDatabaseConnection();
+    const result = await restoreSqliteDatabase({ sourcePath: materialized.databasePath, targetPath });
+    initializeDatabase();
+    markNodeSyncRestoreIncarnation();
+    await pruneBackupsNow();
+    return { ...result, sourcePath: path.resolve(options.sourcePath) };
+  } finally {
+    await materialized.cleanup();
+  }
 }
 
 export async function listApplicationDatabaseBackups(): Promise<ApplicationDatabaseBackupEntry[]> {

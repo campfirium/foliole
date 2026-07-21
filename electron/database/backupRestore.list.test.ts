@@ -98,3 +98,19 @@ it('recognizes the compact automatic restore point filename', async () => {
     expect.objectContaining({ autoFrequency: null, fileName, filePath, kind: 'automatic' })
   ]);
 });
+
+it('recognizes independently compressed automatic and manual backups', async () => {
+  const backupDirectoryPath = path.join(mockedDocumentsDir, 'Foliole', 'Backups');
+  const automaticName = 'foliole-auto-backup-260713-081408.db.gz';
+  const manualName = 'manual-2026-07-13_08-14-08-000.db.gz';
+  await fs.mkdir(backupDirectoryPath, { recursive: true });
+  await fs.writeFile(path.join(backupDirectoryPath, automaticName), 'automatic');
+  await fs.writeFile(path.join(backupDirectoryPath, manualName), 'manual');
+
+  await expect(listManagedDatabaseBackups(backupDirectoryPath)).resolves.toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ fileName: automaticName, kind: 'automatic' }),
+      expect.objectContaining({ fileName: manualName, kind: 'manual' })
+    ])
+  );
+});

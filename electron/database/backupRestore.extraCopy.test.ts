@@ -68,7 +68,7 @@ it('copies a manual backup into the extra backup location and prunes old extra c
   expect(extraNames).toContain('personal.txt');
   expect(extraNames).not.toContain('foliole-external.db');
   expect(extraNames).not.toContain(path.basename(openDatabaseConnection().searchDbPath));
-  expect(extraNames.filter((fileName) => fileName.endsWith('.db'))).toHaveLength(2);
+  expect(extraNames.filter((fileName) => /\.db(?:\.gz)?$/.test(fileName))).toHaveLength(2);
   expect(extraNames).not.toContain('manual-2026-04-02_10-00-00-000.db');
   await expectBackupDirectoryExcludesSidecars(resolveManagedBackupDirectory(loadBackupSettings()));
 });
@@ -89,7 +89,8 @@ it('skips extra copying when the extra location matches the main backup location
   saveBackupSettings({ backup_dir: backupDir, extra_backup_dir: backupDir, extra_backup_max_count: 1 });
 
   const result = await createApplicationDatabaseBackup();
-  const backupNames = (await fs.readdir(resolveManagedBackupDirectory(loadBackupSettings()))).filter((fileName) => fileName.endsWith('.db'));
+  const backupNames = (await fs.readdir(resolveManagedBackupDirectory(loadBackupSettings())))
+    .filter((fileName) => /\.db(?:\.gz)?$/.test(fileName));
 
   expect(result.extraBackup.status).toBe('skipped_same_directory');
   expect(backupNames).toEqual([path.basename(result.destinationPath)]);
@@ -108,7 +109,7 @@ it('copies automatic backups into the extra location without blocking primary re
 
   await reconcileAutomaticDatabaseBackups(new Date(2026, 3, 2, 10, 15, 0));
 
-  await expect(fs.stat(path.join(extraDir, 'foliole-auto-backup-260402-101500.db'))).resolves.toBeDefined();
+  await expect(fs.stat(path.join(extraDir, 'foliole-auto-backup-260402-101500.db.gz'))).resolves.toBeDefined();
   await expect(fs.access(path.join(extraDir, 'foliole-external.db'))).rejects.toMatchObject({ code: 'ENOENT' });
   await expect(fs.access(path.join(extraDir, path.basename(openDatabaseConnection().searchDbPath)))).rejects.toMatchObject({ code: 'ENOENT' });
   await expectBackupDirectoryExcludesSidecars(resolveManagedBackupDirectory(loadBackupSettings()));

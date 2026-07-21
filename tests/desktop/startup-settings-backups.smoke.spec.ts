@@ -9,7 +9,7 @@ const MINIMIZE_BUTTON_NAME = /^(Minimize|最小化)$/;
 const RESTORE_BUTTON_NAME = /^(Restore|恢复)$/;
 const RESTORE_SUCCESS_TITLE = /^(Backup restored|备份已恢复)$/;
 const RESTORE_DONE_BUTTON_NAME = /^(Done|完成)$/;
-const AUTO_BACKUP_FILE_NAME = /^foliole-auto-backup-\d{6}-\d{6}\.db$/;
+const AUTO_BACKUP_FILE_NAME = /^foliole-auto-backup-\d{6}-\d{6}\.db\.gz$/;
 
 test.describe('desktop smoke', () => {
   test('startup renders the desktop workspace shell', async ({ desktopSession, desktopWindow }) => {
