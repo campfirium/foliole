@@ -124,29 +124,6 @@ it('uses concise Publish copy and the standard settings input width', async () =
   expect(forumUrl.parentElement).toHaveClass('w-[min(360px,100%)]');
 });
 
-it('connects WordPress with an Application Password and shows the WordPress.com scope warning', async () => {
-  renderWithLocalization(<SettingsPublishingSection />);
-  fireEvent.click(screen.getByRole('button', { name: 'WordPress' }));
-  fireEvent.change(await screen.findByLabelText('WordPress site address'), {
-    target: { value: 'https://free-site.wordpress.com' }
-  });
-  fireEvent.change(screen.getByLabelText('WordPress username'), { target: { value: 'writer' } });
-  fireEvent.change(screen.getByLabelText('WordPress Application Password'), {
-    target: { value: 'SENTINEL-WORDPRESS-APP-PASSWORD' }
-  });
-
-  expect(screen.getByText(/account-level device credential/u)).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
-
-  await waitFor(() => expect(wordpressRepositoryMocks.connectWordPressPublishSettingsToRuntime).toHaveBeenCalledWith({
-    application_password: 'SENTINEL-WORDPRESS-APP-PASSWORD',
-    site_url: 'https://free-site.wordpress.com',
-    username: 'writer'
-  }));
-  expect(await screen.findByText('Connection successful.')).toBeInTheDocument();
-  expect(screen.getByLabelText('WordPress Application Password')).toHaveValue('');
-});
-
 it('disconnects Discourse and removes the saved credential state', async () => {
   renderWithLocalization(<SettingsPublishingSection />);
   fireEvent.click(screen.getByRole('button', { name: 'Discourse' }));

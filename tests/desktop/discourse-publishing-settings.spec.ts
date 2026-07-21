@@ -60,7 +60,7 @@ async function verifyCollapsedOverview(
   testInfo: import('@playwright/test').TestInfo
 ) {
   await expect(regions.foliole.getByRole('button', { name: /^(Publish to the web|发布到 Web)$/ })).toHaveAttribute('aria-expanded', 'false');
-  await expect(regions.wordpress.getByRole('button', { name: 'WordPress' })).toHaveAttribute('aria-expanded', 'false');
+  await expect(regions.wordpress.getByRole('button', { exact: true, name: 'WordPress' })).toHaveAttribute('aria-expanded', 'false');
   await expect(regions.discourse.getByRole('button', { name: 'Discourse' })).toHaveAttribute('aria-expanded', 'false');
   await expect(regions.foliole.getByLabel(/^Cloudflare Account ID$/)).not.toBeVisible();
   await expect(regions.wordpress.getByLabel(/^(WordPress site address|WordPress 站点地址)$/)).not.toBeVisible();
@@ -76,7 +76,7 @@ async function verifyCollapsedOverview(
 
 async function expandPublishingSections(regions: PublishingRegions) {
   const foliole = regions.foliole.getByRole('button', { name: /^(Publish to the web|发布到 Web)$/ });
-  const wordpress = regions.wordpress.getByRole('button', { name: 'WordPress' });
+  const wordpress = regions.wordpress.getByRole('button', { exact: true, name: 'WordPress' });
   const discourse = regions.discourse.getByRole('button', { name: 'Discourse' });
   const folioleBox = await foliole.boundingBox();
   expect(folioleBox?.width ?? 0).toBeGreaterThan(600);
@@ -159,8 +159,11 @@ test('keeps independent Publish sections collapsed until opened and preserves th
   await expect(wordpressRegion.getByLabel(/^(WordPress site address|WordPress 站点地址)$/)).toBeVisible();
   await expect(wordpressRegion.getByLabel(/^(WordPress username|WordPress 用户名)$/)).toBeVisible();
   await expect(wordpressRegion.getByLabel(/^WordPress Application Password$/)).toBeVisible();
+  await expect(wordpressRegion.getByText(/^(Enter your WordPress address first\.|请先输入 WordPress 地址。)$/)).toBeVisible();
+  await wordpressRegion.getByLabel(/^(WordPress site address|WordPress 站点地址)$/).fill('https://example.com');
+  await expect(wordpressRegion.getByRole('button', { name: /Create an Application Password in this site’s WordPress user profile|在该站点的 WordPress 用户资料中创建 Application Password/ })).toBeVisible();
   await wordpressRegion.getByLabel(/^(WordPress site address|WordPress 站点地址)$/).fill('https://free-site.wordpress.com');
-  await expect(wordpressRegion.getByText(/(account-level device credential|账户级设备凭据)/)).toBeVisible();
+  await expect(wordpressRegion.getByRole('button', { name: /Create an Application Password in WordPress.com|在 WordPress.com 中创建 Application Password/ })).toBeVisible();
   await expect(wordpressRegion.getByLabel(/login password|登录密码/i)).toHaveCount(0);
   const forumUrl = dialog.getByRole('textbox', { name: /^(Discourse forum URL|Discourse 论坛 URL)$/ });
   await expect(forumUrl).toBeVisible();

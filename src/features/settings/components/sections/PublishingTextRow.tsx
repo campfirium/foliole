@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 import {
   SettingsControlSlot,
   SettingsRow,
@@ -5,7 +7,7 @@ import {
 } from '../../../../shared/ui';
 
 export function PublishingTextRow(props: {
-  description: string;
+  description: ReactNode;
   disabled: boolean;
   label: string;
   onBlur?: () => void;

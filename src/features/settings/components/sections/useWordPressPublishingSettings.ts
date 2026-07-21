@@ -16,12 +16,16 @@ export interface WordPressPublishingForm {
 type WordPressPublishingStatus = 'connecting' | 'disconnecting' | 'idle' | 'loading';
 const EMPTY_FORM: WordPressPublishingForm = { applicationPassword: '', siteUrl: '', username: '' };
 
-function isWordPressComSite(value: string) {
+export type WordPressSiteKind = 'selfHosted' | 'unknown' | 'wordpressCom';
+
+function getWordPressSiteKind(value: string): WordPressSiteKind {
   try {
     const hostname = new URL(value).hostname.toLowerCase();
-    return hostname === 'wordpress.com' || hostname.endsWith('.wordpress.com');
+    return hostname === 'wordpress.com' || hostname.endsWith('.wordpress.com')
+      ? 'wordpressCom'
+      : 'selfHosted';
   } catch {
-    return false;
+    return 'unknown';
   }
 }
 
@@ -37,6 +41,7 @@ function useWordPressPublishingState(t: ReturnType<typeof useTranslation>) {
         if (!settings) return;
         setForm((current) => ({ ...current, siteUrl: settings.site_url }));
         setHasCredentials(settings.has_credentials);
+        setConnected(settings.has_credentials);
       })
       .catch(() => setError(t('settings.publishing.wordpress.error.load')))
       .finally(() => setStatus('idle'));
@@ -94,16 +99,17 @@ export function useWordPressPublishingSettings() {
     state.setForm((current) => ({ ...current, ...patch }));
   };
   return {
-    canConnect: !disabled && Boolean(
+    canConnect: !disabled && !state.connected && Boolean(
       state.form.siteUrl.trim() && state.form.username.trim() && state.form.applicationPassword.trim()
     ),
     connected: state.connected,
     disconnect: () => void disconnectWordPress(state, t),
     disabled,
     error: state.error,
+    fieldsDisabled: disabled || state.connected,
     form: state.form,
     hasCredentials: state.hasCredentials,
-    isWordPressCom: isWordPressComSite(state.form.siteUrl),
+    siteKind: getWordPressSiteKind(state.form.siteUrl),
     status: state.status,
     submit: () => void connectWordPress(state, t),
     updateForm
