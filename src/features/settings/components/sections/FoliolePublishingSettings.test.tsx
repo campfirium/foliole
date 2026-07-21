@@ -47,12 +47,15 @@ function renderSettings() {
   );
 }
 
-it('presents the generated local static pages as the same content and styling published to the web', async () => {
+it('presents local and Web views of the generated static pages', async () => {
+  mocks.loadFoliolePublishSettingsFromRuntime.mockResolvedValue(CONNECTED);
   renderSettings();
-  expect(await screen.findByText('Local static pages')).toBeVisible();
-  expect(screen.getByText(/Generated each time you run “Publish to the web” on material/u)).toBeVisible();
-  fireEvent.click(screen.getByRole('button', { name: 'View' }));
+  expect(await screen.findByText('Static pages')).toBeVisible();
+  expect(screen.getByText('Generated each time you run “Publish to the web” on material.')).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'View local' }));
   await waitFor(() => expect(mocks.viewFoliolePublishSiteFromRuntime).toHaveBeenCalledOnce());
+  fireEvent.click(screen.getByRole('button', { name: 'View Web' }));
+  await waitFor(() => expect(openExternalUrl).toHaveBeenCalledWith('https://my-site.pages.dev'));
 });
 
 it('keeps local theme testing separate from publishing changes to the web', async () => {
@@ -62,10 +65,10 @@ it('keeps local theme testing separate from publishing changes to the web', asyn
   expect(screen.getByText('Modify the base theme to customize page structure and styling.')).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: 'Open' }));
   await waitFor(() => expect(mocks.openFoliolePublishThemeFromRuntime).toHaveBeenCalledOnce());
-  fireEvent.click(screen.getByRole('button', { name: 'Update local pages' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Update local' }));
   await waitFor(() => expect(mocks.updateFoliolePublishLocalPagesFromRuntime).toHaveBeenCalledOnce());
   expect(mocks.publishFoliolePublishThemeChangesFromRuntime).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole('button', { name: 'Publish changes' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Update Web' }));
   await waitFor(() => expect(mocks.publishFoliolePublishThemeChangesFromRuntime).toHaveBeenCalledOnce());
   fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
   const dialog = await screen.findByRole('dialog', { name: 'Reset theme?' });
@@ -73,16 +76,18 @@ it('keeps local theme testing separate from publishing changes to the web', asyn
   await waitFor(() => expect(mocks.resetFoliolePublishThemeFromRuntime).toHaveBeenCalledOnce());
 });
 
-it('does not publish theme changes before hosting is connected', async () => {
+it('keeps Web actions disabled before hosting is connected', async () => {
   renderSettings();
-  expect(await screen.findByRole('button', { name: 'Publish changes' })).toBeDisabled();
-  expect(screen.getByRole('button', { name: 'Update local pages' })).toBeEnabled();
+  expect(await screen.findByRole('button', { name: 'View Web' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Update Web' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'View local' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Update local' })).toBeEnabled();
 });
 
 it('shows a user-facing error when local pages cannot be updated', async () => {
   mocks.updateFoliolePublishLocalPagesFromRuntime.mockRejectedValueOnce(new Error('update failed'));
   renderSettings();
-  fireEvent.click(await screen.findByRole('button', { name: 'Update local pages' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Update local' }));
   expect(await screen.findByText("Couldn't update the local pages.")).toBeVisible();
 });
 

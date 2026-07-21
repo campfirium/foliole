@@ -107,7 +107,7 @@ it('starts collapsed and restores independent disclosure state after remounting'
 it('opens the local static pages from the visible Publish settings row', async () => {
   renderWithLocalization(<SettingsPublishingSection />);
   fireEvent.click(screen.getByRole('button', { name: 'Publish to the web' }));
-  fireEvent.click(await screen.findByRole('button', { name: 'View' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'View local' }));
 
   await waitFor(() => expect(folioleRepositoryMocks.viewFoliolePublishSiteFromRuntime).toHaveBeenCalledOnce());
 });

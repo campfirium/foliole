@@ -13,6 +13,7 @@ import {
   updateFoliolePublishSiteAddressInRuntime,
   viewFoliolePublishSiteFromRuntime
 } from '../../../../shared/platform/foliolePublishRepository';
+import { openExternalUrl } from '../../../../shared/platform/runtimeExternalNavigation';
 import { requestAppConfirmation } from '../../../../shared/ui';
 
 export interface FoliolePublishingForm {
@@ -21,7 +22,7 @@ export interface FoliolePublishingForm {
   customDomain: string;
   projectName: string;
 }
-type Status = 'connecting' | 'disconnecting' | 'idle' | 'loading' | 'openingTheme' | 'publishingTheme' | 'resettingTheme' | 'updating' | 'updatingThemePages' | 'viewing';
+type Status = 'connecting' | 'disconnecting' | 'idle' | 'loading' | 'openingTheme' | 'resettingTheme' | 'updating' | 'updatingLocal' | 'updatingWeb' | 'viewingLocal' | 'viewingWeb';
 const EMPTY: FoliolePublishingForm = { accountId: '', apiToken: '', customDomain: '', projectName: '' };
 
 function customDomain(settings: NativeFoliolePublishSettings) {
@@ -116,10 +117,17 @@ function useConnectionActions(state: LoadedState) {
 }
 
 function siteActions(state: LoadedState) {
-  const view = async () => {
-    state.setStatus('viewing'); state.setError(null);
+  const viewLocal = async () => {
+    state.setStatus('viewingLocal'); state.setError(null);
     try { await viewFoliolePublishSiteFromRuntime(); }
     catch { state.setError("Couldn't open the local static pages."); }
+    finally { state.setStatus('idle'); }
+  };
+  const viewWeb = async () => {
+    if (!state.settings?.site_address) return;
+    state.setStatus('viewingWeb'); state.setError(null);
+    try { await openExternalUrl(state.settings.site_address); }
+    catch { state.setError("Couldn't open the Web pages."); }
     finally { state.setStatus('idle'); }
   };
   const updateSiteAddress = async () => {
@@ -131,7 +139,10 @@ function siteActions(state: LoadedState) {
     }
     finally { state.setStatus('idle'); }
   };
-  return { updateSiteAddress: () => void updateSiteAddress(), view: () => void view() };
+  return {
+    updateSiteAddress: () => void updateSiteAddress(),
+    viewLocal: () => void viewLocal(), viewWeb: () => void viewWeb()
+  };
 }
 
 function useThemeActions(state: LoadedState) {
@@ -152,9 +163,9 @@ function useThemeActions(state: LoadedState) {
   };
   return {
     openTheme: () => void run('openingTheme', openFoliolePublishThemeFromRuntime, 'settings.publishing.foliole.theme.error.open'),
-    publishThemeChanges: () => void run('publishingTheme', publishFoliolePublishThemeChangesFromRuntime, 'settings.publishing.foliole.theme.error.publish'),
     resetTheme: () => void resetTheme(),
-    updateThemePages: () => void run('updatingThemePages', updateFoliolePublishLocalPagesFromRuntime, 'settings.publishing.foliole.theme.error.update')
+    updateLocal: () => void run('updatingLocal', updateFoliolePublishLocalPagesFromRuntime, 'settings.publishing.foliole.theme.error.updateLocal'),
+    updateWeb: () => void run('updatingWeb', publishFoliolePublishThemeChangesFromRuntime, 'settings.publishing.foliole.theme.error.updateWeb')
   };
 }
 
@@ -171,8 +182,9 @@ export function useFoliolePublishingSettings() {
   };
   return {
     canDeploy: !disabled && Boolean(state.form.accountId.trim() && state.form.apiToken.trim() && state.form.projectName.trim()),
-    canPublishThemeChanges: connected && !disabled,
+    canUpdateWeb: connected && !disabled,
     canUpdateAddress: connected && !disabled && state.form.customDomain.trim() !== savedCustomDomain,
+    canViewWeb: connected && !disabled && Boolean(state.settings?.site_address),
     connected, disabled, error: state.error, form: state.form, pagesUrl: state.settings?.pages_url ?? '',
     siteAddress: state.settings?.site_address ?? '', status: state.status,
     ...connection, ...site, ...theme, updateForm

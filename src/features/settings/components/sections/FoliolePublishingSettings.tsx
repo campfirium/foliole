@@ -25,9 +25,12 @@ function LocalStaticPagesOverview({ state }: { state: FoliolePublishingSettingsS
   return (
     <div className="px-settings-panel-x py-settings-panel-y" data-local-static-pages>
       <SettingsRow className="min-h-0 px-0 py-0" description={t('settings.publishing.foliole.localPages.description')} title={t('settings.publishing.foliole.localPages.title')}>
-        <SettingsControlSlot>
-          <AppButton disabled={state.status === 'viewing'} onClick={state.view}>
-            {t(state.status === 'viewing' ? 'settings.publishing.foliole.localPages.opening' : 'settings.publishing.foliole.localPages.view')}
+        <SettingsControlSlot className="gap-2">
+          <AppButton disabled={state.disabled} onClick={state.viewLocal}>
+            {t(state.status === 'viewingLocal' ? 'settings.publishing.foliole.localPages.openingLocal' : 'settings.publishing.foliole.localPages.viewLocal')}
+          </AppButton>
+          <AppButton disabled={!state.canViewWeb} onClick={state.viewWeb}>
+            {t(state.status === 'viewingWeb' ? 'settings.publishing.foliole.localPages.openingWeb' : 'settings.publishing.foliole.localPages.viewWeb')}
           </AppButton>
         </SettingsControlSlot>
       </SettingsRow>
@@ -35,19 +38,19 @@ function LocalStaticPagesOverview({ state }: { state: FoliolePublishingSettingsS
         <SettingsRow className="px-0" description={t('settings.publishing.foliole.theme.description')} title={t('settings.publishing.foliole.theme.title')}>
           <SettingsControlSlot className="gap-5 max-[1080px]:flex-wrap">
             <div className="flex gap-2">
-              <AppButton disabled={state.disabled} onClick={state.openTheme} variant="subtle">
+              <AppButton disabled={state.disabled} onClick={state.openTheme}>
                 {t(state.status === 'openingTheme' ? 'settings.publishing.foliole.theme.opening' : 'settings.publishing.foliole.theme.open')}
               </AppButton>
-              <AppButton disabled={state.disabled} onClick={state.resetTheme} variant="subtle">
+              <AppButton disabled={state.disabled} onClick={state.resetTheme}>
                 {t(state.status === 'resettingTheme' ? 'settings.publishing.foliole.theme.resetting' : 'settings.publishing.foliole.theme.reset')}
               </AppButton>
             </div>
             <div className="flex gap-2">
-              <AppButton disabled={state.disabled} onClick={state.updateThemePages}>
-                {t(state.status === 'updatingThemePages' ? 'settings.publishing.foliole.theme.updating' : 'settings.publishing.foliole.theme.update')}
+              <AppButton disabled={state.disabled} onClick={state.updateLocal}>
+                {t(state.status === 'updatingLocal' ? 'settings.publishing.foliole.theme.updatingLocal' : 'settings.publishing.foliole.theme.updateLocal')}
               </AppButton>
-              <AppButton disabled={!state.canPublishThemeChanges} onClick={state.publishThemeChanges} variant="emphasis">
-                {t(state.status === 'publishingTheme' ? 'settings.publishing.foliole.theme.publishing' : 'settings.publishing.foliole.theme.publish')}
+              <AppButton disabled={!state.canUpdateWeb} onClick={state.updateWeb} variant="emphasis">
+                {t(state.status === 'updatingWeb' ? 'settings.publishing.foliole.theme.updatingWeb' : 'settings.publishing.foliole.theme.updateWeb')}
               </AppButton>
             </div>
           </SettingsControlSlot>

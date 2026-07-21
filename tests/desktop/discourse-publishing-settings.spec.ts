@@ -112,13 +112,14 @@ async function verifyFolioleSetupSteps(
   await expect(subdomain).toBeVisible();
   await expect(foliole.getByRole('button', { name: /^(API Token request page ↗|API Token 申请页面 ↗)$/ })).toBeVisible();
   await expect(foliole.getByRole('button', { name: /^(Deploy|部署)$/ })).toBeDisabled();
-  await expect(foliole.getByRole('button', { name: /^(View|查看)$/ })).toBeVisible();
-  await foliole.getByText(/^(Local static pages|本地静态页面)$/).scrollIntoViewIfNeeded();
+  await expect(foliole.getByRole('button', { name: /^(View local|查看本地)$/ })).toBeVisible();
+  await expect(foliole.getByRole('button', { name: /^(View Web|查看 Web)$/ })).toBeDisabled();
+  await foliole.getByText(/^(Static pages|静态页面)$/).scrollIntoViewIfNeeded();
   await expect(foliole.getByRole('button', { name: /^(Open|打开)$/ })).toBeVisible();
   await expect(foliole.getByRole('button', { name: /^(Reset|重置)$/ })).toBeVisible();
-  const updateLocalPages = foliole.getByRole('button', { name: /^(Update local pages|更新本地页面)$/ });
+  const updateLocalPages = foliole.getByRole('button', { name: /^(Update local|更新本地)$/ });
   await expect(updateLocalPages).toBeVisible();
-  await expect(foliole.getByRole('button', { name: /^(Publish changes|发布更改)$/ })).toBeDisabled();
+  await expect(foliole.getByRole('button', { name: /^(Update Web|更新 Web)$/ })).toBeDisabled();
   const previewScreenshot = await desktopWindow.screenshot();
   await writeFile(path.join(screenshotDir, 'foliole-publish-local-preview-hidden-native.png'), previewScreenshot);
   await testInfo.attach('foliole-publish-local-preview', { body: previewScreenshot, contentType: 'image/png' });
