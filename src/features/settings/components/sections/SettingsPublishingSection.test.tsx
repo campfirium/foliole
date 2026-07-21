@@ -23,6 +23,10 @@ const folioleRepositoryMocks = vi.hoisted(() => ({
   connectFoliolePublishSettingsToRuntime: vi.fn(),
   disconnectFoliolePublishSettingsFromRuntime: vi.fn(),
   loadFoliolePublishSettingsFromRuntime: vi.fn(),
+  openFoliolePublishThemeFromRuntime: vi.fn(),
+  publishFoliolePublishThemeChangesFromRuntime: vi.fn(),
+  resetFoliolePublishThemeFromRuntime: vi.fn(),
+  updateFoliolePublishLocalPagesFromRuntime: vi.fn(),
   viewFoliolePublishSiteFromRuntime: vi.fn(),
   updateFoliolePublishSiteAddressInRuntime: vi.fn()
 }));

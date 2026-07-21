@@ -61,6 +61,8 @@ export type NativeFoliolePublishCommandMap = {
   [NATIVE_COMMANDS.resetFoliolePublishFieldHistory]: { args: undefined; result: NativeFoliolePublishSettings };
   [NATIVE_COMMANDS.openFoliolePublishTheme]: { args: undefined; result: { local_path: string } };
   [NATIVE_COMMANDS.resetFoliolePublishTheme]: { args: undefined; result: { local_path: string } };
+  [NATIVE_COMMANDS.updateFoliolePublishLocalPages]: { args: undefined; result: { local_path: string } };
+  [NATIVE_COMMANDS.publishFoliolePublishThemeChanges]: { args: undefined; result: { local_path: string } };
   [NATIVE_COMMANDS.previewFoliolePublishSite]: { args: undefined; result: NativeFoliolePublishResult };
   [NATIVE_COMMANDS.previewFoliolePublish]: { args: NativeFoliolePublishTopicArgs; result: NativeFoliolePublishResult };
   [NATIVE_COMMANDS.publishTopicToFoliole]: {

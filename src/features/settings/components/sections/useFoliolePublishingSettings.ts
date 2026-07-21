@@ -6,8 +6,12 @@ import {
   connectFoliolePublishSettingsToRuntime,
   disconnectFoliolePublishSettingsFromRuntime,
   loadFoliolePublishSettingsFromRuntime,
-  viewFoliolePublishSiteFromRuntime,
-  updateFoliolePublishSiteAddressInRuntime
+  openFoliolePublishThemeFromRuntime,
+  publishFoliolePublishThemeChangesFromRuntime,
+  resetFoliolePublishThemeFromRuntime,
+  updateFoliolePublishLocalPagesFromRuntime,
+  updateFoliolePublishSiteAddressInRuntime,
+  viewFoliolePublishSiteFromRuntime
 } from '../../../../shared/platform/foliolePublishRepository';
 import { requestAppConfirmation } from '../../../../shared/ui';
 
@@ -17,7 +21,7 @@ export interface FoliolePublishingForm {
   customDomain: string;
   projectName: string;
 }
-type Status = 'connecting' | 'disconnecting' | 'idle' | 'loading' | 'updating' | 'viewing';
+type Status = 'connecting' | 'disconnecting' | 'idle' | 'loading' | 'openingTheme' | 'publishingTheme' | 'resettingTheme' | 'updating' | 'updatingThemePages' | 'viewing';
 const EMPTY: FoliolePublishingForm = { accountId: '', apiToken: '', customDomain: '', projectName: '' };
 
 function customDomain(settings: NativeFoliolePublishSettings) {
@@ -130,10 +134,35 @@ function siteActions(state: LoadedState) {
   return { updateSiteAddress: () => void updateSiteAddress(), view: () => void view() };
 }
 
+function useThemeActions(state: LoadedState) {
+  const t = useTranslation();
+  const run = async (status: Status, action: () => Promise<unknown>, errorKey: Parameters<typeof t>[0]) => {
+    state.setStatus(status); state.setError(null);
+    try { await action(); }
+    catch { state.setError(t(errorKey)); }
+    finally { state.setStatus('idle'); }
+  };
+  const resetTheme = async () => {
+    const confirmed = await requestAppConfirmation({
+      cancelLabel: t('common.cancel'), confirmLabel: t('settings.publishing.foliole.theme.reset'),
+      description: t('settings.publishing.foliole.theme.resetConfirm.description'),
+      title: t('settings.publishing.foliole.theme.resetConfirm.title')
+    });
+    if (confirmed) await run('resettingTheme', resetFoliolePublishThemeFromRuntime, 'settings.publishing.foliole.theme.error.reset');
+  };
+  return {
+    openTheme: () => void run('openingTheme', openFoliolePublishThemeFromRuntime, 'settings.publishing.foliole.theme.error.open'),
+    publishThemeChanges: () => void run('publishingTheme', publishFoliolePublishThemeChangesFromRuntime, 'settings.publishing.foliole.theme.error.publish'),
+    resetTheme: () => void resetTheme(),
+    updateThemePages: () => void run('updatingThemePages', updateFoliolePublishLocalPagesFromRuntime, 'settings.publishing.foliole.theme.error.update')
+  };
+}
+
 export function useFoliolePublishingSettings() {
   const state = useLoadedSettings();
   const connection = useConnectionActions(state);
   const site = siteActions(state);
+  const theme = useThemeActions(state);
   const disabled = state.status !== 'idle';
   const connected = Boolean(state.settings?.has_credentials && state.settings.account_id && state.settings.project_name);
   const savedCustomDomain = state.settings ? customDomain(state.settings) : '';
@@ -142,10 +171,11 @@ export function useFoliolePublishingSettings() {
   };
   return {
     canDeploy: !disabled && Boolean(state.form.accountId.trim() && state.form.apiToken.trim() && state.form.projectName.trim()),
+    canPublishThemeChanges: connected && !disabled,
     canUpdateAddress: connected && !disabled && state.form.customDomain.trim() !== savedCustomDomain,
     connected, disabled, error: state.error, form: state.form, pagesUrl: state.settings?.pages_url ?? '',
     siteAddress: state.settings?.site_address ?? '', status: state.status,
-    ...connection, ...site, updateForm
+    ...connection, ...site, ...theme, updateForm
   };
 }
 

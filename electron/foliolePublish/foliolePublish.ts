@@ -10,7 +10,7 @@ import { loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
 import { deleteCloudflarePagesProject, deployCloudflarePages, detectCloudflarePagesSubdomain, normalizeCloudflareProjectName, normalizeSiteAddress, resolveCloudflarePagesProject } from './cloudflarePagesClient.js';
 import { readPublishIndex, upsertPublishedCard, writeFileAtomic, writePublishIndex } from './foliolePublishModel.js';
 import { clearFoliolePublishSettings, forgetFoliolePublishField, loadFoliolePublishSettings, loadFoliolePublishToken, loadStoredFoliolePublishSettings, recordFoliolePublishFields, resetFoliolePublishFieldHistory, saveFoliolePublishConnection, saveFoliolePublishSiteAddress } from './foliolePublishSettings.js';
-import { activateFoliolePublishSite, discardStagedFoliolePublishSite, stageFoliolePublishSite } from './foliolePublishSite.js';
+import { activateFoliolePublishSite, discardStagedFoliolePublishSite, generateFoliolePublishSite, stageFoliolePublishSite } from './foliolePublishSite.js';
 import { ensureFoliolePublishTheme, resetFoliolePublishThemeFiles } from './foliolePublishTheme.js';
 
 function root() { return path.join(loadLibraryPathSettingsSync().library_home, 'Publish'); }
@@ -184,6 +184,23 @@ export async function openFoliolePublishTheme() {
 
 export function resetFoliolePublishTheme() {
   return { local_path: resetFoliolePublishThemeFiles(root()) };
+}
+
+export function updateFoliolePublishLocalPages() {
+  fs.mkdirSync(root(), { recursive: true });
+  const settings = loadFoliolePublishSettings();
+  return { local_path: generateFoliolePublishSite(root(), readPublishIndex(root()), settings.site_address) };
+}
+
+export async function publishFoliolePublishThemeChanges() {
+  const settings = loadStoredFoliolePublishSettings();
+  const token = loadFoliolePublishToken();
+  if (!settings || !token) throw new Error('Connect Foliole Publish before publishing theme changes.');
+  const staged = await deployStagedSite({
+    accountId: settings.account_id, projectName: settings.project_name,
+    siteAddress: settings.site_address, token
+  });
+  return commitStagedSite(staged, () => ({ local_path: path.join(root(), 'Site', 'index.html') }));
 }
 
 export { forgetFoliolePublishField, loadFoliolePublishSettings, resetFoliolePublishFieldHistory };

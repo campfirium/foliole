@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../../../shared/localization/testLocalization';
@@ -10,6 +10,10 @@ const mocks = vi.hoisted(() => ({
   connectFoliolePublishSettingsToRuntime: vi.fn(),
   disconnectFoliolePublishSettingsFromRuntime: vi.fn(),
   loadFoliolePublishSettingsFromRuntime: vi.fn(),
+  openFoliolePublishThemeFromRuntime: vi.fn(),
+  publishFoliolePublishThemeChangesFromRuntime: vi.fn(),
+  resetFoliolePublishThemeFromRuntime: vi.fn(),
+  updateFoliolePublishLocalPagesFromRuntime: vi.fn(),
   viewFoliolePublishSiteFromRuntime: vi.fn(),
   updateFoliolePublishSiteAddressInRuntime: vi.fn()
 }));
@@ -28,6 +32,10 @@ beforeEach(() => {
   openExternalUrl.mockReset();
   mocks.loadFoliolePublishSettingsFromRuntime.mockResolvedValue(EMPTY);
   mocks.viewFoliolePublishSiteFromRuntime.mockResolvedValue({ local_path: '/Publish/Site/index.html', url: null });
+  mocks.openFoliolePublishThemeFromRuntime.mockResolvedValue({ local_path: '/Publish/Theme' });
+  mocks.resetFoliolePublishThemeFromRuntime.mockResolvedValue({ local_path: '/Publish/Theme' });
+  mocks.updateFoliolePublishLocalPagesFromRuntime.mockResolvedValue({ local_path: '/Publish/Site/index.html' });
+  mocks.publishFoliolePublishThemeChangesFromRuntime.mockResolvedValue({ local_path: '/Publish/Site/index.html' });
   mocks.disconnectFoliolePublishSettingsFromRuntime.mockResolvedValue(EMPTY);
 });
 
@@ -45,6 +53,37 @@ it('presents the generated local static pages as the same content and styling pu
   expect(screen.getByText(/Generated each time you run “Publish to the web” on material/u)).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: 'View' }));
   await waitFor(() => expect(mocks.viewFoliolePublishSiteFromRuntime).toHaveBeenCalledOnce());
+});
+
+it('keeps local theme testing separate from publishing changes to the web', async () => {
+  mocks.loadFoliolePublishSettingsFromRuntime.mockResolvedValue(CONNECTED);
+  renderSettings();
+  expect(await screen.findByText('Theme')).toBeVisible();
+  expect(screen.getByText('Modify the base theme to customize page structure and styling.')).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Open' }));
+  await waitFor(() => expect(mocks.openFoliolePublishThemeFromRuntime).toHaveBeenCalledOnce());
+  fireEvent.click(screen.getByRole('button', { name: 'Update local pages' }));
+  await waitFor(() => expect(mocks.updateFoliolePublishLocalPagesFromRuntime).toHaveBeenCalledOnce());
+  expect(mocks.publishFoliolePublishThemeChangesFromRuntime).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Publish changes' }));
+  await waitFor(() => expect(mocks.publishFoliolePublishThemeChangesFromRuntime).toHaveBeenCalledOnce());
+  fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
+  const dialog = await screen.findByRole('dialog', { name: 'Reset theme?' });
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Reset' }));
+  await waitFor(() => expect(mocks.resetFoliolePublishThemeFromRuntime).toHaveBeenCalledOnce());
+});
+
+it('does not publish theme changes before hosting is connected', async () => {
+  renderSettings();
+  expect(await screen.findByRole('button', { name: 'Publish changes' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Update local pages' })).toBeEnabled();
+});
+
+it('shows a user-facing error when local pages cannot be updated', async () => {
+  mocks.updateFoliolePublishLocalPagesFromRuntime.mockRejectedValueOnce(new Error('update failed'));
+  renderSettings();
+  fireEvent.click(await screen.findByRole('button', { name: 'Update local pages' }));
+  expect(await screen.findByText("Couldn't update the local pages.")).toBeVisible();
 });
 
 it('keeps every required Cloudflare value in one setup flow and deploys only on request', async () => {

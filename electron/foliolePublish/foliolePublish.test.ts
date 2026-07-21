@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-import { connectFoliolePublishSettings, disconnectFoliolePublishSettings, previewFoliolePublish, publishTopicToFoliole, updateFoliolePublishSiteAddress, viewFoliolePublishSite } from './foliolePublish.js';
+import { connectFoliolePublishSettings, disconnectFoliolePublishSettings, previewFoliolePublish, publishFoliolePublishThemeChanges, publishTopicToFoliole, updateFoliolePublishLocalPages, updateFoliolePublishSiteAddress, viewFoliolePublishSite } from './foliolePublish.js';
 import { emptyPublishIndex } from './foliolePublishModel.js';
 import { generateFoliolePublishSite } from './foliolePublishSite.js';
 
@@ -171,6 +171,29 @@ it('does not create a preview when local static pages do not exist', async () =>
   await expect(viewFoliolePublishSite()).rejects.toThrow('No local static pages have been generated yet.');
   expect(mocks.shellOpenPath).not.toHaveBeenCalled();
   expect(fs.existsSync(path.join(state.libraryHome, 'Publish', 'Preview'))).toBe(false);
+});
+
+it('updates the local static pages with the current theme without deploying', () => {
+  const publishRoot = path.join(state.libraryHome, 'Publish');
+  fs.writeFileSync(path.join(publishRoot, 'Theme', 'style.css'), 'body { color: rebeccapurple; }');
+  const result = updateFoliolePublishLocalPages();
+  expect(result.local_path).toBe(path.join(publishRoot, 'Site', 'index.html'));
+  expect(fs.readFileSync(path.join(publishRoot, 'Site', 'style.css'), 'utf8')).toBe('body { color: rebeccapurple; }');
+  expect(mocks.deployCloudflarePages).not.toHaveBeenCalled();
+});
+
+it('publishes theme changes as a complete site without changing Topic records', async () => {
+  const publishRoot = path.join(state.libraryHome, 'Publish');
+  let deployedStyle = '';
+  fs.writeFileSync(path.join(publishRoot, 'Theme', 'style.css'), 'body { color: seagreen; }');
+  mocks.deployCloudflarePages.mockImplementation(async ({ siteRoot }: { siteRoot: string }) => {
+    deployedStyle = fs.readFileSync(path.join(siteRoot, 'style.css'), 'utf8');
+    return { url: 'https://deployment.pages.dev' };
+  });
+  await expect(publishFoliolePublishThemeChanges()).resolves.toEqual({ local_path: path.join(publishRoot, 'Site', 'index.html') });
+  expect(deployedStyle).toBe('body { color: seagreen; }');
+  expect(fs.readFileSync(path.join(publishRoot, 'Site', 'style.css'), 'utf8')).toBe(deployedStyle);
+  expect(mocks.recordFoliolePublishFields).not.toHaveBeenCalled();
 });
 
 it('returns the binding after remote success when the local publish transaction rolls back', async () => {

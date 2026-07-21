@@ -2,7 +2,7 @@ import { useTranslation } from '../../../../shared/localization/LocalizationProv
 import { AppButton, AppErrorState, SettingsControlSlot, SettingsRow, SettingsSection } from '../../../../shared/ui';
 
 import { FoliolePublishingSetupRows } from './FoliolePublishingSetupRows';
-import { useFoliolePublishingSettings } from './useFoliolePublishingSettings';
+import { useFoliolePublishingSettings, type FoliolePublishingSettingsState } from './useFoliolePublishingSettings';
 
 function HostingOverview() {
   const t = useTranslation();
@@ -20,6 +20,43 @@ function HostingOverview() {
   );
 }
 
+function LocalStaticPagesOverview({ state }: { state: FoliolePublishingSettingsState }) {
+  const t = useTranslation();
+  return (
+    <div className="px-settings-panel-x py-settings-panel-y" data-local-static-pages>
+      <SettingsRow className="min-h-0 px-0 py-0" description={t('settings.publishing.foliole.localPages.description')} title={t('settings.publishing.foliole.localPages.title')}>
+        <SettingsControlSlot>
+          <AppButton disabled={state.status === 'viewing'} onClick={state.view}>
+            {t(state.status === 'viewing' ? 'settings.publishing.foliole.localPages.opening' : 'settings.publishing.foliole.localPages.view')}
+          </AppButton>
+        </SettingsControlSlot>
+      </SettingsRow>
+      <div className="ml-6 mt-5 border-t border-settings-divider/70">
+        <SettingsRow className="px-0" description={t('settings.publishing.foliole.theme.description')} title={t('settings.publishing.foliole.theme.title')}>
+          <SettingsControlSlot className="gap-5 max-[1080px]:flex-wrap">
+            <div className="flex gap-2">
+              <AppButton disabled={state.disabled} onClick={state.openTheme} variant="subtle">
+                {t(state.status === 'openingTheme' ? 'settings.publishing.foliole.theme.opening' : 'settings.publishing.foliole.theme.open')}
+              </AppButton>
+              <AppButton disabled={state.disabled} onClick={state.resetTheme} variant="subtle">
+                {t(state.status === 'resettingTheme' ? 'settings.publishing.foliole.theme.resetting' : 'settings.publishing.foliole.theme.reset')}
+              </AppButton>
+            </div>
+            <div className="flex gap-2">
+              <AppButton disabled={state.disabled} onClick={state.updateThemePages}>
+                {t(state.status === 'updatingThemePages' ? 'settings.publishing.foliole.theme.updating' : 'settings.publishing.foliole.theme.update')}
+              </AppButton>
+              <AppButton disabled={!state.canPublishThemeChanges} onClick={state.publishThemeChanges} variant="emphasis">
+                {t(state.status === 'publishingTheme' ? 'settings.publishing.foliole.theme.publishing' : 'settings.publishing.foliole.theme.publish')}
+              </AppButton>
+            </div>
+          </SettingsControlSlot>
+        </SettingsRow>
+      </div>
+    </div>
+  );
+}
+
 export function FoliolePublishingSettings(props: { expanded: boolean; onExpandedChange: (expanded: boolean) => void }) {
   const t = useTranslation();
   const state = useFoliolePublishingSettings();
@@ -32,18 +69,7 @@ export function FoliolePublishingSettings(props: { expanded: boolean; onExpanded
       title={t('settings.publishing.foliole.title')}
     >
       {state.error ? <AppErrorState description={t('settings.publishing.foliole.error.tryAgain')} surface="panel" title={state.error} /> : null}
-      <SettingsRow
-        description={t('settings.publishing.foliole.localPages.description')}
-        title={t('settings.publishing.foliole.localPages.title')}
-      >
-        <SettingsControlSlot>
-          <AppButton disabled={state.status === 'viewing'} onClick={state.view}>
-            {t(state.status === 'viewing'
-              ? 'settings.publishing.foliole.localPages.opening'
-              : 'settings.publishing.foliole.localPages.view')}
-          </AppButton>
-        </SettingsControlSlot>
-      </SettingsRow>
+      <LocalStaticPagesOverview state={state} />
       <HostingOverview />
       <FoliolePublishingSetupRows state={state} />
     </SettingsSection>

@@ -26,9 +26,11 @@ const folioleMocks = vi.hoisted(() => ({
   loadFoliolePublishSettings: vi.fn(),
   openFoliolePublishTheme: vi.fn(),
   previewFoliolePublish: vi.fn(),
+  publishFoliolePublishThemeChanges: vi.fn(),
   publishTopicToFoliole: vi.fn(),
   resetFoliolePublishFieldHistory: vi.fn(),
   resetFoliolePublishTheme: vi.fn(),
+  updateFoliolePublishLocalPages: vi.fn(),
   updateFoliolePublishSiteAddress: vi.fn(),
   viewFoliolePublishSite: vi.fn()
 }));
@@ -78,10 +80,14 @@ it('routes Web Publish field history and theme actions through narrow commands',
   await handlePublishingStorageCommand(NATIVE_COMMANDS.resetFoliolePublishFieldHistory, {});
   await handlePublishingStorageCommand(NATIVE_COMMANDS.openFoliolePublishTheme, {});
   await handlePublishingStorageCommand(NATIVE_COMMANDS.resetFoliolePublishTheme, {});
+  await handlePublishingStorageCommand(NATIVE_COMMANDS.updateFoliolePublishLocalPages, {});
+  await handlePublishingStorageCommand(NATIVE_COMMANDS.publishFoliolePublishThemeChanges, {});
   expect(folioleMocks.forgetFoliolePublishField).toHaveBeenCalledWith('category');
   expect(folioleMocks.resetFoliolePublishFieldHistory).toHaveBeenCalledOnce();
   expect(folioleMocks.openFoliolePublishTheme).toHaveBeenCalledOnce();
   expect(folioleMocks.resetFoliolePublishTheme).toHaveBeenCalledOnce();
+  expect(folioleMocks.updateFoliolePublishLocalPages).toHaveBeenCalledOnce();
+  expect(folioleMocks.publishFoliolePublishThemeChanges).toHaveBeenCalledOnce();
 });
 
 it('routes viewing the local static pages without Topic payload data', async () => {

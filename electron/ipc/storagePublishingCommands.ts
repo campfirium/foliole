@@ -18,8 +18,10 @@ import {
   openFoliolePublishTheme,
   previewFoliolePublish,
   publishTopicToFoliole,
+  publishFoliolePublishThemeChanges,
   resetFoliolePublishFieldHistory,
   resetFoliolePublishTheme,
+  updateFoliolePublishLocalPages,
   updateFoliolePublishSiteAddress,
   viewFoliolePublishSite
 } from '../foliolePublish/foliolePublish.js';
@@ -47,6 +49,8 @@ export async function handlePublishingStorageCommand(command: string, args: Reco
   if (command === NATIVE_COMMANDS.resetFoliolePublishFieldHistory) return resetFoliolePublishFieldHistory();
   if (command === NATIVE_COMMANDS.openFoliolePublishTheme) return openFoliolePublishTheme();
   if (command === NATIVE_COMMANDS.resetFoliolePublishTheme) return resetFoliolePublishTheme();
+  if (command === NATIVE_COMMANDS.updateFoliolePublishLocalPages) return updateFoliolePublishLocalPages();
+  if (command === NATIVE_COMMANDS.publishFoliolePublishThemeChanges) return publishFoliolePublishThemeChanges();
   if (command === NATIVE_COMMANDS.previewFoliolePublishSite) return viewFoliolePublishSite();
   if (command === NATIVE_COMMANDS.previewFoliolePublish) {
     return previewFoliolePublish(readSettingsObject(args) as unknown as Parameters<typeof previewFoliolePublish>[0]);

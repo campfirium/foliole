@@ -114,9 +114,17 @@ async function verifyFolioleSetupSteps(
   await expect(foliole.getByRole('button', { name: /^(Deploy|部署)$/ })).toBeDisabled();
   await expect(foliole.getByRole('button', { name: /^(View|查看)$/ })).toBeVisible();
   await foliole.getByText(/^(Local static pages|本地静态页面)$/).scrollIntoViewIfNeeded();
+  await expect(foliole.getByRole('button', { name: /^(Open|打开)$/ })).toBeVisible();
+  await expect(foliole.getByRole('button', { name: /^(Reset|重置)$/ })).toBeVisible();
+  const updateLocalPages = foliole.getByRole('button', { name: /^(Update local pages|更新本地页面)$/ });
+  await expect(updateLocalPages).toBeVisible();
+  await expect(foliole.getByRole('button', { name: /^(Publish changes|发布更改)$/ })).toBeDisabled();
   const previewScreenshot = await desktopWindow.screenshot();
   await writeFile(path.join(screenshotDir, 'foliole-publish-local-preview-hidden-native.png'), previewScreenshot);
   await testInfo.attach('foliole-publish-local-preview', { body: previewScreenshot, contentType: 'image/png' });
+  await updateLocalPages.click();
+  await expect(updateLocalPages).toBeEnabled();
+  await expect(foliole.getByText(/^(Couldn't update the local pages\.|无法更新本地页面。)$/)).toHaveCount(0);
   await expect(foliole.getByText(/^(Custom domain \(optional\)|使用自定义域名（可选）)$/)).toBeVisible();
   await expect(foliole.getByText(/^(Security notice: Foliole does not operate or authorize foliole\.pages\.dev\.|安全提示：Foliole 未运营或授权 foliole\.pages\.dev。)$/)).toBeVisible();
   await accountId.evaluate((element) => element.scrollIntoView({ block: 'center' }));

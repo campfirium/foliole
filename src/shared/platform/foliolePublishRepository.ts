@@ -54,6 +54,14 @@ export function resetFoliolePublishThemeFromRuntime() {
   return requireRuntime()(NATIVE_COMMANDS.resetFoliolePublishTheme);
 }
 
+export function updateFoliolePublishLocalPagesFromRuntime() {
+  return requireRuntime()(NATIVE_COMMANDS.updateFoliolePublishLocalPages);
+}
+
+export function publishFoliolePublishThemeChangesFromRuntime() {
+  return requireRuntime()(NATIVE_COMMANDS.publishFoliolePublishThemeChanges);
+}
+
 export function isFoliolePublishConfigured(settings: NativeFoliolePublishSettings | null) {
   return Boolean(settings?.account_id && settings.project_name && settings.has_credentials);
 }
