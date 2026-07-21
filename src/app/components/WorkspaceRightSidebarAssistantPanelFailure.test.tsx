@@ -163,7 +163,7 @@ it('returns to the capability gate when a send result reports an auth failure', 
   });
   fireEvent.click(screen.getByRole('button', { name: 'Send' }));
 
-  expect(await screen.findByText('Sign in with OpenAI in your browser to use Foliole Aide.')).toBeInTheDocument();
+  expect(await screen.findByText("Sign in on OpenAI's website.")).toBeInTheDocument();
   expect(screen.queryByLabelText('Foliole Aide message')).not.toBeInTheDocument();
 });
 

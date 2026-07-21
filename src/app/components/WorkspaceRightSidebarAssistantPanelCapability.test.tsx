@@ -38,6 +38,8 @@ beforeEach(() => {
 it('does not probe Codex or show the composer before the user connects', () => {
   renderPanel();
 
+  expect(screen.getByRole('heading', { name: 'Foliole Aide' })).toBeInTheDocument();
+  expect(screen.getByText(/Use Codex directly in Foliole/)).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Connect' })).toBeInTheDocument();
   expect(screen.queryByLabelText('Foliole Aide message')).not.toBeInTheDocument();
   expect(assistantRuntime.loadAssistantStatus).not.toHaveBeenCalled();
@@ -187,9 +189,9 @@ it('shows an auth-specific unavailable reason when Codex rejects the session', a
   renderPanel();
   fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
 
-  expect(await screen.findByText('Sign in with OpenAI in your browser to use Foliole Aide.')).toBeInTheDocument();
+  expect(await screen.findByText("Sign in on OpenAI's website.")).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Sign in with OpenAI' })).toBeInTheDocument();
-  expect(screen.getByText('Check result: Codex needs sign-in; Foliole tools running.')).toBeInTheDocument();
+  expect(screen.queryByText(/Check result:/)).not.toBeInTheDocument();
   expect(screen.queryByLabelText('Foliole Aide message')).not.toBeInTheDocument();
 });
 

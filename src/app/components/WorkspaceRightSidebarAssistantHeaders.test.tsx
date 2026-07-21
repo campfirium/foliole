@@ -19,7 +19,7 @@ it('keeps global conversation actions separate from the current conversation tit
     />
   );
 
-  expect(screen.queryByRole('heading', { name: 'Aide' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Foliole Aide' })).not.toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Current conversation' })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'History' }));
   fireEvent.click(screen.getByRole('button', { name: 'New' }));
@@ -38,6 +38,6 @@ it('keeps global conversation actions separate from the current conversation tit
       onShowHistory={onShowHistory}
     />
   );
-  expect(screen.getByRole('heading', { name: 'Aide' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Foliole Aide' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Back to history' })).not.toBeInTheDocument();
 });

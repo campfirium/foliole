@@ -15,6 +15,12 @@ const screenshotPath = path.join(
   'artifacts',
   'assistant-panel-home-detail.png'
 );
+const authGateScreenshotPath = path.join(
+  process.cwd(),
+  '.tmp',
+  'artifacts',
+  'assistant-panel-auth-gate.png'
+);
 const selectedThreadNotice = /(this panel shows new messages from this app session|这个面板会显示本次应用会话的新消息)/;
 
 test('Aide keeps the home composer at the bottom of the panel', async ({ desktopApp, desktopWindow }, testInfo) => {
@@ -31,7 +37,7 @@ test('Aide keeps the home composer at the bottom of the panel', async ({ desktop
   const sidebar = desktopWindow.locator('.workspace-region-main-sidebar');
   const surface = desktopWindow.locator('[data-panel-scale-id="right-panel:assistant"]');
   const composer = desktopWindow.getByLabel(/^(Foliole Aide message|Foliole Aide 消息)$/).locator('xpath=ancestor::form');
-  await expect(desktopWindow.getByRole('heading', { name: 'Aide' })).toBeVisible();
+  await expect(desktopWindow.getByRole('heading', { name: 'Foliole Aide' })).toBeVisible();
   await expect(desktopWindow.getByText(/Use Codex inside Foliole|\u5728 Foliole \u5de5\u4f5c\u533a\u4e2d\u4f7f\u7528 Codex/)).toHaveCount(0);
   const [sidebarBounds, surfaceBounds, composerBounds] = await Promise.all([
     sidebar.boundingBox(),
@@ -93,7 +99,7 @@ test('Aide panel keeps home and conversation detail separate', async ({ desktopA
 test('Aide panel returns to the connection gate after a provider auth failure', async ({
   desktopApp,
   desktopWindow
-}) => {
+}, testInfo) => {
   await desktopWindow.evaluate(() => {
     localStorage.setItem('foliole-workspace-right-sidebar-active-panel', 'assistant');
     localStorage.setItem('foliole-aide-enabled', 'true');
@@ -105,8 +111,20 @@ test('Aide panel returns to the connection gate after a provider auth failure', 
   await desktopWindow.getByLabel(/^(Foliole Aide message|Foliole Aide 消息)$/).fill('Trigger auth failure');
   await desktopWindow.getByRole('button', { name: /^(Send|发送)$/ }).click();
 
-  await expect(desktopWindow.getByText(/Open Codex and sign in|请打开 Codex 并登录/)).toBeVisible();
+  await expect(desktopWindow.getByRole('heading', { name: 'Foliole Aide' })).toBeVisible();
+  await expect(desktopWindow.getByText(/Use Codex directly in Foliole|直接在 Foliole 中使用 Codex/)).toBeVisible();
+  await expect(desktopWindow.getByText(/Sign in on OpenAI's website|登录将在 OpenAI 官网完成/)).toBeVisible();
+  await expect(desktopWindow.getByRole('button', { name: /Sign in with OpenAI|使用 OpenAI 登录/ })).toBeVisible();
+  await expect(desktopWindow.getByText(/Check result:|检查结果：/)).toHaveCount(0);
   await expect(desktopWindow.getByLabel(/^(Foliole Aide message|Foliole Aide 消息)$/)).toBeHidden();
+
+  await mkdir(path.dirname(authGateScreenshotPath), { recursive: true });
+  await desktopWindow.locator('[data-panel-scale-id="right-panel:assistant"]')
+    .screenshot({ path: authGateScreenshotPath });
+  await testInfo.attach('assistant-panel-auth-gate', {
+    path: authGateScreenshotPath,
+    contentType: 'image/png'
+  });
 });
 
 test('Aide panel keeps the conversation after the Codex process exits', async ({ desktopApp, desktopWindow }, testInfo) => {

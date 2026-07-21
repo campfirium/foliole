@@ -70,6 +70,7 @@ function FolioleAideCapabilityGate(props: {
   const action = props.reason === 'auth_failed'
     ? props.onSignIn
     : enabled ? props.onRetry : props.onEnable;
+  const needsSignIn = props.reason === 'auth_failed';
   const statusKey = getCapabilityStatusKey(props.state, props.reason);
   return (
     <section className={`${inspectorListInsetPaddingClassName} flex flex-1 items-center justify-center py-10`}>
@@ -83,16 +84,18 @@ function FolioleAideCapabilityGate(props: {
           <p className="m-0 text-ui-md leading-6 text-foreground/50">
             {t('desktop.rightPanel.assistant.codexDescription')}
           </p>
-          <p className="m-0 text-ui-md leading-6 text-foreground/50">
-            {t('desktop.rightPanel.assistant.quotaDescription')}
-          </p>
+          {needsSignIn ? (
+            <p className="m-0 text-ui-md leading-6 text-foreground/50">
+              {t('desktop.rightPanel.assistant.signInDescription')}
+            </p>
+          ) : null}
         </div>
         {statusKey ? (
           <p className="m-0 mt-5 max-w-[16rem] text-ui-sm leading-5 text-foreground/50">
             {t(statusKey)}
           </p>
         ) : null}
-        {props.state === 'unavailable' && props.diagnostic ? (
+        {props.state === 'unavailable' && props.diagnostic && !needsSignIn ? (
           <FolioleAideDiagnosticText diagnostic={props.diagnostic} />
         ) : null}
         <AppButton
@@ -150,7 +153,7 @@ function getCapabilityStatusKey(
   if (state !== 'unavailable') return null;
   if (reason === 'not_configured') return 'desktop.rightPanel.assistant.unavailable.notConfigured';
   if (reason === 'agent_control_unavailable') return 'desktop.rightPanel.assistant.unavailable.agentControl';
-  if (reason === 'auth_failed') return 'desktop.rightPanel.assistant.unavailable.authFailed';
+  if (reason === 'auth_failed') return null;
   if (reason === 'overloaded' || reason === 'busy') return 'desktop.rightPanel.assistant.unavailable.busy';
   if (reason === 'interrupted') return 'desktop.rightPanel.assistant.unavailable.interrupted';
   if (reason === 'missingThreadIndex') return 'desktop.rightPanel.assistant.unavailable.missingThreadIndex';

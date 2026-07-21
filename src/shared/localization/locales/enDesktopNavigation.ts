@@ -72,21 +72,19 @@ export const EN_DESKTOP_NAVIGATION_TRANSLATIONS = {
   'desktop.rightPanel.highlights': 'Highlights',
   'desktop.rightPanel.backlinks': 'Backlinks',
   'desktop.rightPanel.assistant': 'Foliole Aide',
-  'desktop.rightPanel.assistant.title': 'Aide',
+  'desktop.rightPanel.assistant.title': 'Foliole Aide',
   'desktop.rightPanel.performance': 'Performance',
   'desktop.rightPanel.scheduling': 'Scheduling',
   'desktop.rightPanel.aria': '{label} panel',
   'desktop.rightPanel.assistant.codexDescription':
-    'Requires an OpenAI sign-in.',
-  'desktop.rightPanel.assistant.quotaDescription':
-    'Uses your Codex quota. Foliole Aide history stays in Foliole.',
+    'Use Codex directly in Foliole with the Codex allowance included in your ChatGPT plan—no separate API charges.',
+  'desktop.rightPanel.assistant.signInDescription':
+    "Sign in on OpenAI's website.",
   'desktop.rightPanel.assistant.checking': 'Connecting Foliole Aide...',
   'desktop.rightPanel.assistant.unavailable':
     'Foliole Aide is unavailable right now. Try again.',
   'desktop.rightPanel.assistant.unavailable.agentControl':
     'Foliole Aide is connected, but Foliole tools are not ready yet.',
-  'desktop.rightPanel.assistant.unavailable.authFailed':
-    'Sign in with OpenAI in your browser to use Foliole Aide.',
   'desktop.rightPanel.assistant.unavailable.busy':
     'Codex is busy right now. Wait a moment, then try again.',
   'desktop.rightPanel.assistant.unavailable.interrupted':
