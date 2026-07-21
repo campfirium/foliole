@@ -4,7 +4,7 @@ import path from 'node:path';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import {
-  assertMasElectronRuntime, inspectMasElectronRuntime, prepareMasElectronRuntime
+  assertMasElectronRuntime, extractArchive, inspectMasElectronRuntime, prepareMasElectronRuntime
 } from './mas-electron-runtime.mjs';
 
 const temporaryDirectories = [];
@@ -21,6 +21,18 @@ afterEach(async () => {
   await Promise.all(temporaryDirectories.splice(0).map((directory) => (
     rm(directory, { force: true, recursive: true })
   )));
+});
+
+it('extracts the runtime with the canonical macOS system utility', () => {
+  const run = vi.fn(() => ({ status: 0 }));
+
+  extractArchive('/downloads/electron-mas.zip', '/runtime', run);
+
+  expect(run).toHaveBeenCalledWith(
+    '/usr/bin/ditto',
+    ['-x', '-k', '/downloads/electron-mas.zip', '/runtime'],
+    { stdio: 'inherit' }
+  );
 });
 
 it('accepts only a local MAS runtime matching the installed Electron dependency', async () => {

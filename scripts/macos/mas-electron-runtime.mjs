@@ -9,8 +9,8 @@ const ROOT = path.resolve(import.meta.dirname, '../..');
 export const MAS_ELECTRON_DIRECTORY = '.tmp/electron-mas-arm64';
 const CONTRACT_FILE = '.foliole-electron-runtime.json';
 
-function extractArchive(source, target) {
-  const result = spawnSync('ditto', ['-x', '-k', source, target], { stdio: 'inherit' });
+export function extractArchive(source, target, run = spawnSync) {
+  const result = run('/usr/bin/ditto', ['-x', '-k', source, target], { stdio: 'inherit' });
   if (result.status !== 0) throw new Error(`MAS Electron extraction failed with exit code ${result.status}`);
 }
 
