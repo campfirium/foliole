@@ -22,5 +22,7 @@ it('keeps the single editable Theme until Reset theme is explicitly used', () =>
   resetFoliolePublishThemeFiles(root);
   expect(fs.readFileSync(page, 'utf8')).toContain('<!doctype html>');
   expect(fs.readFileSync(page, 'utf8')).toContain('{{ page.content | raw }}');
+  expect(fs.readFileSync(page, 'utf8')).toContain('Latest topic');
   expect(fs.readFileSync(path.join(theme, 'archive.html'), 'utf8')).toContain('{% for card in site.cards %}');
+  expect(fs.readFileSync(path.join(theme, 'style.css'), 'utf8')).toContain('@media (prefers-color-scheme: dark)');
 });

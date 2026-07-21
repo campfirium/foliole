@@ -15,17 +15,29 @@ function scope(): FoliolePublishTemplateScope {
       depth: '',
       fields: [{ key: '<author>', values: ['Roamer', '<Guest>'] }],
       has_visible_fields: true,
+      home_url: 'index.html',
+      id: 'card',
+      is_home: true,
       kind: 'card',
+      newer: null,
       newer_url: null,
+      older: { title: 'Older', url: 'cards/older.html' },
       older_url: 'cards/older.html',
-      title: '<Title>'
+      published_at: '2026-07-21T00:00:00.000Z',
+      rss_url: 'rss.xml',
+      title: '<Title>',
+      updated_at: '2026-07-21T00:00:00.000Z'
     },
     site: {
+      archive_url: 'archive.html',
       cards: [{
         id: 'card', path: 'cards/card.html',
         published_at: '2026-07-21T00:00:00.000Z', title: '<Card>', updated_at: '2026-07-21T00:00:00.000Z'
       }],
-      title: '<Site>'
+      home_url: 'index.html',
+      rss_url: 'rss.xml',
+      title: '<Site>',
+      url: 'https://example.com'
     }
   };
 }
@@ -48,11 +60,17 @@ it.each([
   expect(() => renderFoliolePublishTemplate(template, scope())).toThrow();
 });
 
+it('identifies the editable file and exact location for Liquid errors', () => {
+  expect(() => renderFoliolePublishTemplate('before\n{{ missing }}', scope(), 'page.html')).toThrow(
+    'Theme file page.html has a Liquid error at line 2, column 4: undefined variable: missing. Edit page.html, then try again.'
+  );
+});
+
 it('rejects templates beyond the file-size and output budgets', () => {
   expect(() => renderFoliolePublishTemplate('x'.repeat(FOLIOLE_TEMPLATE_MAX_BYTES + 1), scope()))
-    .toThrow('256 KiB or smaller');
+    .toThrow('Theme file template must be 256 KiB or smaller');
   const oversized = scope();
   oversized.page.content = 'x'.repeat(FOLIOLE_TEMPLATE_MAX_OUTPUT_BYTES + 1);
   expect(() => renderFoliolePublishTemplate('{{ page.content | raw }}', oversized))
-    .toThrow('8 MiB or smaller');
+    .toThrow('Theme file template rendered a page larger than 8 MiB');
 });

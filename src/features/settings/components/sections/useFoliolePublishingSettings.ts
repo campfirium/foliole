@@ -147,10 +147,17 @@ function siteActions(state: LoadedState) {
 
 function useThemeActions(state: LoadedState) {
   const t = useTranslation();
-  const run = async (status: Status, action: () => Promise<unknown>, errorKey: Parameters<typeof t>[0]) => {
+  const run = async (
+    status: Status,
+    action: () => Promise<unknown>,
+    errorKey: Parameters<typeof t>[0],
+    showRuntimeError = false
+  ) => {
     state.setStatus(status); state.setError(null);
     try { await action(); }
-    catch { state.setError(t(errorKey)); }
+    catch (reason) {
+      state.setError(showRuntimeError && reason instanceof Error ? reason.message : t(errorKey));
+    }
     finally { state.setStatus('idle'); }
   };
   const resetTheme = async () => {
@@ -164,8 +171,8 @@ function useThemeActions(state: LoadedState) {
   return {
     openTheme: () => void run('openingTheme', openFoliolePublishThemeFromRuntime, 'settings.publishing.foliole.theme.error.open'),
     resetTheme: () => void resetTheme(),
-    updateLocal: () => void run('updatingLocal', updateFoliolePublishLocalPagesFromRuntime, 'settings.publishing.foliole.theme.error.updateLocal'),
-    updateWeb: () => void run('updatingWeb', publishFoliolePublishThemeChangesFromRuntime, 'settings.publishing.foliole.theme.error.updateWeb')
+    updateLocal: () => void run('updatingLocal', updateFoliolePublishLocalPagesFromRuntime, 'settings.publishing.foliole.theme.error.updateLocal', true),
+    updateWeb: () => void run('updatingWeb', publishFoliolePublishThemeChangesFromRuntime, 'settings.publishing.foliole.theme.error.updateWeb', true)
   };
 }
 

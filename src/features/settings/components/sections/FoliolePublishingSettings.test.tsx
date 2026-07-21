@@ -88,10 +88,12 @@ it('keeps Web actions disabled before hosting is connected', async () => {
 });
 
 it('shows a user-facing error when local pages cannot be updated', async () => {
-  mocks.updateFoliolePublishLocalPagesFromRuntime.mockRejectedValueOnce(new Error('update failed'));
+  mocks.updateFoliolePublishLocalPagesFromRuntime.mockRejectedValueOnce(
+    new Error('Theme file page.html has a Liquid error at line 4, column 8: unexpected tag. Edit page.html, then try again.')
+  );
   renderSettings();
   fireEvent.click(await screen.findByRole('button', { name: 'Update local' }));
-  expect(await screen.findByText("Couldn't update the local pages.")).toBeVisible();
+  expect(await screen.findByText(/Theme file page\.html has a Liquid error at line 4, column 8/u)).toBeVisible();
 });
 
 it('keeps every required Cloudflare value in one setup flow and deploys only on request', async () => {

@@ -1,4 +1,4 @@
-import { Liquid, type FS } from 'liquidjs';
+import { Liquid, LiquidError, type FS } from 'liquidjs';
 
 export const FOLIOLE_TEMPLATE_MAX_BYTES = 256 * 1024;
 export const FOLIOLE_TEMPLATE_MAX_OUTPUT_BYTES = 8 * 1024 * 1024;
@@ -35,6 +35,7 @@ export interface FoliolePublishTemplateField {
 }
 
 export interface FoliolePublishTemplateSite {
+  archive_url: string;
   cards: Array<{
     id: string;
     path: string;
@@ -42,18 +43,31 @@ export interface FoliolePublishTemplateSite {
     title: string;
     updated_at: string;
   }>;
+  home_url: string;
+  rss_url: string;
   title: string;
+  url: string;
 }
 
+export interface FoliolePublishTemplateNeighbor { title: string; url: string }
+
 interface FoliolePublishTemplatePageBase {
-  archive_url: string | null;
+  archive_url: string;
   content: string;
   depth: '' | '../';
   fields: FoliolePublishTemplateField[];
   has_visible_fields: boolean;
+  home_url: string;
+  id: string | null;
+  is_home: boolean;
+  newer: FoliolePublishTemplateNeighbor | null;
   newer_url: string | null;
+  older: FoliolePublishTemplateNeighbor | null;
   older_url: string | null;
+  published_at: string | null;
+  rss_url: string;
   title: string;
+  updated_at: string | null;
 }
 
 export type FoliolePublishTemplatePage = FoliolePublishTemplatePageBase & {
@@ -65,16 +79,26 @@ export interface FoliolePublishTemplateScope {
   site: FoliolePublishTemplateSite;
 }
 
-export function renderFoliolePublishTemplate(template: string, scope: FoliolePublishTemplateScope) {
+function readableLiquidError(error: unknown, source: string) {
+  if (!LiquidError.is(error)) return error;
+  const [line, column] = error.token.getPosition();
+  const detail = error.originalError?.message ?? error.message.replace(/, line:\d+, col:\d+$/u, '');
+  return new Error(`Theme file ${source} has a Liquid error at line ${line}, column ${column}: ${detail}. Edit ${source}, then try again.`);
+}
+
+export function renderFoliolePublishTemplate(template: string, scope: FoliolePublishTemplateScope, source = 'template') {
   if (Buffer.byteLength(template, 'utf8') > FOLIOLE_TEMPLATE_MAX_BYTES) {
-    throw new Error('Foliole Publish templates must be 256 KiB or smaller.');
+    throw new Error(`Theme file ${source} must be 256 KiB or smaller.`);
   }
-  const output = String(engine.parseAndRenderSync(template, scope, {
-    memoryLimit: FOLIOLE_TEMPLATE_MEMORY_LIMIT,
-    renderLimit: FOLIOLE_TEMPLATE_RENDER_LIMIT_MS
-  }));
+  let output: string;
+  try {
+    output = String(engine.parseAndRenderSync(template, scope, {
+      memoryLimit: FOLIOLE_TEMPLATE_MEMORY_LIMIT,
+      renderLimit: FOLIOLE_TEMPLATE_RENDER_LIMIT_MS
+    }));
+  } catch (error) { throw readableLiquidError(error, source); }
   if (Buffer.byteLength(output, 'utf8') > FOLIOLE_TEMPLATE_MAX_OUTPUT_BYTES) {
-    throw new Error('Rendered Foliole Publish pages must be 8 MiB or smaller.');
+    throw new Error(`Theme file ${source} rendered a page larger than 8 MiB.`);
   }
   return output;
 }

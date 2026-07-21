@@ -29,9 +29,11 @@ it('opens on the newest card and emits stable card pages, archive, and RSS', () 
   expect(fs.readFileSync(entry, 'utf8')).toContain(`data-older-url="cards/${first.card.id}.html"`);
   expect(fs.readFileSync(entry, 'utf8')).not.toContain('data-newer-url=');
   expect(fs.readFileSync(path.join(root, 'Site', 'cards', `${first.card.id}.html`), 'utf8'))
-    .toContain(`data-newer-url="./${second.card.id}.html"`);
+    .toContain(`data-newer-url="../cards/${second.card.id}.html"`);
   expect(fs.readFileSync(path.join(root, 'Site', 'archive.html'), 'utf8')).toContain('Older');
-  expect(fs.readFileSync(path.join(root, 'Site', 'rss.xml'), 'utf8')).toContain('https://notes.example.com/cards/');
+  const feed = fs.readFileSync(path.join(root, 'Site', 'rss.xml'), 'utf8');
+  expect(feed).toContain('<description>Topics published with Foliole.</description>');
+  expect(feed).toContain('https://notes.example.com/cards/');
   expect(fs.existsSync(path.join(root, 'Site', 'cards', `${second.card.id}.html`))).toBe(true);
 });
 
@@ -55,12 +57,35 @@ it('renders scalar and list fields through Liquid while escaping public values',
   const page = fs.readFileSync(path.join(staged, 'index.html'), 'utf8');
   const archive = fs.readFileSync(path.join(staged, 'archive.html'), 'utf8');
   expect(page).toContain('<h1>&lt;Newest&gt;</h1>');
-  expect(page).toContain('<dt>category</dt><dd>essays</dd><dt>tags</dt><dd>design, notes</dd>');
+  expect(page).toContain('<dt>category</dt><dd><span>essays</span></dd>');
+  expect(page).toContain('<dt>tags</dt><dd><span>design</span><span>notes</span></dd>');
   expect(page).not.toContain('empty_scalar');
   expect(page).not.toContain('empty_list');
   expect(page).toContain('&lt;script&gt;alert(1)&lt;/script&gt; <strong>safe</strong>');
   expect(archive).toContain('&lt;Newest&gt;');
   expect(archive).toContain(`href="cards/${published.card.id}.html"`);
+});
+
+it('exposes stable page, navigation, site, card, and field data to Liquid', () => {
+  const root = temporaryRoot();
+  const older = upsertPublishedCard(emptyPublishIndex(), { nodeId: 'older', title: 'Older topic' });
+  writeFileAtomic(path.join(root, older.card.file), 'Older body');
+  const newer = upsertPublishedCard(older.index, { nodeId: 'newer', title: 'Newer topic' });
+  writeFileAtomic(path.join(root, newer.card.file), 'Newer body');
+  const theme = resetFoliolePublishThemeFiles(root);
+  fs.writeFileSync(path.join(theme, 'page.html'), [
+    '{{ site.title }}|{{ site.url }}|{{ site.home_url }}|{{ site.archive_url }}|{{ site.rss_url }}',
+    '{{ page.kind }}|{{ page.id }}|{{ page.is_home }}|{{ page.published_at }}|{{ page.updated_at }}',
+    '{{ page.home_url }}|{{ page.archive_url }}|{{ page.rss_url }}',
+    '{% if page.older %}{{ page.older.title }}|{{ page.older.url }}{% endif %}'
+  ].join('\n'));
+
+  const staged = stageFoliolePublishSite(root, newer.index, 'https://notes.example.com');
+  const home = fs.readFileSync(path.join(staged, 'index.html'), 'utf8');
+
+  expect(home).toContain('Foliole|https://notes.example.com|index.html|archive.html|rss.xml');
+  expect(home).toContain(`card|${newer.card.id}|true|${newer.card.published_at}|${newer.card.updated_at}`);
+  expect(home).toContain(`Older topic|cards/${older.card.id}.html`);
 });
 
 it('lets the single Theme control field and archive item markup with Liquid', () => {
@@ -86,7 +111,9 @@ it('keeps the active site and removes staging files when Liquid rendering fails'
   const before = fs.readFileSync(active, 'utf8');
   fs.writeFileSync(path.join(root, 'Theme', 'page.html'), '{{ missing }}');
 
-  expect(() => stageFoliolePublishSite(root, emptyPublishIndex(), 'https://new.pages.dev')).toThrow();
+  expect(() => stageFoliolePublishSite(root, emptyPublishIndex(), 'https://new.pages.dev')).toThrow(
+    /Theme file page\.html has a Liquid error at line 1, column 4: undefined variable: missing/u
+  );
   expect(fs.readFileSync(active, 'utf8')).toBe(before);
   expect(fs.readdirSync(root).filter((name) => name.startsWith('.Site-'))).toEqual([]);
 });
