@@ -10,6 +10,7 @@ const LABEL = 'com.campfirium.foliole.scheduled-dev-push';
 const MARKER = 'managed-by: foliole-scheduled-dev-push';
 const DEFAULT_REPOSITORY_ROOT = path.resolve(import.meta.dirname, '../..');
 const SOURCE_SCRIPT = path.join(import.meta.dirname, 'scheduled-dev-push.mjs');
+const SOURCE_HANDOFF = path.join(import.meta.dirname, 'scheduled-dev-push-handoff.mjs');
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, { encoding: 'utf8' });
@@ -24,6 +25,7 @@ function run(command, args, options = {}) {
 export function launchAgentPaths(homeDirectory = os.homedir()) {
   const runtimeRoot = path.join(homeDirectory, '.codex/local-tools/foliole-safe-push');
   return {
+    installedHandoff: path.join(runtimeRoot, 'scheduled-dev-push-handoff.mjs'),
     installedScript: path.join(runtimeRoot, 'scheduled-dev-push.mjs'),
     logsDirectory: path.join(runtimeRoot, 'logs'),
     plistPath: path.join(homeDirectory, `Library/LaunchAgents/${LABEL}.plist`),
@@ -93,9 +95,12 @@ export function installLaunchAgent(options = {}, deps = defaultDeps()) {
   fs.mkdirSync(path.dirname(paths.plistPath), { recursive: true });
   fs.mkdirSync(paths.logsDirectory, { recursive: true });
   const scriptTemp = `${paths.installedScript}.${process.pid}.tmp`;
+  const handoffTemp = `${paths.installedHandoff}.${process.pid}.tmp`;
   const plistTemp = `${paths.plistPath}.${process.pid}.tmp`;
   fs.copyFileSync(options.sourceScript ?? SOURCE_SCRIPT, scriptTemp);
+  fs.copyFileSync(options.sourceHandoff ?? SOURCE_HANDOFF, handoffTemp);
   fs.chmodSync(scriptTemp, 0o755);
+  fs.chmodSync(handoffTemp, 0o755);
   fs.writeFileSync(plistTemp, launchAgentXml({
     installedScript: paths.installedScript,
     nodePath: options.nodePath ?? preferredNodePath(),
@@ -105,6 +110,7 @@ export function installLaunchAgent(options = {}, deps = defaultDeps()) {
   }), 'utf8');
   deps.lint(plistTemp);
   if (wasLoaded) deps.bootout(paths.plistPath);
+  fs.renameSync(handoffTemp, paths.installedHandoff);
   fs.renameSync(scriptTemp, paths.installedScript);
   fs.renameSync(plistTemp, paths.plistPath);
   deps.bootstrap(paths.plistPath);

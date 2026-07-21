@@ -20,7 +20,7 @@ function configs() {
   return {
     actions: { enabled: false },
     issues: { ...common, dedupeKeyPattern: 'issue:{eventId}', limit: 50, template: 'issue.md' },
-    prs: { ...common, autoHandleAuthors: ['app/dependabot'], dedupeKeyPattern: 'pr:{eventId}', failureBuckets: ['fail'], includeDrafts: false, template: 'pr.md' }
+    prs: { ...common, autoImplementAuthors: ['app/dependabot'], dedupeKeyPattern: 'pr:{eventId}', failureBuckets: ['fail'], includeDrafts: false, template: 'pr.md' }
   };
 }
 
@@ -52,9 +52,9 @@ describe('GitHub desktop handoff baselines', () => {
     const first = listGithubMonitorEvents(configs(), state, false, [], () => 'authorized prompt');
     expect(first).toHaveLength(1);
     expect(first[0]).toMatchObject({
-      dedupeKey: 'pr:42:auto:dependabot-head-sha',
-      handlingMode: 'automatic-dependabot',
-      title: 'PR #42 automatic Dependabot handling'
+      dedupeKey: 'pr:42:local:dependabot-head-sha',
+      handlingMode: 'automatic-local-implementation',
+      title: 'PR #42 local Dependabot implementation'
     });
     state.submitted[first[0].dedupeKey] = { emittedAt: '2026-07-20T04:00:00Z' };
     expect(listGithubMonitorEvents(configs(), state, false, [], () => 'authorized prompt')).toEqual([]);

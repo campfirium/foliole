@@ -44,15 +44,18 @@ it('schedules one midday run and three nightly attempts without a persistent pro
 it('installs a protected script copy and managed LaunchAgent plist', () => {
   const homeDirectory = temporaryHome();
   const sourceScript = path.join(homeDirectory, 'source.mjs');
+  const sourceHandoff = path.join(homeDirectory, 'handoff.mjs');
   fs.writeFileSync(sourceScript, 'console.log("push")\n');
+  fs.writeFileSync(sourceHandoff, 'console.log("handoff")\n');
   const deps = dependencies();
 
   const result = installLaunchAgent({
     homeDirectory, nodePath: '/opt/homebrew/bin/node', platform: 'darwin',
-    repositoryRoot: '/Users/roamer/P/Foliole', sourceScript
+    repositoryRoot: '/Users/roamer/P/Foliole', sourceHandoff, sourceScript
   }, deps);
 
   expect(fs.readFileSync(result.paths.installedScript, 'utf8')).toBe('console.log("push")\n');
+  expect(fs.readFileSync(result.paths.installedHandoff, 'utf8')).toBe('console.log("handoff")\n');
   expect(readManagedPlist(result.paths.plistPath)).toContain('managed-by: foliole-scheduled-dev-push');
   expect(deps.lint).toHaveBeenCalledOnce();
   expect(deps.bootstrap).toHaveBeenCalledWith(result.paths.plistPath);

@@ -10,6 +10,7 @@ function gitFixture(distance) {
     if (command === 'rev-parse --show-toplevel') return process.cwd();
     if (command === 'branch --show-current') return 'dev';
     if (command.includes('@{upstream}')) return 'origin/dev';
+    if (command === 'rev-parse origin/dev') return 'a'.repeat(40);
     if (command.startsWith('fetch ')) return '';
     if (command.startsWith('rev-list ')) return distance;
     if (command.startsWith('push ')) return '';
@@ -43,13 +44,16 @@ it.each([
 ])('does not push unsafe or empty history %s', (distance, status) => {
   const git = gitFixture(distance);
   const dispatch = vi.fn();
+  const blockedHandoff = vi.fn();
   if (status === 'current') {
-    expect(executeScheduledPush({ dispatch, git })).toMatchObject({ pushed: false, status });
+    expect(executeScheduledPush({ blockedHandoff, dispatch, git })).toMatchObject({ pushed: false, status });
   } else {
-    expect(() => executeScheduledPush({ dispatch, git })).toThrow(`Scheduled push stopped: ${status}`);
+    expect(() => executeScheduledPush({ blockedHandoff, dispatch, git }))
+      .toThrow(`Scheduled push stopped: ${status}`);
   }
   expect(git.mock.calls.some(([args]) => args[0] === 'push')).toBe(false);
   expect(dispatch).not.toHaveBeenCalled();
+  expect(blockedHandoff).toHaveBeenCalledTimes(status === 'current' ? 0 : 1);
 });
 
 it('dry-run fetches and checks history but never writes remote state', () => {

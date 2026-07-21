@@ -3,6 +3,7 @@
 
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
+import { submitScheduledPushBlockedHandoff } from './scheduled-dev-push-handoff.mjs';
 
 const DEFAULT_REPOSITORY_ROOT = path.resolve(import.meta.dirname, '../..');
 const EXPECTED_BRANCH = 'dev';
@@ -54,10 +55,14 @@ export function inspectScheduledPush(options = {}) {
     throw new Error(`Scheduled push requires upstream ${EXPECTED_UPSTREAM}; found ${upstream}`);
   }
   gitCommand(['fetch', '--prune', 'origin', EXPECTED_BRANCH], { label: 'fetch origin/dev' });
-  return classifyCommitDistance(gitCommand(
+  const state = classifyCommitDistance(gitCommand(
     ['rev-list', '--left-right', '--count', `${EXPECTED_UPSTREAM}...HEAD`],
     { label: 'compare origin/dev with HEAD' }
   ));
+  return {
+    ...state,
+    remoteRevision: gitCommand(['rev-parse', EXPECTED_UPSTREAM], { label: 'resolve origin/dev revision' })
+  };
 }
 
 export function executeScheduledPush(options = {}) {
@@ -66,6 +71,9 @@ export function executeScheduledPush(options = {}) {
   const state = inspectScheduledPush({ ...options, git: gitCommand });
   if (state.status === 'current') return { ...state, pushed: false };
   if (state.status !== 'ready') {
+    if (!options.dryRun) {
+      (options.blockedHandoff ?? submitScheduledPushBlockedHandoff)({ repositoryRoot, state });
+    }
     throw new Error(
       `Scheduled push stopped: ${state.status} (remote-only=${state.remoteOnly}, local-only=${state.localOnly})`
     );
