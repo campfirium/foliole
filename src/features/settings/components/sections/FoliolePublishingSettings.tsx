@@ -1,5 +1,5 @@
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
-import { AppButton, AppErrorState, SettingsControlSlot, SettingsRow, SettingsSection } from '../../../../shared/ui';
+import { AppButton, AppErrorState, SettingsControlSlot, SettingsSection } from '../../../../shared/ui';
 
 import { FoliolePublishingSetupRows } from './FoliolePublishingSetupRows';
 import { useFoliolePublishingSettings, type FoliolePublishingSettingsState } from './useFoliolePublishingSettings';
@@ -20,42 +20,56 @@ function HostingOverview() {
   );
 }
 
+function StaticPagesActions({ state }: { state: FoliolePublishingSettingsState }) {
+  const t = useTranslation();
+  return (
+    <SettingsControlSlot className="gap-2">
+      <AppButton disabled={state.disabled} onClick={state.viewLocal}>
+        {t(state.status === 'viewingLocal' ? 'settings.publishing.foliole.localPages.openingLocal' : 'settings.publishing.foliole.localPages.viewLocal')}
+      </AppButton>
+      <AppButton disabled={!state.canViewWeb} onClick={state.viewWeb}>
+        {t(state.status === 'viewingWeb' ? 'settings.publishing.foliole.localPages.openingWeb' : 'settings.publishing.foliole.localPages.viewWeb')}
+      </AppButton>
+    </SettingsControlSlot>
+  );
+}
+
+function ThemeOverview({ state }: { state: FoliolePublishingSettingsState }) {
+  const t = useTranslation();
+  return (
+    <div className="ml-6 mt-5 border-t border-settings-divider/70 py-6">
+      <div className="flex items-start justify-between gap-6 max-[1080px]:flex-col max-[1080px]:items-start">
+        <div className="min-w-0 flex-1">
+          <h5 className="text-ui-lg font-semibold text-foreground">{t('settings.publishing.foliole.theme.title')}</h5>
+          <p className="mt-1 max-w-[840px] text-ui-md leading-6 text-foreground/64">{t('settings.publishing.foliole.theme.description')}</p>
+        </div>
+        <SettingsControlSlot className="gap-5 max-[1080px]:flex-wrap">
+          <div className="flex gap-2">
+            <AppButton disabled={state.disabled} onClick={state.openTheme}>{t(state.status === 'openingTheme' ? 'settings.publishing.foliole.theme.opening' : 'settings.publishing.foliole.theme.open')}</AppButton>
+            <AppButton disabled={state.disabled} onClick={state.resetTheme}>{t(state.status === 'resettingTheme' ? 'settings.publishing.foliole.theme.resetting' : 'settings.publishing.foliole.theme.reset')}</AppButton>
+          </div>
+          <div className="flex gap-2">
+            <AppButton disabled={state.disabled} onClick={state.updateLocal}>{t(state.status === 'updatingLocal' ? 'settings.publishing.foliole.theme.updatingLocal' : 'settings.publishing.foliole.theme.updateLocal')}</AppButton>
+            <AppButton disabled={!state.canUpdateWeb} onClick={state.updateWeb} variant="emphasis">{t(state.status === 'updatingWeb' ? 'settings.publishing.foliole.theme.updatingWeb' : 'settings.publishing.foliole.theme.updateWeb')}</AppButton>
+          </div>
+        </SettingsControlSlot>
+      </div>
+    </div>
+  );
+}
+
 function LocalStaticPagesOverview({ state }: { state: FoliolePublishingSettingsState }) {
   const t = useTranslation();
   return (
     <div className="px-settings-panel-x py-settings-panel-y" data-local-static-pages>
-      <SettingsRow className="min-h-0 px-0 py-0" description={t('settings.publishing.foliole.localPages.description')} title={t('settings.publishing.foliole.localPages.title')}>
-        <SettingsControlSlot className="gap-2">
-          <AppButton disabled={state.disabled} onClick={state.viewLocal}>
-            {t(state.status === 'viewingLocal' ? 'settings.publishing.foliole.localPages.openingLocal' : 'settings.publishing.foliole.localPages.viewLocal')}
-          </AppButton>
-          <AppButton disabled={!state.canViewWeb} onClick={state.viewWeb}>
-            {t(state.status === 'viewingWeb' ? 'settings.publishing.foliole.localPages.openingWeb' : 'settings.publishing.foliole.localPages.viewWeb')}
-          </AppButton>
-        </SettingsControlSlot>
-      </SettingsRow>
-      <div className="ml-6 mt-5 border-t border-settings-divider/70">
-        <SettingsRow className="px-0" description={t('settings.publishing.foliole.theme.description')} title={t('settings.publishing.foliole.theme.title')}>
-          <SettingsControlSlot className="gap-5 max-[1080px]:flex-wrap">
-            <div className="flex gap-2">
-              <AppButton disabled={state.disabled} onClick={state.openTheme}>
-                {t(state.status === 'openingTheme' ? 'settings.publishing.foliole.theme.opening' : 'settings.publishing.foliole.theme.open')}
-              </AppButton>
-              <AppButton disabled={state.disabled} onClick={state.resetTheme}>
-                {t(state.status === 'resettingTheme' ? 'settings.publishing.foliole.theme.resetting' : 'settings.publishing.foliole.theme.reset')}
-              </AppButton>
-            </div>
-            <div className="flex gap-2">
-              <AppButton disabled={state.disabled} onClick={state.updateLocal}>
-                {t(state.status === 'updatingLocal' ? 'settings.publishing.foliole.theme.updatingLocal' : 'settings.publishing.foliole.theme.updateLocal')}
-              </AppButton>
-              <AppButton disabled={!state.canUpdateWeb} onClick={state.updateWeb} variant="emphasis">
-                {t(state.status === 'updatingWeb' ? 'settings.publishing.foliole.theme.updatingWeb' : 'settings.publishing.foliole.theme.updateWeb')}
-              </AppButton>
-            </div>
-          </SettingsControlSlot>
-        </SettingsRow>
+      <div className="flex items-start justify-between gap-6 max-[1080px]:flex-col max-[1080px]:items-start">
+        <div className="min-w-0 flex-1">
+          <h4 className="text-ui-lg font-semibold text-foreground">{t('settings.publishing.foliole.localPages.title')}</h4>
+          <p className="mt-1 max-w-[840px] text-ui-md leading-6 text-foreground/64">{t('settings.publishing.foliole.localPages.description')}</p>
+        </div>
+        <StaticPagesActions state={state} />
       </div>
+      <ThemeOverview state={state} />
     </div>
   );
 }

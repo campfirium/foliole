@@ -50,7 +50,10 @@ function renderSettings() {
 it('presents local and Web views of the generated static pages', async () => {
   mocks.loadFoliolePublishSettingsFromRuntime.mockResolvedValue(CONNECTED);
   renderSettings();
-  expect(await screen.findByText('Static pages')).toBeVisible();
+  expect(await screen.findByRole('heading', { level: 4, name: 'Static pages' })).toBeVisible();
+  expect(screen.getByRole('heading', { level: 4, name: 'Hosting' })).toBeVisible();
+  expect(screen.getByRole('heading', { level: 5, name: 'Theme' })).toBeVisible();
+  expect(screen.getByRole('heading', { level: 5, name: 'Cloudflare Pages' })).toBeVisible();
   expect(screen.getByText('Generated each time you run “Publish to the web” on material.')).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: 'View local' }));
   await waitFor(() => expect(mocks.viewFoliolePublishSiteFromRuntime).toHaveBeenCalledOnce());
