@@ -14,7 +14,7 @@ import {
 
 export type AcceptanceResult = {
   error: string | null;
-  phase: 'applied' | 'disconnected' | 'failed' | 'paired' | 'reapplied' | 'resources-restored' | 'resources-synced' |
+  phase: 'applied' | 'disconnected' | 'failed' | 'paired' | 'reapplied' | 'rejected' | 'resources-restored' | 'resources-synced' |
     'upgraded';
   scenario: 'content-resource-read' | 'database-upgrade-runtime' | 'pairing-signed-transport' |
     'state-writeback-runtime' | 'sync-pack-runtime';

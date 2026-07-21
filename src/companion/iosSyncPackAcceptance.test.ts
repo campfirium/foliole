@@ -34,6 +34,7 @@ import { runIosSyncPackAcceptance } from './iosSyncPackAcceptance';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  localStorage.clear();
   mocks.apply.mockResolvedValue({ applied_blob_count: 0, applied_object_count: 1, to_state_seq: 2 });
   mocks.loadBootstrap.mockResolvedValue({ device_id: 'ios-1', device_name: 'Acceptance iPhone' });
   mocks.requestPairing.mockResolvedValue({ pair_request_id: 'pair-1' });
@@ -55,6 +56,7 @@ it('pairs and applies the identity-bound legal pack on the first launch', async 
 
 it('reapplies through the shared path without repairing an existing pairing', async () => {
   mocks.loadPairing.mockResolvedValue({ device_id: 'ios-1', is_paired: true });
+  localStorage.setItem('foliole-ios-sync-pack-acceptance-phase', 'reapply');
 
   await runIosSyncPackAcceptance();
 
@@ -63,13 +65,28 @@ it('reapplies through the shared path without repairing an existing pairing', as
   expect(mocks.postResult).toHaveBeenCalledWith(expect.objectContaining({ phase: 'reapplied', status: 'passed' }));
 });
 
-it('posts a structured apply rejection', async () => {
+it.each([
+  ['corrupt-envelope', 'missing_sync_pack_entry'],
+  ['wrong-target', 'sync_pack_target_mismatch'],
+  ['cursor-gap', 'sync_pack_cursor_not_contiguous']
+])('accepts only the deterministic %s rejection', async (phase, error) => {
   mocks.loadPairing.mockResolvedValue({ device_id: 'ios-1', is_paired: true });
-  mocks.apply.mockRejectedValue(new Error('cursor gap'));
+  localStorage.setItem('foliole-ios-sync-pack-acceptance-phase', phase);
+  mocks.apply.mockRejectedValue(new Error(error));
 
   await runIosSyncPackAcceptance();
 
   expect(mocks.postResult).toHaveBeenCalledWith(expect.objectContaining({
-    error: 'cursor gap', phase: 'failed', scenario: 'sync-pack-runtime', status: 'failed'
+    error, phase: 'rejected', rejection: phase, scenario: 'sync-pack-runtime', status: 'passed'
   }));
+});
+
+it('fails when a rejection category does not match the active phase', async () => {
+  mocks.loadPairing.mockResolvedValue({ device_id: 'ios-1', is_paired: true });
+  localStorage.setItem('foliole-ios-sync-pack-acceptance-phase', 'wrong-target');
+  mocks.apply.mockRejectedValue(new Error('missing_sync_pack_entry'));
+
+  await runIosSyncPackAcceptance();
+
+  expect(mocks.postResult).toHaveBeenCalledWith(expect.objectContaining({ phase: 'failed', status: 'failed' }));
 });

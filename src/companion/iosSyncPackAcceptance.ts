@@ -11,7 +11,15 @@ import { saveCompanionWorkspaceSyncEndpoint } from '../shared/platform/companion
 
 import { acceptanceEndpoint, postResult } from './iosBridgeAcceptance';
 
-const LEGAL_PACK_PATH = '/acceptance/sync-pack/legal';
+const PHASE_KEY = 'foliole-ios-sync-pack-acceptance-phase';
+const PHASES = ['apply', 'reapply', 'corrupt-envelope', 'wrong-target', 'cursor-gap'] as const;
+type AcceptancePhase = typeof PHASES[number];
+
+const REJECTION_ERRORS: Partial<Record<AcceptancePhase, string>> = {
+  'corrupt-envelope': 'missing_sync_pack_entry',
+  'cursor-gap': 'sync_pack_cursor_not_contiguous',
+  'wrong-target': 'sync_pack_target_mismatch'
+};
 
 async function pairForSyncPack(endpoint: string) {
   const bootstrap = await loadCompanionBootstrapState();
@@ -32,11 +40,36 @@ async function pairForSyncPack(endpoint: string) {
   await saveCompanionWorkspaceSyncEndpoint(endpoint);
 }
 
-async function applyLegalPack(endpoint: string) {
+function loadPhase(): AcceptancePhase {
+  const value = localStorage.getItem(PHASE_KEY);
+  return PHASES.includes(value as AcceptancePhase) ? value as AcceptancePhase : 'apply';
+}
+
+function advancePhase(phase: AcceptancePhase) {
+  const next = PHASES[PHASES.indexOf(phase) + 1];
+  if (next) localStorage.setItem(PHASE_KEY, next);
+}
+
+async function applyPack(endpoint: string, phase: AcceptancePhase) {
+  const kind = phase === 'apply' || phase === 'reapply' ? 'legal' : phase;
+  const path = `/acceptance/sync-pack/${kind}`;
   return await applyCompanionDesktopSyncPack({
-    headers: await createSignedRequestHeaders({ method: 'GET', pathWithQuery: LEGAL_PACK_PATH }),
-    url: `${endpoint}${LEGAL_PACK_PATH}`
+    headers: await createSignedRequestHeaders({ method: 'GET', pathWithQuery: path }),
+    url: `${endpoint}${path}`
   });
+}
+
+async function runPhase(endpoint: string, phase: AcceptancePhase) {
+  const expectedError = REJECTION_ERRORS[phase];
+  if (!expectedError) return { apply: await applyPack(endpoint, phase), error: null };
+  try {
+    await applyPack(endpoint, phase);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes(expectedError)) return { apply: null, error: message };
+    throw new Error(`Unexpected ${phase} rejection: ${message}`);
+  }
+  throw new Error(`Expected ${phase} rejection was not observed.`);
 }
 
 export async function runIosSyncPackAcceptance() {
@@ -45,11 +78,13 @@ export async function runIosSyncPackAcceptance() {
     if (!endpoint) throw new Error('iOS Sync Pack acceptance endpoint is unavailable.');
     const pairing = await loadCompanionPairingState();
     if (!pairing.is_paired) await pairForSyncPack(endpoint);
-    const apply = await applyLegalPack(endpoint);
+    const phase = loadPhase();
+    const result = await runPhase(endpoint, phase);
+    advancePhase(phase);
     postResult({
-      apply,
-      error: null,
-      phase: pairing.is_paired ? 'reapplied' : 'applied',
+      ...result,
+      phase: REJECTION_ERRORS[phase] ? 'rejected' : phase === 'apply' ? 'applied' : 'reapplied',
+      rejection: REJECTION_ERRORS[phase] ? phase : null,
       scenario: 'sync-pack-runtime',
       status: 'passed'
     });

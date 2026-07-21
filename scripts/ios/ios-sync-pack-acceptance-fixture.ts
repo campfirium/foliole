@@ -29,12 +29,27 @@ export async function createIosSyncPackAcceptanceFixture(args: {
   try {
     await buildPack(driver, paths.legalPath, args.toPeerId, 0, 'ios-acceptance-legal');
     await buildPack(driver, paths.wrongTargetPath, `${args.toPeerId}-wrong`, 0, 'ios-acceptance-wrong-target');
-    await buildPack(driver, paths.cursorGapPath, args.toPeerId, 1, 'ios-acceptance-cursor-gap');
+    insertCursorGapNode(driver);
+    await buildPack(driver, paths.cursorGapPath, args.toPeerId, 3, 'ios-acceptance-cursor-gap');
     await writeCorruptEnvelope(paths.legalPath, paths.corruptEnvelopePath);
     return paths;
   } finally {
     sqlite.close();
   }
+}
+
+function insertCursorGapNode(driver: ReturnType<typeof createBetterSqlite3Driver>) {
+  driver.execute(
+    `INSERT INTO nodes (id, kind, title, content, created_at, updated_at)
+     VALUES ('ios-acceptance-gap-node', 'topic', 'Gap Topic', '', ?, ?)`,
+    ['2026-07-21T00:02:00.000Z', '2026-07-21T00:02:00.000Z']
+  );
+  driver.execute(
+    `INSERT INTO sync_object_state (
+       object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
+     ) VALUES ('node', 'ios-acceptance-gap-node', 4, 'ios-acceptance-gap-hash',
+       'acceptance-desktop', '2026-07-21T00:02:00.000Z', 1)`
+  );
 }
 
 function insertAcceptanceNode(driver: ReturnType<typeof createBetterSqlite3Driver>) {

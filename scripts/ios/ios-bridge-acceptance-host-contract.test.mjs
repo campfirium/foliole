@@ -29,7 +29,8 @@ describe('iOS bridge acceptance host contract', () => {
     expect(scenario).toContain('pairCompanionWithDesktop({');
     expect(scenario).toContain("saveCompanionWorkspaceSyncEndpoint('')");
     expect(syncPackScenario).toContain('applyCompanionDesktopSyncPack({');
-    expect(syncPackScenario).toContain("pathWithQuery: LEGAL_PACK_PATH");
+    expect(syncPackScenario).toContain("['apply', 'reapply', 'corrupt-envelope', 'wrong-target', 'cursor-gap']");
+    expect(syncPackScenario).toContain('pathWithQuery: path');
     expect(contentResourceScenario).toContain('pullMissingContentBlobs(endpoint)');
     expect(databaseUpgradeScenario).toContain("VITE_FOLIOLE_IOS_DATABASE_UPGRADE_FAULT === '1'");
     expect(databaseUpgradeScenario).toContain("VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_SCENARIO === 'database-upgrade-runtime'");

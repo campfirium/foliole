@@ -26,6 +26,7 @@ import {
   startPairingAcceptanceService
 } from './ios-pairing-acceptance-runner.mjs';
 import { readServiceObservations, verifyAcceptanceScenario } from './ios-acceptance-scenario-result.mjs';
+import { runAcceptanceRestart } from './ios-acceptance-restart-runner.mjs';
 import { readAcceptanceScenarioSnapshot } from './ios-acceptance-snapshot.mjs';
 import { resolveAcceptanceScenario } from './ios-sync-pack-acceptance-runner.mjs';
 import { runIosDatabaseUpgradeAcceptance } from './ios-database-upgrade-acceptance-runner.mjs';
@@ -110,19 +111,16 @@ async function main() {
       : null;
     const firstScenarioSnapshot = readAcceptanceSnapshot(scenario, containerPath);
     rmSync(bridgeResultPath, { force: true });
-    const second = await waitForBootstrapSnapshot(
-      () => readBootstrapSnapshot(databasePath),
-      () => launchApp(simulator.udid)
-    );
-    const secondBridge = verifyBridgeResult(await waitForAcceptanceObservation({
-      accept: (result) => result?.status === 'passed' || result?.status === 'failed',
-      describe: (result) => `scenario status=${result?.status ?? 'missing'}`,
-      initialObservation: 'second bridge result was not readable',
-      label: 'iOS pairing restart result',
-      read: () => JSON.parse(readFileSync(bridgeResultPath, 'utf8'))
-    }), scenario);
+    const { second, secondBridge, syncPackRejections } = await runAcceptanceRestart({
+      bridgeResultPath,
+      launch: () => launchApp(simulator.udid),
+      readBootstrap: () => readBootstrapSnapshot(databasePath),
+      readSnapshot: () => readAcceptanceSnapshot(scenario, containerPath),
+      removeBridgeResult: () => rmSync(bridgeResultPath, { force: true }),
+      scenario,
+      terminate: () => run('xcrun', ['simctl', 'terminate', simulator.udid, ACCEPTANCE_BUNDLE_ID])
+    });
     const result = verifyBootstrapSnapshots(first, second);
-    run('xcrun', ['simctl', 'terminate', simulator.udid, ACCEPTANCE_BUNDLE_ID]);
     const scenarioResult = verifyAcceptanceScenario({
       firstBridge,
       firstContentObservations,
@@ -131,7 +129,8 @@ async function main() {
       scenario,
       secondBridge,
       secondContentObservations: readServiceObservations(ARTIFACT_DIR),
-      secondScenarioSnapshot: readAcceptanceSnapshot(scenario, containerPath)
+      secondScenarioSnapshot: readAcceptanceSnapshot(scenario, containerPath),
+      syncPackRejections
     });
     const report = { ...result, ...scenarioResult, signatureIdentifier, simulator: simulator.name };
     writeFileSync(path.join(ARTIFACT_DIR, 'result.json'), `${JSON.stringify(report, null, 2)}\n`);

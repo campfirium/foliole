@@ -107,15 +107,18 @@ describe('iOS bootstrap acceptance contract', () => {
   });
 
   it('accepts stable node, state, cursor, cleanup, and repeated apply evidence', () => {
-    const snapshot = parseSyncPackSnapshot('[{"node_count":1,"state_count":1,"cursor":"2"}]');
+    const snapshot = parseSyncPackSnapshot('[{"node_count":1,"state_count":1,"state_seq":1,"cursor":"2"}]');
     const first = { apply: { to_state_seq: 2 }, phase: 'applied' };
     const second = { apply: { to_state_seq: 2 }, phase: 'reapplied' };
+    const rejections = ['corrupt-envelope', 'wrong-target', 'cursor-gap'].map((rejection) => ({
+      after: snapshot, before: snapshot, bridge: { phase: 'rejected', rejection }
+    }));
 
-    expect(verifySyncPackAcceptance(first, second, snapshot, snapshot)).toMatchObject({
-      first_snapshot: { cache_entries: [], cursor: 2, node_count: 1, state_count: 1 },
-      second_snapshot: { cache_entries: [], cursor: 2, node_count: 1, state_count: 1 }
+    expect(verifySyncPackAcceptance(first, second, snapshot, snapshot, rejections)).toMatchObject({
+      first_snapshot: { cache_entries: [], cursor: 2, node_count: 1, state_count: 1, state_seq: 1 },
+      second_snapshot: { cache_entries: [], cursor: 2, node_count: 1, state_count: 1, state_seq: 1 }
     });
-    expect(() => verifySyncPackAcceptance(first, second, snapshot, { ...snapshot, node_count: 2 }))
+    expect(() => verifySyncPackAcceptance(first, second, snapshot, { ...snapshot, node_count: 2 }, rejections))
       .toThrow('evidence is incomplete');
   });
 
