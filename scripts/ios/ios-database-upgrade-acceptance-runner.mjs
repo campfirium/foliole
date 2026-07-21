@@ -1,6 +1,6 @@
 /* global console, process */
 
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
@@ -48,8 +48,8 @@ export async function runIosDatabaseUpgradeAcceptance(repoRoot) {
     bootSimulator(options.repoRoot, simulator);
     installApp(options, simulator.udid, true);
     const containerPath = resolveContainer(options, simulator.udid);
-    const databasePath = path.join(containerPath, DATABASE_RELATIVE_PATH);
-    const resultPath = path.join(containerPath, RESULT_RELATIVE_PATH);
+    let databasePath = path.join(containerPath, DATABASE_RELATIVE_PATH);
+    let resultPath = path.join(containerPath, RESULT_RELATIVE_PATH);
 
     replaceWithV18Fixture(options, databasePath);
     const first = await launchAndRead(options, simulator.udid, resultPath, true);
@@ -63,7 +63,7 @@ export async function runIosDatabaseUpgradeAcceptance(repoRoot) {
     replaceWithV18Fixture(options, databasePath);
     prepareBuild(options, simulator.udid, true);
     installApp(options, simulator.udid, false);
-    assertSameContainer(options, simulator.udid, containerPath);
+    ({ databasePath, resultPath } = resolvePreservedContainer(options, simulator.udid));
     rmSync(resultPath, { force: true });
     const failed = await launchAndRead(options, simulator.udid, resultPath, false);
     const failedSnapshot = readUpgradeSnapshot((command, args) => capture(options.repoRoot, command, args), databasePath);
@@ -71,7 +71,7 @@ export async function runIosDatabaseUpgradeAcceptance(repoRoot) {
 
     prepareBuild(options, simulator.udid, false);
     installApp(options, simulator.udid, false);
-    assertSameContainer(options, simulator.udid, containerPath);
+    ({ databasePath, resultPath } = resolvePreservedContainer(options, simulator.udid));
     rmSync(resultPath, { force: true });
     const recovered = await launchAndRead(options, simulator.udid, resultPath, true);
     const recoveredSnapshot = readUpgradeSnapshot((command, args) => capture(options.repoRoot, command, args), databasePath);
@@ -143,6 +143,8 @@ function replaceWithV18Fixture(options, databasePath) {
   rmSync(`${databasePath}-shm`, { force: true });
   rmSync(`${databasePath}-wal`, { force: true });
   const result = spawnSync(resolveElectronBinary(options.repoRoot), [
+    '--experimental-loader',
+    path.join(options.repoRoot, 'scripts/android/ts-js-extension-loader.mjs'),
     '--experimental-strip-types',
     path.join(options.repoRoot, 'scripts/ios/ios-database-upgrade-acceptance-fixture.ts'),
     databasePath
@@ -173,10 +175,11 @@ function resolveContainer(options, udid) {
   return capture(options.repoRoot, 'xcrun', ['simctl', 'get_app_container', udid, options.bundleId, 'data']).trim();
 }
 
-function assertSameContainer(options, udid, expected) {
-  if (resolveContainer(options, udid) !== expected) {
-    throw new Error('iOS database upgrade overwrite install changed the data container.');
-  }
+function resolvePreservedContainer(options, udid) {
+  const containerPath = resolveContainer(options, udid);
+  const databasePath = path.join(containerPath, DATABASE_RELATIVE_PATH);
+  if (!existsSync(databasePath)) throw new Error('iOS database upgrade overwrite install did not preserve the fixture.');
+  return { databasePath, resultPath: path.join(containerPath, RESULT_RELATIVE_PATH) };
 }
 
 function sanitizeAcceptanceEnv(env) {

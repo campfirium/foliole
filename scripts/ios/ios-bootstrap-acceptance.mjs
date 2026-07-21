@@ -68,14 +68,7 @@ async function main() {
   let ownsBootedSimulator = false;
   const scenario = resolveAcceptanceScenario(process.env.FOLIOLE_IOS_ACCEPTANCE_SCENARIO);
   if (scenario === 'database-upgrade-runtime') {
-    await runIosDatabaseUpgradeAcceptance({
-      artifactDir: ARTIFACT_DIR,
-      bundleId: ACCEPTANCE_BUNDLE_ID,
-      derivedData: DERIVED_DATA,
-      repoRoot: REPO_ROOT,
-      resourceArgs: iosXcodebuildResourceArgs(RESOURCE_MODE),
-      resourceMode: RESOURCE_MODE
-    });
+    await runIosDatabaseUpgradeAcceptance(REPO_ROOT);
     return;
   }
   try {

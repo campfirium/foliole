@@ -49,6 +49,7 @@ describe('iOS bridge acceptance host contract', () => {
     const bootstrap = fs.readFileSync('scripts/ios/ios-bootstrap-acceptance.mjs', 'utf8');
     const runner = fs.readFileSync('scripts/ios/ios-database-upgrade-acceptance-runner.mjs', 'utf8');
     expect(bootstrap).toContain("scenario === 'database-upgrade-runtime'");
+    expect(bootstrap).toContain('runIosDatabaseUpgradeAcceptance(REPO_ROOT)');
     expect(runner).toContain('launchAndRead(options, simulator.udid, resultPath, false)');
     expect(runner).toContain('installApp(options, simulator.udid, false)');
     expect(runner).not.toContain('waitForBootstrapSnapshot');
@@ -62,7 +63,9 @@ describe('iOS bridge acceptance host contract', () => {
     );
     expect(databaseRunner).toContain('createOrdinaryBuildEnv(process.env)');
     expect(databaseRunner).toContain("'VITE_FOLIOLE_IOS_DATABASE_UPGRADE_FAULT'");
-    expect(databaseRunner).toContain('assertSameContainer(options, simulator.udid, containerPath)');
+    expect(databaseRunner).toContain("'scripts/android/ts-js-extension-loader.mjs'");
+    expect(databaseRunner).toContain('resolvePreservedContainer(options, simulator.udid)');
+    expect(databaseRunner).toContain('did not preserve the fixture');
   });
 
   it('finishes the first heavy build before booting a cold Simulator', () => {
