@@ -220,6 +220,7 @@
     "drizzle-orm": "0.45.2",
     "electron-updater": "6.8.9",
     "katex": "0.17.0",
+    "liquidjs": "10.27.2",
     "lucide-react": "^0.577.0",
     "mermaid": "11.16.0",
     "parse5": "7.3.0",

@@ -6,22 +6,16 @@ import { readFolioleWebBinding, readFolioleWebMarkdown, type FolioleWebField } f
 import { convertWordPressMarkdownToHtml } from '../../lib/core/wordpress/wordpressMarkdownHtml.js';
 
 import type { FoliolePublishCard, FoliolePublishIndex } from './foliolePublishModel.js';
+import {
+  renderFoliolePublishTemplate,
+  type FoliolePublishTemplateField,
+  type FoliolePublishTemplatePage,
+  type FoliolePublishTemplateSite
+} from './foliolePublishTemplate.js';
 import { readFoliolePublishTheme } from './foliolePublishTheme.js';
 
 function escapeHtml(value: string) {
   return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
-}
-
-function render(template: string, values: Record<string, string>) {
-  return template.replace(/\{\{([A-Za-z]+)\}\}/gu, (token, key: string) => values[key] ?? token);
-}
-
-function renderFields(fields: FolioleWebField[]) {
-  const entries = fields.flatMap(({ key, value }) => {
-    const text = Array.isArray(value) ? value.join(', ') : value;
-    return text.length > 0 ? `<dt>${escapeHtml(key)}</dt><dd>${escapeHtml(text)}</dd>` : [];
-  });
-  return entries.length > 0 ? `<dl class="fields">${entries.join('')}</dl>` : '';
 }
 
 function tutorialIndex(): FoliolePublishIndex {
@@ -41,19 +35,51 @@ function readCard(root: string, card: FoliolePublishCard, tutorial: boolean) {
   return { fields: tutorial ? [] : readFolioleWebBinding(markdown)?.fields ?? [], markdown };
 }
 
+function templateFields(fields: FolioleWebField[]): FoliolePublishTemplateField[] {
+  return fields.map(({ key, value }) => ({
+    key,
+    values: (Array.isArray(value) ? value : [value]).filter((item) => item.length > 0)
+  }));
+}
+
+function templateSite(index: FoliolePublishIndex): FoliolePublishTemplateSite {
+  return {
+    cards: index.cards.map((card) => ({
+      id: card.id,
+      path: `cards/${card.id}.html`,
+      published_at: card.published_at,
+      title: card.title,
+      updated_at: card.updated_at
+    })),
+    title: index.site.title
+  };
+}
+
 function cardPage(args: {
-  card: FoliolePublishCard; depth: string; fields: FolioleWebField[]; markdown: string;
-  newer: string | null; older: string | null; template: string;
+  card: FoliolePublishCard; depth: '' | '../'; fields: FolioleWebField[]; markdown: string;
+  newer: string | null; older: string | null; site: FoliolePublishTemplateSite; template: string;
 }) {
-  return render(args.template, {
-    archiveUrl: JSON.stringify(`${args.depth}archive.html`),
+  const fields = templateFields(args.fields);
+  const page: FoliolePublishTemplatePage = {
+    archive_url: `${args.depth}archive.html`,
     content: convertWordPressMarkdownToHtml(readFolioleWebMarkdown(args.markdown)),
     depth: args.depth,
-    fields: renderFields(args.fields),
-    newerUrl: JSON.stringify(args.newer),
-    olderUrl: JSON.stringify(args.older),
-    title: escapeHtml(args.card.title)
-  });
+    fields,
+    has_visible_fields: fields.some((field) => field.values.length > 0),
+    kind: 'card',
+    newer_url: args.newer,
+    older_url: args.older,
+    title: args.card.title
+  };
+  return renderFoliolePublishTemplate(args.template, { page, site: args.site });
+}
+
+function archivePage(template: string, site: FoliolePublishTemplateSite) {
+  const page: FoliolePublishTemplatePage = {
+    archive_url: null, content: '', depth: '', fields: [], has_visible_fields: false,
+    kind: 'archive', newer_url: null, older_url: null, title: site.title
+  };
+  return renderFoliolePublishTemplate(template, { page, site });
 }
 
 function rss(index: FoliolePublishIndex, contents: Map<string, string>, siteAddress: string) {
@@ -61,37 +87,52 @@ function rss(index: FoliolePublishIndex, contents: Map<string, string>, siteAddr
   return `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>${escapeHtml(index.site.title)}</title><link>${siteAddress}/</link>${items}</channel></rss>`;
 }
 
-export function stageFoliolePublishSite(root: string, index: FoliolePublishIndex, siteAddress: string, overrides = new Map<string, { content: string; fields: FolioleWebField[] }>()) {
+type PublishOverrides = Map<string, { content: string; fields: FolioleWebField[] }>;
+
+function selectCard(root: string, card: FoliolePublishCard, tutorial: boolean, overrides: PublishOverrides) {
+  const selected = overrides.get(card.id);
+  if (selected) return selected;
+  const stored = readCard(root, card, tutorial);
+  return { content: stored.markdown, fields: stored.fields };
+}
+
+function writeStagedSite(root: string, temporary: string, index: FoliolePublishIndex, siteAddress: string, overrides: PublishOverrides) {
   const tutorial = index.cards.length === 0;
   const source = tutorial ? tutorialIndex() : index;
-  const temporary = path.join(root, `.Site-${randomUUID()}`);
   const theme = readFoliolePublishTheme(root);
-  fs.mkdirSync(path.join(temporary, 'cards'), { recursive: true });
-  const contents = new Map<string, string>();
-  source.cards.forEach((card, i) => {
-    const selected = overrides.get(card.id) ?? (() => {
-      const stored = readCard(root, card, tutorial);
-      return { content: stored.markdown, fields: stored.fields };
-    })();
-    contents.set(card.id, selected.content);
+  const site = templateSite(source);
+  const selectedCards = source.cards.map((card) => ({ card, selected: selectCard(root, card, tutorial, overrides) }));
+  const contents = new Map(selectedCards.map(({ card, selected }) => [card.id, selected.content]));
+  selectedCards.forEach(({ card, selected }, i) => {
     fs.writeFileSync(path.join(temporary, 'cards', `${card.id}.html`), cardPage({
       card, depth: '../', fields: selected.fields, markdown: selected.content,
       newer: i > 0 ? `./${source.cards[i - 1]?.id}.html` : null,
       older: i + 1 < source.cards.length ? `./${source.cards[i + 1]?.id}.html` : null,
+      site,
       template: theme['page.html']
     }));
   });
-  const latest = source.cards[0]!;
-  const selected = overrides.get(latest.id) ?? (() => {
-    const stored = readCard(root, latest, tutorial);
-    return { content: stored.markdown, fields: stored.fields };
-  })();
-  fs.writeFileSync(path.join(temporary, 'index.html'), cardPage({ card: latest, depth: '', fields: selected.fields, markdown: selected.content, newer: null, older: source.cards[1] ? `cards/${source.cards[1].id}.html` : null, template: theme['page.html'] }));
-  const archiveItems = source.cards.map((card) => `<li><a href="cards/${card.id}.html">${escapeHtml(card.title)}</a></li>`).join('');
-  fs.writeFileSync(path.join(temporary, 'archive.html'), render(theme['archive.html'], { content: archiveItems, title: escapeHtml(source.site.title) }));
+  const latest = selectedCards[0]!;
+  fs.writeFileSync(path.join(temporary, 'index.html'), cardPage({
+    card: latest.card, depth: '', fields: latest.selected.fields, markdown: latest.selected.content,
+    newer: null, older: source.cards[1] ? `cards/${source.cards[1].id}.html` : null,
+    site, template: theme['page.html']
+  }));
+  fs.writeFileSync(path.join(temporary, 'archive.html'), archivePage(theme['archive.html'], site));
   fs.writeFileSync(path.join(temporary, 'style.css'), theme['style.css']);
   fs.writeFileSync(path.join(temporary, 'site.js'), theme['site.js']);
   fs.writeFileSync(path.join(temporary, 'rss.xml'), rss(source, contents, siteAddress || 'https://example.pages.dev'));
+}
+
+export function stageFoliolePublishSite(root: string, index: FoliolePublishIndex, siteAddress: string, overrides: PublishOverrides = new Map()) {
+  const temporary = path.join(root, `.Site-${randomUUID()}`);
+  fs.mkdirSync(path.join(temporary, 'cards'), { recursive: true });
+  try {
+    writeStagedSite(root, temporary, index, siteAddress, overrides);
+  } catch (error) {
+    fs.rmSync(temporary, { force: true, recursive: true });
+    throw error;
+  }
   return temporary;
 }
 
