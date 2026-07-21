@@ -112,8 +112,8 @@ async function verifyFolioleSetupSteps(
   await expect(subdomain).toBeVisible();
   await expect(foliole.getByRole('button', { name: /^(API Token request page ↗|API Token 申请页面 ↗)$/ })).toBeVisible();
   await expect(foliole.getByRole('button', { name: /^(Deploy|部署)$/ })).toBeDisabled();
-  await expect(foliole.getByRole('button', { name: /^(Preview|预览)$/ })).toBeVisible();
-  await foliole.getByText(/^(Local preview|本地预览)$/).scrollIntoViewIfNeeded();
+  await expect(foliole.getByRole('button', { name: /^(View|查看)$/ })).toBeVisible();
+  await foliole.getByText(/^(Local static pages|本地静态页面)$/).scrollIntoViewIfNeeded();
   const previewScreenshot = await desktopWindow.screenshot();
   await writeFile(path.join(screenshotDir, 'foliole-publish-local-preview-hidden-native.png'), previewScreenshot);
   await testInfo.attach('foliole-publish-local-preview', { body: previewScreenshot, contentType: 'image/png' });

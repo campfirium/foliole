@@ -32,10 +32,15 @@ export function FoliolePublishingSettings(props: { expanded: boolean; onExpanded
       title={t('settings.publishing.foliole.title')}
     >
       {state.error ? <AppErrorState description={t('settings.publishing.foliole.error.tryAgain')} surface="panel" title={state.error} /> : null}
-      <SettingsRow title={t('settings.publishing.foliole.preview.title')}>
+      <SettingsRow
+        description={t('settings.publishing.foliole.localPages.description')}
+        title={t('settings.publishing.foliole.localPages.title')}
+      >
         <SettingsControlSlot>
-          <AppButton disabled={state.status === 'previewing'} onClick={state.preview}>
-            {t(state.status === 'previewing' ? 'settings.publishing.foliole.previewing' : 'settings.publishing.foliole.preview')}
+          <AppButton disabled={state.status === 'viewing'} onClick={state.view}>
+            {t(state.status === 'viewing'
+              ? 'settings.publishing.foliole.localPages.opening'
+              : 'settings.publishing.foliole.localPages.view')}
           </AppButton>
         </SettingsControlSlot>
       </SettingsRow>

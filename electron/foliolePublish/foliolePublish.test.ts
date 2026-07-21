@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-import { connectFoliolePublishSettings, disconnectFoliolePublishSettings, previewFoliolePublish, previewFoliolePublishSite, publishTopicToFoliole, updateFoliolePublishSiteAddress } from './foliolePublish.js';
+import { connectFoliolePublishSettings, disconnectFoliolePublishSettings, previewFoliolePublish, publishTopicToFoliole, updateFoliolePublishSiteAddress, viewFoliolePublishSite } from './foliolePublish.js';
 import { emptyPublishIndex } from './foliolePublishModel.js';
 import { generateFoliolePublishSite } from './foliolePublishSite.js';
 
@@ -156,13 +156,21 @@ it('opens only the managed Publish Preview entry without changing the active Sit
   expect(fs.readFileSync(result.local_path, 'utf8')).toContain('essays');
 });
 
-it('opens the complete stored site preview without requiring a selected Topic', async () => {
+it('opens the active local static pages without regenerating them', async () => {
   const before = activeRss();
-  const result = await previewFoliolePublishSite();
-  expect(result.local_path).toBe(path.join(state.libraryHome, 'Publish', 'Preview', 'index.html'));
+  const result = await viewFoliolePublishSite();
+  expect(result.local_path).toBe(path.join(state.libraryHome, 'Publish', 'Site', 'index.html'));
   expect(mocks.shellOpenPath).toHaveBeenCalledWith(result.local_path);
   expect(activeRss()).toBe(before);
+  expect(fs.existsSync(path.join(state.libraryHome, 'Publish', 'Preview'))).toBe(false);
   expect(fs.readFileSync(result.local_path, 'utf8')).toContain('This is Foliole Publish');
+});
+
+it('does not create a preview when local static pages do not exist', async () => {
+  fs.rmSync(path.join(state.libraryHome, 'Publish', 'Site'), { force: true, recursive: true });
+  await expect(viewFoliolePublishSite()).rejects.toThrow('No local static pages have been generated yet.');
+  expect(mocks.shellOpenPath).not.toHaveBeenCalled();
+  expect(fs.existsSync(path.join(state.libraryHome, 'Publish', 'Preview'))).toBe(false);
 });
 
 it('returns the binding after remote success when the local publish transaction rolls back', async () => {

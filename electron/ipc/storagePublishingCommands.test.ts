@@ -26,11 +26,11 @@ const folioleMocks = vi.hoisted(() => ({
   loadFoliolePublishSettings: vi.fn(),
   openFoliolePublishTheme: vi.fn(),
   previewFoliolePublish: vi.fn(),
-  previewFoliolePublishSite: vi.fn(),
   publishTopicToFoliole: vi.fn(),
   resetFoliolePublishFieldHistory: vi.fn(),
   resetFoliolePublishTheme: vi.fn(),
-  updateFoliolePublishSiteAddress: vi.fn()
+  updateFoliolePublishSiteAddress: vi.fn(),
+  viewFoliolePublishSite: vi.fn()
 }));
 
 vi.mock('../discourse/discoursePublish.js', () => discourseMocks);
@@ -84,9 +84,9 @@ it('routes Web Publish field history and theme actions through narrow commands',
   expect(folioleMocks.resetFoliolePublishTheme).toHaveBeenCalledOnce();
 });
 
-it('routes the site preview without Topic payload data', async () => {
+it('routes viewing the local static pages without Topic payload data', async () => {
   await handlePublishingStorageCommand(NATIVE_COMMANDS.previewFoliolePublishSite, {});
-  expect(folioleMocks.previewFoliolePublishSite).toHaveBeenCalledOnce();
+  expect(folioleMocks.viewFoliolePublishSite).toHaveBeenCalledOnce();
   expect(folioleMocks.previewFoliolePublish).not.toHaveBeenCalled();
 });
 

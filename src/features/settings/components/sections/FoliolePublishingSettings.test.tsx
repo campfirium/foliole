@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
   connectFoliolePublishSettingsToRuntime: vi.fn(),
   disconnectFoliolePublishSettingsFromRuntime: vi.fn(),
   loadFoliolePublishSettingsFromRuntime: vi.fn(),
-  previewFoliolePublishFromRuntime: vi.fn(),
+  viewFoliolePublishSiteFromRuntime: vi.fn(),
   updateFoliolePublishSiteAddressInRuntime: vi.fn()
 }));
 const openExternalUrl = vi.hoisted(() => vi.fn());
@@ -27,7 +27,7 @@ beforeEach(() => {
   Object.values(mocks).forEach((mock) => mock.mockReset());
   openExternalUrl.mockReset();
   mocks.loadFoliolePublishSettingsFromRuntime.mockResolvedValue(EMPTY);
-  mocks.previewFoliolePublishFromRuntime.mockResolvedValue({ local_path: '/Publish/Site/index.html', url: null });
+  mocks.viewFoliolePublishSiteFromRuntime.mockResolvedValue({ local_path: '/Publish/Site/index.html', url: null });
   mocks.disconnectFoliolePublishSettingsFromRuntime.mockResolvedValue(EMPTY);
 });
 
@@ -38,6 +38,14 @@ function renderSettings() {
     </AppConfirmationProvider>
   );
 }
+
+it('presents the generated local static pages as the same content and styling published to the web', async () => {
+  renderSettings();
+  expect(await screen.findByText('Local static pages')).toBeVisible();
+  expect(screen.getByText(/Generated each time you run “Publish to the web” on material/u)).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'View' }));
+  await waitFor(() => expect(mocks.viewFoliolePublishSiteFromRuntime).toHaveBeenCalledOnce());
+});
 
 it('keeps every required Cloudflare value in one setup flow and deploys only on request', async () => {
   renderSettings();

@@ -17,11 +17,11 @@ import {
   loadFoliolePublishSettings,
   openFoliolePublishTheme,
   previewFoliolePublish,
-  previewFoliolePublishSite,
   publishTopicToFoliole,
   resetFoliolePublishFieldHistory,
   resetFoliolePublishTheme,
-  updateFoliolePublishSiteAddress
+  updateFoliolePublishSiteAddress,
+  viewFoliolePublishSite
 } from '../foliolePublish/foliolePublish.js';
 import {
   connectWordPressPublishSettings,
@@ -47,7 +47,7 @@ export async function handlePublishingStorageCommand(command: string, args: Reco
   if (command === NATIVE_COMMANDS.resetFoliolePublishFieldHistory) return resetFoliolePublishFieldHistory();
   if (command === NATIVE_COMMANDS.openFoliolePublishTheme) return openFoliolePublishTheme();
   if (command === NATIVE_COMMANDS.resetFoliolePublishTheme) return resetFoliolePublishTheme();
-  if (command === NATIVE_COMMANDS.previewFoliolePublishSite) return previewFoliolePublishSite();
+  if (command === NATIVE_COMMANDS.previewFoliolePublishSite) return viewFoliolePublishSite();
   if (command === NATIVE_COMMANDS.previewFoliolePublish) {
     return previewFoliolePublish(readSettingsObject(args) as unknown as Parameters<typeof previewFoliolePublish>[0]);
   }

@@ -6,7 +6,7 @@ import {
   connectFoliolePublishSettingsToRuntime,
   disconnectFoliolePublishSettingsFromRuntime,
   loadFoliolePublishSettingsFromRuntime,
-  previewFoliolePublishSiteFromRuntime,
+  viewFoliolePublishSiteFromRuntime,
   updateFoliolePublishSiteAddressInRuntime
 } from '../../../../shared/platform/foliolePublishRepository';
 import { requestAppConfirmation } from '../../../../shared/ui';
@@ -17,7 +17,7 @@ export interface FoliolePublishingForm {
   customDomain: string;
   projectName: string;
 }
-type Status = 'connecting' | 'disconnecting' | 'idle' | 'loading' | 'previewing' | 'updating';
+type Status = 'connecting' | 'disconnecting' | 'idle' | 'loading' | 'updating' | 'viewing';
 const EMPTY: FoliolePublishingForm = { accountId: '', apiToken: '', customDomain: '', projectName: '' };
 
 function customDomain(settings: NativeFoliolePublishSettings) {
@@ -112,10 +112,10 @@ function useConnectionActions(state: LoadedState) {
 }
 
 function siteActions(state: LoadedState) {
-  const preview = async () => {
-    state.setStatus('previewing'); state.setError(null);
-    try { await previewFoliolePublishSiteFromRuntime(); }
-    catch { state.setError("Couldn't open the local preview."); }
+  const view = async () => {
+    state.setStatus('viewing'); state.setError(null);
+    try { await viewFoliolePublishSiteFromRuntime(); }
+    catch { state.setError("Couldn't open the local static pages."); }
     finally { state.setStatus('idle'); }
   };
   const updateSiteAddress = async () => {
@@ -127,7 +127,7 @@ function siteActions(state: LoadedState) {
     }
     finally { state.setStatus('idle'); }
   };
-  return { preview: () => void preview(), updateSiteAddress: () => void updateSiteAddress() };
+  return { updateSiteAddress: () => void updateSiteAddress(), view: () => void view() };
 }
 
 export function useFoliolePublishingSettings() {
