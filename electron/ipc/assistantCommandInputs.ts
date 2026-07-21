@@ -6,6 +6,11 @@ export function readOptionalClientTurnId(value: unknown) {
   return normalizeRequiredString(value, 'client_turn_id');
 }
 
+export function readAssistantAttachmentId(value: unknown) {
+  if (typeof value !== 'string') throw new Error('invalid_assistant_attachment_id');
+  return normalizeRequiredString(value, 'assistant_attachment_id');
+}
+
 export function readOpeningLocation(value: unknown): NativeAssistantThreadOpeningLocation | undefined {
   if (!value || typeof value !== 'object') return undefined;
   const location = value as Record<string, unknown>;

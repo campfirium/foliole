@@ -3,13 +3,14 @@ import type {
   NativeAssistantThreadMessageRecord,
   NativeAssistantThreadOpeningLocation
 } from '../../lib/platform/nativeAssistantContract.js';
+import type { NativeAssistantImageAttachment } from '../../lib/platform/nativeAssistantImageContract.js';
+import { openAssistantHistoryConnection } from '../database/assistantHistoryConnection.js';
 import {
   upsertAssistantThreadIndex
 } from '../database/assistantThreadIndex.js';
 import {
   appendAssistantThreadMessages
 } from '../database/assistantThreadMessages.js';
-import { openDatabaseConnection } from '../database/connection.js';
 
 export function recordAssistantThreadSuccess(input: {
   agentToolVersion: number;
@@ -18,9 +19,10 @@ export function recordAssistantThreadSuccess(input: {
   continuedFromThreadId?: string;
   location: NativeAssistantThreadOpeningLocation;
   message: string;
+  images?: NativeAssistantImageAttachment[];
   result: NativeAssistantMessageResult;
 }) {
-  return openDatabaseConnection().driver.transaction(() => {
+  return openAssistantHistoryConnection().driver.transaction(() => {
     const turnId = input.result.turnId ?? input.clientTurnId;
     if (input.continuedFromThreadId) {
       appendAssistantThreadMessages([{
@@ -28,7 +30,8 @@ export function recordAssistantThreadSuccess(input: {
         id: `${turnId}:user`,
         providerThreadId: input.continuedFromThreadId,
         role: 'user',
-        text: input.message
+        text: input.message,
+        ...(input.images?.length ? { images: input.images } : {})
       }]);
     }
     const threadIndex = upsertAssistantThreadIndex({
@@ -45,13 +48,15 @@ export function recordAssistantThreadSuccess(input: {
         provider: message.provider,
         providerThreadId: input.result.threadId ?? '',
         role: message.role,
-        text: message.text
+        text: message.text,
+        ...(message.images?.length ? { images: message.images } : {})
       })),
       {
         id: `${turnId}:user`,
         providerThreadId: input.result.threadId ?? '',
         role: 'user',
-        text: input.message
+        text: input.message,
+        ...(input.images?.length ? { images: input.images } : {})
       },
       {
         id: `${turnId}:assistant`,

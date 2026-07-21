@@ -60,3 +60,24 @@ it('sends only a material pointer when following is on', async () => {
   expect(payload?.workspaceContext).not.toHaveProperty('folder');
   expect(payload?.workspaceContext).not.toHaveProperty('selection');
 });
+
+it('includes selected image drafts in the native assistant payload', async () => {
+  const node = createAssistantPanelNode({ id: 'node-1', title: 'Current material' });
+  const image = {
+    contentBase64: 'iVBORw0KGgo=',
+    mimeType: 'image/png',
+    originalName: 'diagram.png',
+    sizeBytes: 8
+  };
+  await sendAssistantTurn({
+    activeNodeId: node.id,
+    editorAdapterRef: undefined,
+    followCurrentMaterial: false,
+    location: { nodeId: node.id, type: 'node' },
+    nodesById: { [node.id]: node },
+    selectedRecord: null,
+    selectedThreadId: null
+  }, 'turn-image', 'Describe this', [image]);
+
+  expect(sendAssistantMessage).toHaveBeenCalledWith(expect.objectContaining({ images: [image] }));
+});

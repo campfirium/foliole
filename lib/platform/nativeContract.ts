@@ -1,3 +1,4 @@
+import type { NativeAideStorageCommandMap } from './nativeAideStorageContract.js';
 import type { NativeAssistantCommandMap } from './nativeAssistantContract.js';
 import { NATIVE_COMMANDS } from './nativeCommands.js';
 import type { NativeDiscoursePublishCommandMap } from './nativeDiscoursePublishContract.js';
@@ -36,8 +37,10 @@ export type * from './nativeFoliolePublishContract.js';
 export type * from './nativeReadwiseContract.js'; export type * from './nativeUtilityContract.js'; export type * from './nativeWordPressPublishContract.js';
 export type * from './nativeSourceDispositionContract.js';
 export type * from './nativeInitialLibrarySetupContract.js';
+export type * from './nativeAideStorageContract.js';
+export type * from './nativeAssistantImageContract.js';
 
-export type NativeCommandMap = NativeAssistantCommandMap & NativeDesktopUpdateCommandMap & NativeDisplayScaleCommandMap & NativeUtilityCommandMap & NativeReadwiseCommandMap & NativeExternalSearchCommandMap & NativeFoliolePublishCommandMap & NativeDiscoursePublishCommandMap & NativeWordPressPublishCommandMap & NativeLocalFileCommandMap & NativeSearchIndexCommandMap & NativeSyncCommandMap & NativeImportCommandMap & NativeInitialLibrarySetupCommandMap & NativeRemoteImageCommandMap & NativeMoveCommandMap & NativeTrashCommandMap & {
+export type NativeCommandMap = NativeAssistantCommandMap & NativeAideStorageCommandMap & NativeDesktopUpdateCommandMap & NativeDisplayScaleCommandMap & NativeUtilityCommandMap & NativeReadwiseCommandMap & NativeExternalSearchCommandMap & NativeFoliolePublishCommandMap & NativeDiscoursePublishCommandMap & NativeWordPressPublishCommandMap & NativeLocalFileCommandMap & NativeSearchIndexCommandMap & NativeSyncCommandMap & NativeImportCommandMap & NativeInitialLibrarySetupCommandMap & NativeRemoteImageCommandMap & NativeMoveCommandMap & NativeTrashCommandMap & {
   [NATIVE_COMMANDS.bootReport]: {
     args: {
       stage: string;

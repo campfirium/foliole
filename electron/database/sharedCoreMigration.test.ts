@@ -46,15 +46,13 @@ it('initializes a fresh database with the current schema', () => {
        `SELECT name
        FROM sqlite_master
        WHERE type = 'table' AND name IN (
-         'assistant_thread_index', 'assistant_thread_messages', 'attachment_blobs', 'content_blob_data', 'content_blobs', 'external_documents', 'node_reading_device_state', 'node_sync_conflicts', 'node_sync_versions', 'node_view_state', 'nodes', 'node_reading', 'node_review', 'review_log', 'search_index_invalidations', 'setting_records', 'settings', 'source_disposition_states', 'sync_change_log', 'sync_object_state', 'sync_peer_cursors', 'sync_peers', 'workspace_meta'
+         'attachment_blobs', 'content_blob_data', 'content_blobs', 'external_documents', 'node_reading_device_state', 'node_sync_conflicts', 'node_sync_versions', 'node_view_state', 'nodes', 'node_reading', 'node_review', 'review_log', 'search_index_invalidations', 'setting_records', 'settings', 'source_disposition_states', 'sync_change_log', 'sync_object_state', 'sync_peer_cursors', 'sync_peers', 'workspace_meta'
        )
        ORDER BY name ASC`
     )
     .all() as Array<{ name: string }>;
 
   expect(tables).toEqual([
-    { name: 'assistant_thread_index' },
-    { name: 'assistant_thread_messages' },
     { name: 'attachment_blobs' },
     { name: 'content_blob_data' },
     { name: 'content_blobs' },
@@ -230,26 +228,26 @@ it('adds incoming updates table to existing v48 desktop databases', () => {
   expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
 });
 
-it('adds assistant thread index to existing v50 desktop databases', () => {
+it('retires assistant thread tables after upgrading existing v50 desktop databases', () => {
   const connection = openDatabaseConnection();
   connection.sqlite.pragma('user_version = 50');
 
   initializeDatabaseConnection(connection);
 
   expect(connection.sqlite
-    .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'assistant_thread_index'")
-    .get()).toEqual({ name: 'assistant_thread_index' });
+    .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'assistant_thread_%'")
+    .all()).toEqual([]);
   expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
 });
 
-it('adds assistant thread messages to existing v52 desktop databases', () => {
+it('retires assistant thread tables after upgrading existing v52 desktop databases', () => {
   const connection = openDatabaseConnection();
   connection.sqlite.pragma('user_version = 52');
 
   initializeDatabaseConnection(connection);
 
   expect(connection.sqlite
-    .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'assistant_thread_messages'")
-    .get()).toEqual({ name: 'assistant_thread_messages' });
+    .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'assistant_thread_%'")
+    .all()).toEqual([]);
   expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
 });

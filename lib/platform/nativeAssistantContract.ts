@@ -1,3 +1,8 @@
+import type {
+  NativeAssistantImageAttachment,
+  NativeAssistantImageContentResult,
+  NativeAssistantImageDraft
+} from './nativeAssistantImageContract.js';
 import { NATIVE_COMMANDS } from './nativeCommands.js';
 
 export type NativeAssistantProviderId = 'codex-app-server';
@@ -68,6 +73,7 @@ export interface NativeAssistantThreadMessageRecord {
   providerThreadId: string;
   role: 'assistant' | 'user';
   text: string;
+  images?: NativeAssistantImageAttachment[];
 }
 
 export interface NativeAssistantStatusResult {
@@ -80,6 +86,7 @@ export interface NativeAssistantStatusResult {
 
 export interface NativeAssistantSendMessageArgs {
   clientTurnId?: string;
+  images?: NativeAssistantImageDraft[];
   message: string;
   openingLocation?: NativeAssistantThreadOpeningLocation;
   provider?: NativeAssistantProviderId;
@@ -218,6 +225,10 @@ export type NativeAssistantCommandMap = {
   [NATIVE_COMMANDS.assistantListThreadMessages]: {
     args: NativeAssistantThreadMessageListArgs;
     result: NativeAssistantThreadMessageRecord[];
+  };
+  [NATIVE_COMMANDS.assistantReadImageAttachment]: {
+    args: { attachmentId: string };
+    result: NativeAssistantImageContentResult;
   };
   [NATIVE_COMMANDS.assistantArchiveThreadIndex]: {
     args: NativeAssistantThreadIndexMutationArgs;

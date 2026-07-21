@@ -1,3 +1,4 @@
+import type { NativeAideStorageInfo } from '../../../lib/platform/nativeAideStorageContract';
 import type {
   NativeAssistantSendMessageArgs,
   NativeAssistantSendMessageResult,
@@ -10,6 +11,7 @@ import type {
   NativeAssistantThreadIndexRecord,
   NativeAssistantTurnEvent
 } from '../../../lib/platform/nativeAssistantContract';
+import type { NativeAssistantImageContentResult } from '../../../lib/platform/nativeAssistantImageContract';
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
 import { getElectronAPI } from './electronApi';
@@ -57,6 +59,14 @@ export async function listAssistantThreadMessages(
   return invoke(NATIVE_COMMANDS.assistantListThreadMessages, args);
 }
 
+export async function loadAssistantImageAttachment(
+  attachmentId: string
+): Promise<NativeAssistantImageContentResult | null> {
+  const invoke = getRuntimeInvoke();
+  if (!invoke) return null;
+  return invoke(NATIVE_COMMANDS.assistantReadImageAttachment, { attachmentId });
+}
+
 export async function archiveAssistantThreadIndex(
   args: NativeAssistantThreadIndexMutationArgs
 ): Promise<NativeAssistantThreadIndexRecord | null> {
@@ -71,4 +81,17 @@ export async function removeAssistantThreadFromHistory(
   const invoke = getRuntimeInvoke();
   if (!invoke) return null;
   return invoke(NATIVE_COMMANDS.assistantRemoveThreadFromHistory, args);
+}
+
+export async function loadAssistantStorageInfo(): Promise<NativeAideStorageInfo | null> {
+  const invoke = getRuntimeInvoke();
+  if (!invoke) return null;
+  return invoke(NATIVE_COMMANDS.assistantGetStorageInfo);
+}
+
+export async function openAssistantStorageLocation(): Promise<boolean> {
+  const invoke = getRuntimeInvoke();
+  if (!invoke) return false;
+  await invoke(NATIVE_COMMANDS.assistantOpenStorageLocation);
+  return true;
 }

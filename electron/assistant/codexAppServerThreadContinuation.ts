@@ -41,6 +41,11 @@ export function startContinuedTurn(args: Omit<ThreadContinuationSequenceArgs, 'm
   args.write({
     id: args.allocateId(),
     method: 'turn/start',
-    params: createAideTurnStartParams(args.launcherCwd, args.turn.threadId, args.turn.userMessage)
+    params: createAideTurnStartParams(
+      args.launcherCwd,
+      args.turn.threadId,
+      args.turn.userMessage,
+      args.turn.imagePaths ?? []
+    )
   });
 }

@@ -9,17 +9,23 @@ import type { AssistantMessage } from './workspaceRightSidebarAssistantPanelMode
 
 interface AssistantConversationProps {
   activeMessages: AssistantMessage[];
+  attachImageLabel?: string;
   contextFollowDescription: string;
   contextFollowEnabled: boolean;
   contextFollowLabel: string;
   inputLabel: string;
+  imageErrorText?: string | null;
+  images?: import('../../../lib/platform/nativeAssistantImageContract').NativeAssistantImageDraft[];
   messageText: string;
+  onAddImageFiles?: (files: File[]) => void;
+  onRemoveImage?: (index: number) => void;
   onMessageTextChange: (text: string) => void;
   onToggleContextFollow: () => void;
-  onEditMessage: (text: string) => void;
+  onEditMessage: (message: AssistantMessage) => void;
   onSubmit: (event: FormEvent) => void;
   placeholder: string;
   pendingLabel: string;
+  removeImageLabel?: string;
   sendLabel: string;
   sending: boolean;
   statusLabel: string | null;
@@ -35,8 +41,8 @@ interface AssistantConversationProps {
 
 export function WorkspaceRightSidebarAssistantConversation(props: AssistantConversationProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const editMessage = (text: string) => {
-    props.onEditMessage(text);
+  const editMessage = (message: AssistantMessage) => {
+    props.onEditMessage(message);
     inputRef.current?.focus();
   };
   return (
@@ -59,16 +65,22 @@ export function WorkspaceRightSidebarAssistantConversation(props: AssistantConve
       />
       <div className="px-3 pb-3">
         <WorkspaceRightSidebarAssistantComposer
+          {...(props.attachImageLabel ? { attachImageLabel: props.attachImageLabel } : {})}
           contextFollowDescription={props.contextFollowDescription}
           contextFollowEnabled={props.contextFollowEnabled}
           contextFollowLabel={props.contextFollowLabel}
           inputLabel={props.inputLabel}
           inputRef={inputRef}
+          {...(props.imageErrorText ? { imageErrorText: props.imageErrorText } : {})}
+          {...(props.images ? { images: props.images } : {})}
           messageText={props.messageText}
+          {...(props.onAddImageFiles ? { onAddImageFiles: props.onAddImageFiles } : {})}
           onMessageTextChange={props.onMessageTextChange}
+          {...(props.onRemoveImage ? { onRemoveImage: props.onRemoveImage } : {})}
           onToggleContextFollow={props.onToggleContextFollow}
           onSubmit={props.onSubmit}
           placeholder={props.placeholder}
+          {...(props.removeImageLabel ? { removeImageLabel: props.removeImageLabel } : {})}
           sendLabel={props.sendLabel}
           sending={props.sending}
         />

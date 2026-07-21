@@ -5,6 +5,7 @@ import type {
   NativeAssistantThreadIndexRecord,
   NativeAssistantWorkspaceContext
 } from '../../../lib/platform/nativeAssistantContract';
+import type { NativeAssistantImageDraft } from '../../../lib/platform/nativeAssistantImageContract';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 
 import { useAssistantTurnEventSubscription, type AssistantActiveTurn } from './useAssistantTurnEventSubscription';
@@ -13,6 +14,11 @@ import { useWorkspaceRightSidebarAssistantThreadMessages } from './useWorkspaceR
 import { useWorkspaceRightSidebarAssistantThreads } from './useWorkspaceRightSidebarAssistantThreads';
 import type { WorkspaceLayoutDocumentProps } from './workspaceLayoutPropGroups';
 import { resetPendingAssistantConversation } from './workspaceRightSidebarAssistantConversationReset';
+import {
+  appendAssistantImageFiles,
+  type AssistantImageDraftError
+} from './workspaceRightSidebarAssistantImages';
+import type { AssistantMessage } from './workspaceRightSidebarAssistantMessageModel';
 import {
   messageCacheReducer,
   PENDING_THREAD_KEY,
@@ -39,6 +45,7 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: Assistant
   );
   const threads = useWorkspaceRightSidebarAssistantThreads(args.aideReady);
   const [messageText, setMessageText] = useState('');
+  const imageState = useAssistantImageDraftState(setMessageText);
   const [messagesByThread, dispatchCache] = useReducer(messageCacheReducer, {});
   const [sending, setSending] = useState(false);
   const [followCurrentMaterial, setFollowCurrentMaterial] = useFolioleAideContextFollow();
@@ -57,39 +64,116 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: Assistant
     setSending
   });
 
-  return {
+  return createPanelControllerResult({
     activeMessages,
-    handleRemoveRecord: (record: NativeAssistantThreadIndexRecord) =>
-      removeRecord(record, threads.removeRecord, dispatchCache),
-    handleNewThread: () =>
-      resetPendingAssistantConversation(dispatchCache, setMessageText, threads.selectThreadId),
-    handleSelectRecord: (record: NativeAssistantThreadIndexRecord) => selectRecord(record, args.nodesById, args.onSelectNode, threads.selectThreadId),
-    handleSubmit: createAssistantSubmitHandler(args, {
-      activeTurnRef,
-      dispatchCache,
-      followCurrentMaterial,
-      location,
-      messageText,
-      selectedRecord,
-      sending,
-      setMessageText,
-      setSending,
-      threads
-    }),
-    loading: threads.loading,
+    activeTurnRef,
+    args,
+    dispatchCache,
     followCurrentMaterial,
+    imageState,
+    location,
     messageText,
-    records: threads.records,
-    reloadThreads: threads.reload,
-    removingThreadId: threads.removingThreadId,
-    threadError: threads.error,
-    selectedThreadNotice: getSelectedThreadNotice(selectedRecord, args.nodesById, args.topicUnavailableText),
     selectedRecord,
-    selectedThreadId: threads.selectedThreadId,
     sending,
     setMessageText,
     setFollowCurrentMaterial,
-    threadMessageStatus
+    setSending,
+    threadMessageStatus,
+    threads
+  });
+}
+
+function useAssistantImageDraftState(setMessageText: (text: string) => void) {
+  const [imageDrafts, setImageDrafts] = useState<NativeAssistantImageDraft[]>([]);
+  const [imageError, setImageError] = useState<AssistantImageDraftError | null>(null);
+  return {
+    addImageFiles: async (files: File[]) => {
+      const result = await appendAssistantImageFiles(imageDrafts, files);
+      setImageDrafts(result.images);
+      setImageError(result.error);
+    },
+    editMessage: (message: AssistantMessage) => {
+      setMessageText(message.text);
+      setImageDrafts(message.images ?? []);
+      setImageError(null);
+    },
+    imageDrafts,
+    imageError,
+    removeImage: (index: number) => {
+      setImageDrafts((current) => current.filter((_, itemIndex) => itemIndex !== index));
+      setImageError(null);
+    },
+    reset: () => {
+      setImageDrafts([]);
+      setImageError(null);
+    },
+    setImageDrafts
+  };
+}
+
+type ControllerResultInput = {
+  activeMessages: AssistantMessage[];
+  activeTurnRef: { current: AssistantActiveTurn | null };
+  args: AssistantPanelControllerArgs;
+  dispatchCache: (action: Parameters<typeof messageCacheReducer>[1]) => void;
+  followCurrentMaterial: boolean;
+  imageState: ReturnType<typeof useAssistantImageDraftState>;
+  location: ReturnType<typeof resolveAssistantLocation>;
+  messageText: string;
+  selectedRecord: NativeAssistantThreadIndexRecord | null;
+  sending: boolean;
+  setFollowCurrentMaterial: (value: boolean) => void;
+  setMessageText: (value: string) => void;
+  setSending: (value: boolean) => void;
+  threadMessageStatus: ReturnType<typeof useThreadMessageStatus>;
+  threads: ReturnType<typeof useWorkspaceRightSidebarAssistantThreads>;
+};
+
+function createPanelControllerResult(input: ControllerResultInput) {
+  const { args, imageState, threads } = input;
+  return {
+    activeMessages: input.activeMessages,
+    addImageFiles: imageState.addImageFiles,
+    editMessage: imageState.editMessage,
+    followCurrentMaterial: input.followCurrentMaterial,
+    handleNewThread: () => {
+      imageState.reset();
+      resetPendingAssistantConversation(input.dispatchCache, input.setMessageText, threads.selectThreadId);
+    },
+    handleRemoveRecord: (record: NativeAssistantThreadIndexRecord) =>
+      removeRecord(record, threads.removeRecord, input.dispatchCache),
+    handleSelectRecord: (record: NativeAssistantThreadIndexRecord) =>
+      selectRecord(record, args.nodesById, args.onSelectNode, threads.selectThreadId),
+    handleSubmit: createAssistantSubmitHandler(args, {
+      activeTurnRef: input.activeTurnRef,
+      dispatchCache: input.dispatchCache,
+      followCurrentMaterial: input.followCurrentMaterial,
+      imageDrafts: imageState.imageDrafts,
+      location: input.location,
+      messageText: input.messageText,
+      selectedRecord: input.selectedRecord,
+      sending: input.sending,
+      setImageDrafts: imageState.setImageDrafts,
+      setMessageText: input.setMessageText,
+      setSending: input.setSending,
+      threads
+    }),
+    imageDrafts: imageState.imageDrafts,
+    imageError: imageState.imageError,
+    loading: threads.loading,
+    messageText: input.messageText,
+    records: threads.records,
+    reloadThreads: threads.reload,
+    removeImage: imageState.removeImage,
+    removingThreadId: threads.removingThreadId,
+    selectedRecord: input.selectedRecord,
+    selectedThreadId: threads.selectedThreadId,
+    selectedThreadNotice: getSelectedThreadNotice(input.selectedRecord, args.nodesById, args.topicUnavailableText),
+    sending: input.sending,
+    setFollowCurrentMaterial: input.setFollowCurrentMaterial,
+    setMessageText: input.setMessageText,
+    threadError: threads.error,
+    threadMessageStatus: input.threadMessageStatus
   };
 }
 

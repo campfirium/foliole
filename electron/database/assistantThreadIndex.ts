@@ -8,8 +8,12 @@ import type {
 } from '../../lib/platform/nativeAssistantContract.js';
 import { CURRENT_ASSISTANT_AGENT_TOOL_VERSION } from '../../lib/platform/nativeAssistantContract.js';
 
+import { openAssistantHistoryConnection } from './assistantHistoryConnection.js';
+import {
+  deleteUnreferencedAssistantImageAttachments,
+  listAssistantThreadAttachmentIds
+} from './assistantThreadImages.js';
 import { deleteAssistantThreadMessages } from './assistantThreadMessages.js';
-import { openDatabaseConnection } from './connection.js';
 
 const DEFAULT_PROVIDER: NativeAssistantProviderId = 'codex-app-server';
 const TITLE_LIMIT = 80;
@@ -62,7 +66,7 @@ export function upsertAssistantThreadIndex(
   const provider = input.provider ?? DEFAULT_PROVIDER;
   const row = locationToColumns(location);
 
-  openDatabaseConnection().driver.execute(
+  openAssistantHistoryConnection().driver.execute(
     `INSERT INTO assistant_thread_index (
        provider, provider_thread_id, agent_tool_version, continued_from_thread_id,
        location_type, location_node_id, title, preview,
@@ -105,7 +109,7 @@ export function listAssistantThreadIndex(
   }
   const limit = Math.max(1, Math.min(input.limit ?? 50, 200));
   const where = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
-  return openDatabaseConnection()
+  return openAssistantHistoryConnection()
     .driver.queryAll<AssistantThreadIndexRow>(
       `SELECT * FROM assistant_thread_index ${where}
        ORDER BY updated_at DESC, provider_thread_id ASC
@@ -133,9 +137,20 @@ export function deleteAssistantThreadIndex(
   providerThreadId: string,
   now = new Date().toISOString()
 ) {
-  const record = updateAssistantThreadIndexStatus(providerThreadId, 'deleted', now);
-  deleteAssistantThreadMessages(providerThreadId);
-  return record;
+  return deleteAssistantThreadIndexWithImages(providerThreadId, now).record;
+}
+
+export function deleteAssistantThreadIndexWithImages(
+  providerThreadId: string,
+  now = new Date().toISOString()
+) {
+  return openAssistantHistoryConnection().driver.transaction(() => {
+    const attachmentIds = listAssistantThreadAttachmentIds(providerThreadId);
+    const record = updateAssistantThreadIndexStatus(providerThreadId, 'deleted', now);
+    deleteAssistantThreadMessages(providerThreadId);
+    const unreferencedImages = deleteUnreferencedAssistantImageAttachments(attachmentIds);
+    return { record, unreferencedImages };
+  });
 }
 
 function updateAssistantThreadIndexStatus(
@@ -144,7 +159,7 @@ function updateAssistantThreadIndexStatus(
   now: string
 ) {
   const provider = DEFAULT_PROVIDER;
-  openDatabaseConnection().driver.execute(
+  openAssistantHistoryConnection().driver.execute(
     `UPDATE assistant_thread_index
      SET status = ?, updated_at = ?, archived_at = ?, deleted_at = ?
      WHERE provider = ? AND provider_thread_id = ?`,
@@ -164,7 +179,7 @@ function readAssistantThreadIndexRecord(
   provider: NativeAssistantProviderId,
   providerThreadId: string
 ) {
-  const row = openDatabaseConnection().driver.queryOne<AssistantThreadIndexRow>(
+  const row = openAssistantHistoryConnection().driver.queryOne<AssistantThreadIndexRow>(
     'SELECT * FROM assistant_thread_index WHERE provider = ? AND provider_thread_id = ?',
     [provider, providerThreadId]
   );

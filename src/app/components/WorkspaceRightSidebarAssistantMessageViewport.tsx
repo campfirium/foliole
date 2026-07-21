@@ -9,7 +9,7 @@ import type { AssistantMessage } from './workspaceRightSidebarAssistantPanelMode
 
 export function WorkspaceRightSidebarAssistantMessageViewport(props: {
   messages: AssistantMessage[];
-  onEditMessage: (text: string) => void;
+  onEditMessage: (message: AssistantMessage) => void;
   pendingLabel: string;
   transitionEvent: {
     actionLabel?: string;

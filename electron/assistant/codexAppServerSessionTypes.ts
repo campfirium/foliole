@@ -20,6 +20,7 @@ export interface TurnState {
   dynamicToolCapabilities: string[];
   finish: (result: NativeAssistantSendMessageResult) => void;
   historyInjectRequestId?: number;
+  imagePaths?: string[];
   onEvent?: (event: NativeAssistantTurnEvent) => void;
   providerThreadId?: string;
   text: string;

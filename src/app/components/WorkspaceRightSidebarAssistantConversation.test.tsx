@@ -31,6 +31,6 @@ it('returns a selected user prompt to the focused composer for resending', () =>
 
   fireEvent.click(screen.getByRole('button', { name: 'Edit and resend' }));
 
-  expect(onEditMessage).toHaveBeenCalledWith('Refine this prompt');
+  expect(onEditMessage).toHaveBeenCalledWith({ id: 'user-1', role: 'user', text: 'Refine this prompt' });
   expect(screen.getByRole('textbox', { name: 'Message' })).toHaveFocus();
 });

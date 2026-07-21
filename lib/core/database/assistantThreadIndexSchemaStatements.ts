@@ -48,7 +48,38 @@ export const ASSISTANT_THREAD_MESSAGE_SCHEMA_STATEMENTS = [
     ON assistant_thread_messages (provider, provider_thread_id, created_at, message_id)`
 ];
 
+export const ASSISTANT_IMAGE_SCHEMA_STATEMENTS = [
+  `CREATE TABLE IF NOT EXISTS assistant_image_attachments (
+    attachment_id TEXT PRIMARY KEY,
+    mime_type TEXT NOT NULL,
+    original_name TEXT NOT NULL,
+    size_bytes INTEGER NOT NULL,
+    created_at TEXT NOT NULL,
+    CHECK (mime_type IN ('image/png', 'image/jpeg', 'image/webp')),
+    CHECK (size_bytes > 0)
+  )`,
+  `CREATE TABLE IF NOT EXISTS assistant_thread_message_images (
+    provider TEXT NOT NULL,
+    provider_thread_id TEXT NOT NULL,
+    message_id TEXT NOT NULL,
+    position INTEGER NOT NULL,
+    attachment_id TEXT NOT NULL,
+    PRIMARY KEY (provider, provider_thread_id, message_id, position),
+    UNIQUE (provider, provider_thread_id, message_id, attachment_id),
+    FOREIGN KEY (provider, provider_thread_id, message_id)
+      REFERENCES assistant_thread_messages(provider, provider_thread_id, message_id)
+      ON DELETE CASCADE,
+    FOREIGN KEY (attachment_id)
+      REFERENCES assistant_image_attachments(attachment_id)
+      ON DELETE RESTRICT,
+    CHECK (position >= 0)
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_assistant_message_images_attachment
+    ON assistant_thread_message_images (attachment_id)`
+];
+
 export const ASSISTANT_THREAD_SCHEMA_STATEMENTS = [
   ...ASSISTANT_THREAD_INDEX_SCHEMA_STATEMENTS,
-  ...ASSISTANT_THREAD_MESSAGE_SCHEMA_STATEMENTS
+  ...ASSISTANT_THREAD_MESSAGE_SCHEMA_STATEMENTS,
+  ...ASSISTANT_IMAGE_SCHEMA_STATEMENTS
 ];

@@ -24,6 +24,7 @@ import { settingsSwitchClassName, settingsSwitchKnobClassName } from '../../../.
 import { settingsSearchRowProps } from '../../model/settingsSearch';
 import { useLocalizedSettingsSearchRow } from '../useLocalizedSettingsSearchRows';
 
+import { SettingsAideStorageSection } from './SettingsAideStorageSection';
 import { SettingsCaptureSection } from './SettingsCaptureSection';
 import { SettingsGeneralSystemSection } from './SettingsGeneralSystemSection';
 
@@ -152,6 +153,7 @@ export function SettingsGeneralSection({
         <SearchEnhancementRow />
       </SettingsSection>
       <SettingsCaptureSection />
+      <SettingsAideStorageSection preview={previewDesktopSettings} />
     </>
   );
 }

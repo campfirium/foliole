@@ -3,6 +3,7 @@ import type {
   NativeAssistantTurnEvent,
   NativeAssistantWorkspaceContext
 } from '../../lib/platform/nativeAssistantContract.js';
+import type { StoredAssistantImage } from '../assistant/assistantImageStorage.js';
 import type { CodexAppServerAdapter } from '../assistant/codexAppServerAdapter.js';
 
 import type { prepareAssistantThreadContinuation } from './assistantThreadContinuation.js';
@@ -11,7 +12,8 @@ export async function sendAssistantTurn(input: {
   adapter: CodexAppServerAdapter;
   agentControl: NativeAssistantAgentControlContext;
   clientTurnId: string;
-  continuation: ReturnType<typeof prepareAssistantThreadContinuation>;
+  continuation: Awaited<ReturnType<typeof prepareAssistantThreadContinuation>>;
+  images: StoredAssistantImage[];
   message: string;
   onEvent?: (event: NativeAssistantTurnEvent) => void;
   workspaceContext?: NativeAssistantWorkspaceContext;
@@ -19,6 +21,7 @@ export async function sendAssistantTurn(input: {
   try {
     return await input.adapter.sendMessage({
       clientTurnId: input.clientTurnId,
+      ...(input.images.length ? { imagePaths: input.images.map((image) => image.filePath) } : {}),
       message: input.message,
       ...(input.onEvent ? { onEvent: input.onEvent } : {}),
       ...(input.continuation.continuationMessages

@@ -4,7 +4,9 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
 const CONTRACT_FILES = [
+  'lib/platform/nativeAideStorageContract.ts',
   'lib/platform/nativeAssistantContract.ts',
+  'lib/platform/nativeAssistantImageContract.ts',
   'lib/platform/nativeContract.ts',
   'lib/platform/nativeDiscoursePublishContract.ts',
   'lib/platform/nativeDisplayScaleContract.ts',
@@ -26,6 +28,7 @@ const CONTRACT_FILES = [
 const ELECTRON_HANDLER_FILES = [
   'electron/ipc/assistantCommands.ts',
   'electron/ipc/assistantLocalHistoryCommands.ts',
+  'electron/ipc/assistantStorageCommands.ts',
   'electron/ipc/companionPairingCommands.ts',
   'electron/ipc/displayScaleCommands.ts',
   'electron/ipc/importCommands.ts',

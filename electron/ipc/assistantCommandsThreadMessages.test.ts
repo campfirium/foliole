@@ -42,6 +42,7 @@ vi.mock('./assistantAgentControlStatus.js', () => ({
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
+import { openAssistantHistoryConnection } from '../database/assistantHistoryConnection.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 
 import { handleAssistantCommand, resetAssistantCommandAdapterForTests } from './assistantCommands.js';
@@ -153,7 +154,7 @@ it('continues a version-one tool thread with the current tools and saved history
     message: 'Old question',
     openingLocation: { type: 'workspace' }
   });
-  openDatabaseConnection().driver.execute(
+  openAssistantHistoryConnection().driver.execute(
     'UPDATE assistant_thread_index SET agent_tool_version = 1 WHERE provider_thread_id = ?',
     ['thread-old']
   );

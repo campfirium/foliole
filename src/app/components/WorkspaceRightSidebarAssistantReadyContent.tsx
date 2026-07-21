@@ -14,6 +14,7 @@ import { createAssistantContinuationEvent } from './workspaceRightSidebarAssista
 import { WorkspaceRightSidebarAssistantConversation } from './WorkspaceRightSidebarAssistantConversation';
 import { AssistantPanelToolbar } from './WorkspaceRightSidebarAssistantHeaders';
 import {
+  resolveAssistantImageError,
   resolveAssistantConversationTitle,
   resolveAssistantThreadLoadStatusLabel,
   resolveAssistantThreadPreviewLabel
@@ -76,17 +77,23 @@ function AssistantConversationView(props: {
       ) : null}
       <WorkspaceRightSidebarAssistantConversation
         activeMessages={props.controller.activeMessages}
+        attachImageLabel={t('desktop.rightPanel.assistant.attachImage')}
         contextFollowDescription={t('desktop.rightPanel.assistant.followCurrentMaterialDescription')}
         contextFollowEnabled={props.controller.followCurrentMaterial}
         contextFollowLabel={resolveContextFollowLabel(props, t)}
         inputLabel={t('desktop.rightPanel.assistant.input')}
+        imageErrorText={resolveAssistantImageError(props.controller, t)}
+        images={props.controller.imageDrafts}
         messageText={props.controller.messageText}
-        onEditMessage={props.controller.setMessageText}
+        onAddImageFiles={(files) => void props.controller.addImageFiles(files)}
+        onEditMessage={props.controller.editMessage}
         onMessageTextChange={props.controller.setMessageText}
+        onRemoveImage={props.controller.removeImage}
         onToggleContextFollow={() => props.controller.setFollowCurrentMaterial(!props.controller.followCurrentMaterial)}
         onSubmit={props.controller.handleSubmit}
         placeholder={t('desktop.rightPanel.assistant.placeholder')}
         pendingLabel={t('desktop.rightPanel.assistant.pending')}
+        removeImageLabel={t('desktop.rightPanel.assistant.removeImage')}
         sendLabel={t('desktop.rightPanel.assistant.send')}
         sending={props.controller.sending}
         statusLabel={resolveAssistantThreadLoadStatusLabel(props.controller, t)}
@@ -111,15 +118,21 @@ function AssistantHomeView(props: {
       </div>
       <div className={`${inspectorListInsetPaddingClassName} shrink-0 pb-3 pt-2`}>
         <WorkspaceRightSidebarAssistantComposer
+          attachImageLabel={t('desktop.rightPanel.assistant.attachImage')}
           contextFollowDescription={t('desktop.rightPanel.assistant.followCurrentMaterialDescription')}
           contextFollowEnabled={props.controller.followCurrentMaterial}
           contextFollowLabel={resolveContextFollowLabel(props, t)}
           inputLabel={t('desktop.rightPanel.assistant.input')}
+          imageErrorText={resolveAssistantImageError(props.controller, t)}
+          images={props.controller.imageDrafts}
           messageText={props.controller.messageText}
+          onAddImageFiles={(files) => void props.controller.addImageFiles(files)}
           onMessageTextChange={props.controller.setMessageText}
+          onRemoveImage={props.controller.removeImage}
           onToggleContextFollow={() => props.controller.setFollowCurrentMaterial(!props.controller.followCurrentMaterial)}
           onSubmit={props.controller.handleSubmit}
           placeholder={t('desktop.rightPanel.assistant.placeholder')}
+          removeImageLabel={t('desktop.rightPanel.assistant.removeImage')}
           sendLabel={t('desktop.rightPanel.assistant.send')}
           sending={props.controller.sending}
         />

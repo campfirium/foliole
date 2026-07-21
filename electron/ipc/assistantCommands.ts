@@ -9,13 +9,18 @@ import type {
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { resolveFolioleAppVersion } from '../appVersion.js';
 import {
+  persistAssistantImages,
+  type StoredAssistantImage
+} from '../assistant/assistantImageStorage.js';
+import { validateAssistantImageDrafts } from '../assistant/assistantImageValidation.js';
+import {
   createAssistantFailure,
   createAssistantStatus
 } from '../assistant/codexAppServerAdapterSupport.js';
+import { runWithAssistantHistoryConnectionOwner } from '../database/assistantHistoryConnection.js';
 import {
   getAssistantThreadIndex
 } from '../database/assistantThreadIndex.js';
-import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 
 import {
   disposeAssistantCommandAdapter,
@@ -30,10 +35,10 @@ import {
 } from './assistantCommandInputs.js';
 import { handleAssistantLocalHistoryCommand } from './assistantLocalHistoryCommands.js';
 import { sendAssistantTurn } from './assistantSendTurn.js';
+import { handleAssistantStorageCommand } from './assistantStorageCommands.js';
 import { prepareAssistantThreadContinuation } from './assistantThreadContinuation.js';
-import { recordAssistantThreadSuccess } from './assistantThreadPersistence.js';
+import { finishAssistantTurn } from './assistantTurnResult.js';
 import { readOptionalWorkspaceContext } from './assistantWorkspaceContextReader.js';
-
 const IPC_ASSISTANT_TURN_EVENT_CHANNEL = 'foliole:assistant-turn-event';
 export { disposeAssistantCommandAdapter, resetAssistantCommandAdapterForTests };
 
@@ -45,7 +50,7 @@ export async function handleAssistantCommand(
   if (command === NATIVE_COMMANDS.assistantGetStatus) return getAssistantStatus();
   if (command === NATIVE_COMMANDS.assistantStartChatGptLogin) return startChatGptLogin();
   if (command === NATIVE_COMMANDS.assistantSendMessage) return sendMessage(args, sender);
-  return handleAssistantLocalHistoryCommand(command, args);
+  return handleAssistantLocalHistoryCommand(command, args) ?? handleAssistantStorageCommand(command);
 }
 
 async function getAssistantStatus() {
@@ -73,72 +78,60 @@ async function sendMessage(args: Record<string, unknown>, sender?: WebContents) 
   let openingLocation: NativeAssistantThreadOpeningLocation | undefined;
   let providerThreadId: string | undefined;
   let workspaceContext: NativeAssistantWorkspaceContext | undefined;
+  let validatedImages: ReturnType<typeof validateAssistantImageDrafts>;
   try {
     clientTurnId = readOptionalClientTurnId(args.clientTurnId) ?? createClientTurnId();
     openingLocation = readOpeningLocation(args.openingLocation);
     providerThreadId = readOptionalProviderThreadId(args.providerThreadId);
     workspaceContext = readOptionalWorkspaceContext(args.workspaceContext);
+    validatedImages = validateAssistantImageDrafts(args.images);
   } catch {
     return assistantProtocolFailure();
   }
-  if (!await isThreadLocationAllowed(providerThreadId, openingLocation)) {
-    return assistantProtocolFailure();
-  }
+  if (!await isThreadLocationAllowed(providerThreadId, openingLocation)) return assistantProtocolFailure();
   const agentControl = await loadAssistantAgentControlContext(resolveFolioleAppVersion(app));
-  let continuation: ReturnType<typeof prepareAssistantThreadContinuation>;
+  let continuation: Awaited<ReturnType<typeof prepareAssistantThreadContinuation>>;
   try {
-    continuation = await runWithDatabaseConnectionOwner(
+    continuation = await runWithAssistantHistoryConnectionOwner(
       () => prepareAssistantThreadContinuation(providerThreadId, agentControl)
     );
   } catch {
     return assistantProtocolFailure();
   }
+  const assistantAdapter = readAssistantAdapter();
+  if (!assistantAdapter) return createAssistantFailure('failed', 'launch_failed');
+  let images: StoredAssistantImage[];
+  try {
+    images = await persistAssistantImages(validatedImages);
+  } catch {
+    return assistantProtocolFailure();
+  }
   const result = await sendAssistantTurn({
     agentControl,
-    adapter: getAssistantAdapter(),
+    adapter: assistantAdapter,
     clientTurnId,
     continuation,
+    images,
     message,
     ...(sender ? { onEvent: createAssistantTurnEventSender(sender, clientTurnId) } : {}),
     ...(workspaceContext ? { workspaceContext } : {})
   });
-  if (!result) return assistantProtocolFailure();
-  const readyMessage = result.message;
-  if (result.state !== 'ready' || !openingLocation || !readyMessage?.threadId) return result;
-  if (typeof readyMessage.text === 'string' && !readyMessage.text.trim()) return assistantProtocolFailure();
-  try {
-    const threadIndex = await runWithDatabaseConnectionOwner(() => recordAssistantThreadSuccess({
-      agentToolVersion: continuation.agentToolVersion,
-      clientTurnId,
-      ...createContinuationPersistenceInput(continuation),
-      location: openingLocation,
-      message,
-      result: readyMessage
-    }));
-    return {
-      ...result,
-      threadIndex
-    };
-  } catch {
-    return {
-      failure: { category: 'persistence_failed' as const },
-      provider: result.provider,
-      state: 'failed' as const
-    };
-  }
+  return finishAssistantTurn({
+    clientTurnId,
+    continuation,
+    images,
+    message,
+    ...(openingLocation ? { openingLocation } : {}),
+    result
+  });
 }
 
-function createContinuationPersistenceInput(
-  continuation: ReturnType<typeof prepareAssistantThreadContinuation>
-) {
-  return {
-    ...(continuation.continuationMessages
-      ? { continuationMessages: continuation.continuationMessages }
-      : {}),
-    ...(continuation.continuedFromThreadId
-      ? { continuedFromThreadId: continuation.continuedFromThreadId }
-      : {})
-  };
+function readAssistantAdapter() {
+  try {
+    return getAssistantAdapter();
+  } catch {
+    return null;
+  }
 }
 
 function assistantProtocolFailure() {
@@ -167,7 +160,7 @@ async function isThreadLocationAllowed(
   if (!providerThreadId) return true;
   if (!openingLocation) return false;
   try {
-    const existing = await runWithDatabaseConnectionOwner(() => getAssistantThreadIndex(providerThreadId));
+    const existing = await runWithAssistantHistoryConnectionOwner(() => getAssistantThreadIndex(providerThreadId));
     return areOpeningLocationsEqual(existing.location, openingLocation);
   } catch {
     return false;

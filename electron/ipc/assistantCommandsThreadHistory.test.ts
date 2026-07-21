@@ -34,6 +34,7 @@ vi.mock('../assistant/codexAppServerAdapter.js', () => ({
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
+import { openAssistantHistoryConnection } from '../database/assistantHistoryConnection.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 
@@ -105,7 +106,7 @@ it('keeps the legacy delete-thread command as a local history removal alias', as
 
 it('queues local history reads behind an active asynchronous database transaction', async () => {
   const gate = createGate();
-  const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite, { name: 'history-owner-test' });
+  const port = createBetterSqliteDbPort(openAssistantHistoryConnection().sqlite, { name: 'history-owner-test' });
   const transaction = port.transaction(async () => {
     gate.enter();
     await gate.wait;

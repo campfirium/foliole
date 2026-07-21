@@ -34,3 +34,14 @@ export function resolveAssistantThreadLoadStatusLabel(
     ? t('desktop.rightPanel.assistant.threadMessagesLoadFailed')
     : null;
 }
+
+export function resolveAssistantImageError(
+  controller: AssistantController,
+  t: Translation
+) {
+  if (controller.imageError === 'count') return t('desktop.rightPanel.assistant.imageError.count');
+  if (controller.imageError === 'size') return t('desktop.rightPanel.assistant.imageError.size');
+  if (controller.imageError === 'type') return t('desktop.rightPanel.assistant.imageError.type');
+  if (controller.imageError === 'read') return t('desktop.rightPanel.assistant.imageError.read');
+  return null;
+}

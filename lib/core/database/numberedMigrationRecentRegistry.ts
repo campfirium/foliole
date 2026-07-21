@@ -91,5 +91,12 @@ export const RECENT_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
       addColumnIfMissing(sqlite, 'assistant_thread_index', 'agent_tool_version', 'INTEGER NOT NULL DEFAULT 0');
       addColumnIfMissing(sqlite, 'assistant_thread_index', 'continued_from_thread_id', 'TEXT');
     }
+  },
+  {
+    version: 58,
+    migrate: (sqlite) => {
+      sqlite.exec('DROP TABLE IF EXISTS assistant_thread_messages');
+      sqlite.exec('DROP TABLE IF EXISTS assistant_thread_index');
+    }
   }
 ];

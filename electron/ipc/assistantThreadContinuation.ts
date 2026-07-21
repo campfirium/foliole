@@ -2,13 +2,23 @@ import {
   CURRENT_ASSISTANT_AGENT_TOOL_VERSION,
   type NativeAssistantAgentControlContext
 } from '../../lib/platform/nativeAssistantContract.js';
+import { readAssistantImageContent } from '../assistant/assistantImageStorage.js';
+import type { AssistantContinuationMessage } from '../assistant/codexAppServerThreadHistory.js';
 import { getAssistantThreadIndex } from '../database/assistantThreadIndex.js';
 import { listAssistantThreadMessages } from '../database/assistantThreadMessages.js';
 
-export function prepareAssistantThreadContinuation(
+export type PreparedAssistantThreadContinuation = {
+  agentToolVersion: number;
+  continuationMessages?: AssistantContinuationMessage[];
+  continuedFromThreadId?: string;
+  persistedContinuationMessages?: ReturnType<typeof listAssistantThreadMessages>;
+  providerThreadId?: string;
+};
+
+export async function prepareAssistantThreadContinuation(
   providerThreadId: string | undefined,
   agentControl: NativeAssistantAgentControlContext
-) {
+): Promise<PreparedAssistantThreadContinuation> {
   if (!providerThreadId) return {
     agentToolVersion: resolveAttachedToolVersion(agentControl)
   };
@@ -17,13 +27,29 @@ export function prepareAssistantThreadContinuation(
     agentToolVersion: record.agentToolVersion,
     providerThreadId
   };
-  const continuationMessages = listAssistantThreadMessages(providerThreadId);
-  if (!continuationMessages.length) throw new Error('assistant_thread_history_unavailable');
+  const persistedContinuationMessages = listAssistantThreadMessages(providerThreadId);
+  if (!persistedContinuationMessages.length) throw new Error('assistant_thread_history_unavailable');
+  const continuationMessages = await hydrateContinuationImages(persistedContinuationMessages);
   return {
     agentToolVersion: CURRENT_ASSISTANT_AGENT_TOOL_VERSION,
     continuationMessages,
-    continuedFromThreadId: providerThreadId
+    continuedFromThreadId: providerThreadId,
+    persistedContinuationMessages
   };
+}
+
+async function hydrateContinuationImages(
+  messages: ReturnType<typeof listAssistantThreadMessages>
+): Promise<AssistantContinuationMessage[]> {
+  return Promise.all(messages.map(async (message) => {
+    if (!message.images?.length) return { role: message.role, text: message.text };
+    const images = await Promise.all(message.images.map(async (image) => {
+      const content = await readAssistantImageContent(image.id);
+      if (content.status !== 'ready') throw new Error('assistant_thread_image_unavailable');
+      return { ...image, contentBase64: content.contentBase64 };
+    }));
+    return { images, role: message.role, text: message.text };
+  }));
 }
 
 function resolveAttachedToolVersion(agentControl: NativeAssistantAgentControlContext) {

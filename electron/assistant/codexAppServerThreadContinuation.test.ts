@@ -15,31 +15,26 @@ it('injects saved history before continuing in a new tool-enabled thread', async
     spawnCommand: () => process,
     timeoutMs: 1000
   });
-  const seenMethods: string[] = [];
-  let injectedItems: unknown[] = [];
-  process.stdin.on('data', (chunk) => {
-    for (const line of String(chunk).trim().split('\n').filter(Boolean)) {
-      const message = JSON.parse(line);
-      seenMethods.push(message.method);
-      if (message.method === 'initialize') writeMessage(process, { id: 0, result: {} });
-      if (message.method === 'thread/start') {
-        expect(message.params.dynamicTools).toHaveLength(1);
-        writeMessage(process, { id: message.id, result: { thread: { id: 'thr_new' } } });
-      }
-      if (message.method === 'thread/inject_items') {
-        injectedItems = message.params.items;
-        writeMessage(process, { id: message.id, result: {} });
-      }
-      if (message.method === 'turn/start') completeTurn(process);
-    }
-  });
+  const observed = { injectedItems: [] as unknown[], seenMethods: [] as string[], turnInput: [] as unknown[] };
+  process.stdin.on('data', createContinuationResponder(process, observed));
 
   await expect(adapter.sendMessage({
     clientTurnId: 'client-continue',
     continuationMessages: [
-      { role: 'user', text: 'Old question' },
+      {
+        images: [{
+          contentBase64: 'iVBORw0KGgo=',
+          id: 'a'.repeat(64),
+          mimeType: 'image/png',
+          originalName: 'old.png',
+          sizeBytes: 8
+        }],
+        role: 'user',
+        text: 'Old question'
+      },
       { role: 'assistant', text: 'Old answer' }
     ],
+    imagePaths: ['C:\\Foliole Aide\\Workspace\\Attachments\\current.png'],
     message: 'Continue now',
     workspaceContext: {
       agentControl: { capabilities: ['materials.read'], state: 'running' },
@@ -47,14 +42,50 @@ it('injects saved history before continuing in a new tool-enabled thread', async
       scope: 'workspace'
     }
   })).resolves.toMatchObject({ message: { text: 'Continued', threadId: 'thr_new' }, state: 'ready' });
-  expect(seenMethods).toEqual([
+  expect(observed.seenMethods).toEqual([
     'initialize', 'initialized', 'thread/start', 'thread/inject_items', 'turn/start'
   ]);
-  expect(injectedItems).toEqual([
-    { content: [{ text: 'Old question', type: 'input_text' }], role: 'user', type: 'message' },
+  expect(observed.turnInput).toEqual([
+    { text: expect.stringContaining('Continue now'), type: 'text' },
+    { path: 'C:\\Foliole Aide\\Workspace\\Attachments\\current.png', type: 'localImage' }
+  ]);
+  expect(observed.injectedItems).toEqual([
+    {
+      content: [
+        { text: 'Old question', type: 'input_text' },
+        { image_url: 'data:image/png;base64,iVBORw0KGgo=', type: 'input_image' }
+      ],
+      role: 'user',
+      type: 'message'
+    },
     { content: [{ text: 'Old answer', type: 'output_text' }], role: 'assistant', type: 'message' }
   ]);
 });
+
+function createContinuationResponder(
+  process: FakeCodexProcess,
+  observed: { injectedItems: unknown[]; seenMethods: string[]; turnInput: unknown[] }
+) {
+  return (chunk: unknown) => {
+    for (const line of String(chunk).trim().split('\n').filter(Boolean)) {
+      const message = JSON.parse(line);
+      observed.seenMethods.push(message.method);
+      if (message.method === 'initialize') writeMessage(process, { id: 0, result: {} });
+      if (message.method === 'thread/start') {
+        expect(message.params.dynamicTools).toHaveLength(1);
+        writeMessage(process, { id: message.id, result: { thread: { id: 'thr_new' } } });
+      }
+      if (message.method === 'thread/inject_items') {
+        observed.injectedItems = message.params.items;
+        writeMessage(process, { id: message.id, result: {} });
+      }
+      if (message.method === 'turn/start') {
+        observed.turnInput = message.params.input;
+        completeTurn(process);
+      }
+    }
+  };
+}
 
 function completeTurn(process: FakeCodexProcess) {
   writeMessage(process, { method: 'turn/started', params: { turn: { id: 'turn_new' } } });

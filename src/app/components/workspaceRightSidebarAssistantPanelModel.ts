@@ -1,26 +1,18 @@
 import type {
   NativeAssistantSendMessageResult,
-  NativeAssistantThreadMessageRecord,
   NativeAssistantThreadIndexRecord,
   NativeAssistantThreadOpeningLocation,
   NativeAssistantWorkspaceContext
 } from '../../../lib/platform/nativeAssistantContract';
+import type { NativeAssistantImageDraft } from '../../../lib/platform/nativeAssistantImageContract';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 
 import { resolveAssistantWorkspaceContext } from './workspaceRightSidebarAssistantContext';
+import type { AssistantMessage } from './workspaceRightSidebarAssistantMessageModel';
 
 export { resolveAssistantWorkspaceContext };
-
-export interface AssistantMessage {
-  activity?: 'thinking';
-  createdAt?: string;
-  failureText?: string;
-  id: string;
-  role: 'assistant' | 'user';
-  state?: 'failed' | 'pending' | 'ready';
-  text: string;
-}
+export type { AssistantMessage } from './workspaceRightSidebarAssistantMessageModel';
 
 export type MessageCache = Record<string, AssistantMessage[]>;
 
@@ -107,18 +99,6 @@ export function resolveAssistantTurnWorkspaceContext(args: {
   );
 }
 
-export function threadMessagesToAssistantMessages(
-  records: NativeAssistantThreadMessageRecord[]
-): AssistantMessage[] {
-  return records.map((record) => ({
-    createdAt: record.createdAt,
-    id: record.id,
-    role: record.role,
-    state: 'ready',
-    text: record.text
-  }));
-}
-
 export function upsertRecord(
   records: NativeAssistantThreadIndexRecord[],
   nextRecord: NativeAssistantThreadIndexRecord
@@ -129,12 +109,18 @@ export function upsertRecord(
   ];
 }
 
-export function createUserMessageAction(key: string, pendingId: string, text: string) {
+export function createUserMessageAction(
+  key: string,
+  pendingId: string,
+  text: string,
+  images: NativeAssistantImageDraft[] = []
+) {
   return {
     key,
     message: {
       createdAt: new Date().toISOString(),
       id: `user-${pendingId}`,
+      ...(images.length ? { images } : {}),
       role: 'user' as const,
       state: 'ready' as const,
       text

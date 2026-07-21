@@ -77,3 +77,65 @@ it('exposes the current material mode as a switch', () => {
   fireEvent.click(toggle);
   expect(onToggle).toHaveBeenCalledOnce();
 });
+
+it('shows attached image previews and removes them', () => {
+  const onRemoveImage = vi.fn();
+  renderWithLocalization(
+    <WorkspaceRightSidebarAssistantComposer
+      contextFollowDescription="Attach current material"
+      contextFollowEnabled
+      contextFollowLabel="Following: Topic"
+      images={[{
+        contentBase64: 'iVBORw0KGgo=',
+        mimeType: 'image/png',
+        originalName: 'diagram.png',
+        sizeBytes: 8
+      }]}
+      inputLabel="Message"
+      messageText="Describe this"
+      onMessageTextChange={vi.fn()}
+      onRemoveImage={onRemoveImage}
+      onToggleContextFollow={vi.fn()}
+      onSubmit={vi.fn()}
+      placeholder="Ask"
+      removeImageLabel="Remove image"
+      sendLabel="Send"
+      sending={false}
+    />
+  );
+
+  expect(screen.getByRole('img', { name: 'diagram.png' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Remove image: diagram.png' }));
+  expect(onRemoveImage).toHaveBeenCalledWith(0);
+});
+
+it('accepts pasted and dropped image files through the shared image entry', () => {
+  const onAddImageFiles = vi.fn();
+  const { container } = renderWithLocalization(
+    <WorkspaceRightSidebarAssistantComposer
+      contextFollowDescription="Attach current material"
+      contextFollowEnabled
+      contextFollowLabel="Following: Topic"
+      inputLabel="Message"
+      messageText="Describe this"
+      onAddImageFiles={onAddImageFiles}
+      onMessageTextChange={vi.fn()}
+      onToggleContextFollow={vi.fn()}
+      onSubmit={vi.fn()}
+      placeholder="Ask"
+      sendLabel="Send"
+      sending={false}
+    />
+  );
+  const file = new File(['png'], 'diagram.png', { type: 'image/png' });
+
+  fireEvent.paste(screen.getByRole('textbox', { name: 'Message' }), {
+    clipboardData: { files: [file] }
+  });
+  fireEvent.drop(container.querySelector('form') as HTMLFormElement, {
+    dataTransfer: { files: [file] }
+  });
+
+  expect(onAddImageFiles).toHaveBeenNthCalledWith(1, [file]);
+  expect(onAddImageFiles).toHaveBeenNthCalledWith(2, [file]);
+});

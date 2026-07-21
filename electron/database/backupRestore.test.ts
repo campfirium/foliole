@@ -148,7 +148,7 @@ it('stamps a restore incarnation before minting post-restore node sync versions'
   expect(selectSettingSyncRecordCount('desktop_node_sync_restore_incarnation')).toBe(0);
 });
 
-it('restores local assistant transcript messages from the backup snapshot', async () => {
+it('leaves device-local assistant history unchanged when restoring the main database', async () => {
   upsertAssistantThreadIndex({
     location: { nodeId: 'node-1', type: 'node' },
     message: 'Before backup',
@@ -187,7 +187,8 @@ it('restores local assistant transcript messages from the backup snapshot', asyn
 
   expect(listAssistantThreadMessages('thread-1').map((message) => message.text)).toEqual([
     'Before backup',
-    'Persisted answer'
+    'Persisted answer',
+    'Later drift'
   ]);
 });
 

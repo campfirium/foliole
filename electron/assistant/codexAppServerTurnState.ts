@@ -12,6 +12,7 @@ import type { AssistantContinuationMessage } from './codexAppServerThreadHistory
 export interface SendMessageArgs {
   clientTurnId: string;
   continuationMessages?: AssistantContinuationMessage[];
+  imagePaths?: string[];
   message: string;
   onEvent?: (event: NativeAssistantTurnEvent) => void;
   providerThreadId?: string;
@@ -30,6 +31,7 @@ export function createTurnState(
     ...(args.continuationMessages ? { continuationMessages: args.continuationMessages } : {}),
     dynamicToolCapabilities: resolveDynamicToolCapabilities(args.workspaceContext),
     finish,
+    imagePaths: args.imagePaths ?? [],
     ...(args.onEvent ? { onEvent: args.onEvent } : {}),
     ...(args.providerThreadId ? { providerThreadId: args.providerThreadId } : {}),
     text: '',

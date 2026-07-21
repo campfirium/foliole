@@ -19,6 +19,11 @@ it('uses the app-server sandbox policy wire values', () => {
   expect(createAideTurnStartParams('/widgets', 'thread-1', 'Hello')).toMatchObject({
     sandboxPolicy: { networkAccess: 'restricted', type: 'externalSandbox' }
   });
+  expect(createAideTurnStartParams('/widgets', 'thread-1', 'Describe this', ['/widgets/image.png']).input)
+    .toEqual([
+      { text: 'Describe this', type: 'text' },
+      { path: '/widgets/image.png', type: 'localImage' }
+    ]);
 });
 
 it('registers only Foliole Aide managed skill roots', () => {

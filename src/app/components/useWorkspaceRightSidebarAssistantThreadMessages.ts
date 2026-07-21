@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 
-import { listAssistantThreadMessages } from '../../shared/platform/assistantRuntime';
+import {
+  listAssistantThreadMessages,
+  loadAssistantImageAttachment
+} from '../../shared/platform/assistantRuntime';
 
+import { threadMessagesToAssistantMessages } from './workspaceRightSidebarAssistantMessageModel';
 import {
   messageCacheReducer,
-  threadMessagesToAssistantMessages,
   type MessageCache
 } from './workspaceRightSidebarAssistantPanelModel';
 
@@ -45,5 +48,16 @@ export function useWorkspaceRightSidebarAssistantThreadMessages(args: {
 async function loadLocalThreadMessages(threadId: string) {
   const records = await listAssistantThreadMessages({ providerThreadId: threadId });
   if (!records) throw new Error('assistant_thread_messages_unavailable');
-  return threadMessagesToAssistantMessages(records);
+  const messages = threadMessagesToAssistantMessages(records);
+  await Promise.all(records.map(async (record, index) => {
+    if (!record.images?.length) return;
+    const message = messages[index];
+    if (!message) throw new Error('assistant_thread_message_unavailable');
+    message.images = await Promise.all(record.images.map(async (image) => {
+      const content = await loadAssistantImageAttachment(image.id);
+      if (!content || content.status !== 'ready') throw new Error('assistant_thread_image_unavailable');
+      return { ...image, contentBase64: content.contentBase64 };
+    }));
+  }));
+  return messages;
 }

@@ -65,6 +65,8 @@ function shouldWaitForDatabaseReady(command: string, route: CommandRouteFamily) 
   return command !== NATIVE_COMMANDS.bootReport &&
     command !== NATIVE_COMMANDS.assistantGetStatus &&
     command !== NATIVE_COMMANDS.assistantStartChatGptLogin &&
+    command !== NATIVE_COMMANDS.assistantGetStorageInfo &&
+    command !== NATIVE_COMMANDS.assistantOpenStorageLocation &&
     route !== 'update' &&
     route !== 'windowAndUtility';
 }

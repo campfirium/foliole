@@ -25,7 +25,7 @@ it('keeps user prompts in a bubble and renders assistant Markdown as unframed co
   const userRow = container.querySelector('[data-message-role="user"]');
   expect(userRow?.querySelector('p')).toHaveClass('rounded-lg');
   fireEvent.click(screen.getByRole('button', { name: 'Edit and resend' }));
-  expect(onEditMessage).toHaveBeenCalledWith('User prompt');
+  expect(onEditMessage).toHaveBeenCalledWith({ id: 'user-1', role: 'user', text: 'User prompt' });
 
   rerender(
     <WorkspaceRightSidebarAssistantMessageRow

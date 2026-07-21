@@ -33,7 +33,7 @@ afterEach(async () => {
   await fs.rm(tempRoot, { force: true, recursive: true });
 });
 
-it('marks existing assistant threads as legacy when adding Agent tool metadata', () => {
+it('applies the legacy metadata migration before retiring main-library assistant history', () => {
   const connection = openDatabaseConnection();
   connection.sqlite.exec(`${legacyThreadIndexSchema()}
     INSERT INTO assistant_thread_index (
@@ -49,8 +49,8 @@ it('marks existing assistant threads as legacy when adding Agent tool metadata',
   initializeDatabaseConnection(connection);
 
   expect(connection.sqlite.prepare(
-    'SELECT agent_tool_version, continued_from_thread_id FROM assistant_thread_index'
-  ).get()).toEqual({ agent_tool_version: 0, continued_from_thread_id: null });
+    "SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'assistant_thread_%'"
+  ).all()).toEqual([]);
   expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
 });
 

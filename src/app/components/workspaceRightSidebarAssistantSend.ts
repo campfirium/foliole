@@ -2,6 +2,7 @@ import type {
   NativeAssistantThreadIndexRecord,
   NativeAssistantWorkspaceContext
 } from '../../../lib/platform/nativeAssistantContract';
+import type { NativeAssistantImageDraft } from '../../../lib/platform/nativeAssistantImageContract';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { sendAssistantMessage } from '../../shared/platform/assistantRuntime';
 
@@ -11,7 +12,12 @@ import {
 } from './workspaceRightSidebarAssistantPanelModel';
 import { resolveAssistantTurnReferenceContext } from './workspaceRightSidebarAssistantReferenceContext';
 
-export async function sendAssistantTurn(args: AssistantSendTurnArgs, clientTurnId: string, message: string) {
+export async function sendAssistantTurn(
+  args: AssistantSendTurnArgs,
+  clientTurnId: string,
+  message: string,
+  images: NativeAssistantImageDraft[] = []
+) {
   const openingLocation = args.selectedRecord?.location ?? args.location;
   const workspaceContext = resolveAssistantTurnReferenceContext({
     followCurrentMaterial: args.followCurrentMaterial,
@@ -21,6 +27,7 @@ export async function sendAssistantTurn(args: AssistantSendTurnArgs, clientTurnI
   });
   return sendAssistantMessage({
     clientTurnId,
+    ...(images.length ? { images } : {}),
     message,
     openingLocation,
     workspaceContext,

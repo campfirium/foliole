@@ -127,6 +127,7 @@ export class CodexAppServerAdapter {
   async sendMessage(input: {
     clientTurnId: string;
     continuationMessages?: AssistantContinuationMessage[];
+    imagePaths?: string[];
     message: string;
     onEvent?: (event: NativeAssistantTurnEvent) => void;
     providerThreadId?: string;
@@ -153,6 +154,7 @@ export class CodexAppServerAdapter {
       return await this.session.sendMessage({
         clientTurnId: input.clientTurnId,
         ...(input.continuationMessages ? { continuationMessages: input.continuationMessages } : {}),
+        ...(input.imagePaths?.length ? { imagePaths: input.imagePaths } : {}),
         message,
         ...(input.onEvent ? { onEvent: input.onEvent } : {}),
         ...(providerThreadId ? { providerThreadId } : {}),

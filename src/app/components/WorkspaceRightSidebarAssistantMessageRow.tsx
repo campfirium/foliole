@@ -1,12 +1,13 @@
 import { LoaderCircle } from 'lucide-react';
 
+import { WorkspaceRightSidebarAssistantImageStrip } from './WorkspaceRightSidebarAssistantImageStrip';
 import { WorkspaceRightSidebarAssistantMarkdown } from './WorkspaceRightSidebarAssistantMarkdown';
 import { WorkspaceRightSidebarAssistantMessageActions } from './WorkspaceRightSidebarAssistantMessageActions';
 import type { AssistantMessage } from './workspaceRightSidebarAssistantPanelModel';
 
 export function WorkspaceRightSidebarAssistantMessageRow(props: {
   message: AssistantMessage;
-  onEditMessage?: (text: string) => void;
+  onEditMessage?: (message: AssistantMessage) => void;
   pendingLabel: string;
 }) {
   const onEditMessage = props.onEditMessage;
@@ -14,6 +15,7 @@ export function WorkspaceRightSidebarAssistantMessageRow(props: {
   if (props.message.role === 'user') {
     return (
       <div className="flex min-w-0 w-full flex-col items-end gap-1" data-message-role="user">
+        <WorkspaceRightSidebarAssistantImageStrip images={props.message.images ?? []} />
         <p className="m-0 max-w-[88%] whitespace-pre-wrap [overflow-wrap:anywhere] rounded-lg bg-foreground/[0.07] px-3 py-2 text-left text-ui-md leading-6 text-foreground/84">
           {props.message.text}
         </p>
@@ -21,7 +23,7 @@ export function WorkspaceRightSidebarAssistantMessageRow(props: {
           align="right"
           text={props.message.text}
           {...(onEditMessage
-            ? { onEdit: () => onEditMessage(props.message.text) }
+            ? { onEdit: () => onEditMessage(props.message) }
             : {})}
         />
       </div>

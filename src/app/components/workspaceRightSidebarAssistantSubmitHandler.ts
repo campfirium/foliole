@@ -6,6 +6,7 @@ import type {
   NativeAssistantThreadIndexRecord,
   NativeAssistantWorkspaceContext
 } from '../../../lib/platform/nativeAssistantContract';
+import type { NativeAssistantImageDraft } from '../../../lib/platform/nativeAssistantImageContract';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 
 import type { AssistantActiveTurn } from './useAssistantTurnEventSubscription';
@@ -36,11 +37,13 @@ type AssistantSubmitState = {
   activeTurnRef: { current: AssistantActiveTurn | null };
   dispatchCache: (action: Parameters<typeof messageCacheReducer>[1]) => void;
   followCurrentMaterial: boolean;
+  imageDrafts: NativeAssistantImageDraft[];
   location: ReturnType<typeof resolveAssistantLocation>;
   messageText: string;
   selectedRecord: NativeAssistantThreadIndexRecord | null;
   sending: boolean;
   setMessageText: (text: string) => void;
+  setImageDrafts: (images: NativeAssistantImageDraft[]) => void;
   setSending: (sending: boolean) => void;
   threads: ReturnType<typeof useWorkspaceRightSidebarAssistantThreads>;
 };
@@ -64,7 +67,7 @@ function createHandleSubmit(args: SubmitHandlerArgs) {
     const threadKey = args.threads.selectedThreadId ?? PENDING_THREAD_KEY;
     const pendingId = `assistant-${Date.now()}`;
     args.activeTurnRef.current = { clientTurnId: pendingId, prompt, responseText: '', threadKey };
-    args.dispatchCache(createUserMessageAction(threadKey, pendingId, prompt));
+    args.dispatchCache(createUserMessageAction(threadKey, pendingId, prompt, args.imageDrafts));
     args.dispatchCache(createPendingMessageAction(threadKey, pendingId));
     try {
       const result = await sendAssistantTurn(
@@ -74,7 +77,8 @@ function createHandleSubmit(args: SubmitHandlerArgs) {
           selectedThreadId: args.threads.selectedThreadId
         },
         pendingId,
-        prompt
+        prompt,
+        args.imageDrafts
       );
       if (args.activeTurnRef.current?.clientTurnId === pendingId)
         applySendResult({ ...args, pendingId, prompt, result, threadKey });
@@ -99,6 +103,7 @@ function applySendResult(result: SendResultArgs) {
     result.dispatchCache(createReadyMessageAction(threadId, result.pendingId, result.result));
     if (result.result.threadIndex) result.threads.upsertRecord(result.result.threadIndex);
     result.threads.selectThreadId(threadId);
+    result.setImageDrafts([]);
     return;
   }
   const failureCategory = result.result?.failure?.category;
@@ -117,7 +122,8 @@ function markContinuationPrompt(result: SendResultArgs, threadId: string) {
       id: `user-${result.pendingId}`,
       role: 'user',
       state: 'ready',
-      text: result.prompt
+      text: result.prompt,
+      ...(result.imageDrafts.length ? { images: result.imageDrafts } : {})
     },
     messageId: `user-${result.pendingId}`,
     type: 'replace'

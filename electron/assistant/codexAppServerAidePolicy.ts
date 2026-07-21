@@ -42,11 +42,19 @@ export function createAideSkillsRootsRequest(id: number, skillRoots: readonly st
   };
 }
 
-export function createAideTurnStartParams(cwd: string, threadId: string, userMessage: string) {
+export function createAideTurnStartParams(
+  cwd: string,
+  threadId: string,
+  userMessage: string,
+  imagePaths: readonly string[] = []
+) {
   return {
     approvalPolicy: 'never',
     cwd,
-    input: [{ text: userMessage, type: 'text' }],
+    input: [
+      { text: userMessage, type: 'text' },
+      ...imagePaths.map((imagePath) => ({ path: imagePath, type: 'localImage' }))
+    ],
     sandboxPolicy: {
       networkAccess: 'restricted',
       type: 'externalSandbox'
