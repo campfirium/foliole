@@ -58,5 +58,9 @@ it('auto-renames manual duplicate imports so inbox titles stay unique', () => {
 
   expect(first.nodeId).not.toBe(second.nodeId);
   expect(second.nodeId).not.toBe(third.nodeId);
-  expect(readInboxChildTitlesByOrder()).toEqual([{ title: 'note 3' }, { title: 'note 2' }, { title: 'note' }]);
+  expect(readInboxChildTitlesByOrder()).toEqual([
+    { title: 'Imported 3' },
+    { title: 'Imported 2' },
+    { title: 'Imported' }
+  ]);
 });

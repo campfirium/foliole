@@ -32,7 +32,7 @@ it('keeps the source body intact and returns matched and unmatched sidecar highl
   );
 
   expect(prepared.content).toContain('# Chapter');
-  expect(prepared.nodeTitle).toBe('chapter');
+  expect(prepared.nodeTitle).toBe('Chapter');
   expect(prepared.content).not.toContain('## Imported Context');
   expect(prepared.content).not.toContain('## Unmatched Sidecar Highlights');
   expect(prepared.unmatchedHighlights).toEqual([
@@ -83,7 +83,7 @@ it('recovers list-heavy and flattened highlights from the source body before mar
   );
 
   expect(prepared.content).toContain('| 每周回顾 | 保持系统清空 & 当前 | 每周打开 Someday/Waiting/Projects 重新评估 |');
-  expect(prepared.nodeTitle).toBe('readwise');
+  expect(prepared.nodeTitle).toBe('GTD');
   expect(prepared.content).not.toContain('## Unmatched Sidecar Highlights');
   expect(prepared.unmatchedHighlights).toEqual([
     {

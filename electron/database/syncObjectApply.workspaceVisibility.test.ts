@@ -139,6 +139,7 @@ it('makes Android-applied reading and review visible while keeping view state de
 
   expect(loadReadingProgress()).toEqual({
     activeNodeId: null,
+    browseRootNodeId: null,
     nodeViewStateById: {}
   });
   expect(openDatabaseConnection().sqlite

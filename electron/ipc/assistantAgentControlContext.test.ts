@@ -29,8 +29,8 @@ beforeEach(() => {
 
 it('resolves the private descriptor and stable command without putting them in model context', () => {
   expect(resolveAssistantAgentDescriptorPath({})).toBe('C:\\Foliole\\cache\\agent-control-session.json');
-  expect(resolveAssistantAgentControlCommandPath({}, 'C:\\Program Files\\Foliole\\resources', 'win32')).toBe(
-    path.join('C:\\Program Files\\Foliole\\resources', 'scripts', 'agent-control', 'foliole.cmd')
+  expect(resolveAssistantAgentControlCommandPath({}, '/opt/foliole/resources', 'win32')).toBe(
+    path.join('/opt/foliole/resources', 'scripts', 'agent-control', 'foliole.cmd')
   );
   expect(resolveAssistantAgentControlContext()).toEqual({
     capabilities: expect.arrayContaining(['materials.create', 'materials.update', 'materials.restore']),

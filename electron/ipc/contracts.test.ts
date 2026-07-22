@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL,
+  IPC_DESKTOP_UPDATE_STATE_EVENT_CHANNEL,
   IPC_DIAGNOSTIC_LOG_CHANNEL,
   IPC_EXTERNAL_DOCUMENT_FILE_OPENED_CHANNEL,
   IPC_GLOBAL_CAPTURE_NAVIGATE_CHANNEL,
@@ -24,7 +25,9 @@ import {
 const PRELOAD_PATH = join(process.cwd(), 'electron/preload.cjs');
 
 const BRIDGE_CHANNELS = {
+  IPC_ASSISTANT_TURN_EVENT_CHANNEL: 'foliole:assistant-turn-event',
   IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL,
+  IPC_DESKTOP_UPDATE_STATE_EVENT_CHANNEL,
   IPC_DIAGNOSTIC_LOG_CHANNEL,
   IPC_EXTERNAL_DOCUMENT_FILE_OPENED_CHANNEL,
   IPC_GLOBAL_CAPTURE_NAVIGATE_CHANNEL,
@@ -42,7 +45,9 @@ const BRIDGE_CHANNELS = {
 } as const;
 
 const SUBSCRIBABLE_CHANNEL_NAMES = [
+  'IPC_ASSISTANT_TURN_EVENT_CHANNEL',
   'IPC_COMPANION_PAIRING_REQUESTS_CHANGED_CHANNEL',
+  'IPC_DESKTOP_UPDATE_STATE_EVENT_CHANNEL',
   'IPC_EXTERNAL_DOCUMENT_FILE_OPENED_CHANNEL',
   'IPC_GLOBAL_CAPTURE_NAVIGATE_CHANNEL',
   'IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL',
@@ -79,7 +84,8 @@ describe('ipc contracts', () => {
 
   it('keeps preload subscription allowlist aligned with renderer event channels', () => {
     const preloadSource = readPreloadSource();
-    const allowlistNames = [...preloadSource.matchAll(/channel !== (IPC_[A-Z_]+_CHANNEL)/g)]
+    const allowlist = preloadSource.match(/const SUBSCRIBABLE_CHANNELS = new Set\(\[([\s\S]*?)\]\);/)?.[1] ?? '';
+    const allowlistNames = [...allowlist.matchAll(/\b(IPC_[A-Z_]+_CHANNEL)\b/g)]
       .map((match) => match[1])
       .sort();
 

@@ -142,6 +142,12 @@ function insertSourceNode() {
      ) VALUES ('node', 'node-delete', 1, 'desktop#1', 'node-delete-hash-1',
        'desktop-source', '2026-05-04T08:00:00.000Z', 1)`
   );
+  openDatabaseConnection().driver.execute(
+    `INSERT INTO node_sync_versions (
+       version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
+     ) VALUES ('desktop#1', 'node-delete', NULL, 'desktop-source',
+       '2026-05-04T08:00:00.000Z', 'node-delete-hash-1', '{"id":"node-delete","title":"Article To Delete"}')`
+  );
 }
 
 function markSourceNodeDeleted() {
@@ -156,6 +162,12 @@ function markSourceNodeDeleted() {
      SET state_seq = 2, current_version_id = 'desktop#delete', content_hash = 'node-delete-hash-2',
        updated_at = '2026-05-04T08:05:00.000Z', deleted_at = '2026-05-04T08:05:00.000Z', sync_dirty = 1
      WHERE object_type = 'node' AND object_id = 'node-delete'`
+  );
+  openDatabaseConnection().driver.execute(
+    `INSERT INTO node_sync_versions (
+       version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
+     ) VALUES ('desktop#delete', 'node-delete', 'desktop#1', 'desktop-source',
+       '2026-05-04T08:05:00.000Z', 'node-delete-hash-2', '{"id":"node-delete","title":"Deleted Article"}')`
   );
 }
 

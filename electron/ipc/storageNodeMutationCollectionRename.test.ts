@@ -2,13 +2,13 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { renameCollectionVirtualFolder } from '../agentControl/agentControlVirtualFolderLifecycle.js';
-import { readAgentVirtualFolderRow } from '../agentControl/agentControlVirtualFolders.js';
+import { readCollectionVirtualFolderRow } from '../agentControl/agentControlVirtualFolders.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 
 import { handleNodeMutationCommand } from './storageNodeMutationCommands.js';
 
 vi.mock('../agentControl/agentControlVirtualFolderLifecycle.js', () => ({ renameCollectionVirtualFolder: vi.fn() }));
-vi.mock('../agentControl/agentControlVirtualFolders.js', () => ({ readAgentVirtualFolderRow: vi.fn() }));
+vi.mock('../agentControl/agentControlVirtualFolders.js', () => ({ readCollectionVirtualFolderRow: vi.fn() }));
 vi.mock('../database/nodeMutations.js', () => ({ upsertNodeSnapshot: vi.fn() }));
 vi.mock('../database/searchIndexInvalidationCoalescer.js', () => ({ enqueueCoalescedWorkspaceSearchInvalidation: vi.fn() }));
 vi.mock('../mirror/mirrorSyncScheduler.js', () => ({ scheduleMirrorSync: vi.fn() }));
@@ -17,7 +17,7 @@ vi.mock('./workspaceContentChangedEvents.js', () => ({ notifyWorkspaceContentCha
 beforeEach(() => vi.clearAllMocks());
 
 it('returns every affected Topic when a Collection virtual folder is renamed', () => {
-  vi.mocked(readAgentVirtualFolderRow).mockReturnValue({
+  vi.mocked(readCollectionVirtualFolderRow).mockReturnValue({
     created_at: '2026-03-06T00:00:00.000Z', deleted_at: null, id: 'virtual-1', manual_child_order: null,
     title: 'Old', updated_at: '2026-03-06T00:00:00.000Z', virtual_filter: null
   });

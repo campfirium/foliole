@@ -13,9 +13,9 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..
 const SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'install-git-hooks.mjs');
 
 function runScript(env) {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const nextEnv = Object.fromEntries(Object.entries(process.env).filter(([key]) => key.toLowerCase() !== 'path'));
-    const child = spawn('node', [SCRIPT_PATH], {
+    const child = spawn(process.execPath, [SCRIPT_PATH], {
       cwd: REPO_ROOT,
       env: { ...nextEnv, ...env }
     });
@@ -27,6 +27,7 @@ function runScript(env) {
     child.stderr.on('data', (chunk) => {
       stderr += chunk.toString();
     });
+    child.on('error', reject);
     child.on('close', (code) => {
       resolve({ code, stdout, stderr });
     });

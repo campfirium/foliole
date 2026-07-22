@@ -79,6 +79,13 @@ function createIncomingPack(filePath: string) {
          ('parent-1', NULL, 'folder', 'Parent Node', 0, 0, NULL, NULL, '', 'desktop#parent',
           '2026-05-29T07:47:00.000Z', '2026-05-29T07:47:00.000Z', NULL)`
     ).run();
+    db.prepare(
+      `INSERT INTO node_sync_versions (
+         version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
+       ) VALUES
+         ('desktop#child', 'child-1', NULL, 'desktop', '2026-05-29T07:48:00.000Z', 'child-hash', '{"id":"child-1"}'),
+         ('desktop#parent', 'parent-1', NULL, 'desktop', '2026-05-29T07:47:00.000Z', 'parent-hash', '{"id":"parent-1"}')`
+    ).run();
   } finally {
     db.close();
   }

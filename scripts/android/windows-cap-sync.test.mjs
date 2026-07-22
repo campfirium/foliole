@@ -124,6 +124,7 @@ describe('windows-cap-sync.sh', () => {
         PATH: `${bashPath(mockBinDir)}:/usr/bin:/bin:${process.env.PATH ?? ''}`,
         ANDROID_SOURCE_SYNC_SCRIPT: sourceSync,
         WINDOWS_SCRIPT_PATH: path.join(tempRoot, 'windows-cap-sync.ps1'),
+        ANDROID_WINDOWS_MIRROR_DIR: bashPath(path.join(tempRoot, 'android-preview-mirror')),
         POWERSHELL_ARGS_LOG: bashPath(powershellArgsLog)
       });
 

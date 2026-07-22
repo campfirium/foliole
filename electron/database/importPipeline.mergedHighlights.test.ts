@@ -86,7 +86,7 @@ it('refreshes imported highlight child nodes when a generic merged import change
   expect(nodeRow).toEqual({
     content: '# Imported\nUse different text',
     parent_id: 'special-inbox',
-    title: 'note'
+    title: 'Imported'
   });
   expect(childRows.map((row) => ({
     anchorLink: parseAnchorLink(row.anchor_link),

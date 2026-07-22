@@ -89,7 +89,9 @@ it('saves reading progress through prepared driver statements only', () => {
 });
 
 it('loads reading progress through query helpers only', () => {
-  queryOneSpy.mockReturnValue({ value: 'node-2' });
+  queryOneSpy.mockImplementation((_sql, params) => ({
+    value: params?.[0] === 'browse_root_node_id' ? 'node-root' : 'node-2'
+  }));
   queryAllSpy.mockReturnValue([
     {
       node_id: 'node-1',
@@ -103,6 +105,7 @@ it('loads reading progress through query helpers only', () => {
 
   expect(loadReadingProgress()).toEqual({
     activeNodeId: 'node-2',
+    browseRootNodeId: 'node-root',
     nodeViewStateById: {
       'node-1': {
         scrollTop: 124,
@@ -116,6 +119,9 @@ it('loads reading progress through query helpers only', () => {
 
   expect(queryOneSpy).toHaveBeenCalledWith('SELECT value FROM workspace_meta WHERE key = ?', [
     'active_node_id'
+  ]);
+  expect(queryOneSpy).toHaveBeenCalledWith('SELECT value FROM workspace_meta WHERE key = ?', [
+    'browse_root_node_id'
   ]);
   expect(queryAllSpy).toHaveBeenCalledWith(
     `SELECT

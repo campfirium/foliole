@@ -221,7 +221,12 @@ it('imports generic split sidecar highlights only when they match the source bod
   await runKeepImportRule(config);
 
   const row = openDatabaseConnection().sqlite
-    .prepare(`SELECT id, content FROM nodes WHERE title = 'entry' ORDER BY created_at DESC LIMIT 1`)
+    .prepare(
+      `SELECT nodes.id, nodes.content
+       FROM import_sources
+       JOIN nodes ON nodes.id = import_sources.latest_node_id
+       WHERE import_sources.source_name = 'entry.md'`
+    )
     .get() as { content: string; id: string };
   const childRows = openDatabaseConnection().sqlite
     .prepare('SELECT title, content, anchor_link FROM nodes WHERE parent_id = ? ORDER BY created_at ASC')

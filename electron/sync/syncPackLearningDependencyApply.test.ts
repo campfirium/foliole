@@ -153,6 +153,18 @@ function createIncomingLearningDependencyPack(filePath: string) {
       '2026-05-04T01:59:00.000Z',
       '2026-05-04T01:59:00.000Z'
     );
+    db.prepare(
+      `INSERT INTO node_sync_versions (
+         version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
+       ) VALUES (?, ?, NULL, ?, ?, ?, ?)`
+    ).run(
+      'desktop#reading-1',
+      'node-reading-1',
+      'desktop',
+      '2026-05-04T01:59:00.000Z',
+      'node-reading-hash-1',
+      JSON.stringify({ id: 'node-reading-1', title: 'Reading Dependency' })
+    );
   } finally {
     db.close();
   }
@@ -182,6 +194,18 @@ function createIncomingDeletedNodePack(filePath: string) {
       '2026-05-04T01:00:00.000Z',
       '2026-05-04T02:00:00.000Z',
       '2026-05-04T02:00:00.000Z'
+    );
+    db.prepare(
+      `INSERT INTO node_sync_versions (
+         version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
+       ) VALUES (?, ?, NULL, ?, ?, ?, ?)`
+    ).run(
+      'desktop#deleted-1',
+      'node-deleted-1',
+      'desktop',
+      '2026-05-04T02:00:00.000Z',
+      'node-deleted-hash-1',
+      JSON.stringify({ deleted_at: '2026-05-04T02:00:00.000Z', id: 'node-deleted-1' })
     );
   } finally {
     db.close();

@@ -43,7 +43,7 @@ vi.mock('../mirror/mirrorSyncScheduler.js', () => ({
   scheduleMirrorSync: vi.fn()
 }));
 vi.mock('../agentControl/agentControlVirtualFolderLifecycle.js', () => ({ renameCollectionVirtualFolder: vi.fn() }));
-vi.mock('../agentControl/agentControlVirtualFolders.js', () => ({ readAgentVirtualFolderRow: vi.fn(() => null) }));
+vi.mock('../agentControl/agentControlVirtualFolders.js', () => ({ readCollectionVirtualFolderRow: vi.fn(() => null) }));
 
 beforeEach(() => {
   vi.clearAllMocks();

@@ -83,6 +83,8 @@ it('restores the application sqlite state from an online backup snapshot', async
         bodyBlobHash: expect.stringMatching(/^[a-f0-9]{64}$/),
         content: '# original',
         currentVersionId: null,
+        importContentFingerprint: null,
+        importSourceFingerprint: null,
         openingText: null,
         virtualFilter: null,
         reveal: null,
@@ -119,7 +121,15 @@ it('restores review history, node lifecycle state, and backup truth after later 
 
   await restoreApplicationDatabaseBackup({ sourcePath: backup.destinationPath });
 
-  expect(loadWorkspaceSnapshot({ includeBody: true })).toEqual(createRestoredWorkspaceSnapshot());
+  const restored = createRestoredWorkspaceSnapshot();
+  expect(loadWorkspaceSnapshot({ includeBody: true })).toEqual({
+    ...restored,
+    nodesById: Object.fromEntries(Object.entries(restored.nodesById).map(([nodeId, node]) => [nodeId, {
+      ...node,
+      importContentFingerprint: null,
+      importSourceFingerprint: null
+    }]))
+  });
   expect(selectReviewLogCount('node-qa')).toBe(1);
   expect(selectNodeCount('node-later')).toBe(0);
 

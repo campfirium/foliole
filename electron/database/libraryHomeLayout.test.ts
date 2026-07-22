@@ -63,13 +63,15 @@ it('initializes and keeps using the library home directory layout across restart
   const libraryHome = path.join(mockedDocumentsDir, 'Foliole');
   const dataDir = path.join(libraryHome, 'Data');
   const assetsDir = path.join(libraryHome, 'Assets');
-  const inboxDir = path.join(libraryHome, 'Inbox');
+  const importDir = path.join(libraryHome, 'Import');
+  const inboxDir = path.join(importDir, 'Inbox');
   const mirrorDir = path.join(libraryHome, 'Mirror');
 
   const firstConnection = initializeDatabase();
 
   expect((await fs.stat(dataDir)).isDirectory()).toBe(true);
   expect((await fs.stat(assetsDir)).isDirectory()).toBe(true);
+  expect((await fs.stat(importDir)).isDirectory()).toBe(true);
   expect((await fs.stat(inboxDir)).isDirectory()).toBe(true);
   expect((await fs.stat(mirrorDir)).isDirectory()).toBe(true);
   expect((await fs.stat(firstConnection.dbPath)).isFile()).toBe(true);

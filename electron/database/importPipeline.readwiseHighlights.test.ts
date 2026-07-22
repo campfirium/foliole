@@ -83,7 +83,7 @@ function expectReadwiseParentBody(input: {
     ].join('\n'),
     kind: 'topic',
     parent_id: 'special-inbox',
-    title: 'readwise'
+    title: 'Article'
   });
 }
 

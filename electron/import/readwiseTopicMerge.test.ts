@@ -18,7 +18,11 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
-import { resetRemoteImagePipelineForTests } from '../attachments/remoteImagePipeline.js';
+import {
+  configureRemoteImageFetchTransportForTests,
+  configureRemoteImageHostResolverForTests,
+  resetRemoteImagePipelineForTests
+} from '../attachments/remoteImagePipeline.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { runPreparedImport } from '../database/importPipeline.js';
 import { initializeDatabase } from '../database/migrate.js';
@@ -208,10 +212,12 @@ it('localizes shared remote images before matching manually merged readwise high
     0x00, 0x00, 0x05, 0x00,
     0x00, 0x00, 0x03, 0xc0
   ]);
-  vi.mocked(fetch).mockResolvedValue(new Response(largePngBytes, {
+  const fetchTransport = vi.fn().mockResolvedValue(new Response(largePngBytes, {
     headers: { 'content-type': 'image/png' },
     status: 200
   }));
+  configureRemoteImageFetchTransportForTests(fetchTransport);
+  configureRemoteImageHostResolverForTests(async () => ['93.184.216.34']);
   const imported = runPreparedImport(
     createPreparedDesktopTextImport({
       content: [
@@ -248,7 +254,7 @@ it('localizes shared remote images before matching manually merged readwise high
     .prepare('SELECT attachment_id FROM node_attachments WHERE node_id = ?')
     .all(imported.nodeId as string);
 
-  expect(fetch).toHaveBeenCalledTimes(1);
+  expect(fetchTransport).toHaveBeenCalledTimes(1);
   expect(state.children).toHaveLength(1);
   expect(state.node?.content).toContain('Lead\n\n![Avatar](asset://');
   expect(state.children[0]?.content).toContain('![Avatar](asset://');

@@ -59,6 +59,12 @@ function insertDesktopBaseReview() {
      ) VALUES ('node', 'node-1', 1, 'desktop-node-base', 'desktop', '2026-04-30T00:00:00.000Z', 0)`
   );
   driver.execute(
+    `INSERT INTO node_sync_versions (
+       version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
+     ) VALUES ('desktop#node-1', 'node-1', NULL, 'desktop',
+       '2026-04-30T00:00:00.000Z', 'desktop-node-base', '{"id":"node-1","title":"Review Topic"}')`
+  );
+  driver.execute(
     `INSERT INTO sync_object_state (
        object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
      ) VALUES ('node_review', 'node-1', 2, 'desktop-base', 'desktop', '2026-04-30T00:00:00.000Z', 0)`

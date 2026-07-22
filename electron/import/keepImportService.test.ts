@@ -81,8 +81,8 @@ it('blocks automatic keep-import recreation after the previous node was deleted'
   await runKeepImportRule(createGenericKeepImportConfig(sourceDir, 'draft-import-source-101'));
 
   const nodeRows = connection.sqlite
-    .prepare(`SELECT id, deleted_at FROM nodes WHERE title = 'entry' ORDER BY created_at ASC`)
-    .all() as Array<{ deleted_at: string | null; id: string }>;
+    .prepare(`SELECT id, deleted_at FROM nodes WHERE id = ?`)
+    .all(importedNode.latest_node_id) as Array<{ deleted_at: string | null; id: string }>;
   const keepItem = connection.sqlite
     .prepare(
       `SELECT has_source_update, last_status, last_node_id, local_node_state, source_state

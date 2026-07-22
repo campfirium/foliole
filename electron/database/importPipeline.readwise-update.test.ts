@@ -88,7 +88,7 @@ function expectUpdatedReadwiseParentBody(nodeRow: unknown) {
       'Beta sentence.'
     ].join('\n'),
     parent_id: 'special-inbox',
-    title: 'readwise'
+    title: 'Article'
   });
 }
 
@@ -206,7 +206,7 @@ it('refreshes readwise frontmatter metadata without replacing the edited parent 
       '',
       'Kept local body.'
     ].join('\n'),
-    title: 'readwise'
+    title: 'Article'
   });
   const anchorLink = parseAnchorLink(childRows[0]!.anchor_link);
   const content = (nodeRow as { content: string }).content;
