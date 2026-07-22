@@ -17,13 +17,59 @@ permissions:
   contents: read
 
 jobs:
+  common-quality:
+    name: Common ${{ inputs.scope }} quality
+    if: inputs.scope == 'shared' || (inputs.scope == 'full' && (inputs.full_host == 'all' || inputs.full_host == 'windows'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    concurrency:
+      group: hosted-quality-common-${{ inputs.target_sha }}-${{ inputs.scope }}
+      cancel-in-progress: false
+    env:
+      TARGET_SHA: ${{ inputs.target_sha }}
+    steps:
+      - name: Check out target snapshot
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Verify target SHA
+        run: test "$(git rev-parse HEAD)" = "${TARGET_SHA}"
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run dependency hardening checks
+        if: inputs.scope == 'full'
+        run: npm run deps:hardening:check
+      - name: Rebuild Electron native ABI for shared contracts
+        run: npm run electron:rebuild:native
+      - name: Run shared quality
+        if: inputs.scope == 'shared'
+        run: npm run quality:shared
+      - name: Run hosted full Common quality
+        if: inputs.scope == 'full'
+        run: npm run quality:release:hosted-common
+      - name: Upload Common quality logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: common-quality-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
+          path: .tmp/logs/quality-gate
+          if-no-files-found: ignore
+          retention-days: 14
+
   windows-quality:
     name: Windows ${{ inputs.scope }} quality
     if: inputs.scope == 'desktop' || (inputs.scope == 'full' && (inputs.full_host == 'all' || inputs.full_host == 'windows'))
     runs-on: windows-latest
     timeout-minutes: 120
     concurrency:
-      group: hosted-quality-windows-${{ inputs.target_sha }}-${{ inputs.scope }}
+      group: hosted-quality-windows-core-${{ inputs.target_sha }}-${{ inputs.scope }}
       cancel-in-progress: false
     env:
       CI: "true"
@@ -57,6 +103,7 @@ jobs:
         run: npm ci
       - name: Run dependency hardening checks
         id: dependency_hardening
+        if: inputs.scope == 'desktop'
         run: npm run deps:hardening:check
       - name: Rebuild and verify Electron native ABI
         id: native_abi
@@ -67,19 +114,11 @@ jobs:
         id: desktop_quality
         if: inputs.scope == 'desktop'
         run: npm run quality:desktop
-      - name: Run canonical release base
-        id: release_base
+      - name: Run Windows core quality
+        id: windows_core
         if: inputs.scope == 'full'
-        run: npm run quality:release:base
-      - name: Run canonical Windows host tail
-        id: windows_tail
-        if: inputs.scope == 'full'
-        run: npm run quality:release:windows:tail
-      - name: Run CI-capable Electron Playwright suite
-        id: playwright
-        if: inputs.scope == 'full'
-        run: node scripts/windows/windows-ci-playwright-profile.mjs
-      - name: Write SHA-bound CI evidence and summary
+        run: npm run quality:release:windows:core
+      - name: Write SHA-bound Windows core evidence
         if: ${{ always() }}
         env:
           GITHUB_SHA: ${{ env.TARGET_SHA }}
@@ -88,30 +127,106 @@ jobs:
           DEPENDENCY_HARDENING_OUTCOME: ${{ steps.dependency_hardening.outcome }}
           NATIVE_ABI_OUTCOME: ${{ steps.native_abi.outcome }}
           DESKTOP_QUALITY_OUTCOME: ${{ steps.desktop_quality.outcome }}
-          RELEASE_BASE_OUTCOME: ${{ steps.release_base.outcome }}
-          WINDOWS_TAIL_OUTCOME: ${{ steps.windows_tail.outcome }}
-          PLAYWRIGHT_OUTCOME: ${{ steps.playwright.outcome }}
+          WINDOWS_CORE_OUTCOME: ${{ steps.windows_core.outcome }}
+          WINDOWS_TAIL_OUTCOME: skipped
+          PLAYWRIGHT_OUTCOME: skipped
         run: node scripts/windows/windows-ci-evidence.mjs write
-      - name: Upload SHA-bound Windows CI evidence
+      - name: Upload SHA-bound Windows core evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: windows-x64-ci-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
+          name: windows-core-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
+          path: |
+            .tmp/artifacts/windows-ci-evidence
+            .tmp/logs/quality-gate
+          if-no-files-found: warn
+          retention-days: 14
+
+  windows-acceptance:
+    name: Windows acceptance
+    if: inputs.scope == 'full' && (inputs.full_host == 'all' || inputs.full_host == 'windows')
+    runs-on: windows-latest
+    timeout-minutes: 120
+    concurrency:
+      group: hosted-quality-windows-acceptance-${{ inputs.target_sha }}
+      cancel-in-progress: false
+    env:
+      CI: "true"
+      FOLIOLE_DESKTOP_NATIVE_SKIP_BUILD: "1"
+      TARGET_SHA: ${{ inputs.target_sha }}
+    steps:
+      - name: Check out target snapshot
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Verify target SHA
+        shell: pwsh
+        run: |
+          if ((git rev-parse HEAD) -ne "${env:TARGET_SHA}") {
+            throw "Checked out SHA does not match TARGET_SHA"
+          }
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Verify fixed Windows x64 context
+        id: context
+        env:
+          GITHUB_SHA: ${{ env.TARGET_SHA }}
+        run: node scripts/windows/windows-ci-evidence.mjs verify
+      - name: Install dependencies
+        id: npm_ci
+        run: npm ci
+      - name: Rebuild and verify Electron native ABI
+        id: native_abi
+        run: |
+          npm run electron:rebuild:native
+          node scripts/electron-sqlite-runner.mjs --preflight
+      - name: Run canonical Windows host tail
+        id: windows_tail
+        if: ${{ !cancelled() && steps.native_abi.outcome == 'success' }}
+        run: npm run quality:release:windows:tail
+      - name: Run CI-capable Electron Playwright suite
+        id: playwright
+        if: ${{ !cancelled() && steps.native_abi.outcome == 'success' }}
+        run: node scripts/windows/windows-ci-playwright-profile.mjs
+      - name: Write SHA-bound Windows acceptance evidence
+        if: ${{ always() }}
+        env:
+          GITHUB_SHA: ${{ env.TARGET_SHA }}
+          CONTEXT_OUTCOME: ${{ steps.context.outcome }}
+          NPM_CI_OUTCOME: ${{ steps.npm_ci.outcome }}
+          DEPENDENCY_HARDENING_OUTCOME: skipped
+          NATIVE_ABI_OUTCOME: ${{ steps.native_abi.outcome }}
+          DESKTOP_QUALITY_OUTCOME: skipped
+          WINDOWS_CORE_OUTCOME: skipped
+          WINDOWS_TAIL_OUTCOME: ${{ steps.windows_tail.outcome }}
+          PLAYWRIGHT_OUTCOME: ${{ steps.playwright.outcome }}
+        run: node scripts/windows/windows-ci-evidence.mjs write
+      - name: Upload SHA-bound Windows acceptance evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-acceptance-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
           path: |
             .tmp/artifacts/windows-ci-evidence
             .tmp/playwright-results/desktop
             .tmp/playwright-report/desktop
             .tmp/artifacts/desktop-acceptance
+            .tmp/logs/quality-gate
           if-no-files-found: warn
           retention-days: 14
 
-  ubuntu-quality:
-    name: Ubuntu ${{ inputs.scope }} quality
-    if: inputs.scope == 'shared' || inputs.scope == 'android' || (inputs.scope == 'full' && (inputs.full_host == 'all' || inputs.full_host == 'android'))
+  android-quality:
+    name: Android ${{ inputs.scope }} quality
+    if: inputs.scope == 'android' || (inputs.scope == 'full' && (inputs.full_host == 'all' || inputs.full_host == 'android'))
     runs-on: ubuntu-latest
     timeout-minutes: 120
     concurrency:
-      group: hosted-quality-ubuntu-${{ inputs.target_sha }}-${{ inputs.scope }}
+      group: hosted-quality-android-${{ inputs.target_sha }}-${{ inputs.scope }}
       cancel-in-progress: false
     env:
       TARGET_SHA: ${{ inputs.target_sha }}
@@ -131,7 +246,6 @@ jobs:
           node-version: 22
           cache: npm
       - name: Set up Java 21 for Android host checks
-        if: inputs.scope == 'android' || inputs.scope == 'full'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -139,25 +253,30 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Rebuild Electron native ABI for Android contract tests
-        if: inputs.scope == 'shared' || inputs.scope == 'android'
+        if: inputs.scope == 'android'
         run: npm run electron:rebuild:native
-      - name: Run shared quality
-        if: inputs.scope == 'shared'
-        run: npm run quality:shared
       - name: Run Android quality
         if: inputs.scope == 'android'
         run: npm run quality:android
       - name: Run canonical Android host tail
         if: inputs.scope == 'full'
         run: npm run quality:release:android:tail
+      - name: Upload Android quality logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-quality-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
+          path: .tmp/logs/quality-gate
+          if-no-files-found: ignore
+          retention-days: 14
 
-  macos-quality:
-    name: macOS ${{ inputs.scope }} quality
+  ios-contract:
+    name: iOS contract quality
     if: inputs.scope == 'ios' || (inputs.scope == 'full' && (inputs.full_host == 'all' || inputs.full_host == 'ios'))
     runs-on: macos-15
     timeout-minutes: 120
     concurrency:
-      group: hosted-quality-macos-${{ inputs.target_sha }}-${{ inputs.scope }}
+      group: hosted-quality-ios-contract-${{ inputs.target_sha }}-${{ inputs.scope }}
       cancel-in-progress: false
     env:
       TARGET_SHA: ${{ inputs.target_sha }}
@@ -179,14 +298,50 @@ jobs:
         run: npm ci
       - name: Rebuild Electron native ABI for iOS contract tests
         run: npm run electron:rebuild:native
-      - name: Run iOS contract quality
-        if: inputs.scope == 'ios'
-        run: npm run quality:ios:contract
-      - name: Run full iOS Simulator quality
+      - name: Run iOS boundary quality
         if: inputs.scope == 'full'
-        run: npm run quality:ios:full
-      - name: Upload minimal iOS Simulator evidence
-        if: ${{ always() && inputs.scope == 'full' }}
+        run: npm run check:ios-boundary
+      - name: Run iOS contract quality
+        run: npm run quality:ios:contract
+      - name: Upload iOS contract logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-contract-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
+          path: .tmp/logs/quality-gate
+          if-no-files-found: ignore
+          retention-days: 14
+
+  ios-simulator:
+    name: iOS Simulator quality
+    if: inputs.scope == 'full' && (inputs.full_host == 'all' || inputs.full_host == 'ios')
+    runs-on: macos-15
+    timeout-minutes: 120
+    concurrency:
+      group: hosted-quality-ios-simulator-${{ inputs.target_sha }}
+      cancel-in-progress: false
+    env:
+      TARGET_SHA: ${{ inputs.target_sha }}
+    steps:
+      - name: Check out target snapshot
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Verify target SHA
+        run: test "$(git rev-parse HEAD)" = "${TARGET_SHA}"
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run full iOS Simulator quality
+        run: npm run quality:ios:simulator:full
+      - name: Upload minimal iOS Simulator evidence and logs
+        if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: ios-simulator-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
@@ -194,5 +349,6 @@ jobs:
             .tmp/artifacts/ios-bridge-acceptance/*/result.json
             .tmp/artifacts/ios-bridge-acceptance/*/failure.json
             .tmp/artifacts/ios-bridge-acceptance/*/simulator.log
+            .tmp/logs/quality-gate
           if-no-files-found: ignore
           retention-days: 14

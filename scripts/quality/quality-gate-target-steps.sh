@@ -9,9 +9,17 @@ run_release_core_gate_steps() {
   run_release_build_gate_steps
 }
 
+run_release_hosted_common_gate_steps() {
+  run_release_static_gate_steps
+  run_release_hosted_common_test_gate_steps
+  run_release_build_gate_steps
+}
+
 run_release_target_steps() {
   case "$1" in
     release-core) run_release_core_gate_steps ;;
+    release-hosted-common) run_release_hosted_common_gate_steps ;;
+    release-windows-core) run_gate_steps test:windows:core ;;
     release-static) run_release_static_gate_steps ;;
     release-tests) run_release_test_gate_steps ;;
     release-build) run_release_build_gate_steps ;;
@@ -55,6 +63,12 @@ run_quality_script_gate_steps_if_related() {
 
 run_release_test_gate_steps() {
   run_gate_steps_parallel test:release:desktop-src test:windows:core test:release:android test:release:shared test:quality:core test:quality:gate test:quality:node
+  run_gate_steps test:desktop:electron
+  run_gate_steps $(quality_gate_integration_scripts)
+}
+
+run_release_hosted_common_test_gate_steps() {
+  run_gate_steps_parallel test:release:desktop-src test:release:android test:release:shared test:quality:core test:quality:gate test:quality:node
   run_gate_steps test:desktop:electron
   run_gate_steps $(quality_gate_integration_scripts)
 }

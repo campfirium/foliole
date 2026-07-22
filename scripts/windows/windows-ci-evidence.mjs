@@ -13,7 +13,7 @@ const STEP_KEYS = [
   'dependency_hardening',
   'native_abi',
   'desktop_quality',
-  'release_base',
+  'windows_core',
   'windows_tail',
   'playwright'
 ];

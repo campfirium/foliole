@@ -2,12 +2,27 @@
 
 import { describe, expect, it, vi } from 'vitest';
 
-import { parseRemoteQualityArgs, runRemoteQuality } from './remote-quality.mjs';
+import { monitorRemoteQualityJobs, parseRemoteQualityArgs, runRemoteQuality } from './remote-quality.mjs';
 
 const SHA = '0123456789abcdef0123456789abcdef01234567';
 
-function createRunner({ dispatchCode = 0, dispatchError = '', authCode = 0, watchCode = 0 } = {}) {
+function job(overrides = {}) {
+  return {
+    conclusion: 'success', html_url: 'https://github.test/jobs/7', id: 7,
+    name: 'Common quality', status: 'completed', ...overrides
+  };
+}
+
+function createRunner({
+  authCode = 0,
+  dispatchCode = 0,
+  dispatchError = '',
+  jobSnapshots = [[job()]],
+  logCodes = [0]
+} = {}) {
   const calls = [];
+  let jobsIndex = 0;
+  let logsIndex = 0;
   const runner = vi.fn(async (command, args, options = {}) => {
     calls.push({ args, command, options });
     if (command === 'git') return { code: 0, stderr: '', stdout: `${SHA}\n` };
@@ -22,8 +37,17 @@ function createRunner({ dispatchCode = 0, dispatchError = '', authCode = 0, watc
         html_url: 'https://github.test/runs/42', workflow_run_id: 42
       }) };
     }
+    if (args[0] === 'api' && args.some((arg) => arg.includes('/actions/runs/42/jobs'))) {
+      const snapshot = jobSnapshots[Math.min(jobsIndex, jobSnapshots.length - 1)];
+      jobsIndex += 1;
+      return { code: 0, stderr: '', stdout: JSON.stringify({ jobs: snapshot }) };
+    }
+    if (args[0] === 'api' && args.some((arg) => arg.includes('/actions/jobs/'))) {
+      const code = logCodes[Math.min(logsIndex, logCodes.length - 1)];
+      logsIndex += 1;
+      return { code, stderr: code ? 'logs not ready' : '', stdout: code ? '' : 'failed log' };
+    }
     if (args[0] === 'api') return { code: 0, stderr: '', stdout: `${SHA}\n` };
-    if (args[0] === 'run' && args[1] === 'watch') return { code: watchCode, stderr: '', stdout: '' };
     return { code: 0, stderr: '', stdout: '' };
   });
   return { calls, runner };
@@ -36,7 +60,7 @@ describe('remote quality dispatcher', () => {
     expect(() => parseRemoteQualityArgs(['--scope', 'ios', '--unknown'])).toThrow('Unknown argument');
   });
 
-  it('verifies the immutable remote SHA, dispatches, and watches the returned run id', async () => {
+  it('verifies the immutable remote SHA, dispatches, and monitors the returned run id', async () => {
     const { calls, runner } = createRunner();
     await expect(runRemoteQuality({ args: ['--scope', 'desktop'], runner })).resolves.toMatchObject({
       runId: 42, scope: 'desktop', sha: SHA
@@ -47,14 +71,32 @@ describe('remote quality dispatcher', () => {
     expect(JSON.parse(dispatch.options.input)).toEqual({
       inputs: { scope: 'desktop', target_sha: SHA }, ref: 'dev'
     });
-    expect(calls.some((call) => call.args.includes('watch') && call.args.includes('42'))).toBe(true);
+    expect(calls.some((call) => call.args.some((arg) => arg.includes('/actions/runs/42/jobs')))).toBe(true);
   });
 
-  it('prints failed logs and preserves a failing exit when the hosted run fails', async () => {
-    const { calls, runner } = createRunner({ watchCode: 1 });
+  it('prints a completed failed job log and preserves a failing exit', async () => {
+    const { calls, runner } = createRunner({
+      jobSnapshots: [[job({ conclusion: 'failure', name: 'Windows core' })]]
+    });
     await expect(runRemoteQuality({ args: ['--scope', 'shared', '--sha', SHA], runner }))
       .rejects.toThrow('Remote shared quality failed');
-    expect(calls.some((call) => call.args.includes('view') && call.args.includes('--log-failed'))).toBe(true);
+    expect(calls.filter((call) => call.args.some((arg) => arg.includes('/actions/jobs/7/logs')))).toHaveLength(1);
+  });
+
+  it('does not read partial logs and retries a completed failure whose log is not ready', async () => {
+    const snapshots = [
+      [job({ conclusion: null, status: 'queued' })],
+      [job({ conclusion: 'failure' }), job({ conclusion: null, id: 8, status: 'in_progress' })],
+      [job({ conclusion: 'failure' }), job({ id: 8 })]
+    ];
+    const { calls, runner } = createRunner({ jobSnapshots: snapshots, logCodes: [1, 0] });
+    const result = await monitorRemoteQualityJobs({
+      cwd: '.', pollIntervalMs: 0, repo: 'campfirium/foliole', runId: 42, runner, wait: vi.fn()
+    });
+    expect(result.failed).toBe(true);
+    const logCalls = calls.filter((call) => call.args.some((arg) => arg.includes('/actions/jobs/7/logs')));
+    expect(logCalls).toHaveLength(2);
+    expect(calls.some((call) => call.args.some((arg) => arg.includes('/actions/jobs/8/logs')))).toBe(false);
   });
 
   it('hard-fails before dispatch when the commit is not on the remote', async () => {

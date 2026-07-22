@@ -21,7 +21,7 @@ function createEnv(overrides = {}) {
     DEPENDENCY_HARDENING_OUTCOME: 'success',
     NATIVE_ABI_OUTCOME: 'success',
     DESKTOP_QUALITY_OUTCOME: 'skipped',
-    RELEASE_BASE_OUTCOME: 'success',
+    WINDOWS_CORE_OUTCOME: 'success',
     WINDOWS_TAIL_OUTCOME: 'success',
     PLAYWRIGHT_OUTCOME: 'success',
     ...overrides

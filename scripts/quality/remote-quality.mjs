@@ -1,4 +1,4 @@
-/* global console, process */
+/* global console, process, setTimeout */
 
 import { spawn } from 'node:child_process';
 import path from 'node:path';
@@ -6,6 +6,8 @@ import { pathToFileURL } from 'node:url';
 
 const ALLOWED_SCOPES = new Set(['android', 'desktop', 'full', 'ios', 'shared']);
 const FULL_SHA = /^[0-9a-f]{40}$/u;
+const PASSING_JOB_CONCLUSIONS = new Set(['neutral', 'skipped', 'success']);
+const POLL_INTERVAL_MS = 15_000;
 
 export function parseRemoteQualityArgs(args) {
   const result = { scope: '', sha: '' };
@@ -62,6 +64,47 @@ async function dispatchWorkflow(runner, args, options) {
   throw new Error(`gh ${args.join(' ')} failed: ${details}`.trim());
 }
 
+function parseJobs(value) {
+  const parsed = JSON.parse(value);
+  if (!Array.isArray(parsed.jobs)) throw new Error('GitHub jobs response did not contain a jobs array');
+  return parsed.jobs;
+}
+
+function isFailedJob(job) {
+  return job.status === 'completed' && !PASSING_JOB_CONCLUSIONS.has(job.conclusion);
+}
+
+async function emitFailedJobLog(runner, repo, job, cwd) {
+  console.error(`[remote-quality] failed job: ${job.name} (${job.html_url ?? job.id})`);
+  return runner('gh', [
+    'api', '-H', 'X-GitHub-Api-Version: 2026-03-10',
+    `repos/${repo}/actions/jobs/${job.id}/logs`
+  ], { capture: false, cwd });
+}
+
+export async function monitorRemoteQualityJobs(options) {
+  const { cwd, repo, runId, runner } = options;
+  const pollIntervalMs = options.pollIntervalMs ?? POLL_INTERVAL_MS;
+  const wait = options.wait ?? ((duration) => new Promise((resolve) => setTimeout(resolve, duration)));
+  const emittedFailures = new Set();
+  while (true) {
+    const stdout = await requireSuccess(runner, 'gh', [
+      'api', '-H', 'X-GitHub-Api-Version: 2026-03-10',
+      `repos/${repo}/actions/runs/${runId}/jobs?per_page=100`
+    ], { cwd });
+    const jobs = parseJobs(stdout);
+    for (const job of jobs.filter(isFailedJob)) {
+      if (emittedFailures.has(job.id)) continue;
+      const log = await emitFailedJobLog(runner, repo, job, cwd);
+      if (log.code === 0) emittedFailures.add(job.id);
+    }
+    if (jobs.length > 0 && jobs.every((job) => job.status === 'completed')) {
+      return { failed: jobs.some(isFailedJob), jobs };
+    }
+    await wait(pollIntervalMs);
+  }
+}
+
 export async function runRemoteQuality(options = {}) {
   const args = parseRemoteQualityArgs(options.args ?? process.argv.slice(2));
   const runner = options.runner ?? runProcess;
@@ -89,13 +132,15 @@ export async function runRemoteQuality(options = {}) {
     throw new Error('GitHub did not return workflow_run_id and html_url for the dispatch');
   }
   console.log(`[remote-quality] ${args.scope} run: ${dispatch.html_url}`);
-  const watch = await runner('gh', [
-    'run', 'watch', String(dispatch.workflow_run_id), '--exit-status', '--repo', repoInfo.nameWithOwner
-  ], { capture: false, cwd });
-  if (watch.code !== 0) {
-    await runner('gh', [
-      'run', 'view', String(dispatch.workflow_run_id), '--log-failed', '--repo', repoInfo.nameWithOwner
-    ], { capture: false, cwd });
+  const result = await monitorRemoteQualityJobs({
+    cwd,
+    repo: repoInfo.nameWithOwner,
+    runId: dispatch.workflow_run_id,
+    runner,
+    wait: options.wait,
+    pollIntervalMs: options.pollIntervalMs
+  });
+  if (result.failed) {
     throw new Error(`Remote ${args.scope} quality failed: ${dispatch.html_url}`);
   }
   console.log(`[remote-quality] ${args.scope} quality passed for ${sha}`);
