@@ -1,6 +1,21 @@
 import { resolveWorkspaceBrowseRootForTarget } from './workspaceBrowseRoot';
 import type { WorkspaceState } from './workspaceStore';
 
+export function resolveReviewActiveBrowseRootNodeId(args: {
+  activeNodeId: string;
+  browseRootNodeId: string;
+  nodesById: WorkspaceState['nodesById'];
+  trashedNodeIds: string[];
+}) {
+  return resolveWorkspaceBrowseRootForTarget({
+    browseRootNodeId: args.browseRootNodeId,
+    intent: 'target-context',
+    nodesById: args.nodesById,
+    targetNodeId: args.activeNodeId,
+    trashedNodeIds: args.trashedNodeIds
+  });
+}
+
 export function buildReviewActiveNodeContext(
   state: WorkspaceState,
   nextActiveNodeId: string | null
@@ -9,11 +24,10 @@ export function buildReviewActiveNodeContext(
   if (!activeNodeId) return { activeNodeId };
   return {
     activeNodeId,
-    browseRootNodeId: resolveWorkspaceBrowseRootForTarget({
+    browseRootNodeId: resolveReviewActiveBrowseRootNodeId({
+      activeNodeId,
       browseRootNodeId: state.browseRootNodeId,
-      intent: 'target-context',
       nodesById: state.nodesById,
-      targetNodeId: activeNodeId,
       trashedNodeIds: state.trashedNodeIds
     })
   };
