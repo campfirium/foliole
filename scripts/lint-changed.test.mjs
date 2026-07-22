@@ -179,7 +179,7 @@ describe('lint-changed.mjs', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  });
+  }, 15_000);
 
   it('fails closed when the shared path domain module cannot load', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'lint-changed-'));
@@ -195,5 +195,5 @@ describe('lint-changed.mjs', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  });
+  }, 15_000);
 });

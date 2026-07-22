@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 const core = fs.readFileSync('.github/workflows/hosted-quality-core.yml', 'utf8');
 const remote = fs.readFileSync('.github/workflows/remote-quality.yml', 'utf8');
 const t5 = fs.readFileSync('.github/workflows/t5-nightly-remote-quality.yml', 'utf8');
-const monitor = JSON.parse(fs.readFileSync('.codex/monitors/github-actions.json', 'utf8'));
+const handoffEvents = fs.readFileSync('scripts/github-desktop-handoff-events.mjs', 'utf8');
 
 describe('hosted quality workflow contracts', () => {
   it('keeps T5 scheduled ownership separate from thread-owned Remote Quality', () => {
@@ -18,12 +18,9 @@ describe('hosted quality workflow contracts', () => {
     expect(remote).toContain('name: Remote Quality');
     expect(remote).toContain('workflow_dispatch:');
     expect(remote).not.toContain('schedule:');
-    expect(monitor.workflows).toEqual(['T5 Nightly Remote Quality']);
-    expect(monitor.workflows).not.toContain('Remote Quality');
-    expect(monitor.notes).toMatch(
-      /Remote Quality[^.]*\bowned by\b[^.]*\brequesting development threads?\b/u,
-    );
-    expect(monitor.notes).not.toContain('T4 checks are local-only');
+    expect(handoffEvents).toContain("['T5 Nightly Remote Quality', 'T5']");
+    expect(handoffEvents).not.toContain("['Remote Quality', 'T5']");
+    expect(remote).toContain('Quality scope owned by the requesting development thread');
   });
 
   it('offers explicit Remote Quality scopes through the shared core', () => {

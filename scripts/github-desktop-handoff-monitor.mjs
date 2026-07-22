@@ -49,11 +49,14 @@ export function bindMonitorWorkspace(config, workspace) {
   return config ? { ...config, workspace } : config;
 }
 
-export function loadConfigs() {
+export function loadConfigs(options = {}) {
+  const monitorDir = options.monitorDir ?? MONITOR_DIR;
+  const readConfig = options.readConfig ?? readJson;
+  const workspace = options.workspace ?? REPO_ROOT;
   return {
-    actions: bindMonitorWorkspace(readJson(path.join(MONITOR_DIR, 'github-actions.json')), REPO_ROOT),
-    issues: bindMonitorWorkspace(readJson(path.join(MONITOR_DIR, 'github-issues.json')), REPO_ROOT),
-    prs: bindMonitorWorkspace(readJson(path.join(MONITOR_DIR, 'github-prs.json')), REPO_ROOT)
+    actions: bindMonitorWorkspace(readConfig(path.join(monitorDir, 'github-actions.json')), workspace),
+    issues: bindMonitorWorkspace(readConfig(path.join(monitorDir, 'github-issues.json')), workspace),
+    prs: bindMonitorWorkspace(readConfig(path.join(monitorDir, 'github-prs.json')), workspace)
   };
 }
 

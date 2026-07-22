@@ -23,5 +23,5 @@ it('brands an unpackaged macOS development runtime in the Dock', () => {
   });
 
   expect(hide).not.toHaveBeenCalled();
-  expect(setIcon).toHaveBeenCalledWith(path.join('/repo/foliole', 'build', 'icon-macos.png'));
+  expect(setIcon).toHaveBeenCalledWith(path.join(path.resolve('/repo/foliole'), 'build', 'icon-macos.png'));
 });

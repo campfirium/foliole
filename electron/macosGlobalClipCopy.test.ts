@@ -41,18 +41,19 @@ it('runs capture and preflight modes without reading clipboard content', async (
     copyWritten: args[0] === '--capture',
     permission: 'granted'
   }) }));
-  await expect(runMacosGlobalClipCopy({ exists: () => true, helperPath: '/helper', run: run as never }))
+  await expect(runMacosGlobalClipCopy({ exists: () => true, helperPath: '/helper', platform: 'darwin', run: run as never }))
     .resolves.toEqual({ copyWritten: true, permission: 'granted' });
-  await expect(runMacosGlobalClipCopy({ exists: () => true, helperPath: '/helper', mode: 'preflight', run: run as never }))
+  await expect(runMacosGlobalClipCopy({ exists: () => true, helperPath: '/helper', mode: 'preflight', platform: 'darwin', run: run as never }))
     .resolves.toEqual({ copyWritten: false, permission: 'granted' });
   expect(run.mock.calls.map(([, args]) => args)).toEqual([['--capture'], ['--preflight']]);
 });
 
 it('fails closed when the helper is missing or exits with an error', async () => {
-  await expect(runMacosGlobalClipCopy({ exists: () => false, helperPath: '/missing' })).rejects.toThrow(/missing/);
+  await expect(runMacosGlobalClipCopy({ exists: () => false, helperPath: '/missing', platform: 'darwin' })).rejects.toThrow(/missing/);
   await expect(runMacosGlobalClipCopy({
     exists: () => true,
     helperPath: '/helper',
+    platform: 'darwin',
     run: vi.fn(async () => { throw new Error('exit 1'); }) as never
   })).rejects.toThrow('exit 1');
 });

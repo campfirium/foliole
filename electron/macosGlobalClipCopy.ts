@@ -16,7 +16,7 @@ const execFileAsync = promisify(execFile);
 const HELPER_NAME = 'Foliole Global Capture';
 
 export function resolveMacosGlobalClipHelperPath() {
-  return path.join(path.dirname(app.getPath('exe')), HELPER_NAME);
+  return path.posix.join(path.posix.dirname(app.getPath('exe')), HELPER_NAME);
 }
 
 export function parseMacosGlobalClipResult(stdout: string): MacosGlobalClipCopyResult {
@@ -37,9 +37,10 @@ export async function runMacosGlobalClipCopy(args: {
   exists?: typeof existsSync;
   helperPath?: string;
   mode?: 'capture' | 'preflight';
+  platform?: NodeJS.Platform;
   run?: typeof execFileAsync;
 } = {}): Promise<MacosGlobalClipCopyResult> {
-  if (process.platform !== 'darwin' || !app.isPackaged) {
+  if ((args.platform ?? process.platform) !== 'darwin' || !app.isPackaged) {
     return { copyWritten: false, permission: 'unavailable' };
   }
   const helperPath = args.helperPath ?? resolveMacosGlobalClipHelperPath();

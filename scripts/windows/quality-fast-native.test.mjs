@@ -10,6 +10,7 @@ const winPath = (...parts) => parts.join(WIN_SEP);
 const SYSTEM_BASH = winPath('C:', 'Windows', 'System32', 'bash.exe');
 const GIT_BASH = winPath('C:', 'Program Files', 'Git', 'bin', 'bash.exe');
 const SCOOP_BASH = winPath('C:', 'Users', 'zephu', 'scoop', 'apps', 'git', 'current', 'bin', 'bash.exe');
+const NPM_ENV = { npm_execpath: '/npm-cli.js' };
 
 describe('quality-fast-native route parsing', () => {
   it('parses heavy route details from the shared route plan output', () => {
@@ -69,7 +70,7 @@ describe('quality-fast-native T0 routing', () => {
     await runQualityT0Native({
       bashExe: GIT_BASH,
       changedFiles: ['src/app/App.tsx'],
-      env: {},
+      env: NPM_ENV,
       plan: { changedFiles: ['src/app/App.tsx'], level: 'light', lintTargets: [], relatedTests: [], target: 'scoped lint + typecheck' },
       runner: async (command, args, options) => {
         calls.push({ args, command, env: options.env, label: options.label });
@@ -104,7 +105,7 @@ describe('quality-fast-native T0 routing', () => {
       await runQualityT0Native({
         bashExe: GIT_BASH,
         changedFiles: ['electron/main.ts'],
-        env: {},
+        env: NPM_ENV,
         plan: {
           changedFiles: ['electron/main.ts'],
           level: 'desktop',
@@ -140,7 +141,7 @@ describe('quality-fast-native T0 routing', () => {
     await runQualityT0Native({
       bashExe: GIT_BASH,
       changedFiles: ['src/shared/platform/companionSyncNodeVersions.ts'],
-      env: {},
+      env: NPM_ENV,
       plan: {
         changedFiles: ['src/shared/platform/companionSyncNodeVersions.ts'],
         level: 'shared',
@@ -180,7 +181,7 @@ describe('quality-fast-native T0 routing', () => {
       await runQualityT0Native({
         bashExe: GIT_BASH,
         changedFiles: ['src/shared/platform/example.ts'],
-        env: {},
+        env: NPM_ENV,
         plan: {
           changedFiles: ['src/shared/platform/example.ts'],
           level,

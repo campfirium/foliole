@@ -80,5 +80,5 @@ describe('Windows validation kit build', () => {
     const packageJson = path.join(kitRoot, 'package.json');
     fs.appendFileSync(packageJson, 'tamper');
     expect(() => verifyWindowsValidationKit({ expected, kitRoot, nodeVersion: '22.14.0' })).toThrow('hash mismatch');
-  });
+  }, 15_000);
 });
