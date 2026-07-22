@@ -2,10 +2,10 @@ name: T5 Nightly Remote Quality
 
 on:
   schedule:
-    # 12:10 Asia/Shanghai, covering the 06:00-12:00 work block.
-    - cron: '10 4 * * *'
-    # 00:10 Asia/Shanghai, covering the rest of the day.
-    - cron: '10 16 * * *'
+    # 11:40 Asia/Shanghai, catching the morning work block before noon.
+    - cron: '40 3 * * *'
+    # 22:40 Asia/Shanghai, catching the evening work block before midnight.
+    - cron: '40 14 * * *'
   workflow_dispatch:
     inputs:
       target_sha:

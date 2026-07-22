@@ -11,8 +11,8 @@ const monitor = JSON.parse(fs.readFileSync('.codex/monitors/github-actions.json'
 describe('hosted quality workflow contracts', () => {
   it('keeps T5 scheduled ownership separate from thread-owned Remote Quality', () => {
     expect(t5).toContain('name: T5 Nightly Remote Quality');
-    expect(t5).toContain("cron: '10 4 * * *'");
-    expect(t5).toContain("cron: '10 16 * * *'");
+    expect(t5).toContain("cron: '40 3 * * *'");
+    expect(t5).toContain("cron: '40 14 * * *'");
     expect(t5).toContain('uses: ./.github/workflows/hosted-quality-core.yml');
     expect(t5).toContain('scope: full');
     expect(remote).toContain('name: Remote Quality');
