@@ -103,7 +103,7 @@ export function authenticateCompanionRequest(args: {
     };
   }
   const validSignature = verifyCompanionRequestSignature({
-    bodyText: args.bodyText,
+    ...(args.bodyText === undefined ? {} : { bodyText: args.bodyText }),
     method: args.request.method ?? 'GET',
     nonce,
     pathWithQuery: parsePathWithQuery(args.request),

@@ -35,8 +35,8 @@ export async function applyStateObjectPushWithDbPort(
   return await port.transaction(async (tx) => {
     const current = await currentState(tx, item.identity);
     const record = buildStateObjectRecord(item, objectType);
-    if (!record || item.base.kind !== 'content_hash') return emptyResult(rejectAck(item, `invalid_${objectType}_push`));
-    if (objectType === 'view_state') return emptyResult(rejectAck(item, 'device_private_view_state_push'));
+    if (!record || item.base.kind !== 'content_hash') return rejectedStateObjectPushResult(item, `invalid_${objectType}_push`);
+    if (objectType === 'view_state') return rejectedStateObjectPushResult(item, 'device_private_view_state_push');
     if (current?.content_hash === record.content_hash && current.deleted_at === record.deleted_at) {
       return emptyResult(stateAck(item, current, 'already_applied'));
     }
@@ -126,13 +126,13 @@ function stateAck(item: CompanionSyncPushPayload, row: SyncObjectStateRow | unde
   };
 }
 
-function rejectAck(item: CompanionSyncPushPayload, reason: string) {
-  return {
-    clientOpId: item.clientOpId,
-    conflictReason: reason,
-    identity: item.identity,
-    status: 'rejected' as const
-  };
+export function rejectedStateObjectPushResult(
+  item: CompanionSyncPushPayload,
+  reason: string
+): CompanionSyncPushResult {
+  return emptyResult({
+    clientOpId: item.clientOpId, conflictReason: reason, identity: item.identity, status: 'rejected'
+  });
 }
 
 function emptyResult(ack: CompanionSyncPushResult['acks'][number]): CompanionSyncPushResult {

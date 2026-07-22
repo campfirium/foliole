@@ -1,6 +1,7 @@
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import {
   applyStateObjectPushWithDbPort,
+  rejectedStateObjectPushResult,
   type StatePushObjectType
 } from './companionSyncPushStateObjectWithDbPort.js';
 import type {
@@ -15,7 +16,7 @@ export async function applyStateObjectPushAsync(item: CompanionSyncPushPayload):
   try {
     return await applyStateObjectPushWithDbPort(port, item, item.identity.objectType as StatePushObjectType);
   } catch (error) {
-    return emptyResult(rejectAck(item, error instanceof Error ? error.message : 'apply_failed'));
+    return rejectedStateObjectPushResult(item, error instanceof Error ? error.message : 'apply_failed');
   }
 }
 
