@@ -28,12 +28,17 @@ export interface InitialLibrarySetupPreparation {
 
 let activeSession: InitialLibrarySetupSession | null = null;
 
+function joinMacPath(basePath: string, ...parts: string[]) {
+  const pathApi = basePath.includes('\\') ? path.win32 : path.posix;
+  return pathApi.join(basePath, ...parts);
+}
+
 function resolveRequestedDefaultLibraryHome() {
   const testStateRoot = process.env.FOLIOLE_ELECTRON_TEST_STATE_ROOT;
   if (testStateRoot && path.isAbsolute(testStateRoot)) {
     return path.join(testStateRoot, 'Documents', LIBRARY_HOME_DEFAULT_DIRNAME);
   }
-  return path.join(app.getPath('home'), 'Documents', LIBRARY_HOME_DEFAULT_DIRNAME);
+  return joinMacPath(app.getPath('home'), 'Documents', LIBRARY_HOME_DEFAULT_DIRNAME);
 }
 
 function defaultDatabaseExistsOutsideTestIsolation() {
@@ -62,7 +67,7 @@ export function prepareInitialLibrarySetup(): InitialLibrarySetupPreparation | n
     return { completion: activeSession.completion, startupView: { kind: 'library-setup' } };
   }
   const requestedHome = resolveRequestedDefaultLibraryHome();
-  const requestedDatabase = path.join(requestedHome, LIBRARY_DATA_DIRNAME, LIBRARY_DATABASE_FILENAME);
+  const requestedDatabase = joinMacPath(requestedHome, LIBRARY_DATA_DIRNAME, LIBRARY_DATABASE_FILENAME);
   if (!shouldRunInitialLibrarySetup({
     defaultDatabaseExists: defaultDatabaseExistsOutsideTestIsolation(),
     hasSelection: hasBootstrapLibrarySelection(),
@@ -88,7 +93,8 @@ function requireActiveSession() {
 
 function formatDisplayPath(libraryHome: string) {
   const home = app.getPath('home');
-  return libraryHome === home || libraryHome.startsWith(`${home}${path.sep}`)
+  const separator = home.includes('\\') ? path.win32.sep : path.posix.sep;
+  return libraryHome === home || libraryHome.startsWith(`${home}${separator}`)
     ? `~${libraryHome.slice(home.length)}`
     : libraryHome;
 }
@@ -105,7 +111,9 @@ async function selectParentDirectory(window: BrowserWindow | null) {
   const session = requireActiveSession();
   const options: OpenDialogOptions = {
     buttonLabel: 'Choose',
-    defaultPath: path.dirname(session.libraryHome),
+    defaultPath: session.libraryHome.includes('\\')
+      ? path.win32.dirname(session.libraryHome)
+      : path.posix.dirname(session.libraryHome),
     message: 'Choose the folder that will contain the Foliole library.',
     properties: ['openDirectory', 'createDirectory'],
     securityScopedBookmarks: shouldRequestSecurityScopedBookmarks()
@@ -117,7 +125,7 @@ async function selectParentDirectory(window: BrowserWindow | null) {
     return false;
   }
   const parentPath = selection.filePaths[0];
-  session.libraryHome = path.join(parentPath, LIBRARY_HOME_DEFAULT_DIRNAME);
+  session.libraryHome = joinMacPath(parentPath, LIBRARY_HOME_DEFAULT_DIRNAME);
   session.authorization = {
     parentPath,
     ...(selection.bookmarks?.[0] ? { bookmark: selection.bookmarks[0] } : {})
@@ -140,7 +148,7 @@ function assertLibraryDestinationAvailable(libraryHome: string) {
   if (!fs.existsSync(libraryHome)) {
     return;
   }
-  const databasePath = path.join(libraryHome, LIBRARY_DATA_DIRNAME, LIBRARY_DATABASE_FILENAME);
+  const databasePath = joinMacPath(libraryHome, LIBRARY_DATA_DIRNAME, LIBRARY_DATABASE_FILENAME);
   if (fs.existsSync(databasePath)) {
     throw new Error('A Foliole library already exists at this location.');
   }

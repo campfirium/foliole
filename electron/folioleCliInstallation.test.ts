@@ -26,8 +26,11 @@ import {
 } from './folioleCliInstallation.js';
 
 const roots: string[] = [];
+let originalPlatform: PropertyDescriptor | undefined;
 
 beforeEach(() => {
+  originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
+  Object.defineProperty(process, 'platform', { configurable: true, value: 'darwin' });
   Object.defineProperty(process, 'mas', { configurable: true, value: true });
   electronMocks.showOpenDialog.mockReset();
   electronMocks.stopAccess.mockReset();
@@ -36,6 +39,7 @@ beforeEach(() => {
 afterEach(async () => {
   Reflect.deleteProperty(process, 'mas');
   Reflect.deleteProperty(process, 'resourcesPath');
+  if (originalPlatform) Object.defineProperty(process, 'platform', originalPlatform);
   await Promise.all(roots.splice(0).map((root) => fs.rm(root, { force: true, recursive: true })));
 });
 

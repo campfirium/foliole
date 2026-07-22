@@ -23,9 +23,13 @@ export type FileBookmarkAccessResult =
 const BOOKMARKS_FILENAME = 'macos-file-security-bookmarks.json';
 const activeHandles = new Map<string, number>();
 
+function resolveMacosFilePath(filePath: string) {
+  return path.posix.resolve(filePath);
+}
+
 export function ensureMacosFileSecurityScopedAccess(filePath: string): FileBookmarkAccessResult {
   if (process.platform !== 'darwin' || !isRunningInAppSandbox()) return { status: 'not_required' };
-  const absolutePath = path.resolve(filePath);
+  const absolutePath = resolveMacosFilePath(filePath);
   if (activeHandles.has(absolutePath)) return { status: 'active' };
   const loaded = loadMacosSecurityScopedBookmarkAdapter();
   if (loaded.status !== 'ready') return adapterLoadFailure(loaded);
@@ -81,7 +85,7 @@ function restoreStoredBookmark(
     logRestoreFailure(entry.path, resolved.errorCode, resolved.message);
     return;
   }
-  if (path.resolve(resolved.resolvedPath) !== entry.path) {
+  if (resolveMacosFilePath(resolved.resolvedPath) !== entry.path) {
     adapter.stop(resolved.handle);
     logRestoreFailure(entry.path, 'resolved_path_changed', resolved.resolvedPath);
     return;
@@ -185,5 +189,5 @@ function isStoredFileBookmark(value: unknown): value is StoredFileBookmark {
   if (!value || typeof value !== 'object') return false;
   const entry = value as Record<string, unknown>;
   return typeof entry.bookmark === 'string' && entry.bookmark.length > 0 &&
-    typeof entry.path === 'string' && path.isAbsolute(entry.path);
+    typeof entry.path === 'string' && path.posix.isAbsolute(entry.path);
 }

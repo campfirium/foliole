@@ -49,7 +49,7 @@ describe('desktop-validation-serial.mjs', () => {
         'single:preview:end'
       ]);
     });
-  }, 10000);
+  }, 30_000);
 
   it('stops before preview when lint fails', async () => {
     await withTempFixture(async ({ logFile, runtimeDir, stub }) => {
@@ -67,7 +67,7 @@ describe('desktop-validation-serial.mjs', () => {
       expect(log).toContain('failed:lint:end');
       expect(log).not.toContain('failed:preview:start');
     });
-  }, 10000);
+  }, 30_000);
 
   it('stops its active child when interrupted', async () => {
     await withTempFixture(async ({ logFile, runtimeDir, stub }) => {

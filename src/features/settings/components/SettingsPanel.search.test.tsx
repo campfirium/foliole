@@ -42,6 +42,9 @@ beforeEach(() => {
       };
     }
     if (command === 'load_external_search_folders') return [];
+    if (command === 'foliole_cli_install') {
+      return { commandPath: null, error: null, status: 'not_installed' };
+    }
     return null;
   }) as unknown as NativeInvoke;
   window.electronAPI = {

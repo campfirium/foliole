@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   persistSecurityScopedBookmark: vi.fn(),
   saveCurrentLibraryHome: vi.fn()
 }));
+let originalPlatform: PropertyDescriptor | undefined;
 
 vi.mock('electron', () => ({
   app: {
@@ -37,12 +38,15 @@ import {
 beforeEach(() => {
   vi.clearAllMocks();
   resetInitialLibrarySetupForTests();
+  originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
+  Object.defineProperty(process, 'platform', { configurable: true, value: 'darwin' });
   Object.defineProperty(process, 'mas', { configurable: true, value: false });
 });
 
 afterEach(() => {
   resetInitialLibrarySetupForTests();
   Object.defineProperty(process, 'mas', { configurable: true, value: false });
+  if (originalPlatform) Object.defineProperty(process, 'platform', originalPlatform);
 });
 
 it('only requests setup for a fresh macOS library', () => {

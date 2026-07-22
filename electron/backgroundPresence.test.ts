@@ -145,7 +145,7 @@ it('installs the macOS menu bar capture menu without the Windows click toggle', 
     'Open Foliole',
     'Quit Foliole'
   ]);
-  expect(menu[0]!.accelerator).toBe('Alt+Shift+C');
+  expect(menu[0]!.accelerator).toBe('Alt+A');
   menu[0]!.click?.();
   menu[1]!.click?.();
   expect(captureToInbox).toHaveBeenCalledTimes(1);

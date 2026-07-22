@@ -26,7 +26,8 @@ export function resetBackgroundPresenceForTests() {
 function resolveTrayIconPath(platform: NodeJS.Platform = process.platform) {
   const iconName = platform === 'win32' ? 'icon.ico' : 'FolioleStatusTemplate.png';
   const basePath = app.isPackaged ? process.resourcesPath : app.getAppPath();
-  return path.join(basePath, 'build', iconName);
+  const pathApi = platform === 'darwin' ? path.posix : path;
+  return pathApi.join(basePath, 'build', iconName);
 }
 
 function createTrayIcon(platform: NodeJS.Platform = process.platform) {

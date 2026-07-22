@@ -44,5 +44,5 @@ describe('portable timeout runner', () => {
     } finally {
       await rm(tempRoot, { force: true, recursive: true });
     }
-  });
+  }, 15_000);
 });

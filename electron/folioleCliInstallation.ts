@@ -16,7 +16,8 @@ function result(status: NativeFolioleCliInstallState['status'], commandPath: str
 }
 
 export function resolvePackagedFolioleCliPath(resourcesPath = process.resourcesPath) {
-  return path.resolve(resourcesPath, '../Helpers/Foliole CLI.app/Contents/MacOS/foliole');
+  const pathApi = resourcesPath.includes('\\') ? path.win32 : path.posix;
+  return pathApi.resolve(resourcesPath, '../Helpers/Foliole CLI.app/Contents/MacOS/foliole');
 }
 
 async function readReceipt(filePath: string): Promise<CliReceipt | null> {

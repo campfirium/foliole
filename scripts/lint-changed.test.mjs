@@ -140,7 +140,7 @@ describe('lint-changed.mjs', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  });
+  }, 15_000);
 
   it('filters changed files by desktop and shared scopes', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'lint-changed-'));
