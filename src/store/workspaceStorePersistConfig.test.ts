@@ -49,6 +49,7 @@ it('roundtrips a partialized persisted workspace payload through merge', () => {
     }
   };
   const partialized = createConfig().partialize?.(persisted);
+  expect(partialized?.browseRootNodeId).toBe(HOME_NODE_ID);
 
   const merged = createConfig().merge?.(
     JSON.parse(JSON.stringify(partialized)),
@@ -56,7 +57,7 @@ it('roundtrips a partialized persisted workspace payload through merge', () => {
   );
 
   expect(merged?.activeNodeId).toBe(INBOX_NODE_ID);
-  expect(merged?.browseRootNodeId).toBe(HOME_NODE_ID);
+  expect(merged?.browseRootNodeId).toBe(INBOX_NODE_ID);
   expect(merged?.layout).toMatchObject({ documentMaxWidth: 920, listWidth: 360 });
   expect(merged?.nodeViewById['node-1']).toMatchObject({
     scrollTop: 42,

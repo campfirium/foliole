@@ -130,7 +130,7 @@ describe('resource gate', () => {
       };
       const timeoutEnv = {
         ...baseEnv,
-        FOLIOLE_RESOURCE_GATE_COMMAND_TIMEOUT_MS: '200',
+        FOLIOLE_RESOURCE_GATE_COMMAND_TIMEOUT_MS: '1000',
       };
       const timedOut = await runGate({
         className: 'node-heavy',

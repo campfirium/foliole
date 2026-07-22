@@ -143,7 +143,7 @@ describe('windows-deploy-app.sh', () => {
       await writeExecutable(
         tempRoot,
         'powershell.exe',
-        '#!/usr/bin/env bash\necho "[android-deploy] failed before open"\nsleep 1\nexit 42\n'
+        '#!/usr/bin/env bash\necho "[android-deploy] failed before open"\nexit 42\n'
       );
 
       const result = await runDeploy(tempRoot, {
@@ -157,4 +157,11 @@ describe('windows-deploy-app.sh', () => {
       await rm(tempRoot, { recursive: true, force: true });
     }
   }, 10000);
+
+  it('keeps the coprocess output descriptor after Bash clears the coprocess variables', async () => {
+    const script = await readFile(DEPLOY_SCRIPT, 'utf8');
+
+    expect(script).toContain('DEPLOY_PS_OUTPUT_FD="${DEPLOY_PS[0]}"');
+    expect(script).toContain('read -r line <&"${DEPLOY_PS_OUTPUT_FD}"');
+  });
 });
