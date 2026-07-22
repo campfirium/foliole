@@ -45,6 +45,8 @@ describe('hosted quality workflow contracts', () => {
     const ubuntuSection = core.split('  ubuntu-quality:')[1].split('  macos-quality:')[0];
     expect(ubuntuSection).toContain("inputs.scope == 'android'");
     expect(ubuntuSection).toContain('FOLIOLE_ANDROID_HOST_MODE: native-linux');
+    expect(ubuntuSection).toContain("if: inputs.scope == 'shared' || inputs.scope == 'android'");
+    expect(ubuntuSection).toContain('npm run electron:rebuild:native');
     expect(ubuntuSection).toContain('npm run quality:android');
     expect(ubuntuSection).toContain('npm run quality:release:android:tail');
   });
