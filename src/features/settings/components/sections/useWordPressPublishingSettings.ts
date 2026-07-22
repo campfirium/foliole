@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react';
 
+import {
+  getWordPressSiteKind,
+  isWordPressApplicationPasswordValid,
+  normalizeWordPressApplicationPassword,
+  normalizeWordPressSiteUrl,
+  type WordPressSiteKind
+} from '../../../../../lib/core/wordpress/wordpressConnectionInput';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
   connectWordPressPublishSettingsToRuntime,
@@ -16,18 +23,7 @@ export interface WordPressPublishingForm {
 type WordPressPublishingStatus = 'connecting' | 'disconnecting' | 'idle' | 'loading';
 const EMPTY_FORM: WordPressPublishingForm = { applicationPassword: '', siteUrl: '', username: '' };
 
-export type WordPressSiteKind = 'selfHosted' | 'unknown' | 'wordpressCom';
-
-function getWordPressSiteKind(value: string): WordPressSiteKind {
-  try {
-    const hostname = new URL(value).hostname.toLowerCase();
-    return hostname === 'wordpress.com' || hostname.endsWith('.wordpress.com')
-      ? 'wordpressCom'
-      : 'selfHosted';
-  } catch {
-    return 'unknown';
-  }
-}
+export type { WordPressSiteKind };
 
 function useWordPressPublishingState(t: ReturnType<typeof useTranslation>) {
   const [form, setForm] = useState<WordPressPublishingForm>(EMPTY_FORM);
@@ -54,7 +50,8 @@ function useWordPressPublishingState(t: ReturnType<typeof useTranslation>) {
 type PublishingState = ReturnType<typeof useWordPressPublishingState>;
 
 function readConnectionError(error: unknown, fallback: string) {
-  return error instanceof Error && error.message.trim() ? error.message : fallback;
+  if (!(error instanceof Error) || !error.message.trim()) return fallback;
+  return error.message.replace(/^Error invoking remote method '[^']+': Error: /u, '');
 }
 
 async function connectWordPress(state: PublishingState, t: ReturnType<typeof useTranslation>) {
@@ -62,8 +59,8 @@ async function connectWordPress(state: PublishingState, t: ReturnType<typeof use
   state.setError(null);
   try {
     const settings = await connectWordPressPublishSettingsToRuntime({
-      application_password: state.form.applicationPassword.trim(),
-      site_url: state.form.siteUrl.trim(),
+      application_password: normalizeWordPressApplicationPassword(state.form.applicationPassword),
+      site_url: normalizeWordPressSiteUrl(state.form.siteUrl),
       username: state.form.username.trim()
     });
     if (!settings) throw new Error('WordPress runtime unavailable');
@@ -98,15 +95,22 @@ export function useWordPressPublishingSettings() {
   const t = useTranslation();
   const state = useWordPressPublishingState(t);
   const disabled = state.status !== 'idle';
+  const siteKind = getWordPressSiteKind(state.form.siteUrl);
+  const siteUrlInvalid = Boolean(state.form.siteUrl.trim()) && siteKind === 'unknown';
+  const applicationPasswordInvalid = Boolean(normalizeWordPressApplicationPassword(state.form.applicationPassword))
+    && siteKind !== 'unknown'
+    && !isWordPressApplicationPasswordValid(state.form.applicationPassword, siteKind);
+  const canConnect = !disabled && !state.connected && Boolean(
+    state.form.siteUrl.trim() && state.form.username.trim() && state.form.applicationPassword.trim()
+  ) && !siteUrlInvalid && !applicationPasswordInvalid;
   const updateForm = (patch: Partial<WordPressPublishingForm>) => {
     state.setConnected(false);
     state.setError(null);
     state.setForm((current) => ({ ...current, ...patch }));
   };
   return {
-    canConnect: !disabled && !state.connected && Boolean(
-      state.form.siteUrl.trim() && state.form.username.trim() && state.form.applicationPassword.trim()
-    ),
+    canConnect,
+    applicationPasswordInvalid,
     connected: state.connected,
     disconnect: () => void disconnectWordPress(state, t),
     disabled,
@@ -114,9 +118,10 @@ export function useWordPressPublishingSettings() {
     fieldsDisabled: disabled || state.connected,
     form: state.form,
     hasCredentials: state.hasCredentials,
-    siteKind: getWordPressSiteKind(state.form.siteUrl),
+    siteKind,
+    siteUrlInvalid,
     status: state.status,
-    submit: () => void connectWordPress(state, t),
+    submit: () => { if (canConnect) void connectWordPress(state, t); },
     updateForm
   };
 }

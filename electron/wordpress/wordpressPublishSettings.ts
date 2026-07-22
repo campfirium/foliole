@@ -1,3 +1,4 @@
+import { normalizeWordPressApplicationPassword } from '../../lib/core/wordpress/wordpressConnectionInput.js';
 import type {
   NativeWordPressConnectInput,
   NativeWordPressPublishAdapter,
@@ -83,7 +84,7 @@ export async function connectWordPressPublishSettings(input: NativeWordPressConn
   const updatedAt = new Date().toISOString();
   const credential: WordPressCredential = {
     adapter: verified.adapter,
-    applicationPassword: input.application_password.trim(),
+    applicationPassword: normalizeWordPressApplicationPassword(input.application_password),
     siteUrl: verified.siteUrl,
     username: input.username.trim()
   };

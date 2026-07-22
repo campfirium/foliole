@@ -1,3 +1,10 @@
+import {
+  getWordPressSiteIdentity,
+  getWordPressSiteKind,
+  isWordPressApplicationPasswordValid,
+  normalizeWordPressApplicationPassword,
+  normalizeWordPressSiteUrl
+} from '../../lib/core/wordpress/wordpressConnectionInput.js';
 import type {
   NativeWordPressPostStatus,
   NativeWordPressPublishAdapter
@@ -29,27 +36,8 @@ interface WordPressPostInput {
   title: string;
 }
 
-function normalizePath(pathname: string) {
-  const value = pathname.replace(/\/+$/u, '');
-  return value === '/' ? '' : value;
-}
-
-export function normalizeWordPressSiteUrl(value: string) {
-  let url: URL;
-  try {
-    url = new URL(value.trim());
-  } catch {
-    throw new Error('Enter a valid HTTPS WordPress site address.');
-  }
-  if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash) {
-    throw new Error('Enter a valid HTTPS WordPress site address.');
-  }
-  return `${url.origin}${normalizePath(url.pathname)}`;
-}
-
 export function resolveWordPressAdapter(siteUrl: string): NativeWordPressPublishAdapter {
-  const hostname = new URL(siteUrl).hostname.toLowerCase();
-  return hostname === 'wordpress.com' || hostname.endsWith('.wordpress.com')
+  return getWordPressSiteKind(siteUrl) === 'wordpressCom'
     ? 'wordpress_com_xmlrpc'
     : 'core_rest';
 }
@@ -96,20 +84,19 @@ function toRecord(value: XmlRpcValue): Record<string, XmlRpcValue> | null {
     : null;
 }
 
-function normalizeReturnedSite(value: XmlRpcValue) {
-  if (typeof value !== 'string') return null;
-  try {
-    return normalizeWordPressSiteUrl(value);
-  } catch {
-    return null;
-  }
+function returnedBlogMatchesSite(blog: Record<string, XmlRpcValue> | null, siteUrl: string) {
+  const requestedSite = getWordPressSiteIdentity(siteUrl);
+  const returnedSite = typeof blog?.url === 'string' ? getWordPressSiteIdentity(blog.url) : null;
+  const requestedEndpoint = getWordPressSiteIdentity(`${siteUrl}/xmlrpc.php`);
+  const returnedEndpoint = typeof blog?.xmlrpc === 'string' ? getWordPressSiteIdentity(blog.xmlrpc) : null;
+  return requestedSite !== null && (requestedSite === returnedSite || requestedEndpoint === returnedEndpoint);
 }
 
 async function verifyWordPressComSite(siteUrl: string, username: string, applicationPassword: string) {
   const endpoint = `${siteUrl}/xmlrpc.php`;
   const result = await callXmlRpc(endpoint, 'wp.getUsersBlogs', [username, applicationPassword]);
   const blogs = Array.isArray(result) ? result.map(toRecord).filter(Boolean) : [];
-  const match = blogs.find((blog) => normalizeReturnedSite(blog?.url ?? '') === siteUrl);
+  const match = blogs.find((blog) => returnedBlogMatchesSite(blog, siteUrl));
   const blogId = match?.blogid;
   if (!match || (typeof blogId !== 'string' && typeof blogId !== 'number')) {
     throw new Error('This WordPress.com credential does not provide access to the requested site.');
@@ -135,8 +122,14 @@ export async function verifyWordPressConnection(input: {
 }): Promise<VerifiedWordPressSite> {
   const siteUrl = normalizeWordPressSiteUrl(input.siteUrl);
   const username = input.username.trim();
-  const applicationPassword = input.applicationPassword.trim();
+  const applicationPassword = normalizeWordPressApplicationPassword(input.applicationPassword);
   if (!username || !applicationPassword) throw new Error('Enter a username and Application Password.');
+  const siteKind = getWordPressSiteKind(siteUrl);
+  if (!isWordPressApplicationPasswordValid(applicationPassword, siteKind)) {
+    throw new Error(siteKind === 'wordpressCom'
+      ? 'Enter the complete 16-character WordPress.com Application Password.'
+      : 'Enter the complete 24-character WordPress Application Password.');
+  }
   return resolveWordPressAdapter(siteUrl) === 'wordpress_com_xmlrpc'
     ? verifyWordPressComSite(siteUrl, username, applicationPassword)
     : verifyCoreSite(siteUrl, username, applicationPassword);

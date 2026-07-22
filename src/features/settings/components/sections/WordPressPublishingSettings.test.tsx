@@ -49,7 +49,7 @@ it('shows the guide for the entered site and keeps connected fields locked until
   expect(openExternalUrl).toHaveBeenLastCalledWith('https://wordpress.com/support/security/two-step-authentication/application-specific-passwords/');
   expect(screen.queryByText(/may grant access to other sites/u)).toBeNull();
   fireEvent.change(screen.getByLabelText('WordPress username'), { target: { value: 'writer' } });
-  fireEvent.change(screen.getByLabelText('WordPress Application Password'), { target: { value: 'app-password' } });
+  fireEvent.change(screen.getByLabelText('WordPress Application Password'), { target: { value: 'abcd efgh ijkl mnop' } });
   fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
 
   expect(await screen.findByText('Connected')).toBeInTheDocument();
@@ -80,7 +80,7 @@ it('restores saved credentials as a connected, locked form', async () => {
 
 it('shows the original connection failure and keeps the form editable', async () => {
   repository.connectWordPressPublishSettingsToRuntime.mockRejectedValueOnce(
-    new Error('WordPress Application Password authentication failed (401)')
+    new Error("Error invoking remote method 'foliole:invoke': Error: WordPress Application Password authentication failed (401)")
   );
   renderWithLocalization(<WordPressPublishingSettings expanded onExpandedChange={vi.fn()} />);
 
@@ -88,7 +88,7 @@ it('shows the original connection failure and keeps the form editable', async ()
   await waitFor(() => expect(siteAddress).toBeEnabled());
   fireEvent.change(siteAddress, { target: { value: 'https://example.com' } });
   fireEvent.change(screen.getByLabelText('WordPress username'), { target: { value: 'writer' } });
-  fireEvent.change(screen.getByLabelText('WordPress Application Password'), { target: { value: 'bad-password' } });
+  fireEvent.change(screen.getByLabelText('WordPress Application Password'), { target: { value: 'abcd efgh ijkl mnop qrst uvwx' } });
   fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
 
   expect(await screen.findByText('WordPress Application Password authentication failed (401)')).toBeVisible();
@@ -108,10 +108,32 @@ it('does not report success when the runtime returns no stored credentials', asy
   await waitFor(() => expect(siteAddress).toBeEnabled());
   fireEvent.change(siteAddress, { target: { value: 'https://example.com' } });
   fireEvent.change(screen.getByLabelText('WordPress username'), { target: { value: 'writer' } });
-  fireEvent.change(screen.getByLabelText('WordPress Application Password'), { target: { value: 'app-password' } });
+  fireEvent.change(screen.getByLabelText('WordPress Application Password'), { target: { value: 'abcd efgh ijkl mnop qrst uvwx' } });
   fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
 
   expect(await screen.findByText('WordPress credentials were unavailable after connecting.')).toBeVisible();
   expect(screen.queryByText('Connected')).toBeNull();
   expect(siteAddress).toBeEnabled();
+});
+
+it('validates the address and provider-specific Application Password length', async () => {
+  renderWithLocalization(<WordPressPublishingSettings expanded onExpandedChange={vi.fn()} />);
+  const siteAddress = await screen.findByLabelText('WordPress site address');
+  await waitFor(() => expect(siteAddress).toBeEnabled());
+
+  fireEvent.change(siteAddress, { target: { value: 'folioleapp.wordpress.com' } });
+  fireEvent.change(screen.getByLabelText('WordPress username'), { target: { value: 'writer' } });
+  fireEvent.change(screen.getByLabelText('WordPress Application Password'), { target: { value: 'abcd efgh' } });
+  expect(screen.getByText(/complete 16-character WordPress\.com/u)).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Connect' })).toBeDisabled();
+  fireEvent.keyDown(screen.getByLabelText('WordPress Application Password'), { key: 'Enter' });
+  expect(repository.connectWordPressPublishSettingsToRuntime).not.toHaveBeenCalled();
+
+  fireEvent.change(screen.getByLabelText('WordPress Application Password'), { target: { value: 'abcd efgh ijkl mnop' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
+  await waitFor(() => expect(repository.connectWordPressPublishSettingsToRuntime).toHaveBeenCalledWith({
+    application_password: 'abcdefghijklmnop',
+    site_url: 'https://folioleapp.wordpress.com',
+    username: 'writer'
+  }));
 });

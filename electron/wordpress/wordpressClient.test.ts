@@ -13,8 +13,8 @@ it('verifies a Core-compatible site with HTTPS REST Application Password auth', 
   }));
 
   const result = await verifyWordPressConnection({
-    applicationPassword: 'site-app-password',
-    siteUrl: 'https://blog.example.com/',
+    applicationPassword: 'abcd efgh ijkl mnop qrst uvwx',
+    siteUrl: 'blog.example.com/',
     username: 'writer'
   });
 
@@ -27,13 +27,14 @@ it('verifies a Core-compatible site with HTTPS REST Application Password auth', 
 it('verifies a WordPress.com site by matching wp.getUsersBlogs without adapter fallback', async () => {
   const response = `<?xml version="1.0"?><methodResponse><params><param><value><array><data>
     <value><struct><member><name>blogid</name><value><string>91</string></value></member>
-    <member><name>url</name><value><string>https://free-site.wordpress.com/</string></value></member></struct></value>
+    <member><name>url</name><value><string>http://free-site.wordpress.com/</string></value></member>
+    <member><name>xmlrpc</name><value><string>http://free-site.wordpress.com/xmlrpc.php</string></value></member></struct></value>
   </data></array></value></param></params></methodResponse>`;
   const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(response, { status: 200 }));
 
   const result = await verifyWordPressConnection({
-    applicationPassword: 'account-app-password',
-    siteUrl: 'https://free-site.wordpress.com',
+    applicationPassword: 'abcd efgh ijkl mnop',
+    siteUrl: 'free-site.wordpress.com',
     username: 'account-name'
   });
 
@@ -83,5 +84,13 @@ it('rejects non-HTTPS sites before sending credentials', async () => {
   await expect(verifyWordPressConnection({
     applicationPassword: 'secret', siteUrl: 'http://blog.example.com', username: 'writer'
   })).rejects.toThrow('valid HTTPS');
+  expect(fetchMock).not.toHaveBeenCalled();
+});
+
+it('rejects incomplete Application Passwords before sending credentials', async () => {
+  const fetchMock = vi.spyOn(globalThis, 'fetch');
+  await expect(verifyWordPressConnection({
+    applicationPassword: 'too-short', siteUrl: 'example.com', username: 'writer'
+  })).rejects.toThrow('24-character');
   expect(fetchMock).not.toHaveBeenCalled();
 });
