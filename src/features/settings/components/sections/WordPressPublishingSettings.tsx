@@ -5,12 +5,10 @@ import { openExternalUrl } from '../../../../shared/platform/runtimeExternalNavi
 import {
   AppButton,
   AppErrorState,
-  AppStatusBadge,
-  SettingsControlSlot,
-  SettingsRow,
   SettingsSection
 } from '../../../../shared/ui';
 
+import { PublishingConnectionRow } from './PublishingConnectionRow';
 import { PublishingTextRow } from './PublishingTextRow';
 import { type WordPressSiteKind, useWordPressPublishingSettings } from './useWordPressPublishingSettings';
 
@@ -54,14 +52,13 @@ export function WordPressPublishingSettings(props: { expanded: boolean; onExpand
       <PublishingTextRow description={<SiteDescription />} disabled={state.fieldsDisabled} label={t('settings.publishing.wordpress.site.aria')} onChange={(siteUrl) => state.updateForm({ siteUrl })} title={t('settings.publishing.wordpress.site.title')} value={state.form.siteUrl} />
       <PublishingTextRow description={t('settings.publishing.wordpress.username.description')} disabled={state.fieldsDisabled} label={t('settings.publishing.wordpress.username.aria')} onChange={(username) => state.updateForm({ username })} title={t('settings.publishing.wordpress.username.title')} value={state.form.username} />
       <PublishingTextRow description={<PasswordDescription siteKind={state.siteKind} />} disabled={state.fieldsDisabled} label={t('settings.publishing.wordpress.password.aria')} onChange={(applicationPassword) => state.updateForm({ applicationPassword })} onEnter={state.submit} {...(state.hasCredentials ? { placeholder: '****************' } : {})} title={t('settings.publishing.wordpress.password.title')} type="password" value={state.form.applicationPassword} />
-      <SettingsRow description={t('settings.publishing.wordpress.connection.description')} title={t('settings.publishing.wordpress.connection.title')}>
-        <SettingsControlSlot className="w-[min(360px,100%)]">
-          {state.connected ? <AppStatusBadge label={t('settings.publishing.feedback.connected')} tone="success" /> : null}
-          {state.connected
-            ? <AppButton disabled={state.disabled} onClick={state.disconnect} variant="subtle">{t('settings.publishing.wordpress.connection.disconnect')}</AppButton>
-            : <AppButton disabled={!state.canConnect} onClick={state.submit}>{state.status === 'connecting' ? t('settings.publishing.wordpress.connection.connecting') : t('settings.publishing.wordpress.connection.connect')}</AppButton>}
-        </SettingsControlSlot>
-      </SettingsRow>
+      <PublishingConnectionRow
+        action={state.connected
+          ? <AppButton disabled={state.disabled} onClick={state.disconnect} variant="subtle">{t('settings.publishing.wordpress.connection.disconnect')}</AppButton>
+          : <AppButton disabled={!state.canConnect} onClick={state.submit}>{state.status === 'connecting' ? t('settings.publishing.wordpress.connection.connecting') : t('settings.publishing.wordpress.connection.connect')}</AppButton>}
+        connected={state.connected}
+        title={t('settings.publishing.wordpress.connection.title')}
+      />
     </SettingsSection>
   );
 }

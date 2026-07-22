@@ -114,6 +114,8 @@ it('shows a user-facing error when local pages cannot be updated', async () => {
 it('keeps every required Cloudflare value in one setup flow and deploys only on request', async () => {
   renderSettings();
   const deploy = await screen.findByRole('button', { name: 'Deploy' });
+  expect(screen.getByText('Cloudflare connection')).toBeVisible();
+  expect(screen.getByText('Not connected')).toBeVisible();
   expect(screen.getByLabelText('Cloudflare API Token')).toBeVisible();
   expect(screen.getByLabelText('Cloudflare Account ID')).toBeVisible();
   expect(screen.getByLabelText('pages.dev subdomain')).toBeVisible();
@@ -222,6 +224,7 @@ it('can restore pages.dev and opens the Cloudflare custom-domain guide', async (
 it('confirms destructive disconnect before deleting the managed Cloudflare site', async () => {
   mocks.loadFoliolePublishSettingsFromRuntime.mockResolvedValue(CONNECTED);
   renderSettings();
+  expect(await screen.findByText('Connected')).toBeVisible();
   fireEvent.click(await screen.findByRole('button', { name: 'Disconnect and delete site' }));
   expect(await screen.findByText('Disconnect and delete this site?')).toBeVisible();
   expect(mocks.disconnectFoliolePublishSettingsFromRuntime).not.toHaveBeenCalled();

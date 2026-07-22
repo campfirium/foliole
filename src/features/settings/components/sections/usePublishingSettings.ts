@@ -16,8 +16,7 @@ export interface PublishingFormState {
   siteUrl: string;
 }
 
-export type PublishingFeedback = 'authorizationOpened' | 'connected' | 'saved' | null;
-export type PublishingStatus = 'authorizing' | 'idle' | 'loading' | 'saving' | 'testing';
+export type PublishingStatus = 'authorizing' | 'connecting' | 'idle' | 'loading' | 'saving';
 
 const EMPTY_FORM: PublishingFormState = { authorizationResult: '', siteUrl: '' };
 
@@ -26,7 +25,6 @@ function usePublishingFormState() {
   const [form, setForm] = useState<PublishingFormState>(EMPTY_FORM);
   const [status, setStatus] = useState<PublishingStatus>('loading');
   const [error, setError] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<PublishingFeedback>(null);
   const [hasApiKey, setHasApiKey] = useState(false);
   const [savedSiteUrl, setSavedSiteUrl] = useState('');
   useEffect(() => {
@@ -44,7 +42,7 @@ function usePublishingFormState() {
         setStatus('idle');
       });
   }, [t]);
-  return { error, feedback, form, hasApiKey, savedSiteUrl, setError, setFeedback, setForm, setHasApiKey, setSavedSiteUrl, setStatus, status };
+  return { error, form, hasApiKey, savedSiteUrl, setError, setForm, setHasApiKey, setSavedSiteUrl, setStatus, status };
 }
 
 type PublishingState = ReturnType<typeof usePublishingFormState>;
@@ -66,10 +64,8 @@ async function persistPublishingSettings(state: PublishingState, form: Publishin
 async function savePublishingSettings(state: PublishingState, t: ReturnType<typeof useTranslation>, form: PublishingFormState) {
   state.setStatus('saving');
   state.setError(null);
-  state.setFeedback(null);
   try {
     await persistPublishingSettings(state, form);
-    state.setFeedback('saved');
   } catch {
     state.setError(t('settings.publishing.error.save'));
   } finally {
@@ -77,32 +73,14 @@ async function savePublishingSettings(state: PublishingState, t: ReturnType<type
   }
 }
 
-async function testPublishingConnection(state: PublishingState, t: ReturnType<typeof useTranslation>) {
-  state.setStatus('testing');
-  state.setError(null);
-  state.setFeedback(null);
-  try {
-    await persistPublishingSettings(state, state.form);
-    const catalog = await loadDiscoursePublishCatalogFromRuntime({ refresh: true });
-    if (!catalog || catalog.from_cache) throw new Error('Discourse catalog unavailable');
-    state.setFeedback('connected');
-  } catch {
-    state.setError(t('settings.publishing.error.test'));
-  } finally {
-    state.setStatus('idle');
-  }
-}
-
 async function beginAuthorization(state: PublishingState, t: ReturnType<typeof useTranslation>) {
   state.setStatus('authorizing');
   state.setError(null);
-  state.setFeedback(null);
   try {
     await persistPublishingSettings(state, state.form);
     const result = await beginDiscourseUserApiAuthorizationFromRuntime(state.form.siteUrl);
     if (!result) throw new Error('Discourse authorization unavailable');
     await openExternalUrl(result.authorization_url);
-    state.setFeedback('authorizationOpened');
   } catch {
     state.setError(t('settings.publishing.error.authorization'));
   } finally {
@@ -111,9 +89,8 @@ async function beginAuthorization(state: PublishingState, t: ReturnType<typeof u
 }
 
 async function completeAuthorization(state: PublishingState, t: ReturnType<typeof useTranslation>) {
-  state.setStatus('saving');
+  state.setStatus('connecting');
   state.setError(null);
-  state.setFeedback(null);
   try {
     const saved = await completeDiscourseUserApiAuthorizationFromRuntime(
       state.form.siteUrl,
@@ -125,7 +102,6 @@ async function completeAuthorization(state: PublishingState, t: ReturnType<typeo
     state.setForm((current) => ({ ...current, authorizationResult: '' }));
     const catalog = await loadDiscoursePublishCatalogFromRuntime({ refresh: true });
     if (!catalog || catalog.from_cache) throw new Error('Discourse catalog unavailable');
-    state.setFeedback('connected');
   } catch {
     state.setError(t('settings.publishing.error.authorization'));
   } finally {
@@ -136,7 +112,6 @@ async function completeAuthorization(state: PublishingState, t: ReturnType<typeo
 async function disconnectPublishingSettings(state: PublishingState, t: ReturnType<typeof useTranslation>) {
   state.setStatus('saving');
   state.setError(null);
-  state.setFeedback(null);
   try {
     const settings = await disconnectDiscoursePublishSettingsFromRuntime();
     if (settings) {
@@ -156,7 +131,6 @@ export function usePublishingSettings() {
   const state = usePublishingFormState();
   const updateForm = (patch: Partial<PublishingFormState>) => {
     state.setError(null);
-    state.setFeedback(null);
     state.setForm((current) => ({ ...current, ...patch }));
   };
   const saveForumUrl = () => {
@@ -167,14 +141,12 @@ export function usePublishingSettings() {
   return {
     ...state,
     beginAuthorization: () => void beginAuthorization(state, t),
-    canAuthorize: !disabled && hasSiteUrl,
-    canCompleteAuthorization: !disabled && hasSiteUrl && Boolean(state.form.authorizationResult.trim()),
-    canTest: !disabled && hasSiteUrl && state.hasApiKey,
+    canAuthorize: !disabled && !state.hasApiKey && hasSiteUrl,
+    canCompleteAuthorization: !disabled && !state.hasApiKey && hasSiteUrl && Boolean(state.form.authorizationResult.trim()),
     completeAuthorization: () => void completeAuthorization(state, t),
     disconnect: () => void disconnectPublishingSettings(state, t),
     disabled,
     saveForumUrl,
-    testConnection: () => void testPublishingConnection(state, t),
     updateForm
   };
 }

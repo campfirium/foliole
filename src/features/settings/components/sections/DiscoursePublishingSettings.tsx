@@ -2,51 +2,13 @@ import { useTranslation } from '../../../../shared/localization/LocalizationProv
 import {
   AppButton,
   AppErrorState,
-  SettingsControlSlot,
-  SettingsRow,
+  settingsFieldClassName,
   SettingsSection
 } from '../../../../shared/ui';
 
 import { DiscourseAuthorizationRows } from './DiscourseAuthorizationRows';
-import { PublishingTextRow } from './PublishingTextRow';
-import { usePublishingSettings, type PublishingFeedback, type PublishingFormState, type PublishingStatus } from './usePublishingSettings';
-
-function ConnectionRow(props: {
-  canTest: boolean;
-  feedback: PublishingFeedback;
-  onDisconnect: () => void;
-  onTest: () => void;
-  status: PublishingStatus;
-}) {
-  const t = useTranslation();
-  return (
-    <SettingsRow
-      description={props.feedback === 'connected' ? t('settings.publishing.connection.verified') : t('settings.publishing.connection.description')}
-      title={t('settings.publishing.connection.title')}
-    >
-      <SettingsControlSlot className="w-[min(360px,100%)]">
-        <AppButton disabled={!props.canTest} onClick={props.onTest}>
-          {props.status === 'testing' ? t('settings.publishing.connection.testing') : t('settings.publishing.connection.test')}
-        </AppButton>
-        <AppButton disabled={props.status !== 'idle'} onClick={props.onDisconnect} variant="subtle">{t('settings.publishing.disconnect')}</AppButton>
-      </SettingsControlSlot>
-    </SettingsRow>
-  );
-}
-
-function PublishingRows(props: {
-  disabled: boolean;
-  form: PublishingFormState;
-  saveForumUrl: () => void;
-  updateForm: (patch: Partial<PublishingFormState>) => void;
-}) {
-  const t = useTranslation();
-  return (
-    <>
-      <PublishingTextRow description={t('settings.publishing.site.description')} disabled={props.disabled} label={t('settings.publishing.site.aria')} onBlur={props.saveForumUrl} onChange={(siteUrl) => props.updateForm({ siteUrl })} onEnter={props.saveForumUrl} title={t('settings.publishing.site.title')} value={props.form.siteUrl} />
-    </>
-  );
-}
+import { PublishingSetupStep } from './PublishingSetupStep';
+import { usePublishingSettings } from './usePublishingSettings';
 
 export function DiscoursePublishingSettings(props: { expanded: boolean; onExpandedChange: (expanded: boolean) => void }) {
   const t = useTranslation();
@@ -54,17 +16,22 @@ export function DiscoursePublishingSettings(props: { expanded: boolean; onExpand
   return (
     <SettingsSection ariaLabel={t('settings.publishing.sectionAria')} description={t('settings.publishing.discourse.description')} expanded={props.expanded} onExpandedChange={props.onExpandedChange} title={t('settings.publishing.discourse.title')}>
       {state.error ? <AppErrorState description={t('settings.publishing.error.tryAgain')} surface="panel" title={state.error} /> : null}
-      <PublishingRows disabled={state.disabled} form={state.form} saveForumUrl={state.saveForumUrl} updateForm={state.updateForm} />
+      <PublishingSetupStep description={t('settings.publishing.site.description')} step={1} title={t('settings.publishing.site.title')}>
+        <input aria-label={t('settings.publishing.site.aria')} className={settingsFieldClassName()} disabled={state.disabled || state.hasApiKey} onBlur={state.saveForumUrl} onChange={(event) => state.updateForm({ siteUrl: event.target.value })} onKeyDown={(event) => { if (event.key === 'Enter') state.saveForumUrl(); }} value={state.form.siteUrl} />
+      </PublishingSetupStep>
       <DiscourseAuthorizationRows
         authorizationResult={state.form.authorizationResult}
         canAuthorize={state.canAuthorize}
-        canComplete={state.canCompleteAuthorization}
+        connected={state.hasApiKey}
         onBegin={state.beginAuthorization}
-        onComplete={state.completeAuthorization}
         onResultChange={(authorizationResult) => state.updateForm({ authorizationResult })}
         status={state.status}
       />
-      {state.hasApiKey ? <ConnectionRow canTest={state.canTest} feedback={state.feedback} onDisconnect={state.disconnect} onTest={state.testConnection} status={state.status} /> : null}
+      <PublishingSetupStep description={t(state.hasApiKey ? 'settings.publishing.connectionState.connected' : 'settings.publishing.connectionState.notConnected')} step={3} title={t('settings.publishing.connection.title')}>
+        {state.hasApiKey
+          ? <AppButton disabled={state.disabled} onClick={state.disconnect} variant="subtle">{t('settings.publishing.disconnect')}</AppButton>
+          : <AppButton disabled={!state.canCompleteAuthorization} onClick={state.completeAuthorization}>{state.status === 'connecting' ? t('settings.publishing.connection.connecting') : t('settings.publishing.connection.connect')}</AppButton>}
+      </PublishingSetupStep>
     </SettingsSection>
   );
 }

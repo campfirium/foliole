@@ -1,4 +1,4 @@
-import { act, fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../../../shared/localization/testLocalization';
@@ -132,22 +132,31 @@ it('uses concise Publish copy and the standard settings input width', async () =
   expect(screen.getByRole('heading', { level: 3, name: 'Publish to WordPress' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { level: 3, name: 'Publish to Discourse' })).toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: 'Discourse forum' })).toBeNull();
-  expect(screen.getByText('Forum URL')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Test access' })).toBeEnabled();
-  expect(forumUrl.parentElement).toHaveClass('w-[min(360px,100%)]');
+  expect(screen.getByText('Enter forum address')).toBeInTheDocument();
+  expect(screen.getByText('Get authorization')).toBeInTheDocument();
+  expect(screen.getByText('Get authorization').parentElement?.parentElement).toHaveClass('grid-cols-[minmax(0,1fr)_minmax(0,420px)]');
+  expect(screen.getByText('Discourse connection')).toBeInTheDocument();
+  expect(screen.getByText('Connected')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Test access' })).toBeNull();
+  expect(forumUrl.parentElement).toHaveClass('w-full');
 });
 
 it('disconnects Discourse and removes the saved credential state', async () => {
   renderWithLocalization(<SettingsPublishingSection />);
   fireEvent.click(screen.getByRole('button', { name: 'Publish to Discourse' }));
-  const disconnect = await screen.findByRole('button', { name: 'Remove authorization' });
+  const disconnect = await screen.findByRole('button', { name: 'Disconnect' });
   fireEvent.click(disconnect);
 
   await waitFor(() => expect(repositoryMocks.disconnectDiscoursePublishSettingsFromRuntime).toHaveBeenCalledOnce());
-  expect(screen.queryByRole('button', { name: 'Remove authorization' })).toBeNull();
+  const discourse = screen.getByRole('region', { name: 'Discourse publish settings' });
+  expect(within(discourse).getByText('Not connected')).toBeVisible();
+  expect(screen.queryByRole('button', { name: 'Disconnect' })).toBeNull();
 });
 
 it('saves the forum URL silently after blur or Enter', async () => {
+  repositoryMocks.loadDiscoursePublishSettingsFromRuntime.mockResolvedValue({
+    has_api_key: false, site_url: 'https://forum.example.com', updated_at: null
+  });
   renderWithLocalization(<SettingsPublishingSection />);
   const forumUrl = await screen.findByLabelText('Discourse forum URL');
 
@@ -167,6 +176,9 @@ it('saves the forum URL silently after blur or Enter', async () => {
 });
 
 it('does not replace newer input when an earlier save finishes', async () => {
+  repositoryMocks.loadDiscoursePublishSettingsFromRuntime.mockResolvedValue({
+    has_api_key: false, site_url: 'https://forum.example.com', updated_at: null
+  });
   let resolveSave: ((settings: typeof SAVED_SETTINGS) => void) | undefined;
   repositoryMocks.saveDiscoursePublishSettingsToRuntime.mockImplementationOnce(() => new Promise<typeof SAVED_SETTINGS>((resolve) => {
     resolveSave = resolve;
@@ -180,48 +192,4 @@ it('does not replace newer input when an earlier save finishes', async () => {
   await act(async () => resolveSave?.({ ...SAVED_SETTINGS, site_url: 'https://first.example.com' }));
 
   expect(forumUrl).toHaveValue('https://newer.example.com');
-});
-
-it('saves current settings and refreshes the Discourse catalog when testing the connection', async () => {
-  renderWithLocalization(<SettingsPublishingSection />);
-  fireEvent.click(screen.getByRole('button', { name: 'Publish to Discourse' }));
-  const testConnection = await screen.findByRole('button', { name: 'Test access' });
-  await waitFor(() => expect(testConnection).toBeEnabled());
-
-  fireEvent.click(testConnection);
-
-  await waitFor(() => expect(repositoryMocks.loadDiscoursePublishCatalogFromRuntime).toHaveBeenCalledWith({ refresh: true }));
-  expect(repositoryMocks.saveDiscoursePublishSettingsToRuntime).toHaveBeenCalledWith({
-    site_url: 'https://forum.example.com'
-  });
-  expect(await screen.findByText('Publishing access verified.')).toBeInTheDocument();
-});
-
-it('shows a user-facing error when the connection test fails', async () => {
-  repositoryMocks.loadDiscoursePublishCatalogFromRuntime.mockRejectedValue(new Error('private runtime detail'));
-  renderWithLocalization(<SettingsPublishingSection />);
-  fireEvent.click(screen.getByRole('button', { name: 'Publish to Discourse' }));
-  const testConnection = await screen.findByRole('button', { name: 'Test access' });
-  await waitFor(() => expect(testConnection).toBeEnabled());
-
-  fireEvent.click(testConnection);
-
-  expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't connect to Discourse.");
-  expect(screen.getByRole('alert')).not.toHaveTextContent('private runtime detail');
-});
-
-it('does not report a cached catalog as a successful connection test', async () => {
-  repositoryMocks.loadDiscoursePublishCatalogFromRuntime.mockResolvedValue({
-    categories: [], fetched_at: '2026-07-02T00:00:00.000Z', from_cache: true,
-    recent_category_ids: [], recent_tags: [], tags: []
-  });
-  renderWithLocalization(<SettingsPublishingSection />);
-  fireEvent.click(screen.getByRole('button', { name: 'Publish to Discourse' }));
-  const testConnection = await screen.findByRole('button', { name: 'Test access' });
-  await waitFor(() => expect(testConnection).toBeEnabled());
-
-  fireEvent.click(testConnection);
-
-  expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't connect to Discourse.");
-  expect(screen.queryByText('Publishing access verified.')).toBeNull();
 });

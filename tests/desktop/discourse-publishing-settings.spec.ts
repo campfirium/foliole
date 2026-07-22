@@ -4,12 +4,6 @@ import path from 'node:path';
 import { test, expect } from './harness/fixtures';
 import { openSettingsDialog } from './harness/settings';
 
-type RowLayout = {
-  inputWidth: number;
-  paragraphWidth: number;
-  title: string;
-};
-
 type PublishingRegions = {
   discourse: import('@playwright/test').Locator;
   foliole: import('@playwright/test').Locator;
@@ -38,23 +32,6 @@ async function seedConnectedFoliolePublish(desktopApp: import('@playwright/test'
       project_name: 'playwright-site', site_address: 'https://notes.example.com'
     }, 'https://playwright-site.pages.dev');
   });
-}
-
-async function collectPublishingRowLayouts(dialog: import('@playwright/test').Locator): Promise<RowLayout[]> {
-  return dialog.getByRole('region', {
-    name: /^(Discourse publish settings|Discourse 发布设置)$/
-  }).locator('[data-settings-row]').evaluateAll((rows) =>
-    rows.map((row) => {
-      const title = row.querySelector('h4')?.textContent?.trim() ?? '';
-      const paragraph = row.querySelector('p');
-      const input = row.querySelector('input');
-      return {
-        inputWidth: input?.getBoundingClientRect().width ?? 0,
-        paragraphWidth: paragraph?.getBoundingClientRect().width ?? 0,
-        title
-      };
-    })
-  );
 }
 
 async function verifyCollapsedOverview(
@@ -96,7 +73,7 @@ async function captureExpandedSettings(
   screenshotDir: string,
   testInfo: import('@playwright/test').TestInfo
 ) {
-  const screenshot = await desktopWindow.screenshot({ fullPage: true });
+  const screenshot = await desktopWindow.screenshot();
   await writeFile(path.join(screenshotDir, 'discourse-publishing-settings-hidden-native.png'), screenshot);
   await testInfo.attach('discourse-publishing-settings', { body: screenshot, contentType: 'image/png' });
 }
@@ -115,6 +92,7 @@ async function verifyFolioleSetupSteps(
   await expect(subdomain).toBeVisible();
   await expect(foliole.getByRole('button', { name: /^(API Token request page ↗|API Token 申请页面 ↗)$/ })).toBeVisible();
   await expect(foliole.getByRole('button', { name: /^(Deploy|部署)$/ })).toBeDisabled();
+  await expect(foliole.getByText(/^(Not connected|未连接)$/)).toBeVisible();
   await expect(foliole.getByRole('button', { name: /^(View local|查看本地)$/ })).toBeVisible();
   await expect(foliole.getByRole('button', { name: /^(View Web|查看 Web)$/ })).toBeDisabled();
   await foliole.getByText(/^(Static pages|静态页面)$/).scrollIntoViewIfNeeded();
@@ -129,7 +107,8 @@ async function verifyFolioleSetupSteps(
   await updateLocalPages.click();
   await expect(updateLocalPages).toBeEnabled();
   await expect(foliole.getByText(/^(Couldn't update the local pages\.|无法更新本地页面。)$/)).toHaveCount(0);
-  await expect(foliole.getByText(/^(Custom domain \(optional\)|使用自定义域名（可选）)$/)).toBeVisible();
+  const customDomain = foliole.getByText(/^(Custom domain \(optional\)|使用自定义域名（可选）)$/);
+  await expect(customDomain).toHaveCount(1);
   await expect(foliole.getByText(/^(Security notice: Foliole does not operate or authorize foliole\.pages\.dev\.|安全提示：Foliole 未运营或授权 foliole\.pages\.dev。)$/)).toBeVisible();
   await accountId.evaluate((element) => element.scrollIntoView({ block: 'center' }));
   const credentialsScreenshot = await desktopWindow.screenshot({ fullPage: true });
@@ -151,6 +130,43 @@ async function verifyFolioleSetupSteps(
   const siteScreenshot = await desktopWindow.screenshot({ fullPage: true });
   await writeFile(path.join(screenshotDir, 'foliole-publish-site-name-hidden-native.png'), siteScreenshot);
   await testInfo.attach('foliole-publish-site-name', { body: siteScreenshot, contentType: 'image/png' });
+}
+
+async function verifyDiscourseSetupSteps(
+  regions: PublishingRegions,
+  dialog: import('@playwright/test').Locator,
+  desktopWindow: import('@playwright/test').Page,
+  screenshotDir: string,
+  testInfo: import('@playwright/test').TestInfo
+) {
+  await regions.foliole.getByRole('button', { name: 'Publish to the site' }).click();
+  await regions.wordpress.getByRole('button', { name: 'Publish to WordPress' }).click();
+  const forumUrl = dialog.getByRole('textbox', { name: /^(Discourse forum URL|Discourse 论坛 URL)$/ });
+  await expect(forumUrl).toBeVisible();
+  await expect(regions.discourse.getByText(/^(Enter forum address|输入论坛地址)$/)).toBeVisible();
+  await forumUrl.evaluate((element) => {
+    let container = element.parentElement;
+    while (container && !['auto', 'scroll'].includes(getComputedStyle(container).overflowY)) container = container.parentElement;
+    container?.scrollTo({ top: container.scrollHeight });
+  });
+  await expect(regions.discourse.getByText(/^(Get authorization|获取授权)$/)).toHaveCount(1);
+  await expect(dialog.getByRole('button', { name: /^(Open the Discourse authorization page ↗|打开 Discourse 授权页面 ↗)$/ })).toHaveCount(1);
+  await expect(dialog.getByLabel(/^(Discourse authorization result|Discourse 授权结果)$/)).toHaveCount(1);
+  await expect(dialog.getByRole('button', { name: /^(Test access|测试访问)$/ })).toHaveCount(0);
+  const connectionStep = regions.discourse.getByText(/^(Discourse connection|Discourse 连接)$/);
+  await expect(connectionStep).toHaveCount(1);
+  await expect(dialog.getByRole('button', { name: /^(Disconnect|断开连接)$/ })).toHaveCount(1);
+  await expect(regions.discourse.getByText(/^(Connected|已连接)$/)).toHaveCount(1);
+  await expect(regions.discourse.getByRole('button', { name: /^(Save|保存)$/ })).toHaveCount(0);
+  await expect(dialog.getByText(/^(API username|API 用户名)$/)).toHaveCount(0);
+  await expect(dialog.getByText(/^(Default category ID|默认分类 ID)$/)).toHaveCount(0);
+  await expect(dialog.getByText(/^(Default tags|默认标签)$/)).toHaveCount(0);
+  await expect(forumUrl).toHaveValue('https://forum.example.com');
+  await expect(regions.discourse.locator('[data-settings-row]')).toHaveCount(3);
+  const widths = await regions.discourse.locator('[data-settings-row]').evaluateAll((rows) => rows.map((row) => row.children.item(1)?.getBoundingClientRect().width ?? 0));
+  for (const width of widths) expect(width).toBeGreaterThan(600);
+  await connectionStep.evaluate((element) => element.scrollIntoView({ block: 'center' }));
+  await captureExpandedSettings(desktopWindow, screenshotDir, testInfo);
 }
 
 test('keeps independent Publish sections collapsed until opened and preserves their settings', async ({ desktopWindow }, testInfo) => {
@@ -177,38 +193,15 @@ test('keeps independent Publish sections collapsed until opened and preserves th
   await expect(wordpressRegion.getByLabel(/^(WordPress site address|WordPress 站点地址)$/)).toBeVisible();
   await expect(wordpressRegion.getByLabel(/^(WordPress username|WordPress 用户名)$/)).toBeVisible();
   await expect(wordpressRegion.getByLabel(/^WordPress Application Password$/)).toBeVisible();
+  await expect(wordpressRegion.getByText(/^(WordPress connection|WordPress 连接)$/)).toBeVisible();
+  await expect(wordpressRegion.getByText(/^(Not connected|未连接)$/)).toBeVisible();
   await expect(wordpressRegion.getByText(/^(Enter your WordPress address first\.|请先输入 WordPress 地址。)$/)).toBeVisible();
   await wordpressRegion.getByLabel(/^(WordPress site address|WordPress 站点地址)$/).fill('https://example.com');
   await expect(wordpressRegion.getByRole('button', { name: /Create an Application Password in this site’s WordPress user profile|在该站点的 WordPress 用户资料中创建 Application Password/ })).toBeVisible();
   await wordpressRegion.getByLabel(/^(WordPress site address|WordPress 站点地址)$/).fill('https://free-site.wordpress.com');
   await expect(wordpressRegion.getByRole('button', { name: /Create an Application Password in WordPress.com|在 WordPress.com 中创建 Application Password/ })).toBeVisible();
   await expect(wordpressRegion.getByLabel(/login password|登录密码/i)).toHaveCount(0);
-  const forumUrl = dialog.getByRole('textbox', { name: /^(Discourse forum URL|Discourse 论坛 URL)$/ });
-  await expect(forumUrl).toBeVisible();
-  await expect(dialog.getByText(/forum must allow your account to generate User API Keys|论坛需允许当前账号生成 User API Key/)).toBeVisible();
-  await expect(dialog.getByRole('button', { name: /^(Generate authorization link|生成授权链接)$/ })).toBeVisible();
-  const authorizationResult = dialog.getByLabel(/^(Discourse authorization result|Discourse 授权结果)$/);
-  await expect(authorizationResult).toBeVisible();
-  await expect(dialog.getByRole('button', { name: /^(Save authorization|保存授权)$/ })).toHaveCount(0);
-  await expect(dialog.getByRole('button', { name: /^(Test access|测试访问)$/ })).toBeVisible();
-  await expect(dialog.getByRole('button', { name: /^(Remove authorization|移除授权)$/ })).toBeVisible();
-  await expect(discourseRegion.getByRole('button', { name: /^(Save|保存)$/ })).toHaveCount(0);
-  await expect(dialog.getByText(/^(API username|API 用户名)$/)).toHaveCount(0);
-  await expect(dialog.getByText(/^(Default category ID|默认分类 ID)$/)).toHaveCount(0);
-  await expect(dialog.getByText(/^(Default tags|默认标签)$/)).toHaveCount(0);
-
-  await forumUrl.fill('https://forum.example.com');
-
-  const layouts = await collectPublishingRowLayouts(dialog);
-  expect(layouts).toHaveLength(4);
-  for (const layout of layouts.filter((row) => row.inputWidth > 0)) {
-    expect(layout.paragraphWidth, `${layout.title} description should not collapse into a narrow column`).toBeGreaterThan(280);
-    expect(layout.inputWidth, `${layout.title} input should keep a normal settings width`).toBeGreaterThan(320);
-    expect(layout.inputWidth, `${layout.title} input should follow the 360px settings standard`).toBeLessThanOrEqual(360);
-  }
-
-  await discourseRegion.scrollIntoViewIfNeeded();
-  await captureExpandedSettings(desktopWindow, screenshotDir, testInfo);
+  await verifyDiscourseSetupSteps(regions, dialog, desktopWindow, screenshotDir, testInfo);
 });
 
 test('shows the connected public address and optional custom domain', async ({ desktopApp, desktopWindow }, testInfo) => {

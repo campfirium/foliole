@@ -42,28 +42,37 @@ function renderSettings() {
   return renderWithLocalization(<DiscoursePublishingSettings expanded onExpandedChange={vi.fn()} />);
 }
 
-it('explains the forum requirement and opens the generated authorization link', async () => {
+it('opens the generated authorization page from the authorization step', async () => {
   renderSettings();
-  expect(await screen.findByText('The forum must allow your account to generate User API Keys.')).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Generate authorization link' }));
+  expect(await screen.findByText('Enter forum address')).toBeInTheDocument();
+  expect(screen.getByText('Get authorization')).toBeInTheDocument();
+  expect(screen.getByText('Discourse connection')).toBeInTheDocument();
+  expect(screen.getByText('Not connected')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Open the Discourse authorization page ↗' }));
   await waitFor(() => expect(repositoryMocks.beginDiscourseUserApiAuthorizationFromRuntime)
     .toHaveBeenCalledWith('https://forum.example.com'));
   expect(openExternalUrl).toHaveBeenCalledWith(expect.stringContaining('/user-api-key/new'));
 });
 
-it('saves and validates the encrypted authorization result after the pasted value loses focus', async () => {
+it('connects only after the user selects Connect', async () => {
   renderSettings();
   const input = await screen.findByLabelText('Discourse authorization result');
-  expect(screen.queryByRole('button', { name: 'Save authorization' })).toBeNull();
+  const connect = screen.getByRole('button', { name: 'Connect' });
+  expect(connect).toBeDisabled();
   fireEvent.change(input, { target: { value: 'ENCRYPTED-AUTHORIZATION-RESULT' } });
   fireEvent.blur(input);
+  expect(repositoryMocks.completeDiscourseUserApiAuthorizationFromRuntime).not.toHaveBeenCalled();
+  expect(connect).toBeEnabled();
+  fireEvent.click(connect);
   await waitFor(() => expect(repositoryMocks.completeDiscourseUserApiAuthorizationFromRuntime).toHaveBeenCalledWith(
     'https://forum.example.com',
     'ENCRYPTED-AUTHORIZATION-RESULT'
   ));
   expect(repositoryMocks.loadDiscoursePublishCatalogFromRuntime).toHaveBeenCalledWith({ refresh: true });
   expect(input).toHaveValue('');
-  expect(await screen.findByText('Publishing access verified.')).toBeInTheDocument();
+  expect(await screen.findByText('Connected')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Disconnect' })).toBeVisible();
+  expect(input).toBeDisabled();
 });
 
 it('points users to the forum permission when authorization fails', async () => {
@@ -71,8 +80,8 @@ it('points users to the forum permission when authorization fails', async () => 
   renderSettings();
   const input = await screen.findByLabelText('Discourse authorization result');
   fireEvent.change(input, { target: { value: 'bad-result' } });
-  fireEvent.blur(input);
-  expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't authorize Foliole with Discourse.");
+  fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't complete Discourse authorization.");
   expect(screen.getByRole('alert')).toHaveTextContent('forum allows your account to generate User API Keys');
   expect(screen.getByRole('alert')).not.toHaveTextContent('private detail');
 });

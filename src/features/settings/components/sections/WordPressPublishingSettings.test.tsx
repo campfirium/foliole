@@ -36,6 +36,8 @@ it('shows the guide for the entered site and keeps connected fields locked until
   renderWithLocalization(<WordPressPublishingSettings expanded onExpandedChange={vi.fn()} />);
   const siteAddress = await screen.findByLabelText('WordPress site address');
   await waitFor(() => expect(siteAddress).toBeEnabled());
+  expect(screen.getByText('WordPress connection')).toBeVisible();
+  expect(screen.getByText('Not connected')).toBeVisible();
   expect(screen.getByText('Enter your WordPress address first.')).toBeInTheDocument();
 
   fireEvent.change(siteAddress, { target: { value: 'https://example.com' } });
@@ -50,7 +52,7 @@ it('shows the guide for the entered site and keeps connected fields locked until
   fireEvent.change(screen.getByLabelText('WordPress Application Password'), { target: { value: 'app-password' } });
   fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
 
-  expect(await screen.findByText('Connection successful.')).toBeInTheDocument();
+  expect(await screen.findByText('Connected')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Connect' })).toBeNull();
   expect(screen.getByRole('button', { name: 'Disconnect' })).toBeVisible();
   expect(siteAddress).toBeDisabled();
@@ -70,7 +72,7 @@ it('restores saved credentials as a connected, locked form', async () => {
   });
   renderWithLocalization(<WordPressPublishingSettings expanded onExpandedChange={vi.fn()} />);
 
-  expect(await screen.findByText('Connection successful.')).toBeInTheDocument();
+  expect(await screen.findByText('Connected')).toBeInTheDocument();
   expect(screen.getByLabelText('WordPress site address')).toBeDisabled();
   expect(screen.queryByRole('button', { name: 'Connect' })).toBeNull();
   expect(screen.getByRole('button', { name: 'Disconnect' })).toBeVisible();
@@ -91,7 +93,7 @@ it('shows the original connection failure and keeps the form editable', async ()
 
   expect(await screen.findByText('WordPress Application Password authentication failed (401)')).toBeVisible();
   expect(screen.getByText('Check the site address, username, and Application Password, then try again.')).toBeVisible();
-  expect(screen.queryByText('Connection successful.')).toBeNull();
+  expect(screen.queryByText('Connected')).toBeNull();
   expect(siteAddress).toBeEnabled();
 });
 
@@ -110,6 +112,6 @@ it('does not report success when the runtime returns no stored credentials', asy
   fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
 
   expect(await screen.findByText('WordPress credentials were unavailable after connecting.')).toBeVisible();
-  expect(screen.queryByText('Connection successful.')).toBeNull();
+  expect(screen.queryByText('Connected')).toBeNull();
   expect(siteAddress).toBeEnabled();
 });
