@@ -49,6 +49,8 @@ describe('hosted quality workflow contracts', () => {
     expect(ubuntuSection).toContain('npm run electron:rebuild:native');
     expect(ubuntuSection).toContain('npm run quality:android');
     expect(ubuntuSection).toContain('npm run quality:release:android:tail');
+    const macosSection = core.split('  macos-quality:')[1];
+    expect(macosSection).toContain('npm run electron:rebuild:native');
   });
 
   it('binds checkout to an immutable SHA under read-only permissions', () => {

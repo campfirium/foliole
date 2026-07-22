@@ -177,6 +177,8 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Rebuild Electron native ABI for iOS contract tests
+        run: npm run electron:rebuild:native
       - name: Run iOS contract quality
         if: inputs.scope == 'ios'
         run: npm run quality:ios:contract
