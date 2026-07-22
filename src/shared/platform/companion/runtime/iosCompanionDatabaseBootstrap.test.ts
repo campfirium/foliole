@@ -10,6 +10,7 @@ import {
 import { initializeIosCompanionDatabase, type IosCompanionDatabaseManager } from './iosCompanionDatabaseBootstrap';
 
 const USER_VERSION_SQL = `PRAGMA user_version = ${COMPANION_DATABASE_VERSION}`;
+const BUSY_TIMEOUT_SQL = 'PRAGMA busy_timeout = 5000';
 
 function createNativeState(): NativeCompanionBootstrapState {
   return {
@@ -55,6 +56,11 @@ function createHarness(args: { missingColumns?: string[]; storedDeviceId?: strin
   return { connection, manager };
 }
 
+function expectBusyTimeoutBeforeTransaction(connection: ReturnType<typeof createHarness>['connection']) {
+  expect(connection.execute).toHaveBeenNthCalledWith(1, BUSY_TIMEOUT_SQL, false);
+  expect(connection.execute.mock.invocationCallOrder[0]).toBeLessThan(connection.beginTransaction.mock.invocationCallOrder[0]);
+}
+
 describe('iosCompanionDatabaseBootstrap version contract', () => {
   it('tracks the latest shared companion migration independently of the desktop schema', () => {
     expect(COMPANION_DATABASE_VERSION).toBe(
@@ -80,8 +86,9 @@ describe('iosCompanionDatabaseBootstrap', () => {
       false
     );
     expect(connection.open).toHaveBeenCalledTimes(1);
-    expect(connection.execute).toHaveBeenNthCalledWith(1, expect.stringContaining('CREATE TABLE IF NOT EXISTS nodes'));
-    expect(connection.execute).toHaveBeenNthCalledWith(2, USER_VERSION_SQL, false);
+    expectBusyTimeoutBeforeTransaction(connection);
+    expect(connection.execute).toHaveBeenNthCalledWith(2, expect.stringContaining('CREATE TABLE IF NOT EXISTS nodes'));
+    expect(connection.execute).toHaveBeenNthCalledWith(3, USER_VERSION_SQL, false);
     expect(connection.beginTransaction).toHaveBeenCalledTimes(1);
     expect(connection.commitTransaction).toHaveBeenCalledTimes(1);
     expect(connection.run).toHaveBeenCalledWith(
@@ -116,8 +123,8 @@ describe('iosCompanionDatabaseBootstrap', () => {
 
     await initializeIosCompanionDatabase(createNativeState(), manager);
 
-    expect(connection.execute).toHaveBeenNthCalledWith(2, repair?.statement, false);
-    expect(connection.execute).toHaveBeenNthCalledWith(3, USER_VERSION_SQL, false);
+    expect(connection.execute).toHaveBeenNthCalledWith(3, repair?.statement, false);
+    expect(connection.execute).toHaveBeenNthCalledWith(4, USER_VERSION_SQL, false);
   });
 
   it('rolls back without declaring the current companion version when repair fails', async () => {

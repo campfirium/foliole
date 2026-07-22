@@ -10,6 +10,7 @@ import {
 
 const DEVICE_ID_KEY = 'device_id';
 const COLUMN_EXISTS_SQL = 'SELECT name FROM pragma_table_info(?) WHERE name = ? LIMIT 1';
+const BUSY_TIMEOUT_SQL = 'PRAGMA busy_timeout = 5000';
 
 export interface IosCompanionDatabaseManager {
   createConnection(
@@ -99,6 +100,7 @@ export async function initializeIosCompanionDatabase(
   options: IosCompanionDatabaseBootstrapOptions = {}
 ): Promise<NativeCompanionBootstrapState> {
   const connection = await openDatabase(manager);
+  await connection.execute(BUSY_TIMEOUT_SQL, false);
   await connection.execute(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
   await repairAndVersionDatabase(connection, options);
   const deviceId = await loadOrCreateDeviceId(connection, nativeState.device_id, nativeState.booted_at);
