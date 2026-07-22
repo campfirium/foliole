@@ -31,6 +31,7 @@ const config = {
     'ps',
     'python3',
     'rg',
+    'sqlite3',
     'taskkill',
     'taskkill.exe',
     'where.exe',

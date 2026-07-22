@@ -28,7 +28,7 @@ audit_cache_dir=".tmp/npm-audit-cache"
 audit_json_file=".tmp/npm-audit-report.json"
 mkdir -p "${audit_cache_dir}"
 set +e
-node "${TIMEOUT_RUNNER}" "${NPM_HARDENING_NETWORK_TIMEOUT_SECONDS}" npm audit --omit=dev --json --cache "${audit_cache_dir}" > "${audit_json_file}"
+node "${TIMEOUT_RUNNER}" "${NPM_HARDENING_NETWORK_TIMEOUT_SECONDS}" --stdout-file "${audit_json_file}" npm audit --omit=dev --json --cache "${audit_cache_dir}"
 audit_exit=$?
 set -e
 if [[ "${audit_exit}" -gt 1 ]]; then
@@ -42,7 +42,9 @@ if [[ "${audit_exit}" -gt 1 ]]; then
 fi
 node -e "
   const fs = require('node:fs');
-  const report = JSON.parse(fs.readFileSync(process.argv[1], 'utf8'));
+  const source = fs.readFileSync(process.argv[1], 'utf8').trim();
+  if (!source) throw new Error('npm audit returned empty JSON output');
+  const report = JSON.parse(source);
   if (report.error) {
     console.error('[npm-hardening] runtime audit unavailable: ' + (report.message || report.error.summary || 'unknown audit error'));
     process.exit(1);
@@ -71,7 +73,7 @@ echo "[npm-hardening] ok: .npmrc pins min-release-age=7"
 echo "[npm-hardening] note: advisory-driven security fixes may bypass min-release-age only for named vulnerable packages"
 
 versions_json_file=".tmp/npm-time.json"
-node "${TIMEOUT_RUNNER}" "${NPM_HARDENING_NETWORK_TIMEOUT_SECONDS}" npm view npm time --json > "${versions_json_file}"
+node "${TIMEOUT_RUNNER}" "${NPM_HARDENING_NETWORK_TIMEOUT_SECONDS}" --stdout-file "${versions_json_file}" npm view npm time --json
 
 selected_versions=()
 while IFS= read -r selected_version; do
@@ -81,7 +83,9 @@ done < <(
     const fs = require('node:fs');
     const now = Date.now();
     const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-    const timeMap = JSON.parse(fs.readFileSync(process.argv[1], 'utf8'));
+    const source = fs.readFileSync(process.argv[1], 'utf8').trim();
+    if (!source) throw new Error('npm view returned empty JSON output');
+    const timeMap = JSON.parse(source);
     const versions = Object.entries(timeMap)
       .filter(([version, publishedAt]) => /^\\d+\\.\\d+\\.\\d+$/.test(version) && typeof publishedAt === 'string')
       .map(([version, publishedAt]) => ({ version, publishedAt: new Date(publishedAt).getTime() }))
