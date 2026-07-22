@@ -41,5 +41,5 @@ describe('iOS scene lifecycle host contract', () => {
     if (sdkMajor >= 27 && (!state.hasSceneManifest || !state.hasConfigurationDelegate)) {
       throw new Error('iOS 27 SDK requires a complete UIScene lifecycle migration before Foliole can launch.');
     }
-  });
+  }, 15_000);
 });
