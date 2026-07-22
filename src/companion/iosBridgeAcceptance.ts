@@ -14,10 +14,10 @@ import {
 
 export type AcceptanceResult = {
   error: string | null;
-  phase: 'applied' | 'disconnected' | 'failed' | 'paired' | 'reapplied' | 'rejected' | 'resources-restored' | 'resources-synced' |
-    'upgraded';
+  phase: 'applied' | 'background' | 'disconnected' | 'failed' | 'foreground' | 'paired' | 'reapplied' | 'rejected' |
+    'resources-restored' | 'resources-synced' | 'ready' | 'upgraded';
   scenario: 'content-resource-read' | 'database-upgrade-runtime' | 'pairing-signed-transport' |
-    'state-writeback-runtime' | 'sync-pack-runtime';
+    'foreground-sync-lifecycle' | 'state-writeback-runtime' | 'sync-pack-runtime';
   status: 'failed' | 'passed';
   [key: string]: unknown;
 };

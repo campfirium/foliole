@@ -89,6 +89,7 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'scripts/ios/ios-app-icon-host-contract.test.mjs',
   'scripts/ios/ios-bootstrap-acceptance.test.mjs',
   'scripts/ios/ios-database-upgrade-acceptance-runner.test.mjs',
+  'scripts/ios/ios-foreground-sync-lifecycle-acceptance.test.mjs',
   'scripts/ios/ios-bridge-acceptance-host-contract.test.mjs',
   'scripts/ios/ios-bootstrap-quality-workflow-contract.test.mjs',
   'scripts/ios/ios-bonjour-discovery-lifecycle-host-contract.test.mjs',

@@ -18,9 +18,7 @@ import {
   routeIosContentResourceRequest
 } from './ios-content-resource-acceptance-service.ts';
 import { createIosPairingAcceptanceObservations } from './ios-pairing-acceptance-observations.ts';
-import {
-  type createIosStateWritebackAcceptanceService
-} from './ios-state-writeback-acceptance-service.ts';
+import { createIosPairingSyncScenarioService } from './ios-pairing-sync-scenario-service.ts';
 import {
   type IosSyncPackAcceptanceRoutes
 } from './ios-sync-pack-acceptance-routes.ts';
@@ -36,7 +34,7 @@ let deviceId = '';
 let requestId = '';
 const deviceSecret = randomBytes(32).toString('base64url');
 let contentResourceFixture: IosContentResourceAcceptanceFixture | null = null;
-let stateWritebackService: Awaited<ReturnType<typeof createIosStateWritebackAcceptanceService>> | null = null;
+let pairingSyncScenarioService: Awaited<ReturnType<typeof createIosPairingSyncScenarioService>> | null = null;
 let syncPackService: IosSyncPackAcceptanceRoutes | null = null;
 
 function writeObservations() {
@@ -98,11 +96,11 @@ async function handlePairRequestCreate(request: IncomingMessage, response: Serve
       outputDirectory: path.join(artifactDir, 'content-resources'),
       toPeerId: deviceId
     });
-  } else if (scenario === 'state-writeback-runtime') {
-    const { createIosStateWritebackAcceptanceService } = await import('./ios-state-writeback-acceptance-service.ts');
-    stateWritebackService = await createIosStateWritebackAcceptanceService({
-      observations: observations.state_writeback,
-      outputDirectory: path.join(artifactDir, 'state-writeback-desktop'),
+  } else if (scenario === 'state-writeback-runtime' || scenario === 'foreground-sync-lifecycle') {
+    pairingSyncScenarioService = await createIosPairingSyncScenarioService({
+      artifactDir,
+      observations,
+      scenario,
       toPeerId: deviceId
     });
   }
@@ -160,15 +158,15 @@ async function handleSignedRequest(request: IncomingMessage, response: ServerRes
       send(response, 401, { error: 'invalid_signature' });
       return;
     }
-    if (stateWritebackService) {
-      const routed = await stateWritebackService.route({
+    if (pairingSyncScenarioService) {
+      const routed = await pairingSyncScenarioService.route({
         bodyText,
         method: request.method ?? 'GET',
         url: request.url ?? '/'
       });
       if (routed) {
         writeObservations();
-        response.writeHead(200, { 'Content-Type': routed.contentType });
+        response.writeHead(routed.status ?? 200, { 'Content-Type': routed.contentType });
         response.end(routed.body);
         return;
       }
@@ -220,15 +218,17 @@ const server = createServer(async (request, response) => {
   }
 });
 
-server.listen(0, '127.0.0.1', () => {
+const lifecycleScenario = scenario === 'foreground-sync-lifecycle';
+const endpointHost = lifecycleScenario ? '[::1]' : '127.0.0.1';
+server.listen(0, lifecycleScenario ? '::1' : '127.0.0.1', () => {
   const address = server.address();
   if (!address || typeof address === 'string') throw new Error('Acceptance server address is unavailable.');
   writeObservations();
-  writeFileSync(path.join(artifactDir, 'service.json'), `${JSON.stringify({ endpoint: `http://127.0.0.1:${address.port}` })}\n`);
+  writeFileSync(path.join(artifactDir, 'service.json'), `${JSON.stringify({ endpoint: `http://${endpointHost}:${address.port}` })}\n`);
 });
 
 process.on('SIGTERM', () => server.close(() => {
-  stateWritebackService?.close();
+  pairingSyncScenarioService?.close();
   syncPackService?.close();
   process.exit(0);
 }));

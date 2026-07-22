@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   createAcceptanceBuildArgs,
+  resolveAcceptanceArtifactDir,
   selectSimulator,
   shouldShutdownSimulator,
   verifyBootstrapSnapshots,
@@ -36,6 +37,15 @@ import {
 } from './ios-sync-pack-acceptance-runner.mjs';
 
 describe('iOS bootstrap acceptance contract', () => {
+  it('isolates Simulator evidence and DerivedData by acceptance scenario', () => {
+    expect(resolveAcceptanceArtifactDir('/repo', 'sync-pack-runtime')).toBe(
+      path.join('/repo', '.tmp/artifacts/ios-bridge-acceptance/sync-pack-runtime')
+    );
+    expect(resolveAcceptanceArtifactDir('/repo', 'foreground-sync-lifecycle')).not.toBe(
+      resolveAcceptanceArtifactDir('/repo', 'state-writeback-runtime')
+    );
+  });
+
   it('keeps Simulator acceptance locally signed', () => {
     const args = createAcceptanceBuildArgs('SIM-1');
 
@@ -59,6 +69,7 @@ describe('iOS bootstrap acceptance contract', () => {
     const pairing = createPairingAcceptanceServiceLaunch('/repo', '/artifacts');
     const contentResource = createPairingAcceptanceServiceLaunch('/repo', '/artifacts', 'content-resource-read');
     const stateWriteback = createPairingAcceptanceServiceLaunch('/repo', '/artifacts', 'state-writeback-runtime');
+    const foregroundLifecycle = createPairingAcceptanceServiceLaunch('/repo', '/artifacts', 'foreground-sync-lifecycle');
     const syncPack = createPairingAcceptanceServiceLaunch('/repo', '/artifacts', 'sync-pack-runtime');
 
     expect(pairing.command).toBe(process.execPath);
@@ -70,6 +81,8 @@ describe('iOS bootstrap acceptance contract', () => {
     expect(stateWriteback.command).toContain('Electron.app/Contents/MacOS/Electron');
     expect(stateWriteback.args.at(-1)).toBe('state-writeback-runtime');
     expect(stateWriteback.env.ELECTRON_RUN_AS_NODE).toBe('1');
+    expect(foregroundLifecycle.command).toContain('Electron.app/Contents/MacOS/Electron');
+    expect(foregroundLifecycle.env.ELECTRON_RUN_AS_NODE).toBe('1');
     expect(syncPack.command).toContain('Electron.app/Contents/MacOS/Electron');
     expect(syncPack.args.at(-1)).toBe('sync-pack-runtime');
     expect(syncPack.env.ELECTRON_RUN_AS_NODE).toBe('1');
@@ -89,6 +102,7 @@ describe('iOS bootstrap acceptance contract', () => {
     expect(resolveAcceptanceScenario()).toBe('pairing-signed-transport');
     expect(resolveAcceptanceScenario('content-resource-read')).toBe('content-resource-read');
     expect(resolveAcceptanceScenario('database-upgrade-runtime')).toBe('database-upgrade-runtime');
+    expect(resolveAcceptanceScenario('foreground-sync-lifecycle')).toBe('foreground-sync-lifecycle');
     expect(resolveAcceptanceScenario('state-writeback-runtime')).toBe('state-writeback-runtime');
     expect(resolveAcceptanceScenario('sync-pack-runtime')).toBe('sync-pack-runtime');
     expect(() => resolveAcceptanceScenario('unknown')).toThrow('Unknown iOS acceptance scenario');

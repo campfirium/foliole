@@ -47,9 +47,11 @@ describe('iOS bridge acceptance host contract', () => {
 
   it('runs expected database upgrade failure without waiting for bootstrap ready', () => {
     const bootstrap = fs.readFileSync('scripts/ios/ios-bootstrap-acceptance.mjs', 'utf8');
+    const standalone = fs.readFileSync('scripts/ios/ios-standalone-acceptance-runner.mjs', 'utf8');
     const runner = fs.readFileSync('scripts/ios/ios-database-upgrade-acceptance-runner.mjs', 'utf8');
-    expect(bootstrap).toContain("scenario === 'database-upgrade-runtime'");
-    expect(bootstrap).toContain('runIosDatabaseUpgradeAcceptance(REPO_ROOT)');
+    expect(bootstrap).toContain('runStandaloneIosAcceptanceScenario(scenario, REPO_ROOT, ARTIFACT_DIR)');
+    expect(standalone).toContain("scenario === 'database-upgrade-runtime'");
+    expect(standalone).toContain('runIosDatabaseUpgradeAcceptance(repoRoot, artifactDir)');
     expect(runner).toContain('launchAndRead(options, simulator.udid, resultPath, false)');
     expect(runner).toContain('installApp(options, simulator.udid, false)');
     expect(runner).not.toContain('waitForBootstrapSnapshot');

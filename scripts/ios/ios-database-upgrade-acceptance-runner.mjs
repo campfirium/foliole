@@ -27,9 +27,11 @@ const ACCEPTANCE_ENV_KEYS = [
   'VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_SCENARIO', 'VITE_FOLIOLE_IOS_DATABASE_UPGRADE_FAULT'
 ];
 
-export async function runIosDatabaseUpgradeAcceptance(repoRoot) {
+export async function runIosDatabaseUpgradeAcceptance(
+  repoRoot,
+  artifactDir = path.join(repoRoot, '.tmp/artifacts/ios-bridge-acceptance', SCENARIO)
+) {
   const resourceMode = resolveIosResourceMode();
-  const artifactDir = path.join(repoRoot, '.tmp/artifacts/ios-bridge-acceptance');
   const options = {
     artifactDir, bundleId: 'com.foliole.ios.bootstrap-acceptance',
     derivedData: path.join(artifactDir, 'DerivedData'), repoRoot,

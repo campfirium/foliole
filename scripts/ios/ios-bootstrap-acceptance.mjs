@@ -29,18 +29,23 @@ import { readServiceObservations, verifyAcceptanceScenario } from './ios-accepta
 import { runAcceptanceRestart } from './ios-acceptance-restart-runner.mjs';
 import { readAcceptanceScenarioSnapshot } from './ios-acceptance-snapshot.mjs';
 import { resolveAcceptanceScenario } from './ios-sync-pack-acceptance-runner.mjs';
-import { runIosDatabaseUpgradeAcceptance } from './ios-database-upgrade-acceptance-runner.mjs';
+import { runStandaloneIosAcceptanceScenario } from './ios-standalone-acceptance-runner.mjs';
 
 export { selectSimulator, shouldShutdownSimulator, waitForBootstrapSnapshot };
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const ARTIFACT_DIR = path.join(REPO_ROOT, '.tmp/artifacts/ios-bridge-acceptance');
+const SCENARIO = resolveAcceptanceScenario(process.env.FOLIOLE_IOS_ACCEPTANCE_SCENARIO);
+const ARTIFACT_DIR = resolveAcceptanceArtifactDir(REPO_ROOT, SCENARIO);
 const DERIVED_DATA = path.join(ARTIFACT_DIR, 'DerivedData');
 const ACCEPTANCE_BUNDLE_ID = 'com.foliole.ios.bootstrap-acceptance';
 const DATABASE_RELATIVE_PATH = 'Library/CapacitorDatabase/foliole-companionSQLite.db';
 const BRIDGE_RESULT_RELATIVE_PATH = 'Library/FolioleBridgeAcceptance/result.json';
 const REQUIRED_TABLES = ['companion_meta', 'nodes', 'sync_object_state'];
 const RESOURCE_MODE = resolveIosResourceMode();
+
+export function resolveAcceptanceArtifactDir(repoRoot, scenario) {
+  return path.join(repoRoot, '.tmp/artifacts/ios-bridge-acceptance', scenario);
+}
 
 export function createAcceptanceBuildArgs(udid) {
   return createSimulatorAcceptanceBuildArgs({
@@ -66,11 +71,8 @@ async function main() {
   let simulator = null;
   let service = null;
   let ownsBootedSimulator = false;
-  const scenario = resolveAcceptanceScenario(process.env.FOLIOLE_IOS_ACCEPTANCE_SCENARIO);
-  if (scenario === 'database-upgrade-runtime') {
-    await runIosDatabaseUpgradeAcceptance(REPO_ROOT);
-    return;
-  }
+  const scenario = SCENARIO;
+  if (await runStandaloneIosAcceptanceScenario(scenario, REPO_ROOT, ARTIFACT_DIR)) return;
   try {
     service = startPairingAcceptanceService(REPO_ROOT, ARTIFACT_DIR, scenario);
     const serviceInfo = await waitForAcceptanceObservation({

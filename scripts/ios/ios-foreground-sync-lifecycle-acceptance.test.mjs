@@ -1,0 +1,135 @@
+// @vitest-environment node
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
+import { describe, expect, it } from 'vitest';
+
+import {
+  createLifecycleBuildEnv,
+  sanitizeIosAcceptanceEnv
+} from './ios-foreground-sync-lifecycle-build.mjs';
+import {
+  createDedicatedSimulatorArgs,
+  dedicatedSimulatorCleanupArgs,
+  selectDedicatedIphoneTemplate
+} from './ios-dedicated-simulator.mjs';
+import {
+  parseForegroundSyncLifecycleSnapshot,
+  verifyForegroundSyncLifecycleAcceptance
+} from './ios-foreground-sync-lifecycle-snapshot.mjs';
+import {
+  createIosForegroundSyncLifecycleObservations,
+  createIosForegroundSyncLifecycleService
+} from './ios-foreground-sync-lifecycle-service.ts';
+
+const finishedEvent = JSON.stringify([
+  { kind: 'run_finished', occurred_at: '2026-07-22T00:00:00.000Z', result: 'synced', run_id: 'run-1', status: 'completed' },
+  { kind: 'run_finished', occurred_at: '2026-07-21T00:00:00.000Z', result: 'failed', run_id: 'older', status: 'completed' }
+]);
+const snapshotRows = JSON.stringify([
+  { key: 'device_id', value: 'ios-device' },
+  { key: 'workspace_sync_endpoint_url', value: 'http://127.0.0.1:1' },
+  { key: 'workspace_sync_last_synced_at', value: '2026-07-22T00:00:00.000Z' },
+  { key: 'workspace_sync_events', value: finishedEvent },
+  { key: 'sync_pack_cursor', value: '2' }
+]);
+
+describe('iOS foreground sync lifecycle acceptance', () => {
+  it('keeps the shell and lifecycle evidence behind the exclusive acceptance gate', () => {
+    const entry = fs.readFileSync('src/companion/main.tsx', 'utf8');
+    const shell = fs.readFileSync('src/companion/iosForegroundSyncLifecycleAcceptance.tsx', 'utf8');
+    expect(entry).toContain("iosAcceptanceScenario === 'foreground-sync-lifecycle'");
+    expect(entry).toMatch(/if \(isIosBridgeAcceptance\)[\s\S]*else[\s\S]*<CompanionApp/);
+    expect(shell).toContain('useCompanionWorkspaceSync(bootstrap)');
+    expect(shell).toContain("App.addListener('pause'");
+    expect(shell).not.toContain('createForegroundSyncRunner');
+    expect(shell).not.toContain('tryForegroundAutoSync');
+  });
+
+  it('sanitizes ordinary assets and enables only the reviewed lifecycle scenario', () => {
+    const ambient = { KEEP: 'yes', VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_SCENARIO: 'ambient' };
+    expect(sanitizeIosAcceptanceEnv(ambient)).toEqual({ KEEP: 'yes' });
+    expect(createLifecycleBuildEnv(ambient, 'http://127.0.0.1:1')).toMatchObject({
+      KEEP: 'yes',
+      VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE: '1',
+      VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_ENDPOINT: 'http://127.0.0.1:1',
+      VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_SCENARIO: 'foreground-sync-lifecycle'
+    });
+  });
+
+  it('creates and deletes only a recorded dedicated iPhone Simulator', () => {
+    const template = selectDedicatedIphoneTemplate({ devices: { 'runtime-ios': [],
+      'com.apple.CoreSimulator.SimRuntime.iOS-26-5': [{
+        deviceTypeIdentifier: 'type-17-pro', isAvailable: true, name: 'iPhone 17 Pro'
+      }] } });
+    expect(createDedicatedSimulatorArgs(template, 'Owned')).toEqual([
+      'simctl', 'create', 'Owned', 'type-17-pro', 'com.apple.CoreSimulator.SimRuntime.iOS-26-5'
+    ]);
+    expect(dedicatedSimulatorCleanupArgs('OWNED')).toEqual({
+      delete: ['simctl', 'delete', 'OWNED'], shutdown: ['simctl', 'shutdown', 'OWNED']
+    });
+  });
+
+  it('holds one canonical sync pass and fails only the controlled phase', async () => {
+    const artifactDir = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-ios-lifecycle-'));
+    const observations = createIosForegroundSyncLifecycleObservations();
+    const route = createIosForegroundSyncLifecycleService({
+      artifactDir, observations,
+      route: async () => ({ body: 'pack', contentType: 'application/vnd.foliole.sync-pack' })
+    });
+    fs.writeFileSync(path.join(artifactDir, 'lifecycle-control.json'), '{"phase":"failed-resume"}\n');
+    await expect(route({ bodyText: '', method: 'GET', url: '/companion/sync-pack?after_state_seq=0' }))
+      .resolves.toMatchObject({ status: 503 });
+    expect(observations).toMatchObject({ active_requests: 0, failed_requests: 1, max_concurrency: 1,
+      phase_requests: { 'failed-resume': 1 }, request_count: 1 });
+  });
+
+  it('accepts suspended or opportunistic background retry with exact counts and stable restart state', () => {
+    const snapshot = parseForegroundSyncLifecycleSnapshot(snapshotRows);
+    expect(snapshot.latestFinished).toMatchObject({ runId: 'run-1', result: 'synced' });
+    expect(snapshot.finishedRuns.map((run) => run.runId)).toEqual(['run-1', 'older']);
+    const phase_requests = Object.fromEntries([
+      'endpoint-ready', 'resume-single-flight', 'failed-resume', 'recovered-resume', 'restart'
+    ].map((phase) => [phase, 1]));
+    const observations = { foreground_sync_lifecycle: {
+      active_requests: 0, completed_requests: 4, failed_requests: 1, max_concurrency: 1,
+      phase_requests, request_count: 5, requests: []
+    } };
+    expect(verifyForegroundSyncLifecycleAcceptance({
+      afterRestart: snapshot, backgroundDeltas: [0, 0, 0], beforeRestart: snapshot,
+      lifecycle: { active_count: 2, pause_count: 3, resume_count: 2 }, observations
+    })).toMatchObject({ background_request_deltas: [0, 0, 0], background_retry_request_count: 0 });
+    const opportunistic = { foreground_sync_lifecycle: {
+      ...observations.foreground_sync_lifecycle,
+      failed_requests: 2,
+      phase_requests: { ...phase_requests, 'failed-resume': 2 },
+      request_count: 6
+    } };
+    expect(verifyForegroundSyncLifecycleAcceptance({
+      afterRestart: snapshot, backgroundDeltas: [0, 0, 1], beforeRestart: snapshot,
+      lifecycle: { active_count: 2, pause_count: 3, resume_count: 2 }, observations: opportunistic
+    })).toMatchObject({ background_retry_request_count: 1 });
+    const partialFinished = { result: 'partial', runId: 'run-2', status: 'skipped' };
+    const partialSnapshot = { ...snapshot, finishedRuns: [partialFinished], latestFinished: partialFinished };
+    expect(verifyForegroundSyncLifecycleAcceptance({
+      afterRestart: partialSnapshot, backgroundDeltas: [0, 0, 0], beforeRestart: partialSnapshot,
+      lifecycle: { active_count: 2, pause_count: 2, resume_count: 2 }, observations
+    })).toMatchObject({ after_restart: partialSnapshot });
+    expect(() => verifyForegroundSyncLifecycleAcceptance({
+      afterRestart: { ...snapshot, cursor: null }, backgroundDeltas: [0, 0, 0], beforeRestart: snapshot,
+      lifecycle: { active_count: 2, pause_count: 2, resume_count: 2 }, observations
+    })).toThrow('evidence is incomplete');
+    for (const backgroundDeltas of [[1, 0, 0], [0, 1, 0], [0, 0, 2]]) {
+      expect(() => verifyForegroundSyncLifecycleAcceptance({
+        afterRestart: snapshot, backgroundDeltas, beforeRestart: snapshot,
+        lifecycle: { active_count: 2, pause_count: 2, resume_count: 2 }, observations
+      })).toThrow('evidence is incomplete');
+    }
+    expect(() => verifyForegroundSyncLifecycleAcceptance({
+      afterRestart: snapshot, backgroundDeltas: [0, 0, 0], beforeRestart: snapshot,
+      lifecycle: { active_count: 2, pause_count: 2, resume_count: 2 },
+      observations: { foreground_sync_lifecycle: { ...observations.foreground_sync_lifecycle, max_concurrency: 2 } }
+    })).toThrow('evidence is incomplete');
+  });
+});

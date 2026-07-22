@@ -1,10 +1,12 @@
 import { createIosContentResourceObservations } from './ios-content-resource-acceptance-service.ts';
+import { createIosForegroundSyncLifecycleObservations } from './ios-foreground-sync-lifecycle-service.ts';
 import { createIosStateWritebackObservations } from './ios-state-writeback-acceptance-observations.ts';
 import { createIosSyncPackAcceptanceObservations } from './ios-sync-pack-acceptance-observations.ts';
 
 export function createIosPairingAcceptanceObservations() {
   return {
     content_resource: createIosContentResourceObservations(),
+    foreground_sync_lifecycle: createIosForegroundSyncLifecycleObservations(),
     last_error: null as string | null,
     pair_completed: false,
     pair_requested: false,

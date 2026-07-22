@@ -25,7 +25,9 @@ export function createPairingAcceptanceServiceCompileArgs(repoRoot, artifactDir)
 }
 
 export function createPairingAcceptanceServiceLaunch(repoRoot, artifactDir, scenario = 'pairing-signed-transport') {
-  const needsElectronSqlite = ['content-resource-read', 'state-writeback-runtime', 'sync-pack-runtime'].includes(scenario);
+  const needsElectronSqlite = [
+    'content-resource-read', 'foreground-sync-lifecycle', 'state-writeback-runtime', 'sync-pack-runtime'
+  ].includes(scenario);
   return {
     args: [
       path.join(artifactDir, 'service-dist', SERVICE_RELATIVE_PATH),
