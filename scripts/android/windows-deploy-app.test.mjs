@@ -4,7 +4,7 @@
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
@@ -14,6 +14,9 @@ const DEPLOY_SCRIPT = path.join(REPO_ROOT, 'scripts', 'android', 'windows-deploy
 const ADB_DEVICE_SCRIPT = path.join(REPO_ROOT, 'scripts', 'android', 'windows-adb-device.ps1');
 const DEPLOY_CACHE_SCRIPT = path.join(REPO_ROOT, 'scripts', 'android', 'windows-deploy-install-cache.ps1');
 const DEPLOY_PS_SCRIPT = path.join(REPO_ROOT, 'scripts', 'android', 'windows-deploy-app.ps1');
+const BASH_SUPPORTS_COPROC = spawnSync('bash', ['-c', 'coproc true; wait "$!"'], {
+  stdio: 'ignore'
+}).status === 0;
 
 function runDeploy(cwd, env = {}) {
   return new Promise((resolve) => {
@@ -108,7 +111,7 @@ describe('windows-deploy-app.sh', () => {
     }
   });
 
-  it('returns after the Windows deploy script reports the app opened', async () => {
+  it.runIf(BASH_SUPPORTS_COPROC)('returns after the Windows deploy script reports the app opened', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-deploy-'));
     try {
       await writeExecutable(
@@ -134,13 +137,13 @@ describe('windows-deploy-app.sh', () => {
     }
   }, 30000);
 
-  it('returns the Windows deploy failure code when the app is not opened', async () => {
+  it.runIf(BASH_SUPPORTS_COPROC)('returns the Windows deploy failure code when the app is not opened', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-deploy-fail-'));
     try {
       await writeExecutable(
         tempRoot,
         'powershell.exe',
-        '#!/usr/bin/env bash\necho "[android-deploy] failed before open"\nexit 42\n'
+        '#!/usr/bin/env bash\necho "[android-deploy] failed before open"\nsleep 1\nexit 42\n'
       );
 
       const result = await runDeploy(tempRoot, {

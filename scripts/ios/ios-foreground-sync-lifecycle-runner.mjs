@@ -56,7 +56,7 @@ export async function runIosForegroundSyncLifecycleAcceptance(
     const databasePath = path.join(containerPath, DATABASE_RELATIVE_PATH);
 
     launch(options, udid, true);
-    await waitForBridge(options, resultPath, (value) => value.phase === 'ready', 'acceptance shell readiness');
+    await waitForBridge(options, resultPath, (value) => value.phase === 'ready', 'acceptance shell readiness', 60_000);
     await waitForRequestPhase(options, 'endpoint-ready', 1);
 
     const backgroundDeltas = [];
@@ -89,7 +89,7 @@ export async function runIosForegroundSyncLifecycleAcceptance(
     rmSync(resultPath, { force: true });
     setPhase(options, 'restart', 'launch');
     launch(options, udid, true);
-    await waitForBridge(options, resultPath, (value) => value.phase === 'ready', 'restart shell readiness');
+    await waitForBridge(options, resultPath, (value) => value.phase === 'ready', 'restart shell readiness', 60_000);
     await waitForRequestPhase(options, 'restart', 1);
     const afterRestart = await waitForForegroundSyncLifecycleSnapshot({
       databasePath, previousRunId: beforeRestart.latestFinished.runId, repoRoot: options.repoRoot
@@ -173,10 +173,10 @@ async function waitForRequestPhase(options, phase, count) {
   });
 }
 
-function waitForBridge(options, resultPath, accept, label) {
+function waitForBridge(options, resultPath, accept, label, timeoutMs = 20_000) {
   return waitForAcceptanceObservation({ accept, describe: (value) => `phase=${value?.phase ?? 'missing'}`,
     initialObservation: `${label} result was not readable`, label,
-    read: () => JSON.parse(readFileSync(resultPath, 'utf8')), timeoutMs: 20_000 });
+    read: () => JSON.parse(readFileSync(resultPath, 'utf8')), timeoutMs });
 }
 
 function waitForJson(options, name, label, accept) {

@@ -38,6 +38,7 @@ const snapshotRows = JSON.stringify([
 describe('iOS foreground sync lifecycle acceptance', () => {
   it('keeps the shell and lifecycle evidence behind the exclusive acceptance gate', () => {
     const entry = fs.readFileSync('src/companion/main.tsx', 'utf8');
+    const runner = fs.readFileSync('scripts/ios/ios-foreground-sync-lifecycle-runner.mjs', 'utf8');
     const shell = fs.readFileSync('src/companion/iosForegroundSyncLifecycleAcceptance.tsx', 'utf8');
     expect(entry).toContain("iosAcceptanceScenario === 'foreground-sync-lifecycle'");
     expect(entry).toMatch(/if \(isIosBridgeAcceptance\)[\s\S]*else[\s\S]*<CompanionApp/);
@@ -45,6 +46,8 @@ describe('iOS foreground sync lifecycle acceptance', () => {
     expect(shell).toContain("App.addListener('pause'");
     expect(shell).not.toContain('createForegroundSyncRunner');
     expect(shell).not.toContain('tryForegroundAutoSync');
+    expect(runner.match(/shell readiness', 60_000/g)).toHaveLength(2);
+    expect(runner).toContain('timeoutMs = 20_000');
   });
 
   it('sanitizes ordinary assets and enables only the reviewed lifecycle scenario', () => {
