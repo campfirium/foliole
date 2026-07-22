@@ -22,6 +22,8 @@ vi.mock('../../../../shared/platform/foliolePublishRepository', () => mocks);
 vi.mock('../../../../shared/platform/runtimeExternalNavigation', () => ({ openExternalUrl }));
 
 const EMPTY = { account_id: '', has_credentials: false, pages_url: '', project_name: '', site_address: '', updated_at: null };
+const VALID_ACCOUNT_ID = '023e105f4ecef8ad9ca31a8372d0c353';
+const VALID_API_TOKEN = 'Sn3lZJTBX6kkg7OdcBUAxOO963GEIyGQqnFTOFYY';
 const CONNECTED = {
   account_id: 'account', has_credentials: true, pages_url: 'https://my-site.pages.dev',
   project_name: 'my-site', site_address: 'https://my-site.pages.dev', updated_at: '2026-07-19T00:00:00.000Z'
@@ -109,9 +111,14 @@ it('keeps every required Cloudflare value in one setup flow and deploys only on 
   );
   expect(deploy).toBeDisabled();
 
-  fireEvent.change(screen.getByLabelText('Cloudflare API Token'), { target: { value: 'SENTINEL-TOKEN' } });
-  fireEvent.change(screen.getByLabelText('Cloudflare Account ID'), { target: { value: 'account' } });
+  fireEvent.change(screen.getByLabelText('Cloudflare API Token'), { target: { value: '/' } });
+  fireEvent.change(screen.getByLabelText('Cloudflare Account ID'), { target: { value: '/' } });
   fireEvent.change(screen.getByLabelText('pages.dev subdomain'), { target: { value: 'my-site' } });
+  expect(screen.getByText(/Enter the complete token from Cloudflare/u)).toBeVisible();
+  expect(screen.getByText(/Enter a 32-character Account ID/u)).toBeVisible();
+  expect(deploy).toBeDisabled();
+  fireEvent.change(screen.getByLabelText('Cloudflare API Token'), { target: { value: VALID_API_TOKEN } });
+  fireEvent.change(screen.getByLabelText('Cloudflare Account ID'), { target: { value: VALID_ACCOUNT_ID } });
   expect(deploy).toBeEnabled();
   expect(mocks.connectFoliolePublishSettingsToRuntime).not.toHaveBeenCalled();
 });
@@ -129,13 +136,13 @@ it('reports an unavailable subdomain without exposing Cloudflare project reuse',
     .mockResolvedValueOnce({ project_name: 'my-site', status: 'subdomain_not_detected' })
     .mockResolvedValueOnce({ project_name: 'my-site', status: 'subdomain_unavailable' });
   renderSettings();
-  fireEvent.change(await screen.findByLabelText('Cloudflare API Token'), { target: { value: 'SENTINEL-TOKEN' } });
-  fireEvent.change(await screen.findByLabelText('Cloudflare Account ID'), { target: { value: 'account' } });
+  fireEvent.change(await screen.findByLabelText('Cloudflare API Token'), { target: { value: VALID_API_TOKEN } });
+  fireEvent.change(await screen.findByLabelText('Cloudflare Account ID'), { target: { value: VALID_ACCOUNT_ID } });
   fireEvent.change(screen.getByLabelText('pages.dev subdomain'), { target: { value: 'my-site' } });
   fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
   expect(await screen.findByText('No use of this subdomain was detected')).toBeVisible();
   expect(mocks.connectFoliolePublishSettingsToRuntime).toHaveBeenLastCalledWith({
-    account_id: 'account', api_token: 'SENTINEL-TOKEN', confirm_subdomain_risk: false, project_name: 'my-site',
+    account_id: VALID_ACCOUNT_ID, api_token: VALID_API_TOKEN, confirm_subdomain_risk: false, project_name: 'my-site',
     site_address: ''
   });
   fireEvent.click(screen.getByRole('button', { name: 'Continue deployment' }));
@@ -152,8 +159,8 @@ it('shows the exact Cloudflare-assigned address in the locked deployment step', 
     .mockResolvedValueOnce({ project_name: 'foliole', status: 'subdomain_detected' })
     .mockResolvedValueOnce({ settings: assigned, status: 'connected' });
   renderSettings();
-  fireEvent.change(await screen.findByLabelText('Cloudflare API Token'), { target: { value: 'SENTINEL-TOKEN' } });
-  fireEvent.change(screen.getByLabelText('Cloudflare Account ID'), { target: { value: 'account' } });
+  fireEvent.change(await screen.findByLabelText('Cloudflare API Token'), { target: { value: VALID_API_TOKEN } });
+  fireEvent.change(screen.getByLabelText('Cloudflare Account ID'), { target: { value: VALID_ACCOUNT_ID } });
   fireEvent.change(screen.getByLabelText('pages.dev subdomain'), { target: { value: 'foliole' } });
   fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
   expect(await screen.findByText('This subdomain appears to be in use')).toBeVisible();

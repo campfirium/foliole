@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import { openExternalUrl } from '../../../../shared/platform/runtimeExternalNavigation';
@@ -40,15 +40,27 @@ function SetupStep(props: { children?: ReactNode; description: ReactNode; step: 
 }
 
 function SetupInput(props: {
+  ariaDescribedBy?: string | undefined;
   ariaLabel: string;
   className?: string;
   disabled: boolean;
+  invalid?: boolean;
   onChange: (value: string) => void;
   placeholder: string;
   type?: 'password' | 'text';
   value: string;
 }) {
-  return <input aria-label={props.ariaLabel} className={settingsFieldClassName(props.className)} disabled={props.disabled} onChange={(event) => props.onChange(event.target.value)} placeholder={props.placeholder} type={props.type ?? 'text'} value={props.value} />;
+  return <input aria-describedby={props.ariaDescribedBy} aria-invalid={props.invalid || undefined} aria-label={props.ariaLabel} className={settingsFieldClassName(props.className)} disabled={props.disabled} onChange={(event) => props.onChange(event.target.value)} placeholder={props.placeholder} type={props.type ?? 'text'} value={props.value} />;
+}
+
+function CredentialInput(props: Parameters<typeof SetupInput>[0] & { error?: string | undefined }) {
+  const errorId = useId();
+  return (
+    <div className="min-w-0 flex-1">
+      <SetupInput {...props} ariaDescribedBy={props.error ? errorId : undefined} invalid={Boolean(props.error)} />
+      {props.error ? <p className="mt-1 text-sm leading-5 text-error" id={errorId} role="alert">{props.error}</p> : null}
+    </div>
+  );
 }
 
 function CustomDomainStep({ state }: { state: FoliolePublishingSettingsState }) {
@@ -78,14 +90,14 @@ export function FoliolePublishingSetupRows({ state }: { state: FoliolePublishing
       step={1}
       title={t('settings.publishing.foliole.token.title')}
     >
-      <SetupInput ariaLabel={t('settings.publishing.foliole.token.aria')} disabled={state.connected || state.disabled} onChange={(apiToken) => state.updateForm({ apiToken })} placeholder={t('settings.publishing.foliole.token.placeholder')} type="password" value={state.connected ? 'stored-token' : state.form.apiToken} />
+      <CredentialInput ariaLabel={t('settings.publishing.foliole.token.aria')} disabled={state.connected || state.disabled} error={state.apiTokenInvalid ? t('settings.publishing.foliole.token.invalid') : undefined} onChange={(apiToken) => state.updateForm({ apiToken })} placeholder={t('settings.publishing.foliole.token.placeholder')} type="password" value={state.connected ? 'stored-token' : state.form.apiToken} />
     </SetupStep>
     <SetupStep
       description={<>{t('settings.publishing.foliole.account.descriptionPrefix')}<InlineExternalLink onClick={() => void openExternalUrl(CLOUDFLARE_HOME_URL)}>{t('settings.publishing.foliole.account.home')}</InlineExternalLink>{t('settings.publishing.foliole.account.descriptionSuffix')}</>}
       step={2}
       title={t('settings.publishing.foliole.account.title')}
     >
-      <SetupInput ariaLabel={t('settings.publishing.foliole.account.aria')} disabled={state.connected || state.disabled} onChange={(accountId) => state.updateForm({ accountId })} placeholder={t('settings.publishing.foliole.account.placeholder')} value={state.form.accountId} />
+      <CredentialInput ariaLabel={t('settings.publishing.foliole.account.aria')} disabled={state.connected || state.disabled} error={state.accountIdInvalid ? t('settings.publishing.foliole.account.invalid') : undefined} onChange={(accountId) => state.updateForm({ accountId })} placeholder={t('settings.publishing.foliole.account.placeholder')} value={state.form.accountId} />
     </SetupStep>
     <SetupStep description={t(state.connected ? 'settings.publishing.foliole.project.connectedDescription' : 'settings.publishing.foliole.project.description')} step={3} title={t('settings.publishing.foliole.project.title')}>
       {state.connected ? <>

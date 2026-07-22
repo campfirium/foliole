@@ -16,6 +16,8 @@ import {
 import { openExternalUrl } from '../../../../shared/platform/runtimeExternalNavigation';
 import { requestAppConfirmation } from '../../../../shared/ui';
 
+import { isCloudflareAccountId, isCloudflareApiToken } from './cloudflareCredentialValidation';
+
 export interface FoliolePublishingForm {
   accountId: string;
   apiToken: string;
@@ -187,8 +189,12 @@ export function useFoliolePublishingSettings() {
   const updateForm = (patch: Partial<FoliolePublishingForm>) => {
     state.setError(null); state.setForm((value) => ({ ...value, ...patch }));
   };
+  const accountIdInvalid = Boolean(state.form.accountId) && !isCloudflareAccountId(state.form.accountId);
+  const apiTokenInvalid = Boolean(state.form.apiToken) && !isCloudflareApiToken(state.form.apiToken);
   return {
-    canDeploy: !disabled && Boolean(state.form.accountId.trim() && state.form.apiToken.trim() && state.form.projectName.trim()),
+    accountIdInvalid, apiTokenInvalid,
+    canDeploy: !disabled && isCloudflareAccountId(state.form.accountId)
+      && isCloudflareApiToken(state.form.apiToken) && Boolean(state.form.projectName.trim()),
     canUpdateWeb: connected && !disabled,
     canUpdateAddress: connected && !disabled && state.form.customDomain.trim() !== savedCustomDomain,
     canViewWeb: connected && !disabled && Boolean(state.settings?.site_address),

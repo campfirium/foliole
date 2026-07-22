@@ -16,6 +16,9 @@ type PublishingRegions = {
   wordpress: import('@playwright/test').Locator;
 };
 
+const VALID_ACCOUNT_ID = '023e105f4ecef8ad9ca31a8372d0c353';
+const VALID_API_TOKEN = 'Sn3lZJTBX6kkg7OdcBUAxOO963GEIyGQqnFTOFYY';
+
 async function seedDiscourseAuthorization(desktopWindow: import('@playwright/test').Page) {
   await desktopWindow.evaluate(() => globalThis.window?.electronAPI?.invoke('save_discourse_publish_settings', {
     settings: { api_key: 'PLAYWRIGHT-DISCOURSE-USER-API-KEY', site_url: 'https://forum.example.com' }
@@ -132,9 +135,8 @@ async function verifyFolioleSetupSteps(
   const credentialsScreenshot = await desktopWindow.screenshot({ fullPage: true });
   await writeFile(path.join(screenshotDir, 'foliole-publish-credentials-hidden-native.png'), credentialsScreenshot);
   await testInfo.attach('foliole-publish-credentials', { body: credentialsScreenshot, contentType: 'image/png' });
-
-  await accountId.fill('playwright-account');
-  await token.fill('PLAYWRIGHT-CLOUDFLARE-TOKEN');
+  await accountId.fill(VALID_ACCOUNT_ID);
+  await token.fill(VALID_API_TOKEN);
   await expect(foliole.getByRole('button', { name: /^(Deploy|部署)$/ })).toBeDisabled();
   await subdomain.fill('playwright-site');
   await expect(foliole.getByRole('button', { name: /^(Deploy|部署)$/ })).toBeEnabled();
