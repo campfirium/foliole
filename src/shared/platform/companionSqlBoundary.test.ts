@@ -13,7 +13,10 @@ const SQLITE_TOUCH_ALLOWED = new Set([
   'src/shared/platform/companionSyncPackNodes.ts',
   'src/shared/platform/companion/runtime/iosCompanionDatabaseBootstrap.ts',
   'src/shared/platform/companion/sync/cursor/iosCompanionSyncPackCursorStore.ts',
-  'src/shared/platform/companion/sync/pack-apply/iosCompanionSyncPackApply.ts'
+  'src/shared/platform/companion/sync/pack-apply/iosCompanionSyncPackApply.ts',
+  'src/shared/platform/companion/sync/syncback/iosCompanionSyncbackStore.ts',
+  'src/shared/platform/companion/sync/workspace-state/iosCompanionWorkspaceSnapshotStore.ts',
+  'src/shared/platform/companion/sync/workspace-state/iosCompanionWorkspaceSyncStateStore.ts'
 ]);
 const SQL_METHOD_PATTERN = /\b(?:executeSql|querySql|runSql|sqlExecute|sqlQuery)\b/i;
 
