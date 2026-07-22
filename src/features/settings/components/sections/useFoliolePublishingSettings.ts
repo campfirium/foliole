@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { normalizeCloudflareProjectName } from '../../../../../lib/core/foliolePublish/cloudflarePagesProjectName';
 import type { NativeFoliolePublishSettings } from '../../../../../lib/platform/nativeFoliolePublishContract';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
@@ -13,6 +14,7 @@ import {
   updateFoliolePublishSiteAddressInRuntime,
   viewFoliolePublishSiteFromRuntime
 } from '../../../../shared/platform/foliolePublishRepository';
+import { probeUrlWithLinkPanel } from '../../../../shared/platform/linkPanelUrlProbe';
 import { openExternalUrl } from '../../../../shared/platform/runtimeExternalNavigation';
 import { requestAppConfirmation } from '../../../../shared/ui';
 
@@ -87,11 +89,10 @@ function useConnectionActions(state: LoadedState) {
   const deploy = async () => {
     state.setStatus('connecting'); state.setError(null);
     try {
-      let result = await connectWithForm(state, false);
-      if (result.status === 'subdomain_detected' || result.status === 'subdomain_not_detected') {
-        if (!await confirmSubdomain(t, result.status === 'subdomain_detected')) return;
-        result = await connectWithForm(state, true);
-      }
+      const projectName = normalizeCloudflareProjectName(state.form.projectName);
+      const detected = await probeUrlWithLinkPanel(`https://${projectName}.pages.dev`);
+      if (!await confirmSubdomain(t, detected)) return;
+      const result = await connectWithForm(state, true);
       if (result.status === 'subdomain_unavailable') {
         state.setError(t('settings.publishing.foliole.subdomain.unavailable'));
         return;

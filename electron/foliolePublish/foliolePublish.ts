@@ -3,11 +3,12 @@ import path from 'node:path';
 
 import { shell } from 'electron';
 
+import { normalizeCloudflareProjectName } from '../../lib/core/foliolePublish/cloudflarePagesProjectName.js';
 import { writeFolioleWebBinding } from '../../lib/core/foliolePublish/folioleWebPublishFrontmatter.js';
 import type { NativeFoliolePublishConnectInput, NativeFoliolePublishTopicArgs } from '../../lib/platform/nativeFoliolePublishContract.js';
 import { loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
 
-import { deleteCloudflarePagesProject, deployCloudflarePages, detectCloudflarePagesSubdomain, normalizeCloudflareProjectName, normalizeSiteAddress, resolveCloudflarePagesProject } from './cloudflarePagesClient.js';
+import { deleteCloudflarePagesProject, deployCloudflarePages, normalizeSiteAddress, resolveCloudflarePagesProject } from './cloudflarePagesClient.js';
 import { readPublishIndex, upsertPublishedCard, writeFileAtomic, writePublishIndex } from './foliolePublishModel.js';
 import { clearFoliolePublishSettings, forgetFoliolePublishField, loadFoliolePublishSettings, loadFoliolePublishToken, loadStoredFoliolePublishSettings, recordFoliolePublishFields, resetFoliolePublishFieldHistory, saveFoliolePublishConnection, saveFoliolePublishSiteAddress } from './foliolePublishSettings.js';
 import { activateFoliolePublishSite, discardStagedFoliolePublishSite, generateFoliolePublishSite, stageFoliolePublishSite } from './foliolePublishSite.js';
@@ -51,10 +52,7 @@ export async function connectFoliolePublishSettings(input: NativeFoliolePublishC
   const accountId = input.account_id.trim();
   const token = input.api_token.trim();
   if (!accountId || !token) throw new Error('Enter a Cloudflare Account ID and authorization result.');
-  if (!input.confirm_subdomain_risk) {
-    const detected = await detectCloudflarePagesSubdomain(projectName);
-    return { project_name: projectName, status: detected ? 'subdomain_detected' : 'subdomain_not_detected' } as const;
-  }
+  if (!input.confirm_subdomain_risk) throw new Error('Confirm the subdomain check before deployment.');
   const resolution = await resolveCloudflarePagesProject({
     accountId, projectName, token
   });

@@ -28,7 +28,6 @@ export interface NativeFoliolePublishConnectInput {
 
 export type NativeFoliolePublishConnectResult =
   | { project_name: string; status: 'subdomain_unavailable' }
-  | { project_name: string; status: 'subdomain_detected' | 'subdomain_not_detected' }
   | { settings: NativeFoliolePublishSettings; status: 'connected' };
 
 export interface NativeFoliolePublishTopicArgs {

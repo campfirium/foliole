@@ -52,7 +52,7 @@ export const EN_SETTINGS_PUBLISHING_TRANSLATIONS = {
   'settings.publishing.foliole.deploying': 'Deploying...',
   'settings.publishing.foliole.subdomain.detected.title': 'This subdomain appears to be in use',
   'settings.publishing.foliole.subdomain.detected.description': 'Cloudflare may assign a subdomain with a random suffix.',
-  'settings.publishing.foliole.subdomain.notDetected.title': 'No use of this subdomain was detected',
+  'settings.publishing.foliole.subdomain.notDetected.title': 'This subdomain doesn’t appear to be in use',
   'settings.publishing.foliole.subdomain.notDetected.description': 'If it is already in use, Cloudflare may assign a subdomain with a random suffix.',
   'settings.publishing.foliole.subdomain.continue': 'Continue deployment',
   'settings.publishing.foliole.subdomain.change': 'Change subdomain',

@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { afterEach, expect, it, vi } from 'vitest';
 
-import { cloudflarePagesAssetHash, deleteCloudflarePagesProject, deployCloudflarePages, detectCloudflarePagesSubdomain, resolveCloudflarePagesProject } from './cloudflarePagesClient.js';
+import { cloudflarePagesAssetHash, deleteCloudflarePagesProject, deployCloudflarePages, resolveCloudflarePagesProject } from './cloudflarePagesClient.js';
 
 const roots: string[] = [];
 function temporarySite() {
@@ -74,14 +74,6 @@ it('creates a missing Pages project with the fixed Direct Upload branch', async 
   expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
     body: JSON.stringify({ name: 'new-site', production_branch: 'main' }), method: 'POST'
   });
-});
-
-it('treats any reachable pages.dev response as detected without claiming an unavailable name is free', async () => {
-  vi.stubGlobal('fetch', vi.fn()
-    .mockResolvedValueOnce(new Response(null, { status: 403 }))
-    .mockRejectedValueOnce(new Error('not reachable')));
-  await expect(detectCloudflarePagesSubdomain('known-site')).resolves.toBe(true);
-  await expect(detectCloudflarePagesSubdomain('unknown-site')).resolves.toBe(false);
 });
 
 it('deletes the managed Pages project and accepts an already missing project', async () => {

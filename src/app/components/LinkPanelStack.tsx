@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import type { PointerEvent as ReactPointerEvent, RefObject } from 'react';
 
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
+import { LINK_PANEL_WEBVIEW_PROPS } from '../../shared/platform/linkPanelUrlProbe';
 import { openExternalUrl } from '../../shared/platform/runtimeExternalNavigation';
 import { AppIconButton, appFloatingSurfaceClassName } from '../../shared/ui';
 
@@ -101,15 +102,10 @@ function LinkPanelCard(props: {
         webviewRef={webviewRef}
       />
       <webview
-        allowpopups="false"
+        {...LINK_PANEL_WEBVIEW_PROPS}
         className="h-full w-full bg-canvas"
-        disablewebsecurity="false"
-        nodeintegration="false"
-        partition="foliole-link-panels"
-        referrerpolicy="no-referrer"
         ref={webviewRef}
         src={props.panel.currentUrl}
-        webpreferences="contextIsolation=yes, sandbox=yes, nodeIntegration=no"
       />
       <div
         aria-hidden="true"

@@ -50,14 +50,6 @@ function safeCloudflareError(error: unknown) {
     : new CloudflareClientError("Couldn't reach Cloudflare. Check your connection and try again.");
 }
 
-export function normalizeCloudflareProjectName(value: string) {
-  const name = value.trim().toLowerCase();
-  if (!/^[a-z0-9](?:[a-z0-9-]{0,56}[a-z0-9])?$/u.test(name)) {
-    throw new Error('Use 1–58 lowercase letters, numbers, or hyphens for the Pages project name.');
-  }
-  return name;
-}
-
 export function normalizeSiteAddress(value: string) {
   if (!value.trim()) return '';
   let url: URL;
@@ -66,16 +58,6 @@ export function normalizeSiteAddress(value: string) {
     throw new Error('Site address must be an HTTPS origin without a path.');
   }
   return url.origin;
-}
-
-export async function detectCloudflarePagesSubdomain(projectName: string) {
-  const name = normalizeCloudflareProjectName(projectName);
-  try {
-    await fetch(`https://${name}.pages.dev`, {
-      method: 'HEAD', redirect: 'manual', signal: AbortSignal.timeout(5_000)
-    });
-    return true;
-  } catch { return false; }
 }
 
 export async function deleteCloudflarePagesProject(input: {

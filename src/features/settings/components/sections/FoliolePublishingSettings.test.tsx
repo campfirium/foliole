@@ -18,8 +18,10 @@ const mocks = vi.hoisted(() => ({
   updateFoliolePublishSiteAddressInRuntime: vi.fn()
 }));
 const openExternalUrl = vi.hoisted(() => vi.fn());
+const probeUrlWithLinkPanel = vi.hoisted(() => vi.fn());
 vi.mock('../../../../shared/platform/foliolePublishRepository', () => mocks);
 vi.mock('../../../../shared/platform/runtimeExternalNavigation', () => ({ openExternalUrl }));
+vi.mock('../../../../shared/platform/linkPanelUrlProbe', () => ({ probeUrlWithLinkPanel }));
 
 const EMPTY = { account_id: '', has_credentials: false, pages_url: '', project_name: '', site_address: '', updated_at: null };
 const VALID_ACCOUNT_ID = '023e105f4ecef8ad9ca31a8372d0c353';
@@ -32,6 +34,7 @@ const CONNECTED = {
 beforeEach(() => {
   Object.values(mocks).forEach((mock) => mock.mockReset());
   openExternalUrl.mockReset();
+  probeUrlWithLinkPanel.mockReset().mockResolvedValue(false);
   mocks.loadFoliolePublishSettingsFromRuntime.mockResolvedValue(EMPTY);
   mocks.viewFoliolePublishSiteFromRuntime.mockResolvedValue({ local_path: '/Publish/Site/index.html', url: null });
   mocks.openFoliolePublishThemeFromRuntime.mockResolvedValue({ local_path: '/Publish/Theme' });
@@ -132,19 +135,15 @@ it('opens the Cloudflare page with Pages Edit permission preselected', async () 
 });
 
 it('reports an unavailable subdomain without exposing Cloudflare project reuse', async () => {
-  mocks.connectFoliolePublishSettingsToRuntime
-    .mockResolvedValueOnce({ project_name: 'my-site', status: 'subdomain_not_detected' })
-    .mockResolvedValueOnce({ project_name: 'my-site', status: 'subdomain_unavailable' });
+  mocks.connectFoliolePublishSettingsToRuntime.mockResolvedValueOnce({ project_name: 'my-site', status: 'subdomain_unavailable' });
   renderSettings();
   fireEvent.change(await screen.findByLabelText('Cloudflare API Token'), { target: { value: VALID_API_TOKEN } });
   fireEvent.change(await screen.findByLabelText('Cloudflare Account ID'), { target: { value: VALID_ACCOUNT_ID } });
   fireEvent.change(screen.getByLabelText('pages.dev subdomain'), { target: { value: 'my-site' } });
   fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
-  expect(await screen.findByText('No use of this subdomain was detected')).toBeVisible();
-  expect(mocks.connectFoliolePublishSettingsToRuntime).toHaveBeenLastCalledWith({
-    account_id: VALID_ACCOUNT_ID, api_token: VALID_API_TOKEN, confirm_subdomain_risk: false, project_name: 'my-site',
-    site_address: ''
-  });
+  expect(await screen.findByText('This subdomain doesn’t appear to be in use')).toBeVisible();
+  expect(probeUrlWithLinkPanel).toHaveBeenCalledWith('https://my-site.pages.dev');
+  expect(mocks.connectFoliolePublishSettingsToRuntime).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button', { name: 'Continue deployment' }));
   expect(await screen.findByText('This subdomain is already in use. Choose another one.')).toBeVisible();
   expect(screen.queryByText(/Cloudflare project/i)).not.toBeInTheDocument();
@@ -155,9 +154,8 @@ it('reports an unavailable subdomain without exposing Cloudflare project reuse',
 
 it('shows the exact Cloudflare-assigned address in the locked deployment step', async () => {
   const assigned = { ...CONNECTED, pages_url: 'https://foliole-ehn.pages.dev', site_address: 'https://foliole-ehn.pages.dev' };
-  mocks.connectFoliolePublishSettingsToRuntime
-    .mockResolvedValueOnce({ project_name: 'foliole', status: 'subdomain_detected' })
-    .mockResolvedValueOnce({ settings: assigned, status: 'connected' });
+  probeUrlWithLinkPanel.mockResolvedValueOnce(true);
+  mocks.connectFoliolePublishSettingsToRuntime.mockResolvedValueOnce({ settings: assigned, status: 'connected' });
   renderSettings();
   fireEvent.change(await screen.findByLabelText('Cloudflare API Token'), { target: { value: VALID_API_TOKEN } });
   fireEvent.change(screen.getByLabelText('Cloudflare Account ID'), { target: { value: VALID_ACCOUNT_ID } });

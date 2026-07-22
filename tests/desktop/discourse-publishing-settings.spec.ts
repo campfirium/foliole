@@ -138,6 +138,13 @@ async function verifyFolioleSetupSteps(
   await accountId.fill(VALID_ACCOUNT_ID);
   await token.fill(VALID_API_TOKEN);
   await expect(foliole.getByRole('button', { name: /^(Deploy|部署)$/ })).toBeDisabled();
+  await subdomain.fill('foliole');
+  await foliole.getByRole('button', { name: /^(Deploy|部署)$/ }).click();
+  await expect(desktopWindow.getByText(/^(This subdomain appears to be in use|这个子域名似乎已被占用)$/)).toBeVisible();
+  const detectedScreenshot = await desktopWindow.screenshot({ fullPage: true });
+  await writeFile(path.join(screenshotDir, 'foliole-subdomain-detected-hidden-native.png'), detectedScreenshot);
+  await testInfo.attach('foliole-subdomain-detected', { body: detectedScreenshot, contentType: 'image/png' });
+  await desktopWindow.getByRole('button', { name: /^(Change subdomain|更换子域名)$/ }).click();
   await subdomain.fill('playwright-site');
   await expect(foliole.getByRole('button', { name: /^(Deploy|部署)$/ })).toBeEnabled();
   await subdomain.evaluate((element) => element.scrollIntoView({ block: 'center' }));

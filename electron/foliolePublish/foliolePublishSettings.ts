@@ -1,8 +1,9 @@
 import type { NativeFoliolePublishConnectInput, NativeFoliolePublishField, NativeFoliolePublishFieldCatalogEntry, NativeFoliolePublishSettings } from '../../lib/platform/nativeFoliolePublishContract.js';
+import { normalizeCloudflareProjectName } from '../../lib/core/foliolePublish/cloudflarePagesProjectName.js';
 import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
 import { deletePublishDeviceSecret, hasPublishDeviceSecret, readPublishDeviceSecret, writePublishDeviceSecret } from '../security/publishDeviceSecretStore.js';
 
-import { normalizeCloudflareProjectName, normalizeSiteAddress } from './cloudflarePagesClient.js';
+import { normalizeSiteAddress } from './cloudflarePagesClient.js';
 
 const SETTINGS_KEY = 'foliole_publish_settings';
 const SECRET_FILE = 'foliole-publish-cloudflare-token.bin';
