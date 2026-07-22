@@ -42,6 +42,11 @@ describe('hosted quality workflow contracts', () => {
       'npm run quality:release:android:tail', 'npm run quality:ios:contract',
       'npm run quality:ios:full'
     ]) expect(core).toContain(command);
+    const ubuntuSection = core.split('  ubuntu-quality:')[1].split('  macos-quality:')[0];
+    expect(ubuntuSection).toContain("inputs.scope == 'android'");
+    expect(ubuntuSection).toContain('FOLIOLE_ANDROID_HOST_MODE: native-linux');
+    expect(ubuntuSection).toContain('npm run quality:android');
+    expect(ubuntuSection).toContain('npm run quality:release:android:tail');
   });
 
   it('binds checkout to an immutable SHA under read-only permissions', () => {

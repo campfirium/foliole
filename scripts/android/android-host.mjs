@@ -17,6 +17,8 @@ const WINDOWS_INVOCATIONS = {
   sync: ['bash', ['scripts/android/windows-cap-sync.sh']]
 };
 
+const NATIVE_LINUX_INVOCATIONS = new Set(['gradle', 'sync']);
+
 export function resolveAndroidHostInvocation(command, args, options = {}) {
   const platform = options.platform ?? process.platform;
   const nodeBin = options.nodeBin ?? process.execPath;
@@ -26,13 +28,22 @@ export function resolveAndroidHostInvocation(command, args, options = {}) {
       bin: nodeBin
     };
   }
+  if (platform === 'linux' && options.hostMode === 'native-linux' && NATIVE_LINUX_INVOCATIONS.has(command)) {
+    return {
+      args: ['scripts/android/native-linux-host.mjs', command, ...args],
+      bin: nodeBin
+    };
+  }
   const invocation = WINDOWS_INVOCATIONS[command];
   if (!invocation) return null;
   return { args: [...invocation[1], ...args], bin: invocation[0] };
 }
 
 export async function runAndroidHost(command, args, options = {}) {
-  const invocation = resolveAndroidHostInvocation(command, args, options);
+  const invocation = resolveAndroidHostInvocation(command, args, {
+    hostMode: options.hostMode ?? process.env.FOLIOLE_ANDROID_HOST_MODE,
+    ...options
+  });
   if (!invocation) {
     console.error(`[android-host] unsupported command: ${command || '<missing>'}`);
     return 2;

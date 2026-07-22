@@ -24,6 +24,21 @@ describe('android host capability router', () => {
     });
   });
 
+  it('routes hosted native Linux checks without the Windows mirror adapter', () => {
+    expect(resolveAndroidHostInvocation('sync', [], {
+      hostMode: 'native-linux', nodeBin: '/node', platform: 'linux'
+    })).toEqual({
+      args: ['scripts/android/native-linux-host.mjs', 'sync'],
+      bin: '/node'
+    });
+    expect(resolveAndroidHostInvocation('gradle', ['lint'], {
+      hostMode: 'native-linux', nodeBin: '/node', platform: 'linux'
+    })).toEqual({
+      args: ['scripts/android/native-linux-host.mjs', 'gradle', 'lint'],
+      bin: '/node'
+    });
+  });
+
   it('keeps Windows preview behind the shared host entry', () => {
     expect(resolveAndroidHostInvocation('preview', [], { platform: 'linux' })).toEqual({
       args: ['scripts/android/android-preview.sh'],

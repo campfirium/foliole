@@ -115,6 +115,7 @@ jobs:
       cancel-in-progress: false
     env:
       TARGET_SHA: ${{ inputs.target_sha }}
+      FOLIOLE_ANDROID_HOST_MODE: native-linux
     steps:
       - name: Check out target snapshot
         uses: actions/checkout@v4
@@ -129,8 +130,17 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Set up Java 21 for Android host checks
+        if: inputs.scope == 'android' || inputs.scope == 'full'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
       - name: Install dependencies
         run: npm ci
+      - name: Rebuild Electron native ABI for Android contract tests
+        if: inputs.scope == 'android'
+        run: npm run electron:rebuild:native
       - name: Run shared quality
         if: inputs.scope == 'shared'
         run: npm run quality:shared
