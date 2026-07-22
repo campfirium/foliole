@@ -100,6 +100,9 @@ resolve_quality_gate_target() {
     android)
       printf 'quality:android'
       ;;
+    ios)
+      printf 'quality:ios:contract'
+      ;;
     mid)
       printf 'scoped lint + typecheck + workspace boundary + related tests'
       ;;

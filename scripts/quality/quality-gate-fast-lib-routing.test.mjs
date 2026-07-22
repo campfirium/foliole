@@ -110,7 +110,7 @@ describe('quality-gate-fast lib routing', () => {
     expect(result.stderr).toContain('path domain resolution failed');
   });
 
-  it('delegates lib changes to the shared gate', async () => {
+  it('caps lib changes locally and points the thread to shared Remote Quality', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-fast-lib-'));
     try {
       await writePackageJson(tempRoot, {
@@ -130,11 +130,13 @@ describe('quality-gate-fast lib routing', () => {
 
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('[quality-gate-fast] selected level: shared');
-      expect(result.stdout).toContain('[quality-gate:shared] all checks passed.');
+      expect(result.stdout).toContain('remote-quality.mjs --scope shared');
+      expect(result.stdout).toContain('[quality-gate-fast] capped local checks passed.');
       expect(result.stdout).toContain('boundary ok');
-      expect(result.stdout).toContain('android boundary ok');
-      expect(result.stdout).toContain('shared test ok');
-      expect(result.stdout).toContain('android web build ok');
+      expect(result.stdout).toContain('shared typecheck ok');
+      expect(result.stdout).not.toContain('android boundary ok');
+      expect(result.stdout).not.toContain('shared test ok');
+      expect(result.stdout).not.toContain('android web build ok');
     } finally {
       await rm(tempRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     }

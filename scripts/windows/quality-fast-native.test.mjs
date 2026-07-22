@@ -118,7 +118,7 @@ describe('quality-fast-native T0 routing', () => {
         }
       });
       expect(logSpy).toHaveBeenCalledWith(
-        '[quality-fast-native] desktop-class change detected -> T0 follow-up gate deferred: npm run quality:desktop'
+        '[quality-fast-native] desktop-class change detected -> remote quality required: node scripts/quality/remote-quality.mjs --scope desktop'
       );
     } finally {
       logSpy.mockRestore();
@@ -167,6 +167,7 @@ describe('quality-fast-native T0 routing', () => {
   it.each([
     ['shared', ['specialized surface usage', 'repository root boundary', 'typecheck:shared'], 'quality:shared'],
     ['android', ['specialized surface usage', 'repository root boundary', 'typecheck:android'], 'quality:android'],
+    ['ios', ['specialized surface usage', 'repository root boundary'], 'quality:ios:contract'],
     [
       'full',
       ['specialized surface usage', 'repository root boundary', 'typecheck:desktop', 'typecheck:shared', 'typecheck:android'],
@@ -193,7 +194,7 @@ describe('quality-fast-native T0 routing', () => {
         }
       });
       expect(logSpy).toHaveBeenCalledWith(
-        `[quality-fast-native] ${level}-class change detected -> T0 follow-up gate deferred: npm run ${deferredGate}`
+        `[quality-fast-native] ${level}-class change detected -> remote quality required: node scripts/quality/remote-quality.mjs --scope ${level}`
       );
     } finally {
       logSpy.mockRestore();

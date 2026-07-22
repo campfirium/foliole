@@ -104,6 +104,7 @@
 - npm 默认保留 7 天 release-age 安全窗口；但 Dependabot / GitHub Advisory / `npm audit` 已明确报出的漏洞修复必须定向绕过该窗口，只允许更新被点名的漏洞包或其必要传递依赖，并用 `npm ls <package> --all` 与 `npm audit --omit=dev` 复验。禁止用等待窗口期作为安全告警处理结论。
 - `it.skip` / `test.skip` 必须紧邻 `// SKIP: <reason> | <date YYYY-MM-DD> | revive: <condition>`；看到超过 30 天的 stale `SKIP` 必须复查能否恢复。
 - E2E（Playwright）不进入任何质量闸；它作为宿主可见验收单独执行。桌面日常 agent 自动化验收优先按 `electron/AGENTS.md` 使用不干扰用户桌面的 Playwright 入口，人工预览仍按下表执行。
+- 开发线程的中重度 hosted 质检使用 `node scripts/quality/remote-quality.mjs --scope <desktop|shared|android|ios|full>`，对远端不可变 SHA 发起、显示唯一 run URL、等待结果并在失败时读取日志；T5 只负责 nightly full 与 monitor 兜底。本地仍先跑改动相关最小验证。不得为触发质检隐式 commit / push，目标 SHA 不在远端时必须停下等待授权，不得回退到其他 SHA。
 - `copy:guard` 默认只报告 warning；若它报 warning，修复前先读 `.lab/specs/_product/terminology-and-copy.md`，禁止机械替换。
 
 | 条件 | 预览决策 |

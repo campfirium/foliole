@@ -58,19 +58,6 @@ async function runRelatedTests(plan, env, runner, runStep, splitRelatedTests) {
   }
 }
 
-export function resolveCappedTypecheckScripts(level) {
-  if (level === 'shared') {
-    return ['typecheck:shared'];
-  }
-  if (level === 'android') {
-    return ['typecheck:android'];
-  }
-  if (level === 'full') {
-    return ['typecheck:desktop', 'typecheck:shared', 'typecheck:android'];
-  }
-  return ['typecheck:desktop'];
-}
-
 export async function runNativeT0StaticGuards(env, runner, runStep) {
   await runOptionalNodeScript('specialized surface usage', 'scripts/check-specialized-surface-usage.mjs', env, runner, runStep);
   await runOptionalNodeScript('repository root boundary', 'scripts/check-repository-root-boundary.mjs', env, runner, runStep);

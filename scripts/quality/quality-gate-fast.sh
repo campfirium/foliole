@@ -195,24 +195,14 @@ fi
 
 run_quality_gate_fast_t0_static_guards
 
-if [[ "${level}" == "full" ]]; then
+if [[ "${level}" =~ ^(full|desktop|shared|android|ios)$ ]]; then
   run_critical_tests_if_needed "${all_changed}"
-  exec bash "${SCRIPT_DIR}/quality-gate-target.sh" full
-fi
-
-if [[ "${level}" == "desktop" ]]; then
-  run_critical_tests_if_needed "${all_changed}"
-  exec bash "${SCRIPT_DIR}/quality-gate-target.sh" desktop
-fi
-
-if [[ "${level}" == "shared" ]]; then
-  run_critical_tests_if_needed "${all_changed}"
-  exec bash "${SCRIPT_DIR}/quality-gate-target.sh" shared
-fi
-
-if [[ "${level}" == "android" ]]; then
-  run_critical_tests_if_needed "${all_changed}"
-  exec bash "${SCRIPT_DIR}/quality-gate-target.sh" android
+  print_quality_gate_route_plan "${all_changed}" "${level}" \
+    | node "${SCRIPT_DIR}/quality-gate-route-json.mjs" \
+    | node "${SCRIPT_DIR}/quality-fast-capped.mjs"
+  echo "[quality-gate-fast] remote quality required: node scripts/quality/remote-quality.mjs --scope ${level}"
+  echo "[quality-gate-fast] capped local checks passed."
+  exit 0
 fi
 
 run_quality_gate_fast_light_mid_static_guards

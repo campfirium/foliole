@@ -219,7 +219,7 @@ describe('quality-gate-fast.sh delegation', () => {
     }
   }, 90000);
 
-  it('delegates android path changes to the android gate', async () => {
+  it('caps Android path changes locally and points the thread to Android Remote Quality', async () => {
     const tempRoot = await createQualityGateTempRoot();
     try {
       await writePackageJson(tempRoot, {
@@ -240,12 +240,34 @@ describe('quality-gate-fast.sh delegation', () => {
 
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('[quality-gate-fast] selected level: android');
-      expect(result.stdout).toContain('[quality-gate:android] all checks passed.');
-      expect(result.stdout).toContain('android full lint ok');
-      expect(result.stdout).toContain('android host test ok');
+      expect(result.stdout).toContain('remote-quality.mjs --scope android');
+      expect(result.stdout).toContain('android typecheck ok');
+      expect(result.stdout).not.toContain('android full lint ok');
+      expect(result.stdout).not.toContain('android host test ok');
       expect(result.stdout).not.toContain('full lint should stay unused');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
   }, 90000);
+
+  it('routes iOS changes to hosted contract quality without starting a local Simulator', async () => {
+    const tempRoot = await createQualityGateTempRoot();
+    try {
+      await writePackageJson(tempRoot, {
+        'quality:ios': 'node -e "console.log(\'local Simulator should stay unused\')"',
+        'quality:ios:contract': 'node -e "console.log(\'local iOS contract should stay unused\')"'
+      });
+      const result = await runQualityGate(tempRoot, {
+        QUALITY_GATE_CHANGED_FILES: 'ios/App/App/AppDelegate.swift'
+      });
+
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('[quality-gate-fast] selected level: ios');
+      expect(result.stdout).toContain('remote-quality.mjs --scope ios');
+      expect(result.stdout).not.toContain('local Simulator should stay unused');
+      expect(result.stdout).not.toContain('local iOS contract should stay unused');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, 15000);
 });

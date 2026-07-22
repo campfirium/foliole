@@ -68,6 +68,14 @@ describe('path-domains', () => {
       level: 'android',
       reason: 'android or companion path changed'
     });
+    expect(resolveStaticQualityRoute(['ios/App/App/AppDelegate.swift'])).toEqual({
+      level: 'ios',
+      reason: 'iOS surface changed'
+    });
+    expect(resolveStaticQualityRoute(['ios/App/App/AppDelegate.swift', 'electron/main.ts'])).toEqual({
+      level: 'full',
+      reason: 'iOS surface changed with another production domain'
+    });
     expect(resolveStaticQualityRoute(['lib/core/database/androidCompanionDiagnosticReadRules.ts'])).toEqual({
       level: 'android',
       reason: 'Android contract changed'

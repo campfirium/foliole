@@ -7,7 +7,16 @@ import { pathToFileURL } from 'node:url';
 import { WINDOWS_CI_PLAYWRIGHT_SPECS } from './windows-ci-playwright-profile.mjs';
 
 const ALLOWED_OUTCOMES = new Set(['success', 'failure', 'skipped', 'cancelled']);
-const STEP_KEYS = ['context', 'npm_ci', 'native_abi', 'windows_contract', 'desktop_build', 'playwright'];
+const STEP_KEYS = [
+  'context',
+  'npm_ci',
+  'dependency_hardening',
+  'native_abi',
+  'desktop_quality',
+  'release_base',
+  'windows_tail',
+  'playwright'
+];
 
 function requireValue(env, name) {
   const value = env[name]?.trim();

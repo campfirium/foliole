@@ -18,9 +18,11 @@ function createEnv(overrides = {}) {
     RUNNER_ARCH: 'X64',
     RUNNER_OS: 'Windows',
     NPM_CI_OUTCOME: 'success',
+    DEPENDENCY_HARDENING_OUTCOME: 'success',
     NATIVE_ABI_OUTCOME: 'success',
-    WINDOWS_CONTRACT_OUTCOME: 'success',
-    DESKTOP_BUILD_OUTCOME: 'success',
+    DESKTOP_QUALITY_OUTCOME: 'skipped',
+    RELEASE_BASE_OUTCOME: 'success',
+    WINDOWS_TAIL_OUTCOME: 'success',
     PLAYWRIGHT_OUTCOME: 'success',
     ...overrides
   };
@@ -57,6 +59,7 @@ describe('Windows CI evidence', () => {
     expect(result.evidence).toContain(`commit_sha=${SHA}`);
     expect(result.evidence).toContain('runner_os=Windows');
     expect(result.evidence).toContain('step_playwright=failure');
+    expect(result.evidence).toContain('step_desktop_quality=skipped');
     expect(result.evidence).toContain('ci_suite=tests/desktop/hidden-native-presentation.spec.ts');
     expect(fsApi.writeFileSync).toHaveBeenCalledWith(result.evidencePath, result.evidence, 'utf8');
     expect(fsApi.appendFileSync).toHaveBeenCalledWith('summary.md', expect.stringContaining('Windows x64 CI'), 'utf8');

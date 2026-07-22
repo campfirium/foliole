@@ -4,18 +4,16 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { controlledElectronSqliteTests } from '../native-sqlite-test-policy.mjs';
+import { runCappedHeavyPlan, splitRelatedTests } from '../quality/quality-fast-capped.mjs';
 import {
-  resolveCappedTypecheckScripts,
   runNativeLightMidPlan,
   runNativeT0StaticGuards
 } from './quality-fast-native-local-steps.mjs';
-import { npmRunCommand, resolveChangedFiles, runCapture } from './windows-preview-native-runtime.mjs';
+import { resolveChangedFiles, runCapture } from './windows-preview-native-runtime.mjs';
 import { WINDOWS_NATIVE_REPO_ROOT } from './windows-native-paths.mjs';
 
-const HEAVY_LEVELS = new Set(['android', 'desktop', 'full', 'shared']);
+const HEAVY_LEVELS = new Set(['android', 'desktop', 'full', 'ios', 'shared']);
 const SECTION_PREFIX = /^\[quality-gate-route\]\s{3}/u;
-const ELECTRON_SQLITE_TESTS = new Set(controlledElectronSqliteTests);
 
 export function isRejectedBashPath(filePath) {
   const normalized = filePath.replaceAll('/', '\\').toLowerCase();
@@ -138,62 +136,6 @@ async function resolveRoutePlan(bashExe, changedFiles, env = process.env) {
   }
 }
 
-function normalizeRepoPath(file) {
-  return file.replaceAll('\\', '/');
-}
-
-function isElectronAbiTest(file) {
-  const normalized = normalizeRepoPath(file);
-  return normalized.startsWith('electron/') || ELECTRON_SQLITE_TESTS.has(normalized);
-}
-
-function splitRelatedTests(tests) {
-  const electron = [];
-  const ordinary = [];
-  for (const file of tests) {
-    if (isElectronAbiTest(file)) {
-      electron.push(file);
-    } else {
-      ordinary.push(file);
-    }
-  }
-  return { electron, ordinary };
-}
-
-async function runCappedHeavyPlan(plan, env = process.env, runner = runInherited) {
-  if (plan.lintTargets.length > 0) {
-    await runStep('scoped lint', process.execPath, [
-      'node_modules/eslint/bin/eslint.js',
-      '--cache',
-      '--cache-location',
-      '.tmp/eslint-cache/quality-fast-native/',
-      ...plan.lintTargets
-    ], env, runner);
-  } else {
-    console.log('[quality-fast-native] no lintable changed files detected - skipping scoped lint');
-  }
-
-  for (const script of resolveCappedTypecheckScripts(plan.level)) {
-    const typecheck = npmRunCommand(script);
-    await runStep(script, typecheck.command, typecheck.args, env, runner);
-  }
-
-  const related = splitRelatedTests(plan.relatedTests);
-  if (related.ordinary.length > 0) {
-    await runStep('related tests', process.execPath, ['scripts/test-files.mjs', ...related.ordinary], env, runner);
-  }
-  if (related.electron.length > 0) {
-    await runStep('electron related tests', process.execPath, [
-      'scripts/electron-sqlite-runner.mjs',
-      'scripts/test-files.mjs',
-      ...related.electron
-    ], env, runner);
-  }
-  if (plan.relatedTests.length === 0) {
-    console.log('[quality-fast-native] no related test files detected - skipping tests');
-  }
-}
-
 export async function runQualityT0Native(options = {}) {
   const env = options.env ?? process.env;
   const bashExe = options.bashExe ?? resolveGitBash(env);
@@ -215,9 +157,13 @@ export async function runQualityT0Native(options = {}) {
     return plan;
   }
 
-  await runCappedHeavyPlan(plan, routeEnv, runner);
-  const deferred = plan.level === 'full' ? 'quality:full' : `quality:${plan.level}`;
-  console.log(`[quality-fast-native] ${plan.level}-class change detected -> T0 follow-up gate deferred: npm run ${deferred}`);
+  await runCappedHeavyPlan(plan, {
+    cacheLocation: '.tmp/eslint-cache/quality-fast-native/', env: routeEnv, runStep, runner
+  });
+  console.log(
+    `[quality-fast-native] ${plan.level}-class change detected -> remote quality required: ` +
+    `node scripts/quality/remote-quality.mjs --scope ${plan.level}`
+  );
   return plan;
 }
 

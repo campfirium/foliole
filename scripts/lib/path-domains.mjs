@@ -55,6 +55,12 @@ export function resolveStaticQualityRoute(files) {
       ? { level: 'full', reason: 'Android contract changed with another production domain' }
       : { level: 'android', reason: 'Android contract changed' };
   }
+  if (changed.some(isIosSurfacePath)) {
+    const hasOtherProductionPath = changed.some((filePath) => !isIosSurfacePath(filePath) && !TEST_FILE_PATTERN.test(filePath));
+    return hasOtherProductionPath
+      ? { level: 'full', reason: 'iOS surface changed with another production domain' }
+      : { level: 'ios', reason: 'iOS surface changed' };
+  }
   if (changed.some((filePath) => filePath.startsWith('electron/'))) {
     return { level: 'desktop', reason: 'desktop runtime changed' };
   }
@@ -125,6 +131,10 @@ function isAndroidSurfacePath(filePath) {
     filePath === 'capacitor.config.ts' ||
     filePath === 'vite.companion.config.ts'
   );
+}
+
+function isIosSurfacePath(filePath) {
+  return filePath.startsWith('ios/') || filePath.startsWith('scripts/ios/');
 }
 
 function printQualityRoute(files) {

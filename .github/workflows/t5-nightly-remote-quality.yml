@@ -12,153 +12,24 @@ on:
         description: Exact dev commit to validate
         required: true
         type: string
+      target_host:
+        description: Hosted quality scope
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - windows
+          - android
+          - ios
 
 permissions:
   contents: read
 
-concurrency:
-  group: t5-nightly-remote-quality-${{ github.event.inputs.target_sha || github.sha }}
-  cancel-in-progress: false
-
-env:
-  T5_TARGET_SHA: ${{ github.event.inputs.target_sha || github.sha }}
-
 jobs:
-  release-base-quality:
-    name: Release base quality
-    runs-on: ubuntu-latest
-    timeout-minutes: 120
-
-    steps:
-      - name: Check out target dev snapshot
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ env.T5_TARGET_SHA }}
-
-      - name: Verify target SHA
-        shell: bash
-        run: test "$(git rev-parse HEAD)" = "${T5_TARGET_SHA}"
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run dependency hardening checks
-        run: npm run deps:hardening:check
-
-      - name: Rebuild Electron native modules
-        run: |
-          npm run electron:rebuild:native
-          node scripts/electron-sqlite-runner.mjs --preflight
-
-      - name: Run remote release-base subset
-        shell: bash
-        run: |
-          set -euo pipefail
-          {
-            echo "## T5 nightly remote quality"
-            echo
-            echo "- scope: remote release-base subset"
-            echo "- branch: dev"
-            echo "- target SHA: ${T5_TARGET_SHA}"
-            echo "- schedule: 12:10 and 00:10 Asia/Shanghai"
-          } >> "${GITHUB_STEP_SUMMARY}"
-          npm run lint:full
-          npm run typecheck:desktop
-          npm run typecheck:android
-          npm run test:release:desktop-src
-          npm run test:release:android
-          npm run test:release:shared
-          npm run test:quality:core
-          npm run test:quality:gate
-          npm run test:quality:node
-          npm run test:quality:preview
-          npm run build:vite-only
-          npm run electron:compile
-          npm run android:web:build
-
-  windows-x64-ci:
-    name: Windows x64 compile, contract, and Playwright
-    runs-on: windows-latest
-    timeout-minutes: 120
-    env:
-      CI: "true"
-      FOLIOLE_DESKTOP_NATIVE_SKIP_BUILD: "1"
-
-    steps:
-      - name: Check out dev snapshot
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ env.T5_TARGET_SHA }}
-          fetch-depth: 1
-          persist-credentials: false
-
-      - name: Verify target SHA
-        run: |
-          if ((git rev-parse HEAD) -ne "${env:T5_TARGET_SHA}") {
-            throw "Checked out SHA does not match T5_TARGET_SHA"
-          }
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Verify fixed Windows x64 context
-        id: context
-        run: node scripts/windows/windows-ci-evidence.mjs verify
-
-      - name: Install dependencies
-        id: npm_ci
-        run: npm ci
-
-      - name: Rebuild and verify Electron native ABI
-        id: native_abi
-        run: |
-          npm run electron:rebuild:native
-          node scripts/electron-sqlite-runner.mjs --preflight
-
-      - name: Run Windows core contract
-        id: windows_contract
-        run: npm run test:windows:core
-
-      - name: Build desktop and compile Electron
-        id: desktop_build
-        run: |
-          npm run build
-          npm run electron:compile
-
-      - name: Run CI-capable Electron Playwright suite
-        id: playwright
-        run: node scripts/windows/windows-ci-playwright-profile.mjs
-
-      - name: Write SHA-bound CI evidence and summary
-        if: ${{ always() }}
-        env:
-          GITHUB_SHA: ${{ env.T5_TARGET_SHA }}
-          CONTEXT_OUTCOME: ${{ steps.context.outcome }}
-          NPM_CI_OUTCOME: ${{ steps.npm_ci.outcome }}
-          NATIVE_ABI_OUTCOME: ${{ steps.native_abi.outcome }}
-          WINDOWS_CONTRACT_OUTCOME: ${{ steps.windows_contract.outcome }}
-          DESKTOP_BUILD_OUTCOME: ${{ steps.desktop_build.outcome }}
-          PLAYWRIGHT_OUTCOME: ${{ steps.playwright.outcome }}
-        run: node scripts/windows/windows-ci-evidence.mjs write
-
-      - name: Upload SHA-bound Windows CI evidence
-        if: ${{ always() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-x64-ci-${{ env.T5_TARGET_SHA }}-${{ github.run_attempt }}
-          path: |
-            .tmp/artifacts/windows-ci-evidence
-            .tmp/playwright-results/desktop
-            .tmp/playwright-report/desktop
-            .tmp/artifacts/desktop-acceptance
-          if-no-files-found: warn
-          retention-days: 14
+  quality:
+    uses: ./.github/workflows/hosted-quality-core.yml
+    with:
+      target_sha: ${{ inputs.target_sha || github.sha }}
+      scope: full
+      full_host: ${{ inputs.target_host || 'all' }}

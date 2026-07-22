@@ -1,0 +1,30 @@
+name: Remote Quality
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Exact remote commit to validate
+        required: true
+        type: string
+      scope:
+        description: Quality scope owned by the requesting development thread
+        required: true
+        type: choice
+        options:
+          - desktop
+          - shared
+          - android
+          - ios
+          - full
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    uses: ./.github/workflows/hosted-quality-core.yml
+    with:
+      target_sha: ${{ inputs.target_sha }}
+      scope: ${{ inputs.scope }}
+      full_host: all
