@@ -2,6 +2,7 @@ import { expect, it } from 'vitest';
 
 import {
   readFolioleWebBinding,
+  readFolioleWebMarkdown,
   readFolioleWebYamlCandidates,
   writeFolioleWebBinding
 } from './folioleWebPublishFrontmatter.js';
@@ -31,4 +32,9 @@ it('rejects duplicate and invalid field keys', () => {
     fields: [{ key: 'bad key', value: 'x' }],
     lastPublishedAt: 'now', pageId: 'id', site: 'site', url: 'url'
   })).toThrow('unique YAML identifiers');
+});
+
+it('removes the opening Topic title from published Markdown', () => {
+  const content = '---\r\ncategory: essay\r\n---\r\n# Publish once\r\n\r\nBody\r\n\r\n# Keep this section';
+  expect(readFolioleWebMarkdown(content)).toBe('Body\r\n\r\n# Keep this section');
 });

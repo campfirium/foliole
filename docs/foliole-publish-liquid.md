@@ -2,10 +2,10 @@
 
 Foliole Publish 使用当前 library 中唯一一份可编辑主题：`Publish/Theme/`。选择 **Open theme** 可以直接编辑它；选择 **Reset theme** 会用当前版本的 Foliole 官方主题覆盖其中四个文件：
 
-- `page.html`：主页（最新 Topic）与每个独立 Topic 页面。
+- `page.html`：主页的 Topic 短列表与每个独立 Topic 页面。
 - `archive.html`：按发布时间倒序排列的归档页。
 - `style.css`：整个静态站点的样式。
-- `site.js`：上一篇、下一篇与归档页键盘导航。
+- `site.js`：可选的渐进增强脚本；官方主题默认不接管阅读导航。
 
 普通 Liquid 输出会自动做 HTML 转义。只有 `page.content` 是 Foliole 已经生成的正文 HTML，应该使用 `{{ page.content | raw }}` 输出。
 

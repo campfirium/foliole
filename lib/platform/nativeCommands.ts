@@ -83,6 +83,7 @@ export const NATIVE_COMMANDS = {
   rebuildMirrorAttachmentLinks: 'rebuild_mirror_attachment_links',
   exportCurrentArticleMirror: 'export_current_article_mirror',
   loadFoliolePublishSettings: 'load_foliole_publish_settings',
+  saveFoliolePublishDraft: 'save_foliole_publish_draft',
   connectFoliolePublishSettings: 'connect_foliole_publish_settings',
   updateFoliolePublishSiteAddress: 'update_foliole_publish_site_address',
   disconnectFoliolePublishSettings: 'disconnect_foliole_publish_settings',

@@ -1,12 +1,9 @@
-import { useEffect, useState } from 'react';
-
 import { normalizeCloudflareProjectName } from '../../../../../lib/core/foliolePublish/cloudflarePagesProjectName';
 import type { NativeFoliolePublishSettings } from '../../../../../lib/platform/nativeFoliolePublishContract';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
   connectFoliolePublishSettingsToRuntime,
   disconnectFoliolePublishSettingsFromRuntime,
-  loadFoliolePublishSettingsFromRuntime,
   openFoliolePublishThemeFromRuntime,
   publishFoliolePublishThemeChangesFromRuntime,
   resetFoliolePublishThemeFromRuntime,
@@ -19,48 +16,22 @@ import { openExternalUrl } from '../../../../shared/platform/runtimeExternalNavi
 import { requestAppConfirmation } from '../../../../shared/ui';
 
 import { isCloudflareAccountId, isCloudflareApiToken } from './cloudflareCredentialValidation';
+import {
+  EMPTY_FOLIOLE_PUBLISHING_FORM,
+  foliolePublishingCustomDomain,
+  foliolePublishingFormFromSettings,
+  persistFoliolePublishingDraft,
+  useFoliolePublishingDraftState,
+  type FoliolePublishingDraftState,
+  type FoliolePublishingForm,
+  type FoliolePublishingStatus
+} from './useFoliolePublishingDraft';
 
-export interface FoliolePublishingForm {
-  accountId: string;
-  apiToken: string;
-  customDomain: string;
-  projectName: string;
-}
-type Status = 'connecting' | 'disconnecting' | 'idle' | 'loading' | 'openingTheme' | 'resettingTheme' | 'updating' | 'updatingLocal' | 'updatingWeb' | 'viewingLocal' | 'viewingWeb';
-const EMPTY: FoliolePublishingForm = { accountId: '', apiToken: '', customDomain: '', projectName: '' };
-
-function customDomain(settings: NativeFoliolePublishSettings) {
-  return settings.site_address === settings.pages_url ? '' : settings.site_address;
-}
-
-function formFromSettings(settings: NativeFoliolePublishSettings): FoliolePublishingForm {
-  return {
-    accountId: settings.account_id,
-    apiToken: '',
-    customDomain: customDomain(settings),
-    projectName: settings.project_name
-  };
-}
-
-function useLoadedSettings() {
-  const [form, setForm] = useState(EMPTY);
-  const [settings, setSettings] = useState<NativeFoliolePublishSettings | null>(null);
-  const [status, setStatus] = useState<Status>('loading');
-  const [error, setError] = useState<string | null>(null);
-  useEffect(() => {
-    void loadFoliolePublishSettingsFromRuntime().then((value) => {
-      if (!value) return;
-      setSettings(value); setForm(formFromSettings(value));
-    }).catch(() => setError("Couldn't load Foliole Publish settings.")).finally(() => setStatus('idle'));
-  }, []);
-  return { error, form, setError, setForm, setSettings, setStatus, settings, status };
-}
-
-type LoadedState = ReturnType<typeof useLoadedSettings>;
+type LoadedState = FoliolePublishingDraftState;
 type Translate = ReturnType<typeof useTranslation>;
 
 function applySettings(state: LoadedState, value: NativeFoliolePublishSettings) {
-  state.setSettings(value); state.setForm(formFromSettings(value));
+  state.setSettings(value); state.setForm(foliolePublishingFormFromSettings(value));
 }
 
 function confirmSubdomain(t: Translate, detected: boolean) {
@@ -76,10 +47,10 @@ function confirmSubdomain(t: Translate, detected: boolean) {
   });
 }
 
-function connectWithForm(state: LoadedState, confirmSubdomainRisk: boolean) {
+function connectWithDraft(settings: NativeFoliolePublishSettings) {
   return connectFoliolePublishSettingsToRuntime({
-    account_id: state.form.accountId.trim(), api_token: state.form.apiToken.trim(),
-    confirm_subdomain_risk: confirmSubdomainRisk, project_name: state.form.projectName.trim(),
+    account_id: settings.account_id, api_token: '',
+    confirm_subdomain_risk: true, project_name: settings.project_name,
     site_address: ''
   });
 }
@@ -89,10 +60,11 @@ function useConnectionActions(state: LoadedState) {
   const deploy = async () => {
     state.setStatus('connecting'); state.setError(null);
     try {
-      const projectName = normalizeCloudflareProjectName(state.form.projectName);
+      const draft = await persistFoliolePublishingDraft(state, state.form);
+      const projectName = normalizeCloudflareProjectName(draft.project_name);
       const detected = await probeUrlWithLinkPanel(`https://${projectName}.pages.dev`);
       if (!await confirmSubdomain(t, detected)) return;
-      const result = await connectWithForm(state, true);
+      const result = await connectWithDraft(draft);
       if (result.status === 'subdomain_unavailable') {
         state.setError(t('settings.publishing.foliole.subdomain.unavailable'));
         return;
@@ -112,7 +84,7 @@ function useConnectionActions(state: LoadedState) {
     state.setStatus('disconnecting'); state.setError(null);
     try {
       const value = await disconnectFoliolePublishSettingsFromRuntime();
-      state.setSettings(value); state.setForm(EMPTY);
+      state.setSettings(value); state.setForm(EMPTY_FOLIOLE_PUBLISHING_FORM);
     } catch { state.setError(t('settings.publishing.foliole.error.delete')); }
     finally { state.setStatus('idle'); }
   };
@@ -137,7 +109,7 @@ function siteActions(state: LoadedState) {
     state.setStatus('updating'); state.setError(null);
     try { applySettings(state, await updateFoliolePublishSiteAddressInRuntime(state.form.customDomain.trim())); }
     catch (reason) {
-      if (state.settings) state.setForm(formFromSettings(state.settings));
+      if (state.settings) state.setForm(foliolePublishingFormFromSettings(state.settings));
       state.setError(reason instanceof Error ? reason.message : "Couldn't update the public address.");
     }
     finally { state.setStatus('idle'); }
@@ -151,7 +123,7 @@ function siteActions(state: LoadedState) {
 function useThemeActions(state: LoadedState) {
   const t = useTranslation();
   const run = async (
-    status: Status,
+    status: FoliolePublishingStatus,
     action: () => Promise<unknown>,
     errorKey: Parameters<typeof t>[0],
     showRuntimeError = false
@@ -180,26 +152,39 @@ function useThemeActions(state: LoadedState) {
 }
 
 export function useFoliolePublishingSettings() {
-  const state = useLoadedSettings();
+  const state = useFoliolePublishingDraftState();
   const connection = useConnectionActions(state);
   const site = siteActions(state);
   const theme = useThemeActions(state);
   const disabled = state.status !== 'idle';
-  const connected = Boolean(state.settings?.has_credentials && state.settings.account_id && state.settings.project_name);
-  const savedCustomDomain = state.settings ? customDomain(state.settings) : '';
+  const connected = Boolean(state.settings?.pages_url && state.settings.account_id && state.settings.project_name);
+  const hasSavedToken = Boolean(state.settings?.has_credentials);
+  const savedCustomDomain = state.settings ? foliolePublishingCustomDomain(state.settings) : '';
   const updateForm = (patch: Partial<FoliolePublishingForm>) => {
     state.setError(null); state.setForm((value) => ({ ...value, ...patch }));
   };
   const accountIdInvalid = Boolean(state.form.accountId) && !isCloudflareAccountId(state.form.accountId);
   const apiTokenInvalid = Boolean(state.form.apiToken) && !isCloudflareApiToken(state.form.apiToken);
+  const tokenReady = state.form.apiToken
+    ? isCloudflareApiToken(state.form.apiToken)
+    : Boolean(state.settings?.credentials_valid);
+  const saveDraft = async () => {
+    if (connected) return;
+    state.setError(null);
+    try {
+      await persistFoliolePublishingDraft(state, state.form);
+      state.setError(null);
+    } catch (reason) { state.setError(reason instanceof Error ? reason.message : "Couldn't save Foliole Publish settings."); }
+  };
   return {
     accountIdInvalid, apiTokenInvalid,
     canDeploy: !disabled && isCloudflareAccountId(state.form.accountId)
-      && isCloudflareApiToken(state.form.apiToken) && Boolean(state.form.projectName.trim()),
+      && tokenReady && Boolean(state.form.projectName.trim()),
     canUpdateWeb: connected && !disabled,
     canUpdateAddress: connected && !disabled && state.form.customDomain.trim() !== savedCustomDomain,
     canViewWeb: connected && !disabled && Boolean(state.settings?.site_address),
-    connected, disabled, error: state.error, form: state.form, pagesUrl: state.settings?.pages_url ?? '',
+    connected, disabled, error: state.error, form: state.form, hasSavedToken, pagesUrl: state.settings?.pages_url ?? '',
+    saveDraft: () => void saveDraft(),
     siteAddress: state.settings?.site_address ?? '', status: state.status,
     ...connection, ...site, ...theme, updateForm
   };

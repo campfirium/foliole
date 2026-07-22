@@ -53,6 +53,10 @@ function useWordPressPublishingState(t: ReturnType<typeof useTranslation>) {
 
 type PublishingState = ReturnType<typeof useWordPressPublishingState>;
 
+function readConnectionError(error: unknown, fallback: string) {
+  return error instanceof Error && error.message.trim() ? error.message : fallback;
+}
+
 async function connectWordPress(state: PublishingState, t: ReturnType<typeof useTranslation>) {
   state.setStatus('connecting');
   state.setError(null);
@@ -63,11 +67,12 @@ async function connectWordPress(state: PublishingState, t: ReturnType<typeof use
       username: state.form.username.trim()
     });
     if (!settings) throw new Error('WordPress runtime unavailable');
+    if (!settings.has_credentials) throw new Error('WordPress credentials were unavailable after connecting.');
     state.setForm({ applicationPassword: '', siteUrl: settings.site_url, username: '' });
-    state.setHasCredentials(settings.has_credentials);
+    state.setHasCredentials(true);
     state.setConnected(true);
-  } catch {
-    state.setError(t('settings.publishing.wordpress.error.connect'));
+  } catch (error) {
+    state.setError(readConnectionError(error, t('settings.publishing.wordpress.error.connect')));
   } finally {
     state.setStatus('idle');
   }

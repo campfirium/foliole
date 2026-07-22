@@ -2,12 +2,19 @@ import { NATIVE_COMMANDS } from './nativeCommands.js';
 
 export interface NativeFoliolePublishSettings {
   account_id: string;
+  credentials_valid: boolean;
   has_credentials: boolean;
   pages_url: string;
   project_name: string;
   site_address: string;
   updated_at: string | null;
   field_catalog: NativeFoliolePublishFieldCatalogEntry[];
+}
+
+export interface NativeFoliolePublishDraftInput {
+  account_id: string;
+  api_token: string;
+  project_name: string;
 }
 
 export type NativeFoliolePublishFieldValue = string | string[];
@@ -47,6 +54,10 @@ export interface NativeFoliolePublishResult {
 
 export type NativeFoliolePublishCommandMap = {
   [NATIVE_COMMANDS.loadFoliolePublishSettings]: { args: undefined; result: NativeFoliolePublishSettings };
+  [NATIVE_COMMANDS.saveFoliolePublishDraft]: {
+    args: { settings: NativeFoliolePublishDraftInput };
+    result: NativeFoliolePublishSettings;
+  };
   [NATIVE_COMMANDS.connectFoliolePublishSettings]: {
     args: { settings: NativeFoliolePublishConnectInput };
     result: NativeFoliolePublishConnectResult;

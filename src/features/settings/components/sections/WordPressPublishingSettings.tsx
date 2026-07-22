@@ -48,7 +48,7 @@ export function WordPressPublishingSettings(props: { expanded: boolean; onExpand
       description={t('settings.publishing.wordpress.description')}
       expanded={props.expanded}
       onExpandedChange={props.onExpandedChange}
-      title="WordPress"
+      title={t('settings.publishing.wordpress.title')}
     >
       {state.error ? <AppErrorState description={t('settings.publishing.wordpress.error.tryAgain')} surface="panel" title={state.error} /> : null}
       <PublishingTextRow description={<SiteDescription />} disabled={state.fieldsDisabled} label={t('settings.publishing.wordpress.site.aria')} onChange={(siteUrl) => state.updateForm({ siteUrl })} title={t('settings.publishing.wordpress.site.title')} value={state.form.siteUrl} />

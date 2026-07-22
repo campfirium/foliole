@@ -30,6 +30,7 @@ const folioleMocks = vi.hoisted(() => ({
   publishTopicToFoliole: vi.fn(),
   resetFoliolePublishFieldHistory: vi.fn(),
   resetFoliolePublishTheme: vi.fn(),
+  saveFoliolePublishDraft: vi.fn(),
   updateFoliolePublishLocalPages: vi.fn(),
   updateFoliolePublishSiteAddress: vi.fn(),
   viewFoliolePublishSite: vi.fn()
@@ -61,6 +62,19 @@ it('keeps the Cloudflare API token inside the main-process connection boundary',
 
   expect(folioleMocks.connectFoliolePublishSettings).toHaveBeenCalledWith(settings);
   expect(JSON.stringify(result)).not.toContain('SENTINEL-CLOUDFLARE-SECRET');
+});
+
+it('routes the Foliole Publish draft without returning its Cloudflare token', async () => {
+  const settings = { account_id: 'account', api_token: 'SENTINEL-DRAFT-SECRET', project_name: 'foliole' };
+  folioleMocks.saveFoliolePublishDraft.mockReturnValue({
+    account_id: 'account', credentials_valid: true, field_catalog: [], has_credentials: true,
+    pages_url: '', project_name: 'foliole', site_address: '', updated_at: '2026-07-22T00:00:00.000Z'
+  });
+
+  const result = await handlePublishingStorageCommand(NATIVE_COMMANDS.saveFoliolePublishDraft, { settings });
+
+  expect(folioleMocks.saveFoliolePublishDraft).toHaveBeenCalledWith(settings);
+  expect(JSON.stringify(result)).not.toContain('SENTINEL-DRAFT-SECRET');
 });
 
 it('updates the public address without accepting a renderer credential', async () => {

@@ -29,7 +29,7 @@ export const EN_DESKTOP_COMMAND_TRANSLATIONS = {
   'desktop.command.openGuidedSample': 'Open Guided Sample',
   'desktop.command.rename': 'Rename',
   'desktop.command.exportCurrentTopic': 'Export Current Topic',
-  'desktop.command.publishToFoliole': 'Publish',
+  'desktop.command.publishToFoliole': 'Publish to the site',
   'desktop.command.publishToDiscourse': 'Publish to Discourse',
   'desktop.command.publishToWordPress': 'Publish to WordPress',
   'desktop.command.mergeHighlights': 'Merge highlights',

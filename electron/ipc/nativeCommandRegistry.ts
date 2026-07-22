@@ -94,6 +94,7 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.rebuildMirrorAttachmentLinks, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.exportCurrentArticleMirror, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.loadFoliolePublishSettings, route: 'storage', capability: 'read' },
+  { command: NATIVE_COMMANDS.saveFoliolePublishDraft, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.connectFoliolePublishSettings, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.updateFoliolePublishSiteAddress, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.disconnectFoliolePublishSettings, route: 'storage', capability: 'settingsMutation' },

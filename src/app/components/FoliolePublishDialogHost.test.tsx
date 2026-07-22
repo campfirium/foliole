@@ -5,11 +5,9 @@ import { FoliolePublishDialogHost } from './FoliolePublishDialogHost';
 
 const repository = vi.hoisted(() => ({
   forgetFoliolePublishFieldFromRuntime: vi.fn(),
-  openFoliolePublishThemeFromRuntime: vi.fn(),
   previewFoliolePublishFromRuntime: vi.fn(),
   publishTopicToFoliole: vi.fn(),
-  resetFoliolePublishFieldHistoryFromRuntime: vi.fn(),
-  resetFoliolePublishThemeFromRuntime: vi.fn()
+  resetFoliolePublishFieldHistoryFromRuntime: vi.fn()
 }));
 const workspace = vi.hoisted(() => ({ updateNodeContent: vi.fn() }));
 
@@ -46,6 +44,9 @@ it('uses Topic YAML as field choices and previews without hosting', async () => 
   await waitFor(() => expect(repository.previewFoliolePublishFromRuntime).toHaveBeenCalledWith(expect.objectContaining({
     fields: [{ key: 'category', value: 'essays' }], node_id: 'topic-1'
   })));
+  expect(screen.getByText('Fields')).toBeVisible();
+  expect(screen.queryByRole('button', { name: 'Open theme' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Reset theme' })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Publish' })).toBeDisabled();
 });
 

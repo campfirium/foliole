@@ -43,7 +43,7 @@ test('shows Discourse publish choices and prefers the body H1 title', async ({ d
     }));
   }, discourseCatalog);
 
-  const dialog = desktopWindow.getByRole('dialog', { name: /^(Publish to Discourse|发布到 Discourse)$/ });
+  const dialog = desktopWindow.getByRole('dialog', { name: 'Publish to Discourse' });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByText(/Topic:|主题：/)).toHaveCount(0);
   await expect(dialog.getByLabel(/^(Category|分类)$/)).toBeVisible();
@@ -66,7 +66,7 @@ test('closes the Discourse publish dialog on Escape', async ({ desktopWindow }) 
     }));
   }, discourseCatalog);
 
-  const dialog = desktopWindow.getByRole('dialog', { name: /^(Publish to Discourse|发布到 Discourse)$/ });
+  const dialog = desktopWindow.getByRole('dialog', { name: 'Publish to Discourse' });
   await expect(dialog).toBeVisible();
   await desktopWindow.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
@@ -88,7 +88,7 @@ test('restores failed publishing choices without restoring the old error', async
     }));
   }, discourseCatalog);
 
-  const dialog = desktopWindow.getByRole('dialog', { name: /^(Publish to Discourse|发布到 Discourse)$/ });
+  const dialog = desktopWindow.getByRole('dialog', { name: 'Publish to Discourse' });
   const category = dialog.getByLabel(/^(Category|分类)$/).first();
   await expect(category).toBeFocused();
   await desktopWindow.keyboard.press('3');
@@ -133,7 +133,7 @@ test('supports keyboard-first Discourse category selection', async ({ desktopWin
     }));
   }, discourseCatalog);
 
-  const dialog = desktopWindow.getByRole('dialog', { name: /^(Publish to Discourse|发布到 Discourse)$/ });
+  const dialog = desktopWindow.getByRole('dialog', { name: 'Publish to Discourse' });
   await expect(dialog).toBeVisible();
 
   const category = dialog.getByLabel(/^(Category|分类)$/).first();
@@ -163,7 +163,7 @@ test('supports keyboard-first Discourse tag selection and creation', async ({ de
     }));
   }, discourseCatalog);
 
-  const dialog = desktopWindow.getByRole('dialog', { name: /^(Publish to Discourse|发布到 Discourse)$/ });
+  const dialog = desktopWindow.getByRole('dialog', { name: 'Publish to Discourse' });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByLabel(/^(Category|分类)$/)).toContainText('作业赏');
   await desktopWindow.keyboard.press('Tab');

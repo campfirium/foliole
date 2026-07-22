@@ -1,5 +1,6 @@
-import type { NativeFoliolePublishConnectInput, NativeFoliolePublishField, NativeFoliolePublishFieldCatalogEntry, NativeFoliolePublishSettings } from '../../lib/platform/nativeFoliolePublishContract.js';
+import { isCloudflareApiToken } from '../../lib/core/foliolePublish/cloudflareCredentials.js';
 import { normalizeCloudflareProjectName } from '../../lib/core/foliolePublish/cloudflarePagesProjectName.js';
+import type { NativeFoliolePublishConnectInput, NativeFoliolePublishDraftInput, NativeFoliolePublishField, NativeFoliolePublishFieldCatalogEntry, NativeFoliolePublishSettings } from '../../lib/platform/nativeFoliolePublishContract.js';
 import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
 import { deletePublishDeviceSecret, hasPublishDeviceSecret, readPublishDeviceSecret, writePublishDeviceSecret } from '../security/publishDeviceSecretStore.js';
 
@@ -18,7 +19,7 @@ interface StoredSettings {
 }
 
 function empty(): NativeFoliolePublishSettings {
-  return { account_id: '', field_catalog: [], has_credentials: false, pages_url: '', project_name: '', site_address: '', updated_at: null };
+  return { account_id: '', credentials_valid: false, field_catalog: [], has_credentials: false, pages_url: '', project_name: '', site_address: '', updated_at: null };
 }
 
 function stored(): StoredSettings | null {
@@ -35,7 +36,43 @@ export function loadFoliolePublishToken() {
 
 export function loadFoliolePublishSettings(): NativeFoliolePublishSettings {
   const value = stored();
-  return value ? { ...value, field_catalog: normalizeCatalog(value.field_catalog), has_credentials: Boolean(loadFoliolePublishToken()) } : empty();
+  const token = loadFoliolePublishToken();
+  return value ? {
+    ...value,
+    credentials_valid: isCloudflareApiToken(token),
+    field_catalog: normalizeCatalog(value.field_catalog),
+    has_credentials: Boolean(token)
+  } : empty();
+}
+
+function deployed(value: StoredSettings | null) {
+  return value && value.pages_url && value.site_address ? value : null;
+}
+
+function restoreToken(previous: string | null) {
+  if (previous === null) deletePublishDeviceSecret(SECRET_FILE);
+  else writePublishDeviceSecret(SECRET_FILE, 'Cloudflare Pages API token', previous);
+}
+
+export function saveFoliolePublishDraft(input: NativeFoliolePublishDraftInput) {
+  const current = stored();
+  if (deployed(current)) return loadFoliolePublishSettings();
+  const updatedAt = new Date().toISOString();
+  const previousSecret = loadFoliolePublishToken() || null;
+  const value: StoredSettings = {
+    account_id: input.account_id.trim(), field_catalog: [], pages_url: '',
+    project_name: input.project_name.trim(), site_address: '', updated_at: updatedAt
+  };
+  try {
+    if (input.api_token.trim()) {
+      writePublishDeviceSecret(SECRET_FILE, 'Cloudflare Pages API token', input.api_token.trim());
+    }
+    saveJsonSetting(SETTINGS_KEY, value, updatedAt);
+  } catch (error) {
+    try { restoreToken(previousSecret); } catch { deletePublishDeviceSecret(SECRET_FILE); }
+    throw error;
+  }
+  return loadFoliolePublishSettings();
 }
 
 function normalizeCatalog(value: unknown): NativeFoliolePublishFieldCatalogEntry[] {
@@ -93,12 +130,7 @@ export function saveFoliolePublishConnection(input: NativeFoliolePublishConnectI
     writePublishDeviceSecret(SECRET_FILE, 'Cloudflare Pages API token', input.api_token.trim());
     saveJsonSetting(SETTINGS_KEY, value, updatedAt);
   } catch (error) {
-    try {
-      if (previousSecret === null) deletePublishDeviceSecret(SECRET_FILE);
-      else writePublishDeviceSecret(SECRET_FILE, 'Cloudflare Pages API token', previousSecret);
-    } catch {
-      deletePublishDeviceSecret(SECRET_FILE);
-    }
+    try { restoreToken(previousSecret); } catch { deletePublishDeviceSecret(SECRET_FILE); }
     throw error;
   }
   return loadFoliolePublishSettings();
@@ -124,4 +156,4 @@ export function clearFoliolePublishSettings() {
   return empty();
 }
 
-export function loadStoredFoliolePublishSettings() { return stored(); }
+export function loadStoredFoliolePublishSettings() { return deployed(stored()); }

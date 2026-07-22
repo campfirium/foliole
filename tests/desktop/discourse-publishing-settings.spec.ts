@@ -62,9 +62,9 @@ async function verifyCollapsedOverview(
   desktopWindow: import('@playwright/test').Page,
   testInfo: import('@playwright/test').TestInfo
 ) {
-  await expect(regions.foliole.getByRole('button', { name: /^(Publish to the web|发布到 Web)$/ })).toHaveAttribute('aria-expanded', 'false');
-  await expect(regions.wordpress.getByRole('button', { exact: true, name: 'WordPress' })).toHaveAttribute('aria-expanded', 'false');
-  await expect(regions.discourse.getByRole('button', { name: 'Discourse' })).toHaveAttribute('aria-expanded', 'false');
+  await expect(regions.foliole.getByRole('button', { name: 'Publish to the site' })).toHaveAttribute('aria-expanded', 'false');
+  await expect(regions.wordpress.getByRole('button', { name: 'Publish to WordPress' })).toHaveAttribute('aria-expanded', 'false');
+  await expect(regions.discourse.getByRole('button', { name: 'Publish to Discourse' })).toHaveAttribute('aria-expanded', 'false');
   await expect(regions.foliole.getByLabel(/^Cloudflare Account ID$/)).not.toBeVisible();
   await expect(regions.wordpress.getByLabel(/^(WordPress site address|WordPress 站点地址)$/)).not.toBeVisible();
   await expect(regions.discourse.getByLabel(/^(Discourse forum URL|Discourse 论坛 URL)$/)).not.toBeVisible();
@@ -78,9 +78,9 @@ async function verifyCollapsedOverview(
 }
 
 async function expandPublishingSections(regions: PublishingRegions) {
-  const foliole = regions.foliole.getByRole('button', { name: /^(Publish to the web|发布到 Web)$/ });
-  const wordpress = regions.wordpress.getByRole('button', { exact: true, name: 'WordPress' });
-  const discourse = regions.discourse.getByRole('button', { name: 'Discourse' });
+  const foliole = regions.foliole.getByRole('button', { name: 'Publish to the site' });
+  const wordpress = regions.wordpress.getByRole('button', { name: 'Publish to WordPress' });
+  const discourse = regions.discourse.getByRole('button', { name: 'Publish to Discourse' });
   const folioleBox = await foliole.boundingBox();
   expect(folioleBox?.width ?? 0).toBeGreaterThan(600);
   await foliole.click({ position: { x: (folioleBox?.width ?? 20) - 10, y: (folioleBox?.height ?? 20) / 2 } });
@@ -159,12 +159,12 @@ test('keeps independent Publish sections collapsed until opened and preserves th
   await dialog.getByRole('button', { name: /^(Publish|发布)$/ }).click();
 
   await expect(dialog.getByRole('heading', { level: 2, name: /^(Publish|发布)$/ })).toBeVisible();
-  const folioleRegion = dialog.getByRole('region', { name: /^(Publish to the web settings|发布到 Web 设置)$/ });
+  const folioleRegion = dialog.getByRole('region', { name: /^Publish to the site (settings|设置)$/ });
   const wordpressRegion = dialog.getByRole('region', { name: /^(WordPress publish settings|WordPress 发布设置)$/ });
   const discourseRegion = dialog.getByRole('region', { name: /^(Discourse publish settings|Discourse 发布设置)$/ });
-  await expect(folioleRegion.getByRole('heading', { level: 3, name: /^(Publish to the web|发布到 Web)$/ })).toBeVisible();
-  await expect(wordpressRegion.getByRole('heading', { level: 3, name: 'WordPress' })).toBeVisible();
-  await expect(discourseRegion.getByRole('heading', { level: 3, name: 'Discourse' })).toBeVisible();
+  await expect(folioleRegion.getByRole('heading', { level: 3, name: 'Publish to the site' })).toBeVisible();
+  await expect(wordpressRegion.getByRole('heading', { level: 3, name: 'Publish to WordPress' })).toBeVisible();
+  await expect(discourseRegion.getByRole('heading', { level: 3, name: 'Publish to Discourse' })).toBeVisible();
   const regions = { discourse: discourseRegion, foliole: folioleRegion, wordpress: wordpressRegion };
   const screenshotDir = await verifyCollapsedOverview(regions, desktopWindow, testInfo);
   await expandPublishingSections(regions);
@@ -215,8 +215,8 @@ test('shows the connected public address and optional custom domain', async ({ d
   await seedConnectedFoliolePublish(desktopApp);
   const dialog = await openSettingsDialog(desktopWindow);
   await dialog.getByRole('button', { name: /^(Publish|发布)$/ }).click();
-  const foliole = dialog.getByRole('region', { name: /^(Publish to the web settings|发布到 Web 设置)$/ });
-  await foliole.getByRole('button', { name: /^(Publish to the web|发布到 Web)$/ }).click();
+  const foliole = dialog.getByRole('region', { name: /^Publish to the site (settings|设置)$/ });
+  await foliole.getByRole('button', { name: 'Publish to the site' }).click();
   const pagesAddress = foliole.getByText('https://playwright-site.pages.dev');
   await expect(pagesAddress).toBeVisible();
   await expect(foliole.getByLabel(/^(Foliole Publish custom domain|Foliole Publish 自定义域名)$/))

@@ -1,7 +1,7 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_DESKTOP_DISCOURSE_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
-  'desktop.discoursePublish.title': '发布到 Discourse',
+  'desktop.discoursePublish.title': 'Publish to Discourse',
   'desktop.discoursePublish.description': '发送到 Discourse 前确认目标。',
   'desktop.discoursePublish.topic': '主题：',
   'desktop.discoursePublish.target': '目标：',

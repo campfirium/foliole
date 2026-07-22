@@ -1,7 +1,7 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_DESKTOP_WORDPRESS_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
-  'desktop.wordpressPublish.dialogTitle': '发布到 WordPress',
+  'desktop.wordpressPublish.dialogTitle': 'Publish to WordPress',
   'desktop.wordpressPublish.postTitle': '文章标题',
   'desktop.wordpressPublish.target': '目标站点',
   'desktop.wordpressPublish.mode': '操作',

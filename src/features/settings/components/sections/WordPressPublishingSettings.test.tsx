@@ -75,3 +75,41 @@ it('restores saved credentials as a connected, locked form', async () => {
   expect(screen.queryByRole('button', { name: 'Connect' })).toBeNull();
   expect(screen.getByRole('button', { name: 'Disconnect' })).toBeVisible();
 });
+
+it('shows the original connection failure and keeps the form editable', async () => {
+  repository.connectWordPressPublishSettingsToRuntime.mockRejectedValueOnce(
+    new Error('WordPress Application Password authentication failed (401)')
+  );
+  renderWithLocalization(<WordPressPublishingSettings expanded onExpandedChange={vi.fn()} />);
+
+  const siteAddress = await screen.findByLabelText('WordPress site address');
+  await waitFor(() => expect(siteAddress).toBeEnabled());
+  fireEvent.change(siteAddress, { target: { value: 'https://example.com' } });
+  fireEvent.change(screen.getByLabelText('WordPress username'), { target: { value: 'writer' } });
+  fireEvent.change(screen.getByLabelText('WordPress Application Password'), { target: { value: 'bad-password' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
+
+  expect(await screen.findByText('WordPress Application Password authentication failed (401)')).toBeVisible();
+  expect(screen.getByText('Check the site address, username, and Application Password, then try again.')).toBeVisible();
+  expect(screen.queryByText('Connection successful.')).toBeNull();
+  expect(siteAddress).toBeEnabled();
+});
+
+it('does not report success when the runtime returns no stored credentials', async () => {
+  repository.connectWordPressPublishSettingsToRuntime.mockResolvedValueOnce({
+    adapter: 'core_rest', has_credentials: false,
+    site_url: 'https://example.com', updated_at: '2026-07-22T00:00:00.000Z'
+  });
+  renderWithLocalization(<WordPressPublishingSettings expanded onExpandedChange={vi.fn()} />);
+
+  const siteAddress = await screen.findByLabelText('WordPress site address');
+  await waitFor(() => expect(siteAddress).toBeEnabled());
+  fireEvent.change(siteAddress, { target: { value: 'https://example.com' } });
+  fireEvent.change(screen.getByLabelText('WordPress username'), { target: { value: 'writer' } });
+  fireEvent.change(screen.getByLabelText('WordPress Application Password'), { target: { value: 'app-password' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
+
+  expect(await screen.findByText('WordPress credentials were unavailable after connecting.')).toBeVisible();
+  expect(screen.queryByText('Connection successful.')).toBeNull();
+  expect(siteAddress).toBeEnabled();
+});

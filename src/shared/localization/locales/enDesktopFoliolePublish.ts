@@ -1,5 +1,5 @@
 export const EN_DESKTOP_FOLIOLE_PUBLISH_TRANSLATIONS = {
-  'desktop.foliolePublish.title': 'Publish to the web',
+  'desktop.foliolePublish.title': 'Publish to the site',
   'desktop.foliolePublish.fields': 'Fields',
   'desktop.foliolePublish.addField': 'Add field',
   'desktop.foliolePublish.keyPlaceholder': 'YAML key',
@@ -11,10 +11,6 @@ export const EN_DESKTOP_FOLIOLE_PUBLISH_TRANSLATIONS = {
   'desktop.foliolePublish.forget': 'Forget',
   'desktop.foliolePublish.resetHistory': 'Reset field history',
   'desktop.foliolePublish.resetHistoryConfirm': 'Remove all saved field and value suggestions for this site? Topics are not changed.',
-  'desktop.foliolePublish.theme': 'Theme',
-  'desktop.foliolePublish.openTheme': 'Open theme',
-  'desktop.foliolePublish.resetTheme': 'Reset theme',
-  'desktop.foliolePublish.resetThemeConfirm': 'Replace your current theme with the Foliole base theme?',
   'desktop.foliolePublish.preview': 'Preview',
   'desktop.foliolePublish.previewing': 'Preparing preview...',
   'desktop.foliolePublish.publish': 'Publish',

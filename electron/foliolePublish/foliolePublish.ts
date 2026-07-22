@@ -10,7 +10,7 @@ import { loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
 
 import { deleteCloudflarePagesProject, deployCloudflarePages, normalizeSiteAddress, resolveCloudflarePagesProject } from './cloudflarePagesClient.js';
 import { readPublishIndex, upsertPublishedCard, writeFileAtomic, writePublishIndex } from './foliolePublishModel.js';
-import { clearFoliolePublishSettings, forgetFoliolePublishField, loadFoliolePublishSettings, loadFoliolePublishToken, loadStoredFoliolePublishSettings, recordFoliolePublishFields, resetFoliolePublishFieldHistory, saveFoliolePublishConnection, saveFoliolePublishSiteAddress } from './foliolePublishSettings.js';
+import { clearFoliolePublishSettings, forgetFoliolePublishField, loadFoliolePublishSettings, loadFoliolePublishToken, loadStoredFoliolePublishSettings, recordFoliolePublishFields, resetFoliolePublishFieldHistory, saveFoliolePublishConnection, saveFoliolePublishDraft, saveFoliolePublishSiteAddress } from './foliolePublishSettings.js';
 import { activateFoliolePublishSite, discardStagedFoliolePublishSite, generateFoliolePublishSite, stageFoliolePublishSite } from './foliolePublishSite.js';
 import { ensureFoliolePublishTheme, resetFoliolePublishThemeFiles } from './foliolePublishTheme.js';
 
@@ -50,7 +50,7 @@ function commitStagedSite<T>(staged: string, save: () => T) {
 export async function connectFoliolePublishSettings(input: NativeFoliolePublishConnectInput) {
   const projectName = normalizeCloudflareProjectName(input.project_name);
   const accountId = input.account_id.trim();
-  const token = input.api_token.trim();
+  const token = input.api_token.trim() || loadFoliolePublishToken();
   if (!accountId || !token) throw new Error('Enter a Cloudflare Account ID and authorization result.');
   if (!input.confirm_subdomain_risk) throw new Error('Confirm the subdomain check before deployment.');
   const resolution = await resolveCloudflarePagesProject({
@@ -201,4 +201,4 @@ export async function publishFoliolePublishThemeChanges() {
   return commitStagedSite(staged, () => ({ local_path: path.join(root(), 'Site', 'index.html') }));
 }
 
-export { forgetFoliolePublishField, loadFoliolePublishSettings, resetFoliolePublishFieldHistory };
+export { forgetFoliolePublishField, loadFoliolePublishSettings, resetFoliolePublishFieldHistory, saveFoliolePublishDraft };

@@ -33,7 +33,7 @@ export const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   { id: APP_COMMAND_IDS.openCommandPalette, title: 'Command Palette', section: 'Workspace', keywords: ['command', 'palette', 'actions'] },
   { id: APP_COMMAND_IDS.renameNode, title: 'Rename', section: 'Workspace', keywords: ['rename', 'topic', 'folder'] },
   { id: APP_COMMAND_IDS.exportCurrentArticle, title: 'Export Current Topic', section: 'Editor', keywords: ['export', 'topic', 'article', 'mirror', 'markdown', 'save'] },
-  { id: APP_COMMAND_IDS.publishToFoliole, title: 'Publish', section: 'Editor', keywords: ['publish', 'foliole', 'site', 'cloudflare'] },
+  { id: APP_COMMAND_IDS.publishToFoliole, title: 'Publish to the site', section: 'Editor', keywords: ['publish', 'foliole', 'site', 'cloudflare', 'web'] },
   { id: APP_COMMAND_IDS.publishToDiscourse, title: 'Publish to Discourse', section: 'Editor', keywords: ['publish', 'discourse', 'topic', 'forum'] },
   { id: APP_COMMAND_IDS.publishToWordPress, title: 'Publish to WordPress', section: 'Editor', keywords: ['publish', 'wordpress', 'post', 'blog'] },
   { id: APP_COMMAND_IDS.mergeHighlightsIntoTopic, title: 'Merge highlights', section: 'Editor', keywords: ['merge', 'highlights', 'topic', 'append', 'file'] },

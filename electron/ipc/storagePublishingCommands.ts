@@ -21,6 +21,7 @@ import {
   publishFoliolePublishThemeChanges,
   resetFoliolePublishFieldHistory,
   resetFoliolePublishTheme,
+  saveFoliolePublishDraft,
   updateFoliolePublishLocalPages,
   updateFoliolePublishSiteAddress,
   viewFoliolePublishSite
@@ -34,8 +35,13 @@ import {
 
 import { readSettingsObject } from './storageCommandSupport.js';
 
-export async function handlePublishingStorageCommand(command: string, args: Record<string, unknown>) {
+function handleFoliolePublishingCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.loadFoliolePublishSettings) return loadFoliolePublishSettings();
+  if (command === NATIVE_COMMANDS.saveFoliolePublishDraft) {
+    return saveFoliolePublishDraft(
+      readSettingsObject(args.settings) as unknown as Parameters<typeof saveFoliolePublishDraft>[0]
+    );
+  }
   if (command === NATIVE_COMMANDS.connectFoliolePublishSettings) {
     return connectFoliolePublishSettings(
       readSettingsObject(args.settings) as unknown as Parameters<typeof connectFoliolePublishSettings>[0]
@@ -58,6 +64,12 @@ export async function handlePublishingStorageCommand(command: string, args: Reco
   if (command === NATIVE_COMMANDS.publishTopicToFoliole) {
     return publishTopicToFoliole(readSettingsObject(args) as unknown as Parameters<typeof publishTopicToFoliole>[0]);
   }
+  return undefined;
+}
+
+export async function handlePublishingStorageCommand(command: string, args: Record<string, unknown>) {
+  const folioleResult = handleFoliolePublishingCommand(command, args);
+  if (folioleResult !== undefined) return folioleResult;
   if (command === NATIVE_COMMANDS.loadDiscoursePublishSettings) return loadDiscoursePublishSettings();
   if (command === NATIVE_COMMANDS.loadDiscoursePublishCatalog) {
     return loadDiscoursePublishCatalog(readSettingsObject(args) as Parameters<typeof loadDiscoursePublishCatalog>[0]);

@@ -1,5 +1,5 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
-import type { NativeFoliolePublishConnectInput, NativeFoliolePublishSettings, NativeFoliolePublishTopicArgs } from '../../../lib/platform/nativeFoliolePublishContract';
+import type { NativeFoliolePublishConnectInput, NativeFoliolePublishDraftInput, NativeFoliolePublishSettings, NativeFoliolePublishTopicArgs } from '../../../lib/platform/nativeFoliolePublishContract';
 
 import { getRuntimeInvoke } from './runtimeInvoke';
 
@@ -12,6 +12,10 @@ function requireRuntime() {
 export function loadFoliolePublishSettingsFromRuntime(): Promise<NativeFoliolePublishSettings | null> {
   const invoke = getRuntimeInvoke();
   return invoke ? invoke(NATIVE_COMMANDS.loadFoliolePublishSettings) : Promise.resolve(null);
+}
+
+export function saveFoliolePublishDraftToRuntime(settings: NativeFoliolePublishDraftInput) {
+  return requireRuntime()(NATIVE_COMMANDS.saveFoliolePublishDraft, { settings });
 }
 
 export function connectFoliolePublishSettingsToRuntime(settings: NativeFoliolePublishConnectInput) {
@@ -63,5 +67,5 @@ export function publishFoliolePublishThemeChangesFromRuntime() {
 }
 
 export function isFoliolePublishConfigured(settings: NativeFoliolePublishSettings | null) {
-  return Boolean(settings?.account_id && settings.project_name && settings.has_credentials);
+  return Boolean(settings?.account_id && settings.project_name && settings.pages_url && settings.has_credentials);
 }

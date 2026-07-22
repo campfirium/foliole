@@ -2,6 +2,7 @@ import {
   readPublishProviderRecord,
   serializeYamlString,
   splitMarkdownFrontmatter,
+  stripOpeningPublishTitle,
   writePublishProviderRecord
 } from '../publishing/publishFrontmatter.js';
 
@@ -73,12 +74,7 @@ export function readDiscoursePublishedMeta(content: string): DiscoursePublishedM
 }
 
 export function readDiscoursePublishMarkdown(content: string) {
-  return stripOpeningH1(splitMarkdownFrontmatter(content, createError).body);
-}
-
-function stripOpeningH1(content: string) {
-  const match = /^(?:[ \t]*\r?\n)*[ \t]{0,3}#(?!#)[ \t]+[^\r\n]*(?:\r?\n)?(?:[ \t]*\r?\n)?/u.exec(content);
-  return match ? content.slice(match[0].length) : content;
+  return stripOpeningPublishTitle(splitMarkdownFrontmatter(content, createError).body);
 }
 
 function serializeBinding(binding: DiscourseTopicBinding) {

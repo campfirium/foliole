@@ -26,6 +26,7 @@ const folioleRepositoryMocks = vi.hoisted(() => ({
   openFoliolePublishThemeFromRuntime: vi.fn(),
   publishFoliolePublishThemeChangesFromRuntime: vi.fn(),
   resetFoliolePublishThemeFromRuntime: vi.fn(),
+  saveFoliolePublishDraftToRuntime: vi.fn(),
   updateFoliolePublishLocalPagesFromRuntime: vi.fn(),
   viewFoliolePublishSiteFromRuntime: vi.fn(),
   updateFoliolePublishSiteAddressInRuntime: vi.fn()
@@ -75,12 +76,20 @@ beforeEach(() => {
   });
   Object.values(folioleRepositoryMocks).forEach((mock) => mock.mockReset());
   folioleRepositoryMocks.loadFoliolePublishSettingsFromRuntime.mockResolvedValue({
-    account_id: '', has_credentials: false, pages_url: '', project_name: '', site_address: '', updated_at: null
+    account_id: '', credentials_valid: false, field_catalog: [], has_credentials: false,
+    pages_url: '', project_name: '', site_address: '', updated_at: null
   });
+  folioleRepositoryMocks.saveFoliolePublishDraftToRuntime.mockImplementation(async (input: {
+    account_id: string; api_token: string; project_name: string;
+  }) => ({
+    account_id: input.account_id, credentials_valid: Boolean(input.api_token), field_catalog: [],
+    has_credentials: Boolean(input.api_token), pages_url: '', project_name: input.project_name,
+    site_address: '', updated_at: '2026-07-22T00:00:00.000Z'
+  }));
   folioleRepositoryMocks.viewFoliolePublishSiteFromRuntime.mockResolvedValue({ local_path: '/Publish/Site/index.html', url: null });
   folioleRepositoryMocks.connectFoliolePublishSettingsToRuntime.mockResolvedValue({
     settings: {
-      account_id: 'account', has_credentials: true, pages_url: 'https://my-notes.pages.dev',
+      account_id: 'account', credentials_valid: true, field_catalog: [], has_credentials: true, pages_url: 'https://my-notes.pages.dev',
       project_name: 'my-notes', site_address: 'https://my-notes.pages.dev', updated_at: '2026-07-16T00:00:00.000Z'
     },
     status: 'connected'
@@ -89,9 +98,9 @@ beforeEach(() => {
 
 it('starts collapsed and restores independent disclosure state after remounting', () => {
   const first = renderWithLocalization(<SettingsPublishingSection />);
-  const foliole = screen.getByRole('button', { name: 'Publish to the web' });
-  const wordpress = screen.getByRole('button', { name: 'WordPress' });
-  const discourse = screen.getByRole('button', { name: 'Discourse' });
+  const foliole = screen.getByRole('button', { name: 'Publish to the site' });
+  const wordpress = screen.getByRole('button', { name: 'Publish to WordPress' });
+  const discourse = screen.getByRole('button', { name: 'Publish to Discourse' });
   expect([foliole, wordpress, discourse].map((button) => button.getAttribute('aria-expanded'))).toEqual(['false', 'false', 'false']);
 
   fireEvent.click(wordpress);
@@ -101,12 +110,12 @@ it('starts collapsed and restores independent disclosure state after remounting'
 
   first.unmount();
   renderWithLocalization(<SettingsPublishingSection />);
-  expect(screen.getByRole('button', { name: 'WordPress' })).toHaveAttribute('aria-expanded', 'true');
+  expect(screen.getByRole('button', { name: 'Publish to WordPress' })).toHaveAttribute('aria-expanded', 'true');
 });
 
 it('opens the local static pages from the visible Publish settings row', async () => {
   renderWithLocalization(<SettingsPublishingSection />);
-  fireEvent.click(screen.getByRole('button', { name: 'Publish to the web' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Publish to the site' }));
   fireEvent.click(await screen.findByRole('button', { name: 'View local' }));
 
   await waitFor(() => expect(folioleRepositoryMocks.viewFoliolePublishSiteFromRuntime).toHaveBeenCalledOnce());
@@ -114,14 +123,14 @@ it('opens the local static pages from the visible Publish settings row', async (
 
 it('uses concise Publish copy and the standard settings input width', async () => {
   renderWithLocalization(<SettingsPublishingSection />);
-  fireEvent.click(screen.getByRole('button', { name: 'Discourse' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Publish to Discourse' }));
 
   const forumUrl = await screen.findByLabelText('Discourse forum URL');
   const headings = screen.getAllByRole('heading', { level: 3 });
   expect(headings).toHaveLength(3);
-  expect(screen.getByRole('heading', { level: 3, name: 'Publish to the web' })).toBeInTheDocument();
-  expect(screen.getByRole('heading', { level: 3, name: 'WordPress' })).toBeInTheDocument();
-  expect(screen.getByRole('heading', { level: 3, name: 'Discourse' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { level: 3, name: 'Publish to the site' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { level: 3, name: 'Publish to WordPress' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { level: 3, name: 'Publish to Discourse' })).toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: 'Discourse forum' })).toBeNull();
   expect(screen.getByText('Forum URL')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Test access' })).toBeEnabled();
@@ -130,7 +139,7 @@ it('uses concise Publish copy and the standard settings input width', async () =
 
 it('disconnects Discourse and removes the saved credential state', async () => {
   renderWithLocalization(<SettingsPublishingSection />);
-  fireEvent.click(screen.getByRole('button', { name: 'Discourse' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Publish to Discourse' }));
   const disconnect = await screen.findByRole('button', { name: 'Remove authorization' });
   fireEvent.click(disconnect);
 
@@ -175,7 +184,7 @@ it('does not replace newer input when an earlier save finishes', async () => {
 
 it('saves current settings and refreshes the Discourse catalog when testing the connection', async () => {
   renderWithLocalization(<SettingsPublishingSection />);
-  fireEvent.click(screen.getByRole('button', { name: 'Discourse' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Publish to Discourse' }));
   const testConnection = await screen.findByRole('button', { name: 'Test access' });
   await waitFor(() => expect(testConnection).toBeEnabled());
 
@@ -191,7 +200,7 @@ it('saves current settings and refreshes the Discourse catalog when testing the 
 it('shows a user-facing error when the connection test fails', async () => {
   repositoryMocks.loadDiscoursePublishCatalogFromRuntime.mockRejectedValue(new Error('private runtime detail'));
   renderWithLocalization(<SettingsPublishingSection />);
-  fireEvent.click(screen.getByRole('button', { name: 'Discourse' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Publish to Discourse' }));
   const testConnection = await screen.findByRole('button', { name: 'Test access' });
   await waitFor(() => expect(testConnection).toBeEnabled());
 
@@ -207,7 +216,7 @@ it('does not report a cached catalog as a successful connection test', async () 
     recent_category_ids: [], recent_tags: [], tags: []
   });
   renderWithLocalization(<SettingsPublishingSection />);
-  fireEvent.click(screen.getByRole('button', { name: 'Discourse' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Publish to Discourse' }));
   const testConnection = await screen.findByRole('button', { name: 'Test access' });
   await waitFor(() => expect(testConnection).toBeEnabled());
 

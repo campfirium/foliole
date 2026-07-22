@@ -65,6 +65,7 @@ describe('getAppPaletteCommands localization', () => {
       sectionId: 'Workspace',
       title: '命令面板'
     });
+    expect(items.find((item) => item.id === APP_COMMAND_IDS.publishToFoliole)?.title).toBe('Publish to the site');
     expect(sections.map((section) => section.title).slice(0, 4)).toEqual(['导航', '创建', '工作区', '编辑器']);
     expect(sections.flatMap((section) => section.items).map((item) => item.title)).not.toContain('desktop.command.openCommandPalette');
   });
@@ -74,6 +75,11 @@ describe('getAppPaletteCommands', () => {
   it('assigns creation commands to the Create section', () => {
     expect(sectionFor(APP_COMMAND_IDS.createTopic)).toBe('Create');
     expect(sectionFor(APP_COMMAND_IDS.createFolder)).toBe('Create');
+  });
+
+  it('names the site publishing target alongside the other destination commands', () => {
+    expect(getAppPaletteCommands(enabledOptions).find((item) => item.id === APP_COMMAND_IDS.publishToFoliole)?.title)
+      .toBe('Publish to the site');
   });
 
   it('keeps command palette sections aligned with the information architecture', () => {

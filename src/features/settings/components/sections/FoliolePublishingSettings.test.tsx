@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   openFoliolePublishThemeFromRuntime: vi.fn(),
   publishFoliolePublishThemeChangesFromRuntime: vi.fn(),
   resetFoliolePublishThemeFromRuntime: vi.fn(),
+  saveFoliolePublishDraftToRuntime: vi.fn(),
   updateFoliolePublishLocalPagesFromRuntime: vi.fn(),
   viewFoliolePublishSiteFromRuntime: vi.fn(),
   updateFoliolePublishSiteAddressInRuntime: vi.fn()
@@ -23,11 +24,11 @@ vi.mock('../../../../shared/platform/foliolePublishRepository', () => mocks);
 vi.mock('../../../../shared/platform/runtimeExternalNavigation', () => ({ openExternalUrl }));
 vi.mock('../../../../shared/platform/linkPanelUrlProbe', () => ({ probeUrlWithLinkPanel }));
 
-const EMPTY = { account_id: '', has_credentials: false, pages_url: '', project_name: '', site_address: '', updated_at: null };
+const EMPTY = { account_id: '', credentials_valid: false, field_catalog: [], has_credentials: false, pages_url: '', project_name: '', site_address: '', updated_at: null };
 const VALID_ACCOUNT_ID = '023e105f4ecef8ad9ca31a8372d0c353';
 const VALID_API_TOKEN = 'Sn3lZJTBX6kkg7OdcBUAxOO963GEIyGQqnFTOFYY';
 const CONNECTED = {
-  account_id: 'account', has_credentials: true, pages_url: 'https://my-site.pages.dev',
+  account_id: 'account', credentials_valid: true, field_catalog: [], has_credentials: true, pages_url: 'https://my-site.pages.dev',
   project_name: 'my-site', site_address: 'https://my-site.pages.dev', updated_at: '2026-07-19T00:00:00.000Z'
 };
 
@@ -36,6 +37,15 @@ beforeEach(() => {
   openExternalUrl.mockReset();
   probeUrlWithLinkPanel.mockReset().mockResolvedValue(false);
   mocks.loadFoliolePublishSettingsFromRuntime.mockResolvedValue(EMPTY);
+  mocks.saveFoliolePublishDraftToRuntime.mockImplementation(async (input: {
+    account_id: string; api_token: string; project_name: string;
+  }) => ({
+    ...EMPTY,
+    account_id: input.account_id,
+    credentials_valid: Boolean(input.api_token),
+    has_credentials: Boolean(input.api_token),
+    project_name: input.project_name
+  }));
   mocks.viewFoliolePublishSiteFromRuntime.mockResolvedValue({ local_path: '/Publish/Site/index.html', url: null });
   mocks.openFoliolePublishThemeFromRuntime.mockResolvedValue({ local_path: '/Publish/Theme' });
   mocks.resetFoliolePublishThemeFromRuntime.mockResolvedValue({ local_path: '/Publish/Theme' });
@@ -59,7 +69,7 @@ it('presents local and Web views of the generated static pages', async () => {
   expect(screen.getByRole('heading', { level: 4, name: 'Hosting' })).toBeVisible();
   expect(screen.getByRole('heading', { level: 5, name: 'Theme' })).toBeVisible();
   expect(screen.getByRole('heading', { level: 5, name: 'Cloudflare Pages' })).toBeVisible();
-  expect(screen.getByText('Generated each time you run “Publish to the web” on material.')).toBeVisible();
+  expect(screen.getByText('Generated each time you run “Publish to the site” on material.')).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: 'View local' }));
   await waitFor(() => expect(mocks.viewFoliolePublishSiteFromRuntime).toHaveBeenCalledOnce());
   fireEvent.click(screen.getByRole('button', { name: 'View Web' }));

@@ -4,6 +4,7 @@ import {
   readPublishProviderRecord,
   serializeYamlString,
   splitMarkdownFrontmatter,
+  stripOpeningPublishTitle,
   writePublishProviderRecord
 } from '../publishing/publishFrontmatter.js';
 
@@ -112,5 +113,5 @@ export function readFolioleWebYamlCandidates(content: string): FolioleWebField[]
 }
 
 export function readFolioleWebMarkdown(content: string) {
-  return splitMarkdownFrontmatter(content, createError).body;
+  return stripOpeningPublishTitle(splitMarkdownFrontmatter(content, createError).body);
 }

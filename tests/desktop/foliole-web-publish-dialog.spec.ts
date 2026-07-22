@@ -6,6 +6,8 @@ import type { ElectronApplication, Page } from '@playwright/test';
 import { expect, test } from './harness/fixtures';
 
 const SCREENSHOT = path.resolve('.tmp/artifacts/desktop-acceptance/foliole-publish-official-theme.png');
+const ARTICLE_SCREENSHOT = path.resolve('.tmp/artifacts/desktop-acceptance/foliole-publish-article.png');
+const DIALOG_SCREENSHOT = path.resolve('.tmp/artifacts/desktop-acceptance/foliole-publish-dialog.png');
 const NEWER_ID = 'playwright-newer-topic';
 const OLDER_ID = 'playwright-older-topic';
 
@@ -49,6 +51,8 @@ foliole:
           - reading
       lastPublishedAt: "2026-07-21T09:30:00.000Z"
 ---
+# A durable place to publish
+
 ## A calmer reading surface
 
 The official theme keeps long-form reading clear on every screen.
@@ -80,14 +84,16 @@ async function openPublishDialog(desktopWindow: Page) {
       title: 'Local preview'
     } }));
   });
-  return desktopWindow.getByRole('dialog', { name: /^(Publish to the web|发布到网站)$/u });
+  return desktopWindow.getByRole('dialog', { name: 'Publish to the site' });
 }
 
-test('resets the official Theme and renders the generated static site in a real browser window', async ({ desktopApp, desktopWindow }) => {
+test('keeps Theme controls out of Publish and renders the generated static site in a real browser window', async ({ desktopApp, desktopWindow }) => {
   const dialog = await openPublishDialog(desktopWindow);
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByRole('button', { name: /^(Open theme|打开主题)$/u })).toBeVisible();
-  await expect(dialog.getByRole('button', { name: /^(Reset theme|重置主题)$/u })).toBeVisible();
+  await expect(dialog.getByText(/^(Fields|字段)$/u)).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /^(Open theme|打开主题)$/u })).toHaveCount(0);
+  await expect(dialog.getByRole('button', { name: /^(Reset theme|重置主题)$/u })).toHaveCount(0);
+  await dialog.screenshot({ path: DIALOG_SCREENSHOT });
 
   const libraryHome = await desktopApp.evaluate(() => process.env.FOLIOLE_LIBRARY_HOME ?? null);
   if (!libraryHome) throw new Error('missing isolated library home');
@@ -99,21 +105,22 @@ test('resets the official Theme and renders the generated static site in a real 
   expect(generated).toMatchObject({ local_path: path.join(libraryHome, 'Publish', 'Site', 'index.html') });
 
   const site = await openStaticSite(desktopApp, generated.local_path);
-  await expect(site.getByRole('heading', { level: 1, name: 'A durable place to publish' })).toBeVisible();
-  await expect(site.getByText('Latest topic')).toBeVisible();
-  await expect(site.getByText('category')).toBeVisible();
-  await expect(site.getByText('essays')).toBeVisible();
-  await expect(site.getByRole('link', { name: 'RSS' })).toHaveAttribute('href', /rss\.xml$/u);
+  await expect(site.getByRole('heading', { level: 1, name: 'Topics' })).toBeVisible();
+  await expect(site.locator('.topic-list > li')).toHaveCount(2);
+  await expect(site.getByRole('navigation', { name: 'Site' }).getByRole('link', { name: 'RSS' }))
+    .toHaveAttribute('href', /rss\.xml$/u);
+  await expect(site.getByRole('link', { name: /A durable place to publish/u })).toBeVisible();
   await expect(site.getByRole('link', { name: /The earlier topic/u })).toBeVisible();
+  await expect(site.locator('.keyboard-hint')).toHaveCount(0);
   await site.screenshot({ fullPage: true, path: SCREENSHOT });
 
-  await site.keyboard.press('Space');
-  await expect(site.getByRole('heading', { level: 1, name: 'The earlier topic' })).toBeVisible();
-  await site.keyboard.press('Shift+Space');
-  await expect(site.getByRole('heading', { level: 1, name: 'A durable place to publish' })).toBeVisible();
-  await site.keyboard.press('Escape');
-  await expect(site.getByRole('heading', { level: 1, name: 'Archive' })).toBeVisible();
-  await expect(site.locator('.archive-list > li')).toHaveCount(2);
+  await site.getByRole('link', { name: /A durable place to publish/u }).click();
+  await expect(site.getByRole('heading', { level: 1, name: 'A durable place to publish' })).toHaveCount(1);
+  await expect(site.getByText('category')).toBeVisible();
+  await expect(site.getByText('essays')).toBeVisible();
+  await site.screenshot({ fullPage: true, path: ARTICLE_SCREENSHOT });
+  await site.getByRole('link', { name: 'All topics' }).click();
+  await expect(site.locator('.topic-list > li')).toHaveCount(2);
 
   await site.setViewportSize({ height: 844, width: 390 });
   await expect(site.locator('.site-header')).toBeVisible();

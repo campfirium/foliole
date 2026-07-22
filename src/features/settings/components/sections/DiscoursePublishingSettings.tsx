@@ -52,7 +52,7 @@ export function DiscoursePublishingSettings(props: { expanded: boolean; onExpand
   const t = useTranslation();
   const state = usePublishingSettings();
   return (
-    <SettingsSection ariaLabel={t('settings.publishing.sectionAria')} description={t('settings.publishing.discourse.description')} expanded={props.expanded} onExpandedChange={props.onExpandedChange} title="Discourse">
+    <SettingsSection ariaLabel={t('settings.publishing.sectionAria')} description={t('settings.publishing.discourse.description')} expanded={props.expanded} onExpandedChange={props.onExpandedChange} title={t('settings.publishing.discourse.title')}>
       {state.error ? <AppErrorState description={t('settings.publishing.error.tryAgain')} surface="panel" title={state.error} /> : null}
       <PublishingRows disabled={state.disabled} form={state.form} saveForumUrl={state.saveForumUrl} updateForm={state.updateForm} />
       <DiscourseAuthorizationRows

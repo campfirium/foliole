@@ -42,6 +42,11 @@ export function joinMarkdownFrontmatter(parts: MarkdownFrontmatterParts, frontma
   return `---${parts.newline}${frontmatter}${parts.newline}---${parts.closingNewline}${parts.body}`;
 }
 
+export function stripOpeningPublishTitle(content: string) {
+  const openingTitle = /^(?:[ \t]*\r?\n)*[ \t]{0,3}#(?!#)[ \t]+[^\r\n]*(?:\r?\n)?(?:[ \t]*\r?\n)?/u.exec(content);
+  return openingTitle ? content.slice(openingTitle[0].length) : content;
+}
+
 function parseRoot(frontmatter: string, createError: ErrorFactory) {
   const document = parseDocument(frontmatter, {
     keepSourceTokens: true,

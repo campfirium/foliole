@@ -45,6 +45,7 @@ vi.mock('./foliolePublishSettings.js', () => ({
   })),
   recordFoliolePublishFields: mocks.recordFoliolePublishFields,
   resetFoliolePublishFieldHistory: vi.fn(),
+  saveFoliolePublishDraft: vi.fn(),
   saveFoliolePublishConnection: mocks.saveFoliolePublishConnection,
   saveFoliolePublishSiteAddress: mocks.saveFoliolePublishSiteAddress
 }));
@@ -149,7 +150,10 @@ it('opens only the managed Publish Preview entry without changing the active Sit
   expect(result.local_path).toBe(path.join(state.libraryHome, 'Publish', 'Preview', 'index.html'));
   expect(mocks.shellOpenPath).toHaveBeenCalledWith(result.local_path);
   expect(activeRss()).toBe(before);
-  expect(fs.readFileSync(result.local_path, 'utf8')).toContain('essays');
+  expect(fs.readFileSync(result.local_path, 'utf8')).toContain('Preview card');
+  const cardFiles = fs.readdirSync(path.join(path.dirname(result.local_path), 'cards'));
+  expect(cardFiles).toHaveLength(1);
+  expect(fs.readFileSync(path.join(path.dirname(result.local_path), 'cards', cardFiles[0]!), 'utf8')).toContain('essays');
 });
 
 it('opens the active local static pages without regenerating them', async () => {

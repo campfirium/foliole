@@ -16,7 +16,7 @@ function temporaryRoot() {
 }
 afterEach(() => roots.splice(0).forEach((root) => fs.rmSync(root, { force: true, recursive: true })));
 
-it('opens on the newest card and emits stable card pages, archive, and RSS', () => {
+it('opens on a compact Topic list and emits stable card pages, archive, and RSS', () => {
   const root = temporaryRoot();
   const first = upsertPublishedCard(emptyPublishIndex(), { nodeId: 'one', title: 'Older' });
   writeFileAtomic(path.join(root, first.card.file), 'Older body');
@@ -25,11 +25,12 @@ it('opens on the newest card and emits stable card pages, archive, and RSS', () 
 
   const entry = generateFoliolePublishSite(root, second.index, 'https://notes.example.com');
 
-  expect(fs.readFileSync(entry, 'utf8')).toContain('<h1>Newest</h1>');
-  expect(fs.readFileSync(entry, 'utf8')).toContain(`data-older-url="cards/${first.card.id}.html"`);
-  expect(fs.readFileSync(entry, 'utf8')).not.toContain('data-newer-url=');
+  expect(fs.readFileSync(entry, 'utf8')).toContain('<h1>Topics</h1>');
+  expect(fs.readFileSync(entry, 'utf8')).toContain(`href="cards/${second.card.id}.html"`);
+  expect(fs.readFileSync(entry, 'utf8')).toContain(`href="cards/${first.card.id}.html"`);
+  expect(fs.readFileSync(entry, 'utf8')).not.toContain('keyboard-hint');
   expect(fs.readFileSync(path.join(root, 'Site', 'cards', `${first.card.id}.html`), 'utf8'))
-    .toContain(`data-newer-url="../cards/${second.card.id}.html"`);
+    .toContain('<a aria-label="All topics" class="back-link" href="../index.html"><span aria-hidden="true">←</span>All topics</a>');
   expect(fs.readFileSync(path.join(root, 'Site', 'archive.html'), 'utf8')).toContain('Older');
   const feed = fs.readFileSync(path.join(root, 'Site', 'rss.xml'), 'utf8');
   expect(feed).toContain('<description>Topics published with Foliole.</description>');
@@ -54,7 +55,7 @@ it('renders scalar and list fields through Liquid while escaping public values',
     }
   ]]));
 
-  const page = fs.readFileSync(path.join(staged, 'index.html'), 'utf8');
+  const page = fs.readFileSync(path.join(staged, 'cards', `${published.card.id}.html`), 'utf8');
   const archive = fs.readFileSync(path.join(staged, 'archive.html'), 'utf8');
   expect(page).toContain('<h1>&lt;Newest&gt;</h1>');
   expect(page).toContain('<dt>category</dt><dd><span>essays</span></dd>');

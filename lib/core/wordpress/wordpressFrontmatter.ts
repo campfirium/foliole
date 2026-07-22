@@ -2,6 +2,7 @@ import {
   readPublishProviderRecord,
   serializeYamlString,
   splitMarkdownFrontmatter,
+  stripOpeningPublishTitle,
   writePublishProviderRecord
 } from '../publishing/publishFrontmatter.js';
 
@@ -65,8 +66,7 @@ export function writeWordPressPostBinding(content: string, binding: WordPressPos
 
 export function readWordPressPublishMarkdown(content: string) {
   const body = splitMarkdownFrontmatter(content, createError).body;
-  const openingTitle = /^(?:[ \t]*\r?\n)*[ \t]{0,3}#(?!#)[ \t]+[^\r\n]*(?:\r?\n)?(?:[ \t]*\r?\n)?/u.exec(body);
-  return openingTitle ? body.slice(openingTitle[0].length) : body;
+  return stripOpeningPublishTitle(body);
 }
 
 export function extractWordPressPublishTitle(content: string, fallback: string) {

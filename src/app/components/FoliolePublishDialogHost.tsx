@@ -6,11 +6,9 @@ import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   forgetFoliolePublishFieldFromRuntime,
   isFoliolePublishConfigured,
-  openFoliolePublishThemeFromRuntime,
   previewFoliolePublishFromRuntime,
   publishTopicToFoliole,
-  resetFoliolePublishFieldHistoryFromRuntime,
-  resetFoliolePublishThemeFromRuntime
+  resetFoliolePublishFieldHistoryFromRuntime
 } from '../../shared/platform/foliolePublishRepository';
 import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle, requestAppConfirmation } from '../../shared/ui';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
@@ -37,18 +35,6 @@ async function executePublishAction(input: {
   return result.status;
 }
 
-async function confirmThemeReset(t: ReturnType<typeof useTranslation>, onError: (message: string) => void) {
-  const confirmed = await requestAppConfirmation({
-    cancelLabel: t('common.cancel'),
-    confirmLabel: t('desktop.foliolePublish.resetTheme'),
-    description: t('desktop.foliolePublish.resetThemeConfirm'),
-    title: t('desktop.foliolePublish.resetTheme')
-  });
-  if (!confirmed) return;
-  try { await resetFoliolePublishThemeFromRuntime(); }
-  catch (caught) { onError(caught instanceof Error ? caught.message : 'Theme reset failed.'); }
-}
-
 async function resetFieldHistory(input: {
   request: FoliolePublishDialogRequest;
   setError: (message: string | null) => void;
@@ -59,14 +45,6 @@ async function resetFieldHistory(input: {
   if (!confirmed) return;
   try { input.setRequest({ ...input.request, settings: await resetFoliolePublishFieldHistoryFromRuntime() }); }
   catch (caught) { input.setError(caught instanceof Error ? caught.message : 'Field history reset failed.'); }
-}
-
-function ThemeControls(props: { setError: (message: string | null) => void; t: ReturnType<typeof useTranslation> }) {
-  return <div className="mt-5 flex items-center gap-2 border-t border-settings-divider/70 pt-4">
-    <span className="mr-2 text-sm text-foreground/68">{props.t('desktop.foliolePublish.theme')}</span>
-    <AppButton onClick={() => void openFoliolePublishThemeFromRuntime()} variant="subtle">{props.t('desktop.foliolePublish.openTheme')}</AppButton>
-    <AppButton onClick={() => void confirmThemeReset(props.t, props.setError)} variant="subtle">{props.t('desktop.foliolePublish.resetTheme')}</AppButton>
-  </div>;
 }
 
 function useFolioleDialogRequest() {
@@ -128,7 +106,6 @@ export function FoliolePublishDialogHost() {
           onForget={(key) => void forgetFoliolePublishFieldFromRuntime(key).then((settings) => setRequest({ ...request, settings })).catch((caught) => setError(caught instanceof Error ? caught.message : 'Could not forget this field.'))}
           onResetHistory={() => void resetFieldHistory({ request, setError, setRequest, t })}
         />
-        <ThemeControls setError={setError} t={t} />
         {!configured ? <p className="mt-3 text-sm text-foreground/60">{t('desktop.foliolePublish.hostingRequired')}</p> : null}
         {error ? <p className="mt-3 text-sm text-destructive" role="alert">{error}</p> : null}
         <div className="mt-5 flex justify-end gap-2">

@@ -25,7 +25,7 @@ function tutorialIndex(): FoliolePublishIndex {
 }
 
 const TUTORIAL = [
-  'Your public site opens on the newest card. Press **Space** to continue.',
+  'Your public site opens with a compact list of the Topics you publish.',
   'Foliole keeps editing private. Only the Topic you explicitly publish becomes part of this site.',
   'Connect a Cloudflare Pages project in Settings. Your first deployment can use a free `pages.dev` address.'
 ];
