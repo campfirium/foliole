@@ -4,10 +4,20 @@ import { closeSync, openSync } from 'node:fs';
 import process from 'node:process';
 import { clearTimeout, setTimeout } from 'node:timers';
 
+export function resolvePortableCommand(command, args, options = {}) {
+  const platform = options.platform ?? process.platform;
+  const npmExecPath = options.npmExecPath ?? process.env.npm_execpath;
+  if (platform === 'win32' && command === 'npm' && npmExecPath) {
+    return { args: [npmExecPath, ...args], command: options.nodeExecPath ?? process.execPath };
+  }
+  return { args, command };
+}
+
 export function runWithTimeout(seconds, command, args, options = {}) {
   if (!Number.isFinite(seconds) || seconds <= 0 || !command) throw new Error('usage: run-with-timeout <seconds> <command> [args...]');
   const stdoutFd = options.stdoutFile ? openSync(options.stdoutFile, 'w') : null;
-  const child = spawn(command, args, { stdio: ['inherit', stdoutFd ?? 'inherit', 'inherit'] });
+  const portable = resolvePortableCommand(command, args, options);
+  const child = spawn(portable.command, portable.args, { stdio: ['inherit', stdoutFd ?? 'inherit', 'inherit'] });
   const timer = setTimeout(() => child.kill('SIGTERM'), seconds * 1000);
   let outputClosed = false;
   const closeOutput = () => {
@@ -15,9 +25,10 @@ export function runWithTimeout(seconds, command, args, options = {}) {
     outputClosed = true;
     closeSync(stdoutFd);
   };
-  child.once('error', () => {
+  child.once('error', (error) => {
     clearTimeout(timer);
     closeOutput();
+    console.error(`[run-with-timeout] failed to start ${portable.command}: ${error.message}`);
     process.exitCode = 1;
   });
   child.once('exit', (code, signal) => {

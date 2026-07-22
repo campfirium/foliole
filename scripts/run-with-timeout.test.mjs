@@ -5,6 +5,8 @@ import path from 'node:path';
 import process from 'node:process';
 import { describe, expect, it } from 'vitest';
 
+import { resolvePortableCommand } from './run-with-timeout.mjs';
+
 const RUNNER = path.resolve('scripts/run-with-timeout.mjs');
 
 function run(args) {
@@ -15,6 +17,14 @@ function run(args) {
 }
 
 describe('portable timeout runner', () => {
+  it('runs npm through its JavaScript entry point on Windows', () => {
+    expect(resolvePortableCommand('npm', ['audit'], {
+      nodeExecPath: 'C:/node/node.exe', npmExecPath: 'C:/node/npm-cli.js', platform: 'win32'
+    })).toEqual({ args: ['C:/node/npm-cli.js', 'audit'], command: 'C:/node/node.exe' });
+    expect(resolvePortableCommand('npm', ['audit'], { platform: 'darwin' }))
+      .toEqual({ args: ['audit'], command: 'npm' });
+  });
+
   it('preserves a completed command exit code', async () => {
     await expect(run(['2', process.execPath, '-e', 'process.exit(7)'])).resolves.toBe(7);
   });
