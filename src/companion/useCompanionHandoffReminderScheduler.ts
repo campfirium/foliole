@@ -1,10 +1,10 @@
 import { useEffect, useSyncExternalStore } from 'react';
 
-import { scheduleCompanionHandoffReminders } from '../shared/platform/companionHandoffNotifications';
 import {
   getCompanionSyncMutationRevision,
   subscribeCompanionSyncMutationRevision
-} from '../shared/platform/companionSyncMutationRevision';
+} from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
+import { scheduleCompanionHandoffReminders } from '../shared/platform/companionHandoffNotifications';
 import { loadCompanionPendingSyncSummary } from '../shared/platform/companionSyncObjects';
 
 import type { CompanionHandoffReminderSettings } from './companionHandoffReminderSettings';

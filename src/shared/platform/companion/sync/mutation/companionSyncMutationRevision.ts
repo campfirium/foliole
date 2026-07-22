@@ -1,4 +1,4 @@
-import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
+import { runCompanionSyncWriterTask } from '../../../companionSyncWriterQueue';
 
 type MutationListener = () => void;
 

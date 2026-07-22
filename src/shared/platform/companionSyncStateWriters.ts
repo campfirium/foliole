@@ -4,7 +4,7 @@ import type {
 } from '../../../lib/platform/nativeStorageContract';
 import type { NativeSyncReviewLogDraft } from '../../../lib/platform/nativeSyncContract';
 
-import { runCompanionSyncMutationTask } from './companionSyncMutationRevision';
+import { runCompanionSyncMutationTask } from './companion/sync/mutation/companionSyncMutationRevision';
 import {
   FolioleCompanionSync,
   getNativeCompanionSettingWritePlatform,

@@ -8,8 +8,12 @@ import { controlledElectronSqliteTests } from '../native-sqlite-test-policy.mjs'
 
 const ELECTRON_SQLITE_TESTS = new Set(controlledElectronSqliteTests);
 
-function npmRunCommand(script) {
-  return { command: process.platform === 'win32' ? 'npm.cmd' : 'npm', args: ['run', script] };
+export function resolveNpmRunCommand(
+  script, env = process.env, platform = process.platform, nodePath = process.execPath
+) {
+  const npmExecPath = env.npm_execpath?.trim();
+  if (!npmExecPath) throw new Error(`npm_execpath is required for capped quality on ${platform}`);
+  return { command: nodePath, args: [npmExecPath, 'run', script] };
 }
 
 function isElectronAbiTest(file) {
@@ -61,7 +65,7 @@ export async function runCappedHeavyPlan(plan, options = {}) {
     console.log('[quality-fast-capped] no lintable changed files detected - skipping scoped lint');
   }
   for (const script of resolveCappedTypecheckScripts(plan.level)) {
-    const typecheck = npmRunCommand(script);
+    const typecheck = resolveNpmRunCommand(script, env);
     await runStep(script, typecheck.command, typecheck.args, env, runner);
   }
   const related = splitRelatedTests(plan.relatedTests);

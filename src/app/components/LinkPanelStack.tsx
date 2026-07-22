@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import type { PointerEvent as ReactPointerEvent, RefObject } from 'react';
 
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { LINK_PANEL_WEBVIEW_PROPS } from '../../shared/platform/linkPanelUrlProbe';
+import { LINK_PANEL_WEBVIEW_PROPS } from '../../shared/platform/external/linkPanelUrlProbe';
 import { openExternalUrl } from '../../shared/platform/runtimeExternalNavigation';
 import { AppIconButton, appFloatingSurfaceClassName } from '../../shared/ui';
 

@@ -62,7 +62,7 @@ function expectInvertedPageBackgrounds(styles: string) {
 function expectStableInvertedBackgroundTokens(styles: string) {
   expect(styles).toContain('--pdf-reading-inverted-surface-color: rgb(23 23 23);');
   expect(styles).toContain('--pdf-reading-inverted-page-color: rgb(23 23 23);');
-  expect(styles).not.toContain('--pdf-reading-inverted-surface-color: color-mix(in srgb, rgb(var(--color-background))');
+  expect(styles).not.toContain('--pdf-reading-inverted-surface-color: color-mix(in srgb, rgb(var(--color-app-shell))');
 }
 
 describe('PDF warm reading CSS', () => {

@@ -28,6 +28,7 @@ async function createFixtureRoot() {
 }
 
 async function writeFixtureFile(repoRoot, relativePath, contents) {
+  await mkdir(path.dirname(path.join(repoRoot, relativePath)), { recursive: true });
   await writeFile(path.join(repoRoot, relativePath), contents.trimStart(), 'utf8');
 }
 
@@ -110,10 +111,10 @@ describe('check-layer-dependency-boundary runtime command imports', () => {
 
   it('allows shared platform compatibility modules to re-export runtime modules', async () => {
     const repoRoot = await createFixtureRoot();
-    await writeFixtureFile(repoRoot, 'src/shared/platform/importBridge.ts', `
+    await writeFixtureFile(repoRoot, 'src/shared/platform/import/importBridge.ts', `
       export { loadRuntimeImportOverview } from './importOverviewRuntimeRepository';
     `);
-    await writeFixtureFile(repoRoot, 'src/shared/platform/importBridgePayloads.ts', `
+    await writeFixtureFile(repoRoot, 'src/shared/platform/import/importBridgePayloads.ts', `
       export { toRuntimeTextImportResult } from './importRuntimePayloads';
     `);
 

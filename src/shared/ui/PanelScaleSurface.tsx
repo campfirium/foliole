@@ -66,7 +66,7 @@ export function PanelScaleSurface(props: {
         {showFeedback ? (
           <div
             aria-live="polite"
-            className="pointer-events-none absolute right-3 top-3 z-local-feedback rounded-md bg-foreground/85 px-2.5 py-1 text-xs text-background shadow-control"
+            className="pointer-events-none absolute right-3 top-3 z-local-feedback rounded-md bg-foreground/85 px-2.5 py-1 text-xs text-canvas shadow-control"
           >
             {props.label} · {percent}%
           </div>

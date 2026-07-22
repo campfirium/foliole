@@ -13,7 +13,7 @@ it('keeps shell-less surfaces on semantic shell-less tokens', () => {
   expect(appShelllessSurfaceClassName()).toContain('border-shellless-border');
   expect(appShelllessSurfaceClassName()).toContain('rounded-shellless');
   expect(appShelllessSurfaceClassName()).toContain('shadow-shellless');
-  expect(appShelllessSurfaceClassName()).not.toContain('bg-background');
+  expect(appShelllessSurfaceClassName()).not.toContain('bg-app-shell');
   expect(appShelllessSurfaceClassName()).not.toContain('workspace-region-main-rail-bg');
 });
 

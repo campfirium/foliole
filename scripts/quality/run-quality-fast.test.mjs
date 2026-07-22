@@ -1,5 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import path from 'node:path';
 import process from 'node:process';
+
+import { describe, expect, it } from 'vitest';
 
 import packageJson from '../../package.json' with { type: 'json' };
 
@@ -23,7 +25,7 @@ describe('quality fast platform adapter', () => {
   it('routes Windows to the native T0 adapter', () => {
     const result = resolveQualityFastCommand('win32', ['--route']);
     expect(result.command).toBe(process.execPath);
-    expect(result.args[0]).toMatch(/windows\/quality-fast-native\.mjs$/u);
+    expect(path.win32.normalize(result.args[0])).toMatch(/\\scripts\\windows\\quality-fast-native\.mjs$/u);
     expect(result.args[1]).toBe('--route');
   });
 

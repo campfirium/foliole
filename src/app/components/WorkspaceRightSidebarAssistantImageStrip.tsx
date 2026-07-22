@@ -22,7 +22,7 @@ export function WorkspaceRightSidebarAssistantImageStrip(props: {
           />
           {props.onRemove && props.removeLabel ? (
             <AppIconButton
-              className="absolute right-0.5 top-0.5 size-6 rounded-full bg-canvas/90 text-foreground shadow-sm"
+              className="absolute right-0.5 top-0.5 size-6 rounded-full bg-canvas/90 text-foreground shadow-control"
               icon={<X aria-hidden className="size-3.5" strokeWidth={1.8} />}
               label={`${props.removeLabel}: ${image.originalName}`}
               onClick={() => props.onRemove?.(index)}

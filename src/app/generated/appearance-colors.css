@@ -25,7 +25,7 @@
   --app-accent-color-rgb: 127 177 141;
   --app-selection-color: #78a6ff;
   --app-selection-color-rgb: 120 166 255;
-  --app-text-selection-bg-color: color-mix(in srgb, var(--app-selection-color) 50%, rgb(var(--color-background)) 50%);
+  --app-text-selection-bg-color: color-mix(in srgb, var(--app-selection-color) 50%, rgb(var(--color-canvas)) 50%);
   --app-text-selection-fg-color: #ffffff;
   --app-selection-foreground-color: #ffffff;
   --app-selection-surface-color: rgb(var(--app-selection-color-rgb) / 0.42);

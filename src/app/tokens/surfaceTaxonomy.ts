@@ -10,7 +10,7 @@ export type SurfaceTaxonomyEntry = {
 export const SURFACE_TAXONOMY = [
   {
     id: 'app-shell',
-    currentToken: '--color-background',
+    currentToken: '--color-app-shell',
     purpose: 'Window-level base behind the desktop workbench.',
     forbidden: ['Do not use it as a local hover, selected, or control-fill color.'],
     notes: ['Startup fallback is a state of app-shell, not a separate surface layer.'],
@@ -69,7 +69,7 @@ export const SURFACE_TAXONOMY = [
   {
     id: 'startup-fallback',
     parent: 'app-shell',
-    currentToken: '--color-background',
+    currentToken: '--color-app-shell',
     purpose: 'The app-shell fallback state shown before the full renderer surface is ready.',
     forbidden: ['Do not treat startup fallback button variants as the AppButton source of truth.'],
   },

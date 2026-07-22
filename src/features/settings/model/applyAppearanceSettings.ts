@@ -56,14 +56,14 @@ interface ApplyAppearanceSettingsInput {
 
 const BASE_APPEARANCE_TOKENS_BY_MODE = {
   dark: {
-    '--color-background': '17 20 19',
+    '--color-app-shell': '17 20 19',
     '--color-bg-panel': '26 31 30',
     '--color-canvas': '22 25 24',
     '--workspace-divider-mix-target': 'white',
     '--workspace-divider-subtle-surface-weight': '93%'
   },
   light: {
-    '--color-background': '245 245 243',
+    '--color-app-shell': '245 245 243',
     '--color-bg-panel': '246 246 246',
     '--color-canvas': '255 255 255',
     '--workspace-divider-mix-target': 'black',

@@ -7,8 +7,8 @@ import { ZH_HANS_DESKTOP_ACTION_HELP_TRANSLATIONS } from './zhHansDesktopActionH
 import { ZH_HANS_DESKTOP_COMMAND_TRANSLATIONS } from './zhHansDesktopCommands';
 import { ZH_HANS_DESKTOP_DISCOURSE_TRANSLATIONS } from './zhHansDesktopDiscourse';
 import { ZH_HANS_DESKTOP_EXTERNAL_LIBRARY_TRANSLATIONS } from './zhHansDesktopExternalLibrary';
-import { ZH_HANS_DESKTOP_FOLIOLE_PUBLISH_TRANSLATIONS } from './zhHansDesktopFoliolePublish';
 import { ZH_HANS_DESKTOP_FOLDER_LIST_TRANSLATIONS } from './zhHansDesktopFolderList';
+import { ZH_HANS_DESKTOP_FOLIOLE_PUBLISH_TRANSLATIONS } from './zhHansDesktopFoliolePublish';
 import { ZH_HANS_DESKTOP_IMPORT_TRANSLATIONS } from './zhHansDesktopImport';
 import { ZH_HANS_DESKTOP_IMPORT_DIALOG_TRANSLATIONS } from './zhHansDesktopImportDialogs';
 import { ZH_HANS_DESKTOP_NAVIGATION_TRANSLATIONS } from './zhHansDesktopNavigation';

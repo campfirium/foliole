@@ -238,7 +238,7 @@ describe('quality-gate-fast.sh delegation', () => {
         QUALITY_GATE_CHANGED_FILES: 'src/companion/App.tsx'
       });
 
-      expect(result.code).toBe(0);
+      expect(result.code, `stdout:\n${result.stdout}\nstderr:\n${result.stderr}`).toBe(0);
       expect(result.stdout).toContain('[quality-gate-fast] selected level: android');
       expect(result.stdout).toContain('remote-quality.mjs --scope android');
       expect(result.stdout).toContain('android typecheck ok');

@@ -19,7 +19,7 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'src/shared/platform/appLifecycle.test.ts',
   'src/shared/platform/companionHandoffNotifications.test.ts',
   'src/shared/platform/companionHandoffNotifications.ios.test.ts',
-  'src/shared/platform/companionSyncMutationRevision.test.ts',
+  'src/shared/platform/companion/sync/mutation/companionSyncMutationRevision.test.ts',
   'src/shared/platform/companionDesktopSyncPush.ios.test.ts',
   'src/shared/platform/companionDesktopSyncPush.nodeVersion.test.ts',
   'src/shared/platform/companionSyncStateWriters.ios.test.ts',

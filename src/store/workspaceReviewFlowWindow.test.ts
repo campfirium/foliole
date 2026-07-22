@@ -8,15 +8,19 @@ import {
   createWorkspaceFixture
 } from './workspaceStoreReviewActions.test-support';
 
+function localIso(monthIndex: number, day: number) {
+  return new Date(2026, monthIndex, day, 12).toISOString();
+}
+
 it('builds a display-only flow window with future topics outside the live queue', () => {
-  const now = '2026-03-10T12:00:00.000Z';
+  const now = localIso(2, 10);
   const queueNodeIds = ['qa-queue'];
   const state = {
     ...createWorkspaceFixture([
-      createQaNode('qa-queue', '2026-03-01T00:00:00.000Z'),
-      createQaNode('qa-ready', '2026-03-02T00:00:00.000Z'),
-      createReadingNode('reading-ready', '2026-03-09T00:00:00.000Z'),
-      createReadingNode('reading-upcoming', '2026-03-20T00:00:00.000Z')
+      createQaNode('qa-queue', localIso(2, 1)),
+      createQaNode('qa-ready', localIso(2, 2)),
+      createReadingNode('reading-ready', localIso(2, 9)),
+      createReadingNode('reading-upcoming', localIso(2, 20))
     ]),
     reviewSession: {
       currentNodeId: 'qa-queue',
@@ -43,9 +47,9 @@ it('builds a display-only flow window with future topics outside the live queue'
 });
 
 it('keeps ready and upcoming entries in separate flow windows', () => {
-  const now = '2026-03-10T12:00:00.000Z';
+  const now = localIso(2, 10);
   const readyNodes = Array.from({ length: 22 }, (_, index) =>
-    createReadingNode(`reading-ready-${index + 1}`, '2026-03-09T00:00:00.000Z')
+    createReadingNode(`reading-ready-${index + 1}`, localIso(2, 9))
   );
   const futureNodes = Array.from({ length: 25 }, (_, index) =>
     createReadingNode(`reading-upcoming-${index + 1}`, new Date(Date.parse(now) + (index + 1) * 86_400_000).toISOString())

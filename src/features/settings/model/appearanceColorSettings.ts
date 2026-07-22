@@ -94,7 +94,7 @@ function getDefaultClozeColor(mode: AppearanceResolvedColorMode) {
 
 function getTextSelectionBackgroundColor(selectionColor: string, mode: AppearanceResolvedColorMode) {
   return mode === 'dark'
-    ? `color-mix(in srgb, ${selectionColor} 50%, rgb(var(--color-background)) 50%)`
+    ? `color-mix(in srgb, ${selectionColor} 50%, rgb(var(--color-canvas)) 50%)`
     : `rgb(var(--app-selection-color-rgb) / ${getSelectionSurfaceAlpha(mode)})`;
 }
 

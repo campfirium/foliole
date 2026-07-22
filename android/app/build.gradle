@@ -3,6 +3,9 @@ apply plugin: 'com.android.application'
 android {
     namespace = "com.foliole.android"
     compileSdk = rootProject.ext.compileSdkVersion
+    compileOptions {
+        coreLibraryDesugaringEnabled true
+    }
     lintOptions {
         baseline file("lint-baseline.xml")
     }
@@ -34,6 +37,7 @@ repositories {
 }
 
 dependencies {
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"

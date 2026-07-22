@@ -6,13 +6,13 @@ const SOURCES = ['src/app/generated/appearance-colors.css', 'src/app/styles.css'
 
 const TOKEN_RULES = {
   light: {
-    backgroundL: [0.94, 0.99],
+    canvasL: [0.99, 1],
     textL: [0.16, 0.26],
     deltaL: [0.68, 0.8],
     textChromaMax: 0.04
   },
   dark: {
-    backgroundL: [0.14, 0.22],
+    canvasL: [0.14, 0.22],
     textL: [0.82, 0.9],
     deltaL: [0.62, 0.72],
     textChromaMax: 0.04
@@ -143,38 +143,38 @@ function format(value) {
 
 function checkMode(css, mode) {
   const variables = collectModeVariables(css, mode);
-  const background = resolveToken('--color-background', variables);
+  const canvas = resolveToken('--color-canvas', variables);
   const text = resolveToken('--content-panel-text-color', variables);
   const rawContentText = variables['--content-panel-text-color']?.trim().toLowerCase();
   const rules = TOKEN_RULES[mode];
   const failures = [];
 
-  if (!background) failures.push(`${mode}: could not resolve --color-background`);
+  if (!canvas) failures.push(`${mode}: could not resolve --color-canvas`);
   if (!text) failures.push(`${mode}: could not resolve --content-panel-text-color`);
-  if (!background || !text) return failures;
+  if (!canvas || !text) return failures;
 
   if (mode === 'dark' && rawContentText === FORBIDDEN_DARK_CONTENT_TEXT) {
     failures.push(`${mode}: --content-panel-text-color must not be ${FORBIDDEN_DARK_CONTENT_TEXT}`);
   }
 
-  const backgroundOklch = rgbToOklch(background);
+  const canvasOklch = rgbToOklch(canvas);
   const textOklch = rgbToOklch(text);
-  const deltaL = Math.abs(textOklch.lightness - backgroundOklch.lightness);
+  const deltaL = Math.abs(textOklch.lightness - canvasOklch.lightness);
 
-  if (!inRange(backgroundOklch.lightness, rules.backgroundL)) {
-    failures.push(`${mode}: background L ${format(backgroundOklch.lightness)} outside ${rules.backgroundL.join('-')}`);
+  if (!inRange(canvasOklch.lightness, rules.canvasL)) {
+    failures.push(`${mode}: canvas L ${format(canvasOklch.lightness)} outside ${rules.canvasL.join('-')}`);
   }
   if (!inRange(textOklch.lightness, rules.textL)) {
     failures.push(`${mode}: text L ${format(textOklch.lightness)} outside ${rules.textL.join('-')}`);
   }
   if (!inRange(deltaL, rules.deltaL)) {
-    failures.push(`${mode}: text/background delta L ${format(deltaL)} outside ${rules.deltaL.join('-')}`);
+    failures.push(`${mode}: text/canvas delta L ${format(deltaL)} outside ${rules.deltaL.join('-')}`);
   }
   if (textOklch.chroma >= rules.textChromaMax) {
     failures.push(`${mode}: text chroma ${format(textOklch.chroma)} must be < ${rules.textChromaMax}`);
   }
-  if (textOklch.chroma >= rules.textChromaMax && hueDelta(textOklch.hue, backgroundOklch.hue) >= 30) {
-    failures.push(`${mode}: text/background hue delta ${format(hueDelta(textOklch.hue, backgroundOklch.hue))} must be < 30 for non-neutral text`);
+  if (textOklch.chroma >= rules.textChromaMax && hueDelta(textOklch.hue, canvasOklch.hue) >= 30) {
+    failures.push(`${mode}: text/canvas hue delta ${format(hueDelta(textOklch.hue, canvasOklch.hue))} must be < 30 for non-neutral text`);
   }
   return failures;
 }

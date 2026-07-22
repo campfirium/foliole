@@ -9,6 +9,8 @@ function actionRunEvent(config, run, renderTemplate) {
   const tier = ACTION_WORKFLOW_TIERS.get(run.workflowName) ?? 'Actions';
   const data = {
     branch: run.headBranch,
+    controllerRole: tier === 'T5' ? 'repair-controller' : '',
+    controllerRunId: tier === 'T5' ? String(run.databaseId) : '',
     eventId: String(run.databaseId),
     headSha: run.headSha,
     repository: config.repository,
@@ -16,6 +18,7 @@ function actionRunEvent(config, run, renderTemplate) {
     runTitle: run.displayTitle,
     source: 'foliole/github-actions',
     tier,
+    triggerEvent: run.event ?? 'unknown',
     url: run.url,
     workflow: run.workflowName,
     workspace: config.workspace
@@ -23,7 +26,9 @@ function actionRunEvent(config, run, renderTemplate) {
   return {
     dedupeKey: config.dedupeKeyPattern.replace('{eventId}', data.eventId),
     prompt: renderTemplate(config.template, data),
-    title: `Foliole ${tier} failed: ${run.workflowName}`,
+    title: tier === 'T5'
+      ? `Foliole T5 repair controller: run ${run.databaseId}`
+      : `Foliole ${tier} failed: ${run.workflowName}`,
     ...data,
     ttlSeconds: config.defaultTtlSeconds
   };
@@ -102,7 +107,7 @@ function listActionEvents(config, state, includeExisting, errors, renderTemplate
         '--limit',
         '10',
         '--json',
-        'databaseId,conclusion,status,displayTitle,headSha,headBranch,url,workflowName,createdAt'
+        'databaseId,conclusion,status,displayTitle,headSha,headBranch,url,workflowName,createdAt,event'
       ]);
     } catch (error) {
       recordMonitorError(errors, 'github-actions', workflow, error);

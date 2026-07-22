@@ -83,7 +83,7 @@ export const liveMarkdownMathTheme = {
     zIndex: 1
   },
   '.cm-md-formula-cloze-region[data-md-formula-region-hidden="true"]': {
-    backgroundColor: 'color-mix(in srgb, rgb(var(--color-foreground)) 5.5%, rgb(var(--color-background)) 94.5%)',
+    backgroundColor: 'color-mix(in srgb, rgb(var(--color-foreground)) 5.5%, var(--workspace-region-main-document-bg) 94.5%)',
     border: '2px solid rgb(var(--color-border-subtle) / 0.92)'
   },
   '.cm-md-formula-cloze-region[data-md-formula-region-outlined="true"]': {

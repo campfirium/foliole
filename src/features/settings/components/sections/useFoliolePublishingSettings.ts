@@ -1,6 +1,7 @@
 import { normalizeCloudflareProjectName } from '../../../../../lib/core/foliolePublish/cloudflarePagesProjectName';
 import type { NativeFoliolePublishSettings } from '../../../../../lib/platform/nativeFoliolePublishContract';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
+import { probeUrlWithLinkPanel } from '../../../../shared/platform/external/linkPanelUrlProbe';
 import {
   connectFoliolePublishSettingsToRuntime,
   disconnectFoliolePublishSettingsFromRuntime,
@@ -11,7 +12,6 @@ import {
   updateFoliolePublishSiteAddressInRuntime,
   viewFoliolePublishSiteFromRuntime
 } from '../../../../shared/platform/foliolePublishRepository';
-import { probeUrlWithLinkPanel } from '../../../../shared/platform/linkPanelUrlProbe';
 import { openExternalUrl } from '../../../../shared/platform/runtimeExternalNavigation';
 import { requestAppConfirmation } from '../../../../shared/ui';
 

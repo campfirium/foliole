@@ -1,7 +1,7 @@
 // @vitest-environment node
 /* global process */
 
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, realpath, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
@@ -69,9 +69,9 @@ describe('quality-gate-lib.sh', () => {
       const [firstLog, secondLog] = result.stdout.trim().split('\n');
       const firstNodeLog = toNodePath(firstLog);
       const secondNodeLog = toNodePath(secondLog);
-      expect(path.dirname(firstNodeLog)).toBe(path.dirname(secondNodeLog));
-      expect(firstNodeLog).toContain(path.join(tempRoot, 'test-run'));
-      expect(secondNodeLog).toContain(path.join(tempRoot, 'test-run'));
+      const expectedRunDir = await realpath(path.join(tempRoot, 'test-run'));
+      expect(await realpath(path.dirname(firstNodeLog))).toBe(expectedRunDir);
+      expect(await realpath(path.dirname(secondNodeLog))).toBe(expectedRunDir);
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
@@ -212,7 +212,7 @@ describe('quality-gate-lib.sh', () => {
       expect(result.stdout).toContain('exit=1');
       const failedSummaryMatch = result.stdout.match(/failed summary: (.+failed\.txt)/);
       expect(failedSummaryMatch).not.toBeNull();
-      expect(toNodePath(failedSummaryMatch[1])).toBe(failedSummary);
+      expect(await realpath(toNodePath(failedSummaryMatch[1]))).toBe(await realpath(failedSummary));
       expect(result.stdout).toContain(
         'rerun: node scripts/run-vitest-with-summary.mjs .tmp/vitest/rerun.json -- --silent=passed-only --pool=threads --maxWorkers=2 --no-file-parallelism src/app/Foo.test.tsx'
       );

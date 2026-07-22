@@ -35,7 +35,7 @@ function gradeResult(due: string, reviewedAt: string, scheduledDays: number) {
 }
 
 it('keeps the earliest next review due across graded session items', async () => {
-  const due = '2026-03-03T00:00:00.000Z';
+  const due = new Date(2026, 2, 3, 8).toISOString();
   vi.mocked(syncReviewGradeToRuntime).mockResolvedValue(undefined);
   const harness = createSetStateHarness(
     createWorkspaceFixture([createQaNode('qa-1', due), createQaNode('qa-2', due)])
@@ -54,7 +54,7 @@ it('keeps the earliest next review due across graded session items', async () =>
 
   expect(harness.getState().reviewSession).toMatchObject({
     currentNodeId: null,
-    nextReviewDueAt: '2026-03-07T20:00:00.000Z',
+    nextReviewDueAt: new Date(2026, 2, 8, 4).toISOString(),
     reviewedItemCount: 2
   });
 });

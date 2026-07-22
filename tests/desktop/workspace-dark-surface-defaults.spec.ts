@@ -9,6 +9,8 @@ const DARK_DEFAULT_SURFACES = {
   topic: '#1c2221'
 } as const;
 
+const SCREENSHOT_PATH = '.tmp/artifacts/desktop-acceptance/workspace-dark-surface-defaults.png';
+
 async function resetToDefaultDarkWorkspaceSurfaces(desktopWindow: import('@playwright/test').Page) {
   await desktopWindow.evaluate(() => {
     window.localStorage.setItem('foliole-base-color', 'dark');
@@ -35,6 +37,10 @@ async function collectWorkspaceSurfaceMetrics(desktopWindow: import('@playwright
         topic: readBg('.workspace-region-main-topic')
       },
       baseColor: document.documentElement.dataset.resolvedBaseColor ?? null,
+      rootTokens: {
+        appShell: readVar('--color-app-shell'),
+        legacyBackground: readVar('--color-background')
+      },
       dividerWeights: {
         strong: readVar('--workspace-divider-strong-surface-weight'),
         subtle: readVar('--workspace-divider-subtle-surface-weight')
@@ -59,12 +65,13 @@ test('default dark workspace surfaces use the neutral dark surface ladder', asyn
     body: JSON.stringify(metrics, null, 2),
     contentType: 'application/json'
   });
+  await desktopWindow.screenshot({ path: SCREENSHOT_PATH });
   await testInfo.attach('workspace-dark-surface-defaults-screenshot', {
-    body: await desktopWindow.screenshot(),
-    contentType: 'image/png'
+    path: SCREENSHOT_PATH
   });
 
   expect(metrics.baseColor).toBe('dark');
+  expect(metrics.rootTokens).toEqual({ appShell: '17 20 19', legacyBackground: '' });
   expect(metrics.surfaces).toEqual(DARK_DEFAULT_SURFACES);
   expect(metrics.dividerWeights).toEqual({ strong: '88%', subtle: '93%' });
   expect(metrics.backgrounds).toMatchObject({

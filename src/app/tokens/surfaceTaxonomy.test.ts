@@ -12,6 +12,13 @@ describe('surface taxonomy boundary', () => {
     expect(SURFACE_TAXONOMY_IDS).toContain('panel-surface');
   });
 
+  it('names the window base after the app-shell role', () => {
+    const appShell = findSurface('app-shell');
+
+    expect(appShell?.currentToken).toBe('--color-app-shell');
+    expect(SURFACE_TAXONOMY.map((entry) => entry.currentToken)).not.toContain('--color-background');
+  });
+
   it('keeps shell-less surfaces anchored to the floating menu family', () => {
     const shellless = findSurface('shellless');
 

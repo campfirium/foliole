@@ -27,6 +27,7 @@ function run(overrides = {}) {
     createdAt: overrides.createdAt ?? '2026-07-03T01:00:00Z',
     databaseId: overrides.databaseId ?? 100,
     displayTitle: overrides.displayTitle ?? 'Push dev',
+    event: overrides.event ?? 'schedule',
     headBranch: overrides.headBranch ?? 'dev',
     headSha: overrides.headSha ?? 'abc123',
     status: overrides.status ?? 'completed',
@@ -83,8 +84,11 @@ describe('GitHub desktop handoff action events', () => {
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({
       branch: 'dev',
+      controllerRole: 'repair-controller',
+      controllerRunId: '102',
       dedupeKey: 'foliole:github-actions:102',
-      title: 'Foliole T5 failed: T5 Nightly Remote Quality'
+      title: 'Foliole T5 repair controller: run 102',
+      triggerEvent: 'schedule'
     });
   });
 
@@ -152,7 +156,7 @@ describe('GitHub desktop handoff action events', () => {
     expect(events[0]).toMatchObject({
       prompt: 'T5:T5 Nightly Remote Quality:dev:106',
       tier: 'T5',
-      title: 'Foliole T5 failed: T5 Nightly Remote Quality'
+      title: 'Foliole T5 repair controller: run 106'
     });
   });
   it('emits each recurring T5 failure once by run id', () => {

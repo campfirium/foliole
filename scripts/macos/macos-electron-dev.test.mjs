@@ -1,6 +1,7 @@
 // @vitest-environment node
 
 import path from 'node:path';
+import process from 'node:process';
 
 import { describe, expect, it } from 'vitest';
 
@@ -14,9 +15,10 @@ import {
 
 describe('macOS Electron dev entry', () => {
   it('uses separate persistent and reset-preview roots', () => {
-    const paths = resolveMacosElectronDevPaths('/repo/foliole');
-    expect(paths.dailyRoot).toBe(path.join('/repo/foliole', MACOS_DAILY_DEBUG_ROOT));
-    expect(paths.resetPreviewRoot).toBe(path.join('/repo/foliole', MACOS_RESET_PREVIEW_ROOT));
+    const repoRoot = path.resolve(path.parse(process.cwd()).root, 'repo', 'foliole');
+    const paths = resolveMacosElectronDevPaths(repoRoot);
+    expect(paths.dailyRoot).toBe(path.join(repoRoot, MACOS_DAILY_DEBUG_ROOT));
+    expect(paths.resetPreviewRoot).toBe(path.join(repoRoot, MACOS_RESET_PREVIEW_ROOT));
     expect(paths.dailyRoot).not.toBe(paths.resetPreviewRoot);
   });
 

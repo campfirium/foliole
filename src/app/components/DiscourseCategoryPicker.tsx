@@ -11,7 +11,7 @@ const SHORTCUT_LIMIT = 9;
 
 function ShortcutBadge(props: { index: number }) {
   return (
-    <span className="flex size-5 shrink-0 items-center justify-center rounded-sm border border-border/70 bg-background text-xs text-foreground/55">
+    <span className="flex size-5 shrink-0 items-center justify-center rounded-sm border border-border/70 text-xs text-foreground/55">
       {props.index + 1}
     </span>
   );

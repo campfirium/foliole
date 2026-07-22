@@ -23,17 +23,20 @@ vi.mock('./workspaceRuntimeSync', async (importOriginal) => {
   };
 });
 
+const REVIEWED_AT = new Date(2026, 2, 3, 8).toISOString();
+const SCHEDULED_DUE = new Date(2026, 2, 10, 4).toISOString();
+
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(syncReviewGradeToRuntime).mockResolvedValue(undefined);
 });
 
 it('advances to next review node after show-answer and grade', async () => {
-  const due = '2026-03-03T00:00:00.000Z';
+  const due = REVIEWED_AT;
   const harness = createSetStateHarness(
     createWorkspaceFixture([createQaNode('qa-1', due), createQaNode('qa-2', due)])
   );
-  const grade = createSchedulerGradeMock();
+  const grade = createSchedulerGradeMock(due);
   const actions = createWorkspaceReviewActions(harness.setState, harness.getState, { grade, preview: previewStub });
 
   const started = actions.startReviewSession(due);
@@ -49,12 +52,12 @@ it('advances to next review node after show-answer and grade', async () => {
   const graded = await actions.gradeReviewCard(3, due);
   expect(graded).toBe(true);
   expect(grade).toHaveBeenCalledTimes(1);
-  expectReviewRuntimeSyncCalled();
-  expectReviewQueueAdvanced(harness.getState());
+  expectReviewRuntimeSyncCalled(due, SCHEDULED_DUE);
+  expectReviewQueueAdvanced(harness.getState(), due, SCHEDULED_DUE);
 });
 
 it('keeps the browse root aligned when review advances across folders', async () => {
-  const due = '2026-03-03T00:00:00.000Z';
+  const due = REVIEWED_AT;
   const qa1 = { ...createQaNode('qa-1', due), parentNodeId: 'folder-a' };
   const qa2 = { ...createQaNode('qa-2', due), parentNodeId: 'folder-b' };
   const folderA = { ...qa1, content: '', id: 'folder-a', kind: 'folder' as const, parentNodeId: null, review: null };
@@ -64,7 +67,7 @@ it('keeps the browse root aligned when review advances across folders', async ()
   const actions = createWorkspaceReviewActions(
     harness.setState,
     harness.getState,
-    { grade: createSchedulerGradeMock(), preview: previewStub }
+    { grade: createSchedulerGradeMock(due), preview: previewStub }
   );
 
   expect(actions.startReviewSession(due)).toBe(true);
@@ -76,7 +79,7 @@ it('keeps the browse root aligned when review advances across folders', async ()
 });
 
 it('ends session when grading the last review node', async () => {
-  const due = '2026-03-03T00:00:00.000Z';
+  const due = REVIEWED_AT;
   const harness = createSetStateHarness(createWorkspaceFixture([createQaNode('qa-1', due)]));
   const actions = createWorkspaceReviewActions(
     harness.setState,
@@ -112,11 +115,11 @@ it('ends session when grading the last review node', async () => {
 
 
 it('treats cloze review nodes as gradable review cards', async () => {
-  const due = '2026-03-03T00:00:00.000Z';
+  const due = REVIEWED_AT;
   const harness = createSetStateHarness(
     createWorkspaceFixture([createClozeReviewNode('cloze-1', due), createQaNode('qa-2', due)])
   );
-  const grade = createSchedulerGradeMock();
+  const grade = createSchedulerGradeMock(due);
   const actions = createWorkspaceReviewActions(harness.setState, harness.getState, { grade, preview: previewStub });
 
   const started = actions.startReviewSession(due);
@@ -138,11 +141,11 @@ it('treats cloze review nodes as gradable review cards', async () => {
 });
 
 it('persists runtime sync and advances review state in one grading action', async () => {
-  const due = '2026-03-03T00:00:00.000Z';
+  const due = REVIEWED_AT;
   const harness = createSetStateHarness(
     createWorkspaceFixture([createQaNode('qa-1', due), createQaNode('qa-2', due)])
   );
-  const grade = createSchedulerGradeMock();
+  const grade = createSchedulerGradeMock(due);
   const actions = createWorkspaceReviewActions(harness.setState, harness.getState, { grade, preview: previewStub });
 
   actions.startReviewSession(due);
@@ -151,17 +154,17 @@ it('persists runtime sync and advances review state in one grading action', asyn
 
   expect(graded).toBe(true);
   expect(grade).toHaveBeenCalledTimes(1);
-  expectReviewRuntimeSyncCalled();
-  expectReviewQueueAdvanced(harness.getState());
+  expectReviewRuntimeSyncCalled(due, SCHEDULED_DUE);
+  expectReviewQueueAdvanced(harness.getState(), due, SCHEDULED_DUE);
 });
 
 it('undoes and redoes fsrs grading with the review session position', async () => {
-  const due = '2026-03-03T00:00:00.000Z';
+  const due = REVIEWED_AT;
   const harness = createSetStateHarness(
     createWorkspaceFixture([createQaNode('qa-1', due), createQaNode('qa-2', due)])
   );
   const actions = createWorkspaceReviewActions(harness.setState, harness.getState, {
-    grade: createSchedulerGradeMock(),
+    grade: createSchedulerGradeMock(due),
     preview: previewStub
   });
   const historyActions = createWorkspaceActionHistoryActions(harness.setState, harness.getState);
@@ -203,12 +206,12 @@ it('undoes and redoes fsrs grading with the review session position', async () =
 });
 
 it('keeps current review card when runtime sync fails', async () => {
-  const due = '2026-03-03T00:00:00.000Z';
+  const due = REVIEWED_AT;
   const harness = createSetStateHarness(
     createWorkspaceFixture([createQaNode('qa-1', due), createQaNode('qa-2', due)])
   );
   vi.mocked(syncReviewGradeToRuntime).mockRejectedValueOnce(new Error('sqlite write failed'));
-  const grade = createSchedulerGradeMock();
+  const grade = createSchedulerGradeMock(due);
   const actions = createWorkspaceReviewActions(harness.setState, harness.getState, { grade, preview: previewStub });
 
   actions.startReviewSession(due);
@@ -222,7 +225,7 @@ it('keeps current review card when runtime sync fails', async () => {
   expect(harness.getState().reviewSession.currentNodeId).toBe('qa-1');
   expect(harness.getState().reviewSession.queueNodeIds).toEqual(['qa-1', 'qa-2']);
   expect(harness.getState().nodesById['qa-1']?.review).toMatchObject({
-    due: '2026-03-03T00:00:00.000Z',
+    due,
     state: 0,
     lastReviewAt: null
   });

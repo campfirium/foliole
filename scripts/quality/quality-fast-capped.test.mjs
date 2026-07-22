@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   resolveCappedTypecheckScripts,
+  resolveNpmRunCommand,
   runCappedHeavyPlan,
   splitRelatedTests
 } from './quality-fast-capped.mjs';
@@ -33,13 +34,27 @@ describe('cross-host capped quality plan', () => {
     });
   });
 
+  it('runs npm scripts through the npm CLI with the current Node on Windows', () => {
+    expect(resolveNpmRunCommand(
+      'typecheck:shared',
+      { npm_execpath: 'C:\\nodejs\\node_modules\\npm\\bin\\npm-cli.js' },
+      'win32',
+      'C:\\nodejs\\node.exe'
+    )).toEqual({
+      args: ['C:\\nodejs\\node_modules\\npm\\bin\\npm-cli.js', 'run', 'typecheck:shared'],
+      command: 'C:\\nodejs\\node.exe'
+    });
+    expect(() => resolveNpmRunCommand('typecheck:shared', {}, 'win32'))
+      .toThrow('npm_execpath is required for capped quality on win32');
+  });
+
   it('executes the same capped plan contract on every local host', async () => {
     const calls = [];
     await runCappedHeavyPlan({
       level: 'desktop', lintTargets: ['electron/main.ts'],
       relatedTests: ['src/app/App.test.tsx', 'electron/main.test.ts']
     }, {
-      env: {},
+      env: { npm_execpath: '/npm/cli.js' },
       runner: async (command, args, options) => {
         calls.push({ args, command, label: options.label });
         return 0;

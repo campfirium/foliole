@@ -20,7 +20,7 @@ const mocks = vi.hoisted(() => ({
 }));
 const probeUrlWithLinkPanel = vi.hoisted(() => vi.fn());
 vi.mock('../../../../shared/platform/foliolePublishRepository', () => mocks);
-vi.mock('../../../../shared/platform/linkPanelUrlProbe', () => ({ probeUrlWithLinkPanel }));
+vi.mock('../../../../shared/platform/external/linkPanelUrlProbe', () => ({ probeUrlWithLinkPanel }));
 vi.mock('../../../../shared/platform/runtimeExternalNavigation', () => ({ openExternalUrl: vi.fn() }));
 
 const ACCOUNT_ID = '023e105f4ecef8ad9ca31a8372d0c353';

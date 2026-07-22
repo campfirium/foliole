@@ -20,7 +20,9 @@ describe('hosted quality workflow contracts', () => {
     expect(remote).not.toContain('schedule:');
     expect(monitor.workflows).toEqual(['T5 Nightly Remote Quality']);
     expect(monitor.workflows).not.toContain('Remote Quality');
-    expect(monitor.notes).toContain('requesting development task');
+    expect(monitor.notes).toMatch(
+      /Remote Quality[^.]*\bowned by\b[^.]*\brequesting development threads?\b/u,
+    );
     expect(monitor.notes).not.toContain('T4 checks are local-only');
   });
 

@@ -76,7 +76,9 @@ describe('useCompanionHandoffReminderScheduler', () => {
   });
 
   it('reschedules after a local permanent mutation commits', async () => {
-    const { runCompanionSyncMutationTask } = await import('../shared/platform/companionSyncMutationRevision');
+    const { runCompanionSyncMutationTask } = await import(
+      '../shared/platform/companion/sync/mutation/companionSyncMutationRevision'
+    );
     const { useCompanionHandoffReminderScheduler } = await import('./useCompanionHandoffReminderScheduler');
     renderHook(() => useCompanionHandoffReminderScheduler({
       settings: { fixedTime: '18:00', shortDelay: '5' },

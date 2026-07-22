@@ -5,6 +5,7 @@ import {
   type SyncProtocolCompatibilityResult
 } from '../../../lib/platform/syncProtocolContract';
 
+import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
 import {
   DISCOVERY_ENDPOINT_PATH,
   FolioleCompanionSync,
@@ -12,7 +13,6 @@ import {
   type LoadCompanionDiscoveryResponse,
   normalizeEndpointUrl
 } from './companionWorkspaceRuntimeRepository';
-import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
 
 export type CompanionDiscoveryResult = {
   compatibility: SyncProtocolCompatibilityResult;

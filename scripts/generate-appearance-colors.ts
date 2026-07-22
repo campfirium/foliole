@@ -21,7 +21,7 @@ function selectionForegroundColor(mode: AppearanceDefaultColorMode) {
 
 function textSelectionBackgroundColor(mode: AppearanceDefaultColorMode) {
   return mode === 'dark'
-    ? 'color-mix(in srgb, var(--app-selection-color) 50%, rgb(var(--color-background)) 50%)'
+    ? 'color-mix(in srgb, var(--app-selection-color) 50%, rgb(var(--color-canvas)) 50%)'
     : `rgb(var(--app-selection-color-rgb) / ${getSelectionSurfaceAlpha(mode)})`;
 }
 

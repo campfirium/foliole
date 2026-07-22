@@ -13,7 +13,7 @@
 
 :root {
   --color-canvas: 255 255 255;
-  --color-background: 245 245 243;
+  --color-app-shell: 245 245 243;
   --color-bg-subtle: 252 252 252;
   --color-settings-group: 246 246 244;
   --color-bg-panel: 246 246 246;
@@ -344,7 +344,7 @@
 
 :root[data-resolved-base-color='dark'] {
   --color-canvas: 22 25 24;
-  --color-background: 17 20 19;
+  --color-app-shell: 17 20 19;
   --color-bg-subtle: 23 27 26;
   --color-settings-group: 26 31 30;
   --color-bg-panel: 26 31 30;
@@ -376,7 +376,7 @@
   --app-diff-removed-spacer-color: rgb(var(--color-error) / 0.14);
   --app-surface-control-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 72%, var(--workspace-region-main-document-token-bg) 28%);
   --app-surface-control-hover-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 62%, var(--workspace-region-main-document-token-bg) 38%);
-  --app-floating-overlay-bg: rgb(var(--color-background) / 0.7);
+  --app-floating-overlay-bg: rgb(var(--color-app-shell) / 0.7);
   --app-floating-surface-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 68%, var(--workspace-region-main-document-token-bg) 32%);
   --app-floating-input-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 76%, var(--workspace-region-main-document-token-bg) 24%);
   --app-floating-border-color: color-mix(in oklab, var(--app-floating-surface-bg) var(--workspace-divider-strong-surface-weight), var(--workspace-region-main-document-token-divider-mix-target, var(--workspace-divider-mix-target)));
@@ -1176,7 +1176,7 @@ b {
 .cm-md-image-cloze-feedback {
   background: rgb(var(--color-foreground) / 0.92);
   border-radius: 999px;
-  color: rgb(var(--color-background) / 0.96);
+  color: rgb(var(--color-canvas) / 0.96);
   font-size: 12px;
   font-weight: 600;
   line-height: 1;

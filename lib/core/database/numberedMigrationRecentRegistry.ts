@@ -98,5 +98,14 @@ export const RECENT_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
       sqlite.exec('DROP TABLE IF EXISTS assistant_thread_messages');
       sqlite.exec('DROP TABLE IF EXISTS assistant_thread_index');
     }
+  },
+  {
+    version: 59,
+    migrate: (sqlite) => {
+      sqlite.exec('DROP TABLE IF EXISTS assistant_thread_message_images');
+      sqlite.exec('DROP TABLE IF EXISTS assistant_image_attachments');
+      sqlite.exec('DROP TABLE IF EXISTS assistant_thread_messages');
+      sqlite.exec('DROP TABLE IF EXISTS assistant_thread_index');
+    }
   }
 ];

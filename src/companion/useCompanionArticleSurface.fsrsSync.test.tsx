@@ -17,6 +17,8 @@ const syncObjectMock = vi.hoisted(() => ({
   saveCompanionSyncNodeViewState: vi.fn()
 }));
 const schedulerGrade = vi.hoisted(() => vi.fn());
+const REVIEWED_AT = new Date(2026, 3, 22, 16, 10).toISOString();
+const SCHEDULED_DUE = new Date(2026, 3, 25, 4).toISOString();
 const hydratedReviewSchedulerSettings = {
   ...DEFAULT_REVIEW_SCHEDULER_SETTINGS,
   desiredRetention: 0.82,
@@ -148,15 +150,15 @@ function expectFsrsReviewRecordSaved() {
     nodeId: 'item-1',
     review: expect.objectContaining({
       difficulty: 3.8,
-      due: '2026-04-24T20:00:00.000Z',
-      lastReviewAt: '2026-04-22T08:10:00.000Z',
+      due: SCHEDULED_DUE,
+      lastReviewAt: REVIEWED_AT,
       scheduledDays: 3
     }),
     reviewLog: expect.objectContaining({
       cardAfter: expect.objectContaining({
         difficulty: 3.8,
-        due: '2026-04-24T20:00:00.000Z',
-        last_review: '2026-04-22T08:10:00.000Z',
+        due: SCHEDULED_DUE,
+        last_review: REVIEWED_AT,
         scheduled_days: 3
       }),
       cardBefore: expect.objectContaining({
@@ -166,7 +168,7 @@ function expectFsrsReviewRecordSaved() {
         scheduled_days: 2
       }),
       grade: 3,
-      reviewedAt: '2026-04-22T08:10:00.000Z',
+      reviewedAt: REVIEWED_AT,
       schedulerVersion: getReviewSchedulerVersion(hydratedReviewSchedulerSettings)
     })
   }));
@@ -182,13 +184,13 @@ describe('useCompanionArticleSurface fsrs sync', () => {
         due: '2026-04-25T08:10:00.000Z',
         elapsed_days: 0,
         lapses: 0,
-        last_review: '2026-04-22T08:10:00.000Z',
+        last_review: REVIEWED_AT,
         reps: 4,
         scheduled_days: 3,
         stability: 3.4,
         state: 2
       },
-      reviewed_at: '2026-04-22T08:10:00.000Z'
+      reviewed_at: REVIEWED_AT
     });
     syncObjectMock.saveCompanionSyncNodeReviewRecord.mockClear();
   });

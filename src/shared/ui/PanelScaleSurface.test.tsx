@@ -30,6 +30,7 @@ it('targets the active panel without shrinking its surface', async () => {
     expect(scaledContent).toHaveStyle({ height: '100%', width: '100%' });
     expect((scaledContent as HTMLElement).style.zoom).toBe('1.05');
     expect(screen.getByText('Folder navigation · 105%')).toBeInTheDocument();
+    expect(screen.getByText('Folder navigation · 105%')).toHaveClass('text-canvas');
   });
 
   rerender(

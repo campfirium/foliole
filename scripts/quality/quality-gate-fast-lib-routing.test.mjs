@@ -128,7 +128,7 @@ describe('quality-gate-fast lib routing', () => {
         QUALITY_GATE_CHANGED_FILES: 'lib/core/database/desktopFreshSchemaStatements.ts'
       });
 
-      expect(result.code).toBe(0);
+      expect(result.code, `stdout:\n${result.stdout}\nstderr:\n${result.stderr}`).toBe(0);
       expect(result.stdout).toContain('[quality-gate-fast] selected level: shared');
       expect(result.stdout).toContain('remote-quality.mjs --scope shared');
       expect(result.stdout).toContain('[quality-gate-fast] capped local checks passed.');

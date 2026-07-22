@@ -187,7 +187,7 @@ export function createSetStateHarness(initialState: WorkspaceState) {
   };
 }
 
-export function createSchedulerGradeMock() {
+export function createSchedulerGradeMock(reviewedAt = '2026-03-03T00:00:00.000Z') {
   return vi.fn<ReviewSchedulerAdapter['grade']>(async () => ({
     card: {
       due: '2026-03-10T00:00:00.000Z',
@@ -198,9 +198,9 @@ export function createSchedulerGradeMock() {
       reps: 1,
       lapses: 0,
       state: 1,
-      last_review: '2026-03-03T00:00:00.000Z'
+      last_review: reviewedAt
     },
-    reviewed_at: '2026-03-03T00:00:00.000Z'
+    reviewed_at: reviewedAt
   }));
 }
 
@@ -225,18 +225,18 @@ export const previewStub: ReviewSchedulerAdapter['preview'] = async () => ({
   Easy: { card: createSchedulerCard('2026-03-10T00:00:00.000Z'), reviewed_at: '2026-03-03T00:00:00.000Z' }
 });
 
-function expectNextQueueState(state: WorkspaceState) {
+function expectNextQueueState(state: WorkspaceState, reviewedAt: string, scheduledDue: string) {
   expect(state.activeNodeId).toBe('qa-2');
   expect(state.reviewSession.currentNodeId).toBe('qa-2');
   expect(state.reviewSession.queueNodeIds).toEqual(['qa-2']);
   expect(state.reviewSession.isAnswerRevealed).toBe(false);
   expect(state.nodesById['qa-1']?.review).toMatchObject({
-    due: new Date(2026, 2, 10, 4).toISOString(),
+    due: scheduledDue,
     state: 1,
-    lastReviewAt: '2026-03-03T00:00:00.000Z'
+    lastReviewAt: reviewedAt
   });
 }
 
-export function expectReviewQueueAdvanced(state: WorkspaceState) {
-  expectNextQueueState(state);
+export function expectReviewQueueAdvanced(state: WorkspaceState, reviewedAt: string, scheduledDue: string) {
+  expectNextQueueState(state, reviewedAt, scheduledDue);
 }

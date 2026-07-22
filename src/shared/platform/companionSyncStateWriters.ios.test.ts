@@ -32,7 +32,7 @@ beforeEach(() => {
 
   it('dispatches active and node view writes through the shared native writer queue', async () => {
     const api = await import('./companionSyncStateWriters');
-    const mutation = await import('./companionSyncMutationRevision');
+    const mutation = await import('./companion/sync/mutation/companionSyncMutationRevision');
     const initialRevision = mutation.getCompanionSyncMutationRevision();
 
     await expect(api.saveCompanionSyncActiveViewState('node-1'))

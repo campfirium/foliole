@@ -27,7 +27,7 @@ it('restores light PDF surface tokens on the first switch after a dark inverted 
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.baseColor, 'dark');
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.pdfReadingMode, 'inverted');
   document.documentElement.style.setProperty('--color-canvas', '22 25 24');
-  document.documentElement.style.setProperty('--color-background', '17 20 19');
+  document.documentElement.style.setProperty('--color-app-shell', '17 20 19');
   document.documentElement.style.setProperty('--color-bg-panel', '26 31 30');
 
   render(
@@ -46,7 +46,7 @@ it('restores light PDF surface tokens on the first switch after a dark inverted 
   expect(document.documentElement.dataset.resolvedBaseColor).toBe('light');
   expect(document.documentElement.dataset.pdfReadingMode).toBe('original');
   expect(document.documentElement.style.getPropertyValue('--color-canvas')).toBe('255 255 255');
-  expect(document.documentElement.style.getPropertyValue('--color-background')).toBe('245 245 243');
+  expect(document.documentElement.style.getPropertyValue('--color-app-shell')).toBe('245 245 243');
   expect(document.documentElement.style.getPropertyValue('--color-bg-panel')).toBe('246 246 246');
   expect(document.documentElement.style.getPropertyValue('--workspace-region-main-document-bg')).toBe('#ffffff');
 });

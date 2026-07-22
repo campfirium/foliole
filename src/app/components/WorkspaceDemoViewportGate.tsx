@@ -25,7 +25,7 @@ export function WorkspaceDemoViewportGate({ children }: { children: ReactNode })
   }
 
   return (
-    <main aria-label={t('desktop.demo.narrow.aria')} className="flex min-h-dvh items-center justify-center bg-background p-6 text-foreground">
+    <main aria-label={t('desktop.demo.narrow.aria')} className="flex min-h-dvh items-center justify-center bg-app-shell p-6 text-foreground">
       <section className="max-w-sm border border-border/60 bg-bg-elevated px-5 py-5 shadow-panel">
         <h1 className="m-0 text-base font-semibold leading-6">{t('desktop.demo.narrow.title')}</h1>
         <p className="m-0 mt-2 text-sm leading-6 text-foreground/70">{t('desktop.demo.narrow.description')}</p>

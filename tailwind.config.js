@@ -93,7 +93,7 @@ export default {
           subtle: 'rgb(var(--color-error-subtle) / <alpha-value>)',
           foreground: 'rgb(var(--color-error-foreground) / <alpha-value>)'
         },
-        background: 'rgb(var(--color-background) / <alpha-value>)',
+        'app-shell': 'rgb(var(--color-app-shell) / <alpha-value>)',
         foreground: 'rgb(var(--color-foreground) / <alpha-value>)',
         primary: {
           DEFAULT: 'rgb(var(--color-accent) / <alpha-value>)',

@@ -22,7 +22,7 @@ const openExternalUrl = vi.hoisted(() => vi.fn());
 const probeUrlWithLinkPanel = vi.hoisted(() => vi.fn());
 vi.mock('../../../../shared/platform/foliolePublishRepository', () => mocks);
 vi.mock('../../../../shared/platform/runtimeExternalNavigation', () => ({ openExternalUrl }));
-vi.mock('../../../../shared/platform/linkPanelUrlProbe', () => ({ probeUrlWithLinkPanel }));
+vi.mock('../../../../shared/platform/external/linkPanelUrlProbe', () => ({ probeUrlWithLinkPanel }));
 
 const EMPTY = { account_id: '', credentials_valid: false, field_catalog: [], has_credentials: false, pages_url: '', project_name: '', site_address: '', updated_at: null };
 const VALID_ACCOUNT_ID = '023e105f4ecef8ad9ca31a8372d0c353';
