@@ -126,6 +126,7 @@ jobs:
           NPM_CI_OUTCOME: ${{ steps.npm_ci.outcome }}
           DEPENDENCY_HARDENING_OUTCOME: ${{ steps.dependency_hardening.outcome }}
           NATIVE_ABI_OUTCOME: ${{ steps.native_abi.outcome }}
+          DESKTOP_BUILD_OUTCOME: skipped
           DESKTOP_QUALITY_OUTCOME: ${{ steps.desktop_quality.outcome }}
           WINDOWS_CORE_OUTCOME: ${{ steps.windows_core.outcome }}
           WINDOWS_TAIL_OUTCOME: skipped
@@ -185,13 +186,19 @@ jobs:
         run: |
           npm run electron:rebuild:native
           node scripts/electron-sqlite-runner.mjs --preflight
+      - name: Build desktop acceptance outputs
+        id: desktop_build
+        if: ${{ !cancelled() && steps.native_abi.outcome == 'success' }}
+        run: |
+          npm run build:vite-only
+          npm run electron:compile
       - name: Run canonical Windows host tail
         id: windows_tail
-        if: ${{ !cancelled() && steps.native_abi.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.desktop_build.outcome == 'success' }}
         run: npm run quality:release:windows:tail
       - name: Run CI-capable Electron Playwright suite
         id: playwright
-        if: ${{ !cancelled() && steps.native_abi.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.desktop_build.outcome == 'success' }}
         run: node scripts/windows/windows-ci-playwright-profile.mjs
       - name: Write SHA-bound Windows acceptance evidence
         if: ${{ always() }}
@@ -201,6 +208,7 @@ jobs:
           NPM_CI_OUTCOME: ${{ steps.npm_ci.outcome }}
           DEPENDENCY_HARDENING_OUTCOME: skipped
           NATIVE_ABI_OUTCOME: ${{ steps.native_abi.outcome }}
+          DESKTOP_BUILD_OUTCOME: ${{ steps.desktop_build.outcome }}
           DESKTOP_QUALITY_OUTCOME: skipped
           WINDOWS_CORE_OUTCOME: skipped
           WINDOWS_TAIL_OUTCOME: ${{ steps.windows_tail.outcome }}
@@ -338,6 +346,8 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Rebuild Electron native ABI for Simulator desktop pairing
+        run: npm run electron:rebuild:native
       - name: Run full iOS Simulator quality
         run: npm run quality:ios:simulator:full
       - name: Upload minimal iOS Simulator evidence and logs

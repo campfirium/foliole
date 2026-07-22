@@ -12,6 +12,7 @@ const STEP_KEYS = [
   'npm_ci',
   'dependency_hardening',
   'native_abi',
+  'desktop_build',
   'desktop_quality',
   'windows_core',
   'windows_tail',

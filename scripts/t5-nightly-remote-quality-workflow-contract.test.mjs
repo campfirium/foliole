@@ -55,6 +55,7 @@ describe('hosted quality workflow contracts', () => {
     expect(contractSection).toContain('npm run electron:rebuild:native');
     expect(contractSection).toContain('npm run quality:ios:contract');
     const simulatorSection = core.split('  ios-simulator:')[1];
+    expect(simulatorSection).toContain('npm run electron:rebuild:native');
     expect(simulatorSection).toContain('npm run quality:ios:simulator:full');
     expect(simulatorSection).not.toContain('npm run quality:ios:contract');
   });

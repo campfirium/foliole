@@ -52,8 +52,13 @@ describe('T5 Windows quality workflow contract', () => {
     expect(windowsJob).not.toContain('npm run quality:release:hosted-common');
     expect(windowsJob).not.toContain('npm run quality:release:windows:tail');
     expect(windowsJob).not.toContain('windows-ci-playwright-profile.mjs');
+    expect(acceptanceJob).toContain('npm run build:vite-only');
+    expect(acceptanceJob).toContain('npm run electron:compile');
     expect(acceptanceJob).toContain('run: npm run quality:release:windows:tail');
     expect(acceptanceJob).toContain('run: node scripts/windows/windows-ci-playwright-profile.mjs');
+    expect(acceptanceJob.indexOf('npm run electron:compile')).toBeLessThan(
+      acceptanceJob.indexOf('run: node scripts/windows/windows-ci-playwright-profile.mjs')
+    );
     expect(windowsJob).not.toContain('npm run build');
     expect(windowsJob).not.toContain('npm run electron:compile');
   });
@@ -67,6 +72,7 @@ describe('T5 Windows quality workflow contract', () => {
       expect(windowsJob).toContain(outcome);
     }
     for (const outcome of [
+      'DESKTOP_BUILD_OUTCOME: ${{ steps.desktop_build.outcome }}',
       'WINDOWS_TAIL_OUTCOME: ${{ steps.windows_tail.outcome }}',
       'PLAYWRIGHT_OUTCOME: ${{ steps.playwright.outcome }}'
     ]) {
