@@ -36,7 +36,7 @@ export function probeUrlWithLinkPanel(url: string) {
       if (failure.isMainFrame === false) return;
       finish(false);
     };
-    webview.addEventListener('dom-ready', () => finish(true), { once: true });
+    webview.addEventListener('dom-ready', () => finish(true));
     webview.addEventListener('did-fail-load', handleFailure);
     const timeout = window.setTimeout(() => finish(false), PROBE_TIMEOUT_MS);
     configureProbe(webview, url);
