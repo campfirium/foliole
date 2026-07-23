@@ -2,7 +2,15 @@ import { readFolioleWebBinding, readFolioleWebYamlCandidates } from '../../../li
 import type { NativeFoliolePublishField, NativeFoliolePublishSettings } from '../../../lib/platform/nativeFoliolePublishContract';
 
 export function readFoliolePublishForm(content: string) {
-  return readFolioleWebBinding(content)?.fields ?? [];
+  const binding = readFolioleWebBinding(content);
+  if (binding) return binding.fields;
+  const yaml = new Map(readFolioleWebYamlCandidates(content).map((field) => [field.key.toLowerCase(), field.value]));
+  const category = yaml.get('category');
+  const tags = yaml.get('tags');
+  return [
+    { key: 'category', value: category ?? '' },
+    { key: 'tags', value: tags === undefined ? [] : Array.isArray(tags) ? tags : [tags] }
+  ];
 }
 
 export function buildFolioleFieldChoices(content: string, settings: NativeFoliolePublishSettings) {

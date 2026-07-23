@@ -148,6 +148,8 @@ test('keeps Theme controls out of Publish and renders the generated static site 
   const dialog = await openPublishDialog(desktopWindow);
   await expect(dialog).toBeVisible();
   await expect(dialog.getByText(/^(Fields|字段)$/u)).toBeVisible();
+  await expect(dialog.getByDisplayValue('category')).toBeVisible();
+  await expect(dialog.getByDisplayValue('tags')).toBeVisible();
   await expect(dialog.getByRole('button', { name: /^(Open theme|打开主题)$/u })).toHaveCount(0);
   await expect(dialog.getByRole('button', { name: /^(Reset theme|重置主题)$/u })).toHaveCount(0);
   await dialog.screenshot({ path: DIALOG_SCREENSHOT });

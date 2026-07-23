@@ -18,9 +18,9 @@ vi.mock('../../shared/platform/foliolePublishRepository', () => ({
 vi.mock('../../store/workspaceStore', () => ({ useWorkspaceStore: { getState: () => workspace } }));
 vi.mock('../../shared/ui/AppRuntimeNotice', () => ({ showAppRuntimeNotice: vi.fn() }));
 
-async function openDialog(hasCredentials = false) {
+async function openDialog(hasCredentials = false, content = '---\ncategory: essays\ntags: [design, notes]\n---\nBody') {
   await act(async () => window.dispatchEvent(new CustomEvent('foliole:web-publish-dialog-request', { detail: {
-    content: '---\ncategory: essays\ntags: [design, notes]\n---\nBody',
+    content,
     nodeId: 'topic-1',
     settings: {
       account_id: hasCredentials ? 'account' : '', field_catalog: [], has_credentials: hasCredentials,
@@ -36,13 +36,20 @@ beforeEach(() => {
   workspace.updateNodeContent.mockResolvedValue(true);
 });
 
-it('uses Topic YAML as field choices and previews without hosting', async () => {
+it('matches the site taxonomy fields and Topic YAML on first publish', async () => {
   render(<FoliolePublishDialogHost />);
   await openDialog(false);
-  fireEvent.click(await screen.findByRole('button', { name: /category/u }));
+  expect(await screen.findByDisplayValue('category')).toBeVisible();
+  expect(screen.getByDisplayValue('essays')).toBeVisible();
+  expect(screen.getByDisplayValue('tags')).toBeVisible();
+  expect(screen.getByDisplayValue('design, notes')).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: 'Preview' }));
   await waitFor(() => expect(repository.previewFoliolePublishFromRuntime).toHaveBeenCalledWith(expect.objectContaining({
-    fields: [{ key: 'category', value: 'essays' }], node_id: 'topic-1'
+    fields: [
+      { key: 'category', value: 'essays' },
+      { key: 'tags', value: ['design', 'notes'] }
+    ],
+    node_id: 'topic-1'
   })));
   expect(screen.getByText('Fields')).toBeVisible();
   expect(screen.queryByRole('button', { name: 'Open theme' })).not.toBeInTheDocument();
@@ -56,11 +63,17 @@ it('keeps empty fields in a confirmed publish binding request', async () => {
     updated_content: '---\nfoliole: {}\n---\nBody', url: 'https://site.example/cards/1.html'
   });
   render(<FoliolePublishDialogHost />);
-  await openDialog(true);
+  await openDialog(true, 'Body');
+  expect(await screen.findByDisplayValue('category')).toBeVisible();
+  expect(screen.getByDisplayValue('tags')).toBeVisible();
   fireEvent.click(await screen.findByRole('button', { name: 'Add field' }));
   fireEvent.click(screen.getByRole('button', { name: 'Publish' }));
   await waitFor(() => expect(repository.publishTopicToFoliole).toHaveBeenCalledWith(expect.objectContaining({
-    fields: [{ key: 'field_1', value: '' }]
+    fields: [
+      { key: 'category', value: '' },
+      { key: 'tags', value: [] },
+      { key: 'field_1', value: '' }
+    ]
   })));
   expect(workspace.updateNodeContent).toHaveBeenCalled();
 });
