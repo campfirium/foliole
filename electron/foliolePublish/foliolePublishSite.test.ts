@@ -42,6 +42,7 @@ it('opens on a complete-segment Topic stream and emits numbered Topic pages, arc
   expect(fs.readFileSync(path.join(root, 'Site', 'search-index.js'), 'utf8')).toContain('Newest');
   const notFound = fs.readFileSync(path.join(root, 'Site', '404.html'), 'utf8');
   expect(notFound).toContain('<h1 class="article-title">Page not found</h1>');
+  expect(notFound).toContain('<meta name="color-scheme" content="light dark">');
   expect(notFound).toContain('<link rel="stylesheet" href="/style.css">');
   expect(notFound).toContain('<a href="/">Return home</a>');
   expect(notFound).not.toContain('topic-stream');
@@ -51,6 +52,8 @@ it('opens on a complete-segment Topic stream and emits numbered Topic pages, arc
   expect(feed).toContain('https://notes.example.com/topics/2/');
   expect(fs.existsSync(path.join(root, 'Site', 'topics', '2', 'index.html'))).toBe(true);
   expect(home).not.toContain('cards');
+  expect(fs.readFileSync(path.join(root, 'Site', 'style.css'), 'utf8'))
+    .toContain('@media (prefers-color-scheme: dark)');
 });
 
 it('renders scalar and list fields through Liquid while escaping public values', () => {

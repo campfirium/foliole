@@ -17,7 +17,7 @@ const EMPTY_HOME_NAV = `<nav class="empty-home-nav" aria-label="Site navigation"
 
 const HEAD = `<meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light">
+  <meta name="color-scheme" content="light dark">
   <meta name="generator" content="Foliole">
   <link rel="alternate" type="application/rss+xml" title="{{ site.title }} RSS" href="{{ page.rss_url }}">
   <link rel="stylesheet" href="{{ page.depth }}style.css">`;

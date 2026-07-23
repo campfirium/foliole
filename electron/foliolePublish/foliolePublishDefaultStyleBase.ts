@@ -1,11 +1,13 @@
 export const DEFAULT_THEME_STYLE_BASE = `:root {
-  color-scheme: light;
+  color-scheme: light dark;
   --canvas: #ffffff;
   --foreground: #202124;
   --body: #414441;
+  --prose: #353735;
   --muted: rgba(32, 33, 36, 0.58);
   --faint: rgba(32, 33, 36, 0.38);
   --focus: rgba(32, 33, 36, 0.62);
+  --ghost: rgba(32, 33, 36, 0.14);
   --selection: rgba(56, 118, 255, 0.18);
   --measure: 680px;
   --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Noto Sans SC", sans-serif;
@@ -13,6 +15,20 @@ export const DEFAULT_THEME_STYLE_BASE = `:root {
   font-family: var(--font-ui);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --canvas: #181918;
+    --foreground: #f1f2ef;
+    --body: #c6c8c4;
+    --prose: #d9dbd7;
+    --muted: rgba(241, 242, 239, 0.62);
+    --faint: rgba(241, 242, 239, 0.4);
+    --focus: rgba(241, 242, 239, 0.72);
+    --ghost: rgba(241, 242, 239, 0.14);
+    --selection: rgba(113, 155, 255, 0.28);
+  }
 }
 
 * { box-sizing: border-box; }

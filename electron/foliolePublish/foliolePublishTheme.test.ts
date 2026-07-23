@@ -63,6 +63,9 @@ it('uses the current read-only Foliole Theme in a new library', () => {
   expect(theme['archive.html']).toContain('{% for group in page.groups %}');
   expect(theme['site.js']).toContain('data-empty-publish-word');
   expect(theme['style.css']).toContain('prefers-reduced-motion: reduce');
+  expect(theme['style.css']).toContain('@media (prefers-color-scheme: dark)');
+  expect(theme['style.css']).toContain('color-scheme: light dark');
+  expect(theme['page.html']).toContain('<meta name="color-scheme" content="light dark">');
 });
 
 it('keeps Custom Theme bytes while switching both real slots', () => {

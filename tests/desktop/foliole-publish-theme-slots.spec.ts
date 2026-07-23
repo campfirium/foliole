@@ -19,8 +19,8 @@ test('shows Default and Custom as one persistent theme selector', async ({ deskt
   await desktopWindow.evaluate(() => globalThis.window?.electronAPI?.invoke('load_foliole_publish_theme'));
   let settings = await openThemeSettings(desktopWindow);
   await expect(settings.region.getByText(/^(Set the publishing page theme\.|设置发布页面主题。)$/u)).toBeVisible();
-  await expect(settings.region.getByRole('radio', { name: 'Default v5' })).toBeChecked();
-  await expect(settings.region.getByRole('radio', { name: 'Custom v5' })).toBeVisible();
+  await expect(settings.region.getByRole('radio', { name: 'Default v6' })).toBeChecked();
+  await expect(settings.region.getByRole('radio', { name: 'Custom v6' })).toBeVisible();
   await expect(settings.region.getByRole('button', { name: /^(Update local|更新本地)$/u })).toBeVisible();
   await expect(settings.region.getByRole('button', { name: /^(Update Web|更新 Web)$/u })).toBeVisible();
   fs.mkdirSync(path.dirname(SCREENSHOT), { recursive: true });
@@ -44,6 +44,6 @@ test('shows Default and Custom as one persistent theme selector', async ({ deskt
   settings = await openThemeSettings(desktopWindow);
   await expect(settings.region.getByRole('radio', { name: 'Custom' })).toBeChecked();
   await expect(settings.region.getByRole('radio', { name: 'Custom v5' })).toHaveCount(0);
-  await settings.region.getByRole('radio', { name: 'Default v5' }).click();
-  await expect(settings.region.getByRole('radio', { name: 'Default v5' })).toBeChecked();
+  await settings.region.getByRole('radio', { name: 'Default v6' }).click();
+  await expect(settings.region.getByRole('radio', { name: 'Default v6' })).toBeChecked();
 });

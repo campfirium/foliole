@@ -32,7 +32,7 @@ export const DEFAULT_THEME_STYLE_CONTENT = `.topic-stream { display: grid; gap: 
   transform: translateY(-50%);
 }
 .empty-publish-activity {
-  color: rgba(32, 33, 36, 0.14);
+  color: var(--ghost);
   font-family: "SF Pro Display", var(--font-ui);
   font-size: clamp(68px, 9.4vw, 144px);
   font-weight: 480;
@@ -65,7 +65,7 @@ export const DEFAULT_THEME_STYLE_CONTENT = `.topic-stream { display: grid; gap: 
 .page-arrow.is-right { --arrow-shift: 3px; margin-left: auto; }
 
 .article-title { margin: 0; font-size: 26px; font-weight: 680; letter-spacing: -0.034em; line-height: 1.24; }
-.prose { margin-top: 38px; color: #353735; font-size: 17px; line-height: 1.8; text-wrap: pretty; }
+.prose { margin-top: 38px; color: var(--prose); font-size: 17px; line-height: 1.8; text-wrap: pretty; }
 .prose > * { margin: 0 0 1.52em; }
 .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
   margin: 2.85em 0 0.78em;

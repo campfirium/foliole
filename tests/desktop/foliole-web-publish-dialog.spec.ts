@@ -10,6 +10,7 @@ const ARTICLE_SCREENSHOT = path.resolve('.tmp/artifacts/desktop-acceptance/folio
 const ARCHIVE_SCREENSHOT = path.resolve('.tmp/artifacts/desktop-acceptance/foliole-publish-archive.png');
 const SEARCH_SCREENSHOT = path.resolve('.tmp/artifacts/desktop-acceptance/foliole-publish-search.png');
 const MOBILE_SCREENSHOT = path.resolve('.tmp/artifacts/desktop-acceptance/foliole-publish-article-mobile.png');
+const DARK_SCREENSHOT = path.resolve('.tmp/artifacts/desktop-acceptance/foliole-publish-article-dark.png');
 const DIALOG_SCREENSHOT = path.resolve('.tmp/artifacts/desktop-acceptance/foliole-publish-dialog.png');
 const EMPTY_SCREENSHOT = path.resolve('.tmp/artifacts/desktop-acceptance/foliole-publish-empty-site.png');
 const NEWER_SOURCE_KEY = 'playwright-newer-topic';
@@ -144,7 +145,9 @@ async function verifySearchAndMobile(site: Page) {
   expect(await site.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await site.screenshot({ fullPage: true, path: MOBILE_SCREENSHOT });
   await site.emulateMedia({ colorScheme: 'dark' });
-  expect(await site.evaluate(() => getComputedStyle(document.documentElement).colorScheme)).toContain('light');
+  expect(await site.evaluate(() => matchMedia('(prefers-color-scheme: dark)').matches)).toBe(true);
+  expect(await site.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(24, 25, 24)');
+  await site.screenshot({ fullPage: true, path: DARK_SCREENSHOT });
 }
 
 test('keeps Theme controls out of Publish and renders the generated static site in a real browser window', async ({ desktopApp, desktopWindow }) => {
