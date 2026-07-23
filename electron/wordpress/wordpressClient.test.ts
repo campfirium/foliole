@@ -24,12 +24,11 @@ it('verifies a Core-compatible site with HTTPS REST Application Password auth', 
   expect((fetchMock.mock.calls[0]![1]?.headers as Record<string, string>).Authorization).toMatch(/^Basic /u);
 });
 
-it('verifies a WordPress.com site by matching its stable public site ID', async () => {
-  const response = `<?xml version="1.0"?><methodResponse><params><param><value><array><data>
-    <value><struct><member><name>blogid</name><value><string>91</string></value></member>
-    <member><name>url</name><value><string>https://custom.example.com/</string></value></member>
-    <member><name>xmlrpc</name><value><string>https://public-api.wordpress.com/xmlrpc.php</string></value></member></struct></value>
-  </data></array></value></param></params></methodResponse>`;
+it('verifies the requested WordPress.com site directly when the account blog list is empty', async () => {
+  const response = `<?xml version="1.0"?><methodResponse><params><param><value><struct>
+    <member><name>siteurl</name><value><struct><member><name>value</name>
+    <value><string>https://free-site.wordpress.com</string></value></member></struct></value></member>
+  </struct></value></param></params></methodResponse>`;
   const fetchMock = vi.spyOn(globalThis, 'fetch')
     .mockResolvedValueOnce(new Response(JSON.stringify({ ID: 91 }), { status: 200 }))
     .mockResolvedValueOnce(new Response(response, { status: 200 }));
@@ -49,14 +48,15 @@ it('verifies a WordPress.com site by matching its stable public site ID', async 
   expect(fetchMock).toHaveBeenCalledTimes(2);
   expect(fetchMock.mock.calls[0]![0]).toBe('https://public-api.wordpress.com/rest/v1.1/sites/free-site.wordpress.com');
   expect(fetchMock.mock.calls[0]![1]).toEqual({ method: 'GET', redirect: 'error' });
-  expect(fetchMock.mock.calls[1]![1]?.body as string).toContain('<methodName>wp.getUsersBlogs</methodName>');
+  expect(fetchMock.mock.calls[1]![1]?.body as string).toContain('<methodName>wp.getOptions</methodName>');
+  expect(fetchMock.mock.calls[1]![1]?.body as string).toContain('<int>91</int>');
+  expect(fetchMock.mock.calls[1]![1]?.body as string).not.toContain('wp.getUsersBlogs');
 });
 
-it('does not connect a WordPress.com credential to a different returned blog ID', async () => {
-  const response = `<?xml version="1.0"?><methodResponse><params><param><value><array><data>
-    <value><struct><member><name>blogid</name><value><string>92</string></value></member>
-    <member><name>url</name><value><string>https://free-site.wordpress.com/</string></value></member></struct></value>
-  </data></array></value></param></params></methodResponse>`;
+it('does not connect when WordPress.com omits the requested site settings', async () => {
+  const response = `<?xml version="1.0"?><methodResponse><params><param>
+    <value><array><data></data></array></value>
+  </param></params></methodResponse>`;
   vi.spyOn(globalThis, 'fetch')
     .mockResolvedValueOnce(new Response(JSON.stringify({ ID: 91 }), { status: 200 }))
     .mockResolvedValueOnce(new Response(response, { status: 200 }));
@@ -65,7 +65,7 @@ it('does not connect a WordPress.com credential to a different returned blog ID'
     applicationPassword: 'abcd efgh ijkl mnop',
     siteUrl: 'free-site.wordpress.com',
     username: 'account-name'
-  })).rejects.toThrow('does not provide access');
+  })).rejects.toThrow('did not return the requested site settings');
 });
 
 it('creates then updates through XML-RPC using the supplied post id', async () => {

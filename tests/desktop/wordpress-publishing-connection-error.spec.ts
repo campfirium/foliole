@@ -81,11 +81,10 @@ test('connects a bare WordPress.com address with a copied spaced password', asyn
         return new Response(JSON.stringify({ ID: 91 }), { status: 200 });
       }
       if (String(input) === 'https://folioleapp.wordpress.com/xmlrpc.php') {
-        const response = `<?xml version="1.0"?><methodResponse><params><param><value><array><data>
-          <value><struct><member><name>blogid</name><value><string>91</string></value></member>
-          <member><name>url</name><value><string>https://custom.example.com/</string></value></member>
-          <member><name>xmlrpc</name><value><string>https://public-api.wordpress.com/xmlrpc.php</string></value></member>
-          </struct></value></data></array></value></param></params></methodResponse>`;
+        const response = `<?xml version="1.0"?><methodResponse><params><param><value><struct>
+          <member><name>siteurl</name><value><struct><member><name>value</name>
+          <value><string>https://folioleapp.wordpress.com</string></value></member></struct></value></member>
+          </struct></value></param></params></methodResponse>`;
         return new Response(response, { status: 200 });
       }
       return target.__wordpressConnectionOriginalFetch!(input, init);

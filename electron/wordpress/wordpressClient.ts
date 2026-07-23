@@ -83,10 +83,6 @@ function toRecord(value: XmlRpcValue): Record<string, XmlRpcValue> | null {
     : null;
 }
 
-function readBlogId(value: XmlRpcValue | undefined) {
-  return typeof value === 'string' || typeof value === 'number' ? String(value) : null;
-}
-
 async function readWordPressComSiteId(siteUrl: string) {
   const hostname = new URL(siteUrl).hostname;
   const endpoint = `https://public-api.wordpress.com/rest/v1.1/sites/${encodeURIComponent(hostname)}`;
@@ -102,12 +98,10 @@ async function readWordPressComSiteId(siteUrl: string) {
 async function verifyWordPressComSite(siteUrl: string, username: string, applicationPassword: string) {
   const endpoint = `${siteUrl}/xmlrpc.php`;
   const requestedBlogId = await readWordPressComSiteId(siteUrl);
-  const result = await callXmlRpc(endpoint, 'wp.getUsersBlogs', [username, applicationPassword]);
-  const blogs = Array.isArray(result) ? result.map(toRecord).filter(Boolean) : [];
-  const match = blogs.find((blog) => readBlogId(blog?.blogid) === requestedBlogId);
-  if (!match) {
-    throw new Error('This WordPress.com credential does not provide access to the requested site.');
-  }
+  const result = await callXmlRpc(endpoint, 'wp.getOptions', [
+    Number(requestedBlogId), username, applicationPassword, ['blog_title', 'home_url', 'siteurl']
+  ]);
+  if (!toRecord(result)) throw new Error('WordPress.com did not return the requested site settings.');
   return { adapter: 'wordpress_com_xmlrpc' as const, blogId: requestedBlogId, endpoint, siteUrl };
 }
 
