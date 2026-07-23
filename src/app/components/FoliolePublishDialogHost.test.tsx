@@ -40,9 +40,13 @@ it('matches the site taxonomy fields and Topic YAML on first publish', async () 
   render(<FoliolePublishDialogHost />);
   await openDialog(false);
   expect(await screen.findByDisplayValue('category')).toBeVisible();
-  expect(screen.getByDisplayValue('essays')).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Choose category' })).toHaveTextContent('essays');
   expect(screen.getByDisplayValue('tags')).toBeVisible();
-  expect(screen.getByDisplayValue('design, notes')).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Remove design' })).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Remove notes' })).toBeVisible();
+  expect(screen.queryByText('Single value')).not.toBeInTheDocument();
+  expect(screen.queryByText('Multiple values')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Use one value' })).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: 'Preview' }));
   await waitFor(() => expect(repository.previewFoliolePublishFromRuntime).toHaveBeenCalledWith(expect.objectContaining({
     fields: [
@@ -51,7 +55,7 @@ it('matches the site taxonomy fields and Topic YAML on first publish', async () 
     ],
     node_id: 'topic-1'
   })));
-  expect(screen.getByText('Fields')).toBeVisible();
+  expect(screen.queryByText('Fields')).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Open theme' })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Reset theme' })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Publish' })).toBeDisabled();
@@ -76,4 +80,19 @@ it('keeps empty fields in a confirmed publish binding request', async () => {
     ]
   })));
   expect(workspace.updateNodeContent).toHaveBeenCalled();
+});
+
+it('edits multiple values as removable chips and preserves them when switching to one value', async () => {
+  render(<FoliolePublishDialogHost />);
+  await openDialog(false);
+
+  const values = await screen.findByRole('textbox', { name: 'Comma-separated values' });
+  fireEvent.change(values, { target: { value: 'research' } });
+  fireEvent.keyDown(values, { key: 'Enter' });
+  expect(screen.getByRole('button', { name: 'Remove research' })).toBeVisible();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Remove notes' }));
+  expect(screen.queryByRole('button', { name: 'Remove notes' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Use one value' }));
+  expect(screen.getByRole('button', { name: 'Choose tags' })).toHaveTextContent('design, research');
 });

@@ -100,8 +100,8 @@ export function FoliolePublishDialogHost() {
         <AppDialogTitle>{t('desktop.foliolePublish.title')}</AppDialogTitle>
         <FoliolePublishFields
           choices={choices}
+          fieldCatalog={request.settings.field_catalog}
           fields={fields}
-          historyKeys={new Set(request.settings.field_catalog.map((entry) => entry.key))}
           onChange={setFields}
           onForget={(key) => void forgetFoliolePublishFieldFromRuntime(key).then((settings) => setRequest({ ...request, settings })).catch((caught) => setError(caught instanceof Error ? caught.message : 'Could not forget this field.'))}
           onResetHistory={() => void resetFieldHistory({ request, setError, setRequest, t })}
