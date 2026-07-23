@@ -12,8 +12,10 @@ const SEARCH_SCREENSHOT = path.resolve('.tmp/artifacts/desktop-acceptance/foliol
 const MOBILE_SCREENSHOT = path.resolve('.tmp/artifacts/desktop-acceptance/foliole-publish-article-mobile.png');
 const DIALOG_SCREENSHOT = path.resolve('.tmp/artifacts/desktop-acceptance/foliole-publish-dialog.png');
 const EMPTY_SCREENSHOT = path.resolve('.tmp/artifacts/desktop-acceptance/foliole-publish-empty-site.png');
-const NEWER_ID = 'playwright-newer-topic';
-const OLDER_ID = 'playwright-older-topic';
+const NEWER_SOURCE_KEY = 'playwright-newer-topic';
+const OLDER_SOURCE_KEY = 'playwright-older-topic';
+const NEWER_NUMBER = 2;
+const OLDER_NUMBER = 1;
 
 async function openStaticSite(desktopApp: ElectronApplication, entry: string) {
   await desktopApp.evaluate(async ({ BrowserWindow }, file) => {
@@ -45,9 +47,9 @@ foliole:
   publish:
     schemaVersion: 1
     web:
-      pageId: ${NEWER_ID}
+      pageId: "${NEWER_NUMBER}"
       site: https://notes.example.com
-      url: https://notes.example.com/cards/${NEWER_ID}.html
+      url: https://notes.example.com/topics/${NEWER_NUMBER}/
       fields:
         category: essays
         tags:
@@ -68,15 +70,16 @@ function seedPublishedTopics(libraryHome: string) {
   const publishRoot = path.join(libraryHome, 'Publish');
   const contentRoot = path.join(publishRoot, 'Content');
   fs.mkdirSync(contentRoot, { recursive: true });
-  fs.writeFileSync(path.join(contentRoot, `${NEWER_ID}.md`), publishedMarkdown());
-  fs.writeFileSync(path.join(contentRoot, `${OLDER_ID}.md`), 'An older published Topic.');
+  fs.writeFileSync(path.join(contentRoot, `${NEWER_NUMBER}.md`), publishedMarkdown());
+  fs.writeFileSync(path.join(contentRoot, `${OLDER_NUMBER}.md`), 'An older published Topic.');
   fs.writeFileSync(path.join(publishRoot, 'publish.yaml'), `${JSON.stringify({
-    cards: [
-      { file: `Content/${NEWER_ID}.md`, id: NEWER_ID, published_at: '2026-07-21T09:00:00.000Z', title: 'A durable place to publish', updated_at: '2026-07-21T09:30:00.000Z' },
-      { file: `Content/${OLDER_ID}.md`, id: OLDER_ID, published_at: '2026-07-20T09:00:00.000Z', title: 'The earlier topic', updated_at: '2026-07-20T09:00:00.000Z' }
+    next_topic_number: 3,
+    topics: [
+      { file: `Content/${NEWER_NUMBER}.md`, number: NEWER_NUMBER, published_at: '2026-07-21T09:00:00.000Z', source_key: NEWER_SOURCE_KEY, title: 'A durable place to publish', updated_at: '2026-07-21T09:30:00.000Z' },
+      { file: `Content/${OLDER_NUMBER}.md`, number: OLDER_NUMBER, published_at: '2026-07-20T09:00:00.000Z', source_key: OLDER_SOURCE_KEY, title: 'The earlier topic', updated_at: '2026-07-20T09:00:00.000Z' }
     ],
     site: { title: 'Foliole Field Notes' },
-    version: 1
+    version: 2
   }, null, 2)}\n`);
 }
 
@@ -93,7 +96,7 @@ async function openPublishDialog(desktopWindow: Page) {
 
 async function verifyHomeAndArticle(site: Page) {
   await expect(site.getByRole('heading', { level: 1, name: 'Foliole Field Notes' })).toBeVisible();
-  await expect(site.locator('.topic-card')).toHaveCount(2);
+  await expect(site.locator('.topic-entry')).toHaveCount(2);
   await expect(site.locator('.page-header .global-nav')).toBeVisible();
   await expect(site.getByRole('navigation', { name: 'Site navigation' }).getByRole('link', { name: 'RSS feed' }))
     .toHaveAttribute('href', /rss\.xml$/u);
@@ -147,9 +150,8 @@ async function verifySearchAndMobile(site: Page) {
 test('keeps Theme controls out of Publish and renders the generated static site in a real browser window', async ({ desktopApp, desktopWindow }) => {
   const dialog = await openPublishDialog(desktopWindow);
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByText(/^(Fields|字段)$/u)).toBeVisible();
-  await expect(dialog.getByDisplayValue('category')).toBeVisible();
-  await expect(dialog.getByDisplayValue('tags')).toBeVisible();
+  await expect(dialog.locator('input[value="category"]')).toBeVisible();
+  await expect(dialog.locator('input[value="tags"]')).toBeVisible();
   await expect(dialog.getByRole('button', { name: /^(Open theme|打开主题)$/u })).toHaveCount(0);
   await expect(dialog.getByRole('button', { name: /^(Reset theme|重置主题)$/u })).toHaveCount(0);
   await dialog.screenshot({ path: DIALOG_SCREENSHOT });

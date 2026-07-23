@@ -22,13 +22,13 @@ Foliole Publish 使用当前 library 中唯一一份可编辑主题：`Publish/T
 | `site.home_url` | `string` | 从站点根目录访问主页的相对路径。 |
 | `site.archive_url` | `string` | 从站点根目录访问归档页的相对路径。 |
 | `site.rss_url` | `string` | 从站点根目录访问 RSS 的相对路径。 |
-| `site.cards` | `array` | 已发布 Topic，按最新更新时间倒序排列。 |
+| `site.topics` | `array` | 已发布 Topic，按最新更新时间倒序排列。 |
 
-`site.cards` 中的每一项包含：
+`site.topics` 中的每一项包含：
 
 | 字段 | 类型 | 含义 |
 | --- | --- | --- |
-| `id` | `string` | 稳定页面 ID。 |
+| `id` | `string` | 当前站点首次发布时分配的永久 Topic 序号。 |
 | `path` | `string` | 从站点根目录访问独立页面的相对路径。 |
 | `title` | `string` | Topic 标题。 |
 | `published_at` | ISO 8601 `string` | 首次发布时间。 |
@@ -40,14 +40,14 @@ Foliole Publish 使用当前 library 中唯一一份可编辑主题：`Publish/T
 
 | 字段 | 类型 | 含义 |
 | --- | --- | --- |
-| `page.kind` | `"card" \| "archive"` | 当前页面类型。 |
+| `page.kind` | `"topic" \| "archive"` | 当前页面类型。 |
 | `page.title` | `string` | 当前页面标题。 |
 | `page.id` | `string \| null` | Topic 页面 ID；归档页为 `null`。 |
 | `page.is_home` | `boolean` | 当前 `page.html` 是否正在生成主页。 |
 | `page.content` | HTML `string` | Topic 正文 HTML；归档页为空。 |
 | `page.published_at` | ISO 8601 `string \| null` | 首次发布时间。 |
 | `page.updated_at` | ISO 8601 `string \| null` | 最近发布时间。 |
-| `page.depth` | `"" \| "../"` | 从当前页面回到站点根目录的前缀。 |
+| `page.depth` | `"" \| "../" \| "../../"` | 从当前页面回到站点根目录的前缀。 |
 | `page.home_url` | `string` | 从当前页面访问主页的相对 URL。 |
 | `page.archive_url` | `string` | 从当前页面访问归档页的相对 URL。 |
 | `page.rss_url` | `string` | 从当前页面访问 RSS 的相对 URL。 |
@@ -55,6 +55,7 @@ Foliole Publish 使用当前 library 中唯一一份可编辑主题：`Publish/T
 | `page.newer_url` / `page.older_url` | `string \| null` | 相邻 Topic URL 的简写。 |
 | `page.fields` | `array` | 当前 Topic 的公开字段；归档页为空。 |
 | `page.has_visible_fields` | `boolean` | 是否至少有一个非空字段。 |
+| `page.topics` | `array` | 当前列表页展示的 Topic；独立 Topic 页面为空。 |
 
 `page.fields` 中的每一项包含 `key: string` 和 `values: string[]`。单值与多值在模板层统一为数组；空值会得到空数组，官方主题只显示 `values.size > 0` 的字段。
 

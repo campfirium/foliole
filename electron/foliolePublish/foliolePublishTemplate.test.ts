@@ -10,47 +10,47 @@ import {
 function scope(): FoliolePublishTemplateScope {
   return {
     page: {
-      archive_url: 'archive.html',
-      cards: [],
-      categories_url: 'categories.html',
+      archive_url: 'archive/',
+      categories_url: 'categories/',
       content: '<p>Safe body</p>',
       depth: '',
       fields: [{ key: '<author>', values: ['Roamer', '<Guest>'] }],
       groups: [],
       has_visible_fields: true,
-      home_url: 'index.html',
-      id: 'card',
+      home_url: './',
+      id: '1',
       is_home: true,
-      kind: 'card',
+      kind: 'topic',
       newer: null,
       newer_url: null,
       next_page_url: null,
-      older: { title: 'Older', url: 'cards/older.html' },
-      older_url: 'cards/older.html',
+      older: { title: 'Older', url: 'topics/2/' },
+      older_url: 'topics/2/',
       previous_page_url: null,
       published_at: '2026-07-21T00:00:00.000Z',
       rss_url: 'rss.xml',
-      search_url: 'search.html',
-      tags_url: 'tags.html',
+      search_url: 'search/',
+      tags_url: 'tags/',
       taxonomy_name: null,
       terms: [],
       title: '<Title>',
+      topics: [],
       updated_at: '2026-07-21T00:00:00.000Z',
       view: 'home'
     },
     site: {
-      archive_url: 'archive.html',
-      cards: [{
-        categories: [], content: '<p>Card</p>', fields: [], has_more: false,
-        id: 'card', path: 'cards/card.html', preview: '<p>Card</p>',
-        published_at: '2026-07-21T00:00:00.000Z', tags: [], title: '<Card>', updated_at: '2026-07-21T00:00:00.000Z'
-      }],
-      categories_url: 'categories.html',
-      home_url: 'index.html',
+      archive_url: 'archive/',
+      categories_url: 'categories/',
+      home_url: './',
       rss_url: 'rss.xml',
-      search_url: 'search.html',
-      tags_url: 'tags.html',
+      search_url: 'search/',
+      tags_url: 'tags/',
       title: '<Site>',
+      topics: [{
+        categories: [], content: '<p>Topic</p>', fields: [], has_more: false,
+        id: '1', path: 'topics/1/', preview: '<p>Topic</p>',
+        published_at: '2026-07-21T00:00:00.000Z', tags: [], title: '<Topic>', updated_at: '2026-07-21T00:00:00.000Z'
+      }],
       url: 'https://example.com'
     }
   };

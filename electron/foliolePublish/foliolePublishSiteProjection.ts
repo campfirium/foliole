@@ -3,22 +3,22 @@ import { createHash } from 'node:crypto';
 import type { FolioleWebField } from '../../lib/core/foliolePublish/folioleWebPublishFrontmatter.js';
 import { convertWordPressMarkdownToBlocks, type WordPressMarkdownBlock } from '../../lib/core/wordpress/wordpressMarkdownHtml.js';
 
-import type { FoliolePublishCard } from './foliolePublishModel.js';
+import type { FoliolePublishTopic } from './foliolePublishModel.js';
 import type {
-  FoliolePublishTemplateCard,
   FoliolePublishTemplateField,
   FoliolePublishTemplateGroup,
   FoliolePublishTemplateTaxonomyTerm,
-  FoliolePublishTemplateTerm
+  FoliolePublishTemplateTerm,
+  FoliolePublishTemplateTopic
 } from './foliolePublishTemplate.js';
 
-export interface FoliolePublishCardSource {
-  card: FoliolePublishCard;
+export interface FoliolePublishTopicSource {
   fields: FolioleWebField[];
   markdown: string;
+  topic: FoliolePublishTopic;
 }
 
-export interface FoliolePublishProjectedCard extends FoliolePublishTemplateCard { search_text: string }
+export interface FoliolePublishProjectedTopic extends FoliolePublishTemplateTopic { search_text: string }
 
 function normalizedValue(value: string) {
   return value.trim().normalize('NFKC');
@@ -71,10 +71,10 @@ function previewBlock(blocks: WordPressMarkdownBlock[]) {
   };
 }
 
-function projectCard(source: FoliolePublishCardSource): FoliolePublishProjectedCard {
+function projectTopic(source: FoliolePublishTopicSource): FoliolePublishProjectedTopic {
   const rendered = convertWordPressMarkdownToBlocks(source.markdown, 1, { preserveSoftBreaks: true });
   const firstIsTitle = /^ATXHeading[1-6]$/u.test(rendered[0]?.kind ?? '')
-    && foldedValue(rendered[0]?.text ?? '') === foldedValue(source.card.title);
+    && foldedValue(rendered[0]?.text ?? '') === foldedValue(source.topic.title);
   const blocks = firstIsTitle ? rendered.slice(1) : rendered;
   const preview = previewBlock(blocks);
   const fields = templateFields(source.fields);
@@ -84,43 +84,43 @@ function projectCard(source: FoliolePublishCardSource): FoliolePublishProjectedC
     content: blocks.map((block) => block.html).join('\n'),
     fields,
     has_more: preview.hasMore,
-    id: source.card.id,
-    path: `cards/${source.card.id}.html`,
+    id: String(source.topic.number),
+    path: `topics/${source.topic.number}/`,
     preview: preview.html,
-    published_at: source.card.published_at,
-    search_text: `${source.card.title} ${preview.text} ${searchFields}`.trim(),
+    published_at: source.topic.published_at,
+    search_text: `${source.topic.title} ${preview.text} ${searchFields}`.trim(),
     tags: terms(source.fields, 'tags'),
-    title: source.card.title,
-    updated_at: source.card.updated_at
+    title: source.topic.title,
+    updated_at: source.topic.updated_at
   };
 }
 
-export function projectPublishedCards(sources: FoliolePublishCardSource[]) {
-  return sources.map((source, index) => ({ index, projected: projectCard(source) }))
+export function projectPublishedTopics(sources: FoliolePublishTopicSource[]) {
+  return sources.map((source, index) => ({ index, projected: projectTopic(source) }))
     .sort((left, right) => right.projected.updated_at.localeCompare(left.projected.updated_at) || left.index - right.index)
     .map(({ projected }) => projected);
 }
 
-export function groupCardsByUpdatedYear(cards: FoliolePublishTemplateCard[]): FoliolePublishTemplateGroup[] {
-  const years = [...new Set(cards.map((card) => card.updated_at.slice(0, 4)))];
-  return years.map((label) => ({ cards: cards.filter((card) => card.updated_at.startsWith(label)), label }));
+export function groupTopicsByUpdatedYear(topics: FoliolePublishTemplateTopic[]): FoliolePublishTemplateGroup[] {
+  const years = [...new Set(topics.map((topic) => topic.updated_at.slice(0, 4)))];
+  return years.map((label) => ({ label, topics: topics.filter((topic) => topic.updated_at.startsWith(label)) }));
 }
 
-export function taxonomyIndex(cards: FoliolePublishTemplateCard[], key: 'categories' | 'tags') {
+export function taxonomyIndex(topics: FoliolePublishTemplateTopic[], key: 'categories' | 'tags') {
   const counts = new Map<string, FoliolePublishTemplateTaxonomyTerm>();
-  cards.flatMap((card) => card[key]).forEach((term) => {
+  topics.flatMap((topic) => topic[key]).forEach((term) => {
     const current = counts.get(term.slug);
     counts.set(term.slug, { ...term, count: (current?.count ?? 0) + 1 });
   });
   return [...counts.values()].sort((left, right) => left.name.localeCompare(right.name));
 }
 
-export function cardsForTerm<T extends FoliolePublishTemplateCard>(cards: T[], key: 'categories' | 'tags', slug: string): T[] {
-  return cards.filter((card) => card[key].some((term) => term.slug === slug));
+export function topicsForTerm<T extends FoliolePublishTemplateTopic>(topics: T[], key: 'categories' | 'tags', slug: string): T[] {
+  return topics.filter((topic) => topic[key].some((term) => term.slug === slug));
 }
 
-export function searchIndexScript(cards: FoliolePublishProjectedCard[]) {
-  const items = cards.map((card) => ({ fields: card.fields, text: card.search_text, title: card.title, url: card.path }));
+export function searchIndexScript(topics: FoliolePublishProjectedTopic[]) {
+  const items = topics.map((topic) => ({ fields: topic.fields, text: topic.search_text, title: topic.title, url: topic.path }));
   const json = JSON.stringify(items).replaceAll('<', '\\u003c').replaceAll('\u2028', '\\u2028').replaceAll('\u2029', '\\u2029');
   return `window.__FOLIOLE_SEARCH_INDEX__=${json};\n`;
 }

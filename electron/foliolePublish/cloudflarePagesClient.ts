@@ -1,12 +1,11 @@
-import fs from 'node:fs';
-import path from 'node:path';
-
-import { blake3 } from '@noble/hashes/blake3.js';
+import {
+  cloudflarePagesAssetHash,
+  cloudflarePagesUploadBatches,
+  prepareCloudflarePagesFiles,
+  type CloudflarePagesUploadFile
+} from './cloudflarePagesAssets.js';
 
 const API = 'https://api.cloudflare.com/client/v4';
-const MAX_FILE_COUNT = 20_000;
-const MAX_FILE_SIZE = 25 * 1024 * 1024;
-const MAX_UPLOAD_BATCH_SIZE = 50 * 1024 * 1024;
 const DEPLOYMENT_POLL_INTERVAL_MS = 1_000;
 const DEPLOYMENT_POLL_LIMIT = 90;
 
@@ -15,7 +14,9 @@ interface CloudflareEnvelope<T> {
   success?: boolean;
 }
 
-interface CloudflarePagesProject { subdomain?: string }
+interface CloudflarePagesProject {
+  subdomain?: string;
+}
 interface CloudflarePagesDeployment {
   id?: string;
   latest_stage?: { status?: string };
@@ -26,13 +27,6 @@ export type CloudflareProjectResolution =
   | { created: boolean; project: CloudflarePagesProject; status: 'ready' };
 
 class CloudflareClientError extends Error {}
-
-interface UploadFile {
-  body: Buffer;
-  contentType: string;
-  hash: string;
-  relativePath: string;
-}
 
 function headers(token: string, json = false) {
   return { Authorization: `Bearer ${token}`, ...(json ? { 'Content-Type': 'application/json' } : {}) };
@@ -99,64 +93,20 @@ export async function resolveCloudflarePagesProject(input: {
   } catch (error) { throw safeCloudflareError(error); }
 }
 
-function contentType(file: string) {
-  const extension = path.extname(file).toLowerCase();
-  return ({ '.css': 'text/css', '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.xml': 'application/rss+xml' } as Record<string, string>)[extension]
-    ?? 'application/octet-stream';
-}
-
-export function cloudflarePagesAssetHash(file: string, body: Buffer) {
-  const extension = path.extname(file).slice(1);
-  const input = Buffer.from(`${body.toString('base64')}${extension}`);
-  return Buffer.from(blake3(Uint8Array.from(input))).toString('hex').slice(0, 32);
-}
-
-function listFiles(root: string, current = root): string[] {
-  return fs.readdirSync(current, { withFileTypes: true }).flatMap((entry) => {
-    const absolute = path.join(current, entry.name);
-    return entry.isDirectory() ? listFiles(root, absolute) : [absolute];
-  });
-}
-
-function prepareFiles(root: string) {
-  const paths = listFiles(root);
-  if (paths.length > MAX_FILE_COUNT) throw new Error('Cloudflare Pages deployments support at most 20,000 files.');
-  return paths.map((file): UploadFile => {
-    const body = fs.readFileSync(file);
-    if (body.byteLength > MAX_FILE_SIZE) throw new Error(`Cloudflare Pages only supports files up to 25 MiB: ${path.basename(file)}`);
-    return {
-      body, contentType: contentType(file),
-      hash: cloudflarePagesAssetHash(file, body),
-      relativePath: path.relative(root, file).split(path.sep).join('/')
-    };
-  });
-}
-
 async function getUploadToken(input: { accountId: string; projectName: string; token: string }) {
   const response = await fetch(`${API}/accounts/${encodeURIComponent(input.accountId)}/pages/projects/${encodeURIComponent(input.projectName)}/upload-token`, { headers: headers(input.token) });
   return (await readEnvelope<{ jwt: string }>(response, 'Cloudflare Pages upload authorization failed.')).jwt;
 }
 
-async function getMissingHashes(files: UploadFile[], jwt: string) {
+async function getMissingHashes(files: CloudflarePagesUploadFile[], jwt: string) {
   const response = await fetch(`${API}/pages/assets/check-missing`, {
     body: JSON.stringify({ hashes: files.map((file) => file.hash) }), headers: headers(jwt, true), method: 'POST'
   });
   return readEnvelope<string[]>(response, 'Cloudflare Pages asset check failed.');
 }
 
-function uploadBatches(files: UploadFile[]) {
-  const batches: UploadFile[][] = [];
-  for (const file of files) {
-    const current = batches.at(-1);
-    const currentSize = current?.reduce((sum, item) => sum + item.body.byteLength, 0) ?? 0;
-    if (!current || currentSize + file.body.byteLength > MAX_UPLOAD_BATCH_SIZE) batches.push([file]);
-    else current.push(file);
-  }
-  return batches;
-}
-
-async function uploadAssets(files: UploadFile[], jwt: string) {
-  for (const batch of uploadBatches(files)) {
+async function uploadAssets(files: CloudflarePagesUploadFile[], jwt: string) {
+  for (const batch of cloudflarePagesUploadBatches(files)) {
     const body = batch.map((file) => ({
       base64: true, key: file.hash,
       metadata: { contentType: file.contentType }, value: file.body.toString('base64')
@@ -168,7 +118,7 @@ async function uploadAssets(files: UploadFile[], jwt: string) {
   }
 }
 
-async function createDeployment(input: { accountId: string; files: UploadFile[]; projectName: string; token: string }) {
+async function createDeployment(input: { accountId: string; files: CloudflarePagesUploadFile[]; projectName: string; token: string }) {
   const manifest = Object.fromEntries(input.files.map((file) => [`/${file.relativePath}`, file.hash]));
   const form = new FormData();
   form.append('branch', 'main');
@@ -179,16 +129,12 @@ async function createDeployment(input: { accountId: string; files: UploadFile[];
   return readEnvelope<CloudflarePagesDeployment>(response, 'Cloudflare Pages deployment failed.');
 }
 
-function deploymentStatus(deployment: CloudflarePagesDeployment) {
-  return deployment.latest_stage?.status;
-}
-
-function assertDeploymentStatus(deployment: CloudflarePagesDeployment) {
-  const status = deploymentStatus(deployment);
+function acceptDeployment(deployment: CloudflarePagesDeployment) {
+  const status = deployment.latest_stage?.status;
   if (status === 'failure' || status === 'canceled') {
     throw new CloudflareClientError('Cloudflare Pages deployment failed.');
   }
-  return status === 'success';
+  return deployment;
 }
 
 async function readDeployment(input: { accountId: string; projectName: string; token: string }, id: string) {
@@ -198,26 +144,32 @@ async function readDeployment(input: { accountId: string; projectName: string; t
 }
 
 async function waitForDeployment(
-  input: { accountId: string; projectName: string; token: string },
-  deployment: CloudflarePagesDeployment
+  input: { accountId: string; projectName: string; token: string }, deployment: CloudflarePagesDeployment
 ) {
-  if (assertDeploymentStatus(deployment)) return deployment;
+  acceptDeployment(deployment);
+  if (deployment.latest_stage?.status === 'success') return deployment;
   if (!deployment.id) throw new CloudflareClientError('Cloudflare Pages did not return a deployment ID.');
   for (let attempt = 0; attempt < DEPLOYMENT_POLL_LIMIT; attempt += 1) {
     await new Promise((resolve) => setTimeout(resolve, DEPLOYMENT_POLL_INTERVAL_MS));
-    const current = await readDeployment(input, deployment.id);
-    if (assertDeploymentStatus(current)) return current;
+    const current = acceptDeployment(await readDeployment(input, deployment.id));
+    if (current.latest_stage?.status === 'success') return current;
   }
   throw new CloudflareClientError('Cloudflare Pages deployment is still processing. Try again shortly.');
 }
 
-export async function deployCloudflarePages(input: { accountId: string; projectName: string; siteRoot: string; token: string }) {
+export async function deployCloudflarePages(input: {
+  accountId: string; projectName: string; siteRoot: string; token: string; waitForCompletion?: boolean;
+}) {
   try {
-    const files = prepareFiles(input.siteRoot);
+    const files = prepareCloudflarePagesFiles(input.siteRoot);
     const jwt = await getUploadToken(input);
     const missing = new Set(await getMissingHashes(files, jwt));
     await uploadAssets(files.filter((file) => missing.has(file.hash)), jwt);
     const deployment = await createDeployment({ ...input, files });
-    return await waitForDeployment(input, deployment);
+    return input.waitForCompletion === false
+      ? acceptDeployment(deployment)
+      : await waitForDeployment(input, deployment);
   } catch (error) { throw safeCloudflareError(error); }
 }
+
+export { cloudflarePagesAssetHash };

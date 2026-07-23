@@ -60,18 +60,29 @@ it('uploads missing assets before creating a manifest deployment', async () => {
   expect(JSON.parse(String(deployment.get('manifest')))).toEqual({ '/index.html': expect.any(String) });
 });
 
-it('waits until Cloudflare reports that the production deployment succeeded', async () => {
+it('accepts an active deployment without polling Cloudflare again', async () => {
+  const fetchMock = vi.fn(async (input: string | URL | Request) => {
+    const url = String(input);
+    if (url.endsWith('/upload-token')) return response({ jwt: 'upload-jwt' });
+    if (url.endsWith('/check-missing')) return response([]);
+    return response({ id: 'deployment', latest_stage: { status: 'active' } });
+  });
+  vi.stubGlobal('fetch', fetchMock);
+
+  await expect(deployCloudflarePages({
+    accountId: 'account', projectName: 'project', siteRoot: temporarySite(), token: 'api-token', waitForCompletion: false
+  })).resolves.toMatchObject({ latest_stage: { status: 'active' } });
+  expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/deployments/deployment'))).toBe(false);
+});
+
+it('still waits for completion in connection and theme deployment flows', async () => {
   vi.useFakeTimers();
   const fetchMock = vi.fn(async (input: string | URL | Request) => {
     const url = String(input);
     if (url.endsWith('/upload-token')) return response({ jwt: 'upload-jwt' });
     if (url.endsWith('/check-missing')) return response([]);
-    if (url.endsWith('/deployments')) {
-      return response({ id: 'deployment', latest_stage: { status: 'active' } });
-    }
-    return response({
-      id: 'deployment', latest_stage: { status: 'success' }, url: 'https://deployment.pages.dev'
-    });
+    if (url.endsWith('/deployments')) return response({ id: 'deployment', latest_stage: { status: 'active' } });
+    return response({ id: 'deployment', latest_stage: { status: 'success' } });
   });
   vi.stubGlobal('fetch', fetchMock);
 
@@ -81,7 +92,6 @@ it('waits until Cloudflare reports that the production deployment succeeded', as
   await vi.runAllTimersAsync();
 
   await expect(pending).resolves.toMatchObject({ latest_stage: { status: 'success' } });
-  expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/deployments/deployment'))).toBe(true);
 });
 
 it('reports a terminal Cloudflare deployment failure', async () => {

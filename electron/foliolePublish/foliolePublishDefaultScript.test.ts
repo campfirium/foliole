@@ -43,3 +43,8 @@ it('uses a static activity word when reduced motion is preferred', () => {
   expect(word.textContent).toBe('Reading...');
   expect(vi.getTimerCount()).toBe(0);
 });
+
+it('keeps directory hrefs public while resolving their local preview entry', () => {
+  expect(DEFAULT_THEME_SCRIPT).toContain("window.location.protocol !== 'file:'");
+  expect(DEFAULT_THEME_SCRIPT).toContain("target.href + 'index.html'");
+});

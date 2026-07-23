@@ -36,7 +36,7 @@ export interface FoliolePublishTemplateField {
 
 export interface FoliolePublishTemplateTerm { name: string; slug: string }
 
-export interface FoliolePublishTemplateCard {
+export interface FoliolePublishTemplateTopic {
   categories: FoliolePublishTemplateTerm[];
   content: string;
   fields: FoliolePublishTemplateField[];
@@ -50,19 +50,19 @@ export interface FoliolePublishTemplateCard {
   updated_at: string;
 }
 
-export interface FoliolePublishTemplateGroup { cards: FoliolePublishTemplateCard[]; label: string }
+export interface FoliolePublishTemplateGroup { label: string; topics: FoliolePublishTemplateTopic[] }
 
 export interface FoliolePublishTemplateTaxonomyTerm extends FoliolePublishTemplateTerm { count: number }
 
 export interface FoliolePublishTemplateSite {
   archive_url: string;
-  cards: FoliolePublishTemplateCard[];
   categories_url: string;
   home_url: string;
   rss_url: string;
   search_url: string;
   tags_url: string;
   title: string;
+  topics: FoliolePublishTemplateTopic[];
   url: string;
 }
 
@@ -70,10 +70,9 @@ export interface FoliolePublishTemplateNeighbor { title: string; url: string }
 
 interface FoliolePublishTemplatePageBase {
   archive_url: string;
-  cards: FoliolePublishTemplateCard[];
   categories_url: string;
   content: string;
-  depth: '' | '../';
+  depth: '' | '../' | '../../';
   fields: FoliolePublishTemplateField[];
   groups: FoliolePublishTemplateGroup[];
   has_visible_fields: boolean;
@@ -93,12 +92,13 @@ interface FoliolePublishTemplatePageBase {
   taxonomy_name: string | null;
   terms: FoliolePublishTemplateTaxonomyTerm[];
   title: string;
+  topics: FoliolePublishTemplateTopic[];
   updated_at: string | null;
   view: 'archive' | 'article' | 'categories' | 'category' | 'home' | 'search' | 'tag' | 'tags';
 }
 
 export type FoliolePublishTemplatePage = FoliolePublishTemplatePageBase & {
-  kind: 'archive' | 'card';
+  kind: 'archive' | 'topic';
 };
 
 export interface FoliolePublishTemplateScope {

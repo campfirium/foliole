@@ -148,15 +148,15 @@ it('opens only the managed Publish Preview entry without changing the active Sit
   const before = activeRss();
   const result = await previewFoliolePublish({
     content: '---\ncategory: essays\n---\nPreview body',
-    fields: [{ key: 'category', value: 'essays' }], node_id: 'topic-1', title: 'Preview card'
+    fields: [{ key: 'category', value: 'essays' }], node_id: 'topic-1', title: 'Preview Topic'
   });
   expect(result.local_path).toBe(path.join(state.libraryHome, 'Publish', 'Preview', 'index.html'));
   expect(mocks.shellOpenPath).toHaveBeenCalledWith(result.local_path);
   expect(activeRss()).toBe(before);
-  expect(fs.readFileSync(result.local_path, 'utf8')).toContain('Preview card');
-  const cardFiles = fs.readdirSync(path.join(path.dirname(result.local_path), 'cards'));
-  expect(cardFiles).toHaveLength(1);
-  expect(fs.readFileSync(path.join(path.dirname(result.local_path), 'cards', cardFiles[0]!), 'utf8')).toContain('essays');
+  expect(fs.readFileSync(result.local_path, 'utf8')).toContain('Preview Topic');
+  const topicFiles = fs.readdirSync(path.join(path.dirname(result.local_path), 'topics'));
+  expect(topicFiles).toEqual(['1']);
+  expect(fs.readFileSync(path.join(path.dirname(result.local_path), 'topics', '1', 'index.html'), 'utf8')).toContain('essays');
 });
 
 it('opens the active local static pages without regenerating them', async () => {
@@ -209,10 +209,11 @@ it('returns the binding after remote success when the local publish transaction 
     if (String(to).includes(`${path.sep}Content${path.sep}`)) throw new Error('disk full');
     return renameSync(from, to);
   });
-  const result = await publishTopicToFoliole({ content: 'Body', fields: [], node_id: 'topic-1', title: 'Card' });
+  const result = await publishTopicToFoliole({ content: 'Body', fields: [], node_id: 'topic-1', title: 'Topic' });
   rename.mockRestore();
   expect(result.status).toBe('deployed_local_publish_state_failed');
   expect(result.updated_content).toContain('pageId:');
+  expect(result.updated_content).toContain('url: https://site.pages.dev/topics/1/');
   expect(activeRss()).toBe(before);
   expect(mocks.shellOpenExternal).toHaveBeenCalledWith(result.url);
 });
@@ -220,7 +221,7 @@ it('returns the binding after remote success when the local publish transaction 
 it('keeps all formal local publish state unchanged when deployment fails', async () => {
   const before = activeRss();
   mocks.deployCloudflarePages.mockRejectedValue(new Error('deploy failed'));
-  await expect(publishTopicToFoliole({ content: 'Body', fields: [], node_id: 'topic-1', title: 'Card' })).rejects.toThrow('deploy failed');
+  await expect(publishTopicToFoliole({ content: 'Body', fields: [], node_id: 'topic-1', title: 'Topic' })).rejects.toThrow('deploy failed');
   expect(activeRss()).toBe(before);
   expect(fs.existsSync(path.join(state.libraryHome, 'Publish', 'Content'))).toBe(false);
   expect(mocks.recordFoliolePublishFields).not.toHaveBeenCalled();
@@ -228,8 +229,22 @@ it('keeps all formal local publish state unchanged when deployment fails', async
 
 it('reports history persistence as an independent partial success', async () => {
   mocks.recordFoliolePublishFields.mockImplementation(() => { throw new Error('settings failed'); });
-  const result = await publishTopicToFoliole({ content: 'Body', fields: [{ key: 'category', value: '' }], node_id: 'topic-1', title: 'Card' });
+  const result = await publishTopicToFoliole({ content: 'Body', fields: [{ key: 'category', value: '' }], node_id: 'topic-1', title: 'Topic' });
   expect(result.status).toBe('deployed_history_failed');
   expect(result.updated_content).toContain('category: ""');
   expect(fs.existsSync(path.join(state.libraryHome, 'Publish', 'Content'))).toBe(true);
+});
+
+it('opens the stable Topic URL after Cloudflare accepts the deployment', async () => {
+  const result = await publishTopicToFoliole({
+    content: '# 中文标题\n\n正文', fields: [], node_id: 'topic-1', title: '中文标题'
+  });
+
+  expect(result).toMatchObject({
+    status: 'deployed_and_committed', url: 'https://site.pages.dev/topics/1/'
+  });
+  expect(result.updated_content).toContain('pageId: "1"');
+  expect(fs.readFileSync(path.join(state.libraryHome, 'Publish', 'publish.yaml'), 'utf8')).toContain('"topics"');
+  expect(mocks.shellOpenExternal).toHaveBeenCalledWith('https://site.pages.dev/topics/1/');
+  expect(mocks.deployCloudflarePages).toHaveBeenCalledWith(expect.objectContaining({ waitForCompletion: false }));
 });

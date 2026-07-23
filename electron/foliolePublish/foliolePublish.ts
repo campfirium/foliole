@@ -9,13 +9,12 @@ import type { NativeFoliolePublishConnectInput, NativeFoliolePublishTopicArgs } 
 import { loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
 
 import { deleteCloudflarePagesProject, deployCloudflarePages, normalizeSiteAddress, resolveCloudflarePagesProject } from './cloudflarePagesClient.js';
+import { commitPublishedTopic } from './foliolePublishCommit.js';
 import {
   readFoliolePublishSiteTitle as readSiteTitle,
   readPublishIndex,
   saveFoliolePublishSiteTitle as writeSiteTitle,
-  upsertPublishedCard,
-  writeFileAtomic,
-  writePublishIndex
+  upsertPublishedTopic
 } from './foliolePublishModel.js';
 import { clearFoliolePublishSettings, forgetFoliolePublishField, loadFoliolePublishSettings, loadFoliolePublishToken, loadStoredFoliolePublishSettings, recordFoliolePublishFields, resetFoliolePublishFieldHistory, saveFoliolePublishConnection, saveFoliolePublishDraft, saveFoliolePublishSiteAddress } from './foliolePublishSettings.js';
 import { activateFoliolePublishSite, discardStagedFoliolePublishSite, generateFoliolePublishSite, stageFoliolePublishSite } from './foliolePublishSite.js';
@@ -119,8 +118,8 @@ export async function previewFoliolePublish(args: NativeFoliolePublishTopicArgs)
   assertPublishableContent(args.content);
   fs.mkdirSync(root(), { recursive: true });
   const settings = loadFoliolePublishSettings();
-  const { card, index } = upsertPublishedCard(readTitledPublishIndex(), { nodeId: args.node_id, title: args.title });
-  const staged = stageFoliolePublishSite(root(), index, settings.site_address, new Map([[card.id, { content: args.content, fields: args.fields }]]));
+  const { index, topic } = upsertPublishedTopic(readTitledPublishIndex(), { nodeId: args.node_id, title: args.title });
+  const staged = stageFoliolePublishSite(root(), index, settings.site_address, new Map([[topic.source_key, { content: args.content, fields: args.fields }]]));
   const activation = activateFoliolePublishSite(root(), staged, 'Preview');
   activation.commit();
   const localPath = activation.activePath;
@@ -144,20 +143,23 @@ export async function publishTopicToFoliole(args: NativeFoliolePublishTopicArgs)
   const token = loadFoliolePublishToken();
   if (!settings || !token) throw new Error('Deploy Foliole Publish from Settings first.');
   const current = readTitledPublishIndex();
-  const { card, index } = upsertPublishedCard(current, { nodeId: args.node_id, title: args.title });
-  const url = `${settings.site_address}/cards/${card.id}.html`;
+  const { index, topic } = upsertPublishedTopic(current, { nodeId: args.node_id, title: args.title });
+  const url = `${settings.site_address}/topics/${topic.number}/`;
   const updatedContent = writeFolioleWebBinding(args.content, {
-    fields: args.fields, lastPublishedAt: card.updated_at, pageId: card.id, site: settings.site_address, url
+    fields: args.fields, lastPublishedAt: topic.updated_at, pageId: String(topic.number), site: settings.site_address, url
   });
-  const staged = stageFoliolePublishSite(root(), index, settings.site_address, new Map([[card.id, { content: updatedContent, fields: args.fields }]]));
+  const staged = stageFoliolePublishSite(root(), index, settings.site_address, new Map([[topic.source_key, { content: updatedContent, fields: args.fields }]]));
   try {
-    await deployCloudflarePages({ accountId: settings.account_id, projectName: settings.project_name, siteRoot: staged, token });
+    await deployCloudflarePages({
+      accountId: settings.account_id, projectName: settings.project_name, siteRoot: staged,
+      token, waitForCompletion: false
+    });
   } catch (error) {
     discardStagedFoliolePublishSite(staged);
     throw error;
   }
   let localPath: string;
-  try { localPath = commitPublishedFiles({ cardFile: card.file, content: updatedContent, index, staged }); }
+  try { localPath = commitPublishedTopic({ content: updatedContent, index, root: root(), staged, topicFile: topic.file }); }
   catch (error) {
     await shell.openExternal(url);
     return {
@@ -171,25 +173,6 @@ export async function publishTopicToFoliole(args: NativeFoliolePublishTopicArgs)
   fs.rmSync(path.join(root(), 'Preview'), { force: true, recursive: true });
   await shell.openExternal(url);
   return { local_path: localPath, status, updated_content: updatedContent, url };
-}
-
-function commitPublishedFiles(input: { cardFile: string; content: string; index: ReturnType<typeof readPublishIndex>; staged: string }) {
-  const contentFile = path.join(root(), input.cardFile);
-  const indexFile = path.join(root(), 'publish.yaml');
-  const oldContent = fs.existsSync(contentFile) ? fs.readFileSync(contentFile) : null;
-  const oldIndex = fs.existsSync(indexFile) ? fs.readFileSync(indexFile) : null;
-  const activation = activateFoliolePublishSite(root(), input.staged);
-  try {
-    writeFileAtomic(contentFile, input.content);
-    writePublishIndex(root(), input.index);
-    activation.commit();
-    return activation.activePath;
-  } catch (error) {
-    activation.rollback();
-    if (oldContent) writeFileAtomic(contentFile, oldContent); else fs.rmSync(contentFile, { force: true });
-    if (oldIndex) writeFileAtomic(indexFile, oldIndex); else fs.rmSync(indexFile, { force: true });
-    throw new Error(`The site was deployed, but Foliole could not save the local publish state: ${error instanceof Error ? error.message : String(error)}`);
-  } finally { discardStagedFoliolePublishSite(input.staged); }
 }
 
 export function loadFoliolePublishTheme() {

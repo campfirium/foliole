@@ -10,13 +10,14 @@ const repository = vi.hoisted(() => ({
   resetFoliolePublishFieldHistoryFromRuntime: vi.fn()
 }));
 const workspace = vi.hoisted(() => ({ updateNodeContent: vi.fn() }));
+const notices = vi.hoisted(() => ({ showAppRuntimeNotice: vi.fn() }));
 
 vi.mock('../../shared/platform/foliolePublishRepository', () => ({
   ...repository,
   isFoliolePublishConfigured: (settings: { has_credentials?: boolean }) => Boolean(settings.has_credentials)
 }));
 vi.mock('../../store/workspaceStore', () => ({ useWorkspaceStore: { getState: () => workspace } }));
-vi.mock('../../shared/ui/AppRuntimeNotice', () => ({ showAppRuntimeNotice: vi.fn() }));
+vi.mock('../../shared/ui/AppRuntimeNotice', () => notices);
 
 async function openDialog(hasCredentials = false, content = '---\ncategory: essays\ntags: [design, notes]\n---\nBody') {
   await act(async () => window.dispatchEvent(new CustomEvent('foliole:web-publish-dialog-request', { detail: {
@@ -26,7 +27,7 @@ async function openDialog(hasCredentials = false, content = '---\ncategory: essa
       account_id: hasCredentials ? 'account' : '', field_catalog: [], has_credentials: hasCredentials,
       pages_url: '', project_name: hasCredentials ? 'site' : '', site_address: '', updated_at: null
     },
-    title: 'Card'
+    title: 'Topic'
   } })));
 }
 
@@ -64,7 +65,7 @@ it('matches the site taxonomy fields and Topic YAML on first publish', async () 
 it('keeps empty fields in a confirmed publish binding request', async () => {
   repository.publishTopicToFoliole.mockResolvedValue({
     local_path: '/Library/Publish/Site/index.html', status: 'deployed_and_committed',
-    updated_content: '---\nfoliole: {}\n---\nBody', url: 'https://site.example/cards/1.html'
+    updated_content: '---\nfoliole: {}\n---\nBody', url: 'https://site.example/topics/1/'
   });
   render(<FoliolePublishDialogHost />);
   await openDialog(true, 'Body');
@@ -80,6 +81,20 @@ it('keeps empty fields in a confirmed publish binding request', async () => {
     ]
   })));
   expect(workspace.updateNodeContent).toHaveBeenCalled();
+});
+
+it('notes that the opened page may take a moment to show the completed deployment', async () => {
+  repository.publishTopicToFoliole.mockResolvedValue({
+    local_path: '/Library/Publish/Site/index.html', status: 'deployed_and_committed',
+    updated_content: '---\nfoliole: {}\n---\nBody', url: 'https://site.example/topics/1/'
+  });
+  render(<FoliolePublishDialogHost />);
+  await openDialog(true, 'Body');
+  fireEvent.click(await screen.findByRole('button', { name: 'Publish' }));
+
+  await waitFor(() => expect(notices.showAppRuntimeNotice).toHaveBeenCalledWith(
+    'Published. The page may take a moment to show the latest version.', 'success'
+  ));
 });
 
 it('edits multiple values as removable chips and preserves them when switching to one value', async () => {

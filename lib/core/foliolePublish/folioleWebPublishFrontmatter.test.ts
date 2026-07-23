@@ -11,7 +11,7 @@ it('preserves user YAML while writing ordered fields including empty values', ()
   const input = '---\r\ntitle: Existing # keep\r\ntags:\r\n  - one\r\n---\r\nBody';
   const output = writeFolioleWebBinding(input, {
     fields: [{ key: 'summary', value: '' }, { key: 'topics', value: [] }],
-    lastPublishedAt: '2026-07-20T00:00:00.000Z', pageId: 'page-1', site: 'https://example.com', url: 'https://example.com/cards/page-1.html'
+    lastPublishedAt: '2026-07-20T00:00:00.000Z', pageId: '1', site: 'https://example.com', url: 'https://example.com/topics/1/'
   });
   expect(output).toContain('title: Existing # keep\r\n');
   expect(output).toContain('summary: ""\r\n');

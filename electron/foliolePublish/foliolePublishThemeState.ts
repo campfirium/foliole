@@ -5,7 +5,7 @@ import path from 'node:path';
 import { writeFileAtomic } from './foliolePublishModel.js';
 
 export const FOLIOLE_PUBLISH_THEME_STATE_FILE = '.foliole-theme.json';
-export const FOLIOLE_PUBLISH_OFFICIAL_THEME_VERSION = 4;
+export const FOLIOLE_PUBLISH_OFFICIAL_THEME_VERSION = 5;
 
 export type FoliolePublishThemeFile = 'archive.html' | 'page.html' | 'site.js' | 'style.css';
 export type FoliolePublishThemeFiles = Record<FoliolePublishThemeFile, string>;

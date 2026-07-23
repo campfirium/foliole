@@ -19,8 +19,8 @@ test('shows Default and Custom as one persistent theme selector', async ({ deskt
   await desktopWindow.evaluate(() => globalThis.window?.electronAPI?.invoke('load_foliole_publish_theme'));
   let settings = await openThemeSettings(desktopWindow);
   await expect(settings.region.getByText(/^(Set the publishing page theme\.|设置发布页面主题。)$/u)).toBeVisible();
-  await expect(settings.region.getByRole('radio', { name: 'Default v4' })).toBeChecked();
-  await expect(settings.region.getByRole('radio', { name: 'Custom v4' })).toBeVisible();
+  await expect(settings.region.getByRole('radio', { name: 'Default v5' })).toBeChecked();
+  await expect(settings.region.getByRole('radio', { name: 'Custom v5' })).toBeVisible();
   await expect(settings.region.getByRole('button', { name: /^(Update local|更新本地)$/u })).toBeVisible();
   await expect(settings.region.getByRole('button', { name: /^(Update Web|更新 Web)$/u })).toBeVisible();
   fs.mkdirSync(path.dirname(SCREENSHOT), { recursive: true });
@@ -38,12 +38,12 @@ test('shows Default and Custom as one persistent theme selector', async ({ deskt
   }
   fs.writeFileSync(path.join(publishRoot, '.foliole-theme.json'), `${JSON.stringify({
     active_theme: 'custom', custom_theme: { based_on_official_version: null },
-    official_theme_version: 4, version: 2
+    official_theme_version: 5, version: 2
   }, null, 2)}\n`);
 
   settings = await openThemeSettings(desktopWindow);
   await expect(settings.region.getByRole('radio', { name: 'Custom' })).toBeChecked();
-  await expect(settings.region.getByRole('radio', { name: 'Custom v4' })).toHaveCount(0);
-  await settings.region.getByRole('radio', { name: 'Default v4' }).click();
-  await expect(settings.region.getByRole('radio', { name: 'Default v4' })).toBeChecked();
+  await expect(settings.region.getByRole('radio', { name: 'Custom v5' })).toHaveCount(0);
+  await settings.region.getByRole('radio', { name: 'Default v5' }).click();
+  await expect(settings.region.getByRole('radio', { name: 'Default v5' })).toBeChecked();
 });

@@ -1,5 +1,16 @@
 export const DEFAULT_THEME_SCRIPT = `document.documentElement.dataset.foliolePublish = 'ready';
 
+document.addEventListener('click', (event) => {
+  if (window.location.protocol !== 'file:' || event.defaultPrevented || event.button !== 0 ||
+    event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || !(event.target instanceof Element)) return;
+  const link = event.target.closest('a[href]');
+  if (!link || link.target || link.hasAttribute('download')) return;
+  const target = new URL(link.href);
+  if (target.protocol !== 'file:' || !target.pathname.endsWith('/')) return;
+  event.preventDefault();
+  window.location.href = target.href + 'index.html';
+});
+
 const form = document.querySelector('[data-search-form]');
 const input = form?.querySelector('input[type="search"]');
 const results = document.querySelector('[data-search-results]');

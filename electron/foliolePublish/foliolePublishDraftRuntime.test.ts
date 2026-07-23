@@ -18,8 +18,8 @@ vi.mock('./cloudflarePagesClient.js', () => ({
 }));
 vi.mock('./foliolePublishModel.js', () => ({
   readFoliolePublishSiteTitle: vi.fn(() => 'Foliole'),
-  readPublishIndex: vi.fn(() => ({ cards: [], site: { title: 'Foliole' }, version: 1 })),
-  saveFoliolePublishSiteTitle: vi.fn(), upsertPublishedCard: vi.fn(), writeFileAtomic: vi.fn(), writePublishIndex: vi.fn()
+  readPublishIndex: vi.fn(() => ({ next_topic_number: 1, site: { title: 'Foliole' }, topics: [], version: 2 })),
+  saveFoliolePublishSiteTitle: vi.fn(), upsertPublishedTopic: vi.fn(), writeFileAtomic: vi.fn(), writePublishIndex: vi.fn()
 }));
 vi.mock('./foliolePublishSettings.js', () => ({
   clearFoliolePublishSettings: mocks.clearSettings,

@@ -20,7 +20,7 @@ export const EN_DESKTOP_FOLIOLE_PUBLISH_TRANSLATIONS = {
   'desktop.foliolePublish.publishing': 'Publishing...',
   'desktop.foliolePublish.hostingRequired': 'Connect hosting in Settings to publish. Preview is available now.',
   'desktop.foliolePublish.invalidKey': 'Enter a unique YAML key.',
-  'desktop.foliolePublish.published': 'Published to the web.',
+  'desktop.foliolePublish.published': 'Published. The page may take a moment to show the latest version.',
   'desktop.foliolePublish.historyWarning': 'Published, but recent field values could not be saved.',
   'desktop.foliolePublish.localStateWarning': 'Published, but the local static site could not be updated. The Topic binding was saved so you can retry.',
   'desktop.foliolePublish.localSaveError': 'Published, but Foliole could not save the Topic binding.'

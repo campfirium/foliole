@@ -4,34 +4,34 @@ import path from 'node:path';
 
 import { readFolioleWebBinding, readFolioleWebMarkdown, type FolioleWebField } from '../../lib/core/foliolePublish/folioleWebPublishFrontmatter.js';
 
-import type { FoliolePublishCard, FoliolePublishIndex } from './foliolePublishModel.js';
+import type { FoliolePublishIndex, FoliolePublishTopic } from './foliolePublishModel.js';
 import { writeFoliolePublishSite } from './foliolePublishSiteWriter.js';
 import { readFoliolePublishTheme } from './foliolePublishTheme.js';
 
-function readCard(root: string, card: FoliolePublishCard) {
-  const markdown = fs.readFileSync(path.join(root, card.file), 'utf8');
+function readTopic(root: string, topic: FoliolePublishTopic) {
+  const markdown = fs.readFileSync(path.join(root, topic.file), 'utf8');
   return { fields: readFolioleWebBinding(markdown)?.fields ?? [], markdown };
 }
 
 type PublishOverrides = Map<string, { content: string; fields: FolioleWebField[] }>;
 
-function selectCard(root: string, card: FoliolePublishCard, overrides: PublishOverrides) {
-  const selected = overrides.get(card.id);
+function selectTopic(root: string, topic: FoliolePublishTopic, overrides: PublishOverrides) {
+  const selected = overrides.get(topic.source_key);
   if (selected) return selected;
-  const stored = readCard(root, card);
+  const stored = readTopic(root, topic);
   return { content: stored.markdown, fields: stored.fields };
 }
 
 function writeStagedSite(root: string, temporary: string, index: FoliolePublishIndex, siteAddress: string, overrides: PublishOverrides) {
   const theme = readFoliolePublishTheme(root);
   const publicAddress = siteAddress || 'https://example.pages.dev';
-  const selectedCards = index.cards.map((card) => ({ card, selected: selectCard(root, card, overrides) }));
+  const selectedTopics = index.topics.map((topic) => ({ selected: selectTopic(root, topic, overrides), topic }));
   writeFoliolePublishSite({
     index,
     publicAddress,
     root: temporary,
-    sources: selectedCards.map(({ card, selected }) => ({
-      card, fields: selected.fields, markdown: readFolioleWebMarkdown(selected.content)
+    sources: selectedTopics.map(({ selected, topic }) => ({
+      fields: selected.fields, markdown: readFolioleWebMarkdown(selected.content), topic
     })),
     theme
   });
@@ -39,7 +39,7 @@ function writeStagedSite(root: string, temporary: string, index: FoliolePublishI
 
 export function stageFoliolePublishSite(root: string, index: FoliolePublishIndex, siteAddress: string, overrides: PublishOverrides = new Map()) {
   const temporary = path.join(root, `.Site-${randomUUID()}`);
-  fs.mkdirSync(path.join(temporary, 'cards'), { recursive: true });
+  fs.mkdirSync(path.join(temporary, 'topics'), { recursive: true });
   try {
     writeStagedSite(root, temporary, index, siteAddress, overrides);
   } catch (error) {
