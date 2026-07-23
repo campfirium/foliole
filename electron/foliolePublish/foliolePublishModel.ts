@@ -21,7 +21,7 @@ export function stableCardId(nodeId: string) {
 }
 
 export function emptyPublishIndex(): FoliolePublishIndex {
-  return { cards: [], site: { title: 'Foliole' }, version: 1 };
+  return { cards: [], site: { title: '' }, version: 1 };
 }
 
 export function readPublishIndex(root: string) {
@@ -29,7 +29,9 @@ export function readPublishIndex(root: string) {
   if (!fs.existsSync(file)) return emptyPublishIndex();
   try {
     const parsed = JSON.parse(fs.readFileSync(file, 'utf8')) as FoliolePublishIndex;
-    return parsed.version === 1 && Array.isArray(parsed.cards) ? parsed : emptyPublishIndex();
+    return parsed.version === 1 && Array.isArray(parsed.cards) && typeof parsed.site?.title === 'string'
+      ? parsed
+      : emptyPublishIndex();
   } catch {
     throw new Error('Foliole Publish index is unreadable. Restore publish.yaml before publishing again.');
   }
@@ -48,6 +50,18 @@ export function writeFileAtomic(file: string, contents: string | Buffer) {
 
 export function writePublishIndex(root: string, index: FoliolePublishIndex) {
   writeFileAtomic(path.join(root, 'publish.yaml'), `${JSON.stringify(index, null, 2)}\n`);
+}
+
+export function readFoliolePublishSiteTitle(root: string) {
+  return readPublishIndex(root).site.title;
+}
+
+export function saveFoliolePublishSiteTitle(root: string, title: string) {
+  const normalized = title.trim();
+  if (!normalized) throw new Error('Enter a site title.');
+  const index = readPublishIndex(root);
+  writePublishIndex(root, { ...index, site: { title: normalized } });
+  return normalized;
 }
 
 export function upsertPublishedCard(index: FoliolePublishIndex, input: { nodeId: string; title: string }) {

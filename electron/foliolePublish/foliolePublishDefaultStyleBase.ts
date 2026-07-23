@@ -39,8 +39,16 @@ a:focus-visible, input:focus-visible {
   border: 0;
 }
 
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 32px;
+}
+.home-view .page-header { margin-bottom: 92px; }
+.index-view .page-header { margin-bottom: 48px; }
 .home-title {
-  margin: 0 0 92px;
+  margin: 0;
   font-size: 28px;
   font-weight: 720;
   letter-spacing: -0.04em;
@@ -55,6 +63,11 @@ a:focus-visible, input:focus-visible {
   gap: 2px;
   margin-top: 76px;
   margin-left: -10px;
+}
+.page-header .global-nav {
+  flex: none;
+  justify-content: flex-end;
+  margin: -10px -10px 0 0;
 }
 .icon-link {
   display: grid;
@@ -78,4 +91,8 @@ a:focus-visible, input:focus-visible {
 @media print {
   .global-nav, .pagination, .search-form { display: none; }
   .view { padding-top: 0; }
+}
+@media (max-width: 720px) {
+  .page-header { flex-direction: column-reverse; gap: 34px; }
+  .page-header .global-nav { align-self: flex-end; }
 }`;

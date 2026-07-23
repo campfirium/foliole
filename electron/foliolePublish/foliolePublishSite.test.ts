@@ -16,9 +16,13 @@ function temporaryRoot() {
 }
 afterEach(() => roots.splice(0).forEach((root) => fs.rmSync(root, { force: true, recursive: true })));
 
+function titledPublishIndex(title = 'Foliole') {
+  return { ...emptyPublishIndex(), site: { title } };
+}
+
 it('opens on a complete-segment Topic stream and emits stable card pages, archive, search, and RSS', () => {
   const root = temporaryRoot();
-  const first = upsertPublishedCard(emptyPublishIndex(), { nodeId: 'one', title: 'Older' });
+  const first = upsertPublishedCard(titledPublishIndex(), { nodeId: 'one', title: 'Older' });
   writeFileAtomic(path.join(root, first.card.file), 'Older body');
   const second = upsertPublishedCard(first.index, { nodeId: 'two', title: 'Newest' });
   writeFileAtomic(path.join(root, second.card.file), 'Newest **body**');
@@ -111,7 +115,7 @@ it('paginates five Topics and keeps archive, taxonomy, and search on update orde
 
 it('exposes stable page, navigation, site, card, and field data to Liquid', () => {
   const root = temporaryRoot();
-  const older = upsertPublishedCard(emptyPublishIndex(), { nodeId: 'older', title: 'Older topic' });
+  const older = upsertPublishedCard(titledPublishIndex(), { nodeId: 'older', title: 'Older topic' });
   writeFileAtomic(path.join(root, older.card.file), 'Older body');
   const newer = upsertPublishedCard(older.index, { nodeId: 'newer', title: 'Newer topic' });
   writeFileAtomic(path.join(root, newer.card.file), 'Newer body');
@@ -161,12 +165,17 @@ it('keeps the active site and removes staging files when Liquid rendering fails'
   expect(fs.readdirSync(root).filter((name) => name.startsWith('.Site-'))).toEqual([]);
 });
 
-it('uses the built-in walkthrough when no Topic has been published', () => {
+it('renders the empty writing cycle without publishing tutorial Topics', () => {
   const root = temporaryRoot();
-  const entry = generateFoliolePublishSite(root, emptyPublishIndex(), '');
+  const index = { ...emptyPublishIndex(), site: { title: 'Working Memory' } };
+  const entry = generateFoliolePublishSite(root, index, '');
 
-  expect(fs.readFileSync(entry, 'utf8')).toContain('This is Foliole Publish');
-  expect(fs.readFileSync(path.join(root, 'Site', 'cards', 'tutorial-1.html'), 'utf8')).toContain('Only the Topic');
+  const html = fs.readFileSync(entry, 'utf8');
+  expect(html).toContain('Writing');
+  expect(html.indexOf('Writing')).toBeLessThan(html.indexOf('Thinking'));
+  expect(html.indexOf('Thinking')).toBeLessThan(html.indexOf('Reading'));
+  expect(fs.readdirSync(path.join(root, 'Site', 'cards'))).toEqual([]);
+  expect(fs.readFileSync(path.join(root, 'Site', 'rss.xml'), 'utf8')).not.toContain('<item>');
 });
 
 it('restores the exact active site when a staged activation rolls back', () => {

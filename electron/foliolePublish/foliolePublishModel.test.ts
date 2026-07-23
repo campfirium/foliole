@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { afterEach, expect, it } from 'vitest';
 
-import { emptyPublishIndex, readPublishIndex, stableCardId, upsertPublishedCard, writePublishIndex } from './foliolePublishModel.js';
+import { emptyPublishIndex, readFoliolePublishSiteTitle, readPublishIndex, saveFoliolePublishSiteTitle, stableCardId, upsertPublishedCard, writePublishIndex } from './foliolePublishModel.js';
 
 const roots: string[] = [];
 function temporaryRoot() {
@@ -31,4 +31,12 @@ it('round-trips the versioned publish index without storing Topic content', () =
 
   expect(readPublishIndex(root)).toEqual(index);
   expect(fs.readFileSync(path.join(root, 'publish.yaml'), 'utf8')).not.toContain('private body');
+});
+
+it('persists a normalized site title in the publish index', () => {
+  const root = temporaryRoot();
+  expect(readFoliolePublishSiteTitle(root)).toBe('');
+  expect(saveFoliolePublishSiteTitle(root, '  Working Memory  ')).toBe('Working Memory');
+  expect(readFoliolePublishSiteTitle(root)).toBe('Working Memory');
+  expect(() => saveFoliolePublishSiteTitle(root, '   ')).toThrow('Enter a site title.');
 });

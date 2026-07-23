@@ -8,40 +8,26 @@ import type { FoliolePublishCard, FoliolePublishIndex } from './foliolePublishMo
 import { writeFoliolePublishSite } from './foliolePublishSiteWriter.js';
 import { readFoliolePublishTheme } from './foliolePublishTheme.js';
 
-function tutorialIndex(): FoliolePublishIndex {
-  const now = new Date().toISOString();
-  const titles = ['This is Foliole Publish', 'Publish when a card is ready', 'Deploy free with Cloudflare'];
-  return { cards: titles.map((title, i) => ({ file: `tutorial-${i}.md`, id: `tutorial-${i}`, published_at: now, title, updated_at: now })), site: { title: 'Foliole Publish' }, version: 1 };
-}
-
-const TUTORIAL = [
-  'Your public site opens with a compact list of the Topics you publish.',
-  'Foliole keeps editing private. Only the Topic you explicitly publish becomes part of this site.',
-  'Connect a Cloudflare Pages project in Settings. Your first deployment can use a free `pages.dev` address.'
-];
-
-function readCard(root: string, card: FoliolePublishCard, tutorial: boolean) {
-  const markdown = tutorial ? TUTORIAL[Number(card.id.at(-1))] ?? '' : fs.readFileSync(path.join(root, card.file), 'utf8');
-  return { fields: tutorial ? [] : readFolioleWebBinding(markdown)?.fields ?? [], markdown };
+function readCard(root: string, card: FoliolePublishCard) {
+  const markdown = fs.readFileSync(path.join(root, card.file), 'utf8');
+  return { fields: readFolioleWebBinding(markdown)?.fields ?? [], markdown };
 }
 
 type PublishOverrides = Map<string, { content: string; fields: FolioleWebField[] }>;
 
-function selectCard(root: string, card: FoliolePublishCard, tutorial: boolean, overrides: PublishOverrides) {
+function selectCard(root: string, card: FoliolePublishCard, overrides: PublishOverrides) {
   const selected = overrides.get(card.id);
   if (selected) return selected;
-  const stored = readCard(root, card, tutorial);
+  const stored = readCard(root, card);
   return { content: stored.markdown, fields: stored.fields };
 }
 
 function writeStagedSite(root: string, temporary: string, index: FoliolePublishIndex, siteAddress: string, overrides: PublishOverrides) {
-  const tutorial = index.cards.length === 0;
-  const source = tutorial ? tutorialIndex() : index;
   const theme = readFoliolePublishTheme(root);
   const publicAddress = siteAddress || 'https://example.pages.dev';
-  const selectedCards = source.cards.map((card) => ({ card, selected: selectCard(root, card, tutorial, overrides) }));
+  const selectedCards = index.cards.map((card) => ({ card, selected: selectCard(root, card, overrides) }));
   writeFoliolePublishSite({
-    index: source,
+    index,
     publicAddress,
     root: temporary,
     sources: selectedCards.map(({ card, selected }) => ({

@@ -93,7 +93,7 @@ export function FoliolePublishingSetupRows({ state }: { state: FoliolePublishing
     <PublishingSetupStep description={t(state.connected ? 'settings.publishing.foliole.project.connectedDescription' : 'settings.publishing.foliole.project.description')} step={3} title={t('settings.publishing.foliole.project.title')}>
       {state.connected ? <>
         <span className={settingsValueBoxClassName('min-w-0 flex-1 truncate')}>{state.pagesUrl}</span>
-        <AppButton onClick={() => void openExternalUrl(state.pagesUrl)}>{t('settings.publishing.foliole.pages.visit')}</AppButton>
+        <AppButton onClick={state.visitPages}>{t('settings.publishing.foliole.pages.visit')}</AppButton>
       </> : <>
         <div className="flex min-w-0 flex-1">
           <SetupInput ariaLabel={t('settings.publishing.foliole.project.aria')} className="rounded-r-none" disabled={state.disabled} onBlur={state.saveDraft} onChange={(projectName) => state.updateForm({ projectName })} onEnter={state.saveDraft} placeholder={t('settings.publishing.foliole.project.placeholder')} value={state.form.projectName} />

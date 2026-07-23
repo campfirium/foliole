@@ -15,6 +15,7 @@ import {
   disconnectFoliolePublishSettings,
   forgetFoliolePublishField,
   loadFoliolePublishSettings,
+  loadFoliolePublishSiteTitle,
   openFoliolePublishTheme,
   previewFoliolePublish,
   publishTopicToFoliole,
@@ -22,6 +23,7 @@ import {
   resetFoliolePublishFieldHistory,
   resetFoliolePublishTheme,
   saveFoliolePublishDraft,
+  saveFoliolePublishSiteTitle,
   updateFoliolePublishLocalPages,
   updateFoliolePublishSiteAddress,
   viewFoliolePublishSite
@@ -38,10 +40,14 @@ import { readSettingsObject } from './storageCommandSupport.js';
 
 function handleFoliolePublishingCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.loadFoliolePublishSettings) return loadFoliolePublishSettings();
+  if (command === NATIVE_COMMANDS.loadFoliolePublishSiteTitle) return loadFoliolePublishSiteTitle();
   if (command === NATIVE_COMMANDS.saveFoliolePublishDraft) {
     return saveFoliolePublishDraft(
       readSettingsObject(args.settings) as unknown as Parameters<typeof saveFoliolePublishDraft>[0]
     );
+  }
+  if (command === NATIVE_COMMANDS.saveFoliolePublishSiteTitle) {
+    return saveFoliolePublishSiteTitle(String(args.site_title ?? ''));
   }
   if (command === NATIVE_COMMANDS.connectFoliolePublishSettings) {
     return connectFoliolePublishSettings(

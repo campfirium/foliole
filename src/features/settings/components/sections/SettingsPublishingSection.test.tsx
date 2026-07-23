@@ -24,10 +24,12 @@ const folioleRepositoryMocks = vi.hoisted(() => ({
   connectFoliolePublishSettingsToRuntime: vi.fn(),
   disconnectFoliolePublishSettingsFromRuntime: vi.fn(),
   loadFoliolePublishSettingsFromRuntime: vi.fn(),
+  loadFoliolePublishSiteTitleFromRuntime: vi.fn(),
   openFoliolePublishThemeFromRuntime: vi.fn(),
   publishFoliolePublishThemeChangesFromRuntime: vi.fn(),
   resetFoliolePublishThemeFromRuntime: vi.fn(),
   saveFoliolePublishDraftToRuntime: vi.fn(),
+  saveFoliolePublishSiteTitleToRuntime: vi.fn(),
   updateFoliolePublishLocalPagesFromRuntime: vi.fn(),
   viewFoliolePublishSiteFromRuntime: vi.fn(),
   updateFoliolePublishSiteAddressInRuntime: vi.fn()
@@ -93,6 +95,8 @@ beforeEach(() => {
     account_id: '', credentials_valid: false, field_catalog: [], has_credentials: false,
     pages_url: '', project_name: '', site_address: '', updated_at: null
   });
+  folioleRepositoryMocks.loadFoliolePublishSiteTitleFromRuntime.mockResolvedValue({ site_title: 'Foliole' });
+  folioleRepositoryMocks.saveFoliolePublishSiteTitleToRuntime.mockResolvedValue({ site_title: 'Foliole' });
   folioleRepositoryMocks.saveFoliolePublishDraftToRuntime.mockImplementation(async (input: {
     account_id: string; api_token: string; project_name: string;
   }) => ({

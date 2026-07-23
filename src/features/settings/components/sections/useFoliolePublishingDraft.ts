@@ -3,7 +3,9 @@ import { useEffect, useRef, useState } from 'react';
 import type { NativeFoliolePublishSettings } from '../../../../../lib/platform/nativeFoliolePublishContract';
 import {
   loadFoliolePublishSettingsFromRuntime,
-  saveFoliolePublishDraftToRuntime
+  loadFoliolePublishSiteTitleFromRuntime,
+  saveFoliolePublishDraftToRuntime,
+  saveFoliolePublishSiteTitleToRuntime
 } from '../../../../shared/platform/foliolePublishRepository';
 
 export interface FoliolePublishingForm {
@@ -11,23 +13,25 @@ export interface FoliolePublishingForm {
   apiToken: string;
   customDomain: string;
   projectName: string;
+  siteTitle: string;
 }
 
 export type FoliolePublishingStatus = 'connecting' | 'disconnecting' | 'idle' | 'loading' | 'openingTheme' | 'resettingTheme' | 'saving' | 'updating' | 'updatingLocal' | 'updatingWeb' | 'viewingLocal' | 'viewingWeb';
 export const EMPTY_FOLIOLE_PUBLISHING_FORM: FoliolePublishingForm = {
-  accountId: '', apiToken: '', customDomain: '', projectName: ''
+  accountId: '', apiToken: '', customDomain: '', projectName: '', siteTitle: ''
 };
 
 export function foliolePublishingCustomDomain(settings: NativeFoliolePublishSettings) {
   return settings.site_address === settings.pages_url ? '' : settings.site_address;
 }
 
-export function foliolePublishingFormFromSettings(settings: NativeFoliolePublishSettings): FoliolePublishingForm {
+export function foliolePublishingFormFromSettings(settings: NativeFoliolePublishSettings, siteTitle = ''): FoliolePublishingForm {
   return {
     accountId: settings.account_id,
     apiToken: '',
     customDomain: foliolePublishingCustomDomain(settings),
-    projectName: settings.project_name
+    projectName: settings.project_name,
+    siteTitle
   };
 }
 
@@ -38,10 +42,10 @@ export function useFoliolePublishingDraftState() {
   const [error, setError] = useState<string | null>(null);
   const saveQueue = useRef<Promise<unknown>>(Promise.resolve());
   useEffect(() => {
-    void loadFoliolePublishSettingsFromRuntime().then((value) => {
+    void Promise.all([loadFoliolePublishSettingsFromRuntime(), loadFoliolePublishSiteTitleFromRuntime()]).then(([value, identity]) => {
       if (!value) return;
       setSettings(value);
-      setForm(foliolePublishingFormFromSettings(value));
+      setForm(foliolePublishingFormFromSettings(value, identity?.site_title ?? ''));
     }).catch(() => setError("Couldn't load Foliole Publish settings.")).finally(() => setStatus('idle'));
   }, []);
   const enqueueSave = <T,>(save: () => Promise<T>) => {
@@ -50,6 +54,16 @@ export function useFoliolePublishingDraftState() {
     return queued;
   };
   return { enqueueSave, error, form, setError, setForm, setSettings, setStatus, settings, status };
+}
+
+export async function persistFoliolePublishingSiteTitle(state: FoliolePublishingDraftState) {
+  const requested = state.form.siteTitle;
+  const saved = await state.enqueueSave(() => saveFoliolePublishSiteTitleToRuntime(requested.trim()));
+  state.setForm((current) => ({
+    ...current,
+    siteTitle: current.siteTitle === requested ? saved.site_title : current.siteTitle
+  }));
+  return saved.site_title;
 }
 
 export type FoliolePublishingDraftState = ReturnType<typeof useFoliolePublishingDraftState>;

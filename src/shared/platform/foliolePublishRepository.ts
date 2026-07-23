@@ -14,8 +14,17 @@ export function loadFoliolePublishSettingsFromRuntime(): Promise<NativeFoliolePu
   return invoke ? invoke(NATIVE_COMMANDS.loadFoliolePublishSettings) : Promise.resolve(null);
 }
 
+export function loadFoliolePublishSiteTitleFromRuntime(): Promise<{ site_title: string } | null> {
+  const invoke = getRuntimeInvoke();
+  return invoke ? invoke(NATIVE_COMMANDS.loadFoliolePublishSiteTitle) : Promise.resolve(null);
+}
+
 export function saveFoliolePublishDraftToRuntime(settings: NativeFoliolePublishDraftInput) {
   return requireRuntime()(NATIVE_COMMANDS.saveFoliolePublishDraft, { settings });
+}
+
+export function saveFoliolePublishSiteTitleToRuntime(siteTitle: string) {
+  return requireRuntime()(NATIVE_COMMANDS.saveFoliolePublishSiteTitle, { site_title: siteTitle });
 }
 
 export function connectFoliolePublishSettingsToRuntime(settings: NativeFoliolePublishConnectInput) {

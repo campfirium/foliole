@@ -24,6 +24,8 @@ it('keeps the single editable Theme until Reset theme is explicitly used', () =>
   expect(fs.readFileSync(page, 'utf8')).toContain('{{ page.content | raw }}');
   expect(fs.readFileSync(page, 'utf8')).toContain('<div class="topic-stream">');
   expect(fs.readFileSync(page, 'utf8')).toContain('{% for card in page.cards %}');
+  expect(fs.readFileSync(page, 'utf8')).toContain('<h2 class="topic-title">Writing</h2>');
+  expect(fs.readFileSync(page, 'utf8')).toContain('<header class="page-header">');
   expect(fs.readFileSync(page, 'utf8')).not.toContain('keyboard-hint');
   expect(fs.readFileSync(path.join(theme, 'archive.html'), 'utf8')).toContain('{% for group in page.groups %}');
   expect(fs.readFileSync(path.join(theme, 'site.js'), 'utf8')).toContain('data-search-form');

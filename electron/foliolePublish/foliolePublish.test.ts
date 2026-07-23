@@ -5,7 +5,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { connectFoliolePublishSettings, disconnectFoliolePublishSettings, previewFoliolePublish, publishFoliolePublishThemeChanges, publishTopicToFoliole, updateFoliolePublishLocalPages, updateFoliolePublishSiteAddress, viewFoliolePublishSite } from './foliolePublish.js';
-import { emptyPublishIndex } from './foliolePublishModel.js';
+import { emptyPublishIndex, writePublishIndex } from './foliolePublishModel.js';
 import { generateFoliolePublishSite } from './foliolePublishSite.js';
 
 const state = vi.hoisted(() => ({ libraryHome: '' }));
@@ -56,8 +56,11 @@ function activeRss() {
 
 beforeEach(() => {
   state.libraryHome = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-publish-runtime-'));
-  fs.mkdirSync(path.join(state.libraryHome, 'Publish'), { recursive: true });
-  generateFoliolePublishSite(path.join(state.libraryHome, 'Publish'), emptyPublishIndex(), 'https://old.pages.dev');
+  const publishRoot = path.join(state.libraryHome, 'Publish');
+  const index = { ...emptyPublishIndex(), site: { title: 'Foliole' } };
+  fs.mkdirSync(publishRoot, { recursive: true });
+  writePublishIndex(publishRoot, index);
+  generateFoliolePublishSite(publishRoot, index, 'https://old.pages.dev');
   Object.values(mocks).forEach((mock) => mock.mockReset());
   mocks.clearFoliolePublishSettings.mockReturnValue({ account_id: '', has_credentials: false, pages_url: '', project_name: '', site_address: '', updated_at: null });
   mocks.deleteCloudflarePagesProject.mockResolvedValue(undefined);
@@ -163,7 +166,7 @@ it('opens the active local static pages without regenerating them', async () => 
   expect(mocks.shellOpenPath).toHaveBeenCalledWith(result.local_path);
   expect(activeRss()).toBe(before);
   expect(fs.existsSync(path.join(state.libraryHome, 'Publish', 'Preview'))).toBe(false);
-  expect(fs.readFileSync(result.local_path, 'utf8')).toContain('This is Foliole Publish');
+  expect(fs.readFileSync(result.local_path, 'utf8')).toContain('Foliole');
 });
 
 it('does not create a preview when local static pages do not exist', async () => {

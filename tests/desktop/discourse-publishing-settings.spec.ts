@@ -96,14 +96,20 @@ async function verifyFolioleSetupSteps(
   await expect(foliole.getByRole('button', { name: /^(View local|查看本地)$/ })).toBeVisible();
   await expect(foliole.getByRole('button', { name: /^(View Web|查看 Web)$/ })).toBeDisabled();
   await foliole.getByText(/^(Static pages|静态页面)$/).scrollIntoViewIfNeeded();
+  const siteTitle = foliole.getByLabel(/^(Public site title|公开站点标题)$/);
+  await expect(siteTitle).toBeVisible();
   await expect(foliole.getByRole('button', { name: /^(Open|打开)$/ })).toBeVisible();
   await expect(foliole.getByRole('button', { name: /^(Reset|重置)$/ })).toBeVisible();
   const updateLocalPages = foliole.getByRole('button', { name: /^(Update local|更新本地)$/ });
   await expect(updateLocalPages).toBeVisible();
   await expect(foliole.getByRole('button', { name: /^(Update Web|更新 Web)$/ })).toBeDisabled();
-  const previewScreenshot = await desktopWindow.screenshot();
-  await writeFile(path.join(screenshotDir, 'foliole-publish-local-preview-hidden-native.png'), previewScreenshot);
-  await testInfo.attach('foliole-publish-local-preview', { body: previewScreenshot, contentType: 'image/png' });
+  await updateLocalPages.click();
+  await expect(foliole.getByText(/^(Enter a site title\.|请输入站点标题。)$/)).toBeVisible();
+  await expect(siteTitle).toBeFocused();
+  await desktopWindow.screenshot({
+    path: path.join(screenshotDir, 'foliole-publish-site-title-required-hidden-native.png')
+  });
+  await siteTitle.fill('Working Memory');
   await updateLocalPages.click();
   await expect(updateLocalPages).toBeEnabled();
   await expect(foliole.getByText(/^(Couldn't update the local pages\.|无法更新本地页面。)$/)).toHaveCount(0);

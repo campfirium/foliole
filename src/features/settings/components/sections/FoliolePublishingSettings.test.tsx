@@ -10,10 +10,12 @@ const mocks = vi.hoisted(() => ({
   connectFoliolePublishSettingsToRuntime: vi.fn(),
   disconnectFoliolePublishSettingsFromRuntime: vi.fn(),
   loadFoliolePublishSettingsFromRuntime: vi.fn(),
+  loadFoliolePublishSiteTitleFromRuntime: vi.fn(),
   openFoliolePublishThemeFromRuntime: vi.fn(),
   publishFoliolePublishThemeChangesFromRuntime: vi.fn(),
   resetFoliolePublishThemeFromRuntime: vi.fn(),
   saveFoliolePublishDraftToRuntime: vi.fn(),
+  saveFoliolePublishSiteTitleToRuntime: vi.fn(),
   updateFoliolePublishLocalPagesFromRuntime: vi.fn(),
   viewFoliolePublishSiteFromRuntime: vi.fn(),
   updateFoliolePublishSiteAddressInRuntime: vi.fn()
@@ -37,6 +39,8 @@ beforeEach(() => {
   openExternalUrl.mockReset();
   probeUrlWithLinkPanel.mockReset().mockResolvedValue(false);
   mocks.loadFoliolePublishSettingsFromRuntime.mockResolvedValue(EMPTY);
+  mocks.loadFoliolePublishSiteTitleFromRuntime.mockResolvedValue({ site_title: 'Foliole' });
+  mocks.saveFoliolePublishSiteTitleToRuntime.mockImplementation(async (siteTitle: string) => ({ site_title: siteTitle.trim() }));
   mocks.saveFoliolePublishDraftToRuntime.mockImplementation(async (input: {
     account_id: string; api_token: string; project_name: string;
   }) => ({

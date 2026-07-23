@@ -1,5 +1,7 @@
+import { useId } from 'react';
+
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
-import { AppButton, AppErrorState, SettingsControlSlot, SettingsSection } from '../../../../shared/ui';
+import { AppButton, AppErrorState, SettingsControlSlot, SettingsSection, settingsFieldClassName } from '../../../../shared/ui';
 
 import { FoliolePublishingSetupRows } from './FoliolePublishingSetupRows';
 import { useFoliolePublishingSettings, type FoliolePublishingSettingsState } from './useFoliolePublishingSettings';
@@ -31,6 +33,38 @@ function StaticPagesActions({ state }: { state: FoliolePublishingSettingsState }
         {t(state.status === 'viewingWeb' ? 'settings.publishing.foliole.localPages.openingWeb' : 'settings.publishing.foliole.localPages.viewWeb')}
       </AppButton>
     </SettingsControlSlot>
+  );
+}
+
+function SiteTitleOverview({ state }: { state: FoliolePublishingSettingsState }) {
+  const t = useTranslation();
+  const errorId = useId();
+  return (
+    <div className="ml-6 mt-5 border-t border-settings-divider/70 py-6">
+      <div className="flex items-start justify-between gap-6 max-[1080px]:flex-col max-[1080px]:items-start">
+        <div className="min-w-0 flex-1">
+          <h5 className="text-ui-lg font-semibold text-foreground">{t('settings.publishing.foliole.siteTitle.title')}</h5>
+          <p className="mt-1 max-w-[840px] text-ui-md leading-6 text-foreground/64">{t('settings.publishing.foliole.siteTitle.description')}</p>
+        </div>
+        <SettingsControlSlot className="w-[min(480px,100%)]">
+          <div className="min-w-0 flex-1">
+            <input
+              aria-describedby={state.siteTitleError ? errorId : undefined}
+              aria-invalid={state.siteTitleError ? true : undefined}
+              aria-label={t('settings.publishing.foliole.siteTitle.aria')}
+              className={settingsFieldClassName()}
+              disabled={state.disabled}
+              onBlur={state.saveSiteTitle}
+              onChange={(event) => state.updateSiteTitle(event.target.value)}
+              onKeyDown={(event) => { if (event.key === 'Enter') state.saveSiteTitle(); }}
+              ref={state.siteTitleInputRef}
+              value={state.form.siteTitle}
+            />
+            {state.siteTitleError ? <p className="mt-1 text-sm leading-5 text-error" id={errorId} role="alert">{state.siteTitleError}</p> : null}
+          </div>
+        </SettingsControlSlot>
+      </div>
+    </div>
   );
 }
 
@@ -69,6 +103,7 @@ function LocalStaticPagesOverview({ state }: { state: FoliolePublishingSettingsS
         </div>
         <StaticPagesActions state={state} />
       </div>
+      <SiteTitleOverview state={state} />
       <ThemeOverview state={state} />
     </div>
   );

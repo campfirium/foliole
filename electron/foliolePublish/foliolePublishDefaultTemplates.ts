@@ -24,7 +24,8 @@ export const DEFAULT_PAGE_TEMPLATE = `<!doctype html>
   <main class="shell" id="main">
     {% if page.view == "home" %}
     <section class="view home-view">
-      <h1 class="home-title">{{ site.title }}</h1>
+      <header class="page-header"><h1 class="home-title">{{ site.title }}</h1>${SITE_NAV}</header>
+      {% if page.cards.size > 0 %}
       <div class="topic-stream">
         {% for card in page.cards %}
         <article class="topic-card">
@@ -33,13 +34,20 @@ export const DEFAULT_PAGE_TEMPLATE = `<!doctype html>
         </article>
         {% endfor %}
       </div>
+      {% else %}
+      <p class="sr-only">No published topics.</p>
+      <div class="topic-stream empty-topic-stream" aria-hidden="true">
+        <h2 class="topic-title">Writing</h2>
+        <h2 class="topic-title">Thinking</h2>
+        <h2 class="topic-title">Reading</h2>
+      </div>
+      {% endif %}
       {% if page.previous_page_url or page.next_page_url %}
       <nav class="pagination" aria-label="Pagination">
         {% if page.previous_page_url %}<a class="page-arrow is-left" href="{{ page.previous_page_url }}" rel="prev" aria-label="Newer page">←</a>{% endif %}
         {% if page.next_page_url %}<a class="page-arrow is-right" href="{{ page.next_page_url }}" rel="next" aria-label="Earlier page">→</a>{% endif %}
       </nav>
       {% endif %}
-      ${SITE_NAV}
     </section>
     {% else %}
     <article class="view article-view">
@@ -71,7 +79,7 @@ export const DEFAULT_ARCHIVE_TEMPLATE = `<!doctype html>
 <body data-foliole-publish-site data-page-kind="{{ page.view }}">
   <main class="shell" id="main">
     <section class="view index-view">
-      <h1 class="page-title">{{ page.title }}</h1>
+      <header class="page-header"><h1 class="page-title">{{ page.title }}</h1>${SITE_NAV}</header>
       {% if page.view == "archive" or page.view == "category" or page.view == "tag" %}
       <div class="year-groups">
         {% for group in page.groups %}<section class="year-group"><h2 class="year-title">{{ group.label }}</h2><ol class="index-list">
@@ -83,10 +91,9 @@ export const DEFAULT_ARCHIVE_TEMPLATE = `<!doctype html>
       {% elsif page.view == "tags" %}
       <div class="tag-cloud">{% for term in page.terms %}<a class="tag-link" data-count="{{ term.count }}" href="tags/{{ term.slug }}.html">#{{ term.name }}</a>{% endfor %}</div>
       {% elsif page.view == "search" %}
-      <form class="search-form" data-search-form role="search"><label class="sr-only" for="site-search">Search published Topics</label><input class="search-field" id="site-search" name="q" type="search" autocomplete="off" placeholder="Search everything"><p class="search-help">Titles, content, categories and tags.</p></form>
-      <ol class="search-results" data-search-results aria-live="polite"></ol><p class="search-empty" data-search-empty hidden>No matching Topics.</p>
+      <form class="search-form" data-search-form role="search"><label class="sr-only" for="site-search">Search published topics</label><input class="search-field" id="site-search" name="q" type="search" autocomplete="off" placeholder="Search published topics"><p class="search-help">Search titles, content, categories, and tags.</p></form>
+      <ol class="search-results" data-search-results aria-live="polite"></ol><p class="search-empty" data-search-empty hidden>No topics found.</p>
       {% endif %}
-      ${SITE_NAV}
     </section>
   </main>
   {% if page.view == "search" %}<script src="{{ page.depth }}search-index.js"></script>{% endif %}

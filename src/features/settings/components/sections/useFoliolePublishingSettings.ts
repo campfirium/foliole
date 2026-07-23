@@ -26,12 +26,14 @@ import {
   type FoliolePublishingForm,
   type FoliolePublishingStatus
 } from './useFoliolePublishingDraft';
+import { useFoliolePublishingSiteTitle } from './useFoliolePublishingSiteTitle';
 
 type LoadedState = FoliolePublishingDraftState;
 type Translate = ReturnType<typeof useTranslation>;
 
 function applySettings(state: LoadedState, value: NativeFoliolePublishSettings) {
-  state.setSettings(value); state.setForm(foliolePublishingFormFromSettings(value));
+  state.setSettings(value);
+  state.setForm((current) => foliolePublishingFormFromSettings(value, current.siteTitle));
 }
 
 function confirmSubdomain(t: Translate, detected: boolean) {
@@ -55,9 +57,10 @@ function connectWithDraft(settings: NativeFoliolePublishSettings) {
   });
 }
 
-function useConnectionActions(state: LoadedState) {
+function useConnectionActions(state: LoadedState, requireSiteTitle: () => Promise<boolean>) {
   const t = useTranslation();
   const deploy = async () => {
+    if (!await requireSiteTitle()) return;
     state.setStatus('connecting'); state.setError(null);
     try {
       const draft = await persistFoliolePublishingDraft(state, state.form);
@@ -84,21 +87,24 @@ function useConnectionActions(state: LoadedState) {
     state.setStatus('disconnecting'); state.setError(null);
     try {
       const value = await disconnectFoliolePublishSettingsFromRuntime();
-      state.setSettings(value); state.setForm(EMPTY_FOLIOLE_PUBLISHING_FORM);
+      state.setSettings(value);
+      state.setForm((current) => ({ ...EMPTY_FOLIOLE_PUBLISHING_FORM, siteTitle: current.siteTitle }));
     } catch { state.setError(t('settings.publishing.foliole.error.delete')); }
     finally { state.setStatus('idle'); }
   };
   return { deploy: () => void deploy(), disconnect: () => void disconnect() };
 }
 
-function siteActions(state: LoadedState) {
+function siteActions(state: LoadedState, requireSiteTitle: () => Promise<boolean>) {
   const viewLocal = async () => {
+    if (!await requireSiteTitle()) return;
     state.setStatus('viewingLocal'); state.setError(null);
     try { await viewFoliolePublishSiteFromRuntime(); }
     catch { state.setError("Couldn't open the local static pages."); }
     finally { state.setStatus('idle'); }
   };
   const viewWeb = async () => {
+    if (!await requireSiteTitle()) return;
     if (!state.settings?.site_address) return;
     state.setStatus('viewingWeb'); state.setError(null);
     try { await openExternalUrl(state.settings.site_address); }
@@ -106,21 +112,29 @@ function siteActions(state: LoadedState) {
     finally { state.setStatus('idle'); }
   };
   const updateSiteAddress = async () => {
+    if (!await requireSiteTitle()) return;
     state.setStatus('updating'); state.setError(null);
     try { applySettings(state, await updateFoliolePublishSiteAddressInRuntime(state.form.customDomain.trim())); }
     catch (reason) {
-      if (state.settings) state.setForm(foliolePublishingFormFromSettings(state.settings));
+      const settings = state.settings;
+      if (settings) {
+        state.setForm((current) => foliolePublishingFormFromSettings(settings, current.siteTitle));
+      }
       state.setError(reason instanceof Error ? reason.message : "Couldn't update the public address.");
     }
     finally { state.setStatus('idle'); }
   };
+  const visitPages = async () => {
+    if (await requireSiteTitle() && state.settings?.pages_url) await openExternalUrl(state.settings.pages_url);
+  };
   return {
     updateSiteAddress: () => void updateSiteAddress(),
+    visitPages: () => void visitPages(),
     viewLocal: () => void viewLocal(), viewWeb: () => void viewWeb()
   };
 }
 
-function useThemeActions(state: LoadedState) {
+function useThemeActions(state: LoadedState, requireSiteTitle: () => Promise<boolean>) {
   const t = useTranslation();
   const run = async (
     status: FoliolePublishingStatus,
@@ -143,19 +157,23 @@ function useThemeActions(state: LoadedState) {
     });
     if (confirmed) await run('resettingTheme', resetFoliolePublishThemeFromRuntime, 'settings.publishing.foliole.theme.error.reset');
   };
+  const runWithSiteTitle = async (...args: Parameters<typeof run>) => {
+    if (await requireSiteTitle()) await run(...args);
+  };
   return {
     openTheme: () => void run('openingTheme', openFoliolePublishThemeFromRuntime, 'settings.publishing.foliole.theme.error.open'),
     resetTheme: () => void resetTheme(),
-    updateLocal: () => void run('updatingLocal', updateFoliolePublishLocalPagesFromRuntime, 'settings.publishing.foliole.theme.error.updateLocal', true),
-    updateWeb: () => void run('updatingWeb', publishFoliolePublishThemeChangesFromRuntime, 'settings.publishing.foliole.theme.error.updateWeb', true)
+    updateLocal: () => void runWithSiteTitle('updatingLocal', updateFoliolePublishLocalPagesFromRuntime, 'settings.publishing.foliole.theme.error.updateLocal', true),
+    updateWeb: () => void runWithSiteTitle('updatingWeb', publishFoliolePublishThemeChangesFromRuntime, 'settings.publishing.foliole.theme.error.updateWeb', true)
   };
 }
 
 export function useFoliolePublishingSettings() {
   const state = useFoliolePublishingDraftState();
-  const connection = useConnectionActions(state);
-  const site = siteActions(state);
-  const theme = useThemeActions(state);
+  const siteTitle = useFoliolePublishingSiteTitle(state);
+  const connection = useConnectionActions(state, siteTitle.requireSiteTitle);
+  const site = siteActions(state, siteTitle.requireSiteTitle);
+  const theme = useThemeActions(state, siteTitle.requireSiteTitle);
   const disabled = state.status !== 'idle';
   const connected = Boolean(state.settings?.pages_url && state.settings.account_id && state.settings.project_name);
   const hasSavedToken = Boolean(state.settings?.has_credentials);
@@ -186,7 +204,7 @@ export function useFoliolePublishingSettings() {
     connected, disabled, error: state.error, form: state.form, hasSavedToken, pagesUrl: state.settings?.pages_url ?? '',
     saveDraft: () => void saveDraft(),
     siteAddress: state.settings?.site_address ?? '', status: state.status,
-    ...connection, ...site, ...theme, updateForm
+    ...connection, ...site, ...siteTitle, ...theme, updateForm
   };
 }
 

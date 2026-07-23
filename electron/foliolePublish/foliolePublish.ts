@@ -9,12 +9,25 @@ import type { NativeFoliolePublishConnectInput, NativeFoliolePublishTopicArgs } 
 import { loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
 
 import { deleteCloudflarePagesProject, deployCloudflarePages, normalizeSiteAddress, resolveCloudflarePagesProject } from './cloudflarePagesClient.js';
-import { readPublishIndex, upsertPublishedCard, writeFileAtomic, writePublishIndex } from './foliolePublishModel.js';
+import {
+  readFoliolePublishSiteTitle as readSiteTitle,
+  readPublishIndex,
+  saveFoliolePublishSiteTitle as writeSiteTitle,
+  upsertPublishedCard,
+  writeFileAtomic,
+  writePublishIndex
+} from './foliolePublishModel.js';
 import { clearFoliolePublishSettings, forgetFoliolePublishField, loadFoliolePublishSettings, loadFoliolePublishToken, loadStoredFoliolePublishSettings, recordFoliolePublishFields, resetFoliolePublishFieldHistory, saveFoliolePublishConnection, saveFoliolePublishDraft, saveFoliolePublishSiteAddress } from './foliolePublishSettings.js';
 import { activateFoliolePublishSite, discardStagedFoliolePublishSite, generateFoliolePublishSite, stageFoliolePublishSite } from './foliolePublishSite.js';
 import { ensureFoliolePublishTheme, resetFoliolePublishThemeFiles } from './foliolePublishTheme.js';
 
 function root() { return path.join(loadLibraryPathSettingsSync().library_home, 'Publish'); }
+
+function readTitledPublishIndex() {
+  const index = readPublishIndex(root());
+  if (!index.site.title.trim()) throw new Error('Enter a site title.');
+  return index;
+}
 
 function assertPublishableContent(content: string) {
   if (/foliole-attachment:\/\//u.test(content) || /!\[[^\]]*\]\((?!https?:\/\/)[^)]+\)/u.test(content)) {
@@ -25,7 +38,7 @@ function assertPublishableContent(content: string) {
 async function deployStagedSite(input: {
   accountId: string; projectName: string; siteAddress: string; token: string;
 }) {
-  const staged = stageFoliolePublishSite(root(), readPublishIndex(root()), input.siteAddress);
+  const staged = stageFoliolePublishSite(root(), readTitledPublishIndex(), input.siteAddress);
   try {
     await deployCloudflarePages({ accountId: input.accountId, projectName: input.projectName, siteRoot: staged, token: input.token });
     return staged;
@@ -101,7 +114,7 @@ export async function previewFoliolePublish(args: NativeFoliolePublishTopicArgs)
   assertPublishableContent(args.content);
   fs.mkdirSync(root(), { recursive: true });
   const settings = loadFoliolePublishSettings();
-  const { card, index } = upsertPublishedCard(readPublishIndex(root()), { nodeId: args.node_id, title: args.title });
+  const { card, index } = upsertPublishedCard(readTitledPublishIndex(), { nodeId: args.node_id, title: args.title });
   const staged = stageFoliolePublishSite(root(), index, settings.site_address, new Map([[card.id, { content: args.content, fields: args.fields }]]));
   const activation = activateFoliolePublishSite(root(), staged, 'Preview');
   activation.commit();
@@ -112,6 +125,7 @@ export async function previewFoliolePublish(args: NativeFoliolePublishTopicArgs)
 }
 
 export async function viewFoliolePublishSite() {
+  readTitledPublishIndex();
   const localPath = path.join(root(), 'Site', 'index.html');
   if (!fs.existsSync(localPath)) throw new Error('No local static pages have been generated yet.');
   const error = await shell.openPath(localPath);
@@ -124,7 +138,7 @@ export async function publishTopicToFoliole(args: NativeFoliolePublishTopicArgs)
   const settings = loadStoredFoliolePublishSettings();
   const token = loadFoliolePublishToken();
   if (!settings || !token) throw new Error('Deploy Foliole Publish from Settings first.');
-  const current = readPublishIndex(root());
+  const current = readTitledPublishIndex();
   const { card, index } = upsertPublishedCard(current, { nodeId: args.node_id, title: args.title });
   const url = `${settings.site_address}/cards/${card.id}.html`;
   const updatedContent = writeFolioleWebBinding(args.content, {
@@ -187,7 +201,7 @@ export function resetFoliolePublishTheme() {
 export function updateFoliolePublishLocalPages() {
   fs.mkdirSync(root(), { recursive: true });
   const settings = loadFoliolePublishSettings();
-  return { local_path: generateFoliolePublishSite(root(), readPublishIndex(root()), settings.site_address) };
+  return { local_path: generateFoliolePublishSite(root(), readTitledPublishIndex(), settings.site_address) };
 }
 
 export async function publishFoliolePublishThemeChanges() {
@@ -199,6 +213,14 @@ export async function publishFoliolePublishThemeChanges() {
     siteAddress: settings.site_address, token
   });
   return commitStagedSite(staged, () => ({ local_path: path.join(root(), 'Site', 'index.html') }));
+}
+
+export function loadFoliolePublishSiteTitle() {
+  return { site_title: readSiteTitle(root()) };
+}
+
+export function saveFoliolePublishSiteTitle(siteTitle: string) {
+  return { site_title: writeSiteTitle(root(), siteTitle) };
 }
 
 export { forgetFoliolePublishField, loadFoliolePublishSettings, resetFoliolePublishFieldHistory, saveFoliolePublishDraft };

@@ -11,6 +11,7 @@ const ARCHIVE_SCREENSHOT = path.resolve('.tmp/artifacts/desktop-acceptance/folio
 const SEARCH_SCREENSHOT = path.resolve('.tmp/artifacts/desktop-acceptance/foliole-publish-search.png');
 const MOBILE_SCREENSHOT = path.resolve('.tmp/artifacts/desktop-acceptance/foliole-publish-article-mobile.png');
 const DIALOG_SCREENSHOT = path.resolve('.tmp/artifacts/desktop-acceptance/foliole-publish-dialog.png');
+const EMPTY_SCREENSHOT = path.resolve('.tmp/artifacts/desktop-acceptance/foliole-publish-empty-site.png');
 const NEWER_ID = 'playwright-newer-topic';
 const OLDER_ID = 'playwright-older-topic';
 
@@ -93,6 +94,7 @@ async function openPublishDialog(desktopWindow: Page) {
 async function verifyHomeAndArticle(site: Page) {
   await expect(site.getByRole('heading', { level: 1, name: 'Foliole Field Notes' })).toBeVisible();
   await expect(site.locator('.topic-card')).toHaveCount(2);
+  await expect(site.locator('.page-header .global-nav')).toBeVisible();
   await expect(site.getByRole('navigation', { name: 'Site navigation' }).getByRole('link', { name: 'RSS feed' }))
     .toHaveAttribute('href', /rss\.xml$/u);
   await expect(site.getByRole('link', { name: /The earlier topic/u })).toBeVisible();
@@ -103,12 +105,15 @@ async function verifyHomeAndArticle(site: Page) {
   await expect(site.getByText('Category')).toBeVisible();
   await expect(site.getByText('essays')).toBeVisible();
   await expect(site.getByText('Updated')).toBeVisible();
+  await expect(site.locator('.article-footer .global-nav')).toBeVisible();
+  await expect(site.locator('.page-header')).toHaveCount(0);
   await site.screenshot({ fullPage: true, path: ARTICLE_SCREENSHOT });
 }
 
 async function verifyArchiveAndTaxonomy(site: Page) {
   await site.getByRole('link', { name: 'Archive' }).click();
   await expect(site.getByRole('heading', { level: 1, name: 'Archive' })).toBeVisible();
+  await expect(site.locator('.page-header .global-nav')).toBeVisible();
   await expect(site.locator('.index-row')).toHaveCount(2);
   await site.screenshot({ fullPage: true, path: ARCHIVE_SCREENSHOT });
   await site.getByRole('link', { name: 'Categories' }).click();
@@ -124,11 +129,11 @@ async function verifyArchiveAndTaxonomy(site: Page) {
 
 async function verifySearchAndMobile(site: Page) {
   await site.getByRole('link', { name: 'Search' }).click();
-  const search = site.getByRole('searchbox', { name: 'Search published Topics' });
+  const search = site.getByRole('searchbox', { name: 'Search published topics' });
   await search.fill('calmer reading');
   await expect(site.getByRole('link', { name: 'A durable place to publish' })).toBeVisible();
   await search.fill('no-such-topic');
-  await expect(site.getByText('No matching Topics.')).toBeVisible();
+  await expect(site.getByText('No topics found.')).toBeVisible();
   await site.screenshot({ fullPage: true, path: SEARCH_SCREENSHOT });
   await site.getByRole('link', { name: 'Home' }).click();
   await site.getByRole('link', { exact: true, name: 'A durable place to publish' }).click();
@@ -150,6 +155,17 @@ test('keeps Theme controls out of Publish and renders the generated static site 
   const libraryHome = await desktopApp.evaluate(() => process.env.FOLIOLE_LIBRARY_HOME ?? null);
   if (!libraryHome) throw new Error('missing isolated library home');
   await desktopWindow.evaluate(() => globalThis.window?.electronAPI?.invoke('reset_foliole_publish_theme'));
+  await desktopWindow.evaluate(() => globalThis.window?.electronAPI?.invoke(
+    'save_foliole_publish_site_title', { site_title: 'Working Memory' }
+  ));
+  const emptyGenerated = await desktopWindow.evaluate(() => (
+    globalThis.window?.electronAPI?.invoke('update_foliole_publish_local_pages') ?? null
+  ));
+  const emptySite = await openStaticSite(desktopApp, emptyGenerated.local_path);
+  await expect(emptySite.locator('.empty-topic-stream .topic-title')).toHaveText(['Writing', 'Thinking', 'Reading']);
+  await expect(emptySite.locator('.empty-topic-stream .topic-title a')).toHaveCount(0);
+  await emptySite.screenshot({ fullPage: true, path: EMPTY_SCREENSHOT });
+  await emptySite.close();
   seedPublishedTopics(libraryHome);
   const generated = await desktopWindow.evaluate(() => (
     globalThis.window?.electronAPI?.invoke('update_foliole_publish_local_pages') ?? null

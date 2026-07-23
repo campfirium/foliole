@@ -54,9 +54,14 @@ export interface NativeFoliolePublishResult {
 
 export type NativeFoliolePublishCommandMap = {
   [NATIVE_COMMANDS.loadFoliolePublishSettings]: { args: undefined; result: NativeFoliolePublishSettings };
+  [NATIVE_COMMANDS.loadFoliolePublishSiteTitle]: { args: undefined; result: { site_title: string } };
   [NATIVE_COMMANDS.saveFoliolePublishDraft]: {
     args: { settings: NativeFoliolePublishDraftInput };
     result: NativeFoliolePublishSettings;
+  };
+  [NATIVE_COMMANDS.saveFoliolePublishSiteTitle]: {
+    args: { site_title: string };
+    result: { site_title: string };
   };
   [NATIVE_COMMANDS.connectFoliolePublishSettings]: {
     args: { settings: NativeFoliolePublishConnectInput };

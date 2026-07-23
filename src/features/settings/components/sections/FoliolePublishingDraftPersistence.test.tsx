@@ -10,10 +10,12 @@ const mocks = vi.hoisted(() => ({
   connectFoliolePublishSettingsToRuntime: vi.fn(),
   disconnectFoliolePublishSettingsFromRuntime: vi.fn(),
   loadFoliolePublishSettingsFromRuntime: vi.fn(),
+  loadFoliolePublishSiteTitleFromRuntime: vi.fn(),
   openFoliolePublishThemeFromRuntime: vi.fn(),
   publishFoliolePublishThemeChangesFromRuntime: vi.fn(),
   resetFoliolePublishThemeFromRuntime: vi.fn(),
   saveFoliolePublishDraftToRuntime: vi.fn(),
+  saveFoliolePublishSiteTitleToRuntime: vi.fn(),
   updateFoliolePublishLocalPagesFromRuntime: vi.fn(),
   updateFoliolePublishSiteAddressInRuntime: vi.fn(),
   viewFoliolePublishSiteFromRuntime: vi.fn()
@@ -46,7 +48,9 @@ beforeEach(() => {
   Object.values(mocks).forEach((mock) => mock.mockReset());
   probeUrlWithLinkPanel.mockReset().mockResolvedValue(false);
   mocks.loadFoliolePublishSettingsFromRuntime.mockResolvedValue(DRAFT);
+  mocks.loadFoliolePublishSiteTitleFromRuntime.mockResolvedValue({ site_title: 'Foliole' });
   mocks.saveFoliolePublishDraftToRuntime.mockResolvedValue(DRAFT);
+  mocks.saveFoliolePublishSiteTitleToRuntime.mockResolvedValue({ site_title: 'Foliole' });
 });
 
 it('restores a usable draft while keeping the saved token masked and out of payloads', async () => {

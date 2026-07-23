@@ -25,6 +25,7 @@ const folioleMocks = vi.hoisted(() => ({
   disconnectFoliolePublishSettings: vi.fn(),
   forgetFoliolePublishField: vi.fn(),
   loadFoliolePublishSettings: vi.fn(),
+  loadFoliolePublishSiteTitle: vi.fn(),
   openFoliolePublishTheme: vi.fn(),
   previewFoliolePublish: vi.fn(),
   publishFoliolePublishThemeChanges: vi.fn(),
@@ -32,6 +33,7 @@ const folioleMocks = vi.hoisted(() => ({
   resetFoliolePublishFieldHistory: vi.fn(),
   resetFoliolePublishTheme: vi.fn(),
   saveFoliolePublishDraft: vi.fn(),
+  saveFoliolePublishSiteTitle: vi.fn(),
   updateFoliolePublishLocalPages: vi.fn(),
   updateFoliolePublishSiteAddress: vi.fn(),
   viewFoliolePublishSite: vi.fn()
@@ -76,6 +78,17 @@ it('routes the Foliole Publish draft without returning its Cloudflare token', as
 
   expect(folioleMocks.saveFoliolePublishDraft).toHaveBeenCalledWith(settings);
   expect(JSON.stringify(result)).not.toContain('SENTINEL-DRAFT-SECRET');
+});
+
+it('routes Foliole site title reads and writes through the narrow contract', async () => {
+  folioleMocks.loadFoliolePublishSiteTitle.mockReturnValue({ site_title: 'Working Memory' });
+  folioleMocks.saveFoliolePublishSiteTitle.mockReturnValue({ site_title: 'Working Memory' });
+
+  await expect(handlePublishingStorageCommand(NATIVE_COMMANDS.loadFoliolePublishSiteTitle, {}))
+    .resolves.toEqual({ site_title: 'Working Memory' });
+  await expect(handlePublishingStorageCommand(NATIVE_COMMANDS.saveFoliolePublishSiteTitle, { site_title: ' Working Memory ' }))
+    .resolves.toEqual({ site_title: 'Working Memory' });
+  expect(folioleMocks.saveFoliolePublishSiteTitle).toHaveBeenCalledWith(' Working Memory ');
 });
 
 it('updates the public address without accepting a renderer credential', async () => {
