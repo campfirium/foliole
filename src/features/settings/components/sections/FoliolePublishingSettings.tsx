@@ -1,7 +1,7 @@
 import { useId } from 'react';
 
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
-import { AppButton, AppErrorState, SETTINGS_WIDE_CONTROL_WIDTH_CLASS_NAME, SettingsControlSlot, SettingsSection, settingsFieldClassName } from '../../../../shared/ui';
+import { AppButton, AppErrorState, SettingsControlSlot, SettingsSection, settingsFieldClassName } from '../../../../shared/ui';
 
 import { FoliolePublishingSetupRows } from './FoliolePublishingSetupRows';
 import { useFoliolePublishingSettings, type FoliolePublishingSettingsState } from './useFoliolePublishingSettings';
@@ -41,12 +41,12 @@ function SiteTitleOverview({ state }: { state: FoliolePublishingSettingsState })
   const errorId = useId();
   return (
     <div className="ml-6 mt-5 border-t border-settings-divider/70 py-6">
-      <div className="flex items-start justify-between gap-6 max-[1080px]:flex-col max-[1080px]:items-start">
-        <div className="min-w-0 flex-1">
+      <div className="flex min-w-0 flex-wrap items-start gap-6">
+        <div className="min-w-0 basis-settings-flow-copy-min grow-[2] shrink">
           <h5 className="text-ui-lg font-semibold text-foreground">{t('settings.publishing.foliole.siteTitle.title')}</h5>
           <p className="mt-1 max-w-[840px] text-ui-md leading-6 text-foreground/64">{t('settings.publishing.foliole.siteTitle.description')}</p>
         </div>
-        <SettingsControlSlot className={SETTINGS_WIDE_CONTROL_WIDTH_CLASS_NAME}>
+        <div className="inline-flex min-w-0 basis-settings-flow-control-min grow shrink items-center gap-2 self-center" data-settings-control-slot>
           <div className="min-w-0 flex-1">
             <input
               aria-describedby={state.siteTitleError ? errorId : undefined}
@@ -62,7 +62,7 @@ function SiteTitleOverview({ state }: { state: FoliolePublishingSettingsState })
             />
             {state.siteTitleError ? <p className="mt-1 text-sm leading-5 text-error" id={errorId} role="alert">{state.siteTitleError}</p> : null}
           </div>
-        </SettingsControlSlot>
+        </div>
       </div>
     </div>
   );

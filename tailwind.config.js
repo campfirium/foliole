@@ -152,10 +152,9 @@ export default {
         'settings-row': '5.125rem',
         'settings-panel-x': '1.25rem',
         'settings-panel-y': '1.25rem',
+        'settings-flow-copy-min': '22.5rem',
+        'settings-flow-control-min': '12.5rem',
         'state-surface': '7.5rem'
-      },
-      maxWidth: {
-        'settings-control-wide': '26.25rem'
       },
       boxShadow: {
         popover: 'var(--shadow-popover)',

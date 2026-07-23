@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
-import { SETTINGS_WIDE_CONTROL_WIDTH_CLASS_NAME, SettingsControlSlot, SettingsRow } from '../../../../shared/ui';
+import { SettingsControlSlot, SettingsRow } from '../../../../shared/ui';
 
 export function PublishingConnectionFooter(props: {
   action?: ReactNode;
@@ -16,7 +16,7 @@ export function PublishingConnectionFooter(props: {
       title={props.title}
     >
       {props.action ? (
-        <SettingsControlSlot className={SETTINGS_WIDE_CONTROL_WIDTH_CLASS_NAME}>
+        <SettingsControlSlot>
           {props.action}
         </SettingsControlSlot>
       ) : null}

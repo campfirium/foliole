@@ -160,8 +160,9 @@ it('uses concise Publish copy and the shared flow layout', async () => {
   expect(screen.getByText('Discourse connection')).toBeInTheDocument();
   expect(screen.getByText('Connected')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Test access' })).toBeNull();
-  expect(forumUrl.parentElement).toHaveClass('w-full');
-  expect(forumUrl.closest('[data-settings-control-slot]')).toHaveClass('max-w-settings-control-wide');
+  expect(forumUrl).toHaveClass('w-full');
+  expect(screen.getByText('Enter forum address').closest('.basis-settings-flow-copy-min')).toBeInTheDocument();
+  expect(forumUrl.closest('[data-settings-control-slot]')).toHaveClass('basis-settings-flow-control-min', 'grow');
   expect(screen.getByRole('button', { name: 'Disconnect' })).toHaveClass('border');
 });
 

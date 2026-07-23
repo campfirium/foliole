@@ -1,7 +1,5 @@
 import type { ReactNode } from 'react';
 
-import { SETTINGS_WIDE_CONTROL_WIDTH_CLASS_NAME, SettingsControlSlot } from './SettingsLayout';
-
 import { cn } from '@/shared/lib/utils';
 
 export function SettingsFlow({ children, className }: { children: ReactNode; className?: string }) {
@@ -21,12 +19,15 @@ export function SettingsFlowItem({ children, control }: { children: ReactNode; c
       <span aria-hidden="true" className="relative z-[1] flex size-4 items-center justify-center self-start" data-settings-flow-marker>
         <span className="size-1.5 rounded-full bg-foreground/45" />
       </span>
-      <div className="flex min-w-0 items-start justify-between gap-6 max-[1080px]:flex-col">
-        {children}
+      <div className="flex min-w-0 flex-wrap items-start gap-6">
+        <div className="min-w-0 basis-settings-flow-copy-min grow-[2] shrink">{children}</div>
         {control ? (
-          <SettingsControlSlot className={SETTINGS_WIDE_CONTROL_WIDTH_CLASS_NAME}>
+          <div
+            className="inline-flex min-w-0 basis-settings-flow-control-min grow shrink items-center justify-end gap-2 self-center"
+            data-settings-control-slot
+          >
             {control}
-          </SettingsControlSlot>
+          </div>
         ) : null}
       </div>
     </div>

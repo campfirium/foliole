@@ -20,8 +20,11 @@ describe('SettingsFlow', () => {
     expect(items?.[1]).toHaveClass('last:before:hidden', 'last:after:hidden');
     expect(flow?.querySelectorAll('[data-settings-flow-marker]')).toHaveLength(2);
     expect(flow).not.toHaveTextContent(/\b[12]\b/u);
+    expect(screen.getByText('First step').parentElement).toHaveClass('basis-settings-flow-copy-min', 'grow-[2]');
     expect(screen.getByLabelText('First value').closest('[data-settings-control-slot]')).toHaveClass(
-      'max-w-settings-control-wide'
+      'basis-settings-flow-control-min',
+      'grow',
+      'min-w-0'
     );
   });
 });
