@@ -58,7 +58,7 @@ function createHarness(args: { missingColumns?: string[]; storedDeviceId?: strin
 
 function expectBusyTimeoutBeforeTransaction(connection: ReturnType<typeof createHarness>['connection']) {
   expect(connection.execute).toHaveBeenNthCalledWith(1, BUSY_TIMEOUT_SQL, false);
-  expect(connection.execute.mock.invocationCallOrder[0]).toBeLessThan(connection.beginTransaction.mock.invocationCallOrder[0]);
+  expect(connection.execute.mock.invocationCallOrder[0]!).toBeLessThan(connection.beginTransaction.mock.invocationCallOrder[0]!);
 }
 
 describe('iosCompanionDatabaseBootstrap version contract', () => {
