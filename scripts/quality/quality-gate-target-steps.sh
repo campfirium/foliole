@@ -19,6 +19,7 @@ run_release_target_steps() {
   case "$1" in
     release-core) run_release_core_gate_steps ;;
     release-hosted-common) run_release_hosted_common_gate_steps ;;
+    release-hosted-common-build) run_release_hosted_common_build_gate_steps ;;
     release-windows-core) run_gate_steps test:windows:core ;;
     release-static) run_release_static_gate_steps ;;
     release-tests) run_release_test_gate_steps ;;
@@ -103,6 +104,11 @@ run_shared_build_gate_steps() {
 
 run_release_build_gate_steps() {
   run_gate_steps test:quality:preview
+  run_gate_steps_parallel build:vite-only electron:compile android:web:build
+  run_workspace_boundary_check_if_present
+}
+
+run_release_hosted_common_build_gate_steps() {
   run_gate_steps_parallel build:vite-only electron:compile android:web:build
   run_workspace_boundary_check_if_present
 }

@@ -20,48 +20,10 @@ jobs:
   common-quality:
     name: Common ${{ inputs.scope }} quality
     if: inputs.scope == 'shared' || (inputs.scope == 'full' && (inputs.full_host == 'all' || inputs.full_host == 'windows'))
-    runs-on: ubuntu-latest
-    timeout-minutes: 120
-    concurrency:
-      group: hosted-quality-common-${{ inputs.target_sha }}-${{ inputs.scope }}
-      cancel-in-progress: false
-    env:
-      TARGET_SHA: ${{ inputs.target_sha }}
-    steps:
-      - name: Check out target snapshot
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ env.TARGET_SHA }}
-          fetch-depth: 1
-          persist-credentials: false
-      - name: Verify target SHA
-        run: test "$(git rev-parse HEAD)" = "${TARGET_SHA}"
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - name: Install dependencies
-        run: npm ci
-      - name: Run dependency hardening checks
-        if: inputs.scope == 'full'
-        run: npm run deps:hardening:check
-      - name: Rebuild Electron native ABI for shared contracts
-        run: npm run electron:rebuild:native
-      - name: Run shared quality
-        if: inputs.scope == 'shared'
-        run: npm run quality:shared
-      - name: Run hosted full Common quality
-        if: inputs.scope == 'full'
-        run: npm run quality:release:hosted-common
-      - name: Upload Common quality logs
-        if: ${{ always() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: common-quality-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
-          path: .tmp/logs/quality-gate
-          if-no-files-found: ignore
-          retention-days: 14
+    uses: ./.github/workflows/hosted-quality-common.yml
+    with:
+      target_sha: ${{ inputs.target_sha }}
+      scope: ${{ inputs.scope }}
 
   windows-quality:
     name: Windows ${{ inputs.scope }} quality
@@ -146,6 +108,7 @@ jobs:
   windows-acceptance:
     name: Windows acceptance
     if: inputs.scope == 'full' && (inputs.full_host == 'all' || inputs.full_host == 'windows')
+    needs: [common-quality, windows-quality]
     runs-on: windows-latest
     timeout-minutes: 120
     concurrency:

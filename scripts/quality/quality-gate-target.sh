@@ -11,7 +11,7 @@ if [[ ! -f "package.json" ]]; then
   exit 1
 fi
 
-target="${1:-}"; usage="Usage: bash scripts/quality/quality-gate-target.sh <desktop|android|android-device|shared|shared-static|shared-test|shared-quality-tests|shared-build|full|release|release-core|release-hosted-common|release-windows-core|release-static|release-tests|release-build|release-script-preview|release-base|release-windows-tail|release-android-tail|release-ios-tail|release-tooling|release-preview-recovery|release-android-host> [--fail-fast]"
+target="${1:-}"; usage="Usage: bash scripts/quality/quality-gate-target.sh <desktop|android|android-device|shared|shared-static|shared-test|shared-quality-tests|shared-build|full|release|release-core|release-hosted-common|release-hosted-common-build|release-windows-core|release-static|release-tests|release-build|release-script-preview|release-base|release-windows-tail|release-android-tail|release-ios-tail|release-tooling|release-preview-recovery|release-android-host> [--fail-fast]"
 QUALITY_GATE_COLLECT_FAILURES=1
 case "${2:-}" in
   --fail-fast) QUALITY_GATE_COLLECT_FAILURES=0 ;;
@@ -134,7 +134,7 @@ case "${target}" in
   shared-build)
     run_shared_build_gate_steps
     ;;
-  full|release|release-core|release-hosted-common|release-windows-core|release-static|release-tests|release-build|release-script-preview|release-base|release-windows-tail|release-android-tail|release-ios-tail|release-tooling|release-preview-recovery|release-android-host)
+  full|release|release-core|release-hosted-common|release-hosted-common-build|release-windows-core|release-static|release-tests|release-build|release-script-preview|release-base|release-windows-tail|release-android-tail|release-ios-tail|release-tooling|release-preview-recovery|release-android-host)
     apply_release_gate_acceleration_defaults
     run_release_target_steps "${target}"
     ;;

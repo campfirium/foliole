@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const core = fs.readFileSync('.github/workflows/hosted-quality-core.yml', 'utf8');
+const common = fs.readFileSync('.github/workflows/hosted-quality-common.yml', 'utf8');
 const remote = fs.readFileSync('.github/workflows/remote-quality.yml', 'utf8');
 const t5 = fs.readFileSync('.github/workflows/t5-nightly-remote-quality.yml', 'utf8');
 const handoffEvents = fs.readFileSync('scripts/github-desktop-handoff-events.mjs', 'utf8');
@@ -37,15 +38,15 @@ describe('hosted quality workflow contracts', () => {
     expect(core).toContain('runs-on: macos-15');
     for (const command of [
       'npm run quality:desktop', 'npm run quality:shared', 'npm run quality:android',
-      'npm run quality:release:hosted-common', 'npm run quality:release:windows:core',
+      'npm run quality:release:windows:core',
       'npm run quality:release:windows:tail',
       'npm run quality:release:android:tail', 'npm run quality:ios:contract',
       'npm run quality:ios:simulator:full'
-    ]) expect(core).toContain(command);
+    ]) expect(`${core}\n${common}`).toContain(command);
     const commonSection = core.split('  common-quality:')[1].split('  windows-quality:')[0];
     expect(commonSection).toContain("inputs.scope == 'shared'");
-    expect(commonSection).toContain('npm run quality:shared');
-    expect(commonSection).toContain('npm run quality:release:hosted-common');
+    expect(commonSection).toContain('uses: ./.github/workflows/hosted-quality-common.yml');
+    expect(common).toContain('run: npm run quality:shared');
     const androidSection = core.split('  android-quality:')[1].split('  ios-contract:')[0];
     expect(androidSection).toContain("inputs.scope == 'android'");
     expect(androidSection).toContain('FOLIOLE_ANDROID_HOST_MODE: native-linux');
@@ -61,10 +62,13 @@ describe('hosted quality workflow contracts', () => {
   });
 
   it('binds checkout to an immutable SHA under read-only permissions', () => {
-    expect(core.match(/ref: \$\{\{ env\.TARGET_SHA \}\}/gu)).toHaveLength(6);
-    expect(core.match(/persist-credentials: false/gu)).toHaveLength(6);
-    expect(core.match(/Verify target SHA/gu)).toHaveLength(6);
-    for (const workflow of [core, remote, t5]) {
+    expect(core.match(/ref: \$\{\{ env\.TARGET_SHA \}\}/gu)).toHaveLength(5);
+    expect(common.match(/ref: \$\{\{ env\.TARGET_SHA \}\}/gu)).toHaveLength(4);
+    expect(core.match(/persist-credentials: false/gu)).toHaveLength(5);
+    expect(common.match(/persist-credentials: false/gu)).toHaveLength(4);
+    expect(core.match(/Verify target SHA/gu)).toHaveLength(5);
+    expect(common.match(/Verify target SHA/gu)).toHaveLength(4);
+    for (const workflow of [core, common, remote, t5]) {
       expect(workflow).toContain('permissions:\n  contents: read');
       expect(workflow).not.toContain('contents: write');
       expect(workflow).not.toContain('secrets.');
@@ -80,13 +84,34 @@ describe('hosted quality workflow contracts', () => {
     }
   });
 
-  it('uploads per-job logs without serial job dependencies', () => {
+  it('stages Common tests before builds and keeps platform jobs independent', () => {
+    for (const command of [
+      'bash scripts/quality/quality-gate-target.sh release-static',
+      'script: test:release:desktop-src',
+      'script: test:release:android',
+      'script: test:release:shared',
+      'script: test:desktop:electron',
+      'script: quality:release:tooling',
+      'bash scripts/quality/quality-gate-target.sh release-hosted-common-build'
+    ]) expect(common).toContain(command);
+    expect(common).toContain('needs: full-static');
+    expect(common).toContain('needs: full-tests');
+    expect(common).toContain('hosted-quality-common-test-${{ inputs.target_sha }}-${{ matrix.domain }}');
+    expect(common).toContain('common-test-${{ matrix.domain }}-${{ env.TARGET_SHA }}-${{ github.run_attempt }}');
+    expect(core).toContain('needs: [common-quality, windows-quality]');
+    const acceptance = core.split('  windows-acceptance:')[1].split('  android-quality:')[0];
+    expect(acceptance).not.toContain('android-quality');
+    expect(acceptance).not.toContain('ios-contract');
+  });
+
+  it('uploads logs for every stable hosted quality domain', () => {
     for (const name of [
-      'Common quality logs', 'Windows core evidence', 'Windows acceptance evidence',
+      'Shared quality logs', 'Common static logs', 'Common test logs', 'Common build logs',
+      'Windows core evidence', 'Windows acceptance evidence',
       'Android quality logs', 'iOS contract logs', 'iOS Simulator evidence and logs'
-    ]) expect(core).toContain(name);
-    expect(core.match(/\.tmp\/logs\/quality-gate/gu)).toHaveLength(6);
-    expect(core).not.toContain('\n    needs:');
+    ]) expect(`${core}\n${common}`).toContain(name);
+    expect(core.match(/\.tmp\/logs\/quality-gate/gu)).toHaveLength(5);
+    expect(common.match(/\.tmp\/logs\/quality-gate/gu)).toHaveLength(4);
   });
 
   it('keeps only minimal per-scenario Simulator evidence', () => {

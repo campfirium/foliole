@@ -61,6 +61,9 @@ describe('T5 Windows quality workflow contract', () => {
     );
     expect(windowsJob).not.toContain('npm run build');
     expect(windowsJob).not.toContain('npm run electron:compile');
+    expect(acceptanceJob).toContain('needs: [common-quality, windows-quality]');
+    expect(acceptanceJob).not.toContain('android-quality');
+    expect(acceptanceJob).not.toContain('ios-contract');
   });
 
   it('records job-specific outcomes and preserves artifacts and logs', () => {
