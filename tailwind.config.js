@@ -154,6 +154,9 @@ export default {
         'settings-panel-y': '1.25rem',
         'state-surface': '7.5rem'
       },
+      maxWidth: {
+        'settings-control-wide': '26.25rem'
+      },
       boxShadow: {
         popover: 'var(--shadow-popover)',
         panel: 'var(--shadow-panel)',

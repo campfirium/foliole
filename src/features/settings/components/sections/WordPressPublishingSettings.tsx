@@ -5,10 +5,11 @@ import { openExternalUrl } from '../../../../shared/platform/runtimeExternalNavi
 import {
   AppButton,
   AppErrorState,
+  SettingsFlow,
   SettingsSection
 } from '../../../../shared/ui';
 
-import { PublishingConnectionRow } from './PublishingConnectionRow';
+import { PublishingConnectionFooter } from './PublishingConnectionFooter';
 import { PublishingTextRow } from './PublishingTextRow';
 import { type WordPressSiteKind, useWordPressPublishingSettings } from './useWordPressPublishingSettings';
 
@@ -49,12 +50,14 @@ export function WordPressPublishingSettings(props: { expanded: boolean; onExpand
       title={t('settings.publishing.wordpress.title')}
     >
       {state.error ? <AppErrorState description={t('settings.publishing.wordpress.error.tryAgain')} surface="panel" title={state.error} /> : null}
-      <PublishingTextRow description={<SiteDescription />} disabled={state.fieldsDisabled} error={state.siteUrlInvalid ? t('settings.publishing.wordpress.site.invalid') : undefined} label={t('settings.publishing.wordpress.site.aria')} onBlur={state.saveDraft} onChange={(siteUrl) => state.updateForm({ siteUrl })} onEnter={state.saveDraft} title={t('settings.publishing.wordpress.site.title')} value={state.form.siteUrl} />
-      <PublishingTextRow description={t('settings.publishing.wordpress.username.description')} disabled={state.fieldsDisabled} label={t('settings.publishing.wordpress.username.aria')} onBlur={state.saveDraft} onChange={(username) => state.updateForm({ username })} onEnter={state.saveDraft} title={t('settings.publishing.wordpress.username.title')} value={state.form.username} />
-      <PublishingTextRow description={<PasswordDescription siteKind={state.siteKind} />} disabled={state.fieldsDisabled} error={state.applicationPasswordInvalid ? t(state.siteKind === 'wordpressCom' ? 'settings.publishing.wordpress.password.wordpressComInvalid' : 'settings.publishing.wordpress.password.coreInvalid') : undefined} label={t('settings.publishing.wordpress.password.aria')} onBlur={state.saveDraft} onChange={(applicationPassword) => state.updateForm({ applicationPassword })} onEnter={state.submit} {...(state.hasCredentials ? { placeholder: '****************' } : {})} title={t('settings.publishing.wordpress.password.title')} type="password" value={state.form.applicationPassword} />
-      <PublishingConnectionRow
+      <SettingsFlow>
+        <PublishingTextRow description={<SiteDescription />} disabled={state.fieldsDisabled} error={state.siteUrlInvalid ? t('settings.publishing.wordpress.site.invalid') : undefined} label={t('settings.publishing.wordpress.site.aria')} name="wordpress-publish-site-url" onBlur={state.saveDraft} onChange={(siteUrl) => state.updateForm({ siteUrl })} onEnter={state.saveDraft} title={t('settings.publishing.wordpress.site.title')} type="url" value={state.form.siteUrl} />
+        <PublishingTextRow description={t('settings.publishing.wordpress.username.description')} disabled={state.fieldsDisabled} label={t('settings.publishing.wordpress.username.aria')} name="wordpress-publish-username" onBlur={state.saveDraft} onChange={(username) => state.updateForm({ username })} onEnter={state.saveDraft} title={t('settings.publishing.wordpress.username.title')} value={state.form.username} />
+        <PublishingTextRow description={<PasswordDescription siteKind={state.siteKind} />} disabled={state.fieldsDisabled} error={state.applicationPasswordInvalid ? t(state.siteKind === 'wordpressCom' ? 'settings.publishing.wordpress.password.wordpressComInvalid' : 'settings.publishing.wordpress.password.coreInvalid') : undefined} label={t('settings.publishing.wordpress.password.aria')} name="wordpress-publish-application-password" onBlur={state.saveDraft} onChange={(applicationPassword) => state.updateForm({ applicationPassword })} onEnter={state.submit} {...(state.hasCredentials ? { placeholder: '****************' } : {})} title={t('settings.publishing.wordpress.password.title')} type="password" value={state.form.applicationPassword} />
+      </SettingsFlow>
+      <PublishingConnectionFooter
         action={state.connected
-          ? <AppButton disabled={state.disabled} onClick={state.disconnect} variant="subtle">{t('settings.publishing.wordpress.connection.disconnect')}</AppButton>
+          ? <AppButton disabled={state.disabled} onClick={state.disconnect}>{t('settings.publishing.wordpress.connection.disconnect')}</AppButton>
           : <AppButton disabled={!state.canConnect} onClick={state.submit}>{state.status === 'connecting' ? t('settings.publishing.wordpress.connection.connecting') : t('settings.publishing.wordpress.connection.connect')}</AppButton>}
         connected={state.connected}
         title={t('settings.publishing.wordpress.connection.title')}

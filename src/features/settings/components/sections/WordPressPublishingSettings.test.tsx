@@ -50,6 +50,9 @@ it('shows the guide for the entered site and keeps connected fields locked until
   await waitFor(() => expect(siteAddress).toBeEnabled());
   expect(screen.getByText('WordPress connection')).toBeVisible();
   expect(screen.getByText('Not connected')).toBeVisible();
+  const flow = screen.getByText('Site address').closest('[data-settings-flow]');
+  expect(flow?.querySelectorAll('[data-settings-flow-item]')).toHaveLength(3);
+  expect(flow?.querySelectorAll('[data-settings-flow-marker]')).toHaveLength(3);
   expect(screen.getByText('Enter your WordPress address first.')).toBeInTheDocument();
 
   fireEvent.change(siteAddress, { target: { value: 'https://example.com' } });
@@ -67,6 +70,7 @@ it('shows the guide for the entered site and keeps connected fields locked until
   expect(await screen.findByText('Connected')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Connect' })).toBeNull();
   expect(screen.getByRole('button', { name: 'Disconnect' })).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Disconnect' })).toHaveClass('border');
   expect(siteAddress).toBeDisabled();
   expect(screen.getByLabelText('WordPress username')).toHaveValue('writer');
   expect(screen.getByLabelText('WordPress Application Password')).toHaveValue('');

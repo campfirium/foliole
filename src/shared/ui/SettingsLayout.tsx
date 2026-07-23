@@ -8,6 +8,7 @@ export { SettingsRow } from './SettingsRow';
 
 export const SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME = 'w-36';
 export const SETTINGS_INPUT_WIDTH_CLASS_NAME = 'flex-[0_0_160px] max-w-full';
+export const SETTINGS_WIDE_CONTROL_WIDTH_CLASS_NAME = 'w-full max-w-settings-control-wide';
 export const SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME = 'flex-[0_0_auto] max-w-full';
 export const SETTINGS_COMPOUND_CONTROL_WIDTH_CLASS_NAME = SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME;
 export const SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME = 'w-20';
@@ -142,6 +143,13 @@ export function settingsControlValueClassName(className?: string) {
 
 export function settingsValueBoxClassName(className?: string) {
   return cn('rounded-md border border-transparent bg-settings-control px-3 py-2 text-ui-md text-foreground/75', className);
+}
+
+export function settingsReadOnlyFieldClassName(className?: string) {
+  return cn(
+    'flex h-9 min-w-0 items-center rounded-md border border-settings-control-border bg-settings-control px-3 text-ui-md text-foreground/70',
+    className
+  );
 }
 
 export function settingsSidebarBadgeClassName(className?: string) {

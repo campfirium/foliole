@@ -168,9 +168,9 @@ async function verifyDiscourseSetupSteps(
   await expect(dialog.getByText(/^(Default category ID|默认分类 ID)$/)).toHaveCount(0);
   await expect(dialog.getByText(/^(Default tags|默认标签)$/)).toHaveCount(0);
   await expect(forumUrl).toHaveValue('https://forum.example.com');
-  await expect(regions.discourse.locator('[data-settings-row]')).toHaveCount(3);
-  const widths = await regions.discourse.locator('[data-settings-row]').evaluateAll((rows) => rows.map((row) => row.children.item(1)?.getBoundingClientRect().width ?? 0));
-  for (const width of widths) expect(width).toBeGreaterThan(600);
+  await expect(regions.discourse.locator('[data-settings-flow-item]')).toHaveCount(2);
+  await expect(regions.discourse.locator('[data-settings-flow-marker]')).toHaveCount(2);
+  await expect(regions.discourse.locator('[data-settings-row]')).toHaveCount(1);
   await connectionStep.evaluate((element) => element.scrollIntoView({ block: 'center' }));
   await captureExpandedSettings(desktopWindow, screenshotDir, testInfo);
 }

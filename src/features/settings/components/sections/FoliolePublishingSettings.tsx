@@ -1,7 +1,7 @@
 import { useId } from 'react';
 
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
-import { AppButton, AppErrorState, SettingsControlSlot, SettingsSection, settingsFieldClassName } from '../../../../shared/ui';
+import { AppButton, AppErrorState, SETTINGS_WIDE_CONTROL_WIDTH_CLASS_NAME, SettingsControlSlot, SettingsSection, settingsFieldClassName } from '../../../../shared/ui';
 
 import { FoliolePublishingSetupRows } from './FoliolePublishingSetupRows';
 import { useFoliolePublishingSettings, type FoliolePublishingSettingsState } from './useFoliolePublishingSettings';
@@ -46,7 +46,7 @@ function SiteTitleOverview({ state }: { state: FoliolePublishingSettingsState })
           <h5 className="text-ui-lg font-semibold text-foreground">{t('settings.publishing.foliole.siteTitle.title')}</h5>
           <p className="mt-1 max-w-[840px] text-ui-md leading-6 text-foreground/64">{t('settings.publishing.foliole.siteTitle.description')}</p>
         </div>
-        <SettingsControlSlot className="w-[min(480px,100%)]">
+        <SettingsControlSlot className={SETTINGS_WIDE_CONTROL_WIDTH_CLASS_NAME}>
           <div className="min-w-0 flex-1">
             <input
               aria-describedby={state.siteTitleError ? errorId : undefined}

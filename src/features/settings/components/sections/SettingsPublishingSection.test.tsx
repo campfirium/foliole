@@ -139,7 +139,7 @@ it('opens the local static pages from the visible Publish settings row', async (
   await waitFor(() => expect(folioleRepositoryMocks.viewFoliolePublishSiteFromRuntime).toHaveBeenCalledOnce());
 });
 
-it('uses concise Publish copy and the standard settings input width', async () => {
+it('uses concise Publish copy and the shared flow layout', async () => {
   renderWithLocalization(<SettingsPublishingSection />);
   fireEvent.click(screen.getByRole('button', { name: 'Publish to Discourse' }));
 
@@ -152,11 +152,17 @@ it('uses concise Publish copy and the standard settings input width', async () =
   expect(screen.queryByRole('heading', { name: 'Discourse forum' })).toBeNull();
   expect(screen.getByText('Enter forum address')).toBeInTheDocument();
   expect(screen.getByText('Get authorization')).toBeInTheDocument();
-  expect(screen.getByText('Get authorization').parentElement?.parentElement).toHaveClass('grid-cols-[minmax(0,1fr)_minmax(0,420px)]');
+  const flow = screen.getByText('Get authorization').closest('[data-settings-flow]');
+  expect(flow).toBeInTheDocument();
+  expect(flow?.querySelectorAll('[data-settings-flow-item]')).toHaveLength(2);
+  expect(flow?.querySelectorAll('[data-settings-flow-marker]')).toHaveLength(2);
+  expect(flow).not.toHaveTextContent(/^\s*[123]\s*$/u);
   expect(screen.getByText('Discourse connection')).toBeInTheDocument();
   expect(screen.getByText('Connected')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Test access' })).toBeNull();
   expect(forumUrl.parentElement).toHaveClass('w-full');
+  expect(forumUrl.closest('[data-settings-control-slot]')).toHaveClass('max-w-settings-control-wide');
+  expect(screen.getByRole('button', { name: 'Disconnect' })).toHaveClass('border');
 });
 
 it('disconnects Discourse and removes the saved credential state', async () => {
