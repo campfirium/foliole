@@ -45,3 +45,11 @@ it('exposes complete top-level blocks and can demote headings for article chrome
   expect(blocks[1]).toMatchObject({ html: '<p>First <strong>segment</strong>.</p>', text: 'First segment.' });
   expect(convertWordPressMarkdownToHtml(markdown, 1)).not.toContain('<h1>');
 });
+
+it('preserves soft line breaks only when the publishing surface requests them', () => {
+  const markdown = 'First line\nSecond **line**';
+
+  expect(convertWordPressMarkdownToHtml(markdown)).toBe('<p>First line\nSecond <strong>line</strong></p>');
+  expect(convertWordPressMarkdownToBlocks(markdown, 0, { preserveSoftBreaks: true })[0]?.html)
+    .toBe('<p>First line<br />Second <strong>line</strong></p>');
+});

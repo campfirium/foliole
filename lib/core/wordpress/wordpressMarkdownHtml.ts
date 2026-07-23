@@ -12,6 +12,11 @@ function escapeAttribute(value: string) {
   return escapeHtml(value).replaceAll('"', '&quot;').replaceAll("'", '&#39;');
 }
 
+function renderText(value: string, preserveSoftBreaks: boolean) {
+  const escaped = escapeHtml(value);
+  return preserveSoftBreaks ? escaped.replace(/\r\n?|\n/gu, '<br />') : escaped;
+}
+
 function children(node: SyntaxNode) {
   const result: SyntaxNode[] = [];
   for (let child = node.firstChild; child; child = child.nextSibling) result.push(child);
@@ -44,22 +49,22 @@ function renderLink(node: SyntaxNode, source: string, image: boolean) {
     : `<a href="${escapeAttribute(destination)}">${escapeHtml(label)}</a>`;
 }
 
-function renderInlineChildren(node: SyntaxNode, source: string) {
+function renderInlineChildren(node: SyntaxNode, source: string, preserveSoftBreaks: boolean) {
   let cursor = node.from;
   const output: string[] = [];
   for (const child of children(node)) {
-    output.push(escapeHtml(source.slice(cursor, child.from)), renderInline(child, source));
+    output.push(renderText(source.slice(cursor, child.from), preserveSoftBreaks), renderInline(child, source, preserveSoftBreaks));
     cursor = child.to;
   }
-  output.push(escapeHtml(source.slice(cursor, node.to)));
+  output.push(renderText(source.slice(cursor, node.to), preserveSoftBreaks));
   return output.join('');
 }
 
-function renderInline(node: SyntaxNode, source: string): string {
+function renderInline(node: SyntaxNode, source: string, preserveSoftBreaks: boolean): string {
   if (MARKERS.has(node.name)) return '';
-  if (node.name === 'Emphasis') return `<em>${renderInlineChildren(node, source)}</em>`;
-  if (node.name === 'StrongEmphasis') return `<strong>${renderInlineChildren(node, source)}</strong>`;
-  if (node.name === 'Strikethrough') return `<del>${renderInlineChildren(node, source)}</del>`;
+  if (node.name === 'Emphasis') return `<em>${renderInlineChildren(node, source, preserveSoftBreaks)}</em>`;
+  if (node.name === 'StrongEmphasis') return `<strong>${renderInlineChildren(node, source, preserveSoftBreaks)}</strong>`;
+  if (node.name === 'Strikethrough') return `<del>${renderInlineChildren(node, source, preserveSoftBreaks)}</del>`;
   if (node.name === 'Link') return renderLink(node, source, false);
   if (node.name === 'Image') return renderLink(node, source, true);
   if (node.name === 'URL') {
@@ -71,7 +76,9 @@ function renderInline(node: SyntaxNode, source: string): string {
     return `<code>${escapeHtml(source.slice(node.from, node.to).replace(/^`|`$/gu, ''))}</code>`;
   }
   if (node.name === 'HardBreak') return '<br />';
-  return node.firstChild ? renderInlineChildren(node, source) : escapeHtml(source.slice(node.from, node.to));
+  return node.firstChild
+    ? renderInlineChildren(node, source, preserveSoftBreaks)
+    : renderText(source.slice(node.from, node.to), preserveSoftBreaks);
 }
 
 function renderFencedCode(node: SyntaxNode, source: string) {
@@ -82,34 +89,34 @@ function renderFencedCode(node: SyntaxNode, source: string) {
   return `<pre><code${className}>${escapeHtml(code ? source.slice(code.from, code.to) : '')}</code></pre>`;
 }
 
-function renderTable(node: SyntaxNode, source: string) {
+function renderTable(node: SyntaxNode, source: string, preserveSoftBreaks: boolean) {
   const rows = children(node).filter((child) => child.name === 'TableHeader' || child.name === 'TableRow');
   return `<table>${rows.map((row, index) => {
     const tag = index === 0 && row.name === 'TableHeader' ? 'th' : 'td';
     const cells = children(row).filter((child) => child.name === 'TableCell');
-    return `<tr>${cells.map((cell) => `<${tag}>${renderInlineChildren(cell, source)}</${tag}>`).join('')}</tr>`;
+    return `<tr>${cells.map((cell) => `<${tag}>${renderInlineChildren(cell, source, preserveSoftBreaks)}</${tag}>`).join('')}</tr>`;
   }).join('')}</table>`;
 }
 
-function renderHeading(node: SyntaxNode, source: string, headingOffset: number) {
+function renderHeading(node: SyntaxNode, source: string, headingOffset: number, preserveSoftBreaks: boolean) {
   const sourceLevel = Number(node.name.at(-1));
   const level = Math.min(6, sourceLevel + headingOffset);
-  return `<h${level}>${renderInlineChildren(node, source).trim()}</h${level}>`;
+  return `<h${level}>${renderInlineChildren(node, source, preserveSoftBreaks).trim()}</h${level}>`;
 }
 
-function renderBlock(node: SyntaxNode, source: string, headingOffset = 0): string {
-  if (node.name === 'Paragraph') return `<p>${renderInlineChildren(node, source)}</p>`;
-  if (/^ATXHeading[1-6]$/u.test(node.name)) return renderHeading(node, source, headingOffset);
-  if (node.name === 'BulletList') return `<ul>${children(node).map((child) => renderBlock(child, source, headingOffset)).join('')}</ul>`;
-  if (node.name === 'OrderedList') return `<ol>${children(node).map((child) => renderBlock(child, source, headingOffset)).join('')}</ol>`;
-  if (node.name === 'ListItem') return `<li>${children(node).map((child) => renderBlock(child, source, headingOffset)).join('')}</li>`;
-  if (node.name === 'Blockquote') return `<blockquote>${children(node).map((child) => renderBlock(child, source, headingOffset)).join('')}</blockquote>`;
+function renderBlock(node: SyntaxNode, source: string, headingOffset: number, preserveSoftBreaks: boolean): string {
+  if (node.name === 'Paragraph') return `<p>${renderInlineChildren(node, source, preserveSoftBreaks)}</p>`;
+  if (/^ATXHeading[1-6]$/u.test(node.name)) return renderHeading(node, source, headingOffset, preserveSoftBreaks);
+  if (node.name === 'BulletList') return `<ul>${children(node).map((child) => renderBlock(child, source, headingOffset, preserveSoftBreaks)).join('')}</ul>`;
+  if (node.name === 'OrderedList') return `<ol>${children(node).map((child) => renderBlock(child, source, headingOffset, preserveSoftBreaks)).join('')}</ol>`;
+  if (node.name === 'ListItem') return `<li>${children(node).map((child) => renderBlock(child, source, headingOffset, preserveSoftBreaks)).join('')}</li>`;
+  if (node.name === 'Blockquote') return `<blockquote>${children(node).map((child) => renderBlock(child, source, headingOffset, preserveSoftBreaks)).join('')}</blockquote>`;
   if (node.name === 'FencedCode') return renderFencedCode(node, source);
   if (node.name === 'HorizontalRule') return '<hr />';
-  if (node.name === 'Table') return renderTable(node, source);
+  if (node.name === 'Table') return renderTable(node, source, preserveSoftBreaks);
   if (MARKERS.has(node.name)) return '';
   return node.firstChild
-    ? children(node).map((child) => renderBlock(child, source, headingOffset)).join('')
+    ? children(node).map((child) => renderBlock(child, source, headingOffset, preserveSoftBreaks)).join('')
     : `<p>${escapeHtml(source.slice(node.from, node.to))}</p>`;
 }
 
@@ -141,11 +148,16 @@ function plainBlock(node: SyntaxNode, source: string): string {
 }
 
 export interface WordPressMarkdownBlock { html: string; kind: string; text: string }
+export interface WordPressMarkdownOptions { preserveSoftBreaks?: boolean }
 
-export function convertWordPressMarkdownToBlocks(markdown: string, headingOffset = 0): WordPressMarkdownBlock[] {
+export function convertWordPressMarkdownToBlocks(
+  markdown: string,
+  headingOffset = 0,
+  options: WordPressMarkdownOptions = {}
+): WordPressMarkdownBlock[] {
   const tree = markdownParser.parse(markdown);
   return children(tree.topNode).map((node) => ({
-    html: renderBlock(node, markdown, headingOffset),
+    html: renderBlock(node, markdown, headingOffset, options.preserveSoftBreaks ?? false),
     kind: node.name,
     text: plainBlock(node, markdown).replace(/\s+/gu, ' ').trim()
   }));

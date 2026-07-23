@@ -72,7 +72,7 @@ function previewBlock(blocks: WordPressMarkdownBlock[]) {
 }
 
 function projectCard(source: FoliolePublishCardSource): FoliolePublishProjectedCard {
-  const rendered = convertWordPressMarkdownToBlocks(source.markdown, 1);
+  const rendered = convertWordPressMarkdownToBlocks(source.markdown, 1, { preserveSoftBreaks: true });
   const firstIsTitle = /^ATXHeading[1-6]$/u.test(rendered[0]?.kind ?? '')
     && foldedValue(rendered[0]?.text ?? '') === foldedValue(source.card.title);
   const blocks = firstIsTitle ? rendered.slice(1) : rendered;
