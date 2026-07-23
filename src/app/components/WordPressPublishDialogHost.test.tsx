@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { writeWordPressPostBinding } from '../../../lib/core/wordpress/wordpressFrontmatter';
@@ -59,6 +59,18 @@ it('shows the Discourse-style taxonomy controls without redundant publish metada
   expect(screen.queryByText('https://blog.example.com')).not.toBeInTheDocument();
   expect(screen.queryByText('Create a new post')).not.toBeInTheDocument();
   expect(screen.getByRole('combobox', { name: 'Post status' })).toHaveValue('draft');
+});
+
+it('shows catalog loading with a spinner instead of trailing dots', async () => {
+  repositoryMocks.loadWordPressPublishCatalogFromRuntime.mockReturnValue(new Promise(() => undefined));
+  render(<WordPressPublishDialogHost />);
+  act(() => requestDialog());
+
+  const status = await screen.findByRole('status');
+  expect(status).toHaveAttribute('aria-busy', 'true');
+  expect(status).toHaveTextContent('Loading categories and tags');
+  expect(status).not.toHaveTextContent('...');
+  expect(status.querySelector('.animate-spin')).not.toBeNull();
 });
 
 it('publishes with the selected status and saves the returned binding locally', async () => {

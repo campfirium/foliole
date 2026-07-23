@@ -11,7 +11,7 @@ export const ZH_HANS_DESKTOP_WORDPRESS_TRANSLATIONS: Partial<Record<TranslationK
   'desktop.wordpressPublish.status.draft': '草稿',
   'desktop.wordpressPublish.status.publish': '发布',
   'desktop.wordpressPublish.category.placeholder': '选择分类',
-  'desktop.wordpressPublish.catalog.loading': '正在加载分类和标签...',
+  'desktop.wordpressPublish.catalog.loading': '正在加载分类和标签',
   'desktop.wordpressPublish.catalog.error': '无法加载分类和标签，请重新打开面板后再试。',
   'desktop.wordpressPublish.confirm': '发布',
   'desktop.wordpressPublish.publishing': '正在发布...',

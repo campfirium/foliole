@@ -120,6 +120,7 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.publishTopicToDiscourse, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.saveDiscoursePublishDraft, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.loadWordPressPublishSettings, route: 'storage', capability: 'read' },
+  { command: NATIVE_COMMANDS.loadWordPressPublishCatalog, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.saveWordPressPublishDraft, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.connectWordPressPublishSettings, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.disconnectWordPressPublishSettings, route: 'storage', capability: 'settingsMutation' },

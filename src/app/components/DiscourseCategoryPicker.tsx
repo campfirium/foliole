@@ -1,3 +1,4 @@
+import { ChevronDown } from 'lucide-react';
 import { useState, type KeyboardEvent } from 'react';
 
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
@@ -161,7 +162,7 @@ export function DiscourseCategoryPicker(props: {
         type="button"
       >
         <span className="min-w-0 truncate">{selectedCategory?.name ?? props.emptyLabel ?? props.categories[0]?.name ?? t('desktop.discoursePublish.category.placeholder')}</span>
-        <span className="ml-2 text-foreground/55">...</span>
+        <ChevronDown aria-hidden="true" className="ml-2 shrink-0 text-foreground/55" size={15} strokeWidth={2} />
       </button>
       <CategoryShortcuts categories={props.categories} onMore={props.toggleShowAll} selectCategory={selectCategory} selectedCategoryId={props.form.categoryId} />
       {props.showAll ? <CategoryPopover categories={props.categories} close={props.toggleShowAll} query={query} selectedCategoryId={props.form.categoryId} selectCategory={selectCategory} setQuery={setQuery} /> : null}

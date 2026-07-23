@@ -9,7 +9,7 @@ export const EN_DESKTOP_WORDPRESS_TRANSLATIONS = {
   'desktop.wordpressPublish.status.draft': 'Draft',
   'desktop.wordpressPublish.status.publish': 'Publish',
   'desktop.wordpressPublish.category.placeholder': 'Choose a category',
-  'desktop.wordpressPublish.catalog.loading': 'Loading categories and tags...',
+  'desktop.wordpressPublish.catalog.loading': 'Loading categories and tags',
   'desktop.wordpressPublish.catalog.error': 'Could not load categories and tags. Try opening the panel again.',
   'desktop.wordpressPublish.confirm': 'Publish',
   'desktop.wordpressPublish.publishing': 'Publishing...',

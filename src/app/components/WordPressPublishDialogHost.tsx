@@ -11,6 +11,7 @@ import {
   AppDialogOverlay,
   AppDialogPortal,
   AppDialogTitle,
+  AppSpinner,
   settingsFieldClassName
 } from '../../shared/ui';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
@@ -101,7 +102,12 @@ function WordPressPublishDialogBody(props: WordPressDialogProps & { canPublish: 
       </label>
     </div>
     <DiscoursePublishFields catalog={props.catalog} categoryPlaceholder={t('desktop.wordpressPublish.category.placeholder')} form={props.form} setForm={props.setForm} showAllCategories={props.showAllCategories} showAllTags={props.showAllTags} toggleShowAllCategories={() => props.setShowAllCategories((current) => !current)} toggleShowAllTags={() => props.setShowAllTags((current) => !current)} />
-    {props.catalog.loading ? <p className="mt-3 text-sm text-muted-foreground">{t('desktop.wordpressPublish.catalog.loading')}</p> : null}
+    {props.catalog.loading ? (
+      <div aria-busy="true" className="mt-3 flex items-center gap-2 text-sm text-muted-foreground" role="status">
+        <AppSpinner decorative size="sm" />
+        <span>{t('desktop.wordpressPublish.catalog.loading')}</span>
+      </div>
+    ) : null}
     {props.catalog.error ? <p className="mt-3 text-sm text-destructive" role="alert">{props.catalog.error}</p> : null}
     {props.details.parseError ? <p className="mt-3 text-sm text-destructive" role="alert">{props.details.parseError}</p> : null}
     {props.action.error ? <p className="mt-3 text-sm text-destructive" role="alert">{props.action.error}</p> : null}
