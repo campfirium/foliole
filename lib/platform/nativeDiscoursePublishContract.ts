@@ -41,6 +41,7 @@ export interface NativeDiscoursePublishCatalog {
   categories: NativeDiscoursePublishCategory[];
   fetched_at: string | null;
   from_cache: boolean;
+  last_published_tags: string[];
   recent_category_ids: number[];
   recent_tags: string[];
   tags: NativeDiscoursePublishTag[];

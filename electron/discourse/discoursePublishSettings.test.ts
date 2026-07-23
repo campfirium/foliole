@@ -28,8 +28,11 @@ vi.mock('../security/publishDeviceSecretStore.js', () => ({
 import {
   disconnectDiscoursePublishSettings,
   loadDiscourseApiKey,
+  loadDiscourseCatalogCache,
   loadDiscoursePublishDraft,
   loadDiscoursePublishSettings,
+  recordDiscoursePublishUsage,
+  saveDiscourseCatalogCache,
   saveDiscoursePublishDraft,
   saveDiscoursePublishSettings
 } from './discoursePublishSettings.js';
@@ -83,6 +86,34 @@ it('persists and clears a publishing draft for the current forum and Topic', () 
 
   expect(saveDiscoursePublishDraft({ draft: null, node_id: 'topic-1' })).toBeNull();
   expect(loadDiscoursePublishDraft('topic-1')).toBeNull();
+});
+
+it('keeps recent tags for ordering but defaults to only the last successful publish', () => {
+  const siteUrl = 'https://forum.example.com';
+  saveDiscoursePublishSettings({ site_url: siteUrl });
+  saveDiscourseCatalogCache(siteUrl, { categories: [], tags: [] });
+
+  recordDiscoursePublishUsage(siteUrl, { categoryId: 7, tags: [' historical ', 'shared'] });
+  recordDiscoursePublishUsage(siteUrl, { categoryId: 8, tags: [' latest ', 'shared', 'latest'] });
+
+  expect(loadDiscourseCatalogCache(siteUrl)).toMatchObject({
+    last_published_tags: ['latest', 'shared'],
+    recent_tags: ['latest', 'shared', 'historical']
+  });
+});
+
+it('does not treat legacy accumulated tags as the last published tag set', () => {
+  state.setting = {
+    catalog_cache: { categories: [], fetched_at: 'now', site_url: 'https://forum.example.com', tags: [] },
+    recent_by_site: { 'https://forum.example.com': { category_ids: [1], tags: ['newest', 'older'] } },
+    site_url: 'https://forum.example.com',
+    updated_at: '2026-07-16T00:00:00.000Z'
+  };
+
+  expect(loadDiscourseCatalogCache('https://forum.example.com')).toMatchObject({
+    last_published_tags: [],
+    recent_tags: ['newest', 'older']
+  });
 });
 
 it('disconnects by deleting the key and clearing the site', () => {

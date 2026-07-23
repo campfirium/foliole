@@ -36,6 +36,7 @@ interface StoredCatalogCache {
 
 interface StoredRecentUsage {
   category_ids: number[];
+  last_published_tags?: string[];
   tags: string[];
 }
 
@@ -170,6 +171,7 @@ export function loadDiscourseCatalogCache(siteUrl: string): NativeDiscoursePubli
     categories: cache.categories,
     fetched_at: cache.fetched_at,
     from_cache: true,
+    last_published_tags: recent?.last_published_tags ?? [],
     recent_category_ids: recent?.category_ids ?? [],
     recent_tags: recent?.tags ?? [],
     tags: cache.tags
@@ -197,18 +199,19 @@ export function recordDiscoursePublishUsage(siteUrl: string, input: { categoryId
   const current = loadStoredSettings();
   if (!current) return;
   const previous = current.recent_by_site?.[siteUrl] ?? { category_ids: [], tags: [] };
+  const publishedTags = [...new Set(input.tags.map((tag) => tag.trim()).filter(Boolean))];
   const category_ids = input.categoryId
     ? [input.categoryId, ...previous.category_ids.filter((id) => id !== input.categoryId)].slice(0, MAX_RECENT_CATEGORIES)
     : previous.category_ids;
   const tags = [
-    ...input.tags,
-    ...previous.tags.filter((tag) => !input.tags.includes(tag))
+    ...publishedTags,
+    ...previous.tags.filter((tag) => !publishedTags.includes(tag))
   ].slice(0, MAX_RECENT_TAGS);
   saveStoredSettings({
     ...current,
     recent_by_site: {
       ...current.recent_by_site,
-      [siteUrl]: { category_ids, tags }
+      [siteUrl]: { category_ids, last_published_tags: publishedTags, tags }
     },
     updated_at: now
   });

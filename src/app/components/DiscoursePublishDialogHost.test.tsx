@@ -39,9 +39,10 @@ function catalog(input: {
     categories: [{ id: input.categoryId, name: input.categoryName, parent_category_id: null, slug: input.categoryName }],
     fetched_at: '2026-07-02T00:00:00.000Z',
     from_cache: input.fromCache,
+    last_published_tags: [input.tag],
     recent_category_ids: [input.categoryId],
-    recent_tags: [input.tag],
-    tags: [{ id: input.tag, name: input.tag }]
+    recent_tags: [input.tag, 'historical-tag'],
+    tags: [{ id: input.tag, name: input.tag }, { id: 'historical-tag', name: 'historical-tag' }]
   };
 }
 

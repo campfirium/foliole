@@ -108,12 +108,17 @@ it('uses cached Discourse publish catalog before refreshing the forum', async ()
     categories: [{ id: 7, name: 'Release Notes', parent_category_id: null, slug: 'release-notes' }],
     fetched_at: '2026-07-02T00:00:00.000Z',
     from_cache: true,
+    last_published_tags: ['foliole'],
     recent_category_ids: [7],
     recent_tags: ['foliole'],
     tags: [{ id: 'foliole', name: 'foliole' }]
   });
   const { loadDiscoursePublishCatalog: loadCatalog } = await import('./discoursePublish.js');
-  await expect(loadCatalog()).resolves.toMatchObject({ from_cache: true, recent_tags: ['foliole'] });
+  await expect(loadCatalog()).resolves.toMatchObject({
+    from_cache: true,
+    last_published_tags: ['foliole'],
+    recent_tags: ['foliole']
+  });
   expect(loadDiscoursePublishCatalog).not.toHaveBeenCalled();
 });
 
@@ -125,7 +130,7 @@ it('refreshes and stores the Discourse publish catalog on demand', async () => {
   });
   const { loadDiscoursePublishCatalog: loadCatalog } = await import('./discoursePublish.js');
   const result = await loadCatalog({ refresh: true });
-  expect(result).toMatchObject({ from_cache: false, recent_tags: [] });
+  expect(result).toMatchObject({ from_cache: false, last_published_tags: [], recent_tags: [] });
   expect(saveDiscourseCatalogCache).toHaveBeenCalledWith('https://forum.example.com', {
     categories: [{ id: 8, name: 'Guides', parent_category_id: null, slug: 'guides' }],
     tags: [{ id: 'desktop', name: 'desktop' }]
@@ -135,7 +140,7 @@ it('refreshes and stores the Discourse publish catalog on demand', async () => {
 it('rejects a failed live catalog refresh instead of reporting the cached catalog as connected', async () => {
   loadDiscourseCatalogCache.mockReturnValue({
     categories: [], fetched_at: '2026-07-02T00:00:00.000Z', from_cache: true,
-    recent_category_ids: [], recent_tags: [], tags: []
+    last_published_tags: [], recent_category_ids: [], recent_tags: [], tags: []
   });
   loadDiscoursePublishCatalog.mockRejectedValue(new Error('forum unavailable'));
   const { loadDiscoursePublishCatalog: loadCatalog } = await import('./discoursePublish.js');

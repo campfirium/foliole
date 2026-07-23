@@ -14,6 +14,7 @@ const discourseCatalog = {
   ],
   fetched_at: null,
   from_cache: false,
+  last_published_tags: ['二语习得'],
   recent_category_ids: [8],
   recent_tags: ['二语习得', '学习'],
   tags: [
@@ -49,8 +50,12 @@ test('shows Discourse publish choices and prefers the body H1 title', async ({ d
   await expect(dialog.getByLabel(/^(Category|分类)$/)).toBeVisible();
   await expect(dialog.getByLabel(/^(Category|分类)$/)).toContainText('作业赏');
   await expect(dialog.getByText(/No category|不选择分类/)).toHaveCount(0);
-  await expect(dialog.getByLabel(/^(Tags|标签)$/)).toBeVisible();
-  await expect(dialog.getByText('二语习得').first()).toBeVisible();
+  const tagInput = dialog.getByLabel(/^(Tags|标签)$/).first();
+  const selectedTags = tagInput.locator('..');
+  await expect(tagInput).toBeVisible();
+  await expect(selectedTags.getByText('二语习得')).toHaveCount(1);
+  await expect(selectedTags.getByText('学习')).toHaveCount(0);
+  await desktopWindow.screenshot({ path: '.tmp/artifacts/discourse-publish-last-tags-hidden-native.png' });
 });
 
 test('closes the Discourse publish dialog on Escape', async ({ desktopWindow }) => {

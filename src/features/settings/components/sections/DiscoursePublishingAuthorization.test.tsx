@@ -34,7 +34,7 @@ beforeEach(() => {
     has_api_key: true, site_url: 'https://forum.example.com', updated_at: '2026-07-19T00:00:00.000Z'
   });
   repositoryMocks.loadDiscoursePublishCatalogFromRuntime.mockResolvedValue({
-    categories: [], fetched_at: null, from_cache: false, recent_category_ids: [], recent_tags: [], tags: []
+    categories: [], fetched_at: null, from_cache: false, last_published_tags: [], recent_category_ids: [], recent_tags: [], tags: []
   });
 });
 

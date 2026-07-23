@@ -88,6 +88,7 @@ export async function loadDiscoursePublishCatalog(args?: { refresh?: boolean }) 
     ...catalog,
     fetched_at: new Date().toISOString(),
     from_cache: false,
+    last_published_tags: cached?.last_published_tags ?? [],
     recent_category_ids: cached?.recent_category_ids ?? [],
     recent_tags: cached?.recent_tags ?? []
   };

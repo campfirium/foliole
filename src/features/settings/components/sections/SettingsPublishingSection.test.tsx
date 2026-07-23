@@ -60,6 +60,7 @@ beforeEach(() => {
     categories: [],
     fetched_at: null,
     from_cache: false,
+    last_published_tags: [],
     recent_category_ids: [],
     recent_tags: [],
     tags: []

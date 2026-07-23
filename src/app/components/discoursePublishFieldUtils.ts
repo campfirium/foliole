@@ -37,7 +37,7 @@ export function withCatalogDefaults(form: PublishFormState, catalog: NativeDisco
   const fallbackCategoryId = recentCategoryId ?? catalog.categories[0]?.id;
   return {
     categoryId: hasSelectedCategory ? form.categoryId : (fallbackCategoryId ? String(fallbackCategoryId) : ''),
-    tags: form.tags || catalog.recent_tags.join(', ')
+    tags: form.tags || catalog.last_published_tags.join(', ')
   };
 }
 
