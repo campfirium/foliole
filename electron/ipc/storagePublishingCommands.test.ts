@@ -171,8 +171,8 @@ it('forwards WordPress publish content without adding credentials to the payload
 });
 
 it('routes the WordPress taxonomy catalog through the configured main-process client', async () => {
-  await handlePublishingStorageCommand(NATIVE_COMMANDS.loadWordPressPublishCatalog, { post_id: '123' });
-  expect(wordpressMocks.loadWordPressPublishCatalog).toHaveBeenCalledWith({ post_id: '123' });
+  await handlePublishingStorageCommand(NATIVE_COMMANDS.loadWordPressPublishCatalog, { post_id: '123', refresh: true });
+  expect(wordpressMocks.loadWordPressPublishCatalog).toHaveBeenCalledWith({ post_id: '123', refresh: true });
 });
 
 it('routes explicit Discourse disconnect through the credential owner', async () => {

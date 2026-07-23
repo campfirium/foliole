@@ -10,6 +10,11 @@ import type { NativeWordPressPublishArgs } from '../../lib/platform/nativeWordPr
 
 import { writeWordPressPost, type WordPressClientConfig } from './wordpressClient.js';
 import {
+  loadWordPressCatalogCache,
+  recordWordPressPublishSelection,
+  saveWordPressCatalogCache
+} from './wordpressPublishCache.js';
+import {
   connectWordPressPublishSettings,
   disconnectWordPressPublishSettings,
   loadStoredWordPressPublishSettings,
@@ -55,8 +60,17 @@ export {
   saveWordPressPublishDraft
 };
 
-export async function loadWordPressPublishCatalog(args: { post_id?: string } = {}) {
-  return loadCatalog(requireConfiguredWordPress(), args.post_id);
+export async function loadWordPressPublishCatalog(args: { post_id?: string; refresh?: boolean } = {}) {
+  const config = requireConfiguredWordPress();
+  const cached = loadWordPressCatalogCache(config, args.post_id);
+  if (cached && !args.refresh) return cached;
+  const catalog = {
+    ...await loadCatalog(config, args.post_id),
+    fetched_at: new Date().toISOString(),
+    from_cache: false
+  };
+  saveWordPressCatalogCache(config, catalog, args.post_id);
+  return catalog;
 }
 
 export async function publishTopicToWordPress(args: NativeWordPressPublishArgs) {
@@ -76,6 +90,12 @@ export async function publishTopicToWordPress(args: NativeWordPressPublishArgs) 
     } } : {}),
     title: extractWordPressPublishTitle(args.content, args.title)
   }, existing?.postId);
+  recordWordPressPublishSelection({
+    category: args.category ? { ...args.category, id: coreCategoryId ?? args.category.id } : null,
+    config,
+    postId: saved.postId,
+    tags: args.tags.map((tag, index) => ({ ...tag, id: coreTagIds?.[index] ?? tag.id }))
+  });
   const binding: WordPressPostBinding = {
     adapter: config.adapter,
     lastPublishedAt: new Date().toISOString(),

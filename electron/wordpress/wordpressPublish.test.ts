@@ -8,6 +8,11 @@ const taxonomyMocks = vi.hoisted(() => ({
   resolveCoreCategoryId: vi.fn(),
   resolveCoreTagIds: vi.fn()
 }));
+const cacheMocks = vi.hoisted(() => ({
+  loadWordPressCatalogCache: vi.fn(),
+  recordWordPressPublishSelection: vi.fn(),
+  saveWordPressCatalogCache: vi.fn()
+}));
 const settings = {
   adapter: 'core_rest' as const,
   blog_id: null,
@@ -23,6 +28,7 @@ const credential = {
 };
 
 vi.mock('./wordpressClient.js', () => ({ writeWordPressPost }));
+vi.mock('./wordpressPublishCache.js', () => cacheMocks);
 vi.mock('./wordpressTaxonomyClient.js', () => taxonomyMocks);
 vi.mock('./wordpressPublishSettings.js', () => ({
   connectWordPressPublishSettings: vi.fn(),
@@ -34,11 +40,40 @@ vi.mock('./wordpressPublishSettings.js', () => ({
 
 beforeEach(() => {
   writeWordPressPost.mockReset();
+  cacheMocks.loadWordPressCatalogCache.mockReset();
+  cacheMocks.recordWordPressPublishSelection.mockReset();
+  cacheMocks.saveWordPressCatalogCache.mockReset();
+  taxonomyMocks.loadWordPressPublishCatalog.mockReset();
   taxonomyMocks.resolveCoreTagIds.mockReset();
   taxonomyMocks.resolveCoreCategoryId.mockReset();
   taxonomyMocks.resolveCoreCategoryId.mockImplementation(async (_config, category) => category?.id ?? 23);
   taxonomyMocks.resolveCoreTagIds.mockResolvedValue([11]);
   writeWordPressPost.mockResolvedValue({ postId: '123', url: 'https://blog.example.com/post' });
+  cacheMocks.loadWordPressCatalogCache.mockReturnValue(null);
+  taxonomyMocks.loadWordPressPublishCatalog.mockResolvedValue({
+    categories: [], fetched_at: null, from_cache: false,
+    selected_category_id: null, selected_tags: [], tags: []
+  });
+});
+
+it('returns the local WordPress catalog without contacting the site', async () => {
+  cacheMocks.loadWordPressCatalogCache.mockReturnValue({
+    categories: [], fetched_at: '2026-07-24T00:00:00.000Z', from_cache: true,
+    selected_category_id: 7, selected_tags: ['cached'], tags: []
+  });
+  const { loadWordPressPublishCatalog } = await import('./wordpressPublish.js');
+
+  await expect(loadWordPressPublishCatalog({ post_id: '123' })).resolves.toMatchObject({ from_cache: true });
+  expect(taxonomyMocks.loadWordPressPublishCatalog).not.toHaveBeenCalled();
+});
+
+it('refreshes and stores the WordPress catalog when requested', async () => {
+  const { loadWordPressPublishCatalog } = await import('./wordpressPublish.js');
+  const catalog = await loadWordPressPublishCatalog({ post_id: '123', refresh: true });
+
+  expect(taxonomyMocks.loadWordPressPublishCatalog).toHaveBeenCalledWith(expect.anything(), '123');
+  expect(catalog).toMatchObject({ from_cache: false, fetched_at: expect.any(String) });
+  expect(cacheMocks.saveWordPressCatalogCache).toHaveBeenCalledWith(expect.anything(), catalog, '123');
 });
 
 it('creates a REST category before assigning it to the post', async () => {
@@ -64,6 +99,9 @@ it('creates a WordPress post and writes the provider-specific binding after succ
     tags: [11], title: 'Body Title'
   }, undefined);
   expect(result.mode).toBe('created');
+  expect(cacheMocks.recordWordPressPublishSelection).toHaveBeenCalledWith(expect.objectContaining({
+    category: { id: 7, name: 'Writing' }, postId: '123', tags: [{ id: 11, name: 'foliole' }]
+  }));
   expect(readWordPressPostBinding(result.updated_content)).toMatchObject({ postId: '123', site: settings.site_url });
   expect(JSON.stringify(result)).not.toContain('SENTINEL-WORDPRESS-SECRET');
 });

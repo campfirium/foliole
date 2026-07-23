@@ -60,6 +60,8 @@ async function loadCoreCatalog(config: WordPressClientConfig, postId?: string): 
   ]);
   return {
     categories: categories as NativeWordPressPublishCatalog['categories'],
+    fetched_at: null,
+    from_cache: false,
     selected_category_id: selection.selected_category_id,
     selected_tags: tags.filter((tag) => selection.selectedTagIds.includes(tag.id)).map((tag) => tag.name),
     tags: tags as NativeWordPressPublishCatalog['tags']
@@ -113,6 +115,8 @@ async function loadXmlCatalog(config: WordPressClientConfig, postId?: string): P
   ]);
   return {
     categories: categories as NativeWordPressPublishCatalog['categories'],
+    fetched_at: null,
+    from_cache: false,
     selected_category_id: Number.isSafeInteger(selection.selected_category_id) ? selection.selected_category_id : null,
     selected_tags: selection.selected_tags,
     tags: tags as NativeWordPressPublishCatalog['tags']

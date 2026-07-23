@@ -34,6 +34,8 @@ it('loads categories, tags, and the connected post selection through the REST ad
 
   await expect(loadWordPressPublishCatalog(config, '123')).resolves.toEqual({
     categories: [{ id: 7, name: 'Writing', parent_category_id: null, slug: 'writing' }],
+    fetched_at: null,
+    from_cache: false,
     selected_category_id: 7,
     selected_tags: ['reading'],
     tags: [

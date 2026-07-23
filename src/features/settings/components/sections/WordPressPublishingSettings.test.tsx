@@ -9,6 +9,7 @@ const openExternalUrl = vi.hoisted(() => vi.fn());
 const repository = vi.hoisted(() => ({
   connectWordPressPublishSettingsToRuntime: vi.fn(),
   disconnectWordPressPublishSettingsFromRuntime: vi.fn(),
+  loadWordPressPublishCatalogFromRuntime: vi.fn(),
   loadWordPressPublishSettingsFromRuntime: vi.fn(),
   saveWordPressPublishDraftToRuntime: vi.fn()
 }));
@@ -21,6 +22,7 @@ beforeEach(() => {
   repository.loadWordPressPublishSettingsFromRuntime.mockReset();
   repository.connectWordPressPublishSettingsToRuntime.mockReset();
   repository.disconnectWordPressPublishSettingsFromRuntime.mockReset();
+  repository.loadWordPressPublishCatalogFromRuntime.mockReset();
   repository.saveWordPressPublishDraftToRuntime.mockReset();
   repository.loadWordPressPublishSettingsFromRuntime.mockResolvedValue({
     adapter: null, credentials_valid: false, has_credentials: false,
@@ -41,6 +43,10 @@ beforeEach(() => {
   repository.disconnectWordPressPublishSettingsFromRuntime.mockResolvedValue({
     adapter: null, credentials_valid: false, has_credentials: false,
     site_url: '', updated_at: null, username: ''
+  });
+  repository.loadWordPressPublishCatalogFromRuntime.mockResolvedValue({
+    categories: [], fetched_at: '2026-07-24T00:00:00.000Z', from_cache: false,
+    selected_category_id: null, selected_tags: [], tags: []
   });
 });
 
@@ -68,6 +74,7 @@ it('shows the guide for the entered site and keeps connected fields locked until
   fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
 
   expect(await screen.findByText('Connected')).toBeInTheDocument();
+  expect(repository.loadWordPressPublishCatalogFromRuntime).toHaveBeenCalledWith({ refresh: true });
   expect(screen.queryByRole('button', { name: 'Connect' })).toBeNull();
   expect(screen.getByRole('button', { name: 'Disconnect' })).toBeVisible();
   expect(screen.getByRole('button', { name: 'Disconnect' })).toHaveClass('border');

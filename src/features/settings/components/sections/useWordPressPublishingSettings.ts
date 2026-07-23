@@ -12,6 +12,7 @@ import { useTranslation } from '../../../../shared/localization/LocalizationProv
 import {
   connectWordPressPublishSettingsToRuntime,
   disconnectWordPressPublishSettingsFromRuntime,
+  loadWordPressPublishCatalogFromRuntime,
   loadWordPressPublishSettingsFromRuntime,
   saveWordPressPublishDraftToRuntime
 } from '../../../../shared/platform/wordpressPublishRepository';
@@ -88,6 +89,7 @@ async function connectWordPress(state: PublishingState, t: ReturnType<typeof use
     });
     if (!settings) throw new Error('WordPress runtime unavailable');
     if (!settings.credentials_valid) throw new Error('WordPress credentials were unavailable after connecting.');
+    await loadWordPressPublishCatalogFromRuntime({ refresh: true }).catch(() => null);
     state.setSettings(settings);
     state.setForm({ applicationPassword: '', siteUrl: settings.site_url, username: settings.username });
     state.setHasCredentials(true);

@@ -35,6 +35,8 @@ export interface NativeWordPressPublishTag {
 
 export interface NativeWordPressPublishCatalog {
   categories: NativeWordPressPublishCategory[];
+  fetched_at: string | null;
+  from_cache: boolean;
   selected_category_id: number | null;
   selected_tags: string[];
   tags: NativeWordPressPublishTag[];
@@ -83,7 +85,7 @@ export type NativeWordPressPublishCommandMap = {
     result: NativeWordPressPublishSettings;
   };
   [NATIVE_COMMANDS.loadWordPressPublishCatalog]: {
-    args: { post_id?: string } | undefined;
+    args: { post_id?: string; refresh?: boolean } | undefined;
     result: NativeWordPressPublishCatalog;
   };
   [NATIVE_COMMANDS.publishTopicToWordPress]: {

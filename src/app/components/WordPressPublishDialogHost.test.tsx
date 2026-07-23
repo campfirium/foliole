@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { writeWordPressPostBinding } from '../../../lib/core/wordpress/wordpressFrontmatter';
+import type { NativeWordPressPublishCatalog } from '../../../lib/platform/nativeWordPressPublishContract';
 
 import { WordPressPublishDialogHost } from './WordPressPublishDialogHost';
 
@@ -29,6 +30,27 @@ function requestDialog(content = '# Post title\n\nBody') {
   }));
 }
 
+function deferred<T>() {
+  let reject!: (reason?: unknown) => void;
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    reject = rejectPromise;
+    resolve = resolvePromise;
+  });
+  return { promise, reject, resolve };
+}
+
+function catalog(args: { categoryId: number; categoryName: string; fromCache: boolean; tag: string }): NativeWordPressPublishCatalog {
+  return {
+    categories: [{ id: args.categoryId, name: args.categoryName, parent_category_id: null, slug: 'category' }],
+    fetched_at: '2026-07-24T00:00:00.000Z',
+    from_cache: args.fromCache,
+    selected_category_id: args.categoryId,
+    selected_tags: [args.tag],
+    tags: [{ id: args.categoryId + 100, name: args.tag, slug: args.tag }]
+  };
+}
+
 beforeEach(() => {
   repositoryMocks.publishTopicToWordPress.mockReset();
   repositoryMocks.loadWordPressPublishCatalogFromRuntime.mockReset();
@@ -37,6 +59,8 @@ beforeEach(() => {
   navigationMocks.openExternalUrl.mockReset();
   repositoryMocks.loadWordPressPublishCatalogFromRuntime.mockResolvedValue({
     categories: [{ id: 7, name: 'Writing', parent_category_id: null, slug: 'writing' }],
+    fetched_at: '2026-07-24T00:00:00.000Z',
+    from_cache: false,
     selected_category_id: null,
     selected_tags: [],
     tags: [{ id: 11, name: 'foliole', slug: 'foliole' }]
@@ -71,6 +95,48 @@ it('shows catalog loading with a spinner instead of trailing dots', async () => 
   expect(status).toHaveTextContent('Loading categories and tags');
   expect(status).not.toHaveTextContent('...');
   expect(status.querySelector('.animate-spin')).not.toBeNull();
+});
+
+it('uses cached WordPress taxonomy immediately and keeps publishing available when refresh fails', async () => {
+  const refresh = deferred<NativeWordPressPublishCatalog>();
+  repositoryMocks.loadWordPressPublishCatalogFromRuntime.mockImplementation((input?: { refresh?: boolean }) =>
+    input?.refresh
+      ? refresh.promise
+      : Promise.resolve(catalog({ categoryId: 7, categoryName: 'Cached Writing', fromCache: true, tag: 'cached-tag' }))
+  );
+  render(<WordPressPublishDialogHost />);
+  requestDialog();
+
+  const category = await screen.findByRole('button', { name: 'Category' });
+  expect(category).toHaveTextContent('Cached Writing');
+  expect(screen.queryByRole('status')).toBeNull();
+  expect(screen.getByRole('button', { name: 'Publish' })).toBeEnabled();
+  expect(repositoryMocks.loadWordPressPublishCatalogFromRuntime.mock.calls.map(([input]) => input))
+    .toEqual([undefined, { refresh: true }]);
+
+  await act(async () => refresh.reject(new Error('offline')));
+  expect(screen.queryByRole('alert')).toBeNull();
+  expect(screen.getByRole('button', { name: 'Publish' })).toBeEnabled();
+});
+
+it('refreshes cached taxonomy without replacing choices edited while the request is in flight', async () => {
+  const refresh = deferred<NativeWordPressPublishCatalog>();
+  repositoryMocks.loadWordPressPublishCatalogFromRuntime.mockImplementation((input?: { refresh?: boolean }) =>
+    input?.refresh
+      ? refresh.promise
+      : Promise.resolve(catalog({ categoryId: 7, categoryName: 'Cached Writing', fromCache: true, tag: 'cached-tag' }))
+  );
+  render(<WordPressPublishDialogHost />);
+  requestDialog();
+
+  const tags = await screen.findByRole('textbox', { name: 'Tags' });
+  fireEvent.change(tags, { target: { value: 'local-edit' } });
+  await act(async () => refresh.resolve(
+    catalog({ categoryId: 9, categoryName: 'Fresh Writing', fromCache: false, tag: 'fresh-tag' })
+  ));
+
+  expect(await screen.findByText('fresh-tag')).toBeVisible();
+  expect(tags).toHaveValue('local-edit');
 });
 
 it('publishes with the selected status and saves the returned binding locally', async () => {

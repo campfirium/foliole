@@ -35,7 +35,7 @@ export async function disconnectWordPressPublishSettingsFromRuntime(): Promise<N
 }
 
 export async function loadWordPressPublishCatalogFromRuntime(
-  args?: { post_id?: string }
+  args?: { post_id?: string; refresh?: boolean }
 ): Promise<NativeWordPressPublishCatalog | null> {
   const runtimeInvoke = getRuntimeInvoke();
   return runtimeInvoke ? runtimeInvoke(NATIVE_COMMANDS.loadWordPressPublishCatalog, args) : null;

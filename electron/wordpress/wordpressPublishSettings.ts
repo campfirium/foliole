@@ -28,6 +28,14 @@ const SECRET_FILE = 'wordpress-publish-credentials.bin';
 export interface StoredWordPressPublishSettings {
   adapter: NativeWordPressPublishAdapter;
   blog_id: string | null;
+  catalog_cache?: {
+    adapter: NativeWordPressPublishAdapter;
+    categories: import('../../lib/platform/nativeWordPressPublishContract.js').NativeWordPressPublishCategory[];
+    fetched_at: string;
+    selections_by_post?: Record<string, { category_id: number | null; tags: string[] }>;
+    site_url: string;
+    tags: import('../../lib/platform/nativeWordPressPublishContract.js').NativeWordPressPublishTag[];
+  };
   endpoint: string;
   site_url: string;
   updated_at: string;
@@ -52,6 +60,10 @@ function isStoredSettings(value: unknown): value is StoredWordPressPublishSettin
     typeof record.updated_at === 'string' &&
     (record.username === undefined || typeof record.username === 'string')
   );
+}
+
+export function saveStoredWordPressPublishSettings(settings: StoredWordPressPublishSettings) {
+  saveJsonSetting(SETTINGS_KEY, settings, settings.updated_at);
 }
 
 export function loadStoredWordPressPublishSettings() {
@@ -144,19 +156,25 @@ export async function connectWordPressPublishSettings(input: NativeWordPressConn
     siteUrl: verified.siteUrl,
     username: input.username.trim()
   };
+  const current = loadStoredWordPressPublishSettings();
+  const catalogCache = current?.catalog_cache?.site_url === verified.siteUrl
+    && current.catalog_cache.adapter === verified.adapter
+    ? current.catalog_cache
+    : undefined;
   const previousSecret = hasPublishDeviceSecret(SECRET_FILE)
     ? readPublishDeviceSecret(SECRET_FILE, 'WordPress publishing credentials')
     : null;
   try {
     writePublishDeviceSecret(SECRET_FILE, 'WordPress publishing credentials', JSON.stringify(credential));
-    saveJsonSetting(SETTINGS_KEY, {
+    saveStoredWordPressPublishSettings({
       adapter: verified.adapter,
       blog_id: verified.blogId,
+      ...(catalogCache ? { catalog_cache: catalogCache } : {}),
       endpoint: verified.endpoint,
       site_url: verified.siteUrl,
       updated_at: updatedAt,
       username: input.username.trim()
-    } satisfies StoredWordPressPublishSettings, updatedAt);
+    });
   } catch (error) {
     try {
       restoreSecret(previousSecret);

@@ -128,6 +128,30 @@ it('restores the previous credential when the non-secret setting cannot be saved
   expect(JSON.parse(state.secret)).toMatchObject({ applicationPassword: 'old', siteUrl: 'https://blog.example.com' });
 });
 
+it('retains taxonomy cache only when the verified site and adapter still match', async () => {
+  state.setting = {
+    adapter: 'wordpress_com_xmlrpc', blog_id: '91', endpoint: 'https://free-site.wordpress.com/xmlrpc.php',
+    catalog_cache: {
+      adapter: 'wordpress_com_xmlrpc', categories: [], fetched_at: 'cached',
+      site_url: 'https://free-site.wordpress.com', tags: []
+    },
+    site_url: 'https://free-site.wordpress.com', updated_at: '2026-07-24T00:00:00.000Z'
+  };
+  await connectWordPressPublishSettings({
+    application_password: 'secret', site_url: 'https://free-site.wordpress.com', username: 'writer'
+  });
+  expect(state.setting).toHaveProperty('catalog_cache.fetched_at', 'cached');
+
+  verifyMock.mockResolvedValueOnce({
+    adapter: 'core_rest', blogId: null,
+    endpoint: 'https://other.example.com/wp-json/wp/v2', siteUrl: 'https://other.example.com'
+  });
+  await connectWordPressPublishSettings({
+    application_password: 'secret', site_url: 'https://other.example.com', username: 'writer'
+  });
+  expect(state.setting).not.toHaveProperty('catalog_cache');
+});
+
 it('disconnects without returning the stored username or password', async () => {
   await connectWordPressPublishSettings({
     application_password: 'secret', site_url: 'https://free-site.wordpress.com', username: 'writer'
