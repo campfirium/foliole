@@ -7,6 +7,14 @@ const SITE_NAV = `<nav class="global-nav" aria-label="Site navigation">
   <a class="icon-link" href="{{ page.rss_url }}" aria-label="RSS feed" title="RSS feed"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5.5" cy="18.5" r="1"></circle><path d="M5 11a8 8 0 0 1 8 8"></path><path d="M5 5a14 14 0 0 1 14 14"></path></svg></a>
 </nav>`;
 
+const EMPTY_HOME_NAV = `<nav class="empty-home-nav" aria-label="Site navigation">
+  <a href="{{ page.home_url }}" aria-current="page">Home</a>
+  <a href="{{ page.archive_url }}">Archive</a>
+  <a href="{{ page.categories_url }}">Categories</a>
+  <a href="{{ page.tags_url }}">Tags</a>
+  <a href="{{ page.search_url }}">Search</a>
+</nav>`;
+
 const HEAD = `<meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
@@ -23,8 +31,8 @@ export const DEFAULT_PAGE_TEMPLATE = `<!doctype html>
 <body data-foliole-publish-site data-page-kind="{{ page.view }}">
   <main class="shell" id="main">
     {% if page.view == "home" %}
-    <section class="view home-view">
-      <header class="page-header"><h1 class="home-title">{{ site.title }}</h1>${SITE_NAV}</header>
+    <section class="view home-view{% if page.cards.size == 0 %} is-empty{% endif %}">
+      <header class="page-header"><h1 class="home-title">{{ site.title }}</h1>{% if page.cards.size > 0 %}${SITE_NAV}{% else %}${EMPTY_HOME_NAV}{% endif %}</header>
       {% if page.cards.size > 0 %}
       <div class="topic-stream">
         {% for card in page.cards %}
@@ -35,12 +43,11 @@ export const DEFAULT_PAGE_TEMPLATE = `<!doctype html>
         {% endfor %}
       </div>
       {% else %}
-      <p class="sr-only">No published topics.</p>
-      <div class="topic-stream empty-topic-stream" aria-hidden="true">
-        <h2 class="topic-title">Writing</h2>
-        <h2 class="topic-title">Thinking</h2>
-        <h2 class="topic-title">Reading</h2>
-      </div>
+      <section class="empty-publish-state" aria-label="No published Topics">
+        <div class="empty-publish-activity" data-empty-publish-activity aria-hidden="true">
+          <span data-empty-publish-word>Reading...</span>
+        </div>
+      </section>
       {% endif %}
       {% if page.previous_page_url or page.next_page_url %}
       <nav class="pagination" aria-label="Pagination">

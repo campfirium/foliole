@@ -51,7 +51,6 @@ a:focus-visible, input:focus-visible {
   margin: 0;
   font-size: 28px;
   font-weight: 720;
-  letter-spacing: -0.04em;
   line-height: 1.1;
 }
 
@@ -89,7 +88,7 @@ a:focus-visible, input:focus-visible {
 
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 @media print {
-  .global-nav, .pagination, .search-form { display: none; }
+  .global-nav, .empty-home-nav, .pagination, .search-form { display: none; }
   .view { padding-top: 0; }
 }
 @media (max-width: 720px) {

@@ -37,4 +37,47 @@ if (form && input) {
   renderResults(initial);
   input.addEventListener('input', () => renderResults(input.value));
   form.addEventListener('submit', (event) => { event.preventDefault(); renderResults(input.value); });
+}
+
+const activity = document.querySelector('[data-empty-publish-activity]');
+const activityWord = activity?.querySelector('[data-empty-publish-word]');
+const activityPhrases = ['Reading', 'Thinking', 'Writing'];
+let activityTimer = 0;
+let activityCharacter = 0;
+let activityPhraseIndex = 0;
+
+function scheduleActivity(callback, delay) {
+  window.clearTimeout(activityTimer);
+  activityTimer = window.setTimeout(callback, delay);
+}
+
+function typeActivity() {
+  if (!activityWord || document.hidden) return;
+  const phrase = activityPhrases[activityPhraseIndex];
+  activityCharacter += 1;
+  const word = phrase.slice(0, activityCharacter);
+  activityWord.textContent = activityCharacter === phrase.length ? word + '...' : word;
+  if (activityCharacter < phrase.length) return scheduleActivity(typeActivity, 170);
+  scheduleActivity(nextActivity, 2600);
+}
+
+function nextActivity() {
+  if (!activityWord) return;
+  activityWord.textContent = '';
+  activityCharacter = 0;
+  activityPhraseIndex = (activityPhraseIndex + 1) % activityPhrases.length;
+  scheduleActivity(typeActivity, 700);
+}
+
+if (activityWord) {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    activityWord.textContent = 'Reading...';
+  } else {
+    activityWord.textContent = '';
+    scheduleActivity(typeActivity, 650);
+    document.addEventListener('visibilitychange', () => {
+      window.clearTimeout(activityTimer);
+      if (!document.hidden) nextActivity();
+    });
+  }
 }`;

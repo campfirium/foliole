@@ -165,16 +165,34 @@ it('keeps the active site and removes staging files when Liquid rendering fails'
   expect(fs.readdirSync(root).filter((name) => name.startsWith('.Site-'))).toEqual([]);
 });
 
-it('renders the empty writing cycle without publishing tutorial Topics', () => {
+it('renders the poster-like empty publish state with text navigation', () => {
   const root = temporaryRoot();
   const index = { ...emptyPublishIndex(), site: { title: 'Working Memory' } };
   const entry = generateFoliolePublishSite(root, index, '');
 
   const html = fs.readFileSync(entry, 'utf8');
-  expect(html).toContain('Writing');
-  expect(html.indexOf('Writing')).toBeLessThan(html.indexOf('Thinking'));
-  expect(html.indexOf('Thinking')).toBeLessThan(html.indexOf('Reading'));
+  expect(html).toContain('class="view home-view is-empty"');
+  expect(html).toContain('<section class="empty-publish-state"');
+  expect(html).not.toContain('No Topics published yet');
+  expect(html).not.toContain('Publish a Topic from Foliole');
+  expect(html).toContain('data-empty-publish-activity');
+  expect(html).toContain('data-empty-publish-word>Reading...</span>');
+  expect(html).toContain('<nav class="empty-home-nav" aria-label="Site navigation">');
+  expect(html).not.toContain('<nav class="global-nav"');
+  expect(html).not.toContain('empty-topic-stream');
+  const navStart = html.indexOf('<nav class="empty-home-nav"');
+  const emptyNav = html.slice(navStart, html.indexOf('</nav>', navStart));
+  expect(emptyNav).toContain('Home</a>');
+  expect(emptyNav.indexOf('Archive</a>')).toBeLessThan(emptyNav.indexOf('Categories</a>'));
+  expect(emptyNav.indexOf('Categories</a>')).toBeLessThan(emptyNav.indexOf('Tags</a>'));
+  expect(emptyNav.indexOf('Tags</a>')).toBeLessThan(emptyNav.indexOf('Search</a>'));
+  expect(emptyNav).not.toContain('RSS');
+  expect(html).toContain('rel="alternate" type="application/rss+xml"');
   expect(fs.readdirSync(path.join(root, 'Site', 'cards'))).toEqual([]);
+  const script = fs.readFileSync(path.join(root, 'Site', 'site.js'), 'utf8');
+  expect(script).toContain("['Reading', 'Thinking', 'Writing']");
+  expect(script).toContain("word + '...'");
+  expect(script).toContain("matchMedia('(prefers-reduced-motion: reduce)')");
   expect(fs.readFileSync(path.join(root, 'Site', 'rss.xml'), 'utf8')).not.toContain('<item>');
 });
 

@@ -162,8 +162,11 @@ test('keeps Theme controls out of Publish and renders the generated static site 
     globalThis.window?.electronAPI?.invoke('update_foliole_publish_local_pages') ?? null
   ));
   const emptySite = await openStaticSite(desktopApp, emptyGenerated.local_path);
-  await expect(emptySite.locator('.empty-topic-stream .topic-title')).toHaveText(['Writing', 'Thinking', 'Reading']);
-  await expect(emptySite.locator('.empty-topic-stream .topic-title a')).toHaveCount(0);
+  await expect(emptySite.locator('.empty-publish-state')).toBeVisible();
+  await expect(emptySite.locator('[data-empty-publish-word]')).toHaveText('Reading...');
+  await expect(emptySite.locator('.empty-home-nav')).toHaveText('Home Archive Categories Tags Search');
+  await expect(emptySite.locator('.empty-home-nav').getByText('RSS')).toHaveCount(0);
+  await expect(emptySite.locator('head link[rel="alternate"][type="application/rss+xml"]')).toHaveCount(1);
   await emptySite.screenshot({ fullPage: true, path: EMPTY_SCREENSHOT });
   await emptySite.close();
   seedPublishedTopics(libraryHome);
