@@ -9,6 +9,7 @@ import {
   AppTooltip,
   AppTooltipContent,
   AppTooltipTrigger,
+  SettingsButton,
   SettingsControlSlot,
   SettingsRow,
   SettingsSection,
@@ -101,15 +102,13 @@ function DiagnosticExportRow() {
       title={diagnosticBundleRow.title}
     >
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-        <button
+        <SettingsButton
           aria-label={t('settings.about.diagnostic.copy')}
-          className={settingsButtonClassName()}
-          disabled={isExporting}
+          loading={isExporting}
           onClick={() => void handleExport()}
-          type="button"
         >
-          {isExporting ? t('settings.about.diagnostic.copying') : t('settings.about.diagnostic.copyButton')}
-        </button>
+          {t('settings.about.diagnostic.copyButton')}
+        </SettingsButton>
       </SettingsControlSlot>
     </SettingsRow>
   );

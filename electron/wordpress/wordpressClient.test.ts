@@ -88,13 +88,19 @@ it('creates then updates through XML-RPC using the supplied post id', async () =
     siteUrl: 'https://free-site.wordpress.com'
   };
 
-  const created = await writeWordPressPost(config, { content: '<p>Body</p>', status: 'draft', title: 'Title' });
+  const created = await writeWordPressPost(config, {
+    content: '<p>Body</p>', status: 'draft',
+    termsNames: { category: ['Writing'], post_tag: ['foliole'] }, title: 'Title'
+  });
   const updated = await writeWordPressPost(config, { content: '<p>Changed</p>', status: 'publish', title: 'Title' }, created.postId);
 
   expect(created.postId).toBe('123');
   expect(updated.postId).toBe('123');
   expect(fetchMock).toHaveBeenCalledTimes(4);
   expect(fetchMock.mock.calls[0]![1]?.body).toContain('<methodName>wp.newPost</methodName>');
+  expect(fetchMock.mock.calls[0]![1]?.body).toContain('<name>terms_names</name>');
+  expect(fetchMock.mock.calls[0]![1]?.body).toContain('<string>Writing</string>');
+  expect(fetchMock.mock.calls[0]![1]?.body).toContain('<string>foliole</string>');
   expect(fetchMock.mock.calls[2]![1]?.body).toContain('<methodName>wp.editPost</methodName>');
   expect(fetchMock.mock.calls[2]![1]?.body).toContain('<int>123</int>');
 });

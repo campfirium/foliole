@@ -29,15 +29,16 @@ function PairAction(props: {
   const t = useTranslation();
   return (
     <button
-      className="shrink-0 rounded-xl border border-companion-divider px-4 py-2 text-sm font-medium text-foreground transition active:bg-companion-subtle/80 disabled:cursor-not-allowed disabled:opacity-45"
+      aria-busy={props.isConnecting || undefined}
+      className={`relative inline-flex shrink-0 items-center justify-center rounded-xl border border-companion-divider px-4 py-2 text-sm font-medium text-foreground transition active:bg-companion-subtle/80 disabled:cursor-not-allowed ${props.isConnecting ? 'disabled:opacity-100' : 'disabled:opacity-45'}`}
       disabled={props.disabled}
       onClick={props.onClick}
       type="button"
     >
       {props.isConnecting ? (
         <>
-          <AppSpinner decorative size="sm" />
-          {t('companion.sync.discovery.connecting')}
+          <AppSpinner className="pointer-events-none absolute left-2" decorative size="sm" />
+          <span className="translate-x-2">{t('companion.sync.discovery.connect')}</span>
         </>
       ) : t('companion.sync.discovery.connect')}
     </button>

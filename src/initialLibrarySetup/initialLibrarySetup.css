@@ -75,7 +75,28 @@
   font-size: 14px;
   font-weight: 560;
   height: 40px;
+  position: relative;
   width: 112px;
+}
+
+.initial-library-setup button.is-loading {
+  opacity: 1;
+}
+
+.initial-library-setup button.is-loading > span {
+  display: inline-block;
+  transform: translateX(8px);
+}
+
+.initial-library-setup__spinner {
+  animation: initial-library-setup-spin 0.8s linear infinite;
+  left: 12px;
+  position: absolute;
+  top: 11px;
+}
+
+@keyframes initial-library-setup-spin {
+  to { transform: rotate(360deg); }
 }
 
 .initial-library-setup button.primary {

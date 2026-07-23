@@ -2,6 +2,7 @@ import type { NativeCompanionPairingState, NativeCompanionSyncEvent } from '../.
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import { isFullSyncCompletedEvent } from '../shared/platform/companionSyncEventSemantics';
+import { AppSpinner } from '../shared/ui';
 
 import { isReportableSyncEvent } from './companionSyncActivityCopy';
 import { CompanionSyncActivityPage } from './CompanionSyncActivityPage';
@@ -161,12 +162,14 @@ function ConnectionPage(props: {
           {t('companion.sync.disconnect.description')}
         </p>
         <button
-          className="mt-3 w-full rounded-2xl border border-error px-4 py-3 text-sm font-semibold text-error transition active:bg-companion-subtle/80 disabled:cursor-not-allowed disabled:opacity-45"
+          aria-busy={props.isDisconnecting || undefined}
+          className={`relative mt-3 inline-flex w-full items-center justify-center rounded-2xl border border-error px-4 py-3 text-sm font-semibold text-error transition active:bg-companion-subtle/80 disabled:cursor-not-allowed ${props.isDisconnecting ? 'disabled:opacity-100' : 'disabled:opacity-45'}`}
           disabled={props.isDisconnecting}
           onClick={props.onDisconnectPairing}
           type="button"
         >
-          {props.isDisconnecting ? t('companion.sync.disconnect.progress') : t('companion.sync.disconnect.button')}
+          {props.isDisconnecting ? <AppSpinner className="pointer-events-none absolute left-4" decorative size="sm" /> : null}
+          <span className={props.isDisconnecting ? 'translate-x-2' : undefined}>{t('companion.sync.disconnect.button')}</span>
         </button>
       </div>
     </section>

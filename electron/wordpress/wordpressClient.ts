@@ -29,9 +29,12 @@ export interface WordPressClientConfig extends VerifiedWordPressSite {
   credential: WordPressCredential;
 }
 
-interface WordPressPostInput {
+export interface WordPressPostInput {
+  categories?: number[];
   content: string;
   status: NativeWordPressPostStatus;
+  tags?: number[];
+  termsNames?: { category: string[]; post_tag: string[] };
   title: string;
 }
 
@@ -41,11 +44,11 @@ export function resolveWordPressAdapter(siteUrl: string): NativeWordPressPublish
     : 'core_rest';
 }
 
-function buildBasicAuthorization(credential: Pick<WordPressCredential, 'applicationPassword' | 'username'>) {
+export function buildBasicAuthorization(credential: Pick<WordPressCredential, 'applicationPassword' | 'username'>) {
   return `Basic ${Buffer.from(`${credential.username}:${credential.applicationPassword}`).toString('base64')}`;
 }
 
-async function fetchWordPress(input: string, init: RequestInit, errorMessage: string) {
+export async function fetchWordPress(input: string, init: RequestInit, errorMessage: string) {
   try {
     return await fetch(input, { ...init, redirect: 'error' });
   } catch {
@@ -53,7 +56,7 @@ async function fetchWordPress(input: string, init: RequestInit, errorMessage: st
   }
 }
 
-async function readCoreJson(response: Response, errorMessage: string) {
+export async function readCoreJson(response: Response, errorMessage: string) {
   if (!response.ok) throw new Error(`${errorMessage} (${response.status})`);
   try {
     return await response.json() as Record<string, unknown>;
@@ -62,7 +65,7 @@ async function readCoreJson(response: Response, errorMessage: string) {
   }
 }
 
-async function callXmlRpc(endpoint: string, method: string, params: XmlRpcValue[]) {
+export async function callXmlRpc(endpoint: string, method: string, params: XmlRpcValue[]) {
   const response = await fetchWordPress(endpoint, {
     body: createXmlRpcCall(method, params),
     headers: { 'Content-Type': 'text/xml' },
@@ -77,7 +80,7 @@ async function callXmlRpc(endpoint: string, method: string, params: XmlRpcValue[
   }
 }
 
-function toRecord(value: XmlRpcValue): Record<string, XmlRpcValue> | null {
+export function toRecord(value: XmlRpcValue): Record<string, XmlRpcValue> | null {
   return value && typeof value === 'object' && !Array.isArray(value) && !Buffer.isBuffer(value)
     ? value as Record<string, XmlRpcValue>
     : null;
@@ -137,8 +140,15 @@ export async function verifyWordPressConnection(input: {
 }
 
 async function writeCorePost(config: WordPressClientConfig, input: WordPressPostInput, postId?: string) {
+  const body = {
+    ...(input.categories ? { categories: input.categories } : {}),
+    content: input.content,
+    status: input.status,
+    ...(input.tags ? { tags: input.tags } : {}),
+    title: input.title
+  };
   const response = await fetchWordPress(`${config.endpoint}/posts${postId ? `/${postId}` : ''}`, {
-    body: JSON.stringify(input),
+    body: JSON.stringify(body),
     headers: {
       Authorization: buildBasicAuthorization(config.credential),
       'Content-Type': 'application/json'
@@ -175,7 +185,8 @@ async function writeXmlRpcPost(config: WordPressClientConfig, input: WordPressPo
     post_content: input.content,
     post_status: input.status,
     post_title: input.title,
-    post_type: 'post'
+    post_type: 'post',
+    terms_names: input.termsNames ?? { category: [], post_tag: [] }
   };
   const common: XmlRpcValue[] = [Number(config.blogId ?? 0), credential.username, credential.applicationPassword];
   const result = postId

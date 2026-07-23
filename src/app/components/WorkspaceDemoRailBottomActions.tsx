@@ -74,8 +74,8 @@ export function WorkspaceDemoRailBottomActions({
       <DemoRailActionButton
         className={`${RAIL_BUTTON_CLASS_NAME} disabled:opacity-45`}
         disabled={isResetting}
-        icon={<RotateCcw aria-hidden="true" size={16} strokeWidth={1.75} />}
-        label={isResetting ? t('desktop.rightPanel.flow.demo.clearing') : t('desktop.workspace.demo.reset')}
+        icon={<RotateCcw aria-hidden="true" className={isResetting ? 'animate-spin' : undefined} size={16} strokeWidth={1.75} />}
+        label={t('desktop.workspace.demo.reset')}
         onClick={() => void resetDemo()}
       />
     </ToolbarActionGroup>

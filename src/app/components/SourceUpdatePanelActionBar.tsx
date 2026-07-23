@@ -24,7 +24,8 @@ function SourceUpdatePanelActionItems(props: SourceUpdatePanelActionBarProps & {
         <ReviewOverlayActionButton
           className="min-w-32 font-medium text-foreground/86"
           disabled={disabled}
-          label={props.pendingAction === 'accept' ? t('desktop.sourceUpdate.accepting') : t('desktop.sourceUpdate.accept')}
+          label={t('desktop.sourceUpdate.accept')}
+          loading={props.pendingAction === 'accept'}
           onClick={() => props.onAction('accept', props.onAcceptIncomingUpdate)}
         />
       ) : null}
@@ -45,7 +46,8 @@ function SourceUpdatePanelActionItems(props: SourceUpdatePanelActionBarProps & {
           <ReviewOverlayActionButton
             className="min-w-32 text-foreground/68"
             disabled={disabled}
-            label={props.pendingAction === 'importAsNew' ? t('desktop.sourceUpdate.importingAsNew') : t('desktop.sourceUpdate.importAsNew')}
+            label={t('desktop.sourceUpdate.importAsNew')}
+            loading={props.pendingAction === 'importAsNew'}
             onClick={() => props.onAction('importAsNew', props.onImportIncomingUpdateAsNew)}
           />
         </>

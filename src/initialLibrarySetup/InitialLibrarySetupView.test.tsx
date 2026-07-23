@@ -37,3 +37,16 @@ it('shows one library path with equal primary and secondary actions', async () =
   fireEvent.click(create);
   await waitFor(() => expect(mocks.confirm).toHaveBeenCalledOnce());
 });
+
+it('keeps the create label and button geometry while creating', async () => {
+  mocks.confirm.mockReturnValue(new Promise(() => undefined));
+  render(<InitialLibrarySetupView />);
+
+  const create = await screen.findByRole('button', { name: 'Create' });
+  fireEvent.click(create);
+
+  expect(create).toBeDisabled();
+  expect(create).toHaveAttribute('aria-busy', 'true');
+  expect(create.className).toContain('is-loading');
+  expect(create).toHaveTextContent('Create');
+});

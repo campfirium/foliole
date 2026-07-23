@@ -8,10 +8,14 @@ export const EN_DESKTOP_WORDPRESS_TRANSLATIONS = {
   'desktop.wordpressPublish.status': 'Post status',
   'desktop.wordpressPublish.status.draft': 'Draft',
   'desktop.wordpressPublish.status.publish': 'Publish',
+  'desktop.wordpressPublish.category.placeholder': 'Choose a category',
+  'desktop.wordpressPublish.catalog.loading': 'Loading categories and tags...',
+  'desktop.wordpressPublish.catalog.error': 'Could not load categories and tags. Try opening the panel again.',
   'desktop.wordpressPublish.confirm': 'Publish',
   'desktop.wordpressPublish.publishing': 'Publishing...',
-  'desktop.wordpressPublish.created': 'WordPress post created.',
-  'desktop.wordpressPublish.updated': 'WordPress post updated.',
+  'desktop.wordpressPublish.created': 'Published to WordPress.',
+  'desktop.wordpressPublish.updated': 'Updated on WordPress.',
+  'desktop.wordpressPublish.viewPost': 'View post',
   'desktop.wordpressPublish.error.publish': "Couldn't publish to WordPress.",
   'desktop.wordpressPublish.error.localSave': 'The post was saved remotely, but Foliole could not save its post link.'
 } as const;

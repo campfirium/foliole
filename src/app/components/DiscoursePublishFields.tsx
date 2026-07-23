@@ -1,14 +1,13 @@
 import type { ReactNode } from 'react';
 
-import type { NativeDiscoursePublishCatalog } from '../../../lib/platform/nativeDiscoursePublishContract';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 
 import { DiscourseCategoryPicker } from './DiscourseCategoryPicker';
 import type { PublishFormState } from './discoursePublishDialogModel';
-import { byRecent, mergeRecentTags } from './discoursePublishFieldUtils';
+import { byRecent, mergeRecentTags, type PublishTaxonomyCatalog } from './discoursePublishFieldUtils';
 import { DiscourseTagPicker } from './DiscourseTagPicker';
 
-type CatalogState = { catalog: NativeDiscoursePublishCatalog | null; error: string | null; loading: boolean };
+type CatalogState = { catalog: PublishTaxonomyCatalog | null; error: string | null; loading: boolean };
 
 function FieldSection(props: { children: ReactNode; label: string }) {
   return (
@@ -21,6 +20,7 @@ function FieldSection(props: { children: ReactNode; label: string }) {
 
 export function DiscoursePublishFields(props: {
   catalog: CatalogState;
+  categoryPlaceholder?: string;
   form: PublishFormState;
   setForm: (form: PublishFormState) => void;
   showAllCategories: boolean;
@@ -34,7 +34,7 @@ export function DiscoursePublishFields(props: {
   return (
     <div className="mt-5 grid gap-4">
       <FieldSection label={t('desktop.discoursePublish.category')}>
-        <DiscourseCategoryPicker categories={catalog?.categories ?? []} form={props.form} setForm={props.setForm} showAll={props.showAllCategories} toggleShowAll={props.toggleShowAllCategories} />
+        <DiscourseCategoryPicker categories={catalog?.categories ?? []} {...(props.categoryPlaceholder ? { emptyLabel: props.categoryPlaceholder } : {})} form={props.form} setForm={props.setForm} showAll={props.showAllCategories} toggleShowAll={props.toggleShowAllCategories} />
       </FieldSection>
       <FieldSection label={t('desktop.discoursePublish.tags')}>
         <DiscourseTagPicker form={props.form} setForm={props.setForm} showAll={props.showAllTags} tags={tags} toggleShowAll={props.toggleShowAllTags} />

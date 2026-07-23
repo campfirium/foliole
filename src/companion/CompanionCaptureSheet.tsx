@@ -10,6 +10,7 @@ import {
   AppDialogOverlay,
   AppDialogPortal,
   AppDialogTitle,
+  AppSpinner,
   appInputFocusVisibleClassName
 } from '../shared/ui';
 
@@ -47,12 +48,14 @@ function CaptureSheetHeader(props: {
       </AppDialogClose>
       <AppDialogTitle>{t('companion.capture.title')}</AppDialogTitle>
       <button
-        className="rounded-md px-2 py-1 text-sm font-semibold text-primary transition hover:bg-companion-subtle disabled:text-companion-text-tertiary"
+        aria-busy={props.isSaving || undefined}
+        className={`relative inline-flex items-center justify-center rounded-md px-2 py-1 text-sm font-semibold text-primary transition hover:bg-companion-subtle ${props.isSaving ? 'disabled:text-primary' : 'disabled:text-companion-text-tertiary'}`}
         disabled={!props.canSave}
         onClick={props.onSave}
         type="button"
       >
-        {props.isSaving ? t('companion.capture.saving') : t('companion.capture.save')}
+        {props.isSaving ? <AppSpinner className="pointer-events-none absolute left-1" decorative size="sm" /> : null}
+        <span className={props.isSaving ? 'translate-x-2' : undefined}>{t('companion.capture.save')}</span>
       </button>
     </div>
   );

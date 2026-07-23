@@ -79,7 +79,7 @@ function DiscoursePublishDialog(props: {
           {props.error ? <p className="mt-3 text-sm text-destructive" role="alert">{props.error}</p> : null}
           <div className="mt-5 flex justify-end gap-2">
             <AppButton disabled={props.state !== 'idle'} onClick={props.onClose} tabIndex={-1} variant="subtle">{t('common.cancel')}</AppButton>
-            <AppButton disabled={!canPublish} onClick={props.onPublish}>{props.state === 'publishing' ? t('desktop.discoursePublish.publishing') : t('desktop.discoursePublish.confirm')}</AppButton>
+            <AppButton disabled={!canPublish} loading={props.state === 'publishing'} onClick={props.onPublish}>{t('desktop.discoursePublish.confirm')}</AppButton>
           </div>
         </AppDialogContent>
       </AppDialogPortal>

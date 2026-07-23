@@ -8,6 +8,7 @@ import {
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   AppDialogContent,
+  AppSpinner,
   appShelllessActionBarClassName,
   appShelllessControlClassName,
   appShelllessInputClassName,
@@ -206,8 +207,9 @@ export function FeedbackActions(props: {
           {t('feedback.updateBeforeSubmit')}
         </p>
       ) : null}
-      <button className={appShelllessControlClassName()} disabled={!props.canSubmit} onClick={() => void props.onSubmit()} type="button">
-        {props.state === 'sending' ? t('feedback.sending') : t('feedback.submit')}
+      <button aria-busy={props.state === 'sending' || undefined} className={appShelllessControlClassName(`relative ${props.state === 'sending' ? 'disabled:opacity-100' : ''}`)} disabled={!props.canSubmit} onClick={() => void props.onSubmit()} type="button">
+        {props.state === 'sending' ? <AppSpinner className="pointer-events-none absolute left-1" decorative size="sm" /> : null}
+        <span className={props.state === 'sending' ? 'translate-x-2' : undefined}>{t('feedback.submit')}</span>
       </button>
     </div>
   );

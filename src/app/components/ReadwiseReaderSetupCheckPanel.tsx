@@ -85,8 +85,6 @@ export function ReadwiseReaderSetupCheckPanel(props: {
   result: NativeReadwiseDetectionResult | null;
 }) {
   const t = useTranslation();
-  const buttonLabel = props.isChecking ? t('desktop.readwise.setup.preview.running') : t('desktop.readwise.setup.preview.action');
-
   return (
     <section className="relative bg-settings-group px-5 py-4 after:absolute after:bottom-0 after:left-5 after:right-5 after:border-b after:border-settings-divider/70">
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
@@ -103,11 +101,12 @@ export function ReadwiseReaderSetupCheckPanel(props: {
         </div>
         <div className="flex justify-start lg:justify-end">
           <AppButton
-            disabled={!props.canCheck || props.isChecking}
+            disabled={!props.canCheck}
+            loading={props.isChecking}
             onClick={props.onCheck}
             variant="default"
           >
-            {buttonLabel}
+            {t('desktop.readwise.setup.preview.action')}
           </AppButton>
         </div>
       </div>

@@ -215,8 +215,8 @@ function SearchEnhancementPromptContent(props: SearchEnhancementPromptContentPro
         <AppButton onClick={props.onSkip} variant="ghost">
           {t('desktop.searchEnhancement.notNow')}
         </AppButton>
-        <AppButton disabled={props.isUpdating} onClick={props.onTurnOn} variant="emphasis">
-          {props.isUpdating ? t('desktop.searchEnhancement.turningOn') : t('desktop.searchEnhancement.turnOn')}
+        <AppButton loading={props.isUpdating} onClick={props.onTurnOn} variant="emphasis">
+          {t('desktop.searchEnhancement.turnOn')}
         </AppButton>
       </div>
       {props.error ? <p className="mt-3 text-sm text-error">{props.error}</p> : null}

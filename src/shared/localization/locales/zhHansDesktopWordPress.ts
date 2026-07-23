@@ -10,10 +10,14 @@ export const ZH_HANS_DESKTOP_WORDPRESS_TRANSLATIONS: Partial<Record<TranslationK
   'desktop.wordpressPublish.status': '文章状态',
   'desktop.wordpressPublish.status.draft': '草稿',
   'desktop.wordpressPublish.status.publish': '发布',
+  'desktop.wordpressPublish.category.placeholder': '选择分类',
+  'desktop.wordpressPublish.catalog.loading': '正在加载分类和标签...',
+  'desktop.wordpressPublish.catalog.error': '无法加载分类和标签，请重新打开面板后再试。',
   'desktop.wordpressPublish.confirm': '发布',
   'desktop.wordpressPublish.publishing': '正在发布...',
-  'desktop.wordpressPublish.created': '已创建 WordPress 文章。',
+  'desktop.wordpressPublish.created': '已发布到 WordPress。',
   'desktop.wordpressPublish.updated': '已更新 WordPress 文章。',
+  'desktop.wordpressPublish.viewPost': '查看文章',
   'desktop.wordpressPublish.error.publish': '无法发布到 WordPress。',
   'desktop.wordpressPublish.error.localSave': '文章已保存到远端，但 Foliole 无法保存文章关联。'
 };

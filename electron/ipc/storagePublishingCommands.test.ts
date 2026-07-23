@@ -16,6 +16,7 @@ const discourseMocks = vi.hoisted(() => ({
 const wordpressMocks = vi.hoisted(() => ({
   connectWordPressPublishSettings: vi.fn(),
   disconnectWordPressPublishSettings: vi.fn(),
+  loadWordPressPublishCatalog: vi.fn(),
   loadWordPressPublishSettings: vi.fn(),
   publishTopicToWordPress: vi.fn(),
   saveWordPressPublishDraft: vi.fn()
@@ -164,9 +165,14 @@ it('routes a WordPress draft without returning its Application Password', async 
 });
 
 it('forwards WordPress publish content without adding credentials to the payload', async () => {
-  const args = { content: '# Title\n\nBody', status: 'draft', title: 'Title' };
+  const args = { category: null, content: '# Title\n\nBody', status: 'draft', tags: [], title: 'Title' };
   await handlePublishingStorageCommand(NATIVE_COMMANDS.publishTopicToWordPress, args);
   expect(wordpressMocks.publishTopicToWordPress).toHaveBeenCalledWith(args);
+});
+
+it('routes the WordPress taxonomy catalog through the configured main-process client', async () => {
+  await handlePublishingStorageCommand(NATIVE_COMMANDS.loadWordPressPublishCatalog, { post_id: '123' });
+  expect(wordpressMocks.loadWordPressPublishCatalog).toHaveBeenCalledWith({ post_id: '123' });
 });
 
 it('routes explicit Discourse disconnect through the credential owner', async () => {

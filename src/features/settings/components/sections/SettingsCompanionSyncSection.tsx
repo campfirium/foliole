@@ -2,12 +2,12 @@ import { useTranslation } from '../../../../shared/localization/LocalizationProv
 import { useDesktopCompanionPairingRequests } from '../../../../shared/platform/useDesktopCompanionPairingRequests';
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
+  SettingsButton,
   SettingsControlSlot,
   SettingsErrorState,
   SettingsLoadingState,
   SettingsRow,
   SettingsSection,
-  settingsButtonClassName,
   settingsSwitchClassName,
   settingsSwitchKnobClassName
 } from '../../../../shared/ui';
@@ -77,14 +77,13 @@ function ConnectedDeviceList({
               <p className="mt-0.5 truncate text-xs text-foreground/50">{device.client_address}</p>
             ) : null}
           </div>
-          <button
-            className={settingsButtonClassName('h-8 px-2 text-xs')}
-            disabled={pendingActionId === `remove-paired-device:${device.device_id}`}
+          <SettingsButton
+            className="h-8 px-2 text-xs"
+            loading={pendingActionId === `remove-paired-device:${device.device_id}`}
             onClick={() => onDisconnect(device.device_id)}
-            type="button"
           >
-            {pendingActionId === `remove-paired-device:${device.device_id}` ? t('settings.companionSync.disconnect.pending') : t('settings.companionSync.disconnect.action')}
-          </button>
+            {t('settings.companionSync.disconnect.action')}
+          </SettingsButton>
         </div>
       ))}
     </div>

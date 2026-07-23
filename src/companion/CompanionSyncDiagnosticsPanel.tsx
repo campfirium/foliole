@@ -15,7 +15,7 @@ import {
   runCombinedSyncDiagnostics,
   type CombinedSyncDiagnosticResult
 } from '../shared/platform/companion/sync/diagnostics/companionSyncDiagnostics';
-import { AppEmptyState } from '../shared/ui';
+import { AppEmptyState, AppSpinner } from '../shared/ui';
 
 import { CompanionSyncConvergenceReport } from './CompanionSyncConvergenceReport';
 import { CompanionSyncDiagnosticCheckpoint } from './CompanionSyncDiagnosticCheckpoint';
@@ -111,20 +111,24 @@ function DiagnosticActions(props: {
   return (
     <>
       <button
-        className="w-full rounded-companion border border-border-strong bg-foreground px-4 py-3 text-sm font-semibold text-bg-panel disabled:opacity-45"
+        aria-busy={props.status === 'running' || undefined}
+        className="relative inline-flex w-full items-center justify-center rounded-companion border border-border-strong bg-foreground px-4 py-3 text-sm font-semibold text-bg-panel disabled:opacity-100"
         disabled={props.status === 'running'}
         onClick={props.onRunDiagnostic}
         type="button"
       >
-        {props.status === 'running' ? t('companion.sync.diagnostics.running') : t('companion.sync.diagnostics.run')}
+        {props.status === 'running' ? <AppSpinner className="pointer-events-none absolute left-4" decorative size="sm" /> : null}
+        <span className={props.status === 'running' ? 'translate-x-2' : undefined}>{t('companion.sync.diagnostics.run')}</span>
       </button>
       <button
-        className="w-full rounded-companion border border-border px-4 py-3 text-sm font-medium text-foreground disabled:opacity-45"
+        aria-busy={props.status === 'checking' || undefined}
+        className={`relative inline-flex w-full items-center justify-center rounded-companion border border-border px-4 py-3 text-sm font-medium text-foreground ${props.status === 'checking' ? 'disabled:opacity-100' : 'disabled:opacity-45'}`}
         disabled={props.status !== 'idle'}
         onClick={props.onRunConvergence}
         type="button"
       >
-        {props.status === 'checking' ? t('companion.sync.diagnostics.checking') : t('companion.sync.diagnostics.convergence')}
+        {props.status === 'checking' ? <AppSpinner className="pointer-events-none absolute left-4" decorative size="sm" /> : null}
+        <span className={props.status === 'checking' ? 'translate-x-2' : undefined}>{t('companion.sync.diagnostics.convergence')}</span>
       </button>
       {props.hasResult ? (
         <button

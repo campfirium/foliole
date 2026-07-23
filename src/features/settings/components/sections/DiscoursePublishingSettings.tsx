@@ -34,7 +34,7 @@ export function DiscoursePublishingSettings(props: { expanded: boolean; onExpand
       <PublishingConnectionFooter
         action={state.hasApiKey
           ? <AppButton disabled={state.disabled} onClick={state.disconnect}>{t('settings.publishing.disconnect')}</AppButton>
-          : <AppButton disabled={!state.canCompleteAuthorization} onClick={state.completeAuthorization}>{state.status === 'connecting' ? t('settings.publishing.connection.connecting') : t('settings.publishing.connection.connect')}</AppButton>}
+          : <AppButton disabled={!state.canCompleteAuthorization} loading={state.status === 'connecting'} onClick={state.completeAuthorization}>{t('settings.publishing.connection.connect')}</AppButton>}
         connected={state.hasApiKey}
         title={t('settings.publishing.connection.title')}
       />

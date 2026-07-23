@@ -32,6 +32,7 @@ import {
 import {
   connectWordPressPublishSettings,
   disconnectWordPressPublishSettings,
+  loadWordPressPublishCatalog,
   loadWordPressPublishSettings,
   publishTopicToWordPress,
   saveWordPressPublishDraft
@@ -114,6 +115,9 @@ export async function handlePublishingStorageCommand(command: string, args: Reco
     );
   }
   if (command === NATIVE_COMMANDS.disconnectWordPressPublishSettings) return disconnectWordPressPublishSettings();
+  if (command === NATIVE_COMMANDS.loadWordPressPublishCatalog) {
+    return loadWordPressPublishCatalog(readSettingsObject(args) as Parameters<typeof loadWordPressPublishCatalog>[0]);
+  }
   if (command === NATIVE_COMMANDS.publishTopicToWordPress) {
     return publishTopicToWordPress(readSettingsObject(args) as unknown as Parameters<typeof publishTopicToWordPress>[0]);
   }

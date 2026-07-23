@@ -69,6 +69,18 @@ it('renders shared control wrappers without Radix theme context', () => {
   expect(container.querySelector('.radix-themes')).toBeNull();
 });
 
+it('keeps loading button content in place while overlaying a leading spinner', () => {
+  const { container } = render(<AppButton loading>Publish</AppButton>);
+  const button = screen.getByRole('button', { name: 'Publish' });
+
+  expect(button).toBeDisabled();
+  expect(button).toHaveAttribute('aria-busy', 'true');
+  expect(button.className).toContain('relative');
+  expect(button.className).toContain('disabled:opacity-100');
+  expect(screen.getByText('Publish').className).toContain('translate-x-2');
+  expect(container.querySelector('.animate-spin.absolute.left-1')).not.toBeNull();
+});
+
 it('applies shared scrollbar styling to scrollable panel bodies', () => {
   const { container } = render(
     <AppPanel scrollBody title="Queue summary">

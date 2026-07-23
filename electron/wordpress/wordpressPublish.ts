@@ -17,6 +17,7 @@ import {
   loadWordPressPublishSettings,
   saveWordPressPublishDraft
 } from './wordpressPublishSettings.js';
+import { loadWordPressPublishCatalog as loadCatalog, resolveCoreTagIds } from './wordpressTaxonomyClient.js';
 
 function requireConfiguredWordPress(): WordPressClientConfig {
   const settings = loadStoredWordPressPublishSettings();
@@ -50,13 +51,24 @@ export {
   saveWordPressPublishDraft
 };
 
+export async function loadWordPressPublishCatalog(args: { post_id?: string } = {}) {
+  return loadCatalog(requireConfiguredWordPress(), args.post_id);
+}
+
 export async function publishTopicToWordPress(args: NativeWordPressPublishArgs) {
   const config = requireConfiguredWordPress();
   const existing = readWordPressPostBinding(args.content);
   validateBinding(existing, config);
+  const coreTagIds = config.adapter === 'core_rest' ? await resolveCoreTagIds(config, args.tags) : undefined;
   const saved = await writeWordPressPost(config, {
+    ...(config.adapter === 'core_rest' && args.category ? { categories: [args.category.id] } : {}),
     content: convertWordPressMarkdownToHtml(readWordPressPublishMarkdown(args.content)),
     status: args.status,
+    ...(coreTagIds ? { tags: coreTagIds } : {}),
+    ...(config.adapter === 'wordpress_com_xmlrpc' ? { termsNames: {
+      category: args.category ? [args.category.name] : [],
+      post_tag: args.tags.map((tag) => tag.name)
+    } } : {}),
     title: extractWordPressPublishTitle(args.content, args.title)
   }, existing?.postId);
   const binding: WordPressPostBinding = {

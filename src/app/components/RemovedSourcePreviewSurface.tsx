@@ -45,7 +45,8 @@ function RemovedImportAction(props: {
     <DocumentRestoreAction
       ariaLabel={t('desktop.removed.preview.reimport')}
       disabled={props.isImporting}
-      label={props.isImporting ? t('desktop.removed.preview.reimporting') : props.needsSourceUpdateConfirm ? t('desktop.removed.preview.reimportCurrent') : t('desktop.removed.preview.reimport')}
+      label={props.needsSourceUpdateConfirm ? t('desktop.removed.preview.reimportCurrent') : t('desktop.removed.preview.reimport')}
+      loading={props.isImporting}
       onRestore={props.onImport}
     />
   );

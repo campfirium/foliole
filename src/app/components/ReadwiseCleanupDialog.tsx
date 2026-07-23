@@ -96,10 +96,11 @@ export function ReadwiseCleanupDialog(props: {
             </AppButton>
             <AppButton
               disabled={props.isRunning || !props.preview || props.preview.total_count === 0}
+              loading={props.isRunning}
               onClick={props.onRun}
               variant="danger"
             >
-              {props.isRunning ? t('desktop.readwise.cleanup.dialogRunning') : t('desktop.readwise.cleanup.dialogAction')}
+              {t('desktop.readwise.cleanup.dialogAction')}
             </AppButton>
           </div>
         </AppDialogContent>

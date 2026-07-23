@@ -1,4 +1,4 @@
-import { Download, Trash2, Upload } from 'lucide-react';
+import { Download, LoaderCircle, Trash2, Upload } from 'lucide-react';
 
 import { useTranslation, type Translate } from '../../../../shared/localization/LocalizationProvider';
 import type { RuntimeSourceDispositionSummary } from '../../../../shared/platform/settingsRuntimeRepository';
@@ -45,18 +45,18 @@ function SourceHandlingIconButton(props: {
   disabled: boolean;
   icon: typeof Download;
   label: string;
-  loadingLabel?: string | undefined;
+  loading?: boolean;
   onClick: () => void;
   tooltip: string;
 }) {
   const Icon = props.icon;
-  const tooltipText = props.loadingLabel ?? props.tooltip;
+  const tooltipText = props.tooltip;
   return (
     <AppTooltip>
       <AppTooltipTrigger asChild>
         <span className="inline-flex" tabIndex={props.disabled ? 0 : undefined} title={tooltipText}>
-          <button aria-label={props.label} className={SOURCE_HANDLING_ICON_BUTTON_CLASS_NAME} disabled={props.disabled} onClick={props.onClick} type="button">
-            <Icon aria-hidden="true" size={22} strokeWidth={1.8} />
+          <button aria-busy={props.loading || undefined} aria-label={props.label} className={SOURCE_HANDLING_ICON_BUTTON_CLASS_NAME} disabled={props.disabled || props.loading} onClick={props.onClick} type="button">
+            {props.loading ? <LoaderCircle aria-hidden="true" className="animate-spin" size={22} strokeWidth={1.8} /> : <Icon aria-hidden="true" size={22} strokeWidth={1.8} />}
           </button>
         </span>
       </AppTooltipTrigger>
@@ -87,9 +87,9 @@ export function SourceDispositionStateRow(props: {
     <SettingsRow description={renderSourceStateDescription(props.statusMessage, props.summary, t)} title={t('settings.backups.sourceHandling.savedTitle')}>
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
         <div className="flex flex-nowrap items-center justify-end gap-2 max-[1080px]:justify-start">
-          <SourceHandlingIconButton disabled={isImportDisabled} icon={Download} label={t('settings.backups.sourceHandling.import')} loadingLabel={props.isImporting ? t('settings.backups.sourceHandling.importing') : undefined} onClick={props.onImport} tooltip={t('settings.backups.sourceHandling.import')} />
-          <SourceHandlingIconButton disabled={isEntryActionDisabled} icon={Upload} label={t('settings.backups.sourceHandling.export')} loadingLabel={props.isExporting ? t('settings.backups.sourceHandling.exporting') : undefined} onClick={props.onExport} tooltip={t('settings.backups.sourceHandling.export')} />
-          <SourceHandlingIconButton disabled={isEntryActionDisabled} icon={Trash2} label={t('settings.backups.sourceHandling.clear')} loadingLabel={props.isResetting ? t('settings.backups.sourceHandling.clearing') : undefined} onClick={props.onReset} tooltip={t('settings.backups.sourceHandling.clearShort')} />
+          <SourceHandlingIconButton disabled={isImportDisabled} icon={Download} label={t('settings.backups.sourceHandling.import')} loading={props.isImporting} onClick={props.onImport} tooltip={t('settings.backups.sourceHandling.import')} />
+          <SourceHandlingIconButton disabled={isEntryActionDisabled} icon={Upload} label={t('settings.backups.sourceHandling.export')} loading={props.isExporting} onClick={props.onExport} tooltip={t('settings.backups.sourceHandling.export')} />
+          <SourceHandlingIconButton disabled={isEntryActionDisabled} icon={Trash2} label={t('settings.backups.sourceHandling.clear')} loading={props.isResetting} onClick={props.onReset} tooltip={t('settings.backups.sourceHandling.clearShort')} />
         </div>
       </SettingsControlSlot>
     </SettingsRow>

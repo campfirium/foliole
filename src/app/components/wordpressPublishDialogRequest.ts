@@ -1,6 +1,9 @@
+import type { NativeWordPressPublishCatalog } from '../../../lib/platform/nativeWordPressPublishContract';
+
 export const WORDPRESS_PUBLISH_DIALOG_REQUEST_EVENT = 'foliole:wordpress-publish-dialog-request';
 
 export interface WordPressPublishDialogRequest {
+  catalog?: NativeWordPressPublishCatalog;
   content: string;
   nodeId: string;
   targetSiteUrl: string;
@@ -21,6 +24,7 @@ export function readWordPressPublishDialogRequest(event: Event): WordPressPublis
     typeof detail.title !== 'string'
   ) return null;
   return {
+    ...(detail.catalog ? { catalog: detail.catalog } : {}),
     content: detail.content,
     nodeId: detail.nodeId,
     targetSiteUrl: detail.targetSiteUrl,

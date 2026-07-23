@@ -1,7 +1,7 @@
 import { forwardRef, useState } from 'react';
 
 import { useDesktopCompanionPairingRequests } from '../../shared/platform/useDesktopCompanionPairingRequests';
-import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle, AppSpinner } from '../../shared/ui';
+import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../shared/ui';
 
 export function CompanionPairingRequestsDialog() {
   const state = useDesktopCompanionPairingRequests(2_000);
@@ -113,7 +113,6 @@ function PairingDialogActions({
   state: ReturnType<typeof useDesktopCompanionPairingRequests>;
 }) {
   const disabled = state.pendingActionId === request.pair_request_id;
-  const actionIcon = disabled ? <AppSpinner decorative size="sm" /> : null;
   const [errorMessage, setErrorMessage] = useState('');
   const runPairingAction = async (action: (pairRequestId: string) => Promise<unknown>) => {
     setErrorMessage('');
@@ -129,20 +128,20 @@ function PairingDialogActions({
       <div className="grid grid-cols-2 gap-3">
         <AppButton
           disabled={disabled}
+          loading={disabled}
           onClick={() => void runPairingAction(state.rejectRequest)}
           variant="danger"
         >
-          {actionIcon}
-          {disabled ? 'Working...' : 'Reject'}
+          Reject
         </AppButton>
         <AppButton
           className="border border-border-strong"
           disabled={disabled}
+          loading={disabled}
           onClick={() => void runPairingAction(state.approveRequest)}
           variant="emphasis"
         >
-          {actionIcon}
-          {disabled ? 'Working...' : 'Allow'}
+          Allow
         </AppButton>
       </div>
       {errorMessage ? (

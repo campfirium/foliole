@@ -7,6 +7,7 @@ import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
   SETTINGS_INPUT_WIDTH_CLASS_NAME,
   SETTINGS_PATH_FIELD_WIDTH_CLASS_NAME,
+  SettingsButton,
   SettingsControlSlot,
   SettingsEmptyState,
   SettingsLoadingState,
@@ -23,8 +24,6 @@ const BACKUP_DATE_FORMATTER = new Intl.DateTimeFormat('en-GB', {
   timeStyle: 'short',
   hour12: false
 });
-
-const ACTION_BUTTON_CLASS_NAME = settingsButtonClassName(SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME);
 
 const SETTINGS_BUTTON_CLASS_NAME = settingsButtonClassName(SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME);
 
@@ -200,9 +199,9 @@ export function BackupListSection(props: {
       />
       <SettingsRow description={props.statusMessage || undefined} title={t('settings.backups.create.title')}>
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-          <button className={ACTION_BUTTON_CLASS_NAME} disabled={!props.isBackupActionsAvailable || props.isCreatingBackup || props.restoringPath.length > 0} onClick={props.createBackup} type="button">
-            {props.isCreatingBackup ? t('settings.backups.create.creating') : t('settings.backups.create.action')}
-          </button>
+          <SettingsButton className={SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME} disabled={!props.isBackupActionsAvailable || props.restoringPath.length > 0} loading={props.isCreatingBackup} onClick={props.createBackup}>
+            {t('settings.backups.create.action')}
+          </SettingsButton>
         </SettingsControlSlot>
       </SettingsRow>
       {!props.isBackupActionsAvailable ? <SettingsRow description={t('settings.backups.desktopRequired.description')} readonly title={t('settings.backups.desktopRequired.title')} /> : null}
@@ -211,9 +210,9 @@ export function BackupListSection(props: {
       {visibleBackups.map((entry) => (
         <SettingsRow description={formatBackupMeta(entry, t)} key={entry.filePath} title={entry.fileName}>
           <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-            <button className={ACTION_BUTTON_CLASS_NAME} disabled={props.isCreatingBackup || props.restoringPath.length > 0} onClick={() => props.restoreBackup(entry)} type="button">
-              {props.restoringPath === entry.filePath ? t('settings.backups.restore.restoring') : t('settings.backups.restore.action')}
-            </button>
+            <SettingsButton className={SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME} disabled={props.isCreatingBackup || props.restoringPath.length > 0} loading={props.restoringPath === entry.filePath} onClick={() => props.restoreBackup(entry)}>
+              {t('settings.backups.restore.action')}
+            </SettingsButton>
           </SettingsControlSlot>
         </SettingsRow>
       ))}

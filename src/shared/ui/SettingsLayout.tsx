@@ -1,4 +1,6 @@
-import type { ReactNode } from 'react';
+import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
+
+import { AppSpinner } from './EmptyState';
 
 import { cn } from '@/shared/lib/utils';
 
@@ -76,6 +78,24 @@ export function settingsButtonClassName(className?: string) {
     className
   );
 }
+
+export const SettingsButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & { loading?: boolean }>(
+  function SettingsButton({ children, className, disabled = false, loading = false, type = 'button', ...rest }, ref) {
+    return (
+      <button
+        aria-busy={loading || undefined}
+        className={settingsButtonClassName(cn('relative', loading && 'disabled:opacity-100', className))}
+        disabled={disabled || loading}
+        ref={ref}
+        type={type}
+        {...rest}
+      >
+        {loading ? <AppSpinner className="pointer-events-none absolute left-1" decorative size="sm" /> : null}
+        <span className={cn('inline-flex min-w-0 items-center justify-center gap-2', loading && 'translate-x-2')}>{children}</span>
+      </button>
+    );
+  }
+);
 
 export function settingsCompactButtonClassName(className?: string) {
   return settingsButtonClassName(cn('size-8 rounded-sm px-0', className));

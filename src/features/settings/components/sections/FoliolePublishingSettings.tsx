@@ -26,11 +26,11 @@ function StaticPagesActions({ state }: { state: FoliolePublishingSettingsState }
   const t = useTranslation();
   return (
     <SettingsControlSlot className="gap-2">
-      <AppButton disabled={state.disabled} onClick={state.viewLocal}>
-        {t(state.status === 'viewingLocal' ? 'settings.publishing.foliole.localPages.openingLocal' : 'settings.publishing.foliole.localPages.viewLocal')}
+      <AppButton disabled={state.disabled && state.status !== 'viewingLocal'} loading={state.status === 'viewingLocal'} onClick={state.viewLocal}>
+        {t('settings.publishing.foliole.localPages.viewLocal')}
       </AppButton>
-      <AppButton disabled={!state.canViewWeb} onClick={state.viewWeb}>
-        {t(state.status === 'viewingWeb' ? 'settings.publishing.foliole.localPages.openingWeb' : 'settings.publishing.foliole.localPages.viewWeb')}
+      <AppButton disabled={!state.canViewWeb && state.status !== 'viewingWeb'} loading={state.status === 'viewingWeb'} onClick={state.viewWeb}>
+        {t('settings.publishing.foliole.localPages.viewWeb')}
       </AppButton>
     </SettingsControlSlot>
   );
@@ -105,8 +105,8 @@ function ThemeOverview({ state }: { state: FoliolePublishingSettingsState }) {
             ]}
             value={theme?.active_theme ?? 'foliole'}
           />
-          <AppButton disabled={state.disabled} onClick={state.updateLocal}>{t(state.status === 'updatingLocal' ? 'settings.publishing.foliole.theme.updatingLocal' : 'settings.publishing.foliole.theme.updateLocal')}</AppButton>
-          <AppButton disabled={!state.canUpdateWeb} onClick={state.updateWeb} variant="emphasis">{t(state.status === 'updatingWeb' ? 'settings.publishing.foliole.theme.updatingWeb' : 'settings.publishing.foliole.theme.updateWeb')}</AppButton>
+          <AppButton disabled={state.disabled && state.status !== 'updatingLocal'} loading={state.status === 'updatingLocal'} onClick={state.updateLocal}>{t('settings.publishing.foliole.theme.updateLocal')}</AppButton>
+          <AppButton disabled={!state.canUpdateWeb && state.status !== 'updatingWeb'} loading={state.status === 'updatingWeb'} onClick={state.updateWeb} variant="emphasis">{t('settings.publishing.foliole.theme.updateWeb')}</AppButton>
         </SettingsControlSlot>
       </div>
     </div>

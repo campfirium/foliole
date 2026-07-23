@@ -1,20 +1,24 @@
 import { useEffect, useState } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
+import { AppSpinner } from '../shared/ui';
 
 function PrimaryAction(props: {
   children: string;
   disabled?: boolean;
+  loading?: boolean;
   onClick(): void;
 }) {
   return (
     <button
-      className="w-full rounded-2xl border border-border-strong bg-foreground px-4 py-3 text-sm font-semibold text-bg-panel transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45"
-      disabled={props.disabled}
+      aria-busy={props.loading || undefined}
+      className={`relative inline-flex w-full items-center justify-center rounded-2xl border border-border-strong bg-foreground px-4 py-3 text-sm font-semibold text-bg-panel transition hover:opacity-90 disabled:cursor-not-allowed ${props.loading ? 'disabled:opacity-100' : 'disabled:opacity-45'}`}
+      disabled={props.disabled || props.loading}
       onClick={props.onClick}
       type="button"
     >
-      {props.children}
+      {props.loading ? <AppSpinner className="pointer-events-none absolute left-4" decorative size="sm" /> : null}
+      <span className={props.loading ? 'translate-x-2' : undefined}>{props.children}</span>
     </button>
   );
 }
@@ -92,8 +96,8 @@ export function EmptyDiscoveryState(props: {
         {t('companion.syncSetup.instructions')}
       </p>
       <div className="mt-6">
-        <PrimaryAction disabled={props.disabled} onClick={props.onTryAgain}>
-          {props.disabled ? t('companion.syncSetup.looking') : t('companion.syncSetup.connect')}
+        <PrimaryAction loading={props.disabled} onClick={props.onTryAgain}>
+          {t('companion.syncSetup.connect')}
         </PrimaryAction>
       </div>
     </div>

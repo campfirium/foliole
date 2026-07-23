@@ -5,10 +5,17 @@ import { writeWordPressPostBinding } from '../../../lib/core/wordpress/wordpress
 
 import { WordPressPublishDialogHost } from './WordPressPublishDialogHost';
 
-const repositoryMocks = vi.hoisted(() => ({ publishTopicToWordPress: vi.fn() }));
+const repositoryMocks = vi.hoisted(() => ({
+  loadWordPressPublishCatalogFromRuntime: vi.fn(),
+  publishTopicToWordPress: vi.fn()
+}));
 const workspaceStoreMocks = vi.hoisted(() => ({ updateNodeContent: vi.fn() }));
+const noticeMocks = vi.hoisted(() => ({ showAppRuntimeNotice: vi.fn() }));
+const navigationMocks = vi.hoisted(() => ({ openExternalUrl: vi.fn() }));
 
 vi.mock('../../shared/platform/wordpressPublishRepository', () => repositoryMocks);
+vi.mock('../../shared/platform/runtimeExternalNavigation', () => navigationMocks);
+vi.mock('../../shared/ui/AppRuntimeNotice', () => noticeMocks);
 vi.mock('../../store/workspaceStore', () => ({ useWorkspaceStore: { getState: () => workspaceStoreMocks } }));
 
 function requestDialog(content = '# Post title\n\nBody') {
@@ -24,7 +31,16 @@ function requestDialog(content = '# Post title\n\nBody') {
 
 beforeEach(() => {
   repositoryMocks.publishTopicToWordPress.mockReset();
+  repositoryMocks.loadWordPressPublishCatalogFromRuntime.mockReset();
   workspaceStoreMocks.updateNodeContent.mockReset();
+  noticeMocks.showAppRuntimeNotice.mockReset();
+  navigationMocks.openExternalUrl.mockReset();
+  repositoryMocks.loadWordPressPublishCatalogFromRuntime.mockResolvedValue({
+    categories: [{ id: 7, name: 'Writing', parent_category_id: null, slug: 'writing' }],
+    selected_category_id: null,
+    selected_tags: [],
+    tags: [{ id: 11, name: 'foliole', slug: 'foliole' }]
+  });
   repositoryMocks.publishTopicToWordPress.mockResolvedValue({
     mode: 'created',
     post_id: '123',
@@ -34,13 +50,14 @@ beforeEach(() => {
   workspaceStoreMocks.updateNodeContent.mockResolvedValue(true);
 });
 
-it('shows title, target, create mode, and defaults to Draft', async () => {
+it('shows the Discourse-style taxonomy controls without redundant publish metadata', async () => {
   render(<WordPressPublishDialogHost />);
   requestDialog();
 
-  expect(await screen.findByRole('dialog')).toHaveTextContent('Post title');
-  expect(screen.getByText('https://blog.example.com')).toBeInTheDocument();
-  expect(screen.getByText('Create a new post')).toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: 'Category' })).toHaveTextContent('Choose a category');
+  expect(screen.getByRole('textbox', { name: 'Tags' })).toBeInTheDocument();
+  expect(screen.queryByText('https://blog.example.com')).not.toBeInTheDocument();
+  expect(screen.queryByText('Create a new post')).not.toBeInTheDocument();
   expect(screen.getByRole('combobox', { name: 'Post status' })).toHaveValue('draft');
 });
 
@@ -48,13 +65,23 @@ it('publishes with the selected status and saves the returned binding locally', 
   render(<WordPressPublishDialogHost />);
   requestDialog();
   const status = await screen.findByRole('combobox', { name: 'Post status' });
+  fireEvent.click(await screen.findByRole('button', { name: '1 Writing' }));
+  fireEvent.click(screen.getByRole('button', { name: '1 foliole' }));
   fireEvent.change(status, { target: { value: 'publish' } });
   fireEvent.click(screen.getByRole('button', { name: 'Publish' }));
 
   await waitFor(() => expect(repositoryMocks.publishTopicToWordPress).toHaveBeenCalledWith({
-    content: '# Post title\n\nBody', status: 'publish', title: 'Post title'
+    category: { id: 7, name: 'Writing' },
+    content: '# Post title\n\nBody',
+    status: 'publish',
+    tags: [{ id: 11, name: 'foliole' }],
+    title: 'Post title'
   }));
   expect(workspaceStoreMocks.updateNodeContent).toHaveBeenCalledWith('topic-1', '# Post title\n\nBody with binding');
+  const action = noticeMocks.showAppRuntimeNotice.mock.calls[0]?.[2];
+  expect(action?.label).toBe('View post');
+  action?.onSelect();
+  expect(navigationMocks.openExternalUrl).toHaveBeenCalledWith('https://blog.example.com/post');
 });
 
 it('shows update mode when the Topic already owns a WordPress post binding', async () => {
@@ -68,5 +95,5 @@ it('shows update mode when the Topic already owns a WordPress post binding', asy
   render(<WordPressPublishDialogHost />);
   requestDialog(content);
 
-  expect(await screen.findByText('Update the connected post')).toBeInTheDocument();
+  await waitFor(() => expect(repositoryMocks.loadWordPressPublishCatalogFromRuntime).toHaveBeenCalledWith({ post_id: '123' }));
 });

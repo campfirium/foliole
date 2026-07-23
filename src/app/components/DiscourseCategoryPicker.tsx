@@ -115,6 +115,7 @@ function categoryForShortcut(categories: Category[], key: string) {
 
 export function DiscourseCategoryPicker(props: {
   categories: Category[];
+  emptyLabel?: string;
   form: PublishFormState;
   setForm: (form: PublishFormState) => void;
   showAll: boolean;
@@ -159,7 +160,7 @@ export function DiscourseCategoryPicker(props: {
         onKeyDown={handleKeyDown}
         type="button"
       >
-        <span className="min-w-0 truncate">{selectedCategory?.name ?? props.categories[0]?.name ?? t('desktop.discoursePublish.category.placeholder')}</span>
+        <span className="min-w-0 truncate">{selectedCategory?.name ?? props.emptyLabel ?? props.categories[0]?.name ?? t('desktop.discoursePublish.category.placeholder')}</span>
         <span className="ml-2 text-foreground/55">...</span>
       </button>
       <CategoryShortcuts categories={props.categories} onMore={props.toggleShowAll} selectCategory={selectCategory} selectedCategoryId={props.form.categoryId} />

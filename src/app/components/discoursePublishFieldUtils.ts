@@ -1,9 +1,15 @@
-import type { NativeDiscoursePublishCatalog } from '../../../lib/platform/nativeDiscoursePublishContract';
-
 import { toTags, type PublishFormState } from './discoursePublishDialogModel';
 
-export type Category = NativeDiscoursePublishCatalog['categories'][number];
-export type Tag = NativeDiscoursePublishCatalog['tags'][number];
+export type Category = { id: number; name: string; parent_category_id: number | null; slug: string };
+export type Tag = { id: string; name: string };
+
+export type PublishTaxonomyCatalog = {
+  categories: Category[];
+  last_published_tags?: string[];
+  recent_category_ids?: number[];
+  recent_tags?: string[];
+  tags: Tag[];
+};
 
 export function byRecent<T>(items: T[], recent: string[], toKey: (item: T) => string) {
   const rank = new Map(recent.map((key, index) => [key, index]));
@@ -31,13 +37,13 @@ export function mergeRecentTags(tags: Tag[], recentTags: string[]) {
   return [...recentOnly, ...tags];
 }
 
-export function withCatalogDefaults(form: PublishFormState, catalog: NativeDiscoursePublishCatalog): PublishFormState {
+export function withCatalogDefaults(form: PublishFormState, catalog: PublishTaxonomyCatalog): PublishFormState {
   const hasSelectedCategory = catalog.categories.some((category) => String(category.id) === form.categoryId);
-  const recentCategoryId = catalog.recent_category_ids.find((id) => catalog.categories.some((category) => category.id === id));
+  const recentCategoryId = catalog.recent_category_ids?.find((id) => catalog.categories.some((category) => category.id === id));
   const fallbackCategoryId = recentCategoryId ?? catalog.categories[0]?.id;
   return {
     categoryId: hasSelectedCategory ? form.categoryId : (fallbackCategoryId ? String(fallbackCategoryId) : ''),
-    tags: form.tags || catalog.last_published_tags.join(', ')
+    tags: form.tags || (catalog.last_published_tags ?? []).join(', ')
   };
 }
 

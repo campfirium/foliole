@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { clearCompanionAppData } from '../shared/platform/companionAppData';
+import { AppSpinner } from '../shared/ui';
 import {
   AppDialog,
   AppDialogContent,
@@ -33,12 +34,14 @@ function ClearAppDataDialog(props: {
           </AppDialogDescription>
           <div className="mt-5 flex flex-col gap-3">
             <button
-              className="w-full rounded-2xl border border-error/60 px-4 py-3 text-sm font-semibold text-error transition hover:bg-error/5 disabled:cursor-not-allowed disabled:opacity-45"
+              aria-busy={props.isClearing || undefined}
+              className={`relative inline-flex w-full items-center justify-center rounded-2xl border border-error/60 px-4 py-3 text-sm font-semibold text-error transition hover:bg-error/5 disabled:cursor-not-allowed ${props.isClearing ? 'disabled:opacity-100' : 'disabled:opacity-45'}`}
               disabled={props.isClearing}
               onClick={props.onClear}
               type="button"
             >
-              {props.isClearing ? t('companion.settings.storage.clearing') : t('companion.settings.storage.clear')}
+              {props.isClearing ? <AppSpinner className="pointer-events-none absolute left-4" decorative size="sm" /> : null}
+              <span className={props.isClearing ? 'translate-x-2' : undefined}>{t('companion.settings.storage.clear')}</span>
             </button>
             <button
               className="w-full rounded-2xl border border-companion-divider px-4 py-3 text-sm font-medium text-foreground transition active:bg-companion-subtle/80 disabled:cursor-not-allowed disabled:opacity-45"
@@ -81,12 +84,14 @@ export function CompanionStorageSettingsContent() {
           {t('companion.settings.storage.description')}
         </p>
         <button
-          className="mt-5 w-full rounded-2xl border border-error/60 px-4 py-3 text-sm font-semibold text-error transition hover:bg-error/5 disabled:cursor-not-allowed disabled:opacity-45"
+          aria-busy={isClearing || undefined}
+          className={`relative mt-5 inline-flex w-full items-center justify-center rounded-2xl border border-error/60 px-4 py-3 text-sm font-semibold text-error transition hover:bg-error/5 disabled:cursor-not-allowed ${isClearing ? 'disabled:opacity-100' : 'disabled:opacity-45'}`}
           disabled={isClearing}
           onClick={() => setIsConfirmOpen(true)}
           type="button"
         >
-          {isClearing ? t('companion.settings.storage.clearing') : t('companion.settings.storage.clear')}
+          {isClearing ? <AppSpinner className="pointer-events-none absolute left-4" decorative size="sm" /> : null}
+          <span className={isClearing ? 'translate-x-2' : undefined}>{t('companion.settings.storage.clear')}</span>
         </button>
         {error ? <p className="mt-3 text-sm leading-6 text-error">{error}</p> : null}
       </div>

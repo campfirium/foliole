@@ -1,5 +1,6 @@
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
+  AppSpinner,
   settingsFieldClassName
 } from '../../../../shared/ui';
 
@@ -17,7 +18,7 @@ export function DiscourseAuthorizationRows(props: {
   const t = useTranslation();
   return (
     <PublishingSetupStep
-      description={<><button className="font-medium text-foreground underline underline-offset-4 disabled:opacity-50" disabled={!props.canAuthorize} onClick={props.onBegin} type="button">{t(props.status === 'authorizing' ? 'settings.publishing.authorization.opening' : 'settings.publishing.authorization.open')}</button>{t('settings.publishing.authorization.descriptionSuffix')}</>}
+      description={<><button aria-busy={props.status === 'authorizing' || undefined} className={`relative inline-flex items-center font-medium text-foreground underline underline-offset-4 disabled:pointer-events-none ${props.status === 'authorizing' ? 'disabled:opacity-100' : 'disabled:opacity-50'}`} disabled={!props.canAuthorize || props.status === 'authorizing'} onClick={props.onBegin} type="button">{props.status === 'authorizing' ? <AppSpinner className="pointer-events-none absolute left-0" decorative size="sm" /> : null}<span className={props.status === 'authorizing' ? 'translate-x-3' : undefined}>{t('settings.publishing.authorization.open')}</span></button>{t('settings.publishing.authorization.descriptionSuffix')}</>}
       title={t('settings.publishing.authorization.title')}
     >
       <input

@@ -5,6 +5,7 @@ import { preloadTranslationCatalog } from '../localization/translations';
 
 import {
   SettingsControlSlot,
+  SettingsButton,
   SettingsGroup,
   SettingsRow,
   SettingsSection,
@@ -69,6 +70,17 @@ it('keeps compact settings control helpers on shared token chrome', () => {
   expect(settingsCompactButtonClassName()).toContain('border-settings-control-border');
   expect(settingsCompactUtilityIconButtonClassName(true)).toContain('text-settings-icon-active');
   expect(settingsCompactUtilityIconButtonClassName(false)).toContain('hover:text-settings-icon-hover');
+});
+
+it('keeps a loading settings button at full opacity with a leading spinner', () => {
+  const { container } = render(<SettingsButton loading>Export</SettingsButton>);
+  const button = screen.getByRole('button', { name: 'Export' });
+
+  expect(button).toBeDisabled();
+  expect(button).toHaveAttribute('aria-busy', 'true');
+  expect(button.className).toContain('disabled:opacity-100');
+  expect(screen.getByText('Export').className).toContain('translate-x-2');
+  expect(container.querySelector('.animate-spin.absolute.left-1')).not.toBeNull();
 });
 
 it('keeps settings selection helpers on shared token states', () => {

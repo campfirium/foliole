@@ -112,6 +112,7 @@ export const NATIVE_COMMANDS = {
   saveWordPressPublishDraft: 'save_wordpress_publish_draft',
   connectWordPressPublishSettings: 'connect_wordpress_publish_settings',
   disconnectWordPressPublishSettings: 'disconnect_wordpress_publish_settings',
+  loadWordPressPublishCatalog: 'load_wordpress_publish_catalog',
   publishTopicToWordPress: 'publish_topic_to_wordpress',
   clearLinkPanelBrowsingData: 'clear_link_panel_browsing_data',
   updateLibraryPathSetting: 'update_library_path_setting',

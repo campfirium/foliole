@@ -5,10 +5,10 @@ import { useTranslation } from '../../../../shared/localization/LocalizationProv
 import { runFolioleCliInstallationAction } from '../../../../shared/platform/folioleCliInstallation';
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
+  SettingsButton,
   SettingsControlSlot,
   SettingsRow,
-  SettingsSection,
-  settingsButtonClassName
+  SettingsSection
 } from '../../../../shared/ui';
 import { settingsSearchRowProps } from '../../model/settingsSearch';
 import { useLocalizedSettingsSearchRow } from '../useLocalizedSettingsSearchRows';
@@ -51,14 +51,13 @@ export function SettingsCliSection() {
         title={row.title}
       >
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-          <button
-            className={settingsButtonClassName()}
-            disabled={busy || state.status === 'conflict'}
+          <SettingsButton
+            disabled={state.status === 'conflict'}
+            loading={busy}
             onClick={() => void run()}
-            type="button"
           >
-            {busy ? t('settings.about.cli.working') : t(`settings.about.cli.action.${action}`)}
-          </button>
+            {t(`settings.about.cli.action.${action}`)}
+          </SettingsButton>
         </SettingsControlSlot>
       </SettingsRow>
     </SettingsSection>

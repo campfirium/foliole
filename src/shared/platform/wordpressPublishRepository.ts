@@ -3,6 +3,7 @@ import type {
   NativeWordPressConnectInput,
   NativeWordPressDraftInput,
   NativeWordPressPublishArgs,
+  NativeWordPressPublishCatalog,
   NativeWordPressPublishResult,
   NativeWordPressPublishSettings
 } from '../../../lib/platform/nativeWordPressPublishContract';
@@ -31,6 +32,13 @@ export async function connectWordPressPublishSettingsToRuntime(
 export async function disconnectWordPressPublishSettingsFromRuntime(): Promise<NativeWordPressPublishSettings | null> {
   const runtimeInvoke = getRuntimeInvoke();
   return runtimeInvoke ? runtimeInvoke(NATIVE_COMMANDS.disconnectWordPressPublishSettings) : null;
+}
+
+export async function loadWordPressPublishCatalogFromRuntime(
+  args?: { post_id?: string }
+): Promise<NativeWordPressPublishCatalog | null> {
+  const runtimeInvoke = getRuntimeInvoke();
+  return runtimeInvoke ? runtimeInvoke(NATIVE_COMMANDS.loadWordPressPublishCatalog, args) : null;
 }
 
 export async function publishTopicToWordPress(args: NativeWordPressPublishArgs): Promise<NativeWordPressPublishResult> {

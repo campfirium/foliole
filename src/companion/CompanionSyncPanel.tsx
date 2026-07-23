@@ -3,6 +3,7 @@ import type { NativeCompanionPairingState, NativeCompanionSyncEvent } from '../.
 import { useTranslation, type Translate } from '../shared/localization/LocalizationProvider';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import { isCompanionPairingSyncUsable } from '../shared/platform/companionPairingState';
+import { AppSpinner } from '../shared/ui';
 
 import type { CompanionHandoffReminderSettings } from './companionHandoffReminderSettings';
 import { CompanionHandoffReminderSettingsPanel } from './CompanionHandoffReminderSettingsPanel';
@@ -108,12 +109,14 @@ function ConnectedState(props: Pick<CompanionSyncPanelProps, 'lastSyncedAt' | 'o
       {props.page !== 'sync' ? null : (
         <>
           <button
-            className="min-h-11 w-full rounded-xl border border-border-strong bg-foreground px-4 py-3 text-sm font-semibold text-bg-panel transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-companion-divider-strong disabled:text-companion-text-secondary"
+            aria-busy={props.status === 'syncing' || undefined}
+            className="relative inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-border-strong bg-foreground px-4 py-3 text-sm font-semibold text-bg-panel transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-foreground disabled:text-bg-panel"
             disabled={props.status === 'syncing'}
             onClick={props.onSync}
             type="button"
           >
-            {props.status === 'syncing' ? t('companion.browse.syncing') : t('companion.settings.sync.title')}
+            {props.status === 'syncing' ? <AppSpinner className="pointer-events-none absolute left-4" decorative size="sm" /> : null}
+            <span className={props.status === 'syncing' ? 'translate-x-2' : undefined}>{t('companion.settings.sync.title')}</span>
           </button>
           {!isPrimary ? (
             <button

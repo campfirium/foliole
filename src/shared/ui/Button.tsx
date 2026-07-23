@@ -1,6 +1,7 @@
 import { forwardRef } from 'react';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
+import { AppSpinner } from './EmptyState';
 import { appFocusControlClassName } from './InputFocus';
 
 import { cn } from '@/shared/lib/utils';
@@ -13,6 +14,7 @@ interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'col
   variant?: ButtonVariant;
   size?: ButtonSize;
   active?: boolean;
+  loading?: boolean;
 }
 
 function resolveVariantClass(variant: ButtonVariant) {
@@ -39,7 +41,7 @@ function resolveSizeClass(size: ButtonSize) {
 }
 
 export const AppButton = forwardRef<HTMLButtonElement, ButtonProps>(function AppButton(
-  { children, variant = 'default', size = 'sm', className, active = false, type = 'button', ...rest },
+  { children, variant = 'default', size = 'sm', className, active = false, disabled = false, loading = false, type = 'button', ...rest },
   ref
 ) {
   const isList = variant === 'list';
@@ -47,19 +49,25 @@ export const AppButton = forwardRef<HTMLButtonElement, ButtonProps>(function App
   return (
     <button
       className={cn(
-        'inline-flex shrink-0 items-center justify-center gap-2 rounded-md transition-colors disabled:pointer-events-none disabled:opacity-45',
+        'relative inline-flex shrink-0 items-center justify-center rounded-md transition-colors disabled:pointer-events-none',
+        loading ? 'disabled:opacity-100' : 'disabled:opacity-45',
         appFocusControlClassName,
         !isList && resolveSizeClass(size),
         resolveVariantClass(variant),
         active && isList && 'border border-border-strong bg-foreground/[0.05] text-foreground',
         className
       )}
+      aria-busy={loading || undefined}
       data-active={active}
+      disabled={disabled || loading}
       ref={ref}
       type={type}
       {...rest}
     >
-      {children}
+      {loading ? <AppSpinner className="pointer-events-none absolute left-1" decorative size="sm" /> : null}
+      <span className={cn('inline-flex min-w-0 items-center justify-center gap-2', loading && 'translate-x-2')}>
+        {children}
+      </span>
     </button>
   );
 });

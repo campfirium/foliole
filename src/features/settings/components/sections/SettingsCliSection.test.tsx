@@ -60,7 +60,8 @@ it('repairs a moved command and exposes a busy state while working', async () =>
   renderWithLocalization(<SettingsCliSection />);
 
   fireEvent.click(await screen.findByRole('button', { name: 'Repair command' }));
-  expect(screen.getByRole('button', { name: 'Working...' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Repair command' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Repair command' })).toHaveAttribute('aria-busy', 'true');
   finishRepair(state('installed'));
   expect(await screen.findByRole('button', { name: 'Remove command' })).toBeEnabled();
   expect(runAction).toHaveBeenLastCalledWith('repair');

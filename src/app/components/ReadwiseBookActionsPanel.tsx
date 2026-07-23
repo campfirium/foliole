@@ -24,11 +24,11 @@ function OriginalFileActionPanel(props: {
           <p className="text-[13px] text-foreground/60">{props.helperText}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <AppButton disabled={props.isBusy} onClick={() => void props.runDownload()} size="sm" variant="default">
-            {props.pendingAction === 'download' ? t('desktop.readwise.original.opening') : t('desktop.readwise.original.download')}
+          <AppButton disabled={props.isBusy} loading={props.pendingAction === 'download'} onClick={() => void props.runDownload()} size="sm" variant="default">
+            {t('desktop.readwise.original.download')}
           </AppButton>
-          <AppButton disabled={props.isBusy} onClick={() => void props.runLoad()} size="sm" variant="ghost">
-            {props.pendingAction === 'load' ? t('desktop.readwise.original.preparing') : t('desktop.readwise.original.load')}
+          <AppButton disabled={props.isBusy} loading={props.pendingAction === 'load'} onClick={() => void props.runLoad()} size="sm" variant="ghost">
+            {t('desktop.readwise.original.load')}
           </AppButton>
         </div>
         {props.showLoadProgress ? <OriginalFileLoadProgress detail={props.loadProgress.detail} progress={props.loadProgress.progress} /> : null}
