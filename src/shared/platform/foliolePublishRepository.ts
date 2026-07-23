@@ -59,12 +59,16 @@ export function resetFoliolePublishFieldHistoryFromRuntime() {
   return requireRuntime()(NATIVE_COMMANDS.resetFoliolePublishFieldHistory);
 }
 
-export function openFoliolePublishThemeFromRuntime() {
-  return requireRuntime()(NATIVE_COMMANDS.openFoliolePublishTheme);
+export function loadFoliolePublishThemeFromRuntime() {
+  return requireRuntime()(NATIVE_COMMANDS.loadFoliolePublishTheme);
 }
 
-export function resetFoliolePublishThemeFromRuntime() {
-  return requireRuntime()(NATIVE_COMMANDS.resetFoliolePublishTheme);
+export function openFoliolePublishCustomThemeFromRuntime() {
+  return requireRuntime()(NATIVE_COMMANDS.openFoliolePublishCustomTheme);
+}
+
+export function useFoliolePublishThemeFromRuntime() {
+  return requireRuntime()(NATIVE_COMMANDS.useFoliolePublishTheme);
 }
 
 export function updateFoliolePublishLocalPagesFromRuntime() {

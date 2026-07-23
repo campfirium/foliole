@@ -6,7 +6,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 
 import { emptyPublishIndex, upsertPublishedCard, writeFileAtomic } from './foliolePublishModel.js';
 import { activateFoliolePublishSite, generateFoliolePublishSite, stageFoliolePublishSite } from './foliolePublishSite.js';
-import { resetFoliolePublishThemeFiles } from './foliolePublishTheme.js';
+import { openOrCreateFoliolePublishCustomTheme } from './foliolePublishTheme.js';
 
 const roots: string[] = [];
 function temporaryRoot() {
@@ -119,7 +119,7 @@ it('exposes stable page, navigation, site, card, and field data to Liquid', () =
   writeFileAtomic(path.join(root, older.card.file), 'Older body');
   const newer = upsertPublishedCard(older.index, { nodeId: 'newer', title: 'Newer topic' });
   writeFileAtomic(path.join(root, newer.card.file), 'Newer body');
-  const theme = resetFoliolePublishThemeFiles(root);
+  const theme = openOrCreateFoliolePublishCustomTheme(root).path;
   fs.writeFileSync(path.join(theme, 'page.html'), [
     '{{ site.title }}|{{ site.url }}|{{ site.home_url }}|{{ site.archive_url }}|{{ site.rss_url }}',
     '{{ page.kind }}|{{ page.id }}|{{ page.is_home }}|{{ page.published_at }}|{{ page.updated_at }}',
@@ -135,9 +135,9 @@ it('exposes stable page, navigation, site, card, and field data to Liquid', () =
   expect(home).toContain(`Older topic|cards/${older.card.id}.html`);
 });
 
-it('lets the single Theme control field and archive item markup with Liquid', () => {
+it('lets Custom Theme control field and archive item markup with Liquid', () => {
   const root = temporaryRoot();
-  const theme = resetFoliolePublishThemeFiles(root);
+  const theme = openOrCreateFoliolePublishCustomTheme(root).path;
   fs.writeFileSync(path.join(theme, 'page.html'), '{% for field in page.fields %}<x-field>{{ field.key }}={{ field.values | join: "|" }}</x-field>{% endfor %}');
   fs.writeFileSync(path.join(theme, 'archive.html'), '{% for card in site.cards %}<x-card path="{{ card.path }}">{{ card.title }}</x-card>{% endfor %}');
   const published = upsertPublishedCard(emptyPublishIndex(), { nodeId: 'one', title: 'Custom card' });
@@ -156,7 +156,8 @@ it('keeps the active site and removes staging files when Liquid rendering fails'
   const root = temporaryRoot();
   const active = generateFoliolePublishSite(root, emptyPublishIndex(), 'https://old.pages.dev');
   const before = fs.readFileSync(active, 'utf8');
-  fs.writeFileSync(path.join(root, 'Theme', 'page.html'), '{{ missing }}');
+  const theme = openOrCreateFoliolePublishCustomTheme(root).path;
+  fs.writeFileSync(path.join(theme, 'page.html'), '{{ missing }}');
 
   expect(() => stageFoliolePublishSite(root, emptyPublishIndex(), 'https://new.pages.dev')).toThrow(
     /Theme file page\.html has a Liquid error at line 1, column 4: undefined variable: missing/u

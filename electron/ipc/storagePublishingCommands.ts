@@ -16,16 +16,17 @@ import {
   forgetFoliolePublishField,
   loadFoliolePublishSettings,
   loadFoliolePublishSiteTitle,
-  openFoliolePublishTheme,
+  loadFoliolePublishTheme,
+  openFoliolePublishCustomTheme,
   previewFoliolePublish,
   publishTopicToFoliole,
   publishFoliolePublishThemeChanges,
   resetFoliolePublishFieldHistory,
-  resetFoliolePublishTheme,
   saveFoliolePublishDraft,
   saveFoliolePublishSiteTitle,
   updateFoliolePublishLocalPages,
   updateFoliolePublishSiteAddress,
+  useFoliolePublishTheme,
   viewFoliolePublishSite
 } from '../foliolePublish/foliolePublish.js';
 import {
@@ -60,8 +61,9 @@ function handleFoliolePublishingCommand(command: string, args: Record<string, un
   if (command === NATIVE_COMMANDS.disconnectFoliolePublishSettings) return disconnectFoliolePublishSettings();
   if (command === NATIVE_COMMANDS.forgetFoliolePublishField) return forgetFoliolePublishField(String(args.key ?? ''));
   if (command === NATIVE_COMMANDS.resetFoliolePublishFieldHistory) return resetFoliolePublishFieldHistory();
-  if (command === NATIVE_COMMANDS.openFoliolePublishTheme) return openFoliolePublishTheme();
-  if (command === NATIVE_COMMANDS.resetFoliolePublishTheme) return resetFoliolePublishTheme();
+  if (command === NATIVE_COMMANDS.loadFoliolePublishTheme) return loadFoliolePublishTheme();
+  if (command === NATIVE_COMMANDS.openFoliolePublishCustomTheme) return openFoliolePublishCustomTheme();
+  if (command === NATIVE_COMMANDS.useFoliolePublishTheme) return useFoliolePublishTheme();
   if (command === NATIVE_COMMANDS.updateFoliolePublishLocalPages) return updateFoliolePublishLocalPages();
   if (command === NATIVE_COMMANDS.publishFoliolePublishThemeChanges) return publishFoliolePublishThemeChanges();
   if (command === NATIVE_COMMANDS.previewFoliolePublishSite) return viewFoliolePublishSite();

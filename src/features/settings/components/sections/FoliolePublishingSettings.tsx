@@ -1,7 +1,7 @@
 import { useId } from 'react';
 
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
-import { AppButton, AppErrorState, SettingsControlSlot, SettingsSection, settingsFieldClassName } from '../../../../shared/ui';
+import { AppButton, AppErrorState, SettingsControlSlot, SettingsSection, SettingsSegmentedControl, settingsFieldClassName } from '../../../../shared/ui';
 
 import { FoliolePublishingSetupRows } from './FoliolePublishingSetupRows';
 import { useFoliolePublishingSettings, type FoliolePublishingSettingsState } from './useFoliolePublishingSettings';
@@ -68,8 +68,25 @@ function SiteTitleOverview({ state }: { state: FoliolePublishingSettingsState })
   );
 }
 
+function ThemeOptionLabel({ label, version }: { label: string; version: number | null }) {
+  return (
+    <span className="inline-flex items-baseline gap-1">
+      <span>{label}</span>
+      {version === null ? null : <span className="text-ui-xs font-normal text-foreground/45">v{version}</span>}
+    </span>
+  );
+}
+
 function ThemeOverview({ state }: { state: FoliolePublishingSettingsState }) {
   const t = useTranslation();
+  const theme = state.theme;
+  const customVersion = !theme
+    ? null
+    : theme.custom_theme?.based_on_official_version ?? (theme.custom_theme ? null : theme.official_theme_version);
+  const selectTheme = (value: string) => {
+    if (value === 'custom') state.openCustomTheme();
+    else if (theme?.active_theme !== 'foliole') state.useFolioleTheme();
+  };
   return (
     <div className="ml-6 mt-5 border-t border-settings-divider/70 py-6">
       <div className="flex items-start justify-between gap-6 max-[1080px]:flex-col max-[1080px]:items-start">
@@ -77,15 +94,19 @@ function ThemeOverview({ state }: { state: FoliolePublishingSettingsState }) {
           <h5 className="text-ui-lg font-semibold text-foreground">{t('settings.publishing.foliole.theme.title')}</h5>
           <p className="mt-1 max-w-[840px] text-ui-md leading-6 text-foreground/64">{t('settings.publishing.foliole.theme.description')}</p>
         </div>
-        <SettingsControlSlot className="gap-5 max-[1080px]:flex-wrap">
-          <div className="flex gap-2">
-            <AppButton disabled={state.disabled} onClick={state.openTheme}>{t(state.status === 'openingTheme' ? 'settings.publishing.foliole.theme.opening' : 'settings.publishing.foliole.theme.open')}</AppButton>
-            <AppButton disabled={state.disabled} onClick={state.resetTheme}>{t(state.status === 'resettingTheme' ? 'settings.publishing.foliole.theme.resetting' : 'settings.publishing.foliole.theme.reset')}</AppButton>
-          </div>
-          <div className="flex gap-2">
-            <AppButton disabled={state.disabled} onClick={state.updateLocal}>{t(state.status === 'updatingLocal' ? 'settings.publishing.foliole.theme.updatingLocal' : 'settings.publishing.foliole.theme.updateLocal')}</AppButton>
-            <AppButton disabled={!state.canUpdateWeb} onClick={state.updateWeb} variant="emphasis">{t(state.status === 'updatingWeb' ? 'settings.publishing.foliole.theme.updatingWeb' : 'settings.publishing.foliole.theme.updateWeb')}</AppButton>
-          </div>
+        <SettingsControlSlot>
+          <SettingsSegmentedControl
+            ariaLabel={t('settings.publishing.foliole.theme.aria')}
+            disabled={state.disabled || !theme}
+            onChange={selectTheme}
+            options={[
+              { label: <ThemeOptionLabel label={t('settings.publishing.foliole.theme.default')} version={theme?.official_theme_version ?? null} />, value: 'foliole' },
+              { label: <ThemeOptionLabel label={t('settings.publishing.foliole.theme.custom')} version={customVersion} />, value: 'custom' }
+            ]}
+            value={theme?.active_theme ?? 'foliole'}
+          />
+          <AppButton disabled={state.disabled} onClick={state.updateLocal}>{t(state.status === 'updatingLocal' ? 'settings.publishing.foliole.theme.updatingLocal' : 'settings.publishing.foliole.theme.updateLocal')}</AppButton>
+          <AppButton disabled={!state.canUpdateWeb} onClick={state.updateWeb} variant="emphasis">{t(state.status === 'updatingWeb' ? 'settings.publishing.foliole.theme.updatingWeb' : 'settings.publishing.foliole.theme.updateWeb')}</AppButton>
         </SettingsControlSlot>
       </div>
     </div>

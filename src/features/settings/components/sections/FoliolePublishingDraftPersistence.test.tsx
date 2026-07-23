@@ -9,15 +9,16 @@ import { FoliolePublishingSettings } from './FoliolePublishingSettings';
 const mocks = vi.hoisted(() => ({
   connectFoliolePublishSettingsToRuntime: vi.fn(),
   disconnectFoliolePublishSettingsFromRuntime: vi.fn(),
+  loadFoliolePublishThemeFromRuntime: vi.fn(),
   loadFoliolePublishSettingsFromRuntime: vi.fn(),
   loadFoliolePublishSiteTitleFromRuntime: vi.fn(),
-  openFoliolePublishThemeFromRuntime: vi.fn(),
+  openFoliolePublishCustomThemeFromRuntime: vi.fn(),
   publishFoliolePublishThemeChangesFromRuntime: vi.fn(),
-  resetFoliolePublishThemeFromRuntime: vi.fn(),
   saveFoliolePublishDraftToRuntime: vi.fn(),
   saveFoliolePublishSiteTitleToRuntime: vi.fn(),
   updateFoliolePublishLocalPagesFromRuntime: vi.fn(),
   updateFoliolePublishSiteAddressInRuntime: vi.fn(),
+  useFoliolePublishThemeFromRuntime: vi.fn(),
   viewFoliolePublishSiteFromRuntime: vi.fn()
 }));
 const probeUrlWithLinkPanel = vi.hoisted(() => vi.fn());
@@ -49,6 +50,9 @@ beforeEach(() => {
   probeUrlWithLinkPanel.mockReset().mockResolvedValue(false);
   mocks.loadFoliolePublishSettingsFromRuntime.mockResolvedValue(DRAFT);
   mocks.loadFoliolePublishSiteTitleFromRuntime.mockResolvedValue({ site_title: 'Foliole' });
+  mocks.loadFoliolePublishThemeFromRuntime.mockResolvedValue({
+    active_theme: 'foliole', custom_theme: null, official_theme_version: 4
+  });
   mocks.saveFoliolePublishDraftToRuntime.mockResolvedValue(DRAFT);
   mocks.saveFoliolePublishSiteTitleToRuntime.mockResolvedValue({ site_title: 'Foliole' });
 });

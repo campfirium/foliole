@@ -25,6 +25,12 @@ export interface NativeFoliolePublishFieldCatalogEntry {
   recent_values: NativeFoliolePublishFieldValue[];
 }
 
+export interface NativeFoliolePublishThemeStatus {
+  active_theme: 'custom' | 'foliole';
+  custom_theme: { based_on_official_version: number | null } | null;
+  official_theme_version: number;
+}
+
 export interface NativeFoliolePublishConnectInput {
   account_id: string;
   api_token: string;
@@ -74,8 +80,15 @@ export type NativeFoliolePublishCommandMap = {
   [NATIVE_COMMANDS.disconnectFoliolePublishSettings]: { args: undefined; result: NativeFoliolePublishSettings };
   [NATIVE_COMMANDS.forgetFoliolePublishField]: { args: { key: string }; result: NativeFoliolePublishSettings };
   [NATIVE_COMMANDS.resetFoliolePublishFieldHistory]: { args: undefined; result: NativeFoliolePublishSettings };
-  [NATIVE_COMMANDS.openFoliolePublishTheme]: { args: undefined; result: { local_path: string } };
-  [NATIVE_COMMANDS.resetFoliolePublishTheme]: { args: undefined; result: { local_path: string } };
+  [NATIVE_COMMANDS.loadFoliolePublishTheme]: { args: undefined; result: NativeFoliolePublishThemeStatus };
+  [NATIVE_COMMANDS.openFoliolePublishCustomTheme]: {
+    args: undefined;
+    result: { local_path: string; theme: NativeFoliolePublishThemeStatus };
+  };
+  [NATIVE_COMMANDS.useFoliolePublishTheme]: {
+    args: undefined;
+    result: { theme: NativeFoliolePublishThemeStatus };
+  };
   [NATIVE_COMMANDS.updateFoliolePublishLocalPages]: { args: undefined; result: { local_path: string } };
   [NATIVE_COMMANDS.publishFoliolePublishThemeChanges]: { args: undefined; result: { local_path: string } };
   [NATIVE_COMMANDS.previewFoliolePublishSite]: { args: undefined; result: NativeFoliolePublishResult };

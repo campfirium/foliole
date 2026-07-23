@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../../../shared/localization/testLocalization';
@@ -9,16 +9,17 @@ import { FoliolePublishingSettings } from './FoliolePublishingSettings';
 const mocks = vi.hoisted(() => ({
   connectFoliolePublishSettingsToRuntime: vi.fn(),
   disconnectFoliolePublishSettingsFromRuntime: vi.fn(),
+  loadFoliolePublishThemeFromRuntime: vi.fn(),
   loadFoliolePublishSettingsFromRuntime: vi.fn(),
   loadFoliolePublishSiteTitleFromRuntime: vi.fn(),
-  openFoliolePublishThemeFromRuntime: vi.fn(),
+  openFoliolePublishCustomThemeFromRuntime: vi.fn(),
   publishFoliolePublishThemeChangesFromRuntime: vi.fn(),
-  resetFoliolePublishThemeFromRuntime: vi.fn(),
   saveFoliolePublishDraftToRuntime: vi.fn(),
   saveFoliolePublishSiteTitleToRuntime: vi.fn(),
   updateFoliolePublishLocalPagesFromRuntime: vi.fn(),
   viewFoliolePublishSiteFromRuntime: vi.fn(),
-  updateFoliolePublishSiteAddressInRuntime: vi.fn()
+  updateFoliolePublishSiteAddressInRuntime: vi.fn(),
+  useFoliolePublishThemeFromRuntime: vi.fn()
 }));
 const openExternalUrl = vi.hoisted(() => vi.fn());
 const probeUrlWithLinkPanel = vi.hoisted(() => vi.fn());
@@ -40,6 +41,9 @@ beforeEach(() => {
   probeUrlWithLinkPanel.mockReset().mockResolvedValue(false);
   mocks.loadFoliolePublishSettingsFromRuntime.mockResolvedValue(EMPTY);
   mocks.loadFoliolePublishSiteTitleFromRuntime.mockResolvedValue({ site_title: 'Foliole' });
+  mocks.loadFoliolePublishThemeFromRuntime.mockResolvedValue({
+    active_theme: 'foliole', custom_theme: null, official_theme_version: 4
+  });
   mocks.saveFoliolePublishSiteTitleToRuntime.mockImplementation(async (siteTitle: string) => ({ site_title: siteTitle.trim() }));
   mocks.saveFoliolePublishDraftToRuntime.mockImplementation(async (input: {
     account_id: string; api_token: string; project_name: string;
@@ -51,8 +55,13 @@ beforeEach(() => {
     project_name: input.project_name
   }));
   mocks.viewFoliolePublishSiteFromRuntime.mockResolvedValue({ local_path: '/Publish/Site/index.html', url: null });
-  mocks.openFoliolePublishThemeFromRuntime.mockResolvedValue({ local_path: '/Publish/Theme' });
-  mocks.resetFoliolePublishThemeFromRuntime.mockResolvedValue({ local_path: '/Publish/Theme' });
+  mocks.openFoliolePublishCustomThemeFromRuntime.mockResolvedValue({
+    local_path: '/Publish/Theme',
+    theme: { active_theme: 'custom', custom_theme: { based_on_official_version: 4 }, official_theme_version: 4 }
+  });
+  mocks.useFoliolePublishThemeFromRuntime.mockResolvedValue({
+    theme: { active_theme: 'foliole', custom_theme: { based_on_official_version: 4 }, official_theme_version: 4 }
+  });
   mocks.updateFoliolePublishLocalPagesFromRuntime.mockResolvedValue({ local_path: '/Publish/Site/index.html' });
   mocks.publishFoliolePublishThemeChangesFromRuntime.mockResolvedValue({ local_path: '/Publish/Site/index.html' });
   mocks.disconnectFoliolePublishSettingsFromRuntime.mockResolvedValue(EMPTY);
@@ -78,24 +87,6 @@ it('presents local and Web views of the generated static pages', async () => {
   await waitFor(() => expect(mocks.viewFoliolePublishSiteFromRuntime).toHaveBeenCalledOnce());
   fireEvent.click(screen.getByRole('button', { name: 'View Web' }));
   await waitFor(() => expect(openExternalUrl).toHaveBeenCalledWith('https://my-site.pages.dev'));
-});
-
-it('keeps local theme testing separate from publishing changes to the web', async () => {
-  mocks.loadFoliolePublishSettingsFromRuntime.mockResolvedValue(CONNECTED);
-  renderSettings();
-  expect(await screen.findByText('Theme')).toBeVisible();
-  expect(screen.getByText('Modify the base theme to customize page structure and styling.')).toBeVisible();
-  fireEvent.click(screen.getByRole('button', { name: 'Open' }));
-  await waitFor(() => expect(mocks.openFoliolePublishThemeFromRuntime).toHaveBeenCalledOnce());
-  fireEvent.click(screen.getByRole('button', { name: 'Update local' }));
-  await waitFor(() => expect(mocks.updateFoliolePublishLocalPagesFromRuntime).toHaveBeenCalledOnce());
-  expect(mocks.publishFoliolePublishThemeChangesFromRuntime).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole('button', { name: 'Update Web' }));
-  await waitFor(() => expect(mocks.publishFoliolePublishThemeChangesFromRuntime).toHaveBeenCalledOnce());
-  fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
-  const dialog = await screen.findByRole('dialog', { name: 'Reset theme?' });
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Reset' }));
-  await waitFor(() => expect(mocks.resetFoliolePublishThemeFromRuntime).toHaveBeenCalledOnce());
 });
 
 it('keeps Web actions disabled before hosting is connected', async () => {

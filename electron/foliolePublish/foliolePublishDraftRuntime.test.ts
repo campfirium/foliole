@@ -36,7 +36,8 @@ vi.mock('./foliolePublishSite.js', () => ({
   stageFoliolePublishSite: vi.fn(() => '/staged-site')
 }));
 vi.mock('./foliolePublishTheme.js', () => ({
-  ensureFoliolePublishTheme: vi.fn(), resetFoliolePublishThemeFiles: vi.fn()
+  loadFoliolePublishTheme: vi.fn(), prepareFoliolePublishCustomTheme: vi.fn(),
+  selectFoliolePublishCustomTheme: vi.fn(), useFoliolePublishOfficialTheme: vi.fn()
 }));
 
 import {

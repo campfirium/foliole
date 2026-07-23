@@ -16,7 +16,7 @@ export interface FoliolePublishingForm {
   siteTitle: string;
 }
 
-export type FoliolePublishingStatus = 'connecting' | 'disconnecting' | 'idle' | 'loading' | 'openingTheme' | 'resettingTheme' | 'saving' | 'updating' | 'updatingLocal' | 'updatingWeb' | 'viewingLocal' | 'viewingWeb';
+export type FoliolePublishingStatus = 'connecting' | 'disconnecting' | 'idle' | 'loading' | 'openingCustomTheme' | 'saving' | 'updating' | 'updatingLocal' | 'updatingWeb' | 'usingFolioleTheme' | 'viewingLocal' | 'viewingWeb';
 export const EMPTY_FOLIOLE_PUBLISHING_FORM: FoliolePublishingForm = {
   accountId: '', apiToken: '', customDomain: '', projectName: '', siteTitle: ''
 };

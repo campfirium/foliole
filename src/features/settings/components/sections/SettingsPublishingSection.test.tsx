@@ -23,14 +23,15 @@ const wordpressRepositoryMocks = vi.hoisted(() => ({
 const folioleRepositoryMocks = vi.hoisted(() => ({
   connectFoliolePublishSettingsToRuntime: vi.fn(),
   disconnectFoliolePublishSettingsFromRuntime: vi.fn(),
+  loadFoliolePublishThemeFromRuntime: vi.fn(),
   loadFoliolePublishSettingsFromRuntime: vi.fn(),
   loadFoliolePublishSiteTitleFromRuntime: vi.fn(),
-  openFoliolePublishThemeFromRuntime: vi.fn(),
+  openFoliolePublishCustomThemeFromRuntime: vi.fn(),
   publishFoliolePublishThemeChangesFromRuntime: vi.fn(),
-  resetFoliolePublishThemeFromRuntime: vi.fn(),
   saveFoliolePublishDraftToRuntime: vi.fn(),
   saveFoliolePublishSiteTitleToRuntime: vi.fn(),
   updateFoliolePublishLocalPagesFromRuntime: vi.fn(),
+  useFoliolePublishThemeFromRuntime: vi.fn(),
   viewFoliolePublishSiteFromRuntime: vi.fn(),
   updateFoliolePublishSiteAddressInRuntime: vi.fn()
 }));
@@ -96,6 +97,9 @@ beforeEach(() => {
     pages_url: '', project_name: '', site_address: '', updated_at: null
   });
   folioleRepositoryMocks.loadFoliolePublishSiteTitleFromRuntime.mockResolvedValue({ site_title: 'Foliole' });
+  folioleRepositoryMocks.loadFoliolePublishThemeFromRuntime.mockResolvedValue({
+    active_theme: 'foliole', custom_theme: null, official_theme_version: 4
+  });
   folioleRepositoryMocks.saveFoliolePublishSiteTitleToRuntime.mockResolvedValue({ site_title: 'Foliole' });
   folioleRepositoryMocks.saveFoliolePublishDraftToRuntime.mockImplementation(async (input: {
     account_id: string; api_token: string; project_name: string;

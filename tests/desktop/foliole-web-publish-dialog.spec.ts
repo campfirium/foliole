@@ -154,7 +154,7 @@ test('keeps Theme controls out of Publish and renders the generated static site 
 
   const libraryHome = await desktopApp.evaluate(() => process.env.FOLIOLE_LIBRARY_HOME ?? null);
   if (!libraryHome) throw new Error('missing isolated library home');
-  await desktopWindow.evaluate(() => globalThis.window?.electronAPI?.invoke('reset_foliole_publish_theme'));
+  await desktopWindow.evaluate(() => globalThis.window?.electronAPI?.invoke('use_foliole_publish_theme'));
   await desktopWindow.evaluate(() => globalThis.window?.electronAPI?.invoke(
     'save_foliole_publish_site_title', { site_title: 'Working Memory' }
   ));

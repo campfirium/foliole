@@ -2,16 +2,7 @@ import { normalizeCloudflareProjectName } from '../../../../../lib/core/folioleP
 import type { NativeFoliolePublishSettings } from '../../../../../lib/platform/nativeFoliolePublishContract';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import { probeUrlWithLinkPanel } from '../../../../shared/platform/external/linkPanelUrlProbe';
-import {
-  connectFoliolePublishSettingsToRuntime,
-  disconnectFoliolePublishSettingsFromRuntime,
-  openFoliolePublishThemeFromRuntime,
-  publishFoliolePublishThemeChangesFromRuntime,
-  resetFoliolePublishThemeFromRuntime,
-  updateFoliolePublishLocalPagesFromRuntime,
-  updateFoliolePublishSiteAddressInRuntime,
-  viewFoliolePublishSiteFromRuntime
-} from '../../../../shared/platform/foliolePublishRepository';
+import { connectFoliolePublishSettingsToRuntime, disconnectFoliolePublishSettingsFromRuntime, updateFoliolePublishSiteAddressInRuntime, viewFoliolePublishSiteFromRuntime } from '../../../../shared/platform/foliolePublishRepository';
 import { openExternalUrl } from '../../../../shared/platform/runtimeExternalNavigation';
 import { requestAppConfirmation } from '../../../../shared/ui';
 
@@ -23,10 +14,10 @@ import {
   persistFoliolePublishingDraft,
   useFoliolePublishingDraftState,
   type FoliolePublishingDraftState,
-  type FoliolePublishingForm,
-  type FoliolePublishingStatus
+  type FoliolePublishingForm
 } from './useFoliolePublishingDraft';
 import { useFoliolePublishingSiteTitle } from './useFoliolePublishingSiteTitle';
+import { useFoliolePublishingTheme } from './useFoliolePublishingTheme';
 
 type LoadedState = FoliolePublishingDraftState;
 type Translate = ReturnType<typeof useTranslation>;
@@ -134,46 +125,12 @@ function siteActions(state: LoadedState, requireSiteTitle: () => Promise<boolean
   };
 }
 
-function useThemeActions(state: LoadedState, requireSiteTitle: () => Promise<boolean>) {
-  const t = useTranslation();
-  const run = async (
-    status: FoliolePublishingStatus,
-    action: () => Promise<unknown>,
-    errorKey: Parameters<typeof t>[0],
-    showRuntimeError = false
-  ) => {
-    state.setStatus(status); state.setError(null);
-    try { await action(); }
-    catch (reason) {
-      state.setError(showRuntimeError && reason instanceof Error ? reason.message : t(errorKey));
-    }
-    finally { state.setStatus('idle'); }
-  };
-  const resetTheme = async () => {
-    const confirmed = await requestAppConfirmation({
-      cancelLabel: t('common.cancel'), confirmLabel: t('settings.publishing.foliole.theme.reset'),
-      description: t('settings.publishing.foliole.theme.resetConfirm.description'),
-      title: t('settings.publishing.foliole.theme.resetConfirm.title')
-    });
-    if (confirmed) await run('resettingTheme', resetFoliolePublishThemeFromRuntime, 'settings.publishing.foliole.theme.error.reset');
-  };
-  const runWithSiteTitle = async (...args: Parameters<typeof run>) => {
-    if (await requireSiteTitle()) await run(...args);
-  };
-  return {
-    openTheme: () => void run('openingTheme', openFoliolePublishThemeFromRuntime, 'settings.publishing.foliole.theme.error.open'),
-    resetTheme: () => void resetTheme(),
-    updateLocal: () => void runWithSiteTitle('updatingLocal', updateFoliolePublishLocalPagesFromRuntime, 'settings.publishing.foliole.theme.error.updateLocal', true),
-    updateWeb: () => void runWithSiteTitle('updatingWeb', publishFoliolePublishThemeChangesFromRuntime, 'settings.publishing.foliole.theme.error.updateWeb', true)
-  };
-}
-
 export function useFoliolePublishingSettings() {
   const state = useFoliolePublishingDraftState();
   const siteTitle = useFoliolePublishingSiteTitle(state);
   const connection = useConnectionActions(state, siteTitle.requireSiteTitle);
   const site = siteActions(state, siteTitle.requireSiteTitle);
-  const theme = useThemeActions(state, siteTitle.requireSiteTitle);
+  const theme = useFoliolePublishingTheme(state, siteTitle.requireSiteTitle);
   const disabled = state.status !== 'idle';
   const connected = Boolean(state.settings?.pages_url && state.settings.account_id && state.settings.project_name);
   const hasSavedToken = Boolean(state.settings?.has_credentials);

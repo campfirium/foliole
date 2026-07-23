@@ -26,16 +26,17 @@ const folioleMocks = vi.hoisted(() => ({
   forgetFoliolePublishField: vi.fn(),
   loadFoliolePublishSettings: vi.fn(),
   loadFoliolePublishSiteTitle: vi.fn(),
-  openFoliolePublishTheme: vi.fn(),
+  loadFoliolePublishTheme: vi.fn(),
+  openFoliolePublishCustomTheme: vi.fn(),
   previewFoliolePublish: vi.fn(),
   publishFoliolePublishThemeChanges: vi.fn(),
   publishTopicToFoliole: vi.fn(),
   resetFoliolePublishFieldHistory: vi.fn(),
-  resetFoliolePublishTheme: vi.fn(),
   saveFoliolePublishDraft: vi.fn(),
   saveFoliolePublishSiteTitle: vi.fn(),
   updateFoliolePublishLocalPages: vi.fn(),
   updateFoliolePublishSiteAddress: vi.fn(),
+  useFoliolePublishTheme: vi.fn(),
   viewFoliolePublishSite: vi.fn()
 }));
 
@@ -106,14 +107,16 @@ it('updates the public address without accepting a renderer credential', async (
 it('routes Web Publish field history and theme actions through narrow commands', async () => {
   await handlePublishingStorageCommand(NATIVE_COMMANDS.forgetFoliolePublishField, { key: 'category' });
   await handlePublishingStorageCommand(NATIVE_COMMANDS.resetFoliolePublishFieldHistory, {});
-  await handlePublishingStorageCommand(NATIVE_COMMANDS.openFoliolePublishTheme, {});
-  await handlePublishingStorageCommand(NATIVE_COMMANDS.resetFoliolePublishTheme, {});
+  await handlePublishingStorageCommand(NATIVE_COMMANDS.loadFoliolePublishTheme, {});
+  await handlePublishingStorageCommand(NATIVE_COMMANDS.openFoliolePublishCustomTheme, {});
+  await handlePublishingStorageCommand(NATIVE_COMMANDS.useFoliolePublishTheme, {});
   await handlePublishingStorageCommand(NATIVE_COMMANDS.updateFoliolePublishLocalPages, {});
   await handlePublishingStorageCommand(NATIVE_COMMANDS.publishFoliolePublishThemeChanges, {});
   expect(folioleMocks.forgetFoliolePublishField).toHaveBeenCalledWith('category');
   expect(folioleMocks.resetFoliolePublishFieldHistory).toHaveBeenCalledOnce();
-  expect(folioleMocks.openFoliolePublishTheme).toHaveBeenCalledOnce();
-  expect(folioleMocks.resetFoliolePublishTheme).toHaveBeenCalledOnce();
+  expect(folioleMocks.loadFoliolePublishTheme).toHaveBeenCalledOnce();
+  expect(folioleMocks.openFoliolePublishCustomTheme).toHaveBeenCalledOnce();
+  expect(folioleMocks.useFoliolePublishTheme).toHaveBeenCalledOnce();
   expect(folioleMocks.updateFoliolePublishLocalPages).toHaveBeenCalledOnce();
   expect(folioleMocks.publishFoliolePublishThemeChanges).toHaveBeenCalledOnce();
 });

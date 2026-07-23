@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-import { connectFoliolePublishSettings, disconnectFoliolePublishSettings, previewFoliolePublish, publishFoliolePublishThemeChanges, publishTopicToFoliole, updateFoliolePublishLocalPages, updateFoliolePublishSiteAddress, viewFoliolePublishSite } from './foliolePublish.js';
+import { connectFoliolePublishSettings, disconnectFoliolePublishSettings, openFoliolePublishCustomTheme, previewFoliolePublish, publishFoliolePublishThemeChanges, publishTopicToFoliole, updateFoliolePublishLocalPages, updateFoliolePublishSiteAddress, viewFoliolePublishSite } from './foliolePublish.js';
 import { emptyPublishIndex, writePublishIndex } from './foliolePublishModel.js';
 import { generateFoliolePublishSite } from './foliolePublishSite.js';
 
@@ -176,8 +176,9 @@ it('does not create a preview when local static pages do not exist', async () =>
   expect(fs.existsSync(path.join(state.libraryHome, 'Publish', 'Preview'))).toBe(false);
 });
 
-it('updates the local static pages with the current theme without deploying', () => {
+it('updates the local static pages with the current theme without deploying', async () => {
   const publishRoot = path.join(state.libraryHome, 'Publish');
+  await openFoliolePublishCustomTheme();
   fs.writeFileSync(path.join(publishRoot, 'Theme', 'style.css'), 'body { color: rebeccapurple; }');
   const result = updateFoliolePublishLocalPages();
   expect(result.local_path).toBe(path.join(publishRoot, 'Site', 'index.html'));
@@ -188,6 +189,7 @@ it('updates the local static pages with the current theme without deploying', ()
 it('publishes theme changes as a complete site without changing Topic records', async () => {
   const publishRoot = path.join(state.libraryHome, 'Publish');
   let deployedStyle = '';
+  await openFoliolePublishCustomTheme();
   fs.writeFileSync(path.join(publishRoot, 'Theme', 'style.css'), 'body { color: seagreen; }');
   mocks.deployCloudflarePages.mockImplementation(async ({ siteRoot }: { siteRoot: string }) => {
     deployedStyle = fs.readFileSync(path.join(siteRoot, 'style.css'), 'utf8');

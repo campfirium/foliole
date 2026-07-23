@@ -19,7 +19,12 @@ import {
 } from './foliolePublishModel.js';
 import { clearFoliolePublishSettings, forgetFoliolePublishField, loadFoliolePublishSettings, loadFoliolePublishToken, loadStoredFoliolePublishSettings, recordFoliolePublishFields, resetFoliolePublishFieldHistory, saveFoliolePublishConnection, saveFoliolePublishDraft, saveFoliolePublishSiteAddress } from './foliolePublishSettings.js';
 import { activateFoliolePublishSite, discardStagedFoliolePublishSite, generateFoliolePublishSite, stageFoliolePublishSite } from './foliolePublishSite.js';
-import { ensureFoliolePublishTheme, resetFoliolePublishThemeFiles } from './foliolePublishTheme.js';
+import {
+  loadFoliolePublishTheme as readFoliolePublishThemeStatus,
+  prepareFoliolePublishCustomTheme,
+  selectFoliolePublishCustomTheme,
+  useFoliolePublishOfficialTheme
+} from './foliolePublishTheme.js';
 
 function root() { return path.join(loadLibraryPathSettingsSync().library_home, 'Publish'); }
 
@@ -187,15 +192,19 @@ function commitPublishedFiles(input: { cardFile: string; content: string; index:
   } finally { discardStagedFoliolePublishSite(input.staged); }
 }
 
-export async function openFoliolePublishTheme() {
-  const localPath = ensureFoliolePublishTheme(root());
-  const error = await shell.openPath(localPath);
-  if (error) throw new Error(error);
-  return { local_path: localPath };
+export function loadFoliolePublishTheme() {
+  return readFoliolePublishThemeStatus(root());
 }
 
-export function resetFoliolePublishTheme() {
-  return { local_path: resetFoliolePublishThemeFiles(root()) };
+export async function openFoliolePublishCustomTheme() {
+  const prepared = prepareFoliolePublishCustomTheme(root());
+  const error = await shell.openPath(prepared.path);
+  if (error) throw new Error(error);
+  return { local_path: prepared.path, theme: selectFoliolePublishCustomTheme(root()) };
+}
+
+export function useFoliolePublishTheme() {
+  return { theme: useFoliolePublishOfficialTheme(root()) };
 }
 
 export function updateFoliolePublishLocalPages() {

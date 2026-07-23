@@ -8,11 +8,11 @@ import { FoliolePublishingSettings } from './FoliolePublishingSettings';
 
 const runtime = vi.hoisted(() => ({
   connectFoliolePublishSettingsToRuntime: vi.fn(), disconnectFoliolePublishSettingsFromRuntime: vi.fn(),
-  loadFoliolePublishSettingsFromRuntime: vi.fn(), loadFoliolePublishSiteTitleFromRuntime: vi.fn(),
-  openFoliolePublishThemeFromRuntime: vi.fn(), publishFoliolePublishThemeChangesFromRuntime: vi.fn(),
-  resetFoliolePublishThemeFromRuntime: vi.fn(), saveFoliolePublishDraftToRuntime: vi.fn(),
+  loadFoliolePublishSettingsFromRuntime: vi.fn(), loadFoliolePublishSiteTitleFromRuntime: vi.fn(), loadFoliolePublishThemeFromRuntime: vi.fn(),
+  openFoliolePublishCustomThemeFromRuntime: vi.fn(), publishFoliolePublishThemeChangesFromRuntime: vi.fn(),
+  saveFoliolePublishDraftToRuntime: vi.fn(),
   saveFoliolePublishSiteTitleToRuntime: vi.fn(), updateFoliolePublishLocalPagesFromRuntime: vi.fn(),
-  updateFoliolePublishSiteAddressInRuntime: vi.fn(), viewFoliolePublishSiteFromRuntime: vi.fn()
+  updateFoliolePublishSiteAddressInRuntime: vi.fn(), useFoliolePublishThemeFromRuntime: vi.fn(), viewFoliolePublishSiteFromRuntime: vi.fn()
 }));
 const openExternalUrl = vi.hoisted(() => vi.fn());
 vi.mock('../../../../shared/platform/foliolePublishRepository', () => runtime);
@@ -30,6 +30,9 @@ beforeEach(() => {
   openExternalUrl.mockReset();
   runtime.loadFoliolePublishSettingsFromRuntime.mockResolvedValue(CONNECTED);
   runtime.loadFoliolePublishSiteTitleFromRuntime.mockResolvedValue({ site_title: '' });
+  runtime.loadFoliolePublishThemeFromRuntime.mockResolvedValue({
+    active_theme: 'foliole', custom_theme: null, official_theme_version: 4
+  });
   runtime.saveFoliolePublishSiteTitleToRuntime.mockImplementation(async (title: string) => ({ site_title: title.trim() }));
   runtime.updateFoliolePublishLocalPagesFromRuntime.mockResolvedValue({ local_path: '/Publish/Site/index.html' });
 });
