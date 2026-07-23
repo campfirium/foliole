@@ -38,11 +38,31 @@ test('shows the original WordPress connection error', async ({ desktopApp, deskt
     await expect(region.getByText(/^(Connection successful\.|连接成功。)$/)).toHaveCount(0);
     await expect(region.getByLabel(/^(WordPress site address|WordPress 站点地址)$/)).toBeEnabled();
 
+    const dialog = await openSettingsDialog(desktopWindow);
+    await dialog.getByRole('button', { name: /^(General|通用)$/ }).click();
+    const returned = await openWordPressSettings(desktopWindow);
+    await expect(returned.getByLabel(/^(WordPress site address|WordPress 站点地址)$/))
+      .toHaveValue('https://example.com');
+    await expect(returned.getByLabel(/^(WordPress username|WordPress 用户名)$/)).toHaveValue('writer');
+    await expect(returned.getByLabel(/^WordPress Application Password$/))
+      .toHaveAttribute('placeholder', '****************');
+    await expect(returned.getByRole('button', { name: /^(Connect|连接)$/ })).toBeEnabled();
+    await expect(returned.getByText(/^(Not connected|未连接)$/)).toBeVisible();
+
+    await desktopWindow.keyboard.press('Escape');
+    await expect(dialog).not.toBeVisible();
+    const reopened = await openWordPressSettings(desktopWindow);
+    await expect(reopened.getByLabel(/^(WordPress site address|WordPress 站点地址)$/))
+      .toHaveValue('https://example.com');
+    await expect(reopened.getByLabel(/^(WordPress username|WordPress 用户名)$/)).toHaveValue('writer');
+    await expect(reopened.getByLabel(/^WordPress Application Password$/))
+      .toHaveAttribute('placeholder', '****************');
+
     const screenshot = await desktopWindow.screenshot({ fullPage: true });
-    const screenshotPath = path.join(process.cwd(), '.tmp', 'artifacts', 'wordpress-connection-error-hidden-native.png');
+    const screenshotPath = path.join(process.cwd(), '.tmp', 'artifacts', 'wordpress-draft-persistence-hidden-native.png');
     await mkdir(path.dirname(screenshotPath), { recursive: true });
     await writeFile(screenshotPath, screenshot);
-    await testInfo.attach('wordpress-connection-error', { body: screenshot, contentType: 'image/png' });
+    await testInfo.attach('wordpress-draft-persistence', { body: screenshot, contentType: 'image/png' });
   } finally {
     await desktopApp.evaluate(() => {
       const target = globalThis as typeof globalThis & { __wordpressConnectionOriginalFetch?: typeof fetch };

@@ -30,7 +30,8 @@ import {
   connectWordPressPublishSettings,
   disconnectWordPressPublishSettings,
   loadWordPressPublishSettings,
-  publishTopicToWordPress
+  publishTopicToWordPress,
+  saveWordPressPublishDraft
 } from '../wordpress/wordpressPublish.js';
 
 import { readSettingsObject } from './storageCommandSupport.js';
@@ -94,6 +95,11 @@ export async function handlePublishingStorageCommand(command: string, args: Reco
     return saveDiscoursePublishDraft(readSettingsObject(args) as unknown as Parameters<typeof saveDiscoursePublishDraft>[0]);
   }
   if (command === NATIVE_COMMANDS.loadWordPressPublishSettings) return loadWordPressPublishSettings();
+  if (command === NATIVE_COMMANDS.saveWordPressPublishDraft) {
+    return saveWordPressPublishDraft(
+      readSettingsObject(args.settings) as unknown as Parameters<typeof saveWordPressPublishDraft>[0]
+    );
+  }
   if (command === NATIVE_COMMANDS.connectWordPressPublishSettings) {
     return connectWordPressPublishSettings(
       readSettingsObject(args.settings) as unknown as Parameters<typeof connectWordPressPublishSettings>[0]

@@ -14,7 +14,8 @@ import {
   disconnectWordPressPublishSettings,
   loadStoredWordPressPublishSettings,
   loadWordPressCredential,
-  loadWordPressPublishSettings
+  loadWordPressPublishSettings,
+  saveWordPressPublishDraft
 } from './wordpressPublishSettings.js';
 
 function requireConfiguredWordPress(): WordPressClientConfig {
@@ -45,7 +46,8 @@ function validateBinding(binding: WordPressPostBinding | null, config: WordPress
 export {
   connectWordPressPublishSettings,
   disconnectWordPressPublishSettings,
-  loadWordPressPublishSettings
+  loadWordPressPublishSettings,
+  saveWordPressPublishDraft
 };
 
 export async function publishTopicToWordPress(args: NativeWordPressPublishArgs) {

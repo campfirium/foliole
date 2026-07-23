@@ -106,6 +106,7 @@ export const NATIVE_COMMANDS = {
   publishTopicToDiscourse: 'publish_topic_to_discourse',
   saveDiscoursePublishDraft: 'save_discourse_publish_draft',
   loadWordPressPublishSettings: 'load_wordpress_publish_settings',
+  saveWordPressPublishDraft: 'save_wordpress_publish_draft',
   connectWordPressPublishSettings: 'connect_wordpress_publish_settings',
   disconnectWordPressPublishSettings: 'disconnect_wordpress_publish_settings',
   publishTopicToWordPress: 'publish_topic_to_wordpress',

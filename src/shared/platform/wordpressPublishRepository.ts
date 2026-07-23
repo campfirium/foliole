@@ -1,6 +1,7 @@
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type {
   NativeWordPressConnectInput,
+  NativeWordPressDraftInput,
   NativeWordPressPublishArgs,
   NativeWordPressPublishResult,
   NativeWordPressPublishSettings
@@ -11,6 +12,13 @@ import { getRuntimeInvoke } from './runtimeInvoke';
 export async function loadWordPressPublishSettingsFromRuntime(): Promise<NativeWordPressPublishSettings | null> {
   const runtimeInvoke = getRuntimeInvoke();
   return runtimeInvoke ? runtimeInvoke(NATIVE_COMMANDS.loadWordPressPublishSettings) : null;
+}
+
+export async function saveWordPressPublishDraftToRuntime(
+  settings: NativeWordPressDraftInput
+): Promise<NativeWordPressPublishSettings | null> {
+  const runtimeInvoke = getRuntimeInvoke();
+  return runtimeInvoke ? runtimeInvoke(NATIVE_COMMANDS.saveWordPressPublishDraft, { settings }) : null;
 }
 
 export async function connectWordPressPublishSettingsToRuntime(

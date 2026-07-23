@@ -17,7 +17,8 @@ const wordpressMocks = vi.hoisted(() => ({
   connectWordPressPublishSettings: vi.fn(),
   disconnectWordPressPublishSettings: vi.fn(),
   loadWordPressPublishSettings: vi.fn(),
-  publishTopicToWordPress: vi.fn()
+  publishTopicToWordPress: vi.fn(),
+  saveWordPressPublishDraft: vi.fn()
 }));
 const folioleMocks = vi.hoisted(() => ({
   connectFoliolePublishSettings: vi.fn(),
@@ -127,6 +128,23 @@ it('forwards nested WordPress connection settings only to the main-process conne
   );
   expect(wordpressMocks.connectWordPressPublishSettings).toHaveBeenCalledWith(settings);
   expect(JSON.stringify(result)).not.toContain('SENTINEL-WORDPRESS-SECRET');
+});
+
+it('routes a WordPress draft without returning its Application Password', async () => {
+  const settings = {
+    application_password: 'SENTINEL-WORDPRESS-DRAFT',
+    site_url: 'https://free-site.wordpress.com',
+    username: 'writer'
+  };
+  wordpressMocks.saveWordPressPublishDraft.mockReturnValue({
+    adapter: 'wordpress_com_xmlrpc', credentials_valid: false, has_credentials: true,
+    site_url: settings.site_url, updated_at: '2026-07-23T00:00:00.000Z', username: 'writer'
+  });
+
+  const result = await handlePublishingStorageCommand(NATIVE_COMMANDS.saveWordPressPublishDraft, { settings });
+
+  expect(wordpressMocks.saveWordPressPublishDraft).toHaveBeenCalledWith(settings);
+  expect(JSON.stringify(result)).not.toContain('SENTINEL-WORDPRESS-DRAFT');
 });
 
 it('forwards WordPress publish content without adding credentials to the payload', async () => {

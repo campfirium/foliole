@@ -3,6 +3,7 @@ import { join } from 'node:path';
 
 import ts from 'typescript';
 
+import { canRecordNativeCommandArgs } from '../../../lib/platform/nativeCommandPrivacy';
 import { NATIVE_COMMANDS, isTypedNativeCommand } from '../../../lib/platform/nativeCommands';
 
 const PLATFORM_DIR = join(process.cwd(), 'lib/platform');
@@ -67,5 +68,10 @@ describe('native command contracts', () => {
     const referencedKeys = [...collectContractCommandReferences()].sort();
 
     expect(referencedKeys).toEqual(commandKeys);
+  });
+
+  it('keeps WordPress draft and connection credentials out of command traces', () => {
+    expect(canRecordNativeCommandArgs(NATIVE_COMMANDS.saveWordPressPublishDraft)).toBe(false);
+    expect(canRecordNativeCommandArgs(NATIVE_COMMANDS.connectWordPressPublishSettings)).toBe(false);
   });
 });

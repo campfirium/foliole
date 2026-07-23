@@ -5,16 +5,20 @@ export type NativeWordPressPostStatus = 'draft' | 'publish';
 
 export interface NativeWordPressPublishSettings {
   adapter: NativeWordPressPublishAdapter | null;
+  credentials_valid: boolean;
   has_credentials: boolean;
   site_url: string;
   updated_at: string | null;
+  username: string;
 }
 
-export interface NativeWordPressConnectInput {
+export interface NativeWordPressDraftInput {
   application_password: string;
   site_url: string;
   username: string;
 }
+
+export type NativeWordPressConnectInput = NativeWordPressDraftInput;
 
 export interface NativeWordPressPublishArgs {
   content: string;
@@ -32,6 +36,10 @@ export interface NativeWordPressPublishResult {
 export type NativeWordPressPublishCommandMap = {
   [NATIVE_COMMANDS.loadWordPressPublishSettings]: {
     args: undefined;
+    result: NativeWordPressPublishSettings;
+  };
+  [NATIVE_COMMANDS.saveWordPressPublishDraft]: {
+    args: { settings: NativeWordPressDraftInput };
     result: NativeWordPressPublishSettings;
   };
   [NATIVE_COMMANDS.connectWordPressPublishSettings]: {

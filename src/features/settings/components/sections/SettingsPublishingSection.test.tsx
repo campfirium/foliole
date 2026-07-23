@@ -17,7 +17,8 @@ const repositoryMocks = vi.hoisted(() => ({
 const wordpressRepositoryMocks = vi.hoisted(() => ({
   connectWordPressPublishSettingsToRuntime: vi.fn(),
   disconnectWordPressPublishSettingsFromRuntime: vi.fn(),
-  loadWordPressPublishSettingsFromRuntime: vi.fn()
+  loadWordPressPublishSettingsFromRuntime: vi.fn(),
+  saveWordPressPublishDraftToRuntime: vi.fn()
 }));
 const folioleRepositoryMocks = vi.hoisted(() => ({
   connectFoliolePublishSettingsToRuntime: vi.fn(),
@@ -42,6 +43,27 @@ const SAVED_SETTINGS = {
   updated_at: null
 };
 
+function resetWordPressRepositoryMocks() {
+  wordpressRepositoryMocks.connectWordPressPublishSettingsToRuntime.mockReset();
+  wordpressRepositoryMocks.disconnectWordPressPublishSettingsFromRuntime.mockReset();
+  wordpressRepositoryMocks.loadWordPressPublishSettingsFromRuntime.mockReset();
+  wordpressRepositoryMocks.saveWordPressPublishDraftToRuntime.mockReset();
+  wordpressRepositoryMocks.loadWordPressPublishSettingsFromRuntime.mockResolvedValue({
+    adapter: null, credentials_valid: false, has_credentials: false,
+    site_url: '', updated_at: null, username: ''
+  });
+  wordpressRepositoryMocks.saveWordPressPublishDraftToRuntime.mockImplementation(async (input: {
+    application_password: string; site_url: string; username: string;
+  }) => ({
+    adapter: 'core_rest', credentials_valid: false, has_credentials: Boolean(input.application_password),
+    site_url: input.site_url, updated_at: '2026-07-23T00:00:00.000Z', username: input.username
+  }));
+  wordpressRepositoryMocks.connectWordPressPublishSettingsToRuntime.mockResolvedValue({
+    adapter: 'wordpress_com_xmlrpc', credentials_valid: true, has_credentials: true,
+    site_url: 'https://free-site.wordpress.com', updated_at: '2026-07-16T00:00:00.000Z', username: 'writer'
+  });
+}
+
 beforeEach(() => {
   window.localStorage.clear();
   repositoryMocks.loadDiscoursePublishSettingsFromRuntime.mockReset();
@@ -65,16 +87,7 @@ beforeEach(() => {
     recent_tags: [],
     tags: []
   });
-  wordpressRepositoryMocks.connectWordPressPublishSettingsToRuntime.mockReset();
-  wordpressRepositoryMocks.disconnectWordPressPublishSettingsFromRuntime.mockReset();
-  wordpressRepositoryMocks.loadWordPressPublishSettingsFromRuntime.mockReset();
-  wordpressRepositoryMocks.loadWordPressPublishSettingsFromRuntime.mockResolvedValue({
-    adapter: null, has_credentials: false, site_url: '', updated_at: null
-  });
-  wordpressRepositoryMocks.connectWordPressPublishSettingsToRuntime.mockResolvedValue({
-    adapter: 'wordpress_com_xmlrpc', has_credentials: true,
-    site_url: 'https://free-site.wordpress.com', updated_at: '2026-07-16T00:00:00.000Z'
-  });
+  resetWordPressRepositoryMocks();
   Object.values(folioleRepositoryMocks).forEach((mock) => mock.mockReset());
   folioleRepositoryMocks.loadFoliolePublishSettingsFromRuntime.mockResolvedValue({
     account_id: '', credentials_valid: false, field_catalog: [], has_credentials: false,

@@ -1,6 +1,10 @@
-import { normalizeWordPressApplicationPassword } from '../../lib/core/wordpress/wordpressConnectionInput.js';
+import {
+  normalizeWordPressApplicationPassword,
+  normalizeWordPressSiteUrl
+} from '../../lib/core/wordpress/wordpressConnectionInput.js';
 import type {
   NativeWordPressConnectInput,
+  NativeWordPressDraftInput,
   NativeWordPressPublishAdapter,
   NativeWordPressPublishSettings
 } from '../../lib/platform/nativeWordPressPublishContract.js';
@@ -12,7 +16,11 @@ import {
   writePublishDeviceSecret
 } from '../security/publishDeviceSecretStore.js';
 
-import { verifyWordPressConnection, type WordPressCredential } from './wordpressClient.js';
+import {
+  resolveWordPressAdapter,
+  verifyWordPressConnection,
+  type WordPressCredential
+} from './wordpressClient.js';
 
 const SETTINGS_KEY = 'wordpress_publish_settings';
 const SECRET_FILE = 'wordpress-publish-credentials.bin';
@@ -26,7 +34,10 @@ export interface StoredWordPressPublishSettings {
 }
 
 function emptySettings(): NativeWordPressPublishSettings {
-  return { adapter: null, has_credentials: false, site_url: '', updated_at: null };
+  return {
+    adapter: null, credentials_valid: false, has_credentials: false,
+    site_url: '', updated_at: null, username: ''
+  };
 }
 
 function isStoredSettings(value: unknown): value is StoredWordPressPublishSettings {
@@ -67,24 +78,67 @@ export function loadWordPressCredential(settings = loadStoredWordPressPublishSet
 export function loadWordPressPublishSettings(): NativeWordPressPublishSettings {
   const settings = loadStoredWordPressPublishSettings();
   if (!settings) return emptySettings();
+  const credential = loadWordPressCredential(settings);
   return {
     adapter: settings.adapter,
-    has_credentials: Boolean(loadWordPressCredential(settings)),
+    credentials_valid: Boolean(settings.endpoint && credential),
+    has_credentials: Boolean(credential),
     site_url: settings.site_url,
-    updated_at: settings.updated_at
+    updated_at: settings.updated_at,
+    username: credential?.username ?? ''
   };
 }
 
+function draftSiteUrl(value: string) {
+  try { return normalizeWordPressSiteUrl(value); } catch { return value.trim(); }
+}
+
+function restoreSecret(previous: string | null) {
+  if (previous === null) deletePublishDeviceSecret(SECRET_FILE);
+  else writePublishDeviceSecret(SECRET_FILE, 'WordPress publishing credentials', previous);
+}
+
+export function saveWordPressPublishDraft(input: NativeWordPressDraftInput) {
+  const current = loadStoredWordPressPublishSettings();
+  if (current?.endpoint && loadWordPressCredential(current)) return loadWordPressPublishSettings();
+  const siteUrl = draftSiteUrl(input.site_url);
+  const adapter = resolveWordPressAdapter(siteUrl);
+  const username = input.username.trim();
+  const applicationPassword = normalizeWordPressApplicationPassword(input.application_password);
+  const updatedAt = new Date().toISOString();
+  const previousSecret = hasPublishDeviceSecret(SECRET_FILE)
+    ? readPublishDeviceSecret(SECRET_FILE, 'WordPress publishing credentials')
+    : null;
+  try {
+    if (applicationPassword) {
+      writePublishDeviceSecret(SECRET_FILE, 'WordPress publishing credentials', JSON.stringify({
+        adapter, applicationPassword, siteUrl, username
+      } satisfies WordPressCredential));
+    }
+    saveJsonSetting(SETTINGS_KEY, {
+      adapter, blog_id: null, endpoint: '', site_url: siteUrl, updated_at: updatedAt
+    } satisfies StoredWordPressPublishSettings, updatedAt);
+  } catch (error) {
+    try { restoreSecret(previousSecret); } catch { deletePublishDeviceSecret(SECRET_FILE); }
+    throw error;
+  }
+  return loadWordPressPublishSettings();
+}
+
 export async function connectWordPressPublishSettings(input: NativeWordPressConnectInput) {
+  const savedCredential = loadWordPressCredential();
+  const applicationPassword = normalizeWordPressApplicationPassword(input.application_password)
+    || savedCredential?.applicationPassword
+    || '';
   const verified = await verifyWordPressConnection({
-    applicationPassword: input.application_password,
+    applicationPassword,
     siteUrl: input.site_url,
     username: input.username
   });
   const updatedAt = new Date().toISOString();
   const credential: WordPressCredential = {
     adapter: verified.adapter,
-    applicationPassword: normalizeWordPressApplicationPassword(input.application_password),
+    applicationPassword,
     siteUrl: verified.siteUrl,
     username: input.username.trim()
   };
@@ -102,8 +156,7 @@ export async function connectWordPressPublishSettings(input: NativeWordPressConn
     } satisfies StoredWordPressPublishSettings, updatedAt);
   } catch (error) {
     try {
-      if (previousSecret === null) deletePublishDeviceSecret(SECRET_FILE);
-      else writePublishDeviceSecret(SECRET_FILE, 'WordPress publishing credentials', previousSecret);
+      restoreSecret(previousSecret);
     } catch {
       deletePublishDeviceSecret(SECRET_FILE);
     }
