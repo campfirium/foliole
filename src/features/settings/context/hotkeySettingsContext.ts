@@ -4,9 +4,12 @@ import type { HotkeySettingItem, HotkeyUpdateResult } from '../model/hotkeySetti
 
 export interface HotkeySettingsContextValue {
   hotkeyItems: HotkeySettingItem[];
+  onConfigureShortcut: (commandId: string) => void;
   onHotkeyReset: (commandId: string) => void;
   onHotkeyResetAll: () => void;
   onHotkeyUpdate: (commandId: string, slot: 'primary' | 'secondary', nextLabel: string) => HotkeyUpdateResult;
+  onRequestedCommandConsumed: () => void;
+  requestedCommandId: string | null;
 }
 
 export const HotkeySettingsContext = createContext<HotkeySettingsContextValue | null>(null);

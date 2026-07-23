@@ -73,6 +73,7 @@ export const EN_DESKTOP_TRANSLATIONS = {
   'desktop.palette.command.search': 'Search commands',
   'desktop.palette.command.placeholder': 'Type a command...',
   'desktop.palette.command.empty': 'No matching commands',
+  'desktop.palette.command.configureShortcut': 'Configure shortcut for {title}',
   'desktop.palette.node.dialog': 'Go to',
   'desktop.palette.node.empty': 'Search folders, topics, and items',
   'desktop.palette.node.input': 'Go to',

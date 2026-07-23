@@ -1,17 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 
+import { useHotkeySettings } from '../../features/settings/context/HotkeySettingsProvider';
+import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import { buildCommandMenuSections } from '../../shared/commands/menuModel';
-import { formatAriaKeyShortcuts, formatShortcutSetLabel } from '../../shared/commands/shortcuts';
 import type { CommandPaletteItem } from '../../shared/commands/types';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
-  appFloatingEmptyStateClassName,
-  appFloatingItemClassName,
-  appFloatingListClassName,
   appFloatingOverlayClassName,
   appFloatingSurfaceClassName
 } from '../../shared/ui';
 
+import { CommandPaletteList } from './CommandPaletteList';
 import { FloatingPaletteInput } from './FloatingPaletteInput';
 import { useFloatingDialogFocusTrap } from './useFloatingDialogFocusTrap';
 import { useFloatingPaletteEscape } from './useFloatingPaletteEscape';
@@ -27,72 +26,11 @@ interface CommandPaletteProps {
   onRunCommand: (id: string) => void;
 }
 
-interface CommandPaletteListProps {
-  activeIndex: number;
-  activeItems: CommandPaletteItem[];
-  displaySections: ReturnType<typeof buildCommandMenuSections>;
-  emptyLabel: string;
-  onRunItem: (item: CommandPaletteItem | undefined) => void;
-}
-
 function runItem(onRunCommand: (id: string) => void, item: CommandPaletteItem | undefined) {
   if (!item || !item.enabled) {
     return;
   }
   onRunCommand(item.id);
-}
-
-function CommandPaletteList({
-  activeIndex,
-  activeItems,
-  displaySections,
-  emptyLabel,
-  onRunItem
-}: CommandPaletteListProps) {
-  if (!activeItems.length) {
-    return (
-      <ul className={appFloatingListClassName()}>
-        <li className={appFloatingEmptyStateClassName()}>{emptyLabel}</li>
-      </ul>
-    );
-  }
-
-  let enabledIndex = -1;
-  return (
-    <ul className={appFloatingListClassName()}>
-      {displaySections.flatMap((section) => [
-        <li className="px-3 pb-1 pt-2 text-xs font-semibold text-foreground/45 first:pt-1" key={section.id}>
-          {section.title}
-        </li>,
-        ...section.items.map((item) => {
-          if (item.enabled) {
-            enabledIndex += 1;
-          }
-          return (
-            <li key={item.id}>
-              <button
-                aria-keyshortcuts={formatAriaKeyShortcuts(item.shortcuts)}
-                aria-label={item.title}
-                className={appFloatingItemClassName('flex items-center justify-between text-sm')}
-                data-active={item.enabled && enabledIndex === activeIndex}
-                data-disabled={!item.enabled}
-                disabled={!item.enabled}
-                onClick={() => onRunItem(item)}
-                type="button"
-              >
-                <span className="min-w-0 truncate font-medium text-foreground">{item.title}</span>
-                {item.shortcuts ? (
-                  <span className="ml-4 text-xs text-foreground/55">
-                    {formatShortcutSetLabel(item.shortcuts)}
-                  </span>
-                ) : null}
-              </button>
-            </li>
-          );
-        })
-      ])}
-    </ul>
-  );
 }
 
 function useCommandPaletteState(
@@ -109,7 +47,7 @@ function useCommandPaletteState(
       }),
     [args.recentTitle, query, visibleItemsSource, visibleRecentCommandIds]
   );
-  const displaySections = useMemo(() => filterDisplaySections(sections, query), [query, sections]);
+  const displaySections = sections;
   const activeItems = useMemo(
     () => displaySections.flatMap((section) => section.items).filter((item) => item.enabled),
     [displaySections]
@@ -142,18 +80,6 @@ function useCommandPaletteState(
   };
 }
 
-function filterDisplaySections(
-  sections: ReturnType<typeof buildCommandMenuSections>,
-  query: string
-) {
-  if (!query.trim()) {
-    return sections;
-  }
-  return sections
-    .map((section) => ({ ...section, items: section.items.filter((item) => item.enabled) }))
-    .filter((section) => section.items.length > 0);
-}
-
 export function CommandPalette({
   isOpen,
   items,
@@ -162,6 +88,7 @@ export function CommandPalette({
   onRunCommand
 }: CommandPaletteProps) {
   const t = useTranslation();
+  const hotkeys = useHotkeySettings();
   const focusTrap = useFloatingDialogFocusTrap(isOpen);
   useFloatingPaletteEscape(isOpen, onClose);
   const { activeIndex, activeItems, displaySections, query, setActiveIndex, setQuery } =
@@ -175,10 +102,6 @@ export function CommandPalette({
   if (!isOpen) {
     return null;
   }
-
-  const runPaletteItem = (item: CommandPaletteItem | undefined) => {
-    runItem(onRunCommand, item);
-  };
 
   return (
     <div
@@ -198,7 +121,7 @@ export function CommandPalette({
           inputLabel={t('desktop.palette.command.search')}
           onClose={onClose}
           onQueryChange={setQuery}
-          onRunActive={() => runPaletteItem(activeItems[activeIndex])}
+          onRunActive={() => runItem(onRunCommand, activeItems[activeIndex])}
           onSetActiveIndex={setActiveIndex}
           placeholder={t('desktop.palette.command.placeholder')}
           query={query}
@@ -209,7 +132,11 @@ export function CommandPalette({
           activeItems={activeItems}
           displaySections={displaySections}
           emptyLabel={t('desktop.palette.command.empty')}
-          onRunItem={runPaletteItem}
+          onConfigureItem={(item) => {
+            hotkeys.onConfigureShortcut(item.id);
+            onRunCommand(APP_COMMAND_IDS.openSettings);
+          }}
+          onRunItem={(item) => runItem(onRunCommand, item)}
         />
       </div>
     </div>

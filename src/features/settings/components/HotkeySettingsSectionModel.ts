@@ -1,14 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
+import { useCallback, useEffect, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
 
 import { APP_COMMAND_IDS } from '../../../shared/commands/ids';
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import { startRuntimeHotkeyRecording } from '../../../shared/platform/nativeHotkeyRecordingRuntime';
 import type { HotkeySettingItem, HotkeyUpdateResult } from '../model/hotkeySettings';
 
+import { useFilteredHotkeyItems, type HotkeyFilterMode } from './hotkeySettingsFilter';
 import { nativeInputToShortcutLabel } from './hotkeyShortcutLabel';
 
 export type HotkeySlot = 'primary' | 'secondary';
-export type HotkeyFilterMode = 'all' | 'assigned' | 'customized' | 'unassigned';
+export type { HotkeyFilterMode } from './hotkeySettingsFilter';
 type RecordingHotkey = { commandId: string; slot: HotkeySlot } | null;
 type DraftById = Record<string, { primary: string; secondary: string }>;
 type SearchRecording = 'hotkey-search' | null;
@@ -34,31 +35,6 @@ function createDraftById(items: HotkeySettingItem[]) {
     };
   }
   return nextDrafts;
-}
-
-function hotkeyMatchesFilter(item: HotkeySettingItem, filterMode: HotkeyFilterMode) {
-  const hasShortcut = Boolean(item.primaryShortcutLabel || item.secondaryShortcutLabel);
-  if (filterMode === 'assigned') return hasShortcut;
-  if (filterMode === 'customized') return item.isCustomized;
-  if (filterMode === 'unassigned') return !hasShortcut;
-  return true;
-}
-
-function hotkeyMatchesQuery(item: HotkeySettingItem, query: string) {
-  const normalizedQuery = query
-    .replaceAll('⌘', ' command cmd ')
-    .replaceAll('⌥', ' option alt ')
-    .replaceAll('⇧', ' shift ')
-    .replaceAll('⌃', ' control ctrl ')
-    .trim()
-    .toLowerCase();
-  if (!normalizedQuery) return true;
-  const haystack = [item.title, item.commandId, item.section, item.shortcutSummaryLabel]
-    .join(' ')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ');
-  const queryTokens = normalizedQuery.split(/[^a-z0-9]+/).filter(Boolean);
-  return queryTokens.every((token) => haystack.includes(token));
 }
 
 function useHotkeyDraftState(items: HotkeySettingItem[], recording: RecordingHotkey) {
@@ -118,13 +94,6 @@ function useNativeHotkeyRecordingCapture(args: NativeCaptureArgs) {
   }, [args.recording?.commandId, args.recording?.slot, args.searchRecording]);
 }
 
-function useFilteredHotkeyItems(items: HotkeySettingItem[], filterMode: HotkeyFilterMode, query: string) {
-  return useMemo(
-    () => items.filter((item) => hotkeyMatchesFilter(item, filterMode) && hotkeyMatchesQuery(item, query)),
-    [filterMode, items, query]
-  );
-}
-
 function useHotkeyRecordingActions(args: {
   invalidShortcutMessage: string;
   onUpdate: (commandId: string, slot: HotkeySlot, nextLabel: string) => HotkeyUpdateResult;
@@ -175,17 +144,39 @@ function useHotkeyRecordingActions(args: {
   return { beginRecording, cancelRecording, recordShortcut, clearShortcut };
 }
 
+function useHotkeySearchState(
+  items: HotkeySettingItem[],
+  target?: { commandId: string | null; onConsumed: () => void }
+) {
+  const [query, setQueryValue] = useState('');
+  const [targetCommandId, setTargetCommandId] = useState<string | null>(null);
+  const [filterMode, setFilterMode] = useState<HotkeyFilterMode>('all');
+  const setQuery = useCallback((nextQuery: string) => {
+    setTargetCommandId(null);
+    setQueryValue(nextQuery);
+  }, []);
+  useEffect(() => {
+    if (!target?.commandId) return;
+    const item = items.find((candidate) => candidate.commandId === target.commandId);
+    setFilterMode('all');
+    setTargetCommandId(item?.commandId ?? null);
+    setQueryValue(item?.title ?? '');
+    target.onConsumed();
+  }, [items, target?.commandId, target?.onConsumed]);
+  return { filterMode, query, setFilterMode, setQuery, targetCommandId };
+}
+
 export function useHotkeySectionModel(
   items: HotkeySettingItem[],
-  onUpdate: (commandId: string, slot: HotkeySlot, nextLabel: string) => HotkeyUpdateResult
+  onUpdate: (commandId: string, slot: HotkeySlot, nextLabel: string) => HotkeyUpdateResult,
+  target?: { commandId: string | null; onConsumed: () => void }
 ) {
   const t = useTranslation();
-  const [query, setQuery] = useState('');
-  const [filterMode, setFilterMode] = useState<HotkeyFilterMode>('all');
+  const searchState = useHotkeySearchState(items, target);
   const [recording, setRecording] = useState<RecordingHotkey>(null);
   const [searchRecording, setSearchRecording] = useState<SearchRecording>(null);
   const draftState = useHotkeyDraftState(items, recording);
-  const filteredItems = useFilteredHotkeyItems(items, filterMode, query);
+  const filteredItems = useFilteredHotkeyItems(items, searchState.filterMode, searchState.query, searchState.targetCommandId);
   const actions = useHotkeyRecordingActions({
     invalidShortcutMessage: t('settings.hotkeys.invalidShortcut'),
     onUpdate,
@@ -200,9 +191,9 @@ export function useHotkeySectionModel(
     setSearchRecording('hotkey-search');
   }, []);
   const setQueryFromHotkey = useCallback((nextLabel: string) => {
-    setQuery(nextLabel);
+    searchState.setQuery(nextLabel);
     setSearchRecording(null);
-  }, []);
+  }, [searchState.setQuery]);
   const cancelRecordingRef = useRef(actions.cancelRecording);
   const recordShortcutRef = useRef(actions.recordShortcut);
   const setQueryFromHotkeyRef = useRef(setQueryFromHotkey);
@@ -217,15 +208,16 @@ export function useHotkeySectionModel(
     setQueryFromHotkeyRef
   });
   return {
-    query,
-    setQuery,
-    filterMode,
-    setFilterMode,
+    query: searchState.query,
+    setQuery: searchState.setQuery,
+    filterMode: searchState.filterMode,
+    setFilterMode: searchState.setFilterMode,
     filteredItems,
     draftById: draftState.draftById,
     messageById: draftState.messageById,
     recording,
     searchRecording,
+    targetCommandId: searchState.targetCommandId,
     beginSearchRecording,
     ...actions
   };

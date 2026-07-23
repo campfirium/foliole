@@ -14,6 +14,7 @@ it('shows the current platform modifier for Ctrl and Cmd equivalent shortcuts', 
   };
 
   expect(formatShortcutSetDisplayLabel(shortcuts, 'Windows')).toBe('Ctrl+F');
+  expect(formatShortcutSetDisplayLabel(shortcuts, 'Linux x86_64')).toBe('Ctrl+F');
   expect(formatShortcutSetDisplayLabel(shortcuts, 'MacIntel')).toBe('⌘ F');
 });
 

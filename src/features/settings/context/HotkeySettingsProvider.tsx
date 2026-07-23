@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 
 import type { HotkeySettingItem, HotkeyUpdateResult } from '../model/hotkeySettings';
 
@@ -16,14 +16,22 @@ interface HotkeySettingsProviderProps {
 }
 
 export function HotkeySettingsProvider(props: HotkeySettingsProviderProps) {
+  const [requestedCommandId, setRequestedCommandId] = useState<string | null>(null);
+  const onConfigureShortcut = useCallback((commandId: string) => {
+    setRequestedCommandId(commandId);
+  }, []);
+  const onRequestedCommandConsumed = useCallback(() => setRequestedCommandId(null), []);
   const value = useMemo(
     () => ({
       hotkeyItems: props.hotkeyItems,
+      onConfigureShortcut,
       onHotkeyReset: props.onHotkeyReset,
       onHotkeyResetAll: props.onHotkeyResetAll,
-      onHotkeyUpdate: props.onHotkeyUpdate
+      onHotkeyUpdate: props.onHotkeyUpdate,
+      onRequestedCommandConsumed,
+      requestedCommandId
     }),
-    [props.hotkeyItems, props.onHotkeyReset, props.onHotkeyResetAll, props.onHotkeyUpdate]
+    [onConfigureShortcut, onRequestedCommandConsumed, props.hotkeyItems, props.onHotkeyReset, props.onHotkeyResetAll, props.onHotkeyUpdate, requestedCommandId]
   );
 
   return <HotkeySettingsContext.Provider value={value}>{props.children}</HotkeySettingsContext.Provider>;

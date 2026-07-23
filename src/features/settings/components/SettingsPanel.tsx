@@ -43,7 +43,9 @@ export function SettingsPanel(props: SettingsPanelProps) {
 }
 
 function SettingsPanelContent(props: SettingsPanelProps) {
-  const state = useSettingsPanelViewState(props.requestedCategory ?? null);
+  const hotkeys = useHotkeySettings();
+  const requestedCategory = hotkeys.requestedCommandId ? 'hotkeys' : props.requestedCategory ?? null;
+  const state = useSettingsPanelViewState(requestedCategory);
   return <SettingsPanelBody {...props} {...state} />;
 }
 

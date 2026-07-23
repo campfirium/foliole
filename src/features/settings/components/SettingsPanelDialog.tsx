@@ -24,7 +24,8 @@ function resolveSettingsOverlayClassName(args: {
 
 export type SettingsPanelCategoryProps = Omit<
   SettingsCategoryContentProps,
-  'hotkeyItems' | 'onHotkeyReset' | 'onHotkeyResetAll' | 'onHotkeyUpdate'
+  'hotkeyItems' | 'onHotkeyReset' | 'onHotkeyResetAll' | 'onHotkeyUpdate' |
+  'onRequestedCommandConsumed' | 'requestedCommandId'
 >;
 
 type SettingsPanelDialogProps = {

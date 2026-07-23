@@ -17,9 +17,12 @@ const DEFAULT_SETTINGS_PANEL_PROPS = {
 
 const DEFAULT_HOTKEY_SETTINGS: HotkeySettingsContextValue = {
   hotkeyItems: [],
+  onConfigureShortcut: () => undefined,
   onHotkeyReset: () => undefined,
   onHotkeyResetAll: () => undefined,
-  onHotkeyUpdate: () => ({ status: 'blocked' as const })
+  onHotkeyUpdate: () => ({ status: 'blocked' as const }),
+  onRequestedCommandConsumed: () => undefined,
+  requestedCommandId: null
 };
 
 export function createDeferred<T>() {

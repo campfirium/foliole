@@ -68,9 +68,11 @@ export interface SettingsCategoryContentProps {
   onHotkeyReset: (commandId: string) => void;
   onHotkeyResetAll: () => void;
   onHotkeyUpdate: (commandId: string, slot: 'primary' | 'secondary', nextLabel: string) => HotkeyUpdateResult;
+  onRequestedCommandConsumed: () => void;
   onRunSupportCommand?: ((commandId: string) => void) | undefined;
   onEnterPreview: () => void;
   onSettingsBackdropTransparentChange: (value: boolean) => void;
+  requestedCommandId: string | null;
 }
 
 function ReviewSettingsContent() {
@@ -157,9 +159,11 @@ function renderFallbackCategory(props: LocalizedSettingsCategoryContentProps) {
   return (
     <HotkeySettingsSection
       items={props.hotkeyItems}
+      onRequestedCommandConsumed={props.onRequestedCommandConsumed}
       onReset={props.onHotkeyReset}
       onResetAll={props.onHotkeyResetAll}
       onUpdate={props.onHotkeyUpdate}
+      requestedCommandId={props.requestedCommandId}
     />
   );
 }
