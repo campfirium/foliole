@@ -14,6 +14,7 @@ function temporarySite() {
   return root;
 }
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   roots.splice(0).forEach((root) => fs.rmSync(root, { force: true, recursive: true }));
 });
@@ -40,7 +41,9 @@ it('uploads missing assets before creating a manifest deployment', async () => {
       return response(hashes);
     }
     if (url.endsWith('/assets/upload')) return response(null);
-    return response({ url: 'https://deployment.pages.dev' });
+    return response({
+      id: 'deployment', latest_stage: { status: 'success' }, url: 'https://deployment.pages.dev'
+    });
   });
   vi.stubGlobal('fetch', fetchMock);
 
@@ -53,7 +56,46 @@ it('uploads missing assets before creating a manifest deployment', async () => {
     expect.stringContaining('/deployments')
   ]);
   const deployment = calls.at(-1)?.body as FormData;
+  expect(deployment.get('branch')).toBe('main');
   expect(JSON.parse(String(deployment.get('manifest')))).toEqual({ '/index.html': expect.any(String) });
+});
+
+it('waits until Cloudflare reports that the production deployment succeeded', async () => {
+  vi.useFakeTimers();
+  const fetchMock = vi.fn(async (input: string | URL | Request) => {
+    const url = String(input);
+    if (url.endsWith('/upload-token')) return response({ jwt: 'upload-jwt' });
+    if (url.endsWith('/check-missing')) return response([]);
+    if (url.endsWith('/deployments')) {
+      return response({ id: 'deployment', latest_stage: { status: 'active' } });
+    }
+    return response({
+      id: 'deployment', latest_stage: { status: 'success' }, url: 'https://deployment.pages.dev'
+    });
+  });
+  vi.stubGlobal('fetch', fetchMock);
+
+  const pending = deployCloudflarePages({
+    accountId: 'account', projectName: 'project', siteRoot: temporarySite(), token: 'api-token'
+  });
+  await vi.runAllTimersAsync();
+
+  await expect(pending).resolves.toMatchObject({ latest_stage: { status: 'success' } });
+  expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/deployments/deployment'))).toBe(true);
+});
+
+it('reports a terminal Cloudflare deployment failure', async () => {
+  const fetchMock = vi.fn(async (input: string | URL | Request) => {
+    const url = String(input);
+    if (url.endsWith('/upload-token')) return response({ jwt: 'upload-jwt' });
+    if (url.endsWith('/check-missing')) return response([]);
+    return response({ id: 'deployment', latest_stage: { status: 'failure' } });
+  });
+  vi.stubGlobal('fetch', fetchMock);
+
+  await expect(deployCloudflarePages({
+    accountId: 'account', projectName: 'project', siteRoot: temporarySite(), token: 'api-token'
+  })).rejects.toThrow('Cloudflare Pages deployment failed.');
 });
 
 it('reports an existing project without exposing a reuse path', async () => {

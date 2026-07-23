@@ -7,6 +7,8 @@ const API = 'https://api.cloudflare.com/client/v4';
 const MAX_FILE_COUNT = 20_000;
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
 const MAX_UPLOAD_BATCH_SIZE = 50 * 1024 * 1024;
+const DEPLOYMENT_POLL_INTERVAL_MS = 1_000;
+const DEPLOYMENT_POLL_LIMIT = 90;
 
 interface CloudflareEnvelope<T> {
   result?: T;
@@ -14,6 +16,11 @@ interface CloudflareEnvelope<T> {
 }
 
 interface CloudflarePagesProject { subdomain?: string }
+interface CloudflarePagesDeployment {
+  id?: string;
+  latest_stage?: { status?: string };
+  url?: string;
+}
 export type CloudflareProjectResolution =
   | { status: 'exists' }
   | { created: boolean; project: CloudflarePagesProject; status: 'ready' };
@@ -164,11 +171,44 @@ async function uploadAssets(files: UploadFile[], jwt: string) {
 async function createDeployment(input: { accountId: string; files: UploadFile[]; projectName: string; token: string }) {
   const manifest = Object.fromEntries(input.files.map((file) => [`/${file.relativePath}`, file.hash]));
   const form = new FormData();
+  form.append('branch', 'main');
   form.append('manifest', JSON.stringify(manifest));
   const response = await fetch(`${API}/accounts/${encodeURIComponent(input.accountId)}/pages/projects/${encodeURIComponent(input.projectName)}/deployments`, {
     body: form, headers: headers(input.token), method: 'POST'
   });
-  return readEnvelope<{ url?: string }>(response, 'Cloudflare Pages deployment failed.');
+  return readEnvelope<CloudflarePagesDeployment>(response, 'Cloudflare Pages deployment failed.');
+}
+
+function deploymentStatus(deployment: CloudflarePagesDeployment) {
+  return deployment.latest_stage?.status;
+}
+
+function assertDeploymentStatus(deployment: CloudflarePagesDeployment) {
+  const status = deploymentStatus(deployment);
+  if (status === 'failure' || status === 'canceled') {
+    throw new CloudflareClientError('Cloudflare Pages deployment failed.');
+  }
+  return status === 'success';
+}
+
+async function readDeployment(input: { accountId: string; projectName: string; token: string }, id: string) {
+  const endpoint = `${API}/accounts/${encodeURIComponent(input.accountId)}/pages/projects/${encodeURIComponent(input.projectName)}/deployments/${encodeURIComponent(id)}`;
+  const response = await fetch(endpoint, { headers: headers(input.token) });
+  return readEnvelope<CloudflarePagesDeployment>(response, 'Cloudflare Pages deployment status check failed.');
+}
+
+async function waitForDeployment(
+  input: { accountId: string; projectName: string; token: string },
+  deployment: CloudflarePagesDeployment
+) {
+  if (assertDeploymentStatus(deployment)) return deployment;
+  if (!deployment.id) throw new CloudflareClientError('Cloudflare Pages did not return a deployment ID.');
+  for (let attempt = 0; attempt < DEPLOYMENT_POLL_LIMIT; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, DEPLOYMENT_POLL_INTERVAL_MS));
+    const current = await readDeployment(input, deployment.id);
+    if (assertDeploymentStatus(current)) return current;
+  }
+  throw new CloudflareClientError('Cloudflare Pages deployment is still processing. Try again shortly.');
 }
 
 export async function deployCloudflarePages(input: { accountId: string; projectName: string; siteRoot: string; token: string }) {
@@ -177,6 +217,7 @@ export async function deployCloudflarePages(input: { accountId: string; projectN
     const jwt = await getUploadToken(input);
     const missing = new Set(await getMissingHashes(files, jwt));
     await uploadAssets(files.filter((file) => missing.has(file.hash)), jwt);
-    return await createDeployment({ ...input, files });
+    const deployment = await createDeployment({ ...input, files });
+    return await waitForDeployment(input, deployment);
   } catch (error) { throw safeCloudflareError(error); }
 }
