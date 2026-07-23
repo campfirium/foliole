@@ -35,13 +35,13 @@ function ClearAppDataDialog(props: {
           <div className="mt-5 flex flex-col gap-3">
             <button
               aria-busy={props.isClearing || undefined}
-              className={`relative inline-flex w-full items-center justify-center rounded-2xl border border-error/60 px-4 py-3 text-sm font-semibold text-error transition hover:bg-error/5 disabled:cursor-not-allowed ${props.isClearing ? 'disabled:opacity-100' : 'disabled:opacity-45'}`}
+              className={`inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-error/60 px-4 py-3 text-sm font-semibold text-error transition hover:bg-error/5 disabled:cursor-not-allowed ${props.isClearing ? 'disabled:opacity-100' : 'disabled:opacity-45'}`}
               disabled={props.isClearing}
               onClick={props.onClear}
               type="button"
             >
-              {props.isClearing ? <AppSpinner className="pointer-events-none absolute left-4" decorative size="sm" /> : null}
-              <span className={props.isClearing ? 'translate-x-2' : undefined}>{t('companion.settings.storage.clear')}</span>
+              {props.isClearing ? <AppSpinner className="pointer-events-none shrink-0" decorative size="sm" /> : null}
+              <span>{t(props.isClearing ? 'companion.settings.storage.clearing' : 'companion.settings.storage.clear')}</span>
             </button>
             <button
               className="w-full rounded-2xl border border-companion-divider px-4 py-3 text-sm font-medium text-foreground transition active:bg-companion-subtle/80 disabled:cursor-not-allowed disabled:opacity-45"
@@ -85,13 +85,13 @@ export function CompanionStorageSettingsContent() {
         </p>
         <button
           aria-busy={isClearing || undefined}
-          className={`relative mt-5 inline-flex w-full items-center justify-center rounded-2xl border border-error/60 px-4 py-3 text-sm font-semibold text-error transition hover:bg-error/5 disabled:cursor-not-allowed ${isClearing ? 'disabled:opacity-100' : 'disabled:opacity-45'}`}
+          className={`mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-error/60 px-4 py-3 text-sm font-semibold text-error transition hover:bg-error/5 disabled:cursor-not-allowed ${isClearing ? 'disabled:opacity-100' : 'disabled:opacity-45'}`}
           disabled={isClearing}
           onClick={() => setIsConfirmOpen(true)}
           type="button"
         >
-          {isClearing ? <AppSpinner className="pointer-events-none absolute left-4" decorative size="sm" /> : null}
-          <span className={isClearing ? 'translate-x-2' : undefined}>{t('companion.settings.storage.clear')}</span>
+          {isClearing ? <AppSpinner className="pointer-events-none shrink-0" decorative size="sm" /> : null}
+          <span>{t(isClearing ? 'companion.settings.storage.clearing' : 'companion.settings.storage.clear')}</span>
         </button>
         {error ? <p className="mt-3 text-sm leading-6 text-error">{error}</p> : null}
       </div>

@@ -72,27 +72,24 @@
   border-radius: 8px;
   color: var(--setup-ink);
   cursor: pointer;
+  align-items: center;
+  display: inline-flex;
   font-size: 14px;
   font-weight: 560;
+  gap: 8px;
   height: 40px;
-  position: relative;
-  width: 112px;
+  justify-content: center;
+  min-width: 112px;
+  padding: 0 16px;
 }
 
 .initial-library-setup button.is-loading {
   opacity: 1;
 }
 
-.initial-library-setup button.is-loading > span {
-  display: inline-block;
-  transform: translateX(8px);
-}
-
 .initial-library-setup__spinner {
   animation: initial-library-setup-spin 0.8s linear infinite;
-  left: 12px;
-  position: absolute;
-  top: 11px;
+  flex: 0 0 auto;
 }
 
 @keyframes initial-library-setup-spin {

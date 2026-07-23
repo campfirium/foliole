@@ -105,6 +105,7 @@ function DiagnosticExportRow() {
         <SettingsButton
           aria-label={t('settings.about.diagnostic.copy')}
           loading={isExporting}
+          loadingLabel={t('settings.about.diagnostic.copying')}
           onClick={() => void handleExport()}
         >
           {t('settings.about.diagnostic.copyButton')}

@@ -26,6 +26,7 @@ function SourceUpdatePanelActionItems(props: SourceUpdatePanelActionBarProps & {
           disabled={disabled}
           label={t('desktop.sourceUpdate.accept')}
           loading={props.pendingAction === 'accept'}
+          loadingLabel={t('desktop.sourceUpdate.accepting')}
           onClick={() => props.onAction('accept', props.onAcceptIncomingUpdate)}
         />
       ) : null}
@@ -48,6 +49,7 @@ function SourceUpdatePanelActionItems(props: SourceUpdatePanelActionBarProps & {
             disabled={disabled}
             label={t('desktop.sourceUpdate.importAsNew')}
             loading={props.pendingAction === 'importAsNew'}
+            loadingLabel={t('desktop.sourceUpdate.importingAsNew')}
             onClick={() => props.onAction('importAsNew', props.onImportIncomingUpdateAsNew)}
           />
         </>

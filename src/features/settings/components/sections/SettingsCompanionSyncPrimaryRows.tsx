@@ -1,8 +1,8 @@
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import type { useDesktopCompanionPairingRequests } from '../../../../shared/platform/useDesktopCompanionPairingRequests';
 import {
-  SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
   AppSpinner,
+  SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
   SettingsControlSlot,
   SettingsRow
 } from '../../../../shared/ui';
@@ -57,13 +57,13 @@ export function SettingsCompanionSyncPrimaryRows(props: {
             {isSecondary ? (
               <button
                 aria-busy={isSettingPrimary || undefined}
-                className={`relative inline-flex items-center justify-center text-sm font-medium text-foreground underline-offset-4 hover:underline disabled:cursor-not-allowed ${isSettingPrimary ? 'disabled:opacity-100' : 'disabled:opacity-45'}`}
+                className={`inline-flex items-center justify-center gap-2 text-sm font-medium text-foreground underline-offset-4 hover:underline disabled:cursor-not-allowed ${isSettingPrimary ? 'disabled:opacity-100' : 'disabled:opacity-45'}`}
                 disabled={props.isBusy}
                 onClick={props.onSetDesktopAsPrimary}
                 type="button"
               >
-                {isSettingPrimary ? <AppSpinner className="pointer-events-none absolute left-0" decorative size="sm" /> : null}
-                <span className={isSettingPrimary ? 'translate-x-2' : undefined}>{t('settings.companionSync.primary.setAction')}</span>
+                {isSettingPrimary ? <AppSpinner className="pointer-events-none shrink-0" decorative size="sm" /> : null}
+                <span>{t(isSettingPrimary ? 'settings.companionSync.primary.setPending' : 'settings.companionSync.primary.setAction')}</span>
               </button>
             ) : null}
           </div>

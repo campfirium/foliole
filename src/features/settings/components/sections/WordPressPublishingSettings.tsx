@@ -58,7 +58,7 @@ export function WordPressPublishingSettings(props: { expanded: boolean; onExpand
       <PublishingConnectionFooter
         action={state.connected
           ? <AppButton disabled={state.disabled} onClick={state.disconnect}>{t('settings.publishing.wordpress.connection.disconnect')}</AppButton>
-          : <AppButton disabled={!state.canConnect} loading={state.status === 'connecting'} onClick={state.submit}>{t('settings.publishing.wordpress.connection.connect')}</AppButton>}
+          : <AppButton disabled={!state.canConnect} loading={state.status === 'connecting'} loadingLabel={t('settings.publishing.wordpress.connection.connecting')} onClick={state.submit}>{t('settings.publishing.wordpress.connection.connect')}</AppButton>}
         connected={state.connected}
         title={t('settings.publishing.wordpress.connection.title')}
       />

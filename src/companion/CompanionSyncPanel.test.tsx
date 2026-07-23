@@ -160,7 +160,7 @@ describe('CompanionSyncPanel discovery list', () => {
 
     renderWithLocalization(<CompanionSyncPanel {...props} />);
 
-    const button = screen.getByRole('button', { name: 'Connect' });
+    const button = screen.getByRole('button', { name: 'Connecting...' });
     expect(button).toBeDisabled();
     expect(button).toHaveAttribute('aria-busy', 'true');
   });

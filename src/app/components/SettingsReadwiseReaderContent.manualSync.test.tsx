@@ -56,8 +56,8 @@ it('keeps manual Readwise sync status compact while running', async () => {
 
   fireEvent.click(screen.getByRole('button', { name: 'Sync' }));
   await waitFor(() => {
-    expect(screen.getByRole('button', { name: 'Sync' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Sync' })).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByRole('button', { name: 'Syncing...' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Syncing...' })).toHaveAttribute('aria-busy', 'true');
   });
   expect(screen.getByRole('status')).toHaveTextContent('Syncing Readwise sources...');
   expect(onReadwiseReaderImportProgress).not.toHaveBeenCalled();

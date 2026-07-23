@@ -79,19 +79,19 @@ export function settingsButtonClassName(className?: string) {
   );
 }
 
-export const SettingsButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & { loading?: boolean }>(
-  function SettingsButton({ children, className, disabled = false, loading = false, type = 'button', ...rest }, ref) {
+export const SettingsButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & { loading?: boolean; loadingLabel?: ReactNode }>(
+  function SettingsButton({ children, className, disabled = false, loading = false, loadingLabel, type = 'button', ...rest }, ref) {
     return (
       <button
         aria-busy={loading || undefined}
-        className={settingsButtonClassName(cn('relative', loading && 'disabled:opacity-100', className))}
+        className={settingsButtonClassName(cn('gap-2', loading && 'disabled:opacity-100', className))}
         disabled={disabled || loading}
         ref={ref}
         type={type}
         {...rest}
       >
-        {loading ? <AppSpinner className="pointer-events-none absolute left-1" decorative size="sm" /> : null}
-        <span className={cn('inline-flex min-w-0 items-center justify-center gap-2', loading && 'translate-x-2')}>{children}</span>
+        {loading ? <AppSpinner className="pointer-events-none shrink-0" decorative size="sm" /> : null}
+        <span className="inline-flex min-w-0 items-center justify-center gap-2">{loading ? loadingLabel ?? children : children}</span>
       </button>
     );
   }

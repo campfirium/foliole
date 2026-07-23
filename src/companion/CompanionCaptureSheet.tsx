@@ -49,13 +49,13 @@ function CaptureSheetHeader(props: {
       <AppDialogTitle>{t('companion.capture.title')}</AppDialogTitle>
       <button
         aria-busy={props.isSaving || undefined}
-        className={`relative inline-flex items-center justify-center rounded-md px-2 py-1 text-sm font-semibold text-primary transition hover:bg-companion-subtle ${props.isSaving ? 'disabled:text-primary' : 'disabled:text-companion-text-tertiary'}`}
+        className={`inline-flex items-center justify-center gap-2 rounded-md px-2 py-1 text-sm font-semibold text-primary transition hover:bg-companion-subtle ${props.isSaving ? 'disabled:text-primary' : 'disabled:text-companion-text-tertiary'}`}
         disabled={!props.canSave}
         onClick={props.onSave}
         type="button"
       >
-        {props.isSaving ? <AppSpinner className="pointer-events-none absolute left-1" decorative size="sm" /> : null}
-        <span className={props.isSaving ? 'translate-x-2' : undefined}>{t('companion.capture.save')}</span>
+        {props.isSaving ? <AppSpinner className="pointer-events-none shrink-0" decorative size="sm" /> : null}
+        <span>{t(props.isSaving ? 'companion.capture.saving' : 'companion.capture.save')}</span>
       </button>
     </div>
   );

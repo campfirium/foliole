@@ -69,16 +69,18 @@ it('renders shared control wrappers without Radix theme context', () => {
   expect(container.querySelector('.radix-themes')).toBeNull();
 });
 
-it('keeps loading button content in place while overlaying a leading spinner', () => {
-  const { container } = render(<AppButton loading>Publish</AppButton>);
-  const button = screen.getByRole('button', { name: 'Publish' });
+it('lets loading button content define its active width', () => {
+  const { container } = render(<AppButton loading loadingLabel="Publishing…">Publish</AppButton>);
+  const button = screen.getByRole('button', { name: 'Publishing…' });
 
   expect(button).toBeDisabled();
   expect(button).toHaveAttribute('aria-busy', 'true');
-  expect(button.className).toContain('relative');
+  expect(button.className).toContain('gap-2');
   expect(button.className).toContain('disabled:opacity-100');
-  expect(screen.getByText('Publish').className).toContain('translate-x-2');
-  expect(container.querySelector('.animate-spin.absolute.left-1')).not.toBeNull();
+  expect(button).toHaveTextContent('Publishing…');
+  expect(button).not.toHaveTextContent(/^Publish$/);
+  expect(container.querySelector('.animate-spin.shrink-0')).not.toBeNull();
+  expect(container.querySelector('.animate-spin.absolute')).toBeNull();
 });
 
 it('applies shared scrollbar styling to scrollable panel bodies', () => {

@@ -54,6 +54,7 @@ export function SettingsCliSection() {
           <SettingsButton
             disabled={state.status === 'conflict'}
             loading={busy}
+            loadingLabel={t('settings.about.cli.working')}
             onClick={() => void run()}
           >
             {t(`settings.about.cli.action.${action}`)}

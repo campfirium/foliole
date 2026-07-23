@@ -163,13 +163,13 @@ function ConnectionPage(props: {
         </p>
         <button
           aria-busy={props.isDisconnecting || undefined}
-          className={`relative mt-3 inline-flex w-full items-center justify-center rounded-2xl border border-error px-4 py-3 text-sm font-semibold text-error transition active:bg-companion-subtle/80 disabled:cursor-not-allowed ${props.isDisconnecting ? 'disabled:opacity-100' : 'disabled:opacity-45'}`}
+          className={`mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-error px-4 py-3 text-sm font-semibold text-error transition active:bg-companion-subtle/80 disabled:cursor-not-allowed ${props.isDisconnecting ? 'disabled:opacity-100' : 'disabled:opacity-45'}`}
           disabled={props.isDisconnecting}
           onClick={props.onDisconnectPairing}
           type="button"
         >
-          {props.isDisconnecting ? <AppSpinner className="pointer-events-none absolute left-4" decorative size="sm" /> : null}
-          <span className={props.isDisconnecting ? 'translate-x-2' : undefined}>{t('companion.sync.disconnect.button')}</span>
+          {props.isDisconnecting ? <AppSpinner className="pointer-events-none shrink-0" decorative size="sm" /> : null}
+          <span>{t(props.isDisconnecting ? 'companion.sync.disconnect.progress' : 'companion.sync.disconnect.button')}</span>
         </button>
       </div>
     </section>

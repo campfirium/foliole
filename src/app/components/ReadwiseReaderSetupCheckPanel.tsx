@@ -103,6 +103,7 @@ export function ReadwiseReaderSetupCheckPanel(props: {
           <AppButton
             disabled={!props.canCheck}
             loading={props.isChecking}
+            loadingLabel={t('desktop.readwise.setup.preview.running')}
             onClick={props.onCheck}
             variant="default"
           >

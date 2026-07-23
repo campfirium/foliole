@@ -24,10 +24,10 @@ function OriginalFileActionPanel(props: {
           <p className="text-[13px] text-foreground/60">{props.helperText}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <AppButton disabled={props.isBusy} loading={props.pendingAction === 'download'} onClick={() => void props.runDownload()} size="sm" variant="default">
+          <AppButton disabled={props.isBusy} loading={props.pendingAction === 'download'} loadingLabel={t('desktop.readwise.original.opening')} onClick={() => void props.runDownload()} size="sm" variant="default">
             {t('desktop.readwise.original.download')}
           </AppButton>
-          <AppButton disabled={props.isBusy} loading={props.pendingAction === 'load'} onClick={() => void props.runLoad()} size="sm" variant="ghost">
+          <AppButton disabled={props.isBusy} loading={props.pendingAction === 'load'} loadingLabel={t('desktop.readwise.original.preparing')} onClick={() => void props.runLoad()} size="sm" variant="ghost">
             {t('desktop.readwise.original.load')}
           </AppButton>
         </div>

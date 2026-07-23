@@ -47,6 +47,7 @@ function RemovedImportAction(props: {
       disabled={props.isImporting}
       label={props.needsSourceUpdateConfirm ? t('desktop.removed.preview.reimportCurrent') : t('desktop.removed.preview.reimport')}
       loading={props.isImporting}
+      loadingLabel={t('desktop.removed.preview.reimporting')}
       onRestore={props.onImport}
     />
   );

@@ -80,6 +80,7 @@ function ConnectedDeviceList({
           <SettingsButton
             className="h-8 px-2 text-xs"
             loading={pendingActionId === `remove-paired-device:${device.device_id}`}
+            loadingLabel={t('settings.companionSync.disconnect.pending')}
             onClick={() => onDisconnect(device.device_id)}
           >
             {t('settings.companionSync.disconnect.action')}

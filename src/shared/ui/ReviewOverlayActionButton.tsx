@@ -5,7 +5,7 @@ import { AppSpinner } from './EmptyState';
 import { cn } from '@/shared/lib/utils';
 
 const overlayButtonClass =
-  'relative inline-flex min-h-9 min-w-20 shrink-0 appearance-none items-center justify-center rounded-none border-0 bg-transparent px-5 text-ui-md text-foreground/82 shadow-none transition-colors hover:bg-transparent hover:text-foreground focus:outline-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong disabled:pointer-events-none disabled:opacity-45';
+  'inline-flex min-h-9 min-w-20 shrink-0 appearance-none items-center justify-center gap-2 rounded-none border-0 bg-transparent px-5 text-ui-md text-foreground/82 shadow-none transition-colors hover:bg-transparent hover:text-foreground focus:outline-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong disabled:pointer-events-none disabled:opacity-45';
 
 export const ReviewOverlayActionButton = forwardRef<HTMLButtonElement, {
   ariaLabel?: string;
@@ -13,12 +13,13 @@ export const ReviewOverlayActionButton = forwardRef<HTMLButtonElement, {
   disabled?: boolean;
   label: string;
   loading?: boolean;
+  loadingLabel?: string;
   onClick: () => void;
   title?: string | undefined;
 }>(function ReviewOverlayActionButton(props, ref) {
   return (
     <button
-      aria-label={props.ariaLabel ?? props.label}
+      aria-label={props.ariaLabel ?? (props.loading ? props.loadingLabel : undefined) ?? props.label}
       aria-busy={props.loading || undefined}
       className={cn(overlayButtonClass, props.loading && 'disabled:opacity-100', props.className)}
       disabled={props.disabled || props.loading}
@@ -28,8 +29,8 @@ export const ReviewOverlayActionButton = forwardRef<HTMLButtonElement, {
       title={props.title}
       type="button"
     >
-      {props.loading ? <AppSpinner className="pointer-events-none absolute left-2" decorative size="sm" /> : null}
-      <span className={props.loading ? 'translate-x-2' : undefined}>{props.label}</span>
+      {props.loading ? <AppSpinner className="pointer-events-none shrink-0" decorative size="sm" /> : null}
+      <span>{props.loading ? props.loadingLabel ?? props.label : props.label}</span>
     </button>
   );
 });

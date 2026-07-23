@@ -15,6 +15,7 @@ const COPY = {
   en: {
     change: 'Change Location',
     create: 'Create',
+    creating: 'Creating…',
     error: 'Couldn’t create the library. Choose another location and try again.',
     heading: 'Create Library',
     loading: 'Loading…',
@@ -23,6 +24,7 @@ const COPY = {
   zh: {
     change: '更改位置',
     create: '创建',
+    creating: '正在创建…',
     error: '无法创建资料库。请选择其他位置后重试。',
     heading: '创建资料库',
     loading: '正在载入…',
@@ -84,7 +86,7 @@ export function InitialLibrarySetupView() {
           </button>
           <button aria-busy={busy || undefined} className={`primary${busy ? ' is-loading' : ''}`} type="button" disabled={!state || busy} onClick={() => void createLibrary()}>
             {busy ? <LoaderCircle aria-hidden="true" className="initial-library-setup__spinner" size={16} /> : null}
-            <span>{copy.create}</span>
+            <span>{busy ? copy.creating : copy.create}</span>
           </button>
         </div>
       </section>

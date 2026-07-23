@@ -7,18 +7,19 @@ function PrimaryAction(props: {
   children: string;
   disabled?: boolean;
   loading?: boolean;
+  loadingLabel?: string;
   onClick(): void;
 }) {
   return (
     <button
       aria-busy={props.loading || undefined}
-      className={`relative inline-flex w-full items-center justify-center rounded-2xl border border-border-strong bg-foreground px-4 py-3 text-sm font-semibold text-bg-panel transition hover:opacity-90 disabled:cursor-not-allowed ${props.loading ? 'disabled:opacity-100' : 'disabled:opacity-45'}`}
+      className={`inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-border-strong bg-foreground px-4 py-3 text-sm font-semibold text-bg-panel transition hover:opacity-90 disabled:cursor-not-allowed ${props.loading ? 'disabled:opacity-100' : 'disabled:opacity-45'}`}
       disabled={props.disabled || props.loading}
       onClick={props.onClick}
       type="button"
     >
-      {props.loading ? <AppSpinner className="pointer-events-none absolute left-4" decorative size="sm" /> : null}
-      <span className={props.loading ? 'translate-x-2' : undefined}>{props.children}</span>
+      {props.loading ? <AppSpinner className="pointer-events-none shrink-0" decorative size="sm" /> : null}
+      <span>{props.loading ? props.loadingLabel ?? props.children : props.children}</span>
     </button>
   );
 }
@@ -96,7 +97,7 @@ export function EmptyDiscoveryState(props: {
         {t('companion.syncSetup.instructions')}
       </p>
       <div className="mt-6">
-        <PrimaryAction loading={props.disabled} onClick={props.onTryAgain}>
+        <PrimaryAction loading={props.disabled} loadingLabel={t('companion.syncSetup.looking')} onClick={props.onTryAgain}>
           {t('companion.syncSetup.connect')}
         </PrimaryAction>
       </div>

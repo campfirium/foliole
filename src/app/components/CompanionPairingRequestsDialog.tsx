@@ -129,6 +129,7 @@ function PairingDialogActions({
         <AppButton
           disabled={disabled}
           loading={disabled}
+          loadingLabel="Working…"
           onClick={() => void runPairingAction(state.rejectRequest)}
           variant="danger"
         >
@@ -138,6 +139,7 @@ function PairingDialogActions({
           className="border border-border-strong"
           disabled={disabled}
           loading={disabled}
+          loadingLabel="Working…"
           onClick={() => void runPairingAction(state.approveRequest)}
           variant="emphasis"
         >

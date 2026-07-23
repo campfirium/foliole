@@ -15,6 +15,7 @@ interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'col
   size?: ButtonSize;
   active?: boolean;
   loading?: boolean;
+  loadingLabel?: ReactNode;
 }
 
 function resolveVariantClass(variant: ButtonVariant) {
@@ -41,7 +42,7 @@ function resolveSizeClass(size: ButtonSize) {
 }
 
 export const AppButton = forwardRef<HTMLButtonElement, ButtonProps>(function AppButton(
-  { children, variant = 'default', size = 'sm', className, active = false, disabled = false, loading = false, type = 'button', ...rest },
+  { children, variant = 'default', size = 'sm', className, active = false, disabled = false, loading = false, loadingLabel, type = 'button', ...rest },
   ref
 ) {
   const isList = variant === 'list';
@@ -49,7 +50,7 @@ export const AppButton = forwardRef<HTMLButtonElement, ButtonProps>(function App
   return (
     <button
       className={cn(
-        'relative inline-flex shrink-0 items-center justify-center rounded-md transition-colors disabled:pointer-events-none',
+        'inline-flex shrink-0 items-center justify-center gap-2 rounded-md transition-colors disabled:pointer-events-none',
         loading ? 'disabled:opacity-100' : 'disabled:opacity-45',
         appFocusControlClassName,
         !isList && resolveSizeClass(size),
@@ -64,10 +65,8 @@ export const AppButton = forwardRef<HTMLButtonElement, ButtonProps>(function App
       type={type}
       {...rest}
     >
-      {loading ? <AppSpinner className="pointer-events-none absolute left-1" decorative size="sm" /> : null}
-      <span className={cn('inline-flex min-w-0 items-center justify-center gap-2', loading && 'translate-x-2')}>
-        {children}
-      </span>
+      {loading ? <AppSpinner className="pointer-events-none shrink-0" decorative size="sm" /> : null}
+      <span className="inline-flex min-w-0 items-center justify-center gap-2">{loading ? loadingLabel ?? children : children}</span>
     </button>
   );
 });

@@ -207,9 +207,9 @@ export function FeedbackActions(props: {
           {t('feedback.updateBeforeSubmit')}
         </p>
       ) : null}
-      <button aria-busy={props.state === 'sending' || undefined} className={appShelllessControlClassName(`relative ${props.state === 'sending' ? 'disabled:opacity-100' : ''}`)} disabled={!props.canSubmit} onClick={() => void props.onSubmit()} type="button">
-        {props.state === 'sending' ? <AppSpinner className="pointer-events-none absolute left-1" decorative size="sm" /> : null}
-        <span className={props.state === 'sending' ? 'translate-x-2' : undefined}>{t('feedback.submit')}</span>
+      <button aria-busy={props.state === 'sending' || undefined} className={appShelllessControlClassName(`gap-2 ${props.state === 'sending' ? 'disabled:opacity-100' : ''}`)} disabled={!props.canSubmit} onClick={() => void props.onSubmit()} type="button">
+        {props.state === 'sending' ? <AppSpinner className="pointer-events-none shrink-0" decorative size="sm" /> : null}
+        <span>{t(props.state === 'sending' ? 'feedback.sending' : 'feedback.submit')}</span>
       </button>
     </div>
   );

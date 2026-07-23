@@ -72,15 +72,17 @@ it('keeps compact settings control helpers on shared token chrome', () => {
   expect(settingsCompactUtilityIconButtonClassName(false)).toContain('hover:text-settings-icon-hover');
 });
 
-it('keeps a loading settings button at full opacity with a leading spinner', () => {
-  const { container } = render(<SettingsButton loading>Export</SettingsButton>);
-  const button = screen.getByRole('button', { name: 'Export' });
+it('lets a loading settings button use its active label and inline spinner', () => {
+  const { container } = render(<SettingsButton loading loadingLabel="Exporting…">Export</SettingsButton>);
+  const button = screen.getByRole('button', { name: 'Exporting…' });
 
   expect(button).toBeDisabled();
   expect(button).toHaveAttribute('aria-busy', 'true');
+  expect(button.className).toContain('gap-2');
   expect(button.className).toContain('disabled:opacity-100');
-  expect(screen.getByText('Export').className).toContain('translate-x-2');
-  expect(container.querySelector('.animate-spin.absolute.left-1')).not.toBeNull();
+  expect(button).toHaveTextContent('Exporting…');
+  expect(container.querySelector('.animate-spin.shrink-0')).not.toBeNull();
+  expect(container.querySelector('.animate-spin.absolute')).toBeNull();
 });
 
 it('keeps settings selection helpers on shared token states', () => {

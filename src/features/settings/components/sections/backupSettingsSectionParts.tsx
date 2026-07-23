@@ -199,7 +199,7 @@ export function BackupListSection(props: {
       />
       <SettingsRow description={props.statusMessage || undefined} title={t('settings.backups.create.title')}>
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-          <SettingsButton className={SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME} disabled={!props.isBackupActionsAvailable || props.restoringPath.length > 0} loading={props.isCreatingBackup} onClick={props.createBackup}>
+          <SettingsButton className={SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME} disabled={!props.isBackupActionsAvailable || props.restoringPath.length > 0} loading={props.isCreatingBackup} loadingLabel={t('settings.backups.create.creating')} onClick={props.createBackup}>
             {t('settings.backups.create.action')}
           </SettingsButton>
         </SettingsControlSlot>
@@ -210,7 +210,7 @@ export function BackupListSection(props: {
       {visibleBackups.map((entry) => (
         <SettingsRow description={formatBackupMeta(entry, t)} key={entry.filePath} title={entry.fileName}>
           <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-            <SettingsButton className={SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME} disabled={props.isCreatingBackup || props.restoringPath.length > 0} loading={props.restoringPath === entry.filePath} onClick={() => props.restoreBackup(entry)}>
+            <SettingsButton className={SETTINGS_ACTION_BUTTON_WIDTH_CLASS_NAME} disabled={props.isCreatingBackup || props.restoringPath.length > 0} loading={props.restoringPath === entry.filePath} loadingLabel={t('settings.backups.restore.restoring')} onClick={() => props.restoreBackup(entry)}>
               {t('settings.backups.restore.action')}
             </SettingsButton>
           </SettingsControlSlot>

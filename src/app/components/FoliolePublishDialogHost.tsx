@@ -110,8 +110,8 @@ export function FoliolePublishDialogHost() {
         {error ? <p className="mt-3 text-sm text-destructive" role="alert">{error}</p> : null}
         <div className="mt-5 flex justify-end gap-2">
           <AppButton disabled={busy !== 'idle'} onClick={() => setRequest(null)} variant="subtle">{t('common.cancel')}</AppButton>
-          <AppButton disabled={busy === 'publishing'} loading={busy === 'previewing'} onClick={() => void run('preview')} variant="subtle">{t('desktop.foliolePublish.preview')}</AppButton>
-          <AppButton disabled={!configured || busy === 'previewing'} loading={busy === 'publishing'} onClick={() => void run('publish')}>{t('desktop.foliolePublish.publish')}</AppButton>
+          <AppButton disabled={busy === 'publishing'} loading={busy === 'previewing'} loadingLabel={t('desktop.foliolePublish.previewing')} onClick={() => void run('preview')} variant="subtle">{t('desktop.foliolePublish.preview')}</AppButton>
+          <AppButton disabled={!configured || busy === 'previewing'} loading={busy === 'publishing'} loadingLabel={t('desktop.foliolePublish.publishing')} onClick={() => void run('publish')}>{t('desktop.foliolePublish.publish')}</AppButton>
         </div>
       </AppDialogContent></AppDialogPortal>
     </AppDialog>

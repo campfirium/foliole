@@ -30,15 +30,15 @@ function PairAction(props: {
   return (
     <button
       aria-busy={props.isConnecting || undefined}
-      className={`relative inline-flex shrink-0 items-center justify-center rounded-xl border border-companion-divider px-4 py-2 text-sm font-medium text-foreground transition active:bg-companion-subtle/80 disabled:cursor-not-allowed ${props.isConnecting ? 'disabled:opacity-100' : 'disabled:opacity-45'}`}
+      className={`inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-companion-divider px-4 py-2 text-sm font-medium text-foreground transition active:bg-companion-subtle/80 disabled:cursor-not-allowed ${props.isConnecting ? 'disabled:opacity-100' : 'disabled:opacity-45'}`}
       disabled={props.disabled}
       onClick={props.onClick}
       type="button"
     >
       {props.isConnecting ? (
         <>
-          <AppSpinner className="pointer-events-none absolute left-2" decorative size="sm" />
-          <span className="translate-x-2">{t('companion.sync.discovery.connect')}</span>
+          <AppSpinner className="pointer-events-none shrink-0" decorative size="sm" />
+          <span>{t('companion.sync.discovery.connecting')}</span>
         </>
       ) : t('companion.sync.discovery.connect')}
     </button>

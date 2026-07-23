@@ -62,7 +62,7 @@ function CustomDomainStep({ state }: { state: FoliolePublishingSettingsState }) 
       title={t('settings.publishing.foliole.address.title')}
     >
       <SetupInput ariaLabel={t('settings.publishing.foliole.address.aria')} disabled={!state.connected || state.disabled} name="foliole-publish-custom-domain" onChange={(customDomain) => state.updateForm({ customDomain })} placeholder={t('settings.publishing.foliole.address.placeholder')} type="url" value={state.form.customDomain} />
-      <AppButton disabled={!state.canUpdateAddress} loading={state.status === 'updating'} onClick={state.updateSiteAddress}>{t('settings.publishing.foliole.address.save')}</AppButton>
+      <AppButton disabled={!state.canUpdateAddress} loading={state.status === 'updating'} loadingLabel={t('settings.publishing.foliole.address.updating')} onClick={state.updateSiteAddress}>{t('settings.publishing.foliole.address.save')}</AppButton>
     </PublishingSetupStep>
   );
 }
@@ -99,7 +99,7 @@ export function FoliolePublishingSetupRows({ state }: { state: FoliolePublishing
           <SetupInput ariaLabel={t('settings.publishing.foliole.project.aria')} className="rounded-r-none" disabled={state.disabled} name="foliole-publish-project-name" onBlur={state.saveDraft} onChange={(projectName) => state.updateForm({ projectName })} onEnter={state.saveDraft} placeholder={t('settings.publishing.foliole.project.placeholder')} value={state.form.projectName} />
           <span className="flex h-9 items-center rounded-r-md border border-l-0 border-settings-control-border bg-settings-control px-3 text-ui-md text-foreground/60">.pages.dev</span>
         </div>
-        <AppButton disabled={!state.canDeploy} loading={state.status === 'connecting'} onClick={state.deploy}>{t('settings.publishing.foliole.deploy')}</AppButton>
+        <AppButton disabled={!state.canDeploy} loading={state.status === 'connecting'} loadingLabel={t('settings.publishing.foliole.deploying')} onClick={state.deploy}>{t('settings.publishing.foliole.deploy')}</AppButton>
       </>}
     </PublishingSetupStep>
     <PublishInstructionStep />

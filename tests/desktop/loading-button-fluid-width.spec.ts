@@ -6,10 +6,10 @@ const SCREENSHOT_PATH = path.join(
   '.tmp',
   'artifacts',
   'desktop-acceptance',
-  'wordpress-publish-loading-button-hidden-native.png'
+  'wordpress-publish-loading-button-fluid-width-hidden-native.png'
 );
 
-test('keeps the WordPress publish button frame stable while publishing', async ({ desktopApp, desktopWindow }, testInfo) => {
+test('lets the WordPress publish button grow with its active label', async ({ desktopApp, desktopWindow }, testInfo) => {
   await desktopApp.evaluate(({ ipcMain }) => {
     ipcMain.removeHandler('foliole:invoke');
     ipcMain.handle('foliole:invoke', async (_event, request: { command?: string }) => {
@@ -41,7 +41,7 @@ test('keeps the WordPress publish button frame stable while publishing', async (
         content: '# Body title\n\nLong enough body for preview.',
         nodeId: 'playwright-loading-button-topic',
         targetSiteUrl: 'https://blog.example.com',
-        title: 'Loading button stability'
+        title: 'Loading button active width'
       }
     }));
   });
@@ -60,14 +60,15 @@ test('keeps the WordPress publish button frame stable while publishing', async (
   const idleBox = await publishButton.boundingBox();
 
   await publishButton.click();
-  await expect(publishButton).toHaveAttribute('aria-busy', 'true');
-  await expect(publishButton).toBeDisabled();
-  await expect(publishButton.locator('.animate-spin')).toBeVisible();
-  const loadingBox = await publishButton.boundingBox();
+  const publishingButton = dialog.getByRole('button', { name: /^(Publishing\.\.\.|正在发布\.\.\.)$/u });
+  await expect(publishingButton).toHaveAttribute('aria-busy', 'true');
+  await expect(publishingButton).toBeDisabled();
+  await expect(publishingButton.locator('.animate-spin')).toBeVisible();
+  const loadingBox = await publishingButton.boundingBox();
 
-  expect(loadingBox?.width).toBe(idleBox?.width);
+  expect(loadingBox?.width).toBeGreaterThan(idleBox?.width ?? 0);
   expect(loadingBox?.height).toBe(idleBox?.height);
-  expect(loadingBox?.x).toBe(idleBox?.x);
+  expect((loadingBox?.x ?? 0) + (loadingBox?.width ?? 0)).toBeCloseTo((idleBox?.x ?? 0) + (idleBox?.width ?? 0), 0);
   const screenshot = await dialog.screenshot({ path: SCREENSHOT_PATH });
-  await testInfo.attach('wordpress-publish-loading-button', { body: screenshot, contentType: 'image/png' });
+  await testInfo.attach('wordpress-publish-loading-button-fluid-width', { body: screenshot, contentType: 'image/png' });
 });

@@ -38,7 +38,7 @@ it('shows one library path with equal primary and secondary actions', async () =
   await waitFor(() => expect(mocks.confirm).toHaveBeenCalledOnce());
 });
 
-it('keeps the create label and button geometry while creating', async () => {
+it('shows the active create label while creating', async () => {
   mocks.confirm.mockReturnValue(new Promise(() => undefined));
   render(<InitialLibrarySetupView />);
 
@@ -48,5 +48,5 @@ it('keeps the create label and button geometry while creating', async () => {
   expect(create).toBeDisabled();
   expect(create).toHaveAttribute('aria-busy', 'true');
   expect(create.className).toContain('is-loading');
-  expect(create).toHaveTextContent('Create');
+  expect(create).toHaveTextContent('Creating…');
 });
