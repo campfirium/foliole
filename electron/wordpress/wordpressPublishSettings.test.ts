@@ -53,10 +53,24 @@ it('stores credentials only in the encrypted secret and returns a redacted statu
 
   expect(settings).toMatchObject({ adapter: 'wordpress_com_xmlrpc', has_credentials: true });
   expect(JSON.stringify(state.setting)).not.toContain('SENTINEL-WORDPRESS-SECRET');
-  expect(JSON.stringify(state.setting)).not.toContain('SENTINEL-WORDPRESS-USER');
+  expect(state.setting).toMatchObject({ username: 'SENTINEL-WORDPRESS-USER' });
   expect(JSON.stringify(settings)).not.toContain('SENTINEL-WORDPRESS-SECRET');
   expect(settings.username).toBe('SENTINEL-WORDPRESS-USER');
   expect(loadWordPressCredential()).toMatchObject({ username: 'SENTINEL-WORDPRESS-USER' });
+});
+
+it('persists a username before an Application Password is entered', () => {
+  const draft = saveWordPressPublishDraft({
+    application_password: '', site_url: 'folioleapp.wordpress.com', username: 'folioleapp'
+  });
+
+  expect(draft).toMatchObject({
+    credentials_valid: false, has_credentials: false,
+    site_url: 'https://folioleapp.wordpress.com', username: 'folioleapp'
+  });
+  expect(state.setting).toMatchObject({ username: 'folioleapp' });
+  expect(state.secret).toBe('');
+  expect(loadWordPressPublishSettings()).toMatchObject({ username: 'folioleapp' });
 });
 
 it('does not replace a working credential when verification fails', async () => {

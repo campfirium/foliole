@@ -31,6 +31,7 @@ export interface StoredWordPressPublishSettings {
   endpoint: string;
   site_url: string;
   updated_at: string;
+  username?: string;
 }
 
 function emptySettings(): NativeWordPressPublishSettings {
@@ -48,7 +49,8 @@ function isStoredSettings(value: unknown): value is StoredWordPressPublishSettin
     (record.blog_id === null || typeof record.blog_id === 'string') &&
     typeof record.endpoint === 'string' &&
     typeof record.site_url === 'string' &&
-    typeof record.updated_at === 'string'
+    typeof record.updated_at === 'string' &&
+    (record.username === undefined || typeof record.username === 'string')
   );
 }
 
@@ -85,7 +87,7 @@ export function loadWordPressPublishSettings(): NativeWordPressPublishSettings {
     has_credentials: Boolean(credential),
     site_url: settings.site_url,
     updated_at: settings.updated_at,
-    username: credential?.username ?? ''
+    username: settings.username ?? credential?.username ?? ''
   };
 }
 
@@ -116,7 +118,7 @@ export function saveWordPressPublishDraft(input: NativeWordPressDraftInput) {
       } satisfies WordPressCredential));
     }
     saveJsonSetting(SETTINGS_KEY, {
-      adapter, blog_id: null, endpoint: '', site_url: siteUrl, updated_at: updatedAt
+      adapter, blog_id: null, endpoint: '', site_url: siteUrl, updated_at: updatedAt, username
     } satisfies StoredWordPressPublishSettings, updatedAt);
   } catch (error) {
     try { restoreSecret(previousSecret); } catch { deletePublishDeviceSecret(SECRET_FILE); }
@@ -152,7 +154,8 @@ export async function connectWordPressPublishSettings(input: NativeWordPressConn
       blog_id: verified.blogId,
       endpoint: verified.endpoint,
       site_url: verified.siteUrl,
-      updated_at: updatedAt
+      updated_at: updatedAt,
+      username: input.username.trim()
     } satisfies StoredWordPressPublishSettings, updatedAt);
   } catch (error) {
     try {
