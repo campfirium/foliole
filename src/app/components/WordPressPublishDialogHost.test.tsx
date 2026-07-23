@@ -58,7 +58,7 @@ it('shows the Discourse-style taxonomy controls without redundant publish metada
   expect(screen.getByRole('textbox', { name: 'Tags' })).toBeInTheDocument();
   expect(screen.queryByText('https://blog.example.com')).not.toBeInTheDocument();
   expect(screen.queryByText('Create a new post')).not.toBeInTheDocument();
-  expect(screen.getByRole('combobox', { name: 'Post status' })).toHaveValue('draft');
+  expect(screen.getByRole('combobox', { name: 'Post status' })).toHaveValue('publish');
 });
 
 it('shows catalog loading with a spinner instead of trailing dots', async () => {

@@ -41,7 +41,7 @@ export function useWordPressPublishDialogRequest() {
   const [request, setRequest] = useState<WordPressPublishDialogRequest | null>(null);
   const [form, setForm] = useState<PublishFormState>({ categoryId: '', tags: '' });
   const [catalog, setCatalog] = useState<CatalogState>({ catalog: null, error: null, loading: false });
-  const [status, setStatus] = useState<NativeWordPressPostStatus>('draft');
+  const [status, setStatus] = useState<NativeWordPressPostStatus>('publish');
   const [showAllCategories, setShowAllCategories] = useState(false);
   const [showAllTags, setShowAllTags] = useState(false);
   const requestSeqRef = useRef(0);
@@ -55,7 +55,7 @@ export function useWordPressPublishDialogRequest() {
       const details = readWordPressPublishDetails(next.content, next.title);
       setRequest(next);
       setForm({ categoryId: '', tags: '' });
-      setStatus('draft');
+      setStatus('publish');
       setShowAllCategories(false);
       setShowAllTags(false);
       if (next.catalog) {

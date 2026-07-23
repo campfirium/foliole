@@ -32,6 +32,7 @@ test('shows WordPress taxonomy choices in the shared publish panel', async ({ de
 
   const dialog = desktopWindow.getByRole('dialog', { name: 'Publish to WordPress' });
   await expect(dialog).toBeVisible();
+  await expect(dialog.getByLabel(/^(Post status|文章状态)$/)).toHaveValue('publish');
   await expect(dialog.getByLabel(/^(Category|分类)$/).first()).toContainText('Product');
   await expect(dialog.getByLabel(/^(Tags|标签)$/).first().locator('..').getByText('foliole')).toBeVisible();
   await expect(dialog.getByText('https://blog.example.com')).toHaveCount(0);
