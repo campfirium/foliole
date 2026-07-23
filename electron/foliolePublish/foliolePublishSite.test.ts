@@ -16,7 +16,7 @@ function temporaryRoot() {
 }
 afterEach(() => roots.splice(0).forEach((root) => fs.rmSync(root, { force: true, recursive: true })));
 
-it('opens on a compact Topic list and emits stable card pages, archive, and RSS', () => {
+it('opens on a complete-segment Topic stream and emits stable card pages, archive, search, and RSS', () => {
   const root = temporaryRoot();
   const first = upsertPublishedCard(emptyPublishIndex(), { nodeId: 'one', title: 'Older' });
   writeFileAtomic(path.join(root, first.card.file), 'Older body');
@@ -25,13 +25,17 @@ it('opens on a compact Topic list and emits stable card pages, archive, and RSS'
 
   const entry = generateFoliolePublishSite(root, second.index, 'https://notes.example.com');
 
-  expect(fs.readFileSync(entry, 'utf8')).toContain('<h1>Topics</h1>');
-  expect(fs.readFileSync(entry, 'utf8')).toContain(`href="cards/${second.card.id}.html"`);
-  expect(fs.readFileSync(entry, 'utf8')).toContain(`href="cards/${first.card.id}.html"`);
-  expect(fs.readFileSync(entry, 'utf8')).not.toContain('keyboard-hint');
+  const home = fs.readFileSync(entry, 'utf8');
+  expect(home).toContain('<h1 class="home-title">Foliole</h1>');
+  expect(home).toContain(`href="cards/${second.card.id}.html"`);
+  expect(home).toContain(`href="cards/${first.card.id}.html"`);
+  expect(home.match(/class="topic-card"/gu)).toHaveLength(2);
+  expect(home).not.toContain('keyboard-hint');
   expect(fs.readFileSync(path.join(root, 'Site', 'cards', `${first.card.id}.html`), 'utf8'))
-    .toContain('<a aria-label="All topics" class="back-link" href="../index.html"><span aria-hidden="true">←</span>All topics</a>');
+    .toContain('href="../index.html" aria-label="Home"');
   expect(fs.readFileSync(path.join(root, 'Site', 'archive.html'), 'utf8')).toContain('Older');
+  expect(fs.readFileSync(path.join(root, 'Site', 'search.html'), 'utf8')).toContain('src="search-index.js"');
+  expect(fs.readFileSync(path.join(root, 'Site', 'search-index.js'), 'utf8')).toContain('Newest');
   const feed = fs.readFileSync(path.join(root, 'Site', 'rss.xml'), 'utf8');
   expect(feed).toContain('<description>Topics published with Foliole.</description>');
   expect(feed).toContain('https://notes.example.com/cards/');
@@ -57,14 +61,52 @@ it('renders scalar and list fields through Liquid while escaping public values',
 
   const page = fs.readFileSync(path.join(staged, 'cards', `${published.card.id}.html`), 'utf8');
   const archive = fs.readFileSync(path.join(staged, 'archive.html'), 'utf8');
-  expect(page).toContain('<h1>&lt;Newest&gt;</h1>');
-  expect(page).toContain('<dt>category</dt><dd><span>essays</span></dd>');
-  expect(page).toContain('<dt>tags</dt><dd><span>design</span><span>notes</span></dd>');
+  expect(page).toContain('<h1 class="article-title">&lt;Newest&gt;</h1>');
+  expect(page).toContain('<span class="meta-key">Category</span>');
+  expect(page).toContain('>essays</a>');
+  expect(page).toContain('<span class="meta-key">Tags</span>');
+  expect(page).toContain('>#design</a>');
+  expect(page).toContain('>#notes</a>');
   expect(page).not.toContain('empty_scalar');
   expect(page).not.toContain('empty_list');
   expect(page).toContain('&lt;script&gt;alert(1)&lt;/script&gt; <strong>safe</strong>');
   expect(archive).toContain('&lt;Newest&gt;');
   expect(archive).toContain(`href="cards/${published.card.id}.html"`);
+});
+
+it('paginates five Topics and keeps archive, taxonomy, and search on update order', () => {
+  const root = temporaryRoot();
+  const cards = Array.from({ length: 6 }, (_, index) => ({
+    file: `Content/topic-${index}.md`, id: `topic-${index}`,
+    published_at: `2025-01-0${index + 1}T00:00:00.000Z`,
+    title: `Topic ${index}`, updated_at: `2026-07-0${index + 1}T00:00:00.000Z`
+  })).reverse();
+  cards.forEach((card) => writeFileAtomic(path.join(root, card.file), `First segment ${card.title}.\n\nSecond segment.`));
+  writeFileAtomic(path.join(root, 'Content', 'private.md'), 'PRIVATE FIXTURE');
+  const index = { cards, site: { title: 'Ordered' }, version: 1 as const };
+
+  const staged = stageFoliolePublishSite(root, index, '', new Map(cards.map((card) => [card.id, {
+    content: `First segment ${card.title}.\n\nSecond segment.`,
+    fields: [{ key: 'Category', value: 'Writing' }, { key: 'tags', value: ['Foliole'] }]
+  }])));
+  const home = fs.readFileSync(path.join(staged, 'index.html'), 'utf8');
+  const second = fs.readFileSync(path.join(staged, 'page-2.html'), 'utf8');
+  const archive = fs.readFileSync(path.join(staged, 'archive.html'), 'utf8');
+  const searchIndex = fs.readFileSync(path.join(staged, 'search-index.js'), 'utf8');
+
+  expect(home.match(/class="topic-card"/gu)).toHaveLength(5);
+  expect(home).toContain('href="page-2.html" rel="next"');
+  expect(second.match(/class="topic-card"/gu)).toHaveLength(1);
+  expect(second).toContain('href="index.html" rel="prev"');
+  expect(home).toContain('<p>First segment Topic 5.</p><a class="continuation"');
+  expect(archive.indexOf('Topic 5')).toBeLessThan(archive.indexOf('Topic 0'));
+  expect(fs.readFileSync(path.join(staged, 'categories.html'), 'utf8')).toContain('Writing');
+  expect(fs.readdirSync(path.join(staged, 'categories'))).toHaveLength(1);
+  expect(fs.readFileSync(path.join(staged, 'tags.html'), 'utf8')).toContain('#Foliole');
+  expect(fs.readdirSync(path.join(staged, 'tags'))).toHaveLength(1);
+  expect(searchIndex).toContain('First segment Topic 5');
+  expect(searchIndex).not.toContain('PRIVATE FIXTURE');
+  expect(fs.readFileSync(path.join(staged, 'search.html'), 'utf8')).toContain('src="search-index.js"');
 });
 
 it('exposes stable page, navigation, site, card, and field data to Liquid', () => {

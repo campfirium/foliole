@@ -11,9 +11,12 @@ function scope(): FoliolePublishTemplateScope {
   return {
     page: {
       archive_url: 'archive.html',
+      cards: [],
+      categories_url: 'categories.html',
       content: '<p>Safe body</p>',
       depth: '',
       fields: [{ key: '<author>', values: ['Roamer', '<Guest>'] }],
+      groups: [],
       has_visible_fields: true,
       home_url: 'index.html',
       id: 'card',
@@ -21,21 +24,32 @@ function scope(): FoliolePublishTemplateScope {
       kind: 'card',
       newer: null,
       newer_url: null,
+      next_page_url: null,
       older: { title: 'Older', url: 'cards/older.html' },
       older_url: 'cards/older.html',
+      previous_page_url: null,
       published_at: '2026-07-21T00:00:00.000Z',
       rss_url: 'rss.xml',
+      search_url: 'search.html',
+      tags_url: 'tags.html',
+      taxonomy_name: null,
+      terms: [],
       title: '<Title>',
-      updated_at: '2026-07-21T00:00:00.000Z'
+      updated_at: '2026-07-21T00:00:00.000Z',
+      view: 'home'
     },
     site: {
       archive_url: 'archive.html',
       cards: [{
-        id: 'card', path: 'cards/card.html',
-        published_at: '2026-07-21T00:00:00.000Z', title: '<Card>', updated_at: '2026-07-21T00:00:00.000Z'
+        categories: [], content: '<p>Card</p>', fields: [], has_more: false,
+        id: 'card', path: 'cards/card.html', preview: '<p>Card</p>',
+        published_at: '2026-07-21T00:00:00.000Z', tags: [], title: '<Card>', updated_at: '2026-07-21T00:00:00.000Z'
       }],
+      categories_url: 'categories.html',
       home_url: 'index.html',
       rss_url: 'rss.xml',
+      search_url: 'search.html',
+      tags_url: 'tags.html',
       title: '<Site>',
       url: 'https://example.com'
     }

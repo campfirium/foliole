@@ -91,26 +91,66 @@ function renderTable(node: SyntaxNode, source: string) {
   }).join('')}</table>`;
 }
 
-function renderBlock(node: SyntaxNode, source: string): string {
+function renderHeading(node: SyntaxNode, source: string, headingOffset: number) {
+  const sourceLevel = Number(node.name.at(-1));
+  const level = Math.min(6, sourceLevel + headingOffset);
+  return `<h${level}>${renderInlineChildren(node, source).trim()}</h${level}>`;
+}
+
+function renderBlock(node: SyntaxNode, source: string, headingOffset = 0): string {
   if (node.name === 'Paragraph') return `<p>${renderInlineChildren(node, source)}</p>`;
-  if (/^ATXHeading[1-6]$/u.test(node.name)) {
-    const level = node.name.at(-1);
-    return `<h${level}>${renderInlineChildren(node, source).trim()}</h${level}>`;
-  }
-  if (node.name === 'BulletList') return `<ul>${children(node).map((child) => renderBlock(child, source)).join('')}</ul>`;
-  if (node.name === 'OrderedList') return `<ol>${children(node).map((child) => renderBlock(child, source)).join('')}</ol>`;
-  if (node.name === 'ListItem') return `<li>${children(node).map((child) => renderBlock(child, source)).join('')}</li>`;
-  if (node.name === 'Blockquote') return `<blockquote>${children(node).map((child) => renderBlock(child, source)).join('')}</blockquote>`;
+  if (/^ATXHeading[1-6]$/u.test(node.name)) return renderHeading(node, source, headingOffset);
+  if (node.name === 'BulletList') return `<ul>${children(node).map((child) => renderBlock(child, source, headingOffset)).join('')}</ul>`;
+  if (node.name === 'OrderedList') return `<ol>${children(node).map((child) => renderBlock(child, source, headingOffset)).join('')}</ol>`;
+  if (node.name === 'ListItem') return `<li>${children(node).map((child) => renderBlock(child, source, headingOffset)).join('')}</li>`;
+  if (node.name === 'Blockquote') return `<blockquote>${children(node).map((child) => renderBlock(child, source, headingOffset)).join('')}</blockquote>`;
   if (node.name === 'FencedCode') return renderFencedCode(node, source);
   if (node.name === 'HorizontalRule') return '<hr />';
   if (node.name === 'Table') return renderTable(node, source);
   if (MARKERS.has(node.name)) return '';
   return node.firstChild
-    ? children(node).map((child) => renderBlock(child, source)).join('')
+    ? children(node).map((child) => renderBlock(child, source, headingOffset)).join('')
     : `<p>${escapeHtml(source.slice(node.from, node.to))}</p>`;
 }
 
-export function convertWordPressMarkdownToHtml(markdown: string) {
+function plainInline(node: SyntaxNode, source: string): string {
+  if (MARKERS.has(node.name) || node.name === 'Image') return '';
+  if (node.name === 'InlineCode') return source.slice(node.from, node.to).replace(/^`|`$/gu, '');
+  if (node.name === 'HardBreak') return ' ';
+  if (!node.firstChild) return source.slice(node.from, node.to);
+  let cursor = node.from;
+  const output: string[] = [];
+  for (const child of children(node)) {
+    output.push(source.slice(cursor, child.from), plainInline(child, source));
+    cursor = child.to;
+  }
+  output.push(source.slice(cursor, node.to));
+  return output.join('');
+}
+
+function plainBlock(node: SyntaxNode, source: string): string {
+  if (node.name === 'FencedCode') {
+    const code = children(node).find((child) => child.name === 'CodeText');
+    return code ? source.slice(code.from, code.to) : '';
+  }
+  if (node.name === 'Table') return children(node).map((child) => plainBlock(child, source)).join(' ');
+  if (node.name === 'Paragraph' || /^ATXHeading[1-6]$/u.test(node.name) || node.name === 'TableCell') {
+    return plainInline(node, source);
+  }
+  return children(node).map((child) => plainBlock(child, source)).join(' ');
+}
+
+export interface WordPressMarkdownBlock { html: string; kind: string; text: string }
+
+export function convertWordPressMarkdownToBlocks(markdown: string, headingOffset = 0): WordPressMarkdownBlock[] {
   const tree = markdownParser.parse(markdown);
-  return children(tree.topNode).map((node) => renderBlock(node, markdown)).join('\n');
+  return children(tree.topNode).map((node) => ({
+    html: renderBlock(node, markdown, headingOffset),
+    kind: node.name,
+    text: plainBlock(node, markdown).replace(/\s+/gu, ' ').trim()
+  }));
+}
+
+export function convertWordPressMarkdownToHtml(markdown: string, headingOffset = 0) {
+  return convertWordPressMarkdownToBlocks(markdown, headingOffset).map((block) => block.html).join('\n');
 }

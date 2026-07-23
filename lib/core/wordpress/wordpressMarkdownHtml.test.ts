@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 
-import { convertWordPressMarkdownToHtml } from './wordpressMarkdownHtml.js';
+import { convertWordPressMarkdownToBlocks, convertWordPressMarkdownToHtml } from './wordpressMarkdownHtml.js';
 
 it('converts common Foliole Markdown to escaped WordPress HTML', () => {
   const markdown = [
@@ -34,4 +34,14 @@ it('keeps unsafe HTML and non-web image targets inert', () => {
   expect(html).not.toContain('<img');
   expect(html).toContain('&lt;script&gt;');
   expect(html).toContain('local');
+});
+
+it('exposes complete top-level blocks and can demote headings for article chrome', () => {
+  const markdown = '# Title\n\nFirst **segment**.\n\n- second\n- block';
+  const blocks = convertWordPressMarkdownToBlocks(markdown, 1);
+
+  expect(blocks.map((block) => block.kind)).toEqual(['ATXHeading1', 'Paragraph', 'BulletList']);
+  expect(blocks[0]).toMatchObject({ html: '<h2>Title</h2>', text: 'Title' });
+  expect(blocks[1]).toMatchObject({ html: '<p>First <strong>segment</strong>.</p>', text: 'First segment.' });
+  expect(convertWordPressMarkdownToHtml(markdown, 1)).not.toContain('<h1>');
 });

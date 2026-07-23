@@ -7,6 +7,9 @@ import { expect, test } from './harness/fixtures';
 
 const SCREENSHOT = path.resolve('.tmp/artifacts/desktop-acceptance/foliole-publish-official-theme.png');
 const ARTICLE_SCREENSHOT = path.resolve('.tmp/artifacts/desktop-acceptance/foliole-publish-article.png');
+const ARCHIVE_SCREENSHOT = path.resolve('.tmp/artifacts/desktop-acceptance/foliole-publish-archive.png');
+const SEARCH_SCREENSHOT = path.resolve('.tmp/artifacts/desktop-acceptance/foliole-publish-search.png');
+const MOBILE_SCREENSHOT = path.resolve('.tmp/artifacts/desktop-acceptance/foliole-publish-article-mobile.png');
 const DIALOG_SCREENSHOT = path.resolve('.tmp/artifacts/desktop-acceptance/foliole-publish-dialog.png');
 const NEWER_ID = 'playwright-newer-topic';
 const OLDER_ID = 'playwright-older-topic';
@@ -87,6 +90,55 @@ async function openPublishDialog(desktopWindow: Page) {
   return desktopWindow.getByRole('dialog', { name: 'Publish to the site' });
 }
 
+async function verifyHomeAndArticle(site: Page) {
+  await expect(site.getByRole('heading', { level: 1, name: 'Foliole Field Notes' })).toBeVisible();
+  await expect(site.locator('.topic-card')).toHaveCount(2);
+  await expect(site.getByRole('navigation', { name: 'Site navigation' }).getByRole('link', { name: 'RSS feed' }))
+    .toHaveAttribute('href', /rss\.xml$/u);
+  await expect(site.getByRole('link', { name: /The earlier topic/u })).toBeVisible();
+  await site.screenshot({ fullPage: true, path: SCREENSHOT });
+  await site.getByRole('link', { exact: true, name: 'A durable place to publish' }).click();
+  await expect(site.getByRole('heading', { level: 1, name: 'A durable place to publish' })).toHaveCount(1);
+  await expect(site.getByRole('heading', { level: 2, name: 'A durable place to publish' })).toHaveCount(0);
+  await expect(site.getByText('Category')).toBeVisible();
+  await expect(site.getByText('essays')).toBeVisible();
+  await expect(site.getByText('Updated')).toBeVisible();
+  await site.screenshot({ fullPage: true, path: ARTICLE_SCREENSHOT });
+}
+
+async function verifyArchiveAndTaxonomy(site: Page) {
+  await site.getByRole('link', { name: 'Archive' }).click();
+  await expect(site.getByRole('heading', { level: 1, name: 'Archive' })).toBeVisible();
+  await expect(site.locator('.index-row')).toHaveCount(2);
+  await site.screenshot({ fullPage: true, path: ARCHIVE_SCREENSHOT });
+  await site.getByRole('link', { name: 'Categories' }).click();
+  await expect(site.getByRole('heading', { level: 1, name: 'Categories' })).toBeVisible();
+  await site.getByRole('link', { name: 'essays' }).click();
+  await expect(site.getByRole('heading', { level: 1, name: 'essays' })).toBeVisible();
+  await expect(site.locator('.index-row')).toHaveCount(1);
+  await site.getByRole('link', { name: 'Tags' }).click();
+  await expect(site.getByRole('heading', { level: 1, name: 'Tags' })).toBeVisible();
+  await site.getByRole('link', { name: '#design' }).click();
+  await expect(site.getByRole('heading', { level: 1, name: 'design' })).toBeVisible();
+}
+
+async function verifySearchAndMobile(site: Page) {
+  await site.getByRole('link', { name: 'Search' }).click();
+  const search = site.getByRole('searchbox', { name: 'Search published Topics' });
+  await search.fill('calmer reading');
+  await expect(site.getByRole('link', { name: 'A durable place to publish' })).toBeVisible();
+  await search.fill('no-such-topic');
+  await expect(site.getByText('No matching Topics.')).toBeVisible();
+  await site.screenshot({ fullPage: true, path: SEARCH_SCREENSHOT });
+  await site.getByRole('link', { name: 'Home' }).click();
+  await site.getByRole('link', { exact: true, name: 'A durable place to publish' }).click();
+  await site.setViewportSize({ height: 844, width: 390 });
+  expect(await site.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await site.screenshot({ fullPage: true, path: MOBILE_SCREENSHOT });
+  await site.emulateMedia({ colorScheme: 'dark' });
+  expect(await site.evaluate(() => getComputedStyle(document.documentElement).colorScheme)).toContain('light');
+}
+
 test('keeps Theme controls out of Publish and renders the generated static site in a real browser window', async ({ desktopApp, desktopWindow }) => {
   const dialog = await openPublishDialog(desktopWindow);
   await expect(dialog).toBeVisible();
@@ -105,26 +157,11 @@ test('keeps Theme controls out of Publish and renders the generated static site 
   expect(generated).toMatchObject({ local_path: path.join(libraryHome, 'Publish', 'Site', 'index.html') });
 
   const site = await openStaticSite(desktopApp, generated.local_path);
-  await expect(site.getByRole('heading', { level: 1, name: 'Topics' })).toBeVisible();
-  await expect(site.locator('.topic-list > li')).toHaveCount(2);
-  await expect(site.getByRole('navigation', { name: 'Site' }).getByRole('link', { name: 'RSS' }))
-    .toHaveAttribute('href', /rss\.xml$/u);
-  await expect(site.getByRole('link', { name: /A durable place to publish/u })).toBeVisible();
-  await expect(site.getByRole('link', { name: /The earlier topic/u })).toBeVisible();
+  const browserErrors: string[] = [];
+  site.on('console', (message) => { if (message.type() === 'error') browserErrors.push(message.text()); });
   await expect(site.locator('.keyboard-hint')).toHaveCount(0);
-  await site.screenshot({ fullPage: true, path: SCREENSHOT });
-
-  await site.getByRole('link', { name: /A durable place to publish/u }).click();
-  await expect(site.getByRole('heading', { level: 1, name: 'A durable place to publish' })).toHaveCount(1);
-  await expect(site.getByText('category')).toBeVisible();
-  await expect(site.getByText('essays')).toBeVisible();
-  await site.screenshot({ fullPage: true, path: ARTICLE_SCREENSHOT });
-  await site.getByRole('link', { name: 'All topics' }).click();
-  await expect(site.locator('.topic-list > li')).toHaveCount(2);
-
-  await site.setViewportSize({ height: 844, width: 390 });
-  await expect(site.locator('.site-header')).toBeVisible();
-  expect(await site.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  await site.emulateMedia({ colorScheme: 'dark' });
-  expect(await site.evaluate(() => getComputedStyle(document.documentElement).colorScheme)).toContain('dark');
+  await verifyHomeAndArticle(site);
+  await verifyArchiveAndTaxonomy(site);
+  await verifySearchAndMobile(site);
+  expect(browserErrors).toEqual([]);
 });

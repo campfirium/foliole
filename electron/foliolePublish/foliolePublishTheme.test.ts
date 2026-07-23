@@ -22,8 +22,11 @@ it('keeps the single editable Theme until Reset theme is explicitly used', () =>
   resetFoliolePublishThemeFiles(root);
   expect(fs.readFileSync(page, 'utf8')).toContain('<!doctype html>');
   expect(fs.readFileSync(page, 'utf8')).toContain('{{ page.content | raw }}');
-  expect(fs.readFileSync(page, 'utf8')).toContain('<ol class="topic-list">');
+  expect(fs.readFileSync(page, 'utf8')).toContain('<div class="topic-stream">');
+  expect(fs.readFileSync(page, 'utf8')).toContain('{% for card in page.cards %}');
   expect(fs.readFileSync(page, 'utf8')).not.toContain('keyboard-hint');
-  expect(fs.readFileSync(path.join(theme, 'archive.html'), 'utf8')).toContain('{% for card in site.cards %}');
-  expect(fs.readFileSync(path.join(theme, 'style.css'), 'utf8')).toContain('@media (prefers-color-scheme: dark)');
+  expect(fs.readFileSync(path.join(theme, 'archive.html'), 'utf8')).toContain('{% for group in page.groups %}');
+  expect(fs.readFileSync(path.join(theme, 'site.js'), 'utf8')).toContain('data-search-form');
+  expect(fs.readFileSync(path.join(theme, 'style.css'), 'utf8')).toContain('color-scheme: light');
+  expect(fs.readFileSync(path.join(theme, 'style.css'), 'utf8')).not.toContain('prefers-color-scheme: dark');
 });

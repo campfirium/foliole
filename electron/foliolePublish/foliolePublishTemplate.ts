@@ -34,17 +34,34 @@ export interface FoliolePublishTemplateField {
   values: string[];
 }
 
+export interface FoliolePublishTemplateTerm { name: string; slug: string }
+
+export interface FoliolePublishTemplateCard {
+  categories: FoliolePublishTemplateTerm[];
+  content: string;
+  fields: FoliolePublishTemplateField[];
+  has_more: boolean;
+  id: string;
+  path: string;
+  preview: string;
+  published_at: string;
+  tags: FoliolePublishTemplateTerm[];
+  title: string;
+  updated_at: string;
+}
+
+export interface FoliolePublishTemplateGroup { cards: FoliolePublishTemplateCard[]; label: string }
+
+export interface FoliolePublishTemplateTaxonomyTerm extends FoliolePublishTemplateTerm { count: number }
+
 export interface FoliolePublishTemplateSite {
   archive_url: string;
-  cards: Array<{
-    id: string;
-    path: string;
-    published_at: string;
-    title: string;
-    updated_at: string;
-  }>;
+  cards: FoliolePublishTemplateCard[];
+  categories_url: string;
   home_url: string;
   rss_url: string;
+  search_url: string;
+  tags_url: string;
   title: string;
   url: string;
 }
@@ -53,21 +70,31 @@ export interface FoliolePublishTemplateNeighbor { title: string; url: string }
 
 interface FoliolePublishTemplatePageBase {
   archive_url: string;
+  cards: FoliolePublishTemplateCard[];
+  categories_url: string;
   content: string;
   depth: '' | '../';
   fields: FoliolePublishTemplateField[];
+  groups: FoliolePublishTemplateGroup[];
   has_visible_fields: boolean;
   home_url: string;
   id: string | null;
   is_home: boolean;
   newer: FoliolePublishTemplateNeighbor | null;
   newer_url: string | null;
+  next_page_url: string | null;
   older: FoliolePublishTemplateNeighbor | null;
   older_url: string | null;
+  previous_page_url: string | null;
   published_at: string | null;
   rss_url: string;
+  search_url: string;
+  tags_url: string;
+  taxonomy_name: string | null;
+  terms: FoliolePublishTemplateTaxonomyTerm[];
   title: string;
   updated_at: string | null;
+  view: 'archive' | 'article' | 'categories' | 'category' | 'home' | 'search' | 'tag' | 'tags';
 }
 
 export type FoliolePublishTemplatePage = FoliolePublishTemplatePageBase & {
