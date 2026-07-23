@@ -45,6 +45,7 @@ export type WorkspaceLayoutDocumentProps = Pick<WorkspaceLayoutFieldTypes,
   | 'onRevealDocumentSelection'
   | 'onResolveDocumentPositionAtViewportY'
   | 'onPastedTextAnchors'
+  | 'onRunDocumentCommand'
 >;
 
 export type WorkspaceLayoutEditorCommandProps = Pick<WorkspaceLayoutFieldTypes,

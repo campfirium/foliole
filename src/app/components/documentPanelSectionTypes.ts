@@ -85,6 +85,7 @@ export interface DocumentPanelSectionProps {
   onPersistPdfViewState: (nodeId: string, viewState: NodeViewState) => void;
   onRevealDocumentPosition: (position: number) => void;
   onRevealDocumentSelection: (selection: EditorSelection, targetViewportMode?: EditorViewportMode) => void;
+  onRunDocumentCommand?: (commandId: string) => void;
   onResolveDocumentPositionAtViewportY: (clientY: number) => number | null;
   onSelectNode: (nodeId: string) => void;
   onSelectNodeInVirtualView?: (nodeId: string) => void;

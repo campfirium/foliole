@@ -81,6 +81,7 @@ export function renderDocumentPanelHeader(args: {
       onGoForward={args.props.onGoForward}
       onGoParent={args.props.onGoParent}
       onNodePriorityChange={args.props.onNodePriorityChange ?? (() => undefined)}
+      onRunDocumentCommand={args.props.onRunDocumentCommand}
       onSelectBacklinkNode={args.props.onSelectNode}
       onSelectBreadcrumbNode={breadcrumb.onSelectBreadcrumbNode}
       onToggleSourceUpdatePanel={args.onToggleSourceUpdatePanel}
@@ -97,6 +98,7 @@ export function renderDocumentPanelHeader(args: {
         ) : undefined
       }
       showDocumentControls
+      showPublishActions={Boolean(activeNode?.kind === 'topic' && !activeNode.anchorLink && !args.props.isTrashViewOpen)}
       showSourceUpdateAction={args.showSourceUpdateAction}
     />
   );

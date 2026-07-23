@@ -195,6 +195,7 @@ export interface WorkspaceLayoutFieldTypes {
   onAdjustExistingHighlightRange: (highlightNodeId: string, range: { from: number; to: number }) => boolean;
   onCreateSelectionHighlight: (payload: SelectionCommandPayload) => string | null;
   onPastedTextAnchors?: (payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void;
+  onRunDocumentCommand?: (commandId: string) => void;
   onToggleSelectionHighlight: (payload: SelectionCommandPayload) => 'created' | 'deleted' | null;
   onCreateSelectionNote: (payload: SelectionCommandPayload, note?: string) => string | null;
   onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;

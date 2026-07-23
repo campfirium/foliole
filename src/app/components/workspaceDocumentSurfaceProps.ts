@@ -173,7 +173,8 @@ function selectDocumentSurfaceEditorActions(props: WorkspaceDocumentSurfaceSourc
     ...definedProps({
       onCreateClozeFromPayload: props.editorCommands.onCreateClozeFromPayload,
       onCreateHighlightFromPayload: props.editorCommands.onCreateHighlightFromPayload,
-      onPastedTextAnchors: props.document.onPastedTextAnchors
+      onPastedTextAnchors: props.document.onPastedTextAnchors,
+      onRunDocumentCommand: props.document.onRunDocumentCommand
     })
   };
 }

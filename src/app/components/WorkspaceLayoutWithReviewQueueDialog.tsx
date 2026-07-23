@@ -68,6 +68,10 @@ export function WorkspaceLayoutWithReviewQueueDialog({ controller }: { controlle
 function buildWorkspaceLayoutProps(controller: ReturnType<typeof useAppController>) {
   return {
     ...controller.layoutProps,
+    document: {
+      ...controller.layoutProps.document,
+      onRunDocumentCommand: controller.paletteState.onRunCommand
+    },
     settings: {
       ...controller.layoutProps.settings,
       onRunRailAction: controller.paletteState.onRunCommand

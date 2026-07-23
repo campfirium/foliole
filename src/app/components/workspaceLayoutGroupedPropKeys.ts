@@ -31,7 +31,7 @@ export const DOCUMENT_KEYS = defineLayoutKeys<WorkspaceLayoutDocumentProps>()([
   'onNodeContentChange', 'setNodeViewState', 'onEditorReady', 'onEditorContextMenu', 'onNodePriorityChange',
   'onNodeDesiredRetentionChange', 'onNodeShortTermChange', 'onEnterPriorityQuickSet', 'onRevealAnchorInDocument',
   'onPersistPdfViewState', 'onRevealDocumentPosition', 'onRevealDocumentSelection', 'onResolveDocumentPositionAtViewportY',
-  'onPastedTextAnchors'
+  'onPastedTextAnchors', 'onRunDocumentCommand'
 ] as const);
 
 export const EDITOR_COMMAND_KEYS = defineLayoutKeys<WorkspaceLayoutEditorCommandProps>()([

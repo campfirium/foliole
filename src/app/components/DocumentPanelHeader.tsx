@@ -33,6 +33,7 @@ export interface DocumentPanelHeaderProps {
   onGoForward: () => void;
   onGoParent: () => void;
   onNodePriorityChange: (nodeId: string, priority: number | null) => void;
+  onRunDocumentCommand?: ((commandId: string) => void) | undefined;
   onSelectBacklinkNode: (nodeId: string) => void;
   onSelectBreadcrumbNode: (nodeId: string) => void;
   onToggleSourceUpdatePanel: () => void;
@@ -40,6 +41,7 @@ export interface DocumentPanelHeaderProps {
   reviewSchedulerSettings: ReviewSchedulerSettings;
   rightSlot?: ReactNode;
   showDocumentControls?: boolean;
+  showPublishActions?: boolean;
   showSourceUpdateAction: boolean;
 }
 
@@ -66,7 +68,9 @@ function renderDocumentHeaderContent(args: DocumentPanelHeaderProps & {
     isFolderListView: args.isFolderListView,
     isSourceUpdatePanelOpen: args.isSourceUpdatePanelOpen,
     onToggleSourceUpdatePanel: args.onToggleSourceUpdatePanel,
+    onRunDocumentCommand: args.onRunDocumentCommand,
     showDocumentControls,
+    showPublishActions: args.showPublishActions ?? false,
     showSourceUpdateAction: args.showSourceUpdateAction,
     t: args.t,
     toggleEditorDisplayMode: args.toggleEditorDisplayMode

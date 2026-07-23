@@ -5,11 +5,13 @@ import type { BacklinkItem } from '../../features/nodes/model/internalLinks';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
+import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import type { Translate } from '../../shared/localization/LocalizationProvider';
 import {
   AppDropdownMenu,
   AppDropdownMenuContent,
   AppDropdownMenuItem,
+  AppDropdownMenuSeparator,
   AppDropdownMenuTrigger,
   AppIconButton,
   ToolbarActionGroup
@@ -75,8 +77,10 @@ export function renderDocumentHeaderActions(args: {
   isFolderListView: boolean;
   isSourceUpdatePanelOpen: boolean;
   onToggleSourceUpdatePanel: () => void;
+  onRunDocumentCommand?: ((commandId: string) => void) | undefined;
   showSourceUpdateAction: boolean;
   showDocumentControls: boolean;
+  showPublishActions: boolean;
   toggleEditorDisplayMode: () => void;
   t: Translate;
 }): ReactNode {
@@ -101,6 +105,20 @@ export function renderDocumentHeaderActions(args: {
           />
         </AppDropdownMenuTrigger>
         <AppDropdownMenuContent align="end" sideOffset={6}>
+          {args.showPublishActions ? (
+            <>
+              <AppDropdownMenuItem onSelect={() => args.onRunDocumentCommand?.(APP_COMMAND_IDS.publishToFoliole)}>
+                {args.t('desktop.command.publishToFoliole')}
+              </AppDropdownMenuItem>
+              <AppDropdownMenuItem onSelect={() => args.onRunDocumentCommand?.(APP_COMMAND_IDS.publishToWordPress)}>
+                {args.t('desktop.command.publishToWordPress')}
+              </AppDropdownMenuItem>
+              <AppDropdownMenuItem onSelect={() => args.onRunDocumentCommand?.(APP_COMMAND_IDS.publishToDiscourse)}>
+                {args.t('desktop.command.publishToDiscourse')}
+              </AppDropdownMenuItem>
+              <AppDropdownMenuSeparator />
+            </>
+          ) : null}
           <AppDropdownMenuItem onSelect={args.toggleEditorDisplayMode}>
             {args.editorDisplayMode === 'preview' ? args.t('desktop.document.switchToSource') : args.t('desktop.document.switchToLivePreview')}
           </AppDropdownMenuItem>
