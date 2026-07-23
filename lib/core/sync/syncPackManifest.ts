@@ -36,6 +36,7 @@ export const SYNC_PACK_PAYLOAD_OBJECT_TYPES = new Set([
   'attachment',
   'external_folder',
   'import_source',
+  'node_open_state',
   'node_reading',
   'node_review',
   'pdf_page_text',

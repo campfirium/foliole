@@ -46,13 +46,26 @@ function insertNode(nodeId: string) {
   );
 }
 
-function insertBaseState(objectType: 'node_reading' | 'node_review' | 'setting' | 'view_state', objectId: string, contentHash: string) {
+function insertBaseState(objectType: 'node_open_state' | 'node_reading' | 'node_review' | 'setting' | 'view_state', objectId: string, contentHash: string) {
   openDatabaseConnection().driver.execute(
     `INSERT INTO sync_object_state (
        object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
      ) VALUES (?, ?, 1, ?, 'desktop', '2026-04-30T00:00:00.000Z', 0)`,
     [objectType, objectId, contentHash]
   );
+}
+
+function createNodeOpenStatePush(lastOpenedAt: string, overrides: Partial<SyncPushPayload> = {}): SyncPushPayload {
+  return {
+    base: { baseContentHash: 'stale-companion-base', kind: 'content_hash' },
+    clientOpId: `node_open_state:node-1:${lastOpenedAt}`,
+    contentHash: `hash-${lastOpenedAt}`,
+    deletedAt: null,
+    identity: { objectId: 'node-1', objectType: 'node_open_state', scope: 'workspace' },
+    payloadJson: JSON.stringify({ last_opened_at: lastOpenedAt, node_id: 'node-1' }),
+    updatedAt: lastOpenedAt,
+    ...overrides
+  };
 }
 
 function insertBaseReviewState(contentHash = 'desktop-base') {
@@ -178,6 +191,41 @@ describe('companion sync push apply', () => {
 });
 
 describe('companion sync push conflict handling', () => {
+  it('merges node open state by the latest timestamp instead of conflicting on a stale base', async () => {
+    insertBaseState('node_open_state', 'node-1', 'desktop-open-base');
+    openDatabaseConnection().driver.execute(
+      "INSERT INTO node_open_state (node_id, last_opened_at) VALUES ('node-1', '2026-04-30T00:00:00.000Z')"
+    );
+
+    const result = await applyCompanionSyncPushAsync([
+      createNodeOpenStatePush('2026-04-30T02:00:00.000Z')
+    ]);
+
+    expect(result.acks).toMatchObject([{ status: 'accepted' }]);
+    expect(openDatabaseConnection().driver.queryOne<{ last_opened_at: string }>(
+      "SELECT last_opened_at FROM node_open_state WHERE node_id = 'node-1'"
+    )).toEqual({ last_opened_at: '2026-04-30T02:00:00.000Z' });
+  });
+
+  it('keeps the newer desktop open fact when a stale-base companion fact is older', async () => {
+    insertBaseState('node_open_state', 'node-1', 'desktop-open-base');
+    openDatabaseConnection().driver.execute(
+      "UPDATE sync_object_state SET updated_at = '2026-04-30T03:00:00.000Z' WHERE object_type = 'node_open_state'"
+    );
+    openDatabaseConnection().driver.execute(
+      "INSERT INTO node_open_state (node_id, last_opened_at) VALUES ('node-1', '2026-04-30T03:00:00.000Z')"
+    );
+
+    const result = await applyCompanionSyncPushAsync([
+      createNodeOpenStatePush('2026-04-30T02:00:00.000Z')
+    ]);
+
+    expect(result.acks).toMatchObject([{ status: 'already_applied' }]);
+    expect(openDatabaseConnection().driver.queryOne<{ last_opened_at: string }>(
+      "SELECT last_opened_at FROM node_open_state WHERE node_id = 'node-1'"
+    )).toEqual({ last_opened_at: '2026-04-30T03:00:00.000Z' });
+  });
+
   it('returns conflict for node_review when desktop base has changed', async () => {
     insertBaseReviewState('desktop-newer');
 

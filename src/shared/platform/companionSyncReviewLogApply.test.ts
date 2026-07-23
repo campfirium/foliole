@@ -46,7 +46,7 @@ it('opens the Android companion database before applying review log', async () =
   await expect(applyCompanionSyncReviewLogWithSharedCoreOnDevice([reviewLogRecord()], manager as never))
     .resolves.toEqual(['review-op-1']);
 
-  expect(manager.createConnection).toHaveBeenCalledWith('foliole-companion', false, 'no-encryption', 19, false);
+  expect(manager.createConnection).toHaveBeenCalledWith('foliole-companion', false, 'no-encryption', 20, false);
   expect(connection.open).toHaveBeenCalled();
 });
 

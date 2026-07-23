@@ -22,6 +22,7 @@ export function createEmptyWorkspaceSnapshot(now: Date, defaultLayoutState: Work
     activeNodeId: null,
     browseRootNodeId: HOME_NODE_ID,
     layout: { ...defaultLayoutState },
+    nodeOpenStateById: {},
     nodeViewById: {},
     nodeOrder: [],
     nodesById: {},

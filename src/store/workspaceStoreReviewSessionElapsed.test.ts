@@ -20,6 +20,9 @@ vi.mock('./workspaceRuntimeSync', async (importOriginal) => {
     syncReviewGradeToRuntime: vi.fn()
   };
 });
+vi.mock('../shared/platform/runtime/nodeReadingStateRuntimeRepository', () => ({
+  saveNodeReadingStateToRuntime: vi.fn(async () => true)
+}));
 
 beforeEach(() => {
   vi.clearAllMocks();

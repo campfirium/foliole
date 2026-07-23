@@ -1,3 +1,4 @@
+import type { NodeOpenState } from '../../lib/core/database/nodeOpenState';
 import type { NodeKind } from '../../lib/core/nodes/nodeKind';
 import type {
   EditorOperationHistoryEntry,
@@ -23,6 +24,7 @@ export interface WorkspaceState {
   workspaceHydrationError: string | null;
   layout: WorkspaceLayoutState;
   navigation: WorkspaceNavigationState;
+  nodeOpenStateById: Record<string, NodeOpenState | undefined>;
   nodeViewById: Record<string, NodeViewState | undefined>;
   nodeOrder: string[];
   nodesById: Record<string, Node>;
@@ -143,6 +145,7 @@ export interface WorkspacePersistedState {
   browseRootNodeId?: string;
   capturedWorkspaceVersion?: string | null;
   layout: WorkspaceLayoutState;
+  nodeOpenStateById?: Record<string, NodeOpenState | undefined>;
   nodeViewById: Record<string, NodeViewState | undefined>;
   nodeOrder: string[];
   nodesById: Record<string, Node>;

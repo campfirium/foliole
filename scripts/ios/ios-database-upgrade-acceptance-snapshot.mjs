@@ -13,6 +13,7 @@ export function parseUpgradeSnapshot(output) {
     cursor: row?.cursor ?? null,
     device_id: row?.device_id ?? null,
     node_count: number(row?.node_count),
+    open_state_table_exists: number(row?.open_state_table_exists),
     node_review_count: number(row?.node_review_count),
     node_review_due: row?.node_review_due ?? null,
     node_title: row?.node_title ?? null,
@@ -45,8 +46,8 @@ export function verifyIosDatabaseUpgradeAcceptance(stages, verifyBridgeResult) {
       !String(stages.failed?.error ?? '').includes('Injected iOS database upgrade acceptance fault')) {
     throw new Error('iOS database upgrade failure evidence is incomplete.');
   }
-  const current = expectedSnapshot(19, PROVENANCE_COLUMNS);
-  const legacy = expectedSnapshot(18, []);
+  const current = expectedSnapshot(20, PROVENANCE_COLUMNS, 1);
+  const legacy = expectedSnapshot(19, PROVENANCE_COLUMNS, 0);
   if (![stages.firstSnapshot, stages.secondSnapshot, stages.recoveredSnapshot]
     .every((snapshot) => equal(snapshot, current)) || !equal(stages.failedSnapshot, legacy)) {
     throw new Error('iOS database upgrade SQLite evidence is incomplete.');
@@ -54,15 +55,16 @@ export function verifyIosDatabaseUpgradeAcceptance(stages, verifyBridgeResult) {
   return stages;
 }
 
-export function expectedUpgradeSnapshot(userVersion, provenanceColumns) {
-  return expectedSnapshot(userVersion, provenanceColumns);
+export function expectedUpgradeSnapshot(userVersion, provenanceColumns, openStateTableExists = 1) {
+  return expectedSnapshot(userVersion, provenanceColumns, openStateTableExists);
 }
 
-function expectedSnapshot(userVersion, provenanceColumns) {
+function expectedSnapshot(userVersion, provenanceColumns, openStateTableExists) {
   return {
     attachment_count: 1, attachment_mime_type: 'image/png', attachment_name: 'sample.png',
     attachment_role: 'inline', blob_availability: 'cached', blob_content_hash: 'resource-hash',
-    cursor: '41', device_id: 'ios-upgrade-device', node_count: 1, node_review_count: 1,
+    cursor: '41', device_id: 'ios-upgrade-device', node_count: 1, open_state_table_exists: openStateTableExists,
+    node_review_count: 1,
     node_review_due: '2026-07-21T00:00:00.000Z', node_title: 'Upgrade',
     provenance_columns: [...provenanceColumns].sort(), resource_count: 1, review_log_count: 1,
     review_log_grade: 3, review_log_op_id: 'op-1', setting_count: 1, setting_value: '"dark"',
@@ -83,6 +85,7 @@ const SNAPSHOT_SQL = `SELECT
   (SELECT value FROM companion_meta WHERE key='sync_pack_cursor') cursor,
   (SELECT value FROM companion_meta WHERE key='device_id') device_id,
   (SELECT count(*) FROM nodes) node_count,
+  (SELECT count(*) FROM sqlite_master WHERE type='table' AND name='node_open_state') open_state_table_exists,
   (SELECT count(*) FROM node_review) node_review_count,
   (SELECT due FROM node_review WHERE node_id='upgrade-node') node_review_due,
   (SELECT title FROM nodes WHERE id='upgrade-node') node_title,

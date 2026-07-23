@@ -4,6 +4,9 @@ const runtimeMock = vi.hoisted(() => ({
   platform: vi.fn(() => 'ios'),
   plugin: {
     saveSyncActiveViewState: vi.fn(async () => ({ content_hash: 'hash-active', object_id: 'active' })),
+    saveSyncNodeOpenState: vi.fn(async () => ({
+      content_hash: 'hash-open', last_opened_at: '2026-07-20T12:00:00Z', object_id: 'node-1'
+    })),
     saveSyncNodeReadingRecord: vi.fn(async () => ({ content_hash: 'hash-reading', object_id: 'node-1' })),
     saveSyncNodeReviewRecord: vi.fn(async () => ({ content_hash: 'hash-review', object_id: 'node-1', op_id: 'op-1' })),
     saveSyncNodeViewState: vi.fn(async () => ({ content_hash: 'hash-view', object_id: 'view' })),
@@ -77,6 +80,18 @@ beforeEach(() => {
         repetition_count: 3,
         state: 'active'
       })
+    });
+    expect(runtimeMock.writer).toHaveBeenCalledOnce();
+  });
+
+  it('dispatches cross-device node open facts through the shared native writer queue', async () => {
+    const api = await import('./companionSyncStateWriters');
+
+    await expect(api.saveCompanionSyncNodeOpenState({
+      lastOpenedAt: '2026-07-20T12:00:00Z', nodeId: 'node-1'
+    })).resolves.toMatchObject({ last_opened_at: '2026-07-20T12:00:00Z' });
+    expect(runtimeMock.plugin.saveSyncNodeOpenState).toHaveBeenCalledWith({
+      last_opened_at: '2026-07-20T12:00:00Z', node_id: 'node-1'
     });
     expect(runtimeMock.writer).toHaveBeenCalledOnce();
   });

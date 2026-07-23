@@ -147,10 +147,10 @@ function resolveWorkspaceListDateTimestamp(node: Pick<Node, 'createdAt' | 'updat
   return null;
 }
 
-function resolveWorkspaceListLastOpenedTimestamp(nodeViewState: { updatedAt?: string | null } | null | undefined) {
-  const updatedAt = nodeViewState?.updatedAt?.trim();
-  if (updatedAt && !Number.isNaN(new Date(updatedAt).getTime())) {
-    return updatedAt;
+function resolveWorkspaceListLastOpenedTimestamp(openState: { lastOpenedAt?: string | null } | null | undefined) {
+  const lastOpenedAt = openState?.lastOpenedAt?.trim();
+  if (lastOpenedAt && !Number.isNaN(new Date(lastOpenedAt).getTime())) {
+    return lastOpenedAt;
   }
   return null;
 }
@@ -223,8 +223,8 @@ export function getWorkspaceListNodeDateLabel(node: Pick<Node, 'createdAt' | 'up
   return new Date(timestamp).toISOString().slice(0, 10);
 }
 
-export function getWorkspaceListNodeLastOpenedLabel(nodeViewState: { updatedAt?: string | null } | null | undefined) {
-  const timestamp = resolveWorkspaceListLastOpenedTimestamp(nodeViewState);
+export function getWorkspaceListNodeLastOpenedLabel(openState: { lastOpenedAt?: string | null } | null | undefined) {
+  const timestamp = resolveWorkspaceListLastOpenedTimestamp(openState);
   if (!timestamp) {
     return WORKSPACE_LIST_LAST_OPENED_FALLBACK;
   }

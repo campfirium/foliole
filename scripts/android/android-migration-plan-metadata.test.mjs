@@ -97,7 +97,7 @@ describe('Android migration plan metadata', () => {
       statementName: 'statementName',
       tableName: 'tableName'
     });
-    expect(schema.plan.map((step) => step.beforeVersion)).toEqual([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]);
+    expect(schema.plan.map((step) => step.beforeVersion)).toEqual([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]);
     expect(databaseVersion).toBe(Math.max(...schema.plan.map((step) => step.beforeVersion)));
     expect(schema.repairRules.nodesSequentialReadingEnabled).toMatchObject({
       columnName: 'sequential_reading_enabled',

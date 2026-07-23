@@ -60,6 +60,40 @@ final class FolioleCompanionSyncStateWriteStore {
         return syncSaveResult(context, nodeId, contentHash);
     }
 
+    static JSObject saveNodeOpenState(Context context, SQLiteDatabase database, JSONObject input, String modifiedByDeviceId) throws Exception {
+        String nodeId = input.optString("node_id", "").trim();
+        String lastOpenedAt = input.optString("last_opened_at", "").trim();
+        if (nodeId.isEmpty() || lastOpenedAt.isEmpty()) {
+            throw new IllegalArgumentException("node_id and last_opened_at are required");
+        }
+        String objectType = syncObjectType(context, "nodeOpenState");
+        JSONObject payload = new JSONObject();
+        payload.put("node_id", nodeId);
+        payload.put("last_opened_at", lastOpenedAt);
+        String contentHash;
+        database.beginTransaction();
+        try {
+            String mutation = FolioleCompanionSyncApplyMutationRules.string(context, "openState", "upsertMutationName");
+            FolioleCompanionGeneratedMutationRunner.execute(context, database, mutation, new Object[] { nodeId, lastOpenedAt });
+            String storedPayloadJson = FolioleCompanionGeneratedQueryRunner.loadString(
+                context, database, "syncPayloadNodeOpenState", new String[] { nodeId }
+            );
+            if (storedPayloadJson == null) throw new IllegalStateException("node open state write failed");
+            payload.put("last_opened_at", new JSONObject(storedPayloadJson).getString("last_opened_at"));
+            contentHash = FolioleCompanionSyncContentHash.hash(payload);
+            upsertTypedObjectState(
+                context, database, objectType, nodeId, contentHash, modifiedByDeviceId,
+                payload.getString("last_opened_at")
+            );
+            database.setTransactionSuccessful();
+        } finally {
+            database.endTransaction();
+        }
+        JSObject result = syncSaveResult(context, nodeId, contentHash);
+        result.put("last_opened_at", payload.getString("last_opened_at"));
+        return result;
+    }
+
     static JSObject saveNodeReview(Context context, SQLiteDatabase database, JSONObject input, String modifiedByDeviceId) throws Exception {
         String queryName = FolioleCompanionLearningPayloadStore.nodeReviewPayloadQueryName();
         String nodeId = FolioleCompanionLearningPayloadRules.nodeId(context, input, queryName);

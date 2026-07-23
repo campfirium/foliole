@@ -31,11 +31,10 @@ export function isSameReadingProfile(
   );
 }
 
-export function applyReadingSnapshot(node: Node, reading: NodeReadingProfile | null, now: string): Node {
+export function applyReadingSnapshot(node: Node, reading: NodeReadingProfile | null): Node {
   return {
     ...node,
-    reading: cloneReadingProfile(reading),
-    updatedAt: now
+    reading: cloneReadingProfile(reading)
   };
 }
 
@@ -61,13 +60,12 @@ export function areRelatedReadingsValid(
 
 export function applyRelatedReadingSnapshots(args: {
   nextNodesById: Record<string, Node | undefined>;
-  now: string;
   readings: RelatedHistoryReadingApply[];
 }) {
   for (const reading of args.readings) {
     const relatedNode = args.nextNodesById[reading.nodeId];
     if (relatedNode) {
-      args.nextNodesById[reading.nodeId] = applyReadingSnapshot(relatedNode, reading.nextReading, args.now);
+      args.nextNodesById[reading.nodeId] = applyReadingSnapshot(relatedNode, reading.nextReading);
     }
   }
 }

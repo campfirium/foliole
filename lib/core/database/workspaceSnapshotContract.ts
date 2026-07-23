@@ -21,6 +21,7 @@ export const WORKSPACE_SNAPSHOT_FIELD_MANIFEST: readonly WorkspaceSnapshotFieldM
   { field: 'nodesById.*.importContentFingerprint', kind: 'entity' },
   { field: 'nodesById.*.deletedAt', kind: 'entity' },
   { field: 'nodeOrder', kind: 'derived' },
+  { field: 'nodeOpenStateById', kind: 'entity' },
   { field: 'trashedNodeIds', kind: 'derived' },
   { field: 'trashedNodeDeletedAtById', kind: 'derived' },
   { field: 'activeNodeId', kind: 'session' },

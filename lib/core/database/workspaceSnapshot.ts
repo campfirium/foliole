@@ -1,6 +1,7 @@
 import type { PersistedNodeViewState } from '../../platform/persistedNodeViewState.js';
 
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
+import { loadNodeOpenStateById, type NodeOpenState } from './nodeOpenState.js';
 import { loadDatabaseDeviceId } from './syncDeviceIdentity.js';
 import { attachWorkspaceNodeAttachments } from './workspaceSnapshotAttachments.js';
 import { normalizeWorkspaceSnapshot, resolveWorkspaceSnapshotActiveNodeId } from './workspaceSnapshotContract.js';
@@ -16,6 +17,7 @@ import { VISIBLE_NODES_CTE_SQL } from './workspaceVisibleNodesSql.js';
 export interface WorkspaceSnapshot {
   activeNodeId: string | null;
   nodeOrder: string[];
+  nodeOpenStateById?: Record<string, NodeOpenState | undefined>;
   nodesById: Record<string, WorkspaceNodeSnapshot>;
   persistedNodeViewById?: Record<string, PersistedNodeViewState | undefined>;
   trashedNodeDeletedAtById?: Record<string, string>;
@@ -197,12 +199,14 @@ function buildSnapshotRows(
   attachWorkspaceNodeAttachments(driver, nodesById);
   const nodeOrder = buildOrderedNodeIds(rows, orderedRows, nodesById);
   const persistedNodeViewById = loadPersistedNodeViewById(driver);
+  const nodeOpenStateById = loadNodeOpenStateById(driver);
   const activeRow = driver.queryOne<{ value: string }>('SELECT value FROM workspace_meta WHERE key = ?', [ACTIVE_NODE_META_KEY]);
   const activeNodeId = activeRow && activeRow.value !== '' ? activeRow.value : null;
 
   return normalizeWorkspaceSnapshot({
     activeNodeId: resolveWorkspaceSnapshotActiveNodeId({ activeNodeId, nodeOrder, nodesById }),
     nodeOrder,
+    ...(Object.keys(nodeOpenStateById).length > 0 ? { nodeOpenStateById } : {}),
     nodesById,
     ...(Object.keys(persistedNodeViewById).length > 0 ? { persistedNodeViewById } : {}),
     trashedNodeDeletedAtById,

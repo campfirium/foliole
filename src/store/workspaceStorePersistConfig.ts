@@ -5,7 +5,7 @@ import { ensureInboxNodeInSnapshot } from '../features/nodes/model/specialNodes'
 import { hasWorkspaceRuntimeRepository } from '../shared/platform/workspaceRuntimeRepository';
 
 import { resolveWorkspaceBrowseRootNodeId } from './workspaceBrowseRoot';
-import { mergeHydratedWorkspaceMembership } from './workspaceHydrateObjectMerge';
+import { mergeHydratedWorkspaceMembership, mergeNodeOpenStateById } from './workspaceHydrateObjectMerge';
 import { parsePersistedWorkspaceState } from './workspacePersistedStateParser';
 import { workspacePersistStorage } from './workspacePersistStorage';
 import { trimWorkspaceNodesForRendererBoundary } from './workspaceRendererBoundary';
@@ -53,6 +53,7 @@ function partializeWorkspaceState(state: WorkspaceState): WorkspacePersistedStat
     browseRootNodeId: state.browseRootNodeId,
     capturedWorkspaceVersion: state.capturedWorkspaceVersion,
     layout: state.layout,
+    nodeOpenStateById: state.nodeOpenStateById,
     nodeViewById: state.nodeViewById,
     nodeOrder: state.nodeOrder,
     nodesById,
@@ -83,6 +84,7 @@ export function createWorkspaceStorePersistConfig(
           ...current.layout,
           ...persisted.layout
         },
+        nodeOpenStateById: mergeNodeOpenStateById(current.nodeOpenStateById, persisted.nodeOpenStateById),
         nodeViewById: persisted.nodeViewById ?? current.nodeViewById,
         rendererBoundaryKeepNodeIds: persisted.rendererBoundaryKeepNodeIds ?? current.rendererBoundaryKeepNodeIds,
         reviewSession: persisted.reviewSession ?? current.reviewSession,

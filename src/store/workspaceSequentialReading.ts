@@ -114,7 +114,7 @@ function applyReadingState(args: {
     now: args.now,
     state: args.state
   });
-  args.nextNodesById[args.nodeId] = { ...node, reading: nextReading, updatedAt: args.now };
+  args.nextNodesById[args.nodeId] = { ...node, reading: nextReading };
   args.changes.push({
     afterReading: cloneReadingProfile(nextReading),
     beforeReading: cloneReadingProfile(node.reading),

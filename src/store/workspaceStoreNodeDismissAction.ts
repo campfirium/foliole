@@ -2,6 +2,7 @@ import { hasNodeContent, type Node } from '../features/nodes/model/nodeTypes';
 import { isProtectedRootNode } from '../features/nodes/model/specialNodes';
 import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
+import { saveNodeReadingStateToRuntime } from '../shared/platform/runtime/nodeReadingStateRuntimeRepository';
 
 import {
   cloneReadingProfile,
@@ -9,11 +10,18 @@ import {
   pushWorkspaceUndoEntry
 } from './workspaceActionHistory';
 import { buildDismissedReadingProfile } from './workspaceReviewReading';
-import { syncNodeContentToRuntime } from './workspaceRuntimeSync';
 import { buildSequentialReadingDismissPatch } from './workspaceSequentialReading';
 import type { WorkspaceState } from './workspaceStore';
 
 type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)) => void;
+
+function persistDismissedReadingNodes(nodes: WorkspaceState['nodesById'][string][], updatedAt: string) {
+  nodes.forEach((node) => void saveNodeReadingStateToRuntime({
+    nodeId: node.id,
+    reading: node.reading ?? null,
+    updatedAt
+  }));
+}
 
 export function createDismissNodeAction(set: WorkspaceSet): WorkspaceState['dismissNode'] {
   return (nodeId, now = new Date().toISOString()) => {
@@ -42,8 +50,7 @@ export function createDismissNodeAction(set: WorkspaceSet): WorkspaceState['dism
       });
       const nextNode: Node = {
         ...node,
-        reading: afterReading,
-        updatedAt: now
+        reading: afterReading
       };
       const nextNodesById = { ...state.nodesById, [nodeId]: nextNode };
       const sequentialPatch = buildSequentialReadingDismissPatch({
@@ -70,7 +77,7 @@ export function createDismissNodeAction(set: WorkspaceSet): WorkspaceState['dism
         nodesById: finalNodesById
       };
     });
-    nextNodesForSync.forEach((node) => syncNodeContentToRuntime(node));
+    persistDismissedReadingNodes(nextNodesForSync, now);
     return dismissed;
   };
 }

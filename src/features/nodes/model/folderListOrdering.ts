@@ -1,6 +1,5 @@
 import type { Node } from './nodeTypes';
 import { compareWorkspaceListNodeDateDesc } from './workspaceListNode';
-import { compareWorkspaceListNodeAuthor } from './workspaceListNodeMetadata';
 
 export type FolderListSortKey = 'dateDeleted' | 'dateImported' | 'dateLastOpened' | 'dateSaved' | 'manual' | 'name';
 export type FolderListSortDirection = 'desc' | 'asc';
@@ -28,10 +27,13 @@ function compareName(left: { node: Node; title: string }, right: { node: Node; t
   return left.node.id.localeCompare(right.node.id);
 }
 
-function resolveNodeLastOpenedTimestamp(nodeId: string, nodeViewById: Record<string, { updatedAt?: string | null } | undefined>) {
-  const updatedAt = nodeViewById[nodeId]?.updatedAt?.trim();
-  if (updatedAt && !Number.isNaN(new Date(updatedAt).getTime())) {
-    return updatedAt;
+function resolveNodeLastOpenedTimestamp(
+  nodeId: string,
+  nodeOpenStateById: Record<string, { lastOpenedAt?: string | null } | undefined>
+) {
+  const lastOpenedAt = nodeOpenStateById[nodeId]?.lastOpenedAt?.trim();
+  if (lastOpenedAt && !Number.isNaN(new Date(lastOpenedAt).getTime())) {
+    return lastOpenedAt;
   }
   return null;
 }
@@ -39,10 +41,10 @@ function resolveNodeLastOpenedTimestamp(nodeId: string, nodeViewById: Record<str
 function compareLastOpenedDesc(
   leftNodeId: string,
   rightNodeId: string,
-  nodeViewById: Record<string, { updatedAt?: string | null } | undefined>
+  nodeOpenStateById: Record<string, { lastOpenedAt?: string | null } | undefined>
 ) {
-  const leftTimestamp = resolveNodeLastOpenedTimestamp(leftNodeId, nodeViewById);
-  const rightTimestamp = resolveNodeLastOpenedTimestamp(rightNodeId, nodeViewById);
+  const leftTimestamp = resolveNodeLastOpenedTimestamp(leftNodeId, nodeOpenStateById);
+  const rightTimestamp = resolveNodeLastOpenedTimestamp(rightNodeId, nodeOpenStateById);
   if (!leftTimestamp && !rightTimestamp) {
     return 0;
   }
@@ -109,9 +111,9 @@ function compareLastOpened(
   left: { node: Node; title: string },
   right: { node: Node; title: string },
   directionMultiplier: number,
-  nodeViewById: Record<string, { updatedAt?: string | null } | undefined>
+  nodeOpenStateById: Record<string, { lastOpenedAt?: string | null } | undefined>
 ) {
-  const dateResult = compareLastOpenedDesc(left.node.id, right.node.id, nodeViewById) * directionMultiplier;
+  const dateResult = compareLastOpenedDesc(left.node.id, right.node.id, nodeOpenStateById) * directionMultiplier;
   if (dateResult !== 0) {
     return dateResult;
   }
@@ -119,18 +121,14 @@ function compareLastOpened(
   if (titleResult !== 0) {
     return titleResult;
   }
-  const importedDateResult = compareWorkspaceListNodeDateDesc(left.node, right.node);
-  if (importedDateResult !== 0) {
-    return importedDateResult;
-  }
-  return compareWorkspaceListNodeAuthor(left.node, right.node);
+  return left.node.id.localeCompare(right.node.id);
 }
 
 export function sortFolderListNodes(
   nodes: Node[],
   sortKey: FolderListSortKey,
   sortDirection: FolderListSortDirection,
-  nodeViewById: Record<string, { updatedAt?: string | null } | undefined>,
+  nodeOpenStateById: Record<string, { lastOpenedAt?: string | null } | undefined>,
   manualChildOrder?: readonly string[] | null
 ) {
   const dateDirectionMultiplier = sortDirection === 'asc' ? -1 : 1;
@@ -173,10 +171,7 @@ export function sortFolderListNodes(
       }
 
       if (sortKey === 'dateLastOpened') {
-        const dateResult = compareLastOpened(left, right, dateDirectionMultiplier, nodeViewById);
-        if (dateResult !== 0) {
-          return dateResult;
-        }
+        return compareLastOpened(left, right, dateDirectionMultiplier, nodeOpenStateById);
       }
 
       const dateResult = compareWorkspaceListNodeDateDesc(left.node, right.node);

@@ -182,6 +182,11 @@ export interface CompanionWorkspaceSyncPlugin
     value_json: string;
   }): Promise<{ content_hash: string; object_id: string }>;
   saveSyncNodeReadingRecord(args: { node_id: string; reading_json: string }): Promise<{ content_hash: string; object_id: string }>;
+  saveSyncNodeOpenState(args: { last_opened_at: string; node_id: string }): Promise<{
+    content_hash: string;
+    last_opened_at: string;
+    object_id: string;
+  }>;
   saveSyncNodeReviewRecord(args: {
     node_id: string;
     review_log_json?: string;

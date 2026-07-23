@@ -28,6 +28,7 @@ describe('Android sync apply mutation rules', () => {
     expect(definitions.syncApplyMutations.groupKeys).toEqual({
       documents: 'documents',
       learning: 'learning',
+      openState: 'openState',
       pushAck: 'pushAck',
       reviewLog: 'reviewLog',
       settings: 'settings',
@@ -36,6 +37,10 @@ describe('Android sync apply mutation rules', () => {
     expect(definitions.syncApplyMutations.learning).toMatchObject({
       readingDeleteMutationName: 'syncNodeReadingDelete',
       reviewUpsertMutationName: 'syncNodeReviewUpsert'
+    });
+    expect(definitions.syncApplyMutations.openState).toMatchObject({
+      deleteMutationName: 'syncNodeOpenStateDelete',
+      upsertMutationName: 'syncNodeOpenStateUpsert'
     });
     expect(definitions.syncApplyMutations.viewState).toMatchObject({
       activeNodeDeleteMutationName: 'syncViewActiveNodeDelete',
@@ -59,6 +64,8 @@ describe('Android sync apply mutation rules', () => {
       'syncNodeReadingDeviceStateDelete',
       'syncNodeReadingUpsert',
       'syncNodeReadingDeviceStateUpsert',
+      'syncNodeOpenStateDelete',
+      'syncNodeOpenStateUpsert',
       'syncNodeReviewDelete',
       'syncNodeReviewUpsert',
       'syncPushAckDeleteIssuesByObject',

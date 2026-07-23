@@ -1,6 +1,6 @@
+import type { NodeOpenState } from '../../../lib/core/database/nodeOpenState';
 import { parseLiteralUnion } from '../../shared/lib/parseLiteralUnion';
 import type { useTranslation } from '../../shared/localization/LocalizationProvider';
-import type { NodeViewState } from '../../store/workspaceStore';
 
 import type { ImportCatalogSortOption } from './ImportCatalogSortControls';
 
@@ -59,10 +59,13 @@ function compareSavedDesc(left: string, right: string) {
   return right.localeCompare(left);
 }
 
-export function resolveImportLastOpened(nodeId: string | null | undefined, nodeViewById: Record<string, NodeViewState | undefined>) {
-  const updatedAt = nodeId ? nodeViewById[nodeId]?.updatedAt?.trim() : null;
-  if (updatedAt && !Number.isNaN(new Date(updatedAt).getTime())) {
-    return updatedAt;
+export function resolveImportLastOpened(
+  nodeId: string | null | undefined,
+  nodeOpenStateById: Record<string, NodeOpenState | undefined>
+) {
+  const lastOpenedAt = nodeId ? nodeOpenStateById[nodeId]?.lastOpenedAt.trim() : null;
+  if (lastOpenedAt && !Number.isNaN(new Date(lastOpenedAt).getTime())) {
+    return lastOpenedAt;
   }
   return null;
 }
@@ -98,11 +101,6 @@ export function sortImportCatalogItems<T extends SortableImportItem>(
     const lastOpenedResult = compareLastOpenedDesc(left.sortLastOpened, right.sortLastOpened) * directionMultiplier;
     if (lastOpenedResult !== 0) {
       return lastOpenedResult;
-    }
-
-    const savedResult = compareSavedDesc(left.sortSaved, right.sortSaved);
-    if (savedResult !== 0) {
-      return savedResult;
     }
 
     return compareText(left.sortTitle, right.sortTitle);

@@ -75,12 +75,12 @@ export function sortPdfItems(
   items: RuntimePdfImportsInventory['items'],
   sortKey: PdfSortKey,
   sortDirection: 'asc' | 'desc',
-  nodeViewById: ReturnType<typeof useWorkspaceStore.getState>['nodeViewById'] = {}
+  nodeOpenStateById: ReturnType<typeof useWorkspaceStore.getState>['nodeOpenStateById'] = {}
 ) {
   return sortImportCatalogItems(
     items.map((item) => ({
       item,
-      sortLastOpened: resolveImportLastOpened(item.latestNodeId, nodeViewById),
+      sortLastOpened: resolveImportLastOpened(item.latestNodeId, nodeOpenStateById),
       sortSaved: item.lastImportedAt,
       sortTitle: item.sourceName
     })),
@@ -163,14 +163,14 @@ function PdfInventoryCatalog(props: {
 export function ImportSourceWorkspacePdfPage({ open }: { open: boolean }) {
   const { isLoading, loadIssue, pdfInventory, refreshPdfInventory } = usePdfImportsInventoryState(open);
   const nodesById = useWorkspaceStore((state) => state.nodesById);
-  const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
+  const nodeOpenStateById = useWorkspaceStore((state) => state.nodeOpenStateById);
   const [query, setQuery] = useState('');
   const [sortKey, setSortKey] = useState<PdfSortKey>('dateImported');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const filteredInventory = filterPdfInventory(query, pdfInventory);
   const filteredItems = useMemo(
-    () => sortPdfItems(filteredInventory?.items ?? [], sortKey, sortDirection, nodeViewById),
-    [filteredInventory?.items, nodeViewById, sortDirection, sortKey]
+    () => sortPdfItems(filteredInventory?.items ?? [], sortKey, sortDirection, nodeOpenStateById),
+    [filteredInventory?.items, nodeOpenStateById, sortDirection, sortKey]
   );
 
   return (

@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { saveNodeReadingStateToRuntime } from '../shared/platform/runtime/nodeReadingStateRuntimeRepository';
+
 import { createWorkspaceActionHistoryActions } from './workspaceActionHistory';
-import { syncNodeContentToRuntimeNow } from './workspaceRuntimeSync';
 import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
 import {
   createReadingNode,
@@ -11,13 +12,9 @@ import {
   previewStub
 } from './workspaceStoreReviewActions.test-support';
 
-vi.mock('./workspaceRuntimeSync', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('./workspaceRuntimeSync')>();
-  return {
-    ...actual,
-    syncNodeContentToRuntimeNow: vi.fn(async () => true)
-  };
-});
+vi.mock('../shared/platform/runtime/nodeReadingStateRuntimeRepository', () => ({
+  saveNodeReadingStateToRuntime: vi.fn(async () => true)
+}));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -125,6 +122,7 @@ it('reads topics without showing grading and advances the queue', async () => {
 
   expect(actions.startReviewSession(now)).toBe(true);
   const firstNodeId = harness.getState().reviewSession.currentNodeId!;
+  const modifiedAtBeforeRead = harness.getState().nodesById[firstNodeId]?.updatedAt;
   const secondNodeId = harness.getState().reviewSession.queueNodeIds.find((nodeId) => nodeId !== firstNodeId)!;
   await expect(actions.readReviewTopic(now)).resolves.toBe(true);
 
@@ -136,10 +134,11 @@ it('reads topics without showing grading and advances the queue', async () => {
     lastHandledAt: now,
     repetitionCount: 2
   });
+  expect(harness.getState().nodesById[firstNodeId]?.updatedAt).toBe(modifiedAtBeforeRead);
 });
 
 it('does not advance reading items when persistence fails', async () => {
-  vi.mocked(syncNodeContentToRuntimeNow).mockResolvedValueOnce(false);
+  vi.mocked(saveNodeReadingStateToRuntime).mockResolvedValueOnce(false);
   const now = '2026-03-03T00:00:00.000Z';
   const harness = createSetStateHarness(
     createWorkspaceFixture([createReadingNode('reading-1', '2026-03-02T00:00:00.000Z'), createReadingNode('reading-2', now)])
@@ -161,7 +160,7 @@ it('does not advance reading items when persistence fails', async () => {
 
 it('ignores duplicate reading actions while persistence is in flight', async () => {
   const pendingPersist: { release?: () => void } = {};
-  vi.mocked(syncNodeContentToRuntimeNow).mockReturnValueOnce(new Promise((resolve) => {
+  vi.mocked(saveNodeReadingStateToRuntime).mockReturnValueOnce(new Promise((resolve) => {
     pendingPersist.release = () => resolve(true);
   }));
   const now = '2026-03-03T00:00:00.000Z';
@@ -176,7 +175,7 @@ it('ignores duplicate reading actions while persistence is in flight', async () 
   pendingPersist.release?.();
   await expect(first).resolves.toBe(true);
 
-  expect(syncNodeContentToRuntimeNow).toHaveBeenCalledTimes(1);
+  expect(saveNodeReadingStateToRuntime).toHaveBeenCalledTimes(1);
   expect(harness.getState().appActionHistory.undoStack).toHaveLength(1);
 });
 
@@ -244,9 +243,9 @@ it('dismisses reading items and removes them from future queues', async () => {
   expect(harness.getState().reviewSession.currentNodeId).toBe(secondNodeId);
   expect(harness.getState().reviewSession.queueNodeIds).toEqual([secondNodeId]);
   expect(harness.getState().nodesById[firstNodeId]?.reading?.state).toBe('dismissed');
-  expect(syncNodeContentToRuntimeNow).toHaveBeenCalledWith(
+  expect(saveNodeReadingStateToRuntime).toHaveBeenCalledWith(
     expect.objectContaining({
-      id: firstNodeId,
+      nodeId: firstNodeId,
       reading: expect.objectContaining({ state: 'dismissed' })
     })
   );

@@ -26,6 +26,7 @@ interface FolderListViewProps {
   folderTitle?: string | undefined;
   nodeOrder?: string[];
   nodes?: Node[];
+  nodeOpenStateById?: Record<string, { lastOpenedAt?: string | null } | undefined>;
   nodeViewById?: Record<string, NodeViewState | undefined>;
   nodesById: Record<string, Node>;
   onChangeSearchQuery?: ((searchQuery: string) => void) | undefined;
@@ -94,8 +95,8 @@ function buildFolderListCurrentViewActions(props: FolderListViewProps, deleteNod
 }
 
 function useResolvedFolderListState(props: FolderListViewProps) {
-  const storeNodeViewById = useWorkspaceStore((state) => state.nodeViewById);
-  const nodeViewById = props.nodeViewById ?? storeNodeViewById;
+  const storeNodeOpenStateById = useWorkspaceStore((state) => state.nodeOpenStateById);
+  const nodeOpenStateById = props.nodeOpenStateById ?? storeNodeOpenStateById;
   const listedNodes = useMemo(
     () => resolveListedFolderNodes(props),
     [
@@ -118,7 +119,7 @@ function useResolvedFolderListState(props: FolderListViewProps) {
       : props.sortOptions?.[0]?.key ?? DEFAULT_FOLDER_LIST_SORT_KEY,
     filterSearchResults: props.filterSearchResults,
     listedNodes,
-    nodeViewById,
+    nodeOpenStateById,
     listRebuildKey: buildFolderListRebuildKey(props, listedNodes),
     manualChildOrder: props.sortKey === 'manual'
       ? listedNodes.map((node) => node.id)
@@ -129,7 +130,7 @@ function useResolvedFolderListState(props: FolderListViewProps) {
   });
 
   return {
-    nodeViewById,
+    nodeOpenStateById,
     resolvedFolderTitle: resolveFolderTitle(props.folderTitle, props.folderNodeId, props.nodesById),
     state
   };
@@ -137,7 +138,7 @@ function useResolvedFolderListState(props: FolderListViewProps) {
 
 function renderFolderListViewItem(args: {
   node: Node;
-  nodeViewById: Record<string, NodeViewState | undefined>;
+  nodeOpenStateById: Record<string, { lastOpenedAt?: string | null } | undefined>;
   props: FolderListViewProps;
   selection: ReturnType<typeof useFolderListSelection>;
   state: ReturnType<typeof useResolvedFolderListState>['state'];
@@ -147,7 +148,7 @@ function renderFolderListViewItem(args: {
     isBulkSelectionActive: args.selection.selectedNodeIds.length > 1 && args.selection.selectedNodeIds.includes(args.node.id),
     itemLayout: args.props.itemLayout ?? 'default',
     node: args.node,
-    nodeViewById: args.nodeViewById,
+    nodeOpenStateById: args.nodeOpenStateById,
     nodesById: args.props.nodesById,
     onSelectNode: args.selection.handleSelectNode,
     ...(args.props.folderNodeId ? { folderNodeId: args.props.folderNodeId } : {}),
@@ -158,7 +159,7 @@ function renderFolderListViewItem(args: {
 
 export function FolderListView(props: FolderListViewProps) {
   const t = useTranslation();
-  const { nodeViewById, resolvedFolderTitle, state } = useResolvedFolderListState(props);
+  const { nodeOpenStateById, resolvedFolderTitle, state } = useResolvedFolderListState(props);
   const deleteNodes = useWorkspaceStore((storeState) => storeState.deleteNodes);
   const scrollElementRef = useRef<HTMLDivElement | null>(null);
   const currentViewActions = buildFolderListCurrentViewActions(props, deleteNodes, state.filteredNodes);
@@ -183,7 +184,7 @@ export function FolderListView(props: FolderListViewProps) {
           onChangeSortKey={state.updateSortKey}
           onRenderItem={(node) => renderFolderListViewItem({
             node,
-            nodeViewById,
+            nodeOpenStateById,
             props,
             selection,
             state

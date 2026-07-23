@@ -5,6 +5,7 @@ import {
 } from '../sync/syncObjectPolicy.js';
 
 export const ANDROID_COMPANION_SYNC_OBJECT_TYPES = {
+  nodeOpenState: 'node_open_state',
   nodeReading: 'node_reading',
   nodeReview: 'node_review',
   settingRecord: 'setting',

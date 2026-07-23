@@ -5,10 +5,6 @@ import { pathToFileURL } from 'node:url';
 import {
   ANDROID_COMPANION_MIGRATION_PLAN
 } from '../../lib/core/database/androidCompanionMigrationSchemaStatements.ts';
-import {
-  ANDROID_COMPANION_NODE_PROVENANCE_MIGRATION_ACTION_TYPES
-} from '../../lib/core/database/androidCompanionNodeProvenanceMigration.ts';
-import { COMPANION_CURRENT_SCHEMA_REPAIRS } from '../../lib/core/database/companionCurrentSchemaRepairs.ts';
 import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements.ts';
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.ts';
 
@@ -18,11 +14,11 @@ const ACCEPTANCE_TIME = '2026-07-21T00:00:00.000Z';
 const PROVENANCE_COLUMNS = ['import_source_fingerprint', 'import_content_fingerprint'] as const;
 
 export function createIosDatabaseUpgradeFixture(databasePath: string) {
-  assertV18FixtureProvenance();
+  assertLatestUpgradeFixtureProvenance();
   const sqlite = new BetterSqlite3(databasePath);
   try {
     sqlite.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
-    for (const column of PROVENANCE_COLUMNS) sqlite.exec(`ALTER TABLE nodes DROP COLUMN ${column}`);
+    sqlite.exec('DROP TABLE node_open_state');
     seedPermanentState(sqlite);
     sqlite.pragma(`user_version = ${COMPANION_DATABASE_VERSION - 1}`);
     return readIosDatabaseUpgradeSnapshot(sqlite);
@@ -31,22 +27,12 @@ export function createIosDatabaseUpgradeFixture(databasePath: string) {
   }
 }
 
-export function assertV18FixtureProvenance() {
+export function assertLatestUpgradeFixtureProvenance() {
   const latest = ANDROID_COMPANION_MIGRATION_PLAN.at(-1);
   const actionTypes = latest?.actions.map((action) => action.type);
-  const expected = [
-    'installSchema',
-    ANDROID_COMPANION_NODE_PROVENANCE_MIGRATION_ACTION_TYPES.addNodesImportSourceFingerprintIfMissing,
-    ANDROID_COMPANION_NODE_PROVENANCE_MIGRATION_ACTION_TYPES.addNodesImportContentFingerprintIfMissing
-  ];
+  const expected = ['installSchema'];
   if (latest?.beforeVersion !== COMPANION_DATABASE_VERSION || JSON.stringify(actionTypes) !== JSON.stringify(expected)) {
-    throw new Error('The v18 fixture no longer matches the latest companion migration step.');
-  }
-  const repairColumns = COMPANION_CURRENT_SCHEMA_REPAIRS
-    .filter((repair) => PROVENANCE_COLUMNS.includes(repair.columnName as typeof PROVENANCE_COLUMNS[number]))
-    .map((repair) => `${repair.tableName}.${repair.columnName}`);
-  if (JSON.stringify(repairColumns) !== JSON.stringify(PROVENANCE_COLUMNS.map((column) => `nodes.${column}`))) {
-    throw new Error('The v18 fixture no longer matches the provenance repair metadata.');
+    throw new Error('The upgrade fixture no longer matches the latest companion migration step.');
   }
 }
 
@@ -62,6 +48,9 @@ export function readIosDatabaseUpgradeSnapshot(sqlite: import('better-sqlite3').
     cursor: meta(sqlite, 'sync_pack_cursor'),
     device_id: meta(sqlite, 'device_id'),
     node_count: count(sqlite, 'nodes'),
+    open_state_table_exists: Number(Boolean(sqlite.prepare(
+      "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'node_open_state'"
+    ).get())),
     node_review_count: count(sqlite, 'node_review'),
     node_review_due: scalar(sqlite, "SELECT due FROM node_review WHERE node_id = 'upgrade-node'"),
     node_title: scalar(sqlite, "SELECT title FROM nodes WHERE id = 'upgrade-node'"),

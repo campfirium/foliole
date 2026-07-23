@@ -124,3 +124,22 @@ export function writeNodeReadingSnapshotWithSync(
     recordNodeReadingUpsert(driver, { ...input, deviceId: input.deviceId, reading: input.reading });
   }
 }
+
+export function saveNodeReadingStateWithSync(driver: DatabaseDriver, input: WriteNodeReadingSyncInput) {
+  const deleteDeviceState = driver.prepare('DELETE FROM node_reading_device_state WHERE node_id = ?');
+  const deleteReading = driver.prepare('DELETE FROM node_reading WHERE node_id = ?');
+  const upsertDeviceState = driver.prepare(
+    'INSERT OR REPLACE INTO node_reading_device_state (node_id, device_id, reading_position, updated_at) VALUES (?, ?, ?, ?)'
+  );
+  const upsertReading = driver.prepare(
+    `INSERT OR REPLACE INTO node_reading (
+      node_id, interval_duration_ms, interval_growth_factor, last_handled_at, next_at, priority, repetition_count, state
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  );
+  driver.transaction(() => writeNodeReadingSnapshotWithSync(driver, input, {
+    deleteDeviceState: deleteDeviceState.run,
+    deleteReading: deleteReading.run,
+    upsertDeviceState: upsertDeviceState.run,
+    upsertReading: upsertReading.run
+  }));
+}

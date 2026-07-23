@@ -75,7 +75,7 @@
       "content_blobs",
       "review_log"
     ],
-    "maximumSchemaVersion": 59,
+    "maximumSchemaVersion": 60,
     "minimumSchemaVersion": 46,
     "sqliteTableRequirements": {
       "pack_manifest": [
@@ -376,6 +376,7 @@
     "scopePartIndex": 0
   },
   "syncObjectTypes": {
+    "nodeOpenState": "node_open_state",
     "nodeReading": "node_reading",
     "nodeReview": "node_review",
     "settingRecord": "setting",
@@ -484,6 +485,18 @@
         "storage": [
           "content_blobs",
           "content_blob_data"
+        ],
+        "userVisible": true
+      },
+      {
+        "category": "activity",
+        "conflict": "lww",
+        "deviceScope": "workspace",
+        "key": "node_open_state",
+        "objectType": "node_open_state",
+        "pushIssue": "review_required",
+        "storage": [
+          "node_open_state"
         ],
         "userVisible": true
       },
@@ -626,6 +639,7 @@
       "external_folder",
       "import_source",
       "node",
+      "node_open_state",
       "node_reading",
       "node_review",
       "pdf_page_text",

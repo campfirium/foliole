@@ -9,7 +9,7 @@ import { resolveCompanionUntitledLabel } from './companionReadableArticle';
 type CompanionBrowseNode = WorkspaceSnapshot['nodesById'][string];
 
 function resolveCompanionLastOpenedAt(snapshot: WorkspaceSnapshot, nodeId: string) {
-  return snapshot.persistedNodeViewById?.[nodeId]?.updatedAt?.trim() || null;
+  return snapshot.nodeOpenStateById?.[nodeId]?.lastOpenedAt.trim() || null;
 }
 
 function resolveCompanionImportAt(node: CompanionBrowseNode) {
@@ -25,9 +25,7 @@ function compareCompanionLastOpened(snapshot: WorkspaceSnapshot, left: Companion
   if (leftOpenedAt) return -1;
   if (rightOpenedAt) return 1;
 
-  const importAtCompare = resolveCompanionImportAt(right).localeCompare(resolveCompanionImportAt(left));
-  if (importAtCompare !== 0) return importAtCompare;
-  return right.updatedAt.localeCompare(left.updatedAt);
+  return compareText(resolveTitle(left), resolveTitle(right));
 }
 
 function compareText(left: string, right: string) {

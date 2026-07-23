@@ -40,7 +40,7 @@ function applyActiveReadingState(args: {
     return;
   }
   const nextReading: NodeReadingProfile = { ...node.reading, state: 'active' };
-  args.nextNodesById[args.nodeId] = { ...node, reading: nextReading, updatedAt: args.now };
+  args.nextNodesById[args.nodeId] = { ...node, reading: nextReading };
   args.changes.push({ afterReading: nextReading, beforeReading: node.reading, nodeId: args.nodeId });
 }
 

@@ -16,6 +16,11 @@ export const ANDROID_COMPANION_MUTATION_DEFINITIONS = {
     'id, op_id, device_id, node_id, grade, scheduler_version, reviewed_at, due_before, stability_before, ' +
     'difficulty_before, due_after, stability_after, difficulty_after' +
     ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+  syncNodeOpenStateDelete: 'DELETE FROM node_open_state WHERE node_id = ?',
+  syncNodeOpenStateUpsert:
+    'INSERT INTO node_open_state (node_id, last_opened_at) VALUES (?, ?) ' +
+    'ON CONFLICT(node_id) DO UPDATE SET last_opened_at = excluded.last_opened_at ' +
+    'WHERE excluded.last_opened_at > node_open_state.last_opened_at',
   syncNodeReadingDelete: 'DELETE FROM node_reading WHERE node_id = ?',
   syncNodeReadingDeviceStateDelete: 'DELETE FROM node_reading_device_state WHERE node_id = ?',
   syncNodeReadingUpsert:
@@ -89,6 +94,7 @@ export const ANDROID_COMPANION_MUTATION_DEFINITIONS = {
   appDataClearNodeViewState: 'DELETE FROM node_view_state',
   appDataClearNodeReadingDeviceState: 'DELETE FROM node_reading_device_state',
   appDataClearNodeOrder: 'DELETE FROM node_order',
+  appDataClearNodeOpenState: 'DELETE FROM node_open_state',
   appDataClearNodeAttachments: 'DELETE FROM node_attachments',
   appDataClearAttachmentBlobs: 'DELETE FROM attachment_blobs',
   appDataClearAttachments: 'DELETE FROM attachments',
@@ -173,7 +179,7 @@ export const ANDROID_COMPANION_HOST_SUPPORT_MUTATION_RULES = {
 } as const;
 
 export const ANDROID_COMPANION_SYNC_APPLY_MUTATION_RULES = {
-  groupKeys: { documents: 'documents', learning: 'learning', pushAck: 'pushAck', reviewLog: 'reviewLog', settings: 'settings', viewState: 'viewState' },
+  groupKeys: { documents: 'documents', learning: 'learning', openState: 'openState', pushAck: 'pushAck', reviewLog: 'reviewLog', settings: 'settings', viewState: 'viewState' },
   documents: {
     markMissingMutationName: 'syncExternalDocumentMarkMissing',
     upsertMutationName: 'syncExternalDocumentUpsert'
@@ -185,6 +191,10 @@ export const ANDROID_COMPANION_SYNC_APPLY_MUTATION_RULES = {
     readingUpsertMutationName: 'syncNodeReadingUpsert',
     reviewDeleteMutationName: 'syncNodeReviewDelete',
     reviewUpsertMutationName: 'syncNodeReviewUpsert'
+  },
+  openState: {
+    deleteMutationName: 'syncNodeOpenStateDelete',
+    upsertMutationName: 'syncNodeOpenStateUpsert'
   },
   pushAck: {
     deleteIssuesMutationName: 'syncPushAckDeleteIssuesByObject',

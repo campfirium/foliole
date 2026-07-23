@@ -54,6 +54,10 @@ export const ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS = [
     repetition_count INTEGER NOT NULL DEFAULT 0,
     state TEXT NOT NULL DEFAULT 'active'
   )`,
+  `CREATE TABLE IF NOT EXISTS node_open_state (
+    node_id TEXT PRIMARY KEY REFERENCES nodes(id) ON DELETE CASCADE,
+    last_opened_at TEXT NOT NULL
+  )`,
   `CREATE TABLE IF NOT EXISTS node_reading_device_state (
     node_id TEXT NOT NULL REFERENCES nodes(id),
     device_id TEXT NOT NULL,

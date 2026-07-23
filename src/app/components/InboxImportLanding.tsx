@@ -45,7 +45,7 @@ function formatCountLabel(filteredCount: number, totalCount: number) {
 
 function useInboxCatalogState(nodesById: Record<string, Node>) {
   const formalImport = useFormalImport();
-  const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
+  const nodeOpenStateById = useWorkspaceStore((state) => state.nodeOpenStateById);
   const [query, setQuery] = useState('');
   const [sortKey, setSortKey] = useState<InboxSortKey>('dateImported');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -62,7 +62,7 @@ function useInboxCatalogState(nodesById: Record<string, Node>) {
             entry,
             key: `linked-${entry.importId}`,
             kind: 'linked' as const,
-            sortLastOpened: resolveImportLastOpened(entry.nodeId, nodeViewById),
+            sortLastOpened: resolveImportLastOpened(entry.nodeId, nodeOpenStateById),
             sortSaved: entry.importedAt,
             sortTitle: nodesById[entry.nodeId!]?.title ?? entry.sourceName
           })),
@@ -70,7 +70,7 @@ function useInboxCatalogState(nodesById: Record<string, Node>) {
             entry,
             key: `run-${entry.importId}`,
             kind: 'run' as const,
-            sortLastOpened: resolveImportLastOpened(entry.nodeId, nodeViewById),
+            sortLastOpened: resolveImportLastOpened(entry.nodeId, nodeOpenStateById),
             sortSaved: entry.importedAt,
             sortTitle: entry.nodeId ? nodesById[entry.nodeId]?.title ?? entry.sourceName : entry.sourceName
           }))
@@ -78,7 +78,7 @@ function useInboxCatalogState(nodesById: Record<string, Node>) {
         sortKey,
         sortDirection
       ),
-    [filteredRecentRuns, nodeViewById, nodesById, recentNodes, sortDirection, sortKey]
+    [filteredRecentRuns, nodeOpenStateById, nodesById, recentNodes, sortDirection, sortKey]
   );
 
   return {

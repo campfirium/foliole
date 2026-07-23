@@ -66,6 +66,11 @@ export const nodeReading = sqliteTable('node_reading', {
   state: text('state').notNull().default('active')
 });
 
+export const nodeOpenState = sqliteTable('node_open_state', {
+  nodeId: text('node_id').primaryKey(),
+  lastOpenedAt: text('last_opened_at').notNull()
+});
+
 export const nodeReadingDeviceState = sqliteTable('node_reading_device_state', {
   nodeId: text('node_id').notNull(),
   deviceId: text('device_id').notNull(),

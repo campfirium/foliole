@@ -71,6 +71,7 @@ it('declares the stage one payload object inventory explicitly', () => {
     'attachment',
     'external_folder',
     'import_source',
+    'node_open_state',
     'node_reading',
     'node_review',
     'pdf_page_text',

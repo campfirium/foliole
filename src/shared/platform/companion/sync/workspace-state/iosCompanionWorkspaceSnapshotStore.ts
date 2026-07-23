@@ -28,10 +28,18 @@ export async function loadIosCompanionWorkspaceSnapshot(connection: SQLiteDBConn
   const persistedNodeViewById = deviceId === '*'
     ? {}
     : buildIosPersistedNodeViews(await queryRows(connection, QUERIES.nodeViewStatesByDevice.sql, [deviceId]));
+  const nodeOpenStateById = Object.fromEntries(
+    (await queryRows(connection, 'SELECT node_id, last_opened_at FROM node_open_state')).flatMap((row) =>
+      typeof row.node_id === 'string' && typeof row.last_opened_at === 'string'
+        ? [[row.node_id, { lastOpenedAt: row.last_opened_at, nodeId: row.node_id }]]
+        : []
+    )
+  );
 
   return normalizeWorkspaceSnapshot({
     activeNodeId: resolveWorkspaceSnapshotActiveNodeId({ activeNodeId, nodeOrder, nodesById }),
     nodeOrder,
+    ...(Object.keys(nodeOpenStateById).length ? { nodeOpenStateById } : {}),
     nodesById,
     ...(Object.keys(persistedNodeViewById).length ? { persistedNodeViewById } : {}),
     trashedNodeIds,

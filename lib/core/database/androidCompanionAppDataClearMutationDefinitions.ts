@@ -21,6 +21,7 @@ export const ANDROID_COMPANION_APP_DATA_CLEAR_MUTATIONS = [
   { table: 'review_log', statementName: 'appDataClearReviewLog' },
   { table: 'node_reading', statementName: 'appDataClearNodeReading' },
   { table: 'node_review', statementName: 'appDataClearNodeReview' },
+  { table: 'node_open_state', statementName: 'appDataClearNodeOpenState' },
   { table: 'setting_records', statementName: 'appDataClearSettingRecords' },
   { table: 'nodes', statementName: 'appDataClearNodes' },
   { table: 'workspace_meta', statementName: 'appDataClearWorkspaceMeta' }

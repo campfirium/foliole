@@ -11,7 +11,7 @@ import { materializeDesktopSettingRecord } from './desktopSettingMaterializer.js
 
 const REMOTE_DEVICE_ID = 'companion-push';
 
-export type StatePushObjectType = Extract<NativeSyncObjectType, 'node_reading' | 'node_review' | 'setting' | 'view_state'>;
+export type StatePushObjectType = Extract<NativeSyncObjectType, 'node_open_state' | 'node_reading' | 'node_review' | 'setting' | 'view_state'>;
 
 interface SyncObjectStateRow extends DbRow {
   content_hash: string;
@@ -21,7 +21,8 @@ interface SyncObjectStateRow extends DbRow {
 }
 
 export function isStateObjectPush(item: CompanionSyncPushPayload) {
-  return item.identity.objectType === 'node_reading'
+  return item.identity.objectType === 'node_open_state'
+    || item.identity.objectType === 'node_reading'
     || item.identity.objectType === 'node_review'
     || item.identity.objectType === 'setting'
     || item.identity.objectType === 'view_state';
@@ -40,7 +41,11 @@ export async function applyStateObjectPushWithDbPort(
     if (current?.content_hash === record.content_hash && current.deleted_at === record.deleted_at) {
       return emptyResult(stateAck(item, current, 'already_applied'));
     }
-    if ((current && current.content_hash !== item.base.baseContentHash) || (!current && item.base.baseContentHash !== null)) {
+    if (objectType === 'node_open_state' && current && current.content_hash !== item.base.baseContentHash) {
+      if (current.updated_at >= record.updated_at) {
+        return emptyResult(stateAck(item, current, 'already_applied'));
+      }
+    } else if ((current && current.content_hash !== item.base.baseContentHash) || (!current && item.base.baseContentHash !== null)) {
       return emptyResult({
         clientOpId: item.clientOpId,
         conflictReason: 'base_content_hash_mismatch',

@@ -1,8 +1,8 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { Node } from '../features/nodes/model/nodeTypes';
+import { saveNodeReadingStateToRuntime } from '../shared/platform/runtime/nodeReadingStateRuntimeRepository';
 
-import { syncNodeContentToRuntimeNow } from './workspaceRuntimeSync';
 import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
 import {
   createReadingNode,
@@ -12,13 +12,9 @@ import {
   previewStub
 } from './workspaceStoreReviewActions.test-support';
 
-vi.mock('./workspaceRuntimeSync', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('./workspaceRuntimeSync')>();
-  return {
-    ...actual,
-    syncNodeContentToRuntimeNow: vi.fn(async () => true)
-  };
-});
+vi.mock('../shared/platform/runtime/nodeReadingStateRuntimeRepository', () => ({
+  saveNodeReadingStateToRuntime: vi.fn(async () => true)
+}));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -98,9 +94,9 @@ it('releases the next sequential topic when read is submitted as advance-ready',
   await expect(actions.readReviewTopic(now, { releaseSequentialReading: true })).resolves.toBe(true);
 
   expect(harness.getState().nodesById['reading-2']?.reading?.state).toBe('active');
-  expect(syncNodeContentToRuntimeNow).toHaveBeenCalledWith(
+  expect(saveNodeReadingStateToRuntime).toHaveBeenCalledWith(
     expect.objectContaining({
-      id: 'reading-2',
+      nodeId: 'reading-2',
       reading: expect.objectContaining({ state: 'active' })
     })
   );
@@ -128,9 +124,9 @@ it('releases after the current topic when earlier sequential topics remain activ
   await expect(actions.readReviewTopic(now, { releaseSequentialReading: true })).resolves.toBe(true);
 
   expect(harness.getState().nodesById['reading-4']?.reading?.state).toBe('active');
-  expect(syncNodeContentToRuntimeNow).toHaveBeenCalledWith(
+  expect(saveNodeReadingStateToRuntime).toHaveBeenCalledWith(
     expect.objectContaining({
-      id: 'reading-4',
+      nodeId: 'reading-4',
       reading: expect.objectContaining({ state: 'active' })
     })
   );

@@ -11,6 +11,7 @@ import {
 } from './companionSyncObjects';
 import {
   nodeVersionSyncAdapter,
+  nodeOpenStateSyncAdapter,
   nodeReadingSyncAdapter,
   nodeReviewSyncAdapter,
   reviewLogSyncAdapter,
@@ -77,6 +78,7 @@ function toPushAck(raw: DesktopSyncPushResponse['acks'][number]): SyncPushAck {
 }
 
 const statePushAdapters = {
+  node_open_state: nodeOpenStateSyncAdapter,
   node_reading: nodeReadingSyncAdapter,
   node_review: nodeReviewSyncAdapter,
   setting: settingSyncAdapter,

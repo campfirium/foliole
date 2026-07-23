@@ -1,4 +1,5 @@
 import type { Node, NodeReadingProfile } from '../features/nodes/model/nodeTypes';
+import { saveNodeReadingStateToRuntime } from '../shared/platform/runtime/nodeReadingStateRuntimeRepository';
 
 import {
   applyReadingSnapshot,
@@ -9,9 +10,8 @@ import {
   isSameReadingProfile
 } from './workspaceActionHistoryReading';
 import { cloneReviewSession } from './workspaceDeleteActionHistory';
-import { syncNodeContentToRuntime } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
-import { markNodeOpenedViewState } from './workspaceStoreOpenedNodeView';
+import { persistNodeOpened } from './workspaceStoreNodeOpenState';
 
 const DISMISS_TOPIC_ACTION_TITLE = 'Dismiss Topic';
 export type WorkspaceTopicReadingActionTitle =
@@ -86,14 +86,12 @@ function getNavigationPatchAfterApply(
     const activeNodeId = reviewSession.currentNodeId ?? entry.nodeId;
     return {
       activeNodeId,
-      nodeViewById: markNodeOpenedViewState(state, activeNodeId),
       reviewSession: cloneReviewSession(reviewSession) ?? state.reviewSession
     };
   }
   if (mode === 'undo') {
     return {
-      activeNodeId: entry.nodeId,
-      nodeViewById: markNodeOpenedViewState(state, entry.nodeId)
+      activeNodeId: entry.nodeId
     };
   }
   return {};
@@ -123,12 +121,12 @@ export function applyTopicDismissWorkspaceHistory(args: {
     if (isInvalid) {
       return { appActionHistory: args.popInvalidTopEntry(state.appActionHistory, args.mode) };
     }
-    const nextNode = applyReadingSnapshot(node, apply.nextReading, args.now);
+    const nextNode = applyReadingSnapshot(node, apply.nextReading);
     const nextNodesById = {
       ...state.nodesById,
       [args.entry.nodeId]: nextNode
     };
-    applyRelatedReadingSnapshots({ nextNodesById, now: args.now, readings: apply.relatedReadings });
+    applyRelatedReadingSnapshots({ nextNodesById, readings: apply.relatedReadings });
     nextNodesForSync = [
       nextNode,
       ...apply.relatedReadings
@@ -142,6 +140,13 @@ export function applyTopicDismissWorkspaceHistory(args: {
     };
   });
   if (nextNodesForSync.length === 0) return false;
-  nextNodesForSync.forEach((node) => syncNodeContentToRuntime(node));
+  nextNodesForSync.forEach((node) => void saveNodeReadingStateToRuntime({
+    nodeId: node.id,
+    reading: node.reading ?? null,
+    updatedAt: args.now
+  }));
+  const reviewSession = args.mode === 'undo' ? args.entry.beforeReviewSession : args.entry.afterReviewSession;
+  const activeNodeId = reviewSession?.currentNodeId ?? (args.mode === 'undo' ? args.entry.nodeId : null);
+  if (activeNodeId) void persistNodeOpened(args.set, activeNodeId, args.now);
   return true;
 }

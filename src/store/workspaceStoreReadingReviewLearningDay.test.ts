@@ -1,6 +1,7 @@
 import { expect, it, vi } from 'vitest';
 
-import { syncNodeContentToRuntimeNow } from './workspaceRuntimeSync';
+import { saveNodeReadingStateToRuntime } from '../shared/platform/runtime/nodeReadingStateRuntimeRepository';
+
 import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
 import {
   createReadingNode,
@@ -10,13 +11,9 @@ import {
   previewStub
 } from './workspaceStoreReviewActions.test-support';
 
-vi.mock('./workspaceRuntimeSync', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('./workspaceRuntimeSync')>();
-  return {
-    ...actual,
-    syncNodeContentToRuntimeNow: vi.fn(async () => true)
-  };
-});
+vi.mock('../shared/platform/runtime/nodeReadingStateRuntimeRepository', () => ({
+  saveNodeReadingStateToRuntime: vi.fn(async () => true)
+}));
 
 it('lets cross-day reading topics enter and complete after the learning day starts', async () => {
   const lastHandledAt = new Date(2026, 2, 9, 21).toISOString();
@@ -35,5 +32,5 @@ it('lets cross-day reading topics enter and complete after the learning day star
 
   expect(harness.getState().reviewSession.currentNodeId).toBeNull();
   expect(harness.getState().reviewSession.readTopicCount).toBe(1);
-  expect(syncNodeContentToRuntimeNow).toHaveBeenCalledTimes(1);
+  expect(saveNodeReadingStateToRuntime).toHaveBeenCalledTimes(1);
 });

@@ -1,12 +1,13 @@
 import type { Node } from '../features/nodes/model/nodeTypes';
 
+
 import {
   syncNodeContentToRuntime,
   syncRestoreNodesToRuntime,
   syncSoftDeleteNodesToRuntime
 } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
-import { markNodeOpenedViewState } from './workspaceStoreOpenedNodeView';
+import { persistNodeOpened } from './workspaceStoreNodeOpenState';
 
 const DELETE_TOPIC_ACTION_TITLE = 'Delete Topic';
 
@@ -120,13 +121,8 @@ function buildNodesPatch(state: WorkspaceState, nodesById: Record<string, Node>)
       };
 }
 
-function buildNavigationPatch(state: WorkspaceState, activeNodeId: string | null) {
-  return activeNodeId
-    ? {
-        activeNodeId,
-        nodeViewById: markNodeOpenedViewState(state, activeNodeId)
-      }
-    : { activeNodeId };
+function buildNavigationPatch(activeNodeId: string | null) {
+  return { activeNodeId };
 }
 
 function applyUndoTopicDelete(
@@ -140,7 +136,7 @@ function applyUndoTopicDelete(
   return {
     parentNodesToSync: Object.values(entry.beforeParentNodesById),
     patch: {
-      ...buildNavigationPatch(state, entry.beforeActiveNodeId),
+      ...buildNavigationPatch(entry.beforeActiveNodeId),
       nodesById: buildNodesPatch(state, entry.beforeParentNodesById),
       reviewSession: cloneReviewSession(entry.beforeReviewSession)!,
       trashedNodeDeletedAtById: restoreDeletedAtSnapshot(state.trashedNodeDeletedAtById, entry),
@@ -160,7 +156,7 @@ function applyRedoTopicDelete(
   return {
     parentNodesToSync: Object.values(entry.afterParentNodesById),
     patch: {
-      ...buildNavigationPatch(state, entry.afterActiveNodeId),
+      ...buildNavigationPatch(entry.afterActiveNodeId),
       nodesById: buildNodesPatch(state, entry.afterParentNodesById),
       reviewSession: cloneReviewSession(entry.afterReviewSession)!,
       trashedNodeDeletedAtById: {
@@ -219,5 +215,7 @@ export function applyTopicDeleteWorkspaceHistory(args: {
   });
   if (!deleteApply) return false;
   syncTopicDeleteHistoryApply(deleteApply);
+  const activeNodeId = args.mode === 'undo' ? args.entry.beforeActiveNodeId : args.entry.afterActiveNodeId;
+  if (activeNodeId) void persistNodeOpened(args.set, activeNodeId, new Date().toISOString());
   return true;
 }

@@ -1,4 +1,5 @@
 import type { Node } from '../features/nodes/model/nodeTypes';
+import { saveNodeReadingStateToRuntime } from '../shared/platform/runtime/nodeReadingStateRuntimeRepository';
 
 import {
   applyRelatedReadingSnapshots,
@@ -7,7 +8,7 @@ import {
 } from './workspaceActionHistoryReading';
 import { syncNodeContentToRuntime } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
-import { markNodeOpenedViewState } from './workspaceStoreOpenedNodeView';
+import { persistNodeOpened } from './workspaceStoreNodeOpenState';
 
 const SHELVE_TOPIC_ACTION_TITLE = 'Shelve Topic';
 const UNSHELVE_TOPIC_ACTION_TITLE = 'Unshelve Topic';
@@ -79,9 +80,19 @@ function getNavigationPatchAfterShelveApply(
   const activeNodeId = reviewSession.currentNodeId ?? entry.nodeId;
   return {
     activeNodeId,
-    nodeViewById: markNodeOpenedViewState(state, activeNodeId),
     reviewSession: cloneReviewSession(reviewSession) ?? state.reviewSession
   };
+}
+
+function persistShelveHistoryNodes(nodes: Node[], updatedAt: string) {
+  if (nodes.length === 0) return false;
+  syncNodeContentToRuntime(nodes[0]!);
+  nodes.slice(1).forEach((node) => void saveNodeReadingStateToRuntime({
+    nodeId: node.id,
+    reading: node.reading ?? null,
+    updatedAt
+  }));
+  return true;
 }
 
 export function applyTopicShelveWorkspaceHistory(args: {
@@ -123,7 +134,7 @@ export function applyTopicShelveWorkspaceHistory(args: {
       ...state.nodesById,
       [args.entry.nodeId]: nextNode
     };
-    applyRelatedReadingSnapshots({ nextNodesById, now: args.now, readings: relatedReadings });
+    applyRelatedReadingSnapshots({ nextNodesById, readings: relatedReadings });
     nextNodesForSync = [
       nextNode,
       ...relatedReadings
@@ -136,7 +147,8 @@ export function applyTopicShelveWorkspaceHistory(args: {
       nodesById: nextNodesById
     };
   });
-  if (nextNodesForSync.length === 0) return false;
-  nextNodesForSync.forEach((node) => syncNodeContentToRuntime(node));
+  if (!persistShelveHistoryNodes(nextNodesForSync, args.now)) return false;
+  const reviewSession = args.mode === 'undo' ? args.entry.beforeReviewSession : args.entry.afterReviewSession;
+  if (reviewSession) void persistNodeOpened(args.set, reviewSession.currentNodeId ?? args.entry.nodeId, args.now);
   return true;
 }

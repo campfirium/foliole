@@ -11,6 +11,9 @@ import type { NativeInvokeTuple } from './nativeInvokeTypes.js';
 import type { NativeLocalFileCommandMap } from './nativeLocalFileCommandMap.js';
 import type { NativeMoveCommandMap } from './nativeMoveCommandMap.js';
 import type { NativeNodeCreationMutationSpec, NativeNodeSnapshotBatchMutationSpec, NativeNodeSnapshotMutationSpec } from './nativeNodeMutationContract.js';
+import type { NativeNodeOpenStateResult, NativeSaveNodeOpenStateArgs } from './nativeNodeOpenStateContract.js';
+import type { NativeSaveNodeReadingStateArgs } from './nativeNodeReadingStateContract.js';
+import type { NativeSaveNodeReviewStateArgs } from './nativeNodeReviewStateContract.js';
 import type { NativeReadwiseCommandMap } from './nativeReadwiseCommandMap.js';
 import type { NativeRemoteImageCommandMap } from './nativeRemoteImageCommandMap.js';
 import type { NativeSearchIndexCommandMap } from './nativeSearchIndexCommandMap.js';
@@ -37,6 +40,7 @@ export type * from './nativeFoliolePublishContract.js';
 export type * from './nativeReadwiseContract.js'; export type * from './nativeUtilityContract.js'; export type * from './nativeWordPressPublishContract.js';
 export type * from './nativeSourceDispositionContract.js';
 export type * from './nativeInitialLibrarySetupContract.js';
+export type * from './nativeNodeOpenStateContract.js';
 export type * from './nativeAideStorageContract.js';
 export type * from './nativeAssistantImageContract.js';
 
@@ -124,6 +128,18 @@ export type NativeCommandMap = NativeAssistantCommandMap & NativeAideStorageComm
   };
   [NATIVE_COMMANDS.saveReadingProgress]: {
     args: NativeSaveReadingProgressArgs;
+    result: null;
+  };
+  [NATIVE_COMMANDS.saveNodeOpenState]: {
+    args: NativeSaveNodeOpenStateArgs;
+    result: NativeNodeOpenStateResult;
+  };
+  [NATIVE_COMMANDS.saveNodeReadingState]: {
+    args: NativeSaveNodeReadingStateArgs;
+    result: null;
+  };
+  [NATIVE_COMMANDS.saveNodeReviewState]: {
+    args: NativeSaveNodeReviewStateArgs;
     result: null;
   };
   [NATIVE_COMMANDS.resetImportData]: {

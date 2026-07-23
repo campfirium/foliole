@@ -3,6 +3,19 @@ import type { Node, NodeReadingProfile, NodeReviewProfile } from '../features/no
 
 import type { WorkspacePersistedState, WorkspaceState } from './workspaceStoreTypes';
 
+export function mergeNodeOpenStateById(
+  current: WorkspaceState['nodeOpenStateById'],
+  next: WorkspacePersistedState['nodeOpenStateById']
+) {
+  const merged = { ...current };
+  for (const [nodeId, openState] of Object.entries(next ?? {})) {
+    if (openState && (!merged[nodeId] || timestampValue(openState.lastOpenedAt) > timestampValue(merged[nodeId]?.lastOpenedAt))) {
+      merged[nodeId] = openState;
+    }
+  }
+  return merged;
+}
+
 function timestampValue(value: string | null | undefined) {
   if (!value) {
     return Number.NEGATIVE_INFINITY;

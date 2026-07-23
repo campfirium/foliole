@@ -128,6 +128,7 @@ function useWorkspaceTopicTreeData(props: WorkspaceTopicTreeProps) {
     Boolean(props.preserveItemOrder || storedManualChildOrder?.length)
   );
   const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
+  const nodeOpenStateById = useWorkspaceStore((state) => state.nodeOpenStateById);
   const dismissedTopicVisibility = useDismissedTopicVisibility();
   const sort = contentSort.sort;
   const childrenByParent = useMemo(
@@ -141,7 +142,7 @@ function useWorkspaceTopicTreeData(props: WorkspaceTopicTreeProps) {
     childrenByParent,
     itemIds: rootItemIds,
     manualChildOrder,
-    nodeViewById,
+    nodeOpenStateById,
     nodesById: props.nodesById,
     sortRefreshVersion: contentSort.sortRefreshVersion,
     sort,

@@ -8,10 +8,19 @@ import { runCompanionSyncMutationTask } from './companion/sync/mutation/companio
 import {
   FolioleCompanionSync,
   getNativeCompanionSettingWritePlatform,
+  isNativeCompanionOpenStateWriteRuntime,
   isNativeCompanionReadingWriteRuntime,
   isNativeCompanionReviewWriteRuntime,
   isNativeCompanionViewStateWriteRuntime
 } from './companionWorkspaceRuntimeRepository';
+
+export async function saveCompanionSyncNodeOpenState(args: { lastOpenedAt: string; nodeId: string }) {
+  if (!isNativeCompanionOpenStateWriteRuntime()) return null;
+  return runCompanionSyncMutationTask(() => FolioleCompanionSync.saveSyncNodeOpenState({
+    last_opened_at: args.lastOpenedAt,
+    node_id: args.nodeId
+  }));
+}
 
 export interface CompanionSyncSettingRecordArgs {
   key: string;

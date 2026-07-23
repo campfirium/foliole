@@ -36,7 +36,6 @@ export interface SharedReviewGradeResult {
   nextReviewProfile: NodeReviewProfile;
   nodePatch: {
     review: NodeReviewProfile;
-    updatedAt: string;
   };
   reviewedAt: string;
   reviewLog: SharedReviewGradeLog;
@@ -80,8 +79,7 @@ export async function gradeSharedFsrsReviewNode(args: {
       review: {
         ...nextReviewProfile,
         lastReviewAt: reviewedAt
-      },
-      updatedAt: args.now
+      }
     },
     reviewedAt,
     reviewLog: {

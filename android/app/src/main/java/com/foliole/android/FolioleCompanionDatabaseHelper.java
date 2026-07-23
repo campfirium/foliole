@@ -15,7 +15,7 @@ import java.time.Instant;
 final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
 
     static final String DATABASE_NAME = "foliole-companionSQLite.db";
-    private static final int DATABASE_VERSION = 19;
+    private static final int DATABASE_VERSION = 20;
     private final Context context;
 
     FolioleCompanionDatabaseHelper(Context context) {
@@ -239,6 +239,12 @@ final class FolioleCompanionDatabaseHelper extends SQLiteOpenHelper {
         SQLiteDatabase database = getWritableDatabase();
         String deviceId = FolioleCompanionMetaRecords.loadOrCreateDeviceId(context, database, Instant.now().toString());
         return FolioleCompanionSyncStateWriteStore.saveNodeReading(context, database, record, deviceId);
+    }
+
+    JSObject saveSyncNodeOpenState(JSONObject record) throws Exception {
+        SQLiteDatabase database = getWritableDatabase();
+        String deviceId = FolioleCompanionMetaRecords.loadOrCreateDeviceId(context, database, Instant.now().toString());
+        return FolioleCompanionSyncStateWriteStore.saveNodeOpenState(context, database, record, deviceId);
     }
 
     JSObject saveSyncNodeReviewRecord(JSONObject record) throws Exception {

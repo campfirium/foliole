@@ -241,6 +241,11 @@ public class FolioleCompanionSyncPlugin extends FolioleCompanionDatabasePlugin {
     }
 
     @PluginMethod
+    public void saveSyncNodeOpenState(PluginCall call) {
+        withCall(call, "Failed to save companion sync node open state.", FolioleCompanionSyncStatePluginActions::saveSyncNodeOpenState);
+    }
+
+    @PluginMethod
     public void saveSyncNodeReviewRecord(PluginCall call) {
         withCall(call, "Failed to save companion sync node review record.", FolioleCompanionSyncStatePluginActions::saveSyncNodeReviewRecord);
     }

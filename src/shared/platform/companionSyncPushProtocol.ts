@@ -80,7 +80,7 @@ function stateClientOpId(row: NativeSyncStateObjectRecord) {
 }
 
 function createStateObjectSyncAdapter(
-  objectType: 'node_reading' | 'node_review' | 'setting' | 'view_state'
+  objectType: 'node_open_state' | 'node_reading' | 'node_review' | 'setting' | 'view_state'
 ): SyncableObjectAdapter<SyncableStateObjectRow, NativeSyncStateObjectRecord> {
   return {
     applyPullPayload(payload, localRow) {
@@ -122,17 +122,19 @@ function createStateObjectSyncAdapter(
 
 function resolveStateApplyStatus(
   payload: NativeSyncStateObjectRecord,
-  objectType: 'node_reading' | 'node_review' | 'setting' | 'view_state',
+  objectType: 'node_open_state' | 'node_reading' | 'node_review' | 'setting' | 'view_state',
   localRow?: SyncableStateObjectRow | null
 ): SyncApplyResult['status'] {
   if (payload.object_type !== objectType) return 'ignored';
-  if (objectType === 'view_state') return 'applied';
+  if (objectType === 'view_state' || objectType === 'node_open_state') return 'applied';
   if (!localRow || !sameIdentity(stateObjectIdentity(payload), stateObjectIdentity(localRow))) return 'applied';
   if (localRow.local_status && localRow.local_status !== 'ready_to_push') return 'blocked_by_dirty';
   return localRow.local_status === 'ready_to_push' ? 'blocked_by_dirty' : 'applied';
 }
 
 export const nodeReadingSyncAdapter = createStateObjectSyncAdapter('node_reading');
+
+export const nodeOpenStateSyncAdapter = createStateObjectSyncAdapter('node_open_state');
 
 export const nodeReviewSyncAdapter = createStateObjectSyncAdapter('node_review');
 
@@ -223,6 +225,7 @@ export const nodeVersionSyncAdapter: SyncableObjectAdapter<SyncableNodeVersionRo
 
 export const syncPushAdapters = {
   node: nodeVersionSyncAdapter,
+  node_open_state: nodeOpenStateSyncAdapter,
   node_reading: nodeReadingSyncAdapter,
   node_review: nodeReviewSyncAdapter,
   setting: settingSyncAdapter,

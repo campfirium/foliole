@@ -24,6 +24,7 @@ describe('Android sync object type protocol rules', () => {
     const viewStateSource = await readFile(VIEW_STATE_SYNC_STORE, 'utf8');
 
     expect(ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS.syncObjectTypes).toEqual({
+      nodeOpenState: 'node_open_state',
       nodeReading: 'node_reading',
       nodeReview: 'node_review',
       settingRecord: 'setting',
@@ -32,6 +33,7 @@ describe('Android sync object type protocol rules', () => {
     expect(stateWriteSource).toContain('FolioleCompanionSyncProtocolDefinitions.syncObjectType(context, key)');
     expect(viewStateSource).not.toContain('FolioleCompanionSyncProtocolDefinitions.syncObjectType');
     expect(stateWriteSource).not.toContain('"node_reading"');
+    expect(stateWriteSource).not.toContain('"node_open_state"');
     expect(stateWriteSource).not.toContain('"node_review"');
     expect(stateWriteSource).not.toContain('"setting"');
     expect(viewStateSource).not.toContain('"view_state"');

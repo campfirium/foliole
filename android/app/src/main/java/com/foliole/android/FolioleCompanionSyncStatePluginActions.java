@@ -109,6 +109,10 @@ final class FolioleCompanionSyncStatePluginActions {
         return databaseHelper.saveSyncNodeReadingRecord(call.getData());
     }
 
+    static JSObject saveSyncNodeOpenState(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
+        return databaseHelper.saveSyncNodeOpenState(call.getData());
+    }
+
     static JSObject saveSyncNodeReviewRecord(FolioleCompanionDatabaseHelper databaseHelper, PluginCall call) throws Exception {
         return databaseHelper.saveSyncNodeReviewRecord(call.getData());
     }

@@ -81,8 +81,7 @@ it('grades a FSRS node with inherited short-term settings and review log output'
       review: {
         lastReviewAt: '2026-04-22T08:10:00.000Z',
         reps: 4
-      },
-      updatedAt: '2026-04-22T08:10:00.000Z'
+      }
     },
     reviewLog: {
       grade: 3,
@@ -142,7 +141,7 @@ it('returns a host-neutral patch that desktop and companion can apply identicall
   const companionNode = { ...node, content: 'companion', ...result?.nodePatch };
 
   expect(desktopNode.review).toEqual(companionNode.review);
-  expect(desktopNode.updatedAt).toBe(companionNode.updatedAt);
+  expect(result?.nodePatch).not.toHaveProperty('updatedAt');
   expect(result?.reviewLog.schedulerVersion).toBe('ts-fsrs@4');
 });
 

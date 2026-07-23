@@ -69,8 +69,8 @@ it('uses Home as the entity root without reparenting Inbox in source data', () =
       result.current.topicNodesById,
       { direction: 'desc', key: 'lastOpenedAt' },
       {
-        'topic-a': { updatedAt: '2026-05-21T10:00:00.000Z' },
-        'topic-inbox': { updatedAt: '2026-05-22T10:00:00.000Z' }
+        'topic-a': { lastOpenedAt: '2026-05-21T10:00:00.000Z' },
+        'topic-inbox': { lastOpenedAt: '2026-05-22T10:00:00.000Z' }
       }
     )
   ).toEqual(['topic-inbox', 'topic-a', 'topic-nested']);

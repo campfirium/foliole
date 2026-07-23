@@ -4,6 +4,7 @@ import type { VirtualNodeFilter } from '../core/nodes/virtualNodeFilter.js';
 import type { UnifiedPushQueueRules } from '../core/review/unifiedPushQueueRules.js';
 
 import type { NativeSchedulerCard } from './nativeContract.js';
+import type { NativeNodeOpenStateResult } from './nativeNodeOpenStateContract.js';
 import type { NativeWorkspaceReadingProfile } from './nativeReadingContract.js';
 import type { NativeWorkspaceAnchorLink, NativeWorkspaceImageRegionGroup } from './nativeWorkspaceNodeContract.js';
 export type * from './nativeReadingProgressContract.js';
@@ -54,6 +55,7 @@ export interface NativeWorkspaceNodeSnapshot {
 
 export interface NativeWorkspaceSnapshot {
   activeNodeId: string | null;
+  nodeOpenStateById?: Record<string, NativeNodeOpenStateResult>;
   nodeOrder: string[];
   nodesById: Record<string, NativeWorkspaceNodeSnapshot>;
   trashedNodeDeletedAtById?: Record<string, string>;

@@ -38,7 +38,7 @@ function buildReadOrLaterPatch(args: {
     snapshot: args.snapshot
   });
   const afterReading = buildNextReadingProfile(nextReading, args.currentNode.reading);
-  const nextNode: Node = { ...args.currentNode, reading: afterReading, updatedAt: args.now };
+  const nextNode: Node = { ...args.currentNode, reading: afterReading };
   const nextNodesById = { ...args.state.nodesById, [args.currentNodeId]: nextNode };
   const sequentialPatch = args.action === 'read' && args.releaseSequentialReading
     ? buildSequentialReadingReadPatch({
@@ -79,7 +79,7 @@ function buildDismissPatch(args: {
     nodesById: args.state.nodesById,
     now: args.now
   });
-  const nextNode: Node = { ...args.currentNode, reading: afterReading, updatedAt: args.now };
+  const nextNode: Node = { ...args.currentNode, reading: afterReading };
   const nextNodesById = { ...args.state.nodesById, [args.currentNodeId]: nextNode };
   const sequentialPatch = buildSequentialReadingDismissPatch({
     defaultPriority,

@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { saveNodeReadingStateToRuntime } from '../shared/platform/runtime/nodeReadingStateRuntimeRepository';
+
 import { syncNodeContentToRuntime } from './workspaceRuntimeSync';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
 import {
@@ -18,6 +20,9 @@ vi.mock('./workspaceRuntimeSync', () => ({
   syncNodeRevealToRuntime: vi.fn(),
   syncRestoreNodesToRuntime: vi.fn(),
   syncSoftDeleteNodesToRuntime: vi.fn()
+}));
+vi.mock('../shared/platform/runtime/nodeReadingStateRuntimeRepository', () => ({
+  saveNodeReadingStateToRuntime: vi.fn(async () => true)
 }));
 
 beforeEach(() => {
@@ -57,14 +62,11 @@ describe('createWorkspaceNodeActions dismiss', () => {
       title: 'Dismiss Topic',
       type: 'topic.dismiss'
     });
-    expect(syncNodeContentToRuntime).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: 'node-1',
-        reading: expect.objectContaining({
-          state: 'dismissed'
-        })
-      })
-    );
+    expect(saveNodeReadingStateToRuntime).toHaveBeenCalledWith(expect.objectContaining({
+      nodeId: 'node-1',
+      reading: expect.objectContaining({ state: 'dismissed' })
+    }));
+    expect(syncNodeContentToRuntime).not.toHaveBeenCalled();
   });
 
 });

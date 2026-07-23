@@ -1,7 +1,9 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { saveNodeReadingStateToRuntime } from '../shared/platform/runtime/nodeReadingStateRuntimeRepository';
+
 import { browserLocalWorkspaceReviewPersistence } from './workspaceReviewPersistence';
-import { syncNodeContentToRuntimeNow, syncReviewGradeToRuntime } from './workspaceRuntimeSync';
+import { syncReviewGradeToRuntime } from './workspaceRuntimeSync';
 import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
 import {
   createQaNode,
@@ -22,6 +24,9 @@ vi.mock('./workspaceRuntimeSync', async (importOriginal) => {
     })
   };
 });
+vi.mock('../shared/platform/runtime/nodeReadingStateRuntimeRepository', () => ({
+  saveNodeReadingStateToRuntime: vi.fn(async () => false)
+}));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -49,7 +54,7 @@ it('updates reading review actions without runtime persistence', async () => {
   const currentNodeId = harness.getState().reviewSession.currentNodeId!;
   await expect(actions.postponeReviewTopic(now)).resolves.toBe(true);
 
-  expect(syncNodeContentToRuntimeNow).not.toHaveBeenCalled();
+  expect(saveNodeReadingStateToRuntime).not.toHaveBeenCalled();
   expect(harness.getState().nodesById[currentNodeId]?.reading).toMatchObject({
     lastHandledAt: now,
     state: 'active'
@@ -71,7 +76,7 @@ it('updates soon and dismiss review state without runtime persistence', async ()
   const dismissedNodeId = harness.getState().reviewSession.currentNodeId!;
 
   await expect(actions.dismissReviewTopic(now)).resolves.toBe(true);
-  expect(syncNodeContentToRuntimeNow).not.toHaveBeenCalled();
+  expect(saveNodeReadingStateToRuntime).not.toHaveBeenCalled();
   expect(harness.getState().nodesById[dismissedNodeId]?.reading?.state).toBe('dismissed');
 });
 
@@ -89,7 +94,7 @@ it('updates topic delay and fsrs grade without runtime persistence', async () =>
   actions.revealReviewAnswer();
   await expect(actions.gradeReviewCard(3, now)).resolves.toBe(true);
 
-  expect(syncNodeContentToRuntimeNow).not.toHaveBeenCalled();
+  expect(saveNodeReadingStateToRuntime).not.toHaveBeenCalled();
   expect(syncReviewGradeToRuntime).not.toHaveBeenCalled();
   expect(harness.getState().nodesById['qa-1']?.review).toMatchObject({
     lastReviewAt: now,

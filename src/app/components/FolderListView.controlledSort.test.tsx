@@ -5,7 +5,6 @@ import { expect, it } from 'vitest';
 import type { FolderListSortDirection, FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
-import type { NodeViewState } from '../../store/workspaceStore';
 
 import { FolderListView } from './FolderListView';
 
@@ -40,7 +39,7 @@ it('updates a controlled sort key through the toolbar menu', () => {
       createNode({ id: 'node-2', title: 'Alpha', updatedAt: '2026-04-03T09:00:00.000Z' })
     ];
     const nodesById = Object.fromEntries([folderNode, ...children].map((node) => [node.id, node]));
-    const nodeViewById: Record<string, NodeViewState | undefined> = {};
+    const nodeViewById = {};
 
     return (
       <FolderListView
@@ -104,9 +103,9 @@ it('keeps last-opened order newest first even if controlled direction is ascendi
   function ControlledFolderList() {
     const [sortKey, setSortKey] = useState<FolderListSortKey>('dateLastOpened');
     const [sortDirection, setSortDirection] = useState<FolderListSortDirection>('asc');
-    const [nodeViewById, setNodeViewById] = useState<Record<string, NodeViewState | undefined>>({
-      'node-1': { scrollTop: 0, selection: null, updatedAt: '2026-04-01T09:00:00.000Z' },
-      'node-2': { scrollTop: 0, selection: null, updatedAt: '2026-04-02T09:00:00.000Z' }
+    const [nodeOpenStateById, setNodeOpenStateById] = useState<Record<string, { lastOpenedAt: string } | undefined>>({
+      'node-1': { lastOpenedAt: '2026-04-01T09:00:00.000Z' },
+      'node-2': { lastOpenedAt: '2026-04-02T09:00:00.000Z' }
     });
     const folderNode = createNode({ id: 'folder-1', kind: 'folder', parentNodeId: null, title: 'Library root' });
     const children = [
@@ -119,9 +118,9 @@ it('keeps last-opened order newest first even if controlled direction is ascendi
       <>
         <button
           onClick={() =>
-            setNodeViewById({
-              'node-1': { scrollTop: 0, selection: null, updatedAt: '2026-04-03T09:00:00.000Z' },
-              'node-2': { scrollTop: 0, selection: null, updatedAt: '2026-04-02T09:00:00.000Z' }
+            setNodeOpenStateById({
+              'node-1': { lastOpenedAt: '2026-04-03T09:00:00.000Z' },
+              'node-2': { lastOpenedAt: '2026-04-02T09:00:00.000Z' }
             })
           }
           type="button"
@@ -131,7 +130,8 @@ it('keeps last-opened order newest first even if controlled direction is ascendi
         <FolderListView
           folderNodeId="folder-1"
           nodeOrder={['folder-1', ...children.map((node) => node.id)]}
-          nodeViewById={nodeViewById}
+          nodeOpenStateById={nodeOpenStateById}
+          nodeViewById={{}}
           nodesById={nodesById}
           onChangeSortDirection={setSortDirection}
           onChangeSortKey={setSortKey}

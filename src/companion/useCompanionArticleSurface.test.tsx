@@ -11,6 +11,9 @@ import {
 
 const syncObjectMock = vi.hoisted(() => ({
   saveCompanionSyncActiveViewState: vi.fn(async () => ({ content_hash: 'hash-active', object_id: 'active' })),
+  saveCompanionSyncNodeOpenState: vi.fn(async ({ lastOpenedAt }: { lastOpenedAt: string }) => ({
+    content_hash: 'hash-open', last_opened_at: lastOpenedAt, object_id: 'article-2'
+  })),
   saveCompanionSyncNodeReadingRecord: vi.fn(async () => ({ content_hash: 'hash-reading', object_id: 'article-1' })),
   saveCompanionSyncNodeReviewRecord: vi.fn(async () => ({ content_hash: 'hash-review', object_id: 'item-1' })),
   saveCompanionSyncNodeViewState: vi.fn(async () => ({ content_hash: 'hash-view', object_id: 'view' }))
@@ -73,6 +76,7 @@ describe('useCompanionArticleSurface', () => {
   beforeEach(() => {
     vi.useRealTimers();
     syncObjectMock.saveCompanionSyncActiveViewState.mockClear();
+    syncObjectMock.saveCompanionSyncNodeOpenState.mockClear();
     syncObjectMock.saveCompanionSyncNodeReadingRecord.mockClear();
     syncObjectMock.saveCompanionSyncNodeReadingRecord.mockResolvedValue({ content_hash: 'hash-reading', object_id: 'article-1' });
     syncObjectMock.saveCompanionSyncNodeReviewRecord.mockClear();
@@ -111,13 +115,12 @@ describe('useCompanionArticleSurface browsing', () => {
       result.current.handleSelectRecentArticle('article-2');
     });
 
-    await waitFor(() => expect(syncObjectMock.saveCompanionSyncNodeViewState).toHaveBeenCalledWith({
-      nodeId: 'article-2',
-      scrollTop: 0
-    }));
+    await waitFor(() => expect(syncObjectMock.saveCompanionSyncNodeOpenState).toHaveBeenCalledWith(
+      expect.objectContaining({ nodeId: 'article-2' })
+    ));
     expect(workspaceSync.replaceSnapshot).toHaveBeenCalledWith(
       expect.objectContaining({
-        persistedNodeViewById: expect.objectContaining({
+        nodeOpenStateById: expect.objectContaining({
           'article-2': expect.objectContaining({ nodeId: 'article-2' })
         })
       }),

@@ -17,6 +17,9 @@ vi.mock('./workspaceRuntimeSync', async (importOriginal) => {
     syncNodeContentToRuntimeNow: vi.fn(async () => true)
   };
 });
+vi.mock('../shared/platform/runtime/nodeReadingStateRuntimeRepository', () => ({
+  saveNodeReadingStateToRuntime: vi.fn(async () => true)
+}));
 
 function createUnscheduledReadingNode(id: string, createdAt: string): Node {
   return {

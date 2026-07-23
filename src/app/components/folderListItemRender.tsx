@@ -1,7 +1,6 @@
 import type { NodeSelectModifiers } from '../../features/nodes/components/NodeListTreeState';
 import type { FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import type { NodeViewState } from '../../store/workspaceStore';
 
 import { FolderListViewItem, type FolderListItemLayout } from './FolderListViewItem';
 
@@ -10,7 +9,7 @@ export interface RenderFolderListItemArgs {
   isBulkSelectionActive?: boolean;
   itemLayout: FolderListItemLayout;
   node: Node;
-  nodeViewById: Record<string, NodeViewState | undefined>;
+  nodeOpenStateById: Record<string, { lastOpenedAt?: string | null } | undefined>;
   nodesById: Record<string, Node>;
   onSelectNode: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   onSelectNodePath?: (nodeId: string) => void;
@@ -18,7 +17,7 @@ export interface RenderFolderListItemArgs {
 }
 
 export function renderFolderListItem(args: RenderFolderListItemArgs) {
-  const nodeViewState = args.nodeViewById[args.node.id];
+  const lastOpenedAt = args.nodeOpenStateById[args.node.id]?.lastOpenedAt;
   return (
     <FolderListViewItem
       active={args.activeNodeId === args.node.id}
@@ -26,7 +25,7 @@ export function renderFolderListItem(args: RenderFolderListItemArgs) {
       itemLayout={args.itemLayout}
       key={args.node.id}
       node={args.node}
-      {...(nodeViewState !== undefined ? { nodeViewState } : {})}
+      {...(lastOpenedAt !== undefined ? { lastOpenedAt } : {})}
       onSelectNode={args.onSelectNode}
       {...(args.onSelectNodePath ? { onSelectNodePath: args.onSelectNodePath } : {})}
       nodesById={args.nodesById}

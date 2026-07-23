@@ -9,6 +9,7 @@ import {
 } from './workspaceReviewPersistence';
 import { resolveReadingPriorityChain } from './workspaceReviewReading';
 import type { WorkspaceState } from './workspaceStore';
+import { persistNodeOpened } from './workspaceStoreNodeOpenState';
 import type { ReadingReviewPendingNodeIds } from './workspaceStoreReadingReviewActions';
 import { advanceOrCompleteAfterReadingAction } from './workspaceStoreReadingReviewSessionFlow';
 import { createReadingReviewHistoryPatch } from './workspaceStoreReviewActionHelpers';
@@ -86,7 +87,7 @@ function buildTopicDelayPatch(args: {
   const baseReading = node.reading ?? buildInitialReadingProfile({ node, nodeId: args.nodeId, now: args.now, state: args.state });
   const nextAt = resolveTopicPostponeDelayNextAt({ level: args.level, now: args.now, reading: baseReading });
   const nextReading = { ...baseReading, nextAt, state: 'active' as const };
-  const nextNode = { ...node, reading: nextReading, updatedAt: args.now };
+  const nextNode = { ...node, reading: nextReading };
   const nextNodesById = { ...args.state.nodesById, [args.nodeId]: nextNode };
   const reviewSession = buildReviewSessionAfterDelay({ ...args, nextNodesById });
   return {
@@ -127,6 +128,8 @@ export function createSetReviewTopicDelayActionWithPending(
         if (!canDelayTopic(currentNode)) return state;
         return result.patch;
       });
+      const nextActiveNodeId = result.patch.reviewSession?.currentNodeId ?? result.patch.reviewSession?.continueNodeId;
+      if (nextActiveNodeId) void persistNodeOpened(set, nextActiveNodeId, now);
       return true;
     } finally {
       pendingNodeIds.delete(nodeId);

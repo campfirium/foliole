@@ -15,6 +15,7 @@ import {
 import { buildResumeReviewSessionQueue } from './workspaceReviewResumeQueue';
 import { resolveReviewSessionProgress } from './workspaceReviewSessionProgress';
 import type { ReviewSessionStartOptions, WorkspaceState } from './workspaceStore';
+import { persistNodeOpened } from './workspaceStoreNodeOpenState';
 
 type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)) => void;
 
@@ -28,11 +29,13 @@ export function createStartReviewSessionAction(
 ): WorkspaceState['startReviewSession'] {
   return (now = new Date().toISOString(), options = {}) => {
     let started = false;
+    let openedNodeId: string | null = null;
     const startOptions = { ...defaultOptions, ...options };
     set((state) => {
       const queueNodeIds = buildStartReviewSessionQueue(state, now, startOptions);
       if (queueNodeIds.length === 0) return state;
       started = true;
+      openedNodeId = queueNodeIds[0]!;
       return {
         ...buildReviewActiveNodeContext(state, queueNodeIds[0] ?? null),
         reviewSession: createStartedReviewSession({
@@ -44,6 +47,7 @@ export function createStartReviewSessionAction(
         })
       };
     });
+    if (openedNodeId) void persistNodeOpened(set, openedNodeId, now);
     return started;
   };
 }
@@ -51,6 +55,7 @@ export function createStartReviewSessionAction(
 export function createContinueReviewSessionReadingAction(set: WorkspaceSet): WorkspaceState['continueReviewSessionReading'] {
   return (now = new Date().toISOString()) => {
     let continued = false;
+    let openedNodeId: string | null = null;
     set((state) => {
       const continueNodeId = state.reviewSession.continueNodeId;
       const continueNode = continueNodeId ? state.nodesById[continueNodeId] : undefined;
@@ -59,6 +64,7 @@ export function createContinueReviewSessionReadingAction(set: WorkspaceSet): Wor
       const queueNodeIds = buildReviewSessionReadingContinuationQueue(state, now, continueNodeId);
       if (!queueNodeIds.includes(continueNodeId)) return state;
       continued = true;
+      openedNodeId = continueNodeId;
       return {
         ...buildReviewActiveNodeContext(state, continueNodeId),
         reviewSession: advanceReviewSession(state.reviewSession, {
@@ -68,6 +74,7 @@ export function createContinueReviewSessionReadingAction(set: WorkspaceSet): Wor
         })
       };
     });
+    if (openedNodeId) void persistNodeOpened(set, openedNodeId, now);
     return continued;
   };
 }
@@ -75,11 +82,13 @@ export function createContinueReviewSessionReadingAction(set: WorkspaceSet): Wor
 export function createResumeReviewSessionAction(set: WorkspaceSet): WorkspaceState['resumeReviewSession'] {
   return (now = new Date().toISOString(), options = {}) => {
     let resumed = false;
+    let openedNodeId: string | null = null;
     set((state) => {
       const queueNodeIds = buildResumeReviewSessionQueue(state, now, options);
       const currentNodeId = queueNodeIds[0] ?? null;
       if (!currentNodeId) return state;
       resumed = true;
+      openedNodeId = currentNodeId;
       return {
         ...buildReviewActiveNodeContext(state, currentNodeId),
         reviewSession: createStartedReviewSession({
@@ -91,12 +100,14 @@ export function createResumeReviewSessionAction(set: WorkspaceSet): WorkspaceSta
         })
       };
     });
+    if (openedNodeId) void persistNodeOpened(set, openedNodeId, now);
     return resumed;
   };
 }
 
 export function createSetReviewSessionModeAction(set: WorkspaceSet): WorkspaceState['setReviewSessionMode'] {
   return (mode, now = new Date().toISOString()) => {
+    let openedNodeId: string | null = null;
     set((state) => {
       const isSameMode = state.reviewSessionMode === mode;
       if (!state.reviewSession.currentNodeId) {
@@ -104,6 +115,7 @@ export function createSetReviewSessionModeAction(set: WorkspaceSet): WorkspaceSt
       }
       const queueNodeIds = buildReviewQueue(state, now, mode);
       const completedCount = resolveReviewSessionProgress(state.reviewSession).reviewCompletedCount;
+      openedNodeId = queueNodeIds[0] ?? null;
       return {
         ...buildReviewActiveNodeContext(state, queueNodeIds[0] ?? null),
         reviewSession: queueNodeIds.length
@@ -116,5 +128,6 @@ export function createSetReviewSessionModeAction(set: WorkspaceSet): WorkspaceSt
         reviewSessionMode: mode
       };
     });
+    if (openedNodeId) void persistNodeOpened(set, openedNodeId, now);
   };
 }

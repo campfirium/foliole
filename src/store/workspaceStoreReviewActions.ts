@@ -17,6 +17,7 @@ import {
 } from './workspaceReviewPersistence';
 import { advanceReviewSession, completeReviewSession, createEmptyReviewSession } from './workspaceReviewReading';
 import type { ReviewSessionStartOptions, WorkspaceState } from './workspaceStore';
+import { persistNodeOpened } from './workspaceStoreNodeOpenState';
 import {
   createReadReviewTopicActionWithPending,
   createPostponeReviewTopicActionWithPending,
@@ -132,6 +133,8 @@ function createGradeReviewCardAction(
       reviewedAt: result.reviewedAt,
       now
     });
+    const nextActiveNodeId = get().activeNodeId;
+    if (nextActiveNodeId) void persistNodeOpened(set, nextActiveNodeId, now);
 
     return true;
   };

@@ -1,9 +1,9 @@
-import type { Node, NodeReviewProfile } from '../features/nodes/model/nodeTypes';
+import type { NodeReviewProfile } from '../features/nodes/model/nodeTypes';
+import { saveNodeReviewStateToRuntime } from '../shared/platform/runtime/nodeReviewStateRuntimeRepository';
 
 import { cloneReviewSession } from './workspaceDeleteActionHistory';
-import { syncNodeContentToRuntime } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
-import { markNodeOpenedViewState } from './workspaceStoreOpenedNodeView';
+import { persistNodeOpened } from './workspaceStoreNodeOpenState';
 
 const GRADE_REVIEW_ACTION_TITLE = 'Grade Review';
 
@@ -73,7 +73,6 @@ function getNavigationPatchAfterApply(
   const activeNodeId = reviewSession.currentNodeId ?? entry.nodeId;
   return {
     activeNodeId,
-    nodeViewById: markNodeOpenedViewState(state, activeNodeId),
     reviewSession: cloneReviewSession(reviewSession) ?? state.reviewSession
   };
 }
@@ -90,29 +89,35 @@ export function applyReviewGradeWorkspaceHistory(args: {
     mode: 'redo' | 'undo'
   ) => WorkspaceState['appActionHistory'];
 }) {
-  let nextNodeForSync: Node | null = null;
+  let didApply = false;
+  const nextReview = args.mode === 'undo' ? args.entry.beforeReview : args.entry.afterReview;
   args.set((state) => {
     const node = state.nodesById[args.entry.nodeId];
     const expectedReview = args.mode === 'undo' ? args.entry.afterReview : args.entry.beforeReview;
-    const nextReview = args.mode === 'undo' ? args.entry.beforeReview : args.entry.afterReview;
     if (!node || state.trashedNodeIds.includes(args.entry.nodeId) || !isSameReviewProfile(node.review, expectedReview)) {
       return { appActionHistory: args.popInvalidTopEntry(state.appActionHistory, args.mode) };
     }
-    nextNodeForSync = {
+    const nextNode = {
       ...node,
-      review: cloneReviewProfile(nextReview),
-      updatedAt: args.now
+      review: cloneReviewProfile(nextReview)
     };
+    didApply = true;
     return {
       ...getNavigationPatchAfterApply(state, args.entry, args.mode),
       appActionHistory: args.updateHistoryAfterApply(state.appActionHistory, args.entry, args.mode),
       nodesById: {
         ...state.nodesById,
-        [args.entry.nodeId]: nextNodeForSync
+        [args.entry.nodeId]: nextNode
       }
     };
   });
-  if (!nextNodeForSync) return false;
-  syncNodeContentToRuntime(nextNodeForSync);
+  if (!didApply) return false;
+  void saveNodeReviewStateToRuntime({
+    nodeId: args.entry.nodeId,
+    review: nextReview,
+    updatedAt: args.now
+  });
+  const reviewSession = args.mode === 'undo' ? args.entry.beforeReviewSession : args.entry.afterReviewSession;
+  void persistNodeOpened(args.set, reviewSession.currentNodeId ?? args.entry.nodeId, args.now);
   return true;
 }

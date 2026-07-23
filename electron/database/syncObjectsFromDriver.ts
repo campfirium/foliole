@@ -41,6 +41,9 @@ const PAYLOAD_SQL_BY_TYPE: Partial<Record<JsonSyncObjectType, string>> = {
     'last_imported_at', last_imported_at, 'last_content_fingerprint', last_content_fingerprint,
     'latest_node_id', latest_node_id
   ) AS payload_json FROM import_sources WHERE source_fingerprint = ?`,
+  node_open_state: `SELECT json_object(
+    'node_id', node_id, 'last_opened_at', last_opened_at
+  ) AS payload_json FROM node_open_state WHERE node_id = ?`,
   node_reading: `SELECT json_object(
     'node_id', node_id, 'interval_duration_ms', interval_duration_ms,
     'interval_growth_factor', interval_growth_factor, 'last_handled_at', last_handled_at,

@@ -28,6 +28,7 @@ const controlledElectronSqliteTests = [
   'scripts/android/android-reset-sync-data.test.mjs',
   'scripts/android/android-sync-audit-core.test.mjs',
   'scripts/android/android-sync-cleanup-device-private.test.mjs',
+  'scripts/ios/ios-database-upgrade-acceptance-fixture.test.mjs',
   'scripts/ios/ios-sync-pack-acceptance-fixture.test.mjs',
   'scripts/sqlite/sqlite-recovery-drill.test.mjs',
   'scripts/sqlite/sqlite-maintenance-cleanup-main-fts.test.mjs',

@@ -154,7 +154,11 @@ export const ANDROID_COMPANION_MIGRATION_PLAN = [
     ],
     beforeVersion: 18
   },
-  ANDROID_COMPANION_NODE_PROVENANCE_MIGRATION_PLAN_STEP
+  ANDROID_COMPANION_NODE_PROVENANCE_MIGRATION_PLAN_STEP,
+  {
+    actions: [{ errorMessage: 'Failed to upgrade companion node open state schema.', type: 'installSchema' }],
+    beforeVersion: 20
+  }
 ] as const;
 
 export const ANDROID_COMPANION_MIGRATION_REPAIR_RULES = {

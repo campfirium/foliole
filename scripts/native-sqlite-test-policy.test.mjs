@@ -67,4 +67,8 @@ describe('native sqlite test policy', () => {
   it('keeps the iOS Sync Pack fixture on the Electron ABI test entry', () => {
     expect(controlledElectronSqliteTests).toContain('scripts/ios/ios-sync-pack-acceptance-fixture.test.mjs');
   });
+
+  it('keeps the iOS database upgrade fixture on the Electron ABI test entry', () => {
+    expect(controlledElectronSqliteTests).toContain('scripts/ios/ios-database-upgrade-acceptance-fixture.test.mjs');
+  });
 });

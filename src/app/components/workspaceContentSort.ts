@@ -104,13 +104,16 @@ export function compareWorkspaceContentNodes(
   left: WorkspaceListNode,
   right: WorkspaceListNode,
   sort: WorkspaceContentSortState,
-  nodeViewById: Record<string, { updatedAt?: string | null } | undefined> = {}
+  nodeOpenStateById: Record<string, { lastOpenedAt?: string | null } | undefined> = {}
 ) {
   if (sort.key === 'name') {
     const titleResult = compareText(left.title, right.title) * (sort.direction === 'asc' ? 1 : -1);
     if (titleResult !== 0) return titleResult;
   } else if (sort.key === 'lastOpenedAt') {
-    const dateResult = compareTimestampDesc(nodeViewById[left.id]?.updatedAt, nodeViewById[right.id]?.updatedAt) * directionMultiplier(sort.direction);
+    const dateResult = compareTimestampDesc(
+      nodeOpenStateById[left.id]?.lastOpenedAt,
+      nodeOpenStateById[right.id]?.lastOpenedAt
+    ) * directionMultiplier(sort.direction);
     if (dateResult !== 0) return dateResult;
   } else if (sort.key === 'modifiedAt') {
     const dateResult = compareTimestampDesc(left.updatedAt, right.updatedAt) * directionMultiplier(sort.direction);
@@ -127,9 +130,9 @@ export function compareWorkspaceContentNodes(
 export function sortWorkspaceContentRows(
   rows: NodeTreeRow[],
   sort: WorkspaceContentSortState,
-  nodeViewById: Record<string, { updatedAt?: string | null } | undefined> = {}
+  nodeOpenStateById: Record<string, { lastOpenedAt?: string | null } | undefined> = {}
 ) {
-  return [...rows].sort((left, right) => compareWorkspaceContentNodes(left.node, right.node, sort, nodeViewById));
+  return [...rows].sort((left, right) => compareWorkspaceContentNodes(left.node, right.node, sort, nodeOpenStateById));
 }
 
 export function sortTrashContentRows(

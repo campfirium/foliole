@@ -5,7 +5,6 @@ import type { FolderListSortDirection, FolderListSortKey } from '../../features/
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { definedProps } from '../../shared/lib/definedProps';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
-import type { NodeViewState } from '../../store/workspaceStore';
 
 import { FolderListView } from './FolderListView';
 
@@ -28,7 +27,7 @@ function createNode(overrides: Partial<Node> & Pick<Node, 'id' | 'title'>): Node
 function renderFolderList(
   children: Node[],
   options?: {
-    nodeViewById?: Record<string, NodeViewState | undefined>;
+    nodeOpenStateById?: Record<string, { lastOpenedAt: string } | undefined>;
     sortDirection?: FolderListSortDirection;
     sortKey?: FolderListSortKey;
   }
@@ -40,7 +39,8 @@ function renderFolderList(
     <FolderListView
       folderNodeId="folder-1"
       nodeOrder={['folder-1', ...children.map((node) => node.id)]}
-      nodeViewById={options?.nodeViewById ?? {}}
+      nodeOpenStateById={options?.nodeOpenStateById ?? {}}
+      nodeViewById={{}}
       nodesById={nodesById}
       onChangeSortDirection={() => undefined}
       onChangeSortKey={() => undefined}
@@ -168,17 +168,9 @@ describe('FolderListView last opened sorting', () => {
         createNode({ id: 'node-3', title: 'Never opened', updatedAt: '2026-04-02T09:00:00.000Z' })
       ],
       {
-        nodeViewById: {
-          'node-1': {
-            scrollTop: 10,
-            selection: { from: 1, to: 2 },
-            updatedAt: '2026-04-02T09:00:00.000Z'
-          },
-          'node-2': {
-            scrollTop: 20,
-            selection: { from: 2, to: 3 },
-            updatedAt: '2026-04-04T09:00:00.000Z'
-          }
+        nodeOpenStateById: {
+          'node-1': { lastOpenedAt: '2026-04-02T09:00:00.000Z' },
+          'node-2': { lastOpenedAt: '2026-04-04T09:00:00.000Z' }
         },
         sortKey: 'dateLastOpened'
       }
@@ -199,11 +191,12 @@ describe('FolderListView dynamic sorting', () => {
       createNode({ id: 'node-2', title: 'Opened later', updatedAt: '2026-04-02T09:00:00.000Z' })
     ];
     const nodesById = Object.fromEntries([folderNode, ...children].map((node) => [node.id, node]));
-    const renderList = (nodeViewById: Record<string, NodeViewState | undefined>, sortKey: FolderListSortKey) => (
+    const renderList = (nodeOpenStateById: Record<string, { lastOpenedAt: string } | undefined>, sortKey: FolderListSortKey) => (
       <FolderListView
         folderNodeId="folder-1"
         nodeOrder={['folder-1', ...children.map((node) => node.id)]}
-        nodeViewById={nodeViewById}
+        nodeOpenStateById={nodeOpenStateById}
+        nodeViewById={{}}
         nodesById={nodesById}
         onChangeSortDirection={() => undefined}
         onChangeSortKey={() => undefined}
@@ -213,15 +206,15 @@ describe('FolderListView dynamic sorting', () => {
       />
     );
     const { rerender } = renderWithLocalization(renderList({
-      'node-1': { scrollTop: 0, selection: null, updatedAt: '2026-04-05T09:00:00.000Z' },
-      'node-2': { scrollTop: 0, selection: null, updatedAt: '2026-04-04T09:00:00.000Z' }
+      'node-1': { lastOpenedAt: '2026-04-05T09:00:00.000Z' },
+      'node-2': { lastOpenedAt: '2026-04-04T09:00:00.000Z' }
     }, 'dateLastOpened'));
 
     expect(getRenderedEntryTitles()).toEqual(['Opened first', 'Opened later']);
 
     rerender(renderList({
-      'node-1': { scrollTop: 0, selection: null, updatedAt: '2026-04-05T09:00:00.000Z' },
-      'node-2': { scrollTop: 0, selection: null, updatedAt: '2026-04-06T09:00:00.000Z' }
+      'node-1': { lastOpenedAt: '2026-04-05T09:00:00.000Z' },
+      'node-2': { lastOpenedAt: '2026-04-06T09:00:00.000Z' }
     }, 'dateLastOpened'));
 
     expect(getRenderedEntryTitles()).toEqual(['Opened first', 'Opened later']);

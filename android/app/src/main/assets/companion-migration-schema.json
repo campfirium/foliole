@@ -194,6 +194,15 @@
         }
       ],
       "beforeVersion": 19
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to upgrade companion node open state schema.",
+          "type": "installSchema"
+        }
+      ],
+      "beforeVersion": 20
     }
   ],
   "planKeys": {

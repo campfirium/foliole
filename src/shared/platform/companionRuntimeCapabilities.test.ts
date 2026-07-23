@@ -49,6 +49,7 @@ describe('companionRuntimeCapabilities', () => {
     expect(requireAvailableCompanionRuntime('setting-write')).toEqual({ kind: 'ios-native', platform: 'ios' });
     expect(requireAvailableCompanionRuntime('topic-search')).toEqual({ kind: 'ios-native', platform: 'ios' });
     expect(requireAvailableCompanionRuntime('view-state-write')).toEqual({ kind: 'ios-native', platform: 'ios' });
+    expect(requireAvailableCompanionRuntime('open-state-write')).toEqual({ kind: 'ios-native', platform: 'ios' });
     expect(() => requireAvailableCompanionRuntime('native-runtime')).toThrowError(
       expect.objectContaining({
         capability: 'native-runtime',

@@ -9,6 +9,7 @@ import {
 } from './workspaceReviewPersistence';
 import { calculateReviewStepElapsedMs } from './workspaceReviewSessionProgress';
 import type { WorkspaceState } from './workspaceStore';
+import { persistNodeOpened } from './workspaceStoreNodeOpenState';
 import {
   advanceAfterSoonAction,
   advanceOrCompleteAfterReadingAction,
@@ -197,6 +198,8 @@ async function persistAndApplyReadingReviewPatch(args: {
       }
       return result?.patch ?? state;
     });
+    const nextActiveNodeId = result.patch.reviewSession?.currentNodeId ?? result.patch.reviewSession?.continueNodeId;
+    if (nextActiveNodeId) void persistNodeOpened(args.set, nextActiveNodeId, new Date().toISOString());
     return true;
   } finally {
     args.pendingNodeIds.delete(args.currentNodeId);

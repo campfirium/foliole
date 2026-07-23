@@ -1,7 +1,8 @@
 import type { Node } from '../features/nodes/model/nodeTypes';
 import type { ReviewGrade, SchedulerCard } from '../features/review/model/reviewTypes';
+import { saveNodeReadingStateToRuntime } from '../shared/platform/runtime/nodeReadingStateRuntimeRepository';
 
-import { syncNodeContentToRuntimeNow, syncReviewGradeToRuntime } from './workspaceRuntimeSync';
+import { syncReviewGradeToRuntime } from './workspaceRuntimeSync';
 
 export interface WorkspaceReviewGradePersistencePayload {
   currentNodeId: string;
@@ -19,7 +20,11 @@ export interface WorkspaceReviewPersistenceAdapter {
 
 async function persistRuntimeReadingNodes(nodes: Node[]) {
   for (const node of nodes) {
-    const persisted = await syncNodeContentToRuntimeNow(node);
+    const persisted = await saveNodeReadingStateToRuntime({
+      nodeId: node.id,
+      reading: node.reading ?? null,
+      updatedAt: node.reading?.lastHandledAt ?? new Date().toISOString()
+    });
     if (!persisted) return false;
   }
   return true;

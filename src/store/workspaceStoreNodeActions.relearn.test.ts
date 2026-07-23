@@ -1,5 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { saveNodeReadingStateToRuntime } from '../shared/platform/runtime/nodeReadingStateRuntimeRepository';
+
 import { syncNodeContentToRuntime, syncRelearnNodeToRuntime } from './workspaceRuntimeSync';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
 import {
@@ -20,6 +22,10 @@ vi.mock('./workspaceRuntimeSync', () => ({
   syncRelearnNodeToRuntime: vi.fn(() => true),
   syncRestoreNodesToRuntime: vi.fn(),
   syncSoftDeleteNodesToRuntime: vi.fn()
+}));
+
+vi.mock('../shared/platform/runtime/nodeReadingStateRuntimeRepository', () => ({
+  saveNodeReadingStateToRuntime: vi.fn(async () => true)
 }));
 
   beforeEach(() => {
@@ -64,7 +70,42 @@ vi.mock('./workspaceRuntimeSync', () => ({
 
     expect(relearned).toBe(true);
     expect(harness.getState().nodesById[seedNodeId]?.review).toBeNull();
+    expect(harness.getState().nodesById[seedNodeId]?.updatedAt).toBe(node.updatedAt);
     expect(syncRelearnNodeToRuntime).toHaveBeenCalledWith({ nodeId: seedNodeId });
+  });
+
+  it('resets reading state without changing the content modified timestamp', () => {
+    const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
+    const actions = createWorkspaceNodeActions(harness.setState);
+    const node = harness.getState().nodesById['node-1']!;
+    harness.setState({
+      nodesById: {
+        ...harness.getState().nodesById,
+        'node-1': {
+          ...node,
+          reading: {
+            intervalDurationMs: 0,
+            intervalGrowthFactor: 1,
+            lastHandledAt: '2026-03-10T00:00:00.000Z',
+            nextAt: '2026-03-10T00:00:00.000Z',
+            priority: 0,
+            readingPosition: 0,
+            repetitionCount: 0,
+            state: 'dismissed'
+          }
+        }
+      }
+    });
+
+    expect(actions.relearnNode('node-1', '2026-05-02T00:00:00.000Z')).toBe(true);
+
+    expect(harness.getState().nodesById['node-1']?.updatedAt).toBe(node.updatedAt);
+    expect(saveNodeReadingStateToRuntime).toHaveBeenCalledWith({
+      nodeId: 'node-1',
+      reading: null,
+      updatedAt: '2026-05-02T00:00:00.000Z'
+    });
+    expect(syncNodeContentToRuntime).not.toHaveBeenCalled();
   });
 
   it('keeps item review state when durable relearn staging fails', async () => {

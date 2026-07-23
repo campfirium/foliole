@@ -97,12 +97,12 @@ it('sorts workspace content by last opened time when that context supports it', 
     createRow('old', 'Old', '2026-04-22T00:00:00.000Z'),
     createRow('new', 'New', '2026-04-20T00:00:00.000Z')
   ];
-  const nodeViewById = {
-    new: { updatedAt: '2026-04-24T00:00:00.000Z' },
-    old: { updatedAt: '2026-04-23T00:00:00.000Z' }
+  const nodeOpenStateById = {
+    new: { lastOpenedAt: '2026-04-24T00:00:00.000Z' },
+    old: { lastOpenedAt: '2026-04-23T00:00:00.000Z' }
   };
 
-  expect(sortWorkspaceContentRows(rows, { direction: 'desc', key: 'lastOpenedAt' }, nodeViewById).map((row) => row.node.id)).toEqual(['new', 'old']);
+  expect(sortWorkspaceContentRows(rows, { direction: 'desc', key: 'lastOpenedAt' }, nodeOpenStateById).map((row) => row.node.id)).toEqual(['new', 'old']);
 });
 
 it('sorts workspace content by import time instead of later edits', () => {

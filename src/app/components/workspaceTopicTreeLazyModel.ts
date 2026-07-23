@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 
+import type { NodeOpenState } from '../../../lib/core/database/nodeOpenState';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
-import type { NodeViewState } from '../../store/workspaceStore';
 
 import { sortWorkspaceContentChildNodeIds, sortWorkspaceContentNodeIds } from './workspaceContentNodeOrder';
 import { normalizeWorkspaceContentSort, type WorkspaceContentSortState } from './workspaceContentSort';
@@ -22,7 +22,7 @@ interface WorkspaceTopicTreeLazyModelArgs {
   hideDismissedTopics?: boolean;
   itemIds: string[];
   manualChildOrder?: readonly string[] | null;
-  nodeViewById: Record<string, NodeViewState | undefined>;
+  nodeOpenStateById: Record<string, NodeOpenState | undefined>;
   nodesById: WorkspaceListNodesById;
   sortRefreshVersion?: number;
   sort: WorkspaceContentSortState;
@@ -38,8 +38,8 @@ export function useWorkspaceTopicTreeLazyModel(args: WorkspaceTopicTreeLazyModel
   const refreshKey = resolveTopicTreeSortRefreshKey(args, contentSort);
   const sortRootIds = useCallback(
     (ids: string[]) =>
-      sortWorkspaceContentNodeIds(ids, args.nodesById, contentSort, args.nodeViewById, args.manualChildOrder),
-    [args.manualChildOrder, args.nodeViewById, args.nodesById, contentSort]
+      sortWorkspaceContentNodeIds(ids, args.nodesById, contentSort, args.nodeOpenStateById, args.manualChildOrder),
+    [args.manualChildOrder, args.nodeOpenStateById, args.nodesById, contentSort]
   );
   const rootIds = useStableWorkspaceContentItems({
     getItemId: getStringItemId,

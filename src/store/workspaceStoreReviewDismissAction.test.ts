@@ -1,8 +1,9 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { saveNodeReadingStateToRuntime } from '../shared/platform/runtime/nodeReadingStateRuntimeRepository';
+
 import { createWorkspaceActionHistoryActions } from './workspaceActionHistory';
 import { createStartedReviewSession } from './workspaceReviewReading';
-import { syncNodeContentToRuntimeNow } from './workspaceRuntimeSync';
 import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
 import {
   createReadingNode,
@@ -12,13 +13,9 @@ import {
   previewStub
 } from './workspaceStoreReviewActions.test-support';
 
-vi.mock('./workspaceRuntimeSync', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('./workspaceRuntimeSync')>();
-  return {
-    ...actual,
-    syncNodeContentToRuntimeNow: vi.fn(async () => true)
-  };
-});
+vi.mock('../shared/platform/runtime/nodeReadingStateRuntimeRepository', () => ({
+  saveNodeReadingStateToRuntime: vi.fn(async () => true)
+}));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -55,9 +52,9 @@ it('creates a persisted reading profile when dismissing a first-time reading ite
     title: 'Dismiss Topic',
     type: 'topic.dismiss'
   });
-  expect(syncNodeContentToRuntimeNow).toHaveBeenCalledWith(
+  expect(saveNodeReadingStateToRuntime).toHaveBeenCalledWith(
     expect.objectContaining({
-      id: 'reading-1',
+      nodeId: 'reading-1',
       reading: expect.objectContaining({ state: 'dismissed' })
     })
   );
@@ -137,7 +134,7 @@ it('does not dismiss the current review item while another topic is open', async
 
   await expect(actions.dismissReviewTopic(now)).resolves.toBe(false);
   expect(harness.getState().nodesById[currentNodeId ?? '']?.reading?.state).toBe('active');
-  expect(syncNodeContentToRuntimeNow).not.toHaveBeenCalled();
+  expect(saveNodeReadingStateToRuntime).not.toHaveBeenCalled();
 });
 
 it('continues within the same sequential book after dismissing its cover topic', async () => {

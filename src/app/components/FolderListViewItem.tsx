@@ -12,7 +12,6 @@ import {
   getWorkspaceListNodeOpening
 } from '../../features/nodes/model/workspaceListNode';
 import { TruncatedTextTooltip } from '../../shared/ui';
-import type { NodeViewState } from '../../store/workspaceStore';
 
 import { FolderListTextItem } from './FolderListItemRow';
 import { resolveFolderListLocationPath } from './folderListLocationPath';
@@ -24,7 +23,7 @@ type FolderListItemProps = {
   isBulkSelectionActive?: boolean;
   itemLayout: FolderListItemLayout;
   node: Node;
-  nodeViewState?: NodeViewState;
+  lastOpenedAt?: string | null;
   onSelectNode: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   onSelectNodePath?: (nodeId: string) => void;
   nodesById: Record<string, Node>;
@@ -99,7 +98,7 @@ export function FolderListViewItem(props: FolderListItemProps) {
   const summary = opening === WORKSPACE_LIST_OPENING_FALLBACK ? '' : projectMarkdownDisplayText(opening);
   const dateLabel =
     props.sortKey === 'dateLastOpened'
-      ? getWorkspaceListNodeLastOpenedLabel(props.nodeViewState)
+      ? getWorkspaceListNodeLastOpenedLabel({ ...(props.lastOpenedAt === undefined ? {} : { lastOpenedAt: props.lastOpenedAt }) })
       : getWorkspaceListNodeDateLabel(props.node);
   const locationPath = resolveFolderListLocationPath(props.node, props.nodesById);
 

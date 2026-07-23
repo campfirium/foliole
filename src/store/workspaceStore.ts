@@ -16,7 +16,7 @@ import { createEmptyWorkspaceSnapshot } from './workspaceSeed';
 import { createWorkspaceLayoutActions } from './workspaceStoreLayoutActions';
 import { createWorkspaceNavigationActions } from './workspaceStoreNavigationActions';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
-import { markNodeOpenedViewState } from './workspaceStoreOpenedNodeView';
+import { persistNodeOpened } from './workspaceStoreNodeOpenState';
 import { createWorkspaceStorePersistConfig } from './workspaceStorePersistConfig';
 import { withWorkspaceRendererBoundary } from './workspaceStoreRendererBoundary';
 import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
@@ -57,6 +57,7 @@ export function createInitialWorkspaceState(now = new Date()): Pick<
   | 'workspaceHydrationError'
   | 'layout'
   | 'navigation'
+  | 'nodeOpenStateById'
   | 'nodeOrder'
   | 'nodesById'
   | 'rendererBoundaryKeepNodeIds'
@@ -118,16 +119,19 @@ const workspaceStore = create<WorkspaceState>()(
       ...initialState,
       ...createWorkspaceLayoutActions(boundaryAwareSet, defaultLayoutState),
       setActiveNode: (nodeId) => {
+        const openedAt = new Date().toISOString();
+        let didOpen = false;
         boundaryAwareSet((state) => {
           if (!isCanonicalVisibleNodeId(state, nodeId)) {
             return state;
           }
+          didOpen = true;
           return {
             activeNodeId: nodeId,
-            nodeViewById: markNodeOpenedViewState(state, nodeId),
             reviewSession: reconcileReviewSession(state, nodeId)
           };
         });
+        if (didOpen) void persistNodeOpened(boundaryAwareSet, nodeId, openedAt);
       },
       setBrowseRootNode: (nodeId) => {
         boundaryAwareSet((state) => ({

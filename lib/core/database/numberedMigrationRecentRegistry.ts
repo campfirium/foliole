@@ -107,5 +107,14 @@ export const RECENT_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
       sqlite.exec('DROP TABLE IF EXISTS assistant_thread_messages');
       sqlite.exec('DROP TABLE IF EXISTS assistant_thread_index');
     }
+  },
+  {
+    version: 60,
+    migrate: (sqlite) => {
+      sqlite.exec(`CREATE TABLE IF NOT EXISTS node_open_state (
+        node_id TEXT PRIMARY KEY REFERENCES nodes(id) ON DELETE CASCADE,
+        last_opened_at TEXT NOT NULL
+      )`);
+    }
   }
 ];

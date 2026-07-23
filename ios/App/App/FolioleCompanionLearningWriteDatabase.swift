@@ -65,6 +65,10 @@ final class FolioleCompanionLearningWriteDatabase {
         guard sqlite3_step(statement) == SQLITE_DONE else { throw error(message()) }
     }
 
+    func queryText(_ sql: String, bindings: [FolioleCompanionLearningBinding] = []) throws -> String? {
+        try queryRow(sql, bindings: bindings)?.first ?? nil
+    }
+
     static func contentHash(_ value: [String: Any]) throws -> String {
         let data = Data(try stableJson(value).utf8)
         return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
@@ -189,3 +193,4 @@ private extension Array {
 }
 
 extension FolioleCompanionReadingWriteContract: FolioleCompanionLearningSyncStateContract {}
+extension FolioleCompanionOpenStateWriteContract: FolioleCompanionLearningSyncStateContract {}

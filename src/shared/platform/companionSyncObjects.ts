@@ -31,6 +31,7 @@ export interface CompanionPdfPageTextSearchResult extends CompanionPdfPageTextEn
 }
 export {
   saveCompanionSyncActiveViewState,
+  saveCompanionSyncNodeOpenState,
   saveCompanionSyncNodeReadingRecord,
   saveCompanionSyncNodeReviewRecord,
   saveCompanionSyncNodeViewState,

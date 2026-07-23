@@ -50,6 +50,7 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
       'savePairingCredentials',
       'savePrimaryDeviceId',
       'saveSyncActiveViewState',
+      'saveSyncNodeOpenState',
       'saveSyncNodeReadingRecord',
       'saveSyncNodeReviewRecord',
       'saveSyncNodeVersionCursor',

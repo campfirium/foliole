@@ -38,6 +38,7 @@
       "savePairingCredentials",
       "savePrimaryDeviceId",
       "saveSyncActiveViewState",
+      "saveSyncNodeOpenState",
       "saveSyncNodeReadingRecord",
       "saveSyncNodeReviewRecord",
       "saveSyncNodeVersionCursor",

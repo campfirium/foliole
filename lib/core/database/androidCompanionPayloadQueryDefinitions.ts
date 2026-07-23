@@ -67,6 +67,12 @@ export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
       "'latest_node_id', latest_node_id) AS payload_json FROM import_sources WHERE source_fingerprint = ? LIMIT 1"
   },
   ...ANDROID_COMPANION_LEARNING_PAYLOAD_QUERY_DEFINITIONS,
+  syncPayloadNodeOpenState: {
+    syncPayload: { argMode: 'object_id', objectType: 'node_open_state' },
+    sql:
+      "SELECT json_object('node_id', node_id, 'last_opened_at', last_opened_at) AS payload_json " +
+      'FROM node_open_state WHERE node_id = ? LIMIT 1'
+  },
   syncPayloadPdfPageText: {
     syncPayload: { argMode: 'object_id', objectType: 'pdf_page_text' },
     sql:

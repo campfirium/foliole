@@ -1,5 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { saveNodeReviewStateToRuntime } from '../shared/platform/runtime/nodeReviewStateRuntimeRepository';
+
 import { createWorkspaceActionHistoryActions } from './workspaceActionHistory';
 import { syncNodeContentToRuntime, syncReviewGradeToRuntime } from './workspaceRuntimeSync';
 import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
@@ -22,6 +24,9 @@ vi.mock('./workspaceRuntimeSync', async (importOriginal) => {
     syncReviewGradeToRuntime: vi.fn()
   };
 });
+vi.mock('../shared/platform/runtime/nodeReviewStateRuntimeRepository', () => ({
+  saveNodeReviewStateToRuntime: vi.fn(async () => true)
+}));
 
 const REVIEWED_AT = new Date(2026, 2, 3, 8).toISOString();
 const SCHEDULED_DUE = new Date(2026, 2, 10, 4).toISOString();
@@ -187,9 +192,11 @@ it('undoes and redoes fsrs grading with the review session position', async () =
     reps: 0,
     state: 0
   });
-  expect(syncNodeContentToRuntime).toHaveBeenLastCalledWith(
-    expect.objectContaining({ id: 'qa-1', review: expect.objectContaining({ reps: 0 }) })
-  );
+  expect(saveNodeReviewStateToRuntime).toHaveBeenLastCalledWith(expect.objectContaining({
+    nodeId: 'qa-1',
+    review: expect.objectContaining({ reps: 0 })
+  }));
+  expect(syncNodeContentToRuntime).not.toHaveBeenCalled();
 
   expect(historyActions.redoWorkspaceAction('2026-03-05T00:00:00.000Z')).toBe(true);
   expect(harness.getState().activeNodeId).toBe('qa-2');

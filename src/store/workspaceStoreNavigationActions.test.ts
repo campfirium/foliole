@@ -157,7 +157,7 @@ it('records a parent open without a loaded document when navigating to parent', 
 
   const state = useWorkspaceStore.getState();
   expect(state.activeNodeId).toBe('node-2');
-  expect(state.nodeViewById['node-2']).toEqual({ scrollTop: 0, selection: null, updatedAt: expect.any(String) });
+  expect(state.nodeViewById['node-2']).toBeUndefined();
 });
 
 function seedParentHighlightReturnState() {
@@ -225,7 +225,7 @@ function runParentHighlightReturnStateTest() {
 
   const state = useWorkspaceStore.getState();
   expect(state.nodeViewById['node-2']).toMatchObject({ scrollTop: 3210, selection: { from: 1, to: 1 } });
-  expect(state.nodeViewById['node-2']?.updatedAt).not.toBe('2026-02-25T00:00:00.000Z');
+  expect(state.nodeViewById['node-2']?.updatedAt).toBe('2026-02-25T00:00:00.000Z');
 }
 
 it('keeps the stored parent view state when returning with a highlight anchor', () => {

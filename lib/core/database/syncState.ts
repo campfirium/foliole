@@ -11,6 +11,7 @@ export type SyncObjectType =
   | 'import_run'
   | 'import_source'
   | 'node'
+  | 'node_open_state'
   | 'node_reading'
   | 'node_review'
   | 'pdf_page_text'

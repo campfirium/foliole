@@ -17,6 +17,9 @@ vi.mock('./workspaceRuntimeSync', async (importOriginal) => {
     syncNodeContentToRuntimeNow: vi.fn(async () => true)
   };
 });
+vi.mock('../shared/platform/runtime/nodeReadingStateRuntimeRepository', () => ({
+  saveNodeReadingStateToRuntime: vi.fn(async () => true)
+}));
 
 it('shows a completed checkpoint after the last review card before reading topics', async () => {
   const now = '2026-03-03T00:00:00.000Z';

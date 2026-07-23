@@ -1,3 +1,4 @@
+import type { NodeOpenState } from '../../lib/core/database/nodeOpenState';
 import { normalizeWorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshotContract';
 import type { Node } from '../features/nodes/model/nodeTypes';
 
@@ -97,6 +98,16 @@ function parseNodeViewById(value: unknown) {
   return Object.fromEntries(entries);
 }
 
+function parseNodeOpenStateById(value: unknown) {
+  if (!isPlainRecord(value)) return undefined;
+  const entries = Object.entries(value).filter((entry): entry is [string, NodeOpenState] => {
+    const [nodeId, state] = entry;
+    return isPlainRecord(state) && state.nodeId === nodeId &&
+      typeof state.lastOpenedAt === 'string' && Number.isFinite(Date.parse(state.lastOpenedAt));
+  });
+  return Object.fromEntries(entries);
+}
+
 function parseStringValueRecord(value: unknown) {
   if (!isPlainRecord(value)) {
     return undefined;
@@ -179,6 +190,7 @@ export function parsePersistedWorkspaceState(value: unknown): Partial<WorkspaceP
   const nodesById = parseNodesById(value.nodesById);
   const activeNodeId = parseActiveNodeId(value.activeNodeId, nodesById);
   const layout = parseLayout(value.layout);
+  const nodeOpenStateById = parseNodeOpenStateById(value.nodeOpenStateById);
   const nodeViewById = parseNodeViewById(value.nodeViewById ?? value.persistedNodeViewById);
   const reviewSession = parseReviewSession(value.reviewSession);
   const rendererBoundaryKeepNodeIds = isStringArray(value.rendererBoundaryKeepNodeIds)
@@ -196,6 +208,7 @@ export function parsePersistedWorkspaceState(value: unknown): Partial<WorkspaceP
     ...(activeNodeId !== undefined ? { activeNodeId } : {}),
     ...(typeof value.browseRootNodeId === 'string' ? { browseRootNodeId: value.browseRootNodeId } : {}),
     ...(layout ? { layout } : {}),
+    ...(nodeOpenStateById ? { nodeOpenStateById } : {}),
     ...(nodeViewById ? { nodeViewById } : {}),
     ...(isStringArray(value.nodeOrder) ? { nodeOrder: value.nodeOrder } : {}),
     ...(reviewSession ? { reviewSession } : {}),

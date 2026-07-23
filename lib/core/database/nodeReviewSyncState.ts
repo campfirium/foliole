@@ -118,3 +118,10 @@ export function writeNodeReviewSnapshotWithSync(
     });
   }
 }
+
+export function saveNodeReviewStateWithSync(driver: DatabaseDriver, input: WriteNodeReviewSyncInput) {
+  const upsertReview = driver.prepare(`INSERT OR REPLACE INTO node_review (
+    node_id, due, last_review_at, state, stability, difficulty, elapsed_days, scheduled_days, reps, lapses
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  driver.transaction(() => writeNodeReviewSnapshotWithSync(driver, input, upsertReview.run));
+}

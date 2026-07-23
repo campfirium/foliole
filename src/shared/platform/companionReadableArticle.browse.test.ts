@@ -59,17 +59,6 @@ function createSnapshot(): WorkspaceSnapshot {
   } satisfies WorkspaceSnapshot;
 }
 
-function createViewState(nodeId: string, updatedAt: string) {
-  return {
-    nodeId,
-    scrollTop: 0,
-    selectionFrom: null,
-    selectionTo: null,
-    source: 'user-scroll' as const,
-    updatedAt
-  };
-}
-
 describe('companionReadableArticle recent browse helpers', () => {
   it('builds recent articles in descending updated time order', () => {
     const result = resolveCompanionRecentArticles(createSnapshot());
@@ -84,11 +73,11 @@ describe('companionReadableArticle recent browse helpers', () => {
     });
   });
 
-  it('builds recent articles in descending last opened time order when view state is available', () => {
+  it('builds recent articles in descending cross-device last opened time order', () => {
     const snapshot = createSnapshot();
-    snapshot.persistedNodeViewById = {
-      'node-1': createViewState('node-1', '2026-04-25T10:00:00.000Z'),
-      'node-2': createViewState('node-2', '2026-04-24T10:00:00.000Z')
+    snapshot.nodeOpenStateById = {
+      'node-1': { lastOpenedAt: '2026-04-25T10:00:00.000Z', nodeId: 'node-1' },
+      'node-2': { lastOpenedAt: '2026-04-24T10:00:00.000Z', nodeId: 'node-2' }
     };
 
     expect(resolveCompanionRecentArticles(snapshot, 'dateLastOpened').map((article) => article.nodeId)).toEqual(['node-1', 'node-2', 'node-7']);
@@ -151,11 +140,11 @@ describe('companionReadableArticle directory browse helpers', () => {
     });
     expect(resolveCompanionFolderViewByNodeId(snapshot, 'node-1')).toBeNull();
   });
-  it('builds folder views in descending last opened time order when view state is available', () => {
+  it('builds folder views in descending cross-device last opened time order', () => {
     const snapshot = createSnapshot();
-    snapshot.persistedNodeViewById = {
-      'folder-2': createViewState('folder-2', '2026-04-25T10:00:00.000Z'),
-      'node-1': createViewState('node-1', '2026-04-24T10:00:00.000Z')
+    snapshot.nodeOpenStateById = {
+      'folder-2': { lastOpenedAt: '2026-04-25T10:00:00.000Z', nodeId: 'folder-2' },
+      'node-1': { lastOpenedAt: '2026-04-24T10:00:00.000Z', nodeId: 'node-1' }
     };
 
     expect(resolveCompanionFolderViewByNodeId(snapshot, 'folder-1', 'dateLastOpened')?.items.map((item) => item.nodeId)).toEqual([

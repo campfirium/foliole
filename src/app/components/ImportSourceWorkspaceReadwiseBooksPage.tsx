@@ -77,14 +77,14 @@ export function sortBooks(
   sortKey: ReadwiseSortKey,
   sortDirection: 'asc' | 'desc',
   input: {
-    nodeViewById?: ReturnType<typeof useWorkspaceStore.getState>['nodeViewById'];
+    nodeOpenStateById?: ReturnType<typeof useWorkspaceStore.getState>['nodeOpenStateById'];
     scannedAt: string;
   }
 ) {
   return sortImportCatalogItems(
     books.map((book) => ({
       book,
-      sortLastOpened: resolveImportLastOpened(book.generatedNodeId, input.nodeViewById ?? {}),
+      sortLastOpened: resolveImportLastOpened(book.generatedNodeId, input.nodeOpenStateById ?? {}),
       sortSaved: input.scannedAt,
       sortTitle: book.title
     })),
@@ -99,15 +99,15 @@ function formatCountLabel(filteredCount: number, totalCount: number) {
 
 function useReadwiseBookCatalogState(
   booksInventory: RuntimeReadwiseBooksInventory | null,
-  nodeViewById: ReturnType<typeof useWorkspaceStore.getState>['nodeViewById']
+  nodeOpenStateById: ReturnType<typeof useWorkspaceStore.getState>['nodeOpenStateById']
 ) {
   const [query, setQuery] = useState('');
   const [sortKey, setSortKey] = useState<ReadwiseSortKey>('dateImported');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const filteredInventory = filterBooksInventory(query, booksInventory);
   const filteredBooks = useMemo(
-    () => sortBooks(filteredInventory?.books ?? [], sortKey, sortDirection, { nodeViewById, scannedAt: booksInventory?.scannedAt ?? '' }),
-    [booksInventory?.scannedAt, filteredInventory?.books, nodeViewById, sortDirection, sortKey]
+    () => sortBooks(filteredInventory?.books ?? [], sortKey, sortDirection, { nodeOpenStateById, scannedAt: booksInventory?.scannedAt ?? '' }),
+    [booksInventory?.scannedAt, filteredInventory?.books, nodeOpenStateById, sortDirection, sortKey]
   );
 
   return {
@@ -134,8 +134,8 @@ export function ImportSourceWorkspaceReadwiseBooksPage({
   const t = useTranslation();
   const { booksInventory, isLoading, loadIssue, refreshBooksInventory } = useReadwiseBooksInventoryState(open);
   const nodesById = useWorkspaceStore((state) => state.nodesById);
-  const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
-  const catalog = useReadwiseBookCatalogState(booksInventory, nodeViewById);
+  const nodeOpenStateById = useWorkspaceStore((state) => state.nodeOpenStateById);
+  const catalog = useReadwiseBookCatalogState(booksInventory, nodeOpenStateById);
   const actions = useReadwiseBookActions({ onOpenChange, ...(onSelectNode ? { onSelectNode } : {}), refreshBooksInventory, t });
 
   return (

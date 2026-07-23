@@ -1,6 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { syncNodeContentToRuntimeNow } from './workspaceRuntimeSync';
+import { saveNodeReadingStateToRuntime } from '../shared/platform/runtime/nodeReadingStateRuntimeRepository';
+
 import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
 import {
   createReadingNode,
@@ -10,13 +11,9 @@ import {
   previewStub
 } from './workspaceStoreReviewActions.test-support';
 
-vi.mock('./workspaceRuntimeSync', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('./workspaceRuntimeSync')>();
-  return {
-    ...actual,
-    syncNodeContentToRuntimeNow: vi.fn(async () => true)
-  };
-});
+vi.mock('../shared/platform/runtime/nodeReadingStateRuntimeRepository', () => ({
+  saveNodeReadingStateToRuntime: vi.fn(async () => true)
+}));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -33,7 +30,7 @@ it('postpones a topic outside the active review queue', async () => {
 
   await expect(actions.setReviewTopicDelay(topic.id, 2, now)).resolves.toBe(true);
 
-  expect(syncNodeContentToRuntimeNow).toHaveBeenCalledTimes(1);
+  expect(saveNodeReadingStateToRuntime).toHaveBeenCalledTimes(1);
   expect(harness.getState().nodesById[topic.id]?.reading).toMatchObject({
     nextAt: '2026-03-17T00:00:00.000Z',
     state: 'active'
@@ -87,7 +84,7 @@ it('resets topic postpone level zero to the current natural due time without mov
 });
 
 it('does not change topic postpone state when persistence fails', async () => {
-  vi.mocked(syncNodeContentToRuntimeNow).mockResolvedValueOnce(false);
+  vi.mocked(saveNodeReadingStateToRuntime).mockResolvedValueOnce(false);
   const now = '2026-03-03T00:00:00.000Z';
   const harness = createSetStateHarness(createWorkspaceFixture([createReadingNode('reading-1', '2026-03-02T00:00:00.000Z')]));
   const actions = createWorkspaceReviewActions(harness.setState, harness.getState, {
@@ -116,6 +113,6 @@ it('does not postpone dismissed topics', async () => {
 
   await expect(actions.setReviewTopicDelay(topic.id, 2, now)).resolves.toBe(false);
 
-  expect(syncNodeContentToRuntimeNow).not.toHaveBeenCalled();
+  expect(saveNodeReadingStateToRuntime).not.toHaveBeenCalled();
   expect(harness.getState().nodesById[topic.id]?.reading?.state).toBe('dismissed');
 });

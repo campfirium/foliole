@@ -167,7 +167,7 @@ export function useImportOverviewState(input: {
   const t = useTranslation();
   const formalImport = useFormalImport();
   const nodesById = useWorkspaceStore((state) => state.nodesById);
-  const nodeViewById = useWorkspaceStore((state) => state.nodeViewById);
+  const nodeOpenStateById = useWorkspaceStore((state) => state.nodeOpenStateById);
   const { booksInventory, isLoading, loadIssue, pdfInventory, refresh } = useOverviewInventories(input.open);
   const [query, setQuery] = useState('');
   const [sortKey, setSortKey] = useState<OverviewSortKey>('dateImported');
@@ -184,7 +184,7 @@ export function useImportOverviewState(input: {
     filteredBooks: filters.filteredBooks,
     filteredInboxRuns: filters.filteredInboxRuns,
     filteredPdfItems: filters.filteredPdfItems,
-    nodeViewById,
+    nodeOpenStateById,
     nodesById,
     sortDirection,
     sortKey

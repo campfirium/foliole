@@ -66,6 +66,9 @@
 		50F050131FED79650016851F /* FolioleCompanionReviewWriteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F050031FED79650016851F /* FolioleCompanionReviewWriteStore.swift */; };
 		50F050141FED79650016851F /* FolioleCompanionSyncPlugin+ReviewWrite.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F050041FED79650016851F /* FolioleCompanionSyncPlugin+ReviewWrite.swift */; };
 		50F060111FED79650016851F /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 50F060011FED79650016851F /* PrivacyInfo.xcprivacy */; };
+		50F070111FED79650016851F /* FolioleCompanionOpenStateWriteContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F070011FED79650016851F /* FolioleCompanionOpenStateWriteContract.swift */; };
+		50F070121FED79650016851F /* FolioleCompanionOpenStateWriteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F070021FED79650016851F /* FolioleCompanionOpenStateWriteStore.swift */; };
+		50F070131FED79650016851F /* FolioleCompanionSyncPlugin+OpenStateWrite.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F070031FED79650016851F /* FolioleCompanionSyncPlugin+OpenStateWrite.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -128,6 +131,9 @@
 		50F050031FED79650016851F /* FolioleCompanionReviewWriteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionReviewWriteStore.swift; sourceTree = "<group>"; };
 		50F050041FED79650016851F /* FolioleCompanionSyncPlugin+ReviewWrite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FolioleCompanionSyncPlugin+ReviewWrite.swift"; sourceTree = "<group>"; };
 		50F060011FED79650016851F /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		50F070011FED79650016851F /* FolioleCompanionOpenStateWriteContract.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionOpenStateWriteContract.swift; sourceTree = "<group>"; };
+		50F070021FED79650016851F /* FolioleCompanionOpenStateWriteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionOpenStateWriteStore.swift; sourceTree = "<group>"; };
+		50F070031FED79650016851F /* FolioleCompanionSyncPlugin+OpenStateWrite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FolioleCompanionSyncPlugin+OpenStateWrite.swift"; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
@@ -215,6 +221,9 @@
 				50F050021FED79650016851F /* FolioleCompanionReviewWriteContract.swift */,
 				50F050031FED79650016851F /* FolioleCompanionReviewWriteStore.swift */,
 				50F050041FED79650016851F /* FolioleCompanionSyncPlugin+ReviewWrite.swift */,
+				50F070011FED79650016851F /* FolioleCompanionOpenStateWriteContract.swift */,
+				50F070021FED79650016851F /* FolioleCompanionOpenStateWriteStore.swift */,
+				50F070031FED79650016851F /* FolioleCompanionSyncPlugin+OpenStateWrite.swift */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
 				504EC30E1FED79650016851F /* Assets.xcassets */,
 				504EC3101FED79650016851F /* LaunchScreen.storyboard */,
@@ -360,6 +369,9 @@
 				50F050121FED79650016851F /* FolioleCompanionReviewWriteContract.swift in Sources */,
 				50F050131FED79650016851F /* FolioleCompanionReviewWriteStore.swift in Sources */,
 				50F050141FED79650016851F /* FolioleCompanionSyncPlugin+ReviewWrite.swift in Sources */,
+				50F070111FED79650016851F /* FolioleCompanionOpenStateWriteContract.swift in Sources */,
+				50F070121FED79650016851F /* FolioleCompanionOpenStateWriteStore.swift in Sources */,
+				50F070131FED79650016851F /* FolioleCompanionSyncPlugin+OpenStateWrite.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

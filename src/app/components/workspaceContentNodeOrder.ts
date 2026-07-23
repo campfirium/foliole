@@ -33,7 +33,7 @@ export function sortWorkspaceContentNodeIds(
   nodeIds: string[],
   nodesById: WorkspaceListNodesById,
   sort: WorkspaceContentSortState,
-  nodeViewById: Record<string, { updatedAt?: string | null } | undefined> = {},
+  nodeOpenStateById: Record<string, { lastOpenedAt?: string | null } | undefined> = {},
   manualChildOrder?: readonly string[] | null
 ) {
   const knownIds = new Set(nodeIds.filter((nodeId) => Boolean(nodesById[nodeId])));
@@ -54,7 +54,12 @@ export function sortWorkspaceContentNodeIds(
   const sortIds = (ids: string[]) =>
     sort.key === 'manual'
       ? sortWorkspaceContentManualNodeIds(ids, nodesById, manualChildOrder)
-      : [...ids].sort((leftId, rightId) => compareWorkspaceContentNodes(nodesById[leftId]!, nodesById[rightId]!, sort, nodeViewById));
+      : [...ids].sort((leftId, rightId) => compareWorkspaceContentNodes(
+          nodesById[leftId]!,
+          nodesById[rightId]!,
+          sort,
+          nodeOpenStateById
+        ));
 
   const sortedIds: string[] = [];
   const walk = (parentId: string | null) => {

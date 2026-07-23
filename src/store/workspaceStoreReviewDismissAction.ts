@@ -17,7 +17,6 @@ import {
   completeReviewSession
 } from './workspaceReviewReading';
 import { calculateReviewStepElapsedMs } from './workspaceReviewSessionProgress';
-import { syncNodeContentToRuntime } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
 import {
   persistReadingReviewNodes,
@@ -177,7 +176,7 @@ export function createLegacyDismissReviewTopicAction(set: WorkspaceSet, get: Wor
       nextNodesForSync = result.nextNodesForSync;
       return result.patch;
     });
-    nextNodesForSync.forEach((node) => syncNodeContentToRuntime(node));
+    void persistReadingReviewNodes(nextNodesForSync);
     return true;
   };
 }

@@ -1,5 +1,8 @@
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { loadNodeBacklinks } from '../database/nodeBacklinks.js';
+import { saveNodeOpenState } from '../database/nodeOpenState.js';
+import { saveNodeReadingState } from '../database/nodeReadingState.js';
+import { saveNodeReviewState } from '../database/nodeReviewState.js';
 import { loadReadingProgress, saveReadingProgress } from '../database/readingProgress.js';
 import { applyReviewGrade, resetNodeReviewState } from '../database/reviewMutations.js';
 import { loadSyncNodeConflicts } from '../database/syncConflictReads.js';
@@ -68,6 +71,26 @@ export function handleReadingAndReviewCommand(command: string, args: Record<stri
       updatedAt: asTimestamp(args.updatedAt, 'updatedAt')
     });
     return null;
+  }
+  if (command === NATIVE_COMMANDS.saveNodeOpenState) {
+    return saveNodeOpenState({
+      lastOpenedAt: asTimestamp(args.lastOpenedAt, 'lastOpenedAt'),
+      nodeId: asString(args.nodeId, 'nodeId')
+    });
+  }
+  if (command === NATIVE_COMMANDS.saveNodeReadingState) {
+    return saveNodeReadingState({
+      nodeId: asString(args.nodeId, 'nodeId'),
+      reading: args.reading as Parameters<typeof saveNodeReadingState>[0]['reading'],
+      updatedAt: asTimestamp(args.updatedAt, 'updatedAt')
+    });
+  }
+  if (command === NATIVE_COMMANDS.saveNodeReviewState) {
+    return saveNodeReviewState({
+      nodeId: asString(args.nodeId, 'nodeId'),
+      review: args.review as Parameters<typeof saveNodeReviewState>[0]['review'],
+      updatedAt: asTimestamp(args.updatedAt, 'updatedAt')
+    });
   }
   if (command === NATIVE_COMMANDS.applyReviewGrade) {
     applyReviewGrade(parseApplyReviewGradeArgs(args));

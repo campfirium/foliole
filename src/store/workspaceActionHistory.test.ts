@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { NodeReadingProfile } from '../features/nodes/model/nodeTypes';
+import { saveNodeReadingStateToRuntime } from '../shared/platform/runtime/nodeReadingStateRuntimeRepository';
 
 import { createWorkspaceActionHistoryActions } from './workspaceActionHistory';
 import {
-  syncNodeContentToRuntime,
   syncRestoreNodesToRuntime,
   syncSoftDeleteNodesToRuntime
 } from './workspaceRuntimeSync';
@@ -26,6 +26,9 @@ vi.mock('./workspaceRuntimeSync', () => ({
   syncNodeRevealToRuntime: vi.fn(),
   syncRestoreNodesToRuntime: vi.fn(),
   syncSoftDeleteNodesToRuntime: vi.fn()
+}));
+vi.mock('../shared/platform/runtime/nodeReadingStateRuntimeRepository', () => ({
+  saveNodeReadingStateToRuntime: vi.fn(async () => true)
 }));
 
 function createReadingProfile(overrides: Partial<NodeReadingProfile> = {}): NodeReadingProfile {
@@ -93,20 +96,21 @@ describe('workspace application action history', () => {
     const nodeActions = createWorkspaceNodeActions(harness.setState);
     const historyActions = createWorkspaceActionHistoryActions(harness.setState, harness.getState);
     const beforeReading = harness.getState().nodesById['node-1']?.reading;
+    const modifiedAt = harness.getState().nodesById['node-1']?.updatedAt;
 
     nodeActions.dismissNode('node-1', '2026-03-18T00:00:00.000Z');
     const afterReading = harness.getState().nodesById['node-1']?.reading;
 
     expect(historyActions.undoWorkspaceAction('2026-03-19T00:00:00.000Z')).toBe(true);
     expect(harness.getState().nodesById['node-1']?.reading).toEqual(beforeReading);
-    expect(harness.getState().nodesById['node-1']?.updatedAt).toBe('2026-03-19T00:00:00.000Z');
-    expect(syncNodeContentToRuntime).toHaveBeenLastCalledWith(
-      expect.objectContaining({ id: 'node-1', reading: beforeReading })
+    expect(harness.getState().nodesById['node-1']?.updatedAt).toBe(modifiedAt);
+    expect(saveNodeReadingStateToRuntime).toHaveBeenLastCalledWith(
+      expect.objectContaining({ nodeId: 'node-1', reading: beforeReading })
     );
 
     expect(historyActions.redoWorkspaceAction('2026-03-20T00:00:00.000Z')).toBe(true);
     expect(harness.getState().nodesById['node-1']?.reading).toEqual(afterReading);
-    expect(harness.getState().nodesById['node-1']?.updatedAt).toBe('2026-03-20T00:00:00.000Z');
+    expect(harness.getState().nodesById['node-1']?.updatedAt).toBe(modifiedAt);
   });
 
   it('returns to the restored topic after undoing Dismiss Topic', () => {
@@ -120,10 +124,7 @@ describe('workspace application action history', () => {
     expect(historyActions.undoWorkspaceAction('2026-03-19T00:00:00.000Z')).toBe(true);
 
     expect(harness.getState().activeNodeId).toBe('node-1');
-    expect(harness.getState().nodeViewById['node-1']).toMatchObject({
-      scrollTop: 0,
-      selection: null
-    });
+    expect(harness.getState().nodeViewById['node-1']).toBeUndefined();
   });
 });
 
@@ -232,6 +233,6 @@ describe('workspace application action history conflicts', () => {
 
     expect(historyActions.undoWorkspaceAction('2026-03-20T00:00:00.000Z')).toBe(false);
     expect(harness.getState().appActionHistory.undoStack).toEqual([]);
-    expect(syncNodeContentToRuntime).toHaveBeenCalledTimes(1);
+    expect(saveNodeReadingStateToRuntime).toHaveBeenCalledTimes(1);
   });
 });

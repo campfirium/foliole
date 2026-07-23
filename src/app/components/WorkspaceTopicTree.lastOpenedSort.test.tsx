@@ -161,11 +161,11 @@ beforeEach(() => {
   window.localStorage.clear();
   useWorkspaceStore.setState((state) => ({
     ...state,
-    nodeViewById: {
-      'article-a': { scrollTop: 0, selection: null, updatedAt: '2026-04-01T09:00:00.000Z' },
-      'article-b': { scrollTop: 0, selection: null, updatedAt: '2026-04-02T09:00:00.000Z' },
-      'article-a-lower': { scrollTop: 0, selection: null, updatedAt: '2026-04-04T09:00:00.000Z' },
-      'article-a-upper': { scrollTop: 0, selection: null, updatedAt: '2026-04-03T09:00:00.000Z' }
+    nodeOpenStateById: {
+      'article-a': { lastOpenedAt: '2026-04-01T09:00:00.000Z', nodeId: 'article-a' },
+      'article-b': { lastOpenedAt: '2026-04-02T09:00:00.000Z', nodeId: 'article-b' },
+      'article-a-lower': { lastOpenedAt: '2026-04-04T09:00:00.000Z', nodeId: 'article-a-lower' },
+      'article-a-upper': { lastOpenedAt: '2026-04-03T09:00:00.000Z', nodeId: 'article-a-upper' }
     },
     trashedNodeIds: []
   }));
@@ -180,9 +180,9 @@ it('keeps the current folder list stable when last-opened timestamps change', ()
   act(() => {
     useWorkspaceStore.setState((state) => ({
       ...state,
-      nodeViewById: {
-        ...state.nodeViewById,
-        'article-a': { scrollTop: 0, selection: null, updatedAt: '2026-04-03T09:00:00.000Z' }
+      nodeOpenStateById: {
+        ...state.nodeOpenStateById,
+        'article-a': { lastOpenedAt: '2026-04-03T09:00:00.000Z', nodeId: 'article-a' }
       }
     }));
   });
@@ -194,9 +194,9 @@ it('does not move a newly opened topic to the top while the folder stays open', 
     ...state,
     activeNodeId: 'article-a',
     nodeOrder: ['article-a', 'article-b', 'article-c'],
-    nodeViewById: {
-      'article-a': { scrollTop: 0, selection: null, updatedAt: '2026-04-01T09:00:00.000Z' },
-      'article-b': { scrollTop: 0, selection: null, updatedAt: '2026-04-02T09:00:00.000Z' }
+    nodeOpenStateById: {
+      'article-a': { lastOpenedAt: '2026-04-01T09:00:00.000Z', nodeId: 'article-a' },
+      'article-b': { lastOpenedAt: '2026-04-02T09:00:00.000Z', nodeId: 'article-b' }
     },
     nodesById: {
       'article-a': createNode('article-a', 'Opened earlier'),
@@ -224,9 +224,9 @@ it('keeps the refreshed last-opened order after leaving and returning to a folde
   act(() => {
     useWorkspaceStore.setState((state) => ({
       ...state,
-      nodeViewById: {
-        ...state.nodeViewById,
-        'article-a': { scrollTop: 0, selection: null, updatedAt: '2026-04-03T09:00:00.000Z' }
+      nodeOpenStateById: {
+        ...state.nodeOpenStateById,
+        'article-a': { lastOpenedAt: '2026-04-03T09:00:00.000Z', nodeId: 'article-a' }
       }
     }));
   });

@@ -19,7 +19,7 @@ const nodeVersionRules = ANDROID_COMPANION_SYNC_STREAM_READ_RULES.nodeVersions;
 const sharedStateQuery = ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS.syncStateChanges.sql;
 const syncbackStateQuery = sharedStateQuery.replace(
   "object_type NOT IN ('node', 'view_state')",
-  "object_type IN ('node_reading', 'node_review', 'setting')"
+  "object_type IN ('node_open_state', 'node_reading', 'node_review', 'setting')"
 );
 
 if (syncbackStateQuery === sharedStateQuery) {
@@ -54,6 +54,7 @@ export const COMPANION_SYNCBACK_HOST_CONTRACT = {
     metaUpsert: mutations[metaRules.upsertMutationName],
     nodeVersionParent: ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS.syncNodeVersionParent.sql,
     nodeVersions: ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS.syncNodeVersions.sql,
+    openStatePayload: ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS.syncPayloadNodeOpenState.sql,
     readingPayload: ANDROID_COMPANION_LEARNING_PAYLOAD_QUERY_DEFINITIONS.syncPayloadNodeReading.sql,
     reviewLog: ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS.syncReviewLog.sql,
     reviewPayload: ANDROID_COMPANION_LEARNING_PAYLOAD_QUERY_DEFINITIONS.syncPayloadNodeReview.sql,

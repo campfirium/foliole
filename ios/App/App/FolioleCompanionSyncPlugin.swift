@@ -27,6 +27,7 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "savePairingCredentials", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "savePrimaryDeviceId", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "saveSyncActiveViewState", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "saveSyncNodeOpenState", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "saveSyncNodeViewState", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "saveSyncNodeReadingRecord", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "saveSyncNodeReviewRecord", returnType: CAPPluginReturnPromise),
