@@ -1,5 +1,4 @@
 import {
-  getWordPressSiteIdentity,
   getWordPressSiteKind,
   isWordPressApplicationPasswordValid,
   normalizeWordPressApplicationPassword,
@@ -84,24 +83,32 @@ function toRecord(value: XmlRpcValue): Record<string, XmlRpcValue> | null {
     : null;
 }
 
-function returnedBlogMatchesSite(blog: Record<string, XmlRpcValue> | null, siteUrl: string) {
-  const requestedSite = getWordPressSiteIdentity(siteUrl);
-  const returnedSite = typeof blog?.url === 'string' ? getWordPressSiteIdentity(blog.url) : null;
-  const requestedEndpoint = getWordPressSiteIdentity(`${siteUrl}/xmlrpc.php`);
-  const returnedEndpoint = typeof blog?.xmlrpc === 'string' ? getWordPressSiteIdentity(blog.xmlrpc) : null;
-  return requestedSite !== null && (requestedSite === returnedSite || requestedEndpoint === returnedEndpoint);
+function readBlogId(value: XmlRpcValue | undefined) {
+  return typeof value === 'string' || typeof value === 'number' ? String(value) : null;
+}
+
+async function readWordPressComSiteId(siteUrl: string) {
+  const hostname = new URL(siteUrl).hostname;
+  const endpoint = `https://public-api.wordpress.com/rest/v1.1/sites/${encodeURIComponent(hostname)}`;
+  const response = await fetchWordPress(endpoint, { method: 'GET' }, 'WordPress.com could not resolve the requested site.');
+  const site = await readCoreJson(response, 'WordPress.com could not resolve the requested site');
+  const siteId = site.ID;
+  if (typeof siteId !== 'string' && typeof siteId !== 'number') {
+    throw new Error('WordPress.com did not return the requested site ID.');
+  }
+  return String(siteId);
 }
 
 async function verifyWordPressComSite(siteUrl: string, username: string, applicationPassword: string) {
   const endpoint = `${siteUrl}/xmlrpc.php`;
+  const requestedBlogId = await readWordPressComSiteId(siteUrl);
   const result = await callXmlRpc(endpoint, 'wp.getUsersBlogs', [username, applicationPassword]);
   const blogs = Array.isArray(result) ? result.map(toRecord).filter(Boolean) : [];
-  const match = blogs.find((blog) => returnedBlogMatchesSite(blog, siteUrl));
-  const blogId = match?.blogid;
-  if (!match || (typeof blogId !== 'string' && typeof blogId !== 'number')) {
+  const match = blogs.find((blog) => readBlogId(blog?.blogid) === requestedBlogId);
+  if (!match) {
     throw new Error('This WordPress.com credential does not provide access to the requested site.');
   }
-  return { adapter: 'wordpress_com_xmlrpc' as const, blogId: String(blogId), endpoint, siteUrl };
+  return { adapter: 'wordpress_com_xmlrpc' as const, blogId: requestedBlogId, endpoint, siteUrl };
 }
 
 async function verifyCoreSite(siteUrl: string, username: string, applicationPassword: string) {
