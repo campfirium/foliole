@@ -152,7 +152,7 @@ export async function publishTopicToFoliole(args: NativeFoliolePublishTopicArgs)
   try {
     await deployCloudflarePages({
       accountId: settings.account_id, projectName: settings.project_name, siteRoot: staged,
-      token, waitForCompletion: false
+      token
     });
   } catch (error) {
     discardStagedFoliolePublishSite(staged);
@@ -161,7 +161,6 @@ export async function publishTopicToFoliole(args: NativeFoliolePublishTopicArgs)
   let localPath: string;
   try { localPath = commitPublishedTopic({ content: updatedContent, index, root: root(), staged, topicFile: topic.file }); }
   catch (error) {
-    await shell.openExternal(url);
     return {
       local_path: path.join(root(), 'Site', 'index.html'), status: 'deployed_local_publish_state_failed' as const,
       updated_content: updatedContent, url,
@@ -171,7 +170,6 @@ export async function publishTopicToFoliole(args: NativeFoliolePublishTopicArgs)
   let status: 'deployed_and_committed' | 'deployed_history_failed' = 'deployed_and_committed';
   try { recordFoliolePublishFields(args.fields); } catch { status = 'deployed_history_failed'; }
   fs.rmSync(path.join(root(), 'Preview'), { force: true, recursive: true });
-  await shell.openExternal(url);
   return { local_path: localPath, status, updated_content: updatedContent, url };
 }
 

@@ -10,6 +10,7 @@ const roots: string[] = [];
 function temporarySite() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-cloudflare-'));
   roots.push(root);
+  fs.writeFileSync(path.join(root, '404.html'), '<h1>Page not found</h1>');
   fs.writeFileSync(path.join(root, 'index.html'), '<h1>Hello</h1>');
   return root;
 }
@@ -57,25 +58,12 @@ it('uploads missing assets before creating a manifest deployment', async () => {
   ]);
   const deployment = calls.at(-1)?.body as FormData;
   expect(deployment.get('branch')).toBe('main');
-  expect(JSON.parse(String(deployment.get('manifest')))).toEqual({ '/index.html': expect.any(String) });
-});
-
-it('accepts an active deployment without polling Cloudflare again', async () => {
-  const fetchMock = vi.fn(async (input: string | URL | Request) => {
-    const url = String(input);
-    if (url.endsWith('/upload-token')) return response({ jwt: 'upload-jwt' });
-    if (url.endsWith('/check-missing')) return response([]);
-    return response({ id: 'deployment', latest_stage: { status: 'active' } });
+  expect(JSON.parse(String(deployment.get('manifest')))).toEqual({
+    '/404.html': expect.any(String), '/index.html': expect.any(String)
   });
-  vi.stubGlobal('fetch', fetchMock);
-
-  await expect(deployCloudflarePages({
-    accountId: 'account', projectName: 'project', siteRoot: temporarySite(), token: 'api-token', waitForCompletion: false
-  })).resolves.toMatchObject({ latest_stage: { status: 'active' } });
-  expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/deployments/deployment'))).toBe(false);
 });
 
-it('still waits for completion in connection and theme deployment flows', async () => {
+it('waits for Cloudflare to finish every deployment', async () => {
   vi.useFakeTimers();
   const fetchMock = vi.fn(async (input: string | URL | Request) => {
     const url = String(input);

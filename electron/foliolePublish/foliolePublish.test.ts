@@ -215,7 +215,7 @@ it('returns the binding after remote success when the local publish transaction 
   expect(result.updated_content).toContain('pageId:');
   expect(result.updated_content).toContain('url: https://site.pages.dev/topics/1/');
   expect(activeRss()).toBe(before);
-  expect(mocks.shellOpenExternal).toHaveBeenCalledWith(result.url);
+  expect(mocks.shellOpenExternal).not.toHaveBeenCalled();
 });
 
 it('keeps all formal local publish state unchanged when deployment fails', async () => {
@@ -233,9 +233,10 @@ it('reports history persistence as an independent partial success', async () => 
   expect(result.status).toBe('deployed_history_failed');
   expect(result.updated_content).toContain('category: ""');
   expect(fs.existsSync(path.join(state.libraryHome, 'Publish', 'Content'))).toBe(true);
+  expect(mocks.shellOpenExternal).not.toHaveBeenCalled();
 });
 
-it('opens the stable Topic URL after Cloudflare accepts the deployment', async () => {
+it('returns the stable Topic URL after Cloudflare finishes without opening it', async () => {
   const result = await publishTopicToFoliole({
     content: '# 中文标题\n\n正文', fields: [], node_id: 'topic-1', title: '中文标题'
   });
@@ -245,6 +246,8 @@ it('opens the stable Topic URL after Cloudflare accepts the deployment', async (
   });
   expect(result.updated_content).toContain('pageId: "1"');
   expect(fs.readFileSync(path.join(state.libraryHome, 'Publish', 'publish.yaml'), 'utf8')).toContain('"topics"');
-  expect(mocks.shellOpenExternal).toHaveBeenCalledWith('https://site.pages.dev/topics/1/');
-  expect(mocks.deployCloudflarePages).toHaveBeenCalledWith(expect.objectContaining({ waitForCompletion: false }));
+  expect(mocks.shellOpenExternal).not.toHaveBeenCalled();
+  expect(mocks.deployCloudflarePages).toHaveBeenCalledWith({
+    accountId: 'account', projectName: 'site', siteRoot: expect.any(String), token: 'stored-token'
+  });
 });

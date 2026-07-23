@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
 
 import { normalizeFolioleWebFields } from '../../../lib/core/foliolePublish/folioleWebPublishFrontmatter';
-import type { NativeFoliolePublishField } from '../../../lib/platform/nativeFoliolePublishContract';
+import type { NativeFoliolePublishField, NativeFoliolePublishResult } from '../../../lib/platform/nativeFoliolePublishContract';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   forgetFoliolePublishFieldFromRuntime,
@@ -10,6 +10,7 @@ import {
   publishTopicToFoliole,
   resetFoliolePublishFieldHistoryFromRuntime
 } from '../../shared/platform/foliolePublishRepository';
+import { openExternalUrl } from '../../shared/platform/runtimeExternalNavigation';
 import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle, requestAppConfirmation } from '../../shared/ui';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -31,8 +32,27 @@ async function executePublishAction(input: {
   if (input.kind === 'preview') return null;
   if (!result.updated_content) throw new Error(input.t('desktop.foliolePublish.localSaveError'));
   const saved = await useWorkspaceStore.getState().updateNodeContent(input.request.nodeId, result.updated_content);
-  if (!saved) throw new Error(input.t('desktop.foliolePublish.localSaveError'));
-  return result.status;
+  return { result, saved };
+}
+
+function showPublishResultNotice(input: {
+  result: NativeFoliolePublishResult;
+  saved: boolean;
+  t: ReturnType<typeof useTranslation>;
+}) {
+  const noticeKey = !input.saved
+    ? 'desktop.foliolePublish.localSaveError'
+    : input.result.status === 'deployed_history_failed'
+      ? 'desktop.foliolePublish.historyWarning'
+      : input.result.status === 'deployed_local_publish_state_failed'
+        ? 'desktop.foliolePublish.localStateWarning'
+        : 'desktop.foliolePublish.published';
+  const complete = input.saved && input.result.status === 'deployed_and_committed';
+  const action = input.result.url ? {
+    label: input.t('desktop.foliolePublish.openTopic'),
+    onSelect: () => void openExternalUrl(input.result.url!)
+  } : undefined;
+  showAppRuntimeNotice(input.t(noticeKey), complete ? 'success' : 'error', action);
 }
 
 async function resetFieldHistory(input: {
@@ -76,15 +96,10 @@ export function FoliolePublishDialogHost() {
     setBusy(kind === 'preview' ? 'previewing' : 'publishing');
     setError(null);
     try {
-      const status = await executePublishAction({ fields, kind, request, t });
-      if (!status) return;
+      const outcome = await executePublishAction({ fields, kind, request, t });
+      if (!outcome) return;
       setRequest(null);
-      const noticeKey = status === 'deployed_history_failed'
-        ? 'desktop.foliolePublish.historyWarning'
-        : status === 'deployed_local_publish_state_failed'
-          ? 'desktop.foliolePublish.localStateWarning'
-          : 'desktop.foliolePublish.published';
-      showAppRuntimeNotice(t(noticeKey), status === 'deployed_and_committed' ? 'success' : 'error');
+      showPublishResultNotice({ ...outcome, t });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Foliole Publish failed.');
     } finally { setBusy('idle'); }

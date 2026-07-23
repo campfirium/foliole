@@ -158,7 +158,7 @@ async function waitForDeployment(
 }
 
 export async function deployCloudflarePages(input: {
-  accountId: string; projectName: string; siteRoot: string; token: string; waitForCompletion?: boolean;
+  accountId: string; projectName: string; siteRoot: string; token: string;
 }) {
   try {
     const files = prepareCloudflarePagesFiles(input.siteRoot);
@@ -166,9 +166,7 @@ export async function deployCloudflarePages(input: {
     const missing = new Set(await getMissingHashes(files, jwt));
     await uploadAssets(files.filter((file) => missing.has(file.hash)), jwt);
     const deployment = await createDeployment({ ...input, files });
-    return input.waitForCompletion === false
-      ? acceptDeployment(deployment)
-      : await waitForDeployment(input, deployment);
+    return await waitForDeployment(input, deployment);
   } catch (error) { throw safeCloudflareError(error); }
 }
 

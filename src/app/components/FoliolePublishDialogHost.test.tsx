@@ -11,6 +11,7 @@ const repository = vi.hoisted(() => ({
 }));
 const workspace = vi.hoisted(() => ({ updateNodeContent: vi.fn() }));
 const notices = vi.hoisted(() => ({ showAppRuntimeNotice: vi.fn() }));
+const navigation = vi.hoisted(() => ({ openExternalUrl: vi.fn() }));
 
 vi.mock('../../shared/platform/foliolePublishRepository', () => ({
   ...repository,
@@ -18,6 +19,7 @@ vi.mock('../../shared/platform/foliolePublishRepository', () => ({
 }));
 vi.mock('../../store/workspaceStore', () => ({ useWorkspaceStore: { getState: () => workspace } }));
 vi.mock('../../shared/ui/AppRuntimeNotice', () => notices);
+vi.mock('../../shared/platform/runtimeExternalNavigation', () => navigation);
 
 async function openDialog(hasCredentials = false, content = '---\ncategory: essays\ntags: [design, notes]\n---\nBody') {
   await act(async () => window.dispatchEvent(new CustomEvent('foliole:web-publish-dialog-request', { detail: {
@@ -83,7 +85,7 @@ it('keeps empty fields in a confirmed publish binding request', async () => {
   expect(workspace.updateNodeContent).toHaveBeenCalled();
 });
 
-it('notes that the opened page may take a moment to show the completed deployment', async () => {
+it('offers to open the published Topic without opening it automatically', async () => {
   repository.publishTopicToFoliole.mockResolvedValue({
     local_path: '/Library/Publish/Site/index.html', status: 'deployed_and_committed',
     updated_content: '---\nfoliole: {}\n---\nBody', url: 'https://site.example/topics/1/'
@@ -93,8 +95,51 @@ it('notes that the opened page may take a moment to show the completed deploymen
   fireEvent.click(await screen.findByRole('button', { name: 'Publish' }));
 
   await waitFor(() => expect(notices.showAppRuntimeNotice).toHaveBeenCalledWith(
-    'Published. The page may take a moment to show the latest version.', 'success'
+    'Published to the site.', 'success', expect.objectContaining({ label: 'Open topic' })
   ));
+  expect(navigation.openExternalUrl).not.toHaveBeenCalled();
+  notices.showAppRuntimeNotice.mock.calls[0]?.[2]?.onSelect();
+  expect(navigation.openExternalUrl).toHaveBeenCalledWith('https://site.example/topics/1/');
+});
+
+it.each([
+  ['deployed_history_failed', 'Published, but recent field values could not be saved.'],
+  ['deployed_local_publish_state_failed', 'Published, but the local static site could not be updated. The Topic binding was saved so you can retry.']
+] as const)('keeps the open action when publishing reports %s', async (status, message) => {
+  repository.publishTopicToFoliole.mockResolvedValue({
+    local_path: '/Library/Publish/Site/index.html', status,
+    updated_content: '---\nfoliole: {}\n---\nBody', url: 'https://site.example/topics/1/'
+  });
+  render(<FoliolePublishDialogHost />);
+  await openDialog(true, 'Body');
+  fireEvent.click(await screen.findByRole('button', { name: 'Publish' }));
+
+  await waitFor(() => expect(notices.showAppRuntimeNotice).toHaveBeenCalledWith(
+    message, 'error', expect.objectContaining({ label: 'Open topic' })
+  ));
+  expect(navigation.openExternalUrl).not.toHaveBeenCalled();
+  notices.showAppRuntimeNotice.mock.calls.at(-1)?.[2]?.onSelect();
+  expect(navigation.openExternalUrl).toHaveBeenCalledWith('https://site.example/topics/1/');
+});
+
+it('reports a local Topic binding failure without losing the published URL', async () => {
+  repository.publishTopicToFoliole.mockResolvedValue({
+    local_path: '/Library/Publish/Site/index.html', status: 'deployed_and_committed',
+    updated_content: '---\nfoliole: {}\n---\nBody', url: 'https://site.example/topics/1/'
+  });
+  workspace.updateNodeContent.mockResolvedValue(false);
+  render(<FoliolePublishDialogHost />);
+  await openDialog(true, 'Body');
+  fireEvent.click(await screen.findByRole('button', { name: 'Publish' }));
+
+  await waitFor(() => expect(notices.showAppRuntimeNotice).toHaveBeenCalledWith(
+    'Published, but Foliole could not save the Topic binding.', 'error',
+    expect.objectContaining({ label: 'Open topic' })
+  ));
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  expect(navigation.openExternalUrl).not.toHaveBeenCalled();
+  notices.showAppRuntimeNotice.mock.calls.at(-1)?.[2]?.onSelect();
+  expect(navigation.openExternalUrl).toHaveBeenCalledWith('https://site.example/topics/1/');
 });
 
 it('edits multiple values as removable chips and preserves them when switching to one value', async () => {

@@ -20,7 +20,8 @@ export const ZH_HANS_DESKTOP_FOLIOLE_PUBLISH_TRANSLATIONS = {
   'desktop.foliolePublish.publishing': '正在发布…',
   'desktop.foliolePublish.hostingRequired': '连接托管服务后才能发布；现在仍可预览。',
   'desktop.foliolePublish.invalidKey': '请输入不重复的 YAML 键名。',
-  'desktop.foliolePublish.published': '已发布，页面可能需要片刻显示最新内容。',
+  'desktop.foliolePublish.published': '已发布到站点。',
+  'desktop.foliolePublish.openTopic': '打开主题',
   'desktop.foliolePublish.historyWarning': '发布成功，但未能保存最近使用的字段值。',
   'desktop.foliolePublish.localStateWarning': '远端已发布，但本地静态站点未能更新。Topic 发布关联已保存，可以再次发布重试。',
   'desktop.foliolePublish.localSaveError': '发布成功，但 Foliole 未能保存 Topic 的发布关联。'

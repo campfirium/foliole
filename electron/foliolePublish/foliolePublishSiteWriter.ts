@@ -115,6 +115,27 @@ function rss(topics: FoliolePublishProjectedTopic[], site: FoliolePublishTemplat
   return `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>${escapeHtml(site.title)}</title><link>${escapeHtml(`${site.url}/`)}</link><description>Topics published with Foliole.</description>${lastBuildDate}<generator>Foliole Publish</generator>${items}</channel></rss>`;
 }
 
+function notFoundPage(site: FoliolePublishTemplateSite) {
+  const title = escapeHtml(site.title);
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="generator" content="Foliole">
+  <link rel="stylesheet" href="/style.css">
+  <title>Page not found — ${title}</title>
+</head>
+<body data-foliole-publish-site data-page-kind="not-found">
+  <main class="shell"><article class="view article-view">
+    <h1 class="article-title">Page not found</h1>
+    <div class="prose"><p>This page is not available.</p><p><a href="/">Return home</a></p></div>
+  </article></main>
+</body>
+</html>`;
+}
+
 export function writeFoliolePublishSite(args: {
   index: FoliolePublishIndex; publicAddress: string; root: string; sources: FoliolePublishTopicSource[]; theme: Theme;
 }) {
@@ -128,6 +149,7 @@ export function writeFoliolePublishSite(args: {
   writeTaxonomy(args.root, topics, site, args.theme['archive.html'], 'tags');
   const search = pageScope({ depth: '../', site, title: 'Search', view: 'search' });
   write(path.join(args.root, 'search', 'index.html'), render(args.theme['archive.html'], search, site, 'archive.html'));
+  write(path.join(args.root, '404.html'), notFoundPage(site));
   write(path.join(args.root, 'search-index.js'), searchIndexScript(topics));
   write(path.join(args.root, 'style.css'), args.theme['style.css']);
   write(path.join(args.root, 'site.js'), args.theme['site.js']);

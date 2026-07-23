@@ -40,6 +40,12 @@ it('opens on a complete-segment Topic stream and emits numbered Topic pages, arc
   expect(fs.readFileSync(path.join(root, 'Site', 'archive', 'index.html'), 'utf8')).toContain('Older');
   expect(fs.readFileSync(path.join(root, 'Site', 'search', 'index.html'), 'utf8')).toContain('src="../search-index.js"');
   expect(fs.readFileSync(path.join(root, 'Site', 'search-index.js'), 'utf8')).toContain('Newest');
+  const notFound = fs.readFileSync(path.join(root, 'Site', '404.html'), 'utf8');
+  expect(notFound).toContain('<h1 class="article-title">Page not found</h1>');
+  expect(notFound).toContain('<link rel="stylesheet" href="/style.css">');
+  expect(notFound).toContain('<a href="/">Return home</a>');
+  expect(notFound).not.toContain('topic-stream');
+  expect(notFound).not.toContain('Newest');
   const feed = fs.readFileSync(path.join(root, 'Site', 'rss.xml'), 'utf8');
   expect(feed).toContain('<description>Topics published with Foliole.</description>');
   expect(feed).toContain('https://notes.example.com/topics/2/');
