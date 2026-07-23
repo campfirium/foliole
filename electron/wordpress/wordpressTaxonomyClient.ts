@@ -1,4 +1,5 @@
 import type {
+  NativeWordPressPublishCategorySelection,
   NativeWordPressPublishCatalog,
   NativeWordPressPublishTagSelection
 } from '../../lib/platform/nativeWordPressPublishContract.js';
@@ -122,8 +123,8 @@ export function loadWordPressPublishCatalog(config: WordPressClientConfig, postI
   return config.adapter === 'core_rest' ? loadCoreCatalog(config, postId) : loadXmlCatalog(config, postId);
 }
 
-async function createCoreTag(config: WordPressClientConfig, name: string) {
-  const response = await fetchWordPress(`${config.endpoint}/tags`, {
+async function createCoreTerm(config: WordPressClientConfig, route: 'categories' | 'tags', name: string) {
+  const response = await fetchWordPress(`${config.endpoint}/${route}`, {
     body: JSON.stringify({ name }),
     headers: { ...coreHeaders(config), 'Content-Type': 'application/json' },
     method: 'POST'
@@ -133,10 +134,19 @@ async function createCoreTag(config: WordPressClientConfig, name: string) {
     ? Number((payload.data as Record<string, unknown>).term_id)
     : null;
   const id = response.ok ? Number(payload.id) : existingId;
-  if (!Number.isSafeInteger(id) || Number(id) <= 0) throw new Error(`WordPress could not create the tag “${name}”.`);
+  const termLabel = route === 'categories' ? 'category' : 'tag';
+  if (!Number.isSafeInteger(id) || Number(id) <= 0) throw new Error(`WordPress could not create the ${termLabel} “${name}”.`);
   return Number(id);
 }
 
+export async function resolveCoreCategoryId(
+  config: WordPressClientConfig,
+  category: NativeWordPressPublishCategorySelection | null
+) {
+  if (!category) return undefined;
+  return category.id ?? createCoreTerm(config, 'categories', category.name);
+}
+
 export async function resolveCoreTagIds(config: WordPressClientConfig, tags: NativeWordPressPublishTagSelection[]) {
-  return Promise.all(tags.map((tag) => tag.id ?? createCoreTag(config, tag.name)));
+  return Promise.all(tags.map((tag) => tag.id ?? createCoreTerm(config, 'tags', tag.name)));
 }

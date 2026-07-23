@@ -44,7 +44,9 @@ function useWordPressPublishAction(args: {
       const result = await publishTopicToWordPress({
         category: (() => {
           const selected = args.catalog.catalog?.categories.find((entry) => String(entry.id) === args.form.categoryId);
-          return selected ? { id: selected.id, name: selected.name } : null;
+          if (selected) return { id: selected.id, name: selected.name };
+          const name = args.form.categoryName?.trim();
+          return name ? { id: null, name } : null;
         })(),
         content: args.request.content,
         status: args.status,
@@ -101,7 +103,7 @@ function WordPressPublishDialogBody(props: WordPressDialogProps & { canPublish: 
         </select>
       </label>
     </div>
-    <DiscoursePublishFields catalog={props.catalog} categoryPlaceholder={t('desktop.wordpressPublish.category.placeholder')} form={props.form} setForm={props.setForm} showAllCategories={props.showAllCategories} showAllTags={props.showAllTags} toggleShowAllCategories={() => props.setShowAllCategories((current) => !current)} toggleShowAllTags={() => props.setShowAllTags((current) => !current)} />
+    <DiscoursePublishFields catalog={props.catalog} categoryPlaceholder={t('desktop.wordpressPublish.category.placeholder')} createCategoryLabel={(name) => t('desktop.wordpressPublish.category.create', { name })} form={props.form} setForm={props.setForm} showAllCategories={props.showAllCategories} showAllTags={props.showAllTags} toggleShowAllCategories={() => props.setShowAllCategories((current) => !current)} toggleShowAllTags={() => props.setShowAllTags((current) => !current)} />
     {props.catalog.loading ? (
       <div aria-busy="true" className="mt-3 flex items-center gap-2 text-sm text-muted-foreground" role="status">
         <AppSpinner decorative size="sm" />

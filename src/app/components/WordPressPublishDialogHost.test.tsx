@@ -96,6 +96,19 @@ it('publishes with the selected status and saves the returned binding locally', 
   expect(navigationMocks.openExternalUrl).toHaveBeenCalledWith('https://blog.example.com/post');
 });
 
+it('publishes a newly entered category', async () => {
+  render(<WordPressPublishDialogHost />);
+  requestDialog();
+  fireEvent.click(await screen.findByRole('button', { name: 'Category' }));
+  fireEvent.change(screen.getAllByRole('textbox', { name: 'Category' })[0]!, { target: { value: 'Research' } });
+  fireEvent.click(screen.getByRole('option', { name: 'Create “Research”' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Publish' }));
+
+  await waitFor(() => expect(repositoryMocks.publishTopicToWordPress).toHaveBeenCalledWith(
+    expect.objectContaining({ category: { id: null, name: 'Research' } })
+  ));
+});
+
 it('shows update mode when the Topic already owns a WordPress post binding', async () => {
   const content = writeWordPressPostBinding('# Post title\n\nChanged', {
     adapter: 'core_rest',

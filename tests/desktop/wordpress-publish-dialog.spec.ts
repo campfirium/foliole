@@ -37,6 +37,11 @@ test('shows WordPress taxonomy choices in the shared publish panel', async ({ de
   await expect(dialog.getByText('https://blog.example.com')).toHaveCount(0);
   await expect(dialog.getByText(/Create a new post|创建新文章/u)).toHaveCount(0);
 
+  await dialog.getByLabel(/^(Category|分类)$/).first().click();
+  await dialog.getByRole('textbox', { name: /^(Category|分类)$/ }).fill('Research');
+  await dialog.getByRole('option', { name: /^(Create “Research”|新建“Research”)$/ }).click();
+  await expect(dialog.getByLabel(/^(Category|分类)$/).first()).toContainText('Research');
+
   const screenshot = await desktopWindow.screenshot({
     path: path.join('.tmp', 'artifacts', 'desktop-acceptance', 'wordpress-publish-taxonomy-hidden-native.png')
   });

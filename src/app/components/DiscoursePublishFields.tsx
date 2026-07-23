@@ -20,6 +20,7 @@ function FieldSection(props: { children: ReactNode; label: string }) {
 
 export function DiscoursePublishFields(props: {
   catalog: CatalogState;
+  createCategoryLabel?: (name: string) => string;
   categoryPlaceholder?: string;
   form: PublishFormState;
   setForm: (form: PublishFormState) => void;
@@ -34,7 +35,7 @@ export function DiscoursePublishFields(props: {
   return (
     <div className="mt-5 grid gap-4">
       <FieldSection label={t('desktop.discoursePublish.category')}>
-        <DiscourseCategoryPicker categories={catalog?.categories ?? []} {...(props.categoryPlaceholder ? { emptyLabel: props.categoryPlaceholder } : {})} form={props.form} setForm={props.setForm} showAll={props.showAllCategories} toggleShowAll={props.toggleShowAllCategories} />
+        <DiscourseCategoryPicker categories={catalog?.categories ?? []} {...(props.categoryPlaceholder ? { emptyLabel: props.categoryPlaceholder } : {})} {...(props.createCategoryLabel ? { createCategoryLabel: props.createCategoryLabel } : {})} form={props.form} setForm={props.setForm} showAll={props.showAllCategories} toggleShowAll={props.toggleShowAllCategories} />
       </FieldSection>
       <FieldSection label={t('desktop.discoursePublish.tags')}>
         <DiscourseTagPicker form={props.form} setForm={props.setForm} showAll={props.showAllTags} tags={tags} toggleShowAll={props.toggleShowAllTags} />

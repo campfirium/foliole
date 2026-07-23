@@ -1,6 +1,10 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { loadWordPressPublishCatalog, resolveCoreTagIds } from './wordpressTaxonomyClient.js';
+import {
+  loadWordPressPublishCatalog,
+  resolveCoreCategoryId,
+  resolveCoreTagIds
+} from './wordpressTaxonomyClient.js';
 
 const config = {
   adapter: 'core_rest' as const,
@@ -55,4 +59,16 @@ it('keeps existing tag ids and creates only newly entered tags', async () => {
   ])).resolves.toEqual([11, 19]);
   expect(fetchMock).toHaveBeenCalledTimes(1);
   expect(fetchMock.mock.calls[0]![1]?.body).toBe(JSON.stringify({ name: 'new-tag' }));
+});
+
+it('creates a newly entered category and reuses an existing category id', async () => {
+  const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    new Response(JSON.stringify({ id: 23, name: 'Research' }), { status: 201 })
+  );
+
+  await expect(resolveCoreCategoryId(config, { id: null, name: 'Research' })).resolves.toBe(23);
+  await expect(resolveCoreCategoryId(config, { id: 7, name: 'Writing' })).resolves.toBe(7);
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  expect(fetchMock.mock.calls[0]![0]).toBe('https://blog.example.com/wp-json/wp/v2/categories');
+  expect(fetchMock.mock.calls[0]![1]?.body).toBe(JSON.stringify({ name: 'Research' }));
 });

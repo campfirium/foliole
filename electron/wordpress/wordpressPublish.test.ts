@@ -5,6 +5,7 @@ import { readWordPressPostBinding, writeWordPressPostBinding } from '../../lib/c
 const writeWordPressPost = vi.hoisted(() => vi.fn());
 const taxonomyMocks = vi.hoisted(() => ({
   loadWordPressPublishCatalog: vi.fn(),
+  resolveCoreCategoryId: vi.fn(),
   resolveCoreTagIds: vi.fn()
 }));
 const settings = {
@@ -34,8 +35,21 @@ vi.mock('./wordpressPublishSettings.js', () => ({
 beforeEach(() => {
   writeWordPressPost.mockReset();
   taxonomyMocks.resolveCoreTagIds.mockReset();
+  taxonomyMocks.resolveCoreCategoryId.mockReset();
+  taxonomyMocks.resolveCoreCategoryId.mockImplementation(async (_config, category) => category?.id ?? 23);
   taxonomyMocks.resolveCoreTagIds.mockResolvedValue([11]);
   writeWordPressPost.mockResolvedValue({ postId: '123', url: 'https://blog.example.com/post' });
+});
+
+it('creates a REST category before assigning it to the post', async () => {
+  const { publishTopicToWordPress } = await import('./wordpressPublish.js');
+  await publishTopicToWordPress({
+    category: { id: null, name: 'Research' }, content: '# Title\n\nBody',
+    status: 'draft', tags: [], title: 'Title'
+  });
+
+  expect(taxonomyMocks.resolveCoreCategoryId).toHaveBeenCalledWith(expect.anything(), { id: null, name: 'Research' });
+  expect(writeWordPressPost).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ categories: [23] }), undefined);
 });
 
 it('creates a WordPress post and writes the provider-specific binding after success', async () => {

@@ -45,7 +45,10 @@ export interface NativeWordPressPublishTagSelection {
   name: string;
 }
 
-export type NativeWordPressPublishCategorySelection = Pick<NativeWordPressPublishCategory, 'id' | 'name'>;
+export interface NativeWordPressPublishCategorySelection {
+  id: number | null;
+  name: string;
+}
 
 export interface NativeWordPressPublishArgs {
   category: NativeWordPressPublishCategorySelection | null;

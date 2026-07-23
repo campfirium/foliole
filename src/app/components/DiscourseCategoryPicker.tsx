@@ -48,13 +48,19 @@ function CategoryOption(props: {
 function CategoryPopover(props: {
   categories: Category[];
   close: () => void;
+  createCategory?: (name: string) => void;
+  createCategoryLabel?: (name: string) => string;
   query: string;
   selectedCategoryId: string;
   selectCategory: (category: Category) => void;
   setQuery: (query: string) => void;
 }) {
   const t = useTranslation();
-  const visibleCategories = props.categories.filter((category) => category.name.toLowerCase().includes(props.query.trim().toLowerCase()));
+  const trimmedQuery = props.query.trim();
+  const normalizedQuery = trimmedQuery.toLowerCase();
+  const visibleCategories = props.categories.filter((category) => category.name.toLowerCase().includes(normalizedQuery));
+  const canCreate = Boolean(trimmedQuery && props.createCategory && props.createCategoryLabel
+    && !props.categories.some((category) => category.name.toLowerCase() === normalizedQuery));
   return (
     <div className="fixed inset-0 z-modal flex items-center justify-center bg-foreground/10 px-5">
       <div className={appFloatingSurfaceClassName('popover', 'w-[min(860px,calc(100vw-40px))] overflow-hidden p-4')} role="listbox">
@@ -72,6 +78,18 @@ function CategoryPopover(props: {
           </button>
         </div>
         <div className="app-scrollbar grid max-h-[min(420px,calc(100vh-180px))] grid-cols-2 gap-2 overflow-y-auto">
+          {canCreate ? (
+            <button
+              aria-selected="false"
+              className="grid w-full grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-md px-2 py-2 text-left text-ui-md text-foreground transition-colors hover:bg-foreground/[0.04]"
+              onClick={() => props.createCategory?.(trimmedQuery)}
+              role="option"
+              type="button"
+            >
+              <span className="size-5" />
+              <span className="truncate font-medium">{props.createCategoryLabel?.(trimmedQuery)}</span>
+            </button>
+          ) : null}
           {visibleCategories.map((category, index) => (
             <CategoryOption
               category={category}
@@ -116,6 +134,7 @@ function categoryForShortcut(categories: Category[], key: string) {
 
 export function DiscourseCategoryPicker(props: {
   categories: Category[];
+  createCategoryLabel?: (name: string) => string;
   emptyLabel?: string;
   form: PublishFormState;
   setForm: (form: PublishFormState) => void;
@@ -127,7 +146,11 @@ export function DiscourseCategoryPicker(props: {
   const selectedCategory = props.categories.find((category) => String(category.id) === props.form.categoryId);
 
   const selectCategory = (category: Category) => {
-    props.setForm({ ...props.form, categoryId: String(category.id) });
+    props.setForm({ categoryId: String(category.id), tags: props.form.tags });
+    if (props.showAll) props.toggleShowAll();
+  };
+  const createCategory = (name: string) => {
+    props.setForm({ ...props.form, categoryId: '', categoryName: name });
     if (props.showAll) props.toggleShowAll();
   };
 
@@ -161,11 +184,11 @@ export function DiscourseCategoryPicker(props: {
         onKeyDown={handleKeyDown}
         type="button"
       >
-        <span className="min-w-0 truncate">{selectedCategory?.name ?? props.emptyLabel ?? props.categories[0]?.name ?? t('desktop.discoursePublish.category.placeholder')}</span>
+        <span className="min-w-0 truncate">{selectedCategory?.name ?? props.form.categoryName ?? props.emptyLabel ?? props.categories[0]?.name ?? t('desktop.discoursePublish.category.placeholder')}</span>
         <ChevronDown aria-hidden="true" className="ml-2 shrink-0 text-foreground/55" size={15} strokeWidth={2} />
       </button>
       <CategoryShortcuts categories={props.categories} onMore={props.toggleShowAll} selectCategory={selectCategory} selectedCategoryId={props.form.categoryId} />
-      {props.showAll ? <CategoryPopover categories={props.categories} close={props.toggleShowAll} query={query} selectedCategoryId={props.form.categoryId} selectCategory={selectCategory} setQuery={setQuery} /> : null}
+      {props.showAll ? <CategoryPopover categories={props.categories} close={props.toggleShowAll} {...(props.createCategoryLabel ? { createCategory, createCategoryLabel: props.createCategoryLabel } : {})} query={query} selectedCategoryId={props.form.categoryId} selectCategory={selectCategory} setQuery={setQuery} /> : null}
     </div>
   );
 }

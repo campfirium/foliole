@@ -9,7 +9,7 @@ export type PublishDetails = {
   tags: string[];
 };
 
-export type PublishFormState = { categoryId: string; tags: string };
+export type PublishFormState = { categoryId: string; categoryName?: string; tags: string };
 
 export function readPublishDetails(content: string): PublishDetails {
   try {
