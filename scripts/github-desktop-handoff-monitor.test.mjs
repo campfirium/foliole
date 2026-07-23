@@ -7,7 +7,8 @@ import { describe, expect, it } from 'vitest';
 import {
   bindMonitorWorkspace,
   loadConfigs,
-  resolveRepositoryRoot
+  resolveRepositoryRoot,
+  submitMonitorEvents
 } from './github-desktop-handoff-monitor.mjs';
 
 describe('github desktop handoff monitor workspace binding', () => {
@@ -34,8 +35,31 @@ describe('github desktop handoff monitor workspace binding', () => {
     });
 
     expect(path.resolve(configs.actions.workspace)).toBe(expectedRoot);
+    expect(path.resolve(configs.dependabotAlerts.workspace)).toBe(expectedRoot);
     expect(path.resolve(configs.issues.workspace)).toBe(expectedRoot);
     expect(path.resolve(configs.prs.workspace)).toBe(expectedRoot);
     expect(configs.actions.name).toBe('github-actions');
+    expect(configs.dependabotAlerts.name).toBe('github-dependabot-alerts');
+  });
+
+  it('checkpoints alerts only after event submission succeeds', () => {
+    const event = { alertNumbers: ['34', '35'], dedupeKey: 'alerts:34-35', title: 'Alerts' };
+    const state = { dependabotAlerts: {}, submitted: {} };
+
+    expect(() => submitMonitorEvents([event], state, {
+      persist: () => undefined,
+      submit: () => { throw new Error('submit failed'); }
+    })).toThrow('submit failed');
+    expect(state).toEqual({ dependabotAlerts: {}, submitted: {} });
+
+    submitMonitorEvents([event], state, {
+      now: () => '2026-07-23T02:00:00Z',
+      persist: () => undefined,
+      submit: () => ({ ok: true })
+    });
+    expect(state.dependabotAlerts).toEqual({
+      34: { emittedAt: '2026-07-23T02:00:00Z', title: 'Alerts' },
+      35: { emittedAt: '2026-07-23T02:00:00Z', title: 'Alerts' }
+    });
   });
 });

@@ -1,4 +1,5 @@
 import { buildIssueHandoffData, buildPrHandoffData } from './github-desktop-handoff-title.mjs';
+import { listDependabotAlertEvents } from './github-dependabot-alert-events.mjs';
 import { listPrChecks, recordMonitorError, runGh } from './github-monitor-gh.mjs';
 
 const ACTION_WORKFLOW_TIERS = new Map([
@@ -216,6 +217,7 @@ function listIssueEvents(config, state, includeExisting, errors, renderTemplate)
 export function listGithubMonitorEvents(configs, state, includeExisting, errors, renderTemplate) {
   state.submitted ??= {};
   return [
+    ...listDependabotAlertEvents(configs.dependabotAlerts, state, errors, renderTemplate),
     ...listActionEvents(configs.actions, state, includeExisting, errors, renderTemplate),
     ...listPrEvents(configs.prs, state, includeExisting, errors, renderTemplate),
     ...listIssueEvents(configs.issues, state, includeExisting, errors, renderTemplate)

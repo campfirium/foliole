@@ -55,6 +55,7 @@ export function loadConfigs(options = {}) {
   const workspace = options.workspace ?? REPO_ROOT;
   return {
     actions: bindMonitorWorkspace(readConfig(path.join(monitorDir, 'github-actions.json')), workspace),
+    dependabotAlerts: bindMonitorWorkspace(readConfig(path.join(monitorDir, 'github-dependabot-alerts.json')), workspace),
     issues: bindMonitorWorkspace(readConfig(path.join(monitorDir, 'github-issues.json')), workspace),
     prs: bindMonitorWorkspace(readConfig(path.join(monitorDir, 'github-prs.json')), workspace)
   };
@@ -65,6 +66,7 @@ function loadState() {
   return {
     ...state,
     actions: state.actions ?? {},
+    dependabotAlerts: state.dependabotAlerts ?? {},
     issues: state.issues ?? {},
     prs: state.prs ?? {},
     submitted: state.submitted ?? {}
@@ -93,6 +95,25 @@ function submitEvent(event) {
   return JSON.parse(result.stdout);
 }
 
+function acknowledgeEvent(state, event, emittedAt) {
+  for (const alertNumber of event.alertNumbers ?? []) {
+    state.dependabotAlerts[String(alertNumber)] = { emittedAt, title: event.title };
+  }
+}
+
+export function submitMonitorEvents(events, state, options = {}) {
+  const submit = options.submit ?? submitEvent;
+  const persist = options.persist ?? ((value) => writeJson(STATE_FILE, value));
+  const now = options.now ?? (() => new Date().toISOString());
+  for (const event of events) {
+    submit(event);
+    const emittedAt = now();
+    state.submitted[event.dedupeKey] = { emittedAt, title: event.title };
+    acknowledgeEvent(state, event, emittedAt);
+    persist(state);
+  }
+}
+
 function scan({ emit = false, includeExisting = false } = {}) {
   const configs = loadConfigs();
   const persistedState = loadState();
@@ -103,19 +124,13 @@ function scan({ emit = false, includeExisting = false } = {}) {
   state.lastErrors = errors;
   state.lastCheckedAt = new Date().toISOString();
   if (emit) writeJson(STATE_FILE, state);
-  if (emit) {
-    for (const event of events) {
-      submitEvent(event);
-      state.submitted[event.dedupeKey] = { emittedAt: new Date().toISOString(), title: event.title };
-      writeJson(STATE_FILE, state);
-    }
-  }
+  if (emit) submitMonitorEvents(events, state);
   return { emit, events, stateFile: STATE_FILE };
 }
 
 async function monitor() {
   const configs = loadConfigs();
-  const interval = Math.max(configs.actions?.pollIntervalSeconds ?? 900, configs.prs?.pollIntervalSeconds ?? 900, configs.issues?.pollIntervalSeconds ?? 900);
+  const interval = Math.max(configs.actions?.pollIntervalSeconds ?? 900, configs.dependabotAlerts?.pollIntervalSeconds ?? 900, configs.prs?.pollIntervalSeconds ?? 900, configs.issues?.pollIntervalSeconds ?? 900);
   for (;;) {
     console.log(JSON.stringify({ ...scan({ emit: true }), checkedAt: new Date().toISOString() }));
     await new Promise((resolve) => setTimeout(resolve, interval * 1000));
