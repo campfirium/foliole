@@ -83,4 +83,30 @@ describe('Windows validation kit runner', () => {
       { name: 'physical_playwright', status: 'skipped' }
     ]);
   });
+
+  it('persists the active stage when the installer deadline expires', async () => {
+    const cacheRoot = root();
+    const executeCommand = vi.fn(async (_command, _args, options) => {
+      expect(options).toMatchObject({ timeoutCode: 'installer_timeout', timeoutMs: 600_000 });
+      throw Object.assign(new Error('installer deadline exceeded'), { code: 'installer_timeout' });
+    });
+    const outcome = await runWindowsValidationKit({
+      cacheRoot,
+      executeCommand,
+      expected: { commitSha: 'a'.repeat(40), runAttempt: '2', runId: '1234' },
+      platform: 'win32',
+      runPhysicalPlaywright: vi.fn(),
+      smokeInstalledApp: vi.fn(),
+      verifyKit: verifier
+    });
+    expect(outcome.result).toMatchObject({ errorCode: 'installer_timeout', status: 'failure' });
+    expect(outcome.result.steps).toEqual([
+      { name: 'install', status: 'failure' },
+      { name: 'readiness', status: 'skipped' },
+      { name: 'physical_playwright', status: 'skipped' }
+    ]);
+    expect(JSON.parse(fs.readFileSync(path.join(outcome.directory, 'progress.json'), 'utf8'))).toMatchObject({
+      currentStage: 'completed', errorCode: 'installer_timeout', status: 'failure'
+    });
+  });
 });

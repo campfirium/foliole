@@ -39,3 +39,28 @@ it('persists a bounded scheduled-task error for remote diagnosis', async () => {
   expect(readJson(paths.status)).toMatchObject({ errorCode: 'artifact_rejected', errorMessage: 'archive rejected' });
   expect(fs.readFileSync(path.join(root, 'worker-error.log'), 'utf8')).toContain('artifact_rejected: archive rejected');
 });
+
+it('preserves collectable candidate evidence when the validation runner times out', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-device-worker-timeout-'));
+  const paths = devicePaths(root);
+  const request = { commitSha: 'c'.repeat(40), runId: '12', schemaVersion: 1 };
+  writeJsonAtomic(paths.active, request);
+  fs.writeFileSync(paths.githubToken, 'read-token');
+  await expect(runWindowsDeviceWorker({
+    downloadArtifactImpl: async () => {},
+    executeCommand: async (_command, _args, options) => {
+      expect(options).toMatchObject({ timeoutCode: 'validation_kit_timeout', timeoutMs: 2_100_000 });
+      throw Object.assign(new Error('runner timed out'), { code: 'validation_kit_timeout' });
+    },
+    extractArtifactImpl: async () => 'C:\\kit',
+    paths,
+    platform: 'win32',
+    resolveArtifactImpl: async () => ({ runAttempt: '3' })
+  })).rejects.toMatchObject({ code: 'validation_kit_timeout' });
+  expect(readJson(paths.status)).toMatchObject({
+    errorCode: 'validation_kit_timeout',
+    evidenceRoot: path.join(root, 'validation-results', 'candidate', `${'c'.repeat(12)}-12-3`),
+    resultStatus: 'failure',
+    state: 'completed'
+  });
+});

@@ -77,8 +77,8 @@ export function isBusy(status, request) {
 
 export function publicStatus(status) {
   if (!status) return { schemaVersion: 1, state: 'idle' };
-  const { completedAt, errorCode, errorMessage, identity, resultStatus, startedAt, state } = status;
-  return { completedAt, errorCode, errorMessage, identity, resultStatus, schemaVersion: 1, startedAt, state };
+  const { completedAt, errorCode, errorMessage, identity, phase, resultStatus, startedAt, state } = status;
+  return { completedAt, errorCode, errorMessage, identity, phase, resultStatus, schemaVersion: 1, startedAt, state };
 }
 
 export function safeEvidencePath(evidenceRoot, relativePath) {

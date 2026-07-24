@@ -25,10 +25,12 @@ it('verifies the downloaded archive digest and maps authentication failure', asy
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-device-artifact-'));
   const bytes = Buffer.from('artifact');
   const digest = `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
-  await downloadArtifact({ archive_download_url: 'https://example.test/zip', digest }, path.join(root, 'artifact.zip'), {
+  const outputPath = path.join(root, 'artifact.zip');
+  fs.writeFileSync(outputPath, 'previous artifact');
+  await downloadArtifact({ archive_download_url: 'https://example.test/zip', digest }, outputPath, {
     fetchImpl: async () => new Response(bytes, { status: 200 }), token: 'token'
   });
-  expect(fs.readFileSync(path.join(root, 'artifact.zip'))).toEqual(bytes);
+  expect(fs.readFileSync(outputPath)).toEqual(bytes);
   await expect(downloadArtifact({ archive_download_url: 'x', digest }, path.join(root, 'bad.zip'), {
     fetchImpl: async () => new Response('bad credentials', { status: 401 }), token: 'bad'
   })).rejects.toMatchObject({ code: 'github_auth_failed' });

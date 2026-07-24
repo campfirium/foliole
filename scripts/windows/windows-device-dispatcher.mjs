@@ -16,7 +16,7 @@ function currentCommand(argv, env) {
 }
 
 function runChecked(command, args) {
-  const result = spawnSync(command, args, { encoding: 'utf8', shell: false });
+  const result = spawnSync(command, args, { encoding: 'utf8', shell: false, timeout: 30_000 });
   if (result.status !== 0) throw new Error(`${command} failed: ${(result.stderr || result.stdout || '').trim()}`);
   return result.stdout;
 }
@@ -61,7 +61,17 @@ function collect(command, paths, stdout) {
 function cancel(paths, runCommand) {
   const status = readJson(paths.status);
   if (!status || status.state !== 'running' || !Number.isSafeInteger(status.pid)) throw new Error('no running task can be cancelled');
-  runCommand('taskkill.exe', ['/PID', String(status.pid), '/T', '/F']);
+  try {
+    runCommand('taskkill.exe', ['/PID', String(status.pid), '/T', '/F']);
+  } catch (error) {
+    writeJsonAtomic(paths.status, {
+      ...status,
+      errorCode: 'cancel_incomplete',
+      errorMessage: error instanceof Error ? error.message.slice(0, 500) : String(error),
+      state: 'running'
+    });
+    throw error;
+  }
   writeJsonAtomic(paths.status, { ...status, completedAt: new Date().toISOString(), errorCode: 'cancelled', resultStatus: 'failure', state: 'completed' });
   return publicStatus(readJson(paths.status));
 }

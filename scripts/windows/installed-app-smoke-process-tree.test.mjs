@@ -16,7 +16,7 @@ describe('installed app smoke process diagnostics', () => {
     expect(run).toHaveBeenCalledWith(
       'pwsh.exe',
       ['-NoProfile', '-NonInteractive', '-EncodedCommand', expect.any(String)],
-      { encoding: 'utf8', windowsHide: true }
+      { encoding: 'utf8', timeout: 15_000, windowsHide: true }
     );
     const encoded = run.mock.calls[0][1][3];
     const command = Buffer.from(encoded, 'base64').toString('utf16le');

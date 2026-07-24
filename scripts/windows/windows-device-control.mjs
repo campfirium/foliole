@@ -39,7 +39,14 @@ export function parseControlArgs(argv, env) {
 function ssh(host, command, env) {
   return new Promise((resolve, reject) => {
     const { dispatcher: remoteDispatcher, node: remoteNode, sshKey } = remoteDevicePaths(host, env);
-    const child = spawn('ssh', ['-T', '-i', sshKey, host, remoteNode, remoteDispatcher, ...command], { shell: false, stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn('ssh', [
+      '-T', '-i', sshKey,
+      '-o', 'BatchMode=yes',
+      '-o', 'ConnectTimeout=15',
+      '-o', 'ServerAliveInterval=15',
+      '-o', 'ServerAliveCountMax=3',
+      host, remoteNode, remoteDispatcher, ...command
+    ], { shell: false, stdio: ['ignore', 'pipe', 'pipe'] });
     const stdout = [];
     let stderr = '';
     child.stdout.on('data', (chunk) => stdout.push(chunk));

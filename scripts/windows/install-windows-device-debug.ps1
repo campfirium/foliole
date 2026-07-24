@@ -10,6 +10,7 @@ $ErrorActionPreference = "Stop"
 $installRoot = Join-Path $env:LOCALAPPDATA "Foliole\windows-device"
 $sourceRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $files = @(
+  "windows-bounded-process.mjs",
   "windows-device-artifact.mjs",
   "windows-device-dispatcher.mjs",
   "windows-device-state.mjs",

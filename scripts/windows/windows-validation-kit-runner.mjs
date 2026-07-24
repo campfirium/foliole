@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /* global console, process */
 
-import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { runInstalledAppSmoke } from './installed-app-smoke.mjs';
+import { executeBounded } from './windows-bounded-process.mjs';
 import { WINDOWS_VALIDATION_PHYSICAL_SPECS } from './windows-validation-kit-profile.mjs';
 import { verifyWindowsValidationKit } from './windows-validation-kit-verify.mjs';
 import {
@@ -20,6 +20,8 @@ import {
 } from './windows-validation-result-store.mjs';
 
 const LOG_LINE_LIMIT = 500;
+const INSTALL_TIMEOUT_MS = 10 * 60_000;
+const PLAYWRIGHT_TIMEOUT_MS = 15 * 60_000;
 
 function parseArgs(argv) {
   const [command, ...rest] = argv;
@@ -39,21 +41,6 @@ function expectedIdentity(values) {
   };
 }
 
-function execute(command, args, options = {}) {
-  return new Promise((resolve, reject) => {
-    const lines = [];
-    const child = spawn(command, args, { ...options, shell: false, stdio: ['ignore', 'pipe', 'pipe'] });
-    const collect = (chunk) => {
-      lines.push(...String(chunk).split(/\r?\n/u).filter(Boolean));
-      if (lines.length > LOG_LINE_LIMIT) lines.splice(0, lines.length - LOG_LINE_LIMIT);
-    };
-    child.stdout.on('data', collect);
-    child.stderr.on('data', collect);
-    child.on('error', reject);
-    child.on('close', (code, signal) => resolve({ code: signal ? 1 : code ?? 1, lines }));
-  });
-}
-
 function runnerEnv(installerPath, evidenceDir) {
   const env = {
     ...process.env,
@@ -70,22 +57,31 @@ function runnerEnv(installerPath, evidenceDir) {
 }
 
 async function runPlaywright(kitRoot, env) {
-  return execute(process.execPath, [
+  return executeBounded(process.execPath, [
     path.join(kitRoot, 'node_modules/playwright/cli.js'),
     'test',
     '--config',
     'scripts/windows/windows-validation-kit-playwright.config.mjs',
     ...WINDOWS_VALIDATION_PHYSICAL_SPECS
-  ], { cwd: kitRoot, env });
+  ], {
+    cwd: kitRoot, env, timeoutCode: 'physical_playwright_timeout', timeoutMs: PLAYWRIGHT_TIMEOUT_MS
+  });
 }
 
 function executionId(manifest) {
   return `${manifest.commitSha.slice(0, 12)}-${manifest.runId}-${manifest.runAttempt}`.toLowerCase();
 }
 
+function writeRunnerEvidence(candidateDir, progress, runnerLog) {
+  const temporary = path.join(candidateDir, `progress.${process.pid}.tmp`);
+  fs.writeFileSync(temporary, `${JSON.stringify({ ...progress, updatedAt: new Date().toISOString() }, null, 2)}\n`, 'utf8');
+  fs.renameSync(temporary, path.join(candidateDir, 'progress.json'));
+  fs.writeFileSync(path.join(candidateDir, 'runner.log'), `${runnerLog.slice(-LOG_LINE_LIMIT).join('\n')}\n`, 'utf8');
+}
+
 export async function runWindowsValidationKit({
   cacheRoot,
-  executeCommand = execute,
+  executeCommand = executeBounded,
   expected,
   kitRoot = process.cwd(),
   platform = process.platform,
@@ -111,25 +107,36 @@ export async function runWindowsValidationKit({
   ];
   let errorCode = null;
   let runnerLog = [];
+  const progress = { schemaVersion: 1, startedAt, status: 'running', steps };
+  const persist = (currentStage) => writeRunnerEvidence(candidateDir, { ...progress, currentStage }, runnerLog);
   try {
-    const install = await executeCommand(verified.installerPath, ['/currentuser', '/S'], { cwd: path.dirname(verified.installerPath) });
+    persist('install');
+    const install = await executeCommand(verified.installerPath, ['/currentuser', '/S'], {
+      cwd: path.dirname(verified.installerPath), timeoutCode: 'installer_timeout', timeoutMs: INSTALL_TIMEOUT_MS
+    });
     runnerLog.push(...install.lines);
     steps[0].status = install.code === 0 ? 'success' : 'failure';
+    persist('install');
     if (install.code !== 0) throw Object.assign(new Error('installer failed'), { code: 'installer_failed' });
+    persist('readiness');
     await smokeInstalledApp({ env: runnerEnv(verified.installerPath, evidenceDir) });
     steps[1].status = 'success';
+    persist('physical_playwright');
     const playwright = await runPhysicalPlaywright(kitRoot, runnerEnv(verified.installerPath, evidenceDir));
     runnerLog.push(...playwright.lines);
     steps[2].status = playwright.code === 0 ? 'success' : 'failure';
+    persist('physical_playwright');
     if (playwright.code !== 0) throw Object.assign(new Error('physical Playwright failed'), { code: 'physical_playwright_failed' });
   } catch (error) {
     errorCode = error.code || 'validation_run_failed';
     runnerLog.push(error instanceof Error ? error.message : String(error));
-    const current = steps.find((step) => step.status === 'pending');
-    if (current) current.status = 'failure';
+    const current = steps.find((step) => step.status === 'failure') || steps.find((step) => step.status === 'pending');
+    if (current?.status === 'pending') current.status = 'failure';
     for (const step of steps) if (step.status === 'pending') step.status = 'skipped';
+    progress.status = 'failure';
+    progress.errorCode = errorCode;
+    persist(current?.name || 'runner');
   }
-  fs.writeFileSync(path.join(candidateDir, 'runner.log'), `${runnerLog.slice(-LOG_LINE_LIMIT).join('\n')}\n`, 'utf8');
   const result = {
     appVersion: verified.manifest.appVersion,
     commitSha: verified.manifest.commitSha,
@@ -142,6 +149,9 @@ export async function runWindowsValidationKit({
     status: errorCode ? 'failure' : 'success',
     steps
   };
+  progress.status = result.status;
+  progress.errorCode = errorCode;
+  persist('completed');
   writeValidationResult(candidateDir, result);
   return errorCode
     ? { directory: archiveValidationFailure(cacheRoot, candidateDir, id), result }

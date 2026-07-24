@@ -6,6 +6,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { createDesktopIsolationContext } from '../desktop/playwright-desktop-isolation.mjs';
+import { terminateProcessTree } from './windows-bounded-process.mjs';
 import {
   readMarker,
   readyMarkersMatch,
@@ -35,6 +36,7 @@ export function readInstalledProcessTree(pid, run = spawnSync) {
   ].join('\n');
   const result = run('pwsh.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', encodePowerShell(command)], {
     encoding: 'utf8',
+    timeout: 15_000,
     windowsHide: true
   });
   const output = result.stdout?.trim();
@@ -121,7 +123,7 @@ function launchInstalledApp(executablePath, env) {
 function stopProcess(pid) {
   if (!pid) return;
   try {
-    process.kill(pid);
+    terminateProcessTree(pid);
   } catch {
     // The app may already have exited after the smoke assertion.
   }

@@ -44,3 +44,12 @@ it('lists and streams only files under the recorded evidence root', () => {
   dispatchWindowsDevice({ argv: ['collect', 'get', 'result.json'], env: {}, paths, stdout: { write: (chunk) => chunks.push(chunk) } });
   expect(Buffer.concat(chunks).toString()).toBe('{}');
 });
+
+it('keeps a task active when process-tree cancellation fails', () => {
+  const { paths } = fixture();
+  writeJsonAtomic(paths.status, { identity: `${'a'.repeat(40)}:1`, pid: 42, state: 'running' });
+  expect(() => dispatchWindowsDevice({
+    argv: ['cancel'], env: {}, paths, runCommand: () => { throw new Error('taskkill denied'); }
+  })).toThrow('taskkill denied');
+  expect(readJson(paths.status)).toMatchObject({ errorCode: 'cancel_incomplete', state: 'running' });
+});
