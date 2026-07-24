@@ -1,4 +1,25 @@
 {
+  "0.7.0": {
+    "notes": [
+      "New",
+      "macOS desktop: Foliole is now available on Mac.",
+      "Foliole CLI: Use Foliole from the command line or an Agent to read, write, and organize materials.",
+      "Foliole Aide: Use Codex directly in Foliole with the Codex allowance included in your ChatGPT plan—no separate API charges.",
+      "Foliole Publish: Publish Topics directly to Cloudflare Pages, WordPress, or Discourse.",
+      "Automatic update downloads: macOS and Windows now download update files in the background.",
+      "Improved",
+      "Automatic import now supports any folder under Import and sends materials to the matching Foliole folder.",
+      "Read now unlocks the next Topic in Sequential Reading when you reach the end of the current one.",
+      "Backups are now compressed to reduce disk usage while keeping each backup independently restorable.",
+      "The whole app, lists, document area, and sidebars can now be scaled independently.",
+      "Fixed",
+      "The interface no longer remains in the backup state after a successful restore.",
+      "Automatic backups no longer create duplicate database copies for the same restore point.",
+      "Full-text search now refreshes correctly after the library is restored or replaced.",
+      "Search results now open the correct external document or PDF and preserve the search state when you return.",
+      "Topic lists now stay aligned with the current content after switching Topics, entering Flow, moving materials, or restarting the app."
+    ]
+  },
   "0.6.6": {
     "notes": [
       "Fixed",

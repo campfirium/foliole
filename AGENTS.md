@@ -95,9 +95,9 @@
 - 宿主可见验收的具体入口由受影响宿主规则决定：桌面按 `electron/AGENTS.md` 选择 Hidden Native 或可见原生自动验收；Android / iOS / companion 按对应局部规则选择等价宿主验收。只改文档、agent 规则、只读诊断、测试代码或脚本内部逻辑，且不改变应用运行时行为时，可跳过宿主可见验收，但最终汇报必须写明跳过原因。
 - 默认先执行覆盖本轮能力闭环的最小相关前置验证；只有能力闭环范围或技术风险超过相关验证覆盖面时，才升级到 `quality:desktop`、`quality:android`、`quality:android:device`、`quality:shared`、`quality:full`、`quality:release` 或 `quality:fast`。
 - 少量明确测试文件优先 `npm run test:files -- <file...>`，变更范围干净且需要按 diff 自动选测时用 `npm run test:changed`。
-- 新增功能或改变既有可观察行为时，必须按 `.lab/specs/_governance/test-drift-prevention-expectation.md` 定位并维护对应测试 contract，同步新增或更新覆盖核心行为、失败路径及本轮相关边界条件的自动化测试，并在完成后运行对应的最小相关测试；可复现 Bug 修复必须新增至少 1 条自动化回归测试。
-- 纯文案、纯静态样式或当前测试基础设施无法可靠覆盖的宿主行为可以不新增自动化测试，但必须说明具体限制，并按受影响宿主规则完成可见验收；已有能力可以自动化覆盖时，不得仅以手工检查替代。
-- 处理测试红灯时先完成 contract 归因，不得只改 expected；质量闸失败后先跑失败文件、失败 npm script 或失败 Gradle task 的定向复验，已收敛失败修复后不默认重跑整宿主质量闸。
+- 新增功能或改变既有可观察行为时，必须按 `.lab/specs/_governance/test-drift-prevention-expectation.md` 定位并维护对应测试 contract；自动化测试只锁定独立于当前实现方式仍需长期成立的产品行为、数据语义、交互结果与失败边界，断言数量不作为完成标准，也不得以此降低稳定 contract 的应有覆盖。
+- 可复现 Bug 只有在根因违反了可稳定自动化表达的长期 contract 时，才新增或更新对应回归测试；决定不新增或更新时，最终汇报必须说明为何不构成稳定 contract，或为何现有基础设施无法可靠覆盖。不得仅因现场问题可复现，就用 DOM 顺序、坐标、像素、当前文案分组或组件层级断言固化偶然排版与实现结构。纯文案、纯视觉编排、纯静态样式或测试基础设施无法可靠覆盖的宿主行为，不新增这类断言，必须按受影响宿主规则完成可见验收；若视觉问题影响可点击、可达性、遮挡或其他交互结果，仍属于交互 contract，不得归入纯视觉豁免。已有稳定 contract 可以自动化覆盖时，不得仅以手工检查替代。
+- 质检发现断言漂移时，不得机械修改预期值。若该断言约束的是需要长期成立的结果，应查明红灯原因再修复；若约束的只是偶然实现或过期表现，则删除该断言。随后先跑失败文件、失败 npm script 或失败 Gradle task 的定向复验，已收敛失败修复后不默认重跑整宿主质量闸。
 - 改动 sync pack manifest / schema / apply 语义，或 `lib/core/sync/syncPack*`、`electron/database/syncPack*`、`electron/sync/syncPack*`、`src/shared/platform/companionSyncPack*`，必须先跑 `npm run test:sync-pack`。
 - 新增文件、拆分文件或修复 `max-lines` / `max-lines-per-function` 后，先跑 `node scripts/check-file-budget.mjs <file...>`，再跑对应窄 scope lint。
 - 新增或升级 npm 依赖时，额外执行 `npm run deps:hardening:check`；`build` 只在用户明确要求或触及依赖 / 构建根链路且必须验证时执行。
