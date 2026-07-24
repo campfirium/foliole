@@ -92,6 +92,8 @@ export const CLASSIFICATIONS = {
     responsibility: 'Install generated schema statements and run SQLite runtime probes only.',
     files: [
       'FolioleCompanionDatabaseMigration.java',
+      'FolioleCompanionExternalFolderOwnershipMigration.java',
+      'FolioleCompanionMigrationRowValues.java',
       'FolioleCompanionSchemaInstaller.java',
       'FolioleCompanionSchemaRepair.java',
       'FolioleCompanionSyncPackDatabaseValidator.java',
