@@ -20,9 +20,8 @@
 讓閱讀真正完成。<br>
 一款現代的漸進閱讀軟體。
 
-Windows alpha 已開放測試。<br>
-Android alpha 預計在 7 月左右發布。<br>
-macOS 和 iOS alpha 預計在 8 月左右發布。<br>
+Windows 和 macOS alpha 已開放測試。<br>
+Android 和 iOS alpha 預計在 8 月左右發布。<br>
 也可以先透過[在線體驗版](https://foliole.app/en/demo/)體驗 Foliole。
 
 <p align="center">

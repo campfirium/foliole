@@ -20,9 +20,8 @@
 Portare davvero a termine la lettura.<br>
 Un'app accessibile per la lettura incrementale.
 
-L'alpha per Windows è aperta ai test.<br>
-L'alpha per Android è prevista intorno a luglio.<br>
-Le build alpha per macOS e iOS sono previste intorno ad agosto.<br>
+Le versioni alpha per Windows e macOS sono disponibili per i test.<br>
+Le versioni alpha per Android e iOS sono previste intorno ad agosto.<br>
 Puoi anche provare Foliole con la [demo online](https://foliole.app/en/demo/).
 
 <p align="center">

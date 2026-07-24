@@ -20,9 +20,8 @@
 Make reading actually complete.<br>
 An approachable incremental reading app.
 
-Windows alpha is open for testing.<br>
-Android alpha is expected around July.<br>
-macOS and iOS alpha builds are expected around August.<br>
+Windows and macOS alpha builds are open for testing.<br>
+Android and iOS alpha builds are expected around August.<br>
 You can also try Foliole with the [online demo](https://foliole.app/en/demo/).
 
 <p align="center">

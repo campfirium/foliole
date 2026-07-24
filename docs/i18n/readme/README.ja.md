@@ -20,9 +20,8 @@
 読書を本当に完了できるものにする。<br>
 親しみやすいインクリメンタルリーディングアプリです。
 
-Windows alpha はテスト公開中です。<br>
-Android alpha は 7 月頃に公開予定です。<br>
-macOS と iOS の alpha ビルドは 8 月頃に公開予定です。<br>
+Windows と macOS の alpha はテスト公開中です。<br>
+Android と iOS の alpha は 8 月頃に公開予定です。<br>
 [オンラインデモ](https://foliole.app/en/demo/)でも Foliole を試せます。
 
 <p align="center">
