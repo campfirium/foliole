@@ -5,8 +5,8 @@ import { VIRTUAL_PUBLISHED_NODE_ID } from '../../features/nodes/model/specialNod
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { definedProps } from '../../shared/lib/definedProps';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { subscribeOpenFoliolePublishedTopics } from '../../shared/platform/foliolePublishedNavigation';
 import { getDemoRuntimeNowIso, subscribeDemoRuntimeState, useDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
+import { subscribeOpenFoliolePublishedTopics } from '../../shared/platform/runtime/foliolePublishedNavigation';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 import { buildStartReviewSessionQueue } from '../../store/workspaceReviewLiveQueue';
 

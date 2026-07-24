@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import { requestFoliolePublishedDelete } from '../../shared/platform/foliolePublishedManagement';
+import { requestFoliolePublishedDelete } from '../../shared/platform/runtime/foliolePublishedManagement';
 
 interface ReviewSourceTopicDeleteWorkspace {
   deleteNode: (nodeId: string) => void;

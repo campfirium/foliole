@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../../../shared/localization/testLocalization';
-import { subscribeOpenFoliolePublishedTopics } from '../../../../shared/platform/foliolePublishedNavigation';
+import { subscribeOpenFoliolePublishedTopics } from '../../../../shared/platform/runtime/foliolePublishedNavigation';
 import { AppConfirmationProvider } from '../../../../shared/ui';
 
 import { FoliolePublishingSettings } from './FoliolePublishingSettings';

@@ -13,14 +13,14 @@ import {
   toRuntimeExternalSearchPreview as toPreview,
   type RuntimeExternalDocumentReference,
   type RuntimeExternalSearchFolder
-} from './externalSearchRuntimeMapping';
+} from './external/externalSearchRuntimeMapping';
 import { getRuntimeInvoke } from './runtimeInvoke';
 
 export type {
   RuntimeExternalSearchBrowseEntry,
   RuntimeExternalSearchFolder,
   RuntimeExternalSearchPreview
-} from './externalSearchRuntimeMapping';
+} from './external/externalSearchRuntimeMapping';
 
 type ExternalSearchFoldersListener = (folders: RuntimeExternalSearchFolder[]) => void;
 

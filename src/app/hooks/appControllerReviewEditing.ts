@@ -1,5 +1,5 @@
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
-import { requestFoliolePublishedDelete } from '../../shared/platform/foliolePublishedManagement';
+import { requestFoliolePublishedDelete } from '../../shared/platform/runtime/foliolePublishedManagement';
 
 import { resolveReviewDeleteTargetNodeId } from './appControllerPaletteReviewActions';
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';

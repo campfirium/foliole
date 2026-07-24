@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react';
 
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
-  notifyFoliolePublishedTopicsChanged,
-  registerFoliolePublishedDeleteHandler
-} from '../../shared/platform/foliolePublishedManagement';
-import {
   inspectFoliolePublishedDeleteFromRuntime,
   unpublishFolioleTopicsFromRuntime
 } from '../../shared/platform/foliolePublishRepository';
+import {
+  notifyFoliolePublishedTopicsChanged,
+  registerFoliolePublishedDeleteHandler
+} from '../../shared/platform/runtime/foliolePublishedManagement';
 import {
   AppButton,
   AppDialog,
@@ -55,7 +55,7 @@ export function FoliolePublishedDeleteDialogHost() {
 
   usePublishedDeleteRegistration(setPending, t('desktop.foliolePublish.delete.failed'));
 
-  const confirm = async () => {
+  const deletePublishedTopics = async () => {
     if (!pending || isSubmitting) return;
     setIsSubmitting(true);
     try {
@@ -89,7 +89,7 @@ export function FoliolePublishedDeleteDialogHost() {
             <AppButton disabled={isSubmitting} onClick={() => setPending(null)} variant="ghost">
               {t('common.cancel')}
             </AppButton>
-            <AppButton loading={isSubmitting} loadingLabel={t('desktop.foliolePublish.unpublishing')} onClick={() => void confirm()} variant="danger">
+            <AppButton loading={isSubmitting} loadingLabel={t('desktop.foliolePublish.unpublishing')} onClick={() => void deletePublishedTopics()} variant="danger">
               {t('desktop.foliolePublish.delete.confirm')}
             </AppButton>
           </div>

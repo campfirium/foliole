@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { canNodeBeMoved } from '../../features/nodes/model/nodeMovementRules';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type { TranslationKey } from '../../shared/localization/translations';
-import { requestFoliolePublishedDelete } from '../../shared/platform/foliolePublishedManagement';
+import { requestFoliolePublishedDelete } from '../../shared/platform/runtime/foliolePublishedManagement';
 import {
   AppButton,
   AppDialog,

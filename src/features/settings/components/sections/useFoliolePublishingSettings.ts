@@ -2,8 +2,8 @@ import { normalizeCloudflareProjectName } from '../../../../../lib/core/folioleP
 import type { NativeFoliolePublishSettings } from '../../../../../lib/platform/nativeFoliolePublishContract';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import { probeUrlWithLinkPanel } from '../../../../shared/platform/external/linkPanelUrlProbe';
-import { requestOpenFoliolePublishedTopics } from '../../../../shared/platform/foliolePublishedNavigation';
 import { connectFoliolePublishSettingsToRuntime, disconnectFoliolePublishSettingsFromRuntime, updateFoliolePublishSiteAddressInRuntime, viewFoliolePublishSiteFromRuntime } from '../../../../shared/platform/foliolePublishRepository';
+import { requestOpenFoliolePublishedTopics } from '../../../../shared/platform/runtime/foliolePublishedNavigation';
 import { openExternalUrl } from '../../../../shared/platform/runtimeExternalNavigation';
 import { requestAppConfirmation } from '../../../../shared/ui';
 

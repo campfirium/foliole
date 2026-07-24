@@ -3,13 +3,13 @@ import { useEffect, useState } from 'react';
 import type { NativeFoliolePublishedTopic } from '../../../lib/platform/nativeFoliolePublishContract';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
-  notifyFoliolePublishedTopicsChanged,
-  subscribeFoliolePublishedTopicsChanged
-} from '../../shared/platform/foliolePublishedManagement';
-import {
   loadFoliolePublishedTopicsFromRuntime,
   unpublishFolioleTopicsFromRuntime
 } from '../../shared/platform/foliolePublishRepository';
+import {
+  notifyFoliolePublishedTopicsChanged,
+  subscribeFoliolePublishedTopicsChanged
+} from '../../shared/platform/runtime/foliolePublishedManagement';
 import { openExternalUrl } from '../../shared/platform/runtimeExternalNavigation';
 import { AppButton, requestAppConfirmation } from '../../shared/ui';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';

@@ -1,5 +1,5 @@
-import { requestFoliolePublishedDelete } from '../../../shared/platform/foliolePublishedManagement';
 import { mergeRuntimeReadwiseTopicHighlights } from '../../../shared/platform/readwiseTopicMerge';
+import { requestFoliolePublishedDelete } from '../../../shared/platform/runtime/foliolePublishedManagement';
 import { showAppRuntimeNotice } from '../../../shared/ui/AppRuntimeNotice';
 import { canNodeBeMoved } from '../model/nodeMovementRules';
 import { isHomeNode, isProtectedRootNode, isVirtualNode, isVirtualRootNode } from '../model/specialNodes';

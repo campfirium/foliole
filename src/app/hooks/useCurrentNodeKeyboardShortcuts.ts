@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type MutableRefObject } from 'react';
 
 import { isProtectedRootNode } from '../../features/nodes/model/specialNodes';
-import { requestFoliolePublishedDelete } from '../../shared/platform/foliolePublishedManagement';
 import { onNativeEditingEscape, onWindowEscape, onWindowKeydown } from '../../shared/platform/keyboard';
+import { requestFoliolePublishedDelete } from '../../shared/platform/runtime/foliolePublishedManagement';
 
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
 import { blurActiveKeyboardTarget, isEditableKeyboardTarget } from './workspaceKeyboardTarget';

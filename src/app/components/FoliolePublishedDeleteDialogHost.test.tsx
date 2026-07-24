@@ -2,7 +2,7 @@ import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
-import { requestFoliolePublishedDelete } from '../../shared/platform/foliolePublishedManagement';
+import { requestFoliolePublishedDelete } from '../../shared/platform/runtime/foliolePublishedManagement';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 const publishMocks = vi.hoisted(() => ({

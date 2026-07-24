@@ -3,8 +3,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { NativeFoliolePublishedTopic } from '../../../lib/platform/nativeFoliolePublishContract';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { subscribeFoliolePublishedTopicsChanged } from '../../shared/platform/foliolePublishedManagement';
 import { loadFoliolePublishedTopicsFromRuntime } from '../../shared/platform/foliolePublishRepository';
+import { subscribeFoliolePublishedTopicsChanged } from '../../shared/platform/runtime/foliolePublishedManagement';
 
 export function useFoliolePublishedTopics(args: {
   nodesById: Record<string, Node>;

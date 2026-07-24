@@ -4,8 +4,8 @@ import {
   resolveReviewSiblingNodeId,
   resolveReviewSourceTopicNodeId
 } from '../../features/review/model/reviewGameNavigation';
-import { requestFoliolePublishedDelete } from '../../shared/platform/foliolePublishedManagement';
 import { getDemoRuntimeNowIso } from '../../shared/platform/runtime/demoRuntime';
+import { requestFoliolePublishedDelete } from '../../shared/platform/runtime/foliolePublishedManagement';
 
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
 import { scrollReviewReadingSurface } from './reviewReadingScrollCommand';

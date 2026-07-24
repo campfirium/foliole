@@ -3,7 +3,7 @@ import type {
   NativeExternalSearchBrowseEntry,
   NativeExternalSearchFolder,
   NativeExternalSearchPreview
-} from '../../../lib/platform/nativeStorageContract';
+} from '../../../../lib/platform/nativeStorageContract';
 
 export interface RuntimeExternalSearchFolder {
   accessMode?: 'local' | 'remote_mirror' | 'unowned';
