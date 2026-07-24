@@ -60,7 +60,7 @@ it('opens the Android companion database before applying state objects', async (
   await expect(applyCompanionSyncObjectsWithSharedCoreOnDevice([settingObject()], manager as never))
     .resolves.toEqual(['setting:user_space:android:mobile:*:app_settings']);
 
-  expect(manager.createConnection).toHaveBeenCalledWith('foliole-companion', false, 'no-encryption', 20, false);
+  expect(manager.createConnection).toHaveBeenCalledWith('foliole-companion', false, 'no-encryption', 21, false);
   expect(connection.open).toHaveBeenCalled();
 });
 

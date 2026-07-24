@@ -6,6 +6,7 @@ const controlledElectronSqliteTests = [
   'electron/database/companionNodeVersionLossless.test.ts',
   'electron/database/companionSyncPushVerticalSlice.test.ts',
   'electron/database/externalDocumentImportVisibility.test.ts',
+  'electron/database/externalFolderOwnershipMigration.test.ts',
   'electron/database/externalSearchCache.test.ts',
   'electron/database/externalSearchMirrorAvailability.test.ts',
   'electron/database/externalSearchSidecar.test.ts',

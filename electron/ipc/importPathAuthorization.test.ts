@@ -50,7 +50,7 @@ it('rejects renderer-provided file paths until the main process authorizes them'
 
   await authorizeSelectedImportFilePath(filePath);
 
-  await expect(assertAuthorizedImportFilePath(filePath)).resolves.toBe(filePath);
+  await expect(assertAuthorizedImportFilePath(filePath)).resolves.toBe(await fs.realpath(filePath));
 });
 
 it('rejects special filesystem roots before import authorization succeeds', async () => {
@@ -64,9 +64,9 @@ it('allows external search imports only when the file resolves inside a configur
   await fs.mkdir(libraryRoot, { recursive: true });
   await fs.writeFile(filePath, '# Library', 'utf8');
   await fs.writeFile(outsidePath, '# Outside', 'utf8');
-  loadExternalSearchFolders.mockReturnValue([{ folder_path: libraryRoot }]);
+  loadExternalSearchFolders.mockReturnValue([{ access_mode: 'local', folder_path: libraryRoot }]);
 
-  await expect(assertExternalSearchImportPath(filePath)).resolves.toBe(filePath);
+  await expect(assertExternalSearchImportPath(filePath)).resolves.toBe(await fs.realpath(filePath));
   await expect(assertExternalSearchImportPath(outsidePath)).rejects.toThrow('External search import path is not authorized.');
 });
 
@@ -82,6 +82,6 @@ it('allows opened local file imports when the main process already tracks the fi
   });
   loadExternalSearchFolders.mockClear();
 
-  await expect(assertExternalSearchImportPath(filePath)).resolves.toBe(filePath);
+  await expect(assertExternalSearchImportPath(filePath)).resolves.toBe(await fs.realpath(filePath));
   expect(loadExternalSearchFolders).not.toHaveBeenCalled();
 });

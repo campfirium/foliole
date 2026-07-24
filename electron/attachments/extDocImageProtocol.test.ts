@@ -45,6 +45,7 @@ async function createTempRoot() {
 
 function createFolderConfig(root: string) {
   return {
+    access_mode: 'local' as const,
     attachment_mode: 'document_relative_first_then_fixed_root' as const,
     attachment_root_path: path.join(root, 'attachments'),
     created_at: '',

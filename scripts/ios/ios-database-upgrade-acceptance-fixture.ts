@@ -3,6 +3,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import {
+  ANDROID_COMPANION_MIGRATION_ACTION_TYPES,
   ANDROID_COMPANION_MIGRATION_PLAN
 } from '../../lib/core/database/androidCompanionMigrationSchemaStatements.ts';
 import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements.ts';
@@ -30,7 +31,7 @@ export function createIosDatabaseUpgradeFixture(databasePath: string) {
 export function assertLatestUpgradeFixtureProvenance() {
   const latest = ANDROID_COMPANION_MIGRATION_PLAN.at(-1);
   const actionTypes = latest?.actions.map((action) => action.type);
-  const expected = ['installSchema'];
+  const expected = [ANDROID_COMPANION_MIGRATION_ACTION_TYPES.migrateExternalFolderOwnership];
   if (latest?.beforeVersion !== COMPANION_DATABASE_VERSION || JSON.stringify(actionTypes) !== JSON.stringify(expected)) {
     throw new Error('The upgrade fixture no longer matches the latest companion migration step.');
   }

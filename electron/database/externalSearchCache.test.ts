@@ -7,6 +7,8 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { loadOrCreateDesktopInstallationIdentity } from '../desktopInstallationIdentity.js';
+
 let mockedAppDataDir = '/tmp/foliole-external-search-cache';
 
 vi.mock('../ipc/paths.js', () => ({
@@ -74,10 +76,12 @@ function readDocumentRow(absolutePath: string) {
 }
 
 function seedExternalSearchFolder(folderPath: string, id: string) {
+  const identity = loadOrCreateDesktopInstallationIdentity();
   openDatabaseConnection().driver.execute(
     `INSERT INTO external_search_folders (
-      id, folder_path, attachment_mode, attachment_root_path, excluded_dirs_json, status, document_count, indexed_at, last_error, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      id, folder_path, attachment_mode, attachment_root_path, excluded_dirs_json, status, document_count, indexed_at, last_error,
+      owner_installation_id, owner_device_name, owner_platform, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       folderPath,
@@ -88,6 +92,9 @@ function seedExternalSearchFolder(folderPath: string, id: string) {
       0,
       null,
       null,
+      identity.installationId,
+      identity.deviceName,
+      identity.platform,
       '2026-04-21T05:00:00.000Z',
       '2026-04-21T05:00:00.000Z'
     ]
