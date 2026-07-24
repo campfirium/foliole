@@ -127,10 +127,6 @@ it('keeps every required Cloudflare value in one setup flow and deploys only on 
   expect(screen.getByLabelText('Cloudflare Account ID')).toBeVisible();
   expect(screen.getByLabelText('pages.dev subdomain')).toBeVisible();
   expect(screen.getByText('Custom domain (optional)')).toBeVisible();
-  expect(screen.getByText('Security notice: Foliole does not operate or authorize foliole.pages.dev.')).toHaveClass(
-    'font-bold',
-    'text-foreground'
-  );
   expect(deploy).toBeDisabled();
 
   fireEvent.change(screen.getByLabelText('Cloudflare API Token'), { target: { value: '/' } });

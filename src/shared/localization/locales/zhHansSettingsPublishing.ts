@@ -34,7 +34,6 @@ export const ZH_HANS_SETTINGS_PUBLISHING_TRANSLATIONS: Partial<Record<Translatio
   'settings.publishing.foliole.theme.error.updateWeb': '无法更新 Web 页面。',
   'settings.publishing.foliole.hosting.title': '托管',
   'settings.publishing.foliole.cloudflare.description': '使用 Cloudflare 提供的免费托管服务部署后，站点地址为 <子域名>.pages.dev，也可以绑定自己的域名。',
-  'settings.publishing.foliole.cloudflare.securityNotice': '安全提示：Foliole 未运营或授权 foliole.pages.dev。',
   'settings.publishing.foliole.token.title': '获取 API Token',
   'settings.publishing.foliole.token.descriptionPrefix': '访问已配置好的 ',
   'settings.publishing.foliole.token.request': 'API Token 申请页面 ↗',

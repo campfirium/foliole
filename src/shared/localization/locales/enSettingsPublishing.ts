@@ -32,7 +32,6 @@ export const EN_SETTINGS_PUBLISHING_TRANSLATIONS = {
   'settings.publishing.foliole.theme.error.updateWeb': "Couldn't update the Web pages.",
   'settings.publishing.foliole.hosting.title': 'Hosting',
   'settings.publishing.foliole.cloudflare.description': "Deploy with Cloudflare's free hosting service. Your site address will be <subdomain>.pages.dev, and you can also connect your own domain.",
-  'settings.publishing.foliole.cloudflare.securityNotice': 'Security notice: Foliole does not operate or authorize foliole.pages.dev.',
   'settings.publishing.foliole.token.title': 'Get API Token',
   'settings.publishing.foliole.token.descriptionPrefix': 'Open the preconfigured ',
   'settings.publishing.foliole.token.request': 'API Token request page ↗',
