@@ -14,6 +14,8 @@ import {
 } from './package-artifact-lifecycle.mjs';
 import { prepareMasElectronRuntime } from './mas-electron-runtime.mjs';
 import { prepareCodexHelper } from './prepare-codex-helper.mjs';
+import { prepareFolioleCli } from './prepare-foliole-cli.mjs';
+import { prepareGlobalCaptureHelper } from './prepare-global-capture-helper.mjs';
 import { verifyPackagedMacosApp } from './verify-packaged-app.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
@@ -29,8 +31,10 @@ export function createGithubBuilderConfig(base, options) {
     directories: { ...base.directories, output: outputDirectory },
     electronDist: options.electronDist,
     extraFiles: [
-      ...(base.extraFiles ?? []),
-      { from: options.codexPath, to: 'MacOS/codex' }
+      ...(base.extraFiles ?? []).filter((entry) => entry.from !== 'build/cli'),
+      { from: options.codexPath, to: 'MacOS/codex' },
+      { from: options.globalCaptureHelperPath, to: 'MacOS/Foliole Global Capture' },
+      { from: options.folioleCliPath, to: 'Helpers/Foliole CLI.app' }
     ],
     extraResources: [
       ...base.extraResources,
@@ -40,7 +44,7 @@ export function createGithubBuilderConfig(base, options) {
     mac: {
       ...base.mac,
       artifactName: '${productName}-${version}-mac-${arch}.${ext}',
-      binaries: ['Contents/MacOS/codex'],
+      binaries: ['Contents/MacOS/codex', 'Contents/MacOS/Foliole Global Capture'],
       entitlements: 'build/entitlements.mas.plist',
       entitlementsInherit: 'build/entitlements.mas.inherit.plist',
       extendInfo: {
@@ -53,6 +57,7 @@ export function createGithubBuilderConfig(base, options) {
       notarize: options.notarize,
       preAutoEntitlements: true,
       provisioningProfile: options.provisioningProfile,
+      signIgnore: ['Contents/Helpers/Foliole CLI\\.app(?:/|$)'],
       sign: 'scripts/macos/sign-mas-app.mjs',
       target: ['dmg', 'zip']
     }
@@ -66,6 +71,14 @@ export function resolveDeveloperIdProvisioningProfile(env = process.env) {
   if (configured) return path.resolve(configured);
   throw new Error(
     'Developer ID sandbox packaging requires FOLIOLE_MACOS_DEVELOPER_ID_PROVISIONING_PROFILE.'
+  );
+}
+
+export function resolveDeveloperIdCliProvisioningProfile(env = process.env) {
+  const configured = env.FOLIOLE_MACOS_CLI_DEVELOPER_ID_PROVISIONING_PROFILE?.trim();
+  if (configured) return path.resolve(configured);
+  throw new Error(
+    'Developer ID CLI packaging requires FOLIOLE_MACOS_CLI_DEVELOPER_ID_PROVISIONING_PROFILE.'
   );
 }
 
@@ -116,15 +129,21 @@ async function main() {
   }
   const codexRelease = await loadPinnedCodexHelperRelease();
   const provisioningProfile = resolveDeveloperIdProvisioningProfile();
+  const cliProvisioningProfile = resolveDeveloperIdCliProvisioningProfile();
   const codexPath = await prepareCodexHelper({ release: codexRelease });
   console.log(`[codex-helper] build=${codexRelease.version}`);
+  const folioleCliPath = await prepareFolioleCli({
+    mode: 'developer-id', provisioningProfile: cliProvisioningProfile
+  });
+  const globalCaptureHelperPath = await prepareGlobalCaptureHelper();
   const electronDist = await prepareMasElectronRuntime();
   const base = JSON.parse(await readFile(path.join(ROOT, 'electron/builder.json'), 'utf8'));
   const packageMetadata = JSON.parse(await readFile(path.join(ROOT, 'package.json'), 'utf8'));
   const artifactNames = createGithubArtifactNames(base.productName, packageMetadata.version);
   const checksum = await runWithCodexHelperRollForward(codexRelease, () => withTemporaryPackageOutput(async (outputDirectory) => {
     const config = createGithubBuilderConfig(base, {
-      codexPath, electronDist, notarize, outputDirectory, provisioningProfile
+      codexPath, electronDist, folioleCliPath, globalCaptureHelperPath,
+      notarize, outputDirectory, provisioningProfile
     });
     const configPath = path.join(outputDirectory, 'electron-builder.json');
     await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`);
@@ -134,6 +153,7 @@ async function main() {
     run('electron-builder', 'npm', ['exec', '--', 'electron-builder', '--config', configPath, '--mac', '--arm64', '--publish', 'never']);
     await verifyPackagedMacosApp({
       appPath: path.join(outputDirectory, 'mac-arm64/Foliole.app'),
+      mode: 'developer-id',
       notarized: notarize
     });
     const result = await writeDmgChecksum(outputDirectory, artifactNames[0]);

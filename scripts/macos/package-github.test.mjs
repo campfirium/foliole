@@ -7,6 +7,7 @@ import {
   createGithubArtifactNames,
   createGithubBuilderConfig,
   hasNotarizationCredentials,
+  resolveDeveloperIdCliProvisioningProfile,
   resolveDeveloperIdProvisioningProfile,
   sendMacosNotification,
   writeDmgChecksum
@@ -37,6 +38,8 @@ describe('GitHub macOS packaging', () => {
     }, {
       codexPath: '.tmp/codex',
       electronDist: '.tmp/electron-mas-arm64',
+      folioleCliPath: '.tmp/Foliole CLI.app',
+      globalCaptureHelperPath: '.tmp/Foliole Global Capture',
       notarize: false,
       outputDirectory: '/private/tmp/foliole-github-output',
       provisioningProfile: '/profiles/foliole-developer-id.provisionprofile'
@@ -45,7 +48,7 @@ describe('GitHub macOS packaging', () => {
     expect(config.electronDist).toBe('.tmp/electron-mas-arm64');
     expect(config.directories.output).toBe('/private/tmp/foliole-github-output');
     expect(config.mac).toMatchObject({
-      binaries: ['Contents/MacOS/codex'],
+      binaries: ['Contents/MacOS/codex', 'Contents/MacOS/Foliole Global Capture'],
       entitlements: 'build/entitlements.mas.plist',
       entitlementsInherit: 'build/entitlements.mas.inherit.plist',
       extendInfo: { ElectronTeamID: 'V589TQH334' },
@@ -55,7 +58,14 @@ describe('GitHub macOS packaging', () => {
       notarize: false,
       preAutoEntitlements: true,
       provisioningProfile: '/profiles/foliole-developer-id.provisionprofile',
+      signIgnore: ['Contents/Helpers/Foliole CLI\\.app(?:/|$)'],
       target: ['dmg', 'zip']
+    });
+    expect(config.extraFiles).toContainEqual({
+      from: '.tmp/Foliole CLI.app', to: 'Helpers/Foliole CLI.app'
+    });
+    expect(config.extraFiles).toContainEqual({
+      from: '.tmp/Foliole Global Capture', to: 'MacOS/Foliole Global Capture'
     });
   });
 
@@ -66,6 +76,15 @@ describe('GitHub macOS packaging', () => {
     expect(resolveDeveloperIdProvisioningProfile({
       FOLIOLE_MACOS_DEVELOPER_ID_PROVISIONING_PROFILE: './profile.provisionprofile'
     })).toBe(path.resolve('./profile.provisionprofile'));
+  });
+
+  it('requires a distinct Developer ID profile for the bundled CLI', () => {
+    expect(() => resolveDeveloperIdCliProvisioningProfile({})).toThrow(
+      'FOLIOLE_MACOS_CLI_DEVELOPER_ID_PROVISIONING_PROFILE'
+    );
+    expect(resolveDeveloperIdCliProvisioningProfile({
+      FOLIOLE_MACOS_CLI_DEVELOPER_ID_PROVISIONING_PROFILE: './cli.provisionprofile'
+    })).toBe(path.resolve('./cli.provisionprofile'));
   });
 
   it('requires a complete supported notarization credential set', () => {

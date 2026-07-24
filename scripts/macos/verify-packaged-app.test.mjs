@@ -15,6 +15,7 @@ const HELPER_ENTITLEMENTS = [
   'com.apple.security.inherit'
 ].join('\n');
 const CODEX_ENTITLEMENTS = `${HELPER_ENTITLEMENTS}\ncom.apple.security.cs.allow-jit`;
+const CLI_RUNTIME_ENTITLEMENTS = `${HELPER_ENTITLEMENTS}\ncom.apple.security.cs.allow-jit`;
 const CLI_ENTITLEMENTS = `${APP_ENTITLEMENTS}\ncom.apple.security.application-groups\nV589TQH334.group.com.campfirium.foliole.agent-control`;
 const TEAM_ID = 'V589TQH334';
 
@@ -23,7 +24,11 @@ function profileFor(path, mode = 'development') {
   const development = mode === 'development'
     ? '<key>get-task-allow</key><true/><key>ProvisionedDevices</key><array><string>device</string></array>'
     : '';
+  const developerId = mode === 'developer-id'
+    ? '<key>ProvisionsAllDevices</key><true/>'
+    : '';
   return `<?xml version="1.0"?><plist><dict>
+    ${developerId}
     <key>TeamIdentifier</key><array><string>${TEAM_ID}</string></array>
     <key>Entitlements</key><dict>
       <key>com.apple.application-identifier</key><string>${TEAM_ID}.${bundleId}</string>
@@ -37,6 +42,7 @@ function profileFor(path, mode = 'development') {
 
 function resolveEntitlements(subject) {
   if (subject.endsWith('/Contents/MacOS/codex')) return CODEX_ENTITLEMENTS;
+  if (subject.endsWith('/Contents/MacOS/foliole-runtime')) return CLI_RUNTIME_ENTITLEMENTS;
   if (subject.endsWith('Foliole Helper.app')) return HELPER_ENTITLEMENTS;
   if (subject.endsWith('Foliole CLI.app')) return CLI_ENTITLEMENTS;
   return APP_ENTITLEMENTS;
@@ -53,9 +59,11 @@ function createRun(options = {}) {
       const bundleId = args.at(-1).endsWith('Foliole CLI.app')
         ? 'com.campfirium.foliole.cli'
         : 'com.campfirium.foliole';
-      const authority = options.signatureMode === 'distribution'
-        ? '3rd Party Mac Developer Application: CAMPFIRIUM LTD (V589TQH334)'
-        : 'Apple Development: Chenyao Peng (VN9YGGWJSV)';
+      const authority = options.signatureMode === 'developer-id'
+        ? 'Developer ID Application: CAMPFIRIUM LTD (V589TQH334)'
+        : options.signatureMode === 'distribution'
+          ? '3rd Party Mac Developer Application: CAMPFIRIUM LTD (V589TQH334)'
+          : 'Apple Development: Chenyao Peng (VN9YGGWJSV)';
       return { status: 0, stderr: `Identifier=${bundleId}\nTeamIdentifier=${TEAM_ID}\nAuthority=${authority}` };
     }
     return { status: 0, stdout: '' };
@@ -139,6 +147,23 @@ it('rejects a package whose embedded Codex signature cannot execute JIT code', a
   })).rejects.toThrow('packaged Codex is missing com.apple.security.cs.allow-jit');
 });
 
+it('rejects a package whose CLI runtime cannot execute JIT code', async () => {
+  const run = createRun();
+  const baseImplementation = run.getMockImplementation();
+  run.mockImplementation((command, args, runOptions) => {
+    if (command === 'codesign' && args.includes('--entitlements') && args.at(-1).endsWith('/foliole-runtime')) {
+      return { status: 0, stderr: HELPER_ENTITLEMENTS };
+    }
+    return baseImplementation(command, args, runOptions);
+  });
+
+  await expect(verifyPackagedMacosApp({
+    access: async () => undefined,
+    appPath: '/artifacts/Foliole.app',
+    run
+  })).rejects.toThrow('packaged CLI runtime is missing com.apple.security.cs.allow-jit');
+});
+
 it('rejects a development profile in a distribution package', async () => {
   await expect(verifyPackagedMacosApp({
     access: async () => undefined,
@@ -146,6 +171,24 @@ it('rejects a development profile in a distribution package', async () => {
     mode: 'distribution',
     run: createRun({ mode: 'development', signatureMode: 'distribution' })
   })).rejects.toThrow('app profile is a development profile');
+});
+
+it('accepts distinct Developer ID profiles and signatures for GitHub distribution', async () => {
+  await expect(verifyPackagedMacosApp({
+    access: async () => undefined,
+    appPath: '/artifacts/Foliole.app',
+    mode: 'developer-id',
+    run: createRun({ mode: 'developer-id', signatureMode: 'developer-id' })
+  })).resolves.toBeUndefined();
+});
+
+it('rejects a non-Developer ID profile in a GitHub distribution package', async () => {
+  await expect(verifyPackagedMacosApp({
+    access: async () => undefined,
+    appPath: '/artifacts/Foliole.app',
+    mode: 'developer-id',
+    run: createRun({ mode: 'distribution', signatureMode: 'developer-id' })
+  })).rejects.toThrow('app profile is not a Developer ID profile');
 });
 
 it('rejects a development signing identity in a distribution package', async () => {

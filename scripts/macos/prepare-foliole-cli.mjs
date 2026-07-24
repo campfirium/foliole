@@ -17,6 +17,7 @@ const RUNTIME_NAME = 'foliole-runtime';
 const SEA_FUSE = 'NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2';
 const DISTRIBUTION_PROFILE = 'Foliole CLI Mac App Store Connect 2026';
 const DISTRIBUTION_IDENTITY = '5553A5CFFB332536BD7448CD4284CE3BFEA5D666';
+const DEVELOPER_ID_IDENTITY = 'D98E147E154630ADF306994D6C4441F9D8E0C4A4';
 const DEVELOPMENT_PROFILE = 'Foliole CLI macOS App Development 2026';
 const DEVELOPMENT_IDENTITY = '31F64F511536B982DB6E0B17485724D9E3EC3D1C';
 
@@ -59,7 +60,10 @@ async function prepareSeaRuntime(nodePath) {
   return runtimePath;
 }
 
-function launcherSigningArgs(mode) {
+export function launcherSigningArgs(mode) {
+  if (mode === 'developer-id') {
+    return ['CODE_SIGNING_ALLOWED=NO', 'CODE_SIGNING_REQUIRED=NO'];
+  }
   if (mode === 'distribution') {
     return [
       'CODE_SIGN_STYLE=Manual',
@@ -103,8 +107,23 @@ function buildLauncher(mode) {
   return path.join(XCODE_OUTPUT, 'Build/Products/Release/foliole.app');
 }
 
-async function assembleAndSign(runtimePath, launcherPath, identity) {
+export function codesignArgs(identity, entitlements, target, mode) {
+  return [
+    '--force', '--sign', identity,
+    mode === 'developer-id' ? '--timestamp' : '--timestamp=none',
+    ...(mode === 'developer-id' ? ['--options', 'runtime'] : []),
+    '--entitlements', entitlements, target
+  ];
+}
+
+async function assembleAndSign(runtimePath, launcherPath, options) {
   await cp(launcherPath, APP_OUTPUT, { recursive: true });
+  if (options.provisioningProfile) {
+    await copyFile(
+      options.provisioningProfile,
+      path.join(APP_OUTPUT, 'Contents/embedded.provisionprofile')
+    );
+  }
   const resources = path.join(APP_OUTPUT, 'Contents/Resources');
   await mkdir(resources, { recursive: true });
   await cp(path.join(ROOT, 'scripts/agent-control'), path.join(resources, 'scripts/agent-control'), {
@@ -114,19 +133,19 @@ async function assembleAndSign(runtimePath, launcherPath, identity) {
   const bundledRuntime = path.join(APP_OUTPUT, 'Contents/MacOS', RUNTIME_NAME);
   await copyFile(runtimePath, bundledRuntime);
   await chmod(bundledRuntime, 0o755);
-  runChecked('CLI runtime signature', 'codesign', [
-    '--force', '--sign', identity, '--timestamp=none',
-    '--entitlements', path.join(SOURCE, 'FolioleCliRuntime.entitlements'), bundledRuntime
-  ]);
-  runChecked('CLI wrapper signature', 'codesign', [
-    '--force', '--sign', identity, '--timestamp=none',
-    '--entitlements', path.join(SOURCE, 'FolioleCli.entitlements'), APP_OUTPUT
-  ]);
+  runChecked('CLI runtime signature', 'codesign', codesignArgs(
+    options.identity, path.join(SOURCE, 'FolioleCliRuntime.entitlements'), bundledRuntime, options.mode
+  ));
+  runChecked('CLI wrapper signature', 'codesign', codesignArgs(
+    options.identity, path.join(SOURCE, 'FolioleCli.entitlements'), APP_OUTPUT, options.mode
+  ));
   runChecked('CLI signature verification', 'codesign', ['--verify', '--deep', '--strict', APP_OUTPUT]);
 }
 
 export async function prepareFolioleCli(options = {}) {
-  const mode = options.mode === 'distribution' ? 'distribution' : 'development';
+  const mode = ['developer-id', 'distribution'].includes(options.mode)
+    ? options.mode
+    : 'development';
   if (process.platform !== 'darwin' || process.arch !== 'arm64') {
     throw new Error('Foliole CLI packaging requires an arm64 Mac');
   }
@@ -137,8 +156,15 @@ export async function prepareFolioleCli(options = {}) {
   });
   const runtimePath = await prepareSeaRuntime(nodePath);
   const launcherPath = buildLauncher(mode);
-  const identity = mode === 'distribution' ? DISTRIBUTION_IDENTITY : DEVELOPMENT_IDENTITY;
-  await assembleAndSign(runtimePath, launcherPath, identity);
+  if (mode === 'developer-id' && !options.provisioningProfile) {
+    throw new Error('Developer ID CLI packaging requires its own provisioning profile');
+  }
+  const identity = mode === 'developer-id'
+    ? DEVELOPER_ID_IDENTITY
+    : mode === 'distribution' ? DISTRIBUTION_IDENTITY : DEVELOPMENT_IDENTITY;
+  await assembleAndSign(runtimePath, launcherPath, {
+    identity, mode, provisioningProfile: options.provisioningProfile
+  });
   return APP_OUTPUT;
 }
 

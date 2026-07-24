@@ -51,7 +51,14 @@ function requireProfile(profile, expected, mode, subject) {
   if (!plistArray(profile, 'com.apple.security.application-groups').includes(expected.profileAppGroup)) {
     throw new Error(`${subject} is missing the Foliole App Group`);
   }
-  if (mode === 'distribution') {
+  if (mode === 'developer-id') {
+    if (plistValue(profile, 'get-task-allow') === true || profile.includes('<key>ProvisionedDevices</key>')) {
+      throw new Error(`${subject} is a development profile`);
+    }
+    if (plistValue(profile, 'ProvisionsAllDevices') !== true) {
+      throw new Error(`${subject} is not a Developer ID profile`);
+    }
+  } else if (mode === 'distribution') {
     if (plistValue(profile, 'get-task-allow') === true || profile.includes('<key>ProvisionedDevices</key>')) {
       throw new Error(`${subject} is a development profile`);
     }
@@ -62,11 +69,13 @@ function requireProfile(profile, expected, mode, subject) {
 
 function requireSignatureDetails(details, expected, mode, subject) {
   requireEntitlements(details, [`Identifier=${expected.bundleId}`, `TeamIdentifier=${TEAM_ID}`], subject);
-  const authority = mode === 'distribution'
-    ? 'Authority=3rd Party Mac Developer Application: CAMPFIRIUM LTD'
-    : 'Authority=Apple Development:';
+  const authority = mode === 'developer-id'
+    ? 'Authority=Developer ID Application: CAMPFIRIUM LTD'
+    : mode === 'distribution'
+      ? 'Authority=3rd Party Mac Developer Application: CAMPFIRIUM LTD'
+      : 'Authority=Apple Development:';
   requireEntitlements(details, [authority], subject);
-  if (mode === 'distribution' && details.includes('Authority=Apple Development:')) {
+  if (mode !== 'development' && details.includes('Authority=Apple Development:')) {
     throw new Error(`${subject} uses a development signing identity`);
   }
 }
@@ -81,7 +90,9 @@ export async function verifyPackagedMacosApp(options) {
   const run = options.run ?? spawnSync;
   const checkAccess = options.access ?? access;
   const appPath = path.resolve(options.appPath);
-  const mode = options.mode === 'distribution' ? 'distribution' : 'development';
+  const mode = ['developer-id', 'distribution'].includes(options.mode)
+    ? options.mode
+    : 'development';
   const codexPath = path.join(appPath, 'Contents/MacOS/codex');
   const helperPath = path.join(appPath, 'Contents/Frameworks/Foliole Helper.app');
   const cliAppPath = path.join(appPath, 'Contents/Helpers/Foliole CLI.app');
@@ -151,6 +162,17 @@ export async function verifyPackagedMacosApp(options) {
     'com.apple.security.application-groups',
     APP_GROUP
   ], 'packaged CLI');
+  const cliRuntimeEntitlements = runChecked(
+    'CLI runtime entitlement inspection',
+    'codesign',
+    ['-d', '--entitlements', '-', cliRuntimePath],
+    run
+  );
+  requireEntitlements(cliRuntimeEntitlements, [
+    'com.apple.security.app-sandbox',
+    'com.apple.security.cs.allow-jit',
+    'com.apple.security.inherit'
+  ], 'packaged CLI runtime');
   runChecked('CLI help', publicLauncherPath, ['--help'], run);
   runChecked('CLI version', publicLauncherPath, ['--version'], run);
   if (options.notarized) {
