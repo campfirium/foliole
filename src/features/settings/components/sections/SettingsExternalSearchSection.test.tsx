@@ -19,12 +19,39 @@ const baseProps = {
   onRebuildIndex: vi.fn(),
   onRemoveFolder: vi.fn(),
   onRetryLoad: vi.fn(),
+  onSetFolderEnabled: vi.fn(),
   onUpdateFolder: vi.fn()
 };
 
 beforeEach(() => {
   window.localStorage.clear();
   vi.clearAllMocks();
+});
+
+it('shows remote mirrors only when a remote desktop folder exists', () => {
+  renderWithLocalization(<SettingsExternalSearchSection {...baseProps} folders={[{
+    accessMode: 'remote_mirror',
+    attachmentMode: 'document_relative_first_then_fixed_root',
+    attachmentRootPath: null,
+    createdAt: '2026-07-24T00:00:00.000Z',
+    documentCount: 2,
+    excludedDirs: [],
+    folderPath: 'D:\\Docs',
+    id: 'remote-1',
+    indexedAt: '2026-07-24T00:00:00.000Z',
+    lastError: null,
+    mirrorEnabled: true,
+    ownerDeviceName: 'Windows PC',
+    status: 'ready',
+    updatedAt: '2026-07-24T00:00:00.000Z'
+  }]} />);
+
+  expect(screen.getByText('From your other devices')).toBeInTheDocument();
+  expect(screen.getByText('Docs · Windows PC')).toBeInTheDocument();
+  expect(screen.getByText('Read-only mirror')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('checkbox'));
+  expect(baseProps.onSetFolderEnabled).toHaveBeenCalledWith('remote-1', false);
+  expect(screen.queryByRole('button', { name: 'Update folder' })).not.toBeInTheDocument();
 });
 
 it('does not show link panel browsing data controls in external sources', () => {

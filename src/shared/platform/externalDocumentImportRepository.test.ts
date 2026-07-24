@@ -27,3 +27,11 @@ it('imports external documents through the native external search command', asyn
   await expect(importExternalDocument('/library/topic.md')).resolves.toEqual(createNativeImportResult());
   expect(invoke).toHaveBeenCalledWith(NATIVE_COMMANDS.importExternalSearchDocument, { absolute_path: '/library/topic.md' });
 });
+
+it('imports remote mirrors by document id instead of a source path', async () => {
+  const invoke = vi.fn(async () => createNativeImportResult());
+  window.electronAPI = { invoke } as unknown as ElectronAPI;
+
+  await importExternalDocument('mirror-document:remote-doc');
+  expect(invoke).toHaveBeenCalledWith(NATIVE_COMMANDS.importExternalSearchDocument, { document_id: 'remote-doc' });
+});

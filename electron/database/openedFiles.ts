@@ -27,6 +27,7 @@ function toLocalOpenedFileEntry(entry: ReturnType<typeof listLocalFiles>[number]
     last_opened_at: entry.lastOpenedAt,
     modified_at: entry.modifiedAt ?? entry.lastOpenedAt,
     opening_text: null,
+    reference: { absolute_path: entry.absolutePath, kind: 'local_path' },
     relative_path: entry.absolutePath,
     source_kind: 'local_file',
     title: entry.title

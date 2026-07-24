@@ -55,7 +55,9 @@ export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
     sql:
       "SELECT json_object('id', id, 'folder_path', folder_path, 'attachment_mode', attachment_mode, " +
       "'attachment_root_path', attachment_root_path, 'excluded_dirs_json', excluded_dirs_json, 'status', status, " +
-      "'document_count', document_count, 'indexed_at', indexed_at, 'last_error', last_error, 'created_at', created_at, " +
+      "'document_count', document_count, 'indexed_at', indexed_at, 'last_error', last_error, " +
+      "'owner_installation_id', owner_installation_id, 'owner_device_name', owner_device_name, " +
+      "'owner_platform', owner_platform, 'created_at', created_at, " +
       "'updated_at', updated_at) AS payload_json FROM external_search_folders WHERE id = ? LIMIT 1"
   },
   syncPayloadImportSource: {

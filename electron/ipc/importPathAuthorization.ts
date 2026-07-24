@@ -67,7 +67,9 @@ export async function assertExternalSearchImportPath(filePath: string) {
   if (localFile && localFile.missingAt === null) {
     return realPath;
   }
-  const folders = await Promise.all(loadExternalSearchFolders().map(async (folder) => resolveRealImportPath(folder.folder_path).catch(() => null)));
+  const folders = await Promise.all(loadExternalSearchFolders()
+    .filter((folder) => folder.access_mode === 'local')
+    .map(async (folder) => resolveRealImportPath(folder.folder_path).catch(() => null)));
   if (!folders.some((folderPath) => folderPath && isSameOrNestedPath(realPath, folderPath))) {
     throw new Error('External search import path is not authorized.');
   }

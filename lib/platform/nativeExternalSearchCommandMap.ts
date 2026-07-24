@@ -14,8 +14,14 @@ export type NativeExternalSearchCommandMap = {
   };
   [NATIVE_COMMANDS.saveExternalSearchFolders]: {
     args: {
-      folders: Array<Pick<NativeExternalSearchFolder, 'attachment_mode' | 'attachment_root_path' | 'excluded_dirs' | 'folder_path' | 'id'>>;
+      folders: Array<Pick<NativeExternalSearchFolder, 'attachment_mode' | 'attachment_root_path' | 'excluded_dirs' | 'folder_path' | 'id'> & {
+        claim_unowned?: boolean;
+      }>;
     };
+    result: NativeExternalSearchFolder[];
+  };
+  [NATIVE_COMMANDS.setExternalSearchFolderEnabled]: {
+    args: { enabled: boolean; folder_id: string };
     result: NativeExternalSearchFolder[];
   };
   [NATIVE_COMMANDS.rebuildExternalSearchIndex]: {
@@ -31,9 +37,7 @@ export type NativeExternalSearchCommandMap = {
     result: NativeExternalSearchBrowseEntry[];
   };
   [NATIVE_COMMANDS.loadExternalSearchPreview]: {
-    args: {
-      absolute_path: string;
-    };
+    args: { absolute_path: string; document_id?: never } | { absolute_path?: never; document_id: string };
     result: NativeExternalSearchPreview | null;
   };
   [NATIVE_COMMANDS.openExternalDocumentFile]: {
@@ -43,8 +47,13 @@ export type NativeExternalSearchCommandMap = {
     result: NativeExternalSearchBrowseEntry | null;
   };
   [NATIVE_COMMANDS.importExternalSearchDocument]: {
-    args: {
+    args: ({
       absolute_path: string;
+      document_id?: never;
+    } | {
+      absolute_path?: never;
+      document_id: string;
+    }) & {
       title_strategy?: 'file_name' | 'heading';
     };
     result: NativeTextImportResult | null;

@@ -58,6 +58,7 @@ export interface SettingsCategoryContentProps {
   onRebuildExternalSearchIndex: (folderId?: string) => void;
   onRemoveExternalSearchFolder: (folderId: string) => void;
   onRetryLoadExternalSearchFolders: () => void;
+  onSetExternalSearchFolderEnabled: (folderId: string, enabled: boolean) => void;
   onRebuildMirrorLinks: () => void;
   onRebuildMirrorOutput: () => void;
   onRestoreDefault: (location: 'assets_dir' | 'inbox' | 'library_home' | 'mirror') => void;
@@ -120,6 +121,7 @@ function renderExternalSearchCategory(props: SettingsCategoryContentProps) {
       onRebuildIndex={props.onRebuildExternalSearchIndex}
       onRemoveFolder={props.onRemoveExternalSearchFolder}
       onRetryLoad={props.onRetryLoadExternalSearchFolders}
+      onSetFolderEnabled={props.onSetExternalSearchFolderEnabled}
       onUpdateFolder={props.onUpdateExternalSearchFolder}
     />
   );

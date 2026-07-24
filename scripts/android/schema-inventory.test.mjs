@@ -200,6 +200,7 @@ describe('schema inventory drift gate', () => {
 
     expect(report.sources).toEqual(EXPECTED_SCHEMA_SOURCES);
     expect(report.desktopOnly).toEqual([
+      { classification: 'known-platform-only', table: 'external_folder_device_preferences' },
       { classification: 'known-platform-only', table: 'import_runs' },
       { classification: 'known-platform-only', table: 'incoming_updates' },
       { classification: 'known-platform-only', table: 'keep_import_item_cache' },

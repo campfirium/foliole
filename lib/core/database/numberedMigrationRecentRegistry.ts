@@ -2,6 +2,7 @@ import {
   ASSISTANT_THREAD_INDEX_SCHEMA_STATEMENTS,
   ASSISTANT_THREAD_MESSAGE_SCHEMA_STATEMENTS
 } from './assistantThreadIndexSchemaStatements.js';
+import { migrateExternalFolderOwnership } from './numberedMigrationExternalFolderOwnership.js';
 import { addColumnIfMissing } from './numberedMigrationHelpers.js';
 import { createIncomingUpdatesTable } from './numberedMigrationIncomingUpdates.js';
 import { migrateLocalFilesRegistry, resetOpenedLocalFileHistory } from './numberedMigrationLocalFiles.js';
@@ -116,5 +117,9 @@ export const RECENT_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
         last_opened_at TEXT NOT NULL
       )`);
     }
+  },
+  {
+    version: 61,
+    migrate: migrateExternalFolderOwnership
   }
 ];

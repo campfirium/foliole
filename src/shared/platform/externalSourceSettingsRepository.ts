@@ -3,6 +3,7 @@ import {
   loadRuntimeExternalSearchFolders,
   rebuildRuntimeExternalSearchIndex,
   saveRuntimeExternalSearchFolders,
+  setRuntimeExternalSearchFolderEnabled,
   type RuntimeExternalSearchFolder
 } from './externalSearchRuntimeRepository';
 import { selectRuntimeFolder } from './folderSelectionRuntimeRepository';
@@ -62,6 +63,13 @@ export function saveExternalSourceSettingsFolders(folders: ExternalSourceSetting
   ).then((saved) => {
     externalSourceSettingsFoldersCache = saved;
     return saved;
+  });
+}
+
+export function setExternalSourceSettingsFolderEnabled(folderId: string, enabled: boolean) {
+  return setRuntimeExternalSearchFolderEnabled(folderId, enabled).then((folders) => {
+    externalSourceSettingsFoldersCache = folders;
+    return folders;
   });
 }
 

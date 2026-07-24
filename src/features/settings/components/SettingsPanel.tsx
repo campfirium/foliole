@@ -109,6 +109,7 @@ type SettingsPanelBodyProps = {
   onRebuildExternalSearchIndex: (folderId?: string) => void;
   onRemoveExternalSearchFolder: (folderId: string) => void;
   onRetryLoadExternalSearchFolders: () => void;
+  onSetExternalSearchFolderEnabled: ReturnType<typeof useExternalSearchFolders>['onSetExternalSearchFolderEnabled'];
   onRunSupportCommand?: ((commandId: string) => void) | undefined;
   onRebuildMirrorLinks: () => void;
   onRebuildMirrorOutput: () => void;
@@ -154,6 +155,7 @@ function createSettingsCategoryProps(
     onRebuildExternalSearchIndex: props.onRebuildExternalSearchIndex,
     onRemoveExternalSearchFolder: props.onRemoveExternalSearchFolder,
     onRetryLoadExternalSearchFolders: props.onRetryLoadExternalSearchFolders,
+    onSetExternalSearchFolderEnabled: props.onSetExternalSearchFolderEnabled,
     ...definedProps({ onRunSupportCommand: props.onRunSupportCommand }),
     onRebuildMirrorLinks: props.onRebuildMirrorLinks,
     onRebuildMirrorOutput: props.onRebuildMirrorOutput,

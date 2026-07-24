@@ -6,10 +6,13 @@ import {
   loadExternalSourceSettingsFolders,
   rebuildExternalSourceSettingsIndex,
   saveExternalSourceSettingsFolders,
+  setExternalSourceSettingsFolderEnabled,
   selectExternalSourceSettingsFolderPath,
   type ExternalSourceSettingsFolder,
   type ExternalSourceSettingsFolderPatch
 } from '../../../shared/platform/externalSourceSettingsRepository';
+
+import { serializeEditableExternalFolders } from './externalSearchFolderSerialization';
 
 export function useExternalSearchFolders() {
   const t = useTranslation();
@@ -43,6 +46,16 @@ export function useExternalSearchFolders() {
       void rebuildExternalSearchFolders(folderId, setError, setFeedback, setFolders, setIsSaving, t),
     onRemoveExternalSearchFolder: (folderId: string) => setFolders((current) => current.filter((folder) => folder.id !== folderId)),
     onRetryLoadExternalSearchFolders: () => setLoadKey((value) => value + 1),
+    onSetExternalSearchFolderEnabled: (folderId: string, enabled: boolean) => {
+      setFolders((current) => current.map((folder) =>
+        folder.id === folderId ? { ...folder, mirrorEnabled: enabled } : folder
+      ));
+      void setExternalSourceSettingsFolderEnabled(folderId, enabled).then((next) => {
+        if (next) setFolders(next);
+      }).catch((nextError) => {
+        setError(nextError instanceof Error ? nextError.message : t('settings.externalSources.error.save'));
+      });
+    },
     onUpdateExternalSearchFolder: (folderId: string, patch: ExternalSourceSettingsFolderPatch) =>
       updateFolder(folderId, (current) => ({
         ...current,
@@ -68,7 +81,7 @@ function useLoadExternalSearchFolders(
       .then((loaded) => {
         if (!alive || loaded === null) return;
         setIsDesktopRuntime(true);
-        lastSavedSnapshotRef.current = serializeEditableFolders(loaded);
+        lastSavedSnapshotRef.current = serializeEditableExternalFolders(loaded);
         setFolders(loaded);
       })
       .catch((nextError) => {
@@ -98,7 +111,7 @@ function usePersistExternalSearchFolders(
 ) {
   useEffect(() => {
     if (!isDesktopRuntime) return;
-    const nextSnapshot = serializeEditableFolders(folders);
+    const nextSnapshot = serializeEditableExternalFolders(folders);
     if (nextSnapshot === lastSavedSnapshotRef.current) return;
     const timer = window.setTimeout(() => {
       void persistExternalSearchFolders(
@@ -147,7 +160,11 @@ async function chooseExternalSearchFolder(
 ) {
   const selectedPath = await selectExternalSourceSettingsFolderPath();
   if (!selectedPath) return;
-  updateFolder(folderId, (current) => ({ ...current, folderPath: selectedPath }));
+  updateFolder(folderId, (current) => current.accessMode !== 'unowned'
+    ? { ...current, folderPath: selectedPath }
+    : selectedPath === current.folderPath
+      ? { ...current, claimUnowned: true }
+      : { ...current, accessMode: 'local', folderPath: selectedPath, id: crypto.randomUUID() });
 }
 
 async function persistExternalSearchFolders(
@@ -163,7 +180,7 @@ async function persistExternalSearchFolders(
   setIsSaving(true);
   setError(null);
   try {
-    const saved = await saveExternalSourceSettingsFolders(folders);
+    const saved = await saveExternalSourceSettingsFolders(folders.filter((folder) => folder.accessMode !== 'remote_mirror'));
     if (saved === null) return;
     const rebuilt = await rebuildExternalSourceSettingsIndex();
     lastSavedSnapshotRef.current = nextSnapshot;
@@ -174,18 +191,6 @@ async function persistExternalSearchFolders(
   } finally {
     setIsSaving(false);
   }
-}
-
-function serializeEditableFolders(folders: ExternalSourceSettingsFolder[]) {
-  return JSON.stringify(
-    folders.map((folder) => ({
-      attachmentMode: 'document_relative_first_then_fixed_root',
-      attachmentRootPath: folder.attachmentRootPath?.trim() || null,
-      excludedDirs: folder.excludedDirs,
-      folderPath: folder.folderPath,
-      id: folder.id
-    }))
-  );
 }
 
 async function rebuildExternalSearchFolders(

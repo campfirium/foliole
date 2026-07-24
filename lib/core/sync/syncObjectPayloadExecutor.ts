@@ -98,14 +98,17 @@ async function applyExternalFolderObject(port: DbPort, record: SyncPackSyncObjec
   const payload = asObject(record);
   await port.run(
     `INSERT INTO external_search_folders (id, folder_path, attachment_mode, attachment_root_path, excluded_dirs_json, status, ` +
-    `document_count, indexed_at, last_error, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ` +
+    `document_count, indexed_at, last_error, owner_installation_id, owner_device_name, owner_platform, created_at, updated_at) ` +
+    `VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ` +
     `ON CONFLICT(id) DO UPDATE SET folder_path = excluded.folder_path, attachment_mode = excluded.attachment_mode, ` +
     `attachment_root_path = excluded.attachment_root_path, excluded_dirs_json = excluded.excluded_dirs_json, ` +
     `status = excluded.status, document_count = excluded.document_count, indexed_at = excluded.indexed_at, ` +
-    `last_error = excluded.last_error, updated_at = excluded.updated_at`,
+    `last_error = excluded.last_error, owner_installation_id = excluded.owner_installation_id, ` +
+    `owner_device_name = excluded.owner_device_name, owner_platform = excluded.owner_platform, updated_at = excluded.updated_at`,
     [record.object_id, text(payload.folder_path) ?? '', text(payload.attachment_mode) ?? 'document_relative_first_then_fixed_root',
       text(payload.attachment_root_path), text(payload.excluded_dirs_json) ?? '[]', text(payload.status) ?? 'idle',
       integer(payload.document_count), text(payload.indexed_at), text(payload.last_error),
+      text(payload.owner_installation_id), text(payload.owner_device_name), text(payload.owner_platform),
       text(payload.created_at) ?? record.updated_at, record.updated_at]
   );
 }

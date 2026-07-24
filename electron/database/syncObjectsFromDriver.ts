@@ -33,7 +33,9 @@ const PAYLOAD_SQL_BY_TYPE: Partial<Record<JsonSyncObjectType, string>> = {
     'id', id, 'folder_path', folder_path, 'attachment_mode', attachment_mode,
     'attachment_root_path', attachment_root_path, 'excluded_dirs_json', excluded_dirs_json,
     'status', status, 'document_count', document_count, 'indexed_at', indexed_at,
-    'last_error', last_error, 'created_at', created_at, 'updated_at', updated_at
+    'last_error', last_error, 'owner_installation_id', owner_installation_id,
+    'owner_device_name', owner_device_name, 'owner_platform', owner_platform,
+    'created_at', created_at, 'updated_at', updated_at
   ) AS payload_json FROM external_search_folders WHERE id = ?`,
   import_source: `SELECT json_object(
     'source_fingerprint', source_fingerprint, 'provider', provider, 'source_kind', source_kind,

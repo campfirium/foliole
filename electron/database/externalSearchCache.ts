@@ -104,7 +104,9 @@ async function syncExternalSearchFolder(
 export async function rebuildExternalSearchIndexes(folderId?: string) {
   const defaultExcludedNames = new Set(['.git', '.obsidian', '.trash', 'node_modules']);
   const autoExcludedPaths = resolveAutoExcludedPaths();
-  const folders = loadExternalSearchFolders().filter((folder) => !folderId || folder.id === folderId);
+  const folders = loadExternalSearchFolders().filter((folder) =>
+    folder.access_mode === 'local' && (!folderId || folder.id === folderId)
+  );
   for (const folder of folders) {
     updateExternalSearchFolderIndexState({
       documentCount: folder.document_count,
@@ -139,7 +141,9 @@ export async function rebuildExternalSearchIndexes(folderId?: string) {
 }
 
 export async function refreshExternalSearchIndexes(folderId?: string, options: ExternalSearchRefreshOptions = {}) {
-  const folders = loadExternalSearchFolders().filter((folder) => !folderId || folder.id === folderId);
+  const folders = loadExternalSearchFolders().filter((folder) =>
+    folder.access_mode === 'local' && (!folderId || folder.id === folderId)
+  );
   const db = openExternalSearchCacheDatabase();
   for (const folder of folders) {
     if (options.taskContext?.signal?.aborted) {

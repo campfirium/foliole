@@ -11,6 +11,7 @@ import {
 } from '../../../../shared/ui';
 
 import { ExternalLibraryRow, ExternalLibraryTable } from './SettingsExternalSearchSectionParts';
+import { SettingsRemoteExternalFolderRows } from './SettingsRemoteExternalFolderRows';
 
 interface SettingsExternalSearchSectionProps {
   error: string | null;
@@ -25,12 +26,15 @@ interface SettingsExternalSearchSectionProps {
   onRebuildIndex: (folderId?: string) => void;
   onRemoveFolder: (folderId: string) => void;
   onRetryLoad: () => void;
+  onSetFolderEnabled?: (folderId: string, enabled: boolean) => void;
   onUpdateFolder: (folderId: string, patch: ExternalSourceSettingsFolderPatch) => void;
   previewDesktopSettings?: boolean;
 }
 
 export function SettingsExternalSearchSection(props: SettingsExternalSearchSectionProps) {
   const t = useTranslation();
+  const remoteFolders = props.folders.filter((folder) => folder.accessMode === 'remote_mirror');
+  const localFolders = props.folders.filter((folder) => folder.accessMode !== 'remote_mirror');
 
   if (props.isLoading) {
     return (
@@ -51,13 +55,19 @@ export function SettingsExternalSearchSection(props: SettingsExternalSearchSecti
       title={t('settings.externalSources.title')}
     >
       <div className="min-w-0 overflow-hidden">
+        {remoteFolders.length > 0 ? (
+          <SettingsRemoteExternalFolderRows
+            folders={remoteFolders}
+            onSetEnabled={props.onSetFolderEnabled ?? (() => undefined)}
+          />
+        ) : null}
         <ExternalLibraryTable
-          folders={props.folders}
+          folders={localFolders}
           isDesktopRuntime={props.isDesktopRuntime || Boolean(props.previewDesktopSettings)}
           isSaving={props.isSaving}
           onAddFolder={props.onAddFolder}
         >
-          {props.folders.map((folder) => (
+          {localFolders.map((folder) => (
             <ExternalLibraryRow
               folder={folder}
               isSaving={props.isSaving}

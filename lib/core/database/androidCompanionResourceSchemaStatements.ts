@@ -56,7 +56,7 @@ export const ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS = [
   )`,
   `CREATE TABLE IF NOT EXISTS external_search_folders (
     id TEXT PRIMARY KEY,
-    folder_path TEXT NOT NULL UNIQUE,
+    folder_path TEXT NOT NULL,
     attachment_mode TEXT NOT NULL,
     attachment_root_path TEXT,
     excluded_dirs_json TEXT NOT NULL DEFAULT '[]',
@@ -64,9 +64,15 @@ export const ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS = [
     document_count INTEGER NOT NULL DEFAULT 0,
     indexed_at TEXT,
     last_error TEXT,
+    owner_installation_id TEXT,
+    owner_device_name TEXT,
+    owner_platform TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
   )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_external_search_folders_owner_path
+    ON external_search_folders (owner_installation_id, folder_path)
+    WHERE owner_installation_id IS NOT NULL`,
   `CREATE TABLE IF NOT EXISTS external_documents (
     document_id TEXT PRIMARY KEY,
     folder_id TEXT NOT NULL,

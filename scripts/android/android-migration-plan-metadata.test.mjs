@@ -68,6 +68,10 @@ const MIGRATION_RULES = path.join(
   'android',
   'FolioleCompanionMigrationRules.java'
 );
+const MIGRATION_ROW_VALUES = path.join(
+  REPO_ROOT, 'android', 'app', 'src', 'main', 'java', 'com', 'foliole', 'android',
+  'FolioleCompanionMigrationRowValues.java'
+);
 
 describe('Android migration plan metadata', () => {
   it('generates versioned migration actions in the migration schema asset', async () => {
@@ -82,6 +86,7 @@ describe('Android migration plan metadata', () => {
       addNodesSequentialReadingEnabledIfMissing: 'addNodesSequentialReadingEnabledIfMissing',
       addNodesShelvedAtIfMissing: 'addNodesShelvedAtIfMissing',
       installSchema: 'installSchema',
+      migrateExternalFolderOwnership: 'migrateExternalFolderOwnership',
       migrateSyncObjectStateSequence: 'migrateSyncObjectStateSequence'
     });
     expect(schema.actionKeys).toMatchObject({ errorMessage: 'errorMessage', type: 'type' });
@@ -97,7 +102,7 @@ describe('Android migration plan metadata', () => {
       statementName: 'statementName',
       tableName: 'tableName'
     });
-    expect(schema.plan.map((step) => step.beforeVersion)).toEqual([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]);
+    expect(schema.plan.map((step) => step.beforeVersion)).toEqual([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]);
     expect(databaseVersion).toBe(Math.max(...schema.plan.map((step) => step.beforeVersion)));
     expect(schema.repairRules.nodesSequentialReadingEnabled).toMatchObject({
       columnName: 'sequential_reading_enabled',
@@ -167,6 +172,7 @@ describe('Android migration plan metadata', () => {
     const repairSource = await readFile(SCHEMA_REPAIR, 'utf8');
     const installerSource = await readFile(SCHEMA_INSTALLER, 'utf8');
     const rulesSource = await readFile(MIGRATION_RULES, 'utf8');
+    const rowValuesSource = await readFile(MIGRATION_ROW_VALUES, 'utf8');
 
     expect(helperSource).toContain('public void onOpen(SQLiteDatabase database)');
     expect(helperSource).toContain('FolioleCompanionDatabaseMigration.repairCurrentSchema(context, database)');
@@ -192,9 +198,9 @@ describe('Android migration plan metadata', () => {
     expect(repairSource).toContain('FolioleCompanionMigrationRules.repairStatementName(context, groupName)');
     expect(repairSource).toContain('FolioleCompanionMigrationRules.repairTableName(context, groupName)');
     expect(migrationSource).toContain('FolioleCompanionMigrationRules.stringValue');
-    expect(migrationSource).toContain('FolioleCompanionMigrationRules.rowString(context, row, key)');
-    expect(migrationSource).toContain('FolioleCompanionMigrationRules.rowNullableString(context, row, key)');
-    expect(migrationSource).toContain('FolioleCompanionMigrationRules.rowInt(context, row, key)');
+    expect(rowValuesSource).toContain('FolioleCompanionMigrationRules.rowString(context, row, key)');
+    expect(rowValuesSource).toContain('FolioleCompanionMigrationRules.rowNullableString(context, row, key)');
+    expect(rowValuesSource).toContain('FolioleCompanionMigrationRules.rowInt(context, row, key)');
     expect(migrationSource).toContain('oldVersion < step.getInt(planKey(context, "beforeVersion"))');
     expect(migrationSource).toContain('step.getJSONArray(planKey(context, "actions"))');
     expect(migrationSource).not.toContain('"installSchema".equals(type)');

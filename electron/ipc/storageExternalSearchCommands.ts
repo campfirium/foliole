@@ -1,5 +1,6 @@
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import type { NativeExternalSearchPreview } from '../../lib/platform/nativeStorageContract.js';
+import { setExternalFolderEnabled } from '../database/externalFolderDevicePreferences.js';
 import { OPENED_EXTERNAL_DOCUMENTS_FOLDER_ID, OPENED_EXTERNAL_DOCUMENTS_FOLDER_PATH } from '../database/externalOpenedDocumentConstants.js';
 import {
   recordOpenedExternalDocument,
@@ -12,9 +13,11 @@ import {
   loadExternalSearchPreview
 } from '../database/externalSearchCacheRead.js';
 import { loadExternalSearchFolders, saveExternalSearchFolders } from '../database/externalSearchFolders.js';
+import { loadExternalSearchMirrorPreview } from '../database/externalSearchMirrorRead.js';
 import { getLocalFileMetadata, readLocalFile } from '../database/localFiles.js';
 import { loadOpenedFilesFolder } from '../database/openedFiles.js';
 import { loadReadwiseExternalSearchFolders } from '../database/readwiseManagedExternalDocuments.js';
+import { loadOrCreateDesktopInstallationIdentity } from '../desktopInstallationIdentity.js';
 import { notifyExternalSearchFoldersChanged } from '../externalSearchBackgroundRefreshRuntime.js';
 
 import { asNullableString, asString } from './commandParsers.js';
@@ -64,6 +67,7 @@ async function loadLocalFilePreview(absolutePath: string): Promise<NativeExterna
     is_present: true,
     last_opened_at: result.lastOpenedAt,
     modified_at: result.modifiedAt,
+    reference: { absolute_path: result.absolutePath, kind: 'local_path' },
     relative_path: result.absolutePath,
     source_kind: 'local_file'
   };
@@ -80,6 +84,13 @@ export function handleExternalSearchStorageCommand(command: string, args: Record
     notifyExternalSearchFoldersChanged();
     return appendManagedExternalSearchFolders(savedFolders);
   }
+  if (command === NATIVE_COMMANDS.setExternalSearchFolderEnabled) {
+    const folderId = asString(args.folder_id, 'folder_id');
+    const folder = loadExternalSearchFolders().find((item) => item.id === folderId);
+    if (!folder || folder.access_mode !== 'remote_mirror') throw new Error('Remote external folder not found.');
+    setExternalFolderEnabled(loadOrCreateDesktopInstallationIdentity(), folderId, args.enabled !== false);
+    return appendManagedExternalSearchFolders(loadExternalSearchFolders());
+  }
   if (command === NATIVE_COMMANDS.rebuildExternalSearchIndex) {
     return rebuildExternalSearchIndexes(asNullableString(args.folder_id, 'folder_id') ?? undefined);
   }
@@ -87,6 +98,8 @@ export function handleExternalSearchStorageCommand(command: string, args: Record
     return loadExternalSearchBrowseEntries(asString(args.folder_id, 'folder_id'));
   }
   if (command === NATIVE_COMMANDS.loadExternalSearchPreview) {
+    const documentId = asNullableString(args.document_id, 'document_id');
+    if (documentId) return loadExternalSearchMirrorPreview(documentId);
     const sourceKind = asNullableString(args.source_kind, 'source_kind');
     return loadOpenedFilePreview(
       asString(args.absolute_path, 'absolute_path'),

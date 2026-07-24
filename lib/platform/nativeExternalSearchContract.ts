@@ -4,6 +4,7 @@ export type NativeExternalSearchAttachmentMode =
   | 'fixed_root';
 
 export interface NativeExternalSearchFolder {
+  access_mode?: 'local' | 'remote_mirror' | 'unowned';
   attachment_mode: NativeExternalSearchAttachmentMode;
   attachment_root_path: string | null;
   created_at: string;
@@ -13,12 +14,19 @@ export interface NativeExternalSearchFolder {
   id: string;
   indexed_at: string | null;
   last_error: string | null;
+  mirror_enabled?: boolean;
+  owner_device_name?: string | null;
+  owner_installation_id?: string | null;
+  owner_platform?: string | null;
   status: 'error' | 'idle' | 'indexing' | 'ready';
   updated_at: string;
 }
 
-export interface NativeExternalSearchPreview {
-  absolute_path: string;
+export type NativeExternalDocumentReference =
+  | { absolute_path: string; kind: 'local_path' }
+  | { document_id: string; kind: 'mirror_document' };
+
+interface NativeExternalSearchPreviewBase {
   content: string;
   editable?: boolean;
   extension: 'md' | 'txt';
@@ -34,8 +42,12 @@ export interface NativeExternalSearchPreview {
   source_kind?: 'external_document' | 'local_file';
 }
 
-export interface NativeExternalSearchBrowseEntry {
-  absolute_path: string;
+export type NativeExternalSearchPreview = NativeExternalSearchPreviewBase & (
+  | { absolute_path: string; document_id?: never; reference: { absolute_path: string; kind: 'local_path' } }
+  | { absolute_path?: never; document_id: string; reference: { document_id: string; kind: 'mirror_document' } }
+);
+
+interface NativeExternalSearchBrowseEntryBase {
   editable?: boolean;
   extension: 'md' | 'txt';
   file_name: string;
@@ -51,3 +63,8 @@ export interface NativeExternalSearchBrowseEntry {
   source_kind?: 'external_document' | 'local_file';
   title: string;
 }
+
+export type NativeExternalSearchBrowseEntry = NativeExternalSearchBrowseEntryBase & (
+  | { absolute_path: string; document_id?: never; reference: { absolute_path: string; kind: 'local_path' } }
+  | { absolute_path?: never; document_id: string; reference: { document_id: string; kind: 'mirror_document' } }
+);

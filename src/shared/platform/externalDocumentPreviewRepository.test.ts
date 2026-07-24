@@ -46,6 +46,7 @@ it('loads external document previews through the native external search command'
     isPresent: undefined,
     lastOpenedAt: null,
     modifiedAt: null,
+    reference: { absolutePath: '/library/topic.md', kind: 'local_path' },
     sourceKind: undefined,
     relativePath: 'topic.md'
   });
@@ -65,4 +66,17 @@ it('passes local file source context to external preview loading', async () => {
     folder_id: 'opened-external-documents',
     source_kind: 'local_file'
   });
+});
+
+it('loads remote mirrors by document id instead of a source path', async () => {
+  const invoke = vi.fn(async () => ({
+    content: '# Remote', document_id: 'remote-doc', extension: 'md', file_name: 'remote.md',
+    folder_id: 'remote-folder', folder_path: 'D:\\Docs', relative_path: 'remote.md',
+    reference: { document_id: 'remote-doc', kind: 'mirror_document' }
+  }));
+  window.electronAPI = { invoke } as unknown as ElectronAPI;
+
+  const result = await loadExternalDocumentPreview('mirror-document:remote-doc');
+  expect(invoke).toHaveBeenCalledWith(NATIVE_COMMANDS.loadExternalSearchPreview, { document_id: 'remote-doc' });
+  expect(result).toMatchObject({ documentId: 'remote-doc', reference: { documentId: 'remote-doc', kind: 'mirror_document' } });
 });

@@ -35,6 +35,7 @@ import { loadAppSettingsState, saveAppSettingsState } from './storage.js';
 import { readSettingsObject } from './storageCommandSupport.js';
 import { handleExternalSearchStorageCommand } from './storageExternalSearchCommands.js';
 import { handlePublishingStorageCommand } from './storagePublishingCommands.js';
+import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.js';
 
 function handleSourceDispositionCommand(command: string, window: BrowserWindow | null) {
   if (command === NATIVE_COMMANDS.loadSourceDispositionSummary) return summarizeSourceDispositions();
@@ -85,7 +86,10 @@ export async function handleSettingsStorageCommand(
   const companionPairingResult = handleCompanionPairingCommand(command, args);
   if (companionPairingResult !== undefined) return companionPairingResult;
   const publishingResult = await handlePublishingStorageCommand(command, args);
-  if (publishingResult !== undefined) return publishingResult;
+  if (publishingResult !== undefined) {
+    if (command === NATIVE_COMMANDS.updateFoliolePublishSiteAddress) notifyWorkspaceContentChanged();
+    return publishingResult;
+  }
   if (command === NATIVE_COMMANDS.loadImportManagerSettings) return loadImportManagerSettings();
   if (command === NATIVE_COMMANDS.loadAppSettingsState) return loadAppSettingsState();
   if (command === NATIVE_COMMANDS.saveAppSettingsState) {

@@ -9,6 +9,7 @@ import {
 } from './externalDocumentImportVisibility.js';
 import { openExternalSearchCacheDatabase } from './externalSearchCacheDatabase.js';
 import { type ExternalSearchRow, toExternalResult } from './externalSearchCacheSupport.js';
+import { searchExternalMirrorDocuments } from './externalSearchMirrorSearch.js';
 import {
   mergeExternalSearchRows,
   readAdvancedExternalSearchRows,
@@ -147,6 +148,9 @@ export function searchExternalDocuments(query: string) {
       .map((row) =>
         toExternalResult(row, queryPlan.highlightQuery, resolveImportedNodeIdForExternalDocument(row.absolute_path, importedNodeIdsByLocator))
       ),
+    ...searchExternalMirrorDocuments(queryPlan.normalizedQuery).map((row) =>
+      toExternalResult(row, queryPlan.highlightQuery)
+    ),
     ...searchReadwiseExternalDocuments(queryPlan)
   ];
 }

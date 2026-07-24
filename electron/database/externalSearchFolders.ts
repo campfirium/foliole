@@ -1,225 +1,127 @@
-import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
 import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorageContract.js';
+import { loadOrCreateDesktopInstallationIdentity } from '../desktopInstallationIdentity.js';
 import { assertNoUnsafePathOverlap } from '../libraryPathSafety.js';
 import { loadManagedPathCandidates } from '../managedPathSafety.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
+import { loadExternalFolderEnabled } from './externalFolderDevicePreferences.js';
+import {
+  type ExternalSearchFolderRow,
+  normalizeExcludedDirs,
+  readExternalSearchFolderRows,
+  toExternalSearchFolder
+} from './externalSearchFolderRows.js';
 
-interface ExternalSearchFolderRow extends DatabaseRow {
-  attachment_mode: string;
-  attachment_root_path: string | null;
-  created_at: string;
-  document_count: number;
-  excluded_dirs_json: string;
-  folder_path: string;
-  id: string;
-  indexed_at: string | null;
-  last_error: string | null;
-  status: string;
-  updated_at: string;
-}
+type SaveFolderInput = Pick<NativeExternalSearchFolder,
+  'attachment_mode' | 'attachment_root_path' | 'excluded_dirs' | 'folder_path' | 'id'> & { claim_unowned?: boolean };
 
-type SaveFolderInput = Pick<
-  NativeExternalSearchFolder,
-  'attachment_mode' | 'attachment_root_path' | 'excluded_dirs' | 'folder_path' | 'id'
->;
-
-interface NormalizedExternalSearchFolder {
-  attachmentMode: 'document_relative_first_then_fixed_root';
-  attachmentRootPath: string | null;
-  excludedDirs: string[];
-  folderPath: string;
-  id: string;
-}
-
-function normalizeExcludedDirs(value: unknown) {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return [...new Set(value.map((item) => (typeof item === 'string' ? item.trim() : '')).filter(Boolean))];
-}
-
-function toFolder(row: ExternalSearchFolderRow): NativeExternalSearchFolder {
-  return {
-    attachment_mode:
-      row.attachment_mode === 'fixed_root' || row.attachment_mode === 'document_relative_first_then_fixed_root'
-        ? row.attachment_mode
-        : 'document_relative',
-    attachment_root_path: row.attachment_root_path?.trim() || null,
-    created_at: row.created_at,
-    document_count: Math.max(0, Number(row.document_count ?? 0)),
-    excluded_dirs: normalizeExcludedDirs(JSON.parse(row.excluded_dirs_json)),
-    folder_path: row.folder_path,
-    id: row.id,
-    indexed_at: row.indexed_at,
-    last_error: row.last_error,
-    status: row.status === 'ready' || row.status === 'indexing' || row.status === 'error' ? row.status : 'idle',
-    updated_at: row.updated_at
-  };
-}
-
-function readRows() {
-  return openDatabaseConnection().driver.queryAll<ExternalSearchFolderRow>(
-    `SELECT
-      id,
-      folder_path,
-      attachment_mode,
-      attachment_root_path,
-      excluded_dirs_json,
-      status,
-      document_count,
-      indexed_at,
-      last_error,
-      created_at,
-      updated_at
-     FROM external_search_folders
-     ORDER BY created_at ASC`
-  );
+function normalizedInput(folders: SaveFolderInput[]) {
+  const result = folders.map((folder) => ({
+    attachmentMode: 'document_relative_first_then_fixed_root' as const,
+    attachmentRootPath: folder.attachment_root_path?.trim() || null,
+    claimUnowned: folder.claim_unowned === true,
+    excludedDirs: normalizeExcludedDirs(folder.excluded_dirs),
+    folderPath: folder.folder_path.trim(), id: folder.id.trim()
+  })).filter((folder) => folder.id && folder.folderPath);
+  assertNoUnsafePathOverlap([...loadManagedPathCandidates(), ...result.map((folder, index) => ({
+    label: `External source ${index + 1}`, path: folder.folderPath
+  }))]);
+  return result;
 }
 
 export function loadExternalSearchFolders() {
-  return readRows().map((row) => toFolder(row));
+  const identity = loadOrCreateDesktopInstallationIdentity();
+  return readExternalSearchFolderRows().map((row) => toExternalSearchFolder(
+    row, identity, loadExternalFolderEnabled(identity, row.id)
+  ));
 }
 
-function normalizeFolders(folders: SaveFolderInput[]) {
-  const normalizedFolders = folders
-    .map((folder) => ({
-      attachmentMode: 'document_relative_first_then_fixed_root' as const,
-      attachmentRootPath: folder.attachment_root_path?.trim() || null,
-      excludedDirs: normalizeExcludedDirs(folder.excluded_dirs),
-      folderPath: folder.folder_path.trim(),
-      id: folder.id.trim()
-    }))
-    .filter((folder) => folder.id && folder.folderPath);
-  assertSafeExternalSearchFolders(normalizedFolders);
-  return normalizedFolders;
-}
-
-function assertSafeExternalSearchFolders(normalizedFolders: NormalizedExternalSearchFolder[]) {
-  assertNoUnsafePathOverlap([
-    ...loadManagedPathCandidates(),
-    ...normalizedFolders.map((folder, index) => ({
-      label: `External source ${index + 1}`,
-      path: folder.folderPath
-    }))
-  ]);
-}
-
-function upsertExternalSearchFolders(
-  normalizedFolders: ReturnType<typeof normalizeFolders>,
-  now: string,
-  existingById: Map<string, ExternalSearchFolderRow>,
-  deviceId: string
-) {
+function recordSync(folder: ReturnType<typeof normalizedInput>[number], now: string, deviceId: string, deletedAt?: string) {
   const driver = openDatabaseConnection().driver;
-  normalizedFolders.forEach((folder) => {
-    const existing = existingById.get(folder.id);
-    driver.execute(
-      `INSERT INTO external_search_folders (
-        id, folder_path, attachment_mode, attachment_root_path, excluded_dirs_json, status, document_count, indexed_at, last_error, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET
-        folder_path = excluded.folder_path,
-        attachment_mode = excluded.attachment_mode,
-        attachment_root_path = excluded.attachment_root_path,
-        excluded_dirs_json = excluded.excluded_dirs_json,
-        status = 'idle',
-        updated_at = excluded.updated_at`,
-      [
-        folder.id,
-        folder.folderPath,
-        folder.attachmentMode,
-        folder.attachmentRootPath,
-        JSON.stringify(folder.excludedDirs),
-        existing?.status ?? 'idle',
-        existing?.document_count ?? 0,
-        existing?.indexed_at ?? null,
-        existing?.last_error ?? null,
-        existing?.created_at ?? now,
-        now
-      ]
-    );
-    recordExternalFolderSync({
-      contentHash: computeSyncContentHash('external_folder', {
-        attachment_mode: folder.attachmentMode,
-        attachment_root_path: folder.attachmentRootPath,
-        excluded_dirs: folder.excludedDirs,
-        folder_path: folder.folderPath,
-        id: folder.id
-      }),
-      deviceId,
-      folderId: folder.id,
-      updatedAt: now
-    });
-  });
-}
-
-function recordExternalFolderSync(args: {
-  contentHash: string;
-  deletedAt?: string | null;
-  deviceId: string;
-  folderId: string;
-  updatedAt: string;
-}) {
-  const driver = openDatabaseConnection().driver;
+  const identity = loadOrCreateDesktopInstallationIdentity();
   upsertSyncObjectState(driver, {
-    objectType: 'external_folder',
-    objectId: args.folderId,
-    contentHash: args.contentHash,
-    deletedAt: args.deletedAt ?? null,
-    lastModifiedByDeviceId: args.deviceId,
-    updatedAt: args.updatedAt,
-    syncDirty: true
+    objectType: 'external_folder', objectId: folder.id,
+    contentHash: computeSyncContentHash('external_folder', deletedAt ? { deleted_at: deletedAt, folder_id: folder.id } : {
+      attachment_mode: folder.attachmentMode, attachment_root_path: folder.attachmentRootPath,
+      excluded_dirs: folder.excludedDirs, folder_path: folder.folderPath, id: folder.id,
+      owner_device_name: identity.deviceName, owner_installation_id: identity.installationId,
+      owner_platform: identity.platform
+    }),
+    deletedAt: deletedAt ?? null, lastModifiedByDeviceId: deviceId, updatedAt: now, syncDirty: true
   });
 }
 
-function tombstoneRemovedExternalFolders(rows: ExternalSearchFolderRow[], keptIds: Set<string>, now: string, deviceId: string) {
-  for (const row of rows) {
-    if (keptIds.has(row.id)) continue;
-    recordExternalFolderSync({
-      contentHash: computeSyncContentHash('external_folder', { deleted_at: now, folder_id: row.id }),
-      deletedAt: now,
-      deviceId,
-      folderId: row.id,
-      updatedAt: now
-    });
-  }
+function resolveLocalId(input: ReturnType<typeof normalizedInput>[number], rows: ExternalSearchFolderRow[]) {
+  const identity = loadOrCreateDesktopInstallationIdentity();
+  const byId = rows.find((row) => row.id === input.id);
+  if (byId?.owner_installation_id && byId.owner_installation_id !== identity.installationId) return null;
+  if (byId && !byId.owner_installation_id && !input.claimUnowned) return null;
+  const claim = input.claimUnowned
+    ? rows.find((row) => !row.owner_installation_id && row.folder_path === input.folderPath)
+    : null;
+  return claim?.id ?? input.id;
+}
+
+function upsertLocalFolder(input: ReturnType<typeof normalizedInput>[number], id: string, rows: ExternalSearchFolderRow[], now: string) {
+  const driver = openDatabaseConnection().driver;
+  const identity = loadOrCreateDesktopInstallationIdentity();
+  const existing = rows.find((row) => row.id === id);
+  driver.execute(
+    `INSERT INTO external_search_folders (id, folder_path, attachment_mode, attachment_root_path, excluded_dirs_json,
+      status, document_count, indexed_at, last_error, owner_installation_id, owner_device_name, owner_platform, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET folder_path = excluded.folder_path, attachment_mode = excluded.attachment_mode,
+      attachment_root_path = excluded.attachment_root_path, excluded_dirs_json = excluded.excluded_dirs_json,
+      owner_installation_id = excluded.owner_installation_id, owner_device_name = excluded.owner_device_name,
+      owner_platform = excluded.owner_platform, status = 'idle', updated_at = excluded.updated_at`,
+    [id, input.folderPath, input.attachmentMode, input.attachmentRootPath, JSON.stringify(input.excludedDirs),
+      existing?.status ?? 'idle', existing?.document_count ?? 0, existing?.indexed_at ?? null,
+      existing?.last_error ?? null, identity.installationId, identity.deviceName, identity.platform,
+      existing?.created_at ?? now, now]
+  );
 }
 
 export function saveExternalSearchFolders(folders: SaveFolderInput[]) {
   const driver = openDatabaseConnection().driver;
   const now = new Date().toISOString();
-  const normalizedFolders = normalizeFolders(folders);
   const deviceId = loadOrCreateDesktopDeviceId(now);
-
+  const identity = loadOrCreateDesktopInstallationIdentity();
+  const inputs = normalizedInput(folders);
   driver.transaction(() => {
-    const existingRows = readRows();
-    const existingById = new Map(existingRows.map((row) => [row.id, row]));
-    tombstoneRemovedExternalFolders(existingRows, new Set(normalizedFolders.map((folder) => folder.id)), now, deviceId);
-    driver.execute(
-      `DELETE FROM external_search_folders
-       WHERE id NOT IN (${normalizedFolders.map(() => '?').join(', ') || "''"})`,
-      normalizedFolders.map((folder) => folder.id)
-    );
-    upsertExternalSearchFolders(normalizedFolders, now, existingById, deviceId);
-    if (!normalizedFolders.length) driver.execute('DELETE FROM external_search_folders');
+    const rows = readExternalSearchFolderRows();
+    const resolved: Array<{ input: (typeof inputs)[number]; id: string }> = [];
+    for (const input of inputs) {
+      const id = resolveLocalId(input, rows);
+      if (id) resolved.push({ id, input });
+    }
+    const keptIds = new Set(resolved.map((item) => item.id));
+    for (const row of rows) {
+      if (row.owner_installation_id !== identity.installationId || keptIds.has(row.id)) continue;
+      const deleted = { attachmentMode: 'document_relative_first_then_fixed_root' as const, attachmentRootPath: null,
+        claimUnowned: false, excludedDirs: [], folderPath: row.folder_path, id: row.id };
+      recordSync(deleted, now, deviceId, now);
+      driver.execute('DELETE FROM external_search_folders WHERE id = ?', [row.id]);
+    }
+    for (const item of resolved) {
+      const input = { ...item.input, id: item.id };
+      upsertLocalFolder(input, item.id, rows, now);
+      recordSync(input, now, deviceId);
+    }
   });
   return loadExternalSearchFolders();
 }
 
 export function updateExternalSearchFolderIndexState(args: {
-  documentCount: number;
-  folderId: string;
-  indexedAt: string | null;
-  lastError: string | null;
+  documentCount: number; folderId: string; indexedAt: string | null; lastError: string | null;
   status: NativeExternalSearchFolder['status'];
 }) {
+  const identity = loadOrCreateDesktopInstallationIdentity();
   openDatabaseConnection().driver.execute(
-    `UPDATE external_search_folders
-     SET status = ?, document_count = ?, indexed_at = ?, last_error = ?, updated_at = ?
-     WHERE id = ?`,
-    [args.status, args.documentCount, args.indexedAt, args.lastError, new Date().toISOString(), args.folderId]
+    `UPDATE external_search_folders SET status = ?, document_count = ?, indexed_at = ?, last_error = ?, updated_at = ?
+     WHERE id = ? AND owner_installation_id = ?`,
+    [args.status, args.documentCount, args.indexedAt, args.lastError, new Date().toISOString(),
+      args.folderId, identity.installationId]
   );
 }

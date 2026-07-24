@@ -85,6 +85,7 @@ function toBrowseEntry(row: OpenedExternalDocumentRow): NativeExternalSearchBrow
     last_opened_at: row.last_opened_at,
     modified_at: row.modified_at,
     opening_text: resolveNodeOpeningText(row.content, title),
+    reference: { absolute_path: row.absolute_path, kind: 'local_path' },
     relative_path: row.relative_path,
     title
   };

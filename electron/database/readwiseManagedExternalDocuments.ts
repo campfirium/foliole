@@ -96,8 +96,9 @@ function toBrowseEntry(row: ReadwiseExternalDocumentRow, importedNodeId: string 
       sourceName: row.relative_path,
       titleStrategy: 'heading'
     });
+  const absolutePath = resolveDocumentAbsolutePath(row);
   return {
-    absolute_path: resolveDocumentAbsolutePath(row),
+    absolute_path: absolutePath,
     extension: row.extension,
     file_name: row.file_name,
     folder_id: row.folder_id,
@@ -105,6 +106,7 @@ function toBrowseEntry(row: ReadwiseExternalDocumentRow, importedNodeId: string 
     imported_node_id: importedNodeId,
     modified_at: row.source_modified_at,
     opening_text: row.opening_text ?? resolveNodeOpeningText(row.content, title),
+    reference: { absolute_path: absolutePath, kind: 'local_path' },
     relative_path: row.relative_path,
     title
   };
@@ -165,6 +167,7 @@ export function loadReadwiseExternalSearchPreview(
     folder_id: row.folder_id,
     folder_path: resolveReadwiseFolderPath(row.folder_id),
     imported_node_id: resolveImportedNodeIdForExternalDocument(absolutePath),
+    reference: { absolute_path: absolutePath, kind: 'local_path' },
     relative_path: row.relative_path
   };
 }

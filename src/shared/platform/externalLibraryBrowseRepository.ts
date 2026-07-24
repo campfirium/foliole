@@ -12,8 +12,14 @@ import {
 export type ExternalLibraryBrowseEntry = RuntimeExternalSearchBrowseEntry;
 export type ExternalLibraryFolder = RuntimeExternalSearchFolder;
 
+function enabledLibraryFolders(folders: ExternalLibraryFolder[]) {
+  return folders.filter((folder) => folder.accessMode !== 'remote_mirror' || folder.mirrorEnabled !== false);
+}
+
 export function loadExternalLibraryFolders() {
-  return getExternalFolderRuntimeProvider().loadFolders().then((folders) => folders ?? loadRuntimeExternalSearchFolders());
+  return getExternalFolderRuntimeProvider().loadFolders().then(async (folders) =>
+    enabledLibraryFolders(folders ?? await loadRuntimeExternalSearchFolders() ?? [])
+  );
 }
 
 export function loadExternalLibraryBrowseEntries(folderId: string) {
@@ -23,8 +29,9 @@ export function loadExternalLibraryBrowseEntries(folderId: string) {
 }
 
 export function subscribeExternalLibraryFolders(listener: (folders: ExternalLibraryFolder[]) => void) {
-  const unsubscribeProvider = getExternalFolderRuntimeProvider().subscribeFolders(listener);
-  const unsubscribeRuntime = subscribeRuntimeExternalSearchFolders(listener);
+  const filteredListener = (folders: ExternalLibraryFolder[]) => listener(enabledLibraryFolders(folders));
+  const unsubscribeProvider = getExternalFolderRuntimeProvider().subscribeFolders(filteredListener);
+  const unsubscribeRuntime = subscribeRuntimeExternalSearchFolders(filteredListener);
   return () => {
     unsubscribeProvider();
     unsubscribeRuntime();

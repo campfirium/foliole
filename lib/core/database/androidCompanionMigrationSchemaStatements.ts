@@ -1,12 +1,25 @@
 import {
+  ANDROID_COMPANION_EXTERNAL_FOLDER_OWNERSHIP_ACTION_TYPES,
+  ANDROID_COMPANION_EXTERNAL_FOLDER_OWNERSHIP_MIGRATION_STATEMENTS,
+  ANDROID_COMPANION_EXTERNAL_FOLDER_OWNERSHIP_PLAN_STEP
+} from './androidCompanionExternalFolderOwnershipMigration.js';
+import {
   ANDROID_COMPANION_NODE_PROVENANCE_MIGRATION_ACTION_TYPES,
   ANDROID_COMPANION_NODE_PROVENANCE_MIGRATION_PLAN_STEP,
   ANDROID_COMPANION_NODE_PROVENANCE_MIGRATION_REPAIR_RULES,
   ANDROID_COMPANION_NODE_PROVENANCE_MIGRATION_STATEMENTS
 } from './androidCompanionNodeProvenanceMigration.js';
+export {
+  ANDROID_COMPANION_MIGRATION_ACTION_KEYS,
+  ANDROID_COMPANION_MIGRATION_ASSET_KEYS,
+  ANDROID_COMPANION_MIGRATION_DEFAULT_MESSAGES,
+  ANDROID_COMPANION_MIGRATION_PLAN_KEYS,
+  ANDROID_COMPANION_MIGRATION_REPAIR_RULE_KEYS
+} from './androidCompanionMigrationMetadata.js';
 
 export const ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS = {
   ...ANDROID_COMPANION_NODE_PROVENANCE_MIGRATION_STATEMENTS,
+  ...ANDROID_COMPANION_EXTERNAL_FOLDER_OWNERSHIP_MIGRATION_STATEMENTS,
   nodesEnableShortTermColumn: 'ALTER TABLE nodes ADD COLUMN enable_short_term INTEGER',
   nodesSequentialReadingEnabledColumn: 'ALTER TABLE nodes ADD COLUMN sequential_reading_enabled INTEGER',
   nodesShelvedAtColumn: 'ALTER TABLE nodes ADD COLUMN shelved_at TEXT',
@@ -36,6 +49,7 @@ export const ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS = {
 
 export const ANDROID_COMPANION_MIGRATION_ACTION_TYPES = {
   ...ANDROID_COMPANION_NODE_PROVENANCE_MIGRATION_ACTION_TYPES,
+  ...ANDROID_COMPANION_EXTERNAL_FOLDER_OWNERSHIP_ACTION_TYPES,
   addNodesEnableShortTermIfMissing: 'addNodesEnableShortTermIfMissing',
   addNodesSequentialReadingEnabledIfMissing: 'addNodesSequentialReadingEnabledIfMissing',
   addNodesShelvedAtIfMissing: 'addNodesShelvedAtIfMissing',
@@ -45,33 +59,6 @@ export const ANDROID_COMPANION_MIGRATION_ACTION_TYPES = {
   backfillNodeAttachmentsFromVersions: 'backfillNodeAttachmentsFromVersions',
   installSchema: 'installSchema',
   migrateSyncObjectStateSequence: 'migrateSyncObjectStateSequence'
-} as const;
-
-export const ANDROID_COMPANION_MIGRATION_ACTION_KEYS = {
-  errorMessage: 'errorMessage',
-  type: 'type'
-} as const;
-
-export const ANDROID_COMPANION_MIGRATION_ASSET_KEYS = {
-  coreStatements: 'statements',
-  migrationPlan: 'plan',
-  migrationStatementsByName: 'statementsByName'
-} as const;
-
-export const ANDROID_COMPANION_MIGRATION_DEFAULT_MESSAGES = {
-  installSchemaErrorMessage: 'Failed to install companion schema.'
-} as const;
-
-export const ANDROID_COMPANION_MIGRATION_PLAN_KEYS = {
-  actions: 'actions',
-  beforeVersion: 'beforeVersion'
-} as const;
-
-export const ANDROID_COMPANION_MIGRATION_REPAIR_RULE_KEYS = {
-  columnName: 'columnName',
-  errorMessage: 'errorMessage',
-  statementName: 'statementName',
-  tableName: 'tableName'
 } as const;
 
 export const ANDROID_COMPANION_MIGRATION_PLAN = [
@@ -158,7 +145,8 @@ export const ANDROID_COMPANION_MIGRATION_PLAN = [
   {
     actions: [{ errorMessage: 'Failed to upgrade companion node open state schema.', type: 'installSchema' }],
     beforeVersion: 20
-  }
+  },
+  ANDROID_COMPANION_EXTERNAL_FOLDER_OWNERSHIP_PLAN_STEP
 ] as const;
 
 export const ANDROID_COMPANION_MIGRATION_REPAIR_RULES = {

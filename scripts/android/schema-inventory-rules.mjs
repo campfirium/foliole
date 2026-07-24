@@ -25,6 +25,7 @@ export const CORE_TABLES = [
 ];
 
 export const DESKTOP_ONLY_TABLES = new Set([
+  'external_folder_device_preferences',
   'import_runs',
   'incoming_updates',
   'keep_import_item_cache',

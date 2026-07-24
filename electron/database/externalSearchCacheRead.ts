@@ -12,6 +12,7 @@ import {
 import { OPENED_EXTERNAL_DOCUMENTS_FOLDER_ID } from './externalOpenedDocumentConstants.js';
 import { openExternalSearchCacheDatabase } from './externalSearchCacheDatabase.js';
 import { loadExternalSearchFolders } from './externalSearchFolders.js';
+import { loadExternalSearchMirrorBrowseEntries } from './externalSearchMirrorRead.js';
 import { resolveExternalPreviewSourceContent, rewriteExternalPreviewContent } from './externalSearchPreviewContent.js';
 import { loadOpenedFilesBrowseEntries } from './openedFiles.js';
 import {
@@ -21,6 +22,8 @@ import {
 } from './readwiseManagedExternalDocuments.js';
 
 export function loadExternalSearchBrowseEntries(folderId: string): NativeExternalSearchBrowseEntry[] {
+  const mirrorEntries = loadExternalSearchMirrorBrowseEntries(folderId);
+  if (mirrorEntries) return mirrorEntries;
   if (isReadwiseExternalFolderId(folderId)) {
     return loadReadwiseExternalSearchBrowseEntries(folderId);
   }
@@ -67,6 +70,7 @@ export function loadExternalSearchBrowseEntries(folderId: string): NativeExterna
       modified_at: row.modified_at,
       opening_text: resolveNodeOpeningText(row.content, title),
       relative_path: row.relative_path,
+      reference: { absolute_path: row.absolute_path, kind: 'local_path' },
       title
     } satisfies NativeExternalSearchBrowseEntry;
   });
@@ -106,6 +110,7 @@ export function loadExternalSearchPreview(absolutePath: string): NativeExternalS
     imported_node_id: importedNodeId,
     is_present: row.is_present === 1,
     last_opened_at: row.last_opened_at,
+    reference: { absolute_path: row.absolute_path, kind: 'local_path' },
     source_kind: 'external_document'
   };
 }
