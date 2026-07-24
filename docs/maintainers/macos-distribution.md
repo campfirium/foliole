@@ -50,6 +50,14 @@ The downloaded GitHub Electron runtime is obtained through `@electron/get` with 
 - `npm run macos:github:package`: build a Developer ID-signed local GitHub test DMG/ZIP. It is not ready for external distribution without notarization.
 - `npm run macos:github:notarize`: build through the notarization path after approved credentials are configured.
 
+The formal GitHub artifact route is `.github/workflows/release-macos.yml`. Dispatch it with an exact 40-character commit SHA. The workflow builds on an arm64 GitHub-hosted runner, imports an isolated Developer ID keychain, signs and notarizes the package, verifies the stapled ticket, attests the DMG and ZIP, and uploads the complete updater artifact set without creating a release.
+
+The workflow requires these repository secrets:
+
+- `MACOS_DEVELOPER_ID_CERTIFICATE_BASE64` and `MACOS_DEVELOPER_ID_CERTIFICATE_PASSWORD`
+- `MACOS_DEVELOPER_ID_PROFILE_BASE64` and `MACOS_CLI_DEVELOPER_ID_PROFILE_BASE64`
+- `APPLE_NOTARY_API_KEY_BASE64`, `APPLE_API_KEY_ID`, and `APPLE_API_ISSUER`
+
 The Developer ID provisioning profile is supplied through `FOLIOLE_MACOS_DEVELOPER_ID_PROVISIONING_PROFILE`. Notarization credentials belong in the macOS Keychain or approved CI secrets; they must never be committed.
 
 Before publishing a GitHub artifact, verify the Developer ID signature, embedded profile, App Sandbox entitlements, notarization ticket, Gatekeeper assessment, and checksum. App Store artifacts follow the MAS signing and submission checks instead of the Developer ID notarization path.
