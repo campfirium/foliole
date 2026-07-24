@@ -116,9 +116,12 @@ it('leaves current node editing after an editor Escape handler only blurs the ed
   fireEvent.focusIn(editor);
   editor.blur();
   fireEvent.blur(editor);
+  await act(async () => {
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+  });
 
+  fireEvent.keyDown(window, { key: 'Delete' });
   await waitFor(() => {
-    fireEvent.keyDown(window, { key: 'Delete' });
     expect(deleteNode).toHaveBeenCalledWith('node-1');
   });
 });

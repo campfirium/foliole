@@ -1,4 +1,5 @@
 name: T5 Nightly Remote Quality
+run-name: T5 Nightly Remote Quality @ ${{ inputs.target_sha || github.sha }}
 
 on:
   schedule:
@@ -25,9 +26,36 @@ on:
 
 permissions:
   contents: read
+  actions: read
+
+concurrency:
+  group: foliole-hosted-quality-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
+  admission:
+    name: Resolve scheduled validation
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.admission.outputs.should_run }}
+    steps:
+      - name: Check out admission script
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Skip a duplicate scheduled full validation
+        id: admission
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FOLIOLE_QUALITY_EVENT: ${{ github.event_name }}
+          FOLIOLE_QUALITY_REPOSITORY: ${{ github.repository }}
+          FOLIOLE_QUALITY_TARGET_SHA: ${{ inputs.target_sha || github.sha }}
+        run: node scripts/quality/t5-remote-quality-admission.mjs
+
   quality:
+    needs: admission
+    if: needs.admission.outputs.should_run == 'true'
     uses: ./.github/workflows/hosted-quality-core.yml
     with:
       target_sha: ${{ inputs.target_sha || github.sha }}

@@ -5,9 +5,11 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const ALLOWED_SCOPES = new Set(['android', 'desktop', 'full', 'ios', 'shared']);
+const ACTIVE_RUN_STATUSES = new Set(['in_progress', 'pending', 'queued', 'requested', 'waiting']);
 const FULL_SHA = /^[0-9a-f]{40}$/u;
 const PASSING_JOB_CONCLUSIONS = new Set(['neutral', 'skipped', 'success']);
 const POLL_INTERVAL_MS = 15_000;
+const QUALITY_WORKFLOWS = ['remote-quality.yml', 't5-nightly-remote-quality.yml'];
 
 export function parseRemoteQualityArgs(args) {
   const result = { scope: '', sha: '' };
@@ -70,6 +72,36 @@ function parseJobs(value) {
   return parsed.jobs;
 }
 
+function parseWorkflowRuns(value) {
+  const parsed = JSON.parse(value);
+  if (!Array.isArray(parsed.workflow_runs)) {
+    throw new Error('GitHub workflow runs response did not contain a workflow_runs array');
+  }
+  return parsed.workflow_runs;
+}
+
+export function findActiveHostedQualityRuns(workflowRuns, branch) {
+  return workflowRuns.flat().filter((run) => (
+    run.head_branch === branch && ACTIVE_RUN_STATUSES.has(run.status)
+  ));
+}
+
+async function requireHostedQualityIdle(runner, repo, branch, cwd) {
+  const responses = await Promise.all(QUALITY_WORKFLOWS.map((workflow) => requireSuccess(
+    runner,
+    'gh',
+    ['api', '-H', 'X-GitHub-Api-Version: 2026-03-10',
+      `repos/${repo}/actions/workflows/${workflow}/runs?branch=${encodeURIComponent(branch)}&per_page=30`],
+    { cwd }
+  )));
+  const activeRuns = findActiveHostedQualityRuns(responses.map(parseWorkflowRuns), branch);
+  if (activeRuns.length === 0) return;
+  const details = activeRuns
+    .map((run) => `${run.name ?? 'hosted quality'} #${run.run_number ?? run.id} ${run.status} ${run.html_url ?? ''}`.trim())
+    .join('\n');
+  throw new Error(`A T5 or Remote Quality run is still active; wait for every job to reach a terminal state before dispatching another run:\n${details}`);
+}
+
 function isFailedJob(job) {
   return job.status === 'completed' && !PASSING_JOB_CONCLUSIONS.has(job.conclusion);
 }
@@ -113,6 +145,9 @@ export async function runRemoteQuality(options = {}) {
   const repoInfo = JSON.parse(await requireSuccess(
     runner, 'gh', ['repo', 'view', '--json', 'nameWithOwner,defaultBranchRef'], { cwd }
   ));
+  await requireHostedQualityIdle(
+    runner, repoInfo.nameWithOwner, repoInfo.defaultBranchRef.name, cwd
+  );
   const sha = args.sha || await requireSuccess(runner, 'git', ['rev-parse', 'HEAD'], { cwd });
   if (!FULL_SHA.test(sha)) throw new Error('Target SHA must be a 40-character lowercase commit SHA');
   const remoteSha = await requireSuccess(

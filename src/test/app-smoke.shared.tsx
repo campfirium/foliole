@@ -67,6 +67,7 @@ const smokeRuntimeMocks = vi.hoisted(() => {
       return { nodeOrder: nodeOrder.filter((nodeId) => !nodeIds.includes(nodeId)), removedNodeIds: nodeIds };
     }
     if (command === 'move_nodes') return { movedNodeIds: Array.isArray(payload?.nodeIds) ? payload.nodeIds : [], nodeOrder: payload?.nodeOrder };
+    if (command === 'inspect_foliole_published_delete') return { status: 'allowed' };
     if (command === 'load_node_backlinks') return [];
     if (command === 'load_readwise_books_inventory') return { books: [] };
     return null;

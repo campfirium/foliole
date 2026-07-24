@@ -31,6 +31,10 @@ describe('T5 repair handoff', () => {
     expect(skill).toContain('explicit user authorization before committing or pushing');
     expect(skill).toContain('remote-quality.mjs --scope full');
     expect(skill).toContain('Do not dispatch another T5 workflow');
+    expect(skill).toContain('Never dispatch while either workflow has a nonterminal run');
+    expect(skill).toContain('wait until every job reaches a terminal state');
+    expect(skill).toContain('hard-refuses a new run while T5 or Remote Quality is active');
+    expect(skill).toContain('Do not cancel a run merely because one job failed');
     expect(skill).toContain('Never describe `thread created`');
   });
 });

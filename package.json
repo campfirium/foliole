@@ -45,7 +45,7 @@
     "test:desktop": "node scripts/electron-sqlite-runner.mjs scripts/run-vitest-with-summary.mjs .tmp/vitest/desktop.json -- --silent=passed-only --pool=threads --maxWorkers=2 --no-file-parallelism src/app src/features src/shared/platform src/shared/ui src/test src/startupBootstrap.test.ts src/startupViewMode.test.ts electron",
     "test:desktop:src": "node scripts/electron-sqlite-runner.mjs scripts/run-vitest-with-summary.mjs .tmp/vitest/desktop-src.json -- --silent=passed-only --pool=threads --maxWorkers=2 --no-file-parallelism src/app src/features src/shared/platform src/shared/ui src/test src/startupBootstrap.test.ts src/startupViewMode.test.ts",
     "test:desktop:electron": "node scripts/run-desktop-electron-test-bucket.mjs .tmp/vitest/desktop-electron.json",
-    "test:release:desktop-src": "node scripts/electron-sqlite-runner.mjs scripts/run-vitest-with-summary.mjs .tmp/vitest/release-desktop-src.json -- --silent=passed-only --pool=threads --maxWorkers=2 --no-file-parallelism --testTimeout=15000 src/app src/test src/startupBootstrap.test.ts src/startupViewMode.test.ts",
+    "test:release:desktop-src": "node scripts/run-release-desktop-source-test-bucket.mjs .tmp/vitest/release-desktop-src.json",
     "test:windows": "node scripts/electron-sqlite-runner.mjs scripts/run-windows-test-bucket.mjs all .tmp/vitest/windows.json",
     "test:windows:core": "node scripts/electron-sqlite-runner.mjs scripts/run-windows-test-bucket.mjs core .tmp/vitest/windows-core.json",
     "test:windows:native-preview": "node scripts/electron-sqlite-runner.mjs scripts/run-windows-test-bucket.mjs native-preview .tmp/vitest/windows-native-preview.json",

@@ -1,4 +1,5 @@
 name: Remote Quality
+run-name: Remote Quality (${{ inputs.scope }}) @ ${{ inputs.target_sha }}
 
 on:
   workflow_dispatch:
@@ -20,6 +21,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: foliole-hosted-quality-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   quality:

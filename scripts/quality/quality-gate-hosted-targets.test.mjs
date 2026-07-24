@@ -14,6 +14,16 @@ function dryRunSteps(stdout) {
   return [...stdout.matchAll(/dry-run step: ([^\n]+)/gu)].map((match) => match[1]);
 }
 
+async function runIsolatedTargetGate(target) {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-hosted-equivalence-'));
+  try {
+    await writePackageJson(tempRoot, releaseScripts());
+    return await runTargetGate(tempRoot, target, DRY_RUN_ENV);
+  } finally {
+    await rm(tempRoot, { recursive: true, force: true });
+  }
+}
+
 describe('hosted quality target boundaries', () => {
   it('exposes dedicated Common and Windows aliases', () => {
     expect(packageJson.scripts['quality:release:hosted-common']).toBe(
@@ -58,34 +68,28 @@ describe('hosted quality target boundaries', () => {
   }, 60000);
 
   it('keeps staged Common jobs exactly equivalent to the hosted Common gate', async () => {
-    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-hosted-equivalence-'));
-    try {
-      await writePackageJson(tempRoot, releaseScripts());
-      const [original, staticGate, toolingGate, buildGate] = await Promise.all([
-        runTargetGate(tempRoot, 'release-hosted-common', DRY_RUN_ENV),
-        runTargetGate(tempRoot, 'release-static', DRY_RUN_ENV),
-        runTargetGate(tempRoot, 'release-tooling', DRY_RUN_ENV),
-        runTargetGate(tempRoot, 'release-hosted-common-build', DRY_RUN_ENV)
-      ]);
-      for (const result of [original, staticGate, toolingGate, buildGate]) expect(result.code).toBe(0);
+    const [original, staticGate, toolingGate, buildGate] = await Promise.all([
+      runIsolatedTargetGate('release-hosted-common'),
+      runIsolatedTargetGate('release-static'),
+      runIsolatedTargetGate('release-tooling'),
+      runIsolatedTargetGate('release-hosted-common-build')
+    ]);
+    for (const result of [original, staticGate, toolingGate, buildGate]) expect(result.code).toBe(0);
 
-      const productDomains = [
-        'test:release:desktop-src',
-        'test:release:android',
-        'test:release:shared',
-        'test:desktop:electron'
-      ];
-      const staged = [
-        ...dryRunSteps(staticGate.stdout),
-        ...productDomains,
-        ...dryRunSteps(toolingGate.stdout),
-        ...dryRunSteps(buildGate.stdout)
-      ];
-      expect(staged.toSorted()).toEqual(dryRunSteps(original.stdout).toSorted());
-      expect(staged.filter((step) => step === 'test:quality:preview')).toHaveLength(1);
-      expect(staged).not.toContain('test:windows:core');
-    } finally {
-      await rm(tempRoot, { recursive: true, force: true });
-    }
+    const productDomains = [
+      'test:release:desktop-src',
+      'test:release:android',
+      'test:release:shared',
+      'test:desktop:electron'
+    ];
+    const staged = [
+      ...dryRunSteps(staticGate.stdout),
+      ...productDomains,
+      ...dryRunSteps(toolingGate.stdout),
+      ...dryRunSteps(buildGate.stdout)
+    ];
+    expect(staged.toSorted()).toEqual(dryRunSteps(original.stdout).toSorted());
+    expect(staged.filter((step) => step === 'test:quality:preview')).toHaveLength(1);
+    expect(staged).not.toContain('test:windows:core');
   }, 60000);
 });

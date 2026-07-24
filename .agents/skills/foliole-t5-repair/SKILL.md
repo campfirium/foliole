@@ -44,8 +44,10 @@ The visible controller owns root-cause judgment, integration, conflict review, f
 3. Review the integrated diff and confirm that unrelated working-tree changes were not absorbed.
 4. Stop for genuine product judgment, missing permission, write-scope expansion, ownership conflict, or an external dependency. A refined hypothesis or intermediate red check is not a stop condition.
 5. Obtain explicit user authorization before committing or pushing.
-6. After the authorized commit is available as an immutable remote SHA, run `node scripts/quality/remote-quality.mjs --scope full` from this controller and wait for the result. Do not dispatch another T5 workflow as the repair recheck.
-7. Route a related remote red result back to its existing worker and continue until full quality is green or a genuine stop condition is reached.
+6. Before rechecking, inspect active and pending T5 and Remote Quality runs. Never dispatch while either workflow has a nonterminal run. If a scheduled T5 will validate the authorized repair SHA, use that complete run instead of dispatching Remote Quality.
+7. Otherwise run `node scripts/quality/remote-quality.mjs --scope full` from this controller and wait until every job reaches a terminal state. Do not dispatch another T5 workflow as the repair recheck, and do not start a second recheck while the prior one is active.
+8. The Remote Quality dispatcher hard-refuses a new run while T5 or Remote Quality is active, and both workflows share a non-canceling concurrency group to close scheduling races. A scheduled T5 skips a duplicate completed full Remote validation for the same SHA. Do not cancel a run merely because one job failed; collect the complete run. Cancel only with explicit user authorization or when the run is deliberately superseded and its remaining evidence is no longer required.
+9. Route a related remote red result back to its existing worker and continue until full quality is green or a genuine stop condition is reached.
 
 ## Report controller state
 

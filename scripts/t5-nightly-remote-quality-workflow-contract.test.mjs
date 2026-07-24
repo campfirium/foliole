@@ -32,6 +32,19 @@ describe('hosted quality workflow contracts', () => {
     expect(remote).toContain('scope: ${{ inputs.scope }}');
   });
 
+  it('serializes scheduled and explicit hosted quality without canceling either run', () => {
+    for (const workflow of [remote, t5]) {
+      expect(workflow).toContain('group: foliole-hosted-quality-${{ github.ref }}');
+      expect(workflow).toContain('cancel-in-progress: false');
+      expect(workflow).not.toContain('queue: max');
+    }
+    expect(remote).toContain('run-name: Remote Quality (${{ inputs.scope }}) @ ${{ inputs.target_sha }}');
+    expect(t5).toContain('run-name: T5 Nightly Remote Quality @ ${{ inputs.target_sha || github.sha }}');
+    expect(t5).toContain('actions: read');
+    expect(t5).toContain('run: node scripts/quality/t5-remote-quality-admission.mjs');
+    expect(t5).toContain("if: needs.admission.outputs.should_run == 'true'");
+  });
+
   it('maps each scope to its canonical runner and target', () => {
     expect(core).toContain('runs-on: windows-latest');
     expect(core).toContain('runs-on: ubuntu-latest');

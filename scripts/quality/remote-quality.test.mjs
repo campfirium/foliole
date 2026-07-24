@@ -2,7 +2,12 @@
 
 import { describe, expect, it, vi } from 'vitest';
 
-import { monitorRemoteQualityJobs, parseRemoteQualityArgs, runRemoteQuality } from './remote-quality.mjs';
+import {
+  findActiveHostedQualityRuns,
+  monitorRemoteQualityJobs,
+  parseRemoteQualityArgs,
+  runRemoteQuality
+} from './remote-quality.mjs';
 
 const SHA = '0123456789abcdef0123456789abcdef01234567';
 
@@ -17,6 +22,7 @@ function createRunner({
   authCode = 0,
   dispatchCode = 0,
   dispatchError = '',
+  activeRuns = [],
   jobSnapshots = [[job()]],
   logCodes = [0]
 } = {}) {
@@ -32,7 +38,10 @@ function createRunner({
         defaultBranchRef: { name: 'dev' }, nameWithOwner: 'campfirium/foliole'
       }) };
     }
-    if (args[0] === 'api' && args.includes('--method')) {
+    if (args[0] === 'api' && args.some((arg) => arg.includes('/runs?branch='))) {
+      return { code: 0, stderr: '', stdout: JSON.stringify({ workflow_runs: activeRuns }) };
+    }
+    if (args[0] === 'api' && args.some((arg) => arg.includes('/dispatches'))) {
       return { code: dispatchCode, stderr: dispatchError, stdout: dispatchCode ? '' : JSON.stringify({
         html_url: 'https://github.test/runs/42', workflow_run_id: 42
       }) };
@@ -72,6 +81,25 @@ describe('remote quality dispatcher', () => {
       inputs: { scope: 'desktop', target_sha: SHA }, ref: 'dev'
     });
     expect(calls.some((call) => call.args.some((arg) => arg.includes('/actions/runs/42/jobs')))).toBe(true);
+  });
+
+  it('refuses to dispatch while T5 or Remote Quality is nonterminal', async () => {
+    const activeRun = {
+      head_branch: 'dev', html_url: 'https://github.test/runs/41',
+      id: 41, name: 'T5 Nightly Remote Quality', run_number: 9, status: 'in_progress'
+    };
+    const { calls, runner } = createRunner({ activeRuns: [activeRun] });
+    await expect(runRemoteQuality({ args: ['--scope', 'full'], runner }))
+      .rejects.toThrow('wait for every job to reach a terminal state');
+    expect(calls.some((call) => call.args.some((arg) => arg.includes('/dispatches')))).toBe(false);
+  });
+
+  it('filters active hosted quality to the default branch', () => {
+    expect(findActiveHostedQualityRuns([[
+      { head_branch: 'dev', status: 'queued' },
+      { head_branch: 'main', status: 'in_progress' },
+      { head_branch: 'dev', status: 'completed' }
+    ]], 'dev')).toEqual([{ head_branch: 'dev', status: 'queued' }]);
   });
 
   it('prints a completed failed job log and preserves a failing exit', async () => {
