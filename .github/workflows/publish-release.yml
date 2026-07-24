@@ -1,0 +1,139 @@
+name: Publish Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_ref:
+        description: "Exact 40-character commit SHA targeted by the release"
+        required: true
+        type: string
+      macos_run_id:
+        description: "Successful Release macOS run ID"
+        required: true
+        type: string
+      macos_sha:
+        description: "Exact commit SHA packaged by the macOS run"
+        required: true
+        type: string
+      windows_run_id:
+        description: "Successful Release Windows run ID"
+        required: true
+        type: string
+      windows_sha:
+        description: "Exact commit SHA packaged by the Windows run"
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  publish-release:
+    name: Assemble and verify release draft
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Check out reviewed release metadata
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_ref }}
+
+      - name: Verify fixed refs and successful source runs
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_ref="${{ inputs.release_ref }}"
+          macos_run_id="${{ inputs.macos_run_id }}"
+          macos_sha="${{ inputs.macos_sha }}"
+          windows_run_id="${{ inputs.windows_run_id }}"
+          windows_sha="${{ inputs.windows_sha }}"
+
+          [[ "$release_ref" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$macos_sha" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$windows_sha" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$macos_run_id" =~ ^[0-9]+$ ]]
+          [[ "$windows_run_id" =~ ^[0-9]+$ ]]
+          [[ "$(git rev-parse HEAD)" == "$release_ref" ]]
+
+          verify_run() {
+            local run_id="$1" expected_sha="$2" artifact_name="$3"
+            local state artifact_count
+            state="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}" --jq '[.status,.conclusion,.head_sha] | @tsv')"
+            [[ "$state" == $'completed\tsuccess\t'"$expected_sha" ]]
+            artifact_count="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts" --jq "[.artifacts[] | select(.name == \"${artifact_name}\" and .expired == false)] | length")"
+            [[ "$artifact_count" == "1" ]]
+          }
+
+          verify_run "$macos_run_id" "$macos_sha" foliole-macos-release
+          verify_run "$windows_run_id" "$windows_sha" foliole-windows-release
+
+      - name: Download macOS release artifacts
+        uses: actions/download-artifact@v5
+        with:
+          name: foliole-macos-release
+          path: release-assets/macos
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.macos_run_id }}
+
+      - name: Download Windows release artifacts
+        uses: actions/download-artifact@v5
+        with:
+          name: foliole-windows-release
+          path: release-assets/windows
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.windows_run_id }}
+
+      - name: Verify and name public release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./package.json').version")"
+          macos_root=release-assets/macos
+          windows_root=release-assets/windows
+
+          test -f "$macos_root/Foliole-${version}-mac-arm64.dmg"
+          test -f "$macos_root/Foliole-${version}-mac-arm64.dmg.blockmap"
+          test -f "$macos_root/Foliole-${version}-mac-arm64.zip"
+          test -f "$macos_root/Foliole-${version}-mac-arm64.zip.blockmap"
+          test -f "$macos_root/latest-mac.yml"
+          (cd "$macos_root" && sha256sum --check SHA256SUMS.txt)
+
+          test -f "$windows_root/Foliole-Setup-${version}-win-x64.exe"
+          test -f "$windows_root/Foliole-Setup-${version}-win-x64.exe.blockmap"
+          test -f "$windows_root/latest.yml"
+          (cd "$windows_root" && sha256sum --check SHA256SUMS.txt)
+
+          grep -Fq "version: ${version}" "$macos_root/latest-mac.yml"
+          grep -Fq "version: ${version}" "$windows_root/latest.yml"
+          mv "$macos_root/SHA256SUMS.txt" "$macos_root/SHA256SUMS-macos.txt"
+          mv "$windows_root/SHA256SUMS.txt" "$windows_root/SHA256SUMS-windows.txt"
+
+      - name: Create inspected release draft
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./package.json').version")"
+          tag="v${version}"
+          notes_file="releases/github/${tag}.md"
+          test -f "$notes_file"
+          gh release create "$tag" \
+            release-assets/macos/Foliole-${version}-mac-arm64.dmg \
+            release-assets/macos/Foliole-${version}-mac-arm64.dmg.blockmap \
+            release-assets/macos/Foliole-${version}-mac-arm64.zip \
+            release-assets/macos/Foliole-${version}-mac-arm64.zip.blockmap \
+            release-assets/macos/latest-mac.yml \
+            release-assets/macos/SHA256SUMS-macos.txt \
+            release-assets/windows/Foliole-Setup-${version}-win-x64.exe \
+            release-assets/windows/Foliole-Setup-${version}-win-x64.exe.blockmap \
+            release-assets/windows/latest.yml \
+            release-assets/windows/SHA256SUMS-windows.txt \
+            --draft \
+            --title "$version" \
+            --target "${{ inputs.release_ref }}" \
+            --notes-file "$notes_file"
