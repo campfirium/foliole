@@ -241,88 +241,10 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
-  ios-contract:
-    name: iOS contract quality
+  ios-quality:
+    name: iOS ${{ inputs.scope }} quality
     if: inputs.scope == 'ios' || (inputs.scope == 'full' && (inputs.full_host == 'all' || inputs.full_host == 'ios'))
-    runs-on: macos-15
-    timeout-minutes: 120
-    concurrency:
-      group: hosted-quality-ios-contract-${{ inputs.target_sha }}-${{ inputs.scope }}
-      cancel-in-progress: false
-    env:
-      TARGET_SHA: ${{ inputs.target_sha }}
-    steps:
-      - name: Check out target snapshot
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ env.TARGET_SHA }}
-          fetch-depth: 1
-          persist-credentials: false
-      - name: Verify target SHA
-        run: test "$(git rev-parse HEAD)" = "${TARGET_SHA}"
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - name: Install dependencies
-        run: npm ci
-      - name: Rebuild Electron native ABI for iOS contract tests
-        run: npm run electron:rebuild:native
-      - name: Run iOS boundary quality
-        if: inputs.scope == 'full'
-        run: npm run check:ios-boundary
-      - name: Run iOS contract quality
-        run: npm run quality:ios:contract
-      - name: Upload iOS contract logs
-        if: ${{ always() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-contract-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
-          path: .tmp/logs/quality-gate
-          if-no-files-found: ignore
-          retention-days: 14
-
-  ios-simulator:
-    name: iOS Simulator quality
-    if: inputs.scope == 'full' && (inputs.full_host == 'all' || inputs.full_host == 'ios')
-    runs-on: macos-15
-    timeout-minutes: 120
-    concurrency:
-      group: hosted-quality-ios-simulator-${{ inputs.target_sha }}
-      cancel-in-progress: false
-    env:
-      TARGET_SHA: ${{ inputs.target_sha }}
-    steps:
-      - name: Check out target snapshot
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ env.TARGET_SHA }}
-          fetch-depth: 1
-          persist-credentials: false
-      - name: Verify target SHA
-        run: test "$(git rev-parse HEAD)" = "${TARGET_SHA}"
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - name: Install dependencies
-        run: npm ci
-      - name: Rebuild Electron native ABI for Simulator desktop pairing
-        run: npm run electron:rebuild:native
-      - name: Run full iOS Simulator quality
-        run: npm run quality:ios:simulator:full
-      - name: Upload minimal iOS Simulator evidence and logs
-        if: ${{ always() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-simulator-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
-          path: |
-            .tmp/artifacts/ios-bridge-acceptance/*/result.json
-            .tmp/artifacts/ios-bridge-acceptance/*/failure.json
-            .tmp/artifacts/ios-bridge-acceptance/*/evidence.json
-            .tmp/artifacts/ios-bridge-acceptance/*/simulator.log
-            .tmp/logs/quality-gate
-          if-no-files-found: ignore
-          retention-days: 14
+    uses: ./.github/workflows/hosted-quality-ios.yml
+    with:
+      target_sha: ${{ inputs.target_sha }}
+      scope: ${{ inputs.scope }}

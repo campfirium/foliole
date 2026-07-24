@@ -1,0 +1,111 @@
+name: Hosted Quality iOS
+
+on:
+  workflow_call:
+    inputs:
+      target_sha:
+        required: true
+        type: string
+      scope:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    name: iOS contract quality
+    runs-on: macos-15
+    timeout-minutes: 120
+    concurrency:
+      group: hosted-quality-ios-contract-${{ inputs.target_sha }}-${{ inputs.scope }}
+      cancel-in-progress: false
+    env:
+      TARGET_SHA: ${{ inputs.target_sha }}
+    steps:
+      - name: Check out target snapshot
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Verify target SHA
+        run: test "$(git rev-parse HEAD)" = "${TARGET_SHA}"
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Rebuild Electron native ABI for iOS contract tests
+        run: npm run electron:rebuild:native
+      - name: Run iOS boundary quality
+        if: inputs.scope == 'full'
+        run: npm run check:ios-boundary
+      - name: Run iOS contract quality
+        run: npm run quality:ios:contract
+      - name: Upload iOS contract logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-contract-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
+          path: .tmp/logs/quality-gate
+          if-no-files-found: ignore
+          retention-days: 14
+
+  simulator:
+    name: iOS Simulator (${{ matrix.scenario }})
+    if: inputs.scope == 'full'
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        scenario:
+          - pairing-signed-transport
+          - state-writeback-runtime
+          - sync-pack-runtime
+          - foreground-sync-lifecycle
+    runs-on: macos-15
+    timeout-minutes: 120
+    concurrency:
+      group: hosted-quality-ios-simulator-${{ inputs.target_sha }}-${{ matrix.scenario }}
+      cancel-in-progress: false
+    env:
+      FOLIOLE_IOS_ACCEPTANCE_SCENARIO: ${{ matrix.scenario }}
+      FOLIOLE_IOS_RESOURCE_MODE: full
+      TARGET_SHA: ${{ inputs.target_sha }}
+    steps:
+      - name: Check out target snapshot
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Verify target SHA
+        run: test "$(git rev-parse HEAD)" = "${TARGET_SHA}"
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Rebuild Electron native ABI for Simulator desktop pairing
+        run: npm run electron:rebuild:native
+      - name: Run iOS Simulator scenario
+        run: node scripts/ios/ios-bootstrap-acceptance.mjs
+      - name: Upload minimal iOS Simulator evidence and logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-simulator-${{ matrix.scenario }}-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
+          path: |
+            .tmp/artifacts/ios-bridge-acceptance/${{ matrix.scenario }}/result.json
+            .tmp/artifacts/ios-bridge-acceptance/${{ matrix.scenario }}/failure.json
+            .tmp/artifacts/ios-bridge-acceptance/${{ matrix.scenario }}/evidence.json
+            .tmp/artifacts/ios-bridge-acceptance/${{ matrix.scenario }}/simulator.log
+            .tmp/logs/quality-gate
+          if-no-files-found: ignore
+          retention-days: 14
