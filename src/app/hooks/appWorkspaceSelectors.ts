@@ -41,6 +41,7 @@ function selectWorkspaceNavigationActions(state: WorkspaceState) {
     goToParent: state.goToParent,
     jumpToAncestorNode: state.jumpToAncestorNode,
     openNode: state.openNode,
+    setActiveNode: state.setActiveNode,
     setBrowseRootNode: state.setBrowseRootNode
   };
 }

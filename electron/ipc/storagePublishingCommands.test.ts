@@ -43,7 +43,6 @@ const folioleMocks = vi.hoisted(() => ({
 const folioleManagementMocks = vi.hoisted(() => ({
   inspectFoliolePublishedDelete: vi.fn(),
   loadFoliolePublishedTopics: vi.fn(),
-  migrateFoliolePublishedTopics: vi.fn(),
   unpublishFolioleTopics: vi.fn()
 }));
 

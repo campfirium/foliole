@@ -21,6 +21,7 @@ import { useNodeSourceDetails } from './useNodeSourceDetails';
 
 interface DocumentPanelContentProps {
   activeNodeId: string | null;
+  activeVirtualNodeId?: string | null | undefined;
   bodyProps: ComponentProps<typeof DocumentPanelBody>;
   folderListSortDirection: FolderListSortDirection;
   folderListSortKey: FolderListSortKey;
@@ -145,6 +146,7 @@ function buildDocumentPanelContentBodyArgs(
   return {
     activeNode: derived.activeNode,
     activeNodeId: props.activeNodeId,
+    activeVirtualNodeId: props.activeVirtualNodeId,
     bodyProps: props.bodyProps,
     folderListSortDirection: props.folderListSortDirection,
     folderListSortKey: props.folderListSortKey,

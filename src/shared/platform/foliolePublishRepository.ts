@@ -58,10 +58,6 @@ export function loadFoliolePublishedTopicsFromRuntime() {
     : Promise.resolve({ status: 'ready' as const, topics: [] });
 }
 
-export function migrateFoliolePublishedTopicsFromRuntime() {
-  return requireRuntime()(NATIVE_COMMANDS.migrateFoliolePublishedTopics);
-}
-
 export function inspectFoliolePublishedDeleteFromRuntime(nodeIds: string[]) {
   const invoke = getRuntimeInvoke();
   return invoke

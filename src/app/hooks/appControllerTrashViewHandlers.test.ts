@@ -80,6 +80,7 @@ describe('createToggleVirtualView', () => {
     const closeExternalView = vi.fn();
     const flushPendingEditorDraft = vi.fn();
     const openVirtualView = vi.fn();
+    const setActiveNode = vi.fn();
     const setIsViewingTrashNode = vi.fn();
     const openVirtual = createToggleVirtualView({
       runtime: { flushPendingEditorDraft, setIsViewingTrashNode },
@@ -90,7 +91,7 @@ describe('createToggleVirtualView', () => {
         isVirtualViewOpen: true,
         openVirtualView
       },
-      ws: {}
+      ws: { setActiveNode }
     } as never);
 
     openVirtual('virtual-a');
@@ -99,6 +100,7 @@ describe('createToggleVirtualView', () => {
     expect(setIsViewingTrashNode).toHaveBeenCalledWith(false);
     expect(closeExternalView).toHaveBeenCalledTimes(1);
     expect(closeTrashView).toHaveBeenCalledTimes(1);
+    expect(setActiveNode).toHaveBeenCalledWith(null);
     expect(openVirtualView).toHaveBeenCalledWith('virtual-a');
   });
 });

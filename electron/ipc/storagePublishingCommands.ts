@@ -32,7 +32,6 @@ import {
 import {
   inspectFoliolePublishedDelete,
   loadFoliolePublishedTopics,
-  migrateFoliolePublishedTopics,
   unpublishFolioleTopics
 } from '../foliolePublish/foliolePublishManagement.js';
 import {
@@ -76,7 +75,6 @@ function handleFoliolePublishingCommand(command: string, args: Record<string, un
   if (command === NATIVE_COMMANDS.publishFoliolePublishThemeChanges) return publishFoliolePublishThemeChanges();
   if (command === NATIVE_COMMANDS.previewFoliolePublishSite) return viewFoliolePublishSite();
   if (command === NATIVE_COMMANDS.loadFoliolePublishedTopics) return loadFoliolePublishedTopics();
-  if (command === NATIVE_COMMANDS.migrateFoliolePublishedTopics) return migrateFoliolePublishedTopics();
   if (command === NATIVE_COMMANDS.inspectFoliolePublishedDelete) {
     return inspectFoliolePublishedDelete(asStringArray(args.node_ids, 'node_ids'));
   }

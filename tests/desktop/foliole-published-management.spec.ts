@@ -9,6 +9,7 @@ import { expectWorkspaceShell, openSettingsDialog } from './harness/settings';
 const TOPIC_ID = 'playwright-published-management-topic';
 const TOPIC_TITLE = 'Published management topic';
 const SCREENSHOT = path.resolve('.tmp/artifacts/desktop-acceptance/foliole-published-management-hidden-native.png');
+const TOPIC_SCREENSHOT = path.resolve('.tmp/artifacts/desktop-acceptance/foliole-published-topic-hidden-native.png');
 const DELETE_SCREENSHOT = path.resolve('.tmp/artifacts/desktop-acceptance/foliole-published-delete-hidden-native.png');
 
 async function seedPublishedTopic(desktopWindow: Page, libraryHome: string) {
@@ -57,16 +58,26 @@ test('opens Published from Settings and identifies its Topics and management act
 
   await expect(dialog).toBeHidden();
   await expect(desktopWindow.getByRole('treeitem', { name: /^(Published|已发布)$/ })).toHaveAttribute('aria-selected', 'true');
+  const publishedRegion = desktopWindow.getByRole('region', { name: /^(Published topics|已发布主题)$/ });
+  await expect(publishedRegion.getByRole('searchbox', {
+    name: /^(Search Topics published to your site|搜索已发布到站点的 Topic)$/
+  })).toBeVisible();
+  await expect(publishedRegion.getByText(TOPIC_TITLE)).toBeVisible();
+
+  const screenshot = await desktopWindow.screenshot({ fullPage: true });
+  await mkdir(path.dirname(SCREENSHOT), { recursive: true });
+  await writeFile(SCREENSHOT, screenshot);
+  await testInfo.attach('foliole-published-management', { body: screenshot, contentType: 'image/png' });
+
   const publishedTopic = desktopWindow.getByRole('treeitem', { name: new RegExp(TOPIC_TITLE, 'u') });
   await expect(publishedTopic).toBeVisible();
   await publishedTopic.click();
   await expect(desktopWindow.getByRole('button', { name: /^(Published|已发布)$/ })).toBeVisible();
   await expect(desktopWindow.getByRole('button', { name: /^(Unpublish|撤回)$/ })).toBeVisible();
 
-  const screenshot = await desktopWindow.screenshot({ fullPage: true });
-  await mkdir(path.dirname(SCREENSHOT), { recursive: true });
-  await writeFile(SCREENSHOT, screenshot);
-  await testInfo.attach('foliole-published-management', { body: screenshot, contentType: 'image/png' });
+  const topicScreenshot = await desktopWindow.screenshot({ fullPage: true });
+  await writeFile(TOPIC_SCREENSHOT, topicScreenshot);
+  await testInfo.attach('foliole-published-topic', { body: topicScreenshot, contentType: 'image/png' });
 
   await desktopWindow.getByRole('treeitem', { exact: true, name: 'Home' }).click();
   const topicPanel = desktopWindow.getByRole('complementary', {

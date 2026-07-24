@@ -65,6 +65,7 @@ function createWorkspaceBrowseState() {
   return {
     activeNodeId: 'node-1',
     browseRootNodeId: 'special-home',
+    setActiveNode: vi.fn(),
     setBrowseRootNode: vi.fn()
   };
 }

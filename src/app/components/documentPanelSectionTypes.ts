@@ -17,6 +17,7 @@ import type { WorkspaceEditorContextMenu } from './WorkspaceLayout';
 
 export interface DocumentPanelSectionProps {
   activeNodeId: string | null;
+  activeVirtualNodeId?: string | null | undefined;
   isWorkspaceHydrated?: boolean;
   isTrashViewOpen?: boolean;
   isFoliolePublishedContext?: boolean;

@@ -2,7 +2,7 @@ import type { ComponentProps, RefObject } from 'react';
 
 import type { FolderListSortDirection, FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
-import { isVirtualNode, isVirtualRootNode } from '../../features/nodes/model/specialNodes';
+import { VIRTUAL_PUBLISHED_NODE_ID, isVirtualNode, isVirtualRootNode } from '../../features/nodes/model/specialNodes';
 import type { Translate } from '../../shared/localization/LocalizationProvider';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 import type { NodeViewState } from '../../store/workspaceStore';
@@ -14,11 +14,13 @@ import { renderPdfOrBodyContent } from './DocumentPanelRegularContent';
 import { DocumentPanelTrashContent } from './DocumentPanelTrashContent';
 import type { LinkPanelRecord } from './linkPanelState';
 import type { PdfHighlightLocator } from './pdfHighlightLocators';
+import { PublishedVirtualDocumentSurface } from './PublishedVirtualDocumentSurface';
 import { VirtualDocumentSurface } from './VirtualDocumentSurface';
 
 export function resolveDocumentPanelContentBody(args: {
   activeNode: Node | undefined;
   activeNodeId: string | null;
+  activeVirtualNodeId?: string | null | undefined;
   bodyProps: ComponentProps<typeof DocumentPanelBody>;
   contentAreaRef: RefObject<HTMLDivElement | null>;
   folderListSortDirection: FolderListSortDirection;
@@ -83,6 +85,20 @@ function renderRegularDocumentContent(args: Parameters<typeof resolveDocumentPan
 }
 
 function resolveSpecialDocumentContent(args: Parameters<typeof resolveDocumentPanelContentBody>[0]) {
+  if (!args.activeNode && args.activeVirtualNodeId === VIRTUAL_PUBLISHED_NODE_ID) {
+    return (
+      <PublishedVirtualDocumentSurface
+        activeNodeId={args.activeNodeId}
+        nodesById={args.nodesById}
+        onChangeSortDirection={args.onChangeFolderListSortDirection}
+        onChangeSortKey={args.onChangeFolderListSortKey}
+        onSelectNode={args.onSelectNodeInVirtualView}
+        sortDirection={args.folderListSortDirection}
+        sortKey={args.folderListSortKey}
+        trashedNodeIds={args.trashedNodeIds}
+      />
+    );
+  }
   if (args.isTrashViewOpen && (!args.activeNode || args.activeNode.kind === 'folder') && args.onSelectTrashNode) {
     return (
       <DocumentPanelTrashContent

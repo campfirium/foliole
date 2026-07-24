@@ -34,8 +34,5 @@ export const EN_DESKTOP_FOLIOLE_PUBLISH_TRANSLATIONS = {
   'desktop.foliolePublish.delete.description': 'To move it to Trash, first remove it from your site.',
   'desktop.foliolePublish.delete.descriptionMany': '{count} selected Topics are published. Remove them from your site before moving the selection to Trash.',
   'desktop.foliolePublish.delete.confirm': 'Unpublish and move to Trash',
-  'desktop.foliolePublish.delete.failed': 'The Topic stayed in place because it could not be removed from the site.',
-  'desktop.foliolePublish.migration.title': 'Update publishing data?',
-  'desktop.foliolePublish.migration.description': 'Foliole needs to update your existing publishing records before opening Published. A backup is kept automatically.',
-  'desktop.foliolePublish.migration.confirm': 'Update and continue'
+  'desktop.foliolePublish.delete.failed': 'The Topic stayed in place because it could not be removed from the site.'
 } as const;

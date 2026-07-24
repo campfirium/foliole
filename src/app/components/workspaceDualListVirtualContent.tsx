@@ -10,7 +10,7 @@ import {
 import { buildVirtualNodeResultIndex, getVirtualNodePrimaryKeyword } from '../../features/nodes/model/virtualNodeDetail';
 import type { Translate } from '../../shared/localization/LocalizationProvider';
 
-import { PublishedVirtualDocumentSurface } from './PublishedVirtualDocumentSurface';
+import { PublishedVirtualResultListPanel } from './PublishedVirtualResultListPanel';
 import { VirtualResultListPanel } from './VirtualResultListPanel';
 import type { WorkspaceDualListContentProps } from './WorkspaceDualListContent';
 import { resolveVirtualContentItemIds } from './workspaceVirtualContentModel';
@@ -51,7 +51,7 @@ function resolveVirtualHeader(args: {
 
 function renderPublishedContentColumn(props: WorkspaceDualListContentProps) {
   return (
-    <PublishedVirtualDocumentSurface
+    <PublishedVirtualResultListPanel
       activeNodeId={props.activeNodeId}
       nodeOrder={props.nodeOrder}
       nodesById={props.nodesById}

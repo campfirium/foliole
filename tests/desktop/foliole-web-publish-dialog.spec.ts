@@ -76,11 +76,11 @@ function seedPublishedTopics(libraryHome: string) {
   fs.writeFileSync(path.join(publishRoot, 'publish.yaml'), `${JSON.stringify({
     next_topic_number: 3,
     topics: [
-      { file: `Content/${NEWER_NUMBER}.md`, number: NEWER_NUMBER, published_at: '2026-07-21T09:00:00.000Z', source_key: NEWER_SOURCE_KEY, title: 'A durable place to publish', updated_at: '2026-07-21T09:30:00.000Z' },
-      { file: `Content/${OLDER_NUMBER}.md`, number: OLDER_NUMBER, published_at: '2026-07-20T09:00:00.000Z', source_key: OLDER_SOURCE_KEY, title: 'The earlier topic', updated_at: '2026-07-20T09:00:00.000Z' }
+      { file: `Content/${NEWER_NUMBER}.md`, number: NEWER_NUMBER, published_at: '2026-07-21T09:00:00.000Z', source_key: NEWER_SOURCE_KEY, source_node_id: 'topic-newer', status: 'published', title: 'A durable place to publish', updated_at: '2026-07-21T09:30:00.000Z' },
+      { file: `Content/${OLDER_NUMBER}.md`, number: OLDER_NUMBER, published_at: '2026-07-20T09:00:00.000Z', source_key: OLDER_SOURCE_KEY, source_node_id: 'topic-older', status: 'published', title: 'The earlier topic', updated_at: '2026-07-20T09:00:00.000Z' }
     ],
     site: { title: 'Foliole Field Notes' },
-    version: 2
+    version: 3
   }, null, 2)}\n`);
 }
 

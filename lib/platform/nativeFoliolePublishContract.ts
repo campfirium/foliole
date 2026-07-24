@@ -59,7 +59,7 @@ export interface NativeFoliolePublishResult {
 }
 
 export interface NativeFoliolePublishedTopic {
-  node_id: string | null;
+  node_id: string;
   number: number;
   source_key: string;
   source_state: 'active' | 'missing' | 'trash';
@@ -68,14 +68,14 @@ export interface NativeFoliolePublishedTopic {
   url: string | null;
 }
 
-export type NativeFoliolePublishedTopicsResult =
-  | { status: 'migration_required'; topics: [] }
-  | { status: 'ready'; topics: NativeFoliolePublishedTopic[] };
+export interface NativeFoliolePublishedTopicsResult {
+  status: 'ready';
+  topics: NativeFoliolePublishedTopic[];
+}
 
 export type NativeFoliolePublishedDeleteInspection =
   | { status: 'allowed' }
-  | { published_node_ids: string[]; source_keys: string[]; status: 'requires_unpublish' }
-  | { message: string; status: 'blocked_publish_state_error' };
+  | { published_node_ids: string[]; source_keys: string[]; status: 'requires_unpublish' };
 
 export type NativeFolioleUnpublishResult =
   | { status: 'unpublished' }
@@ -117,10 +117,6 @@ export type NativeFoliolePublishCommandMap = {
   [NATIVE_COMMANDS.previewFoliolePublishSite]: { args: undefined; result: NativeFoliolePublishResult };
   [NATIVE_COMMANDS.previewFoliolePublish]: { args: NativeFoliolePublishTopicArgs; result: NativeFoliolePublishResult };
   [NATIVE_COMMANDS.loadFoliolePublishedTopics]: { args: undefined; result: NativeFoliolePublishedTopicsResult };
-  [NATIVE_COMMANDS.migrateFoliolePublishedTopics]: {
-    args: undefined;
-    result: NativeFoliolePublishedTopicsResult & { backup_path: string };
-  };
   [NATIVE_COMMANDS.inspectFoliolePublishedDelete]: {
     args: { node_ids: string[] };
     result: NativeFoliolePublishedDeleteInspection;

@@ -46,7 +46,7 @@ export interface WorkspaceState {
   setListCollapsed: (collapsed: boolean) => void;
   setRightSidebarWidth: (width: number) => void;
   setRightSidebarCollapsed: (collapsed: boolean) => void;
-  setActiveNode: (nodeId: string) => void;
+  setActiveNode: (nodeId: string | null) => void;
   setBrowseRootNode: (nodeId: string) => void;
   updateNodeTitle: (nodeId: string, title: string) => Promise<boolean>;
   updateNodeDerivedTitle: (nodeId: string, content?: string) => Promise<boolean>;

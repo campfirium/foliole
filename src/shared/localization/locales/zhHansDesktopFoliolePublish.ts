@@ -34,8 +34,5 @@ export const ZH_HANS_DESKTOP_FOLIOLE_PUBLISH_TRANSLATIONS = {
   'desktop.foliolePublish.delete.description': '要移到废纸篓，请先从站点撤回。',
   'desktop.foliolePublish.delete.descriptionMany': '选中的 Topic 中有 {count} 个已经发布。请先从站点撤回，再将所选内容移到废纸篓。',
   'desktop.foliolePublish.delete.confirm': '撤回并移到废纸篓',
-  'desktop.foliolePublish.delete.failed': '未能从站点撤回，Topic 仍保留在原处。',
-  'desktop.foliolePublish.migration.title': '要更新发布数据吗？',
-  'desktop.foliolePublish.migration.description': '打开“已发布”前，Foliole 需要更新现有发布记录，并会自动保留备份。',
-  'desktop.foliolePublish.migration.confirm': '更新并继续'
+  'desktop.foliolePublish.delete.failed': '未能从站点撤回，Topic 仍保留在原处。'
 } as const;

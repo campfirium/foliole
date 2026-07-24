@@ -41,8 +41,6 @@ function usePublishedDeleteRegistration(
           nodeIds,
           sourceKeys: result.source_keys
         });
-      } else {
-        showAppRuntimeNotice(result.message);
       }
     }).catch((reason) => {
       showAppRuntimeNotice(reason instanceof Error ? reason.message : failureMessage);

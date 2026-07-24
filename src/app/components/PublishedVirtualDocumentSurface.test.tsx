@@ -8,7 +8,6 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 
 const publishMocks = vi.hoisted(() => ({
   loadFoliolePublishedTopicsFromRuntime: vi.fn(),
-  migrateFoliolePublishedTopicsFromRuntime: vi.fn(),
   unpublishFolioleTopicsFromRuntime: vi.fn()
 }));
 
@@ -27,17 +26,13 @@ beforeEach(() => {
   useWorkspaceStore.setState({ isHydrated: true, workspaceHydrationError: null });
 });
 
-it('projects active and missing-source pages from publish data', async () => {
+it('shows published Topics in the shared content list with the description in search', async () => {
   publishMocks.loadFoliolePublishedTopicsFromRuntime.mockResolvedValue({
     status: 'ready',
     topics: [
       {
         node_id: 'topic-1', number: 1, source_key: 'node:topic-1', source_state: 'active',
         title: 'Active Topic', updated_at: '2026-07-24T00:00:00.000Z', url: 'https://example.com/topics/1/'
-      },
-      {
-        node_id: null, number: 2, source_key: 'orphan:2', source_state: 'missing',
-        title: 'Missing Topic', updated_at: '2026-07-24T00:00:00.000Z', url: 'https://example.com/topics/2/'
       }
     ]
   });
@@ -46,19 +41,23 @@ it('projects active and missing-source pages from publish data', async () => {
     <AppConfirmationProvider>
       <PublishedVirtualDocumentSurface
         activeNodeId={null}
-        nodeOrder={[]}
         nodesById={{ 'topic-1': topicNode }}
+        onChangeSortDirection={vi.fn()}
+        onChangeSortKey={vi.fn()}
         onSelectNode={vi.fn()}
+        sortDirection="desc"
+        sortKey="dateSaved"
         trashedNodeIds={[]}
       />
     </AppConfirmationProvider>
   );
 
   expect(await screen.findByText('Active Topic')).toBeVisible();
-  expect(screen.getByRole('treeitem', { name: 'Active Topic' })).toBeVisible();
+  expect(screen.getByRole('searchbox', { name: 'Search Topics published to your site' })).toHaveAttribute(
+    'placeholder',
+    'Search Topics published to your site'
+  );
   expect(screen.queryByText('Manage the Topics currently visible on your site.')).not.toBeInTheDocument();
-  expect(screen.getByText('Missing Topic')).toBeVisible();
-  expect(screen.getByText('The original Topic is unavailable. You can still unpublish this page.')).toBeVisible();
 });
 
 it('uses the shared virtual list empty state without a Published description header', async () => {
@@ -68,9 +67,12 @@ it('uses the shared virtual list empty state without a Published description hea
     <AppConfirmationProvider>
       <PublishedVirtualDocumentSurface
         activeNodeId={null}
-        nodeOrder={[]}
         nodesById={{}}
+        onChangeSortDirection={vi.fn()}
+        onChangeSortKey={vi.fn()}
         onSelectNode={vi.fn()}
+        sortDirection="desc"
+        sortKey="dateSaved"
         trashedNodeIds={[]}
       />
     </AppConfirmationProvider>

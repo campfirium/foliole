@@ -5,10 +5,7 @@ import { loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
 
 import { deployCloudflarePages } from './cloudflarePagesClient.js';
 import {
-  FoliolePublishMigrationRequiredError,
   markTopicsUnpublishedBySourceKeys,
-  migratePublishIndexV2,
-  publishIndexNeedsMigration,
   readPublishIndex,
   type FoliolePublishTopic,
   writePublishIndex
@@ -32,29 +29,22 @@ function readSourceStates(nodeIds: string[]) {
 }
 
 export function loadFoliolePublishedTopics() {
-  if (publishIndexNeedsMigration(publishRoot())) return { status: 'migration_required' as const, topics: [] };
   const index = readPublishIndex(publishRoot());
   const settings = loadStoredFoliolePublishSettings();
   const published = index.topics.filter((topic) => topic.status === 'published');
-  const states = readSourceStates(published.flatMap((topic) => topic.source_node_id ? [topic.source_node_id] : []));
+  const states = readSourceStates(published.map((topic) => topic.source_node_id));
   return {
     status: 'ready' as const,
     topics: published.map((topic) => ({
       node_id: topic.source_node_id,
       number: topic.number,
       source_key: topic.source_key,
-      source_state: topic.source_node_id ? (states.get(topic.source_node_id) ?? 'missing') : 'missing',
+      source_state: states.get(topic.source_node_id) ?? 'missing',
       title: topic.title,
       updated_at: topic.updated_at,
       url: settings ? topicUrl(topic, settings.site_address) : null
     }))
   };
-}
-
-export function migrateFoliolePublishedTopics() {
-  const snapshot = openDatabaseConnection().driver.queryAll<{ id: string }>('SELECT id FROM nodes', []);
-  const result = migratePublishIndexV2(publishRoot(), snapshot.map((row) => row.id));
-  return { backup_path: result.backup, ...loadFoliolePublishedTopics() };
 }
 
 function expandSubtreeNodeIds(nodeIds: readonly string[]) {
@@ -72,21 +62,11 @@ function expandSubtreeNodeIds(nodeIds: readonly string[]) {
 }
 
 export function inspectFoliolePublishedDelete(nodeIds: readonly string[]) {
-  if (publishIndexNeedsMigration(publishRoot())) {
-    return { message: 'Update Foliole Publish data from Manage content before deleting Topics.', status: 'blocked_publish_state_error' as const };
-  }
-  let index;
-  try { index = readPublishIndex(publishRoot()); }
-  catch (error) {
-    if (error instanceof FoliolePublishMigrationRequiredError) {
-      return { message: error.message, status: 'blocked_publish_state_error' as const };
-    }
-    throw error;
-  }
+  const index = readPublishIndex(publishRoot());
   const targets = new Set(expandSubtreeNodeIds(nodeIds));
-  const published = index.topics.filter((topic) => topic.status === 'published' && topic.source_node_id && targets.has(topic.source_node_id));
+  const published = index.topics.filter((topic) => topic.status === 'published' && targets.has(topic.source_node_id));
   return published.length > 0
-    ? { published_node_ids: published.flatMap((topic) => topic.source_node_id ? [topic.source_node_id] : []), source_keys: published.map((topic) => topic.source_key), status: 'requires_unpublish' as const }
+    ? { published_node_ids: published.map((topic) => topic.source_node_id), source_keys: published.map((topic) => topic.source_key), status: 'requires_unpublish' as const }
     : { status: 'allowed' as const };
 }
 
@@ -100,7 +80,6 @@ export class FoliolePublishedDeleteBlockedError extends Error {
 export function assertFoliolePublishedDeleteAllowed(nodeIds: readonly string[]) {
   const result = inspectFoliolePublishedDelete(nodeIds);
   if (result.status === 'requires_unpublish') throw new FoliolePublishedDeleteBlockedError(result.source_keys);
-  if (result.status === 'blocked_publish_state_error') throw new Error(result.message);
 }
 
 function commitUnpublishedSite(staged: string, index: ReturnType<typeof readPublishIndex>) {

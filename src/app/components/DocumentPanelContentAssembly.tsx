@@ -31,6 +31,7 @@ export function DocumentPanelContentAssembly(args: {
   return (
     <DocumentPanelContent
       activeNodeId={args.props.activeNodeId}
+      activeVirtualNodeId={args.props.activeVirtualNodeId}
       bodyProps={args.bodyProps}
       folderListSortDirection={args.folderListSortDirection}
       folderListSortKey={args.folderListSortKey}

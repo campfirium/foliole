@@ -122,6 +122,20 @@ describe('documentPanelSectionModel', () => {
   });
 });
 
+it('treats the selected Published directory as a list surface', () => {
+  const view = getDocumentPanelView(buildProps({
+    activeNodeId: null,
+    activeVirtualNodeId: 'special-virtual-published',
+    editableNodeId: null,
+    editorNodeId: null,
+    isFoliolePublishedContext: true,
+    nodesById: {}
+  }), 'preview', 860);
+
+  expect(view.isFolderListView).toBe(true);
+  expect(view.panelKind).toBe('list');
+});
+
 it('classifies virtual roots and saved searches as list panels', () => {
   for (const [specialKind, isFolderListView] of [
     ['virtual-root', true],

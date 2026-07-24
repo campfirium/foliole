@@ -108,6 +108,7 @@ export interface BuildControllerLayoutPropsArgs {
     setListCollapsed: (collapsed: boolean) => void;
     setListWidth: (width: number) => void;
     setNodeViewState: (nodeId: string, viewState: NodeViewState) => void;
+    setActiveNode: WorkspaceState['setActiveNode'];
     setBrowseRootNode: (nodeId: string) => void;
     setRightSidebarCollapsed: (collapsed: boolean) => void;
     setRightSidebarWidth: (width: number) => void;

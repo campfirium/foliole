@@ -100,7 +100,6 @@ export const NATIVE_COMMANDS = {
   previewFoliolePublishSite: 'preview_foliole_publish_site',
   previewFoliolePublish: 'preview_foliole_publish',
   loadFoliolePublishedTopics: 'load_foliole_published_topics',
-  migrateFoliolePublishedTopics: 'migrate_foliole_published_topics',
   inspectFoliolePublishedDelete: 'inspect_foliole_published_delete',
   unpublishFolioleTopics: 'unpublish_foliole_topics',
   publishTopicToFoliole: 'publish_topic_to_foliole',

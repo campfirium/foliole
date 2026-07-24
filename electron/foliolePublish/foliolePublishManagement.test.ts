@@ -3,8 +3,6 @@ import { beforeEach, expect, it, vi } from 'vitest';
 const dbMocks = vi.hoisted(() => ({ queryAll: vi.fn() }));
 const modelMocks = vi.hoisted(() => ({
   markTopicsUnpublishedBySourceKeys: vi.fn(),
-  migratePublishIndexV2: vi.fn(),
-  publishIndexNeedsMigration: vi.fn(),
   readPublishIndex: vi.fn(),
   writePublishIndex: vi.fn()
 }));
@@ -52,7 +50,6 @@ const PUBLISHED_INDEX = {
 beforeEach(() => {
   [...Object.values(modelMocks), ...Object.values(siteMocks), ...Object.values(cloudflareMocks),
     ...Object.values(settingsMocks), dbMocks.queryAll].forEach((mock) => mock.mockReset());
-  modelMocks.publishIndexNeedsMigration.mockReturnValue(false);
   modelMocks.readPublishIndex.mockReturnValue(PUBLISHED_INDEX);
   dbMocks.queryAll.mockReturnValue([{ id: 'folder-1' }, { id: 'topic-1' }]);
 });

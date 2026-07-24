@@ -98,6 +98,7 @@ export function buildDocumentSectionProps(
   const editorState = resolveDocumentEditorState(documentNodeId, props);
   return {
     activeNodeId: documentNodeId,
+    activeVirtualNodeId: props.activeVirtualNodeId,
     isFoliolePublishedContext: props.isVirtualViewOpen && props.activeVirtualNodeId === VIRTUAL_PUBLISHED_NODE_ID,
     isTrashViewOpen: props.isTrashViewOpen,
     canGoBack: props.canGoBack,

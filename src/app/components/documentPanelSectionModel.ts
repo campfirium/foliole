@@ -214,7 +214,8 @@ export function getDocumentPanelView(
   const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
   const panelState = getDocumentPanelState(props, activeNode, editorDisplayMode, props.showAnswerSection);
   const isFolderListView = Boolean(
-    props.isTrashViewOpen && (!activeNode || activeNode.kind === 'folder') ||
+    (props.isFoliolePublishedContext && !activeNode) ||
+    (props.isTrashViewOpen && (!activeNode || activeNode.kind === 'folder')) ||
       activeNode &&
         activeNode.kind === 'folder' &&
         !isVirtualNode(activeNode) &&

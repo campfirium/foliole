@@ -183,12 +183,14 @@ function useEditorDraftCloseFlushRegistration(
 
 function usePublishedTopicsNavigation(
   runtime: ReturnType<typeof useAppRuntime>,
-  virtualView: ReturnType<typeof useVirtualNodeView>
+  virtualView: ReturnType<typeof useVirtualNodeView>,
+  setActiveNode: ReturnType<typeof useWorkspaceSelectors>['setActiveNode']
 ) {
   useEffect(() => subscribeOpenFoliolePublishedTopics(() => {
     runtime.setIsSettingsOpen(false);
+    setActiveNode(null);
     virtualView.openVirtualView(VIRTUAL_PUBLISHED_NODE_ID);
-  }), [runtime.setIsSettingsOpen, virtualView.openVirtualView]);
+  }), [runtime.setIsSettingsOpen, setActiveNode, virtualView.openVirtualView]);
 }
 
 function useWorkspaceActiveDocuments(activeNodeId: string | null, selectedTrashNodeId: string | null) {
@@ -215,7 +217,7 @@ export function useWorkspaceControllerState(
   useRemovedSourcesWarmup(isWorkspaceHydrated);
   const selectedTrashNode = trash.selectedTrashNodeId ? ws.nodesById[trash.selectedTrashNodeId] : undefined;
   const runtime = useAppRuntime(ws.listWidth, ws.rightSidebarWidth);
-  usePublishedTopicsNavigation(runtime, virtualView);
+  usePublishedTopicsNavigation(runtime, virtualView, ws.setActiveNode);
   const study = useWorkspaceStudyModeState({ isReviewSchedulerSettingsReady, nowIso, ws });
   const listResize = useListResizer(ws.listWidth, ws.setListWidth);
   const rightSidebarResize = useRightSidebarResizer(ws.rightSidebarWidth, ws.setRightSidebarWidth);

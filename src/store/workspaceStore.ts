@@ -119,6 +119,10 @@ const workspaceStore = create<WorkspaceState>()(
       ...initialState,
       ...createWorkspaceLayoutActions(boundaryAwareSet, defaultLayoutState),
       setActiveNode: (nodeId) => {
+        if (nodeId === null) {
+          boundaryAwareSet({ activeNodeId: null });
+          return;
+        }
         const openedAt = new Date().toISOString();
         let didOpen = false;
         boundaryAwareSet((state) => {

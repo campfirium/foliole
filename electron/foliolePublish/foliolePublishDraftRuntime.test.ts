@@ -18,7 +18,7 @@ vi.mock('./cloudflarePagesClient.js', () => ({
 }));
 vi.mock('./foliolePublishModel.js', () => ({
   readFoliolePublishSiteTitle: vi.fn(() => 'Foliole'),
-  readPublishIndex: vi.fn(() => ({ next_topic_number: 1, site: { title: 'Foliole' }, topics: [], version: 2 })),
+  readPublishIndex: vi.fn(() => ({ next_topic_number: 1, site: { title: 'Foliole' }, topics: [], version: 3 })),
   saveFoliolePublishSiteTitle: vi.fn(), upsertPublishedTopic: vi.fn(), writeFileAtomic: vi.fn(), writePublishIndex: vi.fn()
 }));
 vi.mock('./foliolePublishSettings.js', () => ({

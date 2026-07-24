@@ -111,7 +111,6 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.previewFoliolePublishSite, route: 'storage', capability: 'filesystemOpen' },
   { command: NATIVE_COMMANDS.previewFoliolePublish, route: 'storage', capability: 'filesystemOpen' },
   { command: NATIVE_COMMANDS.loadFoliolePublishedTopics, route: 'storage', capability: 'read' },
-  { command: NATIVE_COMMANDS.migrateFoliolePublishedTopics, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.inspectFoliolePublishedDelete, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.unpublishFolioleTopics, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.publishTopicToFoliole, route: 'storage', capability: 'dataMutation' },

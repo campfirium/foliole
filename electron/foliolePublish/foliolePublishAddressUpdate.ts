@@ -56,7 +56,7 @@ function buildNodePlans(index: FoliolePublishIndex, siteAddress: string, updated
   const snapshot = loadWorkspaceSnapshot({ includeBody: true });
   if (!snapshot) return [];
   return index.topics.flatMap((topic) => {
-    const node = topic.source_node_id ? snapshot.nodesById[topic.source_node_id] : null;
+    const node = snapshot.nodesById[topic.source_node_id];
     if (!node || node.deletedAt) return [];
     return [nodeInput(node, rewrittenBinding(node.content, topic, siteAddress), updatedAt, deviceId)];
   });

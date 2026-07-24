@@ -71,6 +71,7 @@ export function createToggleVirtualView(args: BuildControllerLayoutPropsArgs) {
     args.runtime.setIsViewingTrashNode(false);
     args.externalView.closeExternalView();
     args.trash.closeTrashView();
+    args.ws.setActiveNode(null);
     args.virtualView.openVirtualView(nodeId);
   };
 }

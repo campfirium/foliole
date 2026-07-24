@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { afterEach, expect, it } from 'vitest';
 
-import { emptyPublishIndex, markTopicsUnpublished, migratePublishIndexV2, publishIndexNeedsMigration, readFoliolePublishSiteTitle, readPublishIndex, saveFoliolePublishSiteTitle, stableTopicSourceKey, upsertPublishedTopic, writePublishIndex } from './foliolePublishModel.js';
+import { emptyPublishIndex, markTopicsUnpublished, readFoliolePublishSiteTitle, readPublishIndex, saveFoliolePublishSiteTitle, stableTopicSourceKey, upsertPublishedTopic, writePublishIndex } from './foliolePublishModel.js';
 
 const roots: string[] = [];
 function temporaryRoot() {
@@ -46,34 +46,10 @@ it('keeps an unpublished record and reuses its permanent number when republished
   expect(republished.index.next_topic_number).toBe(2);
 });
 
-it('explicitly migrates v2 after backing it up and preserves missing sources as orphans', () => {
-  const root = temporaryRoot();
-  const v2 = {
-    next_topic_number: 3,
-    site: { title: 'Legacy' },
-    topics: [
-      { file: 'Content/1.md', number: 1, published_at: '2026-01-01T00:00:00.000Z', source_key: stableTopicSourceKey('topic-1'), title: 'Found', updated_at: '2026-01-01T00:00:00.000Z' },
-      { file: 'Content/2.md', number: 2, published_at: '2026-01-02T00:00:00.000Z', source_key: stableTopicSourceKey('missing'), title: 'Missing', updated_at: '2026-01-02T00:00:00.000Z' }
-    ],
-    version: 2
-  };
-  fs.writeFileSync(path.join(root, 'publish.yaml'), `${JSON.stringify(v2)}\n`);
-
-  expect(publishIndexNeedsMigration(root)).toBe(true);
-  expect(() => readPublishIndex(root)).toThrow('needs an update');
-  const result = migratePublishIndexV2(root, ['topic-1'], '2026-07-24T12:00:00.000Z');
-
-  expect(fs.readFileSync(result.backup, 'utf8')).toContain('"version":2');
-  expect(readPublishIndex(root).topics).toMatchObject([
-    { source_node_id: 'topic-1', status: 'published' },
-    { source_node_id: null, status: 'published' }
-  ]);
-});
-
-it('rejects the retired index and invalid Topic numbering instead of returning an empty site', () => {
+it('rejects unsupported indexes and invalid Topic numbering instead of returning an empty site', () => {
   const root = temporaryRoot();
   fs.writeFileSync(path.join(root, 'publish.yaml'), '{"version":1,"cards":[],"site":{"title":"Old"}}');
-  expect(() => readPublishIndex(root)).toThrow('retired format');
+  expect(() => readPublishIndex(root)).toThrow('index is invalid');
 
   const valid = upsertPublishedTopic(emptyPublishIndex(), { nodeId: 'topic-1', title: 'One' }).index;
   fs.writeFileSync(path.join(root, 'publish.yaml'), JSON.stringify({ ...valid, next_topic_number: 1 }));
