@@ -8,9 +8,13 @@ import os from 'node:os';
 import path from 'node:path';
 import { expect, it } from 'vitest';
 
-import { downloadArtifact, resolveArtifact, validateArchiveEntries } from './windows-device-artifact.mjs';
+import { ARTIFACT_DOWNLOAD_TIMEOUT_MS, downloadArtifact, resolveArtifact, validateArchiveEntries } from './windows-device-artifact.mjs';
 
 const request = { commitSha: 'a'.repeat(40), runId: '12' };
+
+it('allows a bounded slow physical-device artifact download', () => {
+  expect(ARTIFACT_DOWNLOAD_TIMEOUT_MS).toBe(30 * 60_000);
+});
 
 it('selects the single unexpired artifact bound to the requested commit', async () => {
   const artifact = { archive_download_url: 'https://example.test/zip', digest: `sha256:${'b'.repeat(64)}`, expired: false, name: 'foliole-windows-release', size_in_bytes: 10, workflow_run: { head_sha: request.commitSha } };

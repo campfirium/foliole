@@ -12,7 +12,7 @@ const ARTIFACT_NAME = 'foliole-windows-release';
 const MAX_ARCHIVE_BYTES = 500 * 1024 * 1024;
 const MAX_ARCHIVE_FILES = 5000;
 const GITHUB_REQUEST_TIMEOUT_MS = 60_000;
-const ARTIFACT_DOWNLOAD_TIMEOUT_MS = 10 * 60_000;
+export const ARTIFACT_DOWNLOAD_TIMEOUT_MS = 30 * 60_000;
 const ARCHIVE_COMMAND_TIMEOUT_MS = 2 * 60_000;
 
 function githubHeaders(token) {
