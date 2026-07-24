@@ -115,7 +115,7 @@ describe('hosted quality workflow contracts', () => {
   });
 
   it('keeps only minimal per-scenario Simulator evidence', () => {
-    for (const name of ['result.json', 'failure.json', 'simulator.log']) {
+    for (const name of ['result.json', 'failure.json', 'evidence.json', 'simulator.log']) {
       expect(core).toContain(`.tmp/artifacts/ios-bridge-acceptance/*/${name}`);
     }
     expect(core).toContain('if-no-files-found: ignore');

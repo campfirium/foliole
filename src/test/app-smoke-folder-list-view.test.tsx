@@ -171,10 +171,10 @@ it('supports date last opened sorting from recent to old', () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'folder-1',
     nodeOrder: ['folder-1', 'note-1', 'note-2', 'note-3'],
-    nodeViewById: {
-      ...state.nodeViewById,
-      'note-1': { scrollTop: 20, selection: { from: 1, to: 1 }, updatedAt: '2026-04-01T09:00:00.000Z' },
-      'note-2': { scrollTop: 20, selection: { from: 1, to: 1 }, updatedAt: '2026-04-03T09:00:00.000Z' }
+    nodeOpenStateById: {
+      ...state.nodeOpenStateById,
+      'note-1': { lastOpenedAt: '2026-04-01T09:00:00.000Z', nodeId: 'note-1' },
+      'note-2': { lastOpenedAt: '2026-04-03T09:00:00.000Z', nodeId: 'note-2' }
     },
     nodesById: {
       ...state.nodesById,

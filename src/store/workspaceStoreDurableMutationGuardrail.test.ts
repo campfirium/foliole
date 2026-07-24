@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { saveNodeReadingStateToRuntime } from '../shared/platform/runtime/nodeReadingStateRuntimeRepository';
+
 import {
   syncNodeContentToRuntime,
-  syncNodeContentToRuntimeNow,
   syncRelearnNodeToRuntime,
   syncReviewGradeToRuntime
 } from './workspaceRuntimeSync';
@@ -17,12 +18,15 @@ import {
   previewStub
 } from './workspaceStoreReviewActions.test-support';
 
+vi.mock('../shared/platform/runtime/nodeReadingStateRuntimeRepository', () => ({
+  saveNodeReadingStateToRuntime: vi.fn(async () => true)
+}));
+
 vi.mock('./workspaceRuntimeSync', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./workspaceRuntimeSync')>();
   return {
     ...actual,
     syncNodeContentToRuntime: vi.fn(),
-    syncNodeContentToRuntimeNow: vi.fn(async () => true),
     syncRelearnNodeToRuntime: vi.fn(() => true),
     syncReviewGradeToRuntime: vi.fn()
   };
@@ -47,8 +51,8 @@ describe('workspace durable node mutation guardrails', () => {
     const actions = createWorkspaceNodeActions(harness.setState);
 
     expect(actions.dismissNode('reading-1', '2026-03-18T00:00:00.000Z')).toBe(true);
-    expect(syncNodeContentToRuntime).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'reading-1', reading: expect.objectContaining({ state: 'dismissed' }) })
+    expect(saveNodeReadingStateToRuntime).toHaveBeenCalledWith(
+      expect.objectContaining({ nodeId: 'reading-1', reading: expect.objectContaining({ state: 'dismissed' }) })
     );
   });
 
@@ -57,8 +61,8 @@ describe('workspace durable node mutation guardrails', () => {
     const actions = createWorkspaceNodeActions(harness.setState);
 
     expect(actions.relearnNode('reading-1', '2026-03-18T00:00:00.000Z')).toBe(true);
-    expect(syncNodeContentToRuntime).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'reading-1', reading: null })
+    expect(saveNodeReadingStateToRuntime).toHaveBeenCalledWith(
+      expect.objectContaining({ nodeId: 'reading-1', reading: null })
     );
   });
 
@@ -102,8 +106,8 @@ describe('workspace durable reading review mutation guardrails', () => {
     completeActions.startReviewSession('2026-03-03T00:00:00.000Z');
     const completedNodeId = completeHarness.getState().reviewSession.currentNodeId;
     await expect(completeActions.readReviewTopic('2026-03-03T00:00:00.000Z')).resolves.toBe(true);
-    expect(syncNodeContentToRuntimeNow).toHaveBeenCalledWith(
-      expect.objectContaining({ id: completedNodeId, reading: expect.objectContaining({ state: 'active' }) })
+    expect(saveNodeReadingStateToRuntime).toHaveBeenCalledWith(
+      expect.objectContaining({ nodeId: completedNodeId, reading: expect.objectContaining({ state: 'active' }) })
     );
 
     vi.clearAllMocks();
@@ -122,8 +126,8 @@ describe('workspace durable reading review mutation guardrails', () => {
     postponeReviewTopicActions.startReviewSession('2026-03-03T00:00:00.000Z');
     const deferredNodeId = deferHarness.getState().reviewSession.currentNodeId;
     await expect(postponeReviewTopicActions.postponeReviewTopic()).resolves.toBe(true);
-    expect(syncNodeContentToRuntimeNow).toHaveBeenCalledWith(
-      expect.objectContaining({ id: deferredNodeId, reading: expect.objectContaining({ state: 'active' }) })
+    expect(saveNodeReadingStateToRuntime).toHaveBeenCalledWith(
+      expect.objectContaining({ nodeId: deferredNodeId, reading: expect.objectContaining({ state: 'active' }) })
     );
   });
 });
@@ -149,8 +153,8 @@ describe('workspace durable reading review shelve and dismiss guardrails', () =>
     actions.startReviewSession('2026-03-03T00:00:00.000Z');
     const dismissedNodeId = harness.getState().reviewSession.currentNodeId;
     await expect(actions.dismissReviewTopic('2026-03-03T00:00:00.000Z')).resolves.toBe(true);
-    expect(syncNodeContentToRuntimeNow).toHaveBeenCalledWith(
-      expect.objectContaining({ id: dismissedNodeId, reading: expect.objectContaining({ state: 'dismissed' }) })
+    expect(saveNodeReadingStateToRuntime).toHaveBeenCalledWith(
+      expect.objectContaining({ nodeId: dismissedNodeId, reading: expect.objectContaining({ state: 'dismissed' }) })
     );
   });
 

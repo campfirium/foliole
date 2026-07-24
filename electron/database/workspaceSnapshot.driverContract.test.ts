@@ -100,12 +100,13 @@ it('loads workspace snapshot through query helpers only', () => {
   queryAllSpy
     .mockReturnValueOnce([workspaceSnapshotRow])
     .mockReturnValueOnce([{ node_id: 'node-1' }])
+    .mockReturnValueOnce([])
     .mockReturnValueOnce([]);
   queryOneSpy.mockReturnValueOnce({ value: '"desktop-test"' }).mockReturnValueOnce(undefined).mockReturnValueOnce(undefined);
 
   expect(loadWorkspaceSnapshot(driver)).toEqual(expectedWorkspaceSnapshot);
 
-  expect(queryAllSpy).toHaveBeenCalledTimes(3);
+  expect(queryAllSpy).toHaveBeenCalledTimes(4);
   expect(queryOneSpy).toHaveBeenCalledTimes(5);
   expect(queryAllSpy.mock.calls[0]?.[0]).not.toContain('content_blob_data');
 });

@@ -101,7 +101,8 @@ async function runImmediateHydrationCase() {
     'load-merged'
   ]);
   expect(openNode).toHaveBeenCalledTimes(1);
-  expect(invoke.mock.calls).toEqual([['load_node_document', { nodeId: 'node-2' }]]);
+  expect(invoke.mock.calls.filter(([command]) => command === 'load_node_document'))
+    .toEqual([['load_node_document', { nodeId: 'node-2' }]]);
   expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
   expect(useWorkspaceStore.getState().nodesById['node-2']!).toMatchObject({
     content: 'Loaded node 2 body',

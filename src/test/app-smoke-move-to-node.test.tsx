@@ -70,7 +70,7 @@ it('moves the active node under an empty target node from the command palette', 
 
   fireEvent.change(commandInput, { target: { value: 'move to' } });
   await waitFor(() => {
-    expect(within(commandDialog).getByRole('button', { name: /Move to/i })).toBeInTheDocument();
+    expect(within(commandDialog).getByRole('button', { name: 'Move to...' })).toBeInTheDocument();
   });
 
   fireEvent.keyDown(commandInput, { key: 'Enter' });

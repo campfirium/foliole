@@ -114,9 +114,10 @@ it('keeps the last inactive document warm after switching once', async () => {
     content: 'Loaded node 1 body',
     reveal: 'Loaded node 1 answer'
   });
-  expect(invoke).toHaveBeenNthCalledWith(1, 'load_node_document', { nodeId: 'node-1' });
-  expect(invoke).toHaveBeenNthCalledWith(2, 'load_node_document', { nodeId: 'node-2' });
-  expect(invoke).toHaveBeenCalledTimes(2);
+  expect(invoke.mock.calls.filter(([command]) => command === 'load_node_document')).toEqual([
+    ['load_node_document', { nodeId: 'node-1' }],
+    ['load_node_document', { nodeId: 'node-2' }]
+  ]);
 });
 
 it('reopens a recently visited document without loading it again', async () => {
@@ -154,7 +155,7 @@ it('reopens a recently visited document without loading it again', async () => {
     content: 'Loaded node 3 body',
     reveal: 'Loaded node 3 answer'
   });
-  expect(invoke.mock.calls).toEqual([
+  expect(invoke.mock.calls.filter(([command]) => command === 'load_node_document')).toEqual([
     ['load_node_document', { nodeId: 'node-1' }],
     ['load_node_document', { nodeId: 'node-2' }],
     ['load_node_document', { nodeId: 'node-3' }]
@@ -218,7 +219,7 @@ it('reopens the same long document without reloading while it is still warm', as
     content: 'Loaded node 2 body',
     reveal: null
   });
-  expect(invoke.mock.calls).toEqual([
+  expect(invoke.mock.calls.filter(([command]) => command === 'load_node_document')).toEqual([
     ['load_node_document', { nodeId: 'node-1' }],
     ['load_node_document', { nodeId: 'node-2' }]
   ]);

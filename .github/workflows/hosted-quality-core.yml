@@ -321,6 +321,7 @@ jobs:
           path: |
             .tmp/artifacts/ios-bridge-acceptance/*/result.json
             .tmp/artifacts/ios-bridge-acceptance/*/failure.json
+            .tmp/artifacts/ios-bridge-acceptance/*/evidence.json
             .tmp/artifacts/ios-bridge-acceptance/*/simulator.log
             .tmp/logs/quality-gate
           if-no-files-found: ignore

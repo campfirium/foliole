@@ -46,7 +46,7 @@ it('keeps settings dividers aligned without title extension lines', () => {
 
   const pageTitleShell = screen.getByRole('heading', { level: 2, name: 'Review' }).parentElement;
   const sectionHeader = screen.getByRole('heading', { level: 3, name: 'Scheduler' }).parentElement?.parentElement;
-  const storageGroup = screen.getByText('Storage').parentElement?.parentElement?.parentElement;
+  const storageGroup = screen.getByText('Storage').closest('.relative');
   const desiredRetentionRow = screen.getByRole('heading', { level: 4, name: 'Desired retention' }).parentElement?.parentElement;
 
   expect(pageTitleShell?.className).not.toContain('border-b');

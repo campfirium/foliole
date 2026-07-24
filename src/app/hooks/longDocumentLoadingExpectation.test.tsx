@@ -199,7 +199,7 @@ it('reopens the same long document from the warm cache after switching away once
   view.rerender(<HookHarness activeNodeId="node-1" />);
   await expectNodeDocument('node-1', longDocument);
 
-  expect(invoke.mock.calls).toEqual([
+  expect(invoke.mock.calls.filter(([command]) => command === 'load_node_document')).toEqual([
     ['load_node_document', { nodeId: 'node-1' }],
     ['load_node_document', { nodeId: 'node-2' }]
   ]);

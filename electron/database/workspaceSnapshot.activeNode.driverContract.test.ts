@@ -60,6 +60,7 @@ it('prefers the persisted active node for full workspace snapshots', () => {
     ])
     .mockReturnValueOnce([{ node_id: 'node-1' }, { node_id: 'node-2' }])
     .mockReturnValueOnce([])
+    .mockReturnValueOnce([])
     .mockReturnValueOnce([]);
   queryOneSpy
     .mockReturnValueOnce({ value: '"desktop-test"' })

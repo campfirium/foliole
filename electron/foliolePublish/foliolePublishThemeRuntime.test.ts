@@ -5,6 +5,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { loadFoliolePublishTheme, openFoliolePublishCustomTheme, useFoliolePublishTheme } from './foliolePublish.js';
+import { FOLIOLE_PUBLISH_OFFICIAL_THEME_VERSION } from './foliolePublishThemeState.js';
 
 const state = vi.hoisted(() => ({ libraryHome: '' }));
 const shellOpenPath = vi.hoisted(() => vi.fn());
@@ -35,6 +36,7 @@ it('does not activate Custom Theme when its folder cannot be opened', async () =
   shellOpenPath.mockResolvedValue('Folder access failed.');
   await expect(openFoliolePublishCustomTheme()).rejects.toThrow('Folder access failed.');
   expect(loadFoliolePublishTheme()).toMatchObject({
-    active_theme: 'foliole', custom_theme: { based_on_official_version: 4 }
+    active_theme: 'foliole',
+    custom_theme: { based_on_official_version: FOLIOLE_PUBLISH_OFFICIAL_THEME_VERSION }
   });
 });

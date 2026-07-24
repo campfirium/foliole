@@ -23,7 +23,7 @@ import { ASSISTANT_THREAD_SCHEMA_STATEMENTS } from '../../lib/core/database/assi
 
 import { resolveManagedBackupDirectory } from './backupSettings.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
-import { initializeDatabase } from './migrate.js';
+import { DATABASE_SCHEMA_VERSION, initializeDatabase } from './migrate.js';
 
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
@@ -75,7 +75,7 @@ function expectLegacyAssistantTablesRemoved() {
       'assistant_image_attachments', 'assistant_thread_message_images'
     ) ORDER BY name`
   ).all()).toEqual([]);
-  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(59);
+  expect(connection.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
   expect(connection.sqlite.pragma('foreign_key_check')).toEqual([]);
 }
 
