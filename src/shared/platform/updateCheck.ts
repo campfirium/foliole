@@ -137,6 +137,8 @@ export async function checkForFolioleUpdates(options: { force?: boolean; notify?
     writeUpdateCheckState(nextState);
     if (latestRelease) {
       await checkDesktopUpdate(latestRelease.version);
+    } else {
+      await checkDesktopUpdate(currentVersion);
     }
     const result: UpdateCheckResult = {
       latestRelease,

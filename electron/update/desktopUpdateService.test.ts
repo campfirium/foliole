@@ -2,7 +2,28 @@ import { expect, it, vi } from 'vitest';
 
 import { DesktopUpdateService, type DesktopUpdaterAdapter } from './desktopUpdateService.js';
 
-function createHarness(options: { applicable?: boolean; providerVersion?: string | null } = {}) {
+type StoredRecord = {
+  checkpoint: 'discovered' | 'downloaded';
+  installedVersion: string;
+  schemaVersion: 1;
+  targetVersion: string;
+};
+
+function createStateStore(storedRecord: StoredRecord | null = null) {
+  return {
+    clear: vi.fn(async () => undefined),
+    read: vi.fn(async () => storedRecord),
+    write: vi.fn(async () => undefined)
+  };
+}
+
+function createHarness(options: {
+  applicable?: boolean;
+  currentVersion?: string;
+  isUpdateAvailable?: boolean;
+  providerVersion?: string | null;
+  storedRecord?: StoredRecord | null;
+} = {}) {
   const listeners = new Map<string, (payload?: Record<string, unknown>) => void>();
   let resolveDownload: () => void = () => undefined;
   let rejectDownload: () => void = () => undefined;
@@ -16,7 +37,10 @@ function createHarness(options: { applicable?: boolean; providerVersion?: string
     autoInstallOnAppQuit: true,
     checkForUpdates: vi.fn(async () => options.providerVersion === null
       ? null
-      : { updateInfo: { version: options.providerVersion ?? '0.7.0' } }),
+      : {
+          isUpdateAvailable: options.isUpdateAvailable !== false,
+          updateInfo: { version: options.providerVersion ?? '0.7.0' }
+        }),
     downloadUpdate,
     on: vi.fn((event: string, listener: (payload?: Record<string, unknown>) => void) => {
       listeners.set(event, listener);
@@ -29,11 +53,14 @@ function createHarness(options: { applicable?: boolean; providerVersion?: string
   };
   const prepareInstall = vi.fn(async () => true);
   const loadUpdater = vi.fn(async () => updater);
+  const stateStore = createStateStore(options.storedRecord);
   const service = new DesktopUpdateService({
     eventChannel: 'foliole:desktop-update-state',
+    getCurrentVersion: () => options.currentVersion ?? '0.6.0',
     isApplicable: () => options.applicable !== false,
     loadUpdater,
-    prepareInstall
+    prepareInstall,
+    stateStore
   });
   return {
     listeners,
@@ -43,6 +70,7 @@ function createHarness(options: { applicable?: boolean; providerVersion?: string
     resolveDownload: () => resolveDownload(),
     sender,
     service,
+    stateStore,
     updater
   };
 }
@@ -56,8 +84,8 @@ it('does not load or contact the updater outside applicable packaged desktop bui
   expect(harness.updater.checkForUpdates).not.toHaveBeenCalled();
 });
 
-it('treats a provider version mismatch as pending assets instead of an error', async () => {
-  const harness = createHarness({ providerVersion: '0.8.0' });
+it('treats a provider version mismatch as pending assets even when no provider update is available', async () => {
+  const harness = createHarness({ isUpdateAvailable: false, providerVersion: '0.6.0' });
 
   await expect(harness.service.check('0.7.0', harness.sender as never)).resolves.toEqual({
     phase: 'pending-asset',
@@ -67,6 +95,48 @@ it('treats a provider version mismatch as pending assets instead of an error', a
   expect(harness.updater.autoDownload).toBe(false);
   expect(harness.updater.autoInstallOnAppQuit).toBe(false);
   expect(harness.updater.allowDowngrade).toBe(false);
+});
+
+it('hydrates a durable candidate without contacting the provider or restoring ready', async () => {
+  const harness = createHarness({
+    storedRecord: { checkpoint: 'downloaded', installedVersion: '0.6.0', schemaVersion: 1, targetVersion: '0.7.0' }
+  });
+
+  await expect(harness.service.check('', harness.sender as never)).resolves.toEqual({ phase: 'idle' });
+
+  expect(harness.updater.checkForUpdates).not.toHaveBeenCalled();
+  expect(harness.updater.downloadUpdate).not.toHaveBeenCalled();
+});
+
+it('clears a durable candidate written by a different installed version', async () => {
+  const harness = createHarness({
+    storedRecord: { checkpoint: 'downloaded', installedVersion: '0.5.0', schemaVersion: 1, targetVersion: '0.7.0' }
+  });
+
+  await harness.service.check('', harness.sender as never);
+
+  expect(harness.stateStore.clear).toHaveBeenCalledTimes(1);
+  expect(harness.loadUpdater).not.toHaveBeenCalled();
+});
+
+it('clears a candidate when the fresh manifest reports the installed version', async () => {
+  const harness = createHarness({
+    storedRecord: { checkpoint: 'downloaded', installedVersion: '0.6.0', schemaVersion: 1, targetVersion: '0.7.0' }
+  });
+
+  await expect(harness.service.check('0.6.0', harness.sender as never)).resolves.toEqual({ phase: 'idle' });
+
+  expect(harness.stateStore.clear).toHaveBeenCalledTimes(1);
+  expect(harness.loadUpdater).not.toHaveBeenCalled();
+});
+
+it('clears the candidate when the provider reports no applicable update', async () => {
+  const harness = createHarness({ isUpdateAvailable: false });
+
+  await expect(harness.service.check('0.7.0', harness.sender as never)).resolves.toEqual({ phase: 'idle' });
+
+  expect(harness.stateStore.clear).toHaveBeenCalledTimes(1);
+  expect(harness.updater.downloadUpdate).not.toHaveBeenCalled();
 });
 
 it('downloads automatically after the provider confirms the gated release', async () => {
@@ -87,6 +157,33 @@ it('publishes an error when the automatic download fails', async () => {
   await harness.service.check('0.7.0', harness.sender as never);
 
   harness.rejectDownload();
+
+  await vi.waitFor(() => expect(harness.service.getState()).toEqual({
+    errorCode: 'download-failed',
+    phase: 'error',
+    version: '0.7.0'
+  }));
+});
+
+it('does not download when the durable discovery record cannot be written', async () => {
+  const harness = createHarness();
+  harness.stateStore.write.mockRejectedValueOnce(new Error('disk full'));
+
+  await expect(harness.service.check('0.7.0', harness.sender as never)).resolves.toEqual({
+    errorCode: 'check-failed',
+    phase: 'error',
+    version: '0.7.0'
+  });
+
+  expect(harness.loadUpdater).not.toHaveBeenCalled();
+});
+
+it('does not publish ready when the downloaded checkpoint cannot be written', async () => {
+  const harness = createHarness();
+  harness.stateStore.write.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('disk full'));
+  await harness.service.check('0.7.0', harness.sender as never);
+
+  harness.resolveDownload();
 
   await vi.waitFor(() => expect(harness.service.getState()).toEqual({
     errorCode: 'download-failed',

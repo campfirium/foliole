@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { app, BrowserWindow } from 'electron';
 
 import { markAppQuittingForBackgroundPresence } from '../backgroundPresence.js';
@@ -7,6 +9,9 @@ import { flushWindowReadingProgress } from '../readingProgressWindowFlush.js';
 
 import { isDesktopUpdateApplicable } from './desktopUpdateAvailability.js';
 import { DesktopUpdateService, type DesktopUpdaterAdapter } from './desktopUpdateService.js';
+import { createDesktopUpdateStateStore } from './desktopUpdateStateStore.js';
+
+const DESKTOP_UPDATE_STATE_FILE = 'desktop-update-state-v1.json';
 
 function isCurrentBuildApplicable() {
   return isDesktopUpdateApplicable({
@@ -35,7 +40,10 @@ async function prepareDesktopUpdateInstall() {
 
 export const desktopUpdateService = new DesktopUpdateService({
   eventChannel: IPC_DESKTOP_UPDATE_STATE_EVENT_CHANNEL,
+  getCurrentVersion: () => app.getVersion(),
   isApplicable: isCurrentBuildApplicable,
   loadUpdater,
-  prepareInstall: prepareDesktopUpdateInstall
+  prepareInstall: prepareDesktopUpdateInstall,
+  reportDiagnostic: (label) => appendMainProcessDiagnosticLog(label, {}),
+  stateStore: createDesktopUpdateStateStore(path.join(app.getPath('userData'), DESKTOP_UPDATE_STATE_FILE))
 });
