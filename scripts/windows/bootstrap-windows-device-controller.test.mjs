@@ -18,9 +18,9 @@ it('downloads the exact reviewed controller revision and verifies every file', (
 
 it('preserves device credentials and restores controller files on failure', () => {
   expect(script).toContain('if ($task.State -eq "Running")');
-  expect(script).toContain('Disable-ScheduledTask -TaskName $taskName');
-  expect(script).toContain('Enable-ScheduledTask -TaskName $taskName');
+  expect(script).toContain('if (@($task.Triggers).Count -ne 0)');
+  expect(script.match(/Get-ScheduledTask -TaskName \$taskName/g)).toHaveLength(2);
   expect(script).toContain('Copy-Item -Path $targetPath -Destination (Join-Path $backupRoot $entry.Key)');
   expect(script).toContain('Copy-Item -Path $backupPath -Destination $targetPath -Force');
-  expect(script).not.toMatch(/github-token\.txt|authorized_keys|Register-ScheduledTask|Set-ScheduledTask/);
+  expect(script).not.toMatch(/github-token\.txt|authorized_keys|Disable-ScheduledTask|Enable-ScheduledTask|Register-ScheduledTask|Set-ScheduledTask/);
 });

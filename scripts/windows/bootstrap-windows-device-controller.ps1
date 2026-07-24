@@ -27,8 +27,12 @@ $task = Get-ScheduledTask -TaskName $taskName -ErrorAction Stop
 if ($task.State -eq "Running") {
   throw "$taskName is running. Cancel the current device run before updating the controller."
 }
-$taskWasEnabled = $task.State -ne "Disabled"
-$taskDisabled = $false
+if ($task.State -eq "Disabled") {
+  throw "$taskName is disabled. Re-enable it from an elevated PowerShell before updating."
+}
+if (@($task.Triggers).Count -ne 0) {
+  throw "$taskName has automatic triggers; refusing an in-place controller update."
+}
 
 $workRoot = Join-Path $env:TEMP "foliole-controller-bootstrap-$([guid]::NewGuid().ToString('N'))"
 $downloadRoot = Join-Path $workRoot "download"
@@ -37,13 +41,6 @@ $originalFiles = @{}
 New-Item -ItemType Directory -Path $downloadRoot, $backupRoot | Out-Null
 
 try {
-  if ($taskWasEnabled) {
-    $taskDisabled = $true
-    Disable-ScheduledTask -TaskName $taskName | Out-Null
-  }
-  $task = Get-ScheduledTask -TaskName $taskName -ErrorAction Stop
-  if ($task.State -eq "Running") { throw "$taskName started during controller update" }
-
   [Net.ServicePointManager]::SecurityProtocol =
     [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
   foreach ($entry in $files.GetEnumerator()) {
@@ -53,6 +50,8 @@ try {
     Assert-FileHash -Path $downloadPath -ExpectedHash $entry.Value
   }
 
+  $task = Get-ScheduledTask -TaskName $taskName -ErrorAction Stop
+  if ($task.State -eq "Running") { throw "$taskName started during controller download" }
   foreach ($entry in $files.GetEnumerator()) {
     $targetPath = Join-Path $installRoot $entry.Key
     $originalFiles[$entry.Key] = Test-Path $targetPath -PathType Leaf
@@ -74,11 +73,7 @@ try {
   }
   throw
 } finally {
-  try {
-    if ($taskDisabled) { Enable-ScheduledTask -TaskName $taskName | Out-Null }
-  } finally {
-    Remove-Item -Path $workRoot -Recurse -Force -ErrorAction SilentlyContinue
-  }
+  Remove-Item -Path $workRoot -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 Write-Host "Foliole Windows device controller updated to $revision"
