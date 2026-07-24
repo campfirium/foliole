@@ -23,6 +23,8 @@ it('generates isolated producer packs for the paired iOS identity and failure ca
   });
   const legal = readPackRowsFromZip(fixture.legalPath, tempRoot);
   const wrongTarget = readPackRowsFromZip(fixture.wrongTargetPath, tempRoot);
+  await fixture.buildSuccessorPack(['special-inbox', 'ios-acceptance-restore']);
+  const successor = readPackRowsFromZip(fixture.successorPath, tempRoot);
   const cursorGap = readPackRowsFromZip(fixture.cursorGapPath, tempRoot);
   const legalBytes = await fs.readFile(fixture.legalPath);
   const corruptBytes = await fs.readFile(fixture.corruptEnvelopePath);
@@ -43,10 +45,10 @@ it('generates isolated producer packs for the paired iOS identity and failure ca
     ]
   });
   expect(wrongTarget.manifest).toMatchObject({ to_peer_id: 'ios-runtime-device-wrong' });
-  expect(cursorGap).toMatchObject({
-    manifest: expect.objectContaining({ from_state_seq: 6, to_state_seq: 7, to_peer_id: 'ios-runtime-device' }),
-    nodes: [expect.objectContaining({ id: 'ios-acceptance-gap-node' })]
-  });
+  expect(cursorGap.nodes).toEqual([expect.objectContaining({ id: 'ios-acceptance-gap-node' })]);
+  expect(cursorGap.manifest.to_peer_id).toBe('ios-runtime-device');
+  expect(cursorGap.manifest.from_state_seq).toBeGreaterThan(successor.manifest.to_state_seq);
+  expect(cursorGap.manifest.to_state_seq).toBe(cursorGap.manifest.from_state_seq + 1);
   expect(corruptBytes.subarray(1)).toEqual(legalBytes.subarray(1));
   expect(corruptBytes[0]).not.toBe(legalBytes[0]);
 });

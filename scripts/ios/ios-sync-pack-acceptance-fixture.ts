@@ -32,7 +32,6 @@ export async function createIosSyncPackAcceptanceFixture(args: {
   const paths = fixturePaths(args.outputDirectory);
   await buildPack(driver, paths.legalPath, args.toPeerId, 0, 'ios-acceptance-legal');
   await buildPack(driver, paths.wrongTargetPath, `${args.toPeerId}-wrong`, 0, 'ios-acceptance-wrong-target');
-  await buildCursorGapPack(driver, paths.cursorGapPath, args.toPeerId);
   await writeCorruptEnvelope(paths.legalPath, paths.corruptEnvelopePath);
   await writeLegacyFormatPack(paths.legalPath, paths.legacyFormatPath);
   await writeIllegalDagPack(paths.legalPath, paths.illegalDagPath);
@@ -49,6 +48,7 @@ export async function createIosSyncPackAcceptanceFixture(args: {
       createDesktopSuccessor(driver, captureNodeId);
       await buildPack(driver, paths.successorPath, args.toPeerId, 2, 'ios-acceptance-successor');
       await buildIllegalDagRejectionPack(driver, paths.illegalDagPath, args.toPeerId);
+      await buildCursorGapPack(driver, paths.cursorGapPath, args.toPeerId);
       return { captureNodeId, desktop: readDesktopRoundtripSnapshot(sqlite, captureNodeId) };
     },
     close: () => sqlite.close()
@@ -115,6 +115,11 @@ async function buildCursorGapPack(
   outputPath: string,
   toPeerId: string
 ) {
+  const currentStateSeq = Number(driver.queryOne<{ max_state_seq: number }>(
+    'SELECT COALESCE(MAX(state_seq), 0) AS max_state_seq FROM sync_object_state'
+  )?.max_state_seq ?? 0);
+  const fromStateSeq = currentStateSeq + 1;
+  const toStateSeq = currentStateSeq + 2;
   driver.execute(
     `INSERT INTO nodes (id, kind, title, content, created_at, updated_at)
      VALUES ('ios-acceptance-gap-node', 'topic', 'Gap Topic', '', ?, ?)`,
@@ -123,11 +128,11 @@ async function buildCursorGapPack(
   driver.execute(
     `INSERT INTO sync_object_state (
        object_type, object_id, state_seq, content_hash, last_modified_by_device_id, updated_at, sync_dirty
-     ) VALUES ('node', 'ios-acceptance-gap-node', 7, 'ios-acceptance-gap-hash',
+     ) VALUES ('node', 'ios-acceptance-gap-node', ?, 'ios-acceptance-gap-hash',
        ?, '2026-07-21T00:02:00.000Z', 1)`,
-    [DESKTOP_DEVICE_ID]
+    [toStateSeq, DESKTOP_DEVICE_ID]
   );
-  await buildPack(driver, outputPath, toPeerId, 6, 'ios-acceptance-cursor-gap');
+  await buildPack(driver, outputPath, toPeerId, fromStateSeq, 'ios-acceptance-cursor-gap');
   driver.execute("DELETE FROM sync_object_state WHERE object_id = 'ios-acceptance-gap-node'");
   driver.execute("DELETE FROM nodes WHERE id = 'ios-acceptance-gap-node'");
 }

@@ -9,9 +9,27 @@ import { flushWindowReadingProgress } from '../readingProgressWindowFlush.js';
 
 import { isDesktopUpdateApplicable } from './desktopUpdateAvailability.js';
 import { DesktopUpdateService, type DesktopUpdaterAdapter } from './desktopUpdateService.js';
-import { createDesktopUpdateStateStore } from './desktopUpdateStateStore.js';
+import {
+  createDesktopUpdateStateStore,
+  type DesktopUpdateStateStore
+} from './desktopUpdateStateStore.js';
 
 const DESKTOP_UPDATE_STATE_FILE = 'desktop-update-state-v1.json';
+
+function createRuntimeStateStore(): DesktopUpdateStateStore {
+  let store: DesktopUpdateStateStore | null = null;
+  const resolve = () => {
+    store ??= createDesktopUpdateStateStore(
+      path.join(app.getPath('userData'), DESKTOP_UPDATE_STATE_FILE)
+    );
+    return store;
+  };
+  return {
+    clear: () => resolve().clear(),
+    read: () => resolve().read(),
+    write: (record) => resolve().write(record)
+  };
+}
 
 function isCurrentBuildApplicable() {
   return isDesktopUpdateApplicable({
@@ -45,5 +63,5 @@ export const desktopUpdateService = new DesktopUpdateService({
   loadUpdater,
   prepareInstall: prepareDesktopUpdateInstall,
   reportDiagnostic: (label) => appendMainProcessDiagnosticLog(label, {}),
-  stateStore: createDesktopUpdateStateStore(path.join(app.getPath('userData'), DESKTOP_UPDATE_STATE_FILE))
+  stateStore: createRuntimeStateStore()
 });
