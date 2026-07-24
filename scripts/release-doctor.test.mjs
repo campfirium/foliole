@@ -125,7 +125,11 @@ describe('release doctor', () => {
         [`gh release view v${version} -R campfirium/foliole --json body,isDraft,tagName,url,assets`]: {
           status: 0,
           stdout: JSON.stringify({
-            assets: [{ name: `Foliole-Setup-${version}-win-x64.exe` }, { name: 'SHA256SUMS.txt' }],
+            assets: [
+              { name: `Foliole-Setup-${version}-win-x64.exe` },
+              { name: 'SHA256SUMS-macos.txt' },
+              { name: 'SHA256SUMS-windows.txt' }
+            ],
             body: '### Fixed\n- A fix.\n',
             isDraft: false,
             tagName: `v${version}`,

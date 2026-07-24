@@ -54,10 +54,13 @@ function checkRemoteAssets(candidateJson, phase) {
     ? candidateJson.assets.map((asset) => asset?.name ?? '')
     : [];
   const hasInstaller = assetNames.some((name) => name.endsWith('.exe'));
-  const hasChecksum = assetNames.includes('SHA256SUMS.txt');
+  const hasLegacyChecksum = assetNames.includes('SHA256SUMS.txt');
+  const hasPlatformChecksums = ['SHA256SUMS-macos.txt', 'SHA256SUMS-windows.txt']
+    .every((name) => assetNames.includes(name));
+  const hasChecksum = hasLegacyChecksum || hasPlatformChecksums;
   return [
     createCheck(hasInstaller ? 'PASS' : 'FAIL', 'GitHub release installer asset', hasInstaller ? 'Windows installer asset exists.' : 'Windows installer .exe asset is missing.'),
-    createCheck(hasChecksum ? 'PASS' : 'FAIL', 'GitHub release checksum asset', hasChecksum ? 'SHA256SUMS.txt asset exists.' : 'SHA256SUMS.txt asset is missing.')
+    createCheck(hasChecksum ? 'PASS' : 'FAIL', 'GitHub release checksum asset', hasChecksum ? 'release checksum assets exist.' : 'release checksum assets are missing.')
   ];
 }
 
