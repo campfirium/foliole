@@ -110,7 +110,7 @@ describe('quality-gate-fast lib routing', () => {
     expect(result.stderr).toContain('path domain resolution failed');
   });
 
-  it('caps lib changes locally and points the thread to shared Remote Quality', async () => {
+  it('caps lib changes locally and defers hosted quality to scheduled T5', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-fast-lib-'));
     try {
       await writePackageJson(tempRoot, {
@@ -130,7 +130,9 @@ describe('quality-gate-fast lib routing', () => {
 
       expect(result.code, `stdout:\n${result.stdout}\nstderr:\n${result.stderr}`).toBe(0);
       expect(result.stdout).toContain('[quality-gate-fast] selected level: shared');
-      expect(result.stdout).toContain('remote-quality.mjs --scope shared');
+      expect(result.stdout).toContain('hosted quality deferred to scheduled T5');
+      expect(result.stdout).toContain('Remote Quality is reserved for T5 repair rechecks');
+      expect(result.stdout).not.toContain('remote quality required');
       expect(result.stdout).toContain('[quality-gate-fast] capped local checks passed.');
       expect(result.stdout).toContain('boundary ok');
       expect(result.stdout).toContain('shared typecheck ok');

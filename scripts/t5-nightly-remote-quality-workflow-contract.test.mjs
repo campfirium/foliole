@@ -10,7 +10,7 @@ const t5 = fs.readFileSync('.github/workflows/t5-nightly-remote-quality.yml', 'u
 const handoffEvents = fs.readFileSync('scripts/github-desktop-handoff-events.mjs', 'utf8');
 
 describe('hosted quality workflow contracts', () => {
-  it('keeps T5 scheduled ownership separate from thread-owned Remote Quality', () => {
+  it('keeps T5 scheduled ownership separate from explicit Remote Quality', () => {
     expect(t5).toContain('name: T5 Nightly Remote Quality');
     expect(t5).toContain("cron: '40 3 * * *'");
     expect(t5).toContain("cron: '40 14 * * *'");
@@ -21,7 +21,7 @@ describe('hosted quality workflow contracts', () => {
     expect(remote).not.toContain('schedule:');
     expect(handoffEvents).toContain("['T5 Nightly Remote Quality', 'T5']");
     expect(handoffEvents).not.toContain("['Remote Quality', 'T5']");
-    expect(remote).toContain('Quality scope owned by the requesting development thread');
+    expect(remote).toContain('Explicit recheck or release quality scope');
   });
 
   it('offers explicit Remote Quality scopes through the shared core', () => {

@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       scope:
-        description: Quality scope owned by the requesting development thread
+        description: Explicit recheck or release quality scope
         required: true
         type: choice
         options:

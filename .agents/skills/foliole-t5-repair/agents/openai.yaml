@@ -1,0 +1,4 @@
+interface:
+  display_name: "Foliole T5 Repair"
+  short_description: "Diagnose and repair one failed Foliole T5 run"
+  default_prompt: "Use $foliole-t5-repair to diagnose and repair this Foliole T5 run."
