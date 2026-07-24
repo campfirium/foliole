@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import { expect, it } from 'vitest';
 
 const script = fs.readFileSync('scripts/windows/bootstrap-windows-device-controller.ps1', 'utf8');
-const revision = 'fefdc91babe7dfdd28c58c4c46c83e1165a9748a';
+const revision = '051b1a17d0e3332952b3f9a58fd3d05750d21538';
 
 it('downloads the exact reviewed controller revision and verifies every file', () => {
   expect(script).toContain(`$revision = "${revision}"`);

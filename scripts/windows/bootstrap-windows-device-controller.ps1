@@ -1,12 +1,12 @@
 param()
 
 $ErrorActionPreference = "Stop"
-$revision = "fefdc91babe7dfdd28c58c4c46c83e1165a9748a"
+$revision = "051b1a17d0e3332952b3f9a58fd3d05750d21538"
 $installRoot = Join-Path $env:LOCALAPPDATA "Foliole\windows-device"
 $taskName = "FoliolePhysicalAcceptance"
 $files = [ordered]@{
   "windows-bounded-process.mjs" = "8a33dbffad6d7f6fb23b5557db4836bc81f4c33f33147db399f342706e185962"
-  "windows-device-artifact.mjs" = "4ca0d20272d469e9d3ddc04e76d535fe5ca13c163c1e8f3b57168ec276030658"
+  "windows-device-artifact.mjs" = "6c3e69e68a233c2d68fad96e2f2a0ba0dcd798d15cf768e17bceccbf6950eb62"
   "windows-device-state.mjs" = "3382f725af590cb1e683fdd96878c15f54970487933dece893d4fea27948137e"
   "windows-device-worker.mjs" = "3b17d60fbea0730bfa55d773c5c7fec7d0fa0d0c2ec635b3883441d6ce5a61c9"
   "windows-device-dispatcher.mjs" = "600cedf5ae10d43f0257291332358f91643b517f7c00c86613defbbaae8d0e24"
