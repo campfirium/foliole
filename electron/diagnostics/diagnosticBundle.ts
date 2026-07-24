@@ -7,6 +7,8 @@ import type { App } from 'electron';
 import type { NativeCopyDiagnosticReportResult } from '../../lib/platform/nativeUtilityContract.js';
 import { resolveFolioleAppVersion } from '../appVersion.js';
 
+import { redactDiagnosticValue } from './diagnosticRedactor.js';
+
 interface FileSummary {
   name: string;
   sizeBytes: number;
@@ -108,7 +110,8 @@ async function collectRecentRuntimeErrors(logsDir: string) {
   const files = (await listFiles(logsDir))
     .filter((file) => /^runtime-\d{4}-\d{2}-\d{2}\.ndjson$/u.test(file.name))
     .sort((left, right) => right.name.localeCompare(left.name))
-    .slice(0, 3);
+    .slice(0, 3)
+    .sort((left, right) => left.name.localeCompare(right.name));
   const records = (await Promise.all(files.map(async (file) => {
     const text = await readTail(path.join(logsDir, file.name));
     return parseNdjsonTail(text)
@@ -138,7 +141,7 @@ function asSafePayloadDetail(payload: unknown) {
       .map((key) => [key, (payload as Record<string, unknown>)[key]])
       .filter(([, value]) => typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean')
   );
-  const text = JSON.stringify(safe);
+  const text = JSON.stringify(redactDiagnosticValue(safe));
   return text === '{}' ? undefined : text.slice(0, 180);
 }
 
@@ -148,7 +151,7 @@ function formatRecord(record: ParsedLogRecord): FormattedRecord {
     at: record.occurred_at ?? record.timestamp ?? 'unknown time',
     name: record.event ?? record.stage ?? 'unknown',
     ...(detail ? { detail } : {}),
-    ...(record.source ? { source: record.source } : {})
+    ...(record.source ? { source: String(redactDiagnosticValue(record.source)) } : {})
   };
 }
 

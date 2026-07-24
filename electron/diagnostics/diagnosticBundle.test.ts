@@ -106,3 +106,80 @@ it('shows safe operation failure details without embedding sensitive payload fie
   expect(result.report_text).not.toContain('/Users/alice/private/book.md');
   expect(result.report_text).not.toContain('private stack');
 });
+
+it('redacts paths and URLs from whitelisted details and record sources', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-diagnostic-redaction-'));
+  roots.push(root);
+  const logsDir = path.join(root, 'logs');
+  const crashDir = path.join(root, 'crashDumps');
+  const privatePath = '/Users/alice/private/book.md';
+  const privateUrl = 'https://private.example.test/report?token=secret';
+  await fs.mkdir(logsDir, { recursive: true });
+  await fs.mkdir(crashDir, { recursive: true });
+  await fs.writeFile(
+    path.join(logsDir, 'runtime-2026-06-06.ndjson'),
+    `${JSON.stringify({
+      event: 'operation_failed',
+      level: 'error',
+      occurred_at: '2026-06-06T10:00:00.000Z',
+      payload: {
+        message: `Cannot open ${privatePath}`,
+        reason: privateUrl
+      },
+      source: `${privatePath}?next=${encodeURIComponent(privateUrl)}`
+    })}\n`,
+    'utf8'
+  );
+
+  const result = await copyDiagnosticReport({
+    app: {
+      getPath: (name: string) => ({ crashDumps: crashDir, logs: logsDir })[name] as string,
+      getVersion: () => '0.1.0'
+    }
+  });
+
+  expect(result.report_text).toContain('operation_failed');
+  expect(result.report_text).toContain('[redacted-path]');
+  expect(result.report_text).toContain('[redacted-url]');
+  expect(result.report_text).not.toContain(privatePath);
+  expect(result.report_text).not.toContain(privateUrl);
+  expect(result.report_text).not.toContain(encodeURIComponent(privateUrl));
+});
+
+it('keeps errors from the newest runtime file when older files exceed the report limit', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-diagnostic-recency-'));
+  roots.push(root);
+  const logsDir = path.join(root, 'logs');
+  const crashDir = path.join(root, 'crashDumps');
+  await fs.mkdir(logsDir, { recursive: true });
+  await fs.mkdir(crashDir, { recursive: true });
+  const olderRecords = Array.from({ length: 8 }, (_, index) => JSON.stringify({
+    event: `older_error_${index}`,
+    level: 'error',
+    occurred_at: `2026-06-05T10:00:0${index}.000Z`
+  }));
+  await fs.writeFile(
+    path.join(logsDir, 'runtime-2026-06-05.ndjson'),
+    `${olderRecords.join('\n')}\n`,
+    'utf8'
+  );
+  await fs.writeFile(
+    path.join(logsDir, 'runtime-2026-06-06.ndjson'),
+    `${JSON.stringify({
+      event: 'newest_error',
+      level: 'error',
+      occurred_at: '2026-06-06T10:00:00.000Z'
+    })}\n`,
+    'utf8'
+  );
+
+  const result = await copyDiagnosticReport({
+    app: {
+      getPath: (name: string) => ({ crashDumps: crashDir, logs: logsDir })[name] as string,
+      getVersion: () => '0.1.0'
+    }
+  });
+
+  expect(result.report_text).toContain('newest_error');
+  expect(result.report_text).not.toContain('older_error_0');
+});
