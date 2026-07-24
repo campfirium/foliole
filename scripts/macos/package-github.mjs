@@ -89,12 +89,6 @@ export function hasNotarizationCredentials(env) {
   return Boolean(hasAppleId || hasApiKey || hasKeychainProfile);
 }
 
-export function sendMacosNotification(title, message, run = spawnSync) {
-  const script = 'on run argv\ndisplay notification (item 2 of argv) with title (item 1 of argv)\nend run';
-  const result = run('osascript', ['-e', script, '--', title, message], { stdio: 'ignore' });
-  return result.status === 0;
-}
-
 export function createGithubArtifactNames(productName, version, arch = 'arm64') {
   const baseName = `${productName}-${version}-mac-${arch}`;
   return [
@@ -161,15 +155,10 @@ async function main() {
     return result;
   }), { prepareRelease: (release) => prepareCodexHelper({ release }) });
   console.log(`DMG_READY ${checksum.name} ${checksum.digest}`);
-  sendMacosNotification(
-    'Foliole macOS release',
-    notarize ? 'Apple notarization and DMG packaging completed.' : 'macOS DMG packaging completed.'
-  );
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.meta.filename)) {
   main().catch((error) => {
-    sendMacosNotification('Foliole macOS release', 'Notarization or DMG packaging failed. Check the terminal log.');
     console.error(error instanceof Error ? error.message : error);
     process.exitCode = 1;
   });

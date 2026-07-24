@@ -9,7 +9,6 @@ import {
   hasNotarizationCredentials,
   resolveDeveloperIdCliProvisioningProfile,
   resolveDeveloperIdProvisioningProfile,
-  sendMacosNotification,
   writeDmgChecksum
 } from './package-github.mjs';
 
@@ -121,18 +120,4 @@ describe('GitHub macOS packaging', () => {
     await expect(writeDmgChecksum('/unused', 'Foliole.zip')).rejects.toThrow('exact DMG artifact name');
   });
 
-  it('sends a local macOS notification without exposing release credentials', () => {
-    const calls = [];
-    const sent = sendMacosNotification('Foliole macOS release', 'Apple notarization completed.', (...args) => {
-      calls.push(args);
-      return { status: 0 };
-    });
-
-    expect(sent).toBe(true);
-    expect(calls).toEqual([[
-      'osascript',
-      expect.arrayContaining(['Foliole macOS release', 'Apple notarization completed.']),
-      { stdio: 'ignore' }
-    ]]);
-  });
 });
