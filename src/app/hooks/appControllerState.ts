@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { VIRTUAL_PUBLISHED_NODE_ID } from '../../features/nodes/model/specialNodes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { definedProps } from '../../shared/lib/definedProps';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
+import { subscribeOpenFoliolePublishedTopics } from '../../shared/platform/foliolePublishedNavigation';
 import { getDemoRuntimeNowIso, subscribeDemoRuntimeState, useDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 import { buildStartReviewSessionQueue } from '../../store/workspaceReviewLiveQueue';
@@ -179,6 +181,21 @@ function useEditorDraftCloseFlushRegistration(
   }, [flushPendingEditorDraftImmediately, isWorkspaceHydrated]);
 }
 
+function usePublishedTopicsNavigation(
+  runtime: ReturnType<typeof useAppRuntime>,
+  virtualView: ReturnType<typeof useVirtualNodeView>
+) {
+  useEffect(() => subscribeOpenFoliolePublishedTopics(() => {
+    runtime.setIsSettingsOpen(false);
+    virtualView.openVirtualView(VIRTUAL_PUBLISHED_NODE_ID);
+  }), [runtime.setIsSettingsOpen, virtualView.openVirtualView]);
+}
+
+function useWorkspaceActiveDocuments(activeNodeId: string | null, selectedTrashNodeId: string | null) {
+  useWorkspaceActiveNodeDocument(activeNodeId);
+  useWorkspaceActiveNodeDocument(selectedTrashNodeId, { includeTrashed: true, keepWarm: true });
+}
+
 export function useWorkspaceControllerState(
   ws: WorkspaceControllerStateInput,
   isWorkspaceHydrated: boolean,
@@ -186,8 +203,7 @@ export function useWorkspaceControllerState(
   isReviewSchedulerSettingsReady = true
 ) {
   const trash = useTrashView({ trashedNodeIds: ws.trashedNodeIds });
-  useWorkspaceActiveNodeDocument(ws.activeNodeId);
-  useWorkspaceActiveNodeDocument(trash.selectedTrashNodeId, { includeTrashed: true, keepWarm: true });
+  useWorkspaceActiveDocuments(ws.activeNodeId, trash.selectedTrashNodeId);
   const activeNode = ws.activeNodeId ? ws.nodesById[ws.activeNodeId] : undefined;
   const browseRootNode = ws.nodesById[ws.browseRootNodeId];
   const virtualView = useVirtualNodeView({
@@ -199,6 +215,7 @@ export function useWorkspaceControllerState(
   useRemovedSourcesWarmup(isWorkspaceHydrated);
   const selectedTrashNode = trash.selectedTrashNodeId ? ws.nodesById[trash.selectedTrashNodeId] : undefined;
   const runtime = useAppRuntime(ws.listWidth, ws.rightSidebarWidth);
+  usePublishedTopicsNavigation(runtime, virtualView);
   const study = useWorkspaceStudyModeState({ isReviewSchedulerSettingsReady, nowIso, ws });
   const listResize = useListResizer(ws.listWidth, ws.setListWidth);
   const rightSidebarResize = useRightSidebarResizer(ws.rightSidebarWidth, ws.setRightSidebarWidth);

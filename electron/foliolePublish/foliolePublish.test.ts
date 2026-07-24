@@ -11,6 +11,7 @@ import { generateFoliolePublishSite } from './foliolePublishSite.js';
 const state = vi.hoisted(() => ({ libraryHome: '' }));
 const mocks = vi.hoisted(() => ({
   clearFoliolePublishSettings: vi.fn(),
+  commitFoliolePublishAddressUpdate: vi.fn(),
   deleteCloudflarePagesProject: vi.fn(),
   deployCloudflarePages: vi.fn(),
   resolveCloudflarePagesProject: vi.fn(),
@@ -31,6 +32,9 @@ vi.mock('./cloudflarePagesClient.js', async (importOriginal) => ({
   deployCloudflarePages: mocks.deployCloudflarePages,
   deleteCloudflarePagesProject: mocks.deleteCloudflarePagesProject,
   resolveCloudflarePagesProject: mocks.resolveCloudflarePagesProject
+}));
+vi.mock('./foliolePublishAddressUpdate.js', () => ({
+  commitFoliolePublishAddressUpdate: mocks.commitFoliolePublishAddressUpdate
 }));
 vi.mock('./foliolePublishSettings.js', () => ({
   clearFoliolePublishSettings: mocks.clearFoliolePublishSettings,
@@ -63,6 +67,10 @@ beforeEach(() => {
   generateFoliolePublishSite(publishRoot, index, 'https://old.pages.dev');
   Object.values(mocks).forEach((mock) => mock.mockReset());
   mocks.clearFoliolePublishSettings.mockReturnValue({ account_id: '', has_credentials: false, pages_url: '', project_name: '', site_address: '', updated_at: null });
+  mocks.commitFoliolePublishAddressUpdate.mockReturnValue({
+    settings: { account_id: 'account', has_credentials: true, pages_url: 'https://site.pages.dev', project_name: 'site', site_address: 'https://notes.example.com', updated_at: '2026-07-24T00:00:00.000Z' },
+    updatedNodeIds: []
+  });
   mocks.deleteCloudflarePagesProject.mockResolvedValue(undefined);
   mocks.resolveCloudflarePagesProject.mockResolvedValue({ created: false, project: { subdomain: 'site.pages.dev' }, status: 'ready' });
   mocks.deployCloudflarePages.mockResolvedValue({ url: 'https://deployment.pages.dev' });
@@ -138,7 +146,7 @@ it('keeps the local connection when Cloudflare project deletion fails', async ()
 
 it('updates a custom address with the stored token and rolls back on save failure', async () => {
   const before = activeRss();
-  mocks.saveFoliolePublishSiteAddress.mockImplementation(() => { throw new Error('save failed'); });
+  mocks.commitFoliolePublishAddressUpdate.mockImplementation(() => { throw new Error('save failed'); });
   await expect(updateFoliolePublishSiteAddress('https://notes.example.com')).rejects.toThrow('save failed');
   expect(activeRss()).toBe(before);
   expect(mocks.deployCloudflarePages).toHaveBeenCalledWith(expect.objectContaining({ token: 'stored-token' }));

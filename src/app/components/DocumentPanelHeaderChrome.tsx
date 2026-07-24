@@ -6,6 +6,7 @@ import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../features/settings/model
 
 import { DocumentPanelHeader } from './DocumentPanelHeader';
 import type { DocumentPanelSectionProps } from './DocumentPanelSection';
+import { FoliolePublishedHeaderActions } from './FoliolePublishedHeaderActions';
 import { TrashDocumentHeaderImportAction } from './TrashDocumentRestoreAction';
 
 const TRASH_HEADER_NODE_ID = 'trash-preview-root';
@@ -88,7 +89,9 @@ export function renderDocumentPanelHeader(args: {
       priorityQuickSetShortcutLabel={args.props.priorityQuickSetShortcutLabel ?? ''}
       reviewSchedulerSettings={args.props.reviewSchedulerSettings ?? DEFAULT_REVIEW_SCHEDULER_SETTINGS}
       rightSlot={
-        args.props.isTrashViewOpen ? (
+        args.props.isFoliolePublishedContext && args.props.activeNodeId ? (
+          <FoliolePublishedHeaderActions nodeId={args.props.activeNodeId} />
+        ) : args.props.isTrashViewOpen ? (
           <TrashDocumentHeaderImportAction
             activeNodeId={args.props.activeNodeId}
             isTrashViewOpen={args.props.isTrashViewOpen}
@@ -98,7 +101,7 @@ export function renderDocumentPanelHeader(args: {
         ) : undefined
       }
       showDocumentControls
-      showPublishActions={Boolean(activeNode?.kind === 'topic' && !activeNode.anchorLink && !args.props.isTrashViewOpen)}
+      showPublishActions={Boolean(activeNode?.kind === 'topic' && !activeNode.anchorLink && !args.props.isTrashViewOpen && !args.props.isFoliolePublishedContext)}
       showSourceUpdateAction={args.showSourceUpdateAction}
     />
   );

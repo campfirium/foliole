@@ -18,6 +18,7 @@ import type {
   UpsertNodeSnapshotInput
 } from '../../lib/core/database/nodeMutations.js';
 import type { UpsertNodeSnapshotOptions } from '../../lib/core/database/nodeMutations.js';
+import { assertFoliolePublishedDeleteAllowed } from '../foliolePublish/foliolePublishManagement.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopDeviceId } from './deviceIdentity.js';
@@ -123,6 +124,7 @@ export function updateNodeAnchorLinks(inputs: UpdateNodeAnchorLinkInput[]): void
 }
 
 export function softDeleteNodes(input: SoftDeleteNodesInput): void {
+  assertFoliolePublishedDeleteAllowed(input.nodeIds);
   const connection = openDatabaseConnection();
   const deviceId = loadOrCreateDesktopDeviceId(input.deletedAt);
   for (const nodeId of input.nodeIds) {
@@ -165,6 +167,7 @@ export function restoreNodes(input: RestoreNodesInput): RestoreNodesResult {
 }
 
 export function deleteNodesPermanently(input: DeleteNodesPermanentlyInput): string[] {
+  assertFoliolePublishedDeleteAllowed(input.nodeIds);
   const connection = openDatabaseConnection();
   const deletedAt = new Date().toISOString();
   const deviceId = loadOrCreateDesktopDeviceId(deletedAt);

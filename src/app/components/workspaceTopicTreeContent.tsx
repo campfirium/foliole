@@ -16,6 +16,7 @@ export function renderWorkspaceTopicTreeBody(args: {
   collapsedNodeIds: ReadonlySet<string>;
   contextMenu: NodeListContextMenuController;
   drag: WorkspaceTopicTreeDragController;
+  emptyState?: { description: string; title: string };
   isManualSort: boolean;
   nodesById: WorkspaceListNodesById;
   onRenameNode: (nodeId: string, title: string) => void;
@@ -41,6 +42,7 @@ export function renderWorkspaceTopicTreeBody(args: {
     >
       <NodeListStateSurface
         className="flex min-h-full items-center justify-center px-3 py-6"
+        {...definedProps({ emptyState: args.emptyState })}
         hasRows={args.visibleRows.length > 0}
       >
         <WorkspaceTopicTreeRows

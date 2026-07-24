@@ -35,6 +35,7 @@ export interface WorkspaceTopicTreeProps {
   activeNodeId: string | null;
   childrenByParent?: TopicChildrenByParent;
   creationParentNodeId?: string;
+  emptyState?: { description: string; title: string };
   forceVisibleNodeId?: string | null;
   headerDescription?: string;
   itemIds: string[];
@@ -212,6 +213,7 @@ export const WorkspaceTopicTree = memo(function WorkspaceTopicTree(props: Worksp
     collapsibleNodeIds,
     collapsedNodeIds,
     contentSort,
+    ...definedProps({ emptyState: props.emptyState }),
     focusedNodeId,
     hasCollapsedNodes,
     ...definedProps({ headerDescription: props.headerDescription }),

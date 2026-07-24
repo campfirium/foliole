@@ -19,6 +19,7 @@ export function renderWorkspaceTopicTreeShell(args: {
   collapsibleNodeIds: string[];
   collapsedNodeIds: ReadonlySet<string>;
   contentSort: ReturnType<typeof useWorkspaceContentSort>;
+  emptyState?: { description: string; title: string };
   focusedNodeId: string | null;
   hasCollapsedNodes: boolean;
   headerDescription?: string;
@@ -57,6 +58,7 @@ export function renderWorkspaceTopicTreeShell(args: {
         collapsedNodeIds: args.collapsedNodeIds,
         contextMenu: args.interaction.contextMenu,
         drag: args.interaction.drag,
+        ...definedProps({ emptyState: args.emptyState }),
         isManualSort: args.contentSort.sort.key === 'manual',
         nodesById: args.nodesById,
         onRenameNode: args.interaction.updateNodeTitle,

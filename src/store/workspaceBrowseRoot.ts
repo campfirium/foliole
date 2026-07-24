@@ -1,12 +1,14 @@
 import type { Node } from '../features/nodes/model/nodeTypes';
 import {
   HOME_NODE_ID,
+  VIRTUAL_PUBLISHED_NODE_ID,
   VIRTUAL_REMOVED_NODE_ID,
   VIRTUAL_SHELVED_NODE_ID,
   isHomeNode
 } from '../features/nodes/model/specialNodes';
 
 const BUILT_IN_VIRTUAL_BROWSE_ROOT_IDS = new Set([
+  VIRTUAL_PUBLISHED_NODE_ID,
   VIRTUAL_REMOVED_NODE_ID,
   VIRTUAL_SHELVED_NODE_ID
 ]);

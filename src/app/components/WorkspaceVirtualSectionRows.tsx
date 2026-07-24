@@ -6,6 +6,7 @@ import { NodeTreeRow } from '../../features/nodes/components/NodeTreeRow';
 import { buildVisibleNodeTreeRows } from '../../features/nodes/model/nodeTree';
 import {
   VIRTUAL_REMOVED_NODE_ID,
+  VIRTUAL_PUBLISHED_NODE_ID,
   VIRTUAL_ROOT_NODE_ID,
   VIRTUAL_SHELVED_NODE_ID,
   isVirtualNode
@@ -88,7 +89,7 @@ function renderVirtualRow(args: Parameters<typeof renderVirtualRows>[0] & {
   const isSavedSearch = isVirtualNode(args.row.node);
   const virtualRow = renderMainVirtualRow({ ...args, isSavedSearch, isSelected, isVirtualRoot });
   return isVirtualRoot && !isVirtualRootCollapsed
-    ? [virtualRow, renderShelvedRow(args), renderRemovedRow(args)]
+    ? [virtualRow, renderPublishedRow(args), renderShelvedRow(args), renderRemovedRow(args)]
     : [virtualRow];
 }
 
@@ -145,6 +146,10 @@ function renderShelvedRow(args: Parameters<typeof renderVirtualRows>[0]) {
   return renderBuiltinVirtualRow({ ...args.props, label: 'Shelved', nodeId: VIRTUAL_SHELVED_NODE_ID, onRowKeyDown: args.onRowKeyDown, rowSpacing: args.rowSpacing });
 }
 
+function renderPublishedRow(args: Parameters<typeof renderVirtualRows>[0]) {
+  return renderBuiltinVirtualRow({ ...args.props, label: 'Published', nodeId: VIRTUAL_PUBLISHED_NODE_ID, onRowKeyDown: args.onRowKeyDown, rowSpacing: args.rowSpacing });
+}
+
 function renderRemovedRow(args: Parameters<typeof renderVirtualRows>[0]) {
   return renderBuiltinVirtualRow({ ...args.props, label: 'Removed', nodeId: VIRTUAL_REMOVED_NODE_ID, onRowKeyDown: args.onRowKeyDown, rowSpacing: args.rowSpacing });
 }
@@ -157,6 +162,7 @@ export function getVirtualKeyboardRows(
     row.node.id === VIRTUAL_ROOT_NODE_ID && !collapsedIds.has(VIRTUAL_ROOT_NODE_ID)
       ? [
           { ...row, hasChildren: true },
+          { depth: 1, hasChildren: false, id: VIRTUAL_PUBLISHED_NODE_ID },
           { depth: 1, hasChildren: false, id: VIRTUAL_SHELVED_NODE_ID },
           { depth: 1, hasChildren: false, id: VIRTUAL_REMOVED_NODE_ID }
         ]

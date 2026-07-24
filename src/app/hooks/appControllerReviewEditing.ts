@@ -1,4 +1,5 @@
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
+import { requestFoliolePublishedDelete } from '../../shared/platform/foliolePublishedManagement';
 
 import { resolveReviewDeleteTargetNodeId } from './appControllerPaletteReviewActions';
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
@@ -75,7 +76,7 @@ function useReviewEditingState(args: {
       if (!nodeId) {
         return false;
       }
-      args.ws.deleteNode(nodeId);
+      requestFoliolePublishedDelete({ nodeIds: [nodeId], onAllowed: () => args.ws.deleteNode(nodeId) });
       return true;
     },
     deleteReviewSourceTopic: args.onRequestDeleteSourceTopic,

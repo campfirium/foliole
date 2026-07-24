@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../../../shared/localization/testLocalization';
+import { subscribeOpenFoliolePublishedTopics } from '../../../../shared/platform/foliolePublishedNavigation';
 import { AppConfirmationProvider } from '../../../../shared/ui';
 
 import { FoliolePublishingSettings } from './FoliolePublishingSettings';
@@ -87,6 +88,17 @@ it('presents local and Web views of the generated static pages', async () => {
   await waitFor(() => expect(mocks.viewFoliolePublishSiteFromRuntime).toHaveBeenCalledOnce());
   fireEvent.click(screen.getByRole('button', { name: 'View Web' }));
   await waitFor(() => expect(openExternalUrl).toHaveBeenCalledWith('https://my-site.pages.dev'));
+});
+
+it('opens Published from the first static-pages management action', async () => {
+  const listener = vi.fn();
+  const unsubscribe = subscribeOpenFoliolePublishedTopics(listener);
+  renderSettings();
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Manage content' }));
+
+  expect(listener).toHaveBeenCalledOnce();
+  unsubscribe();
 });
 
 it('keeps Web actions disabled before hosting is connected', async () => {

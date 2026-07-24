@@ -93,12 +93,12 @@ it('paginates five Topics and keeps archive, taxonomy, and search on update orde
   const topics = Array.from({ length: 6 }, (_, index) => ({
     file: `Content/topic-${index}.md`, number: index + 1,
     published_at: `2025-01-0${index + 1}T00:00:00.000Z`,
-    source_key: `source-${index}`,
+    source_key: `source-${index}`, source_node_id: `node-${index}`, status: 'published' as const,
     title: `Topic ${index}`, updated_at: `2026-07-0${index + 1}T00:00:00.000Z`
   })).reverse();
   topics.forEach((topic) => writeFileAtomic(path.join(root, topic.file), `First segment ${topic.title}.\n\nSecond segment.`));
   writeFileAtomic(path.join(root, 'Content', 'private.md'), 'PRIVATE FIXTURE');
-  const index = { next_topic_number: 7, site: { title: 'Ordered' }, topics, version: 2 as const };
+  const index = { next_topic_number: 7, site: { title: 'Ordered' }, topics, version: 3 as const };
 
   const staged = stageFoliolePublishSite(root, index, '', new Map(topics.map((topic) => [topic.source_key, {
     content: `First segment ${topic.title}.\n\nSecond segment.`,
@@ -206,6 +206,26 @@ it('renders the poster-like empty publish state with text navigation', () => {
   expect(script).toContain("word + '...'");
   expect(script).toContain("matchMedia('(prefers-reduced-motion: reduce)')");
   expect(fs.readFileSync(path.join(root, 'Site', 'rss.xml'), 'utf8')).not.toContain('<item>');
+});
+
+it('omits unpublished Topics from every generated site surface', () => {
+  const root = temporaryRoot();
+  const first = upsertPublishedTopic(titledPublishIndex(), { nodeId: 'one', title: 'Keep' });
+  writeFileAtomic(path.join(root, first.topic.file), 'Keep body');
+  const second = upsertPublishedTopic(first.index, { nodeId: 'two', title: 'Withdrawn' });
+  writeFileAtomic(path.join(root, second.topic.file), 'Withdrawn body');
+  const index = {
+    ...second.index,
+    topics: second.index.topics.map((topic) => topic.source_node_id === 'two' ? { ...topic, status: 'unpublished' as const } : topic)
+  };
+
+  const entry = generateFoliolePublishSite(root, index, 'https://notes.example.com');
+  const site = path.dirname(entry);
+  expect(fs.readFileSync(entry, 'utf8')).not.toContain('Withdrawn');
+  expect(fs.readFileSync(path.join(site, 'archive', 'index.html'), 'utf8')).not.toContain('Withdrawn');
+  expect(fs.readFileSync(path.join(site, 'search-index.js'), 'utf8')).not.toContain('Withdrawn');
+  expect(fs.readFileSync(path.join(site, 'rss.xml'), 'utf8')).not.toContain('Withdrawn');
+  expect(fs.existsSync(path.join(site, 'topics', '2', 'index.html'))).toBe(false);
 });
 
 it('restores the exact active site when a staged activation rolls back', () => {

@@ -2,6 +2,7 @@ import { normalizeCloudflareProjectName } from '../../../../../lib/core/folioleP
 import type { NativeFoliolePublishSettings } from '../../../../../lib/platform/nativeFoliolePublishContract';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import { probeUrlWithLinkPanel } from '../../../../shared/platform/external/linkPanelUrlProbe';
+import { requestOpenFoliolePublishedTopics } from '../../../../shared/platform/foliolePublishedNavigation';
 import { connectFoliolePublishSettingsToRuntime, disconnectFoliolePublishSettingsFromRuntime, updateFoliolePublishSiteAddressInRuntime, viewFoliolePublishSiteFromRuntime } from '../../../../shared/platform/foliolePublishRepository';
 import { openExternalUrl } from '../../../../shared/platform/runtimeExternalNavigation';
 import { requestAppConfirmation } from '../../../../shared/ui';
@@ -159,6 +160,7 @@ export function useFoliolePublishingSettings() {
     canUpdateAddress: connected && !disabled && state.form.customDomain.trim() !== savedCustomDomain,
     canViewWeb: connected && !disabled && Boolean(state.settings?.site_address),
     connected, disabled, error: state.error, form: state.form, hasSavedToken, pagesUrl: state.settings?.pages_url ?? '',
+    manageContent: requestOpenFoliolePublishedTopics,
     saveDraft: () => void saveDraft(),
     siteAddress: state.settings?.site_address ?? '', status: state.status,
     ...connection, ...site, ...siteTitle, ...theme, updateForm

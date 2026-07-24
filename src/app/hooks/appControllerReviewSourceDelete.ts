@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { requestFoliolePublishedDelete } from '../../shared/platform/foliolePublishedManagement';
 
 interface ReviewSourceTopicDeleteWorkspace {
   deleteNode: (nodeId: string) => void;
@@ -35,7 +36,10 @@ export function useReviewSourceTopicDeleteDialog(ws: ReviewSourceTopicDeleteWork
     setTargetNodeId(null);
   }, [isTargetCurrent, targetNodeId, ws]);
   const requestDeleteSourceTopic = useCallback((nodeId: string) => {
-    setTargetNodeId((current) => current ?? nodeId);
+    requestFoliolePublishedDelete({
+      nodeIds: [nodeId],
+      onAllowed: () => setTargetNodeId((current) => current ?? nodeId)
+    });
     return true;
   }, []);
 

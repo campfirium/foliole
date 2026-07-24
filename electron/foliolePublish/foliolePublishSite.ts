@@ -25,7 +25,8 @@ function selectTopic(root: string, topic: FoliolePublishTopic, overrides: Publis
 function writeStagedSite(root: string, temporary: string, index: FoliolePublishIndex, siteAddress: string, overrides: PublishOverrides) {
   const theme = readFoliolePublishTheme(root);
   const publicAddress = siteAddress || 'https://example.pages.dev';
-  const selectedTopics = index.topics.map((topic) => ({ selected: selectTopic(root, topic, overrides), topic }));
+  const selectedTopics = index.topics.filter((topic) => topic.status === 'published')
+    .map((topic) => ({ selected: selectTopic(root, topic, overrides), topic }));
   writeFoliolePublishSite({
     index,
     publicAddress,

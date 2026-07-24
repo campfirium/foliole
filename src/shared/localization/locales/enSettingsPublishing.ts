@@ -6,6 +6,7 @@ export const EN_SETTINGS_PUBLISHING_TRANSLATIONS = {
   'settings.publishing.foliole.description': 'Turn selected material into static pages and publish them to the web through a third-party hosting service.',
   'settings.publishing.foliole.localPages.title': 'Static pages',
   'settings.publishing.foliole.localPages.description': 'Generated each time you run “Publish to the site” on material.',
+  'settings.publishing.foliole.localPages.manage': 'Manage content',
   'settings.publishing.foliole.localPages.viewLocal': 'View local',
   'settings.publishing.foliole.localPages.openingLocal': 'Opening...',
   'settings.publishing.foliole.localPages.viewWeb': 'View Web',

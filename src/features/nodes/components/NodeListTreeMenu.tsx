@@ -1,3 +1,4 @@
+import { requestFoliolePublishedDelete } from '../../../shared/platform/foliolePublishedManagement';
 import { mergeRuntimeReadwiseTopicHighlights } from '../../../shared/platform/readwiseTopicMerge';
 import { showAppRuntimeNotice } from '../../../shared/ui/AppRuntimeNotice';
 import { canNodeBeMoved } from '../model/nodeMovementRules';
@@ -184,10 +185,14 @@ function buildNodeListContextMenuProps(
       props.onCreateTopicFromClipboard?.(parentNodeId);
       props.contextMenu.closeContextMenu();
     },
-    onDeleteNode: () => (
-      props.deleteNodes(sortNodeIdsByVisibleOrder(menuState.contextTargets, props.state.noteRowIds)),
-      props.contextMenu.closeContextMenu()
-    ),
+    onDeleteNode: () => {
+      const nodeIds = sortNodeIdsByVisibleOrder(menuState.contextTargets, props.state.noteRowIds);
+      requestFoliolePublishedDelete({
+        nodeIds,
+        onAllowed: () => props.deleteNodes(nodeIds)
+      });
+      props.contextMenu.closeContextMenu();
+    },
     onDeleteNodePermanently: () => (props.deleteNodesPermanently(menuState.contextTargets), props.contextMenu.closeContextMenu()),
     onAddToVirtualFolder: () => (props.onAddToVirtualFolder?.(menuState.contextTargets), props.contextMenu.closeContextMenu()),
     onRemoveFromCurrentVirtualFolder: () => (props.onRemoveFromCurrentVirtualFolder?.(menuState.contextTargets), props.contextMenu.closeContextMenu()),

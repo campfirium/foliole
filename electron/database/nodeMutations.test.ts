@@ -7,6 +7,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let mockedAppDataDir = '/tmp/foliole-node-mutations-tests';
+const publishGuardMocks = vi.hoisted(() => ({ assertFoliolePublishedDeleteAllowed: vi.fn() }));
 
 vi.mock('../ipc/paths.js', () => ({
   resolveAppPaths: () => ({
@@ -16,6 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
     app_log_dir: path.join(mockedAppDataDir, 'logs')
   })
 }));
+vi.mock('../foliolePublish/foliolePublishManagement.js', () => publishGuardMocks);
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
@@ -43,6 +45,20 @@ beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-node-mutation-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabase();
+  publishGuardMocks.assertFoliolePublishedDeleteAllowed.mockReset();
+});
+
+it('blocks both Trash and permanent deletion before mutating a published Topic', () => {
+  seedNode('node-root', null, 0);
+  publishGuardMocks.assertFoliolePublishedDeleteAllowed.mockImplementation(() => {
+    throw new Error('Unpublish first.');
+  });
+
+  expect(() => softDeleteNodes({
+    nodeIds: ['node-root'], deletedAt: '2026-03-06T00:10:00.000Z'
+  })).toThrow('Unpublish first.');
+  expect(() => deleteNodesPermanently({ nodeIds: ['node-root'], nodeOrder: [] })).toThrow('Unpublish first.');
+  expect(getNodeRow('node-root')?.deleted_at).toBeNull();
 });
 
 afterEach(async () => {

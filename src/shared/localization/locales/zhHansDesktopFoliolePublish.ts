@@ -24,5 +24,18 @@ export const ZH_HANS_DESKTOP_FOLIOLE_PUBLISH_TRANSLATIONS = {
   'desktop.foliolePublish.openTopic': '打开主题',
   'desktop.foliolePublish.historyWarning': '发布成功，但未能保存最近使用的字段值。',
   'desktop.foliolePublish.localStateWarning': '远端已发布，但本地静态站点未能更新。Topic 发布关联已保存，可以再次发布重试。',
-  'desktop.foliolePublish.localSaveError': '发布成功，但 Foliole 未能保存 Topic 的发布关联。'
+  'desktop.foliolePublish.localSaveError': '发布成功，但 Foliole 未能保存 Topic 的发布关联。',
+  'desktop.foliolePublish.unpublish': '撤回',
+  'desktop.foliolePublish.unpublishing': '正在撤回…',
+  'desktop.foliolePublish.unpublishConfirm.title': '要撤回这个 Topic 吗？',
+  'desktop.foliolePublish.unpublishConfirm.description': '它的公开页面及站内入口会被移除，Topic 仍保留在 Foliole 中。',
+  'desktop.foliolePublish.publishedAction': '已发布',
+  'desktop.foliolePublish.delete.title': '这个 Topic 已发布',
+  'desktop.foliolePublish.delete.description': '要移到废纸篓，请先从站点撤回。',
+  'desktop.foliolePublish.delete.descriptionMany': '选中的 Topic 中有 {count} 个已经发布。请先从站点撤回，再将所选内容移到废纸篓。',
+  'desktop.foliolePublish.delete.confirm': '撤回并移到废纸篓',
+  'desktop.foliolePublish.delete.failed': '未能从站点撤回，Topic 仍保留在原处。',
+  'desktop.foliolePublish.migration.title': '要更新发布数据吗？',
+  'desktop.foliolePublish.migration.description': '打开“已发布”前，Foliole 需要更新现有发布记录，并会自动保留备份。',
+  'desktop.foliolePublish.migration.confirm': '更新并继续'
 } as const;

@@ -58,6 +58,29 @@ export interface NativeFoliolePublishResult {
   warning?: string;
 }
 
+export interface NativeFoliolePublishedTopic {
+  node_id: string | null;
+  number: number;
+  source_key: string;
+  source_state: 'active' | 'missing' | 'trash';
+  title: string;
+  updated_at: string;
+  url: string | null;
+}
+
+export type NativeFoliolePublishedTopicsResult =
+  | { status: 'migration_required'; topics: [] }
+  | { status: 'ready'; topics: NativeFoliolePublishedTopic[] };
+
+export type NativeFoliolePublishedDeleteInspection =
+  | { status: 'allowed' }
+  | { published_node_ids: string[]; source_keys: string[]; status: 'requires_unpublish' }
+  | { message: string; status: 'blocked_publish_state_error' };
+
+export type NativeFolioleUnpublishResult =
+  | { status: 'unpublished' }
+  | { status: 'deployed_local_unpublish_state_failed'; warning: string };
+
 export type NativeFoliolePublishCommandMap = {
   [NATIVE_COMMANDS.loadFoliolePublishSettings]: { args: undefined; result: NativeFoliolePublishSettings };
   [NATIVE_COMMANDS.loadFoliolePublishSiteTitle]: { args: undefined; result: { site_title: string } };
@@ -93,6 +116,19 @@ export type NativeFoliolePublishCommandMap = {
   [NATIVE_COMMANDS.publishFoliolePublishThemeChanges]: { args: undefined; result: { local_path: string } };
   [NATIVE_COMMANDS.previewFoliolePublishSite]: { args: undefined; result: NativeFoliolePublishResult };
   [NATIVE_COMMANDS.previewFoliolePublish]: { args: NativeFoliolePublishTopicArgs; result: NativeFoliolePublishResult };
+  [NATIVE_COMMANDS.loadFoliolePublishedTopics]: { args: undefined; result: NativeFoliolePublishedTopicsResult };
+  [NATIVE_COMMANDS.migrateFoliolePublishedTopics]: {
+    args: undefined;
+    result: NativeFoliolePublishedTopicsResult & { backup_path: string };
+  };
+  [NATIVE_COMMANDS.inspectFoliolePublishedDelete]: {
+    args: { node_ids: string[] };
+    result: NativeFoliolePublishedDeleteInspection;
+  };
+  [NATIVE_COMMANDS.unpublishFolioleTopics]: {
+    args: { source_keys: string[] };
+    result: NativeFolioleUnpublishResult;
+  };
   [NATIVE_COMMANDS.publishTopicToFoliole]: {
     args: NativeFoliolePublishTopicArgs;
     result: NativeFoliolePublishResult;

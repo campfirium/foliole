@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import {
   VIRTUAL_REMOVED_NODE_ID,
+  VIRTUAL_PUBLISHED_NODE_ID,
   VIRTUAL_ROOT_NODE_ID,
   VIRTUAL_SHELVED_NODE_ID
 } from '../../features/nodes/model/specialNodes';
@@ -17,6 +18,7 @@ function isVirtualBrowseRoot(args: Pick<VirtualNodeViewArgs, 'browseRootNodeId' 
   return args.browseRootSpecialKind === 'virtual' ||
     args.browseRootSpecialKind === 'virtual-root' ||
     args.browseRootNodeId === VIRTUAL_REMOVED_NODE_ID ||
+    args.browseRootNodeId === VIRTUAL_PUBLISHED_NODE_ID ||
     args.browseRootNodeId === VIRTUAL_SHELVED_NODE_ID;
 }
 

@@ -40,9 +40,16 @@ const folioleMocks = vi.hoisted(() => ({
   useFoliolePublishTheme: vi.fn(),
   viewFoliolePublishSite: vi.fn()
 }));
+const folioleManagementMocks = vi.hoisted(() => ({
+  inspectFoliolePublishedDelete: vi.fn(),
+  loadFoliolePublishedTopics: vi.fn(),
+  migrateFoliolePublishedTopics: vi.fn(),
+  unpublishFolioleTopics: vi.fn()
+}));
 
 vi.mock('../discourse/discoursePublish.js', () => discourseMocks);
 vi.mock('../foliolePublish/foliolePublish.js', () => folioleMocks);
+vi.mock('../foliolePublish/foliolePublishManagement.js', () => folioleManagementMocks);
 vi.mock('../wordpress/wordpressPublish.js', () => wordpressMocks);
 
 import { handlePublishingStorageCommand } from './storagePublishingCommands.js';
@@ -50,7 +57,24 @@ import { handlePublishingStorageCommand } from './storagePublishingCommands.js';
 beforeEach(() => {
   Object.values(discourseMocks).forEach((mock) => mock.mockReset());
   Object.values(folioleMocks).forEach((mock) => mock.mockReset());
+  Object.values(folioleManagementMocks).forEach((mock) => mock.mockReset());
   Object.values(wordpressMocks).forEach((mock) => mock.mockReset());
+});
+
+it('routes published-topic inspection and unpublish through the main-process service', async () => {
+  folioleManagementMocks.inspectFoliolePublishedDelete.mockReturnValue({
+    published_node_ids: ['topic-1'], source_keys: ['node:topic-1'], status: 'requires_unpublish'
+  });
+  folioleManagementMocks.unpublishFolioleTopics.mockResolvedValue({ status: 'unpublished' });
+
+  await expect(handlePublishingStorageCommand(NATIVE_COMMANDS.inspectFoliolePublishedDelete, {
+    node_ids: ['topic-1']
+  })).resolves.toMatchObject({ status: 'requires_unpublish' });
+  await expect(handlePublishingStorageCommand(NATIVE_COMMANDS.unpublishFolioleTopics, {
+    source_keys: ['node:topic-1']
+  })).resolves.toEqual({ status: 'unpublished' });
+  expect(folioleManagementMocks.inspectFoliolePublishedDelete).toHaveBeenCalledWith(['topic-1']);
+  expect(folioleManagementMocks.unpublishFolioleTopics).toHaveBeenCalledWith(['node:topic-1']);
 });
 
 it('keeps the Cloudflare API token inside the main-process connection boundary', async () => {
@@ -95,8 +119,11 @@ it('routes Foliole site title reads and writes through the narrow contract', asy
 
 it('updates the public address without accepting a renderer credential', async () => {
   folioleMocks.updateFoliolePublishSiteAddress.mockResolvedValue({
-    account_id: 'account', has_credentials: true, pages_url: 'https://foliole.pages.dev',
-    project_name: 'foliole', site_address: 'https://notes.example.com', updated_at: '2026-07-19T00:00:00.000Z'
+    settings: {
+      account_id: 'account', has_credentials: true, pages_url: 'https://foliole.pages.dev',
+      project_name: 'foliole', site_address: 'https://notes.example.com', updated_at: '2026-07-19T00:00:00.000Z'
+    },
+    updatedNodeIds: []
   });
   const result = await handlePublishingStorageCommand(NATIVE_COMMANDS.updateFoliolePublishSiteAddress, {
     api_token: 'SENTINEL-MUST-BE-IGNORED', site_address: 'https://notes.example.com'

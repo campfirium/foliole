@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 
 import type { Node } from '../features/nodes/model/nodeTypes';
-import { HOME_NODE_ID, VIRTUAL_REMOVED_NODE_ID } from '../features/nodes/model/specialNodes';
+import { HOME_NODE_ID, VIRTUAL_PUBLISHED_NODE_ID, VIRTUAL_REMOVED_NODE_ID } from '../features/nodes/model/specialNodes';
 
 import { resolveWorkspaceBrowseRootForTarget, resolveWorkspaceBrowseRootNodeId } from './workspaceBrowseRoot';
 
@@ -53,6 +53,8 @@ it('keeps visible folders and built-in virtual ranges as browse roots', () => {
     .toBe('folder-a');
   expect(resolveWorkspaceBrowseRootNodeId({ browseRootNodeId: VIRTUAL_REMOVED_NODE_ID, nodesById, trashedNodeIds: [] }))
     .toBe(VIRTUAL_REMOVED_NODE_ID);
+  expect(resolveWorkspaceBrowseRootNodeId({ browseRootNodeId: VIRTUAL_PUBLISHED_NODE_ID, nodesById, trashedNodeIds: [] }))
+    .toBe(VIRTUAL_PUBLISHED_NODE_ID);
 });
 
 it('returns Home when a saved browse root is missing or trashed', () => {

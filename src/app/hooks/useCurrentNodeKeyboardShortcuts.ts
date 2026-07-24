@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type MutableRefObject } from 'react';
 
 import { isProtectedRootNode } from '../../features/nodes/model/specialNodes';
+import { requestFoliolePublishedDelete } from '../../shared/platform/foliolePublishedManagement';
 import { onNativeEditingEscape, onWindowEscape, onWindowKeydown } from '../../shared/platform/keyboard';
 
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
@@ -151,7 +152,7 @@ function useCurrentNodeDeleteShortcut(
         return;
       }
       event.preventDefault();
-      args.ws.deleteNode(nodeId);
+      requestFoliolePublishedDelete({ nodeIds: [nodeId], onAllowed: () => args.ws.deleteNode(nodeId) });
     });
   }, [args.ws, blocked, isEditing]);
 }

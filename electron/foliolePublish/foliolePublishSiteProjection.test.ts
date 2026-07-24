@@ -11,7 +11,7 @@ import {
 } from './foliolePublishSiteProjection.js';
 
 function topic(number: number, updatedAt: string, publishedAt = updatedAt): FoliolePublishTopic {
-  return { file: `Content/${number}.md`, number, published_at: publishedAt, source_key: `source-${number}`, title: `Topic ${number}`, updated_at: updatedAt };
+  return { file: `Content/${number}.md`, number, published_at: publishedAt, source_key: `source-${number}`, source_node_id: `node-${number}`, status: 'published', title: `Topic ${number}`, updated_at: updatedAt };
 }
 
 it('keeps equal update timestamps stable and projects a complete first content block', () => {

@@ -46,6 +46,7 @@ export function VirtualResultListPanel(props: VirtualResultListPanelProps) {
     <WorkspaceTopicTree
       activeFolderId={virtualFolderId}
       activeNodeId={props.activeNodeId}
+      {...(props.emptyState ? { emptyState: props.emptyState } : {})}
       itemIds={nodeIds}
       nodesById={toWorkspaceListNodesById(props.nodesById)}
       onOpenMoveToNode={() => undefined}

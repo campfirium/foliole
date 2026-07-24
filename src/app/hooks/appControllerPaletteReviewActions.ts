@@ -4,6 +4,7 @@ import {
   resolveReviewSiblingNodeId,
   resolveReviewSourceTopicNodeId
 } from '../../features/review/model/reviewGameNavigation';
+import { requestFoliolePublishedDelete } from '../../shared/platform/foliolePublishedManagement';
 import { getDemoRuntimeNowIso } from '../../shared/platform/runtime/demoRuntime';
 
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
@@ -26,7 +27,7 @@ function createDeleteCurrentReviewItemCommand(args: {
     if (!nodeId) {
       return false;
     }
-    args.ws.deleteNode(nodeId);
+    requestFoliolePublishedDelete({ nodeIds: [nodeId], onAllowed: () => args.ws.deleteNode(nodeId) });
     return true;
   };
 }

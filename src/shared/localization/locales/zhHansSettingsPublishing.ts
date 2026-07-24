@@ -8,6 +8,7 @@ export const ZH_HANS_SETTINGS_PUBLISHING_TRANSLATIONS: Partial<Record<Translatio
   'settings.publishing.foliole.description': '将选中的材料转换为静态页面，并通过第三方托管服务发布到 Web。',
   'settings.publishing.foliole.localPages.title': '静态页面',
   'settings.publishing.foliole.localPages.description': '每次对材料执行“Publish to the site”命令时生成。',
+  'settings.publishing.foliole.localPages.manage': '管理内容',
   'settings.publishing.foliole.localPages.viewLocal': '查看本地',
   'settings.publishing.foliole.localPages.openingLocal': '正在打开...',
   'settings.publishing.foliole.localPages.viewWeb': '查看 Web',

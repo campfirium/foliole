@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { canNodeBeMoved } from '../../features/nodes/model/nodeMovementRules';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type { TranslationKey } from '../../shared/localization/translations';
+import { requestFoliolePublishedDelete } from '../../shared/platform/foliolePublishedManagement';
 import {
   AppButton,
   AppDialog,
@@ -54,6 +55,16 @@ function formatTopicCount(count: number, t: TranslationFn) {
   return t(key, { count });
 }
 
+function requestCurrentViewDelete(
+  topicSnapshots: CurrentViewTopicSnapshot[],
+  onAllowed: () => void
+) {
+  requestFoliolePublishedDelete({
+    nodeIds: topicSnapshots.map((topic) => topic.id),
+    onAllowed
+  });
+}
+
 export function WorkspaceTopicTreeCurrentViewActions({
   deleteNodes,
   nodesById,
@@ -91,7 +102,11 @@ export function WorkspaceTopicTreeCurrentViewActions({
             <FolderInput size={15} strokeWidth={1.8} />
             <span>{t('desktop.currentView.move')}</span>
           </AppDropdownMenuItem>
-          <AppDropdownMenuItem className="gap-2" disabled={!hasTopics} onSelect={() => setDeleteSnapshot(topicSnapshots)}>
+          <AppDropdownMenuItem
+            className="gap-2"
+            disabled={!hasTopics}
+            onSelect={() => requestCurrentViewDelete(topicSnapshots, () => setDeleteSnapshot(topicSnapshots))}
+          >
             <Trash2 size={15} strokeWidth={1.8} />
             <span>{t('desktop.currentView.delete')}</span>
           </AppDropdownMenuItem>

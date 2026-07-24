@@ -19,6 +19,7 @@ export interface DocumentPanelSectionProps {
   activeNodeId: string | null;
   isWorkspaceHydrated?: boolean;
   isTrashViewOpen?: boolean;
+  isFoliolePublishedContext?: boolean;
   editableNodeId: string | null;
   canGoBack: boolean;
   canGoForward: boolean;

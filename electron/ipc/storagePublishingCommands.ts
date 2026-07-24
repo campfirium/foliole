@@ -30,6 +30,12 @@ import {
   viewFoliolePublishSite
 } from '../foliolePublish/foliolePublish.js';
 import {
+  inspectFoliolePublishedDelete,
+  loadFoliolePublishedTopics,
+  migrateFoliolePublishedTopics,
+  unpublishFolioleTopics
+} from '../foliolePublish/foliolePublishManagement.js';
+import {
   connectWordPressPublishSettings,
   disconnectWordPressPublishSettings,
   loadWordPressPublishCatalog,
@@ -38,6 +44,7 @@ import {
   saveWordPressPublishDraft
 } from '../wordpress/wordpressPublish.js';
 
+import { asStringArray } from './commandParsers.js';
 import { readSettingsObject } from './storageCommandSupport.js';
 
 function handleFoliolePublishingCommand(command: string, args: Record<string, unknown>) {
@@ -57,7 +64,7 @@ function handleFoliolePublishingCommand(command: string, args: Record<string, un
     );
   }
   if (command === NATIVE_COMMANDS.updateFoliolePublishSiteAddress) {
-    return updateFoliolePublishSiteAddress(String(args.site_address ?? ''));
+    return updateFoliolePublishSiteAddress(String(args.site_address ?? '')).then((result) => result.settings);
   }
   if (command === NATIVE_COMMANDS.disconnectFoliolePublishSettings) return disconnectFoliolePublishSettings();
   if (command === NATIVE_COMMANDS.forgetFoliolePublishField) return forgetFoliolePublishField(String(args.key ?? ''));
@@ -68,6 +75,14 @@ function handleFoliolePublishingCommand(command: string, args: Record<string, un
   if (command === NATIVE_COMMANDS.updateFoliolePublishLocalPages) return updateFoliolePublishLocalPages();
   if (command === NATIVE_COMMANDS.publishFoliolePublishThemeChanges) return publishFoliolePublishThemeChanges();
   if (command === NATIVE_COMMANDS.previewFoliolePublishSite) return viewFoliolePublishSite();
+  if (command === NATIVE_COMMANDS.loadFoliolePublishedTopics) return loadFoliolePublishedTopics();
+  if (command === NATIVE_COMMANDS.migrateFoliolePublishedTopics) return migrateFoliolePublishedTopics();
+  if (command === NATIVE_COMMANDS.inspectFoliolePublishedDelete) {
+    return inspectFoliolePublishedDelete(asStringArray(args.node_ids, 'node_ids'));
+  }
+  if (command === NATIVE_COMMANDS.unpublishFolioleTopics) {
+    return unpublishFolioleTopics(asStringArray(args.source_keys, 'source_keys'));
+  }
   if (command === NATIVE_COMMANDS.previewFoliolePublish) {
     return previewFoliolePublish(readSettingsObject(args) as unknown as Parameters<typeof previewFoliolePublish>[0]);
   }

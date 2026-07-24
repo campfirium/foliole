@@ -26,6 +26,9 @@ function StaticPagesActions({ state }: { state: FoliolePublishingSettingsState }
   const t = useTranslation();
   return (
     <SettingsControlSlot className="gap-2">
+      <AppButton disabled={state.disabled} onClick={state.manageContent}>
+        {t('settings.publishing.foliole.localPages.manage')}
+      </AppButton>
       <AppButton disabled={state.disabled && state.status !== 'viewingLocal'} loading={state.status === 'viewingLocal'} loadingLabel={t('settings.publishing.foliole.localPages.openingLocal')} onClick={state.viewLocal}>
         {t('settings.publishing.foliole.localPages.viewLocal')}
       </AppButton>

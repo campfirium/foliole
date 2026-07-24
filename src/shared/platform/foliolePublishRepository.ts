@@ -51,6 +51,28 @@ export function publishTopicToFoliole(args: NativeFoliolePublishTopicArgs) {
   return requireRuntime()(NATIVE_COMMANDS.publishTopicToFoliole, args);
 }
 
+export function loadFoliolePublishedTopicsFromRuntime() {
+  const invoke = getRuntimeInvoke();
+  return invoke
+    ? invoke(NATIVE_COMMANDS.loadFoliolePublishedTopics)
+    : Promise.resolve({ status: 'ready' as const, topics: [] });
+}
+
+export function migrateFoliolePublishedTopicsFromRuntime() {
+  return requireRuntime()(NATIVE_COMMANDS.migrateFoliolePublishedTopics);
+}
+
+export function inspectFoliolePublishedDeleteFromRuntime(nodeIds: string[]) {
+  const invoke = getRuntimeInvoke();
+  return invoke
+    ? invoke(NATIVE_COMMANDS.inspectFoliolePublishedDelete, { node_ids: nodeIds })
+    : Promise.resolve({ status: 'allowed' as const });
+}
+
+export function unpublishFolioleTopicsFromRuntime(sourceKeys: string[]) {
+  return requireRuntime()(NATIVE_COMMANDS.unpublishFolioleTopics, { source_keys: sourceKeys });
+}
+
 export function forgetFoliolePublishFieldFromRuntime(key: string) {
   return requireRuntime()(NATIVE_COMMANDS.forgetFoliolePublishField, { key });
 }

@@ -4,6 +4,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { createCollectionVirtualNodeFilter } from '../../../lib/core/nodes/virtualNodeFilter';
 import {
   VIRTUAL_REMOVED_NODE_ID,
+  VIRTUAL_PUBLISHED_NODE_ID,
   VIRTUAL_ROOT_NODE_ID,
   VIRTUAL_SHELVED_NODE_ID
 } from '../../features/nodes/model/specialNodes';
@@ -76,6 +77,8 @@ it('moves from the virtual root through built-in virtual rows with arrow keys', 
 
   expect(screen.getByRole('treeitem', { name: 'Shelved' }).querySelector('[data-node-tree-chevron-placeholder="true"]')).toBeNull();
   expect(screen.getByRole('treeitem', { name: 'Removed' }).querySelector('[data-node-tree-chevron-placeholder="true"]')).toBeNull();
+  expect(onOpenVirtualView).toHaveBeenCalledWith(VIRTUAL_PUBLISHED_NODE_ID);
+  fireEvent.keyDown(screen.getByRole('treeitem', { name: 'Published' }), { key: 'ArrowDown' });
   expect(onOpenVirtualView).toHaveBeenCalledWith(VIRTUAL_SHELVED_NODE_ID);
   fireEvent.keyDown(screen.getByRole('treeitem', { name: 'Shelved' }), { key: 'ArrowDown' });
   expect(onOpenVirtualView).toHaveBeenCalledWith(VIRTUAL_REMOVED_NODE_ID);

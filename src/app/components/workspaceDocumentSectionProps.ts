@@ -1,3 +1,4 @@
+import { VIRTUAL_PUBLISHED_NODE_ID } from '../../features/nodes/model/specialNodes';
 import { definedProps } from '../../shared/lib/definedProps';
 
 import type { DocumentPanelSectionProps } from './documentPanelSectionTypes';
@@ -97,6 +98,7 @@ export function buildDocumentSectionProps(
   const editorState = resolveDocumentEditorState(documentNodeId, props);
   return {
     activeNodeId: documentNodeId,
+    isFoliolePublishedContext: props.isVirtualViewOpen && props.activeVirtualNodeId === VIRTUAL_PUBLISHED_NODE_ID,
     isTrashViewOpen: props.isTrashViewOpen,
     canGoBack: props.canGoBack,
     canGoForward: props.canGoForward,

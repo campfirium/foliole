@@ -9,6 +9,7 @@ import type { NativeFoliolePublishConnectInput, NativeFoliolePublishTopicArgs } 
 import { loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
 
 import { deleteCloudflarePagesProject, deployCloudflarePages, normalizeSiteAddress, resolveCloudflarePagesProject } from './cloudflarePagesClient.js';
+import { commitFoliolePublishAddressUpdate } from './foliolePublishAddressUpdate.js';
 import { commitPublishedTopic } from './foliolePublishCommit.js';
 import {
   readFoliolePublishSiteTitle as readSiteTitle,
@@ -16,7 +17,7 @@ import {
   saveFoliolePublishSiteTitle as writeSiteTitle,
   upsertPublishedTopic
 } from './foliolePublishModel.js';
-import { clearFoliolePublishSettings, forgetFoliolePublishField, loadFoliolePublishSettings, loadFoliolePublishToken, loadStoredFoliolePublishSettings, recordFoliolePublishFields, resetFoliolePublishFieldHistory, saveFoliolePublishConnection, saveFoliolePublishDraft, saveFoliolePublishSiteAddress } from './foliolePublishSettings.js';
+import { clearFoliolePublishSettings, forgetFoliolePublishField, loadFoliolePublishSettings, loadFoliolePublishToken, loadStoredFoliolePublishSettings, recordFoliolePublishFields, resetFoliolePublishFieldHistory, saveFoliolePublishConnection, saveFoliolePublishDraft } from './foliolePublishSettings.js';
 import { activateFoliolePublishSite, discardStagedFoliolePublishSite, generateFoliolePublishSite, stageFoliolePublishSite } from './foliolePublishSite.js';
 import {
   loadFoliolePublishTheme as readFoliolePublishThemeStatus,
@@ -111,7 +112,9 @@ export async function updateFoliolePublishSiteAddress(siteAddress: string) {
   const staged = await deployStagedSite({
     accountId: settings.account_id, projectName: settings.project_name, siteAddress: nextAddress, token
   });
-  return commitStagedSite(staged, () => saveFoliolePublishSiteAddress(nextAddress));
+  try {
+    return commitFoliolePublishAddressUpdate({ index: readTitledPublishIndex(), root: root(), siteAddress: nextAddress, staged });
+  } finally { discardStagedFoliolePublishSite(staged); }
 }
 
 export async function previewFoliolePublish(args: NativeFoliolePublishTopicArgs) {

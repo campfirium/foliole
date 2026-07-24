@@ -2,6 +2,7 @@ import { isManualVirtualNodeFilter } from '../../../lib/core/nodes/virtualNodeFi
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import {
   VIRTUAL_REMOVED_NODE_ID,
+  VIRTUAL_PUBLISHED_NODE_ID,
   VIRTUAL_ROOT_NODE_ID,
   VIRTUAL_SHELVED_NODE_ID,
   isVirtualNode
@@ -9,6 +10,7 @@ import {
 import { buildVirtualNodeResultIndex, getVirtualNodePrimaryKeyword } from '../../features/nodes/model/virtualNodeDetail';
 import type { Translate } from '../../shared/localization/LocalizationProvider';
 
+import { PublishedVirtualDocumentSurface } from './PublishedVirtualDocumentSurface';
 import { VirtualResultListPanel } from './VirtualResultListPanel';
 import type { WorkspaceDualListContentProps } from './WorkspaceDualListContent';
 import { resolveVirtualContentItemIds } from './workspaceVirtualContentModel';
@@ -47,6 +49,18 @@ function resolveVirtualHeader(args: {
   };
 }
 
+function renderPublishedContentColumn(props: WorkspaceDualListContentProps) {
+  return (
+    <PublishedVirtualDocumentSurface
+      activeNodeId={props.activeNodeId}
+      nodeOrder={props.nodeOrder}
+      nodesById={props.nodesById}
+      onSelectNode={props.onSelectNodeInVirtualView}
+      trashedNodeIds={props.trashedNodeIds}
+    />
+  );
+}
+
 export function renderVirtualContentColumn(
   props: WorkspaceDualListContentProps,
   virtualResultIndex: ReturnType<typeof buildVirtualNodeResultIndex>,
@@ -55,6 +69,9 @@ export function renderVirtualContentColumn(
   const activeVirtualNodeId = props.activeVirtualNodeId ?? VIRTUAL_ROOT_NODE_ID;
   if (activeVirtualNodeId === VIRTUAL_ROOT_NODE_ID) {
     return <div aria-label={t('desktop.workspace.currentFolderContents')} className="flex min-h-0 min-w-0 flex-1" />;
+  }
+  if (activeVirtualNodeId === VIRTUAL_PUBLISHED_NODE_ID) {
+    return renderPublishedContentColumn(props);
   }
   const activeVirtualNode = props.nodesById[activeVirtualNodeId];
   const preservesCollectionOrder = Boolean(
