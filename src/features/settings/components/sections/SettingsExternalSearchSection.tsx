@@ -26,9 +26,52 @@ interface SettingsExternalSearchSectionProps {
   onRebuildIndex: (folderId?: string) => void;
   onRemoveFolder: (folderId: string) => void;
   onRetryLoad: () => void;
-  onSetFolderEnabled?: (folderId: string, enabled: boolean) => void;
+  onSetFolderEnabled?: (folderId: string | string[], enabled: boolean) => void;
   onUpdateFolder: (folderId: string, patch: ExternalSourceSettingsFolderPatch) => void;
   previewDesktopSettings?: boolean;
+}
+
+function LocalExternalFolders(props: {
+  folders: ExternalSourceSettingsFolder[];
+  settings: SettingsExternalSearchSectionProps;
+}) {
+  const t = useTranslation();
+  return (
+    <SettingsSection
+      ariaLabel={t('settings.externalSources.sectionAria')}
+      description={t('settings.externalSources.description')}
+      title={t('settings.externalSources.title')}
+    >
+      <div className="min-w-0 overflow-hidden">
+        <ExternalLibraryTable
+          folders={props.folders}
+          isDesktopRuntime={props.settings.isDesktopRuntime || Boolean(props.settings.previewDesktopSettings)}
+          isSaving={props.settings.isSaving}
+          onAddFolder={props.settings.onAddFolder}
+        >
+          {props.folders.map((folder) => (
+            <ExternalLibraryRow
+              folder={folder}
+              isSaving={props.settings.isSaving}
+              key={folder.id}
+              onChooseAttachmentRoot={props.settings.onChooseAttachmentRoot}
+              onChooseFolder={props.settings.onChooseFolder}
+              onRebuildIndex={props.settings.onRebuildIndex}
+              onRemoveFolder={props.settings.onRemoveFolder}
+              onUpdateFolder={props.settings.onUpdateFolder}
+            />
+          ))}
+        </ExternalLibraryTable>
+      </div>
+      {props.settings.error ? (
+        <SettingsErrorState
+          action={<SettingsStateAction label={t('settings.externalSources.retry')} onClick={props.settings.onRetryLoad} />}
+          description={props.settings.error}
+          title={t('settings.externalSources.unavailable')}
+        />
+      ) : null}
+    </SettingsSection>
+  );
 }
 
 export function SettingsExternalSearchSection(props: SettingsExternalSearchSectionProps) {
@@ -49,45 +92,15 @@ export function SettingsExternalSearchSection(props: SettingsExternalSearchSecti
   }
 
   return (
-    <SettingsSection
-      ariaLabel={t('settings.externalSources.sectionAria')}
-      description={t('settings.externalSources.description')}
-      title={t('settings.externalSources.title')}
-    >
-      <div className="min-w-0 overflow-hidden">
-        {remoteFolders.length > 0 ? (
-          <SettingsRemoteExternalFolderRows
-            folders={remoteFolders}
-            onSetEnabled={props.onSetFolderEnabled ?? (() => undefined)}
-          />
-        ) : null}
-        <ExternalLibraryTable
-          folders={localFolders}
-          isDesktopRuntime={props.isDesktopRuntime || Boolean(props.previewDesktopSettings)}
+    <>
+      {remoteFolders.length > 0 ? (
+        <SettingsRemoteExternalFolderRows
+          folders={remoteFolders}
           isSaving={props.isSaving}
-          onAddFolder={props.onAddFolder}
-        >
-          {localFolders.map((folder) => (
-            <ExternalLibraryRow
-              folder={folder}
-              isSaving={props.isSaving}
-              key={folder.id}
-              onChooseAttachmentRoot={props.onChooseAttachmentRoot}
-              onChooseFolder={props.onChooseFolder}
-              onRebuildIndex={props.onRebuildIndex}
-              onRemoveFolder={props.onRemoveFolder}
-              onUpdateFolder={props.onUpdateFolder}
-            />
-          ))}
-        </ExternalLibraryTable>
-      </div>
-      {props.error ? (
-        <SettingsErrorState
-          action={<SettingsStateAction label={t('settings.externalSources.retry')} onClick={props.onRetryLoad} />}
-          description={props.error}
-          title={t('settings.externalSources.unavailable')}
+          onSetEnabled={props.onSetFolderEnabled ?? (() => undefined)}
         />
       ) : null}
-    </SettingsSection>
+      <LocalExternalFolders folders={localFolders} settings={props} />
+    </>
   );
 }

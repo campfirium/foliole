@@ -1,4 +1,5 @@
 import { getExternalFolderRuntimeProvider } from './externalFolderRuntime';
+import { isManagedExternalLibraryFolder } from './externalLibraryBrowseModel';
 import {
   loadRuntimeExternalSearchFolders,
   rebuildRuntimeExternalSearchIndex,
@@ -16,6 +17,10 @@ export type ExternalSourceSettingsFolderPatch = Partial<
 
 let externalSourceSettingsFoldersCache: ExternalSourceSettingsFolder[] | null | undefined;
 let externalSourceSettingsFoldersLoadPromise: Promise<ExternalSourceSettingsFolder[] | null> | null = null;
+
+function configuredExternalFolders(folders: ExternalSourceSettingsFolder[] | null) {
+  return folders?.filter((folder) => !isManagedExternalLibraryFolder(folder)) ?? null;
+}
 
 export function resetExternalSourceSettingsFoldersCacheForTest() {
   externalSourceSettingsFoldersCache = undefined;
@@ -49,8 +54,9 @@ export function loadExternalSourceSettingsFolders() {
   externalSourceSettingsFoldersLoadPromise = getExternalFolderRuntimeProvider().loadFolders().then((providerFolders) =>
     providerFolders ?? loadRuntimeExternalSearchFolders()
   ).then((folders) => {
-    externalSourceSettingsFoldersCache = folders;
-    return folders;
+    const configuredFolders = configuredExternalFolders(folders);
+    externalSourceSettingsFoldersCache = configuredFolders;
+    return configuredFolders;
   }).finally(() => {
     externalSourceSettingsFoldersLoadPromise = null;
   });
@@ -61,24 +67,40 @@ export function saveExternalSourceSettingsFolders(folders: ExternalSourceSetting
   return getExternalFolderRuntimeProvider().saveFolders(folders).then((providerSaved) =>
     providerSaved ?? saveRuntimeExternalSearchFolders(folders)
   ).then((saved) => {
-    externalSourceSettingsFoldersCache = saved;
-    return saved;
+    const configuredFolders = configuredExternalFolders(saved);
+    externalSourceSettingsFoldersCache = configuredFolders;
+    return configuredFolders;
   });
 }
 
 export function setExternalSourceSettingsFolderEnabled(folderId: string, enabled: boolean) {
   return setRuntimeExternalSearchFolderEnabled(folderId, enabled).then((folders) => {
-    externalSourceSettingsFoldersCache = folders;
-    return folders;
+    const configuredFolders = configuredExternalFolders(folders);
+    externalSourceSettingsFoldersCache = configuredFolders;
+    return configuredFolders;
   });
+}
+
+export async function setExternalSourceSettingsFoldersEnabled(folderIds: string[], enabled: boolean) {
+  let folders = externalSourceSettingsFoldersCache ?? null;
+  for (const folderId of folderIds) {
+    try {
+      const next = await setExternalSourceSettingsFolderEnabled(folderId, enabled);
+      if (next) folders = next;
+    } catch (error) {
+      return { error, folders };
+    }
+  }
+  return { error: null, folders };
 }
 
 export function rebuildExternalSourceSettingsIndex(folderId?: string) {
   return getExternalFolderRuntimeProvider().rebuildIndex(folderId).then((providerFolders) =>
     providerFolders ?? rebuildRuntimeExternalSearchIndex(folderId)
   ).then((folders) => {
-    externalSourceSettingsFoldersCache = folders;
-    return folders;
+    const configuredFolders = configuredExternalFolders(folders);
+    externalSourceSettingsFoldersCache = configuredFolders;
+    return configuredFolders;
   });
 }
 

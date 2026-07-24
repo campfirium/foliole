@@ -87,6 +87,11 @@ export function isReadwiseExternalFolder(folder: Pick<ExternalLibraryFolder, 'id
   return Object.prototype.hasOwnProperty.call(READWISE_EXTERNAL_FOLDER_LABELS, folder.id);
 }
 
+export function isManagedExternalLibraryFolder(folder: Pick<ExternalLibraryFolder, 'id'>) {
+  return Object.prototype.hasOwnProperty.call(OPENED_EXTERNAL_FOLDER_LABELS, folder.id) ||
+    isReadwiseExternalFolder(folder);
+}
+
 export function resolveExternalFolderDisplayLabel(folder: Pick<ExternalLibraryFolder, 'folderPath' | 'id'>) {
   return OPENED_EXTERNAL_FOLDER_LABELS[folder.id] ?? READWISE_EXTERNAL_FOLDER_LABELS[folder.id] ?? resolveExternalFolderLabel(folder.folderPath);
 }

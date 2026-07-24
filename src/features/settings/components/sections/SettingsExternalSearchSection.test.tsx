@@ -3,6 +3,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../../shared/config/appSettings';
 import { renderWithLocalization } from '../../../../shared/localization/testLocalization';
+import type { ExternalSourceSettingsFolder } from '../../../../shared/platform/externalSourceSettingsRepository';
 
 import { SettingsExternalSearchSection } from './SettingsExternalSearchSection';
 
@@ -23,13 +24,8 @@ const baseProps = {
   onUpdateFolder: vi.fn()
 };
 
-beforeEach(() => {
-  window.localStorage.clear();
-  vi.clearAllMocks();
-});
-
-it('shows remote mirrors only when a remote desktop folder exists', () => {
-  renderWithLocalization(<SettingsExternalSearchSection {...baseProps} folders={[{
+function remoteFolder(overrides: Partial<ExternalSourceSettingsFolder> = {}): ExternalSourceSettingsFolder {
+  return {
     accessMode: 'remote_mirror',
     attachmentMode: 'document_relative_first_then_fixed_root',
     attachmentRootPath: null,
@@ -42,16 +38,54 @@ it('shows remote mirrors only when a remote desktop folder exists', () => {
     lastError: null,
     mirrorEnabled: true,
     ownerDeviceName: 'Windows PC',
+    ownerInstallationId: 'windows-1',
+    ownerPlatform: 'win32',
     status: 'ready',
-    updatedAt: '2026-07-24T00:00:00.000Z'
-  }]} />);
+    updatedAt: '2026-07-24T00:00:00.000Z',
+    ...overrides
+  };
+}
 
-  expect(screen.getByText('From your other devices')).toBeInTheDocument();
-  expect(screen.getByText('Docs · Windows PC')).toBeInTheDocument();
-  expect(screen.getByText('Read-only mirror')).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('checkbox'));
+beforeEach(() => {
+  window.localStorage.clear();
+  vi.clearAllMocks();
+});
+
+it('shows remote mirrors only when a remote desktop folder exists', () => {
+  renderWithLocalization(<SettingsExternalSearchSection {...baseProps} folders={[remoteFolder()]} />);
+
+  expect(screen.getByText('From other devices')).toBeInTheDocument();
+  expect(screen.getByText('Browse and search these folders on this device. They’re read-only here.')).toBeInTheDocument();
+  expect(screen.getByText('Windows PC')).toBeInTheDocument();
+  expect(screen.getByText('Windows')).toBeInTheDocument();
+  expect(screen.getByText('Docs')).toBeInTheDocument();
+  expect(screen.queryByText('Read-only mirror')).not.toBeInTheDocument();
+  const remoteHeading = screen.getByRole('heading', { level: 3, name: 'From other devices' });
+  const localHeading = screen.getByRole('heading', { level: 3, name: 'External folders' });
+  expect(remoteHeading.compareDocumentPosition(localHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  fireEvent.click(screen.getByRole('switch', { name: 'Use Docs from Windows PC on this device' }));
   expect(baseProps.onSetFolderEnabled).toHaveBeenCalledWith('remote-1', false);
   expect(screen.queryByRole('button', { name: 'Update folder' })).not.toBeInTheDocument();
+});
+
+it('groups by installation and exposes a mixed device control without guessing missing ownership', () => {
+  renderWithLocalization(<SettingsExternalSearchSection {...baseProps} folders={[
+    remoteFolder(),
+    remoteFolder({ folderPath: 'D:\\Projects', id: 'remote-2', mirrorEnabled: false }),
+    remoteFolder({ folderPath: '/Users/foliole/Research', id: 'remote-3', ownerInstallationId: 'mac-1', ownerPlatform: 'darwin' }),
+    remoteFolder({ folderPath: '/unknown', id: 'remote-4', ownerDeviceName: null, ownerInstallationId: null, ownerPlatform: 'mystery' })
+  ]} />);
+
+  const sameNameGroupControls = screen.getAllByRole('checkbox', { name: 'Use all folders from Windows PC on this device' });
+  const firstGroupControl = sameNameGroupControls[0];
+  expect(sameNameGroupControls).toHaveLength(2);
+  if (!firstGroupControl) throw new Error('missing first Windows PC group control');
+  expect(firstGroupControl).toHaveAttribute('aria-checked', 'mixed');
+  expect(screen.getByRole('checkbox', { name: 'Use all folders from Other device on this device' })).toBeInTheDocument();
+  expect(screen.queryByText('mystery')).not.toBeInTheDocument();
+
+  fireEvent.click(firstGroupControl);
+  expect(baseProps.onSetFolderEnabled).toHaveBeenCalledWith(['remote-1', 'remote-2'], true);
 });
 
 it('does not show link panel browsing data controls in external sources', () => {

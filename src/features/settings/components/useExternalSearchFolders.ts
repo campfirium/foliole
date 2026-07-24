@@ -7,6 +7,7 @@ import {
   rebuildExternalSourceSettingsIndex,
   saveExternalSourceSettingsFolders,
   setExternalSourceSettingsFolderEnabled,
+  setExternalSourceSettingsFoldersEnabled,
   selectExternalSourceSettingsFolderPath,
   type ExternalSourceSettingsFolder,
   type ExternalSourceSettingsFolderPatch
@@ -46,7 +47,18 @@ export function useExternalSearchFolders() {
       void rebuildExternalSearchFolders(folderId, setError, setFeedback, setFolders, setIsSaving, t),
     onRemoveExternalSearchFolder: (folderId: string) => setFolders((current) => current.filter((folder) => folder.id !== folderId)),
     onRetryLoadExternalSearchFolders: () => setLoadKey((value) => value + 1),
-    onSetExternalSearchFolderEnabled: (folderId: string, enabled: boolean) => {
+    onSetExternalSearchFolderEnabled: (folderId: string | string[], enabled: boolean) => {
+      if (Array.isArray(folderId)) {
+        setIsSaving(true);
+        setError(null);
+        void setExternalSourceSettingsFoldersEnabled(folderId, enabled).then((result) => {
+          if (result.folders) setFolders(result.folders);
+          if (result.error) {
+            setError(result.error instanceof Error ? result.error.message : t('settings.externalSources.error.save'));
+          }
+        }).finally(() => setIsSaving(false));
+        return;
+      }
       setFolders((current) => current.map((folder) =>
         folder.id === folderId ? { ...folder, mirrorEnabled: enabled } : folder
       ));
