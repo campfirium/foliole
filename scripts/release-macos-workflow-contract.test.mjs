@@ -22,6 +22,9 @@ describe('release macOS workflow contract', () => {
     expect(workflow).toContain('APPLE_NOTARY_API_KEY_BASE64');
     expect(workflow).toContain('security create-keychain');
     expect(workflow).toContain('security set-key-partition-list');
+    expect(workflow).toContain('apple_api_key="$RUNNER_TEMP/AuthKey.p8"');
+    expect(workflow).toContain('echo "APPLE_API_KEY=$apple_api_key" >> "$GITHUB_ENV"');
+    expect(workflow).not.toContain('${{ runner.temp }}');
     expect(workflow).not.toContain('gh release create');
   });
 

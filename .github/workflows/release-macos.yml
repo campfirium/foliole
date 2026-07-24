@@ -25,10 +25,7 @@ jobs:
     timeout-minutes: 60
     env:
       APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
-      APPLE_API_KEY: ${{ runner.temp }}/AuthKey.p8
       APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
-      FOLIOLE_MACOS_CLI_DEVELOPER_ID_PROVISIONING_PROFILE: ${{ runner.temp }}/foliole-cli-developer-id.provisionprofile
-      FOLIOLE_MACOS_DEVELOPER_ID_PROVISIONING_PROFILE: ${{ runner.temp }}/foliole-developer-id.provisionprofile
 
     steps:
       - name: Check out repository
@@ -89,10 +86,16 @@ jobs:
           certificate_path="$RUNNER_TEMP/developer-id.p12"
           keychain_path="$RUNNER_TEMP/foliole-signing.keychain-db"
           keychain_password="$(openssl rand -base64 32)"
+          apple_api_key="$RUNNER_TEMP/AuthKey.p8"
+          cli_profile="$RUNNER_TEMP/foliole-cli-developer-id.provisionprofile"
+          main_profile="$RUNNER_TEMP/foliole-developer-id.provisionprofile"
+          echo "APPLE_API_KEY=$apple_api_key" >> "$GITHUB_ENV"
+          echo "FOLIOLE_MACOS_CLI_DEVELOPER_ID_PROVISIONING_PROFILE=$cli_profile" >> "$GITHUB_ENV"
+          echo "FOLIOLE_MACOS_DEVELOPER_ID_PROVISIONING_PROFILE=$main_profile" >> "$GITHUB_ENV"
           printf '%s' "$MACOS_DEVELOPER_ID_CERTIFICATE_BASE64" | base64 --decode > "$certificate_path"
-          printf '%s' "$MACOS_DEVELOPER_ID_PROFILE_BASE64" | base64 --decode > "$FOLIOLE_MACOS_DEVELOPER_ID_PROVISIONING_PROFILE"
-          printf '%s' "$MACOS_CLI_DEVELOPER_ID_PROFILE_BASE64" | base64 --decode > "$FOLIOLE_MACOS_CLI_DEVELOPER_ID_PROVISIONING_PROFILE"
-          printf '%s' "$APPLE_NOTARY_API_KEY_BASE64" | base64 --decode > "$APPLE_API_KEY"
+          printf '%s' "$MACOS_DEVELOPER_ID_PROFILE_BASE64" | base64 --decode > "$main_profile"
+          printf '%s' "$MACOS_CLI_DEVELOPER_ID_PROFILE_BASE64" | base64 --decode > "$cli_profile"
+          printf '%s' "$APPLE_NOTARY_API_KEY_BASE64" | base64 --decode > "$apple_api_key"
 
           security create-keychain -p "$keychain_password" "$keychain_path"
           security set-keychain-settings -lut 21600 "$keychain_path"
@@ -124,4 +127,3 @@ jobs:
             artifacts/macos/github-arm64/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 14
-
