@@ -5,7 +5,6 @@ const updateCheckMock = vi.hoisted(() => ({
   resultStatus: 'current'
 }));
 const desktopUpdateMock = vi.hoisted(() => ({
-  download: vi.fn(),
   install: vi.fn(),
   state: { phase: 'not-applicable' as string, version: undefined as string | undefined }
 }));
@@ -15,7 +14,6 @@ vi.mock('../../../../shared/platform/diagnosticBundle', () => ({
 }));
 
 vi.mock('../../../../shared/platform/desktopUpdate', () => ({
-  downloadDesktopUpdate: desktopUpdateMock.download,
   installDesktopUpdate: desktopUpdateMock.install,
   readDesktopUpdateState: () => desktopUpdateMock.state,
   subscribeDesktopUpdateState: () => () => undefined
@@ -45,7 +43,6 @@ import { SettingsAboutSection } from './SettingsAboutSection';
 beforeEach(() => {
   updateCheckMock.resultStatus = 'current';
   desktopUpdateMock.state = { phase: 'not-applicable', version: undefined };
-  desktopUpdateMock.download.mockReset();
   window.localStorage.clear();
   window.localStorage.setItem(APP_LANGUAGE_STORAGE_KEY, 'en');
   window.electronAPI = {
@@ -112,7 +109,7 @@ it('opens update details when a manual update check finds an available release',
   expect(screen.getByText('Fixed')).toBeInTheDocument();
 });
 
-it('offers an explicit download action when the desktop updater confirms the gated release', async () => {
+it('does not require an explicit download action after the desktop updater confirms the gated release', () => {
   desktopUpdateMock.state = { phase: 'available', version: '0.6.6' };
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.updateCheckState, JSON.stringify({
     cachedManifest: { releases: [], schemaVersion: 1 },
@@ -126,7 +123,5 @@ it('offers an explicit download action when the desktop updater confirms the gat
   }));
   renderWithLocalization(<SettingsAboutSection />);
 
-  fireEvent.click(await screen.findByRole('button', { name: 'Download update' }));
-
-  expect(desktopUpdateMock.download).toHaveBeenCalledTimes(1);
+  expect(screen.queryByRole('button', { name: 'Download update' })).not.toBeInTheDocument();
 });

@@ -58,7 +58,9 @@ export class DesktopUpdateService {
       if (!result || result.updateInfo.version !== normalizedVersion) {
         return this.setState({ phase: 'pending-asset', version: normalizedVersion });
       }
-      return this.setState({ phase: 'available', version: normalizedVersion });
+      this.setState({ phase: 'available', version: normalizedVersion });
+      void this.download();
+      return this.state;
     } catch {
       return this.setState({ errorCode: 'check-failed', phase: 'error', version: normalizedVersion });
     }

@@ -4,7 +4,6 @@ import { APP_COMMAND_IDS } from '../../../../shared/commands/ids';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import { useAppVersion } from '../../../../shared/platform/appVersion';
 import {
-  downloadDesktopUpdate,
   installDesktopUpdate,
   readDesktopUpdateState,
   subscribeDesktopUpdateState
@@ -92,9 +91,6 @@ export function SettingsVersionBlock(props: { onRunSupportCommand?: ((commandId:
           </SettingsSupportButton>
           {update.manifest.lastCheckStatus === 'available' ? (
             <SettingsSupportButton onRunAction={() => setReleaseNotesOpen(true)}>{t('settings.about.viewUpdateDetails')}</SettingsSupportButton>
-          ) : null}
-          {update.desktop.phase === 'available' ? (
-            <SettingsSupportButton onRunAction={() => void downloadDesktopUpdate()}>{t('settings.about.downloadUpdate')}</SettingsSupportButton>
           ) : null}
           {update.desktop.phase === 'ready' ? (
             <SettingsSupportButton onRunAction={() => void installDesktopUpdate()}>{t('settings.about.restartToInstall')}</SettingsSupportButton>

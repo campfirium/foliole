@@ -22,6 +22,7 @@ import {
 import { useDemoMarkdownRailImport } from './WorkspaceSideToolbarDemoImport';
 import { renderStudyDock } from './WorkspaceStudyDock';
 import { WorkspaceThemeModeAction } from './WorkspaceThemeModeAction';
+import { WorkspaceUpdateAction } from './WorkspaceUpdateAction';
 
 interface WorkspaceSideToolbarProps {
   canStartStudyMode: boolean;
@@ -129,6 +130,7 @@ export function WorkspaceSideToolbar(props: WorkspaceSideToolbarProps) {
           onRun={state.runRailCommand}
         />
         <div className="flex-1" />
+        <WorkspaceUpdateAction />
         <RailActionGroup
           ariaLabel={t('desktop.workspace.bottomRailActions')}
           items={state.bottomItems}

@@ -1,0 +1,37 @@
+.workspace-update-action {
+  color: var(--app-accent-color);
+}
+
+.workspace-update-action:hover {
+  color: color-mix(in srgb, var(--app-accent-color) 84%, rgb(var(--color-foreground)) 16%);
+}
+
+.workspace-update-action-nudge {
+  animation:
+    workspace-update-nudge 700ms linear 3,
+    workspace-update-settle 700ms linear 2100ms 1;
+}
+
+@keyframes workspace-update-nudge {
+  0%, 100% { transform: translateY(0); }
+  10%, 90% { transform: translateY(-9px); }
+  20%, 80% { transform: translateY(-15px); }
+  30%, 70% { transform: translateY(-20px); }
+  40%, 60% { transform: translateY(-23px); }
+  50% { transform: translateY(-24px); }
+}
+
+@keyframes workspace-update-settle {
+  0%, 100% { transform: translateY(0); }
+  10%, 90% { transform: translateY(-5px); }
+  20%, 80% { transform: translateY(-8px); }
+  30%, 70% { transform: translateY(-10px); }
+  40%, 60% { transform: translateY(-11px); }
+  50% { transform: translateY(-12px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-update-action-nudge {
+    animation: none;
+  }
+}
