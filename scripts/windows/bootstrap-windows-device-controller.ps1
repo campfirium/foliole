@@ -30,7 +30,9 @@ if ($task.State -eq "Running") {
 if ($task.State -eq "Disabled") {
   throw "$taskName is disabled. Re-enable it from an elevated PowerShell before updating."
 }
-if (@($task.Triggers).Count -ne 0) {
+[xml]$taskXml = Export-ScheduledTask -TaskName $taskName
+$triggerNodes = @($taskXml.Task.Triggers.ChildNodes | Where-Object { $_.NodeType -eq "Element" })
+if ($triggerNodes.Count -ne 0) {
   throw "$taskName has automatic triggers; refusing an in-place controller update."
 }
 

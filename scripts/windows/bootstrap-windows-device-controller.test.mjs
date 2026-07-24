@@ -18,7 +18,9 @@ it('downloads the exact reviewed controller revision and verifies every file', (
 
 it('preserves device credentials and restores controller files on failure', () => {
   expect(script).toContain('if ($task.State -eq "Running")');
-  expect(script).toContain('if (@($task.Triggers).Count -ne 0)');
+  expect(script).toContain('[xml]$taskXml = Export-ScheduledTask -TaskName $taskName');
+  expect(script).toContain('$taskXml.Task.Triggers.ChildNodes');
+  expect(script).toContain('if ($triggerNodes.Count -ne 0)');
   expect(script.match(/Get-ScheduledTask -TaskName \$taskName/g)).toHaveLength(2);
   expect(script).toContain('Copy-Item -Path $targetPath -Destination (Join-Path $backupRoot $entry.Key)');
   expect(script).toContain('Copy-Item -Path $backupPath -Destination $targetPath -Force');
