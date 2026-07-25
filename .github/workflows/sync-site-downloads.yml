@@ -1,0 +1,26 @@
+name: Sync site downloads
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  notify-site:
+    if: github.repository == 'campfirium/foliole'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require site sync token
+        env:
+          SITE_SYNC_TOKEN: ${{ secrets.FOLIOLE_SITE_SYNC_TOKEN }}
+        run: test -n "$SITE_SYNC_TOKEN"
+      - name: Notify Foliole site
+        env:
+          GH_TOKEN: ${{ secrets.FOLIOLE_SITE_SYNC_TOKEN }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          gh api --method POST repos/campfirium/foliole-site/dispatches \
+            -f event_type=foliole-release-published \
+            -F "client_payload[tag]=$RELEASE_TAG"
