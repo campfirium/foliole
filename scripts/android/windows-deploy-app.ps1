@@ -100,17 +100,15 @@ function Invoke-GradleWrapper {
 
   $gradleCommand = "call .\gradlew.bat $TaskName"
   $process = Start-Process -FilePath "cmd.exe" -ArgumentList @("/d", "/c", $gradleCommand) -Wait -PassThru -WindowStyle Hidden
-  $global:LASTEXITCODE = $process.ExitCode
-  if (Test-LastCommandFailed) {
-    exit $LASTEXITCODE
+  if ($process.ExitCode -ne 0) {
+    exit $process.ExitCode
   }
 }
 
 function Stop-GradleWrapperDaemon {
   Write-Info "stopping Gradle daemon"
   $process = Start-Process -FilePath "cmd.exe" -ArgumentList @("/d", "/c", "call .\gradlew.bat --stop") -Wait -PassThru -WindowStyle Hidden
-  $global:LASTEXITCODE = $process.ExitCode
-  if (Test-LastCommandFailed) {
+  if ($process.ExitCode -ne 0) {
     Write-Info "Gradle daemon stop failed; continuing"
   }
 }

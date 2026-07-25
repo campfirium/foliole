@@ -96,6 +96,9 @@ describe('windows-deploy-app.sh', () => {
 
     expect(script).toContain('Start-Process -FilePath "cmd.exe" -ArgumentList @("/d", "/c", $gradleCommand) -Wait -PassThru -WindowStyle Hidden');
     expect(script).toContain('Start-Process -FilePath "cmd.exe" -ArgumentList @("/d", "/c", "call .\\gradlew.bat --stop") -Wait -PassThru -WindowStyle Hidden');
+    expect(script).toContain('if ($process.ExitCode -ne 0)');
+    expect(script).toContain('exit $process.ExitCode');
+    expect(script.match(/\$global:LASTEXITCODE = \$process\.ExitCode/gu)).toHaveLength(1);
     expect(script).not.toContain('& cmd.exe /d /c');
   });
 
