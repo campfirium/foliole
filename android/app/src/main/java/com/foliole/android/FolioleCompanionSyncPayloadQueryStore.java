@@ -161,7 +161,10 @@ final class FolioleCompanionSyncPayloadQueryStore {
         }
         String queryName = FolioleCompanionSyncPayloadRoutingRules.routeString(context, route, "queryNameKey");
         String[] args = queryArgs(context, route, objectId, objectIdKey, viewObjectIdDeviceId(context, objectId));
-        if (FolioleCompanionLearningPayloadStore.owns(queryName)) return FolioleCompanionLearningPayloadStore.loadPayload(context, database, queryName, args);
+        if (loadQuery(context, queryName).optJSONArray(FolioleCompanionQueryDefinitionShapeKeys.queryKey(context, "columns")) != null) {
+            JSONObject payload = FolioleCompanionGeneratedQueryRunner.loadFirstRow(context, database, queryName, args);
+            return payload == null ? "{}" : payload.toString();
+        }
         String payload = FolioleCompanionGeneratedQueryRunner.loadString(
             context,
             database,

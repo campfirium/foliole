@@ -94,6 +94,22 @@ final class FolioleCompanionDatabaseMigration {
             FolioleCompanionExternalFolderOwnershipMigration.migrate(context, database);
             return;
         }
+        if (actionType(context, "addNodesAnchorResolutionStatusIfMissing").equals(type)) {
+            FolioleCompanionSchemaRepair.addNodesAnchorResolutionStatusIfMissing(context, database);
+            return;
+        }
+        if (actionType(context, "addNodesAnchorSourceVersionIdIfMissing").equals(type)) {
+            FolioleCompanionSchemaRepair.addNodesAnchorSourceVersionIdIfMissing(context, database);
+            return;
+        }
+        if (actionType(context, "addNodeSyncVersionsBodyTextIfMissing").equals(type)) {
+            FolioleCompanionSchemaRepair.addNodeSyncVersionsBodyTextIfMissing(context, database);
+            return;
+        }
+        if (actionType(context, "backfillSyncConflictConvergence").equals(type)) {
+            backfillSyncConflictConvergence(context, database);
+            return;
+        }
         throw new IllegalStateException("Companion migration plan has unknown action: " + type);
     }
 
@@ -123,6 +139,22 @@ final class FolioleCompanionDatabaseMigration {
         } finally {
             database.endTransaction();
         }
+    }
+
+    private static void backfillSyncConflictConvergence(Context context, SQLiteDatabase database) {
+        String errorMessage = repairRuleValue(context, "syncConflictConvergence", "errorMessage");
+        installMigrationStatement(
+            context,
+            database,
+            repairRuleValue(context, "syncConflictConvergence", "parentStatementName"),
+            errorMessage
+        );
+        installMigrationStatement(
+            context,
+            database,
+            repairRuleValue(context, "syncConflictConvergence", "bodyTextStatementName"),
+            errorMessage
+        );
     }
 
     private static void copyLegacySyncObjectStateRows(Context context, SQLiteDatabase database) {

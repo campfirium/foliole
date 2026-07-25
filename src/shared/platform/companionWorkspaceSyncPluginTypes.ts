@@ -168,6 +168,7 @@ export interface CompanionWorkspaceSyncPlugin
   saveSyncReviewLogCursor(args: { cursor: NativeSyncChangeCursor | null }): Promise<{ cursor: NativeSyncChangeCursor | null }>;
   saveSyncReviewLogPushCursor(args: { cursor: NativeSyncChangeCursor | null }): Promise<{ cursor: NativeSyncChangeCursor | null }>;
   saveSyncPushAcks(args: { acks: Array<{
+    canonical_object_id?: string;
     client_op_id: string;
     identity: SyncPushAck['identity'];
     state_seq?: number | null;

@@ -95,6 +95,9 @@ export function useReviewEditorEscapeBlur(args: {
       });
     };
     const handlePriorityEscape = (event: KeyboardEvent) => {
+      if (isDialogOpen()) {
+        return false;
+      }
       if (args.enabled) {
         return blurReviewEditorIfEscape(event);
       }

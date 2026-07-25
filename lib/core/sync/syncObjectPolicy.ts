@@ -35,6 +35,7 @@ export const SYNC_OBJECT_POLICIES: readonly SyncObjectPolicy[] = [
   policy('node_reading.reading_position', 'node_reading', 'reading', 'device', 'device_private', ['node_reading_device_state'], true, 'diagnostic'),
   policy('node_reading_device_state', null, 'reading', 'device', 'device_private', ['node_reading_device_state'], true, 'diagnostic'),
   policy('node_review', 'node_review', 'review', 'workspace', 'review_merge', ['node_review'], true),
+  policy('node_text_alternative', 'node_text_alternative', 'content', 'workspace', 'lww', ['node_text_alternatives'], true),
   policy('review_log', null, 'review', 'event', 'append_only_idempotent', ['review_log'], true),
   policy('setting.workspace', 'setting', 'settings', 'workspace', 'lww', ['setting_records'], true),
   policy('setting.device', 'setting', 'settings', 'device', 'device_private', ['setting_records'], true, 'diagnostic'),

@@ -1,4 +1,4 @@
-import { ChevronLeft, EllipsisVertical, ListTree, Pencil, type LucideIcon } from 'lucide-react';
+import { ChevronLeft, EllipsisVertical, ListTree, Pencil, RefreshCw, type LucideIcon } from 'lucide-react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 
@@ -71,6 +71,7 @@ export function ReadingChrome(props: {
   onExit(): void;
   onToggleContentEditing?: () => void;
   onOpenActions(): void;
+  onOpenAlternative?: () => void;
   onOpenOutline(): void;
   title: string;
   visible?: boolean;
@@ -91,6 +92,13 @@ export function ReadingChrome(props: {
               <span className="min-w-0 max-w-[52vw] flex-1 truncate pl-2 text-left text-sm font-medium text-foreground sm:max-w-sm">
                 {props.title}
               </span>
+              {props.onOpenAlternative ? (
+                <ReadingChromeButton
+                  icon={RefreshCw}
+                  label={t('companion.reading.alternative.open')}
+                  onClick={props.onOpenAlternative}
+                />
+              ) : null}
             </>
           ) : <ChromeSpacer />}
         </div>

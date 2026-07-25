@@ -19,6 +19,7 @@ export const ANDROID_COMPANION_DIAGNOSTIC_READ_RULES = {
   metaValue: { queryName: 'companionMetaValue' },
   metricRows: { resultKey: 'metrics', metricKey: 'metric', valueKey: 'value' },
   pendingAcks: { queryName: 'diagnosticPendingAcks', resultKey: 'acks' },
+  nodeConflicts: { queryName: 'nodeConflicts', resultKey: 'conflicts' },
   pushIssues: { queryName: 'diagnosticPushIssues', resultKey: 'acks' },
   recentTopics: { queryName: 'diagnosticRecentTopics', resultKey: 'topics' },
   stateCounts: { queryName: 'diagnosticSyncStateCounts', resultKey: 'counts' },
@@ -26,6 +27,7 @@ export const ANDROID_COMPANION_DIAGNOSTIC_READ_RULES = {
     { outputKey: 'dirtyObjects', queryKey: 'dirtyObjects' },
     { outputKey: 'pendingAcks', queryKey: 'pendingAcks' },
     { outputKey: 'pushIssues', queryKey: 'pushIssues' },
+    { outputKey: 'recentConflicts', queryKey: 'nodeConflicts' },
     { outputKey: 'stateCounts', queryKey: 'stateCounts' }
   ],
   stateMetrics: { queryName: 'diagnosticSyncStateMetrics' },

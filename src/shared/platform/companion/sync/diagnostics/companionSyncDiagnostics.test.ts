@@ -203,6 +203,38 @@ function expectAttachmentBacklogSeparateFromStructure() {
   expect(verdicts).not.toContainEqual(expect.objectContaining({ code: 'sync_android_not_caught_up' }));
 }
 
+function expectSafelySavedConflictVerdict() {
+  const verdicts = mergeSyncDiagnosticVerdicts({
+    android: snapshot('android', {
+      sync_state: {
+        conflict_count: 2,
+        local_dirty_count: 0,
+        max_state_seq: 4,
+        pack_cursor: 4,
+        recent_conflicts: [{
+          conflict_version_id: 'desktop#2',
+          detected_at: '2026-05-04T02:00:00.000Z',
+          device_id: 'desktop-device',
+          object_id: 'node-1',
+          parent_version_id: 'desktop#1'
+        }],
+        state_counts: []
+      }
+    }),
+    desktop: snapshot('desktop', {})
+  });
+
+  expect(verdicts).toContainEqual({
+    code: 'sync_conflicts_safely_saved',
+    evidence: {
+      conflict_count: 2,
+      latest_conflict: expect.objectContaining({ device_id: 'desktop-device', object_id: 'node-1' })
+    },
+    message: 'Conflicting edits were safely saved as separate copies.',
+    severity: 'info'
+  });
+}
+
 describe('mergeSyncDiagnosticVerdicts', () => {
   it('uses device copy for iOS diagnostic verdicts', expectIosVerdictsUseDeviceCopy);
   it('reports when Android has not caught up to the desktop state sequence', expectAndroidCursorLagVerdict);
@@ -213,4 +245,5 @@ describe('mergeSyncDiagnosticVerdicts', () => {
   it('reports aligned structure without using progress percentages', expectAlignedStructureWithoutPercentages);
   it('keeps content cache backlog separate from structure alignment', expectContentBacklogSeparateFromStructure);
   it('keeps attachment cache backlog separate from structure alignment', expectAttachmentBacklogSeparateFromStructure);
+  it('reports safely saved conflict copies without blocking alignment', expectSafelySavedConflictVerdict);
 });

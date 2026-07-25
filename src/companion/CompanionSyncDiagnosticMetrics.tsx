@@ -44,6 +44,7 @@ export function SnapshotMetrics(props: { snapshot: SyncDiagnosticSnapshot }) {
       {isDevice ? <MetricRow label={t('companion.sync.diagnostics.readyToSend')} value={formatNumber(snapshot.sync_state.ready_dirty_count, t)} /> : null}
       {isDevice ? <MetricRow label={t('companion.sync.diagnostics.waitingConfirmation')} value={formatNumber(snapshot.sync_state.pending_ack_count, t)} /> : null}
       {isDevice ? <MetricRow label={t('companion.sync.diagnostics.changesNotSent')} value={formatNumber(snapshot.sync_state.push_issue_count ?? 0, t)} /> : null}
+      {isDevice ? <MetricRow label={t('companion.sync.diagnostics.conflictCopies')} value={formatNumber(snapshot.sync_state.conflict_count ?? 0, t)} /> : null}
       <MetricRow label={t('companion.sync.diagnostics.bodiesToDownload')} value={formatNumber(snapshot.content.missing_content_blob_count, t)} />
       {isDevice ? <MetricRow label={t('companion.sync.diagnostics.bodyBytesToDownload')} value={formatBytes(snapshot.content.missing_content_blob_bytes ?? 0, t)} /> : null}
       {isDevice ? <MetricRow label={t('companion.sync.diagnostics.failedBodyDownloads')} value={`${formatNumber(snapshot.content.failed_content_blob_count ?? 0, t)} · ${formatBytes(snapshot.content.failed_content_blob_bytes ?? 0, t)}`} /> : null}

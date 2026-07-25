@@ -7,7 +7,6 @@ import { createBeforeQuitCoordinator } from './beforeQuitCoordinator.js';
 import { beginDatabaseStartup, markDatabaseReady, markDatabaseStartupFailed } from './database/databaseReadiness.js';
 import { loadOrCreateDesktopDeviceId } from './database/deviceIdentity.js';
 import { initializeDatabase } from './database/migrate.js';
-import { flushAllDirtyNodeSyncVersions } from './database/nodeMutations.js';
 import { flushCoalescedWorkspaceSearchInvalidations } from './database/searchIndexInvalidationCoalescer.js';
 import { stopSearchIndexInvalidationScheduler } from './database/searchIndexInvalidationScheduler.js';
 import { restoreDesktopSecurityScopedAccess, stopDesktopSecurityScopedAccess } from './desktopSecurityScopedAccess.js';
@@ -75,9 +74,7 @@ function installBeforeQuitLifecycle() {
   const devRendererReloadIntentWatcher = installDevRendererReloadIntentWatcher({ getWindows: () => BrowserWindow.getAllWindows() });
   const coordinateBeforeQuit = createBeforeQuitCoordinator({
     flush: flushMirrorSync,
-    onPrepareError: (error) => appendMainProcessDiagnosticLog('node_sync_flush_on_quit_failed', { error }),
     onFlushError: (error) => appendMainProcessDiagnosticLog('mirror_flush_on_quit_failed', { error }),
-    prepare: flushAllDirtyNodeSyncVersions,
     quit: () => app.quit()
   });
   app.on('before-quit', (event) => {
@@ -110,18 +107,6 @@ async function initializeRuntimeServices() {
     });
     await appendBootEvent('database_initialize_call_complete');
     refreshGlobalClipShortcutFromSettings();
-    if (process.env.FOLIOLE_SKIP_STARTUP_NODE_SYNC_FLUSH === '1') {
-      await appendBootEvent('node_sync_flush_skipped', {
-        reason: 'startup-node-sync-flush-disabled'
-      });
-      await appendBootEvent('database_init_complete');
-      installAppMenu();
-      markDatabaseReady();
-      return;
-    }
-    await appendBootEvent('node_sync_flush_start');
-    flushAllDirtyNodeSyncVersions();
-    await appendBootEvent('node_sync_flush_complete');
     await appendBootEvent('database_init_complete');
     installAppMenu();
     markDatabaseReady();

@@ -45,6 +45,27 @@ export type NativeImportCommandMap = {
       updated_content: string;
     } | null;
   };
+  [NATIVE_COMMANDS.loadNodeTextAlternativePreview]: {
+    args: { node_id: string };
+    result: {
+      alternative_id: string;
+      checked_at: string;
+      current_content: string;
+      current_highlight_count: number;
+      kind: 'sync_alternative';
+      source_node_id: string;
+      updated_content: string;
+      updated_highlight_count: number;
+    } | null;
+  };
+  [NATIVE_COMMANDS.dismissNodeTextAlternative]: {
+    args: { alternative_id: string };
+    result: { alternative_id: string; node_id: string | null; status: 'dismissed' | 'unavailable' };
+  };
+  [NATIVE_COMMANDS.promoteNodeTextAlternative]: {
+    args: { alternative_id: string };
+    result: { alternative_id: string; node_id: string | null; status: 'promoted' | 'unavailable' };
+  };
   [NATIVE_COMMANDS.acceptIncomingUpdate]: {
     args: { incoming_update_id: string; content: string };
     result: { incoming_update_id: string; node_id: string | null; status: 'accepted' | 'unavailable' };

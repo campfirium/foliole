@@ -2,6 +2,7 @@ import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapsho
 
 import { CompanionDocumentSearchSheet } from './CompanionDocumentSearchSheet';
 import { buildCompanionHighlightPanelItems } from './companionHighlightPanelModel';
+import { CompanionNodeTextAlternativeSheet } from './CompanionNodeTextAlternativeSheet';
 import { ReadingChrome } from './CompanionReadingChrome';
 import {
   ReadingActionsSheet,
@@ -17,6 +18,40 @@ import type { EditorAdapter } from '@/features/editor/adapters/EditorAdapter';
 import { definedProps } from '@/shared/lib/definedProps';
 
 type ReadableArticle = NonNullable<ReturnType<typeof useCompanionArticleSurface>['readableArticle']>;
+type TextAlternativeState = {
+  alternative: import('../shared/platform/companionNodeTextAlternativeRepository').CompanionNodeTextAlternative | null;
+  busy: boolean;
+  dismiss(): void;
+  error: boolean;
+  open: boolean;
+  setAsBody(): void;
+  setOpen(open: boolean): void;
+};
+
+interface ImmersiveChromeLayerProps {
+  actionsOpen: boolean;
+  canEditContent?: boolean;
+  editor: EditorAdapter | null;
+  isChromeVisible: boolean;
+  isContentEditing: boolean;
+  onExit(): void;
+  onFindInDocument(): void;
+  onOpenActions(open: boolean): void;
+  onOpenOutline(open: boolean): void;
+  onOpenReadingSheet(sheet: 'font' | 'highlight' | 'info' | null): void;
+  onOpenSearchSheet(open: boolean): void;
+  onReadingTypographySettingsChange(settings: CompanionReadingTypographySettings): void;
+  onRestoreFromTrash?: (nodeId: string) => Promise<void> | void;
+  onSelectOutlineItem(item: { from: number; to: number }): void;
+  onToggleContentEditing(): void;
+  openReadingSheet: 'font' | 'highlight' | 'info' | null;
+  outlineOpen: boolean;
+  readableArticle: ReadableArticle;
+  readingTypographySettings: CompanionReadingTypographySettings;
+  searchOpen: boolean;
+  snapshot?: WorkspaceSnapshot | null;
+  textAlternative?: TextAlternativeState;
+}
 
 function ReadingChromeControls(props: {
   canEditContent?: boolean;
@@ -24,6 +59,7 @@ function ReadingChromeControls(props: {
   isContentEditing: boolean;
   onExit(): void;
   onOpenActions(open: boolean): void;
+  onOpenAlternative?: () => void;
   onOpenOutline(open: boolean): void;
   onToggleContentEditing(): void;
   readableArticle: ReadableArticle;
@@ -35,6 +71,7 @@ function ReadingChromeControls(props: {
       visible={props.isChromeVisible}
       onExit={props.onExit}
       onOpenActions={() => props.onOpenActions(true)}
+      {...definedProps({ onOpenAlternative: props.onOpenAlternative })}
       onOpenOutline={() => props.onOpenOutline(true)}
       onToggleContentEditing={props.onToggleContentEditing}
       title={props.readableArticle.title}
@@ -78,6 +115,7 @@ function ReadingSheetsLayer(props: {
   searchOpen: boolean;
   outlineOpen: boolean;
   readableArticle: ReadableArticle;
+  textAlternative?: TextAlternativeState;
 }) {
   const highlights = buildCompanionHighlightPanelItems({
     content: props.readableArticle.content,
@@ -119,33 +157,28 @@ function ReadingSheetsLayer(props: {
         onOpenChange={props.onOpenSearchSheet}
         open={props.searchOpen}
       />
+      <TextAlternativeLayer currentBody={props.readableArticle.content} state={props.textAlternative} />
     </>
   );
 }
 
-export function ImmersiveChromeLayer(props: {
-  actionsOpen: boolean;
-  canEditContent?: boolean;
-  editor: EditorAdapter | null;
-  isChromeVisible: boolean;
-  isContentEditing: boolean;
-  onExit(): void;
-  onFindInDocument(): void;
-  onOpenActions(open: boolean): void;
-  onOpenOutline(open: boolean): void;
-  onOpenReadingSheet(sheet: 'font' | 'highlight' | 'info' | null): void;
-  onOpenSearchSheet(open: boolean): void;
-  onReadingTypographySettingsChange(settings: CompanionReadingTypographySettings): void;
-  onRestoreFromTrash?: (nodeId: string) => Promise<void> | void;
-  onSelectOutlineItem(item: { from: number; to: number }): void;
-  onToggleContentEditing(): void;
-  openReadingSheet: 'font' | 'highlight' | 'info' | null;
-  outlineOpen: boolean;
-  readableArticle: ReadableArticle;
-  readingTypographySettings: CompanionReadingTypographySettings;
-  searchOpen: boolean;
-  snapshot?: WorkspaceSnapshot | null;
-}) {
+function TextAlternativeLayer(props: { currentBody: string; state: TextAlternativeState | undefined }) {
+  if (!props.state) return null;
+  return (
+    <CompanionNodeTextAlternativeSheet
+      alternative={props.state.alternative}
+      busy={props.state.busy}
+      currentBody={props.currentBody}
+      error={props.state.error}
+      onDismiss={props.state.dismiss}
+      onOpenChange={props.state.setOpen}
+      onSetAsBody={props.state.setAsBody}
+      open={props.state.open}
+    />
+  );
+}
+
+export function ImmersiveChromeLayer(props: ImmersiveChromeLayerProps) {
   return (
     <>
       <ReadingChromeControls
@@ -154,6 +187,11 @@ export function ImmersiveChromeLayer(props: {
         isContentEditing={props.isContentEditing}
         onExit={props.onExit}
         onOpenActions={props.onOpenActions}
+        {...definedProps({
+          onOpenAlternative: props.textAlternative?.alternative
+            ? () => props.textAlternative?.setOpen(true)
+            : undefined
+        })}
         onOpenOutline={props.onOpenOutline}
         onToggleContentEditing={props.onToggleContentEditing}
         readableArticle={props.readableArticle}
@@ -178,6 +216,7 @@ export function ImmersiveChromeLayer(props: {
         searchOpen={props.searchOpen}
         outlineOpen={props.outlineOpen}
         readableArticle={props.readableArticle}
+        {...definedProps({ textAlternative: props.textAlternative })}
       />
     </>
   );

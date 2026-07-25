@@ -47,7 +47,6 @@ export function loadSyncNodeTombstoneVersionsSince(
        created_at
      FROM node_sync_tombstones
      WHERE ${cursor ? '(created_at > ? OR (created_at = ? AND version_id > ?))' : '1 = 1'}
-       AND node_id NOT LIKE 'conflict-copy-%'
      ORDER BY created_at ASC, version_id ASC
      LIMIT ?`,
     cursor

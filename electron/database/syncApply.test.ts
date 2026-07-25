@@ -212,7 +212,7 @@ it('prunes learning rows when accepted remote nodes remain hidden under deleted 
   expect(connection.sqlite.prepare('SELECT node_id FROM node_reading WHERE node_id = ?').get('node-1')).toBeUndefined();
 });
 
-it('records divergent remote node versions without overwriting the local node', async () => {
+it('stores divergent remote node versions without reviving the legacy conflict queue', async () => {
   insertLocalNodeVersion('desktop#2');
   const record = createRemoteNodeRecord();
   record.parent_version_id = 'desktop#0';
@@ -228,16 +228,10 @@ it('records divergent remote node versions without overwriting the local node', 
     current_version_id: 'desktop#2',
     title: 'Local Node'
   });
-  expect(
-    connection.sqlite
-      .prepare('SELECT conflict_version_id, object_id, parent_version_id, device_id FROM node_sync_conflicts')
-      .all()
-  ).toEqual([
-    {
-      conflict_version_id: 'phone#1',
-      device_id: 'phone',
-      object_id: 'node-1',
-      parent_version_id: 'desktop#0'
-    }
-  ]);
+  expect(connection.sqlite.prepare(
+    'SELECT version_id, object_id, parent_version_id, device_id FROM node_sync_versions WHERE version_id = ?'
+  ).get('phone#1')).toEqual({
+    device_id: 'phone', object_id: 'node-1', parent_version_id: 'desktop#0', version_id: 'phone#1'
+  });
+  expect(connection.sqlite.prepare('SELECT conflict_version_id FROM node_sync_conflicts').all()).toEqual([]);
 });

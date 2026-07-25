@@ -24,6 +24,8 @@ const SYNC_PACK_NODE_UPSERT_PENDING_COLUMNS = [
 
 const WIRE_SNAPSHOT_FIELDS = expectCompleteWireSnapshotFields([
   'anchor_link',
+  'anchor_resolution_status',
+  'anchor_source_version_id',
   'attachments',
   'body_blob_hash',
   'content',
@@ -107,6 +109,8 @@ function canonicalHashFields() {
 function desktopSnapshotFields() {
   return [
     'anchor_link',
+    'anchor_resolution_status',
+    'anchor_source_version_id',
     'attachments',
     'body_blob_hash',
     'content',

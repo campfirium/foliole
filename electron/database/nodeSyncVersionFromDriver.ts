@@ -25,11 +25,17 @@ export function flushNodeSyncVersionWithDriver(
     const contentHash = computeNodeSyncVersionHashFromDriver(driver, row, nodeId);
     driver.execute(
       `INSERT INTO node_sync_versions (
-         version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
-       ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [versionId, row.id, row.current_version_id, deviceId, now, contentHash,
+         version_id, object_id, parent_version_id, device_id, created_at, content_hash, body_text, snapshot_json
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [versionId, row.id, row.current_version_id, deviceId, now, contentHash, row.content,
         JSON.stringify(buildNodeSyncSnapshotFromDriver(driver, row, nodeId))]
     );
+    if (row.current_version_id) {
+      driver.execute(
+        `INSERT INTO node_sync_version_parents (version_id, parent_version_id, ordinal) VALUES (?, ?, 0)`,
+        [versionId, row.current_version_id]
+      );
+    }
     driver.execute(
       `UPDATE nodes SET current_version_id = ?, last_modified_by_device_id = ?, sync_dirty = 0 WHERE id = ?`,
       [versionId, deviceId, row.id]

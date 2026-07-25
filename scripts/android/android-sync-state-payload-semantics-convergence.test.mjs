@@ -49,6 +49,17 @@ describe('Android sync state payload semantics convergence', () => {
       objectIdKeyPartIndex: 4,
       objectIdPartLimit: 5
     });
+    expect(queryDefinitions.queries.syncPayloadNodeTextAlternative.sql).not.toContain('json_object');
+    expect(queryDefinitions.queries.syncPayloadNodeTextAlternative.columns.map(({ key }) => key)).toEqual([
+      'alternative_id',
+      'node_id',
+      'source_version_id',
+      'body_text',
+      'source_device_id',
+      'created_at',
+      'status',
+      'updated_at'
+    ]);
     expect(payloadQueryStore).toContain('routingString(context, "objectIdDelimiter")');
     expect(payloadQueryStore).toContain('routingInt(context, "objectIdPartLimit")');
     expect(payloadQueryStore).toContain('routingInt(context, "objectIdDeviceIdPartIndex")');

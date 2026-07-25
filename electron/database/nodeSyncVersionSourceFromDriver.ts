@@ -3,6 +3,8 @@ import { computeNodeSyncHash } from '../../lib/core/database/nodeSyncHash.js';
 
 export interface NodeSyncVersionSourceRow extends DatabaseRow {
   anchor_link: string | null;
+  anchor_resolution_status: 'resolved' | 'unmapped_ambiguous' | 'unmapped_missing' | null;
+  anchor_source_version_id: string | null;
   body_blob_hash: string | null;
   content: string;
   created_at: string;
@@ -49,7 +51,7 @@ export function loadNodeSyncVersionSourceFromDriver(driver: DatabaseDriver, node
     `SELECT id, parent_id, kind, priority, desired_retention, enable_short_term,
        sequential_reading_enabled, shelved_at, manual_child_order, title, is_title_manual,
        hide_title_heading, content, body_blob_hash, opening_text, virtual_filter, reveal,
-       anchor_link, image_regions, import_content_fingerprint, import_source_fingerprint,
+       anchor_link, anchor_resolution_status, anchor_source_version_id, image_regions, import_content_fingerprint, import_source_fingerprint,
        node_order.position AS position, current_version_id, sync_dirty, created_at, updated_at, deleted_at
      FROM nodes LEFT JOIN node_order ON node_order.node_id = nodes.id WHERE nodes.id = ?`,
     [nodeId]
@@ -63,6 +65,8 @@ export function buildNodeSyncSnapshotFromDriver(
 ) {
   return {
     anchor_link: row.anchor_link,
+    anchor_resolution_status: row.anchor_resolution_status,
+    anchor_source_version_id: row.anchor_source_version_id,
     attachments: listNodeAttachmentRefs(driver, nodeId),
     body_blob_hash: row.body_blob_hash,
     content: '',
@@ -98,6 +102,8 @@ export function computeNodeSyncVersionHashFromDriver(
 ) {
   return computeNodeSyncHash({
     anchorLink: row.anchor_link,
+    anchorResolutionStatus: row.anchor_resolution_status,
+    anchorSourceVersionId: row.anchor_source_version_id,
     attachments: listNodeAttachmentRefs(driver, nodeId).map((item) => ({
       attachmentId: item.attachment_id,
       role: item.role

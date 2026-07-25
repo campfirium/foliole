@@ -21,7 +21,7 @@ export type SyncBaseReference =
   | { kind: 'blocked'; reason: 'invalid_identity' | 'missing_base_reference' }
   | { baseContentHash: string | null; kind: 'content_hash' }
   | { kind: 'op_id'; opId: string }
-  | { ancestorVersionIds: string[]; kind: 'node_version'; parentVersionId: string | null };
+  | { ancestorVersionIds: string[]; kind: 'node_version'; parentVersionId: string | null; parentVersionIds?: string[] };
 
 export interface SyncPushPayload {
   base: SyncBaseReference;
@@ -34,6 +34,7 @@ export interface SyncPushPayload {
 }
 
 export interface SyncPushAck {
+  canonicalObjectId?: string;
   clientOpId: string;
   conflictReason?: string;
   desktopBase?: SyncBaseReference;
@@ -80,7 +81,7 @@ function stateClientOpId(row: NativeSyncStateObjectRecord) {
 }
 
 function createStateObjectSyncAdapter(
-  objectType: 'node_open_state' | 'node_reading' | 'node_review' | 'setting' | 'view_state'
+  objectType: 'node_open_state' | 'node_reading' | 'node_review' | 'node_text_alternative' | 'setting' | 'view_state'
 ): SyncableObjectAdapter<SyncableStateObjectRow, NativeSyncStateObjectRecord> {
   return {
     applyPullPayload(payload, localRow) {
@@ -122,7 +123,7 @@ function createStateObjectSyncAdapter(
 
 function resolveStateApplyStatus(
   payload: NativeSyncStateObjectRecord,
-  objectType: 'node_open_state' | 'node_reading' | 'node_review' | 'setting' | 'view_state',
+  objectType: 'node_open_state' | 'node_reading' | 'node_review' | 'node_text_alternative' | 'setting' | 'view_state',
   localRow?: SyncableStateObjectRow | null
 ): SyncApplyResult['status'] {
   if (payload.object_type !== objectType) return 'ignored';
@@ -137,6 +138,8 @@ export const nodeReadingSyncAdapter = createStateObjectSyncAdapter('node_reading
 export const nodeOpenStateSyncAdapter = createStateObjectSyncAdapter('node_open_state');
 
 export const nodeReviewSyncAdapter = createStateObjectSyncAdapter('node_review');
+
+export const nodeTextAlternativeSyncAdapter = createStateObjectSyncAdapter('node_text_alternative');
 
 export const settingSyncAdapter = createStateObjectSyncAdapter('setting');
 
@@ -199,7 +202,8 @@ export const nodeVersionSyncAdapter: SyncableObjectAdapter<SyncableNodeVersionRo
     return {
       ancestorVersionIds: row.ancestor_version_ids,
       kind: 'node_version',
-      parentVersionId: row.parent_version_id
+      parentVersionId: row.parent_version_id,
+      parentVersionIds: row.parent_version_ids ?? (row.parent_version_id ? [row.parent_version_id] : [])
     };
   },
   buildPushPayload(row) {
@@ -228,6 +232,7 @@ export const syncPushAdapters = {
   node_open_state: nodeOpenStateSyncAdapter,
   node_reading: nodeReadingSyncAdapter,
   node_review: nodeReviewSyncAdapter,
+  node_text_alternative: nodeTextAlternativeSyncAdapter,
   setting: settingSyncAdapter,
   view_state: viewStateSyncAdapter,
   review_log: reviewLogSyncAdapter

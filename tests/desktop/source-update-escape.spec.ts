@@ -116,7 +116,11 @@ async function seedPendingIncomingUpdate(desktopApp: ElectronApplication) {
     'db.prepare(`INSERT INTO incoming_updates (id, topic_id, source_type, source_path, updated_content, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(topic_id, source_type, source_path, status) DO UPDATE SET updated_content = excluded.updated_content, updated_at = excluded.updated_at`).run(process.argv[2], process.argv[3], "import_file", process.argv[4], process.argv[5], "pending", "2026-07-05T00:00:00.000Z", "2026-07-05T00:00:10.000Z");',
     'db.close();'
   ].join('\n');
-  execFileSync(path.join(process.cwd(), 'node_modules', 'electron', 'dist', 'electron.exe'), [
+  const distPath = path.join(process.cwd(), 'node_modules', 'electron', 'dist');
+  const executablePath = process.platform === 'darwin'
+    ? path.join(distPath, 'Electron.app', 'Contents', 'MacOS', 'Electron')
+    : path.join(distPath, process.platform === 'win32' ? 'electron.exe' : 'electron');
+  execFileSync(executablePath, [
     '-e',
     script,
     dbPath,

@@ -47,12 +47,12 @@ function insertDirtyLocalNode() {
 
 function remoteRecord(overrides: Partial<NativeSyncNodeRecord> = {}): NativeSyncNodeRecord {
   return {
-    ancestor_version_ids: ['desktop#2', 'desktop#1'],
+    ancestor_version_ids: ['desktop#1'],
     content_hash: 'hash-phone-3',
     device_id: 'phone',
     object_id: 'node-1',
     object_type: 'node',
-    parent_version_id: 'desktop#2',
+    parent_version_id: 'desktop#1',
     snapshot: {
       anchor_link: null,
       attachments: [],
@@ -81,7 +81,7 @@ function remoteRecord(overrides: Partial<NativeSyncNodeRecord> = {}): NativeSync
   };
 }
 
-it('blocks active remote overwrite on a dirty local node but still applies a remote tombstone', async () => {
+it('preserves dirty local content without creating a duplicate topic before an ancestral tombstone', async () => {
   insertDirtyLocalNode();
 
   await expect(applySyncNodesAsync([remoteRecord()])).resolves.toEqual([]);
@@ -95,10 +95,14 @@ it('blocks active remote overwrite on a dirty local node but still applies a rem
       sync_dirty: 1
     });
   expect(connection.sqlite.prepare('SELECT COUNT(*) AS count FROM node_sync_conflicts').get()).toEqual({ count: 0 });
+  expect(connection.sqlite.prepare("SELECT COUNT(*) AS count FROM nodes WHERE id LIKE 'conflict-copy-%'").get())
+    .toEqual({ count: 0 });
 
   await expect(applySyncNodesAsync([
     remoteRecord({
       content_hash: 'hash-phone-delete',
+      ancestor_version_ids: ['desktop#2', 'desktop#1'],
+      parent_version_id: 'desktop#2',
       snapshot: {
         ...remoteRecord().snapshot,
         content: 'remote deleted body',

@@ -7,16 +7,24 @@ export const SYNC_PACK_NODE_VERSION_COLUMNS = [
   'device_id',
   'created_at',
   'content_hash',
+  'body_text',
   'snapshot_json'
 ] as const;
 
 export interface SyncPackNodeVersionRow extends DbRow {
   content_hash: string;
+  body_text: string | null;
   created_at: string;
   device_id: string;
   object_id: string;
   parent_version_id: string | null;
   snapshot_json: string;
+  version_id: string;
+}
+
+export interface SyncPackNodeVersionParentRow extends DbRow {
+  ordinal: number;
+  parent_version_id: string;
   version_id: string;
 }
 

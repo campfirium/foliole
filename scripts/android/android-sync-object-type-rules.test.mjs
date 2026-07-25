@@ -27,6 +27,7 @@ describe('Android sync object type protocol rules', () => {
       nodeOpenState: 'node_open_state',
       nodeReading: 'node_reading',
       nodeReview: 'node_review',
+      nodeTextAlternative: 'node_text_alternative',
       settingRecord: 'setting',
       viewState: 'view_state'
     });

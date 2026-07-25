@@ -60,6 +60,16 @@ export async function applySyncPackMetadataObjectsWithDbPort(
   return records.length;
 }
 
+export async function applySyncPackNodeTextAlternativesWithDbPort(
+  port: DbPort,
+  options: SyncPackSyncObjectsOptions
+) {
+  const records = (await loadSyncPackSyncObjectsWithDbPort(port, options))
+    .filter((record) => record.object_type === 'node_text_alternative');
+  for (const record of records) await applySyncObjectPayloadWithDbPort(port, record);
+  return records.length;
+}
+
 function buildSyncPackSyncObjectsQuery(options: SyncPackSyncObjectsOptions) {
   const alias = options.incomingAlias ?? 'inc';
   return `SELECT object_type, object_id, content_hash, payload_json, updated_at, deleted_at ` +

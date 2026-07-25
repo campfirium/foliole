@@ -55,11 +55,13 @@ export async function toWorkspaceNativeNodeVersion(
   const contentHash = await sha256Hex(JSON.stringify(snapshot));
   return {
     ancestor_version_ids: [],
+    body_text: node.content,
     content_hash: contentHash,
     device_id: deviceId,
     object_id: node.id,
     object_type: 'node',
     parent_version_id: node.currentVersionId ?? null,
+    parent_version_ids: node.currentVersionId ? [node.currentVersionId] : [],
     snapshot,
     updated_at: node.updatedAt,
     version_created_at: node.updatedAt,

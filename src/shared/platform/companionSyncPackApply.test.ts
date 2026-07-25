@@ -40,6 +40,9 @@ const bootstrapMock = vi.hoisted(() => ({
     runtime_kind: 'android-capacitor' as 'android-capacitor' | 'ios-capacitor'
   }))
 }));
+const pairingMock = vi.hoisted(() => ({
+  load: vi.fn(async () => ({ primary_device_id: 'desktop-test-device' }))
+}));
 
 vi.mock('@capacitor/core', () => ({
   Capacitor: {
@@ -50,6 +53,7 @@ vi.mock('@capacitor/core', () => ({
 }));
 vi.mock('./companionSyncPackNodes', () => syncPackNodesMock);
 vi.mock('./companionBootstrap', () => ({ loadCompanionBootstrapState: bootstrapMock.load }));
+vi.mock('./companionWorkspacePairing', () => ({ loadCompanionPairingState: pairingMock.load }));
 vi.mock('./companion/sync/pack-apply/iosCompanionSyncPackApply', () => ({
   applyIosCompanionSyncPackPath: iosSyncPackApplyMock.apply
 }));
@@ -85,7 +89,8 @@ it('downloads desktop packs before applying them through the shared TS core', as
   });
   expect(syncPackNodesMock.applyCompanionSyncPackPathWithSharedCore).toHaveBeenCalledWith({
     deviceId: 'android-test-device',
-    packPath: '/tmp/downloaded-pack.db'
+    packPath: '/tmp/downloaded-pack.db',
+    primaryDeviceId: 'desktop-test-device'
   }, expect.any(Object));
   expect(capacitorMock.plugin.deleteDownloadedSyncPack).toHaveBeenCalledWith({ pack_path: '/tmp/downloaded-pack.db' });
 });

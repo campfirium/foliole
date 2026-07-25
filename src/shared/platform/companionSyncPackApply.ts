@@ -9,6 +9,7 @@ import {
   downloadCompanionDesktopSyncPack
 } from './companionSyncPackTransfer';
 import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
+import { loadCompanionPairingState } from './companionWorkspacePairing';
 import {
   FolioleCompanionSync
 } from './companionWorkspaceRuntimeRepository';
@@ -22,6 +23,7 @@ export async function applyCompanionDesktopSyncPack(args: {
     return { applied_blob_count: 0, applied_object_count: 0, to_state_seq: 0 };
   }
   const bootstrap = await loadCompanionBootstrapState();
+  const pairing = await loadCompanionPairingState();
   const packPath = await downloadCompanionDesktopSyncPack(args);
   if (!packPath) {
     return { applied_blob_count: 0, applied_object_count: 0, to_state_seq: 0 };
@@ -33,7 +35,8 @@ export async function applyCompanionDesktopSyncPack(args: {
     return await runCompanionSyncWriterTask(async () => {
       return await applyCompanionSyncPackPathWithSharedCore({
         deviceId: bootstrap.device_id,
-        packPath
+        packPath,
+        primaryDeviceId: pairing.primary_device_id
       }, {
         loadCursor: async () => (await FolioleCompanionSync.loadSyncPackCursor()).cursor,
         saveCursor: async (cursor) => (await FolioleCompanionSync.saveSyncPackCursor({ cursor })).cursor

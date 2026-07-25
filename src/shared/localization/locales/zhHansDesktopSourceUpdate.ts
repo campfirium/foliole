@@ -5,6 +5,8 @@ export const ZH_HANS_DESKTOP_SOURCE_UPDATE_TRANSLATIONS: Partial<Record<Translat
   'desktop.sourceUpdate.close': '关闭来源更新面板',
   'desktop.sourceUpdate.accept': '接受更新',
   'desktop.sourceUpdate.accepting': '正在接受...',
+  'desktop.sourceUpdate.setAsBody': '设为正文',
+  'desktop.sourceUpdate.settingAsBody': '正在设置...',
   'desktop.sourceUpdate.dismiss': '忽略',
   'desktop.sourceUpdate.importAsNew': '作为新主题导入',
   'desktop.sourceUpdate.importingAsNew': '正在导入...',

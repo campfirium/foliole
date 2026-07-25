@@ -1,5 +1,10 @@
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { resetImportData } from '../database/importMaintenance.js';
+import {
+  dismissNodeTextAlternative,
+  loadNodeTextAlternativePreview,
+  promoteNodeTextAlternative
+} from '../database/nodeTextAlternatives.js';
 import { searchWorkspace } from '../database/workspaceSearch.js';
 import { reimportCurrentTopicSource } from '../import/currentSourceReimport.js';
 import {
@@ -97,6 +102,9 @@ async function handleStorageReadCommand(command: string, args: Record<string, un
   if (command === NATIVE_COMMANDS.loadNodeSourceUpdatePreview) {
     return loadNodeSourceUpdatePreview(asString(args.node_id, 'node_id'));
   }
+  if (command === NATIVE_COMMANDS.loadNodeTextAlternativePreview) {
+    return loadNodeTextAlternativePreview(asString(args.node_id, 'node_id'));
+  }
   return undefined;
 }
 
@@ -113,16 +121,10 @@ async function handleImportMutationCommand(
     return result;
   }
   if (command === NATIVE_COMMANDS.acceptIncomingUpdate) {
-    const result = acceptPendingIncomingUpdate({
-      content: asString(args.content, 'content'),
-      id: asString(args.incoming_update_id, 'incoming_update_id')
-    });
-    if (result.status === 'accepted' && result.node_id) {
-      notifyWorkspaceContentChanged(window);
-    }
-    notifyManagedInboxUpdated(result.incoming_update_id);
-    return result;
+    return handleAcceptIncomingUpdate(args, window);
   }
+  const alternativeResult = await handleTextAlternativeMutation(command, args, window);
+  if (alternativeResult !== undefined) return alternativeResult;
   if (command === NATIVE_COMMANDS.dismissIncomingUpdate) {
     const result = dismissPendingIncomingUpdate(asString(args.incoming_update_id, 'incoming_update_id'));
     notifyManagedInboxUpdated(result.incoming_update_id);
@@ -156,6 +158,35 @@ async function handleImportMutationCommand(
       notifyWorkspaceContentChanged();
     }
     return result;
+  }
+  return undefined;
+}
+
+function handleAcceptIncomingUpdate(
+  args: Record<string, unknown>,
+  window: Parameters<typeof handleStorageAttachmentCommand>[2]
+) {
+  const result = acceptPendingIncomingUpdate({
+    content: asString(args.content, 'content'),
+    id: asString(args.incoming_update_id, 'incoming_update_id')
+  });
+  if (result.status === 'accepted' && result.node_id) notifyWorkspaceContentChanged(window);
+  notifyManagedInboxUpdated(result.incoming_update_id);
+  return result;
+}
+
+async function handleTextAlternativeMutation(
+  command: string,
+  args: Record<string, unknown>,
+  window: Parameters<typeof handleStorageAttachmentCommand>[2]
+) {
+  if (command === NATIVE_COMMANDS.promoteNodeTextAlternative) {
+    const result = await promoteNodeTextAlternative(asString(args.alternative_id, 'alternative_id'));
+    if (result.status === 'promoted') notifyWorkspaceContentChanged(window);
+    return result;
+  }
+  if (command === NATIVE_COMMANDS.dismissNodeTextAlternative) {
+    return dismissNodeTextAlternative(asString(args.alternative_id, 'alternative_id'));
   }
   return undefined;
 }

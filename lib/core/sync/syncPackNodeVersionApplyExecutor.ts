@@ -3,8 +3,11 @@ import type { SyncPackNodeApplyOptions } from './syncPackApplyStatements.js';
 import {
   assertValidNodeVersionSnapshot,
   SYNC_PACK_NODE_VERSION_COLUMNS,
+  type SyncPackNodeVersionParentRow,
   type SyncPackNodeVersionRow
 } from './syncPackNodeVersions.js';
+
+const VERSION_PARENT_COLUMNS = ['version_id', 'parent_version_id', 'ordinal'] as const;
 
 export async function applySyncPackNodeVersionsWithDbPort(
   port: DbPort,
@@ -14,15 +17,26 @@ export async function applySyncPackNodeVersionsWithDbPort(
   const incoming = (await port.query(
     `SELECT ${SYNC_PACK_NODE_VERSION_COLUMNS.join(', ')} FROM ${alias}.node_sync_versions`
   )).map(normalizeVersionRow);
-  const ordered = validateIncomingDag(incoming);
+  const parents = (await port.query(
+    `SELECT ${VERSION_PARENT_COLUMNS.join(', ')} FROM ${alias}.node_sync_version_parents`
+  )).map(normalizeVersionParentRow);
+  const ordered = validateIncomingDag(incoming, parents);
   await assertIncomingCurrentPointers(port, alias, new Map(ordered.map((row) => [row.version_id, row])));
   for (const row of ordered) {
     await assertExistingVersionMatches(port, row);
     await port.run(
       `INSERT INTO node_sync_versions (${SYNC_PACK_NODE_VERSION_COLUMNS.join(', ')})
-       VALUES (?, ?, ?, ?, ?, ?, ?)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(version_id) DO NOTHING`,
       SYNC_PACK_NODE_VERSION_COLUMNS.map((column) => row[column]) as DbValue[]
+    );
+  }
+  for (const row of parents) {
+    await port.run(
+      `INSERT INTO node_sync_version_parents (${VERSION_PARENT_COLUMNS.join(', ')})
+       VALUES (?, ?, ?)
+       ON CONFLICT(version_id, parent_version_id) DO NOTHING`,
+      VERSION_PARENT_COLUMNS.map((column) => row[column]) as DbValue[]
     );
   }
 }
@@ -36,14 +50,36 @@ function normalizeVersionRow(row: DbRow): SyncPackNodeVersionRow {
     device_id: requireString(row.device_id, 'device_id'),
     created_at: requireString(row.created_at, 'created_at'),
     content_hash: requireString(row.content_hash, 'content_hash'),
+    body_text: requireNullableText(row.body_text, 'body_text'),
     snapshot_json: requireString(row.snapshot_json, 'snapshot_json')
   };
   assertValidNodeVersionSnapshot(normalized);
   return normalized;
 }
 
-function validateIncomingDag(rows: SyncPackNodeVersionRow[]) {
+function normalizeVersionParentRow(row: DbRow): SyncPackNodeVersionParentRow {
+  const ordinal = row.ordinal;
+  if (typeof ordinal !== 'number' || !Number.isSafeInteger(ordinal) || ordinal < 0) {
+    throw new Error('sync_pack_node_version_parent_field_invalid:ordinal');
+  }
+  return {
+    version_id: requireString(row.version_id, 'version_id'),
+    parent_version_id: requireString(row.parent_version_id, 'parent_version_id'),
+    ordinal
+  };
+}
+
+function validateIncomingDag(
+  rows: SyncPackNodeVersionRow[],
+  parentRows: SyncPackNodeVersionParentRow[]
+) {
   const byId = new Map(rows.map((row) => [row.version_id, row]));
+  const parentsByVersion = new Map<string, SyncPackNodeVersionParentRow[]>();
+  for (const parentRow of parentRows) {
+    const entries = parentsByVersion.get(parentRow.version_id) ?? [];
+    entries.push(parentRow);
+    parentsByVersion.set(parentRow.version_id, entries);
+  }
   const ordered: SyncPackNodeVersionRow[] = [];
   const visited = new Set<string>();
   const visiting = new Set<string>();
@@ -51,8 +87,9 @@ function validateIncomingDag(rows: SyncPackNodeVersionRow[]) {
     if (visited.has(row.version_id)) return;
     if (visiting.has(row.version_id)) throw new Error(`sync_pack_node_version_cycle:${row.version_id}`);
     visiting.add(row.version_id);
-    if (row.parent_version_id !== null) {
-      const parent = byId.get(row.parent_version_id);
+    const parents = (parentsByVersion.get(row.version_id) ?? []).sort((a, b) => a.ordinal - b.ordinal);
+    for (const parentRow of parents) {
+      const parent = byId.get(parentRow.parent_version_id);
       if (!parent) throw new Error(`sync_pack_node_version_missing_parent:${row.version_id}`);
       if (parent.object_id !== row.object_id) {
         throw new Error(`sync_pack_node_version_cross_object:${row.version_id}`);
@@ -108,6 +145,11 @@ function requireString(value: unknown, field: string) {
 function requireNullableString(value: unknown, field: string) {
   if (value === null) return null;
   return requireString(value, field);
+}
+
+function requireNullableText(value: unknown, field: string) {
+  if (value === null || typeof value === 'string') return value;
+  throw new Error(`sync_pack_node_version_field_invalid:${field}`);
 }
 
 function quoteIdentifier(value: string) {

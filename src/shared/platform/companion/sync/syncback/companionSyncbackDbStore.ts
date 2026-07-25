@@ -8,6 +8,8 @@ import type {
 } from '../../../../../../lib/platform/nativeSyncContract';
 import type { SyncPushAck } from '../../../companionSyncPushProtocol';
 
+import { rekeyNodeObject } from './companionSyncNodeRekey';
+
 export interface CompanionSyncbackDbStore {
   loadNodeVersions(cursor: NativeSyncChangeCursor | null, limit?: number): Promise<NativeSyncNodeRecord[]>;
   loadNodeVersionPushCursor(): Promise<NativeSyncChangeCursor | null>;
@@ -51,23 +53,37 @@ async function loadNodeVersions(
   const rows = await port.query(CONTRACT.sql.nodeVersions, [
     deviceId, createdAt, changeId, createdAt, createdAt, changeId, normalizeNodeVersionLimit(limit)
   ]);
-  return Promise.all(rows.map(async (row) => ({
-    ...row,
-    ancestor_version_ids: await loadAncestorVersionIds(port, String(row.version_id)),
-    is_tombstone: Number(row.is_tombstone) === 1,
-    snapshot: parseNodeSnapshot(row.snapshot)
-  }))) as Promise<NativeSyncNodeRecord[]>;
+  return Promise.all(rows.map(async (row) => {
+    const snapshot = parseNodeSnapshot(row.snapshot) as NativeSyncNodeRecord['snapshot'];
+    const parentVersionIds = await loadDirectParentVersionIds(port, String(row.version_id));
+    return {
+      ...row,
+      ancestor_version_ids: await loadAncestorVersionIds(port, parentVersionIds),
+      body_text: typeof row.body_text === 'string' ? row.body_text : snapshot.content ?? '',
+      is_tombstone: Number(row.is_tombstone) === 1,
+      parent_version_ids: parentVersionIds,
+      snapshot
+    };
+  })) as Promise<NativeSyncNodeRecord[]>;
 }
 
-async function loadAncestorVersionIds(port: DbPort, versionId: string) {
+async function loadDirectParentVersionIds(port: DbPort, versionId: string) {
+  const rows = await port.query<DbRow>(CONTRACT.sql.nodeVersionParent, [versionId]);
+  return rows.map((row) => row.parent_version_id)
+    .filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
+}
+
+async function loadAncestorVersionIds(port: DbPort, directParents: string[]) {
   const ancestors: string[] = [];
-  let cursorVersionId = versionId;
+  const pending = [...directParents];
+  const seen = new Set<string>();
   for (let depth = 0; depth < CONTRACT.nodeVersions.ancestorDepthLimit; depth += 1) {
-    const row = (await port.query<DbRow>(CONTRACT.sql.nodeVersionParent, [cursorVersionId]))[0];
-    const parentVersionId = typeof row?.parent_version_id === 'string' ? row.parent_version_id.trim() : '';
-    if (!parentVersionId) break;
-    ancestors.push(parentVersionId);
-    cursorVersionId = parentVersionId;
+    const versionId = pending.shift();
+    if (!versionId) break;
+    if (seen.has(versionId)) continue;
+    seen.add(versionId);
+    ancestors.push(versionId);
+    pending.push(...await loadDirectParentVersionIds(port, versionId));
   }
   return ancestors;
 }
@@ -103,6 +119,7 @@ function payloadSql(objectType: NativeSyncStateObjectRecord['object_type']) {
   if (objectType === 'node_open_state') return CONTRACT.sql.openStatePayload;
   if (objectType === 'node_reading') return CONTRACT.sql.readingPayload;
   if (objectType === 'node_review') return CONTRACT.sql.reviewPayload;
+  if (objectType === 'node_text_alternative') return CONTRACT.sql.alternativePayload;
   if (objectType === 'setting') return CONTRACT.sql.settingPayload;
   throw new Error(`unsupported_companion_syncback_object:${objectType}`);
 }
@@ -163,6 +180,10 @@ async function savePushAcks(port: DbPort, acks: SyncPushAck[]) {
     const now = new Date().toISOString();
     for (const ack of acks) {
       if (!isValidAck(ack)) continue;
+      if (ack.identity.objectType === 'node' && ack.canonicalObjectId
+        && ack.canonicalObjectId !== ack.identity.objectId) {
+        await rekeyNodeObject(tx, ack.identity.objectId, ack.canonicalObjectId);
+      }
       await tx.run(CONTRACT.sql.ackDeleteIssues, [ack.identity.objectType, ack.identity.objectId]);
       await tx.run(CONTRACT.sql.ackUpsert, [
         ack.clientOpId, ack.identity.objectType, ack.identity.objectId, ack.stateSeq ?? null, ack.status, now

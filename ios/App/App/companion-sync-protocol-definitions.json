@@ -49,7 +49,7 @@
     "compression": "zlib",
     "databaseEntry": "incoming.db.deflate",
     "format": "foliole.sync-pack",
-    "formatVersion": 2,
+    "formatVersion": 3,
     "legacyOptionalNodeColumns": [
       "priority",
       "desired_retention",
@@ -69,13 +69,14 @@
       "sync_objects",
       "nodes",
       "node_sync_versions",
+      "node_sync_version_parents",
       "node_order",
       "node_attachments",
       "external_documents",
       "content_blobs",
       "review_log"
     ],
-    "maximumSchemaVersion": 61,
+    "maximumSchemaVersion": 62,
     "minimumSchemaVersion": 46,
     "sqliteTableRequirements": {
       "pack_manifest": [
@@ -108,6 +109,8 @@
         "hide_title_heading",
         "body_blob_hash",
         "opening_text",
+        "anchor_resolution_status",
+        "anchor_source_version_id",
         "content",
         "created_at",
         "updated_at",
@@ -120,7 +123,13 @@
         "device_id",
         "created_at",
         "content_hash",
+        "body_text",
         "snapshot_json"
+      ],
+      "node_sync_version_parents": [
+        "version_id",
+        "parent_version_id",
+        "ordinal"
       ],
       "node_order": [
         "node_id",
@@ -226,6 +235,7 @@
       "packCursor": "pack_cursor",
       "pendingAcks": "pending_acks",
       "pushIssues": "push_issues",
+      "recentConflicts": "recent_conflicts",
       "stateCounts": "state_counts"
     },
     "verdictEvidenceKeys": {
@@ -379,6 +389,7 @@
     "nodeOpenState": "node_open_state",
     "nodeReading": "node_reading",
     "nodeReview": "node_review",
+    "nodeTextAlternative": "node_text_alternative",
     "settingRecord": "setting",
     "viewState": "view_state"
   },
@@ -549,6 +560,18 @@
         "userVisible": true
       },
       {
+        "category": "content",
+        "conflict": "lww",
+        "deviceScope": "workspace",
+        "key": "node_text_alternative",
+        "objectType": "node_text_alternative",
+        "pushIssue": "review_required",
+        "storage": [
+          "node_text_alternatives"
+        ],
+        "userVisible": true
+      },
+      {
         "category": "review",
         "conflict": "append_only_idempotent",
         "deviceScope": "event",
@@ -642,6 +665,7 @@
       "node_open_state",
       "node_reading",
       "node_review",
+      "node_text_alternative",
       "pdf_page_text",
       "setting"
     ]

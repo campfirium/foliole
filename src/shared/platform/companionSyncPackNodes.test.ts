@@ -1,5 +1,7 @@
 import { expect, it, vi } from 'vitest';
 
+import { assertSyncPackCursorAdvance } from '../../../lib/core/sync/syncPackCursorGuard';
+
 import {
   applyCompanionSyncPackNodesWithSharedCore,
   applyCompanionSyncPackPathWithSharedCore
@@ -31,6 +33,8 @@ it('attaches a sync pack before applying pack nodes through the shared core', as
     appliedObjectCount: 0,
     appliedReviewOpIds: [],
     fromStateSeq: 0,
+    handled_conflict_count: 0,
+    handledConflictCount: 0,
     to_state_seq: 4,
     toStateSeq: 4
   });
@@ -48,6 +52,15 @@ it('attaches a sync pack before applying pack nodes through the shared core', as
   expect(connection.close).not.toHaveBeenCalled();
   expect(manager.closeConnection).toHaveBeenCalledWith('foliole-companion', false);
   expect(connection.run).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO main.nodes'), [], false);
+});
+
+it('allows cursor advance when a pack only handled conflicts', () => {
+  expect(() => assertSyncPackCursorAdvance({
+    appliedObjectCount: 0,
+    currentCursor: 2,
+    handledConflictCount: 1,
+    toStateSeq: 5
+  })).not.toThrow();
 });
 
 it('reuses an already open companion database connection', async () => {

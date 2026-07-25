@@ -41,18 +41,29 @@ it('keeps parameterless deletes away from the native execute text parser', async
   expect(connection.execute).not.toHaveBeenCalled();
 });
 
-it('encodes and decodes blob values at the adapter boundary', async () => {
+it('encodes Android blob values with the native plugin Buffer contract', async () => {
   const connection = createFakeConnection({ values: [{ id: 'a', body: [1, 2, 3] }] });
-  const db = createCapacitorSqliteDbPort(connection as never);
+  const db = createCapacitorSqliteDbPort(connection as never, 'android');
 
   await db.run('INSERT INTO items (body) VALUES (?)', [new Uint8Array([4, 5, 6])]);
   const rows = await db.query<{ id: string; body: Uint8Array }>('SELECT id, body FROM items');
 
   expect(connection.run).toHaveBeenCalledWith('INSERT INTO items (body) VALUES (?)', [
-    { 0: 4, 1: 5, 2: 6 }
+    { type: 'Buffer', data: [4, 5, 6] }
   ], false);
   expect(rows[0]!.body).toBeInstanceOf(Uint8Array);
   expect(Array.from(rows[0]!.body)).toEqual([1, 2, 3]);
+});
+
+it('keeps the iOS native dictionary blob contract', async () => {
+  const connection = createFakeConnection();
+  const db = createCapacitorSqliteDbPort(connection as never, 'ios');
+
+  await db.run('INSERT INTO items (body) VALUES (?)', [new Uint8Array([4, 5, 6])]);
+
+  expect(connection.run).toHaveBeenCalledWith('INSERT INTO items (body) VALUES (?)', [
+    { 0: 4, 1: 5, 2: 6 }
+  ], false);
 });
 
 it('commits successful transactions and rolls back failed transactions', async () => {

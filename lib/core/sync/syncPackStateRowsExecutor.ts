@@ -46,9 +46,21 @@ function normalizedObjectTypes(options: SyncPackStateRowsApplyOptions) {
 }
 
 function applyableStateRowsSql(options: SyncPackStateRowsApplyOptions, objectTypes: readonly string[]) {
+  const alias = options.incomingAlias ?? 'inc';
   return `SELECT object_type, object_id, state_seq, content_hash, updated_at, deleted_at ` +
-    `FROM ${buildSyncPackApplyableRowsSql(options)} ` +
-    `WHERE object_type IN (${objectTypes.map(() => '?').join(', ')})`;
+    `FROM ${buildSyncPackApplyableRowsSql(options)} applyable_state ` +
+    `WHERE object_type IN (${objectTypes.map(() => '?').join(', ')}) ` +
+    `AND (object_type <> 'node_review' OR NOT EXISTS (` +
+    `SELECT 1 FROM node_review local_review ` +
+    `LEFT JOIN sync_object_state local_state ON local_state.object_type = 'node_review' ` +
+    `AND local_state.object_id = local_review.node_id ` +
+    `WHERE local_review.node_id = applyable_state.object_id AND (` +
+    `COALESCE(local_review.last_review_at, ''), local_review.reps, COALESCE(local_state.content_hash, '')` +
+    `) > (SELECT COALESCE(json_extract(payload_json, '$.last_review_at'), ''), ` +
+    `COALESCE(json_extract(payload_json, '$.reps'), 0), content_hash ` +
+    `FROM ${alias}.sync_objects incoming_review WHERE incoming_review.object_type = 'node_review' ` +
+    `AND incoming_review.object_id = applyable_state.object_id LIMIT 1)` +
+    `))`;
 }
 
 async function loadPackStateRowCount(port: DbPort, options: SyncPackStateRowsApplyOptions, objectTypes: readonly string[]) {

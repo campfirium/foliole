@@ -1,3 +1,4 @@
+import { Capacitor } from '@capacitor/core';
 import type { SQLiteDBConnection } from '@capacitor-community/sqlite';
 
 import { DbPortError, type DbErrorCode, type DbParams, type DbPort, type DbRow, type DbRunResult, type DbValue } from '../../../lib/core/sync/dbPort.js';
@@ -12,13 +13,20 @@ interface CapacitorChanges {
 type CapacitorRow = Record<string, unknown>;
 
 type IosBlobValue = Record<string, number>;
+interface AndroidBlobValue {
+  data: number[];
+  type: 'Buffer';
+}
 
-export function createCapacitorSqliteDbPort(connection: SQLiteDBConnection): DbPort {
+export function createCapacitorSqliteDbPort(
+  connection: SQLiteDBConnection,
+  platform = Capacitor.getPlatform()
+): DbPort {
   let transactionDepth = 0;
   const port: DbPort = {
     async run(sql, params = []) {
       try {
-        const result = await runStatement(connection, sql, params);
+        const result = await runStatement(connection, sql, params, platform);
         return normalizeRunResult(result);
       } catch (error) {
         throw normalizeSqliteError(error, sql);
@@ -26,7 +34,7 @@ export function createCapacitorSqliteDbPort(connection: SQLiteDBConnection): DbP
     },
     async query<T extends DbRow = DbRow>(sql: string, params: DbParams = []) {
       try {
-        const result = await connection.query(sql, normalizeParams(params));
+        const result = await connection.query(sql, normalizeParams(params, platform));
         return (result.values ?? []).map(normalizeRow) as T[];
       } catch (error) {
         throw normalizeSqliteError(error);
@@ -53,16 +61,19 @@ export function createCapacitorSqliteDbPort(connection: SQLiteDBConnection): DbP
   return port;
 }
 
-async function runStatement(connection: SQLiteDBConnection, sql: string, params: DbParams) {
-  return connection.run(sql, normalizeParams(params), false);
+async function runStatement(connection: SQLiteDBConnection, sql: string, params: DbParams, platform: string) {
+  return connection.run(sql, normalizeParams(params, platform), false);
 }
 
-function normalizeParams(params: DbParams) {
-  return params.map(normalizeValue);
+function normalizeParams(params: DbParams, platform: string) {
+  return params.map((value) => normalizeValue(value, platform));
 }
 
-function normalizeValue(value: DbValue): DbValue | IosBlobValue {
+function normalizeValue(value: DbValue, platform: string): DbValue | IosBlobValue | AndroidBlobValue {
   if (value instanceof Uint8Array) {
+    if (platform === 'android') {
+      return { type: 'Buffer', data: Array.from(value) };
+    }
     return Object.fromEntries(Array.from(value, (byte, index) => [String(index), byte]));
   }
   return value;

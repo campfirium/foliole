@@ -2,6 +2,17 @@ import { ANDROID_COMPANION_LEARNING_PAYLOAD_QUERY_DEFINITIONS } from './androidC
 
 export type CompanionNativePlatform = 'android' | 'ios';
 
+const NODE_TEXT_ALTERNATIVE_COLUMNS = [
+  'alternative_id',
+  'node_id',
+  'source_version_id',
+  'body_text',
+  'source_device_id',
+  'created_at',
+  'status',
+  'updated_at'
+].map((key) => ({ key, source: key, type: 'string' }));
+
 export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
   syncPayloadAttachment: {
     syncPayload: { argMode: 'object_id', objectType: 'attachment' },
@@ -74,6 +85,14 @@ export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
     sql:
       "SELECT json_object('node_id', node_id, 'last_opened_at', last_opened_at) AS payload_json " +
       'FROM node_open_state WHERE node_id = ? LIMIT 1'
+  },
+  syncPayloadNodeTextAlternative: {
+    columns: NODE_TEXT_ALTERNATIVE_COLUMNS,
+    resultKey: 'payloads',
+    syncPayload: { argMode: 'object_id', objectType: 'node_text_alternative' },
+    sql:
+      'SELECT alternative_id, node_id, source_version_id, body_text, source_device_id, created_at, status, updated_at ' +
+      'FROM node_text_alternatives WHERE alternative_id = ? LIMIT 1'
   },
   syncPayloadPdfPageText: {
     syncPayload: { argMode: 'object_id', objectType: 'pdf_page_text' },

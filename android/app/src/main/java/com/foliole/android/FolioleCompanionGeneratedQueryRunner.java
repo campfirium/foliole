@@ -63,6 +63,10 @@ final class FolioleCompanionGeneratedQueryRunner {
         return FolioleCompanionNamedQueryStore.loadFirstRow(context, database, queryName, resultKey, args);
     }
 
+    static JSONObject loadFirstRow(Context context, SQLiteDatabase database, String queryName, String[] args) throws Exception {
+        return FolioleCompanionNamedQueryStore.loadFirstRow(context, database, queryName, args);
+    }
+
     static boolean hasRows(Context context, SQLiteDatabase database, String queryName, String resultKey, String[] args) throws Exception {
         return FolioleCompanionNamedQueryStore.hasRows(context, database, queryName, resultKey, args);
     }

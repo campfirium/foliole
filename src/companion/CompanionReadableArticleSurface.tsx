@@ -12,6 +12,7 @@ import { type CompanionSelectionAnnotationKind } from './CompanionSelectionAnnot
 import { isCompanionSelectionToolbarTarget } from './companionSelectionToolbarDom';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { useCompanionImmersiveScrollPosition } from './useCompanionImmersiveScrollPosition';
+import { useCompanionNodeTextAlternative } from './useCompanionNodeTextAlternative';
 import { useCompanionPendingReadableArticle } from './useCompanionPendingReadableArticle';
 import { useCompanionReadingTypographySettings } from './useCompanionReadingTypographySettings';
 import { useCompanionSelectionAnnotationToolbar } from './useCompanionSelectionAnnotationToolbar';
@@ -133,6 +134,10 @@ function ImmersiveArticleChrome(props: {
   readingTypography: ReturnType<typeof useCompanionReadingTypographySettings>;
 }) {
   const { articleProps, model, readingTypography } = props;
+  const textAlternative = useCompanionNodeTextAlternative({
+    nodeId: articleProps.readableArticle.nodeId,
+    ...definedProps({ onSetAsBody: articleProps.onSaveArticleContent })
+  });
   return (
     <ImmersiveChromeLayer
       actionsOpen={model.reading.isActionsSheetOpen}
@@ -154,6 +159,7 @@ function ImmersiveArticleChrome(props: {
       readableArticle={articleProps.readableArticle}
       readingTypographySettings={readingTypography.settings}
       searchOpen={model.reading.isSearchSheetOpen}
+      textAlternative={textAlternative}
       {...definedProps({ onRestoreFromTrash: articleProps.onRestoreFromTrash })}
     />
   );

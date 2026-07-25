@@ -21,6 +21,7 @@ export const ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS = [
     updated_at TEXT NOT NULL,
     deleted_at TEXT,
     sync_dirty INTEGER NOT NULL DEFAULT 0,
+    base_content_hash TEXT,
     PRIMARY KEY (object_type, object_id),
     UNIQUE (state_seq)
   )`,

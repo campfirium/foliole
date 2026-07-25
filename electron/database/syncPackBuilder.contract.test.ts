@@ -196,6 +196,7 @@ it('keeps the Android sync pack contract fixture deterministic', async () => {
         { name: 'sync_objects', row_count: 1 },
         { name: 'nodes', row_count: 1 },
         { name: 'node_sync_versions', row_count: 1 },
+        { name: 'node_sync_version_parents', row_count: 0 },
         { name: 'node_order', row_count: 1 },
         { name: 'node_attachments', row_count: 1 },
         { name: 'external_documents', row_count: 1 },

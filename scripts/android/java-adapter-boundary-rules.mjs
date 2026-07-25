@@ -22,6 +22,7 @@ export const CLASSIFICATIONS = {
     responsibility: 'Land Capacitor plugin calls into Android host services and return bridge payloads.',
     files: [
       'FolioleCompanionAppDataPlugin.java',
+      'FolioleCompanionAlternativePlugin.java',
       'FolioleCompanionBootstrapPlugin.java',
       'FolioleCompanionDatabasePlugin.java',
       'FolioleCompanionPairingPluginActions.java',
@@ -140,6 +141,8 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionLearningSyncPayload.java',
       'FolioleCompanionMetaRecords.java',
       'FolioleCompanionNodeAttachmentStore.java',
+      'FolioleCompanionNodeRekey.java',
+      'FolioleCompanionNodeTextAlternativeStore.java',
       'FolioleCompanionPdfPageTextStore.java',
       'FolioleCompanionReadableArticleQuery.java',
       'FolioleCompanionSyncEventStore.java',

@@ -131,11 +131,13 @@ function expectedSyncNodeRecord() {
   return [
     {
       ancestor_version_ids: ['desktop#1', 'desktop#0'],
+      body_text: 'hello',
       content_hash: 'hash-2',
       device_id: 'desktop',
       object_id: 'node-1',
       object_type: 'node',
       parent_version_id: 'desktop#1',
+      parent_version_ids: ['desktop#1'],
       snapshot: {
         anchor_link: '{"kind":"highlight"}',
         attachments: [

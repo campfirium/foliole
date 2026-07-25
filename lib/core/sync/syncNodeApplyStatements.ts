@@ -10,10 +10,10 @@ export interface SyncNodeStatement {
 
 export const UPSERT_REMOTE_NODE_SQL = `INSERT INTO nodes (
   id, parent_id, kind, priority, desired_retention, enable_short_term, sequential_reading_enabled, shelved_at, manual_child_order, title, is_title_manual, hide_title_heading,
-  content, body_blob_hash, opening_text, virtual_filter, reveal, anchor_link, image_regions,
+  content, body_blob_hash, opening_text, virtual_filter, reveal, anchor_link, anchor_resolution_status, anchor_source_version_id, image_regions,
   import_source_fingerprint, import_content_fingerprint, position,
   current_version_id, last_modified_by_device_id, sync_dirty, created_at, updated_at, deleted_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
   parent_id = excluded.parent_id,
   kind = excluded.kind,
@@ -32,6 +32,8 @@ ON CONFLICT(id) DO UPDATE SET
   virtual_filter = excluded.virtual_filter,
   reveal = excluded.reveal,
   anchor_link = excluded.anchor_link,
+  anchor_resolution_status = excluded.anchor_resolution_status,
+  anchor_source_version_id = excluded.anchor_source_version_id,
   image_regions = excluded.image_regions,
   import_source_fingerprint = excluded.import_source_fingerprint,
   import_content_fingerprint = excluded.import_content_fingerprint,
@@ -44,14 +46,15 @@ ON CONFLICT(id) DO UPDATE SET
   deleted_at = excluded.deleted_at`;
 
 export const UPSERT_REMOTE_NODE_VERSION_SQL = `INSERT INTO node_sync_versions (
-  version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
-) VALUES (?, ?, ?, ?, ?, ?, ?)
+  version_id, object_id, parent_version_id, device_id, created_at, content_hash, body_text, snapshot_json
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(version_id) DO UPDATE SET
   object_id = excluded.object_id,
   parent_version_id = excluded.parent_version_id,
   device_id = excluded.device_id,
   created_at = excluded.created_at,
   content_hash = excluded.content_hash,
+  body_text = excluded.body_text,
   snapshot_json = excluded.snapshot_json`;
 
 export const DELETE_NODE_ORDER_SQL = 'DELETE FROM node_order WHERE node_id = ?';
@@ -94,6 +97,8 @@ export function buildRemoteNodeUpsert(record: NativeSyncNodeRecord, bodyBlobHash
       snapshot.virtual_filter,
       snapshot.reveal,
       snapshot.anchor_link,
+      snapshot.anchor_resolution_status ?? null,
+      snapshot.anchor_source_version_id ?? null,
       snapshot.image_regions,
       provenance.importSourceFingerprint,
       provenance.importContentFingerprint,
@@ -120,6 +125,7 @@ export function buildRemoteNodeVersionUpsert(record: NativeSyncNodeRecord): Sync
       record.device_id,
       record.version_created_at,
       record.content_hash ?? '',
+      record.body_text ?? record.snapshot.content ?? '',
       JSON.stringify(record.snapshot)
     ],
     sql: UPSERT_REMOTE_NODE_VERSION_SQL

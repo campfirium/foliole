@@ -127,6 +127,12 @@ it('decides incoming node apply outcomes from local state and version ancestry',
       { current_version_id: 'desktop#1', deleted_at: null, sync_dirty: 1 },
       createNodeRecord({ object_id: 'node-1', version_id: 'phone#2' })
     )
+  ).toBe('record_conflict');
+  expect(
+    decideIncomingNodeApply(
+      { current_version_id: 'desktop#1', deleted_at: null, sync_dirty: 1 },
+      createNodeRecord({ object_id: 'node-1', parent_version_id: 'desktop#1', version_id: 'phone#2' })
+    )
   ).toBe('block_incoming');
   expect(
     decideIncomingNodeApply(

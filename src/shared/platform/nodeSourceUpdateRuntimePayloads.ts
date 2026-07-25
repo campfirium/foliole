@@ -3,14 +3,15 @@ export interface RuntimeNodeSourceUpdatePreview {
   currentHighlightCount: number;
   currentContent: string;
   incomingUpdateId: string | null;
-  kind: 'incoming_update' | 'source_update';
+  alternativeId?: string | null;
+  kind: 'incoming_update' | 'source_update' | 'sync_alternative';
   sourceNodeId: string;
   updatedHighlightCount: number;
   updatedContent: string;
 }
 
 function isNodeSourceUpdateKind(value: unknown): value is RuntimeNodeSourceUpdatePreview['kind'] {
-  return value === 'incoming_update' || value === 'source_update';
+  return value === 'incoming_update' || value === 'source_update' || value === 'sync_alternative';
 }
 
 export function toRuntimeNodeSourceUpdatePreview(value: unknown): RuntimeNodeSourceUpdatePreview | null {
@@ -35,6 +36,7 @@ export function toRuntimeNodeSourceUpdatePreview(value: unknown): RuntimeNodeSou
     currentHighlightCount: payload.current_highlight_count,
     currentContent: payload.current_content,
     incomingUpdateId: typeof payload.incoming_update_id === 'string' ? payload.incoming_update_id : null,
+    alternativeId: typeof payload.alternative_id === 'string' ? payload.alternative_id : null,
     kind: isNodeSourceUpdateKind(payload.kind) ? payload.kind : 'source_update',
     sourceNodeId: payload.source_node_id,
     updatedHighlightCount: payload.updated_highlight_count,

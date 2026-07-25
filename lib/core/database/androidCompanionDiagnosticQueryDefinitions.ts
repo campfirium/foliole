@@ -115,6 +115,7 @@ export const ANDROID_COMPANION_DIAGNOSTIC_QUERY_DEFINITIONS = {
     resultKey: 'metrics',
     sql:
       "SELECT 'max_state_seq' AS metric, COALESCE(MAX(state_seq), 0) AS value FROM sync_object_state " +
+      "UNION ALL SELECT 'conflict_count' AS metric, COUNT(*) AS value FROM node_sync_conflicts " +
       "UNION ALL SELECT 'local_dirty_count' AS metric, COUNT(*) AS value FROM sync_object_state WHERE sync_dirty = 1 AND object_type <> 'view_state' " +
       "UNION ALL SELECT 'ready_dirty_count' AS metric, COUNT(*) AS value FROM sync_object_state state WHERE state.sync_dirty = 1 " +
       "AND state.object_type <> 'view_state' " +

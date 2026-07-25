@@ -1,5 +1,275 @@
 {
   "queries": {
+    "nodeTextAlternativeAvailable": {
+      "resultKey": "rows",
+      "sql": "SELECT alternative_id, node_id, source_version_id, body_text, source_device_id, created_at, status, updated_at FROM node_text_alternatives WHERE node_id = ? AND status = 'available' ORDER BY updated_at DESC, alternative_id ASC LIMIT 1",
+      "columns": [
+        {
+          "key": "alternative_id",
+          "source": "alternative_id",
+          "type": "string"
+        },
+        {
+          "key": "node_id",
+          "source": "node_id",
+          "type": "string"
+        },
+        {
+          "key": "source_version_id",
+          "source": "source_version_id",
+          "type": "string"
+        },
+        {
+          "key": "body_text",
+          "source": "body_text",
+          "type": "string"
+        },
+        {
+          "key": "source_device_id",
+          "source": "source_device_id",
+          "type": "string"
+        },
+        {
+          "key": "created_at",
+          "source": "created_at",
+          "type": "string"
+        },
+        {
+          "key": "status",
+          "source": "status",
+          "type": "string"
+        },
+        {
+          "key": "updated_at",
+          "source": "updated_at",
+          "type": "string"
+        }
+      ]
+    },
+    "nodeTextAlternativeById": {
+      "resultKey": "rows",
+      "sql": "SELECT alternative_id, node_id, source_version_id, body_text, source_device_id, created_at, status, updated_at FROM node_text_alternatives WHERE alternative_id = ? LIMIT 1",
+      "columns": [
+        {
+          "key": "alternative_id",
+          "source": "alternative_id",
+          "type": "string"
+        },
+        {
+          "key": "node_id",
+          "source": "node_id",
+          "type": "string"
+        },
+        {
+          "key": "source_version_id",
+          "source": "source_version_id",
+          "type": "string"
+        },
+        {
+          "key": "body_text",
+          "source": "body_text",
+          "type": "string"
+        },
+        {
+          "key": "source_device_id",
+          "source": "source_device_id",
+          "type": "string"
+        },
+        {
+          "key": "created_at",
+          "source": "created_at",
+          "type": "string"
+        },
+        {
+          "key": "status",
+          "source": "status",
+          "type": "string"
+        },
+        {
+          "key": "updated_at",
+          "source": "updated_at",
+          "type": "string"
+        }
+      ]
+    },
+    "nodeExistsById": {
+      "resultKey": "rows",
+      "sql": "SELECT id FROM nodes WHERE id = ? LIMIT 1",
+      "columns": [
+        {
+          "key": "id",
+          "source": "id",
+          "type": "string"
+        }
+      ]
+    },
+    "nodeByIdForRekey": {
+      "resultKey": "rows",
+      "sql": "SELECT parent_id, kind, priority, desired_retention, enable_short_term, sequential_reading_enabled, shelved_at, manual_child_order, title, is_title_manual, hide_title_heading, content, body_blob_hash, opening_text, virtual_filter, reveal, anchor_link, anchor_resolution_status, anchor_source_version_id, image_regions, import_source_fingerprint, import_content_fingerprint, position, current_version_id, last_modified_by_device_id, sync_dirty, created_at, updated_at, deleted_at FROM nodes WHERE id = ? LIMIT 1",
+      "columns": [
+        {
+          "key": "parent_id",
+          "source": "parent_id",
+          "type": "nullableString"
+        },
+        {
+          "key": "kind",
+          "source": "kind",
+          "type": "nullableString"
+        },
+        {
+          "key": "priority",
+          "source": "priority",
+          "type": "long"
+        },
+        {
+          "key": "desired_retention",
+          "source": "desired_retention",
+          "type": "double"
+        },
+        {
+          "key": "enable_short_term",
+          "source": "enable_short_term",
+          "type": "long"
+        },
+        {
+          "key": "sequential_reading_enabled",
+          "source": "sequential_reading_enabled",
+          "type": "long"
+        },
+        {
+          "key": "shelved_at",
+          "source": "shelved_at",
+          "type": "nullableString"
+        },
+        {
+          "key": "manual_child_order",
+          "source": "manual_child_order",
+          "type": "nullableString"
+        },
+        {
+          "key": "title",
+          "source": "title",
+          "type": "nullableString"
+        },
+        {
+          "key": "is_title_manual",
+          "source": "is_title_manual",
+          "type": "long"
+        },
+        {
+          "key": "hide_title_heading",
+          "source": "hide_title_heading",
+          "type": "long"
+        },
+        {
+          "key": "content",
+          "source": "content",
+          "type": "nullableString"
+        },
+        {
+          "key": "body_blob_hash",
+          "source": "body_blob_hash",
+          "type": "nullableString"
+        },
+        {
+          "key": "opening_text",
+          "source": "opening_text",
+          "type": "nullableString"
+        },
+        {
+          "key": "virtual_filter",
+          "source": "virtual_filter",
+          "type": "nullableString"
+        },
+        {
+          "key": "reveal",
+          "source": "reveal",
+          "type": "nullableString"
+        },
+        {
+          "key": "anchor_link",
+          "source": "anchor_link",
+          "type": "nullableString"
+        },
+        {
+          "key": "anchor_resolution_status",
+          "source": "anchor_resolution_status",
+          "type": "nullableString"
+        },
+        {
+          "key": "anchor_source_version_id",
+          "source": "anchor_source_version_id",
+          "type": "nullableString"
+        },
+        {
+          "key": "image_regions",
+          "source": "image_regions",
+          "type": "nullableString"
+        },
+        {
+          "key": "import_source_fingerprint",
+          "source": "import_source_fingerprint",
+          "type": "nullableString"
+        },
+        {
+          "key": "import_content_fingerprint",
+          "source": "import_content_fingerprint",
+          "type": "nullableString"
+        },
+        {
+          "key": "position",
+          "source": "position",
+          "type": "long"
+        },
+        {
+          "key": "current_version_id",
+          "source": "current_version_id",
+          "type": "nullableString"
+        },
+        {
+          "key": "last_modified_by_device_id",
+          "source": "last_modified_by_device_id",
+          "type": "nullableString"
+        },
+        {
+          "key": "sync_dirty",
+          "source": "sync_dirty",
+          "type": "long"
+        },
+        {
+          "key": "created_at",
+          "source": "created_at",
+          "type": "nullableString"
+        },
+        {
+          "key": "updated_at",
+          "source": "updated_at",
+          "type": "nullableString"
+        },
+        {
+          "key": "deleted_at",
+          "source": "deleted_at",
+          "type": "nullableString"
+        }
+      ]
+    },
+    "nodeVersionsForRekey": {
+      "resultKey": "rows",
+      "sql": "SELECT version_id, snapshot_json FROM node_sync_versions WHERE object_id = ? ORDER BY version_id",
+      "columns": [
+        {
+          "key": "version_id",
+          "source": "version_id",
+          "type": "string"
+        },
+        {
+          "key": "snapshot_json",
+          "source": "snapshot_json",
+          "type": "nullableString"
+        }
+      ]
+    },
     "syncIndex": {
       "resultKey": "entries",
       "sql": "SELECT object_type, object_id, current_version_id, content_hash, updated_at FROM sync_object_state WHERE object_type NOT IN ('node', 'view_state') ORDER BY updated_at ASC, object_type ASC, object_id ASC",
@@ -33,7 +303,7 @@
     },
     "syncStateChanges": {
       "resultKey": "objects",
-      "sql": "SELECT object_type, object_id, state_seq, content_hash, updated_at, deleted_at, base_content_hash FROM sync_object_state WHERE object_type NOT IN ('node', 'view_state') AND sync_dirty = 1 AND state_seq > ? AND NOT EXISTS (SELECT 1 FROM sync_push_ack ack WHERE ack.object_type = sync_object_state.object_type AND ack.object_id = sync_object_state.object_id AND (ack.status IN ('accepted', 'already_applied') OR ack.object_type IN ('attachment', 'external_document', 'external_folder', 'import_source', 'node', 'node_open_state', 'node_reading', 'node_review', 'pdf_page_text', 'setting'))) ORDER BY state_seq ASC LIMIT ?",
+      "sql": "SELECT object_type, object_id, state_seq, content_hash, updated_at, deleted_at, base_content_hash FROM sync_object_state WHERE object_type NOT IN ('node', 'view_state') AND sync_dirty = 1 AND state_seq > ? AND NOT EXISTS (SELECT 1 FROM sync_push_ack ack WHERE ack.object_type = sync_object_state.object_type AND ack.object_id = sync_object_state.object_id AND (ack.status IN ('accepted', 'already_applied') OR ack.object_type IN ('attachment', 'external_document', 'external_folder', 'import_source', 'node', 'node_open_state', 'node_reading', 'node_review', 'node_text_alternative', 'pdf_page_text', 'setting'))) ORDER BY state_seq ASC LIMIT ?",
       "columns": [
         {
           "key": "object_type",
@@ -217,7 +487,7 @@
     },
     "syncNodeVersions": {
       "resultKey": "nodes",
-      "sql": "SELECT * FROM (SELECT v.version_id, v.object_id, 'node' AS object_type, v.parent_version_id, v.device_id, 0 AS is_tombstone, v.created_at AS version_created_at, n.updated_at AS updated_at, v.content_hash, v.snapshot_json AS snapshot FROM node_sync_versions v INNER JOIN nodes n ON n.id = v.object_id WHERE v.device_id = ?1 AND (?2 = '' OR ?3 = '' OR v.created_at > ?4 OR (v.created_at = ?5 AND v.version_id > ?6)) AND v.object_id NOT LIKE 'conflict-copy-%' AND n.current_version_id = v.version_id AND n.deleted_at IS NULL UNION ALL SELECT t.version_id, t.node_id AS object_id, 'node' AS object_type, t.parent_version_id, t.device_id, 1 AS is_tombstone, t.created_at AS version_created_at, t.deleted_at AS updated_at, t.content_hash, t.snapshot_json AS snapshot FROM node_sync_tombstones t WHERE t.device_id = ?1 AND (?2 = '' OR ?3 = '' OR t.created_at > ?4 OR (t.created_at = ?5 AND t.version_id > ?6)) AND t.node_id NOT LIKE 'conflict-copy-%') ORDER BY version_created_at ASC, version_id ASC LIMIT ?7",
+      "sql": "SELECT * FROM (SELECT v.version_id, v.object_id, 'node' AS object_type, v.parent_version_id, v.device_id, 0 AS is_tombstone, v.created_at AS version_created_at, n.updated_at AS updated_at, v.content_hash, v.body_text, v.snapshot_json AS snapshot FROM node_sync_versions v INNER JOIN nodes n ON n.id = v.object_id WHERE v.device_id = ?1 AND (?2 = '' OR ?3 = '' OR v.created_at > ?4 OR (v.created_at = ?5 AND v.version_id > ?6)) AND n.current_version_id = v.version_id AND n.deleted_at IS NULL UNION ALL SELECT t.version_id, t.node_id AS object_id, 'node' AS object_type, t.parent_version_id, t.device_id, 1 AS is_tombstone, t.created_at AS version_created_at, t.deleted_at AS updated_at, t.content_hash, NULL AS body_text, t.snapshot_json AS snapshot FROM node_sync_tombstones t WHERE t.device_id = ?1 AND (?2 = '' OR ?3 = '' OR t.created_at > ?4 OR (t.created_at = ?5 AND t.version_id > ?6)) ) ORDER BY version_created_at ASC, version_id ASC LIMIT ?7",
       "columns": [
         {
           "key": "version_id",
@@ -265,6 +535,11 @@
           "type": "string"
         },
         {
+          "key": "body_text",
+          "source": "body_text",
+          "type": "nullableString"
+        },
+        {
           "key": "snapshot",
           "source": "snapshot",
           "type": "json"
@@ -272,7 +547,7 @@
       ]
     },
     "syncNodeVersionParent": {
-      "sql": "SELECT parent_version_id FROM node_sync_versions WHERE version_id = ? LIMIT 1"
+      "sql": "SELECT parent_version_id FROM node_sync_version_parents\n      WHERE version_id = ? ORDER BY ordinal ASC"
     },
     "companionMetaValue": {
       "resultKey": "rows",
@@ -1511,6 +1786,56 @@
       },
       "sql": "SELECT json_object('node_id', node_id, 'last_opened_at', last_opened_at) AS payload_json FROM node_open_state WHERE node_id = ? LIMIT 1"
     },
+    "syncPayloadNodeTextAlternative": {
+      "columns": [
+        {
+          "key": "alternative_id",
+          "source": "alternative_id",
+          "type": "string"
+        },
+        {
+          "key": "node_id",
+          "source": "node_id",
+          "type": "string"
+        },
+        {
+          "key": "source_version_id",
+          "source": "source_version_id",
+          "type": "string"
+        },
+        {
+          "key": "body_text",
+          "source": "body_text",
+          "type": "string"
+        },
+        {
+          "key": "source_device_id",
+          "source": "source_device_id",
+          "type": "string"
+        },
+        {
+          "key": "created_at",
+          "source": "created_at",
+          "type": "string"
+        },
+        {
+          "key": "status",
+          "source": "status",
+          "type": "string"
+        },
+        {
+          "key": "updated_at",
+          "source": "updated_at",
+          "type": "string"
+        }
+      ],
+      "resultKey": "payloads",
+      "syncPayload": {
+        "argMode": "object_id",
+        "objectType": "node_text_alternative"
+      },
+      "sql": "SELECT alternative_id, node_id, source_version_id, body_text, source_device_id, created_at, status, updated_at FROM node_text_alternatives WHERE alternative_id = ? LIMIT 1"
+    },
     "syncPayloadPdfPageText": {
       "syncPayload": {
         "argMode": "object_id",
@@ -1654,7 +1979,7 @@
     },
     "diagnosticSyncStateMetrics": {
       "resultKey": "metrics",
-      "sql": "SELECT 'max_state_seq' AS metric, COALESCE(MAX(state_seq), 0) AS value FROM sync_object_state UNION ALL SELECT 'local_dirty_count' AS metric, COUNT(*) AS value FROM sync_object_state WHERE sync_dirty = 1 AND object_type <> 'view_state' UNION ALL SELECT 'ready_dirty_count' AS metric, COUNT(*) AS value FROM sync_object_state state WHERE state.sync_dirty = 1 AND state.object_type <> 'view_state' AND NOT EXISTS (SELECT 1 FROM sync_push_ack ack WHERE ack.object_type = state.object_type AND ack.object_id = state.object_id AND (ack.status IN ('accepted', 'already_applied') OR ack.object_type IN ('attachment', 'external_document', 'external_folder', 'import_source', 'node', 'node_open_state', 'node_reading', 'node_review', 'pdf_page_text', 'setting'))) UNION ALL SELECT 'pending_ack_count' AS metric, COUNT(*) AS value FROM sync_push_ack WHERE status IN ('accepted', 'already_applied') UNION ALL SELECT 'push_issue_count' AS metric, COUNT(*) AS value FROM sync_push_ack WHERE status IN ('conflict', 'rejected') AND object_type IN ('attachment', 'external_document', 'external_folder', 'import_source', 'node', 'node_open_state', 'node_reading', 'node_review', 'pdf_page_text', 'setting')",
+      "sql": "SELECT 'max_state_seq' AS metric, COALESCE(MAX(state_seq), 0) AS value FROM sync_object_state UNION ALL SELECT 'conflict_count' AS metric, COUNT(*) AS value FROM node_sync_conflicts UNION ALL SELECT 'local_dirty_count' AS metric, COUNT(*) AS value FROM sync_object_state WHERE sync_dirty = 1 AND object_type <> 'view_state' UNION ALL SELECT 'ready_dirty_count' AS metric, COUNT(*) AS value FROM sync_object_state state WHERE state.sync_dirty = 1 AND state.object_type <> 'view_state' AND NOT EXISTS (SELECT 1 FROM sync_push_ack ack WHERE ack.object_type = state.object_type AND ack.object_id = state.object_id AND (ack.status IN ('accepted', 'already_applied') OR ack.object_type IN ('attachment', 'external_document', 'external_folder', 'import_source', 'node', 'node_open_state', 'node_reading', 'node_review', 'node_text_alternative', 'pdf_page_text', 'setting'))) UNION ALL SELECT 'pending_ack_count' AS metric, COUNT(*) AS value FROM sync_push_ack WHERE status IN ('accepted', 'already_applied') UNION ALL SELECT 'push_issue_count' AS metric, COUNT(*) AS value FROM sync_push_ack WHERE status IN ('conflict', 'rejected') AND object_type IN ('attachment', 'external_document', 'external_folder', 'import_source', 'node', 'node_open_state', 'node_reading', 'node_review', 'node_text_alternative', 'pdf_page_text', 'setting')",
       "columns": [
         {
           "key": "metric",
@@ -1670,7 +1995,7 @@
     },
     "diagnosticSyncStateCounts": {
       "resultKey": "counts",
-      "sql": "SELECT state.object_type, COUNT(*) AS count, SUM(CASE WHEN state.sync_dirty = 1 THEN 1 ELSE 0 END) AS dirty_count, MIN(state.state_seq) AS min_state_seq, MAX(state.state_seq) AS max_state_seq, COALESCE(pending.count, 0) AS pending_ack_count, COALESCE(issues.count, 0) AS push_issue_count, SUM(CASE WHEN state.sync_dirty = 1 AND NOT EXISTS (SELECT 1 FROM sync_push_ack ack WHERE ack.object_type = state.object_type AND ack.object_id = state.object_id AND (ack.status IN ('accepted', 'already_applied') OR ack.object_type IN ('attachment', 'external_document', 'external_folder', 'import_source', 'node', 'node_open_state', 'node_reading', 'node_review', 'pdf_page_text', 'setting'))) THEN 1 ELSE 0 END) AS ready_dirty_count FROM sync_object_state state LEFT JOIN (SELECT object_type, COUNT(*) AS count FROM sync_push_ack WHERE status IN ('accepted', 'already_applied') GROUP BY object_type) pending ON pending.object_type = state.object_type LEFT JOIN (SELECT object_type, COUNT(*) AS count FROM sync_push_ack WHERE status IN ('conflict', 'rejected') AND object_type IN ('attachment', 'external_document', 'external_folder', 'import_source', 'node', 'node_open_state', 'node_reading', 'node_review', 'pdf_page_text', 'setting') GROUP BY object_type) issues ON issues.object_type = state.object_type WHERE state.object_type <> 'view_state' GROUP BY state.object_type ORDER BY state.object_type ASC",
+      "sql": "SELECT state.object_type, COUNT(*) AS count, SUM(CASE WHEN state.sync_dirty = 1 THEN 1 ELSE 0 END) AS dirty_count, MIN(state.state_seq) AS min_state_seq, MAX(state.state_seq) AS max_state_seq, COALESCE(pending.count, 0) AS pending_ack_count, COALESCE(issues.count, 0) AS push_issue_count, SUM(CASE WHEN state.sync_dirty = 1 AND NOT EXISTS (SELECT 1 FROM sync_push_ack ack WHERE ack.object_type = state.object_type AND ack.object_id = state.object_id AND (ack.status IN ('accepted', 'already_applied') OR ack.object_type IN ('attachment', 'external_document', 'external_folder', 'import_source', 'node', 'node_open_state', 'node_reading', 'node_review', 'node_text_alternative', 'pdf_page_text', 'setting'))) THEN 1 ELSE 0 END) AS ready_dirty_count FROM sync_object_state state LEFT JOIN (SELECT object_type, COUNT(*) AS count FROM sync_push_ack WHERE status IN ('accepted', 'already_applied') GROUP BY object_type) pending ON pending.object_type = state.object_type LEFT JOIN (SELECT object_type, COUNT(*) AS count FROM sync_push_ack WHERE status IN ('conflict', 'rejected') AND object_type IN ('attachment', 'external_document', 'external_folder', 'import_source', 'node', 'node_open_state', 'node_reading', 'node_review', 'node_text_alternative', 'pdf_page_text', 'setting') GROUP BY object_type) issues ON issues.object_type = state.object_type WHERE state.object_type <> 'view_state' GROUP BY state.object_type ORDER BY state.object_type ASC",
       "columns": [
         {
           "key": "object_type",
@@ -1716,7 +2041,7 @@
     },
     "diagnosticDirtyObjects": {
       "resultKey": "objects",
-      "sql": "SELECT object_type, object_id, content_hash, state_seq, updated_at, base_content_hash FROM sync_object_state WHERE sync_dirty = 1 AND object_type <> 'view_state' AND NOT EXISTS (SELECT 1 FROM sync_push_ack ack WHERE ack.object_type = sync_object_state.object_type AND ack.object_id = sync_object_state.object_id AND (ack.status IN ('accepted', 'already_applied') OR ack.object_type IN ('attachment', 'external_document', 'external_folder', 'import_source', 'node', 'node_open_state', 'node_reading', 'node_review', 'pdf_page_text', 'setting'))) ORDER BY state_seq DESC LIMIT 50",
+      "sql": "SELECT object_type, object_id, content_hash, state_seq, updated_at, base_content_hash FROM sync_object_state WHERE sync_dirty = 1 AND object_type <> 'view_state' AND NOT EXISTS (SELECT 1 FROM sync_push_ack ack WHERE ack.object_type = sync_object_state.object_type AND ack.object_id = sync_object_state.object_id AND (ack.status IN ('accepted', 'already_applied') OR ack.object_type IN ('attachment', 'external_document', 'external_folder', 'import_source', 'node', 'node_open_state', 'node_reading', 'node_review', 'node_text_alternative', 'pdf_page_text', 'setting'))) ORDER BY state_seq DESC LIMIT 50",
       "columns": [
         {
           "key": "object_type",
@@ -1788,7 +2113,7 @@
     },
     "diagnosticPushIssues": {
       "resultKey": "acks",
-      "sql": "SELECT client_op_id, object_type, object_id, state_seq, status, acked_at FROM sync_push_ack WHERE status IN ('conflict', 'rejected') AND object_type IN ('attachment', 'external_document', 'external_folder', 'import_source', 'node', 'node_open_state', 'node_reading', 'node_review', 'pdf_page_text', 'setting') ORDER BY acked_at ASC LIMIT 50",
+      "sql": "SELECT client_op_id, object_type, object_id, state_seq, status, acked_at FROM sync_push_ack WHERE status IN ('conflict', 'rejected') AND object_type IN ('attachment', 'external_document', 'external_folder', 'import_source', 'node', 'node_open_state', 'node_reading', 'node_review', 'node_text_alternative', 'pdf_page_text', 'setting') ORDER BY acked_at ASC LIMIT 50",
       "columns": [
         {
           "key": "client_op_id",
@@ -2241,6 +2566,10 @@
       "queryName": "diagnosticPendingAcks",
       "resultKey": "acks"
     },
+    "nodeConflicts": {
+      "queryName": "nodeConflicts",
+      "resultKey": "conflicts"
+    },
     "pushIssues": {
       "queryName": "diagnosticPushIssues",
       "resultKey": "acks"
@@ -2265,6 +2594,10 @@
       {
         "outputKey": "pushIssues",
         "queryKey": "pushIssues"
+      },
+      {
+        "outputKey": "recentConflicts",
+        "queryKey": "nodeConflicts"
       },
       {
         "outputKey": "stateCounts",
@@ -2720,6 +3053,11 @@
         "argMode": "object_id",
         "objectType": "node_open_state",
         "queryName": "syncPayloadNodeOpenState"
+      },
+      {
+        "argMode": "object_id",
+        "objectType": "node_text_alternative",
+        "queryName": "syncPayloadNodeTextAlternative"
       },
       {
         "argMode": "object_id",

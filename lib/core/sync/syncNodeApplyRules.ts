@@ -109,11 +109,14 @@ export function decideIncomingNodeApply(
   if (isExplicitLocalRestore(local, record, operation)) {
     return 'apply_fast_forward';
   }
-  if (blocksIncomingNodeVersion(local, record)) {
+  if (local.deleted_at && !record.snapshot.deleted_at) {
     return 'block_incoming';
   }
   if (!isRemoteFastForward(record, local.current_version_id)) {
     return 'record_conflict';
+  }
+  if (blocksIncomingNodeVersion(local, record)) {
+    return 'block_incoming';
   }
   if (record.version_id === local.current_version_id) {
     return 'already_applied';

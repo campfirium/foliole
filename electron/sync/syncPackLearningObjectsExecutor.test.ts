@@ -5,8 +5,7 @@ import { applySyncPackLearningObjectsWithDbPort } from '../../lib/core/sync/sync
 
 it('applies node reading and review payload records', async () => {
   const runs: Array<{ params: unknown[]; sql: string }> = [];
-  const port = {
-    query: vi.fn(async () => [
+  const records = [
       {
         content_hash: 'hash-reading',
         deleted_at: null,
@@ -29,7 +28,9 @@ it('applies node reading and review payload records', async () => {
         payload_json: JSON.stringify({ due: '2026-05-05T00:00:00.000Z', reps: 2 }),
         updated_at: '2026-05-04T03:01:00.000Z'
       }
-    ]),
+    ];
+  const port = {
+    query: vi.fn(async (sql: string) => sql.includes('FROM node_review r') ? [] : records),
     run: vi.fn(async (sql: string, params: unknown[] = []) => {
       runs.push({ params, sql });
       return { changes: 1, lastInsertRowId: null };

@@ -3,6 +3,8 @@ export const EN_DESKTOP_SOURCE_UPDATE_TRANSLATIONS = {
   'desktop.sourceUpdate.close': 'Close source update panel',
   'desktop.sourceUpdate.accept': 'Accept update',
   'desktop.sourceUpdate.accepting': 'Accepting...',
+  'desktop.sourceUpdate.setAsBody': 'Set as body',
+  'desktop.sourceUpdate.settingAsBody': 'Setting...',
   'desktop.sourceUpdate.dismiss': 'Dismiss',
   'desktop.sourceUpdate.importAsNew': 'Import as new',
   'desktop.sourceUpdate.importingAsNew': 'Importing...',

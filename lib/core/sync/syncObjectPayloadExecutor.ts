@@ -29,6 +29,8 @@ export async function applySyncObjectPayloadWithDbPort(
       return applyNodeReadingObject(port, record, options);
     case 'node_review':
       return applyNodeReviewObject(port, record);
+    case 'node_text_alternative':
+      return applyNodeTextAlternativeObject(port, record);
     case 'pdf_page_text':
       return applyPdfPageTextObject(port, record);
     case 'setting':
@@ -38,6 +40,26 @@ export async function applySyncObjectPayloadWithDbPort(
     default:
       throw new Error(`Unsupported sync object type: ${String(record.object_type)}`);
   }
+}
+
+async function applyNodeTextAlternativeObject(port: DbPort, record: SyncPackSyncObjectRecord) {
+  if (record.deleted_at) {
+    await port.run('DELETE FROM node_text_alternatives WHERE alternative_id = ?', [record.object_id]);
+    return;
+  }
+  const payload = asObject(record);
+  await port.run(
+    `INSERT INTO node_text_alternatives (
+       alternative_id, node_id, source_version_id, body_text, source_device_id, created_at, status, updated_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(alternative_id) DO UPDATE SET
+       status = excluded.status, updated_at = excluded.updated_at
+     WHERE node_text_alternatives.status = 'available'
+       OR node_text_alternatives.status = excluded.status`,
+    [record.object_id, text(payload.node_id) ?? '', text(payload.source_version_id) ?? '',
+      text(payload.body_text) ?? '', text(payload.source_device_id) ?? '',
+      text(payload.created_at) ?? record.updated_at, text(payload.status) ?? 'available', record.updated_at]
+  );
 }
 
 async function applyExternalDocumentObject(port: DbPort, record: SyncPackSyncObjectRecord) {

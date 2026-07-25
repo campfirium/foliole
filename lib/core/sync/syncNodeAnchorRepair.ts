@@ -133,6 +133,7 @@ export async function repairDirectChildAnchorsForAppliedParent(input: {
   content: string;
   parentNodeId: string;
   port: DbPort;
+  sourceVersionId: string | null;
   updatedAt: string;
 }) {
   const repaired: SyncNodeAnchorRepairRecord[] = [];
@@ -153,18 +154,28 @@ export async function repairDirectChildAnchorsForAppliedParent(input: {
     const anchorId = parseStoredAnchorLink(row.anchor_link)?.id ?? null;
     const result = remapRawAnchorLinkInContent({ content: input.content, value: row.anchor_link });
     if (!result) {
+      await writeAnchorStatus(input.port, row.id, 'resolved', input.sourceVersionId, input.updatedAt);
       continue;
     }
     if (typeof result === 'string') {
+      await writeAnchorStatus(
+        input.port,
+        row.id,
+        result === 'ambiguous_text' ? 'unmapped_ambiguous' : 'unmapped_missing',
+        input.sourceVersionId,
+        input.updatedAt
+      );
       unmapped.push({ anchorId, nodeId: row.id, parentNodeId: input.parentNodeId, reason: result });
       continue;
     }
     if (result.value === row.anchor_link && result.imageRegions === row.image_regions) {
       continue;
     }
-    await input.port.run('UPDATE nodes SET anchor_link = ?, image_regions = ?, updated_at = ? WHERE id = ?', [
+    await input.port.run(`UPDATE nodes SET anchor_link = ?, image_regions = ?, anchor_resolution_status = 'resolved',
+      anchor_source_version_id = ?, sync_dirty = 1, updated_at = ? WHERE id = ?`, [
       result.value,
       result.imageRegions,
+      input.sourceVersionId,
       input.updatedAt,
       row.id
     ]);
@@ -172,4 +183,18 @@ export async function repairDirectChildAnchorsForAppliedParent(input: {
   }
 
   return { repaired, unmapped };
+}
+
+function writeAnchorStatus(
+  port: DbPort,
+  nodeId: string,
+  status: 'resolved' | 'unmapped_ambiguous' | 'unmapped_missing',
+  sourceVersionId: string | null,
+  updatedAt: string
+) {
+  return port.run(
+    `UPDATE nodes SET anchor_resolution_status = ?, anchor_source_version_id = ?, sync_dirty = 1, updated_at = ?
+     WHERE id = ? AND (anchor_resolution_status IS NOT ? OR anchor_source_version_id IS NOT ?)`,
+    [status, sourceVersionId, updatedAt, nodeId, status, sourceVersionId]
+  );
 }

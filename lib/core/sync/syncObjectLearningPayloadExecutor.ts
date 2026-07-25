@@ -42,7 +42,7 @@ export async function applyNodeReviewObject(port: DbPort, record: SyncPackSyncOb
   }
   const payload = asObject(record);
   const incomingReps = integer(payload.reps);
-  if (incomingReps === 0 && await hasReviewedNodeReview(port, record.object_id)) {
+  if (!await shouldApplyNodeReview(port, record, text(payload.last_review_at), incomingReps)) {
     return false;
   }
   await port.run(
@@ -57,12 +57,24 @@ export async function applyNodeReviewObject(port: DbPort, record: SyncPackSyncOb
   );
 }
 
-async function hasReviewedNodeReview(port: DbPort, nodeId: string) {
-  const existing = (await port.query<{ reps: number }>(
-    'SELECT reps FROM node_review WHERE node_id = ?',
-    [nodeId]
+async function shouldApplyNodeReview(
+  port: DbPort,
+  record: SyncPackSyncObjectRecord,
+  incomingLastReviewAt: string | null,
+  incomingReps: number
+) {
+  const existing = (await port.query<{ content_hash: string | null; last_review_at: string | null; reps: number }>(
+    `SELECT r.last_review_at, r.reps, s.content_hash
+     FROM node_review r LEFT JOIN sync_object_state s
+       ON s.object_type = 'node_review' AND s.object_id = r.node_id
+     WHERE r.node_id = ?`,
+    [record.object_id]
   ))[0];
-  return (existing?.reps ?? 0) > 0;
+  if (!existing) return true;
+  if (incomingReps === 0 && existing.reps > 0) return false;
+  const incomingKey = [incomingLastReviewAt ?? '', String(incomingReps).padStart(12, '0'), record.content_hash];
+  const existingKey = [existing.last_review_at ?? '', String(existing.reps).padStart(12, '0'), existing.content_hash ?? ''];
+  return incomingKey.join('\n') > existingKey.join('\n');
 }
 
 async function applyReadingPosition(

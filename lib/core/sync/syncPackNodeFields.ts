@@ -18,6 +18,8 @@ export const SYNC_PACK_NODE_FIELD_DEFINITIONS = [
   { name: 'virtual_filter', sql: 'TEXT', legacyOptional: true },
   { name: 'reveal', sql: 'TEXT', legacyOptional: true },
   { name: 'anchor_link', sql: 'TEXT', legacyOptional: true },
+  { name: 'anchor_resolution_status', sql: 'TEXT' },
+  { name: 'anchor_source_version_id', sql: 'TEXT' },
   { name: 'image_regions', sql: 'TEXT', legacyOptional: true },
   { name: 'import_source_fingerprint', sql: 'TEXT', legacyOptional: true },
   { name: 'import_content_fingerprint', sql: 'TEXT', legacyOptional: true },
@@ -42,6 +44,8 @@ export const SYNC_PACK_LEGACY_OPTIONAL_NODE_COLUMNS = new Set<SyncPackNodeColumn
 
 export interface SyncPackNodeRow extends DatabaseRow {
   anchor_link: string | null;
+  anchor_resolution_status: string | null;
+  anchor_source_version_id: string | null;
   body_blob_hash: string | null;
   content: string;
   created_at: string;

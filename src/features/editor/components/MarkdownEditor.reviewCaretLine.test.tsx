@@ -145,6 +145,27 @@ describe('MarkdownEditor Escape blur', () => {
   });
 });
 
+describe('MarkdownEditor Escape dialog precedence', () => {
+  it('leaves Escape available to an open dialog instead of consuming it in the editor', () => {
+    const view = renderEditor(false, false);
+    const host = view.container.querySelector('.markdown-editor-host') as HTMLElement;
+    const editable = document.createElement('div');
+    const dialog = document.createElement('div');
+    editable.contentEditable = 'true';
+    editable.tabIndex = 0;
+    dialog.role = 'dialog';
+    host.append(editable);
+    document.body.append(dialog);
+    editable.focus();
+
+    const wasNotPrevented = fireEvent.keyDown(window, { key: 'Escape', cancelable: true });
+
+    expect(wasNotPrevented).toBe(true);
+    expect(document.activeElement).toBe(editable);
+    dialog.remove();
+  });
+});
+
 describe('MarkdownEditor Escape CodeMirror fallback', () => {
   it('blurs focused CodeMirror content when activeElement is outside the editor host', () => {
     const view = renderEditor(false, false);

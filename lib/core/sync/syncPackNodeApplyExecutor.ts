@@ -24,6 +24,7 @@ import { applySyncPackReviewLogWithDbPort } from './syncPackReviewLogExecutor.js
 import { applySyncPackStateRowsWithDbPort } from './syncPackStateRowsExecutor.js';
 import {
   applySyncPackMetadataObjectsWithDbPort,
+  applySyncPackNodeTextAlternativesWithDbPort,
   applySyncPackSettingObjectsWithDbPort
 } from './syncPackSyncObjectsExecutor.js';
 import { applySyncPackViewStateObjectsWithDbPort } from './syncPackViewStateObjectsExecutor.js';
@@ -124,6 +125,7 @@ export async function applySyncPackNodeSurfaceWithDbPort(
     appliedBlobCount: result.appliedBlobCount,
     appliedObjectCount: result.appliedObjectCount,
     appliedReviewOpIds: result.appliedReviewOpIds,
+    handledConflictCount: result.handledConflictCount,
     fromStateSeq: cursor.fromStateSeq,
     toStateSeq: cursor.toStateSeq
   };
@@ -137,28 +139,40 @@ async function applySyncPackSurfaceInTransaction(
 ) {
   if (!shouldApply) {
     await clearConfirmedSyncPushAcks(port, options, toStateSeq);
-    return { appliedBlobCount: 0, appliedObjectCount: 0, appliedReviewOpIds: [] as string[] };
+    return {
+      appliedBlobCount: 0,
+      appliedObjectCount: 0,
+      appliedReviewOpIds: [] as string[],
+      handledConflictCount: 0
+    };
   }
-  const appliedBlobCount = await applySyncPackContentBlobsWithDbPort(port, options);
-  await applySyncPackNodeRowsWithDbPort(port, options);
-  await applySyncPackNodeVersionsWithDbPort(port, options);
-  await applySyncPackNodeOrderRowsWithDbPort(port, options);
+  const applyOptions = options;
+  const appliedBlobCount = await applySyncPackContentBlobsWithDbPort(port, applyOptions);
+  await applySyncPackNodeRowsWithDbPort(port, applyOptions);
+  await applySyncPackNodeVersionsWithDbPort(port, applyOptions);
+  await applySyncPackNodeOrderRowsWithDbPort(port, applyOptions);
   await pruneLearningRowsWithoutVisibleNodes(port);
   await applySyncPackExternalDocumentsWithDbPort(port, options);
   await applySyncPackSettingObjectsWithDbPort(port, options);
   await applySyncPackMetadataObjectsWithDbPort(port, options);
+  await applySyncPackNodeTextAlternativesWithDbPort(port, options);
   await applySyncPackLearningObjectsWithDbPort(port, options);
   await pruneLearningRowsWithoutVisibleNodes(port);
   await applySyncPackAttachmentObjectsWithDbPort(port, options);
-  await applySyncPackNodeAttachmentsWithDbPort(port, options);
+  await applySyncPackNodeAttachmentsWithDbPort(port, applyOptions);
   await applySyncPackViewStateObjectsWithDbPort(port, options);
   const appliedReviewOpIds = await applySyncPackReviewLogWithDbPort(port, options);
   const appliedObjectCount = await applySyncPackStateRowsWithDbPort(port, {
-    ...options,
+    ...applyOptions,
     objectTypes: SYNC_PACK_SURFACE_OBJECT_TYPES
   });
   await clearConfirmedSyncPushAcks(port, options, toStateSeq);
-  return { appliedBlobCount, appliedObjectCount, appliedReviewOpIds };
+  return {
+    appliedBlobCount,
+    appliedObjectCount,
+    appliedReviewOpIds,
+    handledConflictCount: 0
+  };
 }
 
 function clearConfirmedSyncPushAcks(
@@ -180,6 +194,7 @@ const SYNC_PACK_SURFACE_OBJECT_TYPES = [
   'external_folder',
   'node_reading',
   'node_review',
+  'node_text_alternative',
   'attachment',
   'pdf_page_text',
   'view_state'

@@ -17,6 +17,9 @@ final class FolioleCompanionSchemaRepair {
         addNodesShelvedAtIfMissing(context, database);
         addNodesImportSourceFingerprintIfMissing(context, database);
         addNodesImportContentFingerprintIfMissing(context, database);
+        addNodesAnchorResolutionStatusIfMissing(context, database);
+        addNodesAnchorSourceVersionIdIfMissing(context, database);
+        addNodeSyncVersionsBodyTextIfMissing(context, database);
     }
 
     static void addSyncBaseContentHashIfMissing(Context context, SQLiteDatabase database) {
@@ -49,6 +52,18 @@ final class FolioleCompanionSchemaRepair {
 
     static void addNodesImportContentFingerprintIfMissing(Context context, SQLiteDatabase database) {
         addColumnIfMissing(context, database, "nodesImportContentFingerprint");
+    }
+
+    static void addNodesAnchorResolutionStatusIfMissing(Context context, SQLiteDatabase database) {
+        addColumnIfMissing(context, database, "nodesAnchorResolutionStatus");
+    }
+
+    static void addNodesAnchorSourceVersionIdIfMissing(Context context, SQLiteDatabase database) {
+        addColumnIfMissing(context, database, "nodesAnchorSourceVersionId");
+    }
+
+    static void addNodeSyncVersionsBodyTextIfMissing(Context context, SQLiteDatabase database) {
+        addColumnIfMissing(context, database, "nodeSyncVersionsBodyText");
     }
 
     private static void addColumnIfMissing(Context context, SQLiteDatabase database, String groupName) {

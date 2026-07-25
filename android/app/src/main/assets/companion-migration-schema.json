@@ -4,6 +4,10 @@
     "type": "type"
   },
   "actionTypes": {
+    "addNodesAnchorResolutionStatusIfMissing": "addNodesAnchorResolutionStatusIfMissing",
+    "addNodesAnchorSourceVersionIdIfMissing": "addNodesAnchorSourceVersionIdIfMissing",
+    "addNodeSyncVersionsBodyTextIfMissing": "addNodeSyncVersionsBodyTextIfMissing",
+    "backfillSyncConflictConvergence": "backfillSyncConflictConvergence",
     "addNodesImportSourceFingerprintIfMissing": "addNodesImportSourceFingerprintIfMissing",
     "addNodesImportContentFingerprintIfMissing": "addNodesImportContentFingerprintIfMissing",
     "migrateExternalFolderOwnership": "migrateExternalFolderOwnership",
@@ -26,6 +30,14 @@
     "installSchemaErrorMessage": "Failed to install companion schema."
   },
   "plan": [
+    {
+      "actions": [
+        {
+          "type": "migrateExternalFolderOwnership"
+        }
+      ],
+      "beforeVersion": 21
+    },
     {
       "actions": [
         {
@@ -208,10 +220,23 @@
     {
       "actions": [
         {
-          "type": "migrateExternalFolderOwnership"
+          "errorMessage": "Failed to install companion sync convergence schema.",
+          "type": "installSchema"
+        },
+        {
+          "type": "addNodesAnchorResolutionStatusIfMissing"
+        },
+        {
+          "type": "addNodesAnchorSourceVersionIdIfMissing"
+        },
+        {
+          "type": "addNodeSyncVersionsBodyTextIfMissing"
+        },
+        {
+          "type": "backfillSyncConflictConvergence"
         }
       ],
-      "beforeVersion": 21
+      "beforeVersion": 22
     }
   ],
   "planKeys": {
@@ -225,6 +250,60 @@
     "tableName": "tableName"
   },
   "repairRules": {
+    "nodesAnchorResolutionStatus": {
+      "columnName": "anchor_resolution_status",
+      "errorMessage": "Failed to add node anchor resolution status column.",
+      "statementName": "nodesAnchorResolutionStatusColumn",
+      "tableName": "nodes"
+    },
+    "nodesAnchorSourceVersionId": {
+      "columnName": "anchor_source_version_id",
+      "errorMessage": "Failed to add node anchor source version column.",
+      "statementName": "nodesAnchorSourceVersionIdColumn",
+      "tableName": "nodes"
+    },
+    "nodeSyncVersionsBodyText": {
+      "columnName": "body_text",
+      "errorMessage": "Failed to add node version body text column.",
+      "statementName": "nodeSyncVersionsBodyTextColumn",
+      "tableName": "node_sync_versions"
+    },
+    "syncConflictConvergence": {
+      "bodyTextStatementName": "syncCurrentVersionBodyTextBackfill",
+      "errorMessage": "Failed to backfill companion sync convergence state.",
+      "parentStatementName": "syncVersionParentsBackfill"
+    },
+    "syncObjectStateSequence": {
+      "createNextErrorMessage": "Failed to create sync object state repair table.",
+      "createNextStatementName": "syncObjectStateNextTable",
+      "dropLegacyErrorMessage": "Failed to drop legacy sync object state table.",
+      "dropLegacyStatementName": "syncObjectStateDropLegacyTable",
+      "indexStatementNames": [
+        "syncObjectStateSeqIndex",
+        "syncObjectStateTypeSeqIndex"
+      ],
+      "indexStatementsErrorMessage": "Failed to create sync object state indexes.",
+      "indexStatementErrorMessage": "Failed to create sync object state index.",
+      "legacyRowsErrorMessage": "Failed to load legacy sync object state rows.",
+      "legacyRowsQueryName": "migrationLegacySyncObjectStateRows",
+      "legacyRowsResultKey": "rows",
+      "nextInsertErrorMessage": "Failed to copy legacy sync object state row.",
+      "nextInsertMutationName": "migrationSyncObjectStateNextInsert",
+      "renameNextErrorMessage": "Failed to rename sync object state repair table.",
+      "renameNextStatementName": "syncObjectStateRenameNextTable",
+      "rowKeys": {
+        "contentHash": "content_hash",
+        "currentVersionId": "current_version_id",
+        "deletedAt": "deleted_at",
+        "lastModifiedByDeviceId": "last_modified_by_device_id",
+        "objectId": "object_id",
+        "objectType": "object_type",
+        "syncDirty": "sync_dirty",
+        "updatedAt": "updated_at"
+      },
+      "stateSeqColumnName": "state_seq",
+      "tableName": "sync_object_state"
+    },
     "nodesImportSourceFingerprint": {
       "columnName": "import_source_fingerprint",
       "errorMessage": "Failed to add node import source fingerprint column.",
@@ -272,40 +351,14 @@
       "errorMessage": "Failed to add sync base content hash column.",
       "statementName": "syncObjectStateBaseContentHashColumn",
       "tableName": "sync_object_state"
-    },
-    "syncObjectStateSequence": {
-      "createNextErrorMessage": "Failed to create sync object state repair table.",
-      "createNextStatementName": "syncObjectStateNextTable",
-      "dropLegacyErrorMessage": "Failed to drop legacy sync object state table.",
-      "dropLegacyStatementName": "syncObjectStateDropLegacyTable",
-      "indexStatementNames": [
-        "syncObjectStateSeqIndex",
-        "syncObjectStateTypeSeqIndex"
-      ],
-      "indexStatementsErrorMessage": "Failed to create sync object state indexes.",
-      "indexStatementErrorMessage": "Failed to create sync object state index.",
-      "legacyRowsErrorMessage": "Failed to load legacy sync object state rows.",
-      "legacyRowsQueryName": "migrationLegacySyncObjectStateRows",
-      "legacyRowsResultKey": "rows",
-      "nextInsertErrorMessage": "Failed to copy legacy sync object state row.",
-      "nextInsertMutationName": "migrationSyncObjectStateNextInsert",
-      "renameNextErrorMessage": "Failed to rename sync object state repair table.",
-      "renameNextStatementName": "syncObjectStateRenameNextTable",
-      "rowKeys": {
-        "contentHash": "content_hash",
-        "currentVersionId": "current_version_id",
-        "deletedAt": "deleted_at",
-        "lastModifiedByDeviceId": "last_modified_by_device_id",
-        "objectId": "object_id",
-        "objectType": "object_type",
-        "syncDirty": "sync_dirty",
-        "updatedAt": "updated_at"
-      },
-      "stateSeqColumnName": "state_seq",
-      "tableName": "sync_object_state"
     }
   },
   "statementsByName": {
+    "nodesAnchorResolutionStatusColumn": "ALTER TABLE nodes ADD COLUMN anchor_resolution_status TEXT",
+    "nodesAnchorSourceVersionIdColumn": "ALTER TABLE nodes ADD COLUMN anchor_source_version_id TEXT",
+    "nodeSyncVersionsBodyTextColumn": "ALTER TABLE node_sync_versions ADD COLUMN body_text TEXT",
+    "syncVersionParentsBackfill": "INSERT OR IGNORE INTO node_sync_version_parents (version_id, parent_version_id, ordinal)\n    SELECT version_id, parent_version_id, 0 FROM node_sync_versions WHERE parent_version_id IS NOT NULL",
+    "syncCurrentVersionBodyTextBackfill": "UPDATE node_sync_versions SET body_text = COALESCE(\n    (SELECT CAST(data AS TEXT) FROM content_blob_data\n      WHERE hash = (SELECT body_blob_hash FROM nodes WHERE current_version_id = node_sync_versions.version_id)),\n    (SELECT content FROM nodes WHERE current_version_id = node_sync_versions.version_id)\n  ) WHERE version_id IN (SELECT current_version_id FROM nodes WHERE current_version_id IS NOT NULL)",
     "nodesImportSourceFingerprintColumn": "ALTER TABLE nodes ADD COLUMN import_source_fingerprint TEXT",
     "nodesImportContentFingerprintColumn": "ALTER TABLE nodes ADD COLUMN import_content_fingerprint TEXT",
     "externalFoldersNextTable": "CREATE TABLE external_search_folders_next (\n    id TEXT PRIMARY KEY, folder_path TEXT NOT NULL, attachment_mode TEXT NOT NULL,\n    attachment_root_path TEXT, excluded_dirs_json TEXT NOT NULL DEFAULT '[]', status TEXT NOT NULL DEFAULT 'idle',\n    document_count INTEGER NOT NULL DEFAULT 0, indexed_at TEXT, last_error TEXT,\n    owner_installation_id TEXT, owner_device_name TEXT, owner_platform TEXT,\n    created_at TEXT NOT NULL, updated_at TEXT NOT NULL\n  )",

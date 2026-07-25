@@ -32,6 +32,20 @@ interface ManualSyncArgs {
   workspaceSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot'];
 }
 
+const MAX_MANUAL_STRUCTURE_PASSES = 3;
+
+function shouldContinueStructureCatchUp(
+  result: Awaited<ReturnType<typeof syncCompanionObjectsFromDesktop>>,
+  passIndex: number
+) {
+  return passIndex + 1 < MAX_MANUAL_STRUCTURE_PASSES
+    && (result.remainingStructureChangeCount ?? 0) > 0
+    && !result.pushError
+    && result.pushConflictCount === 0
+    && result.pushRejectedCount === 0
+    && (result.pushIssueCount ?? 0) === 0;
+}
+
 export async function syncCompanionDesktopStreams(args: ManualSyncArgs) {
   let latestWorkspaceSnapshot = args.workspaceSnapshot;
   let structureRefreshCompleted = false;
@@ -44,14 +58,19 @@ export async function syncCompanionDesktopStreams(args: ManualSyncArgs) {
       args.setReadableArticle(await loadCompanionReadableArticle(latestWorkspaceSnapshot));
     }
   };
-  const result = await syncCompanionObjectsFromDesktop(args.endpointUrl, {
-    onProgress: args.setSyncProgress,
-    onStructureSynced: refreshAfterStructureSync
-  });
+  let result: Awaited<ReturnType<typeof syncCompanionObjectsFromDesktop>> | null = null;
+  for (let passIndex = 0; passIndex < MAX_MANUAL_STRUCTURE_PASSES; passIndex += 1) {
+    result = await syncCompanionObjectsFromDesktop(args.endpointUrl, {
+      onProgress: args.setSyncProgress,
+      onStructureSynced: refreshAfterStructureSync
+    });
+    await recordCompanionSyncStageEvents(args, result);
+    if (!shouldContinueStructureCatchUp(result, passIndex)) break;
+  }
+  if (!result) throw new Error('Manual sync did not run.');
   if (!structureRefreshCompleted) {
     await refreshAfterStructureSync();
   }
-  await recordCompanionSyncStageEvents(args, result);
   const passResult = describeCompanionSyncPassResult(result);
   const nextState = await recordCompanionWorkspaceSyncEvent({
     endpointUrl: args.endpointUrl,

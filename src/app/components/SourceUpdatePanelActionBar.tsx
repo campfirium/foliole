@@ -17,6 +17,7 @@ function SourceUpdatePanelActionItems(props: SourceUpdatePanelActionBarProps & {
 }) {
   const t = useTranslation();
   const disabled = Boolean(props.pendingAction);
+  const isTextAlternative = Boolean(props.onAcceptIncomingUpdate && props.onDismissIncomingUpdate && !props.onImportIncomingUpdateAsNew);
 
   return (
     <>
@@ -24,9 +25,9 @@ function SourceUpdatePanelActionItems(props: SourceUpdatePanelActionBarProps & {
         <ReviewOverlayActionButton
           className="min-w-32 font-medium text-foreground/86"
           disabled={disabled}
-          label={t('desktop.sourceUpdate.accept')}
+          label={t(isTextAlternative ? 'desktop.sourceUpdate.setAsBody' : 'desktop.sourceUpdate.accept')}
           loading={props.pendingAction === 'accept'}
-          loadingLabel={t('desktop.sourceUpdate.accepting')}
+          loadingLabel={t(isTextAlternative ? 'desktop.sourceUpdate.settingAsBody' : 'desktop.sourceUpdate.accepting')}
           onClick={() => props.onAction('accept', props.onAcceptIncomingUpdate)}
         />
       ) : null}

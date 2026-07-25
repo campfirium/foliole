@@ -5,6 +5,10 @@ import {
   dismissRuntimeIncomingUpdate,
   importRuntimeIncomingUpdateAsNew
 } from '../../shared/platform/nodeSourceRuntimeRepository';
+import {
+  dismissRuntimeNodeTextAlternative,
+  promoteRuntimeNodeTextAlternative
+} from '../../shared/platform/nodeTextAlternativeRuntimeRepository';
 
 import type { DocumentPanelSectionProps } from './DocumentPanelSection';
 import {
@@ -67,12 +71,18 @@ function useSourceUpdateDraftSync(args: {
 }
 
 function useIncomingUpdateActions(args: {
+  alternativeId: string | null;
   clearIncomingUpdateDraft: () => void;
   incomingUpdateId: string | null;
   props: DocumentPanelSectionProps;
   sourceUpdatePreview: ReturnType<typeof useNodeSourceUpdatePreview>;
 } & SourceUpdateDraftRefs) {
   const handleIncomingUpdateAccept = useCallback(async () => {
+    if (args.alternativeId) {
+      await promoteRuntimeNodeTextAlternative(args.alternativeId);
+      args.clearIncomingUpdateDraft();
+      return;
+    }
     if (!args.incomingUpdateId) {
       return;
     }
@@ -89,6 +99,11 @@ function useIncomingUpdateActions(args: {
   }, [args]);
 
   const handleIncomingUpdateDismiss = useCallback(async () => {
+    if (args.alternativeId) {
+      await dismissRuntimeNodeTextAlternative(args.alternativeId);
+      args.clearIncomingUpdateDraft();
+      return;
+    }
     if (!args.incomingUpdateId) {
       return;
     }
@@ -105,9 +120,9 @@ function useIncomingUpdateActions(args: {
   }, [args]);
 
   return {
-    handleIncomingUpdateAccept: args.incomingUpdateId ? handleIncomingUpdateAccept : undefined,
-    handleIncomingUpdateDismiss: args.incomingUpdateId ? handleIncomingUpdateDismiss : undefined,
-    handleIncomingUpdateImportAsNew: args.incomingUpdateId ? handleIncomingUpdateImportAsNew : undefined
+    handleIncomingUpdateAccept: args.incomingUpdateId || args.alternativeId ? handleIncomingUpdateAccept : undefined,
+    handleIncomingUpdateDismiss: args.incomingUpdateId || args.alternativeId ? handleIncomingUpdateDismiss : undefined,
+    handleIncomingUpdateImportAsNew: args.incomingUpdateId && !args.alternativeId ? handleIncomingUpdateImportAsNew : undefined
   };
 }
 
@@ -161,7 +176,9 @@ export function useDocumentPanelSourceUpdateState(props: DocumentPanelSectionPro
   const sourceUpdateDraftRef = useRef<SourceUpdateDraft | null>(null);
   const sourceUpdatePreview = useNodeSourceUpdatePreview(props.activeNodeId);
   const incomingUpdateId = sourceUpdatePreview.value?.incomingUpdateId ?? null;
-  const isIncomingUpdatePreview = sourceUpdatePreview.value?.kind === 'incoming_update' && Boolean(incomingUpdateId);
+  const alternativeId = sourceUpdatePreview.value?.alternativeId ?? null;
+  const isIncomingUpdatePreview = (sourceUpdatePreview.value?.kind === 'incoming_update' && Boolean(incomingUpdateId))
+    || (sourceUpdatePreview.value?.kind === 'sync_alternative' && Boolean(alternativeId));
 
   const flushSourceUpdateDraft = useFlushSourceUpdateDraft({
     onNodeContentChange: props.onNodeContentChange,
@@ -184,6 +201,7 @@ export function useDocumentPanelSourceUpdateState(props: DocumentPanelSectionPro
   });
 
   const incomingUpdateActions = useIncomingUpdateActions({
+    alternativeId,
     clearIncomingUpdateDraft,
     incomingUpdateId,
     props,

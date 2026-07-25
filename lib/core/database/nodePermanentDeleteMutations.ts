@@ -20,6 +20,7 @@ export function deleteNodesPermanently(driver: DatabaseDriver, input: DeleteNode
   const deleteNodeReadingStatement = driver.prepare('DELETE FROM node_reading WHERE node_id = ?');
   const deleteNodeReadingDeviceStateStatement = driver.prepare('DELETE FROM node_reading_device_state WHERE node_id = ?');
   const deleteNodeOrderStatement = driver.prepare('DELETE FROM node_order WHERE node_id = ?');
+  const deleteNodeTextAlternativesStatement = driver.prepare('DELETE FROM node_text_alternatives WHERE node_id = ?');
   const deleteNodeOpenSyncStateStatement = driver.prepare(
     "DELETE FROM sync_object_state WHERE object_type = 'node_open_state' AND object_id = ?"
   );
@@ -34,6 +35,7 @@ export function deleteNodesPermanently(driver: DatabaseDriver, input: DeleteNode
       deleteNodeReadingStatement.run([nodeId]);
       deleteNodeReadingDeviceStateStatement.run([nodeId]);
       deleteNodeOrderStatement.run([nodeId]);
+      deleteNodeTextAlternativesStatement.run([nodeId]);
       deleteNodeOpenSyncStateStatement.run([nodeId]);
     }
     for (const nodeId of [...input.nodeIds].reverse()) {

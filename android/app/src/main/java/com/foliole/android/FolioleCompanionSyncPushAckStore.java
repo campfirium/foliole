@@ -38,6 +38,10 @@ final class FolioleCompanionSyncPushAckStore {
                 String clientOpId = rules.clientOpId(ack);
                 String objectType = rules.objectType(identity);
                 String objectId = rules.objectId(identity);
+                String canonicalObjectId = ack.optString("canonical_object_id", "").trim();
+                if ("node".equals(objectType) && !canonicalObjectId.isEmpty() && !canonicalObjectId.equals(objectId)) {
+                    FolioleCompanionNodeRekey.rekey(context, database, objectId, canonicalObjectId);
+                }
                 FolioleCompanionGeneratedMutationRunner.execute(
                     context,
                     database,

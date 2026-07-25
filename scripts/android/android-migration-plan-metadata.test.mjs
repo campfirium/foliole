@@ -83,6 +83,10 @@ describe('Android migration plan metadata', () => {
       addNodesImportContentFingerprintIfMissing: 'addNodesImportContentFingerprintIfMissing',
       addNodesImportSourceFingerprintIfMissing: 'addNodesImportSourceFingerprintIfMissing',
       addNodesManualChildOrderIfMissing: 'addNodesManualChildOrderIfMissing',
+      addNodesAnchorResolutionStatusIfMissing: 'addNodesAnchorResolutionStatusIfMissing',
+      addNodesAnchorSourceVersionIdIfMissing: 'addNodesAnchorSourceVersionIdIfMissing',
+      addNodeSyncVersionsBodyTextIfMissing: 'addNodeSyncVersionsBodyTextIfMissing',
+      backfillSyncConflictConvergence: 'backfillSyncConflictConvergence',
       addNodesSequentialReadingEnabledIfMissing: 'addNodesSequentialReadingEnabledIfMissing',
       addNodesShelvedAtIfMissing: 'addNodesShelvedAtIfMissing',
       installSchema: 'installSchema',
@@ -102,7 +106,8 @@ describe('Android migration plan metadata', () => {
       statementName: 'statementName',
       tableName: 'tableName'
     });
-    expect(schema.plan.map((step) => step.beforeVersion)).toEqual([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]);
+    expect(schema.plan.map((step) => step.beforeVersion)).toEqual([21, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 22]);
+    expect(schema.plan[0]?.actions).toEqual([{ type: 'migrateExternalFolderOwnership' }]);
     expect(databaseVersion).toBe(Math.max(...schema.plan.map((step) => step.beforeVersion)));
     expect(schema.repairRules.nodesSequentialReadingEnabled).toMatchObject({
       columnName: 'sequential_reading_enabled',
@@ -128,6 +133,21 @@ describe('Android migration plan metadata', () => {
       columnName: 'import_content_fingerprint',
       statementName: 'nodesImportContentFingerprintColumn',
       tableName: 'nodes'
+    });
+    expect(schema.repairRules.nodesAnchorResolutionStatus).toMatchObject({
+      columnName: 'anchor_resolution_status',
+      statementName: 'nodesAnchorResolutionStatusColumn',
+      tableName: 'nodes'
+    });
+    expect(schema.repairRules.nodesAnchorSourceVersionId).toMatchObject({
+      columnName: 'anchor_source_version_id',
+      statementName: 'nodesAnchorSourceVersionIdColumn',
+      tableName: 'nodes'
+    });
+    expect(schema.repairRules.nodeSyncVersionsBodyText).toMatchObject({
+      columnName: 'body_text',
+      statementName: 'nodeSyncVersionsBodyTextColumn',
+      tableName: 'node_sync_versions'
     });
     expect(schema.repairRules.syncObjectStateSequence).toMatchObject({
       legacyRowsQueryName: 'migrationLegacySyncObjectStateRows',

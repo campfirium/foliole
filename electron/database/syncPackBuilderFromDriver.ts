@@ -19,7 +19,10 @@ import { writeStoredZip } from '../diagnostics/zipStore.js';
 import { backfillMissingNodeSyncState } from './nodeSyncStateRows.js';
 import { writePackManifest, writePackRows } from './syncPackBuilderRows.js';
 import type { LoadedDesktopSyncPackRows } from './syncPackLoadedRows.js';
-import { loadSyncPackNodeVersionRows } from './syncPackNodeVersionRows.js';
+import {
+  loadSyncPackNodeVersionParentRows,
+  loadSyncPackNodeVersionRows
+} from './syncPackNodeVersionRows.js';
 import { loadMaxStateSeq, loadPackRows } from './syncPackRows.js';
 
 const require = createRequire(import.meta.url);
@@ -62,6 +65,7 @@ function buildContainerManifest(args: {
       node_attachments: args.rows.nodeAttachments,
       node_order: args.rows.nodeOrder,
       node_sync_versions: args.rows.nodeVersions,
+      node_sync_version_parents: args.rows.nodeVersionParents,
       nodes: args.rows.nodes,
       review_log: args.rows.reviewLog,
       sync_object_state: args.rows.stateRows,
@@ -103,9 +107,11 @@ export async function buildDesktopSyncPackFromDriver(
   try {
     for (const statement of PACK_SCHEMA) packDb.exec(statement);
     const baseRows = loadPackRows(fromStateSeq, toStateSeq, sourceDriver);
+    const nodeVersions = loadSyncPackNodeVersionRows(sourceDriver, baseRows.nodes);
     const rows: LoadedDesktopSyncPackRows = {
       ...baseRows,
-      nodeVersions: loadSyncPackNodeVersionRows(sourceDriver, baseRows.nodes)
+      nodeVersions,
+      nodeVersionParents: loadSyncPackNodeVersionParentRows(sourceDriver, nodeVersions)
     };
     const packToStateSeq = rows.stateRows.at(-1)?.state_seq ?? fromStateSeq;
     const writePack = packDb.transaction(() => {

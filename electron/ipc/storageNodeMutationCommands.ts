@@ -10,11 +10,13 @@ import {
   moveNodes,
   replaceNodeOrder,
   restoreNodes,
-  softDeleteNodes,
-  updateNodeAnchorLinks,
-  upsertNodeSnapshot,
-  upsertNodeSnapshotWithOrder
+  softDeleteNodes
 } from '../database/nodeMutations.js';
+import {
+  upsertVersionedNodeContentWithAnchors,
+  upsertVersionedNodeSnapshot,
+  upsertVersionedNodeSnapshotWithOrder
+} from '../database/nodeVersionedMutations.js';
 import { enqueueCoalescedWorkspaceSearchInvalidation } from '../database/searchIndexInvalidationCoalescer.js';
 import { scheduleMirrorSync } from '../mirror/mirrorSyncScheduler.js';
 
@@ -90,7 +92,7 @@ function buildNodeContentWithAnchorsResult(args: {
 
 function handleCreateNodeCommand(args: Record<string, unknown>, kind: 'folder' | 'topic' | 'item', originWindow: OriginWindow) {
   const parsed = parseNodeCreationMutationArgs(args, kind);
-  upsertNodeSnapshotWithOrder(parsed.node, parsed.nodeOrder);
+  upsertVersionedNodeSnapshotWithOrder(parsed.node, parsed.nodeOrder);
   scheduleMirrorSync([parsed.node.nodeId]);
   return buildNodeMutationPatchResult({
     activeNodeId: parsed.activeNodeId,
@@ -127,10 +129,11 @@ function handleNodeContentWithAnchorsCommand(args: Record<string, unknown>, orig
   const affectedAnchors = parseNodeAnchorLocatorUpdateArray(args.affectedAnchors, 'affectedAnchors');
   diagnostics.parseAnchorsMs = readElapsedMs(parseAnchorsStartedAt);
   const upsertStartedAt = readNowMs();
-  upsertNodeSnapshot(parent, { searchInvalidation: { workspaceInvalidation: 'defer' } });
+  upsertVersionedNodeContentWithAnchors(parent, affectedAnchors, {
+    searchInvalidation: { workspaceInvalidation: 'defer' }
+  });
   diagnostics.upsertNodeMs = readElapsedMs(upsertStartedAt);
   const updateAnchorsStartedAt = readNowMs();
-  updateNodeAnchorLinks(affectedAnchors);
   diagnostics.updateAnchorsMs = readElapsedMs(updateAnchorsStartedAt);
   const enqueueSearchStartedAt = readNowMs();
   enqueueCoalescedWorkspaceSearchInvalidation([parent.nodeId]);
@@ -166,7 +169,7 @@ function handleUpdateNodeContentCommand(command: string, args: Record<string, un
       updatedNodeIds: renamed.updatedNodeIds
     });
   }
-  upsertNodeSnapshot(parsed, { searchInvalidation: { workspaceInvalidation: 'defer' } });
+  upsertVersionedNodeSnapshot(parsed, { searchInvalidation: { workspaceInvalidation: 'defer' } });
   enqueueCoalescedWorkspaceSearchInvalidation([parsed.nodeId]);
   scheduleMirrorSync([parsed.nodeId]);
   return buildNodeMutationPatchResult({ nodes: [parsed], originWindow, updatedNodeIds: [parsed.nodeId] });

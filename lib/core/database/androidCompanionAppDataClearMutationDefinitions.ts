@@ -4,6 +4,8 @@ export const ANDROID_COMPANION_APP_DATA_CLEAR_MUTATIONS = [
   { table: 'sync_change_log', statementName: 'appDataClearSyncChangeLog' },
   { table: 'sync_object_state', statementName: 'appDataClearSyncObjectState' },
   { table: 'node_sync_conflicts', statementName: 'appDataClearNodeSyncConflicts' },
+  { table: 'node_text_alternatives', statementName: 'appDataClearNodeTextAlternatives' },
+  { table: 'node_sync_version_parents', statementName: 'appDataClearNodeSyncVersionParents' },
   { table: 'node_sync_tombstones', statementName: 'appDataClearNodeSyncTombstones' },
   { table: 'node_sync_versions', statementName: 'appDataClearNodeSyncVersions' },
   { table: 'node_view_state', statementName: 'appDataClearNodeViewState' },

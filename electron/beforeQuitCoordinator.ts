@@ -3,9 +3,9 @@ interface BeforeQuitEvent {
 }
 
 interface BeforeQuitCoordinatorOptions {
-  prepare: () => void;
+  prepare?: () => void;
   flush: () => Promise<void>;
-  onPrepareError: (error: unknown) => void;
+  onPrepareError?: (error: unknown) => void;
   onFlushError: (error: unknown) => void;
   quit: () => void;
   scheduleQuit?: (quit: () => void) => void;
@@ -24,10 +24,12 @@ export function createBeforeQuitCoordinator(options: BeforeQuitCoordinatorOption
     if (phase === 'flushing') return;
 
     phase = 'flushing';
-    try {
-      options.prepare();
-    } catch (error) {
-      options.onPrepareError(error);
+    if (options.prepare) {
+      try {
+        options.prepare();
+      } catch (error) {
+        options.onPrepareError?.(error);
+      }
     }
     void options.flush()
       .catch(options.onFlushError)

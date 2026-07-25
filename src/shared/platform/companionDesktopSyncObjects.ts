@@ -1,3 +1,5 @@
+import { assertSyncPackCursorAdvance } from '../../../lib/core/sync/syncPackCursorGuard';
+
 import { pushLocalDirtyObjects } from './companionDesktopSyncPush';
 import {
   createEmptyResourceStages,
@@ -67,6 +69,12 @@ async function pullRemoteStructurePack(endpointUrl: string) {
   const result = await applyCompanionDesktopSyncPack({
     headers: await createSignedRequestHeaders({ method: 'GET', pathWithQuery }),
     url: `${normalizeEndpointUrl(endpointUrl)}${pathWithQuery}`
+  });
+  assertSyncPackCursorAdvance({
+    appliedObjectCount: result.applied_object_count,
+    currentCursor: cursor ?? 0,
+    handledConflictCount: result.handled_conflict_count ?? 0,
+    toStateSeq: result.to_state_seq
   });
   if (result.to_state_seq > (cursor ?? 0)) {
     await saveCompanionSyncPackCursor(result.to_state_seq);

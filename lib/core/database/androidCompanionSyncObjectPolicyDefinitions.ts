@@ -8,6 +8,7 @@ export const ANDROID_COMPANION_SYNC_OBJECT_TYPES = {
   nodeOpenState: 'node_open_state',
   nodeReading: 'node_reading',
   nodeReview: 'node_review',
+  nodeTextAlternative: 'node_text_alternative',
   settingRecord: 'setting',
   viewState: 'view_state'
 } as const;

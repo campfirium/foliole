@@ -143,3 +143,18 @@ it('allows host adapters to provide the text body hash implementation', async ()
     body_blob_hash: 'f'.repeat(64)
   });
 });
+
+it('applies conflict copies as ordinary sync topics', async () => {
+  const connection = openDatabaseConnection();
+  const port = createBetterSqliteDbPort(connection.sqlite, { name: 'sync-node-conflict-copy-test' });
+  const record = createRemoteNodeRecord();
+  record.object_id = 'conflict-copy-shared';
+  record.snapshot = { ...record.snapshot, id: record.object_id, title: 'Shared conflict copy' };
+
+  await expect(applySyncNodesWithDbPort(port, [record])).resolves.toMatchObject({
+    appliedIds: ['conflict-copy-shared'],
+    skippedConflictCopyIds: []
+  });
+  expect(connection.sqlite.prepare('SELECT title FROM nodes WHERE id = ?').get(record.object_id))
+    .toEqual({ title: 'Shared conflict copy' });
+});

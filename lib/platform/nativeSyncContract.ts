@@ -8,6 +8,7 @@ export type NativeSyncObjectType =
   | 'node_open_state'
   | 'node_reading'
   | 'node_review'
+  | 'node_text_alternative'
   | 'pdf_page_text'
   | 'setting'
   | 'view_state';
@@ -46,6 +47,7 @@ export interface NativeSyncPackApplyResult {
   applied_blob_count: number;
   applied_object_count: number;
   applied_review_op_ids?: string[];
+  handled_conflict_count?: number;
   pre_sync_backup_path?: string;
   to_state_seq: number;
 }
@@ -94,14 +96,18 @@ export interface NativeSyncNodeAttachmentRef {
 
 export interface NativeSyncNodeRecord {
   ancestor_version_ids: string[];
+  body_text?: string | null;
   content_hash: string | null;
   device_id: string | null;
   is_tombstone?: boolean;
   object_id: string;
   object_type: 'node';
   parent_version_id: string | null;
+  parent_version_ids?: string[];
   snapshot: {
     anchor_link: string | null;
+    anchor_resolution_status?: 'resolved' | 'unmapped_ambiguous' | 'unmapped_missing' | null;
+    anchor_source_version_id?: string | null;
     attachments: NativeSyncNodeAttachmentRef[];
     body_blob_hash?: string | null;
     content?: string;

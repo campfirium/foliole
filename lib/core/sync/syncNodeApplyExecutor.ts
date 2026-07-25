@@ -11,7 +11,6 @@ import {
 } from './syncNodeAnchorRepair.js';
 import {
   decideIncomingNodeApply,
-  isConflictCopyNodeId,
   latestBranchHeadRecords,
   orderNodesForApply,
   type LocalSyncNodeState,
@@ -85,6 +84,16 @@ async function upsertRemoteVersion(port: DbPort, record: NativeSyncNodeRecord) {
   const statement = buildRemoteNodeVersionUpsert(record);
   if (!statement) return;
   await port.run(statement.sql, statement.params);
+  const parentIds = record.parent_version_ids
+    ?? (record.parent_version_id ? [record.parent_version_id] : []);
+  for (const [ordinal, parentId] of parentIds.entries()) {
+    await port.run(
+      `INSERT INTO node_sync_version_parents (version_id, parent_version_id, ordinal)
+       VALUES (?, ?, ?)
+       ON CONFLICT(version_id, parent_version_id) DO NOTHING`,
+      [record.version_id, parentId, ordinal]
+    );
+  }
 }
 
 async function upsertRemoteNode(
@@ -146,6 +155,7 @@ async function applyAcceptedRemoteNode(input: {
       content: input.record.snapshot.content,
       parentNodeId: input.record.object_id,
       port: input.tx,
+      sourceVersionId: input.record.version_id,
       updatedAt: input.record.snapshot.updated_at
     });
     input.result.anchorRepairRecords.push(...repairResult.repaired);
@@ -198,10 +208,6 @@ export async function applySyncNodesWithDbPort(
 
   await port.transaction(async (tx) => {
     for (const record of ordered) {
-      if (isConflictCopyNodeId(record.object_id) || isConflictCopyNodeId(record.snapshot.id)) {
-        result.skippedConflictCopyIds.push(record.object_id);
-        continue;
-      }
       if (await handleTombstoneGuard({ record, result, tx })) {
         continue;
       }

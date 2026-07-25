@@ -21,6 +21,8 @@ export const ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS = [
     virtual_filter TEXT,
     reveal TEXT,
     anchor_link TEXT,
+    anchor_resolution_status TEXT,
+    anchor_source_version_id TEXT,
     image_regions TEXT,
     import_source_fingerprint TEXT,
     import_content_fingerprint TEXT,
@@ -87,7 +89,15 @@ export const ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS = [
     device_id TEXT NOT NULL,
     created_at TEXT NOT NULL,
     content_hash TEXT NOT NULL,
+    body_text TEXT,
     snapshot_json TEXT
+  )`,
+  `CREATE TABLE IF NOT EXISTS node_sync_version_parents (
+    version_id TEXT NOT NULL REFERENCES node_sync_versions(version_id) ON DELETE CASCADE,
+    parent_version_id TEXT NOT NULL,
+    ordinal INTEGER NOT NULL,
+    PRIMARY KEY (version_id, parent_version_id),
+    UNIQUE (version_id, ordinal)
   )`,
   ...NODE_SYNC_TOMBSTONE_SCHEMA_STATEMENTS,
   `CREATE TABLE IF NOT EXISTS node_sync_conflicts (
@@ -101,6 +111,20 @@ export const ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS = [
   )`,
   `CREATE INDEX IF NOT EXISTS idx_node_sync_conflicts_object_detected
     ON node_sync_conflicts (object_id, detected_at)`,
+  `CREATE TABLE IF NOT EXISTS node_text_alternatives (
+    alternative_id TEXT PRIMARY KEY,
+    node_id TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+    source_version_id TEXT NOT NULL,
+    body_text TEXT NOT NULL,
+    source_device_id TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    status TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_node_text_alternatives_source_version
+    ON node_text_alternatives (node_id, source_version_id)`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_node_text_alternatives_available_source
+    ON node_text_alternatives (node_id, source_device_id) WHERE status = 'available'`,
   `CREATE TABLE IF NOT EXISTS node_order (
     node_id TEXT PRIMARY KEY REFERENCES nodes(id),
     position INTEGER NOT NULL

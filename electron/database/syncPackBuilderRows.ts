@@ -48,6 +48,7 @@ export function writePackManifest(
         node_attachments: rows.nodeAttachments,
         node_order: rows.nodeOrder,
         node_sync_versions: rows.nodeVersions,
+        node_sync_version_parents: rows.nodeVersionParents,
         nodes: rows.nodes,
         review_log: rows.reviewLog,
         sync_object_state: rows.stateRows,
@@ -86,6 +87,12 @@ function writeNodePackRows(db: import('better-sqlite3').Database, rows: LoadedDe
     table: 'node_sync_versions',
     columns: [...SYNC_PACK_NODE_VERSION_COLUMNS],
     rows: rows.nodeVersions
+  });
+  copyRows({
+    db,
+    table: 'node_sync_version_parents',
+    columns: ['version_id', 'parent_version_id', 'ordinal'],
+    rows: rows.nodeVersionParents
   });
   copyRows({
     db,

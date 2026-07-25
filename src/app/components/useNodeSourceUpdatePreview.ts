@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { loadRuntimeNodeSourceUpdatePreview, type RuntimeNodeSourceUpdatePreview } from '../../shared/platform/nodeSourceRuntimeRepository';
+import { loadRuntimeNodeTextAlternativePreview } from '../../shared/platform/nodeTextAlternativeRuntimeRepository';
 import { onManagedInboxUpdated } from '../../shared/platform/runtimeShellEvents';
 
 interface NodeSourceUpdatePreviewState {
@@ -27,7 +28,8 @@ export function useNodeSourceUpdatePreview(nodeId: string | null) {
 
     const loadPreview = async () => {
       setState((current) => ({ isLoading: true, value: current.value }));
-      const value = await loadRuntimeNodeSourceUpdatePreview(nodeId);
+      const value = await loadRuntimeNodeTextAlternativePreview(nodeId)
+        ?? await loadRuntimeNodeSourceUpdatePreview(nodeId);
       if (!isDisposed) {
         setState({ isLoading: false, value });
       }

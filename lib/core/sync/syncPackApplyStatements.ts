@@ -5,12 +5,12 @@ import {
 } from './syncPackNodeFields.js';
 
 export interface SyncPackApplyableRowsOptions {
+  excludedNodeIds?: readonly string[] | undefined;
   incomingAlias?: string;
   objectType?: string;
 }
 
-export interface SyncPackNodeApplyOptions {
-  incomingAlias?: string;
+export interface SyncPackNodeApplyOptions extends SyncPackApplyableRowsOptions {
   incomingNodeColumns?: readonly string[];
 }
 
@@ -28,6 +28,15 @@ function typeFilter(objectType: string | undefined) {
   return objectType ? ` AND incoming.object_type = '${objectType.replaceAll("'", "''")}'` : '';
 }
 
+function excludedNodeFilter(options: SyncPackApplyableRowsOptions) {
+  if (!options.excludedNodeIds?.length || (options.objectType && options.objectType !== 'node')) return '';
+  const ids = options.excludedNodeIds.map((id) => `'${id.replaceAll("'", "''")}'`).join(', ');
+  const idFilter = `incoming.object_id NOT IN (${ids})`;
+  return options.objectType === 'node'
+    ? ` AND ${idFilter}`
+    : ` AND (incoming.object_type <> 'node' OR ${idFilter})`;
+}
+
 export function buildSyncPackApplyableRowsSql(options: SyncPackApplyableRowsOptions = {}) {
   const alias = incomingAlias(options);
   return `(SELECT incoming.object_type, incoming.object_id, incoming.state_seq, incoming.content_hash, ` +
@@ -42,12 +51,17 @@ export function buildSyncPackApplyableRowsSql(options: SyncPackApplyableRowsOpti
     ` AND (incoming.object_type <> 'node' OR incoming.deleted_at IS NOT NULL OR EXISTS (` +
     `SELECT 1 FROM ${alias}.nodes node_payload WHERE node_payload.id = incoming.object_id))` +
     typeFilter(options.objectType) +
+    excludedNodeFilter(options) +
     `)`;
 }
 
 export function buildSyncPackNodeUpsertSql(options: SyncPackNodeApplyOptions = {}) {
   const alias = incomingAlias(options);
-  const applyableRowsSql = buildSyncPackApplyableRowsSql({ incomingAlias: alias, objectType: 'node' });
+  const applyableRowsSql = buildSyncPackApplyableRowsSql({
+    excludedNodeIds: options.excludedNodeIds,
+    incomingAlias: alias,
+    objectType: 'node'
+  });
   return `WITH RECURSIVE applyable_node_ids(id) AS (` +
     `SELECT object_id FROM ${applyableRowsSql}` +
     `), node_depth(id, depth) AS (` +
@@ -88,6 +102,7 @@ export function buildSyncPackNodeOrderUpsertSql(options: SyncPackApplyableRowsOp
     `INNER JOIN main.nodes node ON node.id = incoming.node_id ` +
     `WHERE incoming.node_id IN (SELECT object_id FROM ${buildSyncPackApplyableRowsSql({
       incomingAlias: alias,
+      excludedNodeIds: options.excludedNodeIds,
       objectType: 'node'
     })})`;
 }
@@ -95,7 +110,11 @@ export function buildSyncPackNodeOrderUpsertSql(options: SyncPackApplyableRowsOp
 export function buildSyncPackNodeOrderDeleteSql(options: SyncPackApplyableRowsOptions = {}) {
   const alias = incomingAlias(options);
   return `DELETE FROM main.node_order WHERE node_id IN (` +
-    `SELECT object_id FROM ${buildSyncPackApplyableRowsSql({ incomingAlias: alias, objectType: 'node' })}) ` +
+    `SELECT object_id FROM ${buildSyncPackApplyableRowsSql({
+      excludedNodeIds: options.excludedNodeIds,
+      incomingAlias: alias,
+      objectType: 'node'
+    })}) ` +
     `AND node_id NOT IN (SELECT node_id FROM ${alias}.node_order)`;
 }
 
@@ -109,7 +128,11 @@ export function buildSyncPackNodeAttachmentInsertSql(options: SyncPackApplyableR
   return `INSERT OR REPLACE INTO main.node_attachments (node_id, attachment_id, role) ` +
     `SELECT incoming.node_id, incoming.attachment_id, incoming.role FROM ${alias}.node_attachments incoming ` +
     `INNER JOIN main.attachments attachment ON attachment.id = incoming.attachment_id ` +
-    `WHERE incoming.node_id IN (SELECT object_id FROM ${buildSyncPackApplyableRowsSql({ incomingAlias: alias, objectType: 'node' })})`;
+    `WHERE incoming.node_id IN (SELECT object_id FROM ${buildSyncPackApplyableRowsSql({
+      excludedNodeIds: options.excludedNodeIds,
+      incomingAlias: alias,
+      objectType: 'node'
+    })})`;
 }
 
 export function buildSyncPackContentBlobUpsertSql(options: SyncPackApplyableRowsOptions = {}) {
@@ -127,7 +150,11 @@ export function buildSyncPackContentBlobUpsertSql(options: SyncPackApplyableRows
     `LEFT JOIN main.content_blob_data data ON data.hash = incoming.hash ` +
     `WHERE incoming.hash IN (` +
     `SELECT body_blob_hash FROM ${alias}.nodes WHERE body_blob_hash IS NOT NULL ` +
-    `AND id IN (SELECT object_id FROM ${buildSyncPackApplyableRowsSql({ incomingAlias: alias, objectType: 'node' })}) ` +
+    `AND id IN (SELECT object_id FROM ${buildSyncPackApplyableRowsSql({
+      excludedNodeIds: options.excludedNodeIds,
+      incomingAlias: alias,
+      objectType: 'node'
+    })}) ` +
     `UNION SELECT body_blob_hash FROM ${alias}.external_documents WHERE body_blob_hash IS NOT NULL ` +
     `AND document_id IN (SELECT object_id FROM ${buildSyncPackApplyableRowsSql({
       incomingAlias: alias,

@@ -75,6 +75,8 @@ it('builds the canonical remote node upsert params', () => {
     'answer',
     null,
     null,
+    null,
+    null,
     'source-a',
     'content-a',
     4,
@@ -95,7 +97,7 @@ it('normalizes incomplete remote provenance to a double null', () => {
     }
   });
 
-  expect(buildRemoteNodeUpsert(record, 'body-hash').params.slice(19, 21)).toEqual([null, null]);
+  expect(buildRemoteNodeUpsert(record, 'body-hash').params.slice(21, 23)).toEqual([null, null]);
 });
 
 it('builds remote version upsert only for complete version metadata', () => {
@@ -106,6 +108,7 @@ it('builds remote version upsert only for complete version metadata', () => {
     'phone',
     '2026-04-21T11:00:00.000Z',
     'hash-1',
+    'remote body',
     expect.stringContaining('"sequential_reading_enabled":false')
   ]);
   expect(buildRemoteNodeVersionUpsert(createNodeRecord({ version_id: null }))).toBeNull();

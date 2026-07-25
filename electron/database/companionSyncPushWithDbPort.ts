@@ -1,6 +1,6 @@
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 
-import { applyNodeVersionPushWithDbPort } from './companionSyncPushNodeVersionWithDbPort.js';
+import { applyNodePushBatchWithDbPort } from './companionSyncNodeConvergence.js';
 import { applyReviewLogPushWithDbPort } from './companionSyncPushReviewLogWithDbPort.js';
 import {
   applyStateObjectPushWithDbPort,
@@ -27,18 +27,20 @@ export async function applyCompanionStateSyncPushWithDbPort(
   port: DbPort,
   items: CompanionSyncPushPayload[]
 ): Promise<CompanionSyncPushResult> {
-  const result = emptyPushResult();
-  for (const item of items) {
-    const itemResult = item.identity.objectType === 'node'
-      ? await applyNodeVersionPushWithDbPort(port, item)
-      : isStateObjectPush(item)
-      ? await applyStateObjectPushWithDbPort(port, item, item.identity.objectType as StatePushObjectType)
-      : item.identity.objectType === 'review_log'
-        ? await applyReviewLogPushWithDbPort(port, item)
-        : unsupportedPushResult(item);
-    appendPushResult(result, itemResult);
-  }
-  return result;
+  return port.transaction(async (tx) => {
+    const result = emptyPushResult();
+    const nodeItems = items.filter((item) => item.identity.objectType === 'node');
+    if (nodeItems.length > 0) appendPushResult(result, await applyNodePushBatchWithDbPort(tx, nodeItems));
+    for (const item of items.filter((candidate) => candidate.identity.objectType !== 'node')) {
+      const itemResult = isStateObjectPush(item)
+        ? await applyStateObjectPushWithDbPort(tx, item, item.identity.objectType as StatePushObjectType)
+        : item.identity.objectType === 'review_log'
+          ? await applyReviewLogPushWithDbPort(tx, item)
+          : unsupportedPushResult(item);
+      appendPushResult(result, itemResult);
+    }
+    return result;
+  });
 }
 
 function unsupportedPushResult(item: CompanionSyncPushPayload): CompanionSyncPushResult {

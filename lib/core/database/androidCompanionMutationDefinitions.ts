@@ -1,3 +1,4 @@
+import { ANDROID_COMPANION_CONVERGENCE_MUTATION_DEFINITIONS } from './androidCompanionConvergenceMutationDefinitions.js';
 import { ANDROID_COMPANION_RESOURCE_STATUSES } from './androidCompanionSyncProtocolDefinitions.js';
 
 export { ANDROID_COMPANION_APP_DATA_CLEAR_MUTATIONS } from './androidCompanionAppDataClearMutationDefinitions.js';
@@ -5,6 +6,7 @@ export { ANDROID_COMPANION_APP_DATA_CLEAR_MUTATIONS } from './androidCompanionAp
 const RESOURCE_STATUS = ANDROID_COMPANION_RESOURCE_STATUSES;
 
 export const ANDROID_COMPANION_MUTATION_DEFINITIONS = {
+  ...ANDROID_COMPANION_CONVERGENCE_MUTATION_DEFINITIONS,
   syncPushAckDeleteByObject: 'DELETE FROM sync_push_ack WHERE object_type = ? AND object_id = ?',
   syncPushAckDeleteIssuesByObject:
     "DELETE FROM sync_push_ack WHERE object_type = ? AND object_id = ? AND status IN ('conflict', 'rejected')",

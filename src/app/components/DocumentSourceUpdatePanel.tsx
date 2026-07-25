@@ -40,7 +40,7 @@ function useSourceUpdatePanelScrollSync(
 ) {
   const syncSourceRef = useRef<null | 'current' | 'updated'>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open || !currentEditor || !updatedEditor) {
       return;
     }
@@ -119,7 +119,7 @@ function useSourceUpdatePanelDiffState(
 }
 
 function useSourceUpdatePanelEscape(open: boolean, onOpenChange: (open: boolean) => void) {
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (!open) {
       return;
     }

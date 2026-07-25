@@ -141,7 +141,7 @@ describe('Android sync payload routing metadata', () => {
     expect(payloadStore).toContain('routingInt(context, "objectIdPartLimit")');
     expect(payloadStore).toContain('FolioleCompanionSyncPayloadRoutingRules.rowString(context, row, "objectTypeKey")');
     expect(payloadStore).toContain('FolioleCompanionSyncPayloadRoutingRules.routeString(context, route, "queryNameKey")');
-    expect(payloadStore).toContain('FolioleCompanionLearningPayloadStore.loadPayload(context, database, queryName, args)');
+    expect(payloadStore).toContain('FolioleCompanionGeneratedQueryRunner.loadFirstRow(context, database, queryName, args)');
     expect(learningPayloadStore).toContain('FolioleCompanionNamedQueryStore.loadFirstRow(context, database, queryName, args)');
     expect(payloadJson).toContain('FolioleCompanionSyncPayloadRoutingRules.string(context, "payloadJsonKey")');
     expect(payloadRoutingRules).toContain('static String rowString');

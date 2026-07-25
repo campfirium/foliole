@@ -70,6 +70,7 @@ export const ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS = {
       packCursor: 'pack_cursor',
       pendingAcks: 'pending_acks',
       pushIssues: 'push_issues',
+      recentConflicts: 'recent_conflicts',
       stateCounts: 'state_counts'
     },
     verdictEvidenceKeys: {

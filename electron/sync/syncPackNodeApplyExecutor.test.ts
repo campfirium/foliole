@@ -162,8 +162,8 @@ it('does not apply live node state rows when the pack has no node payload', asyn
 });
 
 it.each([
-  ['missing parent', "UPDATE node_sync_versions SET parent_version_id = 'missing#1'"],
-  ['cycle', "UPDATE node_sync_versions SET parent_version_id = version_id"],
+  ['missing parent', "INSERT INTO node_sync_version_parents VALUES ('desktop#1', 'missing#1', 0)"],
+  ['cycle', "INSERT INTO node_sync_version_parents VALUES ('desktop#1', 'desktop#1', 0)"],
   ['invalid snapshot', "UPDATE node_sync_versions SET snapshot_json = 'not-json'"],
   ['dangling current pointer', "UPDATE nodes SET current_version_id = 'missing#head'"]
 ])('rejects %s without polluting nodes, versions, cursor state, or acks', async (_label, mutation) => {
@@ -198,7 +198,8 @@ it('rejects cross-object ancestry and immutable duplicate mismatches', async () 
         version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
       ) VALUES ('desktop#other', 'other-node', NULL, 'desktop',
         '2026-05-04T00:00:00.000Z', 'other-hash', '{"id":"other-node"}');
-      UPDATE node_sync_versions SET parent_version_id = 'desktop#other' WHERE version_id = 'desktop#1';
+      INSERT INTO node_sync_version_parents (version_id, parent_version_id, ordinal)
+      VALUES ('desktop#1', 'desktop#other', 0);
     `);
   } finally {
     incoming.close();

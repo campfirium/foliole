@@ -55,6 +55,7 @@ export const COMPANION_SYNCBACK_HOST_CONTRACT = {
     nodeVersionParent: ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS.syncNodeVersionParent.sql,
     nodeVersions: ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS.syncNodeVersions.sql,
     openStatePayload: ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS.syncPayloadNodeOpenState.sql,
+    alternativePayload: ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS.syncPayloadNodeTextAlternative.sql,
     readingPayload: ANDROID_COMPANION_LEARNING_PAYLOAD_QUERY_DEFINITIONS.syncPayloadNodeReading.sql,
     reviewLog: ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS.syncReviewLog.sql,
     reviewPayload: ANDROID_COMPANION_LEARNING_PAYLOAD_QUERY_DEFINITIONS.syncPayloadNodeReview.sql,

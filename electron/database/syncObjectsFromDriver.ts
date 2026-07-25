@@ -56,6 +56,11 @@ const PAYLOAD_SQL_BY_TYPE: Partial<Record<JsonSyncObjectType, string>> = {
     'stability', stability, 'difficulty', difficulty, 'elapsed_days', elapsed_days,
     'scheduled_days', scheduled_days, 'reps', reps, 'lapses', lapses
   ) AS payload_json FROM node_review WHERE node_id = ?`,
+  node_text_alternative: `SELECT json_object(
+    'alternative_id', alternative_id, 'node_id', node_id, 'source_version_id', source_version_id,
+    'body_text', body_text, 'source_device_id', source_device_id, 'created_at', created_at,
+    'status', status, 'updated_at', updated_at
+  ) AS payload_json FROM node_text_alternatives WHERE alternative_id = ?`,
   pdf_page_text: `SELECT json_object(
     'attachment_id', attachment_id, 'page', page, 'text', text,
     'page_width', page_width, 'page_height', page_height

@@ -136,6 +136,19 @@ function pushContentBacklogVerdicts(android: SyncDiagnosticSnapshot, verdicts: S
   }
 }
 
+function pushConflictVerdict(android: SyncDiagnosticSnapshot, verdicts: SyncDiagnosticVerdict[]) {
+  const conflictCount = android.sync_state.conflict_count ?? 0;
+  if (conflictCount <= 0) return;
+  verdicts.push(infoVerdict(
+    'sync_conflicts_safely_saved',
+    'Conflicting edits were safely saved as separate copies.',
+    {
+      conflict_count: conflictCount,
+      latest_conflict: android.sync_state.recent_conflicts?.[0] ?? null
+    }
+  ));
+}
+
 function pushAlignedVerdict(args: {
   android: SyncDiagnosticSnapshot;
   androidCursor: number;
@@ -172,6 +185,7 @@ export function mergeSyncDiagnosticVerdicts(args: {
     }));
   }
   pushSyncLagVerdicts({ android: args.android, cursorLag, desktop: args.desktop, desktopMaxSeq, verdicts });
+  pushConflictVerdict(args.android, verdicts);
   pushContentBacklogVerdicts(args.android, verdicts);
   pushAlignedVerdict({ android: args.android, androidCursor, desktopMaxSeq, verdicts });
   return verdicts;

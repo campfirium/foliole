@@ -31,7 +31,15 @@ export const PACK_SCHEMA = [
     device_id TEXT NOT NULL,
     created_at TEXT NOT NULL,
     content_hash TEXT NOT NULL,
+    body_text TEXT,
     snapshot_json TEXT NOT NULL
+  )`,
+  `CREATE TABLE node_sync_version_parents (
+    version_id TEXT NOT NULL,
+    parent_version_id TEXT NOT NULL,
+    ordinal INTEGER NOT NULL,
+    PRIMARY KEY (version_id, parent_version_id),
+    UNIQUE (version_id, ordinal)
   )`,
   `CREATE TABLE node_attachments (
     node_id TEXT NOT NULL,

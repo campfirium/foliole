@@ -146,6 +146,7 @@ export async function saveCompanionSyncPushAcks(acks: SyncPushAck[]) {
   return runCompanionSyncWriterTask(async () => (
     await FolioleCompanionSync.saveSyncPushAcks({
       acks: acks.map((ack) => ({
+        ...(ack.canonicalObjectId !== undefined ? { canonical_object_id: ack.canonicalObjectId } : {}),
         client_op_id: ack.clientOpId,
         identity: ack.identity,
         ...(ack.stateSeq !== undefined ? { state_seq: ack.stateSeq } : {}),

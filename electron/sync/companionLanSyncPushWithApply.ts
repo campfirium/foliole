@@ -5,6 +5,7 @@ import type {
 
 interface CompanionSyncPushResponse {
   acks: Array<{
+    canonical_object_id?: string;
     client_op_id: string;
     conflict_reason?: string;
     identity: CompanionSyncPushPayload['identity'];
@@ -55,6 +56,7 @@ export async function handleCompanionSyncPushWithApply(
   });
   return {
     acks: result.acks.map((ack) => ({
+      ...(ack.canonicalObjectId === undefined ? {} : { canonical_object_id: ack.canonicalObjectId }),
       client_op_id: ack.clientOpId,
       ...(ack.conflictReason === undefined ? {} : { conflict_reason: ack.conflictReason }),
       identity: ack.identity,

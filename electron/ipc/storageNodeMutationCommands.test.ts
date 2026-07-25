@@ -1,7 +1,8 @@
 // @vitest-environment node
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { deleteNodesPermanently, moveNodes, replaceNodeOrder, restoreNodes, softDeleteNodes, upsertNodeSnapshot, upsertNodeSnapshotWithOrder } from '../database/nodeMutations.js';
+import { deleteNodesPermanently, moveNodes, replaceNodeOrder, restoreNodes, softDeleteNodes } from '../database/nodeMutations.js';
+import { upsertVersionedNodeSnapshot, upsertVersionedNodeSnapshotWithOrder } from '../database/nodeVersionedMutations.js';
 import { enqueueCoalescedWorkspaceSearchInvalidation } from '../database/searchIndexInvalidationCoalescer.js';
 
 import { handleInvokeRequest } from './commands.js';
@@ -36,6 +37,8 @@ vi.mock('../database/nodeMutations.js', () => ({
   upsertNodeSnapshot: vi.fn(),
   upsertNodeSnapshotWithOrder: vi.fn()
 }));
+vi.mock('../database/nodeVersionedMutations.js', () => ({ upsertVersionedNodeContentWithAnchors: vi.fn(),
+  upsertVersionedNodeSnapshot: vi.fn(), upsertVersionedNodeSnapshotWithOrder: vi.fn() }));
 vi.mock('../database/searchIndexInvalidationCoalescer.js', () => ({
   enqueueCoalescedWorkspaceSearchInvalidation: vi.fn()
 }));
@@ -78,7 +81,7 @@ it('handles node mutation commands', async () => {
     })],
     updatedNodeIds: ['node-1']
   });
-  expect(upsertNodeSnapshot).toHaveBeenCalledWith(
+  expect(upsertVersionedNodeSnapshot).toHaveBeenCalledWith(
     expect.objectContaining({
       anchorLink: null,
       content: '# Content',
@@ -117,7 +120,7 @@ it('handles node reveal mutation command', async () => {
     })],
     updatedNodeIds: ['node-2']
   });
-  expect(upsertNodeSnapshot).toHaveBeenCalledWith(
+  expect(upsertVersionedNodeSnapshot).toHaveBeenCalledWith(
     expect.objectContaining({
       anchorLink: { id: 'cloze-1', kind: 'cloze' },
       content: 'Question',
@@ -156,7 +159,7 @@ it('handles create node mutation command with accepted order patch', async () =>
     nodeOrder: ['special-inbox', 'node-new'],
     nodes: [expect.objectContaining({ nodeId: 'node-new', title: 'New node' })]
   });
-  expect(upsertNodeSnapshotWithOrder).toHaveBeenCalledWith(
+  expect(upsertVersionedNodeSnapshotWithOrder).toHaveBeenCalledWith(
     expect.objectContaining({ nodeId: 'node-new' }),
     ['special-inbox', 'node-new']
   );

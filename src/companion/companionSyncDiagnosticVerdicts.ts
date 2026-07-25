@@ -40,6 +40,12 @@ export function friendlySyncDiagnosticVerdict(verdict: SyncDiagnosticVerdict, t:
       title: t('companion.sync.verdict.pushIssues.title')
     };
   }
+  if (verdict.code === 'sync_conflicts_safely_saved') {
+    return {
+      description: t('companion.sync.verdict.conflictCopies.description'),
+      title: t('companion.sync.verdict.conflictCopies.title')
+    };
+  }
   if (verdict.code === 'desktop_ready') {
     return {
       description: t('companion.sync.verdict.desktopReady.description'),

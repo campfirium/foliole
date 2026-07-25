@@ -4,7 +4,7 @@ type SyncBaseReference =
   | { kind: 'blocked'; reason: 'invalid_identity' | 'missing_base_reference' }
   | { baseContentHash: string | null; kind: 'content_hash' }
   | { kind: 'op_id'; opId: string }
-  | { ancestorVersionIds: string[]; kind: 'node_version'; parentVersionId: string | null };
+  | { ancestorVersionIds: string[]; kind: 'node_version'; parentVersionId: string | null; parentVersionIds?: string[] };
 
 export interface SyncObjectIdentity {
   objectId: string;
@@ -23,6 +23,7 @@ export interface CompanionSyncPushPayload {
 }
 
 interface CompanionSyncPushAck {
+  canonicalObjectId?: string;
   clientOpId: string;
   conflictReason?: string;
   desktopBase?: SyncBaseReference;

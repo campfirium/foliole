@@ -11,6 +11,7 @@ import { migrateNodeProvenance } from './numberedMigrationNodeProvenance.js';
 import { createNodeSyncTombstoneTable } from './numberedMigrationNodeSyncTombstones.js';
 import type { NumberedSchemaMigration } from './numberedMigrations.js';
 import { migrateSettingSingleTruth } from './numberedMigrationSettingSingleTruth.js';
+import { migrateSyncConflictConvergence } from './numberedMigrationSyncConvergence.js';
 import { createVirtualFolderTables } from './numberedMigrationVirtualFolders.js';
 
 export const RECENT_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
@@ -121,5 +122,9 @@ export const RECENT_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   {
     version: 61,
     migrate: migrateExternalFolderOwnership
+  },
+  {
+    version: 62,
+    migrate: migrateSyncConflictConvergence
   }
 ];

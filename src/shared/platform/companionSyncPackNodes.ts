@@ -1,5 +1,6 @@
 import { CapacitorSQLite, SQLiteConnection } from '@capacitor-community/sqlite';
 
+import { assertSyncPackCursorAdvance } from '../../../lib/core/sync/syncPackCursorGuard';
 import { applySyncPackNodeSurfaceWithDbPort } from '../../../lib/core/sync/syncPackNodeApplyExecutor';
 import type { NativeSyncPackApplyResult } from '../../../lib/platform/nativeSyncContract';
 
@@ -14,7 +15,7 @@ import {
 const INCOMING_PACK_ALIAS = 'inc';
 
 export async function applyCompanionSyncPackPathWithSharedCore(
-  args: { deviceId: string; packPath: string },
+  args: { deviceId: string; packPath: string; primaryDeviceId?: string | null | undefined },
   cursorStore: CompanionSyncPackCursorStore,
   manager: CompanionSqliteConnectionManager = new SQLiteConnection(CapacitorSQLite)
 ) {
@@ -22,26 +23,28 @@ export async function applyCompanionSyncPackPathWithSharedCore(
   const result = await applyCompanionSyncPackNodesWithSharedCore({
     currentCursor: currentCursor ?? 0,
     deviceId: args.deviceId,
-    packPath: args.packPath
+    packPath: args.packPath,
+    primaryDeviceId: args.primaryDeviceId
   }, manager);
-  assertPackAppliedObjectsBeforeCursorAdvance(result, currentCursor ?? 0);
+  assertSyncPackCursorAdvance({
+    appliedObjectCount: result.applied_object_count,
+    currentCursor: currentCursor ?? 0,
+    handledConflictCount: result.handled_conflict_count ?? 0,
+    toStateSeq: result.to_state_seq
+  });
   if (result.to_state_seq > (currentCursor ?? 0)) {
     await cursorStore.saveCursor(result.to_state_seq);
   }
   return result;
 }
 
-function assertPackAppliedObjectsBeforeCursorAdvance(
-  result: NativeSyncPackApplyResult,
-  currentCursor: number
-) {
-  if (result.to_state_seq > currentCursor && result.applied_object_count === 0) {
-    throw new Error('sync_pack_applied_no_objects');
-  }
-}
-
 export async function applyCompanionSyncPackNodesWithSharedCore(
-  args: { currentCursor: number; deviceId: string; packPath: string },
+  args: {
+    currentCursor: number;
+    deviceId: string;
+    packPath: string;
+    primaryDeviceId?: string | null | undefined;
+  },
   manager: CompanionSqliteConnectionManager = new SQLiteConnection(CapacitorSQLite)
 ) {
   const connection = await openCompanionDatabaseConnection(manager);
@@ -51,7 +54,7 @@ export async function applyCompanionSyncPackNodesWithSharedCore(
     return await applySyncPackNodeSurfaceWithDbPort(port, {
       currentCursor: args.currentCursor,
       deviceId: args.deviceId,
-      incomingAlias: INCOMING_PACK_ALIAS
+      incomingAlias: INCOMING_PACK_ALIAS,
     }).then((result) => ({
       ...result,
       applied_blob_count: result.appliedBlobCount,
@@ -59,6 +62,7 @@ export async function applyCompanionSyncPackNodesWithSharedCore(
       appliedPackBlobCount: result.appliedBlobCount,
       appliedPackObjectCount: result.appliedObjectCount,
       applied_review_op_ids: result.appliedReviewOpIds,
+      handled_conflict_count: result.handledConflictCount,
       to_state_seq: result.toStateSeq
     } satisfies NativeSyncPackApplyResult & typeof result & {
       appliedPackBlobCount: number;

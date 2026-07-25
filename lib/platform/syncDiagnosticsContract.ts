@@ -58,6 +58,7 @@ export interface SyncDiagnosticStorage {
 }
 
 export interface SyncDiagnosticState {
+  conflict_count?: number;
   dirty_objects?: SyncDiagnosticDirtyObject[];
   local_dirty_count: number;
   max_state_seq: number | null;
@@ -66,6 +67,13 @@ export interface SyncDiagnosticState {
   pending_acks?: SyncDiagnosticPendingAck[];
   push_issue_count?: number;
   push_issues?: SyncDiagnosticPendingAck[];
+  recent_conflicts?: Array<{
+    conflict_version_id: string;
+    detected_at: string;
+    device_id: string | null;
+    object_id: string;
+    parent_version_id: string | null;
+  }>;
   ready_dirty_count?: number;
   state_counts: SyncDiagnosticCountRange[];
 }

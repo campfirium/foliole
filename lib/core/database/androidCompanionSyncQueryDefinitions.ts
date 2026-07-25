@@ -1,7 +1,9 @@
+import { ANDROID_COMPANION_CONVERGENCE_QUERY_DEFINITIONS } from './androidCompanionConvergenceQueryDefinitions.js';
 import { ANDROID_COMPANION_SYNC_NODE_VERSIONS_SQL } from './androidCompanionSyncNodeVersionSql.js';
 import { REVIEW_REQUIRED_PUSH_ISSUE_TYPES_SQL } from './androidCompanionSyncPolicySql.js';
 
 export const ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS = {
+  ...ANDROID_COMPANION_CONVERGENCE_QUERY_DEFINITIONS,
   syncIndex: {
     resultKey: 'entries',
     sql:
@@ -103,11 +105,13 @@ export const ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS = {
       { key: 'version_created_at', source: 'version_created_at', type: 'string' },
       { key: 'updated_at', source: 'updated_at', type: 'string' },
       { key: 'content_hash', source: 'content_hash', type: 'string' },
+      { key: 'body_text', source: 'body_text', type: 'nullableString' },
       { key: 'snapshot', source: 'snapshot', type: 'json' }
     ]
   },
   syncNodeVersionParent: {
-    sql: 'SELECT parent_version_id FROM node_sync_versions WHERE version_id = ? LIMIT 1'
+    sql: `SELECT parent_version_id FROM node_sync_version_parents
+      WHERE version_id = ? ORDER BY ordinal ASC`
   },
   companionMetaValue: {
     resultKey: 'rows',

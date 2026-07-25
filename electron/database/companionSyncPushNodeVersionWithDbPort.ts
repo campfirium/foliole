@@ -35,7 +35,9 @@ export function parseNodeVersionPush(item: CompanionSyncPushPayload): NativeSync
   return {
     ...record,
     ancestor_version_ids: item.base.ancestorVersionIds,
+    body_text: record.body_text ?? record.snapshot.content ?? '',
     content_hash: item.contentHash ?? record.content_hash,
+    parent_version_ids: item.base.parentVersionIds ?? (item.base.parentVersionId ? [item.base.parentVersionId] : []),
     updated_at: item.updatedAt ?? record.updated_at
   };
 }

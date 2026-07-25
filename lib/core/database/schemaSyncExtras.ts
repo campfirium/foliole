@@ -40,7 +40,29 @@ export const nodeSyncVersions = sqliteTable('node_sync_versions', {
   deviceId: text('device_id').notNull(),
   createdAt: text('created_at').notNull(),
   contentHash: text('content_hash').notNull(),
+  bodyText: text('body_text'),
   snapshotJson: text('snapshot_json')
+});
+
+export const nodeSyncVersionParents = sqliteTable(
+  'node_sync_version_parents',
+  {
+    versionId: text('version_id').notNull(),
+    parentVersionId: text('parent_version_id').notNull(),
+    ordinal: integer('ordinal').notNull()
+  },
+  (table) => [primaryKey({ columns: [table.versionId, table.parentVersionId] })]
+);
+
+export const nodeTextAlternatives = sqliteTable('node_text_alternatives', {
+  alternativeId: text('alternative_id').primaryKey(),
+  nodeId: text('node_id').notNull(),
+  sourceVersionId: text('source_version_id').notNull(),
+  bodyText: text('body_text').notNull(),
+  sourceDeviceId: text('source_device_id').notNull(),
+  createdAt: text('created_at').notNull(),
+  status: text('status').notNull(),
+  updatedAt: text('updated_at').notNull()
 });
 
 export const nodeSyncConflicts = sqliteTable('node_sync_conflicts', {

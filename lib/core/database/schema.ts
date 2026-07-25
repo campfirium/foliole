@@ -19,6 +19,8 @@ export const nodes = sqliteTable('nodes', {
   virtualFilter: text('virtual_filter'),
   reveal: text('reveal'),
   anchorLink: text('anchor_link'),
+  anchorResolutionStatus: text('anchor_resolution_status'),
+  anchorSourceVersionId: text('anchor_source_version_id'),
   imageRegions: text('image_regions'),
   importSourceFingerprint: text('import_source_fingerprint'),
   importContentFingerprint: text('import_content_fingerprint'),

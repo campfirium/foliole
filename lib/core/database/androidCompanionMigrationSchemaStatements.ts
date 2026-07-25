@@ -1,4 +1,9 @@
 import {
+  ANDROID_COMPANION_CONVERGENCE_MIGRATION_ACTION_TYPES,
+  ANDROID_COMPANION_CONVERGENCE_MIGRATION_REPAIR_RULES,
+  ANDROID_COMPANION_CONVERGENCE_MIGRATION_STATEMENTS
+} from './androidCompanionConvergenceMigrationDefinitions.js';
+import {
   ANDROID_COMPANION_EXTERNAL_FOLDER_OWNERSHIP_ACTION_TYPES,
   ANDROID_COMPANION_EXTERNAL_FOLDER_OWNERSHIP_MIGRATION_STATEMENTS,
   ANDROID_COMPANION_EXTERNAL_FOLDER_OWNERSHIP_PLAN_STEP
@@ -9,6 +14,7 @@ import {
   ANDROID_COMPANION_NODE_PROVENANCE_MIGRATION_REPAIR_RULES,
   ANDROID_COMPANION_NODE_PROVENANCE_MIGRATION_STATEMENTS
 } from './androidCompanionNodeProvenanceMigration.js';
+import { ANDROID_COMPANION_SYNC_STATE_MIGRATION_REPAIR_RULES } from './androidCompanionSyncStateMigrationRules.js';
 export {
   ANDROID_COMPANION_MIGRATION_ACTION_KEYS,
   ANDROID_COMPANION_MIGRATION_ASSET_KEYS,
@@ -18,6 +24,7 @@ export {
 } from './androidCompanionMigrationMetadata.js';
 
 export const ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS = {
+  ...ANDROID_COMPANION_CONVERGENCE_MIGRATION_STATEMENTS,
   ...ANDROID_COMPANION_NODE_PROVENANCE_MIGRATION_STATEMENTS,
   ...ANDROID_COMPANION_EXTERNAL_FOLDER_OWNERSHIP_MIGRATION_STATEMENTS,
   nodesEnableShortTermColumn: 'ALTER TABLE nodes ADD COLUMN enable_short_term INTEGER',
@@ -48,6 +55,7 @@ export const ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS = {
 };
 
 export const ANDROID_COMPANION_MIGRATION_ACTION_TYPES = {
+  ...ANDROID_COMPANION_CONVERGENCE_MIGRATION_ACTION_TYPES,
   ...ANDROID_COMPANION_NODE_PROVENANCE_MIGRATION_ACTION_TYPES,
   ...ANDROID_COMPANION_EXTERNAL_FOLDER_OWNERSHIP_ACTION_TYPES,
   addNodesEnableShortTermIfMissing: 'addNodesEnableShortTermIfMissing',
@@ -62,6 +70,7 @@ export const ANDROID_COMPANION_MIGRATION_ACTION_TYPES = {
 } as const;
 
 export const ANDROID_COMPANION_MIGRATION_PLAN = [
+  ANDROID_COMPANION_EXTERNAL_FOLDER_OWNERSHIP_PLAN_STEP,
   {
     actions: [{ errorMessage: 'Failed to upgrade companion schema.', type: 'installSchema' }],
     beforeVersion: 4
@@ -146,10 +155,21 @@ export const ANDROID_COMPANION_MIGRATION_PLAN = [
     actions: [{ errorMessage: 'Failed to upgrade companion node open state schema.', type: 'installSchema' }],
     beforeVersion: 20
   },
-  ANDROID_COMPANION_EXTERNAL_FOLDER_OWNERSHIP_PLAN_STEP
+  {
+    actions: [
+      { errorMessage: 'Failed to install companion sync convergence schema.', type: 'installSchema' },
+      { type: 'addNodesAnchorResolutionStatusIfMissing' },
+      { type: 'addNodesAnchorSourceVersionIdIfMissing' },
+      { type: 'addNodeSyncVersionsBodyTextIfMissing' },
+      { type: 'backfillSyncConflictConvergence' }
+    ],
+    beforeVersion: 22
+  }
 ] as const;
 
 export const ANDROID_COMPANION_MIGRATION_REPAIR_RULES = {
+  ...ANDROID_COMPANION_CONVERGENCE_MIGRATION_REPAIR_RULES,
+  ...ANDROID_COMPANION_SYNC_STATE_MIGRATION_REPAIR_RULES,
   ...ANDROID_COMPANION_NODE_PROVENANCE_MIGRATION_REPAIR_RULES,
   nodesEnableShortTerm: {
     columnName: 'enable_short_term',
@@ -187,32 +207,4 @@ export const ANDROID_COMPANION_MIGRATION_REPAIR_RULES = {
     statementName: 'syncObjectStateBaseContentHashColumn',
     tableName: 'sync_object_state'
   },
-  syncObjectStateSequence: {
-    createNextErrorMessage: 'Failed to create sync object state repair table.',
-    createNextStatementName: 'syncObjectStateNextTable',
-    dropLegacyErrorMessage: 'Failed to drop legacy sync object state table.',
-    dropLegacyStatementName: 'syncObjectStateDropLegacyTable',
-    indexStatementNames: ['syncObjectStateSeqIndex', 'syncObjectStateTypeSeqIndex'],
-    indexStatementsErrorMessage: 'Failed to create sync object state indexes.',
-    indexStatementErrorMessage: 'Failed to create sync object state index.',
-    legacyRowsErrorMessage: 'Failed to load legacy sync object state rows.',
-    legacyRowsQueryName: 'migrationLegacySyncObjectStateRows',
-    legacyRowsResultKey: 'rows',
-    nextInsertErrorMessage: 'Failed to copy legacy sync object state row.',
-    nextInsertMutationName: 'migrationSyncObjectStateNextInsert',
-    renameNextErrorMessage: 'Failed to rename sync object state repair table.',
-    renameNextStatementName: 'syncObjectStateRenameNextTable',
-    rowKeys: {
-      contentHash: 'content_hash',
-      currentVersionId: 'current_version_id',
-      deletedAt: 'deleted_at',
-      lastModifiedByDeviceId: 'last_modified_by_device_id',
-      objectId: 'object_id',
-      objectType: 'object_type',
-      syncDirty: 'sync_dirty',
-      updatedAt: 'updated_at'
-    },
-    stateSeqColumnName: 'state_seq',
-    tableName: 'sync_object_state'
-  }
 } as const;

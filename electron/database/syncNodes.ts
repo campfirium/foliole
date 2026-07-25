@@ -2,12 +2,12 @@ import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { openDatabaseConnection } from './connection.js';
-import { isConflictCopyNodeId } from './syncConflictCopyIdentity.js';
 import { loadSyncNodeTombstoneVersionsSince } from './syncNodeTombstones.js';
 
 interface SyncNodeRow extends DatabaseRow {
   anchor_link: string | null;
   body_blob_hash: string | null;
+  body_text: string | null;
   content: string;
   content_hash: string | null;
   created_at: string;
@@ -47,6 +47,25 @@ interface NodeSyncVersionParentRow extends DatabaseRow {
   parent_version_id: string | null;
 }
 
+function listDirectParentVersionIds(versionId: string | null, fallbackParentId: string | null = null) {
+  if (!versionId) return fallbackParentId ? [fallbackParentId] : [];
+  const rows = openDatabaseConnection().driver.queryAll<NodeSyncVersionParentRow>(
+    `SELECT parent_version_id FROM node_sync_version_parents
+     WHERE version_id = ? ORDER BY ordinal ASC`,
+    [versionId]
+  );
+  const parentIds = rows
+    .map((row) => row.parent_version_id)
+    .filter((value): value is string => typeof value === 'string' && value.length > 0);
+  if (parentIds.length > 0) return parentIds;
+  const legacyParent = openDatabaseConnection().driver.queryOne<NodeSyncVersionParentRow>(
+    'SELECT parent_version_id FROM node_sync_versions WHERE version_id = ?',
+    [versionId]
+  )?.parent_version_id;
+  const parentId = legacyParent ?? fallbackParentId;
+  return parentId ? [parentId] : [];
+}
+
 function listNodeAttachmentRefs(nodeId: string) {
   return openDatabaseConnection().driver.queryAll<NodeAttachmentRefRow>(
     `SELECT attachment_id, role
@@ -58,29 +77,16 @@ function listNodeAttachmentRefs(nodeId: string) {
 }
 
 function listAncestorVersionIds(versionId: string | null, parentVersionId: string | null = null) {
-  if (!versionId) {
-    return parentVersionId ? [parentVersionId] : [];
-  }
-  const driver = openDatabaseConnection().driver;
+  if (!versionId) return parentVersionId ? [parentVersionId] : [];
   const ancestors: string[] = [];
-  let cursor = driver.queryOne<NodeSyncVersionParentRow>(
-    `SELECT parent_version_id
-     FROM node_sync_versions
-     WHERE version_id = ?`,
-    [versionId]
-  )?.parent_version_id ?? null;
-
-  while (cursor) {
+  const seen = new Set<string>();
+  const pending = [...listDirectParentVersionIds(versionId, parentVersionId)];
+  while (pending.length > 0) {
+    const cursor = pending.shift()!;
+    if (seen.has(cursor)) continue;
+    seen.add(cursor);
     ancestors.push(cursor);
-    cursor = driver.queryOne<NodeSyncVersionParentRow>(
-      `SELECT parent_version_id
-       FROM node_sync_versions
-       WHERE version_id = ?`,
-      [cursor]
-    )?.parent_version_id ?? null;
-  }
-  if (ancestors.length === 0 && parentVersionId) {
-    ancestors.push(parentVersionId);
+    pending.push(...listDirectParentVersionIds(cursor));
   }
   return ancestors;
 }
@@ -129,11 +135,13 @@ function toNativeSyncNodeRecord(row: SyncNodeRow): NativeSyncNodeRecord {
   const snapshot = parseSnapshot(row);
   return {
     ancestor_version_ids: listAncestorVersionIds(row.version_id, row.parent_version_id),
+    body_text: row.body_text ?? snapshot.content ?? '',
     content_hash: row.content_hash,
     device_id: row.device_id,
     object_id: snapshot.id,
     object_type: 'node',
     parent_version_id: row.parent_version_id,
+    parent_version_ids: listDirectParentVersionIds(row.version_id, row.parent_version_id),
     snapshot,
     updated_at: snapshot.updated_at,
     version_created_at: row.version_created_at,
@@ -171,6 +179,7 @@ const SYNC_NODE_SELECT_COLUMNS = `
   v.created_at AS version_created_at,
   v.parent_version_id,
   v.content_hash,
+  v.body_text,
   v.snapshot_json`;
 
 function normalizeLimit(limit: number) {
@@ -213,7 +222,6 @@ export function loadSyncNodeVersionsSince(cursor: { createdAt: string; versionId
      INNER JOIN node_sync_versions v
        ON v.object_id = n.id
      WHERE ${cursor ? '(v.created_at > ? OR (v.created_at = ? AND v.version_id > ?))' : '1 = 1'}
-       AND n.id NOT LIKE 'conflict-copy-%'
      ORDER BY v.created_at ASC, v.version_id ASC
      LIMIT ?`,
     cursor
@@ -222,8 +230,7 @@ export function loadSyncNodeVersionsSince(cursor: { createdAt: string; versionId
   );
   const tombstoneRecords = loadSyncNodeTombstoneVersionsSince(cursor, limitValue);
 
-  return [...rows.filter((row) => !isConflictCopyNodeId(row.id)).map((row) => toNativeSyncNodeRecord(row)), ...tombstoneRecords]
-    .filter((row) => !isConflictCopyNodeId(row.object_id))
+  return [...rows.map((row) => toNativeSyncNodeRecord(row)), ...tombstoneRecords]
     .sort(compareSyncNodeRecords)
     .slice(0, limitValue)
 }

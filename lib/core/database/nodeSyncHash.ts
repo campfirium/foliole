@@ -9,6 +9,8 @@ export interface NodeSyncAttachmentRef {
 
 export interface NodeSyncHashInput {
   anchorLink: string | null;
+  anchorResolutionStatus?: 'resolved' | 'unmapped_ambiguous' | 'unmapped_missing' | null;
+  anchorSourceVersionId?: string | null;
   attachments: NodeSyncAttachmentRef[];
   content: string;
   createdAt: string;
@@ -39,8 +41,8 @@ function normalizeIso<T extends string | null>(value: T): T {
   return value;
 }
 
-function normalizeNullableText(value: string | null) {
-  return value ?? null;
+function normalizeNullableText<T extends string | null>(value: T): T {
+  return (value ?? null) as T;
 }
 
 function normalizeAttachments(attachments: NodeSyncAttachmentRef[]) {
@@ -60,6 +62,8 @@ export function buildCanonicalNodeSyncPayload(input: NodeSyncHashInput) {
   const provenance = normalizeNodeImportProvenance(input);
   return {
     anchor_link: normalizeNullableText(input.anchorLink),
+    anchor_resolution_status: normalizeNullableText(input.anchorResolutionStatus ?? null),
+    anchor_source_version_id: normalizeNullableText(input.anchorSourceVersionId ?? null),
     attachments: normalizeAttachments(input.attachments),
     content: input.content,
     created_at: normalizeIso(input.createdAt),

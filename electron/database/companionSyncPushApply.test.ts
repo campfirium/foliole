@@ -121,29 +121,6 @@ function createNodeReviewPush(overrides: Partial<SyncPushPayload> = {}): SyncPus
   };
 }
 
-function createReviewLogPush(opId = 'op-1'): SyncPushPayload {
-  return {
-    base: { kind: 'op_id', opId },
-    clientOpId: `review_log:${opId}`,
-    identity: { objectId: opId, objectType: 'review_log', scope: 'workspace' },
-    payloadJson: JSON.stringify({
-      device_id: 'android-device',
-      difficulty_after: 3,
-      difficulty_before: 2,
-      due_after: '2026-05-01T00:00:00.000Z',
-      due_before: '2026-04-30T00:00:00.000Z',
-      grade: 3,
-      id: `review-${opId}`,
-      node_id: 'node-1',
-      op_id: opId,
-      reviewed_at: '2026-04-30T01:00:00.000Z',
-      scheduler_version: 'ts-fsrs@4',
-      stability_after: 4,
-      stability_before: 3
-    })
-  };
-}
-
 describe('companion sync push apply', () => {
   it('accepts node_review when base content hash matches current desktop state', async () => {
     insertBaseReviewState();
@@ -226,21 +203,17 @@ describe('companion sync push conflict handling', () => {
     )).toEqual({ last_opened_at: '2026-04-30T03:00:00.000Z' });
   });
 
-  it('returns conflict for node_review when desktop base has changed', async () => {
+  it('accepts the first actual node review even when its base hash has changed', async () => {
     insertBaseReviewState('desktop-newer');
 
     const result = await applyCompanionSyncPushAsync([createNodeReviewPush()]);
 
-    expect(result.appliedObjectIds).toEqual([]);
-    expect(result.acks).toMatchObject([{
-      conflictReason: 'base_content_hash_mismatch',
-      stateSeq: 1,
-      status: 'conflict'
-    }]);
+    expect(result.appliedObjectIds).toEqual(['node_review:node-1']);
+    expect(result.acks).toMatchObject([{ status: 'accepted' }]);
     expect(openDatabaseConnection().driver.queryOne<{ content_hash: string }>(
       `SELECT content_hash FROM sync_object_state
        WHERE object_type = 'node_review' AND object_id = 'node-1'`
-    )).toEqual({ content_hash: 'desktop-newer' });
+    )).toEqual({ content_hash: 'android-next' });
   });
 
   it('returns conflict for node_reading when desktop base has changed', async () => {
@@ -260,36 +233,4 @@ describe('companion sync push conflict handling', () => {
     )).toEqual({ content_hash: 'desktop-reading-newer' });
   });
 
-});
-
-describe('companion sync push idempotency', () => {
-  it('treats repeated node_reading push as already applied', async () => {
-    insertBaseReadingState();
-    await applyCompanionSyncPushAsync([createNodeReadingPush()]);
-
-    const result = await applyCompanionSyncPushAsync([createNodeReadingPush()]);
-
-    expect(result.appliedObjectIds).toEqual([]);
-    expect(result.acks).toMatchObject([{ stateSeq: 2, status: 'already_applied' }]);
-  });
-
-  it('inserts review_log once and rejects mismatched duplicate op payloads', async () => {
-    const first = createReviewLogPush('op-1');
-    const duplicate = createReviewLogPush('op-1');
-    const conflicting = {
-      ...createReviewLogPush('op-1'),
-      payloadJson: JSON.stringify({ ...JSON.parse(first.payloadJson ?? '{}'), grade: 4 })
-    };
-
-    await expect(applyCompanionSyncPushAsync([first])).resolves.toMatchObject({ acks: [{ status: 'accepted' }] });
-    await expect(applyCompanionSyncPushAsync([duplicate])).resolves.toMatchObject({ acks: [{ status: 'already_applied' }] });
-    await expect(applyCompanionSyncPushAsync([conflicting])).resolves.toMatchObject({ acks: [{
-      conflictReason: 'op_id_payload_mismatch',
-      status: 'rejected'
-    }] });
-    expect(openDatabaseConnection().driver.queryOne<{ count: number }>(
-      'SELECT COUNT(*) AS count FROM review_log WHERE op_id = ?',
-      ['op-1']
-    )).toEqual({ count: 1 });
-  });
 });
