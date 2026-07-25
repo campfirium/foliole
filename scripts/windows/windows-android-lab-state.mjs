@@ -26,6 +26,8 @@ export function androidLabPaths(root = androidLabRoot()) {
     protection: path.join(root, 'protection', 'backups'),
     repository: path.join(root, 'repository.git'),
     root,
+    signingHome: path.join(root, 'signing', 'android-user-home'),
+    signingKeystore: path.join(root, 'signing', 'android-user-home', 'debug.keystore'),
     status: path.join(root, 'status.json')
   };
 }
@@ -66,6 +68,14 @@ export function parseAndroidLabCommand(input) {
       return { action, endpoint: parts[1], operation: 'reconnect' };
     }
     throw new Error('device requires status or reconnect <ipv4:port>');
+  }
+  if (action === 'signing') {
+    const byteLength = Number(parts[1]);
+    if (parts[0] === 'install' && parts.length === 3 && Number.isSafeInteger(byteLength)
+      && byteLength >= 1 && byteLength <= 65_536 && /^[0-9a-f]{64}$/u.test(parts[2])) {
+      return { action, byteLength, operation: 'install', sha256: parts[2] };
+    }
+    throw new Error('signing requires install <1..65536 byte length> <lowercase sha256>');
   }
   if (!['cancel', 'status'].includes(action) || parts.length !== 0) throw new Error('unsupported Android lab action');
   return { action };

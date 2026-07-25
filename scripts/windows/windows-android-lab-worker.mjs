@@ -3,6 +3,7 @@
 
 import fs from 'node:fs';
 import { Buffer } from 'node:buffer';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -17,6 +18,23 @@ const COMMAND_TIMEOUT_MS = 5 * 60_000;
 
 function codedError(code, message) {
   return Object.assign(new Error(message), { code });
+}
+
+function assertAndroidSigning(config, paths) {
+  if (!/^[0-9a-f]{64}$/u.test(config.androidDebugKeystoreSha256 || '')) {
+    throw codedError('android_signing_missing', 'Android Lab signing identity is not installed');
+  }
+  let payload;
+  try {
+    payload = fs.readFileSync(paths.signingKeystore);
+  } catch (error) {
+    if (error.code === 'ENOENT') throw codedError('android_signing_missing', 'Android Lab debug keystore is missing');
+    throw error;
+  }
+  const sha256 = createHash('sha256').update(payload).digest('hex');
+  if (sha256 !== config.androidDebugKeystoreSha256) {
+    throw codedError('android_signing_mismatch', 'Android Lab debug keystore does not match its installed identity');
+  }
 }
 
 async function runChecked(executeCommand, command, args, options, code) {
@@ -71,6 +89,7 @@ function previewEnvironment(config, endpoint, paths) {
     .filter(Boolean).join(';');
   return {
     ...process.env,
+    ANDROID_USER_HOME: paths.signingHome,
     ANDROID_DATA_PROTECTION: '1',
     ANDROID_DATA_PROTECTION_BACKUP_DIR: paths.protection,
     ANDROID_DATA_PROTECTION_MANIFEST_DIR: paths.manifest,
@@ -147,6 +166,7 @@ export async function runWindowsAndroidLabWorker({
   let primaryError = null;
   try {
     validateAndroidLabConfig(config);
+    assertAndroidSigning(config, paths);
     device = await resolveAndroidDevice(config, paths, executeCommand);
     writeJsonAtomic(paths.status, { ...running, phase: 'checkout' });
     await prepareCheckout(config, paths, executeCommand);

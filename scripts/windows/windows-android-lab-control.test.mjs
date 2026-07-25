@@ -1,10 +1,12 @@
 // @vitest-environment node
 
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { Buffer } from 'node:buffer';
 import { describe, expect, it } from 'vitest';
 import {
-  androidLabGitPushSpec, androidLabSshArgs, parseAndroidLabControlArgs, remoteAndroidLabPaths,
+  androidLabGitPushSpec, androidLabSigningInstallSpec, androidLabSshArgs, parseAndroidLabControlArgs, remoteAndroidLabPaths,
   runWindowsAndroidLabControl
 } from './windows-android-lab-control.mjs';
 
@@ -54,5 +56,26 @@ describe('Windows Android lab Mac controller', () => {
   it('builds no GitHub URL or mutable working-tree transfer', () => {
     const spec = androidLabGitPushSpec('tester@windows-host', 'f'.repeat(40), {}, '/Users/tester');
     expect(spec.args.join(' ')).not.toMatch(/github|bundle|patch/iu);
+  });
+
+  it('converts a local keystore into a fixed remote command and binary stdin', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'android-lab-signing-'));
+    const file = path.join(root, 'debug.keystore');
+    fs.writeFileSync(file, 'private signing bytes');
+    try {
+      const spec = androidLabSigningInstallSpec(file);
+      expect(spec.command).toEqual(['signing', 'install', '21', spec.sha256]);
+      const calls = [];
+      await runWindowsAndroidLabControl({
+        argv: ['--host', 'tester@windows-host', 'signing', 'install', file], env: {},
+        executeSsh: async (...args) => { calls.push(args); return Buffer.from('{"state":"installed"}\n'); },
+        stdout: { write: () => {} }
+      });
+      expect(calls[0][1]).toEqual(spec.command);
+      expect(calls[0][3]).toEqual(Buffer.from('private signing bytes'));
+      expect(calls[0][1].join(' ')).not.toContain(file);
+    } finally {
+      fs.rmSync(root, { force: true, recursive: true });
+    }
   });
 });

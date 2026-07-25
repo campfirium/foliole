@@ -1,5 +1,7 @@
 // @vitest-environment node
 
+import { Buffer } from 'node:buffer';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -107,5 +109,37 @@ describe('Windows Android lab dispatcher', () => {
       argv: ['run', SHA], paths, runCommand: () => ({ code: 1 })
     })).rejects.toMatchObject({ code: 'commit_not_in_lab_ref' });
     expect(fs.existsSync(paths.active)).toBe(false);
+  });
+
+  it('installs only a hash-verified signing identity at the fixed private path', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-android-lab-signing-'));
+    roots.push(root);
+    const paths = androidLabPaths(root);
+    prepareSource(paths);
+    const payload = Buffer.from('private signing bytes');
+    const sha256 = createHash('sha256').update(payload).digest('hex');
+    const result = await dispatchWindowsAndroidLab({
+      argv: ['signing', 'install', String(payload.length), sha256], input: payload, paths
+    });
+    expect(result).toEqual({ byteLength: payload.length, schemaVersion: 1, sha256, state: 'installed' });
+    expect(fs.readFileSync(paths.signingKeystore)).toEqual(payload);
+    expect(readJson(paths.config).androidDebugKeystoreSha256).toBe(sha256);
+    await expect(dispatchWindowsAndroidLab({
+      argv: ['signing', 'install', String(payload.length), '0'.repeat(64)], input: payload, paths
+    })).rejects.toMatchObject({ code: 'android_signing_payload_mismatch' });
+  });
+
+  it('does not rotate signing identity while a run is active', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-android-lab-signing-busy-'));
+    roots.push(root);
+    const paths = androidLabPaths(root);
+    prepareSource(paths);
+    writeJsonAtomic(paths.status, { state: 'running' });
+    const payload = Buffer.from('private signing bytes');
+    const sha256 = createHash('sha256').update(payload).digest('hex');
+    await expect(dispatchWindowsAndroidLab({
+      argv: ['signing', 'install', String(payload.length), sha256], input: payload, paths
+    })).rejects.toMatchObject({ code: 'android_lab_busy' });
+    expect(fs.existsSync(paths.signingKeystore)).toBe(false);
   });
 });

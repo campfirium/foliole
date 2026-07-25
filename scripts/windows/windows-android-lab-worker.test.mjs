@@ -1,5 +1,7 @@
 // @vitest-environment node
 
+import { Buffer } from 'node:buffer';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -18,9 +20,12 @@ function createFixture() {
   roots.push(root);
   const paths = androidLabPaths(root);
   writeJsonAtomic(paths.active, { commitSha: SHA, runId: 'run-1', schemaVersion: 1 });
+  const signing = Buffer.from('private signing bytes');
+  fs.mkdirSync(paths.signingHome, { recursive: true });
+  fs.writeFileSync(paths.signingKeystore, signing);
   writeJsonAtomic(paths.config, {
     adbPath: 'adb.exe', bashPath: 'bash.exe', deviceIdentity: 'A5-STABLE', gitPath: 'git.exe',
-    javaHome: 'C:\\Java', nodeDirectory: 'C:\\Node',
+    javaHome: 'C:\\Java', nodeDirectory: 'C:\\Node', androidDebugKeystoreSha256: createHash('sha256').update(signing).digest('hex'),
     schemaVersion: 2
   });
   fs.mkdirSync(paths.repository, { recursive: true });
@@ -56,6 +61,7 @@ describe('Windows Android lab worker', () => {
     expect(preview.options.timeoutMs).toBe(45 * 60_000);
     expect(preview.options.env).toMatchObject({
       ANDROID_DATA_PROTECTION: '1', ANDROID_PREVIEW_AVD: '', ANDROID_PREVIEW_OPEN_STUDIO: '0',
+      ANDROID_USER_HOME: paths.signingHome,
       ANDROID_DATA_PROTECTION_RUNTIME_ROOT: paths.preview, ANDROID_ELECTRON_ABI_PREPARE: '1',
       ANDROID_WINDOWS_DEPENDENCY_REFRESH: 'ci', FOLIOLE_ANDROID_SERIAL: ENDPOINT, JAVA_HOME: 'C:\\Java'
     });
@@ -99,6 +105,18 @@ describe('Windows Android lab worker', () => {
     });
     expect(readJson(paths.status)).toMatchObject({ errorCode: 'android_preview_timeout', resultStatus: 'failure' });
     expect(fs.existsSync(paths.candidate)).toBe(false);
+  });
+
+  it('fails before device access and checkout when the signing identity is missing', async () => {
+    const paths = createFixture();
+    fs.rmSync(paths.signingKeystore);
+    const calls = [];
+    await expect(runWindowsAndroidLabWorker({
+      executeCommand: async (...args) => { calls.push(args); return { code: 0, lines: [], output: '' }; },
+      paths, platform: 'win32'
+    })).rejects.toMatchObject({ code: 'android_signing_missing' });
+    expect(calls).toEqual([]);
+    expect(readJson(paths.status)).toMatchObject({ errorCode: 'android_signing_missing', resultStatus: 'failure' });
   });
 
   it('contains no destructive Android device command', () => {

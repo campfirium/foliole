@@ -17,6 +17,7 @@ describe('Windows Android lab state contract', () => {
     expect(paths.root).not.toContain('windows-device');
     expect(paths.device).toContain('device.json');
     expect(paths.preview).toBe('C:\\dev\\foliole-android-lab-preview');
+    expect(paths.signingKeystore).toContain('debug.keystore');
   });
 
   it('accepts only the fixed command and evidence grammar', () => {
@@ -24,6 +25,9 @@ describe('Windows Android lab state contract', () => {
     expect(parseAndroidLabCommand('collect get summary.json').relativePath).toBe('summary.json');
     expect(parseAndroidLabCommand('collect get logcat.txt').relativePath).toBe('logcat.txt');
     expect(parseAndroidLabCommand('device status')).toEqual({ action: 'device', operation: 'status' });
+    expect(parseAndroidLabCommand(`signing install 2618 ${'1'.repeat(64)}`)).toEqual({
+      action: 'signing', byteLength: 2618, operation: 'install', sha256: '1'.repeat(64)
+    });
     expect(parseAndroidLabCommand('device reconnect 192.168.0.107:38717')).toMatchObject({
       endpoint: '192.168.0.107:38717', operation: 'reconnect'
     });
@@ -31,6 +35,8 @@ describe('Windows Android lab state contract', () => {
     expect(() => parseAndroidLabCommand('collect get ../git-read-token.txt')).toThrow();
     expect(() => parseAndroidLabCommand('deploy 1 abc')).toThrow();
     expect(() => parseAndroidLabCommand('device reconnect 999.1.1.1:70000')).toThrow();
+    expect(() => parseAndroidLabCommand(`signing install 65537 ${'1'.repeat(64)}`)).toThrow();
+    expect(() => parseAndroidLabCommand('signing install C:\\Users\\me\\debug.keystore')).toThrow();
     expect(safeLabEvidencePath('/evidence', 'runner.log')).toContain('runner.log');
   });
 

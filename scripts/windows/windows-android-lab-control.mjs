@@ -3,6 +3,7 @@
 
 import { spawn } from 'node:child_process';
 import { Buffer } from 'node:buffer';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -30,10 +31,10 @@ export function parseAndroidLabControlArgs(argv, env) {
   return { command: args, host, output };
 }
 
-function ssh(host, command, env) {
+function ssh(host, command, env, input = null) {
   return new Promise((resolve, reject) => {
     const child = spawn('ssh', androidLabSshArgs(host, command, env), {
-      shell: false, stdio: ['ignore', 'pipe', 'pipe']
+      shell: false, stdio: [input ? 'pipe' : 'ignore', 'pipe', 'pipe']
     });
     const stdout = [];
     let stderr = '';
@@ -41,6 +42,7 @@ function ssh(host, command, env) {
     child.stderr.on('data', (chunk) => { stderr += chunk; });
     child.on('error', reject);
     child.on('close', (code) => code === 0 ? resolve(Buffer.concat(stdout)) : reject(new Error(stderr.trim() || `ssh exited ${code}`)));
+    if (input) child.stdin.end(input);
   });
 }
 
@@ -76,6 +78,17 @@ export function androidLabGitPushSpec(host, commitSha, env, home = os.homedir())
   };
 }
 
+export function androidLabSigningInstallSpec(filePath) {
+  const resolved = path.resolve(filePath);
+  const stat = fs.statSync(resolved);
+  if (!stat.isFile() || stat.size < 1 || stat.size > 65_536) {
+    throw new Error('Android debug keystore must be a 1..65536 byte regular file');
+  }
+  const input = fs.readFileSync(resolved);
+  const sha256 = createHash('sha256').update(input).digest('hex');
+  return { command: ['signing', 'install', String(input.length), sha256], input, sha256 };
+}
+
 async function pushAndroidLabSource(host, env, executeGit) {
   const status = String(await executeGit(['status', '--porcelain'], { env })).trim();
   if (status) throw new Error('Android Lab source push requires a clean working tree');
@@ -89,7 +102,7 @@ async function pushAndroidLabSource(host, env, executeGit) {
 }
 
 export async function runWindowsAndroidLabControl({
-  argv = process.argv.slice(2), env = process.env, executeGit = git, stdout = process.stdout
+  argv = process.argv.slice(2), env = process.env, executeGit = git, executeSsh = ssh, stdout = process.stdout
 } = {}) {
   const { command, host, output } = parseAndroidLabControlArgs(argv, env);
   if (command[0] === 'push') {
@@ -98,7 +111,17 @@ export async function runWindowsAndroidLabControl({
     stdout.write(`${JSON.stringify(pushed)}\n`);
     return pushed;
   }
-  const result = await ssh(host, command, env);
+  let remoteCommand = command;
+  let input = null;
+  if (command[0] === 'signing') {
+    if (command.length !== 3 || command[1] !== 'install' || output) {
+      throw new Error('signing requires install <local-keystore-path> and does not accept --output');
+    }
+    const spec = androidLabSigningInstallSpec(command[2]);
+    remoteCommand = spec.command;
+    input = spec.input;
+  }
+  const result = await executeSsh(host, remoteCommand, env, input);
   if (output) {
     fs.mkdirSync(path.dirname(path.resolve(output)), { recursive: true });
     fs.writeFileSync(output, result);
