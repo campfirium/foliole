@@ -33,6 +33,33 @@ function Invoke-ScreenshotCapture {
   }
 }
 
+function Invoke-DeviceWake {
+  param(
+    [string]$AdbPath,
+    [string]$Serial
+  )
+
+  $wake = Start-Process `
+    -FilePath $AdbPath `
+    -ArgumentList @("-s", $Serial, "shell", "input", "keyevent", "KEYCODE_WAKEUP") `
+    -WindowStyle Hidden `
+    -Wait `
+    -PassThru
+  if ($wake.ExitCode -ne 0) {
+    throw "Android screen wake failed."
+  }
+  $dismiss = Start-Process `
+    -FilePath $AdbPath `
+    -ArgumentList @("-s", $Serial, "shell", "wm", "dismiss-keyguard") `
+    -WindowStyle Hidden `
+    -Wait `
+    -PassThru
+  if ($dismiss.ExitCode -ne 0) {
+    throw "Android keyguard dismissal failed."
+  }
+  Start-Sleep -Milliseconds 750
+}
+
 . "$PSScriptRoot\windows-adb-device.ps1"
 
 function Resolve-SdkRoot {
@@ -89,6 +116,7 @@ $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $outputPath = Join-Path $resolvedOutputDir "android-$timestamp.png"
 
 Write-Info "device: $serial"
+Invoke-DeviceWake -AdbPath $adbPath -Serial $serial
 Invoke-ScreenshotCapture -AdbPath $adbPath -Serial $serial -OutputPath $outputPath
 
 Write-Info "file: $outputPath"

@@ -81,6 +81,10 @@ describe('windows-screenshot.sh', () => {
 
     expect(script).toContain('function Test-LastCommandFailed');
     expect(script).toContain('function Invoke-ScreenshotCapture');
+    expect(script).toContain('function Invoke-DeviceWake');
+    expect(script).toContain('-ArgumentList @("-s", $Serial, "shell", "input", "keyevent", "KEYCODE_WAKEUP")');
+    expect(script).toContain('-ArgumentList @("-s", $Serial, "shell", "wm", "dismiss-keyguard")');
+    expect(script.indexOf('Invoke-DeviceWake -AdbPath')).toBeLessThan(script.indexOf('Invoke-ScreenshotCapture -AdbPath'));
     expect(script).toContain('-ArgumentList @("-s", $Serial, "exec-out", "screencap", "-p")');
     expect(script).toContain('-RedirectStandardOutput $OutputPath');
     expect(script).toContain('& $adbPath start-server *> $null');
