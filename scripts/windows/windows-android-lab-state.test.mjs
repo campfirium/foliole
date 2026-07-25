@@ -1,8 +1,11 @@
 // @vitest-environment node
 
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
-  androidLabPaths, assertExclusiveDevice, parseAndroidLabCommand, safeLabEvidencePath, WINDOWS_ANDROID_LAB_TASK
+  androidLabPaths, assertExclusiveDevice, parseAndroidLabCommand, readJson, safeLabEvidencePath, WINDOWS_ANDROID_LAB_TASK
 } from './windows-android-lab-state.mjs';
 
 const SHA = 'a'.repeat(40);
@@ -35,5 +38,16 @@ describe('Windows Android lab state contract', () => {
     expect(() => assertExclusiveDevice('List of devices attached\nA5\tdevice\n', 'A5')).not.toThrow();
     expect(() => assertExclusiveDevice('A5\tdevice\nB6\tdevice\n', 'A5')).toThrow('exactly one');
     expect(() => assertExclusiveDevice('A5\tunauthorized\n', 'A5')).toThrow('found none');
+  });
+
+  it('reads UTF-8 JSON written with a Windows PowerShell BOM', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-android-lab-bom-'));
+    const file = path.join(root, 'config.json');
+    try {
+      fs.writeFileSync(file, `\uFEFF${JSON.stringify({ schemaVersion: 2 })}`, 'utf8');
+      expect(readJson(file)).toEqual({ schemaVersion: 2 });
+    } finally {
+      fs.rmSync(root, { force: true, recursive: true });
+    }
   });
 });

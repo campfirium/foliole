@@ -32,7 +32,7 @@ export function androidLabPaths(root = androidLabRoot()) {
 
 export function readJson(filePath, fallback = null) {
   try {
-    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    return JSON.parse(fs.readFileSync(filePath, 'utf8').replace(/^\uFEFF/u, ''));
   } catch (error) {
     if (error.code === 'ENOENT') return fallback;
     throw error;

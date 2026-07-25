@@ -1,6 +1,7 @@
 param(
   [Parameter(Mandatory = $true)][string]$DeviceIdentity,
   [Parameter(Mandatory = $true)][string]$GitReadToken,
+  [Parameter(Mandatory = $true)][string]$JavaHome,
   [Parameter(Mandatory = $true)][string]$MacPublicKey,
   [string]$DeviceEndpoint = "",
   [string]$AdbPath = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe",
@@ -26,11 +27,9 @@ $files = @(
 $releaseRoot = Join-Path $env:LOCALAPPDATA "Foliole\windows-device"
 $nodePathFile = Join-Path $releaseRoot "node-path.txt"
 if ([string]::IsNullOrWhiteSpace($NodePath) -and (Test-Path $nodePathFile)) { $NodePath = (Get-Content $nodePathFile -Raw).Trim() }
-foreach ($tool in @($NodePath, $GitPath, $BashPath, $AdbPath)) {
+$nodeSourceRoot = Split-Path -Parent $NodePath
+foreach ($tool in @($NodePath, $GitPath, $BashPath, $AdbPath, (Join-Path $JavaHome "bin\java.exe"), (Join-Path $nodeSourceRoot "npm.cmd"))) {
   if ([string]::IsNullOrWhiteSpace($tool) -or !(Test-Path -LiteralPath $tool -PathType Leaf)) { throw "Required Android Lab tool is missing: $tool" }
-}
-foreach ($command in @("npm.cmd", "java.exe")) {
-  if ($null -eq (Get-Command $command -ErrorAction SilentlyContinue)) { throw "Required Android Lab command is missing from PATH: $command" }
 }
 if ($DeviceIdentity -notmatch '^[A-Za-z0-9._-]+$') { throw "DeviceIdentity contains unsupported characters" }
 if ([string]::IsNullOrWhiteSpace($GitReadToken)) { throw "A separate read-only Git token is required" }
@@ -59,13 +58,15 @@ foreach ($file in $files) { Copy-Item (Join-Path $sourceRoot $file) (Join-Path $
 $runtimeRoot = Join-Path $installRoot "runtime"
 New-Item -ItemType Directory -Force -Path $runtimeRoot | Out-Null
 $labNodePath = Join-Path $runtimeRoot "node.exe"
-Copy-Item $NodePath $labNodePath -Force
+Copy-Item (Join-Path $nodeSourceRoot "*") $runtimeRoot -Recurse -Force
 Set-Content -Path (Join-Path $installRoot "git-read-token.txt") -Value $GitReadToken -NoNewline
 $config = @{
   adbPath = $AdbPath
   bashPath = $BashPath
   deviceIdentity = $DeviceIdentity
   gitPath = $GitPath
+  javaHome = $JavaHome
+  nodeDirectory = $runtimeRoot
   repositoryUrl = $RepositoryUrl
   schemaVersion = 2
 }
@@ -100,11 +101,15 @@ if (-not $SkipKeyLockdown) {
   $body = ($MacPublicKey -split "\s+")[1]
   $retained = @($existing | Where-Object { $_ -notmatch [regex]::Escape($body) })
   Set-Content -Path $authorizedKeys -Value @($retained + $forced)
-  if ($isAdmin) { icacls.exe $authorizedKeys /inheritance:r /grant "*S-1-5-32-544:F" /grant "SYSTEM:F" | Out-Null }
+  if ($isAdmin) {
+    icacls.exe $authorizedKeys /inheritance:r /grant "*S-1-5-32-544:F" /grant "SYSTEM:F" | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "Failed to secure Android Lab authorized_keys" }
+  }
 }
 
 $account = [System.Security.Principal.NTAccount]::new($identity)
 $sid = $account.Translate([System.Security.Principal.SecurityIdentifier]).Value
-icacls.exe $installRoot /inheritance:r /grant "${sid}:(OI)(CI)F" /grant "*S-1-5-32-544:(OI)(CI)F" /grant "SYSTEM:(OI)(CI)F" | Out-Null
+icacls.exe $installRoot /inheritance:r /grant "*${sid}:(OI)(CI)F" /grant "*S-1-5-32-544:(OI)(CI)F" /grant "SYSTEM:(OI)(CI)F" | Out-Null
+if ($LASTEXITCODE -ne 0) { throw "Failed to secure Android Lab install root" }
 $endpointLabel = if ($DeviceEndpoint) { $DeviceEndpoint } else { "pending reconnect" }
 Write-Host "Foliole Android Lab installed at $installRoot for device $DeviceIdentity ($endpointLabel)"

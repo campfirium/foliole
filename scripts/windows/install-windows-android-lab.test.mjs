@@ -11,7 +11,11 @@ describe('Windows Android lab installer', () => {
     expect(source).toContain('-LogonType Interactive -RunLevel Limited');
     expect(source).toContain('no-agent-forwarding,no-port-forwarding,no-pty,no-user-rc');
     expect(source).toContain('A separate read-only Git token is required');
-    expect(source).toContain('Required Android Lab command is missing from PATH');
+    expect(source).toContain('[Parameter(Mandatory = $true)][string]$JavaHome');
+    expect(source).toContain('Join-Path $nodeSourceRoot "npm.cmd"');
+    expect(source).toContain('Copy-Item (Join-Path $nodeSourceRoot "*") $runtimeRoot -Recurse -Force');
+    expect(source).toContain('"*${sid}:(OI)(CI)F"');
+    expect(source).toContain('Failed to secure Android Lab install root');
     expect(source).toContain('[Parameter(Mandatory = $true)][string]$DeviceIdentity');
     expect(source).toContain('[string]$DeviceEndpoint = ""');
     expect(source).toContain('if ($DeviceEndpoint)');

@@ -70,7 +70,9 @@ async function captureScreenshot(config, endpoint, paths, evidenceRoot, executeC
   return null;
 }
 
-function previewEnvironment(endpoint, paths) {
+function previewEnvironment(config, endpoint, paths) {
+  const toolPath = [config.nodeDirectory, path.win32.join(config.javaHome, 'bin'), path.win32.dirname(config.adbPath)]
+    .filter(Boolean).join(';');
   return {
     ...process.env,
     ANDROID_DATA_PROTECTION: '1',
@@ -81,7 +83,9 @@ function previewEnvironment(endpoint, paths) {
     ANDROID_PREVIEW_OPEN_STUDIO: '0',
     ANDROID_WINDOWS_DEPENDENCY_REFRESH: 'ci',
     ANDROID_WINDOWS_WORKDIR: paths.preview,
-    FOLIOLE_ANDROID_SERIAL: endpoint
+    FOLIOLE_ANDROID_SERIAL: endpoint,
+    JAVA_HOME: config.javaHome,
+    Path: `${toolPath};${process.env.Path || process.env.PATH || ''}`
   };
 }
 
@@ -153,7 +157,7 @@ export async function runWindowsAndroidLabWorker({
     writeJsonAtomic(paths.status, { ...running, phase: 'preview' });
     previewResult = await executeCommand(config.bashPath, [
       '-lc', 'cd "$1" && exec bash scripts/android/android-preview.sh', 'foliole-android-lab', paths.candidate
-    ], { cwd: paths.candidate, env: previewEnvironment(device.endpoint, paths), timeoutCode: 'android_preview_timeout', timeoutMs: PREVIEW_TIMEOUT_MS });
+    ], { cwd: paths.candidate, env: previewEnvironment(config, device.endpoint, paths), timeoutCode: 'android_preview_timeout', timeoutMs: PREVIEW_TIMEOUT_MS });
     if (previewResult.code !== 0) primaryError = codedError('android_preview_failed', previewResult.lines.at(-1) || 'Android preview failed');
   } catch (error) {
     primaryError = error;

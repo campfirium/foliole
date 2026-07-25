@@ -20,6 +20,7 @@ function createFixture() {
   writeJsonAtomic(paths.active, { commitSha: SHA, runId: 'run-1', schemaVersion: 1 });
   writeJsonAtomic(paths.config, {
     adbPath: 'adb.exe', bashPath: 'bash.exe', deviceIdentity: 'A5-STABLE', gitPath: 'git.exe',
+    javaHome: 'C:\\Java', nodeDirectory: 'C:\\Node',
     repositoryUrl: 'https://example.invalid/repo.git', schemaVersion: 2
   });
   writeJsonAtomic(paths.device, { endpoint: ENDPOINT, identity: 'A5-STABLE', schemaVersion: 1 });
@@ -54,8 +55,9 @@ describe('Windows Android lab worker', () => {
     expect(preview.options.timeoutMs).toBe(45 * 60_000);
     expect(preview.options.env).toMatchObject({
       ANDROID_DATA_PROTECTION: '1', ANDROID_PREVIEW_AVD: '', ANDROID_PREVIEW_OPEN_STUDIO: '0',
-      ANDROID_WINDOWS_DEPENDENCY_REFRESH: 'ci', FOLIOLE_ANDROID_SERIAL: ENDPOINT
+      ANDROID_WINDOWS_DEPENDENCY_REFRESH: 'ci', FOLIOLE_ANDROID_SERIAL: ENDPOINT, JAVA_HOME: 'C:\\Java'
     });
+    expect(preview.options.env.Path).toContain('C:\\Node;C:\\Java\\bin');
     expect(fs.existsSync(paths.candidate)).toBe(false);
     expect(readJson(paths.status).resultStatus).toBe('success');
     expect(readJson(path.join(paths.evidence, 'run-1', 'summary.json')).previewStatus).toBe('opened');
