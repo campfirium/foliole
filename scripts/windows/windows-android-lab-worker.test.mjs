@@ -10,6 +10,7 @@ import { runWindowsAndroidLabWorker } from './windows-android-lab-worker.mjs';
 
 const roots = [];
 const SHA = 'd'.repeat(40);
+const ENDPOINT = '192.168.0.107:38717';
 afterEach(() => roots.splice(0).forEach((root) => fs.rmSync(root, { force: true, recursive: true })));
 
 function createFixture() {
@@ -18,15 +19,22 @@ function createFixture() {
   const paths = androidLabPaths(root);
   writeJsonAtomic(paths.active, { commitSha: SHA, runId: 'run-1', schemaVersion: 1 });
   writeJsonAtomic(paths.config, {
-    adbPath: 'adb.exe', bashPath: 'bash.exe', deviceSerial: 'A5', gitPath: 'git.exe', repositoryUrl: 'https://example.invalid/repo.git'
+    adbPath: 'adb.exe', bashPath: 'bash.exe', deviceIdentity: 'A5-STABLE', gitPath: 'git.exe',
+    repositoryUrl: 'https://example.invalid/repo.git', schemaVersion: 2
   });
+  writeJsonAtomic(paths.device, { endpoint: ENDPOINT, identity: 'A5-STABLE', schemaVersion: 1 });
   return paths;
 }
 
 function successfulExecutor(paths, calls) {
   return async (command, args, options) => {
     calls.push({ args, command, options });
-    if (command === 'adb.exe') return { code: 0, lines: ['A5 device'], output: 'List of devices attached\nA5\tdevice\n' };
+    if (command === 'adb.exe' && args[0] === 'devices') {
+      return { code: 0, lines: [`${ENDPOINT} device`], output: `List of devices attached\n${ENDPOINT}\tdevice\n` };
+    }
+    if (command === 'adb.exe' && args.includes('getprop')) return { code: 0, lines: ['A5-STABLE'], output: 'A5-STABLE\n' };
+    if (command === 'adb.exe' && args.includes('logcat')) return { code: 0, lines: ['Foliole log'], output: 'Foliole log\n' };
+    if (command === 'adb.exe') return { code: 0, lines: [], output: '' };
     if (args.includes('clone')) fs.mkdirSync(paths.repository, { recursive: true });
     if (args.includes('worktree') && args.includes('add')) fs.mkdirSync(paths.candidate, { recursive: true });
     if (args.includes('status')) return { code: 0, lines: [], output: '' };
@@ -46,16 +54,22 @@ describe('Windows Android lab worker', () => {
     expect(preview.options.timeoutMs).toBe(45 * 60_000);
     expect(preview.options.env).toMatchObject({
       ANDROID_DATA_PROTECTION: '1', ANDROID_PREVIEW_AVD: '', ANDROID_PREVIEW_OPEN_STUDIO: '0',
-      ANDROID_WINDOWS_DEPENDENCY_REFRESH: 'ci', FOLIOLE_ANDROID_SERIAL: 'A5'
+      ANDROID_WINDOWS_DEPENDENCY_REFRESH: 'ci', FOLIOLE_ANDROID_SERIAL: ENDPOINT
     });
     expect(fs.existsSync(paths.candidate)).toBe(false);
     expect(readJson(paths.status).resultStatus).toBe('success');
     expect(readJson(path.join(paths.evidence, 'run-1', 'summary.json')).previewStatus).toBe('opened');
+    expect(readJson(path.join(paths.evidence, 'run-1', 'summary.json')).logcatStatus).toBe('captured');
+    expect(fs.readFileSync(path.join(paths.evidence, 'run-1', 'logcat.txt'), 'utf8')).toContain('Foliole log');
+    expect(fs.existsSync(paths.active)).toBe(false);
   });
 
   it('fails before checkout when another ready device is present', async () => {
     const paths = createFixture();
-    const executeCommand = async () => ({ code: 0, lines: [], output: 'A5\tdevice\nB6\tdevice\n' });
+    const executeCommand = async (_command, args) => {
+      if (args.includes('getprop')) return { code: 0, lines: ['A5-STABLE'], output: 'A5-STABLE\n' };
+      return { code: 0, lines: [], output: `${ENDPOINT}\tdevice\n192.168.0.108:40000\tdevice\n` };
+    };
     await expect(runWindowsAndroidLabWorker({ executeCommand, paths, platform: 'win32' })).rejects.toMatchObject({
       code: 'android_device_not_exclusive'
     });

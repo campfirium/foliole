@@ -1,5 +1,5 @@
 param(
-  [Parameter(Mandatory = $true)][string]$DeviceSerial,
+  [Parameter(Mandatory = $true)][string]$DeviceEndpoint,
   [Parameter(Mandatory = $true)][string]$GitReadToken,
   [Parameter(Mandatory = $true)][string]$MacPublicKey,
   [string]$AdbPath = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe",
@@ -16,6 +16,7 @@ $sourceRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $files = @(
   "windows-bounded-process.mjs",
   "windows-android-lab-dispatcher.mjs",
+  "windows-android-lab-device.mjs",
   "windows-android-lab-git-askpass.mjs",
   "windows-android-lab-state.mjs",
   "windows-android-lab-worker.mjs"
@@ -30,15 +31,24 @@ foreach ($tool in @($NodePath, $GitPath, $BashPath, $AdbPath)) {
 foreach ($command in @("npm.cmd", "java.exe")) {
   if ($null -eq (Get-Command $command -ErrorAction SilentlyContinue)) { throw "Required Android Lab command is missing from PATH: $command" }
 }
-if ($DeviceSerial -notmatch '^[A-Za-z0-9._:-]+$') { throw "DeviceSerial contains unsupported characters" }
+if ($DeviceEndpoint -notmatch '^(\d{1,3}\.){3}\d{1,3}:\d{1,5}$') { throw "DeviceEndpoint must be ipv4:port" }
+$endpointParts = $DeviceEndpoint.Split(':')
+$parsedIp = $null
+$parsedPort = 0
+if (-not [System.Net.IPAddress]::TryParse($endpointParts[0], [ref]$parsedIp) -or
+    -not [int]::TryParse($endpointParts[1], [ref]$parsedPort) -or $parsedPort -lt 1 -or $parsedPort -gt 65535) {
+  throw "DeviceEndpoint must be ipv4:port"
+}
 if ([string]::IsNullOrWhiteSpace($GitReadToken)) { throw "A separate read-only Git token is required" }
 $readyDevices = @(& $AdbPath devices | Select-Object -Skip 1 | ForEach-Object {
   $parts = ($_ -split '\s+') | Where-Object { $_ }
   if ($parts.Count -ge 2 -and $parts[1] -eq "device") { $parts[0] }
 })
-if ($readyDevices.Count -ne 1 -or $readyDevices[0] -ne $DeviceSerial) {
-  throw "Exactly one ready Android device must match DeviceSerial; found: $($readyDevices -join ',')"
+if ($readyDevices.Count -ne 1 -or $readyDevices[0] -ne $DeviceEndpoint) {
+  throw "Exactly one ready Android device must match DeviceEndpoint; found: $($readyDevices -join ',')"
 }
+$deviceIdentity = (& $AdbPath -s $DeviceEndpoint shell getprop ro.serialno | Out-String).Trim()
+if ($LASTEXITCODE -ne 0 -or $deviceIdentity -notmatch '^[A-Za-z0-9._-]+$') { throw "Stable Android device identity is unavailable" }
 
 New-Item -ItemType Directory -Force -Path $installRoot | Out-Null
 foreach ($file in $files) { Copy-Item (Join-Path $sourceRoot $file) (Join-Path $installRoot $file) -Force }
@@ -50,12 +60,20 @@ Set-Content -Path (Join-Path $installRoot "git-read-token.txt") -Value $GitReadT
 $config = @{
   adbPath = $AdbPath
   bashPath = $BashPath
-  deviceSerial = $DeviceSerial
+  deviceIdentity = $deviceIdentity
   gitPath = $GitPath
   repositoryUrl = $RepositoryUrl
-  schemaVersion = 1
+  schemaVersion = 2
 }
 $config | ConvertTo-Json | Set-Content -Path (Join-Path $installRoot "config.json") -Encoding UTF8
+$device = @{
+  discoverySource = "installer"
+  endpoint = $DeviceEndpoint
+  identity = $deviceIdentity
+  schemaVersion = 1
+  verifiedAt = [DateTime]::UtcNow.ToString("o")
+}
+$device | ConvertTo-Json | Set-Content -Path (Join-Path $installRoot "device.json") -Encoding UTF8
 $askPass = "@echo off`r`n`"$labNodePath`" `"$(Join-Path $installRoot 'windows-android-lab-git-askpass.mjs')`" %*`r`n"
 Set-Content -Path (Join-Path $installRoot "git-askpass.cmd") -Value $askPass -NoNewline
 
@@ -82,4 +100,4 @@ if (-not $SkipKeyLockdown) {
 $account = [System.Security.Principal.NTAccount]::new($identity)
 $sid = $account.Translate([System.Security.Principal.SecurityIdentifier]).Value
 icacls.exe $installRoot /inheritance:r /grant "${sid}:(OI)(CI)F" /grant "*S-1-5-32-544:(OI)(CI)F" /grant "SYSTEM:(OI)(CI)F" | Out-Null
-Write-Host "Foliole Android Lab installed at $installRoot for device $DeviceSerial"
+Write-Host "Foliole Android Lab installed at $installRoot for device $deviceIdentity at $DeviceEndpoint"

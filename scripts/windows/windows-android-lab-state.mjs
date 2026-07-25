@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 export const WINDOWS_ANDROID_LAB_TASK = 'FolioleAndroidLab';
-export const LAB_EVIDENCE_FILES = new Set(['runner.log', 'screenshot.png', 'summary.json']);
+export const LAB_EVIDENCE_FILES = new Set(['logcat.txt', 'runner.log', 'screenshot.png', 'summary.json']);
 
 export function androidLabRoot(env = process.env) {
   if (env.FOLIOLE_WINDOWS_ANDROID_LAB_ROOT) return path.resolve(env.FOLIOLE_WINDOWS_ANDROID_LAB_ROOT);
@@ -18,6 +18,7 @@ export function androidLabPaths(root = androidLabRoot()) {
     active: path.join(root, 'active.json'),
     candidate: path.join(root, 'candidate'),
     config: path.join(root, 'config.json'),
+    device: path.join(root, 'device.json'),
     evidence: path.join(root, 'evidence'),
     gitToken: path.join(root, 'git-read-token.txt'),
     manifest: path.join(root, 'protection', 'manifests'),
@@ -57,16 +58,37 @@ export function parseAndroidLabCommand(input) {
     if (parts[0] === 'get' && parts.length === 2 && LAB_EVIDENCE_FILES.has(parts[1])) {
       return { action, operation: 'get', relativePath: parts[1] };
     }
-    throw new Error('collect requires list or get summary.json|runner.log|screenshot.png');
+    throw new Error('collect requires list or get summary.json|runner.log|logcat.txt|screenshot.png');
+  }
+  if (action === 'device') {
+    if (parts[0] === 'status' && parts.length === 1) return { action, operation: 'status' };
+    if (parts[0] === 'reconnect' && parts.length === 2 && isAndroidEndpoint(parts[1])) {
+      return { action, endpoint: parts[1], operation: 'reconnect' };
+    }
+    throw new Error('device requires status or reconnect <ipv4:port>');
   }
   if (!['cancel', 'status'].includes(action) || parts.length !== 0) throw new Error('unsupported Android lab action');
   return { action };
 }
 
+export function isAndroidEndpoint(value) {
+  const match = /^(\d{1,3}(?:\.\d{1,3}){3}):(\d{1,5})$/u.exec(String(value || ''));
+  if (!match) return false;
+  const octets = match[1].split('.').map(Number);
+  const port = Number(match[2]);
+  return octets.every((octet) => octet >= 0 && octet <= 255) && port >= 1 && port <= 65_535;
+}
+
 export function publicLabStatus(status) {
   if (!status) return { schemaVersion: 1, state: 'idle' };
-  const { commitSha, completedAt, errorCode, errorMessage, phase, resultStatus, runId, startedAt, state } = status;
-  return { commitSha, completedAt, errorCode, errorMessage, phase, resultStatus, runId, schemaVersion: 1, startedAt, state };
+  const { commitSha, completedAt, createdAt, errorCode, errorMessage, phase, resultStatus, runId, startedAt, state } = status;
+  return { commitSha, completedAt, createdAt, errorCode, errorMessage, phase, resultStatus, runId, schemaVersion: 1, startedAt, state };
+}
+
+export function publicDeviceStatus(device) {
+  if (!device) return { schemaVersion: 1, state: 'unconfigured' };
+  const { discoverySource, endpoint, identity, verifiedAt } = device;
+  return { discoverySource, endpoint, identity, schemaVersion: 1, state: 'configured', verifiedAt };
 }
 
 export function safeLabEvidencePath(evidenceRoot, relativePath) {

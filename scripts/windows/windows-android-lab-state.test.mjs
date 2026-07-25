@@ -12,15 +12,22 @@ describe('Windows Android lab state contract', () => {
     const paths = androidLabPaths('C:\\state\\windows-android-lab');
     expect(WINDOWS_ANDROID_LAB_TASK).toBe('FolioleAndroidLab');
     expect(paths.root).not.toContain('windows-device');
+    expect(paths.device).toContain('device.json');
     expect(paths.preview).toBe('C:\\dev\\foliole-android-lab-preview');
   });
 
   it('accepts only the fixed command and evidence grammar', () => {
     expect(parseAndroidLabCommand(`run ${SHA}`)).toEqual({ action: 'run', commitSha: SHA });
     expect(parseAndroidLabCommand('collect get summary.json').relativePath).toBe('summary.json');
+    expect(parseAndroidLabCommand('collect get logcat.txt').relativePath).toBe('logcat.txt');
+    expect(parseAndroidLabCommand('device status')).toEqual({ action: 'device', operation: 'status' });
+    expect(parseAndroidLabCommand('device reconnect 192.168.0.107:38717')).toMatchObject({
+      endpoint: '192.168.0.107:38717', operation: 'reconnect'
+    });
     expect(() => parseAndroidLabCommand('run HEAD')).toThrow();
     expect(() => parseAndroidLabCommand('collect get ../git-read-token.txt')).toThrow();
     expect(() => parseAndroidLabCommand('deploy 1 abc')).toThrow();
+    expect(() => parseAndroidLabCommand('device reconnect 999.1.1.1:70000')).toThrow();
     expect(safeLabEvidencePath('/evidence', 'runner.log')).toContain('runner.log');
   });
 
