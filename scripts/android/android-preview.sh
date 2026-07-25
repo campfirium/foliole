@@ -58,10 +58,6 @@ fi
 
 cd "${REPO_ROOT}"
 
-if [[ "${OS:-}" == "Windows_NT" && -f "scripts/windows/windows-android-lab-controller-bootstrap.mjs" ]]; then
-  node scripts/windows/windows-android-lab-controller-bootstrap.mjs "${ANDROID_DATA_PROTECTION_BACKUP_DIR}"
-fi
-
 run_preview_step() {
   local label="$1"
   shift
