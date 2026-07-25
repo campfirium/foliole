@@ -94,8 +94,9 @@ describe('windows-deploy-app.sh', () => {
   it('runs Gradle through a hidden cmd process', async () => {
     const script = await readFile(DEPLOY_PS_SCRIPT, 'utf8');
 
-    expect(script).toContain('Start-Process -FilePath "cmd.exe" -ArgumentList @("/d", "/c", $gradleCommand) -Wait -PassThru -WindowStyle Hidden');
+    expect(script).toContain('Start-Process -FilePath "cmd.exe" -ArgumentList @("/d", "/c", $gradleCommand) -Wait -PassThru -WindowStyle Hidden -RedirectStandardOutput $out -RedirectStandardError $err');
     expect(script).toContain('Start-Process -FilePath "cmd.exe" -ArgumentList @("/d", "/c", "call .\\gradlew.bat --stop") -Wait -PassThru -WindowStyle Hidden');
+    expect(script).toContain('Get-Content -Path $out, $err -ErrorAction SilentlyContinue');
     expect(script).toContain('if ($process.ExitCode -ne 0)');
     expect(script).toContain('exit $process.ExitCode');
     expect(script.match(/\$global:LASTEXITCODE = \$process\.ExitCode/gu)).toHaveLength(1);

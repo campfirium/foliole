@@ -99,9 +99,13 @@ function Invoke-GradleWrapper {
   )
 
   $gradleCommand = "call .\gradlew.bat $TaskName"
-  $process = Start-Process -FilePath "cmd.exe" -ArgumentList @("/d", "/c", $gradleCommand) -Wait -PassThru -WindowStyle Hidden
-  if ($process.ExitCode -ne 0) {
-    exit $process.ExitCode
+  $out = [System.IO.Path]::GetTempFileName(); $err = [System.IO.Path]::GetTempFileName()
+  try {
+    $process = Start-Process -FilePath "cmd.exe" -ArgumentList @("/d", "/c", $gradleCommand) -Wait -PassThru -WindowStyle Hidden -RedirectStandardOutput $out -RedirectStandardError $err
+    Get-Content -Path $out, $err -ErrorAction SilentlyContinue
+    if ($process.ExitCode -ne 0) { exit $process.ExitCode }
+  } finally {
+    Remove-Item -Path $out, $err -ErrorAction SilentlyContinue
   }
 }
 
