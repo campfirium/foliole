@@ -94,6 +94,30 @@ describe('android-preview failure and protection paths', () => {
     }
   }, 60000);
 
+  it('passes the configured real-device serial to both data protection stages', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-preview-data-serial-'));
+    try {
+      const ok = await writeExecutable(tempRoot, 'ok.sh', '#!/usr/bin/env bash\necho ok\n');
+      const sqliteRunner = await writePassthroughSqliteRunner(tempRoot);
+      const dataProtection = await writeExecutable(tempRoot, 'data-protection.mjs', 'console.log(`protection:${process.argv.slice(2).join("|")}`);\n');
+      const result = await runAndroidPreview(tempRoot, {
+        ANDROID_DATA_PROTECTION: '1',
+        ANDROID_DATA_PROTECTION_SCRIPT: dataProtection,
+        ANDROID_DEPLOY_SCRIPT: ok,
+        FOLIOLE_ANDROID_SERIAL: 'A5-SERIAL',
+        ANDROID_SOURCE_SYNC_SCRIPT: ok,
+        ANDROID_SYNC_SCRIPT: ok,
+        ELECTRON_SQLITE_RUNNER: sqliteRunner,
+        ANDROID_DATA_PROTECTION_BACKUP_DIR: path.join(tempRoot, 'backups'),
+        ANDROID_WINDOWS_MIRROR_DIR: path.join(tempRoot, 'mirror')
+      });
+      expect(result.code, `${result.stdout}\n${result.stderr}`).toBe(0);
+      expect(result.stdout.match(/--serial\|A5-SERIAL/g)).toHaveLength(2);
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  }, 15000);
+
   it('fails preview as a data protection failure when the post-deploy check fails', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-preview-data-fail-'));
     try {

@@ -2,7 +2,7 @@ param(
   [string]$WindowsWorkDir = "C:\dev\foliole-android-preview",
   [string]$AndroidHostDir = "android",
   [string]$CapCliPackage = "@capacitor/cli",
-  [ValidateSet("auto", "skip", "force")]
+  [ValidateSet("auto", "skip", "force", "ci")]
   [string]$DependencyRefresh = "auto"
 )
 
@@ -98,7 +98,7 @@ function Get-InputFiles {
     "src\features",
     "lib",
     "scripts\android\generate-companion-schema.mjs", "scripts\android\ts-js-extension-loader.mjs", "scripts\android\android-query-shape-java.mjs", "scripts\android\android-resource-query-string-java.mjs",
-    "scripts\android\windows-cap-sync.ps1", "scripts\android\windows-hash-helpers.ps1"
+    "scripts\android\windows-cap-sync.ps1", "scripts\android\windows-cap-sync-dependencies.ps1", "scripts\android\windows-hash-helpers.ps1"
   )
   $files = @()
   foreach ($relativePath in $paths) {
@@ -145,68 +145,13 @@ function Write-CapSyncCache {
   $payload | ConvertTo-Json | Set-Content -Path (Get-CachePath) -Encoding UTF8
 }
 
-function Ensure-CapacitorCliAvailable {
-  $cliPackageJson = Join-Path $WindowsWorkDir "node_modules\$($CapCliPackage -replace '/', '\')\package.json"
-  if (Test-Path -Path $cliPackageJson) {
-    return
-  }
-
-  $npmCmd = Get-Command npm.cmd -ErrorAction SilentlyContinue
-  if ($null -eq $npmCmd) {
-    throw "npm.cmd not found on Windows. Install Node.js on Windows first."
-  }
-
-  Write-Info "capacitor cli missing in windows mirror; running npm install"
-  Invoke-CmdTool -CommandPath $npmCmd.Source -Arguments @("install") -FailureMessage "npm install failed in Windows mirror; cannot run Capacitor sync."
-}
-
-function Sync-WindowsMirrorDependencies {
-  $npmCmd = Get-Command npm.cmd -ErrorAction SilentlyContinue
-  if ($null -eq $npmCmd) {
-    throw "npm.cmd not found on Windows. Install Node.js on Windows first."
-  }
-
-  $nodeModulesDir = Join-Path $WindowsWorkDir "node_modules"
-  $installStampPath = Join-Path $nodeModulesDir ".foliole-install-stamp"
-  $packageJsonPath = Join-Path $WindowsWorkDir "package.json"
-  $packageLockPath = Join-Path $WindowsWorkDir "package-lock.json"
-  if ($DependencyRefresh -eq "skip" -and (Test-Path -Path $nodeModulesDir)) {
-    Write-Info "dependency refresh skipped by ANDROID_WINDOWS_DEPENDENCY_REFRESH=skip"
-    return
-  }
-
-  $needsInstall = !(Test-Path -Path $nodeModulesDir) -or !(Test-Path -Path $installStampPath)
-  if ($DependencyRefresh -eq "force") {
-    $needsInstall = $true
-  }
-
-  if (!$needsInstall -and (Test-Path -Path $packageLockPath)) {
-    $needsInstall = (Get-Item $packageLockPath).LastWriteTimeUtc -gt (Get-Item $installStampPath).LastWriteTimeUtc
-  }
-
-  if (!$needsInstall -and !(Test-Path -Path $packageLockPath) -and (Test-Path -Path $packageJsonPath)) {
-    $needsInstall = (Get-Item $packageJsonPath).LastWriteTimeUtc -gt (Get-Item $installStampPath).LastWriteTimeUtc
-  }
-
-  if (!$needsInstall) {
-    return
-  }
-
-  Write-Info "package manifest changed in windows mirror; running npm install"
-  Invoke-CmdTool -CommandPath $npmCmd.Source -Arguments @("install") -FailureMessage "npm install failed in Windows mirror; cannot refresh dependencies for Capacitor sync."
-
-  if (!(Test-Path -Path $nodeModulesDir)) {
-    throw "node_modules missing after npm install in Windows mirror."
-  }
-
-  Set-Content -Path $installStampPath -Value (Get-Date).ToUniversalTime().ToString("o") -NoNewline
-}
+. "$PSScriptRoot\windows-cap-sync-dependencies.ps1"
 
 Push-Location $WindowsWorkDir
 try {
   Write-Info "workdir: $WindowsWorkDir"
-  Ensure-CapacitorCliAvailable
   Sync-WindowsMirrorDependencies
+  Ensure-CapacitorCliAvailable
   $inputHash = Get-CapSyncInputHash
   if (Test-CapSyncCacheHit -InputHash $inputHash) {
     Write-Info "cache: HIT input=$inputHash"

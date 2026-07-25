@@ -7,6 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { backupDatabase, writeManifest } from './android-data-backup-files.mjs';
+import { assertReadableDatabase } from './android-data-protection-validation.mjs';
 import { classifyInstallerClearAppDataEvents } from './android-install-events.mjs';
 
 const execFileAsync = promisify(execFile);
@@ -183,11 +184,12 @@ function printSummary(label, snapshot) {
 async function runBackup(options) {
   const snapshot = await collectSnapshot({ ...options, keepPulledDatabase: true });
   try {
+    assertReadableDatabase(snapshot, 'before install');
     const backup = await backupDatabase(options, snapshot);
+    if (!backup.created) throw new Error(`Android data backup was not created: ${backup.reason}`);
     await writeManifest(options.manifest, { backup, snapshot });
     printSummary('before install', snapshot);
-    if (!backup.created) console.log(`[android-data] warning: preinstall backup not created (${backup.reason})`);
-    else console.log(`[android-data] backup: ${backup.databasePath}`);
+    console.log(`[android-data] backup: ${backup.databasePath}`);
   } finally {
     if (snapshot.database?.path) await rm(path.dirname(snapshot.database.path), { recursive: true, force: true });
   }
@@ -201,7 +203,9 @@ function isDataCleared(before, after) {
 
 async function runCheck(options) {
   const before = JSON.parse(await readFile(options.manifest, 'utf8'));
+  assertReadableDatabase(before.snapshot, 'before install');
   const after = await collectSnapshot(options);
+  assertReadableDatabase(after, 'after install');
   printSummary('after install', after);
   const beforeInstallTime = before.snapshot?.packageInfo?.firstInstallTime;
   const afterInstallTime = after.packageInfo?.firstInstallTime;

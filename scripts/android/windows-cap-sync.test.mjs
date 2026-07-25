@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest';
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const CAP_SYNC_SCRIPT = path.join(REPO_ROOT, 'scripts', 'android', 'windows-cap-sync.sh');
 const CAP_SYNC_PS_SCRIPT = path.join(REPO_ROOT, 'scripts', 'android', 'windows-cap-sync.ps1');
+const CAP_SYNC_DEPENDENCIES_SCRIPT = path.join(REPO_ROOT, 'scripts', 'android', 'windows-cap-sync-dependencies.ps1');
 
 function runCapSync(cwd, env = {}) {
   return new Promise((resolve) => {
@@ -81,6 +82,17 @@ describe('windows-cap-sync.sh', () => {
     expect(script).toContain('function Test-LastCommandFailed');
     expect(script).toContain('return $null -ne $LASTEXITCODE -and $LASTEXITCODE -ne 0');
     expect(script).not.toContain('if ($LASTEXITCODE -ne 0)');
+  });
+
+  it('supports a lockfile-strict dependency mode for the remote Android lab', async () => {
+    const script = await readFile(CAP_SYNC_PS_SCRIPT, 'utf8');
+    const dependencies = await readFile(CAP_SYNC_DEPENDENCIES_SCRIPT, 'utf8');
+
+    expect(script).toContain('[ValidateSet("auto", "skip", "force", "ci")]');
+    expect(script).toContain('windows-cap-sync-dependencies.ps1');
+    expect(dependencies).toContain('$DependencyRefresh -eq "ci"');
+    expect(dependencies).toContain('-Arguments @("ci")');
+    expect(script.indexOf('Sync-WindowsMirrorDependencies')).toBeLessThan(script.lastIndexOf('Ensure-CapacitorCliAvailable'));
   });
 
   it('runs Windows cmd shims through Start-Process and verifies refreshed web assets', async () => {
