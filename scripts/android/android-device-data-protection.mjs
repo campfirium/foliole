@@ -95,10 +95,10 @@ async function collectPackageInfo(options) {
 
 async function pullDatabase(options, destination) {
   try {
-    await runAdb(options, ['shell', 'run-as', options.appId, 'test', '-f', 'databases/foliole-companion.db']);
+    await runAdb(options, ['shell', 'run-as', options.appId, 'test', '-f', 'databases/foliole-companionSQLite.db']);
     const { stdout } = await runAdb(
       options,
-      ['exec-out', 'run-as', options.appId, 'cat', 'databases/foliole-companion.db'],
+      ['exec-out', 'run-as', options.appId, 'cat', 'databases/foliole-companionSQLite.db'],
       { encoding: 'buffer' }
     );
     if (!stdout || stdout.length === 0) return false;

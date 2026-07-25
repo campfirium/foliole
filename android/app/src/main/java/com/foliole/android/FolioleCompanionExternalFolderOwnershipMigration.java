@@ -8,7 +8,10 @@ final class FolioleCompanionExternalFolderOwnershipMigration {
     private FolioleCompanionExternalFolderOwnershipMigration() {}
 
     static void migrate(Context context, SQLiteDatabase database) {
-        if (FolioleCompanionSqliteRuntime.columnExists(database, "external_search_folders", "owner_installation_id")) {
+        if (
+            !FolioleCompanionSqliteRuntime.tableExists(database, "external_search_folders") ||
+            FolioleCompanionSqliteRuntime.columnExists(database, "external_search_folders", "owner_installation_id")
+        ) {
             return;
         }
         String[] statements = {
