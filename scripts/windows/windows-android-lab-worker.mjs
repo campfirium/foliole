@@ -25,20 +25,28 @@ async function runChecked(executeCommand, command, args, options, code) {
   return result;
 }
 
+function isolatedGitArgs(paths, args) {
+  const hooksPath = path.join(paths.root, 'worker-empty-hooks');
+  fs.mkdirSync(hooksPath, { recursive: true });
+  return ['-c', `core.hooksPath=${hooksPath}`, ...args];
+}
+
 async function prepareCheckout(config, paths, executeCommand) {
   const gitOptions = { env: process.env };
   if (!fs.existsSync(path.join(paths.repository, 'HEAD'))) throw codedError('lab_source_missing', 'LAN Git source repository is missing');
-  await runChecked(executeCommand, config.gitPath, [
+  await runChecked(executeCommand, config.gitPath, isolatedGitArgs(paths, [
     '--git-dir', paths.repository, 'cat-file', '-e', `${config.commitSha}^{commit}`
-  ], gitOptions, 'commit_missing');
-  await runChecked(executeCommand, config.gitPath, [
+  ]), gitOptions, 'commit_missing');
+  await runChecked(executeCommand, config.gitPath, isolatedGitArgs(paths, [
     '--git-dir', paths.repository, 'merge-base', '--is-ancestor', config.commitSha, WINDOWS_ANDROID_LAB_SOURCE_REF
-  ], gitOptions, 'commit_not_in_lab_ref');
+  ]), gitOptions, 'commit_not_in_lab_ref');
   fs.rmSync(paths.candidate, { force: true, recursive: true });
-  await runChecked(executeCommand, config.gitPath, [
+  await runChecked(executeCommand, config.gitPath, isolatedGitArgs(paths, [
     '--git-dir', paths.repository, 'worktree', 'add', '--detach', paths.candidate, config.commitSha
-  ], gitOptions, 'checkout_failed');
-  const status = await runChecked(executeCommand, config.gitPath, ['-C', paths.candidate, 'status', '--porcelain'], gitOptions, 'checkout_status_failed');
+  ]), gitOptions, 'checkout_failed');
+  const status = await runChecked(executeCommand, config.gitPath, isolatedGitArgs(paths, [
+    '-C', paths.candidate, 'status', '--porcelain'
+  ]), gitOptions, 'checkout_status_failed');
   if (status.output.trim()) throw codedError('checkout_dirty', 'controller checkout is not clean');
 }
 
@@ -81,12 +89,12 @@ function previewEnvironment(config, endpoint, paths) {
 
 async function cleanupCheckout(config, paths, executeCommand) {
   if (!fs.existsSync(paths.candidate)) return;
-  await runChecked(executeCommand, config.gitPath, [
+  await runChecked(executeCommand, config.gitPath, isolatedGitArgs(paths, [
     '--git-dir', paths.repository, 'worktree', 'remove', '--force', paths.candidate
-  ], { env: process.env }, 'checkout_cleanup_failed');
-  await runChecked(executeCommand, config.gitPath, [
+  ]), { env: process.env }, 'checkout_cleanup_failed');
+  await runChecked(executeCommand, config.gitPath, isolatedGitArgs(paths, [
     '--git-dir', paths.repository, 'worktree', 'prune'
-  ], { env: process.env }, 'checkout_cleanup_failed');
+  ]), { env: process.env }, 'checkout_cleanup_failed');
 }
 
 async function captureLogcat(config, endpoint, evidenceRoot, executeCommand) {

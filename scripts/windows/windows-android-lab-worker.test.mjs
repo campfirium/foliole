@@ -62,6 +62,10 @@ describe('Windows Android lab worker', () => {
     expect(preview.options.env.Path).toContain('C:\\Node;C:\\Java\\bin');
     expect(calls.some((call) => call.args.includes('fetch') || call.args.includes('clone'))).toBe(false);
     expect(calls.some((call) => call.args.includes('refs/heads/lab/dev'))).toBe(true);
+    const gitCalls = calls.filter((call) => call.command === 'git.exe');
+    expect(gitCalls.every((call) => (
+      call.args[0] === '-c' && call.args[1] === `core.hooksPath=${path.join(paths.root, 'worker-empty-hooks')}`
+    ))).toBe(true);
     expect(fs.existsSync(paths.candidate)).toBe(false);
     expect(readJson(paths.status).resultStatus).toBe('success');
     expect(readJson(path.join(paths.evidence, 'run-1', 'summary.json')).previewStatus).toBe('opened');
