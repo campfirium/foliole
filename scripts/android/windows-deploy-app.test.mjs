@@ -162,10 +162,10 @@ describe('windows-deploy-app.sh', () => {
     }
   }, 10000);
 
-  it('keeps the coprocess output descriptor after Bash clears the coprocess variables', async () => {
+  it('duplicates the coprocess output descriptor before Bash clears it', async () => {
     const script = await readFile(DEPLOY_SCRIPT, 'utf8');
 
-    expect(script).toContain('DEPLOY_PS_OUTPUT_FD="${DEPLOY_PS[0]}"');
+    expect(script).toContain('exec {DEPLOY_PS_OUTPUT_FD}<&"${DEPLOY_PS[0]}"');
     expect(script).toContain('read -r line <&"${DEPLOY_PS_OUTPUT_FD}"');
   });
 });

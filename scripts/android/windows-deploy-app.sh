@@ -48,7 +48,7 @@ fi
 
 coproc DEPLOY_PS { powershell.exe "${POWERSHELL_ARGS[@]}" 2>&1; }
 DEPLOY_PS_PROCESS_PID="$!"
-DEPLOY_PS_OUTPUT_FD="${DEPLOY_PS[0]}"
+exec {DEPLOY_PS_OUTPUT_FD}<&"${DEPLOY_PS[0]}"
 DEPLOY_STATUS_OPENED=0
 
 set +e
