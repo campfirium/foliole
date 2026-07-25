@@ -12,8 +12,11 @@ describe('Windows Android lab installer', () => {
     expect(source).toContain('no-agent-forwarding,no-port-forwarding,no-pty,no-user-rc');
     expect(source).toContain('A separate read-only Git token is required');
     expect(source).toContain('Required Android Lab command is missing from PATH');
+    expect(source).toContain('[Parameter(Mandatory = $true)][string]$DeviceIdentity');
+    expect(source).toContain('[string]$DeviceEndpoint = ""');
+    expect(source).toContain('if ($DeviceEndpoint)');
     expect(source).toContain('Exactly one ready Android device must match DeviceEndpoint');
-    expect(source).toContain('deviceIdentity = $deviceIdentity');
+    expect(source).toContain('deviceIdentity = $DeviceIdentity');
     expect(source).toContain('schemaVersion = 2');
     expect(source).toContain('windows-android-lab-device.mjs');
     expect(source).not.toContain('FoliolePhysicalAcceptance');
