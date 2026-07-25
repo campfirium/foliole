@@ -14,7 +14,10 @@ ANDROID_SYNC_STATE_SCRIPT="${ANDROID_SYNC_STATE_SCRIPT:-scripts/android/android-
 ELECTRON_SQLITE_RUNNER="${ELECTRON_SQLITE_RUNNER:-scripts/electron-sqlite-runner.mjs}"
 ANDROID_DATA_PROTECTION_BACKUP_DIR="${ANDROID_DATA_PROTECTION_BACKUP_DIR:-.lab/internal/android-device-backups}"
 ANDROID_DATA_PROTECTION_MANIFEST_DIR="${ANDROID_DATA_PROTECTION_MANIFEST_DIR:-.lab/internal/runtime}"
+ANDROID_DATA_PROTECTION_RUNTIME_ROOT="${ANDROID_DATA_PROTECTION_RUNTIME_ROOT:-${REPO_ROOT}}"
 ANDROID_DATA_PROTECTION="${ANDROID_DATA_PROTECTION:-0}"
+ANDROID_ELECTRON_ABI_PREPARE="${ANDROID_ELECTRON_ABI_PREPARE:-0}"
+ANDROID_NATIVE_ABI_REPAIR_SCRIPT="${ANDROID_NATIVE_ABI_REPAIR_SCRIPT:-scripts/windows/windows-native-abi-repair.mjs}"
 ANDROID_PREVIEW_OPEN_STUDIO="${ANDROID_PREVIEW_OPEN_STUDIO:-1}"
 DEFAULT_ANDROID_AVD="${DEFAULT_ANDROID_AVD:-Foliole_API_36}"
 ANDROID_PREVIEW_AVD="${ANDROID_PREVIEW_AVD-${FOLIOLE_ANDROID_AVD-${DEFAULT_ANDROID_AVD}}}"
@@ -24,6 +27,7 @@ ANDROID_PREVIEW_CAP_SYNC_TIMEOUT_SECONDS="${ANDROID_PREVIEW_CAP_SYNC_TIMEOUT_SEC
 ANDROID_PREVIEW_EMULATOR_TIMEOUT_SECONDS="${ANDROID_PREVIEW_EMULATOR_TIMEOUT_SECONDS:-240}"
 ANDROID_PREVIEW_DEPLOY_TIMEOUT_SECONDS="${ANDROID_PREVIEW_DEPLOY_TIMEOUT_SECONDS:-600}"
 ANDROID_PREVIEW_DATA_PROTECTION_TIMEOUT_SECONDS="${ANDROID_PREVIEW_DATA_PROTECTION_TIMEOUT_SECONDS:-120}"
+ANDROID_PREVIEW_NATIVE_ABI_TIMEOUT_SECONDS="${ANDROID_PREVIEW_NATIVE_ABI_TIMEOUT_SECONDS:-600}"
 ANDROID_PREVIEW_OPEN_STUDIO_TIMEOUT_SECONDS="${ANDROID_PREVIEW_OPEN_STUDIO_TIMEOUT_SECONDS:-60}"
 ANDROID_PREVIEW_SYNC_STATE_TIMEOUT_SECONDS="${ANDROID_PREVIEW_SYNC_STATE_TIMEOUT_SECONDS:-30}"
 ANDROID_PREVIEW_KILL_AFTER_SECONDS="${ANDROID_PREVIEW_KILL_AFTER_SECONDS:-10}"
@@ -106,6 +110,16 @@ ensure_host_dir() {
   fi
 }
 
+run_runtime_timed_step() {
+  local label="$1"
+  local timeout_seconds="$2"
+  shift 2
+  run_timed_preview_step "${label}" "${timeout_seconds}" \
+    bash -c 'cd "$1" && shift && exec "$@"' foliole-android-runtime "${ANDROID_DATA_PROTECTION_RUNTIME_DIR}" "$@"
+}
+
+ANDROID_DATA_PROTECTION_RUNTIME_DIR="$(normalize_host_path "${ANDROID_DATA_PROTECTION_RUNTIME_ROOT}")"
+
 echo "[android-preview] step 1/${PREVIEW_TOTAL_STEPS}: sync to android preview workspace"
 ensure_host_dir "${ANDROID_WINDOWS_MIRROR_DIR}"
 if ! run_timed_preview_step "android-source-sync" "${ANDROID_PREVIEW_SYNC_TIMEOUT_SECONDS}" env ANDROID_WINDOWS_WORKDIR="${ANDROID_WINDOWS_WORKDIR}" bash "${ANDROID_SOURCE_SYNC_SCRIPT}"; then
@@ -119,6 +133,16 @@ if ! run_timed_preview_step "android-cap-sync" "${ANDROID_PREVIEW_CAP_SYNC_TIMEO
   echo "[android-preview] failed at: android host sync"
   echo "[android-preview] status: FAILED"
   exit 1
+fi
+
+if [[ "${ANDROID_DATA_PROTECTION}" != "0" && "${ANDROID_ELECTRON_ABI_PREPARE}" != "0" ]]; then
+  echo "[android-preview] prepare Electron native ABI in data protection runtime"
+  if ! run_runtime_timed_step "electron-native-abi" "${ANDROID_PREVIEW_NATIVE_ABI_TIMEOUT_SECONDS}" \
+    node "${ANDROID_NATIVE_ABI_REPAIR_SCRIPT}" --repo-root .; then
+    echo "[android-preview] failed at: Electron native ABI"
+    echo "[android-preview] status: FAILED"
+    exit 1
+  fi
 fi
 
 if [[ -n "${ANDROID_PREVIEW_TARGET_SERIAL}" || -n "${ANDROID_PREVIEW_AVD}" ]]; then
@@ -138,7 +162,7 @@ if [[ -n "${ANDROID_PREVIEW_TARGET_SERIAL}" || -n "${ANDROID_PREVIEW_AVD}" ]]; t
     ensure_host_dir "${ANDROID_DATA_PROTECTION_MANIFEST_DIR}"
     DATA_PROTECTION_MANIFEST="${ANDROID_DATA_PROTECTION_MANIFEST_DIR}/android-preview-before-$(date +%Y%m%d-%H%M%S).json"
     echo "[android-preview] step 4/${PREVIEW_TOTAL_STEPS}: backup android app data"
-    if ! run_timed_preview_step "android-data-backup" "${ANDROID_PREVIEW_DATA_PROTECTION_TIMEOUT_SECONDS}" node "${ELECTRON_SQLITE_RUNNER}" "${ANDROID_DATA_PROTECTION_SCRIPT}" --mode backup --backup-root "${ANDROID_DATA_PROTECTION_BACKUP_DIR}" --manifest "${DATA_PROTECTION_MANIFEST}" --serial "${ANDROID_PREVIEW_TARGET_SERIAL}"; then
+    if ! run_runtime_timed_step "android-data-backup" "${ANDROID_PREVIEW_DATA_PROTECTION_TIMEOUT_SECONDS}" node "${ELECTRON_SQLITE_RUNNER}" "${ANDROID_DATA_PROTECTION_SCRIPT}" --mode backup --backup-root "${ANDROID_DATA_PROTECTION_BACKUP_DIR}" --manifest "${DATA_PROTECTION_MANIFEST}" --serial "${ANDROID_PREVIEW_TARGET_SERIAL}"; then
       echo "[android-preview] failed at: data protection preflight"
       echo "[android-preview] status: FAILED"
       exit 1
@@ -162,13 +186,13 @@ if [[ -n "${ANDROID_PREVIEW_TARGET_SERIAL}" || -n "${ANDROID_PREVIEW_AVD}" ]]; t
   fi
   if [[ "${ANDROID_PREVIEW_SYNC_STATE_CHECK}" != "0" ]]; then
     echo "[android-preview] checking companion sync readiness"
-    if ! run_timed_preview_step "android-sync-state" "${ANDROID_PREVIEW_SYNC_STATE_TIMEOUT_SECONDS}" node "${ELECTRON_SQLITE_RUNNER}" "${ANDROID_SYNC_STATE_SCRIPT}"; then
+    if ! run_runtime_timed_step "android-sync-state" "${ANDROID_PREVIEW_SYNC_STATE_TIMEOUT_SECONDS}" node "${ELECTRON_SQLITE_RUNNER}" "${ANDROID_SYNC_STATE_SCRIPT}"; then
       echo "[android-preview] sync readiness check failed; continuing with opened preview"
     fi
   fi
   if [[ "${ANDROID_DATA_PROTECTION}" != "0" ]]; then
     echo "[android-preview] step 6/${PREVIEW_TOTAL_STEPS}: check android app data"
-    if ! run_timed_preview_step "android-data-check" "${ANDROID_PREVIEW_DATA_PROTECTION_TIMEOUT_SECONDS}" node "${ELECTRON_SQLITE_RUNNER}" "${ANDROID_DATA_PROTECTION_SCRIPT}" --mode check --backup-root "${ANDROID_DATA_PROTECTION_BACKUP_DIR}" --manifest "${DATA_PROTECTION_MANIFEST}" --serial "${ANDROID_PREVIEW_TARGET_SERIAL}"; then
+    if ! run_runtime_timed_step "android-data-check" "${ANDROID_PREVIEW_DATA_PROTECTION_TIMEOUT_SECONDS}" node "${ELECTRON_SQLITE_RUNNER}" "${ANDROID_DATA_PROTECTION_SCRIPT}" --mode check --backup-root "${ANDROID_DATA_PROTECTION_BACKUP_DIR}" --manifest "${DATA_PROTECTION_MANIFEST}" --serial "${ANDROID_PREVIEW_TARGET_SERIAL}"; then
       echo "[android-preview] failed at: data protection check"
       echo "[android-preview] status: FAILED"
       exit 1
