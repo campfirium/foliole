@@ -1,14 +1,13 @@
 param(
   [Parameter(Mandatory = $true)][string]$DeviceIdentity,
-  [Parameter(Mandatory = $true)][string]$GitReadToken,
   [Parameter(Mandatory = $true)][string]$JavaHome,
+  [Parameter(Mandatory = $true)][string]$MacGitPublicKey,
   [Parameter(Mandatory = $true)][string]$MacPublicKey,
   [string]$DeviceEndpoint = "",
   [string]$AdbPath = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe",
   [string]$BashPath = "$env:ProgramFiles\Git\bin\bash.exe",
   [string]$GitPath = "$env:ProgramFiles\Git\cmd\git.exe",
   [string]$NodePath = "",
-  [string]$RepositoryUrl = "https://github.com/campfirium/foliole.git",
   [switch]$SkipKeyLockdown
 )
 
@@ -19,7 +18,7 @@ $files = @(
   "windows-bounded-process.mjs",
   "windows-android-lab-dispatcher.mjs",
   "windows-android-lab-device.mjs",
-  "windows-android-lab-git-askpass.mjs",
+  "windows-android-lab-receive.mjs",
   "windows-android-lab-state.mjs",
   "windows-android-lab-worker.mjs"
 )
@@ -32,7 +31,6 @@ foreach ($tool in @($NodePath, $GitPath, $BashPath, $AdbPath, (Join-Path $JavaHo
   if ([string]::IsNullOrWhiteSpace($tool) -or !(Test-Path -LiteralPath $tool -PathType Leaf)) { throw "Required Android Lab tool is missing: $tool" }
 }
 if ($DeviceIdentity -notmatch '^[A-Za-z0-9._-]+$') { throw "DeviceIdentity contains unsupported characters" }
-if ([string]::IsNullOrWhiteSpace($GitReadToken)) { throw "A separate read-only Git token is required" }
 if ($DeviceEndpoint) {
   if ($DeviceEndpoint -notmatch '^(\d{1,3}\.){3}\d{1,3}:\d{1,5}$') { throw "DeviceEndpoint must be ipv4:port" }
   $endpointParts = $DeviceEndpoint.Split(':')
@@ -59,7 +57,31 @@ $runtimeRoot = Join-Path $installRoot "runtime"
 New-Item -ItemType Directory -Force -Path $runtimeRoot | Out-Null
 $labNodePath = Join-Path $runtimeRoot "node.exe"
 Copy-Item (Join-Path $nodeSourceRoot "*") $runtimeRoot -Recurse -Force
-Set-Content -Path (Join-Path $installRoot "git-read-token.txt") -Value $GitReadToken -NoNewline
+$repositoryRoot = Join-Path $installRoot "repository.git"
+if (!(Test-Path (Join-Path $repositoryRoot "HEAD"))) {
+  & $GitPath init --bare $repositoryRoot | Out-Null
+  if ($LASTEXITCODE -ne 0) { throw "Failed to initialize Android Lab bare repository" }
+}
+& $GitPath --git-dir $repositoryRoot config receive.denyDeletes true
+if ($LASTEXITCODE -ne 0) { throw "Failed to configure Android Lab bare repository" }
+& $GitPath --git-dir $repositoryRoot config receive.denyNonFastForwards true
+if ($LASTEXITCODE -ne 0) { throw "Failed to configure Android Lab bare repository" }
+$hookPath = Join-Path $repositoryRoot "hooks\pre-receive"
+$hook = @'
+#!/bin/sh
+while read old new ref; do
+  if [ "$ref" != "refs/heads/lab/dev" ]; then
+    echo "only refs/heads/lab/dev is accepted" >&2
+    exit 1
+  fi
+  if [ "$new" = "0000000000000000000000000000000000000000" ]; then
+    echo "refs/heads/lab/dev cannot be deleted" >&2
+    exit 1
+  fi
+done
+'@
+[System.IO.File]::WriteAllText($hookPath, $hook.Replace("`r`n", "`n"), [System.Text.UTF8Encoding]::new($false))
+Remove-Item (Join-Path $installRoot "git-read-token.txt"), (Join-Path $installRoot "git-askpass.cmd") -Force -ErrorAction SilentlyContinue
 $config = @{
   adbPath = $AdbPath
   bashPath = $BashPath
@@ -67,7 +89,6 @@ $config = @{
   gitPath = $GitPath
   javaHome = $JavaHome
   nodeDirectory = $runtimeRoot
-  repositoryUrl = $RepositoryUrl
   schemaVersion = 2
 }
 $config | ConvertTo-Json | Set-Content -Path (Join-Path $installRoot "config.json") -Encoding UTF8
@@ -81,9 +102,6 @@ if ($DeviceEndpoint) {
   }
   $device | ConvertTo-Json | Set-Content -Path (Join-Path $installRoot "device.json") -Encoding UTF8
 }
-$askPass = "@echo off`r`n`"$labNodePath`" `"$(Join-Path $installRoot 'windows-android-lab-git-askpass.mjs')`" %*`r`n"
-Set-Content -Path (Join-Path $installRoot "git-askpass.cmd") -Value $askPass -NoNewline
-
 $identity = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
 $action = New-ScheduledTaskAction -Execute $labNodePath -Argument "`"$(Join-Path $installRoot 'windows-android-lab-worker.mjs')`""
 $principal = New-ScheduledTaskPrincipal -UserId $identity -LogonType Interactive -RunLevel Limited
@@ -96,11 +114,16 @@ if (-not $SkipKeyLockdown) {
   $authorizedKeys = Join-Path $sshDirectory $(if ($isAdmin) { "administrators_authorized_keys" } else { "authorized_keys" })
   New-Item -ItemType Directory -Force -Path $sshDirectory | Out-Null
   $dispatcher = Join-Path $installRoot "windows-android-lab-dispatcher.mjs"
+  $receiver = Join-Path $installRoot "windows-android-lab-receive.mjs"
   $forced = "command=`"$labNodePath $dispatcher`",no-agent-forwarding,no-port-forwarding,no-pty,no-user-rc $MacPublicKey"
+  $gitForced = "command=`"$labNodePath $receiver`",no-agent-forwarding,no-port-forwarding,no-pty,no-user-rc $MacGitPublicKey"
   $existing = if (Test-Path $authorizedKeys) { Get-Content $authorizedKeys } else { @() }
-  $body = ($MacPublicKey -split "\s+")[1]
-  $retained = @($existing | Where-Object { $_ -notmatch [regex]::Escape($body) })
-  Set-Content -Path $authorizedKeys -Value @($retained + $forced)
+  $bodies = @(($MacPublicKey -split "\s+")[1], ($MacGitPublicKey -split "\s+")[1])
+  $retained = @($existing | Where-Object {
+    $line = $_
+    -not ($bodies | Where-Object { $line -match [regex]::Escape($_) })
+  })
+  Set-Content -Path $authorizedKeys -Value @($retained + $forced + $gitForced)
   if ($isAdmin) {
     icacls.exe $authorizedKeys /inheritance:r /grant "*S-1-5-32-544:F" /grant "SYSTEM:F" | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "Failed to secure Android Lab authorized_keys" }

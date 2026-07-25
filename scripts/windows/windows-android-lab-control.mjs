@@ -8,8 +8,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+import { WINDOWS_ANDROID_LAB_SOURCE_REF } from './windows-android-lab-state.mjs';
+
 export function remoteAndroidLabPaths(env, home = os.homedir()) {
   return {
+    gitSshKey: env.FOLIOLE_WINDOWS_ANDROID_LAB_GIT_SSH_KEY || path.join(home, '.ssh', 'agent', 'foliole-windows-android-lab-git'),
     sshKey: env.FOLIOLE_WINDOWS_ANDROID_LAB_SSH_KEY || path.join(home, '.ssh', 'agent', 'foliole-windows-android-lab')
   };
 }
@@ -41,6 +44,18 @@ function ssh(host, command, env) {
   });
 }
 
+function git(args, { env = process.env } = {}) {
+  return new Promise((resolve, reject) => {
+    const child = spawn('git', args, { env, shell: false, stdio: ['ignore', 'pipe', 'pipe'] });
+    const stdout = [];
+    let stderr = '';
+    child.stdout.on('data', (chunk) => stdout.push(chunk));
+    child.stderr.on('data', (chunk) => { stderr += chunk; });
+    child.on('error', reject);
+    child.on('close', (code) => code === 0 ? resolve(Buffer.concat(stdout)) : reject(new Error(stderr.trim() || `git exited ${code}`)));
+  });
+}
+
 export function androidLabSshArgs(host, command, env, home = os.homedir()) {
   const remote = remoteAndroidLabPaths(env, home);
   return [
@@ -49,16 +64,48 @@ export function androidLabSshArgs(host, command, env, home = os.homedir()) {
   ];
 }
 
-export async function runWindowsAndroidLabControl({ argv = process.argv.slice(2), env = process.env } = {}) {
+export function androidLabGitPushSpec(host, commitSha, env, home = os.homedir()) {
+  const key = remoteAndroidLabPaths(env, home).gitSshKey;
+  if (!/^[A-Za-z0-9_./-]+$/u.test(key)) throw new Error('Android Lab Git SSH key path contains unsupported characters');
+  return {
+    args: ['push', '--porcelain', `${host}:foliole-android-lab.git`, `${commitSha}:${WINDOWS_ANDROID_LAB_SOURCE_REF}`],
+    env: {
+      ...env,
+      GIT_SSH_COMMAND: `ssh -i ${key} -o BatchMode=yes -o IdentitiesOnly=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes`
+    }
+  };
+}
+
+async function pushAndroidLabSource(host, env, executeGit) {
+  const status = String(await executeGit(['status', '--porcelain'], { env })).trim();
+  if (status) throw new Error('Android Lab source push requires a clean working tree');
+  const branch = String(await executeGit(['branch', '--show-current'], { env })).trim();
+  if (branch !== 'dev') throw new Error('Android Lab source push requires the dev branch');
+  const commitSha = String(await executeGit(['rev-parse', '--verify', 'HEAD'], { env })).trim();
+  if (!/^[0-9a-f]{40}$/u.test(commitSha)) throw new Error('Android Lab source commit is invalid');
+  const spec = androidLabGitPushSpec(host, commitSha, env);
+  await executeGit(spec.args, { env: spec.env });
+  return { commitSha, ref: WINDOWS_ANDROID_LAB_SOURCE_REF, schemaVersion: 1 };
+}
+
+export async function runWindowsAndroidLabControl({
+  argv = process.argv.slice(2), env = process.env, executeGit = git, stdout = process.stdout
+} = {}) {
   const { command, host, output } = parseAndroidLabControlArgs(argv, env);
+  if (command[0] === 'push') {
+    if (command.length !== 1 || output) throw new Error('push does not accept remote arguments or --output');
+    const pushed = await pushAndroidLabSource(host, env, executeGit);
+    stdout.write(`${JSON.stringify(pushed)}\n`);
+    return pushed;
+  }
   const result = await ssh(host, command, env);
   if (output) {
     fs.mkdirSync(path.dirname(path.resolve(output)), { recursive: true });
     fs.writeFileSync(output, result);
     return { output: path.resolve(output) };
   }
-  process.stdout.write(result);
-  if (result.length > 0 && result.at(-1) !== 10) process.stdout.write('\n');
+  stdout.write(result);
+  if (result.length > 0 && result.at(-1) !== 10) stdout.write('\n');
   return null;
 }
 

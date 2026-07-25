@@ -21,8 +21,10 @@ function createFixture() {
   writeJsonAtomic(paths.config, {
     adbPath: 'adb.exe', bashPath: 'bash.exe', deviceIdentity: 'A5-STABLE', gitPath: 'git.exe',
     javaHome: 'C:\\Java', nodeDirectory: 'C:\\Node',
-    repositoryUrl: 'https://example.invalid/repo.git', schemaVersion: 2
+    schemaVersion: 2
   });
+  fs.mkdirSync(paths.repository, { recursive: true });
+  fs.writeFileSync(path.join(paths.repository, 'HEAD'), 'ref: refs/heads/lab/dev\n');
   writeJsonAtomic(paths.device, { endpoint: ENDPOINT, identity: 'A5-STABLE', schemaVersion: 1 });
   return paths;
 }
@@ -36,7 +38,6 @@ function successfulExecutor(paths, calls) {
     if (command === 'adb.exe' && args.includes('getprop')) return { code: 0, lines: ['A5-STABLE'], output: 'A5-STABLE\n' };
     if (command === 'adb.exe' && args.includes('logcat')) return { code: 0, lines: ['Foliole log'], output: 'Foliole log\n' };
     if (command === 'adb.exe') return { code: 0, lines: [], output: '' };
-    if (args.includes('clone')) fs.mkdirSync(paths.repository, { recursive: true });
     if (args.includes('worktree') && args.includes('add')) fs.mkdirSync(paths.candidate, { recursive: true });
     if (args.includes('status')) return { code: 0, lines: [], output: '' };
     if (command === 'bash.exe') return { code: 0, lines: ['[android-preview] status: OPENED'], output: '[android-preview] status: OPENED\n' };
@@ -58,6 +59,8 @@ describe('Windows Android lab worker', () => {
       ANDROID_WINDOWS_DEPENDENCY_REFRESH: 'ci', FOLIOLE_ANDROID_SERIAL: ENDPOINT, JAVA_HOME: 'C:\\Java'
     });
     expect(preview.options.env.Path).toContain('C:\\Node;C:\\Java\\bin');
+    expect(calls.some((call) => call.args.includes('fetch') || call.args.includes('clone'))).toBe(false);
+    expect(calls.some((call) => call.args.includes('refs/heads/lab/dev'))).toBe(true);
     expect(fs.existsSync(paths.candidate)).toBe(false);
     expect(readJson(paths.status).resultStatus).toBe('success');
     expect(readJson(path.join(paths.evidence, 'run-1', 'summary.json')).previewStatus).toBe('opened');

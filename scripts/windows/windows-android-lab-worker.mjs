@@ -8,7 +8,9 @@ import { pathToFileURL } from 'node:url';
 
 import { executeBounded } from './windows-bounded-process.mjs';
 import { resolveAndroidDevice, validateAndroidLabConfig } from './windows-android-lab-device.mjs';
-import { androidLabPaths, readJson, writeJsonAtomic } from './windows-android-lab-state.mjs';
+import {
+  androidLabPaths, readJson, WINDOWS_ANDROID_LAB_SOURCE_REF, writeJsonAtomic
+} from './windows-android-lab-state.mjs';
 
 const PREVIEW_TIMEOUT_MS = 45 * 60_000;
 const COMMAND_TIMEOUT_MS = 5 * 60_000;
@@ -23,29 +25,15 @@ async function runChecked(executeCommand, command, args, options, code) {
   return result;
 }
 
-function gitEnvironment(paths) {
-  return {
-    ...process.env,
-    FOLIOLE_WINDOWS_ANDROID_LAB_GIT_TOKEN: paths.gitToken,
-    GIT_ASKPASS: path.join(paths.root, 'git-askpass.cmd'),
-    GIT_TERMINAL_PROMPT: '0'
-  };
-}
-
 async function prepareCheckout(config, paths, executeCommand) {
-  const gitOptions = { env: gitEnvironment(paths) };
-  if (!fs.existsSync(path.join(paths.repository, 'HEAD'))) {
-    await runChecked(executeCommand, config.gitPath, ['clone', '--mirror', config.repositoryUrl, paths.repository], gitOptions, 'git_clone_failed');
-  }
-  await runChecked(executeCommand, config.gitPath, [
-    '--git-dir', paths.repository, 'fetch', '--prune', 'origin', '+refs/heads/dev:refs/heads/dev'
-  ], gitOptions, 'git_fetch_failed');
+  const gitOptions = { env: process.env };
+  if (!fs.existsSync(path.join(paths.repository, 'HEAD'))) throw codedError('lab_source_missing', 'LAN Git source repository is missing');
   await runChecked(executeCommand, config.gitPath, [
     '--git-dir', paths.repository, 'cat-file', '-e', `${config.commitSha}^{commit}`
   ], gitOptions, 'commit_missing');
   await runChecked(executeCommand, config.gitPath, [
-    '--git-dir', paths.repository, 'merge-base', '--is-ancestor', config.commitSha, 'refs/heads/dev'
-  ], gitOptions, 'commit_not_on_dev');
+    '--git-dir', paths.repository, 'merge-base', '--is-ancestor', config.commitSha, WINDOWS_ANDROID_LAB_SOURCE_REF
+  ], gitOptions, 'commit_not_in_lab_ref');
   fs.rmSync(paths.candidate, { force: true, recursive: true });
   await runChecked(executeCommand, config.gitPath, [
     '--git-dir', paths.repository, 'worktree', 'add', '--detach', paths.candidate, config.commitSha
@@ -93,10 +81,10 @@ async function cleanupCheckout(config, paths, executeCommand) {
   if (!fs.existsSync(paths.candidate)) return;
   await runChecked(executeCommand, config.gitPath, [
     '--git-dir', paths.repository, 'worktree', 'remove', '--force', paths.candidate
-  ], { env: gitEnvironment(paths) }, 'checkout_cleanup_failed');
+  ], { env: process.env }, 'checkout_cleanup_failed');
   await runChecked(executeCommand, config.gitPath, [
     '--git-dir', paths.repository, 'worktree', 'prune'
-  ], { env: gitEnvironment(paths) }, 'checkout_cleanup_failed');
+  ], { env: process.env }, 'checkout_cleanup_failed');
 }
 
 async function captureLogcat(config, endpoint, evidenceRoot, executeCommand) {

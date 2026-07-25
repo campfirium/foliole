@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 export const WINDOWS_ANDROID_LAB_TASK = 'FolioleAndroidLab';
+export const WINDOWS_ANDROID_LAB_SOURCE_REF = 'refs/heads/lab/dev';
 export const LAB_EVIDENCE_FILES = new Set(['logcat.txt', 'runner.log', 'screenshot.png', 'summary.json']);
 
 export function androidLabRoot(env = process.env) {
@@ -20,7 +21,6 @@ export function androidLabPaths(root = androidLabRoot()) {
     config: path.join(root, 'config.json'),
     device: path.join(root, 'device.json'),
     evidence: path.join(root, 'evidence'),
-    gitToken: path.join(root, 'git-read-token.txt'),
     manifest: path.join(root, 'protection', 'manifests'),
     preview: 'C:\\dev\\foliole-android-lab-preview',
     protection: path.join(root, 'protection', 'backups'),

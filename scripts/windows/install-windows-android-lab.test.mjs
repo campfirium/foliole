@@ -10,7 +10,15 @@ describe('Windows Android lab installer', () => {
     expect(source).toContain('FolioleAndroidLab');
     expect(source).toContain('-LogonType Interactive -RunLevel Limited');
     expect(source).toContain('no-agent-forwarding,no-port-forwarding,no-pty,no-user-rc');
-    expect(source).toContain('A separate read-only Git token is required');
+    expect(source).toContain('[Parameter(Mandatory = $true)][string]$MacGitPublicKey');
+    expect(source).toContain('init --bare $repositoryRoot');
+    expect(source).toContain('receive.denyNonFastForwards true');
+    expect(source).toContain('refs/heads/lab/dev');
+    expect(source).toContain('windows-android-lab-receive.mjs');
+    expect(source).toContain('git-read-token.txt');
+    expect(source).toContain('-ErrorAction SilentlyContinue');
+    expect(source).not.toContain('RepositoryUrl');
+    expect(source).not.toContain('GitReadToken');
     expect(source).toContain('[Parameter(Mandatory = $true)][string]$JavaHome');
     expect(source).toContain('Join-Path $nodeSourceRoot "npm.cmd"');
     expect(source).toContain('Copy-Item (Join-Path $nodeSourceRoot "*") $runtimeRoot -Recurse -Force');

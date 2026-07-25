@@ -8,7 +8,7 @@ import { pathToFileURL } from 'node:url';
 
 import {
   androidLabPaths, LAB_EVIDENCE_FILES, parseAndroidLabCommand, publicLabStatus, readJson,
-  publicDeviceStatus, safeLabEvidencePath, WINDOWS_ANDROID_LAB_TASK, writeJsonAtomic
+  publicDeviceStatus, safeLabEvidencePath, WINDOWS_ANDROID_LAB_SOURCE_REF, WINDOWS_ANDROID_LAB_TASK, writeJsonAtomic
 } from './windows-android-lab-state.mjs';
 import { reconnectAndroidDevice, validateAndroidLabConfig } from './windows-android-lab-device.mjs';
 
@@ -37,12 +37,26 @@ function closeStalePending(paths, now = Date.now()) {
   return completed;
 }
 
+function assertLabSourceCommit(config, commitSha, paths, runCommand) {
+  if (!fs.existsSync(path.join(paths.repository, 'HEAD'))) {
+    throw Object.assign(new Error('LAN Git source repository is missing'), { code: 'lab_source_missing' });
+  }
+  const result = runCommand(config.gitPath, [
+    '--git-dir', paths.repository, 'merge-base', '--is-ancestor', commitSha, WINDOWS_ANDROID_LAB_SOURCE_REF
+  ]);
+  if (result?.code !== undefined && result.code !== 0) {
+    throw Object.assign(new Error('commit is not reachable from the LAN Android Lab ref'), { code: 'commit_not_in_lab_ref' });
+  }
+}
+
 function startRun(command, paths, runCommand, now) {
   const current = closeStalePending(paths, now);
   if (current && ['pending', 'running'].includes(current.state)) {
     if (current.commitSha === command.commitSha) return publicLabStatus(current);
     throw Object.assign(new Error('another Android lab run is active'), { code: 'android_lab_busy' });
   }
+  const config = validateAndroidLabConfig(readJson(paths.config));
+  assertLabSourceCommit(config, command.commitSha, paths, runCommand);
   const runId = `${now}-${command.commitSha.slice(0, 12)}`;
   const createdAt = new Date(now).toISOString();
   const request = { commitSha: command.commitSha, createdAt, runId, schemaVersion: 1 };
