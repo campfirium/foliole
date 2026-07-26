@@ -98,6 +98,26 @@ describe('Windows Android lab worker', () => {
     expect(fs.existsSync(paths.active)).toBe(false);
   });
 
+  it('delegates a Review scenario request without entering the preview deploy path', async () => {
+    const paths = createFixture();
+    writeJsonAtomic(paths.active, {
+      action: 'reviewScenario', commitSha: SHA, runId: '1000-dddddddddddd-scenario', schemaVersion: 1
+    });
+    const phases = [];
+    const runReviewScenario = async ({ request, setPhase }) => {
+      expect(request.action).toBe('reviewScenario');
+      setPhase('scenario_capture');
+      phases.push('scenario_capture');
+    };
+    await runWindowsAndroidLabWorker({
+      executeCommand: async () => { throw new Error('deploy command should not run'); },
+      paths, platform: 'win32', runReviewScenario
+    });
+    expect(phases).toEqual(['scenario_capture']);
+    expect(readJson(paths.status)).toMatchObject({ resultStatus: 'success', state: 'completed' });
+    expect(fs.existsSync(paths.active)).toBe(false);
+  });
+
   it('pins the safety environment, hard timeout, and cleans the detached checkout', async () => {
     const paths = createFixture();
     const calls = [];

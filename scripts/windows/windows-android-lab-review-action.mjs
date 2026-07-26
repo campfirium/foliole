@@ -155,7 +155,7 @@ function writeReviewSummary(evidenceRoot, request, deployment, audit) {
 }
 
 function writeFailureEvidence(paths, request, error) {
-  const evidenceRoot = path.join(paths.evidence, request.runId);
+  const evidenceRoot = path.join(paths.evidence, request.evidenceRunId ?? request.runId);
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const output = path.join(evidenceRoot, 'review-audit.json');
   const deployment = readJson(paths.deployment);
@@ -188,7 +188,7 @@ export async function runWindowsAndroidLabReviewPhase({
   const device = await resolveAndroidDevice(config, paths, executeCommand);
   assertBinding(device.identity, deployment.deviceIdentity, 'review_identity_mismatch', 'resolved device identity');
   if (request.reviewPhase === 'restart') await restartApplication(config, device.endpoint, paths, executeCommand, setPhase);
-  const evidenceRoot = path.join(paths.evidence, request.runId);
+  const evidenceRoot = path.join(paths.evidence, request.evidenceRunId ?? request.runId);
   const snapshotRoot = path.join(paths.root, `review-snapshot-${request.runId}`);
   fs.mkdirSync(evidenceRoot, { recursive: true });
   try {

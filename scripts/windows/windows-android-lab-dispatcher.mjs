@@ -83,7 +83,8 @@ function queueRun(request, paths, runCommand, now) {
   }
   const config = validateAndroidLabConfig(readJson(paths.config));
   assertLabSourceCommit(config, request.commitSha, paths, runCommand);
-  const runId = `${now}-${request.commitSha.slice(0, 12)}${request.reviewPhase ? `-${request.reviewPhase}` : ''}`;
+  const suffix = request.reviewPhase ?? (request.action === 'reviewScenario' ? 'scenario' : '');
+  const runId = `${now}-${request.commitSha.slice(0, 12)}${suffix ? `-${suffix}` : ''}`;
   const createdAt = new Date(now).toISOString();
   const queued = { ...request, createdAt, runId };
   writeActiveExclusive(paths, queued);
@@ -177,7 +178,7 @@ export async function dispatchWindowsAndroidLab({
   runCommand = runProcess, stdout = process.stdout
 } = {}) {
   const command = parseAndroidLabCommand(env.SSH_ORIGINAL_COMMAND?.trim() || argv.join(' '));
-  if (['review', 'run'].includes(command.action)) return startRun(command, paths, runCommand, now);
+  if (['review', 'reviewScenario', 'run'].includes(command.action)) return startRun(command, paths, runCommand, now);
   if (command.action === 'request') {
     const payload = await readBoundedInput(input, command.byteLength);
     const parsed = parseAndroidLabEnvelope(payload, command.byteLength, command.sha256);

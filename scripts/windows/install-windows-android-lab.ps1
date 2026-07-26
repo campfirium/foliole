@@ -24,6 +24,7 @@ $files = @(
   "windows-android-lab-request.mjs",
   "windows-android-lab-review-action.mjs",
   "windows-android-lab-review-audit.ts",
+  "windows-android-lab-review-scenario.mjs",
   "windows-android-lab-review-snapshot.mjs",
   "windows-android-lab-receive.mjs",
   "windows-android-lab-state.mjs",

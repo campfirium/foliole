@@ -47,7 +47,7 @@ public class FolioleCompanionWebViewAutomationTest {
             );
             assertTrue(receipt.toString(), receipt.optBoolean("ok"));
             JSONObject observed = FolioleCompanionWebViewSemanticAdapter.waitForAttribute(
-                instrumentation, webView, testId, expectedAttribute, expectedValue, timeoutMs
+                instrumentation, webView, testId, expectedAttribute, expectedValue, timeoutMs, receipt
             );
             assertEquals(observed.toString(), expectedValue, observed.optString("value"));
             sendEvidence(instrumentation, before,

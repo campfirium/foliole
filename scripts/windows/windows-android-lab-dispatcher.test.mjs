@@ -56,6 +56,19 @@ describe('Windows Android lab dispatcher', () => {
     })).rejects.toMatchObject({ code: 'android_lab_busy' });
   });
 
+  it('queues the commit-bound Review scenario as one scheduled worker run', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-android-lab-review-scenario-dispatch-'));
+    roots.push(root);
+    const paths = androidLabPaths(root);
+    prepareSource(paths);
+    const result = await dispatchWindowsAndroidLab({
+      argv: ['review', 'scenario', SHA], now: 2_500, paths,
+      runCommand: () => ({ code: 0, output: '' })
+    });
+    expect(result.runId).toBe('2500-bbbbbbbbbbbb-scenario');
+    expect(readJson(paths.active)).toMatchObject({ action: 'reviewScenario', commitSha: SHA });
+  });
+
   it('keeps legacy collect and can read a previous run by its internal id', async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-android-lab-collect-'));
     roots.push(root);

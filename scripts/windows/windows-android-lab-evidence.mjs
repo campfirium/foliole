@@ -9,7 +9,7 @@ export const LAB_EVIDENCE_FILES = new Set([
 ]);
 
 export function isAndroidLabRunId(value) {
-  return /^[1-9]\d{0,15}-[0-9a-f]{12}(?:-(?:prepare|capture|restart))?$/u.test(String(value || ''));
+  return /^[1-9]\d{0,15}-[0-9a-f]{12}(?:-(?:prepare|capture|restart|scenario))?$/u.test(String(value || ''));
 }
 
 export function safeLabEvidencePath(evidenceRoot, relativePath) {

@@ -68,6 +68,9 @@ describe('Windows Android Lab semantic UI automation', () => {
     expect(parseUiAutomationArgs(['--testId', 'companion-tab-settings'])).toMatchObject({
       action: 'click', expectedAttribute: 'aria-current', expectedValue: 'page', timeoutMs: 10_000
     });
+    expect(parseUiAutomationArgs([
+      '--testId', 'companion-review-grade-1', '--expectedAttribute', '__actionAccepted', '--expectedValue', 'true'
+    ])).toMatchObject({ expectedAttribute: '__actionAccepted', expectedValue: 'true' });
     expect(() => parseUiAutomationArgs(['--testId', '../settings'])).toThrow('stable testId');
     expect(() => parseUiAutomationArgs(['--testId', 'settings', '--action', 'swipe'])).toThrow('click or input');
     expect(() => parseUiAutomationArgs(['--testId', 'settings', '--timeoutMs', '999'])).toThrow('outside');
@@ -124,6 +127,23 @@ describe('Windows Android Lab semantic UI automation', () => {
     const audit = fs.readFileSync(path.join(root, 'ui-command-audit.json'), 'utf8');
     expect(audit).toContain('<redacted>');
     expect(audit).not.toContain('private probe');
+  });
+
+  it('passes the action-accepted Review contract through instrumentation', async () => {
+    const { env } = fixture();
+    const calls = [];
+    await runWindowsAndroidLabUiAutomation({
+      argv: [
+        '--testId', 'companion-review-grade-1', '--expectedAttribute', '__actionAccepted',
+        '--expectedValue', 'true'
+      ],
+      env,
+      execute: successfulExecute(calls)
+    });
+    const instrumentation = calls.find((call) => call.args.includes('am') && call.args.includes('instrument'));
+    expect(instrumentation.args).toEqual(expect.arrayContaining([
+      'expectedAttribute', '__actionAccepted', 'expectedValue', 'true'
+    ]));
   });
 
   it('fails closed on a locked device and keeps failure screenshot, receipt, and scoped logcat', async () => {

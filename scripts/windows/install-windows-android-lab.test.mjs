@@ -37,6 +37,7 @@ describe('Windows Android lab installer', () => {
     expect(source).toContain('windows-android-lab-request.mjs');
     expect(source).toContain('windows-android-lab-review-action.mjs');
     expect(source).toContain('windows-android-lab-review-audit.ts');
+    expect(source).toContain('windows-android-lab-review-scenario.mjs');
     expect(source).toContain('windows-android-lab-review-snapshot.mjs');
     expect(source).toContain('$existingConfig.androidDebugKeystoreSha256');
     expect(source).toContain('$config.androidDebugKeystoreSha256 = $existingConfig.androidDebugKeystoreSha256');

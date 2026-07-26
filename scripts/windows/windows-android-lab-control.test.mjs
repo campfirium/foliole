@@ -55,6 +55,21 @@ describe('Windows Android lab Mac controller', () => {
     expect(calls).toEqual([['status'], ['review', 'prepare', 'a'.repeat(40)]]);
   });
 
+  it('preflights the Review scenario before sending one fixed remote command', async () => {
+    const calls = [];
+    await runWindowsAndroidLabControl({
+      argv: ['--host', 'tester@windows-host', 'review', 'scenario', 'a'.repeat(40)], env: {},
+      executeSsh: async (_host, command) => {
+        calls.push(command);
+        return Buffer.from(command[0] === 'status'
+          ? '{"protocolVersion":5,"state":"idle"}\n'
+          : '{"state":"pending"}\n');
+      }, stdout: { write: () => {} }
+    });
+    expect(calls).toEqual([['status'], ['review', 'scenario', 'a'.repeat(40)]]);
+  });
+
+
   it('requires an explicit SSH user and sends only action tokens', () => {
     expect(() => parseAndroidLabControlArgs(['--host', 'windows-host', 'status'], {})).toThrow();
     expect(parseAndroidLabControlArgs(['--host', 'tester@windows-host', 'device', 'status'], {}).command).toEqual(['device', 'status']);

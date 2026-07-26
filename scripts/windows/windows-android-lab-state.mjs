@@ -70,9 +70,12 @@ export function parseAndroidLabCommand(input) {
     return { action, byteLength, sha256: parts[1] };
   }
   if (action === 'review') {
+    if (parts[0] === 'scenario' && parts.length === 2 && /^[0-9a-f]{40}$/u.test(parts[1])) {
+      return { action: 'reviewScenario', commitSha: parts[1] };
+    }
     if (!['prepare', 'capture', 'restart'].includes(parts[0]) || parts.length !== 2
       || !/^[0-9a-f]{40}$/u.test(parts[1])) {
-      throw new Error('review requires prepare|capture|restart and a lowercase 40-character commit SHA');
+      throw new Error('review requires prepare|capture|restart|scenario and a lowercase 40-character commit SHA');
     }
     return { action, commitSha: parts[1], reviewPhase: parts[0] };
   }

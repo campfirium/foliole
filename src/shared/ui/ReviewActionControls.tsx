@@ -30,10 +30,12 @@ function ReviewGradeButton(props: {
   label: string;
   surface: ReviewActionSurface;
   submitGrade: (grade: ReviewGrade) => Promise<void>;
+  testId?: string;
 }) {
   if (props.surface === 'overlay') {
     return (
       <ReviewOverlayActionButton
+        {...(props.testId ? { 'data-testid': props.testId } : {})}
         disabled={props.disabled}
         label={props.label}
         onClick={() => void props.submitGrade(props.grade)}
@@ -46,6 +48,7 @@ function ReviewGradeButton(props: {
     <AppButton
       aria-label={props.label}
       className={props.buttonClassName ?? 'min-w-24 px-4'}
+      {...(props.testId ? { 'data-testid': props.testId } : {})}
       disabled={props.disabled}
       onClick={() => void props.submitGrade(props.grade)}
       size="md"
@@ -92,6 +95,7 @@ function createReviewGradeActionNode(args: {
         label={args.t(args.gradeButton.labelKey)}
         surface={args.surface}
         submitGrade={args.submitGrade}
+        testId={`companion-review-grade-${args.gradeButton.grade}`}
       />
     </ReviewGradePreviewTooltip>
   );
@@ -158,12 +162,12 @@ export function FsrsRevealAction({
   const label = t('desktop.reviewActions.showAnswer');
 
   if (surface === 'overlay') {
-    return <ReviewOverlayActionButton disabled={disabled} label={label} onClick={onRevealAnswer} />;
+    return <ReviewOverlayActionButton data-testid="companion-review-action-reveal" disabled={disabled} label={label} onClick={onRevealAnswer} />;
   }
 
   return (
     <ToolbarActionGroup ariaLabel={t('desktop.reviewActions.reveal.group')} className="gap-2" data-review-toolbar-kind="fsrs-prompt">
-      <AppButton aria-label={label} className="min-w-32 px-5" disabled={disabled} onClick={onRevealAnswer} size="md" variant="default">
+      <AppButton aria-label={label} className="min-w-32 px-5" data-testid="companion-review-action-reveal" disabled={disabled} onClick={onRevealAnswer} size="md" variant="default">
         {label}
       </AppButton>
     </ToolbarActionGroup>

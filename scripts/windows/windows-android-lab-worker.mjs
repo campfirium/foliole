@@ -15,6 +15,9 @@ import {
   finishWindowsAndroidLabReviewRun, runWindowsAndroidLabReviewPhase
 } from './windows-android-lab-review-action.mjs';
 import {
+  finishWindowsAndroidLabReviewScenarioRun, runWindowsAndroidLabReviewScenario
+} from './windows-android-lab-review-scenario.mjs';
+import {
   androidLabPaths, readJson, writeJsonAtomic, writeSuccessfulDeployment
 } from './windows-android-lab-state.mjs';
 
@@ -121,7 +124,7 @@ function writeRunEvidence(evidenceRoot, request, result, screenshotError, logcat
 
 export async function runWindowsAndroidLabWorker({
   executeCommand = executeBounded, paths = androidLabPaths(), platform = process.platform,
-  runReviewPhase = runWindowsAndroidLabReviewPhase
+  runReviewPhase = runWindowsAndroidLabReviewPhase, runReviewScenario = runWindowsAndroidLabReviewScenario
 } = {}) {
   if (platform !== 'win32') throw new Error('Windows Android lab worker requires win32');
   const request = readJson(paths.active);
@@ -134,6 +137,11 @@ export async function runWindowsAndroidLabWorker({
   writeJsonAtomic(paths.status, running);
   if (request.action === 'review') {
     return finishWindowsAndroidLabReviewRun({ executeCommand, paths, request, runReviewPhase, running });
+  }
+  if (request.action === 'reviewScenario') {
+    return finishWindowsAndroidLabReviewScenarioRun({
+      executeCommand, paths, request, runScenario: runReviewScenario, running
+    });
   }
   if (request.action === 'request') {
     validateAndroidLabConfig(config);

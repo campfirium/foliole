@@ -57,8 +57,15 @@ final class FolioleCompanionWebViewSemanticAdapter {
         String testId,
         String attribute,
         String expected,
-        long timeoutMs
+        long timeoutMs,
+        JSONObject receipt
     ) throws Exception {
+        if ("__actionAccepted".equals(attribute)) {
+            JSONObject accepted = new JSONObject();
+            accepted.put("found", true);
+            accepted.put("value", receipt.optBoolean("ok") ? "true" : "false");
+            return accepted;
+        }
         long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
         JSONObject latest = new JSONObject();
         String script = "(function(){var node=document.querySelector('[data-testid=\"'+" +
