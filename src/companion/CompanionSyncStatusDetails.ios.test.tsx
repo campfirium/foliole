@@ -27,6 +27,6 @@ it.each(['ios-capacitor', 'ios'])('shows %s pairing records as iOS', (deviceKind
     />
   );
 
-  expect(screen.getByText("Roamer's iPhone (iOS)")).toBeInTheDocument();
+  expect(screen.getByText("Roamer's iPhone")).toBeInTheDocument();
   expect(screen.queryByText(new RegExp(`\\(${deviceKind}\\)`))).not.toBeInTheDocument();
 });

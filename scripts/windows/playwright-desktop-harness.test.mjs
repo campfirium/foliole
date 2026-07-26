@@ -119,7 +119,7 @@ describe('playwright desktop harness', () => {
           path.join(appRoot, 'dist', 'electron', 'main.js'),
           '--custom-feature',
           expect.stringMatching(/^--foliole-playwright-launch-id=/),
-          '--foliole-playwright-state-root=/tmp/foliole-playwright-state'
+          `--foliole-playwright-state-root=${stateRoot}`
         ],
         cwd: appRoot,
         env: {

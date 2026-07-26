@@ -104,7 +104,10 @@ it('keeps the iOS identity through Mac pairing request and completion', async ()
     deviceKind: 'ios-capacitor',
     deviceName: 'iPhone',
     endpointUrl: 'http://192.168.1.8:38641',
-    pairRequestId: 'pair-request-ios'
+    pairRequestId: 'pair-request-ios',
+    remotePeerId: 'desktop-mac',
+    remotePeerName: 'Roamer Mac',
+    remotePeerPlatform: 'macOS'
   });
   expect(result.current.pairingState).toEqual(expect.objectContaining({
     device_id: 'ios-test-device',

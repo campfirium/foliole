@@ -53,6 +53,10 @@ it('generates isolated producer packs for the paired iOS identity and failure ca
   expect(illegalDag.nodeVersionParents).toContainEqual(expect.objectContaining({
     parent_version_id: 'missing#ancestor'
   }));
+  expect(illegalDag.manifest.tables).toContainEqual({
+    name: 'node_sync_version_parents',
+    row_count: illegalDag.nodeVersionParents.length
+  });
   expect(corruptBytes.subarray(1)).toEqual(legalBytes.subarray(1));
   expect(corruptBytes[0]).not.toBe(legalBytes[0]);
 });

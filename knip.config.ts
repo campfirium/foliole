@@ -38,7 +38,13 @@ const config = {
     'wslpath',
     'xcrun'
   ],
-  ignoreDependencies: ['@capacitor/android', '@capacitor/core', 'prettier']
+  ignoreDependencies: [
+    '@capacitor/android',
+    '@capacitor/core',
+    '@lezer/common',
+    '@lezer/highlight',
+    'prettier'
+  ]
 };
 
 export default config;

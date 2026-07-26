@@ -28,6 +28,7 @@ export async function writeIllegalDagPack(
   const temporaryPath = `${outputPath}.db`;
   await fs.writeFile(temporaryPath, database);
   const sqlite = new BetterSqlite3(temporaryPath);
+  let versionParentsRowCount = 0;
   try {
     const versions = sqlite.prepare<{ objectId: string }, { version_id: string }>(
       'SELECT version_id FROM node_sync_versions WHERE object_id = @objectId'
@@ -42,6 +43,8 @@ export async function writeIllegalDagPack(
          VALUES (?, 'missing#ancestor', 0)`
       ).run(versionId);
     }
+    updateInnerTableRowCount(sqlite, 'node_sync_version_parents');
+    versionParentsRowCount = countSqliteRows(sqlite, 'node_sync_version_parents');
   } finally {
     sqlite.close();
   }
@@ -51,10 +54,31 @@ export async function writeIllegalDagPack(
   const manifest = JSON.parse(entries.get('manifest.json')?.toString('utf8') ?? '{}');
   manifest.database_uncompressed_sha256 = sha256Uri(mutatedDatabase);
   manifest.database_compressed_sha256 = sha256Uri(compressed);
+  updateManifestTableRowCount(manifest, 'node_sync_version_parents', versionParentsRowCount);
   await writeStoredZip(outputPath, [
     { name: 'manifest.json', content: Buffer.from(JSON.stringify(manifest, null, 2)) },
     { name: 'incoming.db.deflate', content: compressed }
   ]);
+}
+
+function updateInnerTableRowCount(sqlite: import('better-sqlite3').Database, tableName: string) {
+  const row = sqlite.prepare<{ key: string }, { value: string }>(
+    'SELECT value FROM pack_manifest WHERE key = @key'
+  ).get({ key: 'manifest_json' });
+  const manifest = JSON.parse(row?.value ?? '{}');
+  updateManifestTableRowCount(manifest, tableName, countSqliteRows(sqlite, tableName));
+  sqlite.prepare('UPDATE pack_manifest SET value = ? WHERE key = ?').run(JSON.stringify(manifest), 'manifest_json');
+}
+
+function countSqliteRows(sqlite: import('better-sqlite3').Database, tableName: string) {
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/u.test(tableName)) throw new Error(`invalid_table_name:${tableName}`);
+  return sqlite.prepare<{ count: number }>(`SELECT COUNT(*) AS count FROM "${tableName}"`).get()?.count ?? 0;
+}
+
+function updateManifestTableRowCount(manifest: { tables?: Array<{ name?: string; row_count?: number }> }, tableName: string, rowCount: number) {
+  const table = manifest.tables?.find((entry) => entry.name === tableName);
+  if (!table) throw new Error(`missing_manifest_table:${tableName}`);
+  table.row_count = rowCount;
 }
 
 function sha256Uri(value: Buffer) {
