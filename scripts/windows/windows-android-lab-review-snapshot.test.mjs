@@ -31,7 +31,8 @@ describe('Windows Android lab Review snapshot', () => {
     const calls = [];
     try {
       const databasePath = await pullAndroidReviewSnapshot({
-        adbPath: 'adb.exe', destination: root, endpoint: '192.168.1.8:34567', spawnImpl: successfulAdb(calls)
+        adbPath: 'adb.exe', appStopped: true, destination: root,
+        endpoint: '192.168.1.8:34567', spawnImpl: successfulAdb(calls)
       });
       expect(fs.readFileSync(databasePath).subarray(0, 16).toString()).toBe('SQLite format 3\0');
       expect(calls[0].args).toEqual([
@@ -42,5 +43,11 @@ describe('Windows Android lab Review snapshot', () => {
     } finally {
       fs.rmSync(root, { force: true, recursive: true });
     }
+  });
+
+  it('rejects callers that did not establish the stopped-app snapshot boundary', async () => {
+    await expect(pullAndroidReviewSnapshot({
+      adbPath: 'adb.exe', destination: 'unused', endpoint: '192.168.1.8:34567'
+    })).rejects.toMatchObject({ code: 'review_snapshot_requires_stopped_app' });
   });
 });

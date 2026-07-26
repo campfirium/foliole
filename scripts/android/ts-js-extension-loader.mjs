@@ -16,6 +16,16 @@ export async function resolve(specifier, context, nextResolve) {
         };
       }
     }
+    if (specifier.startsWith('.') && path.extname(specifier) === '' && context.parentURL?.endsWith('.ts')) {
+      const parentPath = fileURLToPath(context.parentURL);
+      const candidatePath = path.resolve(path.dirname(parentPath), `${specifier}.ts`);
+      if (fs.existsSync(candidatePath)) {
+        return {
+          shortCircuit: true,
+          url: pathToFileURL(candidatePath).href
+        };
+      }
+    }
     throw error;
   }
 }

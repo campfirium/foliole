@@ -62,6 +62,25 @@ async function restartApplication(config, endpoint, paths, executeCommand, setPh
   ], { cwd: paths.preview }, 'review_launch_verify_failed');
 }
 
+async function stopForSnapshot(config, endpoint, executeCommand, setPhase) {
+  setPhase('snapshot_force_stop');
+  await checked(executeCommand, config.adbPath, [
+    '-s', endpoint, 'shell', 'am', 'force-stop', APP_ID
+  ], {}, 'review_snapshot_stop_failed');
+}
+
+async function launchAfterSnapshot(config, endpoint, paths, executeCommand, setPhase) {
+  setPhase('snapshot_relaunch');
+  await checked(executeCommand, config.adbPath, [
+    '-s', endpoint, 'shell', 'am', 'start', '-n', APP_COMPONENT
+  ], {}, 'review_launch_failed');
+  await checked(executeCommand, path.join(config.nodeDirectory, 'node.exe'), [
+    path.join(paths.preview, 'scripts', 'android', 'verify-android-launch.mjs'),
+    '--adb', config.adbPath, '--serial', endpoint, '--app-id', APP_ID, '--component', APP_COMPONENT,
+    '--timeout-seconds', '30', '--stability-seconds', '3'
+  ], { cwd: paths.preview }, 'review_launch_verify_failed');
+}
+
 function assertAuditRuntime(paths) {
   const required = [
     path.join(paths.preview, 'scripts', 'electron-sqlite-runner.mjs'),
@@ -99,13 +118,31 @@ async function runAudit({ config, databasePath, deployment, evidenceRoot, execut
 }
 
 function persistPrepareSession(paths, request, deployment, audit) {
-  if (!audit?.selected?.fsrsNodeId || audit.selected.readingNodeIds?.length < 3) {
+  if (!audit?.selected?.fsrsNodeId || audit.selected.readingNodeIds?.length < 3 || !audit.current) {
     throw codedError('review_audit_invalid', 'prepare audit did not select the required acceptance objects');
   }
+  const [readNodeId, laterNodeId, dismissNodeId] = audit.selected.readingNodeIds;
   writeJsonAtomic(paths.reviewSession, {
+    baseline: audit.current,
     commitSha: request.commitSha, createdAt: new Date().toISOString(), deploymentRunId: deployment.runId,
     deviceIdentity: deployment.deviceIdentity, fsrsNodeId: audit.selected.fsrsNodeId,
-    prepareRunId: request.runId, readingNodeIds: audit.selected.readingNodeIds, schemaVersion: 1
+    expectedActions: [
+      { action: 'grade', itemKind: 'fsrs', nodeId: audit.selected.fsrsNodeId },
+      { action: 'read', itemKind: 'reading', nodeId: readNodeId },
+      { action: 'later', itemKind: 'reading', nodeId: laterNodeId },
+      { action: 'dismiss', itemKind: 'reading', nodeId: dismissNodeId }
+    ],
+    prepareRunId: request.runId, readingNodeIds: audit.selected.readingNodeIds, schemaVersion: 2,
+    selectionEvidence: { auditFile: 'review-audit.json', runId: request.runId }
+  });
+}
+
+function persistCaptureSession(paths, request, audit) {
+  const session = readJson(paths.reviewSession);
+  if (!session || !audit.current) throw codedError('review_audit_invalid', 'capture state is unavailable');
+  writeJsonAtomic(paths.reviewSession, {
+    ...session, captureRunId: request.runId, captured: audit.current,
+    capturedAt: audit.capturedAt ?? new Date().toISOString(), schemaVersion: 2
   });
 }
 
@@ -127,9 +164,9 @@ function writeFailureEvidence(paths, request, error) {
     writeJsonAtomic(output, {
       acceptance: unavailable, capturedAt: new Date().toISOString(), checkpoint: request.reviewPhase,
       commitSha: request.commitSha, deploymentRunId: deployment?.runId ?? null,
-      deviceIdentity: deployment?.deviceIdentity ?? null, errorCode: error.code || 'review_phase_failed',
-      errorMessage: error.message, fsrs: unavailable, pairing: unavailable, reading: [], resultStatus: 'failure',
-      runId: request.runId, scheduler: unavailable, schemaVersion: 2, selected: null, sync: unavailable
+      current: null, deviceIdentity: deployment?.deviceIdentity ?? null, errorCode: error.code || 'review_phase_failed',
+      errorMessage: error.message, issues: [], pairing: unavailable, resultStatus: 'failure',
+      runId: request.runId, scheduler: unavailable, schemaVersion: 3, selected: null, sync: unavailable, transitions: []
     });
   }
   const runnerLog = path.join(evidenceRoot, 'runner.log');
@@ -155,11 +192,16 @@ export async function runWindowsAndroidLabReviewPhase({
   const snapshotRoot = path.join(paths.root, `review-snapshot-${request.runId}`);
   fs.mkdirSync(evidenceRoot, { recursive: true });
   try {
+    await stopForSnapshot(config, device.endpoint, executeCommand, setPhase);
     setPhase('database_snapshot');
-    const databasePath = await pullSnapshot({ adbPath: config.adbPath, destination: snapshotRoot, endpoint: device.endpoint });
+    const databasePath = await pullSnapshot({
+      adbPath: config.adbPath, appStopped: true, destination: snapshotRoot, endpoint: device.endpoint
+    });
+    await launchAfterSnapshot(config, device.endpoint, paths, executeCommand, setPhase);
     setPhase('review_audit');
     const audit = await runAudit({ config, databasePath, deployment, evidenceRoot, executeCommand, paths, request, session });
     if (request.reviewPhase === 'prepare') persistPrepareSession(paths, request, deployment, audit);
+    if (request.reviewPhase === 'capture') persistCaptureSession(paths, request, audit);
     writeReviewSummary(evidenceRoot, request, deployment, audit);
     return audit;
   } finally {

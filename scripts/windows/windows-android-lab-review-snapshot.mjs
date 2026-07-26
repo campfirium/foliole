@@ -43,7 +43,12 @@ function assertSqlite(filePath) {
   if (header.toString('utf8') !== 'SQLite format 3\0') throw new Error('Android companion snapshot is not SQLite');
 }
 
-export async function pullAndroidReviewSnapshot({ adbPath, destination, endpoint, spawnImpl = spawn }) {
+export async function pullAndroidReviewSnapshot({ adbPath, appStopped, destination, endpoint, spawnImpl = spawn }) {
+  if (appStopped !== true) {
+    throw Object.assign(new Error('Android review snapshot requires a stopped application'), {
+      code: 'review_snapshot_requires_stopped_app'
+    });
+  }
   fs.mkdirSync(destination, { recursive: true });
   let lastError = null;
   for (const devicePath of DATABASE_CANDIDATES) {

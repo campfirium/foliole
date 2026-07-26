@@ -52,6 +52,11 @@ function executor(calls, audit = {}, auditExitCode = 0) {
     if (outputIndex >= 0) {
       writeJsonAtomic(args[outputIndex + 1], {
         acceptance: { status: 'available' }, resultStatus: auditExitCode ? 'failure' : 'success',
+        current: {
+          fsrs: { nodeId: 'fsrs-1' },
+          reading: ['read-1', 'read-2', 'read-3'].map((nodeId) => ({ nodeId })),
+          schedulerVersion: 'ts-fsrs@test'
+        },
         selected: { fsrsNodeId: 'fsrs-1', readingNodeIds: ['read-1', 'read-2', 'read-3'] }, ...audit
       });
       return { code: auditExitCode, lines: [], output: '' };
@@ -73,13 +78,51 @@ describe('Windows Android lab Review action', () => {
     const calls = [];
     await runWindowsAndroidLabReviewPhase({ executeCommand: executor(calls), paths, pullSnapshot, request });
     expect(readJson(paths.reviewSession)).toMatchObject({
+      baseline: { fsrs: { nodeId: 'fsrs-1' } },
       commitSha: SHA, deploymentRunId: '900-aaaaaaaaaaaa', deviceIdentity: 'A5-STABLE',
+      expectedActions: [
+        { action: 'grade', nodeId: 'fsrs-1' }, { action: 'read', nodeId: 'read-1' },
+        { action: 'later', nodeId: 'read-2' }, { action: 'dismiss', nodeId: 'read-3' }
+      ],
       fsrsNodeId: 'fsrs-1', readingNodeIds: ['read-1', 'read-2', 'read-3']
     });
     expect(readJson(path.join(paths.evidence, request.runId, 'summary.json'))).toMatchObject({
       checkpoint: 'prepare', selectedObjectCount: 4
     });
     expect(calls.some(({ args }) => args.some((value) => String(value).endsWith('electron-sqlite-runner.mjs')))).toBe(true);
+  });
+
+  it('force-stops before snapshot capture and relaunches before database audit', async () => {
+    const { paths, request } = fixture();
+    const events = [];
+    const executeCommand = async (...args) => {
+      events.push(args[1].join(' '));
+      return executor([])(...args);
+    };
+    const stoppedSnapshot = async (args) => {
+      expect(args.appStopped).toBe(true);
+      expect(events.at(-1)).toContain('am force-stop');
+      events.push('snapshot');
+      return pullSnapshot(args);
+    };
+    await runWindowsAndroidLabReviewPhase({ executeCommand, paths, pullSnapshot: stoppedSnapshot, request });
+    expect(events.findIndex((value) => value === 'snapshot'))
+      .toBeLessThan(events.findIndex((value) => value.includes('am start')));
+    expect(events.findIndex((value) => value.includes('am start')))
+      .toBeLessThan(events.findIndex((value) => value.includes('electron-sqlite-runner.mjs')));
+  });
+
+  it('persists the successful capture state for restart comparison', async () => {
+    const { paths, request } = fixture('capture');
+    writeJsonAtomic(paths.reviewSession, {
+      baseline: { fsrs: { nodeId: 'fsrs-1' }, reading: [], schedulerVersion: 'before' },
+      commitSha: SHA, deploymentRunId: '900-aaaaaaaaaaaa', deviceIdentity: 'A5-STABLE',
+      expectedActions: [], fsrsNodeId: 'fsrs-1', readingNodeIds: ['read-1', 'read-2', 'read-3']
+    });
+    await runWindowsAndroidLabReviewPhase({ executeCommand: executor([]), paths, pullSnapshot, request });
+    expect(readJson(paths.reviewSession)).toMatchObject({
+      captureRunId: request.runId, captured: { fsrs: { nodeId: 'fsrs-1' }, schedulerVersion: 'ts-fsrs@test' }
+    });
   });
 
   it('fails closed before device access when commit or acceptance session differs', async () => {

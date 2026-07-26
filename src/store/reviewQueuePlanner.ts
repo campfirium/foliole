@@ -62,7 +62,8 @@ function isSchedulableReadingNode(
 function isDueFsrsNode(
   node: ReviewQueueNode | undefined,
   nodesById: Record<string, ReviewQueueNode | undefined>,
-  now: string
+  now: string,
+  newDayStartsAtHour: number
 ): node is ReviewQueueNode {
   if (!node || !isFsrsReviewItemNode(node)) {
     return false;
@@ -70,7 +71,7 @@ function isDueFsrsNode(
   if (hasDeletedAncestor(node, nodesById)) {
     return false;
   }
-  return isReviewProfileDue(node.review, now, getCurrentReviewSchedulerSettings().newDayStartsAtHour);
+  return isReviewProfileDue(node.review, now, newDayStartsAtHour);
 }
 
 function isSchedulableFsrsNode(
@@ -137,6 +138,7 @@ function resolveReadingQueueNodeIds(args: {
 
 function collectReviewQueueCandidates(args: {
   includeScheduled: boolean;
+  newDayStartsAtHour: number;
   nodeOrder: string[];
   nodesById: Record<string, ReviewQueueNode | undefined>;
   now: string;
@@ -156,7 +158,7 @@ function collectReviewQueueCandidates(args: {
     }
     const isFsrsCandidate = args.includeScheduled
       ? isSchedulableFsrsNode(node, args.nodesById)
-      : isDueFsrsNode(node, args.nodesById, args.now);
+      : isDueFsrsNode(node, args.nodesById, args.now, args.newDayStartsAtHour);
     if (node && isFsrsCandidate) fsrsCandidates.push(node);
   });
   return { fsrsCandidates, readingCandidates };
@@ -166,6 +168,7 @@ export function buildReviewQueuePlan(args: {
   includeScheduled?: boolean;
   limit?: number;
   mode?: ReviewSessionMode;
+  newDayStartsAtHour?: number;
   nodeOrder: string[];
   nodesById: Record<string, ReviewQueueNode | undefined>;
   now: string;
@@ -173,11 +176,14 @@ export function buildReviewQueuePlan(args: {
   trashedNodeIds: string[];
 }): ReviewQueuePlan {
   const includeScheduled = args.includeScheduled ?? false;
+  const newDayStartsAtHour = args.newDayStartsAtHour
+    ?? getCurrentReviewSchedulerSettings().newDayStartsAtHour;
   const mode = args.mode ?? 'recommended';
   const pushQueueRules = args.pushQueueRules ?? getCurrentReviewSchedulerSettings().pushQueue;
   const trashedNodeIds = new Set(args.trashedNodeIds);
   const { fsrsCandidates, readingCandidates } = collectReviewQueueCandidates({
     includeScheduled,
+    newDayStartsAtHour,
     nodeOrder: args.nodeOrder,
     nodesById: args.nodesById,
     now: args.now,
