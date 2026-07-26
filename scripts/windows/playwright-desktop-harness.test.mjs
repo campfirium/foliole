@@ -108,12 +108,19 @@ describe('playwright desktop harness', () => {
         FOLIOLE_ELECTRON_PLAYWRIGHT_TIMEOUT_MS: '12345',
         FOLIOLE_ELECTRON_TEST_STATE_ROOT: '/tmp/foliole-playwright-state'
       },
-      existsSync: (filePath) => filePath !== '/workspace/foliole/node_modules/electron/dist/electron.exe'
+      extraArgs: ['--custom-feature'],
+      existsSync: (filePath) => filePath !== '/workspace/foliole/node_modules/electron/dist/electron.exe',
+      ownershipOptions: { platform: 'linux' }
     });
 
     expect(calls).toEqual([
-      {
-        args: [path.join(appRoot, 'dist', 'electron', 'main.js')],
+      expect.objectContaining({
+        args: [
+          path.join(appRoot, 'dist', 'electron', 'main.js'),
+          '--custom-feature',
+          expect.stringMatching(/^--foliole-playwright-launch-id=/),
+          '--foliole-playwright-state-root=/tmp/foliole-playwright-state'
+        ],
         cwd: appRoot,
         env: {
           FOLIOLE_ALLOW_PARALLEL_INSTANCE: '1',
@@ -128,7 +135,7 @@ describe('playwright desktop harness', () => {
         },
         executablePath: undefined,
         timeout: 12_345
-      }
+      })
     ]);
     expect(session.target.launchMode).toBe('args');
     expect(session.target.runtimeStateRoot).toBe(stateRoot);

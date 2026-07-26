@@ -5,6 +5,7 @@ import {
   type Page
 } from '@playwright/test';
 
+import { finalizeDesktopFixture } from '../../../scripts/desktop/playwright-desktop-fixture-teardown.mjs';
 import { launchDesktopSession } from '../../../scripts/desktop/playwright-desktop-harness.mjs';
 
 import { attachDesktopAcceptanceEvidence } from './acceptanceEvidence';
@@ -84,14 +85,15 @@ export const test = base.extend<DesktopFixtures>({
       await normalizeDesktopWindow(session);
       await use(session);
     } finally {
-      await attachDesktopAcceptanceEvidence(session.firstWindow, testInfo);
-      if (testInfo.status !== testInfo.expectedStatus) {
-        await testInfo.attach('desktop-failure-diagnostics', {
+      await finalizeDesktopFixture({
+        attachEvidence: () => attachDesktopAcceptanceEvidence(session.firstWindow, testInfo),
+        attachDiagnostics: async () => testInfo.attach('desktop-failure-diagnostics', {
           body: JSON.stringify(await session.collectDiagnostics(), null, 2),
           contentType: 'application/json'
-        });
-      }
-      await session.close();
+        }),
+        close: () => session.close(),
+        failed: testInfo.status !== testInfo.expectedStatus
+      });
     }
   },
   desktopApp: async ({ desktopSession }, use) => {

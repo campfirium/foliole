@@ -1,4 +1,3 @@
-import fs from 'node:fs';
 import process from 'node:process';
 
 import {
@@ -7,14 +6,12 @@ import {
   createRendererConsoleCollector,
   createRendererPageEventCollector
 } from './playwright-desktop-diagnostics.mjs';
-import { closeDesktopApplication } from './playwright-desktop-close.mjs';
 import {
-  createDesktopLaunchOptions,
-  resolveDesktopAppRoot,
-  resolveDesktopLaunchTarget
-} from './playwright-desktop-launch-target.mjs';
-import { createDesktopIsolationContext } from './playwright-desktop-isolation.mjs';
-import { assertRendererDistFresh } from './playwright-renderer-dist-freshness.mjs';
+  closeDesktopSessionRuntime,
+  ownDesktopApplication,
+  prepareDesktopLaunch
+} from './playwright-desktop-session.mjs';
+import { resolveDesktopAppRoot } from './playwright-desktop-launch-target.mjs';
 import { waitForDesktopRootWindow } from './playwright-desktop-window.mjs';
 
 const DEFAULT_TIMEOUT_MS = 120_000;
@@ -143,25 +140,19 @@ export async function launchDesktopSession({
   appRoot = resolveDesktopAppRoot(),
   electronLauncher = undefined,
   env = process.env,
-  existsSync = fs.existsSync,
+  existsSync = undefined,
   extraArgs = [],
   isolationOptions = {},
+  ownershipOptions = undefined,
   timeoutMs = resolveTimeoutMs(
     env.FOLIOLE_ELECTRON_PLAYWRIGHT_TIMEOUT_MS ?? env.FOLIOLE_ELECTRON_SPIKE_TIMEOUT_MS
   )
 } = {}) {
-  const target = resolveDesktopLaunchTarget(appRoot, existsSync, env);
-  if (target.missingPaths.length > 0) {
-    throw new Error(`missing build output: ${target.missingPaths.join(', ')}`);
-  }
-  if (target.launchMode !== 'installed') {
-    assertRendererDistFresh(target, env);
-  }
-
+  const prepared = await prepareDesktopLaunch({
+    appRoot, env, existsSync, extraArgs, isolationOptions, timeoutMs
+  });
+  const { isolation, launchOptions, target } = prepared;
   const launcher = electronLauncher ?? (await loadElectronLauncher());
-  const isolation = createDesktopIsolationContext(env, isolationOptions);
-  target.runtimeStateRoot = isolation.runtimeStateRoot;
-  const launchOptions = createDesktopLaunchOptions(target, timeoutMs, env, isolation, existsSync, extraArgs);
   const deadline = Date.now() + timeoutMs;
   let electronApp;
   try {
@@ -170,6 +161,7 @@ export async function launchDesktopSession({
     isolation.cleanup();
     throw error;
   }
+  const ownership = await ownDesktopApplication(electronApp, prepared, ownershipOptions);
   const mainProcessCollector = createMainProcessLogCollector(electronApp.process());
   let rendererConsoleCollector;
   let rendererPageEventCollector;
@@ -195,8 +187,7 @@ export async function launchDesktopSession({
     const failureCollectors = error?.rendererCollectors;
     (failureCollectors?.rendererConsoleCollector ?? rendererConsoleCollector)?.dispose?.();
     (failureCollectors?.rendererPageEventCollector ?? rendererPageEventCollector)?.dispose?.();
-    await closeDesktopApplication(electronApp);
-    isolation.cleanup();
+    await closeDesktopSessionRuntime(electronApp, ownership, isolation);
     throw error;
   }
 
@@ -220,13 +211,13 @@ export async function launchDesktopSession({
       rendererConsoleCollector.dispose();
       rendererPageEventCollector.dispose();
       mainProcessCollector.dispose();
-      await closeDesktopApplication(electronApp);
-      isolation.cleanup();
+      await closeDesktopSessionRuntime(electronApp, ownership, isolation);
     },
     appReady,
     electronApp,
     firstWindow,
     launchOptions,
+    ownership,
     snapshot,
     target,
     timeoutMs

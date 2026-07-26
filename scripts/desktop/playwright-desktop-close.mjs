@@ -1,22 +1,28 @@
-import { killPid } from '../lib/process-control.mjs';
+import { closeOwnedDesktopLaunch } from './playwright-desktop-ownership.mjs';
 
 function delay(ms) {
   return new Promise((resolve) => globalThis.setTimeout(resolve, ms));
 }
 
-export async function closeDesktopApplication(electronApp, { gracefulTimeoutMs = 5000 } = {}) {
+export async function closeDesktopApplication(electronApp, {
+  gracefulTimeoutMs = 5000,
+  ownership,
+  ownershipCloseOptions
+} = {}) {
   let pid;
   try {
     pid = electronApp.process()?.pid;
   } catch {
-    return;
+    return { confirmedExited: true, reason: 'already-closed' };
   }
   const closePromise = electronApp.close();
   const closedGracefully = await Promise.race([
     closePromise.then(() => true),
     delay(gracefulTimeoutMs).then(() => false)
   ]);
-  if (closedGracefully || !pid) return;
-  await killPid(pid, { timeoutMs: 3000 });
-  await Promise.race([closePromise, delay(1000)]);
+  if (closedGracefully || !pid) {
+    if (!ownership?.managed) return { confirmedExited: true, reason: 'graceful' };
+    return closeOwnedDesktopLaunch(ownership, ownershipCloseOptions);
+  }
+  return closeOwnedDesktopLaunch(ownership, ownershipCloseOptions);
 }

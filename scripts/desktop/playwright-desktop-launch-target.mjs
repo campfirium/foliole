@@ -92,7 +92,10 @@ export function resolveElectronExecutablePath(appRoot, env = process.env, exists
   const resolvedAppRoot = resolveHostPath(appRoot);
   const candidatePaths = process.platform === 'win32'
     ? [joinHostPath(resolvedAppRoot, 'node_modules', 'electron', 'dist', 'electron.exe')]
-    : [joinHostPath(resolvedAppRoot, 'node_modules', 'electron', 'dist', 'electron')];
+    : [
+        joinHostPath(resolvedAppRoot, 'node_modules', 'electron', 'dist', 'Electron.app', 'Contents', 'MacOS', 'Electron'),
+        joinHostPath(resolvedAppRoot, 'node_modules', 'electron', 'dist', 'electron')
+      ];
   return candidatePaths.find((candidatePath) => existsSync(candidatePath));
 }
 
