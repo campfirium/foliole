@@ -104,19 +104,33 @@ function getDocLineStartPosition(view: EditorView, beforeLineNumber: number) {
   return view.state.doc.line(beforeLineNumber).from;
 }
 
+function getDiffLineKey(kind: EditorDiffLineKind, lineNumber: number) {
+  return `${kind}:${lineNumber}`;
+}
+
+function getDiffLineEdgeClass(line: EditorDiffLineDecoration, lineKeys: ReadonlySet<string>) {
+  const previousLineNumber = line.lineNumber - 1;
+  const nextLineNumber = line.lineNumber + 1;
+  const hasPrevious = lineKeys.has(getDiffLineKey(line.kind, previousLineNumber));
+  const hasNext = lineKeys.has(getDiffLineKey(line.kind, nextLineNumber));
+  return [hasPrevious ? null : 'cm-diff-line-first', hasNext ? null : 'cm-diff-line-last'].filter(Boolean).join(' ');
+}
+
 export function buildEditorDiffDecorations(view: EditorView, config: EditorDiffDecorations | null | undefined): DecorationSet {
   if (!config) {
     return Decoration.none;
   }
 
   const ranges: Range<Decoration>[] = [];
+  const lineKeys = new Set(config.lineDecorations.map((line) => getDiffLineKey(line.kind, line.lineNumber)));
 
   config.lineDecorations.forEach((line) => {
     if (line.lineNumber < 1 || line.lineNumber > view.state.doc.lines) {
       return;
     }
     const lineFrom = view.state.doc.line(line.lineNumber).from;
-    ranges.push(Decoration.line({ attributes: { class: `cm-diff-line cm-diff-line-${line.kind}` } }).range(lineFrom));
+    const edgeClass = getDiffLineEdgeClass(line, lineKeys);
+    ranges.push(Decoration.line({ attributes: { class: `cm-diff-line cm-diff-line-${line.kind} ${edgeClass}` } }).range(lineFrom));
   });
 
   config.spacerDecorations.forEach((spacer) => {

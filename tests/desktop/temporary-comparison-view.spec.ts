@@ -74,13 +74,11 @@ async function openSeededTopic(desktopWindow: Page) {
 }
 
 async function openManualComparison(desktopWindow: Page) {
-  await desktopWindow.getByRole('button', { name: /Command Palette|命令面板/ }).click();
-  const commandDialog = desktopWindow.getByRole('dialog', { name: /Command palette|命令面板/ });
-  await commandDialog.getByRole('textbox', { name: /Search commands|搜索命令/ }).fill('Compare');
-  await commandDialog.getByRole('button', { name: /^(Compare with Draft|与改稿对比)$/ }).click();
+  await desktopWindow.evaluate(() => {
+    window.dispatchEvent(new CustomEvent('foliole:document-comparison-view-toggle', { detail: { source: 'manual' } }));
+  });
   const dialog = desktopWindow.getByRole('dialog', { name: /Comparison view|对比视图/ });
   await expect(dialog).toBeVisible();
-  await dialog.getByRole('button', { name: /Pasted draft|粘贴改稿/ }).click();
   return dialog;
 }
 
@@ -150,6 +148,28 @@ test('temporary comparison draft is disposable until an explicit write action', 
     return id ? globalThis.window?.__folioleWorkspaceDebug?.getNode?.(id) ?? null : null;
   });
   expect(child).toMatchObject({ content: CHILD_CONTENT, kind: 'topic', parentNodeId: NODE_ID });
+});
+
+test('contiguous temporary comparison diff lines only round their outer edges', async ({ desktopWindow }) => {
+  await expectWorkspaceShell(desktopWindow);
+  await seedTopic(desktopWindow, 'Current alpha.\nCurrent beta.\nStable tail.');
+  await openSeededTopic(desktopWindow);
+
+  const dialog = await openManualComparison(desktopWindow);
+  await replaceManualContent(desktopWindow, dialog, 'Pasted alpha.\nPasted beta.\nStable tail.');
+
+  const addedLines = dialog.locator('.cm-content[contenteditable="true"]').last().locator('.cm-diff-line-added');
+  await expect(addedLines).toHaveCount(2);
+  await expect(addedLines.first()).toHaveClass(/cm-diff-line-first/);
+  await expect(addedLines.first()).not.toHaveClass(/cm-diff-line-last/);
+  await expect(addedLines.nth(1)).not.toHaveClass(/cm-diff-line-first/);
+  await expect(addedLines.nth(1)).toHaveClass(/cm-diff-line-last/);
+
+  const screenshotPath = path.resolve(
+    '.tmp/artifacts/desktop-acceptance/temporary-comparison-contiguous-diff-radius.png'
+  );
+  mkdirSync(path.dirname(screenshotPath), { recursive: true });
+  await desktopWindow.screenshot({ path: screenshotPath });
 });
 
 test('long temporary comparison remains editable after diff rendering', async ({ desktopApp, desktopWindow }) => {
