@@ -108,7 +108,12 @@ async function wakeDevice(invoke, adb, adbArgs) {
 
 function assertFolioleForeground(windowState) {
   const focus = /mCurrentFocus=[^\n]*\s([A-Za-z0-9._]+)\//u.exec(windowState)?.[1] || '';
-  if (focus !== APP_ID) throw codedError('wrong_page_or_system_ui', `Foliole is not foreground; current package is ${focus || 'unknown'}`);
+  const resumed = new RegExp(`mResumeActivity:[^\\n]*\\s${APP_ID.replaceAll('.', '\\.')}[/.]`, 'u').test(windowState);
+  const target = new RegExp(`\\b(?:mObscuringWindow|ime(?:Layering|Input|Control)Target)[^\\n]*\\s${APP_ID.replaceAll('.', '\\.')}[/.]`, 'u')
+    .test(windowState);
+  if (focus !== APP_ID && !resumed && !target) {
+    throw codedError('wrong_page_or_system_ui', `Foliole is not foreground; current package is ${focus || 'unknown'}`);
+  }
 }
 
 function instrumentationArgs(input) {

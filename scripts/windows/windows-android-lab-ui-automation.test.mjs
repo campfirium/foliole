@@ -48,7 +48,9 @@ function successfulExecute(calls) {
     const joined = args.join(' ');
     if (joined.includes('dumpsys window policy')) return result('mShowingLockscreen=false\n');
     if (joined.includes('dumpsys power')) return result('mWakefulness=Awake\n');
-    if (joined.includes('dumpsys window windows')) return result('mCurrentFocus=Window{abc u0 com.foliole.android/com.foliole.android.MainActivity}\n');
+    if (joined.includes('dumpsys window windows')) {
+      return result('mResumeActivity:ActivityRecord{abc u0 com.foliole.android/.MainActivity} t312}\n');
+    }
     if (joined.includes('shell wm size')) return result('Physical size: 1080x1920\n');
     if (joined.includes('dumpsys input')) return result('SurfaceOrientation: 0\n');
     if (joined.includes('exec-out screencap')) return result('', Buffer.from([0x89, 0x50, 0x4e, 0x47]));
