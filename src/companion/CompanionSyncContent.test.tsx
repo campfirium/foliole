@@ -144,7 +144,10 @@ function pairedWorkspaceSync() {
     device_name: 'Android Emulator',
     is_paired: true,
     paired_at: '2026-04-24T10:03:00.000Z',
-    primary_device_id: 'device-desktop'
+    primary_device_id: 'device-desktop',
+    remote_peer_id: 'device-desktop',
+    remote_peer_name: 'MacBook Pro',
+    remote_peer_platform: 'macOS'
   };
   return workspaceSync;
 }
@@ -167,7 +170,7 @@ function testShowsSyncStatusDetails() {
   render(<TestSyncContent workspaceSync={workspaceSync} />);
 
   expect(screen.getByText('Last sync')).toBeInTheDocument();
-  expect(screen.getByText('Android Emulator')).toBeInTheDocument();
+  expect(screen.getByText('MacBook Pro (macOS)')).toBeInTheDocument();
   expect(screen.getByText('Activity')).toBeInTheDocument();
   expect(screen.getByText('Downloaded 1 topic body in this sync.')).toBeInTheDocument();
   expect(screen.getByText(/^Checked \d/)).toBeInTheDocument();
@@ -202,7 +205,10 @@ async function testCompletesApprovedPairing() {
   workspaceSync.pendingPairRequest = {
     endpointUrl: 'http://192.168.1.8:38641',
     expiresAt: '2026-04-24T10:02:00.000Z',
-    pairRequestId: 'pair-request-1'
+    pairRequestId: 'pair-request-1',
+    remotePeerId: 'device-desktop',
+    remotePeerName: 'Desktop',
+    remotePeerPlatform: 'macOS'
   };
   workspaceSync.pairingStatus = 'awaiting-approval';
 
@@ -222,7 +228,10 @@ async function testKeepsApprovalPollingBelowDesktopRateLimit() {
   workspaceSync.pendingPairRequest = {
     endpointUrl: 'http://192.168.1.8:38641',
     expiresAt: '2026-04-24T10:02:00.000Z',
-    pairRequestId: 'pair-request-1'
+    pairRequestId: 'pair-request-1',
+    remotePeerId: 'device-desktop',
+    remotePeerName: 'Desktop',
+    remotePeerPlatform: 'macOS'
   };
   workspaceSync.pairingStatus = 'awaiting-approval';
 
