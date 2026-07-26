@@ -83,6 +83,13 @@ describe('Windows Android Lab semantic UI automation', () => {
     expect(calls[0]).toEqual({
       args: ['scripts/android/windows-gradle-check.sh', 'assembleDebugAndroidTest'], command: 'bash.exe'
     });
+    expect(calls).toContainEqual({
+      args: [
+        '-s', '192.168.0.107:38717', 'install', '-r', '-t',
+        'C:\\dev\\foliole-android-lab-preview\\android\\app\\build\\outputs\\apk\\androidTest\\debug\\app-debug-androidTest.apk'
+      ],
+      command: 'adb.exe'
+    });
     expect(calls.some((call) => call.args.includes('com.foliole.android.FolioleCompanionWebViewAutomationTest#performsBoundedSemanticAction'))).toBe(true);
     expect(JSON.parse(fs.readFileSync(path.join(root, 'action-receipt.json'), 'utf8'))).toMatchObject({
       adapter: 'instrumentation-evaluateJavascript', targetTestId: 'companion-tab-settings'
