@@ -63,6 +63,7 @@ const workspaceSyncMock = vi.hoisted(() => ({
   recordCompanionWorkspaceSyncEvent: vi.fn(),
   resolveReachableCompanionWorkspaceSyncEndpoint: vi.fn(async (endpointUrl: string) => endpointUrl)
 }));
+const schedulerSettingsMock = vi.hoisted(() => ({ hydrate: vi.fn(async () => undefined) }));
 
 vi.mock('../shared/platform/companionDesktopSyncObjects', () => syncObjectsMock);
 vi.mock('../shared/platform/companionSyncObjects', () => ({
@@ -77,6 +78,9 @@ vi.mock('../shared/platform/companionWorkspaceSync', () => ({
   resolveReachableCompanionWorkspaceSyncEndpoint: workspaceSyncMock.resolveReachableCompanionWorkspaceSyncEndpoint,
   saveCompanionSyncOnboardingStatus: vi.fn(),
   saveCompanionWorkspaceSyncEndpoint: vi.fn()
+}));
+vi.mock('./companionReviewSchedulerSettingsHydration', () => ({
+  hydrateCompanionReviewSchedulerSettings: schedulerSettingsMock.hydrate
 }));
 vi.mock('./useCompanionWorkspaceAutoSync', () => ({
   useForegroundAutoSync: vi.fn()
@@ -142,6 +146,7 @@ async function testManualSyncRefreshesReadableArticle() {
   const { result } = renderCompanionWorkspaceSyncHook(useCompanionWorkspaceSync);
 
   await waitFor(() => expect(result.current.status).toBe('idle'));
+  expect(schedulerSettingsMock.hydrate).toHaveBeenCalledTimes(1);
   await act(async () => {
     await result.current.pullFromDesktop('http://10.0.2.2:38641');
   });
@@ -151,6 +156,7 @@ async function testManualSyncRefreshesReadableArticle() {
     expect.objectContaining({ onStructureSynced: expect.any(Function) })
   );
   expect(workspaceSyncMock.loadCompanionWorkspaceSyncState).toHaveBeenCalledTimes(2);
+  expect(schedulerSettingsMock.hydrate).toHaveBeenCalledTimes(2);
   expect(result.current.readableArticle?.nodeId).toBe('topic-1');
   expect(result.current.status).toBe('idle');
 }

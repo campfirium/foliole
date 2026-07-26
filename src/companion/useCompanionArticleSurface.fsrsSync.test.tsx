@@ -145,7 +145,7 @@ function createFloatingBar() {
   };
 }
 
-function expectFsrsReviewRecordSaved() {
+function expectFsrsReviewRecordSaved(grade: 1 | 2 | 3 | 4) {
   expect(syncObjectMock.saveCompanionSyncNodeReviewRecord).toHaveBeenCalledWith(expect.objectContaining({
     nodeId: 'item-1',
     review: expect.objectContaining({
@@ -167,7 +167,7 @@ function expectFsrsReviewRecordSaved() {
         last_review: '2026-04-20T08:00:00.000Z',
         scheduled_days: 2
       }),
-      grade: 3,
+      grade,
       reviewedAt: REVIEWED_AT,
       schedulerVersion: getReviewSchedulerVersion(hydratedReviewSchedulerSettings)
     })
@@ -195,15 +195,15 @@ describe('useCompanionArticleSurface fsrs sync', () => {
     syncObjectMock.saveCompanionSyncNodeReviewRecord.mockClear();
   });
 
-  it('persists fsrs review grades with a review log draft', async () => {
+  it.each([1, 2, 3, 4] as const)('persists FSRS grade %s with a review log draft', async (grade) => {
     const workspaceSync = createWorkspaceSync();
     const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
 
     await act(async () => {
-      await result.current.handleGradeReview(3);
+      await result.current.handleGradeReview(grade);
     });
 
-    expectFsrsReviewRecordSaved();
+    expectFsrsReviewRecordSaved(grade);
     expect(syncObjectMock.saveCompanionSyncNodeReviewRecord.mock.invocationCallOrder[0]!)
       .toBeLessThan(workspaceSync.replaceSnapshot.mock.invocationCallOrder[0]!);
   });

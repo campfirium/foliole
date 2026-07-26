@@ -1,12 +1,19 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import {
   DEFAULT_REVIEW_SCHEDULER_SETTINGS,
+  getReviewSchedulerVersion,
   hydrateCurrentReviewSchedulerSettings
 } from '../features/settings/model/reviewSchedulerSettings';
 
-import { resolveCompanionReviewSession } from './companionReviewSession';
+import { gradeCompanionReviewCard, resolveCompanionReviewSession } from './companionReviewSession';
+
+const schedulerGrade = vi.fn();
+
+vi.mock('../features/review/model/reviewSchedulerFactory', () => ({
+  createReviewSchedulerAdapter: () => ({ grade: schedulerGrade })
+}));
 
 type SnapshotNode = WorkspaceSnapshot['nodesById'][string];
 
@@ -54,6 +61,7 @@ function createSnapshot() {
 describe('companion review scheduler queue hydration', () => {
   beforeEach(() => {
     hydrateCurrentReviewSchedulerSettings(DEFAULT_REVIEW_SCHEDULER_SETTINGS);
+    schedulerGrade.mockReset();
   });
 
   it('uses hydrated review scheduler settings for due queue planning', () => {
@@ -67,5 +75,40 @@ describe('companion review scheduler queue hydration', () => {
 
     expect(session.queueNodeIds).toEqual([]);
     expect(session.scheduledFsrsCount).toBe(2);
+  });
+
+  it('records the same hydrated settings version used by queue planning', async () => {
+    const settings = {
+      ...DEFAULT_REVIEW_SCHEDULER_SETTINGS,
+      desiredRetention: 0.82,
+      newDayStartsAtHour: 10,
+      updatedAt: '2026-04-22T05:55:00.000Z'
+    };
+    hydrateCurrentReviewSchedulerSettings(settings);
+    schedulerGrade.mockResolvedValue({
+      card: {
+        difficulty: 3.8,
+        due: '2026-04-25T08:10:00.000Z',
+        elapsed_days: 0,
+        lapses: 0,
+        last_review: '2026-04-22T08:10:00.000Z',
+        reps: 4,
+        scheduled_days: 3,
+        stability: 3.4,
+        state: 2
+      },
+      reviewed_at: '2026-04-22T08:10:00.000Z'
+    });
+
+    const snapshot = createSnapshot();
+    expect(resolveCompanionReviewSession(snapshot, '2026-04-22T00:00:00.000Z').queueNodeIds).toEqual([]);
+    const result = await gradeCompanionReviewCard({
+      grade: 3,
+      nodeId: 'item-1',
+      now: '2026-04-22T08:10:00.000Z',
+      snapshot
+    });
+
+    expect(result?.reviewLog.schedulerVersion).toBe(getReviewSchedulerVersion(settings));
   });
 });

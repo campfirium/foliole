@@ -9,6 +9,12 @@ import {
   syncPlatformMock
 } from './companionWorkspaceSyncFlow.testHarness';
 
+const schedulerSettingsMock = vi.hoisted(() => ({ hydrate: vi.fn(async () => undefined) }));
+
+vi.mock('./companionReviewSchedulerSettingsHydration', () => ({
+  hydrateCompanionReviewSchedulerSettings: schedulerSettingsMock.hydrate
+}));
+
 async function testRefreshesVisibleWorkspaceSnapshotAfterStructureSync() {
   const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
   const syncedSnapshot = createWorkspaceSnapshot('synced-topic');
@@ -38,6 +44,7 @@ async function testRefreshesVisibleWorkspaceSnapshotAfterStructureSync() {
   expect(setState).toHaveBeenLastCalledWith(expect.objectContaining({
     workspace_snapshot: syncedSnapshot
   }));
+  expect(schedulerSettingsMock.hydrate).toHaveBeenCalledOnce();
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenLastCalledWith(expect.objectContaining({
     status: 'completed'
   }));
