@@ -1,6 +1,8 @@
 // @vitest-environment node
+/* global process */
 
 import fs from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
 import Database from 'better-sqlite3';
@@ -26,9 +28,11 @@ function createDatabase(settings = { ...DEFAULT_REVIEW_SCHEDULER_SETTINGS, desir
     CREATE TABLE sync_object_state (object_type TEXT, object_id TEXT, sync_dirty INTEGER);
     CREATE TABLE companion_meta (key TEXT PRIMARY KEY, value TEXT);
   `);
-  db.prepare('INSERT INTO setting_records VALUES (?, ?, ?, ?, NULL)').run(
-    'review_scheduler_settings', JSON.stringify(settings), '2026-07-25T00:00:00.000Z', 'desktop'
-  );
+  if (settings) {
+    db.prepare('INSERT INTO setting_records VALUES (?, ?, ?, ?, NULL)').run(
+      'review_scheduler_settings', JSON.stringify(settings), '2026-07-25T00:00:00.000Z', 'desktop'
+    );
+  }
   db.prepare('INSERT INTO nodes VALUES (?, ?, NULL, ?, ?)').run('fsrs-1', 'answer', 'private body', 'private title');
   db.prepare('INSERT INTO node_review VALUES (?, ?, NULL, 2, 4, 1)').run('fsrs-1', '2026-07-25T00:00:00.000Z');
   for (const id of ['read-1', 'read-2', 'read-3']) {
@@ -53,13 +57,11 @@ describe('Windows Android lab Review audit', () => {
     const audit = auditAndroidReviewDatabase({
       context, databasePath, now: '2026-07-26T00:00:00.000Z'
     });
+    expect(audit.resultStatus).toBe('success');
     expect(audit.selected).toEqual({ fsrsNodeId: 'fsrs-1', readingNodeIds: ['read-1', 'read-2', 'read-3'] });
-    expect(audit.pairingTarget).toBe('windows_executor');
-    expect(audit.scheduler.schedulerVersion).toContain('dr=0.85');
-    expect(Object.keys(audit.fsrs).sort()).toEqual([
-      'dirty', 'due', 'itemKind', 'lapses', 'last_review_at', 'nodeId', 'reps',
-      'reviewLogCount', 'reviewLogOutgoing', 'schedulerVersion', 'state'
-    ]);
+    expect(audit.pairing.value).toEqual({ endpointUrl: 'http://127.0.0.1:38641', target: 'windows_executor' });
+    expect(audit.scheduler.value).toMatchObject({ deviceId: 'desktop', rawValue: { desiredRetention: 0.85 } });
+    expect(audit.fsrs.value).toMatchObject({ nodeId: 'fsrs-1', outgoing: { recordPresent: false, syncDirty: null } });
     const serialized = JSON.stringify(audit);
     for (const forbidden of ['private body', 'private title', 'secret read', databasePath, 'attachment']) {
       expect(serialized).not.toContain(forbidden);
@@ -77,12 +79,63 @@ describe('Windows Android lab Review audit', () => {
         readingNodeIds: ['read-3', 'read-2', 'read-1']
       }
     });
-    expect(audit.reading.map(({ nodeId }) => nodeId)).toEqual(['read-3', 'read-2', 'read-1']);
+    expect(audit.reading.map(({ value }) => value.nodeId)).toEqual(['read-3', 'read-2', 'read-1']);
   });
 
-  it('rejects default scheduler settings and insufficient acceptance data', () => {
-    expect(() => auditAndroidReviewDatabase({
-      context, databasePath: createDatabase(DEFAULT_REVIEW_SCHEDULER_SETTINGS)
-    })).toThrow('still default');
+  it('keeps fixed pairing, sync, and acceptance diagnostics when scheduler settings are missing', () => {
+    const audit = auditAndroidReviewDatabase({
+      context, databasePath: createDatabase(null), now: '2026-07-26T00:00:00.000Z'
+    });
+    expect(audit).toMatchObject({
+      acceptance: { status: 'available' }, pairing: { status: 'available' }, resultStatus: 'failure',
+      errorCode: 'review_scheduler_settings_missing', issues: [{ name: 'scheduler', status: 'missing' }],
+      scheduler: { error: 'review scheduler settings are missing', status: 'missing' },
+      sync: { status: 'available', value: { reviewLogPushCursor: null } }
+    });
+    expect(audit.selected).toEqual({ fsrsNodeId: 'fsrs-1', readingNodeIds: ['read-1', 'read-2', 'read-3'] });
+  });
+
+  it('reports default settings and acceptance gaps without suppressing either failure', () => {
+    const databasePath = createDatabase(DEFAULT_REVIEW_SCHEDULER_SETTINGS);
+    const db = new Database(databasePath);
+    db.exec("DELETE FROM node_reading WHERE node_id IN ('read-2', 'read-3')");
+    db.close();
+    const audit = auditAndroidReviewDatabase({ context, databasePath });
+    expect(audit.scheduler).toMatchObject({ status: 'invalid', error: 'review scheduler settings are still default' });
+    expect(audit.scheduler.value).toMatchObject({ deviceId: 'desktop', rawValue: DEFAULT_REVIEW_SCHEDULER_SETTINGS });
+    expect(audit.acceptance).toMatchObject({
+      status: 'invalid', value: { readingNodeIds: ['read-1'], required: { fsrs: 1, reading: 3 } }
+    });
+    expect(audit.acceptance.error).toContain('fsrs=1, reading=1, required=1+3');
+    expect(audit.resultStatus).toBe('failure');
+  });
+
+  it('keeps the internal pairing target while omitting unrelated URL credentials', () => {
+    const databasePath = createDatabase();
+    const db = new Database(databasePath);
+    db.prepare("UPDATE companion_meta SET value = ? WHERE key = 'workspace_sync_endpoint_url'")
+      .run('https://operator:password@lab.internal/sync?workspace=foliole&token=secret-token');
+    db.close();
+    const audit = auditAndroidReviewDatabase({ context, databasePath });
+    expect(audit.pairing.value.endpointUrl).toContain('lab.internal/sync?workspace=foliole');
+    expect(audit.pairing.value.endpointUrl).toContain('token=%5Bcredential-omitted%5D');
+    expect(JSON.stringify(audit)).not.toContain('password');
+    expect(JSON.stringify(audit)).not.toContain('secret-token');
+  });
+
+  it('writes failure evidence before the audit CLI exits nonzero', () => {
+    const databasePath = createDatabase(null);
+    const output = path.join(path.dirname(databasePath), 'review-audit.json');
+    const result = spawnSync(process.execPath, [
+      '--experimental-strip-types', path.resolve('scripts/windows/windows-android-lab-review-audit.ts'),
+      '--checkpoint', 'prepare', '--commit', context.commitSha, '--database', databasePath,
+      '--deployment-run', context.deploymentRunId, '--device', context.deviceIdentity,
+      '--output', output, '--run', context.runId
+    ], { cwd: process.cwd(), encoding: 'utf8', env: process.env });
+    expect(result.status).not.toBe(0);
+    expect(JSON.parse(fs.readFileSync(output, 'utf8'))).toMatchObject({
+      pairing: { status: 'available' }, resultStatus: 'failure', scheduler: { status: 'missing' },
+      sync: { status: 'available' }
+    });
   });
 });

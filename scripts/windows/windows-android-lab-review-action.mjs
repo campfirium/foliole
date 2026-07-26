@@ -85,11 +85,17 @@ async function runAudit({ config, databasePath, deployment, evidenceRoot, execut
     '--output', output, '--run', request.runId,
     ...(session ? ['--session', paths.reviewSession] : [])
   ];
-  const result = await checked(
-    executeCommand, path.join(config.nodeDirectory, 'node.exe'), args, { cwd: paths.preview }, 'review_audit_failed'
-  );
+  const result = await executeCommand(path.join(config.nodeDirectory, 'node.exe'), args, {
+    cwd: paths.preview, timeoutCode: 'review_audit_failed_timeout', timeoutMs: COMMAND_TIMEOUT_MS
+  });
   fs.writeFileSync(path.join(evidenceRoot, 'runner.log'), `${result.lines?.join('\n') || ''}\n`, 'utf8');
-  return readJson(output);
+  const audit = readJson(output);
+  if (result.code !== 0) {
+    throw codedError(audit?.errorCode || 'review_audit_failed',
+      result.lines?.at(-1) || audit?.scheduler?.error || audit?.acceptance?.error || `audit exited ${result.code}`);
+  }
+  if (!audit || audit.resultStatus !== 'success') throw codedError('review_audit_invalid', 'audit result is unavailable or incomplete');
+  return audit;
 }
 
 function persistPrepareSession(paths, request, deployment, audit) {
@@ -108,6 +114,30 @@ function writeReviewSummary(evidenceRoot, request, deployment, audit) {
     checkpoint: request.reviewPhase, commitSha: request.commitSha, deploymentRunId: deployment.runId,
     deviceIdentity: deployment.deviceIdentity, resultStatus: 'success', runId: request.runId,
     schemaVersion: 1, selectedObjectCount: 1 + audit.selected.readingNodeIds.length
+  });
+}
+
+function writeFailureEvidence(paths, request, error) {
+  const evidenceRoot = path.join(paths.evidence, request.runId);
+  fs.mkdirSync(evidenceRoot, { recursive: true });
+  const output = path.join(evidenceRoot, 'review-audit.json');
+  const deployment = readJson(paths.deployment);
+  if (!fs.existsSync(output)) {
+    const unavailable = { error: 'database audit did not start or did not produce evidence', status: 'unavailable' };
+    writeJsonAtomic(output, {
+      acceptance: unavailable, capturedAt: new Date().toISOString(), checkpoint: request.reviewPhase,
+      commitSha: request.commitSha, deploymentRunId: deployment?.runId ?? null,
+      deviceIdentity: deployment?.deviceIdentity ?? null, errorCode: error.code || 'review_phase_failed',
+      errorMessage: error.message, fsrs: unavailable, pairing: unavailable, reading: [], resultStatus: 'failure',
+      runId: request.runId, scheduler: unavailable, schemaVersion: 2, selected: null, sync: unavailable
+    });
+  }
+  const runnerLog = path.join(evidenceRoot, 'runner.log');
+  if (!fs.existsSync(runnerLog)) fs.writeFileSync(runnerLog, `${error.code || 'review_phase_failed'}: ${error.message}\n`, 'utf8');
+  writeJsonAtomic(path.join(evidenceRoot, 'summary.json'), {
+    checkpoint: request.reviewPhase, commitSha: request.commitSha, deploymentRunId: deployment?.runId ?? null,
+    deviceIdentity: deployment?.deviceIdentity ?? null, errorCode: error.code || 'review_phase_failed',
+    resultStatus: 'failure', runId: request.runId, schemaVersion: 1
   });
 }
 
@@ -145,6 +175,7 @@ export async function finishWindowsAndroidLabReviewRun({ executeCommand, paths, 
     } });
   } catch (error) {
     primaryError = error;
+    writeFailureEvidence(paths, request, error);
   }
   const completed = {
     ...running, completedAt: new Date().toISOString(), errorCode: primaryError?.code,

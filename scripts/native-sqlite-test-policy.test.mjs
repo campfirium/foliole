@@ -71,4 +71,8 @@ describe('native sqlite test policy', () => {
   it('keeps the iOS database upgrade fixture on the Electron ABI test entry', () => {
     expect(controlledElectronSqliteTests).toContain('scripts/ios/ios-database-upgrade-acceptance-fixture.test.mjs');
   });
+
+  it('keeps the Windows Android Lab Review audit on the Electron ABI test entry', () => {
+    expect(controlledElectronSqliteTests).toContain('scripts/windows/windows-android-lab-review-audit.test.mjs');
+  });
 });

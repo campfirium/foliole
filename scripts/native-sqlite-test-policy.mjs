@@ -34,6 +34,7 @@ const controlledElectronSqliteTests = [
   'scripts/sqlite/sqlite-recovery-drill.test.mjs',
   'scripts/sqlite/sqlite-maintenance-cleanup-main-fts.test.mjs',
   'scripts/sqlite/sqlite-maintenance.test.mjs',
+  'scripts/windows/windows-android-lab-review-audit.test.mjs',
   'src/companion/companionCaptureTextActions.ios.test.ts',
   'src/companion/companionTrashActions.ios.test.ts',
   'src/shared/platform/companionSyncNodeVersions.androidSchema.test.ts',

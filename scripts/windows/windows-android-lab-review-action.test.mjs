@@ -5,7 +5,9 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { runWindowsAndroidLabReviewPhase } from './windows-android-lab-review-action.mjs';
+import {
+  finishWindowsAndroidLabReviewRun, runWindowsAndroidLabReviewPhase
+} from './windows-android-lab-review-action.mjs';
 import { androidLabPaths, readJson, writeJsonAtomic } from './windows-android-lab-state.mjs';
 
 const roots = [];
@@ -41,7 +43,7 @@ function fixture(phase = 'prepare') {
   return { paths, request };
 }
 
-function executor(calls, audit = {}) {
+function executor(calls, audit = {}, auditExitCode = 0) {
   return async (command, args) => {
     calls.push({ args, command });
     if (args[0] === 'devices') return { code: 0, lines: [`${ENDPOINT} device`], output: `${ENDPOINT}\tdevice\n` };
@@ -49,8 +51,10 @@ function executor(calls, audit = {}) {
     const outputIndex = args.indexOf('--output');
     if (outputIndex >= 0) {
       writeJsonAtomic(args[outputIndex + 1], {
+        acceptance: { status: 'available' }, resultStatus: auditExitCode ? 'failure' : 'success',
         selected: { fsrsNodeId: 'fsrs-1', readingNodeIds: ['read-1', 'read-2', 'read-3'] }, ...audit
       });
+      return { code: auditExitCode, lines: [], output: '' };
     }
     return { code: 0, lines: [], output: '' };
   };
@@ -114,5 +118,35 @@ describe('Windows Android lab Review action', () => {
     await expect(runWindowsAndroidLabReviewPhase({
       executeCommand: executor([]), paths, pullSnapshot, request
     })).rejects.toMatchObject({ code: 'review_audit_runtime_missing' });
+  });
+
+  it('keeps a missing-scheduler audit collectable while preserving a nonzero phase failure', async () => {
+    const { paths, request } = fixture();
+    const executeCommand = executor([], {
+      pairing: { status: 'available', value: { endpointUrl: 'http://127.0.0.1:38641', target: 'windows_executor' } },
+      errorCode: 'review_scheduler_settings_missing',
+      scheduler: { error: 'review scheduler settings are missing', status: 'missing' },
+      sync: { status: 'available', value: { reviewLogPushCursor: null } }
+    }, 1);
+    await expect(runWindowsAndroidLabReviewPhase({ executeCommand, paths, pullSnapshot, request }))
+      .rejects.toMatchObject({ code: 'review_scheduler_settings_missing' });
+    expect(readJson(path.join(paths.evidence, request.runId, 'review-audit.json'))).toMatchObject({
+      resultStatus: 'failure', scheduler: { status: 'missing' }, sync: { status: 'available' }
+    });
+    expect(fs.existsSync(path.join(paths.evidence, request.runId, 'runner.log'))).toBe(true);
+  });
+
+  it('writes a run-scoped failure audit when a Review phase fails before database audit', async () => {
+    const { paths, request } = fixture('capture');
+    const running = { ...request, evidenceRoot: path.join(paths.evidence, request.runId), state: 'running' };
+    await expect(finishWindowsAndroidLabReviewRun({
+      executeCommand: executor([]), paths, request, running,
+      runReviewPhase: async () => { throw Object.assign(new Error('review prepare must complete'), { code: 'review_session_missing' }); }
+    })).rejects.toMatchObject({ code: 'review_session_missing' });
+    expect(readJson(path.join(paths.evidence, request.runId, 'review-audit.json'))).toMatchObject({
+      checkpoint: 'capture', errorCode: 'review_session_missing', resultStatus: 'failure',
+      scheduler: { status: 'unavailable' }
+    });
+    expect(readJson(path.join(paths.evidence, request.runId, 'summary.json'))).toMatchObject({ resultStatus: 'failure' });
   });
 });
