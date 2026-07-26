@@ -162,6 +162,7 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
           })
         })}
         backlinks={topicBacklinks}
+        canOpenComparisonView={model.canOpenComparisonView}
         isFolderListView={model.isFolderListView}
         panelKind={model.panelKind}
         isSourceUpdatePanelOpen={model.isSourceUpdatePanelOpen}
@@ -178,7 +179,7 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
           onEditorReady: interactions.handleEditorReady
         }}
         onPreviewDocumentSelection={interactions.handlePreviewDocumentSelection}
-        showSourceUpdateAction={model.canOpenComparisonView}
+        showSourceUpdateAction={model.canOpenComparisonView && Boolean(model.sourceUpdatePreview)}
       />
       <NodeLinkHoverPreviewPanel preview={nodeLinkPreview.preview} />
       <DocumentPanelSectionOverlayHost

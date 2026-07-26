@@ -19,6 +19,16 @@ function createRunner(overrides: Partial<Parameters<typeof createPaletteCommandR
 }
 
 describe('createPaletteCommandRunner', () => {
+  it('runs the contextual source update command outside the command palette catalog', () => {
+    const reviewSourceUpdate = vi.fn();
+    const { args, run } = createRunner({ reviewSourceUpdate });
+
+    run(APP_COMMAND_IDS.reviewSourceUpdate);
+
+    expect(reviewSourceUpdate).toHaveBeenCalledTimes(1);
+    expect(args.recordRecentCommand).toHaveBeenCalledWith(APP_COMMAND_IDS.reviewSourceUpdate);
+  });
+
   it('reruns app undo against fresh workspace state even when the palette item snapshot is disabled', () => {
     const undoWorkspaceAction = vi.fn(() => true);
     const { args, run } = createRunner({

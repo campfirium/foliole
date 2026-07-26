@@ -50,6 +50,7 @@ function resolveDocumentHeaderBreadcrumb(props: DocumentPanelSectionProps) {
 
 export function renderDocumentPanelHeader(args: {
   backlinks: BacklinkItem[];
+  canOpenComparisonView: boolean;
   folderListSortDirection: FolderListSortDirection;
   folderListSortKey: FolderListSortKey;
   isFolderListView: boolean;
@@ -73,6 +74,7 @@ export function renderDocumentPanelHeader(args: {
       canGoBack={args.props.canGoBack}
       canGoForward={args.props.canGoForward}
       canGoParent={args.props.canGoParent}
+      canOpenComparisonView={args.canOpenComparisonView}
       editableNodeId={args.props.editableNodeId}
       folderListToolbar={null}
       isFolderListView={args.isFolderListView}

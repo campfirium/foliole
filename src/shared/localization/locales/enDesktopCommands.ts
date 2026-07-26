@@ -55,6 +55,7 @@ export const EN_DESKTOP_COMMAND_TRANSLATIONS = {
   'desktop.command.goParent': 'Go to Parent',
   'desktop.command.findInTopic': 'Find in Topic',
   'desktop.command.compareWithDraft': 'Compare with Draft',
+  'desktop.command.reviewSourceUpdate': 'Review Source Update',
   'desktop.command.enterImmersiveReading': 'Enter Immersive Reading',
   'desktop.command.exitImmersiveReading': 'Exit Immersive Reading',
   'desktop.command.toggleDismissedTopicsVisibility': 'Toggle Topic Focus',

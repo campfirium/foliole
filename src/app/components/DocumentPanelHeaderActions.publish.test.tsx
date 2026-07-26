@@ -13,6 +13,7 @@ function PublishHeaderActions(props: {
 }) {
   const t = useTranslation();
   return renderDocumentHeaderActions({
+    canOpenComparisonView: true,
     editorDisplayMode: 'preview',
     isFolderListView: false,
     isSourceUpdatePanelOpen: false,
@@ -41,6 +42,7 @@ it('exposes every publishing command from the Topic actions menu', async () => {
 
   await openDocumentActionsMenu();
 
+  expect(screen.getByRole('menuitem', { name: 'Compare with Draft' })).toBeInTheDocument();
   expect(screen.getByRole('menuitem', { name: 'Publish to the site' })).toBeInTheDocument();
   expect(screen.getByRole('menuitem', { name: 'Publish to WordPress' })).toBeInTheDocument();
   expect(screen.getByRole('menuitem', { name: 'Publish to Discourse' })).toBeInTheDocument();
@@ -56,5 +58,6 @@ it('keeps publishing commands out of non-publishable document menus', async () =
   await openDocumentActionsMenu();
 
   expect(screen.queryByRole('menuitem', { name: 'Publish to the site' })).not.toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: 'Compare with Draft' })).toBeInTheDocument();
   expect(screen.getByRole('menuitem', { name: 'Switch to Source mode' })).toBeInTheDocument();
 });

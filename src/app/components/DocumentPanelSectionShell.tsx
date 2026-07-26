@@ -21,6 +21,7 @@ import { useDocumentPanelFolderListSort } from './useDocumentPanelFolderListSort
 interface DocumentPanelShellProps {
   backlinks: BacklinkItem[];
   bodyProps: Parameters<typeof DocumentPanelContent>[0]['bodyProps'];
+  canOpenComparisonView: boolean;
   isFolderListView: boolean;
   panelKind: CentralPanelKind;
   isSourceUpdatePanelOpen: boolean;
@@ -45,6 +46,7 @@ function resolvePriorityQuickSetValue(props: DocumentPanelSectionProps) {
 
 function renderDocumentPanelChrome(args: {
   backlinks: BacklinkItem[];
+  canOpenComparisonView: boolean;
   folderListSortDirection: FolderListSortDirection;
   folderListSortKey: FolderListSortKey;
   isFolderListView: boolean;
@@ -65,6 +67,7 @@ function renderDocumentPanelChrome(args: {
     <>
       {renderDocumentPanelHeader({
         backlinks: args.backlinks,
+        canOpenComparisonView: args.canOpenComparisonView,
         folderListSortDirection: args.folderListSortDirection,
         folderListSortKey: args.folderListSortKey,
         isFolderListView: args.isFolderListView,
@@ -133,6 +136,7 @@ function renderFolderNavigationOverlay(props: DocumentPanelSectionProps, visible
 export function DocumentPanelSectionShell({
   backlinks,
   bodyProps,
+  canOpenComparisonView,
   isFolderListView,
   panelKind,
   isSourceUpdatePanelOpen,
@@ -157,6 +161,7 @@ export function DocumentPanelSectionShell({
   const overlay = renderFolderNavigationOverlay(props, isFolderListView);
   const chrome = renderDocumentPanelChrome({
     backlinks,
+    canOpenComparisonView,
     folderListSortDirection,
     folderListSortKey,
     isFolderListView,

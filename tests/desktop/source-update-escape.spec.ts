@@ -140,6 +140,11 @@ async function seedPendingIncomingUpdate(desktopApp: ElectronApplication) {
 
 test('Escape closes the source update panel while an editor has focus', async ({ desktopApp, desktopWindow }) => {
   await expectWorkspaceShell(desktopWindow);
+  const exitFlow = desktopWindow.getByRole('button', { name: /^(Exit Flow|退出 Flow)$/ });
+  if (await exitFlow.isVisible().catch(() => false)) {
+    await exitFlow.click();
+    await expect(exitFlow).toBeHidden();
+  }
   await seedSourceUpdateWorkspace(desktopWindow);
   await seedPendingIncomingUpdate(desktopApp);
   await desktopWindow.evaluate(async () => {
@@ -148,6 +153,10 @@ test('Escape closes the source update panel while an editor has focus', async ({
   await desktopWindow.evaluate(async ({ nodeId }) => {
     await globalThis.window?.__folioleWorkspaceDebug?.openNode?.(nodeId);
   }, { nodeId: NODE_ID });
+  if (await exitFlow.isVisible().catch(() => false)) {
+    await exitFlow.click();
+    await expect(exitFlow).toBeHidden();
+  }
   await expect.poll(
     () => desktopWindow.evaluate(async ({ nodeId }) =>
       globalThis.window?.electronAPI?.invoke('load_node_source_update_preview', { node_id: nodeId }) ?? null,
@@ -158,9 +167,14 @@ test('Escape closes the source update panel while an editor has focus', async ({
     kind: 'incoming_update',
     source_node_id: NODE_ID
   });
+  await desktopApp.evaluate(({ BrowserWindow }) => {
+    BrowserWindow.getAllWindows().forEach((window) => {
+      window.webContents.send('foliole:managed-inbox-updated', { importId: 'playwright-source-update-escape' });
+    });
+  });
 
-  await desktopWindow.getByRole('button', { name: /Toggle source update panel|切换来源更新面板/ }).click();
-  const dialog = desktopWindow.getByRole('dialog', { name: /Source update panel|来源更新面板/ });
+  await desktopWindow.getByRole('button', { name: /Review Source Update|查看来源更新/ }).click();
+  const dialog = desktopWindow.getByRole('dialog', { name: /Comparison view|对比视图/ });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole('button', { name: /Close source update panel|关闭来源更新面板/ })).toHaveCount(0);
 

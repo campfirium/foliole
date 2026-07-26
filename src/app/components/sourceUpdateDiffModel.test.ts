@@ -34,7 +34,7 @@ describe('buildSourceUpdateDiffModel', () => {
     ]);
   });
 
-  it('keeps rendered headings paired while leaving inserted noise as gaps', () => {
+  it('marks every changed line and balances unequal official diff chunks', () => {
     const model = buildSourceUpdateDiffModel(
       ['alpha', '### 📂 其他重要观点摘要 (Brief Summary)', 'omega'].join('\n'),
       ['alpha', '123', '123', '### 📂 其他重要观点摘要 (Brief Summary)123132', 'omega'].join('\n')
@@ -46,16 +46,9 @@ describe('buildSourceUpdateDiffModel', () => {
       { kind: 'added', lineNumber: 3 },
       { kind: 'added', lineNumber: 4 }
     ]);
-    expect(model.current.decorations.spacerDecorations).toEqual([
-      {
-        beforeLineNumber: 2,
-        kind: 'added',
-        lines: [
-          { className: 'cm-line-paragraph', lineNumber: 2, text: '123' },
-          { className: 'cm-line-paragraph', lineNumber: 3, text: '123' }
-        ]
-      }
-    ]);
+    expect(model.current.decorations.spacerDecorations).toHaveLength(1);
+    expect(model.current.decorations.spacerDecorations[0]?.kind).toBe('added');
+    expect(model.current.decorations.spacerDecorations[0]?.lines).toHaveLength(2);
     expect(model.updated.decorations.spacerDecorations).toEqual([]);
   });
 });

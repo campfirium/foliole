@@ -23,6 +23,7 @@ export interface DocumentPanelHeaderProps {
   canGoBack: boolean;
   canGoForward: boolean;
   canGoParent: boolean;
+  canOpenComparisonView?: boolean;
   editableNodeId: string | null;
   folderItemCountLabel?: string | null;
   folderListToolbar?: JSX.Element | null;
@@ -64,6 +65,7 @@ function renderDocumentHeaderContent(args: DocumentPanelHeaderProps & {
   const navigationProps = buildNavigationProps(args);
   const showDocumentControls = args.showDocumentControls ?? true;
   const editorActions = renderDocumentHeaderActions({
+    canOpenComparisonView: Boolean(args.canOpenComparisonView),
     editorDisplayMode: args.editorDisplayMode,
     isFolderListView: args.isFolderListView,
     isSourceUpdatePanelOpen: args.isSourceUpdatePanelOpen,

@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorDiffDecorations } from '../../features/editor/adapters/EditorAdapter';
@@ -15,6 +15,7 @@ import {
 import type { DocumentComparisonMode } from './documentComparisonView';
 import { buildSourceUpdateDiffModel } from './sourceUpdateDiffModel';
 import { SourceUpdatePanelDialogBody } from './SourceUpdatePanelDialogBody';
+import { useSourceUpdateDiffModel } from './useSourceUpdateDiffModel';
 
 interface DocumentSourceUpdatePanelProps {
   comparisonMode: DocumentComparisonMode;
@@ -69,57 +70,6 @@ function useSourceUpdatePanelScrollSync(
       unsubscribeUpdated();
     };
   }, [currentEditor, open, updatedEditor]);
-}
-
-function withMeasuredSpacerHeights(
-  decorations: EditorDiffDecorations | null,
-  sourceEditor: EditorAdapter | null
-): EditorDiffDecorations | null {
-  if (!decorations) {
-    return null;
-  }
-  return {
-    lineDecorations: decorations.lineDecorations,
-    spacerDecorations: decorations.spacerDecorations.map((spacer) => ({
-      ...spacer,
-      ...(sourceEditor
-        ? { measuredHeightPx: spacer.lines.reduce((total, line) => total + sourceEditor.getLineBlockHeight(line.lineNumber), 0) }
-        : {})
-    }))
-  };
-}
-
-function useSourceUpdatePanelDiffState(
-  currentContent: string,
-  updatedContent: string,
-  currentEditor: EditorAdapter | null,
-  updatedEditor: EditorAdapter | null,
-  enabled: boolean
-) {
-  const deferredCurrentContent = useDeferredValue(currentContent);
-  const deferredUpdatedContent = useDeferredValue(enabled ? updatedContent : currentContent);
-  const diffModel = useMemo(
-    () => buildSourceUpdateDiffModel(deferredCurrentContent, deferredUpdatedContent),
-    [deferredCurrentContent, deferredUpdatedContent]
-  );
-  const currentMeasuredHighlights = useMemo(
-    () => withMeasuredSpacerHeights(diffModel.current.decorations, updatedEditor),
-    [diffModel.current.decorations, updatedEditor]
-  );
-  const updatedMeasuredHighlights = useMemo(
-    () => withMeasuredSpacerHeights(diffModel.updated.decorations, currentEditor),
-    [currentEditor, diffModel.updated.decorations]
-  );
-
-  return {
-    currentMeasuredHighlights,
-    diffModel,
-    lineHighlights: {
-      current: diffModel.current.decorations,
-      updated: diffModel.updated.decorations
-    },
-    updatedMeasuredHighlights
-  };
 }
 
 function useSourceUpdatePanelEscape(open: boolean, onOpenChange: (open: boolean) => void) {
@@ -193,13 +143,13 @@ export function DocumentSourceUpdatePanel(props: DocumentSourceUpdatePanelProps)
     diffModel,
     lineHighlights,
     updatedMeasuredHighlights
-  } = useSourceUpdatePanelDiffState(
-    props.currentContent,
-    props.updatedContent,
+  } = useSourceUpdateDiffModel({
+    currentContent: props.currentContent,
     currentEditor,
-    updatedEditor,
-    props.comparisonMode !== 'manual' || Boolean(props.manualContent.trim())
-  );
+    enabled: props.comparisonMode !== 'manual' || Boolean(props.manualContent.trim()),
+    updatedContent: props.updatedContent,
+    updatedEditor
+  });
 
   useSourceUpdatePanelScrollSync(currentEditor, updatedEditor, props.open);
 

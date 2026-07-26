@@ -1,4 +1,4 @@
-import { Columns2 } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import type { BacklinkItem } from '../../features/nodes/model/internalLinks';
@@ -21,7 +21,7 @@ import { DocumentPanelHeaderBacklinksMenu } from './DocumentPanelHeaderBacklinks
 import { MoreOptionsIcon } from './DocumentPanelHeaderIcons';
 import { DocumentPriorityControl } from './DocumentPriorityControl';
 
-function ComparisonViewAction({
+function SourceUpdateAction({
   isOpen,
   onRunCommand,
   t,
@@ -40,10 +40,10 @@ function ComparisonViewAction({
       aria-pressed={isOpen}
       className="text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground"
       data-active={isOpen}
-      data-command-id={APP_COMMAND_IDS.toggleComparisonView}
-      icon={<Columns2 aria-hidden="true" size={16} strokeWidth={1.8} />}
-      label={t('desktop.command.compareWithDraft')}
-      onClick={() => onRunCommand?.(APP_COMMAND_IDS.toggleComparisonView)}
+      data-command-id={APP_COMMAND_IDS.reviewSourceUpdate}
+      icon={<RefreshCw aria-hidden="true" size={16} strokeWidth={1.8} />}
+      label={t('desktop.command.reviewSourceUpdate')}
+      onClick={() => onRunCommand?.(APP_COMMAND_IDS.reviewSourceUpdate)}
     />
   );
 }
@@ -74,6 +74,7 @@ export function renderDefaultDocumentHeaderRightSlot(args: {
 }
 
 export function renderDocumentHeaderActions(args: {
+  canOpenComparisonView: boolean;
   editorDisplayMode: ReturnType<typeof useAppearanceSettings>['editorDisplayMode'];
   isFolderListView: boolean;
   isSourceUpdatePanelOpen: boolean;
@@ -91,7 +92,7 @@ export function renderDocumentHeaderActions(args: {
 
   return (
     <ToolbarActionGroup ariaLabel={args.t('desktop.document.editorActions')} className="justify-end">
-      <ComparisonViewAction
+      <SourceUpdateAction
         isOpen={args.isSourceUpdatePanelOpen}
         {...(args.onRunDocumentCommand ? { onRunCommand: args.onRunDocumentCommand } : {})}
         t={args.t}
@@ -119,6 +120,11 @@ export function renderDocumentHeaderActions(args: {
               </AppDropdownMenuItem>
               <AppDropdownMenuSeparator />
             </>
+          ) : null}
+          {args.canOpenComparisonView ? (
+            <AppDropdownMenuItem onSelect={() => args.onRunDocumentCommand?.(APP_COMMAND_IDS.toggleComparisonView)}>
+              {args.t('desktop.command.compareWithDraft')}
+            </AppDropdownMenuItem>
           ) : null}
           <AppDropdownMenuItem onSelect={args.toggleEditorDisplayMode}>
             {args.editorDisplayMode === 'preview' ? args.t('desktop.document.switchToSource') : args.t('desktop.document.switchToLivePreview')}

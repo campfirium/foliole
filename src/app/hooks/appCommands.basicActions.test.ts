@@ -123,6 +123,12 @@ it('runs the comparison view through the shared command handler', () => {
   expect(toggleComparisonView).toHaveBeenCalledTimes(1);
 });
 
+it('runs source update review through its shared command handler', () => {
+  const reviewSourceUpdate = vi.fn();
+  expectCommandRuns(APP_COMMAND_IDS.reviewSourceUpdate, { reviewSourceUpdate });
+  expect(reviewSourceUpdate).toHaveBeenCalledTimes(1);
+});
+
 it('runs the developer performance panel command through the shared command handler', () => {
   const openPerformancePanel = vi.fn();
 

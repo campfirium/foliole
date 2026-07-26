@@ -12,15 +12,13 @@ import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 import { openWorkspaceNodeWithPreparedDocument } from '../../store/workspaceNodePreparation';
 import { refreshWorkspaceState } from '../../store/workspaceRefreshScheduler';
 import { useWorkspaceStore } from '../../store/workspaceStore';
-import { requestToggleDismissedTopicVisibility } from '../components/dismissedTopicVisibilitySetting';
-import { requestDocumentComparisonViewToggle } from '../components/documentComparisonView';
-import { requestDocumentTopicSearchOpen } from '../components/documentTopicSearchEvents';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 
 import { createPaletteReviewActions } from './appControllerPaletteReviewActions';
 import { createPaletteRuntimeActions } from './appControllerPaletteRuntimeActions';
 import { createPublishingPaletteActions } from './appControllerPublishingActions';
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
+import { createPaletteDocumentActions } from './appPaletteDocumentActions';
 import { createPaletteHistoryActions } from './appPaletteHistoryActions';
 import { createPaletteImportActions } from './appPaletteImportActions';
 import { createSelectionAnnotationPaletteActions } from './appPaletteSelectionActions';
@@ -127,12 +125,6 @@ function createPaletteNavigationActions(args: {
   };
 }
 
-function createPaletteViewActions() {
-  return {
-    onToggleDismissedTopicsVisibility: requestToggleDismissedTopicVisibility
-  };
-}
-
 function createPaletteReleaseActions() {
   return {
     checkForUpdates: () => checkForFolioleUpdates({ force: true, notify: true }).then(() => undefined),
@@ -203,8 +195,7 @@ export function createPaletteRunnerArgs(args: {
     enterPriorityMode: args.layoutProps.document.onEnterPriorityQuickSet,
     exportCurrentArticle: createExportCurrentArticleCommand(args),
     ...createPublishingPaletteActions(args),
-    findInTopic: requestDocumentTopicSearchOpen,
-    toggleComparisonView: requestDocumentComparisonViewToggle,
+    ...createPaletteDocumentActions(),
     mergeHighlightsIntoTopic: createMergeHighlightsIntoTopicCommand({ ws: args.ws }),
     ...createPaletteNavigationActions(args),
     ...createPaletteImportActions(args.formalImport),
@@ -214,7 +205,6 @@ export function createPaletteRunnerArgs(args: {
     onSendFeedback: args.onSendFeedback,
     ...createPaletteSurfaceActions(args),
     ...createPaletteAppearanceActions(args),
-    ...createPaletteViewActions(),
     ...createPaletteReleaseActions(),
     ...createPaletteRuntimeActions(args),
     onToggleDevTools: toggleMainWindowDevTools,

@@ -7,7 +7,7 @@ import {
   importRuntimeIncomingUpdateAsNew,
   mockIncomingUpdatePreview,
   mockSourceUpdatePreview,
-  openSourceUpdatePanel,
+  openSourceUpdateReview,
   renderSection,
   renderSectionWithProps
 } from './DocumentPanelSection.testSupport';
@@ -18,15 +18,15 @@ describe('DocumentPanelSection source updates', () => {
 
     renderSection();
 
-    expect(openSourceUpdatePanel()).toBeDefined();
+    expect(openSourceUpdateReview()).toBeDefined();
   });
 
-  it('places the source update action before the more-options menu in the header', () => {
+  it('shows the source update icon only when an update exists', () => {
     mockSourceUpdatePreview();
 
     renderSection();
 
-    const splitButton = document.querySelectorAll('[aria-label="Compare with Draft"]').item(0);
+    const splitButton = document.querySelectorAll('[aria-label="Review Source Update"]').item(0);
     const moreButton = document.querySelectorAll('[aria-label="More editor options"]').item(0);
 
     expect(splitButton).toBeTruthy();
@@ -40,7 +40,7 @@ describe('DocumentPanelSection source updates', () => {
 
     renderSectionWithProps({ onNodeContentChange });
 
-    const panelProps = openSourceUpdatePanel();
+    const panelProps = openSourceUpdateReview();
     act(() => {
       panelProps?.onCurrentContentChange('Updated from split panel');
     });
@@ -57,7 +57,7 @@ describe('DocumentPanelSection source updates', () => {
 
     renderSectionWithProps({ editorContent: 'Current content', onNodeContentChange });
 
-    const panelProps = openSourceUpdatePanel();
+    const panelProps = openSourceUpdateReview();
     act(() => {
       panelProps?.onOpenChange(false);
     });
@@ -70,7 +70,7 @@ describe('DocumentPanelSection source updates', () => {
 
     renderSectionWithProps({});
 
-    const panelProps = openSourceUpdatePanel();
+    const panelProps = openSourceUpdateReview();
     await act(async () => {
       await panelProps?.onDismissIncomingUpdate?.();
     });
@@ -87,7 +87,7 @@ describe('DocumentPanelSection incoming updates', () => {
 
     renderSectionWithProps({ onNodeContentChange });
 
-    const panelProps = openSourceUpdatePanel();
+    const panelProps = openSourceUpdateReview();
     act(() => {
       panelProps?.onCurrentContentChange('Edited incoming update');
     });
@@ -106,7 +106,7 @@ describe('DocumentPanelSection incoming updates', () => {
 
     renderSectionWithProps({ onNodeContentChange });
 
-    const panelProps = openSourceUpdatePanel();
+    const panelProps = openSourceUpdateReview();
     await act(async () => {
       await panelProps?.onImportIncomingUpdateAsNew?.();
     });
@@ -123,7 +123,7 @@ describe('DocumentPanelSection incoming updates', () => {
 
     renderSectionWithProps({ editorContent: 'Current content', onNodeContentChange });
 
-    const panelProps = openSourceUpdatePanel();
+    const panelProps = openSourceUpdateReview();
     await act(async () => {
       await panelProps?.onAcceptIncomingUpdate?.();
     });
@@ -139,7 +139,7 @@ describe('DocumentPanelSection incoming updates', () => {
 
     renderSectionWithProps({ onNodeContentChange });
 
-    const panelProps = openSourceUpdatePanel();
+    const panelProps = openSourceUpdateReview();
     act(() => {
       panelProps?.onCurrentContentChange('Accepted incoming draft');
     });

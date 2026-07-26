@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { beforeEach, vi } from 'vitest';
 
@@ -8,7 +8,7 @@ import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import { LocalizationProvider } from '../../shared/localization/LocalizationProvider';
 import type { loadRuntimeNodeSourceDetails as loadRuntimeNodeSourceDetailsRuntime } from '../../shared/platform/nodeSourceRuntimeRepository';
 
-import { requestDocumentComparisonViewToggle } from './documentComparisonView';
+import { requestDocumentComparisonViewToggle, requestSourceUpdateReview } from './documentComparisonView';
 import { DocumentPanelSection } from './DocumentPanelSection';
 
 vi.mock('../../features/settings/context/AppearanceSettingsProvider', () => ({
@@ -178,6 +178,7 @@ export function buildSectionProps(overrides: Partial<ComponentProps<typeof Docum
     onRevealDocumentSelection: () => undefined,
     onRunDocumentCommand: (commandId: string) => {
       if (commandId === APP_COMMAND_IDS.toggleComparisonView) requestDocumentComparisonViewToggle();
+      if (commandId === APP_COMMAND_IDS.reviewSourceUpdate) requestSourceUpdateReview();
     },
     onSelectBreadcrumbNode: () => undefined,
     onSelectNode: () => undefined,
@@ -235,10 +236,12 @@ export function mockNoSourceUpdatePreview() {
 }
 
 export function openSourceUpdatePanel() {
-  const trigger = screen.getAllByRole('button', { name: 'Compare with Draft' }).at(-1);
-  if (!trigger) {
-    throw new Error('Expected source update panel trigger');
-  }
+  act(() => requestDocumentComparisonViewToggle());
+  return documentSourceUpdatePanelMock.mock.calls.at(-1)?.[0];
+}
+
+export function openSourceUpdateReview() {
+  const trigger = screen.getByRole('button', { name: 'Review Source Update' });
   fireEvent.click(trigger);
   return documentSourceUpdatePanelMock.mock.calls.at(-1)?.[0];
 }

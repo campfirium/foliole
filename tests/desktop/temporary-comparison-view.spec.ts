@@ -65,7 +65,9 @@ async function openSeededTopic(desktopWindow: Page) {
   await expect.poll(() => desktopWindow.evaluate(() =>
     globalThis.window?.__folioleWorkspaceDebug?.getActiveNodeId?.() ?? null)).toBe(NODE_ID);
   const exitFlow = desktopWindow.getByRole('button', { name: /Exit Flow|退出 Flow/ });
-  if (await exitFlow.count()) {
+  const flowIsActive = await exitFlow.isVisible().catch(() => false)
+    || await exitFlow.waitFor({ state: 'visible', timeout: 1_000 }).then(() => true).catch(() => false);
+  if (flowIsActive) {
     await exitFlow.click();
     await expect(exitFlow).toBeHidden();
   }
@@ -91,6 +93,23 @@ async function replaceManualContent(desktopWindow: Page, dialog: ReturnType<Page
   await expect(dialog.getByRole('button', { name: /Set as body|设为正文/ })).toBeEnabled();
   return editor;
 }
+
+test('ordinary comparison lives in the Topic menu without a persistent header icon', async ({ desktopWindow }) => {
+  await expectWorkspaceShell(desktopWindow);
+  await seedTopic(desktopWindow);
+  await openSeededTopic(desktopWindow);
+
+  await expect(desktopWindow.getByRole('button', { name: /Review Source Update|查看来源更新/ })).toHaveCount(0);
+  await desktopWindow.getByRole('button', { name: /More editor options|更多编辑器选项/ }).click();
+  const compareItem = desktopWindow.getByRole('menuitem', { name: /^(Compare with Draft|与改稿对比)$/ });
+  await expect(compareItem).toBeVisible();
+  await compareItem.click();
+
+  const dialog = desktopWindow.getByRole('dialog', { name: /Comparison view|对比视图/ });
+  await expect(dialog).toBeVisible();
+  await desktopWindow.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+});
 
 test('temporary comparison draft is disposable until an explicit write action', async ({ desktopApp, desktopWindow }) => {
   await expectWorkspaceShell(desktopWindow);
@@ -151,6 +170,8 @@ test('long temporary comparison remains editable after diff rendering', async ({
   await currentEditor.click();
   await desktopWindow.keyboard.insertText('Left editor remains responsive. ');
   await expect(currentEditor).toContainText('Left editor remains responsive.');
+  await expect(dialog.locator('.cm-diff-line').first()).toBeVisible();
+  await expect(editor).toContainText('Still responsive after the long draft.');
   const screenshotPath = path.resolve(
     '.tmp/artifacts/desktop-acceptance/temporary-comparison-long-editing.png'
   );

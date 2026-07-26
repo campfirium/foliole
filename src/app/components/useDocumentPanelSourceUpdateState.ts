@@ -13,7 +13,8 @@ import type { RuntimeNodeSourceUpdatePreview } from '../../shared/platform/nodeS
 import {
   canOpenDocumentComparisonView,
   DOCUMENT_COMPARISON_VIEW_TOGGLE_EVENT,
-  type DocumentComparisonMode
+  type DocumentComparisonMode,
+  type DocumentComparisonSource
 } from './documentComparisonView';
 import type { DocumentPanelSectionProps } from './documentPanelSectionTypes';
 import {
@@ -68,14 +69,18 @@ function useComparisonLifecycle(args: {
   flushLeftDraft: () => void;
   isOpen: boolean;
   modeRef: MutableRefObject<DocumentComparisonMode>;
-  openPanel: () => void;
+  openPanel: (source?: DocumentComparisonSource) => void;
   openRef: MutableRefObject<boolean>;
   preview: ReturnType<typeof useNodeSourceUpdatePreview>;
   editorNodeId: string | null;
   source: ComparisonSource;
 }) {
   useEffect(() => {
-    const toggle = () => (args.openRef.current ? args.closePanel() : args.openPanel());
+    const toggle = (event: Event) => {
+      const requestedSource = (event as CustomEvent<{ source?: DocumentComparisonSource }>).detail?.source;
+      if (args.openRef.current) args.closePanel();
+      else args.openPanel(requestedSource);
+    };
     window.addEventListener(DOCUMENT_COMPARISON_VIEW_TOGGLE_EVENT, toggle);
     return () => window.removeEventListener(DOCUMENT_COMPARISON_VIEW_TOGGLE_EVENT, toggle);
   }, [args.closePanel, args.openPanel, args.openRef]);
@@ -151,13 +156,13 @@ export function useDocumentPanelSourceUpdateState(props: DocumentPanelSectionPro
     clearPanel();
   }, [clearPanel, flushLeftDraft]);
 
-  const openPanel = useCallback(() => {
+  const openPanel = useCallback((requestedSource?: DocumentComparisonSource) => {
     if (!canOpen) return;
     const draft = createSourceUpdateDraft(props);
     draftRef.current = draft;
     setLeftContent(draft.content);
     setManualContent('');
-    setSource(preview.value ? 'source' : 'manual');
+    setSource(requestedSource === 'source' && preview.value ? 'source' : 'manual');
     setIsOpen(true);
   }, [canOpen, preview.value, props]);
 

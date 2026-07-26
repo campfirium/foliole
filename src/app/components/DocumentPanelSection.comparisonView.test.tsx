@@ -1,4 +1,4 @@
-import { act, screen } from '@testing-library/react';
+import { act, fireEvent, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -7,16 +7,21 @@ import {
   mockSourceUpdatePreview,
   mockNoSourceUpdatePreview,
   openSourceUpdatePanel,
+  openSourceUpdateReview,
   renderSection,
   renderSectionWithProps
 } from './DocumentPanelSection.testSupport';
 
 describe('DocumentPanelSection manual comparison view', () => {
-  it('uses the formal compare command for ordinary Topics without requiring a source update', () => {
+  it('keeps ordinary comparison in the Topic menu and out of the header icon row', async () => {
     renderSection();
-    const trigger = screen.getByRole('button', { name: 'Compare with Draft' });
-    expect(trigger).toHaveAttribute('data-command-id', 'document.toggleComparisonView');
-    expect(openSourceUpdatePanel()).toMatchObject({
+    expect(screen.queryByRole('button', { name: 'Compare with Draft' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Review Source Update' })).not.toBeInTheDocument();
+    const menuTrigger = screen.getByRole('button', { name: 'More editor options' });
+    await act(async () => fireEvent.keyDown(menuTrigger, { key: 'ArrowDown' }));
+    const menuItem = screen.getByRole('menuitem', { name: 'Compare with Draft' });
+    fireEvent.click(menuItem);
+    expect(getLatestComparisonPanelProps()).toMatchObject({
       comparisonMode: 'manual',
       comparisonSource: 'manual',
       manualContent: '',
@@ -27,7 +32,7 @@ describe('DocumentPanelSection manual comparison view', () => {
   it('preserves manual text while switching sources and resets it after the view closes', () => {
     mockSourceUpdatePreview();
     renderSection();
-    expect(openSourceUpdatePanel()).toMatchObject({ comparisonMode: 'source_preview', comparisonSource: 'source' });
+    expect(openSourceUpdateReview()).toMatchObject({ comparisonMode: 'source_preview', comparisonSource: 'source' });
 
     act(() => getLatestComparisonPanelProps()?.onSourceChange('manual'));
     act(() => getLatestComparisonPanelProps()?.onManualContentChange('Pasted revision'));
@@ -36,13 +41,13 @@ describe('DocumentPanelSection manual comparison view', () => {
     expect(getLatestComparisonPanelProps()).toMatchObject({ manualContent: 'Pasted revision' });
 
     act(() => getLatestComparisonPanelProps()?.onOpenChange(false));
-    expect(openSourceUpdatePanel()).toMatchObject({ comparisonMode: 'source_preview', manualContent: '' });
+    expect(openSourceUpdateReview()).toMatchObject({ comparisonMode: 'source_preview', manualContent: '' });
   });
 
   it('keeps a manual session open when the source update disappears', () => {
     mockSourceUpdatePreview();
     const view = renderSection();
-    openSourceUpdatePanel();
+    openSourceUpdateReview();
     act(() => getLatestComparisonPanelProps()?.onSourceChange('manual'));
     act(() => getLatestComparisonPanelProps()?.onManualContentChange('Keep this session'));
     mockNoSourceUpdatePreview();
@@ -58,7 +63,7 @@ describe('DocumentPanelSection manual comparison view', () => {
   it('closes a source session when its source update disappears', () => {
     mockSourceUpdatePreview();
     const view = renderSection();
-    openSourceUpdatePanel();
+    openSourceUpdateReview();
     mockNoSourceUpdatePreview();
     view.rerender(createSectionElement());
     expect(screen.queryByTestId('document-source-update-panel')).not.toBeInTheDocument();

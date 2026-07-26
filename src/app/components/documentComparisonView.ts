@@ -44,6 +44,16 @@ export function canOpenDocumentComparisonView(args: DocumentComparisonEligibilit
 
 export const DOCUMENT_COMPARISON_VIEW_TOGGLE_EVENT = 'foliole:document-comparison-view-toggle';
 
+export type DocumentComparisonSource = 'manual' | 'source';
+
+export function requestDocumentComparisonView(source: DocumentComparisonSource) {
+  window.dispatchEvent(new CustomEvent(DOCUMENT_COMPARISON_VIEW_TOGGLE_EVENT, { detail: { source } }));
+}
+
 export function requestDocumentComparisonViewToggle() {
-  window.dispatchEvent(new Event(DOCUMENT_COMPARISON_VIEW_TOGGLE_EVENT));
+  requestDocumentComparisonView('manual');
+}
+
+export function requestSourceUpdateReview() {
+  requestDocumentComparisonView('source');
 }
