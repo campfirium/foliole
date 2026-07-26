@@ -29,9 +29,19 @@ export async function writeIllegalDagPack(
   await fs.writeFile(temporaryPath, database);
   const sqlite = new BetterSqlite3(temporaryPath);
   try {
-    sqlite.prepare(
-      "UPDATE node_sync_versions SET parent_version_id = 'missing#ancestor' WHERE object_id = ?"
-    ).run(objectId);
+    const versions = sqlite.prepare<{ objectId: string }, { version_id: string }>(
+      'SELECT version_id FROM node_sync_versions WHERE object_id = @objectId'
+    ).all({ objectId });
+    for (const { version_id: versionId } of versions) {
+      sqlite.prepare(
+        "UPDATE node_sync_versions SET parent_version_id = 'missing#ancestor' WHERE version_id = ?"
+      ).run(versionId);
+      sqlite.prepare('DELETE FROM node_sync_version_parents WHERE version_id = ? AND ordinal = 0').run(versionId);
+      sqlite.prepare(
+        `INSERT INTO node_sync_version_parents (version_id, parent_version_id, ordinal)
+         VALUES (?, 'missing#ancestor', 0)`
+      ).run(versionId);
+    }
   } finally {
     sqlite.close();
   }

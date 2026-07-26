@@ -90,6 +90,13 @@ describe('Windows Android lab Mac controller', () => {
     expect(spec.args.join(' ')).not.toMatch(/github|bundle|patch/iu);
   });
 
+  it('quotes a Windows-style Android lab Git key path without turning it into argv', () => {
+    const spec = androidLabGitPushSpec('tester@windows-host', 'f'.repeat(40), {}, 'C:\\Users\\tester');
+    expect(spec.env.GIT_SSH_COMMAND).toContain("-i 'C:\\Users\\tester");
+    expect(spec.env.GIT_SSH_COMMAND).toContain('foliole-windows-android-lab-git');
+    expect(spec.args.join(' ')).not.toContain('C:\\Users\\tester');
+  });
+
   it('converts a local keystore into a fixed remote command and binary stdin', async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'android-lab-signing-'));
     const file = path.join(root, 'debug.keystore');

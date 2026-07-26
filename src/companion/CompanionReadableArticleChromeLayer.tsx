@@ -19,7 +19,7 @@ import { definedProps } from '@/shared/lib/definedProps';
 
 type ReadableArticle = NonNullable<ReturnType<typeof useCompanionArticleSurface>['readableArticle']>;
 type TextAlternativeState = {
-  alternative: import('../shared/platform/companionNodeTextAlternativeRepository').CompanionNodeTextAlternative | null;
+  alternative: import('../shared/platform/companion/runtime/companionNodeTextAlternativeRepository').CompanionNodeTextAlternative | null;
   busy: boolean;
   dismiss(): void;
   error: boolean;

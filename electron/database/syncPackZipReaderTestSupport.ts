@@ -20,6 +20,9 @@ export function readPackRowsFromZip(packPath: string, tempRoot: string) {
       externalDocuments: db.prepare('SELECT document_id, content, body_blob_hash, opening_text FROM external_documents').all(),
       manifest,
       nodeAttachments: db.prepare('SELECT node_id, attachment_id, role FROM node_attachments').all(),
+      nodeVersionParents: db.prepare(
+        'SELECT version_id, parent_version_id, ordinal FROM node_sync_version_parents ORDER BY version_id, ordinal'
+      ).all(),
       nodeVersions: db.prepare(
         `SELECT version_id, object_id, parent_version_id, device_id, created_at, content_hash, snapshot_json
          FROM node_sync_versions ORDER BY created_at, version_id`

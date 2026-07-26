@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
+import { loadRuntimeNodeTextAlternativePreview } from '../../shared/platform/desktop/nodeTextAlternativeRuntimeRepository';
 import { loadRuntimeNodeSourceUpdatePreview, type RuntimeNodeSourceUpdatePreview } from '../../shared/platform/nodeSourceRuntimeRepository';
-import { loadRuntimeNodeTextAlternativePreview } from '../../shared/platform/nodeTextAlternativeRuntimeRepository';
 import { onManagedInboxUpdated } from '../../shared/platform/runtimeShellEvents';
 
 interface NodeSourceUpdatePreviewState {

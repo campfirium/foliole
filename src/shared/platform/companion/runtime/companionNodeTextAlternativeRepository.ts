@@ -1,6 +1,6 @@
 import { registerPlugin } from '@capacitor/core';
 
-import { isAvailableNativeAndroidCompanionRuntime } from './companionWorkspaceRuntimeRepository';
+import { isAvailableNativeAndroidCompanionRuntime } from '../../companionWorkspaceRuntimeRepository';
 
 export interface CompanionNodeTextAlternative {
   alternative_id: string;

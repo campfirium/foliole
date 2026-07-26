@@ -1,7 +1,6 @@
-import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
-
-import { toRuntimeNodeSourceUpdatePreview } from './nodeSourceUpdateRuntimePayloads';
-import { getRuntimeInvoke } from './runtimeInvoke';
+import { NATIVE_COMMANDS } from '../../../../lib/platform/nativeCommands';
+import { toRuntimeNodeSourceUpdatePreview } from '../nodeSourceUpdateRuntimePayloads';
+import { getRuntimeInvoke } from '../runtimeInvoke';
 
 export async function loadRuntimeNodeTextAlternativePreview(nodeId: string) {
   const invoke = getRuntimeInvoke();

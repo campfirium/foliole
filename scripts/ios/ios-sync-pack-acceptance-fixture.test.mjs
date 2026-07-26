@@ -26,6 +26,7 @@ it('generates isolated producer packs for the paired iOS identity and failure ca
   await fixture.buildSuccessorPack(['special-inbox', 'ios-acceptance-restore']);
   const successor = readPackRowsFromZip(fixture.successorPath, tempRoot);
   const cursorGap = readPackRowsFromZip(fixture.cursorGapPath, tempRoot);
+  const illegalDag = readPackRowsFromZip(fixture.illegalDagPath, tempRoot);
   const legalBytes = await fs.readFile(fixture.legalPath);
   const corruptBytes = await fs.readFile(fixture.corruptEnvelopePath);
 
@@ -49,6 +50,9 @@ it('generates isolated producer packs for the paired iOS identity and failure ca
   expect(cursorGap.manifest.to_peer_id).toBe('ios-runtime-device');
   expect(cursorGap.manifest.from_state_seq).toBeGreaterThan(successor.manifest.to_state_seq);
   expect(cursorGap.manifest.to_state_seq).toBe(cursorGap.manifest.from_state_seq + 1);
+  expect(illegalDag.nodeVersionParents).toContainEqual(expect.objectContaining({
+    parent_version_id: 'missing#ancestor'
+  }));
   expect(corruptBytes.subarray(1)).toEqual(legalBytes.subarray(1));
   expect(corruptBytes[0]).not.toBe(legalBytes[0]);
 });

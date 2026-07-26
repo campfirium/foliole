@@ -83,6 +83,9 @@ final class FolioleSyncDiagnosticsTests: XCTestCase {
           content_hash TEXT, updated_at TEXT, base_content_hash TEXT);
         CREATE TABLE sync_push_ack (object_type TEXT, object_id TEXT, status TEXT, client_op_id TEXT,
           state_seq INTEGER, acked_at TEXT);
+        CREATE TABLE node_sync_conflicts (conflict_version_id TEXT PRIMARY KEY, object_id TEXT,
+          parent_version_id TEXT, device_id TEXT, content_hash TEXT, snapshot_json TEXT, detected_at TEXT);
+        CREATE INDEX idx_node_sync_conflicts_object_detected ON node_sync_conflicts (object_id, detected_at);
         CREATE TABLE node_review (node_id TEXT, due TEXT);
         CREATE TABLE workspace_meta (key TEXT PRIMARY KEY, value TEXT);
         CREATE TABLE companion_meta (key TEXT PRIMARY KEY, value TEXT);

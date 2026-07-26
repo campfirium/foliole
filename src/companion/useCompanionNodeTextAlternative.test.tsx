@@ -6,7 +6,7 @@ const repository = vi.hoisted(() => ({
   update: vi.fn()
 }));
 
-vi.mock('../shared/platform/companionNodeTextAlternativeRepository', () => ({
+vi.mock('../shared/platform/companion/runtime/companionNodeTextAlternativeRepository', () => ({
   loadCompanionNodeTextAlternative: repository.load,
   updateCompanionNodeTextAlternativeStatus: repository.update
 }));

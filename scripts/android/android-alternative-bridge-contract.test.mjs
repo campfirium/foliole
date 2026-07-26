@@ -6,7 +6,7 @@ import { expect, it } from 'vitest';
 
 it('keeps the companion alternate-text repository wired to a registered Android Capacitor plugin', async () => {
   const [repository, plugin, activity] = await Promise.all([
-    readFile(path.join(process.cwd(), 'src/shared/platform/companionNodeTextAlternativeRepository.ts'), 'utf8'),
+    readFile(path.join(process.cwd(), 'src/shared/platform/companion/runtime/companionNodeTextAlternativeRepository.ts'), 'utf8'),
     readFile(path.join(process.cwd(), 'android/app/src/main/java/com/foliole/android/FolioleCompanionAlternativePlugin.java'), 'utf8'),
     readFile(path.join(process.cwd(), 'android/app/src/main/java/com/foliole/android/MainActivity.java'), 'utf8')
   ]);

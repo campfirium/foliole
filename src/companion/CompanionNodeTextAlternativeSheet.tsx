@@ -1,5 +1,5 @@
 import { useTranslation } from '../shared/localization/LocalizationProvider';
-import type { CompanionNodeTextAlternative } from '../shared/platform/companionNodeTextAlternativeRepository';
+import type { CompanionNodeTextAlternative } from '../shared/platform/companion/runtime/companionNodeTextAlternativeRepository';
 
 import { ReadingBottomSheet } from './CompanionReadingSheets';
 

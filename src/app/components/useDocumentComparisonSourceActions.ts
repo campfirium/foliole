@@ -1,14 +1,14 @@
 import { useCallback, type MutableRefObject } from 'react';
 
 import {
+  dismissRuntimeNodeTextAlternative,
+  promoteRuntimeNodeTextAlternative
+} from '../../shared/platform/desktop/nodeTextAlternativeRuntimeRepository';
+import {
   acceptRuntimeIncomingUpdate,
   dismissRuntimeIncomingUpdate,
   importRuntimeIncomingUpdateAsNew
 } from '../../shared/platform/nodeSourceRuntimeRepository';
-import {
-  dismissRuntimeNodeTextAlternative,
-  promoteRuntimeNodeTextAlternative
-} from '../../shared/platform/nodeTextAlternativeRuntimeRepository';
 
 import type { DocumentPanelSectionProps } from './documentPanelSectionTypes';
 import type { SourceUpdateDraft } from './sourceUpdateDraftState';

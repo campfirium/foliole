@@ -60,6 +60,7 @@ async function buildIllegalDagRejectionPack(
   outputPath: string,
   toPeerId: string
 ) {
+  const fromStateSeq = currentMaxStateSeq(driver);
   driver.execute(
     `INSERT INTO nodes (id, kind, title, content, sync_dirty, created_at, updated_at)
      VALUES ('ios-acceptance-illegal-dag', 'topic', 'Illegal DAG', '', 1, ?, ?)`,
@@ -68,8 +69,22 @@ async function buildIllegalDagRejectionPack(
   flushNodeSyncVersionWithDriver(
     driver, 'ios-acceptance-illegal-dag', DESKTOP_DEVICE_ID, '2026-07-21T00:05:00.000Z'
   );
-  await buildPack(driver, outputPath, toPeerId, 5, 'ios-acceptance-illegal-dag');
+  driver.execute(
+    `UPDATE nodes SET title = 'Illegal DAG child', sync_dirty = 1, updated_at = ?
+     WHERE id = 'ios-acceptance-illegal-dag'`,
+    ['2026-07-21T00:06:00.000Z']
+  );
+  flushNodeSyncVersionWithDriver(
+    driver, 'ios-acceptance-illegal-dag', DESKTOP_DEVICE_ID, '2026-07-21T00:06:00.000Z'
+  );
+  await buildPack(driver, outputPath, toPeerId, fromStateSeq, 'ios-acceptance-illegal-dag');
   await writeIllegalDagPack(outputPath, outputPath, 'ios-acceptance-illegal-dag');
+}
+
+function currentMaxStateSeq(driver: ReturnType<typeof createBetterSqlite3Driver>) {
+  return Number(driver.queryOne<{ max_state_seq: number }>(
+    'SELECT COALESCE(MAX(state_seq), 0) AS max_state_seq FROM sync_object_state'
+  )?.max_state_seq ?? 0);
 }
 
 function markInitialPackAcknowledged(driver: ReturnType<typeof createBetterSqlite3Driver>) {
@@ -115,9 +130,7 @@ async function buildCursorGapPack(
   outputPath: string,
   toPeerId: string
 ) {
-  const currentStateSeq = Number(driver.queryOne<{ max_state_seq: number }>(
-    'SELECT COALESCE(MAX(state_seq), 0) AS max_state_seq FROM sync_object_state'
-  )?.max_state_seq ?? 0);
+  const currentStateSeq = currentMaxStateSeq(driver);
   const fromStateSeq = currentStateSeq + 1;
   const toStateSeq = currentStateSeq + 2;
   driver.execute(

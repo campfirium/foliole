@@ -72,14 +72,22 @@ export function androidLabSshArgs(host, command, env, home = os.homedir()) {
 
 export function androidLabGitPushSpec(host, commitSha, env, home = os.homedir()) {
   const key = remoteAndroidLabPaths(env, home).gitSshKey;
-  if (!/^[A-Za-z0-9_./-]+$/u.test(key)) throw new Error('Android Lab Git SSH key path contains unsupported characters');
   return {
     args: ['push', '--porcelain', `${host}:foliole-android-lab.git`, `${commitSha}:${WINDOWS_ANDROID_LAB_SOURCE_REF}`],
     env: {
       ...env,
-      GIT_SSH_COMMAND: `ssh -i ${key} -o BatchMode=yes -o IdentitiesOnly=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes`
+      GIT_SSH_COMMAND:
+        `ssh -i ${quoteGitSshCommandToken(key)} ` +
+        '-o BatchMode=yes -o IdentitiesOnly=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes'
     }
   };
+}
+
+function quoteGitSshCommandToken(value) {
+  if (typeof value !== 'string' || value.length === 0 || /[\0\r\n']/u.test(value)) {
+    throw new Error('Android Lab Git SSH key path contains unsupported characters');
+  }
+  return `'${value}'`;
 }
 
 export function androidLabSigningInstallSpec(filePath) {

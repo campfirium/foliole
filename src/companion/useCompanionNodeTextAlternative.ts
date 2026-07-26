@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import {
   loadCompanionNodeTextAlternative,
   updateCompanionNodeTextAlternativeStatus
-} from '../shared/platform/companionNodeTextAlternativeRepository';
+} from '../shared/platform/companion/runtime/companionNodeTextAlternativeRepository';
 
 export function useCompanionNodeTextAlternative(args: {
   nodeId: string;
