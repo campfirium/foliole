@@ -87,6 +87,13 @@ describe('Windows Android Lab semantic UI automation', () => {
     });
     expect(calls).toContainEqual({
       args: [
+        '-s', '192.168.0.107:38717', 'install', '-r',
+        'C:\\dev\\foliole-android-lab-preview\\android\\app\\build\\outputs\\apk\\debug\\app-debug.apk'
+      ],
+      command: 'adb.exe'
+    });
+    expect(calls).toContainEqual({
+      args: [
         '-s', '192.168.0.107:38717', 'install', '-r', '-t',
         'C:\\dev\\foliole-android-lab-preview\\android\\app\\build\\outputs\\apk\\androidTest\\debug\\app-debug-androidTest.apk'
       ],

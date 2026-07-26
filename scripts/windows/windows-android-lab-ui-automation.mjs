@@ -158,7 +158,9 @@ export async function runWindowsAndroidLabUiAutomation({
   const adbArgs = (...args) => ['-s', serial, ...args];
   try {
     await invoke(env.FOLIOLE_ANDROID_BASH_PATH || 'bash', ['scripts/android/windows-gradle-check.sh', 'assembleDebugAndroidTest'], { timeoutMs: 15 * 60_000 });
+    const appApk = path.win32.join(windowsWorkDir, 'android', 'app', 'build', 'outputs', 'apk', 'debug', 'app-debug.apk');
     const testApk = path.win32.join(windowsWorkDir, 'android', 'app', 'build', 'outputs', 'apk', 'androidTest', 'debug', 'app-debug-androidTest.apk');
+    await invoke(adb, adbArgs('install', '-r', appApk), { timeoutMs: 120_000 });
     await invoke(adb, adbArgs('install', '-r', '-t', testApk), { timeoutMs: 120_000 });
     await wakeDevice(invoke, adb, adbArgs);
     const policy = await invoke(adb, adbArgs('shell', 'dumpsys', 'window', 'policy'));
