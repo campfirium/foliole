@@ -8,7 +8,7 @@ import { isAndroidLabRunId, LAB_EVIDENCE_FILES } from './windows-android-lab-evi
 
 export const WINDOWS_ANDROID_LAB_TASK = 'FolioleAndroidLab';
 export const WINDOWS_ANDROID_LAB_SOURCE_REF = 'refs/heads/lab/dev';
-export const WINDOWS_ANDROID_LAB_PROTOCOL_VERSION = 3;
+export const WINDOWS_ANDROID_LAB_PROTOCOL_VERSION = 4;
 
 export function androidLabRoot(env = process.env) {
   if (env.FOLIOLE_WINDOWS_ANDROID_LAB_ROOT) return path.resolve(env.FOLIOLE_WINDOWS_ANDROID_LAB_ROOT);
@@ -61,6 +61,14 @@ export function parseAndroidLabCommand(input) {
     if (parts.length !== 1 || !/^[0-9a-f]{40}$/u.test(parts[0])) throw new Error('run requires a lowercase 40-character commit SHA');
     return { action, commitSha: parts[0] };
   }
+  if (action === 'request') {
+    const byteLength = Number(parts[0]);
+    if (parts.length !== 2 || !Number.isSafeInteger(byteLength) || byteLength < 2 || byteLength > 1_048_576
+      || !/^[0-9a-f]{64}$/u.test(parts[1])) {
+      throw new Error('request requires <2..1048576 byte length> <lowercase sha256>');
+    }
+    return { action, byteLength, sha256: parts[1] };
+  }
   if (action === 'review') {
     if (!['prepare', 'capture', 'restart'].includes(parts[0]) || parts.length !== 2
       || !/^[0-9a-f]{40}$/u.test(parts[1])) {
@@ -110,10 +118,14 @@ export function isAndroidEndpoint(value) {
 
 export function publicLabStatus(status) {
   if (!status) return { protocolVersion: WINDOWS_ANDROID_LAB_PROTOCOL_VERSION, schemaVersion: 1, state: 'idle' };
-  const { commitSha, completedAt, createdAt, errorCode, errorMessage, phase, resultStatus, runId, startedAt, state } = status;
+  const {
+    commitSha, completedAt, createdAt, errorCode, errorMessage, mode, phase,
+    requestId, resultStatus, runId, startedAt, state, target
+  } = status;
   return {
-    commitSha, completedAt, createdAt, errorCode, errorMessage, phase,
-    protocolVersion: WINDOWS_ANDROID_LAB_PROTOCOL_VERSION, resultStatus, runId, schemaVersion: 1, startedAt, state
+    commitSha, completedAt, createdAt, errorCode, errorMessage, mode, phase,
+    protocolVersion: WINDOWS_ANDROID_LAB_PROTOCOL_VERSION, requestId, resultStatus,
+    runId, schemaVersion: 1, startedAt, state, target
   };
 }
 

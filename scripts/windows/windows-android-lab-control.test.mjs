@@ -35,7 +35,7 @@ describe('Windows Android lab Mac controller', () => {
       argv: ['--host', 'tester@windows-host', 'collect', 'get', '1000-aaaaaaaaaaaa', 'summary.json'], env: {},
       executeSsh: async (_host, command) => {
         calls.push(command);
-        return command[0] === 'status' ? Buffer.from('{"protocolVersion":3,"state":"idle"}\n') : Buffer.from('evidence');
+        return command[0] === 'status' ? Buffer.from('{"protocolVersion":4,"state":"idle"}\n') : Buffer.from('evidence');
       }, stdout: { write: () => {} }
     });
     expect(calls).toEqual([['status'], ['collect', 'get', '1000-aaaaaaaaaaaa', 'summary.json']]);
@@ -48,7 +48,7 @@ describe('Windows Android lab Mac controller', () => {
       executeSsh: async (_host, command) => {
         calls.push(command);
         return Buffer.from(command[0] === 'status'
-          ? '{"protocolVersion":3,"state":"idle"}\n'
+          ? '{"protocolVersion":4,"state":"idle"}\n'
           : '{"state":"pending"}\n');
       }, stdout: { write: () => {} }
     });
@@ -60,6 +60,8 @@ describe('Windows Android lab Mac controller', () => {
     expect(parseAndroidLabControlArgs(['--host', 'tester@windows-host', 'device', 'status'], {}).command).toEqual(['device', 'status']);
     const args = androidLabSshArgs('tester@windows-host', ['device', 'status'], {}, '/Users/tester');
     expect(args.slice(-3)).toEqual(['tester@windows-host', 'device', 'status']);
+    expect(args).toContain('IdentitiesOnly=yes');
+    expect(args).toContain('StrictHostKeyChecking=yes');
     expect(args.join(' ')).not.toMatch(/node\.exe|dispatcher/iu);
   });
 
@@ -104,6 +106,31 @@ describe('Windows Android lab Mac controller', () => {
       expect(calls[0][1]).toEqual(spec.command);
       expect(calls[0][3]).toEqual(Buffer.from('private signing bytes'));
       expect(calls[0][1].join(' ')).not.toContain(file);
+    } finally {
+      fs.rmSync(root, { force: true, recursive: true });
+    }
+  });
+
+  it('hashes a local request envelope and sends only its bounded payload to the forced command', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'android-lab-control-request-'));
+    const file = path.join(root, 'request.json');
+    fs.writeFileSync(file, JSON.stringify({
+      commitSha: 'a'.repeat(40), cwd: { path: '', scope: 'checkout' }, mode: 'automation',
+      operation: { args: [], kind: 'repository', runner: 'scripts/windows/windows-native-check.mjs' },
+      requestId: 'repo-check', schemaVersion: 1, target: 'windows', timeoutMs: 30_000
+    }));
+    const calls = [];
+    try {
+      await runWindowsAndroidLabControl({
+        argv: ['--host', 'tester@windows-host', 'request', file], env: {},
+        executeSsh: async (_host, command, _env, input) => {
+          calls.push({ command, input });
+          return Buffer.from(command[0] === 'status'
+            ? '{"protocolVersion":4,"state":"idle"}\n' : '{"state":"pending"}\n');
+        }, stdout: { write: () => {} }
+      });
+      expect(calls[1].command).toEqual(['request', String(calls[1].input.length), expect.stringMatching(/^[0-9a-f]{64}$/u)]);
+      expect(JSON.parse(calls[1].input.toString())).toMatchObject({ requestId: 'repo-check' });
     } finally {
       fs.rmSync(root, { force: true, recursive: true });
     }

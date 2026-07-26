@@ -8,12 +8,14 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { executeBounded } from './windows-bounded-process.mjs';
+import { cleanupAndroidLabCheckout, prepareAndroidLabCheckout } from './windows-android-lab-checkout.mjs';
 import { resolveAndroidDevice, validateAndroidLabConfig } from './windows-android-lab-device.mjs';
+import { finishAndroidLabOperationRun } from './windows-android-lab-operation.mjs';
 import {
   finishWindowsAndroidLabReviewRun, runWindowsAndroidLabReviewPhase
 } from './windows-android-lab-review-action.mjs';
 import {
-  androidLabPaths, readJson, WINDOWS_ANDROID_LAB_SOURCE_REF, writeJsonAtomic, writeSuccessfulDeployment
+  androidLabPaths, readJson, writeJsonAtomic, writeSuccessfulDeployment
 } from './windows-android-lab-state.mjs';
 
 const PREVIEW_TIMEOUT_MS = 45 * 60_000;
@@ -44,31 +46,6 @@ async function runChecked(executeCommand, command, args, options, code) {
   const result = await executeCommand(command, args, { timeoutCode: `${code}_timeout`, timeoutMs: COMMAND_TIMEOUT_MS, ...options });
   if (result.code !== 0) throw codedError(code, result.lines.at(-1) || `${command} exited ${result.code}`);
   return result;
-}
-
-function isolatedGitArgs(paths, args) {
-  const hooksPath = path.join(paths.root, 'worker-empty-hooks');
-  fs.mkdirSync(hooksPath, { recursive: true });
-  return ['-c', `core.hooksPath=${hooksPath}`, ...args];
-}
-
-async function prepareCheckout(config, paths, executeCommand) {
-  const gitOptions = { env: process.env };
-  if (!fs.existsSync(path.join(paths.repository, 'HEAD'))) throw codedError('lab_source_missing', 'LAN Git source repository is missing');
-  await runChecked(executeCommand, config.gitPath, isolatedGitArgs(paths, [
-    '--git-dir', paths.repository, 'cat-file', '-e', `${config.commitSha}^{commit}`
-  ]), gitOptions, 'commit_missing');
-  await runChecked(executeCommand, config.gitPath, isolatedGitArgs(paths, [
-    '--git-dir', paths.repository, 'merge-base', '--is-ancestor', config.commitSha, WINDOWS_ANDROID_LAB_SOURCE_REF
-  ]), gitOptions, 'commit_not_in_lab_ref');
-  fs.rmSync(paths.candidate, { force: true, recursive: true });
-  await runChecked(executeCommand, config.gitPath, isolatedGitArgs(paths, [
-    '--git-dir', paths.repository, 'worktree', 'add', '--detach', paths.candidate, config.commitSha
-  ]), gitOptions, 'checkout_failed');
-  const status = await runChecked(executeCommand, config.gitPath, isolatedGitArgs(paths, [
-    '-C', paths.candidate, 'status', '--porcelain'
-  ]), gitOptions, 'checkout_status_failed');
-  if (status.output.trim()) throw codedError('checkout_dirty', 'controller checkout is not clean');
 }
 
 async function captureScreenshot(config, endpoint, paths, evidenceRoot, executeCommand) {
@@ -107,16 +84,6 @@ function previewEnvironment(config, endpoint, paths) {
     JAVA_HOME: config.javaHome,
     Path: `${toolPath};${process.env.Path || process.env.PATH || ''}`
   };
-}
-
-async function cleanupCheckout(config, paths, executeCommand) {
-  if (!fs.existsSync(paths.candidate)) return;
-  await runChecked(executeCommand, config.gitPath, isolatedGitArgs(paths, [
-    '--git-dir', paths.repository, 'worktree', 'remove', '--force', paths.candidate
-  ]), { env: process.env }, 'checkout_cleanup_failed');
-  await runChecked(executeCommand, config.gitPath, isolatedGitArgs(paths, [
-    '--git-dir', paths.repository, 'worktree', 'prune'
-  ]), { env: process.env }, 'checkout_cleanup_failed');
 }
 
 async function captureLogcat(config, endpoint, evidenceRoot, executeCommand) {
@@ -168,6 +135,10 @@ export async function runWindowsAndroidLabWorker({
   if (request.action === 'review') {
     return finishWindowsAndroidLabReviewRun({ executeCommand, paths, request, runReviewPhase, running });
   }
+  if (request.action === 'request') {
+    validateAndroidLabConfig(config);
+    return finishAndroidLabOperationRun({ config, executeCommand, paths, request, running });
+  }
   let previewResult = { code: 1, lines: [], output: '' };
   let device = null;
   let primaryError = null;
@@ -176,7 +147,7 @@ export async function runWindowsAndroidLabWorker({
     assertAndroidSigning(config, paths);
     device = await resolveAndroidDevice(config, paths, executeCommand);
     writeJsonAtomic(paths.status, { ...running, phase: 'checkout' });
-    await prepareCheckout(config, paths, executeCommand);
+    await prepareAndroidLabCheckout(config, paths, request.commitSha, executeCommand);
     fs.mkdirSync(paths.protection, { recursive: true });
     fs.mkdirSync(paths.manifest, { recursive: true });
     writeJsonAtomic(paths.status, { ...running, phase: 'preview' });
@@ -191,7 +162,7 @@ export async function runWindowsAndroidLabWorker({
   const logcatError = await captureLogcat(config, device?.endpoint, evidenceRoot, executeCommand);
   const screenshotError = await captureScreenshot(config, device?.endpoint, paths, evidenceRoot, executeCommand);
   try {
-    await cleanupCheckout(config, paths, executeCommand);
+    await cleanupAndroidLabCheckout(config, paths, executeCommand);
   } catch (error) {
     primaryError ||= error;
   }

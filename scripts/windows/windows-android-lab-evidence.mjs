@@ -2,7 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export const LAB_EVIDENCE_FILES = new Set([
-  'logcat.txt', 'review-audit.json', 'runner.log', 'screenshot.png', 'summary.json'
+  'command-audit.json', 'logcat.txt', 'review-audit.json', 'runner.log',
+  'screenshot.png', 'stderr.txt', 'stdout.txt', 'summary.json'
 ]);
 
 export function isAndroidLabRunId(value) {

@@ -16,7 +16,7 @@
 - 除原生权限、生命周期、intent、插件接缝与设备集成这类宿主特有能力外，Android 相关需求默认都应先复用或抽取 `src/shared/**` / `src/features/**` / 共享 contract；不得因为入口发生在 Android 就把节点列表、跳转逻辑、浏览语义、状态切换等非原生专属能力落到 Android / companion 私有实现。
 - Android 首轮交付优先验证存储、生命周期、同步入口与真实数据复习闭环；不得先扩展桌面级 UI 宽度或复杂编辑表面。
 - Android 权限、生命周期、文件访问、分享、intent、插件接缝改动，必须先核对 Capacitor 官方文档与 Android 官方文档。
-- 实体 Windows Android Lab 是 Android 原生宿主与 A5 设备操作的唯一执行端；Mac 只允许编辑源码、运行不启动 Android 宿主的静态 / TypeScript 测试，以及通过 `scripts/windows/windows-android-lab-control.mjs` 发送受限 controller 动作。Mac 不得启动本地 ADB、Gradle、Android Studio、模拟器或 scrcpy。
+- 实体 Windows Android Lab 是 Android 原生宿主与 A5 设备操作的唯一执行端；Mac 只允许编辑源码、运行不启动 Android 宿主的静态 / TypeScript 测试，以及通过 `scripts/windows/windows-android-lab-control.mjs` 发送 commit-bound、受审计的 controller request。Mac 不得启动本地 ADB、Gradle、Android Studio、模拟器或 scrcpy。
 
 ## Legacy E-Reader Compatibility
 

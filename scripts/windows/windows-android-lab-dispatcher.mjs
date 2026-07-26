@@ -13,7 +13,8 @@ import {
   androidLabPaths, parseAndroidLabCommand, publicLabStatus, readJson,
   publicDeviceStatus, WINDOWS_ANDROID_LAB_SOURCE_REF, WINDOWS_ANDROID_LAB_TASK, writeJsonAtomic
 } from './windows-android-lab-state.mjs';
-import { reconnectAndroidDevice, validateAndroidLabConfig } from './windows-android-lab-device.mjs';
+import { validateAndroidLabConfig } from './windows-android-lab-device.mjs';
+import { parseAndroidLabEnvelope } from './windows-android-lab-request.mjs';
 
 const WORKER_START_TIMEOUT_MS = 60_000;
 
@@ -52,29 +53,50 @@ function assertLabSourceCommit(config, commitSha, paths, runCommand) {
   }
 }
 
-function startRun(command, paths, runCommand, now) {
+function writeActiveExclusive(paths, request) {
+  fs.mkdirSync(path.dirname(paths.active), { recursive: true });
+  let handle;
+  try {
+    handle = fs.openSync(paths.active, 'wx', 0o600);
+    fs.writeFileSync(handle, `${JSON.stringify(request, null, 2)}\n`, 'utf8');
+  } catch (error) {
+    if (error.code === 'EEXIST') throw Object.assign(new Error('another Android lab run claimed the slot'), { code: 'android_lab_busy' });
+    throw error;
+  } finally {
+    if (handle !== undefined) fs.closeSync(handle);
+  }
+}
+
+function queueRun(request, paths, runCommand, now) {
   const current = closeStalePending(paths, now);
   if (current && ['pending', 'running'].includes(current.state)) {
-    if (current.commitSha === command.commitSha && current.reviewPhase === command.reviewPhase) return publicLabStatus(current);
+    if (current.requestId && current.requestId === request.requestId) {
+      if (current.requestSha256 !== request.requestSha256) {
+        throw Object.assign(new Error('request id was reused with different content'), { code: 'request_id_collision' });
+      }
+      return publicLabStatus(current);
+    }
+    if (!request.requestId && current.commitSha === request.commitSha && current.reviewPhase === request.reviewPhase) {
+      return publicLabStatus(current);
+    }
     throw Object.assign(new Error('another Android lab run is active'), { code: 'android_lab_busy' });
   }
   const config = validateAndroidLabConfig(readJson(paths.config));
-  assertLabSourceCommit(config, command.commitSha, paths, runCommand);
-  const runId = `${now}-${command.commitSha.slice(0, 12)}${command.reviewPhase ? `-${command.reviewPhase}` : ''}`;
+  assertLabSourceCommit(config, request.commitSha, paths, runCommand);
+  const runId = `${now}-${request.commitSha.slice(0, 12)}${request.reviewPhase ? `-${request.reviewPhase}` : ''}`;
   const createdAt = new Date(now).toISOString();
-  const request = {
-    action: command.action, commitSha: command.commitSha, createdAt,
-    ...(command.reviewPhase ? { reviewPhase: command.reviewPhase } : {}), runId, schemaVersion: 1
-  };
-  writeJsonAtomic(paths.active, request);
+  const queued = { ...request, createdAt, runId };
+  writeActiveExclusive(paths, queued);
   writeJsonAtomic(paths.status, {
-    commitSha: request.commitSha, createdAt, phase: 'queued',
-    ...(request.reviewPhase ? { reviewPhase: request.reviewPhase } : {}), runId, schemaVersion: 1, state: 'pending'
+    commitSha: queued.commitSha, createdAt, mode: queued.mode, phase: 'queued', requestId: queued.requestId,
+    requestSha256: queued.requestSha256,
+    ...(queued.reviewPhase ? { reviewPhase: queued.reviewPhase } : {}), runId, schemaVersion: 1,
+    state: 'pending', target: queued.target
   });
   const started = runCommand('schtasks.exe', ['/Run', '/TN', WINDOWS_ANDROID_LAB_TASK]);
   if (started?.code !== undefined && started.code !== 0) {
     const failed = {
-      ...request, completedAt: new Date(now).toISOString(), errorCode: 'scheduled_task_start_failed',
+      ...queued, completedAt: new Date(now).toISOString(), errorCode: 'scheduled_task_start_failed',
       errorMessage: String(started.output || 'scheduled task failed to start').trim(), phase: 'completed',
       resultStatus: 'failure', state: 'completed'
     };
@@ -83,6 +105,13 @@ function startRun(command, paths, runCommand, now) {
     throw Object.assign(new Error(failed.errorMessage), { code: failed.errorCode });
   }
   return publicLabStatus(readJson(paths.status));
+}
+
+function startRun(command, paths, runCommand, now) {
+  return queueRun({
+    action: command.action, commitSha: command.commitSha,
+    ...(command.reviewPhase ? { reviewPhase: command.reviewPhase } : {}), schemaVersion: 1
+  }, paths, runCommand, now);
 }
 
 function collect(command, paths, stdout) {
@@ -104,15 +133,11 @@ function cancel(paths, runCommand) {
   return publicLabStatus(readJson(paths.status));
 }
 
-async function deviceAction(command, paths, runCommand) {
+function deviceAction(command, paths) {
   if (command.operation === 'status') return publicDeviceStatus(readJson(paths.device));
-  const status = closeStalePending(paths);
-  if (status && ['pending', 'running'].includes(status.state)) {
-    throw Object.assign(new Error('device reconnect is unavailable while a run is active'), { code: 'android_lab_busy' });
-  }
-  const config = validateAndroidLabConfig(readJson(paths.config));
-  const device = await reconnectAndroidDevice(config, command.endpoint, paths, runCommand);
-  return publicDeviceStatus(device);
+  throw Object.assign(new Error('device reconnect must be submitted in a commit-bound request envelope'), {
+    code: 'device_reconnect_requires_request'
+  });
 }
 
 async function readBoundedInput(input, byteLength) {
@@ -153,8 +178,13 @@ export async function dispatchWindowsAndroidLab({
 } = {}) {
   const command = parseAndroidLabCommand(env.SSH_ORIGINAL_COMMAND?.trim() || argv.join(' '));
   if (['review', 'run'].includes(command.action)) return startRun(command, paths, runCommand, now);
+  if (command.action === 'request') {
+    const payload = await readBoundedInput(input, command.byteLength);
+    const parsed = parseAndroidLabEnvelope(payload, command.byteLength, command.sha256);
+    return queueRun({ ...parsed.envelope, action: 'request', requestSha256: parsed.sha256 }, paths, runCommand, now);
+  }
   if (command.action === 'status') return publicLabStatus(closeStalePending(paths, now));
-  if (command.action === 'device') return deviceAction(command, paths, runCommand);
+  if (command.action === 'device') return deviceAction(command, paths);
   if (command.action === 'signing') return installSigning(command, paths, input);
   if (command.action === 'collect') return collect(command, paths, stdout);
   return cancel(paths, runCommand);

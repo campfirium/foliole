@@ -16,9 +16,12 @@ $installRoot = Join-Path $env:LOCALAPPDATA "Foliole\windows-android-lab"
 $sourceRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $files = @(
   "windows-bounded-process.mjs",
+  "windows-android-lab-checkout.mjs",
   "windows-android-lab-dispatcher.mjs",
   "windows-android-lab-device.mjs",
   "windows-android-lab-evidence.mjs",
+  "windows-android-lab-operation.mjs",
+  "windows-android-lab-request.mjs",
   "windows-android-lab-review-action.mjs",
   "windows-android-lab-review-audit.ts",
   "windows-android-lab-review-snapshot.mjs",

@@ -57,6 +57,26 @@ function successfulExecutor(paths, calls) {
 }
 
 describe('Windows Android lab worker', () => {
+  it('executes a claimed general request in the worker and leaves a complete command audit', async () => {
+    const paths = createFixture();
+    fs.writeFileSync(path.join(paths.root, 'health.txt'), 'healthy\n');
+    writeJsonAtomic(paths.active, {
+      action: 'request', commitSha: SHA, cwd: { path: '', scope: 'lab' }, mode: 'automation',
+      operation: { kind: 'read', path: 'health.txt' }, requestId: 'read-health',
+      requestSha256: 'a'.repeat(64), runId: 'request-run', schemaVersion: 1,
+      target: 'windows', timeoutMs: 30_000
+    });
+    await runWindowsAndroidLabWorker({
+      executeCommand: async () => { throw new Error('bounded file read should not spawn'); },
+      paths, platform: 'win32'
+    });
+    expect(readJson(paths.status)).toMatchObject({ requestId: 'read-health', resultStatus: 'success', state: 'completed' });
+    expect(readJson(path.join(paths.evidence, 'request-run', 'command-audit.json'))).toMatchObject({
+      commands: [], operationKind: 'read', resultStatus: 'success'
+    });
+    expect(fs.readFileSync(path.join(paths.evidence, 'request-run', 'stdout.txt'), 'utf8')).toContain('healthy');
+  });
+
   it('delegates a Review request without entering deploy or data-protection setup', async () => {
     const paths = createFixture();
     writeJsonAtomic(paths.active, {

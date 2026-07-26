@@ -48,15 +48,19 @@ export function executeBounded(command, args, {
     const child = spawnImpl(command, args, { ...options, shell: false, stdio: ['ignore', 'pipe', 'pipe'] });
     const lines = [];
     let output = '';
+    let stderr = '';
+    let stdout = '';
     let timedOut = false;
     let terminationError = null;
-    const collect = (chunk) => {
+    const collect = (stream) => (chunk) => {
       output += chunk;
+      if (stream === 'stdout') stdout += chunk;
+      else stderr += chunk;
       lines.push(...String(chunk).split(/\r?\n/u).filter(Boolean));
       if (lines.length > lineLimit) lines.splice(0, lines.length - lineLimit);
     };
-    child.stdout?.on('data', collect);
-    child.stderr?.on('data', collect);
+    child.stdout?.on('data', collect('stdout'));
+    child.stderr?.on('data', collect('stderr'));
     const timer = setTimeout(() => {
       timedOut = true;
       try {
@@ -67,7 +71,9 @@ export function executeBounded(command, args, {
         reject(error);
         return;
       }
-      reject(timeoutError(timeoutCode, timeoutMs, command));
+      const error = timeoutError(timeoutCode, timeoutMs, command);
+      Object.assign(error, { lines: [...lines], output, stderr, stdout });
+      reject(error);
     }, timeoutMs);
     child.on('error', (error) => {
       clearTimeout(timer);
@@ -77,7 +83,7 @@ export function executeBounded(command, args, {
       clearTimeout(timer);
       if (terminationError) return reject(terminationError);
       if (timedOut) return;
-      resolve({ code: signal ? 1 : code ?? 1, lines, output });
+      resolve({ code: signal ? 1 : code ?? 1, lines, output, stderr, stdout });
     });
   });
 }

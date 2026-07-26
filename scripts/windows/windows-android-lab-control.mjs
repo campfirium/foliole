@@ -12,6 +12,7 @@ import { pathToFileURL } from 'node:url';
 import {
   WINDOWS_ANDROID_LAB_PROTOCOL_VERSION, WINDOWS_ANDROID_LAB_SOURCE_REF
 } from './windows-android-lab-state.mjs';
+import { loadAndroidLabEnvelope } from './windows-android-lab-request.mjs';
 
 export function remoteAndroidLabPaths(env, home = os.homedir()) {
   return {
@@ -64,6 +65,7 @@ export function androidLabSshArgs(host, command, env, home = os.homedir()) {
   const remote = remoteAndroidLabPaths(env, home);
   return [
     '-T', '-i', remote.sshKey, '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=15',
+    '-o', 'IdentitiesOnly=yes', '-o', 'StrictHostKeyChecking=yes',
     '-o', 'ServerAliveInterval=15', '-o', 'ServerAliveCountMax=3', host, ...command
   ];
 }
@@ -109,7 +111,7 @@ function isRunScopedCollect(command) {
 }
 
 function requiresProtocolPreflight(command) {
-  return command[0] === 'review' || isRunScopedCollect(command);
+  return ['request', 'review'].includes(command[0]) || isRunScopedCollect(command);
 }
 
 async function assertRunScopedCollectSupport(host, env, executeSsh) {
@@ -137,6 +139,12 @@ export async function runWindowsAndroidLabControl({
   }
   let remoteCommand = command;
   let input = null;
+  if (command[0] === 'request') {
+    if (command.length !== 2 || output) throw new Error('request requires one local envelope JSON path and does not accept --output');
+    const request = loadAndroidLabEnvelope(command[1]);
+    remoteCommand = ['request', String(request.payload.length), request.sha256];
+    input = request.payload;
+  }
   if (command[0] === 'signing') {
     if (command.length !== 3 || command[1] !== 'install' || output) {
       throw new Error('signing requires install <local-keystore-path> and does not accept --output');
