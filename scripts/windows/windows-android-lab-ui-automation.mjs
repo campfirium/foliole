@@ -102,6 +102,10 @@ function assertAwakeAndUnlocked(policy, power) {
   }
 }
 
+async function wakeDevice(invoke, adb, adbArgs) {
+  await invoke(adb, adbArgs('shell', 'input', 'keyevent', 'KEYCODE_WAKEUP'));
+}
+
 function assertFolioleForeground(windowState) {
   const focus = /mCurrentFocus=[^\n]*\s([A-Za-z0-9._]+)\//u.exec(windowState)?.[1] || '';
   if (focus !== APP_ID) throw codedError('wrong_page_or_system_ui', `Foliole is not foreground; current package is ${focus || 'unknown'}`);
@@ -150,7 +154,8 @@ export async function runWindowsAndroidLabUiAutomation({
   try {
     await invoke(env.FOLIOLE_ANDROID_BASH_PATH || 'bash', ['scripts/android/windows-gradle-check.sh', 'assembleDebugAndroidTest'], { timeoutMs: 15 * 60_000 });
     const testApk = path.win32.join(windowsWorkDir, 'android', 'app', 'build', 'outputs', 'apk', 'androidTest', 'debug', 'app-debug-androidTest.apk');
-    await invoke(adb, adbArgs('install', '-r', testApk), { timeoutMs: 120_000 });
+    await invoke(adb, adbArgs('install', '-r', '-t', testApk), { timeoutMs: 120_000 });
+    await wakeDevice(invoke, adb, adbArgs);
     const policy = await invoke(adb, adbArgs('shell', 'dumpsys', 'window', 'policy'));
     const power = await invoke(adb, adbArgs('shell', 'dumpsys', 'power'));
     assertAwakeAndUnlocked(policy.stdout, power.stdout);
