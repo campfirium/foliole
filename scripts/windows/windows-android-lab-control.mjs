@@ -14,6 +14,8 @@ import {
 } from './windows-android-lab-state.mjs';
 import { loadAndroidLabEnvelope } from './windows-android-lab-request.mjs';
 
+const COMMIT_SHA = /^[0-9a-f]{40}$/u;
+
 export function remoteAndroidLabPaths(env, home = os.homedir()) {
   return {
     gitSshKey: env.FOLIOLE_WINDOWS_ANDROID_LAB_GIT_SSH_KEY || path.join(home, '.ssh', 'agent', 'foliole-windows-android-lab-git'),
@@ -101,13 +103,20 @@ export function androidLabSigningInstallSpec(filePath) {
   return { command: ['signing', 'install', String(input.length), sha256], input, sha256 };
 }
 
-async function pushAndroidLabSource(host, env, executeGit) {
-  const status = String(await executeGit(['status', '--porcelain'], { env })).trim();
-  if (status) throw new Error('Android Lab source push requires a clean working tree');
+async function pushAndroidLabSource(host, env, executeGit, explicitCommitSha = null) {
+  if (!explicitCommitSha) {
+    const status = String(await executeGit(['status', '--porcelain'], { env })).trim();
+    if (status) throw new Error('Android Lab source push requires a clean working tree');
+  }
   const branch = String(await executeGit(['branch', '--show-current'], { env })).trim();
   if (branch !== 'dev') throw new Error('Android Lab source push requires the dev branch');
-  const commitSha = String(await executeGit(['rev-parse', '--verify', 'HEAD'], { env })).trim();
-  if (!/^[0-9a-f]{40}$/u.test(commitSha)) throw new Error('Android Lab source commit is invalid');
+  const commitSha = explicitCommitSha || String(await executeGit(['rev-parse', '--verify', 'HEAD'], { env })).trim();
+  if (!COMMIT_SHA.test(commitSha)) throw new Error('Android Lab source commit is invalid');
+  if (explicitCommitSha) {
+    const verified = String(await executeGit(['rev-parse', '--verify', `${commitSha}^{commit}`], { env })).trim();
+    if (verified !== commitSha) throw new Error('Android Lab source commit is invalid');
+    await executeGit(['merge-base', '--is-ancestor', commitSha, 'HEAD'], { env });
+  }
   const spec = androidLabGitPushSpec(host, commitSha, env);
   await executeGit(spec.args, { env: spec.env });
   return { commitSha, ref: WINDOWS_ANDROID_LAB_SOURCE_REF, schemaVersion: 1 };
@@ -140,8 +149,12 @@ export async function runWindowsAndroidLabControl({
 } = {}) {
   const { command, host, output } = parseAndroidLabControlArgs(argv, env);
   if (command[0] === 'push') {
-    if (command.length !== 1 || output) throw new Error('push does not accept remote arguments or --output');
-    const pushed = await pushAndroidLabSource(host, env, executeGit);
+    if (output) throw new Error('push does not accept --output');
+    const explicitCommitSha = command.length === 3 && command[1] === '--commit' ? command[2] : null;
+    if ((explicitCommitSha && !COMMIT_SHA.test(explicitCommitSha)) || (!explicitCommitSha && command.length !== 1)) {
+      throw new Error('push accepts no arguments, or --commit <40-character commit SHA>');
+    }
+    const pushed = await pushAndroidLabSource(host, env, executeGit, explicitCommitSha);
     stdout.write(`${JSON.stringify(pushed)}\n`);
     return pushed;
   }

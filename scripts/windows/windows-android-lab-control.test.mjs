@@ -85,6 +85,30 @@ describe('Windows Android lab Mac controller', () => {
     expect(JSON.parse(output)).toMatchObject({ commitSha: sha, ref: 'refs/heads/lab/dev' });
   });
 
+  it('pushes an explicit committed SHA without requiring a clean working tree', async () => {
+    const sha = 'e'.repeat(40);
+    const calls = [];
+    const executeGit = async (args, options) => {
+      calls.push({ args, options });
+      if (args[0] === 'status') throw new Error('status should not be read for explicit commit push');
+      if (args.join(' ') === 'branch --show-current') return Buffer.from('dev\n');
+      if (args.join(' ') === `rev-parse --verify ${sha}^{commit}`) return Buffer.from(`${sha}\n`);
+      if (args.join(' ') === `merge-base --is-ancestor ${sha} HEAD`) return Buffer.from('');
+      if (args[0] === 'push') return Buffer.from('ok\n');
+      throw new Error(`unexpected git call: ${args.join(' ')}`);
+    };
+    let output = '';
+    await runWindowsAndroidLabControl({
+      argv: ['--host', 'tester@windows-host', 'push', '--commit', sha], env: {}, executeGit,
+      stdout: { write: (value) => { output += String(value); } }
+    });
+    expect(calls.map((call) => call.args[0])).toEqual(['branch', 'rev-parse', 'merge-base', 'push']);
+    expect(calls.at(-1).args).toEqual([
+      'push', '--porcelain', 'tester@windows-host:foliole-android-lab.git', `${sha}:refs/heads/lab/dev`
+    ]);
+    expect(JSON.parse(output)).toMatchObject({ commitSha: sha, ref: 'refs/heads/lab/dev' });
+  });
+
   it('builds no GitHub URL or mutable working-tree transfer', () => {
     const spec = androidLabGitPushSpec('tester@windows-host', 'f'.repeat(40), {}, '/Users/tester');
     expect(spec.args.join(' ')).not.toMatch(/github|bundle|patch/iu);
