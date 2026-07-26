@@ -1,6 +1,7 @@
 import { screen, within } from '@testing-library/react';
 import { beforeEach, vi } from 'vitest';
 
+import './app-smoke-desktop-update-mock';
 import './reactPdfMock';
 
 import type { Node } from '../features/nodes/model/nodeTypes';

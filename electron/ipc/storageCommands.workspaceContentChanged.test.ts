@@ -20,6 +20,9 @@ const { upsertNodeSnapshot } = vi.hoisted(() => ({
 const { upsertNodeSnapshotWithOrder } = vi.hoisted(() => ({
   upsertNodeSnapshotWithOrder: vi.fn()
 }));
+const { upsertVersionedNodeSnapshotWithOrder } = vi.hoisted(() => ({
+  upsertVersionedNodeSnapshotWithOrder: vi.fn()
+}));
 
 vi.mock('../database/importMaintenance.js', () => ({ resetImportData }));
 vi.mock('../database/nodeMutations.js', () => ({
@@ -31,6 +34,11 @@ vi.mock('../database/nodeMutations.js', () => ({
   updateNodeAnchorLinks: vi.fn(),
   upsertNodeSnapshot,
   upsertNodeSnapshotWithOrder
+}));
+vi.mock('../database/nodeVersionedMutations.js', () => ({
+  upsertVersionedNodeContentWithAnchors: vi.fn(),
+  upsertVersionedNodeSnapshot: vi.fn(),
+  upsertVersionedNodeSnapshotWithOrder
 }));
 vi.mock('../database/workspaceSearch.js', () => ({ searchWorkspace: vi.fn() }));
 vi.mock('../import/currentSourceReimport.js', () => ({ reimportCurrentTopicSource }));
@@ -66,7 +74,7 @@ it('notifies workspace content changes after node mutation commands', async () =
     nodeOrder: ['node-1']
   });
 
-  expect(upsertNodeSnapshotWithOrder).toHaveBeenCalledWith(expect.objectContaining({
+  expect(upsertVersionedNodeSnapshotWithOrder).toHaveBeenCalledWith(expect.objectContaining({
     kind: 'topic',
     nodeId: 'node-1'
   }), ['node-1']);

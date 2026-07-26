@@ -49,7 +49,8 @@ vi.mock('@codemirror/view', () => ({
     updateListener: { of: vi.fn((value) => value) }
   },
   highlightActiveLine: vi.fn(() => 'active-line'),
-  keymap: { of: vi.fn((value) => value) }
+  keymap: { of: vi.fn((value) => value) },
+  WidgetType: class {}
 }));
 
 vi.mock('./liveMarkdown', () => ({

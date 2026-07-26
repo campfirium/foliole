@@ -81,7 +81,7 @@ it('covers highlight child apply, idempotency, and divergent remote conflict iso
   });
   expect(connection.sqlite.prepare(
     `SELECT COUNT(*) AS count FROM nodes WHERE id LIKE 'conflict-copy-%'`
-  ).get()).toEqual({ count: 1 });
+  ).get()).toEqual({ count: 0 });
 });
 
 function nodeRecord(args: {

@@ -25,6 +25,12 @@ vi.mock('@codemirror/lang-markdown', () => ({
 vi.mock('@codemirror/state', () => ({
   EditorState: {
     allowMultipleSelections: { of: vi.fn(() => 'allow-multiple-selections') }
+  },
+  StateEffect: {
+    define: vi.fn(() => ({ of: vi.fn((value) => value) }))
+  },
+  StateField: {
+    define: vi.fn((value) => value)
   }
 }));
 
@@ -37,7 +43,8 @@ vi.mock('@codemirror/view', () => ({
     updateListener: { of: vi.fn((value) => value) }
   },
   highlightActiveLine: vi.fn(() => 'highlight-active-line'),
-  keymap: { of: mockKeymapOf }
+  keymap: { of: mockKeymapOf },
+  WidgetType: class {}
 }));
 
 vi.mock('../model/folioleMarkdownParser', () => ({

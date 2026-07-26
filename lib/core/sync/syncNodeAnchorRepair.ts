@@ -131,6 +131,7 @@ function remapRawAnchorLinkInContent(input: {
 
 export async function repairDirectChildAnchorsForAppliedParent(input: {
   content: string;
+  excludedNodeIds?: ReadonlySet<string>;
   parentNodeId: string;
   port: DbPort;
   sourceVersionId: string | null;
@@ -148,6 +149,9 @@ export async function repairDirectChildAnchorsForAppliedParent(input: {
   );
 
   for (const row of rows) {
+    if (input.excludedNodeIds?.has(row.id)) {
+      continue;
+    }
     if (!row.anchor_link) {
       continue;
     }

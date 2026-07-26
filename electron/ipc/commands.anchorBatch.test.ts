@@ -2,7 +2,7 @@
 
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { updateNodeAnchorLinks, upsertNodeSnapshot } from '../database/nodeMutations.js';
+import { upsertVersionedNodeContentWithAnchors } from '../database/nodeVersionedMutations.js';
 import { enqueueCoalescedWorkspaceSearchInvalidation } from '../database/searchIndexInvalidationCoalescer.js';
 import { scheduleMirrorSync } from '../mirror/mirrorSyncScheduler.js';
 
@@ -22,9 +22,12 @@ vi.mock('../database/nodeMutations.js', () => ({
   deleteNodesPermanently: vi.fn(),
   replaceNodeOrder: vi.fn(),
   restoreNodes: vi.fn(),
-  softDeleteNodes: vi.fn(),
-  upsertNodeSnapshot: vi.fn(),
-  updateNodeAnchorLinks: vi.fn()
+  softDeleteNodes: vi.fn()
+}));
+vi.mock('../database/nodeVersionedMutations.js', () => ({
+  upsertVersionedNodeContentWithAnchors: vi.fn(),
+  upsertVersionedNodeSnapshot: vi.fn(),
+  upsertVersionedNodeSnapshotWithOrder: vi.fn()
 }));
 vi.mock('../database/searchIndexInvalidationCoalescer.js', () => ({
   enqueueCoalescedWorkspaceSearchInvalidation: vi.fn()
@@ -85,22 +88,25 @@ it('handles batched parent and text-anchor mutations in one command', async () =
     updatedNodeIds: ['node-parent', 'node-child']
   });
 
-  expect(upsertNodeSnapshot).toHaveBeenCalledWith(expect.objectContaining({
-    content: 'Alpha Better Gamma',
-    nodeId: 'node-parent'
-  }), { searchInvalidation: { workspaceInvalidation: 'defer' } });
-  expect(enqueueCoalescedWorkspaceSearchInvalidation).toHaveBeenCalledWith(['node-parent']);
-  expect(updateNodeAnchorLinks).toHaveBeenCalledWith([
+  expect(upsertVersionedNodeContentWithAnchors).toHaveBeenCalledWith(
     expect.objectContaining({
-      nodeId: 'node-child',
-      anchorLink: expect.objectContaining({
-        locator: { from: 6, to: 12, originalText: 'Better' }
-      }),
-      imageRegions: [{
-        attachmentId: 'asset-1',
-        regions: [{ height: 1, id: 'hl-1-image-0', width: 1, x: 0, y: 0 }]
-      }]
-    })
-  ]);
+      content: 'Alpha Better Gamma',
+      nodeId: 'node-parent'
+    }),
+    [
+      expect.objectContaining({
+        nodeId: 'node-child',
+        anchorLink: expect.objectContaining({
+          locator: { from: 6, to: 12, originalText: 'Better' }
+        }),
+        imageRegions: [{
+          attachmentId: 'asset-1',
+          regions: [{ height: 1, id: 'hl-1-image-0', width: 1, x: 0, y: 0 }]
+        }]
+      })
+    ],
+    { searchInvalidation: { workspaceInvalidation: 'defer' } }
+  );
+  expect(enqueueCoalescedWorkspaceSearchInvalidation).toHaveBeenCalledWith(['node-parent']);
   expect(scheduleMirrorSync).toHaveBeenCalledWith(['node-parent', 'node-child']);
 });

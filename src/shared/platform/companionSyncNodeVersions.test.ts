@@ -4,6 +4,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS } from '../../../lib/core/database/androidCompanionCoreSchemaStatements';
 import { ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS } from '../../../lib/core/database/androidCompanionSyncSchemaStatements';
 import { toWorkspaceNativeNodeVersion } from '../../../lib/core/database/workspaceNodeSyncVersion';
+import { COMPANION_DATABASE_VERSION } from '../../../lib/platform/nativeCompanionContract';
 import type { NativeSyncNodeRecord } from '../../../lib/platform/nativeSyncContract';
 
 import {
@@ -98,7 +99,7 @@ it('opens the Android companion database before running the shared core', async 
   await expect(applyCompanionSyncNodeVersionsWithSharedCoreOnDevice([nodeVersion()], manager as never))
     .resolves.toEqual(['node-1']);
 
-  expect(manager.createConnection).toHaveBeenCalledWith('foliole-companion', false, 'no-encryption', 21, false);
+  expect(manager.createConnection).toHaveBeenCalledWith('foliole-companion', false, 'no-encryption', COMPANION_DATABASE_VERSION, false);
   expect(connection.open).toHaveBeenCalled();
 });
 
@@ -138,7 +139,7 @@ it('recreates the Android companion database connection when the cached handle i
     .resolves.toEqual(['node-1']);
 
   expect(manager.checkConnectionsConsistency).toHaveBeenCalled();
-  expect(manager.createConnection).toHaveBeenCalledWith('foliole-companion', false, 'no-encryption', 21, false);
+  expect(manager.createConnection).toHaveBeenCalledWith('foliole-companion', false, 'no-encryption', COMPANION_DATABASE_VERSION, false);
   expect(connection.open).toHaveBeenCalled();
 });
 

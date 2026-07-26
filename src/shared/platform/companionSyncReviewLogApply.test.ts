@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import { afterEach, expect, it, vi } from 'vitest';
 
+import { COMPANION_DATABASE_VERSION } from '../../../lib/platform/nativeCompanionContract';
 import type { NativeSyncReviewLogRecord } from '../../../lib/platform/nativeSyncContract';
 
 import {
@@ -46,7 +47,7 @@ it('opens the Android companion database before applying review log', async () =
   await expect(applyCompanionSyncReviewLogWithSharedCoreOnDevice([reviewLogRecord()], manager as never))
     .resolves.toEqual(['review-op-1']);
 
-  expect(manager.createConnection).toHaveBeenCalledWith('foliole-companion', false, 'no-encryption', 21, false);
+  expect(manager.createConnection).toHaveBeenCalledWith('foliole-companion', false, 'no-encryption', COMPANION_DATABASE_VERSION, false);
   expect(connection.open).toHaveBeenCalled();
 });
 

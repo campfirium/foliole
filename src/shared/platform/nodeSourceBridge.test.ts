@@ -155,6 +155,7 @@ it('normalizes node source update previews from the runtime bridge', async () =>
     checkedAt: '2026-03-28T04:00:00.000Z',
     currentHighlightCount: 2,
     currentContent: 'Current content',
+    alternativeId: null,
     incomingUpdateId: 'incoming-update-1',
     kind: 'incoming_update',
     sourceNodeId: 'node-1',

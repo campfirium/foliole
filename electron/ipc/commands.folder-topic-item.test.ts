@@ -2,7 +2,7 @@
 
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { upsertNodeSnapshotWithOrder } from '../database/nodeMutations.js';
+import { upsertVersionedNodeSnapshotWithOrder } from '../database/nodeVersionedMutations.js';
 
 import { handleInvokeRequest } from './commands.js';
 
@@ -56,9 +56,12 @@ vi.mock('../database/nodeMutations.js', () => ({
   replaceNodeOrder: vi.fn(),
   restoreNodes: vi.fn(),
   softDeleteNodes: vi.fn(),
-  upsertNodeSnapshot: vi.fn(),
-  upsertNodeSnapshotWithOrder: vi.fn(),
   upsertNodeSnapshots: vi.fn()
+}));
+vi.mock('../database/nodeVersionedMutations.js', () => ({
+  upsertVersionedNodeContentWithAnchors: vi.fn(),
+  upsertVersionedNodeSnapshot: vi.fn(),
+  upsertVersionedNodeSnapshotWithOrder: vi.fn()
 }));
 vi.mock('./storage.js', () => ({
   loadAppSettingsState: vi.fn().mockResolvedValue({ 'foliole-ui-font-preset': 'inter' }),
@@ -115,7 +118,7 @@ it.each([
     nodes: [expect.objectContaining({ nodeId, title })]
   });
 
-  expect(upsertNodeSnapshotWithOrder).toHaveBeenCalledWith(
+  expect(upsertVersionedNodeSnapshotWithOrder).toHaveBeenCalledWith(
     {
       nodeId,
       parentNodeId: null,
@@ -183,7 +186,7 @@ it('persists review payloads on create_item commands', async () => {
     nodes: [expect.objectContaining({ nodeId: 'node-create-item', review })]
   });
 
-  expect(upsertNodeSnapshotWithOrder).toHaveBeenCalledWith(expect.objectContaining({ review }), ['node-create-item']);
+  expect(upsertVersionedNodeSnapshotWithOrder).toHaveBeenCalledWith(expect.objectContaining({ review }), ['node-create-item']);
 });
 
 it('rejects mismatched folder-topic-item creation payload kinds', async () => {

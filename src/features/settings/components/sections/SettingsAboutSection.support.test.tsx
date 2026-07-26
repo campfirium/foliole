@@ -81,31 +81,32 @@ it('runs support commands from About settings', async () => {
 
 it('opens update details when a manual update check finds an available release', async () => {
   updateCheckMock.resultStatus = 'available';
+  desktopUpdateMock.state = { phase: 'idle', version: undefined };
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.updateCheckState, JSON.stringify({
     cachedManifest: {
       releases: [
-        { date: '2026-06-14', platforms: ['windows'], url: 'https://github.com/campfirium/foliole/releases/tag/v0.6.6', version: '0.6.6' }
+        { date: '2026-06-14', platforms: ['windows'], url: 'https://github.com/campfirium/foliole/releases/tag/v0.7.1', version: '0.7.1' }
       ],
       schemaVersion: 1
     },
     cachedReleaseNotes: {
       en: {
-        '0.6.6': { notes: ['Fixed', 'Imported PDFs can now be previewed and read normally.'] }
+        '0.7.1': { notes: ['Fixed', 'Imported PDFs can now be previewed and read normally.'] }
       }
     },
     dismissedVersion: null,
     lastCheckedAt: '2026-06-14T00:00:00.000Z',
     lastCheckStatus: 'available',
-    lastSeenVersion: '0.6.6',
-    latestReleaseUrl: 'https://github.com/campfirium/foliole/releases/tag/v0.6.6',
-    latestVersion: '0.6.6'
+    lastSeenVersion: '0.7.1',
+    latestReleaseUrl: 'https://github.com/campfirium/foliole/releases/tag/v0.7.1',
+    latestVersion: '0.7.1'
   }));
   renderWithLocalization(<SettingsAboutSection />);
 
   fireEvent.click(await screen.findByRole('button', { name: 'Check for Updates' }));
 
   expect(await screen.findByRole('dialog', { name: 'Update details' })).toBeInTheDocument();
-  expect(screen.getByText('v0.6.6')).toBeInTheDocument();
+  expect(screen.getByText('v0.7.1')).toBeInTheDocument();
   expect(screen.getByText('Fixed')).toBeInTheDocument();
 });
 

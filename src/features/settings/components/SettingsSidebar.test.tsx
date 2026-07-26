@@ -1,10 +1,13 @@
 import { render, screen } from '@testing-library/react';
 import { beforeAll, expect, it, vi } from 'vitest';
 
+import packageJson from '../../../../package.json';
 import { LocalizationProvider } from '../../../shared/localization/LocalizationProvider';
 import { preloadTranslationCatalog } from '../../../shared/localization/translations';
 
 import { SettingsSidebar } from './SettingsSidebar';
+
+const CURRENT_VERSION_LABEL = `v${packageJson.version}`;
 
 beforeAll(async () => {
   await preloadTranslationCatalog('en');
@@ -48,7 +51,7 @@ it('labels the demo settings brand separately from the version when supplied', (
 
   expect(screen.getByText('Foliole')).toBeInTheDocument();
   expect(screen.getByText('Demo')).toBeInTheDocument();
-  expect(screen.getByText('v0.6.5')).toBeInTheDocument();
+  expect(screen.getByText(CURRENT_VERSION_LABEL)).toBeInTheDocument();
 });
 
 it('groups workspace and control settings in product order', () => {
