@@ -102,7 +102,7 @@ function useComparisonBehavior(args: {
   flushLeftDraft: () => void;
   isOpen: boolean;
   leftContent: string | null;
-  manualContent: string;
+  manualContentRef: MutableRefObject<string>;
   modeRef: MutableRefObject<DocumentComparisonMode>;
   openPanel: () => void;
   openRef: MutableRefObject<boolean>;
@@ -122,16 +122,31 @@ function useComparisonBehavior(args: {
     clearPanel: args.clearPanel,
     draftRef: args.draftRef,
     flushLeftDraft: args.flushLeftDraft,
-    manualContent: args.manualContent,
+    manualContentRef: args.manualContentRef,
     props: args.props
   });
   return { manualActions, sourceActions };
 }
 
+function useManualComparisonContent() {
+  const [content, setContent] = useState('');
+  const contentRef = useRef('');
+  const reset = useCallback(() => {
+    contentRef.current = '';
+    setContent('');
+  }, []);
+  const update = useCallback((nextContent: string) => {
+    contentRef.current = nextContent;
+    setContent(nextContent);
+  }, []);
+  return { content, contentRef, reset, update };
+}
+
 export function useDocumentPanelSourceUpdateState(props: DocumentPanelSectionProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [leftContent, setLeftContent] = useState<string | null>(null);
-  const [manualContent, setManualContent] = useState('');
+  const { content: manualContent, contentRef: manualContentRef, reset: resetManualContent,
+    update: handleManualContentChange } = useManualComparisonContent();
   const [source, setSource] = useState<ComparisonSource>('manual');
   const draftRef = useRef<SourceUpdateDraft | null>(null);
   const openRef = useRef(false);
@@ -146,10 +161,10 @@ export function useDocumentPanelSourceUpdateState(props: DocumentPanelSectionPro
   const clearPanel = useCallback(() => {
     draftRef.current = null;
     setLeftContent(null);
-    setManualContent('');
+    resetManualContent();
     setSource('manual');
     setIsOpen(false);
-  }, []);
+  }, [resetManualContent]);
 
   const closePanel = useCallback(() => {
     if (modeRef.current === 'manual' || modeRef.current === 'source_preview') flushLeftDraft();
@@ -161,10 +176,10 @@ export function useDocumentPanelSourceUpdateState(props: DocumentPanelSectionPro
     const draft = createSourceUpdateDraft(props);
     draftRef.current = draft;
     setLeftContent(draft.content);
-    setManualContent('');
+    resetManualContent();
     setSource(requestedSource === 'source' && preview.value ? 'source' : 'manual');
     setIsOpen(true);
-  }, [canOpen, preview.value, props]);
+  }, [canOpen, preview.value, props, resetManualContent]);
 
   const handleOpenChange = useCallback((nextOpen: boolean) => {
     if (nextOpen) openPanel();
@@ -172,7 +187,7 @@ export function useDocumentPanelSourceUpdateState(props: DocumentPanelSectionPro
   }, [closePanel, openPanel]);
 
   const { manualActions, sourceActions } = useComparisonBehavior({
-    clearPanel, closePanel, draftRef, flushLeftDraft, isOpen, leftContent, manualContent,
+    clearPanel, closePanel, draftRef, flushLeftDraft, isOpen, leftContent, manualContentRef,
     modeRef, openPanel, openRef, preview, props, source
   });
 
@@ -181,7 +196,7 @@ export function useDocumentPanelSourceUpdateState(props: DocumentPanelSectionPro
     comparisonMode: mode,
     comparisonSource: source,
     currentSourceUpdateContent: leftContent ?? props.editorContent,
-    handleManualContentChange: setManualContent,
+    handleManualContentChange,
     handleManualSaveAsTopic: manualActions.saveAsTopic,
     handleManualSetAsBody: manualActions.setAsBody,
     handleSourceUpdateDraftChange: createDraftChangeHandler(props, draftRef, setLeftContent),

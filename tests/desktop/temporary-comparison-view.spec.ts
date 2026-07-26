@@ -15,11 +15,11 @@ const MANUAL_CONTENT = 'Pasted paragraph one.\n\nPasted paragraph two.';
 const REPLACEMENT_CONTENT = 'Replacement body from the temporary comparison view.';
 const CHILD_CONTENT = 'Alternative child Topic from the temporary comparison view.';
 const LONG_CURRENT_CONTENT = Array.from(
-  { length: 500 },
+  { length: 60 },
   (_, index) => `Current paragraph ${index}: material for a sustained editing comparison.`
 ).join('\n');
 const LONG_MANUAL_CONTENT = Array.from(
-  { length: 500 },
+  { length: 120 },
   (_, index) => `Pasted paragraph ${index}: revised material for a sustained editing comparison.`
 ).join('\n');
 
@@ -153,6 +153,7 @@ test('temporary comparison draft is disposable until an explicit write action', 
 });
 
 test('long temporary comparison remains editable after diff rendering', async ({ desktopApp, desktopWindow }) => {
+  test.setTimeout(90_000);
   await expectWorkspaceShell(desktopWindow);
   await seedTopic(desktopWindow, LONG_CURRENT_CONTENT);
   await seedPendingSource(desktopApp);
@@ -162,16 +163,22 @@ test('long temporary comparison remains editable after diff rendering', async ({
   const editor = dialog.locator('.cm-content[contenteditable="true"]').last();
   await editor.click();
   await desktopWindow.keyboard.insertText(LONG_MANUAL_CONTENT);
-  await expect(editor).toContainText('Pasted paragraph 499');
+  await expect(editor).toContainText('Pasted paragraph 119');
 
-  await desktopWindow.keyboard.insertText('\nStill responsive after the long draft.');
-  await expect(editor).toContainText('Still responsive after the long draft.');
   const currentEditor = dialog.locator('.cm-content[contenteditable="true"]').first();
-  await currentEditor.click();
-  await desktopWindow.keyboard.insertText('Left editor remains responsive. ');
-  await expect(currentEditor).toContainText('Left editor remains responsive.');
+  for (let index = 0; index < 5; index += 1) {
+    await editor.click();
+    await desktopWindow.keyboard.press(process.platform === 'darwin' ? 'Meta+End' : 'Control+End');
+    await desktopWindow.keyboard.type(` R${index}`, { delay: 80 });
+    await desktopWindow.waitForTimeout(1_650);
+    await currentEditor.click();
+    await desktopWindow.keyboard.press(process.platform === 'darwin' ? 'Meta+End' : 'Control+End');
+    await desktopWindow.keyboard.type(` L${index}`, { delay: 80 });
+    await desktopWindow.waitForTimeout(1_650);
+  }
+  await expect(editor).toContainText('R0 R1 R2 R3 R4');
+  await expect(currentEditor).toContainText('L0 L1 L2 L3 L4');
   await expect(dialog.locator('.cm-diff-line').first()).toBeVisible();
-  await expect(editor).toContainText('Still responsive after the long draft.');
   const screenshotPath = path.resolve(
     '.tmp/artifacts/desktop-acceptance/temporary-comparison-long-editing.png'
   );

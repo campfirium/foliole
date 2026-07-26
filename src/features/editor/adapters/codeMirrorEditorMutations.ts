@@ -1,11 +1,15 @@
 import { Transaction, type Compartment } from '@codemirror/state';
-import { EditorView } from '@codemirror/view';
+import { Decoration, EditorView } from '@codemirror/view';
 
 import { reconfigureDecorationCompartment } from './codeMirrorEditorAdapterView';
 import { updateTextAnchorDecorations } from './codeMirrorTextAnchorState';
 import type { EditorSearchDecorations } from './EditorAdapter';
 import type { EditorTextAnchorDecoration } from './EditorAdapter';
-import { buildEditorDiffDecorations, type EditorDiffDecorations } from './lineDiffDecorations';
+import {
+  buildEditorDiffDecorations,
+  setEditorDiffDecorationsEffect,
+  type EditorDiffDecorations
+} from './lineDiffDecorations';
 import { buildEditorSearchDecorations } from './searchDecorations';
 
 export function applyExternalEditorContent(args: {
@@ -32,16 +36,17 @@ export function replaceEditorRange(args: {
 }
 
 export function applyDiffDecorations(args: {
-  compartment: Compartment;
   diffDecorations: EditorDiffDecorations | null;
   view: EditorView;
 }) {
-  reconfigureDecorationCompartment({
-    buildDecorations: () => EditorView.decorations.of(buildEditorDiffDecorations(args.view, args.diffDecorations)),
-    compartment: args.compartment,
-    fallbackLabel: '[editor] failed to apply diff decorations, falling back to plain view',
-    view: args.view
-  });
+  try {
+    args.view.dispatch({
+      effects: setEditorDiffDecorationsEffect.of(buildEditorDiffDecorations(args.view, args.diffDecorations))
+    });
+  } catch (error) {
+    console.error('[editor] failed to apply diff decorations, falling back to plain view', error);
+    args.view.dispatch({ effects: setEditorDiffDecorationsEffect.of(Decoration.none) });
+  }
 }
 
 export function applySearchDecorations(args: {

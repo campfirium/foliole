@@ -1,6 +1,13 @@
+import { EditorState } from '@codemirror/state';
+import { EditorView } from '@codemirror/view';
 import { describe, expect, it } from 'vitest';
 
-import { buildEditorDiffDecorations, buildLineClassProfiles } from './lineDiffDecorations';
+import {
+  buildEditorDiffDecorations,
+  buildLineClassProfiles,
+  editorDiffDecorationsStateField,
+  setEditorDiffDecorationsEffect
+} from './lineDiffDecorations';
 
 describe('buildEditorDiffDecorations', () => {
   it('accepts mixed line and spacer entries without requiring pre-sorted input order', () => {
@@ -37,5 +44,25 @@ describe('buildEditorDiffDecorations', () => {
       'cm-line-code',
       'cm-line-code-fence'
     ]);
+  });
+
+  it('maps active diff decorations through document edits', () => {
+    const view = new EditorView({
+      state: EditorState.create({ doc: 'alpha\nbeta', extensions: [editorDiffDecorationsStateField] })
+    });
+    view.dispatch({
+      effects: setEditorDiffDecorationsEffect.of(buildEditorDiffDecorations(view, {
+        lineDecorations: [{ kind: 'added', lineNumber: 2 }],
+        spacerDecorations: []
+      }))
+    });
+    view.dispatch({ changes: { from: 0, insert: 'x\n' } });
+
+    const positions: number[] = [];
+    view.state.field(editorDiffDecorationsStateField).between(0, view.state.doc.length, (from) => {
+      positions.push(from);
+    });
+    expect(positions).toEqual([8]);
+    view.destroy();
   });
 });

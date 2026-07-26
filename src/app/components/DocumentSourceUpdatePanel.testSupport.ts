@@ -4,6 +4,7 @@ import { vi } from 'vitest';
 import type { EditorScrollEvent } from '../../features/editor/adapters/EditorAdapter';
 
 export interface PanelBodyCall {
+  editorContent?: string;
   editorDiffDecorations?: unknown;
   onEditorChange?: (content: string) => void;
   onEditorReady?: (adapter: unknown) => void;
@@ -11,6 +12,7 @@ export interface PanelBodyCall {
 }
 
 export function createScrollAdapter(options?: {
+  content?: string;
   getScrollTop?: () => number;
   onScroll?: (listener: (event: EditorScrollEvent) => void) => () => void;
   revealPosition?: ReturnType<typeof vi.fn>;
@@ -20,11 +22,13 @@ export function createScrollAdapter(options?: {
   let scrollTop = options?.scrollTop ?? 0;
 
   return {
+    getContent: () => options?.content ?? '',
     getLineBlockHeight: () => 24,
     getScrollMetrics: () => ({ clientHeight: 300, scrollHeight: 1200, scrollTop: options?.getScrollTop?.() ?? scrollTop }),
     getScrollTop: () => options?.getScrollTop?.() ?? scrollTop,
     onScroll: options?.onScroll ?? (() => () => undefined),
     revealPosition: options?.revealPosition ?? vi.fn(),
+    setDiffDecorations: vi.fn(),
     setScrollTop: vi.fn((nextScrollTop: number) => {
       scrollTop = nextScrollTop;
       options?.setScrollTop?.(nextScrollTop);

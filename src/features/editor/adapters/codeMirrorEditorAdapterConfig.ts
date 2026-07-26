@@ -13,6 +13,7 @@ import {
   createLiveMarkdownReconfigureEffect
 } from './codeMirrorEditorAdapterSupport';
 import { createTextAnchorDecorationsExtension } from './codeMirrorTextAnchorState';
+import { editorDiffDecorationsStateField } from './lineDiffDecorations';
 import { createLiveMarkdownExtensions } from './liveMarkdown';
 import { createLiveMarkdownStateExtensions, trailingDividerFacet } from './liveMarkdownState';
 import { trailingDividerExtension } from './liveMarkdownTrailingDivider';
@@ -135,7 +136,7 @@ export function createCodeMirrorEditorExtensions(args: {
     EditorView.lineWrapping,
     highlightActiveLine(),
     markdownInputAssist,
-    args.diffDecorationsCompartment.of(EditorView.decorations.of(Decoration.none)),
+    args.diffDecorationsCompartment.of(editorDiffDecorationsStateField),
     args.paragraphMarkerCompartment.of(EditorView.decorations.of(Decoration.none)),
     args.searchDecorationsCompartment.of(EditorView.decorations.of(Decoration.none)),
     args.textAnchorDecorationsCompartment.of(createTextAnchorDecorationsExtension(args.textAnchorDecorations)),

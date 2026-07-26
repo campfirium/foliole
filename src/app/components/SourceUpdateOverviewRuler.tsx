@@ -70,10 +70,11 @@ function jumpEditorsToSegment(
 }
 
 function useActiveOverviewIndex(overviewSegments: SourceUpdateOverviewSegment[]) {
+  const segmentCount = overviewSegments.length;
   const [activeIndex, setActiveIndex] = useState(() => (overviewSegments.length > 0 ? 0 : -1));
 
   useEffect(() => {
-    if (overviewSegments.length === 0) {
+    if (segmentCount === 0) {
       setActiveIndex(-1);
       return;
     }
@@ -81,9 +82,9 @@ function useActiveOverviewIndex(overviewSegments: SourceUpdateOverviewSegment[])
       if (current < 0) {
         return 0;
       }
-      return Math.min(current, overviewSegments.length - 1);
+      return Math.min(current, segmentCount - 1);
     });
-  }, [overviewSegments]);
+  }, [segmentCount]);
 
   return { activeIndex, setActiveIndex };
 }

@@ -16,8 +16,10 @@ import type { DocumentComparisonMode } from './documentComparisonView';
 import { buildSourceUpdateDiffModel } from './sourceUpdateDiffModel';
 import { SourceUpdatePanelDialogBody } from './SourceUpdatePanelDialogBody';
 import { useSourceUpdateDiffModel } from './useSourceUpdateDiffModel';
+import { useSourceUpdatePanelLiveProps } from './useSourceUpdatePanelLiveProps';
+import { useSourceUpdatePanelSnapshots } from './useSourceUpdatePanelSnapshots';
 
-interface DocumentSourceUpdatePanelProps {
+export interface DocumentSourceUpdatePanelProps {
   comparisonMode: DocumentComparisonMode;
   comparisonSource: 'manual' | 'source';
   currentContent: string;
@@ -138,20 +140,27 @@ function SourceUpdatePanelDialog(props: {
 export function DocumentSourceUpdatePanel(props: DocumentSourceUpdatePanelProps) {
   const [currentEditor, setCurrentEditor] = useState<EditorAdapter | null>(null);
   const [updatedEditor, setUpdatedEditor] = useState<EditorAdapter | null>(null);
+  const snapshots = useSourceUpdatePanelSnapshots(props);
   const {
     currentMeasuredHighlights,
     diffModel,
     lineHighlights,
     updatedMeasuredHighlights
   } = useSourceUpdateDiffModel({
-    currentContent: props.currentContent,
+    currentContent: snapshots.current,
     currentEditor,
-    enabled: props.comparisonMode !== 'manual' || Boolean(props.manualContent.trim()),
-    updatedContent: props.updatedContent,
+    enabled: props.comparisonMode !== 'manual' || Boolean(snapshots.updated.trim()),
+    updatedContent: snapshots.updated,
     updatedEditor
   });
 
   useSourceUpdatePanelScrollSync(currentEditor, updatedEditor, props.open);
+  useEffect(() => {
+    currentEditor?.setDiffDecorations(currentMeasuredHighlights ?? lineHighlights.current);
+  }, [currentEditor, currentMeasuredHighlights, lineHighlights.current]);
+  useEffect(() => {
+    updatedEditor?.setDiffDecorations(updatedMeasuredHighlights ?? lineHighlights.updated);
+  }, [lineHighlights.updated, updatedEditor, updatedMeasuredHighlights]);
 
   const handleCurrentEditorReady = (adapter: EditorAdapter | null) => {
     setCurrentEditor(adapter);
@@ -163,6 +172,8 @@ export function DocumentSourceUpdatePanel(props: DocumentSourceUpdatePanelProps)
     props.onUpdatedEditorReady?.(adapter);
   };
 
+  const panelProps = useSourceUpdatePanelLiveProps(props, currentEditor, updatedEditor, snapshots);
+
   return <SourceUpdatePanelDialog
     currentEditor={currentEditor}
     currentMeasuredHighlights={currentMeasuredHighlights}
@@ -170,7 +181,7 @@ export function DocumentSourceUpdatePanel(props: DocumentSourceUpdatePanelProps)
     handleUpdatedEditorReady={handleUpdatedEditorReady}
     lineHighlights={lineHighlights}
     overviewSegments={diffModel.overviewSegments}
-    panelProps={props}
+    panelProps={panelProps}
     totalRows={diffModel.totalRows}
     updatedEditor={updatedEditor}
     updatedMeasuredHighlights={updatedMeasuredHighlights}

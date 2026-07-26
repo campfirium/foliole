@@ -215,7 +215,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     replaceCodeMirrorRange({ content, from: this.clampPosition(from), to: this.clampPosition(to), view: this.view });
   }
   setDiffDecorations(diffDecorations: import('./lineDiffDecorations').EditorDiffDecorations | null) {
-    setCodeMirrorDiffDecorations({ compartment: this.diffDecorationsCompartment, diffDecorations, view: this.view });
+    setCodeMirrorDiffDecorations({ diffDecorations, view: this.view });
   }
   setSearchDecorations(searchDecorations: EditorSearchDecorations | null) {
     setCodeMirrorSearchDecorations({ compartment: this.searchDecorationsCompartment, searchDecorations, view: this.view });

@@ -1,4 +1,4 @@
-import type { ComponentProps } from 'react';
+import { memo, useRef, type ComponentProps } from 'react';
 
 import type { EditorAdapter, EditorDiffDecorations } from '../../features/editor/adapters/EditorAdapter';
 import { definedProps } from '../../shared/lib/definedProps';
@@ -57,17 +57,7 @@ function PaneLabel({ mode, title }: { mode: string; title: string }) {
   );
 }
 
-function PreviewDocumentPane({
-  content,
-  currentNodeId,
-  documentMaxWidth,
-  editorAppearanceKey,
-  editorDiffDecorations,
-  hideScrollbar,
-  onChange,
-  onReady,
-  readOnly
-}: {
+interface PreviewDocumentPaneProps {
   content: string;
   currentNodeId: string | null;
   documentMaxWidth: number;
@@ -77,12 +67,25 @@ function PreviewDocumentPane({
   onChange: (content: string) => void;
   onReady?: (adapter: EditorAdapter | null) => void;
   readOnly?: boolean;
-}) {
+}
+
+function PreviewDocumentPaneSurface({
+  content,
+  currentNodeId,
+  documentMaxWidth,
+  editorAppearanceKey,
+  editorDiffDecorations,
+  hideScrollbar,
+  onChange,
+  onReady,
+  readOnly
+}: PreviewDocumentPaneProps) {
+  const initialContentRef = useRef(content);
   return (
     <DocumentPanelBody
       documentMaxWidth={documentMaxWidth}
       editorAppearanceKey={editorAppearanceKey}
-      editorContent={content}
+      editorContent={initialContentRef.current}
       editorNodeId={currentNodeId}
       hasAnswerSection={false}
       onAnswerChange={() => undefined}
@@ -101,6 +104,16 @@ function PreviewDocumentPane({
     />
   );
 }
+
+const PreviewDocumentPane = memo(
+  PreviewDocumentPaneSurface,
+  (previous, next) => previous.currentNodeId === next.currentNodeId
+    && previous.documentMaxWidth === next.documentMaxWidth
+    && previous.editorAppearanceKey === next.editorAppearanceKey
+    && previous.hideScrollbar === next.hideScrollbar
+    && previous.readOnly === next.readOnly
+    && (!next.readOnly || previous.content === next.content)
+);
 
 function SourceUpdatePaneBody(props: {
   className: string;
@@ -160,6 +173,7 @@ export function SourceUpdatePanelColumns(props: SourceUpdatePanelColumnsProps) {
           paneProps={currentPaneProps}
         />
         <SourceUpdatePaneBody
+          key={`updated-${props.props.comparisonMode}`}
           className={REFERENCE_PREVIEW_PANE_CLASS_NAME}
           labelMode={t(props.props.comparisonMode === 'manual'
             ? 'desktop.sourceUpdate.manual.mode'

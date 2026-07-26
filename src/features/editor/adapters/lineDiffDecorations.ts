@@ -1,4 +1,4 @@
-import type { Range } from '@codemirror/state';
+import { StateEffect, StateField, type Range } from '@codemirror/state';
 import { Decoration, EditorView, WidgetType, type DecorationSet } from '@codemirror/view';
 
 import { collectMarkdownLineClassRanges } from '../model/markdownBlockProjection';
@@ -28,6 +28,19 @@ export interface EditorDiffDecorations {
   lineDecorations: EditorDiffLineDecoration[];
   spacerDecorations: EditorDiffSpacerDecoration[];
 }
+
+export const setEditorDiffDecorationsEffect = StateEffect.define<DecorationSet>();
+export const editorDiffDecorationsStateField = StateField.define<DecorationSet>({
+  create: () => Decoration.none,
+  update: (decorations, transaction) => {
+    let nextDecorations = decorations.map(transaction.changes);
+    transaction.effects.forEach((effect) => {
+      if (effect.is(setEditorDiffDecorationsEffect)) nextDecorations = effect.value;
+    });
+    return nextDecorations;
+  },
+  provide: (field) => EditorView.decorations.from(field)
+});
 
 class DiffSpacerWidget extends WidgetType {
   constructor(

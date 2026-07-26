@@ -138,7 +138,9 @@ vi.mock('./liveMarkdown', () => ({
 }));
 
 vi.mock('./lineDiffDecorations', () => ({
-  buildEditorDiffDecorations: vi.fn(() => 'line-diff-decorations')
+  buildEditorDiffDecorations: vi.fn(() => 'line-diff-decorations'),
+  editorDiffDecorationsStateField: 'diff-decoration-state-field',
+  setEditorDiffDecorationsEffect: { of: vi.fn((value) => value) }
 }));
 
 vi.mock('./markdownInputAssist', () => ({
