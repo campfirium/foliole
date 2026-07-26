@@ -37,6 +37,13 @@ function parseArgs(argv) {
   return options;
 }
 
+function assertAndroidAuditHost(options, platform = options.platform ?? process.platform) {
+  if (platform !== 'darwin' || options.androidDb) return;
+  throw new Error(
+    'macOS is controller-only for Android. Pass --android-db with an explicit local read-only database copy; device ADB access belongs to scripts/windows/windows-android-lab-control.mjs.'
+  );
+}
+
 async function copySqliteSnapshot(sourcePath, outputDir, outputName) {
   const outputPath = path.join(outputDir, outputName);
   await copyFile(sourcePath, outputPath);
@@ -102,6 +109,7 @@ async function pullAndroidSidecars(options, devicePath, outputPath) {
 }
 
 async function runAudit(options) {
+  assertAndroidAuditHost(options);
   const tempDir = await mkdtemp(path.join(os.tmpdir(), 'foliole-android-sync-audit-'));
   try {
     await mkdir(tempDir, { recursive: true });
@@ -126,4 +134,4 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
     });
 }
 
-export { parseArgs, runAudit };
+export { assertAndroidAuditHost, parseArgs, runAudit };

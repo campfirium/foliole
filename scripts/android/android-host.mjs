@@ -22,12 +22,7 @@ const NATIVE_LINUX_INVOCATIONS = new Set(['gradle', 'sync']);
 export function resolveAndroidHostInvocation(command, args, options = {}) {
   const platform = options.platform ?? process.platform;
   const nodeBin = options.nodeBin ?? process.execPath;
-  if (platform === 'darwin') {
-    return {
-      args: ['scripts/macos/android/android-host.mjs', command, ...args],
-      bin: nodeBin
-    };
-  }
+  if (platform === 'darwin') return null;
   if (platform === 'linux' && options.hostMode === 'native-linux' && NATIVE_LINUX_INVOCATIONS.has(command)) {
     return {
       args: ['scripts/android/native-linux-host.mjs', command, ...args],
@@ -40,6 +35,11 @@ export function resolveAndroidHostInvocation(command, args, options = {}) {
 }
 
 export async function runAndroidHost(command, args, options = {}) {
+  const platform = options.platform ?? process.platform;
+  if (platform === 'darwin') {
+    console.error('[android-host] refused: macOS is controller-only for Android. Use scripts/windows/windows-android-lab-control.mjs.');
+    return 2;
+  }
   const invocation = resolveAndroidHostInvocation(command, args, {
     hostMode: options.hostMode ?? process.env.FOLIOLE_ANDROID_HOST_MODE,
     ...options

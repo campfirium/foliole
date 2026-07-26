@@ -90,9 +90,9 @@ describe('script domain registry', () => {
     });
     expect(renderCapabilityCommand(resolveCapabilityContract('android:host:test')))
       .toBe('node scripts/android/android-host.mjs gradle testDebugUnitTest');
-    expect(resolveCapabilityAdapter('android:control', 'darwin')).toMatchObject({
-      ok: true,
-      placements: ['shared-core']
+    expect(resolveCapabilityAdapter('android:control', 'darwin')).toEqual({
+      ok: false,
+      reason: 'unsupported-platform'
     });
     expect(resolveCapabilityAdapter('android:web:dev', 'darwin')).toMatchObject({
       ok: true,

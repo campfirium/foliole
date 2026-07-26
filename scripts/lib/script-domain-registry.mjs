@@ -114,14 +114,14 @@ export const CAPABILITY_CONTRACTS = [
     adapterPath: 'scripts/android/android-host.mjs',
     name,
     placements: ['shared-core'],
-    platforms: ['darwin', 'linux', 'win32']
+    platforms: ['linux', 'win32']
   })),
   {
     adapter: { args: ['scripts/preview/preview-dedupe.mjs', 'android', '--', 'node', 'scripts/android/android-host.mjs', 'preview'], bin: 'node' },
     adapterPath: 'scripts/android/android-host.mjs',
     name: 'android:preview',
     placements: ['shared-core'],
-    platforms: ['darwin', 'linux', 'win32']
+    platforms: ['linux', 'win32']
   },
   {
     adapter: { args: ['scripts/windows/windows-preview-native-entry.mjs'], bin: 'node' },
@@ -146,7 +146,7 @@ export const CAPABILITY_CONTRACTS = [
   }
 ];
 
-export const SCRIPT_ASSET_INVENTORY_SHA256 = '60aa3898023947c6aca877454d393b897636b392d9c1a2c23de01c05138bd6ea';
+export const SCRIPT_ASSET_INVENTORY_SHA256 = '956ebfa18c52648b0b5356df6b71da4a1e6d83270d40fc750ebd9d1f6b024671';
 
 function normalizeScriptPath(filePath) {
   return filePath.replaceAll('\\', '/').replace(/^\.\//u, '').trim();

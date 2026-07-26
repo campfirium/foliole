@@ -27,7 +27,7 @@ async function writeExecutable(rootDir, relativePath, content) {
 
 function runDevServerPreview(cwd, env = {}) {
   return new Promise((resolve) => {
-    const child = spawn('bash', [DEV_SERVER_PREVIEW_SCRIPT], {
+    const child = spawn('bash', ['-c', 'source "$1"; run_android_preview_dev_server', 'bash', DEV_SERVER_PREVIEW_SCRIPT], {
       cwd,
       env: {
         ...process.env,
@@ -49,6 +49,22 @@ function runDevServerPreview(cwd, env = {}) {
 }
 
 describe('android dev-server preview scripts', () => {
+  it('refuses the public entry on Darwin before starting Windows tooling', async () => {
+    if (process.platform !== 'darwin') return;
+
+    const result = await new Promise((resolve) => {
+      const child = spawn('bash', [DEV_SERVER_PREVIEW_SCRIPT], { cwd: REPO_ROOT });
+      let stderr = '';
+      child.stderr.on('data', (chunk) => {
+        stderr += chunk.toString();
+      });
+      child.on('close', (code) => resolve({ code, stderr }));
+    });
+
+    expect(result.code).toBe(2);
+    expect(result.stderr).toContain('windows-android-lab-control.mjs');
+  });
+
   it('orchestrates dev service, mirror sync, Capacitor dev sync, deploy, and adb reverse launch', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-dev-preview-'));
     try {

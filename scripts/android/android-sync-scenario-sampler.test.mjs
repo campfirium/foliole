@@ -44,7 +44,7 @@ describe('android sync scenario sampler', () => {
   it('samples reports over the requested timeline without destructive actions', async () => {
     const sleeps = [];
     const result = await sampleSyncScenario(
-      { atSeconds: [0, 3, 6] },
+      { androidDb: '/local/android.db', atSeconds: [0, 3, 6], platform: 'darwin' },
       async () => ({ report: createReport() }),
       async (milliseconds) => sleeps.push(milliseconds)
     );
@@ -59,7 +59,7 @@ describe('android sync scenario sampler', () => {
 
   it('formats structure, resource, cursor and latest run facts per sample', async () => {
     const result = await sampleSyncScenario(
-      { atSeconds: [0] },
+      { androidDb: '/local/android.db', atSeconds: [0], platform: 'darwin' },
       async () => ({ report: createReport() }),
       async () => {}
     );
@@ -76,7 +76,7 @@ describe('android sync scenario sampler', () => {
 
   it('keeps sampling output readable when a point cannot read the device database', async () => {
     const result = await sampleSyncScenario(
-      { atSeconds: [0] },
+      { androidDb: '/local/android.db', atSeconds: [0], platform: 'darwin' },
       async () => {
         throw new Error('No Android companion database was readable with run-as.');
       },
@@ -84,5 +84,19 @@ describe('android sync scenario sampler', () => {
     );
 
     expect(formatScenarioReport(result)).toContain('sample_failed=No Android companion database was readable with run-as.');
+  });
+
+  it('rejects Darwin device sampling before invoking the audit runner', async () => {
+    let calls = 0;
+
+    await expect(sampleSyncScenario(
+      { androidDb: '', atSeconds: [0], platform: 'darwin' },
+      async () => {
+        calls += 1;
+        return { report: createReport() };
+      },
+      async () => {}
+    )).rejects.toThrow('Pass --android-db');
+    expect(calls).toBe(0);
   });
 });

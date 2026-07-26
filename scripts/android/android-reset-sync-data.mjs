@@ -83,6 +83,13 @@ No database backup is written; this is a repeatable test reset tool.
 Set ${RESET_CONFIRM_ENV}=1 to run it against a connected device.`);
 }
 
+export function assertAndroidResetHost(platform = process.platform) {
+  if (platform !== 'darwin') return;
+  throw new Error(
+    'macOS is controller-only for Android. Device reset belongs to scripts/windows/windows-android-lab-control.mjs.'
+  );
+}
+
 export function inspectSyncDataCounts(databasePath) {
   const database = new Database(databasePath, { readonly: true, fileMustExist: true });
   try {
@@ -192,6 +199,7 @@ function assertResetResult(before, after, endpointRewrite) {
 }
 
 async function run(options) {
+  assertAndroidResetHost();
   if (options.help) {
     printHelp();
     return;

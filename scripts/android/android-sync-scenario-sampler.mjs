@@ -4,7 +4,11 @@
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
-import { parseArgs as parseAuditArgs, runAudit } from './android-sync-audit.mjs';
+import {
+  assertAndroidAuditHost,
+  parseArgs as parseAuditArgs,
+  runAudit
+} from './android-sync-audit.mjs';
 
 const DEFAULT_SAMPLE_SECONDS = [0, 3, 6, 15];
 
@@ -36,6 +40,7 @@ function parseSampleSeconds(value) {
 }
 
 async function sampleSyncScenario(options, runner = runAudit, sleeper = sleep) {
+  assertAndroidAuditHost(options);
   const startedAt = Date.now();
   let previousSecond = 0;
   const samples = [];

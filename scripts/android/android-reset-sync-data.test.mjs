@@ -4,7 +4,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { isResetConfirmed, resetSyncDataInDatabase } from './android-reset-sync-data.mjs';
+import {
+  assertAndroidResetHost,
+  isResetConfirmed,
+  resetSyncDataInDatabase
+} from './android-reset-sync-data.mjs';
 
 let tempDir;
 
@@ -14,6 +18,11 @@ afterEach(async () => {
 });
 
 describe('android-reset-sync-data', () => {
+  it('refuses direct device reset on Darwin', () => {
+    expect(() => assertAndroidResetHost('darwin')).toThrow('windows-android-lab-control.mjs');
+    expect(() => assertAndroidResetHost('win32')).not.toThrow();
+  });
+
   it('requires an explicit device reset confirmation', () => {
     expect(isResetConfirmed({})).toBe(false);
     expect(isResetConfirmed({ FOLIOLE_ANDROID_ALLOW_SYNC_DATA_RESET: '0' })).toBe(false);

@@ -1,7 +1,5 @@
 // @vitest-environment node
-/* global URL */
-
-import { chmod, mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -10,13 +8,6 @@ import { describe, expect, it } from 'vitest';
 import { androidSdkCandidates, resolveAndroidTool, resolveExecutable, withAndroidSdk, withJavaHome } from './android-tools.mjs';
 
 describe('macOS Android tool resolution', () => {
-  it('owns scrcpy through a repository PID marker without scanning all processes', async () => {
-    const source = await readFile(new URL('./android-device-actions.mjs', import.meta.url), 'utf8');
-    expect(source).toContain('.tmp/android-runtime');
-    expect(source).toContain("execFileAsync('/bin/ps', ['-p'");
-    expect(source).not.toMatch(/pgrep|ps aux|killall/iu);
-  });
-
   it('prefers explicit SDK roots before the official macOS default', () => {
     expect(androidSdkCandidates({ ANDROID_HOME: '/sdk/home', ANDROID_SDK_ROOT: '/sdk/legacy' }, '/Users/test')).toEqual([
       '/sdk/home',
