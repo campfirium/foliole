@@ -4,9 +4,11 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+import { isAndroidLabRunId, LAB_EVIDENCE_FILES } from './windows-android-lab-evidence.mjs';
+
 export const WINDOWS_ANDROID_LAB_TASK = 'FolioleAndroidLab';
 export const WINDOWS_ANDROID_LAB_SOURCE_REF = 'refs/heads/lab/dev';
-export const LAB_EVIDENCE_FILES = new Set(['logcat.txt', 'runner.log', 'screenshot.png', 'summary.json']);
+export const WINDOWS_ANDROID_LAB_PROTOCOL_VERSION = 2;
 
 export function androidLabRoot(env = process.env) {
   if (env.FOLIOLE_WINDOWS_ANDROID_LAB_ROOT) return path.resolve(env.FOLIOLE_WINDOWS_ANDROID_LAB_ROOT);
@@ -15,20 +17,23 @@ export function androidLabRoot(env = process.env) {
 }
 
 export function androidLabPaths(root = androidLabRoot()) {
+  const preview = 'C:\\dev\\foliole-android-lab-preview';
   return {
     active: path.join(root, 'active.json'),
     candidate: path.join(root, 'candidate'),
     config: path.join(root, 'config.json'),
+    deployment: path.join(root, 'deployment.json'),
     device: path.join(root, 'device.json'),
     evidence: path.join(root, 'evidence'),
     manifest: path.join(root, 'protection', 'manifests'),
-    preview: 'C:\\dev\\foliole-android-lab-preview',
+    preview,
     protection: path.join(root, 'protection', 'backups'),
     repository: path.join(root, 'repository.git'),
     root,
     signingHome: path.join(root, 'signing', 'android-user-home'),
     signingKeystore: path.join(root, 'signing', 'android-user-home', 'debug.keystore'),
-    status: path.join(root, 'status.json')
+    status: path.join(root, 'status.json'),
+    workspaceDeployment: path.win32.join(preview, '.foliole-android-lab-deployment.json')
   };
 }
 
@@ -57,10 +62,16 @@ export function parseAndroidLabCommand(input) {
   }
   if (action === 'collect') {
     if (parts[0] === 'list' && parts.length === 1) return { action, operation: 'list' };
+    if (parts[0] === 'list' && parts.length === 2 && isAndroidLabRunId(parts[1])) {
+      return { action, operation: 'list', runId: parts[1] };
+    }
     if (parts[0] === 'get' && parts.length === 2 && LAB_EVIDENCE_FILES.has(parts[1])) {
       return { action, operation: 'get', relativePath: parts[1] };
     }
-    throw new Error('collect requires list or get summary.json|runner.log|logcat.txt|screenshot.png');
+    if (parts[0] === 'get' && parts.length === 3 && isAndroidLabRunId(parts[1]) && LAB_EVIDENCE_FILES.has(parts[2])) {
+      return { action, operation: 'get', relativePath: parts[2], runId: parts[1] };
+    }
+    throw new Error('collect requires list [runId] or get [runId] summary.json|runner.log|logcat.txt|screenshot.png');
   }
   if (action === 'device') {
     if (parts[0] === 'status' && parts.length === 1) return { action, operation: 'status' };
@@ -90,9 +101,12 @@ export function isAndroidEndpoint(value) {
 }
 
 export function publicLabStatus(status) {
-  if (!status) return { schemaVersion: 1, state: 'idle' };
+  if (!status) return { protocolVersion: WINDOWS_ANDROID_LAB_PROTOCOL_VERSION, schemaVersion: 1, state: 'idle' };
   const { commitSha, completedAt, createdAt, errorCode, errorMessage, phase, resultStatus, runId, startedAt, state } = status;
-  return { commitSha, completedAt, createdAt, errorCode, errorMessage, phase, resultStatus, runId, schemaVersion: 1, startedAt, state };
+  return {
+    commitSha, completedAt, createdAt, errorCode, errorMessage, phase,
+    protocolVersion: WINDOWS_ANDROID_LAB_PROTOCOL_VERSION, resultStatus, runId, schemaVersion: 1, startedAt, state
+  };
 }
 
 export function publicDeviceStatus(device) {
@@ -101,9 +115,17 @@ export function publicDeviceStatus(device) {
   return { discoverySource, endpoint, identity, schemaVersion: 1, state: 'configured', verifiedAt };
 }
 
-export function safeLabEvidencePath(evidenceRoot, relativePath) {
-  if (!evidenceRoot || !LAB_EVIDENCE_FILES.has(relativePath)) throw new Error('evidence file is not allowed');
-  return path.join(evidenceRoot, relativePath);
+export function writeSuccessfulDeployment(paths, request, device, completedAt) {
+  const marker = {
+    commitSha: request.commitSha, completedAt, deviceIdentity: device.identity,
+    runId: request.runId, schemaVersion: 1
+  };
+  if (!fs.existsSync(path.dirname(paths.workspaceDeployment))) {
+    throw Object.assign(new Error('deployed preview workspace is missing'), { code: 'deployed_workspace_missing' });
+  }
+  writeJsonAtomic(paths.workspaceDeployment, marker);
+  writeJsonAtomic(paths.deployment, marker);
+  return marker;
 }
 
 export function parseReadyDevices(output) {

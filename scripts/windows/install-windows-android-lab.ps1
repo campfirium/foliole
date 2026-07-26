@@ -18,6 +18,7 @@ $files = @(
   "windows-bounded-process.mjs",
   "windows-android-lab-dispatcher.mjs",
   "windows-android-lab-device.mjs",
+  "windows-android-lab-evidence.mjs",
   "windows-android-lab-receive.mjs",
   "windows-android-lab-state.mjs",
   "windows-android-lab-worker.mjs"
@@ -82,6 +83,8 @@ done
 '@
 [System.IO.File]::WriteAllText($hookPath, $hook.Replace("`r`n", "`n"), [System.Text.UTF8Encoding]::new($false))
 Remove-Item (Join-Path $installRoot "git-read-token.txt"), (Join-Path $installRoot "git-askpass.cmd") -Force -ErrorAction SilentlyContinue
+$existingConfigPath = Join-Path $installRoot "config.json"
+$existingConfig = if (Test-Path $existingConfigPath) { Get-Content $existingConfigPath -Raw | ConvertFrom-Json } else { $null }
 $config = @{
   adbPath = $AdbPath
   bashPath = $BashPath
@@ -91,7 +94,10 @@ $config = @{
   nodeDirectory = $runtimeRoot
   schemaVersion = 2
 }
-$config | ConvertTo-Json | Set-Content -Path (Join-Path $installRoot "config.json") -Encoding UTF8
+if ($existingConfig.androidDebugKeystoreSha256 -match '^[0-9a-f]{64}$') {
+  $config.androidDebugKeystoreSha256 = $existingConfig.androidDebugKeystoreSha256
+}
+$config | ConvertTo-Json | Set-Content -Path $existingConfigPath -Encoding UTF8
 if ($DeviceEndpoint) {
   $device = @{
     discoverySource = "installer"

@@ -8,9 +8,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+import { collectLabEvidence } from './windows-android-lab-evidence.mjs';
 import {
-  androidLabPaths, LAB_EVIDENCE_FILES, parseAndroidLabCommand, publicLabStatus, readJson,
-  publicDeviceStatus, safeLabEvidencePath, WINDOWS_ANDROID_LAB_SOURCE_REF, WINDOWS_ANDROID_LAB_TASK, writeJsonAtomic
+  androidLabPaths, parseAndroidLabCommand, publicLabStatus, readJson,
+  publicDeviceStatus, WINDOWS_ANDROID_LAB_SOURCE_REF, WINDOWS_ANDROID_LAB_TASK, writeJsonAtomic
 } from './windows-android-lab-state.mjs';
 import { reconnectAndroidDevice, validateAndroidLabConfig } from './windows-android-lab-device.mjs';
 
@@ -79,15 +80,7 @@ function startRun(command, paths, runCommand, now) {
 }
 
 function collect(command, paths, stdout) {
-  const status = readJson(paths.status);
-  if (!status?.evidenceRoot) throw new Error('evidence is unavailable');
-  if (command.operation === 'list') {
-    return { files: [...LAB_EVIDENCE_FILES].filter((name) => fs.existsSync(path.join(status.evidenceRoot, name))).sort(), schemaVersion: 1 };
-  }
-  const filePath = safeLabEvidencePath(status.evidenceRoot, command.relativePath);
-  if (!fs.statSync(filePath).isFile()) throw new Error('evidence path is not a file');
-  stdout.write(fs.readFileSync(filePath));
-  return null;
+  return collectLabEvidence(command, paths, readJson(paths.status), stdout);
 }
 
 function cancel(paths, runCommand) {

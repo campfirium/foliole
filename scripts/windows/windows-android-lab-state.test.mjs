@@ -4,8 +4,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { safeLabEvidencePath } from './windows-android-lab-evidence.mjs';
 import {
-  androidLabPaths, assertExclusiveDevice, parseAndroidLabCommand, readJson, safeLabEvidencePath, WINDOWS_ANDROID_LAB_TASK
+  androidLabPaths, assertExclusiveDevice, parseAndroidLabCommand, readJson, WINDOWS_ANDROID_LAB_TASK
 } from './windows-android-lab-state.mjs';
 
 const SHA = 'a'.repeat(40);
@@ -24,6 +25,10 @@ describe('Windows Android lab state contract', () => {
     expect(parseAndroidLabCommand(`run ${SHA}`)).toEqual({ action: 'run', commitSha: SHA });
     expect(parseAndroidLabCommand('collect get summary.json').relativePath).toBe('summary.json');
     expect(parseAndroidLabCommand('collect get logcat.txt').relativePath).toBe('logcat.txt');
+    expect(parseAndroidLabCommand('collect list 1000-aaaaaaaaaaaa')).toMatchObject({ operation: 'list', runId: '1000-aaaaaaaaaaaa' });
+    expect(parseAndroidLabCommand('collect get 1000-aaaaaaaaaaaa runner.log')).toMatchObject({
+      operation: 'get', relativePath: 'runner.log', runId: '1000-aaaaaaaaaaaa'
+    });
     expect(parseAndroidLabCommand('device status')).toEqual({ action: 'device', operation: 'status' });
     expect(parseAndroidLabCommand(`signing install 2618 ${'1'.repeat(64)}`)).toEqual({
       action: 'signing', byteLength: 2618, operation: 'install', sha256: '1'.repeat(64)
@@ -33,6 +38,7 @@ describe('Windows Android lab state contract', () => {
     });
     expect(() => parseAndroidLabCommand('run HEAD')).toThrow();
     expect(() => parseAndroidLabCommand('collect get ../git-read-token.txt')).toThrow();
+    expect(() => parseAndroidLabCommand('collect list ../1000-aaaaaaaaaaaa')).toThrow();
     expect(() => parseAndroidLabCommand('deploy 1 abc')).toThrow();
     expect(() => parseAndroidLabCommand('device reconnect 999.1.1.1:70000')).toThrow();
     expect(() => parseAndroidLabCommand(`signing install 65537 ${'1'.repeat(64)}`)).toThrow();

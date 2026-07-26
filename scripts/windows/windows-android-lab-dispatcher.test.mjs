@@ -29,11 +29,34 @@ describe('Windows Android lab dispatcher', () => {
     prepareSource(paths);
     const result = await dispatchWindowsAndroidLab({ argv: ['run', SHA], now: 1_000, paths, runCommand: (...args) => calls.push(args) });
     expect(result.state).toBe('pending');
+    expect(result.protocolVersion).toBe(2);
     expect(readJson(paths.active).commitSha).toBe(SHA);
     expect(calls).toEqual([
       ['git.exe', ['--git-dir', paths.repository, 'merge-base', '--is-ancestor', SHA, 'refs/heads/lab/dev']],
       ['schtasks.exe', ['/Run', '/TN', 'FolioleAndroidLab']]
     ]);
+  });
+
+  it('keeps legacy collect and can read a previous run by its internal id', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-android-lab-collect-'));
+    roots.push(root);
+    const paths = androidLabPaths(root);
+    const latestRun = '1001-bbbbbbbbbbbb';
+    const olderRun = '1000-aaaaaaaaaaaa';
+    for (const [runId, summary] of [[olderRun, 'older'], [latestRun, 'latest']]) {
+      const evidenceRoot = path.join(paths.evidence, runId);
+      fs.mkdirSync(evidenceRoot, { recursive: true });
+      fs.writeFileSync(path.join(evidenceRoot, 'summary.json'), summary);
+    }
+    writeJsonAtomic(paths.status, { evidenceRoot: path.join(paths.evidence, latestRun), runId: latestRun, state: 'completed' });
+    const legacy = [];
+    const historical = [];
+    await dispatchWindowsAndroidLab({ argv: ['collect', 'get', 'summary.json'], paths, stdout: { write: (value) => legacy.push(value) } });
+    await dispatchWindowsAndroidLab({
+      argv: ['collect', 'get', olderRun, 'summary.json'], paths, stdout: { write: (value) => historical.push(value) }
+    });
+    expect(Buffer.concat(legacy).toString()).toBe('latest');
+    expect(Buffer.concat(historical).toString()).toBe('older');
   });
 
   it('does not queue a different commit while a run is active', async () => {

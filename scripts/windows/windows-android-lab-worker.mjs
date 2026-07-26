@@ -10,7 +10,7 @@ import { pathToFileURL } from 'node:url';
 import { executeBounded } from './windows-bounded-process.mjs';
 import { resolveAndroidDevice, validateAndroidLabConfig } from './windows-android-lab-device.mjs';
 import {
-  androidLabPaths, readJson, WINDOWS_ANDROID_LAB_SOURCE_REF, writeJsonAtomic
+  androidLabPaths, readJson, WINDOWS_ANDROID_LAB_SOURCE_REF, writeJsonAtomic, writeSuccessfulDeployment
 } from './windows-android-lab-state.mjs';
 
 const PREVIEW_TIMEOUT_MS = 45 * 60_000;
@@ -189,8 +189,16 @@ export async function runWindowsAndroidLabWorker({
     primaryError ||= error;
   }
   writeRunEvidence(evidenceRoot, request, previewResult, screenshotError, logcatError, device);
+  const completedAt = new Date().toISOString();
+  if (!primaryError) {
+    try {
+      writeSuccessfulDeployment(paths, request, device, completedAt);
+    } catch (error) {
+      primaryError = error;
+    }
+  }
   const completed = {
-    ...running, completedAt: new Date().toISOString(), errorCode: primaryError?.code,
+    ...running, completedAt, errorCode: primaryError?.code,
     errorMessage: primaryError?.message?.slice(0, 500), phase: 'completed', resultStatus: primaryError ? 'failure' : 'success', state: 'completed'
   };
   writeJsonAtomic(paths.status, completed);

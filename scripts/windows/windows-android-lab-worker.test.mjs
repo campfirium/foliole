@@ -19,6 +19,7 @@ function createFixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-android-lab-worker-'));
   roots.push(root);
   const paths = androidLabPaths(root);
+  paths.workspaceDeployment = path.join(root, 'preview', '.foliole-android-lab-deployment.json');
   writeJsonAtomic(paths.active, { commitSha: SHA, runId: 'run-1', schemaVersion: 1 });
   const signing = Buffer.from('private signing bytes');
   fs.mkdirSync(paths.signingHome, { recursive: true });
@@ -45,7 +46,10 @@ function successfulExecutor(paths, calls) {
     if (command === 'adb.exe') return { code: 0, lines: [], output: '' };
     if (args.includes('worktree') && args.includes('add')) fs.mkdirSync(paths.candidate, { recursive: true });
     if (args.includes('status')) return { code: 0, lines: [], output: '' };
-    if (command === 'bash.exe') return { code: 0, lines: ['[android-preview] status: OPENED'], output: '[android-preview] status: OPENED\n' };
+    if (command === 'bash.exe') {
+      fs.mkdirSync(path.dirname(paths.workspaceDeployment), { recursive: true });
+      return { code: 0, lines: ['[android-preview] status: OPENED'], output: '[android-preview] status: OPENED\n' };
+    }
     if (command === 'powershell.exe') return { code: 1, lines: ['screenshot unavailable'], output: '' };
     if (args.includes('remove')) fs.rmSync(paths.candidate, { force: true, recursive: true });
     return { code: 0, lines: [], output: '' };
@@ -74,6 +78,8 @@ describe('Windows Android lab worker', () => {
     ))).toBe(true);
     expect(fs.existsSync(paths.candidate)).toBe(false);
     expect(readJson(paths.status).resultStatus).toBe('success');
+    expect(readJson(paths.deployment)).toMatchObject({ commitSha: SHA, deviceIdentity: 'A5-STABLE', runId: 'run-1' });
+    expect(readJson(paths.workspaceDeployment)).toEqual(readJson(paths.deployment));
     expect(readJson(path.join(paths.evidence, 'run-1', 'summary.json')).previewStatus).toBe('opened');
     expect(readJson(path.join(paths.evidence, 'run-1', 'summary.json')).logcatStatus).toBe('captured');
     expect(fs.readFileSync(path.join(paths.evidence, 'run-1', 'logcat.txt'), 'utf8')).toContain('Foliole log');
@@ -94,6 +100,10 @@ describe('Windows Android lab worker', () => {
 
   it('records a bounded preview timeout and still removes its checkout', async () => {
     const paths = createFixture();
+    const previous = { commitSha: 'c'.repeat(40), runId: 'previous' };
+    fs.mkdirSync(path.dirname(paths.workspaceDeployment), { recursive: true });
+    writeJsonAtomic(paths.deployment, previous);
+    writeJsonAtomic(paths.workspaceDeployment, previous);
     const calls = [];
     const base = successfulExecutor(paths, calls);
     const executeCommand = async (command, args, options) => {
@@ -105,6 +115,8 @@ describe('Windows Android lab worker', () => {
     });
     expect(readJson(paths.status)).toMatchObject({ errorCode: 'android_preview_timeout', resultStatus: 'failure' });
     expect(fs.existsSync(paths.candidate)).toBe(false);
+    expect(readJson(paths.deployment)).toEqual(previous);
+    expect(readJson(paths.workspaceDeployment)).toEqual(previous);
   });
 
   it('fails before device access and checkout when the signing identity is missing', async () => {

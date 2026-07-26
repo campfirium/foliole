@@ -9,7 +9,9 @@ import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { WINDOWS_ANDROID_LAB_SOURCE_REF } from './windows-android-lab-state.mjs';
+import {
+  WINDOWS_ANDROID_LAB_PROTOCOL_VERSION, WINDOWS_ANDROID_LAB_SOURCE_REF
+} from './windows-android-lab-state.mjs';
 
 export function remoteAndroidLabPaths(env, home = os.homedir()) {
   return {
@@ -101,6 +103,24 @@ async function pushAndroidLabSource(host, env, executeGit) {
   return { commitSha, ref: WINDOWS_ANDROID_LAB_SOURCE_REF, schemaVersion: 1 };
 }
 
+function isRunScopedCollect(command) {
+  return command[0] === 'collect'
+    && ((command[1] === 'list' && command.length === 3) || (command[1] === 'get' && command.length === 4));
+}
+
+async function assertRunScopedCollectSupport(host, env, executeSsh) {
+  const raw = await executeSsh(host, ['status'], env, null);
+  let status;
+  try {
+    status = JSON.parse(String(raw));
+  } catch {
+    throw new Error('Windows Android Lab version could not be verified; reinstall the Lab before run-scoped collect');
+  }
+  if (status.protocolVersion !== WINDOWS_ANDROID_LAB_PROTOCOL_VERSION) {
+    throw new Error('Windows Android Lab version mismatch; reinstall the Lab before run-scoped collect');
+  }
+}
+
 export async function runWindowsAndroidLabControl({
   argv = process.argv.slice(2), env = process.env, executeGit = git, executeSsh = ssh, stdout = process.stdout
 } = {}) {
@@ -121,6 +141,7 @@ export async function runWindowsAndroidLabControl({
     remoteCommand = spec.command;
     input = spec.input;
   }
+  if (isRunScopedCollect(remoteCommand)) await assertRunScopedCollectSupport(host, env, executeSsh);
   const result = await executeSsh(host, remoteCommand, env, input);
   if (output) {
     fs.mkdirSync(path.dirname(path.resolve(output)), { recursive: true });

@@ -25,6 +25,22 @@ describe('Windows Android lab Mac controller', () => {
     });
   });
 
+  it('preflights run-scoped collect and rejects an older installed dispatcher explicitly', async () => {
+    await expect(runWindowsAndroidLabControl({
+      argv: ['--host', 'tester@windows-host', 'collect', 'list', '1000-aaaaaaaaaaaa'], env: {},
+      executeSsh: async () => Buffer.from('{"schemaVersion":1,"state":"idle"}\n'), stdout: { write: () => {} }
+    })).rejects.toThrow('version mismatch');
+    const calls = [];
+    await runWindowsAndroidLabControl({
+      argv: ['--host', 'tester@windows-host', 'collect', 'get', '1000-aaaaaaaaaaaa', 'summary.json'], env: {},
+      executeSsh: async (_host, command) => {
+        calls.push(command);
+        return command[0] === 'status' ? Buffer.from('{"protocolVersion":2,"state":"idle"}\n') : Buffer.from('evidence');
+      }, stdout: { write: () => {} }
+    });
+    expect(calls).toEqual([['status'], ['collect', 'get', '1000-aaaaaaaaaaaa', 'summary.json']]);
+  });
+
   it('requires an explicit SSH user and sends only action tokens', () => {
     expect(() => parseAndroidLabControlArgs(['--host', 'windows-host', 'status'], {})).toThrow();
     expect(parseAndroidLabControlArgs(['--host', 'tester@windows-host', 'device', 'status'], {}).command).toEqual(['device', 'status']);

@@ -31,6 +31,10 @@ describe('Windows Android lab installer', () => {
     expect(source).toContain('deviceIdentity = $DeviceIdentity');
     expect(source).toContain('schemaVersion = 2');
     expect(source).toContain('windows-android-lab-device.mjs');
+    expect(source).toContain('windows-android-lab-evidence.mjs');
+    expect(source).toContain('$existingConfig.androidDebugKeystoreSha256');
+    expect(source).toContain('$config.androidDebugKeystoreSha256 = $existingConfig.androidDebugKeystoreSha256');
+    expect(source).not.toMatch(/Remove-Item[^\n]*(repository\.git|device\.json|evidence)/u);
     expect(source).not.toContain('FoliolePhysicalAcceptance');
   });
 });
