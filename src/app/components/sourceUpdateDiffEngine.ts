@@ -2,8 +2,8 @@ import { Chunk, type DiffConfig } from '@codemirror/merge';
 import { ChangeSet, Text } from '@codemirror/state';
 
 const SOURCE_UPDATE_DIFF_CONFIG: DiffConfig = {
-  scanLimit: 500,
-  timeout: 20
+  scanLimit: 5_000,
+  timeout: 100
 };
 
 export interface SourceUpdateDiffSnapshot {

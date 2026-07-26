@@ -173,6 +173,32 @@ describe('DocumentSourceUpdatePanel diff hints', () => {
       })
     );
   });
+
+});
+
+describe('DocumentSourceUpdatePanel measured diff alignment', () => {
+  resetPanelBodyMock();
+
+  it('adds a measured visual gap before the next identical line when changed lines wrap to different heights', () => {
+    renderPanel('title\nsame\nshort change\naligned', 'title\nsame\nlong wrapped change\naligned');
+    const currentAdapter = createScrollAdapter({
+      getLineBlockHeight: (lineNumber) => (lineNumber === 3 ? 24 : 20)
+    });
+    const updatedAdapter = createScrollAdapter({
+      getLineBlockHeight: (lineNumber) => (lineNumber === 3 ? 96 : 20)
+    });
+
+    attachPanelAdapters(documentPanelBodyMock.mock.calls, currentAdapter, updatedAdapter);
+
+    expect(currentAdapter.setDiffDecorations).toHaveBeenLastCalledWith({
+      lineDecorations: [{ kind: 'removed', lineNumber: 3 }],
+      spacerDecorations: [{ beforeLineNumber: 4, kind: 'added', lines: [], measuredHeightPx: 72 }]
+    });
+    expect(updatedAdapter.setDiffDecorations).toHaveBeenLastCalledWith({
+      lineDecorations: [{ kind: 'added', lineNumber: 3 }],
+      spacerDecorations: []
+    });
+  });
 });
 
 describe('DocumentSourceUpdatePanel overview ruler', () => {

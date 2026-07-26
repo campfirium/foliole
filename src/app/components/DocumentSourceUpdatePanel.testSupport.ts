@@ -13,6 +13,7 @@ export interface PanelBodyCall {
 
 export function createScrollAdapter(options?: {
   content?: string;
+  getLineBlockHeight?: (lineNumber: number) => number;
   getScrollTop?: () => number;
   onScroll?: (listener: (event: EditorScrollEvent) => void) => () => void;
   revealPosition?: ReturnType<typeof vi.fn>;
@@ -23,7 +24,7 @@ export function createScrollAdapter(options?: {
 
   return {
     getContent: () => options?.content ?? '',
-    getLineBlockHeight: () => 24,
+    getLineBlockHeight: (lineNumber: number) => options?.getLineBlockHeight?.(lineNumber) ?? 24,
     getScrollMetrics: () => ({ clientHeight: 300, scrollHeight: 1200, scrollTop: options?.getScrollTop?.() ?? scrollTop }),
     getScrollTop: () => options?.getScrollTop?.() ?? scrollTop,
     onScroll: options?.onScroll ?? (() => () => undefined),
