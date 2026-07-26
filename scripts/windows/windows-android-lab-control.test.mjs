@@ -35,10 +35,24 @@ describe('Windows Android lab Mac controller', () => {
       argv: ['--host', 'tester@windows-host', 'collect', 'get', '1000-aaaaaaaaaaaa', 'summary.json'], env: {},
       executeSsh: async (_host, command) => {
         calls.push(command);
-        return command[0] === 'status' ? Buffer.from('{"protocolVersion":2,"state":"idle"}\n') : Buffer.from('evidence');
+        return command[0] === 'status' ? Buffer.from('{"protocolVersion":3,"state":"idle"}\n') : Buffer.from('evidence');
       }, stdout: { write: () => {} }
     });
     expect(calls).toEqual([['status'], ['collect', 'get', '1000-aaaaaaaaaaaa', 'summary.json']]);
+  });
+
+  it('preflights review phases before sending the fixed remote command', async () => {
+    const calls = [];
+    await runWindowsAndroidLabControl({
+      argv: ['--host', 'tester@windows-host', 'review', 'prepare', 'a'.repeat(40)], env: {},
+      executeSsh: async (_host, command) => {
+        calls.push(command);
+        return Buffer.from(command[0] === 'status'
+          ? '{"protocolVersion":3,"state":"idle"}\n'
+          : '{"state":"pending"}\n');
+      }, stdout: { write: () => {} }
+    });
+    expect(calls).toEqual([['status'], ['review', 'prepare', 'a'.repeat(40)]]);
   });
 
   it('requires an explicit SSH user and sends only action tokens', () => {

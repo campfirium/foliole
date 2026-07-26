@@ -55,16 +55,22 @@ function assertLabSourceCommit(config, commitSha, paths, runCommand) {
 function startRun(command, paths, runCommand, now) {
   const current = closeStalePending(paths, now);
   if (current && ['pending', 'running'].includes(current.state)) {
-    if (current.commitSha === command.commitSha) return publicLabStatus(current);
+    if (current.commitSha === command.commitSha && current.reviewPhase === command.reviewPhase) return publicLabStatus(current);
     throw Object.assign(new Error('another Android lab run is active'), { code: 'android_lab_busy' });
   }
   const config = validateAndroidLabConfig(readJson(paths.config));
   assertLabSourceCommit(config, command.commitSha, paths, runCommand);
-  const runId = `${now}-${command.commitSha.slice(0, 12)}`;
+  const runId = `${now}-${command.commitSha.slice(0, 12)}${command.reviewPhase ? `-${command.reviewPhase}` : ''}`;
   const createdAt = new Date(now).toISOString();
-  const request = { commitSha: command.commitSha, createdAt, runId, schemaVersion: 1 };
+  const request = {
+    action: command.action, commitSha: command.commitSha, createdAt,
+    ...(command.reviewPhase ? { reviewPhase: command.reviewPhase } : {}), runId, schemaVersion: 1
+  };
   writeJsonAtomic(paths.active, request);
-  writeJsonAtomic(paths.status, { commitSha: request.commitSha, createdAt, phase: 'queued', runId, schemaVersion: 1, state: 'pending' });
+  writeJsonAtomic(paths.status, {
+    commitSha: request.commitSha, createdAt, phase: 'queued',
+    ...(request.reviewPhase ? { reviewPhase: request.reviewPhase } : {}), runId, schemaVersion: 1, state: 'pending'
+  });
   const started = runCommand('schtasks.exe', ['/Run', '/TN', WINDOWS_ANDROID_LAB_TASK]);
   if (started?.code !== undefined && started.code !== 0) {
     const failed = {
@@ -146,7 +152,7 @@ export async function dispatchWindowsAndroidLab({
   runCommand = runProcess, stdout = process.stdout
 } = {}) {
   const command = parseAndroidLabCommand(env.SSH_ORIGINAL_COMMAND?.trim() || argv.join(' '));
-  if (command.action === 'run') return startRun(command, paths, runCommand, now);
+  if (['review', 'run'].includes(command.action)) return startRun(command, paths, runCommand, now);
   if (command.action === 'status') return publicLabStatus(closeStalePending(paths, now));
   if (command.action === 'device') return deviceAction(command, paths, runCommand);
   if (command.action === 'signing') return installSigning(command, paths, input);

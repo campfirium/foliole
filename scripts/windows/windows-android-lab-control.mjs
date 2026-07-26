@@ -108,6 +108,10 @@ function isRunScopedCollect(command) {
     && ((command[1] === 'list' && command.length === 3) || (command[1] === 'get' && command.length === 4));
 }
 
+function requiresProtocolPreflight(command) {
+  return command[0] === 'review' || isRunScopedCollect(command);
+}
+
 async function assertRunScopedCollectSupport(host, env, executeSsh) {
   const raw = await executeSsh(host, ['status'], env, null);
   let status;
@@ -141,7 +145,7 @@ export async function runWindowsAndroidLabControl({
     remoteCommand = spec.command;
     input = spec.input;
   }
-  if (isRunScopedCollect(remoteCommand)) await assertRunScopedCollectSupport(host, env, executeSsh);
+  if (requiresProtocolPreflight(remoteCommand)) await assertRunScopedCollectSupport(host, env, executeSsh);
   const result = await executeSsh(host, remoteCommand, env, input);
   if (output) {
     fs.mkdirSync(path.dirname(path.resolve(output)), { recursive: true });

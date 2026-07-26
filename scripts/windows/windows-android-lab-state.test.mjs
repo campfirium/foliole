@@ -23,6 +23,9 @@ describe('Windows Android lab state contract', () => {
 
   it('accepts only the fixed command and evidence grammar', () => {
     expect(parseAndroidLabCommand(`run ${SHA}`)).toEqual({ action: 'run', commitSha: SHA });
+    expect(parseAndroidLabCommand(`review prepare ${SHA}`)).toEqual({
+      action: 'review', commitSha: SHA, reviewPhase: 'prepare'
+    });
     expect(parseAndroidLabCommand('collect get summary.json').relativePath).toBe('summary.json');
     expect(parseAndroidLabCommand('collect get logcat.txt').relativePath).toBe('logcat.txt');
     expect(parseAndroidLabCommand('collect list 1000-aaaaaaaaaaaa')).toMatchObject({ operation: 'list', runId: '1000-aaaaaaaaaaaa' });
@@ -37,6 +40,8 @@ describe('Windows Android lab state contract', () => {
       endpoint: '192.168.0.107:38717', operation: 'reconnect'
     });
     expect(() => parseAndroidLabCommand('run HEAD')).toThrow();
+    expect(() => parseAndroidLabCommand(`review inspect ${SHA}`)).toThrow();
+    expect(() => parseAndroidLabCommand(`review capture ${SHA} node-1`)).toThrow();
     expect(() => parseAndroidLabCommand('collect get ../git-read-token.txt')).toThrow();
     expect(() => parseAndroidLabCommand('collect list ../1000-aaaaaaaaaaaa')).toThrow();
     expect(() => parseAndroidLabCommand('deploy 1 abc')).toThrow();

@@ -33,7 +33,9 @@ describe('Windows Android lab evidence', () => {
     roots.push(root);
     const paths = androidLabPaths(root);
     expect(isAndroidLabRunId('1000-aaaaaaaaaaaa')).toBe(true);
+    expect(isAndroidLabRunId('1000-aaaaaaaaaaaa-prepare')).toBe(true);
     expect(isAndroidLabRunId('../1000-aaaaaaaaaaaa')).toBe(false);
+    expect(isAndroidLabRunId('1000-aaaaaaaaaaaa-inspect')).toBe(false);
     expect(() => collectLabEvidence({ operation: 'list', runId: '1000-aaaaaaaaaaaa' }, paths, null, { write: () => {} }))
       .toThrow('run is unavailable');
     expect(() => collectLabEvidence({ operation: 'get', relativePath: '../config.json' }, paths, { evidenceRoot: root }, { write: () => {} }))

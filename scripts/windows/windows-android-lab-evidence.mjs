@@ -1,10 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-export const LAB_EVIDENCE_FILES = new Set(['logcat.txt', 'runner.log', 'screenshot.png', 'summary.json']);
+export const LAB_EVIDENCE_FILES = new Set([
+  'logcat.txt', 'review-audit.json', 'runner.log', 'screenshot.png', 'summary.json'
+]);
 
 export function isAndroidLabRunId(value) {
-  return /^[1-9]\d{0,15}-[0-9a-f]{12}$/u.test(String(value || ''));
+  return /^[1-9]\d{0,15}-[0-9a-f]{12}(?:-(?:prepare|capture|restart))?$/u.test(String(value || ''));
 }
 
 export function safeLabEvidencePath(evidenceRoot, relativePath) {

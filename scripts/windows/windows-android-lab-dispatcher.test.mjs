@@ -29,12 +29,31 @@ describe('Windows Android lab dispatcher', () => {
     prepareSource(paths);
     const result = await dispatchWindowsAndroidLab({ argv: ['run', SHA], now: 1_000, paths, runCommand: (...args) => calls.push(args) });
     expect(result.state).toBe('pending');
-    expect(result.protocolVersion).toBe(2);
+    expect(result.protocolVersion).toBe(3);
     expect(readJson(paths.active).commitSha).toBe(SHA);
     expect(calls).toEqual([
       ['git.exe', ['--git-dir', paths.repository, 'merge-base', '--is-ancestor', SHA, 'refs/heads/lab/dev']],
       ['schtasks.exe', ['/Run', '/TN', 'FolioleAndroidLab']]
     ]);
+  });
+
+  it('queues fixed Review phases in the scheduled worker single slot', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-android-lab-review-dispatch-'));
+    roots.push(root);
+    const paths = androidLabPaths(root);
+    prepareSource(paths);
+    const calls = [];
+    const result = await dispatchWindowsAndroidLab({
+      argv: ['review', 'capture', SHA], now: 2_000, paths,
+      runCommand: (...args) => { calls.push(args); return { code: 0, output: '' }; }
+    });
+    expect(result.runId).toBe('2000-bbbbbbbbbbbb-capture');
+    expect(readJson(paths.active)).toMatchObject({ action: 'review', reviewPhase: 'capture' });
+    expect(calls.at(-1)).toEqual(['schtasks.exe', ['/Run', '/TN', 'FolioleAndroidLab']]);
+    await expect(dispatchWindowsAndroidLab({
+      argv: ['review', 'restart', SHA], now: 2_001, paths,
+      runCommand: () => ({ code: 0, output: '' })
+    })).rejects.toMatchObject({ code: 'android_lab_busy' });
   });
 
   it('keeps legacy collect and can read a previous run by its internal id', async () => {

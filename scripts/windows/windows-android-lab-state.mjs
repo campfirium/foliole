@@ -8,7 +8,7 @@ import { isAndroidLabRunId, LAB_EVIDENCE_FILES } from './windows-android-lab-evi
 
 export const WINDOWS_ANDROID_LAB_TASK = 'FolioleAndroidLab';
 export const WINDOWS_ANDROID_LAB_SOURCE_REF = 'refs/heads/lab/dev';
-export const WINDOWS_ANDROID_LAB_PROTOCOL_VERSION = 2;
+export const WINDOWS_ANDROID_LAB_PROTOCOL_VERSION = 3;
 
 export function androidLabRoot(env = process.env) {
   if (env.FOLIOLE_WINDOWS_ANDROID_LAB_ROOT) return path.resolve(env.FOLIOLE_WINDOWS_ANDROID_LAB_ROOT);
@@ -29,6 +29,7 @@ export function androidLabPaths(root = androidLabRoot()) {
     preview,
     protection: path.join(root, 'protection', 'backups'),
     repository: path.join(root, 'repository.git'),
+    reviewSession: path.join(root, 'review-session.json'),
     root,
     signingHome: path.join(root, 'signing', 'android-user-home'),
     signingKeystore: path.join(root, 'signing', 'android-user-home', 'debug.keystore'),
@@ -60,6 +61,13 @@ export function parseAndroidLabCommand(input) {
     if (parts.length !== 1 || !/^[0-9a-f]{40}$/u.test(parts[0])) throw new Error('run requires a lowercase 40-character commit SHA');
     return { action, commitSha: parts[0] };
   }
+  if (action === 'review') {
+    if (!['prepare', 'capture', 'restart'].includes(parts[0]) || parts.length !== 2
+      || !/^[0-9a-f]{40}$/u.test(parts[1])) {
+      throw new Error('review requires prepare|capture|restart and a lowercase 40-character commit SHA');
+    }
+    return { action, commitSha: parts[1], reviewPhase: parts[0] };
+  }
   if (action === 'collect') {
     if (parts[0] === 'list' && parts.length === 1) return { action, operation: 'list' };
     if (parts[0] === 'list' && parts.length === 2 && isAndroidLabRunId(parts[1])) {
@@ -71,7 +79,7 @@ export function parseAndroidLabCommand(input) {
     if (parts[0] === 'get' && parts.length === 3 && isAndroidLabRunId(parts[1]) && LAB_EVIDENCE_FILES.has(parts[2])) {
       return { action, operation: 'get', relativePath: parts[2], runId: parts[1] };
     }
-    throw new Error('collect requires list [runId] or get [runId] summary.json|runner.log|logcat.txt|screenshot.png');
+    throw new Error('collect requires list [runId] or get [runId] an allowlisted evidence file');
   }
   if (action === 'device') {
     if (parts[0] === 'status' && parts.length === 1) return { action, operation: 'status' };

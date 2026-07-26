@@ -10,6 +10,9 @@ import { pathToFileURL } from 'node:url';
 import { executeBounded } from './windows-bounded-process.mjs';
 import { resolveAndroidDevice, validateAndroidLabConfig } from './windows-android-lab-device.mjs';
 import {
+  finishWindowsAndroidLabReviewRun, runWindowsAndroidLabReviewPhase
+} from './windows-android-lab-review-action.mjs';
+import {
   androidLabPaths, readJson, WINDOWS_ANDROID_LAB_SOURCE_REF, writeJsonAtomic, writeSuccessfulDeployment
 } from './windows-android-lab-state.mjs';
 
@@ -150,7 +153,8 @@ function writeRunEvidence(evidenceRoot, request, result, screenshotError, logcat
 }
 
 export async function runWindowsAndroidLabWorker({
-  executeCommand = executeBounded, paths = androidLabPaths(), platform = process.platform
+  executeCommand = executeBounded, paths = androidLabPaths(), platform = process.platform,
+  runReviewPhase = runWindowsAndroidLabReviewPhase
 } = {}) {
   if (platform !== 'win32') throw new Error('Windows Android lab worker requires win32');
   const request = readJson(paths.active);
@@ -161,6 +165,9 @@ export async function runWindowsAndroidLabWorker({
   const startedAt = new Date().toISOString();
   const running = { ...request, evidenceRoot, phase: 'device_resolve', pid: process.pid, startedAt, state: 'running' };
   writeJsonAtomic(paths.status, running);
+  if (request.action === 'review') {
+    return finishWindowsAndroidLabReviewRun({ executeCommand, paths, request, runReviewPhase, running });
+  }
   let previewResult = { code: 1, lines: [], output: '' };
   let device = null;
   let primaryError = null;

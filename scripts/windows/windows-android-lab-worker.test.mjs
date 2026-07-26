@@ -57,6 +57,27 @@ function successfulExecutor(paths, calls) {
 }
 
 describe('Windows Android lab worker', () => {
+  it('delegates a Review request without entering deploy or data-protection setup', async () => {
+    const paths = createFixture();
+    writeJsonAtomic(paths.active, {
+      action: 'review', commitSha: SHA, reviewPhase: 'prepare',
+      runId: '1000-dddddddddddd-prepare', schemaVersion: 1
+    });
+    const phases = [];
+    const runReviewPhase = async ({ request, setPhase }) => {
+      expect(request.reviewPhase).toBe('prepare');
+      setPhase('review_audit');
+      phases.push('review_audit');
+    };
+    await runWindowsAndroidLabWorker({
+      executeCommand: async () => { throw new Error('deploy command should not run'); },
+      paths, platform: 'win32', runReviewPhase
+    });
+    expect(phases).toEqual(['review_audit']);
+    expect(readJson(paths.status)).toMatchObject({ resultStatus: 'success', state: 'completed' });
+    expect(fs.existsSync(paths.active)).toBe(false);
+  });
+
   it('pins the safety environment, hard timeout, and cleans the detached checkout', async () => {
     const paths = createFixture();
     const calls = [];
