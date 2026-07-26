@@ -32,7 +32,7 @@ export function useClearIncomingUpdateDraft(args: {
     args.sourceUpdateDraftRef.current = null;
     args.setSourceUpdateDraftContent(null);
     args.setIsSourceUpdatePanelOpen(false);
-  }, [args]);
+  }, [args.setIsSourceUpdatePanelOpen, args.setSourceUpdateDraftContent, args.sourceUpdateDraftRef]);
 }
 
 export function useFlushSourceUpdateDraft(args: {
@@ -48,5 +48,5 @@ export function useFlushSourceUpdateDraft(args: {
       return;
     }
     args.onNodeContentChange(draft.nodeId, draft.content);
-  }, [args]);
+  }, [args.onNodeContentChange, args.sourceUpdateDraftRef]);
 }

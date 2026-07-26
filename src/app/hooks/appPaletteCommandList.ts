@@ -58,6 +58,7 @@ export const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   { id: APP_COMMAND_IDS.moveToNode, title: 'Move to...', section: 'Navigation', keywords: ['move', 'reparent'] },
   { id: APP_COMMAND_IDS.goParent, title: 'Go to Parent', section: 'Navigation' },
   { id: APP_COMMAND_IDS.findInTopic, title: 'Find in Topic', section: 'Navigation', keywords: ['find', 'search', 'topic', 'document', 'text'] },
+  { id: APP_COMMAND_IDS.toggleComparisonView, title: 'Compare with Draft', section: 'Editor', keywords: ['compare', 'diff', 'paste', 'draft'] },
   { id: APP_COMMAND_IDS.toggleImmersiveMode, title: 'Toggle Immersive Reading', section: 'Editor', keywords: ['immersive', 'reading', 'focus', 'fullscreen'] },
   { id: APP_COMMAND_IDS.toggleDismissedTopicsVisibility, title: 'Toggle Topic Focus', section: 'Workspace', keywords: ['dismissed', 'topics', 'hide', 'show', 'focus'] },
   { id: APP_COMMAND_IDS.enterPriorityMode, title: 'Set Priority...', section: 'Editor', keywords: ['priority', 'queue', 'p0', 'p1', 'quick set'] },

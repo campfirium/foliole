@@ -1,236 +1,190 @@
-import { useCallback, useEffect, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type Dispatch,
+  type MutableRefObject,
+  type SetStateAction
+} from 'react';
+
+import type { RuntimeNodeSourceUpdatePreview } from '../../shared/platform/nodeSourceRuntimeRepository';
 
 import {
-  acceptRuntimeIncomingUpdate,
-  dismissRuntimeIncomingUpdate,
-  importRuntimeIncomingUpdateAsNew
-} from '../../shared/platform/nodeSourceRuntimeRepository';
-import {
-  dismissRuntimeNodeTextAlternative,
-  promoteRuntimeNodeTextAlternative
-} from '../../shared/platform/nodeTextAlternativeRuntimeRepository';
-
-import type { DocumentPanelSectionProps } from './DocumentPanelSection';
+  canOpenDocumentComparisonView,
+  DOCUMENT_COMPARISON_VIEW_TOGGLE_EVENT,
+  type DocumentComparisonMode
+} from './documentComparisonView';
+import type { DocumentPanelSectionProps } from './documentPanelSectionTypes';
 import {
   createSourceUpdateDraft,
   type SourceUpdateDraft,
-  type SourceUpdateDraftRefs,
-  useClearIncomingUpdateDraft,
   useFlushSourceUpdateDraft
 } from './sourceUpdateDraftState';
+import { useDocumentComparisonSourceActions } from './useDocumentComparisonSourceActions';
+import { useDocumentManualComparisonActions } from './useDocumentManualComparisonActions';
 import { useNodeSourceUpdatePreview } from './useNodeSourceUpdatePreview';
 
-function useSourceUpdatePreviewAutoClose(args: {
-  handleSourceUpdatePanelOpenChange: (open: boolean) => void;
-  isSourceUpdatePanelOpen: boolean;
-  sourceUpdatePreview: ReturnType<typeof useNodeSourceUpdatePreview>;
-}) {
-  useEffect(() => {
-    if (args.isSourceUpdatePanelOpen && !args.sourceUpdatePreview.value && !args.sourceUpdatePreview.isLoading) {
-      args.handleSourceUpdatePanelOpenChange(false);
-    }
-  }, [args.handleSourceUpdatePanelOpenChange, args.isSourceUpdatePanelOpen, args.sourceUpdatePreview.isLoading, args.sourceUpdatePreview.value]);
+type ComparisonSource = 'manual' | 'source';
+
+function resolveMode(source: ComparisonSource, preview: RuntimeNodeSourceUpdatePreview | null): DocumentComparisonMode {
+  if (source === 'manual' || !preview) return 'manual';
+  return preview.kind === 'source_update' ? 'source_preview' : preview.kind;
 }
 
-function useSourceUpdateDraftSync(args: {
-  flushSourceUpdateDraft: () => void;
-  isIncomingUpdatePreview: boolean;
-  isSourceUpdatePanelOpen: boolean;
-  props: DocumentPanelSectionProps;
-  setSourceUpdateDraftContent: Dispatch<SetStateAction<string | null>>;
-  sourceUpdateDraftRef: MutableRefObject<SourceUpdateDraft | null>;
-}) {
-  useEffect(() => {
-    if (!args.isSourceUpdatePanelOpen) {
-      args.sourceUpdateDraftRef.current = null;
-      args.setSourceUpdateDraftContent((current) => (current === null ? current : null));
-      return;
-    }
-    const currentDraft = args.sourceUpdateDraftRef.current;
-    if (!currentDraft || currentDraft.nodeId !== args.props.editorNodeId) {
-      if (!args.isIncomingUpdatePreview) {
-        args.flushSourceUpdateDraft();
-      }
-      args.sourceUpdateDraftRef.current = createSourceUpdateDraft(args.props);
-      args.setSourceUpdateDraftContent(args.props.editorContent);
-      return;
-    }
-    if (currentDraft.content !== currentDraft.baseContent) {
-      return;
-    }
-    args.sourceUpdateDraftRef.current = { ...currentDraft, baseContent: args.props.editorContent, content: args.props.editorContent };
-    args.setSourceUpdateDraftContent((current) => (current === args.props.editorContent ? current : args.props.editorContent));
-  }, [
-    args.flushSourceUpdateDraft,
-    args.isIncomingUpdatePreview,
-    args.isSourceUpdatePanelOpen,
-    args.props,
-    args.setSourceUpdateDraftContent,
-    args.sourceUpdateDraftRef
-  ]);
+function useComparisonEligibility(props: DocumentPanelSectionProps) {
+  const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
+  return canOpenDocumentComparisonView({
+    activeNode,
+    activeNodeId: props.activeNodeId,
+    editorNodeId: props.editorNodeId,
+    isEditorReadOnly: props.isEditorReadOnly,
+    isExternalViewOpen: false,
+    isFoliolePublishedContext: Boolean(props.isFoliolePublishedContext),
+    isImmersiveMode: Boolean(props.isImmersiveMode),
+    isReviewOnly: Boolean(props.reviewEscapeBlurEnabled && !props.reviewCaretLineHighlight),
+    isTrashViewOpen: Boolean(props.isTrashViewOpen)
+  });
 }
 
-function useIncomingUpdateActions(args: {
-  alternativeId: string | null;
-  clearIncomingUpdateDraft: () => void;
-  incomingUpdateId: string | null;
-  props: DocumentPanelSectionProps;
-  sourceUpdatePreview: ReturnType<typeof useNodeSourceUpdatePreview>;
-} & SourceUpdateDraftRefs) {
-  const handleIncomingUpdateAccept = useCallback(async () => {
-    if (args.alternativeId) {
-      await promoteRuntimeNodeTextAlternative(args.alternativeId);
-      args.clearIncomingUpdateDraft();
-      return;
-    }
-    if (!args.incomingUpdateId) {
-      return;
-    }
-    const draft = args.sourceUpdateDraftRef.current;
-    const acceptedContent =
-      draft && draft.content !== draft.baseContent
-        ? draft.content
-        : args.sourceUpdatePreview.value?.updatedContent ?? args.sourceUpdateDraftContent ?? args.props.editorContent;
-    const result = await acceptRuntimeIncomingUpdate(args.incomingUpdateId, acceptedContent);
-    if (result?.status === 'accepted' && result.nodeId) {
-      args.props.onNodeContentChange(result.nodeId, acceptedContent, { publishLocal: false });
-    }
-    args.clearIncomingUpdateDraft();
-  }, [args]);
-
-  const handleIncomingUpdateDismiss = useCallback(async () => {
-    if (args.alternativeId) {
-      await dismissRuntimeNodeTextAlternative(args.alternativeId);
-      args.clearIncomingUpdateDraft();
-      return;
-    }
-    if (!args.incomingUpdateId) {
-      return;
-    }
-    await dismissRuntimeIncomingUpdate(args.incomingUpdateId);
-    args.clearIncomingUpdateDraft();
-  }, [args]);
-
-  const handleIncomingUpdateImportAsNew = useCallback(async () => {
-    if (!args.incomingUpdateId) {
-      return;
-    }
-    await importRuntimeIncomingUpdateAsNew(args.incomingUpdateId);
-    args.clearIncomingUpdateDraft();
-  }, [args]);
-
-  return {
-    handleIncomingUpdateAccept: args.incomingUpdateId || args.alternativeId ? handleIncomingUpdateAccept : undefined,
-    handleIncomingUpdateDismiss: args.incomingUpdateId || args.alternativeId ? handleIncomingUpdateDismiss : undefined,
-    handleIncomingUpdateImportAsNew: args.incomingUpdateId && !args.alternativeId ? handleIncomingUpdateImportAsNew : undefined
-  };
-}
-
-function useSourceUpdatePanelOpenChange(args: {
-  flushSourceUpdateDraft: () => void;
-  isIncomingUpdatePreview: boolean;
-  props: DocumentPanelSectionProps;
-  setIsSourceUpdatePanelOpen: Dispatch<SetStateAction<boolean>>;
-  setSourceUpdateDraftContent: Dispatch<SetStateAction<string | null>>;
-  sourceUpdateDraftRef: MutableRefObject<SourceUpdateDraft | null>;
-}) {
-  return useCallback(
-    (open: boolean) => {
-      if (open) {
-        const nextDraft = args.sourceUpdateDraftRef.current ?? createSourceUpdateDraft(args.props);
-        args.sourceUpdateDraftRef.current = nextDraft;
-        args.setSourceUpdateDraftContent(nextDraft.content);
-        args.setIsSourceUpdatePanelOpen(true);
-        return;
-      }
-      if (!args.isIncomingUpdatePreview) {
-        args.flushSourceUpdateDraft();
-      }
-      args.sourceUpdateDraftRef.current = null;
-      args.setSourceUpdateDraftContent(null);
-      args.setIsSourceUpdatePanelOpen(false);
-    },
-    [args]
-  );
-}
-
-function createSourceUpdateDraftChangeHandler(
-  args: Pick<DocumentPanelSectionProps, 'editorContent' | 'editorNodeId'> & {
-    setSourceUpdateDraftContent: Dispatch<SetStateAction<string | null>>;
-    sourceUpdateDraftRef: MutableRefObject<SourceUpdateDraft | null>;
-  }
+function createDraftChangeHandler(
+  props: DocumentPanelSectionProps,
+  draftRef: MutableRefObject<SourceUpdateDraft | null>,
+  setContent: Dispatch<SetStateAction<string | null>>
 ) {
   return (content: string) => {
-    args.sourceUpdateDraftRef.current = {
-      baseContent: args.sourceUpdateDraftRef.current?.baseContent ?? args.editorContent,
+    draftRef.current = {
+      baseContent: draftRef.current?.baseContent ?? props.editorContent,
       content,
-      nodeId: args.sourceUpdateDraftRef.current?.nodeId ?? args.editorNodeId
+      nodeId: draftRef.current?.nodeId ?? props.editorNodeId
     };
-    args.setSourceUpdateDraftContent(content);
+    setContent(content);
   };
+}
+
+function useComparisonLifecycle(args: {
+  closePanel: () => void;
+  draftRef: MutableRefObject<SourceUpdateDraft | null>;
+  flushLeftDraft: () => void;
+  isOpen: boolean;
+  modeRef: MutableRefObject<DocumentComparisonMode>;
+  openPanel: () => void;
+  openRef: MutableRefObject<boolean>;
+  preview: ReturnType<typeof useNodeSourceUpdatePreview>;
+  editorNodeId: string | null;
+  source: ComparisonSource;
+}) {
+  useEffect(() => {
+    const toggle = () => (args.openRef.current ? args.closePanel() : args.openPanel());
+    window.addEventListener(DOCUMENT_COMPARISON_VIEW_TOGGLE_EVENT, toggle);
+    return () => window.removeEventListener(DOCUMENT_COMPARISON_VIEW_TOGGLE_EVENT, toggle);
+  }, [args.closePanel, args.openPanel, args.openRef]);
+  useEffect(() => {
+    if (args.isOpen && args.draftRef.current?.nodeId !== args.editorNodeId) args.closePanel();
+  }, [args.closePanel, args.draftRef, args.editorNodeId, args.isOpen]);
+  useEffect(() => {
+    if (args.isOpen && args.source === 'source' && !args.preview.isLoading && !args.preview.value) args.closePanel();
+  }, [args.closePanel, args.isOpen, args.preview.isLoading, args.preview.value, args.source]);
+  useEffect(() => () => {
+    if (args.modeRef.current === 'manual' || args.modeRef.current === 'source_preview') args.flushLeftDraft();
+  }, [args.flushLeftDraft, args.modeRef]);
+}
+
+function useComparisonBehavior(args: {
+  clearPanel: () => void;
+  closePanel: () => void;
+  draftRef: MutableRefObject<SourceUpdateDraft | null>;
+  flushLeftDraft: () => void;
+  isOpen: boolean;
+  leftContent: string | null;
+  manualContent: string;
+  modeRef: MutableRefObject<DocumentComparisonMode>;
+  openPanel: () => void;
+  openRef: MutableRefObject<boolean>;
+  preview: ReturnType<typeof useNodeSourceUpdatePreview>;
+  props: DocumentPanelSectionProps;
+  source: ComparisonSource;
+}) {
+  useComparisonLifecycle({ ...args, editorNodeId: args.props.editorNodeId });
+  const sourceActions = useDocumentComparisonSourceActions({
+    clearPanel: args.clearPanel,
+    props: args.props,
+    sourceUpdateDraftContent: args.leftContent,
+    sourceUpdateDraftRef: args.draftRef,
+    sourceUpdatePreview: args.preview
+  });
+  const manualActions = useDocumentManualComparisonActions({
+    clearPanel: args.clearPanel,
+    draftRef: args.draftRef,
+    flushLeftDraft: args.flushLeftDraft,
+    manualContent: args.manualContent,
+    props: args.props
+  });
+  return { manualActions, sourceActions };
 }
 
 export function useDocumentPanelSourceUpdateState(props: DocumentPanelSectionProps) {
-  const [isSourceUpdatePanelOpen, setIsSourceUpdatePanelOpen] = useState(false);
-  const [sourceUpdateDraftContent, setSourceUpdateDraftContent] = useState<string | null>(null);
-  const sourceUpdateDraftRef = useRef<SourceUpdateDraft | null>(null);
-  const sourceUpdatePreview = useNodeSourceUpdatePreview(props.activeNodeId);
-  const incomingUpdateId = sourceUpdatePreview.value?.incomingUpdateId ?? null;
-  const alternativeId = sourceUpdatePreview.value?.alternativeId ?? null;
-  const isIncomingUpdatePreview = (sourceUpdatePreview.value?.kind === 'incoming_update' && Boolean(incomingUpdateId))
-    || (sourceUpdatePreview.value?.kind === 'sync_alternative' && Boolean(alternativeId));
+  const [isOpen, setIsOpen] = useState(false);
+  const [leftContent, setLeftContent] = useState<string | null>(null);
+  const [manualContent, setManualContent] = useState('');
+  const [source, setSource] = useState<ComparisonSource>('manual');
+  const draftRef = useRef<SourceUpdateDraft | null>(null);
+  const openRef = useRef(false);
+  const preview = useNodeSourceUpdatePreview(props.activeNodeId);
+  const canOpen = useComparisonEligibility(props);
+  const mode = resolveMode(source, preview.value);
+  const modeRef = useRef<DocumentComparisonMode>(mode);
+  modeRef.current = mode;
+  openRef.current = isOpen;
+  const flushLeftDraft = useFlushSourceUpdateDraft({ onNodeContentChange: props.onNodeContentChange, sourceUpdateDraftRef: draftRef });
 
-  const flushSourceUpdateDraft = useFlushSourceUpdateDraft({
-    onNodeContentChange: props.onNodeContentChange,
-    sourceUpdateDraftRef
-  });
+  const clearPanel = useCallback(() => {
+    draftRef.current = null;
+    setLeftContent(null);
+    setManualContent('');
+    setSource('manual');
+    setIsOpen(false);
+  }, []);
 
-  const handleSourceUpdatePanelOpenChange = useSourceUpdatePanelOpenChange({
-    flushSourceUpdateDraft,
-    isIncomingUpdatePreview,
-    props,
-    setIsSourceUpdatePanelOpen,
-    setSourceUpdateDraftContent,
-    sourceUpdateDraftRef
-  });
+  const closePanel = useCallback(() => {
+    if (modeRef.current === 'manual' || modeRef.current === 'source_preview') flushLeftDraft();
+    clearPanel();
+  }, [clearPanel, flushLeftDraft]);
 
-  const clearIncomingUpdateDraft = useClearIncomingUpdateDraft({
-    setIsSourceUpdatePanelOpen,
-    setSourceUpdateDraftContent,
-    sourceUpdateDraftRef
-  });
+  const openPanel = useCallback(() => {
+    if (!canOpen) return;
+    const draft = createSourceUpdateDraft(props);
+    draftRef.current = draft;
+    setLeftContent(draft.content);
+    setManualContent('');
+    setSource(preview.value ? 'source' : 'manual');
+    setIsOpen(true);
+  }, [canOpen, preview.value, props]);
 
-  const incomingUpdateActions = useIncomingUpdateActions({
-    alternativeId,
-    clearIncomingUpdateDraft,
-    incomingUpdateId,
-    props,
-    sourceUpdatePreview,
-    sourceUpdateDraftContent,
-    sourceUpdateDraftRef
-  });
+  const handleOpenChange = useCallback((nextOpen: boolean) => {
+    if (nextOpen) openPanel();
+    else closePanel();
+  }, [closePanel, openPanel]);
 
-  useSourceUpdatePreviewAutoClose({ handleSourceUpdatePanelOpenChange, isSourceUpdatePanelOpen, sourceUpdatePreview });
-  useSourceUpdateDraftSync({
-    flushSourceUpdateDraft,
-    isIncomingUpdatePreview,
-    isSourceUpdatePanelOpen,
-    props,
-    setSourceUpdateDraftContent,
-    sourceUpdateDraftRef
+  const { manualActions, sourceActions } = useComparisonBehavior({
+    clearPanel, closePanel, draftRef, flushLeftDraft, isOpen, leftContent, manualContent,
+    modeRef, openPanel, openRef, preview, props, source
   });
 
   return {
-    currentSourceUpdateContent: sourceUpdateDraftContent ?? props.editorContent,
-    handleSourceUpdateDraftChange: createSourceUpdateDraftChangeHandler({
-      editorContent: props.editorContent,
-      editorNodeId: props.editorNodeId,
-      setSourceUpdateDraftContent,
-      sourceUpdateDraftRef
-    }),
-    ...incomingUpdateActions,
-    handleSourceUpdatePanelOpenChange,
-    isSourceUpdatePanelOpen,
-    sourceUpdatePreview
+    canOpenComparisonView: canOpen,
+    comparisonMode: mode,
+    comparisonSource: source,
+    currentSourceUpdateContent: leftContent ?? props.editorContent,
+    handleManualContentChange: setManualContent,
+    handleManualSaveAsTopic: manualActions.saveAsTopic,
+    handleManualSetAsBody: manualActions.setAsBody,
+    handleSourceUpdateDraftChange: createDraftChangeHandler(props, draftRef, setLeftContent),
+    handleSourceUpdatePanelOpenChange: handleOpenChange,
+    isSourceUpdatePanelOpen: isOpen,
+    manualContent,
+    setComparisonSource: setSource,
+    sourceUpdatePreview: preview,
+    ...sourceActions
   };
 }

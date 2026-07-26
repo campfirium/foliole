@@ -12,7 +12,7 @@ import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 
 import { useDocumentPanelSectionDiagnostic } from './documentPanelSectionDiagnostic';
 import { getDocumentPanelView } from './documentPanelSectionModel';
-import { DocumentPanelSectionOverlays } from './DocumentPanelSectionOverlays';
+import { DocumentPanelSectionOverlayHost } from './DocumentPanelSectionOverlayHost';
 import { DocumentPanelSectionShell } from './DocumentPanelSectionShell';
 import {
   buildResolvedDocumentPanelProps,
@@ -78,6 +78,15 @@ function useDocumentPanelClozePresentations(activeNode: Node | undefined, props:
   });
 }
 
+function buildDocumentComparisonModel(
+  state: ReturnType<typeof useDocumentPanelSourceUpdateState>
+) {
+  return {
+    ...state,
+    sourceUpdatePreview: state.sourceUpdatePreview.value
+  };
+}
+
 function useDocumentPanelSectionModel(props: DocumentPanelSectionProps) {
   const t = useTranslation();
   const { editorDisplayMode, readingContentWidth } = useAppearanceSettings();
@@ -92,16 +101,7 @@ function useDocumentPanelSectionModel(props: DocumentPanelSectionProps) {
   const editorNode = props.editorNodeId ? props.nodesById[props.editorNodeId] : undefined;
   const isEditorDocumentLoaded = !props.editorNodeId || isNodeDocumentLoaded(editorNode);
   const textAnchorState = useDocumentPanelTextAnchorState(props);
-  const {
-    currentSourceUpdateContent,
-    handleIncomingUpdateAccept,
-    handleIncomingUpdateDismiss,
-    handleIncomingUpdateImportAsNew,
-    handleSourceUpdateDraftChange,
-    handleSourceUpdatePanelOpenChange,
-    isSourceUpdatePanelOpen,
-    sourceUpdatePreview
-  } = useDocumentPanelSourceUpdateState(props);
+  const comparison = buildDocumentComparisonModel(useDocumentPanelSourceUpdateState(props));
   const backlinks = useNodeBacklinks({
     targetNodeId: props.activeNodeId,
     nodeOrder: props.nodeOrder,
@@ -126,41 +126,12 @@ function useDocumentPanelSectionModel(props: DocumentPanelSectionProps) {
     textAnchorState,
     isFolderListView,
     panelKind,
-    isSourceUpdatePanelOpen,
-    currentSourceUpdateContent,
+    ...comparison,
     backlinks,
-    handleSourceUpdateDraftChange,
-    handleIncomingUpdateAccept,
-    handleIncomingUpdateDismiss,
-    handleIncomingUpdateImportAsNew,
-    handleSourceUpdatePanelOpenChange,
-    sourceUpdatePreview: sourceUpdatePreview.value
   };
 }
 
-function DocumentPanelSectionOverlayHost(args: {
-  editorAdapter: ReturnType<typeof useDocumentPanelInteractions>['editorAdapter'];
-  model: ReturnType<typeof useDocumentPanelSectionModel>;
-  props: DocumentPanelSectionProps;
-}) {
-  return (
-    <DocumentPanelSectionOverlays
-      {...definedProps({
-        currentSourceUpdateContent: args.model.currentSourceUpdateContent,
-        documentMaxWidth: args.model.bodyProps.documentMaxWidth,
-        editorAdapter: args.editorAdapter,
-        handleIncomingUpdateAccept: args.model.handleIncomingUpdateAccept,
-        handleIncomingUpdateDismiss: args.model.handleIncomingUpdateDismiss,
-        handleIncomingUpdateImportAsNew: args.model.handleIncomingUpdateImportAsNew,
-        handleSourceUpdateDraftChange: args.model.handleSourceUpdateDraftChange,
-        handleSourceUpdatePanelOpenChange: args.model.handleSourceUpdatePanelOpenChange,
-        isSourceUpdatePanelOpen: args.model.isSourceUpdatePanelOpen,
-        props: args.props,
-        sourceUpdatePreview: args.model.sourceUpdatePreview
-      })}
-    />
-  );
-}
+export type DocumentPanelSectionModel = ReturnType<typeof useDocumentPanelSectionModel>;
 
 export function DocumentPanelSection(props: DocumentPanelSectionProps) {
   recordComponentRender('documentPanel');
@@ -207,10 +178,14 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
           onEditorReady: interactions.handleEditorReady
         }}
         onPreviewDocumentSelection={interactions.handlePreviewDocumentSelection}
-        showSourceUpdateAction={Boolean(model.sourceUpdatePreview)}
+        showSourceUpdateAction={model.canOpenComparisonView}
       />
       <NodeLinkHoverPreviewPanel preview={nodeLinkPreview.preview} />
-      <DocumentPanelSectionOverlayHost editorAdapter={interactions.editorAdapter} model={model} props={draftProps} />
+      <DocumentPanelSectionOverlayHost
+        editorAdapter={interactions.editorAdapter}
+        model={model}
+        props={draftProps}
+      />
     </section>
   );
 }

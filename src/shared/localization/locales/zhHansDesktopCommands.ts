@@ -56,6 +56,7 @@ export const ZH_HANS_DESKTOP_COMMAND_TRANSLATIONS: Partial<Record<TranslationKey
   'desktop.command.moveToNode': '移动到...',
   'desktop.command.goParent': '返回上级',
   'desktop.command.findInTopic': '在主题内查找',
+  'desktop.command.compareWithDraft': '与改稿对比',
   'desktop.command.enterImmersiveReading': '进入沉浸阅读',
   'desktop.command.exitImmersiveReading': '退出沉浸阅读',
   'desktop.command.toggleDismissedTopicsVisibility': '切换主题聚焦',

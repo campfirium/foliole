@@ -1,7 +1,7 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_DESKTOP_SOURCE_UPDATE_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
-  'desktop.sourceUpdate.dialogTitle': '来源更新面板',
+  'desktop.sourceUpdate.dialogTitle': '对比视图',
   'desktop.sourceUpdate.close': '关闭来源更新面板',
   'desktop.sourceUpdate.accept': '接受更新',
   'desktop.sourceUpdate.accepting': '正在接受...',
@@ -11,8 +11,18 @@ export const ZH_HANS_DESKTOP_SOURCE_UPDATE_TRANSLATIONS: Partial<Record<Translat
   'desktop.sourceUpdate.importAsNew': '作为新主题导入',
   'desktop.sourceUpdate.importingAsNew': '正在导入...',
   'desktop.sourceUpdate.reviewTitle': '传入更新',
+  'desktop.sourceUpdate.comparisonTitle': '对比',
   'desktop.sourceUpdate.reviewHint': '对比导入文件与当前文档',
-  'desktop.sourceUpdate.current.title': '当前',
+  'desktop.sourceUpdate.sourceSelector': '对比来源',
+  'desktop.sourceUpdate.sourceOption': '来源更新',
+  'desktop.sourceUpdate.manualOption': '粘贴改稿',
+  'desktop.sourceUpdate.manual.hint': '临时文本会在关闭此视图时丢弃',
+  'desktop.sourceUpdate.manual.title': '粘贴改稿',
+  'desktop.sourceUpdate.manual.mode': '临时',
+  'desktop.sourceUpdate.manual.setAsBody': '设为正文',
+  'desktop.sourceUpdate.manual.saveAsTopic': '另存为新主题',
+  'desktop.sourceUpdate.manual.savingAsTopic': '正在保存...',
+  'desktop.sourceUpdate.current.title': '当前主题',
   'desktop.sourceUpdate.current.mode': '可编辑',
   'desktop.sourceUpdate.current.description': '这一侧保持主文档的阅读和编辑体验，并与更新后的来源同步滚动；来源多出的行会在这里留出对齐空隙。',
   'desktop.sourceUpdate.updated.title': '传入',

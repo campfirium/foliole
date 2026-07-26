@@ -1,3 +1,4 @@
+import { VIRTUAL_PUBLISHED_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 
 import { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
@@ -11,6 +12,7 @@ export function useControllerPaletteItems(args: {
   formalImport: ReturnType<typeof useFormalImport>;
   hotkeys: ReturnType<typeof useCommandShortcutState>;
   isCurrentReviewItemGradable: boolean;
+  isReviewEditing: boolean;
   isStudyMode: boolean;
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }) {
@@ -20,6 +22,12 @@ export function useControllerPaletteItems(args: {
     hasReviewCard: Boolean(args.ws.reviewSession.currentNodeId),
     hotkeys: args.hotkeys,
     isImmersiveMode: args.controller.runtime.isImmersiveMode,
+    isEditorReadOnly: args.controller.runtime.isViewingTrashNode,
+    isExternalViewOpen: args.controller.externalView.isExternalViewOpen,
+    isFoliolePublishedContext:
+      args.controller.virtualView.isVirtualViewOpen &&
+      args.controller.virtualView.activeVirtualNodeId === VIRTUAL_PUBLISHED_NODE_ID,
+    isReviewOnly: args.isStudyMode && !args.isReviewEditing,
     isViewingTrashNode: args.controller.runtime.isViewingTrashNode,
     isCurrentReviewItemGradable: args.isCurrentReviewItemGradable,
     isStudyMode: args.isStudyMode,

@@ -13,6 +13,7 @@ import { openWorkspaceNodeWithPreparedDocument } from '../../store/workspaceNode
 import { refreshWorkspaceState } from '../../store/workspaceRefreshScheduler';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { requestToggleDismissedTopicVisibility } from '../components/dismissedTopicVisibilitySetting';
+import { requestDocumentComparisonViewToggle } from '../components/documentComparisonView';
 import { requestDocumentTopicSearchOpen } from '../components/documentTopicSearchEvents';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 
@@ -203,6 +204,7 @@ export function createPaletteRunnerArgs(args: {
     exportCurrentArticle: createExportCurrentArticleCommand(args),
     ...createPublishingPaletteActions(args),
     findInTopic: requestDocumentTopicSearchOpen,
+    toggleComparisonView: requestDocumentComparisonViewToggle,
     mergeHighlightsIntoTopic: createMergeHighlightsIntoTopicCommand({ ws: args.ws }),
     ...createPaletteNavigationActions(args),
     ...createPaletteImportActions(args.formalImport),

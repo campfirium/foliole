@@ -26,7 +26,7 @@ describe('DocumentPanelSection source updates', () => {
 
     renderSection();
 
-    const splitButton = document.querySelectorAll('[aria-label="Toggle source update panel"]').item(0);
+    const splitButton = document.querySelectorAll('[aria-label="Compare with Draft"]').item(0);
     const moreButton = document.querySelectorAll('[aria-label="More editor options"]').item(0);
 
     expect(splitButton).toBeTruthy();

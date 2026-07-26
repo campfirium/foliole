@@ -4,9 +4,11 @@ import { beforeEach, vi } from 'vitest';
 
 import '../../test/reactPdfMock';
 
+import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import { LocalizationProvider } from '../../shared/localization/LocalizationProvider';
 import type { loadRuntimeNodeSourceDetails as loadRuntimeNodeSourceDetailsRuntime } from '../../shared/platform/nodeSourceRuntimeRepository';
 
+import { requestDocumentComparisonViewToggle } from './documentComparisonView';
 import { DocumentPanelSection } from './DocumentPanelSection';
 
 vi.mock('../../features/settings/context/AppearanceSettingsProvider', () => ({
@@ -35,16 +37,28 @@ vi.mock('./ReadwiseBookActionsPanel', () => ({
 const documentSourceUpdatePanelMocks = vi.hoisted(() => ({
   documentSourceUpdatePanelMock: vi.fn()
 }));
-const documentSourceUpdatePanelMock = documentSourceUpdatePanelMocks.documentSourceUpdatePanelMock;
+export const documentSourceUpdatePanelMock = documentSourceUpdatePanelMocks.documentSourceUpdatePanelMock;
+
+export function getLatestComparisonPanelProps() {
+  return documentSourceUpdatePanelMock.mock.calls.at(-1)?.[0];
+}
 
 vi.mock('./DocumentSourceUpdatePanel', () => ({
   DocumentSourceUpdatePanel: (props: {
+    comparisonMode: 'manual' | 'source_preview' | 'incoming_update' | 'sync_alternative';
+    comparisonSource: 'manual' | 'source';
+    manualContent: string;
     onAcceptIncomingUpdate?: () => Promise<void>;
     onCurrentContentChange: (content: string) => void;
     onDismissIncomingUpdate?: () => Promise<void>;
     onImportIncomingUpdateAsNew?: () => Promise<void>;
+    onManualContentChange: (content: string) => void;
+    onManualSaveAsTopic: () => Promise<void>;
+    onManualSetAsBody: () => Promise<void>;
     onOpenChange: (open: boolean) => void;
+    onSourceChange: (source: 'manual' | 'source') => void;
     open: boolean;
+    sourceAvailable: boolean;
   }) => {
     documentSourceUpdatePanelMock(props);
     return props.open ? <div data-testid="document-source-update-panel">Source update panel</div> : null;
@@ -105,7 +119,10 @@ export const baseNode = {
   kind: 'topic' as const,
   title: 'Node 1',
   parentNodeId: null,
-  content: '',
+  content: '# Node 1',
+  bodyStatus: 'ready' as const,
+  hasContent: true,
+  hasReveal: false,
   anchorLink: null,
   reveal: '',
   review: null,
@@ -159,6 +176,9 @@ export function buildSectionProps(overrides: Partial<ComponentProps<typeof Docum
     onResolveDocumentPositionAtViewportY: () => null,
     onRevealDocumentPosition: () => undefined,
     onRevealDocumentSelection: () => undefined,
+    onRunDocumentCommand: (commandId: string) => {
+      if (commandId === APP_COMMAND_IDS.toggleComparisonView) requestDocumentComparisonViewToggle();
+    },
     onSelectBreadcrumbNode: () => undefined,
     onSelectNode: () => undefined,
     onSelectNodeInVirtualView: () => undefined,
@@ -186,6 +206,7 @@ export function mockSourceUpdatePreview() {
       checkedAt: '2026-03-28T04:00:00.000Z',
       currentHighlightCount: 1,
       currentContent: 'Current content',
+      kind: 'source_update',
       sourceNodeId: 'node-1',
       updatedHighlightCount: 2,
       updatedContent: 'Updated content'
@@ -209,8 +230,12 @@ export function mockIncomingUpdatePreview() {
   } as never);
 }
 
+export function mockNoSourceUpdatePreview() {
+  useNodeSourceUpdatePreview.mockReturnValue({ isLoading: false, value: null });
+}
+
 export function openSourceUpdatePanel() {
-  const trigger = screen.getAllByRole('button', { name: 'Toggle source update panel' }).at(-1);
+  const trigger = screen.getAllByRole('button', { name: 'Compare with Draft' }).at(-1);
   if (!trigger) {
     throw new Error('Expected source update panel trigger');
   }

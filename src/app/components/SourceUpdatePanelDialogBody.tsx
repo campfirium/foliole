@@ -1,5 +1,6 @@
 import type { EditorAdapter, EditorDiffDecorations } from '../../features/editor/adapters/EditorAdapter';
 
+import type { DocumentComparisonMode } from './documentComparisonView';
 import type { buildSourceUpdateDiffModel } from './sourceUpdateDiffModel';
 import { SourceUpdatePanelActionBar } from './SourceUpdatePanelActionBar';
 import { SourceUpdatePanelColumns } from './SourceUpdatePanelColumns';
@@ -15,15 +16,23 @@ interface SourceUpdatePanelDialogBodyProps {
     updated: EditorDiffDecorations | null;
   };
   panelProps: {
+    comparisonMode: DocumentComparisonMode;
+    comparisonSource: 'manual' | 'source';
     currentContent: string;
     currentHighlightCount: number;
     currentNodeId: string | null;
     documentMaxWidth: number;
     editorAppearanceKey: string;
+    manualContent: string;
     onAcceptIncomingUpdate?: () => Promise<void>;
     onCurrentContentChange: (content: string) => void;
     onDismissIncomingUpdate?: () => Promise<void>;
     onImportIncomingUpdateAsNew?: () => Promise<void>;
+    onManualContentChange: (content: string) => void;
+    onManualSaveAsTopic: () => Promise<void>;
+    onManualSetAsBody: () => Promise<void>;
+    onSourceChange: (source: 'manual' | 'source') => void;
+    sourceAvailable: boolean;
     updatedHighlightCount: number;
     updatedContent: string;
   };
@@ -36,7 +45,12 @@ interface SourceUpdatePanelDialogBodyProps {
 export function SourceUpdatePanelDialogBody(props: SourceUpdatePanelDialogBodyProps) {
   return (
     <section className="relative flex h-full min-h-0 flex-col overflow-hidden">
-      <SourceUpdatePanelHeader />
+      <SourceUpdatePanelHeader
+        comparisonMode={props.panelProps.comparisonMode}
+        comparisonSource={props.panelProps.comparisonSource}
+        onSourceChange={props.panelProps.onSourceChange}
+        sourceAvailable={props.panelProps.sourceAvailable}
+      />
       <SourceUpdatePanelColumns
         currentEditor={props.currentEditor}
         currentMeasuredHighlights={props.currentMeasuredHighlights}
@@ -50,6 +64,8 @@ export function SourceUpdatePanelDialogBody(props: SourceUpdatePanelDialogBodyPr
         updatedMeasuredHighlights={props.updatedMeasuredHighlights}
       />
       <SourceUpdatePanelActionBar
+        comparisonMode={props.panelProps.comparisonMode}
+        manualContent={props.panelProps.manualContent}
         {...(props.panelProps.onAcceptIncomingUpdate
           ? { onAcceptIncomingUpdate: props.panelProps.onAcceptIncomingUpdate }
           : {})}
@@ -59,6 +75,8 @@ export function SourceUpdatePanelDialogBody(props: SourceUpdatePanelDialogBodyPr
         {...(props.panelProps.onImportIncomingUpdateAsNew
           ? { onImportIncomingUpdateAsNew: props.panelProps.onImportIncomingUpdateAsNew }
           : {})}
+        onManualSaveAsTopic={props.panelProps.onManualSaveAsTopic}
+        onManualSetAsBody={props.panelProps.onManualSetAsBody}
       />
     </section>
   );

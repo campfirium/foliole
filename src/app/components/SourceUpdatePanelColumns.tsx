@@ -4,6 +4,7 @@ import type { EditorAdapter, EditorDiffDecorations } from '../../features/editor
 import { definedProps } from '../../shared/lib/definedProps';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 
+import type { DocumentComparisonMode } from './documentComparisonView';
 import { DocumentPanelBody } from './DocumentPanelBody';
 import type { SourceUpdateOverviewSegment } from './sourceUpdateDiffModel';
 import { SourceUpdateOverviewRuler } from './SourceUpdateOverviewRuler';
@@ -16,12 +17,14 @@ const OVERVIEW_PANE_CLASS_NAME =
   'flex min-h-0 min-w-0 flex-col overflow-hidden bg-[var(--workspace-region-main-document-bg)]';
 
 interface DocumentSourceUpdatePanelLayoutProps {
+  comparisonMode: DocumentComparisonMode;
   currentContent: string;
   currentHighlightCount: number;
   currentNodeId: string | null;
   documentMaxWidth: number;
   editorAppearanceKey: string;
   onCurrentContentChange: (content: string) => void;
+  onManualContentChange: (content: string) => void;
   updatedHighlightCount: number;
   updatedContent: string;
 }
@@ -129,15 +132,16 @@ function buildCurrentPaneProps(props: SourceUpdatePanelColumnsProps): ComponentP
 }
 
 function buildUpdatedPaneProps(props: SourceUpdatePanelColumnsProps): ComponentProps<typeof PreviewDocumentPane> {
+  const isManual = props.props.comparisonMode === 'manual';
   return {
     content: props.props.updatedContent,
     currentNodeId: null,
     documentMaxWidth: props.props.documentMaxWidth,
     editorAppearanceKey: `${props.props.editorAppearanceKey}-source-update-reference`,
     editorDiffDecorations: props.updatedMeasuredHighlights ?? props.lineHighlights.updated,
-    onChange: () => undefined,
+    onChange: isManual ? props.props.onManualContentChange : () => undefined,
     onReady: props.handleUpdatedEditorReady,
-    readOnly: true
+    readOnly: !isManual
   };
 }
 
@@ -157,8 +161,12 @@ export function SourceUpdatePanelColumns(props: SourceUpdatePanelColumnsProps) {
         />
         <SourceUpdatePaneBody
           className={REFERENCE_PREVIEW_PANE_CLASS_NAME}
-          labelMode={t('desktop.sourceUpdate.updated.mode')}
-          labelTitle={t('desktop.sourceUpdate.updated.title')}
+          labelMode={t(props.props.comparisonMode === 'manual'
+            ? 'desktop.sourceUpdate.manual.mode'
+            : 'desktop.sourceUpdate.updated.mode')}
+          labelTitle={t(props.props.comparisonMode === 'manual'
+            ? 'desktop.sourceUpdate.manual.title'
+            : 'desktop.sourceUpdate.updated.title')}
           paneProps={updatedPaneProps}
         />
         <section className={OVERVIEW_PANE_CLASS_NAME}>

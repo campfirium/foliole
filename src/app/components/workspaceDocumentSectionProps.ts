@@ -116,6 +116,7 @@ export function buildDocumentSectionProps(
     onCreateCloze: props.onCreateCloze,
     onCreateHighlight: props.onCreateHighlight,
     onCreateNote: props.onCreateNote,
+    onCreateChildNode: props.onCreateChildNode,
     onDeleteExistingHighlight: props.onDeleteExistingHighlight,
     onOpenExistingHighlight: props.onOpenExistingHighlight,
     onRepairTable: props.onRepairTable,

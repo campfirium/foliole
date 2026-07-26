@@ -21,6 +21,7 @@ interface RunAppCommandActions {
   publishToDiscourse?: () => void | Promise<void>;
   publishToWordPress?: () => void | Promise<void>;
   findInTopic: () => void;
+  toggleComparisonView?: () => void;
   mergeHighlightsIntoTopic: () => void | Promise<void>;
   createSelectionHighlight: () => void;
   createSelectionCloze: () => void;
@@ -148,6 +149,7 @@ function createWorkspaceCommandHandlers(actions: RunAppCommandActions): Record<s
     [APP_COMMAND_IDS.publishToWordPress]: actions.publishToWordPress ?? (() => false),
     [APP_COMMAND_IDS.enterPriorityMode]: actions.enterPriorityMode,
     [APP_COMMAND_IDS.findInTopic]: actions.findInTopic,
+    [APP_COMMAND_IDS.toggleComparisonView]: actions.toggleComparisonView ?? (() => false),
     [APP_COMMAND_IDS.mergeHighlightsIntoTopic]: actions.mergeHighlightsIntoTopic,
     [APP_COMMAND_IDS.createSelectionHighlight]: actions.createSelectionHighlight,
     [APP_COMMAND_IDS.createSelectionCloze]: actions.createSelectionCloze,

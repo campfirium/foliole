@@ -3,7 +3,9 @@ import { vi } from 'vitest';
 
 export interface PanelBodyCall {
   editorDiffDecorations?: unknown;
+  onEditorChange?: (content: string) => void;
   onEditorReady?: (adapter: unknown) => void;
+  readOnly?: boolean;
 }
 
 export function createScrollAdapter(options?: {

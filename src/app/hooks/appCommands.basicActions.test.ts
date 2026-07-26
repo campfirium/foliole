@@ -44,6 +44,7 @@ function createCommandActions(overrides: Partial<Parameters<typeof runAppCommand
     enterPriorityMode: () => undefined,
     exportCurrentArticle: () => undefined,
     findInTopic: () => undefined,
+    toggleComparisonView: () => undefined,
     mergeHighlightsIntoTopic: () => undefined,
     goBack: () => undefined,
     goForward: () => undefined,
@@ -114,6 +115,12 @@ it('runs toggle devtools through the shared command handler', () => {
   expect(toggleDevTools).toHaveBeenCalledTimes(1);
   expect(importSingleFile).not.toHaveBeenCalled();
   expect(importDirectory).not.toHaveBeenCalled();
+});
+
+it('runs the comparison view through the shared command handler', () => {
+  const toggleComparisonView = vi.fn();
+  expectCommandRuns(APP_COMMAND_IDS.toggleComparisonView, { toggleComparisonView });
+  expect(toggleComparisonView).toHaveBeenCalledTimes(1);
 });
 
 it('runs the developer performance panel command through the shared command handler', () => {

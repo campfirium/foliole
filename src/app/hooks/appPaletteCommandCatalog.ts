@@ -38,6 +38,7 @@ export interface BuildAppPaletteItemsOptions extends ReviewPaletteCommandOptions
   canMoveToNode: boolean;
   canGoParent: boolean;
   canFindInCurrentTopic: boolean;
+  canOpenComparisonView?: boolean;
   canToggleImmersiveMode: boolean;
   canSetNodePriority: boolean;
   isImmersiveMode: boolean;
@@ -137,6 +138,9 @@ function isEditorCommandEnabled(id: string, options: BuildAppPaletteItemsOptions
   }
   if (id === APP_COMMAND_IDS.findInTopic) {
     return options.canFindInCurrentTopic;
+  }
+  if (id === APP_COMMAND_IDS.toggleComparisonView) {
+    return Boolean(options.canOpenComparisonView);
   }
   if (id === APP_COMMAND_IDS.toggleImmersiveMode) {
     return options.canToggleImmersiveMode;

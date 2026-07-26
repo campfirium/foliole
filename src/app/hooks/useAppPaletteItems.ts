@@ -139,7 +139,11 @@ export function useAppPaletteItems(args: {
   hasReviewCard: boolean;
   hotkeys: ReturnType<typeof useCommandShortcutState>;
   isImmersiveMode: boolean;
+  isEditorReadOnly: boolean;
+  isExternalViewOpen: boolean;
+  isFoliolePublishedContext: boolean;
   isViewingTrashNode: boolean;
+  isReviewOnly: boolean;
   isCurrentReviewItemGradable: boolean;
   isStudyMode: boolean;
   nav: ReturnType<typeof useWorkspaceControllerState>['nav'];

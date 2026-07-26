@@ -1,4 +1,4 @@
-import { act } from '@testing-library/react';
+import { act, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import {
@@ -53,12 +53,7 @@ it('does not commit a source update draft through raw editor fallback without a 
     onNodeContentChange
   });
 
-  const panelProps = openSourceUpdatePanel();
-
-  act(() => {
-    panelProps?.onCurrentContentChange('Detached source draft');
-    panelProps?.onOpenChange(false);
-  });
+  expect(screen.queryByRole('button', { name: 'Compare with Draft' })).not.toBeInTheDocument();
 
   expect(onEditorChange).not.toHaveBeenCalled();
   expect(onNodeContentChange).not.toHaveBeenCalled();

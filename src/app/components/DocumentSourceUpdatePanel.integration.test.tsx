@@ -15,14 +15,22 @@ describe('DocumentSourceUpdatePanel integration', () => {
     renderWithLocalization(
       <MouseGestureSettingsProvider>
         <DocumentSourceUpdatePanel
+          comparisonMode="source_preview"
+          comparisonSource="source"
           currentContent={'# Title\n\nSame\nLeft only\nEnd'}
           currentHighlightCount={1}
           currentNodeId="node-1"
           documentMaxWidth={760}
           editorAppearanceKey="appearance-1"
+          manualContent=""
           onCurrentContentChange={() => undefined}
+          onManualContentChange={() => undefined}
+          onManualSaveAsTopic={async () => undefined}
+          onManualSetAsBody={async () => undefined}
           onOpenChange={() => undefined}
+          onSourceChange={() => undefined}
           open
+          sourceAvailable
           updatedHighlightCount={2}
           updatedContent={'# Title\n\nSame\nRight only\nEnd'}
         />
@@ -30,8 +38,8 @@ describe('DocumentSourceUpdatePanel integration', () => {
     );
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getAllByText('Current').length).toBeGreaterThan(0);
-    expect(screen.getByText('Incoming update')).toBeInTheDocument();
+    expect(screen.getAllByText('Current Topic').length).toBeGreaterThan(0);
+    expect(screen.getByText('Compare')).toBeInTheDocument();
     expect(screen.getByText('Incoming')).toBeInTheDocument();
     expect(screen.getAllByTestId('source-update-pane')).toHaveLength(2);
   });

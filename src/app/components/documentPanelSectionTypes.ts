@@ -1,5 +1,6 @@
 import type { MouseEvent as ReactMouseEvent } from 'react';
 
+import type { NodeKind } from '../../../lib/core/nodes/nodeKind';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
@@ -66,6 +67,7 @@ export interface DocumentPanelSectionProps {
   onCopyImage: () => void;
   onCreateHighlight: () => void;
   onCreateNote?: (note: string) => void;
+  onCreateChildNode?: (parentNodeId: string, content?: string, kind?: NodeKind) => Promise<string | null>;
   onDeleteExistingHighlight?: () => void;
   onOpenExistingHighlight?: () => void;
   onRepairTable?: () => boolean;

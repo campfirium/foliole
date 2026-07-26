@@ -1,4 +1,4 @@
-import { FileUp } from 'lucide-react';
+import { Columns2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import type { BacklinkItem } from '../../features/nodes/model/internalLinks';
@@ -21,14 +21,14 @@ import { DocumentPanelHeaderBacklinksMenu } from './DocumentPanelHeaderBacklinks
 import { MoreOptionsIcon } from './DocumentPanelHeaderIcons';
 import { DocumentPriorityControl } from './DocumentPriorityControl';
 
-function SourceUpdateAction({
+function ComparisonViewAction({
   isOpen,
-  onToggle,
+  onRunCommand,
   t,
   visible
 }: {
   isOpen: boolean;
-  onToggle: () => void;
+  onRunCommand?: (commandId: string) => void;
   t: Translate;
   visible: boolean;
 }) {
@@ -40,9 +40,10 @@ function SourceUpdateAction({
       aria-pressed={isOpen}
       className="text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground"
       data-active={isOpen}
-      icon={<FileUp aria-hidden="true" size={16} strokeWidth={1.8} />}
-      label={t('desktop.document.toggleSourceUpdatePanel')}
-      onClick={onToggle}
+      data-command-id={APP_COMMAND_IDS.toggleComparisonView}
+      icon={<Columns2 aria-hidden="true" size={16} strokeWidth={1.8} />}
+      label={t('desktop.command.compareWithDraft')}
+      onClick={() => onRunCommand?.(APP_COMMAND_IDS.toggleComparisonView)}
     />
   );
 }
@@ -90,9 +91,9 @@ export function renderDocumentHeaderActions(args: {
 
   return (
     <ToolbarActionGroup ariaLabel={args.t('desktop.document.editorActions')} className="justify-end">
-      <SourceUpdateAction
+      <ComparisonViewAction
         isOpen={args.isSourceUpdatePanelOpen}
-        onToggle={args.onToggleSourceUpdatePanel}
+        {...(args.onRunDocumentCommand ? { onRunCommand: args.onRunDocumentCommand } : {})}
         t={args.t}
         visible={args.showSourceUpdateAction}
       />

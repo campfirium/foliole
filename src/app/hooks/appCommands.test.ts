@@ -30,6 +30,7 @@ function createPaletteOptions(isReviewMode: boolean) {
     canMoveToNode: true,
     canGoParent: true,
     canFindInCurrentTopic: true,
+    canOpenComparisonView: true,
     canToggleImmersiveMode: true,
     canSetNodePriority: true,
     canRevealAnswer: true,
@@ -66,6 +67,7 @@ function expectCorePaletteEntries() {
   expect(items.some((item) => item.id === APP_COMMAND_IDS.moveToNode)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.renameNode)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.findInTopic)).toBe(true);
+  expect(items.find((item) => item.id === APP_COMMAND_IDS.toggleComparisonView)).toMatchObject({ enabled: true, title: 'Compare with Draft' });
   expect(items.some((item) => item.id === APP_COMMAND_IDS.enterPriorityMode)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.gradeReviewGood)).toBe(true);
   expect(items.some((item) => item.id === APP_COMMAND_IDS.importSingleFile)).toBe(true);

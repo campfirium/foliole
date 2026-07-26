@@ -12,23 +12,32 @@ import {
   AppDialogTitle
 } from '../../shared/ui';
 
+import type { DocumentComparisonMode } from './documentComparisonView';
 import { buildSourceUpdateDiffModel } from './sourceUpdateDiffModel';
 import { SourceUpdatePanelDialogBody } from './SourceUpdatePanelDialogBody';
 
 interface DocumentSourceUpdatePanelProps {
+  comparisonMode: DocumentComparisonMode;
+  comparisonSource: 'manual' | 'source';
   currentContent: string;
   currentHighlightCount: number;
   currentNodeId: string | null;
   documentMaxWidth: number;
   editorAppearanceKey: string;
+  manualContent: string;
   onAcceptIncomingUpdate?: () => Promise<void>;
   onCurrentContentChange: (content: string) => void;
   onCurrentEditorReady?: (adapter: EditorAdapter | null) => void;
   onDismissIncomingUpdate?: () => Promise<void>;
   onImportIncomingUpdateAsNew?: () => Promise<void>;
+  onManualContentChange: (content: string) => void;
+  onManualSaveAsTopic: () => Promise<void>;
+  onManualSetAsBody: () => Promise<void>;
   onOpenChange: (open: boolean) => void;
   open: boolean;
   onUpdatedEditorReady?: (adapter: EditorAdapter | null) => void;
+  onSourceChange: (source: 'manual' | 'source') => void;
+  sourceAvailable: boolean;
   updatedHighlightCount: number;
   updatedContent: string;
 }
@@ -95,9 +104,13 @@ function useSourceUpdatePanelDiffState(
   currentContent: string,
   updatedContent: string,
   currentEditor: EditorAdapter | null,
-  updatedEditor: EditorAdapter | null
+  updatedEditor: EditorAdapter | null,
+  enabled: boolean
 ) {
-  const diffModel = useMemo(() => buildSourceUpdateDiffModel(currentContent, updatedContent), [currentContent, updatedContent]);
+  const diffModel = useMemo(
+    () => buildSourceUpdateDiffModel(currentContent, enabled ? updatedContent : currentContent),
+    [currentContent, enabled, updatedContent]
+  );
   const currentMeasuredHighlights = useMemo(
     () => withMeasuredSpacerHeights(diffModel.current.decorations, updatedEditor),
     [diffModel.current.decorations, updatedEditor]
@@ -193,7 +206,8 @@ export function DocumentSourceUpdatePanel(props: DocumentSourceUpdatePanelProps)
     props.currentContent,
     props.updatedContent,
     currentEditor,
-    updatedEditor
+    updatedEditor,
+    props.comparisonMode !== 'manual' || Boolean(props.manualContent.trim())
   );
 
   useSourceUpdatePanelScrollSync(currentEditor, updatedEditor, props.open);

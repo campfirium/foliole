@@ -1,8 +1,15 @@
+import { canOpenDocumentComparisonView } from '../components/documentComparisonView';
+
 import type { useWorkspaceSelectors } from './appControllerState';
 
 interface EditorPaletteSource {
   activeNodeId: string | null;
   isViewingTrashNode: boolean;
+  isEditorReadOnly?: boolean;
+  isExternalViewOpen?: boolean;
+  isFoliolePublishedContext?: boolean;
+  isImmersiveMode?: boolean;
+  isReviewOnly?: boolean;
   ws: Pick<ReturnType<typeof useWorkspaceSelectors>, 'nodesById' | 'trashedNodeIds'>;
 }
 
@@ -34,10 +41,22 @@ function canToggleImmersiveMode(args: EditorPaletteSource) {
 
 export function buildEditorPaletteOptions(args: EditorPaletteSource) {
   const canUseCurrentTopic = hasCurrentTopic(args);
+  const activeNode = args.activeNodeId ? args.ws.nodesById[args.activeNodeId] : undefined;
   return {
     canAnnotateSelection: canAnnotateSelection(args),
     canExportCurrentArticle: canExportCurrentArticle(args),
     canFindInCurrentTopic: canUseCurrentTopic,
+    canOpenComparisonView: canOpenDocumentComparisonView({
+      activeNode,
+      activeNodeId: args.activeNodeId,
+      editorNodeId: args.activeNodeId,
+      isEditorReadOnly: args.isEditorReadOnly ?? false,
+      isExternalViewOpen: args.isExternalViewOpen ?? false,
+      isFoliolePublishedContext: args.isFoliolePublishedContext ?? false,
+      isImmersiveMode: args.isImmersiveMode ?? false,
+      isReviewOnly: args.isReviewOnly ?? false,
+      isTrashViewOpen: args.isViewingTrashNode
+    }),
     canMergeHighlightsIntoTopic: canUseCurrentTopic,
     canPublishToFoliole: canUseCurrentTopic,
     canPublishToDiscourse: canUseCurrentTopic,

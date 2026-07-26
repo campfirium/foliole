@@ -24,17 +24,37 @@ vi.mock('./DocumentPanelBody', () => ({
   }
 }));
 
-function renderPanel(currentContent: string, updatedContent: string, onOpenChange = () => undefined) {
+function renderPanel(
+  currentContent: string,
+  updatedContent: string,
+  onOpenChange = () => undefined,
+  options: {
+    comparisonMode?: 'manual' | 'source_preview';
+    manualContent?: string;
+    onManualContentChange?: (content: string) => void;
+    onManualSaveAsTopic?: () => Promise<void>;
+    sourceAvailable?: boolean;
+  } = {}
+) {
+  const comparisonMode = options.comparisonMode ?? 'source_preview';
   renderWithLocalization(
     <DocumentSourceUpdatePanel
+      comparisonMode={comparisonMode}
+      comparisonSource={comparisonMode === 'manual' ? 'manual' : 'source'}
       currentContent={currentContent}
       currentHighlightCount={1}
       currentNodeId="node-1"
       documentMaxWidth={760}
       editorAppearanceKey="appearance-1"
+      manualContent={options.manualContent ?? ''}
       onCurrentContentChange={() => undefined}
+      onManualContentChange={options.onManualContentChange ?? (() => undefined)}
+      onManualSaveAsTopic={options.onManualSaveAsTopic ?? (async () => undefined)}
+      onManualSetAsBody={async () => undefined}
       onOpenChange={onOpenChange}
+      onSourceChange={() => undefined}
       open
+      sourceAvailable={options.sourceAvailable ?? true}
       updatedHighlightCount={2}
       updatedContent={updatedContent}
     />
@@ -82,10 +102,10 @@ describe('DocumentSourceUpdatePanel rendering', () => {
   it('shows a compact review chrome while keeping the overview ruler', () => {
     renderPanel('# Existing title\nsecond\nfourth', '# Updated topic\nsecond\nthird\nfourth changed');
 
-    expect(screen.getByText('Incoming update')).toBeInTheDocument();
+    expect(screen.getByText('Compare')).toBeInTheDocument();
     expect(screen.getByText('Compare imported file with current document')).toBeInTheDocument();
     expect(screen.queryByText('Updated topic')).not.toBeInTheDocument();
-    expect(screen.getByText('Current')).toBeInTheDocument();
+    expect(screen.getByText('Current Topic')).toBeInTheDocument();
     expect(screen.getByText('editable')).toBeInTheDocument();
     expect(screen.getByText('Incoming')).toBeInTheDocument();
     expect(screen.getByText('read-only')).toBeInTheDocument();
@@ -103,7 +123,6 @@ describe('DocumentSourceUpdatePanel rendering', () => {
 
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
-
 });
 
 describe('DocumentSourceUpdatePanel diff hints', () => {
