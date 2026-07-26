@@ -42,6 +42,14 @@ const PAIRING_PROTOCOL_STORE = path.join(
   REPO_ROOT,
   'android/app/src/main/java/com/foliole/android/FolioleCompanionPairingProtocolStore.java'
 );
+const PAIRING_PEER_CONTRACT = path.join(
+  REPO_ROOT,
+  'android/app/src/main/java/com/foliole/android/FolioleCompanionPairingPeerContractDefinitions.java'
+);
+const PAIRING_METADATA = path.join(
+  REPO_ROOT,
+  'android/app/src/main/java/com/foliole/android/FolioleCompanionPairingMetadata.java'
+);
 const RESOURCE_STORE_SOURCES = [
   'android/app/src/main/java/com/foliole/android/FolioleCompanionAttachmentResourceStore.java',
   'android/app/src/main/java/com/foliole/android/FolioleCompanionAttachmentResourceBatchStore.java',
@@ -80,6 +88,9 @@ describe('Android bridge contract metadata', () => {
       deviceKind: 'device_kind',
       deviceName: 'device_name',
       deviceSecret: 'device_secret',
+      remotePeerId: 'remote_peer_id',
+      remotePeerName: 'remote_peer_name',
+      remotePeerPlatform: 'remote_peer_platform',
       pairedAt: 'paired_at'
     });
     expect(definitions.pairingPlugin.storageKeys).toMatchObject({
@@ -148,7 +159,9 @@ describe('Android bridge contract metadata', () => {
     const combinedSource = [
       await readFile(PAIRING_PLUGIN_ACTIONS, 'utf8'),
       await readFile(PAIRING_STORE, 'utf8'),
-      await readFile(PAIRING_PROTOCOL_STORE, 'utf8')
+      await readFile(PAIRING_PROTOCOL_STORE, 'utf8'),
+      await readFile(PAIRING_PEER_CONTRACT, 'utf8'),
+      await readFile(PAIRING_METADATA, 'utf8')
     ].join('\n');
     const bridgeSource = await readFile(BRIDGE_CONTRACT_READER, 'utf8');
     const assetReaderSource = await readFile(BRIDGE_CONTRACT_ASSET_READER, 'utf8');
@@ -161,6 +174,7 @@ describe('Android bridge contract metadata', () => {
     expect(bridgeSource).toContain('pairingPreferenceKey(context, "remoteProtocol")');
     expect(bridgeSource).toContain('pairingStorageKey(context, "keyAlias")');
     expect(bridgeSource).toContain('pairingStateKey(context, "deviceId")');
+    expect(combinedSource).toContain('FolioleCompanionPairingPeerContractDefinitions.remotePeerNameStateKey(context)');
     expect(bridgeSource).toContain('pairingSignatureHeaderKey(context, "deviceId")');
     expect(bridgeSource).toContain('pairingSignatureResponseKey(context, "headers")');
     expect(combinedSource).toContain('FolioleCompanionBridgeContractDefinitions.pairingDeviceIdCredentialRequestKey(context)');

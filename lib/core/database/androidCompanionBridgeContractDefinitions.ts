@@ -160,6 +160,9 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
       negotiatedProtocolVersion: 'negotiated_protocol_version',
       pairedAt: 'paired_at',
       primaryDeviceId: 'primary_device_id',
+      remotePeerId: 'remote_peer_id',
+      remotePeerName: 'remote_peer_name',
+      remotePeerPlatform: 'remote_peer_platform',
       remoteProtocol: 'remote_protocol'
     },
     preferenceKeys: {
@@ -171,6 +174,9 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
       negotiatedProtocolVersion: 'negotiated_protocol_version',
       pairedAt: 'paired_at',
       primaryDeviceId: 'primary_device_id',
+      remotePeerId: 'remote_peer_id',
+      remotePeerName: 'remote_peer_name',
+      remotePeerPlatform: 'remote_peer_platform',
       remoteProtocol: 'remote_protocol'
     },
     storageKeys: {
@@ -203,6 +209,9 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
       negotiatedProtocolVersion: 'negotiated_protocol_version',
       pairedAt: 'paired_at',
       primaryDeviceId: 'primary_device_id',
+      remotePeerId: 'remote_peer_id',
+      remotePeerName: 'remote_peer_name',
+      remotePeerPlatform: 'remote_peer_platform',
       remoteProtocol: 'remote_protocol',
       repairRequired: 'repair_required',
       syncUsable: 'sync_usable'

@@ -35,6 +35,9 @@ final class FolioleCompanionPairingPluginActions {
             String primaryDeviceIdKey = FolioleCompanionBridgeContractDefinitions.pairingPrimaryDeviceIdCredentialRequestKey(context);
             String negotiatedVersionKey = FolioleCompanionBridgeContractDefinitions.pairingNegotiatedProtocolVersionCredentialRequestKey(context);
             String remoteProtocolKey = FolioleCompanionBridgeContractDefinitions.pairingRemoteProtocolCredentialRequestKey(context);
+            String remotePeerIdKey = FolioleCompanionPairingPeerContractDefinitions.remotePeerIdCredentialRequestKey(context);
+            String remotePeerNameKey = FolioleCompanionPairingPeerContractDefinitions.remotePeerNameCredentialRequestKey(context);
+            String remotePeerPlatformKey = FolioleCompanionPairingPeerContractDefinitions.remotePeerPlatformCredentialRequestKey(context);
             String deviceId = call.getString(deviceIdKey);
             String deviceKind = call.getString(deviceKindKey);
             String deviceName = call.getString(deviceNameKey);
@@ -43,6 +46,9 @@ final class FolioleCompanionPairingPluginActions {
             String primaryDeviceId = call.getString(primaryDeviceIdKey);
             Integer negotiatedVersion = call.getInt(negotiatedVersionKey);
             JSObject remoteProtocol = call.getObject(remoteProtocolKey);
+            String remotePeerId = call.getString(remotePeerIdKey);
+            String remotePeerName = call.getString(remotePeerNameKey);
+            String remotePeerPlatform = call.getString(remotePeerPlatformKey);
             if (
                 rejectIfBlank(call, deviceIdKey, deviceId) ||
                 rejectIfBlank(call, deviceKindKey, deviceKind) ||
@@ -66,6 +72,9 @@ final class FolioleCompanionPairingPluginActions {
                 negotiatedVersion,
                 pairedAt,
                 primaryDeviceId,
+                remotePeerId,
+                remotePeerName,
+                remotePeerPlatform,
                 remoteProtocol
             ));
         } catch (Exception exception) {

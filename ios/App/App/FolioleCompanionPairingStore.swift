@@ -50,6 +50,9 @@ final class FolioleCompanionPairingStore {
         negotiatedProtocolVersion: Int,
         pairedAt: String,
         primaryDeviceId: String,
+        remotePeerId: String?,
+        remotePeerName: String?,
+        remotePeerPlatform: String?,
         remoteProtocol: [String: Any]
     ) throws -> [String: Any] {
         guard negotiatedProtocolVersion == Self.currentProtocolVersion, JSONSerialization.isValidJSONObject(remoteProtocol) else {
@@ -64,6 +67,9 @@ final class FolioleCompanionPairingStore {
         defaults.set(deviceName.trimmedNonempty, forKey: preference("deviceName"))
         defaults.set(pairedAt.trimmedNonempty, forKey: preference("pairedAt"))
         defaults.set(primaryDeviceId.trimmedNonempty, forKey: preference("primaryDeviceId"))
+        setOptional(remotePeerId, forKey: preference("remotePeerId"))
+        setOptional(remotePeerName, forKey: preference("remotePeerName"))
+        setOptional(remotePeerPlatform, forKey: preference("remotePeerPlatform"))
         defaults.set(negotiatedProtocolVersion, forKey: preference("negotiatedProtocolVersion"))
         defaults.set(remoteProtocolData, forKey: preference("remoteProtocol"))
         return try loadState()
@@ -112,6 +118,9 @@ final class FolioleCompanionPairingStore {
             stateKey("negotiatedProtocolVersion"): negotiatedVersion > 0 ? negotiatedVersion : NSNull(),
             stateKey("pairedAt"): metadata("pairedAt") ?? NSNull(),
             stateKey("primaryDeviceId"): metadata("primaryDeviceId") ?? NSNull(),
+            stateKey("remotePeerId"): metadata("remotePeerId") ?? NSNull(),
+            stateKey("remotePeerName"): metadata("remotePeerName") ?? NSNull(),
+            stateKey("remotePeerPlatform"): metadata("remotePeerPlatform") ?? NSNull(),
             stateKey("remoteProtocol"): remoteProtocol ?? NSNull(),
             stateKey("repairRequired"): hasCredentials && !syncUsable,
             stateKey("syncUsable"): syncUsable
@@ -124,6 +133,13 @@ final class FolioleCompanionPairingStore {
     }
 
     private func metadata(_ name: String) -> String? { defaults.string(forKey: preference(name))?.trimmedNonempty }
+    private func setOptional(_ value: String?, forKey key: String) {
+        if let value = value?.trimmedNonempty {
+            defaults.set(value, forKey: key)
+        } else {
+            defaults.removeObject(forKey: key)
+        }
+    }
     private func preference(_ name: String) -> String { contract.preferenceKeys[name] ?? "invalid.\(name)" }
     private func signatureHeaderKey(_ name: String) -> String { contract.signatureHeaderKeys[name] ?? "invalid.\(name)" }
     private func signatureResponseKey(_ name: String) -> String { contract.signatureResponseKeys[name] ?? "invalid.\(name)" }

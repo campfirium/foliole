@@ -11,7 +11,6 @@ import java.security.KeyStore;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
-import javax.crypto.Mac;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
@@ -44,6 +43,7 @@ final class FolioleCompanionPairingStore {
             FolioleCompanionBridgeContractDefinitions.pairingPrimaryDeviceIdStateKey(context),
             trimToNull(prefs.getString(FolioleCompanionBridgeContractDefinitions.pairingPrimaryDeviceIdPreferenceKey(context), null))
         );
+        FolioleCompanionPairingMetadata.addState(context, prefs, result);
         FolioleCompanionPairingProtocolStore.addState(context, prefs, result, hasCredentials);
         return result;
     }
@@ -61,6 +61,9 @@ final class FolioleCompanionPairingStore {
         int negotiatedProtocolVersion,
         String pairedAt,
         String primaryDeviceId,
+        String remotePeerId,
+        String remotePeerName,
+        String remotePeerPlatform,
         JSObject remoteProtocol
     ) throws Exception {
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
@@ -78,6 +81,7 @@ final class FolioleCompanionPairingStore {
             .putString(FolioleCompanionBridgeContractDefinitions.pairingDeviceSecretIvPreferenceKey(context), Base64.encodeToString(iv, Base64.NO_WRAP))
             .putString(FolioleCompanionBridgeContractDefinitions.pairingPairedAtPreferenceKey(context), pairedAt.trim())
             .putString(FolioleCompanionBridgeContractDefinitions.pairingPrimaryDeviceIdPreferenceKey(context), primaryDeviceId.trim());
+        FolioleCompanionPairingMetadata.saveRemotePeer(context, editor, remotePeerId, remotePeerName, remotePeerPlatform);
         FolioleCompanionPairingProtocolStore.save(context, editor, negotiatedProtocolVersion, remoteProtocol);
         boolean saved = editor.commit();
         if (!saved) {
@@ -102,7 +106,7 @@ final class FolioleCompanionPairingStore {
         headers.put(FolioleCompanionBridgeContractDefinitions.pairingDeviceIdSignatureHeaderKey(context), deviceId);
         headers.put(FolioleCompanionBridgeContractDefinitions.pairingTimestampSignatureHeaderKey(context), timestamp);
         headers.put(FolioleCompanionBridgeContractDefinitions.pairingNonceSignatureHeaderKey(context), nonce);
-        headers.put(FolioleCompanionBridgeContractDefinitions.pairingSignatureSignatureHeaderKey(context), signCanonicalRequest(secret, canonical));
+        headers.put(FolioleCompanionBridgeContractDefinitions.pairingSignatureSignatureHeaderKey(context), FolioleCompanionPairingCrypto.signCanonicalRequest(secret, canonical));
         JSObject result = new JSObject();
         result.put(FolioleCompanionBridgeContractDefinitions.pairingHeadersSignatureResponseKey(context), headers);
         return result;
@@ -119,7 +123,7 @@ final class FolioleCompanionPairingStore {
     }
 
     static String decryptCredentialBag(Context context, String service, String salt, String iv, String ciphertext) throws Exception {
-        byte[] key = deriveCredentialBagKey(decryptSecret(context), service, decodeBase64Url(salt));
+        byte[] key = FolioleCompanionPairingCrypto.deriveCredentialBagKey(decryptSecret(context), service, decodeBase64Url(salt));
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
         cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(key, "AES"), new GCMParameterSpec(128, decodeBase64Url(iv)));
         return new String(cipher.doFinal(decodeBase64Url(ciphertext)), StandardCharsets.UTF_8);
@@ -135,7 +139,7 @@ final class FolioleCompanionPairingStore {
         }
         try {
             String secret = decryptSecret(context);
-            signCanonicalRequest(secret, "pairing-state-check");
+            FolioleCompanionPairingCrypto.signCanonicalRequest(secret, "pairing-state-check");
             return trimToNull(secret) != null;
         } catch (Exception exception) {
             clearPairingCredentials(context);
@@ -153,6 +157,7 @@ final class FolioleCompanionPairingStore {
                 .remove(FolioleCompanionBridgeContractDefinitions.pairingDeviceSecretIvPreferenceKey(context))
                 .remove(FolioleCompanionBridgeContractDefinitions.pairingPairedAtPreferenceKey(context))
                 .remove(FolioleCompanionBridgeContractDefinitions.pairingPrimaryDeviceIdPreferenceKey(context));
+            FolioleCompanionPairingMetadata.clear(context, editor);
             FolioleCompanionPairingProtocolStore.clear(context, editor);
             editor.apply();
         } catch (Exception exception) {
@@ -214,32 +219,7 @@ final class FolioleCompanionPairingStore {
         return value == null || value.trim().isEmpty() ? null : value.trim();
     }
 
-    private static String toHex(byte[] bytes) {
-        StringBuilder builder = new StringBuilder(bytes.length * 2);
-        for (byte value : bytes) {
-            builder.append(String.format("%02x", value));
-        }
-        return builder.toString();
-    }
-
     private static byte[] decodeBase64Url(String value) {
         return Base64.decode(value, Base64.URL_SAFE | Base64.NO_WRAP);
-    }
-
-    private static byte[] deriveCredentialBagKey(String deviceSecret, String service, byte[] salt) throws Exception {
-        byte[] pseudoRandomKey = hmacSha256(salt, deviceSecret.getBytes(StandardCharsets.UTF_8));
-        return hmacSha256(pseudoRandomKey, ("Foliole credential bag v1/" + service + "\u0001").getBytes(StandardCharsets.UTF_8));
-    }
-
-    private static byte[] hmacSha256(byte[] key, byte[] value) throws Exception {
-        Mac mac = Mac.getInstance("HmacSHA256");
-        mac.init(new SecretKeySpec(key, "HmacSHA256"));
-        return mac.doFinal(value);
-    }
-
-    private static String signCanonicalRequest(String secret, String canonical) throws Exception {
-        Mac mac = Mac.getInstance("HmacSHA256");
-        mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
-        return toHex(mac.doFinal(canonical.getBytes(StandardCharsets.UTF_8)));
     }
 }

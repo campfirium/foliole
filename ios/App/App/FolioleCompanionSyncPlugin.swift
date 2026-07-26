@@ -123,6 +123,9 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
                 negotiatedProtocolVersion: try self.requiredInt(call, contract.credentialRequestKeys, "negotiatedProtocolVersion"),
                 pairedAt: try self.requiredString(call, contract.credentialRequestKeys, "pairedAt"),
                 primaryDeviceId: try self.requiredString(call, contract.credentialRequestKeys, "primaryDeviceId"),
+                remotePeerId: call.getString(try self.key("remotePeerId", contract.credentialRequestKeys)),
+                remotePeerName: call.getString(try self.key("remotePeerName", contract.credentialRequestKeys)),
+                remotePeerPlatform: call.getString(try self.key("remotePeerPlatform", contract.credentialRequestKeys)),
                 remoteProtocol: try self.requiredObject(call, contract.credentialRequestKeys, "remoteProtocol")
             )
         }

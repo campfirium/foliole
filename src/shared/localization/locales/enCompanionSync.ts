@@ -4,6 +4,7 @@ export const EN_COMPANION_SYNC_TRANSLATIONS = {
   'companion.sync.unavailable': 'Unavailable',
   'companion.sync.thisDevice': 'This device',
   'companion.sync.deviceFallback': 'Device',
+  'companion.sync.desktopDevice': 'Desktop',
   'companion.sync.lastSync': 'Last sync',
   'companion.sync.noSyncYet': 'No sync yet',
   'companion.sync.syncing': 'Syncing',

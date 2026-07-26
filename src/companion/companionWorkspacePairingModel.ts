@@ -18,6 +18,9 @@ export type PendingPairRequest = {
   endpointUrl: string;
   expiresAt: string;
   pairRequestId: string;
+  remotePeerId: string;
+  remotePeerName: string;
+  remotePeerPlatform: string;
 } | null;
 
 export function createCompanionDeviceName(bootstrapState: NativeCompanionBootstrapState) {

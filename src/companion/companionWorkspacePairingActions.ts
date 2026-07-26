@@ -91,7 +91,10 @@ function createRequestPairingAction(
       args.setPendingPairRequest({
         endpointUrl: normalizedDiscovery.endpointUrl,
         expiresAt: nextRequest.expires_at,
-        pairRequestId: nextRequest.pair_request_id
+        pairRequestId: nextRequest.pair_request_id,
+        remotePeerId: normalizedDiscovery.peerId,
+        remotePeerName: normalizedDiscovery.desktopDeviceName,
+        remotePeerPlatform: normalizedDiscovery.desktopPlatform
       });
       await args.onSaveEndpoint(normalizedDiscovery.endpointUrl);
       args.setPairingStatus('awaiting-approval');
@@ -164,7 +167,10 @@ function createCompletePairingAction(args: CompletePairingActionArgs) {
         deviceKind: args.bootstrapState.runtime_kind,
         deviceName: createCompanionDeviceName(args.bootstrapState),
         endpointUrl: pendingPairRequest.endpointUrl,
-        pairRequestId: pendingPairRequest.pairRequestId
+        pairRequestId: pendingPairRequest.pairRequestId,
+        remotePeerId: pendingPairRequest.remotePeerId,
+        remotePeerName: pendingPairRequest.remotePeerName,
+        remotePeerPlatform: pendingPairRequest.remotePeerPlatform
       });
       args.setPairingState(nextPairingState);
       await args.onSaveEndpoint(pendingPairRequest.endpointUrl);

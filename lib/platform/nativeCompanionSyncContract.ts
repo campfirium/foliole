@@ -43,6 +43,9 @@ export interface NativeCompanionPairingState {
   negotiated_protocol_version?: number | null;
   paired_at: string | null;
   primary_device_id: string | null;
+  remote_peer_id?: string | null;
+  remote_peer_name?: string | null;
+  remote_peer_platform?: string | null;
   protocol_compatibility?: SyncProtocolCompatibilityResult;
   remote_protocol?: SyncProtocolDescriptor | null;
   repair_required?: boolean;

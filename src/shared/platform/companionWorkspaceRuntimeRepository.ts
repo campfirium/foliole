@@ -143,6 +143,9 @@ export type PairCompanionWithDesktopArgs = {
   deviceName: string;
   endpointUrl: string;
   pairRequestId: string;
+  remotePeerId?: string | null;
+  remotePeerName?: string | null;
+  remotePeerPlatform?: string | null;
 };
 
 export type RequestCompanionPairingArgs = {

@@ -13,10 +13,14 @@ final class FoliolePairingStoreTests: XCTestCase {
             negotiatedProtocolVersion: 1,
             pairedAt: "2026-07-19T10:00:00.000Z",
             primaryDeviceId: "desktop-device",
+            remotePeerId: "desktop-device",
+            remotePeerName: "Foliole Desktop on Mac",
+            remotePeerPlatform: "macOS",
             remoteProtocol: ["version": 1, "min_supported_version": 1, "max_supported_version": 1, "capabilities": []]
         )
 
         XCTAssertEqual(saved[fixture.contract.stateKeys["isPaired"]!] as? Bool, true)
+        XCTAssertEqual(saved[fixture.contract.stateKeys["remotePeerName"]!] as? String, "Foliole Desktop on Mac")
         XCTAssertEqual(saved[fixture.contract.stateKeys["syncUsable"]!] as? Bool, true)
         XCTAssertNil(fixture.defaults.object(forKey: fixture.contract.preferenceKeys["deviceSecret"]!))
 
@@ -45,6 +49,9 @@ final class FoliolePairingStoreTests: XCTestCase {
             negotiatedProtocolVersion: 1,
             pairedAt: "2026-07-19T10:00:00.000Z",
             primaryDeviceId: "desktop-device",
+            remotePeerId: "desktop-device",
+            remotePeerName: "Foliole Desktop on Mac",
+            remotePeerPlatform: "macOS",
             remoteProtocol: ["version": 1]
         )
 
@@ -66,6 +73,9 @@ final class FoliolePairingStoreTests: XCTestCase {
             negotiatedProtocolVersion: 2,
             pairedAt: "2026-07-19T10:00:00.000Z",
             primaryDeviceId: "desktop-device",
+            remotePeerId: nil,
+            remotePeerName: nil,
+            remotePeerPlatform: nil,
             remoteProtocol: ["version": 2]
         ))
         XCTAssertNil(try fixture.secrets.load())
@@ -81,6 +91,9 @@ final class FoliolePairingStoreTests: XCTestCase {
             negotiatedProtocolVersion: 1,
             pairedAt: "2026-07-19T10:00:00.000Z",
             primaryDeviceId: "desktop-old",
+            remotePeerId: nil,
+            remotePeerName: nil,
+            remotePeerPlatform: nil,
             remoteProtocol: ["version": 1]
         )
 

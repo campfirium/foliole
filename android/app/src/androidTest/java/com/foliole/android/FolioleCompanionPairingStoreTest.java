@@ -57,6 +57,9 @@ public class FolioleCompanionPairingStoreTest {
             1,
             "2026-04-27T06:00:00.000Z",
             "primary-device-1",
+            "desktop-device-1",
+            "Foliole Desktop on Windows",
+            "Windows",
             protocol()
         );
 
@@ -73,6 +76,9 @@ public class FolioleCompanionPairingStoreTest {
 
         assertTrue(state.getBoolean("is_paired"));
         assertTrue(state.getBoolean("sync_usable"));
+        assertEquals("desktop-device-1", state.getString("remote_peer_id"));
+        assertEquals("Foliole Desktop on Windows", state.getString("remote_peer_name"));
+        assertEquals("Windows", state.getString("remote_peer_platform"));
         assertNotNull(headers);
         assertEquals("android-test-device", headers.getString("X-Device-Id"));
         assertNotNull(headers.getString("X-Signature"));
@@ -89,6 +95,9 @@ public class FolioleCompanionPairingStoreTest {
             1,
             "2026-04-27T06:00:00.000Z",
             "primary-device-1",
+            null,
+            null,
+            null,
             protocol()
         );
         prefs().edit().remove("negotiated_protocol_version").remove("remote_protocol").commit();

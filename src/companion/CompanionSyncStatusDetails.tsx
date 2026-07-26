@@ -23,19 +23,10 @@ type SyncStatusDetailsProps = {
   onOpenPage(page: CompanionSettingsPage): void;
 };
 
-function formatDeviceKind(deviceKind: string | null, t: Translate) {
-  if (deviceKind === 'android-capacitor' || deviceKind === 'android') {
-    return 'Android';
-  }
-  if (deviceKind === 'ios-capacitor' || deviceKind === 'ios') {
-    return 'iOS';
-  }
-  return deviceKind ?? t('companion.sync.deviceFallback');
-}
-
 function formatPairedDevice(pairingState: NativeCompanionPairingState, t: Translate) {
-  const name = pairingState.device_name?.trim() || t('companion.sync.thisDevice');
-  return `${name} (${formatDeviceKind(pairingState.device_kind, t)})`;
+  const name = pairingState.remote_peer_name?.trim() || pairingState.remote_peer_id?.trim() || t('companion.sync.unavailable');
+  const platform = pairingState.remote_peer_platform?.trim() || t('companion.sync.desktopDevice');
+  return `${name} (${platform})`;
 }
 
 function formatDeviceName(pairingState: NativeCompanionPairingState, t: Translate) {
@@ -141,7 +132,7 @@ function ConnectionSummary(props: {
       detail={t('companion.sync.connection.detail')}
       label={t('companion.sync.connection.row')}
       onClick={props.onOpen}
-      value={formatDeviceName(props.pairingState, t)}
+      value={formatPairedDevice(props.pairingState, t)}
     />
   );
 }
@@ -156,6 +147,7 @@ function ConnectionPage(props: {
   return (
     <section className="border-t border-companion-divider">
       <SettingsRow label={t('companion.sync.pairedDevice')} value={formatPairedDevice(props.pairingState, t)} />
+      <SettingsRow label={t('companion.sync.thisDevice')} value={formatDeviceName(props.pairingState, t)} />
       <SettingsRow label={t('companion.sync.desktopAddress')} value={props.endpointUrl} />
       <div className="py-4">
         <p className="text-xs leading-5 text-companion-text-secondary">
