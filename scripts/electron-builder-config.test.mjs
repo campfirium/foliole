@@ -52,6 +52,8 @@ describe('electron-builder release packaging config', () => {
     expect(config.electronLanguages).toEqual(['en-US', 'zh-CN']);
     expect(config.files).toContain('dist/desktop/**/*');
     expect(config.files).not.toContain('dist/**/*');
+    expect(packageJson.dependencies['@lezer/common']).toEqual('1.5.1');
+    expect(packageJson.dependencies['@lezer/highlight']).toEqual('1.2.3');
     expect(packageJson.dependencies['@lezer/markdown']).toEqual(expect.any(String));
     expect(packageJson.dependencies['@lezer/markdown']).not.toHaveLength(0);
     expect(config.files).not.toContain('!node_modules/@lezer/**');
