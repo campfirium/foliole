@@ -141,10 +141,21 @@ function readPairing(db: Sqlite) {
 }
 
 function readSync(db: Sqlite) {
-  const row = db.prepare(
+  const cursorRow = db.prepare(
     "SELECT value FROM companion_meta WHERE key = 'sync_review_log_push_cursor' LIMIT 1"
   ).get() as { value: string } | undefined;
-  return { reviewLogPushCursor: row?.value ?? null };
+  const eventsRow = db.prepare(
+    "SELECT value FROM companion_meta WHERE key = 'workspace_sync_events' LIMIT 1"
+  ).get() as { value: string } | undefined;
+  const events = eventsRow?.value ? JSON.parse(eventsRow.value) as Array<Record<string, unknown>> : [];
+  return {
+    recentEvents: events.slice(0, 12).map((event) => ({
+      endpointUrl: typeof event.endpoint_url === 'string' ? credentialSafeEndpoint(event.endpoint_url) : null,
+      kind: event.kind ?? null, message: event.message ?? null, occurredAt: event.occurred_at ?? null,
+      result: event.result ?? null, status: event.status ?? null
+    })),
+    reviewLogPushCursor: cursorRow?.value ?? null
+  };
 }
 
 export function auditAndroidReviewDatabase(args: {

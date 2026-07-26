@@ -42,6 +42,10 @@ function createDatabase(settings = { ...DEFAULT_REVIEW_SCHEDULER_SETTINGS, desir
     );
   }
   db.prepare('INSERT INTO companion_meta VALUES (?, ?)').run('workspace_sync_endpoint_url', 'http://127.0.0.1:38641');
+  db.prepare('INSERT INTO companion_meta VALUES (?, ?)').run('workspace_sync_events', JSON.stringify([{
+    endpoint_url: 'http://127.0.0.1:38641', kind: 'run_finished', message: 'Desktop identity rejected.',
+    occurred_at: '2026-07-25T01:00:00.000Z', result: 'failed', status: 'failed'
+  }]));
   db.close();
   return databasePath;
 }
@@ -90,7 +94,10 @@ describe('Windows Android lab Review audit', () => {
       acceptance: { status: 'available' }, pairing: { status: 'available' }, resultStatus: 'failure',
       errorCode: 'review_scheduler_settings_missing', issues: [{ name: 'scheduler', status: 'missing' }],
       scheduler: { error: 'review scheduler settings are missing', status: 'missing' },
-      sync: { status: 'available', value: { reviewLogPushCursor: null } }
+      sync: { status: 'available', value: {
+        recentEvents: [{ message: 'Desktop identity rejected.', result: 'failed', status: 'failed' }],
+        reviewLogPushCursor: null
+      } }
     });
     expect(audit.selected).toEqual({ fsrsNodeId: 'fsrs-1', readingNodeIds: ['read-1', 'read-2', 'read-3'] });
   });
