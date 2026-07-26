@@ -93,6 +93,7 @@ it('disables reading actions while saving', () => {
   expect(screen.getByRole('button', { name: 'Later' })).toBeDisabled();
   expect(screen.getByRole('button', { name: 'Read' })).toBeDisabled();
   expect(screen.getByRole('button', { name: 'Dismiss' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Read' })).toHaveAttribute('data-testid', 'companion-review-action-read');
 });
 
 it('adds short overlay dividers between grade actions only for overlay surface', () => {

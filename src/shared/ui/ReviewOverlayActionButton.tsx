@@ -10,6 +10,7 @@ const overlayButtonClass =
 export const ReviewOverlayActionButton = forwardRef<HTMLButtonElement, {
   ariaLabel?: string;
   className?: string;
+  'data-testid'?: string;
   disabled?: boolean;
   label: string;
   loading?: boolean;
@@ -22,6 +23,7 @@ export const ReviewOverlayActionButton = forwardRef<HTMLButtonElement, {
       aria-label={props.ariaLabel ?? (props.loading ? props.loadingLabel : undefined) ?? props.label}
       aria-busy={props.loading || undefined}
       className={cn(overlayButtonClass, props.loading && 'disabled:opacity-100', props.className)}
+      data-testid={props['data-testid']}
       disabled={props.disabled || props.loading}
       onClick={props.onClick}
       ref={ref}
