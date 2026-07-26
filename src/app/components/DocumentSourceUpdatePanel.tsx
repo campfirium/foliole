@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorDiffDecorations } from '../../features/editor/adapters/EditorAdapter';
@@ -47,37 +47,26 @@ function useSourceUpdatePanelScrollSync(
   updatedEditor: EditorAdapter | null,
   open: boolean
 ) {
-  const syncSourceRef = useRef<null | 'current' | 'updated'>(null);
-
   useLayoutEffect(() => {
     if (!open || !currentEditor || !updatedEditor) {
       return;
     }
 
-    const releaseSync = () => {
-      requestAnimationFrame(() => {
-        syncSourceRef.current = null;
-      });
-    };
-
-    const syncEditors = (source: EditorAdapter, target: EditorAdapter, sourceKey: 'current' | 'updated') => {
-      if (syncSourceRef.current && syncSourceRef.current !== sourceKey) {
-        return;
+    const syncEditors = (source: EditorAdapter, target: EditorAdapter, userInitiated: boolean) => {
+      if (!userInitiated) return;
+      const nextScrollTop = source.getScrollTop();
+      if (Math.abs(target.getScrollTop() - nextScrollTop) > 0.5) {
+        target.setScrollTop(nextScrollTop);
       }
-
-      syncSourceRef.current = sourceKey;
-      target.setScrollTop(source.getScrollTop());
-      releaseSync();
     };
 
     updatedEditor.setScrollTop(currentEditor.getScrollTop());
-    const unsubscribeCurrent = currentEditor.onScroll(() => syncEditors(currentEditor, updatedEditor, 'current'));
-    const unsubscribeUpdated = updatedEditor.onScroll(() => syncEditors(updatedEditor, currentEditor, 'updated'));
+    const unsubscribeCurrent = currentEditor.onScroll((event) => syncEditors(currentEditor, updatedEditor, event.userInitiated));
+    const unsubscribeUpdated = updatedEditor.onScroll((event) => syncEditors(updatedEditor, currentEditor, event.userInitiated));
 
     return () => {
       unsubscribeCurrent();
       unsubscribeUpdated();
-      syncSourceRef.current = null;
     };
   }, [currentEditor, open, updatedEditor]);
 }
@@ -107,9 +96,11 @@ function useSourceUpdatePanelDiffState(
   updatedEditor: EditorAdapter | null,
   enabled: boolean
 ) {
+  const deferredCurrentContent = useDeferredValue(currentContent);
+  const deferredUpdatedContent = useDeferredValue(enabled ? updatedContent : currentContent);
   const diffModel = useMemo(
-    () => buildSourceUpdateDiffModel(currentContent, enabled ? updatedContent : currentContent),
-    [currentContent, enabled, updatedContent]
+    () => buildSourceUpdateDiffModel(deferredCurrentContent, deferredUpdatedContent),
+    [deferredCurrentContent, deferredUpdatedContent]
   );
   const currentMeasuredHighlights = useMemo(
     () => withMeasuredSpacerHeights(diffModel.current.decorations, updatedEditor),

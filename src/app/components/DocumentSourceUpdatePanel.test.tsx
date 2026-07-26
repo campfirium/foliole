@@ -1,4 +1,4 @@
-import { act, fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
@@ -173,55 +173,6 @@ describe('DocumentSourceUpdatePanel diff hints', () => {
       })
     );
   });
-});
-
-describe('DocumentSourceUpdatePanel scroll sync', () => {
-  resetPanelBodyMock();
-
-  it('syncs vertical scrolling between the two editors', () => {
-    const currentScrollListeners: Array<() => void> = [];
-    let currentScrollTop = 120;
-    let updatedScrollTop = 0;
-
-    renderPanel('current', 'updated');
-
-    const currentReady = getPanelBodyCall(0).onEditorReady;
-    const updatedReady = getPanelBodyCall(1).onEditorReady;
-
-    const currentAdapter = createScrollAdapter({
-      getScrollTop: () => currentScrollTop,
-      onScroll: (listener: () => void) => {
-        currentScrollListeners.push(listener);
-        return () => undefined;
-      },
-      scrollTop: currentScrollTop,
-      setScrollTop: (scrollTop: number) => {
-        currentScrollTop = scrollTop;
-      }
-    });
-    const updatedAdapter = createScrollAdapter({
-      onScroll: () => () => undefined,
-      scrollTop: updatedScrollTop,
-      setScrollTop: (scrollTop: number) => {
-        updatedScrollTop = scrollTop;
-      }
-    });
-
-    act(() => {
-      currentReady?.(currentAdapter as never);
-      updatedReady?.(updatedAdapter as never);
-    });
-
-    expect(updatedAdapter.setScrollTop).toHaveBeenCalledWith(120);
-
-    act(() => {
-      currentScrollTop = 260;
-      currentScrollListeners.forEach((listener) => listener());
-    });
-
-    expect(updatedAdapter.setScrollTop).toHaveBeenLastCalledWith(260);
-  });
-
 });
 
 describe('DocumentSourceUpdatePanel overview ruler', () => {

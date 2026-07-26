@@ -14,13 +14,21 @@ const SOURCE_CONTENT = 'Imported paragraph one.\n\nOriginal paragraph two.';
 const MANUAL_CONTENT = 'Pasted paragraph one.\n\nPasted paragraph two.';
 const REPLACEMENT_CONTENT = 'Replacement body from the temporary comparison view.';
 const CHILD_CONTENT = 'Alternative child Topic from the temporary comparison view.';
+const LONG_CURRENT_CONTENT = Array.from(
+  { length: 500 },
+  (_, index) => `Current paragraph ${index}: material for a sustained editing comparison.`
+).join('\n');
+const LONG_MANUAL_CONTENT = Array.from(
+  { length: 500 },
+  (_, index) => `Pasted paragraph ${index}: revised material for a sustained editing comparison.`
+).join('\n');
 
-async function seedTopic(desktopWindow: Page) {
+async function seedTopic(desktopWindow: Page, content = CURRENT_CONTENT) {
   await desktopWindow.evaluate(async ({ content, nodeId, title }) => {
     const api = globalThis.window?.__folioleWorkspaceDebug;
     if (!api) throw new Error('missing workspace debug bridge');
     await api.seedNodes([{ content, id: nodeId, kind: 'topic', title }], { persist: true });
-  }, { content: CURRENT_CONTENT, nodeId: NODE_ID, title: NODE_TITLE });
+  }, { content, nodeId: NODE_ID, title: NODE_TITLE });
 }
 
 async function seedPendingSource(desktopApp: ElectronApplication) {
@@ -123,4 +131,32 @@ test('temporary comparison draft is disposable until an explicit write action', 
     return id ? globalThis.window?.__folioleWorkspaceDebug?.getNode?.(id) ?? null : null;
   });
   expect(child).toMatchObject({ content: CHILD_CONTENT, kind: 'topic', parentNodeId: NODE_ID });
+});
+
+test('long temporary comparison remains editable after diff rendering', async ({ desktopApp, desktopWindow }) => {
+  await expectWorkspaceShell(desktopWindow);
+  await seedTopic(desktopWindow, LONG_CURRENT_CONTENT);
+  await seedPendingSource(desktopApp);
+  await openSeededTopic(desktopWindow);
+
+  const dialog = await openManualComparison(desktopWindow);
+  const editor = dialog.locator('.cm-content[contenteditable="true"]').last();
+  await editor.click();
+  await desktopWindow.keyboard.insertText(LONG_MANUAL_CONTENT);
+  await expect(editor).toContainText('Pasted paragraph 499');
+
+  await desktopWindow.keyboard.insertText('\nStill responsive after the long draft.');
+  await expect(editor).toContainText('Still responsive after the long draft.');
+  const currentEditor = dialog.locator('.cm-content[contenteditable="true"]').first();
+  await currentEditor.click();
+  await desktopWindow.keyboard.insertText('Left editor remains responsive. ');
+  await expect(currentEditor).toContainText('Left editor remains responsive.');
+  const screenshotPath = path.resolve(
+    '.tmp/artifacts/desktop-acceptance/temporary-comparison-long-editing.png'
+  );
+  mkdirSync(path.dirname(screenshotPath), { recursive: true });
+  await desktopWindow.screenshot({ path: screenshotPath });
+
+  await desktopWindow.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
 });

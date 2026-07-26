@@ -1,10 +1,13 @@
 import { collectMarkdownLineClassRanges } from '../../features/editor/model/markdownBlockProjection';
 import { collectMarkdownCodeFenceProjection } from '../../features/editor/model/markdownCodeFenceProjection';
 
-export interface SourceUpdateAlignedRow {
-  currentLine: string | null;
-  updatedLine: string | null;
-}
+import {
+  buildExactAnchorFallbackRows,
+  shouldUseFuzzyLineAlignment,
+  type SourceUpdateAlignedRow
+} from './sourceUpdateLineFallback';
+
+export type { SourceUpdateAlignedRow } from './sourceUpdateLineFallback';
 
 interface LineProfile {
   className: string | null;
@@ -13,8 +16,6 @@ interface LineProfile {
   normalizedRenderedText: string;
   text: string;
 }
-
-const MAX_DP_CELLS = 1_000_000;
 
 function splitIntoLines(content: string) {
   return content.split('\n');
@@ -160,49 +161,15 @@ function getPairScore(current: LineProfile, updated: LineProfile) {
   return score;
 }
 
-function buildFallbackRows(currentLines: string[], updatedLines: string[]) {
-  const rows: SourceUpdateAlignedRow[] = [];
-  let currentIndex = 0;
-  let updatedIndex = 0;
-
-  while (currentIndex < currentLines.length) {
-    const currentLine = currentLines[currentIndex] ?? '';
-    const matchingUpdatedIndex = updatedLines.findIndex((updatedLine, index) => index >= updatedIndex && updatedLine === currentLine);
-
-    if (matchingUpdatedIndex === -1) {
-      rows.push({ currentLine, updatedLine: null });
-      currentIndex += 1;
-      continue;
-    }
-
-    while (updatedIndex < matchingUpdatedIndex) {
-      rows.push({ currentLine: null, updatedLine: updatedLines[updatedIndex] ?? '' });
-      updatedIndex += 1;
-    }
-
-    rows.push({ currentLine, updatedLine: updatedLines[updatedIndex] ?? '' });
-    currentIndex += 1;
-    updatedIndex += 1;
-  }
-
-  while (updatedIndex < updatedLines.length) {
-    rows.push({ currentLine: null, updatedLine: updatedLines[updatedIndex] ?? '' });
-    updatedIndex += 1;
-  }
-
-  return rows;
-}
-
 export function alignSourceUpdateLines(currentContent: string, updatedContent: string): SourceUpdateAlignedRow[] {
   const currentLines = splitIntoLines(currentContent);
   const updatedLines = splitIntoLines(updatedContent);
-  const rowCount = currentLines.length + 1;
-  const columnCount = updatedLines.length + 1;
-
-  if (rowCount * columnCount > MAX_DP_CELLS) {
-    return buildFallbackRows(currentLines, updatedLines);
+  if (!shouldUseFuzzyLineAlignment(currentLines, updatedLines)) {
+    return buildExactAnchorFallbackRows(currentLines, updatedLines);
   }
 
+  const rowCount = currentLines.length + 1;
+  const columnCount = updatedLines.length + 1;
   const currentProfiles = buildLineProfiles(currentLines);
   const updatedProfiles = buildLineProfiles(updatedLines);
   const dp = Array.from({ length: rowCount }, () => new Int32Array(columnCount));

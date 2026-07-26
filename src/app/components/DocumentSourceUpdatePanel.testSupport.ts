@@ -1,6 +1,8 @@
 import { act } from '@testing-library/react';
 import { vi } from 'vitest';
 
+import type { EditorScrollEvent } from '../../features/editor/adapters/EditorAdapter';
+
 export interface PanelBodyCall {
   editorDiffDecorations?: unknown;
   onEditorChange?: (content: string) => void;
@@ -10,7 +12,7 @@ export interface PanelBodyCall {
 
 export function createScrollAdapter(options?: {
   getScrollTop?: () => number;
-  onScroll?: (listener: () => void) => () => void;
+  onScroll?: (listener: (event: EditorScrollEvent) => void) => () => void;
   revealPosition?: ReturnType<typeof vi.fn>;
   scrollTop?: number;
   setScrollTop?: (scrollTop: number) => void;

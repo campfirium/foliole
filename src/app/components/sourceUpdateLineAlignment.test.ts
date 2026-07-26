@@ -32,4 +32,19 @@ describe('alignSourceUpdateLines', () => {
       { currentLine: 'omega', updatedLine: 'omega' }
     ]);
   });
+
+  it('uses exact anchors to keep large edited documents responsive', () => {
+    const currentLines = Array.from({ length: 500 }, (_, index) => `paragraph ${index}`);
+    const updatedLines = [...currentLines];
+    updatedLines[250] = 'paragraph 250 updated';
+
+    const rows = alignSourceUpdateLines(currentLines.join('\n'), updatedLines.join('\n'));
+
+    expect(rows.slice(249, 253)).toEqual([
+      { currentLine: 'paragraph 249', updatedLine: 'paragraph 249' },
+      { currentLine: 'paragraph 250', updatedLine: null },
+      { currentLine: null, updatedLine: 'paragraph 250 updated' },
+      { currentLine: 'paragraph 251', updatedLine: 'paragraph 251' }
+    ]);
+  });
 });
