@@ -41,4 +41,18 @@ describe('Windows Android lab evidence', () => {
     expect(() => collectLabEvidence({ operation: 'get', relativePath: '../config.json' }, paths, { evidenceRoot: root }, { write: () => {} }))
       .toThrow('not allowed');
   });
+
+  it('allows run-scoped UI receipts, semantic summaries, and screenshots', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-android-lab-ui-evidence-'));
+    roots.push(root);
+    const paths = androidLabPaths(root);
+    const runId = '1001-bbbbbbbbbbbb';
+    const evidenceRoot = path.join(paths.evidence, runId);
+    fs.mkdirSync(evidenceRoot, { recursive: true });
+    for (const name of ['action-receipt.json', 'before.png', 'after.png', 'semantic-snapshot.json', 'ui-command-audit.json']) {
+      fs.writeFileSync(path.join(evidenceRoot, name), name);
+    }
+    expect(collectLabEvidence({ operation: 'list', runId }, paths, null, { write: () => {} }).files)
+      .toEqual(['action-receipt.json', 'after.png', 'before.png', 'semantic-snapshot.json', 'ui-command-audit.json']);
+  });
 });

@@ -8,7 +8,11 @@ import { cleanupAndroidLabCheckout, prepareAndroidLabCheckout } from './windows-
 import { readJson, writeJsonAtomic } from './windows-android-lab-state.mjs';
 
 const OUTPUT_LIMIT = 1_000_000;
-const ENV_KEYS = ['JAVA_HOME', 'LOCALAPPDATA', 'PATH', 'Path', 'SystemRoot', 'TEMP', 'TMP', 'USERPROFILE', 'WINDIR'];
+const ENV_KEYS = [
+  'ANDROID_USER_HOME', 'ANDROID_WINDOWS_WORKDIR', 'FOLIOLE_ANDROID_ADB_PATH', 'FOLIOLE_ANDROID_BASH_PATH',
+  'FOLIOLE_ANDROID_LAB_EVIDENCE_ROOT', 'FOLIOLE_ANDROID_SERIAL', 'JAVA_HOME', 'LOCALAPPDATA', 'PATH', 'Path',
+  'SystemRoot', 'TEMP', 'TMP', 'USERPROFILE', 'WINDIR'
+];
 
 function codedError(code, message) {
   return Object.assign(new Error(message), { code });
@@ -37,11 +41,24 @@ function boundedText(value) {
   return `[truncated to last ${OUTPUT_LIMIT} bytes]\n${bytes.subarray(bytes.length - OUTPUT_LIMIT).toString('utf8')}`;
 }
 
-function operationEnvironment(config) {
+function auditedArgs(args) {
+  return args.map((value, index) => (
+    args[index - 1] === '--value' || (args[index - 2] === '-e' && ['value', 'valueBase64'].includes(args[index - 1]))
+      ? '<redacted>' : value
+  ));
+}
+
+function operationEnvironment(config, paths, evidenceRoot, spec) {
   const env = Object.fromEntries(ENV_KEYS.filter((key) => process.env[key] !== undefined).map((key) => [key, process.env[key]]));
   env.JAVA_HOME = config.javaHome;
   const tools = [config.nodeDirectory, path.win32.dirname(config.adbPath)].filter(Boolean).join(';');
   env.Path = `${tools};${env.Path || env.PATH || ''}`;
+  env.ANDROID_USER_HOME = paths.signingHome;
+  env.ANDROID_WINDOWS_WORKDIR = paths.preview;
+  env.FOLIOLE_ANDROID_ADB_PATH = config.adbPath;
+  env.FOLIOLE_ANDROID_BASH_PATH = config.bashPath;
+  env.FOLIOLE_ANDROID_LAB_EVIDENCE_ROOT = evidenceRoot;
+  if (spec.deviceEndpoint) env.FOLIOLE_ANDROID_SERIAL = spec.deviceEndpoint;
   return env;
 }
 
@@ -71,7 +88,12 @@ function diagnosticSpec(config, operation, evidenceRoot) {
 
 async function resolveProcessSpec(config, paths, request, evidenceRoot, executeCommand) {
   const operation = request.operation;
-  if (operation.kind === 'repository') return repositorySpec(config, paths, operation);
+  if (operation.kind === 'repository') {
+    const spec = repositorySpec(config, paths, operation);
+    if (request.target !== 'a5') return spec;
+    const device = await resolveAndroidDevice(config, paths, executeCommand);
+    return { ...spec, deviceEndpoint: device.endpoint, deviceIdentity: device.identity };
+  }
   if (operation.kind === 'windowsClient') return {
     args: [path.join(paths.candidate, 'scripts', 'windows', 'windows-client-native.mjs'), operation.action],
     command: path.join(config.nodeDirectory, 'node.exe')
@@ -112,11 +134,11 @@ export async function runAndroidLabOperation({ config, executeCommand, paths, re
     const commandStartedAt = new Date().toISOString();
     try {
       const result = await executeCommand(command, args, options);
-      commands.push({ args, command, completedAt: new Date().toISOString(), cwd: options.cwd || null,
+      commands.push({ args: auditedArgs(args), command, completedAt: new Date().toISOString(), cwd: options.cwd || null,
         exitCode: result.code ?? null, startedAt: commandStartedAt });
       return result;
     } catch (error) {
-      commands.push({ args, command, completedAt: new Date().toISOString(), cwd: options.cwd || null,
+      commands.push({ args: auditedArgs(args), command, completedAt: new Date().toISOString(), cwd: options.cwd || null,
         errorCode: error.code || 'command_failed', exitCode: null, startedAt: commandStartedAt });
       throw error;
     }
@@ -124,7 +146,7 @@ export async function runAndroidLabOperation({ config, executeCommand, paths, re
   try {
     spec = await resolveProcessSpec(config, paths, request, evidenceRoot, auditedExecute);
     const result = spec.direct || await auditedExecute(spec.command, spec.args, {
-      cwd, env: operationEnvironment(config), timeoutCode: 'request_timeout', timeoutMs: request.timeoutMs
+      cwd, env: operationEnvironment(config, paths, evidenceRoot, spec), timeoutCode: 'request_timeout', timeoutMs: request.timeoutMs
     });
     const stdout = boundedText(spec.direct ? JSON.stringify(result) : result.stdout ?? result.output);
     const stderr = boundedText(spec.direct ? '' : result.stderr);

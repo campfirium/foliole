@@ -8,7 +8,7 @@ import { isAndroidLabRunId, LAB_EVIDENCE_FILES } from './windows-android-lab-evi
 
 export const WINDOWS_ANDROID_LAB_TASK = 'FolioleAndroidLab';
 export const WINDOWS_ANDROID_LAB_SOURCE_REF = 'refs/heads/lab/dev';
-export const WINDOWS_ANDROID_LAB_PROTOCOL_VERSION = 4;
+export const WINDOWS_ANDROID_LAB_PROTOCOL_VERSION = 5;
 
 export function androidLabRoot(env = process.env) {
   if (env.FOLIOLE_WINDOWS_ANDROID_LAB_ROOT) return path.resolve(env.FOLIOLE_WINDOWS_ANDROID_LAB_ROOT);

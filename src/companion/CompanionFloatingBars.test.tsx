@@ -26,6 +26,7 @@ describe('CompanionBottomTabBar', () => {
     const labels = screen.getAllByRole('button').map((button) => button.getAttribute('aria-label'));
     expect(labels).toEqual(['Directory', 'Browse', 'Flow', 'Search', 'Settings']);
     expect(screen.getByRole('button', { name: 'Browse' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Settings' })).toHaveAttribute('data-testid', 'companion-tab-settings');
     expect(screen.queryByLabelText('Sync progress')).not.toBeInTheDocument();
   });
 

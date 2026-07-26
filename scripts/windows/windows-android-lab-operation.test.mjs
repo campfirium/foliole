@@ -74,6 +74,31 @@ describe('Windows Android Lab worker operations', () => {
     expect(readJson(path.join(paths.evidence, 'adb-run', 'command-audit.json')).commands.length).toBeGreaterThan(1);
   });
 
+  it('injects verified device and run evidence paths into an A5 repository adapter', async () => {
+    const { config, paths } = fixture();
+    const calls = [];
+    const executeCommand = async (command, args, options = {}) => {
+      calls.push({ args, command, options });
+      if (args[0] === 'devices') return { code: 0, lines: [`${ENDPOINT} device`], output: `${ENDPOINT}\tdevice\n` };
+      if (args.includes('ro.serialno')) return { code: 0, lines: ['A5-STABLE'], output: 'A5-STABLE\n' };
+      return { code: 0, lines: ['ok'], output: 'ok\n', stderr: '', stdout: 'ok\n' };
+    };
+    await runAndroidLabOperation({ config: { ...config, bashPath: 'bash.exe' }, executeCommand, paths, request: request('ui-run', {
+      args: ['--testId', 'companion-search-input', '--value', 'private probe'], kind: 'repository', runner: 'scripts/windows/probe.mjs'
+    }, { target: 'a5' }) });
+    expect(calls.at(-1).options.env).toMatchObject({
+      ANDROID_USER_HOME: paths.signingHome,
+      ANDROID_WINDOWS_WORKDIR: paths.preview,
+      FOLIOLE_ANDROID_ADB_PATH: 'adb.exe',
+      FOLIOLE_ANDROID_BASH_PATH: 'bash.exe',
+      FOLIOLE_ANDROID_LAB_EVIDENCE_ROOT: path.join(paths.evidence, 'ui-run'),
+      FOLIOLE_ANDROID_SERIAL: ENDPOINT
+    });
+    const audit = fs.readFileSync(path.join(paths.evidence, 'ui-run', 'command-audit.json'), 'utf8');
+    expect(audit).toContain('<redacted>');
+    expect(audit).not.toContain('private probe');
+  });
+
   it('runs Windows client status and a run-scoped Node diagnostic without a shell', async () => {
     const { config, paths } = fixture();
     const calls = [];

@@ -22,6 +22,7 @@ function TabButton(props: {
   icon: LucideIcon;
   label: string;
   onClick?: () => void;
+  testId: string;
 }) {
   const Icon = props.icon;
   return (
@@ -32,6 +33,7 @@ function TabButton(props: {
         props.active ? 'text-foreground' : 'text-companion-text-secondary active:bg-companion-subtle/60'
       }`}
       onClick={props.onClick}
+      data-testid={props.testId}
       type="button"
     >
       <span
@@ -104,6 +106,7 @@ function renderTabButton(
       icon={tab.icon}
       key={tab.id}
       label={translateTabLabel(tab, t)}
+      testId={`companion-tab-${tab.id}`}
       onClick={() => {
         if (tab.destinationId) props.onSecondaryDestination(tab.destinationId);
         else if (tab.action) props.onAction(tab.action);
