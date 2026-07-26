@@ -138,6 +138,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   commandShortcutOverrides: 'foliole-command-shortcut-overrides',
   webLookupEntries: 'foliole-web-lookup-entries',
   updateCheckState: 'foliole-update-check-state',
+  manualComparisonDrafts: 'foliole-manual-comparison-drafts',
   devReviewStatusBarPersistenceEnabled: 'foliole-dev-review-status-bar-persistence-enabled',
   devReviewStatusBarOpen: 'foliole-dev-review-status-bar-open',
   desktopDeviceSyncEnabled: 'foliole-desktop-device-sync-enabled'

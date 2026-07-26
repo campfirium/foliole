@@ -109,7 +109,7 @@ test('ordinary comparison lives in the Topic menu without a persistent header ic
   await expect(dialog).toBeHidden();
 });
 
-test('temporary comparison draft is disposable until an explicit write action', async ({ desktopApp, desktopWindow }) => {
+test('pasted comparison draft survives close until an explicit write action', async ({ desktopApp, desktopWindow }) => {
   await expectWorkspaceShell(desktopWindow);
   await seedTopic(desktopWindow);
   await seedPendingSource(desktopApp);
@@ -130,17 +130,22 @@ test('temporary comparison draft is disposable until an explicit write action', 
   await desktopWindow.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
   dialog = await openManualComparison(desktopWindow);
-  await expect(dialog.locator('.cm-content[contenteditable="true"]').last()).toHaveText('');
+  await expect(dialog.locator('.cm-content[contenteditable="true"]').last()).toContainText(
+    MANUAL_CONTENT.replaceAll('\n', '')
+  );
 
   await replaceManualContent(desktopWindow, dialog, REPLACEMENT_CONTENT);
   await dialog.getByRole('button', { name: /Set as body|设为正文/ }).click();
+  await expect(dialog).toBeHidden();
   await expect.poll(() => desktopWindow.evaluate((nodeId) =>
     globalThis.window?.__folioleWorkspaceDebug?.getNode?.(nodeId)?.content ?? null, NODE_ID)
   ).toBe(REPLACEMENT_CONTENT);
 
   dialog = await openManualComparison(desktopWindow);
+  await expect(dialog.locator('.cm-content[contenteditable="true"]').last()).toHaveText('');
   await replaceManualContent(desktopWindow, dialog, CHILD_CONTENT);
   await dialog.getByRole('button', { name: /Save as new Topic|另存为新主题/ }).click();
+  await expect(dialog).toBeHidden();
   await expect.poll(() => desktopWindow.evaluate(() =>
     globalThis.window?.__folioleWorkspaceDebug?.getActiveNodeId?.() ?? null)).not.toBe(NODE_ID);
   const child = await desktopWindow.evaluate(() => {

@@ -33,6 +33,7 @@ interface SourceUpdatePanelDialogBodyProps {
     onManualSetAsBody: () => Promise<void>;
     onSourceChange: (source: 'manual' | 'source') => void;
     sourceAvailable: boolean;
+    updatedExternalVersion: number;
     updatedHighlightCount: number;
     updatedContent: string;
   };

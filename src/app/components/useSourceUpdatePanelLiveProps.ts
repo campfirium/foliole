@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 
 import type { DocumentSourceUpdatePanelProps } from './DocumentSourceUpdatePanel';
@@ -19,6 +21,11 @@ export function useSourceUpdatePanelLiveProps(
     snapshots.setUpdated(content);
     if (content !== props.manualContent) props.onManualContentChange(content);
   };
+  useEffect(() => {
+    if (props.open && props.comparisonMode === 'manual' && snapshots.updated !== props.manualContent) {
+      props.onManualContentChange(snapshots.updated);
+    }
+  }, [props, snapshots.updated]);
   return {
     ...props,
     currentContent: snapshots.current,
@@ -35,7 +42,10 @@ export function useSourceUpdatePanelLiveProps(
       await props.onManualSetAsBody();
     },
     onOpenChange: (open: boolean) => {
-      if (!open) syncCurrentEditor();
+      if (!open) {
+        syncCurrentEditor();
+        if (props.comparisonMode === 'manual') syncManualEditor();
+      }
       props.onOpenChange(open);
     },
     onSourceChange: (source: 'manual' | 'source') => {
@@ -43,6 +53,7 @@ export function useSourceUpdatePanelLiveProps(
       props.onSourceChange(source);
     },
     updatedContent: snapshots.updated,
+    updatedExternalVersion: snapshots.updatedExternalVersion,
     ...(props.onAcceptIncomingUpdate ? {
       onAcceptIncomingUpdate: async () => {
         syncCurrentEditor();

@@ -1,6 +1,7 @@
 import { useCallback, type MutableRefObject } from 'react';
 
 import type { DocumentPanelSectionProps } from './documentPanelSectionTypes';
+import { clearManualComparisonDraft } from './manualComparisonDraftRepository';
 import type { SourceUpdateDraft } from './sourceUpdateDraftState';
 
 export function useDocumentManualComparisonActions(args: {
@@ -8,12 +9,15 @@ export function useDocumentManualComparisonActions(args: {
   draftRef: MutableRefObject<SourceUpdateDraft | null>;
   flushLeftDraft: () => void;
   manualContentRef: MutableRefObject<string>;
+  manualPersistenceSuppressedRef: MutableRefObject<boolean>;
   props: DocumentPanelSectionProps;
 }) {
   const setAsBody = useCallback(async () => {
     const content = args.manualContentRef.current;
     if (!args.props.editorNodeId || !content.trim()) return;
     args.props.onNodeContentChange(args.props.editorNodeId, content);
+    args.manualPersistenceSuppressedRef.current = true;
+    await clearManualComparisonDraft(args.props.editorNodeId);
     args.clearPanel();
   }, [args]);
 
@@ -30,6 +34,8 @@ export function useDocumentManualComparisonActions(args: {
       'topic'
     );
     if (!createdNodeId) return;
+    args.manualPersistenceSuppressedRef.current = true;
+    await clearManualComparisonDraft(args.props.editorNodeId);
     args.clearPanel();
     args.props.onSelectNode(createdNodeId);
   }, [args]);

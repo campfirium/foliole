@@ -101,7 +101,7 @@ function SourceUpdatePanelDialog(props: {
     current: EditorDiffDecorations | null;
     updated: EditorDiffDecorations | null;
   };
-  panelProps: DocumentSourceUpdatePanelProps;
+  panelProps: DocumentSourceUpdatePanelProps & { updatedExternalVersion: number };
   totalRows: number;
   overviewSegments: ReturnType<typeof buildSourceUpdateDiffModel>['overviewSegments'];
   updatedEditor: EditorAdapter | null;

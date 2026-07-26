@@ -25,6 +25,7 @@ interface DocumentSourceUpdatePanelLayoutProps {
   editorAppearanceKey: string;
   onCurrentContentChange: (content: string) => void;
   onManualContentChange: (content: string) => void;
+  updatedExternalVersion: number;
   updatedHighlightCount: number;
   updatedContent: string;
 }
@@ -120,12 +121,13 @@ function SourceUpdatePaneBody(props: {
   labelMode: string;
   labelTitle: string;
   paneProps: ComponentProps<typeof PreviewDocumentPane>;
+  resetKey?: string;
 }) {
   return (
     <section className={props.className}>
       <PaneLabel mode={props.labelMode} title={props.labelTitle} />
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        <PreviewDocumentPane {...props.paneProps} />
+        <PreviewDocumentPane key={props.resetKey} {...props.paneProps} />
       </div>
     </section>
   );
@@ -173,7 +175,6 @@ export function SourceUpdatePanelColumns(props: SourceUpdatePanelColumnsProps) {
           paneProps={currentPaneProps}
         />
         <SourceUpdatePaneBody
-          key={`updated-${props.props.comparisonMode}`}
           className={REFERENCE_PREVIEW_PANE_CLASS_NAME}
           labelMode={t(props.props.comparisonMode === 'manual'
             ? 'desktop.sourceUpdate.manual.mode'
@@ -182,6 +183,7 @@ export function SourceUpdatePanelColumns(props: SourceUpdatePanelColumnsProps) {
             ? 'desktop.sourceUpdate.manual.title'
             : 'desktop.sourceUpdate.updated.title')}
           paneProps={updatedPaneProps}
+          resetKey={`${props.props.comparisonMode}-${props.props.updatedExternalVersion}`}
         />
         <section className={OVERVIEW_PANE_CLASS_NAME}>
           <SourceUpdateOverviewRuler

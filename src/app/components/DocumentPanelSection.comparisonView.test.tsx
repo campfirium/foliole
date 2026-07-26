@@ -1,5 +1,13 @@
 import { act, fireEvent, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const manualDraftMocks = vi.hoisted(() => ({
+  clearManualComparisonDraft: vi.fn(async () => undefined),
+  loadManualComparisonDraft: vi.fn(async () => ''),
+  saveManualComparisonDraft: vi.fn(async () => undefined)
+}));
+
+vi.mock('./manualComparisonDraftRepository', () => manualDraftMocks);
 
 import {
   createSectionElement,
@@ -11,6 +19,17 @@ import {
   renderSection,
   renderSectionWithProps
 } from './DocumentPanelSection.testSupport';
+
+const { clearManualComparisonDraft, loadManualComparisonDraft, saveManualComparisonDraft } = manualDraftMocks;
+
+beforeEach(() => {
+  clearManualComparisonDraft.mockReset();
+  clearManualComparisonDraft.mockResolvedValue(undefined);
+  loadManualComparisonDraft.mockReset();
+  loadManualComparisonDraft.mockResolvedValue('');
+  saveManualComparisonDraft.mockReset();
+  saveManualComparisonDraft.mockResolvedValue(undefined);
+});
 
 describe('DocumentPanelSection manual comparison view', () => {
   it('keeps ordinary comparison in the Topic menu and out of the header icon row', async () => {
@@ -29,7 +48,7 @@ describe('DocumentPanelSection manual comparison view', () => {
     });
   });
 
-  it('preserves manual text while switching sources and resets it after the view closes', () => {
+  it('preserves manual text while switching sources and reloads it after the view closes', async () => {
     mockSourceUpdatePreview();
     renderSection();
     expect(openSourceUpdateReview()).toMatchObject({ comparisonMode: 'source_preview', comparisonSource: 'source' });
@@ -41,7 +60,12 @@ describe('DocumentPanelSection manual comparison view', () => {
     expect(getLatestComparisonPanelProps()).toMatchObject({ manualContent: 'Pasted revision' });
 
     act(() => getLatestComparisonPanelProps()?.onOpenChange(false));
+    expect(saveManualComparisonDraft).toHaveBeenLastCalledWith('node-1', 'Pasted revision');
+    loadManualComparisonDraft.mockResolvedValue('Pasted revision');
     expect(openSourceUpdateReview()).toMatchObject({ comparisonMode: 'source_preview', manualContent: '' });
+    act(() => getLatestComparisonPanelProps()?.onSourceChange('manual'));
+    await act(async () => undefined);
+    expect(getLatestComparisonPanelProps()).toMatchObject({ manualContent: 'Pasted revision' });
   });
 
   it('keeps a manual session open when the source update disappears', () => {
@@ -71,13 +95,14 @@ describe('DocumentPanelSection manual comparison view', () => {
 });
 
 describe('DocumentPanelSection manual comparison actions', () => {
-  it('discards manual text on close without writing it to the current Topic', () => {
+  it('keeps manual text on close without writing it to the current Topic', () => {
     const onNodeContentChange = vi.fn();
     renderSectionWithProps({ onNodeContentChange });
     openSourceUpdatePanel();
     act(() => getLatestComparisonPanelProps()?.onManualContentChange('Temporary only'));
     act(() => getLatestComparisonPanelProps()?.onOpenChange(false));
     expect(onNodeContentChange).not.toHaveBeenCalled();
+    expect(saveManualComparisonDraft).toHaveBeenLastCalledWith('node-1', 'Temporary only');
   });
 
   it('sets the pasted text as body with one explicit write and closes', async () => {
@@ -88,6 +113,7 @@ describe('DocumentPanelSection manual comparison actions', () => {
     await act(async () => getLatestComparisonPanelProps()?.onManualSetAsBody());
     expect(onNodeContentChange).toHaveBeenCalledTimes(1);
     expect(onNodeContentChange).toHaveBeenCalledWith('node-1', 'Replacement body');
+    expect(clearManualComparisonDraft).toHaveBeenCalledWith('node-1');
     expect(screen.queryByTestId('document-source-update-panel')).not.toBeInTheDocument();
   });
 
@@ -100,6 +126,7 @@ describe('DocumentPanelSection manual comparison actions', () => {
     await act(async () => getLatestComparisonPanelProps()?.onManualSaveAsTopic());
     expect(onCreateChildNode).toHaveBeenCalledWith('node-1', 'Alternative topic body', 'topic');
     expect(onSelectNode).toHaveBeenCalledWith('node-2');
+    expect(clearManualComparisonDraft).toHaveBeenCalledWith('node-1');
     expect(screen.queryByTestId('document-source-update-panel')).not.toBeInTheDocument();
   });
 
