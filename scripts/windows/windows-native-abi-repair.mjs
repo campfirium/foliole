@@ -3,7 +3,12 @@
 
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { npmRunCommand as defaultNpmRunCommand, runCapture, runChecked } from './windows-preview-native-runtime.mjs';
+import {
+  createNpmCommand as defaultCreateNpmCommand,
+  npmRunCommand as defaultNpmRunCommand,
+  runCapture,
+  runChecked
+} from './windows-preview-native-runtime.mjs';
 
 function createNativeAbiPreflightArgs(nativeAbiScript, repoRoot) {
   return [
@@ -28,7 +33,24 @@ function printOutput(result) {
   }
 }
 
+export function electronRebuildSourceCommand(createNpmCommand = defaultCreateNpmCommand) {
+  return createNpmCommand([
+    'exec', '--', 'electron-rebuild',
+    '-f', '--build-from-source', '-w', 'better-sqlite3', '-m', '.', '-s'
+  ]);
+}
+
+async function runCheckedWithOutput(command, args, label, cwd, runCaptureCommand) {
+  console.log(`[windows-preview-native] ${label}`);
+  const result = await runCaptureCommand(command, args, { cwd });
+  printOutput(result);
+  if (result.code !== 0) {
+    throw new Error(`${label} failed`);
+  }
+}
+
 export async function ensureElectronNativeAbi({
+  createNpmCommand = defaultCreateNpmCommand,
   nativeAbiScript,
   npmRunCommand = defaultNpmRunCommand,
   repoRoot,
@@ -47,9 +69,21 @@ export async function ensureElectronNativeAbi({
   console.log('[windows-preview-native] Electron native ABI mismatch detected; restoring better-sqlite3 for Electron');
   const rebuild = npmRunCommand('electron:rebuild:native');
   await runCheckedCommand(rebuild.command, rebuild.args, 'restore Electron native ABI', repoRoot);
-  await runCheckedCommand('powershell.exe', preflightArgs, 'verify restored Electron native ABI', repoRoot);
-  console.log('[windows-native-abi] status: READY disposition=rebuilt');
-  return 'rebuilt';
+  console.log('[windows-preview-native] verify restored Electron native ABI');
+  const secondCheck = await runCaptureCommand('powershell.exe', preflightArgs, { cwd: repoRoot });
+  printOutput(secondCheck);
+  if (secondCheck.code === 0) {
+    console.log('[windows-native-abi] status: READY disposition=rebuilt');
+    return 'rebuilt';
+  }
+  console.log('[windows-preview-native] restored ABI still invalid; rebuilding better-sqlite3 from source for Electron');
+  const sourceRebuild = electronRebuildSourceCommand(createNpmCommand);
+  await runCheckedWithOutput(
+    sourceRebuild.command, sourceRebuild.args, 'restore Electron native ABI from source', repoRoot, runCaptureCommand
+  );
+  await runCheckedCommand('powershell.exe', preflightArgs, 'verify source-restored Electron native ABI', repoRoot);
+  console.log('[windows-native-abi] status: READY disposition=source-rebuilt');
+  return 'source-rebuilt';
 }
 
 function parseRepoRoot(argv) {
