@@ -58,7 +58,7 @@ async function verifyElectronAbiByNodeMismatch(repoRoot, runCaptureCommand, read
   const electronAbi = readElectronAbiVersionFn(repoRoot);
   const result = await runCaptureCommand(process.execPath, [
     '-e',
-    "require('better-sqlite3'); console.log(JSON.stringify(process.versions))"
+    "const Database = require('better-sqlite3'); const db = new Database(':memory:'); db.close(); console.log(JSON.stringify(process.versions))"
   ], { cwd: repoRoot });
   printOutput(result);
   if (result.code === 0) {
