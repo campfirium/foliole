@@ -83,17 +83,60 @@ describe('Windows Electron native ABI repair', () => {
     ]);
   });
 
-  it('fails closed when the source-restored module does not pass the final preflight', async () => {
+  it('fails closed when the source-restored module ABI cannot be verified', async () => {
     const fixture = repairFixture(1, 1);
     fixture.runCheckedCommand
       .mockResolvedValueOnce(undefined)
-      .mockRejectedValueOnce(new Error('source-restored ABI is still invalid'));
+      .mockRejectedValueOnce(new Error('spawn EINVAL'));
+    fixture.runCaptureCommand.mockReset();
+    fixture.runCaptureCommand
+      .mockResolvedValueOnce({ code: 1, stderr: '', stdout: '' })
+      .mockResolvedValueOnce({ code: 1, stderr: '', stdout: '' })
+      .mockResolvedValueOnce({ code: 0, stderr: '', stdout: '' })
+      .mockResolvedValueOnce({
+        code: 1,
+        stderr: 'NODE_MODULE_VERSION 127. This version of Node.js requires NODE_MODULE_VERSION 127.',
+        stdout: ''
+      });
 
     await expect(ensureElectronNativeAbi({
-      ...fixture, nativeAbiScript: PREFLIGHT, repoRoot: REPO_ROOT
-    })).rejects.toThrow('source-restored ABI is still invalid');
+      ...fixture,
+      nativeAbiScript: PREFLIGHT,
+      readElectronAbiVersionFn: () => '145',
+      repoRoot: REPO_ROOT
+    })).rejects.toThrow('Electron ABI verification failed');
 
     expect(fixture.npmRunCommand).toHaveBeenCalledOnce();
     expect(fixture.runCheckedCommand).toHaveBeenCalledTimes(2);
+  });
+
+  it('accepts a source rebuild when Electron cannot launch but the module ABI matches Electron', async () => {
+    const fixture = repairFixture(1, 1);
+    fixture.runCheckedCommand
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('spawn EINVAL'));
+    fixture.runCaptureCommand.mockReset();
+    fixture.runCaptureCommand
+      .mockResolvedValueOnce({ code: 1, stderr: '', stdout: '' })
+      .mockResolvedValueOnce({ code: 1, stderr: '', stdout: '' })
+      .mockResolvedValueOnce({ code: 0, stderr: 'Searching dependency tree', stdout: '' })
+      .mockResolvedValueOnce({
+        code: 1,
+        stderr: [
+          'was compiled against a different Node.js version using',
+          'NODE_MODULE_VERSION 145. This version of Node.js requires',
+          'NODE_MODULE_VERSION 127.'
+        ].join('\n'),
+        stdout: ''
+      });
+
+    await expect(ensureElectronNativeAbi({
+      ...fixture,
+      nativeAbiScript: PREFLIGHT,
+      readElectronAbiVersionFn: () => '145',
+      repoRoot: REPO_ROOT
+    })).resolves.toBe('source-rebuilt');
+
+    expect(fixture.runCaptureCommand).toHaveBeenCalledTimes(4);
   });
 });

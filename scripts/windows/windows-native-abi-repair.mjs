@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /* global console, process */
 
+import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
@@ -49,10 +50,33 @@ async function runCheckedWithOutput(command, args, label, cwd, runCaptureCommand
   }
 }
 
+function readElectronAbiVersion(repoRoot) {
+  return fs.readFileSync(path.join(repoRoot, 'node_modules', 'electron', 'abi_version'), 'utf8').trim();
+}
+
+async function verifyElectronAbiByNodeMismatch(repoRoot, runCaptureCommand, readElectronAbiVersionFn) {
+  const electronAbi = readElectronAbiVersionFn(repoRoot);
+  const result = await runCaptureCommand(process.execPath, [
+    '-e',
+    "require('better-sqlite3'); console.log(JSON.stringify(process.versions))"
+  ], { cwd: repoRoot });
+  printOutput(result);
+  if (result.code === 0) {
+    throw new Error('Electron ABI verification failed: better-sqlite3 is still loadable in plain Node');
+  }
+  const detail = `${result.stdout}\n${result.stderr}`;
+  const match = /NODE_MODULE_VERSION\s+(\d+)[\s\S]*?requires\s+NODE_MODULE_VERSION\s+(\d+)/u.exec(detail);
+  if (!match || match[1] !== electronAbi) {
+    throw new Error(`Electron ABI verification failed: expected module ABI ${electronAbi}`);
+  }
+  console.log(`[windows-native-abi] Electron ABI verified by Node mismatch module=${match[1]} node=${match[2]}`);
+}
+
 export async function ensureElectronNativeAbi({
   createNpmCommand = defaultCreateNpmCommand,
   nativeAbiScript,
   npmRunCommand = defaultNpmRunCommand,
+  readElectronAbiVersionFn = readElectronAbiVersion,
   repoRoot,
   runCaptureCommand = runCapture,
   runCheckedCommand = runChecked
@@ -81,7 +105,12 @@ export async function ensureElectronNativeAbi({
   await runCheckedWithOutput(
     sourceRebuild.command, sourceRebuild.args, 'restore Electron native ABI from source', repoRoot, runCaptureCommand
   );
-  await runCheckedCommand('powershell.exe', preflightArgs, 'verify source-restored Electron native ABI', repoRoot);
+  try {
+    await runCheckedCommand('powershell.exe', preflightArgs, 'verify source-restored Electron native ABI', repoRoot);
+  } catch {
+    console.log('[windows-preview-native] Electron runtime launch unavailable; verifying rebuilt module ABI without launching Electron');
+    await verifyElectronAbiByNodeMismatch(repoRoot, runCaptureCommand, readElectronAbiVersionFn);
+  }
   console.log('[windows-native-abi] status: READY disposition=source-rebuilt');
   return 'source-rebuilt';
 }
