@@ -65,6 +65,20 @@ describe('Windows Android lab device contract', () => {
     expect(calls.findIndex((args) => args[0] === 'mdns')).toBeGreaterThan(calls.findIndex((args) => args.includes('getprop')));
   });
 
+  it('resolves a ready USB ADB serial without wireless reconnect', async () => {
+    const paths = fixture();
+    const calls = [];
+    const executeCommand = async (_command, args) => {
+      calls.push(args);
+      if (args[0] === 'devices') return { code: 0, lines: [], output: '87a33a4b\tdevice product:marble\n' };
+      if (args.includes('getprop')) return { code: 0, lines: ['A5-STABLE'], output: 'A5-STABLE\n' };
+      return { code: 0, lines: [], output: '' };
+    };
+    const device = await resolveAndroidDevice(CONFIG, paths, executeCommand);
+    expect(device).toMatchObject({ discoverySource: 'usb', endpoint: '87a33a4b', identity: 'A5-STABLE' });
+    expect(calls.some((args) => args[0] === 'connect')).toBe(false);
+  });
+
   it('parses only valid IPv4 endpoints from mDNS output', () => {
     expect(parseMdnsEndpoints(`tls 192.168.0.107:38717\ninvalid 999.1.1.1:70000`)).toEqual([ENDPOINT]);
   });

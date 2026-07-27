@@ -1,5 +1,7 @@
 import { isAndroidEndpoint, parseReadyDevices, readJson, writeJsonAtomic } from './windows-android-lab-state.mjs';
 
+const USB_SERIAL = /^[A-Za-z0-9._-]{4,128}$/u;
+
 export function codedLabError(code, message) {
   return Object.assign(new Error(message), { code });
 }
@@ -28,6 +30,9 @@ async function readDeviceIdentity(config, endpoint, executeCommand) {
 
 async function connectAndVerify(config, endpoint, ready, executeCommand) {
   if (!ready.has(endpoint)) {
+    if (!isAndroidEndpoint(endpoint)) {
+      throw codedLabError('device_connect_failed', `USB device ${endpoint} is not ready`);
+    }
     await checked(executeCommand, config.adbPath, ['connect', endpoint], 'device_connect_failed');
   }
   const identity = await readDeviceIdentity(config, endpoint, executeCommand);
@@ -42,9 +47,13 @@ export function parseMdnsEndpoints(output) {
   return [...new Set(endpoints.filter(isAndroidEndpoint))];
 }
 
+export function isAndroidDeviceSelector(value) {
+  return isAndroidEndpoint(value) || USB_SERIAL.test(String(value || ''));
+}
+
 export async function reconnectAndroidDevice(config, endpoint, paths, executeCommand, source = 'manual') {
   validateAndroidLabConfig(config);
-  if (!isAndroidEndpoint(endpoint)) throw codedLabError('device_endpoint_invalid', 'device endpoint must be ipv4:port');
+  if (!isAndroidDeviceSelector(endpoint)) throw codedLabError('device_endpoint_invalid', 'device endpoint must be ipv4:port or USB serial');
   const devices = await checked(executeCommand, config.adbPath, ['devices'], 'adb_devices_failed');
   const ready = new Set(parseReadyDevices(devices.output));
   const identity = await connectAndVerify(config, endpoint, ready, executeCommand);
@@ -63,15 +72,16 @@ export async function resolveAndroidDevice(config, paths, executeCommand) {
   const devices = await checked(executeCommand, config.adbPath, ['devices'], 'adb_devices_failed');
   const ready = new Set(parseReadyDevices(devices.output));
   const previous = readJson(paths.device);
-  const candidates = [...ready].filter(isAndroidEndpoint);
-  if (isAndroidEndpoint(previous?.endpoint)) candidates.unshift(previous.endpoint);
+  const candidates = [...ready].filter(isAndroidDeviceSelector);
+  if (isAndroidDeviceSelector(previous?.endpoint)) candidates.unshift(previous.endpoint);
   const seen = new Set();
   const tryCandidates = async (values) => {
     for (const endpoint of values) {
       if (seen.has(endpoint)) continue;
       seen.add(endpoint);
       try {
-        const source = endpoint === previous?.endpoint ? 'previous' : ready.has(endpoint) ? 'ready' : 'mdns';
+        const source = endpoint === previous?.endpoint
+          ? 'previous' : isAndroidEndpoint(endpoint) ? ready.has(endpoint) ? 'ready' : 'mdns' : 'usb';
         return await reconnectAndroidDevice(config, endpoint, paths, executeCommand, source);
       } catch (error) {
         if (!['device_connect_failed', 'device_identity_mismatch', 'device_identity_read_failed'].includes(error.code)) throw error;
