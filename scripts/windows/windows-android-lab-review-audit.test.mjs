@@ -53,10 +53,12 @@ function createDatabase(settings = SETTINGS_INPUT) {
   if (settings) db.prepare('INSERT INTO setting_records VALUES (?, ?, ?, ?, NULL)').run(
     'review_scheduler_settings', JSON.stringify(settings), '2026-07-25T00:00:00.000Z', 'desktop'
   );
-  insertNode(db, { id: 'fsrs-1', kind: 'item', position: 0, reveal: 'private answer' });
-  db.prepare('INSERT INTO node_review VALUES (?, ?, NULL, 2, 4, 1)').run('fsrs-1', '2026-07-25T00:00:00.000Z');
+  ['fsrs-1', 'fsrs-2'].forEach((id, index) => {
+    insertNode(db, { id, kind: 'item', position: index, reveal: 'private answer' });
+    db.prepare('INSERT INTO node_review VALUES (?, ?, NULL, 2, 4, 1)').run(id, '2026-07-25T00:00:00.000Z');
+  });
   ['read-1', 'read-2', 'read-3'].forEach((id, index) => {
-    insertNode(db, { id, kind: 'topic', position: index + 1, reveal: null });
+    insertNode(db, { id, kind: 'topic', position: index + 2, reveal: null });
     db.prepare('INSERT INTO node_reading VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(
       id, 86_400_000, 1.5, '2026-07-24T00:00:00.000Z', '2026-07-25T00:00:00.000Z', 0, 1, 'active'
     );
@@ -79,19 +81,14 @@ function insertNode(db, { id, kind, position, reveal }) {
 
 function prepare(databasePath) {
   const audit = auditAndroidReviewDatabase({ context, databasePath, now: NOW });
-  const [readNodeId, laterNodeId, dismissNodeId] = audit.selected.readingNodeIds;
   return {
     audit,
     session: {
       baseline: audit.current, commitSha: context.commitSha, deploymentRunId: context.deploymentRunId,
       deviceIdentity: context.deviceIdentity,
-      expectedActions: [
-        { action: 'grade', itemKind: 'fsrs', nodeId: audit.selected.fsrsNodeId },
-        { action: 'read', itemKind: 'reading', nodeId: readNodeId },
-        { action: 'later', itemKind: 'reading', nodeId: laterNodeId },
-        { action: 'dismiss', itemKind: 'reading', nodeId: dismissNodeId }
-      ],
+      expectedActions: audit.selected.expectedActions,
       fsrsNodeId: audit.selected.fsrsNodeId,
+      fsrsNodeIds: audit.selected.fsrsNodeIds,
       readingNodeIds: audit.selected.readingNodeIds
     }
   };
@@ -106,9 +103,10 @@ function markOutgoing(db, objectType, objectId, stateSeq) {
 function applyAction(db, action, nodeId, index) {
   if (action === 'grade') {
     db.prepare('UPDATE node_review SET due = ?, last_review_at = ?, reps = reps + 1 WHERE node_id = ?')
-      .run('2026-07-30T00:00:00.000Z', '2026-07-26T00:01:00.000Z', nodeId);
+      .run('2026-07-30T00:00:00.000Z', `2026-07-26T00:0${index + 1}:00.000Z`, nodeId);
     db.prepare('INSERT INTO review_log VALUES (?, ?, ?, ?, ?)').run(
-      'log-1', 'op-1', nodeId, getReviewSchedulerVersion(SETTINGS), '2026-07-26T00:01:00.000Z'
+      `log-${index + 1}`, `op-${index + 1}`, nodeId, getReviewSchedulerVersion(SETTINGS),
+      `2026-07-26T00:0${index + 1}:00.000Z`
     );
     markOutgoing(db, 'node_review', nodeId, index + 1);
     return;
@@ -160,6 +158,7 @@ describe('Windows Android lab Review audit', () => {
     expect(audit.resultStatus).toBe('success');
     expect(audit.acceptance.value.source).toBe('shared_review_planner');
     expect(audit.current.fsrs.nodeId).toBe('fsrs-1');
+    expect(audit.current.fsrsItems.map(({ nodeId }) => nodeId)).toEqual(['fsrs-1', 'fsrs-2']);
     expect(audit.current.reading.map(({ nodeId }) => nodeId)).toEqual(['read-1', 'read-2', 'read-3']);
     const serialized = JSON.stringify(audit);
     for (const forbidden of ['private body', 'private answer', databasePath, 'attachment', 'secret']) {
@@ -173,7 +172,8 @@ describe('Windows Android lab Review audit', () => {
     const audit = capture(databasePath, session);
     expect(audit.resultStatus).toBe('failure');
     expect(audit.transitions.map(({ code }) => code)).toEqual([
-      'review_fsrs_transition_missing', 'review_reading_read_transition_missing',
+      'review_fsrs_transition_missing', 'review_fsrs_transition_missing',
+      'review_reading_read_transition_missing',
       'review_reading_later_transition_missing', 'review_reading_dismiss_transition_missing'
     ]);
   });

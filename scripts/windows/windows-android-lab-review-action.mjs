@@ -119,20 +119,20 @@ async function runAudit({ config, databasePath, deployment, evidenceRoot, execut
 }
 
 function persistPrepareSession(paths, request, deployment, audit) {
-  if (!audit?.selected?.fsrsNodeId || audit.selected.readingNodeIds?.length < 3 || !audit.current) {
+  const fsrsNodeIds = audit?.selected?.fsrsNodeIds?.length ? audit.selected.fsrsNodeIds : [audit?.selected?.fsrsNodeId].filter(Boolean);
+  const expectedActions = audit?.selected?.expectedActions ?? [
+    ...fsrsNodeIds.map((nodeId) => ({ action: 'grade', itemKind: 'fsrs', nodeId })),
+    ...['read', 'later', 'dismiss'].map((action, index) => ({
+      action, itemKind: 'reading', nodeId: audit?.selected?.readingNodeIds?.[index]
+    })).filter(({ nodeId }) => nodeId)
+  ];
+  if (fsrsNodeIds.length < 1 || audit?.selected?.readingNodeIds?.length < 3 || !audit.current) {
     throw codedError('review_audit_invalid', 'prepare audit did not select the required acceptance objects');
   }
-  const [readNodeId, laterNodeId, dismissNodeId] = audit.selected.readingNodeIds;
   writeJsonAtomic(paths.reviewSession, {
     baseline: audit.current,
     commitSha: request.commitSha, createdAt: new Date().toISOString(), deploymentRunId: deployment.runId,
-    deviceIdentity: deployment.deviceIdentity, fsrsNodeId: audit.selected.fsrsNodeId,
-    expectedActions: [
-      { action: 'grade', itemKind: 'fsrs', nodeId: audit.selected.fsrsNodeId },
-      { action: 'read', itemKind: 'reading', nodeId: readNodeId },
-      { action: 'later', itemKind: 'reading', nodeId: laterNodeId },
-      { action: 'dismiss', itemKind: 'reading', nodeId: dismissNodeId }
-    ],
+    deviceIdentity: deployment.deviceIdentity, expectedActions, fsrsNodeId: fsrsNodeIds[0], fsrsNodeIds,
     prepareRunId: request.runId, readingNodeIds: audit.selected.readingNodeIds, schemaVersion: 2,
     selectionEvidence: { auditFile: 'review-audit.json', runId: request.runId }
   });
@@ -148,10 +148,11 @@ function persistCaptureSession(paths, request, audit) {
 }
 
 function writeReviewSummary(evidenceRoot, request, deployment, audit) {
+  const fsrsCount = audit.selected.fsrsNodeIds?.length ?? 1;
   writeJsonAtomic(path.join(evidenceRoot, 'summary.json'), {
     checkpoint: request.reviewPhase, commitSha: request.commitSha, deploymentRunId: deployment.runId,
     deviceIdentity: deployment.deviceIdentity, resultStatus: 'success', runId: request.runId,
-    schemaVersion: 1, selectedObjectCount: 1 + audit.selected.readingNodeIds.length
+    schemaVersion: 1, selectedObjectCount: fsrsCount + audit.selected.readingNodeIds.length
   });
 }
 

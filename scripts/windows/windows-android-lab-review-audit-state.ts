@@ -111,12 +111,15 @@ function readingAudit(db: Sqlite, nodeId: string): ReadingAuditState {
 
 export function readReviewAuditState(
   db: Sqlite,
-  selected: { fsrsNodeId: string; readingNodeIds: string[] },
+  selected: { fsrsNodeId: string; fsrsNodeIds?: string[]; readingNodeIds: string[] },
   schedulerVersion: string,
   cursorValue: string | null
 ): ReviewAuditState {
+  const fsrsNodeIds = selected.fsrsNodeIds?.length ? selected.fsrsNodeIds : [selected.fsrsNodeId];
+  const fsrsItems = fsrsNodeIds.map((id) => fsrsAudit(db, id, cursorValue));
   return {
-    fsrs: fsrsAudit(db, selected.fsrsNodeId, cursorValue),
+    fsrs: fsrsItems[0],
+    fsrsItems,
     reading: selected.readingNodeIds.map((id) => readingAudit(db, id)),
     schedulerVersion
   };

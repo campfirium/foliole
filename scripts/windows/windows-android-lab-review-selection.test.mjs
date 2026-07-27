@@ -67,6 +67,13 @@ describe('Windows Android lab Review acceptance selection', () => {
       status: 'available',
       value: {
         fsrsNodeId: 'fsrs-1',
+        fsrsNodeIds: ['fsrs-1'],
+        expectedActions: [
+          { action: 'grade', itemKind: 'fsrs', nodeId: 'fsrs-1' },
+          { action: 'read', itemKind: 'reading', nodeId: 'read-1' },
+          { action: 'later', itemKind: 'reading', nodeId: 'read-2' },
+          { action: 'dismiss', itemKind: 'reading', nodeId: 'read-3' }
+        ],
         queuePrefix: [
           { itemKind: 'fsrs', nodeId: 'fsrs-1' },
           { itemKind: 'reading', nodeId: 'read-1' },
@@ -79,7 +86,7 @@ describe('Windows Android lab Review acceptance selection', () => {
     db.close();
   });
 
-  it('rejects data where the actual UI queue has another FSRS before Reading actions', () => {
+  it('binds extra FSRS items before Reading actions to the actual UI queue', () => {
     const db = createDatabase();
     ['fsrs-1', 'fsrs-2'].forEach((id, index) => {
       insertNode(db, { id, kind: 'item', position: index, reveal: 'answer' });
@@ -95,14 +102,22 @@ describe('Windows Android lab Review acceptance selection', () => {
       normalizeReviewSchedulerSettings(DEFAULT_REVIEW_SCHEDULER_SETTINGS),
       NOW
     )).toMatchObject({
-      error: expect.stringContaining('review acceptance UI sequence is not ready'),
-      status: 'invalid',
+      status: 'available',
       value: {
+        expectedActions: [
+          { action: 'grade', itemKind: 'fsrs', nodeId: 'fsrs-1' },
+          { action: 'grade', itemKind: 'fsrs', nodeId: 'fsrs-2' },
+          { action: 'read', itemKind: 'reading', nodeId: 'read-1' },
+          { action: 'later', itemKind: 'reading', nodeId: 'read-2' },
+          { action: 'dismiss', itemKind: 'reading', nodeId: 'read-3' }
+        ],
+        fsrsNodeIds: ['fsrs-1', 'fsrs-2'],
         queuePrefix: [
           { itemKind: 'fsrs', nodeId: 'fsrs-1' },
           { itemKind: 'fsrs', nodeId: 'fsrs-2' },
           { itemKind: 'reading', nodeId: 'read-1' },
-          { itemKind: 'reading', nodeId: 'read-2' }
+          { itemKind: 'reading', nodeId: 'read-2' },
+          { itemKind: 'reading', nodeId: 'read-3' }
         ]
       }
     });

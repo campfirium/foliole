@@ -69,7 +69,9 @@ function readSync(db: Sqlite) {
 
 function selectedFromSession(session: AcceptanceSession) {
   return {
+    expectedActions: session.expectedActions,
     fsrsNodeId: session.fsrsNodeId,
+    fsrsNodeIds: session.fsrsNodeIds ?? [session.fsrsNodeId],
     readingNodeIds: session.readingNodeIds,
     source: 'review_session'
   };
@@ -107,7 +109,12 @@ export function auditAndroidReviewDatabase(args: {
         ? selectReviewAcceptanceObjects(db, scheduler.value.settings, args.now ?? new Date().toISOString())
         : { error: 'review scheduler settings are unavailable', status: 'invalid' as const };
     const selected = acceptance.status === 'available' && acceptance.value.fsrsNodeId
-      ? { fsrsNodeId: acceptance.value.fsrsNodeId, readingNodeIds: acceptance.value.readingNodeIds }
+      ? {
+          expectedActions: acceptance.value.expectedActions,
+          fsrsNodeId: acceptance.value.fsrsNodeId,
+          fsrsNodeIds: acceptance.value.fsrsNodeIds,
+          readingNodeIds: acceptance.value.readingNodeIds
+        }
       : null;
     const current = selected && scheduler.value?.schedulerVersion
       ? section(() => readReviewAuditState(

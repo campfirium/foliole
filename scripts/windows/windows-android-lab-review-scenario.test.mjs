@@ -6,7 +6,8 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
-  finishWindowsAndroidLabReviewScenarioRun, reviewUiSequenceArgs, scenarioEnv, SCENARIO_UI_COMMAND_TIMEOUT_MS
+  finishWindowsAndroidLabReviewScenarioRun, reviewUiSequenceArgs, reviewUiSteps, scenarioEnv,
+  SCENARIO_UI_COMMAND_TIMEOUT_MS
 } from './windows-android-lab-review-scenario.mjs';
 import { androidLabPaths, readJson, writeJsonAtomic } from './windows-android-lab-state.mjs';
 
@@ -42,6 +43,19 @@ describe('Windows Android Lab Review scenario run', () => {
       { testId: 'companion-review-action-reveal' },
       { testId: 'companion-review-grade-1' }
     ])).toContain('companion-review-action-reveal,companion-review-grade-1');
+  });
+
+  it('expands bound Review actions into the actual UI step sequence', () => {
+    const steps = reviewUiSteps([
+      { action: 'grade' }, { action: 'grade' }, { action: 'read' },
+      { action: 'later' }, { action: 'dismiss' }
+    ]);
+    expect(steps.map(({ testId }) => testId)).toEqual([
+      'companion-review-action-reveal', 'companion-review-grade-1',
+      'companion-review-action-reveal', 'companion-review-grade-1',
+      'companion-review-action-read', 'companion-review-action-later',
+      'companion-review-action-dismiss'
+    ]);
   });
 
   it('keeps the scenario as one worker-owned run and updates phase status', async () => {

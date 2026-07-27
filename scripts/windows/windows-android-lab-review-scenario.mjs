@@ -10,19 +10,25 @@ import { readJson, writeJsonAtomic } from './windows-android-lab-state.mjs';
 
 const COMMAND_TIMEOUT_MS = 10 * 60_000;
 export const SCENARIO_UI_COMMAND_TIMEOUT_MS = 35 * 60_000;
-const REVIEW_ACTIONS = [
-  { name: 'reveal', testId: 'companion-review-action-reveal' },
-  { name: 'grade-again', testId: 'companion-review-grade-1' },
-  { name: 'read', testId: 'companion-review-action-read' },
-  { name: 'later', testId: 'companion-review-action-later' },
-  { name: 'dismiss', testId: 'companion-review-action-dismiss' }
-];
+const REVIEW_UI_STEPS = {
+  dismiss: [{ name: 'dismiss', testId: 'companion-review-action-dismiss' }],
+  grade: [
+    { name: 'reveal', testId: 'companion-review-action-reveal' },
+    { name: 'grade-again', testId: 'companion-review-grade-1' }
+  ],
+  later: [{ name: 'later', testId: 'companion-review-action-later' }],
+  read: [{ name: 'read', testId: 'companion-review-action-read' }]
+};
 
 export function reviewUiSequenceArgs(steps) {
   return [
     '--testIds', steps.map((step) => step.testId).join(','), '--expectedAttribute', '__actionAccepted',
     '--expectedValue', 'true'
   ];
+}
+
+export function reviewUiSteps(expectedActions) {
+  return expectedActions.flatMap((action) => REVIEW_UI_STEPS[action.action] ?? []);
 }
 
 function codedError(code, message) {
@@ -65,16 +71,18 @@ async function runChecked(executeCommand, command, args, options, code) {
 
 async function runUiSequence({ config, device, executeCommand, paths, request }) {
   const evidenceRoot = scenarioEvidenceRoot(paths, request, 'ui-sequence');
+  const steps = reviewUiSteps(readJson(paths.reviewSession)?.expectedActions ?? []);
+  if (!steps.length) throw codedError('review_ui_sequence_missing', 'review prepare did not bind UI actions');
   await runChecked(executeCommand, path.join(config.nodeDirectory, 'node.exe'), [
     path.join(paths.preview, 'scripts', 'windows', 'windows-android-lab-ui-automation.mjs'),
-    ...reviewUiSequenceArgs(REVIEW_ACTIONS)
+    ...reviewUiSequenceArgs(steps)
   ], {
     cwd: paths.preview, timeoutMs: SCENARIO_UI_COMMAND_TIMEOUT_MS,
     env: scenarioEnv(config, device.endpoint, paths, evidenceRoot)
   }, 'review_ui_sequence_failed');
   return {
     evidencePath: path.relative(path.join(paths.evidence, request.runId), evidenceRoot),
-    steps: REVIEW_ACTIONS.map((step) => ({ name: step.name, testId: step.testId }))
+    steps: steps.map((step) => ({ name: step.name, testId: step.testId }))
   };
 }
 

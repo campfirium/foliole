@@ -53,6 +53,21 @@ function validateReading(
     && after.repetitionCount === next?.repetitionCount && after.nextAt === next?.nextAt;
 }
 
+function fsrsItems(state: ReviewAuditState) {
+  return state.fsrsItems?.length ? state.fsrsItems : [state.fsrs];
+}
+
+function validateFsrs(before: ReviewAuditState, current: ReviewAuditState, expected: ExpectedAction, index: number) {
+  const previous = fsrsItems(before)[index];
+  const after = fsrsItems(current)[index];
+  return expected.nodeId === after?.nodeId && previous?.nodeId === after.nodeId
+    && after.reviewLogCount === previous.reviewLogCount + 1
+    && after.reps === previous.reps + 1 && after.due !== previous.due
+    && after.lastReviewAt !== previous.lastReviewAt
+    && after.latestReviewLog?.schedulerVersion === current.schedulerVersion
+    && outgoingAdvanced(previous.outgoing, after.outgoing);
+}
+
 export function validateCaptureTransition(
   session: AcceptanceSession,
   current: ReviewAuditState,
@@ -60,16 +75,14 @@ export function validateCaptureTransition(
 ): TransitionIssue[] {
   const issues: TransitionIssue[] = [];
   const before = session.baseline;
-  const expectedFsrs = session.expectedActions.find(({ itemKind }) => itemKind === 'fsrs');
-  const fsrs = current.fsrs;
-  const fsrsPassed = expectedFsrs?.nodeId === fsrs.nodeId && before.fsrs.nodeId === fsrs.nodeId
-    && fsrs.reviewLogCount === before.fsrs.reviewLogCount + 1
-    && fsrs.reps === before.fsrs.reps + 1 && fsrs.due !== before.fsrs.due
-    && fsrs.lastReviewAt !== before.fsrs.lastReviewAt
-    && fsrs.latestReviewLog?.schedulerVersion === current.schedulerVersion
-    && outgoingAdvanced(before.fsrs.outgoing, fsrs.outgoing);
-  if (!fsrsPassed) issues.push({
-    code: 'review_fsrs_transition_missing', error: 'FSRS grade did not produce the expected bound transition', name: 'transition.fsrs'
+  session.expectedActions.filter(({ itemKind }) => itemKind === 'fsrs').forEach((expected, index) => {
+    if (!validateFsrs(before, current, expected, index)) {
+      issues.push({
+        code: 'review_fsrs_transition_missing',
+        error: 'FSRS grade did not produce the expected bound transition',
+        name: `transition.fsrs[${index}]`
+      });
+    }
   });
   session.expectedActions.filter(({ itemKind }) => itemKind === 'reading').forEach((expected, index) => {
     const previous = before.reading[index];
@@ -93,6 +106,11 @@ function persistenceView(state: ReviewAuditState) {
       latestReviewLog: state.fsrs.latestReviewLog, nodeId: state.fsrs.nodeId,
       reps: state.fsrs.reps, reviewLogCount: state.fsrs.reviewLogCount, state: state.fsrs.state
     },
+    fsrsItems: fsrsItems(state).map((item) => ({
+      due: item.due, lapses: item.lapses, lastReviewAt: item.lastReviewAt,
+      latestReviewLog: item.latestReviewLog, nodeId: item.nodeId,
+      reps: item.reps, reviewLogCount: item.reviewLogCount, state: item.state
+    })),
     reading: state.reading.map((reading) => ({
       intervalDurationMs: reading.intervalDurationMs,
       intervalGrowthFactor: reading.intervalGrowthFactor,

@@ -83,7 +83,7 @@ describe('Windows Android lab Review action', () => {
         { action: 'grade', nodeId: 'fsrs-1' }, { action: 'read', nodeId: 'read-1' },
         { action: 'later', nodeId: 'read-2' }, { action: 'dismiss', nodeId: 'read-3' }
       ],
-      fsrsNodeId: 'fsrs-1', readingNodeIds: ['read-1', 'read-2', 'read-3']
+      fsrsNodeId: 'fsrs-1', fsrsNodeIds: ['fsrs-1'], readingNodeIds: ['read-1', 'read-2', 'read-3']
     });
     expect(readJson(path.join(paths.evidence, request.runId, 'summary.json'))).toMatchObject({
       checkpoint: 'prepare', selectedObjectCount: 4

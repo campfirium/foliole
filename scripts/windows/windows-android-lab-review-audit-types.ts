@@ -50,6 +50,7 @@ export interface ReadingAuditState {
 
 export interface ReviewAuditState {
   fsrs: FsrsAuditState;
+  fsrsItems: FsrsAuditState[];
   reading: ReadingAuditState[];
   schedulerVersion: string;
 }
@@ -68,6 +69,7 @@ export interface AcceptanceSession {
   deviceIdentity: string;
   expectedActions: ExpectedAction[];
   fsrsNodeId: string;
+  fsrsNodeIds?: string[];
   readingNodeIds: string[];
 }
 

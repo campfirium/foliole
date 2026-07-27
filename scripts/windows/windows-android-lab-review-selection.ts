@@ -7,6 +7,8 @@ import {
 import type { ReviewSchedulerSettings } from '../../lib/core/review/settings.ts';
 import { buildReviewQueuePlan, type ReviewQueueNode } from '../../src/store/reviewQueuePlanner.ts';
 
+import type { ExpectedAction } from './windows-android-lab-review-audit-types.ts';
+
 type Sqlite = InstanceType<typeof Database>;
 const BODY_BLOB_DATA = 'CAST(cbd.data AS TEXT)';
 const RESOLVED_CONTENT = androidResolvedContentExpression('n.content', BODY_BLOB_DATA);
@@ -36,6 +38,8 @@ interface ReviewNodeRow {
 }
 
 type ReviewAcceptanceKind = 'fsrs' | 'reading' | 'unknown';
+const MAX_ACCEPTANCE_ACTIONS = 16;
+const READING_ACTIONS = ['read', 'later', 'dismiss'] as const;
 
 function toPlannerNode(row: ReviewNodeRow): ReviewQueueNode {
   return {
@@ -77,11 +81,32 @@ function companionUiQueueNodeIds(plan: ReturnType<typeof buildReviewQueuePlan>) 
   return [...new Set([...plan.queueNodeIds, ...plan.readingQueueNodeIds])];
 }
 
-function uiPrefixError(prefixKinds: string[], fsrsNodeId: string | null, readingNodeIds: string[]) {
-  const expected = 'fsrs,reading,reading,reading';
+function uiPrefixError(prefixKinds: string[], fsrsNodeIds: string[], readingNodeIds: string[]) {
+  const expected = `fsrs and 3 reading actions within ${MAX_ACCEPTANCE_ACTIONS} queue actions`;
   const actual = prefixKinds.join(',') || 'empty';
   return 'review acceptance UI sequence is not ready: ' +
-    `actual=${actual}, expected=${expected}, fsrs=${fsrsNodeId ? 1 : 0}, reading=${readingNodeIds.length}`;
+    `actual=${actual}, expected=${expected}, fsrs=${fsrsNodeIds.length}, reading=${readingNodeIds.length}`;
+}
+
+function selectUiActions(uiQueueNodeIds: string[], nodesById: Record<string, ReviewQueueNode>) {
+  const prefixNodeIds: string[] = [];
+  const fsrsNodeIds: string[] = [];
+  const readingNodeIds: string[] = [];
+  const expectedActions: ExpectedAction[] = [];
+  for (const nodeId of uiQueueNodeIds) {
+    if (expectedActions.length >= MAX_ACCEPTANCE_ACTIONS || readingNodeIds.length === 3) break;
+    const itemKind = reviewKind(nodesById[nodeId]);
+    prefixNodeIds.push(nodeId);
+    if (itemKind === 'fsrs') {
+      fsrsNodeIds.push(nodeId);
+      expectedActions.push({ action: 'grade' as const, itemKind, nodeId });
+    } else if (itemKind === 'reading' && readingNodeIds.length < 3) {
+      const action = READING_ACTIONS[readingNodeIds.length];
+      readingNodeIds.push(nodeId);
+      expectedActions.push({ action, itemKind, nodeId });
+    }
+  }
+  return { expectedActions, fsrsNodeIds, prefixNodeIds, readingNodeIds };
 }
 
 export function selectReviewAcceptanceObjects(
@@ -114,21 +139,21 @@ export function selectReviewAcceptanceObjects(
     trashedNodeIds: rows.filter(({ deleted_at }) => Boolean(deleted_at)).map(({ id }) => id)
   });
   const uiQueueNodeIds = companionUiQueueNodeIds(plan);
-  const prefixNodeIds = uiQueueNodeIds.slice(0, 4);
+  const { expectedActions, fsrsNodeIds, prefixNodeIds, readingNodeIds } = selectUiActions(uiQueueNodeIds, nodesById);
   const prefixKinds = prefixNodeIds.map((nodeId) => reviewKind(nodesById[nodeId]));
-  const fsrsNodeId = prefixKinds[0] === 'fsrs' ? prefixNodeIds[0] ?? null : null;
-  const readingNodeIds = prefixNodeIds.slice(1).filter((nodeId) => reviewKind(nodesById[nodeId]) === 'reading');
   const value = {
-    fsrsNodeId,
+    expectedActions,
+    fsrsNodeId: fsrsNodeIds[0] ?? null,
+    fsrsNodeIds,
     readingNodeIds,
     queuePrefix: prefixNodeIds.map((nodeId, index) => ({ itemKind: prefixKinds[index], nodeId })),
-    required: { fsrs: 1, reading: 3 },
+    required: { fsrs: 1, maxActions: MAX_ACCEPTANCE_ACTIONS, reading: 3 },
     source: 'shared_review_planner'
   };
-  return fsrsNodeId && readingNodeIds.length === 3 && prefixKinds.join(',') === 'fsrs,reading,reading,reading'
+  return expectedActions[0]?.itemKind === 'fsrs' && fsrsNodeIds.length >= 1 && readingNodeIds.length === 3
     ? { status: 'available' as const, value }
     : {
-        error: uiPrefixError(prefixKinds, fsrsNodeId, readingNodeIds),
+        error: uiPrefixError(prefixKinds, fsrsNodeIds, readingNodeIds),
         status: 'invalid' as const,
         value
       };
