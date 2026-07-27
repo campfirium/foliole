@@ -84,13 +84,11 @@ async function launchAfterSnapshot(config, endpoint, paths, executeCommand, setP
 
 function assertAuditRuntime(paths) {
   const required = [
-    path.join(paths.preview, 'scripts', 'electron-sqlite-runner.mjs'),
     path.join(paths.preview, 'scripts', 'windows', 'windows-android-lab-review-audit.ts'),
-    path.join(paths.preview, 'node_modules', 'electron', 'dist', 'electron.exe'),
-    path.join(paths.preview, 'node_modules', 'better-sqlite3')
+    path.join(paths.preview, 'scripts', 'android', 'sqlite-readonly.mjs')
   ];
   if (required.some((entry) => !fs.existsSync(entry))) {
-    throw codedError('review_audit_runtime_missing', 'deployed Electron ABI audit runtime is missing; rerun normal deployment');
+    throw codedError('review_audit_runtime_missing', 'deployed Review audit runtime is missing; rerun normal deployment');
   }
 }
 
@@ -98,7 +96,7 @@ async function runAudit({ config, databasePath, deployment, evidenceRoot, execut
   assertAuditRuntime(paths);
   const output = path.join(evidenceRoot, 'review-audit.json');
   const args = [
-    path.join(paths.preview, 'scripts', 'electron-sqlite-runner.mjs'),
+    '--experimental-strip-types',
     path.join(paths.preview, 'scripts', 'windows', 'windows-android-lab-review-audit.ts'),
     '--checkpoint', request.reviewPhase, '--commit', request.commitSha, '--database', databasePath,
     '--deployment-run', deployment.runId, '--device', deployment.deviceIdentity,

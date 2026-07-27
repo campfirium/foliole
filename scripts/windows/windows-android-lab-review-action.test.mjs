@@ -31,14 +31,12 @@ function fixture(phase = 'prepare') {
   writeJsonAtomic(paths.workspaceDeployment, deployment);
   writeJsonAtomic(paths.device, { endpoint: ENDPOINT, identity: 'A5-STABLE', schemaVersion: 1 });
   for (const entry of [
-    'scripts/electron-sqlite-runner.mjs', 'scripts/windows/windows-android-lab-review-audit.ts',
-    'node_modules/electron/dist/electron.exe'
+    'scripts/android/sqlite-readonly.mjs', 'scripts/windows/windows-android-lab-review-audit.ts'
   ]) {
     const target = path.join(paths.preview, entry);
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, 'fixture');
   }
-  fs.mkdirSync(path.join(paths.preview, 'node_modules', 'better-sqlite3'), { recursive: true });
   const request = { action: 'review', commitSha: SHA, reviewPhase: phase, runId: RUN.replace('prepare', phase) };
   return { paths, request };
 }
@@ -90,7 +88,9 @@ describe('Windows Android lab Review action', () => {
     expect(readJson(path.join(paths.evidence, request.runId, 'summary.json'))).toMatchObject({
       checkpoint: 'prepare', selectedObjectCount: 4
     });
-    expect(calls.some(({ args }) => args.some((value) => String(value).endsWith('electron-sqlite-runner.mjs')))).toBe(true);
+    expect(calls.some(({ args }) => args.some((value) => String(value).endsWith('windows-android-lab-review-audit.ts')))).toBe(true);
+    expect(calls.some(({ args }) => args.includes('--experimental-strip-types'))).toBe(true);
+    expect(calls.some(({ args }) => args.some((value) => String(value).endsWith('electron-sqlite-runner.mjs')))).toBe(false);
     expect(calls.some(({ args }) => args[0] === '-P' && args[1] === '5601')).toBe(true);
   });
 
@@ -111,7 +111,7 @@ describe('Windows Android lab Review action', () => {
     expect(events.findIndex((value) => value === 'snapshot'))
       .toBeLessThan(events.findIndex((value) => value.includes('am start')));
     expect(events.findIndex((value) => value.includes('am start')))
-      .toBeLessThan(events.findIndex((value) => value.includes('electron-sqlite-runner.mjs')));
+      .toBeLessThan(events.findIndex((value) => value.includes('windows-android-lab-review-audit.ts')));
   });
 
   it('persists the successful capture state for restart comparison', async () => {
@@ -157,9 +157,9 @@ describe('Windows Android lab Review action', () => {
       .toBeLessThan(operations.findIndex((value) => value.includes('verify-android-launch.mjs')));
   });
 
-  it('does not fall back to bare Node when the deployed Electron ABI runtime is absent', async () => {
+  it('fails closed when the deployed Review audit runtime is absent', async () => {
     const { paths, request } = fixture();
-    fs.rmSync(path.join(paths.preview, 'node_modules', 'better-sqlite3'), { recursive: true });
+    fs.rmSync(path.join(paths.preview, 'scripts', 'android', 'sqlite-readonly.mjs'));
     await expect(runWindowsAndroidLabReviewPhase({
       executeCommand: executor([]), paths, pullSnapshot, request
     })).rejects.toMatchObject({ code: 'review_audit_runtime_missing' });

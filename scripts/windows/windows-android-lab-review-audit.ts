@@ -4,7 +4,7 @@ import { register } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import Database from 'better-sqlite3';
+import { openReadonlySqliteDatabaseSync } from '../android/sqlite-readonly.mjs';
 
 register('../android/ts-js-extension-loader.mjs', import.meta.url);
 
@@ -18,7 +18,14 @@ import type {
   AcceptanceSession, AuditContext, AuditPhase, Section
 } from './windows-android-lab-review-audit-types.ts';
 
-type Sqlite = InstanceType<typeof Database>;
+type SqliteRow = Record<string, unknown> | undefined;
+type SqliteStatement = {
+  get: (...args: unknown[]) => SqliteRow;
+};
+type Sqlite = {
+  close: () => void;
+  prepare: (sql: string) => SqliteStatement;
+};
 
 function credentialSafeEndpoint(value: string) {
   try {
@@ -89,7 +96,7 @@ export function auditAndroidReviewDatabase(args: {
   now?: string;
   session?: AcceptanceSession;
 }) {
-  const db = new Database(args.databasePath, { fileMustExist: true, readonly: true });
+  const db = openReadonlySqliteDatabaseSync(args.databasePath) as Sqlite;
   try {
     const scheduler = readScheduler(db);
     const pairing = section(() => readPairing(db));
