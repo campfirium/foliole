@@ -36,6 +36,9 @@ describe('Windows Android lab state contract', () => {
     expect(parseAndroidLabCommand('collect get 1000-aaaaaaaaaaaa runner.log')).toMatchObject({
       operation: 'get', relativePath: 'runner.log', runId: '1000-aaaaaaaaaaaa'
     });
+    expect(parseAndroidLabCommand('collect get 1000-aaaaaaaaaaaa-scenario ui-reveal/action-receipt.json')).toMatchObject({
+      operation: 'get', relativePath: 'ui-reveal/action-receipt.json', runId: '1000-aaaaaaaaaaaa-scenario'
+    });
     expect(parseAndroidLabCommand('device status')).toEqual({ action: 'device', operation: 'status' });
     expect(parseAndroidLabCommand('selfcheck')).toEqual({ action: 'selfcheck' });
     expect(parseAndroidLabCommand(`runtime update ${SHA}`)).toEqual({ action: 'runtime', commitSha: SHA, operation: 'update' });
@@ -50,6 +53,7 @@ describe('Windows Android lab state contract', () => {
     expect(() => parseAndroidLabCommand(`review inspect ${SHA}`)).toThrow();
     expect(() => parseAndroidLabCommand(`review capture ${SHA} node-1`)).toThrow();
     expect(() => parseAndroidLabCommand('collect get ../git-read-token.txt')).toThrow();
+    expect(() => parseAndroidLabCommand('collect get 1000-aaaaaaaaaaaa-scenario ui-reveal/private.txt')).toThrow();
     expect(() => parseAndroidLabCommand('collect list ../1000-aaaaaaaaaaaa')).toThrow();
     expect(() => parseAndroidLabCommand('deploy 1 abc')).toThrow();
     expect(() => parseAndroidLabCommand('selfcheck now')).toThrow();

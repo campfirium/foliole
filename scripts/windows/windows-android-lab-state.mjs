@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { isAndroidLabRunId, LAB_EVIDENCE_FILES } from './windows-android-lab-evidence.mjs';
+import { isAndroidLabRunId, safeLabEvidencePath } from './windows-android-lab-evidence.mjs';
 
 export const WINDOWS_ANDROID_LAB_TASK = 'FolioleAndroidLab';
 export const WINDOWS_ANDROID_LAB_SOURCE_REF = 'refs/heads/lab/dev';
@@ -110,10 +110,10 @@ export function parseAndroidLabCommand(input) {
     if (parts[0] === 'list' && parts.length === 2 && isAndroidLabRunId(parts[1])) {
       return { action, operation: 'list', runId: parts[1] };
     }
-    if (parts[0] === 'get' && parts.length === 2 && LAB_EVIDENCE_FILES.has(parts[1])) {
+    if (parts[0] === 'get' && parts.length === 2 && isLabEvidenceRelativePath(parts[1])) {
       return { action, operation: 'get', relativePath: parts[1] };
     }
-    if (parts[0] === 'get' && parts.length === 3 && isAndroidLabRunId(parts[1]) && LAB_EVIDENCE_FILES.has(parts[2])) {
+    if (parts[0] === 'get' && parts.length === 3 && isAndroidLabRunId(parts[1]) && isLabEvidenceRelativePath(parts[2])) {
       return { action, operation: 'get', relativePath: parts[2], runId: parts[1] };
     }
     throw new Error('collect requires list [runId] or get [runId] an allowlisted evidence file');
@@ -142,6 +142,15 @@ export function parseAndroidLabCommand(input) {
   }
   if (!['cancel', 'status'].includes(action) || parts.length !== 0) throw new Error('unsupported Android lab action');
   return { action };
+}
+
+function isLabEvidenceRelativePath(value) {
+  try {
+    safeLabEvidencePath('evidence-root', value);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function isAndroidEndpoint(value) {

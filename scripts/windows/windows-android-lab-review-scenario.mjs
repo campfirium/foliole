@@ -9,6 +9,7 @@ import { runWindowsAndroidLabReviewPhase } from './windows-android-lab-review-ac
 import { readJson, writeJsonAtomic } from './windows-android-lab-state.mjs';
 
 const COMMAND_TIMEOUT_MS = 10 * 60_000;
+export const SCENARIO_UI_COMMAND_TIMEOUT_MS = 20 * 60_000;
 const REVIEW_ACTIONS = [
   { name: 'reveal', testId: 'companion-review-action-reveal' },
   { name: 'grade-again', testId: 'companion-review-grade-1' },
@@ -60,7 +61,7 @@ async function runUiAction({ config, device, executeCommand, paths, request, ste
     path.join(paths.preview, 'scripts', 'windows', 'windows-android-lab-ui-automation.mjs'),
     '--testId', step.testId, '--expectedAttribute', '__actionAccepted', '--expectedValue', 'true'
   ], {
-    cwd: paths.preview,
+    cwd: paths.preview, timeoutMs: SCENARIO_UI_COMMAND_TIMEOUT_MS,
     env: scenarioEnv(config, device.endpoint, paths, evidenceRoot)
   }, `review_ui_${step.name}_failed`);
   return { evidencePath: path.relative(path.join(paths.evidence, request.runId), evidenceRoot), name: step.name, testId: step.testId };

@@ -5,7 +5,9 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { finishWindowsAndroidLabReviewScenarioRun } from './windows-android-lab-review-scenario.mjs';
+import {
+  finishWindowsAndroidLabReviewScenarioRun, SCENARIO_UI_COMMAND_TIMEOUT_MS
+} from './windows-android-lab-review-scenario.mjs';
 import { androidLabPaths, readJson, writeJsonAtomic } from './windows-android-lab-state.mjs';
 
 const roots = [];
@@ -23,6 +25,10 @@ function fixture() {
 }
 
 describe('Windows Android Lab Review scenario run', () => {
+  it('keeps the UI action wrapper timeout beyond the instrumentation build timeout', () => {
+    expect(SCENARIO_UI_COMMAND_TIMEOUT_MS).toBeGreaterThan(15 * 60_000);
+  });
+
   it('keeps the scenario as one worker-owned run and updates phase status', async () => {
     const { paths, request } = fixture();
     const phases = [];

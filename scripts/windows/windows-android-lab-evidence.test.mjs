@@ -55,4 +55,26 @@ describe('Windows Android lab evidence', () => {
     expect(collectLabEvidence({ operation: 'list', runId }, paths, null, { write: () => {} }).files)
       .toEqual(['action-receipt.json', 'after.png', 'before.png', 'semantic-snapshot.json', 'ui-command-audit.json']);
   });
+
+  it('lists and reads scenario child evidence without allowing traversal', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-android-lab-scenario-evidence-'));
+    roots.push(root);
+    const paths = androidLabPaths(root);
+    const runId = '1002-cccccccccccc-scenario';
+    const evidenceRoot = path.join(paths.evidence, runId, 'ui-reveal');
+    fs.mkdirSync(evidenceRoot, { recursive: true });
+    fs.writeFileSync(path.join(evidenceRoot, 'action-receipt.json'), '{"ok":true}\n');
+    fs.writeFileSync(path.join(evidenceRoot, 'private.txt'), 'nope');
+    const chunks = [];
+    const listed = collectLabEvidence({ operation: 'list', runId }, paths, null, { write: () => {} });
+    collectLabEvidence({ operation: 'get', relativePath: 'ui-reveal/action-receipt.json', runId }, paths, null, {
+      write: (value) => chunks.push(value)
+    });
+    expect(listed.files).toEqual(['ui-reveal/action-receipt.json']);
+    expect(Buffer.concat(chunks).toString('utf8')).toContain('"ok":true');
+    expect(() => collectLabEvidence({ operation: 'get', relativePath: 'ui-reveal/private.txt', runId }, paths, null, { write: () => {} }))
+      .toThrow('not allowed');
+    expect(() => collectLabEvidence({ operation: 'get', relativePath: '../summary.json', runId }, paths, null, { write: () => {} }))
+      .toThrow('not allowed');
+  });
 });
