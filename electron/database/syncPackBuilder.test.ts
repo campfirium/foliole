@@ -101,7 +101,6 @@ it('builds from an explicit isolated driver without reading the desktop connecti
     expect(readPackRows(packPath)).toMatchObject({
       manifest: expect.objectContaining({ to_peer_id: 'ios-runtime-device' }),
       nodeVersions: [
-        expect.objectContaining({ parent_version_id: null, version_id: 'desktop#isolated-v1' }),
         expect.objectContaining({ parent_version_id: 'desktop#isolated-v1', version_id: 'desktop#isolated-v2' })
       ],
       nodes: [expect.objectContaining({ id: 'isolated-node' })],

@@ -15,7 +15,7 @@ export function loadSyncPackNodeVersionRows(
   const ordered: SyncPackNodeVersionRow[] = [];
   const visited = new Map<string, string>();
   for (const node of [...nodes].sort((left, right) => left.id.localeCompare(right.id))) {
-    visitVersion(driver, node.id, node.current_version_id, visited, new Set(), ordered);
+    loadCurrentVersion(driver, node.id, node.current_version_id, visited, ordered);
   }
   return ordered;
 }
@@ -26,20 +26,28 @@ export function loadSyncPackNodeVersionParentRows(
 ): SyncPackNodeVersionParentRow[] {
   if (versions.length === 0) return [];
   const ids = versions.map((row) => row.version_id);
-  return driver.queryAll<SyncPackNodeVersionParentRow>(
+  const objectIds = new Map(versions.map((row) => [row.version_id, row.object_id]));
+  const rows = driver.queryAll<SyncPackNodeVersionParentRow>(
     `SELECT version_id, parent_version_id, ordinal FROM node_sync_version_parents
      WHERE version_id IN (${ids.map(() => '?').join(', ')})
      ORDER BY version_id ASC, ordinal ASC`,
     ids
   );
+  return rows.filter((row) => {
+    const parentObjectId = objectIds.get(row.parent_version_id);
+    if (parentObjectId === undefined) return false;
+    if (parentObjectId !== objectIds.get(row.version_id)) {
+      throw new Error(`sync_pack_node_version_cross_object:${row.version_id}`);
+    }
+    return true;
+  });
 }
 
-function visitVersion(
+function loadCurrentVersion(
   driver: DatabaseDriver,
   objectId: string,
   versionId: string | null,
   visited: Map<string, string>,
-  visiting: Set<string>,
   ordered: SyncPackNodeVersionRow[]
 ) {
   if (versionId === null) return;
@@ -48,8 +56,6 @@ function visitVersion(
     if (visitedObjectId !== objectId) throw new Error(`sync_pack_node_version_cross_object:${versionId}`);
     return;
   }
-  if (visiting.has(versionId)) throw new Error(`sync_pack_node_version_cycle:${versionId}`);
-  visiting.add(versionId);
   const row = driver.queryOne<SyncPackNodeVersionRow>(
     `SELECT ${SYNC_PACK_NODE_VERSION_COLUMNS.join(', ')}
      FROM node_sync_versions WHERE version_id = ?`,
@@ -60,20 +66,6 @@ function visitVersion(
     throw new Error(`sync_pack_node_version_cross_object:${versionId}`);
   }
   assertValidNodeVersionSnapshot(row);
-  for (const parentVersionId of loadParentVersionIds(driver, row)) {
-    visitVersion(driver, objectId, parentVersionId, visited, visiting, ordered);
-  }
-  visiting.delete(versionId);
   visited.set(versionId, objectId);
   ordered.push(row);
-}
-
-function loadParentVersionIds(driver: DatabaseDriver, row: SyncPackNodeVersionRow) {
-  const parents = driver.queryAll<{ parent_version_id: string }>(
-    `SELECT parent_version_id FROM node_sync_version_parents
-     WHERE version_id = ? ORDER BY ordinal ASC`,
-    [row.version_id]
-  ).map((parent) => parent.parent_version_id);
-  if (parents.length > 0) return parents;
-  return row.parent_version_id ? [row.parent_version_id] : [];
 }
