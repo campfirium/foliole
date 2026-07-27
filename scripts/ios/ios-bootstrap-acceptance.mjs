@@ -40,6 +40,7 @@ const DERIVED_DATA = path.join(ARTIFACT_DIR, 'DerivedData');
 const ACCEPTANCE_BUNDLE_ID = 'com.foliole.ios.bootstrap-acceptance';
 const DATABASE_RELATIVE_PATH = 'Library/CapacitorDatabase/foliole-companionSQLite.db';
 const BRIDGE_RESULT_RELATIVE_PATH = 'Library/FolioleBridgeAcceptance/result.json';
+const BOOTSTRAP_SNAPSHOT_TIMEOUT_MS = 60_000;
 const REQUIRED_TABLES = ['companion_meta', 'nodes', 'sync_object_state'];
 const RESOURCE_MODE = resolveIosResourceMode();
 
@@ -91,7 +92,8 @@ async function main() {
     const bridgeResultPath = path.join(containerPath, BRIDGE_RESULT_RELATIVE_PATH);
     const first = await waitForBootstrapSnapshot(
       () => readBootstrapSnapshot(databasePath),
-      () => launchApp(simulator.udid)
+      () => launchApp(simulator.udid),
+      BOOTSTRAP_SNAPSHOT_TIMEOUT_MS
     );
     const firstBridge = verifyBridgeResult(await waitForAcceptanceObservation({
       accept: (result) => result?.status === 'passed' || result?.status === 'failed',
@@ -113,6 +115,7 @@ async function main() {
       readSnapshot: () => readAcceptanceSnapshot(scenario, containerPath),
       removeBridgeResult: () => rmSync(bridgeResultPath, { force: true }),
       scenario,
+      bootstrapTimeoutMs: BOOTSTRAP_SNAPSHOT_TIMEOUT_MS,
       terminate: () => run('xcrun', ['simctl', 'terminate', simulator.udid, ACCEPTANCE_BUNDLE_ID])
     });
     const result = verifyBootstrapSnapshots(first, second);

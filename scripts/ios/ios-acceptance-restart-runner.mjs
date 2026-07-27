@@ -15,7 +15,7 @@ export function restartBridgeResultTimeoutMs(scenario) {
 }
 
 export async function runAcceptanceRestart(options) {
-  const second = await waitForBootstrapSnapshot(options.readBootstrap, options.launch);
+  const second = await waitForBootstrapSnapshot(options.readBootstrap, options.launch, options.bootstrapTimeoutMs);
   const secondBridge = verifyBridgeResult(await readBridgeResult(options), options.scenario);
   options.terminate();
   const syncPackRejections = options.scenario === 'sync-pack-runtime'
