@@ -10,7 +10,7 @@ import { pathToFileURL } from 'node:url';
 
 import { collectLabEvidence } from './windows-android-lab-evidence.mjs';
 import {
-  androidLabPaths, parseAndroidLabCommand, publicLabStatus, readJson,
+  androidLabPaths, isJsonReadFailure, parseAndroidLabCommand, publicLabStatus, readJson,
   publicDeviceStatus, WINDOWS_ANDROID_LAB_SOURCE_REF, WINDOWS_ANDROID_LAB_TASK, writeJsonAtomic
 } from './windows-android-lab-state.mjs';
 import { validateAndroidLabConfig } from './windows-android-lab-device.mjs';
@@ -42,6 +42,33 @@ function closeStalePending(paths, now = Date.now()) {
   return completed;
 }
 
+function unreadableStatusFrom(error) {
+  const failure = error.jsonReadFailure;
+  return {
+    errorCode: 'android_lab_status_json_unreadable',
+    errorMessage: failure?.parseMessage || error.message,
+    jsonFile: failure?.fileName,
+    jsonFirstNulOffset: failure?.firstNulOffset,
+    jsonLeadingHex: failure?.leadingHex,
+    jsonModifiedAt: failure?.modifiedAt,
+    jsonNulCount: failure?.nulCount,
+    jsonSize: failure?.size,
+    jsonTrailingHex: failure?.trailingHex,
+    phase: 'state_recovery',
+    resultStatus: 'failure',
+    state: 'unreadable'
+  };
+}
+
+function closeStalePendingRecoverable(paths, now = Date.now()) {
+  try {
+    return closeStalePending(paths, now);
+  } catch (error) {
+    if (isJsonReadFailure(error)) return unreadableStatusFrom(error);
+    throw error;
+  }
+}
+
 function assertLabSourceCommit(config, commitSha, paths, runCommand) {
   if (!fs.existsSync(path.join(paths.repository, 'HEAD'))) {
     throw Object.assign(new Error('LAN Git source repository is missing'), { code: 'lab_source_missing' });
@@ -69,7 +96,7 @@ function writeActiveExclusive(paths, request) {
 }
 
 function queueRun(request, paths, runCommand, now) {
-  const current = closeStalePending(paths, now);
+  const current = closeStalePendingRecoverable(paths, now);
   if (current && ['pending', 'running'].includes(current.state)) {
     if (current.requestId && current.requestId === request.requestId) {
       if (current.requestSha256 !== request.requestSha256) {
@@ -117,7 +144,8 @@ function startRun(command, paths, runCommand, now) {
 }
 
 function collect(command, paths, stdout) {
-  return collectLabEvidence(command, paths, readJson(paths.status), stdout);
+  const status = command.runId ? null : readJson(paths.status);
+  return collectLabEvidence(command, paths, status, stdout);
 }
 
 function cancel(paths, runCommand) {
@@ -185,7 +213,7 @@ export async function dispatchWindowsAndroidLab({
     const parsed = parseAndroidLabEnvelope(payload, command.byteLength, command.sha256);
     return queueRun({ ...parsed.envelope, action: 'request', requestSha256: parsed.sha256 }, paths, runCommand, now);
   }
-  if (command.action === 'status') return publicLabStatus(closeStalePending(paths, now));
+  if (command.action === 'status') return publicLabStatus(closeStalePendingRecoverable(paths, now));
   if (command.action === 'selfcheck') return runWindowsAndroidLabSelfcheck({ paths, runCommand });
   if (command.action === 'device') return deviceAction(command, paths);
   if (command.action === 'signing') return installSigning(command, paths, input);

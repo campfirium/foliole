@@ -38,9 +38,35 @@ export function androidLabPaths(root = androidLabRoot()) {
   };
 }
 
+function jsonReadFailure(filePath, payload, error) {
+  const stat = fs.statSync(filePath);
+  let nulCount = 0;
+  for (const byte of payload) if (byte === 0) nulCount += 1;
+  return {
+    fileName: path.basename(filePath),
+    firstNulOffset: payload.indexOf(0),
+    leadingHex: payload.subarray(0, 32).toString('hex'),
+    modifiedAt: stat.mtime.toISOString(),
+    nulCount,
+    parseMessage: error.message,
+    size: payload.length,
+    trailingHex: payload.subarray(Math.max(0, payload.length - 32)).toString('hex')
+  };
+}
+
+export function isJsonReadFailure(error) {
+  return Boolean(error?.jsonReadFailure);
+}
+
 export function readJson(filePath, fallback = null) {
   try {
-    return JSON.parse(fs.readFileSync(filePath, 'utf8').replace(/^\uFEFF/u, ''));
+    const payload = fs.readFileSync(filePath);
+    try {
+      return JSON.parse(payload.toString('utf8').replace(/^\uFEFF/u, ''));
+    } catch (error) {
+      error.jsonReadFailure = jsonReadFailure(filePath, payload, error);
+      throw error;
+    }
   } catch (error) {
     if (error.code === 'ENOENT') return fallback;
     throw error;
@@ -124,10 +150,12 @@ export function publicLabStatus(status) {
   if (!status) return { protocolVersion: WINDOWS_ANDROID_LAB_PROTOCOL_VERSION, schemaVersion: 1, state: 'idle' };
   const {
     commitSha, completedAt, createdAt, errorCode, errorMessage, mode, phase,
+    jsonFile, jsonFirstNulOffset, jsonLeadingHex, jsonModifiedAt, jsonNulCount, jsonSize, jsonTrailingHex,
     requestId, resultStatus, runId, startedAt, state, target
   } = status;
   return {
     commitSha, completedAt, createdAt, errorCode, errorMessage, mode, phase,
+    jsonFile, jsonFirstNulOffset, jsonLeadingHex, jsonModifiedAt, jsonNulCount, jsonSize, jsonTrailingHex,
     protocolVersion: WINDOWS_ANDROID_LAB_PROTOCOL_VERSION, requestId, resultStatus,
     runId, schemaVersion: 1, startedAt, state, target
   };

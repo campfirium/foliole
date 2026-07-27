@@ -1,12 +1,13 @@
 // @vitest-environment node
 
+import { Buffer } from 'node:buffer';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { safeLabEvidencePath } from './windows-android-lab-evidence.mjs';
 import {
-  androidLabPaths, assertExclusiveDevice, parseAndroidLabCommand, readJson, WINDOWS_ANDROID_LAB_TASK
+  androidLabPaths, assertExclusiveDevice, isJsonReadFailure, parseAndroidLabCommand, readJson, WINDOWS_ANDROID_LAB_TASK
 } from './windows-android-lab-state.mjs';
 
 const SHA = 'a'.repeat(40);
@@ -69,6 +70,26 @@ describe('Windows Android lab state contract', () => {
     try {
       fs.writeFileSync(file, `\uFEFF${JSON.stringify({ schemaVersion: 2 })}`, 'utf8');
       expect(readJson(file)).toEqual({ schemaVersion: 2 });
+    } finally {
+      fs.rmSync(root, { force: true, recursive: true });
+    }
+  });
+
+  it('attaches bounded diagnostics when a JSON file contains NUL bytes', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-android-lab-nul-json-'));
+    const file = path.join(root, 'status.json');
+    try {
+      fs.writeFileSync(file, Buffer.concat([Buffer.alloc(8), Buffer.from('{"state":"completed"}')]));
+      let failure;
+      try { readJson(file); } catch (error) { failure = error; }
+      expect(isJsonReadFailure(failure)).toBe(true);
+      expect(failure.jsonReadFailure).toMatchObject({
+        fileName: 'status.json',
+        firstNulOffset: 0,
+        nulCount: 8,
+        size: 29
+      });
+      expect(failure.jsonReadFailure.leadingHex).toMatch(/^0000000000000000/u);
     } finally {
       fs.rmSync(root, { force: true, recursive: true });
     }

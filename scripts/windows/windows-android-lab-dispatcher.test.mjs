@@ -91,6 +91,44 @@ describe('Windows Android lab dispatcher', () => {
     expect(Buffer.concat(historical).toString()).toBe('older');
   });
 
+  it('reports unreadable status JSON with file diagnostics instead of crashing', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-android-lab-corrupt-status-'));
+    roots.push(root);
+    const paths = androidLabPaths(root);
+    fs.mkdirSync(root, { recursive: true });
+    fs.writeFileSync(paths.status, Buffer.concat([Buffer.alloc(10), Buffer.from('{"state":"completed"}')]));
+    const result = await dispatchWindowsAndroidLab({ argv: ['status'], paths });
+    expect(result).toMatchObject({
+      errorCode: 'android_lab_status_json_unreadable',
+      jsonFile: 'status.json',
+      jsonFirstNulOffset: 0,
+      jsonLeadingHex: expect.stringMatching(/^00000000000000000000/u),
+      jsonNulCount: 10,
+      protocolVersion: 5,
+      state: 'unreadable'
+    });
+    expect(result.jsonSize).toBeGreaterThan(10);
+    expect(result.jsonTrailingHex).toContain('7b22737461746522');
+  });
+
+  it('keeps run-scoped collect independent from a corrupted current status file', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-android-lab-corrupt-collect-'));
+    roots.push(root);
+    const paths = androidLabPaths(root);
+    const runId = '1785136191723-edd7c06aa0a0';
+    const evidenceRoot = path.join(paths.evidence, runId);
+    fs.mkdirSync(evidenceRoot, { recursive: true });
+    fs.writeFileSync(paths.status, Buffer.alloc(16));
+    fs.writeFileSync(path.join(evidenceRoot, 'summary.json'), '{"previewStatus":"failed"}\n');
+    const listed = await dispatchWindowsAndroidLab({ argv: ['collect', 'list', runId], paths });
+    const chunks = [];
+    await dispatchWindowsAndroidLab({
+      argv: ['collect', 'get', runId, 'summary.json'], paths, stdout: { write: (value) => chunks.push(value) }
+    });
+    expect(listed.files).toEqual(['summary.json']);
+    expect(Buffer.concat(chunks).toString()).toContain('previewStatus');
+  });
+
   it('does not queue a different commit while a run is active', async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-android-lab-busy-'));
     roots.push(root);
