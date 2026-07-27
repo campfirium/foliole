@@ -18,6 +18,13 @@ const REVIEW_ACTIONS = [
   { name: 'dismiss', testId: 'companion-review-action-dismiss' }
 ];
 
+export function reviewUiActionArgs(step, setup) {
+  return [
+    '--testId', step.testId, '--expectedAttribute', '__actionAccepted',
+    '--expectedValue', 'true', '--setup', setup ? 'true' : 'false'
+  ];
+}
+
 function codedError(code, message) {
   return Object.assign(new Error(message), { code });
 }
@@ -60,7 +67,7 @@ async function runUiAction({ config, device, executeCommand, paths, request, ste
   const evidenceRoot = scenarioEvidenceRoot(paths, request, `ui-${step.name}`);
   await runChecked(executeCommand, path.join(config.nodeDirectory, 'node.exe'), [
     path.join(paths.preview, 'scripts', 'windows', 'windows-android-lab-ui-automation.mjs'),
-    '--testId', step.testId, '--expectedAttribute', '__actionAccepted', '--expectedValue', 'true'
+    ...reviewUiActionArgs(step, step.name === 'reveal')
   ], {
     cwd: paths.preview, timeoutMs: SCENARIO_UI_COMMAND_TIMEOUT_MS,
     env: scenarioEnv(config, device.endpoint, paths, evidenceRoot)
