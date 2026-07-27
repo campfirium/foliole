@@ -9,12 +9,14 @@ import { clearTimeout, setTimeout } from 'node:timers';
 import { pathToFileURL } from 'node:url';
 
 import { terminateProcessTree } from './windows-bounded-process.mjs';
+import { nativeUiSummary } from './windows-android-lab-native-ui-summary.mjs';
 
 const APP_ID = 'com.foliole.android';
 const TEST_RUNNER = `${APP_ID}.test/androidx.test.runner.AndroidJUnitRunner`;
 const TEST_CLASS = `${APP_ID}.FolioleCompanionWebViewAutomationTest#performsBoundedSemanticAction`;
+const TEST_SEQUENCE_CLASS = `${APP_ID}.FolioleCompanionWebViewAutomationTest#performsBoundedSemanticSequence`;
 const TEST_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,119}$/u;
-const UI_ARGUMENTS = new Set(['action', 'expectedAttribute', 'expectedValue', 'setup', 'testId', 'timeoutMs', 'value']);
+const UI_ARGUMENTS = new Set(['action', 'expectedAttribute', 'expectedValue', 'testId', 'testIds', 'timeoutMs', 'value']);
 export const UI_TEST_APK_BUILD_TIMEOUT_MS = 25 * 60_000;
 
 function codedError(code, message) {
@@ -22,7 +24,7 @@ function codedError(code, message) {
 }
 
 export function parseUiAutomationArgs(argv) {
-  const values = { action: 'click', expectedAttribute: 'aria-current', expectedValue: 'page', setup: 'true', timeoutMs: 10_000 };
+  const values = { action: 'click', expectedAttribute: 'aria-current', expectedValue: 'page', timeoutMs: 10_000 };
   for (let index = 0; index < argv.length; index += 2) {
     const name = argv[index];
     const value = argv[index + 1];
@@ -31,9 +33,14 @@ export function parseUiAutomationArgs(argv) {
     if (!UI_ARGUMENTS.has(key)) throw codedError('ui_arguments_invalid', `unsupported UI argument: ${name}`);
     values[key] = value;
   }
-  if (!TEST_ID.test(values.testId || '') || !['click', 'input'].includes(values.action)) {
+  const testIds = typeof values.testIds === 'string' ? values.testIds.split(',').filter(Boolean) : null;
+  if (!TEST_ID.test(values.testId || '') && !testIds?.length) {
+    throw codedError('ui_arguments_invalid', 'a stable testId or testIds sequence is required');
+  }
+  if (testIds?.some((testId) => !TEST_ID.test(testId)) || !['click', 'input'].includes(values.action)) {
     throw codedError('ui_arguments_invalid', 'a stable testId and click or input action are required');
   }
+  if (testIds) values.testIds = testIds;
   values.timeoutMs = Number(values.timeoutMs);
   if (!Number.isSafeInteger(values.timeoutMs) || values.timeoutMs < 1_000 || values.timeoutMs > 30_000) {
     throw codedError('ui_arguments_invalid', 'timeoutMs is outside 1000..30000');
@@ -41,8 +48,6 @@ export function parseUiAutomationArgs(argv) {
   if (!/^[A-Za-z_:][-A-Za-z0-9_:.]{0,79}$/u.test(values.expectedAttribute || '') || String(values.expectedValue).length > 200) {
     throw codedError('ui_arguments_invalid', 'expected attribute contract is invalid');
   }
-  if (!['false', 'true'].includes(values.setup)) throw codedError('ui_arguments_invalid', 'setup must be true or false');
-  values.setup = values.setup === 'true';
   if ((values.action === 'input') !== (typeof values.value === 'string') || Buffer.byteLength(values.value || '') > 4_096) {
     throw codedError('ui_arguments_invalid', 'input actions require a bounded value and click actions do not accept one');
   }
@@ -92,21 +97,6 @@ function parseInstrumentationEvidence(output) {
   return evidence;
 }
 
-function nativeUiSummary(xml, size, inputState) {
-  const nodes = [];
-  for (const match of String(xml).matchAll(/<node\s+([^>]+)>?/gu)) {
-    const attributes = Object.fromEntries([...match[1].matchAll(/([\w-]+)="([^"]*)"/gu)].map((entry) => [entry[1], entry[2]]));
-    nodes.push({
-      bounds: attributes.bounds || '', className: attributes.class || '', clickable: attributes.clickable === 'true',
-      enabled: attributes.enabled !== 'false', focused: attributes.focused === 'true', packageName: attributes.package || '',
-      resourceId: attributes['resource-id'] || '', selected: attributes.selected === 'true'
-    });
-  }
-  const physicalSize = /Physical size:\s*(\d+x\d+)/iu.exec(size)?.[1] || '';
-  const orientation = /SurfaceOrientation:\s*(\d+)/iu.exec(inputState)?.[1] || '';
-  return { device: { orientation, physicalSize }, nodes: nodes.slice(0, 500), schemaVersion: 1 };
-}
-
 function assertAwakeAndUnlocked(policy, power) {
   if (!/mWakefulness=Awake/iu.test(power)) throw codedError('device_locked', 'A5 is not awake');
   if (/mShowingLockscreen=true|isStatusBarKeyguard=true|mDreamingLockscreen=true/iu.test(policy)) {
@@ -129,6 +119,12 @@ function assertFolioleForeground(windowState) {
 }
 
 function instrumentationArgs(input) {
+  if (input.testIds) {
+    return [
+      'shell', 'am', 'instrument', '-w', '-r', '-e', 'class', TEST_SEQUENCE_CLASS,
+      '-e', 'testIds', input.testIds.join(','), '-e', 'timeoutMs', String(input.timeoutMs), TEST_RUNNER
+    ];
+  }
   const pairs = [
     ['class', TEST_CLASS], ['testId', input.testId], ['action', input.action],
     ['expectedAttribute', input.expectedAttribute], ['expectedValue', String(input.expectedValue)],
@@ -172,18 +168,16 @@ export async function runWindowsAndroidLabUiAutomation({
     ...(adbServerPort ? ['-P', adbServerPort] : []), '-s', serial, ...args
   ];
   try {
-    if (input.setup) {
-      await invoke(env.FOLIOLE_ANDROID_BASH_PATH || 'bash', ['scripts/android/windows-gradle-check.sh', 'assembleDebugAndroidTest'], { timeoutMs: UI_TEST_APK_BUILD_TIMEOUT_MS });
-      const appApk = path.win32.join(windowsWorkDir, 'android', 'app', 'build', 'outputs', 'apk', 'debug', 'app-debug.apk');
-      const testApk = path.win32.join(windowsWorkDir, 'android', 'app', 'build', 'outputs', 'apk', 'androidTest', 'debug', 'app-debug-androidTest.apk');
-      await invoke(adb, adbArgs('install', '-r', appApk), { timeoutMs: 120_000 });
-      await invoke(adb, adbArgs('install', '-r', '-t', testApk), { timeoutMs: 120_000 });
-    }
+    await invoke(env.FOLIOLE_ANDROID_BASH_PATH || 'bash', ['scripts/android/windows-gradle-check.sh', 'assembleDebugAndroidTest'], { timeoutMs: UI_TEST_APK_BUILD_TIMEOUT_MS });
+    const appApk = path.win32.join(windowsWorkDir, 'android', 'app', 'build', 'outputs', 'apk', 'debug', 'app-debug.apk');
+    const testApk = path.win32.join(windowsWorkDir, 'android', 'app', 'build', 'outputs', 'apk', 'androidTest', 'debug', 'app-debug-androidTest.apk');
+    await invoke(adb, adbArgs('install', '-r', appApk), { timeoutMs: 120_000 });
+    await invoke(adb, adbArgs('install', '-r', '-t', testApk), { timeoutMs: 120_000 });
     await wakeDevice(invoke, adb, adbArgs);
     const policy = await invoke(adb, adbArgs('shell', 'dumpsys', 'window', 'policy'));
     const power = await invoke(adb, adbArgs('shell', 'dumpsys', 'power'));
     assertAwakeAndUnlocked(policy.stdout, power.stdout);
-    if (input.setup) await invoke(adb, adbArgs('shell', 'am', 'start', '-W', '-n', `${APP_ID}/${APP_ID}.MainActivity`));
+    await invoke(adb, adbArgs('shell', 'am', 'start', '-W', '-n', `${APP_ID}/${APP_ID}.MainActivity`));
     const windowState = await invoke(adb, adbArgs('shell', 'dumpsys', 'window', 'windows'));
     assertFolioleForeground(windowState.stdout);
     fs.writeFileSync(path.join(evidenceRoot, 'before.png'), (await invoke(adb, adbArgs('exec-out', 'screencap', '-p'))).stdoutBuffer);
@@ -197,13 +191,16 @@ export async function runWindowsAndroidLabUiAutomation({
     await invoke(adb, adbArgs('shell', 'rm', '/sdcard/foliole-window.xml'));
     const instrumentation = await invoke(adb, adbArgs(...instrumentationArgs(input)), { timeoutMs: input.timeoutMs + 30_000 });
     const semantic = parseInstrumentationEvidence(instrumentation.stdout);
-    if (semantic.receipt.targetTestId !== input.testId || semantic.receipt.action !== input.action || semantic.receipt.ok !== true) {
+    const receiptMatches = input.testIds
+      ? semantic.receipt.action === 'sequence' && semantic.receipt.ok === true
+      : semantic.receipt.targetTestId === input.testId && semantic.receipt.action === input.action && semantic.receipt.ok === true;
+    if (!receiptMatches) {
       throw codedError('ui_receipt_mismatch', 'instrumentation receipt does not match the requested semantic action');
     }
     fs.writeFileSync(path.join(evidenceRoot, 'semantic-snapshot.json'), `${JSON.stringify({ before: semantic.before, after: semantic.after }, null, 2)}\n`);
     fs.writeFileSync(path.join(evidenceRoot, 'action-receipt.json'), `${JSON.stringify({ ...semantic.receipt, adapter: 'instrumentation-evaluateJavascript' }, null, 2)}\n`);
     fs.writeFileSync(path.join(evidenceRoot, 'after.png'), (await invoke(adb, adbArgs('exec-out', 'screencap', '-p'))).stdoutBuffer);
-    return { adapter: 'instrumentation-evaluateJavascript', resultStatus: 'success', targetTestId: input.testId };
+    return { adapter: 'instrumentation-evaluateJavascript', resultStatus: 'success', targetTestId: input.testId || input.testIds.at(-1) };
   } catch (error) {
     try {
       fs.writeFileSync(path.join(evidenceRoot, 'on-failure.png'), (await invoke(adb, adbArgs('exec-out', 'screencap', '-p'))).stdoutBuffer);

@@ -19,6 +19,8 @@ import org.json.JSONObject;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @RunWith(AndroidJUnit4.class)
@@ -52,6 +54,38 @@ public class FolioleCompanionWebViewAutomationTest {
             assertEquals(observed.toString(), expectedValue, observed.optString("value"));
             sendEvidence(instrumentation, before,
                 FolioleCompanionWebViewSemanticAdapter.snapshot(instrumentation, webView), receipt);
+        } finally {
+            instrumentation.runOnMainSync(activity::finish);
+        }
+    }
+
+    @Test
+    public void performsBoundedSemanticSequence() throws Exception {
+        Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
+        Bundle arguments = InstrumentationRegistry.getArguments();
+        Activity activity = startMainActivity(instrumentation);
+        try {
+            WebView webView = activity.findViewById(R.id.webview);
+            assertNotNull(webView);
+            long timeoutMs = boundedTimeout(arguments.getString("timeoutMs", "10000"));
+            waitForWindowFocus(activity, timeoutMs);
+            JSONObject before = FolioleCompanionWebViewSemanticAdapter.snapshot(instrumentation, webView);
+            List<JSONObject> receipts = new ArrayList<>();
+            for (String testId : parseTestIds(arguments.getString("testIds", ""))) {
+                waitForTarget(instrumentation, webView, testId, timeoutMs);
+                JSONObject receipt = FolioleCompanionWebViewSemanticAdapter.perform(
+                    instrumentation, webView, testId, "click", ""
+                );
+                assertTrue(receipt.toString(), receipt.optBoolean("ok"));
+                receipts.add(receipt);
+            }
+            JSONObject sequenceReceipt = new JSONObject();
+            sequenceReceipt.put("ok", true);
+            sequenceReceipt.put("action", "sequence");
+            sequenceReceipt.put("targetTestId", receipts.get(receipts.size() - 1).optString("targetTestId"));
+            sequenceReceipt.put("steps", receipts);
+            sendEvidence(instrumentation, before,
+                FolioleCompanionWebViewSemanticAdapter.snapshot(instrumentation, webView), sequenceReceipt);
         } finally {
             instrumentation.runOnMainSync(activity::finish);
         }
@@ -102,6 +136,16 @@ public class FolioleCompanionWebViewAutomationTest {
         byte[] bytes = Base64.decode(encoded, Base64.DEFAULT);
         if (bytes.length > 4096) throw new IllegalArgumentException("input value exceeds 4096 bytes");
         return new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    private static List<String> parseTestIds(String raw) {
+        List<String> ids = new ArrayList<>();
+        for (String item : raw.split(",")) {
+            String trimmed = item.trim();
+            if (!trimmed.isEmpty()) ids.add(trimmed);
+        }
+        if (ids.isEmpty()) throw new IllegalArgumentException("testIds is required for semantic sequence");
+        return ids;
     }
 
     private static void sendEvidence(

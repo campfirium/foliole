@@ -18,10 +18,10 @@ const REVIEW_ACTIONS = [
   { name: 'dismiss', testId: 'companion-review-action-dismiss' }
 ];
 
-export function reviewUiActionArgs(step, setup) {
+export function reviewUiSequenceArgs(steps) {
   return [
-    '--testId', step.testId, '--expectedAttribute', '__actionAccepted',
-    '--expectedValue', 'true', '--setup', setup ? 'true' : 'false'
+    '--testIds', steps.map((step) => step.testId).join(','), '--expectedAttribute', '__actionAccepted',
+    '--expectedValue', 'true'
   ];
 }
 
@@ -63,16 +63,19 @@ async function runChecked(executeCommand, command, args, options, code) {
   return result;
 }
 
-async function runUiAction({ config, device, executeCommand, paths, request, step }) {
-  const evidenceRoot = scenarioEvidenceRoot(paths, request, `ui-${step.name}`);
+async function runUiSequence({ config, device, executeCommand, paths, request }) {
+  const evidenceRoot = scenarioEvidenceRoot(paths, request, 'ui-sequence');
   await runChecked(executeCommand, path.join(config.nodeDirectory, 'node.exe'), [
     path.join(paths.preview, 'scripts', 'windows', 'windows-android-lab-ui-automation.mjs'),
-    ...reviewUiActionArgs(step, step.name === 'reveal')
+    ...reviewUiSequenceArgs(REVIEW_ACTIONS)
   ], {
     cwd: paths.preview, timeoutMs: SCENARIO_UI_COMMAND_TIMEOUT_MS,
     env: scenarioEnv(config, device.endpoint, paths, evidenceRoot)
-  }, `review_ui_${step.name}_failed`);
-  return { evidencePath: path.relative(path.join(paths.evidence, request.runId), evidenceRoot), name: step.name, testId: step.testId };
+  }, 'review_ui_sequence_failed');
+  return {
+    evidencePath: path.relative(path.join(paths.evidence, request.runId), evidenceRoot),
+    steps: REVIEW_ACTIONS.map((step) => ({ name: step.name, testId: step.testId }))
+  };
 }
 
 async function runWindowsClientSyncCheck({ config, executeCommand, paths, request }) {
@@ -90,11 +93,8 @@ export async function runWindowsAndroidLabReviewScenario({ executeCommand, paths
   await runWindowsAndroidLabReviewPhase({ executeCommand, paths, request: childRequest(request, 'prepare'), setPhase });
   setPhase('scenario_device_resolve');
   const device = await resolveAndroidDevice(config, paths, executeCommand);
-  const ui = [];
-  for (const step of REVIEW_ACTIONS) {
-    setPhase(`scenario_ui_${step.name}`);
-    ui.push(await runUiAction({ config, device, executeCommand, paths, request, step }));
-  }
+  setPhase('scenario_ui_sequence');
+  const ui = await runUiSequence({ config, device, executeCommand, paths, request });
   setPhase('scenario_capture');
   await runWindowsAndroidLabReviewPhase({ executeCommand, paths, request: childRequest(request, 'capture'), setPhase });
   setPhase('scenario_restart');

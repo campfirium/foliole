@@ -6,7 +6,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
-  finishWindowsAndroidLabReviewScenarioRun, reviewUiActionArgs, scenarioEnv, SCENARIO_UI_COMMAND_TIMEOUT_MS
+  finishWindowsAndroidLabReviewScenarioRun, reviewUiSequenceArgs, scenarioEnv, SCENARIO_UI_COMMAND_TIMEOUT_MS
 } from './windows-android-lab-review-scenario.mjs';
 import { androidLabPaths, readJson, writeJsonAtomic } from './windows-android-lab-state.mjs';
 
@@ -37,11 +37,11 @@ describe('Windows Android Lab Review scenario run', () => {
     expect(env.ANDROID_WINDOWS_WORKDIR).toBe('C:\\dev\\foliole-android-lab-preview');
   });
 
-  it('keeps setup on the first UI action only so review state is preserved', () => {
-    expect(reviewUiActionArgs({ name: 'reveal', testId: 'companion-review-action-reveal' }, true))
-      .toContain('true');
-    expect(reviewUiActionArgs({ name: 'grade-again', testId: 'companion-review-grade-1' }, false))
-      .toContain('false');
+  it('runs Review UI actions as one instrumentation sequence', () => {
+    expect(reviewUiSequenceArgs([
+      { testId: 'companion-review-action-reveal' },
+      { testId: 'companion-review-grade-1' }
+    ])).toContain('companion-review-action-reveal,companion-review-grade-1');
   });
 
   it('keeps the scenario as one worker-owned run and updates phase status', async () => {

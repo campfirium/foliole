@@ -57,7 +57,11 @@ function successfulExecute(calls) {
     if (joined.includes('exec-out screencap')) return result('', Buffer.from([0x89, 0x50, 0x4e, 0x47]));
     if (joined.includes('exec-out cat')) return result('<hierarchy><node package="com.foliole.android" class="android.webkit.WebView" resource-id="com.foliole.android:id/webview" bounds="[0,0][1080,1920]" clickable="false" enabled="true" /></hierarchy>');
     if (joined.includes('am instrument')) {
-      const argument = (name) => args[args.findIndex((value, index) => value === name && args[index - 1] === '-e') + 1];
+      const argument = (name) => {
+        const index = args.findIndex((value, position) => value === name && args[position - 1] === '-e');
+        return index < 0 ? undefined : args[index + 1];
+      };
+      if (argument('testIds')) return result(instrumentationOutput(argument('testIds').split(',').at(-1), 'sequence'));
       return result(instrumentationOutput(argument('testId'), argument('action')));
     }
     return result('ok\n');
@@ -71,16 +75,16 @@ describe('Windows Android Lab semantic UI automation', () => {
 
   it('requires a bounded stable identity and action contract', () => {
     expect(parseUiAutomationArgs(['--testId', 'companion-tab-settings'])).toMatchObject({
-      action: 'click', expectedAttribute: 'aria-current', expectedValue: 'page', setup: true, timeoutMs: 10_000
+      action: 'click', expectedAttribute: 'aria-current', expectedValue: 'page', timeoutMs: 10_000
     });
-    expect(parseUiAutomationArgs(['--testId', 'companion-tab-settings', '--setup', 'false'])).toMatchObject({ setup: false });
+    expect(parseUiAutomationArgs(['--testIds', 'companion-review-action-reveal,companion-review-grade-1']))
+      .toMatchObject({ testIds: ['companion-review-action-reveal', 'companion-review-grade-1'] });
     expect(parseUiAutomationArgs([
       '--testId', 'companion-review-grade-1', '--expectedAttribute', '__actionAccepted', '--expectedValue', 'true'
     ])).toMatchObject({ expectedAttribute: '__actionAccepted', expectedValue: 'true' });
     expect(() => parseUiAutomationArgs(['--testId', '../settings'])).toThrow('stable testId');
     expect(() => parseUiAutomationArgs(['--testId', 'settings', '--action', 'swipe'])).toThrow('click or input');
     expect(() => parseUiAutomationArgs(['--testId', 'settings', '--timeoutMs', '999'])).toThrow('outside');
-    expect(() => parseUiAutomationArgs(['--testId', 'settings', '--setup', 'later'])).toThrow('setup');
     expect(() => parseUiAutomationArgs(['--testId', 'settings', '--fallback', '10,10'])).toThrow('unsupported');
     expect(() => parseUiAutomationArgs(['--testId', 'settings', '--action', 'input'])).toThrow('bounded value');
   });
@@ -136,18 +140,6 @@ describe('Windows Android Lab semantic UI automation', () => {
     expect(audit).not.toContain('private probe');
   });
 
-  it('can reuse the current foreground WebView without reinstalling or restarting the app', async () => {
-    const { env } = fixture();
-    const calls = [];
-    await runWindowsAndroidLabUiAutomation({
-      argv: ['--testId', 'companion-tab-settings', '--setup', 'false'], env, execute: successfulExecute(calls)
-    });
-    expect(calls.some((call) => call.args.includes('assembleDebugAndroidTest'))).toBe(false);
-    expect(calls.some((call) => call.args.includes('install'))).toBe(false);
-    expect(calls.some((call) => call.args.includes('start'))).toBe(false);
-    expect(calls.some((call) => call.args.includes('instrument'))).toBe(true);
-  });
-
   it('passes the action-accepted Review contract through instrumentation', async () => {
     const { env } = fixture();
     const calls = [];
@@ -162,6 +154,22 @@ describe('Windows Android Lab semantic UI automation', () => {
     const instrumentation = calls.find((call) => call.args.includes('am') && call.args.includes('instrument'));
     expect(instrumentation.args).toEqual(expect.arrayContaining([
       'expectedAttribute', '__actionAccepted', 'expectedValue', 'true'
+    ]));
+  });
+
+  it('passes a semantic sequence through one instrumentation invocation', async () => {
+    const { env } = fixture();
+    const calls = [];
+    await runWindowsAndroidLabUiAutomation({
+      argv: ['--testIds', 'companion-review-action-reveal,companion-review-grade-1'],
+      env,
+      execute: successfulExecute(calls)
+    });
+    const instrumentation = calls.find((call) => call.args.includes('am') && call.args.includes('instrument'));
+    expect(instrumentation.args).toEqual(expect.arrayContaining([
+      'com.foliole.android.FolioleCompanionWebViewAutomationTest#performsBoundedSemanticSequence',
+      'testIds',
+      'companion-review-action-reveal,companion-review-grade-1'
     ]));
   });
 
