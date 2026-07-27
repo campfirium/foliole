@@ -75,4 +75,8 @@ describe('native sqlite test policy', () => {
   it('keeps the Windows Android Lab Review audit on the Electron ABI test entry', () => {
     expect(controlledElectronSqliteTests).toContain('scripts/windows/windows-android-lab-review-audit.test.mjs');
   });
+
+  it('keeps the Windows Android Lab Review selection on the Electron ABI test entry', () => {
+    expect(controlledElectronSqliteTests).toContain('scripts/windows/windows-android-lab-review-selection.test.mjs');
+  });
 });

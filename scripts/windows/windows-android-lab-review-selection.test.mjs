@@ -1,17 +1,18 @@
 // @vitest-environment node
 
 import fs from 'node:fs';
+import { Buffer } from 'node:buffer';
 import os from 'node:os';
 import path from 'node:path';
 
 import Database from 'better-sqlite3';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { DEFAULT_REVIEW_SCHEDULER_SETTINGS, normalizeReviewSchedulerSettings } from '../../lib/core/review/settings';
+import { DEFAULT_REVIEW_SCHEDULER_SETTINGS, normalizeReviewSchedulerSettings } from '../../lib/core/review/settings.ts';
 
-import { selectReviewAcceptanceObjects } from './windows-android-lab-review-selection';
+import { selectReviewAcceptanceObjects } from './windows-android-lab-review-selection.ts';
 
-const roots: string[] = [];
+const roots = [];
 const NOW = '2026-07-26T00:00:00.000Z';
 
 afterEach(() => roots.splice(0).forEach((root) => fs.rmSync(root, { force: true, recursive: true })));
@@ -34,7 +35,7 @@ function createDatabase() {
   return db;
 }
 
-function insertNode(db: Database.Database, args: { body?: string; bodyHash?: string; id: string; kind: string; position: number; reveal?: string | null }) {
+function insertNode(db, args) {
   db.prepare('INSERT INTO nodes VALUES (?, NULL, ?, 0, NULL, ?, ?, ?, ?, ?, NULL)').run(
     args.id,
     args.kind,
@@ -64,7 +65,46 @@ describe('Windows Android lab Review acceptance selection', () => {
       NOW
     )).toMatchObject({
       status: 'available',
-      value: { fsrsNodeId: 'fsrs-1', readingNodeIds: ['read-1', 'read-2', 'read-3'] }
+      value: {
+        fsrsNodeId: 'fsrs-1',
+        queuePrefix: [
+          { itemKind: 'fsrs', nodeId: 'fsrs-1' },
+          { itemKind: 'reading', nodeId: 'read-1' },
+          { itemKind: 'reading', nodeId: 'read-2' },
+          { itemKind: 'reading', nodeId: 'read-3' }
+        ],
+        readingNodeIds: ['read-1', 'read-2', 'read-3']
+      }
+    });
+    db.close();
+  });
+
+  it('rejects data where the actual UI queue has another FSRS before Reading actions', () => {
+    const db = createDatabase();
+    ['fsrs-1', 'fsrs-2'].forEach((id, index) => {
+      insertNode(db, { id, kind: 'item', position: index, reveal: 'answer' });
+      db.prepare('INSERT INTO node_review VALUES (?, ?)').run(id, '2026-07-25T00:00:00.000Z');
+    });
+    ['read-1', 'read-2', 'read-3'].forEach((id, index) => {
+      insertNode(db, { body: `topic ${index}`, id, kind: 'topic', position: index + 2 });
+      db.prepare('INSERT INTO node_reading VALUES (?, ?, 0, ?)').run(id, '2026-07-25T00:00:00.000Z', 'active');
+    });
+
+    expect(selectReviewAcceptanceObjects(
+      db,
+      normalizeReviewSchedulerSettings(DEFAULT_REVIEW_SCHEDULER_SETTINGS),
+      NOW
+    )).toMatchObject({
+      error: expect.stringContaining('review acceptance UI sequence is not ready'),
+      status: 'invalid',
+      value: {
+        queuePrefix: [
+          { itemKind: 'fsrs', nodeId: 'fsrs-1' },
+          { itemKind: 'fsrs', nodeId: 'fsrs-2' },
+          { itemKind: 'reading', nodeId: 'read-1' },
+          { itemKind: 'reading', nodeId: 'read-2' }
+        ]
+      }
     });
     db.close();
   });

@@ -35,6 +35,8 @@ interface ReviewNodeRow {
   shelved_at: string | null;
 }
 
+type ReviewAcceptanceKind = 'fsrs' | 'reading' | 'unknown';
+
 function toPlannerNode(row: ReviewNodeRow): ReviewQueueNode {
   return {
     content: row.content,
@@ -62,6 +64,24 @@ function toPlannerNode(row: ReviewNodeRow): ReviewQueueNode {
     } : null,
     shelvedAt: row.shelved_at
   };
+}
+
+function reviewKind(node: ReviewQueueNode | undefined): ReviewAcceptanceKind {
+  if (!node) return 'unknown';
+  if (node.review) return 'fsrs';
+  if (node.reading) return 'reading';
+  return 'unknown';
+}
+
+function companionUiQueueNodeIds(plan: ReturnType<typeof buildReviewQueuePlan>) {
+  return [...new Set([...plan.queueNodeIds, ...plan.readingQueueNodeIds])];
+}
+
+function uiPrefixError(prefixKinds: string[], fsrsNodeId: string | null, readingNodeIds: string[]) {
+  const expected = 'fsrs,reading,reading,reading';
+  const actual = prefixKinds.join(',') || 'empty';
+  return 'review acceptance UI sequence is not ready: ' +
+    `actual=${actual}, expected=${expected}, fsrs=${fsrsNodeId ? 1 : 0}, reading=${readingNodeIds.length}`;
 }
 
 export function selectReviewAcceptanceObjects(
@@ -93,18 +113,22 @@ export function selectReviewAcceptanceObjects(
     pushQueueRules: settings.pushQueue,
     trashedNodeIds: rows.filter(({ deleted_at }) => Boolean(deleted_at)).map(({ id }) => id)
   });
-  const fsrsNodeId = plan.fsrsQueueNodeIds[0] ?? null;
-  const readingNodeIds = plan.readingQueueNodeIds.slice(0, 3);
+  const uiQueueNodeIds = companionUiQueueNodeIds(plan);
+  const prefixNodeIds = uiQueueNodeIds.slice(0, 4);
+  const prefixKinds = prefixNodeIds.map((nodeId) => reviewKind(nodesById[nodeId]));
+  const fsrsNodeId = prefixKinds[0] === 'fsrs' ? prefixNodeIds[0] ?? null : null;
+  const readingNodeIds = prefixNodeIds.slice(1).filter((nodeId) => reviewKind(nodesById[nodeId]) === 'reading');
   const value = {
     fsrsNodeId,
     readingNodeIds,
+    queuePrefix: prefixNodeIds.map((nodeId, index) => ({ itemKind: prefixKinds[index], nodeId })),
     required: { fsrs: 1, reading: 3 },
     source: 'shared_review_planner'
   };
-  return fsrsNodeId && readingNodeIds.length === 3
+  return fsrsNodeId && readingNodeIds.length === 3 && prefixKinds.join(',') === 'fsrs,reading,reading,reading'
     ? { status: 'available' as const, value }
     : {
-        error: `review acceptance data is insufficient: fsrs=${fsrsNodeId ? 1 : 0}, reading=${readingNodeIds.length}, required=1+3`,
+        error: uiPrefixError(prefixKinds, fsrsNodeId, readingNodeIds),
         status: 'invalid' as const,
         value
       };
