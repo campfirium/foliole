@@ -149,6 +149,24 @@ describe('Windows Android lab worker', () => {
     expect(fs.existsSync(paths.active)).toBe(false);
   });
 
+  it('does not report install cache hit from the capacitor sync cache marker', async () => {
+    const paths = createFixture();
+    const calls = [];
+    const executeCommand = async (command, args, options) => {
+      const result = await successfulExecutor(paths, calls)(command, args, options);
+      if (command === 'bash.exe') {
+        return {
+          code: 0,
+          lines: ['[android-cap-sync] cache: HIT input=abc', '[android-deploy] install cache: MISS apk=abc'],
+          output: '[android-cap-sync] cache: HIT input=abc\n[android-deploy] install cache: MISS apk=abc\n'
+        };
+      }
+      return result;
+    };
+    await runWindowsAndroidLabWorker({ executeCommand, paths, platform: 'win32' });
+    expect(readJson(path.join(paths.evidence, 'run-1', 'summary.json')).installDisposition).toBe('installed');
+  });
+
   it('fails before checkout when another ready device is present', async () => {
     const paths = createFixture();
     const executeCommand = async (_command, args) => {
