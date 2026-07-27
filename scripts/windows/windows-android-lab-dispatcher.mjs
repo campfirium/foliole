@@ -15,6 +15,7 @@ import {
 } from './windows-android-lab-state.mjs';
 import { validateAndroidLabConfig } from './windows-android-lab-device.mjs';
 import { parseAndroidLabEnvelope } from './windows-android-lab-request.mjs';
+import { runWindowsAndroidLabSelfcheck } from './windows-android-lab-selfcheck.mjs';
 
 const WORKER_START_TIMEOUT_MS = 60_000;
 
@@ -185,6 +186,7 @@ export async function dispatchWindowsAndroidLab({
     return queueRun({ ...parsed.envelope, action: 'request', requestSha256: parsed.sha256 }, paths, runCommand, now);
   }
   if (command.action === 'status') return publicLabStatus(closeStalePending(paths, now));
+  if (command.action === 'selfcheck') return runWindowsAndroidLabSelfcheck({ paths, runCommand });
   if (command.action === 'device') return deviceAction(command, paths);
   if (command.action === 'signing') return installSigning(command, paths, input);
   if (command.action === 'collect') return collect(command, paths, stdout);

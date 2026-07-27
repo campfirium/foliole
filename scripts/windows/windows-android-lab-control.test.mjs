@@ -73,6 +73,7 @@ describe('Windows Android lab Mac controller', () => {
   it('requires an explicit SSH user and sends only action tokens', () => {
     expect(() => parseAndroidLabControlArgs(['--host', 'windows-host', 'status'], {})).toThrow();
     expect(parseAndroidLabControlArgs(['--host', 'tester@windows-host', 'device', 'status'], {}).command).toEqual(['device', 'status']);
+    expect(parseAndroidLabControlArgs(['--host', 'tester@windows-host', 'selfcheck'], {}).command).toEqual(['selfcheck']);
     const args = androidLabSshArgs('tester@windows-host', ['device', 'status'], {}, '/Users/tester');
     expect(args.slice(-3)).toEqual(['tester@windows-host', 'device', 'status']);
     expect(args).toContain('IdentitiesOnly=yes');
