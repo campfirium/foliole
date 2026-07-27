@@ -101,6 +101,8 @@ function Invoke-RobocopySync {
     "/NJH",
     "/NJS",
     "/NP",
+    "/IS",
+    "/IT",
     "/XD"
   ) + $excludeDirs + @("/XF") + $excludeFiles
 
