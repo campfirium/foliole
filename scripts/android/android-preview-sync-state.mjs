@@ -1,12 +1,12 @@
 /* global console, process */
 
-import Database from 'better-sqlite3';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { resolveSerial, runAdb } from './android-adb-command.mjs';
+import { openReadonlySqliteDatabase } from './sqlite-readonly.mjs';
 
 const DEFAULT_APP_ID = 'com.foliole.android';
 const DATABASE_CANDIDATES = [
@@ -106,7 +106,7 @@ async function inspectPreviewSyncState(options) {
         status: 'NO_DATABASE'
       };
     }
-    const database = new Database(pulled.outputPath, { readonly: true, fileMustExist: true });
+    const database = await openReadonlySqliteDatabase(pulled.outputPath);
     try {
       const endpoint = readEndpoint(database);
       const nodes = countRows(database, 'nodes');

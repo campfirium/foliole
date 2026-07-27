@@ -1,6 +1,5 @@
 /* global console, process */
 
-import Database from 'better-sqlite3';
 import { execFile } from 'node:child_process';
 import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import os from 'node:os';
@@ -9,6 +8,7 @@ import { promisify } from 'node:util';
 import { backupDatabase, writeManifest } from './android-data-backup-files.mjs';
 import { assertReadableDatabase } from './android-data-protection-validation.mjs';
 import { classifyInstallerClearAppDataEvents } from './android-install-events.mjs';
+import { openReadonlySqliteDatabase } from './sqlite-readonly.mjs';
 
 const execFileAsync = promisify(execFile);
 const DEFAULT_TABLES = ['nodes', 'node_order', 'content_blobs', 'sync_object_state', 'workspace_meta', 'companion_meta'];
@@ -119,7 +119,7 @@ async function inspectDatabase(filePath, tables) {
   const size = (await stat(filePath)).size;
   let database = null;
   try {
-    database = new Database(filePath, { readonly: true, fileMustExist: true });
+    database = await openReadonlySqliteDatabase(filePath);
     const counts = Object.fromEntries(tables.map((table) => [table, countTable(database, table)]));
     return { counts, exists: true, path: filePath, size };
   } catch (error) {
