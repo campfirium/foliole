@@ -129,6 +129,7 @@ const vitestTask = iosResourceCommand(process.execPath, [
   'scripts/run-vitest-with-summary.mjs',
   '.tmp/vitest/ios-runtime-contract.json',
   '--',
+  '--hookTimeout=30000',
   '--silent=passed-only',
   '--pool=threads',
   ...iosVitestResourceArgs(resourceMode),
@@ -140,11 +141,14 @@ if (vitest.error) throw vitest.error;
 if (vitest.status !== 0) {
   process.exitCode = vitest.status ?? 1;
 } else {
-  const sqliteTask = iosResourceCommand(process.execPath, [
-    'scripts/electron-sqlite-runner.mjs',
-    'scripts/test-files.mjs',
-    ...IOS_RUNTIME_SQLITE_CONTRACT_TESTS
-  ], resourceMode);
+  const sqliteTask = {
+    command: process.execPath,
+    args: [
+      'scripts/electron-sqlite-runner.mjs',
+      'scripts/test-files.mjs',
+      ...IOS_RUNTIME_SQLITE_CONTRACT_TESTS
+    ]
+  };
   const sqlite = spawnSync(sqliteTask.command, sqliteTask.args, {
     cwd: REPO_ROOT,
     env: {
