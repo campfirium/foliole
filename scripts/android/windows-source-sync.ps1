@@ -101,6 +101,7 @@ function Invoke-RobocopySync {
     "/NJH",
     "/NJS",
     "/NP",
+    "/IM",
     "/IS",
     "/IT",
     "/XD"

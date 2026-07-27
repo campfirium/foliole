@@ -48,6 +48,7 @@ describe('windows-source-sync', () => {
     expect(script).toContain('& $robocopyPath @args');
     expect(script).toContain('if ($null -eq $exitCode)');
     expect(script).toContain('"/E"');
+    expect(script).toContain('"/IM"');
     expect(script).toContain('"/IS"');
     expect(script).toContain('"/IT"');
     expect(script).not.toContain('"/MIR"');
