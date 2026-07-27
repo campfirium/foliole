@@ -10,11 +10,12 @@ import { readJson, writeJsonAtomic } from './windows-android-lab-state.mjs';
 
 const COMMAND_TIMEOUT_MS = 10 * 60_000;
 export const SCENARIO_UI_COMMAND_TIMEOUT_MS = 35 * 60_000;
+const SCENARIO_INSTRUMENTATION_TIMEOUT_MS = 30_000;
 const REVIEW_UI_STEPS = {
   dismiss: [{ name: 'dismiss', testId: 'companion-review-action-dismiss' }],
   grade: [
     { name: 'reveal', testId: 'companion-review-action-reveal' },
-    { name: 'grade-again', testId: 'companion-review-grade-1' }
+    { name: 'grade-good', testId: 'companion-review-grade-3' }
   ],
   later: [{ name: 'later', testId: 'companion-review-action-later' }],
   read: [{ name: 'read', testId: 'companion-review-action-read' }]
@@ -23,7 +24,7 @@ const REVIEW_UI_STEPS = {
 export function reviewUiSequenceArgs(steps) {
   return [
     '--testIds', steps.map((step) => step.testId).join(','), '--expectedAttribute', '__actionAccepted',
-    '--expectedValue', 'true'
+    '--expectedValue', 'true', '--timeoutMs', String(SCENARIO_INSTRUMENTATION_TIMEOUT_MS)
   ];
 }
 

@@ -41,8 +41,8 @@ describe('Windows Android Lab Review scenario run', () => {
   it('runs Review UI actions as one instrumentation sequence', () => {
     expect(reviewUiSequenceArgs([
       { testId: 'companion-review-action-reveal' },
-      { testId: 'companion-review-grade-1' }
-    ])).toContain('companion-review-action-reveal,companion-review-grade-1');
+      { testId: 'companion-review-grade-3' }
+    ])).toContain('companion-review-action-reveal,companion-review-grade-3');
   });
 
   it('expands bound Review actions into the actual UI step sequence', () => {
@@ -51,8 +51,8 @@ describe('Windows Android Lab Review scenario run', () => {
       { action: 'later' }, { action: 'dismiss' }
     ]);
     expect(steps.map(({ testId }) => testId)).toEqual([
-      'companion-review-action-reveal', 'companion-review-grade-1',
-      'companion-review-action-reveal', 'companion-review-grade-1',
+      'companion-review-action-reveal', 'companion-review-grade-3',
+      'companion-review-action-reveal', 'companion-review-grade-3',
       'companion-review-action-read', 'companion-review-action-later',
       'companion-review-action-dismiss'
     ]);
