@@ -7,7 +7,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
-  parseUiAutomationArgs, runWindowsAndroidLabUiAutomation
+  parseUiAutomationArgs, runWindowsAndroidLabUiAutomation, UI_TEST_APK_BUILD_TIMEOUT_MS
 } from './windows-android-lab-ui-automation.mjs';
 
 const roots = [];
@@ -65,6 +65,10 @@ function successfulExecute(calls) {
 }
 
 describe('Windows Android Lab semantic UI automation', () => {
+  it('keeps the test APK build timeout bounded below the scenario wrapper', () => {
+    expect(UI_TEST_APK_BUILD_TIMEOUT_MS).toBe(25 * 60_000);
+  });
+
   it('requires a bounded stable identity and action contract', () => {
     expect(parseUiAutomationArgs(['--testId', 'companion-tab-settings'])).toMatchObject({
       action: 'click', expectedAttribute: 'aria-current', expectedValue: 'page', timeoutMs: 10_000

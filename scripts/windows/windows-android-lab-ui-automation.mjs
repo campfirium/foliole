@@ -8,11 +8,14 @@ import path from 'node:path';
 import { clearTimeout, setTimeout } from 'node:timers';
 import { pathToFileURL } from 'node:url';
 
+import { terminateProcessTree } from './windows-bounded-process.mjs';
+
 const APP_ID = 'com.foliole.android';
 const TEST_RUNNER = `${APP_ID}.test/androidx.test.runner.AndroidJUnitRunner`;
 const TEST_CLASS = `${APP_ID}.FolioleCompanionWebViewAutomationTest#performsBoundedSemanticAction`;
 const TEST_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,119}$/u;
 const UI_ARGUMENTS = new Set(['action', 'expectedAttribute', 'expectedValue', 'testId', 'timeoutMs', 'value']);
+export const UI_TEST_APK_BUILD_TIMEOUT_MS = 25 * 60_000;
 
 function codedError(code, message) {
   return Object.assign(new Error(message), { code });
@@ -50,7 +53,14 @@ function runProcess(command, args, options = {}) {
     const stdout = [];
     const stderr = [];
     let timedOut = false;
-    const timer = setTimeout(() => { timedOut = true; child.kill(); }, options.timeoutMs || 120_000);
+    const timer = setTimeout(() => {
+      timedOut = true;
+      try {
+        terminateProcessTree(child.pid);
+      } catch {
+        child.kill();
+      }
+    }, options.timeoutMs || 120_000);
     child.stdout.on('data', (chunk) => stdout.push(chunk));
     child.stderr.on('data', (chunk) => stderr.push(chunk));
     child.on('error', reject);
@@ -160,7 +170,7 @@ export async function runWindowsAndroidLabUiAutomation({
     ...(adbServerPort ? ['-P', adbServerPort] : []), '-s', serial, ...args
   ];
   try {
-    await invoke(env.FOLIOLE_ANDROID_BASH_PATH || 'bash', ['scripts/android/windows-gradle-check.sh', 'assembleDebugAndroidTest'], { timeoutMs: 15 * 60_000 });
+    await invoke(env.FOLIOLE_ANDROID_BASH_PATH || 'bash', ['scripts/android/windows-gradle-check.sh', 'assembleDebugAndroidTest'], { timeoutMs: UI_TEST_APK_BUILD_TIMEOUT_MS });
     const appApk = path.win32.join(windowsWorkDir, 'android', 'app', 'build', 'outputs', 'apk', 'debug', 'app-debug.apk');
     const testApk = path.win32.join(windowsWorkDir, 'android', 'app', 'build', 'outputs', 'apk', 'androidTest', 'debug', 'app-debug-androidTest.apk');
     await invoke(adb, adbArgs('install', '-r', appApk), { timeoutMs: 120_000 });

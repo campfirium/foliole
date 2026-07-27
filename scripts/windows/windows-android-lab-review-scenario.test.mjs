@@ -26,7 +26,7 @@ function fixture() {
 
 describe('Windows Android Lab Review scenario run', () => {
   it('keeps the UI action wrapper timeout beyond the instrumentation build timeout', () => {
-    expect(SCENARIO_UI_COMMAND_TIMEOUT_MS).toBeGreaterThan(15 * 60_000);
+    expect(SCENARIO_UI_COMMAND_TIMEOUT_MS).toBeGreaterThan(25 * 60_000);
   });
 
   it('keeps the scenario as one worker-owned run and updates phase status', async () => {
