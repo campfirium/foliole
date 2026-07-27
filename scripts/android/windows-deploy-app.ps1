@@ -96,22 +96,6 @@ function Resolve-NodeExe {
   throw "node.exe not found. Install Node.js first."
 }
 
-function Invoke-GradleWrapper {
-  param(
-    [string]$TaskName
-  )
-
-  $gradleCommand = "call .\gradlew.bat $TaskName"
-  $out = [System.IO.Path]::GetTempFileName(); $err = [System.IO.Path]::GetTempFileName()
-  try {
-    $process = Start-Process -FilePath "cmd.exe" -ArgumentList @("/d", "/c", $gradleCommand) -Wait -PassThru -WindowStyle Hidden -RedirectStandardOutput $out -RedirectStandardError $err
-    Get-Content -Path $out, $err -ErrorAction SilentlyContinue
-    if ($process.ExitCode -ne 0) { exit $process.ExitCode }
-  } finally {
-    Remove-Item -Path $out, $err -ErrorAction SilentlyContinue
-  }
-}
-
 function Stop-GradleWrapperDaemon {
   Write-Info "stopping Gradle daemon"
   $process = Start-Process -FilePath "cmd.exe" -ArgumentList @("/d", "/c", "call .\gradlew.bat --stop") -Wait -PassThru -WindowStyle Hidden
@@ -165,10 +149,14 @@ if (!(Test-Path -Path $adbPath)) {
 $nodeExe = Resolve-NodeExe
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $adbDeviceScript = Join-Path $repoRoot "scripts\android\windows-adb-device.ps1"
+$debugBuildScript = Join-Path $repoRoot "scripts\android\windows-deploy-debug-build.ps1"
 $installCacheScript = Join-Path $repoRoot "scripts\android\windows-deploy-install-cache.ps1"
 $verifyScript = Join-Path $repoRoot "scripts\android\verify-android-launch.mjs"
 if (!(Test-Path -Path $adbDeviceScript)) {
   throw "Android adb device helper not found: $adbDeviceScript"
+}
+if (!(Test-Path -Path $debugBuildScript)) {
+  throw "Android deploy debug build helper not found: $debugBuildScript"
 }
 if (!(Test-Path -Path $installCacheScript)) {
   throw "Android deploy install cache script not found: $installCacheScript"
@@ -177,6 +165,7 @@ if (!(Test-Path -Path $verifyScript)) {
   throw "Android launch verification script not found: $verifyScript"
 }
 . $adbDeviceScript
+. $debugBuildScript
 . $installCacheScript
 
 $androidDir = Join-Path $WindowsWorkDir $AndroidHostDir
@@ -203,13 +192,7 @@ if (Test-InstallCacheHit -ApkHash $apkHash -NativeSourcesHash $nativeSourcesHash
   Write-Info "install cache: HIT apk=$apkHash versionCode=$installedVersionCode"
 } else {
   Write-Info "install cache: MISS apk=$apkHash nativeSources=$nativeSourcesHash webAssets=$webAssetsHash versionCode=$installedVersionCode"
-  Push-Location $androidDir
-  try {
-    Write-Info "installing debug build"
-    Invoke-GradleWrapper -TaskName "installDebug"
-  } finally {
-    Pop-Location
-  }
+  Install-DebugBuild -AdbPath $adbPath -AndroidDir $androidDir -Serial $serial
   $apkHash = Get-ApkHash -AndroidDir $androidDir
   $nativeSourcesHash = Get-NativeSourcesHash -AndroidDir $androidDir
   $webAssetsHash = Get-WebAssetsHash -AndroidDir $androidDir

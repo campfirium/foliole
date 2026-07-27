@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest';
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const DEPLOY_SCRIPT = path.join(REPO_ROOT, 'scripts', 'android', 'windows-deploy-app.sh');
 const ADB_DEVICE_SCRIPT = path.join(REPO_ROOT, 'scripts', 'android', 'windows-adb-device.ps1');
+const DEPLOY_BUILD_SCRIPT = path.join(REPO_ROOT, 'scripts', 'android', 'windows-deploy-debug-build.ps1');
 const DEPLOY_CACHE_SCRIPT = path.join(REPO_ROOT, 'scripts', 'android', 'windows-deploy-install-cache.ps1');
 const DEPLOY_PS_SCRIPT = path.join(REPO_ROOT, 'scripts', 'android', 'windows-deploy-app.ps1');
 const BASH_SUPPORTS_COPROC = spawnSync('bash', ['-c', 'coproc true; wait "$!"'], {
@@ -49,11 +50,13 @@ async function writeExecutable(rootDir, name, content) {
 }
 
 describe('windows-deploy-app.sh', () => {
-  it('skips installDebug when the installed APK cache is valid', async () => {
+  it('skips debug APK install when the installed APK cache is valid', async () => {
     const script = await readFile(DEPLOY_PS_SCRIPT, 'utf8');
+    const buildScript = await readFile(DEPLOY_BUILD_SCRIPT, 'utf8');
     const cacheScript = await readFile(DEPLOY_CACHE_SCRIPT, 'utf8');
 
     expect(script).toContain('. $installCacheScript');
+    expect(script).toContain('. $debugBuildScript');
     expect(cacheScript).toContain('function Test-InstallCacheHit');
     expect(cacheScript).toContain('function Get-WebAssetsHash');
     expect(cacheScript).toContain('function Get-NativeSourcesHash');
@@ -62,7 +65,9 @@ describe('windows-deploy-app.sh', () => {
     expect(cacheScript).toContain('$cache.version -eq 3');
     expect(cacheScript).toContain('android-install-cache.json');
     expect(script).toContain('install cache: HIT apk=$apkHash versionCode=$installedVersionCode');
-    expect(script).toContain('Invoke-GradleWrapper -TaskName "installDebug"');
+    expect(script).toContain('Install-DebugBuild -AdbPath $adbPath -AndroidDir $androidDir -Serial $serial');
+    expect(buildScript).toContain('gradlew.bat assembleDebug');
+    expect(buildScript).toContain('"install", "-r", $apkPath');
     expect(script).toContain('$nativeSourcesHash = Get-NativeSourcesHash -AndroidDir $androidDir');
     expect(script).toContain('Test-InstallCacheHit -ApkHash $apkHash -NativeSourcesHash $nativeSourcesHash -Serial $serial -VersionCode $installedVersionCode -WebAssetsHash $webAssetsHash -WindowsWorkDir $WindowsWorkDir');
     expect(script).toContain('Write-InstallCache -ApkHash $apkHash -NativeSourcesHash $nativeSourcesHash -Serial $serial -VersionCode $installedVersionCode -WebAssetsHash $webAssetsHash -WindowsWorkDir $WindowsWorkDir');
@@ -95,12 +100,15 @@ describe('windows-deploy-app.sh', () => {
 
   it('runs Gradle through a hidden cmd process', async () => {
     const script = await readFile(DEPLOY_PS_SCRIPT, 'utf8');
+    const buildScript = await readFile(DEPLOY_BUILD_SCRIPT, 'utf8');
 
-    expect(script).toContain('Start-Process -FilePath "cmd.exe" -ArgumentList @("/d", "/c", $gradleCommand) -Wait -PassThru -WindowStyle Hidden -RedirectStandardOutput $out -RedirectStandardError $err');
+    expect(buildScript).toContain('Start-Process -FilePath $FilePath -ArgumentList $Arguments -PassThru -WindowStyle Hidden -RedirectStandardOutput $out -RedirectStandardError $err');
+    expect(buildScript).toContain('Invoke-DeployProcess -FilePath "cmd.exe" -ArgumentList @("/d", "/c", "call .\\gradlew.bat assembleDebug")');
+    expect(buildScript).toContain('Invoke-DeployProcess -FilePath $AdbPath -ArgumentList $arguments -TimeoutSeconds $InstallTimeoutSeconds');
     expect(script).toContain('Start-Process -FilePath "cmd.exe" -ArgumentList @("/d", "/c", "call .\\gradlew.bat --stop") -Wait -PassThru -WindowStyle Hidden');
-    expect(script).toContain('Get-Content -Path $out, $err -ErrorAction SilentlyContinue');
+    expect(buildScript).toContain('Get-Content -Path $out, $err -ErrorAction SilentlyContinue');
     expect(script).toContain('if ($process.ExitCode -ne 0)');
-    expect(script).toContain('exit $process.ExitCode');
+    expect(buildScript).toContain('exit $process.ExitCode');
     expect(script.match(/\$global:LASTEXITCODE = \$process\.ExitCode/gu)).toHaveLength(1);
     expect(script).not.toContain('& cmd.exe /d /c');
   });

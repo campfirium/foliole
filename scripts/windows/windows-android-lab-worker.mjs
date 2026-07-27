@@ -109,10 +109,11 @@ async function captureLogcat(config, endpoint, evidenceRoot, executeCommand) {
 function writeRunEvidence(evidenceRoot, request, result, screenshotError, logcatError, device) {
   fs.mkdirSync(evidenceRoot, { recursive: true });
   fs.writeFileSync(path.join(evidenceRoot, 'runner.log'), `[bounded to last 500 lines]\n${result.lines.join('\n')}\n`, 'utf8');
+  const deployCacheHit = /^\[android-deploy\]\s+install cache:\s+HIT\b/imu.test(result.output);
   const summary = {
     commitSha: request.commitSha,
     deviceDiscovery: device?.discoverySource || 'failed',
-    installDisposition: /cache:\s*HIT|install cache hit/iu.test(result.output) ? 'cache_hit' : 'installed',
+    installDisposition: deployCacheHit ? 'cache_hit' : 'installed',
     previewStatus: result.code === 0 ? 'opened' : 'failed',
     runId: request.runId,
     schemaVersion: 1,
