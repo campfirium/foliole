@@ -66,7 +66,7 @@ describe('windows-deploy-app.sh', () => {
     expect(cacheScript).toContain('android-install-cache.json');
     expect(script).toContain('install cache: HIT apk=$apkHash versionCode=$installedVersionCode');
     expect(script).toContain('Install-DebugBuild -AdbPath $adbPath -AndroidDir $androidDir -Serial $serial');
-    expect(buildScript).toContain('gradlew.bat assembleDebug');
+    expect(buildScript).toContain('gradlew.bat --no-daemon assembleDebug');
     expect(buildScript).toContain('"install", "-r", $apkPath');
     expect(script).toContain('$nativeSourcesHash = Get-NativeSourcesHash -AndroidDir $androidDir');
     expect(script).toContain('Test-InstallCacheHit -ApkHash $apkHash -NativeSourcesHash $nativeSourcesHash -Serial $serial -VersionCode $installedVersionCode -WebAssetsHash $webAssetsHash -WindowsWorkDir $WindowsWorkDir');
@@ -103,7 +103,7 @@ describe('windows-deploy-app.sh', () => {
     const buildScript = await readFile(DEPLOY_BUILD_SCRIPT, 'utf8');
 
     expect(buildScript).toContain('Start-Process -FilePath $FilePath -ArgumentList $ArgumentList -PassThru -WindowStyle Hidden -RedirectStandardOutput $out -RedirectStandardError $err');
-    expect(buildScript).toContain('Invoke-DeployProcess -FilePath "cmd.exe" -ArgumentList @("/d", "/c", "call .\\gradlew.bat assembleDebug")');
+    expect(buildScript).toContain('Invoke-DeployProcess -FilePath "cmd.exe" -ArgumentList @("/d", "/c", "call .\\gradlew.bat --no-daemon assembleDebug")');
     expect(buildScript).toContain('Invoke-DeployProcess -FilePath $AdbPath -ArgumentList $arguments -TimeoutSeconds $InstallTimeoutSeconds');
     expect(script).toContain('Start-Process -FilePath "cmd.exe" -ArgumentList @("/d", "/c", "call .\\gradlew.bat --stop") -Wait -PassThru -WindowStyle Hidden');
     expect(buildScript).toContain('Get-Content -Path $out, $err -ErrorAction SilentlyContinue');

@@ -23,7 +23,7 @@ function Invoke-GradleAssembleDebug {
   param([string]$AndroidDir, [int]$TimeoutSeconds = 240)
   Push-Location $AndroidDir
   try {
-    Invoke-DeployProcess -FilePath "cmd.exe" -ArgumentList @("/d", "/c", "call .\gradlew.bat assembleDebug") -TimeoutSeconds $TimeoutSeconds
+    Invoke-DeployProcess -FilePath "cmd.exe" -ArgumentList @("/d", "/c", "call .\gradlew.bat --no-daemon assembleDebug") -TimeoutSeconds $TimeoutSeconds
   } finally {
     Pop-Location
   }
