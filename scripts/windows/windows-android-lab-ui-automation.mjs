@@ -190,6 +190,8 @@ export async function runWindowsAndroidLabUiAutomation({
     )}\n`);
     await invoke(adb, adbArgs('shell', 'rm', '/sdcard/foliole-window.xml'));
     const instrumentation = await invoke(adb, adbArgs(...instrumentationArgs(input)), { timeoutMs: input.timeoutMs + 30_000 });
+    fs.writeFileSync(path.join(evidenceRoot, 'instrumentation-stdout.txt'), instrumentation.stdout, 'utf8');
+    fs.writeFileSync(path.join(evidenceRoot, 'instrumentation-stderr.txt'), instrumentation.stderr, 'utf8');
     const semantic = parseInstrumentationEvidence(instrumentation.stdout);
     const receiptMatches = input.testIds
       ? semantic.receipt.action === 'sequence' && semantic.receipt.ok === true
