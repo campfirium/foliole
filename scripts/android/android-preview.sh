@@ -12,6 +12,7 @@ ANDROID_DEPLOY_SCRIPT="${ANDROID_DEPLOY_SCRIPT:-scripts/android/windows-deploy-a
 ANDROID_DATA_PROTECTION_SCRIPT="${ANDROID_DATA_PROTECTION_SCRIPT:-scripts/android/android-device-data-protection.mjs}"
 ANDROID_SYNC_STATE_SCRIPT="${ANDROID_SYNC_STATE_SCRIPT:-scripts/android/android-preview-sync-state.mjs}"
 ELECTRON_SQLITE_RUNNER="${ELECTRON_SQLITE_RUNNER:-scripts/electron-sqlite-runner.mjs}"
+ANDROID_DATA_PROTECTION_NODE="${ANDROID_DATA_PROTECTION_NODE:-node}"
 ANDROID_DATA_PROTECTION_BACKUP_DIR="${ANDROID_DATA_PROTECTION_BACKUP_DIR:-.lab/internal/android-device-backups}"
 ANDROID_DATA_PROTECTION_MANIFEST_DIR="${ANDROID_DATA_PROTECTION_MANIFEST_DIR:-.lab/internal/runtime}"
 ANDROID_DATA_PROTECTION_RUNTIME_ROOT="${ANDROID_DATA_PROTECTION_RUNTIME_ROOT:-${REPO_ROOT}}"
@@ -162,7 +163,7 @@ if [[ -n "${ANDROID_PREVIEW_TARGET_SERIAL}" || -n "${ANDROID_PREVIEW_AVD}" ]]; t
     ensure_host_dir "${ANDROID_DATA_PROTECTION_MANIFEST_DIR}"
     DATA_PROTECTION_MANIFEST="${ANDROID_DATA_PROTECTION_MANIFEST_DIR}/android-preview-before-$(date +%Y%m%d-%H%M%S).json"
     echo "[android-preview] step 4/${PREVIEW_TOTAL_STEPS}: backup android app data"
-    if ! run_runtime_timed_step "android-data-backup" "${ANDROID_PREVIEW_DATA_PROTECTION_TIMEOUT_SECONDS}" node "${ELECTRON_SQLITE_RUNNER}" "${ANDROID_DATA_PROTECTION_SCRIPT}" --mode backup --backup-root "${ANDROID_DATA_PROTECTION_BACKUP_DIR}" --manifest "${DATA_PROTECTION_MANIFEST}" --serial "${ANDROID_PREVIEW_TARGET_SERIAL}"; then
+    if ! run_runtime_timed_step "android-data-backup" "${ANDROID_PREVIEW_DATA_PROTECTION_TIMEOUT_SECONDS}" "${ANDROID_DATA_PROTECTION_NODE}" "${ANDROID_DATA_PROTECTION_SCRIPT}" --mode backup --backup-root "${ANDROID_DATA_PROTECTION_BACKUP_DIR}" --manifest "${DATA_PROTECTION_MANIFEST}" --serial "${ANDROID_PREVIEW_TARGET_SERIAL}"; then
       echo "[android-preview] failed at: data protection preflight"
       echo "[android-preview] status: FAILED"
       exit 1
@@ -192,7 +193,7 @@ if [[ -n "${ANDROID_PREVIEW_TARGET_SERIAL}" || -n "${ANDROID_PREVIEW_AVD}" ]]; t
   fi
   if [[ "${ANDROID_DATA_PROTECTION}" != "0" ]]; then
     echo "[android-preview] step 6/${PREVIEW_TOTAL_STEPS}: check android app data"
-    if ! run_runtime_timed_step "android-data-check" "${ANDROID_PREVIEW_DATA_PROTECTION_TIMEOUT_SECONDS}" node "${ELECTRON_SQLITE_RUNNER}" "${ANDROID_DATA_PROTECTION_SCRIPT}" --mode check --backup-root "${ANDROID_DATA_PROTECTION_BACKUP_DIR}" --manifest "${DATA_PROTECTION_MANIFEST}" --serial "${ANDROID_PREVIEW_TARGET_SERIAL}"; then
+    if ! run_runtime_timed_step "android-data-check" "${ANDROID_PREVIEW_DATA_PROTECTION_TIMEOUT_SECONDS}" "${ANDROID_DATA_PROTECTION_NODE}" "${ANDROID_DATA_PROTECTION_SCRIPT}" --mode check --backup-root "${ANDROID_DATA_PROTECTION_BACKUP_DIR}" --manifest "${DATA_PROTECTION_MANIFEST}" --serial "${ANDROID_PREVIEW_TARGET_SERIAL}"; then
       echo "[android-preview] failed at: data protection check"
       echo "[android-preview] status: FAILED"
       exit 1

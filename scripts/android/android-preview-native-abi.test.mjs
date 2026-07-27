@@ -73,3 +73,45 @@ it('blocks backup and deploy when mirror Electron ABI preparation fails', async 
     await rm(tempRoot, { recursive: true, force: true });
   }
 }, 15000);
+
+it('runs data protection through Node after Electron ABI preparation succeeds', async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-preview-data-node-'));
+  try {
+    const mirror = path.join(tempRoot, 'mirror');
+    await mkdir(mirror);
+    const ok = await writeExecutable(tempRoot, 'ok.sh', '#!/usr/bin/env bash\necho ok\n');
+    const failIfCalled = await writeExecutable(
+      tempRoot,
+      'electron-sqlite-runner.mjs',
+      '#!/usr/bin/env bash\necho electron-runner-called\nexit 64\n'
+    );
+    const dataProtection = await writeExecutable(
+      tempRoot,
+      'data-protection.mjs',
+      'console.log(`data-node:${process.argv.slice(2).join("|")}`);\n'
+    );
+    await writeExecutable(mirror, 'abi-ok.mjs', 'console.log("abi-ready");\n');
+
+    const result = await runAndroidPreview(tempRoot, {
+      ANDROID_DATA_PROTECTION: '1',
+      ANDROID_DATA_PROTECTION_RUNTIME_ROOT: mirror,
+      ANDROID_DATA_PROTECTION_SCRIPT: dataProtection,
+      ANDROID_DEPLOY_SCRIPT: ok,
+      ANDROID_ELECTRON_ABI_PREPARE: '1',
+      ANDROID_NATIVE_ABI_REPAIR_SCRIPT: 'abi-ok.mjs',
+      ANDROID_SOURCE_SYNC_SCRIPT: ok,
+      ANDROID_SYNC_SCRIPT: ok,
+      ELECTRON_SQLITE_RUNNER: failIfCalled,
+      FOLIOLE_ANDROID_SERIAL: 'A5-SERIAL',
+      ANDROID_WINDOWS_MIRROR_DIR: mirror
+    });
+
+    expect(result.code, `${result.stdout}\n${result.stderr}`).toBe(0);
+    expect(result.stdout).toContain('abi-ready');
+    expect(result.stdout).toContain('data-node:--mode|backup');
+    expect(result.stdout).toContain('data-node:--mode|check');
+    expect(result.stdout).not.toContain('electron-runner-called');
+  } finally {
+    await rm(tempRoot, { recursive: true, force: true });
+  }
+}, 15000);
