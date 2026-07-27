@@ -71,9 +71,14 @@ describe('windows-cap-sync.sh', () => {
     }
     expect(script).toContain('\\.(test|spec)\\.[^/]+$');
     expect(script).toContain('android-cap-sync-cache.json');
+    expect(script).toContain('function Read-CapSyncCache');
+    expect(script).toContain('cache: unreadable; treating as MISS');
     expect(script).toContain('Test-CapSyncCacheHit -InputHash $inputHash');
+    expect(script).toContain('if ($null -eq $cache)');
     expect(script).toContain('cache: HIT input=$inputHash');
     expect(script).toContain('Write-CapSyncCache -InputHash $inputHash');
+    expect(script).toContain('$temporaryPath = "$cachePath.$PID.tmp"');
+    expect(script).toContain('Move-Item -Path $temporaryPath -Destination $cachePath -Force');
   });
 
   it('does not treat a blank PowerShell last exit code as npm install failure', async () => {

@@ -127,6 +127,16 @@ function Get-CachePath {
   return Join-Path $cacheDir "android-cap-sync-cache.json"
 }
 
+function Read-CapSyncCache {
+  param([string]$Path)
+  try {
+    return Get-Content -Path $Path -Raw | ConvertFrom-Json
+  } catch {
+    Write-Info "cache: unreadable; treating as MISS path=$(Get-RelativePath -Path $Path)"
+    return $null
+  }
+}
+
 function Test-CapSyncCacheHit {
   param([string]$InputHash)
   $cachePath = Get-CachePath
@@ -135,14 +145,20 @@ function Test-CapSyncCacheHit {
   if (!(Test-Path -Path $cachePath) -or !(Test-Path -Path $webMarker) -or !(Test-Path -Path $assetMarker)) {
     return $false
   }
-  $cache = Get-Content -Path $cachePath -Raw | ConvertFrom-Json
+  $cache = Read-CapSyncCache -Path $cachePath
+  if ($null -eq $cache) {
+    return $false
+  }
   return $cache.inputHash -eq $InputHash -and $cache.status -eq "ok" -and $cache.version -eq 1
 }
 
 function Write-CapSyncCache {
   param([string]$InputHash)
   $payload = @{ inputHash = $InputHash; status = "ok"; timestamp = (Get-Date).ToUniversalTime().ToString("o"); version = 1 }
-  $payload | ConvertTo-Json | Set-Content -Path (Get-CachePath) -Encoding UTF8
+  $cachePath = Get-CachePath
+  $temporaryPath = "$cachePath.$PID.tmp"
+  $payload | ConvertTo-Json | Set-Content -Path $temporaryPath -Encoding UTF8
+  Move-Item -Path $temporaryPath -Destination $cachePath -Force
 }
 
 . "$PSScriptRoot\windows-cap-sync-dependencies.ps1"
