@@ -4,8 +4,9 @@ export function selectDedicatedIphoneTemplate(devicePayload) {
     .flatMap(([runtime, devices]) => devices
       .filter((device) => device.isAvailable && /^iPhone /.test(device.name) && device.deviceTypeIdentifier)
       .map((device) => ({ device, runtime })));
-  candidates.sort((left, right) => left.device.name.localeCompare(right.device.name));
-  const selected = candidates.find(({ device }) => device.name === 'iPhone 17 Pro') ?? candidates[0];
+  candidates.sort((left, right) => Number(right.device.state === 'Booted') - Number(left.device.state === 'Booted') ||
+    left.device.name.localeCompare(right.device.name));
+  const selected = candidates[0];
   if (!selected) throw new Error('Could not find an available iPhone Simulator template.');
   return {
     deviceTypeIdentifier: selected.device.deviceTypeIdentifier,

@@ -230,12 +230,12 @@ function runHeavy(options, command, args, extra = {}) {
 function runJson(options, command, args) { return JSON.parse(capture(options, command, args)); }
 function capture(options, command, args) {
   const result = spawnSync(command, args, { cwd: options.repoRoot, encoding: 'utf8', timeout: 600_000 });
-  if (result.status !== 0) throw new Error(result.error?.message || result.stderr || `${command} failed with ${result.status}`);
+  if (result.status !== 0) throw new Error([command, ...args, result.error?.message || result.stderr || `failed with ${result.status}`].join(' '));
   return result.stdout;
 }
 function run(options, command, args, extra = {}) {
   const result = spawnSync(command, args, { cwd: options.repoRoot, stdio: 'inherit', timeout: 600_000, ...extra });
-  if (result.status !== 0) throw new Error(result.error?.message || `${command} failed with ${result.status}`);
+  if (result.status !== 0) throw new Error([command, ...args, result.error?.message || `failed with ${result.status}`].join(' '));
 }
 function runAllowFailure(options, command, args) { spawnSync(command, args, { cwd: options.repoRoot, stdio: 'ignore', timeout: 600_000 }); }
 function captureAllowFailure(options, command, args) {

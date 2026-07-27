@@ -72,6 +72,10 @@ describe('iOS foreground sync lifecycle acceptance', () => {
     expect(dedicatedSimulatorCleanupArgs('OWNED')).toEqual({
       delete: ['simctl', 'delete', 'OWNED'], shutdown: ['simctl', 'shutdown', 'OWNED']
     });
+    expect(selectDedicatedIphoneTemplate({ devices: { 'com.apple.CoreSimulator.SimRuntime.iOS-26-5': [
+      { deviceTypeIdentifier: 'type-17-pro', isAvailable: true, name: 'iPhone 17 Pro', state: 'Shutdown' },
+      { deviceTypeIdentifier: 'type-16', isAvailable: true, name: 'iPhone 16', state: 'Booted' }
+    ] } })).toMatchObject({ deviceTypeIdentifier: 'type-16' });
   });
 
   it('holds one canonical sync pass and fails only the controlled phase', async () => {
