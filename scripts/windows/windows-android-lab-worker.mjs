@@ -81,7 +81,7 @@ function previewEnvironment(config, endpoint, paths) {
     ANDROID_GRADLE_STOP_AFTER_DEPLOY: '1',
     ANDROID_PREVIEW_AVD: '',
     ANDROID_PREVIEW_OPEN_STUDIO: '0',
-    ANDROID_WINDOWS_DEPENDENCY_REFRESH: 'ci',
+    ANDROID_WINDOWS_DEPENDENCY_REFRESH: 'auto',
     ANDROID_WINDOWS_WORKDIR: paths.preview,
     FOLIOLE_ANDROID_SERIAL: endpoint,
     JAVA_HOME: config.javaHome,

@@ -128,7 +128,7 @@ describe('Windows Android lab worker', () => {
       ANDROID_DATA_PROTECTION: '1', ANDROID_PREVIEW_AVD: '', ANDROID_PREVIEW_OPEN_STUDIO: '0',
       ANDROID_USER_HOME: paths.signingHome,
       ANDROID_DATA_PROTECTION_RUNTIME_ROOT: paths.preview, ANDROID_ELECTRON_ABI_PREPARE: '1',
-      ANDROID_WINDOWS_DEPENDENCY_REFRESH: 'ci', FOLIOLE_ANDROID_SERIAL: ENDPOINT, JAVA_HOME: 'C:\\Java'
+      ANDROID_WINDOWS_DEPENDENCY_REFRESH: 'auto', FOLIOLE_ANDROID_SERIAL: ENDPOINT, JAVA_HOME: 'C:\\Java'
     });
     expect(preview.options.env.Path).toContain('C:\\Node;C:\\Java\\bin');
     expect(calls.some((call) => call.args.includes('fetch') || call.args.includes('clone'))).toBe(false);
