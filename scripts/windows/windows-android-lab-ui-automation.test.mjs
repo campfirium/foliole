@@ -117,6 +117,10 @@ describe('Windows Android Lab semantic UI automation', () => {
       args: ['-P', '5601', '-s', '192.168.0.107:38717', 'shell', 'input', 'keyevent', 'KEYCODE_WAKEUP'],
       command: 'adb.exe'
     });
+    expect(calls).toContainEqual({
+      args: ['-P', '5601', '-s', '192.168.0.107:38717', 'shell', 'wm', 'dismiss-keyguard'],
+      command: 'adb.exe'
+    });
     expect(calls.some((call) => call.args.includes('com.foliole.android.FolioleCompanionWebViewAutomationTest#performsBoundedSemanticAction'))).toBe(true);
     expect(JSON.parse(fs.readFileSync(path.join(root, 'action-receipt.json'), 'utf8'))).toMatchObject({
       adapter: 'instrumentation-evaluateJavascript', targetTestId: 'companion-tab-settings'

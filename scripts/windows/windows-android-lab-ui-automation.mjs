@@ -174,6 +174,7 @@ export async function runWindowsAndroidLabUiAutomation({
     await invoke(adb, adbArgs('install', '-r', appApk), { timeoutMs: 120_000 });
     await invoke(adb, adbArgs('install', '-r', '-t', testApk), { timeoutMs: 120_000 });
     await wakeDevice(invoke, adb, adbArgs);
+    await invoke(adb, adbArgs('shell', 'wm', 'dismiss-keyguard'));
     const policy = await invoke(adb, adbArgs('shell', 'dumpsys', 'window', 'policy'));
     const power = await invoke(adb, adbArgs('shell', 'dumpsys', 'power'));
     assertAwakeAndUnlocked(policy.stdout, power.stdout);
