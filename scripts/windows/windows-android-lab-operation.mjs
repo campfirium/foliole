@@ -58,6 +58,7 @@ function operationEnvironment(config, paths, evidenceRoot, spec) {
   env.FOLIOLE_ANDROID_ADB_PATH = config.adbPath;
   env.FOLIOLE_ANDROID_BASH_PATH = config.bashPath;
   env.FOLIOLE_ANDROID_LAB_EVIDENCE_ROOT = evidenceRoot;
+  if (spec.runtimeHead) env.FOLIOLE_RUNTIME_HEAD = spec.runtimeHead;
   if (spec.deviceEndpoint) env.FOLIOLE_ANDROID_SERIAL = spec.deviceEndpoint;
   return env;
 }
@@ -95,10 +96,15 @@ async function resolveProcessSpec(config, paths, request, evidenceRoot, executeC
     return { ...spec, deviceEndpoint: device.endpoint, deviceIdentity: device.identity };
   }
   if (operation.kind === 'windowsClient') return {
-    args: [path.join(paths.candidate, 'scripts', 'windows', 'windows-client-native.mjs'), operation.action],
-    command: path.join(config.nodeDirectory, 'node.exe')
+    args: [path.join(paths.preview, 'scripts', 'windows', 'windows-client-native.mjs'), operation.action],
+    command: path.join(config.nodeDirectory, 'node.exe'), cwd: paths.preview, runtimeHead: request.commitSha
   };
-  if (operation.kind === 'diagnostic') return diagnosticSpec(config, operation, evidenceRoot);
+  if (operation.kind === 'diagnostic') {
+    const spec = diagnosticSpec(config, operation, evidenceRoot);
+    if (request.target !== 'a5') return spec;
+    const device = await resolveAndroidDevice(config, paths, executeCommand);
+    return { ...spec, deviceEndpoint: device.endpoint, deviceIdentity: device.identity };
+  }
   if (operation.kind === 'deviceReconnect') {
     const device = await reconnectAndroidDevice(config, operation.endpoint, paths, executeCommand, 'request');
     return { direct: { deviceIdentity: device.identity, endpoint: device.endpoint } };
@@ -146,7 +152,8 @@ export async function runAndroidLabOperation({ config, executeCommand, paths, re
   try {
     spec = await resolveProcessSpec(config, paths, request, evidenceRoot, auditedExecute);
     const result = spec.direct || await auditedExecute(spec.command, spec.args, {
-      cwd, env: operationEnvironment(config, paths, evidenceRoot, spec), timeoutCode: 'request_timeout', timeoutMs: request.timeoutMs
+      cwd: spec.cwd || cwd, env: operationEnvironment(config, paths, evidenceRoot, spec),
+      timeoutCode: 'request_timeout', timeoutMs: request.timeoutMs
     });
     const stdout = boundedText(spec.direct ? JSON.stringify(result) : result.stdout ?? result.output);
     const stderr = boundedText(spec.direct ? '' : result.stderr);
@@ -186,7 +193,8 @@ export async function runAndroidLabOperation({ config, executeCommand, paths, re
 }
 
 export async function finishAndroidLabOperationRun({ config, executeCommand, paths, request, running }) {
-  const needsCheckout = ['repository', 'windowsClient'].includes(request.operation.kind) || request.cwd.scope === 'checkout';
+  const needsCheckout = request.operation.kind !== 'windowsClient' &&
+    (request.operation.kind === 'repository' || request.cwd.scope === 'checkout');
   let primaryError = null;
   try {
     if (needsCheckout) {
