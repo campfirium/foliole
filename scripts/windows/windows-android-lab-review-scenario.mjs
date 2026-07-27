@@ -32,10 +32,11 @@ function scenarioEvidenceRoot(paths, request, name) {
   return root;
 }
 
-function scenarioEnv(config, endpoint, paths, evidenceRoot) {
+export function scenarioEnv(config, endpoint, paths, evidenceRoot) {
   const tools = [config.nodeDirectory, path.win32.dirname(config.adbPath)].filter(Boolean).join(';');
   return androidLabAdbEnv(config, {
     ...process.env,
+    ANDROID_SKIP_WINDOWS_SYNC: '1',
     ANDROID_USER_HOME: paths.signingHome,
     ANDROID_WINDOWS_WORKDIR: paths.preview,
     FOLIOLE_ANDROID_ADB_PATH: config.adbPath,

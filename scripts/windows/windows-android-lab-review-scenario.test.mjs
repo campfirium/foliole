@@ -6,7 +6,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
-  finishWindowsAndroidLabReviewScenarioRun, SCENARIO_UI_COMMAND_TIMEOUT_MS
+  finishWindowsAndroidLabReviewScenarioRun, scenarioEnv, SCENARIO_UI_COMMAND_TIMEOUT_MS
 } from './windows-android-lab-review-scenario.mjs';
 import { androidLabPaths, readJson, writeJsonAtomic } from './windows-android-lab-state.mjs';
 
@@ -27,6 +27,14 @@ function fixture() {
 describe('Windows Android Lab Review scenario run', () => {
   it('keeps the UI action wrapper timeout beyond the instrumentation build timeout', () => {
     expect(SCENARIO_UI_COMMAND_TIMEOUT_MS).toBeGreaterThan(25 * 60_000);
+  });
+
+  it('skips source sync when UI automation runs from the deployed preview workspace', () => {
+    const env = scenarioEnv({
+      adbPath: 'C:\\Android\\adb.exe', bashPath: 'bash.exe', nodeDirectory: 'C:\\node'
+    }, 'A5', { preview: 'C:\\dev\\foliole-android-lab-preview', signingHome: 'C:\\signing' }, 'C:\\evidence');
+    expect(env.ANDROID_SKIP_WINDOWS_SYNC).toBe('1');
+    expect(env.ANDROID_WINDOWS_WORKDIR).toBe('C:\\dev\\foliole-android-lab-preview');
   });
 
   it('keeps the scenario as one worker-owned run and updates phase status', async () => {
