@@ -20,6 +20,7 @@ function fixture() {
     env: {
       ANDROID_WINDOWS_WORKDIR: 'C:\\dev\\foliole-android-lab-preview',
       FOLIOLE_ANDROID_ADB_PATH: 'adb.exe', FOLIOLE_ANDROID_BASH_PATH: 'bash.exe',
+      FOLIOLE_ANDROID_ADB_SERVER_PORT: '5601',
       FOLIOLE_ANDROID_LAB_EVIDENCE_ROOT: root, FOLIOLE_ANDROID_SERIAL: '192.168.0.107:38717'
     },
     root
@@ -90,20 +91,20 @@ describe('Windows Android Lab semantic UI automation', () => {
     });
     expect(calls).toContainEqual({
       args: [
-        '-s', '192.168.0.107:38717', 'install', '-r',
+        '-P', '5601', '-s', '192.168.0.107:38717', 'install', '-r',
         'C:\\dev\\foliole-android-lab-preview\\android\\app\\build\\outputs\\apk\\debug\\app-debug.apk'
       ],
       command: 'adb.exe'
     });
     expect(calls).toContainEqual({
       args: [
-        '-s', '192.168.0.107:38717', 'install', '-r', '-t',
+        '-P', '5601', '-s', '192.168.0.107:38717', 'install', '-r', '-t',
         'C:\\dev\\foliole-android-lab-preview\\android\\app\\build\\outputs\\apk\\androidTest\\debug\\app-debug-androidTest.apk'
       ],
       command: 'adb.exe'
     });
     expect(calls).toContainEqual({
-      args: ['-s', '192.168.0.107:38717', 'shell', 'input', 'keyevent', 'KEYCODE_WAKEUP'],
+      args: ['-P', '5601', '-s', '192.168.0.107:38717', 'shell', 'input', 'keyevent', 'KEYCODE_WAKEUP'],
       command: 'adb.exe'
     });
     expect(calls.some((call) => call.args.includes('com.foliole.android.FolioleCompanionWebViewAutomationTest#performsBoundedSemanticAction'))).toBe(true);

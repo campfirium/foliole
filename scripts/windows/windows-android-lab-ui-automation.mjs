@@ -137,6 +137,7 @@ export async function runWindowsAndroidLabUiAutomation({
 } = {}) {
   const input = parseUiAutomationArgs(argv);
   const adb = env.FOLIOLE_ANDROID_ADB_PATH;
+  const adbServerPort = env.FOLIOLE_ANDROID_ADB_SERVER_PORT;
   const serial = env.FOLIOLE_ANDROID_SERIAL;
   const evidenceRoot = env.FOLIOLE_ANDROID_LAB_EVIDENCE_ROOT;
   const windowsWorkDir = env.ANDROID_WINDOWS_WORKDIR;
@@ -155,7 +156,9 @@ export async function runWindowsAndroidLabUiAutomation({
       throw error;
     }
   };
-  const adbArgs = (...args) => ['-s', serial, ...args];
+  const adbArgs = (...args) => [
+    ...(adbServerPort ? ['-P', adbServerPort] : []), '-s', serial, ...args
+  ];
   try {
     await invoke(env.FOLIOLE_ANDROID_BASH_PATH || 'bash', ['scripts/android/windows-gradle-check.sh', 'assembleDebugAndroidTest'], { timeoutMs: 15 * 60_000 });
     const appApk = path.win32.join(windowsWorkDir, 'android', 'app', 'build', 'outputs', 'apk', 'debug', 'app-debug.apk');

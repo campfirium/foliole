@@ -1,4 +1,5 @@
 import { isAndroidEndpoint, parseReadyDevices, readJson, writeJsonAtomic } from './windows-android-lab-state.mjs';
+import { androidLabAdbArgs } from './windows-android-lab-adb.mjs';
 
 const USB_SERIAL = /^[A-Za-z0-9._-]{4,128}$/u;
 
@@ -22,9 +23,9 @@ async function checked(executeCommand, command, args, code) {
 }
 
 async function readDeviceIdentity(config, endpoint, executeCommand) {
-  const result = await checked(executeCommand, config.adbPath, [
+  const result = await checked(executeCommand, config.adbPath, androidLabAdbArgs(config, [
     '-s', endpoint, 'shell', 'getprop', 'ro.serialno'
-  ], 'device_identity_read_failed');
+  ]), 'device_identity_read_failed');
   return result.output.trim();
 }
 
@@ -33,7 +34,7 @@ async function connectAndVerify(config, endpoint, ready, executeCommand) {
     if (!isAndroidEndpoint(endpoint)) {
       throw codedLabError('device_connect_failed', `USB device ${endpoint} is not ready`);
     }
-    await checked(executeCommand, config.adbPath, ['connect', endpoint], 'device_connect_failed');
+    await checked(executeCommand, config.adbPath, androidLabAdbArgs(config, ['connect', endpoint]), 'device_connect_failed');
   }
   const identity = await readDeviceIdentity(config, endpoint, executeCommand);
   if (identity !== config.deviceIdentity) {
@@ -54,10 +55,10 @@ export function isAndroidDeviceSelector(value) {
 export async function reconnectAndroidDevice(config, endpoint, paths, executeCommand, source = 'manual') {
   validateAndroidLabConfig(config);
   if (!isAndroidDeviceSelector(endpoint)) throw codedLabError('device_endpoint_invalid', 'device endpoint must be ipv4:port or USB serial');
-  const devices = await checked(executeCommand, config.adbPath, ['devices'], 'adb_devices_failed');
+  const devices = await checked(executeCommand, config.adbPath, androidLabAdbArgs(config, ['devices']), 'adb_devices_failed');
   const ready = new Set(parseReadyDevices(devices.output));
   const identity = await connectAndVerify(config, endpoint, ready, executeCommand);
-  const after = await checked(executeCommand, config.adbPath, ['devices'], 'adb_devices_failed');
+  const after = await checked(executeCommand, config.adbPath, androidLabAdbArgs(config, ['devices']), 'adb_devices_failed');
   const connected = parseReadyDevices(after.output);
   if (connected.length !== 1 || connected[0] !== endpoint) {
     throw codedLabError('android_device_not_exclusive', `expected only ${endpoint}; found ${connected.join(',') || 'none'}`);
@@ -69,7 +70,7 @@ export async function reconnectAndroidDevice(config, endpoint, paths, executeCom
 
 export async function resolveAndroidDevice(config, paths, executeCommand) {
   validateAndroidLabConfig(config);
-  const devices = await checked(executeCommand, config.adbPath, ['devices'], 'adb_devices_failed');
+  const devices = await checked(executeCommand, config.adbPath, androidLabAdbArgs(config, ['devices']), 'adb_devices_failed');
   const ready = new Set(parseReadyDevices(devices.output));
   const previous = readJson(paths.device);
   const candidates = [...ready].filter(isAndroidDeviceSelector);
@@ -93,7 +94,7 @@ export async function resolveAndroidDevice(config, paths, executeCommand) {
   if (current) return current;
   let discovered = [];
   try {
-    const mdns = await checked(executeCommand, config.adbPath, ['mdns', 'services'], 'adb_mdns_failed');
+    const mdns = await checked(executeCommand, config.adbPath, androidLabAdbArgs(config, ['mdns', 'services']), 'adb_mdns_failed');
     discovered = parseMdnsEndpoints(mdns.output);
   } catch {
     // mDNS is an optional discovery adapter; manual reconnect remains explicit.

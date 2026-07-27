@@ -16,6 +16,7 @@ $installRoot = Join-Path $env:LOCALAPPDATA "Foliole\windows-android-lab"
 $sourceRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $files = @(
   "windows-bounded-process.mjs",
+  "windows-android-lab-adb.mjs",
   "windows-android-lab-checkout.mjs",
   "windows-android-lab-dispatcher.mjs",
   "windows-android-lab-device.mjs",
@@ -101,6 +102,9 @@ $config = @{
   javaHome = $JavaHome
   nodeDirectory = $runtimeRoot
   schemaVersion = 2
+}
+if ($existingConfig.adbServerPort -match '^[1-9][0-9]{1,4}$') {
+  $config.adbServerPort = $existingConfig.adbServerPort
 }
 if ($existingConfig.androidDebugKeystoreSha256 -match '^[0-9a-f]{64}$') {
   $config.androidDebugKeystoreSha256 = $existingConfig.androidDebugKeystoreSha256

@@ -46,7 +46,8 @@ function fixture(phase = 'prepare') {
 function executor(calls, audit = {}, auditExitCode = 0) {
   return async (command, args) => {
     calls.push({ args, command });
-    if (args[0] === 'devices') return { code: 0, lines: [`${ENDPOINT} device`], output: `${ENDPOINT}\tdevice\n` };
+    const adb = args[0] === '-P' ? args.slice(2) : args;
+    if (adb[0] === 'devices') return { code: 0, lines: [`${ENDPOINT} device`], output: `${ENDPOINT}\tdevice\n` };
     if (args.includes('getprop')) return { code: 0, lines: ['A5-STABLE'], output: 'A5-STABLE\n' };
     const outputIndex = args.indexOf('--output');
     if (outputIndex >= 0) {
@@ -90,6 +91,7 @@ describe('Windows Android lab Review action', () => {
       checkpoint: 'prepare', selectedObjectCount: 4
     });
     expect(calls.some(({ args }) => args.some((value) => String(value).endsWith('electron-sqlite-runner.mjs')))).toBe(true);
+    expect(calls.some(({ args }) => args[0] === '-P' && args[1] === '5601')).toBe(true);
   });
 
   it('force-stops before snapshot capture and relaunches before database audit', async () => {

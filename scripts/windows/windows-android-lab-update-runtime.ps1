@@ -6,6 +6,7 @@ $ErrorActionPreference = "Stop"
 $sourceRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $files = @(
   "windows-bounded-process.mjs",
+  "windows-android-lab-adb.mjs",
   "windows-android-lab-checkout.mjs",
   "windows-android-lab-dispatcher.mjs",
   "windows-android-lab-device.mjs",

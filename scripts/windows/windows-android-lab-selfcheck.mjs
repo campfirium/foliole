@@ -92,6 +92,7 @@ export function runWindowsAndroidLabSelfcheck({
   const device = publicDeviceStatus(readJson(paths.device));
   const collect = { resultStatus: fs.existsSync(paths.evidence) ? 'success' : 'failure' };
   const installedRuntime = [
+    installedFile(paths, 'windows-android-lab-adb.mjs'),
     installedFile(paths, 'windows-android-lab-dispatcher.mjs'),
     installedFile(paths, 'windows-android-lab-worker.mjs'),
     installedFile(paths, 'windows-android-lab-operation.mjs'),

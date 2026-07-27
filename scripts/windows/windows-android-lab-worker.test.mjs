@@ -38,7 +38,8 @@ function createFixture() {
 function successfulExecutor(paths, calls) {
   return async (command, args, options) => {
     calls.push({ args, command, options });
-    if (command === 'adb.exe' && args[0] === 'devices') {
+    const adb = args[0] === '-P' ? args.slice(2) : args;
+    if (command === 'adb.exe' && adb[0] === 'devices') {
       return { code: 0, lines: [`${ENDPOINT} device`], output: `List of devices attached\n${ENDPOINT}\tdevice\n` };
     }
     if (command === 'adb.exe' && args.includes('getprop')) return { code: 0, lines: ['A5-STABLE'], output: 'A5-STABLE\n' };
@@ -47,6 +48,7 @@ function successfulExecutor(paths, calls) {
     if (args.includes('worktree') && args.includes('add')) fs.mkdirSync(paths.candidate, { recursive: true });
     if (args.includes('status')) return { code: 0, lines: [], output: '' };
     if (command === 'bash.exe') {
+      expect(options.env.FOLIOLE_ANDROID_ADB_SERVER_PORT).toBe('5601');
       fs.mkdirSync(path.dirname(paths.workspaceDeployment), { recursive: true });
       return { code: 0, lines: ['[android-preview] status: OPENED'], output: '[android-preview] status: OPENED\n' };
     }

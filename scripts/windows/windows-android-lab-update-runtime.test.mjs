@@ -9,6 +9,7 @@ describe('Windows Android Lab runtime updater', () => {
     const source = fs.readFileSync('scripts/windows/windows-android-lab-update-runtime.ps1', 'utf8');
 
     expect(source).toContain('windows-android-lab-worker.mjs');
+    expect(source).toContain('windows-android-lab-adb.mjs');
     expect(source).toContain('windows-android-lab-dispatcher.mjs');
     expect(source).toContain('windows-android-lab-selfcheck.mjs');
     expect(source).toContain('windows-android-lab-operation.mjs');

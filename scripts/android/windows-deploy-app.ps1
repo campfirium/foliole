@@ -20,6 +20,9 @@ function Write-Info {
 
 function Invoke-AdbCommand {
   param([string]$AdbPath, [string[]]$Arguments)
+  if (![string]::IsNullOrWhiteSpace($env:FOLIOLE_ANDROID_ADB_SERVER_PORT)) {
+    $Arguments = @("-P", $env:FOLIOLE_ANDROID_ADB_SERVER_PORT) + $Arguments
+  }
   $out = [System.IO.Path]::GetTempFileName(); $err = [System.IO.Path]::GetTempFileName()
   try {
     $process = Start-Process -FilePath $AdbPath -ArgumentList $Arguments -Wait -PassThru -WindowStyle Hidden -RedirectStandardOutput $out -RedirectStandardError $err
@@ -149,6 +152,9 @@ $sdkRoot = Resolve-SdkRoot
 $env:JAVA_HOME = $javaHome
 $env:ANDROID_HOME = $sdkRoot
 $env:ANDROID_SDK_ROOT = $sdkRoot
+if (![string]::IsNullOrWhiteSpace($env:FOLIOLE_ANDROID_ADB_SERVER_PORT)) {
+  $env:ANDROID_ADB_SERVER_PORT = $env:FOLIOLE_ANDROID_ADB_SERVER_PORT
+}
 $env:Path = "$javaHome\bin;$sdkRoot\platform-tools;$sdkRoot\emulator;$env:Path"
 
 $adbPath = Join-Path $sdkRoot "platform-tools\adb.exe"
@@ -226,7 +232,7 @@ if (Test-LastCommandFailed) {
 }
 
 Write-Info "verifying foreground activity"
-& $nodeExe $verifyScript --adb $adbPath --serial $serial --app-id $AppId --component "$AppId/$MainActivity" --timeout-seconds $LaunchTimeoutSeconds --stability-seconds $LaunchStabilitySeconds
+& $nodeExe $verifyScript --adb $adbPath --adb-server-port $env:FOLIOLE_ANDROID_ADB_SERVER_PORT --serial $serial --app-id $AppId --component "$AppId/$MainActivity" --timeout-seconds $LaunchTimeoutSeconds --stability-seconds $LaunchStabilitySeconds
 if (Test-LastCommandFailed) {
   throw "Android app did not remain in the foreground after launch."
 }

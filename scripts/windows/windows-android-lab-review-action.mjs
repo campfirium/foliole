@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { resolveAndroidDevice, validateAndroidLabConfig } from './windows-android-lab-device.mjs';
+import { androidLabAdbArgs, androidLabAdbServerPort } from './windows-android-lab-adb.mjs';
 import { pullAndroidReviewSnapshot } from './windows-android-lab-review-snapshot.mjs';
 import { readJson, writeJsonAtomic } from './windows-android-lab-state.mjs';
 
@@ -49,34 +50,34 @@ async function checked(executeCommand, command, args, options, code) {
 
 async function restartApplication(config, endpoint, paths, executeCommand, setPhase) {
   setPhase('restart_force_stop');
-  await checked(executeCommand, config.adbPath, ['-s', endpoint, 'shell', 'am', 'force-stop', APP_ID], {}, 'review_force_stop_failed');
+  await checked(executeCommand, config.adbPath, androidLabAdbArgs(config, ['-s', endpoint, 'shell', 'am', 'force-stop', APP_ID]), {}, 'review_force_stop_failed');
   setPhase('restart_reverse');
-  await checked(executeCommand, config.adbPath, ['-s', endpoint, 'reverse', 'tcp:38641', 'tcp:38641'], {}, 'review_reverse_failed');
+  await checked(executeCommand, config.adbPath, androidLabAdbArgs(config, ['-s', endpoint, 'reverse', 'tcp:38641', 'tcp:38641']), {}, 'review_reverse_failed');
   setPhase('restart_launch');
-  await checked(executeCommand, config.adbPath, ['-s', endpoint, 'shell', 'am', 'start', '-n', APP_COMPONENT], {}, 'review_launch_failed');
+  await checked(executeCommand, config.adbPath, androidLabAdbArgs(config, ['-s', endpoint, 'shell', 'am', 'start', '-n', APP_COMPONENT]), {}, 'review_launch_failed');
   setPhase('restart_verify');
   await checked(executeCommand, path.join(config.nodeDirectory, 'node.exe'), [
     path.join(paths.preview, 'scripts', 'android', 'verify-android-launch.mjs'),
-    '--adb', config.adbPath, '--serial', endpoint, '--app-id', APP_ID, '--component', APP_COMPONENT,
+    '--adb', config.adbPath, '--adb-server-port', androidLabAdbServerPort(config), '--serial', endpoint, '--app-id', APP_ID, '--component', APP_COMPONENT,
     '--timeout-seconds', '30', '--stability-seconds', '3'
   ], { cwd: paths.preview }, 'review_launch_verify_failed');
 }
 
 async function stopForSnapshot(config, endpoint, executeCommand, setPhase) {
   setPhase('snapshot_force_stop');
-  await checked(executeCommand, config.adbPath, [
+  await checked(executeCommand, config.adbPath, androidLabAdbArgs(config, [
     '-s', endpoint, 'shell', 'am', 'force-stop', APP_ID
-  ], {}, 'review_snapshot_stop_failed');
+  ]), {}, 'review_snapshot_stop_failed');
 }
 
 async function launchAfterSnapshot(config, endpoint, paths, executeCommand, setPhase) {
   setPhase('snapshot_relaunch');
-  await checked(executeCommand, config.adbPath, [
+  await checked(executeCommand, config.adbPath, androidLabAdbArgs(config, [
     '-s', endpoint, 'shell', 'am', 'start', '-n', APP_COMPONENT
-  ], {}, 'review_launch_failed');
+  ]), {}, 'review_launch_failed');
   await checked(executeCommand, path.join(config.nodeDirectory, 'node.exe'), [
     path.join(paths.preview, 'scripts', 'android', 'verify-android-launch.mjs'),
-    '--adb', config.adbPath, '--serial', endpoint, '--app-id', APP_ID, '--component', APP_COMPONENT,
+    '--adb', config.adbPath, '--adb-server-port', androidLabAdbServerPort(config), '--serial', endpoint, '--app-id', APP_ID, '--component', APP_COMPONENT,
     '--timeout-seconds', '30', '--stability-seconds', '3'
   ], { cwd: paths.preview }, 'review_launch_verify_failed');
 }
@@ -195,7 +196,7 @@ export async function runWindowsAndroidLabReviewPhase({
     await stopForSnapshot(config, device.endpoint, executeCommand, setPhase);
     setPhase('database_snapshot');
     const databasePath = await pullSnapshot({
-      adbPath: config.adbPath, appStopped: true, destination: snapshotRoot, endpoint: device.endpoint
+      adbPath: config.adbPath, adbServerPort: androidLabAdbServerPort(config), appStopped: true, destination: snapshotRoot, endpoint: device.endpoint
     });
     await launchAfterSnapshot(config, device.endpoint, paths, executeCommand, setPhase);
     setPhase('review_audit');

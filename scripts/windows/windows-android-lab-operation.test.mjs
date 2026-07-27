@@ -70,14 +70,15 @@ describe('Windows Android Lab worker operations', () => {
     const calls = [];
     const executeCommand = async (command, args) => {
       calls.push({ args, command });
-      if (args[0] === 'devices') return { code: 0, lines: [`${ENDPOINT} device`], output: `${ENDPOINT}\tdevice\n` };
+      const adb = args[0] === '-P' ? args.slice(2) : args;
+      if (adb[0] === 'devices') return { code: 0, lines: [`${ENDPOINT} device`], output: `${ENDPOINT}\tdevice\n` };
       if (args.includes('ro.serialno')) return { code: 0, lines: ['A5-STABLE'], output: 'A5-STABLE\n' };
       return { code: 0, lines: ['A5'], output: 'A5\n', stdout: 'A5\n', stderr: '' };
     };
     await runAndroidLabOperation({ config, executeCommand, paths, request: request('adb-run', {
       args: ['shell', 'getprop', 'ro.product.model'], kind: 'adb'
     }, { cwd: { path: '', scope: 'lab' }, target: 'a5' }) });
-    expect(calls.at(-1)).toEqual({ args: ['-s', ENDPOINT, 'shell', 'getprop', 'ro.product.model'], command: 'adb.exe' });
+    expect(calls.at(-1)).toEqual({ args: ['-P', '5601', '-s', ENDPOINT, 'shell', 'getprop', 'ro.product.model'], command: 'adb.exe' });
     expect(readJson(path.join(paths.evidence, 'adb-run', 'command-audit.json')).commands.length).toBeGreaterThan(1);
   });
 
@@ -86,7 +87,8 @@ describe('Windows Android Lab worker operations', () => {
     const calls = [];
     const executeCommand = async (command, args, options = {}) => {
       calls.push({ args, command, options });
-      if (args[0] === 'devices') return { code: 0, lines: [`${ENDPOINT} device`], output: `${ENDPOINT}\tdevice\n` };
+      const adb = args[0] === '-P' ? args.slice(2) : args;
+      if (adb[0] === 'devices') return { code: 0, lines: [`${ENDPOINT} device`], output: `${ENDPOINT}\tdevice\n` };
       if (args.includes('ro.serialno')) return { code: 0, lines: ['A5-STABLE'], output: 'A5-STABLE\n' };
       return { code: 0, lines: ['ok'], output: 'ok\n', stderr: '', stdout: 'ok\n' };
     };
@@ -97,6 +99,7 @@ describe('Windows Android Lab worker operations', () => {
       ANDROID_USER_HOME: paths.signingHome,
       ANDROID_WINDOWS_WORKDIR: paths.preview,
       FOLIOLE_ANDROID_ADB_PATH: 'adb.exe',
+      FOLIOLE_ANDROID_ADB_SERVER_PORT: '5601',
       FOLIOLE_ANDROID_BASH_PATH: 'bash.exe',
       FOLIOLE_ANDROID_LAB_EVIDENCE_ROOT: path.join(paths.evidence, 'ui-run'),
       FOLIOLE_ANDROID_SERIAL: ENDPOINT
@@ -135,7 +138,8 @@ describe('Windows Android Lab worker operations', () => {
     const calls = [];
     const executeCommand = async (command, args, options = {}) => {
       calls.push({ args, command, options });
-      if (args[0] === 'devices') return { code: 0, lines: [`${ENDPOINT} device`], output: `${ENDPOINT}\tdevice\n` };
+      const adb = args[0] === '-P' ? args.slice(2) : args;
+      if (adb[0] === 'devices') return { code: 0, lines: [`${ENDPOINT} device`], output: `${ENDPOINT}\tdevice\n` };
       if (args.includes('ro.serialno')) return { code: 0, lines: ['A5-STABLE'], output: 'A5-STABLE\n' };
       return { code: 0, lines: ['ok'], output: 'ok\n', stderr: '', stdout: 'ok\n' };
     };
@@ -145,6 +149,7 @@ describe('Windows Android Lab worker operations', () => {
       fileName: 'probe.mjs', kind: 'diagnostic', runtime: 'node'
     }, { cwd: { path: '', scope: 'run' }, mode: 'diagnostic', target: 'a5' }) });
     expect(calls.at(-1).options.env.FOLIOLE_ANDROID_SERIAL).toBe(ENDPOINT);
+    expect(calls.at(-1).options.env.FOLIOLE_ANDROID_ADB_SERVER_PORT).toBe('5601');
   });
 
   it('does not create a clean candidate checkout before Windows client control', async () => {

@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { resolveAndroidDevice, validateAndroidLabConfig } from './windows-android-lab-device.mjs';
+import { androidLabAdbEnv } from './windows-android-lab-adb.mjs';
 import { runWindowsAndroidLabReviewPhase } from './windows-android-lab-review-action.mjs';
 import { readJson, writeJsonAtomic } from './windows-android-lab-state.mjs';
 
@@ -32,7 +33,7 @@ function scenarioEvidenceRoot(paths, request, name) {
 
 function scenarioEnv(config, endpoint, paths, evidenceRoot) {
   const tools = [config.nodeDirectory, path.win32.dirname(config.adbPath)].filter(Boolean).join(';');
-  return {
+  return androidLabAdbEnv(config, {
     ...process.env,
     ANDROID_USER_HOME: paths.signingHome,
     ANDROID_WINDOWS_WORKDIR: paths.preview,
@@ -42,7 +43,7 @@ function scenarioEnv(config, endpoint, paths, evidenceRoot) {
     FOLIOLE_ANDROID_SERIAL: endpoint,
     JAVA_HOME: config.javaHome,
     Path: `${tools};${process.env.Path || process.env.PATH || ''}`
-  };
+  });
 }
 
 async function runChecked(executeCommand, command, args, options, code) {

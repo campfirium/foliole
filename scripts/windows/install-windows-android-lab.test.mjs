@@ -32,6 +32,7 @@ describe('Windows Android lab installer', () => {
     expect(source).toContain('deviceIdentity = $DeviceIdentity');
     expect(source).toContain('schemaVersion = 2');
     expect(source).toContain('windows-android-lab-device.mjs');
+    expect(source).toContain('windows-android-lab-adb.mjs');
     expect(source).toContain('windows-android-lab-evidence.mjs');
     expect(source).toContain('windows-android-lab-checkout.mjs');
     expect(source).toContain('windows-android-lab-operation.mjs');
@@ -42,6 +43,7 @@ describe('Windows Android lab installer', () => {
     expect(source).toContain('windows-android-lab-review-snapshot.mjs');
     expect(source).toContain('$existingConfig.androidDebugKeystoreSha256');
     expect(source).toContain('$config.androidDebugKeystoreSha256 = $existingConfig.androidDebugKeystoreSha256');
+    expect(source).toContain('$config.adbServerPort = $existingConfig.adbServerPort');
     expect(source).not.toMatch(/Remove-Item[^\n]*(repository\.git|device\.json|evidence)/u);
     expect(source).toContain('-RunLevel Limited');
     expect(source).not.toContain('FoliolePhysicalAcceptance');

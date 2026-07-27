@@ -81,6 +81,8 @@ describe('windows-deploy-app.sh', () => {
     const adbDeviceScript = await readFile(ADB_DEVICE_SCRIPT, 'utf8');
 
     expect(script).toContain('function Invoke-AdbCommand');
+    expect(script).toContain('$Arguments = @("-P", $env:FOLIOLE_ANDROID_ADB_SERVER_PORT) + $Arguments');
+    expect(script).toContain('$env:ANDROID_ADB_SERVER_PORT = $env:FOLIOLE_ANDROID_ADB_SERVER_PORT');
     expect(script).toContain('Invoke-AdbCommand -AdbPath $adbPath -Arguments @("start-server") *> $null');
     expect(script).toContain('-WindowStyle Hidden');
     expect(script).toContain('function Test-LastCommandFailed');

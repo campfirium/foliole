@@ -10,11 +10,15 @@ const DATABASE_CANDIDATES = [
   'databases/foliole-companion.db'
 ];
 
-function captureDeviceFile(adbPath, endpoint, devicePath, outputPath, spawnImpl = spawn) {
+function adbArgs(adbServerPort, args) {
+  return adbServerPort ? ['-P', adbServerPort, ...args] : args;
+}
+
+function captureDeviceFile(adbPath, adbServerPort, endpoint, devicePath, outputPath, spawnImpl = spawn) {
   return new Promise((resolve, reject) => {
-    const child = spawnImpl(adbPath, [
+    const child = spawnImpl(adbPath, adbArgs(adbServerPort, [
       '-s', endpoint, 'exec-out', 'run-as', APP_ID, 'cat', devicePath
-    ], { shell: false, stdio: ['ignore', 'pipe', 'pipe'] });
+    ]), { shell: false, stdio: ['ignore', 'pipe', 'pipe'] });
     const output = fs.createWriteStream(outputPath, { mode: 0o600 });
     let stderr = '';
     const timer = setTimeout(() => {
@@ -43,7 +47,7 @@ function assertSqlite(filePath) {
   if (header.toString('utf8') !== 'SQLite format 3\0') throw new Error('Android companion snapshot is not SQLite');
 }
 
-export async function pullAndroidReviewSnapshot({ adbPath, appStopped, destination, endpoint, spawnImpl = spawn }) {
+export async function pullAndroidReviewSnapshot({ adbPath, adbServerPort = '', appStopped, destination, endpoint, spawnImpl = spawn }) {
   if (appStopped !== true) {
     throw Object.assign(new Error('Android review snapshot requires a stopped application'), {
       code: 'review_snapshot_requires_stopped_app'
@@ -54,11 +58,11 @@ export async function pullAndroidReviewSnapshot({ adbPath, appStopped, destinati
   for (const devicePath of DATABASE_CANDIDATES) {
     const databasePath = path.join(destination, 'review.db');
     try {
-      await captureDeviceFile(adbPath, endpoint, devicePath, databasePath, spawnImpl);
+      await captureDeviceFile(adbPath, adbServerPort, endpoint, devicePath, databasePath, spawnImpl);
       assertSqlite(databasePath);
       for (const suffix of ['-wal', '-shm']) {
         try {
-          await captureDeviceFile(adbPath, endpoint, `${devicePath}${suffix}`, `${databasePath}${suffix}`, spawnImpl);
+          await captureDeviceFile(adbPath, adbServerPort, endpoint, `${devicePath}${suffix}`, `${databasePath}${suffix}`, spawnImpl);
         } catch {
           fs.rmSync(`${databasePath}${suffix}`, { force: true });
         }

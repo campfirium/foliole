@@ -18,12 +18,13 @@ function Invoke-ScreenshotCapture {
   param(
     [string]$AdbPath,
     [string]$Serial,
+    [string[]]$AdbPrefix,
     [string]$OutputPath
   )
 
   $process = Start-Process `
     -FilePath $AdbPath `
-    -ArgumentList @("-s", $Serial, "exec-out", "screencap", "-p") `
+    -ArgumentList ($AdbPrefix + @("-s", $Serial, "exec-out", "screencap", "-p")) `
     -RedirectStandardOutput $OutputPath `
     -WindowStyle Hidden `
     -Wait `
@@ -36,12 +37,13 @@ function Invoke-ScreenshotCapture {
 function Invoke-DeviceWake {
   param(
     [string]$AdbPath,
-    [string]$Serial
+    [string]$Serial,
+    [string[]]$AdbPrefix
   )
 
   $wake = Start-Process `
     -FilePath $AdbPath `
-    -ArgumentList @("-s", $Serial, "shell", "input", "keyevent", "KEYCODE_WAKEUP") `
+    -ArgumentList ($AdbPrefix + @("-s", $Serial, "shell", "input", "keyevent", "KEYCODE_WAKEUP")) `
     -WindowStyle Hidden `
     -Wait `
     -PassThru
@@ -50,7 +52,7 @@ function Invoke-DeviceWake {
   }
   $dismiss = Start-Process `
     -FilePath $AdbPath `
-    -ArgumentList @("-s", $Serial, "shell", "wm", "dismiss-keyguard") `
+    -ArgumentList ($AdbPrefix + @("-s", $Serial, "shell", "wm", "dismiss-keyguard")) `
     -WindowStyle Hidden `
     -Wait `
     -PassThru
@@ -94,12 +96,17 @@ function Resolve-AdbPath {
 }
 
 $adbPath = Resolve-AdbPath
-& $adbPath start-server *> $null
+$adbPrefix = @()
+if (![string]::IsNullOrWhiteSpace($env:FOLIOLE_ANDROID_ADB_SERVER_PORT)) {
+  $adbPrefix = @("-P", $env:FOLIOLE_ANDROID_ADB_SERVER_PORT)
+  $env:ANDROID_ADB_SERVER_PORT = $env:FOLIOLE_ANDROID_ADB_SERVER_PORT
+}
+& $adbPath @adbPrefix start-server *> $null
 
 if (![string]::IsNullOrWhiteSpace($TargetSerial)) {
   $serial = $TargetSerial
 } else {
-  $devicesOutput = & $adbPath devices 2>$null
+  $devicesOutput = & $adbPath @adbPrefix devices 2>$null
   $deviceLines = $devicesOutput | Select-Object -Skip 1
   $serial = Resolve-AndroidDeviceSerialFromAdbDevices -DeviceLines $deviceLines -TargetSerial $TargetSerial
 }
@@ -116,8 +123,8 @@ $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $outputPath = Join-Path $resolvedOutputDir "android-$timestamp.png"
 
 Write-Info "device: $serial"
-Invoke-DeviceWake -AdbPath $adbPath -Serial $serial
-Invoke-ScreenshotCapture -AdbPath $adbPath -Serial $serial -OutputPath $outputPath
+Invoke-DeviceWake -AdbPath $adbPath -Serial $serial -AdbPrefix $adbPrefix
+Invoke-ScreenshotCapture -AdbPath $adbPath -Serial $serial -AdbPrefix $adbPrefix -OutputPath $outputPath
 
 Write-Info "file: $outputPath"
 Write-Info "status: CAPTURED"

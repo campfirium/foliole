@@ -19,12 +19,17 @@ function fixture() {
   return androidLabPaths(root);
 }
 
+function adbCommand(args) {
+  return args[0] === '-P' ? args.slice(2) : args;
+}
+
 function adbExecutor({ devices = `${ENDPOINT}\tdevice\n`, identity = 'A5-STABLE', mdns = '' } = {}) {
   return async (_command, args) => {
-    if (args[0] === 'devices') return { code: 0, lines: [], output: devices };
-    if (args[0] === 'mdns') return { code: 0, lines: [], output: mdns };
+    const adb = adbCommand(args);
+    if (adb[0] === 'devices') return { code: 0, lines: [], output: devices };
+    if (adb[0] === 'mdns') return { code: 0, lines: [], output: mdns };
     if (args.includes('getprop')) return { code: 0, lines: [identity], output: `${identity}\n` };
-    return { code: 0, lines: [], output: `connected to ${args.at(-1)}\n` };
+    return { code: 0, lines: [], output: `connected to ${adb.at(-1)}\n` };
   };
 }
 
@@ -51,18 +56,20 @@ describe('Windows Android lab device contract', () => {
     let connected = '';
     const executeCommand = async (_command, args) => {
       calls.push(args);
-      if (args[0] === 'devices') return { code: 0, lines: [], output: connected ? `${connected}\tdevice\n` : '' };
-      if (args[0] === 'mdns') return { code: 0, lines: [], output: `adb-A5 _adb-tls-connect._tcp. ${ENDPOINT}` };
+      const adb = adbCommand(args);
+      if (adb[0] === 'devices') return { code: 0, lines: [], output: connected ? `${connected}\tdevice\n` : '' };
+      if (adb[0] === 'mdns') return { code: 0, lines: [], output: `adb-A5 _adb-tls-connect._tcp. ${ENDPOINT}` };
       if (args.includes('getprop')) {
-        const identity = args[1] === ENDPOINT ? 'A5-STABLE' : 'OTHER';
+        const identity = adb[1] === ENDPOINT ? 'A5-STABLE' : 'OTHER';
         return { code: 0, lines: [identity], output: identity };
       }
-      if (args[0] === 'connect') connected = args[1];
+      if (adb[0] === 'connect') connected = adb[1];
       return { code: 0, lines: [], output: 'connected' };
     };
     const device = await resolveAndroidDevice(CONFIG, paths, executeCommand);
     expect(device).toMatchObject({ discoverySource: 'mdns', endpoint: ENDPOINT });
-    expect(calls.findIndex((args) => args[0] === 'mdns')).toBeGreaterThan(calls.findIndex((args) => args.includes('getprop')));
+    expect(calls.findIndex((args) => adbCommand(args)[0] === 'mdns')).toBeGreaterThan(calls.findIndex((args) => args.includes('getprop')));
+    expect(calls.every((args) => args[0] === '-P' && args[1] === '5601')).toBe(true);
   });
 
   it('resolves a ready USB ADB serial without wireless reconnect', async () => {
@@ -70,13 +77,15 @@ describe('Windows Android lab device contract', () => {
     const calls = [];
     const executeCommand = async (_command, args) => {
       calls.push(args);
-      if (args[0] === 'devices') return { code: 0, lines: [], output: '87a33a4b\tdevice product:marble\n' };
+      const adb = adbCommand(args);
+      if (adb[0] === 'devices') return { code: 0, lines: [], output: '87a33a4b\tdevice product:marble\n' };
       if (args.includes('getprop')) return { code: 0, lines: ['A5-STABLE'], output: 'A5-STABLE\n' };
       return { code: 0, lines: [], output: '' };
     };
     const device = await resolveAndroidDevice(CONFIG, paths, executeCommand);
     expect(device).toMatchObject({ discoverySource: 'usb', endpoint: '87a33a4b', identity: 'A5-STABLE' });
-    expect(calls.some((args) => args[0] === 'connect')).toBe(false);
+    expect(calls.some((args) => adbCommand(args)[0] === 'connect')).toBe(false);
+    expect(calls.every((args) => args[0] === '-P' && args[1] === '5601')).toBe(true);
   });
 
   it('parses only valid IPv4 endpoints from mDNS output', () => {

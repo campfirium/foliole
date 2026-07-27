@@ -90,7 +90,8 @@ function pairingStateFromPrefs(values) {
 }
 
 async function adb(adbPath, serial, args, options = {}) {
-  const result = await execFileAsync(adbPath, ['-s', serial, ...args], {
+  const port = process.env.FOLIOLE_ANDROID_ADB_SERVER_PORT;
+  const result = await execFileAsync(adbPath, [...(port ? ['-P', port] : []), '-s', serial, ...args], {
     encoding: options.encoding ?? 'utf8',
     maxBuffer: options.maxBuffer ?? 8_000_000,
     timeout: options.timeoutMs ?? 60_000

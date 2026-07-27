@@ -8,6 +8,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { executeBounded } from './windows-bounded-process.mjs';
+import { androidLabAdbArgs, androidLabAdbEnv } from './windows-android-lab-adb.mjs';
 import { cleanupAndroidLabCheckout, prepareAndroidLabCheckout } from './windows-android-lab-checkout.mjs';
 import { resolveAndroidDevice, validateAndroidLabConfig } from './windows-android-lab-device.mjs';
 import { finishAndroidLabOperationRun } from './windows-android-lab-operation.mjs';
@@ -70,7 +71,7 @@ async function captureScreenshot(config, endpoint, paths, evidenceRoot, executeC
 function previewEnvironment(config, endpoint, paths) {
   const toolPath = [config.nodeDirectory, path.win32.join(config.javaHome, 'bin'), path.win32.dirname(config.adbPath)]
     .filter(Boolean).join(';');
-  return {
+  return androidLabAdbEnv(config, {
     ...process.env,
     ANDROID_USER_HOME: paths.signingHome,
     ANDROID_DATA_PROTECTION: '1',
@@ -86,15 +87,15 @@ function previewEnvironment(config, endpoint, paths) {
     FOLIOLE_ANDROID_SERIAL: endpoint,
     JAVA_HOME: config.javaHome,
     Path: `${toolPath};${process.env.Path || process.env.PATH || ''}`
-  };
+  });
 }
 
 async function captureLogcat(config, endpoint, evidenceRoot, executeCommand) {
   if (!endpoint) return 'device unresolved';
   try {
-    const result = await runChecked(executeCommand, config.adbPath, [
+    const result = await runChecked(executeCommand, config.adbPath, androidLabAdbArgs(config, [
       '-s', endpoint, 'logcat', '-d', '-t', '2000'
-    ], { env: process.env }, 'logcat_failed');
+    ]), { env: androidLabAdbEnv(config, process.env) }, 'logcat_failed');
     const output = Buffer.from(result.output || '', 'utf8');
     const bounded = output.length > 1_000_000 ? output.subarray(output.length - 1_000_000) : output;
     const prefix = output.length > bounded.length ? '[truncated to last 1000000 bytes]\n' : '';

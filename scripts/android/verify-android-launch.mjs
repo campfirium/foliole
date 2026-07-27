@@ -68,6 +68,7 @@ export function matchesLaunchComponent(actualComponent, expectedComponent, appId
 function parseArgs(argv) {
   const options = {
     adb: 'adb',
+    adbServerPort: '',
     appId: '',
     component: '',
     serial: '',
@@ -84,6 +85,9 @@ function parseArgs(argv) {
     switch (key) {
       case '--adb':
         options.adb = value;
+        break;
+      case '--adb-server-port':
+        options.adbServerPort = value;
         break;
       case '--app-id':
         options.appId = value;
@@ -115,16 +119,16 @@ function sleep(milliseconds) {
   });
 }
 
-async function runAdb(adbPath, serial, args) {
-  const adbArgs = serial ? ['-s', serial, ...args] : args;
+async function runAdb(adbPath, serial, adbServerPort, args) {
+  const adbArgs = [...(adbServerPort ? ['-P', adbServerPort] : []), ...(serial ? ['-s', serial] : []), ...args];
   const result = await execFileAsync(adbPath, adbArgs, { encoding: 'utf8' });
   return result.stdout ?? '';
 }
 
-async function collectLaunchState(adbPath, serial) {
+async function collectLaunchState(adbPath, serial, adbServerPort) {
   const [activityOutput, windowOutput] = await Promise.all([
-    runAdb(adbPath, serial, ['shell', 'dumpsys', 'activity', 'activities']),
-    runAdb(adbPath, serial, ['shell', 'dumpsys', 'window', 'windows'])
+    runAdb(adbPath, serial, adbServerPort, ['shell', 'dumpsys', 'activity', 'activities']),
+    runAdb(adbPath, serial, adbServerPort, ['shell', 'dumpsys', 'window', 'windows'])
   ]);
 
   return {
@@ -138,7 +142,7 @@ export async function verifyAndroidLaunch(options) {
   let lastState = { focusedWindow: null, topActivity: null };
 
   while (Date.now() < deadline) {
-    lastState = await collectLaunchState(options.adb, options.serial);
+    lastState = await collectLaunchState(options.adb, options.serial, options.adbServerPort);
     const inForeground =
       matchesLaunchComponent(lastState.topActivity, options.component, options.appId) &&
       matchesLaunchComponent(lastState.focusedWindow, options.component, options.appId);
@@ -152,7 +156,7 @@ export async function verifyAndroidLaunch(options) {
     let stable = true;
     while (Date.now() < stableDeadline) {
       await sleep(1000);
-      lastState = await collectLaunchState(options.adb, options.serial);
+      lastState = await collectLaunchState(options.adb, options.serial, options.adbServerPort);
       stable =
         matchesLaunchComponent(lastState.topActivity, options.component, options.appId) &&
         matchesLaunchComponent(lastState.focusedWindow, options.component, options.appId);

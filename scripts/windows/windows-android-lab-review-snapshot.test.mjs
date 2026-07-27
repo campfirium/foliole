@@ -31,12 +31,12 @@ describe('Windows Android lab Review snapshot', () => {
     const calls = [];
     try {
       const databasePath = await pullAndroidReviewSnapshot({
-        adbPath: 'adb.exe', appStopped: true, destination: root,
+        adbPath: 'adb.exe', adbServerPort: '5601', appStopped: true, destination: root,
         endpoint: '192.168.1.8:34567', spawnImpl: successfulAdb(calls)
       });
       expect(fs.readFileSync(databasePath).subarray(0, 16).toString()).toBe('SQLite format 3\0');
       expect(calls[0].args).toEqual([
-        '-s', '192.168.1.8:34567', 'exec-out', 'run-as', 'com.foliole.android',
+        '-P', '5601', '-s', '192.168.1.8:34567', 'exec-out', 'run-as', 'com.foliole.android',
         'cat', 'databases/foliole-companionSQLite.db'
       ]);
       expect(calls.flatMap(({ args }) => args).join(' ')).not.toMatch(/push|\brm\b|sh -c|write/iu);

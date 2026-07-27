@@ -4,6 +4,7 @@ import path from 'node:path';
 import process from 'node:process';
 
 import { reconnectAndroidDevice, resolveAndroidDevice } from './windows-android-lab-device.mjs';
+import { androidLabAdbArgs, androidLabAdbEnv } from './windows-android-lab-adb.mjs';
 import { cleanupAndroidLabCheckout, prepareAndroidLabCheckout } from './windows-android-lab-checkout.mjs';
 import { readJson, writeJsonAtomic } from './windows-android-lab-state.mjs';
 
@@ -49,7 +50,9 @@ function auditedArgs(args) {
 }
 
 function operationEnvironment(config, paths, evidenceRoot, spec) {
-  const env = Object.fromEntries(ENV_KEYS.filter((key) => process.env[key] !== undefined).map((key) => [key, process.env[key]]));
+  const env = androidLabAdbEnv(config, Object.fromEntries(
+    ENV_KEYS.filter((key) => process.env[key] !== undefined).map((key) => [key, process.env[key]])
+  ));
   env.JAVA_HOME = config.javaHome;
   const tools = [config.nodeDirectory, path.win32.dirname(config.adbPath)].filter(Boolean).join(';');
   env.Path = `${tools};${env.Path || env.PATH || ''}`;
@@ -111,7 +114,7 @@ async function resolveProcessSpec(config, paths, request, evidenceRoot, executeC
   }
   if (operation.kind === 'adb') {
     const device = await resolveAndroidDevice(config, paths, executeCommand);
-    return { args: ['-s', device.endpoint, ...operation.args], command: config.adbPath, deviceIdentity: device.identity };
+    return { args: androidLabAdbArgs(config, ['-s', device.endpoint, ...operation.args]), command: config.adbPath, deviceIdentity: device.identity };
   }
   const readRoot = scopedRoot(request.cwd.scope, paths, evidenceRoot);
   const file = resolveWithin(readRoot, path.join(request.cwd.path || '', operation.path));

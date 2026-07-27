@@ -25,7 +25,8 @@ function adbCandidates(adbPath) {
 export { adbCandidates };
 
 export async function runAdb(options, args, execOptions = {}) {
-  const adbArgs = options.serial ? ['-s', options.serial, ...args] : args;
+  const port = options.adbServerPort || process.env.FOLIOLE_ANDROID_ADB_SERVER_PORT;
+  const adbArgs = [...(port ? ['-P', port] : []), ...(options.serial ? ['-s', options.serial] : []), ...args];
   let lastError = null;
   for (const adbPath of adbCandidates(options.adb)) {
     try {
@@ -39,7 +40,8 @@ export async function runAdb(options, args, execOptions = {}) {
 }
 
 export async function spawnAdb(options, args, input) {
-  const adbArgs = options.serial ? ['-s', options.serial, ...args] : args;
+  const port = options.adbServerPort || process.env.FOLIOLE_ANDROID_ADB_SERVER_PORT;
+  const adbArgs = [...(port ? ['-P', port] : []), ...(options.serial ? ['-s', options.serial] : []), ...args];
   let lastError = null;
   for (const adbPath of adbCandidates(options.adb)) {
     try {
