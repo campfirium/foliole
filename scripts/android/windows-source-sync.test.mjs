@@ -53,6 +53,9 @@ describe('windows-source-sync', () => {
     expect(script).toContain('"/IT"');
     expect(script).not.toContain('"/MIR"');
     expect(script).not.toContain('"/PURGE"');
+    expect(script).toContain('Copy-ChangedSourceFiles -Source $sourcePath -Destination $destinationPath');
+    expect(script).toContain('Get-FileHash -LiteralPath');
+    expect(script).toContain('Copy-Item -LiteralPath $_.FullName -Destination $target -Force');
     expect(script).toContain('if ($exitCode -ge 8)');
     expect(script).toContain('status: SYNCED code=$exitCode');
     expect(script).toContain('android\\app\\src\\main\\assets\\public');

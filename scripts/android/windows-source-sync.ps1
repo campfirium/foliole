@@ -118,6 +118,64 @@ function Invoke-RobocopySync {
   Write-Info "status: SYNCED code=$exitCode"
 }
 
+function Test-ExcludedRelativePath {
+  param(
+    [string]$RelativePath,
+    [array]$Patterns,
+    [bool]$DirectoryMode
+  )
+
+  $normalized = $RelativePath.ToLowerInvariant()
+  foreach ($pattern in $Patterns) {
+    $match = $pattern.ToLowerInvariant()
+    if ($match.Contains("*")) {
+      if ($normalized -like $match -or ($DirectoryMode -and $normalized -like "$match\*")) {
+        return $true
+      }
+      continue
+    }
+    if ($normalized -eq $match -or ($DirectoryMode -and $normalized.StartsWith("$match\"))) {
+      return $true
+    }
+  }
+  return $false
+}
+
+function Copy-ChangedSourceFiles {
+  param(
+    [string]$Source,
+    [string]$Destination
+  )
+
+  $sourceRoot = (Resolve-Path -LiteralPath $Source).Path.TrimEnd("\")
+  $copied = 0
+  Get-ChildItem -LiteralPath $sourceRoot -File -Recurse -Force | ForEach-Object {
+    $relative = $_.FullName.Substring($sourceRoot.Length).TrimStart("\")
+    if (Test-ExcludedRelativePath -RelativePath $relative -Patterns $excludeFiles -DirectoryMode $false) {
+      return
+    }
+    if (Test-ExcludedRelativePath -RelativePath $relative -Patterns $excludeDirs -DirectoryMode $true) {
+      return
+    }
+    $target = Join-Path $Destination $relative
+    $targetItem = Get-Item -LiteralPath $target -ErrorAction SilentlyContinue
+    if ($null -ne $targetItem -and $targetItem.Length -eq $_.Length) {
+      $sourceHash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
+      $targetHash = (Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash
+      if ($sourceHash -eq $targetHash) {
+        return
+      }
+    }
+    $targetDir = Split-Path -Parent $target
+    if (!(Test-Path -LiteralPath $targetDir -PathType Container)) {
+      New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
+    }
+    Copy-Item -LiteralPath $_.FullName -Destination $target -Force
+    $copied += 1
+  }
+  Write-Info "content overlay copied=$copied"
+}
+
 Assert-Directory -Path $SourceDir -Label "SourceDir"
 if (!(Test-Path -LiteralPath $WindowsWorkDir -PathType Container)) {
   New-Item -ItemType Directory -Path $WindowsWorkDir -Force | Out-Null
@@ -128,3 +186,4 @@ $destinationPath = (Resolve-Path -LiteralPath $WindowsWorkDir).Path
 Write-Info "source: $sourcePath"
 Write-Info "destination: $destinationPath"
 Invoke-RobocopySync -Source $sourcePath -Destination $destinationPath
+Copy-ChangedSourceFiles -Source $sourcePath -Destination $destinationPath
