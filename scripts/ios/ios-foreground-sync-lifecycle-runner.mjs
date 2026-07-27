@@ -229,17 +229,17 @@ function runHeavy(options, command, args, extra = {}) {
 }
 function runJson(options, command, args) { return JSON.parse(capture(options, command, args)); }
 function capture(options, command, args) {
-  const result = spawnSync(command, args, { cwd: options.repoRoot, encoding: 'utf8' });
-  if (result.status !== 0) throw new Error(result.stderr || `${command} failed with ${result.status}`);
+  const result = spawnSync(command, args, { cwd: options.repoRoot, encoding: 'utf8', timeout: 600_000 });
+  if (result.status !== 0) throw new Error(result.error?.message || result.stderr || `${command} failed with ${result.status}`);
   return result.stdout;
 }
 function run(options, command, args, extra = {}) {
-  const result = spawnSync(command, args, { cwd: options.repoRoot, stdio: 'inherit', ...extra });
-  if (result.status !== 0) throw new Error(`${command} failed with ${result.status}`);
+  const result = spawnSync(command, args, { cwd: options.repoRoot, stdio: 'inherit', timeout: 600_000, ...extra });
+  if (result.status !== 0) throw new Error(result.error?.message || `${command} failed with ${result.status}`);
 }
-function runAllowFailure(options, command, args) { spawnSync(command, args, { cwd: options.repoRoot, stdio: 'ignore' }); }
+function runAllowFailure(options, command, args) { spawnSync(command, args, { cwd: options.repoRoot, stdio: 'ignore', timeout: 600_000 }); }
 function captureAllowFailure(options, command, args) {
-  const result = spawnSync(command, args, { cwd: options.repoRoot, encoding: 'utf8' });
+  const result = spawnSync(command, args, { cwd: options.repoRoot, encoding: 'utf8', timeout: 600_000 });
   return `${result.stdout ?? ''}${result.stderr ?? ''}`;
 }
 function delay(durationMs) { return new Promise((resolve) => setTimeout(resolve, durationMs)); }
