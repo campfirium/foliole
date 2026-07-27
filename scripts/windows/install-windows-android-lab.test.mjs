@@ -15,6 +15,7 @@ describe('Windows Android lab installer', () => {
     expect(source).toContain('receive.denyNonFastForwards true');
     expect(source).toContain('refs/heads/lab/dev');
     expect(source).toContain('windows-android-lab-receive.mjs');
+    expect(source).toContain('windows-android-lab-runtime-update.mjs');
     expect(source).toContain('windows-android-lab-selfcheck.mjs');
     expect(source).toContain('git-read-token.txt');
     expect(source).toContain('-ErrorAction SilentlyContinue');

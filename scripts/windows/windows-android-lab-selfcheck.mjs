@@ -5,6 +5,7 @@ import path from 'node:path';
 import {
   publicDeviceStatus, readJson, WINDOWS_ANDROID_LAB_TASK
 } from './windows-android-lab-state.mjs';
+import { WINDOWS_ANDROID_LAB_RUNTIME_FILES } from './windows-android-lab-runtime-update.mjs';
 
 function boundedOutput(value) {
   return String(value || '').slice(-4000);
@@ -91,13 +92,7 @@ export function runWindowsAndroidLabSelfcheck({
   const signing = signingStatus(config, paths);
   const device = publicDeviceStatus(readJson(paths.device));
   const collect = { resultStatus: fs.existsSync(paths.evidence) ? 'success' : 'failure' };
-  const installedRuntime = [
-    installedFile(paths, 'windows-android-lab-adb.mjs'),
-    installedFile(paths, 'windows-android-lab-dispatcher.mjs'),
-    installedFile(paths, 'windows-android-lab-worker.mjs'),
-    installedFile(paths, 'windows-android-lab-operation.mjs'),
-    installedFile(paths, 'windows-android-lab-state.mjs')
-  ];
+  const installedRuntime = WINDOWS_ANDROID_LAB_RUNTIME_FILES.map((name) => installedFile(paths, name));
   const checks = [task, workerSyntax, signing, collect];
   const resultStatus = checks.every((check) => check.resultStatus === 'success') && dependencyRefresh === 'auto'
     ? 'success' : 'failure';

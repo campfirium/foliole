@@ -9,18 +9,14 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { dispatchWindowsAndroidLab } from './windows-android-lab-dispatcher.mjs';
 import { androidLabPaths, writeJsonAtomic } from './windows-android-lab-state.mjs';
+import { WINDOWS_ANDROID_LAB_RUNTIME_FILES } from './windows-android-lab-runtime-update.mjs';
 
 const roots = [];
 afterEach(() => roots.splice(0).forEach((root) => fs.rmSync(root, { force: true, recursive: true })));
 
 function prepareSelfcheck(paths) {
   fs.mkdirSync(paths.root, { recursive: true });
-  for (const file of [
-    'windows-android-lab-dispatcher.mjs',
-    'windows-android-lab-worker.mjs',
-    'windows-android-lab-operation.mjs',
-    'windows-android-lab-state.mjs'
-  ]) {
+  for (const file of WINDOWS_ANDROID_LAB_RUNTIME_FILES) {
     fs.writeFileSync(path.join(paths.root, file), `// ${file}\nANDROID_WINDOWS_DEPENDENCY_REFRESH: 'auto'\n`);
   }
   const signing = Buffer.from('private signing bytes');

@@ -134,6 +134,12 @@ export function parseAndroidLabCommand(input) {
     throw new Error('signing requires install <1..65536 byte length> <lowercase sha256>');
   }
   if (action === 'selfcheck' && parts.length === 0) return { action };
+  if (action === 'runtime') {
+    if (parts[0] === 'update' && parts.length === 2 && /^[0-9a-f]{40}$/u.test(parts[1])) {
+      return { action, commitSha: parts[1], operation: 'update' };
+    }
+    throw new Error('runtime requires update <40-character commit SHA>');
+  }
   if (!['cancel', 'status'].includes(action) || parts.length !== 0) throw new Error('unsupported Android lab action');
   return { action };
 }

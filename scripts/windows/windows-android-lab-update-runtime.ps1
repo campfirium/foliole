@@ -18,6 +18,7 @@ $files = @(
   "windows-android-lab-review-scenario.mjs",
   "windows-android-lab-review-snapshot.mjs",
   "windows-android-lab-receive.mjs",
+  "windows-android-lab-runtime-update.mjs",
   "windows-android-lab-selfcheck.mjs",
   "windows-android-lab-state.mjs",
   "windows-android-lab-worker.mjs"

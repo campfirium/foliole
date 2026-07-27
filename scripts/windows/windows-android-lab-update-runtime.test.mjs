@@ -11,6 +11,7 @@ describe('Windows Android Lab runtime updater', () => {
     expect(source).toContain('windows-android-lab-worker.mjs');
     expect(source).toContain('windows-android-lab-adb.mjs');
     expect(source).toContain('windows-android-lab-dispatcher.mjs');
+    expect(source).toContain('windows-android-lab-runtime-update.mjs');
     expect(source).toContain('windows-android-lab-selfcheck.mjs');
     expect(source).toContain('windows-android-lab-operation.mjs');
     expect(source).toContain('$nodePath --check');
