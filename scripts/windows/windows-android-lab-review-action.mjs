@@ -109,8 +109,10 @@ async function runAudit({ config, databasePath, deployment, evidenceRoot, execut
   fs.writeFileSync(path.join(evidenceRoot, 'runner.log'), `${result.lines?.join('\n') || ''}\n`, 'utf8');
   const audit = readJson(output);
   if (result.code !== 0) {
+    const auditMessage = audit?.issues?.find((issue) => issue.error)?.error
+      || audit?.acceptance?.error || audit?.scheduler?.error || audit?.sync?.error || audit?.pairing?.error;
     throw codedError(audit?.errorCode || 'review_audit_failed',
-      result.lines?.at(-1) || audit?.scheduler?.error || audit?.acceptance?.error || `audit exited ${result.code}`);
+      auditMessage || result.lines?.at(-1) || `audit exited ${result.code}`);
   }
   if (!audit || audit.resultStatus !== 'success') throw codedError('review_audit_invalid', 'audit result is unavailable or incomplete');
   return audit;

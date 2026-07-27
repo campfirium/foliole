@@ -41,7 +41,7 @@ function fixture(phase = 'prepare') {
   return { paths, request };
 }
 
-function executor(calls, audit = {}, auditExitCode = 0) {
+function executor(calls, audit = {}, auditExitCode = 0, auditLines = []) {
   return async (command, args) => {
     calls.push({ args, command });
     const adb = args[0] === '-P' ? args.slice(2) : args;
@@ -58,7 +58,7 @@ function executor(calls, audit = {}, auditExitCode = 0) {
         },
         selected: { fsrsNodeId: 'fsrs-1', readingNodeIds: ['read-1', 'read-2', 'read-3'] }, ...audit
       });
-      return { code: auditExitCode, lines: [], output: '' };
+      return { code: auditExitCode, lines: auditLines, output: auditLines.join('\n') };
     }
     return { code: 0, lines: [], output: '' };
   };
@@ -172,9 +172,11 @@ describe('Windows Android lab Review action', () => {
       errorCode: 'review_scheduler_settings_missing',
       scheduler: { error: 'review scheduler settings are missing', status: 'missing' },
       sync: { status: 'available', value: { reviewLogPushCursor: null } }
-    }, 1);
+    }, 1, ['(Use `node --trace-warnings ...` to show where the warning was created)']);
     await expect(runWindowsAndroidLabReviewPhase({ executeCommand, paths, pullSnapshot, request }))
-      .rejects.toMatchObject({ code: 'review_scheduler_settings_missing' });
+      .rejects.toMatchObject({
+        code: 'review_scheduler_settings_missing', message: 'review scheduler settings are missing'
+      });
     expect(readJson(path.join(paths.evidence, request.runId, 'review-audit.json'))).toMatchObject({
       resultStatus: 'failure', scheduler: { status: 'missing' }, sync: { status: 'available' }
     });
