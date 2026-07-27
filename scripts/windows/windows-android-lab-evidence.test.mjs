@@ -77,4 +77,27 @@ describe('Windows Android lab evidence', () => {
     expect(() => collectLabEvidence({ operation: 'get', relativePath: '../summary.json', runId }, paths, null, { write: () => {} }))
       .toThrow('not allowed');
   });
+
+  it('allows scenario instrumentation stdout and stderr evidence', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-android-lab-instrumentation-evidence-'));
+    roots.push(root);
+    const paths = androidLabPaths(root);
+    const runId = '1003-dddddddddddd-scenario';
+    const evidenceRoot = path.join(paths.evidence, runId, 'ui-sequence');
+    fs.mkdirSync(evidenceRoot, { recursive: true });
+    fs.writeFileSync(path.join(evidenceRoot, 'instrumentation-stdout.txt'), 'raw stdout');
+    fs.writeFileSync(path.join(evidenceRoot, 'instrumentation-stderr.txt'), 'raw stderr');
+    const chunks = [];
+
+    const listed = collectLabEvidence({ operation: 'list', runId }, paths, null, { write: () => {} });
+    collectLabEvidence({
+      operation: 'get', relativePath: 'ui-sequence/instrumentation-stdout.txt', runId
+    }, paths, null, { write: (value) => chunks.push(value) });
+
+    expect(listed.files).toEqual([
+      'ui-sequence/instrumentation-stderr.txt',
+      'ui-sequence/instrumentation-stdout.txt'
+    ]);
+    expect(Buffer.concat(chunks).toString('utf8')).toBe('raw stdout');
+  });
 });

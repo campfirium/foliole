@@ -3,9 +3,9 @@ import path from 'node:path';
 
 export const LAB_EVIDENCE_FILES = new Set([
   'action-receipt.json', 'after.png', 'before.png', 'command-audit.json', 'logcat.txt',
-  'native-ui-summary.json', 'on-failure.png', 'review-audit.json', 'runner.log',
-  'screenshot.png', 'semantic-snapshot.json', 'stderr.txt', 'stdout.txt', 'summary.json',
-  'ui-command-audit.json'
+  'instrumentation-stderr.txt', 'instrumentation-stdout.txt', 'native-ui-summary.json',
+  'on-failure.png', 'review-audit.json', 'runner.log', 'screenshot.png',
+  'semantic-snapshot.json', 'stderr.txt', 'stdout.txt', 'summary.json', 'ui-command-audit.json'
 ]);
 const LAB_EVIDENCE_SEGMENT = /^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/u;
 
