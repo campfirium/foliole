@@ -145,7 +145,15 @@ if (vitest.status !== 0) {
     'scripts/test-files.mjs',
     ...IOS_RUNTIME_SQLITE_CONTRACT_TESTS
   ], resourceMode);
-  const sqlite = spawnSync(sqliteTask.command, sqliteTask.args, { cwd: REPO_ROOT, stdio: 'inherit' });
+  const sqlite = spawnSync(sqliteTask.command, sqliteTask.args, {
+    cwd: REPO_ROOT,
+    env: {
+      ...process.env,
+      VITEST_FILE_PARALLELISM: '0',
+      VITEST_MAX_WORKERS: '1'
+    },
+    stdio: 'inherit'
+  });
   if (sqlite.error) throw sqlite.error;
   if (sqlite.status !== 0) process.exit(sqlite.status ?? 1);
 

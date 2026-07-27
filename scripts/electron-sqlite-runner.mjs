@@ -145,6 +145,9 @@ function main() {
   if (result.error) {
     console.error(result.error.message);
   }
+  if (result.status !== 0) {
+    console.error(`[electron-sqlite-runner] child exited status=${result.status ?? 'null'} signal=${result.signal ?? 'null'}`);
+  }
   process.exitCode = result.status ?? 1;
 }
 
