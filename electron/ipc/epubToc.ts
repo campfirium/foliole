@@ -24,8 +24,16 @@ function normalizeRelativePath(baseFilePath: string, href: string | null) {
   if (!sourcePath?.trim()) {
     return fragment ? `${baseFilePath}#${fragment}` : null;
   }
-  const normalizedPath = path.posix.normalize(path.posix.join(path.posix.dirname(baseFilePath), sourcePath.replace(/\\/g, '/')));
+  const normalizedPath = path.posix.normalize(path.posix.join(path.posix.dirname(baseFilePath), safelyDecodeUriPath(sourcePath).replace(/\\/g, '/')));
   return fragment ? `${normalizedPath}#${fragment}` : normalizedPath;
+}
+
+function safelyDecodeUriPath(sourcePath: string) {
+  try {
+    return decodeURI(sourcePath);
+  } catch {
+    return sourcePath;
+  }
 }
 
 function collectText(node: HtmlNode): string {
