@@ -1,4 +1,4 @@
-import { Eye, EyeOff, GripVertical, RotateCcw, Trash2 } from 'lucide-react';
+import { GripVertical, RotateCcw, Trash2 } from 'lucide-react';
 import { useState, type DragEvent } from 'react';
 
 import { APP_PALETTE_COMMANDS } from '../../../../app/hooks/appPaletteCommandList';
@@ -50,22 +50,21 @@ function DocumentMenuSeparatorButton(props: {
 }) {
   const t = useTranslation();
   const separatorEnabled = props.item.separatorBefore === true;
-  const SeparatorIcon = separatorEnabled ? Eye : EyeOff;
   return (
     <button
       aria-label={t('settings.documentMenu.separatorBefore', { label: props.label })}
       aria-pressed={separatorEnabled}
       className={[
-        'absolute left-1/2 top-0 z-10 inline-flex size-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border',
-        'border-settings-divider bg-settings-group text-foreground/38 shadow-sm transition-colors',
-        'hover:border-settings-control-border-hover hover:bg-settings-control-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
-        separatorEnabled ? 'border-settings-control-border-hover bg-settings-control-active text-foreground' : ''
+        'absolute left-settings-panel-x right-settings-panel-x top-0 z-10 h-5 -translate-y-1/2 cursor-pointer bg-transparent p-0',
+        'before:absolute before:left-0 before:right-0 before:top-1/2 before:border-t before:transition-colors',
+        'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+        separatorEnabled
+          ? 'before:border-foreground/30 hover:before:border-foreground/40'
+          : 'before:border-settings-divider/70 hover:before:border-settings-control-border-hover'
       ].join(' ')}
       onClick={() => props.onToggle(props.item.id, !separatorEnabled)}
       type="button"
-    >
-      <SeparatorIcon aria-hidden="true" size={14} strokeWidth={2} />
-    </button>
+    />
   );
 }
 

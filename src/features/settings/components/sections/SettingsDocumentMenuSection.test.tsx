@@ -12,7 +12,7 @@ beforeEach(() => {
 });
 
 function renderDocumentMenuSettings() {
-  renderWithLocalization(
+  return renderWithLocalization(
     <DocumentHeaderMenuSettingsProvider>
       <SettingsDocumentMenuSection actionItems={[]} />
     </DocumentHeaderMenuSettingsProvider>
@@ -24,12 +24,14 @@ it('shows immediate state feedback when a menu separator is toggled', () => {
 
   const separator = screen.getByRole('button', { name: 'Show separator before Publish to WordPress' });
   expect(separator).toHaveAttribute('aria-pressed', 'false');
+  expect(separator).toHaveClass('before:border-settings-divider/70');
+  expect(separator.querySelector('svg')).toBeNull();
 
   fireEvent.click(separator);
 
-  expect(screen.getByRole('button', { name: 'Show separator before Publish to WordPress' })).toHaveAttribute(
-    'aria-pressed',
-    'true'
-  );
+  const activeSeparator = screen.getByRole('button', { name: 'Show separator before Publish to WordPress' });
+  expect(activeSeparator).toHaveAttribute('aria-pressed', 'true');
+  expect(activeSeparator).toHaveClass('before:border-foreground/30');
+  expect(activeSeparator).not.toHaveClass('before:border-settings-divider/70');
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.documentHeaderMenuItems)).toContain('separatorBefore');
 });
