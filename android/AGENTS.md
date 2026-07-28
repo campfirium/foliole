@@ -41,11 +41,11 @@
 - Android 原生壳新增配置、权限或插件接入时，必须同步检查 `scripts/android/**` 现有工作流是否需要更新。
 - 除非用户明确要求，不得把 Android 特有实现回写成全仓默认路径。
 - Android / companion 侧凡会写入移动端 SQLite 的同步、复习、资源落库、cursor、配对或 workspace sync metadata 路径，必须经共享的 companion sync writer queue 串行化；已处在同一个 writer task 内部的内部 cursor 保存不得再次嵌套排队，避免自锁。
-- 实体 Windows Android Lab 只允许 controller-owned、commit-bound、只读 checkout；必须使用独立于 Windows release acceptance 的 key、task、状态和证据根，禁止同步未提交改动、开放任意远程 shell 或让 Windows 写入 / 提交源码。
+- 实体 Windows Android Lab 使用 controller-owned、commit / scratch-bound 的持久 checkout 作为 A5 开发现场；checkout 可写构建产物、Capacitor 生成物和 generator-owned tracked output，但 Windows 不得写回 / 提交源码上游，tracked source dirty 判断必须 generator-aware 并落入 evidence。Lab 仍必须使用独立于 Windows release acceptance 的 key、task、状态和证据根，禁止开放任意远程 shell。
 
 ## Validation
 
-- Android / Capacitor 相关改动默认先执行覆盖本轮能力闭环的最小验证；只有当能力闭环触及移动宿主根链路、Capacitor 宿主 / bridge 主链路、共享层 / 依赖、跨宿主联动、或你无法用相关验证证明影响已被覆盖时，才升级为 `npm run quality:android`、`npm run quality:shared` 或 `npm run quality:release`；`npm run quality:full` 只覆盖仓库级 JS/TS、桌面构建与 companion Web 构建，不跑 Android 原生宿主检查。
+- Android / Capacitor 相关改动默认先执行覆盖本轮能力闭环的最小验证；A5 日常开发验收优先走 Windows Lab DEV mode（companion dev server、reverse、app restart，必要时 cap sync + Gradle + install），CI 级 clean / bundled / release-like 终检只在发布、T5 或用户明确要求时升级。只有当能力闭环触及移动宿主根链路、Capacitor 宿主 / bridge 主链路、共享层 / 依赖、跨宿主联动、或你无法用相关验证证明影响已被覆盖时，才升级为 `npm run quality:android`、`npm run quality:shared` 或 `npm run quality:release`；`npm run quality:full` 只覆盖仓库级 JS/TS、桌面构建与 companion Web 构建，不跑 Android 原生宿主检查。
 - 若改动触及 Android 权限、生命周期、Capacitor 插件、intent、安装 / 启动链路，或问题只会在模拟器 / 设备上暴露，必须将已提交的 clean `dev` 精确 HEAD 通过 Windows Android Lab 固定 LAN ref 交给 Windows 执行对应 `quality:android:device` / preview；Mac 本地不得替代该验收。
 - Android 设备 serial、ADB、Gradle、安装、启动、截图、logcat、数据保护与镜像窗口只由 Windows worker 解析和执行；Mac controller 不接受任意远程 shell、working-tree 传输或“唯一 ready 设备”推断。
 - Android 调试命令不得批量弹出终端窗口：自动化验证、ADB、PowerShell、Node、bash、截图、sync、deploy 等后台步骤必须使用隐藏窗口或无窗口进程；只有用户明确要操作手机时，才允许打开一个可见的 `scrcpy` 设备镜像窗口。

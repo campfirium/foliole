@@ -50,6 +50,8 @@
 ## Windows Command Boundary
 
 - Windows Android Lab 的通用自动化与诊断必须经受审计 request envelope 进入单槽 scheduled worker；commit、目标、cwd、timeout、内容 hash 与危险操作分类必须在执行前校验，危险操作只能返回 approval-required，不得由诊断模式绕过。
+- Windows Android Lab 的受控 checkout 是持久可写开发现场，允许 `node_modules`、Gradle、Capacitor、`dist`、Android build 与 `.tmp` 等构建 / 运行产物跨 run 存活；安全边界是 Mac 控制面 commit / scratch-bound、Windows 不回写源码上游、tracked source dirty 必须 generator-aware 且 evidence-bound，不再要求构建 checkout 全只读。
+- Windows Lab checkout 是同一轮 Windows 桌面与 A5 Android 目视调试的唯一 Lab 开发现场；不得并存 candidate worktree、preview mirror、WSL mirror 或 personal Windows checkout 来承载同一轮 Lab 调试。
 - Windows 原生命令默认用已存在的 `npm` / `node` / 项目脚本入口执行；不得把多步验证长期写成内联 PowerShell / cmd 片段。
 - 复杂 Windows 命令若涉及多层引号、环境变量、重定向、后台进程、native exe、`cmd.exe` / PowerShell 交叉调用或 stdout 可靠性判断，优先写成仓库内 Node runner 或已提交脚本；临时诊断必须把 stdout、stderr、exit code 写入 `.tmp/` 后再读取，不得只凭空 stdout 或空日志判定成功。
 - 临时 Playwright / browser 验收、生产站点 browser probe、HTTP server + browser 脚本必须通过 `node scripts/with-resource-gate.mjs preview -- <command...>` 执行；Node REPL 只用于短探针，长流程必须转成仓库脚本。只清理 runner 自己启动的子进程树，不按进程名全机杀 `node.exe` / `msedge.exe`。
@@ -105,6 +107,7 @@
 - npm 默认保留 7 天 release-age 安全窗口；但 Dependabot / GitHub Advisory / `npm audit` 已明确报出的漏洞修复必须定向绕过该窗口，只允许更新被点名的漏洞包或其必要传递依赖，并用 `npm ls <package> --all` 与 `npm audit --omit=dev` 复验。禁止用等待窗口期作为安全告警处理结论。
 - `it.skip` / `test.skip` 必须紧邻 `// SKIP: <reason> | <date YYYY-MM-DD> | revive: <condition>`；看到超过 30 天的 stale `SKIP` 必须复查能否恢复。
 - E2E（Playwright）不进入任何质量闸；它作为宿主可见验收单独执行。桌面日常 agent 自动化验收优先按 `electron/AGENTS.md` 使用不干扰用户桌面的 Playwright 入口，人工预览仍按下表执行。
+- Windows Android Lab 日常按 DEV-first 远程工作站使用：Windows native dev 与 A5 Android dev-server 预览优先服务开发调试；CI 级 clean / bundled / release-like 终检默认由 GitHub / T5 或明确触发的重模式承担，不得把旧 final acceptance 作为默认 Android Lab 验收。
 - 普通开发任务只跑改动相关的最小本地验证，不默认等待 hosted 中度或重度质检；每日两次 T5 负责常规 full hosted 兜底。`node scripts/quality/remote-quality.mjs --scope <desktop|shared|android|ios|full>` 仅用于 T5 修复后的即时复验、发布流程或用户明确要求，并且只验证远端不可变 SHA、显示唯一 run URL、等待结果并在失败时读取日志。不得为触发质检隐式 commit / push，目标 SHA 不在远端时必须停下等待授权，不得回退到其他 SHA。
 - `copy:guard` 默认只报告 warning；若它报 warning，修复前先读 `.lab/specs/_product/terminology-and-copy.md`，禁止机械替换。
 
