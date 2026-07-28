@@ -48,7 +48,8 @@ function Invoke-DeviceWake {
     -Wait `
     -PassThru
   if ($wake.ExitCode -ne 0) {
-    throw "Android screen wake failed."
+    Write-Info "screen wake skipped: adb input was rejected."
+    return
   }
   $dismiss = Start-Process `
     -FilePath $AdbPath `
@@ -57,7 +58,7 @@ function Invoke-DeviceWake {
     -Wait `
     -PassThru
   if ($dismiss.ExitCode -ne 0) {
-    throw "Android keyguard dismissal failed."
+    Write-Info "keyguard dismissal skipped: device rejected the request."
   }
   Start-Sleep -Milliseconds 750
 }

@@ -84,6 +84,10 @@ describe('windows-screenshot.sh', () => {
     expect(script).toContain('function Invoke-DeviceWake');
     expect(script).toContain('-ArgumentList ($AdbPrefix + @("-s", $Serial, "shell", "input", "keyevent", "KEYCODE_WAKEUP"))');
     expect(script).toContain('-ArgumentList ($AdbPrefix + @("-s", $Serial, "shell", "wm", "dismiss-keyguard"))');
+    expect(script).toContain('screen wake skipped: adb input was rejected.');
+    expect(script).toContain('keyguard dismissal skipped: device rejected the request.');
+    expect(script).not.toContain('throw "Android screen wake failed."');
+    expect(script).not.toContain('throw "Android keyguard dismissal failed."');
     expect(script.indexOf('Invoke-DeviceWake -AdbPath')).toBeLessThan(script.indexOf('Invoke-ScreenshotCapture -AdbPath'));
     expect(script).toContain('-ArgumentList ($AdbPrefix + @("-s", $Serial, "exec-out", "screencap", "-p"))');
     expect(script).toContain('-RedirectStandardOutput $OutputPath');
