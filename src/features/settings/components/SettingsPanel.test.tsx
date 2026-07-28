@@ -79,9 +79,9 @@ it('groups settings sidebar entries by workspace, data, and sources', async () =
     'Publish',
     'Hotkeys',
     'Left toolbar',
+    'Topic menu',
     'Mouse gestures',
-    'Right-click menu',
-    'Storage'
+    'Right-click menu'
   ]);
   expect(labels).toContain('Storage');
   expect(labels).toContain('Watched folders');

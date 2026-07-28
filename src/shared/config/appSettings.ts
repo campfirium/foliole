@@ -19,6 +19,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   settingsActiveCategory: 'foliole-settings-active-category',
   publishingExpandedSections: 'foliole-publishing-expanded-sections',
   workspaceRailItems: 'foliole-workspace-rail-items',
+  documentHeaderMenuItems: 'foliole-document-header-menu-items',
   appLanguage: 'foliole-app-language',
   appDisplayScalePercent: 'foliole-app-display-scale-percent',
   macOsFontSmoothing: 'foliole-macos-font-smoothing-enabled',

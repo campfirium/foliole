@@ -64,6 +64,7 @@ export const EN_DESKTOP_NAVIGATION_TRANSLATIONS = {
   'desktop.document.moreEditorOptions': 'More editor options',
   'desktop.document.switchToSource': 'Switch to Source mode',
   'desktop.document.switchToLivePreview': 'Switch to Live Preview mode',
+  'desktop.document.customizeTopicMenu': 'Customize menu...',
   'desktop.links.references': 'Link references',
   'desktop.links.openReferences': 'Open link references ({count})',
   'desktop.links.backlinks': 'Backlinks',

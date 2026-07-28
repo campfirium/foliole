@@ -14,6 +14,7 @@ export type SettingsCategoryId =
   | 'mouse-gestures'
   | 'publishing'
   | 'rail'
+  | 'document-menu'
   | 'web-lookup'
   | 'appearance'
   | 'typography'
@@ -39,6 +40,7 @@ const SETTINGS_CATEGORY_DEFINITIONS: Array<{
   { id: 'review', labelKey: 'settings.category.review.label', descriptionKey: 'settings.category.review.description' },
   { id: 'publishing', labelKey: 'settings.category.publishing.label', descriptionKey: 'settings.category.publishing.description' },
   { id: 'rail', labelKey: 'settings.category.rail.label', descriptionKey: 'settings.category.rail.description' },
+  { id: 'document-menu', labelKey: 'settings.category.documentMenu.label', descriptionKey: 'settings.category.documentMenu.description' },
   { id: 'hotkeys', labelKey: 'settings.category.hotkeys.label', descriptionKey: 'settings.category.hotkeys.description' },
   { id: 'mouse-gestures', labelKey: 'settings.category.mouseGestures.label', descriptionKey: 'settings.category.mouseGestures.description' },
   { id: 'library', labelKey: 'settings.category.library.label', descriptionKey: 'settings.category.library.description' },
@@ -66,7 +68,7 @@ const SETTINGS_CATEGORY_GROUP_DEFINITIONS: Array<{ categoryIds: SettingsCategory
   },
   {
     labelKey: 'settings.group.controls',
-    categoryIds: ['hotkeys', 'rail', 'mouse-gestures', 'web-lookup']
+    categoryIds: ['hotkeys', 'rail', 'document-menu', 'mouse-gestures', 'web-lookup']
   },
   {
     labelKey: 'settings.group.storage',

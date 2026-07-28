@@ -65,6 +65,7 @@ export const ZH_HANS_DESKTOP_NAVIGATION_TRANSLATIONS: Partial<Record<Translation
   'desktop.document.moreEditorOptions': '更多编辑器选项',
   'desktop.document.switchToSource': '切换到源码模式',
   'desktop.document.switchToLivePreview': '切换到实时预览模式',
+  'desktop.document.customizeTopicMenu': '自定义菜单...',
   'desktop.links.references': '链接引用',
   'desktop.links.openReferences': '打开链接引用（{count}）',
   'desktop.links.backlinks': '反向链接',

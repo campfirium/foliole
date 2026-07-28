@@ -1,12 +1,16 @@
 import { RefreshCw } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 
 import type { BacklinkItem } from '../../features/nodes/model/internalLinks';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
+import { useDocumentHeaderMenuSettings } from '../../features/settings/context/DocumentHeaderMenuSettingsProvider';
+import type { DocumentHeaderMenuItemConfig } from '../../features/settings/model/documentHeaderMenuSettings';
 import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
+import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
 import type { Translate } from '../../shared/localization/LocalizationProvider';
+import { setWhitelistedLocalStorageItem } from '../../shared/platform/storage';
 import {
   AppDropdownMenu,
   AppDropdownMenuContent,
@@ -16,10 +20,18 @@ import {
   AppIconButton,
   ToolbarActionGroup
 } from '../../shared/ui';
+import { APP_PALETTE_COMMANDS } from '../hooks/appPaletteCommandList';
+import { localizePaletteCommandTitle } from '../hooks/appPaletteCommandLocalization';
 
 import { DocumentPanelHeaderBacklinksMenu } from './DocumentPanelHeaderBacklinksMenu';
 import { MoreOptionsIcon } from './DocumentPanelHeaderIcons';
 import { DocumentPriorityControl } from './DocumentPriorityControl';
+
+const PUBLISH_COMMAND_IDS = new Set<string>([
+  APP_COMMAND_IDS.publishToFoliole,
+  APP_COMMAND_IDS.publishToWordPress,
+  APP_COMMAND_IDS.publishToDiscourse
+]);
 
 function SourceUpdateAction({
   isOpen,
@@ -73,7 +85,7 @@ export function renderDefaultDocumentHeaderRightSlot(args: {
   );
 }
 
-export function renderDocumentHeaderActions(args: {
+interface DocumentHeaderActionsProps {
   canOpenComparisonView: boolean;
   editorDisplayMode: ReturnType<typeof useAppearanceSettings>['editorDisplayMode'];
   isFolderListView: boolean;
@@ -85,7 +97,61 @@ export function renderDocumentHeaderActions(args: {
   showPublishActions: boolean;
   toggleEditorDisplayMode: () => void;
   t: Translate;
-}): ReactNode {
+}
+
+function isMenuItemAvailable(item: DocumentHeaderMenuItemConfig, args: DocumentHeaderActionsProps) {
+  if (!item.visible) return false;
+  if (PUBLISH_COMMAND_IDS.has(item.commandId)) return args.showPublishActions;
+  if (item.commandId === APP_COMMAND_IDS.toggleComparisonView) return args.canOpenComparisonView;
+  return true;
+}
+
+function getMenuItemLabel(item: DocumentHeaderMenuItemConfig, args: DocumentHeaderActionsProps) {
+  if (item.commandId === APP_COMMAND_IDS.toggleEditorDisplayMode) {
+    return args.editorDisplayMode === 'preview'
+      ? args.t('desktop.document.switchToSource')
+      : args.t('desktop.document.switchToLivePreview');
+  }
+  const command = APP_PALETTE_COMMANDS.find((candidate) => candidate.id === item.commandId);
+  return item.labelOverride ?? localizePaletteCommandTitle(item.commandId, command?.title ?? item.commandId, args.t);
+}
+
+function runMenuItemCommand(item: DocumentHeaderMenuItemConfig, args: DocumentHeaderActionsProps) {
+  if (item.commandId === APP_COMMAND_IDS.toggleEditorDisplayMode) {
+    args.toggleEditorDisplayMode();
+    return;
+  }
+  args.onRunDocumentCommand?.(item.commandId);
+}
+
+function openDocumentMenuSettings(args: DocumentHeaderActionsProps) {
+  setWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.settingsActiveCategory, 'document-menu');
+  args.onRunDocumentCommand?.(APP_COMMAND_IDS.openSettings);
+}
+
+function renderDocumentMenuItems(items: DocumentHeaderMenuItemConfig[], args: DocumentHeaderActionsProps) {
+  const visibleItems = items.filter((item) => isMenuItemAvailable(item, args));
+  const firstNonPublishIndex = visibleItems.findIndex((item) => !PUBLISH_COMMAND_IDS.has(item.commandId));
+  return (
+    <>
+      {visibleItems.map((item, index) => (
+        <Fragment key={item.id}>
+          {index === firstNonPublishIndex && index > 0 ? <AppDropdownMenuSeparator /> : null}
+          <AppDropdownMenuItem onSelect={() => runMenuItemCommand(item, args)}>
+            {getMenuItemLabel(item, args)}
+          </AppDropdownMenuItem>
+        </Fragment>
+      ))}
+      {visibleItems.length ? <AppDropdownMenuSeparator /> : null}
+      <AppDropdownMenuItem onSelect={() => openDocumentMenuSettings(args)}>
+        {args.t('desktop.document.customizeTopicMenu')}
+      </AppDropdownMenuItem>
+    </>
+  );
+}
+
+function DocumentHeaderActions(args: DocumentHeaderActionsProps): ReactNode {
+  const menu = useDocumentHeaderMenuSettings();
   if (args.isFolderListView || !args.showDocumentControls) {
     return null;
   }
@@ -107,30 +173,13 @@ export function renderDocumentHeaderActions(args: {
           />
         </AppDropdownMenuTrigger>
         <AppDropdownMenuContent align="end" sideOffset={6}>
-          {args.showPublishActions ? (
-            <>
-              <AppDropdownMenuItem onSelect={() => args.onRunDocumentCommand?.(APP_COMMAND_IDS.publishToFoliole)}>
-                {args.t('desktop.command.publishToFoliole')}
-              </AppDropdownMenuItem>
-              <AppDropdownMenuItem onSelect={() => args.onRunDocumentCommand?.(APP_COMMAND_IDS.publishToWordPress)}>
-                {args.t('desktop.command.publishToWordPress')}
-              </AppDropdownMenuItem>
-              <AppDropdownMenuItem onSelect={() => args.onRunDocumentCommand?.(APP_COMMAND_IDS.publishToDiscourse)}>
-                {args.t('desktop.command.publishToDiscourse')}
-              </AppDropdownMenuItem>
-              <AppDropdownMenuSeparator />
-            </>
-          ) : null}
-          {args.canOpenComparisonView ? (
-            <AppDropdownMenuItem onSelect={() => args.onRunDocumentCommand?.(APP_COMMAND_IDS.toggleComparisonView)}>
-              {args.t('desktop.command.compareWithDraft')}
-            </AppDropdownMenuItem>
-          ) : null}
-          <AppDropdownMenuItem onSelect={args.toggleEditorDisplayMode}>
-            {args.editorDisplayMode === 'preview' ? args.t('desktop.document.switchToSource') : args.t('desktop.document.switchToLivePreview')}
-          </AppDropdownMenuItem>
+          {renderDocumentMenuItems(menu.items, args)}
         </AppDropdownMenuContent>
       </AppDropdownMenu>
     </ToolbarActionGroup>
   );
+}
+
+export function renderDocumentHeaderActions(args: DocumentHeaderActionsProps): ReactNode {
+  return <DocumentHeaderActions {...args} />;
 }

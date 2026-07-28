@@ -16,6 +16,7 @@ test('organizes controls and keeps capture behavior in General', async ({ deskto
   await expect(controls.getByRole('button')).toHaveText([
     /^(Hotkeys|快捷键)$/,
     /^(Left toolbar|左侧工具栏)$/,
+    /^(Topic menu|主题菜单)$/,
     /^(Mouse gestures|鼠标手势)$/,
     /^(Right-click menu|右键菜单)$/
   ]);

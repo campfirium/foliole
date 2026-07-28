@@ -32,6 +32,8 @@ export const EN_SETTINGS_TRANSLATIONS = {
   'settings.category.review.description': 'Tune the scheduler and review queue.',
   'settings.category.rail.label': 'Left toolbar',
   'settings.category.rail.description': 'Choose which actions appear in the left toolbar.',
+  'settings.category.documentMenu.label': 'Topic menu',
+  'settings.category.documentMenu.description': 'Choose which actions appear in the Topic menu.',
   'settings.category.hotkeys.label': 'Hotkeys',
   'settings.category.hotkeys.description': 'Customize keyboard shortcuts.',
   'settings.category.mouseGestures.label': 'Mouse gestures',
@@ -204,4 +206,9 @@ export const EN_SETTINGS_TRANSLATIONS = {
   'settings.rail.section.aria': 'Left toolbar settings section',
   'settings.rail.show': 'Show {label}',
   'settings.rail.title': 'Left toolbar',
+  'settings.documentMenu.remove': 'Remove {label}',
+  'settings.documentMenu.reset': 'Restore default Topic menu',
+  'settings.documentMenu.section.aria': 'Topic menu settings section',
+  'settings.documentMenu.show': 'Show {label}',
+  'settings.documentMenu.title': 'Topic menu',
 } as const;

@@ -67,10 +67,11 @@ it('groups workspace and control settings in product order', () => {
 
   const controls = screen.getByText('Controls').closest('.relative');
   expect(controls).not.toBeNull();
-  expect(controls?.querySelectorAll('button')).toHaveLength(4);
+  expect(controls?.querySelectorAll('button')).toHaveLength(5);
   expect(Array.from(controls?.querySelectorAll('button') ?? []).map((button) => button.textContent)).toEqual([
     'Hotkeys',
     'Left toolbar',
+    'Topic menu',
     'Mouse gestures',
     'Right-click menu'
   ]);

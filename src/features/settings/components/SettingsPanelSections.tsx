@@ -16,6 +16,7 @@ import { SettingsAboutSection } from './sections/SettingsAboutSection';
 import { SettingsAppearanceSection } from './sections/SettingsAppearanceSection';
 import { SettingsBackupsSection } from './sections/SettingsBackupsSection';
 import { SettingsCompanionSyncSection } from './sections/SettingsCompanionSyncSection';
+import { SettingsDocumentMenuSection } from './sections/SettingsDocumentMenuSection';
 import { SettingsEditorSection } from './sections/SettingsEditorSection';
 import { SettingsExternalSearchSection } from './sections/SettingsExternalSearchSection';
 import { SettingsGeneralSection } from './sections/SettingsGeneralSection';
@@ -194,6 +195,8 @@ export function SettingsCategoryContent(props: SettingsCategoryContentProps) {
       return <SettingsTypographySection />;
     case 'rail':
       return <SettingsRailSection actionItems={props.hotkeyItems} />;
+    case 'document-menu':
+      return <SettingsDocumentMenuSection actionItems={props.hotkeyItems} />;
     case 'mouse-gestures':
       return <SettingsMouseGesturesSection />;
     case 'library':

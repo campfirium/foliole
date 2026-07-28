@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 
 import { AppearanceSettingsProvider } from '../features/settings/context/AppearanceSettingsProvider';
 import { DisplayScaleProvider } from '../features/settings/context/DisplayScaleProvider';
+import { DocumentHeaderMenuSettingsProvider } from '../features/settings/context/DocumentHeaderMenuSettingsProvider';
 import { ExternalFoldersSettingsProvider } from '../features/settings/context/ExternalFoldersSettingsProvider';
 import { MouseGestureSettingsProvider } from '../features/settings/context/MouseGestureSettingsProvider';
 import { ReviewSchedulerSettingsProvider } from '../features/settings/context/ReviewSchedulerSettingsProvider';
@@ -24,7 +25,9 @@ export function AppProviders({ children, initialLanguagePreference }: AppProvide
           <MouseGestureSettingsProvider>
             <ReviewSchedulerSettingsProvider>
               <WorkspaceRailSettingsProvider>
-                <AppConfirmationProvider>{children}</AppConfirmationProvider>
+                <DocumentHeaderMenuSettingsProvider>
+                  <AppConfirmationProvider>{children}</AppConfirmationProvider>
+                </DocumentHeaderMenuSettingsProvider>
               </WorkspaceRailSettingsProvider>
             </ReviewSchedulerSettingsProvider>
           </MouseGestureSettingsProvider>
