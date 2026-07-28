@@ -30,7 +30,8 @@ function PublishHeaderActions(props: {
         onMoveMenuItem: vi.fn(),
         onRemoveMenuItem: vi.fn(),
         onResetMenu: vi.fn(),
-        onToggleMenuItem: vi.fn()
+        onToggleMenuItem: vi.fn(),
+        onToggleMenuSeparator: vi.fn()
       }}
     >
       {renderDocumentHeaderActions({
@@ -70,10 +71,25 @@ it('exposes every publishing command from the Topic actions menu', async () => {
   expect(screen.getByRole('menuitem', { name: 'Publish to WordPress' })).toBeInTheDocument();
   expect(screen.getByRole('menuitem', { name: 'Publish to Discourse' })).toBeInTheDocument();
   expect(screen.getByRole('menuitem', { name: 'Split Topic' })).toBeInTheDocument();
-  expect(screen.getAllByRole('separator').length).toBeGreaterThan(0);
+  expect(screen.queryByRole('separator')).not.toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('menuitem', { name: 'Publish to WordPress' }));
   expect(onRunDocumentCommand).toHaveBeenCalledWith(APP_COMMAND_IDS.publishToWordPress);
+});
+
+it('renders configured Topic menu separators', async () => {
+  renderWithLocalization(
+    <PublishHeaderActions
+      menuItems={DEFAULT_DOCUMENT_HEADER_MENU_ITEMS.map((item) =>
+        item.commandId === APP_COMMAND_IDS.publishToFoliole ? { ...item, separatorAfter: true } : item
+      )}
+      showPublishActions
+    />
+  );
+
+  await openDocumentActionsMenu();
+
+  expect(screen.getAllByRole('separator')).toHaveLength(1);
 });
 
 it('applies configured Topic menu order and hidden commands', async () => {

@@ -6,6 +6,7 @@ export interface DocumentHeaderMenuItemConfig {
   id: string;
   commandId: string;
   order: number;
+  separatorAfter?: boolean;
   source: 'system' | 'user';
   visible: boolean;
   labelOverride?: string;
@@ -35,6 +36,7 @@ function sanitizeStoredItem(value: unknown): DocumentHeaderMenuItemConfig | null
     id: value.id,
     commandId: value.commandId,
     order: typeof value.order === 'number' && Number.isFinite(value.order) ? value.order : 0,
+    separatorAfter: value.separatorAfter === true,
     source: value.source === 'user' ? 'user' : 'system',
     visible: typeof value.visible === 'boolean' ? value.visible : true,
     ...(typeof value.labelOverride === 'string' && value.labelOverride.trim() ? { labelOverride: value.labelOverride.trim() } : {})
@@ -70,6 +72,10 @@ export function resetDocumentHeaderMenuItems() {
 
 export function toggleDocumentHeaderMenuItemVisibility(items: DocumentHeaderMenuItemConfig[], itemId: string, visible: boolean) {
   return normalizeDocumentHeaderMenuItems(items.map((item) => (item.id === itemId ? { ...item, visible } : item)));
+}
+
+export function toggleDocumentHeaderMenuItemSeparator(items: DocumentHeaderMenuItemConfig[], itemId: string, separatorAfter: boolean) {
+  return normalizeDocumentHeaderMenuItems(items.map((item) => (item.id === itemId ? { ...item, separatorAfter } : item)));
 }
 
 export function moveDocumentHeaderMenuItem(items: DocumentHeaderMenuItemConfig[], itemId: string, order: number) {

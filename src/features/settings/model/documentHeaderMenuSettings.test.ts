@@ -11,6 +11,7 @@ import {
   removeDocumentHeaderMenuItem,
   resetDocumentHeaderMenuItems,
   saveDocumentHeaderMenuItems,
+  toggleDocumentHeaderMenuItemSeparator,
   toggleDocumentHeaderMenuItemVisibility
 } from './documentHeaderMenuSettings';
 
@@ -32,12 +33,14 @@ it('keeps the default Topic menu order when no setting is stored', () => {
 
 it('persists hidden and reordered Topic menu items', () => {
   const moved = moveDocumentHeaderMenuItem(DEFAULT_DOCUMENT_HEADER_MENU_ITEMS, 'system.compare-draft', 0);
-  const hidden = toggleDocumentHeaderMenuItemVisibility(moved, 'system.publish-site', false);
+  const separated = toggleDocumentHeaderMenuItemSeparator(moved, 'system.compare-draft', true);
+  const hidden = toggleDocumentHeaderMenuItemVisibility(separated, 'system.publish-site', false);
 
   saveDocumentHeaderMenuItems(hidden);
 
   const loaded = loadDocumentHeaderMenuItems();
   expect(loaded[0]?.commandId).toBe(APP_COMMAND_IDS.toggleComparisonView);
+  expect(loaded[0]?.separatorAfter).toBe(true);
   expect(loaded.find((item) => item.id === 'system.publish-site')?.visible).toBe(false);
 });
 

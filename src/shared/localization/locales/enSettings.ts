@@ -209,6 +209,7 @@ export const EN_SETTINGS_TRANSLATIONS = {
   'settings.documentMenu.remove': 'Remove {label}',
   'settings.documentMenu.reset': 'Restore default Topic menu',
   'settings.documentMenu.section.aria': 'Topic menu settings section',
+  'settings.documentMenu.separatorAfter': 'Show separator after {label}',
   'settings.documentMenu.show': 'Show {label}',
   'settings.documentMenu.title': 'Topic menu',
 } as const;

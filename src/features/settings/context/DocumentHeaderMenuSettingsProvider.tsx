@@ -7,6 +7,7 @@ import {
   removeDocumentHeaderMenuItem,
   resetDocumentHeaderMenuItems,
   saveDocumentHeaderMenuItems,
+  toggleDocumentHeaderMenuItemSeparator,
   toggleDocumentHeaderMenuItemVisibility,
   type DocumentHeaderMenuItemConfig
 } from '../model/documentHeaderMenuSettings';
@@ -42,6 +43,10 @@ function useDocumentHeaderMenuSettingsState() {
     onToggleMenuItem: useCallback(
       (itemId: string, visible: boolean) => updateItems(toggleDocumentHeaderMenuItemVisibility(items, itemId, visible)),
       [items, updateItems]
+    ),
+    onToggleMenuSeparator: useCallback(
+      (itemId: string, separatorAfter: boolean) => updateItems(toggleDocumentHeaderMenuItemSeparator(items, itemId, separatorAfter)),
+      [items, updateItems]
     )
   };
 }
@@ -55,9 +60,18 @@ export function DocumentHeaderMenuSettingsProvider({ children }: { children: Rea
       onMoveMenuItem: state.onMoveMenuItem,
       onRemoveMenuItem: state.onRemoveMenuItem,
       onResetMenu: state.onResetMenu,
-      onToggleMenuItem: state.onToggleMenuItem
+      onToggleMenuItem: state.onToggleMenuItem,
+      onToggleMenuSeparator: state.onToggleMenuSeparator
     }),
-    [state.items, state.onAddMenuItem, state.onMoveMenuItem, state.onRemoveMenuItem, state.onResetMenu, state.onToggleMenuItem]
+    [
+      state.items,
+      state.onAddMenuItem,
+      state.onMoveMenuItem,
+      state.onRemoveMenuItem,
+      state.onResetMenu,
+      state.onToggleMenuItem,
+      state.onToggleMenuSeparator
+    ]
   );
 
   return (

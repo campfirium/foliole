@@ -128,6 +128,10 @@ function runMenuItemCommand(item: DocumentHeaderMenuItemConfig, args: DocumentHe
   args.onRunDocumentCommand?.(item.commandId);
 }
 
+function shouldRenderMenuSeparatorAfter(items: DocumentHeaderMenuItemConfig[], index: number) {
+  return items[index]?.separatorAfter === true && index < items.length - 1;
+}
+
 function openDocumentMenuSettings(args: DocumentHeaderActionsProps) {
   setWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.settingsActiveCategory, 'document-menu');
   args.onRunDocumentCommand?.(APP_COMMAND_IDS.openSettings);
@@ -135,15 +139,14 @@ function openDocumentMenuSettings(args: DocumentHeaderActionsProps) {
 
 function renderDocumentMenuItems(items: DocumentHeaderMenuItemConfig[], args: DocumentHeaderActionsProps) {
   const visibleItems = items.filter((item) => isMenuItemAvailable(item, args));
-  const firstNonPublishIndex = visibleItems.findIndex((item) => !PUBLISH_COMMAND_IDS.has(item.commandId));
   return (
     <>
       {visibleItems.map((item, index) => (
         <Fragment key={item.id}>
-          {index === firstNonPublishIndex && index > 0 ? <AppDropdownMenuSeparator /> : null}
           <AppDropdownMenuItem onSelect={() => runMenuItemCommand(item, args)}>
             {getMenuItemLabel(item, args)}
           </AppDropdownMenuItem>
+          {shouldRenderMenuSeparatorAfter(visibleItems, index) ? <AppDropdownMenuSeparator /> : null}
         </Fragment>
       ))}
     </>

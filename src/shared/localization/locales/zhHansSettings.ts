@@ -209,6 +209,7 @@ export const ZH_HANS_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, strin
   'settings.documentMenu.remove': '移除 {label}',
   'settings.documentMenu.reset': '恢复默认主题菜单',
   'settings.documentMenu.section.aria': '主题菜单设置区',
+  'settings.documentMenu.separatorAfter': '显示 {label} 后的分割线',
   'settings.documentMenu.show': '显示 {label}',
   'settings.documentMenu.title': '主题菜单',
 };

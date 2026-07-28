@@ -1,4 +1,4 @@
-import { GripVertical, RotateCcw, Trash2 } from 'lucide-react';
+import { GripVertical, Minus, RotateCcw, Trash2 } from 'lucide-react';
 import { useState, type DragEvent } from 'react';
 
 import { APP_PALETTE_COMMANDS } from '../../../../app/hooks/appPaletteCommandList';
@@ -43,6 +43,30 @@ function DocumentMenuVisibilitySwitch(props: {
   );
 }
 
+function DocumentMenuSeparatorButton(props: {
+  owner: { item: DocumentHeaderMenuItemConfig; label: string };
+  onToggle: (itemId: string, separatorAfter: boolean) => void;
+}) {
+  const t = useTranslation();
+  const separatorEnabled = props.owner.item.separatorAfter === true;
+  return (
+    <button
+      aria-label={t('settings.documentMenu.separatorAfter', { label: props.owner.label })}
+      aria-pressed={separatorEnabled}
+      className={[
+        'absolute left-1/2 top-0 z-10 inline-flex size-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border',
+        'border-settings-divider bg-settings-group text-foreground/42 transition-colors',
+        'hover:border-settings-control-border-hover hover:bg-settings-control-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+        separatorEnabled ? 'border-settings-control-border-hover bg-settings-control-hover text-foreground' : ''
+      ].join(' ')}
+      onClick={() => props.onToggle(props.owner.item.id, !separatorEnabled)}
+      type="button"
+    >
+      <Minus aria-hidden="true" size={13} strokeWidth={2.2} />
+    </button>
+  );
+}
+
 function DocumentMenuManagerRow(props: {
   item: DocumentHeaderMenuItemConfig;
   label: string;
@@ -50,6 +74,8 @@ function DocumentMenuManagerRow(props: {
   onDropItem: (item: DocumentHeaderMenuItemConfig, droppedItemId?: string) => void;
   onRemove: (itemId: string) => void;
   onToggle: (itemId: string, visible: boolean) => void;
+  onToggleSeparator: (itemId: string, separatorAfter: boolean) => void;
+  separatorOwner?: { item: DocumentHeaderMenuItemConfig; label: string };
 }) {
   const t = useTranslation();
   return (
@@ -65,6 +91,9 @@ function DocumentMenuManagerRow(props: {
       onDrop={(event: DragEvent<HTMLDivElement>) => props.onDropItem(props.item, event.dataTransfer.getData('text/plain'))}
       title={props.label}
     >
+      {props.separatorOwner ? (
+        <DocumentMenuSeparatorButton owner={props.separatorOwner} onToggle={props.onToggleSeparator} />
+      ) : null}
       <div className="absolute left-5 top-1/2 -translate-y-1/2 cursor-grab text-settings-icon active:cursor-grabbing">
         <GripVertical aria-hidden="true" size={16} />
       </div>
@@ -115,17 +144,27 @@ export function SettingsDocumentMenuSection({ actionItems }: { actionItems: Hotk
       ariaLabel={t('settings.documentMenu.section.aria')}
       title={t('settings.documentMenu.title')}
     >
-      {menu.items.map((item) => (
-        <DocumentMenuManagerRow
-          item={item}
-          key={item.id}
-          label={getDocumentMenuItemLabel(item, t)}
-          onDragStart={setDraggedItemId}
-          onDropItem={dropOnItem}
-          onRemove={menu.onRemoveMenuItem}
-          onToggle={menu.onToggleMenuItem}
-        />
-      ))}
+      {menu.items.map((item, index) => {
+        const previousItem = menu.items[index - 1];
+        return (
+          <DocumentMenuManagerRow
+            item={item}
+            key={item.id}
+            label={getDocumentMenuItemLabel(item, t)}
+            onDragStart={setDraggedItemId}
+            onDropItem={dropOnItem}
+            onRemove={menu.onRemoveMenuItem}
+            onToggle={menu.onToggleMenuItem}
+            onToggleSeparator={menu.onToggleMenuSeparator}
+            {...(previousItem ? {
+              separatorOwner: {
+                item: previousItem,
+                label: getDocumentMenuItemLabel(previousItem, t)
+              }
+            } : {})}
+          />
+        );
+      })}
       <AddRailActionRow
         actionItems={actionItems}
         currentCommandIds={currentCommandIds}
