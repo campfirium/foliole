@@ -63,7 +63,7 @@ function validateDiagnostic(operation) {
 
 function assertOperation(envelope) {
   const operation = envelope.operation;
-  if (!operation || !['adb', 'diagnostic', 'read', 'repository', 'windowsClient', 'deviceReconnect'].includes(operation.kind)) {
+  if (!operation || !['adb', 'androidDevServer', 'diagnostic', 'read', 'repository', 'windowsClient', 'deviceReconnect'].includes(operation.kind)) {
     throw codedError('request_invalid', 'request operation kind is unsupported');
   }
   if (operation.kind === 'repository') validateRepository(operation);
@@ -76,12 +76,15 @@ function assertOperation(envelope) {
   if (operation.kind === 'windowsClient' && !['status', 'start', 'stop', 'restart', 'full-restart'].includes(operation.action)) {
     throw codedError('request_invalid', 'Windows client action is unsupported');
   }
+  if (operation.kind === 'androidDevServer' && !['status', 'start', 'stop', 'restart'].includes(operation.action)) {
+    throw codedError('request_invalid', 'Android dev-server action is unsupported');
+  }
   if (operation.kind === 'read') assertRelative(operation.path, 'read path', { allowEmpty: false });
   if (operation.kind === 'deviceReconnect' && !isAndroidEndpoint(operation.endpoint)) {
     throw codedError('request_invalid', 'device reconnect endpoint is required');
   }
   if (operation.kind === 'diagnostic') validateDiagnostic(operation);
-  if (['repository', 'windowsClient'].includes(operation.kind) && envelope.cwd.scope !== 'checkout') {
+  if (['repository', 'windowsClient', 'androidDevServer'].includes(operation.kind) && envelope.cwd.scope !== 'checkout') {
     throw codedError('request_cwd_rejected', `${operation.kind} requests require checkout cwd`);
   }
   if (operation.kind === 'diagnostic' && envelope.cwd.scope !== 'run') {
@@ -92,6 +95,9 @@ function assertOperation(envelope) {
   }
   if (operation.kind === 'windowsClient' && envelope.target !== 'windows') {
     throw codedError('request_invalid', 'Windows client requests require the Windows target');
+  }
+  if (operation.kind === 'androidDevServer' && envelope.target !== 'a5') {
+    throw codedError('request_invalid', 'Android dev-server requests require the A5 target');
   }
 }
 

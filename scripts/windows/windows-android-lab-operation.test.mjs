@@ -174,6 +174,30 @@ describe('Windows Android Lab worker operations', () => {
     ]);
   });
 
+  it('runs A5 dev-server runtime control from the checkout with Lab runtime state outside checkout tmp', async () => {
+    const { config, paths } = fixture();
+    const calls = [];
+    await finishAndroidLabOperationRun({
+      config,
+      paths,
+      request: request('dev-server-status', { action: 'status', kind: 'androidDevServer' }, { target: 'a5' }),
+      running: { runId: 'dev-server-status', state: 'running' },
+      executeCommand: async (command, args, options) => {
+        calls.push({ args, command, options });
+        return { code: 0, lines: ['ok'], output: 'ok\n', stderr: '', stdout: 'ok\n' };
+      }
+    });
+    expect(calls).toHaveLength(1);
+    expect(calls[0].args).toEqual([
+      path.join(paths.preview, 'scripts', 'windows', 'windows-android-dev-server.mjs'), 'status'
+    ]);
+    expect(calls[0].options.cwd).toBe(paths.preview);
+    expect(calls[0].options.env).toMatchObject({
+      FOLIOLE_RUNTIME_HEAD: SHA,
+      FOLIOLE_WINDOWS_ANDROID_DEV_SERVER_STATE_ROOT: path.join(paths.root, 'runtime', 'android-dev-server')
+    });
+  });
+
   it('records timeout termination and bounded partial streams', async () => {
     const { config, paths } = fixture();
     const timedOut = Object.assign(new Error('probe timed out'), {

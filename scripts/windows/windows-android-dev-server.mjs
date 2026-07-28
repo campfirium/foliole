@@ -9,26 +9,33 @@ import { fileURLToPath } from 'node:url';
 import { processAlive } from './windows-process-alive.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const stateRoot = path.join(repoRoot, '.tmp', 'windows-android-dev-server');
 const SERVICE = { host: '127.0.0.1', port: 24604, readyPath: '/' };
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const readyUrl = () => `http://${SERVICE.host}:${SERVICE.port}${SERVICE.readyPath}`;
+const defaultStateRoot = () => process.env.FOLIOLE_WINDOWS_ANDROID_DEV_SERVER_STATE_ROOT ||
+  path.join(repoRoot, '.tmp', 'windows-android-dev-server');
 
-function servicePaths(root = stateRoot) {
+function servicePaths(root = defaultStateRoot(), workspace = repoRoot) {
   return {
+    appState: path.join(root, 'a5-runtime.json'),
     errLog: path.join(root, 'companion.err.log'),
+    installState: path.join(workspace, '.foliole-android-lab-deployment.json'),
     outLog: path.join(root, 'companion.out.log'),
     state: path.join(root, 'companion.json')
   };
 }
 
-function readState(root = stateRoot) {
+function readJson(filePath) {
   try {
-    return JSON.parse(fs.readFileSync(servicePaths(root).state, 'utf8'));
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
   } catch {
     return null;
   }
+}
+
+function readState(root = defaultStateRoot()) {
+  return readJson(servicePaths(root).state);
 }
 
 function probeHttp(url, timeoutMs = 3000) {
@@ -53,10 +60,22 @@ async function waitUntilReady(url, timeoutMs = 15000) {
   return false;
 }
 
+async function currentHead(root = repoRoot) {
+  if (process.env.FOLIOLE_RUNTIME_HEAD) return process.env.FOLIOLE_RUNTIME_HEAD.trim();
+  const result = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' });
+  return result.status === 0 ? result.stdout.trim() : '';
+}
+
+function headState(runtimeHead, checkoutHead) {
+  if (!runtimeHead) return 'missing';
+  if (!checkoutHead) return 'unknown';
+  return runtimeHead === checkoutHead ? 'current' : 'stale';
+}
+
 export function createAndroidDevServerLaunch({
   nodePath = process.execPath,
   root = repoRoot,
-  stateDirectory = stateRoot
+  stateDirectory = defaultStateRoot()
 } = {}) {
   const paths = servicePaths(stateDirectory);
   const env = { ...process.env, FOLIOLE_VITE_PORT: String(SERVICE.port) };
@@ -69,10 +88,34 @@ export function createAndroidDevServerLaunch({
   };
 }
 
-async function getStatus(root = stateRoot) {
-  const state = readState(root);
+export async function readAndroidDevServerStatus({
+  root = repoRoot,
+  stateDirectory = defaultStateRoot(),
+  workspaceDeployment = servicePaths(stateDirectory, root).installState
+} = {}) {
+  const paths = servicePaths(stateDirectory, root);
+  const state = readState(stateDirectory);
+  const appState = readJson(paths.appState);
+  const install = readJson(workspaceDeployment);
+  const checkoutHead = await currentHead(root);
   const alive = processAlive(state?.pid);
-  return { alive, pid: state?.pid ?? null, ready: alive ? await probeHttp(readyUrl()) : false };
+  const ready = alive ? await probeHttp(readyUrl()) : false;
+  const installedApkHead = install?.commitSha ?? appState?.installedApkHead ?? null;
+  return {
+    alive,
+    appLaunchResult: appState?.appLaunchResult ?? null,
+    checkoutHead,
+    devServerHead: state?.devServerHead ?? null,
+    devServerState: ready ? headState(state?.devServerHead, checkoutHead) : alive ? 'starting_or_stale' : 'stopped',
+    installedApkHead,
+    installedApkState: headState(installedApkHead, checkoutHead),
+    pid: state?.pid ?? null,
+    ready,
+    reverseStatus: appState?.reverseStatus ?? null,
+    runningMode: ready ? 'a5-dev-server' : 'stopped',
+    stateDirectory,
+    url: readyUrl()
+  };
 }
 
 async function stopService() {
@@ -90,7 +133,7 @@ async function stopService() {
 }
 
 async function startService() {
-  const current = await getStatus();
+  const current = await readAndroidDevServerStatus();
   if (current.alive && current.ready) {
     console.log(`[windows-android-dev-server] status: RUNNING pid=${current.pid} url=${readyUrl()}`);
     return;
@@ -105,6 +148,7 @@ async function startService() {
   fs.writeFileSync(launch.paths.state, `${JSON.stringify({
     args: launch.args,
     command: launch.command,
+    devServerHead: await currentHead(launch.spawnOptions.cwd),
     errLog: launch.paths.errLog,
     outLog: launch.paths.outLog,
     pid: child.pid,
@@ -118,9 +162,15 @@ async function startService() {
 }
 
 async function printStatus() {
-  const status = await getStatus();
+  const status = await readAndroidDevServerStatus();
   const label = status.ready ? 'RUNNING' : status.alive ? 'STARTING_OR_STALE' : 'STOPPED';
-  console.log(`[windows-android-dev-server] status: ${label} pid=${status.pid ?? '-'} url=${readyUrl()}`);
+  console.log(
+    `[windows-android-dev-server] status: ${label} pid=${status.pid ?? '-'} url=${readyUrl()}` +
+    ` checkout_head=${status.checkoutHead || '-'} dev_server_head=${status.devServerHead || '-'}` +
+    ` dev_server_state=${status.devServerState} installed_apk_head=${status.installedApkHead || '-'}` +
+    ` installed_apk_state=${status.installedApkState} reverse=${status.reverseStatus || 'unknown'}` +
+    ` app_launch=${status.appLaunchResult || 'unknown'}`
+  );
 }
 
 function printLogs() {

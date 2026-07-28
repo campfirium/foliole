@@ -65,4 +65,19 @@ describe('Windows Android Lab request envelope', () => {
       fs.rmSync(root, { force: true, recursive: true });
     }
   });
+
+  it('allows only bounded A5 Android dev-server runtime operations', () => {
+    expect(validateAndroidLabEnvelope(request(
+      { action: 'status', kind: 'androidDevServer' },
+      { target: 'a5' }
+    ))).toMatchObject({ operation: { action: 'status', kind: 'androidDevServer' }, target: 'a5' });
+    expect(() => validateAndroidLabEnvelope(request(
+      { action: 'full-restart', kind: 'androidDevServer' },
+      { target: 'a5' }
+    ))).toThrow('Android dev-server action');
+    expect(() => validateAndroidLabEnvelope(request(
+      { action: 'status', kind: 'androidDevServer' },
+      { target: 'windows' }
+    ))).toThrow('A5 target');
+  });
 });

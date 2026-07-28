@@ -62,6 +62,7 @@ function operationEnvironment(config, paths, evidenceRoot, spec) {
   env.FOLIOLE_ANDROID_BASH_PATH = config.bashPath;
   env.FOLIOLE_ANDROID_LAB_EVIDENCE_ROOT = evidenceRoot;
   if (spec.runtimeHead) env.FOLIOLE_RUNTIME_HEAD = spec.runtimeHead;
+  if (spec.devServerStateRoot) env.FOLIOLE_WINDOWS_ANDROID_DEV_SERVER_STATE_ROOT = spec.devServerStateRoot;
   if (spec.deviceEndpoint) env.FOLIOLE_ANDROID_SERIAL = spec.deviceEndpoint;
   return env;
 }
@@ -101,6 +102,11 @@ async function resolveProcessSpec(config, paths, request, evidenceRoot, executeC
   if (operation.kind === 'windowsClient') return {
     args: [path.join(paths.checkout, 'scripts', 'windows', 'windows-client-native.mjs'), operation.action],
     command: path.join(config.nodeDirectory, 'node.exe'), cwd: paths.checkout, runtimeHead: request.commitSha
+  };
+  if (operation.kind === 'androidDevServer') return {
+    args: [path.join(paths.checkout, 'scripts', 'windows', 'windows-android-dev-server.mjs'), operation.action],
+    command: path.join(config.nodeDirectory, 'node.exe'), cwd: paths.checkout,
+    devServerStateRoot: path.join(paths.root, 'runtime', 'android-dev-server'), runtimeHead: request.commitSha
   };
   if (operation.kind === 'diagnostic') {
     const spec = diagnosticSpec(config, operation, evidenceRoot);
@@ -196,7 +202,7 @@ export async function runAndroidLabOperation({ config, executeCommand, paths, re
 }
 
 export async function finishAndroidLabOperationRun({ config, executeCommand, paths, request, running }) {
-  const needsCheckout = request.operation.kind !== 'windowsClient' &&
+  const needsCheckout = !['windowsClient', 'androidDevServer'].includes(request.operation.kind) &&
     (request.operation.kind === 'repository' || request.cwd.scope === 'checkout');
   let primaryError = null;
   try {

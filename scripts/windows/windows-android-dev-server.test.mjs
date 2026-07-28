@@ -6,7 +6,12 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import { createAndroidDevServerLaunch } from './windows-android-dev-server.mjs';
+import {
+  createAndroidDevServerLaunch
+} from './windows-android-dev-server.mjs';
+import {
+  selectAndroidDevServerActionWithCommittedFiles
+} from './windows-android-dev-server-action.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const normalizePath = (value) => value.replaceAll('\\', '/');
@@ -34,5 +39,36 @@ describe('Windows Android dev server', () => {
     expect(packageJson.scripts['windows:android:dev-server']).toBe(
       'node scripts/windows/windows-android-dev-server.mjs'
     );
+  });
+
+  it('uses path-domain registry facts to classify A5 dev-server update actions', () => {
+    const currentStatus = {
+      appLaunchResult: 'opened',
+      devServerState: 'current',
+      installedApkState: 'current',
+      ready: true,
+      reverseStatus: 'ok'
+    };
+
+    expect(selectAndroidDevServerActionWithCommittedFiles({
+      changedFiles: ['src/companion/App.tsx'],
+      committedFilesSinceRuntime: [],
+      currentHead: 'b'.repeat(40),
+      status: currentStatus
+    })).toMatchObject({ action: 'hot-update' });
+
+    expect(selectAndroidDevServerActionWithCommittedFiles({
+      changedFiles: ['scripts/android/windows-dev-server-launch.ps1'],
+      committedFilesSinceRuntime: [],
+      currentHead: 'b'.repeat(40),
+      status: currentStatus
+    })).toMatchObject({ action: 'restart-app' });
+
+    expect(selectAndroidDevServerActionWithCommittedFiles({
+      changedFiles: ['android/app/build.gradle'],
+      committedFilesSinceRuntime: [],
+      currentHead: 'b'.repeat(40),
+      status: currentStatus
+    })).toMatchObject({ action: 'rebuild-install' });
   });
 });
