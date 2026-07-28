@@ -18,6 +18,7 @@ import {
   upsertVersionedNodeSnapshotWithOrder
 } from '../database/nodeVersionedMutations.js';
 import { enqueueCoalescedWorkspaceSearchInvalidation } from '../database/searchIndexInvalidationCoalescer.js';
+import { splitTopic } from '../database/splitTopicMutation.js';
 import { scheduleMirrorSync } from '../mirror/mirrorSyncScheduler.js';
 
 import {
@@ -32,6 +33,7 @@ import {
   parseRestoreNodesArgs,
   parseSoftDeleteNodesArgs
 } from './nodeCommandArgs.js';
+import { parseSplitTopicArgs } from './splitTopicCommandArgs.js';
 import { readObjectArg } from './storageCommandSupport.js';
 import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.js';
 
@@ -118,6 +120,13 @@ function handlePermanentDeleteNodeCommand(args: Record<string, unknown>, originW
   return completeWorkspaceMutation({ nodeOrder: parsed.nodeOrder, removedNodeIds }, originWindow);
 }
 
+function handleSplitTopicCommand(args: Record<string, unknown>, originWindow: OriginWindow) {
+  const parsed = parseSplitTopicArgs(args);
+  const result = splitTopic(parsed);
+  scheduleMirrorSync([parsed.sourceNodeId, ...parsed.generatedNodes.map((node) => node.nodeId)]);
+  return completeWorkspaceMutation(result, originWindow);
+}
+
 function handleNodeContentWithAnchorsCommand(args: Record<string, unknown>, originWindow: OriginWindow) {
   const shouldReturnDiagnostics = args.diagnostics === true;
   const totalStartedAt = readNowMs();
@@ -181,6 +190,9 @@ export function handleNodeMutationCommand(command: string, args: Record<string, 
   }
   if (command === NATIVE_COMMANDS.createTopic) {
     return handleCreateNodeCommand(args, 'topic', originWindow);
+  }
+  if (command === NATIVE_COMMANDS.splitTopic) {
+    return handleSplitTopicCommand(args, originWindow);
   }
   if (command === NATIVE_COMMANDS.createItem) {
     return handleCreateNodeCommand(args, 'item', originWindow);

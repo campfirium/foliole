@@ -122,13 +122,21 @@ function runSourceDispositionDelete(driver: DatabaseDriver, key: SourceDispositi
   );
 }
 
-export function recordNodeSourceDisposition(nodeId: string, disposition: SourceDisposition, updatedAt: string) {
-  const connection = openDatabaseConnection();
-  const key = readSourceKeyForNode(connection.driver, nodeId);
+export function recordNodeSourceDispositionWithDriver(
+  driver: DatabaseDriver,
+  nodeId: string,
+  disposition: SourceDisposition,
+  updatedAt: string
+) {
+  const key = readSourceKeyForNode(driver, nodeId);
   if (!key) {
     return;
   }
-  runSourceDispositionUpsert(connection.driver, key, disposition, updatedAt);
+  runSourceDispositionUpsert(driver, key, disposition, updatedAt);
+}
+
+export function recordNodeSourceDisposition(nodeId: string, disposition: SourceDisposition, updatedAt: string) {
+  recordNodeSourceDispositionWithDriver(openDatabaseConnection().driver, nodeId, disposition, updatedAt);
 }
 
 export function clearNodeSourceDisposition(nodeId: string) {

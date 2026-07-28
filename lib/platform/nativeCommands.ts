@@ -181,6 +181,7 @@ export const NATIVE_COMMANDS = {
   saveLoginItemSettings: 'save_login_item_settings',
   createFolder: 'create_folder',
   createTopic: 'create_topic',
+  splitTopic: 'split_topic',
   createItem: 'create_item',
   updateNodeContent: 'update_node_content',
   updateNodeContentWithAnchors: 'update_node_content_with_anchors',

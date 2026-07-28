@@ -12,6 +12,7 @@ export interface NativeNodeMutationPatchResult {
   activeNodeId?: string | null;
   anchorUpdates?: NativeNodeAnchorUpdateArgs[];
   createdNodeIds?: string[];
+  deletedNodeIds?: string[];
   collectionRenames?: Array<{
     from: string;
     nodeIds: string[];
@@ -28,6 +29,14 @@ export type NativeNodeCreationMutationArgs = NativeNodeSnapshotArgs & {
   nodeOrder: string[];
 };
 
+export interface NativeSplitTopicMutationArgs {
+  activeNodeId: string;
+  deletedAt: string;
+  generatedNodes: NativeNodeSnapshotArgs[];
+  nodeOrder: string[];
+  sourceNodeId: string;
+}
+
 export type NativeNodeSnapshotMutationSpec = {
   args: NativeNodeSnapshotArgs;
   result: NativeNodeMutationPatchResult;
@@ -35,6 +44,11 @@ export type NativeNodeSnapshotMutationSpec = {
 
 export type NativeNodeCreationMutationSpec = {
   args: NativeNodeCreationMutationArgs;
+  result: NativeNodeMutationPatchResult;
+};
+
+export type NativeSplitTopicMutationSpec = {
+  args: NativeSplitTopicMutationArgs;
   result: NativeNodeMutationPatchResult;
 };
 

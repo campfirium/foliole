@@ -192,6 +192,7 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.saveLoginItemSettings, route: 'windowAndUtility', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.createFolder, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.createTopic, route: 'storage', capability: 'dataMutation' },
+  { command: NATIVE_COMMANDS.splitTopic, route: 'storage', capability: 'destructiveMutation' },
   { command: NATIVE_COMMANDS.createItem, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.updateNodeContent, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.updateNodeContentWithAnchors, route: 'storage', capability: 'dataMutation' },
