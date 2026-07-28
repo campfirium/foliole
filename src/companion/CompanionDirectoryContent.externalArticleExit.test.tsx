@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
+import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { createCollectionVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter';
 
 import { CompanionDirectoryContent, type CompanionDirectorySelection } from './CompanionDirectoryContent';
@@ -64,7 +65,7 @@ function renderExternalDocumentArticle(args: {
   return { onChangeSelection, onExitArticle };
 }
 
-function createCollectionSnapshot() {
+function createCollectionSnapshot(): WorkspaceSnapshot {
   return {
     activeNodeId: null,
     nodeOrder: ['collection-guide', 'topic-a'],
