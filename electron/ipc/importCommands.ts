@@ -196,7 +196,7 @@ async function handleTextImportCommand(
     return result;
   }
   if (request.command === NATIVE_COMMANDS.selectImportTextFile) {
-    return selectImportTextFile(resolveTargetWindow(context), args);
+    return selectImportTextFile(resolveTargetWindow(context));
   }
   if (request.command === NATIVE_COMMANDS.importExternalSearchDocument) {
     const documentId = typeof args.document_id === 'string' ? args.document_id.trim() : '';
