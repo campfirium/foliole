@@ -117,6 +117,16 @@ describe('iOS foreground sync lifecycle acceptance', () => {
       afterRestart: snapshot, backgroundDeltas: [0, 0, 1], beforeRestart: snapshot,
       lifecycle: { active_count: 2, pause_count: 3, resume_count: 2 }, observations: opportunistic
     })).toMatchObject({ background_retry_request_count: 1 });
+    const restartDoubleActive = { foreground_sync_lifecycle: {
+      ...observations.foreground_sync_lifecycle,
+      completed_requests: 5,
+      phase_requests: { ...phase_requests, restart: 2 },
+      request_count: 6
+    } };
+    expect(verifyForegroundSyncLifecycleAcceptance({
+      afterRestart: snapshot, backgroundDeltas: [0, 0, 0], beforeRestart: snapshot,
+      lifecycle: { active_count: 3, pause_count: 3, resume_count: 3 }, observations: restartDoubleActive
+    })).toMatchObject({ restart_extra_request_count: 1 });
     const partialFinished = { result: 'partial', runId: 'run-2', status: 'skipped' };
     const partialSnapshot = { ...snapshot, finishedRuns: [partialFinished], latestFinished: partialFinished };
     expect(verifyForegroundSyncLifecycleAcceptance({
