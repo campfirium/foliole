@@ -36,6 +36,7 @@ export const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   { id: APP_COMMAND_IDS.publishToFoliole, title: 'Publish to the site', section: 'Editor', keywords: ['publish', 'foliole', 'site', 'cloudflare', 'web'] },
   { id: APP_COMMAND_IDS.publishToDiscourse, title: 'Publish to Discourse', section: 'Editor', keywords: ['publish', 'discourse', 'topic', 'forum'] },
   { id: APP_COMMAND_IDS.publishToWordPress, title: 'Publish to WordPress', section: 'Editor', keywords: ['publish', 'wordpress', 'post', 'blog'] },
+  { id: APP_COMMAND_IDS.splitTopic, title: 'Split Topic', section: 'Editor', keywords: ['split', 'topic', 'sections'] },
   { id: APP_COMMAND_IDS.mergeHighlightsIntoTopic, title: 'Merge highlights', section: 'Editor', keywords: ['merge', 'highlights', 'topic', 'append', 'file'] },
   { id: APP_COMMAND_IDS.createSelectionHighlight, title: 'Highlight Selection', section: 'Editor', keywords: ['highlight', 'selection', 'excerpt'] },
   { id: APP_COMMAND_IDS.createSelectionCloze, title: 'Cloze Selection', section: 'Editor', keywords: ['cloze', 'selection', 'item'] },

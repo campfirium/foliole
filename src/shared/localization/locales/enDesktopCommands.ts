@@ -32,6 +32,7 @@ export const EN_DESKTOP_COMMAND_TRANSLATIONS = {
   'desktop.command.publishToFoliole': 'Publish to the site',
   'desktop.command.publishToDiscourse': 'Publish to Discourse',
   'desktop.command.publishToWordPress': 'Publish to WordPress',
+  'desktop.command.splitTopic': 'Split Topic',
   'desktop.command.mergeHighlights': 'Merge highlights',
   'desktop.command.highlightSelection': 'Highlight Selection',
   'desktop.command.clozeSelection': 'Cloze Selection',

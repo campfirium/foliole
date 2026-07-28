@@ -45,6 +45,7 @@ interface PaletteCommandRunnerArgs extends PaletteHelpCommandRunnerArgs, Palette
   redoWorkspaceAction: () => boolean;
   isReviewMode: boolean;
   openPerformancePanel: () => void;
+  openSplitTopicDialog: () => boolean | void | Promise<boolean | void>;
   openGuidedSample: () => Promise<boolean>;
   openNotesView: () => void;
   onToggleEditorDisplayMode: () => void;
@@ -156,6 +157,9 @@ function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleRevie
       void args.reimportSelectedTopic();
     },
     openPerformancePanel: args.openPerformancePanel,
+    splitTopic: () => {
+      void args.openSplitTopicDialog();
+    },
     resetImportData: () => runResetImportDataCommand(args),
     toggleDevReviewStatusBarPersistence: args.toggleDevReviewStatusBarPersistence,
     openGuidedSample: () => {

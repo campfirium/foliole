@@ -18,8 +18,8 @@ interface RunAppCommandActions {
   enterPriorityMode: () => void;
   exportCurrentArticle: () => void | Promise<void>;
   publishToFoliole?: () => void | Promise<void>;
-  publishToDiscourse?: () => void | Promise<void>;
-  publishToWordPress?: () => void | Promise<void>;
+  publishToDiscourse?: () => void | Promise<void>; publishToWordPress?: () => void | Promise<void>;
+  splitTopic?: () => void | Promise<void>;
   findInTopic: () => void;
   toggleComparisonView?: () => void;
   reviewSourceUpdate?: () => void;
@@ -148,6 +148,7 @@ function createWorkspaceCommandHandlers(actions: RunAppCommandActions): Record<s
     [APP_COMMAND_IDS.publishToFoliole]: actions.publishToFoliole ?? (() => false),
     [APP_COMMAND_IDS.publishToDiscourse]: actions.publishToDiscourse ?? (() => false),
     [APP_COMMAND_IDS.publishToWordPress]: actions.publishToWordPress ?? (() => false),
+    [APP_COMMAND_IDS.splitTopic]: actions.splitTopic ?? (() => false),
     [APP_COMMAND_IDS.enterPriorityMode]: actions.enterPriorityMode,
     [APP_COMMAND_IDS.findInTopic]: actions.findInTopic,
     [APP_COMMAND_IDS.toggleComparisonView]: actions.toggleComparisonView ?? (() => false),

@@ -20,6 +20,7 @@ const COMMAND_TITLE_KEYS: Partial<Record<AppCommandId, TranslationKey>> = {
   [APP_COMMAND_IDS.publishToFoliole]: 'desktop.command.publishToFoliole',
   [APP_COMMAND_IDS.publishToDiscourse]: 'desktop.command.publishToDiscourse',
   [APP_COMMAND_IDS.publishToWordPress]: 'desktop.command.publishToWordPress',
+  [APP_COMMAND_IDS.splitTopic]: 'desktop.command.splitTopic',
   [APP_COMMAND_IDS.mergeHighlightsIntoTopic]: 'desktop.command.mergeHighlights',
   [APP_COMMAND_IDS.createSelectionHighlight]: 'desktop.command.highlightSelection',
   [APP_COMMAND_IDS.createSelectionCloze]: 'desktop.command.clozeSelection',

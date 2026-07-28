@@ -90,6 +90,7 @@ describe('getAppPaletteCommands', () => {
     expect(sectionFor(APP_COMMAND_IDS.enterPriorityMode)).toBe('Editor');
     expect(sectionFor(APP_COMMAND_IDS.exportCurrentArticle)).toBe('Editor');
     expect(sectionFor(APP_COMMAND_IDS.mergeHighlightsIntoTopic)).toBe('Editor');
+    expect(sectionFor(APP_COMMAND_IDS.splitTopic)).toBe('Editor');
     expect(sectionFor(APP_COMMAND_IDS.repairTable)).toBe('Editor');
     expect(sectionFor(APP_COMMAND_IDS.openHelpSearch)).toBe('Workspace');
     expect(sectionFor(APP_COMMAND_IDS.openGuidedSample)).toBe('Workspace');

@@ -16,6 +16,7 @@ export const APP_COMMAND_IDS = {
   renameNode: 'workspace.renameNode',
   findInTopic: 'document.findInTopic',
   toggleComparisonView: 'document.toggleComparisonView',
+  splitTopic: 'document.splitTopic',
   reviewSourceUpdate: 'document.reviewSourceUpdate',
   enterPriorityMode: 'nodes.enterPriorityMode',
   mergeHighlightsIntoTopic: 'workspace.mergeHighlightsIntoTopic',

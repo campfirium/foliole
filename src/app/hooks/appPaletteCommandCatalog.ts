@@ -22,6 +22,7 @@ export interface BuildAppPaletteItemsOptions extends ReviewPaletteCommandOptions
   canPublishToFoliole?: boolean;
   canPublishToDiscourse?: boolean;
   canPublishToWordPress?: boolean;
+  canSplitCurrentTopic?: boolean;
   canImportFile: boolean;
   canImportFolder: boolean;
   canMergeHighlightsIntoTopic: boolean;
@@ -125,6 +126,9 @@ function isEditorCommandEnabled(id: string, options: BuildAppPaletteItemsOptions
   }
   if (id === APP_COMMAND_IDS.publishToWordPress) {
     return Boolean(options.canPublishToWordPress);
+  }
+  if (id === APP_COMMAND_IDS.splitTopic) {
+    return Boolean(options.canSplitCurrentTopic);
   }
   if (id === APP_COMMAND_IDS.mergeHighlightsIntoTopic) {
     return options.canMergeHighlightsIntoTopic;

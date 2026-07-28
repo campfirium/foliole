@@ -34,6 +34,7 @@ export const ZH_HANS_DESKTOP_COMMAND_TRANSLATIONS: Partial<Record<TranslationKey
   'desktop.command.publishToFoliole': 'Publish to the site',
   'desktop.command.publishToDiscourse': 'Publish to Discourse',
   'desktop.command.publishToWordPress': 'Publish to WordPress',
+  'desktop.command.splitTopic': '拆分主题',
   'desktop.command.mergeHighlights': '合并高亮',
   'desktop.command.highlightSelection': '高亮所选内容',
   'desktop.command.clozeSelection': '挖空所选内容',

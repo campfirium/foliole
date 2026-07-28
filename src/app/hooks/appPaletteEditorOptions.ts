@@ -61,6 +61,7 @@ export function buildEditorPaletteOptions(args: EditorPaletteSource) {
     canPublishToFoliole: canUseCurrentTopic,
     canPublishToDiscourse: canUseCurrentTopic,
     canPublishToWordPress: canUseCurrentTopic,
+    canSplitCurrentTopic: canUseCurrentTopic && !args.isEditorReadOnly,
     canRepairTable: canAnnotateSelection(args),
     canSetNodePriority: Boolean(args.activeNodeId) && !args.isViewingTrashNode,
     canToggleImmersiveMode: canToggleImmersiveMode(args)

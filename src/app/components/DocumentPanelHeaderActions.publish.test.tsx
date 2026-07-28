@@ -10,6 +10,12 @@ import { renderWithLocalization } from '../../shared/localization/testLocalizati
 
 import { renderDocumentHeaderActions } from './DocumentPanelHeaderActions';
 
+function defaultMenuItem(commandId: string) {
+  const item = DEFAULT_DOCUMENT_HEADER_MENU_ITEMS.find((candidate) => candidate.commandId === commandId);
+  if (!item) throw new Error(`missing default menu item: ${commandId}`);
+  return item;
+}
+
 function PublishHeaderActions(props: {
   menuItems?: typeof DEFAULT_DOCUMENT_HEADER_MENU_ITEMS;
   onRunDocumentCommand?: ((commandId: string) => void) | undefined;
@@ -63,6 +69,7 @@ it('exposes every publishing command from the Topic actions menu', async () => {
   expect(screen.getByRole('menuitem', { name: 'Publish to the site' })).toBeInTheDocument();
   expect(screen.getByRole('menuitem', { name: 'Publish to WordPress' })).toBeInTheDocument();
   expect(screen.getByRole('menuitem', { name: 'Publish to Discourse' })).toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: 'Split Topic' })).toBeInTheDocument();
   expect(screen.getAllByRole('separator').length).toBeGreaterThan(0);
 
   fireEvent.click(screen.getByRole('menuitem', { name: 'Publish to WordPress' }));
@@ -73,9 +80,9 @@ it('applies configured Topic menu order and hidden commands', async () => {
   renderWithLocalization(
     <PublishHeaderActions
       menuItems={[
-        { ...DEFAULT_DOCUMENT_HEADER_MENU_ITEMS[3]!, order: 0 },
+        { ...defaultMenuItem(APP_COMMAND_IDS.toggleComparisonView), order: 0 },
         { ...DEFAULT_DOCUMENT_HEADER_MENU_ITEMS[0]!, order: 1, visible: false },
-        { ...DEFAULT_DOCUMENT_HEADER_MENU_ITEMS[4]!, order: 2 }
+        { ...defaultMenuItem(APP_COMMAND_IDS.toggleEditorDisplayMode), order: 2 }
       ]}
       showPublishActions
     />
@@ -122,6 +129,7 @@ it('keeps publishing commands out of non-publishable document menus', async () =
   await openDocumentActionsMenu();
 
   expect(screen.queryByRole('menuitem', { name: 'Publish to the site' })).not.toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: 'Split Topic' })).toBeInTheDocument();
   expect(screen.getByRole('menuitem', { name: 'Compare with Draft' })).toBeInTheDocument();
   expect(screen.getByRole('menuitem', { name: 'Switch to Source mode' })).toBeInTheDocument();
 });

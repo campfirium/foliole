@@ -22,6 +22,7 @@ import { createPaletteDocumentActions } from './appPaletteDocumentActions';
 import { createPaletteHistoryActions } from './appPaletteHistoryActions';
 import { createPaletteImportActions } from './appPaletteImportActions';
 import { createSelectionAnnotationPaletteActions } from './appPaletteSelectionActions';
+import { createSplitTopicCommand } from './appPaletteSplitTopicCommand';
 import { createPaletteSurfaceActions } from './appPaletteSurfaceActions';
 import { restartAppWithReadingProgress } from './appRestartPersistence';
 import { repairEditorTable } from './editorRepairTableCommand';
@@ -197,6 +198,7 @@ export function createPaletteRunnerArgs(args: {
     ...createPublishingPaletteActions(args),
     ...createPaletteDocumentActions(),
     mergeHighlightsIntoTopic: createMergeHighlightsIntoTopicCommand({ ws: args.ws }),
+    openSplitTopicDialog: createSplitTopicCommand(args),
     ...createPaletteNavigationActions(args),
     ...createPaletteImportActions(args.formalImport),
     openLocalFile,

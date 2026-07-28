@@ -128,3 +128,37 @@ export async function saveWorkspaceNodeContentMutationWithAnchors(args: {
     return null;
   }
 }
+
+export async function saveSplitTopicWorkspaceMutation(args: {
+  activeNodeId: string;
+  deletedAt: string;
+  generatedNodes: WorkspaceRuntimeNode[];
+  nodeOrder: string[];
+  sourceNodeId: string;
+}): Promise<WorkspaceNodeMutationPatchResult | null> {
+  const runtimeInvoke = getRuntimeInvoke();
+  if (!runtimeInvoke) {
+    return null;
+  }
+  try {
+    const result = await runtimeInvoke(NATIVE_COMMANDS.splitTopic, {
+      activeNodeId: args.activeNodeId,
+      deletedAt: args.deletedAt,
+      generatedNodes: args.generatedNodes.map((node) =>
+        createWorkspaceRuntimeNodeSnapshot(node, args.nodeOrder.indexOf(node.id))
+      ),
+      nodeOrder: args.nodeOrder,
+      sourceNodeId: args.sourceNodeId
+    });
+    return isNodeMutationPatchResult(result) ? result : null;
+  } catch (error) {
+    logRuntimeError('runtime sync failed', {
+      area: 'native',
+      action: 'split_topic',
+      command: NATIVE_COMMANDS.splitTopic,
+      fallback: 'none',
+      error
+    });
+    return null;
+  }
+}

@@ -23,6 +23,7 @@ it('keeps the default Topic menu order when no setting is stored', () => {
     APP_COMMAND_IDS.publishToFoliole,
     APP_COMMAND_IDS.publishToWordPress,
     APP_COMMAND_IDS.publishToDiscourse,
+    APP_COMMAND_IDS.splitTopic,
     APP_COMMAND_IDS.toggleComparisonView,
     APP_COMMAND_IDS.toggleEditorDisplayMode,
     APP_COMMAND_IDS.customizeDocumentMenu
