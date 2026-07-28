@@ -10,6 +10,7 @@ import { pathToFileURL } from 'node:url';
 
 import { terminateProcessTree } from './windows-bounded-process.mjs';
 import { nativeUiSummary } from './windows-android-lab-native-ui-summary.mjs';
+import { createUiAutomationProgress, redactedUiProgressArgs } from './windows-android-lab-ui-progress.mjs';
 
 const APP_ID = 'com.foliole.android';
 const TEST_RUNNER = `${APP_ID}.test/androidx.test.runner.AndroidJUnitRunner`;
@@ -134,14 +135,8 @@ function instrumentationArgs(input) {
   return ['shell', 'am', 'instrument', '-w', '-r', ...pairs.flatMap(([name, value]) => ['-e', name, value]), TEST_RUNNER];
 }
 
-function auditedArgs(args) {
-  return args.map((value, index) => (
-    args[index - 1] === '--value' || (args[index - 2] === '-e' && args[index - 1] === 'valueBase64') ? '<redacted>' : value
-  ));
-}
-
 export async function runWindowsAndroidLabUiAutomation({
-  argv = process.argv.slice(2), env = process.env, execute = runProcess
+  argv = process.argv.slice(2), env = process.env, execute = runProcess, stdout = process.stdout
 } = {}) {
   const input = parseUiAutomationArgs(argv);
   const adb = env.FOLIOLE_ANDROID_ADB_PATH;
@@ -152,14 +147,18 @@ export async function runWindowsAndroidLabUiAutomation({
   if (!adb || !serial || !evidenceRoot || !windowsWorkDir) throw codedError('ui_environment_missing', 'verified Lab UI environment is missing');
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const commands = [];
+  const progress = createUiAutomationProgress({ evidenceRoot, stdout });
   const invoke = async (command, args, options = {}) => {
     const startedAt = new Date().toISOString();
+    progress.begin(command, args);
     try {
       const result = await execute(command, args, { env, ...options });
-      commands.push({ args: auditedArgs(args), command, exitCode: 0, startedAt, completedAt: new Date().toISOString() });
+      progress.done(command, args);
+      commands.push({ args: redactedUiProgressArgs(args), command, exitCode: 0, startedAt, completedAt: new Date().toISOString() });
       return result;
     } catch (error) {
-      commands.push({ args: auditedArgs(args), command, errorCode: error.code || 'failed', exitCode: error.exitCode ?? null,
+      progress.fail(command, args, error);
+      commands.push({ args: redactedUiProgressArgs(args), command, errorCode: error.code || 'failed', exitCode: error.exitCode ?? null,
         startedAt, completedAt: new Date().toISOString() });
       throw error;
     }

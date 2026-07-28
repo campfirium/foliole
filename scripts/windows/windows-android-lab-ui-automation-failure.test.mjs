@@ -55,4 +55,20 @@ describe('Windows Android Lab UI automation failure evidence', () => {
       resultStatus: 'failure'
     });
   });
+
+  it('writes progress before a blocked child command can finish', async () => {
+    const { env, root } = fixture();
+    let output = '';
+    await expect(runWindowsAndroidLabUiAutomation({
+      argv: ['--testId', 'companion-tab-settings'], env,
+      execute: async () => {
+        throw Object.assign(new Error('blocked'), { code: 'ui_command_timeout' });
+      },
+      stdout: { write: (value) => { output += String(value); } }
+    })).rejects.toMatchObject({ code: 'ui_command_timeout' });
+    expect(output).toContain('begin: gradle assembleDebugAndroidTest');
+    expect(output).toContain('fail: gradle assembleDebugAndroidTest');
+    const progress = JSON.parse(fs.readFileSync(path.join(root, 'ui-progress.json'), 'utf8'));
+    expect(progress.events[0]).toMatchObject({ state: 'begin', label: 'gradle assembleDebugAndroidTest' });
+  });
 });
