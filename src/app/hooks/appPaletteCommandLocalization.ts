@@ -36,6 +36,7 @@ const COMMAND_TITLE_KEYS: Partial<Record<AppCommandId, TranslationKey>> = {
   [APP_COMMAND_IDS.openHelpSearch]: 'desktop.command.openHelpSearch',
   [APP_COMMAND_IDS.openWorkspaceSearch]: 'desktop.command.openWorkspaceSearch',
   [APP_COMMAND_IDS.openCommandPalette]: 'desktop.command.openCommandPalette',
+  [APP_COMMAND_IDS.customizeDocumentMenu]: 'desktop.command.customizeDocumentMenu',
   [APP_COMMAND_IDS.goBack]: 'desktop.command.goBack',
   [APP_COMMAND_IDS.goForward]: 'desktop.command.goForward',
   [APP_COMMAND_IDS.goToNode]: 'desktop.command.goToNode',

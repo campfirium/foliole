@@ -121,6 +121,10 @@ function runMenuItemCommand(item: DocumentHeaderMenuItemConfig, args: DocumentHe
     args.toggleEditorDisplayMode();
     return;
   }
+  if (item.commandId === APP_COMMAND_IDS.customizeDocumentMenu) {
+    openDocumentMenuSettings(args);
+    return;
+  }
   args.onRunDocumentCommand?.(item.commandId);
 }
 
@@ -142,10 +146,6 @@ function renderDocumentMenuItems(items: DocumentHeaderMenuItemConfig[], args: Do
           </AppDropdownMenuItem>
         </Fragment>
       ))}
-      {visibleItems.length ? <AppDropdownMenuSeparator /> : null}
-      <AppDropdownMenuItem onSelect={() => openDocumentMenuSettings(args)}>
-        {args.t('desktop.document.customizeTopicMenu')}
-      </AppDropdownMenuItem>
     </>
   );
 }

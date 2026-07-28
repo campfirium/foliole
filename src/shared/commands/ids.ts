@@ -65,6 +65,7 @@ export const APP_COMMAND_IDS = {
   openHelpSearch: 'workspace.openHelpSearch',
   openWorkspaceSearch: 'workspace.openSearch',
   openCommandPalette: 'workspace.openCommandPalette',
+  customizeDocumentMenu: 'settings.customizeDocumentMenu',
   checkForUpdates: 'release.checkForUpdates',
   openLatestRelease: 'release.openLatestRelease',
   openGitHubRepository: 'support.openRepository',

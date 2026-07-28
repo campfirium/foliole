@@ -24,7 +24,8 @@ it('keeps the default Topic menu order when no setting is stored', () => {
     APP_COMMAND_IDS.publishToWordPress,
     APP_COMMAND_IDS.publishToDiscourse,
     APP_COMMAND_IDS.toggleComparisonView,
-    APP_COMMAND_IDS.toggleEditorDisplayMode
+    APP_COMMAND_IDS.toggleEditorDisplayMode,
+    APP_COMMAND_IDS.customizeDocumentMenu
   ]);
 });
 
@@ -37,6 +38,15 @@ it('persists hidden and reordered Topic menu items', () => {
   const loaded = loadDocumentHeaderMenuItems();
   expect(loaded[0]?.commandId).toBe(APP_COMMAND_IDS.toggleComparisonView);
   expect(loaded.find((item) => item.id === 'system.publish-site')?.visible).toBe(false);
+});
+
+it('lets the Topic menu customization command be hidden like other system commands', () => {
+  const hidden = toggleDocumentHeaderMenuItemVisibility(DEFAULT_DOCUMENT_HEADER_MENU_ITEMS, 'system.customize-menu', false);
+
+  expect(hidden.find((item) => item.commandId === APP_COMMAND_IDS.customizeDocumentMenu)).toMatchObject({
+    source: 'system',
+    visible: false
+  });
 });
 
 it('adds custom commands and removes them without losing system defaults', () => {

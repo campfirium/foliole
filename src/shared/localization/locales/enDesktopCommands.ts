@@ -48,6 +48,7 @@ export const EN_DESKTOP_COMMAND_TRANSLATIONS = {
   'desktop.command.openHelpSearch': 'DEV Open Help Search',
   'desktop.command.openWorkspaceSearch': 'Search',
   'desktop.command.openCommandPalette': 'Command Palette',
+  'desktop.command.customizeDocumentMenu': 'Customize menu...',
   'desktop.command.goBack': 'Go Back',
   'desktop.command.goForward': 'Go Forward',
   'desktop.command.goToNode': 'Go to...',

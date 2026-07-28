@@ -101,6 +101,21 @@ it('opens Topic menu customization from the menu', async () => {
   expect(onRunDocumentCommand).toHaveBeenCalledWith(APP_COMMAND_IDS.openSettings);
 });
 
+it('allows the Topic menu customization command to be hidden', async () => {
+  renderWithLocalization(
+    <PublishHeaderActions
+      menuItems={DEFAULT_DOCUMENT_HEADER_MENU_ITEMS.map((item) =>
+        item.commandId === APP_COMMAND_IDS.customizeDocumentMenu ? { ...item, visible: false } : item
+      )}
+      showPublishActions={false}
+    />
+  );
+
+  await openDocumentActionsMenu();
+
+  expect(screen.queryByRole('menuitem', { name: 'Customize menu...' })).not.toBeInTheDocument();
+});
+
 it('keeps publishing commands out of non-publishable document menus', async () => {
   renderWithLocalization(<PublishHeaderActions showPublishActions={false} />);
 
