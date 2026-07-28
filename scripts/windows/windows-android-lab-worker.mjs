@@ -59,13 +59,25 @@ async function captureScreenshot(config, endpoint, paths, evidenceRoot, executeC
     await runChecked(executeCommand, 'powershell.exe', [
       '-NoProfile', '-WindowStyle', 'Hidden', '-ExecutionPolicy', 'Bypass', '-File', script,
       '-OutputDir', evidenceRoot, '-TargetSerial', endpoint
-    ], { env: process.env }, 'screenshot_failed');
+    ], { env: screenshotEnvironment(config, endpoint) }, 'screenshot_failed');
     const screenshot = fs.readdirSync(evidenceRoot).filter((name) => /^android-.*\.png$/u.test(name)).sort().at(-1);
     if (screenshot) fs.renameSync(path.join(evidenceRoot, screenshot), path.join(evidenceRoot, 'screenshot.png'));
   } catch (error) {
     return error instanceof Error ? error.message : String(error);
   }
   return null;
+}
+
+function screenshotEnvironment(config, endpoint) {
+  const toolPath = [config.nodeDirectory, path.win32.join(config.javaHome, 'bin'), path.win32.dirname(config.adbPath)]
+    .filter(Boolean).join(';');
+  return androidLabAdbEnv(config, {
+    ...process.env,
+    FOLIOLE_ANDROID_ADB_PATH: config.adbPath,
+    FOLIOLE_ANDROID_SERIAL: endpoint,
+    JAVA_HOME: config.javaHome,
+    Path: `${toolPath};${process.env.Path || process.env.PATH || ''}`
+  });
 }
 
 function previewEnvironment(config, endpoint, paths) {

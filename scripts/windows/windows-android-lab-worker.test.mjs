@@ -135,6 +135,12 @@ describe('Windows Android lab worker', () => {
       ANDROID_WINDOWS_DEPENDENCY_REFRESH: 'auto', FOLIOLE_ANDROID_SERIAL: ENDPOINT, JAVA_HOME: 'C:\\Java'
     });
     expect(preview.options.env.Path).toContain('C:\\Node;C:\\Java\\bin');
+    const screenshot = calls.find((call) => call.command === 'powershell.exe' && call.args.includes('-OutputDir'));
+    expect(screenshot.options.env).toMatchObject({
+      FOLIOLE_ANDROID_ADB_PATH: 'adb.exe',
+      FOLIOLE_ANDROID_SERIAL: ENDPOINT
+    });
+    expect(screenshot.options.env.Path).toContain('C:\\Node;C:\\Java\\bin');
     expect(calls.some((call) => call.args.includes('fetch') || call.args.includes('clone'))).toBe(false);
     expect(calls.some((call) => call.args.includes('refs/heads/lab/dev'))).toBe(true);
     const gitCalls = calls.filter((call) => call.command === 'git.exe');
