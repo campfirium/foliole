@@ -99,7 +99,7 @@ async function resolveProcessSpec(config, paths, request, evidenceRoot, executeC
     const spec = repositorySpec(config, paths, operation);
     if (request.target !== 'a5') return spec;
     const device = await resolveAndroidDevice(config, paths, executeCommand);
-    return { ...spec, deviceEndpoint: device.endpoint, deviceIdentity: device.identity };
+    return { ...spec, devServerStateRoot: path.join(paths.root, 'runtime', 'android-dev-server'), deviceEndpoint: device.endpoint, deviceIdentity: device.identity };
   }
   if (operation.kind === 'windowsClient') return {
     args: [path.join(paths.checkout, 'scripts', 'windows', 'windows-client-native.mjs'), operation.action],

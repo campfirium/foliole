@@ -107,7 +107,8 @@ describe('Windows Android Lab worker operations', () => {
       FOLIOLE_ANDROID_ADB_SERVER_PORT: '5601',
       FOLIOLE_ANDROID_BASH_PATH: 'bash.exe',
       FOLIOLE_ANDROID_LAB_EVIDENCE_ROOT: path.join(paths.evidence, 'ui-run'),
-      FOLIOLE_ANDROID_SERIAL: ENDPOINT
+      FOLIOLE_ANDROID_SERIAL: ENDPOINT,
+      FOLIOLE_WINDOWS_ANDROID_DEV_SERVER_STATE_ROOT: path.join(paths.root, 'runtime', 'android-dev-server')
     });
     const audit = fs.readFileSync(path.join(paths.evidence, 'ui-run', 'command-audit.json'), 'utf8');
     expect(audit).toContain('<redacted>');

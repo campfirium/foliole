@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest';
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const DEV_SERVER_PREVIEW_SCRIPT = path.join(REPO_ROOT, 'scripts', 'android', 'android-preview-dev-server.sh');
 const DEV_SERVER_SYNC_PS_SCRIPT = path.join(REPO_ROOT, 'scripts', 'android', 'windows-cap-sync-dev-server.ps1');
+const DEV_SERVER_LAUNCH_PS_SCRIPT = path.join(REPO_ROOT, 'scripts', 'android', 'windows-dev-server-launch.ps1');
 
 function bashPath(windowsPath) {
   return windowsPath.replace(/^([A-Za-z]):/, (_, drive) => `/${drive.toLowerCase()}`).replace(/\\/g, '/');
@@ -128,5 +129,15 @@ describe('android dev-server preview scripts', () => {
     expect(script).toContain('$synced.server.url -ne $ServerUrl');
     expect(script).toContain('Copy-Item -Path $backupPath -Destination $configPath -Force');
     expect(script).toContain('cleartext: true');
+  });
+
+  it('records A5 launch state for the dev-server status adapter', async () => {
+    const script = await readFile(DEV_SERVER_LAUNCH_PS_SCRIPT, 'utf8');
+
+    expect(script).toContain('FOLIOLE_WINDOWS_ANDROID_DEV_SERVER_STATE_ROOT');
+    expect(script).toContain('a5-runtime.json');
+    expect(script).toContain('appLaunchResult = "opened"');
+    expect(script).toContain('reverseStatus = $ReverseStatus');
+    expect(script).toContain('UTF8Encoding($false)');
   });
 });

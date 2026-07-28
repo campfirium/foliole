@@ -5,7 +5,8 @@ param(
   [int]$DevServerPort = 24604,
   [int]$DevSyncPort = 38641,
   [int]$BootTimeoutSeconds = 180,
-  [string]$TargetSerial = ""
+  [string]$TargetSerial = $env:FOLIOLE_ANDROID_SERIAL,
+  [string]$StateRoot = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -26,6 +27,15 @@ function Invoke-AdbCommand {
   } finally { Remove-Item -Path $out, $err -ErrorAction SilentlyContinue }
 }
 
+function Invoke-CheckedAdbCommand {
+  param([string]$AdbPath, [string[]]$Arguments, [string]$Description)
+  $lines = Invoke-AdbCommand -AdbPath $AdbPath -Arguments $Arguments
+  if ($global:LASTEXITCODE -ne 0) {
+    throw "$Description failed with exit code $global:LASTEXITCODE"
+  }
+  return $lines
+}
+
 function Resolve-SdkRoot {
   $candidates = @(
     $env:ANDROID_SDK_ROOT,
@@ -38,6 +48,49 @@ function Resolve-SdkRoot {
     }
   }
   throw "Android SDK not found. Install Android SDK first."
+}
+
+function Resolve-StateRoot {
+  param([string]$RequestedStateRoot, [string]$WindowsWorkDir)
+  if ($RequestedStateRoot -and $RequestedStateRoot.Trim().Length -gt 0) {
+    return $RequestedStateRoot
+  }
+  if ($env:FOLIOLE_WINDOWS_ANDROID_DEV_SERVER_STATE_ROOT) {
+    return $env:FOLIOLE_WINDOWS_ANDROID_DEV_SERVER_STATE_ROOT
+  }
+  if ($WindowsWorkDir -and $WindowsWorkDir.Trim().Length -gt 0) {
+    return (Join-Path $WindowsWorkDir ".tmp\windows-android-dev-server")
+  }
+  return ""
+}
+
+function Write-AppRuntimeState {
+  param(
+    [string]$StateRoot,
+    [string]$Serial,
+    [string]$AppId,
+    [string]$MainActivity,
+    [int]$DevServerPort,
+    [int]$DevSyncPort,
+    [string]$ReverseStatus
+  )
+  if (!$StateRoot) { return }
+  New-Item -ItemType Directory -Path $StateRoot -Force | Out-Null
+  $statePath = Join-Path $StateRoot "a5-runtime.json"
+  $state = [ordered]@{
+    appId = $AppId
+    appLaunchResult = "opened"
+    mainActivity = $MainActivity
+    reverseStatus = $ReverseStatus
+    serial = $Serial
+    devServerPort = $DevServerPort
+    devSyncPort = $DevSyncPort
+    updatedAt = (Get-Date).ToUniversalTime().ToString("o")
+  }
+  $tmpPath = "$statePath.tmp"
+  $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+  [System.IO.File]::WriteAllText($tmpPath, (($state | ConvertTo-Json -Depth 4) + [Environment]::NewLine), $utf8NoBom)
+  Move-Item -Path $tmpPath -Destination $statePath -Force
 }
 
 function Wait-ForDeviceReady {
@@ -59,6 +112,7 @@ function Wait-ForDeviceReady {
 }
 
 $sdkRoot = Resolve-SdkRoot
+$resolvedStateRoot = Resolve-StateRoot -RequestedStateRoot $StateRoot -WindowsWorkDir $WindowsWorkDir
 $env:ANDROID_HOME = $sdkRoot
 $env:ANDROID_SDK_ROOT = $sdkRoot
 $env:Path = "$sdkRoot\platform-tools;$env:Path"
@@ -75,7 +129,7 @@ if (!(Test-Path -Path $adbDeviceScript)) {
 . $adbDeviceScript
 
 Write-Info "waiting for ready device"
-Invoke-AdbCommand -AdbPath $adbPath -Arguments @("start-server") *> $null
+Invoke-CheckedAdbCommand -AdbPath $adbPath -Arguments @("start-server") -Description "adb start-server" *> $null
 $serial = Wait-ForDeviceReady -AdbPath $adbPath -TargetSerial $TargetSerial -TimeoutSeconds $BootTimeoutSeconds
 if ($null -eq $serial) {
   throw "No ready Android device found within ${BootTimeoutSeconds}s."
@@ -84,14 +138,16 @@ Write-Info "device: $serial"
 
 if ($DevSyncPort -gt 0) {
   Write-Info "configuring dev sync reverse: tcp:$DevSyncPort"
-  Invoke-AdbCommand -AdbPath $adbPath -Arguments @("-s", $serial, "reverse", "tcp:$DevSyncPort", "tcp:$DevSyncPort") *> $null
+  Invoke-CheckedAdbCommand -AdbPath $adbPath -Arguments @("-s", $serial, "reverse", "tcp:$DevSyncPort", "tcp:$DevSyncPort") -Description "adb reverse dev sync" *> $null
 }
 if ($DevServerPort -gt 0) {
   Write-Info "configuring dev server reverse: tcp:$DevServerPort"
-  Invoke-AdbCommand -AdbPath $adbPath -Arguments @("-s", $serial, "reverse", "tcp:$DevServerPort", "tcp:$DevServerPort") *> $null
+  Invoke-CheckedAdbCommand -AdbPath $adbPath -Arguments @("-s", $serial, "reverse", "tcp:$DevServerPort", "tcp:$DevServerPort") -Description "adb reverse dev server" *> $null
 }
 
 Write-Info "restarting activity: $AppId/$MainActivity"
-Invoke-AdbCommand -AdbPath $adbPath -Arguments @("-s", $serial, "shell", "am", "force-stop", $AppId) *> $null
-Invoke-AdbCommand -AdbPath $adbPath -Arguments @("-s", $serial, "shell", "am", "start", "-n", "$AppId/$MainActivity")
+$reverseStatus = if (($DevSyncPort -gt 0) -or ($DevServerPort -gt 0)) { "ok" } else { "skipped" }
+Invoke-CheckedAdbCommand -AdbPath $adbPath -Arguments @("-s", $serial, "shell", "am", "force-stop", $AppId) -Description "adb force-stop" *> $null
+Invoke-CheckedAdbCommand -AdbPath $adbPath -Arguments @("-s", $serial, "shell", "am", "start", "-n", "$AppId/$MainActivity") -Description "adb start activity"
+Write-AppRuntimeState -StateRoot $resolvedStateRoot -Serial $serial -AppId $AppId -MainActivity $MainActivity -DevServerPort $DevServerPort -DevSyncPort $DevSyncPort -ReverseStatus $reverseStatus
 Write-Info "status: OPENED"
