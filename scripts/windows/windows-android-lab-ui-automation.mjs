@@ -11,10 +11,10 @@ import { pathToFileURL } from 'node:url';
 import { terminateProcessTree } from './windows-bounded-process.mjs';
 import { nativeUiSummary } from './windows-android-lab-native-ui-summary.mjs';
 import { createUiAutomationProgress, redactedUiProgressArgs } from './windows-android-lab-ui-progress.mjs';
+import { resolveUiAutomationTestClass } from './windows-android-lab-ui-scenario.mjs';
 
 const APP_ID = 'com.foliole.android';
 const TEST_RUNNER = `${APP_ID}.test/androidx.test.runner.AndroidJUnitRunner`;
-const TEST_CLASS = `${APP_ID}.FolioleCompanionWebViewAutomationTest#performsBoundedSemanticAction`;
 const TEST_SEQUENCE_CLASS = `${APP_ID}.FolioleCompanionWebViewAutomationTest#performsBoundedSemanticSequence`;
 const TEST_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,119}$/u;
 const UI_ARGUMENTS = new Set(['action', 'expectedAttribute', 'expectedValue', 'testId', 'testIds', 'timeoutMs', 'value']);
@@ -126,8 +126,9 @@ function instrumentationArgs(input) {
       '-e', 'testIds', input.testIds.join(','), '-e', 'timeoutMs', String(input.timeoutMs), TEST_RUNNER
     ];
   }
+  const testClass = resolveUiAutomationTestClass(input.testId);
   const pairs = [
-    ['class', TEST_CLASS], ['testId', input.testId], ['action', input.action],
+    ['class', testClass], ['testId', input.testId], ['action', input.action],
     ['expectedAttribute', input.expectedAttribute], ['expectedValue', String(input.expectedValue)],
     ['timeoutMs', String(input.timeoutMs)]
   ];

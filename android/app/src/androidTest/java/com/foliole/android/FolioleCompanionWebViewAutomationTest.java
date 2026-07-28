@@ -91,6 +91,38 @@ public class FolioleCompanionWebViewAutomationTest {
         }
     }
 
+    @Test
+    public void persistsCaptureClozeAndNoteAfterRestart() throws Exception {
+        Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
+        Bundle arguments = InstrumentationRegistry.getArguments();
+        long timeoutMs = boundedTimeout(arguments.getString("timeoutMs", "30000"));
+        String token = arguments.getString("expectedValue", "");
+        Activity activity = startMainActivity(instrumentation);
+        try {
+            waitForWindowFocus(activity, timeoutMs);
+            WebView webView = activity.findViewById(R.id.webview);
+            assertNotNull(webView);
+            JSONObject before = FolioleCompanionWebViewSemanticAdapter.snapshot(instrumentation, webView);
+            JSONObject receipt = FolioleCompanionCaptureAnnotationScenario.create(
+                instrumentation, webView, token, timeoutMs
+            );
+            instrumentation.runOnMainSync(activity::finish);
+            activity = startMainActivity(instrumentation);
+            waitForWindowFocus(activity, timeoutMs);
+            webView = activity.findViewById(R.id.webview);
+            assertNotNull(webView);
+            FolioleCompanionCaptureAnnotationScenario.verifyHydrated(
+                instrumentation, webView, token, timeoutMs
+            );
+            receipt.put("hydratedAfterRestart", true);
+            sendEvidence(instrumentation, before,
+                FolioleCompanionWebViewSemanticAdapter.snapshot(instrumentation, webView), receipt);
+        } finally {
+            Activity finalActivity = activity;
+            instrumentation.runOnMainSync(finalActivity::finish);
+        }
+    }
+
     private static Activity startMainActivity(Instrumentation instrumentation) {
         Context context = instrumentation.getTargetContext();
         Intent intent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());

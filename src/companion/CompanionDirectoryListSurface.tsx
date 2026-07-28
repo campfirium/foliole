@@ -49,6 +49,7 @@ function DirectoryRow(props: {
     <button
       aria-label={t(props.item.kind === 'folder' ? 'companion.directory.openFolder' : 'companion.directory.openTopic', { title })}
       className="flex min-h-16 w-full items-center gap-2.5 bg-transparent px-1 py-2 text-left transition-colors focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-companion-accent active:bg-companion-subtle/70"
+      data-testid={`companion-directory-node-${props.item.nodeId}`}
       onClick={() => props.onSelectItem(props.item)}
       type="button"
     >

@@ -18,24 +18,7 @@ import {
   COMPANION_SORT_LABEL_KEYS,
   translateCompanionSortOrderLabel
 } from './companionBrowseSortLabels';
-
-function TopActionButton(props: {
-  icon: LucideIcon;
-  label: string;
-  onClick(): void;
-}) {
-  const Icon = props.icon;
-  return (
-    <button
-      aria-label={props.label}
-      className="inline-flex h-10 w-10 items-center justify-center rounded-md text-companion-text-secondary transition hover:bg-bg-subtle/60 hover:text-foreground"
-      onClick={props.onClick}
-      type="button"
-    >
-      <Icon className="h-5 w-5" />
-    </button>
-  );
-}
+import { CompanionTopActionButton } from './CompanionTopActionButton';
 
 function MenuRow(props: {
   active?: boolean;
@@ -206,9 +189,14 @@ export function CompanionBrowseTopActions(props: {
   return (
     <div className="flex items-center gap-1">
       {supportsCompanionNodeMutationSurface('quick-capture') ? (
-        <TopActionButton icon={ClipboardPlus} label={t('companion.capture.title')} onClick={props.onOpenCapture} />
+        <CompanionTopActionButton
+          icon={ClipboardPlus}
+          label={t('companion.capture.title')}
+          onClick={props.onOpenCapture}
+          testId="companion-capture-open"
+        />
       ) : null}
-      <TopActionButton icon={MoreHorizontal} label={t('companion.browse.more')} onClick={() => setIsMenuOpen(true)} />
+      <CompanionTopActionButton icon={MoreHorizontal} label={t('companion.browse.more')} onClick={() => setIsMenuOpen(true)} />
       <CompanionBrowseMenuSheet
         onChangeSortDirection={props.onChangeSortDirection}
         onChangeSortKey={props.onChangeSortKey}

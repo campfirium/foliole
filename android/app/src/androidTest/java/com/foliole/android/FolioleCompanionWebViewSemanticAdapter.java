@@ -79,7 +79,7 @@ final class FolioleCompanionWebViewSemanticAdapter {
         return latest;
     }
 
-    private static JSONObject evaluateJson(
+    static JSONObject evaluateJson(
         Instrumentation instrumentation,
         WebView webView,
         String script

@@ -50,6 +50,7 @@ function CaptureSheetHeader(props: {
       <button
         aria-busy={props.isSaving || undefined}
         className={`inline-flex items-center justify-center gap-2 rounded-md px-2 py-1 text-sm font-semibold text-primary transition hover:bg-companion-subtle ${props.isSaving ? 'disabled:text-primary' : 'disabled:text-companion-text-tertiary'}`}
+        data-testid="companion-capture-save"
         disabled={!props.canSave}
         onClick={props.onSave}
         type="button"
@@ -82,6 +83,7 @@ function CaptureTextBox(props: {
           'min-h-24 w-full resize-none bg-transparent text-base leading-6 text-foreground placeholder:text-companion-text-tertiary',
           appInputFocusVisibleClassName
         )}
+        data-testid="companion-capture-text"
         onChange={(event) => props.onChange(event.currentTarget.value)}
         placeholder={t('companion.capture.placeholder')}
         value={props.draft}

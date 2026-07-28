@@ -68,6 +68,14 @@ describe('Android Java adapter boundary', () => {
     expect(mainActivitySource()).toContain('registerPlugin(CapacitorSQLitePlugin.class);');
   });
 
+  it('reloads bundled companion assets only when the packaged index signature changes', () => {
+    const source = mainActivitySource();
+    expect(source).toContain('getAssets().open("public/index.html")');
+    expect(source).toContain('shouldRefreshWebAssets(webAssetSignature)');
+    expect(source).toContain('webView.clearCache(true)');
+    expect(source).toContain('/?foliole-app-assets=" + webAssetSignature');
+  });
+
   it('blocks obvious sync conflict, review scheduling, and schema authoring rules in Java', () => {
     const matches = productionJavaFiles().flatMap((file) => {
       const source = fs.readFileSync(path.join(JAVA_ROOT, file), 'utf8');

@@ -23,6 +23,7 @@ function ToolbarButton(props: {
   children: JSX.Element;
   label: string;
   onClick: () => void;
+  testId?: string;
 }) {
   const lastPressActionAtRef = useRef(0);
   function wasRecentlyHandled() {
@@ -40,6 +41,7 @@ function ToolbarButton(props: {
     <button
       aria-label={props.label}
       className="flex size-9 items-center justify-center rounded-sm text-foreground/72 transition-colors hover:bg-foreground/8 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-selection-blue/40"
+      data-testid={props.testId}
       onClick={(event) => {
         event.stopPropagation();
         if (wasRecentlyHandled()) return;
@@ -83,13 +85,14 @@ function CompanionSelectionNotePanel(props: {
           'min-h-16 w-full resize-none border-0 bg-transparent px-1 py-1 text-sm leading-5 text-foreground placeholder:text-foreground/45',
           appInputFocusVisibleClassName
         )}
+        data-testid="companion-selection-note-text"
         onChange={(event) => props.onChange(event.target.value)}
         placeholder={t('companion.selection.addAnnotation')}
         value={props.draft}
       />
       <div className="mt-2 flex justify-end gap-2">
         <AppButton onClick={props.onCancel} size="sm" variant="ghost">{t('common.cancel')}</AppButton>
-        <AppButton disabled={!props.draft.trim()} onClick={props.onSave} size="sm">{t('companion.selection.save')}</AppButton>
+        <AppButton data-testid="companion-selection-note-save" disabled={!props.draft.trim()} onClick={props.onSave} size="sm">{t('companion.selection.save')}</AppButton>
       </div>
     </div>
   );
@@ -109,15 +112,15 @@ function CompanionSelectionToolbarActions(props: {
           <X aria-hidden="true" size={19} strokeWidth={2} />
         </ToolbarButton>
       ) : (
-        <ToolbarButton label={t('companion.selection.highlight')} onClick={() => props.onApply('highlight')}>
+        <ToolbarButton label={t('companion.selection.highlight')} onClick={() => props.onApply('highlight')} testId="companion-selection-highlight">
           <Highlighter aria-hidden="true" size={19} strokeWidth={2} />
         </ToolbarButton>
       )}
-      <ToolbarButton label={t('companion.selection.addComment')} onClick={props.onAddNote}>
+      <ToolbarButton label={t('companion.selection.addComment')} onClick={props.onAddNote} testId="companion-selection-note">
         <MessageSquare aria-hidden="true" size={19} strokeWidth={2} />
       </ToolbarButton>
       {props.isExistingHighlight ? null : (
-        <ToolbarButton label={t('companion.selection.cloze')} onClick={() => props.onApply('cloze')}>
+        <ToolbarButton label={t('companion.selection.cloze')} onClick={() => props.onApply('cloze')} testId="companion-selection-cloze">
           <RectangleEllipsis aria-hidden="true" size={19} strokeWidth={2} />
         </ToolbarButton>
       )}
