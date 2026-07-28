@@ -19,7 +19,7 @@ export const ANDROID_CONTRACT_PATH_PATTERN = /^lib\/core\/database\/androidCompa
 export const ANDROID_SYNC_BOUNDARY_PATH_PATTERN =
   /^(lib\/core\/database\/androidCompanion.*\.ts|android\/app\/src\/main\/assets\/companion-.*\.json|android\/app\/src\/main\/java\/com\/foliole\/android\/FolioleCompanionSync.*\.java)/u;
 export const ANDROID_DEV_SERVER_INSTALL_PATH_PATTERN =
-  /^(android\/|capacitor\.config\.ts|package\.json|package-lock\.json|android\/app\/src\/main\/assets\/companion-.*\.json)/u;
+  /^(android\/(?:app\/|gradle\/|build\.gradle|settings\.gradle|gradle\.properties|variables\.gradle|gradlew(?:\.bat)?)|capacitor\.config\.ts|package\.json|package-lock\.json)/u;
 
 export const ANDROID_DEV_SERVER_RESTART_PATHS = [
   'scripts/android/android-preview-dev-server.sh',

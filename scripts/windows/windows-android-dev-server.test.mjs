@@ -65,6 +65,13 @@ describe('Windows Android dev server', () => {
     })).toMatchObject({ action: 'restart-app' });
 
     expect(selectAndroidDevServerActionWithCommittedFiles({
+      changedFiles: [],
+      committedFilesSinceRuntime: ['android/AGENTS.md', 'scripts/android/windows-dev-server-launch.ps1'],
+      currentHead: 'b'.repeat(40),
+      status: { ...currentStatus, installedApkState: 'stale' }
+    })).toMatchObject({ action: 'restart-app' });
+
+    expect(selectAndroidDevServerActionWithCommittedFiles({
       changedFiles: ['android/app/build.gradle'],
       committedFilesSinceRuntime: [],
       currentHead: 'b'.repeat(40),
