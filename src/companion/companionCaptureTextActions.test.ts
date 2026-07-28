@@ -93,4 +93,15 @@ describe('companion capture text actions', () => {
     })).rejects.toMatchObject({ code: 'inbox-unavailable' });
     expect(syncObjectsMock.applyCompanionSyncNodeVersions).not.toHaveBeenCalled();
   });
+
+  it('rejects capture when Inbox is trashed', async () => {
+    const { persistCompanionCapturedText } = await import('./companionCaptureTextActions');
+
+    await expect(persistCompanionCapturedText({
+      deviceId: 'android-device',
+      snapshot: { ...createSnapshot(), trashedNodeIds: [INBOX_NODE_ID] },
+      text: 'Quick note'
+    })).rejects.toMatchObject({ code: 'inbox-unavailable' });
+    expect(syncObjectsMock.applyCompanionSyncNodeVersions).not.toHaveBeenCalled();
+  });
 });
