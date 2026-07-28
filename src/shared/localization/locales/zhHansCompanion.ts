@@ -2,12 +2,14 @@ import type { TranslationKey } from '../translations';
 
 import { ZH_HANS_COMPANION_APP_TRANSLATIONS } from './zhHansCompanionApp';
 import { ZH_HANS_COMPANION_CAPTURE_TRANSLATIONS } from './zhHansCompanionCapture';
+import { ZH_HANS_COMPANION_READING_TRANSLATIONS } from './zhHansCompanionReading';
 import { ZH_HANS_COMPANION_READING_TYPOGRAPHY_TRANSLATIONS } from './zhHansCompanionReadingTypography';
 import { ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS } from './zhHansCompanionSettings';
 
 export const ZH_HANS_COMPANION_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
   ...ZH_HANS_COMPANION_APP_TRANSLATIONS,
   ...ZH_HANS_COMPANION_CAPTURE_TRANSLATIONS,
+  ...ZH_HANS_COMPANION_READING_TRANSLATIONS,
   ...ZH_HANS_COMPANION_READING_TYPOGRAPHY_TRANSLATIONS,
   ...ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS,
   'companion.back': '返回',
@@ -69,35 +71,6 @@ export const ZH_HANS_COMPANION_TRANSLATIONS: Partial<Record<TranslationKey, stri
   'companion.review.noTopicsTitle': '还没有同步主题',
   'companion.review.noTopicsDescription': '将这台设备连接到桌面端，并保持两台设备在同一网络。',
   'companion.review.refreshError': '复习队列无法刷新',
-  'companion.reading.exit': '退出',
-  'companion.reading.actions': '操作',
-  'companion.reading.find': '在文档中查找',
-  'companion.reading.font': '字体',
-  'companion.reading.highlight': '高亮',
-  'companion.reading.info': '信息',
-  'companion.reading.outline': '大纲',
-  'companion.reading.more': '更多阅读操作',
-  'companion.reading.editTopic': '编辑主题',
-  'companion.reading.cancelEditing': '取消',
-  'companion.reading.editContent': '编辑内容',
-  'companion.reading.doneEditing': '完成',
-  'companion.reading.restoreFromTrash': '从废纸篓恢复',
-  'companion.reading.noHeadings.title': '这个主题没有标题',
-  'companion.reading.noHeadings.description': '当这个主题包含标题时，大纲会显示在这里。',
-  'companion.reading.noHighlights.title': '这个主题没有高亮',
-  'companion.reading.noHighlights.description': '你在这个主题中创建的高亮会显示在这里。',
-  'companion.reading.info.topic': '主题',
-  'companion.reading.info.source': '来源',
-  'companion.reading.info.pdfAndText': 'PDF 和文本',
-  'companion.reading.info.text': '文本',
-  'companion.reading.alternative.title': '另一份正文',
-  'companion.reading.alternative.open': '查看另一份正文',
-  'companion.reading.alternative.current': '当前正文',
-  'companion.reading.alternative.other': '另一份正文',
-  'companion.reading.alternative.dismiss': '忽略',
-  'companion.reading.alternative.setAsBody': '设为正文',
-  'companion.reading.alternative.setting': '正在设置...',
-  'companion.reading.alternative.error': '暂时无法更新这份正文，请重试。',
   'companion.search.closeDocumentSearch': '关闭文档搜索',
   'companion.search.nextMatch': '下一个匹配项',
   'companion.search.previousMatch': '上一个匹配项',

@@ -69,12 +69,11 @@ function useCompanionDirectorySections(args: {
 }
 
 function resolveItemSelection(item: DirectoryListItem): CompanionDirectorySelection {
-  if (item.source === 'internal' || item.source === 'virtual') {
+  if ((item.source === 'internal' || item.source === 'virtual') && item.kind === 'folder') {
     return { kind: item.source, nodeId: item.nodeId };
   }
   if (item.source === 'trashRoot') return { kind: 'trash' };
   if (item.source === 'trash' && item.kind === 'folder') return { kind: 'trashFolder', nodeId: item.nodeId };
-  if (item.source === 'trash') return { kind: 'trash' };
   if (item.source === 'externalFolder') return { folderId: item.nodeId, kind: 'externalFolder' };
   if (item.source === 'externalDirectory') {
     return {
@@ -83,11 +82,37 @@ function resolveItemSelection(item: DirectoryListItem): CompanionDirectorySelect
       kind: 'externalDirectory'
     };
   }
-  return { documentId: item.documentId, kind: 'externalDocument' };
+  if (item.source === 'externalDocument') return { documentId: item.documentId, kind: 'externalDocument' };
+  return { kind: 'root' };
+}
+
+function CompanionDirectoryListContent(props: {
+  directory: ReturnType<typeof useCompanionExternalDirectory>;
+  handleSelectItem(item: DirectoryListItem): void;
+  itemCount: number;
+  sections: ReturnType<typeof useCompanionDirectorySections>['sections'];
+  snapshot: WorkspaceSnapshot | null;
+}) {
+  const t = useTranslation();
+  return (
+    <section className="px-1 py-3">
+      <CompanionScreenHeader
+        metric={t('companion.directory.header.count', { count: props.itemCount })}
+        subtitle={t('companion.directory.header.subtitle')}
+        title={t('companion.directory.title')}
+      />
+      <CompanionDirectoryList
+        directory={props.directory}
+        emptyLabel={t('companion.directory.emptyFolder')}
+        onSelectItem={props.handleSelectItem}
+        sections={props.sections}
+        snapshot={props.snapshot}
+      />
+    </section>
+  );
 }
 
 export function CompanionDirectoryContent(props: CompanionDirectoryContentProps) {
-  const t = useTranslation();
   const directory = useCompanionExternalDirectory();
   const externalDocument = useCompanionExternalDocument(props.selection);
   const { sections } = useCompanionDirectorySections({
@@ -108,11 +133,20 @@ export function CompanionDirectoryContent(props: CompanionDirectoryContentProps)
     [directory, props.selection, props.snapshot]
   );
   const handleSelectItem = (item: DirectoryListItem) => {
-    const selection = resolveItemSelection(item);
-    props.onChangeSelection(selection);
-    if (selection.kind === 'internal' || selection.kind === 'virtual' || item.source === 'trash') {
+    if (
+      item.source === 'internal' ||
+      item.source === 'virtual' ||
+      item.source === 'trash'
+    ) {
       props.onSelectNode(item.nodeId);
     }
+    if (
+      item.source === 'trash' && item.kind !== 'folder' ||
+      (item.source === 'internal' || item.source === 'virtual') && item.kind !== 'folder'
+    ) {
+      return;
+    }
+    props.onChangeSelection(resolveItemSelection(item));
   };
 
   if (props.selection.kind === 'externalDocument' && externalDocument) {
@@ -125,20 +159,11 @@ export function CompanionDirectoryContent(props: CompanionDirectoryContentProps)
     );
   }
 
-  return (
-    <section className="px-1 py-3">
-      <CompanionScreenHeader
-        metric={t('companion.directory.header.count', { count: itemCount })}
-        subtitle={t('companion.directory.header.subtitle')}
-        title={t('companion.directory.title')}
-      />
-      <CompanionDirectoryList
-        directory={directory}
-        emptyLabel={t('companion.directory.emptyFolder')}
-        onSelectItem={handleSelectItem}
-        sections={sections}
-        snapshot={props.snapshot}
-      />
-    </section>
-  );
+  return <CompanionDirectoryListContent
+    directory={directory}
+    handleSelectItem={handleSelectItem}
+    itemCount={itemCount}
+    sections={sections}
+    snapshot={props.snapshot}
+  />;
 }

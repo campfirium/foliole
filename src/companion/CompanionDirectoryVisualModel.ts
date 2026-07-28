@@ -1,5 +1,6 @@
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { normalizeWorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshotContract';
+import { resolveVirtualNodeResultIds } from '../../lib/core/nodes/virtualNodeResults';
 import type { Translate } from '../shared/localization/LocalizationProvider';
 import type { CompanionExternalDirectory } from '../shared/platform/companionExternalDocuments';
 import { selectCanonicalTrashedNodeIds, selectCanonicalVisibleNodeIds } from '../shared/workspaceCanonicalSelectors';
@@ -32,6 +33,19 @@ function formatRowCount(count: number | null) {
   return String(count);
 }
 
+function countVirtualResults(snapshot: WorkspaceSnapshot | null, virtualNodeId: string) {
+  const normalizedSnapshot = snapshot ? normalizeWorkspaceSnapshot(snapshot) : null;
+  const virtualNode = normalizedSnapshot?.nodesById[virtualNodeId];
+  if (!normalizedSnapshot || !virtualNode?.virtualFilter) return null;
+  return resolveVirtualNodeResultIds({
+    activeNodeId: virtualNode.id,
+    filter: virtualNode.virtualFilter,
+    manualChildOrder: virtualNode.manualChildOrder,
+    nodeOrder: selectCanonicalVisibleNodeIds(normalizedSnapshot),
+    nodesById: normalizedSnapshot.nodesById
+  }).length;
+}
+
 export function resolveDirectoryRowMeta(args: {
   directory: CompanionExternalDirectory;
   item: DirectoryListItem;
@@ -45,7 +59,12 @@ export function resolveDirectoryRowMeta(args: {
     const count = countDirectChildren(args.snapshot, args.item.nodeId, 'trash');
     return formatRowCount(count);
   }
-  if ((args.item.source === 'internal' || args.item.source === 'virtual') && args.item.kind === 'folder') {
+  if (args.item.source === 'virtual' && args.item.kind === 'folder') {
+    const virtualCount = countVirtualResults(args.snapshot, args.item.nodeId);
+    const count = virtualCount ?? countDirectChildren(args.snapshot, args.item.nodeId, 'visible');
+    return formatRowCount(count);
+  }
+  if (args.item.source === 'internal' && args.item.kind === 'folder') {
     const count = countDirectChildren(args.snapshot, args.item.nodeId, 'visible');
     return formatRowCount(count);
   }

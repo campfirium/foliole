@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
+import { createCollectionVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter';
+
 import {
   resolveDirectorySections
 } from './CompanionDirectoryModel';
 import { resolveDirectoryParentSelection } from './CompanionDirectoryParentModel';
+import { resolveDirectoryRowMeta } from './CompanionDirectoryVisualModel';
 
 const rootView = {
   items: [
@@ -80,6 +83,37 @@ describe('CompanionDirectoryModel', () => {
       { id: 'virtual', titleKey: 'companion.directory.section.virtual', titles: ['Virtual'] },
       { id: 'trash', titleKey: 'companion.directory.section.trash', titles: [''] }
     ]);
+  });
+
+  it('counts virtual Collection rows from aggregated members', () => {
+    const collectionSnapshot = {
+      nodeOrder: ['special-virtual-root', 'collection-1', 'topic-1', 'topic-2'],
+      nodesById: {
+        'special-virtual-root': { id: 'special-virtual-root', kind: 'folder', parentNodeId: null, title: 'Virtual' },
+        'collection-1': {
+          id: 'collection-1',
+          kind: 'folder',
+          manualChildOrder: ['topic-2', 'topic-1'],
+          parentNodeId: 'special-virtual-root',
+          title: 'Guides',
+          virtualFilter: createCollectionVirtualNodeFilter('Guides')
+        },
+        'topic-1': { collections: ['Guides'], id: 'topic-1', kind: 'topic', parentNodeId: null, title: 'One' },
+        'topic-2': { content: '---\ncollections:\n  - "Guides"\n---\nTwo', id: 'topic-2', kind: 'topic', parentNodeId: null, title: 'Two' }
+      },
+      trashedNodeIds: [],
+      untitledSequenceByParent: {}
+    } as never;
+    const collection = resolveDirectorySections({
+      directory: externalDirectory,
+      folderView: null,
+      rootView: { items: [{ kind: 'folder', nodeId: 'collection-1', preview: null, title: 'Guides' }] },
+      selection: { kind: 'root' },
+      snapshot: collectionSnapshot
+    }).flatMap((section) => section.items).find((item) => item.nodeId === 'collection-1');
+
+    expect(collection && resolveDirectoryRowMeta({ directory: externalDirectory, item: collection, snapshot: collectionSnapshot }))
+      .toBe('2');
   });
 
   it('builds external folder navigation from the synced desktop cache', () => {

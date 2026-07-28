@@ -1,6 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
+import { createCollectionVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter';
+
 import { CompanionDirectoryContent, type CompanionDirectorySelection } from './CompanionDirectoryContent';
 
 const mocks = vi.hoisted(() => ({
@@ -62,6 +64,52 @@ function renderExternalDocumentArticle(args: {
   return { onChangeSelection, onExitArticle };
 }
 
+function createCollectionSnapshot() {
+  return {
+    activeNodeId: null,
+    nodeOrder: ['collection-guide', 'topic-a'],
+    nodesById: {
+      'collection-guide': {
+        anchorLink: null,
+        content: '',
+        createdAt: '2026-07-28T00:00:00.000Z',
+        hideTitleHeading: false,
+        id: 'collection-guide',
+        isTitleManual: true,
+        kind: 'folder',
+        manualChildOrder: null,
+        parentNodeId: 'special-virtual-root',
+        reading: null,
+        reveal: null,
+        review: null,
+        title: 'Guide',
+        updatedAt: '2026-07-28T00:00:00.000Z',
+        virtualFilter: createCollectionVirtualNodeFilter('Guide')
+      },
+      'topic-a': {
+        anchorLink: null,
+        collections: ['Guide'],
+        content: '',
+        createdAt: '2026-07-28T00:00:00.000Z',
+        hideTitleHeading: false,
+        id: 'topic-a',
+        isTitleManual: true,
+        kind: 'topic',
+        openingText: 'Opening text',
+        parentNodeId: null,
+        reading: null,
+        reveal: null,
+        review: null,
+        title: 'Alpha',
+        updatedAt: '2026-07-28T00:00:00.000Z'
+      }
+    },
+    trashedNodeDeletedAtById: {},
+    trashedNodeIds: [],
+    untitledSequenceByParent: {}
+  };
+}
+
 describe('CompanionDirectoryContent external article exit', () => {
   it('uses the article exit callback so the shell can restore navigation state', () => {
     mocks.useCompanionExternalDirectory.mockReturnValue(externalDirectory);
@@ -81,4 +129,31 @@ describe('CompanionDirectoryContent external article exit', () => {
     });
     expect(onChangeSelection).not.toHaveBeenCalled();
   });
+});
+
+describe('CompanionDirectoryContent virtual article selection', () => {
+  it('opens a Collection topic without replacing the current Directory selection', () => {
+    mocks.useCompanionExternalDirectory.mockReturnValue({ entries: [], folders: [] });
+    mocks.useCompanionExternalDocument.mockReturnValue(null);
+    const onChangeSelection = vi.fn<(selection: CompanionDirectorySelection) => void>();
+    const onSelectNode = vi.fn();
+
+    render(
+      <CompanionDirectoryContent
+        onChangeSelection={onChangeSelection}
+        onExitArticle={vi.fn()}
+        onSelectNode={onSelectNode}
+        selection={{ kind: 'virtual', nodeId: 'collection-guide' }}
+        snapshot={createCollectionSnapshot()}
+        sortDirection="asc"
+        sortKey="name"
+      />
+    );
+
+    fireEvent.click(screen.getByText('Alpha'));
+
+    expect(onSelectNode).toHaveBeenCalledWith('topic-a');
+    expect(onChangeSelection).not.toHaveBeenCalled();
+  });
+
 });

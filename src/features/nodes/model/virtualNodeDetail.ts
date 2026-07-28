@@ -1,29 +1,13 @@
-import { readTopicCollections } from '../../../../lib/core/nodes/topicCollectionsFrontmatter';
 import {
   VIRTUAL_NODE_FILTER_VERSION,
-  isManualVirtualNodeFilter,
   type VirtualNodeFilter
 } from '../../../../lib/core/nodes/virtualNodeFilter';
+import {
+  resolveVirtualNodeResultIds
+} from '../../../../lib/core/nodes/virtualNodeResults';
 
 import type { Node } from './nodeTypes';
 import { VIRTUAL_ROOT_NODE_ID, isVirtualNode } from './specialNodes';
-
-function normalizeSearchText(value: string) {
-  return value.trim().toLocaleLowerCase();
-}
-
-function hasTopicCollection(node: Pick<Node, 'collections' | 'content'>, name: string) {
-  if (!node.content) return (node.collections ?? []).includes(name);
-  try {
-    return readTopicCollections(node.content).includes(name);
-  } catch {
-    return false;
-  }
-}
-
-function isVirtualNodeResultCandidate(node: Node, activeNodeId: string) {
-  return node.id !== activeNodeId && !node.specialKind && !node.anchorLink && node.kind !== 'folder';
-}
 
 export interface VirtualNodeResultReference {
   sourceNodeId: string;
@@ -50,48 +34,8 @@ export function getVirtualNodePrimaryKeyword(filter: VirtualNodeFilter | null | 
   return filter?.conditions.find((condition) => condition.field === 'text' && condition.operator === 'contains')?.value ?? '';
 }
 
-function getRunnableConditions(filter: VirtualNodeFilter | null | undefined) {
-  if (!filter || filter.match !== 'all') {
-    return [];
-  }
-  return filter.conditions
-    .map((condition) => ({ ...condition, value: condition.value.trim() }))
-    .filter((condition) => condition.value.length > 0);
-}
-
-function matchesVirtualNodeFilter(node: Node, filter: VirtualNodeFilter | null | undefined) {
-  const runnableConditions = getRunnableConditions(filter);
-  if (runnableConditions.length === 0) {
-    return false;
-  }
-  const searchableText = `${node.title}\n${node.content}`.toLocaleLowerCase();
-  return runnableConditions.every((condition) => {
-    if (condition.field === 'collection') return hasTopicCollection(node, condition.value);
-    if (condition.field === 'manual') return false;
-    return searchableText.includes(normalizeSearchText(condition.value));
-  });
-}
-
 function isVirtualResultCandidate(node: Node | undefined) {
   return Boolean(node && !node.specialKind && !node.anchorLink && node.kind !== 'folder');
-}
-
-function matchesPreparedVirtualNodeFilter(
-  searchableText: string,
-  node: Node,
-  conditions: Array<{ field: 'collection' | 'manual' | 'text'; value: string }>
-) {
-  return conditions.every((condition) => {
-    if (condition.field === 'collection') return hasTopicCollection(node, condition.value);
-    if (condition.field === 'manual') return false;
-    return searchableText.includes(normalizeSearchText(condition.value));
-  });
-}
-
-function applyVirtualNodeManualOrder(resultIds: string[], manualChildOrder: readonly string[] | null | undefined) {
-  const remaining = new Set(resultIds);
-  const ordered = (manualChildOrder ?? []).filter((id) => remaining.delete(id));
-  return [...ordered, ...resultIds.filter((id) => remaining.has(id))];
 }
 
 export interface VirtualNodeResultIndex {
@@ -106,38 +50,25 @@ export function buildVirtualNodeResultIndex(args: {
   trashedNodeIds?: readonly string[];
 }): VirtualNodeResultIndex {
   const trashedNodeIdSet = new Set(args.trashedNodeIds ?? []);
-  const candidateIds: string[] = [];
-  const searchableTextById = new Map<string, string>();
-  for (const nodeId of args.nodeOrder) {
-    const node = args.nodesById[nodeId];
-    if (!isVirtualResultCandidate(node)) continue;
-    candidateIds.push(nodeId);
-    searchableTextById.set(nodeId, `${node!.title}\n${node!.content}`.toLocaleLowerCase());
-  }
-
   const countById = new Map<string, number>();
   const resultIdsByVirtualId = new Map<string, string[]>();
   const rootResultIdSet = new Set<string>();
   for (const nodeId of args.nodeOrder) {
     const node = args.nodesById[nodeId];
     if (!isVirtualNode(node)) continue;
-    const conditions = getRunnableConditions(node.virtualFilter);
-    const matchedIds = isManualVirtualNodeFilter(node.virtualFilter)
-      ? (node.manualChildOrder ?? []).filter((candidateId) => candidateIds.includes(candidateId))
-      : conditions.length === 0
-        ? []
-        : candidateIds.filter((candidateId) => {
-          const searchableText = searchableTextById.get(candidateId);
-          return Boolean(searchableText && matchesPreparedVirtualNodeFilter(searchableText, args.nodesById[candidateId]!, conditions));
-        });
-    const resultIds = applyVirtualNodeManualOrder(matchedIds, node.manualChildOrder);
+    const resultIds = resolveVirtualNodeResultIds({
+      activeNodeId: nodeId,
+      filter: node.virtualFilter,
+      manualChildOrder: node.manualChildOrder,
+      nodeOrder: args.nodeOrder,
+      nodesById: args.nodesById
+    });
     resultIdsByVirtualId.set(nodeId, resultIds);
     if (resultIds.length > 0) countById.set(nodeId, resultIds.length);
     if (!trashedNodeIdSet.has(nodeId) && node.parentNodeId === VIRTUAL_ROOT_NODE_ID) {
       resultIds.forEach((resultId) => rootResultIdSet.add(resultId));
     }
   }
-
   const rootResultIds = args.nodeOrder.filter((nodeId) => !trashedNodeIdSet.has(nodeId) && rootResultIdSet.has(nodeId));
   if (rootResultIds.length > 0) countById.set(VIRTUAL_ROOT_NODE_ID, rootResultIds.length);
   return { countById, resultIdsByVirtualId, rootResultIds };
@@ -148,27 +79,13 @@ export function getVirtualNodeResultReferences(
   nodesById: Record<string, Node>,
   filter: VirtualNodeFilter | null | undefined
 ) {
-  if (isManualVirtualNodeFilter(filter)) {
-    return (nodesById[activeNodeId]?.manualChildOrder ?? [])
-      .filter((nodeId) => {
-        const node = nodesById[nodeId]
-        return Boolean(node && isVirtualNodeResultCandidate(node, activeNodeId))
-      })
-      .map((sourceNodeId) => ({ sourceNodeId }));
-  }
-  const runnableConditions = getRunnableConditions(filter);
-  if (runnableConditions.length === 0) {
-    return [];
-  }
-
-  return Object.values(nodesById).filter(
-    (node): node is Node =>
-      Boolean(
-        node &&
-          isVirtualNodeResultCandidate(node, activeNodeId) &&
-          matchesVirtualNodeFilter(node, filter)
-      )
-  ).map((node) => ({ sourceNodeId: node.id }));
+  return resolveVirtualNodeResultIds({
+    activeNodeId,
+    filter,
+    manualChildOrder: nodesById[activeNodeId]?.manualChildOrder,
+    nodeOrder: Object.keys(nodesById),
+    nodesById
+  }).map((sourceNodeId) => ({ sourceNodeId }));
 }
 
 export function resolveVirtualNodeResultNodes(
@@ -194,15 +111,13 @@ export function getOrderedVirtualNodeResultNodes(
   nodesById: Record<string, Node>,
   filter: VirtualNodeFilter | null | undefined
 ) {
-  const resultIds = new Set(
-    getVirtualNodeResultReferences(activeNodeId, nodesById, filter).map((reference) => reference.sourceNodeId)
-  );
-
-  const resultIdsInWorkspaceOrder = nodeOrder
-    .map((nodeId) => nodesById[nodeId])
-    .filter((node): node is Node => Boolean(node && resultIds.has(node.id)))
-    .map((node) => node.id);
-  return applyVirtualNodeManualOrder(resultIdsInWorkspaceOrder, nodesById[activeNodeId]?.manualChildOrder)
+  return resolveVirtualNodeResultIds({
+    activeNodeId,
+    filter,
+    manualChildOrder: nodesById[activeNodeId]?.manualChildOrder,
+    nodeOrder,
+    nodesById
+  })
     .map((nodeId) => nodesById[nodeId]!)
     .filter(Boolean);
 }

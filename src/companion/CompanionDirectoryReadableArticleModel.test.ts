@@ -37,7 +37,7 @@ describe('canRenderCompanionDirectoryArticle', () => {
 });
 
 describe('resolveCompanionDirectoryArticleExit', () => {
-  it('clears directory article detail before returning to the directory parent', () => {
+  it('clears directory article detail without changing the directory selection', () => {
     const handleExitDirectoryArticle = vi.fn();
     const onBackDirectorySelection = vi.fn();
     const onExit = resolveCompanionDirectoryArticleExit({
@@ -49,24 +49,21 @@ describe('resolveCompanionDirectoryArticleExit', () => {
     onExit();
 
     expect(handleExitDirectoryArticle).toHaveBeenCalledTimes(1);
-    expect(onBackDirectorySelection).toHaveBeenCalledTimes(1);
-    expect(handleExitDirectoryArticle.mock.invocationCallOrder[0]!).toBeLessThan(
-      onBackDirectorySelection.mock.invocationCallOrder[0]!
-    );
+    expect(onBackDirectorySelection).not.toHaveBeenCalled();
   });
 
   it('keeps trash open when exiting a trashed topic', () => {
-    const handleTabAction = vi.fn();
+    const handleExitDirectoryArticle = vi.fn();
     const onBackDirectorySelection = vi.fn();
     const onExit = resolveCompanionDirectoryArticleExit({
       directorySelection: { kind: 'trash' },
       onBackDirectorySelection,
-      surface: { handleTabAction } as never
+      surface: { handleExitDirectoryArticle } as never
     });
 
     onExit();
 
-    expect(handleTabAction).toHaveBeenCalledWith('recent');
+    expect(handleExitDirectoryArticle).toHaveBeenCalledTimes(1);
     expect(onBackDirectorySelection).not.toHaveBeenCalled();
   });
 });

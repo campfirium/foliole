@@ -1,6 +1,7 @@
 import type { WorkspaceSnapshot } from '../../../lib/core/database/workspaceSnapshot';
 import { normalizeWorkspaceSnapshot } from '../../../lib/core/database/workspaceSnapshotContract';
 import { resolveNodeOpeningText } from '../../../lib/core/nodes/nodeOpeningPreview';
+import { resolveVirtualNodeResultIds } from '../../../lib/core/nodes/virtualNodeResults';
 import {
   DEFAULT_FOLDER_LIST_SORT_DIRECTION,
   DEFAULT_FOLDER_LIST_SORT_KEY,
@@ -73,6 +74,10 @@ function isBrowseContainerNode(node: CompanionReadableNode | undefined): node is
   return Boolean(node && (node.kind === 'folder' || node.kind === 'topic'));
 }
 
+function isTopicContainerNode(node: CompanionReadableNode): node is CompanionReadableNode & { kind: 'topic' } {
+  return node.kind === 'topic';
+}
+
 function isRootFolderNode(node: CompanionReadableNode | undefined): node is CompanionReadableNode {
   return Boolean(node && node.kind === 'folder' && !node.parentNodeId);
 }
@@ -96,6 +101,41 @@ function buildCompanionFolderListEntry(node: CompanionReadableNode): CompanionFo
   };
 }
 
+function isVirtualFolderNode(node: CompanionReadableNode | undefined): node is CompanionReadableNode {
+  return Boolean(node && node.kind === 'folder' && node.virtualFilter);
+}
+
+function resolveCompanionVirtualFolderItems(snapshot: WorkspaceSnapshot, folderNode: CompanionReadableNode) {
+  const resultIds = resolveVirtualNodeResultIds({
+    activeNodeId: folderNode.id,
+    filter: folderNode.virtualFilter,
+    manualChildOrder: folderNode.manualChildOrder,
+    nodeOrder: selectCanonicalVisibleNodeIds(snapshot),
+    nodesById: snapshot.nodesById
+  });
+  return resultIds
+    .map((nodeId) => snapshot.nodesById[nodeId])
+    .filter((node): node is CompanionReadableNode => Boolean(node))
+    .map(buildCompanionFolderListEntry);
+}
+
+function resolveCompanionDirectFolderView(
+  snapshot: WorkspaceSnapshot,
+  folderNode: CompanionReadableNode,
+  sortKey: FolderListSortKey,
+  sortDirection: FolderListSortDirection
+) {
+  const childNodes = selectCanonicalVisibleNodeIds(snapshot)
+    .map((childNodeId) => snapshot.nodesById[childNodeId])
+    .filter((childNode): childNode is CompanionReadableNode => Boolean(childNode && childNode.parentNodeId === folderNode.id));
+  if (isTopicContainerNode(folderNode) && childNodes.length === 0) return null;
+  return {
+    items: sortCompanionBrowseNodes(snapshot, childNodes, sortKey, sortDirection).map(buildCompanionFolderListEntry),
+    nodeId: folderNode.id,
+    title: folderNode.title.trim() || resolveCompanionUntitledLabel()
+  };
+}
+
 export function resolveCompanionFolderViewByNodeId(
   snapshot: WorkspaceSnapshot | null,
   nodeId: string | null,
@@ -106,15 +146,14 @@ export function resolveCompanionFolderViewByNodeId(
   if (!normalizedSnapshot || !nodeId || !isCanonicalVisibleNodeId(normalizedSnapshot, nodeId)) return null;
   const folderNode = normalizedSnapshot.nodesById[nodeId];
   if (!isBrowseContainerNode(folderNode)) return null;
-  const childNodes = selectCanonicalVisibleNodeIds(normalizedSnapshot)
-    .map((childNodeId) => normalizedSnapshot.nodesById[childNodeId])
-    .filter((childNode): childNode is CompanionReadableNode => Boolean(childNode && childNode.parentNodeId === nodeId));
-  if (folderNode.kind === 'topic' && childNodes.length === 0) return null;
-  return {
-    items: sortCompanionBrowseNodes(normalizedSnapshot, childNodes, sortKey, sortDirection).map(buildCompanionFolderListEntry),
-    nodeId: folderNode.id,
-    title: folderNode.title.trim() || resolveCompanionUntitledLabel()
-  };
+  if (isVirtualFolderNode(folderNode)) {
+    return {
+      items: resolveCompanionVirtualFolderItems(normalizedSnapshot, folderNode),
+      nodeId: folderNode.id,
+      title: folderNode.title.trim() || resolveCompanionUntitledLabel()
+    };
+  }
+  return resolveCompanionDirectFolderView(normalizedSnapshot, folderNode, sortKey, sortDirection);
 }
 
 export function resolveCompanionRootDirectoryView(

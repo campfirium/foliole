@@ -1,4 +1,5 @@
 import { Highlighter, Info, RotateCcw, Search, SlidersHorizontal } from 'lucide-react';
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
@@ -45,13 +46,20 @@ export function ReadingActionsSheet(props: {
   onFindInDocument(): void;
   onOpenChange(open: boolean): void;
   onOpenReadingSheet(sheet: 'font' | 'highlight' | 'info'): void;
-  onRestoreFromTrash?: () => void;
+  onRestoreFromTrash?: () => Promise<void> | void;
   open: boolean;
 }) {
   const t = useTranslation();
+  const [restoreError, setRestoreError] = useState(false);
   const openReadingSheet = (sheet: 'font' | 'highlight' | 'info') => {
     props.onOpenChange(false);
     props.onOpenReadingSheet(sheet);
+  };
+  const restoreFromTrash = () => {
+    setRestoreError(false);
+    Promise.resolve(props.onRestoreFromTrash?.())
+      .then(() => props.onOpenChange(false))
+      .catch(() => setRestoreError(true));
   };
   return (
     <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.actions')}>
@@ -77,11 +85,18 @@ export function ReadingActionsSheet(props: {
           onClick={() => openReadingSheet('info')}
         />
         {props.onRestoreFromTrash ? (
-          <ReadingActionRow
-            icon={<RotateCcw aria-hidden="true" className="h-5 w-5" />}
-            label={t('companion.reading.restoreFromTrash')}
-            onClick={props.onRestoreFromTrash}
-          />
+          <>
+            <ReadingActionRow
+              icon={<RotateCcw aria-hidden="true" className="h-5 w-5" />}
+              label={t('companion.reading.restoreFromTrash')}
+              onClick={restoreFromTrash}
+            />
+            {restoreError ? (
+              <p className="border-b border-companion-divider py-3 text-sm text-error">
+                {t('companion.reading.restoreError')}
+              </p>
+            ) : null}
+          </>
         ) : null}
       </div>
     </ReadingBottomSheet>

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ReadingActionsSheet, ReadingFontSheet, ReadingHighlightSheet } from './CompanionReadingSheets';
@@ -26,6 +26,26 @@ describe('ReadingActionsSheet', () => {
 
     expect(onOpenChange).toHaveBeenCalledWith(false);
     expect(onOpenReadingSheet).toHaveBeenCalledWith('highlight');
+  });
+
+  it('keeps a failed trash restore visible in the actions sheet', async () => {
+    const onOpenChange = vi.fn();
+    render(
+      <ReadingActionsSheet
+        onFindInDocument={vi.fn()}
+        onOpenChange={onOpenChange}
+        onOpenReadingSheet={vi.fn()}
+        onRestoreFromTrash={vi.fn(async () => {
+          throw new Error('local_restore_not_applied');
+        })}
+        open
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Restore from Trash' }));
+
+    expect(await screen.findByText('This topic could not be restored on this device.')).toBeInTheDocument();
+    await waitFor(() => expect(onOpenChange).not.toHaveBeenCalledWith(false));
   });
 });
 

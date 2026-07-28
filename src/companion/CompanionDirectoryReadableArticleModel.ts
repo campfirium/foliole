@@ -25,11 +25,9 @@ export function resolveCompanionDirectoryArticleExit(args: {
   onBackDirectorySelection(): void;
   surface: ReturnType<typeof useCompanionArticleSurface>;
 }) {
-  if (args.directorySelection.kind === 'trash' || args.directorySelection.kind === 'trashFolder') {
-    return () => args.surface.handleTabAction('recent');
-  }
+  void args.directorySelection;
+  void args.onBackDirectorySelection;
   return () => {
     args.surface.handleExitDirectoryArticle();
-    args.onBackDirectorySelection();
   };
 }
