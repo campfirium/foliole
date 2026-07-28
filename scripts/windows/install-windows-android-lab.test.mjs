@@ -15,8 +15,8 @@ describe('Windows Android lab installer', () => {
     expect(source).toContain('receive.denyNonFastForwards true');
     expect(source).toContain('refs/heads/lab/dev');
     expect(source).toContain('windows-android-lab-receive.mjs');
-    expect(source).toContain('windows-android-lab-runtime-update.mjs');
-    expect(source).toContain('windows-android-lab-selfcheck.mjs');
+    expect(source).toContain('windows-android-lab-runtime-manifest.mjs');
+    expect(source).toContain('$files = @(& $NodePath');
     expect(source).toContain('git-read-token.txt');
     expect(source).toContain('-ErrorAction SilentlyContinue');
     expect(source).not.toContain('RepositoryUrl');
@@ -32,16 +32,7 @@ describe('Windows Android lab installer', () => {
     expect(source).toContain('Exactly one ready Android device must match DeviceEndpoint');
     expect(source).toContain('deviceIdentity = $DeviceIdentity');
     expect(source).toContain('schemaVersion = 2');
-    expect(source).toContain('windows-android-lab-device.mjs');
-    expect(source).toContain('windows-android-lab-adb.mjs');
-    expect(source).toContain('windows-android-lab-evidence.mjs');
-    expect(source).toContain('windows-android-lab-checkout.mjs');
-    expect(source).toContain('windows-android-lab-operation.mjs');
-    expect(source).toContain('windows-android-lab-request.mjs');
-    expect(source).toContain('windows-android-lab-review-action.mjs');
-    expect(source).toContain('windows-android-lab-review-audit.ts');
-    expect(source).toContain('windows-android-lab-review-scenario.mjs');
-    expect(source).toContain('windows-android-lab-review-snapshot.mjs');
+    expect(source).not.toContain("$files = @(\n");
     expect(source).toContain('$existingConfig.androidDebugKeystoreSha256');
     expect(source).toContain('$config.androidDebugKeystoreSha256 = $existingConfig.androidDebugKeystoreSha256');
     expect(source).toContain('$config.adbServerPort = $existingConfig.adbServerPort');

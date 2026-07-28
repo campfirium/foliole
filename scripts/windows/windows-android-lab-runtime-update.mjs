@@ -1,26 +1,18 @@
+/* global process */
+
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { resolveWindowsAndroidLabRuntimeFiles } from './windows-android-lab-runtime-manifest.mjs';
 import { WINDOWS_ANDROID_LAB_SOURCE_REF } from './windows-android-lab-state.mjs';
 
-export const WINDOWS_ANDROID_LAB_RUNTIME_FILES = [
-  'windows-bounded-process.mjs',
-  'windows-android-lab-adb.mjs',
-  'windows-android-lab-checkout.mjs',
+export const WINDOWS_ANDROID_LAB_RUNTIME_FILES = resolveWindowsAndroidLabRuntimeFiles();
+const SYNTAX_CHECK_FILES = [
   'windows-android-lab-dispatcher.mjs',
-  'windows-android-lab-device.mjs',
-  'windows-android-lab-evidence.mjs',
-  'windows-android-lab-operation.mjs',
-  'windows-android-lab-request.mjs',
-  'windows-android-lab-review-action.mjs',
-  'windows-android-lab-review-audit.ts',
-  'windows-android-lab-review-scenario.mjs',
-  'windows-android-lab-review-snapshot.mjs',
   'windows-android-lab-receive.mjs',
   'windows-android-lab-runtime-update.mjs',
   'windows-android-lab-selfcheck.mjs',
-  'windows-android-lab-state.mjs',
   'windows-android-lab-worker.mjs'
 ];
 
@@ -46,6 +38,49 @@ function fileSha256(filePath) {
   return createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
 }
 
+function copyRuntimeFromSource({ commitSha, gitPath, repository, root, runCommand }) {
+  fs.rmSync(root, { force: true, recursive: true });
+  fs.mkdirSync(root, { recursive: true });
+  for (const file of WINDOWS_ANDROID_LAB_RUNTIME_FILES) {
+    const content = runChecked(runCommand, gitPath, [
+      '--git-dir', repository, 'show', `${commitSha}:scripts/windows/${file}`
+    ], 'android_lab_runtime_source_missing');
+    const target = path.join(root, file);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, content, 'utf8');
+  }
+}
+
+export function verifyWindowsAndroidLabRuntimeTree({ nodePath, root, runCommand }) {
+  for (const file of WINDOWS_ANDROID_LAB_RUNTIME_FILES) requireFile(path.join(root, file), 'android_lab_runtime_source_missing');
+  for (const file of SYNTAX_CHECK_FILES) {
+    runChecked(runCommand, nodePath, ['--check', path.join(root, file)], `${path.basename(file, '.mjs')}_syntax_failed`);
+  }
+}
+
+function replaceRuntimeFiles(paths, stagingRoot) {
+  const backupRoot = path.join(paths.root, `.runtime-update-backup-${process.pid}-${Date.now()}`);
+  fs.mkdirSync(backupRoot, { recursive: true });
+  const replaced = [];
+  try {
+    for (const file of WINDOWS_ANDROID_LAB_RUNTIME_FILES) {
+      const target = path.join(paths.root, file);
+      const backup = path.join(backupRoot, file);
+      fs.mkdirSync(path.dirname(backup), { recursive: true });
+      if (fs.existsSync(target)) fs.renameSync(target, backup);
+      replaced.push({ backup, file, target });
+      fs.renameSync(path.join(stagingRoot, file), target);
+    }
+  } catch (error) {
+    for (const entry of replaced.reverse()) {
+      fs.rmSync(entry.target, { force: true });
+      if (fs.existsSync(entry.backup)) fs.renameSync(entry.backup, entry.target);
+    }
+    throw Object.assign(error, { backupRoot, code: error.code || 'android_lab_runtime_replace_failed' });
+  }
+  return backupRoot;
+}
+
 export function updateAndroidLabRuntime({ command, config, paths, runCommand }) {
   const nodePath = path.join(config.nodeDirectory || '', 'node.exe');
   requireFile(config.gitPath, 'android_lab_runtime_git_missing');
@@ -55,15 +90,16 @@ export function updateAndroidLabRuntime({ command, config, paths, runCommand }) 
     '--git-dir', paths.repository, 'merge-base', '--is-ancestor',
     command.commitSha, WINDOWS_ANDROID_LAB_SOURCE_REF
   ], 'commit_not_in_lab_ref');
-  for (const file of WINDOWS_ANDROID_LAB_RUNTIME_FILES) {
-    const content = runChecked(runCommand, config.gitPath, [
-      '--git-dir', paths.repository, 'show', `${command.commitSha}:scripts/windows/${file}`
-    ], 'android_lab_runtime_source_missing');
-    fs.writeFileSync(path.join(paths.root, file), content, 'utf8');
-  }
-  runChecked(runCommand, nodePath, ['--check', path.join(paths.root, 'windows-android-lab-worker.mjs')], 'worker_syntax_failed');
-  runChecked(runCommand, nodePath, ['--check', path.join(paths.root, 'windows-android-lab-dispatcher.mjs')], 'dispatcher_syntax_failed');
+  const stagingRoot = path.join(paths.root, `.runtime-update-staging-${process.pid}-${Date.now()}`);
+  copyRuntimeFromSource({
+    commitSha: command.commitSha, gitPath: config.gitPath, repository: paths.repository,
+    root: stagingRoot, runCommand
+  });
+  verifyWindowsAndroidLabRuntimeTree({ nodePath, root: stagingRoot, runCommand });
+  const backupRoot = replaceRuntimeFiles(paths, stagingRoot);
+  fs.rmSync(stagingRoot, { force: true, recursive: true });
   return {
+    backupRoot,
     commitSha: command.commitSha,
     dispatcherSha256: fileSha256(path.join(paths.root, 'windows-android-lab-dispatcher.mjs')),
     fileCount: WINDOWS_ANDROID_LAB_RUNTIME_FILES.length,

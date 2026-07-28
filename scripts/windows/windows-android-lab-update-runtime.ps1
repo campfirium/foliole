@@ -4,39 +4,10 @@ param(
 
 $ErrorActionPreference = "Stop"
 $sourceRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
-$files = @(
-  "windows-bounded-process.mjs",
-  "windows-android-lab-adb.mjs",
-  "windows-android-lab-checkout.mjs",
-  "windows-android-lab-dispatcher.mjs",
-  "windows-android-lab-device.mjs",
-  "windows-android-lab-evidence.mjs",
-  "windows-android-lab-operation.mjs",
-  "windows-android-lab-request.mjs",
-  "windows-android-lab-review-action.mjs",
-  "windows-android-lab-review-audit.ts",
-  "windows-android-lab-review-scenario.mjs",
-  "windows-android-lab-review-snapshot.mjs",
-  "windows-android-lab-receive.mjs",
-  "windows-android-lab-runtime-update.mjs",
-  "windows-android-lab-selfcheck.mjs",
-  "windows-android-lab-state.mjs",
-  "windows-android-lab-worker.mjs"
-)
 
 if (!(Test-Path -LiteralPath $InstallRoot -PathType Container)) {
   throw "Windows Android Lab install root is missing: $InstallRoot"
 }
-
-foreach ($file in $files) {
-  $source = Join-Path $sourceRoot $file
-  $target = Join-Path $InstallRoot $file
-  if (!(Test-Path -LiteralPath $source -PathType Leaf)) {
-    throw "Windows Android Lab runtime source is missing: $source"
-  }
-  Copy-Item -LiteralPath $source -Destination $target -Force
-}
-
 $configPath = Join-Path $InstallRoot "config.json"
 if (!(Test-Path -LiteralPath $configPath -PathType Leaf)) {
   throw "Windows Android Lab config is missing: $configPath"
@@ -46,9 +17,42 @@ $nodePath = Join-Path $config.nodeDirectory "node.exe"
 if (!(Test-Path -LiteralPath $nodePath -PathType Leaf)) {
   throw "Windows Android Lab node runtime is missing: $nodePath"
 }
-& $nodePath --check (Join-Path $InstallRoot "windows-android-lab-worker.mjs")
-if ($LASTEXITCODE -ne 0) { throw "Windows Android Lab worker syntax check failed." }
-& $nodePath --check (Join-Path $InstallRoot "windows-android-lab-dispatcher.mjs")
-if ($LASTEXITCODE -ne 0) { throw "Windows Android Lab dispatcher syntax check failed." }
+$files = @(& $nodePath (Join-Path $sourceRoot "windows-android-lab-runtime-manifest.mjs") --list)
+if ($LASTEXITCODE -ne 0 -or $files.Count -lt 1) { throw "Failed to derive Windows Android Lab runtime manifest" }
+
+$stagingRoot = Join-Path $InstallRoot ".runtime-update-staging-$PID"
+$backupRoot = Join-Path $InstallRoot ".runtime-update-backup-$PID"
+Remove-Item -LiteralPath $stagingRoot -Recurse -Force -ErrorAction SilentlyContinue
+New-Item -ItemType Directory -Force -Path $stagingRoot | Out-Null
+foreach ($file in $files) {
+  $source = Join-Path $sourceRoot $file
+  $target = Join-Path $stagingRoot $file
+  if (!(Test-Path -LiteralPath $source -PathType Leaf)) { throw "Windows Android Lab runtime source is missing: $source" }
+  New-Item -ItemType Directory -Force -Path (Split-Path -Parent $target) | Out-Null
+  Copy-Item -LiteralPath $source -Destination $target -Force
+}
+foreach ($file in @(
+  "windows-android-lab-dispatcher.mjs",
+  "windows-android-lab-receive.mjs",
+  "windows-android-lab-runtime-update.mjs",
+  "windows-android-lab-selfcheck.mjs",
+  "windows-android-lab-worker.mjs"
+)) {
+  & $nodePath --check (Join-Path $stagingRoot $file)
+  if ($LASTEXITCODE -ne 0) { throw "Windows Android Lab runtime syntax check failed: $file" }
+}
+
+Remove-Item -LiteralPath $backupRoot -Recurse -Force -ErrorAction SilentlyContinue
+New-Item -ItemType Directory -Force -Path $backupRoot | Out-Null
+foreach ($file in $files) {
+  $target = Join-Path $InstallRoot $file
+  $backup = Join-Path $backupRoot $file
+  if (Test-Path -LiteralPath $target -PathType Leaf) {
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $backup) | Out-Null
+    Move-Item -LiteralPath $target -Destination $backup -Force
+  }
+  Move-Item -LiteralPath (Join-Path $stagingRoot $file) -Destination $target -Force
+}
+Remove-Item -LiteralPath $stagingRoot -Recurse -Force -ErrorAction SilentlyContinue
 
 Write-Host "[windows-android-lab-update-runtime] status: UPDATED files=$($files.Count)"

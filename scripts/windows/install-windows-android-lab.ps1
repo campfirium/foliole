@@ -14,25 +14,6 @@ param(
 $ErrorActionPreference = "Stop"
 $installRoot = Join-Path $env:LOCALAPPDATA "Foliole\windows-android-lab"
 $sourceRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
-$files = @(
-  "windows-bounded-process.mjs",
-  "windows-android-lab-adb.mjs",
-  "windows-android-lab-checkout.mjs",
-  "windows-android-lab-dispatcher.mjs",
-  "windows-android-lab-device.mjs",
-  "windows-android-lab-evidence.mjs",
-  "windows-android-lab-operation.mjs",
-  "windows-android-lab-request.mjs",
-  "windows-android-lab-review-action.mjs",
-  "windows-android-lab-review-audit.ts",
-  "windows-android-lab-review-scenario.mjs",
-  "windows-android-lab-review-snapshot.mjs",
-  "windows-android-lab-receive.mjs",
-  "windows-android-lab-runtime-update.mjs",
-  "windows-android-lab-selfcheck.mjs",
-  "windows-android-lab-state.mjs",
-  "windows-android-lab-worker.mjs"
-)
 
 $releaseRoot = Join-Path $env:LOCALAPPDATA "Foliole\windows-device"
 $nodePathFile = Join-Path $releaseRoot "node-path.txt"
@@ -41,6 +22,8 @@ $nodeSourceRoot = Split-Path -Parent $NodePath
 foreach ($tool in @($NodePath, $GitPath, $BashPath, $AdbPath, (Join-Path $JavaHome "bin\java.exe"), (Join-Path $nodeSourceRoot "npm.cmd"))) {
   if ([string]::IsNullOrWhiteSpace($tool) -or !(Test-Path -LiteralPath $tool -PathType Leaf)) { throw "Required Android Lab tool is missing: $tool" }
 }
+$files = @(& $NodePath (Join-Path $sourceRoot "windows-android-lab-runtime-manifest.mjs") --list)
+if ($LASTEXITCODE -ne 0 -or $files.Count -lt 1) { throw "Failed to derive Windows Android Lab runtime manifest" }
 if ($DeviceIdentity -notmatch '^[A-Za-z0-9._-]+$') { throw "DeviceIdentity contains unsupported characters" }
 if ($DeviceEndpoint) {
   if ($DeviceEndpoint -notmatch '^(\d{1,3}\.){3}\d{1,3}:\d{1,5}$') { throw "DeviceEndpoint must be ipv4:port" }

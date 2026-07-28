@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { dispatchWindowsAndroidLab } from './windows-android-lab-dispatcher.mjs';
 import { androidLabPaths, writeJsonAtomic } from './windows-android-lab-state.mjs';
 import { WINDOWS_ANDROID_LAB_RUNTIME_FILES } from './windows-android-lab-runtime-update.mjs';
+import { resolveWindowsAndroidLabRuntimeFiles } from './windows-android-lab-runtime-manifest.mjs';
 
 const roots = [];
 const SHA = '6'.repeat(40);
@@ -61,6 +62,9 @@ describe('Windows Android Lab runtime update recovery', () => {
     expect(fs.readFileSync(paths.status)).toEqual(Buffer.alloc(8));
     expect(fs.readFileSync(path.join(paths.root, 'windows-android-lab-dispatcher.mjs'), 'utf8'))
       .toContain('recovered windows-android-lab-dispatcher.mjs');
+    expect(fs.readFileSync(path.join(paths.root, 'windows-android-lab-runtime-manifest.mjs'), 'utf8'))
+      .toContain('recovered windows-android-lab-runtime-manifest.mjs');
+    expect(fs.readdirSync(paths.root).some((name) => name.startsWith('.runtime-update-backup-'))).toBe(true);
     expect(result.dispatcherSha256).toBe(createHash('sha256')
       .update(fs.readFileSync(path.join(paths.root, 'windows-android-lab-dispatcher.mjs')))
       .digest('hex'));
@@ -72,5 +76,31 @@ describe('Windows Android Lab runtime update recovery', () => {
       argv: ['runtime', 'update', SHA], paths,
       runCommand: () => ({ code: 1, output: 'not reachable' })
     })).rejects.toMatchObject({ code: 'commit_not_in_lab_ref' });
+  });
+
+  it('derives runtime files from entrypoint imports and retained compatibility files', () => {
+    expect(resolveWindowsAndroidLabRuntimeFiles()).toEqual(WINDOWS_ANDROID_LAB_RUNTIME_FILES);
+    expect(WINDOWS_ANDROID_LAB_RUNTIME_FILES).toContain('windows-android-lab-runtime-manifest.mjs');
+    expect(WINDOWS_ANDROID_LAB_RUNTIME_FILES).toContain('windows-android-lab-review-audit-state.ts');
+    expect(WINDOWS_ANDROID_LAB_RUNTIME_FILES).toContain('windows-bounded-process.mjs');
+  });
+
+  it('keeps the old runtime installed when staged syntax checks fail', async () => {
+    const paths = fixture();
+    fs.writeFileSync(path.join(paths.root, 'windows-android-lab-dispatcher.mjs'), '// old dispatcher\n');
+    await expect(dispatchWindowsAndroidLab({
+      argv: ['runtime', 'update', SHA], paths,
+      runCommand: (command, args) => {
+        if (args.includes('merge-base')) return { code: 0, output: '' };
+        if (args[0] === '--check' && String(args[1]).endsWith('windows-android-lab-worker.mjs')) {
+          return { code: 1, output: 'syntax failed' };
+        }
+        if (args[0] === '--check') return { code: 0, output: '' };
+        if (args.includes('show')) return { code: 0, output: '// new runtime\n' };
+        throw new Error(`unexpected command: ${command} ${args.join(' ')}`);
+      }
+    })).rejects.toMatchObject({ code: 'windows-android-lab-worker_syntax_failed' });
+    expect(fs.readFileSync(path.join(paths.root, 'windows-android-lab-dispatcher.mjs'), 'utf8'))
+      .toBe('// old dispatcher\n');
   });
 });
