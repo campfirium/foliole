@@ -72,11 +72,10 @@ export function androidLabSshArgs(host, command, env, home = os.homedir()) {
   ];
 }
 
-export function androidLabGitPushSpec(host, commitSha, env, home = os.homedir(), { force = false } = {}) {
+export function androidLabGitPushSpec(host, commitSha, env, home = os.homedir()) {
   const key = remoteAndroidLabPaths(env, home).gitSshKey;
-  const refspec = `${force ? '+' : ''}${commitSha}:${WINDOWS_ANDROID_LAB_SOURCE_REF}`;
   return {
-    args: ['push', '--porcelain', `${host}:foliole-android-lab.git`, refspec],
+    args: ['push', '--porcelain', `${host}:foliole-android-lab.git`, `${commitSha}:${WINDOWS_ANDROID_LAB_SOURCE_REF}`],
     env: {
       ...env,
       GIT_SSH_COMMAND:
@@ -107,27 +106,11 @@ export function androidLabSigningInstallSpec(filePath) {
 async function pushAndroidLabSource(host, env, executeGit, explicitCommitSha = null) {
   const branch = String(await executeGit(['branch', '--show-current'], { env })).trim();
   if (branch !== 'dev') throw new Error('Android Lab source push requires the dev branch');
-  let sourceKind = 'formal';
-  let baseHead = null;
-  let treeSha = null;
-  let commitSha = explicitCommitSha || String(await executeGit(['rev-parse', '--verify', 'HEAD'], { env })).trim();
+  const commitSha = explicitCommitSha || String(await executeGit(['rev-parse', '--verify', 'HEAD'], { env })).trim();
   if (!explicitCommitSha) {
     const status = String(await executeGit(['status', '--porcelain'], { env })).trim();
     if (status) {
-      sourceKind = 'scratch';
-      baseHead = commitSha;
-      const indexPath = path.join(os.tmpdir(), `foliole-android-lab-${process.pid}-${Date.now()}.index`);
-      const indexEnv = { ...env, GIT_INDEX_FILE: indexPath };
-      try {
-        await executeGit(['read-tree', 'HEAD'], { env: indexEnv });
-        await executeGit(['add', '-A'], { env: indexEnv });
-        treeSha = String(await executeGit(['write-tree'], { env: indexEnv })).trim();
-        commitSha = String(await executeGit([
-          'commit-tree', treeSha, '-p', baseHead, '-m', `Windows Android Lab scratch ${baseHead.slice(0, 12)}`
-        ], { env })).trim();
-      } finally {
-        fs.rmSync(indexPath, { force: true });
-      }
+      throw new Error('Android Lab source push requires a clean working tree; commit the intended Lab input first');
     }
   }
   if (!COMMIT_SHA.test(commitSha)) throw new Error('Android Lab source commit is invalid');
@@ -136,9 +119,9 @@ async function pushAndroidLabSource(host, env, executeGit, explicitCommitSha = n
     if (verified !== commitSha) throw new Error('Android Lab source commit is invalid');
     await executeGit(['merge-base', '--is-ancestor', commitSha, 'HEAD'], { env });
   }
-  const spec = androidLabGitPushSpec(host, commitSha, env, os.homedir(), { force: sourceKind === 'scratch' });
+  const spec = androidLabGitPushSpec(host, commitSha, env);
   await executeGit(spec.args, { env: spec.env });
-  return { baseHead, commitSha, ref: WINDOWS_ANDROID_LAB_SOURCE_REF, schemaVersion: 1, sourceKind, treeSha };
+  return { commitSha, ref: WINDOWS_ANDROID_LAB_SOURCE_REF, schemaVersion: 1, sourceKind: 'formal' };
 }
 
 function isRunScopedCollect(command) {

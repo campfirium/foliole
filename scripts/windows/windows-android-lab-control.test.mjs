@@ -101,36 +101,6 @@ describe('Windows Android lab Mac controller', () => {
     expect(JSON.parse(output)).toMatchObject({ commitSha: sha, ref: 'refs/heads/lab/dev' });
   });
 
-  it('pushes dirty working tree content as a lab-only scratch commit', async () => {
-    const head = 'a'.repeat(40);
-    const tree = 'b'.repeat(40);
-    const scratch = 'c'.repeat(40);
-    const calls = [];
-    const executeGit = async (args, options = {}) => {
-      calls.push({ args, options });
-      if (args.join(' ') === 'branch --show-current') return Buffer.from('dev\n');
-      if (args.join(' ') === 'rev-parse --verify HEAD') return Buffer.from(`${head}\n`);
-      if (args.join(' ') === 'status --porcelain') return Buffer.from(' M scripts/windows/probe.mjs\n');
-      if (args.join(' ') === 'write-tree') return Buffer.from(`${tree}\n`);
-      if (args[0] === 'commit-tree') return Buffer.from(`${scratch}\n`);
-      if (args[0] === 'push') return Buffer.from('ok\n');
-      return Buffer.from('');
-    };
-    let output = '';
-    await runWindowsAndroidLabControl({
-      argv: ['--host', 'tester@windows-host', 'push'], env: {}, executeGit,
-      stdout: { write: (value) => { output += String(value); } }
-    });
-    expect(calls.find((call) => call.args[0] === 'read-tree').options.env.GIT_INDEX_FILE).toBeTruthy();
-    expect(calls.find((call) => call.args[0] === 'add').options.env.GIT_INDEX_FILE).toBeTruthy();
-    expect(calls.at(-1).args).toEqual([
-      'push', '--porcelain', 'tester@windows-host:foliole-android-lab.git', `+${scratch}:refs/heads/lab/dev`
-    ]);
-    expect(JSON.parse(output)).toMatchObject({
-      baseHead: head, commitSha: scratch, ref: 'refs/heads/lab/dev', sourceKind: 'scratch', treeSha: tree
-    });
-  });
-
   it('pushes an explicit committed SHA without requiring a clean working tree', async () => {
     const sha = 'e'.repeat(40);
     const calls = [];
