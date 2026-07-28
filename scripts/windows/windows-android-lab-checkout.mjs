@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
-import { WINDOWS_ANDROID_LAB_SOURCE_REF, writeJsonAtomic } from './windows-android-lab-state.mjs';
+import { readJson, WINDOWS_ANDROID_LAB_SOURCE_REF, writeJsonAtomic } from './windows-android-lab-state.mjs';
 
 const GENERATOR_OWNED_TRACKED = [
   'android/app/capacitor.build.gradle',
@@ -32,6 +32,14 @@ function checkoutRoot(paths) {
   return paths.checkout || paths.preview || paths.candidate;
 }
 
+function resolveWithin(root, relativePath = '') {
+  const resolvedRoot = path.resolve(root);
+  const resolved = path.resolve(resolvedRoot, relativePath);
+  const relative = path.relative(resolvedRoot, resolved);
+  if (relative.startsWith('..') || path.isAbsolute(relative)) throw codedError('checkout_path_escape', 'checkout path escaped root');
+  return resolved;
+}
+
 function normalizeStatusPath(line) {
   const value = line.slice(3).trim().replace(/\\/gu, '/');
   return (value.split(' -> ').at(-1) || value).replace(/^"|"$/gu, '');
@@ -41,6 +49,23 @@ function isGeneratorOwned(line) {
   if (line.startsWith('?? ')) return true;
   const filePath = normalizeStatusPath(line);
   return GENERATOR_OWNED_TRACKED.some((owned) => filePath === owned || filePath.startsWith(`${owned}/`));
+}
+
+async function isRecordedCheckoutContent(config, paths, checkout, line, executeCommand, options) {
+  const checkoutState = readJson(paths.checkoutState);
+  if (!/^[0-9a-f]{40}$/u.test(checkoutState?.checkoutHead || '')) return false;
+  const filePath = normalizeStatusPath(line);
+  const worktreeHash = await executeCommand(config.gitPath, isolatedGitArgs(paths, [
+    'hash-object', resolveWithin(checkout, filePath)
+  ]), { timeoutCode: 'checkout_stale_hash_timeout', timeoutMs: 5 * 60_000, ...options });
+  const recordedHash = await executeCommand(config.gitPath, isolatedGitArgs(paths, [
+    '--git-dir', paths.repository, 'rev-parse', `${checkoutState.checkoutHead}:${filePath}`
+  ]), { timeoutCode: 'checkout_stale_hash_timeout', timeoutMs: 5 * 60_000, ...options });
+  return worktreeHash.code === 0 && recordedHash.code === 0 && worktreeHash.output.trim() === recordedHash.output.trim();
+}
+
+async function isBlockedCheckoutLine(config, paths, checkout, line, executeCommand, options) {
+  return !isGeneratorOwned(line) && !await isRecordedCheckoutContent(config, paths, checkout, line, executeCommand, options);
 }
 
 export async function prepareAndroidLabCheckout(config, paths, commitSha, executeCommand, sourceKind = 'unknown') {
@@ -57,7 +82,10 @@ export async function prepareAndroidLabCheckout(config, paths, commitSha, execut
   const before = await runChecked(executeCommand, config.gitPath, isolatedGitArgs(paths, [
     '--git-dir', paths.repository, '--work-tree', checkout, 'status', '--porcelain', '--untracked-files=no'
   ]), options, 'checkout_status_failed');
-  const blocked = before.output.split(/\r?\n/u).filter(Boolean).filter((line) => !isGeneratorOwned(line));
+  const blocked = [];
+  for (const line of before.output.split(/\r?\n/u).filter(Boolean)) {
+    if (await isBlockedCheckoutLine(config, paths, checkout, line, executeCommand, options)) blocked.push(line);
+  }
   if (blocked.length > 0) throw codedError('checkout_dirty', `Windows checkout has tracked source changes: ${blocked[0]}`);
   await runChecked(executeCommand, config.gitPath, isolatedGitArgs(paths, [
     '--git-dir', paths.repository, '--work-tree', checkout, 'checkout', '--force', commitSha, '--', '.'

@@ -6,7 +6,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { prepareAndroidLabCheckout } from './windows-android-lab-checkout.mjs';
-import { androidLabPaths, readJson } from './windows-android-lab-state.mjs';
+import { androidLabPaths, readJson, writeJsonAtomic } from './windows-android-lab-state.mjs';
 
 const roots = [];
 const SHA = 'f'.repeat(40);
@@ -64,5 +64,25 @@ describe('Windows Android Lab checkout', () => {
       return { code: 0, lines: [], output: '' };
     });
     expect(readJson(paths.checkoutState)).toMatchObject({ dirty: 'generator_owned' });
+  });
+
+  it('allows tracked files that still match the recorded checkout head', async () => {
+    const paths = fixture();
+    const OLD = 'a'.repeat(40);
+    writeJsonAtomic(paths.checkoutState, { checkoutHead: OLD, schemaVersion: 1 });
+    let statusCalls = 0;
+    await prepareAndroidLabCheckout({ gitPath: 'git.exe' }, paths, SHA, async (_command, args) => {
+      if (args.includes('status')) {
+        statusCalls += 1;
+        const output = statusCalls === 1 ? ' M scripts/windows/windows-android-lab-operation.mjs\n' : '';
+        return { code: 0, lines: output.trim().split(/\r?\n/u).filter(Boolean), output };
+      }
+      if (args.includes('hash-object')) return { code: 0, lines: ['old-blob'], output: 'old-blob\n' };
+      if (args.includes('rev-parse') && args.includes(`${OLD}:scripts/windows/windows-android-lab-operation.mjs`)) {
+        return { code: 0, lines: ['old-blob'], output: 'old-blob\n' };
+      }
+      return { code: 0, lines: [], output: '' };
+    });
+    expect(readJson(paths.checkoutState)).toMatchObject({ checkoutHead: SHA, dirty: 'clean' });
   });
 });
