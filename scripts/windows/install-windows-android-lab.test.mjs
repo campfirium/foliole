@@ -11,9 +11,8 @@ describe('Windows Android lab installer', () => {
     expect(source).toContain('-LogonType Interactive -RunLevel Limited');
     expect(source).toContain('no-agent-forwarding,no-port-forwarding,no-pty,no-user-rc');
     expect(source).toContain('[Parameter(Mandatory = $true)][string]$MacGitPublicKey');
-    expect(source).toContain('init --bare $repositoryRoot');
-    expect(source).toContain('receive.denyNonFastForwards true');
-    expect(source).toContain('refs/heads/lab/dev');
+    expect(source).toContain('windows-android-lab-git-repositories.mjs');
+    expect(source).toContain('Failed to configure Android Lab Git repositories');
     expect(source).toContain('windows-android-lab-receive.mjs');
     expect(source).toContain('windows-android-lab-runtime-manifest.mjs');
     expect(source).toContain('$files = @(& $NodePath');

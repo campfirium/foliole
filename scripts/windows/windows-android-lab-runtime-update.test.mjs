@@ -14,14 +14,15 @@ import { resolveWindowsAndroidLabRuntimeFiles } from './windows-android-lab-runt
 
 const roots = [];
 const SHA = '6'.repeat(40);
+const TREE_SHA = '7'.repeat(40);
 afterEach(() => roots.splice(0).forEach((root) => fs.rmSync(root, { force: true, recursive: true })));
 
 function fixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-android-lab-runtime-update-'));
   roots.push(root);
   const paths = androidLabPaths(root);
-  fs.mkdirSync(paths.repository, { recursive: true });
-  fs.writeFileSync(path.join(paths.repository, 'HEAD'), 'ref: refs/heads/lab/dev\n');
+  fs.mkdirSync(paths.runtimeRepository, { recursive: true });
+  fs.writeFileSync(path.join(paths.runtimeRepository, 'HEAD'), 'ref: refs/heads/lab/runtime\n');
   fs.writeFileSync(path.join(root, 'git.exe'), 'git');
   fs.mkdirSync(path.join(root, 'node'), { recursive: true });
   fs.writeFileSync(path.join(root, 'node', 'node.exe'), 'node');
@@ -41,15 +42,19 @@ describe('Windows Android Lab runtime update recovery', () => {
     const runCommand = (command, args) => {
       calls.push({ args, command });
       if (args.includes('merge-base')) return { code: 0, output: '' };
+      if (args.includes('rev-parse')) return { code: 0, output: `${TREE_SHA}\n` };
       if (args[0] === '--check') return { code: 0, output: '' };
       if (args.includes('show')) {
         const file = String(args.at(-1)).split('/').at(-1);
-        return { code: 0, output: `// recovered ${file}\n` };
+        return {
+          code: 0,
+          output: `// recovered ${file}\n${fs.readFileSync(path.join('scripts/windows', file), 'utf8')}`
+        };
       }
       throw new Error(`unexpected command: ${command} ${args.join(' ')}`);
     };
     const result = await dispatchWindowsAndroidLab({
-      argv: ['runtime', 'update', SHA], paths, runCommand
+      argv: ['runtime', 'update', SHA, TREE_SHA], paths, runCommand
     });
     expect(result).toMatchObject({
       commitSha: SHA,
@@ -57,8 +62,9 @@ describe('Windows Android Lab runtime update recovery', () => {
       status: 'updated'
     });
     expect(calls[0].args).toEqual([
-      '--git-dir', paths.repository, 'merge-base', '--is-ancestor', SHA, 'refs/heads/lab/dev'
+      '--git-dir', paths.runtimeRepository, 'merge-base', '--is-ancestor', SHA, 'refs/heads/lab/runtime'
     ]);
+    expect(calls.some(({ args }) => args.includes(paths.repository))).toBe(false);
     expect(fs.readFileSync(paths.status)).toEqual(Buffer.alloc(8));
     expect(fs.readFileSync(path.join(paths.root, 'windows-android-lab-dispatcher.mjs'), 'utf8'))
       .toContain('recovered windows-android-lab-dispatcher.mjs');
@@ -70,12 +76,22 @@ describe('Windows Android Lab runtime update recovery', () => {
       .digest('hex'));
   });
 
-  it('rejects commits that are not reachable from the fixed Lab ref', async () => {
+  it('rejects commits that are not reachable from the fixed runtime ref', async () => {
     const paths = fixture();
     await expect(dispatchWindowsAndroidLab({
-      argv: ['runtime', 'update', SHA], paths,
+      argv: ['runtime', 'update', SHA, TREE_SHA], paths,
       runCommand: () => ({ code: 1, output: 'not reachable' })
-    })).rejects.toMatchObject({ code: 'commit_not_in_lab_ref' });
+    })).rejects.toMatchObject({ code: 'commit_not_in_runtime_ref' });
+  });
+
+  it('rejects a runtime tree whose declared hash does not match the committed tree', async () => {
+    const paths = fixture();
+    await expect(dispatchWindowsAndroidLab({
+      argv: ['runtime', 'update', SHA, TREE_SHA], paths,
+      runCommand: (_command, args) => args.includes('merge-base')
+        ? { code: 0, output: '' }
+        : { code: 0, output: `${'8'.repeat(40)}\n` }
+    })).rejects.toMatchObject({ code: 'android_lab_runtime_tree_mismatch' });
   });
 
   it('derives runtime files from entrypoint imports and retained compatibility files', () => {
@@ -89,14 +105,18 @@ describe('Windows Android Lab runtime update recovery', () => {
     const paths = fixture();
     fs.writeFileSync(path.join(paths.root, 'windows-android-lab-dispatcher.mjs'), '// old dispatcher\n');
     await expect(dispatchWindowsAndroidLab({
-      argv: ['runtime', 'update', SHA], paths,
+      argv: ['runtime', 'update', SHA, TREE_SHA], paths,
       runCommand: (command, args) => {
         if (args.includes('merge-base')) return { code: 0, output: '' };
+        if (args.includes('rev-parse')) return { code: 0, output: `${TREE_SHA}\n` };
         if (args[0] === '--check' && String(args[1]).endsWith('windows-android-lab-worker.mjs')) {
           return { code: 1, output: 'syntax failed' };
         }
         if (args[0] === '--check') return { code: 0, output: '' };
-        if (args.includes('show')) return { code: 0, output: '// new runtime\n' };
+        if (args.includes('show')) {
+          const file = String(args.at(-1)).split('/').at(-1);
+          return { code: 0, output: fs.readFileSync(path.join('scripts/windows', file), 'utf8') };
+        }
         throw new Error(`unexpected command: ${command} ${args.join(' ')}`);
       }
     })).rejects.toMatchObject({ code: 'windows-android-lab-worker_syntax_failed' });

@@ -46,7 +46,7 @@ it('keeps ordinary push non-forced and points divergence to explicit repair', as
 
   await expect(runWindowsAndroidLabControl({
     argv: ['--host', 'tester@windows-host', 'push'], env: {}, executeGit, stdout: { write: () => {} }
-  })).rejects.toThrow('use the explicit repair action');
+  })).rejects.toThrow('repair --commit <formal SHA> --expected-current <current Lab SHA>');
   const pushArgs = calls.at(-1);
   expect(pushArgs).toEqual([
     'push', '--porcelain', 'tester@windows-host:foliole-android-lab.git', `${head}:refs/heads/lab/dev`
@@ -71,7 +71,7 @@ it('repairs only the fixed Lab ref with an exact lease and committed HEAD ancest
   await runWindowsAndroidLabControl({
     argv: [
       '--host', 'tester@windows-host', 'repair', '--commit', formal, '--expected-current', legacy
-    ], env: {}, executeGit, executeSsh: async () => Buffer.from('{"protocolVersion":6}'),
+    ], env: {}, executeGit, executeSsh: async () => Buffer.from('{"protocolVersion":7}'),
     stdout: { write: (value) => { output += String(value); } }
   });
 

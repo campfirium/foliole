@@ -25,8 +25,7 @@ function normalizeRuntimeName(root, baseDir, specifier) {
   return relative.replaceAll(path.sep, '/');
 }
 
-function importedRuntimeFiles(root, fileName) {
-  const source = fs.readFileSync(path.join(root, fileName), 'utf8');
+function importedRuntimeFiles(source, root, fileName) {
   const files = [];
   const baseDir = path.dirname(path.join(root, fileName));
   for (const match of source.matchAll(RELATIVE_IMPORT_PATTERN)) {
@@ -38,18 +37,26 @@ function importedRuntimeFiles(root, fileName) {
 
 export function resolveWindowsAndroidLabRuntimeFiles(root = path.dirname(fileURLToPath(import.meta.url))) {
   const normalizedRoot = path.resolve(root);
+  return resolveWindowsAndroidLabRuntimeFilesFromSource((fileName) => {
+    const fullPath = path.join(normalizedRoot, fileName);
+    if (!fs.existsSync(fullPath) || !fs.statSync(fullPath).isFile()) return null;
+    return fs.readFileSync(fullPath, 'utf8');
+  }, normalizedRoot);
+}
+
+export function resolveWindowsAndroidLabRuntimeFilesFromSource(readSource, root = '.') {
   const pending = [...RUNTIME_ENTRYPOINTS, ...RUNTIME_COMPATIBILITY_FILES];
   const seen = new Set();
   while (pending.length) {
     const fileName = pending.shift();
     if (seen.has(fileName)) continue;
-    const fullPath = path.join(normalizedRoot, fileName);
-    if (!fs.existsSync(fullPath) || !fs.statSync(fullPath).isFile()) {
+    const source = readSource(fileName);
+    if (typeof source !== 'string') {
       throw new Error(`Windows Android Lab runtime source is missing: ${fileName}`);
     }
     seen.add(fileName);
     if (fileName.endsWith('.mjs') || fileName.endsWith('.ts')) {
-      for (const imported of importedRuntimeFiles(normalizedRoot, fileName)) pending.push(imported);
+      for (const imported of importedRuntimeFiles(source, root, fileName)) pending.push(imported);
     }
   }
   return [...seen].sort();

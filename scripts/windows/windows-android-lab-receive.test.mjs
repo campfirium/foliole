@@ -6,7 +6,8 @@ import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  ANDROID_LAB_RECEIVE_COMMAND, ANDROID_LAB_REPAIR_RECEIVE_COMMAND, runWindowsAndroidLabReceive
+  ANDROID_LAB_RECEIVE_COMMAND, ANDROID_LAB_REPAIR_RECEIVE_COMMAND, ANDROID_LAB_RUNTIME_RECEIVE_COMMAND,
+  runWindowsAndroidLabReceive
 } from './windows-android-lab-receive.mjs';
 import { androidLabPaths, writeJsonAtomic } from './windows-android-lab-state.mjs';
 
@@ -42,6 +43,18 @@ describe('Windows Android lab Git receive bridge', () => {
     runWindowsAndroidLabReceive({ env: { SSH_ORIGINAL_COMMAND: ANDROID_LAB_REPAIR_RECEIVE_COMMAND }, paths, spawnImpl });
     expect(spawnImpl).toHaveBeenCalledWith('C:\\Git\\git.exe', [
       '-c', 'receive.denyNonFastForwards=false', 'receive-pack', paths.repository
+    ], { shell: false, stdio: 'inherit' });
+  });
+
+  it('routes runtime objects only to the isolated fixed runtime repository', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-android-lab-receive-'));
+    roots.push(root);
+    const paths = androidLabPaths(root);
+    writeJsonAtomic(paths.config, { gitPath: 'C:\\Git\\git.exe' });
+    const spawnImpl = vi.fn(() => ({ on: vi.fn() }));
+    runWindowsAndroidLabReceive({ env: { SSH_ORIGINAL_COMMAND: ANDROID_LAB_RUNTIME_RECEIVE_COMMAND }, paths, spawnImpl });
+    expect(spawnImpl).toHaveBeenCalledWith('C:\\Git\\git.exe', [
+      'receive-pack', paths.runtimeRepository
     ], { shell: false, stdio: 'inherit' });
   });
 });

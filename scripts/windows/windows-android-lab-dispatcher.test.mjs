@@ -29,7 +29,7 @@ describe('Windows Android lab dispatcher', () => {
     prepareSource(paths);
     const result = await dispatchWindowsAndroidLab({ argv: ['run', SHA], now: 1_000, paths, runCommand: (...args) => calls.push(args) });
     expect(result.state).toBe('pending');
-    expect(result.protocolVersion).toBe(6);
+    expect(result.protocolVersion).toBe(7);
     expect(readJson(paths.active).commitSha).toBe(SHA);
     expect(calls).toEqual([
       ['git.exe', ['--git-dir', paths.repository, 'merge-base', '--is-ancestor', SHA, 'refs/heads/lab/dev']],
@@ -104,7 +104,7 @@ describe('Windows Android lab dispatcher', () => {
       jsonFirstNulOffset: 0,
       jsonLeadingHex: expect.stringMatching(/^00000000000000000000/u),
       jsonNulCount: 10,
-      protocolVersion: 6,
+      protocolVersion: 7,
       state: 'unreadable'
     });
     expect(result.jsonSize).toBeGreaterThan(10);

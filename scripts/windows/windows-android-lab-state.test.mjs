@@ -41,7 +41,9 @@ describe('Windows Android lab state contract', () => {
     });
     expect(parseAndroidLabCommand('device status')).toEqual({ action: 'device', operation: 'status' });
     expect(parseAndroidLabCommand('selfcheck')).toEqual({ action: 'selfcheck' });
-    expect(parseAndroidLabCommand(`runtime update ${SHA}`)).toEqual({ action: 'runtime', commitSha: SHA, operation: 'update' });
+    expect(parseAndroidLabCommand(`runtime update ${SHA} ${'b'.repeat(40)}`)).toEqual({
+      action: 'runtime', commitSha: SHA, operation: 'update', treeSha: 'b'.repeat(40)
+    });
     expect(parseAndroidLabCommand(`signing install 2618 ${'1'.repeat(64)}`)).toEqual({
       action: 'signing', byteLength: 2618, operation: 'install', sha256: '1'.repeat(64)
     });

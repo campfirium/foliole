@@ -20,6 +20,8 @@ describe('Windows Android Lab runtime updater', () => {
     expect(source).toContain('.runtime-update-backup-$PID');
     expect(source).toContain('Copy-Item -LiteralPath $source -Destination $target -Force');
     expect(source).toContain('Move-Item -LiteralPath');
+    expect(source).toContain('windows-android-lab-git-repositories.mjs');
+    expect(source).toContain('--root $InstallRoot --git-path $config.gitPath');
     expect(source).toContain('status: UPDATED');
     expect(source).not.toContain('Register-ScheduledTask');
     expect(source).not.toContain('authorized_keys');

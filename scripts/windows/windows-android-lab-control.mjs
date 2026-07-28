@@ -13,6 +13,7 @@ import {
   WINDOWS_ANDROID_LAB_PROTOCOL_VERSION, WINDOWS_ANDROID_LAB_SOURCE_REF
 } from './windows-android-lab-state.mjs';
 import { loadAndroidLabEnvelope } from './windows-android-lab-request.mjs';
+import { runAndroidLabRuntimeUpdate } from './windows-android-lab-runtime-publish.mjs';
 
 const COMMIT_SHA = /^[0-9a-f]{40}$/u;
 const LAB_GIT_REPOSITORY = 'foliole-android-lab.git';
@@ -132,7 +133,10 @@ async function pushAndroidLabSource(host, env, executeGit, explicitCommitSha = n
     await executeGit(spec.args, { env: spec.env });
   } catch (error) {
     if (!expectedCurrentSha && /non-fast-forward|fetch first|\[rejected\]/iu.test(error.message)) {
-      throw new Error(`${error.message}\nAndroid Lab ref diverged; use the explicit repair action with the expected current SHA`);
+      throw new Error(
+        `${error.message}\nAndroid Lab ref diverged; run the audited maintenance action: ` +
+        'repair --commit <formal SHA> --expected-current <current Lab SHA>'
+      );
     }
     throw error;
   }
@@ -148,7 +152,7 @@ function isRunScopedCollect(command) {
 }
 
 function requiresProtocolPreflight(command) {
-  return ['request', 'review'].includes(command[0]) || isRunScopedCollect(command);
+  return ['request', 'review', 'runtime'].includes(command[0]) || isRunScopedCollect(command);
 }
 
 async function assertRunScopedCollectSupport(host, env, executeSsh) {
@@ -187,6 +191,12 @@ export async function runWindowsAndroidLabControl({
     const repaired = await pushAndroidLabSource(host, env, executeGit, command[2], command[4]);
     stdout.write(`${JSON.stringify(repaired)}\n`);
     return repaired;
+  }
+  if (command[0] === 'runtime') {
+    return runAndroidLabRuntimeUpdate({
+      command, env, executeGit, executeSsh, host, output, preflight: assertRunScopedCollectSupport,
+      quoteToken: quoteGitSshCommandToken, resolveRemotePaths: remoteAndroidLabPaths, stdout
+    });
   }
   let remoteCommand = command;
   let input = null;

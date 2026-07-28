@@ -41,6 +41,8 @@ foreach ($file in @(
   & $nodePath --check (Join-Path $stagingRoot $file)
   if ($LASTEXITCODE -ne 0) { throw "Windows Android Lab runtime syntax check failed: $file" }
 }
+& $nodePath (Join-Path $sourceRoot "windows-android-lab-git-repositories.mjs") --root $InstallRoot --git-path $config.gitPath
+if ($LASTEXITCODE -ne 0) { throw "Failed to configure Android Lab Git repositories" }
 
 Remove-Item -LiteralPath $backupRoot -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $backupRoot | Out-Null

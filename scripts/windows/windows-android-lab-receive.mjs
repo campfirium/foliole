@@ -9,18 +9,21 @@ import { androidLabPaths, readJson } from './windows-android-lab-state.mjs';
 
 export const ANDROID_LAB_RECEIVE_COMMAND = "git-receive-pack 'foliole-android-lab.git'";
 export const ANDROID_LAB_REPAIR_RECEIVE_COMMAND = "git-receive-pack 'foliole-android-lab-repair.git'";
+export const ANDROID_LAB_RUNTIME_RECEIVE_COMMAND = "git-receive-pack 'foliole-android-lab-runtime.git'";
 
 export function runWindowsAndroidLabReceive({
   env = process.env, paths = androidLabPaths(), spawnImpl = spawn
 } = {}) {
   const repair = env.SSH_ORIGINAL_COMMAND === ANDROID_LAB_REPAIR_RECEIVE_COMMAND;
-  if (!repair && env.SSH_ORIGINAL_COMMAND !== ANDROID_LAB_RECEIVE_COMMAND) {
+  const runtime = env.SSH_ORIGINAL_COMMAND === ANDROID_LAB_RUNTIME_RECEIVE_COMMAND;
+  if (!repair && !runtime && env.SSH_ORIGINAL_COMMAND !== ANDROID_LAB_RECEIVE_COMMAND) {
     throw new Error('Android Lab Git key only accepts the fixed receive-pack command');
   }
   const config = readJson(paths.config);
   if (!config?.gitPath) throw new Error('Android Lab Git configuration is missing');
   const configArgs = repair ? ['-c', 'receive.denyNonFastForwards=false'] : [];
-  const child = spawnImpl(config.gitPath, [...configArgs, 'receive-pack', paths.repository], { shell: false, stdio: 'inherit' });
+  const repository = runtime ? paths.runtimeRepository : paths.repository;
+  const child = spawnImpl(config.gitPath, [...configArgs, 'receive-pack', repository], { shell: false, stdio: 'inherit' });
   child.on('error', (error) => {
     console.error(`[windows-android-lab-receive] ${error.message}`);
     process.exitCode = 1;
