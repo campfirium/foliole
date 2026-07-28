@@ -51,8 +51,30 @@ $runtimeRoot = Join-Path $installRoot "runtime"
 New-Item -ItemType Directory -Force -Path $runtimeRoot | Out-Null
 $labNodePath = Join-Path $runtimeRoot "node.exe"
 Copy-Item (Join-Path $nodeSourceRoot "*") $runtimeRoot -Recurse -Force
-& $NodePath (Join-Path $sourceRoot "windows-android-lab-git-repositories.mjs") --root $installRoot --git-path $GitPath
-if ($LASTEXITCODE -ne 0) { throw "Failed to configure Android Lab Git repositories" }
+$repositoryRoot = Join-Path $installRoot "repository.git"
+if (!(Test-Path (Join-Path $repositoryRoot "HEAD"))) {
+  & $GitPath init --bare $repositoryRoot | Out-Null
+  if ($LASTEXITCODE -ne 0) { throw "Failed to initialize Android Lab bare repository" }
+}
+& $GitPath --git-dir $repositoryRoot config receive.denyDeletes true
+if ($LASTEXITCODE -ne 0) { throw "Failed to configure Android Lab bare repository" }
+& $GitPath --git-dir $repositoryRoot config receive.denyNonFastForwards true
+if ($LASTEXITCODE -ne 0) { throw "Failed to configure Android Lab bare repository" }
+$hookPath = Join-Path $repositoryRoot "hooks\pre-receive"
+$hook = @'
+#!/bin/sh
+while read old new ref; do
+  if [ "$ref" != "refs/heads/lab/dev" ]; then
+    echo "only refs/heads/lab/dev is accepted" >&2
+    exit 1
+  fi
+  if [ "$new" = "0000000000000000000000000000000000000000" ]; then
+    echo "refs/heads/lab/dev cannot be deleted" >&2
+    exit 1
+  fi
+done
+'@
+[System.IO.File]::WriteAllText($hookPath, $hook.Replace("`r`n", "`n"), [System.Text.UTF8Encoding]::new($false))
 Remove-Item (Join-Path $installRoot "git-read-token.txt"), (Join-Path $installRoot "git-askpass.cmd") -Force -ErrorAction SilentlyContinue
 $existingConfigPath = Join-Path $installRoot "config.json"
 $existingConfig = if (Test-Path $existingConfigPath) { Get-Content $existingConfigPath -Raw | ConvertFrom-Json } else { $null }

@@ -7,7 +7,6 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const RUNTIME_ENTRYPOINTS = [
   'windows-android-lab-dispatcher.mjs',
   'windows-android-lab-receive.mjs',
-  'windows-android-lab-runtime-update.mjs',
   'windows-android-lab-selfcheck.mjs',
   'windows-android-lab-worker.mjs'
 ];
@@ -61,6 +60,8 @@ export function resolveWindowsAndroidLabRuntimeFilesFromSource(readSource, root 
   }
   return [...seen].sort();
 }
+
+export const WINDOWS_ANDROID_LAB_INSTALLED_FILES = resolveWindowsAndroidLabRuntimeFiles();
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   if (process.argv[2] !== '--list') throw new Error('usage: windows-android-lab-runtime-manifest.mjs --list');

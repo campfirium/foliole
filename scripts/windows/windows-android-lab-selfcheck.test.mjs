@@ -8,15 +8,15 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { dispatchWindowsAndroidLab } from './windows-android-lab-dispatcher.mjs';
+import { WINDOWS_ANDROID_LAB_INSTALLED_FILES } from './windows-android-lab-runtime-manifest.mjs';
 import { androidLabPaths, writeJsonAtomic } from './windows-android-lab-state.mjs';
-import { WINDOWS_ANDROID_LAB_RUNTIME_FILES } from './windows-android-lab-runtime-update.mjs';
 
 const roots = [];
 afterEach(() => roots.splice(0).forEach((root) => fs.rmSync(root, { force: true, recursive: true })));
 
 function prepareSelfcheck(paths) {
   fs.mkdirSync(paths.root, { recursive: true });
-  for (const file of WINDOWS_ANDROID_LAB_RUNTIME_FILES) {
+  for (const file of WINDOWS_ANDROID_LAB_INSTALLED_FILES) {
     fs.writeFileSync(path.join(paths.root, file), `// ${file}\nANDROID_WINDOWS_DEPENDENCY_REFRESH: 'auto'\n`);
   }
   const signing = Buffer.from('private signing bytes');

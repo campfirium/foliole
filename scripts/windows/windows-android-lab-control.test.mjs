@@ -35,7 +35,7 @@ describe('Windows Android lab Mac controller', () => {
       argv: ['--host', 'tester@windows-host', 'collect', 'get', '1000-aaaaaaaaaaaa', 'summary.json'], env: {},
       executeSsh: async (_host, command) => {
         calls.push(command);
-        return command[0] === 'status' ? Buffer.from('{"protocolVersion":7,"state":"idle"}\n') : Buffer.from('evidence');
+        return command[0] === 'status' ? Buffer.from('{"protocolVersion":8,"state":"idle"}\n') : Buffer.from('evidence');
       }, stdout: { write: () => {} }
     });
     expect(calls).toEqual([['status'], ['collect', 'get', '1000-aaaaaaaaaaaa', 'summary.json']]);
@@ -48,7 +48,7 @@ describe('Windows Android lab Mac controller', () => {
       executeSsh: async (_host, command) => {
         calls.push(command);
         return Buffer.from(command[0] === 'status'
-          ? '{"protocolVersion":7,"state":"idle"}\n'
+          ? '{"protocolVersion":8,"state":"idle"}\n'
           : '{"state":"pending"}\n');
       }, stdout: { write: () => {} }
     });
@@ -62,7 +62,7 @@ describe('Windows Android lab Mac controller', () => {
       executeSsh: async (_host, command) => {
         calls.push(command);
         return Buffer.from(command[0] === 'status'
-          ? '{"protocolVersion":7,"state":"idle"}\n'
+          ? '{"protocolVersion":8,"state":"idle"}\n'
           : '{"state":"pending"}\n');
       }, stdout: { write: () => {} }
     });
@@ -125,36 +125,6 @@ describe('Windows Android lab Mac controller', () => {
     expect(JSON.parse(output)).toMatchObject({ commitSha: sha, ref: 'refs/heads/lab/dev' });
   });
 
-  it('publishes runtime from a verified HEAD ancestor before requesting installation', async () => {
-    const sha = 'e'.repeat(40);
-    const treeSha = 'f'.repeat(40);
-    const gitCalls = [];
-    const sshCalls = [];
-    let output = '';
-    const executeGit = async (args) => {
-      gitCalls.push(args);
-      if (args.join(' ') === 'branch --show-current') return Buffer.from('dev\n');
-      if (args.join(' ') === `rev-parse --verify ${sha}^{commit}`) return Buffer.from(`${sha}\n`);
-      if (args.join(' ') === `merge-base --is-ancestor ${sha} HEAD`) return Buffer.from('');
-      if (args.join(' ') === `rev-parse --verify ${sha}:scripts/windows`) return Buffer.from(`${treeSha}\n`);
-      if (args[0] === 'push') return Buffer.from('ok\n');
-      throw new Error(`unexpected git call: ${args.join(' ')}`);
-    };
-    await runWindowsAndroidLabControl({
-      argv: ['--host', 'tester@windows-host', 'runtime', 'update', sha], env: {}, executeGit,
-      executeSsh: async (_host, command) => {
-        sshCalls.push(command);
-        return Buffer.from(command[0] === 'status' ? '{"protocolVersion":7}\n' : '{"status":"updated"}\n');
-      }, stdout: { write: (value) => { output += String(value); } }
-    });
-    expect(gitCalls.at(-1)).toEqual([
-      'push', '--porcelain', 'tester@windows-host:foliole-android-lab-runtime.git',
-      `${sha}:refs/heads/lab/runtime`
-    ]);
-    expect(sshCalls).toEqual([['status'], ['runtime', 'update', sha, treeSha]]);
-    expect(output).toContain('updated');
-  });
-
   it('builds no GitHub URL or mutable working-tree transfer', () => {
     const spec = androidLabGitPushSpec('tester@windows-host', 'f'.repeat(40), {}, '/Users/tester');
     expect(spec.args.join(' ')).not.toMatch(/github|bundle|patch/iu);
@@ -203,7 +173,7 @@ describe('Windows Android lab Mac controller', () => {
         executeSsh: async (_host, command, _env, input) => {
           calls.push({ command, input });
           return Buffer.from(command[0] === 'status'
-            ? '{"protocolVersion":7,"state":"idle"}\n' : '{"state":"pending"}\n');
+            ? '{"protocolVersion":8,"state":"idle"}\n' : '{"state":"pending"}\n');
         }, stdout: { write: () => {} }
       });
       expect(calls[1].command).toEqual(['request', String(calls[1].input.length), expect.stringMatching(/^[0-9a-f]{64}$/u)]);

@@ -8,8 +8,7 @@ import { isAndroidLabRunId, safeLabEvidencePath } from './windows-android-lab-ev
 
 export const WINDOWS_ANDROID_LAB_TASK = 'FolioleAndroidLab';
 export const WINDOWS_ANDROID_LAB_SOURCE_REF = 'refs/heads/lab/dev';
-export const WINDOWS_ANDROID_LAB_RUNTIME_REF = 'refs/heads/lab/runtime';
-export const WINDOWS_ANDROID_LAB_PROTOCOL_VERSION = 7;
+export const WINDOWS_ANDROID_LAB_PROTOCOL_VERSION = 8;
 
 export function androidLabRoot(env = process.env) {
   if (env.FOLIOLE_WINDOWS_ANDROID_LAB_ROOT) return path.resolve(env.FOLIOLE_WINDOWS_ANDROID_LAB_ROOT);
@@ -32,7 +31,6 @@ export function androidLabPaths(root = androidLabRoot()) {
     preview: checkout,
     protection: path.join(root, 'protection', 'backups'),
     repository: path.join(root, 'repository.git'),
-    runtimeRepository: path.join(root, 'runtime-repository.git'),
     reviewSession: path.join(root, 'review-session.json'),
     root,
     signingHome: path.join(root, 'signing', 'android-user-home'),
@@ -138,12 +136,12 @@ export function parseAndroidLabCommand(input) {
     throw new Error('signing requires install <1..65536 byte length> <lowercase sha256>');
   }
   if (action === 'selfcheck' && parts.length === 0) return { action };
-  if (action === 'runtime') {
-    if (parts[0] === 'update' && parts.length === 3
+  if (action === 'maintenance') {
+    if (parts[0] === 'repair-ref' && parts.length === 3
       && /^[0-9a-f]{40}$/u.test(parts[1]) && /^[0-9a-f]{40}$/u.test(parts[2])) {
-      return { action, commitSha: parts[1], operation: 'update', treeSha: parts[2] };
+      return { action, expectedOldSha: parts[2], operation: 'repair-ref', targetSha: parts[1] };
     }
-    throw new Error('runtime requires update <40-character commit SHA> <40-character scripts/windows tree SHA>');
+    throw new Error('maintenance requires repair-ref <formal commit SHA> <expected old SHA>');
   }
   if (!['cancel', 'status'].includes(action) || parts.length !== 0) throw new Error('unsupported Android lab action');
   return { action };

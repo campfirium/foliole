@@ -54,16 +54,16 @@ it('keeps ordinary push non-forced and points divergence to explicit repair', as
   expect(pushArgs.join(' ')).not.toMatch(/force|^\+/u);
 });
 
-it('repairs only the fixed Lab ref with an exact lease and committed HEAD ancestor', async () => {
+it('repairs through the fixed local CAS action then queues the existing run entry', async () => {
   const formal = 'a'.repeat(40);
   const legacy = 'd'.repeat(40);
-  const calls = [];
+  const gitCalls = [];
+  const sshCalls = [];
   const executeGit = async (args) => {
-    calls.push(args);
-    if (args.join(' ') === 'branch --show-current') return Buffer.from('dev\n');
+    gitCalls.push(args);
     if (args.join(' ') === `rev-parse --verify ${formal}^{commit}`) return Buffer.from(`${formal}\n`);
-    if (args.join(' ') === `merge-base --is-ancestor ${formal} HEAD`) return Buffer.from('');
-    if (args[0] === 'push') return Buffer.from('ok\n');
+    if (args.join(' ') === 'rev-parse --verify refs/remotes/origin/dev^{commit}') return Buffer.from(`${formal}\n`);
+    if (args.join(' ') === `merge-base --is-ancestor ${formal} refs/remotes/origin/dev`) return Buffer.from('');
     throw new Error(`unexpected git call: ${args.join(' ')}`);
   };
   let output = '';
@@ -71,26 +71,41 @@ it('repairs only the fixed Lab ref with an exact lease and committed HEAD ancest
   await runWindowsAndroidLabControl({
     argv: [
       '--host', 'tester@windows-host', 'repair', '--commit', formal, '--expected-current', legacy
-    ], env: {}, executeGit, executeSsh: async () => Buffer.from('{"protocolVersion":7}'),
+    ], env: {}, executeGit, executeSsh: async (_host, command) => {
+      sshCalls.push(command);
+      return Buffer.from(command[0] === 'maintenance'
+        ? JSON.stringify({ commitSha: formal, status: 'updated' })
+        : JSON.stringify({ commitSha: formal, state: 'pending' }));
+    },
     stdout: { write: (value) => { output += String(value); } }
   });
 
-  expect(calls.map((args) => args[0])).toEqual(['branch', 'rev-parse', 'merge-base', 'push']);
-  expect(calls.at(-1)).toEqual([
-    'push', '--porcelain', `--force-with-lease=refs/heads/lab/dev:${legacy}`,
-    'tester@windows-host:foliole-android-lab-repair.git', `+${formal}:refs/heads/lab/dev`
+  expect(gitCalls).toEqual([
+    ['rev-parse', '--verify', `${formal}^{commit}`],
+    ['rev-parse', '--verify', 'refs/remotes/origin/dev^{commit}'],
+    ['merge-base', '--is-ancestor', formal, 'refs/remotes/origin/dev']
+  ]);
+  expect(sshCalls).toEqual([
+    ['maintenance', 'repair-ref', formal, legacy], ['run', formal]
   ]);
   expect(JSON.parse(output)).toMatchObject({ commitSha: formal, operation: 'repair', sourceKind: 'formal' });
 });
 
-it('fails repair closed when the installed Lab lacks the repair protocol', async () => {
+it('rejects a target outside the fixed formal dev ref before contacting Windows', async () => {
+  const formal = 'a'.repeat(40);
+  const sshCalls = [];
   await expect(runWindowsAndroidLabControl({
     argv: [
-      '--host', 'tester@windows-host', 'repair', '--commit', 'a'.repeat(40),
+      '--host', 'tester@windows-host', 'repair', '--commit', formal,
       '--expected-current', 'd'.repeat(40)
-    ], env: {}, executeGit: async () => { throw new Error('git must not run'); },
-    executeSsh: async () => Buffer.from('{"protocolVersion":5}'), stdout: { write: () => {} }
-  })).rejects.toThrow('version mismatch; reinstall the Lab');
+    ], env: {}, executeGit: async (args) => {
+      if (args.join(' ') === `rev-parse --verify ${formal}^{commit}`) return Buffer.from(`${formal}\n`);
+      if (args.join(' ') === 'rev-parse --verify refs/remotes/origin/dev^{commit}') return Buffer.from(`${'b'.repeat(40)}\n`);
+      throw new Error('not an ancestor of formal dev');
+    }, executeSsh: async (...args) => { sshCalls.push(args); return Buffer.from('{}'); },
+    stdout: { write: () => {} }
+  })).rejects.toThrow('not an ancestor of formal dev');
+  expect(sshCalls).toEqual([]);
 });
 
 it('rejects repair without both immutable commit identities before Git runs', async () => {

@@ -14,8 +14,8 @@ import {
   publicDeviceStatus, WINDOWS_ANDROID_LAB_SOURCE_REF, WINDOWS_ANDROID_LAB_TASK, writeJsonAtomic
 } from './windows-android-lab-state.mjs';
 import { validateAndroidLabConfig } from './windows-android-lab-device.mjs';
+import { repairAndroidLabSourceRef } from './windows-android-lab-ref-maintenance.mjs';
 import { parseAndroidLabEnvelope } from './windows-android-lab-request.mjs';
-import { updateAndroidLabRuntime } from './windows-android-lab-runtime-update.mjs';
 import { runWindowsAndroidLabSelfcheck } from './windows-android-lab-selfcheck.mjs';
 
 const WORKER_START_TIMEOUT_MS = 60_000;
@@ -216,8 +216,8 @@ export async function dispatchWindowsAndroidLab({
   }
   if (command.action === 'status') return publicLabStatus(closeStalePendingRecoverable(paths, now));
   if (command.action === 'selfcheck') return runWindowsAndroidLabSelfcheck({ paths, runCommand });
-  if (command.action === 'runtime') {
-    return updateAndroidLabRuntime({ command, config: readJson(paths.config), paths, runCommand });
+  if (command.action === 'maintenance') {
+    return repairAndroidLabSourceRef({ command, config: readJson(paths.config), paths, runCommand });
   }
   if (command.action === 'device') return deviceAction(command, paths);
   if (command.action === 'signing') return installSigning(command, paths, input);
