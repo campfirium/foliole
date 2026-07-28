@@ -151,7 +151,7 @@ function capture(databasePath, session) {
   });
 }
 
-describe('Windows Android lab Review audit', () => {
+describe('Windows Android lab on-demand Review audit', () => {
   it('uses shared planner identities and emits a redacted prepare baseline', () => {
     const databasePath = createDatabase();
     const { audit } = prepare(databasePath);

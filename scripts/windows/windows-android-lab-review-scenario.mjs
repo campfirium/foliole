@@ -36,6 +36,11 @@ function codedError(code, message) {
   return Object.assign(new Error(message), { code });
 }
 
+function textTail(value, maxLength = 2_000) {
+  const text = String(value || '').trim();
+  return text.length > maxLength ? text.slice(text.length - maxLength) : text;
+}
+
 function childRequest(request, phase) {
   return { ...request, evidenceRunId: path.join(request.runId, phase), reviewPhase: phase };
 }
@@ -66,7 +71,18 @@ async function runChecked(executeCommand, command, args, options, code) {
   const result = await executeCommand(command, args, {
     timeoutCode: `${code}_timeout`, timeoutMs: COMMAND_TIMEOUT_MS, ...options
   });
-  if (result.code !== 0) throw codedError(code, result.lines?.at(-1) || `${command} exited ${result.code}`);
+  if (result.code !== 0) throw Object.assign(
+    codedError(code, result.lines?.at(-1) || `${command} exited ${result.code}`),
+    {
+      runner: {
+        args: args.map((arg) => path.basename(String(arg))),
+        command: path.basename(command),
+        exitCode: result.code,
+        stderrTail: textTail(result.stderr),
+        stdoutTail: textTail(result.stdout)
+      }
+    }
+  );
   return result;
 }
 
@@ -135,7 +151,8 @@ export async function finishWindowsAndroidLabReviewScenarioRun({ executeCommand,
     fs.mkdirSync(evidenceRoot, { recursive: true });
     writeJsonAtomic(path.join(evidenceRoot, 'summary.json'), {
       commitSha: request.commitSha, errorCode: error.code || 'review_scenario_failed',
-      errorMessage: error.message, resultStatus: 'failure', runId: request.runId, schemaVersion: 1
+      errorMessage: error.message, resultStatus: 'failure', runId: request.runId,
+      runner: error.runner, schemaVersion: 1
     });
   }
   const completed = {

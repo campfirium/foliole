@@ -91,9 +91,9 @@ function parseInstrumentationEvidence(output) {
     const match = /^INSTRUMENTATION_STATUS: ([A-Za-z]+)=(.*)$/u.exec(line);
     if (match && keys[match[1]]) evidence[keys[match[1]]] = JSON.parse(match[2]);
   }
-  if (!evidence.before || !evidence.after || !evidence.receipt) {
-    throw codedError('ui_evidence_missing', 'instrumentation did not return complete semantic evidence');
-  }
+  const missing = ['before', 'after', 'receipt'].filter((key) => !evidence[key]);
+  if (missing.length) throw Object.assign(codedError('ui_instrumentation_evidence_incomplete',
+    `instrumentation semantic evidence missing: ${missing.join(', ')}`), { instrumentation: { missing, present: Object.keys(evidence) } });
   return evidence;
 }
 
@@ -218,7 +218,8 @@ export async function runWindowsAndroidLabUiAutomation({
     }
     fs.writeFileSync(path.join(evidenceRoot, 'action-receipt.json'), `${JSON.stringify({
       adapter: 'instrumentation-evaluateJavascript', errorCode: error.code || 'ui_automation_failed',
-      resultStatus: 'failure', targetTestId: input.testId
+      instrumentation: error.instrumentation,
+      resultStatus: 'failure', targetTestId: input.testId || input.testIds?.at(-1)
     }, null, 2)}\n`);
     throw error;
   } finally {

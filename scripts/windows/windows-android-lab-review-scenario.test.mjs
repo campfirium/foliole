@@ -58,7 +58,7 @@ describe('Windows Android Lab Review scenario run', () => {
     ]);
   });
 
-  it('keeps the scenario as one worker-owned run and updates phase status', async () => {
+  it('keeps the on-demand scenario as one worker-owned run and updates phase status', async () => {
     const { paths, request } = fixture();
     const phases = [];
     await finishWindowsAndroidLabReviewScenarioRun({
@@ -98,6 +98,35 @@ describe('Windows Android Lab Review scenario run', () => {
     });
     expect(readJson(paths.status)).toMatchObject({
       errorCode: 'review_fsrs_transition_missing', resultStatus: 'failure', state: 'completed'
+    });
+  });
+
+  it('keeps child runner failure details in the collectable scenario summary', async () => {
+    const { paths, request } = fixture();
+    await expect(finishWindowsAndroidLabReviewScenarioRun({
+      executeCommand: async () => { throw new Error('scenario mock should own commands'); },
+      paths,
+      request,
+      running: { ...request, evidenceRoot: path.join(paths.evidence, request.runId), state: 'running' },
+      runScenario: async () => {
+        throw Object.assign(new Error('[windows-android-lab-ui] ui_instrumentation_evidence_incomplete'), {
+          code: 'review_ui_sequence_failed',
+          runner: {
+            command: 'node.exe',
+            exitCode: 1,
+            stderrTail: '[windows-android-lab-ui] ui_instrumentation_evidence_incomplete',
+            stdoutTail: 'INSTRUMENTATION_STATUS: folioleBeforeSemantic={}'
+          }
+        });
+      }
+    })).rejects.toMatchObject({ code: 'review_ui_sequence_failed' });
+    expect(readJson(path.join(paths.evidence, request.runId, 'summary.json'))).toMatchObject({
+      errorCode: 'review_ui_sequence_failed',
+      runner: {
+        exitCode: 1,
+        stderrTail: expect.stringContaining('ui_instrumentation_evidence_incomplete'),
+        stdoutTail: expect.stringContaining('folioleBeforeSemantic')
+      }
     });
   });
 });

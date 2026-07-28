@@ -49,7 +49,7 @@ function insertNode(db, args) {
   db.prepare('INSERT INTO node_order VALUES (?, ?)').run(args.id, args.position);
 }
 
-describe('Windows Android lab Review acceptance selection', () => {
+describe('Windows Android lab on-demand Review scenario selection', () => {
   it('treats Android body blob data as readable Topic content for the shared planner', () => {
     const db = createDatabase();
     insertNode(db, { id: 'fsrs-1', kind: 'item', position: 0, reveal: 'answer' });
