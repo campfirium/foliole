@@ -60,6 +60,8 @@ describe('Windows Android Lab worker operations', () => {
     expect(calls[0]).toMatchObject({ command: path.join('C:\\Node', 'node.exe') });
     expect(calls[0].options).toMatchObject({ timeoutMs: 30_000 });
     expect(calls[0].options).not.toHaveProperty('shell');
+    expect(calls[0].options.env.Path).toMatch(/^C:\\Node;.*$/u);
+    expect(calls[0].options.env).not.toHaveProperty('PATH');
     expect(fs.readFileSync(path.join(paths.evidence, 'repo-run', 'stdout.txt'), 'utf8')).toBe('ok\n');
     expect(fs.readFileSync(path.join(paths.evidence, 'repo-run', 'stderr.txt'), 'utf8')).toBe('warning\n');
     expect(readJson(path.join(paths.evidence, 'repo-run', 'command-audit.json'))).toMatchObject({

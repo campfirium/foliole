@@ -56,6 +56,7 @@ function operationEnvironment(config, paths, evidenceRoot, spec) {
   env.JAVA_HOME = config.javaHome;
   const tools = [config.nodeDirectory, path.win32.dirname(config.adbPath)].filter(Boolean).join(';');
   env.Path = `${tools};${env.Path || env.PATH || ''}`;
+  delete env.PATH;
   env.ANDROID_USER_HOME = paths.signingHome;
   env.ANDROID_WINDOWS_WORKDIR = paths.checkout;
   env.FOLIOLE_ANDROID_ADB_PATH = config.adbPath;
