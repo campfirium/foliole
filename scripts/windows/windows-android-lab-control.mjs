@@ -15,6 +15,8 @@ import {
 import { loadAndroidLabEnvelope } from './windows-android-lab-request.mjs';
 
 const COMMIT_SHA = /^[0-9a-f]{40}$/u;
+const LAB_GIT_REPOSITORY = 'foliole-android-lab.git';
+const LAB_GIT_REPAIR_REPOSITORY = 'foliole-android-lab-repair.git';
 
 export function remoteAndroidLabPaths(env, home = os.homedir()) {
   return {
@@ -72,10 +74,16 @@ export function androidLabSshArgs(host, command, env, home = os.homedir()) {
   ];
 }
 
-export function androidLabGitPushSpec(host, commitSha, env, home = os.homedir()) {
+export function androidLabGitPushSpec(host, commitSha, env, home = os.homedir(), expectedCurrentSha = null) {
   const key = remoteAndroidLabPaths(env, home).gitSshKey;
+  if (expectedCurrentSha && !COMMIT_SHA.test(expectedCurrentSha)) {
+    throw new Error('Android Lab expected current commit is invalid');
+  }
+  const repository = expectedCurrentSha ? LAB_GIT_REPAIR_REPOSITORY : LAB_GIT_REPOSITORY;
+  const refspec = `${expectedCurrentSha ? '+' : ''}${commitSha}:${WINDOWS_ANDROID_LAB_SOURCE_REF}`;
+  const lease = expectedCurrentSha ? [`--force-with-lease=${WINDOWS_ANDROID_LAB_SOURCE_REF}:${expectedCurrentSha}`] : [];
   return {
-    args: ['push', '--porcelain', `${host}:foliole-android-lab.git`, `${commitSha}:${WINDOWS_ANDROID_LAB_SOURCE_REF}`],
+    args: ['push', '--porcelain', ...lease, `${host}:${repository}`, refspec],
     env: {
       ...env,
       GIT_SSH_COMMAND:
@@ -103,7 +111,7 @@ export function androidLabSigningInstallSpec(filePath) {
   return { command: ['signing', 'install', String(input.length), sha256], input, sha256 };
 }
 
-async function pushAndroidLabSource(host, env, executeGit, explicitCommitSha = null) {
+async function pushAndroidLabSource(host, env, executeGit, explicitCommitSha = null, expectedCurrentSha = null) {
   const branch = String(await executeGit(['branch', '--show-current'], { env })).trim();
   if (branch !== 'dev') throw new Error('Android Lab source push requires the dev branch');
   const commitSha = explicitCommitSha || String(await executeGit(['rev-parse', '--verify', 'HEAD'], { env })).trim();
@@ -119,9 +127,19 @@ async function pushAndroidLabSource(host, env, executeGit, explicitCommitSha = n
     if (verified !== commitSha) throw new Error('Android Lab source commit is invalid');
     await executeGit(['merge-base', '--is-ancestor', commitSha, 'HEAD'], { env });
   }
-  const spec = androidLabGitPushSpec(host, commitSha, env);
-  await executeGit(spec.args, { env: spec.env });
-  return { commitSha, ref: WINDOWS_ANDROID_LAB_SOURCE_REF, schemaVersion: 1, sourceKind: 'formal' };
+  const spec = androidLabGitPushSpec(host, commitSha, env, os.homedir(), expectedCurrentSha);
+  try {
+    await executeGit(spec.args, { env: spec.env });
+  } catch (error) {
+    if (!expectedCurrentSha && /non-fast-forward|fetch first|\[rejected\]/iu.test(error.message)) {
+      throw new Error(`${error.message}\nAndroid Lab ref diverged; use the explicit repair action with the expected current SHA`);
+    }
+    throw error;
+  }
+  return {
+    commitSha, operation: expectedCurrentSha ? 'repair' : 'push', ref: WINDOWS_ANDROID_LAB_SOURCE_REF,
+    schemaVersion: 1, sourceKind: 'formal'
+  };
 }
 
 function isRunScopedCollect(command) {
@@ -139,10 +157,10 @@ async function assertRunScopedCollectSupport(host, env, executeSsh) {
   try {
     status = JSON.parse(String(raw));
   } catch {
-    throw new Error('Windows Android Lab version could not be verified; reinstall the Lab before run-scoped collect');
+    throw new Error('Windows Android Lab version could not be verified; reinstall the Lab before this action');
   }
   if (status.protocolVersion !== WINDOWS_ANDROID_LAB_PROTOCOL_VERSION) {
-    throw new Error('Windows Android Lab version mismatch; reinstall the Lab before run-scoped collect');
+    throw new Error('Windows Android Lab version mismatch; reinstall the Lab before this action');
   }
 }
 
@@ -159,6 +177,16 @@ export async function runWindowsAndroidLabControl({
     const pushed = await pushAndroidLabSource(host, env, executeGit, explicitCommitSha);
     stdout.write(`${JSON.stringify(pushed)}\n`);
     return pushed;
+  }
+  if (command[0] === 'repair') {
+    if (output || command.length !== 5 || command[1] !== '--commit' || command[3] !== '--expected-current'
+      || !COMMIT_SHA.test(command[2]) || !COMMIT_SHA.test(command[4])) {
+      throw new Error('repair requires --commit <formal SHA> --expected-current <current Lab SHA> and does not accept --output');
+    }
+    await assertRunScopedCollectSupport(host, env, executeSsh);
+    const repaired = await pushAndroidLabSource(host, env, executeGit, command[2], command[4]);
+    stdout.write(`${JSON.stringify(repaired)}\n`);
+    return repaired;
   }
   let remoteCommand = command;
   let input = null;

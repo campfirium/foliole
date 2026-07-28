@@ -5,7 +5,9 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ANDROID_LAB_RECEIVE_COMMAND, runWindowsAndroidLabReceive } from './windows-android-lab-receive.mjs';
+import {
+  ANDROID_LAB_RECEIVE_COMMAND, ANDROID_LAB_REPAIR_RECEIVE_COMMAND, runWindowsAndroidLabReceive
+} from './windows-android-lab-receive.mjs';
 import { androidLabPaths, writeJsonAtomic } from './windows-android-lab-state.mjs';
 
 const roots = [];
@@ -29,5 +31,17 @@ describe('Windows Android lab Git receive bridge', () => {
     const spawnImpl = vi.fn();
     expect(() => runWindowsAndroidLabReceive({ env: { SSH_ORIGINAL_COMMAND: 'whoami' }, spawnImpl })).toThrow('fixed receive-pack');
     expect(spawnImpl).not.toHaveBeenCalled();
+  });
+
+  it('allows non-fast-forward only for the fixed repair repository command', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-android-lab-receive-'));
+    roots.push(root);
+    const paths = androidLabPaths(root);
+    writeJsonAtomic(paths.config, { gitPath: 'C:\\Git\\git.exe' });
+    const spawnImpl = vi.fn(() => ({ on: vi.fn() }));
+    runWindowsAndroidLabReceive({ env: { SSH_ORIGINAL_COMMAND: ANDROID_LAB_REPAIR_RECEIVE_COMMAND }, paths, spawnImpl });
+    expect(spawnImpl).toHaveBeenCalledWith('C:\\Git\\git.exe', [
+      '-c', 'receive.denyNonFastForwards=false', 'receive-pack', paths.repository
+    ], { shell: false, stdio: 'inherit' });
   });
 });

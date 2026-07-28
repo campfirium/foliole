@@ -35,7 +35,7 @@ describe('Windows Android lab Mac controller', () => {
       argv: ['--host', 'tester@windows-host', 'collect', 'get', '1000-aaaaaaaaaaaa', 'summary.json'], env: {},
       executeSsh: async (_host, command) => {
         calls.push(command);
-        return command[0] === 'status' ? Buffer.from('{"protocolVersion":5,"state":"idle"}\n') : Buffer.from('evidence');
+        return command[0] === 'status' ? Buffer.from('{"protocolVersion":6,"state":"idle"}\n') : Buffer.from('evidence');
       }, stdout: { write: () => {} }
     });
     expect(calls).toEqual([['status'], ['collect', 'get', '1000-aaaaaaaaaaaa', 'summary.json']]);
@@ -48,7 +48,7 @@ describe('Windows Android lab Mac controller', () => {
       executeSsh: async (_host, command) => {
         calls.push(command);
         return Buffer.from(command[0] === 'status'
-          ? '{"protocolVersion":5,"state":"idle"}\n'
+          ? '{"protocolVersion":6,"state":"idle"}\n'
           : '{"state":"pending"}\n');
       }, stdout: { write: () => {} }
     });
@@ -62,7 +62,7 @@ describe('Windows Android lab Mac controller', () => {
       executeSsh: async (_host, command) => {
         calls.push(command);
         return Buffer.from(command[0] === 'status'
-          ? '{"protocolVersion":5,"state":"idle"}\n'
+          ? '{"protocolVersion":6,"state":"idle"}\n'
           : '{"state":"pending"}\n');
       }, stdout: { write: () => {} }
     });
@@ -173,7 +173,7 @@ describe('Windows Android lab Mac controller', () => {
         executeSsh: async (_host, command, _env, input) => {
           calls.push({ command, input });
           return Buffer.from(command[0] === 'status'
-            ? '{"protocolVersion":5,"state":"idle"}\n' : '{"state":"pending"}\n');
+            ? '{"protocolVersion":6,"state":"idle"}\n' : '{"state":"pending"}\n');
         }, stdout: { write: () => {} }
       });
       expect(calls[1].command).toEqual(['request', String(calls[1].input.length), expect.stringMatching(/^[0-9a-f]{64}$/u)]);
