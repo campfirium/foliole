@@ -19,7 +19,7 @@ beforeEach(() => {
   window.localStorage.clear();
 });
 
-it('keeps the default Topic menu order when no setting is stored', () => {
+it('keeps the default editor menu order when no setting is stored', () => {
   expect(loadDocumentHeaderMenuItems().map((item) => item.commandId)).toEqual([
     APP_COMMAND_IDS.publishToFoliole,
     APP_COMMAND_IDS.publishToWordPress,
@@ -31,7 +31,7 @@ it('keeps the default Topic menu order when no setting is stored', () => {
   ]);
 });
 
-it('persists hidden and reordered Topic menu items', () => {
+it('persists hidden and reordered editor menu items', () => {
   const moved = moveDocumentHeaderMenuItem(DEFAULT_DOCUMENT_HEADER_MENU_ITEMS, 'system.compare-draft', 0);
   const separated = toggleDocumentHeaderMenuItemSeparator(moved, 'system.compare-draft', true);
   const hidden = toggleDocumentHeaderMenuItemVisibility(separated, 'system.publish-site', false);
@@ -40,11 +40,24 @@ it('persists hidden and reordered Topic menu items', () => {
 
   const loaded = loadDocumentHeaderMenuItems();
   expect(loaded[0]?.commandId).toBe(APP_COMMAND_IDS.toggleComparisonView);
-  expect(loaded[0]?.separatorAfter).toBe(true);
+  expect(loaded[0]?.separatorBefore).toBe(true);
   expect(loaded.find((item) => item.id === 'system.publish-site')?.visible).toBe(false);
 });
 
-it('lets the Topic menu customization command be hidden like other system commands', () => {
+it('migrates older separator-after settings to the next menu item', () => {
+  const legacyItems = [
+    { ...DEFAULT_DOCUMENT_HEADER_MENU_ITEMS[0]!, separatorAfter: true },
+    ...DEFAULT_DOCUMENT_HEADER_MENU_ITEMS.slice(1)
+  ] as unknown as Parameters<typeof saveDocumentHeaderMenuItems>[0];
+
+  saveDocumentHeaderMenuItems(legacyItems);
+
+  const loaded = loadDocumentHeaderMenuItems();
+  expect(loaded.find((item) => item.commandId === APP_COMMAND_IDS.publishToWordPress)?.separatorBefore).toBe(true);
+  expect(loaded.find((item) => item.commandId === APP_COMMAND_IDS.publishToFoliole)).not.toHaveProperty('separatorAfter');
+});
+
+it('lets the editor menu customization command be hidden like other system commands', () => {
   const hidden = toggleDocumentHeaderMenuItemVisibility(DEFAULT_DOCUMENT_HEADER_MENU_ITEMS, 'system.customize-menu', false);
 
   expect(hidden.find((item) => item.commandId === APP_COMMAND_IDS.customizeDocumentMenu)).toMatchObject({
@@ -69,7 +82,7 @@ it('adds custom commands and removes them without losing system defaults', () =>
   expect(removed.map((item) => item.commandId)).toEqual(resetDocumentHeaderMenuItems().map((item) => item.commandId));
 });
 
-it('stores the Topic menu under the whitelisted app setting key', () => {
+it('stores the editor menu under the whitelisted app setting key', () => {
   saveDocumentHeaderMenuItems(DEFAULT_DOCUMENT_HEADER_MENU_ITEMS);
 
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.documentHeaderMenuItems)).toContain(

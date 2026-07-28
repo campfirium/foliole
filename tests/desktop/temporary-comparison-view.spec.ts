@@ -92,7 +92,7 @@ async function replaceManualContent(desktopWindow: Page, dialog: ReturnType<Page
   return editor;
 }
 
-test('ordinary comparison lives in the Topic menu without a persistent header icon', async ({ desktopWindow }) => {
+test('ordinary comparison lives in the editor menu without a persistent header icon', async ({ desktopWindow }) => {
   await expectWorkspaceShell(desktopWindow);
   await seedTopic(desktopWindow);
   await openSeededTopic(desktopWindow);

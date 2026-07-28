@@ -79,7 +79,7 @@ it('groups settings sidebar entries by workspace, data, and sources', async () =
     'Publish',
     'Hotkeys',
     'Left toolbar',
-    'Topic menu',
+    'Editor menu',
     'Mouse gestures',
     'Right-click menu'
   ]);

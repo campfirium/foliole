@@ -1,4 +1,4 @@
-import { GripVertical, Minus, RotateCcw, Trash2 } from 'lucide-react';
+import { Eye, EyeOff, GripVertical, RotateCcw, Trash2 } from 'lucide-react';
 import { useState, type DragEvent } from 'react';
 
 import { APP_PALETTE_COMMANDS } from '../../../../app/hooks/appPaletteCommandList';
@@ -44,25 +44,27 @@ function DocumentMenuVisibilitySwitch(props: {
 }
 
 function DocumentMenuSeparatorButton(props: {
-  owner: { item: DocumentHeaderMenuItemConfig; label: string };
-  onToggle: (itemId: string, separatorAfter: boolean) => void;
+  item: DocumentHeaderMenuItemConfig;
+  label: string;
+  onToggle: (itemId: string, separatorBefore: boolean) => void;
 }) {
   const t = useTranslation();
-  const separatorEnabled = props.owner.item.separatorAfter === true;
+  const separatorEnabled = props.item.separatorBefore === true;
+  const SeparatorIcon = separatorEnabled ? Eye : EyeOff;
   return (
     <button
-      aria-label={t('settings.documentMenu.separatorAfter', { label: props.owner.label })}
+      aria-label={t('settings.documentMenu.separatorBefore', { label: props.label })}
       aria-pressed={separatorEnabled}
       className={[
-        'absolute left-1/2 top-0 z-10 inline-flex size-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border',
-        'border-settings-divider bg-settings-group text-foreground/42 transition-colors',
+        'absolute left-1/2 top-0 z-10 inline-flex size-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border',
+        'border-settings-divider bg-settings-group text-foreground/38 shadow-sm transition-colors',
         'hover:border-settings-control-border-hover hover:bg-settings-control-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
-        separatorEnabled ? 'border-settings-control-border-hover bg-settings-control-hover text-foreground' : ''
+        separatorEnabled ? 'border-settings-control-border-hover bg-settings-control-active text-foreground' : ''
       ].join(' ')}
-      onClick={() => props.onToggle(props.owner.item.id, !separatorEnabled)}
+      onClick={() => props.onToggle(props.item.id, !separatorEnabled)}
       type="button"
     >
-      <Minus aria-hidden="true" size={13} strokeWidth={2.2} />
+      <SeparatorIcon aria-hidden="true" size={14} strokeWidth={2} />
     </button>
   );
 }
@@ -74,8 +76,8 @@ function DocumentMenuManagerRow(props: {
   onDropItem: (item: DocumentHeaderMenuItemConfig, droppedItemId?: string) => void;
   onRemove: (itemId: string) => void;
   onToggle: (itemId: string, visible: boolean) => void;
-  onToggleSeparator: (itemId: string, separatorAfter: boolean) => void;
-  separatorOwner?: { item: DocumentHeaderMenuItemConfig; label: string };
+  onToggleSeparator: (itemId: string, separatorBefore: boolean) => void;
+  showSeparatorControl: boolean;
 }) {
   const t = useTranslation();
   return (
@@ -91,8 +93,8 @@ function DocumentMenuManagerRow(props: {
       onDrop={(event: DragEvent<HTMLDivElement>) => props.onDropItem(props.item, event.dataTransfer.getData('text/plain'))}
       title={props.label}
     >
-      {props.separatorOwner ? (
-        <DocumentMenuSeparatorButton owner={props.separatorOwner} onToggle={props.onToggleSeparator} />
+      {props.showSeparatorControl ? (
+        <DocumentMenuSeparatorButton item={props.item} label={props.label} onToggle={props.onToggleSeparator} />
       ) : null}
       <div className="absolute left-5 top-1/2 -translate-y-1/2 cursor-grab text-settings-icon active:cursor-grabbing">
         <GripVertical aria-hidden="true" size={16} />
@@ -156,12 +158,7 @@ export function SettingsDocumentMenuSection({ actionItems }: { actionItems: Hotk
             onRemove={menu.onRemoveMenuItem}
             onToggle={menu.onToggleMenuItem}
             onToggleSeparator={menu.onToggleMenuSeparator}
-            {...(previousItem ? {
-              separatorOwner: {
-                item: previousItem,
-                label: getDocumentMenuItemLabel(previousItem, t)
-              }
-            } : {})}
+            showSeparatorControl={Boolean(previousItem)}
           />
         );
       })}

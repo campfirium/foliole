@@ -45,7 +45,7 @@ function useDocumentHeaderMenuSettingsState() {
       [items, updateItems]
     ),
     onToggleMenuSeparator: useCallback(
-      (itemId: string, separatorAfter: boolean) => updateItems(toggleDocumentHeaderMenuItemSeparator(items, itemId, separatorAfter)),
+      (itemId: string, separatorBefore: boolean) => updateItems(toggleDocumentHeaderMenuItemSeparator(items, itemId, separatorBefore)),
       [items, updateItems]
     )
   };

@@ -8,11 +8,11 @@ const SCREENSHOT_PATH = path.resolve(
   '.tmp/artifacts/desktop-acceptance/document-publish-actions-menu.png'
 );
 
-test('exposes Topic publishing commands from the document actions menu', async ({ desktopWindow }, testInfo) => {
+test('exposes publishing commands from the editor menu', async ({ desktopWindow }, testInfo) => {
   await expectWorkspaceShell(desktopWindow);
-  const initialSettingsDialog = await openSettingsCategory(desktopWindow, 'TopicMenu');
+  const initialSettingsDialog = await openSettingsCategory(desktopWindow, 'EditorMenu');
   await initialSettingsDialog.getByRole('button', {
-    name: /^(Restore default Topic menu|恢复默认主题菜单)$/
+    name: /^(Restore default editor menu|恢复默认编辑器菜单)$/
   }).click();
   await desktopWindow.keyboard.press('Escape');
   await expect(initialSettingsDialog).toBeHidden();
@@ -28,9 +28,9 @@ test('exposes Topic publishing commands from the document actions menu', async (
   await desktopWindow.getByRole('menuitem', { name: /^(Customize menu\.\.\.|自定义菜单\.\.\.)$/ }).click();
 
   const settingsDialog = getSettingsDialog(desktopWindow);
-  await expect(settingsDialog.getByRole('heading', { level: 2, name: /^(Topic menu|主题菜单)$/ })).toBeVisible();
+  await expect(settingsDialog.getByRole('heading', { level: 2, name: /^(Editor menu|编辑器菜单)$/ })).toBeVisible();
   await settingsDialog.getByRole('button', {
-    name: /^(Show separator after Publish to the site|显示 Publish to the site 后的分割线)$/
+    name: /^(Show separator before Publish to WordPress|在 Publish to WordPress 前显示分割线)$/
   }).click();
   await settingsDialog.getByRole('switch', { name: /^(Show Publish to WordPress|显示 Publish to WordPress)$/ }).click();
   await settingsDialog.getByRole('switch', { name: /^(Show Customize menu\.\.\.|显示 自定义菜单\.\.\.)$/ }).click();

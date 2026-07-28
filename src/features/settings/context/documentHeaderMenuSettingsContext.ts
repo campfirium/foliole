@@ -9,7 +9,7 @@ export interface DocumentHeaderMenuSettingsValue {
   onRemoveMenuItem: (itemId: string) => void;
   onResetMenu: () => void;
   onToggleMenuItem: (itemId: string, visible: boolean) => void;
-  onToggleMenuSeparator: (itemId: string, separatorAfter: boolean) => void;
+  onToggleMenuSeparator: (itemId: string, separatorBefore: boolean) => void;
 }
 
 export const DocumentHeaderMenuSettingsContext = createContext<DocumentHeaderMenuSettingsValue | null>(null);

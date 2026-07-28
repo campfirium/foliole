@@ -128,8 +128,14 @@ function runMenuItemCommand(item: DocumentHeaderMenuItemConfig, args: DocumentHe
   args.onRunDocumentCommand?.(item.commandId);
 }
 
-function shouldRenderMenuSeparatorAfter(items: DocumentHeaderMenuItemConfig[], index: number) {
-  return items[index]?.separatorAfter === true && index < items.length - 1;
+function shouldRenderMenuSeparatorAfter(items: DocumentHeaderMenuItemConfig[], visibleItems: DocumentHeaderMenuItemConfig[], index: number) {
+  const currentItem = visibleItems[index];
+  const nextItem = visibleItems[index + 1];
+  if (!currentItem || !nextItem) return false;
+  const currentIndex = items.findIndex((item) => item.id === currentItem.id);
+  const nextIndex = items.findIndex((item) => item.id === nextItem.id);
+  if (currentIndex < 0 || nextIndex <= currentIndex) return false;
+  return items.slice(currentIndex + 1, nextIndex + 1).some((item) => item.separatorBefore === true);
 }
 
 function openDocumentMenuSettings(args: DocumentHeaderActionsProps) {
@@ -146,7 +152,7 @@ function renderDocumentMenuItems(items: DocumentHeaderMenuItemConfig[], args: Do
           <AppDropdownMenuItem onSelect={() => runMenuItemCommand(item, args)}>
             {getMenuItemLabel(item, args)}
           </AppDropdownMenuItem>
-          {shouldRenderMenuSeparatorAfter(visibleItems, index) ? <AppDropdownMenuSeparator /> : null}
+          {shouldRenderMenuSeparatorAfter(items, visibleItems, index) ? <AppDropdownMenuSeparator /> : null}
         </Fragment>
       ))}
     </>

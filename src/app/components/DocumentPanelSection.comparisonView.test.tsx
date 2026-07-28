@@ -1,4 +1,5 @@
 import { act, fireEvent, screen } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const manualDraftMocks = vi.hoisted(() => ({
@@ -8,6 +9,22 @@ const manualDraftMocks = vi.hoisted(() => ({
 }));
 
 vi.mock('./manualComparisonDraftRepository', () => manualDraftMocks);
+
+vi.mock('../../features/settings/context/DocumentHeaderMenuSettingsProvider', async () => {
+  const { DEFAULT_DOCUMENT_HEADER_MENU_ITEMS } = await import('../../features/settings/model/documentHeaderMenuSettings');
+  return {
+    DocumentHeaderMenuSettingsProvider: (props: { children: ReactNode }) => props.children,
+    useDocumentHeaderMenuSettings: () => ({
+      items: DEFAULT_DOCUMENT_HEADER_MENU_ITEMS,
+      onAddMenuItem: vi.fn(),
+      onMoveMenuItem: vi.fn(),
+      onRemoveMenuItem: vi.fn(),
+      onResetMenu: vi.fn(),
+      onToggleMenuItem: vi.fn(),
+      onToggleMenuSeparator: vi.fn()
+    })
+  };
+});
 
 import {
   createSectionElement,
@@ -32,7 +49,7 @@ beforeEach(() => {
 });
 
 describe('DocumentPanelSection manual comparison view', () => {
-  it('keeps ordinary comparison in the Topic menu and out of the header icon row', async () => {
+  it('keeps ordinary comparison in the editor menu and out of the header icon row', async () => {
     renderSection();
     expect(screen.queryByRole('button', { name: 'Compare with Draft' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Review Source Update' })).not.toBeInTheDocument();

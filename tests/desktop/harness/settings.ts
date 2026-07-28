@@ -8,7 +8,7 @@ const CATEGORY_NAMES = {
   General: /^(General|通用)$/,
   Hotkeys: /^(Hotkeys|快捷键)$/,
   Sync: /^(Sync|同步)$/,
-  TopicMenu: /^(Topic menu|主题菜单)$/,
+  EditorMenu: /^(Editor menu|编辑器菜单)$/,
   Typography: /^(Typography|字体与排版)$/
 } as const;
 const SETTINGS_CATEGORIES_LABEL = /^(Settings categories|设置分类)$/;

@@ -58,7 +58,7 @@ async function openDocumentActionsMenu() {
   });
 }
 
-it('exposes every publishing command from the Topic actions menu', async () => {
+it('exposes every publishing command from the editor menu', async () => {
   const onRunDocumentCommand = vi.fn();
   renderWithLocalization(
     <PublishHeaderActions onRunDocumentCommand={onRunDocumentCommand} showPublishActions />
@@ -77,11 +77,11 @@ it('exposes every publishing command from the Topic actions menu', async () => {
   expect(onRunDocumentCommand).toHaveBeenCalledWith(APP_COMMAND_IDS.publishToWordPress);
 });
 
-it('renders configured Topic menu separators', async () => {
+it('renders configured editor menu separators', async () => {
   renderWithLocalization(
     <PublishHeaderActions
       menuItems={DEFAULT_DOCUMENT_HEADER_MENU_ITEMS.map((item) =>
-        item.commandId === APP_COMMAND_IDS.publishToFoliole ? { ...item, separatorAfter: true } : item
+        item.commandId === APP_COMMAND_IDS.publishToWordPress ? { ...item, separatorBefore: true } : item
       )}
       showPublishActions
     />
@@ -92,7 +92,26 @@ it('renders configured Topic menu separators', async () => {
   expect(screen.getAllByRole('separator')).toHaveLength(1);
 });
 
-it('applies configured Topic menu order and hidden commands', async () => {
+it('keeps separators stable when hidden commands are between visible commands', async () => {
+  renderWithLocalization(
+    <PublishHeaderActions
+      menuItems={DEFAULT_DOCUMENT_HEADER_MENU_ITEMS.map((item) => {
+        if (item.commandId === APP_COMMAND_IDS.publishToWordPress) {
+          return { ...item, separatorBefore: true, visible: false };
+        }
+        return item;
+      })}
+      showPublishActions
+    />
+  );
+
+  await openDocumentActionsMenu();
+
+  expect(screen.queryByRole('menuitem', { name: 'Publish to WordPress' })).not.toBeInTheDocument();
+  expect(screen.getAllByRole('separator')).toHaveLength(1);
+});
+
+it('applies configured editor menu order and hidden commands', async () => {
   renderWithLocalization(
     <PublishHeaderActions
       menuItems={[
@@ -111,7 +130,7 @@ it('applies configured Topic menu order and hidden commands', async () => {
   expect(items.slice(0, 2)).toEqual(['Compare with Draft', 'Switch to Source mode']);
 });
 
-it('opens Topic menu customization from the menu', async () => {
+it('opens editor menu customization from the menu', async () => {
   const onRunDocumentCommand = vi.fn();
   renderWithLocalization(
     <PublishHeaderActions onRunDocumentCommand={onRunDocumentCommand} showPublishActions={false} />
@@ -124,7 +143,7 @@ it('opens Topic menu customization from the menu', async () => {
   expect(onRunDocumentCommand).toHaveBeenCalledWith(APP_COMMAND_IDS.openSettings);
 });
 
-it('allows the Topic menu customization command to be hidden', async () => {
+it('allows the editor menu customization command to be hidden', async () => {
   renderWithLocalization(
     <PublishHeaderActions
       menuItems={DEFAULT_DOCUMENT_HEADER_MENU_ITEMS.map((item) =>

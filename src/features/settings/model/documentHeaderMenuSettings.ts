@@ -6,11 +6,13 @@ export interface DocumentHeaderMenuItemConfig {
   id: string;
   commandId: string;
   order: number;
-  separatorAfter?: boolean;
+  separatorBefore?: boolean;
   source: 'system' | 'user';
   visible: boolean;
   labelOverride?: string;
 }
+
+type StoredDocumentHeaderMenuItemConfig = DocumentHeaderMenuItemConfig & { separatorAfter?: boolean };
 
 export const DEFAULT_DOCUMENT_HEADER_MENU_ITEMS: DocumentHeaderMenuItemConfig[] = [
   { id: 'system.publish-site', commandId: APP_COMMAND_IDS.publishToFoliole, order: 0, source: 'system', visible: true },
@@ -28,7 +30,7 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function sanitizeStoredItem(value: unknown): DocumentHeaderMenuItemConfig | null {
+function sanitizeStoredItem(value: unknown): StoredDocumentHeaderMenuItemConfig | null {
   if (!isObject(value) || typeof value.id !== 'string' || typeof value.commandId !== 'string') {
     return null;
   }
@@ -36,20 +38,36 @@ function sanitizeStoredItem(value: unknown): DocumentHeaderMenuItemConfig | null
     id: value.id,
     commandId: value.commandId,
     order: typeof value.order === 'number' && Number.isFinite(value.order) ? value.order : 0,
-    separatorAfter: value.separatorAfter === true,
+    ...(value.separatorAfter === true ? { separatorAfter: true } : {}),
+    separatorBefore: value.separatorBefore === true,
     source: value.source === 'user' ? 'user' : 'system',
     visible: typeof value.visible === 'boolean' ? value.visible : true,
     ...(typeof value.labelOverride === 'string' && value.labelOverride.trim() ? { labelOverride: value.labelOverride.trim() } : {})
   };
 }
 
-function normalizeOrder(items: DocumentHeaderMenuItemConfig[]) {
+function normalizeOrder<T extends { id: string; order: number }>(items: T[]) {
   return [...items]
     .sort((left, right) => left.order - right.order || left.id.localeCompare(right.id))
     .map((item, order) => ({ ...item, order }));
 }
 
-export function normalizeDocumentHeaderMenuItems(items: DocumentHeaderMenuItemConfig[] = DEFAULT_DOCUMENT_HEADER_MENU_ITEMS) {
+function normalizeSeparatorBoundaries(items: StoredDocumentHeaderMenuItemConfig[]) {
+  const orderedItems = normalizeOrder(items);
+  return orderedItems.map((item, index) => {
+    return {
+      commandId: item.commandId,
+      id: item.id,
+      ...(item.labelOverride ? { labelOverride: item.labelOverride } : {}),
+      order: item.order,
+      separatorBefore: item.separatorBefore === true || orderedItems[index - 1]?.separatorAfter === true,
+      source: item.source,
+      visible: item.visible
+    };
+  });
+}
+
+export function normalizeDocumentHeaderMenuItems(items: StoredDocumentHeaderMenuItemConfig[] = DEFAULT_DOCUMENT_HEADER_MENU_ITEMS) {
   const storedById = new Map(items.map((item) => [item.id, item]));
   const defaults = DEFAULT_DOCUMENT_HEADER_MENU_ITEMS.map((defaultItem) => ({
     ...defaultItem,
@@ -59,11 +77,12 @@ export function normalizeDocumentHeaderMenuItems(items: DocumentHeaderMenuItemCo
   }));
   const custom = items.filter((item) => item.source === 'user' && !SYSTEM_ITEM_IDS.has(item.id));
   const seen = new Set<string>();
-  return normalizeOrder([...defaults, ...custom].filter((item) => {
+  const filtered = [...defaults, ...custom].filter((item) => {
     if (!item.id || !item.commandId || seen.has(item.id)) return false;
     seen.add(item.id);
     return true;
-  }));
+  }) as StoredDocumentHeaderMenuItemConfig[];
+  return normalizeSeparatorBoundaries(filtered);
 }
 
 export function resetDocumentHeaderMenuItems() {
@@ -74,8 +93,8 @@ export function toggleDocumentHeaderMenuItemVisibility(items: DocumentHeaderMenu
   return normalizeDocumentHeaderMenuItems(items.map((item) => (item.id === itemId ? { ...item, visible } : item)));
 }
 
-export function toggleDocumentHeaderMenuItemSeparator(items: DocumentHeaderMenuItemConfig[], itemId: string, separatorAfter: boolean) {
-  return normalizeDocumentHeaderMenuItems(items.map((item) => (item.id === itemId ? { ...item, separatorAfter } : item)));
+export function toggleDocumentHeaderMenuItemSeparator(items: DocumentHeaderMenuItemConfig[], itemId: string, separatorBefore: boolean) {
+  return normalizeDocumentHeaderMenuItems(items.map((item) => (item.id === itemId ? { ...item, separatorBefore } : item)));
 }
 
 export function moveDocumentHeaderMenuItem(items: DocumentHeaderMenuItemConfig[], itemId: string, order: number) {

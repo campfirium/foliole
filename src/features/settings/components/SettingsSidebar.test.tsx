@@ -71,7 +71,7 @@ it('groups workspace and control settings in product order', () => {
   expect(Array.from(controls?.querySelectorAll('button') ?? []).map((button) => button.textContent)).toEqual([
     'Hotkeys',
     'Left toolbar',
-    'Topic menu',
+    'Editor menu',
     'Mouse gestures',
     'Right-click menu'
   ]);
