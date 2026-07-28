@@ -6,6 +6,7 @@ import {
   type FeedbackSubmissionPayload
 } from '../../shared/feedback/feedbackContract';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
+import { resolveRuntimeUpdateTarget } from '../../shared/platform/updateTarget';
 import {
   AppDialogContent,
   AppSpinner,
@@ -98,7 +99,7 @@ export function createFeedbackPayload(draft: FeedbackDraft, turnstileToken: stri
     metadata: {
       appVersion: draft.appVersion,
       language: navigator.language,
-      platform: draft.isDemo ? 'demo' : 'desktop'
+      platform: draft.isDemo ? 'demo' : resolveRuntimeUpdateTarget().platform
     },
     name: draft.name,
     turnstileToken

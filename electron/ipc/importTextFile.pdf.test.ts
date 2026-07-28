@@ -62,7 +62,7 @@ beforeEach(() => {
 
 it('supports selecting and importing PDF files through the manual import flow', async () => {
   await expect(selectImportTextFile()).resolves.toEqual({
-    content: '# paper\n\nLinked PDF source ready for the reader surface.',
+    content: '',
     file_name: 'paper.pdf',
     file_path: '/tmp/paper.pdf',
     kind: 'pdf'

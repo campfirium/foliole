@@ -60,15 +60,16 @@ beforeEach(() => {
   });
 });
 
-it('converts HTML selection into markdown-compatible text with visible degraded placeholders', async () => {
+it('returns the selected HTML file without preloading the full content', async () => {
   readFile.mockResolvedValue(DEGRADED_HTML);
 
   await expect(selectImportTextFile()).resolves.toEqual({
-    content: DEGRADED_HTML_MARKDOWN,
+    content: '',
     file_name: 'inbox.html',
     file_path: '/tmp/inbox.html',
     kind: 'html'
   });
+  expect(readFile).not.toHaveBeenCalled();
 });
 
 it('marks HTML file imports as degraded when conversion had to fall back', async () => {

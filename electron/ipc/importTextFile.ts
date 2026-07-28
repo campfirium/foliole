@@ -138,25 +138,13 @@ export function runImportForMirrorDocument(documentId: string, args?: NativeText
   return result;
 }
 
-export async function selectImportTextFile(
-  window?: BrowserWindow | null,
-  args?: NativeTextImportArgs
-): Promise<NativeImportedTextFile | null> {
+export async function selectImportTextFile(window?: BrowserWindow | null): Promise<NativeImportedTextFile | null> {
   const filePath = await selectImportFilePath(window);
   if (!filePath) {
     return null;
   }
   const source = resolveSingleFileImportSource(filePath);
-  const content =
-    source.kind === 'epub'
-      ? await loadEpubPreview(source)
-      : (
-          await loadPreparedImportRecord(source, {
-            highlightPolicy: resolveImportHighlightPolicy(args),
-            importedAt: new Date().toISOString(),
-            titleStrategy: resolveImportNodeTitleStrategy(args)
-          })
-        ).content;
+  const content = source.kind === 'epub' ? await loadEpubPreview(source) : '';
 
   return {
     content,
