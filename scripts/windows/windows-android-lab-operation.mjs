@@ -11,7 +11,7 @@ import { readJson, writeJsonAtomic } from './windows-android-lab-state.mjs';
 const OUTPUT_LIMIT = 1_000_000;
 const ENV_KEYS = [
   'ANDROID_USER_HOME', 'ANDROID_WINDOWS_WORKDIR', 'FOLIOLE_ANDROID_ADB_PATH', 'FOLIOLE_ANDROID_BASH_PATH',
-  'FOLIOLE_ANDROID_LAB_EVIDENCE_ROOT', 'FOLIOLE_ANDROID_SERIAL', 'JAVA_HOME', 'LOCALAPPDATA', 'PATH', 'Path',
+  'FOLIOLE_ANDROID_LAB_EVIDENCE_ROOT', 'FOLIOLE_ANDROID_SERIAL', 'JAVA_HOME', 'LOCALAPPDATA', 'PATH', 'PATHEXT', 'Path',
   'SystemRoot', 'TEMP', 'TMP', 'USERPROFILE', 'WINDIR'
 ];
 
@@ -57,6 +57,7 @@ function operationEnvironment(config, paths, evidenceRoot, spec) {
   const tools = [config.nodeDirectory, path.win32.dirname(config.adbPath)].filter(Boolean).join(';');
   env.Path = `${tools};${env.Path || env.PATH || ''}`;
   delete env.PATH;
+  env.PATHEXT ||= '.COM;.EXE;.BAT;.CMD';
   env.ANDROID_USER_HOME = paths.signingHome;
   env.ANDROID_WINDOWS_WORKDIR = paths.checkout;
   env.FOLIOLE_ANDROID_ADB_PATH = config.adbPath;
