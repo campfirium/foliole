@@ -6,6 +6,7 @@
 
 - 当前仓库是多平台单仓：`Electron + React + TypeScript + Vite + Capacitor`；主要宿主与表面为 `electron/`、`android/`、`src/app/`、`src/companion/`、`src/shared/platform/`。
 - 默认在 `dev` 主干按 Track-Based 连续小步推进；不创建 feature branch / worktree，除非用户明确要求。
+- 创建 Foliole 新 Codex 任务时，若用户未明确要求 worktree，必须使用 saved project 的 `local` 环境；不得采用 `create_thread` 工具对 Git 仓库“默认 worktree”的通用建议。
 - 单次只交付一个可运行、可验证、可回退的能力闭环；闭环以用户可验收行为、数据语义或迁移语义为边界，不以文件、函数、测试断言、提交数量或“超过 3 个文件”为边界。
 - 能力闭环必须覆盖本轮承诺所需的入口、模型、消费侧、必要持久化、边界防护和验证；新增功能覆盖用户入口、状态模型、业务行为、失败或空状态，Bug 修复覆盖现象确认、根因修复、回归验证和用户可见结果恢复。
 - 禁止混入无关重构，也禁止把同一闭环拆成微任务；同一闭环内必要的模型、入口、消费侧、测试、边界防护和生成物更新必须一起收口。
@@ -109,6 +110,7 @@
 - E2E（Playwright）不进入任何质量闸；它作为宿主可见验收单独执行。桌面日常 agent 自动化验收优先按 `electron/AGENTS.md` 使用不干扰用户桌面的 Playwright 入口，人工预览仍按下表执行。
 - Windows Android Lab 日常按 DEV-first 远程工作站使用：Windows native dev 与 A5 Android dev-server 预览优先服务开发调试；CI 级 clean / bundled / release-like 终检默认由 GitHub / T5 或明确触发的重模式承担，不得把旧 final acceptance 作为默认 Android Lab 验收。
 - 普通开发任务只跑改动相关的最小本地验证，不默认等待 hosted 中度或重度质检；每日两次 T5 负责常规 full hosted 兜底。`node scripts/quality/remote-quality.mjs --scope <desktop|shared|android|ios|full>` 仅用于 T5 修复后的即时复验、发布流程或用户明确要求，并且只验证远端不可变 SHA、显示唯一 run URL、等待结果并在失败时读取日志。不得为触发质检隐式 commit / push，目标 SHA 不在远端时必须停下等待授权，不得回退到其他 SHA。
+- 运行命令后若工具返回非终态、无新增输出、仅 heartbeat / progress，或 agent 准备汇报“仍在运行 / 继续等 / 再查一次”，必须触发 `$quiet-wait`；后续用 waiter 接管等待，不得用 agent 回合继续守进程。
 - `copy:guard` 默认只报告 warning；若它报 warning，修复前先读 `.lab/specs/_product/terminology-and-copy.md`，禁止机械替换。
 
 | 条件 | 预览决策 |
