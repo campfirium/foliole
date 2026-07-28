@@ -69,9 +69,11 @@ it('atomically creates root sibling Topics, updates order, trashes the source, a
   const result = splitTopic({
     activeNodeId: 'part-a',
     deletedAt: '2026-07-28T00:01:00.000Z',
+    disposition: 'replace',
     generatedNodes: [generatedTopic('part-a', null, 2), generatedTopic('part-b', null, 3)],
     nodeOrder: ['root-a', 'source', 'part-a', 'part-b', 'root-b'],
-    sourceNodeId: 'source'
+    sourceNodeId: 'source',
+    sourceParentNodeId: null
   });
 
   expect(result).toMatchObject({
@@ -85,6 +87,7 @@ it('atomically creates root sibling Topics, updates order, trashes the source, a
   expect(getNodeOrderRows().map((row) => row.node_id)).toEqual(['root-a', 'source', 'part-a', 'part-b', 'root-b']);
   expect(readSyncDirty('source')?.sync_dirty).toBe(0);
   expect(readSyncDirty('part-a')?.sync_dirty).toBe(0);
+  expect(publishGuardMocks.assertFoliolePublishedDeleteAllowed).toHaveBeenCalledWith(['source']);
 });
 
 it('creates generated Topics as folder siblings without hiding them when the source is restored', () => {
@@ -95,9 +98,11 @@ it('creates generated Topics as folder siblings without hiding them when the sou
   splitTopic({
     activeNodeId: 'part-a',
     deletedAt: '2026-07-28T00:01:00.000Z',
+    disposition: 'replace',
     generatedNodes: [generatedTopic('part-a', 'folder', 2), generatedTopic('part-b', 'folder', 3)],
     nodeOrder: ['folder', 'source', 'part-a', 'part-b', 'sibling'],
-    sourceNodeId: 'source'
+    sourceNodeId: 'source',
+    sourceParentNodeId: 'folder'
   });
   restoreNodes({ nodeIds: ['source'] });
 
@@ -105,6 +110,33 @@ it('creates generated Topics as folder siblings without hiding them when the sou
   expect(getNodeRow('part-a')?.deleted_at).toBeNull();
   expect(getNodeRow('part-b')?.parent_id).toBe('folder');
   expect(getNodeOrderRows().map((row) => row.node_id)).toEqual(['folder', 'source', 'part-a', 'part-b', 'sibling']);
+});
+
+it('keeps the source and inserts generated Topics as its first direct children', () => {
+  seedNode('folder', null, 0);
+  seedNode('source', 'folder', 1);
+  seedNode('old-child', 'source', 2);
+  seedNode('grandchild', 'old-child', 3);
+  seedNode('sibling', 'folder', 4);
+
+  const result = splitTopic({
+    activeNodeId: 'part-a',
+    disposition: 'keep-as-parent',
+    generatedNodes: [generatedTopic('part-a', 'source', 2), generatedTopic('part-b', 'source', 3)],
+    nodeOrder: ['folder', 'source', 'part-a', 'part-b', 'old-child', 'grandchild', 'sibling'],
+    sourceNodeId: 'source',
+    sourceParentNodeId: 'folder'
+  });
+
+  expect(result.deletedNodeIds).toEqual([]);
+  expect(getNodeRow('source')?.deleted_at).toBeNull();
+  expect(getNodeRow('part-a')?.parent_id).toBe('source');
+  expect(getNodeRow('old-child')?.parent_id).toBe('source');
+  expect(getNodeRow('grandchild')?.parent_id).toBe('old-child');
+  expect(getNodeOrderRows().map((row) => row.node_id)).toEqual([
+    'folder', 'source', 'part-a', 'part-b', 'old-child', 'grandchild', 'sibling'
+  ]);
+  expect(publishGuardMocks.assertFoliolePublishedDeleteAllowed).not.toHaveBeenCalled();
 });
 
 it('rolls back generated Topics, order, and source Trash when any write fails', () => {
@@ -115,9 +147,11 @@ it('rolls back generated Topics, order, and source Trash when any write fails', 
   expect(() => splitTopic({
     activeNodeId: 'part-a',
     deletedAt: '2026-07-28T00:01:00.000Z',
+    disposition: 'replace',
     generatedNodes: [generatedTopic('part-a', 'missing-parent', 1)],
     nodeOrder: ['source', 'part-a', 'sibling'],
-    sourceNodeId: 'source'
+    sourceNodeId: 'source',
+    sourceParentNodeId: null
   })).toThrow();
 
   expect(getNodeRow('source')?.deleted_at).toBeNull();

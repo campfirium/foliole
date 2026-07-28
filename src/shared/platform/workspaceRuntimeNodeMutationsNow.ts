@@ -129,13 +129,15 @@ export async function saveWorkspaceNodeContentMutationWithAnchors(args: {
   }
 }
 
-export async function saveSplitTopicWorkspaceMutation(args: {
+type SaveSplitTopicWorkspaceMutationArgs = {
   activeNodeId: string;
-  deletedAt: string;
   generatedNodes: WorkspaceRuntimeNode[];
   nodeOrder: string[];
   sourceNodeId: string;
-}): Promise<WorkspaceNodeMutationPatchResult | null> {
+  sourceParentNodeId: string | null;
+} & ({ deletedAt: string; disposition: 'replace' } | { disposition: 'keep-as-parent' });
+
+export async function saveSplitTopicWorkspaceMutation(args: SaveSplitTopicWorkspaceMutationArgs): Promise<WorkspaceNodeMutationPatchResult | null> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
     return null;
@@ -143,12 +145,14 @@ export async function saveSplitTopicWorkspaceMutation(args: {
   try {
     const result = await runtimeInvoke(NATIVE_COMMANDS.splitTopic, {
       activeNodeId: args.activeNodeId,
-      deletedAt: args.deletedAt,
+      ...(args.disposition === 'replace' ? { deletedAt: args.deletedAt! } : {}),
+      disposition: args.disposition,
       generatedNodes: args.generatedNodes.map((node) =>
         createWorkspaceRuntimeNodeSnapshot(node, args.nodeOrder.indexOf(node.id))
       ),
       nodeOrder: args.nodeOrder,
-      sourceNodeId: args.sourceNodeId
+      sourceNodeId: args.sourceNodeId,
+      sourceParentNodeId: args.sourceParentNodeId
     });
     return isNodeMutationPatchResult(result) ? result : null;
   } catch (error) {

@@ -22,6 +22,7 @@ const CONTRACT_FILES = [
   'nativeReadwiseCommandMap.ts',
   'nativeRemoteImageCommandMap.ts',
   'nativeSearchIndexCommandMap.ts',
+  'nativeSplitTopicPreferencesContract.ts',
   'nativeSyncCommandMap.ts',
   'nativeTrashCommandMap.ts',
   'nativeUpdateContract.ts',

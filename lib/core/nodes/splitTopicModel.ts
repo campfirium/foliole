@@ -19,7 +19,8 @@ export interface SplitTopicOrderInput {
 
 const NODE_TITLE_MAX_CHARS = 100;
 const UNTITLED_NODE_TITLE = 'Untitled';
-const MARKDOWN_HEADING_PATTERN = /^\s{0,3}#{1,6}\s+(.+)$/;
+const MARKDOWN_HEADING_PATTERN = /^( {0,3})(#{1,6})(?:[ \t]+(.*)|[ \t]*)$/;
+const MARKDOWN_FENCE_PATTERN = /^( {0,3})(`{3,}|~{3,})(.*)$/;
 
 function sanitizeTitleCandidate(value: string) {
   return value.trim().replace(/\s+/g, ' ').slice(0, NODE_TITLE_MAX_CHARS);
@@ -41,21 +42,53 @@ function stripMarkdownInline(value: string) {
     .replace(/[*_~`]+/g, '');
 }
 
+function visitMarkdownLines(content: string, visit: (line: string, heading: RegExpMatchArray | null, excluded: boolean) => void) {
+  let fence: { character: string; length: number } | null = null;
+  for (const line of content.split(/(?<=\n)/)) {
+    const text = line.replace(/\r?\n$/, '');
+    const fenceMatch = text.match(MARKDOWN_FENCE_PATTERN);
+    if (fenceMatch) {
+      const marker = fenceMatch[2]!;
+      if (!fence) fence = { character: marker[0]!, length: marker.length };
+      else if (marker[0] === fence.character && marker.length >= fence.length && fenceMatch[3]!.trim() === '') fence = null;
+      visit(line, null, true);
+      continue;
+    }
+    visit(line, fence ? null : text.match(MARKDOWN_HEADING_PATTERN), fence !== null);
+  }
+}
+
+function headingTitle(match: RegExpMatchArray) {
+  return sanitizeTitleCandidate(stripMarkdownInline((match[3] ?? '').replace(/[ \t]+#+[ \t]*$/, '')));
+}
+
 function deriveSplitTopicTitle(content: string) {
-  for (const line of content.split(/\r?\n/)) {
-    const match = line.match(MARKDOWN_HEADING_PATTERN);
-    const candidate = match ? sanitizeTitleCandidate(stripMarkdownInline(match[1] ?? '')) : '';
-    if (candidate) {
-      return candidate;
-    }
-  }
-  for (const line of content.split(/\r?\n/)) {
-    const candidate = sanitizeTitleCandidate(stripMarkdownInline(stripMarkdownPrefixes(line)));
-    if (candidate) {
-      return candidate;
-    }
-  }
+  let h1Title = '';
+  visitMarkdownLines(content, (_line, heading) => {
+    if (!h1Title && heading?.[2]?.length === 1) h1Title = headingTitle(heading);
+  });
+  if (h1Title) return h1Title;
+  let fallback = '';
+  visitMarkdownLines(content, (line, _heading, excluded) => {
+    if (!fallback && !excluded) fallback = sanitizeTitleCandidate(stripMarkdownInline(stripMarkdownPrefixes(line)));
+  });
+  if (fallback) return fallback;
   return UNTITLED_NODE_TITLE;
+}
+
+function promoteMarkdownHeadings(content: string) {
+  let shallowest = 7;
+  visitMarkdownLines(content, (_line, heading) => {
+    if (heading) shallowest = Math.min(shallowest, heading[2]!.length);
+  });
+  if (shallowest === 7 || shallowest === 1) return content;
+  const offset = shallowest - 1;
+  const promoted: string[] = [];
+  visitMarkdownLines(content, (line, heading) => {
+    if (!heading) promoted.push(line);
+    else promoted.push(`${heading[1]}${'#'.repeat(heading[2]!.length - offset)}${line.slice(heading[1]!.length + heading[2]!.length)}`);
+  });
+  return promoted.join('');
 }
 
 function appendAffixes(body: string, headerText: string, footerText: string) {
@@ -83,10 +116,11 @@ export function buildSplitTopicPreview(input: SplitTopicPreviewInput): SplitTopi
   const headerText = input.headerText ?? '';
   const footerText = input.footerText ?? '';
   return splitContent(input).map((part) => {
-    const body = appendAffixes(part, headerText, footerText);
+    const promotedPart = promoteMarkdownHeadings(part);
+    const body = appendAffixes(promotedPart, headerText, footerText);
     return {
       body,
-      title: deriveSplitTopicTitle(body)
+      title: deriveSplitTopicTitle(promotedPart)
     };
   });
 }

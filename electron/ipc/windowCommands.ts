@@ -27,6 +27,7 @@ import { handleInitialLibrarySetupCommand } from './initialLibrarySetupCommands.
 import { resolveAllowedLocalOpenPath } from './localOpenPathGuard.js';
 import { syncAppMenuState } from './menu.js';
 import { resolveAppPaths } from './paths.js';
+import { handleSplitTopicPreferencesCommand } from './splitTopicPreferencesCommands.js';
 
 function asShortcutAccelerators(value: unknown) {
   if (!Array.isArray(value)) {
@@ -217,6 +218,8 @@ function handleUtilityCommand(request: InvokeRequest) {
 }
 
 export async function handleWindowAndUtilityCommand(request: InvokeRequest, context?: InvokeContext): Promise<unknown> {
+  const splitTopicPreferencesResult = handleSplitTopicPreferencesCommand(request);
+  if (splitTopicPreferencesResult !== undefined) return splitTopicPreferencesResult;
   const displayScaleResult = handleDisplayScaleCommand(request, context);
   if (displayScaleResult !== undefined) return displayScaleResult;
   const setupResult = handleInitialLibrarySetupCommand(request, resolveTargetWindow(context));

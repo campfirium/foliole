@@ -17,6 +17,7 @@ import type { NativeSaveNodeReviewStateArgs } from './nativeNodeReviewStateContr
 import type { NativeReadwiseCommandMap } from './nativeReadwiseCommandMap.js';
 import type { NativeRemoteImageCommandMap } from './nativeRemoteImageCommandMap.js';
 import type { NativeSearchIndexCommandMap } from './nativeSearchIndexCommandMap.js';
+import type { NativeSplitTopicPreferencesCommandMap } from './nativeSplitTopicPreferencesContract.js';
 import type {
   NativeApplyReviewGradeArgs, NativeImportClipboardImageAttachmentArgs, NativeImportLocalImageAttachmentArgs,
   NativeImportRemoteImageAttachmentArgs, NativeImportLocalImageAttachmentResult,
@@ -35,7 +36,7 @@ import type { NativeDesktopUpdateCommandMap } from './nativeUpdateContract.js';
 import type { NativeUtilityCommandMap } from './nativeUtilityCommandMap.js';
 import type { NativeAttachmentResourceResolution, NativeReviewGradeArgs, NativeReviewGradeResult, NativeReviewPreviewArgs, NativeReviewPreviewResult } from './nativeUtilityContract.js';
 import type { NativeWordPressPublishCommandMap } from './nativeWordPressPublishContract.js';
-export type * from './nativeStorageContract.js'; export type * from './nativeDiscoursePublishContract.js'; export type * from './nativeImportContract.js'; export type * from './nativeLocalFileCommandMap.js'; export type * from './nativeNodeMutationContract.js';
+export type * from './nativeStorageContract.js'; export type * from './nativeDiscoursePublishContract.js'; export type * from './nativeImportContract.js'; export type * from './nativeLocalFileCommandMap.js'; export type * from './nativeNodeMutationContract.js'; export type * from './nativeSplitTopicPreferencesContract.js';
 export type * from './nativeFoliolePublishContract.js';
 export type * from './nativeReadwiseContract.js'; export type * from './nativeUtilityContract.js'; export type * from './nativeWordPressPublishContract.js';
 export type * from './nativeSourceDispositionContract.js';
@@ -44,7 +45,7 @@ export type * from './nativeNodeOpenStateContract.js';
 export type * from './nativeAideStorageContract.js';
 export type * from './nativeAssistantImageContract.js';
 
-export type NativeCommandMap = NativeAssistantCommandMap & NativeAideStorageCommandMap & NativeDesktopUpdateCommandMap & NativeDisplayScaleCommandMap & NativeUtilityCommandMap & NativeReadwiseCommandMap & NativeExternalSearchCommandMap & NativeFoliolePublishCommandMap & NativeDiscoursePublishCommandMap & NativeWordPressPublishCommandMap & NativeLocalFileCommandMap & NativeSearchIndexCommandMap & NativeSyncCommandMap & NativeImportCommandMap & NativeInitialLibrarySetupCommandMap & NativeRemoteImageCommandMap & NativeMoveCommandMap & NativeTrashCommandMap & {
+export type NativeCommandMap = NativeAssistantCommandMap & NativeAideStorageCommandMap & NativeDesktopUpdateCommandMap & NativeDisplayScaleCommandMap & NativeUtilityCommandMap & NativeReadwiseCommandMap & NativeExternalSearchCommandMap & NativeFoliolePublishCommandMap & NativeDiscoursePublishCommandMap & NativeWordPressPublishCommandMap & NativeLocalFileCommandMap & NativeSearchIndexCommandMap & NativeSyncCommandMap & NativeImportCommandMap & NativeInitialLibrarySetupCommandMap & NativeRemoteImageCommandMap & NativeMoveCommandMap & NativeTrashCommandMap & NativeSplitTopicPreferencesCommandMap & {
   [NATIVE_COMMANDS.bootReport]: {
     args: {
       stage: string;

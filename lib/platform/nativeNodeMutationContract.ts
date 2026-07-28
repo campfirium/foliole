@@ -29,13 +29,18 @@ export type NativeNodeCreationMutationArgs = NativeNodeSnapshotArgs & {
   nodeOrder: string[];
 };
 
-export interface NativeSplitTopicMutationArgs {
+interface NativeSplitTopicMutationBaseArgs {
   activeNodeId: string;
-  deletedAt: string;
   generatedNodes: NativeNodeSnapshotArgs[];
   nodeOrder: string[];
   sourceNodeId: string;
+  sourceParentNodeId: string | null;
 }
+
+export type NativeSplitTopicMutationArgs = NativeSplitTopicMutationBaseArgs & (
+  | { deletedAt: string; disposition: 'replace' }
+  | { disposition: 'keep-as-parent' }
+);
 
 export type NativeNodeSnapshotMutationSpec = {
   args: NativeNodeSnapshotArgs;

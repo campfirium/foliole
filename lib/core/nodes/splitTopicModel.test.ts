@@ -35,7 +35,7 @@ describe('buildSplitTopicPreview', () => {
     ]);
   });
 
-  it('adds shared header and footer before deriving titles', () => {
+  it('adds shared Before and After text without overriding fragment titles', () => {
     expect(buildSplitTopicPreview({
       content: 'alpha---beta',
       delimiter: '---',
@@ -43,9 +43,31 @@ describe('buildSplitTopicPreview', () => {
       headerText: '# Shared\n\n',
       keepDelimiter: false
     })).toEqual([
-      { body: '# Shared\n\nalpha\nTail', title: 'Shared' },
-      { body: '# Shared\n\nbeta\nTail', title: 'Shared' }
+      { body: '# Shared\n\nalpha\nTail', title: 'alpha' },
+      { body: '# Shared\n\nbeta\nTail', title: 'beta' }
     ]);
+  });
+});
+
+describe('buildSplitTopicPreview heading promotion', () => {
+  it.each([
+    ['# H1\n## H2', '# H1\n## H2'],
+    ['## H2\n### H3', '# H2\n## H3'],
+    ['##### H5\n###### H6', '# H5\n## H6'],
+    ['### First\n#### Child\n### Second', '# First\n## Child\n# Second'],
+    ['   ### Indented\n    ## Four spaces', '   # Indented\n    ## Four spaces'],
+    ['plain body', 'plain body'],
+    ['### Title ###\nBody', '# Title ###\nBody']
+  ])('promotes headings as one relative hierarchy: %s', (content, expected) => {
+    expect(buildSplitTopicPreview({ content: `${content}---tail`, delimiter: '---', keepDelimiter: false })[0]).toMatchObject({ body: expected });
+  });
+
+  it('ignores headings in backtick and tilde fences, including longer closing fences', () => {
+    const content = '```js\n# Fake\n````\n### Real\n~~~\n## Also fake\n~~~\n---tail';
+    expect(buildSplitTopicPreview({ content, delimiter: '---', keepDelimiter: false })[0]).toEqual({
+      body: '```js\n# Fake\n````\n# Real\n~~~\n## Also fake\n~~~\n',
+      title: 'Real'
+    });
   });
 
   it('derives bounded semantic titles without Part labels', () => {
