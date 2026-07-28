@@ -1,7 +1,12 @@
 import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import { settingsButtonClassName } from '../../../../shared/ui';
+import {
+  AppTooltip,
+  AppTooltipContent,
+  AppTooltipTrigger,
+  settingsButtonClassName
+} from '../../../../shared/ui';
 
 export function SettingsSupportButton(props: {
   ariaLabel?: string | undefined;
@@ -12,10 +17,11 @@ export function SettingsSupportButton(props: {
   onRunSupportCommand?: ((commandId: string) => void) | undefined;
   onRunStart?: (() => void) | undefined;
   onRunAction?: (() => void) | undefined;
+  tooltip?: string | undefined;
 }) {
   const Icon = props.icon;
   const canRun = Boolean(props.onRunAction || (props.commandId && props.onRunSupportCommand));
-  return (
+  const button = (
     <button
       aria-label={props.ariaLabel}
       className={settingsButtonClassName(`gap-2 ${props.className ?? ''}`)}
@@ -33,5 +39,14 @@ export function SettingsSupportButton(props: {
       {Icon ? <Icon aria-hidden="true" className="size-4 shrink-0 text-settings-icon-active" strokeWidth={1.8} /> : null}
       {props.children}
     </button>
+  );
+  if (!props.tooltip) {
+    return button;
+  }
+  return (
+    <AppTooltip>
+      <AppTooltipTrigger asChild>{button}</AppTooltipTrigger>
+      <AppTooltipContent side="top">{props.tooltip}</AppTooltipContent>
+    </AppTooltip>
   );
 }

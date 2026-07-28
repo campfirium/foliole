@@ -241,7 +241,7 @@ it('localizes About and General settings rows in Simplified Chinese', () => {
 
   expect(screen.getByText('诊断报告')).toBeInTheDocument();
   expect(screen.getByText('发送私下反馈，可选择留下联系方式和图片；也可以通过邮件继续沟通。')).toBeInTheDocument();
-  expect(screen.getByText('打开源代码、社区讨论、问题列表和视频更新入口。')).toBeInTheDocument();
+  expect(screen.getByText('项目与社区入口。')).toBeInTheDocument();
   expect(screen.getByRole('combobox', { name: '全文搜索语言' })).toBeInTheDocument();
   expect(screen.getByText('选择 Foliole 如何准备全文搜索。中文、日文或韩文会使用更多搜索数据。')).toBeInTheDocument();
   expect(screen.queryByText('Diagnostic report')).not.toBeInTheDocument();

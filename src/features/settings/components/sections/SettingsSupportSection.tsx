@@ -30,19 +30,35 @@ function QuickLinksBlock({ onRunSupportCommand }: SettingsSupportSectionProps) {
       title={communityRow.title}
     >
       <SettingsControlSlot className="flex-wrap">
-        <SettingsSupportButton commandId={APP_COMMAND_IDS.openGitHubRepository} icon={Github} onRunSupportCommand={onRunSupportCommand}>
+        <SettingsSupportButton
+          commandId={APP_COMMAND_IDS.openGitHubRepository}
+          icon={Github}
+          onRunSupportCommand={onRunSupportCommand}
+          tooltip={t('settings.about.github.tooltip')}
+        >
           GitHub
         </SettingsSupportButton>
-        <SettingsSupportButton commandId={APP_COMMAND_IDS.openGitHubDiscussions} icon={Github} onRunSupportCommand={onRunSupportCommand}>
+        <SettingsSupportButton
+          commandId={APP_COMMAND_IDS.openGitHubDiscussions}
+          icon={Github}
+          onRunSupportCommand={onRunSupportCommand}
+          tooltip={t('settings.about.discussions.tooltip')}
+        >
           {t('settings.about.discussions')}
         </SettingsSupportButton>
-        <SettingsSupportButton commandId={APP_COMMAND_IDS.openGitHubIssues} icon={Github} onRunSupportCommand={onRunSupportCommand}>
+        <SettingsSupportButton
+          commandId={APP_COMMAND_IDS.openGitHubIssues}
+          icon={Github}
+          onRunSupportCommand={onRunSupportCommand}
+          tooltip={t('settings.about.issues.tooltip')}
+        >
           {t('settings.about.issues')}
         </SettingsSupportButton>
         <SettingsSupportButton
           commandId={APP_COMMAND_IDS.openYouTubePlaylist}
           icon={Youtube}
           onRunSupportCommand={onRunSupportCommand}
+          tooltip={t('settings.about.youtube.tooltip')}
         >
           YouTube
         </SettingsSupportButton>

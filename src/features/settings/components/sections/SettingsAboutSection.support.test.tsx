@@ -1,4 +1,4 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const updateCheckMock = vi.hoisted(() => ({
@@ -59,16 +59,20 @@ it('runs support commands from About settings', async () => {
   renderWithLocalization(<SettingsAboutSection onRunSupportCommand={onRunSupportCommand} />);
 
   fireEvent.click(await screen.findByRole('button', { name: 'Check for Updates' }));
+  expect(screen.getByText('Checking')).toBeInTheDocument();
+  expect(screen.getByText('Checking for updates...')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Issues' }));
   fireEvent.click(screen.getByRole('button', { name: 'YouTube' }));
+  fireEvent.focus(screen.getByRole('button', { name: 'Discussions' }));
+  expect(await screen.findByRole('tooltip')).toHaveTextContent('Share ideas or ask questions.');
+  fireEvent.blur(screen.getByRole('button', { name: 'Discussions' }));
+  await waitFor(() => expect(screen.queryByText('Share ideas or ask questions.')).not.toBeInTheDocument());
   fireEvent.click(screen.getByRole('button', { name: 'Send Feedback' }));
   const emailButton = screen.getByRole('button', { name: 'Email' });
   expect(emailButton).toHaveAttribute('title', 'hello@foliole.app');
   fireEvent.click(emailButton);
   fireEvent.focus(emailButton);
 
-  expect(screen.getByText('Checking')).toBeInTheDocument();
-  expect(screen.getByText('Checking for updates...')).toBeInTheDocument();
   const emailTooltip = await screen.findByRole('tooltip');
   expect(emailTooltip).toHaveTextContent('hello@foliole.app');
   expect(emailTooltip.parentElement?.className).toContain('[z-index:var(--z-dropdown)]');

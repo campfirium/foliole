@@ -1,6 +1,6 @@
 import { test, expect } from './harness/fixtures';
 
-test('shows the support email tooltip in About settings', async ({ desktopApp, desktopWindow }, testInfo) => {
+test('shows About support and community tooltips', async ({ desktopApp, desktopWindow }, testInfo) => {
   await desktopApp.evaluate(({ shell }) => {
     const openedUrls: string[] = [];
     globalThis.__FOLIOLE_TEST_OPENED_EXTERNAL_URLS__ = openedUrls;
@@ -14,8 +14,12 @@ test('shows the support email tooltip in About settings', async ({ desktopApp, d
   });
   await expect(settingsDialog).toBeVisible();
   await settingsDialog.getByRole('button', { name: /^(About|关于)$/ }).click();
+  await expect(settingsDialog.getByText(/^(Project and community links\.|项目与社区入口。)$/)).toBeVisible();
+  const githubButton = settingsDialog.getByRole('button', { name: 'GitHub' });
   const emailButton = settingsDialog.getByRole('button', { name: /^(Email|邮件联系)$/ });
 
+  await githubButton.hover();
+  await expect(desktopWindow.getByRole('tooltip', { name: /^(If Foliole helps, a GitHub star means a lot\.|如果 Foliole 对你有帮助，欢迎在 GitHub 上点个 Star。)$/ })).toBeVisible();
   await expect(emailButton).toBeEnabled();
   await expect(emailButton).toHaveAttribute('title', 'hello@foliole.app');
   await emailButton.hover();
