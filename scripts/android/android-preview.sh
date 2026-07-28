@@ -123,10 +123,14 @@ ANDROID_DATA_PROTECTION_RUNTIME_DIR="$(normalize_host_path "${ANDROID_DATA_PROTE
 
 echo "[android-preview] step 1/${PREVIEW_TOTAL_STEPS}: sync to android preview workspace"
 ensure_host_dir "${ANDROID_WINDOWS_MIRROR_DIR}"
-if ! run_timed_preview_step "android-source-sync" "${ANDROID_PREVIEW_SYNC_TIMEOUT_SECONDS}" env ANDROID_WINDOWS_WORKDIR="${ANDROID_WINDOWS_WORKDIR}" bash "${ANDROID_SOURCE_SYNC_SCRIPT}"; then
-  echo "[android-preview] failed at: windows sync"
-  echo "[android-preview] status: FAILED"
-  exit 1
+if [[ "${ANDROID_PREVIEW_SKIP_SOURCE_SYNC:-0}" != "0" ]]; then
+  echo "[android-preview] source sync skipped: using controlled checkout"
+else
+  if ! run_timed_preview_step "android-source-sync" "${ANDROID_PREVIEW_SYNC_TIMEOUT_SECONDS}" env ANDROID_WINDOWS_WORKDIR="${ANDROID_WINDOWS_WORKDIR}" bash "${ANDROID_SOURCE_SYNC_SCRIPT}"; then
+    echo "[android-preview] failed at: windows sync"
+    echo "[android-preview] status: FAILED"
+    exit 1
+  fi
 fi
 
 echo "[android-preview] step 2/${PREVIEW_TOTAL_STEPS}: sync capacitor android host"

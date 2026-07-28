@@ -19,8 +19,11 @@ function createFixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-android-lab-worker-'));
   roots.push(root);
   const paths = androidLabPaths(root);
-  paths.workspaceDeployment = path.join(root, 'preview', '.foliole-android-lab-deployment.json');
-  writeJsonAtomic(paths.active, { commitSha: SHA, runId: 'run-1', schemaVersion: 1 });
+  paths.checkout = path.join(root, 'checkout');
+  paths.candidate = paths.checkout;
+  paths.preview = paths.checkout;
+  paths.workspaceDeployment = path.join(paths.checkout, '.foliole-android-lab-deployment.json');
+  writeJsonAtomic(paths.active, { commitSha: SHA, runId: 'run-1', schemaVersion: 1, sourceKind: 'formal' });
   const signing = Buffer.from('private signing bytes');
   fs.mkdirSync(paths.signingHome, { recursive: true });
   fs.writeFileSync(paths.signingKeystore, signing);
@@ -45,7 +48,6 @@ function successfulExecutor(paths, calls) {
     if (command === 'adb.exe' && args.includes('getprop')) return { code: 0, lines: ['A5-STABLE'], output: 'A5-STABLE\n' };
     if (command === 'adb.exe' && args.includes('logcat')) return { code: 0, lines: ['Foliole log'], output: 'Foliole log\n' };
     if (command === 'adb.exe') return { code: 0, lines: [], output: '' };
-    if (args.includes('worktree') && args.includes('add')) fs.mkdirSync(paths.candidate, { recursive: true });
     if (args.includes('status')) return { code: 0, lines: [], output: '' };
     if (command === 'bash.exe') {
       expect(options.env.FOLIOLE_ANDROID_ADB_SERVER_PORT).toBe('5601');
@@ -53,7 +55,6 @@ function successfulExecutor(paths, calls) {
       return { code: 0, lines: ['[android-preview] status: OPENED'], output: '[android-preview] status: OPENED\n' };
     }
     if (command === 'powershell.exe') return { code: 1, lines: ['screenshot unavailable'], output: '' };
-    if (args.includes('remove')) fs.rmSync(paths.candidate, { force: true, recursive: true });
     return { code: 0, lines: [], output: '' };
   };
 }
@@ -120,7 +121,7 @@ describe('Windows Android lab worker', () => {
     expect(fs.existsSync(paths.active)).toBe(false);
   });
 
-  it('pins the safety environment, hard timeout, and cleans the detached checkout', async () => {
+  it('pins the safety environment, hard timeout, and keeps the persistent checkout', async () => {
     const paths = createFixture();
     const calls = [];
     await runWindowsAndroidLabWorker({ executeCommand: successfulExecutor(paths, calls), paths, platform: 'win32' });
@@ -129,7 +130,8 @@ describe('Windows Android lab worker', () => {
     expect(preview.options.env).toMatchObject({
       ANDROID_DATA_PROTECTION: '1', ANDROID_PREVIEW_AVD: '', ANDROID_PREVIEW_OPEN_STUDIO: '0',
       ANDROID_USER_HOME: paths.signingHome,
-      ANDROID_DATA_PROTECTION_RUNTIME_ROOT: paths.preview, ANDROID_ELECTRON_ABI_PREPARE: '1',
+      ANDROID_DATA_PROTECTION_RUNTIME_ROOT: paths.checkout, ANDROID_ELECTRON_ABI_PREPARE: '1',
+      ANDROID_PREVIEW_SKIP_SOURCE_SYNC: '1',
       ANDROID_WINDOWS_DEPENDENCY_REFRESH: 'auto', FOLIOLE_ANDROID_SERIAL: ENDPOINT, JAVA_HOME: 'C:\\Java'
     });
     expect(preview.options.env.Path).toContain('C:\\Node;C:\\Java\\bin');
@@ -139,7 +141,8 @@ describe('Windows Android lab worker', () => {
     expect(gitCalls.every((call) => (
       call.args[0] === '-c' && call.args[1] === `core.hooksPath=${path.join(paths.root, 'worker-empty-hooks')}`
     ))).toBe(true);
-    expect(fs.existsSync(paths.candidate)).toBe(false);
+    expect(fs.existsSync(paths.checkout)).toBe(true);
+    expect(readJson(paths.checkoutState)).toMatchObject({ checkoutHead: SHA, path: paths.checkout, sourceKind: 'formal' });
     expect(readJson(paths.status).resultStatus).toBe('success');
     expect(readJson(paths.deployment)).toMatchObject({ commitSha: SHA, deviceIdentity: 'A5-STABLE', runId: 'run-1' });
     expect(readJson(paths.workspaceDeployment)).toEqual(readJson(paths.deployment));
@@ -179,7 +182,7 @@ describe('Windows Android lab worker', () => {
     expect(readJson(paths.status).resultStatus).toBe('failure');
   });
 
-  it('records a bounded preview timeout and still removes its checkout', async () => {
+  it('records a bounded preview timeout and preserves the persistent checkout', async () => {
     const paths = createFixture();
     const previous = { commitSha: 'c'.repeat(40), runId: 'previous' };
     fs.mkdirSync(path.dirname(paths.workspaceDeployment), { recursive: true });
@@ -195,7 +198,7 @@ describe('Windows Android lab worker', () => {
       code: 'android_preview_timeout'
     });
     expect(readJson(paths.status)).toMatchObject({ errorCode: 'android_preview_timeout', resultStatus: 'failure' });
-    expect(fs.existsSync(paths.candidate)).toBe(false);
+    expect(fs.existsSync(paths.checkout)).toBe(true);
     expect(readJson(paths.deployment)).toEqual(previous);
     expect(readJson(paths.workspaceDeployment)).toEqual(previous);
   });

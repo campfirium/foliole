@@ -54,7 +54,7 @@ async function runChecked(executeCommand, command, args, options, code) {
 
 async function captureScreenshot(config, endpoint, paths, evidenceRoot, executeCommand) {
   if (!endpoint) return 'device unresolved';
-  const script = path.join(paths.candidate, 'scripts', 'android', 'windows-screenshot.ps1');
+  const script = path.join(paths.checkout, 'scripts', 'android', 'windows-screenshot.ps1');
   try {
     await runChecked(executeCommand, 'powershell.exe', [
       '-NoProfile', '-WindowStyle', 'Hidden', '-ExecutionPolicy', 'Bypass', '-File', script,
@@ -77,13 +77,14 @@ function previewEnvironment(config, endpoint, paths) {
     ANDROID_DATA_PROTECTION: '1',
     ANDROID_DATA_PROTECTION_BACKUP_DIR: paths.protection,
     ANDROID_DATA_PROTECTION_MANIFEST_DIR: paths.manifest,
-    ANDROID_DATA_PROTECTION_RUNTIME_ROOT: paths.preview,
+    ANDROID_DATA_PROTECTION_RUNTIME_ROOT: paths.checkout,
     ANDROID_ELECTRON_ABI_PREPARE: '1',
     ANDROID_GRADLE_STOP_AFTER_DEPLOY: '1',
     ANDROID_PREVIEW_AVD: '',
     ANDROID_PREVIEW_OPEN_STUDIO: '0',
+    ANDROID_PREVIEW_SKIP_SOURCE_SYNC: '1',
     ANDROID_WINDOWS_DEPENDENCY_REFRESH: 'auto',
-    ANDROID_WINDOWS_WORKDIR: paths.preview,
+    ANDROID_WINDOWS_WORKDIR: paths.checkout,
     FOLIOLE_ANDROID_SERIAL: endpoint,
     JAVA_HOME: config.javaHome,
     Path: `${toolPath};${process.env.Path || process.env.PATH || ''}`
@@ -157,13 +158,13 @@ export async function runWindowsAndroidLabWorker({
     assertAndroidSigning(config, paths);
     device = await resolveAndroidDevice(config, paths, executeCommand);
     writeJsonAtomic(paths.status, { ...running, phase: 'checkout' });
-    await prepareAndroidLabCheckout(config, paths, request.commitSha, executeCommand);
+    await prepareAndroidLabCheckout(config, paths, request.commitSha, executeCommand, request.sourceKind);
     fs.mkdirSync(paths.protection, { recursive: true });
     fs.mkdirSync(paths.manifest, { recursive: true });
     writeJsonAtomic(paths.status, { ...running, phase: 'preview' });
     previewResult = await executeCommand(config.bashPath, [
-      '-lc', 'cd "$1" && exec bash scripts/android/android-preview.sh', 'foliole-android-lab', paths.candidate
-    ], { cwd: paths.candidate, env: previewEnvironment(config, device.endpoint, paths), timeoutCode: 'android_preview_timeout', timeoutMs: PREVIEW_TIMEOUT_MS });
+      '-lc', 'cd "$1" && exec bash scripts/android/android-preview.sh', 'foliole-android-lab', paths.checkout
+    ], { cwd: paths.checkout, env: previewEnvironment(config, device.endpoint, paths), timeoutCode: 'android_preview_timeout', timeoutMs: PREVIEW_TIMEOUT_MS });
     if (previewResult.code !== 0) primaryError = codedError('android_preview_failed', previewResult.lines.at(-1) || 'Android preview failed');
   } catch (error) {
     primaryError = error;

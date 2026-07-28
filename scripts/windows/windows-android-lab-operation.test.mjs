@@ -20,6 +20,8 @@ function fixture() {
   const preview = path.join(root, 'preview');
   const paths = {
     ...androidLabPaths(root),
+    checkout: preview,
+    candidate: preview,
     preview,
     workspaceDeployment: path.join(preview, '.foliole-android-lab-deployment.json')
   };

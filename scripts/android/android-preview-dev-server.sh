@@ -24,7 +24,11 @@ run_android_preview_dev_server() {
   node "${ANDROID_DEV_SERVER_START_SCRIPT}" start companion
 
   echo "[android-dev-server-preview] step 2/5: sync to android preview workspace"
-  env ANDROID_WINDOWS_WORKDIR="${ANDROID_WINDOWS_WORKDIR}" bash "${ANDROID_SOURCE_SYNC_SCRIPT}"
+  if [[ "${ANDROID_PREVIEW_SKIP_SOURCE_SYNC:-0}" != "0" ]]; then
+    echo "[android-dev-server-preview] source sync skipped: using controlled checkout"
+  else
+    env ANDROID_WINDOWS_WORKDIR="${ANDROID_WINDOWS_WORKDIR}" bash "${ANDROID_SOURCE_SYNC_SCRIPT}"
+  fi
 
   echo "[android-dev-server-preview] step 3/5: sync Capacitor dev-server config"
   POWERSHELL_SYNC_ARGS=(

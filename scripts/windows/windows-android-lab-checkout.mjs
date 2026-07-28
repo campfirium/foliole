@@ -2,7 +2,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
-import { WINDOWS_ANDROID_LAB_SOURCE_REF } from './windows-android-lab-state.mjs';
+import { WINDOWS_ANDROID_LAB_SOURCE_REF, writeJsonAtomic } from './windows-android-lab-state.mjs';
+
+const GENERATOR_OWNED_TRACKED = [
+  'android/app/capacitor.build.gradle',
+  'android/capacitor.settings.gradle',
+  'android/app/src/main/assets/capacitor.config.json',
+  'android/app/src/main/assets/capacitor.plugins.json',
+  'android/app/src/main/res/xml/config.xml'
+];
 
 function codedError(code, message) {
   return Object.assign(new Error(message), { code });
@@ -20,7 +28,23 @@ function isolatedGitArgs(paths, args) {
   return ['-c', `core.hooksPath=${hooksPath}`, ...args];
 }
 
-export async function prepareAndroidLabCheckout(config, paths, commitSha, executeCommand) {
+function checkoutRoot(paths) {
+  return paths.checkout || paths.preview || paths.candidate;
+}
+
+function normalizeStatusPath(line) {
+  const value = line.slice(3).trim().replace(/\\/gu, '/');
+  return (value.split(' -> ').at(-1) || value).replace(/^"|"$/gu, '');
+}
+
+function isGeneratorOwned(line) {
+  if (line.startsWith('?? ')) return true;
+  const filePath = normalizeStatusPath(line);
+  return GENERATOR_OWNED_TRACKED.some((owned) => filePath === owned || filePath.startsWith(`${owned}/`));
+}
+
+export async function prepareAndroidLabCheckout(config, paths, commitSha, executeCommand, sourceKind = 'unknown') {
+  const checkout = checkoutRoot(paths);
   const options = { env: process.env };
   if (!fs.existsSync(path.join(paths.repository, 'HEAD'))) throw codedError('lab_source_missing', 'LAN Git source repository is missing');
   await runChecked(executeCommand, config.gitPath, isolatedGitArgs(paths, [
@@ -29,22 +53,32 @@ export async function prepareAndroidLabCheckout(config, paths, commitSha, execut
   await runChecked(executeCommand, config.gitPath, isolatedGitArgs(paths, [
     '--git-dir', paths.repository, 'merge-base', '--is-ancestor', commitSha, WINDOWS_ANDROID_LAB_SOURCE_REF
   ]), options, 'commit_not_in_lab_ref');
-  fs.rmSync(paths.candidate, { force: true, recursive: true });
+  fs.mkdirSync(checkout, { recursive: true });
+  const before = await runChecked(executeCommand, config.gitPath, isolatedGitArgs(paths, [
+    '--git-dir', paths.repository, '--work-tree', checkout, 'status', '--porcelain', '--untracked-files=no'
+  ]), options, 'checkout_status_failed');
+  const blocked = before.output.split(/\r?\n/u).filter(Boolean).filter((line) => !isGeneratorOwned(line));
+  if (blocked.length > 0) throw codedError('checkout_dirty', `Windows checkout has tracked source changes: ${blocked[0]}`);
   await runChecked(executeCommand, config.gitPath, isolatedGitArgs(paths, [
-    '--git-dir', paths.repository, 'worktree', 'add', '--detach', paths.candidate, commitSha
+    '--git-dir', paths.repository, '--work-tree', checkout, 'checkout', '--force', commitSha, '--', '.'
   ]), options, 'checkout_failed');
   const status = await runChecked(executeCommand, config.gitPath, isolatedGitArgs(paths, [
-    '-C', paths.candidate, 'status', '--porcelain'
+    '--git-dir', paths.repository, '--work-tree', checkout, 'status', '--porcelain', '--untracked-files=no'
   ]), options, 'checkout_status_failed');
-  if (status.output.trim()) throw codedError('checkout_dirty', 'controller checkout is not clean');
+  const remaining = status.output.split(/\r?\n/u).filter(Boolean).filter((line) => !isGeneratorOwned(line));
+  if (remaining.length > 0) throw codedError('checkout_dirty', `Windows checkout has tracked source changes: ${remaining[0]}`);
+  writeJsonAtomic(paths.checkoutState, {
+    checkoutHead: commitSha,
+    dirty: status.output.trim() ? 'generator_owned' : 'clean',
+    path: checkout,
+    schemaVersion: 1,
+    sourceKind,
+    updatedAt: new Date().toISOString()
+  });
 }
 
 export async function cleanupAndroidLabCheckout(config, paths, executeCommand) {
-  if (!fs.existsSync(paths.candidate)) return;
-  await runChecked(executeCommand, config.gitPath, isolatedGitArgs(paths, [
-    '--git-dir', paths.repository, 'worktree', 'remove', '--force', paths.candidate
-  ]), { env: process.env }, 'checkout_cleanup_failed');
-  await runChecked(executeCommand, config.gitPath, isolatedGitArgs(paths, [
-    '--git-dir', paths.repository, 'worktree', 'prune'
-  ]), { env: process.env }, 'checkout_cleanup_failed');
+  void config;
+  void paths;
+  void executeCommand;
 }

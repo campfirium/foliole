@@ -20,7 +20,7 @@ function codedError(code, message) {
 }
 
 function scopedRoot(scope, paths, evidenceRoot) {
-  if (scope === 'checkout') return paths.candidate;
+  if (scope === 'checkout') return paths.checkout;
   if (scope === 'lab') return paths.root;
   if (scope === 'run') return evidenceRoot;
   throw codedError('request_cwd_rejected', 'unknown Lab path scope');
@@ -57,7 +57,7 @@ function operationEnvironment(config, paths, evidenceRoot, spec) {
   const tools = [config.nodeDirectory, path.win32.dirname(config.adbPath)].filter(Boolean).join(';');
   env.Path = `${tools};${env.Path || env.PATH || ''}`;
   env.ANDROID_USER_HOME = paths.signingHome;
-  env.ANDROID_WINDOWS_WORKDIR = paths.preview;
+  env.ANDROID_WINDOWS_WORKDIR = paths.checkout;
   env.FOLIOLE_ANDROID_ADB_PATH = config.adbPath;
   env.FOLIOLE_ANDROID_BASH_PATH = config.bashPath;
   env.FOLIOLE_ANDROID_LAB_EVIDENCE_ROOT = evidenceRoot;
@@ -67,7 +67,7 @@ function operationEnvironment(config, paths, evidenceRoot, spec) {
 }
 
 function repositorySpec(config, paths, operation) {
-  const runner = resolveWithin(paths.candidate, operation.runner);
+  const runner = resolveWithin(paths.checkout, operation.runner);
   if (!fs.existsSync(runner) || !fs.statSync(runner).isFile()) throw codedError('request_runner_missing', 'repository runner is missing');
   if (runner.endsWith('.mjs')) return { args: [runner, ...operation.args], command: path.join(config.nodeDirectory, 'node.exe') };
   if (runner.endsWith('.ps1')) return {
@@ -99,8 +99,8 @@ async function resolveProcessSpec(config, paths, request, evidenceRoot, executeC
     return { ...spec, deviceEndpoint: device.endpoint, deviceIdentity: device.identity };
   }
   if (operation.kind === 'windowsClient') return {
-    args: [path.join(paths.preview, 'scripts', 'windows', 'windows-client-native.mjs'), operation.action],
-    command: path.join(config.nodeDirectory, 'node.exe'), cwd: paths.preview, runtimeHead: request.commitSha
+    args: [path.join(paths.checkout, 'scripts', 'windows', 'windows-client-native.mjs'), operation.action],
+    command: path.join(config.nodeDirectory, 'node.exe'), cwd: paths.checkout, runtimeHead: request.commitSha
   };
   if (operation.kind === 'diagnostic') {
     const spec = diagnosticSpec(config, operation, evidenceRoot);
@@ -202,7 +202,7 @@ export async function finishAndroidLabOperationRun({ config, executeCommand, pat
   try {
     if (needsCheckout) {
       writeJsonAtomic(paths.status, { ...running, phase: 'checkout' });
-      await prepareAndroidLabCheckout(config, paths, request.commitSha, executeCommand);
+      await prepareAndroidLabCheckout(config, paths, request.commitSha, executeCommand, request.sourceKind);
     }
     writeJsonAtomic(paths.status, { ...running, phase: 'request_execute' });
     await runAndroidLabOperation({ config, executeCommand, paths, request });
