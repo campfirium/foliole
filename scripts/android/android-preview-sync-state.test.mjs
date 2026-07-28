@@ -11,7 +11,11 @@ import { describe, expect, it } from 'vitest';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const ANDROID_PREVIEW_SCRIPT = path.join(REPO_ROOT, 'scripts', 'android', 'android-preview.sh');
-const { hasPairingCredentials } = await import('./android-preview-sync-state.mjs');
+const {
+  databaseSnapshotPaths,
+  hasPairingCredentials,
+  isReadonlySqliteUnreadableError
+} = await import('./android-preview-sync-state.mjs');
 
 function runAndroidPreview(cwd, env = {}) {
   return new Promise((resolve) => {
@@ -58,6 +62,20 @@ describe('android-preview sync readiness check', () => {
     expect(hasPairingCredentials('<string name="device_id">a</string><string name="device_secret">b</string>')).toBe(true);
     expect(hasPairingCredentials('<string name="pairing_device_id">a</string><string name="pairing_device_secret">b</string>')).toBe(true);
     expect(hasPairingCredentials('<string name="device_id">a</string>')).toBe(false);
+  });
+
+  it('copies SQLite WAL sidecars with the main Android database snapshot', () => {
+    expect(databaseSnapshotPaths('databases/foliole-companionSQLite.db', '/tmp/out')).toEqual([
+      { devicePath: 'databases/foliole-companionSQLite.db', outputPath: '/tmp/out/foliole-companionSQLite.db' },
+      { devicePath: 'databases/foliole-companionSQLite.db-wal', outputPath: '/tmp/out/foliole-companionSQLite.db-wal' },
+      { devicePath: 'databases/foliole-companionSQLite.db-shm', outputPath: '/tmp/out/foliole-companionSQLite.db-shm' }
+    ]);
+  });
+
+  it('classifies malformed SQLite snapshots as unreadable readiness evidence', () => {
+    expect(isReadonlySqliteUnreadableError(new Error('database disk image is malformed'))).toBe(true);
+    expect(isReadonlySqliteUnreadableError(new Error('sqlite open failed: better-sqlite3=file is not a database'))).toBe(true);
+    expect(isReadonlySqliteUnreadableError(new Error('permission denied'))).toBe(false);
   });
 
   it('can report sync readiness after deploy without blocking preview', async () => {

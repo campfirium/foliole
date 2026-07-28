@@ -1,4 +1,4 @@
-/* global console, process */
+/* global console, process, setTimeout */
 
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
@@ -13,6 +13,8 @@ const DATABASE_CANDIDATES = [
   'databases/foliole-companionSQLite.db',
   'databases/foliole-companion.db'
 ];
+const DATABASE_SIDECAR_SUFFIXES = ['-wal', '-shm'];
+const SQLITE_READ_RETRY_DELAYS_MS = [250, 750, 1500, 2500];
 const PAIRING_PREFS_PATH = 'shared_prefs/foliole_companion_pairing.xml';
 
 function parseArgs(argv) {
@@ -41,13 +43,36 @@ async function readDeviceFile(options, devicePath) {
   return stdout;
 }
 
+function databaseSnapshotPaths(devicePath, outputDir) {
+  const outputPath = path.join(outputDir, path.basename(devicePath));
+  return [
+    { devicePath, outputPath },
+    ...DATABASE_SIDECAR_SUFFIXES.map((suffix) => ({
+      devicePath: `${devicePath}${suffix}`,
+      outputPath: `${outputPath}${suffix}`
+    }))
+  ];
+}
+
+async function pullDatabaseSnapshot(options, devicePath, outputDir) {
+  const [main, ...sidecars] = databaseSnapshotPaths(devicePath, outputDir);
+  const body = await readDeviceFile(options, main.devicePath);
+  await writeFile(main.outputPath, body);
+  for (const sidecar of sidecars) {
+    try {
+      const sidecarBody = await readDeviceFile(options, sidecar.devicePath);
+      if (sidecarBody.length > 0) await writeFile(sidecar.outputPath, sidecarBody);
+    } catch {
+      // WAL/SHM files are optional; copy them when present for a more consistent snapshot.
+    }
+  }
+  return { devicePath, outputPath: main.outputPath };
+}
+
 async function pullFirstDatabase(options, outputDir) {
   for (const devicePath of DATABASE_CANDIDATES) {
     try {
-      const body = await readDeviceFile(options, devicePath);
-      const outputPath = path.join(outputDir, path.basename(devicePath));
-      await writeFile(outputPath, body);
-      return { devicePath, outputPath };
+      return await pullDatabaseSnapshot(options, devicePath, outputDir);
     } catch {
       // Try the next historical database file name.
     }
@@ -72,6 +97,28 @@ function readEndpoint(database) {
     .get()?.value ?? null;
 }
 
+function isReadonlySqliteUnreadableError(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  return /(?:database disk image is malformed|file is not a database|sqlite open failed)/iu.test(message);
+}
+
+function unreadableResult(base, error) {
+  return {
+    ...base,
+    databaseError: error instanceof Error ? error.message : String(error),
+    endpointPresent: false,
+    nodeOrderRows: null,
+    nodes: null,
+    status: 'DATABASE_UNREADABLE'
+  };
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
 async function readPairingPresence(options) {
   try {
     const body = await readDeviceFile(options, PAIRING_PREFS_PATH);
@@ -88,41 +135,55 @@ function hasPairingCredentials(xml) {
   return hasDeviceId && hasDeviceSecret;
 }
 
+async function inspectPulledDatabase(pulled, base) {
+  const database = await openReadonlySqliteDatabase(pulled.outputPath);
+  try {
+    const endpoint = readEndpoint(database);
+    const nodes = countRows(database, 'nodes');
+    const nodeOrderRows = countRows(database, 'node_order');
+    return {
+      ...base,
+      endpointPresent: typeof endpoint === 'string' && endpoint.trim().length > 0,
+      nodeOrderRows,
+      nodes,
+      status: endpoint && base.pairingPresent ? 'SYNC_READY' : 'SYNC_NOT_READY'
+    };
+  } finally {
+    database.close();
+  }
+}
+
 async function inspectPreviewSyncState(options) {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), 'foliole-android-preview-sync-state-'));
   try {
     const serial = await resolveSerial(options);
     const resolved = { ...options, serial };
     const pairingPresent = await readPairingPresence(resolved);
-    const pulled = await pullFirstDatabase(resolved, tempDir);
-    if (!pulled) {
-      return {
-        database: null,
-        endpointPresent: false,
-        nodeOrderRows: null,
-        nodes: null,
-        pairingPresent,
-        serial,
-        status: 'NO_DATABASE'
-      };
+    let lastUnreadable = null;
+    for (let attempt = 0; attempt <= SQLITE_READ_RETRY_DELAYS_MS.length; attempt += 1) {
+      const pulled = await pullFirstDatabase(resolved, tempDir);
+      if (!pulled) {
+        return {
+          database: null,
+          endpointPresent: false,
+          nodeOrderRows: null,
+          nodes: null,
+          pairingPresent,
+          serial,
+          status: 'NO_DATABASE'
+        };
+      }
+      const base = { database: pulled.devicePath, pairingPresent, readAttempts: attempt + 1, serial };
+      try {
+        return await inspectPulledDatabase(pulled, base);
+      } catch (error) {
+        if (!isReadonlySqliteUnreadableError(error)) throw error;
+        lastUnreadable = unreadableResult(base, error);
+        const delay = SQLITE_READ_RETRY_DELAYS_MS[attempt];
+        if (delay !== undefined) await sleep(delay);
+      }
     }
-    const database = await openReadonlySqliteDatabase(pulled.outputPath);
-    try {
-      const endpoint = readEndpoint(database);
-      const nodes = countRows(database, 'nodes');
-      const nodeOrderRows = countRows(database, 'node_order');
-      return {
-        database: pulled.devicePath,
-        endpointPresent: typeof endpoint === 'string' && endpoint.trim().length > 0,
-        nodeOrderRows,
-        nodes,
-        pairingPresent,
-        serial,
-        status: endpoint && pairingPresent ? 'SYNC_READY' : 'SYNC_NOT_READY'
-      };
-    } finally {
-      database.close();
-    }
+    return lastUnreadable;
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
@@ -133,6 +194,8 @@ function printResult(result) {
   console.log(`[android-preview-sync-state] database=${result.database ?? 'missing'}`);
   console.log(`[android-preview-sync-state] endpoint=${result.endpointPresent ? 'present' : 'missing'} pairing=${result.pairingPresent ? 'present' : 'missing'}`);
   console.log(`[android-preview-sync-state] nodes=${result.nodes ?? 'unknown'} node_order=${result.nodeOrderRows ?? 'unknown'}`);
+  if (result.databaseError) console.log(`[android-preview-sync-state] database_error=${result.databaseError}`);
+  if (result.readAttempts) console.log(`[android-preview-sync-state] read_attempts=${result.readAttempts}`);
   console.log(`[android-preview-sync-state] status: ${result.status}`);
 }
 
@@ -145,4 +208,9 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
     });
 }
 
-export { hasPairingCredentials, inspectPreviewSyncState };
+export {
+  databaseSnapshotPaths,
+  hasPairingCredentials,
+  inspectPreviewSyncState,
+  isReadonlySqliteUnreadableError
+};
