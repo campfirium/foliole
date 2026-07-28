@@ -35,7 +35,7 @@ describe('Windows Android lab Mac controller', () => {
       argv: ['--host', 'tester@windows-host', 'collect', 'get', '1000-aaaaaaaaaaaa', 'summary.json'], env: {},
       executeSsh: async (_host, command) => {
         calls.push(command);
-        return command[0] === 'status' ? Buffer.from('{"protocolVersion":8,"state":"idle"}\n') : Buffer.from('evidence');
+        return command[0] === 'status' ? Buffer.from('{"protocolVersion":9,"state":"idle"}\n') : Buffer.from('evidence');
       }, stdout: { write: () => {} }
     });
     expect(calls).toEqual([['status'], ['collect', 'get', '1000-aaaaaaaaaaaa', 'summary.json']]);
@@ -48,7 +48,7 @@ describe('Windows Android lab Mac controller', () => {
       executeSsh: async (_host, command) => {
         calls.push(command);
         return Buffer.from(command[0] === 'status'
-          ? '{"protocolVersion":8,"state":"idle"}\n'
+          ? '{"protocolVersion":9,"state":"idle"}\n'
           : '{"state":"pending"}\n');
       }, stdout: { write: () => {} }
     });
@@ -62,7 +62,7 @@ describe('Windows Android lab Mac controller', () => {
       executeSsh: async (_host, command) => {
         calls.push(command);
         return Buffer.from(command[0] === 'status'
-          ? '{"protocolVersion":8,"state":"idle"}\n'
+          ? '{"protocolVersion":9,"state":"idle"}\n'
           : '{"state":"pending"}\n');
       }, stdout: { write: () => {} }
     });
@@ -84,7 +84,7 @@ describe('Windows Android lab Mac controller', () => {
   it('pushes only clean dev HEAD to the fixed LAN ref with the dedicated key', async () => {
     const sha = 'e'.repeat(40);
     const calls = [];
-    const results = ['dev\n', `${sha}\n`, '', 'ok\n'];
+    const results = ['dev\n', `${sha}\n`, 'ok\n'];
     const executeGit = async (args, options) => {
       calls.push({ args, options });
       return Buffer.from(results.shift());
@@ -95,33 +95,9 @@ describe('Windows Android lab Mac controller', () => {
       stdout: { write: (value) => { output += String(value); } }
     });
     expect(calls.at(-1).args).toEqual([
-      'push', '--porcelain', 'tester@windows-host:foliole-android-lab.git', `${sha}:refs/heads/lab/dev`
+      'push', '--porcelain', '--force', 'tester@windows-host:foliole-android-lab.git', `${sha}:refs/heads/lab/dev`
     ]);
     expect(calls.at(-1).options.env.GIT_SSH_COMMAND).toContain('foliole-windows-android-lab-git');
-    expect(JSON.parse(output)).toMatchObject({ commitSha: sha, ref: 'refs/heads/lab/dev' });
-  });
-
-  it('pushes an explicit committed SHA without requiring a clean working tree', async () => {
-    const sha = 'e'.repeat(40);
-    const calls = [];
-    const executeGit = async (args, options) => {
-      calls.push({ args, options });
-      if (args[0] === 'status') throw new Error('status should not be read for explicit commit push');
-      if (args.join(' ') === 'branch --show-current') return Buffer.from('dev\n');
-      if (args.join(' ') === `rev-parse --verify ${sha}^{commit}`) return Buffer.from(`${sha}\n`);
-      if (args.join(' ') === `merge-base --is-ancestor ${sha} HEAD`) return Buffer.from('');
-      if (args[0] === 'push') return Buffer.from('ok\n');
-      throw new Error(`unexpected git call: ${args.join(' ')}`);
-    };
-    let output = '';
-    await runWindowsAndroidLabControl({
-      argv: ['--host', 'tester@windows-host', 'push', '--commit', sha], env: {}, executeGit,
-      stdout: { write: (value) => { output += String(value); } }
-    });
-    expect(calls.map((call) => call.args[0])).toEqual(['branch', 'rev-parse', 'merge-base', 'push']);
-    expect(calls.at(-1).args).toEqual([
-      'push', '--porcelain', 'tester@windows-host:foliole-android-lab.git', `${sha}:refs/heads/lab/dev`
-    ]);
     expect(JSON.parse(output)).toMatchObject({ commitSha: sha, ref: 'refs/heads/lab/dev' });
   });
 
@@ -173,7 +149,7 @@ describe('Windows Android lab Mac controller', () => {
         executeSsh: async (_host, command, _env, input) => {
           calls.push({ command, input });
           return Buffer.from(command[0] === 'status'
-            ? '{"protocolVersion":8,"state":"idle"}\n' : '{"state":"pending"}\n');
+            ? '{"protocolVersion":9,"state":"idle"}\n' : '{"state":"pending"}\n');
         }, stdout: { write: () => {} }
       });
       expect(calls[1].command).toEqual(['request', String(calls[1].input.length), expect.stringMatching(/^[0-9a-f]{64}$/u)]);

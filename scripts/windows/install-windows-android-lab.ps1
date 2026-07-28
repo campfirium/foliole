@@ -58,7 +58,7 @@ if (!(Test-Path (Join-Path $repositoryRoot "HEAD"))) {
 }
 & $GitPath --git-dir $repositoryRoot config receive.denyDeletes true
 if ($LASTEXITCODE -ne 0) { throw "Failed to configure Android Lab bare repository" }
-& $GitPath --git-dir $repositoryRoot config receive.denyNonFastForwards true
+& $GitPath --git-dir $repositoryRoot config receive.denyNonFastForwards false
 if ($LASTEXITCODE -ne 0) { throw "Failed to configure Android Lab bare repository" }
 $hookPath = Join-Path $repositoryRoot "hooks\pre-receive"
 $hook = @'

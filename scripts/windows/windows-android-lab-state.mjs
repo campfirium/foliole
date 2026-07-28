@@ -8,7 +8,7 @@ import { isAndroidLabRunId, safeLabEvidencePath } from './windows-android-lab-ev
 
 export const WINDOWS_ANDROID_LAB_TASK = 'FolioleAndroidLab';
 export const WINDOWS_ANDROID_LAB_SOURCE_REF = 'refs/heads/lab/dev';
-export const WINDOWS_ANDROID_LAB_PROTOCOL_VERSION = 8;
+export const WINDOWS_ANDROID_LAB_PROTOCOL_VERSION = 9;
 
 export function androidLabRoot(env = process.env) {
   if (env.FOLIOLE_WINDOWS_ANDROID_LAB_ROOT) return path.resolve(env.FOLIOLE_WINDOWS_ANDROID_LAB_ROOT);
@@ -136,13 +136,6 @@ export function parseAndroidLabCommand(input) {
     throw new Error('signing requires install <1..65536 byte length> <lowercase sha256>');
   }
   if (action === 'selfcheck' && parts.length === 0) return { action };
-  if (action === 'maintenance') {
-    if (parts[0] === 'repair-ref' && parts.length === 3
-      && /^[0-9a-f]{40}$/u.test(parts[1]) && /^[0-9a-f]{40}$/u.test(parts[2])) {
-      return { action, expectedOldSha: parts[2], operation: 'repair-ref', targetSha: parts[1] };
-    }
-    throw new Error('maintenance requires repair-ref <formal commit SHA> <expected old SHA>');
-  }
   if (!['cancel', 'status'].includes(action) || parts.length !== 0) throw new Error('unsupported Android lab action');
   return { action };
 }

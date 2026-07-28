@@ -41,9 +41,6 @@ describe('Windows Android lab state contract', () => {
     });
     expect(parseAndroidLabCommand('device status')).toEqual({ action: 'device', operation: 'status' });
     expect(parseAndroidLabCommand('selfcheck')).toEqual({ action: 'selfcheck' });
-    expect(parseAndroidLabCommand(`maintenance repair-ref ${SHA} ${'b'.repeat(40)}`)).toEqual({
-      action: 'maintenance', expectedOldSha: 'b'.repeat(40), operation: 'repair-ref', targetSha: SHA
-    });
     expect(parseAndroidLabCommand(`signing install 2618 ${'1'.repeat(64)}`)).toEqual({
       action: 'signing', byteLength: 2618, operation: 'install', sha256: '1'.repeat(64)
     });
@@ -59,7 +56,7 @@ describe('Windows Android lab state contract', () => {
     expect(() => parseAndroidLabCommand('collect list ../1000-aaaaaaaaaaaa')).toThrow();
     expect(() => parseAndroidLabCommand('deploy 1 abc')).toThrow();
     expect(() => parseAndroidLabCommand('selfcheck now')).toThrow();
-    expect(() => parseAndroidLabCommand('maintenance repair-ref HEAD')).toThrow();
+    expect(() => parseAndroidLabCommand(`maintenance repair-ref ${SHA} ${'b'.repeat(40)}`)).toThrow();
     expect(() => parseAndroidLabCommand('device reconnect 999.1.1.1:70000')).toThrow();
     expect(() => parseAndroidLabCommand(`signing install 65537 ${'1'.repeat(64)}`)).toThrow();
     expect(() => parseAndroidLabCommand('signing install C:\\Users\\me\\debug.keystore')).toThrow();
