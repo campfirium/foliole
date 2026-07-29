@@ -22,4 +22,20 @@ describe('Windows development SSH configuration', () => {
     expect(source).toContain('administrators_authorized_keys');
     expect(source).toContain('"*S-1-5-32-544:F"');
   });
+
+  it('targets the administrators key file from account membership instead of token elevation', () => {
+    expect(source).toContain('$identity.Groups | ForEach-Object { $_.Value }');
+    expect(source).toContain('$isAdministratorAccount');
+    expect(source).toContain('$isElevated');
+    expect(source).toContain('Windows development SSH must be configured from an elevated PowerShell');
+    expect(source).toContain('[Environment]::GetFolderPath("CommonApplicationData")');
+    expect(source).not.toContain('$sshDirectory = if ($isAdministrator)');
+  });
+
+  it('sets PowerShell as the ordinary OpenSSH shell and restarts sshd', () => {
+    expect(source).toContain('(Get-Command powershell.exe -ErrorAction Stop).Source');
+    expect(source).toContain('"HKLM:\\SOFTWARE\\OpenSSH"');
+    expect(source).toContain('-Name "DefaultShell"');
+    expect(source).toContain('Restart-Service -Name sshd -ErrorAction Stop');
+  });
 });

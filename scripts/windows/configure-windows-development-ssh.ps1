@@ -30,11 +30,16 @@ $shellKeyBody = Get-Ed25519KeyBody $MacPublicKey "MacPublicKey"
 $gitKeyBody = Get-Ed25519KeyBody $MacGitPublicKey "MacGitPublicKey"
 if ($shellKeyBody -eq $gitKeyBody) { throw "Shell and Git receive keys must be different" }
 
-$isAdministrator = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
+$identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+$administratorsSid = [Security.Principal.SecurityIdentifier]::new("S-1-5-32-544")
+$isAdministratorAccount = @($identity.Groups | ForEach-Object { $_.Value }) -contains $administratorsSid.Value
+$isElevated = ([Security.Principal.WindowsPrincipal]$identity).IsInRole(
   [Security.Principal.WindowsBuiltInRole]::Administrator
 )
-$sshDirectory = if ($isAdministrator) { Join-Path $env:ProgramData "ssh" } else { Join-Path $env:USERPROFILE ".ssh" }
-$authorizedKeys = Join-Path $sshDirectory $(if ($isAdministrator) { "administrators_authorized_keys" } else { "authorized_keys" })
+if (-not $isElevated) { throw "Windows development SSH must be configured from an elevated PowerShell" }
+$commonApplicationData = [Environment]::GetFolderPath("CommonApplicationData")
+$sshDirectory = if ($isAdministratorAccount) { Join-Path $commonApplicationData "ssh" } else { Join-Path $env:USERPROFILE ".ssh" }
+$authorizedKeys = Join-Path $sshDirectory $(if ($isAdministratorAccount) { "administrators_authorized_keys" } else { "authorized_keys" })
 New-Item -ItemType Directory -Force -Path $sshDirectory | Out-Null
 
 $shellKey = "no-agent-forwarding,no-port-forwarding,no-X11-forwarding,no-user-rc $($MacPublicKey.Trim())"
@@ -47,9 +52,15 @@ $retained = @($existing | Where-Object {
   $authorizedKeys, [string[]]@($retained + $shellKey + $gitKey), [System.Text.UTF8Encoding]::new($false)
 )
 
-if ($isAdministrator) {
+if ($isAdministratorAccount) {
   icacls.exe $authorizedKeys /inheritance:r /grant "*S-1-5-32-544:F" /grant "SYSTEM:F" | Out-Null
   if ($LASTEXITCODE -ne 0) { throw "Failed to secure administrators_authorized_keys" }
 }
+
+$powerShellPath = (Get-Command powershell.exe -ErrorAction Stop).Source
+$openSshRegistry = "HKLM:\SOFTWARE\OpenSSH"
+New-Item -Path $openSshRegistry -Force | Out-Null
+New-ItemProperty -Path $openSshRegistry -Name "DefaultShell" -PropertyType String -Value $powerShellPath -Force | Out-Null
+Restart-Service -Name sshd -ErrorAction Stop
 
 Write-Host "Windows development SSH shell key and dedicated Git receive key are configured."
