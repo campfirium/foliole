@@ -16,9 +16,9 @@ it('installs only the standard SSH and interactive-task bridge', () => {
   expect(script).not.toMatch(/-Password|New-Service|Session 0|WinRM/u);
 });
 
-it('locks the dedicated key to the dispatcher without PTY or forwarding', () => {
-  expect(script).toContain('command=`"$NodePath $dispatcher`"');
-  expect(script).toContain('no-agent-forwarding,no-port-forwarding,no-pty');
-  expect(script).toContain('administrators_authorized_keys');
-  expect(script).toContain('$retained + $forcedCommand');
+it('preserves existing SSH keys instead of replacing a shell key with a forced command', () => {
+  expect(script).toContain('existing SSH keys were preserved');
+  expect(script).not.toContain('authorized_keys');
+  expect(script).not.toContain('forcedCommand');
+  expect(script).not.toMatch(/command=.*windows-device-dispatcher/u);
 });

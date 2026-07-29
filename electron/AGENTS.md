@@ -40,7 +40,7 @@
 
 ## Windows Native Shell Policy
 
-- Windows Android Lab 的 forced-command dispatcher 只负责 envelope 校验、原子 claim 与 scheduled worker 投递；ADB、Windows client、仓库 runner、Lab 文件读取及 run-scoped 诊断都由 limited interactive worker 执行，并记录实际 argv、声明 cwd、环境键、stdout、stderr、exit code、时限与终止原因。
+- Windows 开发机使用普通局域网 SSH 进入 PowerShell；Android Lab 自动化仅在需要时显式调用 dispatcher 完成 envelope 校验、原子 claim 与 scheduled worker 投递，不把普通终端诊断包装成独立服务。
 - Lab 自动化必须绑定 Mac 本次推送的 commit 和目标 A5 identity；Windows 普通本地仓库快进拉取后必须核对 `HEAD`，诊断脚本只写入当前 run evidence sandbox。清数据、re-pair、Lab 根外读取、提权、防火墙或系统级修改必须在执行前返回 `approval_required`，不得提供远程 approval bypass。
 - Windows 原生 Codex 会话可以使用 PowerShell 作为默认交互 shell，但 PowerShell 只用于短命令、文件读取、状态检查和运行已存在脚本；不得把 PowerShell 当成通用脚本语言来内联复杂流程。
 - 涉及环境变量、后台进程、重定向、路径拼接、Electron 启动或多步 Windows 命令时，必须优先写成 Node `.mjs` runner；确实需要 Windows 宿主能力时，使用已提交的 `.ps1` / `.cmd` 文件入口，并通过简单 `-File` 或脚本路径调用。

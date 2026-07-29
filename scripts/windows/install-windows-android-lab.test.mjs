@@ -4,12 +4,12 @@ import fs from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 describe('Windows Android lab installer', () => {
-  it('creates an isolated limited interactive task and forced SSH command', () => {
+  it('creates an isolated limited interactive task and configures ordinary development SSH', () => {
     const source = fs.readFileSync('scripts/windows/install-windows-android-lab.ps1', 'utf8');
     expect(source).toContain('Foliole\\windows-android-lab');
     expect(source).toContain('FolioleAndroidLab');
     expect(source).toContain('-LogonType Interactive -RunLevel Limited');
-    expect(source).toContain('no-agent-forwarding,no-port-forwarding,no-pty,no-user-rc');
+    expect(source).toContain('configure-windows-development-ssh.ps1');
     expect(source).toContain('[Parameter(Mandatory = $true)][string]$MacGitPublicKey');
     expect(source).toContain('$repositoryRoot = Join-Path $installRoot "repository.git"');
     expect(source).toContain('$JavaHome = Join-Path $env:LOCALAPPDATA "Programs\\Android Studio\\jbr"');
@@ -19,10 +19,11 @@ describe('Windows Android lab installer', () => {
     expect(source).toContain('windows-android-lab-runtime-manifest.mjs');
     expect(source).toContain('$files = @(& $NodePath');
     expect(source).toContain('windows-android-lab-worker.mjs');
-    expect(source).toContain('windows-android-lab-dispatcher.mjs');
+    expect(source).toContain('windows-android-lab-receive.mjs');
+    expect(source).not.toContain('$forced =');
     expect(source).toContain('$installedRuntimeNames');
     expect(source).toContain('Get-ChildItem $installRoot -File -Filter "windows-android-lab-*"');
-    expect(source).toContain('Remove-Item -LiteralPath $checkoutRoot -Recurse -Force');
+    expect(source).not.toContain('$checkoutRoot');
     for (const name of ['$AdbPath', '$BashPath', '$GitPath', '$JavaHome']) {
       expect(source).toContain(`${name} = (Resolve-Path -LiteralPath ${name}).Path`);
     }

@@ -46,22 +46,5 @@ $principal = New-ScheduledTaskPrincipal -UserId $userId -LogonType Interactive -
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
 Register-ScheduledTask -TaskName "FoliolePhysicalAcceptance" -Action $action -Principal $principal -Settings $settings -Force | Out-Null
 
-if (-not $SkipKeyLockdown) {
-  if ([string]::IsNullOrWhiteSpace($MacPublicKey)) { throw "Mac public key is required for SSH lockdown" }
-  $isAdministrator = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-  $sshDirectory = if ($isAdministrator) { Join-Path $env:ProgramData "ssh" } else { Join-Path $env:USERPROFILE ".ssh" }
-  $authorizedKeys = Join-Path $sshDirectory $(if ($isAdministrator) { "administrators_authorized_keys" } else { "authorized_keys" })
-  New-Item -ItemType Directory -Force -Path $sshDirectory | Out-Null
-  $dispatcher = Join-Path $installRoot "windows-device-dispatcher.mjs"
-  $forcedCommand = "command=`"$NodePath $dispatcher`",no-agent-forwarding,no-port-forwarding,no-pty $MacPublicKey"
-  $existing = if (Test-Path $authorizedKeys) { Get-Content $authorizedKeys } else { @() }
-  $publicKeyBody = ($MacPublicKey -split "\s+")[1]
-  $retained = @($existing | Where-Object { $_ -notmatch [regex]::Escape($publicKeyBody) })
-  Set-Content -Path $authorizedKeys -Value @($retained + $forcedCommand)
-  if ($isAdministrator) {
-    icacls.exe $authorizedKeys /inheritance:r /grant "*S-1-5-32-544:F" /grant "SYSTEM:F" | Out-Null
-  }
-}
-
 Write-Host "Foliole Windows device debug chain installed at $installRoot"
-Write-Host "OpenSSH Server, private-profile firewall, forced SSH command, and interactive task are ready."
+Write-Host "OpenSSH Server and private-profile firewall are ready; existing SSH keys were preserved."

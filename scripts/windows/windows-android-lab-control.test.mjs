@@ -11,7 +11,7 @@ import {
 } from './windows-android-lab-control.mjs';
 
 describe('Windows Android lab Mac controller', () => {
-  it('uses a second SSH key and Android lab dispatcher', () => {
+  it('uses an ordinary shell key and a dedicated Git receive key', () => {
     const remote = remoteAndroidLabPaths({}, '/Users/tester');
     expect(remote.sshKey).toBe(path.join('/Users/tester', '.ssh', 'agent', 'foliole-windows-android-lab'));
     expect(remote.gitSshKey).toBe(path.join('/Users/tester', '.ssh', 'agent', 'foliole-windows-android-lab-git'));
@@ -70,15 +70,20 @@ describe('Windows Android lab Mac controller', () => {
   });
 
 
-  it('requires an explicit SSH user and sends only action tokens', () => {
+  it('requires an explicit SSH user and invokes the installed dispatcher through the ordinary shell', () => {
     expect(() => parseAndroidLabControlArgs(['--host', 'windows-host', 'status'], {})).toThrow();
     expect(parseAndroidLabControlArgs(['--host', 'tester@windows-host', 'device', 'status'], {}).command).toEqual(['device', 'status']);
     expect(parseAndroidLabControlArgs(['--host', 'tester@windows-host', 'selfcheck'], {}).command).toEqual(['selfcheck']);
     const args = androidLabSshArgs('tester@windows-host', ['device', 'status'], {}, '/Users/tester');
-    expect(args.slice(-3)).toEqual(['tester@windows-host', 'device', 'status']);
+    expect(args.slice(-5)).toEqual([
+      'tester@windows-host',
+      'C:/Users/tester/AppData/Local/Foliole/windows-android-lab/runtime/node.exe',
+      'C:/Users/tester/AppData/Local/Foliole/windows-android-lab/windows-android-lab-dispatcher.mjs',
+      'device', 'status'
+    ]);
     expect(args).toContain('IdentitiesOnly=yes');
     expect(args).toContain('StrictHostKeyChecking=yes');
-    expect(args.join(' ')).not.toMatch(/node\.exe|dispatcher/iu);
+    expect(args).not.toContain('no-pty');
   });
 
   it('pushes only clean dev HEAD to the fixed LAN ref with the dedicated key', async () => {

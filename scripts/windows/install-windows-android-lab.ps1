@@ -121,32 +121,14 @@ $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoi
 Register-ScheduledTask -TaskName "FolioleAndroidLab" -Action $action -Principal $principal -Settings $settings -Force | Out-Null
 
 if (-not $SkipKeyLockdown) {
-  $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-  $sshDirectory = if ($isAdmin) { Join-Path $env:ProgramData "ssh" } else { Join-Path $env:USERPROFILE ".ssh" }
-  $authorizedKeys = Join-Path $sshDirectory $(if ($isAdmin) { "administrators_authorized_keys" } else { "authorized_keys" })
-  New-Item -ItemType Directory -Force -Path $sshDirectory | Out-Null
-  $dispatcher = Join-Path $installRoot "windows-android-lab-dispatcher.mjs"
-  $receiver = Join-Path $installRoot "windows-android-lab-receive.mjs"
-  $forced = "command=`"$labNodePath $dispatcher`",no-agent-forwarding,no-port-forwarding,no-pty,no-user-rc $MacPublicKey"
-  $gitForced = "command=`"$labNodePath $receiver`",no-agent-forwarding,no-port-forwarding,no-pty,no-user-rc $MacGitPublicKey"
-  $existing = if (Test-Path $authorizedKeys) { Get-Content $authorizedKeys } else { @() }
-  $bodies = @(($MacPublicKey -split "\s+")[1], ($MacGitPublicKey -split "\s+")[1])
-  $retained = @($existing | Where-Object {
-    $line = $_
-    -not ($bodies | Where-Object { $line -match [regex]::Escape($_) })
-  })
-  Set-Content -Path $authorizedKeys -Value @($retained + $forced + $gitForced)
-  if ($isAdmin) {
-    icacls.exe $authorizedKeys /inheritance:r /grant "*S-1-5-32-544:F" /grant "SYSTEM:F" | Out-Null
-    if ($LASTEXITCODE -ne 0) { throw "Failed to secure Android Lab authorized_keys" }
-  }
+  & (Join-Path $sourceRoot "configure-windows-development-ssh.ps1") `
+    -MacGitPublicKey $MacGitPublicKey -MacPublicKey $MacPublicKey `
+    -NodePath $labNodePath -ReceiverPath (Join-Path $installRoot "windows-android-lab-receive.mjs")
 }
 
 $account = [System.Security.Principal.NTAccount]::new($identity)
 $sid = $account.Translate([System.Security.Principal.SecurityIdentifier]).Value
 icacls.exe $installRoot /inheritance:r /grant "*${sid}:(OI)(CI)F" /grant "*S-1-5-32-544:(OI)(CI)F" /grant "SYSTEM:(OI)(CI)F" | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "Failed to secure Android Lab install root" }
-$checkoutRoot = "C:\dev\foliole-android-lab-preview"
-if (Test-Path -LiteralPath $checkoutRoot) { Remove-Item -LiteralPath $checkoutRoot -Recurse -Force }
 $endpointLabel = if ($DeviceEndpoint) { $DeviceEndpoint } else { "pending reconnect" }
 Write-Host "Foliole Android Lab installed at $installRoot for device $DeviceIdentity ($endpointLabel)"

@@ -206,7 +206,7 @@ export async function dispatchWindowsAndroidLab({
   argv = process.argv.slice(2), env = process.env, input = process.stdin, now = Date.now(), paths = androidLabPaths(),
   runCommand = runProcess, stdout = process.stdout
 } = {}) {
-  const command = parseAndroidLabCommand(env.SSH_ORIGINAL_COMMAND?.trim() || argv.join(' '));
+  const command = parseAndroidLabCommand(argv.length > 0 ? argv.join(' ') : env.SSH_ORIGINAL_COMMAND?.trim());
   if (['review', 'reviewScenario', 'run'].includes(command.action)) return startRun(command, paths, runCommand, now);
   if (command.action === 'request') {
     const payload = await readBoundedInput(input, command.byteLength);

@@ -50,7 +50,7 @@
 
 ## Windows Command Boundary
 
-- Windows Android Lab 的通用自动化与诊断必须经受审计 request envelope 进入单槽 scheduled worker；commit、目标、cwd、timeout、内容 hash 与危险操作分类必须在执行前校验，危险操作只能返回 approval-required，不得由诊断模式绕过。
+- Windows Android Lab 自动化必须经受审计 request envelope 进入单槽 scheduled worker；普通 Windows 终端诊断走局域网 SSH，具体边界按 `electron/AGENTS.md` 执行。
 - Mac controller 只把当前 `dev` 的已提交状态以普通 fast-forward push 送到 LAN Git；Windows 使用普通本地 Git 仓库，首次 clone，之后只执行 `git pull --ff-only`。拉取失败直接报告，不自动 reset、重建、修复或合并源码。
 - Windows 本地仓库同时服务 Windows 桌面与 A5 Android 开发；Windows 不提交或推送源码上游，不建立 candidate、scratch、preview / WSL mirror 或按请求 SHA 切换的第二份源码现场。
 - Windows 原生命令默认用已存在的 `npm` / `node` / 项目脚本入口执行；不得把多步验证长期写成内联 PowerShell / cmd 片段。
