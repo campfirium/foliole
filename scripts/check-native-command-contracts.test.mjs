@@ -142,6 +142,24 @@ describe('check-native-command-contracts', () => {
     expect(inspectNativeCommandContracts({ repoRoot })).toMatchObject({ ok: true, violations: [] });
   });
 
+  it('discovers Split Topic preference contract and handler modules', async () => {
+    const repoRoot = await createFixtureRoot();
+    await writeBaseFixture(repoRoot, { contract: '', handlers: '' });
+    const references = `
+      import { NATIVE_COMMANDS } from './nativeCommands.js';
+      void NATIVE_COMMANDS.loadThing;
+      void NATIVE_COMMANDS.applyThing;
+    `;
+    await writeFixtureFile(repoRoot, 'lib/platform/nativeSplitTopicPreferencesContract.ts', references);
+    await writeFixtureFile(
+      repoRoot,
+      'electron/ipc/splitTopicPreferencesCommands.ts',
+      references.replace("'./nativeCommands.js'", "'../../lib/platform/nativeCommands.js'")
+    );
+
+    expect(inspectNativeCommandContracts({ repoRoot })).toMatchObject({ ok: true, violations: [] });
+  });
+
   it('reports missing contract map, inventory and handler coverage', async () => {
     const repoRoot = await createFixtureRoot();
     await writeBaseFixture(repoRoot, {

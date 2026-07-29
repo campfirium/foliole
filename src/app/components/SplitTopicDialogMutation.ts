@@ -1,6 +1,6 @@
 import type { SplitTopicPreviewPart } from '../../../lib/core/nodes/splitTopicModel';
 import { buildSplitTopicNodeOrder } from '../../../lib/core/nodes/splitTopicModel';
-import { saveSplitTopicPreferences } from '../../shared/platform/splitTopicPreferences';
+import { saveSplitTopicPreferences } from '../../shared/platform/desktop/splitTopicPreferences';
 import { saveSplitTopicWorkspaceMutation } from '../../shared/platform/workspaceRuntimeRepository';
 import { sanitizeNavigationState } from '../../store/workspaceNavigation';
 import { createWorkspaceNodeMutationPatch } from '../../store/workspaceNodeMutationPatch';

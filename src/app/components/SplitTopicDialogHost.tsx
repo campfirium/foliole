@@ -2,7 +2,7 @@ import { forwardRef, useEffect, useMemo, useState } from 'react';
 
 import { buildSplitTopicPreview } from '../../../lib/core/nodes/splitTopicModel';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { loadSplitTopicPreferences } from '../../shared/platform/splitTopicPreferences';
+import { loadSplitTopicPreferences } from '../../shared/platform/desktop/splitTopicPreferences';
 import { AppButton, AppDialog, AppDialogActions, AppDialogBody, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../shared/ui';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 import { useWorkspaceStore } from '../../store/workspaceStore';

@@ -2,7 +2,7 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
-import { loadSplitTopicPreferences, saveSplitTopicPreferences } from '../../shared/platform/splitTopicPreferences';
+import { loadSplitTopicPreferences, saveSplitTopicPreferences } from '../../shared/platform/desktop/splitTopicPreferences';
 import { saveSplitTopicWorkspaceMutation } from '../../shared/platform/workspaceRuntimeRepository';
 import { createInitialWorkspaceState, useWorkspaceStore } from '../../store/workspaceStore';
 
@@ -14,7 +14,7 @@ vi.mock('../../shared/platform/workspaceRuntimeRepository', async (importOrigina
   saveSplitTopicWorkspaceMutation: vi.fn()
 }));
 
-vi.mock('../../shared/platform/splitTopicPreferences', () => ({
+vi.mock('../../shared/platform/desktop/splitTopicPreferences', () => ({
   loadSplitTopicPreferences: vi.fn(),
   saveSplitTopicPreferences: vi.fn()
 }));

@@ -1,7 +1,6 @@
-import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
-import type { NativeSplitTopicPreferences } from '../../../lib/platform/nativeSplitTopicPreferencesContract';
-
-import { getRuntimeInvoke } from './runtimeInvoke';
+import { NATIVE_COMMANDS } from '../../../../lib/platform/nativeCommands';
+import type { NativeSplitTopicPreferences } from '../../../../lib/platform/nativeSplitTopicPreferencesContract';
+import { getRuntimeInvoke } from '../runtimeInvoke';
 
 export const DEFAULT_SPLIT_TOPIC_PREFERENCES: NativeSplitTopicPreferences = {
   delimiter: '---',
