@@ -1,6 +1,6 @@
 param(
   [Parameter(Mandatory = $true)][string]$DeviceIdentity,
-  [Parameter(Mandatory = $true)][string]$JavaHome,
+  [string]$JavaHome = "",
   [Parameter(Mandatory = $true)][string]$MacGitPublicKey,
   [Parameter(Mandatory = $true)][string]$MacPublicKey,
   [string]$DeviceEndpoint = "",
@@ -18,6 +18,7 @@ $sourceRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $releaseRoot = Join-Path $env:LOCALAPPDATA "Foliole\windows-device"
 $nodePathFile = Join-Path $releaseRoot "node-path.txt"
 if ([string]::IsNullOrWhiteSpace($NodePath) -and (Test-Path $nodePathFile)) { $NodePath = (Get-Content $nodePathFile -Raw).Trim() }
+if ([string]::IsNullOrWhiteSpace($JavaHome)) { $JavaHome = Join-Path $env:LOCALAPPDATA "Programs\Android Studio\jbr" }
 $nodeSourceRoot = Split-Path -Parent $NodePath
 foreach ($tool in @($NodePath, $GitPath, $BashPath, $AdbPath, (Join-Path $JavaHome "bin\java.exe"), (Join-Path $nodeSourceRoot "npm.cmd"))) {
   if ([string]::IsNullOrWhiteSpace($tool) -or !(Test-Path -LiteralPath $tool -PathType Leaf)) { throw "Required Android Lab tool is missing: $tool" }

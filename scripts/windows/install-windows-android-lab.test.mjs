@@ -12,6 +12,7 @@ describe('Windows Android lab installer', () => {
     expect(source).toContain('no-agent-forwarding,no-port-forwarding,no-pty,no-user-rc');
     expect(source).toContain('[Parameter(Mandatory = $true)][string]$MacGitPublicKey');
     expect(source).toContain('$repositoryRoot = Join-Path $installRoot "repository.git"');
+    expect(source).toContain('$JavaHome = Join-Path $env:LOCALAPPDATA "Programs\\Android Studio\\jbr"');
     expect(source).toContain('receive.denyNonFastForwards true');
     expect(source).toContain('only refs/heads/lab/dev is accepted');
     expect(source).toContain('windows-android-lab-receive.mjs');
@@ -29,7 +30,7 @@ describe('Windows Android lab installer', () => {
     expect(source).toContain('-ErrorAction SilentlyContinue');
     expect(source).not.toContain('RepositoryUrl');
     expect(source).not.toContain('GitReadToken');
-    expect(source).toContain('[Parameter(Mandatory = $true)][string]$JavaHome');
+    expect(source).toContain('[string]$JavaHome = ""');
     expect(source).toContain('Join-Path $nodeSourceRoot "npm.cmd"');
     expect(source).toContain('Copy-Item (Join-Path $nodeSourceRoot "*") $runtimeRoot -Recurse -Force');
     expect(source).toContain('"*${sid}:(OI)(CI)F"');
