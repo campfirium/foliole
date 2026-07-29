@@ -122,7 +122,7 @@ Register-ScheduledTask -TaskName "FolioleAndroidLab" -Action $action -Principal 
 
 if (-not $SkipKeyLockdown) {
   & (Join-Path $sourceRoot "configure-windows-development-ssh.ps1") `
-    -MacGitPublicKey $MacGitPublicKey -MacPublicKey $MacPublicKey `
+    -GitPath $GitPath -MacGitPublicKey $MacGitPublicKey -MacPublicKey $MacPublicKey `
     -NodePath $labNodePath -ReceiverPath (Join-Path $installRoot "windows-android-lab-receive.mjs")
 }
 

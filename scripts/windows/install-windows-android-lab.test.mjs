@@ -10,6 +10,7 @@ describe('Windows Android lab installer', () => {
     expect(source).toContain('FolioleAndroidLab');
     expect(source).toContain('-LogonType Interactive -RunLevel Limited');
     expect(source).toContain('configure-windows-development-ssh.ps1');
+    expect(source).toContain('-GitPath $GitPath');
     expect(source).toContain('[Parameter(Mandatory = $true)][string]$MacGitPublicKey');
     expect(source).toContain('$repositoryRoot = Join-Path $installRoot "repository.git"');
     expect(source).toContain('$JavaHome = Join-Path $env:LOCALAPPDATA "Programs\\Android Studio\\jbr"');

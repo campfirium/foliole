@@ -1,4 +1,5 @@
 param(
+  [string]$GitPath = "",
   [Parameter(Mandatory = $true)][string]$MacGitPublicKey,
   [Parameter(Mandatory = $true)][string]$MacPublicKey,
   [string]$NodePath = "",
@@ -19,11 +20,18 @@ function Get-Ed25519KeyBody([string]$PublicKey, [string]$Label) {
 }
 
 $installRoot = Join-Path $env:LOCALAPPDATA "Foliole\windows-android-lab"
+$configPath = Join-Path $installRoot "config.json"
+if ([string]::IsNullOrWhiteSpace($GitPath) -and (Test-Path -LiteralPath $configPath -PathType Leaf)) {
+  $GitPath = [string]((Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json).gitPath)
+}
 if ([string]::IsNullOrWhiteSpace($NodePath)) { $NodePath = Join-Path $installRoot "runtime\node.exe" }
 if ([string]::IsNullOrWhiteSpace($ReceiverPath)) { $ReceiverPath = Join-Path $installRoot "windows-android-lab-receive.mjs" }
 foreach ($runtimeFile in @($NodePath, $ReceiverPath)) {
   if (!(Test-Path -LiteralPath $runtimeFile -PathType Leaf)) { throw "Required SSH runtime file is missing: $runtimeFile" }
   if ($runtimeFile -match '[\s"\r\n]') { throw "SSH runtime paths must not contain whitespace or quotes" }
+}
+if ([string]::IsNullOrWhiteSpace($GitPath) -or !(Test-Path -LiteralPath $GitPath -PathType Leaf)) {
+  throw "Required Git executable is missing: $GitPath"
 }
 
 $shellKeyBody = Get-Ed25519KeyBody $MacPublicKey "MacPublicKey"
@@ -56,6 +64,14 @@ if ($isAdministratorAccount) {
   icacls.exe $authorizedKeys /inheritance:r /grant "*S-1-5-32-544:F" /grant "SYSTEM:F" | Out-Null
   if ($LASTEXITCODE -ne 0) { throw "Failed to secure administrators_authorized_keys" }
 }
+
+$developmentPathEntries = @(
+  (Split-Path -Parent (Resolve-Path -LiteralPath $NodePath).Path),
+  (Split-Path -Parent (Resolve-Path -LiteralPath $GitPath).Path)
+)
+$existingUserPath = @([Environment]::GetEnvironmentVariable("Path", "User") -split ';' | Where-Object { $_ })
+$retainedUserPath = @($existingUserPath | Where-Object { $_ -notin $developmentPathEntries })
+[Environment]::SetEnvironmentVariable("Path", (@($developmentPathEntries + $retainedUserPath) -join ';'), "User")
 
 $powerShellPath = (Get-Command powershell.exe -ErrorAction Stop).Source
 $openSshRegistry = "HKLM:\SOFTWARE\OpenSSH"

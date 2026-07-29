@@ -38,4 +38,12 @@ describe('Windows development SSH configuration', () => {
     expect(source).toContain('-Name "DefaultShell"');
     expect(source).toContain('Restart-Service -Name sshd -ErrorAction Stop');
   });
+
+  it('puts the verified Node and Git directories ahead of reparse-point shims', () => {
+    expect(source).toContain('[string]$GitPath = ""');
+    expect(source).toContain('ConvertFrom-Json).gitPath');
+    expect(source).toContain('$developmentPathEntries');
+    expect(source).toContain('[Environment]::SetEnvironmentVariable("Path"');
+    expect(source).toContain('$retainedUserPath');
+  });
 });
