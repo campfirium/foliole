@@ -68,11 +68,12 @@ export function androidLabSshArgs(host, command, env, home = os.homedir()) {
   const remote = remoteAndroidLabPaths(env, home);
   const user = host.slice(0, host.lastIndexOf('@')).split('\\').at(-1);
   const runtimeRoot = `C:/Users/${user}/AppData/Local/Foliole/windows-android-lab`;
+  const dispatcher = 'C:/dev/foliole-android-lab-preview/scripts/windows/windows-android-lab-dispatcher.mjs';
   return [
     '-T', '-i', remote.sshKey, '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=15',
     '-o', 'IdentitiesOnly=yes', '-o', 'StrictHostKeyChecking=yes',
     '-o', 'ServerAliveInterval=15', '-o', 'ServerAliveCountMax=3', host,
-    `${runtimeRoot}/runtime/node.exe`, `${runtimeRoot}/windows-android-lab-dispatcher.mjs`, ...command
+    `${runtimeRoot}/runtime/node.exe`, dispatcher, ...command
   ];
 }
 

@@ -70,7 +70,7 @@ describe('Windows Android lab Mac controller', () => {
   });
 
 
-  it('requires an explicit SSH user and invokes the installed dispatcher through the ordinary shell', () => {
+  it('requires an explicit SSH user and invokes the repository dispatcher through the ordinary shell', () => {
     expect(() => parseAndroidLabControlArgs(['--host', 'windows-host', 'status'], {})).toThrow();
     expect(parseAndroidLabControlArgs(['--host', 'tester@windows-host', 'device', 'status'], {}).command).toEqual(['device', 'status']);
     expect(parseAndroidLabControlArgs(['--host', 'tester@windows-host', 'selfcheck'], {}).command).toEqual(['selfcheck']);
@@ -78,7 +78,7 @@ describe('Windows Android lab Mac controller', () => {
     expect(args.slice(-5)).toEqual([
       'tester@windows-host',
       'C:/Users/tester/AppData/Local/Foliole/windows-android-lab/runtime/node.exe',
-      'C:/Users/tester/AppData/Local/Foliole/windows-android-lab/windows-android-lab-dispatcher.mjs',
+      'C:/dev/foliole-android-lab-preview/scripts/windows/windows-android-lab-dispatcher.mjs',
       'device', 'status'
     ]);
     expect(args).toContain('IdentitiesOnly=yes');
