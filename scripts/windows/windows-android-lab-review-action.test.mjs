@@ -21,8 +21,8 @@ function fixture(phase = 'prepare') {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-android-lab-review-'));
   roots.push(root);
   const paths = androidLabPaths(root);
-  paths.preview = path.join(root, 'preview');
-  paths.workspaceDeployment = path.join(paths.preview, '.foliole-android-lab-deployment.json');
+  paths.checkout = path.join(root, 'checkout');
+  paths.workspaceDeployment = path.join(paths.checkout, '.foliole-android-lab-deployment.json');
   const deployment = { commitSha: SHA, deviceIdentity: 'A5-STABLE', runId: '900-aaaaaaaaaaaa', schemaVersion: 1 };
   writeJsonAtomic(paths.config, {
     adbPath: 'adb.exe', deviceIdentity: 'A5-STABLE', nodeDirectory: path.join(root, 'runtime'), schemaVersion: 2
@@ -33,7 +33,7 @@ function fixture(phase = 'prepare') {
   for (const entry of [
     'scripts/android/sqlite-readonly.mjs', 'scripts/windows/windows-android-lab-review-audit.ts'
   ]) {
-    const target = path.join(paths.preview, entry);
+    const target = path.join(paths.checkout, entry);
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, 'fixture');
   }
@@ -159,7 +159,7 @@ describe('Windows Android lab Review action', () => {
 
   it('fails closed when the deployed Review audit runtime is absent', async () => {
     const { paths, request } = fixture();
-    fs.rmSync(path.join(paths.preview, 'scripts', 'android', 'sqlite-readonly.mjs'));
+    fs.rmSync(path.join(paths.checkout, 'scripts', 'android', 'sqlite-readonly.mjs'));
     await expect(runWindowsAndroidLabReviewPhase({
       executeCommand: executor([]), paths, pullSnapshot, request
     })).rejects.toMatchObject({ code: 'review_audit_runtime_missing' });

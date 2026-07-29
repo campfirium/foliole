@@ -33,7 +33,7 @@ describe('Windows Android Lab Review scenario run', () => {
   it('skips source sync when UI automation runs from the deployed preview workspace', () => {
     const env = scenarioEnv({
       adbPath: 'C:\\Android\\adb.exe', bashPath: 'bash.exe', nodeDirectory: 'C:\\node'
-    }, 'A5', { preview: 'C:\\dev\\foliole-android-lab-preview', signingHome: 'C:\\signing' }, 'C:\\evidence');
+    }, 'A5', { checkout: 'C:\\dev\\foliole-android-lab-preview', signingHome: 'C:\\signing' }, 'C:\\evidence');
     expect(env.ANDROID_SKIP_WINDOWS_SYNC).toBe('1');
     expect(env.ANDROID_WINDOWS_WORKDIR).toBe('C:\\dev\\foliole-android-lab-preview');
   });

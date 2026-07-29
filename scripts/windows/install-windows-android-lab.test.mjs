@@ -12,11 +12,16 @@ describe('Windows Android lab installer', () => {
     expect(source).toContain('no-agent-forwarding,no-port-forwarding,no-pty,no-user-rc');
     expect(source).toContain('[Parameter(Mandatory = $true)][string]$MacGitPublicKey');
     expect(source).toContain('$repositoryRoot = Join-Path $installRoot "repository.git"');
-    expect(source).toContain('receive.denyNonFastForwards false');
+    expect(source).toContain('receive.denyNonFastForwards true');
     expect(source).toContain('only refs/heads/lab/dev is accepted');
     expect(source).toContain('windows-android-lab-receive.mjs');
     expect(source).toContain('windows-android-lab-runtime-manifest.mjs');
     expect(source).toContain('$files = @(& $NodePath');
+    expect(source).toContain('windows-android-lab-worker.mjs');
+    expect(source).toContain('windows-android-lab-dispatcher.mjs');
+    expect(source).toContain('$installedRuntimeNames');
+    expect(source).toContain('Get-ChildItem $installRoot -File -Filter "windows-android-lab-*"');
+    expect(source).toContain('Remove-Item -LiteralPath $checkoutRoot -Recurse -Force');
     expect(source).toContain('git-read-token.txt');
     expect(source).toContain('-ErrorAction SilentlyContinue');
     expect(source).not.toContain('RepositoryUrl');

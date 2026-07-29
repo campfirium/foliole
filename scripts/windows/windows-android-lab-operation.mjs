@@ -5,7 +5,6 @@ import process from 'node:process';
 
 import { reconnectAndroidDevice, resolveAndroidDevice } from './windows-android-lab-device.mjs';
 import { androidLabAdbArgs, androidLabAdbEnv } from './windows-android-lab-adb.mjs';
-import { cleanupAndroidLabCheckout, prepareAndroidLabCheckout } from './windows-android-lab-checkout.mjs';
 import { readJson, writeJsonAtomic } from './windows-android-lab-state.mjs';
 
 const OUTPUT_LIMIT = 1_000_000;
@@ -204,21 +203,12 @@ export async function runAndroidLabOperation({ config, executeCommand, paths, re
 }
 
 export async function finishAndroidLabOperationRun({ config, executeCommand, paths, request, running }) {
-  const needsCheckout = !['windowsClient', 'androidDevServer'].includes(request.operation.kind) &&
-    (request.operation.kind === 'repository' || request.cwd.scope === 'checkout');
   let primaryError = null;
   try {
-    if (needsCheckout) {
-      writeJsonAtomic(paths.status, { ...running, phase: 'checkout' });
-      await prepareAndroidLabCheckout(config, paths, request.commitSha, executeCommand, request.sourceKind);
-    }
     writeJsonAtomic(paths.status, { ...running, phase: 'request_execute' });
     await runAndroidLabOperation({ config, executeCommand, paths, request });
   } catch (error) {
     primaryError = error;
-  }
-  if (needsCheckout) {
-    try { await cleanupAndroidLabCheckout(config, paths, executeCommand); } catch (error) { primaryError ||= error; }
   }
   const completed = {
     ...running, completedAt: new Date().toISOString(), errorCode: primaryError?.code,

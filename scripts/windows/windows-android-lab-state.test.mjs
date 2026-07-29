@@ -18,7 +18,7 @@ describe('Windows Android lab state contract', () => {
     expect(WINDOWS_ANDROID_LAB_TASK).toBe('FolioleAndroidLab');
     expect(paths.root).not.toContain('windows-device');
     expect(paths.device).toContain('device.json');
-    expect(paths.preview).toBe('C:\\dev\\foliole-android-lab-preview');
+    expect(paths.checkout).toBe('C:\\dev\\foliole-android-lab-preview');
     expect(paths.signingKeystore).toContain('debug.keystore');
   });
 

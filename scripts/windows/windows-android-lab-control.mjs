@@ -77,7 +77,7 @@ export function androidLabGitPushSpec(host, commitSha, env, home = os.homedir())
   const key = remoteAndroidLabPaths(env, home).gitSshKey;
   return {
     args: [
-      'push', '--porcelain', '--force', `${host}:${LAB_GIT_REPOSITORY}`,
+      'push', '--porcelain', `${host}:${LAB_GIT_REPOSITORY}`,
       `${commitSha}:${WINDOWS_ANDROID_LAB_SOURCE_REF}`
     ],
     env: {
@@ -115,7 +115,7 @@ async function pushAndroidLabSource(host, env, executeGit) {
   const spec = androidLabGitPushSpec(host, commitSha, env);
   await executeGit(spec.args, { env: spec.env });
   return {
-    commitSha, operation: 'push', ref: WINDOWS_ANDROID_LAB_SOURCE_REF, schemaVersion: 1, sourceKind: 'formal'
+    commitSha, operation: 'push', ref: WINDOWS_ANDROID_LAB_SOURCE_REF, schemaVersion: 1
   };
 }
 

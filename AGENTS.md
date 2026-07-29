@@ -51,8 +51,8 @@
 ## Windows Command Boundary
 
 - Windows Android Lab 的通用自动化与诊断必须经受审计 request envelope 进入单槽 scheduled worker；commit、目标、cwd、timeout、内容 hash 与危险操作分类必须在执行前校验，危险操作只能返回 approval-required，不得由诊断模式绕过。
-- Windows Android Lab 的正式运行与验收必须绑定 Mac 控制面的明确 commit；controller 在工作树 dirty 时必须 fail closed，不得隐式生成或续接 scratch。scratch 仅允许作为显式标注的单次 diagnostic / probe，且不得作为正式验收输入或连续开发主路径。Windows 不回写源码上游，tracked source dirty 必须 generator-aware 且 evidence-bound。
-- Windows Lab checkout 是同一轮 Windows 桌面与 A5 Android 目视调试的唯一 Lab 开发现场；不得并存 candidate worktree、preview mirror、WSL mirror 或 personal Windows checkout 来承载同一轮 Lab 调试。
+- Mac controller 只把当前 `dev` 的已提交状态以普通 fast-forward push 送到 LAN Git；Windows 使用普通本地 Git 仓库，首次 clone，之后只执行 `git pull --ff-only`。拉取失败直接报告，不自动 reset、重建、修复或合并源码。
+- Windows 本地仓库同时服务 Windows 桌面与 A5 Android 开发；Windows 不提交或推送源码上游，不建立 candidate、scratch、preview / WSL mirror 或按请求 SHA 切换的第二份源码现场。
 - Windows 原生命令默认用已存在的 `npm` / `node` / 项目脚本入口执行；不得把多步验证长期写成内联 PowerShell / cmd 片段。
 - 复杂 Windows 命令若涉及多层引号、环境变量、重定向、后台进程、native exe、`cmd.exe` / PowerShell 交叉调用或 stdout 可靠性判断，优先写成仓库内 Node runner 或已提交脚本；临时诊断必须把 stdout、stderr、exit code 写入 `.tmp/` 后再读取，不得只凭空 stdout 或空日志判定成功。
 - 临时 Playwright / browser 验收、生产站点 browser probe、HTTP server + browser 脚本必须通过 `node scripts/with-resource-gate.mjs preview -- <command...>` 执行；Node REPL 只用于短探针，长流程必须转成仓库脚本。只清理 runner 自己启动的子进程树，不按进程名全机杀 `node.exe` / `msedge.exe`。

@@ -21,14 +21,11 @@ function fixture() {
   const paths = {
     ...androidLabPaths(root),
     checkout: preview,
-    candidate: preview,
-    preview,
     workspaceDeployment: path.join(preview, '.foliole-android-lab-deployment.json')
   };
-  fs.mkdirSync(path.join(paths.candidate, 'scripts', 'windows'), { recursive: true });
-  fs.mkdirSync(path.join(paths.preview, 'scripts', 'windows'), { recursive: true });
-  fs.writeFileSync(path.join(paths.candidate, 'scripts', 'windows', 'probe.mjs'), 'console.log("probe")\n');
-  fs.writeFileSync(path.join(paths.preview, 'scripts', 'windows', 'windows-client-native.mjs'), 'console.log("client")\n');
+  fs.mkdirSync(path.join(paths.checkout, 'scripts', 'windows'), { recursive: true });
+  fs.writeFileSync(path.join(paths.checkout, 'scripts', 'windows', 'probe.mjs'), 'console.log("probe")\n');
+  fs.writeFileSync(path.join(paths.checkout, 'scripts', 'windows', 'windows-client-native.mjs'), 'console.log("client")\n');
   writeJsonAtomic(paths.device, { endpoint: ENDPOINT, identity: 'A5-STABLE' });
   return {
     config: {
@@ -102,7 +99,7 @@ describe('Windows Android Lab worker operations', () => {
     }, { target: 'a5' }) });
     expect(calls.at(-1).options.env).toMatchObject({
       ANDROID_USER_HOME: paths.signingHome,
-      ANDROID_WINDOWS_WORKDIR: paths.preview,
+      ANDROID_WINDOWS_WORKDIR: paths.checkout,
       FOLIOLE_ANDROID_ADB_PATH: 'adb.exe',
       FOLIOLE_ANDROID_ADB_SERVER_PORT: '5601',
       FOLIOLE_ANDROID_BASH_PATH: 'bash.exe',
@@ -131,9 +128,9 @@ describe('Windows Android Lab worker operations', () => {
       fileName: 'probe.mjs', kind: 'diagnostic', runtime: 'node'
     }, { cwd: { path: '', scope: 'run' }, mode: 'diagnostic' }) });
     expect(calls[0].args).toEqual([
-      path.join(paths.preview, 'scripts', 'windows', 'windows-client-native.mjs'), 'status'
+      path.join(paths.checkout, 'scripts', 'windows', 'windows-client-native.mjs'), 'status'
     ]);
-    expect(calls[0].options.cwd).toBe(paths.preview);
+    expect(calls[0].options.cwd).toBe(paths.checkout);
     expect(calls[0].options.env.FOLIOLE_RUNTIME_HEAD).toBe(SHA);
     expect(calls[1].args[0]).toContain(path.join('diagnostic-run', 'diagnostic', 'probe.mjs'));
     expect(calls.every((call) => call.options.shell === undefined)).toBe(true);
@@ -158,7 +155,7 @@ describe('Windows Android Lab worker operations', () => {
     expect(calls.at(-1).options.env.FOLIOLE_ANDROID_ADB_SERVER_PORT).toBe('5601');
   });
 
-  it('does not create a clean candidate checkout before Windows client control', async () => {
+  it('runs Windows client control in the local development repository', async () => {
     const { config, paths } = fixture();
     const phases = [];
     await finishAndroidLabOperationRun({
@@ -172,9 +169,9 @@ describe('Windows Android Lab worker operations', () => {
       }
     });
     expect(phases).toHaveLength(1);
-    expect(phases[0]).toMatchObject({ cwd: paths.preview });
+    expect(phases[0]).toMatchObject({ cwd: paths.checkout });
     expect(phases[0].args).toEqual([
-      path.join(paths.preview, 'scripts', 'windows', 'windows-client-native.mjs'), 'start'
+      path.join(paths.checkout, 'scripts', 'windows', 'windows-client-native.mjs'), 'start'
     ]);
   });
 
@@ -193,9 +190,9 @@ describe('Windows Android Lab worker operations', () => {
     });
     expect(calls).toHaveLength(1);
     expect(calls[0].args).toEqual([
-      path.join(paths.preview, 'scripts', 'windows', 'windows-android-dev-server.mjs'), 'status'
+      path.join(paths.checkout, 'scripts', 'windows', 'windows-android-dev-server.mjs'), 'status'
     ]);
-    expect(calls[0].options.cwd).toBe(paths.preview);
+    expect(calls[0].options.cwd).toBe(paths.checkout);
     expect(calls[0].options.env).toMatchObject({
       FOLIOLE_RUNTIME_HEAD: SHA,
       FOLIOLE_WINDOWS_ANDROID_DEV_SERVER_STATE_ROOT: path.join(paths.root, 'runtime', 'android-dev-server')

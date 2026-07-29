@@ -9,8 +9,8 @@ import { pathToFileURL } from 'node:url';
 
 import { executeBounded } from './windows-bounded-process.mjs';
 import { androidLabAdbArgs, androidLabAdbEnv } from './windows-android-lab-adb.mjs';
-import { cleanupAndroidLabCheckout, prepareAndroidLabCheckout } from './windows-android-lab-checkout.mjs';
 import { resolveAndroidDevice, validateAndroidLabConfig } from './windows-android-lab-device.mjs';
+import { updateWindowsAndroidLabRepository } from './windows-android-lab-git-sync.mjs';
 import { finishAndroidLabOperationRun } from './windows-android-lab-operation.mjs';
 import {
   finishWindowsAndroidLabReviewRun, runWindowsAndroidLabReviewPhase
@@ -139,7 +139,8 @@ function writeRunEvidence(evidenceRoot, request, result, screenshotError, logcat
 
 export async function runWindowsAndroidLabWorker({
   executeCommand = executeBounded, paths = androidLabPaths(), platform = process.platform,
-  runReviewPhase = runWindowsAndroidLabReviewPhase, runReviewScenario = runWindowsAndroidLabReviewScenario
+  runReviewPhase = runWindowsAndroidLabReviewPhase, runReviewScenario = runWindowsAndroidLabReviewScenario,
+  syncRepository = updateWindowsAndroidLabRepository
 } = {}) {
   if (platform !== 'win32') throw new Error('Windows Android lab worker requires win32');
   const request = readJson(paths.active);
@@ -148,8 +149,18 @@ export async function runWindowsAndroidLabWorker({
   const config = { ...installedConfig, commitSha: request.commitSha };
   const evidenceRoot = path.join(paths.evidence, request.runId);
   const startedAt = new Date().toISOString();
-  const running = { ...request, evidenceRoot, phase: 'device_resolve', pid: process.pid, startedAt, state: 'running' };
+  const running = { ...request, evidenceRoot, phase: 'git_pull', pid: process.pid, startedAt, state: 'running' };
   writeJsonAtomic(paths.status, running);
+  try {
+    await syncRepository(config, paths, request.commitSha, executeCommand);
+  } catch (error) {
+    writeJsonAtomic(paths.status, {
+      ...running, completedAt: new Date().toISOString(), errorCode: error.code || 'lab_git_sync_failed',
+      errorMessage: error.message?.slice(0, 500), phase: 'completed', resultStatus: 'failure', state: 'completed'
+    });
+    if (readJson(paths.active)?.runId === request.runId) fs.rmSync(paths.active, { force: true });
+    throw error;
+  }
   if (request.action === 'review') {
     return finishWindowsAndroidLabReviewRun({ executeCommand, paths, request, runReviewPhase, running });
   }
@@ -169,8 +180,6 @@ export async function runWindowsAndroidLabWorker({
     validateAndroidLabConfig(config);
     assertAndroidSigning(config, paths);
     device = await resolveAndroidDevice(config, paths, executeCommand);
-    writeJsonAtomic(paths.status, { ...running, phase: 'checkout' });
-    await prepareAndroidLabCheckout(config, paths, request.commitSha, executeCommand, request.sourceKind);
     fs.mkdirSync(paths.protection, { recursive: true });
     fs.mkdirSync(paths.manifest, { recursive: true });
     writeJsonAtomic(paths.status, { ...running, phase: 'preview' });
@@ -184,11 +193,6 @@ export async function runWindowsAndroidLabWorker({
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const logcatError = await captureLogcat(config, device?.endpoint, evidenceRoot, executeCommand);
   const screenshotError = await captureScreenshot(config, device?.endpoint, paths, evidenceRoot, executeCommand);
-  try {
-    await cleanupAndroidLabCheckout(config, paths, executeCommand);
-  } catch (error) {
-    primaryError ||= error;
-  }
   writeRunEvidence(evidenceRoot, request, previewResult, screenshotError, logcatError, device);
   const completedAt = new Date().toISOString();
   if (!primaryError) {

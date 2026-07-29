@@ -24,7 +24,7 @@ it('force-updates the fixed LAN ref to the latest committed dev HEAD', async () 
     ['branch', '--show-current'],
     ['rev-parse', '--verify', 'HEAD'],
     [
-      'push', '--porcelain', '--force', 'tester@windows-host:foliole-android-lab.git',
+      'push', '--porcelain', 'tester@windows-host:foliole-android-lab.git',
       `${head}:refs/heads/lab/dev`
     ]
   ]);

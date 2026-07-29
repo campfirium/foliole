@@ -95,7 +95,7 @@ describe('Windows Android lab Mac controller', () => {
       stdout: { write: (value) => { output += String(value); } }
     });
     expect(calls.at(-1).args).toEqual([
-      'push', '--porcelain', '--force', 'tester@windows-host:foliole-android-lab.git', `${sha}:refs/heads/lab/dev`
+      'push', '--porcelain', 'tester@windows-host:foliole-android-lab.git', `${sha}:refs/heads/lab/dev`
     ]);
     expect(calls.at(-1).options.env.GIT_SSH_COMMAND).toContain('foliole-windows-android-lab-git');
     expect(JSON.parse(output)).toMatchObject({ commitSha: sha, ref: 'refs/heads/lab/dev' });

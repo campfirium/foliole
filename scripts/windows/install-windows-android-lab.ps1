@@ -47,6 +47,10 @@ if ($DeviceEndpoint) {
 
 New-Item -ItemType Directory -Force -Path $installRoot | Out-Null
 foreach ($file in $files) { Copy-Item (Join-Path $sourceRoot $file) (Join-Path $installRoot $file) -Force }
+$installedRuntimeNames = @($files | ForEach-Object { Split-Path -Leaf $_ })
+Get-ChildItem $installRoot -File -Filter "windows-android-lab-*" | Where-Object {
+  $installedRuntimeNames -notcontains $_.Name
+} | Remove-Item -Force
 $runtimeRoot = Join-Path $installRoot "runtime"
 New-Item -ItemType Directory -Force -Path $runtimeRoot | Out-Null
 $labNodePath = Join-Path $runtimeRoot "node.exe"
@@ -58,7 +62,7 @@ if (!(Test-Path (Join-Path $repositoryRoot "HEAD"))) {
 }
 & $GitPath --git-dir $repositoryRoot config receive.denyDeletes true
 if ($LASTEXITCODE -ne 0) { throw "Failed to configure Android Lab bare repository" }
-& $GitPath --git-dir $repositoryRoot config receive.denyNonFastForwards false
+& $GitPath --git-dir $repositoryRoot config receive.denyNonFastForwards true
 if ($LASTEXITCODE -ne 0) { throw "Failed to configure Android Lab bare repository" }
 $hookPath = Join-Path $repositoryRoot "hooks\pre-receive"
 $hook = @'
@@ -105,7 +109,8 @@ if ($DeviceEndpoint) {
   $device | ConvertTo-Json | Set-Content -Path (Join-Path $installRoot "device.json") -Encoding UTF8
 }
 $identity = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-$action = New-ScheduledTaskAction -Execute $labNodePath -Argument "`"$(Join-Path $installRoot 'windows-android-lab-worker.mjs')`""
+$workerPath = Join-Path $installRoot "windows-android-lab-worker.mjs"
+$action = New-ScheduledTaskAction -Execute $labNodePath -Argument "`"$workerPath`""
 $principal = New-ScheduledTaskPrincipal -UserId $identity -LogonType Interactive -RunLevel Limited
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Minutes 50)
 Register-ScheduledTask -TaskName "FolioleAndroidLab" -Action $action -Principal $principal -Settings $settings -Force | Out-Null
@@ -136,5 +141,7 @@ $account = [System.Security.Principal.NTAccount]::new($identity)
 $sid = $account.Translate([System.Security.Principal.SecurityIdentifier]).Value
 icacls.exe $installRoot /inheritance:r /grant "*${sid}:(OI)(CI)F" /grant "*S-1-5-32-544:(OI)(CI)F" /grant "SYSTEM:(OI)(CI)F" | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "Failed to secure Android Lab install root" }
+$checkoutRoot = "C:\dev\foliole-android-lab-preview"
+if (Test-Path -LiteralPath $checkoutRoot) { Remove-Item -LiteralPath $checkoutRoot -Recurse -Force }
 $endpointLabel = if ($DeviceEndpoint) { $DeviceEndpoint } else { "pending reconnect" }
 Write-Host "Foliole Android Lab installed at $installRoot for device $DeviceIdentity ($endpointLabel)"

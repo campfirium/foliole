@@ -20,10 +20,8 @@ function createFixture() {
   roots.push(root);
   const paths = androidLabPaths(root);
   paths.checkout = path.join(root, 'checkout');
-  paths.candidate = paths.checkout;
-  paths.preview = paths.checkout;
   paths.workspaceDeployment = path.join(paths.checkout, '.foliole-android-lab-deployment.json');
-  writeJsonAtomic(paths.active, { commitSha: SHA, runId: 'run-1', schemaVersion: 1, sourceKind: 'formal' });
+  writeJsonAtomic(paths.active, { commitSha: SHA, runId: 'run-1', schemaVersion: 1 });
   const signing = Buffer.from('private signing bytes');
   fs.mkdirSync(paths.signingHome, { recursive: true });
   fs.writeFileSync(paths.signingKeystore, signing);
@@ -34,6 +32,7 @@ function createFixture() {
   });
   fs.mkdirSync(paths.repository, { recursive: true });
   fs.writeFileSync(path.join(paths.repository, 'HEAD'), 'ref: refs/heads/lab/dev\n');
+  fs.mkdirSync(path.join(paths.checkout, '.git'), { recursive: true });
   writeJsonAtomic(paths.device, { endpoint: ENDPOINT, identity: 'A5-STABLE', schemaVersion: 1 });
   return paths;
 }
@@ -41,6 +40,8 @@ function createFixture() {
 function successfulExecutor(paths, calls) {
   return async (command, args, options) => {
     calls.push({ args, command, options });
+    if (command === 'git.exe' && args.includes('pull')) return { code: 0, lines: ['Already up to date.'], output: 'Already up to date.\n' };
+    if (command === 'git.exe' && args.includes('rev-parse')) return { code: 0, lines: [SHA], output: `${SHA}\n` };
     const adb = args[0] === '-P' ? args.slice(2) : args;
     if (command === 'adb.exe' && adb[0] === 'devices') {
       return { code: 0, lines: [`${ENDPOINT} device`], output: `List of devices attached\n${ENDPOINT}\tdevice\n` };
@@ -59,6 +60,8 @@ function successfulExecutor(paths, calls) {
   };
 }
 
+const noSync = async () => ({ commitSha: SHA });
+
 describe('Windows Android lab worker', () => {
   it('executes a claimed general request in the worker and leaves a complete command audit', async () => {
     const paths = createFixture();
@@ -71,7 +74,7 @@ describe('Windows Android lab worker', () => {
     });
     await runWindowsAndroidLabWorker({
       executeCommand: async () => { throw new Error('bounded file read should not spawn'); },
-      paths, platform: 'win32'
+      paths, platform: 'win32', syncRepository: noSync
     });
     expect(readJson(paths.status)).toMatchObject({ requestId: 'read-health', resultStatus: 'success', state: 'completed' });
     expect(readJson(path.join(paths.evidence, 'request-run', 'command-audit.json'))).toMatchObject({
@@ -94,7 +97,7 @@ describe('Windows Android lab worker', () => {
     };
     await runWindowsAndroidLabWorker({
       executeCommand: async () => { throw new Error('deploy command should not run'); },
-      paths, platform: 'win32', runReviewPhase
+      paths, platform: 'win32', runReviewPhase, syncRepository: noSync
     });
     expect(phases).toEqual(['review_audit']);
     expect(readJson(paths.status)).toMatchObject({ resultStatus: 'success', state: 'completed' });
@@ -114,7 +117,7 @@ describe('Windows Android lab worker', () => {
     };
     await runWindowsAndroidLabWorker({
       executeCommand: async () => { throw new Error('deploy command should not run'); },
-      paths, platform: 'win32', runReviewScenario
+      paths, platform: 'win32', runReviewScenario, syncRepository: noSync
     });
     expect(phases).toEqual(['scenario_capture']);
     expect(readJson(paths.status)).toMatchObject({ resultStatus: 'success', state: 'completed' });
@@ -141,14 +144,11 @@ describe('Windows Android lab worker', () => {
       FOLIOLE_ANDROID_SERIAL: ENDPOINT
     });
     expect(screenshot.options.env.Path).toContain('C:\\Node;C:\\Java\\bin');
-    expect(calls.some((call) => call.args.includes('fetch') || call.args.includes('clone'))).toBe(false);
-    expect(calls.some((call) => call.args.includes('refs/heads/lab/dev'))).toBe(true);
     const gitCalls = calls.filter((call) => call.command === 'git.exe');
-    expect(gitCalls.every((call) => (
-      call.args[0] === '-c' && call.args[1] === `core.hooksPath=${path.join(paths.root, 'worker-empty-hooks')}`
-    ))).toBe(true);
+    expect(gitCalls.map((call) => call.args.filter((arg) => ['pull', 'rev-parse'].includes(arg)))).toEqual([
+      ['pull'], ['rev-parse']
+    ]);
     expect(fs.existsSync(paths.checkout)).toBe(true);
-    expect(readJson(paths.checkoutState)).toMatchObject({ checkoutHead: SHA, path: paths.checkout, sourceKind: 'formal' });
     expect(readJson(paths.status).resultStatus).toBe('success');
     expect(readJson(paths.deployment)).toMatchObject({ commitSha: SHA, deviceIdentity: 'A5-STABLE', runId: 'run-1' });
     expect(readJson(paths.workspaceDeployment)).toEqual(readJson(paths.deployment));
@@ -172,7 +172,7 @@ describe('Windows Android lab worker', () => {
       }
       return result;
     };
-    await runWindowsAndroidLabWorker({ executeCommand, paths, platform: 'win32' });
+    await runWindowsAndroidLabWorker({ executeCommand, paths, platform: 'win32', syncRepository: noSync });
     expect(readJson(path.join(paths.evidence, 'run-1', 'summary.json')).installDisposition).toBe('installed');
   });
 
@@ -182,7 +182,7 @@ describe('Windows Android lab worker', () => {
       if (args.includes('getprop')) return { code: 0, lines: ['A5-STABLE'], output: 'A5-STABLE\n' };
       return { code: 0, lines: [], output: `${ENDPOINT}\tdevice\n192.168.0.108:40000\tdevice\n` };
     };
-    await expect(runWindowsAndroidLabWorker({ executeCommand, paths, platform: 'win32' })).rejects.toMatchObject({
+    await expect(runWindowsAndroidLabWorker({ executeCommand, paths, platform: 'win32', syncRepository: noSync })).rejects.toMatchObject({
       code: 'android_device_not_exclusive'
     });
     expect(readJson(paths.status).resultStatus).toBe('failure');
@@ -200,7 +200,7 @@ describe('Windows Android lab worker', () => {
       if (command === 'bash.exe') throw Object.assign(new Error('preview exceeded limit'), { code: 'android_preview_timeout' });
       return base(command, args, options);
     };
-    await expect(runWindowsAndroidLabWorker({ executeCommand, paths, platform: 'win32' })).rejects.toMatchObject({
+    await expect(runWindowsAndroidLabWorker({ executeCommand, paths, platform: 'win32', syncRepository: noSync })).rejects.toMatchObject({
       code: 'android_preview_timeout'
     });
     expect(readJson(paths.status)).toMatchObject({ errorCode: 'android_preview_timeout', resultStatus: 'failure' });
@@ -215,7 +215,7 @@ describe('Windows Android lab worker', () => {
     const calls = [];
     await expect(runWindowsAndroidLabWorker({
       executeCommand: async (...args) => { calls.push(args); return { code: 0, lines: [], output: '' }; },
-      paths, platform: 'win32'
+      paths, platform: 'win32', syncRepository: noSync
     })).rejects.toMatchObject({ code: 'android_signing_missing' });
     expect(calls).toEqual([]);
     expect(readJson(paths.status)).toMatchObject({ errorCode: 'android_signing_missing', resultStatus: 'failure' });

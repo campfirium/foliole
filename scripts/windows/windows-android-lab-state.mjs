@@ -20,15 +20,12 @@ export function androidLabPaths(root = androidLabRoot()) {
   const checkout = 'C:\\dev\\foliole-android-lab-preview';
   return {
     active: path.join(root, 'active.json'),
-    candidate: checkout,
     checkout,
-    checkoutState: path.join(root, 'checkout-state.json'),
     config: path.join(root, 'config.json'),
     deployment: path.join(root, 'deployment.json'),
     device: path.join(root, 'device.json'),
     evidence: path.join(root, 'evidence'),
     manifest: path.join(root, 'protection', 'manifests'),
-    preview: checkout,
     protection: path.join(root, 'protection', 'backups'),
     repository: path.join(root, 'repository.git'),
     reviewSession: path.join(root, 'review-session.json'),
@@ -181,7 +178,7 @@ export function publicDeviceStatus(device) {
 export function writeSuccessfulDeployment(paths, request, device, completedAt) {
   const marker = {
     commitSha: request.commitSha, completedAt, deviceIdentity: device.identity,
-    runId: request.runId, schemaVersion: 1, sourceKind: request.sourceKind || 'unknown'
+    runId: request.runId, schemaVersion: 1
   };
   if (!fs.existsSync(path.dirname(paths.workspaceDeployment))) {
     throw Object.assign(new Error('deployed preview workspace is missing'), { code: 'deployed_workspace_missing' });

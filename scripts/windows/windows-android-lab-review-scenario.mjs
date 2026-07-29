@@ -57,7 +57,7 @@ export function scenarioEnv(config, endpoint, paths, evidenceRoot) {
     ...process.env,
     ANDROID_SKIP_WINDOWS_SYNC: '1',
     ANDROID_USER_HOME: paths.signingHome,
-    ANDROID_WINDOWS_WORKDIR: paths.preview,
+    ANDROID_WINDOWS_WORKDIR: paths.checkout,
     FOLIOLE_ANDROID_ADB_PATH: config.adbPath,
     FOLIOLE_ANDROID_BASH_PATH: config.bashPath,
     FOLIOLE_ANDROID_LAB_EVIDENCE_ROOT: evidenceRoot,
@@ -91,10 +91,10 @@ async function runUiSequence({ config, device, executeCommand, paths, request })
   const steps = reviewUiSteps(readJson(paths.reviewSession)?.expectedActions ?? []);
   if (!steps.length) throw codedError('review_ui_sequence_missing', 'review prepare did not bind UI actions');
   await runChecked(executeCommand, path.join(config.nodeDirectory, 'node.exe'), [
-    path.join(paths.preview, 'scripts', 'windows', 'windows-android-lab-ui-automation.mjs'),
+    path.join(paths.checkout, 'scripts', 'windows', 'windows-android-lab-ui-automation.mjs'),
     ...reviewUiSequenceArgs(steps)
   ], {
-    cwd: paths.preview, timeoutMs: SCENARIO_UI_COMMAND_TIMEOUT_MS,
+    cwd: paths.checkout, timeoutMs: SCENARIO_UI_COMMAND_TIMEOUT_MS,
     env: scenarioEnv(config, device.endpoint, paths, evidenceRoot)
   }, 'review_ui_sequence_failed');
   return {
@@ -106,8 +106,8 @@ async function runUiSequence({ config, device, executeCommand, paths, request })
 async function runWindowsClientSyncCheck({ config, executeCommand, paths, request }) {
   const evidenceRoot = scenarioEvidenceRoot(paths, request, 'windows-sync');
   const result = await runChecked(executeCommand, path.join(config.nodeDirectory, 'node.exe'), [
-    path.join(paths.preview, 'scripts', 'windows', 'windows-client-native.mjs'), 'status'
-  ], { cwd: paths.preview }, 'review_windows_sync_status_failed');
+    path.join(paths.checkout, 'scripts', 'windows', 'windows-client-native.mjs'), 'status'
+  ], { cwd: paths.checkout }, 'review_windows_sync_status_failed');
   fs.writeFileSync(path.join(evidenceRoot, 'stdout.txt'), result.output || result.lines?.join('\n') || '', 'utf8');
   return { evidencePath: 'windows-sync', operation: 'windows-client-status' };
 }

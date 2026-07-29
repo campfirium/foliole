@@ -57,10 +57,10 @@ async function restartApplication(config, endpoint, paths, executeCommand, setPh
   await checked(executeCommand, config.adbPath, androidLabAdbArgs(config, ['-s', endpoint, 'shell', 'am', 'start', '-n', APP_COMPONENT]), {}, 'review_launch_failed');
   setPhase('restart_verify');
   await checked(executeCommand, path.join(config.nodeDirectory, 'node.exe'), [
-    path.join(paths.preview, 'scripts', 'android', 'verify-android-launch.mjs'),
+    path.join(paths.checkout, 'scripts', 'android', 'verify-android-launch.mjs'),
     '--adb', config.adbPath, '--adb-server-port', androidLabAdbServerPort(config), '--serial', endpoint, '--app-id', APP_ID, '--component', APP_COMPONENT,
     '--timeout-seconds', '30', '--stability-seconds', '3'
-  ], { cwd: paths.preview }, 'review_launch_verify_failed');
+  ], { cwd: paths.checkout }, 'review_launch_verify_failed');
 }
 
 async function stopForSnapshot(config, endpoint, executeCommand, setPhase) {
@@ -76,16 +76,16 @@ async function launchAfterSnapshot(config, endpoint, paths, executeCommand, setP
     '-s', endpoint, 'shell', 'am', 'start', '-n', APP_COMPONENT
   ]), {}, 'review_launch_failed');
   await checked(executeCommand, path.join(config.nodeDirectory, 'node.exe'), [
-    path.join(paths.preview, 'scripts', 'android', 'verify-android-launch.mjs'),
+    path.join(paths.checkout, 'scripts', 'android', 'verify-android-launch.mjs'),
     '--adb', config.adbPath, '--adb-server-port', androidLabAdbServerPort(config), '--serial', endpoint, '--app-id', APP_ID, '--component', APP_COMPONENT,
     '--timeout-seconds', '30', '--stability-seconds', '3'
-  ], { cwd: paths.preview }, 'review_launch_verify_failed');
+  ], { cwd: paths.checkout }, 'review_launch_verify_failed');
 }
 
 function assertAuditRuntime(paths) {
   const required = [
-    path.join(paths.preview, 'scripts', 'windows', 'windows-android-lab-review-audit.ts'),
-    path.join(paths.preview, 'scripts', 'android', 'sqlite-readonly.mjs')
+    path.join(paths.checkout, 'scripts', 'windows', 'windows-android-lab-review-audit.ts'),
+    path.join(paths.checkout, 'scripts', 'android', 'sqlite-readonly.mjs')
   ];
   if (required.some((entry) => !fs.existsSync(entry))) {
     throw codedError('review_audit_runtime_missing', 'deployed Review audit runtime is missing; rerun normal deployment');
@@ -97,14 +97,14 @@ async function runAudit({ config, databasePath, deployment, evidenceRoot, execut
   const output = path.join(evidenceRoot, 'review-audit.json');
   const args = [
     '--experimental-strip-types',
-    path.join(paths.preview, 'scripts', 'windows', 'windows-android-lab-review-audit.ts'),
+    path.join(paths.checkout, 'scripts', 'windows', 'windows-android-lab-review-audit.ts'),
     '--checkpoint', request.reviewPhase, '--commit', request.commitSha, '--database', databasePath,
     '--deployment-run', deployment.runId, '--device', deployment.deviceIdentity,
     '--output', output, '--run', request.runId,
     ...(session ? ['--session', paths.reviewSession] : [])
   ];
   const result = await executeCommand(path.join(config.nodeDirectory, 'node.exe'), args, {
-    cwd: paths.preview, timeoutCode: 'review_audit_failed_timeout', timeoutMs: COMMAND_TIMEOUT_MS
+    cwd: paths.checkout, timeoutCode: 'review_audit_failed_timeout', timeoutMs: COMMAND_TIMEOUT_MS
   });
   fs.writeFileSync(path.join(evidenceRoot, 'runner.log'), `${result.lines?.join('\n') || ''}\n`, 'utf8');
   const audit = readJson(output);
