@@ -1,6 +1,6 @@
 ---
 name: foliole-t5-repair
-description: Diagnose, repair, and verify one failed Foliole T5 quality run from a handoff locator. Use when a Codex Desktop task names a Foliole T5 run ID, failed T5 workflow, nightly remote-quality failure, or asks the visible controller to take over T5 repair.
+description: Diagnose, repair, and verify one failed Foliole T5 quality run from a handoff locator, then audit why local quality did not catch each failure and open separate visible repair tasks for confirmed local gate coverage gaps. Use when a Codex Desktop task names a Foliole T5 run ID, failed T5 workflow, nightly remote-quality failure, or asks the visible controller to take over T5 repair.
 ---
 
 # Foliole T5 Repair
@@ -49,6 +49,24 @@ The visible controller owns root-cause judgment, integration, conflict review, f
 8. The Remote Quality dispatcher hard-refuses a new run while T5 or Remote Quality is active, and both workflows share a non-canceling concurrency group to close scheduling races. A scheduled T5 skips a duplicate completed full Remote validation for the same SHA. Do not cancel a run merely because one job failed; collect the complete run. Cancel only with explicit user authorization or when the run is deliberately superseded and its remaining evidence is no longer required.
 9. Route a related remote red result back to its existing worker and continue until full quality is green or a genuine stop condition is reached.
 
+## Audit local detection after repair
+
+Begin this prevention audit only after the immediate repair is committed, pushed, and proven by a green full Remote Quality or scheduled T5 recheck. Do not analyze local coverage or create coverage tasks while the root cause, repair diff, or remote result is still unsettled. The visible controller owns the audit; do not ask a repair worker to judge whether its own failure should have been caught locally.
+
+1. For every resolved root-cause family, identify the narrow local command that reproduces it and trace whether normal changed-file, fast-quality, pre-push, or host-specific routing would have run that command for the target diff.
+2. Classify the result as exactly one of:
+   - `local-validation-missed`: the correct local command and route existed, but the required targeted validation was not run.
+   - `local-gate-coverage-gap`: a stable mechanical check existed or should exist, but routine local routing could not select it for the triggering files.
+   - `hosted-only-by-design`: the failure depends on an OS, runner, service, credential, or remote state that the local workflow cannot faithfully provide.
+   - `pre-existing-or-external`: the target SHA did not create the failure and local coverage is not the relevant cause.
+3. Record the counterfactual evidence: the triggering files, the check that should have caught them, the route that skipped them, and why the comparison case stayed green. Do not label a gap from timing alone or from a broad gate that happened not to be run.
+4. When `local-gate-coverage-gap` is confirmed, create a separate visible Codex Desktop task to close it. Use `create_thread`, the saved Foliole project, and the `local` environment; never request a default worktree. Group gaps that share one checker or routing root cause, and create at most one task per non-overlapping coverage family.
+5. Give each coverage task the immutable run URL and SHA, raw failed checks, the counterfactual evidence, ownership limited to checker/routing/contract-test files, forbidden product-repair files, and this acceptance contract: the triggering diff now selects the intended local check and a regression test locks that route. The task must not commit, push, or dispatch hosted quality without authorization in that task.
+6. Wait for successful task creation and initial progress; task creation alone is not evidence that the gap is fixed. Do not open a coverage task for `local-validation-missed`, `hosted-only-by-design`, or `pre-existing-or-external`; report the evidence instead.
+7. If task creation is unavailable, expose that boundary and wait rather than silently folding the prevention work into the completed T5 repair.
+
+An explicit invocation of `$foliole-t5-repair` includes authorization for these bounded local-coverage tasks. If the skill was triggered implicitly, obtain user authorization before creating them. Coverage tasks are user-owned sibling tasks, not internal workers; the visible controller must not absorb or stage their changes.
+
 ## Report controller state
 
 Keep delivery and repair status distinct:
@@ -58,6 +76,9 @@ Keep delivery and repair status distinct:
 - `repairing`: one or more root-cause families are being repaired.
 - `waiting-for-write-approval`: local repair is verified and awaits commit or push authorization.
 - `rechecking`: full Remote Quality is running for the authorized immutable SHA.
-- `complete`: all in-scope failures are resolved and the full recheck is green.
+- `auditing-local-coverage`: the repair recheck is green and the post-repair local-detection audit is running.
+- `complete`: all in-scope failures are resolved, the full recheck is green, and every resolved failure family has been classified by the post-repair audit.
+
+Track the prevention lane separately as `auditing`, `not-a-gap`, `task-created`, or `waiting-for-task-creation`. `complete` additionally requires every confirmed local gate coverage gap to have a successfully created task, but does not require those user-owned sibling tasks to finish.
 
 Never describe `thread created`, `Desktop opened`, or `prompt delivered` as T5 processing progress.
