@@ -30,6 +30,7 @@ describe('Windows Android Lab Git sync', () => {
       return { code: 0, lines: [], output: args.includes('rev-parse') ? `${SHA}\n` : '' };
     };
     await expect(updateWindowsAndroidLabRepository(config, paths, SHA, executeCommand)).resolves.toEqual({ commitSha: SHA });
+    expect(calls.every(({ args }) => args.includes(`safe.directory=${paths.repository}`))).toBe(true);
     expect(calls.some(({ args }) => args.includes('clone') && args.includes('lan') && args.includes('lab/dev'))).toBe(true);
     expect(calls.some(({ args }) => args.includes('pull'))).toBe(true);
   });

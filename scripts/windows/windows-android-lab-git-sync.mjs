@@ -11,7 +11,9 @@ function codedError(code, message) {
 async function runGit(executeCommand, config, paths, args, code, cwd = paths.checkout) {
   const hooksPath = path.join(paths.root, 'empty-git-hooks');
   fs.mkdirSync(hooksPath, { recursive: true });
-  const result = await executeCommand(config.gitPath, ['-c', `core.hooksPath=${hooksPath}`, ...args], {
+  const result = await executeCommand(config.gitPath, [
+    '-c', `core.hooksPath=${hooksPath}`, '-c', `safe.directory=${paths.repository}`, ...args
+  ], {
     cwd,
     env: process.env,
     timeoutCode: `${code}_timeout`,
