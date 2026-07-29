@@ -6,6 +6,8 @@ import { openExternalUrl } from '../../shared/platform/runtimeExternalNavigation
 import {
   AppButton,
   AppDialog,
+  AppDialogActions,
+  AppDialogBody,
   AppDialogContent,
   AppDialogOverlay,
   AppDialogPortal,
@@ -27,6 +29,21 @@ import { useDiscoursePublishDialogEscape } from './useDiscoursePublishDialogEsca
 import { useDiscoursePublishDialogRequest } from './useDiscoursePublishDialogRequest';
 
 type PublishState = 'idle' | 'publishing';
+
+function DiscoursePublishFeedback(props: {
+  catalogError: string | null;
+  error: string | null;
+  parseError: string | null;
+}) {
+  return (
+    <>
+      {props.catalogError ? <p className="mt-3 text-sm text-muted-foreground">{props.catalogError}</p> : null}
+      {props.parseError ? <p className="mt-3 text-sm text-destructive" role="alert">{props.parseError}</p> : null}
+      {props.error ? <p className="mt-3 text-sm text-destructive" role="alert">{props.error}</p> : null}
+    </>
+  );
+}
+
 function DiscoursePublishDialog(props: {
   details: PublishDetails;
   error: string | null;
@@ -71,16 +88,16 @@ function DiscoursePublishDialog(props: {
     <AppDialog open onOpenChange={(open) => !open && props.state === 'idle' && props.onClose()}>
       <AppDialogPortal>
         <AppDialogOverlay />
-        <AppDialogContent aria-describedby={undefined} className="w-[min(960px,calc(100vw-32px))] p-6" onEscapeKeyDown={handleEscapeKeyDown} onKeyDownCapture={handleKeyDownCapture}>
+        <AppDialogContent aria-describedby={undefined} className="w-[min(960px,calc(100vw-32px))]" layout="task" onEscapeKeyDown={handleEscapeKeyDown} onKeyDownCapture={handleKeyDownCapture}>
           <AppDialogTitle>{t('desktop.discoursePublish.title')}</AppDialogTitle>
-          <DiscoursePublishFields catalog={props.catalog} form={props.form} setForm={props.setForm} showAllCategories={props.showAllCategories} showAllTags={props.showAllTags} toggleShowAllCategories={props.toggleShowAllCategories} toggleShowAllTags={props.toggleShowAllTags} />
-          {props.catalog.error ? <p className="mt-3 text-sm text-muted-foreground">{t('desktop.discoursePublish.catalog.error')}</p> : null}
-          {props.details.parseError ? <p className="mt-3 text-sm text-destructive" role="alert">{props.details.parseError}</p> : null}
-          {props.error ? <p className="mt-3 text-sm text-destructive" role="alert">{props.error}</p> : null}
-          <div className="mt-5 flex justify-end gap-2">
+          <AppDialogBody>
+            <DiscoursePublishFields catalog={props.catalog} form={props.form} setForm={props.setForm} showAllCategories={props.showAllCategories} showAllTags={props.showAllTags} toggleShowAllCategories={props.toggleShowAllCategories} toggleShowAllTags={props.toggleShowAllTags} />
+            <DiscoursePublishFeedback catalogError={props.catalog.error ? t('desktop.discoursePublish.catalog.error') : null} error={props.error} parseError={props.details.parseError} />
+          </AppDialogBody>
+          <AppDialogActions>
             <AppButton disabled={props.state !== 'idle'} onClick={props.onClose} tabIndex={-1} variant="subtle">{t('common.cancel')}</AppButton>
             <AppButton disabled={!canPublish} loading={props.state === 'publishing'} loadingLabel={t('desktop.discoursePublish.publishing')} onClick={props.onPublish}>{t('desktop.discoursePublish.confirm')}</AppButton>
-          </div>
+          </AppDialogActions>
         </AppDialogContent>
       </AppDialogPortal>
     </AppDialog>

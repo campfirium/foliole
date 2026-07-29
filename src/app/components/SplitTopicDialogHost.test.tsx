@@ -1,4 +1,4 @@
-import { act, fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
@@ -84,8 +84,14 @@ it('previews split Topics and leaves storage untouched when canceled', async () 
   await waitFor(() => expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled());
 
   expect(screen.getByRole('heading', { name: 'Split Topic' })).toBeInTheDocument();
-  expect(screen.getAllByText('Alpha').length).toBeGreaterThan(0);
-  expect(screen.getByText('Beta')).toBeInTheDocument();
+  const preview = within(screen.getByRole('region', { name: 'Preview' }));
+  expect(preview.getAllByText('Alpha')).toHaveLength(1);
+  expect(preview.getAllByText('Beta')).toHaveLength(1);
+  expect(preview.getByText('Body')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('switch', { name: 'Keep delimiter' }));
+  fireEvent.change(screen.getByRole('textbox', { name: 'Delimiter' }), { target: { value: '#' } });
+  await waitFor(() => expect(preview.getByText('#')).toBeInTheDocument());
 
   fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
@@ -162,7 +168,7 @@ it('restores only device preferences, keeps Before and After blank, and preserve
   await waitFor(() => expect(screen.getByRole('radio', { name: 'Keep' })).toBeChecked());
   expect(screen.getByLabelText('Before')).toHaveValue('');
   expect(screen.getByLabelText('After')).toHaveValue('');
-  expect(screen.getByRole('switch', { name: 'Keep delimiter with each Topic' })).toBeChecked();
+  expect(screen.getByRole('switch', { name: 'Keep delimiter' })).toBeChecked();
   fireEvent.click(screen.getByRole('button', { name: 'Split Topic' }));
 
   await waitFor(() => expect(saveSplitTopicWorkspaceMutation).toHaveBeenCalledTimes(1));

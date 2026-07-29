@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { forwardRef, useEffect, useMemo, useState } from 'react';
 
 import { buildSplitTopicPreview } from '../../../lib/core/nodes/splitTopicModel';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { loadSplitTopicPreferences } from '../../shared/platform/splitTopicPreferences';
-import { AppButton, AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../shared/ui';
+import { AppButton, AppDialog, AppDialogActions, AppDialogBody, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../shared/ui';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
@@ -33,6 +33,36 @@ function readSource(request: SplitTopicDialogRequest | null) {
   if (!source || source.kind !== 'topic' || state.trashedNodeIds.includes(source.id)) return null;
   return { source, state };
 }
+
+const SplitTopicDialogSurface = forwardRef<HTMLDivElement, {
+  busy: Busy;
+  close: () => void;
+  confirm: () => Promise<void>;
+  error: string | null;
+  form: SplitTopicFormState;
+  preview: ReturnType<typeof buildSplitTopicPreview>;
+  setForm: (form: SplitTopicFormState) => void;
+}>(function SplitTopicDialogSurface(props, ref) {
+  const t = useTranslation();
+  return (
+    <AppDialogContent ref={ref} aria-describedby={undefined} className="flex max-h-[calc(100dvh-2rem)] w-[min(64rem,calc(100vw-2rem))] max-w-none flex-col overflow-hidden" layout="task">
+      <AppDialogTitle>{t('desktop.splitTopic.title')}</AppDialogTitle>
+      <AppDialogBody className="grid min-h-0 flex-1 grid-cols-2 gap-dialog-column-gap overflow-hidden">
+        <section className="app-scrollbar overflow-auto">
+          <SplitTopicControls form={props.form} onChange={props.setForm} />
+        </section>
+        <section className="min-h-0">
+          <SplitTopicPreviewList delimiter={props.form.delimiter} parts={props.preview} />
+        </section>
+      </AppDialogBody>
+      {props.error ? <p className="mt-2 text-ui-md text-destructive" role="alert">{props.error}</p> : null}
+      <AppDialogActions>
+        <AppButton disabled={props.busy !== 'idle'} onClick={props.close} variant="subtle">{t('common.cancel')}</AppButton>
+        <AppButton disabled={props.busy !== 'idle' || !props.form.delimiter || props.preview.length === 0} loading={props.busy === 'splitting'} loadingLabel={t('desktop.splitTopic.splitting')} onClick={() => void props.confirm()}>{t('desktop.splitTopic.confirm')}</AppButton>
+      </AppDialogActions>
+    </AppDialogContent>
+  );
+});
 
 export function SplitTopicDialogHost() {
   const t = useTranslation();
@@ -78,18 +108,7 @@ export function SplitTopicDialogHost() {
     <AppDialog open onOpenChange={(open) => !open && close()}>
       <AppDialogPortal>
         <AppDialogOverlay />
-        <AppDialogContent aria-describedby={undefined} className="flex max-h-[min(780px,calc(100vh-32px))] w-[min(920px,calc(100vw-32px))] flex-col p-6">
-          <AppDialogTitle>{t('desktop.splitTopic.title')}</AppDialogTitle>
-          <div className="mt-5 grid min-h-0 gap-6 md:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
-            <SplitTopicControls form={form} onChange={setForm} />
-            <SplitTopicPreviewList delimiter={form.delimiter} parts={preview} />
-          </div>
-          {error ? <p className="mt-4 text-sm text-destructive" role="alert">{error}</p> : null}
-          <div className="mt-5 flex justify-end gap-2">
-            <AppButton disabled={busy !== 'idle'} onClick={close} variant="subtle">{t('common.cancel')}</AppButton>
-            <AppButton disabled={busy !== 'idle' || !form.delimiter || preview.length === 0} loading={busy === 'splitting'} loadingLabel={t('desktop.splitTopic.splitting')} onClick={() => void confirm()}>{t('desktop.splitTopic.confirm')}</AppButton>
-          </div>
-        </AppDialogContent>
+        <SplitTopicDialogSurface busy={busy} close={close} confirm={confirm} error={error} form={form} preview={preview} setForm={setForm} />
       </AppDialogPortal>
     </AppDialog>
   );

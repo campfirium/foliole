@@ -94,18 +94,20 @@ test('previews and confirms Split Topic from the command palette', async ({ desk
   dialog = await openSplitTopicDialog(desktopWindow);
   await dialog.getByRole('textbox', { name: 'Delimiter' }).fill('---keep---');
   await dialog.getByRole('radio', { name: 'Keep' }).click();
-  await dialog.getByRole('switch', { name: 'Keep delimiter with each Topic' }).click();
+  await dialog.getByRole('switch', { name: 'Keep delimiter' }).click();
   await dialog.getByRole('button', { name: 'Split Topic' }).click();
   await expect(dialog).toBeHidden();
   await expect.poll(() => readNode(desktopWindow, 'Keep Alpha')).toMatchObject({ parentNodeId: KEEP_SOURCE_TOPIC_ID, trashed: false });
   await expect.poll(() => readNode(desktopWindow, 'Keep Beta')).toMatchObject({ parentNodeId: KEEP_SOURCE_TOPIC_ID, trashed: false });
+  expect((await readNode(desktopWindow, 'Keep Alpha'))?.content.trimEnd().endsWith('---keep---')).toBe(true);
+  expect((await readNode(desktopWindow, 'Keep Beta'))?.content.trimStart().startsWith('---keep---')).toBe(false);
   expect(await desktopWindow.evaluate((nodeId) => globalThis.window?.__folioleWorkspaceDebug?.getNode(nodeId)?.trashed ?? null, KEEP_SOURCE_TOPIC_ID)).toBe(false);
 
   await desktopWindow.evaluate((nodeId) => globalThis.window?.__folioleWorkspaceDebug?.openNode?.(nodeId), KEEP_SOURCE_TOPIC_ID);
   dialog = await openSplitTopicDialog(desktopWindow);
   await expect(dialog.getByRole('radio', { name: 'Keep' })).toBeChecked();
   await expect(dialog.getByRole('textbox', { name: 'Delimiter' })).toHaveValue('---keep---');
-  await expect(dialog.getByRole('switch', { name: 'Keep delimiter with each Topic' })).toBeChecked();
+  await expect(dialog.getByRole('switch', { name: 'Keep delimiter' })).toBeChecked();
   await expect(dialog.getByRole('textbox', { name: 'Before' })).toHaveValue('');
   await expect(dialog.getByRole('textbox', { name: 'After' })).toHaveValue('');
   await dialog.getByRole('button', { name: 'Cancel' }).click();

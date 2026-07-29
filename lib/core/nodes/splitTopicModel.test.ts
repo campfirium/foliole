@@ -24,14 +24,14 @@ describe('buildSplitTopicPreview', () => {
     ]);
   });
 
-  it('keeps delimiters on following non-empty fragments when requested', () => {
+  it('keeps delimiters at the end of the preceding fragment when requested', () => {
     expect(buildSplitTopicPreview({
       content: 'Alpha\n---\n# Beta',
       delimiter: '---',
       keepDelimiter: true
     })).toEqual([
-      { body: 'Alpha\n', title: 'Alpha' },
-      { body: '---\n# Beta', title: 'Beta' }
+      { body: 'Alpha\n---', title: 'Alpha' },
+      { body: '\n# Beta', title: 'Beta' }
     ]);
   });
 

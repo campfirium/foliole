@@ -1,3 +1,4 @@
+import { resolveNodeOpeningText } from '../../../lib/core/nodes/nodeOpeningPreview';
 import type { SplitTopicPreviewPart } from '../../../lib/core/nodes/splitTopicModel';
 import type { SplitTopicDisposition } from '../../../lib/platform/nativeSplitTopicPreferencesContract';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
@@ -25,7 +26,7 @@ export function SplitTopicControls(props: {
 }) {
   const t = useTranslation();
   return (
-    <div className="space-y-5">
+    <div className="space-y-settings-panel-y">
       <div>
         <div className="mb-2 text-sm font-medium text-foreground">{t('desktop.splitTopic.originalTopic')}</div>
         <SettingsSegmentedControl
@@ -50,11 +51,11 @@ export function SplitTopicControls(props: {
       </div>
       <label className="block text-sm font-medium text-foreground">
         {t('desktop.splitTopic.headerText')}
-        <textarea className="mt-2 min-h-28 w-full resize-y rounded-md border border-settings-control-border bg-settings-control px-3 py-2 text-sm text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring" value={props.form.headerText} onChange={(event) => props.onChange({ ...props.form, headerText: event.target.value })} />
+        <textarea className="mt-2 min-h-settings-row w-full resize-y rounded-md border border-settings-control-border bg-settings-control px-3 py-2 text-ui-md text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring" value={props.form.headerText} onChange={(event) => props.onChange({ ...props.form, headerText: event.target.value })} />
       </label>
       <label className="block text-sm font-medium text-foreground">
         {t('desktop.splitTopic.footerText')}
-        <textarea className="mt-2 min-h-28 w-full resize-y rounded-md border border-settings-control-border bg-settings-control px-3 py-2 text-sm text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring" value={props.form.footerText} onChange={(event) => props.onChange({ ...props.form, footerText: event.target.value })} />
+        <textarea className="mt-2 min-h-settings-row w-full resize-y rounded-md border border-settings-control-border bg-settings-control px-3 py-2 text-ui-md text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring" value={props.form.footerText} onChange={(event) => props.onChange({ ...props.form, footerText: event.target.value })} />
       </label>
     </div>
   );
@@ -64,18 +65,21 @@ export function SplitTopicPreviewList(props: { delimiter: string; parts: SplitTo
   const t = useTranslation();
   const emptyCopy = props.delimiter ? t('desktop.splitTopic.noPreview') : t('desktop.splitTopic.enterDelimiter');
   return (
-    <section aria-label={t('desktop.splitTopic.preview')} className="min-h-0">
-      <div className="mb-2 text-sm font-medium text-foreground">{t('desktop.splitTopic.preview')}</div>
+    <section aria-label={t('desktop.splitTopic.preview')} className="flex h-full min-h-0 flex-col">
+      <div className="border-b border-settings-divider/70 pb-2 text-ui-md font-medium text-foreground">{t('desktop.splitTopic.preview')}</div>
       {props.parts.length === 0 ? (
-        <p className="rounded-md border border-border bg-bg-subtle p-4 text-sm text-foreground/65">{emptyCopy}</p>
+        <p className="py-settings-panel-y text-ui-md text-muted-foreground">{emptyCopy}</p>
       ) : (
-        <div className="max-h-[420px] space-y-2 overflow-auto pr-1">
-          {props.parts.map((part, index) => (
-            <article className="rounded-md border border-border bg-bg-subtle p-3" key={`${part.title}-${index}`}>
-              <div className="text-sm font-medium text-foreground">{part.title}</div>
-              <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-sm leading-5 text-foreground/68">{part.body}</p>
-            </article>
-          ))}
+        <div className="app-scrollbar min-h-0 flex-1 divide-y divide-settings-divider/70 overflow-auto">
+          {props.parts.map((part, index) => {
+            const opening = resolveNodeOpeningText(part.body, part.title);
+            return (
+              <article className="py-3" key={`${part.title}-${index}`}>
+                <div className="text-ui-md font-medium text-foreground">{part.title}</div>
+                {opening ? <p className="mt-1 line-clamp-2 text-ui-base text-muted-foreground">{opening}</p> : null}
+              </article>
+            );
+          })}
         </div>
       )}
     </section>

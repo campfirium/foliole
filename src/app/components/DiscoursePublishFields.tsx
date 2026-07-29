@@ -33,7 +33,7 @@ export function DiscoursePublishFields(props: {
   const catalog = props.catalog.catalog;
   const tags = byRecent(mergeRecentTags(catalog?.tags ?? [], catalog?.recent_tags ?? []), catalog?.recent_tags ?? [], (tag) => tag.name);
   return (
-    <div className="mt-5 grid gap-4">
+    <div className="grid gap-4">
       <FieldSection label={t('desktop.discoursePublish.category')}>
         <DiscourseCategoryPicker categories={catalog?.categories ?? []} {...(props.categoryPlaceholder ? { emptyLabel: props.categoryPlaceholder } : {})} {...(props.createCategoryLabel ? { createCategoryLabel: props.createCategoryLabel } : {})} form={props.form} setForm={props.setForm} showAll={props.showAllCategories} toggleShowAll={props.toggleShowAllCategories} />
       </FieldSection>

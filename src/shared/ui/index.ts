@@ -1,7 +1,7 @@
 // Foundation controls: reusable across desktop workbench surfaces and companion shell.
 export { AppBreadcrumb, type AppBreadcrumbItem } from './Breadcrumb';
 export { AppButton } from './Button';
-export { AppDialog, AppDialogClose, AppDialogContent, AppDialogDescription, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from './Dialog';
+export { AppDialog, AppDialogActions, AppDialogBody, AppDialogClose, AppDialogContent, AppDialogDescription, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from './Dialog';
 export { AppIconButton } from './IconButton';
 export { AppInput } from './Input';
 export { appFocusControlClassName, appFocusSilentClassName, appInputBorderFocusVisibleClassName, appInputFocusVisibleClassName } from './InputFocus';

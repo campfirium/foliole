@@ -107,8 +107,8 @@ function splitContent(input: SplitTopicPreviewInput) {
     if (part.trim().length === 0) {
       return [];
     }
-    const prefix = input.keepDelimiter && index > 0 ? input.delimiter : '';
-    return [`${prefix}${part}`];
+    const suffix = input.keepDelimiter && index < rawParts.length - 1 ? input.delimiter : '';
+    return [`${part}${suffix}`];
   });
 }
 

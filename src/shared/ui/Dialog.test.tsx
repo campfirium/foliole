@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { expect, it } from 'vitest';
 
 import { AppButton } from './Button';
-import { AppDialog, AppDialogContent, AppDialogDescription, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from './Dialog';
+import { AppDialog, AppDialogActions, AppDialogBody, AppDialogContent, AppDialogDescription, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from './Dialog';
 
 it('renders dialog content with shared floating surface baseline', async () => {
   render(
@@ -27,6 +27,25 @@ it('renders dialog content with shared floating surface baseline', async () => {
   expect(screen.getByText('Shared dialog').className).toContain('text-ui-xl');
   expect(screen.getByText('Body copy').className).toContain('text-foreground/68');
   expect(screen.getByText('Body copy')).toBeInTheDocument();
+});
+
+it('owns task dialog spacing in the shared pattern', async () => {
+  render(
+    <AppDialog open>
+      <AppDialogPortal>
+        <AppDialogContent layout="task">
+          <AppDialogTitle>Task dialog</AppDialogTitle>
+          <AppDialogBody>Task content</AppDialogBody>
+          <AppDialogActions><AppButton>Done</AppButton></AppDialogActions>
+        </AppDialogContent>
+      </AppDialogPortal>
+    </AppDialog>
+  );
+
+  const dialog = await screen.findByRole('dialog', { name: 'Task dialog' });
+  expect(dialog.className).toContain('p-dialog-gutter');
+  expect(screen.getByText('Task content').className).toContain('mt-dialog-section-gap');
+  expect(screen.getByRole('button', { name: 'Done' }).parentElement?.className).toContain('mt-dialog-section-gap');
 });
 
 it('keeps initial dialog focus on the surface instead of the first action', async () => {

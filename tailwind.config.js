@@ -147,6 +147,9 @@ export default {
         ]
       },
       spacing: {
+        'dialog-column-gap': '4rem',
+        'dialog-gutter': '3rem',
+        'dialog-section-gap': '2.5rem',
         'panel-header': '3rem',
         'inspector-list-inset': '1rem',
         'settings-row': '5.125rem',
