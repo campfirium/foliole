@@ -22,6 +22,9 @@ describe('Windows Android lab installer', () => {
     expect(source).toContain('$installedRuntimeNames');
     expect(source).toContain('Get-ChildItem $installRoot -File -Filter "windows-android-lab-*"');
     expect(source).toContain('Remove-Item -LiteralPath $checkoutRoot -Recurse -Force');
+    for (const name of ['$AdbPath', '$BashPath', '$GitPath', '$JavaHome']) {
+      expect(source).toContain(`${name} = (Resolve-Path -LiteralPath ${name}).Path`);
+    }
     expect(source).toContain('git-read-token.txt');
     expect(source).toContain('-ErrorAction SilentlyContinue');
     expect(source).not.toContain('RepositoryUrl');

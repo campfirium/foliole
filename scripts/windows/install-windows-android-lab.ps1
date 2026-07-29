@@ -22,6 +22,10 @@ $nodeSourceRoot = Split-Path -Parent $NodePath
 foreach ($tool in @($NodePath, $GitPath, $BashPath, $AdbPath, (Join-Path $JavaHome "bin\java.exe"), (Join-Path $nodeSourceRoot "npm.cmd"))) {
   if ([string]::IsNullOrWhiteSpace($tool) -or !(Test-Path -LiteralPath $tool -PathType Leaf)) { throw "Required Android Lab tool is missing: $tool" }
 }
+$AdbPath = (Resolve-Path -LiteralPath $AdbPath).Path
+$BashPath = (Resolve-Path -LiteralPath $BashPath).Path
+$GitPath = (Resolve-Path -LiteralPath $GitPath).Path
+$JavaHome = (Resolve-Path -LiteralPath $JavaHome).Path
 $files = @(& $NodePath (Join-Path $sourceRoot "windows-android-lab-runtime-manifest.mjs") --list)
 if ($LASTEXITCODE -ne 0 -or $files.Count -lt 1) { throw "Failed to derive Windows Android Lab runtime manifest" }
 if ($DeviceIdentity -notmatch '^[A-Za-z0-9._-]+$') { throw "DeviceIdentity contains unsupported characters" }
